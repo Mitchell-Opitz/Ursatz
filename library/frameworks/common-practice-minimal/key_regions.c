@@ -25,6 +25,8 @@ CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void) 
     config.context_id_prefix = "key-region";
     config.pivot_search_measures = 2;
     config.evidence_weight = 0.3;
+    config.phrase_boundaries = NULL;
+    config.phrase_boundary_count = 0;
     return config;
 }
 
@@ -655,6 +657,74 @@ static unsigned natural_collection(int key_index) {
     return mask;
 }
 
+/* Moves each edge of the measure keys (a measure whose key differs from the one before it) to the nearest boundary
+   slot within `reach` measures, never onto or past a neighbouring edge, and never an edge marked fixed. */
+static CommonPracticeKeyRegionsStatus snap_edges(int *measure_key, const bool *fixed, size_t measure_count,
+                                                  const size_t *boundaries, size_t boundary_count, size_t reach) {
+    if (boundary_count == 0 || measure_count < 2) {
+        return COMMON_PRACTICE_KEY_REGIONS_OK;
+    }
+    size_t edge_count = 0;
+    for (size_t m = 1; m < measure_count; m++) {
+        edge_count += measure_key[m] != measure_key[m - 1] ? 1 : 0;
+    }
+    if (edge_count == 0) {
+        return COMMON_PRACTICE_KEY_REGIONS_OK;
+    }
+    size_t *edge = (size_t *)calloc(edge_count, sizeof(size_t));
+    int *before_key = (int *)calloc(edge_count, sizeof(int));
+    int *after_key = (int *)calloc(edge_count, sizeof(int));
+    if (edge == NULL || before_key == NULL || after_key == NULL) {
+        free(edge);
+        free(before_key);
+        free(after_key);
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+    }
+    size_t next = 0;
+    for (size_t m = 1; m < measure_count; m++) {
+        if (measure_key[m] != measure_key[m - 1]) {
+            edge[next] = m;
+            before_key[next] = measure_key[m - 1];
+            after_key[next] = measure_key[m];
+            next++;
+        }
+    }
+    size_t previous = 0; /* the position of the edge before this one, after its own move; 0 = the start */
+    for (size_t i = 0; i < edge_count; i++) {
+        size_t at = edge[i];
+        size_t next_edge = i + 1 < edge_count ? edge[i + 1] : measure_count;
+        size_t target = at;
+        if (!fixed[at]) {
+            size_t best_distance = reach + 1;
+            for (size_t b = 0; b < boundary_count; b++) {
+                size_t slot = boundaries[b];
+                if (slot <= previous || slot >= next_edge) {
+                    continue;
+                }
+                size_t distance = slot > at ? slot - at : at - slot;
+                if (distance < best_distance || (distance == best_distance && slot < target)) {
+                    best_distance = distance;
+                    target = slot;
+                }
+            }
+        }
+        if (target < at) {
+            for (size_t m = target; m < at; m++) {
+                measure_key[m] = after_key[i];
+            }
+        } else if (target > at) {
+            for (size_t m = at; m < target; m++) {
+                measure_key[m] = before_key[i];
+            }
+        }
+        previous = target;
+    }
+    free(edge);
+    free(before_key);
+    free(after_key);
+    return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
+
 /* The pivot of one change (see key_regions.h): the last segment at or before the boundary, within the search
    distance, whose best chord in the old key lies inside the new key's collection. */
 static CommonPracticeKeyRegionsStatus find_pivot(const CommonPracticeKeySegment *segments, size_t segment_count,
@@ -716,8 +786,14 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
     }
     if (!isfinite(effective.change_penalty) || effective.change_penalty < 0.0 ||
         effective.tonicization_max_measures == 0 || effective.context_id_prefix == NULL ||
-        effective.context_id_prefix[0] == '\0' || strlen(effective.context_id_prefix) > 100) {
+        effective.context_id_prefix[0] == '\0' || strlen(effective.context_id_prefix) > 100 ||
+        (effective.phrase_boundary_count > 0 && effective.phrase_boundaries == NULL)) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG;
+    }
+    for (size_t b = 0; b < effective.phrase_boundary_count; b++) {
+        if (!time_ok(effective.phrase_boundaries[b])) {
+            return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT;
+        }
     }
 
     MeasureWeights measures;
@@ -764,6 +840,34 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         }
         free(path);
         common_practice_key_windows_destroy(&windows);
+    }
+    if (status == COMMON_PRACTICE_KEY_REGIONS_OK && effective.phrase_boundary_count > 0) {
+        size_t *slots = (size_t *)calloc(effective.phrase_boundary_count, sizeof(size_t));
+        bool *fixed = (bool *)calloc(measures.measure_count, sizeof(bool));
+        if (slots == NULL || fixed == NULL) {
+            status = COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+        }
+        size_t slot_count = 0;
+        for (size_t b = 0; b < effective.phrase_boundary_count && status == COMMON_PRACTICE_KEY_REGIONS_OK; b++) {
+            int measure = 0;
+            status = nearest_barline(map, effective.phrase_boundaries[b], &measure);
+            long slot = (long)measure - (long)measures.first_measure;
+            if (status == COMMON_PRACTICE_KEY_REGIONS_OK && slot > 0 && (size_t)slot < measures.measure_count) {
+                slots[slot_count++] = (size_t)slot;
+            }
+        }
+        for (size_t m = 0; m < measures.measure_count && status == COMMON_PRACTICE_KEY_REGIONS_OK; m++) {
+            fixed[m] = forced[m];
+        }
+        for (size_t sp = 1; sp < plan.count && status == COMMON_PRACTICE_KEY_REGIONS_OK; sp++) {
+            fixed[plan.start[sp]] = true;
+        }
+        if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
+            status = snap_edges(measure_key, fixed, measures.measure_count, slots, slot_count,
+                                effective.window_measures);
+        }
+        free(slots);
+        free(fixed);
     }
     CommonPracticeKeyRegions result = {NULL, 0, NULL, 0};
     if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {

@@ -102,10 +102,12 @@ typedef struct {
     const char *context_id_prefix;             /* default "key-region": region n is "<prefix>-<n>" (from 1) */
     size_t pivot_search_measures;              /* default 2: how far back a pivot chord is looked for */
     double evidence_weight;                    /* default 0.3: the weight of functional chord evidence in a window's score */
+    const MusicalTime *const *phrase_boundaries; /* optional: phrase boundary times, whole notes, any order; borrowed */
+    size_t phrase_boundary_count;              /* default 0 */
 } CommonPracticeKeyRegionsConfig;
 
 /* window_measures 4, Krumhansl-Kessler profiles, change_penalty 0.2, tonicization_max_measures 4, prefix
-   "key-region", pivot_search_measures 2, evidence_weight 0.3. */
+   "key-region", pivot_search_measures 2, evidence_weight 0.3, no phrase boundaries. */
 CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void);
 
 typedef enum {
@@ -197,6 +199,16 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  */
 
 /*
+ * PHRASE BOUNDARIES. A window labels the measure at its centre, so the path's edges land up to two measures from
+ * where the music turns. When config.phrase_boundaries is given (times in whole notes, each snapped to the nearest
+ * barline), every edge the path drew is moved to the nearest boundary measure within window_measures of it, ties to
+ * the earlier. An edge never moves onto or past a neighbouring edge, and an edge at a key signature event (an
+ * authoritative boundary, below) never moves. With no boundaries the edges stay where the path put them. The
+ * boundaries come from phrase detection, which needs cadences, which need keys, so the caller runs this twice: once
+ * without boundaries, then again with the boundaries found from that first answer.
+ */
+
+/*
  * PIVOT CHORDS. At each change whose extent is a modulation (WEAK_MODULATION or MODULATION: a tonicization
  * has no pivot, and neither does a change with no extent worth a pivot), the pivot is the LAST segment, looking
  * back from the boundary (the start of the new region's first measure), whose chord is diatonic in both the old
@@ -271,7 +283,8 @@ typedef struct {
  * Estimates the regions. events may be NULL with event_count 0 (no signature information: boundaries come only
  * from the path). BAD_EVENT for a missing or negative position, sharps_flats outside -7..7, or events out of
  * time order. BAD_CONFIG additionally for a negative or non-finite change_penalty, a zero
- * tonicization_max_measures or an empty prefix. config may be NULL for the defaults. On OK, *out owns its
+ * tonicization_max_measures, an empty prefix, or a phrase boundary count with no list. BAD_EVENT also covers a
+ * missing or negative phrase boundary time. config may be NULL for the defaults. On OK, *out owns its
  * regions and changes (common_practice_key_regions_destroy); otherwise *out is untouched.
  */
 CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegment *segments, size_t segment_count,
