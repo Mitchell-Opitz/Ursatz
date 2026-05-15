@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/similar-material.v1.schema.json",
+  "title": "Ursatz-Analyzer similar material",
+  "description": "The passages of an analyzed corpus that are similar to a motive or a progression, best first.",
+  "type": "object",
+  "required": ["schema", "schema_version", "query", "minimum", "pieces_searched", "matches"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "ursatz-similar-material" },
+    "schema_version": { "const": 1 },
+    "query": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["kind", "notes"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "motive" },
+            "notes": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "type": "object",
+                "required": ["pitch", "duration"],
+                "additionalProperties": false,
+                "properties": {
+                  "pitch": { "type": "integer", "minimum": 0, "maximum": 127, "description": "MIDI note number." },
+                  "duration": { "$ref": "#/$defs/fraction" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["kind", "numerals"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": { "const": "progression" },
+            "numerals": { "type": "array", "minItems": 2, "items": { "type": "string", "minLength": 1 } }
+          }
+        }
+      ]
+    },
+    "minimum": { "$ref": "#/$defs/fraction", "description": "The lowest score reported." },
+    "pieces_searched": { "type": "integer", "minimum": 0 },
+    "matches": {
+      "type": "array",
+      "description": "Sorted by score, highest first, then piece, then start.",
+      "items": {
+        "type": "object",
+        "required": ["piece", "document", "start", "end", "score", "dimensions", "numeral_matches", "notes"],
+        "additionalProperties": false,
+        "properties": {
+          "piece": { "type": "string", "minLength": 1, "description": "The piece's path in the corpus." },
+          "document": { "type": "string", "minLength": 1, "description": "Its analysis document, relative to the corpus output folder." },
+          "start": { "$ref": "#/$defs/position" },
+          "end": { "$ref": "#/$defs/position" },
+          "score": { "$ref": "#/$defs/score" },
+          "dimensions": {
+            "type": "array",
+            "description": "The scores the combined score was made from.",
+            "items": {
+              "type": "object",
+              "required": ["dimension", "score"],
+              "additionalProperties": false,
+              "properties": {
+                "dimension": { "enum": ["interval", "rhythm", "contour"] },
+                "score": { "$ref": "#/$defs/score" }
+              }
+            }
+          },
+          "numeral_matches": { "type": "integer", "minimum": 0, "description": "Progression: the chords whose numeral is the query's at that place. 0 for a motive." },
+          "notes": {
+            "type": "array",
+            "description": "The soprano notes of the passage, onsets in whole notes from its start.",
+            "items": {
+              "type": "object",
+              "required": ["pitch", "onset", "duration"],
+              "additionalProperties": false,
+              "properties": {
+                "pitch": { "type": "integer", "minimum": 0, "maximum": 127 },
+                "onset": { "$ref": "#/$defs/fraction" },
+                "duration": { "$ref": "#/$defs/fraction" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "fraction": { "type": "string", "pattern": "^[0-9]+/[1-9][0-9]*$" },
+    "position": {
+      "type": "object",
+      "required": ["measure", "beat"],
+      "additionalProperties": false,
+      "properties": {
+        "measure": { "type": "integer", "minimum": 1 },
+        "beat": { "type": "number", "minimum": 1, "description": "The beat plus the fraction of it." }
+      }
+    },
+    "score": {
+      "type": "object",
+      "required": ["fraction", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "fraction": { "$ref": "#/$defs/fraction" },
+        "value": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  }
+}

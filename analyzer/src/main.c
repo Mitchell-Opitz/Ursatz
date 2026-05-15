@@ -9,6 +9,7 @@
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/report_writer.h>
+#include <ursatz_analyzer/similar_material.h>
 #include <ursatz_analyzer/style_profile.h>
 
 #include "pipeline/counterpoint_pipeline.h"
@@ -67,8 +68,10 @@ static void print_usage(const char *program) {
             "[--cantus upper|lower]] <input-file-path>\n"
             "       %s --corpus <dir> [--out <dir>] [--resume] [--markdown]\n"
             "       %s --style-profile <corpus output dir> --name <style name> [--out <file>]\n"
-            "       %s --compare-styles <a.json> <b.json> [--format text|json]\n",
-            program, program, program, program);
+            "       %s --compare-styles <a.json> <b.json> [--format text|json]\n"
+            "       %s --similar <corpus output dir> (--motive <file> | --progression \"<numerals>\") [--min <n/d>] "
+            "[--max <n>] [--format text|json]\n",
+            program, program, program, program, program);
 }
 
 static void print_corpus_piece(const char *path, CorpusPieceStatus status, const char *error, void *user) {
@@ -264,6 +267,145 @@ static int run_style_profile(const char *corpus_output_dir, const char *name, co
     return exit_code;
 }
 
+static void print_json_fraction(unsigned long numerator, unsigned long denominator) {
+    printf("\"%lu/%lu\"", numerator, denominator);
+}
+
+static void print_json_score(SimilarityScore score) {
+    printf("{\"fraction\": ");
+    print_json_fraction(score.numerator, score.denominator);
+    printf(", \"value\": %.6f}", (double)score.numerator / (double)score.denominator);
+}
+
+static void print_similar_json(const SimilarQuery *query, unsigned long min_numerator, unsigned long min_denominator,
+                               const SimilarResults *results) {
+    printf("{\n  \"schema\": \"ursatz-similar-material\",\n  \"schema_version\": 1,\n  \"query\": {\"kind\": ");
+    if (query->kind == SIMILAR_QUERY_MOTIVE) {
+        printf("\"motive\", \"notes\": [");
+        for (size_t i = 0; i < query->note_count; i++) {
+            const SimilarNote *note = &query->notes[i];
+            printf("%s{\"pitch\": %d, \"duration\": ", i ? ", " : "", note->pitch);
+            print_json_fraction(note->duration_numerator, note->duration_denominator);
+            printf("}");
+        }
+    } else {
+        printf("\"progression\", \"numerals\": [");
+        for (size_t i = 0; i < query->numeral_count; i++) {
+            printf(i ? ", " : "");
+            print_json_string(query->numerals[i]);
+        }
+    }
+    printf("]},\n  \"minimum\": ");
+    print_json_fraction(min_numerator, min_denominator);
+    printf(",\n  \"pieces_searched\": %zu,\n  \"matches\": [", results->pieces_searched);
+    for (size_t i = 0; i < results->count; i++) {
+        const SimilarMatch *m = &results->matches[i];
+        printf("%s\n    {\"piece\": ", i ? "," : "");
+        print_json_string(m->piece);
+        printf(", \"document\": ");
+        print_json_string(m->document);
+        printf(",\n     \"start\": {\"measure\": %d, \"beat\": %g}, \"end\": {\"measure\": %d, \"beat\": %g},\n     \"score\": ",
+               m->start_measure, m->start_beat, m->end_measure, m->end_beat);
+        print_json_score(m->score.similarity);
+        printf(",\n     \"dimensions\": [");
+        for (size_t d = 0; d < m->score.dimension_score_count; d++) {
+            printf("%s{\"dimension\": \"%s\", \"score\": ", d ? ", " : "",
+                   similarity_dimension_name(m->score.dimension_scores[d].dimension));
+            print_json_score(m->score.dimension_scores[d].score);
+            printf("}");
+        }
+        printf("],\n     \"numeral_matches\": %zu,\n     \"notes\": [", m->numeral_matches);
+        for (size_t k = 0; k < m->note_count; k++) {
+            const SimilarNote *note = &m->notes[k];
+            printf("%s{\"pitch\": %d, \"onset\": ", k ? ", " : "", note->pitch);
+            print_json_fraction(note->onset_numerator, note->onset_denominator);
+            printf(", \"duration\": ");
+            print_json_fraction(note->duration_numerator, note->duration_denominator);
+            printf("}");
+        }
+        printf("]}");
+    }
+    printf("\n  ]\n}\n");
+}
+
+static void print_similar_text(const SimilarQuery *query, const SimilarResults *results) {
+    if (results->count == 0) {
+        printf("no match in %zu pieces\n", results->pieces_searched);
+        return;
+    }
+    for (size_t i = 0; i < results->count; i++) {
+        const SimilarMatch *m = &results->matches[i];
+        printf("%.4f (%lu/%lu) %s m.%d b.%g - m.%d b.%g", (double)m->score.similarity.numerator / (double)m->score.similarity.denominator,
+               m->score.similarity.numerator, m->score.similarity.denominator, m->piece, m->start_measure, m->start_beat,
+               m->end_measure, m->end_beat);
+        for (size_t d = 0; d < m->score.dimension_score_count; d++) {
+            printf(" %s %lu/%lu", similarity_dimension_name(m->score.dimension_scores[d].dimension),
+                   m->score.dimension_scores[d].score.numerator, m->score.dimension_scores[d].score.denominator);
+        }
+        if (query->kind == SIMILAR_QUERY_PROGRESSION) {
+            printf(" numerals %zu/%zu", m->numeral_matches, query->numeral_count);
+        }
+        printf("\n");
+    }
+}
+
+static int run_similar(const char *corpus_output_dir, const char *motive_file, const char *progression, const SimilarOptions *options,
+                       bool json) {
+    SimilarQuery query = {0};
+    SimilarResult read = motive_file ? similar_query_from_file(motive_file, &query)
+                                     : similar_query_from_numerals(progression, &query);
+    if (read == SIMILAR_ERR_QUERY || read == SIMILAR_ERR_ARGUMENT) {
+        fprintf(stderr, "Error: %s\n",
+                motive_file ? "the motive must have at least two notes" : "the progression must be two or more Roman numerals");
+        return 1;
+    }
+    if (read != SIMILAR_OK) {
+        if (read != SIMILAR_ERR_IO) {
+            fprintf(stderr, "Error: cannot read the motive '%s'\n", motive_file);
+        }
+        return 2;
+    }
+    SimilarResults results = {0};
+    SimilarResult found = similar_material_find(corpus_output_dir, &query, options, &results);
+    int exit_code = 0;
+    if (found == SIMILAR_ERR_QUERY) {
+        fprintf(stderr, "Error: the query is not a motive or a progression this search can score\n");
+        exit_code = 1;
+    } else if (found != SIMILAR_OK) {
+        fprintf(stderr, "Error: cannot read the corpus in '%s'\n", corpus_output_dir);
+        exit_code = 2;
+    } else if (json) {
+        print_similar_json(&query, options->minimum_numerator, options->minimum_denominator, &results);
+    } else {
+        print_similar_text(&query, &results);
+    }
+    similar_results_destroy(&results);
+    similar_query_destroy(&query);
+    return exit_code;
+}
+
+/* "n/d" with 0 <= n <= d and d > 0. */
+static bool parse_minimum(const char *text, unsigned long *numerator, unsigned long *denominator) {
+    int used = 0;
+    unsigned long n, d;
+    if (text[0] == '-' || sscanf(text, "%lu/%lu%n", &n, &d, &used) != 2 || text[used] != '\0' || d == 0 || n > d) {
+        return false;
+    }
+    *numerator = n;
+    *denominator = d;
+    return true;
+}
+
+static bool parse_count(const char *text, size_t *out) {
+    char *end;
+    unsigned long value = strtoul(text, &end, 10);
+    if (text[0] < '0' || text[0] > '9' || *end != '\0' || value == 0) {
+        return false;
+    }
+    *out = (size_t)value;
+    return true;
+}
+
 int main(int argc, char *argv[]) {
     const char *path = NULL;
     const char *compare_a = NULL;
@@ -282,6 +424,11 @@ int main(int argc, char *argv[]) {
     int species = 0;
     bool cantus_set = false;
     bool cantus_upper = false;
+    const char *similar_dir = NULL;
+    const char *motive_file = NULL;
+    const char *progression = NULL;
+    bool similar_flags = false; /* --min or --max given */
+    SimilarOptions similar_options = similar_options_default();
     for (int i = 1; i < argc; i++) {
         const char *arg = argv[i];
         if (strcmp(arg, "--json") == 0) {
@@ -294,6 +441,25 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             input_format_set = true;
+        } else if (strcmp(arg, "--similar") == 0 || strcmp(arg, "--motive") == 0 || strcmp(arg, "--progression") == 0) {
+            if (i + 1 >= argc) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            const char **target = strcmp(arg, "--similar") == 0 ? &similar_dir
+                                  : strcmp(arg, "--motive") == 0 ? &motive_file
+                                                                 : &progression;
+            *target = argv[++i];
+        } else if (strcmp(arg, "--min") == 0 || strcmp(arg, "--max") == 0) {
+            bool minimum = strcmp(arg, "--min") == 0;
+            if (i + 1 >= argc ||
+                !(minimum ? parse_minimum(argv[i + 1], &similar_options.minimum_numerator, &similar_options.minimum_denominator)
+                          : parse_count(argv[i + 1], &similar_options.max_results))) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            i++;
+            similar_flags = true;
         } else if (strcmp(arg, "--compare-styles") == 0) {
             if (i + 2 >= argc) {
                 print_usage(argv[0]);
@@ -349,6 +515,15 @@ int main(int argc, char *argv[]) {
         } else {
             path = arg;
         }
+    }
+    if (similar_dir || motive_file || progression || similar_flags) {
+        if (!similar_dir || (motive_file != NULL) == (progression != NULL) || compare_a || style_dir || style_name ||
+            corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume || species != 0 || cantus_set ||
+            input_format_set) {
+            print_usage(argv[0]);
+            return 1;
+        }
+        return run_similar(similar_dir, motive_file, progression, &similar_options, format_json);
     }
     if (compare_a) {
         if (style_dir || style_name || corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume ||

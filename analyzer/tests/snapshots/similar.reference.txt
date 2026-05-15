@@ -1,0 +1,114 @@
+motive: Mozart 545 opening
+5 pieces searched, 10 matches
+1/1 Mozart 545.mid m.1 b.1 - m.2 b.2.5 interval 1/1 contour 1/1 rhythm 1/1, numerals 0, notes 4
+1/1 Mozart 545.mid m.29 b.1 - m.30 b.2.5 interval 1/1 contour 1/1 rhythm 1/1, numerals 0, notes 4
+1/1 Mozart 545.mid m.70 b.1 - m.71 b.2.5 interval 1/1 contour 1/1 rhythm 1/1, numerals 0, notes 4
+1/1 Mozart 545.mid m.115 b.1 - m.116 b.2.5 interval 1/1 contour 1/1 rhythm 1/1, numerals 0, notes 4
+2/3 Clementi 36.mid m.12 b.1 - m.12 b.3.5 interval 2/3 contour 1/1 rhythm 1/3, numerals 0, notes 4
+2/3 Clementi 36.mid m.35 b.1 - m.35 b.3.5 interval 2/3 contour 1/1 rhythm 1/3, numerals 0, notes 4
+2/3 Mozart 545.mid m.26 b.1 - m.27 b.1 interval 2/3 contour 1/1 rhythm 1/3, numerals 0, notes 4
+2/3 Mozart 545.mid m.54 b.1 - m.55 b.1 interval 2/3 contour 1/1 rhythm 1/3, numerals 0, notes 4
+2/3 Mozart 545.mid m.99 b.1 - m.100 b.1 interval 2/3 contour 1/1 rhythm 1/3, numerals 0, notes 4
+2/3 Mozart 545.mid m.144 b.1 - m.145 b.1 interval 2/3 contour 1/1 rhythm 1/3, numerals 0, notes 4
+progression: I IV V I
+5 pieces searched, 100 matches
+8/9 Mozart 545.mid m.310 b.2.5 - m.312 b.2 interval 1/1 rhythm 2/3, numerals 1, notes 4
+7/9 Field 5.mid m.14 b.4 - m.15 b.4 interval 2/3 rhythm 1/1, numerals 0, notes 3
+7/9 Field 5.mid m.29 b.4 - m.30 b.4 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.7 b.1 - m.8 b.1 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.18 b.1 - m.20 b.1 interval 2/3 rhythm 1/1, numerals 2, notes 4
+7/9 Mozart 545.mid m.20 b.1 - m.22 b.1 interval 2/3 rhythm 1/1, numerals 2, notes 4
+7/9 Mozart 545.mid m.25 b.1.5 - m.25 b.3.5 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.35 b.1 - m.36 b.1 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.46 b.1 - m.48 b.1 interval 2/3 rhythm 1/1, numerals 2, notes 4
+7/9 Mozart 545.mid m.48 b.1 - m.50 b.1 interval 2/3 rhythm 1/1, numerals 2, notes 4
+7/9 Mozart 545.mid m.53 b.1.5 - m.53 b.3.5 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.62 b.4 - m.63 b.4 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.66 b.2 - m.67 b.2 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.76 b.1 - m.77 b.1 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.79 b.4 - m.80 b.4 interval 2/3 rhythm 1/1, numerals 0, notes 3
+7/9 Mozart 545.mid m.91 b.1 - m.93 b.1 interval 2/3 rhythm 1/1, numerals 2, notes 4
+7/9 Mozart 545.mid m.93 b.1 - m.95 b.1 interval 2/3 rhythm 1/1, numerals 2, notes 4
+7/9 Mozart 545.mid m.103 b.4 - m.104 b.4 interval 2/3 rhythm 1/1, numerals 0, notes 3
+7/9 Mozart 545.mid m.107 b.4 - m.108 b.4 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.111 b.2 - m.112 b.2 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.121 b.1 - m.122 b.1 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.124 b.4 - m.125 b.4 interval 2/3 rhythm 1/1, numerals 0, notes 3
+7/9 Mozart 545.mid m.136 b.1 - m.138 b.1 interval 2/3 rhythm 1/1, numerals 2, notes 4
+7/9 Mozart 545.mid m.138 b.1 - m.140 b.1 interval 2/3 rhythm 1/1, numerals 2, notes 4
+7/9 Mozart 545.mid m.183 b.3 - m.185 b.1 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.185 b.3 - m.187 b.1 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.199 b.3 - m.201 b.1 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.201 b.3 - m.203 b.1 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.264 b.2 - m.266 b.2 interval 2/3 rhythm 1/1, numerals 0, notes 5
+7/9 Mozart 545.mid m.276 b.2 - m.278 b.2 interval 2/3 rhythm 1/1, numerals 0, notes 5
+7/9 Mozart 545.mid m.284 b.2 - m.286 b.2 interval 2/3 rhythm 1/1, numerals 0, notes 5
+7/9 Mozart 545.mid m.295 b.2 - m.297 b.2 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.312 b.2 - m.314 b.2 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.326 b.1 - m.328 b.1 interval 2/3 rhythm 1/1, numerals 0, notes 4
+7/9 Mozart 545.mid m.329 b.1 - m.331 b.1 interval 2/3 rhythm 1/1, numerals 0, notes 4
+2/3 Bach 114.mid m.4 b.2.5 - m.5 b.3 interval 2/3 rhythm 2/3, numerals 1, notes 7
+2/3 Bach 114.mid m.10 b.2.5 - m.11 b.3 interval 2/3 rhythm 2/3, numerals 1, notes 7
+2/3 Bach 114.mid m.17 b.1.5 - m.17 b.4 interval 2/3 rhythm 2/3, numerals 0, notes 4
+2/3 Bach 114.mid m.23 b.1.5 - m.23 b.4 interval 2/3 rhythm 2/3, numerals 2, notes 4
+2/3 Field 5.mid m.8 b.2 - m.9 b.3 interval 2/3 rhythm 2/3, numerals 1, notes 4
+2/3 Field 5.mid m.42 b.1 - m.42 b.3.33333 interval 1/1 rhythm 0/1, numerals 1, notes 4
+2/3 Field 5.mid m.43 b.1 - m.44 b.1 interval 1/1 rhythm 0/1, numerals 1, notes 2
+2/3 Mozart 545.mid m.292 b.1 - m.294 b.2 interval 2/3 rhythm 2/3, numerals 0, notes 3
+5/9 Bach 114.mid m.2 b.4 - m.3 b.2.5 interval 2/3 rhythm 1/3, numerals 0, notes 4
+5/9 Bach 114.mid m.8 b.4 - m.9 b.2.5 interval 2/3 rhythm 1/3, numerals 0, notes 4
+5/9 Bach 114.mid m.23 b.4 - m.24 b.2 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Clementi 36.mid m.8 b.2 - m.8 b.4 interval 1/3 rhythm 1/1, numerals 2, notes 4
+5/9 Clementi 36.mid m.10 b.3 - m.11 b.1 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Clementi 36.mid m.16 b.3 - m.18 b.3 interval 1/3 rhythm 1/1, numerals 0, notes 5
+5/9 Clementi 36.mid m.28 b.2 - m.30 b.4 interval 2/3 rhythm 1/3, numerals 1, notes 11
+5/9 Clementi 36.mid m.31 b.2 - m.31 b.4 interval 1/3 rhythm 1/1, numerals 2, notes 4
+5/9 Clementi 36.mid m.33 b.3 - m.34 b.1 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Field 1.mid m.7 b.2 - m.8 b.2 interval 1/3 rhythm 1/1, numerals 0, notes 2
+5/9 Field 1.mid m.42 b.2 - m.43 b.2 interval 1/3 rhythm 1/1, numerals 0, notes 3
+5/9 Field 1.mid m.56 b.4 - m.57 b.4 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Field 1.mid m.63 b.2 - m.64 b.2 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Field 5.mid m.18 b.3 - m.19 b.3 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Field 5.mid m.20 b.3 - m.21 b.3 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Field 5.mid m.36 b.3 - m.37 b.3 interval 1/3 rhythm 1/1, numerals 0, notes 2
+5/9 Field 5.mid m.38 b.3 - m.39 b.3 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Field 5.mid m.40 b.3 - m.41 b.3 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Mozart 545.mid m.5 b.4 - m.6 b.4 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Mozart 545.mid m.8 b.1 - m.9 b.1 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Mozart 545.mid m.33 b.4 - m.34 b.4 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Mozart 545.mid m.36 b.1 - m.37 b.1 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Mozart 545.mid m.59 b.1 - m.60 b.1 interval 1/3 rhythm 1/1, numerals 0, notes 3
+5/9 Mozart 545.mid m.64 b.4 - m.65 b.4 interval 1/3 rhythm 1/1, numerals 0, notes 3
+5/9 Mozart 545.mid m.74 b.4 - m.75 b.4 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Mozart 545.mid m.77 b.1 - m.78 b.1 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Mozart 545.mid m.78 b.1 - m.79 b.1 interval 1/3 rhythm 1/1, numerals 2, notes 3
+5/9 Mozart 545.mid m.81 b.1 - m.82 b.1 interval 1/3 rhythm 1/1, numerals 0, notes 3
+5/9 Mozart 545.mid m.109 b.4 - m.110 b.4 interval 1/3 rhythm 1/1, numerals 0, notes 3
+5/9 Mozart 545.mid m.119 b.4 - m.120 b.4 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Mozart 545.mid m.122 b.1 - m.123 b.1 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Mozart 545.mid m.123 b.1 - m.124 b.1 interval 1/3 rhythm 1/1, numerals 2, notes 3
+5/9 Mozart 545.mid m.126 b.1 - m.127 b.1 interval 1/3 rhythm 1/1, numerals 0, notes 3
+5/9 Mozart 545.mid m.153 b.1 - m.154 b.2 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Mozart 545.mid m.154 b.2 - m.155 b.3 interval 1/3 rhythm 1/1, numerals 0, notes 3
+5/9 Mozart 545.mid m.162 b.2 - m.163 b.3 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Mozart 545.mid m.169 b.1 - m.170 b.2 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Mozart 545.mid m.170 b.2 - m.171 b.3 interval 1/3 rhythm 1/1, numerals 0, notes 3
+5/9 Mozart 545.mid m.178 b.2 - m.179 b.3 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Mozart 545.mid m.194 b.2 - m.195 b.3 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Mozart 545.mid m.217 b.3 - m.219 b.1 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Mozart 545.mid m.220 b.3 - m.222 b.1 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Mozart 545.mid m.233 b.1 - m.234 b.2 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Mozart 545.mid m.234 b.2 - m.235 b.3 interval 1/3 rhythm 1/1, numerals 0, notes 3
+5/9 Mozart 545.mid m.242 b.2 - m.243 b.3 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Mozart 545.mid m.243 b.3 - m.245 b.1 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Mozart 545.mid m.247 b.1 - m.248 b.2 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Mozart 545.mid m.253 b.3.5 - m.257 b.2 interval 2/3 rhythm 1/3, numerals 0, notes 4
+5/9 Mozart 545.mid m.258 b.1 - m.260 b.1 interval 1/3 rhythm 1/1, numerals 0, notes 5
+5/9 Mozart 545.mid m.262 b.2 - m.264 b.2 interval 2/3 rhythm 1/3, numerals 2, notes 5
+5/9 Mozart 545.mid m.266 b.2 - m.268 b.2 interval 1/3 rhythm 1/1, numerals 2, notes 5
+5/9 Mozart 545.mid m.270 b.2 - m.273 b.1 interval 2/3 rhythm 1/3, numerals 2, notes 6
+5/9 Mozart 545.mid m.273 b.1 - m.275 b.2 interval 2/3 rhythm 1/3, numerals 0, notes 5
+5/9 Mozart 545.mid m.281 b.1 - m.283 b.1 interval 1/3 rhythm 1/1, numerals 1, notes 4
+5/9 Mozart 545.mid m.286 b.2 - m.288 b.2 interval 1/3 rhythm 1/1, numerals 2, notes 5
+5/9 Mozart 545.mid m.314 b.2 - m.318 b.1 interval 1/3 rhythm 1/1, numerals 0, notes 4
+5/9 Mozart 545.mid m.319 b.1 - m.321 b.1 interval 1/3 rhythm 1/1, numerals 0, notes 5
