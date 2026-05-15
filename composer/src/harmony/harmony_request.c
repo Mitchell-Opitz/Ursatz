@@ -175,6 +175,21 @@ bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanS
     return true;
 }
 
+/* a minus b, which must not be later than a. */
+static bool time_since(PlanTime a, PlanTime b, PlanTime *out) {
+    return plan_time_make(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den, out) == PLAN_OK && out->num >= 0;
+}
+
+/* Whether the time is a whole number of beats of the meter (a beat is 1/beat_unit of a whole note). */
+static bool on_beat(PlanTime time, int beat_unit) {
+    return time.den != 0 && (time.num * (long)beat_unit) % (long)time.den == 0;
+}
+
+/* The whole times `unit` goes into `time`; unit must be positive. */
+static size_t times_in(PlanTime time, PlanTime unit) {
+    return (size_t)((time.num * (long)unit.den) / ((long)time.den * unit.num));
+}
+
 bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out) {
     PhraseMetre metre;
     LaneSpanId meters[2];
@@ -185,42 +200,197 @@ bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out) 
     if (!plan_span_contains(meter_span, span)) {
         return false;
     }
+    memset(&metre, 0, sizeof(metre));
     metre.meter = plan_lane_span_payload(plan, meters[0])->meter;
     if (plan_time_make(metre.meter.beats_per_bar, (unsigned long)metre.meter.beat_unit, &metre.bar_length) !=
-        PLAN_OK) {
-        return false;
-    }
-
-    /* The span starts on a barline of the meter span, and is a whole number of bars. */
-    PlanTime barline = meter_span.start;
-    for (size_t bar = 0; plan_time_compare(barline, span.start) < 0; bar++) {
-        if (bar >= MAX_BARLINES || plan_time_add(barline, metre.bar_length, &barline) != PLAN_OK) {
-            return false;
-        }
-    }
-    if (plan_time_compare(barline, span.start) != 0) {
-        return false;
-    }
-    PlanTime length = {0, 1};
-    metre.bars = 0;
-    while (plan_time_compare(length, span.length) < 0) {
-        if (metre.bars >= MAX_PHRASE_BARS || plan_time_add(length, metre.bar_length, &length) != PLAN_OK) {
-            return false;
-        }
-        metre.bars++;
-    }
-    if (metre.bars == 0 || plan_time_compare(length, span.length) != 0) {
-        return false;
-    }
-
-    if (!harmony_rhythm_cells_per_bar(&metre.meter, &metre.cells_per_bar) ||
+            PLAN_OK ||
+        !harmony_rhythm_cells_per_bar(&metre.meter, &metre.cells_per_bar) ||
         plan_time_make(metre.bar_length.num, metre.bar_length.den * metre.cells_per_bar, &metre.cell_length) !=
             PLAN_OK) {
         return false;
     }
-    metre.cells = metre.bars * metre.cells_per_bar;
+
+    /* The span starts and ends on a beat of the meter span: its start is `offset` after the last barline at or before it. */
+    PlanTime barline = meter_span.start;
+    for (size_t bar = 0;; bar++) {
+        PlanTime next;
+        if (bar >= MAX_BARLINES || plan_time_add(barline, metre.bar_length, &next) != PLAN_OK) {
+            return false;
+        }
+        if (plan_time_compare(next, span.start) > 0) {
+            break;
+        }
+        barline = next;
+    }
+    PlanTime offset;
+    PlanTime end;
+    if (span.length.num <= 0 || !time_since(span.start, barline, &offset) || !on_beat(offset, metre.meter.beat_unit) ||
+        !on_beat(span.length, metre.meter.beat_unit) || plan_time_add(offset, span.length, &end) != PLAN_OK) {
+        return false;
+    }
+    /* The bars the span touches: those it ends in, counting a barline it ends on as the end of the bar before. */
+    PlanTime bars_length = {0, 1};
+    metre.bars = 0;
+    while (plan_time_compare(bars_length, end) < 0) {
+        if (metre.bars >= MAX_PHRASE_BARS || plan_time_add(bars_length, metre.bar_length, &bars_length) != PLAN_OK) {
+            return false;
+        }
+        metre.bars++;
+    }
+
+    /* A span that starts inside a cell has a lead; what is left is whole cells and a tail. */
+    PlanTime into_cell;
+    PlanTime whole_cells;
+    PlanTime remaining = span.length;
+    size_t cells_before = times_in(offset, metre.cell_length);
+    if (plan_time_make(metre.cell_length.num * (long)cells_before, metre.cell_length.den, &whole_cells) != PLAN_OK ||
+        !time_since(offset, whole_cells, &into_cell)) {
+        return false;
+    }
+    metre.lead = (PlanTime){0, 1};
+    if (into_cell.num > 0) {
+        PlanTime to_boundary;
+        if (!time_since(metre.cell_length, into_cell, &to_boundary)) {
+            return false;
+        }
+        metre.lead = plan_time_compare(to_boundary, span.length) < 0 ? to_boundary : span.length;
+        if (!time_since(span.length, metre.lead, &remaining)) {
+            return false;
+        }
+    }
+    size_t whole = times_in(remaining, metre.cell_length);
+    PlanTime whole_length;
+    metre.tail = (PlanTime){0, 1};
+    if (plan_time_make(metre.cell_length.num * (long)whole, metre.cell_length.den, &whole_length) != PLAN_OK ||
+        !time_since(remaining, whole_length, &metre.tail)) {
+        return false;
+    }
+    metre.cells = (metre.lead.num > 0 ? 1 : 0) + whole + (metre.tail.num > 0 ? 1 : 0);
+    if (metre.cells == 0 || metre.cells > MAX_PHRASE_BARS * metre.cells_per_bar + 2) {
+        return false;
+    }
+    metre.start = span.start;
+    metre.offset = offset;
     *out = metre;
     return true;
+}
+
+bool harmony_metre_cell_offset(const PhraseMetre *metre, size_t cell, PlanTime *out) {
+    size_t lead_cells = metre->lead.num > 0 ? 1 : 0;
+    size_t tail_cells = metre->tail.num > 0 ? 1 : 0;
+    if (cell > metre->cells) {
+        return false;
+    }
+    if (cell == 0) {
+        *out = (PlanTime){0, 1};
+        return true;
+    }
+    /* Past the lead, the cells run on from it; the end of a span with a tail is the tail's length on. */
+    size_t whole = cell == metre->cells && tail_cells ? cell - 1 - lead_cells : cell - lead_cells;
+    PlanTime run;
+    PlanTime sum;
+    if (plan_time_make(metre->cell_length.num * (long)whole, metre->cell_length.den, &run) != PLAN_OK ||
+        plan_time_add(metre->lead, run, &sum) != PLAN_OK) {
+        return false;
+    }
+    if (cell == metre->cells && tail_cells) {
+        return plan_time_add(sum, metre->tail, out) == PLAN_OK;
+    }
+    *out = sum;
+    return true;
+}
+
+PlanResult harmony_metre_cells_span(const PhraseMetre *metre, size_t first, size_t cells, PlanSpan *out) {
+    PlanTime from;
+    PlanTime to;
+    if (!harmony_metre_cell_offset(metre, first, &from) || !harmony_metre_cell_offset(metre, first + cells, &to) ||
+        !time_since(to, from, &out->length)) {
+        return PLAN_ERR_BAD_INDEX;
+    }
+    return plan_time_add(metre->start, from, &out->start);
+}
+
+bool harmony_metre_cell_position(const PhraseMetre *metre, size_t cell, size_t *bar, PlanTime *in_bar) {
+    PlanTime offset;
+    PlanTime from_barline;
+    PlanTime whole_bars;
+    if (!harmony_metre_cell_offset(metre, cell, &offset) ||
+        plan_time_add(metre->offset, offset, &from_barline) != PLAN_OK) {
+        return false;
+    }
+    size_t bars = times_in(from_barline, metre->bar_length);
+    if (plan_time_make(metre->bar_length.num * (long)bars, metre->bar_length.den, &whole_bars) != PLAN_OK ||
+        !time_since(from_barline, whole_bars, in_bar)) {
+        return false;
+    }
+    *bar = bars;
+    return true;
+}
+
+bool harmony_metre_cell_on_downbeat(const PhraseMetre *metre, size_t cell) {
+    size_t bar;
+    PlanTime in_bar;
+    return harmony_metre_cell_position(metre, cell, &bar, &in_bar) && in_bar.num == 0;
+}
+
+bool harmony_metre_cell_is_part(const PhraseMetre *metre, size_t cell) {
+    return (metre->lead.num > 0 && cell == 0) || (metre->tail.num > 0 && cell + 1 == metre->cells);
+}
+
+BeatStrength harmony_metre_cell_strength(const PhraseMetre *metre, size_t cell) {
+    if (harmony_metre_cell_on_downbeat(metre, cell)) {
+        return BEAT_STRENGTH_STRONG;
+    }
+    return harmony_metre_cell_is_part(metre, cell) ? BEAT_STRENGTH_WEAK : BEAT_STRENGTH_MEDIUM;
+}
+
+bool harmony_metre_find_cells(const PhraseMetre *metre, PlanSpan span, size_t *first, size_t *count) {
+    PlanTime from;
+    PlanTime to;
+    PlanTime end;
+    if (!time_since(span.start, metre->start, &from) || plan_span_end(span, &end) != PLAN_OK ||
+        !time_since(end, metre->start, &to)) {
+        return false;
+    }
+    bool found_first = false;
+    for (size_t cell = 0; cell <= metre->cells; cell++) {
+        PlanTime at;
+        if (!harmony_metre_cell_offset(metre, cell, &at)) {
+            return false;
+        }
+        int against_from = plan_time_compare(at, from);
+        if (against_from == 0) {
+            *first = cell;
+            found_first = true;
+        }
+        int against_to = plan_time_compare(at, to);
+        if (against_to == 0) {
+            if (!found_first || cell <= *first) {
+                return false;
+            }
+            *count = cell - *first;
+            return true;
+        }
+        if (against_to > 0) {
+            return false;
+        }
+    }
+    return false;
+}
+
+size_t harmony_metre_last_cell(const PhraseMetre *metre) {
+    /* The last downbeat the span holds starts the last bar portion; a span with none in it starts the last chord on the
+       first cell boundary after the lead. */
+    size_t first = metre->lead.num > 0 ? 1 : 0;
+    if (first >= metre->cells) {
+        return metre->cells - 1;
+    }
+    for (size_t cell = metre->cells; cell-- > first;) {
+        if (harmony_metre_cell_on_downbeat(metre, cell)) {
+            return cell;
+        }
+    }
+    return first;
 }
 
 static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolongation, bool around_given,
@@ -243,6 +413,9 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolonga
     request.cells_per_bar = metre.cells_per_bar;
     request.cell_length = metre.cell_length;
     request.cells = metre.cells;
+    request.lead = metre.lead;
+    request.tail = metre.tail;
+    request.metre = metre;
     /* A Given bass over the span means the harmony is to be found from the bass (harmony_octave.h), unless this operator
        works around Given material: it writes chords that stand on the bass. */
     LaneSpanId basses[HARMONY_MAX_CHORDS];
@@ -310,7 +483,7 @@ bool harmony_prolong_read_request_given(const PiecePlan *plan, LaneSpanId target
 }
 
 PlanResult harmony_request_cells_span(const PhraseRequest *request, size_t first_cell, size_t cells, PlanSpan *out) {
-    return harmony_cells_span(request->span.start, request->cell_length, first_cell, cells, out);
+    return harmony_metre_cells_span(&request->metre, first_cell, cells, out);
 }
 
 PlanResult harmony_cells_span(PlanTime start, PlanTime cell_length, size_t first_cell, size_t cells, PlanSpan *out) {
