@@ -76,6 +76,10 @@ Tests:
   `tests/snapshots/style-model.reference.json`, the model file round trip, the distances between the `chorales` and
   `sonatinas` corpora CMake builds in the build tree, and the refusals. `test_cli_style_profile` checks the flags and exit
   codes. `test_style_model_schema` validates the model file against the schema (see below).
+- `test_similar_material`: the similar material search over the `reference` corpus: the opening of Mozart 545 as a
+  motive, the same motive moved up, `I IV V I`, the results against `tests/snapshots/similar.reference.txt`, and the
+  refusals. `test_cli_similar` checks the flags, the output and the exit codes, and validates the JSON against the
+  schema (see below).
 - `test_analysis_document_schema`: validates the documents for the corpus pieces against the
   schema. Optional: needs `python3` with the `jsonschema` module at configure time, and is
   reported as skipped otherwise.
@@ -123,6 +127,14 @@ ursatz-analyzer --compare-styles <a.json> <b.json> [--format text|json]
 style model file; `--compare-styles` gives the exact distance between two such files. See
 [docs/style-profile.md](docs/style-profile.md) and the [model schema](schema/style-model.v1.schema.json).
 
+```sh
+ursatz-analyzer --similar <corpus output dir> (--motive <file> | --progression "<numerals>") [--min <n/d>] [--max <n>] [--format text|json]
+```
+
+`--similar` finds passages of a corpus run's documents that are similar to a motive (the soprano of a MIDI or MusicXML
+file) or a progression (Roman numerals). See [docs/similar-material.md](docs/similar-material.md) and the
+[output schema](schema/similar-material.v1.schema.json).
+
 ## Library
 
 The pipeline builds as the `ursatz_analyzer` static library. The CLI and the tests link it.
@@ -143,6 +155,7 @@ Its public include directory is `include/`, and consumers include headers as
 | `corpus.h` | `corpus_run` analyzes every piece in a folder into documents and a corpus index, resumable. |
 | `style_labels.h` | The labels a style profile counts (numerals, progressions, intervals, durations) and the category names, shared with the Composer. |
 | `style_profile.h` | `StyleProfile` (counts over documents or a corpus), the style model file reader and writer, and `style_profile_compare`. |
+| `similar_material.h` | `similar_material_find` scores the passages of a corpus against a motive or a progression query. |
 
 Ownership: the caller owns the `AnalysisReport` and frees it with `analysis_report_destroy`,
 which also frees every entry's labels. Labels are heap strings with no length limit; "no match"
