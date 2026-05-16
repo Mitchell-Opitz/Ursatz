@@ -156,6 +156,12 @@ typedef struct {
     const unsigned *chord_keys;
     /* Leaves out the root progression rule (R-164), for tests and comparisons. */
     bool plain_shaping;
+    /*
+     * The cells the chords sit on, when the phrase does not start on a barline or has part cells (see PhraseMetre): the
+     * time, the bar and the strength of each chord are read from it, and cells_per_bar and cell_length are not used.
+     * NULL for a phrase of whole bars from a barline, which is every cell of cell_length from cell 0.
+     */
+    const PhraseMetre *metre;
 } HeardPhrase;
 
 HarmonyMode harmony_mode_of(PlanKeyMode mode);
@@ -273,6 +279,9 @@ PlanResult harmony_progression_apply(PiecePlan *plan, FillTarget target, const F
  */
 bool harmony_shape_keeps(const PlanHarmonyShape *shape, const size_t *cells, size_t count, size_t cells_per_bar,
                          bool exempt_last);
+/* The same over the cells of a metre, which may start between barlines and have part cells at its ends. */
+bool harmony_shape_keeps_in(const PlanHarmonyShape *shape, const size_t *cells, size_t count, const PhraseMetre *metre,
+                            bool exempt_last);
 
 /* The span of cells [first_cell, first_cell + cells) of the request. */
 PlanResult harmony_request_cells_span(const PhraseRequest *request, size_t first_cell, size_t cells, PlanSpan *out);
@@ -297,6 +306,9 @@ bool harmony_count_cells(PlanTime cell_length, PlanTime length, size_t *cells);
 
 /* Reads the chord of a harmony span: a diatonic numeral, else an applied one, and its length in cells. */
 bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, PlanTime cell_length, PhraseChord *out);
+/* The same on the cells of a metre: the span must start and end on a cell boundary of it. */
+bool harmony_read_chord_in(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, const PhraseMetre *metre,
+                           PhraseChord *out);
 
 /*
  * Reads the chords of the phrase around a marked chord span (see
@@ -358,6 +370,7 @@ typedef struct {
     PlanCadenceType cadence;
     size_t cells_per_bar;
     PlanTime cell_length;
+    PhraseMetre metre; /* the cells the phrase sits on */
     PhraseChord chords[HARMONY_MAX_CHORDS]; /* the whole phrase after the edit */
     size_t count;
 } EmbellishCandidate;
@@ -403,8 +416,11 @@ bool harmony_phrase_propose(const PhraseRequest *request, FillRng *rng, FillCand
 
 void harmony_progression_destroy(void *payload);
 
-/* The fewest cells a phrase can have and still end in the cadence (the phrase-model operator's minimum). */
-size_t harmony_phrase_min_cells(PlanCadenceType cadence, size_t cells_per_bar);
+/*
+ * The cells a phrase needs before its last bar, plus that bar, to end in the cadence: the room a phrase of whole bars
+ * (or what is left of a span after a skeleton) must have.
+ */
+size_t harmony_phrase_room_cells(PlanCadenceType cadence, size_t cells_per_bar);
 
 /* The verdict of the harmony-from-bass operator's checker on a candidate payload. */
 bool harmony_octave_check(const void *payload, FillCheck *out);

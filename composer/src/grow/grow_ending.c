@@ -59,7 +59,7 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
 
     /* The continuation is a phrase model if it has room for one, else the cadential progression alone. */
     size_t cells = request->bars / 2 * request->cells_per_bar;
-    spec->ending_shape = cells >= harmony_phrase_min_cells(request->cadence, request->cells_per_bar)
+    spec->ending_shape = cells >= harmony_phrase_room_cells(request->cadence, request->cells_per_bar)
                              ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
                              : PLAN_HARMONY_SHAPE_CADENTIAL;
     /* Its chords change at least twice as fast as the presentation's longest could, and still deal the cells out. */
@@ -88,7 +88,7 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
         return false;
     }
     size_t cells = request->bars / 2 * request->cells_per_bar;
-    spec->ending_shape = cells >= harmony_phrase_min_cells(request->cadence, request->cells_per_bar)
+    spec->ending_shape = cells >= harmony_phrase_room_cells(request->cadence, request->cells_per_bar)
                              ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
                              : PLAN_HARMONY_SHAPE_CADENTIAL;
     spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);

@@ -13,7 +13,7 @@
 /* The shape of the chords of the first half: a phrase model if it has room for its cadence, else the cadential one. */
 static PlanHarmonyShapeKind shape_for(const GrowThemeRequest *request, PlanCadenceType cadence) {
     size_t cells = request->bars / 2 * request->cells_per_bar;
-    return cells >= harmony_phrase_min_cells(cadence, request->cells_per_bar) ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
+    return cells >= harmony_phrase_room_cells(cadence, request->cells_per_bar) ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
                                                                                : PLAN_HARMONY_SHAPE_CADENTIAL;
 }
 

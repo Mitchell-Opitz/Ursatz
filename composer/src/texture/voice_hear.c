@@ -229,7 +229,7 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
         StandardCounterpointVoiceGrid counterpoint = {count, VOICES, grid->row_id_ptrs, grid->counterpoint_cells};
         HarmonyVoiceGrid harmony_grid = {count, VOICES, grid->harmony_cells};
         HeardPhrase phrase = {chords, count, key.mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, false, NULL,
-                              false,  false, NULL, NULL, false};
+                              false,  false, NULL, NULL, false, &metre};
         result = count_violations(&counterpoint, &harmony_grid, &phrase, out);
         out->rows = count;
     }

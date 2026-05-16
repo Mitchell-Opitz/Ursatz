@@ -461,6 +461,10 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolonga
     request.around_given = around_given;
     if (around_given) {
         harmony_given_read(plan, &request);
+        /* Given material is read and heard on whole cells: not around a span with part cells. */
+        if (request.has_given && (request.lead.num > 0 || request.tail.num > 0)) {
+            return false;
+        }
     }
     *out = request;
     return true;

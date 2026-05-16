@@ -163,7 +163,7 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
 
     /* The cadence is heard only when the skeleton ends the span; otherwise the rest of the span will bring it. */
     HeardPhrase phrase = {all, total, context->key.mode, context->has_cadence ? context->cadence : PLAN_CADENCE_PAC,
-                          context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt, false, false, NULL, NULL, false};
+                          context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt, false, false, NULL, NULL, false, NULL};
     bool ok = harmony_judge(&phrase, &harmony);
     free(all);
     if (!ok) {
@@ -174,7 +174,7 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
         return true;
     }
     if (skeleton->remainder_cells > 0 && context->has_cadence &&
-        skeleton->remainder_cells < harmony_phrase_min_cells(context->cadence, context->metre.cells_per_bar)) {
+        skeleton->remainder_cells < harmony_phrase_room_cells(context->cadence, context->metre.cells_per_bar)) {
         verdict->hard = "no room left for the cadence";
         return true;
     }

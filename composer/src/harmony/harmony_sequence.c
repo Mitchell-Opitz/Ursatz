@@ -146,7 +146,7 @@ static bool offer(const SkeletonContext *read, const HarmonySequenceParams *para
             skeleton->chords[count - 1].cells += cpb - end;
             total += cpb - end;
         }
-        size_t room = read->has_cadence ? harmony_phrase_min_cells(read->cadence, cpb) : 0;
+        size_t room = read->has_cadence ? harmony_phrase_room_cells(read->cadence, cpb) : 0;
         if (total + room <= read->metre.cells) {
             skeleton->count = count;
             skeleton->remainder_cells = read->metre.cells - total;
