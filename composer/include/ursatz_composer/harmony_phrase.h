@@ -18,8 +18,9 @@
  * the cadence the span asks for. Chords carry a Roman numeral and a function.
  *
  * A target is a Constrained harmony lane span that:
- *   - lies inside one meter lane span, starts on a barline and is a whole
- *     number of bars long;
+ *   - lies inside one meter lane span and starts and ends on a beat of it (a
+ *     span of whole bars from a barline, or any span between beats: see
+ *     harmony_phrase_min_cells);
  *   - has a key lane span over it, or a key constraint on the span or its owner
  *     (only the mode is read);
  *   - carries a cadence constraint, on the span or on its owner.

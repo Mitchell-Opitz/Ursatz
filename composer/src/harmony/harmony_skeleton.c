@@ -20,6 +20,8 @@ bool harmony_skeleton_read(const PiecePlan *plan, LaneSpanId target, SkeletonCon
     context.owner = plan_lane_span_owner(plan, target);
     context.span = plan_lane_span_span(plan, target);
     PlanSpan owner_span = plan_node_span(plan, context.owner);
+    /* A span with a lead or a tail is not a whole number of cells from a cell: harmony_read_cells refuses it, so the schema
+       and sequence operators have no candidates for it, and it is left to the operators that read part cells. */
     if (!harmony_find_key(plan, target, context.owner, context.span, &context.key) ||
         !harmony_read_cells(plan, context.span, &context.metre)) {
         return false;

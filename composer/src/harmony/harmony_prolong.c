@@ -131,14 +131,14 @@ static bool deal_figure(const PhraseRequest *request, const Figure *figure, Fill
         }
         cells[open[fill_rng_below(rng, open_count)]]++;
     }
-    if (!harmony_shape_keeps(&request->shape, cells, figure->count, request->cells_per_bar, false)) {
+    if (!harmony_shape_keeps_in(&request->shape, cells, figure->count, &request->metre, false)) {
         return false;
     }
-    /* A span that ends on a root-position V keeps that V off the bar's first cell. */
+    /* A span that ends on a root-position V keeps that V off a downbeat. */
     const FigureChord *last = &figure->chords[figure->count - 1];
     if (figure->ends == ANCHOR_DOMINANT && last->inversion == 0) {
         size_t start = request->cells - cells[figure->count - 1];
-        if (start % request->cells_per_bar == 0) {
+        if (harmony_metre_cell_on_downbeat(&request->metre, start)) {
             return false;
         }
     }
@@ -175,6 +175,10 @@ static bool same_shape(const PlanHarmonyShape *a, const PlanHarmonyShape *b) {
 static bool previous_chords(const PiecePlan *plan, const PhraseRequest *request, PhraseChord *chords, size_t *count) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     PlanTime before;
+    /* The cells of a span with part cells are not those of the span before it. */
+    if (request->lead.num > 0 || request->tail.num > 0) {
+        return false;
+    }
     if (plan_time_make(request->span.start.num * (long)request->span.length.den -
                            request->span.length.num * (long)request->span.start.den,
                        request->span.start.den * request->span.length.den, &before) != PLAN_OK ||
