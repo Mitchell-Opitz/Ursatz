@@ -104,10 +104,11 @@ typedef struct {
     double evidence_weight;                    /* default 0.3: the weight of functional chord evidence in a window's score */
     const MusicalTime *const *phrase_boundaries; /* optional: phrase boundary times, whole notes, any order; borrowed */
     size_t phrase_boundary_count;              /* default 0 */
+    double hold_tolerance;                     /* default 0.05: the weight share outside the old key that allows a switch */
 } CommonPracticeKeyRegionsConfig;
 
 /* window_measures 4, Krumhansl-Kessler profiles, change_penalty 0.2, tonicization_max_measures 4, prefix
-   "key-region", pivot_search_measures 2, evidence_weight 0.3, no phrase boundaries. */
+   "key-region", pivot_search_measures 2, evidence_weight 0.3, no phrase boundaries, hold_tolerance 0.05. */
 CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void);
 
 typedef enum {
@@ -199,6 +200,22 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  */
 
 /*
+ * HOME KEY HELD (R-017). Profile correlation reads a passage built on IV, V or ii of the current key as the
+ * dominant, the subdominant or the relative of it. After the path is chosen, a region (not the first of the piece
+ * or of a key signature span) is therefore folded back into the key before it when ALL of these hold:
+ *
+ *   - its key is closely related to that key: the dominant or subdominant in the same mode, or the relative
+ *     major or minor;
+ *   - it has chords (segments with `chord.present`), every one rooted on the old key's IV, V or ii and made only
+ *     of the old key's tones (its natural collection, plus the raised seventh in minor);
+ *   - no pitch class outside the old key's collection carries more than hold_tolerance of the region's weight.
+ *
+ * A switch therefore needs a non-diatonic pitch (the new key's leading tone, or a raised sixth or seventh) or a
+ * chord outside IV, V and ii; a dominant of the new key always has one. A region with no chord data is never
+ * folded back, so a caller that passes no chords gets the path as it was.
+ */
+
+/*
  * PHRASE BOUNDARIES. A window labels the measure at its centre, so the path's edges land up to two measures from
  * where the music turns. When config.phrase_boundaries is given (times in whole notes, each snapped to the nearest
  * barline), every edge the path drew is moved to the nearest boundary measure within window_measures of it, ties to
@@ -282,7 +299,7 @@ typedef struct {
 /*
  * Estimates the regions. events may be NULL with event_count 0 (no signature information: boundaries come only
  * from the path). BAD_EVENT for a missing or negative position, sharps_flats outside -7..7, or events out of
- * time order. BAD_CONFIG additionally for a negative or non-finite change_penalty, a zero
+ * time order. BAD_CONFIG additionally for a negative or non-finite change_penalty or hold_tolerance, a zero
  * tonicization_max_measures, an empty prefix, or a phrase boundary count with no list. BAD_EVENT also covers a
  * missing or negative phrase boundary time. config may be NULL for the defaults. On OK, *out owns its
  * regions and changes (common_practice_key_regions_destroy); otherwise *out is untouched.

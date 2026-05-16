@@ -27,6 +27,7 @@ CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void) 
     config.evidence_weight = 0.3;
     config.phrase_boundaries = NULL;
     config.phrase_boundary_count = 0;
+    config.hold_tolerance = 0.05;
     return config;
 }
 
@@ -657,6 +658,76 @@ static unsigned natural_collection(int key_index) {
     return mask;
 }
 
+/* True when the key `to` is closely related to `from`: the dominant or subdominant in the same mode, or the
+   relative major or minor. */
+static bool closely_related(int from, int to) {
+    int from_tonic = common_practice_key_index_tonic(from);
+    int to_tonic = common_practice_key_index_tonic(to);
+    CommonPracticeKeyMode from_mode = common_practice_key_index_mode(from);
+    CommonPracticeKeyMode to_mode = common_practice_key_index_mode(to);
+    int step = ((to_tonic - from_tonic) % 12 + 12) % 12;
+    if (from_mode == to_mode) {
+        return step == 5 || step == 7;
+    }
+    return from_mode == COMMON_PRACTICE_KEY_MAJOR ? step == 9 : step == 3;
+}
+
+/* The tones a key's diatonic chords are made of: its natural collection, plus the raised seventh in minor. */
+static unsigned held_collection(int key_index) {
+    unsigned mask = natural_collection(key_index);
+    if (common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR) {
+        mask |= PITCH_CLASS_BIT(common_practice_key_index_tonic(key_index) + 11);
+    }
+    return mask;
+}
+
+/* Folds a region back into the key before it when it is a passage of IV, V and ii of that key (see key_regions.h,
+   HOME KEY HELD). */
+static void hold_home_keys(const CommonPracticeKeySegment *segments, size_t segment_count,
+                           const MeasureWeights *measures, const bool *fixed, double tolerance, int *measure_key) {
+    size_t from = 1;
+    while (from < measures->measure_count) {
+        if (measure_key[from] == measure_key[from - 1]) {
+            from++;
+            continue;
+        }
+        size_t to = from + 1;
+        while (to < measures->measure_count && measure_key[to] == measure_key[from]) {
+            to++;
+        }
+        int old_key = measure_key[from - 1];
+        int tonic = common_practice_key_index_tonic(old_key);
+        unsigned collection = held_collection(old_key);
+        bool hold = !fixed[from] && closely_related(old_key, measure_key[from]);
+        size_t chords = 0;
+        for (size_t i = 0; i < segment_count && hold; i++) {
+            size_t slot = (size_t)(measures->segment_measure[i] - measures->first_measure);
+            if (slot < from || slot >= to || !segments[i].chord.present) {
+                continue;
+            }
+            int root = segments[i].chord.root_pitch_class;
+            int degree = ((root - tonic) % 12 + 12) % 12;
+            hold = (degree == 2 || degree == 5 || degree == 7) && (segments[i].chord.pitch_classes & ~collection) == 0;
+            chords++;
+        }
+        double total = 0.0;
+        double outside = 0.0;
+        for (size_t m = from; m < to && hold; m++) {
+            for (int pc = 0; pc < 12; pc++) {
+                total += measures->weights[m][pc];
+                outside += ((collection >> pc) & 1u) ? 0.0 : measures->weights[m][pc];
+            }
+        }
+        hold = hold && chords > 0 && outside <= tolerance * total;
+        if (hold) {
+            for (size_t m = from; m < to; m++) {
+                measure_key[m] = old_key;
+            }
+        }
+        from = to;
+    }
+}
+
 /* Moves each edge of the measure keys (a measure whose key differs from the one before it) to the nearest boundary
    slot within `reach` measures, never onto or past a neighbouring edge, and never an edge marked fixed. */
 static CommonPracticeKeyRegionsStatus snap_edges(int *measure_key, const bool *fixed, size_t measure_count,
@@ -784,7 +855,8 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
     if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
         return status;
     }
-    if (!isfinite(effective.change_penalty) || effective.change_penalty < 0.0 ||
+    if (!isfinite(effective.change_penalty) || effective.change_penalty < 0.0 || !isfinite(effective.hold_tolerance) ||
+        effective.hold_tolerance < 0.0 ||
         effective.tonicization_max_measures == 0 || effective.context_id_prefix == NULL ||
         effective.context_id_prefix[0] == '\0' || strlen(effective.context_id_prefix) > 100 ||
         (effective.phrase_boundary_count > 0 && effective.phrase_boundaries == NULL)) {
@@ -841,10 +913,22 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         free(path);
         common_practice_key_windows_destroy(&windows);
     }
+    bool *fixed = (bool *)calloc(measures.measure_count, sizeof(bool));
+    if (fixed == NULL && status == COMMON_PRACTICE_KEY_REGIONS_OK) {
+        status = COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+    }
+    if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
+        for (size_t m = 0; m < measures.measure_count; m++) {
+            fixed[m] = forced[m];
+        }
+        for (size_t sp = 1; sp < plan.count; sp++) {
+            fixed[plan.start[sp]] = true;
+        }
+        hold_home_keys(segments, segment_count, &measures, fixed, effective.hold_tolerance, measure_key);
+    }
     if (status == COMMON_PRACTICE_KEY_REGIONS_OK && effective.phrase_boundary_count > 0) {
         size_t *slots = (size_t *)calloc(effective.phrase_boundary_count, sizeof(size_t));
-        bool *fixed = (bool *)calloc(measures.measure_count, sizeof(bool));
-        if (slots == NULL || fixed == NULL) {
+        if (slots == NULL) {
             status = COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
         }
         size_t slot_count = 0;
@@ -856,19 +940,13 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
                 slots[slot_count++] = (size_t)slot;
             }
         }
-        for (size_t m = 0; m < measures.measure_count && status == COMMON_PRACTICE_KEY_REGIONS_OK; m++) {
-            fixed[m] = forced[m];
-        }
-        for (size_t sp = 1; sp < plan.count && status == COMMON_PRACTICE_KEY_REGIONS_OK; sp++) {
-            fixed[plan.start[sp]] = true;
-        }
         if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
             status = snap_edges(measure_key, fixed, measures.measure_count, slots, slot_count,
                                 effective.window_measures);
         }
         free(slots);
-        free(fixed);
     }
+    free(fixed);
     CommonPracticeKeyRegions result = {NULL, 0, NULL, 0};
     if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
         size_t region_count = 1;
