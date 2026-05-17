@@ -120,6 +120,14 @@ bool harmony_skeleton_bass(SkeletonCandidate *skeleton, const HarmonyBassParams 
     bass.metre.cell_length = context->metre.cell_length;
     bass.metre.cells = cells;
     bass.metre.bars = cells / context->metre.cells_per_bar;
+    /* A skeleton is written on whole cells, from a cell boundary of the bar. */
+    bass.metre.start = context->span.start;
+    bass.metre.lead = (PlanTime){0, 1};
+    bass.metre.tail = (PlanTime){0, 1};
+    if (plan_time_make(context->metre.cell_length.num * (long)(context->metre.first_cell % context->metre.cells_per_bar),
+                       context->metre.cell_length.den, &bass.metre.offset) != PLAN_OK) {
+        return false;
+    }
     return harmony_bass_build(&bass, params, rng, &skeleton->bass);
 }
 

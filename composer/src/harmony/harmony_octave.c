@@ -35,13 +35,11 @@ typedef struct {
     PhraseChord chords[HARMONY_MAX_CHORDS];
 } OctaveCandidate;
 
-/* A length in whole cells; zero is allowed. */
-static bool cells_of(PlanTime cell_length, PlanTime length, size_t *cells) {
-    if (length.num == 0) {
-        *cells = 0;
-        return true;
-    }
-    return length.num > 0 && harmony_count_cells(cell_length, length, cells);
+/* The cells of the metre a note covers exactly, from its start to its end; none is not allowed. */
+static bool cells_of(const PhraseMetre *metre, PlanTime start, PlanTime length, size_t *cells) {
+    size_t first;
+    PlanSpan note = {start, length};
+    return length.num > 0 && harmony_metre_find_cells(metre, note, &first, cells);
 }
 
 /* The scale degree (1 to 7) of a pitch class in the key, 0 when it is not in the scale. */
@@ -93,8 +91,10 @@ static bool octave_context_read(const PiecePlan *plan, LaneSpanId target, Octave
         for (size_t n = 0; n < notes->note_count; n++) {
             const PlanNote *note = &notes->notes[n];
             size_t cells;
-            if (plan_time_compare(note->offset, at) != 0 || !cells_of(context.metre.cell_length, note->duration, &cells) ||
-                cells == 0 || plan_time_add(at, note->duration, &at) != PLAN_OK) {
+            PlanTime note_start;
+            if (plan_time_compare(note->offset, at) != 0 || plan_time_add(span.start, at, &note_start) != PLAN_OK ||
+                !cells_of(&context.metre, note_start, note->duration, &cells) || cells == 0 ||
+                plan_time_add(at, note->duration, &at) != PLAN_OK) {
                 return false;
             }
             int pc = ((note->midi_pitch % 12) + 12) % 12;
@@ -290,7 +290,7 @@ static PlanResult octave_apply(PiecePlan *plan, FillTarget target, const FillCan
     for (size_t i = 0; result == PLAN_OK && i < read.count; i++) {
         PlanSpan span;
         PlanLanePayload payload;
-        result = harmony_cells_span(read.span.start, read.metre.cell_length, cell, read.runs[i].cells, &span);
+        result = harmony_metre_cells_span(&read.metre, cell, read.runs[i].cells, &span);
         if (result != PLAN_OK) {
             break;
         }
