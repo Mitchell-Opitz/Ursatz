@@ -24,11 +24,22 @@ CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void) 
     config.tonicization_max_measures = 4;
     config.context_id_prefix = "key-region";
     config.pivot_search_measures = 2;
-    config.evidence_weight = 0.3;
+    config.evidence_weight = 0.8;
     config.phrase_boundaries = NULL;
     config.phrase_boundary_count = 0;
+    config.snap_reach_measures = 1;
     config.hold_tolerance = 0.05;
     return config;
+}
+
+CommonPracticeKeyChord common_practice_key_chord_of(const CommonPracticeWeightedResult *result) {
+    CommonPracticeKeyChord chord = {false, 0, 0};
+    if (result != NULL && result->matched) {
+        chord.pitch_classes = common_practice_ranked_chord_mask(&result->best, 0);
+        chord.root_pitch_class = result->best.root_pitch_class;
+        chord.present = chord.pitch_classes != 0;
+    }
+    return chord;
 }
 
 int common_practice_key_index_tonic(int key_index) {
@@ -942,7 +953,7 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         }
         if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
             status = snap_edges(measure_key, fixed, measures.measure_count, slots, slot_count,
-                                effective.window_measures);
+                                effective.snap_reach_measures);
         }
         free(slots);
     }

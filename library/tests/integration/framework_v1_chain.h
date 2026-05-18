@@ -246,6 +246,8 @@ typedef struct {
     Annotation shim; /* only the beat length is read from it (make_inputs) */
 
     CommonPracticeKeySegment *key_segments;
+    MusicalTime **boundaries; /* pass 2: the phrase ends of pass 1, owned copies */
+    size_t boundary_count;
     MidiKeySignatureEvents scanned;
     CommonPracticeKeySignatureEvent *events;
     CommonPracticeKeyRegions regions;
@@ -279,55 +281,14 @@ static size_t fv1_region_at(const CommonPracticeKeyRegions *regions, double star
     return found;
 }
 
-static void fv1_chain_run(Chain *c, const FormPiece *fp) {
-    memset(c, 0, sizeof(*c));
-    c->fp = fp;
-    fv1_load_expected(fp->prefix, &c->x);
+/* The stages from the key regions to the L3.6 form, over the chain's setup. A pass can be run again after fv1_pass_destroy. */
+static void fv1_chain_pass(Chain *c, const MusicalTime *const *boundaries, size_t boundary_count) {
     const V1Expected *x = &c->x;
-    c->own = fp->piece.score_three_four ? three_four_map() : NULL;
-    c->p = pipeline_run(URSATZ_CORPUS_DIR, fp->piece.midi, c->own);
-    c->map = c->own != NULL ? c->own : c->p.meter.meter_map;
-    c->shim.beats = x->beats;
-    c->shim.beat_num = x->beat_num;
-    c->shim.beat_den = x->beat_den;
-    c->shim.beat_length = (double)x->beat_num / (double)x->beat_den;
-
-    /* the segments of the keys scope */
-    TimeSpan *last_measure = NULL;
-    assert(meter_map_measure_span(c->map, x->keys_last, &last_measure) == METER_MAP_OK);
-    double scope_end = fv1_time_double(time_span_end(last_measure));
-    time_span_destroy(last_measure);
-    while (c->count < c->p.segment_count && c->p.starts[c->count] < scope_end - 1e-12) {
-        c->count++;
-    }
-    assert(c->count > 0);
     size_t count = c->count;
-
-    /* weights, and the key regions with the file's key signature events */
-    CommonPracticeWeightedConfig weighting = common_practice_weighted_config_default();
-    c->key_segments = (CommonPracticeKeySegment *)calloc(count, sizeof(CommonPracticeKeySegment));
-    assert(c->key_segments != NULL);
-    for (size_t s = 0; s < count; s++) {
-        const TimeSpan *window = sonority_time_window(c->p.sonorities.items[s].sonority);
-        c->key_segments[s].start = time_span_start(window);
-        c->key_segments[s].end = time_span_end(window);
-        c->key_segments[s].source = &c->p.segments[s];
-        assert(common_practice_weight_segment(c->p.segments[s].members, c->p.segments[s].member_count, &weighting,
-                                              &c->key_segments[s].weights) == COMMON_PRACTICE_WEIGHTED_OK);
-    }
-    char path[1024];
-    snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, fp->piece.midi);
-    size_t size = 0;
-    unsigned char *data = pipeline_read_file(path, &size);
-    assert(midi_key_signature_scan_all(data, size, &c->scanned) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
-    free(data);
-    c->events = (CommonPracticeKeySignatureEvent *)calloc(c->scanned.count + 1, sizeof(CommonPracticeKeySignatureEvent));
-    assert(c->events != NULL);
-    for (size_t i = 0; i < c->scanned.count; i++) {
-        c->events[i].position = c->scanned.events[i].position;
-        c->events[i].sharps_flats = c->scanned.events[i].sharps_flats;
-    }
-    assert(key_regions_estimate(c->key_segments, count, c->map, c->events, c->scanned.count, NULL, &c->regions) ==
+    CommonPracticeKeyRegionsConfig key_config = common_practice_key_regions_config_default();
+    key_config.phrase_boundaries = boundaries;
+    key_config.phrase_boundary_count = boundary_count;
+    assert(key_regions_estimate(c->key_segments, count, c->map, c->events, c->scanned.count, &key_config, &c->regions) ==
            COMMON_PRACTICE_KEY_REGIONS_OK);
 
     /* chords in each region's own key and mode */
@@ -418,7 +379,7 @@ static void fv1_chain_run(Chain *c, const FormPiece *fp) {
     form_analyze(&c->build, &c->form);
 }
 
-static void fv1_chain_destroy(Chain *c) {
+static void fv1_pass_destroy(Chain *c) {
     form_analysis_destroy(&c->form);
     form_build_destroy(&c->build);
     harmony_cadences_destroy(&c->cadences);
@@ -435,6 +396,97 @@ static void fv1_chain_destroy(Chain *c) {
     }
     free(c->chords);
     common_practice_key_regions_destroy(&c->regions);
+    memset(&c->form, 0, sizeof(c->form));
+    memset(&c->build, 0, sizeof(c->build));
+    memset(&c->cadences, 0, sizeof(c->cadences));
+    memset(&c->in, 0, sizeof(c->in));
+    memset(&c->lines, 0, sizeof(c->lines));
+    c->harmony = NULL;
+    c->romans = NULL;
+    c->tonal_inputs = NULL;
+    c->tonal_count = 0;
+    c->segment_inputs = NULL;
+    c->segment_pitches = NULL;
+    c->region_inputs = NULL;
+    c->chords = NULL;
+}
+
+
+static void fv1_chain_run(Chain *c, const FormPiece *fp) {
+    memset(c, 0, sizeof(*c));
+    c->fp = fp;
+    fv1_load_expected(fp->prefix, &c->x);
+    const V1Expected *x = &c->x;
+    c->own = fp->piece.score_three_four ? three_four_map() : NULL;
+    c->p = pipeline_run(URSATZ_CORPUS_DIR, fp->piece.midi, c->own);
+    c->map = c->own != NULL ? c->own : c->p.meter.meter_map;
+    c->shim.beats = x->beats;
+    c->shim.beat_num = x->beat_num;
+    c->shim.beat_den = x->beat_den;
+    c->shim.beat_length = (double)x->beat_num / (double)x->beat_den;
+
+    /* the segments of the keys scope */
+    TimeSpan *last_measure = NULL;
+    assert(meter_map_measure_span(c->map, x->keys_last, &last_measure) == METER_MAP_OK);
+    double scope_end = fv1_time_double(time_span_end(last_measure));
+    time_span_destroy(last_measure);
+    while (c->count < c->p.segment_count && c->p.starts[c->count] < scope_end - 1e-12) {
+        c->count++;
+    }
+    assert(c->count > 0);
+    size_t count = c->count;
+
+    /* weights, and the key regions with the file's key signature events */
+    CommonPracticeWeightedConfig weighting = common_practice_weighted_config_default();
+    c->key_segments = (CommonPracticeKeySegment *)calloc(count, sizeof(CommonPracticeKeySegment));
+    assert(c->key_segments != NULL);
+    for (size_t s = 0; s < count; s++) {
+        const TimeSpan *window = sonority_time_window(c->p.sonorities.items[s].sonority);
+        c->key_segments[s].start = time_span_start(window);
+        c->key_segments[s].end = time_span_end(window);
+        c->key_segments[s].source = &c->p.segments[s];
+        assert(common_practice_weight_segment(c->p.segments[s].members, c->p.segments[s].member_count, &weighting,
+                                              &c->key_segments[s].weights) == COMMON_PRACTICE_WEIGHTED_OK);
+    }
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, fp->piece.midi);
+    size_t size = 0;
+    unsigned char *data = pipeline_read_file(path, &size);
+    assert(midi_key_signature_scan_all(data, size, &c->scanned) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
+    free(data);
+    c->events = (CommonPracticeKeySignatureEvent *)calloc(c->scanned.count + 1, sizeof(CommonPracticeKeySignatureEvent));
+    assert(c->events != NULL);
+    for (size_t i = 0; i < c->scanned.count; i++) {
+        c->events[i].position = c->scanned.events[i].position;
+        c->events[i].sharps_flats = c->scanned.events[i].sharps_flats;
+    }
+    /* Pass 1: the key regions from the pitch classes alone. Its chords, cadences and phrase ends then inform pass 2 (the keys depend on
+       the phrases, which depend on the cadences, which depend on the keys): pass 2 runs once, with the chords as evidence and the phrase
+       ends as boundaries, and everything after the key regions re-runs on its answer. No further iteration. */
+    fv1_chain_pass(c, NULL, 0);
+    for (size_t s = 0; s < count; s++) {
+        c->key_segments[s].chord = common_practice_key_chord_of(&c->chords[s]);
+    }
+    if (c->form.phrases.count > 1) {
+        c->boundaries = (MusicalTime **)calloc(c->form.phrases.count, sizeof(MusicalTime *));
+        assert(c->boundaries != NULL);
+        for (size_t k = 0; k + 1 < c->form.phrases.count; k++) {
+            const MusicalTime *end = time_span_end(c->form.phrases.items[k].span);
+            assert(musical_time_create(musical_time_numerator(end), musical_time_denominator(end),
+                                       &c->boundaries[c->boundary_count]) == MUSICAL_TIME_OK);
+            c->boundary_count++;
+        }
+    }
+    fv1_pass_destroy(c);
+    fv1_chain_pass(c, (const MusicalTime *const *)c->boundaries, c->boundary_count);
+}
+
+static void fv1_chain_destroy(Chain *c) {
+    fv1_pass_destroy(c);
+    for (size_t i = 0; i < c->boundary_count; i++) {
+        musical_time_destroy(c->boundaries[i]);
+    }
+    free(c->boundaries);
     free(c->events);
     midi_key_signature_events_destroy(&c->scanned);
     free(c->key_segments);

@@ -94,6 +94,9 @@ typedef struct {
     CommonPracticeKeyChord chord;              /* optional: the segment's chord; .present false when not given */
 } CommonPracticeKeySegment;
 
+/* The chord of a weighted identification result as evidence: present only when the result matched a chord. */
+CommonPracticeKeyChord common_practice_key_chord_of(const CommonPracticeWeightedResult *result);
+
 typedef struct {
     size_t window_measures;                    /* default 4 */
     CommonPracticeKeyProfiles profiles;        /* default Krumhansl-Kessler */
@@ -101,14 +104,15 @@ typedef struct {
     size_t tonicization_max_measures;          /* default 4 */
     const char *context_id_prefix;             /* default "key-region": region n is "<prefix>-<n>" (from 1) */
     size_t pivot_search_measures;              /* default 2: how far back a pivot chord is looked for */
-    double evidence_weight;                    /* default 0.3: the weight of functional chord evidence in a window's score */
+    double evidence_weight;                    /* default 0.8: the weight of functional chord evidence in a window's score */
     const MusicalTime *const *phrase_boundaries; /* optional: phrase boundary times, whole notes, any order; borrowed */
     size_t phrase_boundary_count;              /* default 0 */
+    size_t snap_reach_measures;                /* default 1: how far an edge may move to a phrase boundary */
     double hold_tolerance;                     /* default 0.05: the weight share outside the old key that allows a switch */
 } CommonPracticeKeyRegionsConfig;
 
 /* window_measures 4, Krumhansl-Kessler profiles, change_penalty 0.2, tonicization_max_measures 4, prefix
-   "key-region", pivot_search_measures 2, evidence_weight 0.3, no phrase boundaries, hold_tolerance 0.05. */
+   "key-region", pivot_search_measures 2, evidence_weight 0.8, no phrase boundaries, snap_reach_measures 1, hold_tolerance 0.05. */
 CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void);
 
 typedef enum {
@@ -218,8 +222,8 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
 /*
  * PHRASE BOUNDARIES. A window labels the measure at its centre, so the path's edges land up to two measures from
  * where the music turns. When config.phrase_boundaries is given (times in whole notes, each snapped to the nearest
- * barline), every edge the path drew is moved to the nearest boundary measure within window_measures of it, ties to
- * the earlier. An edge never moves onto or past a neighbouring edge, and an edge at a key signature event (an
+ * barline), every edge the path drew is moved to the nearest boundary measure within snap_reach_measures of it (default
+ * 1; 0 keeps every edge), ties to the earlier. An edge never moves onto or past a neighbouring edge, and an edge at a key signature event (an
  * authoritative boundary, below) never moves. With no boundaries the edges stay where the path put them. The
  * boundaries come from phrase detection, which needs cadences, which need keys, so the caller runs this twice: once
  * without boundaries, then again with the boundaries found from that first answer.
