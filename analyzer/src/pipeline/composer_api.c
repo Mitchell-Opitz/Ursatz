@@ -1,5 +1,6 @@
 #include <ursatz_analyzer/composer_api.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -12,12 +13,17 @@
 #include "pitch/pitch_spelling.h"
 #include "pitch/tuning_system.h"
 #include "time/duration.h"
+#include "theory/style_model_build.h"
+#include "time/metrical_position.h"
 #include "time/note_value.h"
 #include "time/temporal_anchor.h"
 #include "time/time_signature.h"
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
+#include <ursatz_analyzer/style_profile.h>
+
+#include "pipeline/counterpoint_pipeline.h"
 
 #define MIDI_NOTE_COUNT 128
 #define FRAGMENT_PROVENANCE_ID "composer-fragment-v1"
@@ -353,4 +359,220 @@ const AnalysisReport *analyzer_fragment_report(const AnalyzerFragmentAnalysis *a
 
 const char *analyzer_fragment_document_json(const AnalyzerFragmentAnalysis *analysis) {
     return analysis && analysis->valid ? analysis->document_json : NULL;
+}
+
+AnalyzerFragmentResult analyzer_fragment_check_counterpoint(AnalyzerFragmentAnalysis *analysis, int species,
+                                                            bool cantus_upper) {
+    if (!analysis || !analysis->valid || species < 1 || species > 5) {
+        return ANALYZER_FRAGMENT_ERR_ARGUMENT;
+    }
+    CounterpointCheckResult checked =
+        counterpoint_check_collect(&analysis->notes, species, cantus_upper, &analysis->report);
+    if (checked == COUNTERPOINT_CHECK_ERR_ALLOC) {
+        return ANALYZER_FRAGMENT_ERR_ALLOC;
+    }
+    return checked == COUNTERPOINT_CHECK_OK ? ANALYZER_FRAGMENT_OK : ANALYZER_FRAGMENT_ERR_ARGUMENT;
+}
+
+void analyzer_violations_free(AnalyzerViolation *violations, size_t count) {
+    for (size_t i = 0; violations && i < count; i++) {
+        free(violations[i].rule);
+        free(violations[i].note_ids);
+    }
+    free(violations);
+}
+
+/* The measure and beat of a time in whole notes on the fragment's meter; 0 and 0.0 when it cannot be placed. */
+static void place(const AnalyzerFragmentAnalysis *analysis, long numerator, unsigned long denominator, int *measure,
+                  double *beat) {
+    *measure = 0;
+    *beat = 0.0;
+    const MeterMap *map = analysis->notes.meter.meter_map;
+    MusicalTime *time = NULL;
+    MetricalPosition *position = NULL;
+    const TimeSignature *signature = NULL;
+    Duration *unit = NULL;
+    if (musical_time_create(numerator, denominator, &time) == MUSICAL_TIME_OK) {
+        if (metrical_position_from_time(map, time, &position) == METRICAL_POSITION_OK) {
+            int m = metrical_position_measure(position);
+            const Duration *offset = metrical_position_offset(position);
+            if (metrical_position_reading_signature(map, m, &signature) == METRICAL_POSITION_OK &&
+                time_signature_unit_duration(signature, &unit) == DURATION_OK && duration_numerator(unit) > 0) {
+                *measure = m;
+                *beat = 1.0 + ((double)duration_numerator(offset) / (double)duration_denominator(offset)) /
+                                  ((double)duration_numerator(unit) / (double)duration_denominator(unit));
+            }
+        }
+    }
+    duration_destroy(unit);
+    metrical_position_destroy(position);
+    musical_time_destroy(time);
+}
+
+/* Appends one violation; the rule and the note ids are copied. false on allocation failure. */
+static bool add_violation(const AnalyzerFragmentAnalysis *analysis, AnalyzerViolation **list, size_t *count,
+                          size_t *capacity, const char *rule, bool hard, long numerator, unsigned long denominator,
+                          const size_t *note_ids, size_t note_id_count) {
+    if (*count == *capacity) {
+        size_t grown = *capacity ? *capacity * 2 : 8;
+        AnalyzerViolation *bigger = realloc(*list, grown * sizeof **list);
+        if (!bigger) {
+            return false;
+        }
+        *list = bigger;
+        *capacity = grown;
+    }
+    AnalyzerViolation *violation = &(*list)[*count];
+    *violation = (AnalyzerViolation){0};
+    violation->rule = strdup(rule);
+    violation->note_ids = malloc((note_id_count > 0 ? note_id_count : 1) * sizeof *violation->note_ids);
+    if (!violation->rule || !violation->note_ids) {
+        free(violation->rule);
+        free(violation->note_ids);
+        return false;
+    }
+    memcpy(violation->note_ids, note_ids, note_id_count * sizeof *note_ids);
+    violation->note_id_count = note_id_count;
+    violation->hard = hard;
+    place(analysis, numerator, denominator, &violation->measure, &violation->beat);
+    (*count)++;
+    return true;
+}
+
+static const char *voice_rule_id(const AnalysisVoiceViolation *fault) {
+    if (strcmp(fault->rule, "parallel-fifths") == 0 || strcmp(fault->rule, "parallel-octaves") == 0) {
+        return fault->rule;
+    }
+    return fault->arrival_interval == 5 ? "direct-fifths" : "direct-octaves";
+}
+
+AnalyzerFragmentResult analyzer_fragment_violations(const AnalyzerFragmentAnalysis *analysis, AnalyzerViolation **out,
+                                                    size_t *count) {
+    if (!analysis || !analysis->valid || !out || !count) {
+        return ANALYZER_FRAGMENT_ERR_ARGUMENT;
+    }
+    *out = NULL;
+    *count = 0;
+    const AnalysisReport *report = &analysis->report;
+    const AnalysisVoiceLeading *leading = &report->voice_leading;
+    AnalyzerViolation *list = NULL;
+    size_t used = 0, capacity = 0;
+    bool ok = true;
+    for (size_t i = 0; ok && leading->present && i < leading->violation_count; i++) {
+        const AnalysisVoiceViolation *fault = &leading->violations[i];
+        const AnalysisReportEntry *arrival = &report->entries[fault->entry_to];
+        bool parallel = fault->rule[0] == 'p';
+        ok = add_violation(analysis, &list, &used, &capacity, voice_rule_id(fault), parallel, arrival->time_numerator,
+                           arrival->time_denominator, fault->note_ids, 4);
+    }
+    for (int pass = 0; ok && pass < 2; pass++) {
+        const char *wanted = pass == 0 ? "seventh-resolves-down" : "leading-tone-resolves";
+        for (size_t i = 0; ok && leading->present && i < leading->resolution_count; i++) {
+            const AnalysisVoiceResolution *fault = &leading->resolutions[i];
+            if (strcmp(fault->rule, wanted) != 0) {
+                continue;
+            }
+            const AnalysisReportEntry *arrival = &report->entries[fault->entry_to];
+            ok = add_violation(analysis, &list, &used, &capacity,
+                               pass == 0 ? "unresolved-seventh" : "unresolved-leading-tone", false,
+                               arrival->time_numerator, arrival->time_denominator, fault->note_ids, 2);
+        }
+    }
+    const AnalysisCounterpointCheck *check = &report->counterpoint_check;
+    for (size_t i = 0; ok && check->present && i < check->violation_count; i++) {
+        char rule[96];
+        snprintf(rule, sizeof rule, "counterpoint:%s", check->violations[i].group);
+        ok = add_violation(analysis, &list, &used, &capacity, rule, check->violations[i].hard, check->start_numerator,
+                           check->start_denominator, check->note_ids, check->note_id_count);
+    }
+    if (!ok) {
+        analyzer_violations_free(list, used);
+        return ANALYZER_FRAGMENT_ERR_ALLOC;
+    }
+    *out = list;
+    *count = used;
+    return ANALYZER_FRAGMENT_OK;
+}
+
+/* A style model of the statistics. The caller destroys it. */
+static StyleModel *model_of(const char *name, const StyleStatistic *statistics, size_t count) {
+    EntityID *id = NULL;
+    StyleModel *model = NULL;
+    if (entity_id_create(name, &id) != ENTITY_ID_OK) {
+        return NULL;
+    }
+    if (style_model_from_statistics(id, name, "<fragment>", URSATZ_ANALYZER_VERSION, statistics, count, &model) !=
+        STYLE_MODEL_BUILD_OK) {
+        entity_id_destroy(id);
+        return NULL;
+    }
+    return model;
+}
+
+static bool has_category(const StyleStatistic *statistics, size_t count, const char *category) {
+    for (size_t i = 0; i < count; i++) {
+        if (strcmp(statistics[i].category, category) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+AnalyzerFragmentResult analyzer_fragment_style_distance(const AnalyzerFragmentAnalysis *analysis,
+                                                        const StyleModel *model, StyleComparison *out) {
+    if (!analysis || !analysis->valid || !model || !out) {
+        return ANALYZER_FRAGMENT_ERR_ARGUMENT;
+    }
+    memset(out, 0, sizeof *out);
+    AnalyzerFragmentResult result = ANALYZER_FRAGMENT_ERR_ALLOC;
+    StyleProfile *profile = style_profile_create();
+    StyleStatistic *fragment_stats = NULL, *model_stats = NULL, *kept = NULL;
+    size_t fragment_count = 0, model_count = 0, kept_count = 0;
+    StyleModel *fragment_model = NULL, *kept_model = NULL;
+    StyleComparison full = {0}, means = {0};
+    if (!profile || style_profile_add_document_json(profile, analysis->document_json) != STYLE_PROFILE_OK ||
+        style_profile_statistics(profile, &fragment_stats, &fragment_count) != STYLE_PROFILE_OK ||
+        style_model_statistics(model, &model_stats, &model_count) != STYLE_MODEL_FILE_OK) {
+        goto done;
+    }
+    kept = calloc(model_count > 0 ? model_count : 1, sizeof *kept);
+    fragment_model = model_of("fragment-style", fragment_stats, fragment_count);
+    if (!kept || !fragment_model) {
+        goto done;
+    }
+    /* The means come from the model cut down to the categories the fragment has. */
+    for (size_t i = 0; i < model_count; i++) {
+        if (has_category(fragment_stats, fragment_count, model_stats[i].category)) {
+            kept[kept_count++] = model_stats[i];
+        }
+    }
+    kept_model = model_of("fragment-style-reference", kept, kept_count);
+    if (!kept_model) {
+        goto done;
+    }
+    if (style_profile_compare(fragment_model, model, &full) != STYLE_COMPARE_OK ||
+        style_profile_compare(fragment_model, kept_model, &means) != STYLE_COMPARE_OK) {
+        result = ANALYZER_FRAGMENT_ERR_ARGUMENT;
+        goto done;
+    }
+    /* The full comparison's categories (the missing ones too) with the means of the cut one. */
+    StyleCategoryDistance *categories = means.categories;
+    size_t category_count = means.category_count;
+    *out = means;
+    out->categories = full.categories;
+    out->category_count = full.category_count;
+    full.categories = categories;
+    full.category_count = category_count;
+    memset(&means, 0, sizeof means);
+    result = ANALYZER_FRAGMENT_OK;
+done:
+    style_comparison_destroy(&full);
+    style_comparison_destroy(&means);
+    style_model_destroy(kept_model);
+    style_model_destroy(fragment_model);
+    free(kept);
+    style_statistics_free(model_stats, model_count);
+    free(fragment_stats);
+    style_profile_destroy(profile);
+    return result;
 }
