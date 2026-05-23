@@ -230,16 +230,38 @@ plus the connection. A pool form is labelled `pool <item> <connection>%: <chain>
 
 ## The harmony
 
+**Targets on beats.** A harmony target (phrase model, prolongation, schema, sequence, embellishment, and the bass under
+it) lies in one meter lane span and starts and ends on a beat of it, a beat being 1/`beat_unit` of a whole note: a span
+of whole bars from a barline, or any span between beats, such as 7 beats of 4/4 or beats 2 to 11. The cells are the
+places in a bar where a chord may start (one for a bar of 2/4 or 3/4, two for 4/4 or 6/8), anchored to the barlines of
+the meter lane span. A span that starts or ends between two of them has a *part cell* at that end: the `lead`, from its
+start to the first cell boundary, and the `tail`, from the last cell boundary to its end (zero when it is on one). Each
+part cell is a cell of its own, so the span's cells are the lead, the whole cells and the tail, and a chord is a number
+of them. A part cell counts as a weak cell for the rules about strong beats unless it starts on a downbeat, and a
+recognizer arrival may be as short as the part cell's one beat. A span that does not start and end on a beat is not a
+target.
+
+The phrase model lays the tonic, the predominant, the dominant and the tonic of the cadence over the cells, one cell to
+a chord at the least. The cadence's last chord starts on the last downbeat the span holds and takes the cells from there
+to the end (the whole last bar of a span of bars); a span that holds no downbeat after its lead starts it on the first
+cell boundary after the lead, where the recognizer may not hear the cadence. `harmony_phrase_min_cells(cadence, meter)`
+is the fewest cells a span can have (the cells the cadence needs before its last chord, and one for it), and a span with
+fewer cells gets no candidates; `harmony_phrase_min_bars` is the same for a span of whole bars, which ends in a whole
+bar. The schema and sequence operators need whole cells from a cell boundary, so they skip a span with a lead or a tail
+(no candidates, not an error). A chord of one beat gets one bass note. Given material around a target with part cells is
+not read: the Given operators decline such a target.
+
 `harmony-prolongation` writes a Constrained harmony span with a `harmony_shape` of kind `prolongation`: one lane span
 per chord, on the cells of the meter, from standard-harmony's prolongation figures (I-V-I, I-V6-I, I-viio6-I6, I-IV-I,
 I-V4/3-I6, and the same turned round for a span that opens on the dominant). A span that ends on V ends on V6, V6/5 or
-V4/3, or on a V off the bar's first cell. Its checker rejects any candidate in which standard-harmony's recognizer
+V4/3, or on a V off a downbeat. Its checker rejects any candidate in which standard-harmony's recognizer
 hears a cadence, inside or at the end, whatever the soprano; the phrase model's tonic-then-dominant rule is not asked
 of a prolongation. A prolongation that follows one of the same shape repeats its chords, which is how an exact
 repetition gets the harmony of the basic idea.
 
 `harmony-phrase-model` reads an optional `phrase_model` or `cadential` shape. `max_cells_per_chord` caps every chord
-but the last, which always takes the whole last bar so the cadence arrives on a downbeat; `split_at_bars` keeps every
+but the last, which always takes the cells from the last downbeat (the whole last bar of a span of bars) so the cadence
+arrives on a downbeat; `split_at_bars` keeps every
 chord off the barlines; `cadential` drops the opening tonic (a predominant, a dominant and the arrival). Without a
 shape it behaves as it always did. The continuation of a grown theme has the `phrase_model` shape with
 `split_at_bars`, and the cadence; its cap is half the cells of the basic idea (at least 1, and at least what lets
