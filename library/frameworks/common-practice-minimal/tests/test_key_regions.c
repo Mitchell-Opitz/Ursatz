@@ -716,6 +716,244 @@ static void test_bad_events(void) {
     meter_map_destroy(map);
 }
 
+/* --- functional evidence, phrase boundaries and the held home key --- */
+
+static unsigned triad_mask(int root, int third, int fifth) {
+    return (1u << (root % 12)) | (1u << ((root + third) % 12)) | (1u << ((root + fifth) % 12));
+}
+
+static void set_chord(Piece *piece, size_t segment, int root, unsigned mask) {
+    piece->items[segment].chord.present = true;
+    piece->items[segment].chord.root_pitch_class = root;
+    piece->items[segment].chord.pitch_classes = mask;
+}
+
+static void test_functional_evidence_favours_the_key_a_dominant_resolves_into(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    double flat[12];
+    for (int pc = 0; pc < 12; pc++) {
+        flat[pc] = 1.0;
+    }
+    flat[0] = 1.1;
+    for (long m = 0; m < 4; m++) {
+        add_measure(&piece, m, flat);
+    }
+    /* G major then C major, twice: a dominant to tonic motion in C, and a leading tone resolving up */
+    set_chord(&piece, 0, 7, triad_mask(7, 4, 7));
+    set_chord(&piece, 1, 0, triad_mask(0, 4, 7));
+    set_chord(&piece, 2, 7, triad_mask(7, 4, 7));
+    set_chord(&piece, 3, 0, triad_mask(0, 4, 7));
+    CommonPracticeKeyWindows windows = {0};
+    assert(key_window_scores(piece.items, piece.count, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(windows.count == 1);
+    const CommonPracticeKeyWindow *window = &windows.items[0];
+    assert(window->evidence[0] > window->evidence[7] && window->evidence[0] > window->evidence[5]);
+    assert(window->evidence[0] > 0.0 && window->evidence[0] <= 0.8 + 1e-12); /* weight 0.8, evidence per chord <= 1 */
+    common_practice_key_windows_destroy(&windows);
+
+    /* no chords, no evidence */
+    for (size_t i = 0; i < piece.count; i++) {
+        memset(&piece.items[i].chord, 0, sizeof(piece.items[i].chord));
+    }
+    assert(key_window_scores(piece.items, piece.count, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
+        assert(windows.items[0].evidence[k] == 0.0);
+    }
+    common_practice_key_windows_destroy(&windows);
+
+    /* the raised seventh counts for the minor key only */
+    set_chord(&piece, 0, 4, triad_mask(4, 4, 7)); /* E G# B */
+    set_chord(&piece, 1, 9, triad_mask(9, 3, 7)); /* A C E */
+    assert(key_window_scores(piece.items, piece.count, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    int a_minor = common_practice_key_index_of(9, COMMON_PRACTICE_KEY_MINOR);
+    int a_major = common_practice_key_index_of(9, COMMON_PRACTICE_KEY_MAJOR);
+    assert(windows.items[0].evidence[a_minor] > windows.items[0].evidence[a_major]);
+    common_practice_key_windows_destroy(&windows);
+
+    /* a zero weight turns the evidence off */
+    CommonPracticeKeyRegionsConfig off = common_practice_key_regions_config_default();
+    off.evidence_weight = 0.0;
+    assert(key_window_scores(piece.items, piece.count, map, &off, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
+        assert(windows.items[0].evidence[k] == 0.0);
+    }
+    common_practice_key_windows_destroy(&windows);
+    off.evidence_weight = -0.1;
+    assert(key_window_scores(piece.items, piece.count, map, &off, &windows) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+    piece.items[0].chord.root_pitch_class = 12;
+    assert(key_window_scores(piece.items, piece.count, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_SEGMENT);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_edges_snap_to_a_nearby_phrase_boundary(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 8);
+    add_run(&piece, &measure, 7, 8);
+    CommonPracticeKeyRegions plain = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &plain) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(plain.region_count == 2);
+    int edge = plain.regions[1].first_measure;
+    common_practice_key_regions_destroy(&plain);
+
+    /* a boundary one measure from the edge, whichever side it is on, takes the edge */
+    for (int target = edge - 1; target <= edge + 1; target++) {
+        MusicalTime *boundary = time_at(&piece, target - 1, 1); /* the start of measure `target` */
+        const MusicalTime *list[1] = {boundary};
+        CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+        config.phrase_boundaries = list;
+        config.phrase_boundary_count = 1;
+        CommonPracticeKeyRegions snapped = {0};
+        assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &snapped) == COMMON_PRACTICE_KEY_REGIONS_OK);
+        assert_gap_free(&snapped, 1, 16);
+        assert(snapped.region_count == 2 && snapped.regions[1].first_measure == target);
+        assert(snapped.regions[0].key_index == 0 && snapped.regions[1].key_index == 7);
+        common_practice_key_regions_destroy(&snapped);
+    }
+
+    /* a boundary beyond the reach is ignored, and reach 0 keeps every edge */
+    MusicalTime *far = time_at(&piece, edge + 2, 1);
+    const MusicalTime *far_list[1] = {far};
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    config.phrase_boundaries = far_list;
+    config.phrase_boundary_count = 1;
+    CommonPracticeKeyRegions kept = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &kept) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(kept.regions[1].first_measure == edge);
+    common_practice_key_regions_destroy(&kept);
+    config.snap_reach_measures = 3;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &kept) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(kept.regions[1].first_measure == edge + 3);
+    common_practice_key_regions_destroy(&kept);
+    config.snap_reach_measures = 0;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &kept) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(kept.regions[1].first_measure == edge);
+    common_practice_key_regions_destroy(&kept);
+
+    /* a boundary at the start of the piece, or past its end, moves nothing */
+    MusicalTime *before = time_at(&piece, 0, 1);
+    MusicalTime *after = time_at(&piece, 40, 1);
+    const MusicalTime *outside[2] = {before, after};
+    config = common_practice_key_regions_config_default();
+    config.phrase_boundaries = outside;
+    config.phrase_boundary_count = 2;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &kept) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(kept.regions[1].first_measure == edge);
+    common_practice_key_regions_destroy(&kept);
+
+    /* a bad list */
+    config.phrase_boundaries = NULL;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &kept) ==
+           COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+    const MusicalTime *missing[1] = {NULL};
+    config.phrase_boundaries = missing;
+    config.phrase_boundary_count = 1;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &config, &kept) ==
+           COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_an_edge_at_a_key_signature_does_not_snap(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 8);
+    add_run(&piece, &measure, 7, 8);
+    CommonPracticeKeySignatureEvent events[2] = {make_event(&piece, 0, 1, 0), make_event(&piece, 8, 1, 1)};
+    const MusicalTime *list[1] = {time_at(&piece, 9, 1)};
+    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
+    config.phrase_boundaries = list;
+    config.phrase_boundary_count = 1;
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, events, 2, &config, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 2 && regions.regions[1].first_measure == 9);
+    assert(regions.regions[1].source == COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE);
+    common_practice_key_regions_destroy(&regions);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+/* Weights of the diatonic collection of C major leaning on G: G major's tones with F for F#. */
+static void g_leaning_diatonic_weights(double out[12]) {
+    memset(out, 0, 12 * sizeof(double));
+    out[7] = 3.0;
+    out[2] = 2.5;
+    out[11] = 2.0;
+    out[0] = 1.2;
+    out[9] = 1.0;
+    out[4] = 1.0;
+    out[5] = 0.5;
+}
+
+static void test_a_passage_of_iv_v_and_ii_keeps_the_home_key(void) {
+    MeterMap *map = four_four();
+    Piece piece = {{{0}}, {0}, 0, 0};
+    long measure = 0;
+    add_run(&piece, &measure, 0, 8);
+    double passage[12];
+    g_leaning_diatonic_weights(passage);
+    for (int i = 0; i < 6; i++) {
+        add_measure(&piece, measure++, passage);
+    }
+    add_run(&piece, &measure, 0, 8);
+
+    /* without chord data the profile follows the passage into the dominant key */
+    CommonPracticeKeyRegions regions = {0};
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count > 1);
+    common_practice_key_regions_destroy(&regions);
+
+    /* chords on V, ii and IV, all diatonic to C: the home key holds */
+    for (size_t i = 8; i < 14; i++) {
+        int roots[3] = {7, 2, 5};
+        int root = roots[i % 3];
+        set_chord(&piece, i, root, triad_mask(root, root == 7 || root == 5 ? 4 : 3, 7));
+    }
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert_gap_free(&regions, 1, 22);
+    assert(regions.region_count == 1 && regions.regions[0].key_index == 0);
+    common_practice_key_regions_destroy(&regions);
+
+    /* a chord off IV, V and ii (vi) lets the switch stand */
+    set_chord(&piece, 10, 9, triad_mask(9, 3, 7));
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count > 1);
+    common_practice_key_regions_destroy(&regions);
+
+    /* so does the new key's leading tone (F# in the weights, beyond the tolerance) */
+    set_chord(&piece, 10, 7, triad_mask(7, 4, 7));
+    for (size_t i = 8; i < 14; i++) {
+        piece.items[i].weights.pitch_class[6] = 1.0;
+        piece.items[i].weights.total += 1.0;
+    }
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, NULL, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count > 1);
+    common_practice_key_regions_destroy(&regions);
+
+    /* a tolerance wide enough to forgive that pitch holds the key again */
+    CommonPracticeKeyRegionsConfig lax = common_practice_key_regions_config_default();
+    lax.hold_tolerance = 0.5;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &lax, &regions) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(regions.region_count == 1);
+    common_practice_key_regions_destroy(&regions);
+    lax.hold_tolerance = -1.0;
+    assert(key_regions_estimate(piece.items, piece.count, map, NULL, 0, &lax, &regions) ==
+           COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG);
+    destroy_piece(&piece);
+    meter_map_destroy(map);
+}
+
+static void test_the_chord_of_a_result_is_plain_data(void) {
+    CommonPracticeWeightedResult none;
+    memset(&none, 0, sizeof(none));
+    assert(!common_practice_key_chord_of(&none).present);
+    assert(!common_practice_key_chord_of(NULL).present);
+}
+
 int main(void) {
     test_a_scale_scores_its_own_key_highest();
     test_a_minor_distribution_scores_the_minor_key();
@@ -739,6 +977,11 @@ int main(void) {
     test_repeated_and_late_events_are_not_boundaries();
     test_events_snap_to_the_nearest_barline();
     test_bad_events();
+    test_functional_evidence_favours_the_key_a_dominant_resolves_into();
+    test_edges_snap_to_a_nearby_phrase_boundary();
+    test_an_edge_at_a_key_signature_does_not_snap();
+    test_a_passage_of_iv_v_and_ii_keeps_the_home_key();
+    test_the_chord_of_a_result_is_plain_data();
     printf("test_key_regions: ok\n");
     return 0;
 }
