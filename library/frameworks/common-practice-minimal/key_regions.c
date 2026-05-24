@@ -146,20 +146,28 @@ typedef struct {
 #define PITCH_CLASS_BIT(pc) (1u << (((pc) % 12 + 12) % 12))
 
 /* The functional evidence for the key on `tonic` (minor when `minor`) in the move from chord `from` (NULL for
-   none) to chord `to`: see key_regions.h, FUNCTIONAL EVIDENCE. */
+   none) to chord `to`: see key_regions.h, FUNCTIONAL EVIDENCE. A tonic chord counts only when its third is the
+   key's mode's third, so a dominant motion into a major tonic is evidence for the major key and not its parallel. */
 static double chord_evidence(const CommonPracticeKeyChord *from, const CommonPracticeKeyChord *to, int tonic,
                              bool minor) {
     double evidence = 0.0;
     unsigned leading = PITCH_CLASS_BIT(tonic + 11);
-    if (minor && (to->pitch_classes & leading) != 0 && (to->pitch_classes & PITCH_CLASS_BIT(tonic + 10)) == 0) {
-        evidence += 0.5;
+    if (from == NULL) {
+        return evidence;
     }
-    if (from != NULL && to->root_pitch_class == tonic) {
-        if (from->root_pitch_class == (tonic + 7) % 12 && (from->pitch_classes & DOMINANT_THIRD_BIT(from->root_pitch_class)) != 0) {
+    bool tonic_chord = to->root_pitch_class == tonic &&
+                       (to->pitch_classes & PITCH_CLASS_BIT(tonic + (minor ? 3 : 4))) != 0;
+    if (tonic_chord) {
+        if (from->root_pitch_class == (tonic + 7) % 12 &&
+            (from->pitch_classes & DOMINANT_THIRD_BIT(from->root_pitch_class)) != 0) {
             evidence += 1.0;
-        } else if ((from->pitch_classes & leading) != 0 && (to->pitch_classes & PITCH_CLASS_BIT(tonic)) != 0) {
+        } else if ((from->pitch_classes & leading) != 0) {
             evidence += 0.5;
         }
+    }
+    if (minor && (to->pitch_classes & leading) != 0 && (to->pitch_classes & PITCH_CLASS_BIT(tonic + 10)) == 0 &&
+        (from->pitch_classes & (PITCH_CLASS_BIT(tonic + 3) | PITCH_CLASS_BIT(tonic + 8))) != 0) {
+        evidence += 0.5;
     }
     return evidence;
 }

@@ -749,6 +749,7 @@ static void test_functional_evidence_favours_the_key_a_dominant_resolves_into(vo
     assert(windows.count == 1);
     const CommonPracticeKeyWindow *window = &windows.items[0];
     assert(window->evidence[0] > window->evidence[7] && window->evidence[0] > window->evidence[5]);
+    assert(window->evidence[0] > window->evidence[common_practice_key_index_of(0, COMMON_PRACTICE_KEY_MINOR)]); /* not C minor */
     assert(window->evidence[0] > 0.0 && window->evidence[0] <= 0.8 + 1e-12); /* weight 0.8, evidence per chord <= 1 */
     common_practice_key_windows_destroy(&windows);
 
@@ -762,13 +763,26 @@ static void test_functional_evidence_favours_the_key_a_dominant_resolves_into(vo
     }
     common_practice_key_windows_destroy(&windows);
 
-    /* the raised seventh counts for the minor key only */
+    /* a dominant into a minor tonic is evidence for the minor key, not its parallel major */
+    int a_minor = common_practice_key_index_of(9, COMMON_PRACTICE_KEY_MINOR);
+    int a_major = common_practice_key_index_of(9, COMMON_PRACTICE_KEY_MAJOR);
+    memset(&piece.items[2].chord, 0, sizeof(piece.items[2].chord));
+    memset(&piece.items[3].chord, 0, sizeof(piece.items[3].chord));
     set_chord(&piece, 0, 4, triad_mask(4, 4, 7)); /* E G# B */
     set_chord(&piece, 1, 9, triad_mask(9, 3, 7)); /* A C E */
     assert(key_window_scores(piece.items, piece.count, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK);
-    int a_minor = common_practice_key_index_of(9, COMMON_PRACTICE_KEY_MINOR);
-    int a_major = common_practice_key_index_of(9, COMMON_PRACTICE_KEY_MAJOR);
-    assert(windows.items[0].evidence[a_minor] > windows.items[0].evidence[a_major]);
+    assert(windows.items[0].evidence[a_minor] > 0.0 && windows.items[0].evidence[a_major] == 0.0);
+    common_practice_key_windows_destroy(&windows);
+
+    /* the raised seventh after a minor chord counts for the minor key only; after nothing minor it does not */
+    set_chord(&piece, 0, 9, triad_mask(9, 3, 7)); /* A C E */
+    set_chord(&piece, 1, 4, triad_mask(4, 4, 7)); /* E G# B */
+    assert(key_window_scores(piece.items, piece.count, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(windows.items[0].evidence[a_minor] > 0.0 && windows.items[0].evidence[a_major] == 0.0);
+    common_practice_key_windows_destroy(&windows);
+    set_chord(&piece, 0, 2, triad_mask(2, 4, 7)); /* D F# A: no minor colour for A minor */
+    assert(key_window_scores(piece.items, piece.count, map, NULL, &windows) == COMMON_PRACTICE_KEY_REGIONS_OK);
+    assert(windows.items[0].evidence[a_minor] == 0.0);
     common_practice_key_windows_destroy(&windows);
 
     /* a zero weight turns the evidence off */

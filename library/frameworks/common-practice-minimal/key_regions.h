@@ -50,14 +50,17 @@
  * adds evidence_weight times the key's evidence per chord to the key's score. For a chord sequence in a window and
  * the key on tonic t:
  *
- *   - a dominant to tonic motion (a chord rooted on t+7 with a major third, then a chord rooted on t) counts 1;
- *   - a leading tone resolving up (a chord holding t+11 followed by a chord holding t, without the first
- *     already counted as a dominant to tonic motion) counts 0.5;
- *   - in a minor key, a chord holding the raised seventh (t+11) and not the natural seventh (t+10) counts 0.5.
+ *   - a dominant to tonic motion (a chord rooted on t+7 with a major third, then a tonic chord: rooted on t with
+ *     the key's third, the major third t+4 for a major key and the minor third t+3 for a minor key) counts 1;
+ *   - a leading tone resolving up (a chord holding t+11 followed by such a tonic chord, without the first already
+ *     counted as a dominant to tonic motion) counts 0.5;
+ *   - in a minor key, a raised seventh (a chord holding t+11 and not the natural seventh t+10) after a chord holding
+ *     the minor third t+3 or the minor sixth t+8 counts 0.5. A raised seventh alone does not tell a minor key from
+ *     its parallel major, whose dominant has it too, so it needs the minor colour before it.
  *
  * A motion is credited to the measure of the chord it arrives on. The window's evidence is the sum over its
- * measures divided by the number of chords it holds, so it is in [0, 1] whatever the window's length or chord
- * rate. A window with no chords, or a caller that passes none, adds nothing and the score is the correlation.
+ * measures divided by the number of chords it holds, so it does not grow with the window's length or chord rate
+ * (at most 1 for a chord). A window with no chords, or a caller that passes none, adds nothing and the score is the correlation.
  */
 
 #define COMMON_PRACTICE_KEY_COUNT 24
