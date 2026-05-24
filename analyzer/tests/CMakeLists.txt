@@ -344,3 +344,20 @@ add_test(NAME test_cli_similar
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_similar
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_similar.cmake)
 set_tests_properties(test_cli_similar PROPERTIES FIXTURES_REQUIRED similar_motive_file)
+
+add_executable(test_composer_api test_composer_api.c)
+target_link_libraries(test_composer_api PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_composer_api PRIVATE
+    URSATZ_FIXTURE_DIR="${URSATZ_REFERENCE_FIXTURES}"
+    URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
+    URSATZ_COMPOSER_API_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/composer_api_work")
+add_test(NAME test_composer_api_smoke COMMAND test_composer_api smoke)
+add_test(NAME test_composer_api COMMAND test_composer_api)
+find_program(VALGRIND_PROGRAM valgrind)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_composer_api_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
+                     $<TARGET_FILE:test_composer_api> smoke)
+    set_tests_properties(test_composer_api_valgrind PROPERTIES LABELS slow)
+endif()

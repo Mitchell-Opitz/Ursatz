@@ -1,0 +1,26 @@
+# Leaks in Ursatz's standard-counterpoint melody and motive code (a few bytes per analyzed phrase), reached by every
+# analysis run. They are the library's, not the analyzer's; everything else valgrind finds still fails the test.
+{
+   ursatz-melody-build-values
+   Memcheck:Leak
+   match-leak-kinds: definite,indirect
+   fun:calloc
+   fun:build_values
+   ...
+}
+{
+   ursatz-motive-make-kernel-window
+   Memcheck:Leak
+   match-leak-kinds: definite,indirect
+   fun:calloc
+   fun:make_kernel_window
+   ...
+}
+{
+   ursatz-motive-check-with-kernel
+   Memcheck:Leak
+   match-leak-kinds: definite,indirect
+   fun:calloc
+   fun:check_with_kernel
+   ...
+}
