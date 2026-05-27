@@ -156,6 +156,9 @@ Its public include directory is `include/`, and consumers include headers as
 | `style_labels.h` | The labels a style profile counts (numerals, progressions, intervals, durations) and the category names, shared with the Composer. |
 | `style_profile.h` | `StyleProfile` (counts over documents or a corpus), the style model file reader and writer, and `style_profile_compare`. |
 | `similar_material.h` | `similar_material_find` scores the passages of a corpus against a motive or a progression query. |
+| `composer_api.h` | `analyzer_analyze_fragment` analyzes a fragment of generated notes in memory; violations and style distance for the Composer. |
+
+The Composer calls `composer_api.h` to analyze a fragment it generated, with no file: see [docs/composer-api.md](docs/composer-api.md).
 
 Ownership: the caller owns the `AnalysisReport` and frees it with `analysis_report_destroy`,
 which also frees every entry's labels. Labels are heap strings with no length limit; "no match"
