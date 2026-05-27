@@ -2,9 +2,8 @@
 
 #include <string.h>
 
-/* Reads the chord of one span: a diatonic numeral, else an applied one. */
-bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, PlanTime cell_length,
-                       PhraseChord *out) {
+/* Reads the numeral of one span: a diatonic one, else an applied one. The cells are not counted. */
+static bool read_numeral(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, PhraseChord *out) {
     const PlanHarmony *harmony = &plan_lane_span_payload(plan, id)->harmony;
     memset(out, 0, sizeof(*out));
     memcpy(out->roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
@@ -16,7 +15,20 @@ bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, 
             return false;
         }
     }
-    return harmony_count_cells(cell_length, plan_lane_span_span(plan, id).length, &out->cells);
+    return true;
+}
+
+bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, PlanTime cell_length,
+                       PhraseChord *out) {
+    return read_numeral(plan, id, mode, out) &&
+           harmony_count_cells(cell_length, plan_lane_span_span(plan, id).length, &out->cells);
+}
+
+bool harmony_read_chord_in(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, const PhraseMetre *metre,
+                           PhraseChord *out) {
+    size_t first;
+    return read_numeral(plan, id, mode, out) &&
+           harmony_metre_find_cells(metre, plan_lane_span_span(plan, id), &first, &out->cells);
 }
 
 bool harmony_context_read(const PiecePlan *plan, LaneSpanId target, PhraseContext *out) {
@@ -97,7 +109,7 @@ bool harmony_context_read(const PiecePlan *plan, LaneSpanId target, PhraseContex
             return false;
         }
         context.ids[i] = id;
-        if (!harmony_read_chord(plan, id, context.mode, context.metre.cell_length, &context.chords[i])) {
+        if (!harmony_read_chord_in(plan, id, context.mode, &context.metre, &context.chords[i])) {
             return false;
         }
     }

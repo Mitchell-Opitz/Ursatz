@@ -118,7 +118,8 @@ static bool propose_edits(const PiecePlan *plan, const PhraseContext *phrase, co
             continue;
         }
         HeardPhrase heard = {scratch->chords, scratch->count, scratch->mode, scratch->cadence,
-                             scratch->cells_per_bar, scratch->cell_length, false, NULL, false, false, NULL, NULL, false};
+                             scratch->cells_per_bar, scratch->cell_length, false, NULL, false, false, NULL, NULL, false,
+                             &scratch->metre};
         PhraseVerdict verdict;
         if (!harmony_judge(&heard, &verdict)) {
             ok = false;
@@ -178,7 +179,6 @@ static PlanResult add_chord(PiecePlan *plan, NodeId owner, const PhraseChord *ch
 static PlanResult apply_edit(PiecePlan *plan, const PhraseContext *phrase, const EmbellishCandidate *candidate) {
     const Edit *edit = &candidate->edit;
     size_t t = phrase->target;
-    PlanTime cell = phrase->metre.cell_length;
     size_t lead_cells = 0;
     size_t piece_cells = 0;
     for (size_t i = 0; i < edit->lead_count; i++) {
@@ -193,20 +193,25 @@ static PlanResult apply_edit(PiecePlan *plan, const PhraseContext *phrase, const
         return PLAN_ERR_BAD_PAYLOAD;
     }
 
+    /* The cell each chord starts on, counted from the start of the phrase: the cells are not all the same length. */
+    size_t target_cell = 0;
+    for (size_t i = 0; i < t; i++) {
+        target_cell += phrase->chords[i].cells;
+    }
     PlanSpan span;
     PlanResult result = PLAN_OK;
     if (edit->steal_cells > 0) {
         LaneSpanId before = phrase->ids[t - 1];
         size_t kept = phrase->chords[t - 1].cells - edit->steal_cells;
-        PlanSpan before_span = plan_lane_span_span(plan, before);
-        result = harmony_cells_span(before_span.start, cell, 0, kept, &span);
+        size_t before_cell = target_cell - phrase->chords[t - 1].cells;
+        result = harmony_metre_cells_span(&phrase->metre, before_cell, kept, &span);
         if (result == PLAN_OK) {
             result = plan_lane_span_resize(plan, before, span.length);
         }
-        size_t at = kept;
+        size_t at = before_cell + kept;
         for (size_t i = 0; result == PLAN_OK && i < edit->lead_count; i++) {
             LaneSpanId id;
-            result = harmony_cells_span(before_span.start, cell, at, edit->lead[i].cells, &span);
+            result = harmony_metre_cells_span(&phrase->metre, at, edit->lead[i].cells, &span);
             if (result == PLAN_OK) {
                 result = add_chord(plan, phrase->owner, &edit->lead[i], span, &id);
             }
@@ -216,9 +221,8 @@ static PlanResult apply_edit(PiecePlan *plan, const PhraseContext *phrase, const
 
     LaneSpanId first = phrase->ids[t];
     LaneSpanId last = first;
-    PlanTime start = plan_lane_span_span(plan, first).start;
     if (result == PLAN_OK) {
-        result = harmony_cells_span(start, cell, 0, edit->pieces[0].cells, &span);
+        result = harmony_metre_cells_span(&phrase->metre, target_cell, edit->pieces[0].cells, &span);
     }
     if (result == PLAN_OK) {
         PlanLanePayload payload;
@@ -228,9 +232,9 @@ static PlanResult apply_edit(PiecePlan *plan, const PhraseContext *phrase, const
             result = plan_lane_span_write(plan, first, &payload);
         }
     }
-    size_t at = edit->pieces[0].cells;
+    size_t at = target_cell + edit->pieces[0].cells;
     for (size_t i = 1; result == PLAN_OK && i < edit->piece_count; i++) {
-        result = harmony_cells_span(start, cell, at, edit->pieces[i].cells, &span);
+        result = harmony_metre_cells_span(&phrase->metre, at, edit->pieces[i].cells, &span);
         if (result == PLAN_OK) {
             result = add_chord(plan, phrase->owner, &edit->pieces[i], span, &last);
         }

@@ -141,6 +141,7 @@ typedef struct {
     TimeSpan *span;
     Duration *offset;
     MetricalPosition *position;
+    Duration *beat_length; /* a part cell's beat, when the recognizer should not read it as shorter than one */
 } SegmentTimes;
 
 struct SegmentSet {
@@ -157,6 +158,7 @@ void harmony_segments_destroy(SegmentSet *set) {
         return;
     }
     for (size_t i = 0; i < HARMONY_MAX_CHORDS; i++) {
+        duration_destroy(set->times[i].beat_length);
         time_span_destroy(set->times[i].span);
         metrical_position_destroy(set->times[i].position);
         duration_destroy(set->times[i].offset);
@@ -167,11 +169,24 @@ void harmony_segments_destroy(SegmentSet *set) {
     free(set);
 }
 
+/* The times of the cells [first_cell, first_cell + cells) on the metre, and the bar and place in it where they start. */
+static bool metre_times(const PhraseMetre *metre, size_t first_cell, size_t cells, PlanTime *start, PlanTime *end,
+                        size_t *bar, PlanTime *offset) {
+    return harmony_metre_cell_offset(metre, first_cell, start) &&
+           harmony_metre_cell_offset(metre, first_cell + cells, end) &&
+           harmony_metre_cell_position(metre, first_cell, bar, offset);
+}
+
 static bool times_create(const HeardPhrase *phrase, size_t first_cell, size_t cells, SegmentTimes *times) {
     PlanTime start;
     PlanTime end;
     PlanTime offset;
-    if (plan_time_make(phrase->cell_length.num * (long)first_cell, phrase->cell_length.den, &start) != PLAN_OK ||
+    size_t bar = first_cell / phrase->cells_per_bar;
+    if (phrase->metre) {
+        if (!metre_times(phrase->metre, first_cell, cells, &start, &end, &bar, &offset)) {
+            return false;
+        }
+    } else if (plan_time_make(phrase->cell_length.num * (long)first_cell, phrase->cell_length.den, &start) != PLAN_OK ||
         plan_time_make(phrase->cell_length.num * (long)(first_cell + cells), phrase->cell_length.den, &end) !=
             PLAN_OK ||
         plan_time_make(phrase->cell_length.num * (long)(first_cell % phrase->cells_per_bar),
@@ -183,8 +198,7 @@ static bool times_create(const HeardPhrase *phrase, size_t first_cell, size_t ce
            time_span_create(times->start, times->end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &times->span) ==
                TIME_SPAN_OK &&
            duration_create(offset.num, offset.den, &times->offset) == DURATION_OK &&
-           metrical_position_create((int)(first_cell / phrase->cells_per_bar) + 1, times->offset,
-                                    &times->position) == METRICAL_POSITION_OK;
+           metrical_position_create((int)bar + 1, times->offset, &times->position) == METRICAL_POSITION_OK;
 }
 
 /* soprano[i] is the soprano degree over chord i, or NULL for the one the requested cadence implies. */
@@ -216,7 +230,8 @@ static SegmentSet *segments_create(const HeardPhrase *phrase, const int *soprano
         input->segment_id = set->ids[i];
         input->span = set->times[i].span;
         input->position = set->times[i].position;
-        input->beat_strength = harmony_rhythm_cell_strength(first_cell % phrase->cells_per_bar);
+        input->beat_strength = phrase->metre ? harmony_metre_cell_strength(phrase->metre, first_cell)
+                                             : harmony_rhythm_cell_strength(first_cell % phrase->cells_per_bar);
         if (chord->applied) {
             bool leading = chord->applied_chord.kind == APPLIED_CHORD_KIND_SECONDARY_LEADING_TONE;
             input->degree = leading ? 7 : 5;
@@ -233,6 +248,12 @@ static SegmentSet *segments_create(const HeardPhrase *phrase, const int *soprano
         input->mode = harmony_mode_of(mode);
         input->uncertainty = 0.0;
         input->beat_length = NULL;
+        /* A part cell of a beat or more is long enough to arrive on, whatever the meter's beat is in whole notes. */
+        if (phrase->metre && harmony_metre_cell_is_part(phrase->metre, first_cell) &&
+            duration_create(1, (unsigned long)phrase->metre->meter.beat_unit, &set->times[i].beat_length) ==
+                DURATION_OK) {
+            input->beat_length = set->times[i].beat_length;
+        }
         first_cell += chord->cells;
     }
     if (harmony_analysis_prepare(set->inputs, set->count, &set->segments) != HARMONY_ANALYSIS_OK) {
@@ -308,7 +329,7 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, PlanKeyMode mo
         }
         /* Chords must start where the last ended, in whole cells. */
         if (plan_time_compare(chord_span.start, position) != 0 || plan_span_end(chord_span, &end) != PLAN_OK ||
-            !harmony_read_chord(plan, ids[i], chord_mode, metre->cell_length, &chords[i])) {
+            !harmony_read_chord_in(plan, ids[i], chord_mode, metre, &chords[i])) {
             return false;
         }
         if (modes) {
@@ -338,7 +359,7 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode
     if (!heard || !at_end || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, NULL, false, false, NULL, NULL, false};
+    HeardPhrase phrase = {chords, count, mode, requested, metre.cells_per_bar, metre.cell_length, false, NULL, false, false, NULL, NULL, false, &metre};
     return harmony_hear_phrase(&phrase, heard, at_end);
 }
 
@@ -355,7 +376,7 @@ bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMod
         found != count) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, modes, keys, false};
+    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, modes, keys, false, &metre};
     SegmentSet *set = segments_create(&phrase, soprano);
     if (!set) {
         return false;

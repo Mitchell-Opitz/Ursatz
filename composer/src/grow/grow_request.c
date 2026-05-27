@@ -160,7 +160,7 @@ static GrowResult from_plan(PlanResult result) {
 static bool half_fits(size_t bars, size_t cells_per_bar, PlanCadenceType cadence) {
     size_t cells = bars / 2 * cells_per_bar;
     /* A cadential progression has no opening tonic, so it needs one cell fewer than the phrase model. */
-    return cells + 1 >= harmony_phrase_min_cells(cadence, cells_per_bar);
+    return cells + 1 >= harmony_phrase_room_cells(cadence, cells_per_bar);
 }
 
 /* Whether an antecedent can end in `first` below a theme that ends in `last`: weak, and weaker. */

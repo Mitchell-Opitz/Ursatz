@@ -490,3 +490,8 @@ target_compile_definitions(test_theme_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FI
 add_dependencies(test_theme_cli ursatz-composer)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
 add_test(NAME test_theme_cli COMMAND test_theme_cli WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
+
+add_executable(test_harmony_beats test_harmony_beats.c)
+target_link_libraries(test_harmony_beats PRIVATE ursatz_composer)
+target_compile_options(test_harmony_beats PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_harmony_beats COMMAND test_harmony_beats)

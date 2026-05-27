@@ -18,8 +18,9 @@
  * the cadence the span asks for. Chords carry a Roman numeral and a function.
  *
  * A target is a Constrained harmony lane span that:
- *   - lies inside one meter lane span, starts on a barline and is a whole
- *     number of bars long;
+ *   - lies inside one meter lane span and starts and ends on a beat of it (a
+ *     span of whole bars from a barline, or any span between beats: see
+ *     harmony_phrase_min_cells);
  *   - has a key lane span over it, or a key constraint on the span or its owner
  *     (only the mode is read);
  *   - carries a cadence constraint, on the span or on its owner.
@@ -48,8 +49,19 @@
 bool harmony_meter_supported(const PlanMeter *meter);
 
 /*
- * The fewest bars a phrase can have and still end in the cadence, in a meter the operators support; 0 for any
- * other meter. A phrase of fewer bars gets no candidates from the phrase-model operator.
+ * The fewest cells a phrase can have and still end in the cadence, in a meter the operators support; 0 for any
+ * other meter. The phrase model lays the tonic, predominant, dominant and tonic of the cadence over the cells of the
+ * span, a chord to a cell at the least, and the last chord starts on the last downbeat the span holds (else on the
+ * first cell boundary after its lead); a span with fewer cells gets no candidates from the phrase-model operator.
+ * A cell is a place in a bar where a chord may start, and a part cell at either end of a span that starts or ends
+ * between two of them counts as one.
+ */
+size_t harmony_phrase_min_cells(PlanCadenceType cadence, const PlanMeter *meter);
+
+/*
+ * The fewest bars a phrase of whole bars can have and still end in the cadence, in a meter the operators support;
+ * 0 for any other meter. A phrase of fewer bars gets no candidates from the phrase-model operator. Its last chord is
+ * the whole last bar, so this is the cells before it, plus that bar, rounded up to bars.
  */
 size_t harmony_phrase_min_bars(PlanCadenceType cadence, const PlanMeter *meter);
 

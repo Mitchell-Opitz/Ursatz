@@ -20,6 +20,8 @@ bool harmony_skeleton_read(const PiecePlan *plan, LaneSpanId target, SkeletonCon
     context.owner = plan_lane_span_owner(plan, target);
     context.span = plan_lane_span_span(plan, target);
     PlanSpan owner_span = plan_node_span(plan, context.owner);
+    /* A span with a lead or a tail is not a whole number of cells from a cell: harmony_read_cells refuses it, so the schema
+       and sequence operators have no candidates for it, and it is left to the operators that read part cells. */
     if (!harmony_find_key(plan, target, context.owner, context.span, &context.key) ||
         !harmony_read_cells(plan, context.span, &context.metre)) {
         return false;
@@ -118,6 +120,14 @@ bool harmony_skeleton_bass(SkeletonCandidate *skeleton, const HarmonyBassParams 
     bass.metre.cell_length = context->metre.cell_length;
     bass.metre.cells = cells;
     bass.metre.bars = cells / context->metre.cells_per_bar;
+    /* A skeleton is written on whole cells, from a cell boundary of the bar. */
+    bass.metre.start = context->span.start;
+    bass.metre.lead = (PlanTime){0, 1};
+    bass.metre.tail = (PlanTime){0, 1};
+    if (plan_time_make(context->metre.cell_length.num * (long)(context->metre.first_cell % context->metre.cells_per_bar),
+                       context->metre.cell_length.den, &bass.metre.offset) != PLAN_OK) {
+        return false;
+    }
     return harmony_bass_build(&bass, params, rng, &skeleton->bass);
 }
 
@@ -163,7 +173,7 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
 
     /* The cadence is heard only when the skeleton ends the span; otherwise the rest of the span will bring it. */
     HeardPhrase phrase = {all, total, context->key.mode, context->has_cadence ? context->cadence : PLAN_CADENCE_PAC,
-                          context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt, false, false, NULL, NULL, false};
+                          context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt, false, false, NULL, NULL, false, NULL};
     bool ok = harmony_judge(&phrase, &harmony);
     free(all);
     if (!ok) {
@@ -174,7 +184,7 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
         return true;
     }
     if (skeleton->remainder_cells > 0 && context->has_cadence &&
-        skeleton->remainder_cells < harmony_phrase_min_cells(context->cadence, context->metre.cells_per_bar)) {
+        skeleton->remainder_cells < harmony_phrase_room_cells(context->cadence, context->metre.cells_per_bar)) {
         verdict->hard = "no room left for the cadence";
         return true;
     }

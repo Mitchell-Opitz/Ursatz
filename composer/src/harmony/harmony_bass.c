@@ -279,20 +279,31 @@ static bool bass_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
 }
 
 PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, PlanNote *notes, size_t *count) {
-    PlanTime cell = line->context.metre.cell_length;
-    size_t used = 0;
+    const PhraseMetre *metre = &line->context.metre;
+    /* The cell the chord starts on: the cells are not all the same length. */
     size_t at = 0;
+    for (size_t i = 0; i < chord && i < line->context.count; i++) {
+        at += line->context.chords[i].cells;
+    }
+    PlanTime chord_start;
+    if (!harmony_metre_cell_offset(metre, at, &chord_start)) {
+        return PLAN_ERR_BAD_INDEX;
+    }
+    size_t used = 0;
     for (size_t i = 0; i < line->note_count; i++) {
         if (line->notes[i].chord != chord) {
             continue;
         }
-        PlanResult result = plan_time_make(cell.num * (long)at, cell.den, &notes[used].offset);
-        if (result == PLAN_OK) {
-            result = plan_time_make(cell.num * (long)line->notes[i].cells, cell.den, &notes[used].duration);
+        /* A note's offset is from the chord's start. */
+        PlanTime note_start;
+        PlanSpan span;
+        PlanResult result = harmony_metre_cells_span(metre, at, line->notes[i].cells, &span);
+        if (result != PLAN_OK || !harmony_metre_cell_offset(metre, at, &note_start) ||
+            plan_time_make(note_start.num * (long)chord_start.den - chord_start.num * (long)note_start.den,
+                           note_start.den * chord_start.den, &notes[used].offset) != PLAN_OK) {
+            return PLAN_ERR_BAD_INDEX;
         }
-        if (result != PLAN_OK) {
-            return result;
-        }
+        notes[used].duration = span.length;
         notes[used].midi_pitch = line->notes[i].pitch;
         at += line->notes[i].cells;
         used++;
@@ -334,7 +345,7 @@ static PlanResult bass_apply(PiecePlan *plan, FillTarget target, const FillCandi
             result = PLAN_ERR_BAD_PAYLOAD;
         }
         if (result == PLAN_OK) {
-            result = harmony_cells_span(read.span.start, read.metre.cell_length, cell, read.chords[i].cells, &span);
+            result = harmony_metre_cells_span(&read.metre, cell, read.chords[i].cells, &span);
         }
         if (result != PLAN_OK) {
             break;

@@ -14,12 +14,13 @@
  *
  * A target is a Constrained harmony lane span that:
  *   - carries a PROLONGATION harmony shape constraint, on the span or on its owner;
- *   - lies inside one meter lane span, starts on a barline and is a whole number of bars long;
+ *   - lies inside one meter lane span and starts and ends on a beat of it (a span between beats has a part cell at
+ *     an end: see harmony_phrase.h);
  *   - has a key lane span over it, or a key constraint on the span or its owner (only the mode is read).
  * The shape's starts_on says whether the span opens on I (ANY and TONIC) or on V (DOMINANT, in an inversion,
  * since a root-position V that goes to I is a cadence); ends_on whether it ends on I (TONIC), on V (DOMINANT)
  * or on either (ANY). A span that ends on the dominant ends on V6, V6/5 or V4/3, or on a root-position V that
- * does not start on the bar's first cell. max_cells_per_chord and split_at_bars limit how the cells are dealt.
+ * does not start on a downbeat. max_cells_per_chord and split_at_bars limit how the cells are dealt.
  *
  * The inside is built from standard-harmony's prolongation figures: I-V-I, I-V6-I, I-viio6-I6, the neighbor
  * I-IV-I and the passing I-V4/3-I6, and the same figures backwards for a span that opens on V. A request with

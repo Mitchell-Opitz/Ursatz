@@ -67,6 +67,7 @@ bool harmony_edit_compose(const PhraseContext *phrase, const Edit *edit, Embelli
     out->cadence = phrase->cadence;
     out->cells_per_bar = phrase->metre.cells_per_bar;
     out->cell_length = phrase->metre.cell_length;
+    out->metre = phrase->metre;
     out->count = count;
     return true;
 }

@@ -88,8 +88,8 @@ These were met, and are the limits of what is built:
   target with no candidate, and the run is stuck at the harmony stage;
 - a phrase model never lets a chord cross a barline in a continuation (`split_at_bars`), so the downbeat of every bar of
   a continuation is a tone of the chord of that bar;
-- a harmony target must begin on a barline and be a whole number of bars, so a Given progression that ends inside a bar
-  leaves a gap the operators cannot write;
+- a harmony target must begin and end on a beat ([grow.md](grow.md)), so a Given progression that ends between beats
+  leaves a gap the operators cannot write, and Given material around a target with part cells is not read;
 - the bass and the melody operators read the chords over their target as a row that tiles it: a Given chord that
   crosses the edge of a target (an idea, or a Given bass span) is not read;
 - a cadence needs room: a gap of one bar cannot hold a perfect authentic cadence, only a half cadence.

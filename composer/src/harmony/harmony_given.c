@@ -168,7 +168,7 @@ void harmony_given_read(const PiecePlan *plan, PhraseRequest *request) {
                 continue;
             }
             request->bass_pc[cell] = given_pitch_class(plan, PLAN_LANE_BASS, request->span, at.start, false);
-            if (cell % request->cells_per_bar == 0) {
+            if (harmony_metre_cell_on_downbeat(&request->metre, cell)) {
                 request->melody_pc[cell] = given_pitch_class(plan, PLAN_LANE_MELODY, request->span, at.start, true);
             }
             request->has_given = request->has_given || request->bass_pc[cell] >= 0 || request->melody_pc[cell] >= 0;
@@ -236,8 +236,34 @@ bool harmony_given_join(const PhraseRequest *request, const PhraseChord *chords,
     memcpy(sequence, request->before, request->before_count * sizeof(PhraseChord));
     memcpy(sequence + request->before_count, chords, count * sizeof(PhraseChord));
     memcpy(sequence + request->before_count + count, request->after, request->after_count * sizeof(PhraseChord));
+    /* The cells of the Given chords before, the target and the Given chords after, in a row from the first of them. */
+    PhraseMetre joined = request->metre;
+    size_t joined_cells = 0;
+    for (size_t i = 0; i < total; i++) {
+        joined_cells += sequence[i].cells;
+    }
+    joined.lead = (PlanTime){0, 1};
+    joined.tail = (PlanTime){0, 1};
+    joined.cells = joined_cells;
+    if (request->before_count > 0) {
+        /* The chords before are trimmed to start on a barline. */
+        size_t before_cells = 0;
+        for (size_t i = 0; i < request->before_count; i++) {
+            before_cells += sequence[i].cells;
+        }
+        PlanTime before_length;
+        PlanTime start;
+        if (plan_time_make(-request->cell_length.num * (long)before_cells, request->cell_length.den, &before_length) !=
+                PLAN_OK ||
+            plan_time_add(request->span.start, before_length, &start) != PLAN_OK) {
+            free(sequence);
+            return false;
+        }
+        joined.start = start;
+        joined.offset = (PlanTime){0, 1};
+    }
     HeardPhrase phrase = {sequence, total, request->mode, PLAN_CADENCE_HC, request->cells_per_bar, request->cell_length,
-                          true, NULL, true, false, NULL, NULL, false};
+                          true, NULL, true, false, NULL, NULL, false, &joined};
     SegmentSet *set = harmony_segments_create(&phrase);
     bool ok = set != NULL;
     HarmonyCadences found = {NULL, 0};

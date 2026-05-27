@@ -33,6 +33,29 @@ typedef struct {
 #define HARMONY_GIVEN_CELLS 128
 #define HARMONY_JOIN_CHORDS 8
 
+/*
+ * The meter under a phrase: its bars and the places in a bar where a chord may start, and the cells of the span.
+ *
+ * The cells are the places in a bar where a chord may start, anchored to the barlines of the meter span the phrase
+ * lies in. A span that starts or ends between two of them has a part cell at that end: `lead` from the span's start
+ * to the first cell boundary, and `tail` from the last cell boundary to the span's end (zero when the span is on a
+ * boundary). Each part cell is a cell of its own, so the span's cells are the lead (when there is one), whole cells,
+ * and the tail (when there is one), and `cells` counts them all. A span of bars has neither, and its cells are
+ * `bars * cells_per_bar` of `cell_length`. `offset` is where the span starts in its bar.
+ */
+typedef struct {
+    PlanMeter meter;
+    PlanTime bar_length;
+    size_t bars; /* the bars the span touches */
+    size_t cells_per_bar;
+    PlanTime cell_length;
+    size_t cells; /* the span's cells, part cells included */
+    PlanTime start;
+    PlanTime lead;
+    PlanTime tail;
+    PlanTime offset;
+} PhraseMetre;
+
 /* What a harmony span asks for, read from the plan. */
 typedef struct {
     LaneSpanId target;
@@ -45,7 +68,10 @@ typedef struct {
     size_t bars;
     size_t cells_per_bar; /* the places in a bar where a chord may start */
     PlanTime cell_length;
-    size_t cells;         /* bars * cells_per_bar */
+    size_t cells;         /* the cells of the span, part cells included (see PhraseMetre) */
+    PlanTime lead;        /* from the span's start to the first cell boundary; zero when it starts on one */
+    PlanTime tail;        /* from the last cell boundary to the span's end; zero when it ends on one */
+    PhraseMetre metre;    /* the cells, as the functions on PhraseMetre read them */
     bool has_shape;       /* a harmony shape constraint (PHRASE_MODEL, CADENTIAL or PROLONGATION) is on the span or its owner */
     PlanHarmonyShape shape;
     /* The span opens a new key (shape.starts_on is PIVOT): the key before it, and the degrees in the new key that a
@@ -73,16 +99,6 @@ typedef struct {
     bool start_at_boundary;
     bool end_at_boundary;
 } PhraseRequest;
-
-/* The meter under a phrase: its bars and the places in a bar where a chord may start. */
-typedef struct {
-    PlanMeter meter;
-    PlanTime bar_length;
-    size_t bars;
-    size_t cells_per_bar;
-    PlanTime cell_length;
-    size_t cells; /* bars * cells_per_bar */
-} PhraseMetre;
 
 /* A candidate's payload. */
 typedef struct {
@@ -140,6 +156,12 @@ typedef struct {
     const unsigned *chord_keys;
     /* Leaves out the root progression rule (R-164), for tests and comparisons. */
     bool plain_shaping;
+    /*
+     * The cells the chords sit on, when the phrase does not start on a barline or has part cells (see PhraseMetre): the
+     * time, the bar and the strength of each chord are read from it, and cells_per_bar and cell_length are not used.
+     * NULL for a phrase of whole bars from a barline, which is every cell of cell_length from cell 0.
+     */
+    const PhraseMetre *metre;
 } HeardPhrase;
 
 HarmonyMode harmony_mode_of(PlanKeyMode mode);
@@ -194,8 +216,30 @@ bool harmony_key_before(const PiecePlan *plan, PlanTime start, PlanKey *out);
 size_t harmony_pivot_degrees(PlanKey from, PlanKey to, int degrees[HARMONY_PIVOT_MAX]);
 /* Whether the chord is a pivot chord from the key `from` into the key `to`: a root-position triad both keys have. */
 bool harmony_pivot_chord_valid(PlanKey from, PlanKey to, const HarmonyChord *chord);
-/* The meter under span, which must lie in one meter lane span, start on a barline and be whole bars long. */
+/*
+ * The meter under span, which must lie in one meter lane span and start and end on a beat of it (a beat is
+ * 1/beat_unit of a whole note). A span of whole bars has no part cells (see PhraseMetre).
+ */
 bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out);
+
+/* Where cell `cell` starts, counted from the span's start; cell == cells is the span's end. */
+bool harmony_metre_cell_offset(const PhraseMetre *metre, size_t cell, PlanTime *out);
+/* The span of cells [first, first + cells). */
+PlanResult harmony_metre_cells_span(const PhraseMetre *metre, size_t first, size_t cells, PlanSpan *out);
+/* The bar (counted from the span's first bar, 0 for it) and the place in it where cell `cell` starts. */
+bool harmony_metre_cell_position(const PhraseMetre *metre, size_t cell, size_t *bar, PlanTime *in_bar);
+/* Whether the cell starts on a barline, and whether it is a part cell (the lead or the tail). */
+bool harmony_metre_cell_on_downbeat(const PhraseMetre *metre, size_t cell);
+bool harmony_metre_cell_is_part(const PhraseMetre *metre, size_t cell);
+/* A cell on a downbeat is strong; any other whole cell is medium, and a part cell not on a downbeat is weak. */
+BeatStrength harmony_metre_cell_strength(const PhraseMetre *metre, size_t cell);
+/* The first cell and the number of cells that span covers exactly (inside the metre's span). False if it covers none. */
+bool harmony_metre_find_cells(const PhraseMetre *metre, PlanSpan span, size_t *first, size_t *count);
+/*
+ * The cell the last chord of a phrase over the metre starts on: the last downbeat the span holds, else the first cell
+ * boundary after the lead. For a span of whole bars it is the first cell of the last bar.
+ */
+size_t harmony_metre_last_cell(const PhraseMetre *metre);
 /* The span of cells [first_cell, first_cell + cells) counted from start. */
 PlanResult harmony_cells_span(PlanTime start, PlanTime cell_length, size_t first_cell, size_t cells, PlanSpan *out);
 
@@ -235,6 +279,9 @@ PlanResult harmony_progression_apply(PiecePlan *plan, FillTarget target, const F
  */
 bool harmony_shape_keeps(const PlanHarmonyShape *shape, const size_t *cells, size_t count, size_t cells_per_bar,
                          bool exempt_last);
+/* The same over the cells of a metre, which may start between barlines and have part cells at its ends. */
+bool harmony_shape_keeps_in(const PlanHarmonyShape *shape, const size_t *cells, size_t count, const PhraseMetre *metre,
+                            bool exempt_last);
 
 /* The span of cells [first_cell, first_cell + cells) of the request. */
 PlanResult harmony_request_cells_span(const PhraseRequest *request, size_t first_cell, size_t cells, PlanSpan *out);
@@ -259,6 +306,9 @@ bool harmony_count_cells(PlanTime cell_length, PlanTime length, size_t *cells);
 
 /* Reads the chord of a harmony span: a diatonic numeral, else an applied one, and its length in cells. */
 bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, PlanTime cell_length, PhraseChord *out);
+/* The same on the cells of a metre: the span must start and end on a cell boundary of it. */
+bool harmony_read_chord_in(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, const PhraseMetre *metre,
+                           PhraseChord *out);
 
 /*
  * Reads the chords of the phrase around a marked chord span (see
@@ -320,6 +370,7 @@ typedef struct {
     PlanCadenceType cadence;
     size_t cells_per_bar;
     PlanTime cell_length;
+    PhraseMetre metre; /* the cells the phrase sits on */
     PhraseChord chords[HARMONY_MAX_CHORDS]; /* the whole phrase after the edit */
     size_t count;
 } EmbellishCandidate;
@@ -365,8 +416,11 @@ bool harmony_phrase_propose(const PhraseRequest *request, FillRng *rng, FillCand
 
 void harmony_progression_destroy(void *payload);
 
-/* The fewest cells a phrase can have and still end in the cadence (the phrase-model operator's minimum). */
-size_t harmony_phrase_min_cells(PlanCadenceType cadence, size_t cells_per_bar);
+/*
+ * The cells a phrase needs before its last bar, plus that bar, to end in the cadence: the room a phrase of whole bars
+ * (or what is left of a span after a skeleton) must have.
+ */
+size_t harmony_phrase_room_cells(PlanCadenceType cadence, size_t cells_per_bar);
 
 /* The verdict of the harmony-from-bass operator's checker on a candidate payload. */
 bool harmony_octave_check(const void *payload, FillCheck *out);
