@@ -161,16 +161,19 @@ static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
 
 bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, PlanKey key, MelodyContext *context) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
-    long cells = 0;
+    size_t cells = 0;
+    long offset;
     memset(context, 0, sizeof(*context));
     context->owner = owner;
     context->span = span;
     context->key = key;
     if (!harmony_read_lane(plan, span, key.mode, context->chords, &context->count, &context->metre) ||
         !melody_ticks(span.length, &context->length) || !melody_ticks(context->metre.cell_length, &context->cell) ||
-        context->cell <= 0) {
+        context->cell <= 0 || !melody_ticks(context->metre.offset, &offset)) {
         return false;
     }
+    /* The strong beats are the barline grid's: a span that starts between two cell boundaries has a lead. */
+    context->phase = offset % context->cell;
     /* The harmony is written: no chord span under the melody is still open. */
     size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, HARMONY_MAX_CHORDS);
     if (found != context->count || context->count == 0) {
@@ -182,11 +185,18 @@ bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, Plan
                                &context->chord_seventh[i])) {
             return false;
         }
-        context->chord_start[i] = cells * context->cell;
-        cells += (long)context->chords[i].cells;
+        PlanTime start;
+        PlanTime length;
+        long chord_length;
+        if (!harmony_cells_of_span(&context->metre, cells, context->chords[i].cells, &start, &length) ||
+            !melody_ticks(start, &context->chord_start[i]) || !melody_ticks(length, &chord_length) ||
+            chord_length <= 0) {
+            return false;
+        }
+        cells += context->chords[i].cells;
     }
-    context->chord_start[context->count] = cells * context->cell;
-    if (context->chord_start[context->count] != context->length) {
+    context->chord_start[context->count] = context->length;
+    if (cells != context->metre.cells) {
         return false;
     }
     PlanConstraint cadence;
