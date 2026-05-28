@@ -160,8 +160,34 @@ segments get no label. See docs/modules/analysis.md.
 path with a change penalty, `KeyChangeExtent` labels, pivot chords, and key signature events as authoritative
 boundaries. It is a new function beside the whole-piece estimator, which is unchanged. It takes plain structs
 (segment time windows, `CommonPracticeWeights`, members, signature events) and includes no other framework.
-Limits: fixed windows until phrases exist, no cadence confirmation, profile bias in chromatic music, natural-minor
-pivots. See docs/modules/analysis.md.
+Three optional inputs make it harmony aware, all plain data and all off when not given:
+
+- `CommonPracticeKeySegment.chord` (root and a pitch-class mask; `common_practice_key_chord_of` reads it from a
+  weighted identification result). A window adds `evidence_weight` (default 0.8) times its functional evidence per
+  chord to each key's score: a dominant to tonic motion into a tonic chord with the key's own third (1), a leading
+  tone resolving up (0.5), and in minor a raised seventh after a chord holding the minor third or sixth (0.5). A
+  dominant into a major tonic therefore favours the major key and not its parallel minor.
+- `phrase_boundaries` in the config (times in whole notes). Each edge the path drew moves to the nearest boundary
+  measure within `snap_reach_measures` (default 1), never onto or past a neighbouring edge, and never an edge at a
+  key signature event. The caller runs the function twice (first pass without boundaries, then chords, cadences
+  and phrase ends from it, then a second pass with them) and re-runs everything after it once; it does not iterate
+  further. `tests/accuracy/chorale_chain.c` and the Framework v1 chain do this; the chorale chain takes the phrase
+  ends from the cadences' arrival ends, which is what the kernel's phrase boundary detection does for a cadence.
+- The home key holds: a region whose key is the dominant, subdominant or relative of the key before it is folded
+  back into that key when all of its chords are rooted on that key's IV, V or ii and made of its tones and no
+  pitch class outside the key carries more than `hold_tolerance` (default 0.05) of its weight. A switch needs a
+  non-diatonic pitch or a chord outside IV, V and ii; a region with no chord data is never folded back.
+
+The defaults `evidence_weight` and `snap_reach_measures` were chosen from the accuracy harness, not from the
+reference pieces. On the ten chorales the `key` metric is 62.0% before, 64.1% with the boundaries alone, 66.7% at
+weight 0.3 to 0.5, 69.1% from 0.8 to 1.6 and 67.7% from 2.0, so 0.8 is the lowest value on the plateau. At weight
+0.8 a reach of 0 gives 67.9%, 1 gives 69.1%, 2 gives 64.4% and 4 gives 62.2%: a boundary the first pass missed
+pulls an edge to the wrong phrase end, so the reach is one measure and not the window. The hold rule changed no measured result on the chorales or the five
+reference pieces; it is exercised by the unit tests. The chorale harness reads `key` 69.1%, Roman numeral in the
+chain's key 52.0% (47.1% before), chord root 84.5% (83.8%).
+Limits: no cadence confirmation of a key change (the extent is read from region lengths alone), profile bias in
+chromatic music, natural-minor pivots, a phrase boundary the first pass did not find cannot place an edge, and the
+evidence needs identified chords, so a wrong chord is wrong evidence. See docs/modules/analysis.md.
 
 `key_identification.c` matches by one-directional containment: a key
 matches when all seven of its pitch classes are present, and pitch classes
