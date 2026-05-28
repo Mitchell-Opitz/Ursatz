@@ -31,11 +31,9 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 
 | ID | Piece | Area | Location | Expected | Actual | Cause |
 |---|---|---|---|---|---|---|
-| DEV-001 | bach114 | keys | region 19-20 | D major 19-20 | D major 19-22 | C1 |
-| DEV-002 | bach114 | keys | region 21-26 | G major 21-26 | D major 19-22, G major 23-26 | C1 |
-| DEV-003 | bach114 | keys | region 27-28 | D major 27-28 | D major 27-32 | C1 |
-| DEV-004 | bach114 | keys | region 29-32 | G major 29-32 | D major 27-32 | C1 |
-| DEV-005 | bach114 | keys | change 21 | weak-modulation return at 21 | none | C1 |
+| DEV-003 | bach114 | keys | region 27-28 | D major 27-28 | D major 27-30 | C1 |
+| DEV-004 | bach114 | keys | region 29-32 | G major 29-32 | D major 27-30, G major 31-32 | C1 |
+| DEV-005 | bach114 | keys | change 21 | weak-modulation return at 21 | tonicization return at 21 | C1 |
 | DEV-006 | bach114 | keys | change 29 | weak-modulation return at 29 | none | C1 |
 | DEV-007 | bach114 | cadences | m4 b3 | hc | none | C4 |
 | DEV-008 | bach114 | cadences | m8 b2.5 | pac | none | C5 |
@@ -43,30 +41,29 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-010 | bach114 | cadences | m16 b2.5 | pac | none | C5 |
 | DEV-012 | bach114 | cadences | m24 b2.5 | pac | none | C5 |
 | DEV-014 | bach114 | cadences | m32 b2.5 | pac | none | C5 |
-| DEV-015 | bach114 | cadences | extra m23 b1 | none | subverted | C5 |
 | DEV-016 | bach114 | cadences | extra m31 b1 | none | subverted | C5 |
 | DEV-017 | bach114 | phrase-form | end m4 | hc at m4 | none | C8 |
 | DEV-018 | bach114 | phrase-form | end m12 | hc at m12 | none | C8 |
 | DEV-020 | bach114 | phrase-form | end m24 | pac at m24 | none | C8 |
 | DEV-021 | bach114 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | none | C8 |
 | DEV-022 | bach114 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | hybrid 9-20 parts 9-12 13-20 | C8 |
-| DEV-023 | mozart545 | keys | region 1-12 | C major 1-12 | C major 1-8, F major 9-11, G major 12-20 | C1,C2 |
-| DEV-024 | mozart545 | keys | region 13-28 | G major 13-28 | G major 12-20, A minor 21-24, G major 25-29 | C1,C2 |
-| DEV-025 | mozart545 | keys | region 29-40 | C major 29-40 | G major 25-29, C major 30-36, F major 37-39, G major 40-48 | C1,C2 |
-| DEV-026 | mozart545 | keys | region 41-56 | G major 41-56 | G major 40-48, A minor 49-52, G major 53-60 | C1,C2 |
+| DEV-023 | mozart545 | keys | region 1-12 | C major 1-12 | C major 1-8, F major 9-11, G major 12-21 | C1,C2 |
+| DEV-024 | mozart545 | keys | region 13-28 | G major 13-28 | G major 12-21, A minor 22-24, G major 25-28 | C1,C2 |
+| DEV-025 | mozart545 | keys | region 29-40 | C major 29-40 | C major 29-36, F major 37-39, G major 40-49 | C1,C2 |
+| DEV-026 | mozart545 | keys | region 41-56 | G major 41-56 | G major 40-49, A minor 50-52, G major 53-61 | C1,C2 |
 | DEV-027 | mozart545 | keys | region 70-78 | F major 70-78 | F major 69-84 | C1 |
-| DEV-028 | mozart545 | keys | region 79-101 | C major 79-101 | F major 69-84, G major 85-87, E minor 88-93, D minor 94-97, C major 98-103 | C1,C2 |
+| DEV-028 | mozart545 | keys | region 79-101 | C major 79-101 | F major 69-84, G major 85-86, E minor 87-90, C major 91-94, D minor 95-98, C major 99-102 | C1,C2 |
 | DEV-029 | mozart545 | keys | region 115-123 | F major 115-123 | F major 114-129 | C1 |
-| DEV-030 | mozart545 | keys | region 124-146 | C major 124-146 | F major 114-129, G major 130-132, E minor 133-138, D minor 139-142, C major 143-146 | C1,C2 |
+| DEV-030 | mozart545 | keys | region 124-146 | C major 124-146 | F major 114-129, G major 130-131, E minor 132-135, C major 136-139, D minor 140-143, C major 144-146 | C1,C2 |
 | DEV-031 | mozart545 | keys | change 79 | modulation at 79 | none | C1,C2 |
 | DEV-032 | mozart545 | keys | change 124 | modulation at 124 | none | C1,C2 |
 | DEV-033 | mozart545 | cadences | m11 b1 | hc | none | C5 |
 | DEV-034 | mozart545 | cadences | m26 b1 | pac | none | C5 |
 | DEV-039 | clementi36 | keys | region 1-5 | C major 1-5 | C major 1-7 | C1 |
-| DEV-040 | clementi36 | keys | region 6-15 | G major 6-15 | C major 1-7, G major 8-15 | C1 |
-| DEV-041 | clementi36 | keys | region 16-22 | C minor 16-22 | C minor 16-19, G major 20-23 | C1,C2 |
+| DEV-040 | clementi36 | keys | region 6-15 | G major 6-15 | C major 1-7, G major 8-14, C minor 15-19 | C1 |
+| DEV-041 | clementi36 | keys | region 16-22 | C minor 16-22 | C minor 15-19, G major 20-23 | C1,C2 |
 | DEV-042 | clementi36 | keys | change 6 | modulation at 6 | none | C1 |
-| DEV-043 | clementi36 | keys | change 16 | modulation at 16 | weak-modulation at 16 | C3 |
+| DEV-043 | clementi36 | keys | change 16 | modulation at 16 | weak-modulation at 15 | C3 |
 | DEV-044 | clementi36 | cadences | m8 b1 | pac | none | C1,C5 |
 | DEV-045 | clementi36 | cadences | m15 b1 | pac | none | C5 |
 | DEV-046 | clementi36 | cadences | m23 b1 | hc | none | C1,C2 |
@@ -92,19 +89,18 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-072 | field1 | phrase-form | end m12 | iac at m12 | none | C8 |
 | DEV-073 | field1 | phrase-form | theme repeated-phrase 1-8 | repeated-phrase 1-8 parts 1-4 5-8 | none | C8 |
 | DEV-074 | field1 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | none | C8 |
-| DEV-075 | field5 | keys | region 1-8 | Bb major 1-8 | Bb major 1-4, D minor 5-8 | C1,C2 |
-| DEV-076 | mozart545 | returns | main m70 | m70 resembles m1 | no theme there (themes: m22-27, m50-55) | C8,C10 |
-| DEV-077 | mozart545 | returns | main m115 | m115 resembles m1 | no theme there (themes: m22-27, m50-55) | C8,C10 |
-| DEV-078 | mozart545 | returns | second m42 | m42 resembles m14 | no theme there (themes: m22-27, m50-55) | C8,C10 |
-| DEV-079 | mozart545 | returns | second m87 | m87 resembles m14 | no theme there (themes: m22-27, m50-55) | C8,C10 |
-| DEV-080 | mozart545 | returns | second m132 | m132 resembles m14 | no theme there (themes: m22-27, m50-55) | C8,C10 |
+| DEV-075 | field5 | keys | region 1-8 | Bb major 1-8 | Bb major 1-5, D minor 6-8 | C1,C2 |
+| DEV-076 | mozart545 | returns | main m70 | m70 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8,C10 |
+| DEV-077 | mozart545 | returns | main m115 | m115 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8,C10 |
+| DEV-078 | mozart545 | returns | second m42 | m42 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8,C10 |
+| DEV-079 | mozart545 | returns | second m87 | m87 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8,C10 |
+| DEV-080 | mozart545 | returns | second m132 | m132 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8,C10 |
 | DEV-081 | clementi36 | returns | main m24 | m24 resembles m1 | no theme there (themes: m5-10, m15-24, m28-33) | C8,C10 |
 | DEV-082 | clementi36 | returns | second m32 | m32 resembles m9 | no theme there (themes: m5-10, m15-24, m28-33) | C8,C10 |
 | DEV-083 | clementi36 | cadences | extra m19 b1 | none | hc | C5 |
-| DEV-084 | field5 | cadences | none in scope | no cadence | 2 cadence(s) | C5 |
-| DEV-085 | field5 | cadences | extra m5 b3 | none | hc | C5 |
-| DEV-086 | field5 | cadences | extra m6 b1 | none | other | C5 |
-| DEV-087 | mozart545 | returns | main m29 | m29 resembles m1 | no theme there (themes: m22-27, m50-55) | C8,C10 |
+| DEV-087 | mozart545 | returns | main m29 | m29 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8,C10 |
 | DEV-088 | bach114 | phrase-form | end m16 | pac at m16 | none | C8 |
 | DEV-089 | bach114 | phrase-form | end m32 | pac at m32 | none | C8 |
 | DEV-090 | clementi36 | cadences | extra m38 b2.5 | none | pac | C4 |
+| DEV-091 | bach114 | keys | change 19 | weak-modulation at 19 | tonicization at 19 | C3 |
+| DEV-092 | bach114 | keys | change 27 | weak-modulation at 27 | tonicization return at 27 | C3 |

@@ -24,7 +24,22 @@ CommonPracticeKeyRegionsConfig common_practice_key_regions_config_default(void) 
     config.tonicization_max_measures = 4;
     config.context_id_prefix = "key-region";
     config.pivot_search_measures = 2;
+    config.evidence_weight = 0.8;
+    config.phrase_boundaries = NULL;
+    config.phrase_boundary_count = 0;
+    config.snap_reach_measures = 1;
+    config.hold_tolerance = 0.05;
     return config;
+}
+
+CommonPracticeKeyChord common_practice_key_chord_of(const CommonPracticeWeightedResult *result) {
+    CommonPracticeKeyChord chord = {false, 0, 0};
+    if (result != NULL && result->matched) {
+        chord.pitch_classes = common_practice_ranked_chord_mask(&result->best, 0);
+        chord.root_pitch_class = result->best.root_pitch_class;
+        chord.present = chord.pitch_classes != 0;
+    }
+    return chord;
 }
 
 int common_practice_key_index_tonic(int key_index) {
@@ -123,7 +138,39 @@ typedef struct {
     size_t measure_count;
     int first_measure;
     int last_measure;
+    double (*evidence)[COMMON_PRACTICE_KEY_COUNT]; /* owned; per measure, per key: the unweighted evidence */
+    double *chords;                                 /* owned; per measure: the chords starting in it */
 } MeasureWeights;
+
+#define DOMINANT_THIRD_BIT(root) (1u << (((root) + 4) % 12))
+#define PITCH_CLASS_BIT(pc) (1u << (((pc) % 12 + 12) % 12))
+
+/* The functional evidence for the key on `tonic` (minor when `minor`) in the move from chord `from` (NULL for
+   none) to chord `to`: see key_regions.h, FUNCTIONAL EVIDENCE. A tonic chord counts only when its third is the
+   key's mode's third, so a dominant motion into a major tonic is evidence for the major key and not its parallel. */
+static double chord_evidence(const CommonPracticeKeyChord *from, const CommonPracticeKeyChord *to, int tonic,
+                             bool minor) {
+    double evidence = 0.0;
+    unsigned leading = PITCH_CLASS_BIT(tonic + 11);
+    if (from == NULL) {
+        return evidence;
+    }
+    bool tonic_chord = to->root_pitch_class == tonic &&
+                       (to->pitch_classes & PITCH_CLASS_BIT(tonic + (minor ? 3 : 4))) != 0;
+    if (tonic_chord) {
+        if (from->root_pitch_class == (tonic + 7) % 12 &&
+            (from->pitch_classes & DOMINANT_THIRD_BIT(from->root_pitch_class)) != 0) {
+            evidence += 1.0;
+        } else if ((from->pitch_classes & leading) != 0) {
+            evidence += 0.5;
+        }
+    }
+    if (minor && (to->pitch_classes & leading) != 0 && (to->pitch_classes & PITCH_CLASS_BIT(tonic + 10)) == 0 &&
+        (from->pitch_classes & (PITCH_CLASS_BIT(tonic + 3) | PITCH_CLASS_BIT(tonic + 8))) != 0) {
+        evidence += 0.5;
+    }
+    return evidence;
+}
 
 static CommonPracticeKeyRegionsStatus gather_measures(const CommonPracticeKeySegment *segments, size_t segment_count,
                                                        const MeterMap *map, MeasureWeights *out) {
@@ -137,7 +184,9 @@ static CommonPracticeKeyRegionsStatus gather_measures(const CommonPracticeKeySeg
         const CommonPracticeKeySegment *segment = &segments[i];
         bool bad = !time_ok(segment->start) || !time_ok(segment->end) || !before(segment->start, segment->end) ||
                    !isfinite(segment->weights.total) || segment->weights.total < 0.0 ||
-                   (i > 0 && before(segment->start, segments[i - 1].start));
+                   (i > 0 && before(segment->start, segments[i - 1].start)) ||
+                   (segment->chord.present &&
+                    (segment->chord.root_pitch_class < 0 || segment->chord.root_pitch_class > 11));
         for (int pc = 0; pc < 12 && !bad; pc++) {
             bad = !isfinite(segment->weights.pitch_class[pc]) || segment->weights.pitch_class[pc] < 0.0;
         }
@@ -163,23 +212,47 @@ static CommonPracticeKeyRegionsStatus gather_measures(const CommonPracticeKeySeg
         free(measure_of);
         return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
     }
+    double(*evidence)[COMMON_PRACTICE_KEY_COUNT] =
+        (double(*)[COMMON_PRACTICE_KEY_COUNT])calloc(measure_count, sizeof(double[COMMON_PRACTICE_KEY_COUNT]));
+    double *chords = (double *)calloc(measure_count, sizeof(double));
+    if (evidence == NULL || chords == NULL) {
+        free(evidence);
+        free(chords);
+        free(per_measure);
+        free(measure_of);
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+    }
+    const CommonPracticeKeyChord *previous = NULL;
     for (size_t i = 0; i < segment_count; i++) {
         size_t slot = (size_t)(measure_of[i] - first_measure);
         for (int pc = 0; pc < 12; pc++) {
             per_measure[slot][pc] += segments[i].weights.pitch_class[pc];
         }
+        const CommonPracticeKeyChord *chord = &segments[i].chord;
+        if (!chord->present) {
+            continue;
+        }
+        chords[slot] += 1.0;
+        for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
+            evidence[slot][k] += chord_evidence(previous, chord, k % 12, k >= 12);
+        }
+        previous = chord;
     }
     out->segment_measure = measure_of;
     out->weights = per_measure;
     out->measure_count = measure_count;
     out->first_measure = first_measure;
     out->last_measure = last_measure;
+    out->evidence = evidence;
+    out->chords = chords;
     return COMMON_PRACTICE_KEY_REGIONS_OK;
 }
 
 static void measures_release(MeasureWeights *measures) {
     free(measures->segment_measure);
     free(measures->weights);
+    free(measures->evidence);
+    free(measures->chords);
 }
 
 static CommonPracticeKeyRegionsStatus validate_inputs(const CommonPracticeKeySegment *segments, size_t segment_count,
@@ -190,7 +263,8 @@ static CommonPracticeKeyRegionsStatus validate_inputs(const CommonPracticeKeySeg
     if (segment_count == 0) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_NO_SEGMENTS;
     }
-    if (config->window_measures == 0 || !profiles_valid(&config->profiles)) {
+    if (config->window_measures == 0 || !profiles_valid(&config->profiles) || !isfinite(config->evidence_weight) ||
+        config->evidence_weight < 0.0) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG;
     }
     return COMMON_PRACTICE_KEY_REGIONS_OK;
@@ -213,15 +287,25 @@ static CommonPracticeKeyRegionsStatus score_windows(const MeasureWeights *measur
     }
     for (size_t w = 0; w < window_count; w++) {
         double sum[12] = {0.0};
+        double window_evidence[COMMON_PRACTICE_KEY_COUNT] = {0.0};
+        double window_chords = 0.0;
         for (size_t m = w; m < w + window_length; m++) {
             for (int pc = 0; pc < 12; pc++) {
                 sum[pc] += measures->weights[m][pc];
+            }
+            if (measures->chords != NULL) {
+                window_chords += measures->chords[m];
+                for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
+                    window_evidence[k] += measures->evidence[m][k];
+                }
             }
         }
         windows[w].first_measure = measures->first_measure + (int)w;
         windows[w].last_measure = measures->first_measure + (int)(w + window_length) - 1;
         for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
             windows[w].correlation[k] = correlate(sum, profile[k]);
+            windows[w].evidence[k] =
+                window_chords > 0.0 ? config->evidence_weight * window_evidence[k] / window_chords : 0.0;
         }
     }
     out->items = windows;
@@ -273,6 +357,11 @@ void common_practice_key_regions_destroy(CommonPracticeKeyRegions *regions) {
     regions->change_count = 0;
 }
 
+/* The score a path earns for key k in a window: correlation plus functional evidence. */
+static double window_score(const CommonPracticeKeyWindow *window, int key) {
+    return window->correlation[key] + window->evidence[key];
+}
+
 /* The least-cost key per window (see key_regions.h). */
 static CommonPracticeKeyRegionsStatus choose_path(const CommonPracticeKeyWindows *windows, double penalty,
                                                    int *path) {
@@ -287,7 +376,7 @@ static CommonPracticeKeyRegionsStatus choose_path(const CommonPracticeKeyWindows
         return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
     }
     for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
-        cost[0][k] = -windows->items[0].correlation[k];
+        cost[0][k] = -window_score(&windows->items[0], k);
         from[0][k] = k;
     }
     for (size_t w = 1; w < n; w++) {
@@ -308,10 +397,10 @@ static CommonPracticeKeyRegionsStatus choose_path(const CommonPracticeKeyWindows
             }
             double change = cost[w - 1][other] + penalty;
             if (cost[w - 1][k] <= change + TIE) {
-                cost[w][k] = cost[w - 1][k] - windows->items[w].correlation[k];
+                cost[w][k] = cost[w - 1][k] - window_score(&windows->items[w], k);
                 from[w][k] = k;
             } else {
-                cost[w][k] = change - windows->items[w].correlation[k];
+                cost[w][k] = change - window_score(&windows->items[w], k);
                 from[w][k] = other;
             }
         }
@@ -427,12 +516,12 @@ static CommonPracticeKeyRegionsStatus choose_path_restricted(const CommonPractic
     }
 #define AT(w, k) ((w) * COMMON_PRACTICE_KEY_COUNT + (k))
     for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
-        cost0[AT(0, k)] = ((allowed >> k) & 1u) ? -windows->items[0].correlation[k] : BIG;
+        cost0[AT(0, k)] = ((allowed >> k) & 1u) ? -window_score(&windows->items[0], k) : BIG;
         cost1[AT(0, k)] = BIG;
     }
     for (size_t w = 1; w < n; w++) {
         for (int k = 0; k < COMMON_PRACTICE_KEY_COUNT; k++) {
-            double r = windows->items[w].correlation[k];
+            double r = window_score(&windows->items[w], k);
             cost0[AT(w, k)] = cost0[AT(w - 1, k)] >= BIG ? BIG : cost0[AT(w - 1, k)] - r;
             /* into phase 1 at key k: stay in phase 1, or change from any other key in either phase */
             double best = cost1[AT(w - 1, k)];
@@ -588,6 +677,144 @@ static unsigned natural_collection(int key_index) {
     return mask;
 }
 
+/* True when the key `to` is closely related to `from`: the dominant or subdominant in the same mode, or the
+   relative major or minor. */
+static bool closely_related(int from, int to) {
+    int from_tonic = common_practice_key_index_tonic(from);
+    int to_tonic = common_practice_key_index_tonic(to);
+    CommonPracticeKeyMode from_mode = common_practice_key_index_mode(from);
+    CommonPracticeKeyMode to_mode = common_practice_key_index_mode(to);
+    int step = ((to_tonic - from_tonic) % 12 + 12) % 12;
+    if (from_mode == to_mode) {
+        return step == 5 || step == 7;
+    }
+    return from_mode == COMMON_PRACTICE_KEY_MAJOR ? step == 9 : step == 3;
+}
+
+/* The tones a key's diatonic chords are made of: its natural collection, plus the raised seventh in minor. */
+static unsigned held_collection(int key_index) {
+    unsigned mask = natural_collection(key_index);
+    if (common_practice_key_index_mode(key_index) == COMMON_PRACTICE_KEY_MINOR) {
+        mask |= PITCH_CLASS_BIT(common_practice_key_index_tonic(key_index) + 11);
+    }
+    return mask;
+}
+
+/* Folds a region back into the key before it when it is a passage of IV, V and ii of that key (see key_regions.h,
+   HOME KEY HELD). */
+static void hold_home_keys(const CommonPracticeKeySegment *segments, size_t segment_count,
+                           const MeasureWeights *measures, const bool *fixed, double tolerance, int *measure_key) {
+    size_t from = 1;
+    while (from < measures->measure_count) {
+        if (measure_key[from] == measure_key[from - 1]) {
+            from++;
+            continue;
+        }
+        size_t to = from + 1;
+        while (to < measures->measure_count && measure_key[to] == measure_key[from]) {
+            to++;
+        }
+        int old_key = measure_key[from - 1];
+        int tonic = common_practice_key_index_tonic(old_key);
+        unsigned collection = held_collection(old_key);
+        bool hold = !fixed[from] && closely_related(old_key, measure_key[from]);
+        size_t chords = 0;
+        for (size_t i = 0; i < segment_count && hold; i++) {
+            size_t slot = (size_t)(measures->segment_measure[i] - measures->first_measure);
+            if (slot < from || slot >= to || !segments[i].chord.present) {
+                continue;
+            }
+            int root = segments[i].chord.root_pitch_class;
+            int degree = ((root - tonic) % 12 + 12) % 12;
+            hold = (degree == 2 || degree == 5 || degree == 7) && (segments[i].chord.pitch_classes & ~collection) == 0;
+            chords++;
+        }
+        double total = 0.0;
+        double outside = 0.0;
+        for (size_t m = from; m < to && hold; m++) {
+            for (int pc = 0; pc < 12; pc++) {
+                total += measures->weights[m][pc];
+                outside += ((collection >> pc) & 1u) ? 0.0 : measures->weights[m][pc];
+            }
+        }
+        hold = hold && chords > 0 && outside <= tolerance * total;
+        if (hold) {
+            for (size_t m = from; m < to; m++) {
+                measure_key[m] = old_key;
+            }
+        }
+        from = to;
+    }
+}
+
+/* Moves each edge of the measure keys (a measure whose key differs from the one before it) to the nearest boundary
+   slot within `reach` measures, never onto or past a neighbouring edge, and never an edge marked fixed. */
+static CommonPracticeKeyRegionsStatus snap_edges(int *measure_key, const bool *fixed, size_t measure_count,
+                                                  const size_t *boundaries, size_t boundary_count, size_t reach) {
+    if (boundary_count == 0 || measure_count < 2) {
+        return COMMON_PRACTICE_KEY_REGIONS_OK;
+    }
+    size_t edge_count = 0;
+    for (size_t m = 1; m < measure_count; m++) {
+        edge_count += measure_key[m] != measure_key[m - 1] ? 1 : 0;
+    }
+    if (edge_count == 0) {
+        return COMMON_PRACTICE_KEY_REGIONS_OK;
+    }
+    size_t *edge = (size_t *)calloc(edge_count, sizeof(size_t));
+    int *before_key = (int *)calloc(edge_count, sizeof(int));
+    int *after_key = (int *)calloc(edge_count, sizeof(int));
+    if (edge == NULL || before_key == NULL || after_key == NULL) {
+        free(edge);
+        free(before_key);
+        free(after_key);
+        return COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+    }
+    size_t next = 0;
+    for (size_t m = 1; m < measure_count; m++) {
+        if (measure_key[m] != measure_key[m - 1]) {
+            edge[next] = m;
+            before_key[next] = measure_key[m - 1];
+            after_key[next] = measure_key[m];
+            next++;
+        }
+    }
+    size_t previous = 0; /* the position of the edge before this one, after its own move; 0 = the start */
+    for (size_t i = 0; i < edge_count; i++) {
+        size_t at = edge[i];
+        size_t next_edge = i + 1 < edge_count ? edge[i + 1] : measure_count;
+        size_t target = at;
+        if (!fixed[at]) {
+            size_t best_distance = reach + 1;
+            for (size_t b = 0; b < boundary_count; b++) {
+                size_t slot = boundaries[b];
+                if (slot <= previous || slot >= next_edge) {
+                    continue;
+                }
+                size_t distance = slot > at ? slot - at : at - slot;
+                if (distance < best_distance || (distance == best_distance && slot < target)) {
+                    best_distance = distance;
+                    target = slot;
+                }
+            }
+        }
+        if (target < at) {
+            for (size_t m = target; m < at; m++) {
+                measure_key[m] = after_key[i];
+            }
+        } else if (target > at) {
+            for (size_t m = at; m < target; m++) {
+                measure_key[m] = before_key[i];
+            }
+        }
+        previous = target;
+    }
+    free(edge);
+    free(before_key);
+    free(after_key);
+    return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
+
 /* The pivot of one change (see key_regions.h): the last segment at or before the boundary, within the search
    distance, whose best chord in the old key lies inside the new key's collection. */
 static CommonPracticeKeyRegionsStatus find_pivot(const CommonPracticeKeySegment *segments, size_t segment_count,
@@ -647,10 +874,17 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
     if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
         return status;
     }
-    if (!isfinite(effective.change_penalty) || effective.change_penalty < 0.0 ||
+    if (!isfinite(effective.change_penalty) || effective.change_penalty < 0.0 || !isfinite(effective.hold_tolerance) ||
+        effective.hold_tolerance < 0.0 ||
         effective.tonicization_max_measures == 0 || effective.context_id_prefix == NULL ||
-        effective.context_id_prefix[0] == '\0' || strlen(effective.context_id_prefix) > 100) {
+        effective.context_id_prefix[0] == '\0' || strlen(effective.context_id_prefix) > 100 ||
+        (effective.phrase_boundary_count > 0 && effective.phrase_boundaries == NULL)) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_CONFIG;
+    }
+    for (size_t b = 0; b < effective.phrase_boundary_count; b++) {
+        if (!time_ok(effective.phrase_boundaries[b])) {
+            return COMMON_PRACTICE_KEY_REGIONS_ERR_BAD_EVENT;
+        }
     }
 
     MeasureWeights measures;
@@ -670,7 +904,8 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         size_t from_slot = plan.start[sp];
         size_t to_slot = sp + 1 < plan.count ? plan.start[sp + 1] : measures.measure_count;
         MeasureWeights view = {NULL, measures.weights + from_slot, to_slot - from_slot,
-                               measures.first_measure + (int)from_slot, measures.first_measure + (int)to_slot - 1};
+                               measures.first_measure + (int)from_slot, measures.first_measure + (int)to_slot - 1,
+                               measures.evidence + from_slot, measures.chords + from_slot};
         CommonPracticeKeyWindows windows = {0};
         status = score_windows(&view, &effective, &windows);
         if (status != COMMON_PRACTICE_KEY_REGIONS_OK) {
@@ -697,6 +932,40 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
         free(path);
         common_practice_key_windows_destroy(&windows);
     }
+    bool *fixed = (bool *)calloc(measures.measure_count, sizeof(bool));
+    if (fixed == NULL && status == COMMON_PRACTICE_KEY_REGIONS_OK) {
+        status = COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+    }
+    if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
+        for (size_t m = 0; m < measures.measure_count; m++) {
+            fixed[m] = forced[m];
+        }
+        for (size_t sp = 1; sp < plan.count; sp++) {
+            fixed[plan.start[sp]] = true;
+        }
+        hold_home_keys(segments, segment_count, &measures, fixed, effective.hold_tolerance, measure_key);
+    }
+    if (status == COMMON_PRACTICE_KEY_REGIONS_OK && effective.phrase_boundary_count > 0) {
+        size_t *slots = (size_t *)calloc(effective.phrase_boundary_count, sizeof(size_t));
+        if (slots == NULL) {
+            status = COMMON_PRACTICE_KEY_REGIONS_ERR_ALLOC;
+        }
+        size_t slot_count = 0;
+        for (size_t b = 0; b < effective.phrase_boundary_count && status == COMMON_PRACTICE_KEY_REGIONS_OK; b++) {
+            int measure = 0;
+            status = nearest_barline(map, effective.phrase_boundaries[b], &measure);
+            long slot = (long)measure - (long)measures.first_measure;
+            if (status == COMMON_PRACTICE_KEY_REGIONS_OK && slot > 0 && (size_t)slot < measures.measure_count) {
+                slots[slot_count++] = (size_t)slot;
+            }
+        }
+        if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
+            status = snap_edges(measure_key, fixed, measures.measure_count, slots, slot_count,
+                                effective.snap_reach_measures);
+        }
+        free(slots);
+    }
+    free(fixed);
     CommonPracticeKeyRegions result = {NULL, 0, NULL, 0};
     if (status == COMMON_PRACTICE_KEY_REGIONS_OK) {
         size_t region_count = 1;

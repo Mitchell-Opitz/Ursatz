@@ -285,6 +285,62 @@ static void report_piece(const char *label, const char *file, const char *annota
     }
     printf("\n");
 
+    /* the second pass: the chords of the first pass as functional evidence (information; not asserted) */
+    {
+        CommonPracticeKeyRegions first = {0};
+        assert(key_regions_estimate(segments, count, p.meter.meter_map, events, scanned.count, NULL, &first) ==
+               COMMON_PRACTICE_KEY_REGIONS_OK);
+        size_t first_scored = 0;
+        size_t first_right = 0;
+        score_regions(&annotation, &first, &first_scored, &first_right);
+        size_t s = 0;
+        while (s < count) {
+            size_t region = 0;
+            for (size_t i = 0; i < first.region_count; i++) {
+                if (musical_time_numerator(time_span_start(first.regions[i].span)) * (long)musical_time_denominator(segments[s].start) <=
+                    musical_time_numerator(segments[s].start) * (long)musical_time_denominator(time_span_start(first.regions[i].span))) {
+                    region = i;
+                }
+            }
+            size_t end = s + 1;
+            while (end < count) {
+                size_t other = 0;
+                for (size_t i = 0; i < first.region_count; i++) {
+                    if (musical_time_numerator(time_span_start(first.regions[i].span)) * (long)musical_time_denominator(segments[end].start) <=
+                        musical_time_numerator(segments[end].start) * (long)musical_time_denominator(time_span_start(first.regions[i].span))) {
+                        other = i;
+                    }
+                }
+                if (other != region) {
+                    break;
+                }
+                end++;
+            }
+            int key_index = first.regions[region].key_index;
+            CommonPracticeWeightedResults group = {0};
+            assert(common_practice_identify_weighted_sequence(&p.segments[s], end - s, common_practice_key_index_tonic(key_index),
+                                                              common_practice_key_index_mode(key_index), NULL, &group) ==
+                   COMMON_PRACTICE_WEIGHTED_OK);
+            for (size_t i = 0; i < group.count; i++) {
+                segments[s + i].chord = common_practice_key_chord_of(&group.items[i]);
+            }
+            common_practice_weighted_results_destroy(&group);
+            s = end;
+        }
+        CommonPracticeKeyRegions second = {0};
+        assert(key_regions_estimate(segments, count, p.meter.meter_map, events, scanned.count, NULL, &second) ==
+               COMMON_PRACTICE_KEY_REGIONS_OK);
+        size_t scored = 0;
+        size_t right = 0;
+        score_regions(&annotation, &second, &scored, &right);
+        printf(" with the first pass's chords as evidence: %zu regions, %zu of %zu scored measures right (%.1f%%; without: %.1f%%)\n\n",
+               second.region_count, right, scored, 100.0 * (double)right / (double)scored,
+               100.0 * (double)first_right / (double)first_scored);
+        assert(second.region_count >= 1);
+        common_practice_key_regions_destroy(&first);
+        common_practice_key_regions_destroy(&second);
+    }
+
     midi_key_signature_events_destroy(&scanned);
     free(events);
     free(segments);

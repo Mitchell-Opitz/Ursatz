@@ -58,10 +58,11 @@ accuracy_fixture(phrase_model test_mozart545_phrase_model.c standard_harmony sta
 accuracy_fixture(schema test_schema_sequence.c galant_schemas scale_harmonization standard_harmony standard_tonality common_practice_minimal
                  standard_meter)
 
-# The chorale chain and the report: common-practice-minimal, standard-meter and standard-tonality only.
+# The chorale chain and the report: common-practice-minimal, standard-meter, standard-tonality and standard-harmony (the cadences
+# that give the key regions their second pass).
 add_library(accuracy_chain STATIC chorale_chain.c)
 target_include_directories(accuracy_chain PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(accuracy_chain PUBLIC accuracy_support PRIVATE common_practice_minimal standard_meter standard_tonality)
+target_link_libraries(accuracy_chain PUBLIC accuracy_support PRIVATE standard_harmony common_practice_minimal standard_meter standard_tonality)
 
 add_executable(accuracy_harness accuracy_harness.c accuracy_report.c accuracy_gate.c fixtures.c)
 target_link_libraries(accuracy_harness PRIVATE accuracy_chain

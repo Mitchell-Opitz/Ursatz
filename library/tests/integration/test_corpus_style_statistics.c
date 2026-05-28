@@ -192,8 +192,8 @@ static void check_corpus(CorpusStoreHandle *corpus, PersistenceHandle *persisten
  * KNOWN COUNTS. What the chain finds on each piece, pinned: the cadence types it classifies, one chord progression of length 2 and the top one
  * of length 3, each with its count and the n-gram total of the piece. These are the chain's own results (cross-checked above against a tally
  * taken straight from the chain), not the hand annotations: the chain finds more cadences than the annotated ones in places (Mozart K. 545:
- * 22 against 4), a listed deviation of the cadence stage (tests/fixtures/framework-v1-corpus/expected_deviations.md). Field 5's minor
- * region, read in the minor vocabulary, gives two cadences the draft does not mark.
+ * 14 against 4), a listed deviation of the cadence stage (tests/fixtures/framework-v1-corpus/expected_deviations.md). Field 5, whose
+ * minor region is read in the minor vocabulary, has no cadence the chain finds.
  */
 typedef struct {
     const char *cadence_labels[4];
@@ -208,11 +208,11 @@ typedef struct {
 } Known;
 
 static const Known KNOWN[5] = {
-    /* Bach 114 */ {{"subverted", "pac"}, {2, 2}, 2, "I > I", 16, 146, "I > I > I", 7, 145},
-    /* Mozart 545 */ {{"pac", "subverted", "hc", "other"}, {13, 2, 1, 2}, 4, "I > I", 95, 574, "I > I > I", 55, 573},
-    /* Clementi 36 */ {{"hc", "pac", "iac", "subverted"}, {6, 4, 2, 1}, 4, "I > V", 7, 198, "I > I > I", 15, 197},
+    /* Bach 114 */ {{"subverted", "pac"}, {1, 2}, 2, "I > I", 19, 148, "I > I > I", 8, 147},
+    /* Mozart 545 */ {{"pac", "subverted", "other"}, {10, 2, 2}, 3, "I > I", 101, 578, "I > I > I", 61, 577},
+    /* Clementi 36 */ {{"hc", "pac", "iac", "subverted"}, {6, 4, 2, 1}, 4, "I > V", 7, 198, "I > I > I", 13, 197},
     /* Field 1 */ {{"pac", "hc"}, {1, 2}, 2, "I > I", 24, 59, "I > I > I", 19, 58},
-    /* Field 5 */ {{"hc", "other"}, {1, 1}, 2, "I > I", 7, 29, "I > I > I", 5, 28},
+    /* Field 5 */ {{NULL}, {0}, 0, "I > I", 9, 28, "I > I > I", 7, 27},
 };
 
 static unsigned long count_of(const CorpusStatsCounts *counts, const char *label) {
