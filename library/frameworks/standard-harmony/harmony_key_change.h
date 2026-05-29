@@ -45,6 +45,23 @@ typedef struct {
    continuation without a cadence, and for NULL. */
 bool harmony_key_change_classify(const HarmonyKeyChange *change, KeyChangeExtent *out);
 
+/*
+ * CADENCE CONFIRMATION. A key region reads as a modulation only when a cadence in the new key falls inside it. The
+ * caller has read the region's extent from its length and return (length_extent) and passes the region's span and the
+ * arrival times of the cadences found in the piece, all in whole notes (plain data: no other framework is included).
+ * A cadence belongs to the region when its arrival starts in [region_start, region_end).
+ *
+ *   a cadence inside, length_extent MODULATION or WEAK_MODULATION   unchanged
+ *   a cadence inside, any other length_extent                       WEAK_MODULATION (the passage returns home)
+ *   no cadence inside, whatever the length                          TONICIZATION (EXTENDED_TONICIZATION stays)
+ *
+ * cadence_arrivals NULL means no cadences were given and length_extent is kept (the length rule as the fallback); an
+ * empty list (non-NULL, count 0) means none were found. False (*out untouched) for an invalid length_extent, a NULL out,
+ * a non-finite time, or a region that ends before it starts.
+ */
+bool harmony_key_change_confirm(KeyChangeExtent length_extent, double region_start, double region_end,
+                                const double *cadence_arrivals, size_t cadence_count, KeyChangeExtent *out);
+
 /* PIVOT when a pivot is given, DIRECT when it is NULL. */
 ModulationKind harmony_modulation_kind(const HarmonyPivot *pivot);
 
