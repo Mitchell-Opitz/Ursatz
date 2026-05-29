@@ -81,13 +81,20 @@ static bool read_chords(const PiecePlan *plan, VoicingContext *out, PlanTime *ce
         return false;
     }
     long at = 0;
+    size_t cells = 0;
     for (size_t i = 0; i < count; i++) {
-        if (plan_lane_span_state(plan, harmony[i]) == PLAN_STATE_CONSTRAINED) {
+        PlanTime chord_from;
+        PlanTime chord_length;
+        long chord_ticks;
+        if (plan_lane_span_state(plan, harmony[i]) == PLAN_STATE_CONSTRAINED ||
+            !harmony_cells_of_span(&metre, cells, chords[i].cells, &chord_from, &chord_length) ||
+            !melody_ticks(chord_length, &chord_ticks) || chord_ticks <= 0) {
             return false;
         }
         out->chord[i] = chords[i];
         out->chord_start[i] = at;
-        at += (long)chords[i].cells * cell;
+        at += chord_ticks;
+        cells += chords[i].cells;
     }
     out->chord_count = count;
     out->chord_start[count] = at;

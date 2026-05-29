@@ -48,6 +48,7 @@ typedef struct {
     bool compound;
     long length;
     long beat;  /* the pattern's beat: a quarter, or the dotted quarter of a compound meter */
+    long cell;  /* a cell of the meter (the places in a bar a chord may start) */
     long bar;
     long phase; /* ticks from the bar line at or before the target's start to its start */
     size_t chord_count;
@@ -81,7 +82,14 @@ typedef struct {
     size_t voices; /* how many voices the pattern writes */
     size_t note_count[ACCOMP_VOICES];
     AccompNote notes[ACCOMP_VOICES][ACCOMP_MAX_NOTES];
+    /*
+     * The beats of the pattern: each chord is cut into beats from its start, the last of a chord cut at its end, so a
+     * chord of any length in beats has whole beats and, when the chord is shorter than a beat or not a whole number of
+     * them, a short one. Notes and voicings are indexed by these.
+     */
     size_t beat_count;
+    long beat_start[ACCOMP_MAX_BEATS];
+    long beat_end[ACCOMP_MAX_BEATS];
     bool voiced[ACCOMP_MAX_BEATS];
     /* How each beat was voiced, low to high: three notes, or two where the window leaves no room for three. */
     size_t voicing_size[ACCOMP_MAX_BEATS];

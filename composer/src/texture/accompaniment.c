@@ -203,11 +203,13 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
     out->meter = metre.meter;
     out->compound = out->meter.beat_unit == 8 && out->meter.beats_per_bar >= 6 && out->meter.beats_per_bar % 3 == 0;
     long cell;
+    size_t cells = 0;
     if (!melody_ticks(out->span.length, &out->length) || !melody_ticks(out->span.start, &origin) ||
         !melody_ticks(metre.cell_length, &cell) || !melody_ticks(metre.bar_length, &out->bar) || cell <= 0 ||
         out->length <= 0 || out->bar <= 0 || out->meter.beat_unit <= 0 || MELODY_TICKS % out->meter.beat_unit != 0) {
         return false;
     }
+    out->cell = cell;
     out->beat = out->compound ? 3 * (MELODY_TICKS / 8) : MELODY_TICKS / out->meter.beat_unit;
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, out->span, meters, 2) != 1 ||
         !melody_ticks(plan_lane_span_span(plan, meters[0]).start, &meter_start)) {
@@ -217,13 +219,19 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
     long at = 0;
     for (size_t i = 0; i < count; i++) {
         unsigned seventh;
+        PlanTime chord_from;
+        PlanTime chord_length;
+        long chord_ticks;
         if (plan_lane_span_state(plan, harmony[i]) == PLAN_STATE_CONSTRAINED ||
             !accomp_chord_tones(&out->key, &chords[i], out->chord_pcs[i], &out->chord_pc_count[i]) ||
-            !melody_chord_mask(&out->key, &chords[i], &out->chord_mask[i], &seventh)) {
+            !melody_chord_mask(&out->key, &chords[i], &out->chord_mask[i], &seventh) ||
+            !harmony_cells_of_span(&metre, cells, chords[i].cells, &chord_from, &chord_length) ||
+            !melody_ticks(chord_length, &chord_ticks) || chord_ticks <= 0) {
             return false;
         }
         out->chord_start[i] = at;
-        at += (long)chords[i].cells * cell;
+        at += chord_ticks;
+        cells += chords[i].cells;
     }
     out->chord_count = count;
     out->chord_start[count] = at;
@@ -287,7 +295,7 @@ void accomp_judge(const AccompContext *context, const AccompCandidate *candidate
         if (!candidate->voiced[b]) {
             continue;
         }
-        size_t chord = accomp_chord_at(context, (long)b * context->beat);
+        size_t chord = accomp_chord_at(context, candidate->beat_start[b]);
         if (previous && chord != previous_chord) {
             size_t voices = candidate->voicing_size[b] < previous_size ? candidate->voicing_size[b] : previous_size;
             moved += accomp_voicing_distance(candidate->voicing[b], candidate->voicing_size[b], previous, previous_size);
