@@ -111,6 +111,13 @@ static unsigned nct_bit(NonChordTone tone) {
 static void check_basics(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     const MelodyContext *context = &melody->context;
     unsigned strong_figures = MELODY_NCT_APPOGGIATURA | MELODY_NCT_SUSPENSION;
+    /* The pickup is held to the range, and to the melodic rules in check_melodic; no chord tone is asked of it. */
+    for (size_t i = 0; !verdict->hard && i < melody->pickup_count; i++) {
+        if (melody->pickup_notes[i].pitch < melody->params.range_low ||
+            melody->pickup_notes[i].pitch > melody->params.range_high) {
+            verdict->hard = "outside the melody range";
+        }
+    }
     for (size_t i = 0; !verdict->hard && i < melody->count; i++) {
         const MelodyNote *note = &melody->notes[i];
         if (note->pitch < melody->params.range_low || note->pitch > melody->params.range_high) {
@@ -233,12 +240,16 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
        the join is judged like any other; so is the join to written or Given melody that follows it. */
     size_t lead = melody->context.lead_in_count;
     size_t trail = melody->context.has_lead_out ? 1 : 0;
-    size_t total = lead + melody->count + trail;
+    size_t pickup = melody->pickup_count;
+    size_t total = lead + pickup + melody->count + trail;
     PitchSpelling **spellings = calloc(total, sizeof(*spellings));
     bool ok = spellings != NULL;
     for (size_t i = 0; ok && !verdict->hard && i < total; i++) {
         int pitch = i < lead ? melody->context.lead_in[i]
-                             : (i < lead + melody->count ? melody->notes[i - lead].pitch : melody->context.lead_out);
+                    : i < lead + pickup
+                        ? melody->pickup_notes[i - lead].pitch
+                        : (i < lead + pickup + melody->count ? melody->notes[i - lead - pickup].pitch
+                                                             : melody->context.lead_out);
         spellings[i] = spell_melody(&melody->context.key, pitch);
         if (!spellings[i]) {
             verdict->hard = "a melody pitch cannot be spelled";
@@ -634,9 +645,11 @@ bool melody_check_lane(const PiecePlan *plan, PlanSpan span, PlanKey key, const 
     bool ok = melody && violation;
     size_t found = 0;
     long origin = 0;
+    PlanTime phrase_end;
     if (ok) {
         found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, HARMONY_MAX_CHORDS);
         ok = found > 0 && found <= HARMONY_MAX_CHORDS && melody_ticks(span.start, &origin) &&
+             plan_span_end(span, &phrase_end) == PLAN_OK &&
              melody_phrase_read(plan, plan_lane_span_owner(plan, ids[0]), span, key, &melody->context);
     }
     if (melody) {
@@ -647,14 +660,29 @@ bool melody_check_lane(const PiecePlan *plan, PlanSpan span, PlanKey key, const 
     for (size_t i = 0; ok && i < found; i++) {
         long base;
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
-        ok = plan_span_contains(span, plan_lane_span_span(plan, ids[i])) &&
-             melody_ticks(plan_lane_span_span(plan, ids[i]).start, &base);
+        PlanTime lane_end;
+        PlanSpan lane_span = plan_lane_span_span(plan, ids[i]);
+        /* A melody span may start before the phrase, with a pickup (PLAN_CONSTRAINT_PICKUP), and end where it ends. */
+        ok = plan_span_end(lane_span, &lane_end) == PLAN_OK &&
+             (plan_span_contains(span, lane_span) ||
+              (plan_time_compare(lane_span.start, span.start) < 0 && plan_time_compare(lane_end, phrase_end) == 0)) &&
+             melody_ticks(lane_span.start, &base);
         for (size_t n = 0; ok && n < notes->note_count; n++) {
             MelodyNote *note = &melody->notes[melody->count];
-            ok = melody->count < MELODY_MAX_NOTES && melody_ticks(notes->notes[n].offset, &note->onset) &&
+            long onset;
+            ok = melody->count < MELODY_MAX_NOTES && melody_ticks(notes->notes[n].offset, &onset) &&
                  melody_ticks(notes->notes[n].duration, &note->duration);
-            if (ok) {
-                note->onset += base - origin;
+            if (ok && base - origin + onset < 0) {
+                /* A note before the phrase is the pickup. */
+                MelodyNote *pickup = &melody->pickup_notes[melody->pickup_count];
+                ok = melody->pickup_count < MELODY_MAX_PICKUP;
+                pickup->onset = base - origin + onset;
+                pickup->duration = note->duration;
+                pickup->pitch = notes->notes[n].midi_pitch;
+                pickup->motive_index = -1;
+                melody->pickup_count += ok;
+            } else if (ok) {
+                note->onset = base - origin + onset;
                 note->pitch = notes->notes[n].midi_pitch;
                 note->motive_index = -1;
                 note->strong = melody_on_cell(&melody->context, note->onset);

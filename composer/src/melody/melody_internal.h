@@ -16,6 +16,8 @@
 #define MELODY_TICKS 128L
 #define MELODY_MAX_NOTES 256
 #define MELODY_MAX_BASS 256
+/* The most notes of a pickup (R-168). */
+#define MELODY_MAX_PICKUP 4
 #define MELODY_PAYLOAD_MAGIC 0x4D454C31UL
 /* The smallest leap, in semitones, that a step the other way is asked to follow. */
 #define MELODY_RECOVER_FROM 5
@@ -37,6 +39,14 @@ typedef struct {
     PhraseMetre metre;
     long length;
     long cell;
+    /*
+     * The anacrusis before the target (PLAN_CONSTRAINT_PICKUP): its ticks, 0 for none. The target's span is what follows
+     * it, so the notes of the pickup have onsets from -pickup, and the melody span the notes are written to starts
+     * `pickup` ticks before the target. The pitch classes of the chord sounding under the pickup (the harmony span
+     * before the target) are `pickup_mask`, 0 when there is none, as at the start of a plan.
+     */
+    long pickup;
+    unsigned pickup_mask;
     size_t count;
     PhraseChord chords[HARMONY_MAX_CHORDS];
     long chord_start[HARMONY_MAX_CHORDS + 1]; /* the last entry is the phrase's length */
@@ -108,6 +118,8 @@ typedef struct {
     MelodyFillParams params;
     MelodyNote notes[MELODY_MAX_NOTES];
     size_t count;
+    MelodyNote pickup_notes[MELODY_MAX_PICKUP]; /* the anacrusis, oldest first, onsets from -context.pickup */
+    size_t pickup_count;
 } MelodyCandidate;
 
 /* A time in the plan as ticks from the start of the plan; false when it is not a whole number of them. */

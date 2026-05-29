@@ -34,7 +34,8 @@ typedef enum {
     PLAN_CONSTRAINT_SECTION_LETTER, /* on a section node: its form letter ("A", "B", "A'") */
     PLAN_CONSTRAINT_INVENT_MOTIVE,  /* no parameters: a motive's melody span to be invented (motive-invent) */
     PLAN_CONSTRAINT_STYLE,          /* on the form node: the style model file the fill prefers, and how strongly (R-080) */
-    PLAN_CONSTRAINT_SOURCE          /* on a motive node, or a section holding a given progression: the corpus passage it was taken from */
+    PLAN_CONSTRAINT_SOURCE,         /* on a motive node, or a section holding a given progression: the corpus passage it was taken from */
+    PLAN_CONSTRAINT_PICKUP          /* on a melody span: its first `length` is an anacrusis before the first downbeat note (R-168) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -312,6 +313,7 @@ typedef struct {
         char letter[PLAN_SECTION_LETTER_MAX];
         PlanStyle style;
         PlanSource source;
+        PlanTime pickup; /* the anacrusis: a multiple of 1/32 of a whole note, shorter than a bar */
     } params;
 } PlanConstraint;
 
