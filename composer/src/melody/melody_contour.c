@@ -5,6 +5,8 @@
 /* The most the climax is placed above the top of the motive, past the pitch above it, in semitones. */
 #define CLIMAX_RISE 4
 #define CLIMAX_SCALE 1000
+/* The most a climax of a span on beats rises above the last anchor of its motive, in semitones: a fifth. */
+#define CLIMB_REACH 7
 /* A climax within this many thousandths of the place asked for is at that place. */
 #define POSITION_SLACK 150
 #define SOFT_RULES 4
@@ -93,11 +95,29 @@ bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *p
         ceiling = top + 2 > middle ? top + 2 : middle;
         ceiling = ceiling < params->range_high ? ceiling : params->range_high;
     }
+    /*
+     * A span that does not run from a barline over whole bars has few anchors after its motive, and a climax more than a
+     * fifth above the last anchor of the motive cannot be reached by notes that leap as the rules allow: the climax is
+     * left in the motive then, as it is when no pitch is free.
+     */
+    bool beat_span = context->pickup > 0 || context->metre.offset.num != 0 || context->metre.lead.num != 0 ||
+                     context->metre.tail.num != 0;
+    bool has_reach = false;
+    int reach_from = 0;
+    for (size_t j = 0; beat_span && j < first; j++) {
+        if (melody_is_anchor(context, params, melody, j)) {
+            reach_from = melody->notes[j].pitch;
+            has_reach = true;
+        }
+    }
     for (size_t k = 0; k < limit; k++) {
         size_t best = order[k];
         unsigned mask = melody_need_mask(context, params, &melody->notes[best]);
         int found = -1;
         for (int pitch = top + 1; pitch <= ceiling; pitch++) {
+            if (has_reach && pitch - reach_from > CLIMB_REACH) {
+                continue;
+            }
             if (((mask >> (((pitch % 12) + 12) % 12)) & 1u) &&
                 (found < 0 || absolute(pitch - peak) < absolute(found - peak))) {
                 found = pitch;
