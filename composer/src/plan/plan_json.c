@@ -27,7 +27,7 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style", "source"};
+                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
@@ -282,6 +282,12 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
              json_add(object, "end_measure", cJSON_CreateNumber(source->end_measure)) &&
              json_add(object, "end_beat", cJSON_CreateNumber(source->end_beat)) &&
              json_add(object, "score", cJSON_CreateString(score));
+        break;
+    }
+    case PLAN_CONSTRAINT_PICKUP: {
+        char length[64];
+        snprintf(length, sizeof(length), "%ld/%lu", constraint->params.pickup.num, constraint->params.pickup.den);
+        ok = ok && json_add(object, "length", cJSON_CreateString(length));
         break;
     }
     }
@@ -1160,6 +1166,23 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         out->params.source.end_beat = end_beat->valuedouble;
         out->params.source.score_numerator = numerator;
         out->params.source.score_denominator = denominator;
+        return true;
+    }
+    case PLAN_CONSTRAINT_PICKUP: {
+        const cJSON *length = json_member(reader, item, path, "length", true);
+        long numerator;
+        unsigned long denominator;
+        char rest;
+        if (!length) {
+            return false;
+        }
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "length");
+        if (!cJSON_IsString(length) || sscanf(length->valuestring, "%ld/%lu%c", &numerator, &denominator, &rest) != 2 ||
+            denominator == 0 || numerator <= 0 || numerator > TIME_LIMIT || denominator > (unsigned long)TIME_LIMIT ||
+            plan_time_make(numerator, denominator, &out->params.pickup) != PLAN_OK) {
+            return json_bad_format(reader, at, "expected a length in whole notes like \"1/4\"");
+        }
         return true;
     }
     }

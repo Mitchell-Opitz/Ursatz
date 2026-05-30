@@ -56,6 +56,7 @@ typedef struct {
     int voice;                 /* an inner voice's number, otherwise 0 */
     size_t first_bar;          /* 1-based from the start of the piece, 0 when the plan has no meter; the last bar the target ends in */
     size_t last_bar;
+    char pickup[16];           /* the pickup the target's melody span starts with, "n/d" whole notes; "" for none */
     FillStepOutcome outcome;
     size_t considered;         /* how many candidates the step weighed */
     bool has_chosen;
