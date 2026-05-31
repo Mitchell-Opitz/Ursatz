@@ -33,7 +33,6 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 |---|---|---|---|---|---|---|
 | DEV-003 | bach114 | keys | region 27-28 | D major 27-28 | D major 27-30 | C1 |
 | DEV-004 | bach114 | keys | region 29-32 | G major 29-32 | D major 27-30, G major 31-32 | C1 |
-| DEV-005 | bach114 | keys | change 21 | weak-modulation return at 21 | tonicization return at 21 | C1 |
 | DEV-006 | bach114 | keys | change 29 | weak-modulation return at 29 | none | C1 |
 | DEV-007 | bach114 | cadences | m4 b3 | hc | none | C4 |
 | DEV-008 | bach114 | cadences | m8 b2.5 | pac | none | C5 |
@@ -102,5 +101,6 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-088 | bach114 | phrase-form | end m16 | pac at m16 | none | C8 |
 | DEV-089 | bach114 | phrase-form | end m32 | pac at m32 | none | C8 |
 | DEV-090 | clementi36 | cadences | extra m38 b2.5 | none | pac | C4 |
-| DEV-091 | bach114 | keys | change 19 | weak-modulation at 19 | tonicization at 19 | C3 |
-| DEV-092 | bach114 | keys | change 27 | weak-modulation at 27 | tonicization return at 27 | C3 |
+| DEV-093 | mozart545 | keys | change 13 | modulation at 13 | tonicization at 12 | C5 |
+| DEV-094 | mozart545 | keys | change 29 | modulation at 29 | tonicization at 29 | C5 |
+| DEV-095 | mozart545 | keys | change 41 | modulation at 41 | tonicization at 40 | C5 |
