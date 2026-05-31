@@ -18,7 +18,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 |---|---|---|---|
 | C1 | [method] Key regions come from 4-measure windows scored against pitch-class profiles with a change penalty (`key_regions.h`, REGION PATH); a window labels the measure at its centre, so a region's edge lands up to two measures from the barline where the music changes, and a one- or two-measure excursion is stretched to a window or absorbed | Key regions placed on harmonic evidence (cadence- and pivot-informed boundaries) | unassigned |
 | C2 | [method] The key of a window is the best correlation of its pooled pitch-class weights with the 24 profiles; closely related keys (the dominant, the subdominant, the relative minor) and passages of scales or a dominant pedal are read as the neighbouring key | Harmony-aware key estimation (the key from chord functions, not pitch-class weights alone) | unassigned |
-| C3 | [method] The extent of a key change is read from the lengths of the regions and their return only; no cadence is looked for (`cadence_confirmed` is always false, `key_regions.h`), so a change that a cadence confirms reads as a weak modulation or a tonicization | KeyChangeExtent confirmed by cadences (named as later work in `key_regions.h`) | unassigned |
+| C3 | [method] The extent of a key change is read from region lengths and return, then confirmed by the cadences found (`harmony_key_change_confirm`); a change whose cadence is not found, or whose region edge is off, still reads wrongly | Region length rule confirmed by cadences (B5) | unassigned |
 | C4 | [method] A cadence arriving on a weak beat is found only as a tonic after a root-position dominant on a stronger beat (or on the beat against a tonic off it) with a phrase end signal (`allow_weak_arrival`, `analysis_cadence.h`); a half cadence arriving on a weak beat is not found, and a closing V-I tag after the cadence of the draft is read as a second cadence | Half cadences on weak beats; the draft cadence list covering closing tags | unassigned |
 | C5 | [method] Chords are read from the pitch classes sounding in each adaptive segment, ranked among the diatonic triads and sevenths of the region's key: a segment holding only a melody note (a sparse left hand), an alternating or ornamented texture, or a chord outside the vocabulary is read as another chord or none, so the V-I that the music has is hidden and a V-I the music does not have can appear | Chord identification with context (non-chord-tone filtering, harmonic continuity across melody-only segments, non-diatonic chords) | unassigned |
 | C6 | [method] A bass that is not a member of the chord reads as root position (`roman_numeral_adapter.h`); the segment's bass is its lowest sounding pitch, so a neighbour or passing bass tone turns a dominant seventh that is prolonged in an inversion into a root-position V7 (and a tonic with an ornamental bass into I6) | Inversion read from the chord's bass tone when the lowest pitch is ornamental | unassigned |
@@ -33,7 +33,6 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 |---|---|---|---|---|---|---|
 | DEV-003 | bach114 | keys | region 27-28 | D major 27-28 | D major 27-30 | C1 |
 | DEV-004 | bach114 | keys | region 29-32 | G major 29-32 | D major 27-30, G major 31-32 | C1 |
-| DEV-005 | bach114 | keys | change 21 | weak-modulation return at 21 | tonicization return at 21 | C1 |
 | DEV-006 | bach114 | keys | change 29 | weak-modulation return at 29 | none | C1 |
 | DEV-007 | bach114 | cadences | m4 b3 | hc | none | C4 |
 | DEV-008 | bach114 | cadences | m8 b2.5 | pac | none | C5 |
@@ -102,5 +101,6 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-088 | bach114 | phrase-form | end m16 | pac at m16 | none | C8 |
 | DEV-089 | bach114 | phrase-form | end m32 | pac at m32 | none | C8 |
 | DEV-090 | clementi36 | cadences | extra m38 b2.5 | none | pac | C4 |
-| DEV-091 | bach114 | keys | change 19 | weak-modulation at 19 | tonicization at 19 | C3 |
-| DEV-092 | bach114 | keys | change 27 | weak-modulation at 27 | tonicization return at 27 | C3 |
+| DEV-093 | mozart545 | keys | change 13 | modulation at 13 | tonicization at 12 | C5 |
+| DEV-094 | mozart545 | keys | change 29 | modulation at 29 | tonicization at 29 | C5 |
+| DEV-095 | mozart545 | keys | change 41 | modulation at 41 | tonicization at 40 | C5 |

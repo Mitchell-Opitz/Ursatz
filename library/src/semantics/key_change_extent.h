@@ -20,7 +20,8 @@
  *                           in it afterward, the clearest modulation
  *
  * The thresholds, and what establishes a key, are conventions of a Framework
- * (frameworks/standard-harmony), not of this type. People hear the same passage differently,
+ * (frameworks/standard-harmony), not of this type. A region is confirmed as a modulation by a
+ * cadence in the new key (harmony_key_change_confirm); without one it is a tonicization. People hear the same passage differently,
  * so an analysis represents a hearing, not a fact.
  */
 

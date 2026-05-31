@@ -20,6 +20,7 @@
 #define URSATZ_FORM_PIECES_AS_LIBRARY
 #include "test_form_reference_pieces.c"
 
+#include "harmony_key_change.h"
 #include "io/midi_key_signature.h"
 
 /* --- the expected values --- */
@@ -281,6 +282,37 @@ static size_t fv1_region_at(const CommonPracticeKeyRegions *regions, double star
     return found;
 }
 
+/* The key changes' extents confirmed by the cadences the chain found (B5): a region is a modulation only when a cadence arrives
+   inside it, and the change out of an excursion takes the excursion's extent. */
+static void fv1_confirm_key_changes(Chain *c) {
+    CommonPracticeKeyRegions *r = &c->regions;
+    double *arrivals = (double *)calloc(c->cadences.count + 1, sizeof(double));
+    assert(arrivals != NULL);
+    for (size_t k = 0; k < c->cadences.count; k++) {
+        arrivals[k] = c->p.starts[c->cadences.items[k].arrival_first];
+    }
+    for (size_t i = 0; i < r->change_count; i++) {
+        CommonPracticeKeyChange *change = &r->changes[i];
+        if (change->is_return) {
+            continue;
+        }
+        const CommonPracticeKeyRegion *into = &r->regions[change->to_region];
+        KeyChangeExtent confirmed = change->extent;
+        assert(harmony_key_change_confirm(change->extent, fv1_time_double(time_span_start(into->span)),
+                                          fv1_time_double(time_span_end(into->span)), arrivals, c->cadences.count,
+                                          &confirmed));
+        change->extent = confirmed;
+        change->cadence_confirmed = key_change_extent_is_modulation(confirmed);
+    }
+    for (size_t i = 1; i < r->change_count; i++) {
+        if (r->changes[i].is_return) {
+            r->changes[i].extent = r->changes[i - 1].extent;
+            r->changes[i].cadence_confirmed = r->changes[i - 1].cadence_confirmed;
+        }
+    }
+    free(arrivals);
+}
+
 /* The stages from the key regions to the L3.6 form, over the chain's setup. A pass can be run again after fv1_pass_destroy. */
 static void fv1_chain_pass(Chain *c, const MusicalTime *const *boundaries, size_t boundary_count) {
     const V1Expected *x = &c->x;
@@ -370,6 +402,7 @@ static void fv1_chain_pass(Chain *c, const MusicalTime *const *boundaries, size_
     }
     assert(harmony_analysis_prepare(c->in.inputs, count, &c->harmony) == HARMONY_ANALYSIS_OK);
     assert(harmony_analysis_find_cadences(c->harmony, count, NULL, &c->cadences) == HARMONY_CADENCE_ANALYSIS_OK);
+    fv1_confirm_key_changes(c);
 
     /* the L3.6 adapter over the keys scope, on the cadences the chain found */
     form_build_init(&c->build, c->map);

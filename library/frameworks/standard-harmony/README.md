@@ -291,6 +291,11 @@ and 0/1 when it does not.
   cadence establishes it, whether the passage continues after it) and gives a `KeyChangeExtent`:
   two chords or fewer with no cadence is a tonicization, more with none an extended tonicization,
   a cadence a modulation (strong if it continues, weak if it goes right back home).
+  `harmony_key_change_confirm` confirms a region's extent with cadences passed as arrival times
+  (whole notes): a cadence arriving inside the region keeps a modulation (a short region with a
+  cadence becomes a weak modulation); with none, the region is a tonicization however long it is.
+  With no cadences given (NULL) the length rule stands. The Framework v1 chain passes the cadences
+  it found, and the change out of an excursion takes the excursion's extent.
   `harmony_extended_tonicization_label` writes the Roman numeral for the bracket under an
   extended tonicization ("ii" for F minor in E-flat major). `harmony_modulation_kind` is pivot
   when a pivot is given and direct when not.
