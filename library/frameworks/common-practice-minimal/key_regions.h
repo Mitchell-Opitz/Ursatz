@@ -201,9 +201,10 @@ void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows);
  *
  * A change that is the return out of such a region (the key goes back to the one before the excursion) is
  * flagged is_return and carries the extent of the excursion it closes. EXTENDED_TONICIZATION is not used here (it
- * needs a count of chords). The extent is read from region lengths ALONE: no cadence is looked for, so
- * cadence_confirmed is always false in this version, and MODULATION / WEAK_MODULATION mean "a lasting new
- * key region", not "a cadence established it". Cadence confirmation is later work (L3.3).
+ * needs a count of chords). The extent is read from region lengths ALONE: no cadence is looked for here, so
+ * cadence_confirmed is false as returned, and MODULATION / WEAK_MODULATION mean "a lasting new
+ * key region", not "a cadence established it". The caller confirms the extent with the cadences it finds
+ * (standard-harmony's harmony_key_change_confirm, as the Framework v1 chain does) and sets cadence_confirmed.
  */
 
 /*
@@ -291,7 +292,7 @@ typedef struct {
     size_t to_region;
     KeyChangeExtent extent;
     bool is_return;                /* goes back to the key before an excursion that this extent describes */
-    bool cadence_confirmed;        /* always false: no cadence is looked for */
+    bool cadence_confirmed;        /* false as returned; the caller sets it after confirming with cadences */
     bool has_pivot;                /* a pivot chord was found (see below); false for a direct change */
     size_t pivot_segment;          /* its index in the caller's segments; meaningful only when has_pivot */
 } CommonPracticeKeyChange;
