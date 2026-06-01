@@ -530,6 +530,159 @@ HarmonyCadenceAnalysisStatus harmony_analysis_find_cadences(const HarmonySegment
     return HARMONY_CADENCE_ANALYSIS_OK;
 }
 
+/* --- cadences at formal boundaries --- */
+
+/* The index of the segment that starts at `start` whole notes, from 1 on; false when none does. */
+static bool section_start_segment(const HarmonySegment *segments, size_t count, double start, size_t *out) {
+    for (size_t i = 1; i < count; i++) {
+        if (fabs(whole_notes(time_span_start(segments[i].input->span)) - start) < 1e-9) {
+            *out = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool is_authentic_family(CadenceType type) {
+    return cadence_type_is_authentic(type) || type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED;
+}
+
+HarmonyCadenceAnalysisStatus harmony_analysis_add_boundary_cadences(const HarmonySegment *segments, size_t count,
+                                                                    const HarmonyCadenceConfig *config,
+                                                                    const double *section_starts, size_t section_count,
+                                                                    HarmonyCadences *cadences) {
+    if (cadences == NULL || (segments == NULL && count > 0) || (section_starts == NULL && section_count > 0)) {
+        return HARMONY_CADENCE_ANALYSIS_ERR_NULL_ARGUMENT;
+    }
+    HarmonyCadenceConfig defaults = harmony_cadence_config_default();
+    if (config == NULL) {
+        config = &defaults;
+    }
+    if (!config_valid(config)) {
+        return HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG;
+    }
+    for (size_t k = 0; k < section_count; k++) {
+        if (!isfinite(section_starts[k])) {
+            return HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG;
+        }
+    }
+    if (section_count == 0 || count < 2) {
+        return HARMONY_CADENCE_ANALYSIS_OK;
+    }
+    HarmonyRun *runs = (HarmonyRun *)calloc(count, sizeof(HarmonyRun));
+    HarmonyCadenceResult *merged =
+        (HarmonyCadenceResult *)calloc(cadences->count + section_count, sizeof(HarmonyCadenceResult));
+    bool *removed = (bool *)calloc(cadences->count > 0 ? cadences->count : 1, sizeof(bool));
+    if (runs == NULL || merged == NULL || removed == NULL) {
+        free(runs);
+        free(merged);
+        free(removed);
+        return HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
+    }
+    size_t run_count = harmony_analysis_build_runs(segments, count, runs);
+    bool *pac_arrival_run = (bool *)calloc(run_count > 0 ? run_count : 1, sizeof(bool));
+    if (pac_arrival_run == NULL) {
+        free(runs);
+        free(merged);
+        free(removed);
+        return HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
+    }
+
+    size_t added = 0;
+    HarmonyCadenceAnalysisStatus status = HARMONY_CADENCE_ANALYSIS_OK;
+    for (size_t k = 0; k < section_count && status == HARMONY_CADENCE_ANALYSIS_OK; k++) {
+        size_t start;
+        if (!section_start_segment(segments, count, section_starts[k], &start)) {
+            continue;
+        }
+        size_t r = 0;
+        while (r < run_count && runs[r].last != start - 1) {
+            r++;
+        }
+        if (r == 0 || r >= run_count || !is_dominant_root(&segments[runs[r].first]) ||
+            !diatonic(&segments[runs[r - 1].first])) {
+            continue;
+        }
+        bool recorded = false;
+        for (size_t i = 0; i < cadences->count; i++) {
+            const HarmonyCadenceResult *old = &cadences->items[i];
+            recorded = recorded || (old->type == CADENCE_TYPE_HALF && old->arrival_last == start - 1);
+        }
+        InternalPoint point;
+        memset(&point, 0, sizeof(point));
+        point.point.arrival_first = runs[r].first;
+        point.point.arrival_last = runs[r].last;
+        point.point.before_first = runs[r - 1].first;
+        point.point.before_last = runs[r - 1].last;
+        point.arrival_run = r;
+        Classified classified;
+        if (!recorded && (!classify_point(segments, runs, &point, pac_arrival_run, config, &classified) ||
+                          classified.type != CADENCE_TYPE_HALF)) {
+            continue;
+        }
+        /* the tonic after the dominant starts the new section: an authentic cadence read into it is replaced */
+        for (size_t i = 0; i < cadences->count; i++) {
+            const HarmonyCadenceResult *old = &cadences->items[i];
+            if (is_authentic_family(old->type) && old->arrival_first == start && old->dominant_last == start - 1) {
+                removed[i] = true;
+            }
+        }
+        if (!recorded) {
+            if (!build_result(segments, &point.point, &classified, &merged[added])) {
+                status = HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
+                break;
+            }
+            added++;
+        }
+    }
+    free(pac_arrival_run);
+    free(runs);
+    if (status != HARMONY_CADENCE_ANALYSIS_OK) {
+        for (size_t i = 0; i < added; i++) {
+            destroy_result(&merged[i]);
+        }
+        free(merged);
+        free(removed);
+        return status;
+    }
+
+    /* the kept cadences and the added ones, in order of arrival */
+    HarmonyCadenceResult *items = (HarmonyCadenceResult *)calloc(cadences->count + added > 0 ? cadences->count + added : 1,
+                                                                 sizeof(HarmonyCadenceResult));
+    if (items == NULL) {
+        for (size_t i = 0; i < added; i++) {
+            destroy_result(&merged[i]);
+        }
+        free(merged);
+        free(removed);
+        return HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
+    }
+    size_t n = 0;
+    size_t next_added = 0;
+    for (size_t i = 0; i < cadences->count; i++) {
+        if (removed[i]) {
+            destroy_result(&cadences->items[i]);
+            continue;
+        }
+        while (next_added < added && merged[next_added].arrival_first < cadences->items[i].arrival_first) {
+            items[n++] = merged[next_added++];
+        }
+        items[n++] = cadences->items[i];
+    }
+    while (next_added < added) {
+        items[n++] = merged[next_added++];
+    }
+    free(cadences->items);
+    free(merged);
+    free(removed);
+    cadences->items = n > 0 ? items : NULL;
+    cadences->count = n;
+    if (n == 0) {
+        free(items);
+    }
+    return HARMONY_CADENCE_ANALYSIS_OK;
+}
+
 bool harmony_cadence_claim_read(const Interpretation *interpretation, HarmonyCadenceClaim *out) {
     if (interpretation == NULL || out == NULL) {
         return false;
