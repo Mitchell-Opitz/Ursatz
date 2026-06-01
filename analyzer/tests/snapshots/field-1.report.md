@@ -1120,7 +1120,7 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 
 ## Cadences
 
-The library's standard-harmony analysis found 11 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
+The library's standard-harmony analysis found 13 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
 
 | Position | Type | Key | Soprano | Beat strength | Boundary |
 | --- | --- | --- | --- | --- | --- |
@@ -1134,6 +1134,8 @@ The library's standard-harmony analysis found 11 cadences from the chords, the m
 | m. 46, beat 1 | perfect-authentic | Eb major | 1 | strong | no |
 | m. 50, beat 1 | imperfect-authentic | Eb major | 3 | strong | no |
 | m. 57, beat 1 | half | Eb major | b6 | strong | no |
+| m. 60, beat 1 | subverted | Eb major | 3 | strong | no |
+| m. 64, beat 1 | subverted | Eb major | 5 | strong | no |
 | m. 65, beat 3 | half | Eb major | 7 | medium | no |
 
 ### Cadence plan
@@ -1148,9 +1150,11 @@ The library's standard-harmony analysis found 11 cadences from the chords, the m
 8. m. 46, beat 1: perfect-authentic in Eb major
 9. m. 50, beat 1: imperfect-authentic in Eb major
 10. m. 57, beat 1: half in Eb major
-11. m. 65, beat 3: half in Eb major
+11. m. 60, beat 1: subverted in Eb major
+12. m. 64, beat 1: subverted in Eb major
+13. m. 65, beat 3: half in Eb major
 
-**Counts:** half 6, perfect-authentic 3, subverted 1, imperfect-authentic 1.
+**Counts:** half 6, perfect-authentic 3, subverted 3, imperfect-authentic 1.
 
 ## Phrases
 
@@ -1406,7 +1410,9 @@ Changes per measure over the two measures before each cadence's arrival (Approac
 | 8 | m. 46 | 3 | 3.5 | yes |
 | 9 | m. 50 | 0.5 | 2 | yes |
 | 10 | m. 57 | 2 | 3 | yes |
-| 11 | m. 65 | 1.5 | 3.5 | yes |
+| 11 | m. 60 | 3.5 | 1.5 | no |
+| 12 | m. 64 | 1.5 | 3 | yes |
+| 13 | m. 65 | 1.5 | 3.5 | yes |
 
 ## Rhythm and meter
 

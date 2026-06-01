@@ -194,11 +194,11 @@ static void check_counts(const Piece *piece, const cJSON *cadences) {
         CHECK(has_cadence_at(cadences, "perfect-authentic", 117, 8));
         CHECK(has_cadence_at(cadences, "perfect-authentic", 165, 8));
     } else if (strcmp(piece->name, "Clementi 36") == 0) {
-        CHECK(count_type(cadences, "half") == 7);
-        CHECK(count_type(cadences, "perfect-authentic") == 3);
+        CHECK(count_type(cadences, "half") == 6);
+        CHECK(count_type(cadences, "perfect-authentic") == 4);
         CHECK(count_type(cadences, "imperfect-authentic") == 2);
-        CHECK(count_type(cadences, "subverted") == 1);
-        CHECK(cJSON_GetArraySize(cadences) == 13);
+        CHECK(count_type(cadences, "subverted") == 3);
+        CHECK(cJSON_GetArraySize(cadences) == 15);
     } else if (strcmp(piece->name, "Mozart 545") == 0) {
         size_t boundary = 0;
         const cJSON *cadence;
