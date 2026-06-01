@@ -261,6 +261,21 @@ bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *r
         cadence->in_region = arrival->in_region;
         cadence->region = arrival->region;
         cadence->uncertainty = found->uncertainty;
+        cadence->share = found->share;
+        if (found->alternative.present) {
+            const HarmonyCadenceAlternative *alternative = &found->alternative;
+            bool is_cadence = alternative->reading == HARMONY_CADENCE_READING_CADENCE;
+            const char *alternative_type = is_cadence ? cadence_type_name(alternative->type) : NULL;
+            cadence->has_alternative = true;
+            cadence->alternative.reading = is_cadence ? "cadence" : "prolongation";
+            cadence->alternative.type = is_cadence ? strdup(alternative_type ? alternative_type : "unknown") : NULL;
+            cadence->alternative.arrival_first = alternative->arrival_first;
+            cadence->alternative.arrival_last = alternative->arrival_last;
+            cadence->alternative.share = alternative->share;
+            if (is_cadence && !cadence->alternative.type) {
+                return false;
+            }
+        }
         if (!cadence->type || (arrival->soprano.degree && !cadence->soprano_degree)) {
             return false;
         }

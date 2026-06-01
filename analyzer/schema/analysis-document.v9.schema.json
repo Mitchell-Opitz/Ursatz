@@ -361,7 +361,7 @@
         { "$ref": "#/$defs/claim" },
         {
           "type": "object",
-          "required": ["type", "arrival", "dominant", "soprano_degree", "arrival_beat_strength", "boundary", "region"],
+          "required": ["type", "arrival", "dominant", "soprano_degree", "arrival_beat_strength", "boundary", "region", "share"],
           "properties": {
             "type": {
               "enum": [
@@ -393,7 +393,35 @@
             "soprano_degree": { "type": ["string", "null"] },
             "arrival_beat_strength": { "enum": ["strong", "medium", "weak"] },
             "boundary": { "type": "boolean" },
-            "region": { "type": ["integer", "null"], "minimum": 0 }
+            "region": { "type": ["integer", "null"], "minimum": 0 },
+            "share": { "type": "integer", "minimum": 0, "maximum": 1000 },
+            "alternative": {
+              "type": "object",
+              "required": ["reading", "type", "measure", "beat", "share", "note_ids"],
+              "properties": {
+                "reading": { "enum": ["cadence", "prolongation"] },
+                "type": {
+                  "enum": [
+                    "perfect-authentic",
+                    "imperfect-authentic",
+                    "half",
+                    "subverted",
+                    "plagal",
+                    "deceptive",
+                    "authentic-unspecified",
+                    "unknown",
+                    null
+                  ]
+                },
+                "measure": { "type": ["integer", "null"], "minimum": 0 },
+                "beat": { "type": ["integer", "null"], "minimum": 1 },
+                "share": { "type": "integer", "minimum": 0, "maximum": 1000 },
+                "note_ids": {
+                  "type": "array",
+                  "items": { "type": "integer", "minimum": 0 }
+                }
+              }
+            }
           }
         }
       ]
