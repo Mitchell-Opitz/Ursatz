@@ -282,14 +282,14 @@ static size_t fv1_region_at(const CommonPracticeKeyRegions *regions, double star
     return found;
 }
 
-/* The sections' start times, in whole notes: the chain has no separate section step, so a section starts where a key region returns
-   to the home key (a recapitulation), the region pass 2 placed on the phrases (B6). */
+/* The sections' start times, in whole notes: the chain has no separate section step, so a section starts where the key regions come
+   back to the home key after leaving it (a recapitulation), on the regions pass 2 placed on the phrases (B6). */
 static size_t fv1_section_starts(const Chain *c, double *out, size_t capacity) {
     const CommonPracticeKeyRegions *r = &c->regions;
     size_t n = 0;
-    for (size_t i = 0; i < r->change_count && n < capacity; i++) {
-        if (r->changes[i].is_return) {
-            out[n++] = fv1_time_double(time_span_start(r->regions[r->changes[i].to_region].span));
+    for (size_t i = 1; i < r->region_count && n < capacity; i++) {
+        if (r->regions[i].key_index == c->x.home_key && r->regions[i - 1].key_index != c->x.home_key) {
+            out[n++] = fv1_time_double(time_span_start(r->regions[i].span));
         }
     }
     return n;
