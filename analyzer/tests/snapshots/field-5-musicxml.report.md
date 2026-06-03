@@ -954,8 +954,8 @@ The library's standard-harmony analysis found 12 cadences from the chords, the m
 | m. 40, beat 1 | perfect-authentic | Bb major | 1 | strong | no |
 | m. 41, beat 1 | half | Bb major | 4 | strong | no |
 | m. 41, beat 3 | half | Bb major | 4 | medium | no |
-| m. 42, beat 3 | subverted | Bb major | 1 | medium | no |
-| m. 43, beat 1 | subverted | Bb major | 1 | strong | no |
+| m. 42, beat 3 | evaded | Bb major | 1 | medium | no |
+| m. 43, beat 1 | evaded | Bb major | 1 | strong | no |
 
 ### Cadence plan
 
@@ -969,10 +969,10 @@ The library's standard-harmony analysis found 12 cadences from the chords, the m
 8. m. 40, beat 1: perfect-authentic in Bb major
 9. m. 41, beat 1: half in Bb major
 10. m. 41, beat 3: half in Bb major
-11. m. 42, beat 3: subverted in Bb major
-12. m. 43, beat 1: subverted in Bb major
+11. m. 42, beat 3: evaded in Bb major
+12. m. 43, beat 1: evaded in Bb major
 
-**Counts:** half 7, perfect-authentic 2, imperfect-authentic 1, subverted 2.
+**Counts:** half 7, perfect-authentic 2, imperfect-authentic 1, evaded 2.
 
 ## Phrases
 

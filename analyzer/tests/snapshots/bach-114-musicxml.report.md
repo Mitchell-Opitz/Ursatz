@@ -640,21 +640,21 @@ The library's standard-harmony analysis found 5 cadences from the chords, the me
 
 | Position | Type | Key | Soprano | Beat strength | Boundary |
 | --- | --- | --- | --- | --- | --- |
-| m. 14, beat 3 | subverted | D major | 1 | medium | no |
+| m. 14, beat 3 | evaded | D major | 1 | medium | no |
 | m. 15, beat 3.5 | perfect-authentic | D major | 1 | weak | no |
-| m. 20, beat 3 | subverted | D major | 1 | medium | no |
+| m. 20, beat 3 | evaded | D major | 1 | medium | no |
 | m. 21, beat 3.5 | perfect-authentic | D major | 1 | weak | no |
-| m. 23, beat 3 | subverted | D major | 4 | medium | no |
+| m. 23, beat 3 | evaded | D major | 4 | medium | no |
 
 ### Cadence plan
 
-1. m. 14, beat 3: subverted in D major
+1. m. 14, beat 3: evaded in D major
 2. m. 15, beat 3.5: perfect-authentic in D major
-3. m. 20, beat 3: subverted in D major
+3. m. 20, beat 3: evaded in D major
 4. m. 21, beat 3.5: perfect-authentic in D major
-5. m. 23, beat 3: subverted in D major
+5. m. 23, beat 3: evaded in D major
 
-**Counts:** subverted 3, perfect-authentic 2.
+**Counts:** evaded 3, perfect-authentic 2.
 
 ## Phrases
 

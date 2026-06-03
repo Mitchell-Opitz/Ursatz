@@ -4801,31 +4801,31 @@ The library's standard-harmony analysis found 51 cadences from the chords, the m
 | m. 56, beat 1 | perfect-authentic | G major | 1 | strong | no |
 | m. 58, beat 1 | perfect-authentic | G major | 1 | strong | no |
 | m. 63, beat 1 | imperfect-authentic | D minor | 3 | strong | no |
-| m. 82, beat 1 | subverted | F major | 6 | strong | no |
+| m. 82, beat 1 | evaded | F major | 6 | strong | no |
 | m. 100, beat 1 | perfect-authentic | C major | 1 | strong | no |
 | m. 101, beat 1 | perfect-authentic | C major | 1 | strong | no |
 | m. 104, beat 1 | perfect-authentic | G minor | 1 | strong | no |
 | m. 108, beat 1 | imperfect-authentic | D minor | 3 | strong | no |
-| m. 127, beat 1 | subverted | F major | 6 | strong | no |
+| m. 127, beat 1 | evaded | F major | 6 | strong | no |
 | m. 145, beat 1 | perfect-authentic | C major | 1 | strong | no |
 | m. 146, beat 1 | perfect-authentic | C major | 1 | strong | no |
 | m. 149, beat 1 | half | C major | 7 | strong | no |
-| m. 164, beat 1 | subverted | G major | 2 | strong | no |
-| m. 180, beat 1 | subverted | G major | 2 | strong | no |
+| m. 164, beat 1 | evaded | G major | 2 | strong | no |
+| m. 180, beat 1 | evaded | G major | 2 | strong | no |
 | m. 181, beat 1 | half | G major | 5 | strong | no |
 | m. 187, beat 3 | half | D major | 3 | weak | yes |
-| m. 188, beat 1 | subverted | G major | 6 | strong | no |
-| m. 196, beat 1 | subverted | G major | 2 | strong | no |
+| m. 188, beat 1 | evaded | G major | 6 | strong | no |
+| m. 196, beat 1 | evaded | G major | 2 | strong | no |
 | m. 197, beat 1 | half | G major | 5 | strong | no |
 | m. 203, beat 3 | half | D major | 3 | weak | yes |
-| m. 204, beat 1 | subverted | G major | 6 | strong | no |
-| m. 212, beat 1 | subverted | G minor | 2 | strong | no |
+| m. 204, beat 1 | evaded | G major | 6 | strong | no |
+| m. 212, beat 1 | evaded | G minor | 2 | strong | no |
 | m. 216, beat 1 | perfect-authentic | G minor | 1 | strong | no |
-| m. 220, beat 1 | subverted | Bb major | 2 | strong | no |
+| m. 220, beat 1 | evaded | Bb major | 2 | strong | no |
 | m. 227, beat 3 | half | G minor | 3 | weak | yes |
-| m. 228, beat 1 | subverted | G major | 2 | strong | no |
-| m. 244, beat 1 | subverted | G major | 2 | strong | no |
-| m. 248, beat 1 | subverted | G major | 2 | strong | no |
+| m. 228, beat 1 | evaded | G major | 2 | strong | no |
+| m. 244, beat 1 | evaded | G major | 2 | strong | no |
+| m. 248, beat 1 | evaded | G major | 2 | strong | no |
 | m. 252, beat 1 | imperfect-authentic | G major | 3 | strong | no |
 | m. 253, beat 1 | imperfect-authentic | G major | 3 | strong | no |
 | m. 254, beat 1 | perfect-authentic | G major | 1 | strong | no |
@@ -4844,8 +4844,8 @@ The library's standard-harmony analysis found 51 cadences from the chords, the m
 | m. 319, beat 1 | half | C major | 2 | strong | no |
 | m. 323, beat 1 | half | C major | 2 | strong | no |
 | m. 325, beat 1 | perfect-authentic | C major | 1 | strong | no |
-| m. 329, beat 1 | subverted | C major | 2 | strong | no |
-| m. 333, beat 1 | subverted | C major | 3 | strong | no |
+| m. 329, beat 1 | evaded | C major | 2 | strong | no |
+| m. 333, beat 1 | evaded | C major | 3 | strong | no |
 
 ### Cadence plan
 
@@ -4855,31 +4855,31 @@ The library's standard-harmony analysis found 51 cadences from the chords, the m
 4. m. 56, beat 1: perfect-authentic in G major
 5. m. 58, beat 1: perfect-authentic in G major
 6. m. 63, beat 1: imperfect-authentic in D minor
-7. m. 82, beat 1: subverted in F major
+7. m. 82, beat 1: evaded in F major
 8. m. 100, beat 1: perfect-authentic in C major
 9. m. 101, beat 1: perfect-authentic in C major
 10. m. 104, beat 1: perfect-authentic in G minor
 11. m. 108, beat 1: imperfect-authentic in D minor
-12. m. 127, beat 1: subverted in F major
+12. m. 127, beat 1: evaded in F major
 13. m. 145, beat 1: perfect-authentic in C major
 14. m. 146, beat 1: perfect-authentic in C major
 15. m. 149, beat 1: half in C major
-16. m. 164, beat 1: subverted in G major
-17. m. 180, beat 1: subverted in G major
+16. m. 164, beat 1: evaded in G major
+17. m. 180, beat 1: evaded in G major
 18. m. 181, beat 1: half in G major
 19. m. 187, beat 3: half in D major
-20. m. 188, beat 1: subverted in G major
-21. m. 196, beat 1: subverted in G major
+20. m. 188, beat 1: evaded in G major
+21. m. 196, beat 1: evaded in G major
 22. m. 197, beat 1: half in G major
 23. m. 203, beat 3: half in D major
-24. m. 204, beat 1: subverted in G major
-25. m. 212, beat 1: subverted in G minor
+24. m. 204, beat 1: evaded in G major
+25. m. 212, beat 1: evaded in G minor
 26. m. 216, beat 1: perfect-authentic in G minor
-27. m. 220, beat 1: subverted in Bb major
+27. m. 220, beat 1: evaded in Bb major
 28. m. 227, beat 3: half in G minor
-29. m. 228, beat 1: subverted in G major
-30. m. 244, beat 1: subverted in G major
-31. m. 248, beat 1: subverted in G major
+29. m. 228, beat 1: evaded in G major
+30. m. 244, beat 1: evaded in G major
+31. m. 248, beat 1: evaded in G major
 32. m. 252, beat 1: imperfect-authentic in G major
 33. m. 253, beat 1: imperfect-authentic in G major
 34. m. 254, beat 1: perfect-authentic in G major
@@ -4898,10 +4898,10 @@ The library's standard-harmony analysis found 51 cadences from the chords, the m
 47. m. 319, beat 1: half in C major
 48. m. 323, beat 1: half in C major
 49. m. 325, beat 1: perfect-authentic in C major
-50. m. 329, beat 1: subverted in C major
-51. m. 333, beat 1: subverted in C major
+50. m. 329, beat 1: evaded in C major
+51. m. 333, beat 1: evaded in C major
 
-**Counts:** perfect-authentic 18, imperfect-authentic 5, subverted 14, half 14.
+**Counts:** perfect-authentic 18, imperfect-authentic 5, evaded 14, half 14.
 
 ## Phrases
 

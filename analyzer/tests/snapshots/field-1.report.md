@@ -1127,34 +1127,41 @@ The library's standard-harmony analysis found 13 cadences from the chords, the m
 | m. 3, beat 1 | half | Eb major | 1 | strong | no |
 | m. 4, beat 1 | perfect-authentic | Eb major | 1 | strong | no |
 | m. 7, beat 1 | half | Eb major | 6 | strong | no |
-| m. 18, beat 1 | subverted | Eb major | 2 | strong | no |
+| m. 18, beat 1 | evaded | Eb major | 2 | strong | no |
 | m. 30, beat 1 | half | F minor | 2 | strong | no |
 | m. 30, beat 3 | half | F minor | 2 | medium | no |
 | m. 37, beat 1 | perfect-authentic | Eb major | 1 | strong | no |
 | m. 46, beat 1 | perfect-authentic | Eb major | 1 | strong | no |
 | m. 50, beat 1 | imperfect-authentic | Eb major | 3 | strong | no |
 | m. 57, beat 1 | half | Eb major | b6 | strong | no |
-| m. 60, beat 1 | subverted | Eb major | 3 | strong | no |
-| m. 64, beat 1 | subverted | Eb major | 5 | strong | no |
+| m. 60, beat 1 | evaded | Eb major | 3 | strong | no |
+| m. 64, beat 1 | evaded | Eb major | 5 | strong | no |
 | m. 65, beat 3 | half | Eb major | 7 | medium | no |
+
+### Competing readings
+
+A cadence the evidence does not settle has two readings, the likelier first, each with its share of the evidence.
+
+- m60 b1 evaded cadence (50%), or tonic prolongation (50%)
+- m64 b1 evaded cadence (50%), or tonic prolongation (50%)
 
 ### Cadence plan
 
 1. m. 3, beat 1: half in Eb major
 2. m. 4, beat 1: perfect-authentic in Eb major
 3. m. 7, beat 1: half in Eb major
-4. m. 18, beat 1: subverted in Eb major
+4. m. 18, beat 1: evaded in Eb major
 5. m. 30, beat 1: half in F minor
 6. m. 30, beat 3: half in F minor
 7. m. 37, beat 1: perfect-authentic in Eb major
 8. m. 46, beat 1: perfect-authentic in Eb major
 9. m. 50, beat 1: imperfect-authentic in Eb major
 10. m. 57, beat 1: half in Eb major
-11. m. 60, beat 1: subverted in Eb major
-12. m. 64, beat 1: subverted in Eb major
+11. m. 60, beat 1: evaded in Eb major
+12. m. 64, beat 1: evaded in Eb major
 13. m. 65, beat 3: half in Eb major
 
-**Counts:** half 6, perfect-authentic 3, subverted 3, imperfect-authentic 1.
+**Counts:** half 6, perfect-authentic 3, evaded 3, imperfect-authentic 1.
 
 ## Phrases
 

@@ -729,7 +729,7 @@ The library's standard-harmony analysis found 15 cadences from the chords, the m
 | m. 2, beat 3 | half | C major | 5 | medium | no |
 | m. 4, beat 1 | half | C major | 2 | strong | no |
 | m. 10, beat 1 | imperfect-authentic | G major | 4 | strong | no |
-| m. 12, beat 1 | subverted | G major | 1 | strong | no |
+| m. 12, beat 1 | evaded | G major | 1 | strong | no |
 | m. 14, beat 3 | half | G major | 5 | medium | no |
 | m. 19, beat 1 | half | C minor | 1 | strong | no |
 | m. 24, beat 1 | perfect-authentic | C major | 1 | strong | no |
@@ -737,9 +737,17 @@ The library's standard-harmony analysis found 15 cadences from the chords, the m
 | m. 25, beat 3 | half | C major | 5 | medium | no |
 | m. 27, beat 1 | half | C major | 2 | strong | no |
 | m. 33, beat 1 | imperfect-authentic | C major | 4 | strong | no |
-| m. 35, beat 1 | subverted | C major | 1 | strong | no |
-| m. 37, beat 3 | subverted | C major | 4 | medium | no |
+| m. 35, beat 1 | evaded | C major | 1 | strong | no |
+| m. 37, beat 3 | evaded | C major | 4 | medium | no |
 | m. 38, beat 2.5 | perfect-authentic | C major | 1 | weak | no |
+
+### Competing readings
+
+A cadence the evidence does not settle has two readings, the likelier first, each with its share of the evidence.
+
+- m12 b1 evaded cadence (50%), or tonic prolongation (50%)
+- m24 b1 perfect authentic cadence (75%), or half cadence at m23 b4 (25%)
+- m35 b1 evaded cadence (50%), or tonic prolongation (50%)
 
 ### Cadence plan
 
@@ -747,7 +755,7 @@ The library's standard-harmony analysis found 15 cadences from the chords, the m
 2. m. 2, beat 3: half in C major
 3. m. 4, beat 1: half in C major
 4. m. 10, beat 1: imperfect-authentic in G major
-5. m. 12, beat 1: subverted in G major
+5. m. 12, beat 1: evaded in G major
 6. m. 14, beat 3: half in G major
 7. m. 19, beat 1: half in C minor
 8. m. 24, beat 1: perfect-authentic in C major
@@ -755,11 +763,11 @@ The library's standard-harmony analysis found 15 cadences from the chords, the m
 10. m. 25, beat 3: half in C major
 11. m. 27, beat 1: half in C major
 12. m. 33, beat 1: imperfect-authentic in C major
-13. m. 35, beat 1: subverted in C major
-14. m. 37, beat 3: subverted in C major
+13. m. 35, beat 1: evaded in C major
+14. m. 37, beat 3: evaded in C major
 15. m. 38, beat 2.5: perfect-authentic in C major
 
-**Counts:** perfect-authentic 4, half 6, imperfect-authentic 2, subverted 3.
+**Counts:** perfect-authentic 4, half 6, imperfect-authentic 2, evaded 3.
 
 ## Phrases
 
