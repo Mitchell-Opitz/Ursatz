@@ -59,6 +59,9 @@
  * A half cadence is the END of a phrase on V: a V that the next cadence resolves (an authentic, deceptive or subverted
  * cadence whose dominant is this V) is that cadence's dominant, and no half cadence is reported for it.
  *
+ * AT A FORMAL BOUNDARY (harmony_analysis_add_boundary_cadences, below): a V that ends the run before a section start
+ * is a half cadence of the earlier section, whatever follows it. The tonic after it starts the new section (R-038).
+ *
  * A candidate that matches none of these is not a cadence. The soprano degree is the one of the arrival's first segment (the input's `soprano_degree`, from the outer voices);
  * 0 means absent. viio to I is not an authentic cadence in standard-harmony's rule and is not found here.
  *
@@ -148,6 +151,20 @@ HarmonyCadenceAnalysisStatus harmony_analysis_find_cadences(const HarmonySegment
                                                             HarmonyCadences *out);
 
 void harmony_cadences_destroy(HarmonyCadences *cadences);
+
+/* Cadences at formal boundaries (a post-pass). section_starts are the start times, in whole notes, of the sections
+   the caller found (from the Framework v1 chain's section detection; passed as data, never recomputed here). A
+   root-position V that ends a run directly before a section start is a HALF cadence ending the earlier section, even
+   when the chord that follows is the tonic: the tonic starts the new section and is not a cadential arrival. A
+   dominant that is no half cadence by the usual rule (no tonic or predominant before it) is left alone. An authentic
+   cadence found in `cadences` with that dominant and an arrival starting at the section start is removed (destroyed)
+   and the half cadence takes its place; a half cadence already recorded at the dominant is kept as it is. `cadences`
+   is the existing result, updated in place and kept in order of arrival. A start that is no segment's start is
+   ignored. config may be NULL for the defaults. BAD_CONFIG for a bad config or a non-finite start. */
+HarmonyCadenceAnalysisStatus harmony_analysis_add_boundary_cadences(const HarmonySegment *segments, size_t count,
+                                                                    const HarmonyCadenceConfig *config,
+                                                                    const double *section_starts, size_t section_count,
+                                                                    HarmonyCadences *cadences);
 
 /* Reads the claim back out of a cadence Interpretation. False if it is not one. */
 bool harmony_cadence_claim_read(const Interpretation *interpretation, HarmonyCadenceClaim *out);

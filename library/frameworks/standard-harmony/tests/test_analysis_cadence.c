@@ -460,6 +460,114 @@ static void test_cadence_points_and_config(void) {
     fixture_destroy(&f);
 }
 
+/* Cadences at formal boundaries: a V before a section start is a half cadence of the earlier section. Segment n starts
+   at n/4 whole notes. */
+static HarmonyCadences boundary(Fixture *f, HarmonySegment **segments, const double *starts, size_t n) {
+    HarmonyCadences found = find(f, segments, NULL);
+    assert(harmony_analysis_add_boundary_cadences(*segments, f->count, NULL, starts, n, &found) ==
+           HARMONY_CADENCE_ANALYSIS_OK);
+    return found;
+}
+
+static void test_a_dominant_before_a_section_start_is_a_half_cadence(void) {
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);   /* I, beat 1 */
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);   /* IV, beat 2 */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 3 */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 4 */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* I, measure 2 beat 1: the new section */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);
+    HarmonySegment *segments = NULL;
+    HarmonyCadences before = find(&f, &segments, NULL);
+    assert(before.count == 1 && before.items[0].type == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    harmony_cadences_destroy(&before);
+    harmony_analysis_destroy(segments);
+
+    double starts[1] = {1.0};
+    HarmonyCadences found = boundary(&f, &segments, starts, 1);
+    assert(found.count == 1);
+    const HarmonyCadenceResult *c = &found.items[0];
+    assert(c->type == CADENCE_TYPE_HALF && c->dominant_first == 2 && c->arrival_first == 2 && c->arrival_last == 3);
+    HarmonyCadenceClaim claim;
+    assert(harmony_cadence_claim_read(c->interpretation, &claim) && claim.type == (int)CADENCE_TYPE_HALF &&
+           strcmp(claim.arrival_segment, "seg-2") == 0);
+    harmony_cadences_destroy(&found);
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+}
+
+static void test_a_boundary_leaves_other_cadences_alone(void) {
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);   /* a PAC at beat 3 */
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);
+    HarmonySegment *segments = NULL;
+
+    /* no section start: nothing changes */
+    HarmonyCadences found = boundary(&f, &segments, NULL, 0);
+    assert(found.count == 1 && found.items[0].type == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    harmony_cadences_destroy(&found);
+    harmony_analysis_destroy(segments);
+
+    /* a start that no segment has, and a start that is not right after a V: ignored */
+    double starts[2] = {0.9, 0.75};
+    found = boundary(&f, &segments, starts, 2);
+    assert(found.count == 1 && found.items[0].type == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    harmony_cadences_destroy(&found);
+    harmony_analysis_destroy(segments);
+
+    /* a start at the tonic's arrival with the V before it, but no tonic or predominant before the V: the PAC stays */
+    fixture_destroy(&f);
+    fixture_init(&f);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 1);
+    double lone[1] = {0.5};
+    found = boundary(&f, &segments, lone, 1);
+    assert(found.count == 0 || found.items[0].type != CADENCE_TYPE_HALF);
+    harmony_cadences_destroy(&found);
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+}
+
+static void test_a_recorded_half_cadence_is_kept_at_a_boundary(void) {
+    Fixture f;
+    fixture_init(&f);
+    fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);
+    fixture_add(&f, 4, TRIAD_MAJOR, 3, 0, 4, 6);
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);   /* V, beat 3: a half cadence */
+    fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
+    fixture_add(&f, 6, TRIAD_MINOR, 3, 0, 6, 1);   /* vi at the section start */
+    HarmonySegment *segments = NULL;
+    HarmonyCadences plain = find(&f, &segments, NULL);
+    size_t before = plain.count;
+    harmony_cadences_destroy(&plain);
+    harmony_analysis_destroy(segments);
+    double starts[1] = {1.0};
+    HarmonyCadences found = boundary(&f, &segments, starts, 1);
+    size_t halves = 0;
+    for (size_t i = 0; i < found.count; i++) {
+        halves += found.items[i].type == CADENCE_TYPE_HALF ? 1 : 0;
+    }
+    assert(found.count >= before && halves <= 1);
+    harmony_cadences_destroy(&found);
+    harmony_analysis_destroy(segments);
+    fixture_destroy(&f);
+}
+
+static void test_boundary_arguments(void) {
+    HarmonyCadences found = {NULL, 0};
+    double bad[1] = {NAN};
+    assert(harmony_analysis_add_boundary_cadences(NULL, 0, NULL, NULL, 0, NULL) == HARMONY_CADENCE_ANALYSIS_ERR_NULL_ARGUMENT);
+    assert(harmony_analysis_add_boundary_cadences(NULL, 0, NULL, NULL, 1, &found) == HARMONY_CADENCE_ANALYSIS_ERR_NULL_ARGUMENT);
+    assert(harmony_analysis_add_boundary_cadences(NULL, 0, NULL, bad, 1, &found) == HARMONY_CADENCE_ANALYSIS_ERR_BAD_CONFIG);
+    assert(harmony_analysis_add_boundary_cadences(NULL, 0, NULL, NULL, 0, &found) == HARMONY_CADENCE_ANALYSIS_OK);
+}
+
 int main(void) {
     test_authentic_v_to_i_on_a_strong_enough_beat();
     test_pac_iac_by_the_soprano();
@@ -476,6 +584,10 @@ int main(void) {
     test_cadential_six_four_is_part_of_the_dominant();
     test_uncertainty_is_the_largest_of_the_chords_involved();
     test_cadence_points_and_config();
+    test_a_dominant_before_a_section_start_is_a_half_cadence();
+    test_a_boundary_leaves_other_cadences_alone();
+    test_a_recorded_half_cadence_is_kept_at_a_boundary();
+    test_boundary_arguments();
     printf("standard-harmony analysis cadences: all tests passed\n");
     return 0;
 }

@@ -282,6 +282,27 @@ static size_t fv1_region_at(const CommonPracticeKeyRegions *regions, double star
     return found;
 }
 
+/* The sections' start times, in whole notes: the chain has no separate section step, so a section starts where the key regions come
+   back to the home key after leaving it (a recapitulation), on the regions pass 2 placed on the phrases (B6). */
+static size_t fv1_section_starts(const Chain *c, double *out, size_t capacity) {
+    const CommonPracticeKeyRegions *r = &c->regions;
+    size_t n = 0;
+    for (size_t i = 1; i < r->region_count && n < capacity; i++) {
+        if (r->regions[i].key_index == c->x.home_key && r->regions[i - 1].key_index != c->x.home_key) {
+            out[n++] = fv1_time_double(time_span_start(r->regions[i].span));
+        }
+    }
+    return n;
+}
+
+/* Dominants before a section start are half cadences of the earlier section (R-038); sections are not recomputed from them. */
+static void fv1_add_boundary_cadences(Chain *c) {
+    double starts[16];
+    size_t n = fv1_section_starts(c, starts, 16);
+    assert(harmony_analysis_add_boundary_cadences(c->harmony, c->count, NULL, starts, n, &c->cadences) ==
+           HARMONY_CADENCE_ANALYSIS_OK);
+}
+
 /* The key changes' extents confirmed by the cadences the chain found (B5): a region is a modulation only when a cadence arrives
    inside it, and the change out of an excursion takes the excursion's extent. */
 static void fv1_confirm_key_changes(Chain *c) {
@@ -402,6 +423,7 @@ static void fv1_chain_pass(Chain *c, const MusicalTime *const *boundaries, size_
     }
     assert(harmony_analysis_prepare(c->in.inputs, count, &c->harmony) == HARMONY_ANALYSIS_OK);
     assert(harmony_analysis_find_cadences(c->harmony, count, NULL, &c->cadences) == HARMONY_CADENCE_ANALYSIS_OK);
+    fv1_add_boundary_cadences(c);
     fv1_confirm_key_changes(c);
 
     /* the L3.6 adapter over the keys scope, on the cadences the chain found */

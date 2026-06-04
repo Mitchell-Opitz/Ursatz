@@ -62,7 +62,7 @@ The tests read that file, so a row is an exact statement of what the chain does 
 | C6 | 5 | a non-chord bass tone reads the chord as root position | inversion from the chord's bass tone |
 | C7 | 3 | convention: V to I6 is SUBVERTED in the adapter, a prolongation in the drafts | check the drafts against the editions |
 | C8 | 22 | L3.6 phrases, themes and expansions follow the cadences it is given | re-verify L3.6 after the cadence items |
-| C9 | 1 | convention: a dominant resolving into the recapitulation | cadences across a formal boundary |
+| C9 | 0 | convention: a dominant resolving into the recapitulation (DEV-054 removed; the chain now reads the half cadence, DEV-096 notes its place) | cadences across a formal boundary, done in P1 B6 |
 | C10 | 7 | return detection compares whole themes for exact contour and rhythm | matching inside themes and with variation |
 
 (A deviation can have more than one cause, so the counts add to more than 82.)
