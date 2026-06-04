@@ -7,7 +7,6 @@ add_executable(test_health_route test_health_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/theme_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_service.c
@@ -49,7 +48,6 @@ add_executable(test_analyzer_route test_analyzer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/theme_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_service.c
@@ -101,7 +99,6 @@ add_executable(test_corpus_route test_corpus_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/theme_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_service.c
@@ -169,7 +166,6 @@ add_executable(test_composer_route test_composer_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/theme_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_service.c
@@ -217,7 +213,6 @@ add_executable(test_styles_route test_styles_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/theme_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_service.c
@@ -305,7 +300,6 @@ add_executable(test_materials_route test_materials_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/theme_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_service.c
@@ -350,7 +344,6 @@ add_executable(test_subjects_route test_subjects_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/theme_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_service.c
@@ -428,7 +421,6 @@ add_executable(test_links_route test_links_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/theme_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_service.c
@@ -476,7 +468,6 @@ add_executable(test_theme_route test_theme_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/theme_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_service.c
@@ -526,7 +517,6 @@ add_executable(test_piece_route test_piece_route.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/collection_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/style_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/composer_service.c
-  ${CMAKE_SOURCE_DIR}/backend/src/service/composition_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/material_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/theme_service.c
   ${CMAKE_SOURCE_DIR}/backend/src/service/piece_service.c
