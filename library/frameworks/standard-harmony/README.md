@@ -37,6 +37,13 @@ on the beat against a tonic off it, the weak beat and the weak half beat after i
 (`arrival_min_beats`), followed by a soprano rest, or ends the piece. The claim records the arrival's beat strength
 (`arrival_beat_strength`). Half cadences arriving on a weak beat are not found.
 
+Cadences at formal boundaries (`harmony_analysis_add_boundary_cadences`, a post-pass): the caller passes the section start
+times it found, as data, and the cadences already found. A root-position V that ends a run directly before a section start
+is a half cadence ending the earlier section, even when the tonic follows (R-038); the tonic starts the new section and is
+not a cadential arrival, so an authentic cadence read into it is replaced. A V with no tonic or predominant before it is left
+alone. Sections are not recomputed from the added half cadences. The Framework v1 chain has no section step yet and takes a
+section start at each key region that returns to the home key.
+
 ## Scope
 
 Every rule group has Rule/Constraint pairs referencing this Framework plus pure
