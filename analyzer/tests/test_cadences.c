@@ -6,6 +6,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
+#include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include "cJSON.h"
@@ -28,6 +29,11 @@
  *                165/8.
  *   Clementi 36  hc 7, pac 3, iac 2, subverted 1, the P1 B6 result.
  *   Mozart 545   boundary cadences exist, and each is a half cadence.
+ *
+ * Competing readings (R-090, R-091): every claim has a share in thousandths; a claim with an alternative has the two
+ * shares summing to 1000. Clementi 36 m. 12 beat 1 and m. 35 beat 1 are V to I6 with 500 evaded and 500 prolongation;
+ * m. 24 beat 1 is the perfect authentic cadence with the half cadence at m. 23 as its alternative. The report prints
+ * both readings. (Mozart 545 m. 4 has a V to I6 the chain does not find: B3 deviation DEV-103.)
  */
 
 static int failures = 0;
@@ -188,6 +194,78 @@ static bool has_cadence_at(const cJSON *cadences, const char *type, long num, lo
     return false;
 }
 
+/* The cadence claim whose arrival begins at measure/beat, or NULL. */
+static const cJSON *cadence_at(const cJSON *cadences, int measure, int beat) {
+    const cJSON *cadence;
+    cJSON_ArrayForEach(cadence, cadences) {
+        const cJSON *start = member(member(member(cadence, "arrival"), "location"), "start");
+        if ((int)member(start, "measure")->valuedouble == measure && (int)member(start, "beat")->valuedouble == beat) {
+            return cadence;
+        }
+    }
+    return NULL;
+}
+
+/* Every claim has a share; an alternative's share completes it to 1000 and its note ids are in order. */
+static void check_readings(const cJSON *cadences) {
+    const cJSON *cadence;
+    cJSON_ArrayForEach(cadence, cadences) {
+        const cJSON *share = member(cadence, "share");
+        CHECK(cJSON_IsNumber(share) && share->valuedouble >= 0 && share->valuedouble <= 1000);
+        const cJSON *alternative = member(cadence, "alternative");
+        if (!alternative) {
+            CHECK(share->valuedouble == 1000);
+            continue;
+        }
+        const char *reading = member(alternative, "reading")->valuestring;
+        CHECK(strcmp(reading, "cadence") == 0 || strcmp(reading, "prolongation") == 0);
+        CHECK((strcmp(reading, "prolongation") == 0) == cJSON_IsNull(member(alternative, "type")));
+        CHECK(share->valuedouble + member(alternative, "share")->valuedouble == 1000);
+        CHECK(cJSON_IsNumber(member(alternative, "measure")) && cJSON_IsNumber(member(alternative, "beat")));
+        CHECK(cJSON_GetArraySize(member(alternative, "note_ids")) > 0);
+    }
+}
+
+/* Clementi 36: the two V to I6 points and the boundary cadence at m. 24. */
+static void check_clementi_readings(const cJSON *cadences) {
+    static const int EVADED_MEASURES[] = {12, 35};
+    for (size_t i = 0; i < sizeof(EVADED_MEASURES) / sizeof(EVADED_MEASURES[0]); i++) {
+        const cJSON *evaded = cadence_at(cadences, EVADED_MEASURES[i], 1);
+        const cJSON *alternative = evaded ? member(evaded, "alternative") : NULL;
+        CHECK(evaded && strcmp(member(evaded, "type")->valuestring, "subverted") == 0);
+        CHECK(evaded && member(evaded, "share")->valuedouble == 500);
+        CHECK(alternative && strcmp(member(alternative, "reading")->valuestring, "prolongation") == 0);
+        CHECK(alternative && cJSON_IsNull(member(alternative, "type")));
+        CHECK(alternative && member(alternative, "share")->valuedouble == 500);
+        CHECK(alternative && member(alternative, "measure")->valuedouble == EVADED_MEASURES[i] &&
+              member(alternative, "beat")->valuedouble == 1);
+    }
+    const cJSON *pac = cadence_at(cadences, 24, 1);
+    const cJSON *half = pac ? member(pac, "alternative") : NULL;
+    CHECK(pac && strcmp(member(pac, "type")->valuestring, "perfect-authentic") == 0);
+    CHECK(half && strcmp(member(half, "reading")->valuestring, "cadence") == 0);
+    CHECK(half && strcmp(member(half, "type")->valuestring, "half") == 0);
+    CHECK(half && member(half, "measure")->valuedouble == 23);
+    CHECK(pac && half && member(pac, "share")->valuedouble > member(half, "share")->valuedouble);
+}
+
+/* The report prints each competing pair, the primary first, and calls a subverted cadence evaded. */
+static void check_clementi_report(const char *path, const ImportedNotes *notes, const AnalysisReport *report) {
+    AnalysisDocument *document = analysis_document_build(path, notes, report);
+    char *markdown = document ? markdown_report_render(document) : NULL;
+    CHECK(markdown != NULL);
+    if (markdown) {
+        CHECK(strstr(markdown, "- m12 b1 evaded cadence (50%), or tonic prolongation (50%)\n") != NULL);
+        CHECK(strstr(markdown, "- m35 b1 evaded cadence (50%), or tonic prolongation (50%)\n") != NULL);
+        CHECK(strstr(markdown, "- m24 b1 perfect authentic cadence (") != NULL);
+        CHECK(strstr(markdown, "), or half cadence at m23 b4 (") != NULL);
+        CHECK(strstr(markdown, "subverted") == NULL);
+        CHECK(strstr(markdown, "evaded 3.") != NULL);
+    }
+    free(markdown);
+    analysis_document_destroy(document);
+}
+
 static void check_counts(const Piece *piece, const cJSON *cadences) {
     if (strcmp(piece->name, "Bach 114") == 0) {
         CHECK(count_type(cadences, "perfect-authentic") == 2);
@@ -227,6 +305,11 @@ static void run_piece(const Piece *piece) {
         check_claims(piece, &notes, &report, document);
         check_key_changes(document, &report);
         check_counts(piece, member(document, "cadences"));
+        check_readings(member(document, "cadences"));
+        if (strcmp(piece->name, "Clementi 36") == 0) {
+            check_clementi_readings(member(document, "cadences"));
+            check_clementi_report(path, &notes, &report);
+        }
         printf("%s: %zu cadences\n", piece->name, report.cadence_count);
         cJSON_Delete(document);
     }
