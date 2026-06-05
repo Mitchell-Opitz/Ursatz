@@ -437,12 +437,20 @@ Roman numerals (degree, quality, inversion, applied target, mode, uncertainty), 
 degrees at the segment (the library's labels, a chromatic degree counted as none), the segment's place on the
 meter and its beat strength, and hands them to `harmony_analysis_prepare` and `harmony_analysis_find_cadences`
 with the default config. Each cadence has the library's type, its arrival and dominant, the arrival's beat
-strength, the soprano degree at the arrival, the key region and the uncertainty.
+strength, the soprano degree at the arrival, the key region, the uncertainty and the share of its reading.
 
-- **Boundary cadences.** A dominant before a section start is a half cadence of the earlier section
+- **Boundary cadences.** A dominant before a section start is a half cadence of the earlier section, or the
+  authentic cadence into the tonic that starts the next one
   (`harmony_analysis_add_boundary_cadences`). A section starts at each key region that returns to the
   home key after leaving it, as in Ursatz's Framework v1 chain; sections from the form structure do not
   feed back.
+- **Competing readings.** A V to I6 is an evaded cadence or a prolongation of the dominant, and a dominant
+  before a section start is a half cadence or an authentic one (R-090, R-091). The library reports both
+  with shares in thousandths that sum to 1000. The claim carries `share` and, when it has a competing
+  reading, `alternative`. The report prints both in a "Competing readings" list, the likelier first, for
+  example `m23 b1 half cadence (60%), or perfect authentic cadence at m24 b1 (40%)` and
+  `m4 b1 evaded cadence (55%), or tonic prolongation (45%)`. The report calls a `subverted` cadence "evaded";
+  the document keeps the library's word.
 - **Key change confirmation.** Each change into a new key is checked with `harmony_key_change_confirm`
   against the cadence arrivals: no cadence in the new region makes it a tonicization however long. The
   report's key changes, tonicizations and modulations follow the confirmed extents, and `cadence_confirmed`

@@ -468,6 +468,27 @@ Markdown report renders it from here.
 | `arrival_beat_strength` | string | The library's beat strength of the arrival: `"strong"`, `"medium"` or `"weak"`. |
 | `boundary` | boolean | A half cadence the boundary step added before a section start. |
 | `region` | integer or null | Index into `keys.regions` of the arrival's key region; `null` outside every region. |
+| `share` | integer | Thousandths of the evidence for this reading, 0 to 1000. 1000 when the cadence has no `alternative`. |
+| `alternative` | object | Optional; present only when the library reports a competing reading (below). |
+
+A cadence has a competing reading in two places (R-090, R-091). A root-position V or V7 followed by a I6 at a
+cadence point is an evaded cadence (`type` `"subverted"`) or a prolongation of the dominant. A dominant before a
+section start is a half cadence or the authentic cadence into the tonic that starts the next section. The claim
+describes the likelier reading and `alternative` the other; the two `share` values sum to 1000. For an evaded
+cadence the claim stays `"subverted"` even when the prolongation is the likelier reading (`share` below 500).
+
+| `alternative` field | Type | Meaning |
+| --- | --- | --- |
+| `reading` | string | `"cadence"` or `"prolongation"`. |
+| `type` | string or null | The cadence type when `reading` is `"cadence"`; `null` for a prolongation. |
+| `measure`, `beat` | integer or null | Where the alternative's arrival begins; `null` when the meter cannot place it. |
+| `share` | integer | Thousandths of the evidence for the alternative. |
+| `note_ids` | array of integer | The notes sounding in the alternative's arrival. |
+
+The Markdown report lists each cadence with an alternative under "Competing readings", the claim first, with
+percentages: `m23 b1 half cadence (60%), or perfect authentic cadence at m24 b1 (40%)` and
+`m4 b1 evaded cadence (55%), or tonic prolongation (45%)`. The report calls a `"subverted"` cadence "evaded"
+everywhere it names a cadence type; the document keeps the library's word.
 
 ### Prolongations
 
