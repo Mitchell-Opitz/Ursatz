@@ -67,6 +67,25 @@ whole of it. The enclosing phrase node's span is the phrase. A phrase is then wr
 - **Cadence.** The last note is the cadence's stable tone: the tonic for a PAC or PC, the third of the
   tonic for an IAC (the soprano the harmony operators' recognizer is told).
 
+## Spans on beats
+
+The melody reads the same cell grid as the harmony (`harmony_cells_of_span`): the places a chord may start are
+anchored to the barlines of the meter span, and a span that starts or ends between two of them has part cells at
+its ends. Strong beats are the barline grid's, so in 4/4 a span starting on beat 3 starts on a strong beat and one
+starting on beat 2 does not. Chord starts are read from the cell list, part cells included. On a span that does not
+run from a barline over whole bars the climax stays in the motive when no chord tone is within a fifth above the
+last anchor of the motive, since few anchors follow it. Whole-bar spans are written as before.
+
+## Pickups
+
+A `pickup` constraint (see [plan-format.md](plan-format.md)) on a melody span makes its first `length` an
+anacrusis. The phrase, the harmony and the key are read from the end of the pickup. The pickup is written as 1 to 4
+notes of equal beats (the first takes what is left over when there are more than four): the last is a step from the
+first downbeat note or a chord tone of the chord before (the harmony span sounding under the pickup; none at the
+start of a plan, where it is a step), and the others come by step toward it. The pickup is held to the range and
+the melodic rules only, never to the chord-tone rule. A pickup of a bar or more is not one the operator applies to.
+A pickup takes no accompaniment.
+
 A motive that cannot be placed (too long for the phrase, wider than the range, no chord tone near enough
 to its contour) leaves the span open: the loop reports `FILL_STUCK_ALL_REJECTED`.
 

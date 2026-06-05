@@ -300,6 +300,12 @@ bool harmony_metre_cell_offset(const PhraseMetre *metre, size_t cell, PlanTime *
     return true;
 }
 
+bool harmony_cells_of_span(const PhraseMetre *metre, size_t first, size_t cells, PlanTime *start, PlanTime *length) {
+    PlanTime end;
+    return metre && start && length && harmony_metre_cell_offset(metre, first, start) &&
+           harmony_metre_cell_offset(metre, first + cells, &end) && time_since(end, *start, length);
+}
+
 PlanResult harmony_metre_cells_span(const PhraseMetre *metre, size_t first, size_t cells, PlanSpan *out) {
     PlanTime from;
     PlanTime to;

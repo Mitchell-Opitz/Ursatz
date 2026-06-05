@@ -161,16 +161,19 @@ static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
 
 bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, PlanKey key, MelodyContext *context) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
-    long cells = 0;
+    size_t cells = 0;
+    long offset;
     memset(context, 0, sizeof(*context));
     context->owner = owner;
     context->span = span;
     context->key = key;
     if (!harmony_read_lane(plan, span, key.mode, context->chords, &context->count, &context->metre) ||
         !melody_ticks(span.length, &context->length) || !melody_ticks(context->metre.cell_length, &context->cell) ||
-        context->cell <= 0) {
+        context->cell <= 0 || !melody_ticks(context->metre.offset, &offset)) {
         return false;
     }
+    /* The strong beats are the barline grid's: a span that starts between two cell boundaries has a lead. */
+    context->phase = offset % context->cell;
     /* The harmony is written: no chord span under the melody is still open. */
     size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, HARMONY_MAX_CHORDS);
     if (found != context->count || context->count == 0) {
@@ -182,11 +185,18 @@ bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, Plan
                                &context->chord_seventh[i])) {
             return false;
         }
-        context->chord_start[i] = cells * context->cell;
-        cells += (long)context->chords[i].cells;
+        PlanTime start;
+        PlanTime length;
+        long chord_length;
+        if (!harmony_cells_of_span(&context->metre, cells, context->chords[i].cells, &start, &length) ||
+            !melody_ticks(start, &context->chord_start[i]) || !melody_ticks(length, &chord_length) ||
+            chord_length <= 0) {
+            return false;
+        }
+        cells += context->chords[i].cells;
     }
-    context->chord_start[context->count] = cells * context->cell;
-    if (context->chord_start[context->count] != context->length) {
+    context->chord_start[context->count] = context->length;
+    if (cells != context->metre.cells) {
         return false;
     }
     PlanConstraint cadence;
@@ -494,6 +504,33 @@ static bool melody_idea_read(const PiecePlan *plan, LaneSpanId target, MelodyCon
            (restate_previous(plan, context), true);
 }
 
+/*
+ * The anacrusis before a phrase that starts `pickup` after `start`: shorter than a bar, a whole number of ticks, and over
+ * the chord of the harmony span that sounds there, when one is written (none starts a plan).
+ */
+static bool read_pickup(const PiecePlan *plan, PlanTime start, PlanTime pickup, MelodyContext *context) {
+    LaneSpanId ids[HARMONY_MAX_CHORDS];
+    PlanSpan under = {start, pickup};
+    long ticks;
+    if (!melody_ticks(pickup, &ticks) || ticks <= 0 || plan_time_compare(pickup, context->metre.bar_length) >= 0) {
+        return false;
+    }
+    context->pickup = ticks;
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, under, ids, HARMONY_MAX_CHORDS);
+    if (found > HARMONY_MAX_CHORDS) {
+        return false;
+    }
+    if (found > 0 && plan_lane_span_state(plan, ids[found - 1]) != PLAN_STATE_CONSTRAINED) {
+        PhraseChord chord;
+        unsigned seventh;
+        if (!harmony_read_chord(plan, ids[found - 1], context->key.mode, context->metre.cell_length, &chord) ||
+            !melody_chord_mask(&context->key, &chord, &context->pickup_mask, &seventh)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext *out) {
     if (plan && plan_has_lane_span(plan, target) && plan_lane_span_lane(plan, target) == PLAN_LANE_MELODY &&
         plan_lane_span_voice(plan, target) == 0 && plan_lane_span_state(plan, target) == PLAN_STATE_CONSTRAINED &&
@@ -507,14 +544,25 @@ bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext
     }
     NodeId owner = plan_lane_span_owner(plan, target);
     PlanSpan span = plan_lane_span_span(plan, target);
+    PlanSpan body = span;
+    PlanConstraint pickup;
     LaneSpanId melody[2];
     PlanKey key;
+    bool has_pickup = harmony_find_constraint(plan, target, owner, PLAN_CONSTRAINT_PICKUP, &pickup);
 
+    /* A pickup is the start of the span: the harmony, the key and the notes after it are the phrase's. */
+    if (has_pickup && (plan_time_add(span.start, pickup.params.pickup, &body.start) != PLAN_OK ||
+                       plan_time_make(span.length.num * (long)pickup.params.pickup.den -
+                                          pickup.params.pickup.num * (long)span.length.den,
+                                      span.length.den * pickup.params.pickup.den, &body.length) != PLAN_OK ||
+                       body.length.num <= 0)) {
+        return false;
+    }
     /* The target is the only melody in the phrase. */
     if (plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, melody, 2) != 1 ||
-        !harmony_find_key(plan, target, owner, span, &key) || !melody_phrase_read(plan, owner, span, key, out)) {
+        !harmony_find_key(plan, target, owner, body, &key) || !melody_phrase_read(plan, owner, body, key, out)) {
         return false;
     }
     out->target = target;
-    return read_motive(plan, out);
+    return (!has_pickup || read_pickup(plan, span.start, pickup.params.pickup, out)) && read_motive(plan, out);
 }

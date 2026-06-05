@@ -224,6 +224,11 @@ bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out);
 
 /* Where cell `cell` starts, counted from the span's start; cell == cells is the span's end. */
 bool harmony_metre_cell_offset(const PhraseMetre *metre, size_t cell, PlanTime *out);
+/*
+ * Where cells [first, first + cells) lie in the span, counted from its start: `start` and `length`. The harmony, melody
+ * and texture operators read the same anchored grid, part cells included, through it.
+ */
+bool harmony_cells_of_span(const PhraseMetre *metre, size_t first, size_t cells, PlanTime *start, PlanTime *length);
 /* The span of cells [first, first + cells). */
 PlanResult harmony_metre_cells_span(const PhraseMetre *metre, size_t first, size_t cells, PlanSpan *out);
 /* The bar (counted from the span's first bar, 0 for it) and the place in it where cell `cell` starts. */

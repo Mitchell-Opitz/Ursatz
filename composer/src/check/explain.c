@@ -208,6 +208,24 @@ static bool add_step(const PiecePlan *plan, bool have_meter, const PlanMeter *me
             target.voice = plan_lane_span_voice(plan, (LaneSpanId)step->target.id);
         }
         bars_of(have_meter, meter, fill_target_span(plan, step->target), &target.first_bar, &target.last_bar);
+        if (step->target.kind == FILL_TARGET_LANE_SPAN) {
+            LaneSpanId span = (LaneSpanId)step->target.id;
+            for (size_t c = 0; c < plan_lane_span_constraint_count(plan, span); c++) {
+                const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, span, c);
+                if (constraint->kind == PLAN_CONSTRAINT_PICKUP) {
+                    snprintf(target.pickup, sizeof(target.pickup), "%ld/%lu", constraint->params.pickup.num,
+                             constraint->params.pickup.den);
+                }
+            }
+            /* The melody operator reads the pickup from the span, else from its owner. */
+            for (size_t c = 0; !target.pickup[0] && c < plan_node_constraint_count(plan, owner); c++) {
+                const PlanConstraint *constraint = plan_node_constraint_at(plan, owner, c);
+                if (constraint->kind == PLAN_CONSTRAINT_PICKUP) {
+                    snprintf(target.pickup, sizeof(target.pickup), "%ld/%lu", constraint->params.pickup.num,
+                             constraint->params.pickup.den);
+                }
+            }
+        }
     }
 
     size_t top[EXPLAIN_RUNNERS_UP];
@@ -514,13 +532,17 @@ static void put_candidate(Buffer *buffer, const char *role, const ExplainCandida
 }
 
 static void put_target(Buffer *buffer, const ExplainTarget *target) {
-    char where[96];
+    char where[128];
     if (target->first_bar == 0) {
         where[0] = '\0';
     } else if (target->first_bar == target->last_bar) {
         snprintf(where, sizeof(where), ", bar %zu", target->first_bar);
     } else {
         snprintf(where, sizeof(where), ", bars %zu-%zu", target->first_bar, target->last_bar);
+    }
+    if (target->pickup[0]) {
+        size_t used = strlen(where);
+        snprintf(where + used, sizeof(where) - used, ", pickup %s", target->pickup);
     }
     if (target->kind == FILL_TARGET_NODE) {
         put(buffer, "  [%s] node %s%s (%s, %zu considered)\n", target->stage, target->name, where,

@@ -42,6 +42,14 @@ eighth for the figures. A chord is written on every beat from the harmony lane's
 The figures run on the eighths of the bar, not of the chord, so a bar of 3/4 ends in the middle of a figure
 (`low high middle high low high`).
 
+### Chords of any length in beats
+
+Each chord is cut into beats from its own start, the last cut at the chord's end, so a chord of 3 beats, or of 1,
+has its own beats. A figure (`arpeggiated`, `alberti`) on a chord that starts on one of the meter's cells runs on the
+eighths of the bar as above; on one that starts between cells (after a lead) it starts again with the chord, and a
+cut figure keeps its first notes. The motive is restated from each chord's start and cut at its end. Voicing writes
+one voicing per chord, of any length.
+
 ### The motive pattern
 
 The pattern `motive` reads the Given melody span of the node named by `motive_node` (a motive of the accompaniment

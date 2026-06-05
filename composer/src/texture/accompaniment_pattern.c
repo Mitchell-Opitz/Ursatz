@@ -190,9 +190,8 @@ static void voiced_pcs(const AccompContext *context, size_t chord, int out[3]) {
     out[2] = context->chord_pc_count[chord] > 3 ? pcs[3] : pcs[2];
 }
 
-/* The window the notes of the beat from start to start + beat have to keep to: above the bass, below the melody. */
-static void beat_window(const AccompContext *context, long start, int *low, int *high) {
-    long end = start + context->beat;
+/* The window the notes of the beat from start to end have to keep to: above the bass, below the melody. */
+static void beat_window(const AccompContext *context, long start, long end, int *low, int *high) {
     *low = context->low;
     *high = context->high;
     for (size_t i = 0; i < context->bass_count; i++) {
@@ -348,11 +347,22 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
     out->magic = ACCOMP_PAYLOAD_MAGIC;
     out->pattern = pattern;
     out->voices = accomp_pattern_voices(pattern);
-    if (!accomp_pattern_allowed(context, pattern) || context->beat <= 0 || context->length % context->beat != 0 ||
-        context->length / context->beat > ACCOMP_MAX_BEATS) {
+    if (!accomp_pattern_allowed(context, pattern) || context->beat <= 0) {
         return false;
     }
-    out->beat_count = (size_t)(context->length / context->beat);
+    /* The beats run on from each chord's start, so a chord of any length in beats is cut at its end. */
+    for (size_t chord = 0; chord < context->chord_count; chord++) {
+        for (long start = context->chord_start[chord]; start < context->chord_start[chord + 1]; start += context->beat) {
+            long end = start + context->beat < context->chord_start[chord + 1] ? start + context->beat
+                                                                                : context->chord_start[chord + 1];
+            if (out->beat_count >= ACCOMP_MAX_BEATS) {
+                return false;
+            }
+            out->beat_start[out->beat_count] = start;
+            out->beat_end[out->beat_count] = end;
+            out->beat_count++;
+        }
+    }
     if (pattern == PLAN_ACCOMPANIMENT_MOTIVE) {
         return build_motive(context, out);
     }
@@ -361,7 +371,7 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
     const int *previous = NULL;
     size_t previous_size = 0;
     for (size_t b = 0; b < out->beat_count; b++) {
-        long start = (long)b * context->beat;
+        long start = out->beat_start[b];
         int pcs[3];
         int low;
         int high;
@@ -369,7 +379,7 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
             continue;
         }
         voiced_pcs(context, accomp_chord_at(context, start), pcs);
-        beat_window(context, start, &low, &high);
+        beat_window(context, start, out->beat_end[b], &low, &high);
         if (!choose_voicing(pcs, low, high, previous, previous_size, previous ? 0 : FIRST_SLACK, rng, out->voicing[b],
                             &out->voicing_size[b])) {
             return false;
@@ -388,7 +398,7 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         for (size_t b = 0; b < out->beat_count; b++) {
             for (size_t voice = 0; out->voiced[b] && voice < out->voicing_size[b]; voice++) {
                 /* Voice 1 is the top of the chord. */
-                if (!add_note(out, voice, (long)b * context->beat, context->beat,
+                if (!add_note(out, voice, out->beat_start[b], out->beat_end[b] - out->beat_start[b],
                               out->voicing[b][out->voicing_size[b] - 1 - voice])) {
                     return false;
                 }
@@ -398,17 +408,21 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
     case PLAN_ACCOMPANIMENT_ARPEGGIATED:
     case PLAN_ACCOMPANIMENT_ALBERTI: {
         const int *figure = pattern == PLAN_ACCOMPANIMENT_ARPEGGIATED ? ARPEGGIO : ALBERTI;
-        for (long at = 0; at < context->length; at += ACCOMP_EIGHTH) {
-            long eighth = ((at + context->phase) % context->bar) / ACCOMP_EIGHTH;
-            size_t b = (size_t)(at / context->beat);
+        for (size_t b = 0; b < out->beat_count; b++) {
+            size_t chord = accomp_chord_at(context, out->beat_start[b]);
+            long chord_start = context->chord_start[chord];
+            /* A chord on the meter's cells goes by the eighths of the bar; one that starts off them, by its own. */
+            bool on_cells = (chord_start + context->phase) % context->cell == 0;
             /* A voicing of two notes is the low one and the high one over again, one of a single note. */
             size_t size = out->voicing_size[b];
-            int index = size == 3 ? figure[eighth % 4] : (size == 2 ? (int)(eighth % 2) : 0);
-            if (!out->voiced[b]) {
-                continue;
-            }
-            if (!add_note(out, 0, at, ACCOMP_EIGHTH, out->voicing[b][index])) {
-                return false;
+            for (long at = out->beat_start[b]; out->voiced[b] && at < out->beat_end[b]; at += ACCOMP_EIGHTH) {
+                long eighth = on_cells ? ((at + context->phase) % context->bar) / ACCOMP_EIGHTH
+                                       : (at - chord_start) / ACCOMP_EIGHTH;
+                int index = size == 3 ? figure[eighth % 4] : (size == 2 ? (int)(eighth % 2) : 0);
+                long length = at + ACCOMP_EIGHTH < out->beat_end[b] ? ACCOMP_EIGHTH : out->beat_end[b] - at;
+                if (!add_note(out, 0, at, length, out->voicing[b][index])) {
+                    return false;
+                }
             }
         }
         return true;

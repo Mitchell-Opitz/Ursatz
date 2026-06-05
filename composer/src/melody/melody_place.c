@@ -278,6 +278,100 @@ static MelodyFillParams arch_params(const MelodyContext *context, const MelodyFi
     return adjusted;
 }
 
+static long gcd(long a, long b) {
+    while (b != 0) {
+        long rest = a % b;
+        a = b;
+        b = rest;
+    }
+    return a;
+}
+
+/* The pitch a step (a semitone or a tone, within the scale) from `from` in a direction, in range; -1 when none. */
+static int scale_step(unsigned scale, int from, int direction, int low, int high) {
+    for (int distance = 1; distance <= 2; distance++) {
+        int pitch = from + direction * distance;
+        if (pitch >= low && pitch <= high && ((scale >> pitch_class(pitch)) & 1u)) {
+            return pitch;
+        }
+    }
+    return -1;
+}
+
+/*
+ * The anacrusis (PLAN_CONSTRAINT_PICKUP): 1 to MELODY_MAX_PICKUP notes ending where the first downbeat note starts. They
+ * are equal beats (or the biggest equal part of one that divides the pickup), the first as long as what is left over
+ * when there are too many. The last is a step from the first downbeat note, or a chord tone of the chord before when
+ * one sounds there; those before it come by step toward it, mostly from below.
+ */
+static bool place_pickup(const MelodyContext *context, const MelodyFillParams *params, FillRng *rng,
+                         MelodyCandidate *out) {
+    PlanTime beat_time;
+    long beat;
+    if (context->pickup == 0) {
+        return true;
+    }
+    if (plan_time_make(1, (unsigned long)context->metre.meter.beat_unit, &beat_time) != PLAN_OK ||
+        !melody_ticks(beat_time, &beat)) {
+        return false;
+    }
+    long unit = gcd(context->pickup, beat);
+    long count = context->pickup / unit;
+    count = count > MELODY_MAX_PICKUP ? MELODY_MAX_PICKUP : count;
+    long first_length = context->pickup - (count - 1) * unit;
+    long onset = -context->pickup;
+    for (long k = 0; k < count; k++) {
+        long length = k == 0 ? first_length : unit;
+        out->pickup_notes[k].onset = onset;
+        out->pickup_notes[k].duration = length;
+        out->pickup_notes[k].motive_index = -1;
+        out->pickup_notes[k].chord = 0;
+        out->pickup_notes[k].strong = false;
+        onset += length;
+    }
+    out->pickup_count = (size_t)count;
+
+    /* The last note: a step from the downbeat note, or a chord tone of the chord before within a fourth of it. */
+    int target = out->notes[0].pitch;
+    unsigned scale = melody_scale_mask(context, 0);
+    int options[16];
+    size_t steps = 0;
+    size_t tones = 0;
+    for (int pitch = target - 2; pitch <= target + 2; pitch++) {
+        if (pitch != target && pitch >= params->range_low && pitch <= params->range_high &&
+            ((scale >> pitch_class(pitch)) & 1u)) {
+            options[steps++] = pitch;
+        }
+    }
+    int chord_tones[16];
+    for (int pitch = target - 5; context->pickup_mask != 0 && pitch <= target + 5; pitch++) {
+        if (pitch != target && absolute(pitch - target) > 2 && pitch >= params->range_low &&
+            pitch <= params->range_high && ((context->pickup_mask >> pitch_class(pitch)) & 1u)) {
+            chord_tones[tones++] = pitch;
+        }
+    }
+    if (steps == 0 && tones == 0) {
+        return false;
+    }
+    /* A step in two draws of three; a chord tone otherwise, when there is one. */
+    bool step = tones == 0 || (steps > 0 && fill_rng_below(rng, 3) > 0);
+    int last = step ? options[fill_rng_below(rng, steps)] : chord_tones[fill_rng_below(rng, tones)];
+    out->pickup_notes[count - 1].pitch = last;
+    int direction = last < target ? 1 : -1;
+    for (long k = count - 2; k >= 0; k--) {
+        /* Going back from the last note, away from the downbeat note: the line leans into it. */
+        int pitch = scale_step(scale, out->pickup_notes[k + 1].pitch, -direction, params->range_low, params->range_high);
+        if (pitch < 0) {
+            pitch = scale_step(scale, out->pickup_notes[k + 1].pitch, direction, params->range_low, params->range_high);
+        }
+        if (pitch < 0) {
+            return false;
+        }
+        out->pickup_notes[k].pitch = pitch;
+    }
+    return true;
+}
+
 bool melody_build(const MelodyContext *context, const MelodyFillParams *params, FillRng *rng, MelodyCandidate *out) {
     MelodyFillParams arch = arch_params(context, params);
     memset(out, 0, sizeof(*out));
@@ -285,7 +379,8 @@ bool melody_build(const MelodyContext *context, const MelodyFillParams *params, 
     out->context = *context;
     out->params = arch;
     /* A melody with two notes as high as its highest has no one climax. */
-    bool assigned = layout(context, &arch, out) && assign(context, &arch, rng, out);
+    bool assigned = layout(context, &arch, out) && assign(context, &arch, rng, out) &&
+                    place_pickup(context, &arch, rng, out);
     /* The phrase has one highest note: the whole phrase, or the target with its climax, has one. */
     MelodyRole role = melody_role(context, &arch);
     bool unique = assigned && ((role != MELODY_ROLE_WHOLE && role != MELODY_ROLE_CLIMAX) || melody_contour_unique(out));

@@ -33,8 +33,13 @@ static const MelodyFillParams *params_of(void *context) {
 }
 
 static bool same_melody(const MelodyCandidate *a, const MelodyCandidate *b) {
-    if (a->count != b->count) {
+    if (a->count != b->count || a->pickup_count != b->pickup_count) {
         return false;
+    }
+    for (size_t i = 0; i < a->pickup_count; i++) {
+        if (a->pickup_notes[i].pitch != b->pickup_notes[i].pitch) {
+            return false;
+        }
     }
     for (size_t i = 0; i < a->count; i++) {
         if (a->notes[i].pitch != b->notes[i].pitch || a->notes[i].onset != b->notes[i].onset ||
@@ -134,7 +139,7 @@ static PlanResult melody_apply(PiecePlan *plan, FillTarget target, const FillCan
         return PLAN_ERR_NULL;
     }
     read = malloc(sizeof(*read));
-    notes = calloc(melody->count, sizeof(*notes));
+    notes = calloc(melody->count + melody->pickup_count, sizeof(*notes));
     if (!read || !notes) {
         free(read);
         free(notes);
@@ -142,20 +147,23 @@ static PlanResult melody_apply(PiecePlan *plan, FillTarget target, const FillCan
     }
     /* The plan must still be what the melody was made for. */
     if (!melody_context_read(plan, (LaneSpanId)target.id, read) || read->count != melody->context.count ||
-        read->length != melody->context.length) {
+        read->length != melody->context.length || read->pickup != melody->context.pickup) {
         result = PLAN_ERR_BAD_PAYLOAD;
     }
-    for (size_t i = 0; result == PLAN_OK && i < melody->count; i++) {
-        notes[i].midi_pitch = melody->notes[i].pitch;
-        result = melody_time(melody->notes[i].onset, &notes[i].offset);
+    /* The span starts with the pickup: the notes are written from its start, the pickup's first. */
+    for (size_t i = 0; result == PLAN_OK && i < melody->pickup_count + melody->count; i++) {
+        const MelodyNote *note = i < melody->pickup_count ? &melody->pickup_notes[i]
+                                                           : &melody->notes[i - melody->pickup_count];
+        notes[i].midi_pitch = note->pitch;
+        result = melody_time(note->onset + melody->context.pickup, &notes[i].offset);
         if (result == PLAN_OK) {
-            result = melody_time(melody->notes[i].duration, &notes[i].duration);
+            result = melody_time(note->duration, &notes[i].duration);
         }
     }
     if (result == PLAN_OK) {
         memset(&payload, 0, sizeof(payload));
         payload.notes.notes = notes;
-        payload.notes.note_count = melody->count;
+        payload.notes.note_count = melody->pickup_count + melody->count;
         result = plan_lane_span_write(plan, (LaneSpanId)target.id, &payload);
     }
     free(read);

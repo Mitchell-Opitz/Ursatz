@@ -115,6 +115,12 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         return length > 0 && length < PLAN_SOURCE_PIECE_MAX && source->score_denominator > 0 &&
                source->score_numerator <= source->score_denominator;
     }
+    case PLAN_CONSTRAINT_PICKUP: {
+        /* The bar it must be shorter than is the meter's, which the melody operator reads; no bar is as long as two wholes. */
+        PlanTime pickup = constraint->params.pickup;
+        return pickup.den != 0 && pickup.num > 0 && (pickup.num * 32) % (long)pickup.den == 0 &&
+               pickup.num < 2 * (long)pickup.den;
+    }
     }
     return false;
 }
