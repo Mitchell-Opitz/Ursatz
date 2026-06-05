@@ -177,6 +177,17 @@ typedef struct {
     AnalysisChordReading pivot; /* the pivot chord read in the old key; label NULL unless has_pivot */
 } AnalysisKeyChange;
 
+/* The competing reading of a cadence that has two (a V to I6, or a dominant before a section start; R-090, R-091).
+   reading is "cadence" or "prolongation"; type is the library's CadenceType name of a "cadence" reading and NULL for
+   a "prolongation". The entry range is the alternative's arrival. */
+typedef struct {
+    const char *reading;              /* "cadence" or "prolongation" */
+    char *type;                       /* owned; NULL for a prolongation */
+    size_t arrival_first;
+    size_t arrival_last;
+    int share;                        /* thousandths of this reading */
+} AnalysisCadenceAlternative;
+
 /* One cadence from the library's standard-harmony analysis (analysis/analysis_cadence.h), in time order. Entry
    ranges are indices into entries, inclusive. */
 typedef struct {
@@ -192,6 +203,9 @@ typedef struct {
     bool in_region;                   /* the arrival lies in a key region */
     size_t region;                    /* index of that region in key_regions; valid only when in_region */
     double uncertainty;               /* [0, 1], higher is LESS certain */
+    int share;                        /* thousandths of this reading; 1000 when there is no alternative */
+    bool has_alternative;
+    AnalysisCadenceAlternative alternative; /* valid only when has_alternative */
 } AnalysisCadence;
 
 /* One prolongation from the library's standard-harmony analysis (analysis/analysis_prolongation.h): the harmony of

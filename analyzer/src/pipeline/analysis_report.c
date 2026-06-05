@@ -65,6 +65,7 @@ void analysis_report_destroy(AnalysisReport *report) {
     for (size_t i = 0; i < report->cadence_count; i++) {
         free(report->cadences[i].type);
         free(report->cadences[i].soprano_degree);
+        free(report->cadences[i].alternative.type);
     }
     free(report->cadences);
     for (size_t i = 0; i < report->prolongation_count; i++) {

@@ -1307,11 +1307,41 @@ static cJSON *span_and_location_json(const ImportedNotes *notes, Rational start,
     return object;
 }
 
+/* The competing reading of a cadence: {"reading", "type" (null for a prolongation), "measure", "beat" (where its
+   arrival begins; null when the meter cannot place it), "share", "note_ids" (the notes of its arrival)}. */
+static cJSON *cadence_alternative_json(const ImportedNotes *notes, const AnalysisReport *report,
+                                       const AnalysisCadenceAlternative *alternative) {
+    size_t id_count = 0;
+    size_t *ids = entry_range_note_ids(report, alternative->arrival_first, alternative->arrival_last, &id_count);
+    if (!ids) {
+        return NULL;
+    }
+    cJSON *position = position_json(notes->meter.meter_map, entry_start_time(&report->entries[alternative->arrival_first]));
+    cJSON *object = cJSON_CreateObject();
+    cJSON *measure = position ? cJSON_GetObjectItemCaseSensitive(position, "measure") : NULL;
+    cJSON *beat = position ? cJSON_GetObjectItemCaseSensitive(position, "beat") : NULL;
+    bool ok = object &&
+              add(object, "reading", cJSON_CreateString(alternative->reading)) &&
+              add(object, "type", optional_string_json(alternative->type)) &&
+              add(object, "measure", measure ? cJSON_CreateNumber(measure->valuedouble) : cJSON_CreateNull()) &&
+              add(object, "beat", beat ? cJSON_CreateNumber(beat->valuedouble) : cJSON_CreateNull()) &&
+              add(object, "share", cJSON_CreateNumber((double)alternative->share)) &&
+              add(object, "note_ids", note_ids_json(ids, id_count));
+    free(ids);
+    cJSON_Delete(position);
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 /* One claim per cadence, in time order. The claim's span runs from the dominant's start to the arrival's end;
    arrival has the arrival's span and location, dominant its span. soprano_degree is the outer voice's label at the
    arrival (null when absent); region the key region of the arrival (null outside every region); boundary marks a half
-   cadence the boundary step added before a section start. Everything else is the library's: the type, the beat
-   strength, the uncertainty. */
+   cadence the boundary step added before a section start. share is the thousandths of this reading (1000 with no
+   other); alternative, present only for a cadence with a competing reading, is the other one. Everything else is the
+   library's: the type, the beat strength, the uncertainty. */
 static cJSON *cadences_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (!list) {
@@ -1340,7 +1370,10 @@ static cJSON *cadences_json(const ImportedNotes *notes, const AnalysisReport *re
               add(claim, "arrival_beat_strength", cJSON_CreateString(cadence->arrival_beat_strength)) &&
               add(claim, "boundary", cJSON_CreateBool(cadence->boundary)) &&
               add(claim, "region",
-                  cadence->in_region ? cJSON_CreateNumber((double)cadence->region) : cJSON_CreateNull()))) {
+                  cadence->in_region ? cJSON_CreateNumber((double)cadence->region) : cJSON_CreateNull()) &&
+              add(claim, "share", cJSON_CreateNumber((double)cadence->share)) &&
+              (!cadence->has_alternative ||
+               add(claim, "alternative", cadence_alternative_json(notes, report, &cadence->alternative))))) {
             cJSON_Delete(claim);
             cJSON_Delete(list);
             return NULL;

@@ -927,6 +927,75 @@ static bool render_non_chord_tones(StringBuilder *sb, const cJSON *document, con
 
 #define CADENCE_TYPE_MAX 8
 
+/* The report's word for a cadence type: the library's "subverted" is "evaded" here (the JSON keeps the library's). */
+static const char *cadence_type_label(const char *type) {
+    return type && strcmp(type, "subverted") == 0 ? "evaded" : type;
+}
+
+/* "m23 b1" for a position object; "unknown position" when the meter cannot place it. */
+static bool append_short_position(StringBuilder *sb, const cJSON *position) {
+    if (!cJSON_IsObject(position)) {
+        return sb_append(sb, "unknown position");
+    }
+    return sb_appendf(sb, "m%d b%d", (int)number_member(position, "measure"), (int)number_member(position, "beat"));
+}
+
+/* A share in thousandths as a percentage: "60%" or "62.5%". */
+static bool append_share(StringBuilder *sb, double share) {
+    long rounded = (long)(share + 0.5);
+    return rounded % 10 == 0 ? sb_appendf(sb, "%ld%%", rounded / 10) : sb_appendf(sb, "%.1f%%", (double)rounded / 10.0);
+}
+
+/* A cadence type as a sentence word: "perfect-authentic" is "perfect authentic cadence". */
+static bool append_cadence_phrase(StringBuilder *sb, const char *type) {
+    for (const char *c = cadence_type_label(type); c && *c; c++) {
+        if (!sb_appendf(sb, "%c", *c == '-' ? ' ' : *c)) {
+            return false;
+        }
+    }
+    return sb_append(sb, " cadence");
+}
+
+/* The cadences that have a competing reading, one line each, the primary first: "m23 b1 half cadence (60%), or
+   perfect authentic cadence at m24 b1 (40%)" and "m4 b1 evaded cadence (55%), or tonic prolongation (45%)". Read
+   from the document's cadences; prints nothing when none has an alternative. */
+static bool render_cadence_readings(StringBuilder *sb, const cJSON *cadences) {
+    bool heading = false;
+    const cJSON *cadence;
+    cJSON_ArrayForEach(cadence, cadences) {
+        const cJSON *alternative = cJSON_GetObjectItemCaseSensitive(cadence, "alternative");
+        if (!cJSON_IsObject(alternative)) {
+            continue;
+        }
+        const cJSON *location = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cadence, "arrival"),
+                                                                 "location");
+        bool prolongation = string_member(alternative, "reading") &&
+                            strcmp(string_member(alternative, "reading"), "prolongation") == 0;
+        bool ok = (heading || sb_append(sb, "### Competing readings\n\n"
+                                            "A cadence the evidence does not settle has two readings, the likelier "
+                                            "first, each with its share of the evidence.\n\n")) &&
+                  sb_append(sb, "- ") && append_short_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
+                  sb_append(sb, " ") && append_cadence_phrase(sb, string_member(cadence, "type")) &&
+                  sb_append(sb, " (") && append_share(sb, number_member(cadence, "share")) && sb_append(sb, "), or ");
+        heading = true;
+        if (ok && prolongation) {
+            ok = sb_append(sb, "tonic prolongation");
+        } else if (ok) {
+            const cJSON *measure = cJSON_GetObjectItemCaseSensitive(alternative, "measure");
+            const cJSON *beat = cJSON_GetObjectItemCaseSensitive(alternative, "beat");
+            ok = append_cadence_phrase(sb, string_member(alternative, "type")) && sb_append(sb, " at ") &&
+                 (cJSON_IsNumber(measure) && cJSON_IsNumber(beat)
+                      ? sb_appendf(sb, "m%d b%d", (int)measure->valuedouble, (int)beat->valuedouble)
+                      : sb_append(sb, "unknown position"));
+        }
+        if (!(ok && sb_append(sb, " (") && append_share(sb, number_member(alternative, "share")) &&
+              sb_append(sb, ")\n"))) {
+            return false;
+        }
+    }
+    return !heading || sb_append(sb, "\n");
+}
+
 typedef struct {
     const char *type;
     int count;
@@ -946,7 +1015,7 @@ static bool render_cadence_plan(StringBuilder *sb, const cJSON *document, const 
         }
         const cJSON *location = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cadence, "arrival"),
                                                                  "location");
-        const char *type = string_member(cadence, "type");
+        const char *type = cadence_type_label(string_member(cadence, "type"));
         ok = sb_appendf(sb, "%d. ", number++) &&
              append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
              sb_appendf(sb, ": %s in %s\n", type, region_label(document, cJSON_GetObjectItemCaseSensitive(cadence, "region")));
@@ -987,12 +1056,13 @@ static bool render_cadences(StringBuilder *sb, const cJSON *document, const cJSO
         const cJSON *location = cJSON_GetObjectItemCaseSensitive(arrival, "location");
         const char *soprano = string_member(cadence, "soprano_degree");
         ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
-             sb_appendf(sb, " | %s | %s | %s | %s | %s |\n", string_member(cadence, "type"),
+             sb_appendf(sb, " | %s | %s | %s | %s | %s |\n", cadence_type_label(string_member(cadence, "type")),
                         region_label(document, cJSON_GetObjectItemCaseSensitive(cadence, "region")),
                         soprano ? soprano : "none", string_member(cadence, "arrival_beat_strength"),
                         cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(cadence, "boundary")) ? "yes" : "no");
     }
-    return ok && sb_append(sb, "\n") && render_cadence_plan(sb, document, cadences);
+    return ok && sb_append(sb, "\n") && render_cadence_readings(sb, cadences) &&
+           render_cadence_plan(sb, document, cadences);
 }
 
 #define PROGRESSION_TABLE_ROWS 10
@@ -1285,7 +1355,7 @@ static bool append_phrase_cadence(StringBuilder *sb, const cJSON *document, cons
     }
     const cJSON *location = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cadence, "arrival"),
                                                              "location");
-    return sb_appendf(sb, "%s (", string_member(cadence, "type")) &&
+    return sb_appendf(sb, "%s (", cadence_type_label(string_member(cadence, "type"))) &&
            append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) && sb_append(sb, ")");
 }
 
