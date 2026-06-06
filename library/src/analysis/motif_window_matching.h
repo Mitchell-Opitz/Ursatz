@@ -62,6 +62,27 @@ typedef enum {
 } MotifWindowMatchingResult;
 
 /*
+ * Partial comparison of an aligned stretch of two windows, for callers that
+ * look for a motif inside longer windows or allow variation (ThematicReturn-
+ * Detection). Compares `length` consecutive events of `a` starting at
+ * a_offset with `length` of `b` starting at b_offset: contour_score is the
+ * fraction of the length - 1 contour directions that are equal,
+ * rhythm_score the fraction of the length durations that are equal, each
+ * 0 to 1. Both are 1 exactly when the stretches match under the exact rule
+ * above. length must be at least 2 and both stretches must lie inside their
+ * windows' contours and rhythms; otherwise
+ * MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOW is returned and *out is untouched.
+ */
+typedef struct {
+    double contour_score;
+    double rhythm_score;
+} MotifWindowSimilarity;
+
+MotifWindowMatchingResult motif_window_matching_compare(const MotifWindow *a, size_t a_offset, const MotifWindow *b,
+                                                          size_t b_offset, size_t length,
+                                                          MotifWindowSimilarity *out);
+
+/*
  * windows/window_count MUST be non-NULL/non-zero if window_count > 0;
  * window_count == 0 is valid and yields *out_occurrences = NULL,
  * *out_occurrence_count = 0. No entry of windows may have a NULL

@@ -28,40 +28,49 @@
    checked. */
 #define THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH 4
 
-static bool window_meets_min_length(const MotifWindow *window) {
-    return window->event_id_count >= THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH;
-}
+/* Length of the stretch compared inside each theme. A theme shorter than this is compared whole (down to the
+   minimum above); a longer one is slid across, so a return that restates only a part of the earlier theme (its
+   opening idea) is found wherever that part sits. A stated default, expected to move with the corpus. */
+#define THEMATIC_RETURN_DETECTION_WINDOW_LENGTH 6
 
-/* Reuses MotifWindowMatching's exact comparison rule (contour direction equality AND
-   rhythmic duration equality, element for element) -- see this module's header comment
-   for why the pairwise bookkeeping is reimplemented rather than calling
-   motif_window_matching_find directly. */
-static bool windows_match(const MotifWindow *a, const MotifWindow *b) {
-    if (!window_meets_min_length(a) || !window_meets_min_length(b)) {
+typedef struct {
+    size_t earlier_offset;
+    size_t later_offset;
+    size_t length;
+} ReturnMatch;
+
+static size_t window_length_of(const MotifWindow *window) { return rhythmic_pattern_duration_count(window->rhythm); }
+
+/* Compares every stretch of one theme with every stretch of the other, using MotifWindowMatching's comparison
+   (contour direction equality AND rhythmic duration equality, element for element) on stretches of
+   THEMATIC_RETURN_DETECTION_WINDOW_LENGTH events (the shorter theme's length when that is less). A window below
+   THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH is too short/generic and never matches. The first stretch pair in
+   (earlier offset, later offset) order that matches is the match. */
+static bool find_return(const MotifWindow *earlier, const MotifWindow *later, ReturnMatch *match) {
+    size_t earlier_length = window_length_of(earlier);
+    size_t later_length = window_length_of(later);
+    size_t length = earlier_length < later_length ? earlier_length : later_length;
+    if (length < THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH) {
         return false;
     }
-
-    size_t direction_count = contour_direction_count(a->contour);
-    if (direction_count != contour_direction_count(b->contour)) {
-        return false;
+    if (length > THEMATIC_RETURN_DETECTION_WINDOW_LENGTH) {
+        length = THEMATIC_RETURN_DETECTION_WINDOW_LENGTH;
     }
-    for (size_t i = 0; i < direction_count; i++) {
-        if (contour_direction_at(a->contour, i) != contour_direction_at(b->contour, i)) {
-            return false;
+    for (size_t i = 0; i + length <= earlier_length; i++) {
+        for (size_t j = 0; j + length <= later_length; j++) {
+            MotifWindowSimilarity similarity;
+            if (motif_window_matching_compare(earlier, i, later, j, length, &similarity) != MOTIF_WINDOW_MATCHING_OK) {
+                continue;
+            }
+            if (similarity.contour_score == 1.0 && similarity.rhythm_score == 1.0) {
+                match->earlier_offset = i;
+                match->later_offset = j;
+                match->length = length;
+                return true;
+            }
         }
     }
-
-    size_t duration_count = rhythmic_pattern_duration_count(a->rhythm);
-    if (duration_count != rhythmic_pattern_duration_count(b->rhythm)) {
-        return false;
-    }
-    for (size_t i = 0; i < duration_count; i++) {
-        if (!duration_equals(rhythmic_pattern_duration_at(a->rhythm, i), rhythmic_pattern_duration_at(b->rhythm, i))) {
-            return false;
-        }
-    }
-
-    return true;
+    return false;
 }
 
 static bool valid_entry_shape(const ThematicReturnDetectionEntry *entry) {
@@ -135,7 +144,8 @@ AnalyzerResult thematic_return_detection_analyze(const void *input, const Contex
         for (size_t j = i + 1; j < entry_count; j++) {
             const ThematicReturnDetectionEntry *earlier = &analysis_input->entries[i];
             const ThematicReturnDetectionEntry *later = &analysis_input->entries[j];
-            if (!windows_match(earlier->window, later->window)) {
+            ReturnMatch match;
+            if (!find_return(earlier->window, later->window, &match)) {
                 continue;
             }
 
@@ -268,7 +278,8 @@ ThematicReturnDetectionRelationshipResult thematic_return_detection_build_relati
         for (size_t j = i + 1; j < entry_count; j++) {
             const ThematicReturnDetectionEntry *earlier = &entries[i];
             const ThematicReturnDetectionEntry *later = &entries[j];
-            if (!windows_match(earlier->window, later->window)) {
+            ReturnMatch match;
+            if (!find_return(earlier->window, later->window, &match)) {
                 continue;
             }
 
