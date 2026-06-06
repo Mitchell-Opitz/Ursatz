@@ -30,13 +30,41 @@ static const char *midi_import_error_message(MidiImportResult result) {
     }
 }
 
-/* A note-on of the file with the track chunk it is in. */
+/* A note-on of the file with the track chunk and channel it is in. */
 typedef struct {
     long long tick;
     int pitch;
     size_t track;
+    int channel;
     bool used;
 } TrackNoteOn;
+
+/* A program change (0xC0) of the file. */
+typedef struct {
+    long long tick;
+    size_t track;
+    int channel;
+    int program;
+} ProgramChange;
+
+/* What the track chunks say beyond their note-ons: the first track name (meta 0x03) of each track, NULL when it has
+   none, and every program change in file order. */
+typedef struct {
+    char **track_names; /* owned; one entry per track */
+    size_t track_count;
+    ProgramChange *programs;
+    size_t program_count;
+    size_t program_capacity;
+} MidiFileInfo;
+
+static void midi_file_info_destroy(MidiFileInfo *info) {
+    for (size_t t = 0; t < info->track_count; t++) {
+        free(info->track_names[t]);
+    }
+    free(info->track_names);
+    free(info->programs);
+    *info = (MidiFileInfo){0};
+}
 
 /* Reads a variable-length quantity at data[at], within end; returns the bytes used, 0 when it runs past end. */
 static size_t read_vlq(const unsigned char *data, size_t at, size_t end, unsigned long *value) {
@@ -54,15 +82,36 @@ static size_t read_vlq(const unsigned char *data, size_t at, size_t end, unsigne
     return used;
 }
 
+static bool add_program_change(MidiFileInfo *info, ProgramChange change) {
+    if (info->program_count == info->program_capacity) {
+        size_t capacity = info->program_capacity > 0 ? info->program_capacity * 2 : 16;
+        ProgramChange *grown = realloc(info->programs, capacity * sizeof *grown);
+        if (!grown) {
+            return false;
+        }
+        info->programs = grown;
+        info->program_capacity = capacity;
+    }
+    info->programs[info->program_count++] = change;
+    return true;
+}
+
 /* The note-ons of every track chunk (running status honoured), ported from Ursatz's tests/integration/texture_util.h
-   texture_read_note_ons as a rewrite with error returns. false on a malformed track or allocation failure. */
-static bool read_note_ons(const SmfTrack *tracks, size_t track_count, TrackNoteOn **out, size_t *out_count) {
+   texture_read_note_ons as a rewrite with error returns, with each track's first name and every program change in
+   info (empty on failure). false on a malformed track or allocation failure. */
+static bool read_note_ons(const SmfTrack *tracks, size_t track_count, TrackNoteOn **out, size_t *out_count,
+                          MidiFileInfo *info) {
     size_t capacity = 1024;
     size_t count = 0;
+    *info = (MidiFileInfo){0};
     TrackNoteOn *ons = malloc(capacity * sizeof *ons);
-    if (!ons) {
+    info->track_names = calloc(track_count > 0 ? track_count : 1, sizeof *info->track_names);
+    if (!ons || !info->track_names) {
+        free(ons);
+        midi_file_info_destroy(info);
         return false;
     }
+    info->track_count = track_count;
     for (size_t t = 0; t < track_count; t++) {
         const unsigned char *data = tracks[t].data;
         size_t end = tracks[t].size;
@@ -74,6 +123,7 @@ static bool read_note_ons(const SmfTrack *tracks, size_t track_count, TrackNoteO
             size_t used = read_vlq(data, p, end, &delta);
             if (used == 0 || p + used >= end) {
                 free(ons);
+                midi_file_info_destroy(info);
                 return false;
             }
             p += used;
@@ -81,11 +131,22 @@ static bool read_note_ons(const SmfTrack *tracks, size_t track_count, TrackNoteO
             unsigned char status = data[p];
             if (status == 0xff || status == 0xf0 || status == 0xf7) {
                 unsigned long length = 0;
+                unsigned char meta_type = (status == 0xff && p + 1 < end) ? data[p + 1] : 0;
                 p += status == 0xff ? 2 : 1;
                 used = p < end ? read_vlq(data, p, end, &length) : 0;
                 if (used == 0 || p + used + length > end) {
                     free(ons);
                     return false;
+                }
+                if (meta_type == 0x03 && !info->track_names[t]) {
+                    info->track_names[t] = malloc(length + 1);
+                    if (!info->track_names[t]) {
+                        free(ons);
+                        midi_file_info_destroy(info);
+                        return false;
+                    }
+                    memcpy(info->track_names[t], data + p + used, length);
+                    info->track_names[t][length] = '\0';
                 }
                 p += used + length;
                 continue;
@@ -100,6 +161,7 @@ static bool read_note_ons(const SmfTrack *tracks, size_t track_count, TrackNoteO
             size_t data_bytes = (kind == 0xc0 || kind == 0xd0) ? 1 : 2;
             if (kind < 0x80 || p + data_bytes > end) {
                 free(ons);
+                midi_file_info_destroy(info);
                 return false;
             }
             if (kind == 0x90 && data[p + 1] > 0) {
@@ -108,11 +170,17 @@ static bool read_note_ons(const SmfTrack *tracks, size_t track_count, TrackNoteO
                     TrackNoteOn *grown = realloc(ons, capacity * sizeof *ons);
                     if (!grown) {
                         free(ons);
+                        midi_file_info_destroy(info);
                         return false;
                     }
                     ons = grown;
                 }
-                ons[count++] = (TrackNoteOn){tick, data[p], t, false};
+                ons[count++] = (TrackNoteOn){tick, data[p], t, status & 0x0f, false};
+            } else if (kind == 0xc0 &&
+                       !add_program_change(info, (ProgramChange){tick, t, status & 0x0f, data[p]})) {
+                free(ons);
+                midi_file_info_destroy(info);
+                return false;
             }
             p += data_bytes;
         }
@@ -136,7 +204,8 @@ static size_t *note_streams(const unsigned char *buffer, size_t size, const Note
     }
     TrackNoteOn *ons = NULL;
     size_t on_count = 0;
-    bool ok = read_note_ons(tracks, track_count, &ons, &on_count);
+    MidiFileInfo info;
+    bool ok = read_note_ons(tracks, track_count, &ons, &on_count, &info);
     free(tracks);
     if (!ok) {
         free(streams);
@@ -160,6 +229,7 @@ static size_t *note_streams(const unsigned char *buffer, size_t size, const Note
         }
     }
     free(ons);
+    midi_file_info_destroy(&info);
     return streams;
 }
 
