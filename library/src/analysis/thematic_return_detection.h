@@ -112,9 +112,27 @@ typedef struct {
 #define THEMATIC_RETURN_DETECTION_DEFAULT_WINDOW_LENGTH 6
 #define THEMATIC_RETURN_DETECTION_DEFAULT_THRESHOLD 0.8
 
+/*
+ * The evidence of one return: the scores of the best stretch pair (see ThematicReturnDetectionConfig) and where
+ * the stretches sit, as event offsets inside the earlier and the later theme's window. Carried on the
+ * Interpretation's claim and, as a Value of type THEMATIC_RETURN_SIMILARITY_VALUE_TYPE, in the qualifiers of the
+ * "resembles" Relationship (read it with value_content). similarity = lower of contour_score and rhythm_score.
+ */
+#define THEMATIC_RETURN_SIMILARITY_VALUE_TYPE "thematic-return-similarity"
+
+typedef struct {
+    double contour_score;
+    double rhythm_score;
+    double similarity;
+    size_t earlier_offset;
+    size_t later_offset;
+    size_t window_length;
+} ThematicReturnSimilarity;
+
 typedef struct {
     char later_theme_occurrence_id[THEMATIC_RETURN_DETECTION_ID_BUFFER_SIZE];
     char earlier_theme_occurrence_id[THEMATIC_RETURN_DETECTION_ID_BUFFER_SIZE];
+    ThematicReturnSimilarity similarity;
 } ThematicReturnDetectionClaim;
 
 /*

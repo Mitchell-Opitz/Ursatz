@@ -28,12 +28,7 @@
    checked. The value is defined in the header. */
 
 typedef struct {
-    size_t earlier_offset;
-    size_t later_offset;
-    size_t length;
-    double contour_score;
-    double rhythm_score;
-    double similarity;
+    ThematicReturnSimilarity evidence;
 } ReturnMatch;
 
 static size_t window_length_of(const MotifWindow *window) { return rhythmic_pattern_duration_count(window->rhythm); }
@@ -78,19 +73,24 @@ static bool find_return(const MotifWindow *earlier, const MotifWindow *later, co
                 continue;
             }
             double similarity = score.contour_score < score.rhythm_score ? score.contour_score : score.rhythm_score;
-            if (found && similarity <= match->similarity) {
+            if (found && similarity <= match->evidence.similarity) {
                 continue;
             }
-            match->earlier_offset = i;
-            match->later_offset = j;
-            match->length = length;
-            match->contour_score = score.contour_score;
-            match->rhythm_score = score.rhythm_score;
-            match->similarity = similarity;
+            match->evidence.contour_score = score.contour_score;
+            match->evidence.rhythm_score = score.rhythm_score;
+            match->evidence.similarity = similarity;
+            match->evidence.earlier_offset = i;
+            match->evidence.later_offset = j;
+            match->evidence.window_length = length;
             found = true;
         }
     }
-    return found && match->similarity >= config->threshold;
+    return found && match->evidence.similarity >= config->threshold;
+}
+
+/* The similarity as a confidence in thousandths (a perfect match is 1000/1000). */
+static size_t similarity_per_mille(const ThematicReturnSimilarity *evidence) {
+    return (size_t)(evidence->similarity * 1000.0 + 0.5);
 }
 
 static bool valid_entry_shape(const ThematicReturnDetectionEntry *entry) {
@@ -193,6 +193,7 @@ AnalyzerResult thematic_return_detection_analyze(const void *input, const Contex
                       later_value);
             snprintf(claim_content.earlier_theme_occurrence_id, sizeof(claim_content.earlier_theme_occurrence_id),
                       "%s", earlier_value);
+            claim_content.similarity = match.evidence;
 
             Value *claim;
             if (value_create("thematic-return-detection-claim", &claim_content, sizeof(claim_content), &claim) !=
@@ -205,7 +206,7 @@ AnalyzerResult thematic_return_detection_analyze(const void *input, const Contex
             }
 
             Uncertainty *uncertainty;
-            if (uncertainty_create_scalar_confidence(1, 1, &uncertainty) != UNCERTAINTY_OK) {
+            if (uncertainty_create_scalar_confidence(similarity_per_mille(&match.evidence), 1000, &uncertainty) != UNCERTAINTY_OK) {
                 value_destroy(claim);
                 entity_id_destroy(interpretation_id);
                 entity_id_destroy(relationship_id);
@@ -352,9 +353,22 @@ ThematicReturnDetectionRelationshipResult thematic_return_detection_build_relati
                 return THEMATIC_RETURN_DETECTION_REL_ERR_ALLOC;
             }
 
+            Value *qualifiers;
+            if (value_create(THEMATIC_RETURN_SIMILARITY_VALUE_TYPE, &match.evidence, sizeof(match.evidence),
+                              &qualifiers) != VALUE_OK) {
+                provenance_reference_destroy(provenance);
+                entity_id_destroy(target_id);
+                entity_id_destroy(source_id);
+                entity_id_destroy(relationship_id);
+                destroy_partial_relationships(relationships, out_index);
+                free(relationships);
+                return THEMATIC_RETURN_DETECTION_REL_ERR_ALLOC;
+            }
+
             Relationship *relationship;
-            if (relationship_create(relationship_id, source_id, "resembles", target_id, NULL, NULL, NULL, NULL, NULL,
-                                     provenance, &relationship) != RELATIONSHIP_OK) {
+            if (relationship_create(relationship_id, source_id, "resembles", target_id, NULL, NULL, qualifiers, NULL,
+                                     NULL, provenance, &relationship) != RELATIONSHIP_OK) {
+                value_destroy(qualifiers);
                 destroy_partial_relationships(relationships, out_index);
                 free(relationships);
                 return THEMATIC_RETURN_DETECTION_REL_ERR_ALLOC;
