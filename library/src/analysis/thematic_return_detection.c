@@ -25,52 +25,72 @@
    treats 2-event material as a legitimate (if minimal) continuation, so 2 does not separate
    "genuine theme" from "incidental fragment" one level up; 4 gives real separation without a
    corpus-derived number to justify going higher. Expect this to move once more of the corpus is
-   checked. */
-#define THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH 4
-
-/* Length of the stretch compared inside each theme. A theme shorter than this is compared whole (down to the
-   minimum above); a longer one is slid across, so a return that restates only a part of the earlier theme (its
-   opening idea) is found wherever that part sits. A stated default, expected to move with the corpus. */
-#define THEMATIC_RETURN_DETECTION_WINDOW_LENGTH 6
+   checked. The value is defined in the header. */
 
 typedef struct {
     size_t earlier_offset;
     size_t later_offset;
     size_t length;
+    double contour_score;
+    double rhythm_score;
+    double similarity;
 } ReturnMatch;
 
 static size_t window_length_of(const MotifWindow *window) { return rhythmic_pattern_duration_count(window->rhythm); }
 
-/* Compares every stretch of one theme with every stretch of the other, using MotifWindowMatching's comparison
-   (contour direction equality AND rhythmic duration equality, element for element) on stretches of
-   THEMATIC_RETURN_DETECTION_WINDOW_LENGTH events (the shorter theme's length when that is less). A window below
-   THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH is too short/generic and never matches. The first stretch pair in
-   (earlier offset, later offset) order that matches is the match. */
-static bool find_return(const MotifWindow *earlier, const MotifWindow *later, ReturnMatch *match) {
+static ThematicReturnDetectionConfig effective_config(const ThematicReturnDetectionConfig *config) {
+    ThematicReturnDetectionConfig effective = thematic_return_detection_default_config();
+    if (config != NULL) {
+        if (config->window_length >= THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH) {
+            effective.window_length = config->window_length;
+        }
+        if (config->threshold > 0.0 && config->threshold <= 1.0) {
+            effective.threshold = config->threshold;
+        }
+    }
+    return effective;
+}
+
+/* Compares every stretch of one theme with every stretch of the other, using MotifWindowMatching's comparison on
+   stretches of `window_length` events (the shorter theme's length when that is less). Contour and rhythm each
+   score 0 to 1 (the share of equal directions and of equal durations); the similarity of a stretch pair is the
+   lower of the two, so a return needs both shape and rhythm. The best stretch pair (first in (earlier offset,
+   later offset) order on a tie) is the match, and it counts as a return when its similarity reaches the
+   threshold. Contour direction is transposition-invariant, so a transposed statement scores the same as an
+   untransposed one. A window below THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH is too short/generic and never
+   matches. */
+static bool find_return(const MotifWindow *earlier, const MotifWindow *later, const ThematicReturnDetectionConfig *config,
+                        ReturnMatch *match) {
     size_t earlier_length = window_length_of(earlier);
     size_t later_length = window_length_of(later);
     size_t length = earlier_length < later_length ? earlier_length : later_length;
     if (length < THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH) {
         return false;
     }
-    if (length > THEMATIC_RETURN_DETECTION_WINDOW_LENGTH) {
-        length = THEMATIC_RETURN_DETECTION_WINDOW_LENGTH;
+    if (length > config->window_length) {
+        length = config->window_length;
     }
+    bool found = false;
     for (size_t i = 0; i + length <= earlier_length; i++) {
         for (size_t j = 0; j + length <= later_length; j++) {
-            MotifWindowSimilarity similarity;
-            if (motif_window_matching_compare(earlier, i, later, j, length, &similarity) != MOTIF_WINDOW_MATCHING_OK) {
+            MotifWindowSimilarity score;
+            if (motif_window_matching_compare(earlier, i, later, j, length, &score) != MOTIF_WINDOW_MATCHING_OK) {
                 continue;
             }
-            if (similarity.contour_score == 1.0 && similarity.rhythm_score == 1.0) {
-                match->earlier_offset = i;
-                match->later_offset = j;
-                match->length = length;
-                return true;
+            double similarity = score.contour_score < score.rhythm_score ? score.contour_score : score.rhythm_score;
+            if (found && similarity <= match->similarity) {
+                continue;
             }
+            match->earlier_offset = i;
+            match->later_offset = j;
+            match->length = length;
+            match->contour_score = score.contour_score;
+            match->rhythm_score = score.rhythm_score;
+            match->similarity = similarity;
+            found = true;
         }
     }
-    return false;
+    return found && match->similarity >= config->threshold;
 }
 
 static bool valid_entry_shape(const ThematicReturnDetectionEntry *entry) {
@@ -128,6 +148,7 @@ AnalyzerResult thematic_return_detection_analyze(const void *input, const Contex
         return ANALYZER_ERR_NULL_INPUT;
     }
 
+    ThematicReturnDetectionConfig match_config = effective_config(analysis_input->config);
     size_t entry_count = analysis_input->entry_count;
     size_t max_pair_count = entry_count < 2 ? 0 : (entry_count * (entry_count - 1)) / 2;
 
@@ -145,7 +166,7 @@ AnalyzerResult thematic_return_detection_analyze(const void *input, const Contex
             const ThematicReturnDetectionEntry *earlier = &analysis_input->entries[i];
             const ThematicReturnDetectionEntry *later = &analysis_input->entries[j];
             ReturnMatch match;
-            if (!find_return(earlier->window, later->window, &match)) {
+            if (!find_return(earlier->window, later->window, &match_config, &match)) {
                 continue;
             }
 
@@ -206,7 +227,7 @@ AnalyzerResult thematic_return_detection_analyze(const void *input, const Contex
 
             Interpretation *interpretation;
             if (interpretation_create(interpretation_id, relationship_id, claim, NULL, NULL, NULL, uncertainty,
-                                       "ThematicReturnDetection", "contour/rhythm exact-match thematic return",
+                                       "ThematicReturnDetection", "contour/rhythm similarity thematic return",
                                        INTERPRETATION_STATUS_MACHINE_GENERATED, provenance, &interpretation) !=
                 INTERPRETATION_OK) {
                 destroy_partial_interpretations(interpretations, out_index);
@@ -249,9 +270,23 @@ AnalyzerResult thematic_return_detection_analyze(const void *input, const Contex
 
 const Analyzer THEMATIC_RETURN_DETECTION_ANALYZER = {"ThematicReturnDetection", thematic_return_detection_analyze};
 
+ThematicReturnDetectionConfig thematic_return_detection_default_config(void) {
+    ThematicReturnDetectionConfig config = {THEMATIC_RETURN_DETECTION_DEFAULT_WINDOW_LENGTH,
+                                             THEMATIC_RETURN_DETECTION_DEFAULT_THRESHOLD};
+    return config;
+}
+
 ThematicReturnDetectionRelationshipResult thematic_return_detection_build_relationships(
     const ThematicReturnDetectionEntry *entries, size_t entry_count, Relationship ***out_relationships,
     size_t *out_relationship_count) {
+    return thematic_return_detection_build_relationships_configured(entries, entry_count, NULL, out_relationships,
+                                                                     out_relationship_count);
+}
+
+ThematicReturnDetectionRelationshipResult thematic_return_detection_build_relationships_configured(
+    const ThematicReturnDetectionEntry *entries, size_t entry_count, const ThematicReturnDetectionConfig *config_in,
+    Relationship ***out_relationships, size_t *out_relationship_count) {
+    ThematicReturnDetectionConfig config = effective_config(config_in);
     if (entry_count > 0 && entries == NULL) {
         return THEMATIC_RETURN_DETECTION_REL_ERR_NULL_ENTRIES;
     }
@@ -279,7 +314,7 @@ ThematicReturnDetectionRelationshipResult thematic_return_detection_build_relati
             const ThematicReturnDetectionEntry *earlier = &entries[i];
             const ThematicReturnDetectionEntry *later = &entries[j];
             ReturnMatch match;
-            if (!find_return(earlier->window, later->window, &match)) {
+            if (!find_return(earlier->window, later->window, &config, &match)) {
                 continue;
             }
 

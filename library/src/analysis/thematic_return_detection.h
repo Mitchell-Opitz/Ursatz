@@ -83,12 +83,34 @@ typedef struct {
     const MotifWindow *window;
 } ThematicReturnDetectionEntry;
 
+/*
+ * Return matching settings. window_length is the number of events compared at a time inside each theme (the
+ * shorter theme's length when that is less; at least THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH, a smaller
+ * value is replaced by the default). threshold is the similarity (0 to 1) a stretch pair must reach to count as
+ * a return, a value outside (0, 1] is replaced by the default. Similarity is the lower of the contour score
+ * (share of equal up/down/same directions) and the rhythm score (share of equal durations) of the best stretch
+ * pair, so transposed statements match and a changed rhythm or shape lowers the score.
+ */
+typedef struct {
+    size_t window_length;
+    double threshold;
+} ThematicReturnDetectionConfig;
+
+/* Defaults: window_length 6, threshold THEMATIC_RETURN_DETECTION_DEFAULT_THRESHOLD. */
+ThematicReturnDetectionConfig thematic_return_detection_default_config(void);
+
 typedef struct {
     const ThematicReturnDetectionEntry *entries;
     size_t entry_count;
+    /* Optional; NULL means thematic_return_detection_default_config(). */
+    const ThematicReturnDetectionConfig *config;
 } ThematicReturnDetectionInput;
 
 #define THEMATIC_RETURN_DETECTION_ID_BUFFER_SIZE 128
+
+#define THEMATIC_RETURN_DETECTION_MIN_WINDOW_LENGTH 4
+#define THEMATIC_RETURN_DETECTION_DEFAULT_WINDOW_LENGTH 6
+#define THEMATIC_RETURN_DETECTION_DEFAULT_THRESHOLD 0.8
 
 typedef struct {
     char later_theme_occurrence_id[THEMATIC_RETURN_DETECTION_ID_BUFFER_SIZE];
@@ -149,6 +171,11 @@ typedef enum {
 ThematicReturnDetectionRelationshipResult thematic_return_detection_build_relationships(
     const ThematicReturnDetectionEntry *entries, size_t entry_count, Relationship ***out_relationships,
     size_t *out_relationship_count);
+
+/* As above, with the match settings of config (NULL means the defaults). */
+ThematicReturnDetectionRelationshipResult thematic_return_detection_build_relationships_configured(
+    const ThematicReturnDetectionEntry *entries, size_t entry_count, const ThematicReturnDetectionConfig *config,
+    Relationship ***out_relationships, size_t *out_relationship_count);
 
 /* Destroys each Relationship in relationships and the array itself. */
 void thematic_return_detection_destroy_relationships(Relationship **relationships, size_t relationship_count);
