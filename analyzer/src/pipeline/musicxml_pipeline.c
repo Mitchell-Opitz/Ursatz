@@ -89,6 +89,7 @@ static bool copy_parts(const MusicXmlImport *import, ImportedSource *source) {
         source->parts[i].id = strdup(import->parts[i].id);
         source->parts[i].name = strdup(import->parts[i].name);
         source->parts[i].staff_count = import->parts[i].staff_count;
+        source->parts[i].midi_program = -1;
         source->part_count = i + 1;
         if (!source->parts[i].id || !source->parts[i].name) {
             return false;
