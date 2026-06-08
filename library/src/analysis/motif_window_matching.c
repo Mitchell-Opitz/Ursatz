@@ -27,6 +27,38 @@ static bool windows_match(const MotifWindow *a, const MotifWindow *b) {
     return true;
 }
 
+MotifWindowMatchingResult motif_window_matching_compare(const MotifWindow *a, size_t a_offset, const MotifWindow *b,
+                                                          size_t b_offset, size_t length,
+                                                          MotifWindowSimilarity *out) {
+    if (a == NULL || b == NULL || out == NULL || a->contour == NULL || a->rhythm == NULL || b->contour == NULL ||
+        b->rhythm == NULL || length < 2) {
+        return MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOW;
+    }
+    if (a_offset + length > rhythmic_pattern_duration_count(a->rhythm) ||
+        b_offset + length > rhythmic_pattern_duration_count(b->rhythm) ||
+        a_offset + length - 1 > contour_direction_count(a->contour) ||
+        b_offset + length - 1 > contour_direction_count(b->contour)) {
+        return MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOW;
+    }
+
+    size_t equal_directions = 0;
+    for (size_t i = 0; i + 1 < length; i++) {
+        if (contour_direction_at(a->contour, a_offset + i) == contour_direction_at(b->contour, b_offset + i)) {
+            equal_directions++;
+        }
+    }
+    size_t equal_durations = 0;
+    for (size_t i = 0; i < length; i++) {
+        if (duration_equals(rhythmic_pattern_duration_at(a->rhythm, a_offset + i),
+                             rhythmic_pattern_duration_at(b->rhythm, b_offset + i))) {
+            equal_durations++;
+        }
+    }
+    out->contour_score = (double)equal_directions / (double)(length - 1);
+    out->rhythm_score = (double)equal_durations / (double)length;
+    return MOTIF_WINDOW_MATCHING_OK;
+}
+
 MotifWindowMatchingResult motif_window_matching_find(const MotifWindow *windows, size_t window_count,
                                                        MotifDetectionOccurrence **out_occurrences,
                                                        size_t *out_occurrence_count) {
