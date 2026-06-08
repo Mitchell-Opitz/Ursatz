@@ -25,7 +25,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | C7 | [convention] The cadence adapter defines SUBVERTED as a cadential dominant that resolves to I6 or another non-tonic (`analysis_cadence.h`); the older cadence drafts do not mark such places (a V-I6 prolongs there) | Fixture check against the editions, then one cadence convention across the drafts and the adapter | unassigned |
 | C8 | [method] L3.6 builds phrases, themes and expansions from the cadences it is given; where the cadences upstream are missing or wrong (C4, C5, C6) the phrase ends, the themes and their parts, and the expansions are missing or fall on other measures | Re-verification of L3.6 once the cadence items (C4, C5, C6) are done | unassigned |
 | C9 | [convention] A dominant that ends a development and resolves into the recapitulation's tonic is a root-position V to I, which the adapter calls an authentic cadence; the draft reads the dominant as the development's half cadence and the recapitulation as a new start | Cadences across a formal boundary (the adapter has no notion of form sections); fixture check against the edition | unassigned |
-| C10 | [method] The kernel's thematic return detection compares whole windows (the soprano notes of one L3.6 theme) for exact equality of contour and rhythm, with a minimum of 4 events; a return is found only where an L3.6 theme starts at it and repeats the earlier theme's contour and rhythm note for note. A return inside a longer theme, a return cut at other measures because the themes follow the chain's cadences (C8), or a transposed statement with a change of rhythm or contour is not matched | Thematic return detection with partial and varied matches (matching inside themes and with variation) | unassigned |
+| C10 | [method] The kernel's thematic return detection compares stretches of 6 events inside the soprano notes of each L3.6 theme by contour and rhythm similarity (default threshold 0.8, transposition-invariant) and finds a return where a theme restates part of an earlier one, with variation. It still sees only the notes of L3.6 themes: a return at a place where no theme was built (C8) is not found, and similarity of pitch content, harmony and ornamented rhythm is not scored | Re-verification of L3.6 themes (C8) | unassigned |
 
 ## Deviations
 
@@ -88,15 +88,15 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-073 | field1 | phrase-form | theme repeated-phrase 1-8 | repeated-phrase 1-8 parts 1-4 5-8 | none | C8 |
 | DEV-074 | field1 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | none | C8 |
 | DEV-075 | field5 | keys | region 1-8 | Bb major 1-8 | Bb major 1-5, D minor 6-8 | C1,C2 |
-| DEV-076 | mozart545 | returns | main m70 | m70 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8,C10 |
-| DEV-077 | mozart545 | returns | main m115 | m115 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8,C10 |
-| DEV-078 | mozart545 | returns | second m42 | m42 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8,C10 |
-| DEV-079 | mozart545 | returns | second m87 | m87 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8,C10 |
-| DEV-080 | mozart545 | returns | second m132 | m132 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8,C10 |
-| DEV-081 | clementi36 | returns | main m24 | m24 resembles m1 | no theme there (themes: m5-10, m20-25, m28-33) | C8,C10 |
-| DEV-082 | clementi36 | returns | second m32 | m32 resembles m9 | no theme there (themes: m5-10, m20-25, m28-33) | C8,C10 |
+| DEV-076 | mozart545 | returns | main m70 | m70 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8 |
+| DEV-077 | mozart545 | returns | main m115 | m115 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8 |
+| DEV-078 | mozart545 | returns | second m42 | m42 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8 |
+| DEV-079 | mozart545 | returns | second m87 | m87 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8 |
+| DEV-080 | mozart545 | returns | second m132 | m132 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8 |
+| DEV-081 | clementi36 | returns | main m24 | m24 resembles m1 | no theme there (themes: m5-10, m20-25, m28-33) | C8 |
+| DEV-082 | clementi36 | returns | second m32 | m32 resembles m9 | no theme there (themes: m5-10, m20-25, m28-33) | C8 |
 | DEV-083 | clementi36 | cadences | extra m19 b1 | none | hc | C5 |
-| DEV-087 | mozart545 | returns | main m29 | m29 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8,C10 |
+| DEV-087 | mozart545 | returns | main m29 | m29 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8 |
 | DEV-088 | bach114 | phrase-form | end m16 | pac at m16 | none | C8 |
 | DEV-089 | bach114 | phrase-form | end m32 | pac at m32 | none | C8 |
 | DEV-090 | clementi36 | cadences | extra m38 b2.5 | none | pac | C4 |
