@@ -23,7 +23,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | C5 | [method] Chords are read from the pitch classes sounding in each adaptive segment, ranked among the diatonic triads and sevenths of the region's key: a segment holding only a melody note (a sparse left hand), an alternating or ornamented texture, or a chord outside the vocabulary is read as another chord or none, so the V-I that the music has is hidden and a V-I the music does not have can appear | Chord identification with context (non-chord-tone filtering, harmonic continuity across melody-only segments, non-diatonic chords) | unassigned |
 | C6 | [method] A bass that is not a member of the chord reads as root position (`roman_numeral_adapter.h`); the segment's bass is its lowest sounding pitch, so a neighbour or passing bass tone turns a dominant seventh that is prolonged in an inversion into a root-position V7 (and a tonic with an ornamental bass into I6) | Inversion read from the chord's bass tone when the lowest pitch is ornamental | unassigned |
 | C7 | [convention] The cadence adapter defines SUBVERTED as a cadential dominant that resolves to I6 or another non-tonic (`analysis_cadence.h`); the older cadence drafts do not mark such places (a V-I6 prolongs there) | Fixture check against the editions, then one cadence convention across the drafts and the adapter | unassigned |
-| C8 | [method] L3.6 builds phrases, themes and expansions from the cadences it is given; where the cadences upstream are missing or wrong (C4, C5, C6) the phrase ends, the themes and their parts, and the expansions are missing or fall on other measures | Re-verification of L3.6 once the cadence items (C4, C5, C6) are done | unassigned |
+| C8 | [method] L3.6 builds phrases, themes and expansions from the cadences it is given and has no cadence detection of its own: a phrase ends at every goal cadence, so a missing cadence drops the phrase end and the themes and expansions built on it, and a false one cuts a short phrase. Re-verified in P1 B8: every remaining phrase, theme, expansion and return deviation traces to a cadence the upstream stages did not give (C1, C4, C5, C6); no L3.6 rule was found wrong. Rows carry C8 where the theme, expansion or return cannot be built until those cadences are right | Re-verify L3.6 again once the cadence causes (C1, C4, C5, C6) are removed | unassigned |
 | C9 | [convention] A dominant that ends a development and resolves into the recapitulation's tonic is a root-position V to I, which the adapter calls an authentic cadence; the draft reads the dominant as the development's half cadence and the recapitulation as a new start | Cadences across a formal boundary (the adapter has no notion of form sections); fixture check against the edition | unassigned |
 | C10 | [method] The kernel's thematic return detection compares stretches of 6 events inside the soprano notes of each L3.6 theme by contour and rhythm similarity (default threshold 0.8, transposition-invariant) and finds a return where a theme restates part of an earlier one, with variation. It still sees only the notes of L3.6 themes: a return at a place where no theme was built (C8) is not found, and similarity of pitch content, harmony and ornamented rhythm is not scored | Re-verification of L3.6 themes (C8) | unassigned |
 
@@ -41,11 +41,11 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-012 | bach114 | cadences | m24 b2.5 | pac | none | C5 |
 | DEV-014 | bach114 | cadences | m32 b2.5 | pac | none | C5 |
 | DEV-016 | bach114 | cadences | extra m31 b1 | none | subverted | C5 |
-| DEV-017 | bach114 | phrase-form | end m4 | hc at m4 | none | C8 |
-| DEV-018 | bach114 | phrase-form | end m12 | hc at m12 | none | C8 |
-| DEV-020 | bach114 | phrase-form | end m24 | pac at m24 | none | C8 |
-| DEV-021 | bach114 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | none | C8 |
-| DEV-022 | bach114 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | hybrid 9-20 parts 9-12 13-20 | C8 |
+| DEV-017 | bach114 | phrase-form | end m4 | hc at m4 | none | C4 |
+| DEV-018 | bach114 | phrase-form | end m12 | hc at m12 | none | C4 |
+| DEV-020 | bach114 | phrase-form | end m24 | pac at m24 | none | C5 |
+| DEV-021 | bach114 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | none | C4,C5,C8 |
+| DEV-022 | bach114 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | hybrid 9-20 parts 9-12 13-20 | C5,C8 |
 | DEV-023 | mozart545 | keys | region 1-12 | C major 1-12 | C major 1-8, F major 9-11, G major 12-21 | C1,C2 |
 | DEV-024 | mozart545 | keys | region 13-28 | G major 13-28 | G major 12-21, A minor 22-24, G major 25-28 | C1,C2 |
 | DEV-025 | mozart545 | keys | region 29-40 | C major 29-40 | C major 29-36, F major 37-39, G major 40-49 | C1,C2 |
@@ -75,30 +75,30 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-056 | clementi36 | cadences | extra m25 b3 | none | hc | C5 |
 | DEV-058 | clementi36 | cadences | extra m33 b1 | none | iac | C5 |
 | DEV-060 | clementi36 | cadences | extra m37 b3 | none | subverted | C5,C7 |
-| DEV-061 | clementi36 | phrase-form | end m8 | pac at m8 | none | C8 |
-| DEV-063 | clementi36 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | hybrid 5-10 parts 5-8 9-10 | C8 |
-| DEV-064 | clementi36 | phrase-form | theme period 24-38 | period 24-38 parts 24-27 28-38 | hybrid 20-25 parts 20-23 24-25, hybrid 28-33 parts 28-31 32-33 | C8 |
-| DEV-065 | clementi36 | phrase-form | expansion internal 28-38 | internal 28-38 7 measures | contraction 32-33 2 measures | C8 |
+| DEV-061 | clementi36 | phrase-form | end m8 | pac at m8 | none | C1,C5 |
+| DEV-063 | clementi36 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | hybrid 5-10 parts 5-8 9-10 | C1,C5,C8 |
+| DEV-064 | clementi36 | phrase-form | theme period 24-38 | period 24-38 parts 24-27 28-38 | hybrid 20-25 parts 20-23 24-25, hybrid 28-33 parts 28-31 32-33 | C5,C8 |
+| DEV-065 | clementi36 | phrase-form | expansion internal 28-38 | internal 28-38 7 measures | contraction 32-33 2 measures | C5,C8 |
 | DEV-066 | field1 | cadences | m8 b1 | pac | none | C5,C6 |
 | DEV-067 | field1 | cadences | m12 b1 | iac | none | C5,C6 |
 | DEV-068 | field1 | cadences | m16 b1 | pac | none | C5,C6 |
 | DEV-070 | field1 | cadences | extra m3 b1 | none | hc | C5 |
 | DEV-071 | field1 | cadences | extra m7 b1 | none | hc | C5 |
-| DEV-072 | field1 | phrase-form | end m12 | iac at m12 | none | C8 |
-| DEV-073 | field1 | phrase-form | theme repeated-phrase 1-8 | repeated-phrase 1-8 parts 1-4 5-8 | none | C8 |
-| DEV-074 | field1 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | none | C8 |
+| DEV-072 | field1 | phrase-form | end m12 | iac at m12 | none | C5,C6 |
+| DEV-073 | field1 | phrase-form | theme repeated-phrase 1-8 | repeated-phrase 1-8 parts 1-4 5-8 | none | C5,C6,C8 |
+| DEV-074 | field1 | phrase-form | theme period 9-16 | period 9-16 parts 9-12 13-16 | none | C5,C6,C8 |
 | DEV-075 | field5 | keys | region 1-8 | Bb major 1-8 | Bb major 1-5, D minor 6-8 | C1,C2 |
-| DEV-076 | mozart545 | returns | main m70 | m70 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8 |
-| DEV-077 | mozart545 | returns | main m115 | m115 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8 |
-| DEV-078 | mozart545 | returns | second m42 | m42 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8 |
-| DEV-079 | mozart545 | returns | second m87 | m87 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8 |
-| DEV-080 | mozart545 | returns | second m132 | m132 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8 |
-| DEV-081 | clementi36 | returns | main m24 | m24 resembles m1 | no theme there (themes: m5-10, m20-25, m28-33) | C8 |
-| DEV-082 | clementi36 | returns | second m32 | m32 resembles m9 | no theme there (themes: m5-10, m20-25, m28-33) | C8 |
+| DEV-076 | mozart545 | returns | main m70 | m70 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C5,C8 |
+| DEV-077 | mozart545 | returns | main m115 | m115 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C5,C8 |
+| DEV-078 | mozart545 | returns | second m42 | m42 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C5,C8 |
+| DEV-079 | mozart545 | returns | second m87 | m87 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C5,C8 |
+| DEV-080 | mozart545 | returns | second m132 | m132 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C5,C8 |
+| DEV-081 | clementi36 | returns | main m24 | m24 resembles m1 | no theme there (themes: m5-10, m20-25, m28-33) | C5,C8 |
+| DEV-082 | clementi36 | returns | second m32 | m32 resembles m9 | no theme there (themes: m5-10, m20-25, m28-33) | C5,C8 |
 | DEV-083 | clementi36 | cadences | extra m19 b1 | none | hc | C5 |
-| DEV-087 | mozart545 | returns | main m29 | m29 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C8 |
-| DEV-088 | bach114 | phrase-form | end m16 | pac at m16 | none | C8 |
-| DEV-089 | bach114 | phrase-form | end m32 | pac at m32 | none | C8 |
+| DEV-087 | mozart545 | returns | main m29 | m29 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C5,C8 |
+| DEV-088 | bach114 | phrase-form | end m16 | pac at m16 | none | C5 |
+| DEV-089 | bach114 | phrase-form | end m32 | pac at m32 | none | C5 |
 | DEV-090 | clementi36 | cadences | extra m38 b2.5 | none | pac | C4 |
 | DEV-093 | mozart545 | keys | change 13 | modulation at 13 | tonicization at 12 | C5 |
 | DEV-094 | mozart545 | keys | change 29 | modulation at 29 | tonicization at 29 | C5 |
