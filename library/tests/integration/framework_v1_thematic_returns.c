@@ -330,6 +330,11 @@ static void fv1_bach_minimum_window(const Chain *c) {
     assert(second_start > 12 && second_start < n);
     size_t length = second_start - first_start; /* the notes of measures 1-8 */
     assert(length >= 12 && second_start + length <= n);
+    size_t opening = 0; /* the notes of measures 1-4: the opening idea alone */
+    while (opening < n && measures_of[opening] < 5) {
+        opening++;
+    }
+    assert(opening >= 6 && opening < length);
     free(measures_of);
     Contour *c1 = NULL, *c2 = NULL;
     RhythmicPattern *r1 = NULL, *r2 = NULL;
@@ -345,6 +350,39 @@ static void fv1_bach_minimum_window(const Chain *c) {
     assert(strcmp(entity_id_value(relationship_source_id(rels[0])), "bach-first-strain-repeat") == 0);
     assert(strcmp(entity_id_value(relationship_target_id(rels[0])), "bach-first-strain") == 0);
     thematic_return_detection_destroy_relationships(rels, rel_count);
+
+    /* a return that restates only the opening idea (measures 1-4 against the written-out repeat, measures 9-16) is found inside the longer theme,
+       at the start of it, with a perfect score; it was invisible when whole themes were compared */
+    Contour *co = NULL;
+    RhythmicPattern *ro = NULL;
+    MotifWindow wo;
+    assert(fv1_window_of_events(&events[first_start], opening, &ids[first_start], &co, &ro, &wo));
+    Contour *cl = NULL;
+    RhythmicPattern *rl = NULL;
+    MotifWindow wl;
+    assert(fv1_window_of_events(&events[second_start], n - second_start, &ids[second_start], &cl, &rl, &wl));
+    EntityID *eo = fv1_id("bach-opening-idea");
+    EntityID *el = fv1_id("bach-second-strain");
+    ThematicReturnDetectionEntry partial[2] = {{eo, &wo}, {el, &wl}};
+    assert(thematic_return_detection_build_relationships(partial, 2, &rels, &rel_count) == THEMATIC_RETURN_DETECTION_REL_OK);
+    printf("  partial return: the opening idea (%zu notes) inside the repeat (%zu notes): %zu \"resembles\" link(s)", opening, n - second_start,
+           rel_count);
+    assert(rel_count == 1);
+    const Value *qualifiers = relationship_qualifiers(rels[0]);
+    assert(qualifiers != NULL && strcmp(value_type(qualifiers), THEMATIC_RETURN_SIMILARITY_VALUE_TYPE) == 0);
+    size_t evidence_size = 0;
+    const ThematicReturnSimilarity *evidence = (const ThematicReturnSimilarity *)value_content(qualifiers, &evidence_size);
+    assert(evidence_size == sizeof(*evidence));
+    printf(", similarity %.2f at offset %zu\n", evidence->similarity, evidence->later_offset);
+    assert(evidence->similarity == 1.0 && evidence->earlier_offset == 0 && evidence->later_offset == 0);
+    thematic_return_detection_destroy_relationships(rels, rel_count);
+    entity_id_destroy(eo);
+    entity_id_destroy(el);
+    contour_destroy(co);
+    contour_destroy(cl);
+    rhythmic_pattern_destroy(ro);
+    rhythmic_pattern_destroy(rl);
+
     entity_id_destroy(e1);
     entity_id_destroy(e2);
     contour_destroy(c1);

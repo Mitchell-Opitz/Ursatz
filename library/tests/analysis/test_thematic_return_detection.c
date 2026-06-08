@@ -64,6 +64,141 @@ static RhythmicPattern *make_rhythm(size_t count) {
     return pattern;
 }
 
+/* A themed window of `count` events built from a direction string ("u", "d", "s": count - 1 characters) and the
+   durations in eighths. Owns its ids, contour and rhythm. */
+typedef struct {
+    EntityID *occurrence_id;
+    EntityID *event_ids[16];
+    Contour *contour;
+    RhythmicPattern *rhythm;
+    MotifWindow window;
+} TestTheme;
+
+static void make_theme(TestTheme *theme, const char *name, const char *directions_text, const long *eighths,
+                       size_t count) {
+    theme->occurrence_id = make_id(name);
+    PitchIdentity *pitch_ids[16];
+    ContourDirection directions[15];
+    Duration *durations[16];
+    for (size_t i = 0; i < count; i++) {
+        char note[48];
+        snprintf(note, sizeof(note), "%s-note-%zu", name, i);
+        theme->event_ids[i] = make_id(note);
+        pitch_ids[i] = make_pitch("c\0");
+        assert(duration_create(eighths[i], 8, &durations[i]) == DURATION_OK);
+        if (i > 0) {
+            char c = directions_text[i - 1];
+            directions[i - 1] = c == 'u' ? CONTOUR_DIRECTION_UP : (c == 'd' ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME);
+        }
+    }
+    assert(contour_create(pitch_ids, count, directions, count - 1, &theme->contour) == CONTOUR_OK);
+    assert(rhythmic_pattern_create(durations, count, &theme->rhythm) == RHYTHMIC_PATTERN_OK);
+    theme->window = (MotifWindow){theme->contour, theme->rhythm, (const EntityID *const *)theme->event_ids, count};
+}
+
+static void destroy_theme(TestTheme *theme, size_t count) {
+    entity_id_destroy(theme->occurrence_id);
+    for (size_t i = 0; i < count; i++) {
+        entity_id_destroy(theme->event_ids[i]);
+    }
+    contour_destroy(theme->contour);
+    rhythmic_pattern_destroy(theme->rhythm);
+}
+
+/* Returns the number of links between the two themes and, when there is one, its evidence. */
+static size_t link_two(TestTheme *earlier, TestTheme *later, const ThematicReturnDetectionConfig *config,
+                       ThematicReturnSimilarity *evidence) {
+    ThematicReturnDetectionEntry entries[2] = {{earlier->occurrence_id, &earlier->window},
+                                                {later->occurrence_id, &later->window}};
+    Relationship **relationships = NULL;
+    size_t count = 0;
+    assert(thematic_return_detection_build_relationships_configured(entries, 2, config, &relationships, &count) ==
+           THEMATIC_RETURN_DETECTION_REL_OK);
+    if (count == 1 && evidence != NULL) {
+        const Value *qualifiers = relationship_qualifiers(relationships[0]);
+        assert(qualifiers != NULL);
+        assert(strcmp(value_type(qualifiers), THEMATIC_RETURN_SIMILARITY_VALUE_TYPE) == 0);
+        size_t size;
+        const ThematicReturnSimilarity *content = (const ThematicReturnSimilarity *)value_content(qualifiers, &size);
+        assert(size == sizeof(ThematicReturnSimilarity));
+        *evidence = *content;
+    }
+    thematic_return_detection_destroy_relationships(relationships, count);
+    return count;
+}
+
+static void test_partial_and_varied_returns(void) {
+    const long even[10] = {2, 2, 2, 2, 2, 2, 2, 2, 2, 2};
+    ThematicReturnSimilarity evidence;
+
+    /* Partial: the earlier theme (10 events) opens with an idea (up up down up down) that the later theme
+       (8 events) restates at its start and then continues differently. Whole-theme comparison would see
+       two different themes. */
+    TestTheme earlier, later;
+    make_theme(&earlier, "theme-earlier", "uudud" "ddsuu", even, 10);
+    make_theme(&later, "theme-later", "uududsd", even, 8);
+    assert(link_two(&earlier, &later, NULL, &evidence) == 1);
+    assert(evidence.similarity == 1.0);
+    assert(evidence.earlier_offset == 0 && evidence.later_offset == 0 && evidence.window_length == 6);
+    destroy_theme(&later, 8);
+
+    /* The restated idea can sit anywhere in the later theme (here from its fourth event) and be transposed
+       (contour direction is all that is compared). */
+    make_theme(&later, "theme-later", "ddduududs", even, 10);
+    assert(link_two(&earlier, &later, NULL, &evidence) == 1);
+    assert(evidence.similarity == 1.0);
+    assert(evidence.earlier_offset == 0 && evidence.later_offset == 3);
+    destroy_theme(&later, 10);
+
+    /* Nothing in common: no link and no evidence. */
+    make_theme(&later, "theme-later", "sssssssss", even, 10);
+    assert(link_two(&earlier, &later, NULL, NULL) == 0);
+    destroy_theme(&later, 10);
+    destroy_theme(&earlier, 10);
+
+    /* Varied: same shape with one duration changed (5 of 6 equal, 0.83) is a return at the default
+       threshold and the evidence carries the scores. */
+    const long varied_rhythm[6] = {2, 2, 4, 2, 2, 2};
+    const long plain_rhythm[6] = {2, 2, 2, 2, 2, 2};
+    make_theme(&earlier, "theme-earlier", "uudud", plain_rhythm, 6);
+    make_theme(&later, "theme-later", "uudud", varied_rhythm, 6);
+    assert(link_two(&earlier, &later, NULL, &evidence) == 1);
+    assert(evidence.contour_score == 1.0);
+    assert(evidence.rhythm_score > 0.83 && evidence.rhythm_score < 0.84);
+    assert(evidence.similarity == evidence.rhythm_score);
+
+    /* The threshold is a setting: 1.0 asks for an exact return and rejects it. */
+    ThematicReturnDetectionConfig exact = thematic_return_detection_default_config();
+    exact.threshold = 1.0;
+    assert(link_two(&earlier, &later, &exact, NULL) == 0);
+    destroy_theme(&later, 6);
+
+    /* A changed contour (two of five directions) scores 0.6 and is not a return at the default threshold,
+       but is at a lower one. */
+    make_theme(&later, "theme-later", "uuddu", plain_rhythm, 6);
+    assert(link_two(&earlier, &later, NULL, NULL) == 0);
+    ThematicReturnDetectionConfig loose = thematic_return_detection_default_config();
+    loose.threshold = 0.6;
+    assert(link_two(&earlier, &later, &loose, &evidence) == 1);
+    assert(evidence.contour_score > 0.59 && evidence.contour_score < 0.61);
+    destroy_theme(&later, 6);
+
+    /* Same contour, different rhythm throughout: shape alone is not a return. */
+    const long other_rhythm[6] = {4, 1, 1, 4, 1, 1};
+    make_theme(&later, "theme-later", "uudud", other_rhythm, 6);
+    assert(link_two(&earlier, &later, NULL, NULL) == 0);
+    destroy_theme(&later, 6);
+    destroy_theme(&earlier, 6);
+
+    /* Below the minimum window nothing matches, however similar. */
+    const long short_rhythm[3] = {2, 2, 2};
+    make_theme(&earlier, "theme-earlier", "ud", short_rhythm, 3);
+    make_theme(&later, "theme-later", "ud", short_rhythm, 3);
+    assert(link_two(&earlier, &later, NULL, NULL) == 0);
+    destroy_theme(&later, 3);
+    destroy_theme(&earlier, 3);
+}
+
 int main(void) {
     /* Behavioral contract: NULL input is rejected without touching *out. */
     AnalysisResult *untouched = (AnalysisResult *)0x1;
@@ -127,8 +262,11 @@ int main(void) {
     assert(strcmp(claim->later_theme_occurrence_id, "occurrence-theme-c") == 0);
     assert(strcmp(claim->earlier_theme_occurrence_id, "occurrence-theme-a") == 0);
     const Uncertainty *uncertainty = interpretation_uncertainty(interpretation);
-    assert(uncertainty_scalar_confidence_numerator(uncertainty) == 1);
-    assert(uncertainty_scalar_confidence_denominator(uncertainty) == 1);
+    assert(uncertainty_scalar_confidence_numerator(uncertainty) == 1000);
+    assert(uncertainty_scalar_confidence_denominator(uncertainty) == 1000);
+    assert(claim->similarity.similarity == 1.0);
+    assert(claim->similarity.contour_score == 1.0);
+    assert(claim->similarity.rhythm_score == 1.0);
     assert(strcmp(interpretation_author(interpretation), "ThematicReturnDetection") == 0);
 
     analysis_result_destroy(result);
@@ -272,6 +410,8 @@ int main(void) {
         contour_destroy(long_contours[i]);
         rhythmic_pattern_destroy(long_rhythms[i]);
     }
+
+    test_partial_and_varied_returns();
 
     printf("test_thematic_return_detection: ok\n");
     return 0;
