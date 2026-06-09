@@ -38,34 +38,34 @@ deviation; none fails. As of the commit that wrote this page; `framework_v1_veri
 
 | Piece | Keys | Cadences | Phrase form | Thematic returns |
 |---|---|---|---|---|
-| Bach 114 | 4 / 6 | 0 / 10 | 4 / 6 | not asserted |
-| Mozart 545 | 4 / 10 | 2 / 5 | 1 / 1 | 1 / 5 |
-| Clementi 36 | 3 / 5 | 2 / 17 | 4 / 5 | 0 / 2 |
-| Field 1 | 2 / 0 | 1 / 6 | 3 / 3 | not asserted |
+| Bach 114 | 7 / 3 | 2 / 7 | 3 / 7 | not asserted |
+| Mozart 545 | 1 / 13 | 2 / 2 | 2 / 0 | 0 / 6 |
+| Clementi 36 | 3 / 5 | 2 / 15 | 5 / 4 | 0 / 2 |
+| Field 1 | 2 / 0 | 1 / 5 | 3 / 3 | not asserted |
 | Field 5 | 1 / 1 | 1 / 0 | 0 / 0 (nothing annotated) | not asserted |
-| **All five** | **14 / 22** | **6 / 38** | **12 / 15** | **1 / 7** |
+| **All five** | **14 / 22** | **8 / 29** | **13 / 14** | **0 / 8** |
 
-33 of 115 checks give the expected value; 82 are deviations. Of the 38 cadence deviations, 21 are cadences the chain reports that are not annotated.
+35 of 108 checks give the expected value; 73 are deviations. Of the 29 cadence deviations, 14 are cadences the chain reports that are not annotated.
 
 ## Deviations
 
-`tests/fixtures/framework-v1-corpus/expected_deviations.md` lists each of the 82 deviations (piece, area, location, expected, actual, cause) and the ten causes.
+`tests/fixtures/framework-v1-corpus/expected_deviations.md` lists each of the 73 deviations (piece, area, location, expected, actual, cause) and the ten causes.
 The tests read that file, so a row is an exact statement of what the chain does now: it breaks when the chain changes, either way.
 
 | Cause | Deviations | What it is | Roadmap item (no number yet) |
 |---|---|---|---|
 | C1 | 23 | key region edges set by 4-measure windows | key regions placed on harmonic evidence |
-| C2 | 11 | closely related key read for a passage | harmony-aware key estimation |
+| C2 | 12 | closely related key read for a passage | harmony-aware key estimation |
 | C3 | 1 | `KeyChangeExtent` from region lengths, no cadence consulted | extents confirmed by cadences |
-| C4 | 8 | cadence arrival on a weak beat is not looked for (all of Bach 114's) | cadence arrival on weak beats |
-| C5 | 26 | chords read from the sounding pitches: sparse, alternating or ornamented segments | chord identification with context |
-| C6 | 5 | a non-chord bass tone reads the chord as root position | inversion from the chord's bass tone |
-| C7 | 3 | convention: V to I6 is SUBVERTED in the adapter, a prolongation in the drafts | check the drafts against the editions |
-| C8 | 22 | L3.6 phrases, themes and expansions follow the cadences it is given | re-verify L3.6 after the cadence items |
+| C4 | 6 | cadence arrival on a weak beat is not looked for (all of Bach 114's) | cadence arrival on weak beats |
+| C5 | 47 | chords read from the sounding pitches: sparse, alternating or ornamented segments | chord identification with context |
+| C6 | 6 | a non-chord bass tone reads the chord as root position | inversion from the chord's bass tone |
+| C7 | 1 | convention: V to I6 is SUBVERTED in the adapter, a prolongation in the drafts | check the drafts against the editions |
+| C8 | 15 | L3.6 builds phrases, themes, expansions and returns only from the cadences it is given; re-verified in P1 B8, no L3.6 rule was found wrong, every row also names the upstream cadence cause | re-verify L3.6 once C1, C4, C5 and C6 are removed |
 | C9 | 0 | convention: a dominant resolving into the recapitulation (DEV-054 removed; the chain now reads the half cadence, DEV-096 notes its place) | cadences across a formal boundary, done in P1 B6 |
-| C10 | 7 | return detection compares whole themes for exact contour and rhythm | matching inside themes and with variation |
+| C10 | 0 | removed in P1 B7: returns match inside themes and with variation; the remaining return rows are C8 | done in P1 B7 |
 
-(A deviation can have more than one cause, so the counts add to more than 82.)
+(A deviation can have more than one cause, so the counts add to more than 73.)
 
 ## Bugs found and fixed
 
@@ -88,7 +88,7 @@ with the weighted identifier, whose Chord ids come from the segment ids. Nothing
 
 The criterion is: all assertions pass, and every deviation is a documented method limit with a roadmap item attached.
 
-- All 115 checks pass or are asserted deviations. Met.
+- All 108 checks pass or are asserted deviations. Met.
 - Every deviation is documented, with its exact actual value and a cause. Met.
 - Every cause has a named roadmap item, but **none has a roadmap number yet** (the Registry assigns them). Not met.
 - Two causes (C7, C9; four deviations name one) are differences of convention between the drafts and the library, not method limits. Not met until the drafts are checked.
