@@ -66,8 +66,9 @@ typedef struct {
  * part per track and channel that has notes, in order of first
  * appearance: its name from the track name and the General MIDI
  * instrument, midi_program its program (0 when the channel never
- * changes it, -1 for the percussion channel). part_index is filled and
- * staff is NULL until the staves are assigned.
+ * changes it, -1 for the percussion channel). Its staff_count is 2 for
+ * the keyboard-like programs (score_program_uses_grand_staff), and
+ * staff[i] is then score_staves_assign's result.
  *
  * tempo_declared is true when the score gives a tempo;
  * initial_quarters_per_minute is then the tempo at the start.

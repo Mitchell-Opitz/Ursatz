@@ -6,6 +6,7 @@
 
 #include "io/midi_importer.h"
 #include "io/midi_key_signature.h"
+#include "export/score_staves.h"
 #include "io/smf_reader.h"
 #include "pipeline/gm_names.h"
 
@@ -267,7 +268,7 @@ static bool build_parts(const TrackNoteOn *ons, size_t on_count, const MidiFileI
         snprintf(id, sizeof id, "P%zu", part + 1);
         parts[part].id = strdup(id);
         parts[part].name = part_name(info, keys, key_count, part, program);
-        parts[part].staff_count = 1;
+        parts[part].staff_count = score_program_uses_grand_staff(program) ? 2 : 1;
         parts[part].midi_program = program;
         ok = parts[part].id && parts[part].name;
     }
@@ -348,6 +349,33 @@ static size_t *note_parts(const unsigned char *buffer, size_t size, const NoteEv
         memcpy(part_index, streams, count * sizeof *part_index);
     }
     source->part_index = part_index;
+    if (part_index) {
+        int *part_staff_count = malloc(source->part_count * sizeof *part_staff_count);
+        int *staff = malloc((count > 0 ? count : 1) * sizeof *staff);
+        for (size_t i = 0; part_staff_count && i < source->part_count; i++) {
+            part_staff_count[i] = source->parts[i].staff_count;
+        }
+        if (!part_staff_count || !staff ||
+            score_staves_assign((NoteEvent *const *)events, pitch_values, count, part_index, part_staff_count,
+                                source->part_count, staff) != SCORE_STAVES_OK) {
+            free(part_staff_count);
+            free(staff);
+            for (size_t i = 0; i < source->part_count; i++) {
+                free(source->parts[i].id);
+                free(source->parts[i].name);
+            }
+            free(source->parts);
+            free(part_index);
+            *source = (ImportedSource){.format = INPUT_FORMAT_MIDI};
+            free(on_part);
+            free(ons);
+            midi_file_info_destroy(&info);
+            free(streams);
+            return NULL;
+        }
+        free(part_staff_count);
+        source->staff = staff;
+    }
     free(on_part);
     free(ons);
     midi_file_info_destroy(&info);
