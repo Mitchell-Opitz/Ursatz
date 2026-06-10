@@ -102,13 +102,26 @@ typedef struct {
 } MidiTrackName;
 
 /*
+ * A marker meta-event (0xFF 0x06) in track 0 at position, text written as given. A NULL position or text is
+ * MIDI_RENDER_ERR_NULL_ARG; a position that is negative or not a whole tick, or a text longer than 0x0FFFFFFF
+ * bytes, is MIDI_RENDER_ERR_NOT_REPRESENTABLE.
+ */
+typedef struct {
+    const MusicalTime *position;
+    const char *text;
+} MidiMarker;
+
+/*
  * Optional extras for midi_renderer_render_with_options; every member is optional (NULL, 0).
- * conductor_name names track 0.
+ * conductor_name names track 0. Markers are written at their tick after the tempo, time signature and key
+ * signature events of an equal tick, in the order supplied among themselves.
  */
 typedef struct {
     const char *conductor_name;
     const MidiTrackName *track_names;
     size_t track_name_count;
+    const MidiMarker *markers;
+    size_t marker_count;
 } MidiRenderOptions;
 
 /*

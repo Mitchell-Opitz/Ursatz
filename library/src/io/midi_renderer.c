@@ -222,7 +222,7 @@ static void write_events(Bytes *bytes, const TrackEvents *events) {
 /* --- the conductor track's meta-events --- */
 
 /* ORDER_NAME is below every other order, so a name is first at tick 0. */
-enum { ORDER_NAME = -1, ORDER_TEMPO = 0, ORDER_TIME_SIGNATURE = 1, ORDER_KEY_SIGNATURE = 2 };
+enum { ORDER_NAME = -1, ORDER_TEMPO = 0, ORDER_TIME_SIGNATURE = 1, ORDER_KEY_SIGNATURE = 2, ORDER_MARKER = 3 };
 
 static MidiRenderResult collect_conductor(TrackEvents *events, const MeterMap *meter_map, const TempoMap *tempo_map,
                                           const MidiKeySignatureEvent *key_signatures, size_t key_signature_count,
@@ -281,6 +281,18 @@ static MidiRenderResult collect_conductor(TrackEvents *events, const MeterMap *m
         unsigned char meta[5] = {0xFF, 0x59, 0x02, (unsigned char)(int8_t)sharps_flats, key_signatures[i].mode_byte};
         if (!add_event(events, tick, ORDER_KEY_SIGNATURE, meta, sizeof(meta))) {
             return MIDI_RENDER_ERR_ALLOC;
+        }
+    }
+    if (options != NULL) {
+        for (size_t i = 0; i < options->marker_count; i++) {
+            const MusicalTime *position = options->markers[i].position;
+            uint32_t tick;
+            if (!to_tick(musical_time_numerator(position), musical_time_denominator(position), division, &tick)) {
+                return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
+            }
+            if (!add_text_event(events, tick, ORDER_MARKER, 0x06, options->markers[i].text)) {
+                return MIDI_RENDER_ERR_ALLOC;
+            }
         }
     }
     return MIDI_RENDER_OK;
@@ -485,6 +497,19 @@ static MidiRenderResult check_options(const MidiRenderOptions *options) {
     for (size_t i = 0; i < options->track_name_count; i++) {
         if (options->track_names[i].name == NULL) {
             return MIDI_RENDER_ERR_NULL_ARG;
+        }
+    }
+    if (options->marker_count > 0 && options->markers == NULL) {
+        return MIDI_RENDER_ERR_NULL_ARG;
+    }
+    for (size_t i = 0; i < options->marker_count; i++) {
+        if (options->markers[i].position == NULL || options->markers[i].text == NULL) {
+            return MIDI_RENDER_ERR_NULL_ARG;
+        }
+    }
+    for (size_t i = 0; i < options->marker_count; i++) {
+        if (strlen(options->markers[i].text) > MAX_TICK) {
+            return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
         }
     }
     if (options->conductor_name != NULL && strlen(options->conductor_name) > MAX_TICK) {
