@@ -139,6 +139,8 @@ typedef struct {
     size_t index; /* then input order, which makes the sort a total order */
     unsigned char bytes[8];
     size_t length;
+    const unsigned char *text; /* a text meta-event's payload, borrowed from the caller; NULL for other events */
+    size_t text_length;
 } TrackEvent;
 
 typedef struct {
@@ -163,7 +165,21 @@ static int add_event(TrackEvents *events, uint32_t tick, int order, const unsign
     event->index = events->count;
     memcpy(event->bytes, bytes, length);
     event->length = length;
+    event->text = NULL;
+    event->text_length = 0;
     events->count++;
+    return 1;
+}
+
+/* A text meta-event (0xFF type, VLQ length, the bytes of text); text must outlive the render. */
+static int add_text_event(TrackEvents *events, uint32_t tick, int order, unsigned char type, const char *text) {
+    const unsigned char meta[2] = {0xFF, type};
+    if (!add_event(events, tick, order, meta, sizeof(meta))) {
+        return 0;
+    }
+    TrackEvent *event = &events->items[events->count - 1];
+    event->text = (const unsigned char *)text;
+    event->text_length = strlen(text);
     return 1;
 }
 
@@ -194,6 +210,10 @@ static void write_events(Bytes *bytes, const TrackEvents *events) {
     for (size_t i = 0; i < events->count; i++) {
         put_vlq(bytes, events->items[i].tick - previous);
         put_bytes(bytes, events->items[i].bytes, events->items[i].length);
+        if (events->items[i].text != NULL) {
+            put_vlq(bytes, (uint32_t)events->items[i].text_length);
+            put_bytes(bytes, events->items[i].text, events->items[i].text_length);
+        }
         previous = events->items[i].tick;
     }
     put_end_of_track(bytes, 0);
@@ -201,11 +221,16 @@ static void write_events(Bytes *bytes, const TrackEvents *events) {
 
 /* --- the conductor track's meta-events --- */
 
-enum { ORDER_TEMPO = 0, ORDER_TIME_SIGNATURE = 1, ORDER_KEY_SIGNATURE = 2 };
+/* ORDER_NAME is below every other order, so a name is first at tick 0. */
+enum { ORDER_NAME = -1, ORDER_TEMPO = 0, ORDER_TIME_SIGNATURE = 1, ORDER_KEY_SIGNATURE = 2 };
 
 static MidiRenderResult collect_conductor(TrackEvents *events, const MeterMap *meter_map, const TempoMap *tempo_map,
                                           const MidiKeySignatureEvent *key_signatures, size_t key_signature_count,
-                                          unsigned division) {
+                                          const MidiRenderOptions *options, unsigned division) {
+    if (options != NULL && options->conductor_name != NULL &&
+        !add_text_event(events, 0, ORDER_NAME, 0x03, options->conductor_name)) {
+        return MIDI_RENDER_ERR_ALLOC;
+    }
     if (tempo_map != NULL) {
         for (size_t i = 0; i < tempo_map_region_count(tempo_map); i++) {
             const TempoMapRegion *region = tempo_map_region(tempo_map, i);
@@ -274,6 +299,19 @@ static int same_voice(const char *a, const char *b) {
     return (a == NULL && b == NULL) || (a != NULL && b != NULL && strcmp(a, b) == 0);
 }
 
+/* The name the options give the voice's track, or NULL. */
+static const char *track_name_for(const MidiRenderOptions *options, const char *voice_id) {
+    if (options == NULL) {
+        return NULL;
+    }
+    for (size_t i = 0; i < options->track_name_count; i++) {
+        if (same_voice(options->track_names[i].voice_id, voice_id)) {
+            return options->track_names[i].name;
+        }
+    }
+    return NULL;
+}
+
 static int compare_groups(const void *left, const void *right) {
     const Group *a = *(const Group *const *)left;
     const Group *b = *(const Group *const *)right;
@@ -292,6 +330,9 @@ static int overlaps_on_one_pitch(const TrackEvents *events) {
     unsigned char sounding[128] = {0};
     for (size_t i = 0; i < events->count; i++) {
         const unsigned char *event = events->items[i].bytes;
+        if (event[0] == 0xFF) {
+            continue; /* a meta-event, such as a track name */
+        }
         if ((event[0] & 0xF0) == 0x90) {
             if (sounding[event[1]]++ > 0) {
                 return 1;
@@ -318,8 +359,8 @@ static void free_tracks(TrackEvents *tracks, size_t count) {
  * *out_count tracks in track order (free with free_tracks); otherwise nothing is left allocated.
  */
 static MidiRenderResult collect_voice_tracks(NoteEvent *const *events, PitchNumericValue *const *pitch_values,
-                                             size_t count, unsigned division, TrackEvents **out_tracks,
-                                             size_t *out_count) {
+                                             size_t count, const MidiRenderOptions *options, unsigned division,
+                                             TrackEvents **out_tracks, size_t *out_count) {
     *out_tracks = NULL;
     *out_count = 0;
     if (count == 0) {
@@ -406,6 +447,12 @@ static MidiRenderResult collect_voice_tracks(NoteEvent *const *events, PitchNume
                 status = MIDI_RENDER_ERR_ALLOC;
             }
         }
+        for (size_t g = 0; g < group_count && status == MIDI_RENDER_OK; g++) {
+            const char *name = track_name_for(options, groups[g].voice_id);
+            if (name != NULL && !add_text_event(&tracks[groups[g].rank], 0, ORDER_NAME, 0x03, name)) {
+                status = MIDI_RENDER_ERR_ALLOC;
+            }
+        }
         for (size_t rank = 0; rank < group_count && status == MIDI_RENDER_OK; rank++) {
             sort_events(&tracks[rank]);
             if (overlaps_on_one_pitch(&tracks[rank])) {
@@ -427,10 +474,48 @@ static MidiRenderResult collect_voice_tracks(NoteEvent *const *events, PitchNume
     return MIDI_RENDER_OK;
 }
 
+/* Checks the options before anything is collected: NULL arguments, then values that cannot be written. */
+static MidiRenderResult check_options(const MidiRenderOptions *options) {
+    if (options == NULL) {
+        return MIDI_RENDER_OK;
+    }
+    if (options->track_name_count > 0 && options->track_names == NULL) {
+        return MIDI_RENDER_ERR_NULL_ARG;
+    }
+    for (size_t i = 0; i < options->track_name_count; i++) {
+        if (options->track_names[i].name == NULL) {
+            return MIDI_RENDER_ERR_NULL_ARG;
+        }
+    }
+    if (options->conductor_name != NULL && strlen(options->conductor_name) > MAX_TICK) {
+        return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
+    }
+    for (size_t i = 0; i < options->track_name_count; i++) {
+        if (strlen(options->track_names[i].name) > MAX_TICK) {
+            return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
+        }
+        for (size_t j = 0; j < i; j++) {
+            if (same_voice(options->track_names[i].voice_id, options->track_names[j].voice_id)) {
+                return MIDI_RENDER_ERR_NOT_REPRESENTABLE;
+            }
+        }
+    }
+    return MIDI_RENDER_OK;
+}
+
 MidiRenderResult midi_renderer_render(NoteEvent *const *events, PitchNumericValue *const *pitch_values, size_t count,
                                       const MeterMap *meter_map, const TempoMap *tempo_map,
                                       const MidiKeySignatureEvent *key_signatures, size_t key_signature_count,
                                       unsigned division, unsigned char **out_data, size_t *out_size) {
+    return midi_renderer_render_with_options(events, pitch_values, count, meter_map, tempo_map, key_signatures,
+                                             key_signature_count, NULL, division, out_data, out_size);
+}
+
+MidiRenderResult midi_renderer_render_with_options(NoteEvent *const *events, PitchNumericValue *const *pitch_values,
+                                                   size_t count, const MeterMap *meter_map, const TempoMap *tempo_map,
+                                                   const MidiKeySignatureEvent *key_signatures,
+                                                   size_t key_signature_count, const MidiRenderOptions *options,
+                                                   unsigned division, unsigned char **out_data, size_t *out_size) {
     if (out_data == NULL || out_size == NULL || (count > 0 && (events == NULL || pitch_values == NULL)) ||
         (key_signature_count > 0 && key_signatures == NULL)) {
         return MIDI_RENDER_ERR_NULL_ARG;
@@ -445,16 +530,20 @@ MidiRenderResult midi_renderer_render(NoteEvent *const *events, PitchNumericValu
     }
 
     /* Everything is checked and collected before a byte is written, so a failure writes nothing. */
+    MidiRenderResult status = check_options(options);
+    if (status != MIDI_RENDER_OK) {
+        return status;
+    }
     TrackEvents conductor_events = {NULL, 0, 0};
-    MidiRenderResult status =
-        collect_conductor(&conductor_events, meter_map, tempo_map, key_signatures, key_signature_count, division);
+    status = collect_conductor(&conductor_events, meter_map, tempo_map, key_signatures, key_signature_count, options,
+                               division);
     if (status != MIDI_RENDER_OK) {
         free(conductor_events.items);
         return status;
     }
     TrackEvents *voice_tracks = NULL;
     size_t voice_track_count = 0;
-    status = collect_voice_tracks(events, pitch_values, count, division, &voice_tracks, &voice_track_count);
+    status = collect_voice_tracks(events, pitch_values, count, options, division, &voice_tracks, &voice_track_count);
     if (status != MIDI_RENDER_OK) {
         free(conductor_events.items);
         return status;
