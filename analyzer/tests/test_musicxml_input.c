@@ -213,13 +213,19 @@ static void test_midi_keeps_rule_spelling(void) {
     cJSON *document = analyze(path, &notes);
     assert(notes.source.format == INPUT_FORMAT_MIDI);
     assert(!notes.source.spelling_notated && !notes.source.meter_notated && !notes.source.key_notated);
-    assert(notes.source.part_count == 0);
+    /* The file's one named track is one part on two staves, its notes all in it. */
+    assert(notes.source.part_count == 1);
+    assert(strcmp(notes.source.parts[0].name, "Grand Piano") == 0);
+    assert(notes.source.parts[0].staff_count == 2);
+    for (size_t i = 0; i < notes.count; i++) {
+        assert(notes.streams[i] == 0 && notes.source.part_index[i] == 0);
+    }
     imported_notes_destroy(&notes);
     const cJSON *input = member(member(document, "metadata"), "input");
     assert(strcmp(string(input, "format"), "midi") == 0);
     assert(strcmp(string(input, "source_type"), "performance") == 0);
     assert(strcmp(string(input, "spelling"), "rule") == 0);
-    assert(cJSON_GetArraySize(member(input, "parts")) == 0);
+    assert(cJSON_GetArraySize(member(input, "parts")) == 1);
     cJSON_Delete(document);
 }
 
