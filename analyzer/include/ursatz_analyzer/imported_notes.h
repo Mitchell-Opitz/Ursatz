@@ -44,11 +44,12 @@ typedef struct {
     char *id;   /* owned; the score-part id */
     char *name; /* owned; the part name, "" when it has none */
     int staff_count;
+    int midi_program; /* General MIDI program, 0-based; -1 when unknown (a MusicXML part, the percussion channel) */
 } ImportedPart;
 
 /*
- * What the input says about itself, beyond the notes. Everything here
- * is false/zero/NULL for a MIDI file except format.
+ * What the input says about itself, beyond the notes. For a MIDI file
+ * everything here is false/zero/NULL except format and the parts (below).
  *
  * format is INPUT_FORMAT_MIDI or INPUT_FORMAT_MUSICXML, never AUTO.
  * meter_notated and key_notated say the time signatures and key
@@ -61,7 +62,13 @@ typedef struct {
  * is the index into parts of the part note i belongs to, staff[i] its
  * staff number. A note's voice, where the score names one, is its
  * NoteEvent's VoiceReference. All parts are merged into the one
- * texture the pipeline analyzes; none is dropped.
+ * texture the pipeline analyzes; none is dropped. A MIDI file has one
+ * part per track and channel that has notes, in order of first
+ * appearance: its name from the track name and the General MIDI
+ * instrument, midi_program its program (0 when the channel never
+ * changes it, -1 for the percussion channel). Its staff_count is 2 for
+ * the keyboard-like programs (score_program_uses_grand_staff), and
+ * staff[i] is then score_staves_assign's result.
  *
  * tempo_declared is true when the score gives a tempo;
  * initial_quarters_per_minute is then the tempo at the start.
@@ -111,8 +118,8 @@ typedef struct {
     NoteEvent **events;
     PitchNumericValue **pitch_values;
     size_t count;
-    size_t *streams; /* owned; count entries, parallel to events: the MIDI track chunk index the note was read from, the
-                        MusicXML part index (source.part_index); all 0 for a one-track file */
+    size_t *streams; /* owned; count entries, parallel to events: the part index the note belongs to (source.part_index):
+                        the MIDI track and channel, the MusicXML part; all 0 for a one-part file */
     MidiKeySignature key_signature;
     MidiKeySignatureEvents key_signature_events;
     unsigned ticks_per_quarter; /* SMF header division (PPQN); 0 when unavailable */

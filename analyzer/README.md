@@ -253,6 +253,13 @@ read by Ursatz's MusicXMLImporter.
   and bass are the highest and lowest notes sounding in any part. Each note keeps its part, staff and
   voice (`ImportedSource` in `imported_notes.h`), and `metadata.input.parts` lists the parts with their
   note counts. Per-part and per-voice analysis is not done.
+- **MIDI parts.** A MIDI file has one part per track and channel that has notes, in order of first
+  appearance. A part is named from the track name (meta 0x03) and the General MIDI instrument of its
+  program change (a channel that never sends one is program 0; channel 10 is "Percussion", program -1):
+  the track name alone when the track has one part, the track name and the instrument when it has
+  several, the instrument when the track has no name. Keyboard-like programs (pianos, harpsichord,
+  celesta, organs, accordion, harp) are on two staves, split at middle C by Ursatz's
+  `score_staves_assign`; every other part has one.
 - **Tempo, dynamics, articulation.** Tempo and dynamics markings are imported, kept with their part
   and position, and reported in `markings` and a `## Markings` section, read with the library's
   standard-markings rules (tempo group and change, dynamic rank and change, louder or quieter than the
@@ -684,8 +691,8 @@ Ursatz's target (80% of the syncopations and hyperdownbeats, every hemiola, ever
 
 The analyzer builds the neutral input of the texture adapter of Ursatz's standard-texture
 (`src/pipeline/texture_pipeline.c`, ported from `tests/integration/texture_util.h`) and reports the library's results.
-Every imported note carries a stream (`ImportedNotes.streams`: the MIDI track chunk, read back from the file, or the
-MusicXML part), the kernel's voice separation runs per stream (a track is usually a hand) and gives each note a voice and
+Every imported note carries a stream (`ImportedNotes.streams`: the part, that is the MIDI track and channel read back
+from the file, or the MusicXML part), the kernel's voice separation runs per stream (a part is usually a hand) and gives each note a voice and
 a confidence, and the library measures each measure, classifies it with its defaults and merges equal consecutive
 measures into passages. The document's `texture` has a claim per passage (texture, category, measures, confidence and
 the measured features) and one per change. The library names no accompaniment pattern, so the passage reports the

@@ -1,6 +1,7 @@
 add_library(ursatz_analyzer STATIC
     pipeline/imported_notes.c
     pipeline/midi_pipeline.c
+    pipeline/gm_names.c
     pipeline/musicxml_pipeline.c
     pipeline/input_pipeline.c
     pipeline/segmentation.c

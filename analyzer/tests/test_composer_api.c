@@ -101,6 +101,14 @@ static void test_bach_round_trip(void) {
     CHECK(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK, "cannot import %s", path);
     AnalysisReport direct;
     CHECK(run_analysis_pipeline(&notes, &direct), "direct analysis");
+    /* A fragment has no parts: leave the file's out of the document it is compared with. */
+    for (size_t i = 0; i < notes.source.part_count; i++) {
+        free(notes.source.parts[i].id);
+        free(notes.source.parts[i].name);
+    }
+    free(notes.source.parts);
+    notes.source.parts = NULL;
+    notes.source.part_count = 0;
     char *direct_json = analysis_document_render("<fragment>", &notes, &direct);
 
     char *before = fingerprint((const NoteEvent *const *)notes.events, notes.count);
