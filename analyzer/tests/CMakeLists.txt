@@ -216,6 +216,10 @@ target_compile_definitions(test_musicxml_input PRIVATE
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 add_test(NAME test_musicxml_input COMMAND test_musicxml_input)
 
+add_executable(test_midi_parts test_midi_parts.c)
+target_link_libraries(test_midi_parts PRIVATE ursatz_analyzer)
+add_test(NAME test_midi_parts COMMAND test_midi_parts)
+
 add_test(NAME test_cli_input_formats
          COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
