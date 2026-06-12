@@ -79,6 +79,7 @@ add_library(ursatz_composer STATIC
     piece/given.c
     piece/form_vary.c
     piece/piece_request.c
+    piece/piece_structure.c
     piece/piece_keys.c
     piece/piece_cadences.c
     piece/compose_run.c
