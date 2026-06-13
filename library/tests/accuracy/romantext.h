@@ -129,6 +129,10 @@ void romantext_destroy(RomanTextAnalysis *analysis);
  */
 size_t romantext_expected_chord(const RomanTextChord *chord, int *root, int intervals[4]);
 
+/* True for RomanText's #vio: the diminished vi on the raised sixth of a minor key. The chain reads it as degree 6,
+   diminished, so a comparison credits it although the numeral carries an alteration. */
+bool romantext_is_raised_sixth_diminished(const RomanTextChord *chord);
+
 /* The metadata of text alone, with no MeterMap: composer, title and time signature. For building the MeterMap. */
 RomanTextStatus romantext_parse_metadata(const char *text, RomanTextAnalysis *out);
 

@@ -510,7 +510,7 @@ static bool numeral_matches(const RomanTextChord *want, const StandardTonalityRo
             claim->degree != want->degree) {
             return false;
         }
-    } else if (claim->degree != want->degree || want->alteration != 0) {
+    } else if (claim->degree != want->degree || (want->alteration != 0 && !romantext_is_raised_sixth_diminished(want))) {
         return false;
     }
     int root = 0;
