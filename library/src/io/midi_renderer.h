@@ -70,7 +70,11 @@
  * a key signature sf outside -7 to 7.
  *
  * What it does not do: velocity or dynamics, articulation, pedal or control events,
- * program changes, sysex, SMPTE division, format 0 or 2, track names, audio playback.
+ * program changes, sysex, SMPTE division, format 0 or 2, lyrics, cue points, audio playback.
+ *
+ * Track names and markers: midi_renderer_render_with_options writes a Sequence/Track Name (0xFF 0x03) at tick 0
+ * of track 0 and of each named voice track, and markers (0xFF 0x06) in track 0 after the tempo, time signature and
+ * key signature events of an equal tick. midi_renderer_render writes neither.
  */
 
 typedef enum {
@@ -90,6 +94,41 @@ typedef enum {
 #define MIDI_RENDER_MAX_VOICE_TRACKS 15
 
 /*
+ * The name of the track holding one voice's notes: voice_id is the voice reference's target id value
+ * (entity_id_value), NULL for the track of notes with no voice. name is written as given, as a
+ * Sequence/Track Name meta-event (0xFF 0x03) at tick 0, first in its track. A name for a voice with no
+ * notes is ignored. Two names for one voice are MIDI_RENDER_ERR_NOT_REPRESENTABLE; a NULL name is
+ * MIDI_RENDER_ERR_NULL_ARG.
+ */
+typedef struct {
+    const char *voice_id;
+    const char *name;
+} MidiTrackName;
+
+/*
+ * A marker meta-event (0xFF 0x06) in track 0 at position, text written as given. A NULL position or text is
+ * MIDI_RENDER_ERR_NULL_ARG; a position that is negative or not a whole tick, or a text longer than 0x0FFFFFFF
+ * bytes, is MIDI_RENDER_ERR_NOT_REPRESENTABLE.
+ */
+typedef struct {
+    const MusicalTime *position;
+    const char *text;
+} MidiMarker;
+
+/*
+ * Optional extras for midi_renderer_render_with_options; every member is optional (NULL, 0).
+ * conductor_name names track 0. Markers are written at their tick after the tempo, time signature and key
+ * signature events of an equal tick, in the order supplied among themselves.
+ */
+typedef struct {
+    const char *conductor_name;
+    const MidiTrackName *track_names;
+    size_t track_name_count;
+    const MidiMarker *markers;
+    size_t marker_count;
+} MidiRenderOptions;
+
+/*
  * Renders to a newly allocated SMF buffer (see above). events and pitch_values are each
  * count entries, index-paired; no entry may be NULL.
  */
@@ -97,5 +136,14 @@ MidiRenderResult midi_renderer_render(NoteEvent *const *events, PitchNumericValu
                                       const MeterMap *meter_map, const TempoMap *tempo_map,
                                       const MidiKeySignatureEvent *key_signatures, size_t key_signature_count,
                                       unsigned division, unsigned char **out_data, size_t *out_size);
+
+/*
+ * midi_renderer_render with options (NULL options: the same bytes as midi_renderer_render, which calls this).
+ */
+MidiRenderResult midi_renderer_render_with_options(NoteEvent *const *events, PitchNumericValue *const *pitch_values,
+                                                   size_t count, const MeterMap *meter_map, const TempoMap *tempo_map,
+                                                   const MidiKeySignatureEvent *key_signatures,
+                                                   size_t key_signature_count, const MidiRenderOptions *options,
+                                                   unsigned division, unsigned char **out_data, size_t *out_size);
 
 #endif
