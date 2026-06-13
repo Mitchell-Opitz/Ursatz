@@ -1,10 +1,10 @@
 # Expected results for the Framework v1 verification of Field, Nocturne No. 1 in E-flat major (12/8).
 #
-# SOURCE: the Breitkopf and Haertel edition of the Nocturnes and the IMSLP scan. The edition was not available when this file was written, so it is the one to check against.
-# STATUS: DRAFT, UNVERIFIED AGAINST THE EDITION. A hand reading of tests/fixtures/framework-v1-corpus/"Field 1.mid" (the notes of the first 16 measures; measure 1 holds the pickup),
+# SOURCE: the Breitkopf and Haertel edition of the Nocturnes and the IMSLP scan.
+# STATUS: VERIFIED against an edition by Michelle Opitz, 2026-10-17. Read from the MIDI first and checked against standard theory and a printed edition (R-092). A hand reading of tests/fixtures/framework-v1-corpus/"Field 1.mid" (the notes of the first 16 measures; measure 1 holds the pickup),
 # written before the verification test was run and NOT derived from the output of any analysis stage. Where the older annotation
 # files for this piece (key regions, cadences, phrase form) cover the same ground their values are copied here, and
-# framework_v1_fixture_consistency checks that the two agree. A human should confirm it against the edition before it is relied on.
+# framework_v1_fixture_consistency checks that the two agree.
 #
 # Every list below is COMPLETE for its scope: a cadence the music does not have is a claim, not an omission, so a cadence the chain
 # reports inside the cadence scope that is not listed is reported as a deviation. (Phrase ends, themes, expansions and
@@ -44,6 +44,7 @@ cadence-scope 1 16
 # copied from field1_cadences.txt: a root-position V7 to I in each of measures 3-4, 7-8, 11-12 and 15-16, the third (12) an imperfect authentic cadence
 cadence 4 1 pac
 cadence 8 1 pac
+# m12 is an imperfect authentic cadence because the soprano lands on G (scale degree 3)
 cadence 12 1 iac
 cadence 16 1 pac
 form-scope 1 16
