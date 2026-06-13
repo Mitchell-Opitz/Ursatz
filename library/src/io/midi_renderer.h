@@ -70,7 +70,11 @@
  * a key signature sf outside -7 to 7.
  *
  * What it does not do: velocity or dynamics, articulation, pedal or control events,
- * program changes, sysex, SMPTE division, format 0 or 2, track names, audio playback.
+ * program changes, sysex, SMPTE division, format 0 or 2, lyrics, cue points, audio playback.
+ *
+ * Track names and markers: midi_renderer_render_with_options writes a Sequence/Track Name (0xFF 0x03) at tick 0
+ * of track 0 and of each named voice track, and markers (0xFF 0x06) in track 0 after the tempo, time signature and
+ * key signature events of an equal tick. midi_renderer_render writes neither.
  */
 
 typedef enum {
