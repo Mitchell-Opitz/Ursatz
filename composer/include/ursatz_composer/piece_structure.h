@@ -99,4 +99,23 @@ void piece_structure_default_cadences(PieceStructure *structure);
  */
 bool piece_structure_default_ending(PieceStructure *structure, size_t capacity);
 
+/*
+ * Builds the plan of a structure into *out, which the caller destroys with plan_destroy. The structure is checked first
+ * (piece_structure_check) and its default cadences applied to a copy.
+ *
+ *   - a Form "structure" over the sections and the material, with a meter lane span and a key lane span, both Given,
+ *     over all of it;
+ *   - one Section node for each section of the intro, the body and the turnaround, in order, each `beats` long from the
+ *     end of the one before, Constrained, with SECTION_LETTER, CADENCE, KEY, PIECE_PART (its part and id) and, when it
+ *     has a pickup, PICKUP (the pickup is the section's own: it is not part of its length). The ending is not laid out:
+ *     the ending version is built from the realized loop (R-172);
+ *   - a theme section (a motif or empty section of 4 or 8 whole bars on a barline with no pickup) also has the
+ *     ARCHETYPE and THEME_PAIRING grow-theme builds from, and an antecedent's second CADENCE (HC);
+ *   - the Section "material" from the first barline at or after the end of the last laid out section (its motives are
+ *     bars of the meter), marked MATERIAL, holding m0, the piece's basic motive (R-170): the structure's `motive`,
+ *     else the motive of the first motif section, else one to invent (INVENT_MOTIVE).
+ * Theme and progression fills are PIECE_ERR_BAD_REQUEST until P17 B4 gives them.
+ */
+PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePlan **out);
+
 #endif
