@@ -193,6 +193,9 @@ static void fv1_check_cadences(const Chain *c, Fv1Verifier *v) {
             }
         }
         bool right = false;
+        if (want->optional && (best < 0 || found->items[(size_t)best].type != want->type)) {
+            continue; /* an optional cadence that is missing is no deviation */
+        }
         if (best >= 0) {
             used[best] = true;
             int measure = 0;
@@ -384,6 +387,9 @@ static void fv1_check_fixture_agreement(void) {
         for (size_t e = 0; e < a.cadence_count; e++) {
             bool found = false;
             for (size_t k = 0; k < x.cadence_count; k++) {
+                if (x.cadences[k].optional) {
+                    continue;
+                }
                 double at = ((double)(x.cadences[k].measure - 1) * x.beats + (x.cadences[k].beat - 1.0)) * beat_length;
                 found = found || (fabs(at - a.cadences[e].at) < 1e-9 && x.cadences[k].type == a.cadences[e].type);
             }
@@ -429,6 +435,9 @@ static void fv1_check_fixture_agreement(void) {
             }
             bool coincides = false;
             for (size_t m = 0; m < x.cadence_count; m++) {
+                if (x.cadences[m].optional) {
+                    continue;
+                }
                 coincides = coincides || (abs(x.cadences[m].measure - x.ends[k].measure) <= 1 && x.cadences[m].type == x.ends[k].type);
             }
             if (!coincides) {

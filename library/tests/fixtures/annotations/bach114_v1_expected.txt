@@ -22,6 +22,8 @@
 #                                                       modulation); 'return' marks the change back to the key before the excursion
 #   cadence-scope <first> <last>                        the measures whose cadences are listed
 #   cadence <measure> <beat> <pac|iac|hc|deceptive|plagal|subverted>   the cadence whose ARRIVAL chord starts here (beats are 1-based)
+#   cadence <measure> <beat> <type> optional           the same, but the music may or may not have it: missing is no deviation, and found with its type
+#                                                       (within one beat) it is not an extra
 #   form-scope <first> <last>
 #   phrase-end <measure> <pac|iac|hc>                   a phrase ends in this measure (the measure its arrival chord ends in)
 #   theme <form> <first> <last> [parts <a-first> <a-last> <b-first> <b-last>]   a theme and its two parts
