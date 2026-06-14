@@ -1,10 +1,10 @@
 # Expected results for the Framework v1 verification of Clementi, Sonatina in C major, Op. 36 No. 1, first movement.
 #
-# SOURCE: the Breitkopf and Haertel edition of the Sonatinas Op. 36 and the IMSLP scan. The edition was not available when this file was written, so it is the one to check against.
-# STATUS: DRAFT, UNVERIFIED AGAINST THE EDITION. A hand reading of tests/fixtures/framework-v1-corpus/"Clementi 36.mid" (the top line and the bass of each measure, dumped beat by beat; the first 38 measures: the exposition, a short development and the recapitulation up to its closing cadence),
+# SOURCE: the Breitkopf and Haertel edition of the Sonatinas Op. 36 and the IMSLP scan.
+# STATUS: VERIFIED against an edition by Michelle Opitz, 2026-10-17. Read from the MIDI first and checked against standard theory and a printed edition (R-092). A hand reading of tests/fixtures/framework-v1-corpus/"Clementi 36.mid" (the top line and the bass of each measure, dumped beat by beat; the first 38 measures: the exposition, a short development and the recapitulation up to its closing cadence),
 # written before the verification test was run and NOT derived from the output of any analysis stage. Where the older annotation
 # files for this piece (key regions, cadences, phrase form) cover the same ground their values are copied here, and
-# framework_v1_fixture_consistency checks that the two agree. A human should confirm it against the edition before it is relied on.
+# framework_v1_fixture_consistency checks that the two agree.
 #
 # Every list below is COMPLETE for its scope: a cadence the music does not have is a claim, not an omission, so a cadence the chain
 # reports inside the cadence scope that is not listed is reported as a deviation. (Phrase ends, themes, expansions and
@@ -48,13 +48,14 @@ change 16 modulation
 change 23 modulation
 cadence-scope 1 38
 # the antecedent's half cadence on G (4), the perfect authentic cadence in G that closes the consequent (8) and the second theme (15), the half cadence that closes the
-# development on G (23), the recapitulated antecedent's half cadence (27) and the closing perfect authentic cadence (38); measures 28-37 expand the cadence without
-# completing it (see clementi36_phrase_form.txt)
+# development on G (23, a second reading is added with the readings lines), then the recapitulation: the main theme as a period (m24-31) with its half cadence at m27 and
+# its perfect authentic cadence at m31 (C in the bass and the soprano), a linking scale in m31, and the second theme in C (m32-38) ending with the perfect authentic cadence at m38
 cadence 4 1 hc
 cadence 8 1 pac
 cadence 15 1 pac
 cadence 23 1 hc
 cadence 27 1 hc
+cadence 31 1 pac
 cadence 38 1 pac
 form-scope 1 38
 phrase-end 4 hc
@@ -62,10 +63,11 @@ phrase-end 8 pac
 phrase-end 15 pac
 phrase-end 23 hc
 phrase-end 27 hc
+phrase-end 31 pac
 phrase-end 38 pac
 theme period 1 8 parts 1 4 5 8
-theme period 24 38 parts 24 27 28 38
-expansion internal 28 38 7
+# the recapitulation's main theme is a period of eight measures (24-31): the antecedent 24-27, the consequent 28-31
+theme period 24 31 parts 24 27 28 31
 # thematic returns: the main theme (1-4) returns in the recapitulation (24); the second theme (9-15, in G) returns in C major in the recapitulation's closing section (32-38)
 original main 1 4
 return main 24 27

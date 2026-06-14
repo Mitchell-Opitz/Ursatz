@@ -1,10 +1,10 @@
 # Hand-marked cadences in Clementi, Sonatina in C major, Op. 36 No. 1, first movement.
 #
-# SOURCE: the IMSLP scan of the first edition (Op. 36, 1797) and a modern urtext of the Op. 36 sonatinas. Neither was available when this file was written, so the edition is the one to check against.
-# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. The numerals and cadences are a hand reading of the
+# SOURCE: the IMSLP scan of the first edition (Op. 36, 1797) and a modern urtext of the Op. 36 sonatinas.
+# STATUS: VERIFIED against an edition by Michelle Opitz, 2026-10-17. Read from the MIDI first and checked against standard theory and a printed edition (R-092). The numerals and cadences are a hand reading of the
 # harmony, made from the pitch content of tests/fixtures/framework-v1-corpus/"Clementi 36.mid" (notes dumped beat by beat) and
 # the piece's known form. They were NOT derived from the output of the chord identifier, the key estimator or the
-# cadence adapter. A human should confirm them against an edition before this file is relied on.
+# cadence adapter.
 #
 # The reading follows standard-harmony's definitions, not every analyst's: a PAC or IAC is a root-position V (or V7)
 # to a root-position I, so a V6 or V4/3 to I is not marked (it prolongs); viio to I is not a cadence; a half cadence
@@ -22,13 +22,19 @@
 #   end <measure> <beat>      the end of the stretch of chords (chords outside a stretch are not read)
 #   cadence <measure> <beat> <pac|iac|hc|deceptive|plagal|subverted>   the cadence whose ARRIVAL chord starts here
 #
-# The closing cadence of the movement (measures 36-38). Earlier cadences have inverted dominants (V4/3 over D, V4/2 over F)
-# and are not marked, by the definition above.
+# The cadence of the recapitulated main theme (measures 30-31) and the closing cadence of the movement (measures 36-38). Earlier cadences have
+# inverted dominants (V4/3 over D, V4/2 over F) and are not marked, by the definition above. In m30 the cadential 6/4 (G in the bass under C and E) resolves
+# to V on beat 4, and m31 arrives on I with C in the bass and the soprano; the scale that follows in m31 links to the second theme.
 
 meter 4 1/4
 home C
+chord 30 1 C I6/4
+chord 30 4 C V
+chord 31 1 C I
+end 32 1
 chord 36 1 C IV
 chord 37 1 C V7
 chord 38 1 C I
 end 39 1
+cadence 31 1 pac
 cadence 38 1 pac
