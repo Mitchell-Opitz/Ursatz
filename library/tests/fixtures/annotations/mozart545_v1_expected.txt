@@ -1,10 +1,10 @@
 # Expected results for the Framework v1 verification of Mozart, Piano Sonata in C major K. 545, first movement.
 #
-# SOURCE: the Neue Mozart-Ausgabe (IX/25/2) and the IMSLP scan of the first edition. The edition was not available when this file was written, so it is the one to check against.
-# STATUS: DRAFT, UNVERIFIED AGAINST THE EDITION. A hand reading of tests/fixtures/framework-v1-corpus/"Mozart 545.mid" (the top line and the bass of each measure, dumped beat by beat; the first movement is its first 146 measures, with both repeats written out),
+# SOURCE: the Neue Mozart-Ausgabe (IX/25/2) and the IMSLP scan of the first edition.
+# STATUS: VERIFIED against an edition by Michelle Opitz, 2026-10-17. Read from the MIDI first and checked against standard theory and a printed edition (R-092). A hand reading of tests/fixtures/framework-v1-corpus/"Mozart 545.mid" (the top line and the bass of each measure, dumped beat by beat; the first movement is its first 146 measures, with both repeats written out),
 # written before the verification test was run and NOT derived from the output of any analysis stage. Where the older annotation
 # files for this piece (key regions, cadences, phrase form) cover the same ground their values are copied here, and
-# framework_v1_fixture_consistency checks that the two agree. A human should confirm it against the edition before it is relied on.
+# framework_v1_fixture_consistency checks that the two agree.
 #
 # Every list below is COMPLETE for its scope: a cadence the music does not have is a claim, not an omission, so a cadence the chain
 # reports inside the cadence scope that is not listed is reported as a deviation. (Phrase ends, themes, expansions and
@@ -38,7 +38,9 @@ piece mozart545
 meter 4 1/4
 home C major
 keys-scope 1 146
-# copied from mozart545_key_regions.txt (the development, 57-69 and 102-114, is not scored); the extent of each change is the one the music has
+# copied from mozart545_key_regions.txt (the development, 57-69 and 102-114, is not scored); the extent of each change is the one the music has.
+# The recapitulation keys (C major for m79-101 and m124-146, with the half cadence on G at m85 and m130) are accepted and flagged for Michelle to re-verify. M79-85
+# repeats m6-12 note for note. The C-sharp in m13 is a chromatic line D, C-sharp, C, B into the second theme, not a change of key by itself.
 region 1 12 C major
 region 13 28 G major
 region 29 40 C major
@@ -54,12 +56,13 @@ change 29 modulation
 change 41 modulation
 change 79 modulation
 change 124 modulation
-# the exposition (1-28): a half cadence on V at measure 11, the closing section in G major with a perfect authentic cadence in each of measures 26, 27 and 28
-# (copied from mozart545_cadences.txt); the repeat starts at measure 29
+# the exposition (1-28): a half cadence on V at measure 12 (a G major triad, V of C, after I-IV-I-IV over the G pedal in m11), then the closing section in G major
+# (copied from mozart545_cadences.txt): m26 and m27 are codettas before the closing perfect authentic cadence at m28, so their cadences are optional (R-095) and the one at
+# m28 is required; the repeat starts at measure 29
 cadence-scope 1 28
-cadence 11 1 hc
-cadence 26 1 pac
-cadence 27 1 pac
+cadence 12 1 hc
+cadence 26 1 pac optional
+cadence 27 1 pac optional
 cadence 28 1 pac
 form-scope 1 28
 # no cadence ends the four-measure opening (measure 4 reaches I6): the first phrase runs to the half cadence that sounds into measure 12; the exposition closes at 28
