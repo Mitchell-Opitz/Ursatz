@@ -6,12 +6,11 @@
     "roman_numeral": 0.673617,
     "roman_numeral_chain_key": 0.520426,
     "key": 0.690635,
-    "cadence_recall": 0.100000,
+    "cadence_recall": 0.111111,
     "cadence_type": 1.000000,
     "cadence_precision": 0.200000,
-    "phrase_boundaries": 0.631579,
+    "phrase_boundaries": 0.600000,
     "theme_types": 0.000000,
-    "expansions": 0.000000,
     "phrase_model_labels": 0.370968,
     "melody_climaxes": 1.000000,
     "melody_ranges": 0.000000,
@@ -121,9 +120,8 @@
       "rhythm_hyperdownbeats": 0.625000
     },
     "Five reference pieces, pooled": {
-      "phrase_boundaries": 0.631579,
-      "theme_types": 0.000000,
-      "expansions": 0.000000
+      "phrase_boundaries": 0.600000,
+      "theme_types": 0.000000
     },
     "Galant fixture": {
       "schemas_sequences": 0.555556

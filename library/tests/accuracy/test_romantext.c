@@ -230,11 +230,27 @@ static void test_expected_chords(void) {
     expect_chord("viio7/ii", "G:", 8, FULL, 4);
     expect_chord("bVI", "C:", 8, MAJ, 3);
     expect_chord("#ivo", "C:", 6, DIM, 3);
+    expect_chord("#vio", "a:", 6, DIM, 3);
+}
+
+static void test_raised_sixth_credit(void) {
+    MeterMap *map = make_map(4, 2, false);
+    RomanTextGrid grid = romantext_meter_map_grid(map);
+    RomanTextAnalysis a;
+    assert(romantext_parse("m1 a: #vio\nm2 C: #vio\nm3 a: vio\nm4 a: bVI\n", &grid, &a) == ROMANTEXT_OK);
+    assert(a.chord_count == 4);
+    assert(romantext_is_raised_sixth_diminished(&a.chords[0]));
+    assert(!romantext_is_raised_sixth_diminished(&a.chords[1])); /* major key */
+    assert(!romantext_is_raised_sixth_diminished(&a.chords[2])); /* not raised */
+    assert(!romantext_is_raised_sixth_diminished(&a.chords[3]));
+    romantext_destroy(&a);
+    meter_map_destroy(map);
 }
 
 int main(void) {
     test_metadata();
     test_expected_chords();
+    test_raised_sixth_credit();
     test_chords_keys_and_beats();
     test_applied_and_altered();
     test_slashed_figures_and_keys();

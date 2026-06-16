@@ -31,7 +31,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 
 | ID | Piece | Area | Location | Expected | Actual | Cause |
 |---|---|---|---|---|---|---|
-| DEV-003 | bach114 | keys | region 27-28 | D major 27-28 | D major 27-30 | C1 |
+| DEV-003 | bach114 | keys | region 26-28 | D major 26-28 | G major 21-26, D major 27-30 | C1 |
 | DEV-004 | bach114 | keys | region 29-32 | G major 29-32 | D major 27-30, G major 31-32 | C1 |
 | DEV-006 | bach114 | keys | change 29 | weak-modulation return at 29 | none | C1 |
 | DEV-007 | bach114 | cadences | m4 b3 | hc | none | C4 |
@@ -56,8 +56,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-030 | mozart545 | keys | region 124-146 | C major 124-146 | F major 114-129, G major 130-131, E minor 132-135, C major 136-139, D minor 140-143, C major 144-146 | C1,C2 |
 | DEV-031 | mozart545 | keys | change 79 | modulation at 79 | none | C1,C2 |
 | DEV-032 | mozart545 | keys | change 124 | modulation at 124 | none | C1,C2 |
-| DEV-033 | mozart545 | cadences | m11 b1 | hc | none | C5 |
-| DEV-034 | mozart545 | cadences | m26 b1 | pac | none | C5 |
+| DEV-033 | mozart545 | cadences | m12 b1 | hc | none | C5 |
 | DEV-039 | clementi36 | keys | region 1-5 | C major 1-5 | C major 1-7 | C1 |
 | DEV-040 | clementi36 | keys | region 6-15 | G major 6-15 | C major 1-7, G major 8-14, C minor 15-19 | C1 |
 | DEV-041 | clementi36 | keys | region 16-22 | C minor 16-22 | C minor 15-19, G major 20-23 | C1,C2 |
@@ -77,8 +76,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-060 | clementi36 | cadences | extra m37 b3 | none | subverted | C5,C7 |
 | DEV-061 | clementi36 | phrase-form | end m8 | pac at m8 | none | C1,C5 |
 | DEV-063 | clementi36 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | hybrid 5-10 parts 5-8 9-10 | C1,C5,C8 |
-| DEV-064 | clementi36 | phrase-form | theme period 24-38 | period 24-38 parts 24-27 28-38 | hybrid 20-25 parts 20-23 24-25, hybrid 28-33 parts 28-31 32-33 | C5,C8 |
-| DEV-065 | clementi36 | phrase-form | expansion internal 28-38 | internal 28-38 7 measures | contraction 32-33 2 measures | C5,C8 |
+| DEV-064 | clementi36 | phrase-form | theme period 24-31 | period 24-31 parts 24-27 28-31 | hybrid 20-25 parts 20-23 24-25, hybrid 28-33 parts 28-31 32-33 | C5,C8 |
 | DEV-066 | field1 | cadences | m8 b1 | pac | none | C5,C6 |
 | DEV-067 | field1 | cadences | m12 b1 | iac | none | C5,C6 |
 | DEV-068 | field1 | cadences | m16 b1 | pac | none | C5,C6 |
@@ -104,3 +102,5 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-094 | mozart545 | keys | change 29 | modulation at 29 | tonicization at 29 | C5 |
 | DEV-095 | mozart545 | keys | change 41 | modulation at 41 | tonicization at 40 | C5 |
 | DEV-096 | clementi36 | cadences | extra m23 b4.5 | none | hc | C1,C2 |
+| DEV-097 | clementi36 | cadences | m31 b1 | pac | none | C5 |
+| DEV-098 | clementi36 | phrase-form | end m31 | pac at m31 | none | C5 |

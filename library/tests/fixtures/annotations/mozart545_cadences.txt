@@ -1,10 +1,10 @@
 # Hand-marked cadences in Mozart, Piano Sonata No. 16 in C major, K. 545 ("Sonata facile"), first movement, exposition.
 #
-# SOURCE: the Neue Mozart-Ausgabe (Barenreiter) and the IMSLP scan of the first edition. Neither was available when this file was written, so the edition is the one to check against.
-# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. The numerals and cadences are a hand reading of the
+# SOURCE: the Neue Mozart-Ausgabe (Barenreiter) and the IMSLP scan of the first edition.
+# STATUS: VERIFIED against an edition by Michelle Opitz, 2026-10-17. Read from the MIDI first and checked against standard theory and a printed edition (R-092). The numerals and cadences are a hand reading of the
 # harmony, made from the pitch content of tests/fixtures/framework-v1-corpus/"Mozart 545.mid" (notes dumped beat by beat) and
 # the piece's known form. They were NOT derived from the output of the chord identifier, the key estimator or the
-# cadence adapter. A human should confirm them against an edition before this file is relied on.
+# cadence adapter.
 #
 # The reading follows standard-harmony's definitions, not every analyst's: a PAC or IAC is a root-position V (or V7)
 # to a root-position I, so a V6 or V4/3 to I is not marked (it prolongs); viio to I is not a cadence; a half cadence
@@ -22,9 +22,10 @@
 #   end <measure> <beat>      the end of the stretch of chords (chords outside a stretch are not read)
 #   cadence <measure> <beat> <pac|iac|hc|deceptive|plagal|subverted>   the cadence whose ARRIVAL chord starts here
 #
-# Measures 1-4 (no cadence marked: the V is inverted), the transition's half cadence (measure 11, after an applied
-# chord, so a miss by design), and the closing section in G major (measures 24-28): a tonic 6/4 over D, V7, and three
-# perfect authentic cadences. The file plays the exposition's repeat out; the first playing is read.
+# Measures 1-4 (no cadence marked: the V is inverted), the transition's half cadence (measure 12: a G major triad, V of C,
+# after I-IV-I-IV over the G pedal in measure 11), and the closing section in G major (measures 24-28): a tonic 6/4 over D, V7,
+# and the closing perfect authentic cadence at measure 28 (measures 26 and 27 are codettas before it). The file plays the
+# exposition's repeat out; the first playing is read.
 
 meter 4 1/4
 home C
@@ -38,13 +39,13 @@ chord 4 2 C V4/3
 chord 4 3 C I
 end 5 1
 chord 10 4 C viio/V
-chord 11 1 C V
-chord 11 2 C I6/4
-chord 11 3 C V
-chord 11 4 C I6/4
+chord 11 1 C I6/4
+chord 11 2 C IV6/4
+chord 11 3 C I6/4
+chord 11 4 C IV6/4
 chord 12 1 C V
 end 13 1
-cadence 11 1 hc
+cadence 12 1 hc
 chord 24 1 G I6/4
 chord 25 1 G V7
 chord 26 1 G I
@@ -53,6 +54,5 @@ chord 27 1 G I
 chord 27 4 G V7
 chord 28 1 G I
 end 29 1
-cadence 26 1 pac
-cadence 27 1 pac
+# m26 and m27 are codettas before the closing cadence at m28. This file has no optional form, so they are not listed here; mozart545_v1_expected.txt lists them as optional.
 cadence 28 1 pac

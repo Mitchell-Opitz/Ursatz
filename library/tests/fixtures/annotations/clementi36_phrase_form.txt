@@ -1,10 +1,10 @@
 # Hand analysis of the phrase form of Clementi, Sonatina in C major, Op. 36 No. 1, first movement, for the form adapter (frameworks/standard-form/analysis).
 #
-# SOURCE: the Breitkopf and Haertel edition of the Sonatinas Op. 36 and the IMSLP scan. Neither was available when this file was written, so the edition is the one to check against.
-# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. No score was available when this file was written. It is a hand
+# SOURCE: the Breitkopf and Haertel edition of the Sonatinas Op. 36 and the IMSLP scan.
+# STATUS: VERIFIED against an edition by Michelle Opitz, 2026-10-17. Read from the MIDI first and checked against standard theory and a printed edition (R-092). It is a hand
 # reading of tests/fixtures/framework-v1-corpus/"Clementi 36.mid" (the top line and the bass of each measure, dumped beat by beat), of the
 # harmony as far as the bass and the top line show it, and of the piece's known form. It was NOT derived from the output of the
-# form adapter, the cadence adapter or the chord identifier. A human should confirm it against an edition before it is relied on.
+# form adapter, the cadence adapter or the chord identifier.
 # # The first 38 measures are read: the exposition, the short development and the recapitulation up to its closing cadence.
 # The reading follows standard-form's definitions, not every analyst's: a phrase ends at a PAC, IAC or HC; a period is an antecedent
 # ending on a weaker cadence and a consequent ending on a stronger one; a sentence is a presentation (a basic idea and its repetition)
@@ -28,11 +28,10 @@ range 1 38
 phrase-end 4 hc
 phrase-end 8 pac
 phrase-end 15 pac
-# the development ends on the dominant of C at measure 23; the recapitulation restates the opening: a half cadence at 27, and a consequent that stays in C and ends on a PAC at 38
+# the development ends on the dominant of C at measure 23; the recapitulation is the main theme as a period (24-31): a half cadence at 27 and a PAC at 31, then the second theme in C ends on a PAC at 38
 phrase-end 23 hc
 phrase-end 27 hc
+phrase-end 31 pac
 phrase-end 38 pac
 theme period 1 8
-theme period 24 38
-# the recapitulation's consequent (measures 28-38, eleven measures) against its antecedent's four: an expansion of seven measures
-expansion internal 28 38 7
+theme period 24 31

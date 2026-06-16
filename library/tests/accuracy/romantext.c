@@ -576,3 +576,7 @@ size_t romantext_expected_chord(const RomanTextChord *c, int *root, int interval
     return 4;
 }
 
+
+bool romantext_is_raised_sixth_diminished(const RomanTextChord *chord) {
+    return chord->minor && !chord->applied && chord->degree == 6 && chord->alteration == 1 && chord->marker == 'o';
+}

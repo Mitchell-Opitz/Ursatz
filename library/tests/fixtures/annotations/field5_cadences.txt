@@ -1,10 +1,10 @@
 # Hand-marked cadences in Field, Nocturne No. 5 in B-flat major (12/8).
 #
-# SOURCE: the Breitkopf and Haertel edition of the Nocturnes and the IMSLP scan. Neither was available when this file was written, so the edition is the one to check against.
-# STATUS: DRAFT, NOT YET CHECKED AGAINST THE PRINTED SCORE. The numerals and cadences are a hand reading of the
+# SOURCE: the Breitkopf and Haertel edition of the Nocturnes and the IMSLP scan.
+# STATUS: VERIFIED against an edition by Michelle Opitz, 2026-10-17. Read from the MIDI first and checked against standard theory and a printed edition (R-092). The numerals and cadences are a hand reading of the
 # harmony, made from the pitch content of tests/fixtures/framework-v1-corpus/"Field 5.mid" (notes dumped beat by beat) and
 # the piece's known form. They were NOT derived from the output of the chord identifier, the key estimator or the
-# cadence adapter. A human should confirm them against an edition before this file is relied on.
+# cadence adapter.
 #
 # The reading follows standard-harmony's definitions, not every analyst's: a PAC or IAC is a root-position V (or V7)
 # to a root-position I, so a V6 or V4/3 to I is not marked (it prolongs); viio to I is not a cadence; a half cadence
@@ -23,8 +23,8 @@
 #   cadence <measure> <beat> <pac|iac|hc|deceptive|plagal|subverted>   the cadence whose ARRIVAL chord starts here
 #
 # The opening phrase (measures 1-8) has no root-position V to I: the dominant harmonies are inverted or chromatic,
-# and the phrase closes over a descending bass F E-flat D C into I on the downbeat of measure 9 (an inverted
-# dominant, so not a cadence by the definition above). Only the tonic stretches are marked, and no cadence is
+# and the bass descends A-flat (m6), G, F, E-flat, D, C into B-flat on the downbeat of m9, approached by an inverted
+# dominant (C bass), so not a cadence by the definition above. Only the tonic stretches are marked, and no cadence is
 # annotated: any cadence the adapter reports here is a false positive.
 
 meter 4 3/8

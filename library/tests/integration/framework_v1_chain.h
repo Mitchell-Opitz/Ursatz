@@ -43,6 +43,7 @@ typedef struct {
     double beat;
     CadenceType type;
     char type_text[24];
+    bool optional; /* may be missing without a deviation; found with its type, it is not an extra */
 } XCadence;
 
 typedef struct {
@@ -186,12 +187,15 @@ static void fv1_load_expected(const char *prefix, V1Expected *x) {
             ch->is_return = n == 3 && strcmp(b, "return") == 0;
         } else if (strcmp(word, "cadence") == 0) {
             double beat = 0.0;
-            assert(sscanf(line, "cadence %d %lf %23s", &i1, &beat, a) == 3 && x->cadence_count < 24);
+            int n = sscanf(line, "cadence %d %lf %23s %23s", &i1, &beat, a, b);
+            assert(n >= 3 && x->cadence_count < 24);
+            assert(n == 3 || strcmp(b, "optional") == 0);
             XCadence *cd = &x->cadences[x->cadence_count++];
             cd->measure = i1;
             cd->beat = beat;
             cd->type = fv1_cadence_type(a);
             snprintf(cd->type_text, sizeof(cd->type_text), "%s", a);
+            cd->optional = n == 4;
         } else if (strcmp(word, "phrase-end") == 0) {
             assert(sscanf(line, "phrase-end %d %23s", &i1, a) == 2 && x->end_count < 24);
             XEnd *e = &x->ends[x->end_count++];

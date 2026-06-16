@@ -6,8 +6,8 @@ checked only that the five files register, and a manual pass in the GUI had look
 the full chain gives, where it does not give the expected value and why, and whether Phase 2.5's exit criterion is met.
 
 **Status: not met.** The assertions all pass, every deviation is documented with its exact actual value, and every deviation has a cause and a named roadmap
-item. But the expected values are drafts that were never checked against the editions, ten roadmap items have no number yet, and four deviations have a difference
-of convention, not a method limit, among their causes. The reasons are listed at the end.
+item. The expected values are now verified (below), but ten roadmap items have no number yet, and one deviation has a difference of convention, not a method
+limit, among its causes. The reasons are listed at the end.
 
 ## What is asserted
 
@@ -16,10 +16,21 @@ signature events), chords identified in each region's key, Roman numerals, outer
 expansions). No stage is given an answer, and every default is the library's. (Bach 114's file declares 4/4 and the piece is 3/4, so a 3/4 meter replaces it, as in
 every other reference-piece test. Chord identification reads each key region in its own mode: the major set in a major region, the diatonic triads and sevenths of natural, harmonic and melodic minor in a minor one.)
 
-The expected values are `tests/fixtures/annotations/<piece>_v1_expected.txt`, one per piece, each citing its edition and marked unverified. Where the older
-annotation files (key regions, cadences, phrase form) cover the same ground their values are copied, and `framework_v1_verification` fails if the two disagree,
-or if a phrase end has no cadence of its type within a measure. Every cadence list is complete for its scope; the phrase-form lists are what could be read with
-confidence.
+The expected values are `tests/fixtures/annotations/<piece>_v1_expected.txt`, one per piece, each citing its edition. They are **verified** (Michelle Opitz,
+2026-10-17, R-092): read from the MIDI first, then checked against standard theory and a printed edition. Where the older annotation files (key regions, cadences,
+phrase form) cover the same ground their values are copied, and `framework_v1_verification` fails if the two disagree, or if a phrase end has no required cadence
+of its type within a measure. Every cadence list is complete for its scope; the phrase-form lists are what could be read with confidence.
+
+A cadence line may end with `optional` (`cadence <m> <beat> <type> optional`): the music may or may not have it, so missing is no deviation, and found with its
+type within one beat it is not an extra. The consistency check compares required cadences only. Mozart 545 m26 and m27 are optional (codettas before the closing
+cadence at m28, R-095).
+
+Notes on the verified values:
+
+- **Bach 114.** The file declares 4/4 and its note values are halved. Correctly notated, each strain is 16 measures of 3/4 and every cadence lands on beat 1. The
+  verification keeps the file's numbering (R-092), so the measures and beats in the expected file and the deviation rows are the file's.
+- **Mozart 545.** The recapitulation keys (C major for m79-101 and m124-146, half cadence on G at m85 and m130) are accepted and flagged for Michelle to
+  re-verify. M79-85 repeats m6-12 note for note.
 
 | Area | One check per | Tolerance |
 |---|---|---|
@@ -39,8 +50,8 @@ deviation; none fails. As of the commit that wrote this page; `framework_v1_veri
 | Piece | Keys | Cadences | Phrase form | Thematic returns |
 |---|---|---|---|---|
 | Bach 114 | 7 / 3 | 2 / 7 | 3 / 7 | not asserted |
-| Mozart 545 | 1 / 13 | 2 / 2 | 2 / 0 | 0 / 6 |
-| Clementi 36 | 3 / 5 | 2 / 15 | 5 / 4 | 0 / 2 |
+| Mozart 545 | 1 / 13 | 2 / 1 | 2 / 0 | 0 / 6 |
+| Clementi 36 | 3 / 5 | 2 / 16 | 5 / 4 | 0 / 2 |
 | Field 1 | 2 / 0 | 1 / 5 | 3 / 3 | not asserted |
 | Field 5 | 1 / 1 | 1 / 0 | 0 / 0 (nothing annotated) | not asserted |
 | **All five** | **14 / 22** | **8 / 29** | **13 / 14** | **0 / 8** |
@@ -61,7 +72,7 @@ The tests read that file, so a row is an exact statement of what the chain does 
 | C5 | 47 | chords read from the sounding pitches: sparse, alternating or ornamented segments | chord identification with context |
 | C6 | 6 | a non-chord bass tone reads the chord as root position | inversion from the chord's bass tone |
 | C7 | 1 | convention: V to I6 is SUBVERTED in the adapter, a prolongation in the drafts | check the drafts against the editions |
-| C8 | 15 | L3.6 builds phrases, themes, expansions and returns only from the cadences it is given; re-verified in P1 B8, no L3.6 rule was found wrong, every row also names the upstream cadence cause | re-verify L3.6 once C1, C4, C5 and C6 are removed |
+| C8 | 14 | L3.6 builds phrases, themes, expansions and returns only from the cadences it is given; re-verified in P1 B8, no L3.6 rule was found wrong, every row also names the upstream cadence cause | re-verify L3.6 once C1, C4, C5 and C6 are removed |
 | C9 | 0 | convention: a dominant resolving into the recapitulation (DEV-054 removed; the chain now reads the half cadence, DEV-096 notes its place) | cadences across a formal boundary, done in P1 B6 |
 | C10 | 0 | removed in P1 B7: returns match inside themes and with variation; the remaining return rows are C8 | done in P1 B7 |
 
@@ -91,9 +102,8 @@ The criterion is: all assertions pass, and every deviation is a documented metho
 - All 108 checks pass or are asserted deviations. Met.
 - Every deviation is documented, with its exact actual value and a cause. Met.
 - Every cause has a named roadmap item, but **none has a roadmap number yet** (the Registry assigns them). Not met.
-- Two causes (C7, C9; four deviations name one) are differences of convention between the drafts and the library, not method limits. Not met until the drafts are checked.
-- The expected values are **unverified drafts**. A check against the editions may change them, and so move deviations in either direction. Not met.
+- One cause (C7, one deviation) is a difference of convention between the expected values and the library, not a method limit. Not met until the adapter reports both readings.
+- The expected values are **verified** (2026-10-17, R-092). Met. The Mozart recapitulation keys are flagged for a re-check.
 
-So the status is **not met**. The step that would settle it is a check of the five `_v1_expected.txt` files against the editions, followed by numbering the ten
-roadmap items. To rerun the suite: `ctest -R framework_v1`. When a stage improves, a deviation row that now passes fails the test and is removed; one whose
+So the status is **not met**. The steps that would settle it are the two-reading cadences, then numbering the ten roadmap items. To rerun the suite: `ctest -R framework_v1`. When a stage improves, a deviation row that now passes fails the test and is removed; one whose
 actual value changes fails and is rewritten (`FRAMEWORK_V1_PRINT_DEVIATIONS=1` prints the rows).

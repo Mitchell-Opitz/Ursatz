@@ -134,7 +134,7 @@
       "name": "Mozart 545",
       "group": "fixture",
       "metrics": {
-        "cadence_recall": {"value": 0.000000, "num": 0.000000, "den": 4.000000},
+        "cadence_recall": {"value": 0.000000, "num": 0.000000, "den": 2.000000},
         "phrase_model_labels": {"value": 0.370968, "num": 23.000000, "den": 62.000000},
         "motive_occurrences": {"value": 0.952381, "num": 20.000000, "den": 21.000000}
       }
@@ -143,7 +143,7 @@
       "name": "Clementi 36",
       "group": "fixture",
       "metrics": {
-        "cadence_recall": {"value": 0.000000, "num": 0.000000, "den": 1.000000},
+        "cadence_recall": {"value": 0.000000, "num": 0.000000, "den": 2.000000},
         "cadence_precision": {"value": 0.000000, "num": 0.000000, "den": 2.000000}
       }
     },
@@ -170,9 +170,8 @@
       "name": "Five reference pieces, pooled",
       "group": "fixture",
       "metrics": {
-        "phrase_boundaries": {"value": 0.631579, "num": 12.000000, "den": 19.000000},
-        "theme_types": {"value": 0.000000, "num": 0.000000, "den": 6.000000},
-        "expansions": {"value": 0.000000, "num": 0.000000, "den": 1.000000}
+        "phrase_boundaries": {"value": 0.600000, "num": 12.000000, "den": 20.000000},
+        "theme_types": {"value": 0.000000, "num": 0.000000, "den": 6.000000}
       }
     },
     {
@@ -189,12 +188,11 @@
     "roman_numeral": 0.673617,
     "roman_numeral_chain_key": 0.520426,
     "key": 0.690635,
-    "cadence_recall": 0.100000,
+    "cadence_recall": 0.111111,
     "cadence_type": 1.000000,
     "cadence_precision": 0.200000,
-    "phrase_boundaries": 0.631579,
+    "phrase_boundaries": 0.600000,
     "theme_types": 0.000000,
-    "expansions": 0.000000,
     "phrase_model_labels": 0.370968,
     "melody_climaxes": 1.000000,
     "melody_ranges": 0.000000,

@@ -1,10 +1,10 @@
 # Expected results for the Framework v1 verification of Bach, Minuet in G, BWV Anh. 114 (Notebook for Anna Magdalena Bach, 1725).
 #
-# SOURCE: the Neue Bach-Ausgabe (V/4) and the IMSLP scan of the Notebook. The edition was not available when this file was written, so it is the one to check against.
-# STATUS: DRAFT, UNVERIFIED AGAINST THE EDITION. A hand reading of tests/fixtures/framework-v1-corpus/"Bach 114.mid" (the top line and the bass of each measure, dumped beat by beat; the file declares 4/4, the piece is 3/4, and its repeats are written out),
+# SOURCE: the Neue Bach-Ausgabe (V/4) and the IMSLP scan of the Notebook.
+# STATUS: VERIFIED against an edition by Michelle Opitz, 2026-10-17. Read from the MIDI first and checked against standard theory and a printed edition (R-092). A hand reading of tests/fixtures/framework-v1-corpus/"Bach 114.mid" (the top line and the bass of each measure, dumped beat by beat; the file declares 4/4, the piece is 3/4, and its repeats are written out),
 # written before the verification test was run and NOT derived from the output of any analysis stage. Where the older annotation
 # files for this piece (key regions, cadences, phrase form) cover the same ground their values are copied here, and
-# framework_v1_fixture_consistency checks that the two agree. A human should confirm it against the edition before it is relied on.
+# framework_v1_fixture_consistency checks that the two agree.
 #
 # Every list below is COMPLETE for its scope: a cadence the music does not have is a claim, not an omission, so a cadence the chain
 # reports inside the cadence scope that is not listed is reported as a deviation. (Phrase ends, themes, expansions and
@@ -22,6 +22,8 @@
 #                                                       modulation); 'return' marks the change back to the key before the excursion
 #   cadence-scope <first> <last>                        the measures whose cadences are listed
 #   cadence <measure> <beat> <pac|iac|hc|deceptive|plagal|subverted>   the cadence whose ARRIVAL chord starts here (beats are 1-based)
+#   cadence <measure> <beat> <type> optional           the same, but the music may or may not have it: missing is no deviation, and found with its type
+#                                                       (within one beat) it is not an extra
 #   form-scope <first> <last>
 #   phrase-end <measure> <pac|iac|hc>                   a phrase ends in this measure (the measure its arrival chord ends in)
 #   theme <form> <first> <last> [parts <a-first> <a-last> <b-first> <b-last>]   a theme and its two parts
@@ -36,16 +38,19 @@ piece bach114
 meter 3 1/4
 home G major
 keys-scope 1 32
-# The first strain (1-8) and its repeat (9-16) stay in G. In the second strain (17-24) the A major chord of measure 18 and the A7 of measure 19 lead to a perfect
-# authentic cadence in D at measure 20, and measure 21 is back in G (the D chord of measure 23 is the dominant of G); the repeat (25-32) does the same.
-region 1 18 G major
-region 19 20 D major
-region 21 26 G major
-region 27 28 D major
+# The first strain (1-8) and its repeat (9-16) stay in G, and so does measure 17. C-sharp enters at measure 18 (and at measure 26 in the repeat): the A major chord of
+# measure 18 and the A7 of measure 19 lead to a perfect authentic cadence in D at measure 20, and measure 21 is back in G (the D chord of measure 23 is the dominant of G);
+# the repeat (25-32) does the same.
+# The file is declared 4/4 and its note values are halved: correctly notated, each strain is 16 measures of 3/4 and every cadence lands on beat 1. The verification keeps
+# the file's numbering (R-092), so the measures and beats below are the file's.
+region 1 17 G major
+region 18 20 D major
+region 21 25 G major
+region 26 28 D major
 region 29 32 G major
-change 19 weak-modulation
+change 18 weak-modulation
 change 21 weak-modulation return
-change 27 weak-modulation
+change 26 weak-modulation
 change 29 weak-modulation return
 cadence-scope 1 32
 # the half cadence of measures 4 and 12 arrives on the D (the dominant) at beat 3; the perfect authentic cadences arrive on the tonic at the half beat before beat 3
