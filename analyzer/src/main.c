@@ -8,6 +8,7 @@
 #include <ursatz_analyzer/corpus.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/markdown_report.h>
+#include <ursatz_analyzer/notation_reading.h>
 #include <ursatz_analyzer/report_writer.h>
 #include <ursatz_analyzer/similar_material.h>
 #include <ursatz_analyzer/style_profile.h>
@@ -65,7 +66,7 @@ static bool write_analysis_document(const char *path, const AnalysisDocument *an
 static void print_usage(const char *program) {
     fprintf(stderr,
             "Usage: %s [--json] [--markdown] [--input-format midi|musicxml] [--check-counterpoint <1-5> "
-            "[--cantus upper|lower]] <input-file-path>\n"
+            "[--cantus upper|lower]] [--meter <n/d>] [--value-scale <n or n/d>] [--pickup <n/d>] <input-file-path>\n"
             "       %s --corpus <dir> [--out <dir>] [--resume] [--markdown]\n"
             "       %s --style-profile <corpus output dir> --name <style name> [--out <file>]\n"
             "       %s --compare-styles <a.json> <b.json> [--format text|json]\n"
@@ -429,6 +430,8 @@ int main(int argc, char *argv[]) {
     const char *progression = NULL;
     bool similar_flags = false; /* --min or --max given */
     SimilarOptions similar_options = similar_options_default();
+    NotationReading reading = notation_reading_none();
+    bool reading_set = false; /* --meter, --value-scale or --pickup given */
     for (int i = 1; i < argc; i++) {
         const char *arg = argv[i];
         if (strcmp(arg, "--json") == 0) {
@@ -502,6 +505,18 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             species = argv[++i][0] - '0';
+        } else if (strcmp(arg, "--meter") == 0 || strcmp(arg, "--value-scale") == 0 || strcmp(arg, "--pickup") == 0) {
+            bool (*parse)(const char *, NotationReading *) = strcmp(arg, "--meter") == 0
+                                                                 ? notation_reading_parse_meter
+                                                                 : (strcmp(arg, "--value-scale") == 0
+                                                                        ? notation_reading_parse_scale
+                                                                        : notation_reading_parse_pickup);
+            if (i + 1 >= argc || !parse(argv[i + 1], &reading)) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            i++;
+            reading_set = true;
         } else if (strcmp(arg, "--cantus") == 0) {
             if (i + 1 >= argc || (strcmp(argv[i + 1], "upper") != 0 && strcmp(argv[i + 1], "lower") != 0)) {
                 print_usage(argv[0]);
@@ -519,7 +534,7 @@ int main(int argc, char *argv[]) {
     if (similar_dir || motive_file || progression || similar_flags) {
         if (!similar_dir || (motive_file != NULL) == (progression != NULL) || compare_a || style_dir || style_name ||
             corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume || species != 0 || cantus_set ||
-            input_format_set) {
+            input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
         }
@@ -527,7 +542,7 @@ int main(int argc, char *argv[]) {
     }
     if (compare_a) {
         if (style_dir || style_name || corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume ||
-            species != 0 || cantus_set || input_format_set) {
+            species != 0 || cantus_set || input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
         }
@@ -539,14 +554,14 @@ int main(int argc, char *argv[]) {
     }
     if (style_dir || style_name) {
         if (!style_dir || !style_name || !style_name[0] || corpus_dir || path || want_json || want_markdown || corpus_resume ||
-            species != 0 || cantus_set || input_format_set) {
+            species != 0 || cantus_set || input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
         }
         return run_style_profile(style_dir, style_name, corpus_out);
     }
     if (corpus_dir) {
-        if (path || want_json || species != 0 || cantus_set || input_format_set) {
+        if (path || want_json || species != 0 || cantus_set || input_format_set || reading_set) {
             print_usage(argv[0]);
             return 1;
         }
@@ -568,6 +583,17 @@ int main(int argc, char *argv[]) {
     ImportedNotes notes;
     if (input_pipeline_import_file(path, input_format, &notes) != INPUT_PIPELINE_OK) {
         return 1;
+    }
+    if (reading_set) {
+        NotationReadingResult applied = notation_reading_apply(&notes, &reading);
+        if (applied != NOTATION_READING_OK) {
+            fprintf(stderr, "Error: cannot apply the notation reading to '%s': %s\n", path,
+                    applied == NOTATION_READING_ERR_INVALID
+                        ? "the pickup must be shorter than one measure of the meter"
+                        : (applied == NOTATION_READING_ERR_OVERFLOW ? "a scaled time is too large" : "out of memory"));
+            imported_notes_destroy(&notes);
+            return 1;
+        }
     }
 
     AnalysisReport report;
