@@ -9,6 +9,8 @@
 #include "io/midi_key_signature.h"
 #include "pitch/pitch_numeric_value.h"
 
+#include <ursatz_analyzer/notation_reading.h>
+
 typedef enum {
     INPUT_FORMAT_AUTO = 0, /* choose by extension, then by content */
     INPUT_FORMAT_MIDI,
@@ -76,6 +78,10 @@ typedef struct {
  * (dynamics_count) are the markings the input carries, in time order,
  * owned; both are NULL for a MIDI file. Reading them is the markings
  * stage's job (markings_pipeline.h).
+ *
+ * reading_applied is true when a notation reading (notation_reading.h)
+ * was applied to the notes, and reading is that reading; otherwise
+ * reading is zeroed.
  */
 typedef struct {
     InputFormat format;
@@ -93,6 +99,8 @@ typedef struct {
     size_t warning_count;
     ImportedTempoMarking *tempo_markings;
     ImportedDynamic *dynamics;
+    bool reading_applied;
+    NotationReading reading;
 } ImportedSource;
 
 /*
@@ -114,7 +122,7 @@ typedef struct {
  * (meter_map_is_defaulted), so meter.meter_map is never NULL after a
  * successful import.
  */
-typedef struct {
+typedef struct ImportedNotes {
     NoteEvent **events;
     PitchNumericValue **pitch_values;
     size_t count;

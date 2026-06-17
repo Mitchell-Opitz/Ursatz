@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+typedef struct ImportedNotes ImportedNotes;
+
 /*
  * A notation reading: how the notes of an input are to be read as notation, when the file's own meter or note
  * values are not the ones a score would write. It is applied to the imported notes before analysis (see
@@ -35,5 +37,28 @@ NotationReading notation_reading_none(void);
 bool notation_reading_parse_meter(const char *text, NotationReading *r);
 bool notation_reading_parse_scale(const char *text, NotationReading *r);
 bool notation_reading_parse_pickup(const char *text, NotationReading *r);
+
+typedef enum {
+    NOTATION_READING_OK = 0,
+    NOTATION_READING_ERR_NULL_ARGUMENT,
+    NOTATION_READING_ERR_INVALID, /* a scale that is not allowed, a meter out of range, a pickup not shorter than a measure */
+    NOTATION_READING_ERR_OVERFLOW, /* a scaled time does not fit */
+    NOTATION_READING_ERR_ALLOC
+} NotationReadingResult;
+
+/*
+ * Applies reading to notes in place. Every NoteEvent is rebuilt with its start and duration times the scale, keeping
+ * its EntityID, pitch, spelling, voice and provenance, so note ids (and every list of them) stay valid; pitch_values,
+ * streams and the parts are untouched. The key signature events, meter.end_time, the tempo markings and the dynamics
+ * are scaled with the notes.
+ *
+ * Meter: with has_meter, meter.meter_map becomes one region of the reading's meter, preceded by a pickup region when
+ * has_pickup. Without it the existing map is kept with its change points scaled; with has_pickup alone the pickup is
+ * laid before the map's first full measure's signature, and its later changes are dropped. The reading is recorded in
+ * notes->source (reading_applied, reading).
+ *
+ * On any result other than NOTATION_READING_OK the notes are unchanged.
+ */
+NotationReadingResult notation_reading_apply(ImportedNotes *notes, const NotationReading *reading);
 
 #endif
