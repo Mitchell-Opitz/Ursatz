@@ -40,6 +40,8 @@ static const char HOME_KEY_RULE[] = "longest_total_duration";
 static const char TIME_SIGNATURE_SOURCE[] = "midi-time-signature";
 static const char NOTATED_TIME_SIGNATURE_SOURCE[] = "musicxml-time-signature";
 static const char DEFAULT_METER_SOURCE[] = "ursatz-default-meter";
+/* The meter a notation reading sets, replacing the input's. */
+static const char READING_METER_SOURCE[] = "notation-reading-meter";
 
 /* ---- Rational time (whole notes) ---- */
 
@@ -335,10 +337,28 @@ static cJSON *meter_changes_json(const MeterMap *map, size_t first_index) {
     return changes;
 }
 
+/* The notation reading applied to the notes: {"scale", "meter_overridden"}, null when none was. */
+static cJSON *reading_json(const ImportedNotes *notes) {
+    if (!notes->source.reading_applied) {
+        return cJSON_CreateNull();
+    }
+    const NotationReading *reading = &notes->source.reading;
+    cJSON *object = cJSON_CreateObject();
+    if (object &&
+        !(add(object, "scale",
+              rational_json(rational_make(reading->scale_numerator, reading->scale_denominator))) &&
+          add(object, "meter_overridden", cJSON_CreateBool(reading->has_meter)))) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 /* The piece's meter claim. The time signature is that of the first full
    measure; a pickup before it is reported separately, and later signature
    changes under "changes". A file without a time signature gets the
-   library's 4/4 default, reported with source "inferred". */
+   library's 4/4 default, reported with source "inferred"; a meter set by a
+   notation reading is "override". */
 static cJSON *meter_json(const ImportedNotes *notes) {
     const MeterMap *map = notes->meter.meter_map;
     bool inferred = meter_map_is_defaulted(map);
@@ -355,11 +375,14 @@ static cJSON *meter_json(const ImportedNotes *notes) {
     snprintf(label, sizeof(label), "%u/%u", time_signature_top_number(time_signature),
              time_signature_bottom_number(time_signature));
 
-    bool notated = !inferred && notes->source.meter_notated;
-    const char *claim_source =
-        inferred ? DEFAULT_METER_SOURCE : (notated ? NOTATED_TIME_SIGNATURE_SOURCE : TIME_SIGNATURE_SOURCE);
+    bool overridden = notes->source.reading_applied && notes->source.reading.has_meter;
+    bool notated = !inferred && !overridden && notes->source.meter_notated;
+    const char *claim_source = overridden  ? READING_METER_SOURCE
+                               : inferred  ? DEFAULT_METER_SOURCE
+                               : (notated ? NOTATED_TIME_SIGNATURE_SOURCE : TIME_SIGNATURE_SOURCE);
+    const char *source_name = overridden ? "override" : (inferred ? "inferred" : (notated ? "notated" : "file"));
     cJSON *meter = claim_json(claim_source, notes, NULL, notes->count, label, (AnalysisConfidence){false, 0, 0});
-    if (!(meter && add(meter, "source", cJSON_CreateString(inferred ? "inferred" : (notated ? "notated" : "file"))) &&
+    if (!(meter && add(meter, "source", cJSON_CreateString(source_name)) &&
           add(meter, "time_signature", time_signature_json(time_signature)) &&
           add(meter, "measure_count", cJSON_CreateNumber((double)measure_count)) &&
           add(meter, "last_measure",
@@ -367,7 +390,8 @@ static cJSON *meter_json(const ImportedNotes *notes) {
                                                               (int)measure_count - 1))
                                 : cJSON_CreateNull()) &&
           add(meter, "pickup", has_pickup ? pickup_json(map) : cJSON_CreateNull()) &&
-          add(meter, "changes", meter_changes_json(map, primary_index + 1)))) {
+          add(meter, "changes", meter_changes_json(map, primary_index + 1)) &&
+          add(meter, "reading", reading_json(notes)))) {
         cJSON_Delete(meter);
         return NULL;
     }
