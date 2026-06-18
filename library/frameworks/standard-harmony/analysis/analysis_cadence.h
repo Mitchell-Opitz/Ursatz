@@ -84,9 +84,36 @@ typedef struct {
     double beat_length;                /* whole notes, when a segment has none: default 1/4 */
     double soprano_absent_penalty;     /* default 0.3 */
     bool allow_weak_arrival;           /* default true */
+
+    /* Competing readings (analysis_cadence_readings.h): weights in thousandths, all default as listed. */
+    int reading_strong_arrival;        /* 150 */
+    int reading_cadential_approach;    /* 150 */
+    int reading_followup_cadence;      /* 150 */
+    int reading_tonic_continues;       /* 100 */
+    int reading_long_dominant;         /* 150 */
+    int reading_break_after_dominant;  /* 150 */
+    int reading_pac_shape;             /* 150 */
+    int reading_short_dominant;        /* 100 */
+    double reading_followup_beats;     /* default 8 */
+    double reading_long_dominant_beats; /* default 4 */
 } HarmonyCadenceConfig;
 
+typedef enum {
+    HARMONY_CADENCE_READING_CADENCE = 0,
+    HARMONY_CADENCE_READING_PROLONGATION
+} HarmonyCadenceReading;
+
 HarmonyCadenceConfig harmony_cadence_config_default(void);
+
+/* The chord tests and the arrival rule the cadence adapter and the reading evidence share. A dominant is V or V7 in
+   root position with a major third; a tonic is a root-position I without a seventh; a cadential six-four is the
+   prepared segment marked `cadential`. harmony_cadence_is_arrival is the cadence-point rule above for the run
+   [first, last] after a run starting at before_first. */
+bool harmony_cadence_is_dominant_root(const HarmonySegment *segment);
+bool harmony_cadence_is_tonic_root(const HarmonySegment *segment);
+bool harmony_cadence_is_cadential_six_four(const HarmonySegment *segment);
+bool harmony_cadence_is_arrival(const HarmonySegment *segments, size_t count, size_t before_first, size_t first,
+                                size_t last, const HarmonyCadenceConfig *config);
 
 /* A candidate cadence point: the arrival run and the run before it, as segment index ranges (inclusive). */
 typedef struct {

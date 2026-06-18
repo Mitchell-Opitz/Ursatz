@@ -24,6 +24,16 @@ HarmonyCadenceConfig harmony_cadence_config_default(void) {
     config.beat_length = 0.25;
     config.soprano_absent_penalty = 0.3;
     config.allow_weak_arrival = true;
+    config.reading_strong_arrival = 150;
+    config.reading_cadential_approach = 150;
+    config.reading_followup_cadence = 150;
+    config.reading_tonic_continues = 100;
+    config.reading_long_dominant = 150;
+    config.reading_break_after_dominant = 150;
+    config.reading_pac_shape = 150;
+    config.reading_short_dominant = 100;
+    config.reading_followup_beats = 8.0;
+    config.reading_long_dominant_beats = 4.0;
     return config;
 }
 
@@ -31,7 +41,13 @@ static bool config_valid(const HarmonyCadenceConfig *config) {
     return beat_strength_valid(config->min_arrival_strength) && isfinite(config->arrival_min_beats) &&
            config->arrival_min_beats >= 0.0 && isfinite(config->beat_length) && config->beat_length > 0.0 &&
            isfinite(config->soprano_absent_penalty) && config->soprano_absent_penalty >= 0.0 &&
-           config->soprano_absent_penalty <= 1.0;
+           config->soprano_absent_penalty <= 1.0 && config->reading_strong_arrival >= 0 &&
+           config->reading_cadential_approach >= 0 && config->reading_followup_cadence >= 0 &&
+           config->reading_tonic_continues >= 0 && config->reading_long_dominant >= 0 &&
+           config->reading_break_after_dominant >= 0 && config->reading_pac_shape >= 0 &&
+           config->reading_short_dominant >= 0 && isfinite(config->reading_followup_beats) &&
+           config->reading_followup_beats >= 0.0 && isfinite(config->reading_long_dominant_beats) &&
+           config->reading_long_dominant_beats >= 0.0;
 }
 
 static double whole_notes(const MusicalTime *time) {
@@ -57,6 +73,18 @@ static bool is_tonic_root(const HarmonySegment *segment) {
 
 static bool is_cadential_six_four(const HarmonySegment *segment) {
     return diatonic(segment) && segment->chord.cadential;
+}
+
+bool harmony_cadence_is_dominant_root(const HarmonySegment *segment) {
+    return is_dominant_root(segment);
+}
+
+bool harmony_cadence_is_tonic_root(const HarmonySegment *segment) {
+    return is_tonic_root(segment);
+}
+
+bool harmony_cadence_is_cadential_six_four(const HarmonySegment *segment) {
+    return is_cadential_six_four(segment);
 }
 
 /* --- cadence points --- */
@@ -112,6 +140,11 @@ static bool arrival_ok(const HarmonySegment *segments, size_t count, size_t befo
            is_tonic_root(&segments[first]) &&
            dominant_on_stronger_beat(&segments[before_first], &segments[first], config) &&
            (last + 1 == count || arrival_closes(segments, count, first, last, config));
+}
+
+bool harmony_cadence_is_arrival(const HarmonySegment *segments, size_t count, size_t before_first, size_t first,
+                                size_t last, const HarmonyCadenceConfig *config) {
+    return arrival_ok(segments, count, before_first, first, last, config);
 }
 
 /* A candidate with the index of its arrival run, so the classifier can look at the runs around it. */
