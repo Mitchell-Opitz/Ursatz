@@ -93,6 +93,10 @@ typedef struct {
 /* What one theme section was heard as. The members are GrowOutcome's. */
 typedef struct {
     NodeId section;
+    /* A section of a piece structure (piece_structure.h) names its id and its part; has_part is false for any other. */
+    bool has_part;
+    int part;                    /* a PiecePart */
+    char id[PLAN_PIECE_ID_MAX];
     FormHearResult heard_result; /* FORM_HEAR_ERR_NOT_WRITTEN when the run did not complete */
     FormHeard heard;             /* owned */
     int heard_form;              /* PhraseLevelForm of the first theme heard, -1 for none */

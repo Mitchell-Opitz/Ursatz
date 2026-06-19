@@ -373,9 +373,24 @@ static bool structure_score(const FillRecord *record, NodeId section, GrowScore 
 }
 
 /* Hears one finished section. */
+/* The part and the id a piece structure gave the section, if it did. */
+static void read_part(const PiecePlan *plan, NodeId section, ComposeHeard *out) {
+    out->has_part = false;
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        if (constraint->kind == PLAN_CONSTRAINT_PIECE_PART) {
+            out->has_part = true;
+            out->part = constraint->params.piece_part.part;
+            memcpy(out->id, constraint->params.piece_part.id, sizeof(out->id));
+            return;
+        }
+    }
+}
+
 static void hear_section(const PiecePlan *plan, NodeId section, const FillRecord *structure, ComposeHeard *out) {
     PlanSpan span = plan_node_span(plan, section);
     out->section = section;
+    read_part(plan, section, out);
     out->heard_form = -1;
     out->requested_form = -1;
     out->requested_beginning = -1;
@@ -705,6 +720,7 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     outcome->section_count = theme_count;
     for (size_t t = 0; t < theme_count; t++) {
         outcome->sections[t].section = themes[t];
+        read_part(plan, themes[t], &outcome->sections[t]);
         outcome->sections[t].heard_result = FORM_HEAR_ERR_NOT_WRITTEN;
         outcome->sections[t].heard_form = -1;
         outcome->sections[t].requested_form = -1;
