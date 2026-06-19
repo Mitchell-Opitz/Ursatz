@@ -264,6 +264,14 @@ endforeach()
 set_tests_properties(test_piece_keys_binary test_piece_keys_rounded-binary test_piece_keys_ternary test_piece_keys_loop
                      test_piece_keys_layered PROPERTIES WILL_FAIL TRUE)
 
+add_executable(test_piece_structure test_piece_structure.c)
+target_link_libraries(test_piece_structure PRIVATE ursatz_composer)
+target_compile_options(test_piece_structure PRIVATE -Wall -Wextra -Wpedantic)
+# The checks and the plans, then the composed runs (seeds 1 to 10 each): a structure, a pickup, free phrases.
+foreach(mode checks plan compose pickup free)
+    add_test(NAME test_piece_structure_${mode} COMMAND test_piece_structure ${mode})
+endforeach()
+
 add_executable(test_form_return test_form_return.c)
 target_link_libraries(test_form_return PRIVATE ursatz_composer)
 target_compile_options(test_form_return PRIVATE -Wall -Wextra -Wpedantic)
