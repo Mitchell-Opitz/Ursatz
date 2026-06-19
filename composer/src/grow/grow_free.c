@@ -179,16 +179,22 @@ static bool read_free(const PiecePlan *plan, FillTarget target, FreeRequest *out
         return false;
     }
     size_t cells = metre.cells;
-    size_t least = harmony_phrase_min_cells(theme->cadence, &theme->meter);
+    /* A span of whole bars from a barline ends in a chord of the whole last bar, which asks for more room than one that
+       starts or ends between barlines (harmony_phrase_min_cells, harmony_phrase_room_cells). */
+    bool whole_bars = metre.lead.num == 0 && metre.tail.num == 0 && metre.offset.num == 0 &&
+                      cells % theme->cells_per_bar == 0;
+    size_t least = whole_bars ? harmony_phrase_room_cells(theme->cadence, theme->cells_per_bar)
+                              : harmony_phrase_min_cells(theme->cadence, &theme->meter);
     request.cells = cells;
-    if (least == 0 || cells + 1 < least) {
+    if (least == 0 || cells + (whole_bars ? 0 : 1) < least) {
         return false;
     }
     request.shape = cells >= least ? PLAN_HARMONY_SHAPE_PHRASE_MODEL : PLAN_HARMONY_SHAPE_CADENTIAL;
-    /* Chords no longer than they must be, so a long phrase changes harmony and does not hold one for bars. */
+    /* Chords no longer than they must be, so a long phrase changes harmony and does not hold one for bars: the cells
+       before the last chord dealt out to the chords a phrase model has, with half again to spare. */
     if (cells > 2 * theme->cells_per_bar) {
         size_t room = cells - theme->cells_per_bar;
-        size_t cap = (room + PHRASE_MODEL_SLOTS - 1) / PHRASE_MODEL_SLOTS;
+        size_t cap = (room * 3 / 2 + PHRASE_MODEL_SLOTS - 1) / PHRASE_MODEL_SLOTS;
         request.cap = (int)(cap > theme->cells_per_bar ? cap : theme->cells_per_bar);
     }
     *out = request;
