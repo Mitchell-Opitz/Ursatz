@@ -244,6 +244,11 @@ static PieceResult add_section(PiecePlan *plan, const PieceStructure *structure,
             constraint.params.theme_pairing = pairing;
             result = add_constraint(plan, *out, &constraint);
         }
+    } else if (result == PIECE_OK) {
+        /* Any other length is a free phrase, which grow-theme lays out in ideas of a bar (grow_free.c). */
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_FREE_PHRASE;
+        result = add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
@@ -335,8 +340,11 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
     if (!plan) {
         return PIECE_ERR_ALLOC;
     }
-    PlanSpan piece = {{0, 1}, beats_of(&structure->meter, beats)};
-    PlanSpan material = {piece.length, {0, 1}};
+    /* The material starts on the first barline at or after the last section's end: its motives are bars of the meter. */
+    PlanSpan material = {{0, 1}, {0, 1}};
+    if (plan_time_make(bar.num * (long)((beats + per_bar - 1) / per_bar), bar.den, &material.start) != PLAN_OK) {
+        return PIECE_ERR_BAD_REQUEST;
+    }
     PlanSpan form = {{0, 1}, {0, 1}};
     NodeId form_id = PLAN_NODE_NONE;
     NodeId source = PLAN_NODE_NONE;
@@ -348,7 +356,7 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
         return PIECE_ERR_BAD_REQUEST;
     }
     material.length = bars_length;
-    result = from_plan(plan_time_add(piece.length, material.length, &form.length));
+    result = from_plan(plan_time_add(material.start, material.length, &form.length));
     if (result == PIECE_OK) {
         result = from_plan(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form, "structure", &form_id));
     }

@@ -202,6 +202,20 @@ bool grow_checker(const PiecePlan *plan, FillTarget target, const FillOperator *
     }
     const GrowThemeSpec *spec = candidate->payload;
     Soft soft;
+    if (spec && spec->magic == GROW_FREE_MAGIC) {
+        memset(out, 0, sizeof(*out));
+        out->score_denominator = 1;
+        const char *hard = grow_free_judge(candidate->payload, &soft.held, &soft.total);
+        if (hard) {
+            out->hard_violation = true;
+            snprintf(out->reason, sizeof(out->reason), "%s", hard);
+            return true;
+        }
+        out->score_numerator = soft.held;
+        out->score_denominator = soft.total ? soft.total : 1;
+        snprintf(out->reason, sizeof(out->reason), "free phrase rules");
+        return true;
+    }
     if (!spec || spec->magic != GROW_PAYLOAD_MAGIC) {
         return false;
     }

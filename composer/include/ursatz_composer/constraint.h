@@ -36,7 +36,8 @@ typedef enum {
     PLAN_CONSTRAINT_STYLE,          /* on the form node: the style model file the fill prefers, and how strongly (R-080) */
     PLAN_CONSTRAINT_SOURCE,         /* on a motive node, or a section holding a given progression: the corpus passage it was taken from */
     PLAN_CONSTRAINT_PICKUP,         /* on a melody span: its first `length` is an anacrusis before the first downbeat note (R-168) */
-    PLAN_CONSTRAINT_PIECE_PART      /* on a section node: the part of a piece structure it is and its id (R-169) */
+    PLAN_CONSTRAINT_PIECE_PART,     /* on a section node: the part of a piece structure it is and its id (R-169) */
+    PLAN_CONSTRAINT_FREE_PHRASE     /* no parameters: on a section node, a phrase of any length in beats (R-170), not a theme */
 } PlanConstraintKind;
 
 typedef enum {

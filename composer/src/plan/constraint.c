@@ -121,6 +121,8 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
         return pickup.den != 0 && pickup.num > 0 && (pickup.num * 32) % (long)pickup.den == 0 &&
                pickup.num < 2 * (long)pickup.den;
     }
+    case PLAN_CONSTRAINT_FREE_PHRASE:
+        return true;
     case PLAN_CONSTRAINT_PIECE_PART: {
         const PlanPiecePart *part = &constraint->params.piece_part;
         size_t length = strnlen(part->id, PLAN_PIECE_ID_MAX);

@@ -100,9 +100,11 @@ void compose_outcome_destroy(ComposeOutcome *outcome) {
 
 /* ------------------------------------------------------------- the plan */
 
+/* A section grow-theme builds: a theme (an archetype and a pairing) or a free phrase of a piece structure (R-170). */
 static bool is_theme_section(const PiecePlan *plan, NodeId id) {
     bool archetype = false;
     bool pairing = false;
+    bool free_phrase = false;
     if (plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
         return false;
     }
@@ -110,8 +112,9 @@ static bool is_theme_section(const PiecePlan *plan, NodeId id) {
         PlanConstraintKind kind = plan_node_constraint_at(plan, id, i)->kind;
         archetype = archetype || kind == PLAN_CONSTRAINT_ARCHETYPE;
         pairing = pairing || kind == PLAN_CONSTRAINT_THEME_PAIRING;
+        free_phrase = free_phrase || kind == PLAN_CONSTRAINT_FREE_PHRASE;
     }
-    return archetype && pairing;
+    return (archetype && pairing) || free_phrase;
 }
 
 /* Whether a lane span in the section (a lane span reopened by plan_regenerate) is still open. */
@@ -436,7 +439,8 @@ static void hear(const PiecePlan *plan, const NodeId *themes, size_t theme_count
         hear_section(plan, themes[t], outcome->records[COMPOSE_STAGE_STRUCTURE], heard);
         outcome->heard_as_requested += heard->heard_as_requested;
         numerator += heard->structure.numerator + (heard->heard_as_requested ? 1 : 0);
-        denominator += heard->structure.denominator + 1;
+        /* A free phrase asks for no form to be heard as: only its structure's score counts. */
+        denominator += heard->structure.denominator + (heard->requested_form >= 0 ? 1 : 0);
     }
     hear_returns(plan, themes, theme_count, outcome);
     numerator += outcome->returns_heard;

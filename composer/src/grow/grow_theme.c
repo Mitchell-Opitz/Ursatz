@@ -35,7 +35,7 @@ typedef GrowThemeRequest ThemeRequest;
  * key lane has a span that ends where the section starts, the key before it. Spans are contiguous. False when the
  * lane does not tile the section that way.
  */
-static bool read_keys(const PiecePlan *plan, ThemeRequest *request) {
+bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request) {
     LaneSpanId spans[MAX_KEY_SPANS];
     PlanTime end;
     PlanTime half;
@@ -141,7 +141,7 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         return false;
     }
     request.meter = plan_lane_span_payload(plan, lane[0])->meter;
-    if (!read_keys(plan, &request)) {
+    if (!grow_read_keys(plan, &request)) {
         return false;
     }
     request.bar = grow_bar_length(&request.meter);
@@ -173,7 +173,7 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
 static bool grow_applies(const PiecePlan *plan, FillTarget target, void *context) {
     ThemeRequest request;
     (void)context;
-    return read_request(plan, target, &request);
+    return read_request(plan, target, &request) || grow_free_applies(plan, target);
 }
 
 /* ------------------------------------------------------------ the spec */
@@ -310,50 +310,57 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowIdea idea, MotiveDevSpec *dev)
     }
 }
 
-void grow_idea_ref(const GrowThemeSpec *spec, GrowIdea idea, NodeId source, PlanMotiveRef *out) {
-    MotiveDevSpec dev;
+void grow_dev_ref(const MotiveDevSpec *dev_spec, NodeId source, PlanMotiveRef *out) {
+    const MotiveDevSpec *dev = dev_spec;
     memset(out, 0, sizeof(*out));
     out->motive = source;
-    if (!grow_idea_dev(spec, idea, &dev)) {
-        out->transform = PLAN_TRANSFORM_NONE;
-        return;
-    }
-    switch (dev.kind) {
+    switch (dev->kind) {
     case MOTIVE_DEV_EXACT:
         out->transform = PLAN_TRANSFORM_RESTATED;
         break;
     case MOTIVE_DEV_TRANSPOSE:
         out->transform = PLAN_TRANSFORM_TRANSPOSED;
-        out->tonal = dev.tonal;
-        out->steps = dev.tonal ? dev.amount : 0;
-        out->semitones = dev.tonal ? 0 : dev.amount;
+        out->tonal = dev->tonal;
+        out->steps = dev->tonal ? dev->amount : 0;
+        out->semitones = dev->tonal ? 0 : dev->amount;
         break;
     case MOTIVE_DEV_INVERT:
         out->transform = PLAN_TRANSFORM_INVERTED;
-        out->tonal = dev.tonal;
-        out->has_axis = dev.has_axis;
-        out->axis = dev.axis;
+        out->tonal = dev->tonal;
+        out->has_axis = dev->has_axis;
+        out->axis = dev->axis;
         break;
     case MOTIVE_DEV_INTERVAL_CHANGE:
         out->transform = PLAN_TRANSFORM_INTERVAL_CHANGED;
-        out->interval = dev.interval;
-        out->amount = dev.amount;
-        out->keep_contour = dev.keep_contour;
+        out->interval = dev->interval;
+        out->amount = dev->amount;
+        out->keep_contour = dev->keep_contour;
         break;
     case MOTIVE_DEV_FRAGMENT:
         out->transform = PLAN_TRANSFORM_FRAGMENTED;
-        out->position = dev.position;
-        out->length = (int)dev.length;
+        out->position = dev->position;
+        out->length = (int)dev->length;
         break;
     case MOTIVE_DEV_LIQUIDATE:
         out->transform = PLAN_TRANSFORM_LIQUIDATED;
-        out->drop = (int)dev.drop;
-        out->keep_rhythm = dev.keep_rhythm;
+        out->drop = (int)dev->drop;
+        out->keep_rhythm = dev->keep_rhythm;
         break;
     default:
         out->transform = PLAN_TRANSFORM_NONE;
         break;
     }
+}
+
+void grow_idea_ref(const GrowThemeSpec *spec, GrowIdea idea, NodeId source, PlanMotiveRef *out) {
+    MotiveDevSpec dev;
+    if (!grow_idea_dev(spec, idea, &dev)) {
+        memset(out, 0, sizeof(*out));
+        out->motive = source;
+        out->transform = PLAN_TRANSFORM_NONE;
+        return;
+    }
+    grow_dev_ref(&dev, source, out);
 }
 
 const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowIdea idea) {
@@ -664,7 +671,7 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
     const GrowContext *shared = context;
     ThemeRequest request;
     if (!read_request(plan, target, &request)) {
-        return true;
+        return grow_free_applies(plan, target) ? grow_free_generate(plan, target, rng, shared, out) : true;
     }
     size_t wanted = shared && shared->candidates > 0 ? shared->candidates : GROW_DEFAULT_CANDIDATES;
     GrowThemeSpec *kept[16];
@@ -1044,8 +1051,8 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
  * where its motives were: the first gap of the bars wanted is taken, and when there is none, the bar after the last
  * motive, which is where the motives of a piece nothing was removed from always go.
  */
-static size_t first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, PlanTime bar,
-                             size_t wanted) {
+size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, PlanTime bar,
+                          size_t wanted) {
     size_t free_bar = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, material); i++) {
         PlanSpan span = plan_node_span(plan, plan_node_child_at(plan, material, i));
@@ -1105,6 +1112,9 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     const GrowThemeSpec *spec = candidate ? candidate->payload : NULL;
     ThemeRequest request;
     (void)context;
+    if (spec && spec->magic == GROW_FREE_MAGIC) {
+        return grow_free_apply(plan, target, (const GrowFreeSpec *)candidate->payload);
+    }
     if (!spec || spec->magic != GROW_PAYLOAD_MAGIC) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
@@ -1124,7 +1134,7 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     build.material_span = plan_node_span(plan, build.material);
     build.source = request.source;
     /* A section's motives: its own, when it has one, and the four the ideas are made from. */
-    build.slot_base = first_free_bar(plan, build.material, build.material_span, request.bar,
+    build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.bar,
                                      (spec->has_section_motive ? 1 : 0) + GROW_IDEA_COUNT - 1);
     PlanResult result = PLAN_OK;
     if (spec->has_section_motive) {
