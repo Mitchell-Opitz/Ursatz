@@ -52,9 +52,16 @@
  *   PLAGAL                 IV to I (harmony_plagal_progression_is), only when it directly follows a PERFECT authentic
  *                          cadence: it is then marked `post_cadential`. Elsewhere IV to I is a prolongation, which
  *                          is what standard-harmony says it is, and is not found here
- *   SUBVERTED              a cadential dominant (V(7) after a predominant, or with a cadential 6/4) that resolves to I6
- *                          or another chord that is not a tonic, the V again, a deceptive substitute or a 6/4. The
- *                          dominant's own beat is not tested; the arrival must be at a cadence point
+ *   SUBVERTED              a V(7) that resolves to I6 at a cadence point (C7: no cadential approach is needed, the
+ *                          competing prolongation reading below carries that doubt), or a cadential dominant (V(7)
+ *                          after a predominant, or with a cadential 6/4) that resolves to another chord that is not a
+ *                          tonic, the V again, a deceptive substitute or a 6/4. The dominant's own beat is not tested;
+ *                          the arrival must be at a cadence point
+ *
+ * COMPETING READINGS (analysis_cadence_readings.h). A V to I6 is an evaded cadence or a prolongation of the dominant
+ * (C7, R-090): the result is the SUBVERTED cadence, `share` its thousandths and `alternative` the PROLONGATION reading
+ * with the rest. `share` below 500 means the prolongation is the likelier reading. SUBVERTED already means no goal
+ * cadence to every consumer, so phrase ends do not change. Every other cadence has `share` 1000 and no alternative
  *
  * A half cadence is the END of a phrase on V: a V that the next cadence resolves (an authentic, deceptive or subverted
  * cadence whose dominant is this V) is that cadence's dominant, and no half cadence is reported for it.
@@ -142,10 +149,25 @@ typedef struct {
     bool post_cadential;    /* a plagal cadence that directly follows a PAC */
     bool has_six_four;      /* the dominant includes a cadential 6/4 */
     int arrival_beat_strength; /* BeatStrength at the arrival's first segment */
+    int reading;            /* HarmonyCadenceReading: what this Interpretation claims */
+    int rank;               /* 1 for the primary reading, 2 for the alternative */
+    int share;              /* thousandths of this reading; the two readings of a cadence sum to 1000 */
     char arrival_segment[96];   /* the arrival's first segment id */
     char dominant_segment[96];  /* the dominant's first segment id (the cadential 6/4's when it has one) */
     char key_ref[64];
 } HarmonyCadenceClaim;
+
+/* The competing reading of a cadence that has two (C7, C9). `type` is meaningful only when `reading` is CADENCE. */
+typedef struct {
+    bool present;
+    HarmonyCadenceReading reading;
+    CadenceType type;
+    size_t arrival_first;
+    size_t arrival_last;
+    int soprano_degree;           /* at the arrival's first segment; 0 when absent */
+    int share;                    /* thousandths */
+    Interpretation *interpretation; /* owned; targets the same Cadence id; id = the primary's id + "-alt" */
+} HarmonyCadenceAlternative;
 
 typedef struct {
     CadenceType type;
@@ -164,6 +186,8 @@ typedef struct {
     TimeSpan *span;               /* owned: the dominant's start to the arrival's end */
     Cadence *cadence;             /* owned */
     Interpretation *interpretation; /* owned; targets the Cadence's id */
+    int share;                    /* thousandths of the primary reading; 1000 when there is no alternative */
+    HarmonyCadenceAlternative alternative;
 } HarmonyCadenceResult;
 
 typedef struct {

@@ -393,12 +393,13 @@ static void test_subverted(void) {
     assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_SUBVERTED && n == 1);
     fixture_destroy(&f);
 
-    /* A V that is not cadential (after a tonic, no 6/4) resolving to I6 is not one. */
+    /* A V that is not cadential (after a tonic, no 6/4) resolving to I6 is still the SUBVERTED reading (C7, R-093);
+       the prolongation reading carries the doubt (here 500 - 150 for the medium beat - 150 for no approach = 200). */
     fixture_init(&f);
     fixture_add(&f, 1, TRIAD_MAJOR, 3, 0, 1, 3);
     fixture_add(&f, 5, TRIAD_MAJOR, 3, 0, 5, 7);
     fixture_add(&f, 1, TRIAD_MAJOR, 3, 1, 3, 3);
-    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_UNKNOWN && n == 0);
+    assert(only_type(&f, &post, &six_four, &n) == CADENCE_TYPE_SUBVERTED && n == 1);
     fixture_destroy(&f);
 }
 
