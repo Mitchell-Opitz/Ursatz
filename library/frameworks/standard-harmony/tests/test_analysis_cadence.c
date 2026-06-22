@@ -489,10 +489,16 @@ static void test_a_dominant_before_a_section_start_is_a_half_cadence(void) {
     HarmonyCadences found = boundary(&f, &segments, starts, 1);
     assert(found.count == 1);
     const HarmonyCadenceResult *c = &found.items[0];
-    assert(c->type == CADENCE_TYPE_HALF && c->dominant_first == 2 && c->arrival_first == 2 && c->arrival_last == 3);
+    /* a 2-beat V into a downbeat tonic with the soprano on 1: 500 - 150 (PAC shape) = 350 half, so the PAC is the
+       primary reading (650) and the half cadence its alternative (R-094) */
+    assert(c->type == CADENCE_TYPE_PERFECT_AUTHENTIC && c->dominant_first == 2 && c->arrival_first == 4 &&
+           c->share == 650);
+    assert(c->alternative.present && c->alternative.reading == HARMONY_CADENCE_READING_CADENCE &&
+           c->alternative.type == CADENCE_TYPE_HALF && c->alternative.arrival_first == 2 &&
+           c->alternative.arrival_last == 3 && c->alternative.share == 350);
     HarmonyCadenceClaim claim;
-    assert(harmony_cadence_claim_read(c->interpretation, &claim) && claim.type == (int)CADENCE_TYPE_HALF &&
-           strcmp(claim.arrival_segment, "seg-2") == 0);
+    assert(harmony_cadence_claim_read(c->interpretation, &claim) && claim.type == (int)CADENCE_TYPE_PERFECT_AUTHENTIC &&
+           strcmp(claim.arrival_segment, "seg-4") == 0 && claim.rank == 1 && claim.share == 650);
     harmony_cadences_destroy(&found);
     harmony_analysis_destroy(segments);
     fixture_destroy(&f);

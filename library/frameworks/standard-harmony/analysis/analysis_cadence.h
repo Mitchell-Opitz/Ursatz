@@ -205,13 +205,16 @@ void harmony_cadences_destroy(HarmonyCadences *cadences);
 
 /* Cadences at formal boundaries (a post-pass). section_starts are the start times, in whole notes, of the sections
    the caller found (from the Framework v1 chain's section detection; passed as data, never recomputed here). A
-   root-position V that ends a run directly before a section start is a HALF cadence ending the earlier section, even
-   when the chord that follows is the tonic: the tonic starts the new section and is not a cadential arrival. A
-   dominant that is no half cadence by the usual rule (no tonic or predominant before it) is left alone. An authentic
-   cadence found in `cadences` with that dominant and an arrival starting at the section start is removed (destroyed)
-   and the half cadence takes its place; a half cadence already recorded at the dominant is kept as it is. `cadences`
-   is the existing result, updated in place and kept in order of arrival. A start that is no segment's start is
-   ignored. config may be NULL for the defaults. BAD_CONFIG for a bad config or a non-finite start. */
+   root-position V that ends a run directly before a section start has two readings (C9, R-091, R-094): a HALF cadence
+   ending the earlier section, and the authentic cadence into the tonic that starts the next (PAC, IAC or unspecified,
+   by harmony_cadence_classify; offered only when the section start is a root-position tonic). One result carries both:
+   the reading with the higher share is the primary (a tie keeps HALF, R-038's reading), the other is its
+   `alternative`; the shares come from harmony_cadence_boundary_half_share. A dominant that is no half cadence by the
+   usual rule (no tonic or predominant before it) is left alone. The authentic cadence found in `cadences` with that
+   dominant and an arrival starting at the section start, and a half cadence already recorded at the dominant, are
+   replaced by the one two-reading result. `cadences` is the existing result, updated in place and kept in order of the
+   primary's arrival. A start that is no segment's start is ignored. config may be NULL for the defaults. BAD_CONFIG for
+   a bad config or a non-finite start. */
 HarmonyCadenceAnalysisStatus harmony_analysis_add_boundary_cadences(const HarmonySegment *segments, size_t count,
                                                                     const HarmonyCadenceConfig *config,
                                                                     const double *section_starts, size_t section_count,

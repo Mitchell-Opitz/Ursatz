@@ -705,41 +705,78 @@ HarmonyCadenceAnalysisStatus harmony_analysis_add_boundary_cadences(const Harmon
         while (r < run_count && runs[r].last != start - 1) {
             r++;
         }
-        if (r == 0 || r >= run_count || !is_dominant_root(&segments[runs[r].first]) ||
+        if (r == 0 || r + 1 >= run_count || !is_dominant_root(&segments[runs[r].first]) ||
             !diatonic(&segments[runs[r - 1].first])) {
             continue;
         }
-        bool recorded = false;
-        for (size_t i = 0; i < cadences->count; i++) {
-            const HarmonyCadenceResult *old = &cadences->items[i];
-            recorded = recorded || (old->type == CADENCE_TYPE_HALF && old->arrival_last == start - 1);
-        }
-        InternalPoint point;
-        memset(&point, 0, sizeof(point));
-        point.point.arrival_first = runs[r].first;
-        point.point.arrival_last = runs[r].last;
-        point.point.before_first = runs[r - 1].first;
-        point.point.before_last = runs[r - 1].last;
-        point.arrival_run = r;
-        Classified classified;
-        if (!recorded && (!classify_point(segments, runs, &point, pac_arrival_run, config, &classified) ||
-                          classified.type != CADENCE_TYPE_HALF)) {
+        /* the V must be a half cadence by the usual rule (a tonic or predominant before it) */
+        InternalPoint half_point;
+        memset(&half_point, 0, sizeof(half_point));
+        half_point.point.arrival_first = runs[r].first;
+        half_point.point.arrival_last = runs[r].last;
+        half_point.point.before_first = runs[r - 1].first;
+        half_point.point.before_last = runs[r - 1].last;
+        half_point.arrival_run = r;
+        Classified half;
+        if (!classify_point(segments, runs, &half_point, pac_arrival_run, config, &half) ||
+            half.type != CADENCE_TYPE_HALF) {
             continue;
         }
-        /* the tonic after the dominant starts the new section: an authentic cadence read into it is replaced */
+
+        /* the authentic reading: the tonic that starts the new section, by the usual rule (C9, R-094) */
+        InternalPoint tonic_point;
+        memset(&tonic_point, 0, sizeof(tonic_point));
+        tonic_point.point.arrival_first = runs[r + 1].first;
+        tonic_point.point.arrival_last = runs[r + 1].last;
+        tonic_point.point.before_first = runs[r].first;
+        tonic_point.point.before_last = runs[r].last;
+        tonic_point.arrival_run = r + 1;
+        Classified authentic;
+        bool authentic_ok = is_tonic_root(&segments[runs[r + 1].first]) &&
+                            classify_point(segments, runs, &tonic_point, pac_arrival_run, config, &authentic) &&
+                            is_authentic_family(authentic.type);
+
+        const HarmonyCadencePoint *use = &half_point.point;
+        Classified chosen = half;
+        if (authentic_ok) {
+            int half_share = harmony_cadence_boundary_half_share(segments, count, runs, run_count, r, config);
+            if (half_share >= 1000 - half_share) {
+                chosen = half;
+                chosen.share = half_share;
+                chosen.alt_reading = HARMONY_CADENCE_READING_CADENCE;
+                chosen.alt_type = authentic.type;
+                chosen.alt_arrival_first = tonic_point.point.arrival_first;
+                chosen.alt_arrival_last = tonic_point.point.arrival_last;
+                chosen.alt_soprano_degree = authentic.soprano_degree;
+                chosen.alt_penalty = authentic.penalty;
+            } else {
+                chosen = authentic;
+                chosen.share = 1000 - half_share;
+                chosen.alt_reading = HARMONY_CADENCE_READING_CADENCE;
+                chosen.alt_type = CADENCE_TYPE_HALF;
+                chosen.alt_arrival_first = half_point.point.arrival_first;
+                chosen.alt_arrival_last = half_point.point.arrival_last;
+                chosen.alt_soprano_degree = half.soprano_degree;
+                chosen.alt_penalty = 0.0;
+                use = &tonic_point.point;
+            }
+            chosen.has_alt = true;
+        }
+
+        /* the one two-reading result takes the place of the authentic cadence read into the tonic and of a half
+           cadence already recorded at the dominant */
         for (size_t i = 0; i < cadences->count; i++) {
             const HarmonyCadenceResult *old = &cadences->items[i];
-            if (is_authentic_family(old->type) && old->arrival_first == start && old->dominant_last == start - 1) {
+            if ((is_authentic_family(old->type) && old->arrival_first == start && old->dominant_last == start - 1) ||
+                (old->type == CADENCE_TYPE_HALF && old->arrival_last == start - 1)) {
                 removed[i] = true;
             }
         }
-        if (!recorded) {
-            if (!build_result(segments, &point.point, &classified, &merged[added])) {
-                status = HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
-                break;
-            }
-            added++;
+        if (!build_result(segments, use, &chosen, &merged[added])) {
+            status = HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
+            break;
         }
+        added++;
     }
     free(pac_arrival_run);
     free(runs);
