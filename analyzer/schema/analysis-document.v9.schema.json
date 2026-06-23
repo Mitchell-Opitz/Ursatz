@@ -272,7 +272,7 @@
           "type": "object",
           "required": ["source", "time_signature", "measure_count", "last_measure", "pickup", "changes"],
           "properties": {
-            "source": { "enum": ["file", "notated", "inferred"] },
+            "source": { "enum": ["file", "notated", "inferred", "override"] },
             "time_signature": { "$ref": "#/$defs/time_signature" },
             "measure_count": { "type": "integer", "minimum": 0 },
             "last_measure": { "type": ["integer", "null"] },
@@ -284,6 +284,14 @@
                 "beats": {
                   "oneOf": [{ "$ref": "#/$defs/rational" }, { "type": "null" }]
                 }
+              }
+            },
+            "reading": {
+              "type": ["object", "null"],
+              "required": ["scale", "meter_overridden"],
+              "properties": {
+                "scale": { "$ref": "#/$defs/rational" },
+                "meter_overridden": { "type": "boolean" }
               }
             },
             "changes": {

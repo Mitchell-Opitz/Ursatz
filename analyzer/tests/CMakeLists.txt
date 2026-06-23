@@ -220,6 +220,22 @@ add_executable(test_midi_parts test_midi_parts.c)
 target_link_libraries(test_midi_parts PRIVATE ursatz_analyzer)
 add_test(NAME test_midi_parts COMMAND test_midi_parts)
 
+add_executable(test_notation_reading test_notation_reading.c)
+target_link_libraries(test_notation_reading PRIVATE ursatz_analyzer)
+target_compile_definitions(test_notation_reading PRIVATE URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+add_test(NAME test_notation_reading COMMAND test_notation_reading)
+
+add_test(NAME test_cli_notation_reading
+         COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/musicxml/bach-114.musicxml
+                 -DPYTHON=${Python3_EXECUTABLE}
+                 -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
+                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v9.schema.json
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_notation_reading
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_notation_reading.cmake)
+
 add_test(NAME test_cli_input_formats
          COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
