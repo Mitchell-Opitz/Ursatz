@@ -65,6 +65,9 @@ Tests:
 - `test_musicxml_input`: format choice, notated key and meter, a pickup, a multi-part score, notated
   spelling (Db vs C#) and every error case.
 - `test_cli_input_formats`: `--input-format`, format detection and the error exits of the CLI.
+- `test_notation_reading`: the reading parsers, scaling that keeps note ids, the meter map a reading sets, a failed
+  reading leaving the notes unchanged, and Bach 114 read in 3/4 at scale 2 (64 measures, its cadence arrivals on beat 1).
+  `test_cli_notation_reading` checks the flags, the document and its schema.
 - `test_counterpoint_check`: the first and second species Fux exercises (`tests/counterpoint`, one valid and one
   with a parallel fifth each), the document and the Markdown of a check, a shape error, and input that is not two
   voices. `test_cli_counterpoint_check` checks the flags and the exit codes.
@@ -87,7 +90,7 @@ Tests:
 ## Usage
 
 ```sh
-ursatz-analyzer [--json] [--markdown] [--input-format midi|musicxml] [--check-counterpoint <1-5> [--cantus upper|lower]] <input-file-path>
+ursatz-analyzer [--json] [--markdown] [--input-format midi|musicxml] [--check-counterpoint <1-5> [--cantus upper|lower]] [--meter <n/d>] [--value-scale <n or n/d>] [--pickup <n/d>] <input-file-path>
 ```
 
 Writes two files next to the input file:
@@ -110,13 +113,17 @@ two streams (MIDI tracks or MusicXML parts), or the two voices the kernel finds 
 For any other input the rest of the analysis is written and the CLI exits 2 with "counterpoint
 check needs two voices".
 
+`--meter <n/d>`, `--value-scale <n or n/d>` and `--pickup <n/d>` read the notes as other notation
+than the file's before they are analyzed (see "Notation readings"). They apply to one input file,
+not to corpus, style or similar-material runs.
+
 ```sh
 ursatz-analyzer --corpus <dir> [--out <dir>] [--resume] [--markdown]
 ```
 
 Corpus mode analyzes every MIDI and MusicXML file under a folder and writes one analysis document each, plus a
 corpus index. See [docs/corpus.md](docs/corpus.md) and the [index schema](schema/corpus-index.v1.schema.json).
-It cannot be combined with an input file, `--json`, `--check-counterpoint`, `--cantus` or `--input-format`.
+It cannot be combined with an input file, `--json`, `--check-counterpoint`, `--cantus`, `--input-format`, `--meter`, `--value-scale` or `--pickup`.
 
 ```sh
 ursatz-analyzer --style-profile <corpus output dir> --name <style name> [--out <file>]
@@ -310,6 +317,29 @@ The analyzer adds no music theory of its own here: it renders what Ursatz's segm
   tone or a classified non-chord tone of an identified chord. `test_chord_coverage` measures it.
 
 See [docs/analysis-document.md](docs/analysis-document.md) for the fields.
+
+## Notation readings
+
+A file can be right about its notes and wrong about how they are written: a minuet exported in 4/4 with
+every value half as long as the printed ones, or a pickup the file does not mark. A notation reading
+says how to read the notes instead, and is applied to the imported notes before analysis:
+
+- `--meter <n/d>` replaces the meter map with one region of that meter (`3/4`, `6/8`; the lower number
+  is 1, 2, 4, 8 or 16, the upper 1 to 64).
+- `--value-scale <n or n/d>` multiplies every start and duration by that factor. The allowed factors are
+  `1/4`, `1/2`, `1`, `2` and `4`; `1` changes nothing. Scale 2 reads each note as twice as long, so a
+  4/4 file read in `3/4` at scale 2 has `24 * 2 / (3/4) = 64` measures.
+- `--pickup <n/d>` makes the first measure a pickup of that many whole notes, counted after scaling and
+  shorter than one measure of the meter. Without `--meter` it uses the file's first full measure's
+  signature and drops the file's later signature changes.
+
+A note keeps its id, pitch, spelling, voice and provenance, so ids in any list stay valid. Key
+signature events, the end time, tempo markings and dynamics move with the notes. Nothing applies a
+reading on its own. The analysis document's `meter` says what was done: `source` is `"override"` when a
+meter was set, and `reading` is `{"scale", "meter_overridden"}` (`null` when no reading was applied).
+A reading that cannot be applied (a pickup as long as the measure, a scale that is not allowed) exits 1
+with a message and writes nothing. The code is `notation_reading.h`; `notation_reading_apply` is the
+library entry point.
 
 ## Roman numerals and the chord vocabulary
 

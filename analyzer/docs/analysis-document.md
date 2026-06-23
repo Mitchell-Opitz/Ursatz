@@ -97,16 +97,17 @@ a successfully imported file, even one with no notes.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
-| `framework` | string | `"midi-time-signature"` when the file declares a time signature; `"ursatz-default-meter"` when it declares none. |
+| `framework` | string | `"midi-time-signature"` when the file declares a time signature; `"musicxml-time-signature"` for a score's; `"ursatz-default-meter"` when it declares none; `"notation-reading-meter"` when a notation reading set the meter. |
 | `span`, `note_ids` | | As for every claim: the extent of all the notes. |
 | `label` | string | The time signature, e.g. `"3/4"`. |
 | `uncertainty` | null | Always `null`: the library supplies no confidence for a declared or defaulted meter. Use `source` to tell them apart. |
-| `source` | `"file"`, `"notated"` or `"inferred"` | `"file"` when a MIDI file declares at least one time signature; `"notated"` when a MusicXML score does. `"inferred"` when it declares none and the library's default 4/4 is used. An inferred meter is an assumption, not a fact about the piece. |
+| `source` | `"file"`, `"notated"`, `"inferred"` or `"override"` | `"file"` when a MIDI file declares at least one time signature; `"notated"` when a MusicXML score does. `"inferred"` when it declares none and the library's default 4/4 is used. An inferred meter is an assumption, not a fact about the piece. `"override"` when a notation reading (`--meter`) set the meter. |
 | `time_signature` | object | `{"numerator", "denominator"}` of the first full measure. |
 | `measure_count` | integer | Measures that start before the last note ends, a pickup included (the library's count). `0` for a file with no notes. |
 | `last_measure` | integer or null | The number of the last measure (see numbering below), or `null` when there are no measures. |
 | `pickup` | object or null | `null` when the piece has no pickup. Otherwise `{"length", "beats"}`: `length` is a rational in whole notes; `beats` is the same length in beats of the signature the pickup is read in, a rational, or `null` when that signature has no beat grid. |
 | `changes` | array | One entry per later time signature: `{"measure", "start", "time_signature", "inferred"}`. `measure` is the number of the first measure in the new signature; `start` is a rational time in whole notes. Empty when the signature never changes. |
+| `reading` | object or null | `null` unless a notation reading (`--meter`, `--value-scale`, `--pickup`; see the README) was applied. Otherwise `{"scale", "meter_overridden"}`: `scale` is the rational every start and duration was multiplied by, `meter_overridden` is true when the reading set the meter. Added to schema version 9 without a version bump. |
 
 A pickup is detected by the library from what the file says (a partial first measure ended by a
 later time signature, or a short leading signature such as 1/8 before 12/8), never from note
