@@ -289,6 +289,31 @@ contrasting idea asks for its weak cadence, whose tone is any), and an exact res
 it restates was. A consequent's restated basic idea is said again as the first half's basic idea, whatever idea lies
 between them.
 
+## Free phrases
+
+A section with a `free_phrase` constraint and no `archetype` or `theme_pairing` is a free phrase (R-170): a phrase of any
+length in beats, the sections of a [piece structure](piece-structure.md) that are not themes of 4 or 8 whole bars.
+`grow-theme` builds it in the same structure stage, with the cadence, the key and the accompaniment the section asks for
+(a PAC, IAC or HC, in one key).
+
+- **Ideas.** One idea for each bar, cut at the barlines inside the section. A part bar at the start of the section (it
+  starts between barlines) joins the idea after it, and one at the end the idea before it; a section shorter than a bar
+  is one idea. A section of more than 32 bars has several bars to an idea.
+- **Motives.** The first idea (`basic idea`) is the section's motive exact, `m0`. The last (`cadential`) is a cadential
+  form of it: `m0` liquidated. The ones between (`fragment 1`, `fragment 2` in turn) are continuation forms: a leading
+  fragment, a transposition in the key's steps, an inversion or an interval changed, each fitting its idea and the range
+  58 to 84. A section of one idea is the basic idea alone; the melody ends in the cadence.
+- **Chords.** One phrase holds the ideas, with the harmony and the bass over all of it: a phrase model if the section has
+  room for the cadence's chords, else the cadential progression. A section of whole bars from a barline has to have room
+  for the last chord to be a whole bar (`harmony_phrase_room_cells`); one that starts or ends between barlines needs
+  `harmony_phrase_min_cells`. A long phrase asks for chords of at most about a bar and a half, so the harmony changes.
+- **Checks.** The cadential idea is shorter than `m0`. The score is the share of the soft rules that hold: no middle idea
+  repeats the one before it, and the cadential idea is shorter than the basic idea.
+
+The motives stage names the ideas as a theme's (`fragment 1`, `fragment 2`, `cadential`), so it scores a free phrase's
+forms by function and connection as it does a theme's, and prefers a saved motive-form of the pool for the function
+([Motive-forms](#motive-forms)).
+
 ## Hearing the result
 
 After a complete run `grow_run` calls `form_hear` on the theme section (see [form-hear.md](form-hear.md)) and keeps

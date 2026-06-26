@@ -50,6 +50,9 @@ other than the table's are not planned yet.
 The return defaults: A' of the rounded binary and the second A of the ternary are `exact`, Var k is `ornament` for odd k
 and `reharmonize` for even k, a layer is `exact`.
 
+Pieces of other shapes, laid out in beats and not from these templates, are [piece structures](piece-structure.md):
+sections of any length with a pickup and a cadence each, the loop of a game track. The templates here are unchanged.
+
 ## Returns
 
 A section with a `return` is given the material of the section it returns by `form-return` (`form_return.h`) instead of
