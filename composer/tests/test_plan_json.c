@@ -206,6 +206,13 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         return strcmp(a->params.letter, b->params.letter) == 0;
     case PLAN_CONSTRAINT_INVENT_MOTIVE:
         return true;
+    case PLAN_CONSTRAINT_PIECE_PART:
+        return a->params.piece_part.part == b->params.piece_part.part &&
+               strcmp(a->params.piece_part.id, b->params.piece_part.id) == 0;
+    case PLAN_CONSTRAINT_FREE_PHRASE:
+        return true;
+    default:
+        break;
     }
     return false;
 }
@@ -367,6 +374,27 @@ static void test_section_constraints(void) {
     assert(plan_node_add_constraint(plan, b, &layers) == PLAN_OK);
     PlanConstraint invent = {PLAN_CONSTRAINT_INVENT_MOTIVE, {0}};
     assert(plan_lane_span_add_constraint(plan, open, &invent) == PLAN_OK);
+    /* A piece structure's sections name their part and id (R-169), and a free phrase is marked (R-170). */
+    static const int PARTS[] = {1, 1, 2};
+    static const char *const IDS[] = {"a", "b", "turn"};
+    for (size_t i = 0; i < 3; i++) {
+        PlanConstraint part = {PLAN_CONSTRAINT_PIECE_PART, {0}};
+        part.params.piece_part.part = PARTS[i];
+        strcpy(part.params.piece_part.id, IDS[i]);
+        assert(plan_node_add_constraint(plan, sections[i], &part) == PLAN_OK);
+    }
+    PlanConstraint free_phrase = {PLAN_CONSTRAINT_FREE_PHRASE, {0}};
+    assert(plan_node_add_constraint(plan, b, &free_phrase) == PLAN_OK);
+    PlanConstraint bad_part = {PLAN_CONSTRAINT_PIECE_PART, {0}};
+    assert(plan_node_add_constraint(plan, a, &bad_part) == PLAN_ERR_BAD_PAYLOAD); /* no id */
+    strcpy(bad_part.params.piece_part.id, "x");
+    bad_part.params.piece_part.part = PLAN_PIECE_PART_COUNT;
+    assert(plan_node_add_constraint(plan, a, &bad_part) == PLAN_ERR_BAD_PAYLOAD);
+    bad_part.params.piece_part.part = -1;
+    assert(plan_node_add_constraint(plan, a, &bad_part) == PLAN_ERR_BAD_PAYLOAD);
+    memset(bad_part.params.piece_part.id, 'x', PLAN_PIECE_ID_MAX); /* not terminated */
+    bad_part.params.piece_part.part = 0;
+    assert(plan_node_add_constraint(plan, a, &bad_part) == PLAN_ERR_BAD_PAYLOAD);
 
     /* A return names a section; a layer sounds a lane there is; a letter is one to three characters. */
     back.params.section_return.section = phrase;
@@ -391,6 +419,8 @@ static void test_section_constraints(void) {
     assert(strstr(text, "\"variation\": \"ornament\"") != NULL);
     assert(strstr(text, "\"letter\": \"A'\"") != NULL);
     assert(strstr(text, "\"invent_motive\"") != NULL);
+    assert(strstr(text, "\"piece_part\"") != NULL && strstr(text, "\"part\": \"turnaround\"") != NULL);
+    assert(strstr(text, "\"id\": \"turn\"") != NULL && strstr(text, "\"free_phrase\"") != NULL);
     PiecePlan *parsed = NULL;
     expect_ok(plan_from_json(text, &parsed, &error), &error);
     assert(plans_equal(plan, parsed));
@@ -399,6 +429,14 @@ static void test_section_constraints(void) {
            read->params.layers.lanes == (PLAN_LAYER_BIT(PLAN_LANE_BASS) | PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE)));
     char *again = plan_to_json(parsed, &error);
     assert(again && strcmp(text, again) == 0);
+    /* A part that is none of the four is refused. */
+    PiecePlan *refused = NULL;
+    char *outro = strdup(text);
+    char *at = strstr(outro, "\"turnaround\"");
+    assert(at);
+    memcpy(at, "\"turnaroun_\"", 12);
+    assert(plan_from_json(outro, &refused, &error) != PLAN_OK && refused == NULL);
+    free(outro);
     free(text);
     free(again);
     plan_destroy(parsed);

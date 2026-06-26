@@ -100,9 +100,11 @@ void compose_outcome_destroy(ComposeOutcome *outcome) {
 
 /* ------------------------------------------------------------- the plan */
 
+/* A section grow-theme builds: a theme (an archetype and a pairing) or a free phrase of a piece structure (R-170). */
 static bool is_theme_section(const PiecePlan *plan, NodeId id) {
     bool archetype = false;
     bool pairing = false;
+    bool free_phrase = false;
     if (plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
         return false;
     }
@@ -110,8 +112,9 @@ static bool is_theme_section(const PiecePlan *plan, NodeId id) {
         PlanConstraintKind kind = plan_node_constraint_at(plan, id, i)->kind;
         archetype = archetype || kind == PLAN_CONSTRAINT_ARCHETYPE;
         pairing = pairing || kind == PLAN_CONSTRAINT_THEME_PAIRING;
+        free_phrase = free_phrase || kind == PLAN_CONSTRAINT_FREE_PHRASE;
     }
-    return archetype && pairing;
+    return (archetype && pairing) || free_phrase;
 }
 
 /* Whether a lane span in the section (a lane span reopened by plan_regenerate) is still open. */
@@ -370,9 +373,24 @@ static bool structure_score(const FillRecord *record, NodeId section, GrowScore 
 }
 
 /* Hears one finished section. */
+/* The part and the id a piece structure gave the section, if it did. */
+static void read_part(const PiecePlan *plan, NodeId section, ComposeHeard *out) {
+    out->has_part = false;
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        if (constraint->kind == PLAN_CONSTRAINT_PIECE_PART) {
+            out->has_part = true;
+            out->part = constraint->params.piece_part.part;
+            memcpy(out->id, constraint->params.piece_part.id, sizeof(out->id));
+            return;
+        }
+    }
+}
+
 static void hear_section(const PiecePlan *plan, NodeId section, const FillRecord *structure, ComposeHeard *out) {
     PlanSpan span = plan_node_span(plan, section);
     out->section = section;
+    read_part(plan, section, out);
     out->heard_form = -1;
     out->requested_form = -1;
     out->requested_beginning = -1;
@@ -436,7 +454,8 @@ static void hear(const PiecePlan *plan, const NodeId *themes, size_t theme_count
         hear_section(plan, themes[t], outcome->records[COMPOSE_STAGE_STRUCTURE], heard);
         outcome->heard_as_requested += heard->heard_as_requested;
         numerator += heard->structure.numerator + (heard->heard_as_requested ? 1 : 0);
-        denominator += heard->structure.denominator + 1;
+        /* A free phrase asks for no form to be heard as: only its structure's score counts. */
+        denominator += heard->structure.denominator + (heard->requested_form >= 0 ? 1 : 0);
     }
     hear_returns(plan, themes, theme_count, outcome);
     numerator += outcome->returns_heard;
@@ -701,6 +720,7 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     outcome->section_count = theme_count;
     for (size_t t = 0; t < theme_count; t++) {
         outcome->sections[t].section = themes[t];
+        read_part(plan, themes[t], &outcome->sections[t]);
         outcome->sections[t].heard_result = FORM_HEAR_ERR_NOT_WRITTEN;
         outcome->sections[t].heard_form = -1;
         outcome->sections[t].requested_form = -1;

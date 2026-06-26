@@ -134,6 +134,26 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
 PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiveRef *ref,
                                   const PlanConstraint *cadence);
 
+/* The key lane over the section: see grow_theme.c. False when the lane does not tile the section. */
+bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request);
+/* The first bar of the material section a run of `wanted` motive bars can go in (see grow_theme.c). */
+size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, PlanTime bar, size_t wanted);
+/* The motive ref the development `dev` of the motive node `source` is. */
+void grow_dev_ref(const MotiveDevSpec *dev, NodeId source, PlanMotiveRef *out);
+
+/*
+ * Free phrases (R-170): a section with a FREE_PHRASE constraint is a phrase of any length in beats, laid out as one
+ * idea per bar (grow_free.c). grow-theme builds it when no ARCHETYPE and THEME_PAIRING are on the section.
+ */
+#define GROW_FREE_MAGIC 0x47465231UL
+typedef struct GrowFreeSpec GrowFreeSpec;
+bool grow_free_applies(const PiecePlan *plan, FillTarget target);
+bool grow_free_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, const GrowContext *context,
+                        FillCandidateList *out);
+PlanResult grow_free_apply(PiecePlan *plan, FillTarget target, const GrowFreeSpec *spec);
+/* The checker's verdict on a free phrase candidate: NULL when it holds, else the hard reason; soft rules in *soft. */
+const char *grow_free_judge(const GrowFreeSpec *spec, unsigned *held, unsigned *total);
+
 /* The ARCHETYPE (PlanArchetype) a pairing is, or -1 for a pairing standard-form does not know. */
 int grow_pairing_archetype(const PlanThemePairing *pairing);
 /*

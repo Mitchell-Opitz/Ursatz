@@ -27,13 +27,15 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup"};
+                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
                                               "interval_changed", "liquidated"};
 static const char *const FRAGMENT_POSITION_NAMES[] = {"any", "leading", "trailing", "middle"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
+/* The parts of a piece structure, in PiecePart order (piece_structure.h). */
+static const char *const PIECE_PART_NAMES[] = {"intro", "body", "turnaround", "ending"};
 static const char *const SHAPE_KIND_NAMES[] = {"prolongation", "phrase_model", "cadential"};
 static const char *const ANCHOR_NAMES[] = {"any", "tonic", "dominant", "pivot"};
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound_basic_idea"};
@@ -290,6 +292,12 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         ok = ok && json_add(object, "length", cJSON_CreateString(length));
         break;
     }
+    case PLAN_CONSTRAINT_PIECE_PART:
+        ok = ok && json_add(object, "part", cJSON_CreateString(PIECE_PART_NAMES[constraint->params.piece_part.part])) &&
+             json_add(object, "id", cJSON_CreateString(constraint->params.piece_part.id));
+        break;
+    case PLAN_CONSTRAINT_FREE_PHRASE:
+        break;
     }
     if (!ok) {
         cJSON_Delete(object);
@@ -1185,6 +1193,23 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         }
         return true;
     }
+    case PLAN_CONSTRAINT_PIECE_PART: {
+        const cJSON *id = NULL;
+        char at[PLAN_JSON_PATH_MAX];
+        if (!read_enum_member(reader, item, path, "part", PIECE_PART_NAMES, COUNT_OF(PIECE_PART_NAMES), &value) ||
+            !(id = json_member(reader, item, path, "id", true))) {
+            return false;
+        }
+        json_child_path(at, path, "id");
+        if (!cJSON_IsString(id) || id->valuestring[0] == '\0' || strlen(id->valuestring) >= PLAN_PIECE_ID_MAX) {
+            return json_bad_format(reader, at, "expected one to fifteen characters");
+        }
+        out->params.piece_part.part = value;
+        snprintf(out->params.piece_part.id, PLAN_PIECE_ID_MAX, "%s", id->valuestring);
+        return true;
+    }
+    case PLAN_CONSTRAINT_FREE_PHRASE:
+        return true;
     }
     return false;
 }

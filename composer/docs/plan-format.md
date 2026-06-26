@@ -144,6 +144,8 @@ nothing checks them.
 | `source` | Where seeded material came from in a corpus ([style.md](style.md)), a note for the reader: on the motive node `m0` for a motive taken with `--like`, on the section for a progression taken with `--like-progression`. `piece`: the piece's path in the corpus; `start_measure`, `start_beat`, `end_measure`, `end_beat`: the passage as the Analyzer reports it (the beat plus the fraction of it); `score`: the similarity as a fraction from `"0/1"` to `"1/1"` as text. A Given node takes no more constraints, so it is added when the node is made. Nothing reads it at `fill`. |
 | `pickup` | On a melody span (or its owner): the first `length` of the span is an anacrusis before the first downbeat note, and the phrase the melody operator reads starts after it. `length`: a fraction of a whole note as text (`"1/4"`), a multiple of 1/32 and shorter than a bar. See [melody-fill.md](melody-fill.md). |
 | `invent_motive` | No fields. On a Constrained melody span of a motive node: `motive-invent` writes the motive. See [piece.md](piece.md). |
+| `piece_part` | On a section node of a piece structure: `part`: `intro`, `body`, `turnaround` or `ending`; `id`: the section's id in the structure, 1 to 15 characters. See [piece-structure.md](piece-structure.md). |
+| `free_phrase` | No fields. On a section node: a phrase of any length in beats, not a theme; `grow-theme` builds it as ideas of a bar. See [grow.md](grow.md#free-phrases). |
 
 ### Motive development parameters
 

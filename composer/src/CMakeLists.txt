@@ -71,6 +71,7 @@ add_library(ursatz_composer STATIC
     grow/grow_theme.c
     grow/grow_beginning.c
     grow/grow_ending.c
+    grow/grow_free.c
     grow/grow_check.c
     grow/grow_form.c
     grow/grow_run.c
@@ -79,6 +80,7 @@ add_library(ursatz_composer STATIC
     piece/given.c
     piece/form_vary.c
     piece/piece_request.c
+    piece/piece_structure.c
     piece/piece_keys.c
     piece/piece_cadences.c
     piece/compose_run.c

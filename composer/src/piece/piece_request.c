@@ -8,6 +8,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "grow/grow_internal.h"
+#include "piece/piece_internal.h"
 
 /* Each section's own motive and the four motives grow-theme makes for its ideas. */
 #define MATERIAL_BARS_PER_SECTION 5
@@ -176,8 +177,8 @@ static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) 
 }
 
 /* The material section, its phrase and its idea, Realized, with m0 in it; the source node in *out. */
-static PieceResult add_material(PiecePlan *plan, const PieceRequest *request, NodeId form, PlanSpan material,
-                                PlanTime bar, NodeId *out) {
+PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const PlanSource *motive_source, NodeId form,
+                               PlanSpan material, PlanTime bar, NodeId *out) {
     NodeId section;
     NodeId phrase;
     NodeId idea;
@@ -194,9 +195,9 @@ static PieceResult add_material(PiecePlan *plan, const PieceRequest *request, No
     if (result == PIECE_OK) {
         result = from_plan(plan_add_node(plan, phrase, PLAN_NODE_IDEA, material, GROW_MATERIAL_NAME, &idea));
     }
-    if (result == PIECE_OK && request->motive) {
-        result = from_plan(motive_attach_sourced(plan, idea, material.start, request->motive, GROW_SOURCE_NAME,
-                                                 request->source, out, NULL));
+    if (result == PIECE_OK && motive) {
+        result = from_plan(motive_attach_sourced(plan, idea, material.start, motive, GROW_SOURCE_NAME, motive_source,
+                                                 out, NULL));
     } else if (result == PIECE_OK) {
         PlanSpan span = {material.start, bar};
         result = add_open_motive(plan, idea, span);
@@ -286,7 +287,7 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
         }
     }
     if (result == PIECE_OK) {
-        result = add_material(plan, request, form_id, material, bar, &source);
+        result = piece_add_material(plan, request->motive, request->source, form_id, material, bar, &source);
     }
     for (size_t i = 0; result == PIECE_OK && i < layout.section_count; i++) {
         result = add_section_motive(plan, &layout.sections[i], sections[i], source);

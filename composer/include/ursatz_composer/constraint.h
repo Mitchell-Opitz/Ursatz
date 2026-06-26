@@ -35,7 +35,9 @@ typedef enum {
     PLAN_CONSTRAINT_INVENT_MOTIVE,  /* no parameters: a motive's melody span to be invented (motive-invent) */
     PLAN_CONSTRAINT_STYLE,          /* on the form node: the style model file the fill prefers, and how strongly (R-080) */
     PLAN_CONSTRAINT_SOURCE,         /* on a motive node, or a section holding a given progression: the corpus passage it was taken from */
-    PLAN_CONSTRAINT_PICKUP          /* on a melody span: its first `length` is an anacrusis before the first downbeat note (R-168) */
+    PLAN_CONSTRAINT_PICKUP,         /* on a melody span: its first `length` is an anacrusis before the first downbeat note (R-168) */
+    PLAN_CONSTRAINT_PIECE_PART,     /* on a section node: the part of a piece structure it is and its id (R-169) */
+    PLAN_CONSTRAINT_FREE_PHRASE     /* no parameters: on a section node, a phrase of any length in beats (R-170), not a theme */
 } PlanConstraintKind;
 
 typedef enum {
@@ -293,6 +295,18 @@ typedef struct {
     unsigned long score_denominator;
 } PlanSource;
 
+/*
+ * The part of a piece structure (piece_structure.h) a section is, and the id the structure gave it. part is a PiecePart:
+ * 0 intro, 1 body, 2 turnaround, 3 ending.
+ */
+#define PLAN_PIECE_ID_MAX 16
+#define PLAN_PIECE_PART_COUNT 4
+
+typedef struct {
+    int part;
+    char id[PLAN_PIECE_ID_MAX];
+} PlanPiecePart;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -314,6 +328,7 @@ typedef struct {
         PlanStyle style;
         PlanSource source;
         PlanTime pickup; /* the anacrusis: a multiple of 1/32 of a whole note, shorter than a bar */
+        PlanPiecePart piece_part;
     } params;
 } PlanConstraint;
 
