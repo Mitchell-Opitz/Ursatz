@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "analysis_cadence_readings.h"
 #include "analysis_claim.h"
 #include "analysis_runs.h"
 #include "core/value.h"
@@ -24,6 +25,16 @@ HarmonyCadenceConfig harmony_cadence_config_default(void) {
     config.beat_length = 0.25;
     config.soprano_absent_penalty = 0.3;
     config.allow_weak_arrival = true;
+    config.reading_strong_arrival = 150;
+    config.reading_cadential_approach = 150;
+    config.reading_followup_cadence = 150;
+    config.reading_tonic_continues = 100;
+    config.reading_long_dominant = 150;
+    config.reading_break_after_dominant = 150;
+    config.reading_pac_shape = 150;
+    config.reading_short_dominant = 100;
+    config.reading_followup_beats = 8.0;
+    config.reading_long_dominant_beats = 4.0;
     return config;
 }
 
@@ -31,7 +42,13 @@ static bool config_valid(const HarmonyCadenceConfig *config) {
     return beat_strength_valid(config->min_arrival_strength) && isfinite(config->arrival_min_beats) &&
            config->arrival_min_beats >= 0.0 && isfinite(config->beat_length) && config->beat_length > 0.0 &&
            isfinite(config->soprano_absent_penalty) && config->soprano_absent_penalty >= 0.0 &&
-           config->soprano_absent_penalty <= 1.0;
+           config->soprano_absent_penalty <= 1.0 && config->reading_strong_arrival >= 0 &&
+           config->reading_cadential_approach >= 0 && config->reading_followup_cadence >= 0 &&
+           config->reading_tonic_continues >= 0 && config->reading_long_dominant >= 0 &&
+           config->reading_break_after_dominant >= 0 && config->reading_pac_shape >= 0 &&
+           config->reading_short_dominant >= 0 && isfinite(config->reading_followup_beats) &&
+           config->reading_followup_beats >= 0.0 && isfinite(config->reading_long_dominant_beats) &&
+           config->reading_long_dominant_beats >= 0.0;
 }
 
 static double whole_notes(const MusicalTime *time) {
@@ -57,6 +74,18 @@ static bool is_tonic_root(const HarmonySegment *segment) {
 
 static bool is_cadential_six_four(const HarmonySegment *segment) {
     return diatonic(segment) && segment->chord.cadential;
+}
+
+bool harmony_cadence_is_dominant_root(const HarmonySegment *segment) {
+    return is_dominant_root(segment);
+}
+
+bool harmony_cadence_is_tonic_root(const HarmonySegment *segment) {
+    return is_tonic_root(segment);
+}
+
+bool harmony_cadence_is_cadential_six_four(const HarmonySegment *segment) {
+    return is_cadential_six_four(segment);
 }
 
 /* --- cadence points --- */
@@ -112,6 +141,11 @@ static bool arrival_ok(const HarmonySegment *segments, size_t count, size_t befo
            is_tonic_root(&segments[first]) &&
            dominant_on_stronger_beat(&segments[before_first], &segments[first], config) &&
            (last + 1 == count || arrival_closes(segments, count, first, last, config));
+}
+
+bool harmony_cadence_is_arrival(const HarmonySegment *segments, size_t count, size_t before_first, size_t first,
+                                size_t last, const HarmonyCadenceConfig *config) {
+    return arrival_ok(segments, count, before_first, first, last, config);
 }
 
 /* A candidate with the index of its arrival run, so the classifier can look at the runs around it. */
@@ -207,7 +241,20 @@ typedef struct {
     int soprano_degree;
     bool post_cadential;
     double penalty;
+    int share;                    /* thousandths of the primary; 1000 with no alternative */
+    bool has_alt;
+    HarmonyCadenceReading alt_reading;
+    CadenceType alt_type;
+    size_t alt_arrival_first;
+    size_t alt_arrival_last;
+    int alt_soprano_degree;
+    double alt_penalty;
 } Classified;
+
+static bool is_tonic_six(const HarmonySegment *segment) {
+    return diatonic(segment) && segment->chord.degree == 1 && segment->chord.inversion == 1 &&
+           !segment->chord.seventh && !segment->chord.cadential;
+}
 
 /* The dominant unit before the arrival: the V run, with a cadential 6/4 run directly before it when there is one. */
 static void dominant_unit(const HarmonySegment *segments, const HarmonyRun *runs, size_t arrival_run,
@@ -244,6 +291,7 @@ static bool classify_point(const HarmonySegment *segments, const HarmonyRun *run
     const HarmonySegment *before = &segments[point->before_first];
     size_t r = internal->arrival_run;
     memset(out, 0, sizeof(*out));
+    out->share = 1000;
     out->soprano_degree = arrival->input->soprano_degree;
     bool soprano = out->soprano_degree >= 1 && out->soprano_degree <= 7;
 
@@ -276,7 +324,7 @@ static bool classify_point(const HarmonySegment *segments, const HarmonyRun *run
         /* SUBVERTED: a cadential dominant (after a predominant, or with a cadential 6/4) that resolves to I6 or
            another chord that is neither a tonic, the V again, a deceptive substitute nor a 6/4. */
         bool cadential = out->has_six_four || (prior != NULL && has_function(prior, HARMONIC_FUNCTION_PREDOMINANT));
-        if (cadential && diatonic(arrival) && !arrival->chord.cadential && arrival->chord.degree != 5 &&
+        if ((cadential || is_tonic_six(arrival)) && diatonic(arrival) && !arrival->chord.cadential && arrival->chord.degree != 5 &&
             !is_tonic_root(arrival)) {
             HarmonyCadence rule = {before->chord, arrival->chord, soprano_or_one(out->soprano_degree), true};
             CadenceType rule_type;
@@ -286,6 +334,7 @@ static bool classify_point(const HarmonySegment *segments, const HarmonyRun *run
             }
         }
         memset(out, 0, sizeof(*out));
+        out->share = 1000;
         out->soprano_degree = arrival->input->soprano_degree;
     }
 
@@ -401,10 +450,14 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
     claim.post_cadential = c->post_cadential;
     claim.has_six_four = c->has_six_four;
     claim.arrival_beat_strength = (int)arrival->beat_strength;
+    claim.reading = (int)HARMONY_CADENCE_READING_CADENCE;
+    claim.rank = 1;
+    claim.share = c->share;
     snprintf(claim.arrival_segment, sizeof(claim.arrival_segment), "%s", arrival->segment_id);
     snprintf(claim.dominant_segment, sizeof(claim.dominant_segment), "%s",
              segments[c->dominant_first].input->segment_id);
     snprintf(claim.key_ref, sizeof(claim.key_ref), "%s", arrival->key_ref);
+    result->share = c->share;
     char interpretation_id[256];
     snprintf(interpretation_id, sizeof(interpretation_id), "standard-harmony-cadence-interpretation-%s",
              arrival->segment_id);
@@ -418,10 +471,51 @@ static bool build_result(const HarmonySegment *segments, const HarmonyCadencePoi
         result->span = NULL;
         return false;
     }
+
+    /* the competing reading: the same Cadence, the same uncertainty formula, its own arrival and share */
+    if (c->has_alt) {
+        const HarmonySegmentInput *alt_arrival = segments[c->alt_arrival_first].input;
+        HarmonyCadenceAlternative *alt = &result->alternative;
+        alt->present = true;
+        alt->reading = c->alt_reading;
+        alt->type = c->alt_type;
+        alt->arrival_first = c->alt_arrival_first;
+        alt->arrival_last = c->alt_arrival_last;
+        alt->soprano_degree = c->alt_soprano_degree;
+        alt->share = 1000 - c->share;
+        double alt_u = max_uncertainty(segments, c->dominant_first, c->dominant_last, 0.0);
+        alt_u = max_uncertainty(segments, c->alt_arrival_first, c->alt_arrival_last, alt_u);
+        alt_u = 1.0 - (1.0 - alt_u) * (1.0 - c->alt_penalty);
+
+        HarmonyCadenceClaim alt_claim = claim;
+        alt_claim.type = (int)c->alt_type;
+        alt_claim.soprano_degree = c->alt_soprano_degree;
+        alt_claim.arrival_beat_strength = (int)alt_arrival->beat_strength;
+        alt_claim.reading = (int)c->alt_reading;
+        alt_claim.rank = 2;
+        alt_claim.share = alt->share;
+        snprintf(alt_claim.arrival_segment, sizeof(alt_claim.arrival_segment), "%s", alt_arrival->segment_id);
+        char alt_id[300];
+        snprintf(alt_id, sizeof(alt_id), "%s-alt", interpretation_id);
+        alt->interpretation = harmony_analysis_make_interpretation(alt_id, cadence_id_value, HARMONY_CADENCE_CLAIM_TYPE,
+                                                                   &alt_claim, sizeof(alt_claim), alt_u,
+                                                                   "cadence-adapter");
+        if (alt->interpretation == NULL) {
+            interpretation_destroy(result->interpretation);
+            result->interpretation = NULL;
+            cadence_destroy(result->cadence);
+            result->cadence = NULL;
+            time_span_destroy(result->span);
+            result->span = NULL;
+            memset(alt, 0, sizeof(*alt));
+            return false;
+        }
+    }
     return true;
 }
 
 static void destroy_result(HarmonyCadenceResult *result) {
+    interpretation_destroy(result->alternative.interpretation);
     interpretation_destroy(result->interpretation);
     cadence_destroy(result->cadence);
     time_span_destroy(result->span);
@@ -483,6 +577,18 @@ HarmonyCadenceAnalysisStatus harmony_analysis_find_cadences(const HarmonySegment
         is_cadence[i] = classify_point(segments, runs, &points[i], pac_arrival_run, config, &classified[i]);
         if (is_cadence[i] && classified[i].type == CADENCE_TYPE_PERFECT_AUTHENTIC) {
             pac_arrival_run[points[i].arrival_run] = true;
+        }
+        if (is_cadence[i] && classified[i].type == CADENCE_TYPE_SUBVERTED &&
+            is_tonic_six(&segments[points[i].point.arrival_first])) {
+            /* C7: V to I6 is an evaded cadence or a prolongation of the dominant (R-090, R-093) */
+            Classified *c = &classified[i];
+            c->share = harmony_cadence_evaded_share(segments, count, runs, run_count, points[i].arrival_run - 1, config);
+            c->has_alt = true;
+            c->alt_reading = HARMONY_CADENCE_READING_PROLONGATION;
+            c->alt_type = CADENCE_TYPE_UNKNOWN;
+            c->alt_arrival_first = points[i].point.arrival_first;
+            c->alt_arrival_last = points[i].point.arrival_last;
+            c->alt_soprano_degree = c->soprano_degree;
         }
     }
     /* A half cadence arrival is the END of a phrase on V. A V that the very next cadence resolves (an authentic,
@@ -599,41 +705,78 @@ HarmonyCadenceAnalysisStatus harmony_analysis_add_boundary_cadences(const Harmon
         while (r < run_count && runs[r].last != start - 1) {
             r++;
         }
-        if (r == 0 || r >= run_count || !is_dominant_root(&segments[runs[r].first]) ||
+        if (r == 0 || r + 1 >= run_count || !is_dominant_root(&segments[runs[r].first]) ||
             !diatonic(&segments[runs[r - 1].first])) {
             continue;
         }
-        bool recorded = false;
-        for (size_t i = 0; i < cadences->count; i++) {
-            const HarmonyCadenceResult *old = &cadences->items[i];
-            recorded = recorded || (old->type == CADENCE_TYPE_HALF && old->arrival_last == start - 1);
-        }
-        InternalPoint point;
-        memset(&point, 0, sizeof(point));
-        point.point.arrival_first = runs[r].first;
-        point.point.arrival_last = runs[r].last;
-        point.point.before_first = runs[r - 1].first;
-        point.point.before_last = runs[r - 1].last;
-        point.arrival_run = r;
-        Classified classified;
-        if (!recorded && (!classify_point(segments, runs, &point, pac_arrival_run, config, &classified) ||
-                          classified.type != CADENCE_TYPE_HALF)) {
+        /* the V must be a half cadence by the usual rule (a tonic or predominant before it) */
+        InternalPoint half_point;
+        memset(&half_point, 0, sizeof(half_point));
+        half_point.point.arrival_first = runs[r].first;
+        half_point.point.arrival_last = runs[r].last;
+        half_point.point.before_first = runs[r - 1].first;
+        half_point.point.before_last = runs[r - 1].last;
+        half_point.arrival_run = r;
+        Classified half;
+        if (!classify_point(segments, runs, &half_point, pac_arrival_run, config, &half) ||
+            half.type != CADENCE_TYPE_HALF) {
             continue;
         }
-        /* the tonic after the dominant starts the new section: an authentic cadence read into it is replaced */
+
+        /* the authentic reading: the tonic that starts the new section, by the usual rule (C9, R-094) */
+        InternalPoint tonic_point;
+        memset(&tonic_point, 0, sizeof(tonic_point));
+        tonic_point.point.arrival_first = runs[r + 1].first;
+        tonic_point.point.arrival_last = runs[r + 1].last;
+        tonic_point.point.before_first = runs[r].first;
+        tonic_point.point.before_last = runs[r].last;
+        tonic_point.arrival_run = r + 1;
+        Classified authentic;
+        bool authentic_ok = is_tonic_root(&segments[runs[r + 1].first]) &&
+                            classify_point(segments, runs, &tonic_point, pac_arrival_run, config, &authentic) &&
+                            is_authentic_family(authentic.type);
+
+        const HarmonyCadencePoint *use = &half_point.point;
+        Classified chosen = half;
+        if (authentic_ok) {
+            int half_share = harmony_cadence_boundary_half_share(segments, count, runs, run_count, r, config);
+            if (half_share >= 1000 - half_share) {
+                chosen = half;
+                chosen.share = half_share;
+                chosen.alt_reading = HARMONY_CADENCE_READING_CADENCE;
+                chosen.alt_type = authentic.type;
+                chosen.alt_arrival_first = tonic_point.point.arrival_first;
+                chosen.alt_arrival_last = tonic_point.point.arrival_last;
+                chosen.alt_soprano_degree = authentic.soprano_degree;
+                chosen.alt_penalty = authentic.penalty;
+            } else {
+                chosen = authentic;
+                chosen.share = 1000 - half_share;
+                chosen.alt_reading = HARMONY_CADENCE_READING_CADENCE;
+                chosen.alt_type = CADENCE_TYPE_HALF;
+                chosen.alt_arrival_first = half_point.point.arrival_first;
+                chosen.alt_arrival_last = half_point.point.arrival_last;
+                chosen.alt_soprano_degree = half.soprano_degree;
+                chosen.alt_penalty = 0.0;
+                use = &tonic_point.point;
+            }
+            chosen.has_alt = true;
+        }
+
+        /* the one two-reading result takes the place of the authentic cadence read into the tonic and of a half
+           cadence already recorded at the dominant */
         for (size_t i = 0; i < cadences->count; i++) {
             const HarmonyCadenceResult *old = &cadences->items[i];
-            if (is_authentic_family(old->type) && old->arrival_first == start && old->dominant_last == start - 1) {
+            if ((is_authentic_family(old->type) && old->arrival_first == start && old->dominant_last == start - 1) ||
+                (old->type == CADENCE_TYPE_HALF && old->arrival_last == start - 1)) {
                 removed[i] = true;
             }
         }
-        if (!recorded) {
-            if (!build_result(segments, &point.point, &classified, &merged[added])) {
-                status = HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
-                break;
-            }
-            added++;
+        if (!build_result(segments, use, &chosen, &merged[added])) {
+            status = HARMONY_CADENCE_ANALYSIS_ERR_ALLOC;
+            break;
         }
+        added++;
     }
     free(pac_arrival_run);
     free(runs);

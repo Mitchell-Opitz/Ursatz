@@ -61,6 +61,7 @@ add_library(standard_harmony
     analysis/analysis_resolution.c
     analysis/analysis_runs.c
     analysis/analysis_cadence.c
+    analysis/analysis_cadence_readings.c
 )
 target_include_directories(standard_harmony PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}

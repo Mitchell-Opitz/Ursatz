@@ -29,7 +29,7 @@ catalog and the shared conventions.
 | `baroque-ground-bass` | Ground bass, chaconne, passacaglia | standard-counterpoint, ursatz |
 | `galant-schemas` | Gjerdingen's Galant schemas | standard-counterpoint, ursatz |
 | `scale-harmonization` | Rule of the octave, sequences over a bass scale | galant-schemas, standard-counterpoint, ursatz |
-| `standard-harmony` | Harmonic function, phrase model, cadences, six-four chords, prolongation, tonicization, modulation | ursatz |
+| `standard-harmony` | Harmonic function, phrase model, cadences (two competing readings where the music has two: V to I6 as evaded cadence or prolongation, a dominant before a section start as half or authentic cadence, each with a share in thousandths), six-four chords, prolongation, tonicization, modulation | ursatz |
 | `standard-form` | Form levels, motives, sentence, period, hybrid forms, phrase expansion and contraction | standard-harmony, ursatz |
 
 Most of the frameworks after `common-practice-minimal` follow Open Music Theory, a free

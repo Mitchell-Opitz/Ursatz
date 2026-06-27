@@ -76,7 +76,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-060 | clementi36 | cadences | extra m37 b3 | none | subverted | C5,C7 |
 | DEV-061 | clementi36 | phrase-form | end m8 | pac at m8 | none | C1,C5 |
 | DEV-063 | clementi36 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | hybrid 5-10 parts 5-8 9-10 | C1,C5,C8 |
-| DEV-064 | clementi36 | phrase-form | theme period 24-31 | period 24-31 parts 24-27 28-31 | hybrid 20-25 parts 20-23 24-25, hybrid 28-33 parts 28-31 32-33 | C5,C8 |
+| DEV-064 | clementi36 | phrase-form | theme period 24-31 | period 24-31 parts 24-27 28-31 | period 15-24 parts 15-19 20-24, hybrid 28-33 parts 28-31 32-33 | C5,C8 |
 | DEV-066 | field1 | cadences | m8 b1 | pac | none | C5,C6 |
 | DEV-067 | field1 | cadences | m12 b1 | iac | none | C5,C6 |
 | DEV-068 | field1 | cadences | m16 b1 | pac | none | C5,C6 |
@@ -91,8 +91,8 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-078 | mozart545 | returns | second m42 | m42 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C5,C8 |
 | DEV-079 | mozart545 | returns | second m87 | m87 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C5,C8 |
 | DEV-080 | mozart545 | returns | second m132 | m132 resembles m14 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C5,C8 |
-| DEV-081 | clementi36 | returns | main m24 | m24 resembles m1 | no theme there (themes: m5-10, m20-25, m28-33) | C5,C8 |
-| DEV-082 | clementi36 | returns | second m32 | m32 resembles m9 | no theme there (themes: m5-10, m20-25, m28-33) | C5,C8 |
+| DEV-081 | clementi36 | returns | main m24 | m24 resembles m1 | no theme there (themes: m5-10, m15-24, m28-33) | C5,C8 |
+| DEV-082 | clementi36 | returns | second m32 | m32 resembles m9 | no theme there (themes: m5-10, m15-24, m28-33) | C5,C8 |
 | DEV-083 | clementi36 | cadences | extra m19 b1 | none | hc | C5 |
 | DEV-087 | mozart545 | returns | main m29 | m29 resembles m1 | no theme there (themes: m22-27, m50-55, m95-100, m140-145) | C5,C8 |
 | DEV-088 | bach114 | phrase-form | end m16 | pac at m16 | none | C5 |
@@ -101,6 +101,8 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-093 | mozart545 | keys | change 13 | modulation at 13 | tonicization at 12 | C5 |
 | DEV-094 | mozart545 | keys | change 29 | modulation at 29 | tonicization at 29 | C5 |
 | DEV-095 | mozart545 | keys | change 41 | modulation at 41 | tonicization at 40 | C5 |
-| DEV-096 | clementi36 | cadences | extra m23 b4.5 | none | hc | C1,C2 |
 | DEV-097 | clementi36 | cadences | m31 b1 | pac | none | C5 |
 | DEV-098 | clementi36 | phrase-form | end m31 | pac at m31 | none | C5 |
+| DEV-099 | clementi36 | cadences | extra m12 b1 | none | subverted | C7 |
+| DEV-100 | clementi36 | cadences | extra m24 b1 | none | pac | C9 |
+| DEV-101 | clementi36 | cadences | extra m35 b1 | none | subverted | C7 |
