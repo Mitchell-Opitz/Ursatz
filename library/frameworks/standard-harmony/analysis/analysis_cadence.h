@@ -66,8 +66,10 @@
  * A half cadence is the END of a phrase on V: a V that the next cadence resolves (an authentic, deceptive or subverted
  * cadence whose dominant is this V) is that cadence's dominant, and no half cadence is reported for it.
  *
- * AT A FORMAL BOUNDARY (harmony_analysis_add_boundary_cadences, below): a V that ends the run before a section start
- * is a half cadence of the earlier section, whatever follows it. The tonic after it starts the new section (R-038).
+ * AT A FORMAL BOUNDARY (harmony_analysis_add_boundary_cadences, below): a root-position V that ends the run before a
+ * section start has two readings (C9, R-091, R-094): a half cadence ending the earlier section, and the authentic
+ * cadence into the tonic that starts the new one. R-038's single reading (always the half cadence) is replaced by one
+ * result with both: the higher share is the primary, a tie keeps the half cadence, the other is the `alternative`.
  *
  * A candidate that matches none of these is not a cadence. The soprano degree is the one of the arrival's first segment (the input's `soprano_degree`, from the outer voices);
  * 0 means absent. viio to I is not an authentic cadence in standard-harmony's rule and is not found here.
@@ -76,6 +78,12 @@
  * ids from the dominant's first segment to the arrival's last) and an Interpretation targeting the Cadence's id:
  * FrameworkReference standard-harmony, claim = a HarmonyCadenceClaim, the uncertainty below. The span from the
  * dominant's start to the arrival's end is carried as a TimeSpan on the result.
+ *
+ * A cadence with two readings (C7, C9) has a second Interpretation for the alternative: the same Cadence target, the
+ * id of the first plus "-alt", the same framework reference, uncertainty formula, author and method. Each claim
+ * says which reading it is (`reading`), its `rank` (1 the primary, 2 the alternative) and its `share`, in thousandths,
+ * the two shares summing to 1000. The evidence for the shares is analysis_cadence_readings.h; its weights are the
+ * `reading_*` fields of HarmonyCadenceConfig. Consumers that read one reading per cadence read the primary only.
  *
  * UNCERTAINTY = 1 - (1 - u)(1 - penalty), u the largest input uncertainty of the chords involved (the dominant, a
  * cadential 6/4 in it, and the arrival), penalty config.soprano_absent_penalty when the type is
