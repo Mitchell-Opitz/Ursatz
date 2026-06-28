@@ -37,6 +37,8 @@ typedef enum {
     GIVEN_ERR_KEY,         /* the material is not inside one key span */
     GIVEN_ERR_METER,       /* the section has no meter the harmony operators support */
     GIVEN_ERR_OVERLAP,     /* a span of the same lane is already there */
+    GIVEN_ERR_NOT_REALIZED, /* the section to give is not realized: harmony, bass and melody are not all written */
+    GIVEN_ERR_LENGTH,      /* the section to give is not as long as the section, pickup included */
     GIVEN_ERR_PLAN         /* the plan refused the span (allocation, or an unforeseen refusal) */
 } GivenResult;
 
@@ -55,6 +57,20 @@ GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, c
 
 /* A bass span, as long as the notes need in whole bars, Given. */
 GivenResult plan_give_bass(PiecePlan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count);
+
+/*
+ * A realized section of another plan (a theme the theme command composed) given to a section of this one: its harmony,
+ * bass, melody and inner voice spans become Given spans owned by the section, moved to its start and transposed by the
+ * key difference between the two (the key lanes must have the same shape and mode), and its phrase and idea nodes are
+ * copied under the section so that form_hear hears it as the theme it was. The section ends Realized, so no stage
+ * targets it. References to motive nodes of the source plan are dropped: the plan holds none of them.
+ *
+ * The section must be a theme section of the plan with no nodes under it and nothing of the copy's lanes in it. The
+ * source must be realized (GIVEN_ERR_NOT_REALIZED), as long as the section (GIVEN_ERR_LENGTH, which also refuses a
+ * span that would start before the section's pickup) and in the same meter (GIVEN_ERR_METER). A refused call leaves
+ * the plan as it was.
+ */
+GivenResult plan_give_section(PiecePlan *plan, NodeId section, const PiecePlan *source, NodeId source_section);
 
 /*
  * The parts of span that no Given span of the lane and voice covers, in time order: *out receives up to capacity
