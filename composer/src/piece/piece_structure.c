@@ -3,10 +3,12 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <ursatz_composer/given.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "grow/grow_internal.h"
+#include "piece/form_return_internal.h"
 #include "piece/piece_internal.h"
 
 static const char *const PART_NAMES[PIECE_PART_COUNT] = {"intro", "body", "turnaround", "ending"};
@@ -214,26 +216,93 @@ static bool is_theme_section(const PieceStructure *structure, const PieceSection
            grow_theme_buildable(&structure->meter, bars, pairing, section->cadence, ANTECEDENT_CADENCE);
 }
 
-/* The basic motive (R-170): the structure's, else the first motif section's, else NULL to have one invented. */
-static const Motive *basic_motive(const PieceStructure *structure) {
+/* The key over the start of a span, when one key span holds it. */
+static bool key_over(const PiecePlan *plan, PlanSpan span, PlanKey *out) {
+    LaneSpanId ids[2];
+    if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 2) != 1 ||
+        !plan_span_contains(plan_lane_span_span(plan, ids[0]), span)) {
+        return false;
+    }
+    *out = plan_lane_span_payload(plan, ids[0])->key;
+    return true;
+}
+
+/*
+ * The m0 of the theme plan of a theme fill, in the structure's key: the pitches move by the key difference, as the
+ * theme's lanes do (plan_give_section). False when the plan has no theme section, no m0, or is in another mode.
+ */
+static bool theme_motive(const PieceStructure *structure, const PieceSection *section, Motive *out) {
+    const PiecePlan *theme_plan = section->theme_plan;
+    NodeId theme = theme_plan ? grow_find_theme(theme_plan, false) : PLAN_NODE_NONE;
+    NodeId source = theme_plan ? grow_find_source(theme_plan) : PLAN_NODE_NONE;
+    PlanSpan span;
+    PlanMeter meter;
+    PlanKey key;
+    if (theme == PLAN_NODE_NONE || source == PLAN_NODE_NONE) {
+        return false;
+    }
+    span = plan_node_span(theme_plan, theme);
+    if (!return_meter_over(theme_plan, span, &meter) || !key_over(theme_plan, span, &key) ||
+        key.mode != structure->key.mode || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
+        return false;
+    }
+    int shift = ((structure->key.tonic_pitch_class - key.tonic_pitch_class) % 12 + 12) % 12;
+    shift = shift > 6 ? shift - 12 : shift;
+    for (size_t i = 0; i < out->note_count; i++) {
+        out->notes[i].midi_pitch += shift;
+        if (out->notes[i].midi_pitch < 0 || out->notes[i].midi_pitch > 127) {
+            return false;
+        }
+    }
+    out->key = structure->key;
+    return true;
+}
+
+/* The basic motive (R-170): the structure's, else the first motif section's or theme fill's, else NULL to have one invented. */
+static const Motive *basic_motive(const PieceStructure *structure, Motive *storage) {
     if (structure->motive) {
         return structure->motive;
     }
     for (size_t i = 0; i < structure->section_count; i++) {
-        if (structure->sections[i].fill == PIECE_FILL_MOTIF && structure->sections[i].motive) {
-            return structure->sections[i].motive;
+        const PieceSection *section = &structure->sections[i];
+        if (section->fill == PIECE_FILL_MOTIF && section->motive) {
+            return section->motive;
+        }
+        if (section->fill == PIECE_FILL_THEME && theme_motive(structure, section, storage)) {
+            return storage;
         }
     }
     return NULL;
+}
+
+/* The constraints a theme section has from the theme it is given: its archetype, pairing and cadences. */
+static PieceResult add_theme_constraints(PiecePlan *plan, NodeId id, const PiecePlan *theme_plan, NodeId theme) {
+    PieceResult result = PIECE_OK;
+    for (size_t i = 0; result == PIECE_OK && i < plan_node_constraint_count(theme_plan, theme); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(theme_plan, theme, i);
+        if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE || constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING ||
+            constraint->kind == PLAN_CONSTRAINT_CADENCE) {
+            result = add_constraint(plan, id, constraint);
+        }
+    }
+    return result;
 }
 
 static PieceResult add_section(PiecePlan *plan, const PieceStructure *structure, const PieceSection *section,
                                size_t start_beats, NodeId form, PlanSpan span, NodeId *out) {
     PlanConstraint constraint;
     PlanThemePairing pairing;
-    bool theme = is_theme_section(structure, section, start_beats, &pairing);
+    /* A theme fill is the theme it was composed as: its archetype, pairing and cadences, not the structure's. */
+    const PiecePlan *theme_plan = section->fill == PIECE_FILL_THEME ? section->theme_plan : NULL;
+    NodeId given = theme_plan ? grow_find_theme(theme_plan, false) : PLAN_NODE_NONE;
+    if (section->fill == PIECE_FILL_THEME && given == PLAN_NODE_NONE) {
+        return PIECE_ERR_BAD_REQUEST;
+    }
+    bool theme = given == PLAN_NODE_NONE && is_theme_section(structure, section, start_beats, &pairing);
     PieceResult result = from_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->id, out));
-    if (result == PIECE_OK && theme) {
+    if (result == PIECE_OK && given != PLAN_NODE_NONE) {
+        result = add_theme_constraints(plan, *out, theme_plan, given);
+    } else if (result == PIECE_OK && theme) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_ARCHETYPE;
         constraint.params.archetype = (PlanArchetype)grow_pairing_archetype(&pairing);
@@ -250,7 +319,7 @@ static PieceResult add_section(PiecePlan *plan, const PieceStructure *structure,
         constraint.kind = PLAN_CONSTRAINT_FREE_PHRASE;
         result = add_constraint(plan, *out, &constraint);
     }
-    if (result == PIECE_OK) {
+    if (result == PIECE_OK && given == PLAN_NODE_NONE) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CADENCE;
         constraint.params.cadence = section->cadence;
@@ -307,7 +376,8 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
     }
     size_t cells;
     PlanTime bar = grow_bar_length(&structure->meter);
-    const Motive *motive = basic_motive(structure);
+    Motive theme_storage;
+    const Motive *motive = basic_motive(structure, &theme_storage);
     PieceSection sections[PIECE_STRUCTURE_MAX_SECTIONS];
     PieceStructure copy = *structure;
     memcpy(sections, structure->sections, structure->section_count * sizeof(PieceSection));
@@ -327,7 +397,7 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
     size_t material_bars = 1;
     size_t per_bar = (size_t)structure->meter.beats_per_bar;
     for (size_t i = 0; i < copy.section_count; i++) {
-        if (copy.sections[i].fill == PIECE_FILL_THEME || copy.sections[i].fill == PIECE_FILL_PROGRESSION) {
+        if (copy.sections[i].fill == PIECE_FILL_PROGRESSION) {
             return PIECE_ERR_BAD_REQUEST;
         }
         if (copy.sections[i].part != PIECE_PART_ENDING) {
@@ -380,6 +450,11 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
         NodeId id;
         PlanSpan span = {start, beats_of(&structure->meter, copy.sections[i].beats)};
         result = add_section(plan, &copy, &copy.sections[i], start_beats, form_id, span, &id);
+        if (result == PIECE_OK && copy.sections[i].fill == PIECE_FILL_THEME &&
+            plan_give_section(plan, id, copy.sections[i].theme_plan, grow_find_theme(copy.sections[i].theme_plan, false)) !=
+                GIVEN_OK) {
+            result = PIECE_ERR_BAD_REQUEST;
+        }
         if (result == PIECE_OK) {
             result = from_plan(plan_time_add(start, span.length, &start));
         }
