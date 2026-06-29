@@ -397,9 +397,6 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
     size_t material_bars = 1;
     size_t per_bar = (size_t)structure->meter.beats_per_bar;
     for (size_t i = 0; i < copy.section_count; i++) {
-        if (copy.sections[i].fill == PIECE_FILL_PROGRESSION) {
-            return PIECE_ERR_BAD_REQUEST;
-        }
         if (copy.sections[i].part != PIECE_PART_ENDING) {
             laid = i + 1;
             beats += copy.sections[i].beats;
@@ -454,6 +451,15 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
             plan_give_section(plan, id, copy.sections[i].theme_plan, grow_find_theme(copy.sections[i].theme_plan, false)) !=
                 GIVEN_OK) {
             result = PIECE_ERR_BAD_REQUEST;
+        }
+        /* A progression fill: the chords Given from the section's start, a bar each unless it says; the harmony stage
+           fills what is left of the section. */
+        if (result == PIECE_OK && copy.sections[i].fill == PIECE_FILL_PROGRESSION) {
+            const PieceSection *given = &copy.sections[i];
+            size_t per_chord = given->cells_per_chord ? given->cells_per_chord : cells;
+            if (plan_give_progression(plan, id, 0, given->numerals, given->numeral_count, per_chord) != GIVEN_OK) {
+                result = PIECE_ERR_BAD_REQUEST;
+            }
         }
         if (result == PIECE_OK) {
             result = from_plan(plan_time_add(start, span.length, &start));
