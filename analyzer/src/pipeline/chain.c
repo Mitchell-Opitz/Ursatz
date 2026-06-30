@@ -7,6 +7,7 @@
 #include "pipeline/harmonic_rhythm_pipeline.h"
 #include "pipeline/key_region_pipeline.h"
 #include "pipeline/melody_pipeline.h"
+#include "pipeline/meter_check_pipeline.h"
 #include "pipeline/outer_voice_pipeline.h"
 #include "pipeline/progression_pipeline.h"
 #include "pipeline/rhythm_pipeline.h"
@@ -168,6 +169,7 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         !harmony_stage_collect_functions(&chain->harmony, report) ||
         !harmony_stage_collect_six_fours_and_prolongations(&chain->harmony, report) ||
         !progression_stage_collect(report) || !harmonic_rhythm_stage_collect(chain->notes, report) ||
+        !meter_check_stage_collect(chain->notes, report) ||
         !form_stage_run(&chain->form, chain->notes, &chain->voice_segmentation, segmentation, &chain->lines,
                         &chain->harmony) ||
         !form_stage_collect(&chain->form, report) || !harmony_stage_collect_phrase_model(&chain->harmony, report) ||
