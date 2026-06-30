@@ -38,4 +38,7 @@
 bool meter_check_run(const ImportedNotes *notes, const AnalysisReportEntry *entries, size_t entry_count,
                      const AnalysisCadence *cadences, size_t cadence_count, AnalysisMeterCheck *out);
 
+/* Fills report->meter_check from report->entries and report->cadences; run after the harmonic rhythm stage. */
+bool meter_check_stage_collect(const ImportedNotes *notes, AnalysisReport *report);
+
 #endif

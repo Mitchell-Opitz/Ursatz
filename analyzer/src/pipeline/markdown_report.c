@@ -2034,9 +2034,49 @@ static bool render_tuplets(StringBuilder *sb, const cJSON *rhythm) {
     return ok && sb_append(sb, "\n");
 }
 
+/* "3/4, scale 2, pickup 1/4" for a meter-fit reading, with its score. */
+static bool append_meter_reading(StringBuilder *sb, const cJSON *reading) {
+    const cJSON *meter = cJSON_GetObjectItemCaseSensitive(reading, "meter");
+    const cJSON *scale = cJSON_GetObjectItemCaseSensitive(reading, "scale");
+    const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(reading, "pickup");
+    bool ok = sb_appendf(sb, "%d/%d, scale %d", (int)number_member(meter, "numerator"),
+                         (int)number_member(meter, "denominator"), (int)number_member(scale, "num"));
+    if ((int)number_member(scale, "den") != 1) {
+        ok = ok && sb_appendf(sb, "/%d", (int)number_member(scale, "den"));
+    }
+    ok = ok && sb_append(sb, ", ");
+    if ((int)number_member(pickup, "num") == 0) {
+        ok = ok && sb_append(sb, "no pickup");
+    } else {
+        ok = ok && sb_appendf(sb, "pickup %d/%d", (int)number_member(pickup, "num"), (int)number_member(pickup, "den"));
+    }
+    return ok && sb_appendf(sb, " (fit %.2f)", number_member(reading, "score"));
+}
+
+/* The meter check: how well the meter used carries the harmonic rhythm and cadences, and a better reading if there is
+   one. Offered only, never applied. */
+static bool render_meter_fit(StringBuilder *sb, const cJSON *rhythm) {
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, rhythm) {
+        if (!has_label(claim, "meter-fit")) {
+            continue;
+        }
+        const cJSON *alternative = cJSON_GetObjectItemCaseSensitive(claim, "alternative");
+        bool ok = sb_append(sb, "**Meter fit:** ") &&
+                  append_meter_reading(sb, cJSON_GetObjectItemCaseSensitive(claim, "declared")) &&
+                  sb_append(sb, cJSON_IsObject(alternative) ? "; a better reading: " : "; no better reading found");
+        if (ok && cJSON_IsObject(alternative)) {
+            ok = append_meter_reading(sb, alternative);
+        }
+        return ok && sb_append(sb, "\n\n");
+    }
+    return true;
+}
+
 static bool render_rhythm(StringBuilder *sb, const cJSON *document, const cJSON *rhythm) {
     (void)document;
-    return sb_append(sb, "## Rhythm and meter\n\n") && (!has_claims(rhythm, "density") || render_densities(sb, rhythm)) &&
+    return sb_append(sb, "## Rhythm and meter\n\n") && render_meter_fit(sb, rhythm) &&
+           (!has_claims(rhythm, "density") || render_densities(sb, rhythm)) &&
            render_syncopations(sb, rhythm) && render_hemiolas(sb, rhythm) &&
            (!has_claims(rhythm, "hypermeter") || render_hypermeters(sb, rhythm)) && render_tuplets(sb, rhythm);
 }

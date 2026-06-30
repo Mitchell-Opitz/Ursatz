@@ -1120,6 +1120,7 @@ typedef struct {
     size_t hemiola_count;
     AnalysisHypermeter *hypermeters; /* owned; one per phrase that has a measure, in phrase order */
     size_t hypermeter_count;
+    AnalysisMeterCheck meter_check; /* the meter against the harmonic rhythm and cadences; present is false with no chords */
     AnalysisTuplet *tuplets; /* owned; grouped by ratio (the smaller actual count first), each in time order */
     size_t tuplet_count;
     AnalysisTexturePassage *texture_passages; /* owned; in time order; empty when the library found no texture */

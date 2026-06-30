@@ -933,6 +933,7 @@
         { "$ref": "#/$defs/claim" },
         {
           "oneOf": [
+            { "$ref": "#/$defs/meter_fit_claim" },
             { "$ref": "#/$defs/density_claim" },
             { "$ref": "#/$defs/syncopation_claim" },
             { "$ref": "#/$defs/hemiola_claim" },
@@ -1003,6 +1004,27 @@
       }
     },
     "meter_level": { "enum": ["downbeat", "secondary-beat", "beat", "offbeat", "finer"] },
+    "meter_reading": {
+      "type": "object",
+      "required": ["meter", "scale", "pickup", "score"],
+      "properties": {
+        "meter": { "$ref": "#/$defs/time_signature" },
+        "scale": { "$ref": "#/$defs/rational" },
+        "pickup": { "$ref": "#/$defs/rational" },
+        "score": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "meter_fit_claim": {
+      "type": "object",
+      "required": ["label", "declared", "alternative"],
+      "properties": {
+        "label": { "const": "meter-fit" },
+        "declared": { "$ref": "#/$defs/meter_reading" },
+        "alternative": {
+          "oneOf": [{ "$ref": "#/$defs/meter_reading" }, { "type": "null" }]
+        }
+      }
+    },
     "hemiola_claim": {
       "type": "object",
       "required": ["label", "measures", "evidence"],

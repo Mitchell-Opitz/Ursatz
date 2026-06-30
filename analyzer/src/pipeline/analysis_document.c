@@ -3125,12 +3125,55 @@ static cJSON *tuplet_json(const ImportedNotes *notes, const AnalysisTuplet *tupl
     return claim;
 }
 
-/* The rhythm section: a list of claims, each labelled by the result it is ("density", "syncopation", "hemiola",
-   "hypermeter", "tuplet"), the densities first and then each kind in time order. The library's results are
+/* A meter reading of the meter check: the meter, the scale and the pickup as a notation reading states them. */
+static cJSON *meter_reading_json(const AnalysisMeterReading *reading) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *meter = cJSON_CreateObject();
+    bool ok = object && meter && add(meter, "numerator", cJSON_CreateNumber(reading->beats)) &&
+              add(meter, "denominator", cJSON_CreateNumber(reading->beat_type));
+    if (ok) {
+        ok = add(object, "meter", meter); /* attached, or freed by add */
+        meter = NULL;
+    }
+    ok = ok &&
+         add(object, "scale", rational_json(rational_make(reading->scale_numerator, reading->scale_denominator))) &&
+         add(object, "pickup", rational_json(rational_make(reading->pickup_numerator, reading->pickup_denominator))) &&
+         add(object, "score", cJSON_CreateNumber(reading->score));
+    if (!ok) {
+        cJSON_Delete(meter);
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+/* The meter-fit claim: the meter the analysis used against the best other reading, which is null unless it beats the
+   effective one by the stage's margin. Over the whole piece, with no notes of its own. */
+static cJSON *meter_fit_json(const ImportedNotes *notes, const AnalysisMeterCheck *check) {
+    Rational start;
+    Rational end;
+    notes_span(notes, NULL, notes->count, &start, &end);
+    cJSON *claim = claim_json_with("standard-meter-v1", notes, NULL, 0, start, end, "meter-fit",
+                                   cJSON_CreateNumber(check->uncertainty));
+    if (!(claim && add(claim, "declared", meter_reading_json(&check->effective)) &&
+          add(claim, "alternative",
+              check->has_alternative ? meter_reading_json(&check->other) : cJSON_CreateNull()))) {
+        cJSON_Delete(claim);
+        return NULL;
+    }
+    return claim;
+}
+
+/* The rhythm section: a list of claims, each labelled by the result it is ("meter-fit", "density", "syncopation",
+   "hemiola", "hypermeter", "tuplet"), the meter fit first, then the densities and each kind in time order. The library's results are
    claims over the notes of a phrase or a measure, so the list is flat and the label says which kind. Empty for a piece
    without phrases. */
 static cJSON *rhythm_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
+    if (list && report->meter_check.present && !append(list, meter_fit_json(notes, &report->meter_check))) {
+        cJSON_Delete(list);
+        return NULL;
+    }
     for (size_t i = 0; list && i < report->density_count; i++) {
         if (!append(list, density_json(notes, report, &report->densities[i]))) {
             cJSON_Delete(list);

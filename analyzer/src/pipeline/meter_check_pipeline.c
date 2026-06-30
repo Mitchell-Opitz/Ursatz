@@ -406,3 +406,8 @@ bool meter_check_run(const ImportedNotes *notes, const AnalysisReportEntry *entr
     }
     return true;
 }
+
+bool meter_check_stage_collect(const ImportedNotes *notes, AnalysisReport *report) {
+    return meter_check_run(notes, report->entries, report->entry_count, report->cadences, report->cadence_count,
+                           &report->meter_check);
+}
