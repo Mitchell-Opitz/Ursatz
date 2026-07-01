@@ -78,10 +78,16 @@ typedef struct {
     Rat measure;         /* a candidate's measure and beat lengths, in the file's time */
     Rat beat;
     Rat offset;          /* the first barline, 0 or later */
+    bool four_beats;     /* a candidate's meter has four beats: its third beat is a secondary downbeat */
 } Grid;
 
 static bool signature_is_compound(unsigned top, unsigned bottom) {
     return bottom == 8 && (top == 6 || top == 9 || top == 12);
+}
+
+/* Whether a signature has four beats, so that its third beat is the secondary accent. */
+static bool four_beats(unsigned top, unsigned bottom) {
+    return (top == 4 && bottom == 4) || (top == 12 && bottom == 8);
 }
 
 /* The beat of a signature in whole notes: the denominator's note, a dotted one in the compound meters. */
@@ -94,13 +100,15 @@ static Rat time_rat(const MusicalTime *time) {
 }
 
 /* Whether the grid has a barline (a downbeat) at x, and whether it has a beat. */
-static void grid_place(const Grid *grid, Rat x, bool *downbeat, bool *beat) {
+static void grid_place(const Grid *grid, Rat x, bool *downbeat, bool *beat, bool *secondary) {
     *downbeat = false;
     *beat = false;
+    *secondary = false;
     if (!grid->map) {
         Rat from = rat_sub(x, grid->offset);
         *downbeat = rat_is_integer(rat_div(from, grid->measure));
         *beat = rat_is_integer(rat_div(from, grid->beat));
+        *secondary = grid->four_beats && rat_is_integer(rat_sub(rat_div(from, grid->measure), (Rat){1, 2}));
         return;
     }
     MusicalTime *time = NULL;
@@ -124,6 +132,7 @@ static void grid_place(const Grid *grid, Rat x, bool *downbeat, bool *beat) {
     Rat measure = rat_make((Wide)top, (Wide)bottom);
     *downbeat = rat_is_integer(rat_div(from, measure));
     *beat = rat_is_integer(rat_div(from, beat_length(top, bottom)));
+    *secondary = four_beats(top, bottom) && rat_is_integer(rat_sub(rat_div(from, measure), (Rat){1, 2}));
 }
 
 /* ---- Evidence ---- */
@@ -167,6 +176,40 @@ static bool evidence_collect(const AnalysisReportEntry *entries, size_t entry_co
     return true;
 }
 
+/* floor and ceiling of a rational */
+static Wide rat_floor(Rat a) {
+    Wide q = a.num / a.den;
+    return (a.num % a.den != 0 && a.num < 0) ? q - 1 : q;
+}
+
+static Wide rat_ceil(Rat a) {
+    return -rat_floor((Rat){-a.num, a.den});
+}
+
+/* How many downbeats the grid has from time from to time to, both inclusive; at least 1. */
+static Wide downbeats_between(const Grid *grid, Rat from, Rat to) {
+    Wide count = 1;
+    if (!grid->map) {
+        Rat first = rat_div(rat_sub(from, grid->offset), grid->measure);
+        Rat last = rat_div(rat_sub(to, grid->offset), grid->measure);
+        count = rat_floor(last) - rat_ceil(first) + 1;
+    } else {
+        int measure_from = 0;
+        int measure_to = 0;
+        MusicalTime *a = NULL;
+        MusicalTime *b = NULL;
+        if (musical_time_create((long)from.num, (unsigned long)from.den, &a) == MUSICAL_TIME_OK &&
+            musical_time_create((long)to.num, (unsigned long)to.den, &b) == MUSICAL_TIME_OK &&
+            meter_map_measure_index_at(grid->map, a, &measure_from) == METER_MAP_OK &&
+            meter_map_measure_index_at(grid->map, b, &measure_to) == METER_MAP_OK) {
+            count = (Wide)measure_to - (Wide)measure_from + 1;
+        }
+        musical_time_destroy(a);
+        musical_time_destroy(b);
+    }
+    return count < 1 ? 1 : count;
+}
+
 /* The score of a grid in [0, 1]. */
 static double grid_score(const Grid *grid, const Evidence *evidence) {
     double weights = 0.0;
@@ -174,25 +217,36 @@ static double grid_score(const Grid *grid, const Evidence *evidence) {
     if (evidence->change_count > 0) {
         size_t on_down = 0;
         size_t on_beat = 0;
+        double on_accent = 0.0; /* a secondary downbeat counts half */
         for (size_t i = 0; i < evidence->change_count; i++) {
             bool downbeat;
             bool beat;
-            grid_place(grid, evidence->changes[i], &downbeat, &beat);
+            bool secondary;
+            grid_place(grid, evidence->changes[i], &downbeat, &beat, &secondary);
             on_down += downbeat ? 1 : 0;
+            on_accent += downbeat ? 1.0 : (secondary ? 0.5 : 0.0);
             on_beat += (downbeat || beat) ? 1 : 0;
         }
-        sum += (2.0 * (double)on_down + 1.0 * (double)on_beat) / (double)evidence->change_count;
+        /* The downbeat share is the harmonic mean of the share of the changes on a downbeat and the share of the
+           downbeats that carry a change. Without the second, a grid with a barline at every beat would always win: it
+           holds every barline of the real meter and more. */
+        double recall = on_accent / (double)evidence->change_count;
+        Wide downbeats = downbeats_between(grid, evidence->changes[0], evidence->changes[evidence->change_count - 1]);
+        double precision = fmin(1.0, (double)on_down / (double)downbeats);
+        double downbeat_fit = recall + precision > 0.0 ? 2.0 * recall * precision / (recall + precision) : 0.0;
+        sum += 2.0 * downbeat_fit + 1.0 * (double)on_beat / (double)evidence->change_count;
         weights += 3.0;
     }
     if (evidence->arrival_count > 0) {
-        size_t on_down = 0;
+        double on_down = 0.0;
         for (size_t i = 0; i < evidence->arrival_count; i++) {
             bool downbeat;
             bool beat;
-            grid_place(grid, evidence->arrivals[i], &downbeat, &beat);
-            on_down += downbeat ? 1 : 0;
+            bool secondary;
+            grid_place(grid, evidence->arrivals[i], &downbeat, &beat, &secondary);
+            on_down += downbeat ? 1.0 : (secondary ? 0.5 : 0.0);
         }
-        sum += 3.0 * (double)on_down / (double)evidence->arrival_count;
+        sum += 3.0 * on_down / (double)evidence->arrival_count;
         weights += 3.0;
     }
     return weights > 0.0 ? sum / weights : 0.0;
@@ -329,6 +383,7 @@ static bool effective_candidate(const ImportedNotes *notes, Candidate *effective
     barlines->measure = rat_make((Wide)top, (Wide)bottom);
     barlines->beat = beat_length(top, bottom);
     barlines->offset = pickup;
+    effective->grid.four_beats = four_beats(top, bottom);
     return true;
 }
 
@@ -375,6 +430,10 @@ bool meter_check_run(const ImportedNotes *notes, const AnalysisReportEntry *entr
                 candidate.grid.measure = rat_div(rat_make((Wide)top, (Wide)bottom), scale);
                 candidate.grid.beat = rat_div(beat, scale);
                 candidate.grid.offset = rat_div(candidate.pickup, scale);
+                candidate.grid.four_beats = four_beats(top, bottom);
+                if (rat_cmp(candidate.grid.measure, effective_barlines.beat) <= 0) {
+                    continue; /* a bar no longer than the beat already counted only adds barlines */
+                }
                 if (same_grid(&candidate.grid, &effective_barlines)) {
                     continue;
                 }

@@ -20,10 +20,13 @@
  * beats are one candidate; of them the shown reading is the one whose most common inter-onset interval, scaled, is
  * nearest an eighth note, then the one with denominator 4 over 8.
  *
- * Score: the share of the harmony changes (report entries as harmonic_rhythm_is_change reads them, the first segment
- * included) on a downbeat, weight 2, plus the share on any beat, weight 1, plus the share of the cadence arrivals on a
- * downbeat, weight 3, over the weights of the evidence the piece has. A piece with no cadences scores on its changes
- * alone.
+ * Score: over the weights of the evidence the piece has, the harmony changes (report entries as
+ * harmonic_rhythm_is_change reads them, the first segment included) on a downbeat, weight 2, plus on any beat, weight 1,
+ * and the cadence arrivals on a downbeat, weight 3. The downbeat share of the changes is the harmonic mean of the share
+ * of the changes on a downbeat and the share of the downbeats that carry a change: raw shares always favour a grid with
+ * a barline at every beat, which holds every downbeat of the real meter and more. For the same reason a candidate whose
+ * measure is no longer than the effective meter's beat is not tried. The third beat of a four-beat meter is a secondary
+ * downbeat and counts half. A piece with no cadences scores on its changes alone.
  *
  * The effective reading is the analysis's own meter map: the first full measure's signature at scale 1, with the
  * length of a pickup region as its pickup; its score reads the map, so meter changes are honoured. A candidate
