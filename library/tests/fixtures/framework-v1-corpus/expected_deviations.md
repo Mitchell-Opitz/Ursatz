@@ -57,6 +57,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-031 | mozart545 | keys | change 79 | modulation at 79 | none | C1,C2 |
 | DEV-032 | mozart545 | keys | change 124 | modulation at 124 | none | C1,C2 |
 | DEV-033 | mozart545 | cadences | m12 b1 | hc | none | C5 |
+| DEV-103 | mozart545 | cadences | readings m4 b1 | subverted m4 or prolongation m4 | none | C5 |
 | DEV-039 | clementi36 | keys | region 1-5 | C major 1-5 | C major 1-7 | C1 |
 | DEV-040 | clementi36 | keys | region 6-15 | G major 6-15 | C major 1-7, G major 8-14, C minor 15-19 | C1 |
 | DEV-041 | clementi36 | keys | region 16-22 | C minor 16-22 | C minor 15-19, G major 20-23 | C1,C2 |
@@ -64,7 +65,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-043 | clementi36 | keys | change 16 | modulation at 16 | weak-modulation at 15 | C3 |
 | DEV-044 | clementi36 | cadences | m8 b1 | pac | none | C1,C5 |
 | DEV-045 | clementi36 | cadences | m15 b1 | pac | none | C5 |
-| DEV-046 | clementi36 | cadences | m23 b1 | hc | none | C1,C2 |
+| DEV-102 | clementi36 | cadences | readings m23 b1 | hc m23 or pac m24 | pac at m24 b1 (750), or hc at m23 b4.5 (250) | C1,C2 |
 | DEV-047 | clementi36 | cadences | m38 b1 | pac | none | C5 |
 | DEV-048 | clementi36 | cadences | extra m2 b1 | none | pac | C5 |
 | DEV-049 | clementi36 | cadences | extra m2 b3 | none | hc | C5 |
@@ -103,6 +104,3 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-095 | mozart545 | keys | change 41 | modulation at 41 | tonicization at 40 | C5 |
 | DEV-097 | clementi36 | cadences | m31 b1 | pac | none | C5 |
 | DEV-098 | clementi36 | phrase-form | end m31 | pac at m31 | none | C5 |
-| DEV-099 | clementi36 | cadences | extra m12 b1 | none | subverted | C7 |
-| DEV-100 | clementi36 | cadences | extra m24 b1 | none | pac | C9 |
-| DEV-101 | clementi36 | cadences | extra m35 b1 | none | subverted | C7 |

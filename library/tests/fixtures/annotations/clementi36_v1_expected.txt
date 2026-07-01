@@ -60,7 +60,9 @@ cadence-scope 1 38
 cadence 4 1 hc
 cadence 8 1 pac
 cadence 15 1 pac
-cadence 23 1 hc
+readings 23 1 hc 24 1 pac
+readings 12 1 subverted 12 1 prolongation
+readings 35 1 subverted 35 1 prolongation
 cadence 27 1 hc
 cadence 31 1 pac
 cadence 38 1 pac

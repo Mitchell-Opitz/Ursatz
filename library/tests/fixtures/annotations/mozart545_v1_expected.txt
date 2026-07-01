@@ -71,6 +71,7 @@ cadence 12 1 hc
 cadence 26 1 pac optional
 cadence 27 1 pac optional
 cadence 28 1 pac
+readings 4 1 subverted 4 1 prolongation
 form-scope 1 28
 # no cadence ends the four-measure opening (measure 4 reaches I6): the first phrase runs to the half cadence that sounds into measure 12; the exposition closes at 28
 phrase-end 12 hc
