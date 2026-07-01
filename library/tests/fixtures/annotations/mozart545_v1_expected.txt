@@ -24,6 +24,13 @@
 #   cadence <measure> <beat> <pac|iac|hc|deceptive|plagal|subverted>   the cadence whose ARRIVAL chord starts here (beats are 1-based)
 #   cadence <measure> <beat> <type> optional           the same, but the music may or may not have it: missing is no deviation, and found with its type
 #                                                       (within one beat) it is not an extra
+#   readings <measure> <beat> <reading> <measure> <beat> <reading> [prefer 1|2]
+#                                                       one cadence point with two competing readings (a V to I6 evaded or prolonged, a dominant
+#                                                       before a section start as a half or an authentic cadence); a reading is a cadence type word
+#                                                       or 'prolongation'. The chain's primary and alternative reading must be these two, in either
+#                                                       order, each arrival within one beat. 'prefer 1' or 'prefer 2' also requires that reading to
+#                                                       have the higher share. A result a readings line takes is not an extra and matches no
+#                                                       'cadence' line; a phrase-end at either reading's measure passes at either measure
 #   form-scope <first> <last>
 #   phrase-end <measure> <pac|iac|hc>                   a phrase ends in this measure (the measure its arrival chord ends in)
 #   theme <form> <first> <last> [parts <a-first> <a-last> <b-first> <b-last>]   a theme and its two parts
