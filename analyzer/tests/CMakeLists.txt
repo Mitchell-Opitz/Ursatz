@@ -381,3 +381,8 @@ if(VALGRIND_PROGRAM)
                      $<TARGET_FILE:test_composer_api> smoke)
     set_tests_properties(test_composer_api_valgrind PROPERTIES LABELS slow)
 endif()
+
+add_executable(test_meter_check test_meter_check.c)
+target_link_libraries(test_meter_check PRIVATE ursatz_analyzer cjson m)
+target_compile_definitions(test_meter_check PRIVATE URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+add_test(NAME test_meter_check COMMAND test_meter_check)
