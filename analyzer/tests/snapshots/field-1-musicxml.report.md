@@ -1423,6 +1423,8 @@ Changes per measure over the two measures before each cadence's arrival (Approac
 
 ## Rhythm and meter
 
+**Meter fit:** 12/8, scale 1, no pickup (fit 0.82); no better reading found
+
 ### Density
 
 The library's density profile of each phrase, for all its notes and for each line that has a note in it (the soprano and bass of the outer voices, and Other for the rest). A note is in a phrase when its onset is; a chord is one attack. Attacks per beat is read measure by measure over the beats the phrase spans in it, as a mean and the largest; Mean gap is the mean distance between attacks in whole notes; On the beat is the share of attacks exactly on a beat. Durations lists the notes' lengths in whole notes, shortest first, with how many notes have each. The patterns that recur are the motive families' rhythms (see Motives).

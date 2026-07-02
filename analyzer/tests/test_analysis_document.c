@@ -267,7 +267,12 @@ int main(void) {
         const cJSON *entry = cJSON_GetArrayItem(rhythm, i);
         const char *label = string(entry, "label");
         check_claim(entry);
-        if (strcmp(label, "density") == 0) {
+        if (strcmp(label, "meter-fit") == 0) {
+            /* the meter check, over no notes, first in the section */
+            assert(i == 0);
+            assert(cJSON_GetArraySize(member(entry, "note_ids")) == 0);
+            assert(cJSON_IsNull(member(entry, "alternative")) || cJSON_IsObject(member(entry, "alternative")));
+        } else if (strcmp(label, "density") == 0) {
             assert(syncopations_seen == 0 && hypermeters == 0);
             assert(number(entry, "phrase") < phrase_count);
             assert(number(entry, "attacks") <= number(entry, "notes"));

@@ -106,7 +106,7 @@ static void check_structure(const Analysis *analysis) {
     const AnalysisReport *report = &analysis->report;
     const cJSON *rhythm = member(analysis->document, "rhythm");
     size_t expected = report->density_count + report->syncopation_count + report->hemiola_count +
-                      report->hypermeter_count + report->tuplet_count;
+                      report->hypermeter_count + report->tuplet_count + (report->meter_check.present ? 1 : 0);
     CHECK(cJSON_IsArray(rhythm) && (size_t)cJSON_GetArraySize(rhythm) == expected);
     CHECK(report->density_count > 0);
 

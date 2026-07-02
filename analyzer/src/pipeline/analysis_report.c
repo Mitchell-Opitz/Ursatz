@@ -206,6 +206,7 @@ void analysis_report_destroy(AnalysisReport *report) {
     report->syncopation_count = 0;
     report->hemiolas = NULL;
     report->hemiola_count = 0;
+    report->meter_check = (AnalysisMeterCheck){0};
     report->hypermeters = NULL;
     report->hypermeter_count = 0;
     report->tuplets = NULL;

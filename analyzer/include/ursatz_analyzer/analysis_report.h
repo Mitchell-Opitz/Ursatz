@@ -658,6 +658,31 @@ typedef struct {
     double uncertainty;      /* the library's: 0, the profile describes the notes as given */
 } AnalysisDensity;
 
+/* One reading of the meter: a meter, a scale applied to the notes' starts and durations, and a pickup in whole notes
+   (counted after scaling), as a notation reading states them (notation_reading.h). */
+typedef struct {
+    int beats;
+    int beat_type;
+    long scale_numerator;
+    unsigned long scale_denominator;
+    long pickup_numerator;
+    unsigned long pickup_denominator;
+    double score; /* [0, 1]: how well the reading's barlines carry the harmonic rhythm and the cadences */
+} AnalysisMeterReading;
+
+/* The meter checked against the harmonic rhythm and the cadences (meter_check_pipeline.h). effective is the reading the
+   analysis used. other is the best other reading when there is one. The alternative is offered (has_alternative) when
+   other beats effective by at least the margin the stage requires; it is never applied. present is false for a piece
+   with no chord segments. */
+typedef struct {
+    bool present;
+    AnalysisMeterReading effective;
+    bool has_other;
+    AnalysisMeterReading other;
+    bool has_alternative;
+    double uncertainty; /* [0, 1], higher is LESS certain: 1 minus the margin between the two scores */
+} AnalysisMeterCheck;
+
 /* One passage of the texture: a run of measures the library classifies as the same texture (the standard-texture
    passage claim, analysis/texture_analysis_classify.h). The Analyzer only builds the library's input (every imported
    note, the voice kernel's separation per stream) and copies the passages and changes; the texture, the category and
@@ -1095,6 +1120,7 @@ typedef struct {
     size_t hemiola_count;
     AnalysisHypermeter *hypermeters; /* owned; one per phrase that has a measure, in phrase order */
     size_t hypermeter_count;
+    AnalysisMeterCheck meter_check; /* the meter against the harmonic rhythm and cadences; present is false with no chords */
     AnalysisTuplet *tuplets; /* owned; grouped by ratio (the smaller actual count first), each in time order */
     size_t tuplet_count;
     AnalysisTexturePassage *texture_passages; /* owned; in time order; empty when the library found no texture */
