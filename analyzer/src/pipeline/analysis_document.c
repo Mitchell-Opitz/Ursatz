@@ -3165,9 +3165,9 @@ static cJSON *meter_fit_json(const ImportedNotes *notes, const AnalysisMeterChec
 }
 
 /* The rhythm section: a list of claims, each labelled by the result it is ("meter-fit", "density", "syncopation",
-   "hemiola", "hypermeter", "tuplet"), the meter fit first, then the densities and each kind in time order. The library's results are
-   claims over the notes of a phrase or a measure, so the list is flat and the label says which kind. Empty for a piece
-   without phrases. */
+   "hemiola", "hypermeter", "tuplet"): the meter fit first, then the densities and each kind in time order. The library's
+   results are claims over the notes of a phrase or a measure, so the list is flat and the label says which kind. A
+   piece without phrases has only the meter fit, or nothing when it has no chord segments. */
 static cJSON *rhythm_json(const ImportedNotes *notes, const AnalysisReport *report) {
     cJSON *list = cJSON_CreateArray();
     if (list && report->meter_check.present && !append(list, meter_fit_json(notes, &report->meter_check))) {

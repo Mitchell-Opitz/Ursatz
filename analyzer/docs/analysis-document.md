@@ -32,7 +32,7 @@ newline. The same input and build always give the same bytes.
 | `form` | form object or null | Filled: the tree of sections, phrases, subphrases and ideas, and the thematic returns. See below; `null` when the library found no phrases. |
 | `motives` | array of motive claims | Filled: the library's motive families with every occurrence and their development. See below. |
 | `melody` | array of melody claims | Filled: the melody of each phrase, read by the library's melody adapter. See below. |
-| `rhythm` | array of rhythm claims | Filled: the library's density, syncopation, hemiola, hypermeter and tuplet results, one flat list labelled by kind. See below. |
+| `rhythm` | array of rhythm claims | Filled: the meter fit, then the library's density, syncopation, hemiola, hypermeter and tuplet results, one flat list labelled by kind. See below. |
 | `texture` | array of texture claims | Filled: the library's texture passages and the changes between them, one flat list labelled by kind. See below. |
 | `voice_leading` | array of voice leading claims | Filled: the library's motion, parallel and direct perfect intervals, unresolved tendency tones, and doubling and spacing, one flat list labelled by kind. See below. |
 | `schemas` | array of schema and sequence claims | Filled: the library's galant schemas and harmonic sequences, one flat list labelled by kind. See below. |
@@ -749,17 +749,35 @@ the subsections `### Leaps`, `### Non-chord tones` and `### Tendencies`.
 
 ### Rhythm and meter
 
-`rhythm` is one flat array of claims, each labelled by the kind of result it is: the densities first (phrase by phrase),
-then the syncopations, hemiolas, hypermeters and tuplets, each kind in time order. A flat list keeps the placeholder's
-type (an array) from version 9; `label` says which of the five a claim is. The analyzer builds the neutral input of
+`rhythm` is one flat array of claims, each labelled by the kind of result it is: the meter fit first, then the densities
+(phrase by phrase), then the syncopations, hemiolas, hypermeters and tuplets, each kind in time order. A flat list keeps
+the placeholder's type (an array) from version 9; `label` says which of the six a claim is. The analyzer builds the neutral input of
 Ursatz's standard-meter adapter (`analysis/meter_analysis_input.h`) in `src/pipeline/rhythm_pipeline.c`, ported from
 `tests/integration/rhythm_util.h`, and copies the library's results; every count, level, share and verdict is the
 library's. The input holds every imported note (its onset to its release; `line` 0 when it is a note of the outer voice
 soprano, 1 for the bass, 2 for any other), a chord change at the start of every chord segment whose base numeral or key
 region differs from the segment before (the harmonic rhythm's definition) and the phrases of `phrases` with the
 arrival of their cadence and the length change of their expansion. The form adapter does not report elided cadences, so
-no phrase is elided and the library reports no hypermetric reinterpretation. A piece without phrases has an empty
-`rhythm`. A claim's `framework` is `"standard-meter-v1"`.
+no phrase is elided and the library reports no hypermetric reinterpretation. A piece without chord segments has no
+`meter-fit` claim, and one without phrases has no other. A claim's `framework` is `"standard-meter-v1"`.
+
+**Meter fit** (`label` `"meter-fit"`): the meter checked against the harmonic rhythm and the cadences
+(`src/pipeline/meter_check_pipeline.c`). The analyzer's own result, not the library's: `note_ids` is empty and `span` is the
+piece. Candidates are every meter of 2/4, 3/4, 4/4, 3/8, 6/8, 9/8 and 12/8 at the scales 1/2, 1 and 2 with a pickup of 0 to
+one beat less than the measure; their barlines are placed in the file's time. A candidate with the same barlines and beats
+as another is one (3/4 at scale 2 and 3/8 at scale 1); the reading shown is the one whose most common interval between
+onsets, scaled, is nearest an eighth note, then the one with denominator 4. A candidate whose measure is no longer than the
+beat of the meter in use is not tried. A reading scores from 0 to 1 on the harmony changes (the downbeat share is the
+harmonic mean of the share of changes on a downbeat and the share of downbeats with a change; the share on any beat counts
+once) and the cadence arrivals on a downbeat (three times); the third beat of a four-beat meter counts half a downbeat.
+A reading applied with `--meter`, `--value-scale` or `--pickup` is the one checked (`declared`). The check never applies the
+alternative.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `declared` | object | The reading the analysis used: `meter` (`numerator`, `denominator`), `scale` and `pickup` (rationals; the pickup in whole notes after scaling) and `score`. |
+| `alternative` | object or null | The best other reading, same shape; `null` unless its score is at least 0.15 above `declared`'s. |
+| `uncertainty` | number | 1 minus the gap between the two best scores. |
 
 **Density** (`label` `"density"`): the library's profile of a phrase's notes. One claim of all the notes of each phrase
 (`line` `"all"`) and one for each line that has a note in it (`"soprano"`, `"bass"`, `"other"`); `span` is the phrase's
@@ -826,7 +844,7 @@ for. All the notes are one stream. The library names the ratio and places it (`b
 | `attacks` | integer | The attacks in the run, at least 2. |
 
 The Markdown report renders `## Rhythm and meter` from this section: `### Density` (a row per phrase and line),
-`### Syncopation`, `### Hemiola`, `### Hypermeter` and `### Tuplets and borrowed divisions`.
+`### Syncopation`, `### Hemiola`, `### Hypermeter` and `### Tuplets and borrowed divisions`, after one `**Meter fit:**` line.
 
 ### Texture
 

@@ -212,6 +212,9 @@ which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/int
    the motive families with Ursatz's motive analysis (see "Motives").
 11. `melody_pipeline`: builds the soprano line of each phrase and reads it with the melody adapter of standard-counterpoint
    (see "Melody").
+11a. `meter_check_pipeline`: scores the effective meter and the other readings of 2/4, 3/4, 4/4, 3/8, 6/8, 9/8 and 12/8 at
+   the scales 1/2, 1 and 2, with every pickup, by how well their barlines carry the harmonic rhythm and the cadences, and
+   reports the best other reading, which it never applies (see "Rhythm and meter").
 12. `rhythm_pipeline`: builds the neutral input of the rhythm adapter of standard-meter from the notes, the chord changes
    and the phrases, and reads the density, syncopation, hemiola and hypermeter; finds the tuplets (see "Rhythm and meter").
 13. `texture_pipeline`: separates the voices of each stream (MIDI track or part) with the kernel, builds the neutral input of
@@ -683,6 +686,13 @@ The input holds every note (its line: the outer voice soprano, the bass or any o
 numeral or key region differs from the chord before, and the phrases with the arrival of their cadence and their length
 change. The document's `rhythm` is one flat list of claims labelled by kind:
 
+- **Meter fit** (first in the list): the meter the analysis used (`declared`: meter, scale, pickup and a score from 0 to 1)
+  against the best other reading (`alternative`, `null` unless it scores at least 0.15 higher). The score is how well the
+  reading's barlines carry the harmony changes (on a downbeat, weight 2; on any beat, 1) and the cadence arrivals (on a
+  downbeat, 3). It exists for a file whose meter does not fit its music, such as a 3/4 piece written in 4/4; the
+  alternative is the `--meter`, `--value-scale` and `--pickup` that would read it. It is offered and never applied. A reading
+  applied with those options is the one checked, so a corrected piece offers nothing. The Markdown report prints one line
+  of it under `## Rhythm and meter`.
 - **Density** per phrase, for all its notes and for each line: notes, attacks, attacks per beat, the mean distance
   between attacks, the share of attacks on the beat and a histogram of the notes' lengths. The recurring rhythm patterns
   are the motive families' rhythms (see "Motives"), not a second detector.
