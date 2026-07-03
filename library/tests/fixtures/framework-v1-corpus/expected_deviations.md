@@ -6,26 +6,24 @@ below with the exact value the chain gives (the **actual** column) and its cause
 exactly (expected, actual, cause known); a check that now passes while its row is still here fails; a row no check uses fails. Nothing is skipped, no threshold is
 chosen, and no default is tuned to a piece. See `tests/integration/framework_v1_deviations.h`.
 
-The expected values are **draft hand readings, unverified against the editions** (see the headers of the `_v1_expected.txt` files). Two kinds of cause are
-therefore recorded: a **method** limit (a documented or demonstrable limit of an L2/L3 stage, with the roadmap item that would remove it) and a **convention**
-(the draft fixtures and a library rule define the same thing differently, so the difference ends only when the drafts are checked against the editions).
+The expected values are **verified** (Michelle Opitz, 2026-10-17: read from the MIDI first and checked against standard theory and a printed edition, R-092), so a
+deviation is never a draft reading to be corrected: the only cause kind left is a **method** limit (a documented or demonstrable limit of an L2/L3 stage, with the
+roadmap item that would remove it). The two differences of convention that were listed before (a V to I6, and a dominant resolving into the recapitulation) are
+resolved: the chain reports both readings of those places (R-090, R-091) and the expected files carry them as `readings` lines.
 
-Roadmap items are named here and have no number yet: the **Roadmap ID** column reads `unassigned` until the Registry gives one.
+Every cause names its follow-up in the **Roadmap ID** column (R-095).
 
 ## Causes
 
 | ID | Limit | Roadmap item | Roadmap ID |
 |---|---|---|---|
-| C1 | [method] Key regions come from 4-measure windows scored against pitch-class profiles with a change penalty (`key_regions.h`, REGION PATH); a window labels the measure at its centre, so a region's edge lands up to two measures from the barline where the music changes, and a one- or two-measure excursion is stretched to a window or absorbed | Key regions placed on harmonic evidence (cadence- and pivot-informed boundaries) | unassigned |
-| C2 | [method] The key of a window is the best correlation of its pooled pitch-class weights with the 24 profiles; closely related keys (the dominant, the subdominant, the relative minor) and passages of scales or a dominant pedal are read as the neighbouring key | Harmony-aware key estimation (the key from chord functions, not pitch-class weights alone) | unassigned |
-| C3 | [method] The extent of a key change is read from region lengths and return, then confirmed by the cadences found (`harmony_key_change_confirm`); a change whose cadence is not found, or whose region edge is off, still reads wrongly | Region length rule confirmed by cadences (B5) | unassigned |
-| C4 | [method] A cadence arriving on a weak beat is found only as a tonic after a root-position dominant on a stronger beat (or on the beat against a tonic off it) with a phrase end signal (`allow_weak_arrival`, `analysis_cadence.h`); a half cadence arriving on a weak beat is not found, and a closing V-I tag after the cadence of the draft is read as a second cadence | Half cadences on weak beats; the draft cadence list covering closing tags | unassigned |
-| C5 | [method] Chords are read from the pitch classes sounding in each adaptive segment, ranked among the diatonic triads and sevenths of the region's key: a segment holding only a melody note (a sparse left hand), an alternating or ornamented texture, or a chord outside the vocabulary is read as another chord or none, so the V-I that the music has is hidden and a V-I the music does not have can appear | Chord identification with context (non-chord-tone filtering, harmonic continuity across melody-only segments, non-diatonic chords) | unassigned |
-| C6 | [method] A bass that is not a member of the chord reads as root position (`roman_numeral_adapter.h`); the segment's bass is its lowest sounding pitch, so a neighbour or passing bass tone turns a dominant seventh that is prolonged in an inversion into a root-position V7 (and a tonic with an ornamental bass into I6) | Inversion read from the chord's bass tone when the lowest pitch is ornamental | unassigned |
-| C7 | [convention] The cadence adapter defines SUBVERTED as a cadential dominant that resolves to I6 or another non-tonic (`analysis_cadence.h`); the older cadence drafts do not mark such places (a V-I6 prolongs there) | Fixture check against the editions, then one cadence convention across the drafts and the adapter | unassigned |
-| C8 | [method] L3.6 builds phrases, themes and expansions from the cadences it is given and has no cadence detection of its own: a phrase ends at every goal cadence, so a missing cadence drops the phrase end and the themes and expansions built on it, and a false one cuts a short phrase. Re-verified in P1 B8: every remaining phrase, theme, expansion and return deviation traces to a cadence the upstream stages did not give (C1, C4, C5, C6); no L3.6 rule was found wrong. Rows carry C8 where the theme, expansion or return cannot be built until those cadences are right | Re-verify L3.6 again once the cadence causes (C1, C4, C5, C6) are removed | unassigned |
-| C9 | [convention] A dominant that ends a development and resolves into the recapitulation's tonic is a root-position V to I, which the adapter calls an authentic cadence; the draft reads the dominant as the development's half cadence and the recapitulation as a new start | Cadences across a formal boundary (the adapter has no notion of form sections); fixture check against the edition | unassigned |
-| C10 | [method] The kernel's thematic return detection compares stretches of 6 events inside the soprano notes of each L3.6 theme by contour and rhythm similarity (default threshold 0.8, transposition-invariant) and finds a return where a theme restates part of an earlier one, with variation. It still sees only the notes of L3.6 themes: a return at a place where no theme was built (C8) is not found, and similarity of pitch content, harmony and ornamented rhythm is not scored | Re-verification of L3.6 themes (C8) | unassigned |
+| C1 | [method] Key regions come from 4-measure windows scored against pitch-class profiles with a change penalty (`key_regions.h`, REGION PATH); a window labels the measure at its centre, so a region's edge lands up to two measures from the barline where the music changes, and a one- or two-measure excursion is stretched to a window or absorbed | Key regions placed on harmonic evidence (cadence- and pivot-informed boundaries) | L8.1 |
+| C2 | [method] The key of a window is the best correlation of its pooled pitch-class weights with the 24 profiles; closely related keys (the dominant, the subdominant, the relative minor) and passages of scales or a dominant pedal are read as the neighbouring key | Harmony-aware key estimation (the key from chord functions, not pitch-class weights alone) | L8.2 |
+| C3 | [method] The extent of a key change is read from region lengths and return, then confirmed by the cadences found (`harmony_key_change_confirm`); a change whose cadence is not found, or whose region edge is off, still reads wrongly | Region length rule confirmed by cadences (B5) | L8.3 |
+| C4 | [method] A cadence arriving on a weak beat is found only as a tonic after a root-position dominant on a stronger beat (or on the beat against a tonic off it) with a phrase end signal (`allow_weak_arrival`, `analysis_cadence.h`); a half cadence arriving on a weak beat is not found, and a closing V-I tag after the cadence of the draft is read as a second cadence | Half cadences on weak beats; the draft cadence list covering closing tags | L8.4 |
+| C5 | [method] Chords are read from the pitch classes sounding in each adaptive segment, ranked among the diatonic triads and sevenths of the region's key: a segment holding only a melody note (a sparse left hand), an alternating or ornamented texture, or a chord outside the vocabulary is read as another chord or none, so the V-I that the music has is hidden and a V-I the music does not have can appear | Chord identification with context (non-chord-tone filtering, harmonic continuity across melody-only segments, non-diatonic chords) | L8.5 |
+| C6 | [method] A bass that is not a member of the chord reads as root position (`roman_numeral_adapter.h`); the segment's bass is its lowest sounding pitch, so a neighbour or passing bass tone turns a dominant seventh that is prolonged in an inversion into a root-position V7 (and a tonic with an ornamental bass into I6) | Inversion read from the chord's bass tone when the lowest pitch is ornamental | L8.6 |
+| C8 | [method] L3.6 builds phrases, themes and expansions from the cadences it is given and has no cadence detection of its own: a phrase ends at every goal cadence, so a missing cadence drops the phrase end and the themes and expansions built on it, and a false one cuts a short phrase. Re-verified in P1 B8: every remaining phrase, theme, expansion and return deviation traces to a cadence the upstream stages did not give (C1, C4, C5, C6); no L3.6 rule was found wrong. Rows carry C8 where the theme, expansion or return cannot be built until those cadences are right | Re-verify L3.6 again once the cadence causes (C1, C4, C5, C6) are removed | L8.7 |
 
 ## Deviations
 
@@ -57,6 +55,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-031 | mozart545 | keys | change 79 | modulation at 79 | none | C1,C2 |
 | DEV-032 | mozart545 | keys | change 124 | modulation at 124 | none | C1,C2 |
 | DEV-033 | mozart545 | cadences | m12 b1 | hc | none | C5 |
+| DEV-103 | mozart545 | cadences | readings m4 b1 | subverted m4 or prolongation m4 | none | C5 |
 | DEV-039 | clementi36 | keys | region 1-5 | C major 1-5 | C major 1-7 | C1 |
 | DEV-040 | clementi36 | keys | region 6-15 | G major 6-15 | C major 1-7, G major 8-14, C minor 15-19 | C1 |
 | DEV-041 | clementi36 | keys | region 16-22 | C minor 16-22 | C minor 15-19, G major 20-23 | C1,C2 |
@@ -64,7 +63,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-043 | clementi36 | keys | change 16 | modulation at 16 | weak-modulation at 15 | C3 |
 | DEV-044 | clementi36 | cadences | m8 b1 | pac | none | C1,C5 |
 | DEV-045 | clementi36 | cadences | m15 b1 | pac | none | C5 |
-| DEV-046 | clementi36 | cadences | m23 b1 | hc | none | C1,C2 |
+| DEV-102 | clementi36 | cadences | readings m23 b1 | hc m23 or pac m24 | pac at m24 b1 (750), or hc at m23 b4.5 (250) | C1,C2 |
 | DEV-047 | clementi36 | cadences | m38 b1 | pac | none | C5 |
 | DEV-048 | clementi36 | cadences | extra m2 b1 | none | pac | C5 |
 | DEV-049 | clementi36 | cadences | extra m2 b3 | none | hc | C5 |
@@ -73,7 +72,7 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-055 | clementi36 | cadences | extra m25 b1 | none | pac | C5 |
 | DEV-056 | clementi36 | cadences | extra m25 b3 | none | hc | C5 |
 | DEV-058 | clementi36 | cadences | extra m33 b1 | none | iac | C5 |
-| DEV-060 | clementi36 | cadences | extra m37 b3 | none | subverted | C5,C7 |
+| DEV-060 | clementi36 | cadences | extra m37 b3 | none | subverted | C5 |
 | DEV-061 | clementi36 | phrase-form | end m8 | pac at m8 | none | C1,C5 |
 | DEV-063 | clementi36 | phrase-form | theme period 1-8 | period 1-8 parts 1-4 5-8 | hybrid 5-10 parts 5-8 9-10 | C1,C5,C8 |
 | DEV-064 | clementi36 | phrase-form | theme period 24-31 | period 24-31 parts 24-27 28-31 | period 15-24 parts 15-19 20-24, hybrid 28-33 parts 28-31 32-33 | C5,C8 |
@@ -103,6 +102,3 @@ Roadmap items are named here and have no number yet: the **Roadmap ID** column r
 | DEV-095 | mozart545 | keys | change 41 | modulation at 41 | tonicization at 40 | C5 |
 | DEV-097 | clementi36 | cadences | m31 b1 | pac | none | C5 |
 | DEV-098 | clementi36 | phrase-form | end m31 | pac at m31 | none | C5 |
-| DEV-099 | clementi36 | cadences | extra m12 b1 | none | subverted | C7 |
-| DEV-100 | clementi36 | cadences | extra m24 b1 | none | pac | C9 |
-| DEV-101 | clementi36 | cadences | extra m35 b1 | none | subverted | C7 |

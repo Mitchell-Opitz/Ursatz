@@ -164,11 +164,105 @@ static void fv1_beat_text(double beat, char out[16]) {
     snprintf(out, 16, "%g", beat);
 }
 
+/* A readings side against one reading of a found cadence: the same kind (a type, or a prolongation), within one beat of the arrival. */
+static bool fv1_reading_matches(const Chain *c, const XReadingSide *want, bool prolongation, CadenceType type, size_t arrival_first) {
+    double at = fv1_time_of(c, want->measure, want->beat);
+    return want->prolongation == prolongation && (prolongation || want->type == type) &&
+           fabs(c->p.starts[arrival_first] - at) <= c->shim.beat_length + 1e-9;
+}
+
+static void fv1_reading_text(const Chain *c, bool prolongation, CadenceType type, size_t arrival_first, int share, char *out, size_t size) {
+    int measure = 0;
+    double b = 0.0;
+    fv1_where(c, arrival_first, &measure, &b);
+    char bt[16];
+    fv1_beat_text(b, bt);
+    if (prolongation) {
+        snprintf(out, size, "prolongation at m%d b%s (%d)", measure, bt, share);
+    } else {
+        snprintf(out, size, "%s at m%d b%s (%d)", fv1_type_text(type), measure, bt, share);
+    }
+}
+
+/* The `readings` lines: one found result whose primary and alternative are the two readings, in either order. The result is marked used
+   (whether it matches or not, the nearest one) so it is neither matched against a `cadence` line nor reported as an extra. */
+static void fv1_check_readings(const Chain *c, Fv1Verifier *v, bool *used) {
+    const V1Expected *x = &c->x;
+    const HarmonyCadences *found = &c->cadences;
+    double tolerance = c->shim.beat_length + 1e-9;
+    for (size_t i = 0; i < x->readings_count; i++) {
+        const XReadings *want = &x->readings[i];
+        char beat[16];
+        fv1_beat_text(want->side[0].beat, beat);
+        char location[72];
+        char expected[160];
+        char actual[480];
+        char first[80];
+        char second[80];
+        snprintf(location, sizeof(location), "readings m%d b%s", want->side[0].measure, beat);
+        snprintf(expected, sizeof(expected), "%s m%d or %s m%d%s", want->side[0].text, want->side[0].measure, want->side[1].text,
+                 want->side[1].measure, want->prefer != 0 ? (want->prefer == 1 ? ", first likelier" : ", second likelier") : "");
+        long match = -1;
+        long near = -1;
+        int match_order = 0;
+        for (size_t k = 0; k < found->count && match < 0; k++) {
+            const HarmonyCadenceResult *r = &found->items[k];
+            double d0 = fabs(c->p.starts[r->arrival_first] - fv1_time_of(c, want->side[0].measure, want->side[0].beat));
+            double d1 = fabs(c->p.starts[r->arrival_first] - fv1_time_of(c, want->side[1].measure, want->side[1].beat));
+            if (near < 0 && (d0 <= tolerance || d1 <= tolerance)) {
+                near = (long)k;
+            }
+            if (!r->alternative.present) {
+                continue;
+            }
+            for (int order = 0; order < 2 && match < 0; order++) {
+                if (fv1_reading_matches(c, &want->side[order], false, r->type, r->arrival_first) &&
+                    fv1_reading_matches(c, &want->side[1 - order], r->alternative.reading == HARMONY_CADENCE_READING_PROLONGATION,
+                                        r->alternative.type, r->alternative.arrival_first)) {
+                    match = (long)k;
+                    match_order = order;
+                }
+            }
+        }
+        bool right = match >= 0;
+        long shown = match >= 0 ? match : near;
+        if (shown >= 0) {
+            const HarmonyCadenceResult *r = &found->items[(size_t)shown];
+            used[shown] = true;
+            fv1_reading_text(c, false, r->type, r->arrival_first, r->share, first, sizeof(first));
+            if (r->alternative.present) {
+                fv1_reading_text(c, r->alternative.reading == HARMONY_CADENCE_READING_PROLONGATION, r->alternative.type,
+                                 r->alternative.arrival_first, r->alternative.share, second, sizeof(second));
+                snprintf(actual, sizeof(actual), "%s, or %s", first, second);
+            } else {
+                snprintf(actual, sizeof(actual), "%s, no alternative", first);
+            }
+            if (right && want->prefer != 0) {
+                /* side[order] is the primary's reading: the preferred side has the higher share when it is the primary and the primary
+                   leads, or the alternative and it leads */
+                int primary_side = match_order + 1;
+                bool primary_leads = r->share > r->alternative.share;
+                bool alternative_leads = r->alternative.share > r->share;
+                right = (want->prefer == primary_side && primary_leads) || (want->prefer != primary_side && alternative_leads);
+            }
+        } else {
+            snprintf(actual, sizeof(actual), "none");
+        }
+        fv1_check(v, FV1_AREA_CADENCES, location, right, expected, actual);
+    }
+}
+
 static void fv1_check_cadences(const Chain *c, Fv1Verifier *v) {
     const V1Expected *x = &c->x;
     const HarmonyCadences *found = &c->cadences;
     bool *used = (bool *)calloc(found->count > 0 ? found->count : 1, sizeof(bool));
     assert(used != NULL);
+    bool *claimed = (bool *)calloc(found->count > 0 ? found->count : 1, sizeof(bool)); /* results a `readings` line took */
+    assert(claimed != NULL);
+    fv1_check_readings(c, v, claimed);
+    for (size_t k = 0; k < found->count; k++) {
+        used[k] = claimed[k];
+    }
     double tolerance = c->shim.beat_length + 1e-9;
     for (size_t i = 0; i < x->cadence_count; i++) {
         const XCadence *want = &x->cadences[i];
@@ -182,7 +276,7 @@ static void fv1_check_cadences(const Chain *c, Fv1Verifier *v) {
         double at = fv1_time_of(c, want->measure, want->beat);
         long best = -1;
         for (size_t k = 0; k < found->count; k++) {
-            if (fabs(c->p.starts[found->items[k].arrival_first] - at) > tolerance) {
+            if (claimed[k] || fabs(c->p.starts[found->items[k].arrival_first] - at) > tolerance) {
                 continue;
             }
             if (best < 0 || (found->items[k].type == want->type && found->items[(size_t)best].type != want->type) ||
@@ -210,7 +304,7 @@ static void fv1_check_cadences(const Chain *c, Fv1Verifier *v) {
         }
         fv1_check(v, FV1_AREA_CADENCES, location, right, expected, actual);
     }
-    if (x->cadence_count == 0) {
+    if (x->cadence_count == 0 && x->readings_count == 0) {
         /* a piece with no cadence in its scope: the claim is that there is none */
         size_t in_scope = 0;
         for (size_t k = 0; k < found->count; k++) {
@@ -236,6 +330,7 @@ static void fv1_check_cadences(const Chain *c, Fv1Verifier *v) {
         snprintf(location, sizeof(location), "extra m%d b%s", measure, bt);
         fv1_check(v, FV1_AREA_CADENCES, location, false, "none", fv1_type_text(found->items[k].type));
     }
+    free(claimed);
     free(used);
 }
 
@@ -256,12 +351,26 @@ static void fv1_check_form(const Chain *c, Fv1Verifier *v) {
         char actual[480];
         snprintf(location, sizeof(location), "end m%d", want->measure);
         snprintf(expected, sizeof(expected), "%s at m%d", want->type_text, want->measure);
+        /* an end at the measure of either reading of a `readings` line may be found at either reading's measure */
+        int targets[1 + 2 * 8];
+        size_t target_count = 0;
+        targets[target_count++] = want->measure;
+        for (size_t r = 0; r < x->readings_count; r++) {
+            if (x->readings[r].side[0].measure == want->measure || x->readings[r].side[1].measure == want->measure) {
+                targets[target_count++] = x->readings[r].side[0].measure;
+                targets[target_count++] = x->readings[r].side[1].measure;
+            }
+        }
         const StandardFormPhraseClaim *best = NULL;
+        int best_distance = 0;
         for (size_t k = 0; k < f->phrases.count; k++) {
             const StandardFormPhraseClaim *p = &f->phrases.items[k].claim;
-            if (abs(p->end_measure - want->measure) <= 1 &&
-                (best == NULL || abs(p->end_measure - want->measure) < abs(best->end_measure - want->measure))) {
-                best = p;
+            for (size_t t = 0; t < target_count; t++) {
+                int distance = abs(p->end_measure - targets[t]);
+                if (distance <= 1 && (best == NULL || distance < best_distance)) {
+                    best = p;
+                    best_distance = distance;
+                }
             }
         }
         if (best != NULL) {
@@ -393,6 +502,13 @@ static void fv1_check_fixture_agreement(void) {
                 double at = ((double)(x.cadences[k].measure - 1) * x.beats + (x.cadences[k].beat - 1.0)) * beat_length;
                 found = found || (fabs(at - a.cadences[e].at) < 1e-9 && x.cadences[k].type == a.cadences[e].type);
             }
+            for (size_t k = 0; k < x.readings_count; k++) {
+                for (int side = 0; side < 2; side++) {
+                    const XReadingSide *r = &x.readings[k].side[side];
+                    double at = ((double)(r->measure - 1) * x.beats + (r->beat - 1.0)) * beat_length;
+                    found = found || (!r->prolongation && fabs(at - a.cadences[e].at) < 1e-9 && r->type == a.cadences[e].type);
+                }
+            }
             if (!found) {
                 printf("  %s: a cadence of %s is not in the v1 file\n", x.piece, fp->piece.fixture);
             }
@@ -428,6 +544,11 @@ static void fv1_check_fixture_agreement(void) {
         for (size_t k = 0; k < x.cadence_count; k++) {
             assert(x.cadences[k].measure >= x.cadence_first && x.cadences[k].measure <= x.cadence_last);
         }
+        for (size_t k = 0; k < x.readings_count; k++) {
+            for (int side = 0; side < 2; side++) {
+                assert(x.readings[k].side[side].measure >= x.cadence_first && x.readings[k].side[side].measure <= x.cadence_last);
+            }
+        }
         for (size_t k = 0; k < x.end_count; k++) {
             assert(x.ends[k].measure >= x.form_first && x.ends[k].measure <= x.form_last);
             if (x.ends[k].measure < x.cadence_first || x.ends[k].measure > x.cadence_last) {
@@ -439,6 +560,12 @@ static void fv1_check_fixture_agreement(void) {
                     continue;
                 }
                 coincides = coincides || (abs(x.cadences[m].measure - x.ends[k].measure) <= 1 && x.cadences[m].type == x.ends[k].type);
+            }
+            for (size_t m = 0; m < x.readings_count; m++) {
+                for (int side = 0; side < 2; side++) {
+                    const XReadingSide *r = &x.readings[m].side[side];
+                    coincides = coincides || (!r->prolongation && abs(r->measure - x.ends[k].measure) <= 1 && r->type == x.ends[k].type);
+                }
             }
             if (!coincides) {
                 printf("  %s: phrase end m%d has no cadence of its type\n", x.piece, x.ends[k].measure);

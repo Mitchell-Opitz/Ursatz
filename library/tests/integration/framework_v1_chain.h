@@ -46,6 +46,21 @@ typedef struct {
     bool optional; /* may be missing without a deviation; found with its type, it is not an extra */
 } XCadence;
 
+/* One side of a `readings` line: a cadence type word, or `prolongation`. */
+typedef struct {
+    int measure;
+    double beat;
+    bool prolongation;
+    CadenceType type; /* meaningful when not a prolongation */
+    char text[24];
+} XReadingSide;
+
+/* `readings <m> <beat> <reading> <m> <beat> <reading> [prefer 1|2]`: one cadence point with two competing readings (C7, C9). */
+typedef struct {
+    XReadingSide side[2];
+    int prefer; /* 0: none; 1 or 2: that side must have the higher share */
+} XReadings;
+
 typedef struct {
     int measure;
     CadenceType type;
@@ -92,6 +107,8 @@ typedef struct {
     size_t change_count;
     XCadence cadences[24];
     size_t cadence_count;
+    XReadings readings[8];
+    size_t readings_count;
     XEnd ends[24];
     size_t end_count;
     XTheme themes[8];
@@ -196,6 +213,30 @@ static void fv1_load_expected(const char *prefix, V1Expected *x) {
             cd->type = fv1_cadence_type(a);
             snprintf(cd->type_text, sizeof(cd->type_text), "%s", a);
             cd->optional = n == 4;
+        } else if (strcmp(word, "readings") == 0) {
+            int m1 = 0;
+            int m2 = 0;
+            double b1 = 0.0;
+            double b2 = 0.0;
+            char r1[24] = "";
+            char r2[24] = "";
+            char keyword[24] = "";
+            int prefer = 0;
+            int n = sscanf(line, "readings %d %lf %23s %d %lf %23s %23s %d", &m1, &b1, r1, &m2, &b2, r2, keyword, &prefer);
+            assert((n == 6 || n == 8) && x->readings_count < 8);
+            assert(n == 6 || (strcmp(keyword, "prefer") == 0 && (prefer == 1 || prefer == 2)));
+            XReadings *rd = &x->readings[x->readings_count++];
+            const int measures[2] = {m1, m2};
+            const double beats[2] = {b1, b2};
+            const char *texts[2] = {r1, r2};
+            for (int s = 0; s < 2; s++) {
+                rd->side[s].measure = measures[s];
+                rd->side[s].beat = beats[s];
+                rd->side[s].prolongation = strcmp(texts[s], "prolongation") == 0;
+                rd->side[s].type = rd->side[s].prolongation ? CADENCE_TYPE_SUBVERTED : fv1_cadence_type(texts[s]);
+                snprintf(rd->side[s].text, sizeof(rd->side[s].text), "%s", texts[s]);
+            }
+            rd->prefer = n == 8 ? prefer : 0;
         } else if (strcmp(word, "phrase-end") == 0) {
             assert(sscanf(line, "phrase-end %d %23s", &i1, a) == 2 && x->end_count < 24);
             XEnd *e = &x->ends[x->end_count++];
