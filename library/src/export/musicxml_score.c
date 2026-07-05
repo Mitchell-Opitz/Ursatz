@@ -8,6 +8,7 @@
 
 #include "events/note_event.h"
 #include "export/musicxml_export.h"
+#include "export/musicxml_score_internal.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_spelling.h"
 #include "events/dynamics.h"
@@ -230,6 +231,7 @@ typedef struct {
 
 typedef struct {
     const MusicXmlExportScore *score;
+    bool strict; /* an overlap in a voice fails instead of being split into lanes */
 
     PartInfo *parts;
     size_t part_count;
@@ -883,6 +885,86 @@ static MusicXmlExportResult build_cuts(Prep *prep) {
     return MUSICXML_EXPORT_OK;
 }
 
+/* One strand of non-overlapping notes of a voice group; its last chord is the notes sharing chord_start/chord_end. */
+typedef struct {
+    size_t group;
+    long long cursor; /* the end of the last note */
+    long long chord_start;
+    long long chord_end;
+} Lane;
+
+/*
+ * Splits every voice group into lanes so no group has overlapping notes. The notes must be sorted (group, start,
+ * index). A note that starts and ends with a lane's last chord joins that chord; any other goes to the lowest lane
+ * that is free at its start, and a new lane is made when none is. Lane 0 stays the group itself; each further lane
+ * becomes a group of its own on the same part and staff, with the next voice number unused in the part.
+ */
+static MusicXmlExportResult split_lanes(Prep *prep) {
+    int *next_voice = (int *)calloc(prep->part_count, sizeof(int));
+    if (next_voice == NULL) {
+        return MUSICXML_EXPORT_ERR_ALLOC;
+    }
+    for (size_t g = 0; g < prep->group_count; g++) {
+        if (prep->groups[g].voice_number >= next_voice[prep->groups[g].part]) {
+            next_voice[prep->groups[g].part] = prep->groups[g].voice_number + 1;
+        }
+    }
+    Lane *lanes = NULL;
+    size_t lane_count = 0;
+    size_t lane_cap = 0;
+    size_t home = SIZE_MAX;
+    MusicXmlExportResult result = MUSICXML_EXPORT_OK;
+    for (size_t i = 0; i < prep->note_count && result == MUSICXML_EXPORT_OK; i++) {
+        NoteRec *note = &prep->notes[i];
+        if (note->group != home) {
+            home = note->group;
+            lane_count = 0;
+        }
+        if (prep->strict && lane_count > 0 && note->start < lanes[0].cursor) {
+            result = MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES;
+            break;
+        }
+        size_t chosen = lane_count;
+        for (size_t l = 0; l < lane_count && chosen == lane_count; l++) {
+            if (lanes[l].chord_start == note->start && lanes[l].chord_end == note->end) {
+                chosen = l;
+            }
+        }
+        for (size_t l = 0; l < lane_count && chosen == lane_count; l++) {
+            if (lanes[l].cursor <= note->start) {
+                chosen = l;
+            }
+        }
+        if (chosen == lane_count) {
+            if (lane_count == lane_cap) {
+                size_t cap = lane_cap == 0 ? 4 : lane_cap * 2;
+                Lane *grown = (Lane *)realloc(lanes, cap * sizeof(Lane));
+                if (grown == NULL) {
+                    result = MUSICXML_EXPORT_ERR_ALLOC;
+                    break;
+                }
+                lanes = grown;
+                lane_cap = cap;
+            }
+            lanes[lane_count].group = home;
+            if (lane_count > 0) {
+                /* at most one lane per note, so the groups array (one slot per note) has room */
+                lanes[lane_count].group = prep->group_count++;
+                prep->groups[lanes[lane_count].group] = prep->groups[home];
+                prep->groups[lanes[lane_count].group].voice_number = next_voice[prep->groups[home].part]++;
+            }
+            lane_count++;
+        }
+        lanes[chosen].cursor = note->end;
+        lanes[chosen].chord_start = note->start;
+        lanes[chosen].chord_end = note->end;
+        note->group = lanes[chosen].group;
+    }
+    free(lanes);
+    free(next_voice);
+    return result;
+}
+
 static MusicXmlExportResult prepare(Prep *prep) {
     MusicXmlExportResult result = validate_arrays(prep->score);
     if (result == MUSICXML_EXPORT_OK) {
@@ -928,6 +1010,10 @@ static MusicXmlExportResult prepare(Prep *prep) {
     }
     if (result == MUSICXML_EXPORT_OK) {
         qsort(prep->notes, prep->note_count, sizeof(NoteRec), compare_notes);
+        result = split_lanes(prep);
+    }
+    if (result == MUSICXML_EXPORT_OK) {
+        qsort(prep->notes, prep->note_count, sizeof(NoteRec), compare_notes);
     }
     return result;
 }
@@ -943,6 +1029,7 @@ typedef struct {
     int fragment;     /* 0 for the first piece of a note */
     bool tie_start;
     bool tie_stop;
+    bool chord;       /* written with <chord/>, sharing the previous note's start and duration */
 } Segment;
 
 typedef struct {
@@ -980,8 +1067,13 @@ static long long next_cut(const long long *cuts, size_t count, long long tick) {
     return low < count ? cuts[low] : LLONG_MAX;
 }
 
-/* Splits [from, to) at the part's cuts: a note's pieces are tied, a rest's are not. */
-static bool add_run(const Prep *prep, size_t part, SegmentList *list, long long from, long long to, size_t note) {
+/*
+ * Splits [from, to) at the part's cuts: a note's pieces are tied, a rest's are not. A chord is several notes with
+ * this same span, prep->notes[first] to prep->notes[first + members - 1]: each piece is written for every member,
+ * the first plain and the others as chord members, so the writer finds them back to back.
+ */
+static bool add_run(const Prep *prep, size_t part, SegmentList *list, long long from, long long to, size_t note,
+                    size_t members) {
     long long position = from;
     int fragment = 0;
     while (position < to) {
@@ -989,16 +1081,20 @@ static bool add_run(const Prep *prep, size_t part, SegmentList *list, long long 
         if (next > to) {
             next = to;
         }
-        Segment segment;
-        segment.start = position;
-        segment.end = next;
-        segment.note = note;
-        segment.fragment = fragment++;
-        segment.tie_start = note != REST_SEGMENT && next < to;
-        segment.tie_stop = note != REST_SEGMENT && position > from;
-        if (!segment_push(list, segment)) {
-            return false;
+        for (size_t k = 0; k < members; k++) {
+            Segment segment;
+            segment.start = position;
+            segment.end = next;
+            segment.note = note == REST_SEGMENT ? REST_SEGMENT : note + k;
+            segment.fragment = fragment;
+            segment.tie_start = note != REST_SEGMENT && next < to;
+            segment.tie_stop = note != REST_SEGMENT && position > from;
+            segment.chord = k > 0;
+            if (!segment_push(list, segment)) {
+                return false;
+            }
         }
+        fragment++;
         position = next;
     }
     return true;
@@ -1014,7 +1110,10 @@ static void segments_free(SegmentList *lists, size_t count) {
     free(lists);
 }
 
-/* Each group's notes in order, the gaps between them as rests, all cut. An overlap in a voice fails. */
+/*
+ * Each group's notes in order, the gaps between them as rests, all cut. Split_lanes has already made every group
+ * free of overlaps, so the only notes that share a start are chords (the same start and end).
+ */
 static MusicXmlExportResult build_segments(const Prep *prep, SegmentList **out) {
     SegmentList *lists = (SegmentList *)calloc(prep->group_count > 0 ? prep->group_count : 1, sizeof(SegmentList));
     long long *cursor = (long long *)calloc(prep->group_count > 0 ? prep->group_count : 1, sizeof(long long));
@@ -1024,17 +1123,22 @@ static MusicXmlExportResult build_segments(const Prep *prep, SegmentList **out) 
         return MUSICXML_EXPORT_ERR_ALLOC;
     }
     MusicXmlExportResult result = MUSICXML_EXPORT_OK;
-    for (size_t i = 0; i < prep->note_count && result == MUSICXML_EXPORT_OK; i++) {
+    size_t i = 0;
+    while (i < prep->note_count && result == MUSICXML_EXPORT_OK) {
         const NoteRec *note = &prep->notes[i];
         size_t g = note->group;
-        if (note->start < cursor[g]) {
-            result = MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES;
-        } else if ((note->start > cursor[g] &&
-                    !add_run(prep, note->part, &lists[g], cursor[g], note->start, REST_SEGMENT)) ||
-                   !add_run(prep, note->part, &lists[g], note->start, note->end, i)) {
+        size_t members = 1;
+        while (i + members < prep->note_count && prep->notes[i + members].group == g &&
+               prep->notes[i + members].start == note->start && prep->notes[i + members].end == note->end) {
+            members++;
+        }
+        if ((note->start > cursor[g] &&
+             !add_run(prep, note->part, &lists[g], cursor[g], note->start, REST_SEGMENT, 1)) ||
+            !add_run(prep, note->part, &lists[g], note->start, note->end, i, members)) {
             result = MUSICXML_EXPORT_ERR_ALLOC;
         }
         cursor[g] = note->end;
+        i += members;
     }
     free(cursor);
     if (result != MUSICXML_EXPORT_OK) {
@@ -1077,6 +1181,7 @@ static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment,
         xmlbuf_append(buf, "      <note>\n        <rest/>\n");
     } else {
         char base[64];
+        const char *chord = segment->chord ? "        <chord/>\n" : "";
         xml_id_from_entity(entity_id_value(note_event_id(event)), base, sizeof(base));
         if (segment->tie_start || segment->tie_stop) {
             char id[96];
@@ -1085,9 +1190,9 @@ static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment,
             } else {
                 snprintf(id, sizeof(id), "%s_%d", base, segment->fragment);
             }
-            xmlbuf_append(buf, "      <note xml:id=\"%s\">\n", id);
+            xmlbuf_append(buf, "      <note xml:id=\"%s\">\n%s", id, chord);
         } else {
-            xmlbuf_append(buf, "      <note xml:id=\"%s\">\n", base);
+            xmlbuf_append(buf, "      <note xml:id=\"%s\">\n%s", base, chord);
         }
         const PitchSpelling *spelling = note_event_optional_pitch_spelling(event);
         xmlbuf_append(buf, "        <pitch>\n          <step>%s</step>\n",
@@ -1262,7 +1367,7 @@ static void write_rest_run(const Prep *prep, XmlBuf *buf, size_t part, long long
             next = to;
         }
         write_dirs_through(dirs, buf, position);
-        Segment rest = {position, next, REST_SEGMENT, 0, false, false};
+        Segment rest = {position, next, REST_SEGMENT, 0, false, false, false};
         write_segment(prep, buf, &rest, part, staff, voice_number);
         position = next;
     }
@@ -1443,13 +1548,14 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
     return result;
 }
 
-MusicXmlExportResult musicxml_export_write_score(const MusicXmlExportScore *score, char **out_xml) {
+static MusicXmlExportResult write_score(const MusicXmlExportScore *score, char **out_xml, bool strict) {
     if (score == NULL || out_xml == NULL) {
         return MUSICXML_EXPORT_ERR_NULL_ARG;
     }
     Prep prep;
     memset(&prep, 0, sizeof(prep));
     prep.score = score;
+    prep.strict = strict;
     MusicXmlExportResult result = prepare(&prep);
 
     XmlBuf buf;
@@ -1475,4 +1581,12 @@ MusicXmlExportResult musicxml_export_write_score(const MusicXmlExportScore *scor
     }
     *out_xml = buf.data;
     return MUSICXML_EXPORT_OK;
+}
+
+MusicXmlExportResult musicxml_export_write_score(const MusicXmlExportScore *score, char **out_xml) {
+    return write_score(score, out_xml, false);
+}
+
+MusicXmlExportResult musicxml_export_write_score_strict(const MusicXmlExportScore *score, char **out_xml) {
+    return write_score(score, out_xml, true);
 }

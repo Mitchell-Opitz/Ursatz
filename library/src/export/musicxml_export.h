@@ -149,6 +149,12 @@ MusicXmlExportResult musicxml_export_write(PersistenceHandle *handle, char **out
  * Measures, their numbers (a pickup is 0), and every barline come from score->meter_map and nowhere else; a note
  * that crosses a barline is split and tied; <divisions> is the smallest whole number that makes every position and
  * duration an integer, and nothing is rounded. On any result other than OK *out_xml is not written.
+ *
+ * Chords and overlaps are written, never refused (MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES is not returned here). Within
+ * a voice (part, staff, VoiceReference), notes with the same start and end are a chord: the first is a plain <note>
+ * and each other is a <note> that begins with <chord/>. Any other note that starts while an earlier one still sounds
+ * goes to the lowest lane of that voice that is free, a new lane when none is; each lane after the first is written
+ * as an extra <voice>, numbered after the voices the part already uses, on the same staff.
  */
 MusicXmlExportResult musicxml_export_write_score(const MusicXmlExportScore *score, char **out_xml);
 
