@@ -280,7 +280,7 @@ target_compile_definitions(test_piece_fills PRIVATE COMPOSER_CLI_PATH="$<TARGET_
                                                     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_dependencies(test_piece_fills ursatz-composer)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills)
-foreach(mode fixture)
+foreach(mode fixture theme refused progression partial)
     add_test(NAME test_piece_fills_${mode} COMMAND test_piece_fills ${mode}
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills)
 endforeach()
