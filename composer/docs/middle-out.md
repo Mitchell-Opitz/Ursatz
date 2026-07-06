@@ -9,6 +9,7 @@ GivenResult plan_give_melody(PiecePlan *, NodeId section, size_t bar, const Plan
 GivenResult plan_give_progression(PiecePlan *, NodeId section, size_t bar, const char *const *numerals, size_t count,
                                   size_t cells_per_chord);
 GivenResult plan_give_bass(PiecePlan *, NodeId section, size_t bar, const PlanNote *notes, size_t count);
+GivenResult plan_give_section(PiecePlan *, NodeId section, const PiecePlan *source, NodeId source_section);
 ```
 
 From the command line: `plan --given-melody <file> --at B:1`, `--given-progression "I IV V I" --at A:1 --cells 2` and
@@ -32,6 +33,8 @@ Every call checks all of the material before it adds any, so a call that is refu
 end), `GIVEN_ERR_KEY` (it is not inside one key span, so a melody cannot cross the change of key a section may have in
 its second half), `GIVEN_ERR_METER` and `GIVEN_ERR_OVERLAP` (Given material of the same lane is already there).
 
+Two more results belong to `plan_give_section` below: `GIVEN_ERR_NOT_REALIZED` and `GIVEN_ERR_LENGTH`.
+
 A piece that is to take given melodies is requested with `PieceRequest.given_melodies`: the material section holds a
 bar more for each, for the motive described below.
 
@@ -39,6 +42,24 @@ bar more for each, for the motive described below.
 `given_touches` asks whether there is any. `given_snapshot` copies the material the user placed (the spans owned by a
 section) and `given_snapshot_report` says, run by run (a progression is a run), whether every span is still there, Given,
 with the same payload byte for byte. `fill` takes a snapshot before the run and reports after it.
+
+## A section from another plan
+
+`plan_give_section` gives a whole realized section of another plan (a theme the `theme` command composed) to a section of
+this one, the way a piece structure fills a section with a theme ([piece-structure.md](piece-structure.md#fills)):
+
+- its harmony, bass, melody and inner voice spans become Given spans owned by the section, moved to its start and
+  transposed by the key difference between the two sections (the key lanes must have the same shape and mode, else
+  `GIVEN_ERR_KEY`);
+- its phrase and idea nodes are copied under the section, in the states they had, so `form_hear` reads the section as the
+  theme it was; the section is then Realized and no stage targets it. Constraints that name a node of the source plan
+  (a motive reference) are dropped, since the plan has no such node;
+- the source must be realized (not Constrained, with harmony, bass and melody all written: `GIVEN_ERR_NOT_REALIZED`),
+  as long as the section, a pickup before it included (`GIVEN_ERR_LENGTH`; a span that would start before the section's
+  `pickup` is refused the same way), and in the same meter (`GIVEN_ERR_METER`). A section that has nodes already, or lane
+  spans where the copy would go, is `GIVEN_ERR_OVERLAP`. A refused call leaves the plan as it was.
+
+The Given spans are in the snapshot like any others, so `given_snapshot_report` shows that a run left them as they were.
 
 ## How the stages go around it
 
