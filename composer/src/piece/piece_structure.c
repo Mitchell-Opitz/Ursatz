@@ -288,6 +288,32 @@ static PieceResult add_theme_constraints(PiecePlan *plan, NodeId id, const Piece
     return result;
 }
 
+/*
+ * Whether the section is held for the seam stage (R-171): the loop's end, unless it is Given (a theme fill, or a
+ * progression that covers it) or holds the body's first bar, which the seam copies before anything can be filled.
+ */
+static bool is_held(const PieceStructure *structure, size_t index, size_t cells) {
+    const PieceSection *section = &structure->sections[index];
+    size_t loop_end = structure->section_count;
+    size_t first_body = structure->section_count;
+    for (size_t i = 0; i < structure->section_count; i++) {
+        if (structure->sections[i].part == PIECE_PART_BODY && first_body == structure->section_count) {
+            first_body = i;
+        }
+        if (structure->sections[i].part == PIECE_PART_BODY || structure->sections[i].part == PIECE_PART_TURNAROUND) {
+            loop_end = i;
+        }
+    }
+    if (index != loop_end || index == first_body || section->fill == PIECE_FILL_THEME) {
+        return false;
+    }
+    if (section->fill == PIECE_FILL_PROGRESSION) {
+        size_t per_chord = section->cells_per_chord ? section->cells_per_chord : cells;
+        return section->numeral_count * per_chord * (size_t)structure->meter.beats_per_bar < section->beats * cells;
+    }
+    return true;
+}
+
 static PieceResult add_section(PiecePlan *plan, const PieceStructure *structure, const PieceSection *section,
                                size_t start_beats, NodeId form, PlanSpan span, NodeId *out) {
     PlanConstraint constraint;
@@ -365,6 +391,14 @@ static PieceResult add_section(PiecePlan *plan, const PieceStructure *structure,
     return result;
 }
 
+/* A constraint with no parameters on a node. */
+static PieceResult add_flag(PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
+    PlanConstraint constraint;
+    memset(&constraint, 0, sizeof(constraint));
+    constraint.kind = kind;
+    return add_constraint(plan, id, &constraint);
+}
+
 PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePlan **out) {
     if (!structure || !out) {
         return PIECE_ERR_NULL;
@@ -407,7 +441,9 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
     if (!plan) {
         return PIECE_ERR_ALLOC;
     }
-    /* The material starts on the first barline at or after the last section's end: its motives are bars of the meter. */
+    /* The seam is a bar after the loop's end; the material starts on the first barline at or after the seam's end: its
+       motives are bars of the meter. */
+    beats += per_bar;
     PlanSpan material = {{0, 1}, {0, 1}};
     if (plan_time_make(bar.num * (long)((beats + per_bar - 1) / per_bar), bar.den, &material.start) != PLAN_OK) {
         return PIECE_ERR_BAD_REQUEST;
@@ -461,10 +497,27 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
                 result = PIECE_ERR_BAD_REQUEST;
             }
         }
+        if (result == PIECE_OK && is_held(&copy, i, cells)) {
+            result = add_flag(plan, id, PLAN_CONSTRAINT_HOLD);
+        }
         if (result == PIECE_OK) {
             result = from_plan(plan_time_add(start, span.length, &start));
         }
         start_beats += copy.sections[i].beats;
+    }
+    /* The seam: the bar the loop leads into, open and empty until the seam stage copies the body's first bar into it. */
+    if (result == PIECE_OK) {
+        NodeId seam;
+        PlanSpan span = {start, bar};
+        result = from_plan(plan_add_node(plan, form_id, PLAN_NODE_SECTION, span, "seam", &seam));
+        result = result == PIECE_OK ? add_flag(plan, seam, PLAN_CONSTRAINT_SEAM) : result;
+        if (result == PIECE_OK) {
+            PlanConstraint key;
+            memset(&key, 0, sizeof(key));
+            key.kind = PLAN_CONSTRAINT_KEY;
+            key.params.key = structure->key;
+            result = add_constraint(plan, seam, &key);
+        }
     }
     if (result == PIECE_OK) {
         result = piece_add_material(plan, motive, NULL, form_id, material, bar, &source);

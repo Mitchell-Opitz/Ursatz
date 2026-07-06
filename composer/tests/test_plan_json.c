@@ -210,6 +210,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         return a->params.piece_part.part == b->params.piece_part.part &&
                strcmp(a->params.piece_part.id, b->params.piece_part.id) == 0;
     case PLAN_CONSTRAINT_FREE_PHRASE:
+    case PLAN_CONSTRAINT_HOLD:
+    case PLAN_CONSTRAINT_SEAM:
         return true;
     default:
         break;

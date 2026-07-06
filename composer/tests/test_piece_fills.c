@@ -101,7 +101,7 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
     return section;
 }
 
-/* The section nodes of the piece (not the material), in time order. */
+/* The section nodes of the piece (not the material or the seam), in time order. */
 static size_t piece_sections(const PiecePlan *plan, NodeId *out, size_t max) {
     size_t count = 0;
     NodeId form = plan_root(plan);
@@ -109,7 +109,8 @@ static size_t piece_sections(const PiecePlan *plan, NodeId *out, size_t max) {
         NodeId child = plan_node_child_at(plan, form, i);
         bool material = false;
         for (size_t c = 0; c < plan_node_constraint_count(plan, child); c++) {
-            material = material || plan_node_constraint_at(plan, child, c)->kind == PLAN_CONSTRAINT_MATERIAL;
+            PlanConstraintKind kind = plan_node_constraint_at(plan, child, c)->kind;
+            material = material || kind == PLAN_CONSTRAINT_MATERIAL || kind == PLAN_CONSTRAINT_SEAM;
         }
         if (!material) {
             out[count++] = child;

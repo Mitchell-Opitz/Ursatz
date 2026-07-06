@@ -253,8 +253,9 @@ static bool stage_done(const PiecePlan *plan, ComposeStage stage, const NodeId *
         NodeId section = themes[t];
         PlanSpan span = plan_node_span(plan, section);
         bool done = false;
-        /* A section that returns an earlier one has nothing yet: the returns stage gives it its material. */
-        if (form_return_handles(plan, section)) {
+        /* A section that returns an earlier one has nothing yet: the returns stage gives it its material. A held
+           section is left for the seam stage. */
+        if (form_return_handles(plan, section) || plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_HOLD)) {
             continue;
         }
         switch (stage) {
