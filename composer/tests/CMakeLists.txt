@@ -272,6 +272,19 @@ foreach(mode checks plan compose pickup free)
     add_test(NAME test_piece_structure_${mode} COMMAND test_piece_structure ${mode})
 endforeach()
 
+# Theme and progression fills (R-170). The theme plan comes from the theme command, run as a process in a directory of its own.
+add_executable(test_piece_fills test_piece_fills.c)
+target_link_libraries(test_piece_fills PRIVATE ursatz_composer)
+target_compile_options(test_piece_fills PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_piece_fills PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+                                                    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_dependencies(test_piece_fills ursatz-composer)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills)
+foreach(mode fixture theme refused progression partial)
+    add_test(NAME test_piece_fills_${mode} COMMAND test_piece_fills ${mode}
+             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills)
+endforeach()
+
 add_executable(test_form_return test_form_return.c)
 target_link_libraries(test_form_return PRIVATE ursatz_composer)
 target_compile_options(test_form_return PRIVATE -Wall -Wextra -Wpedantic)

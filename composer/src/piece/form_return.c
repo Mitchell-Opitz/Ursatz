@@ -333,7 +333,7 @@ static bool find_return(const PiecePlan *plan, NodeId section, PlanReturn *out) 
     return false;
 }
 
-static bool meter_over(const PiecePlan *plan, PlanSpan span, PlanMeter *out) {
+bool return_meter_over(const PiecePlan *plan, PlanSpan span, PlanMeter *out) {
     LaneSpanId ids[2];
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, ids, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, ids[0]), span)) {
@@ -377,13 +377,14 @@ static bool key_pieces(const PiecePlan *plan, PlanSpan span, KeyPiece *out, size
 }
 
 /* The key difference, in semitones from -5 to 6, a section returned in another is transposed by; false when the shapes differ. */
-static bool key_shift(const PiecePlan *plan, PlanSpan source, PlanSpan target, int *shift) {
+bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+                      int *shift) {
     KeyPiece a[MAX_KEY_PIECES];
     KeyPiece b[MAX_KEY_PIECES];
     size_t na;
     size_t nb;
     int difference = -1;
-    if (!key_pieces(plan, source, a, &na) || !key_pieces(plan, target, b, &nb) || na != nb) {
+    if (!key_pieces(source_plan, source, a, &na) || !key_pieces(target_plan, target, b, &nb) || na != nb) {
         return false;
     }
     for (size_t i = 0; i < na; i++) {
@@ -422,9 +423,9 @@ bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, P
     }
     PlanSpan from = plan_node_span(plan, ret.section);
     PlanSpan to = plan_node_span(plan, section);
-    if (plan_time_compare(from.length, to.length) != 0 || !meter_over(plan, from, &source_meter) ||
-        !meter_over(plan, to, &target_meter) || source_meter.beats_per_bar != target_meter.beats_per_bar ||
-        source_meter.beat_unit != target_meter.beat_unit || !key_shift(plan, from, to, &shift)) {
+    if (plan_time_compare(from.length, to.length) != 0 || !return_meter_over(plan, from, &source_meter) ||
+        !return_meter_over(plan, to, &target_meter) || source_meter.beats_per_bar != target_meter.beats_per_bar ||
+        source_meter.beat_unit != target_meter.beat_unit || !return_key_shift(plan, from, plan, to, &shift)) {
         return false;
     }
     if (source) {
@@ -463,7 +464,7 @@ static bool lanes_written(const PiecePlan *plan, NodeId node, unsigned *seen) {
 }
 
 /* The returned section is Realized and its harmony, bass and melody are all written. */
-static bool source_ready(const PiecePlan *plan, NodeId source) {
+bool return_source_ready(const PiecePlan *plan, NodeId source) {
     unsigned seen = 0;
     unsigned needed = (1u << PLAN_LANE_HARMONY) | (1u << PLAN_LANE_BASS) | (1u << PLAN_LANE_MELODY);
     return plan_node_state(plan, source) != PLAN_STATE_CONSTRAINED && lanes_written(plan, source, &seen) &&
@@ -606,7 +607,7 @@ static bool return_applies(const PiecePlan *plan, FillTarget target, void *conte
     NodeId source;
     (void)context;
     return target.kind == FILL_TARGET_NODE && form_return_source(plan, target.id, &source, NULL) &&
-           source_ready(plan, source);
+           return_source_ready(plan, source);
 }
 
 /* Builds the payload of a return of the target: the returned section moved onto it, before the variation. */
@@ -622,8 +623,8 @@ static ReturnPayload *make_payload(const PiecePlan *plan, NodeId target, NodeId 
     payload->variation = variation;
     payload->from_start = from.start;
     payload->span = plan_node_span(plan, target);
-    if (!key_pieces(plan, payload->span, pieces, &count) || !meter_over(plan, payload->span, &payload->meter) ||
-        !key_shift(plan, from, payload->span, &payload->transpose)) {
+    if (!key_pieces(plan, payload->span, pieces, &count) || !return_meter_over(plan, payload->span, &payload->meter) ||
+        !return_key_shift(plan, from, plan, payload->span, &payload->transpose)) {
         free(payload);
         return NULL;
     }

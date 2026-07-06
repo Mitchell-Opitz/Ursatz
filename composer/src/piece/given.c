@@ -10,6 +10,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "harmony/harmony_internal.h"
+#include "piece/form_return_internal.h"
 
 const char *given_result_name(GivenResult result) {
     switch (result) {
@@ -33,6 +34,10 @@ const char *given_result_name(GivenResult result) {
         return "no supported meter";
     case GIVEN_ERR_OVERLAP:
         return "overlaps given material";
+    case GIVEN_ERR_NOT_REALIZED:
+        return "section not realized";
+    case GIVEN_ERR_LENGTH:
+        return "section of another length";
     case GIVEN_ERR_PLAN:
         return "refused by the plan";
     }
@@ -275,6 +280,112 @@ GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, c
         }
     }
     free(payloads);
+    return result;
+}
+
+/* ------------------------------------------------------------- a section */
+
+static void drop_motive_refs(PlanConstraint *constraints, size_t *count) {
+    size_t kept = 0;
+    for (size_t i = 0; i < *count; i++) {
+        if (constraints[i].kind != PLAN_CONSTRAINT_MOTIVE_REF) {
+            constraints[kept++] = constraints[i];
+        }
+    }
+    *count = kept;
+}
+
+/* The pickup of a section: the length of its PICKUP constraint, else nothing. */
+static PlanTime section_pickup(const PiecePlan *plan, NodeId section) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
+        if (constraint->kind == PLAN_CONSTRAINT_PICKUP) {
+            return constraint->params.pickup;
+        }
+    }
+    return (PlanTime){0, 1};
+}
+
+/* Whether the copy's spans lie from the pickup before the section to its end, and hold pitches a note can have. */
+static GivenResult copy_fits(const PiecePlan *plan, NodeId section, const ReturnCopy *copy) {
+    PlanSpan span = plan_node_span(plan, section);
+    PlanSpan room = span;
+    PlanTime pickup = section_pickup(plan, section);
+    PlanTime before;
+    if (plan_time_make(-pickup.num, pickup.den, &before) != PLAN_OK ||
+        plan_time_add(span.start, before, &room.start) != PLAN_OK ||
+        plan_time_add(span.length, pickup, &room.length) != PLAN_OK) {
+        return GIVEN_ERR_LENGTH;
+    }
+    for (size_t i = 0; i < copy->span_count; i++) {
+        const ReturnSpan *given = &copy->spans[i];
+        if (!plan_span_contains(room, given->span)) {
+            return GIVEN_ERR_LENGTH;
+        }
+        for (size_t n = 0; n < given->note_count; n++) {
+            if (given->notes[n].midi_pitch < 0 || given->notes[n].midi_pitch > 127) {
+                return GIVEN_ERR_BAD_NOTES;
+            }
+        }
+        if (plan_lane_find(plan, given->lane, given->voice, given->span, NULL, 0) != 0) {
+            return GIVEN_ERR_OVERLAP;
+        }
+    }
+    return GIVEN_OK;
+}
+
+GivenResult plan_give_section(PiecePlan *plan, NodeId section, const PiecePlan *source, NodeId source_section) {
+    Placement placement;
+    GivenResult result = read_placement(plan, section, 0, &placement);
+    if (result != GIVEN_OK) {
+        return result;
+    }
+    if (!source || !plan_has_node(source, source_section) || plan_node_kind(source, source_section) != PLAN_NODE_SECTION ||
+        is_material(source, source_section)) {
+        return source ? GIVEN_ERR_NOT_SECTION : GIVEN_ERR_NULL;
+    }
+    PlanSpan from = plan_node_span(source, source_section);
+    PlanMeter meter;
+    int shift;
+    if (!return_source_ready(source, source_section)) {
+        return GIVEN_ERR_NOT_REALIZED;
+    }
+    if (!return_meter_over(source, from, &meter) || meter.beats_per_bar != placement.meter.beats_per_bar ||
+        meter.beat_unit != placement.meter.beat_unit) {
+        return GIVEN_ERR_METER;
+    }
+    if (plan_time_compare(from.length, placement.section.length) != 0) {
+        return GIVEN_ERR_LENGTH;
+    }
+    if (plan_node_child_count(plan, section) != 0) {
+        return GIVEN_ERR_OVERLAP;
+    }
+    if (!return_key_shift(source, from, plan, placement.section, &shift)) {
+        return GIVEN_ERR_KEY;
+    }
+    ReturnCopy copy;
+    if (!return_copy_read(source, source_section, &copy)) {
+        return GIVEN_ERR_PLAN;
+    }
+    /* The spans belong to the section and are Given; the nodes keep the states they had. */
+    for (size_t i = 0; i < copy.node_count; i++) {
+        drop_motive_refs(copy.nodes[i].constraints, &copy.nodes[i].constraint_count);
+    }
+    for (size_t i = 0; i < copy.span_count; i++) {
+        copy.spans[i].owner = RETURN_SECTION;
+        copy.spans[i].state = PLAN_STATE_GIVEN;
+        drop_motive_refs(copy.spans[i].constraints, &copy.spans[i].constraint_count);
+    }
+    if (!return_copy_move(&copy, from.start, placement.section.start, shift)) {
+        result = GIVEN_ERR_PLAN;
+    } else {
+        result = copy_fits(plan, section, &copy);
+    }
+    if (result == GIVEN_OK && (return_copy_write(plan, section, &copy) != PLAN_OK ||
+                               plan_node_set_state(plan, section, PLAN_STATE_REALIZED) != PLAN_OK)) {
+        result = GIVEN_ERR_PLAN;
+    }
+    return_copy_destroy(&copy);
     return result;
 }
 

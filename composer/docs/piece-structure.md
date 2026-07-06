@@ -40,12 +40,35 @@ A section is:
 | `beats` | The length in beats of the meter: any whole number, 1 or more. |
 | `pickup` | The anacrusis before the section: a multiple of 1/32 of a whole note and shorter than a bar; 0 for none. It is the section's own, not part of `beats`. |
 | `has_cadence`, `cadence` | The cadence the section ends in; without one `piece_structure_default_cadences` decides. |
-| `fill` | `PIECE_FILL_EMPTY`, `_MOTIF`, `_THEME` or `_PROGRESSION`. Theme and progression fills are not planned yet: `piece_structure_build_plan` refuses them. |
+| `fill` | `PIECE_FILL_EMPTY`, `_MOTIF`, `_THEME` or `_PROGRESSION` (see [Fills](#fills)). |
 | `motive`, `has_into`, `into`, `hybrid` | A motif section's motive (read as the piece's basic motive when it is the first), and the archetype a theme section is built as (`into`: sentence by default; a hybrid names its pairing in `hybrid`). |
+| `theme_plan` | A theme fill: the composed theme (the plan the `theme` command writes) whose first theme section is given to this one. It must outlive the build. |
+| `numerals`, `numeral_count`, `cells_per_chord` | A progression fill: the numerals, one chord each, and the harmony cells each lasts (0 for a bar). They must outlive the build. |
 
 `piece_structure_check` returns `PIECE_ERR_BAD_REQUEST` for a structure with no body section, parts out of order, ids that
 repeat, more than 32 sections or 512 bars, a length under one beat, a pickup that is not a multiple of 1/32 or not
 shorter than a bar, or a meter or key that is not supported.
+
+## Fills
+
+A section's fill says where its material comes from (R-170).
+
+- **empty** and **motif**: grown from the piece's basic motive. A motif section's own motive is the basic motive when it
+  is the first.
+- **theme**: a composed theme used as it was composed. The first theme section of `theme_plan` is given to the section
+  with `plan_give_section` ([middle-out.md](middle-out.md#a-section-from-another-plan)): its melody, harmony, bass and
+  inner voice spans are Given in the section, moved to its start and transposed by the key difference (D minor to E minor
+  is up a whole tone), and its phrase and idea nodes are copied under the section so that `form_hear` hears the theme it
+  was. The section is Realized when the plan is built, so no stage targets it and `compose_run` leaves it as it is; change
+  a theme in the Themes view, not here. The section takes the theme's archetype, pairing and cadences, not the
+  structure's, and the structure's `cadence` for it is not used. The theme must be as long as the section, in the same
+  meter and in the same mode; otherwise `piece_structure_build_plan` is `PIECE_ERR_BAD_REQUEST`. The theme's `m0`, in the
+  structure's key, is the piece's basic motive when no `motive` and no earlier motif section has one. The theme's
+  references to its motive nodes are not kept.
+- **progression**: the numerals are Given from the section's first beat (`plan_give_progression`), `cells_per_chord`
+  cells each (a cell is a beat or half a bar, a bar when 0), and the harmony stage writes what is left of the section; the
+  melody grows from the basic motive over the chords as it does in an empty section. A progression that is too long for the
+  section, or has a numeral that cannot be read, is `PIECE_ERR_BAD_REQUEST`.
 
 ## Defaults
 
@@ -78,6 +101,12 @@ outcome has one entry for each section, in time order, with the section's `id` a
 a form, so only its structure's score counts.
 
 ## What does not compose
+
+- A progression fill does not move the section's cadence. A progression that ends on V in a section whose default cadence
+  is an IAC (any section that is not the last of the loop) leaves the melody stage stuck: give the section a half cadence
+  (`has_cadence`, `PLAN_CADENCE_HC`). A progression of 4 bars that ends on V, followed by 4 open bars in the same 8-bar
+  section that must end in a half cadence, leaves the harmony stage stuck; `I IV V I`, `I IV I` and `I` composed for all of
+  seeds 1 to 10.
 
 - A free phrase that ends on an odd beat of a 4/4 bar (5, 7, 9 beats long after a section that ends on a barline) can be
   planned and its chords written, but the melody leaves it open: the melody stage is stuck. Free phrases of 6 beats and

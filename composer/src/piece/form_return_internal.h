@@ -78,6 +78,17 @@ PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *
 
 void return_payload_destroy(void *payload);
 
+/*
+ * The key difference in semitones, from -5 to 6, between a section of one plan and a section of another (or the same)
+ * plan, whose key lanes must have the same shape and mode; false when they differ.
+ */
+bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const PiecePlan *target_plan, PlanSpan target,
+                      int *shift);
+/* The meter lane span that holds the span whole; false when none does. */
+bool return_meter_over(const PiecePlan *plan, PlanSpan span, PlanMeter *out);
+/* Whether the section is not Constrained and its harmony, bass and melody are all written. */
+bool return_source_ready(const PiecePlan *plan, NodeId section);
+
 /* What a variation may change in a copy that is otherwise the returned section moved onto the target. */
 typedef struct {
     unsigned skip_notes; /* bits (1u << lane) of the lanes whose notes are not compared */

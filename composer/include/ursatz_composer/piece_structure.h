@@ -58,12 +58,12 @@ typedef struct {
     bool has_into;               /* motif: a theme section's archetype */
     PlanArchetype into;          /* sentence by default; PLAN_ARCHETYPE_HYBRID reads `hybrid` */
     PlanThemePairing hybrid;
-    const struct GrowPoolForm *pool; /* the motive forms the section's motives stage offers (B4) */
+    const struct GrowPoolForm *pool; /* the motive forms the section's motives stage offers (B6) */
     size_t pool_count;
-    const PiecePlan *theme_plan; /* theme: the composed theme to take the realized lanes from (B4) */
-    const char *const *numerals; /* progression: the numerals, one per chord (B4) */
+    const PiecePlan *theme_plan; /* theme: the composed theme to take the realized lanes from; must outlive the build */
+    const char *const *numerals; /* progression: the numerals, one per chord; must outlive the build */
     size_t numeral_count;
-    size_t cells_per_chord;
+    size_t cells_per_chord;      /* progression: harmony cells each chord lasts; 0 for a bar */
 } PieceSection;
 
 typedef struct {
@@ -114,7 +114,15 @@ bool piece_structure_default_ending(PieceStructure *structure, size_t capacity);
  *   - the Section "material" from the first barline at or after the end of the last laid out section (its motives are
  *     bars of the meter), marked MATERIAL, holding m0, the piece's basic motive (R-170): the structure's `motive`,
  *     else the motive of the first motif section, else one to invent (INVENT_MOTIVE).
- * Theme and progression fills are PIECE_ERR_BAD_REQUEST until P17 B4 gives them.
+ *   - a theme fill (a section with a theme_plan) is the first theme section of that plan given to the section
+ *     (plan_give_section): its realized lanes are Given, moved and transposed to the section, and its archetype,
+ *     pairing and cadences replace the structure's. The section ends Realized and no stage targets it; the theme must be
+ *     as long as the section, in the same meter and mode (PIECE_ERR_BAD_REQUEST otherwise). The theme's m0, in the
+ *     structure's key, is the basic motive when no motive comes first (R-170).
+ *   - a progression fill has its numerals Given from the section's start (plan_give_progression), cells_per_chord
+ *     cells each (a bar when 0); the harmony stage fills the rest of the section, and the melody grows from the basic
+ *     motive over the chords as it does in an empty section. Numerals that cannot be read, or that run past the section,
+ *     are PIECE_ERR_BAD_REQUEST.
  */
 PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePlan **out);
 
