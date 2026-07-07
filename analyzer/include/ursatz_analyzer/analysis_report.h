@@ -464,6 +464,40 @@ typedef struct {
     size_t window_length;      /* notes compared */
 } AnalysisThematicReturn;
 
+/* One note of a motive family's prototype: the soprano note (ImportedNotes index), its MIDI pitch, and its onset (from
+   the first note) and duration as exact whole-note fractions. */
+typedef struct {
+    size_t note_id;
+    int pitch;
+    unsigned long long onset_numerator;
+    unsigned long long onset_denominator;
+    unsigned long long duration_numerator;
+    unsigned long long duration_denominator;
+} AnalysisMotiveNote;
+
+/* What a motive family is made of, read from its prototype (occurrence 0) so families of different pieces can be
+   compared and linked. Degrees are spelled against the major scale of the tonic ("1 b2 2 b3 3 4 #4 5 b6 6 b7 7"), so a
+   minor-key "1 b6 5" reads the same as one in major. */
+typedef struct {
+    AnalysisMotiveNote *notes; /* owned; note_count entries */
+    size_t note_count;
+    int tonic_pc;              /* the key region the first note starts in */
+    bool minor;
+    unsigned long long bar_numerator; /* the meter at the first note, whole notes */
+    unsigned long long bar_denominator;
+    unsigned long long beat_numerator;
+    unsigned long long beat_denominator;
+    unsigned long long pickup_numerator; /* the first note's position in its bar; 0 on a downbeat */
+    unsigned long long pickup_denominator;
+    const char **degrees;      /* owned array, borrowed static labels; note_count entries */
+    int *intervals;            /* owned; signed semitones between neighbours, note_count - 1 entries */
+    long *steps;               /* owned; signed scale steps between neighbours, note_count - 1 entries */
+    char **ncts;               /* owned array of owned strings, note_count entries: the non-chord-tone type of the
+                                  segment the note starts in, "chord-tone", or NULL when the segment has no chord or the
+                                  library left the tone unclassified */
+    char fingerprint[17];      /* motive_sketch_fingerprint of the prototype as a sketch, 16 lowercase hex digits */
+} AnalysisMotiveFeatures;
+
 /* One occurrence of a motive family from the library's motive analysis (analysis/analysis_motive.h) over the
    note-level soprano: the highest sounding note at each attack. The first occurrence of a family is its prototype. */
 typedef struct {
@@ -490,6 +524,8 @@ typedef struct {
     bool has_idea;           /* it lies in one idea of that phrase */
     size_t idea;             /* index into ideas; valid only when has_idea */
     double uncertainty;      /* the library's, 1 minus its score, in [0, 1]; higher is LESS certain */
+    const char **degrees;    /* owned array, borrowed static labels; note_id_count entries: each note's degree against
+                                the major scale of the tonic of the key region it starts in (see AnalysisMotiveFeatures) */
 } AnalysisMotiveOccurrence;
 
 /* One motive family: a short figure that recurs. Its occurrences are the prototype first and then the library's order,
@@ -503,6 +539,8 @@ typedef struct {
     size_t *development;     /* owned; occurrence_count indices into occurrences in time order, earliest first: the
                                 family's development through the piece. Each step's transformation is the occurrence's
                                 kind (the library's, against the prototype); the analyzer only orders */
+    bool has_features;       /* false when the first note has no key region or meter, or the sketch is not valid */
+    AnalysisMotiveFeatures features;
 } AnalysisMotive;
 
 /* One leap of a melody (an interval of a third or larger) and the library's verdict on its recovery

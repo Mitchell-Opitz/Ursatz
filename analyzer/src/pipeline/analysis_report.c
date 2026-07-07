@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "pipeline/motive_features.h"
+
 void analysis_outer_note_destroy(AnalysisOuterNote *note) {
     if (!note) {
         return;
@@ -104,9 +106,11 @@ void analysis_report_destroy(AnalysisReport *report) {
     for (size_t i = 0; i < report->motive_count; i++) {
         for (size_t o = 0; o < report->motives[i].occurrence_count; o++) {
             free(report->motives[i].occurrences[o].note_ids);
+            free(report->motives[i].occurrences[o].degrees);
         }
         free(report->motives[i].occurrences);
         free(report->motives[i].development);
+        motive_features_destroy(&report->motives[i].features);
     }
     free(report->motives);
     for (size_t i = 0; i < report->melody_count; i++) {

@@ -175,7 +175,7 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         !form_stage_collect(&chain->form, report) || !harmony_stage_collect_phrase_model(&chain->harmony, report) ||
         !form_plan_stage_collect(&chain->form, report) ||
         !motive_stage_run(&chain->motives, chain->notes, segmentation, &chain->harmony, report) ||
-        !motive_stage_collect(&chain->motives, report) ||
+        !motive_stage_collect(&chain->motives, chain->notes, report) ||
         !melody_stage_collect(chain->notes, &chain->voice_segmentation, &chain->lines, report) ||
         !rhythm_stage_collect(chain->notes, &chain->lines, &chain->form, report) ||
         !texture_stage_collect(chain->notes, report) || !markings_stage_collect(chain->notes, report) ||

@@ -1,13 +1,17 @@
 #include "pipeline/motive_pipeline.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "analysis/motif_window_matching.h"
 #include "key_vocabulary.h"
 #include "outer_scale_degrees.h"
+#include "pipeline/motive_features.h"
 #include "pitch/pitch_numeric_value.h"
+#include "standard-form/analysis/analysis_time.h"
 #include "time/duration.h"
+#include "time/exact_rational.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
@@ -363,7 +367,207 @@ static bool order_development(AnalysisMotive *motive) {
     return true;
 }
 
-bool motive_stage_collect(const MotiveStage *stage, AnalysisReport *report) {
+/* A note's start and duration in whole notes, and its MIDI pitch. */
+static bool note_timing(const ImportedNotes *notes, size_t index, ExactRational *start, ExactRational *duration,
+                        int *pitch) {
+    if (index >= notes->count) {
+        return false;
+    }
+    const MusicalTime *time = temporal_anchor_position(note_event_temporal_anchor(notes->events[index]));
+    const Duration *length = note_event_duration(notes->events[index]);
+    if (musical_time_numerator(time) < 0 || duration_numerator(length) <= 0) {
+        return false;
+    }
+    *start = er_of_time(time);
+    *duration = er_of_duration(length);
+    *pitch = (int)pitch_numeric_value_position_numerator(notes->pitch_values[index]);
+    return true;
+}
+
+/* Each note of an occurrence as a degree of the tonic of the key region it starts in. */
+static bool collect_occurrence_degrees(const ImportedNotes *notes, const AnalysisReport *report,
+                                       AnalysisMotiveOccurrence *occurrence) {
+    occurrence->degrees = calloc(occurrence->note_id_count > 0 ? occurrence->note_id_count : 1, sizeof(char *));
+    if (!occurrence->degrees) {
+        return false;
+    }
+    for (size_t k = 0; k < occurrence->note_id_count; k++) {
+        ExactRational start;
+        ExactRational duration;
+        int pitch = 0;
+        if (!note_timing(notes, occurrence->note_ids[k], &start, &duration, &pitch)) {
+            return false;
+        }
+        const AnalysisKeyRegion *region = region_at(report, (long long)start.n, (long long)start.d);
+        occurrence->degrees[k] = motive_features_degree_label(pitch % 12, region->tonic_pitch_class);
+    }
+    return true;
+}
+
+static ExactRational rational_of(StandardFormQ q) {
+    return er_make((unsigned long long)q.n, (unsigned long long)q.d);
+}
+
+/* The bar and beat at the first note and its position in the bar. A pickup measure is short, so its bar and beat are
+   the following region's. */
+static bool meter_at(const MeterMap *map, ExactRational start, ExactRational *bar, ExactRational *beat,
+                     ExactRational *position) {
+    MusicalTime *time = NULL;
+    if (musical_time_create((long)start.n, (unsigned long)start.d, &time) != MUSICAL_TIME_OK) {
+        return false;
+    }
+    int measure = 0;
+    const MeterMapRegion *region = NULL;
+    bool ok = meter_map_measure_index_at(map, time, &measure) == METER_MAP_OK &&
+              meter_map_region_of_measure(map, measure, &region) == METER_MAP_OK;
+    musical_time_destroy(time);
+    StandardFormQ measure_start;
+    StandardFormQ measure_end;
+    if (!ok || !standard_form_measure_bounds(map, measure, &measure_start, &measure_end)) {
+        return false;
+    }
+    bool pickup = meter_map_region_is_pickup(region);
+    int reference = measure;
+    const MeterMapRegion *reference_region = region;
+    if (pickup && meter_map_region_of_measure(map, measure + 1, &reference_region) == METER_MAP_OK) {
+        reference = measure + 1;
+    } else {
+        reference_region = region;
+    }
+    Duration *bar_duration = NULL;
+    StandardFormQ beat_length;
+    if (time_signature_measure_duration(meter_map_region_time_signature(reference_region), &bar_duration) !=
+            DURATION_OK ||
+        !standard_form_beat_length(map, reference, &beat_length)) {
+        return false;
+    }
+    *bar = er_of_duration(bar_duration);
+    duration_destroy(bar_duration);
+    *beat = rational_of(beat_length);
+    if (pickup) {
+        ExactRational remaining = msk_sub(rational_of(measure_end), start);
+        *position = msk_ok(remaining) && msk_cmp(remaining, *bar) < 0 ? msk_sub(*bar, remaining) : msk_int(0);
+    } else {
+        *position = msk_sub(start, rational_of(measure_start));
+    }
+    return msk_ok(*bar) && msk_ok(*beat) && msk_ok(*position);
+}
+
+/* The non-chord-tone type of the segment the note starts in: the library's type, "chord-tone" when the note is one of
+   the chord there, NULL when the segment has no chord or the library left the tone unclassified. *failed is set on
+   allocation failure. */
+static char *note_nct(const AnalysisReport *report, size_t note_id, ExactRational start, bool *failed) {
+    for (size_t e = 0; e < report->entry_count; e++) {
+        const AnalysisReportEntry *entry = &report->entries[e];
+        ExactRational from = er_make((unsigned long long)entry->time_numerator, entry->time_denominator);
+        ExactRational to = er_make((unsigned long long)entry->end_numerator, entry->end_denominator);
+        if (msk_cmp(start, from) < 0 || msk_cmp(start, to) >= 0) {
+            continue;
+        }
+        if (!entry->chord.label) {
+            return NULL;
+        }
+        const char *type = "chord-tone";
+        for (size_t n = 0; n < report->non_chord_tone_count; n++) {
+            const AnalysisNonChordTone *tone = &report->non_chord_tones[n];
+            if (tone->note_id == note_id && tone->chord_index == e) {
+                type = tone->type;
+                break;
+            }
+        }
+        if (!type) {
+            return NULL;
+        }
+        char *copy = strdup(type);
+        *failed = copy == NULL;
+        return copy;
+    }
+    return NULL;
+}
+
+/* Describes the family by its prototype. Leaves has_features false for a family whose first note has no key region
+   or meter, or whose sketch the library would refuse. false only on allocation failure. */
+static bool collect_features(const MotiveStage *stage, const ImportedNotes *notes, const AnalysisReport *report,
+                             AnalysisMotive *motive) {
+    const AnalysisMotiveOccurrence *prototype = &motive->occurrences[0];
+    size_t count = prototype->note_id_count;
+    if (count == 0 || count > MOTIVE_SKETCH_MAX_NOTES || report->key_region_count == 0) {
+        return true;
+    }
+    AnalysisMotiveFeatures *features = &motive->features;
+    features->notes = calloc(count, sizeof(AnalysisMotiveNote));
+    features->degrees = calloc(count, sizeof(char *));
+    features->ncts = calloc(count, sizeof(char *));
+    features->intervals = calloc(count, sizeof(int));
+    features->steps = calloc(count, sizeof(long));
+    if (!features->notes || !features->degrees || !features->ncts || !features->intervals || !features->steps) {
+        return false;
+    }
+    features->note_count = count;
+    ExactRational first_start = {0, 0};
+    for (size_t k = 0; k < count; k++) {
+        ExactRational start;
+        ExactRational duration;
+        int pitch = 0;
+        if (!note_timing(notes, prototype->note_ids[k], &start, &duration, &pitch)) {
+            goto skip;
+        }
+        if (k == 0) {
+            first_start = start;
+            const AnalysisKeyRegion *region = region_at(report, (long long)start.n, (long long)start.d);
+            features->tonic_pc = region->tonic_pitch_class;
+            features->minor = !region->is_major;
+        }
+        ExactRational onset = msk_sub(start, first_start);
+        if (!msk_ok(onset)) {
+            goto skip;
+        }
+        AnalysisMotiveNote *note = &features->notes[k];
+        note->note_id = prototype->note_ids[k];
+        note->pitch = pitch;
+        note->onset_numerator = onset.n;
+        note->onset_denominator = onset.d;
+        note->duration_numerator = duration.n;
+        note->duration_denominator = duration.d;
+        features->degrees[k] = motive_features_degree_label(pitch % 12, features->tonic_pc);
+        bool failed = false;
+        features->ncts[k] = note_nct(report, prototype->note_ids[k], start, &failed);
+        if (failed) {
+            return false;
+        }
+        if (k > 0) {
+            features->intervals[k - 1] = pitch - features->notes[k - 1].pitch;
+        }
+    }
+    ExactRational bar;
+    ExactRational beat;
+    ExactRational position;
+    if (!meter_at(stage->form.input.map, first_start, &bar, &beat, &position)) {
+        goto skip;
+    }
+    features->bar_numerator = bar.n;
+    features->bar_denominator = bar.d;
+    features->beat_numerator = beat.n;
+    features->beat_denominator = beat.d;
+    features->pickup_numerator = position.n;
+    features->pickup_denominator = position.d;
+    MotiveSketch sketch;
+    if (!motive_features_sketch(features, &sketch)) {
+        goto skip;
+    }
+    for (size_t k = 0; k + 1 < count; k++) {
+        features->steps[k] = motive_sketch_step(&sketch, features->notes[k + 1].pitch, NULL) -
+                             motive_sketch_step(&sketch, features->notes[k].pitch, NULL);
+    }
+    snprintf(features->fingerprint, sizeof features->fingerprint, "%016llx", motive_sketch_fingerprint(&sketch));
+    motive->has_features = true;
+    return true;
+skip:
+    motive_features_destroy(features);
+    return true;
+}
+
+bool motive_stage_collect(const MotiveStage *stage, const ImportedNotes *notes, AnalysisReport *report) {
     size_t count = stage->motives.family_count;
     if (count == 0) {
         return true;
@@ -391,6 +595,14 @@ bool motive_stage_collect(const MotiveStage *stage, AnalysisReport *report) {
             }
         }
         if (!order_development(motive)) {
+            return false;
+        }
+        for (size_t o = 0; o < motive->occurrence_count; o++) {
+            if (!collect_occurrence_degrees(notes, report, &motive->occurrences[o])) {
+                return false;
+            }
+        }
+        if (!collect_features(stage, notes, report, motive)) {
             return false;
         }
     }
