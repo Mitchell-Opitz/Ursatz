@@ -1,4 +1,5 @@
 #include "export/musicxml_export.h"
+#include "export/musicxml_score_internal.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -7,8 +8,8 @@
 #include "persistence/persistence_note_events.h"
 
 /*
- * The single-part entry point: loads the persisted NoteEvents and writes them through musicxml_export_write_score
- * with no MeterMap, so the layout is meter_map_create_defaulted's one 4/4 region and the output is flagged
+ * The single-part entry point: loads the persisted NoteEvents and writes them through the score writer (strict: an
+ * overlap in a voice still fails, see musicxml_score_internal.h) with no MeterMap, so the layout is meter_map_create_defaulted's one 4/4 region and the output is flagged
  * ursatz:meter-defaulted. All layout lives in musicxml_score.c.
  */
 
@@ -37,7 +38,7 @@ MusicXmlExportResult musicxml_export_write(PersistenceHandle *handle, char **out
     memset(&score, 0, sizeof(score));
     score.events = events;
     score.count = count;
-    MusicXmlExportResult result = musicxml_export_write_score(&score, out_xml);
+    MusicXmlExportResult result = musicxml_export_write_score_strict(&score, out_xml);
 
     free_note_events(events, count);
     return result;

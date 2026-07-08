@@ -58,20 +58,14 @@ static void test_missing_spelling(void) {
     note_event_destroy(events[0]);
 }
 
+/* Overlapping notes are written, not refused (test_musicxml_score_overlaps); in different voices, staves or parts
+   they need no extra voice at all. */
 static void test_overlap_is_per_voice(void) {
     TestBag bag;
     memset(&bag, 0, sizeof(bag));
-    bag_add_note(&bag, "a", 0, 1, 1, 2, PITCH_LETTER_C, "v");
-    bag_add_note(&bag, "b", 1, 4, 1, 2, PITCH_LETTER_D, "v");
-    MusicXmlExportScore score = score_of(&bag);
-    assert(write_failing(&score) == MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES);
-    bag_free(&bag);
-
-    /* the same two notes in different voices, staves or parts are not an overlap */
-    memset(&bag, 0, sizeof(bag));
     bag_add(&bag, tu_note("a", 0, 1, 1, 2, PITCH_LETTER_C, 0, 4, "v"), 0, 1);
     bag_add(&bag, tu_note("b", 1, 4, 1, 2, PITCH_LETTER_D, 0, 4, "w"), 0, 1);
-    score = score_of(&bag);
+    MusicXmlExportScore score = score_of(&bag);
     assert(write_failing(&score) == MUSICXML_EXPORT_OK);
     bag_free(&bag);
 
