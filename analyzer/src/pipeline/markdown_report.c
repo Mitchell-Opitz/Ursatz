@@ -1143,6 +1143,22 @@ static bool append_motive_kinds(StringBuilder *sb, const cJSON *occurrences) {
     return ok;
 }
 
+/* The prototype's degrees joined by spaces, or a dash for a family without features. */
+static bool append_motive_degrees(StringBuilder *sb, const cJSON *features) {
+    const cJSON *degrees = cJSON_GetObjectItemCaseSensitive(features, "degrees");
+    if (!cJSON_IsArray(degrees) || cJSON_GetArraySize(degrees) == 0) {
+        return sb_append(sb, "-");
+    }
+    bool ok = true;
+    bool first = true;
+    const cJSON *degree;
+    cJSON_ArrayForEach(degree, degrees) {
+        ok = ok && sb_appendf(sb, "%s%s", first ? "" : " ", cJSON_IsString(degree) ? degree->valuestring : "?");
+        first = false;
+    }
+    return ok;
+}
+
 static bool render_motives(StringBuilder *sb, const cJSON *document, const cJSON *motives) {
     (void)document;
     int count = cJSON_GetArraySize(motives);
@@ -1156,16 +1172,18 @@ static bool render_motives(StringBuilder *sb, const cJSON *document, const cJSON
                          "kind the library names against the first occurrence (exact, real-transposed, "
                          "tonal-transposed, inverted, retrograde, augmented, diminished, fragmented, varied).\n\n",
                          count, count == 1 ? "family" : "families") &&
-              sb_append(sb, "| Family | Notes | Pattern | Occurrences | Measures | Phrases | Transformations |\n"
-                            "| --- | --- | --- | --- | --- | --- | --- |\n");
+              sb_append(sb, "| Family | Notes | Degrees | Pattern | Occurrences | Measures | Phrases | Transformations |\n"
+                            "| --- | --- | --- | --- | --- | --- | --- | --- |\n");
     const cJSON *motive;
     cJSON_ArrayForEach(motive, motives) {
         if (!ok) {
             break;
         }
         const cJSON *occurrences = cJSON_GetObjectItemCaseSensitive(motive, "occurrences");
-        ok = sb_appendf(sb, "| %d | %d | %s | %d | ", (int)number_member(motive, "index") + 1,
-                        (int)number_member(motive, "note_count"),
+        ok = sb_appendf(sb, "| %d | %d | ", (int)number_member(motive, "index") + 1,
+                        (int)number_member(motive, "note_count")) &&
+             append_motive_degrees(sb, cJSON_GetObjectItemCaseSensitive(motive, "features")) &&
+             sb_appendf(sb, " | %s | %d | ",
                         cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motive, "generic")) ? "scale steps" : "semitones",
                         cJSON_GetArraySize(occurrences)) &&
              append_motive_measures(sb, occurrences) && sb_append(sb, " | ") &&

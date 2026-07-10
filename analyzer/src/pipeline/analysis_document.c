@@ -2504,6 +2504,39 @@ static cJSON *chord_vocabulary_json(const AnalysisReport *report, const cJSON *c
 
 /* ---- Motives ---- */
 
+static bool add_owned(cJSON *object, const char *key, cJSON **item) {
+    bool ok = add(object, key, *item);
+    *item = NULL;
+    return ok;
+}
+
+/* An exact fraction of a whole note as "n/d". */
+static cJSON *fraction_string_json(unsigned long long numerator, unsigned long long denominator) {
+    char text[48];
+    snprintf(text, sizeof text, "%llu/%llu", numerator, denominator);
+    return cJSON_CreateString(text);
+}
+
+static cJSON *strings_json(const char *const *labels, size_t count) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < count; i++) {
+        if (!append(list, labels[i] ? cJSON_CreateString(labels[i]) : cJSON_CreateNull())) {
+            return NULL;
+        }
+    }
+    return list;
+}
+
+static cJSON *numbers_json(const long *values, size_t count) {
+    cJSON *list = cJSON_CreateArray();
+    for (size_t i = 0; list && i < count; i++) {
+        if (!append(list, cJSON_CreateNumber((double)values[i]))) {
+            return NULL;
+        }
+    }
+    return list;
+}
+
 /* One occurrence of a motive family as a claim over its soprano notes. The label is the library's kind of the
    occurrence relative to the family's prototype (the transformation: "exact", "real-transposed" for the same semitone
    intervals from another pitch, "tonal-transposed" for the same scale steps, "inverted", "retrograde", "augmented",
@@ -2530,11 +2563,61 @@ static cJSON *motive_occurrence_json(const ImportedNotes *notes, const AnalysisR
           add(claim, "in_continuation", cJSON_CreateBool(occurrence->in_continuation)) &&
           add(claim, "phrase", occurrence->has_phrase ? cJSON_CreateNumber((double)occurrence->phrase) : cJSON_CreateNull()) &&
           add(claim, "idea",
-              occurrence->has_idea ? cJSON_CreateNumber(report->ideas[occurrence->idea].index) : cJSON_CreateNull()))) {
+              occurrence->has_idea ? cJSON_CreateNumber(report->ideas[occurrence->idea].index) : cJSON_CreateNull()) &&
+          (!occurrence->degrees ||
+           add(claim, "degrees", strings_json(occurrence->degrees, occurrence->note_id_count))))) {
         cJSON_Delete(claim);
         return NULL;
     }
     return claim;
+}
+
+/* What a family is made of, read from its prototype: its notes (id, MIDI pitch, onset from the first note and duration
+   as "n/d" whole notes), the key region's tonic and mode at the first note, the bar and beat there and the first
+   note's position in its bar (pickup, "0/1" on a downbeat), the degrees of the notes against the tonic's major scale
+   ("1 b2 2 b3 3 4 #4 5 b6 6 b7 7"), the semitone and scale-step intervals between neighbours, the rhythm (the durations),
+   the non-chord-tone type of the segment each note starts in ("chord-tone" for a chord tone, null when the segment has
+   no chord or the library left the tone unclassified) and the sketch's fingerprint (16 hex digits). */
+static cJSON *motive_features_json(const AnalysisMotiveFeatures *features) {
+    cJSON *object = cJSON_CreateObject();
+    cJSON *notes = cJSON_CreateArray();
+    cJSON *rhythm = cJSON_CreateArray();
+    cJSON *intervals = cJSON_CreateArray();
+    bool ok = object && notes && rhythm && intervals;
+    for (size_t k = 0; ok && k < features->note_count; k++) {
+        const AnalysisMotiveNote *note = &features->notes[k];
+        cJSON *entry = cJSON_CreateObject();
+        ok = entry && add(entry, "note_id", cJSON_CreateNumber((double)note->note_id)) &&
+             add(entry, "pitch", cJSON_CreateNumber(note->pitch)) &&
+             add(entry, "onset", fraction_string_json(note->onset_numerator, note->onset_denominator)) &&
+             add(entry, "duration", fraction_string_json(note->duration_numerator, note->duration_denominator));
+        ok = ok ? append(notes, entry) : (cJSON_Delete(entry), false);
+        ok = ok && append(rhythm, fraction_string_json(note->duration_numerator, note->duration_denominator));
+        if (ok && k > 0) {
+            ok = append(intervals, cJSON_CreateNumber(features->intervals[k - 1]));
+        }
+    }
+    size_t gaps = features->note_count > 0 ? features->note_count - 1 : 0;
+    /* add() takes an item over, and frees it itself when it fails, so each is cleared once handed over */
+    ok = ok && add_owned(object, "notes", &notes) &&
+         add(object, "tonic_pc", cJSON_CreateNumber(features->tonic_pc)) &&
+         add(object, "minor", cJSON_CreateBool(features->minor)) &&
+         add(object, "bar", fraction_string_json(features->bar_numerator, features->bar_denominator)) &&
+         add(object, "beat", fraction_string_json(features->beat_numerator, features->beat_denominator)) &&
+         add(object, "pickup", fraction_string_json(features->pickup_numerator, features->pickup_denominator)) &&
+         add(object, "degrees", strings_json(features->degrees, features->note_count)) &&
+         add_owned(object, "intervals", &intervals) && add(object, "steps", numbers_json(features->steps, gaps)) &&
+         add_owned(object, "rhythm", &rhythm) &&
+         add(object, "ncts", strings_json((const char *const *)features->ncts, features->note_count)) &&
+         add(object, "fingerprint", cJSON_CreateString(features->fingerprint));
+    cJSON_Delete(notes);
+    cJSON_Delete(rhythm);
+    cJSON_Delete(intervals);
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
 }
 
 /* The development of a family: a step per occurrence in time order. transformation is the library's kind of that
@@ -2601,7 +2684,8 @@ static cJSON *motives_json(const ImportedNotes *notes, const AnalysisReport *rep
               add(claim, "note_count", cJSON_CreateNumber(motive->note_count)) &&
               add(claim, "generic", cJSON_CreateBool(motive->generic)) &&
               (taken = true, add(claim, "occurrences", occurrences)) &&
-              add(claim, "development", motive_development_json(motive)))) {
+              add(claim, "development", motive_development_json(motive)) &&
+              (!motive->has_features || add(claim, "features", motive_features_json(&motive->features))))) {
             if (!taken) {
                 cJSON_Delete(occurrences);
             }
