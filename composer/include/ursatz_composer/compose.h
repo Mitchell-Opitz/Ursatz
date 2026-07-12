@@ -32,10 +32,17 @@
  *              of the section it returns, once that is written; the stages before leave such a section alone. Then
  *              harmony, bass, melody and texture run again, to write what a variation reopened (REHARMONIZE). The stage
  *              does not run when no section returns an earlier one.
+ *   seam       the loop's end of a piece structure, held by the stages before (a HOLD constraint, as a RETURN section is
+ *              left alone), is filled last against the bar it leads into (R-171). The body's first bar is copied into the
+ *              seam section (a SEAM constraint) as Given, then structure, motives, harmony, bass, melody and texture run
+ *              for the held sections. The stage does not run when the plan has no seam section. Its records are kept
+ *              together under the seam stage.
  *
  * The stages from structure to texture are seeded seed + 0 to seed + 5, as grow's are, and invention seed + 6, so a
  * plan with one theme section and a Given motive is filled exactly as grow_run fills it. The returns are seeded
  * seed + 7, and the harmony, bass, melody and texture run again seed + 8 to seed + 11 (their records are not kept).
+ * The seam stage runs harmony, bass, melody and texture seed + 12 to seed + 15, and the structure and the motives of the
+ * held sections seed + 16 and seed + 17.
  *
  * Retries are grow's (R-051): the melody stage is run up to six times, each from the next seed, reopening the melody
  * of the sections it left unwritten, the climax moved in a theme that is not a sentence; a run stuck after that starts
@@ -69,10 +76,11 @@ typedef enum {
     COMPOSE_STAGE_MELODY,
     COMPOSE_STAGE_TEXTURE,
     COMPOSE_STAGE_RETURNS,
+    COMPOSE_STAGE_SEAM,
     COMPOSE_STAGE_COUNT
 } ComposeStage;
 
-/* "invent", "structure", "motives", "harmony", "bass", "melody", "texture", "returns". */
+/* "invent", "structure", "motives", "harmony", "bass", "melody", "texture", "returns", "seam". */
 const char *compose_stage_name(ComposeStage stage);
 
 /* All-zero is the default configuration (seed 0). The members are GrowConfig's. */
@@ -118,6 +126,7 @@ typedef struct {
     size_t returns_planned;                   /* the theme sections with a RETURN, each planned to be heard as a return */
     size_t returns_heard;                     /* how many of them were */
     bool returns_heard_as_planned;            /* every return planned was heard (true when none was planned) */
+    bool seam_planned;                        /* the body's first bar was copied into the seam section (R-171) */
     bool key_rejected;                        /* the last run was complete but failed the key or cadence check (stuck) */
     PieceKeyCheck key_check;                  /* the checks of the last complete run, for a plan with several keys */
     PieceCadenceCheck cadence_check;

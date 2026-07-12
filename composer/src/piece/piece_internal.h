@@ -1,6 +1,9 @@
 #ifndef URSATZ_COMPOSER_PIECE_INTERNAL_H
 #define URSATZ_COMPOSER_PIECE_INTERNAL_H
 
+#include <stdbool.h>
+
+#include <ursatz_composer/given.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
 
@@ -11,5 +14,12 @@
  */
 PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const PlanSource *motive_source, NodeId form,
                                PlanSpan material, PlanTime bar, NodeId *out);
+
+/* The seam section of a plan (R-171), or PLAN_NODE_NONE. */
+NodeId piece_seam_find(const PiecePlan *plan);
+/* The start of the first body section; false when no section is marked as a body. */
+bool piece_seam_body_start(const PiecePlan *plan, PlanTime *out);
+/* Gives the seam a copy of the written lane spans of the bar that starts at body_start; plan_give_section's results. */
+GivenResult piece_seam_give(PiecePlan *plan, NodeId seam, PlanTime body_start);
 
 #endif

@@ -78,6 +78,7 @@ add_library(ursatz_composer STATIC
     piece/form_template.c
     piece/form_return.c
     piece/given.c
+    piece/seam.c
     piece/form_vary.c
     piece/piece_request.c
     piece/piece_structure.c

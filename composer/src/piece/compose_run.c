@@ -22,6 +22,7 @@
 #include <ursatz_composer/voicing.h>
 
 #include "grow/grow_internal.h"
+#include "piece/piece_internal.h"
 #include "plan/plan_internal.h"
 #include "style/style_internal.h"
 
@@ -46,16 +47,25 @@ static const unsigned CLIMAX_RETRIES[COMPOSE_MELODY_ATTEMPTS] = {0, 250, 833, 40
 #define COMPOSE_ROUND_STRIDE 100000UL
 
 const char *compose_stage_name(ComposeStage stage) {
-    static const char *const NAMES[COMPOSE_STAGE_COUNT] = {"invent", "structure", "motives", "harmony",
-                                                           "bass",   "melody",    "texture", "returns"};
+    static const char *const NAMES[COMPOSE_STAGE_COUNT] = {"invent", "structure", "motives", "harmony", "bass",
+                                                           "melody", "texture",   "returns", "seam"};
     return stage >= 0 && stage < COMPOSE_STAGE_COUNT ? NAMES[stage] : "unknown";
 }
 
 /*
  * What a stage's seed adds to the configuration's: grow's stages keep grow's seeds (0 to 5), invention comes after them
- * (6), then the returns (7) and the stages that write what the returns reopened, run again (8 to 11).
+ * (6), then the returns (7) and the stages that write what the returns reopened, run again (8 to 11). The stages of the
+ * seam follow: harmony, bass, melody and texture (12 to 15), then the structure and the motives of the held sections
+ * (16, 17).
  */
-static unsigned long stage_seed(ComposeStage stage, bool again) {
+static unsigned long stage_seed(ComposeStage stage, bool again, bool seam) {
+    if (seam) {
+        unsigned long base = (unsigned long)(COMPOSE_STAGE_TEXTURE - COMPOSE_STAGE_STRUCTURE + 7);
+        if (stage == COMPOSE_STAGE_STRUCTURE || stage == COMPOSE_STAGE_MOTIVES) {
+            return base + 4 + (unsigned long)(stage - COMPOSE_STAGE_STRUCTURE);
+        }
+        return base + (unsigned long)(stage - COMPOSE_STAGE_HARMONY);
+    }
     if (again) {
         return (unsigned long)(COMPOSE_STAGE_TEXTURE - COMPOSE_STAGE_STRUCTURE + 3 + (stage - COMPOSE_STAGE_HARMONY));
     }
@@ -314,6 +324,7 @@ static FillResult register_stage(FillOperatorRegistry *registry, ComposeStage st
         return result == FILL_OK ? voicing_register(registry, voicing) : result;
     case COMPOSE_STAGE_RETURNS:
         return form_return_register(registry, melody);
+    case COMPOSE_STAGE_SEAM: /* run as the stages above, for the held sections */
     case COMPOSE_STAGE_COUNT:
         break;
     }
@@ -338,6 +349,7 @@ static FillCheckerFn checker_of(ComposeStage stage) {
         return texture_checker;
     case COMPOSE_STAGE_RETURNS:
         return form_return_checker;
+    case COMPOSE_STAGE_SEAM:
     case COMPOSE_STAGE_COUNT:
         break;
     }
@@ -525,11 +537,36 @@ typedef struct {
     size_t theme_count;
     bool sentences;
     size_t attempt; /* the attempt at the returns, which moves the seeds of the stages they run */
+    bool seam;      /* the stages are the seam's: their records are kept under the seam stage */
     MotiveDevelopContext motives;
     AccompanimentParams accompaniment;
     VoicingParams voicing;
     ComposeOutcome *outcome;
 } Run;
+
+/* Adds the steps of a record to the one the seam stage keeps, and frees it; false when out of memory. */
+static bool record_keep(FillRecord **kept, FillRecord *record) {
+    if (!record) {
+        return true;
+    }
+    if (!*kept) {
+        *kept = record;
+        return true;
+    }
+    FillStep *steps = realloc((*kept)->steps, ((*kept)->step_count + record->step_count) * sizeof(FillStep));
+    if (!steps && (*kept)->step_count + record->step_count > 0) {
+        fill_record_destroy(record);
+        return false;
+    }
+    memcpy(steps + (*kept)->step_count, record->steps, record->step_count * sizeof(FillStep));
+    (*kept)->steps = steps;
+    (*kept)->step_count += record->step_count;
+    (*kept)->iterations += record->iterations;
+    (*kept)->status = record->status;
+    record->step_count = 0;
+    fill_record_destroy(record);
+    return true;
+}
 
 /*
  * One stage. again marks a stage run a second time, after the returns: it writes what a return reopened, with seeds
@@ -553,7 +590,7 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
             return PIECE_ERR_ALLOC;
         }
         memset(&fill, 0, sizeof(fill));
-        fill.seed = config->seed + run->offset + stage_seed(stage, again) + COMPOSE_ATTEMPT_STRIDE * (unsigned long)attempt +
+        fill.seed = config->seed + run->offset + stage_seed(stage, again, run->seam) + COMPOSE_ATTEMPT_STRIDE * (unsigned long)attempt +
                     COMPOSE_RETURN_STRIDE * (unsigned long)run->attempt;
         fill.max_iterations = config->max_iterations;
         fill.checker = checker_of(stage);
@@ -577,8 +614,9 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
             fill.checker = style_stage_checker;
             fill.checker_context = &style_context;
         }
-        FillRecord **record = again ? NULL : &outcome->records[stage];
-        if (record) {
+        FillRecord *seam_record = NULL;
+        FillRecord **record = run->seam ? &seam_record : (again ? NULL : &outcome->records[stage]);
+        if (record && !run->seam) {
             fill_record_destroy(*record);
             *record = NULL;
         }
@@ -599,6 +637,10 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
                                                &run->voicing);
         FillResult ran = registered == FILL_OK ? fill_run(plan, registry, &fill, &fill_outcome, record) : registered;
         fill_registry_destroy(registry);
+        if (run->seam && !record_keep(&outcome->records[COMPOSE_STAGE_SEAM], seam_record)) {
+            free(open_at_start);
+            return PIECE_ERR_ALLOC;
+        }
         if (ran != FILL_OK) {
             free(open_at_start);
             return ran == FILL_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_STUCK;
@@ -701,6 +743,71 @@ static PieceResult run_returns(Run *run) {
     return result;
 }
 
+/* Takes the HOLD constraint off a section, so the stages can target it; false when it has none or the plan refuses. */
+static bool release_hold(PiecePlan *plan, NodeId section) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
+        if (plan_node_constraint_at(plan, section, i)->kind == PLAN_CONSTRAINT_HOLD) {
+            return plan_node_remove_constraint(plan, section, i) == PLAN_OK;
+        }
+    }
+    return false;
+}
+
+/*
+ * The seam (R-171). The body's first bar is copied into the seam section as Given (once: a plan that has the copy is
+ * left as it is), then the held sections are given their structure, motives, harmony, bass, melody and texture, with
+ * the copy after them. A seam that cannot be copied (the first bar is not written) leaves the held sections to be
+ * filled without it. The held sections keep their HOLD constraint.
+ */
+static PieceResult run_seam(Run *run) {
+    PiecePlan *plan = run->plan;
+    NodeId seam = piece_seam_find(plan);
+    if (seam == PLAN_NODE_NONE) {
+        return PIECE_OK;
+    }
+    NodeId *held = calloc(run->theme_count + 1, sizeof(NodeId));
+    if (!held) {
+        return PIECE_ERR_ALLOC;
+    }
+    size_t held_count = 0;
+    for (size_t t = 0; t < run->theme_count; t++) {
+        if (plan_node_has_constraint(plan, run->themes[t], PLAN_CONSTRAINT_HOLD)) {
+            held[held_count++] = run->themes[t];
+        }
+    }
+    PlanTime body_start;
+    if (plan_node_lane_spans(plan, seam, NULL, 0) == 0 && piece_seam_body_start(plan, &body_start)) {
+        piece_seam_give(plan, seam, body_start);
+    }
+    run->outcome->seam_planned = plan_node_lane_spans(plan, seam, NULL, 0) > 0;
+    PieceResult result = PIECE_OK;
+    size_t released = 0;
+    while (released < held_count && release_hold(plan, held[released])) {
+        released++;
+    }
+    static const ComposeStage STAGES[] = {COMPOSE_STAGE_STRUCTURE, COMPOSE_STAGE_MOTIVES, COMPOSE_STAGE_HARMONY,
+                                          COMPOSE_STAGE_BASS,      COMPOSE_STAGE_MELODY,  COMPOSE_STAGE_TEXTURE};
+    run->seam = held_count > 0 && released == held_count;
+    for (size_t s = 0; run->seam && result == PIECE_OK && s < sizeof(STAGES) / sizeof(STAGES[0]); s++) {
+        result = run_stage(run, STAGES[s], false);
+    }
+    if (result == PIECE_ERR_STUCK) {
+        run->outcome->stuck = true;
+        run->outcome->stuck_stage = COMPOSE_STAGE_SEAM;
+    }
+    run->seam = false;
+    PlanConstraint hold;
+    memset(&hold, 0, sizeof(hold));
+    hold.kind = PLAN_CONSTRAINT_HOLD;
+    for (size_t i = 0; i < released; i++) {
+        if (plan_node_add_constraint(plan, held[i], &hold) != PLAN_OK && result == PIECE_OK) {
+            result = PIECE_ERR_ALLOC;
+        }
+    }
+    free(held);
+    return result;
+}
+
 /* One run of the stages. offset is added to every seed. */
 static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsigned long offset,
                             ComposeOutcome *outcome) {
@@ -767,6 +874,10 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     /* The sections that return an earlier one are given its material now it is written, then what they reopened is. */
     if (result == PIECE_OK && returns_pending(plan, themes, theme_count)) {
         result = run_returns(&run);
+    }
+    /* The loop's end, held until now, is filled against the bar it leads into. */
+    if (result == PIECE_OK) {
+        result = run_seam(&run);
     }
     if (result == PIECE_OK) {
         hear(plan, themes, theme_count, outcome);
