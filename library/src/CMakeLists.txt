@@ -198,6 +198,7 @@ add_library(ursatz
     query/corpus_search.c
     export/musicxml_export.c
     export/musicxml_score.c
+    export/score_quantize.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
