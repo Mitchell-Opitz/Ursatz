@@ -9,10 +9,12 @@
 #include "events/note_event.h"
 #include "export/musicxml_export.h"
 #include "export/musicxml_score_internal.h"
+#include "export/score_quantize.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_spelling.h"
 #include "events/dynamics.h"
 #include "time/duration.h"
+#include "time/exact_rational.h"
 #include "time/metronome_marking.h"
 #include "time/tempo_map.h"
 #include "time/musical_time.h"
@@ -347,6 +349,34 @@ static int compare_notes(const void *left, const void *right) {
     return a->index < b->index ? -1 : (a->index > b->index ? 1 : 0);
 }
 
+/* Replaces the played start and duration of every note with the notated ones from score_quantize. */
+static MusicXmlExportResult apply_quantize(Prep *prep) {
+    const MusicXmlExportScore *score = prep->score;
+    ScoreQuantized quantized;
+    ScoreQuantizeResult status = score_quantize(score->events, score->count, score->part_index, score->staff,
+                                                score->meter_map, score->quantize, &quantized);
+    if (status != SCORE_QUANTIZE_OK) {
+        return status == SCORE_QUANTIZE_ERR_ALLOC ? MUSICXML_EXPORT_ERR_ALLOC : MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+    }
+    MusicXmlExportResult result = MUSICXML_EXPORT_OK;
+    for (size_t i = 0; i < prep->note_count && result == MUSICXML_EXPORT_OK; i++) {
+        ExactRational start = er_make(quantized.start_num[i], quantized.start_den[i]);
+        ExactRational end = er_make(quantized.end_num[i], quantized.end_den[i]);
+        ExactRational duration;
+        if (er_cmp(end, start) <= 0 || er_sub(end, start, &duration) != 0 || start.n > (unsigned long long)LONG_MAX ||
+            duration.n > (unsigned long long)LONG_MAX || start.d > ULONG_MAX || duration.d > ULONG_MAX) {
+            result = MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+            break;
+        }
+        prep->notes[i].start_n = (long)start.n;
+        prep->notes[i].start_d = (unsigned long)start.d;
+        prep->notes[i].dur_n = (long)duration.n;
+        prep->notes[i].dur_d = (unsigned long)duration.d;
+    }
+    score_quantized_destroy(&quantized);
+    return result;
+}
+
 /* The notes: part, staff, spelling present, exact start and duration, and their voice groups. */
 static MusicXmlExportResult gather_notes(Prep *prep) {
     const MusicXmlExportScore *score = prep->score;
@@ -407,7 +437,7 @@ static MusicXmlExportResult gather_notes(Prep *prep) {
         }
         note->group = found;
     }
-    return MUSICXML_EXPORT_OK;
+    return prep->score->quantize != NULL ? apply_quantize(prep) : MUSICXML_EXPORT_OK;
 }
 
 static MusicXmlExportResult gather_keys(Prep *prep) {
