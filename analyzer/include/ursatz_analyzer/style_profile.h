@@ -75,6 +75,14 @@ StyleModelFileResult style_model_file_write(const StyleProfile *profile, const c
  */
 StyleModelFileResult style_model_file_read(const char *path, StyleModel **out, size_t *pieces);
 
+/*
+ * style_model_file_read without the named categories: they are dropped before the model is built, so it holds no
+ * statistics of them. An unknown category name is STYLE_MODEL_FILE_ERR_ARGUMENT. style_model_file_read is this with none.
+ * The Composer reads styles without the motive categories until it uses them as preferences.
+ */
+StyleModelFileResult style_model_file_read_without(const char *path, const char *const *categories, size_t count,
+                                                   StyleModel **out, size_t *pieces);
+
 /* The statistics a model holds (style_features_decode); free with style_statistics_free. */
 StyleModelFileResult style_model_statistics(const StyleModel *model, StyleStatistic **out, size_t *count);
 

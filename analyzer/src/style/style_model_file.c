@@ -96,8 +96,19 @@ static bool count_member(const cJSON *object, const char *name, unsigned long *o
 }
 
 StyleModelFileResult style_model_file_read(const char *path, StyleModel **out, size_t *pieces) {
-    if (!path || !out) {
+    return style_model_file_read_without(path, NULL, 0, out, pieces);
+}
+
+StyleModelFileResult style_model_file_read_without(const char *path, const char *const *categories, size_t dropped,
+                                                   StyleModel **out, size_t *pieces) {
+    if (!path || !out || (dropped > 0 && !categories)) {
         return STYLE_MODEL_FILE_ERR_ARGUMENT;
+    }
+    for (size_t i = 0; i < dropped; i++) {
+        StyleDimension unused;
+        if (!style_category_dimension(categories[i], &unused)) {
+            return STYLE_MODEL_FILE_ERR_ARGUMENT;
+        }
     }
     *out = NULL;
     char *text = style_read_file(path);
@@ -157,6 +168,18 @@ StyleModelFileResult style_model_file_read(const char *path, StyleModel **out, s
             start = i;
         }
     }
+    /* The named categories are dropped here, after the totals are checked, so a damaged file is refused either way. */
+    size_t kept = 0;
+    for (size_t i = 0; i < count; i++) {
+        bool drop = false;
+        for (size_t d = 0; d < dropped && !drop; d++) {
+            drop = strcmp(statistics[i].category, categories[d]) == 0;
+        }
+        if (!drop) {
+            statistics[kept++] = statistics[i];
+        }
+    }
+    count = kept;
     char id_text[40];
     snprintf(id_text, sizeof id_text, "style-model-%016llx", (unsigned long long)hash);
     EntityID *id = NULL;
