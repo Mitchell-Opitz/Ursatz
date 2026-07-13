@@ -1,5 +1,6 @@
 #include "export/score_quantize.h"
 
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -46,6 +47,10 @@ typedef struct {
     ExactRational step; /* the grid step chosen for the beat of the onset */
     ExactRational snapped_start;
     ExactRational snapped_end;
+    size_t part;
+    int staff;
+    const char *voice; /* the VoiceReference's target id, NULL for none */
+    size_t group;      /* the voice group: part, staff and voice */
 } Item;
 
 typedef struct {
@@ -177,8 +182,13 @@ static ScoreQuantizeResult choose_step(const Item *items, const BeatKey *keys, s
 
 /* --- quantize --- */
 
-static ScoreQuantizeResult fill_items(Item *items, NoteEvent *const *events, size_t count, const MeterMap *meter) {
+static ScoreQuantizeResult fill_items(Item *items, NoteEvent *const *events, size_t count, const size_t *part_index,
+                                      const int *staff, const MeterMap *meter) {
     for (size_t i = 0; i < count; i++) {
+        items[i].part = part_index != NULL ? part_index[i] : 0;
+        items[i].staff = staff != NULL ? staff[i] : 1;
+        const VoiceReference *voice = note_event_optional_voice(events[i]);
+        items[i].voice = voice != NULL ? entity_id_value(voice_reference_target_id(voice)) : NULL;
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(events[i]));
         const Duration *duration = note_event_duration(events[i]);
         if (musical_time_numerator(position) < 0 || duration_numerator(duration) <= 0) {
@@ -260,6 +270,114 @@ static ScoreQuantizeResult snap_items(Item *items, size_t count, const MeterMap 
     return SCORE_QUANTIZE_OK;
 }
 
+/* --- legato --- */
+
+static bool same_group(const Item *a, const Item *b) {
+    return a->part == b->part && a->staff == b->staff &&
+           ((a->voice == NULL && b->voice == NULL) ||
+            (a->voice != NULL && b->voice != NULL && strcmp(a->voice, b->voice) == 0));
+}
+
+/* Numbers the voice groups: items of one part, staff and voice share a number. */
+static void assign_groups(Item *items, size_t count) {
+    size_t groups = 0;
+    for (size_t i = 0; i < count; i++) {
+        size_t found = groups;
+        for (size_t g = 0; g < i && found == groups; g++) {
+            if (items[g].group < groups && same_group(&items[g], &items[i])) {
+                found = items[g].group;
+            }
+        }
+        items[i].group = found;
+        if (found == groups) {
+            groups++;
+        }
+    }
+}
+
+typedef struct {
+    size_t group;
+    ExactRational start;
+    size_t item;
+} VoiceKey;
+
+static int compare_voice_keys(const void *left, const void *right) {
+    const VoiceKey *a = (const VoiceKey *)left;
+    const VoiceKey *b = (const VoiceKey *)right;
+    if (a->group != b->group) {
+        return a->group < b->group ? -1 : 1;
+    }
+    int order = er_cmp(a->start, b->start);
+    if (order != 0) {
+        return order;
+    }
+    return a->item < b->item ? -1 : (a->item > b->item ? 1 : 0);
+}
+
+/* True when the end of a note should move to the next onset of its voice: the gap is positive, less than a beat and at
+   most gap_absorb times the note's own notated length. */
+static int absorbs(const Item *item, ExactRational next, const ScoreQuantizeOptions *options, bool *absorb) {
+    *absorb = false;
+    if (er_cmp(next, item->snapped_end) <= 0) {
+        return 0;
+    }
+    ExactRational gap;
+    ExactRational length;
+    ExactRational limit;
+    if (er_sub(next, item->snapped_end, &gap) != 0 || er_sub(item->snapped_end, item->snapped_start, &length) != 0 ||
+        er_mul(length, er_make(options->gap_absorb_numerator, options->gap_absorb_denominator), &limit) != 0) {
+        return -1;
+    }
+    *absorb = er_cmp(gap, item->beat.len) < 0 && er_cmp(gap, limit) <= 0;
+    return 0;
+}
+
+/* Moves the end of each note over a small gap to the next onset in its voice group. The next onset is the earliest
+   onset after the note's own, so the notes of a chord all look to the same one. */
+static ScoreQuantizeResult absorb_gaps(Item *items, size_t count, const ScoreQuantizeOptions *options) {
+    if (count == 0) {
+        return SCORE_QUANTIZE_OK;
+    }
+    assign_groups(items, count);
+    VoiceKey *keys = (VoiceKey *)malloc(count * sizeof(VoiceKey));
+    ExactRational *ends = (ExactRational *)malloc(count * sizeof(ExactRational));
+    if (keys == NULL || ends == NULL) {
+        free(keys);
+        free(ends);
+        return SCORE_QUANTIZE_ERR_ALLOC;
+    }
+    for (size_t i = 0; i < count; i++) {
+        keys[i].group = items[i].group;
+        keys[i].start = items[i].snapped_start;
+        keys[i].item = i;
+        ends[i] = items[i].snapped_end;
+    }
+    qsort(keys, count, sizeof(VoiceKey), compare_voice_keys);
+    ScoreQuantizeResult result = SCORE_QUANTIZE_OK;
+    for (size_t k = count; k-- > 0 && result == SCORE_QUANTIZE_OK;) {
+        size_t next = k + 1;
+        while (next < count && keys[next].group == keys[k].group && er_cmp(keys[next].start, keys[k].start) == 0) {
+            next++;
+        }
+        if (next >= count || keys[next].group != keys[k].group) {
+            continue;
+        }
+        Item *item = &items[keys[k].item];
+        bool absorb = false;
+        if (absorbs(item, keys[next].start, options, &absorb) != 0) {
+            result = SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
+        } else if (absorb) {
+            ends[keys[k].item] = keys[next].start;
+        }
+    }
+    for (size_t i = 0; i < count && result == SCORE_QUANTIZE_OK; i++) {
+        items[i].snapped_end = ends[i];
+    }
+    free(keys);
+    free(ends);
+    return result;
+}
+
 static ScoreQuantizeResult store_items(const Item *items, size_t count, ScoreQuantized *out) {
     out->start_num = (unsigned long long *)malloc((count > 0 ? count : 1) * sizeof(unsigned long long));
     out->start_den = (unsigned long long *)malloc((count > 0 ? count : 1) * sizeof(unsigned long long));
@@ -281,8 +399,6 @@ static ScoreQuantizeResult store_items(const Item *items, size_t count, ScoreQua
 ScoreQuantizeResult score_quantize(NoteEvent *const *events, size_t count, const size_t *part_index, const int *staff,
                                    const MeterMap *meter_map, const ScoreQuantizeOptions *options,
                                    ScoreQuantized *out) {
-    (void)part_index;
-    (void)staff;
     if (out == NULL || (events == NULL && count > 0)) {
         return SCORE_QUANTIZE_ERR_NULL_ARG;
     }
@@ -313,13 +429,16 @@ ScoreQuantizeResult score_quantize(NoteEvent *const *events, size_t count, const
     size_t grid_count = 0;
     ScoreQuantizeResult result = items != NULL && grids != NULL ? SCORE_QUANTIZE_OK : SCORE_QUANTIZE_ERR_ALLOC;
     if (result == SCORE_QUANTIZE_OK) {
-        result = fill_items(items, events, count, meter_map);
+        result = fill_items(items, events, count, part_index, staff, meter_map);
     }
     if (result == SCORE_QUANTIZE_OK && count > 0) {
         result = choose_grids(items, count, options, grids, &grid_count);
     }
     if (result == SCORE_QUANTIZE_OK) {
         result = snap_items(items, count, meter_map, grids, grid_count, options);
+    }
+    if (result == SCORE_QUANTIZE_OK) {
+        result = absorb_gaps(items, count, options);
     }
     if (result == SCORE_QUANTIZE_OK) {
         result = store_items(items, count, out);
