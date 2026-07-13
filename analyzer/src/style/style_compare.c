@@ -77,6 +77,18 @@ static bool rational_divide(StyleRational x, u128 count, StyleRational *out) {
     return true;
 }
 
+/* The value, between 0 and 1, as the nearest fraction over 2^64, in lowest terms. */
+static StyleRational approximate(long double value) {
+    const u128 scale = (u128)1 << 64;
+    long double scaled = value * 18446744073709551616.0L + 0.5L;
+    u128 numerator = scaled <= 0 ? 0 : (u128)scaled;
+    return reduce(numerator > scale ? scale : numerator, scale);
+}
+
+static long double value_of(StyleRational fraction) {
+    return (long double)fraction.numerator / (long double)fraction.denominator;
+}
+
 /* One category of one model: statistics [first, first + count) of a sorted list. */
 typedef struct {
     const StyleStatistic *items;
@@ -187,6 +199,8 @@ StyleCompareResult style_profile_compare(const StyleModel *model_a, const StyleM
     }
     StyleRational dimension_sum[STYLE_DIMENSION_COUNT] = {{0, 1}, {0, 1}, {0, 1}, {0, 1}};
     u128 dimension_categories[STYLE_DIMENSION_COUNT] = {0};
+    long double dimension_value[STYLE_DIMENSION_COUNT] = {0};
+    bool sum_exact[STYLE_DIMENSION_COUNT] = {true, true, true, true};
     size_t i = 0, j = 0;
     while (i < count_a || j < count_b) {
         size_t end_a = i < count_a ? category_end(a, i, count_a) : i;
@@ -219,9 +233,12 @@ StyleCompareResult style_profile_compare(const StyleModel *model_a, const StyleM
             result = STYLE_COMPARE_ERR_ALLOC;
             goto done;
         }
-        if (!rational_add(dimension_sum[entry->dimension], entry->distance, &dimension_sum[entry->dimension])) {
-            result = STYLE_COMPARE_ERR_OVERFLOW;
-            goto done;
+        /* A category's own distance is exact or an error; the means over categories may need more bits than 128 and
+           then fall back to the nearest fraction over 2^64. */
+        dimension_value[entry->dimension] += value_of(entry->distance);
+        if (sum_exact[entry->dimension] &&
+            !rational_add(dimension_sum[entry->dimension], entry->distance, &dimension_sum[entry->dimension])) {
+            sum_exact[entry->dimension] = false;
         }
         dimension_categories[entry->dimension]++;
         if (order <= 0) {
@@ -232,23 +249,26 @@ StyleCompareResult style_profile_compare(const StyleModel *model_a, const StyleM
         }
     }
     StyleRational overall_sum = {0, 1};
+    long double overall_value = 0;
+    bool overall_sum_exact = true;
     u128 dimensions = 0;
     for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
         if (dimension_categories[d] == 0) {
             continue;
         }
         out->dimension_present[d] = true;
-        if (!rational_divide(dimension_sum[d], dimension_categories[d], &out->dimension[d]) ||
-            !rational_add(overall_sum, out->dimension[d], &overall_sum)) {
-            result = STYLE_COMPARE_ERR_OVERFLOW;
-            goto done;
+        out->dimension_exact[d] = sum_exact[d] && rational_divide(dimension_sum[d], dimension_categories[d], &out->dimension[d]);
+        if (!out->dimension_exact[d]) {
+            out->dimension[d] = approximate(dimension_value[d] / (long double)dimension_categories[d]);
         }
+        overall_value += value_of(out->dimension[d]);
+        overall_sum_exact = overall_sum_exact && out->dimension_exact[d] && rational_add(overall_sum, out->dimension[d], &overall_sum);
         dimensions++;
     }
     if (dimensions > 0) {
-        if (!rational_divide(overall_sum, dimensions, &out->overall)) {
-            result = STYLE_COMPARE_ERR_OVERFLOW;
-            goto done;
+        out->overall_exact = overall_sum_exact && rational_divide(overall_sum, dimensions, &out->overall);
+        if (!out->overall_exact) {
+            out->overall = approximate(overall_value / (long double)dimensions);
         }
         out->overall_present = true;
     }
