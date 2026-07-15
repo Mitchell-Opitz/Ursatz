@@ -9,6 +9,7 @@ target_compile_definitions(test_musicxml_score_overlaps PRIVATE
     URSATZ_MUSICXML_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/musicxml")
 add_ursatz_test(musicxml_score_errors)
 add_ursatz_test(musicxml_score_fixtures)
+add_ursatz_test(score_quantize)
 target_compile_definitions(test_musicxml_score_fixtures PRIVATE
     URSATZ_MUSICXML_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/musicxml")
 
