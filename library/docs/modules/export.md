@@ -22,6 +22,16 @@
 - **Tempo**: `<sound tempo>` (quarter notes per minute, up to 12 decimal places) in part 0 at each `TempoMap` region that is not defaulted; a defaulted map writes none. A `TempoMarking` is a `<direction>` with `<words>` and a `<metronome>` (a beat unit MusicXML names, up to four dots, and an exactly representable per-minute). A marking at a tempo region's position shares one `<direction>` with the `<sound>`, so it comes back as one marking. A marking with text only and no tempo at its position comes back as unclassified text.
 - **Dynamics**: `<direction><dynamics>` at the start of the Dynamics' span, or at its event; the names MusicXML has are elements and the rest are `<other-dynamics>`.
 
+## Notated versus played times
+
+`MusicXmlExportScore.quantize` (`export/score_quantize.h`) is NULL by default: every note is written at its exact played start and duration, as above. When it is set, `score_quantize` turns the played times into notated ones first and the document is written from those. The events, their ids and their order are not changed, and nothing imported or analyzed is touched; the notated times exist only for the write.
+
+- **Grid.** Per beat of the meter (the dotted beat in a compound meter such as 6/8), the grid is the straight one (`grid_denominator`, a 32nd by default) or, with `allow_triplets`, a third or a sixth of the beat. The grid with the lowest total snap error for the onsets in that beat wins; a tie goes to the straight grid and then to the coarser triplet grid. Onsets and ends snap to the nearest point of their beat's grid (a tie rounds up). An end in a beat with no onset uses the straight grid. A note is never shorter than one grid step.
+- **Legato.** Within a voice group (part, staff, VoiceReference), a gap after a note's snapped end, up to `gap_absorb` times the note's own notated length and less than one beat, is absorbed: the end moves to the next onset of the voice. The notes of a chord look to the same next onset.
+- **Chords and barlines.** Notes that end up with the same start and end in a voice are a chord, which the writer already handles. A snapped point never leaves its beat, so no onset or end moves across a barline by more than half a grid step.
+- **Errors.** A negative position, a zero duration, a zero denominator option or an overflow is `SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE` (`MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE` from the writer).
+- **Not yet written.** `<type>`, dots, tuplets and beams: the writer still gives each note its exact `<duration>` only.
+
 ## Errors
 
 `MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT` (a count with no array, a NULL entry, parts that do not add up), `_UNKNOWN_PART`, `_BAD_STAFF`, `_UNKNOWN_EVENT` (a Dynamics targets an event the score lacks), `_NOT_REPRESENTABLE` (a negative position, a zero duration, a key outside -7 to 7, a beat unit or per-minute MusicXML cannot write, an overflow) and `_DIVISIONS_OVERFLOW`. They were appended to the enum; the earlier values are unchanged.

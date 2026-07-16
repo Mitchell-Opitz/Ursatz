@@ -6,6 +6,7 @@
 #include "events/dynamics.h"
 #include "events/note_event.h"
 #include "events/tempo_marking.h"
+#include "export/score_quantize.h"
 #include "persistence/persistence.h"
 #include "pitch/pitch_numeric_value.h"
 #include "time/meter_map.h"
@@ -95,6 +96,9 @@ typedef struct {
  *   - tempo_markings (+ tempo_marking_part): written as <direction> text and <metronome>; part arrays default to 0.
  *   - dynamics (+ dynamics_part, dynamics_staff): written at the start of the Dynamics' span, or at its event.
  *   - key_signatures: written in their own part.
+ *   - quantize: NULL writes every note at its exact played start and duration. When set, score_quantize (see
+ *     export/score_quantize.h) turns the played times into notated times on the beat grid of meter_map first, and the
+ *     document is written from those; the events themselves, their ids and their order are untouched.
  */
 typedef struct {
     NoteEvent *const *events;
@@ -115,6 +119,7 @@ typedef struct {
     size_t dynamics_count;
     const MusicXmlExportKeySignature *key_signatures;
     size_t key_signature_count;
+    const ScoreQuantizeOptions *quantize;
 } MusicXmlExportScore;
 
 /*
@@ -148,7 +153,8 @@ MusicXmlExportResult musicxml_export_write(PersistenceHandle *handle, char **out
  * Writes score as a newly allocated, NUL-terminated MusicXML 3.1 document to *out_xml (the caller free()s it).
  * Measures, their numbers (a pickup is 0), and every barline come from score->meter_map and nowhere else; a note
  * that crosses a barline is split and tied; <divisions> is the smallest whole number that makes every position and
- * duration an integer, and nothing is rounded. On any result other than OK *out_xml is not written.
+ * duration an integer, and nothing is rounded (unless score->quantize is set, which writes notated times instead of
+ * played ones; ScoreQuantizeResult failures other than allocation are MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE). On any result other than OK *out_xml is not written.
  *
  * Chords and overlaps are written, never refused (MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES is not returned here). Within
  * a voice (part, staff, VoiceReference), notes with the same start and end are a chord: the first is a plain <note>
