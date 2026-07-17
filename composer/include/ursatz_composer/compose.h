@@ -13,6 +13,7 @@
 #include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/rejection.h>
 #include <ursatz_composer/return_hear.h>
+#include <ursatz_composer/seam_hear.h>
 #include <ursatz_composer/style.h>
 
 /*
@@ -126,7 +127,8 @@ typedef struct {
     size_t returns_planned;                   /* the theme sections with a RETURN, each planned to be heard as a return */
     size_t returns_heard;                     /* how many of them were */
     bool returns_heard_as_planned;            /* every return planned was heard (true when none was planned) */
-    bool seam_planned;                        /* the body's first bar was copied into the seam section (R-171) */
+    bool seam_planned;                        /* the body's first bar was copied into the seam section and the seam heard (R-171) */
+    SeamHeard seam;                           /* the seam rules over the finished plan; empty without seam_planned */
     bool key_rejected;                        /* the last run was complete but failed the key or cadence check (stuck) */
     PieceKeyCheck key_check;                  /* the checks of the last complete run, for a plan with several keys */
     PieceCadenceCheck cadence_check;
@@ -138,8 +140,8 @@ typedef struct {
     /*
      * Over the sections, the structure's score and 1 for each section heard as requested: the sum of the numerators
      * over the sum of the denominators (each section's denominator one more than its structure's), as GrowOutcome's
-     * score is for one; and 1 more for each return planned, in the numerator too when it was heard. With
-     * analyzer_check, each cadence and key planned adds 1 to the denominator and each one heard as planned adds 1 to
+     * score is for one; and 1 more for each return planned, in the numerator too when it was heard; and, with a seam
+     * heard, 4 more for its rules and the ones it holds in the numerator. With analyzer_check, each cadence and key planned adds 1 to the denominator and each one heard as planned adds 1 to
      * the numerator.
      */
     GrowScore score;

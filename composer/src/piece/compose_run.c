@@ -459,6 +459,17 @@ static void hear_returns(const PiecePlan *plan, const NodeId *themes, size_t the
     outcome->returns_heard_as_planned = outcome->returns_heard == outcome->returns_planned;
 }
 
+/* The seam rules over the finished plan: 4 more in the score's denominator, and the ones held in its numerator. */
+static void hear_seam(const PiecePlan *plan, ComposeOutcome *outcome) {
+    NodeId seam = outcome->seam_planned ? piece_seam_find(plan) : PLAN_NODE_NONE;
+    outcome->seam_planned = false;
+    if (seam != PLAN_NODE_NONE && seam_hear(plan, seam, &outcome->seam) == SEAM_HEAR_OK) {
+        outcome->seam_planned = true;
+        outcome->score.numerator += outcome->seam.held;
+        outcome->score.denominator += SEAM_RULE_COUNT;
+    }
+}
+
 static void hear(const PiecePlan *plan, const NodeId *themes, size_t theme_count, ComposeOutcome *outcome) {
     unsigned long numerator = 0;
     unsigned long denominator = 0;
@@ -881,6 +892,7 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     }
     if (result == PIECE_OK) {
         hear(plan, themes, theme_count, outcome);
+        hear_seam(plan, outcome);
     }
     free(themes);
     return result;

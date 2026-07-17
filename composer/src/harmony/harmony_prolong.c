@@ -393,6 +393,7 @@ bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const Fil
         out->score_numerator += progression->repeats ? 1 : 0;
         out->score_denominator += 1;
     }
+    harmony_seam_score(progression, out);
     snprintf(out->reason, sizeof(out->reason), progression->repeats ? "prolongation, repeated" : "prolongation");
     return true;
 }
