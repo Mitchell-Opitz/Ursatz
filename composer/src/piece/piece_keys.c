@@ -205,6 +205,8 @@ PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
         NodeId child = plan_node_child_at(plan, form, i);
         if (find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
             material = child;
+        } else if (find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
+            continue; /* the seam is not a section of the piece */
         } else if (count < FORM_TEMPLATE_MAX_SECTIONS) {
             sections[count++] = child;
         } else {
@@ -345,6 +347,8 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
         NodeId child = plan_node_child_at(plan, form, i);
         if (find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
             piece_end = plan_node_span(plan, child).start;
+        } else if (find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
+            continue;
         } else if (section_count < FORM_TEMPLATE_MAX_SECTIONS) {
             sections[section_count++] = child;
         }

@@ -50,6 +50,7 @@ static void report_skipped(const RenderedPlan *rendered) {
                 skip->reason == RENDER_SKIP_NOT_REALIZED ? "not Given or Realized"
                 : skip->reason == RENDER_SKIP_MATERIAL ? "source material"
                 : skip->reason == RENDER_SKIP_LAYER    ? "not in the layer"
+                : skip->reason == RENDER_SKIP_SEAM     ? "seam"
                                                          : "lane is not rendered yet");
     }
 }

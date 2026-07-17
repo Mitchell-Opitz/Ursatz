@@ -308,7 +308,8 @@ ReturnHearResult return_hear(const PiecePlan *plan, ReturnHeard *out) {
     ReturnHearResult status = themes && entries && entry_theme ? RETURN_HEAR_OK : RETURN_HEAR_ERR_ALLOC;
 
     for (NodeId id = 1; status == RETURN_HEAR_OK && id <= plan_node_count(plan); id++) {
-        if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && !has_constraint(plan, id, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && !has_constraint(plan, id, PLAN_CONSTRAINT_MATERIAL) &&
+            !has_constraint(plan, id, PLAN_CONSTRAINT_SEAM)) {
             status = read_section(plan, id, themes, &theme_count);
         }
     }
