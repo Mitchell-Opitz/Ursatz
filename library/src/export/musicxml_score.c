@@ -1099,6 +1099,7 @@ typedef struct {
     bool tie_start;
     bool tie_stop;
     bool chord;       /* written with <chord/>, sharing the previous note's start and duration */
+    bool measure_rest; /* a rest that fills its measure, written as <rest measure="yes"/> */
 } Segment;
 
 typedef struct {
@@ -1290,6 +1291,7 @@ static bool add_run(const Prep *prep, size_t part, SegmentList *list, long long 
                 segment.tie_start = note != REST_SEGMENT && end < to;
                 segment.tie_stop = note != REST_SEGMENT && position > from;
                 segment.chord = k > 0;
+                segment.measure_rest = false;
                 if (!segment_push(list, segment)) {
                     return false;
                 }
@@ -1379,7 +1381,8 @@ static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment,
     NoteEvent *event = is_rest ? NULL : prep->score->events[note->index];
 
     if (is_rest) {
-        xmlbuf_append(buf, "      <note>\n        <rest/>\n");
+        xmlbuf_append(buf, segment->measure_rest ? "      <note>\n        <rest measure=\"yes\"/>\n"
+                                                 : "      <note>\n        <rest/>\n");
     } else {
         char base[64];
         const char *chord = segment->chord ? "        <chord/>\n" : "";
@@ -1412,7 +1415,7 @@ static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment,
     }
     xmlbuf_append(buf, "        <voice>%d</voice>\n", voice_number);
     NotatedValue value;
-    if (classify_value(segment->end - segment->start, prep->divisions, false, &value)) {
+    if (!segment->measure_rest && classify_value(segment->end - segment->start, prep->divisions, false, &value)) {
         xmlbuf_append(buf, "        <type>%s</type>\n", VALUE_TYPE_NAMES[value.type - 1]);
         for (int d = 0; d < value.dots; d++) {
             xmlbuf_append(buf, "        <dot/>\n");
@@ -1575,19 +1578,23 @@ static void write_dirs_through(DirCtx *ctx, XmlBuf *buf, long long tick) {
     }
 }
 
-/* A rest from from to to, cut at the part's cuts; the part's dirs are written before each piece when dirs is given. */
-static void write_rest_run(const Prep *prep, XmlBuf *buf, size_t part, long long from, long long to, int staff,
+/* Appends the rests that fill [from, to): cut at the part's cuts and into notated values. A whole measure with no cut
+   inside it is one measure rest. */
+static bool rest_pieces(const Prep *prep, size_t part, SegmentList *list, long long from, long long to,
+                        bool whole_measure) {
+    if (whole_measure && next_cut(prep->cuts[part], prep->cut_count[part], from) >= to) {
+        Segment rest = {from, to, REST_SEGMENT, 0, false, false, false, true};
+        return segment_push(list, rest);
+    }
+    return add_run(prep, part, list, from, to, REST_SEGMENT, 1);
+}
+
+/* Writes the segments in order; the part's dirs go in before each one when dirs is given. */
+static void write_segments(const Prep *prep, XmlBuf *buf, const SegmentList *list, size_t part, int staff,
                            int voice_number, DirCtx *dirs) {
-    long long position = from;
-    while (position < to) {
-        long long next = next_cut(prep->cuts[part], prep->cut_count[part], position);
-        if (next > to) {
-            next = to;
-        }
-        write_dirs_through(dirs, buf, position);
-        Segment rest = {position, next, REST_SEGMENT, 0, false, false, false};
-        write_segment(prep, buf, &rest, part, staff, voice_number);
-        position = next;
+    for (size_t i = 0; i < list->count; i++) {
+        write_dirs_through(dirs, buf, list->items[i].start);
+        write_segment(prep, buf, &list->items[i], part, staff, voice_number);
     }
 }
 
@@ -1623,22 +1630,33 @@ static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_
                           head - measure_start);
         }
         head = measure_start;
+        SegmentList chain = {NULL, 0, 0};
+        bool ok = true;
         for (size_t i = cursor[g]; i < last; i++) {
-            if (first) {
-                write_dirs_through(&dir_ctx, buf, list->items[i].start);
-            }
-            write_segment(prep, buf, &list->items[i], part, group->staff, group->voice_number);
+            ok = ok && segment_push(&chain, list->items[i]);
             head = list->items[i].end;
         }
         if (first && head < measure_end) {
-            write_rest_run(prep, buf, part, head, measure_end, group->staff, group->voice_number, &dir_ctx);
+            ok = ok && rest_pieces(prep, part, &chain, head, measure_end, false);
             head = measure_end;
         }
+        if (!ok) {
+            buf->failed = true;
+        } else {
+            write_segments(prep, buf, &chain, part, group->staff, group->voice_number, first ? &dir_ctx : NULL);
+        }
+        free(chain.items);
         first = false;
         cursor[g] = last;
     }
     if (first && prep->note_count > 0) {
-        write_rest_run(prep, buf, part, measure_start, measure_end, 1, 1, &dir_ctx);
+        SegmentList rests = {NULL, 0, 0};
+        if (rest_pieces(prep, part, &rests, measure_start, measure_end, true)) {
+            write_segments(prep, buf, &rests, part, 1, 1, &dir_ctx);
+        } else {
+            buf->failed = true;
+        }
+        free(rests.items);
     } else if (first) {
         /* No notes at all: the dirs alone, with <forward> between them. */
         size_t end = prep->dir_first[part + 1];
