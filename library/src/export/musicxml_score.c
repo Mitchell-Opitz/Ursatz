@@ -1149,6 +1149,9 @@ typedef struct {
     bool triplet;
 } NotatedValue;
 
+static const char *const VALUE_TYPE_NAMES[VALUE_TYPE_COUNT] = {"whole", "half", "quarter", "eighth",
+                                                               "16th",  "32nd", "64th",    "128th"};
+
 /* A dotted value is base * (2^(d+1) - 1) / 2^d. */
 static const long long DOT_NUMERATOR[MAX_VALUE_DOTS + 1] = {1, 3, 7};
 static const long long DOT_DENOMINATOR[MAX_VALUE_DOTS + 1] = {1, 2, 4};
@@ -1408,8 +1411,25 @@ static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment,
         xmlbuf_append(buf, "        <tie type=\"start\"/>\n");
     }
     xmlbuf_append(buf, "        <voice>%d</voice>\n", voice_number);
+    NotatedValue value;
+    if (classify_value(segment->end - segment->start, prep->divisions, false, &value)) {
+        xmlbuf_append(buf, "        <type>%s</type>\n", VALUE_TYPE_NAMES[value.type - 1]);
+        for (int d = 0; d < value.dots; d++) {
+            xmlbuf_append(buf, "        <dot/>\n");
+        }
+    }
     if (prep->parts[part].staff_count > 1) {
         xmlbuf_append(buf, "        <staff>%d</staff>\n", staff);
+    }
+    if (segment->tie_stop || segment->tie_start) {
+        xmlbuf_append(buf, "        <notations>\n");
+        if (segment->tie_stop) {
+            xmlbuf_append(buf, "          <tied type=\"stop\"/>\n");
+        }
+        if (segment->tie_start) {
+            xmlbuf_append(buf, "          <tied type=\"start\"/>\n");
+        }
+        xmlbuf_append(buf, "        </notations>\n");
     }
     xmlbuf_append(buf, "      </note>\n");
 }
