@@ -1100,6 +1100,7 @@ typedef struct {
     bool tie_stop;
     bool chord;       /* written with <chord/>, sharing the previous note's start and duration */
     bool measure_rest; /* a rest that fills its measure, written as <rest measure="yes"/> */
+    int tuplet;        /* 1 opens a triplet group and 2 closes it (with <tuplet>), 0 neither */
 } Segment;
 
 typedef struct {
@@ -1292,6 +1293,7 @@ static bool add_run(const Prep *prep, size_t part, SegmentList *list, long long 
                 segment.tie_stop = note != REST_SEGMENT && position > from;
                 segment.chord = k > 0;
                 segment.measure_rest = false;
+                segment.tuplet = 0;
                 if (!segment_push(list, segment)) {
                     return false;
                 }
@@ -1373,6 +1375,49 @@ static void xml_id_from_entity(const char *raw, char *out, size_t out_size) {
     out[pos] = '\0';
 }
 
+/*
+ * Marks the triplet groups of one voice's segments in a measure: a run of two or more triplet-valued notes and rests,
+ * back to back inside one beat, opens at its first and closes at its last (chord members follow their first note).
+ */
+static void mark_tuplets(const Prep *prep, SegmentList *list) {
+    size_t first = 0;
+    size_t last = 0;
+    size_t length = 0;
+    long long run_beat = 0;
+    for (size_t i = 0; i <= list->count; i++) {
+        Segment *item = i < list->count ? &list->items[i] : NULL;
+        if (item != NULL && item->chord) {
+            continue;
+        }
+        bool triplet = false;
+        long long beat_start = 0;
+        NotatedValue value;
+        if (item != NULL && !item->measure_rest &&
+            classify_value(item->end - item->start, prep->divisions, true, &value) && value.triplet) {
+            size_t m = measure_at(prep, item->start);
+            triplet = true;
+            beat_start = prep->measure_start[m] +
+                         (item->start - prep->measure_start[m]) / prep->measure_beat[m] * prep->measure_beat[m];
+        }
+        bool continues = triplet && length > 0 && list->items[last].end == item->start && beat_start == run_beat;
+        if (!continues) {
+            if (length >= 2) {
+                list->items[first].tuplet = 1;
+                list->items[last].tuplet = 2;
+            }
+            length = 0;
+        }
+        if (triplet) {
+            if (length == 0) {
+                first = i;
+                run_beat = beat_start;
+            }
+            last = i;
+            length++;
+        }
+    }
+}
+
 /* One <note> or rest for a segment, in the given voice and staff (staff written only when the part has several). */
 static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment, size_t part, int staff,
                           int voice_number) {
@@ -1415,22 +1460,29 @@ static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment,
     }
     xmlbuf_append(buf, "        <voice>%d</voice>\n", voice_number);
     NotatedValue value;
-    if (!segment->measure_rest && classify_value(segment->end - segment->start, prep->divisions, false, &value)) {
+    if (!segment->measure_rest && classify_value(segment->end - segment->start, prep->divisions, true, &value)) {
         xmlbuf_append(buf, "        <type>%s</type>\n", VALUE_TYPE_NAMES[value.type - 1]);
         for (int d = 0; d < value.dots; d++) {
             xmlbuf_append(buf, "        <dot/>\n");
+        }
+        if (value.triplet) {
+            xmlbuf_append(buf, "        <time-modification>\n          <actual-notes>3</actual-notes>\n"
+                               "          <normal-notes>2</normal-notes>\n        </time-modification>\n");
         }
     }
     if (prep->parts[part].staff_count > 1) {
         xmlbuf_append(buf, "        <staff>%d</staff>\n", staff);
     }
-    if (segment->tie_stop || segment->tie_start) {
+    if (segment->tie_stop || segment->tie_start || segment->tuplet != 0) {
         xmlbuf_append(buf, "        <notations>\n");
         if (segment->tie_stop) {
             xmlbuf_append(buf, "          <tied type=\"stop\"/>\n");
         }
         if (segment->tie_start) {
             xmlbuf_append(buf, "          <tied type=\"start\"/>\n");
+        }
+        if (segment->tuplet != 0) {
+            xmlbuf_append(buf, "          <tuplet type=\"%s\"/>\n", segment->tuplet == 1 ? "start" : "stop");
         }
         xmlbuf_append(buf, "        </notations>\n");
     }
@@ -1583,7 +1635,7 @@ static void write_dirs_through(DirCtx *ctx, XmlBuf *buf, long long tick) {
 static bool rest_pieces(const Prep *prep, size_t part, SegmentList *list, long long from, long long to,
                         bool whole_measure) {
     if (whole_measure && next_cut(prep->cuts[part], prep->cut_count[part], from) >= to) {
-        Segment rest = {from, to, REST_SEGMENT, 0, false, false, false, true};
+        Segment rest = {from, to, REST_SEGMENT, 0, false, false, false, true, 0};
         return segment_push(list, rest);
     }
     return add_run(prep, part, list, from, to, REST_SEGMENT, 1);
@@ -1643,6 +1695,7 @@ static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_
         if (!ok) {
             buf->failed = true;
         } else {
+            mark_tuplets(prep, &chain);
             write_segments(prep, buf, &chain, part, group->staff, group->voice_number, first ? &dir_ctx : NULL);
         }
         free(chain.items);
