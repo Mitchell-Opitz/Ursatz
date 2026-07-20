@@ -1,5 +1,6 @@
 add_ursatz_test(musicxml_export)
 add_ursatz_test(musicxml_score)
+add_ursatz_test(musicxml_score_values)
 add_ursatz_test(musicxml_score_reference)
 target_compile_definitions(test_musicxml_score_reference PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
@@ -29,7 +30,7 @@ add_ursatz_architecture_test(export)
 # docs/modules/export.md). Skips silently if valgrind isn't installed.
 find_program(URSATZ_EXPORT_VALGRIND valgrind)
 if(URSATZ_EXPORT_VALGRIND)
-  foreach(export_test_name musicxml_export musicxml_score musicxml_score_errors musicxml_score_fixtures musicxml_score_overlaps musicxml_score_reference)
+  foreach(export_test_name musicxml_export musicxml_score musicxml_score_errors musicxml_score_fixtures musicxml_score_overlaps musicxml_score_reference musicxml_score_values)
     add_test(NAME ${export_test_name}_valgrind
              COMMAND ${URSATZ_EXPORT_VALGRIND} --leak-check=full --error-exitcode=1
                      $<TARGET_FILE:test_${export_test_name}>

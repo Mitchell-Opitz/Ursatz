@@ -110,7 +110,7 @@ static void test_chord_in_one_voice(void) {
     MusicXmlExportScore score = score_of(&bag);
     char *xml = export_and_compare(&score);
     assert(count_of(xml, "<chord/>") == 2);
-    assert(count_of(xml, "<voice>1</voice>") == 3 + 1); /* the three notes and the rest to the barline */
+    assert(count_of(xml, "<voice>1</voice>") == 3 + 2); /* the three notes, then a quarter rest and a half rest */
     assert(!TU_HAS(xml, "<voice>2</voice>"));
     free(xml);
     bag_free(&bag);
