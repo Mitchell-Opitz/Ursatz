@@ -156,6 +156,12 @@ MusicXmlExportResult musicxml_export_write(PersistenceHandle *handle, char **out
  * duration an integer, and nothing is rounded (unless score->quantize is set, which writes notated times instead of
  * played ones; ScoreQuantizeResult failures other than allocation are MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE). On any result other than OK *out_xml is not written.
  *
+ * Notes and rests are written as notated values: after the cut at barlines, each piece is cut by the beat of its
+ * measure (rules in docs/modules/export.md) into values with a <type>, up to two <dot/>s and, for two thirds of a
+ * plain value, a <time-modification> with <tuplet> start and stop around a beat's group. A value is tied to the next
+ * piece of its note, and a measure no voice sounds in is one <rest measure="yes"/>. A length no value can write keeps
+ * its exact <duration> and has no <type>.
+ *
  * Chords and overlaps are written, never refused (MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES is not returned here). Within
  * a voice (part, staff, VoiceReference), notes with the same start and end are a chord: the first is a plain <note>
  * and each other is a <note> that begins with <chord/>. Any other note that starts while an earlier one still sounds
