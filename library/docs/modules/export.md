@@ -13,7 +13,7 @@
 
 - **Measures come from the `MeterMap` and nowhere else.** `<measure number>` is the map's own number (a pickup is measure 0 and is written `implicit="yes"`; a short measure keeps its number; a barline belongs to the following measure). `<time>` is written in the measure where a region starts, from its `TimeSignature`. A defaulted map still writes its `<time>`; it also sets the meter-defaulted flag, and a map with any declared region does not.
 - **Exact time.** `<divisions>` (per quarter note) is the least common multiple that makes every note position and duration, every barline and every marking position a whole number of divisions. Nothing is rounded. If no value up to `INT32_MAX` does, the result is `MUSICXML_EXPORT_ERR_DIVISIONS_OVERFLOW`.
-- **Ties and rests.** A note that crosses a barline, or a key, tempo, marking or dynamics position of its part, is split there and tied (the importer merges such ties back). A gap inside a measure is a rest, and the first sounding voice of each measure is padded with a rest to the barline, so every measure has its full length. A measure no voice sounds in is one rest, in voice 1.
+- **Ties and rests.** A note that crosses a barline, or a key, tempo, marking or dynamics position of its part, is split there and tied (the importer merges such ties back). A gap inside a measure is a rest, and the first sounding voice of each measure is padded with a rest to the barline, so every measure has its full length. A measure no voice sounds in is one `<rest measure="yes"/>`, in voice 1. Notes and rests are further cut into notated values, below.
 - **Parts, staves, voices.** One `<part>` per part, `<staves>` when staff_count is above 1, `<staff>` on each note, and `<backup>` between voices. A voice is a group of notes sharing a VoiceReference within one part and staff (no voice reference is one implicit voice).
 - **Chords and lanes.** `musicxml_export_write_score` writes chords and overlaps; it never returns `MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES`. Each voice is first split into lanes, with its notes in start order: a note with the same start and end as a lane's last chord joins that chord; any other note goes to the lowest lane that is free at its start, and a new lane is made when none is. A chord is written as its first note plain and every other member right after it with `<chord/>` as the first child of `<note>`, the same `<duration>`, `<voice>` and `<staff>`, its own `<pitch>` and `xml:id`, and its own ties on each cut piece. Rests are never chord members. Lane 0 is the voice itself; every later lane becomes a voice of its own on the same part and staff, numbered after every voice number the part already uses, so `<voice>` is distinct per part. Lanes are a writing device, not voice separation: the notes come back from a re-import with the same onsets, durations and pitches, not the same voices. Output for input with no overlap is unchanged.
 - **Persistence path.** `musicxml_export_write` still fails with `MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES` when two notes of one voice overlap, through an internal strict entry (`musicxml_score_internal.h`) of the same writer.
@@ -30,7 +30,17 @@
 - **Legato.** Within a voice group (part, staff, VoiceReference), a gap after a note's snapped end, up to `gap_absorb` times the note's own notated length and less than one beat, is absorbed: the end moves to the next onset of the voice. The notes of a chord look to the same next onset.
 - **Chords and barlines.** Notes that end up with the same start and end in a voice are a chord, which the writer already handles. A snapped point never leaves its beat, so no onset or end moves across a barline by more than half a grid step.
 - **Errors.** A negative position, a zero duration, a zero denominator option or an overflow is `SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE` (`MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE` from the writer).
-- **Not yet written.** `<type>`, dots, tuplets and beams: the writer still gives each note its exact `<duration>` only.
+- **Not yet written.** Beams.
+
+## Notated values
+
+Every note and rest is written as values a player can read: after the cuts above, each piece is cut again by the beat of its measure (the bottom unit of a simple meter, three of them in a compound meter such as 6/8; the same beat `score_quantize` uses).
+
+- **A value** is a power-of-two fraction of a whole note, whole to 128th, with up to two dots, or two thirds of an undotted one (a triplet value, which never crosses a beat). The plain reading wins when both fit.
+- **Splitting.** A piece that starts off the beat stops at the next beat. One that starts on a beat may cover several beats as one value when that length is writable; in a full 4/4 measure one that starts on beat 2 stops at beat 3, and one that starts on beat 1 may go through it. Otherwise the longest run of whole beats that is writable is taken, then the first beat, then the longest writable value from the start. A length nothing can write (below a 128th, or not a whole number of divisions) is written with its exact `<duration>` and no `<type>`. Pieces of a note are tied; rests are never tied.
+- **Elements.** `<duration>`, `<tie>`, `<voice>`, `<type>`, `<dot/>` per dot, `<time-modification>`, `<staff>`, `<notations>` (`<tied>` and `<tuplet>`), in MusicXML order. `<divisions>` also covers the beat, so a split at a beat is a whole number of divisions. A note cut into several values keeps its `_a`, `_b` fragment ids.
+- **Triplets.** A triplet value writes `<time-modification>` (3 actual, 2 normal). A run of two or more back to back inside one beat opens `<tuplet type="start"/>` on its first note or rest and closes `<tuplet type="stop"/>` on its last; chord members follow the first note.
+- **Measure rests.** A measure no voice sounds in, with no key, tempo, marking or dynamics position inside it, is one `<rest measure="yes"/>` with the measure's duration and no `<type>`.
 
 ## Errors
 
@@ -42,4 +52,4 @@
 
 ## Not exported
 
-Articulations, slurs, lyrics, ornaments, grace notes, tuplet brackets, repeats and endings, page layout, MusicXML 4.0, compressed `.mxl`, wedges, transposition (the written spelling is exported, and a transposing part's sounding pitch is not), notation inference and voice separation by musical sense, and reading meter, tempo, key or dynamics from persistence.
+Articulations, slurs, lyrics, ornaments, grace notes, beams, repeats and endings, page layout, MusicXML 4.0, compressed `.mxl`, wedges, transposition (the written spelling is exported, and a transposing part's sounding pitch is not), notation inference and voice separation by musical sense, and reading meter, tempo, key or dynamics from persistence.

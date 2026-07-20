@@ -253,6 +253,8 @@ typedef struct {
     int first_measure_number;
     long long *measure_start; /* ticks, measure_count entries */
     long long *measure_end;
+    long long *measure_beat; /* ticks in one beat of the measure: its bottom unit, or three of them in a compound meter */
+    bool *measure_four_four; /* a full 4/4 measure, whose second half does not take a note across beat 3 */
 
     Dir *dirs;
     size_t dir_count;
@@ -271,6 +273,8 @@ static void prep_free(Prep *prep) {
     free(prep->dir_first);
     free(prep->measure_start);
     free(prep->measure_end);
+    free(prep->measure_beat);
+    free(prep->measure_four_four);
     if (prep->cuts != NULL) {
         for (size_t p = 0; p < prep->part_count; p++) {
             free(prep->cuts[p]);
@@ -788,9 +792,14 @@ static MusicXmlExportResult build_measures(Prep *prep) {
     unsigned long *end_d = (unsigned long *)calloc(count, sizeof(unsigned long));
     prep->measure_start = (long long *)calloc(count, sizeof(long long));
     prep->measure_end = (long long *)calloc(count, sizeof(long long));
+    prep->measure_beat = (long long *)calloc(count, sizeof(long long));
+    prep->measure_four_four = (bool *)calloc(count, sizeof(bool));
+    unsigned long *beat_d = (unsigned long *)calloc(count, sizeof(unsigned long));
+    unsigned long *beat_n = (unsigned long *)calloc(count, sizeof(unsigned long));
     MusicXmlExportResult result = MUSICXML_EXPORT_OK;
     if (start_n == NULL || start_d == NULL || end_n == NULL || end_d == NULL || prep->measure_start == NULL ||
-        prep->measure_end == NULL) {
+        prep->measure_end == NULL || prep->measure_beat == NULL || prep->measure_four_four == NULL || beat_n == NULL ||
+        beat_d == NULL) {
         result = MUSICXML_EXPORT_ERR_ALLOC;
     }
 
@@ -820,6 +829,25 @@ static MusicXmlExportResult build_measures(Prep *prep) {
         if (time_status == TIME_OK && !lcm_into(&divisions, den)) {
             time_status = TIME_DIVISIONS_OVERFLOW;
         }
+        if (time_status == TIME_OK) {
+            /* the beat, so that a split at a beat falls on a whole tick (the quantizer's beat: see score_quantize.c) */
+            const MeterMapRegion *region = NULL;
+            status = meter_map_region_of_measure(prep->meter, prep->first_measure_number + (int)m, &region);
+            if (status != METER_MAP_OK) {
+                result = from_meter_status(status);
+                break;
+            }
+            const TimeSignature *signature = meter_map_region_time_signature(region);
+            unsigned top = time_signature_top_number(signature);
+            unsigned bottom = time_signature_bottom_number(signature);
+            beat_d[m] = bottom > 0 ? bottom : 4;
+            beat_n[m] = (top > 3 && top % 3 == 0 && bottom >= 8) ? 3 : 1;
+            prep->measure_four_four[m] = top == 4 && bottom == 4;
+            time_status = time_denominator((long)beat_n[m], beat_d[m], &den);
+            if (time_status == TIME_OK && !lcm_into(&divisions, den)) {
+                time_status = TIME_DIVISIONS_OVERFLOW;
+            }
+        }
         if (time_status != TIME_OK) {
             result = from_time_status(time_status);
         }
@@ -834,11 +862,22 @@ static MusicXmlExportResult build_measures(Prep *prep) {
             time_ticks(end_n[m], end_d[m], prep->divisions, &prep->measure_end[m]) != TIME_OK) {
             result = MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
         }
+        if (result == MUSICXML_EXPORT_OK &&
+            (time_ticks((long)beat_n[m], beat_d[m], prep->divisions, &prep->measure_beat[m]) != TIME_OK ||
+             prep->measure_beat[m] <= 0)) {
+            result = MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
+        }
+        if (result == MUSICXML_EXPORT_OK) {
+            prep->measure_four_four[m] = prep->measure_four_four[m] &&
+                                         prep->measure_end[m] - prep->measure_start[m] == 4 * prep->measure_beat[m];
+        }
     }
     free(start_n);
     free(start_d);
     free(end_n);
     free(end_d);
+    free(beat_n);
+    free(beat_d);
     return result;
 }
 
@@ -1060,6 +1099,8 @@ typedef struct {
     bool tie_start;
     bool tie_stop;
     bool chord;       /* written with <chord/>, sharing the previous note's start and duration */
+    bool measure_rest; /* a rest that fills its measure, written as <rest measure="yes"/> */
+    int tuplet;        /* 1 opens a triplet group and 2 closes it (with <tuplet>), 0 neither */
 } Segment;
 
 typedef struct {
@@ -1097,10 +1138,138 @@ static long long next_cut(const long long *cuts, size_t count, long long tick) {
     return low < count ? cuts[low] : LLONG_MAX;
 }
 
+/* --- notated values: which lengths a note or rest can be written as --- */
+
+#define VALUE_TYPE_COUNT 8     /* whole to 128th */
+#define TRIPLET_TYPE_COUNT 7   /* whole to 64th */
+#define MAX_VALUE_DOTS 2
+
+/* A length written as a note: type is 1 (whole) to 8 (128th), dots 0 to 2, triplet when it is 2/3 of the plain value. */
+typedef struct {
+    int type;
+    int dots;
+    bool triplet;
+} NotatedValue;
+
+static const char *const VALUE_TYPE_NAMES[VALUE_TYPE_COUNT] = {"whole", "half", "quarter", "eighth",
+                                                               "16th",  "32nd", "64th",    "128th"};
+
+/* A dotted value is base * (2^(d+1) - 1) / 2^d. */
+static const long long DOT_NUMERATOR[MAX_VALUE_DOTS + 1] = {1, 3, 7};
+static const long long DOT_DENOMINATOR[MAX_VALUE_DOTS + 1] = {1, 2, 4};
+
+/* The value a length of ticks is written as, false when it cannot be written alone. A plain value wins over a triplet
+   one of the same length; triplets only when allowed (a triplet value never crosses a beat). */
+static bool classify_value(long long length, long long divisions, bool allow_triplet, NotatedValue *out) {
+    long long whole = 4 * divisions;
+    if (length <= 0 || length > 2 * whole) {
+        return false;
+    }
+    for (int k = 0; k < VALUE_TYPE_COUNT; k++) {
+        for (int d = 0; d <= MAX_VALUE_DOTS; d++) {
+            if (length * (1LL << k) * DOT_DENOMINATOR[d] == whole * DOT_NUMERATOR[d]) {
+                out->type = k + 1;
+                out->dots = d;
+                out->triplet = false;
+                return true;
+            }
+        }
+    }
+    if (allow_triplet) {
+        for (int k = 0; k < TRIPLET_TYPE_COUNT; k++) {
+            if (length * 3 * (1LL << k) == 2 * whole) {
+                out->type = k + 1;
+                out->dots = 0;
+                out->triplet = true;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/* The longest writable length of at most max ticks, 0 when there is none that is a whole number of ticks. */
+static long long largest_value(long long max, long long divisions, bool allow_triplet) {
+    long long whole = 4 * divisions;
+    long long best = 0;
+    for (int k = 0; k < VALUE_TYPE_COUNT; k++) {
+        for (int d = 0; d <= MAX_VALUE_DOTS; d++) {
+            long long numerator = whole * DOT_NUMERATOR[d];
+            long long denominator = (1LL << k) * DOT_DENOMINATOR[d];
+            if (numerator % denominator == 0 && numerator / denominator <= max && numerator / denominator > best) {
+                best = numerator / denominator;
+            }
+        }
+    }
+    for (int k = 0; allow_triplet && k < TRIPLET_TYPE_COUNT; k++) {
+        long long numerator = 2 * whole;
+        long long denominator = 3 * (1LL << k);
+        if (numerator % denominator == 0 && numerator / denominator <= max && numerator / denominator > best) {
+            best = numerator / denominator;
+        }
+    }
+    return best;
+}
+
+/* The measure that holds tick (the last one starting at or before it). */
+static size_t measure_at(const Prep *prep, long long tick) {
+    size_t low = 0;
+    size_t high = prep->measure_count;
+    while (high - low > 1) {
+        size_t mid = low + (high - low) / 2;
+        if (prep->measure_start[mid] <= tick) {
+            low = mid;
+        } else {
+            high = mid;
+        }
+    }
+    return low;
+}
+
 /*
- * Splits [from, to) at the part's cuts: a note's pieces are tied, a rest's are not. A chord is several notes with
- * this same span, prep->notes[first] to prep->notes[first + members - 1]: each piece is written for every member,
- * the first plain and the others as chord members, so the writer finds them back to back.
+ * The end of the next written value of a note or rest that starts at pos and runs to at most to (inside one measure
+ * and between two cuts). The rules, with the beat of the measure as the unit:
+ *   - a value that starts off the beat stops at the next beat;
+ *   - one that starts on a beat may cover several beats when its whole length is writable, but in a full 4/4 measure
+ *     one that starts on beat 2 stops at beat 3 (one that starts on beat 1 may go through it);
+ *   - when the whole is not writable, the longest run of whole beats that is, else the first beat;
+ *   - when even that is not writable, the longest writable value from pos.
+ * A length nothing can write (below a 128th, or not a whole number of ticks) is returned as it is, and written
+ * without a <type>.
+ */
+static long long next_value_end(const Prep *prep, long long pos, long long to) {
+    size_t m = measure_at(prep, pos);
+    long long start = prep->measure_start[m];
+    long long beat = prep->measure_beat[m];
+    long long offset = pos - start;
+    long long next_beat = start + (offset / beat + 1) * beat;
+    long long cap = to;
+    if (offset % beat != 0) {
+        cap = cap < next_beat ? cap : next_beat;
+    } else if (prep->measure_four_four[m] && offset / beat == 1 && cap > start + 2 * beat) {
+        cap = start + 2 * beat;
+    }
+    NotatedValue value;
+    /* from the far end back to the first beat: the longest span of whole beats (or the cap itself) that is writable */
+    long long end = cap;
+    for (;;) {
+        if (classify_value(end - pos, prep->divisions, end <= next_beat, &value)) {
+            return end;
+        }
+        if (end <= next_beat) {
+            break;
+        }
+        long long previous = start + ((end - 1 - start) / beat) * beat;
+        end = previous > next_beat ? previous : next_beat;
+    }
+    long long take = largest_value(end - pos, prep->divisions, end <= next_beat);
+    return take > 0 ? pos + take : end;
+}
+
+/*
+ * Splits [from, to) at the part's cuts and then into notated values: a note's pieces are tied, a rest's are not. A
+ * chord is several notes with this same span, prep->notes[first] to prep->notes[first + members - 1]: each piece is
+ * written for every member, the first plain and the others as chord members, so the writer finds them back to back.
  */
 static bool add_run(const Prep *prep, size_t part, SegmentList *list, long long from, long long to, size_t note,
                     size_t members) {
@@ -1111,21 +1280,27 @@ static bool add_run(const Prep *prep, size_t part, SegmentList *list, long long 
         if (next > to) {
             next = to;
         }
-        for (size_t k = 0; k < members; k++) {
-            Segment segment;
-            segment.start = position;
-            segment.end = next;
-            segment.note = note == REST_SEGMENT ? REST_SEGMENT : note + k;
-            segment.fragment = fragment;
-            segment.tie_start = note != REST_SEGMENT && next < to;
-            segment.tie_stop = note != REST_SEGMENT && position > from;
-            segment.chord = k > 0;
-            if (!segment_push(list, segment)) {
-                return false;
+        /* each piece between two cuts is cut again into values a note can be written as */
+        while (position < next) {
+            long long end = next_value_end(prep, position, next);
+            for (size_t k = 0; k < members; k++) {
+                Segment segment;
+                segment.start = position;
+                segment.end = end;
+                segment.note = note == REST_SEGMENT ? REST_SEGMENT : note + k;
+                segment.fragment = fragment;
+                segment.tie_start = note != REST_SEGMENT && end < to;
+                segment.tie_stop = note != REST_SEGMENT && position > from;
+                segment.chord = k > 0;
+                segment.measure_rest = false;
+                segment.tuplet = 0;
+                if (!segment_push(list, segment)) {
+                    return false;
+                }
             }
+            fragment++;
+            position = end;
         }
-        fragment++;
-        position = next;
     }
     return true;
 }
@@ -1200,6 +1375,49 @@ static void xml_id_from_entity(const char *raw, char *out, size_t out_size) {
     out[pos] = '\0';
 }
 
+/*
+ * Marks the triplet groups of one voice's segments in a measure: a run of two or more triplet-valued notes and rests,
+ * back to back inside one beat, opens at its first and closes at its last (chord members follow their first note).
+ */
+static void mark_tuplets(const Prep *prep, SegmentList *list) {
+    size_t first = 0;
+    size_t last = 0;
+    size_t length = 0;
+    long long run_beat = 0;
+    for (size_t i = 0; i <= list->count; i++) {
+        Segment *item = i < list->count ? &list->items[i] : NULL;
+        if (item != NULL && item->chord) {
+            continue;
+        }
+        bool triplet = false;
+        long long beat_start = 0;
+        NotatedValue value;
+        if (item != NULL && !item->measure_rest &&
+            classify_value(item->end - item->start, prep->divisions, true, &value) && value.triplet) {
+            size_t m = measure_at(prep, item->start);
+            triplet = true;
+            beat_start = prep->measure_start[m] +
+                         (item->start - prep->measure_start[m]) / prep->measure_beat[m] * prep->measure_beat[m];
+        }
+        bool continues = triplet && length > 0 && list->items[last].end == item->start && beat_start == run_beat;
+        if (!continues) {
+            if (length >= 2) {
+                list->items[first].tuplet = 1;
+                list->items[last].tuplet = 2;
+            }
+            length = 0;
+        }
+        if (triplet) {
+            if (length == 0) {
+                first = i;
+                run_beat = beat_start;
+            }
+            last = i;
+            length++;
+        }
+    }
+}
+
 /* One <note> or rest for a segment, in the given voice and staff (staff written only when the part has several). */
 static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment, size_t part, int staff,
                           int voice_number) {
@@ -1208,7 +1426,8 @@ static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment,
     NoteEvent *event = is_rest ? NULL : prep->score->events[note->index];
 
     if (is_rest) {
-        xmlbuf_append(buf, "      <note>\n        <rest/>\n");
+        xmlbuf_append(buf, segment->measure_rest ? "      <note>\n        <rest measure=\"yes\"/>\n"
+                                                 : "      <note>\n        <rest/>\n");
     } else {
         char base[64];
         const char *chord = segment->chord ? "        <chord/>\n" : "";
@@ -1240,8 +1459,32 @@ static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment,
         xmlbuf_append(buf, "        <tie type=\"start\"/>\n");
     }
     xmlbuf_append(buf, "        <voice>%d</voice>\n", voice_number);
+    NotatedValue value;
+    if (!segment->measure_rest && classify_value(segment->end - segment->start, prep->divisions, true, &value)) {
+        xmlbuf_append(buf, "        <type>%s</type>\n", VALUE_TYPE_NAMES[value.type - 1]);
+        for (int d = 0; d < value.dots; d++) {
+            xmlbuf_append(buf, "        <dot/>\n");
+        }
+        if (value.triplet) {
+            xmlbuf_append(buf, "        <time-modification>\n          <actual-notes>3</actual-notes>\n"
+                               "          <normal-notes>2</normal-notes>\n        </time-modification>\n");
+        }
+    }
     if (prep->parts[part].staff_count > 1) {
         xmlbuf_append(buf, "        <staff>%d</staff>\n", staff);
+    }
+    if (segment->tie_stop || segment->tie_start || segment->tuplet != 0) {
+        xmlbuf_append(buf, "        <notations>\n");
+        if (segment->tie_stop) {
+            xmlbuf_append(buf, "          <tied type=\"stop\"/>\n");
+        }
+        if (segment->tie_start) {
+            xmlbuf_append(buf, "          <tied type=\"start\"/>\n");
+        }
+        if (segment->tuplet != 0) {
+            xmlbuf_append(buf, "          <tuplet type=\"%s\"/>\n", segment->tuplet == 1 ? "start" : "stop");
+        }
+        xmlbuf_append(buf, "        </notations>\n");
     }
     xmlbuf_append(buf, "      </note>\n");
 }
@@ -1387,19 +1630,23 @@ static void write_dirs_through(DirCtx *ctx, XmlBuf *buf, long long tick) {
     }
 }
 
-/* A rest from from to to, cut at the part's cuts; the part's dirs are written before each piece when dirs is given. */
-static void write_rest_run(const Prep *prep, XmlBuf *buf, size_t part, long long from, long long to, int staff,
+/* Appends the rests that fill [from, to): cut at the part's cuts and into notated values. A whole measure with no cut
+   inside it is one measure rest. */
+static bool rest_pieces(const Prep *prep, size_t part, SegmentList *list, long long from, long long to,
+                        bool whole_measure) {
+    if (whole_measure && next_cut(prep->cuts[part], prep->cut_count[part], from) >= to) {
+        Segment rest = {from, to, REST_SEGMENT, 0, false, false, false, true, 0};
+        return segment_push(list, rest);
+    }
+    return add_run(prep, part, list, from, to, REST_SEGMENT, 1);
+}
+
+/* Writes the segments in order; the part's dirs go in before each one when dirs is given. */
+static void write_segments(const Prep *prep, XmlBuf *buf, const SegmentList *list, size_t part, int staff,
                            int voice_number, DirCtx *dirs) {
-    long long position = from;
-    while (position < to) {
-        long long next = next_cut(prep->cuts[part], prep->cut_count[part], position);
-        if (next > to) {
-            next = to;
-        }
-        write_dirs_through(dirs, buf, position);
-        Segment rest = {position, next, REST_SEGMENT, 0, false, false, false};
-        write_segment(prep, buf, &rest, part, staff, voice_number);
-        position = next;
+    for (size_t i = 0; i < list->count; i++) {
+        write_dirs_through(dirs, buf, list->items[i].start);
+        write_segment(prep, buf, &list->items[i], part, staff, voice_number);
     }
 }
 
@@ -1435,22 +1682,34 @@ static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_
                           head - measure_start);
         }
         head = measure_start;
+        SegmentList chain = {NULL, 0, 0};
+        bool ok = true;
         for (size_t i = cursor[g]; i < last; i++) {
-            if (first) {
-                write_dirs_through(&dir_ctx, buf, list->items[i].start);
-            }
-            write_segment(prep, buf, &list->items[i], part, group->staff, group->voice_number);
+            ok = ok && segment_push(&chain, list->items[i]);
             head = list->items[i].end;
         }
         if (first && head < measure_end) {
-            write_rest_run(prep, buf, part, head, measure_end, group->staff, group->voice_number, &dir_ctx);
+            ok = ok && rest_pieces(prep, part, &chain, head, measure_end, false);
             head = measure_end;
         }
+        if (!ok) {
+            buf->failed = true;
+        } else {
+            mark_tuplets(prep, &chain);
+            write_segments(prep, buf, &chain, part, group->staff, group->voice_number, first ? &dir_ctx : NULL);
+        }
+        free(chain.items);
         first = false;
         cursor[g] = last;
     }
     if (first && prep->note_count > 0) {
-        write_rest_run(prep, buf, part, measure_start, measure_end, 1, 1, &dir_ctx);
+        SegmentList rests = {NULL, 0, 0};
+        if (rest_pieces(prep, part, &rests, measure_start, measure_end, true)) {
+            write_segments(prep, buf, &rests, part, 1, 1, &dir_ctx);
+        } else {
+            buf->failed = true;
+        }
+        free(rests.items);
     } else if (first) {
         /* No notes at all: the dirs alone, with <forward> between them. */
         size_t end = prep->dir_first[part + 1];

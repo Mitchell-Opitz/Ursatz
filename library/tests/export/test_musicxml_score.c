@@ -57,11 +57,19 @@ static void test_minimal_document_exact(void) {
         "        </pitch>\n"
         "        <duration>1</duration>\n"
         "        <voice>1</voice>\n"
+        "        <type>quarter</type>\n"
         "      </note>\n"
         "      <note>\n"
         "        <rest/>\n"
-        "        <duration>3</duration>\n"
+        "        <duration>1</duration>\n"
         "        <voice>1</voice>\n"
+        "        <type>quarter</type>\n"
+        "      </note>\n"
+        "      <note>\n"
+        "        <rest/>\n"
+        "        <duration>2</duration>\n"
+        "        <voice>1</voice>\n"
+        "        <type>half</type>\n"
         "      </note>\n"
         "    </measure>\n"
         "  </part>\n"
@@ -145,8 +153,8 @@ static void test_tie_across_barline(void) {
     assert(TU_HAS(xml, "<note xml:id=\"n0_a\">") && TU_HAS(xml, "<note xml:id=\"n0_b\">"));
     assert(tu_count(xml, "<tie type=\"start\"/>") == 1 && tu_count(xml, "<tie type=\"stop\"/>") == 1);
     assert(TU_HAS(xml, "<measure number=\"2\">"));
-    /* the leading rest (3) and the closing rest (3) each fill their measure */
-    assert(tu_count(xml, "<rest/>") == 2 && tu_count(xml, "<duration>3</duration>") == 2);
+    /* the leading rest is one dotted half; the closing rest is a quarter and a half, as it starts on beat 2 */
+    assert(tu_count(xml, "<rest/>") == 3 && tu_count(xml, "<duration>3</duration>") == 1);
     free(xml);
     bag_free(&bag);
 }
