@@ -1091,6 +1091,11 @@ static MusicXmlExportResult prepare(Prep *prep) {
 
 #define REST_SEGMENT SIZE_MAX
 
+#define MAX_BEAM_LEVELS 5 /* an eighth has one beam, a 128th five */
+
+enum { BEAM_NONE, BEAM_BEGIN, BEAM_CONTINUE, BEAM_END, BEAM_FORWARD_HOOK, BEAM_BACKWARD_HOOK };
+static const char *const BEAM_NAMES[] = {NULL, "begin", "continue", "end", "forward hook", "backward hook"};
+
 typedef struct {
     long long start;
     long long end;
@@ -1103,6 +1108,7 @@ typedef struct {
     int tuplet;        /* 1 opens a triplet group and 2 closes it (with <tuplet>), 0 neither */
     int beam_group;    /* 0 when not beamed, else the number of the beat group in the measure (from 1) */
     int beam_levels;   /* beams a beamed note carries: 1 for an eighth, 2 for a 16th, and so on */
+    unsigned char beam[MAX_BEAM_LEVELS]; /* the state of beam level n + 1 on this note: a BEAM_* value */
 } Segment;
 
 typedef struct {
@@ -1298,6 +1304,7 @@ static bool add_run(const Prep *prep, size_t part, SegmentList *list, long long 
                 segment.tuplet = 0;
                 segment.beam_group = 0;
                 segment.beam_levels = 0;
+                memset(segment.beam, 0, sizeof(segment.beam));
                 if (!segment_push(list, segment)) {
                     return false;
                 }
@@ -1422,6 +1429,35 @@ static void mark_tuplets(const Prep *prep, SegmentList *list) {
     }
 }
 
+/* The beam states of each level on the notes of every beat group of a chain (chord members are left out). */
+static void set_beam_states(SegmentList *list) {
+    size_t previous = SIZE_MAX; /* the last beamed unit seen, its group is the one still open */
+    for (size_t i = 0; i < list->count; i++) {
+        Segment *item = &list->items[i];
+        if (item->chord || item->beam_group == 0) {
+            continue;
+        }
+        size_t next = i + 1;
+        while (next < list->count && list->items[next].chord) {
+            next++;
+        }
+        bool has_previous = previous != SIZE_MAX && list->items[previous].beam_group == item->beam_group &&
+                            list->items[previous].end == item->start;
+        bool has_next = next < list->count && list->items[next].beam_group == item->beam_group;
+        for (int level = 1; level <= item->beam_levels; level++) {
+            bool before = has_previous && list->items[previous].beam_levels >= level;
+            bool after = has_next && list->items[next].beam_levels >= level;
+            unsigned char state = before && after   ? BEAM_CONTINUE
+                                  : after           ? BEAM_BEGIN
+                                  : before          ? BEAM_END
+                                  : has_previous    ? BEAM_BACKWARD_HOOK
+                                                    : BEAM_FORWARD_HOOK;
+            item->beam[level - 1] = state;
+        }
+        previous = i;
+    }
+}
+
 /*
  * Groups the short notes of one voice's segments in a measure for beaming: consecutive notes written as an eighth or
  * shorter, back to back inside one beat group (a beat in a simple meter, the dotted beat in a compound one), form a
@@ -1470,6 +1506,7 @@ static void mark_beams(const Prep *prep, SegmentList *list) {
             members++;
         }
     }
+    set_beam_states(list);
 }
 
 /* One <note> or rest for a segment, in the given voice and staff (staff written only when the part has several). */
@@ -1526,6 +1563,11 @@ static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment,
     }
     if (prep->parts[part].staff_count > 1) {
         xmlbuf_append(buf, "        <staff>%d</staff>\n", staff);
+    }
+    for (int level = 0; level < segment->beam_levels && level < MAX_BEAM_LEVELS && !segment->chord; level++) {
+        if (segment->beam[level] != BEAM_NONE) {
+            xmlbuf_append(buf, "        <beam number=\"%d\">%s</beam>\n", level + 1, BEAM_NAMES[segment->beam[level]]);
+        }
     }
     if (segment->tie_stop || segment->tie_start || segment->tuplet != 0) {
         xmlbuf_append(buf, "        <notations>\n");
@@ -1689,7 +1731,7 @@ static void write_dirs_through(DirCtx *ctx, XmlBuf *buf, long long tick) {
 static bool rest_pieces(const Prep *prep, size_t part, SegmentList *list, long long from, long long to,
                         bool whole_measure) {
     if (whole_measure && next_cut(prep->cuts[part], prep->cut_count[part], from) >= to) {
-        Segment rest = {from, to, REST_SEGMENT, 0, false, false, false, true, 0, 0, 0};
+        Segment rest = {from, to, REST_SEGMENT, 0, false, false, false, true, 0, 0, 0, {0}};
         return segment_push(list, rest);
     }
     return add_run(prep, part, list, from, to, REST_SEGMENT, 1);
