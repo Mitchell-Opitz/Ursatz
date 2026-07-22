@@ -1101,6 +1101,8 @@ typedef struct {
     bool chord;       /* written with <chord/>, sharing the previous note's start and duration */
     bool measure_rest; /* a rest that fills its measure, written as <rest measure="yes"/> */
     int tuplet;        /* 1 opens a triplet group and 2 closes it (with <tuplet>), 0 neither */
+    int beam_group;    /* 0 when not beamed, else the number of the beat group in the measure (from 1) */
+    int beam_levels;   /* beams a beamed note carries: 1 for an eighth, 2 for a 16th, and so on */
 } Segment;
 
 typedef struct {
@@ -1294,6 +1296,8 @@ static bool add_run(const Prep *prep, size_t part, SegmentList *list, long long 
                 segment.chord = k > 0;
                 segment.measure_rest = false;
                 segment.tuplet = 0;
+                segment.beam_group = 0;
+                segment.beam_levels = 0;
                 if (!segment_push(list, segment)) {
                     return false;
                 }
@@ -1414,6 +1418,56 @@ static void mark_tuplets(const Prep *prep, SegmentList *list) {
             }
             last = i;
             length++;
+        }
+    }
+}
+
+/*
+ * Groups the short notes of one voice's segments in a measure for beaming: consecutive notes written as an eighth or
+ * shorter, back to back inside one beat group (a beat in a simple meter, the dotted beat in a compound one), form a
+ * group of two or more. A rest, a longer note, a value nothing can write or the next beat ends a group; a chord counts
+ * once, as its first note. Triplet runs sit inside one beat, so they are one group.
+ */
+static void mark_beams(const Prep *prep, SegmentList *list) {
+    int group = 0;
+    long long group_beat = 0;
+    long long group_end = 0;
+    size_t group_first = 0;
+    size_t members = 0;
+    for (size_t i = 0; i <= list->count; i++) {
+        Segment *item = i < list->count ? &list->items[i] : NULL;
+        if (item != NULL && item->chord) {
+            continue;
+        }
+        int levels = 0;
+        long long beat_start = 0;
+        NotatedValue value;
+        if (item != NULL && item->note != REST_SEGMENT && !item->measure_rest &&
+            classify_value(item->end - item->start, prep->divisions, true, &value) && value.type >= 4) {
+            size_t m = measure_at(prep, item->start);
+            levels = value.type - 3;
+            beat_start = prep->measure_start[m] +
+                         (item->start - prep->measure_start[m]) / prep->measure_beat[m] * prep->measure_beat[m];
+        }
+        bool continues = levels > 0 && members > 0 && group_end == item->start && beat_start == group_beat;
+        if (!continues && members == 1) {
+            list->items[group_first].beam_group = 0;
+            list->items[group_first].beam_levels = 0;
+            group--;
+        }
+        if (!continues) {
+            members = 0;
+        }
+        if (levels > 0) {
+            if (members == 0) {
+                group++;
+                group_first = i;
+                group_beat = beat_start;
+            }
+            item->beam_group = group;
+            item->beam_levels = levels;
+            group_end = item->end;
+            members++;
         }
     }
 }
@@ -1635,7 +1689,7 @@ static void write_dirs_through(DirCtx *ctx, XmlBuf *buf, long long tick) {
 static bool rest_pieces(const Prep *prep, size_t part, SegmentList *list, long long from, long long to,
                         bool whole_measure) {
     if (whole_measure && next_cut(prep->cuts[part], prep->cut_count[part], from) >= to) {
-        Segment rest = {from, to, REST_SEGMENT, 0, false, false, false, true, 0};
+        Segment rest = {from, to, REST_SEGMENT, 0, false, false, false, true, 0, 0, 0};
         return segment_push(list, rest);
     }
     return add_run(prep, part, list, from, to, REST_SEGMENT, 1);
@@ -1696,6 +1750,7 @@ static void write_measure_body(const Prep *prep, XmlBuf *buf, size_t part, size_
             buf->failed = true;
         } else {
             mark_tuplets(prep, &chain);
+            mark_beams(prep, &chain);
             write_segments(prep, buf, &chain, part, group->staff, group->voice_number, first ? &dir_ctx : NULL);
         }
         free(chain.items);
