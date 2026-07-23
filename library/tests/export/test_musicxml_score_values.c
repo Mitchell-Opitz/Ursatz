@@ -133,7 +133,8 @@ static void test_triplet_eighths(void) {
     const char *quarter = strstr(xml, "<note xml:id=\"q\">");
     assert(first && start && stop && third && quarter);
     assert(first < start && start < third && third < stop && stop < quarter);
-    assert(TU_HAS(xml, "</time-modification>\n        <notations>\n          <tuplet type=\"start\"/>"));
+    assert(TU_HAS(xml, "</time-modification>\n        <beam number=\"1\">begin</beam>\n        <notations>\n          <tuplet type=\"start\"/>"));
+    assert(tu_count(xml, "<beam number=\"1\">continue</beam>") == 1 && tu_count(xml, "<beam number=\"1\">end</beam>") == 1);
     free(xml);
     bag_free(&bag);
 }
