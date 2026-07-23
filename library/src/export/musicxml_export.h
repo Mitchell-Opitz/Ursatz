@@ -162,6 +162,11 @@ MusicXmlExportResult musicxml_export_write(PersistenceHandle *handle, char **out
  * piece of its note, and a measure no voice sounds in is one <rest measure="yes"/>. A length no value can write keeps
  * its exact <duration> and has no <type>.
  *
+ * Notes written as an eighth or shorter are beamed: back to back inside one beat group (a beat, or the dotted beat of
+ * a compound meter), two or more form a <beam> group, level 1 for an eighth, 2 for a 16th, 3 for a 32nd, with
+ * begin, continue and end, and a forward or backward hook on a lone short value. A rest or a longer note ends a
+ * group, a lone note is not beamed, and a chord is beamed once, on its first note.
+ *
  * Chords and overlaps are written, never refused (MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES is not returned here). Within
  * a voice (part, staff, VoiceReference), notes with the same start and end are a chord: the first is a plain <note>
  * and each other is a <note> that begins with <chord/>. Any other note that starts while an earlier one still sounds
