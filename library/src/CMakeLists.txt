@@ -199,6 +199,7 @@ add_library(ursatz
     export/musicxml_export.c
     export/musicxml_score.c
     export/score_quantize.c
+    export/score_staves.c
 )
 target_include_directories(ursatz PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
