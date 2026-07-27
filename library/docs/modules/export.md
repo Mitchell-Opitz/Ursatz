@@ -43,6 +43,15 @@ Every note and rest is written as values a player can read: after the cuts above
 - **Beams.** Within one voice of a measure, consecutive notes written as an eighth or shorter and back to back inside one beat group are beamed: `<beam number="n">` for n = 1 (eighth) up to 5 (128th), with `begin`, `continue` and `end`, or `forward hook` / `backward hook` on a level that only one note of the group reaches. The beat group is the beat of the meter (the dotted beat in a compound meter such as 6/8), so a beam never crosses a beat; a triplet run lies inside one beat and is one group. A rest, a longer note or a length with no `<type>` ends a group, a single note is not beamed, and a chord is beamed once, on its first note. User-set beaming and cross-staff beams are not written.
 - **Measure rests.** A measure no voice sounds in, with no key, tempo, marking or dynamics position inside it, is one `<rest measure="yes"/>` with the measure's duration and no `<type>`.
 
+## Grand staff split
+
+`export/score_staves.h` decides which instruments use two staves and which staff each note takes. It is a separate step: the caller passes the result on as `MusicXmlExportScore.staff` with a part whose `staff_count` is 2.
+
+- **Programs.** `score_program_uses_grand_staff` is true for General MIDI programs 0 to 8 (pianos, harpsichord, clavinet, celesta), 16 to 21 (organs, accordion) and 46 (harp), 0-based; false otherwise and for -1.
+- **Assignment.** `score_staves_assign` gives staff 1 to every note of a part with staff count 1. In a part with staff count 2 the split point is middle C (MIDI 60, from the pitch value as `midi_importer` writes it): notes that start together and span more than an octave across middle C split at their largest adjacent interval (a tie goes to the gap nearest middle C), otherwise a note at or above 60 is treble (1) and below is bass (2).
+- **Middle C window.** From 55 to 64 a note takes the staff of the nearer pitch of the last treble note and the last bass note that ended within the whole note before it; with no such note, or at equal distance, the middle C rule applies.
+- **Errors.** `SCORE_STAVES_ERR_INCONSISTENT_INPUT` for a part index out of range, a staff count other than 1 or 2, a missing pitch value in a two-staff part, a negative position, a zero duration or an overflow.
+
 ## Errors
 
 `MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT` (a count with no array, a NULL entry, parts that do not add up), `_UNKNOWN_PART`, `_BAD_STAFF`, `_UNKNOWN_EVENT` (a Dynamics targets an event the score lacks), `_NOT_REPRESENTABLE` (a negative position, a zero duration, a key outside -7 to 7, a beat unit or per-minute MusicXML cannot write, an overflow) and `_DIVISIONS_OVERFLOW`. They were appended to the enum; the earlier values are unchanged.
