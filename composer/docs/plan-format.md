@@ -146,6 +146,8 @@ nothing checks them.
 | `invent_motive` | No fields. On a Constrained melody span of a motive node: `motive-invent` writes the motive. See [piece.md](piece.md). |
 | `piece_part` | On a section node of a piece structure: `part`: `intro`, `body`, `turnaround` or `ending`; `id`: the section's id in the structure, 1 to 15 characters. See [piece-structure.md](piece-structure.md). |
 | `free_phrase` | No fields. On a section node: a phrase of any length in beats, not a theme; `grow-theme` builds it as ideas of a bar. See [grow.md](grow.md#free-phrases). |
+| `hold` | No fields. On a section node: the stages from structure to texture leave it alone, and the seam stage fills it against the seam. See [loop-seam.md](loop-seam.md). |
+| `seam` | No fields. On a section node: the bar after the loop's end, a Given copy of the body's first bar; it is not part of the piece. See [loop-seam.md](loop-seam.md). |
 
 ### Motive development parameters
 

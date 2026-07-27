@@ -92,11 +92,15 @@ ending version is built from the realized loop (R-172).
   `cadence` (HC), and `grow-theme` builds it as [grow.md](grow.md) says.
 - Any other section is a free phrase: it has `free_phrase`, and `grow-theme` builds it as ideas of a bar
   ([grow.md](grow.md#free-phrases)).
-- The material section starts on the first barline at or after the end of the last section laid out, since the motives in
+- The loop's end (the last section of the turnaround, else the last body section) is held: it has `hold`, and the seam
+  stage fills it last against the seam, the section `seam` (one bar, `seam`) that follows it, a Given copy of the body's
+  first bar. A theme fill, a progression fill that covers its section and the first body section are not held. See
+  [loop-seam.md](loop-seam.md).
+- The material section starts on the first barline at or after the end of the seam, since the motives in
   it are bars of the meter. `m0` is the basic motive, Given, or to be invented. An empty section is made from it as a
   motif section is: the same basic motive, with no motive of its own.
 
-`compose_run` fills the plan with its stages unchanged: a free phrase is a structure-stage target like a theme. Its
+`compose_run` fills the plan with its stages, then the seam stage ([loop-seam.md](loop-seam.md)): a free phrase is a structure-stage target like a theme. Its
 outcome has one entry for each section, in time order, with the section's `id` and `part`. A free phrase is not heard as
 a form, so only its structure's score counts.
 

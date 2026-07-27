@@ -12,6 +12,12 @@ candidate was chosen or rejected. It is put together from what a run already kee
 | Sections | Per theme section: the form heard and the form asked for, and the Analyzer check items ([analyzer-check.md](analyzer-check.md)): each planned cadence and the key with what was heard, and any hard voice-leading fault. A section the check did not read (no `--check`, or a section it cannot read) says so. |
 | Rejections | Every whole run `compose_run` threw away and started again from the plan as given, with its round, its seed and the stage reached. The reason is `stuck` (a stage left a target open), `key` or `cadence` (the plan's keys or cadences, with the checker's text) or `analyzer` (the analysis contradicted the plan, with the items that disagreed). `grow` adds the seeds the command passed over. |
 
+The seam stage ([loop-seam.md](loop-seam.md)) is a stage of its own: the structure, motives, harmony, bass, melody and texture
+targets of the held loop's end are listed under `seam`, in the order they were worked on, with the section letter of the
+held section. A harmony or melody candidate that ends at the seam has the seam rules it keeps in its score, so a runner-up
+can score behind the chosen one by one or more of them. The records of a stage are kept together, so the melody stage's last
+attempt is the one explained, as it is elsewhere.
+
 A scored candidate whose checker did not hold a shaping rule (R-164) names it: the candidate's reason ends in `; not held:` and
 the names, which the text prints as `(not held: ...)` and the JSON gives as `not_held`. The names are `ending-reduction`, `waves`,
 `central-range` and `monotony` for a melody ([melody-fill.md](melody-fill.md#the-shaping-rules)) and `root-progression` for a
