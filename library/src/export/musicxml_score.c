@@ -1886,12 +1886,29 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
                   "<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 3.1 Partwise//EN\" "
                   "\"http://www.musicxml.org/dtds/partwise.dtd\">\n"
                   "<score-partwise version=\"3.1\">\n");
-    if (prep->meter_defaulted) {
-        /* The layout is a default 4/4, not a meter anyone wrote: say so, so a reader can tell. */
-        xmlbuf_append(buf,
-                      "  <identification>\n    <miscellaneous>\n"
-                      "      <miscellaneous-field name=\"ursatz:meter-defaulted\">true</miscellaneous-field>\n"
-                      "    </miscellaneous>\n  </identification>\n");
+    const MusicXmlExportScore *score = prep->score;
+    bool has_title = score->title != NULL && score->title[0] != '\0';
+    bool has_composer = score->composer != NULL && score->composer[0] != '\0';
+    if (has_title) {
+        xmlbuf_append(buf, "  <work>\n    <work-title>");
+        xmlbuf_append_escaped(buf, score->title);
+        xmlbuf_append(buf, "</work-title>\n  </work>\n");
+    }
+    if (has_composer || prep->meter_defaulted) {
+        xmlbuf_append(buf, "  <identification>\n");
+        if (has_composer) {
+            xmlbuf_append(buf, "    <creator type=\"composer\">");
+            xmlbuf_append_escaped(buf, score->composer);
+            xmlbuf_append(buf, "</creator>\n");
+        }
+        if (prep->meter_defaulted) {
+            /* The layout is a default 4/4, not a meter anyone wrote: say so, so a reader can tell. */
+            xmlbuf_append(buf,
+                          "    <miscellaneous>\n"
+                          "      <miscellaneous-field name=\"ursatz:meter-defaulted\">true</miscellaneous-field>\n"
+                          "    </miscellaneous>\n");
+        }
+        xmlbuf_append(buf, "  </identification>\n");
     }
     xmlbuf_append(buf, "  <part-list>\n");
     for (size_t p = 0; p < prep->part_count; p++) {

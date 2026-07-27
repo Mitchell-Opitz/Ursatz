@@ -99,6 +99,8 @@ typedef struct {
  *   - quantize: NULL writes every note at its exact played start and duration. When set, score_quantize (see
  *     export/score_quantize.h) turns the played times into notated times on the beat grid of meter_map first, and the
  *     document is written from those; the events themselves, their ids and their order are untouched.
+ *   - title / composer: written as <work><work-title> and <identification><creator type="composer"> (escaped); NULL or
+ *     "" writes nothing.
  */
 typedef struct {
     NoteEvent *const *events;
@@ -120,6 +122,8 @@ typedef struct {
     const MusicXmlExportKeySignature *key_signatures;
     size_t key_signature_count;
     const ScoreQuantizeOptions *quantize;
+    const char *title;    /* written as <work><work-title>; NULL or "" writes nothing */
+    const char *composer; /* written as <creator type="composer">; NULL or "" writes nothing */
 } MusicXmlExportScore;
 
 /*
