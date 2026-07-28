@@ -38,7 +38,7 @@ static void test_minimal_document_exact(void) {
         "  </identification>\n"
         "  <part-list>\n"
         "    <score-part id=\"P1\">\n"
-        "      <part-name>Ursatz Export</part-name>\n"
+        "      <part-name print-object=\"no\"></part-name>\n"
         "    </score-part>\n"
         "  </part-list>\n"
         "  <part id=\"P1\">\n"
@@ -224,6 +224,85 @@ static void test_two_parts(void) {
     bag_free(&bag);
 }
 
+static char *write_titled(const TestBag *bag, const char *title, const char *composer, const MusicXmlExportPart *parts,
+                          size_t part_count, const MeterMap *meter) {
+    MusicXmlExportScore score;
+    memset(&score, 0, sizeof(score));
+    score.events = bag->events;
+    score.count = bag->count;
+    score.parts = parts;
+    score.part_count = part_count;
+    score.meter_map = meter;
+    score.title = title;
+    score.composer = composer;
+    char *xml = NULL;
+    assert(musicxml_export_write_score(&score, &xml) == MUSICXML_EXPORT_OK);
+    return xml;
+}
+
+static void test_title_and_composer(void) {
+    TestBag bag;
+    memset(&bag, 0, sizeof(bag));
+    bag_add_note(&bag, "n0", 0, 1, 1, 4, PITCH_LETTER_C, NULL);
+    char *xml = write_titled(&bag, "Fugue <1> & Co", "J. S. Bach", NULL, 0, NULL);
+    assert(TU_HAS(xml, "<work>\n    <work-title>Fugue &lt;1&gt; &amp; Co</work-title>\n  </work>"));
+    assert(TU_HAS(xml, "<creator type=\"composer\">J. S. Bach</creator>"));
+    assert(tu_count(xml, "<identification>") == 1 && TU_HAS(xml, "ursatz:meter-defaulted"));
+    assert(strstr(xml, "<work>") < strstr(xml, "<identification>"));
+    assert(strstr(xml, "<creator") < strstr(xml, "<miscellaneous>"));
+    free(xml);
+
+    const TuMeter declared[] = {{4, 4, 0, 1}};
+    MeterMap *meter = tu_meter_map(declared, 1);
+    xml = write_titled(&bag, "", NULL, NULL, 0, meter);
+    assert(!TU_HAS(xml, "<work>") && !TU_HAS(xml, "<identification>"));
+    free(xml);
+    xml = write_titled(&bag, NULL, "Anon", NULL, 0, meter);
+    assert(!TU_HAS(xml, "<work>") && TU_HAS(xml, "<creator type=\"composer\">Anon</creator>"));
+    assert(!TU_HAS(xml, "<miscellaneous>"));
+    free(xml);
+    meter_map_destroy(meter);
+    bag_free(&bag);
+}
+
+static void test_instruments_and_unnamed_part(void) {
+    TestBag bag;
+    memset(&bag, 0, sizeof(bag));
+    bag_add(&bag, tu_note("f", 0, 1, 1, 4, PITCH_LETTER_C, 0, 5, NULL), 0, 1);
+    bag_add(&bag, tu_note("c", 0, 1, 1, 4, PITCH_LETTER_C, 0, 3, NULL), 1, 1);
+    bag_add(&bag, tu_note("x", 0, 1, 1, 4, PITCH_LETTER_C, 0, 4, NULL), 2, 1);
+    const MusicXmlExportPart parts[] = {{"P1", "Flute", 1, 73}, {"P2", "", 1, -1}, {"P3", "Organ", 1, 0}};
+    MusicXmlExportScore score;
+    memset(&score, 0, sizeof(score));
+    score.events = bag.events;
+    score.count = bag.count;
+    score.part_index = bag.part;
+    score.staff = bag.staff;
+    score.parts = parts;
+    score.part_count = 3;
+    char *xml = NULL;
+    assert(musicxml_export_write_score(&score, &xml) == MUSICXML_EXPORT_OK);
+    assert(TU_HAS(xml, "<score-instrument id=\"P1-I1\">\n        <instrument-name>Flute</instrument-name>"));
+    assert(TU_HAS(xml, "<midi-instrument id=\"P1-I1\">\n        <midi-program>74</midi-program>"));
+    assert(TU_HAS(xml, "<midi-instrument id=\"P3-I1\">\n        <midi-program>1</midi-program>"));
+    assert(!TU_HAS(xml, "P2-I1"));
+    assert(tu_count(xml, "<score-instrument") == 2);
+    assert(TU_HAS(xml, "<part-name print-object=\"no\"></part-name>") && TU_HAS(xml, "<part-name>Flute</part-name>"));
+    free(xml);
+    bag_free(&bag);
+}
+
+static void test_default_part_is_unnamed_without_instrument(void) {
+    TestBag bag;
+    memset(&bag, 0, sizeof(bag));
+    bag_add_note(&bag, "n0", 0, 1, 1, 4, PITCH_LETTER_C, NULL);
+    char *xml = write_bag(&bag, NULL, NULL, 0, false);
+    assert(TU_HAS(xml, "<part-name print-object=\"no\"></part-name>") && !TU_HAS(xml, "Ursatz Export"));
+    assert(!TU_HAS(xml, "<score-instrument") && !TU_HAS(xml, "<midi-instrument"));
+    free(xml);
+    bag_free(&bag);
+}
+
 static void test_flag_follows_the_map(void) {
     TestBag bag;
     memset(&bag, 0, sizeof(bag));
@@ -353,6 +432,9 @@ int main(void) {
     test_two_voices_back_up();
     test_two_staves();
     test_two_parts();
+    test_title_and_composer();
+    test_instruments_and_unnamed_part();
+    test_default_part_is_unnamed_without_instrument();
     test_flag_follows_the_map();
     test_zero_notes();
     test_key_tempo_marking_and_dynamics();

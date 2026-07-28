@@ -190,6 +190,7 @@ typedef struct {
     const char *id;
     const char *name;
     int staff_count;
+    int midi_program; /* 0 to 127, or -1 for none */
 } PartInfo;
 
 typedef struct {
@@ -326,6 +327,8 @@ static MusicXmlExportResult build_parts(Prep *prep) {
             prep->parts[i].id = score->parts[i].id;
             prep->parts[i].name = score->parts[i].name != NULL ? score->parts[i].name : "";
             prep->parts[i].staff_count = score->parts[i].staff_count;
+            prep->parts[i].midi_program =
+                score->parts[i].midi_program >= 0 && score->parts[i].midi_program <= 127 ? score->parts[i].midi_program : -1;
         }
         return MUSICXML_EXPORT_OK;
     }
@@ -336,8 +339,9 @@ static MusicXmlExportResult build_parts(Prep *prep) {
         }
     }
     prep->parts[0].id = "P1";
-    prep->parts[0].name = "Ursatz Export";
+    prep->parts[0].name = "";
     prep->parts[0].staff_count = staves;
+    prep->parts[0].midi_program = -1;
     return MUSICXML_EXPORT_OK;
 }
 
@@ -1886,20 +1890,49 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
                   "<!DOCTYPE score-partwise PUBLIC \"-//Recordare//DTD MusicXML 3.1 Partwise//EN\" "
                   "\"http://www.musicxml.org/dtds/partwise.dtd\">\n"
                   "<score-partwise version=\"3.1\">\n");
-    if (prep->meter_defaulted) {
-        /* The layout is a default 4/4, not a meter anyone wrote: say so, so a reader can tell. */
-        xmlbuf_append(buf,
-                      "  <identification>\n    <miscellaneous>\n"
-                      "      <miscellaneous-field name=\"ursatz:meter-defaulted\">true</miscellaneous-field>\n"
-                      "    </miscellaneous>\n  </identification>\n");
+    const MusicXmlExportScore *score = prep->score;
+    bool has_title = score->title != NULL && score->title[0] != '\0';
+    bool has_composer = score->composer != NULL && score->composer[0] != '\0';
+    if (has_title) {
+        xmlbuf_append(buf, "  <work>\n    <work-title>");
+        xmlbuf_append_escaped(buf, score->title);
+        xmlbuf_append(buf, "</work-title>\n  </work>\n");
+    }
+    if (has_composer || prep->meter_defaulted) {
+        xmlbuf_append(buf, "  <identification>\n");
+        if (has_composer) {
+            xmlbuf_append(buf, "    <creator type=\"composer\">");
+            xmlbuf_append_escaped(buf, score->composer);
+            xmlbuf_append(buf, "</creator>\n");
+        }
+        if (prep->meter_defaulted) {
+            /* The layout is a default 4/4, not a meter anyone wrote: say so, so a reader can tell. */
+            xmlbuf_append(buf,
+                          "    <miscellaneous>\n"
+                          "      <miscellaneous-field name=\"ursatz:meter-defaulted\">true</miscellaneous-field>\n"
+                          "    </miscellaneous>\n");
+        }
+        xmlbuf_append(buf, "  </identification>\n");
     }
     xmlbuf_append(buf, "  <part-list>\n");
     for (size_t p = 0; p < prep->part_count; p++) {
         xmlbuf_append(buf, "    <score-part id=\"");
         xmlbuf_append_escaped(buf, prep->parts[p].id);
-        xmlbuf_append(buf, "\">\n      <part-name>");
+        xmlbuf_append(buf, prep->parts[p].name[0] == '\0' ? "\">\n      <part-name print-object=\"no\">"
+                                                          : "\">\n      <part-name>");
         xmlbuf_append_escaped(buf, prep->parts[p].name);
-        xmlbuf_append(buf, "</part-name>\n    </score-part>\n");
+        xmlbuf_append(buf, "</part-name>\n");
+        if (prep->parts[p].midi_program >= 0) {
+            xmlbuf_append(buf, "      <score-instrument id=\"");
+            xmlbuf_append_escaped(buf, prep->parts[p].id);
+            xmlbuf_append(buf, "-I1\">\n        <instrument-name>");
+            xmlbuf_append_escaped(buf, prep->parts[p].name);
+            xmlbuf_append(buf, "</instrument-name>\n      </score-instrument>\n      <midi-instrument id=\"");
+            xmlbuf_append_escaped(buf, prep->parts[p].id);
+            xmlbuf_append(buf, "-I1\">\n        <midi-program>%d</midi-program>\n      </midi-instrument>\n",
+                          prep->parts[p].midi_program + 1);
+        }
+        xmlbuf_append(buf, "    </score-part>\n");
     }
     xmlbuf_append(buf, "  </part-list>\n");
     size_t *dir_pos = (size_t *)calloc(1, sizeof(size_t));
