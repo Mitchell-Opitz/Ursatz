@@ -27,7 +27,7 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase"};
+                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
@@ -297,6 +297,8 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
              json_add(object, "id", cJSON_CreateString(constraint->params.piece_part.id));
         break;
     case PLAN_CONSTRAINT_FREE_PHRASE:
+    case PLAN_CONSTRAINT_HOLD:
+    case PLAN_CONSTRAINT_SEAM:
         break;
     }
     if (!ok) {
@@ -1209,6 +1211,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         return true;
     }
     case PLAN_CONSTRAINT_FREE_PHRASE:
+    case PLAN_CONSTRAINT_HOLD:
+    case PLAN_CONSTRAINT_SEAM:
         return true;
     }
     return false;

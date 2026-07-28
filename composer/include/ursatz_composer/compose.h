@@ -13,6 +13,7 @@
 #include <ursatz_composer/piece_plan_keys.h>
 #include <ursatz_composer/rejection.h>
 #include <ursatz_composer/return_hear.h>
+#include <ursatz_composer/seam_hear.h>
 #include <ursatz_composer/style.h>
 
 /*
@@ -32,10 +33,17 @@
  *              of the section it returns, once that is written; the stages before leave such a section alone. Then
  *              harmony, bass, melody and texture run again, to write what a variation reopened (REHARMONIZE). The stage
  *              does not run when no section returns an earlier one.
+ *   seam       the loop's end of a piece structure, held by the stages before (a HOLD constraint, as a RETURN section is
+ *              left alone), is filled last against the bar it leads into (R-171). The body's first bar is copied into the
+ *              seam section (a SEAM constraint) as Given, then structure, motives, harmony, bass, melody and texture run
+ *              for the held sections. The stage does not run when the plan has no seam section. Its records are kept
+ *              together under the seam stage.
  *
  * The stages from structure to texture are seeded seed + 0 to seed + 5, as grow's are, and invention seed + 6, so a
  * plan with one theme section and a Given motive is filled exactly as grow_run fills it. The returns are seeded
  * seed + 7, and the harmony, bass, melody and texture run again seed + 8 to seed + 11 (their records are not kept).
+ * The seam stage runs harmony, bass, melody and texture seed + 12 to seed + 15, and the structure and the motives of the
+ * held sections seed + 16 and seed + 17.
  *
  * Retries are grow's (R-051): the melody stage is run up to six times, each from the next seed, reopening the melody
  * of the sections it left unwritten, the climax moved in a theme that is not a sentence; a run stuck after that starts
@@ -69,10 +77,11 @@ typedef enum {
     COMPOSE_STAGE_MELODY,
     COMPOSE_STAGE_TEXTURE,
     COMPOSE_STAGE_RETURNS,
+    COMPOSE_STAGE_SEAM,
     COMPOSE_STAGE_COUNT
 } ComposeStage;
 
-/* "invent", "structure", "motives", "harmony", "bass", "melody", "texture", "returns". */
+/* "invent", "structure", "motives", "harmony", "bass", "melody", "texture", "returns", "seam". */
 const char *compose_stage_name(ComposeStage stage);
 
 /* All-zero is the default configuration (seed 0). The members are GrowConfig's. */
@@ -118,6 +127,8 @@ typedef struct {
     size_t returns_planned;                   /* the theme sections with a RETURN, each planned to be heard as a return */
     size_t returns_heard;                     /* how many of them were */
     bool returns_heard_as_planned;            /* every return planned was heard (true when none was planned) */
+    bool seam_planned;                        /* the body's first bar was copied into the seam section and the seam heard (R-171) */
+    SeamHeard seam;                           /* the seam rules over the finished plan; empty without seam_planned */
     bool key_rejected;                        /* the last run was complete but failed the key or cadence check (stuck) */
     PieceKeyCheck key_check;                  /* the checks of the last complete run, for a plan with several keys */
     PieceCadenceCheck cadence_check;
@@ -129,8 +140,8 @@ typedef struct {
     /*
      * Over the sections, the structure's score and 1 for each section heard as requested: the sum of the numerators
      * over the sum of the denominators (each section's denominator one more than its structure's), as GrowOutcome's
-     * score is for one; and 1 more for each return planned, in the numerator too when it was heard. With
-     * analyzer_check, each cadence and key planned adds 1 to the denominator and each one heard as planned adds 1 to
+     * score is for one; and 1 more for each return planned, in the numerator too when it was heard; and, with a seam
+     * heard, 4 more for its rules and the ones it holds in the numerator. With analyzer_check, each cadence and key planned adds 1 to the denominator and each one heard as planned adds 1 to
      * the numerator.
      */
     GrowScore score;

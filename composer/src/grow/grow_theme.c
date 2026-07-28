@@ -97,8 +97,8 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         plan_node_state(plan, target.id) != PLAN_STATE_CONSTRAINED || plan_node_child_count(plan, target.id) != 0) {
         return false;
     }
-    /* A section that returns an earlier one is form-return's, not grown afresh. */
-    if (form_return_handles(plan, target.id)) {
+    /* A section that returns an earlier one is form-return's, not grown afresh; a held one is the seam stage's. */
+    if (form_return_handles(plan, target.id) || plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_HOLD)) {
         return false;
     }
     request.section = target.id;

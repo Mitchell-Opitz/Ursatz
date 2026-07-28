@@ -26,6 +26,9 @@
  * A span owned by a section with a MATERIAL constraint, or by a node under one, is skipped with
  * RENDER_SKIP_MATERIAL, whatever its lane or state: source material is not part of the piece. The piece ends
  * where the last section that is not material ends (piece_end).
+ * The same holds for the seam section of a piece structure (a SEAM constraint, R-171), the Given copy of the body's
+ * first bar after the loop's end that the loop's end is filled against: its spans are skipped with RENDER_SKIP_SEAM, it
+ * has no section marker, and the piece ends where the loop does.
  * A span in a section with a LAYERS constraint (a layer of a layered form) whose lane the mask leaves out is skipped
  * with RENDER_SKIP_LAYER: the section is grown in full, and the mask decides only what sounds.
  * Only Given and Realized spans are rendered. A Constrained span is skipped,
@@ -74,7 +77,8 @@ typedef enum {
     RENDER_SKIP_NOT_REALIZED,   /* the span is Constrained */
     RENDER_SKIP_LANE_NOT_RENDERED, /* the lane makes no sound yet (harmony) */
     RENDER_SKIP_MATERIAL,          /* the span belongs to a section marked as source material */
-    RENDER_SKIP_LAYER              /* the span's lane is not in the LAYERS mask of the section it is in */
+    RENDER_SKIP_LAYER,             /* the span's lane is not in the LAYERS mask of the section it is in */
+    RENDER_SKIP_SEAM               /* the span belongs to the seam section, which is not part of the piece */
 } RenderSkipReason;
 
 typedef struct {

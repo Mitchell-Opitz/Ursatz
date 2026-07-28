@@ -136,7 +136,8 @@ static bool read_free(const PiecePlan *plan, FillTarget target, FreeRequest *out
         plan_node_state(plan, target.id) != PLAN_STATE_CONSTRAINED || plan_node_child_count(plan, target.id) != 0 ||
         !has_constraint(plan, target.id, PLAN_CONSTRAINT_FREE_PHRASE) ||
         has_constraint(plan, target.id, PLAN_CONSTRAINT_ARCHETYPE) ||
-        has_constraint(plan, target.id, PLAN_CONSTRAINT_THEME_PAIRING) || form_return_handles(plan, target.id)) {
+        has_constraint(plan, target.id, PLAN_CONSTRAINT_THEME_PAIRING) || form_return_handles(plan, target.id) ||
+        has_constraint(plan, target.id, PLAN_CONSTRAINT_HOLD)) {
         return false;
     }
     theme->section = target.id;

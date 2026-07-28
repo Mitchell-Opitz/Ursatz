@@ -81,6 +81,11 @@ typedef struct {
     size_t lead_in_count;
     int lead_out;        /* the first note of the melody, Given or written, that starts where the target ends */
     bool has_lead_out;
+    /* The target ends where the seam section starts (R-171): the first bass note of the seam and the melody note after
+       lead_out, -1 for none. The candidates are also scored by how the end leads into the seam. */
+    bool at_seam;
+    int seam_bass;
+    int seam_next;
     bool restating;      /* the motive is the melody of the idea before, to be said again as it was */
 } MelodyContext;
 

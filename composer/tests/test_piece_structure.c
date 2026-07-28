@@ -72,13 +72,13 @@ static const PlanConstraint *node_constraint(const PiecePlan *plan, NodeId id, P
     return NULL;
 }
 
-/* The section nodes of the piece (not the material), in time order. */
+/* The section nodes of the piece (not the material or the seam), in time order. */
 static size_t piece_sections(const PiecePlan *plan, NodeId *out, size_t max) {
     size_t count = 0;
     NodeId form = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, form) && count < max; i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        if (!node_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (!node_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL) && !node_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
             out[count++] = child;
         }
     }
@@ -196,15 +196,25 @@ static void test_plan(void) {
         assert((node_constraint(plan, sections[i], PLAN_CONSTRAINT_ARCHETYPE) != NULL) == (i == 1));
         start += BEATS[i];
     }
-    /* The material starts on the first barline at or after the turnaround's end (50 beats: bar 13, beat 52). */
+    /* Only the turnaround, the loop's end, is held for the seam stage. */
+    for (size_t i = 0; i < count; i++) {
+        assert((node_constraint(plan, sections[i], PLAN_CONSTRAINT_HOLD) != NULL) == (i == 3));
+    }
+    /* The seam is the bar after the loop's end (50 beats), open and empty. */
     NodeId form = plan_root(plan);
-    NodeId material = plan_node_child_at(plan, form, count);
-    assert(node_constraint(plan, material, PLAN_CONSTRAINT_MATERIAL));
+    NodeId seam = plan_node_child_at(plan, form, count);
+    assert(node_constraint(plan, seam, PLAN_CONSTRAINT_SEAM));
+    assert(!node_constraint(plan, seam, PLAN_CONSTRAINT_MATERIAL) && !node_constraint(plan, seam, PLAN_CONSTRAINT_HOLD));
+    assert(plan_node_child_count(plan, seam) == 0 && plan_node_state(plan, seam) == PLAN_STATE_CONSTRAINED);
     PlanTime end;
     assert(plan_span_end(plan_node_span(plan, sections[3]), &end) == PLAN_OK);
+    assert(plan_time_compare(plan_node_span(plan, seam).start, end) == 0);
+    assert(plan_time_compare(plan_node_span(plan, seam).length, (PlanTime){1, 1}) == 0);
+    /* The material starts on the first barline at or after the seam's end (54 beats: bar 14, beat 56). */
+    NodeId material = plan_node_child_at(plan, form, count + 1);
+    assert(node_constraint(plan, material, PLAN_CONSTRAINT_MATERIAL));
     PlanTime barline;
-    assert(plan_time_make(52, 4, &barline) == PLAN_OK);
-    assert(plan_time_compare(end, barline) < 0);
+    assert(plan_time_make(56, 4, &barline) == PLAN_OK);
     assert(plan_time_compare(plan_node_span(plan, material).start, barline) == 0);
     plan_destroy(plan);
 

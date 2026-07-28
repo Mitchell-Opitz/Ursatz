@@ -98,6 +98,9 @@ typedef struct {
     /* The target starts or ends where a phrase or a section of the plan does: a cadence heard there is a boundary's. */
     bool start_at_boundary;
     bool end_at_boundary;
+    /* The target ends where the seam section of a piece structure starts and the first Given chord after it is the
+       seam's (R-171): the candidates are also scored by how the last chord leads into it. */
+    bool at_seam;
 } PhraseRequest;
 
 /* A candidate's payload. */
@@ -109,6 +112,13 @@ typedef struct {
     bool repeatable;
     bool repeats;
 } PhraseProgression;
+
+/*
+ * A candidate whose target ends at the seam (request.at_seam) is also scored by the seam's progression rule (R-171): the
+ * check's denominator grows by 1, and its numerator by 1 when the last chord leads into the seam's first. Nothing is
+ * rejected for it. Any other candidate is left as it is.
+ */
+void harmony_seam_score(const PhraseProgression *progression, FillCheck *out);
 
 #define HARMONY_MAX_CHORDS 64
 

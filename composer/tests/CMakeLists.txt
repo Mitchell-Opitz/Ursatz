@@ -285,6 +285,14 @@ foreach(mode fixture theme refused progression partial)
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_fills)
 endforeach()
 
+# The loop seam (R-171): the seam rules on hand-made plans, then the composed sweep (seeds 1 to 20).
+add_executable(test_loop_seam test_loop_seam.c)
+target_link_libraries(test_loop_seam PRIVATE ursatz_composer)
+target_compile_options(test_loop_seam PRIVATE -Wall -Wextra -Wpedantic)
+foreach(mode rules sweep)
+    add_test(NAME test_loop_seam_${mode} COMMAND test_loop_seam ${mode})
+endforeach()
+
 add_executable(test_form_return test_form_return.c)
 target_link_libraries(test_form_return PRIVATE ursatz_composer)
 target_compile_options(test_form_return PRIVATE -Wall -Wextra -Wpedantic)

@@ -122,6 +122,8 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
                pickup.num < 2 * (long)pickup.den;
     }
     case PLAN_CONSTRAINT_FREE_PHRASE:
+    case PLAN_CONSTRAINT_HOLD:
+    case PLAN_CONSTRAINT_SEAM:
         return true;
     case PLAN_CONSTRAINT_PIECE_PART: {
         const PlanPiecePart *part = &constraint->params.piece_part;
@@ -233,4 +235,13 @@ PlanResult plan_lane_span_remove_constraint(PiecePlan *plan, LaneSpanId id, size
         return PLAN_ERR_GIVEN_LOCKED;
     }
     return list_remove(&entry->constraints, index);
+}
+
+bool plan_node_has_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
+        if (plan_node_constraint_at(plan, id, i)->kind == kind) {
+            return true;
+        }
+    }
+    return false;
 }

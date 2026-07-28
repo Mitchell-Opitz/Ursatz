@@ -26,7 +26,8 @@ static size_t sections_of(const PiecePlan *plan, NodeId *sections) {
         NodeId child = plan_node_child_at(plan, form, i);
         bool material = false;
         for (size_t c = 0; c < plan_node_constraint_count(plan, child); c++) {
-            material = material || plan_node_constraint_at(plan, child, c)->kind == PLAN_CONSTRAINT_MATERIAL;
+            PlanConstraintKind kind = plan_node_constraint_at(plan, child, c)->kind;
+            material = material || kind == PLAN_CONSTRAINT_MATERIAL || kind == PLAN_CONSTRAINT_SEAM;
         }
         if (!material && count < FORM_TEMPLATE_MAX_SECTIONS) {
             sections[count++] = child;

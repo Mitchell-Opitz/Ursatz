@@ -75,6 +75,21 @@ static bool section_is_material(const PiecePlan *plan, NodeId id) {
     return false;
 }
 
+/* Whether the section is the seam: the copy of the body's first bar after the loop's end, which is not part of the piece. */
+static bool section_is_seam(const PiecePlan *plan, NodeId id) {
+    return plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM);
+}
+
+/* True for a node that is, or sits under, the seam section. */
+static bool node_is_seam(const PiecePlan *plan, NodeId id) {
+    for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
+        if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && section_is_seam(plan, id)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /* True for a node that is, or sits under, a section marked MATERIAL. */
 static bool node_is_material(const PiecePlan *plan, NodeId id) {
     for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
@@ -105,7 +120,7 @@ static bool lane_sounds_in(const PiecePlan *plan, NodeId id, PlanLaneKind lane) 
     return true;
 }
 
-/* The end of the last section that is not material; zero when the form has no such section. */
+/* The end of the last section that is not material or the seam; zero when the form has no such section. */
 static PlanTime piece_end_of(const PiecePlan *plan) {
     PlanTime end = {0, 1};
     NodeId root = plan_root(plan);
@@ -113,7 +128,7 @@ static PlanTime piece_end_of(const PiecePlan *plan) {
         NodeId section = plan_node_child_at(plan, root, i);
         PlanTime section_end;
         if (plan_node_kind(plan, section) == PLAN_NODE_SECTION && !section_is_material(plan, section) &&
-            plan_span_end(plan_node_span(plan, section), &section_end) == PLAN_OK &&
+            !section_is_seam(plan, section) && plan_span_end(plan_node_span(plan, section), &section_end) == PLAN_OK &&
             plan_time_compare(section_end, end) > 0) {
             end = section_end;
         }
@@ -450,6 +465,10 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
             if (!add_skip(&out->skipped, &out->skipped_count, &skipped_capacity, id, lane, RENDER_SKIP_MATERIAL)) {
                 result = PLAN_RENDER_ERR_ALLOC;
             }
+        } else if (node_is_seam(plan, plan_lane_span_owner(plan, id))) {
+            if (!add_skip(&out->skipped, &out->skipped_count, &skipped_capacity, id, lane, RENDER_SKIP_SEAM)) {
+                result = PLAN_RENDER_ERR_ALLOC;
+            }
         } else if (lane == PLAN_LANE_HARMONY) {
             if (!add_skip(&out->skipped, &out->skipped_count, &skipped_capacity, id, lane,
                           RENDER_SKIP_LANE_NOT_RENDERED)) {
@@ -617,7 +636,8 @@ static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *r
     PlanRenderResult result = PLAN_RENDER_OK;
     for (size_t i = 0; result == PLAN_RENDER_OK && i < child_count; i++) {
         NodeId section = plan_node_child_at(plan, root, i);
-        if (plan_node_kind(plan, section) != PLAN_NODE_SECTION || section_is_material(plan, section)) {
+        if (plan_node_kind(plan, section) != PLAN_NODE_SECTION || section_is_material(plan, section) ||
+            section_is_seam(plan, section)) {
             continue;
         }
         PlanTime start = plan_node_span(plan, section).start;

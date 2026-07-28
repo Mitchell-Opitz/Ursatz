@@ -16,6 +16,7 @@
 
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
+#include <ursatz_composer/seam_hear.h>
 
 #include "check/shaping.h"
 #include "melody/melody_internal.h"
@@ -548,6 +549,32 @@ static void check_shaping(const MelodyCandidate *melody, PhraseVerdict *verdict)
     verdict->shaping_broken |= broken;
 }
 
+/*
+ * A candidate that ends at the seam (R-171) is also scored by three of its rules: no parallel fifths or octaves between
+ * bass and melody across it, a melody that moves by step (or a leap answered), and a leading tone that goes up. The
+ * progression is the harmony's. Nothing is rejected for them.
+ */
+static void check_seam(const MelodyCandidate *melody, PhraseVerdict *verdict) {
+    const MelodyContext *context = &melody->context;
+    SeamNotes notes;
+    SeamHeard heard;
+    if (!context->at_seam || melody->count == 0) {
+        return;
+    }
+    memset(&notes, 0, sizeof(notes));
+    notes.key = context->key;
+    notes.bass_before = context->bass_count > 0 ? context->bass[context->bass_count - 1].pitch : -1;
+    notes.bass_after = context->seam_bass;
+    notes.melody_before = melody->notes[melody->count - 1].pitch;
+    notes.melody_previous = melody->count > 1 ? melody->notes[melody->count - 2].pitch
+                            : (context->lead_in_count > 0 ? context->lead_in[context->lead_in_count - 1] : -1);
+    notes.melody_after = context->lead_out;
+    notes.melody_next = context->seam_next;
+    seam_hear_notes(&notes, &heard);
+    verdict->soft_total += 3;
+    verdict->soft_held += (unsigned)heard.no_parallels + (unsigned)heard.step + (unsigned)heard.leading_tone;
+}
+
 bool melody_nct_types(const MelodyCandidate *melody, unsigned *types) {
     PhraseVerdict verdict;
     if (!melody || !types || melody->count == 0 || melody->count > MELODY_MAX_NOTES) {
@@ -601,6 +628,7 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
         verdict->soft_held += held;
         verdict->soft_total += total;
         check_shaping(melody, verdict);
+        check_seam(melody, verdict);
     }
     return ok;
 }

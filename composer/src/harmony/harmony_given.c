@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include <ursatz_composer/plan_state.h>
+#include <ursatz_composer/seam_hear.h>
 
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
@@ -157,6 +158,7 @@ void harmony_given_read(const PiecePlan *plan, PhraseRequest *request) {
     request->after_count = 0;
     request->start_at_boundary = false;
     request->end_at_boundary = false;
+    request->at_seam = false;
     for (size_t cell = 0; cell < HARMONY_GIVEN_CELLS; cell++) {
         request->bass_pc[cell] = -1;
         request->melody_pc[cell] = -1;
@@ -182,6 +184,7 @@ void harmony_given_read(const PiecePlan *plan, PhraseRequest *request) {
     request->after_count = read_chain(plan, request, end, false, request->after);
     request->start_at_boundary = at_boundary(plan, request, true);
     request->end_at_boundary = at_boundary(plan, request, false);
+    request->at_seam = request->after_count > 0 && seam_section_at(plan, end) != PLAN_NODE_NONE;
     request->has_given = request->has_given || request->before_count > 0 || request->after_count > 0;
 }
 

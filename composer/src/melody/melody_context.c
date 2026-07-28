@@ -4,6 +4,7 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/plan_state.h>
+#include <ursatz_composer/seam_hear.h>
 
 bool melody_ticks(PlanTime time, long *out) {
     long scaled = time.num * MELODY_TICKS;
@@ -355,6 +356,8 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
             context->lead_in_count = take;
         }
     }
+    context->seam_bass = -1;
+    context->seam_next = -1;
     /* The first note of the melody that starts where the target ends: the target's last note leads to it. */
     PlanTime end;
     PlanTime tick_after;
@@ -369,6 +372,15 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
             if (notes->note_count > 0 && notes->notes[0].offset.num == 0) {
                 context->lead_out = notes->notes[0].midi_pitch;
                 context->has_lead_out = true;
+                context->seam_next = notes->note_count > 1 ? notes->notes[1].midi_pitch : -1;
+            }
+        }
+        context->at_seam = context->has_lead_out && seam_section_at(plan, end) != PLAN_NODE_NONE;
+        if (context->at_seam) {
+            LaneSpanId bass[2];
+            if (plan_lane_find(plan, PLAN_LANE_BASS, 0, first_tick, bass, 2) >= 1 &&
+                plan_lane_span_payload(plan, bass[0])->notes.note_count > 0) {
+                context->seam_bass = plan_lane_span_payload(plan, bass[0])->notes.notes[0].midi_pitch;
             }
         }
     }

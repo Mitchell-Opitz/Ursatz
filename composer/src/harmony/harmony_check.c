@@ -17,6 +17,7 @@
 #include <ursatz_composer/harmony_octave.h>
 #include <ursatz_composer/harmony_schema.h>
 #include <ursatz_composer/harmony_sequence.h>
+#include <ursatz_composer/seam_hear.h>
 
 #include "check/shaping.h"
 #include "harmony/harmony_internal.h"
@@ -261,6 +262,29 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
 
 static bool verdict_to_check(const HeardPhrase *phrase, FillCheck *out);
 
+void harmony_seam_score(const PhraseProgression *progression, FillCheck *out) {
+    if (!progression->request.at_seam || progression->request.after_count == 0 || progression->count == 0 ||
+        out->hard_violation) {
+        return;
+    }
+    const PhraseChord *last = &progression->chords[progression->count - 1];
+    const PhraseChord *first = &progression->request.after[0];
+    SeamNotes notes;
+    SeamHeard heard;
+    memset(&notes, 0, sizeof(notes));
+    notes.key.mode = progression->request.mode;
+    notes.has_chords = true;
+    notes.before_function = last->function;
+    notes.after_function = first->function;
+    snprintf(notes.before_roman, sizeof(notes.before_roman), "%s", last->roman);
+    snprintf(notes.after_roman, sizeof(notes.after_roman), "%s", first->roman);
+    notes.bass_before = notes.bass_after = notes.melody_previous = notes.melody_before = notes.melody_after =
+        notes.melody_next = -1;
+    seam_hear_notes(&notes, &heard);
+    out->score_numerator += heard.progression ? 1 : 0;
+    out->score_denominator += 1;
+}
+
 /* The verdict on a phrase of this operator, then what the Given material around its target asks of the chords. */
 static bool phrase_to_check(const HeardPhrase *phrase, const PhraseProgression *progression, FillCheck *out) {
     const char *given_hard = NULL;
@@ -279,6 +303,7 @@ static bool phrase_to_check(const HeardPhrase *phrase, const PhraseProgression *
         out->score_numerator = 0;
         snprintf(out->reason, sizeof(out->reason), "%s", given_hard);
     }
+    harmony_seam_score(progression, out);
     return true;
 }
 

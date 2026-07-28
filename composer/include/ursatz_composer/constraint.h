@@ -37,7 +37,9 @@ typedef enum {
     PLAN_CONSTRAINT_SOURCE,         /* on a motive node, or a section holding a given progression: the corpus passage it was taken from */
     PLAN_CONSTRAINT_PICKUP,         /* on a melody span: its first `length` is an anacrusis before the first downbeat note (R-168) */
     PLAN_CONSTRAINT_PIECE_PART,     /* on a section node: the part of a piece structure it is and its id (R-169) */
-    PLAN_CONSTRAINT_FREE_PHRASE     /* no parameters: on a section node, a phrase of any length in beats (R-170), not a theme */
+    PLAN_CONSTRAINT_FREE_PHRASE,    /* no parameters: on a section node, a phrase of any length in beats (R-170), not a theme */
+    PLAN_CONSTRAINT_HOLD,           /* no parameters: on a section node, the stages from structure to texture leave it alone; the seam stage fills it (R-171) */
+    PLAN_CONSTRAINT_SEAM            /* no parameters: on a section node, the bar after the loop's end, a Given copy of the body's first bar (R-171) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -335,6 +337,8 @@ typedef struct {
 /* Fails with PLAN_ERR_BAD_PAYLOAD for a constraint that is malformed or names a missing motive node. */
 PlanResult plan_node_add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint);
 size_t plan_node_constraint_count(const PiecePlan *plan, NodeId id);
+/* Whether the node has a constraint of the kind. */
+bool plan_node_has_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind);
 /* NULL for an unknown id or an index past the end. The pointer is valid until the list changes. */
 const PlanConstraint *plan_node_constraint_at(const PiecePlan *plan, NodeId id, size_t index);
 /* Later constraints shift down one. PLAN_ERR_BAD_INDEX for an index past the end. */
