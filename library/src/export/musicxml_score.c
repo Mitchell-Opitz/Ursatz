@@ -339,7 +339,7 @@ static MusicXmlExportResult build_parts(Prep *prep) {
         }
     }
     prep->parts[0].id = "P1";
-    prep->parts[0].name = "Ursatz Export";
+    prep->parts[0].name = "";
     prep->parts[0].staff_count = staves;
     prep->parts[0].midi_program = -1;
     return MUSICXML_EXPORT_OK;
@@ -1918,7 +1918,8 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
     for (size_t p = 0; p < prep->part_count; p++) {
         xmlbuf_append(buf, "    <score-part id=\"");
         xmlbuf_append_escaped(buf, prep->parts[p].id);
-        xmlbuf_append(buf, "\">\n      <part-name>");
+        xmlbuf_append(buf, prep->parts[p].name[0] == '\0' ? "\">\n      <part-name print-object=\"no\">"
+                                                          : "\">\n      <part-name>");
         xmlbuf_append_escaped(buf, prep->parts[p].name);
         xmlbuf_append(buf, "</part-name>\n");
         if (prep->parts[p].midi_program >= 0) {
