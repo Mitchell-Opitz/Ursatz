@@ -126,4 +126,16 @@ bool piece_structure_default_ending(PieceStructure *structure, size_t capacity);
  */
 PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePlan **out);
 
+/*
+ * The ending version (R-172) into *out, which the caller destroys with plan_destroy: a copy of the realized loop plan's
+ * intro and body, every lane Given (plan_give_section), with the turnaround, the seam and their spans dropped, and the
+ * ending sections of the structure appended open after the body's end, filled as piece_structure_build_plan fills them
+ * (motif and empty from the loop's basic motive, which the new plan holds as its m0; theme and progression Given). The
+ * structure is the one the loop was built from, and must have an ending (piece_structure_default_ending). Run it with
+ * compose_run and seed + 20; the ending's harmony hears the body's last chord as a Given neighbour. PIECE_ERR_BAD_REQUEST
+ * for a loop plan that is not realized or does not hold the structure's intro and body sections, or a structure with no
+ * ending; piece_structure_build_plan's results otherwise.
+ */
+PieceResult piece_ending_plan(const PiecePlan *loop_plan, const PieceStructure *structure, PiecePlan **out);
+
 #endif

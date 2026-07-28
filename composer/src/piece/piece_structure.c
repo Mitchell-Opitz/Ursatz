@@ -288,6 +288,37 @@ static PieceResult add_theme_constraints(PiecePlan *plan, NodeId id, const Piece
     return result;
 }
 
+/* The section of a plan that a piece part and id name, or PLAN_NODE_NONE. */
+static NodeId find_part_section(const PiecePlan *plan, const PieceSection *section) {
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
+            continue;
+        }
+        for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
+            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
+            if (constraint->kind == PLAN_CONSTRAINT_PIECE_PART && constraint->params.piece_part.part == (int)section->part &&
+                strcmp(constraint->params.piece_part.id, section->id) == 0) {
+                return id;
+            }
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+/* The piece's basic motive as the realized loop plan holds it (m0, in the structure's key). */
+static bool loop_motive(const PieceStructure *structure, const PiecePlan *loop_plan, Motive *out) {
+    NodeId source = grow_find_source(loop_plan);
+    PlanMeter meter;
+    PlanKey key;
+    if (source == PLAN_NODE_NONE) {
+        return false;
+    }
+    PlanSpan span = plan_node_span(loop_plan, source);
+    return return_meter_over(loop_plan, span, &meter) && key_over(loop_plan, span, &key) &&
+           key.mode == structure->key.mode && key.tonic_pitch_class == structure->key.tonic_pitch_class &&
+           grow_read_motive(loop_plan, source, &meter, &key, out);
+}
+
 /*
  * Whether the section is held for the seam stage (R-171): the loop's end, unless it is Given (a theme fill, or a
  * progression that covers it) or holds the body's first bar, which the seam copies before anything can be filled.
@@ -399,7 +430,11 @@ static PieceResult add_flag(PiecePlan *plan, NodeId id, PlanConstraintKind kind)
     return add_constraint(plan, id, &constraint);
 }
 
-PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePlan **out) {
+/*
+ * The plan of a structure. With a loop plan it is the ending version (R-172): the intro and the body Given from the
+ * realized loop, the turnaround and the seam left out, the ending laid out open after the body.
+ */
+static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_plan, PiecePlan **out) {
     if (!structure || !out) {
         return PIECE_ERR_NULL;
     }
@@ -412,6 +447,12 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
     PlanTime bar = grow_bar_length(&structure->meter);
     Motive theme_storage;
     const Motive *motive = basic_motive(structure, &theme_storage);
+    if (loop_plan) {
+        if (!loop_motive(structure, loop_plan, &theme_storage)) {
+            return PIECE_ERR_BAD_REQUEST;
+        }
+        motive = &theme_storage;
+    }
     PieceSection sections[PIECE_STRUCTURE_MAX_SECTIONS];
     PieceStructure copy = *structure;
     memcpy(sections, structure->sections, structure->section_count * sizeof(PieceSection));
@@ -430,20 +471,25 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
     size_t beats = 0;
     size_t material_bars = 1;
     size_t per_bar = (size_t)structure->meter.beats_per_bar;
+    bool has_ending = false;
     for (size_t i = 0; i < copy.section_count; i++) {
-        if (copy.sections[i].part != PIECE_PART_ENDING) {
+        has_ending = has_ending || copy.sections[i].part == PIECE_PART_ENDING;
+        if (loop_plan ? copy.sections[i].part != PIECE_PART_TURNAROUND : copy.sections[i].part != PIECE_PART_ENDING) {
             laid = i + 1;
             beats += copy.sections[i].beats;
             material_bars += MATERIAL_BARS_PER_SECTION + (copy.sections[i].beats + per_bar - 1) / per_bar;
         }
+    }
+    if (loop_plan && !has_ending) {
+        return PIECE_ERR_BAD_REQUEST;
     }
     PiecePlan *plan = plan_create();
     if (!plan) {
         return PIECE_ERR_ALLOC;
     }
     /* The seam is a bar after the loop's end; the material starts on the first barline at or after the seam's end: its
-       motives are bars of the meter. */
-    beats += per_bar;
+       motives are bars of the meter. The ending version has no seam. */
+    beats += loop_plan ? 0 : per_bar;
     PlanSpan material = {{0, 1}, {0, 1}};
     if (plan_time_make(bar.num * (long)((beats + per_bar - 1) / per_bar), bar.den, &material.start) != PLAN_OK) {
         return PIECE_ERR_BAD_REQUEST;
@@ -480,24 +526,34 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
     PlanTime start = {0, 1};
     size_t start_beats = 0;
     for (size_t i = 0; result == PIECE_OK && i < laid; i++) {
+        if (loop_plan && copy.sections[i].part == PIECE_PART_TURNAROUND) {
+            continue;
+        }
         NodeId id;
+        /* The ending version takes the intro and the body as the loop realized them. */
+        bool from_loop = loop_plan && copy.sections[i].part != PIECE_PART_ENDING;
+        NodeId loop_section = from_loop ? find_part_section(loop_plan, &copy.sections[i]) : PLAN_NODE_NONE;
         PlanSpan span = {start, beats_of(&structure->meter, copy.sections[i].beats)};
         result = add_section(plan, &copy, &copy.sections[i], start_beats, form_id, span, &id);
-        if (result == PIECE_OK && copy.sections[i].fill == PIECE_FILL_THEME &&
-            plan_give_section(plan, id, copy.sections[i].theme_plan, grow_find_theme(copy.sections[i].theme_plan, false)) !=
-                GIVEN_OK) {
+        if (result == PIECE_OK && from_loop) {
+            if (loop_section == PLAN_NODE_NONE || plan_give_section(plan, id, loop_plan, loop_section) != GIVEN_OK) {
+                result = PIECE_ERR_BAD_REQUEST;
+            }
+        } else if (result == PIECE_OK && copy.sections[i].fill == PIECE_FILL_THEME &&
+                   plan_give_section(plan, id, copy.sections[i].theme_plan,
+                                     grow_find_theme(copy.sections[i].theme_plan, false)) != GIVEN_OK) {
             result = PIECE_ERR_BAD_REQUEST;
         }
         /* A progression fill: the chords Given from the section's start, a bar each unless it says; the harmony stage
            fills what is left of the section. */
-        if (result == PIECE_OK && copy.sections[i].fill == PIECE_FILL_PROGRESSION) {
+        if (result == PIECE_OK && !from_loop && copy.sections[i].fill == PIECE_FILL_PROGRESSION) {
             const PieceSection *given = &copy.sections[i];
             size_t per_chord = given->cells_per_chord ? given->cells_per_chord : cells;
             if (plan_give_progression(plan, id, 0, given->numerals, given->numeral_count, per_chord) != GIVEN_OK) {
                 result = PIECE_ERR_BAD_REQUEST;
             }
         }
-        if (result == PIECE_OK && is_held(&copy, i, cells)) {
+        if (result == PIECE_OK && !loop_plan && is_held(&copy, i, cells)) {
             result = add_flag(plan, id, PLAN_CONSTRAINT_HOLD);
         }
         if (result == PIECE_OK) {
@@ -506,7 +562,7 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
         start_beats += copy.sections[i].beats;
     }
     /* The seam: the bar the loop leads into, open and empty until the seam stage copies the body's first bar into it. */
-    if (result == PIECE_OK) {
+    if (result == PIECE_OK && !loop_plan) {
         NodeId seam;
         PlanSpan span = {start, bar};
         result = from_plan(plan_add_node(plan, form_id, PLAN_NODE_SECTION, span, "seam", &seam));
@@ -538,4 +594,18 @@ PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePla
     }
     *out = plan;
     return PIECE_OK;
+}
+
+PieceResult piece_structure_build_plan(const PieceStructure *structure, PiecePlan **out) {
+    return build(structure, NULL, out);
+}
+
+PieceResult piece_ending_plan(const PiecePlan *loop_plan, const PieceStructure *structure, PiecePlan **out) {
+    if (!loop_plan) {
+        if (out) {
+            *out = NULL;
+        }
+        return PIECE_ERR_NULL;
+    }
+    return build(structure, loop_plan, out);
 }
