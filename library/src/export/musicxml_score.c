@@ -190,6 +190,7 @@ typedef struct {
     const char *id;
     const char *name;
     int staff_count;
+    int midi_program; /* 0 to 127, or -1 for none */
 } PartInfo;
 
 typedef struct {
@@ -326,6 +327,8 @@ static MusicXmlExportResult build_parts(Prep *prep) {
             prep->parts[i].id = score->parts[i].id;
             prep->parts[i].name = score->parts[i].name != NULL ? score->parts[i].name : "";
             prep->parts[i].staff_count = score->parts[i].staff_count;
+            prep->parts[i].midi_program =
+                score->parts[i].midi_program >= 0 && score->parts[i].midi_program <= 127 ? score->parts[i].midi_program : -1;
         }
         return MUSICXML_EXPORT_OK;
     }
@@ -338,6 +341,7 @@ static MusicXmlExportResult build_parts(Prep *prep) {
     prep->parts[0].id = "P1";
     prep->parts[0].name = "Ursatz Export";
     prep->parts[0].staff_count = staves;
+    prep->parts[0].midi_program = -1;
     return MUSICXML_EXPORT_OK;
 }
 
@@ -1916,7 +1920,18 @@ static MusicXmlExportResult write_document(const Prep *prep, XmlBuf *buf) {
         xmlbuf_append_escaped(buf, prep->parts[p].id);
         xmlbuf_append(buf, "\">\n      <part-name>");
         xmlbuf_append_escaped(buf, prep->parts[p].name);
-        xmlbuf_append(buf, "</part-name>\n    </score-part>\n");
+        xmlbuf_append(buf, "</part-name>\n");
+        if (prep->parts[p].midi_program >= 0) {
+            xmlbuf_append(buf, "      <score-instrument id=\"");
+            xmlbuf_append_escaped(buf, prep->parts[p].id);
+            xmlbuf_append(buf, "-I1\">\n        <instrument-name>");
+            xmlbuf_append_escaped(buf, prep->parts[p].name);
+            xmlbuf_append(buf, "</instrument-name>\n      </score-instrument>\n      <midi-instrument id=\"");
+            xmlbuf_append_escaped(buf, prep->parts[p].id);
+            xmlbuf_append(buf, "-I1\">\n        <midi-program>%d</midi-program>\n      </midi-instrument>\n",
+                          prep->parts[p].midi_program + 1);
+        }
+        xmlbuf_append(buf, "    </score-part>\n");
     }
     xmlbuf_append(buf, "  </part-list>\n");
     size_t *dir_pos = (size_t *)calloc(1, sizeof(size_t));

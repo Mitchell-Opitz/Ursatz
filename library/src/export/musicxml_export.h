@@ -60,11 +60,16 @@ typedef enum {
     MUSICXML_EXPORT_ERR_DIVISIONS_OVERFLOW  /* no <divisions> up to INT32_MAX makes every time an integer */
 } MusicXmlExportResult;
 
-/* One <part>. id and name are borrowed (the document escapes them); staff_count is at least 1. */
+/*
+ * One <part>. id and name are borrowed (the document escapes them); staff_count is at least 1. midi_program is a
+ * General MIDI program, 0 to 127 (written 1-based as <midi-program> in a <score-instrument> and <midi-instrument>);
+ * -1 writes no instrument. A zeroed struct is program 0.
+ */
 typedef struct {
     const char *id;
     const char *name;
     int staff_count;
+    int midi_program;
 } MusicXmlExportPart;
 
 typedef enum {
