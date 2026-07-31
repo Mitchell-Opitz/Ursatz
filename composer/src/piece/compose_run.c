@@ -921,11 +921,44 @@ static PieceResult check_keys(const PiecePlan *plan, ComposeOutcome *outcome) {
 }
 
 /*
+ * The Analyzer's check of a piece structure plan (R-172): the whole of it in one check, analyzer_check_piece, kept as
+ * the only member of outcome->analyzer_checks. A plan it cannot read is left out, as a section is.
+ */
+static PieceResult check_analyzer_piece(const PiecePlan *plan, ComposeOutcome *outcome) {
+    outcome->analyzer_checks = calloc(1, sizeof(AnalyzerCheck));
+    if (!outcome->analyzer_checks) {
+        return PIECE_ERR_ALLOC;
+    }
+    outcome->analyzer_check_count = 1;
+    AnalyzerCheckResult result = analyzer_check_piece(plan, &outcome->analyzer_checks[0]);
+    if (result == ANALYZER_CHECK_ERR_ALLOC) {
+        return PIECE_ERR_ALLOC;
+    }
+    if (result != ANALYZER_CHECK_OK) {
+        return PIECE_OK;
+    }
+    outcome->analyzer_planned = outcome->analyzer_checks[0].planned;
+    outcome->analyzer_agreed = outcome->analyzer_checks[0].agreed;
+    outcome->score.numerator += outcome->analyzer_agreed;
+    outcome->score.denominator += outcome->analyzer_planned;
+    if (!outcome->analyzer_checks[0].contradicts) {
+        return PIECE_OK;
+    }
+    outcome->stuck = true;
+    outcome->stuck_stage = COMPOSE_STAGE_TEXTURE;
+    outcome->analyzer_rejected = true;
+    return PIECE_ERR_STUCK;
+}
+
+/*
  * The Analyzer's check of every theme section (R-080). PIECE_ERR_STUCK, marked in the outcome, when some section's
  * analysis contradicts the plan; the score takes in what was planned and what was heard. A section the check cannot read
  * is left out of it.
  */
 static PieceResult check_analyzer(const PiecePlan *plan, ComposeOutcome *outcome) {
+    if (piece_is_structure_plan(plan)) {
+        return check_analyzer_piece(plan, outcome);
+    }
     outcome->analyzer_checks = calloc(outcome->section_count ? outcome->section_count : 1, sizeof(AnalyzerCheck));
     if (!outcome->analyzer_checks) {
         return PIECE_ERR_ALLOC;
@@ -999,7 +1032,9 @@ static void add_rejection(ComposeRejection **list, size_t *count, const PiecePla
                 }
                 rejection->items = items;
                 memset(&items[rejection->item_count], 0, sizeof(*items));
-                const char *name = s < outcome->section_count ? plan_node_name(plan, outcome->sections[s].section) : NULL;
+                const char *name = piece_is_structure_plan(plan)
+                                       ? "piece"
+                                       : (s < outcome->section_count ? plan_node_name(plan, outcome->sections[s].section) : NULL);
                 snprintf(items[rejection->item_count].section, sizeof(items[0].section), "%s", name ? name : "");
                 items[rejection->item_count].item = check->items[i];
                 rejection->item_count++;

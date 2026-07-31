@@ -15,6 +15,9 @@
 PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const PlanSource *motive_source, NodeId form,
                                PlanSpan material, PlanTime bar, NodeId *out);
 
+/* Whether the plan is a piece structure plan: some section of it has a piece part (PLAN_CONSTRAINT_PIECE_PART). */
+bool piece_is_structure_plan(const PiecePlan *plan);
+
 /* The seam section of a plan (R-171), or PLAN_NODE_NONE. */
 NodeId piece_seam_find(const PiecePlan *plan);
 /* The start of the first body section; false when no section is marked as a body. */

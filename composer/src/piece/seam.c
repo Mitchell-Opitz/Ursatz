@@ -17,6 +17,16 @@
 /* The inner voices a texture writes. */
 #define SEAM_INNER_VOICES 3
 
+bool piece_is_structure_plan(const PiecePlan *plan) {
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
+            plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_PIECE_PART)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 NodeId piece_seam_find(const PiecePlan *plan) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&

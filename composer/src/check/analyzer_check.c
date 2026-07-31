@@ -271,3 +271,159 @@ AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section
     out->item_count = items.count;
     return ANALYZER_CHECK_OK;
 }
+
+/* ------------------------------------------------------------- the whole piece */
+
+static bool time_minus(PlanTime a, PlanTime b, PlanTime *out) {
+    return plan_time_make(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den, out) == PLAN_OK;
+}
+
+/* |a - b| at most one beat of the meter. */
+static bool within_a_beat(PlanTime a, PlanTime b, const PlanMeter *meter) {
+    PlanTime difference;
+    if (!time_minus(a, b, &difference)) {
+        return false;
+    }
+    long num = difference.num < 0 ? -difference.num : difference.num;
+    return (unsigned long)num * (unsigned long)meter->beat_unit <= difference.den;
+}
+
+/* The section a node is, as the structure plan builds them: one with a piece part, which is not the seam. */
+static bool is_part_section(const PiecePlan *plan, NodeId id) {
+    return plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
+           plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_PIECE_PART) &&
+           !plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM);
+}
+
+/* Where the Analyzer heard a cadence end: the start of the chord after its arrival, else the end of the fragment. */
+static PlanTime cadence_end(const AnalysisReport *report, const AnalysisCadence *cadence, PlanTime fragment_end) {
+    PlanTime out = fragment_end;
+    if (cadence->arrival_last + 1 < report->entry_count) {
+        const AnalysisReportEntry *next = &report->entries[cadence->arrival_last + 1];
+        if (plan_time_make(next->time_numerator, next->time_denominator, &out) != PLAN_OK) {
+            out = fragment_end;
+        }
+    }
+    return out;
+}
+
+static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter, const AnalysisReport *report,
+                                   PlanTime fragment_end, Items *items) {
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        if (!is_part_section(plan, id)) {
+            continue;
+        }
+        const PlanConstraint *planned = NULL;
+        for (size_t i = 0; !planned && i < plan_node_constraint_count(plan, id); i++) {
+            const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
+            planned = constraint->kind == PLAN_CONSTRAINT_CADENCE ? constraint : NULL;
+        }
+        PlanTime end;
+        PlanSpan span = plan_node_span(plan, id);
+        if (!planned || plan_span_end(span, &end) != PLAN_OK) {
+            continue;
+        }
+        PlanTime last_beat;
+        PlanTime one_beat = {1, (unsigned long)meter->beat_unit};
+        size_t bar = time_minus(end, one_beat, &last_beat) && last_beat.num > 0
+                         ? bar_of(last_beat.num, last_beat.den, meter)
+                         : 0;
+        const char *heard = "none";
+        bool agreed = false;
+        for (size_t c = 0; c < report->cadence_count; c++) {
+            const AnalysisCadence *cadence = &report->cadences[c];
+            if (!within_a_beat(cadence_end(report, cadence, fragment_end), end, meter)) {
+                continue;
+            }
+            bool matches = cadence_agrees(planned->params.cadence, cadence->type);
+            if (matches || !agreed) {
+                heard = cadence->type;
+                agreed = matches;
+            }
+        }
+        add_item(items, ANALYZER_CHECK_CADENCE, bar, cadence_type_name(harmony_cadence_type_of(planned->params.cadence)), heard,
+                 agreed);
+    }
+}
+
+AnalyzerCheckResult analyzer_check_piece(const PiecePlan *plan, AnalyzerCheck *out) {
+    if (!out) {
+        return ANALYZER_CHECK_ERR_NULL;
+    }
+    memset(out, 0, sizeof(*out));
+    if (!plan) {
+        return ANALYZER_CHECK_ERR_NULL;
+    }
+    RenderedPlan rendered;
+    PlanRenderResult drawn = plan_render(plan, &rendered);
+    if (drawn != PLAN_RENDER_OK) {
+        return drawn == PLAN_RENDER_ERR_ALLOC ? ANALYZER_CHECK_ERR_ALLOC : ANALYZER_CHECK_ERR_PLAN;
+    }
+    PlanSpan whole = {{0, 1}, rendered.piece_end};
+    if (rendered.count == 0 || section_open(plan, whole)) {
+        rendered_plan_destroy(&rendered);
+        return ANALYZER_CHECK_ERR_NOT_WRITTEN;
+    }
+    LaneSpanId meter_span;
+    LaneSpanId key_span;
+    if (!lane_at_start(plan, PLAN_LANE_METER, whole, &meter_span) || !lane_at_start(plan, PLAN_LANE_KEY, whole, &key_span)) {
+        rendered_plan_destroy(&rendered);
+        return ANALYZER_CHECK_ERR_PLAN;
+    }
+    PlanMeter meter = plan_lane_span_payload(plan, meter_span)->meter;
+    PlanKey key = plan_lane_span_payload(plan, key_span)->key;
+    if (meter.beats_per_bar <= 0 || meter.beat_unit <= 0) {
+        rendered_plan_destroy(&rendered);
+        return ANALYZER_CHECK_ERR_PLAN;
+    }
+    AnalyzerFragment fragment;
+    memset(&fragment, 0, sizeof(fragment));
+    fragment.events = (const NoteEvent *const *)rendered.events;
+    fragment.count = rendered.count;
+    fragment.meter = rendered.meter_map;
+    fragment.has_key = true;
+    fragment.key_tonic_pitch_class = key.tonic_pitch_class;
+    fragment.key_minor = key.mode == PLAN_MODE_MINOR;
+    fragment.streams = rendered.part_index;
+
+    AnalyzerFragmentAnalysis analysis;
+    AnalyzerFragmentResult analyzed = analyzer_analyze_fragment(&fragment, &analysis);
+    if (analyzed != ANALYZER_FRAGMENT_OK) {
+        rendered_plan_destroy(&rendered);
+        return analyzed == ANALYZER_FRAGMENT_ERR_ALLOC ? ANALYZER_CHECK_ERR_ALLOC : ANALYZER_CHECK_ERR_ANALYSIS;
+    }
+    const AnalysisReport *report = analyzer_fragment_report(&analysis);
+    Items items;
+    memset(&items, 0, sizeof(items));
+    compare_piece_cadences(plan, &meter, report, rendered.piece_end, &items);
+    compare_key(report, key, &items);
+    out->planned = items.count;
+    for (size_t i = 0; i < items.count; i++) {
+        out->agreed += items.items[i].agreed;
+    }
+    out->contradicts = out->agreed != out->planned;
+
+    AnalyzerViolation *violations = NULL;
+    size_t violation_count = 0;
+    if (analyzer_fragment_violations(&analysis, &violations, &violation_count) != ANALYZER_FRAGMENT_OK) {
+        items.failed = true;
+    }
+    for (size_t i = 0; i < violation_count; i++) {
+        if (violations[i].hard && writes_note(plan, &rendered, &violations[i])) {
+            add_item(&items, ANALYZER_CHECK_VIOLATION, violations[i].measure > 0 ? (size_t)violations[i].measure - 1 : 0, "none",
+                     violations[i].rule, false);
+            out->contradicts = true;
+        }
+    }
+    analyzer_violations_free(violations, violation_count);
+    analyzer_fragment_analysis_destroy(&analysis);
+    rendered_plan_destroy(&rendered);
+    if (items.failed) {
+        free(items.items);
+        memset(out, 0, sizeof(*out));
+        return ANALYZER_CHECK_ERR_ALLOC;
+    }
+    out->items = items.items;
+    out->item_count = items.count;
+    return ANALYZER_CHECK_OK;
+}
