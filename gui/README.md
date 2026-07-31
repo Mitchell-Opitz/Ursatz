@@ -45,8 +45,6 @@ a monolithic application.
   viewed last this session; before any piece has been opened it points at
   the Library.
 - **Collections**: named groups of piece ids (the Corpus routes, below).
-- **Composer (old)**: start a theme or a piece and work on it (Composer view,
-  below).
 - **Subjects**: named characters, places, ideas and notes that items and
   Library pieces link to (see Subjects views, below).
 - **Motifs**, **Themes**, **Pieces**: the items of the material store (see
@@ -231,51 +229,6 @@ families first (piece, measures, degrees; a click opens that piece's Analysis on
 and changed). Earlier runs are listed with their scope and date; each opens or is deleted. The model is
 `frontend/public/motive-links-model.js` (global `MotiveLinksModel`: `scopeBody`, `progressText`, `linkRows`,
 `groupRows`, `motiveFeatureRows`, `pieceLinkRows`); the DOM is `motive-links-view.js`.
-
-### Composer view
-
-The Composer entry drives the Composer routes (see Composer routes below).
-The page has two forms and the list of compositions; a row opens the
-composition. Every action waits for its answer with its buttons disabled and a
-spinner (a run can take tens of seconds); nothing is polled. A failed run shows
-the backend's message and the Composer's stderr.
-
-- **Grow a theme**: fill New theme (name, the motive as a note list such as
-  `D4:q F4:e A4:e D5:h`, into sentence, period or hybrid, key, meter, bars 4 to
-  8, optional cadence, accompaniment, check, seed and tempo) and press Grow
-  theme. The composition starts at version 1.
-- **Plan a piece**: fill New piece (name, form, key, meter, bars, count,
-  modulate, optional motive, optional given melody with where it goes, for
-  example `B` or `B:2`, accompaniment, check, seed, tempo) and press Plan
-  piece. The piece is planned and filled; the result is version 1.
-- **Compose in a style**: both forms have a Style select (None, then every
-  style built in the Collections view, with its piece count) and a Weight
-  select (Light 1/4, Normal 1/2, Strong 1; Normal by default, disabled while
-  Style is None). The result text includes the Composer's style distance line.
-  A composition keeps the path of its style file, so a later fill or
-  regenerate after the style was deleted fails with the Composer's message.
-- **A composition**: the version selector lists each version with its action,
-  seed and time. Below it: the plan tree (form, sections with their letters,
-  phrases and ideas, each with its bars and its state, Given or Realized), the
-  summary table (the form heard and the cadences per section), the score of the
-  version drawn with OpenSheetMusicDisplay, and a MIDI download.
-- **Lock and regenerate**: every section and node of the tree has Lock and
-  Regenerate. The Lane and Seed fields above the tree apply to the button
-  pressed (all lanes and a new random seed when left blank). Each action
-  writes the next version and opens it; the earlier versions stay.
-- **Variations**: pick a target (a section or node), a lane, a count from 1 to
-  8, an optional seed, and press Generate. The results show side by side as
-  small scores with their seeds and the form heard; Choose makes one the next
-  version. Harmonize (harmonizations of the whole section, no lane) is enabled
-  only when the section has a form letter and every melody span of the
-  section is Given.
-
-`composer.js` (loaded after `app.js`) holds the request builders and the plan
-tree as plain functions, tested by `frontend/tests/composer-view.test.js`
-against `frontend/tests/fixtures/composer-plan.json`, a plan the Composer CLI
-wrote. The score renderer (`drawMusicXmlScore`) and the fetch helpers
-(`fetchJsonResult`, `postJsonResult`) live in `app.js` and are shared with the
-Analysis view.
 
 ### Analysis view
 
@@ -667,10 +620,12 @@ not listed and cannot be opened, so upload those files again.
 
 ### Material store
 
-Motifs, themes and pieces live in `materials/` beside `pieces/`, `collections/`
-and `compositions/`. `service/material_service.c` is the only code that touches
+Motifs, themes and pieces live in `materials/` beside `pieces/` and
+`collections/`. `service/material_service.c` is the only code that touches
 it; every operation runs under one mutex, and every file is written to
 `<name>.tmp` and renamed.
+
+Compositions from the old Composer view (`compositions/`) are no longer read and may be deleted.
 
 ```
 materials/
@@ -1368,70 +1323,14 @@ reaches an argument list: keys (`D`, `F#`, `Bb`, `D minor`), meters
 (`^[A-Z]'*$`), lanes, node ids, tempos (20 to 400, whole or `n/d`) and
 note-list text. Anything else is 400 and starts nothing.
 
-Compositions are stored in `compositions/<id>/` (`comp-<16 hex>`):
-
-- `meta.json`: `{"name", "created_at", "kind": "grow"|"plan", "request",
-  "versions": [{"n", "action", "args", "created_at", "seed", "summary"}]}`.
-  `request` is the body that made the composition; `summary` is the command's
-  JSON output (for `plan`, `{"plan": ..., "fill": ...}`, with the `fill`
-  command's arguments in `fill_args`). `args` paths are relative to the
-  composition.
-- `v<n>/plan.json`, `v<n>/piece.mid`, `v<n>/piece.musicxml`: one directory per
-  version. Every step is a new version; earlier versions are never changed.
-- `motive.txt`, `given-melody.txt`: the note lists the request gave.
-- `v<n>/variations-<k>/`: a set of variations (`variation-<i>.json`, `.mid`,
-  `.musicxml`, and `result.json`, the command's output).
-
-A command that fails adds no version and leaves nothing behind. A new version
-or composition is written with the tempo the composition was made with.
-
 Routes (bodies are JSON; success bodies have `"ok":true`):
 
 - `GET /api/composer/status`: `{"ok":true,"available":true,"version":"..."}`,
   or 503 when the binary is missing.
-- `POST /api/composer/grow`: `{name, motive, into, hybrid?, key, meter,
-  bars?, cadence?, first_cadence?, accompaniment?, texture?, check?, seed?,
-  tempo?, style?, style_weight?}`. `motive` is a note list (`D4:q F4:e A4:e
-  D5:h`); `hybrid` is required when `into` is `hybrid`. `style` is a style id
-  (see Styles routes), passed as `--style <model file>`; `style_weight` is a
-  whole number or `n/d` with a non-zero denominator (`--style-weight`) and
-  needs `style`. An unknown style is 400 `{"error":"unknown style"}`. Makes
-  version 1. Returns
-  `{"ok":true,"id","version":1,"summary"}`.
-- `POST /api/composer/plan`: `{name, form, key, meter, bars?, count?,
-  modulate?, motive?, given_melody? {notes, at}, accompaniment?, texture?,
-  seed?, check?, tempo?, style?, style_weight?}`. Runs `plan`, then `fill`
-  with the same seed, into version 1. `style` and `style_weight` are as for
-  grow and go to `plan`; `fill` reads the plan's style constraint.
-- `GET /api/composer/compositions`: `{"ok":true,"compositions":[{id, name,
-  kind, created_at, versions}]}`, newest first.
-- `GET /api/composer/compositions/<id>`: `meta.json` with `ok` and `id`.
-- `PATCH /api/composer/compositions/<id>`: `{name}`. `DELETE` removes the
-  composition.
-- `GET /api/composer/compositions/<id>/versions/<n>/plan | musicxml | midi`:
-  the file (`application/json`, `application/xml`, `audio/midi` as an
-  attachment).
-- `POST .../<id>/lock`: `{version, node | section, lane?}`. Writes the next
-  version; only the plan changes, so it copies the piece files of `version`.
-- `POST .../<id>/regenerate`: `{version, node | section, lane?, seed?}`.
-  Writes the next version with its piece files. A grow plan has no form
-  letters; address its nodes by `node` (the `composer.id` in `plan.json`).
-- `POST .../<id>/variations`: `{version, node | section, lane?, count (1 to
-  16), seed?, harmonize?}`. Writes `v<version>/variations-<k>/` and returns
-  `{"ok":true,"id","version","set":<k>,"variations":[{index, seed,
-  sections}],"kept","requested","seeds_tried"}`. `harmonize` runs
-  `harmonize` and takes a `section` only, with a section whose melody is all
-  Given. `k` is counted over the whole composition.
-- `POST .../<id>/variations/<k>/<i>/choose`: makes variation `i` of set `k`
-  the next version.
-- `GET .../<id>/variations/<k>/<i>/plan | musicxml | midi`: the files of a
-  variation, for previews.
 
-Errors are `{"error": "..."}`: 400 for a bad field or a Composer usage error
-(with `stderr`), 404 for an unknown composition, version or variation, 422
-`{"error":"stuck","stderr"}` when the Composer cannot do it (exit status 2),
-503 when the binary is missing, 504 on a timeout, 500 otherwise. The Composer
-needs POSIX (`posix_spawn`), so this tool does not build on Windows.
+Themes and pieces compose through `composer_service.c` (see Theme bodies and
+version files, Piece bodies and version files). The Composer needs POSIX
+(`posix_spawn`), so this tool does not build on Windows.
 
 ## Frontend
 
@@ -1590,9 +1489,6 @@ run directly, for example `node frontend/tests/analysis-view.test.js`.
 `analysis-view.test.js` loads `analysis-tabs.js` and checks it against
 `frontend/tests/fixtures/mozart545.analysis.json`, the Analyzer CLI's
 document for Mozart 545 cut to its first 6 items per array.
-`composer-view.test.js` loads `composer.js` and checks the plan tree and the
-request bodies against `frontend/tests/fixtures/composer-plan.json`, the
-`plan.json` the Composer CLI wrote for a rounded binary form with seed 3.
 `test_analyzer_route` uploads Mozart 545 and a MusicXML score, compares the
 stored analysis with the Analyzer CLI's document for the same file, and
 covers list, detail, metadata editing, filtering and groups, rename,
@@ -1625,5 +1521,4 @@ pull request. The private submodules are checked out through the
 
 Native webview packaging, authentication, claim
 editing, and accepting or disputing a claim (no promotion path exists). The
-Composer view has no style, blend, corpus seeding or explain, and no playback
-in the browser (MIDI is downloaded).
+Composer has no blend, corpus seeding or explain.
