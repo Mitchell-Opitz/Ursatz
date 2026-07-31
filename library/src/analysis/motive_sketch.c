@@ -1,0 +1,209 @@
+#include "analysis/motive_sketch.h"
+
+#include <string.h>
+
+static const int MAJOR_STEPS[7] = {0, 2, 4, 5, 7, 9, 11};
+static const int MINOR_STEPS[7] = {0, 2, 3, 5, 7, 8, 10};
+
+static long floor_div(long a, long b) {
+    long quotient = a / b;
+    return (a % b != 0 && ((a < 0) != (b < 0))) ? quotient - 1 : quotient;
+}
+
+static const int *scale_steps(const MotiveSketch *sketch) {
+    return sketch->minor ? MINOR_STEPS : MAJOR_STEPS;
+}
+
+/* --- equality and validation --------------------------------------------- */
+
+bool motive_sketch_equal(const MotiveSketch *a, const MotiveSketch *b) {
+    if (a->note_count != b->note_count || a->has_scale != b->has_scale || a->chord_count != b->chord_count ||
+        a->feature_count != b->feature_count || a->accompaniment != b->accompaniment) {
+        return false;
+    }
+    if (a->has_scale && (a->tonic_pc != b->tonic_pc || a->minor != b->minor)) {
+        return false;
+    }
+    if (!msk_eq(a->bar, b->bar) || !msk_eq(a->beat, b->beat) || !msk_eq(a->pickup, b->pickup) ||
+        !msk_eq(a->length, b->length)) {
+        return false;
+    }
+    for (size_t i = 0; i < a->note_count; i++) {
+        if (a->notes[i].pitch != b->notes[i].pitch || !msk_eq(a->notes[i].onset, b->notes[i].onset) ||
+            !msk_eq(a->notes[i].duration, b->notes[i].duration)) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < a->chord_count; i++) {
+        const MotiveSketchChord *x = &a->chords[i];
+        const MotiveSketchChord *y = &b->chords[i];
+        if (!msk_eq(x->onset, y->onset) || x->degree != y->degree || x->alteration != y->alteration ||
+            x->inversion != y->inversion || x->seventh != y->seventh) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < a->feature_count; i++) {
+        if (strcmp(a->features[i].label, b->features[i].label) != 0 || a->features[i].first != b->features[i].first ||
+            a->features[i].last != b->features[i].last) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool motive_sketch_validate(const MotiveSketch *sketch) {
+    if (!sketch || sketch->note_count == 0 || sketch->note_count > MOTIVE_SKETCH_MAX_NOTES ||
+        sketch->chord_count > MOTIVE_SKETCH_MAX_CHORDS || sketch->feature_count > MOTIVE_SKETCH_MAX_FEATURES) {
+        return false;
+    }
+    if (sketch->has_scale && (sketch->tonic_pc < 0 || sketch->tonic_pc > 11)) {
+        return false;
+    }
+    if (!msk_ok(sketch->bar) || !msk_ok(sketch->beat) || !msk_ok(sketch->pickup) || !msk_ok(sketch->length) ||
+        sketch->bar.n == 0 || sketch->beat.n == 0 || msk_cmp(sketch->pickup, sketch->bar) >= 0) {
+        return false;
+    }
+    ExactRational end = msk_int(0);
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        const MotiveSketchNote *note = &sketch->notes[i];
+        if ((note->pitch != MOTIVE_SKETCH_PITCH_UNKNOWN && (note->pitch < 0 || note->pitch > 127)) ||
+            !msk_ok(note->onset) || !msk_ok(note->duration) || note->duration.n == 0 ||
+            msk_cmp(note->onset, end) < 0) {
+            return false;
+        }
+        end = msk_add(note->onset, note->duration);
+        if (!msk_ok(end)) {
+            return false;
+        }
+    }
+    if (msk_cmp(sketch->length, end) < 0) {
+        return false;
+    }
+    for (size_t i = 0; i < sketch->chord_count; i++) {
+        const MotiveSketchChord *chord = &sketch->chords[i];
+        if (!msk_ok(chord->onset) || msk_cmp(chord->onset, sketch->length) >= 0 ||
+            (i > 0 && msk_cmp(chord->onset, sketch->chords[i - 1].onset) <= 0) || chord->degree < 1 ||
+            chord->degree > 7 || chord->alteration < -1 || chord->alteration > 1 || chord->inversion < 0 ||
+            chord->inversion > 3) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < sketch->feature_count; i++) {
+        const MotiveSketchFeature *feature = &sketch->features[i];
+        size_t label = 0;
+        while (label < MOTIVE_SKETCH_LABEL_SIZE && feature->label[label] != '\0') {
+            label++;
+        }
+        if (label == 0 || label >= MOTIVE_SKETCH_LABEL_SIZE || feature->first > feature->last ||
+            feature->last >= sketch->note_count) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* --- scale ----------------------------------------------------------------- */
+
+long motive_sketch_step(const MotiveSketch *sketch, int pitch, int *alteration) {
+    if (!sketch->has_scale) {
+        if (alteration) {
+            *alteration = 0;
+        }
+        return pitch;
+    }
+    const int *steps = scale_steps(sketch);
+    long relative = (long)pitch - sketch->tonic_pc;
+    long octave = floor_div(relative, 12);
+    int inside = (int)(relative - octave * 12);
+    int degree = 0;
+    int raised = 0;
+    for (int d = 0; d < 7; d++) {
+        if (steps[d] == inside) {
+            degree = d;
+            break;
+        }
+        if (steps[d] == inside - 1) {
+            degree = d;
+            raised = 1;
+        }
+    }
+    if (alteration) {
+        *alteration = raised;
+    }
+    return octave * 7 + degree;
+}
+
+int motive_sketch_pitch_at_step(const MotiveSketch *sketch, long step, int alteration) {
+    if (!sketch->has_scale) {
+        return (int)step + alteration;
+    }
+    long octave = floor_div(step, 7);
+    int degree = (int)(step - octave * 7);
+    return (int)(sketch->tonic_pc + octave * 12 + scale_steps(sketch)[degree] + alteration);
+}
+
+int motive_sketch_degree_of_step(const MotiveSketch *sketch, long step) {
+    if (!sketch->has_scale) {
+        return 0;
+    }
+    return (int)(step - floor_div(step, 7) * 7) + 1;
+}
+
+size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchChord *chord, int pcs[4]) {
+    if (!sketch->has_scale || !chord) {
+        return 0;
+    }
+    const int *steps = scale_steps(sketch);
+    int root_index = chord->degree - 1;
+    int root = steps[root_index] + chord->alteration;
+    size_t count = chord->seventh ? 4 : 3;
+    if (chord->alteration != 0) {
+        static const int OFFSETS[4] = {0, 4, 7, 10};
+        for (size_t i = 0; i < count; i++) {
+            pcs[i] = (sketch->tonic_pc + root + OFFSETS[i] + 120) % 12;
+        }
+        return count;
+    }
+    for (size_t i = 0; i < count; i++) {
+        pcs[i] = (sketch->tonic_pc + steps[(root_index + 2 * (int)i) % 7]) % 12;
+    }
+    if (sketch->minor && chord->degree == 5) {
+        pcs[1] = (sketch->tonic_pc + 11) % 12;
+    }
+    return count;
+}
+
+/* --- time ------------------------------------------------------------------- */
+
+bool motive_sketch_expressible(ExactRational duration) {
+    if (!msk_ok(duration) || duration.n == 0) {
+        return false;
+    }
+    /* 1/2^k times 1, 3/2 or 7/4, for the values w to t. */
+    for (unsigned k = 0; k < 6; k++) {
+        ExactRational plain = er_make(1, 1ULL << k);
+        ExactRational one_dot = msk_mul(plain, er_make(3, 2));
+        ExactRational two_dots = msk_mul(plain, er_make(7, 4));
+        if (msk_eq(duration, plain) || msk_eq(duration, one_dot) || msk_eq(duration, two_dots)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool motive_sketch_on_grid(ExactRational onset) {
+    return msk_ok(onset) && 32 % onset.d == 0;
+}
+
+int motive_sketch_strength(const MotiveSketch *sketch, ExactRational onset) {
+    ExactRational shift = msk_is_zero(sketch->pickup) ? msk_int(0) : msk_sub(sketch->bar, sketch->pickup);
+    ExactRational inside = msk_mod(msk_add(onset, shift), sketch->bar);
+    if (!msk_ok(inside)) {
+        return 0;
+    }
+    if (inside.n == 0) {
+        return 2;
+    }
+    ExactRational beats = msk_div(inside, sketch->beat);
+    return msk_ok(beats) && beats.d == 1 ? 1 : 0;
+}
