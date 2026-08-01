@@ -8,7 +8,6 @@ add_executable(ursatz-gui-backend
   src/service/collection_service.c
   src/service/style_service.c
   src/service/composer_service.c
-  src/service/composition_service.c
   src/service/material_service.c
   src/service/theme_service.c
   src/service/piece_service.c
