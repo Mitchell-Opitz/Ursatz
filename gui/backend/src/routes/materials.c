@@ -358,6 +358,8 @@ static bool analysis_key_ok(const char *text) {
   return strcmp(rest, " major") == 0 || strcmp(rest, " minor") == 0;
 }
 
+#define ANALYSIS_ERROR_SIZE 400
+
 typedef enum {
   ANALYSIS_DONE,
   ANALYSIS_REFUSED,
@@ -459,14 +461,37 @@ static const char *motif_role_option(const char *role) {
   return role && (strcmp(role, "melodic") == 0 || strcmp(role, "accompaniment") == 0) ? role : NULL;
 }
 
+/* "composer could not analyze the motif: <last non-empty stderr line>", the line cut at 300 characters. */
+static void last_line_reason(char *reason, size_t size, const char *stderr_text) {
+  const char *prefix = "composer could not analyze the motif";
+  const char *end = stderr_text + strlen(stderr_text);
+  while (end > stderr_text && isspace((unsigned char)end[-1])) {
+    end--;
+  }
+  const char *start = end;
+  while (start > stderr_text && start[-1] != '\n') {
+    start--;
+  }
+  int length = (int)(end - start);
+  if (length > 300) {
+    length = 300;
+  }
+  if (length > 0) {
+    snprintf(reason, size, "%s: %.*s", prefix, length, start);
+  } else {
+    snprintf(reason, size, "%s", prefix);
+  }
+}
+
 /* Runs the Composer's motive analysis on a motif body (full, rhythm or contour) and stores the result as
    motif.analysis and its degree, rhythm or contour list as motif.degrees. A body without a valid motif is left alone
    for the material service to judge. When the Composer cannot run, the analysis and degrees are stored as null and
-   *analysis_error names the reason. When the Composer reads the input and refuses it, or a full motif has no key to
+   analysis_error (ANALYSIS_ERROR_SIZE bytes, empty when analyzed) names the reason; the reason is also stored as
+   motif.analysis_error, null when analyzed. When the Composer reads the input and refuses it, or a full motif has no key to
    write its degrees in, the result is REFUSED and refusal holds its message. */
-static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **analysis_error, char *refusal,
+static AnalysisOutcome analyze_motif_body(cJSON *version_body, char *analysis_error, char *refusal,
                                           size_t refusal_size) {
-  *analysis_error = NULL;
+  analysis_error[0] = '\0';
   cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
   if (!cJSON_IsObject(motif)) {
     return ANALYSIS_DONE;
@@ -495,9 +520,10 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
   }
   int fd = mkstemp(path);
   if (fd < 0) {
-    *analysis_error = "could not write the note list for the Composer";
+    snprintf(analysis_error, ANALYSIS_ERROR_SIZE, "could not write the note list for the Composer");
     set_motif_analysis(motif, cJSON_CreateNull());
     set_motif_member(motif, "degrees", cJSON_CreateNull());
+    set_motif_member(motif, "analysis_error", cJSON_CreateString(analysis_error));
     return ANALYSIS_DONE;
   }
   size_t length = strlen(notes->valuestring);
@@ -506,7 +532,7 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
   cJSON *analysis = NULL;
   bool refused = false;
   if (!written) {
-    *analysis_error = "could not write the note list for the Composer";
+    snprintf(analysis_error, ANALYSIS_ERROR_SIZE, "could not write the note list for the Composer");
   } else {
     const char *args[14 + MOTIF_EXTRA_ARGS];
     MotifExtras extras;
@@ -531,11 +557,11 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
     UrsatzGuiComposerOutput out = {0, NULL, NULL};
     UrsatzGuiComposerResult result = ursatz_gui_composer_run(args, &out);
     if (result == URSATZ_GUI_COMPOSER_ERR_NO_BINARY) {
-      *analysis_error = "composer not found";
+      snprintf(analysis_error, ANALYSIS_ERROR_SIZE, "composer not found");
     } else if (result == URSATZ_GUI_COMPOSER_ERR_TIMEOUT) {
-      *analysis_error = "composer timed out";
+      snprintf(analysis_error, ANALYSIS_ERROR_SIZE, "composer timed out");
     } else if (result != URSATZ_GUI_COMPOSER_OK) {
-      *analysis_error = "composer could not be started";
+      snprintf(analysis_error, ANALYSIS_ERROR_SIZE, "composer could not be started");
     } else {
       analysis = out.exit_status == 0 ? cJSON_Parse(out.stdout_text) : NULL;
       if (out.exit_status == 1 || out.exit_status == 2) {
@@ -546,7 +572,11 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
           refusal[--end] = '\0';
         }
       } else if (!analysis) {
-        *analysis_error = "composer could not analyze the motif";
+        if (out.exit_status > 128) {
+          snprintf(analysis_error, ANALYSIS_ERROR_SIZE, "composer crashed (signal %d)", out.exit_status - 128);
+        } else {
+          last_line_reason(analysis_error, ANALYSIS_ERROR_SIZE, out.stderr_text);
+        }
       }
       ursatz_gui_composer_output_destroy(&out);
     }
@@ -565,19 +595,22 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, const char **anal
   if (!analysis) {
     analysis = cJSON_CreateNull();
   }
-  if (!analysis || !degrees) {
+  cJSON *reason = analysis_error[0] ? cJSON_CreateString(analysis_error) : cJSON_CreateNull();
+  if (!analysis || !degrees || !reason) {
+    cJSON_Delete(reason);
     cJSON_Delete(analysis);
     cJSON_Delete(degrees);
     return ANALYSIS_ALLOC;
   }
   set_motif_analysis(motif, analysis);
   set_motif_member(motif, "degrees", degrees);
+  set_motif_member(motif, "analysis_error", reason);
   return ANALYSIS_DONE;
 }
 
 /* Adds "analysis_error" to the item answer when the Composer was unavailable. */
 static int send_item_answer(struct mg_connection *conn, cJSON *item, const char *analysis_error) {
-  if (item && analysis_error) {
+  if (item && analysis_error[0]) {
     cJSON_AddStringToObject(item, "analysis_error", analysis_error);
   }
   return send_ok_with(conn, "item", item);
@@ -1115,9 +1148,9 @@ static int handle_create_item(struct mg_connection *conn) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "type, name, project_id and an object body are required");
   }
-  const char *analysis_error = NULL;
+  char analysis_error[ANALYSIS_ERROR_SIZE];
   char refusal[512] = "";
-  AnalysisOutcome analysis = analyze_motif_body((cJSON *)version_body, &analysis_error, refusal, sizeof(refusal));
+  AnalysisOutcome analysis = analyze_motif_body((cJSON *)version_body, analysis_error, refusal, sizeof(refusal));
   if (analysis != ANALYSIS_DONE) {
     cJSON_Delete(body);
     return analysis == ANALYSIS_REFUSED ? send_failure(conn, 400, refusal) : send_failure(conn, 500, "out of memory");
@@ -1245,9 +1278,9 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "an object body is required; note is a string");
   }
-  const char *analysis_error = NULL;
+  char analysis_error[ANALYSIS_ERROR_SIZE];
   char refusal[512] = "";
-  AnalysisOutcome analysis = analyze_motif_body((cJSON *)version_body, &analysis_error, refusal, sizeof(refusal));
+  AnalysisOutcome analysis = analyze_motif_body((cJSON *)version_body, analysis_error, refusal, sizeof(refusal));
   if (analysis != ANALYSIS_DONE) {
     cJSON_Delete(body);
     return analysis == ANALYSIS_REFUSED ? send_failure(conn, 400, refusal) : send_failure(conn, 500, "out of memory");
