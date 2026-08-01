@@ -1294,6 +1294,38 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
   return send_item_answer(conn, item, analysis_error);
 }
 
+/* POST /api/materials/items/<id>/reanalyze: analyzes the current version of a motif again and saves the result as a
+   new version (versions are never rewritten, R-130). A refusal writes nothing. */
+static int handle_reanalyze(struct mg_connection *conn, const char *id) {
+  cJSON *meta = NULL;
+  cJSON *version_body = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, &meta, &version_body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  const cJSON *type = cJSON_GetObjectItemCaseSensitive(meta, "type");
+  bool motif = cJSON_IsString(type) && strcmp(type->valuestring, "motif") == 0;
+  cJSON_Delete(meta);
+  if (!motif) {
+    cJSON_Delete(version_body);
+    return send_failure(conn, 400, "only motifs are analyzed");
+  }
+  char analysis_error[ANALYSIS_ERROR_SIZE];
+  char refusal[512] = "";
+  AnalysisOutcome analysis = analyze_motif_body(version_body, analysis_error, refusal, sizeof(refusal));
+  if (analysis != ANALYSIS_DONE) {
+    cJSON_Delete(version_body);
+    return analysis == ANALYSIS_REFUSED ? send_failure(conn, 400, refusal) : send_failure(conn, 500, "out of memory");
+  }
+  cJSON *item = NULL;
+  result = ursatz_gui_material_item_add_version(id, version_body, "Re-analyzed", &item);
+  cJSON_Delete(version_body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  return send_item_answer(conn, item, analysis_error);
+}
+
 static int handle_get_version(struct mg_connection *conn, const char *id, const char *number_text) {
   char *end = NULL;
   long number = strtol(number_text, &end, 10);
@@ -2832,6 +2864,9 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 3 && strcmp(segments[2], "versions") == 0) {
     return post ? handle_add_version(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "reanalyze") == 0) {
+    return post ? handle_reanalyze(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 4 && strcmp(segments[2], "versions") == 0) {
     return get ? handle_get_version(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
