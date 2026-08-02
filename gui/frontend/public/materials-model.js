@@ -328,6 +328,14 @@
     return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/versions`, request);
   }
 
+  const COMPOSER_MISSING_TEXT =
+    "The Composer is not available: motifs save without analysis, notation or variants. Rebuild the GUI (README, Building).";
+
+  /* Whether the Composer answered the status request as available. */
+  function composerAvailable(answer) {
+    return Boolean(answer && answer.ok && answer.data && answer.data.available);
+  }
+
   /* Analyzes the current version of a motif again; the answer is the new version. */
   function buildReanalyzeRequest(id) {
     return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/reanalyze`, {});
@@ -766,6 +774,8 @@
     bodyWithUse,
     buildAddVersionRequest,
     buildReanalyzeRequest,
+    COMPOSER_MISSING_TEXT,
+    composerAvailable,
     NOTE_HINT,
     formHint,
     errorField,

@@ -1120,6 +1120,12 @@ async function renderMaterialsDetail(type, id, analysisError) {
     return found ? found.name : itemId;
   };
   if (type === "motif") {
+    const composerStatus = await sendMaterialsRequest({ method: "GET", url: "/api/composer/status" });
+    if (!MaterialsModel.composerAvailable(composerStatus)) {
+      const banner = materialsElement("div", "upload-status error", MaterialsModel.COMPOSER_MISSING_TEXT);
+      banner.setAttribute("role", "alert");
+      content.insertBefore(banner, content.children[1]);
+    }
     const editor = buildMotifEditor(answer.data.body);
     content.appendChild(editor.el);
     content.appendChild(
