@@ -1006,12 +1006,27 @@ function buildMotifScore(id, item, body) {
 }
 
 /* The Composer's analysis of a motif version body, or why there is none. */
-function buildAnalysisPanel(body, analysisError) {
+function buildAnalysisPanel(body, analysisError, onReanalyzed) {
   const info = MaterialsModel.analysisRows(body && body.motif, analysisError);
   const section = materialsElement("section", "panel materials-analysis");
   section.appendChild(materialsElement("h2", "section-title", "Analysis"));
+  const statusRow = materialsElement("div", "upload-controls");
+  statusRow.appendChild(materialsElement("div", "piece-list-status", info.message));
+  const again = materialsElement("button", "", "Re-analyze");
+  again.type = "button";
+  again.addEventListener("click", async () => {
+    again.disabled = true;
+    const answer = await onReanalyzed.send();
+    if (answer.ok) {
+      onReanalyzed.done(answer.data.item.analysis_error);
+      return;
+    }
+    again.disabled = false;
+    statusRow.appendChild(materialsElement("div", "upload-status error", MaterialsModel.errorText(answer.data, "Could not re-analyze")));
+  });
+  statusRow.appendChild(again);
+  section.appendChild(statusRow);
   if (!info.analyzed) {
-    section.appendChild(materialsElement("div", "piece-list-status", info.message));
     return section;
   }
   const list = materialsElement("dl", "materials-analysis-list");
@@ -1107,7 +1122,12 @@ async function renderMaterialsDetail(type, id, analysisError) {
   if (type === "motif") {
     const editor = buildMotifEditor(answer.data.body);
     content.appendChild(editor.el);
-    content.appendChild(buildAnalysisPanel(answer.data.body, analysisError));
+    content.appendChild(
+      buildAnalysisPanel(answer.data.body, analysisError, {
+        send: () => sendMaterialsRequest(MaterialsModel.buildReanalyzeRequest(id)),
+        done: (reason) => renderMaterialsDetail(type, id, reason),
+      }),
+    );
     const score = buildMotifScore(id, item, answer.data.body);
     if (score) {
       content.appendChild(score);
