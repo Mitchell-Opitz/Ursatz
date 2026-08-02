@@ -372,6 +372,16 @@
     return typeof analysis[key] === "string" ? analysis[key] : "";
   }
 
+  /* Why a motif cannot be varied: empty when it has degrees, else the message
+   * with the reason stored with its version. */
+  function noDegreesMessage(motif) {
+    if (motif && typeof motif.degrees === "string" && motif.degrees !== "") {
+      return "";
+    }
+    const stored = motif && typeof motif.analysis_error === "string" ? motif.analysis_error : "";
+    return `No analysis yet: ${stored || "the motif was not analyzed"}. Re-analyze on the motif first.`;
+  }
+
   /* The labelled features a candidate kept, as the editor stores them. */
   function candidateFeatures(candidate) {
     const list = candidate && candidate.motive && candidate.motive.motive ? candidate.motive.motive.features : null;
@@ -422,6 +432,7 @@
     compareView,
     candidateView,
     candidateDegrees,
+    noDegreesMessage,
     candidateFeatures,
     candidateBody,
   };
