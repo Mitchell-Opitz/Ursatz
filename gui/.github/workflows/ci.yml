@@ -25,7 +25,16 @@ jobs:
           dpkg -s libsqlite3-dev pkg-config > /dev/null 2>&1 ||
             sudo apt-get install -y --no-install-recommends libsqlite3-dev pkg-config
 
+      - name: Cache compiler output
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-ccache
+
       - name: Configure
+        # The Composer's own build tree inherits the launcher from the environment.
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
         run: cmake -S . -B build
 
       - name: Build
