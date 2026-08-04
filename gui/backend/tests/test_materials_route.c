@@ -455,6 +455,148 @@ static cJSON *read_motif(const cJSON *saved) {
 }
 
 /* Rhythm and contour motifs are analyzed too, and every form stores its list as motif.degrees. */
+#ifndef _WIN32
+static bool write_stand_in(const char *name, const char *text, char *path, size_t size) {
+  char dir[512];
+  if (!getcwd(dir, sizeof(dir))) {
+    return false;
+  }
+  snprintf(path, size, "%s/%s", dir, name);
+  FILE *file = fopen(path, "wb");
+  if (!file) {
+    return false;
+  }
+  bool ok = fwrite(text, 1, strlen(text), file) == strlen(text);
+  ok = (fclose(file) == 0) && ok;
+  return ok && chmod(path, 0755) == 0;
+}
+
+static const cJSON *saved_motif(const char *item_id, int version) {
+  static cJSON *held = NULL;
+  cJSON_Delete(held);
+  char path[300];
+  int status = 0;
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/%d", item_id, version);
+  held = json_exchange("GET", path, NULL, &status);
+  return cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(held, "body"), "motif");
+}
+
+static int saved_version_count(const char *item_id) {
+  char path[300];
+  int status = 0;
+  snprintf(path, sizeof(path), "/api/materials/items/%s", item_id);
+  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  int count = cJSON_GetArraySize(
+      cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "item"), "versions"));
+  cJSON_Delete(answer);
+  return count;
+}
+
+/* The reason a motif was not analyzed is stored with its version, and Re-analyze writes a new version. */
+static void test_motif_analysis_error(void) {
+  int status = 0;
+  char project[64] = "";
+  cJSON *answer = json_exchange("GET", "/api/materials/projects", NULL, &status);
+  snprintf(project, sizeof(project), "%s",
+           string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(answer, "projects"), 0), "id"));
+  cJSON_Delete(answer);
+
+  char *original = getenv("URSATZ_GUI_COMPOSER") ? strdup(getenv("URSATZ_GUI_COMPOSER")) : NULL;
+  char crash[600];
+  char noisy[600];
+  char refuse[600];
+  bool written = write_stand_in("crash-composer.sh", "#!/bin/sh\nkill -SEGV $$\n", crash, sizeof(crash)) &&
+                 write_stand_in("noisy-composer.sh",
+                                "#!/bin/sh\necho first line >&2\necho \"the note list is odd\" >&2\nexit 3\n", noisy,
+                                sizeof(noisy)) &&
+                 write_stand_in("refusing-composer.sh", "#!/bin/sh\necho \"no such note\" >&2\nexit 1\n", refuse,
+                                sizeof(refuse));
+  check(written, "stand-in Composers are written");
+
+  /* Composer missing: saved without analysis, the reason kept with the version. */
+  setenv("URSATZ_GUI_COMPOSER", "/nonexistent/ursatz-composer", 1);
+  char *missing = create_item("motif", "NoBinary", project, kMotifBody);
+  check(missing != NULL, "a motif is saved when the Composer is missing");
+  if (!missing) {
+    return;
+  }
+  const cJSON *motif = saved_motif(missing, 1);
+  check(strcmp(string_of(motif, "analysis_error"), "composer not found") == 0 &&
+            cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(motif, "analysis")),
+        "the version stores analysis_error composer not found");
+
+  /* A crashing Composer names the signal. */
+  setenv("URSATZ_GUI_COMPOSER", crash, 1);
+  char *crashed = create_item("motif", "Crashed", project, kMotifBody);
+  check(crashed != NULL && strcmp(string_of(saved_motif(crashed, 1), "analysis_error"), "composer crashed (signal 11)") == 0,
+        "a crash is stored with its signal");
+
+  /* Any other failure keeps the last non-empty stderr line. */
+  setenv("URSATZ_GUI_COMPOSER", noisy, 1);
+  char *noisy_id = create_item("motif", "Noisy", project, kMotifBody);
+  check(noisy_id != NULL &&
+            strcmp(string_of(saved_motif(noisy_id, 1), "analysis_error"),
+                   "composer could not analyze the motif: the note list is odd") == 0,
+        "the last stderr line is stored");
+
+  /* Re-analyze with a working Composer writes a new version and clears the reason. */
+  if (original) {
+    setenv("URSATZ_GUI_COMPOSER", original, 1);
+  } else {
+    unsetenv("URSATZ_GUI_COMPOSER");
+  }
+  char path[300];
+  snprintf(path, sizeof(path), "/api/materials/items/%s/reanalyze", missing);
+  answer = json_exchange("POST", path, "", &status);
+  check(status == 200 && ok_true(answer), "re-analyze answers 200");
+  cJSON_Delete(answer);
+  check(saved_version_count(missing) == 2, "re-analyze writes a new version");
+  motif = saved_motif(missing, 2);
+  check(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(motif, "analysis")) &&
+            cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(motif, "analysis_error")),
+        "the new version is analyzed with no stored reason");
+  snprintf(path, sizeof(path), "/api/materials/items/%s", missing);
+  answer = json_exchange("GET", path, NULL, &status);
+  const cJSON *versions = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "item"), "versions");
+  check(strcmp(string_of(cJSON_GetArrayItem(versions, 1), "note"), "Re-analyzed") == 0, "the new version's note is Re-analyzed");
+  cJSON_Delete(answer);
+  check(cJSON_IsString(cJSON_GetObjectItemCaseSensitive(saved_motif(missing, 1), "analysis_error")),
+        "the first version keeps its reason");
+
+  /* A refusal is 400 and writes nothing. */
+  setenv("URSATZ_GUI_COMPOSER", refuse, 1);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/reanalyze", missing);
+  answer = json_exchange("POST", path, "", &status);
+  check(status == 400 && strstr(string_of(answer, "error"), "no such note") != NULL, "a refused re-analyze is 400 with the message");
+  cJSON_Delete(answer);
+  check(saved_version_count(missing) == 2, "a refused re-analyze writes no version");
+  if (original) {
+    setenv("URSATZ_GUI_COMPOSER", original, 1);
+  } else {
+    unsetenv("URSATZ_GUI_COMPOSER");
+  }
+
+  /* Only motifs are analyzed. */
+  char *theme = create_item("theme", "NotAMotif", project, kThemeBody);
+  check(theme != NULL, "a theme is saved");
+  if (theme) {
+    snprintf(path, sizeof(path), "/api/materials/items/%s/reanalyze", theme);
+    answer = json_exchange("POST", path, "", &status);
+    check(status == 400 && strcmp(string_of(answer, "error"), "only motifs are analyzed") == 0, "re-analyze of a theme is 400");
+    cJSON_Delete(answer);
+  }
+  snprintf(path, sizeof(path), "/api/materials/items/mot-0000000000000000/reanalyze");
+  answer = json_exchange("POST", path, "", &status);
+  check(status == 404, "re-analyze of an unknown item is 404");
+  cJSON_Delete(answer);
+  free(missing);
+  free(crashed);
+  free(noisy_id);
+  free(theme);
+  free(original);
+}
+#endif
+
 static void test_motif_forms(void) {
   char project[64] = "";
   first_project(project, sizeof(project));
@@ -1246,6 +1388,9 @@ int main(void) {
   test_items();
   test_motif_analysis();
   test_motif_refused();
+#ifndef _WIN32
+  test_motif_analysis_error();
+#endif
   test_motif_forms();
   test_motif_import();
   test_motif_render();

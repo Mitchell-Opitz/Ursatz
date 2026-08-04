@@ -35,6 +35,10 @@ add_subdirectory(external/ursatz-analyzer)
 # external project in its own build tree: its targets never meet the ones
 # above. composer_service.c starts the binary named here, or the one in
 # URSATZ_GUI_COMPOSER at run time.
+#
+# BUILD_ALWAYS ON runs the Composer's own (incremental) build on every GUI
+# build. Without it the sub-build ran once, so a moved submodule left an old
+# Composer binary behind and motifs saved without analysis (R-182).
 include(ExternalProject)
 set(URSATZ_GUI_COMPOSER_BINARY_DIR ${CMAKE_BINARY_DIR}/composer)
 set(URSATZ_GUI_COMPOSER_BINARY ${URSATZ_GUI_COMPOSER_BINARY_DIR}/cli/ursatz-composer)
@@ -44,6 +48,7 @@ ExternalProject_Add(ursatz_composer_cli
   CMAKE_ARGS -DCMAKE_BUILD_TYPE=Debug -DURSATZ_COMPOSER_BUILD_TESTS=OFF
   BUILD_COMMAND ${CMAKE_COMMAND} --build <BINARY_DIR> --target ursatz-composer
   INSTALL_COMMAND ""
+  BUILD_ALWAYS ON
   BUILD_BYPRODUCTS ${URSATZ_GUI_COMPOSER_BINARY}
 )
 add_compile_definitions(URSATZ_GUI_COMPOSER_BIN="${URSATZ_GUI_COMPOSER_BINARY}")

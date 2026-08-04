@@ -86,8 +86,13 @@ Save as new version writes a version with an optional note; the Composer's
 message for a note list it cannot read shows beside the note list and the
 input is kept. The Analysis panel under the form shows the scale degrees,
 intervals (semitones and steps), contour, rhythm and implied harmony stored
-in `motif.analysis`; a motif without one reads "Not analyzed", with the
-reason when the save said why. The helpers (`motifFormValues`,
+in `motif.analysis`. A status line above it reads "Analyzed" or "Not
+analyzed: <reason>" (the reason is stored with the version as
+`motif.analysis_error`), and Re-analyze runs the Composer on the current
+version again and saves the result as a new version with the note
+"Re-analyzed". A banner at the top of the page says when the Composer is not
+available. The Variants section says why a motif cannot be varied when it has
+no degrees. The helpers (`motifFormValues`,
 `motifFormProblems`, `buildMotifBody`, `featureProblems`, `analysisRows`) are
 in `materials-model.js`.
 
@@ -748,8 +753,15 @@ checked before they reach the argument list.
 
 - A note list or key the Composer refuses is 400 with its message, and no
   version is written.
-- Composer missing, timed out or not startable: the version is saved with
-  `analysis: null` and the answer carries `analysis_error`.
+- Composer missing, timed out, crashed or not startable: the version is saved
+  with `analysis: null` and `motif.analysis_error` holds the reason
+  (`composer not found`, `composer timed out`, `composer could not be started`,
+  `composer crashed (signal <n>)`, or `composer could not analyze the motif:
+  <last stderr line>`); `analysis_error` is `null` when the motif was analyzed.
+  The answer carries `analysis_error` too.
+- `POST /api/materials/items/<id>/reanalyze` (motifs only, else 400 `only
+  motifs are analyzed`) analyzes the current version again and writes a new
+  version with the note `Re-analyzed`. A refusal is 400 and writes nothing.
 - `rhythm` and `contour` motifs are saved with `analysis: null` until P13.
   The stored `pickup` is not passed to the Composer yet.
 
@@ -1477,7 +1489,11 @@ built (`URSATZ_BUILD_TESTS` is OFF). The Composer is a third submodule,
 `external/ursatz-composer`, pinned at PR #40 (`466b38c`). It is built by an
 `ExternalProject` in `build/composer` (its tests off), so it brings its own
 Ursatz and Analyzer; the build runs it as `ursatz-composer` and does not link
-it.
+it. The `ExternalProject` has `BUILD_ALWAYS ON`, so the Composer's own
+incremental build runs on every GUI build and a moved submodule is never left
+with an old binary. If `GET /api/composer/status` says the Composer is not
+available, motifs save without analysis: run `git submodule update --init
+--recursive` and build again.
 
 ## Tests
 

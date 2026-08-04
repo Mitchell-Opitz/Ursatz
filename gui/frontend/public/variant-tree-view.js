@@ -495,6 +495,12 @@ const VariantTreeView = (function () {
       setStatus(status, shown.length === 0 ? "No variants came out" : `Seed ${answer.data.seed}`, false);
     });
 
+    const blocked = VariantTree.noDegreesMessage(ctx.body && ctx.body.motif);
+    if (blocked) {
+      generate.disabled = true;
+      setStatus(status, blocked, true);
+    }
+
     refreshTree();
     return {
       el: section,

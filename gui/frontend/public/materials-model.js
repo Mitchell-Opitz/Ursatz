@@ -328,6 +328,19 @@
     return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/versions`, request);
   }
 
+  const COMPOSER_MISSING_TEXT =
+    "The Composer is not available: motifs save without analysis, notation or variants. Rebuild the GUI (README, Building).";
+
+  /* Whether the Composer answered the status request as available. */
+  function composerAvailable(answer) {
+    return Boolean(answer && answer.ok && answer.data && answer.data.available);
+  }
+
+  /* Analyzes the current version of a motif again; the answer is the new version. */
+  function buildReanalyzeRequest(id) {
+    return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/reanalyze`, {});
+  }
+
   const NOTE_HINT = "Pitch:duration, e.g. D4:q F4:e A4:e D5:h. r is a rest, ~ ties to the next note, | is ignored. Durations: w h q e s t, with up to two dots.";
   const MOTIF_ROLES = [
     { value: "melodic", label: "Melodic" },
@@ -660,13 +673,16 @@
 
   /* What the Composer heard, as rows {label, text} for the analysis panel.
    * `motif` is the body's motif object. A motif without an analysis gives
-   * {analyzed: false, message} (message names analysisError when given);
-   * otherwise {analyzed: true, rows}. */
+   * {analyzed: false, message} (message names the reason: analysisError when
+   * given, else the motif's stored analysis_error); otherwise
+   * {analyzed: true, message: "Analyzed", rows}. */
   function analysisRows(motif, analysisError) {
     const outer = motif && motif.analysis;
     const a = outer && outer.analysis;
     if (!a || typeof a !== "object") {
-      const reason = analysisError ? `: ${analysisError}` : "";
+      const stored = analysisError === undefined && motif && typeof motif.analysis_error === "string" ? motif.analysis_error : "";
+      const given = typeof analysisError === "string" ? analysisError : stored;
+      const reason = given ? `: ${given}` : "";
       return { analyzed: false, message: `Not analyzed${reason}`, rows: [] };
     }
     const rows = [];
@@ -706,7 +722,7 @@
       });
     }
     if (!a.implied_harmony || !Array.isArray(a.intervals)) {
-      return { analyzed: true, message: "", rows };
+      return { analyzed: true, message: "Analyzed", rows };
     }
     const candidates = a.implied_harmony && Array.isArray(a.implied_harmony.candidates) ? a.implied_harmony.candidates : [];
     rows.push({
@@ -718,7 +734,7 @@
             : "needs a key"
           : candidates.map((c) => `${c.roman_numeral} (${c.function}) ${Math.round(c.fit * 100)}%`).join(", "),
     });
-    return { analyzed: true, message: "", rows };
+    return { analyzed: true, message: "Analyzed", rows };
   }
 
   const api = {
@@ -757,6 +773,9 @@
     pickerItems,
     bodyWithUse,
     buildAddVersionRequest,
+    buildReanalyzeRequest,
+    COMPOSER_MISSING_TEXT,
+    composerAvailable,
     NOTE_HINT,
     formHint,
     errorField,
