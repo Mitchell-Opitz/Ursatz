@@ -306,6 +306,13 @@ check(savedRhythm.motif.notes === "x:q x:e x:e" && savedRhythm.motif.role === "m
 check(M.randomCandidateToBody({ motive: { analysis: {} } }, {}).motif.key === null, "a candidate without a key saves a null key");
 check(M.rerollSeed(3) === 4 && M.rerollSeed(undefined) === 0, "reroll uses the next seed");
 
+check(M.analysisRows({ analysis: null, analysis_error: "composer not found" }).message === "Not analyzed: composer not found", "the stored reason is read when no argument is given");
+check(M.analysisRows({ analysis: null, analysis_error: "stored" }, "given").message === "Not analyzed: given", "an argument wins over the stored reason");
+check(M.analysisRows({ analysis: null, analysis_error: null }).message === "Not analyzed", "no stored reason gives a bare status");
+check(M.analysisRows(heard).message === "Analyzed", "an analyzed motif reads Analyzed");
+check(M.buildReanalyzeRequest("mot-1").url === "/api/materials/items/mot-1/reanalyze" && M.buildReanalyzeRequest("mot-1").method === "POST", "re-analyze posts to the item's reanalyze route");
+check(M.composerAvailable({ ok: true, data: { available: true } }) && !M.composerAvailable({ ok: true, data: { available: false } }) && !M.composerAvailable({ ok: false }), "the Composer counts as available only when the status says so");
+
 if (failures > 0) {
   process.exit(1);
 }

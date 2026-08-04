@@ -127,6 +127,10 @@ check(!V.compareView(null).found && V.compareView({ found: true, chain: { steps:
 const linkedRows = V.treeRows({ id: "m1", name: "A", current_version: 1, derived: null, children: [{ id: "m2", name: "B", current_version: 2, derived: { kind: "motive-form", flag: "unflagged", kept: ["rhythm"], changed: ["intervals"], operations: [{ op: "invert" }], seed: null, functions: [], remoteness: 0.2, harmony: null }, children: [] }] }, false).rows;
 check(linkedRows.length === 2 && linkedRows[1].seed === null && linkedRows[1].derivation === "invert" && linkedRows[1].remoteness === "20% remote from the basic motive", "a linked form is a tree row with no seed");
 
+check(V.noDegreesMessage({ degrees: "1:q 5:e" }) === "", "a motif with degrees has no blocking message");
+check(V.noDegreesMessage({ degrees: null, analysis_error: "composer not found" }) === "No analysis yet: composer not found. Re-analyze on the motif first.", "the message carries the stored reason");
+check(V.noDegreesMessage({ degrees: null }).startsWith("No analysis yet: ") && V.noDegreesMessage(null).endsWith("Re-analyze on the motif first."), "a motif with no stored reason still says to re-analyze");
+
 if (failures > 0) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);
