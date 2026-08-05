@@ -812,7 +812,8 @@ static int handle_motifs_to_c(struct mg_connection *conn) {
 }
 
 /* POST /api/materials/motifs/import: the body is a MIDI file; ?meter= and ?key= are optional. Answers
-   {"ok":true,"notes_text":...,"meter":"4/4","key":"D minor"|null,"pickup":"0","analysis":{...}} and saves nothing. */
+   {"ok":true,"notes_text":...,"meter":"4/4","key":"C minor","moved_from":"D minor"|null,"pickup":"0",
+   "analysis":{...}} and saves nothing. The notes are moved to C; with no key found they are read as C major. */
 static int handle_import_motif(struct mg_connection *conn) {
   char meter[16];
   char key[32];
@@ -898,19 +899,46 @@ static int handle_import_motif(struct mg_connection *conn) {
   char key_text[32];
   snprintf(meter_text, sizeof(meter_text), "%d/%d", beats->valueint, unit->valueint);
   bool keyed = import_key_text(document, key_text, sizeof(key_text));
+  /* Motifs are written with C as the tonic (R-179): a key on another tonic moves the notes to C in the same mode;
+     no key found reads the notes as C major. */
+  const char *final_notes = notes_text->valuestring;
+  const char *final_key = "C major";
+  const char *moved_from = NULL;
+  char *moved_notes = NULL;
+  char c_key[16];
+  if (keyed) {
+    const char *mode = strchr(key_text, ' ') + 1;
+    snprintf(c_key, sizeof(c_key), "C %s", mode);
+    final_key = c_key;
+    if (strncmp(key_text, "C ", 2) != 0) {
+      const cJSON *degrees_text = cJSON_GetObjectItemCaseSensitive(analysis, "degrees_text");
+      ToCFailure failure = {0, ""};
+      moved_notes = degrees_to_c_notes(cJSON_IsString(degrees_text) ? degrees_text->valuestring : NULL, mode, meter_text,
+                                       pickup->valuestring, &failure);
+      if (!moved_notes) {
+        cJSON_Delete(document);
+        return send_failure(conn, failure.status, failure.message);
+      }
+      final_notes = moved_notes;
+      moved_from = key_text;
+    }
+  }
   cJSON *answer = cJSON_CreateObject();
   if (!answer) {
+    free(moved_notes);
     cJSON_Delete(document);
     return send_failure(conn, 500, "out of memory");
   }
   cJSON_AddBoolToObject(answer, "ok", 1);
-  cJSON_AddStringToObject(answer, "notes_text", notes_text->valuestring);
+  cJSON_AddStringToObject(answer, "notes_text", final_notes);
   cJSON_AddStringToObject(answer, "meter", meter_text);
-  if (keyed) {
-    cJSON_AddStringToObject(answer, "key", key_text);
+  cJSON_AddStringToObject(answer, "key", final_key);
+  if (moved_from) {
+    cJSON_AddStringToObject(answer, "moved_from", moved_from);
   } else {
-    cJSON_AddNullToObject(answer, "key");
+    cJSON_AddNullToObject(answer, "moved_from");
   }
+  free(moved_notes);
   cJSON_AddStringToObject(answer, "pickup", pickup->valuestring);
   cJSON_AddItemToObject(answer, "analysis", cJSON_DetachItemFromObjectCaseSensitive(document, "analysis"));
   cJSON_Delete(document);
