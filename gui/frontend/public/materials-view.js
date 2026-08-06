@@ -773,6 +773,48 @@ function buildMotifEditor(body) {
     importStatus.textContent = MaterialsModel.importNotice(answer.data);
   });
 
+  let legacyKey = initial.legacyKey;
+  const legacyRow = materialsElement("div", "upload-controls");
+  const legacyText = materialsElement("span", "materials-hint");
+  const rewriteButton = materialsElement("button", "", "Rewrite in C");
+  rewriteButton.type = "button";
+  const rewriteStatus = materialsElement("span", "upload-status");
+  rewriteStatus.setAttribute("role", "status");
+  legacyRow.append(legacyText, rewriteButton, rewriteStatus);
+  el.appendChild(legacyRow);
+  function showLegacy() {
+    legacyRow.hidden = !legacyKey;
+    legacyText.textContent = legacyKey ? MaterialsModel.legacyNotice(legacyKey) : "";
+  }
+  showLegacy();
+  rewriteButton.addEventListener("click", async () => {
+    rewriteStatus.classList.remove("error");
+    rewriteStatus.textContent = "";
+    if (form.value !== "full") {
+      legacyKey = null;
+      showLegacy();
+      return;
+    }
+    const request = MaterialsModel.toCRequest(body, mode.value);
+    if (!request) {
+      rewriteStatus.classList.add("error");
+      rewriteStatus.textContent = "This version has no degrees to rewrite. Re-analyze it first.";
+      return;
+    }
+    rewriteButton.disabled = true;
+    rewriteStatus.textContent = "Rewriting...";
+    const answer = await sendMaterialsRequest(request);
+    rewriteButton.disabled = false;
+    if (!answer.ok) {
+      rewriteStatus.classList.add("error");
+      rewriteStatus.textContent = MaterialsModel.errorText(answer.data, "Could not rewrite the motif in C");
+      return;
+    }
+    notes.value = answer.data.notes_text;
+    legacyKey = null;
+    showLegacy();
+  });
+
   const meter = materialsElement("input");
   meter.type = "text";
   meter.value = initial.meter;
@@ -862,6 +904,7 @@ function buildMotifEditor(body) {
       notes: notes.value,
       meter: meter.value,
       mode: mode.value,
+      legacyKey,
       pickup: pickup.value,
       harmony: harmony.value,
       features: featureRows.map((row) => ({ ...row })),

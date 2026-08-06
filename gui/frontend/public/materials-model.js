@@ -418,6 +418,26 @@
     };
   }
 
+  /* The to-c POST for a stored motif body: its degrees written in C in the stored mode. Null when the motif holds no
+   * degrees (it was never analyzed). */
+  function toCRequest(body, mode) {
+    const motif = body && body.motif ? body.motif : {};
+    if (typeof motif.degrees !== "string" || motif.degrees === "") {
+      return null;
+    }
+    return jsonRequest("POST", "/api/materials/motifs/to-c", {
+      degrees: motif.degrees,
+      mode: MOTIF_MODES.includes(mode) ? mode : "major",
+      meter: typeof motif.meter === "string" ? motif.meter : "4/4",
+      pickup: typeof motif.pickup === "string" && motif.pickup !== "" ? motif.pickup : "0",
+    });
+  }
+
+  /* The notice for a motif stored on another tonic. */
+  function legacyNotice(legacyKey) {
+    return `Written in ${legacyKey} before motifs moved to C.`;
+  }
+
   /* The line under the upload for an import answer. */
   function importNotice(answer) {
     const a = answer || {};
@@ -431,7 +451,9 @@
    * sent. The Composer judges the note list itself. */
   function motifFormProblems(values) {
     const problems = [];
-    if (String(values.notes || "").trim() === "") {
+    if (values.legacyKey) {
+      problems.push({ field: "notes", message: "Rewrite the motif in C before saving." });
+    } else if (String(values.notes || "").trim() === "") {
       problems.push({ field: "notes", message: "Enter at least one note." });
     }
     if (!/^\d{1,2}\/\d{1,2}$/.test(String(values.meter || "").trim())) {
@@ -801,6 +823,8 @@
     buildImportMidiRequest,
     importToFormValues,
     importNotice,
+    toCRequest,
+    legacyNotice,
     MOTIF_MODES,
     TONIC_HINT,
     keyMode,
