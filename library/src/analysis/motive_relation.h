@@ -26,6 +26,11 @@
  *   fragment           position (1 leading, 2 trailing, 3 middle), length, min (0 for 2)
  *   liquidate          drop, keep-rhythm (0/1), min (0 for 2)
  *   augment, diminish  ratio (0:0 for 2:1 and 1:2)
+ *   note-repeat        note (0-based), count (2 to 4)
+ *   rhythm-repeat      first, length, target (0-based note indices)
+ *   rhythm-shift       offset (ratio, later in the bar)
+ *   add-upbeat         count (1 to 3), approach (+1 from below, -1 from above)
+ *   change-meter       num, den (the new meter, den 1, 2, 4, 8 or 16)
  *
  * motive_relation_apply never changes its input. The result is as long as its notes (length is the end of the
  * last note).
@@ -41,6 +46,11 @@ typedef enum {
     MOTIVE_RELATION_LIQUIDATE,
     MOTIVE_RELATION_AUGMENT,
     MOTIVE_RELATION_DIMINISH,
+    MOTIVE_RELATION_NOTE_REPEAT,
+    MOTIVE_RELATION_RHYTHM_REPEAT,
+    MOTIVE_RELATION_RHYTHM_SHIFT,
+    MOTIVE_RELATION_ADD_UPBEAT,
+    MOTIVE_RELATION_CHANGE_METER,
     MOTIVE_RELATION_KIND_COUNT
 } MotiveRelationKind;
 
