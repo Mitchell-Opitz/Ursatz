@@ -362,15 +362,27 @@
     return form === "rhythm" ? RHYTHM_HINT : form === "contour" ? CONTOUR_HINT : NOTE_HINT;
   }
 
-  /* The editor's field values for a motif body (null for a new motif). */
+  const MOTIF_MODES = ["major", "minor"];
+  const TONIC_HINT = "Write the notes with C as the tonic. A piece sets the real key.";
+
+  /* The mode of a stored key text ("D minor" gives "minor"); "major" when there is none. */
+  function keyMode(key) {
+    const match = /^[A-Ga-g][#b]? (major|minor)$/i.exec(String(key || "").trim());
+    return match ? match[1].toLowerCase() : "major";
+  }
+
+  /* The editor's field values for a motif body (null for a new motif). legacyKey is the stored key when its tonic is
+   * not C (a motif written before motifs moved to C, R-179), else null. */
   function motifFormValues(body) {
     const motif = body && body.motif ? body.motif : {};
+    const storedKey = typeof motif.key === "string" ? motif.key.trim() : "";
     return {
       role: motif.role === "accompaniment" ? "accompaniment" : "melodic",
       form: motif.form || "full",
       notes: typeof motif.notes === "string" ? motif.notes : "",
       meter: typeof motif.meter === "string" ? motif.meter : "4/4",
-      key: typeof motif.key === "string" ? motif.key : "",
+      mode: keyMode(storedKey),
+      legacyKey: storedKey !== "" && !/^C (major|minor)$/.test(storedKey) ? storedKey : null,
       pickup: typeof motif.pickup === "string" ? motif.pickup : "0",
       harmony: typeof motif.harmony === "string" ? motif.harmony : "",
       features: Array.isArray(motif.features)
@@ -393,16 +405,26 @@
     };
   }
 
-  /* The editor's field values for an import answer {notes_text, meter, key, pickup}: a full motif. */
+  /* The editor's field values for an import answer {notes_text, meter, key, moved_from, pickup}: a full motif. The
+   * backend has already moved the notes to C. */
   function importToFormValues(answer) {
     const a = answer || {};
     return {
       form: "full",
       notes: typeof a.notes_text === "string" ? a.notes_text : "",
       meter: typeof a.meter === "string" ? a.meter : "4/4",
-      key: typeof a.key === "string" ? a.key : "",
+      mode: keyMode(a.key),
       pickup: typeof a.pickup === "string" ? a.pickup : "0",
     };
+  }
+
+  /* The line under the upload for an import answer. */
+  function importNotice(answer) {
+    const a = answer || {};
+    if (typeof a.moved_from === "string" && a.moved_from !== "") {
+      return `Moved from ${a.moved_from} to C ${keyMode(a.key)}.`;
+    }
+    return a.key_found === false ? "No key found: read as C major." : "Filled from the MIDI file.";
   }
 
   /* Problems with the form values as {field, message}; empty when it can be
@@ -414,10 +436,6 @@
     }
     if (!/^\d{1,2}\/\d{1,2}$/.test(String(values.meter || "").trim())) {
       problems.push({ field: "meter", message: "Meter looks like 4/4." });
-    }
-    const key = String(values.key || "").trim();
-    if (key !== "" && !/^[A-Ga-g][#b]? (major|minor)$/i.test(key)) {
-      problems.push({ field: "key", message: "Key looks like D minor, or leave it empty." });
     }
     if (!/^\d{1,2}(\/\d{1,2})?$/.test(String(values.pickup || "").trim())) {
       problems.push({ field: "pickup", message: "Pickup is beats as 0, 1 or 1/2." });
@@ -486,7 +504,7 @@
         form: values.form,
         notes: String(values.notes).trim(),
         meter: String(values.meter).trim(),
-        key: String(values.key || "").trim() === "" ? null : String(values.key).trim(),
+        key: `C ${MOTIF_MODES.includes(values.mode) ? values.mode : "major"}`,
         pickup: String(values.pickup || "").trim() === "" ? "0" : String(values.pickup).trim(),
         harmony: String(values.harmony || "").trim() === "" ? null : String(values.harmony).trim(),
         features: (values.features || []).map((feature) => ({
@@ -782,6 +800,10 @@
     HARMONY_HINT,
     buildImportMidiRequest,
     importToFormValues,
+    importNotice,
+    MOTIF_MODES,
+    TONIC_HINT,
+    keyMode,
     MOTIF_ROLES,
     MOTIF_FORMS,
     motifFormValues,

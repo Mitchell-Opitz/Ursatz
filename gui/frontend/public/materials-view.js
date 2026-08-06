@@ -735,6 +735,7 @@ function buildMotifEditor(body) {
   form.addEventListener("change", () => {
     hint.textContent = MaterialsModel.formHint(form.value);
   });
+  el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.TONIC_HINT));
 
   const importRow = materialsElement("div", "upload-controls");
   const importButton = materialsElement("button", "", "Upload MIDI");
@@ -767,9 +768,9 @@ function buildMotifEditor(body) {
     hint.textContent = MaterialsModel.formHint(filled.form);
     notes.value = filled.notes;
     meter.value = filled.meter;
-    key.value = filled.key;
+    mode.value = filled.mode;
     pickup.value = filled.pickup;
-    importStatus.textContent = "Filled from the MIDI file.";
+    importStatus.textContent = MaterialsModel.importNotice(answer.data);
   });
 
   const meter = materialsElement("input");
@@ -778,11 +779,14 @@ function buildMotifEditor(body) {
   meter.size = 6;
   field("Meter", meter, "meter");
 
-  const key = materialsElement("input");
-  key.type = "text";
-  key.value = initial.key;
-  key.placeholder = "D minor (optional)";
-  field("Key", key, "key");
+  const mode = materialsElement("select");
+  for (const option of MaterialsModel.MOTIF_MODES) {
+    const o = materialsElement("option", "", option);
+    o.value = option;
+    mode.appendChild(o);
+  }
+  mode.value = initial.mode;
+  field("Mode", mode, "mode");
 
   const pickup = materialsElement("input");
   pickup.type = "text";
@@ -857,7 +861,7 @@ function buildMotifEditor(body) {
       form: form.value,
       notes: notes.value,
       meter: meter.value,
-      key: key.value,
+      mode: mode.value,
       pickup: pickup.value,
       harmony: harmony.value,
       features: featureRows.map((row) => ({ ...row })),

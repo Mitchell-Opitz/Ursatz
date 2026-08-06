@@ -933,6 +933,7 @@ static int handle_import_motif(struct mg_connection *conn) {
   cJSON_AddStringToObject(answer, "notes_text", final_notes);
   cJSON_AddStringToObject(answer, "meter", meter_text);
   cJSON_AddStringToObject(answer, "key", final_key);
+  cJSON_AddBoolToObject(answer, "key_found", keyed);
   if (moved_from) {
     cJSON_AddStringToObject(answer, "moved_from", moved_from);
   } else {
@@ -1295,6 +1296,16 @@ static int handle_render(struct mg_connection *conn) {
   return send_render_answer(conn, xml, playback);
 }
 
+/* A motif body must name C as its tonic (R-179): "C major" or "C minor". Bodies without a motif are left alone. */
+static bool motif_tonic_ok(const cJSON *version_body) {
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+  if (!cJSON_IsObject(motif)) {
+    return true;
+  }
+  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
+  return cJSON_IsString(key) && (strcmp(key->valuestring, "C major") == 0 || strcmp(key->valuestring, "C minor") == 0);
+}
+
 static int handle_create_item(struct mg_connection *conn) {
   int status = 0;
   cJSON *body = read_json_body(conn, &status);
@@ -1309,6 +1320,10 @@ static int handle_create_item(struct mg_connection *conn) {
   if (bad || !type || !name || !project_id || !cJSON_IsObject(version_body)) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "type, name, project_id and an object body are required");
+  }
+  if (!motif_tonic_ok(version_body)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "motifs are written with C as the tonic");
   }
   char analysis_error[ANALYSIS_ERROR_SIZE];
   char refusal[512] = "";
@@ -1439,6 +1454,10 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
   if (bad || !cJSON_IsObject(version_body)) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "an object body is required; note is a string");
+  }
+  if (!motif_tonic_ok(version_body)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "motifs are written with C as the tonic");
   }
   char analysis_error[ANALYSIS_ERROR_SIZE];
   char refusal[512] = "";
