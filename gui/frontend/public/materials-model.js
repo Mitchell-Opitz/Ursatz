@@ -569,19 +569,19 @@
   const RANDOM_DEFAULT_COUNT = 6;
   const RANDOM_MAX_COUNT = 16;
 
-  /* The random motifs POST for the dialog values {mode, meter, key, form, style_id, count, seed}. Empty key, style and
-   * seed are left out; count defaults to 6. */
+  /* The random motifs POST for the dialog values {mode, meter, form, style_id, count, seed}. The key is always C in
+   * the chosen mode (R-179; without a key the Composer gives A minor for minor). Empty style and seed are left out;
+   * count defaults to 6. */
   function randomRequest(values) {
     const v = values || {};
+    const mode = v.mode === "minor" ? "minor" : "major";
     const request = {
-      mode: v.mode === "minor" ? "minor" : "major",
+      mode,
+      key: `C ${mode}`,
       meter: String(v.meter || "").trim(),
       form: v.form === "rhythm" || v.form === "contour" ? v.form : "full",
       count: Number.isInteger(Number(v.count)) && Number(v.count) >= 1 ? Math.min(Number(v.count), RANDOM_MAX_COUNT) : RANDOM_DEFAULT_COUNT,
     };
-    if (String(v.key || "").trim() !== "") {
-      request.key = String(v.key).trim();
-    }
     if (v.role === "accompaniment") {
       request.role = "accompaniment";
     }
@@ -600,10 +600,6 @@
     const problems = [];
     if (!/^\d{1,2}\/\d{1,2}$/.test(String(v.meter || "").trim())) {
       problems.push({ field: "meter", message: "Meter looks like 4/4." });
-    }
-    const key = String(v.key || "").trim();
-    if (key !== "" && !/^[A-Ga-g][#b]? (major|minor)$/.test(key)) {
-      problems.push({ field: "key", message: "Key looks like D minor, or leave it empty." });
     }
     const seed = String(v.seed === undefined || v.seed === null ? "" : v.seed).trim();
     if (seed !== "" && !/^\d{1,10}$/.test(seed)) {

@@ -248,7 +248,6 @@ function buildRandomMotifs(statusEl, reload) {
   }
   const mode = field("Mode", select([["major", "Major"], ["minor", "Minor"]]));
   const meter = field("Meter", input("4/4", "4/4"));
-  const key = field("Key", input("optional, e.g. D minor"));
   const formSelect = field("Form", select(MaterialsModel.MOTIF_FORMS.map((f) => [f.value, f.label])));
   const style = field("Style", select([["", "No style"]]));
   const count = field("Count", input("6", "6"));
@@ -273,7 +272,6 @@ function buildRandomMotifs(statusEl, reload) {
     return {
       mode: mode.value,
       meter: meter.value,
-      key: key.value,
       form: formSelect.value,
       style_id: style.value,
       count: count.value.trim() === "" ? 6 : count.value.trim(),
