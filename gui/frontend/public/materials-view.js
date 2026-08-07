@@ -1008,8 +1008,7 @@ function renderNewMotif(draftName, draftProject) {
   );
 }
 
-/* The score and playback of a motif version in the score workspace, with a render key select in the header. Nothing
- * here is saved: the key only changes how the stored degrees are sounded. */
+/* The score and playback of a motif version in the score workspace, sounded in its stored key. Nothing here is saved. */
 function buildMotifScore(id, item, body) {
   const motif = (body && body.motif) || {};
   const section = materialsElement("section", "panel materials-score");
@@ -1017,35 +1016,20 @@ function buildMotifScore(id, item, body) {
     return null;
   }
   const mountEl = materialsElement("div", "materials-score-mount");
-  const keySelect = materialsElement("select");
-  const keys = MaterialsModel.RENDER_KEYS.slice();
-  if (typeof motif.key === "string" && motif.key !== "" && !keys.includes(motif.key)) {
-    keys.unshift(motif.key);
-  }
-  for (const key of keys) {
-    const o = materialsElement("option", "", key);
-    o.value = key;
-    keySelect.appendChild(o);
-  }
-  keySelect.value = typeof motif.key === "string" && motif.key !== "" ? motif.key : "C major";
-  const keyLabel = materialsElement("label", "filter-field", "Render key ");
-  keyLabel.appendChild(keySelect);
   let workspace = null;
   function mountScore() {
     if (workspace) {
       workspace.destroy();
     }
     mountEl.innerHTML = "";
-    const urls = MaterialsModel.versionScoreUrls(id, item.current_version, keySelect.value);
+    const urls = MaterialsModel.versionScoreUrls(id, item.current_version);
     workspace = ScoreWorkspace.mount(mountEl, {
       title: item.name,
-      subtitle: `${motif.form || "full"} motif · v${item.current_version} · ${keySelect.value}`,
+      subtitle: `${motif.form || "full"} motif · v${item.current_version} · ${motif.key || "C major"}`,
       musicxmlUrl: urls.musicxmlUrl,
       playbackUrl: urls.playbackUrl,
-      headerExtra: keyLabel,
     });
   }
-  keySelect.addEventListener("change", mountScore);
   section.appendChild(materialsElement("h2", "section-title", "Score"));
   section.appendChild(mountEl);
   mountScore();
