@@ -31,6 +31,12 @@
  *   rhythm-shift       offset (ratio, later in the bar)
  *   add-upbeat         count (1 to 3), approach (+1 from below, -1 from above)
  *   change-meter       num, den (the new meter, den 1, 2, 4, 8 or 16)
+ *   add-interval       interval (1-based), steps (scale steps from the note before the interval, not 0)
+ *   omit-interval      interval (1-based; the note after it goes)
+ *   ancillary-fill     interval (1-based), kind (0 passing notes, 1 neighbor)
+ *   condense           first, last (0-based note indices), ratio (below 1)
+ *   repeat-feature     feature (0-based), times (1 or 2), steps
+ *   shift-feature      feature (0-based), offset (ratio)
  *
  * motive_relation_apply never changes its input. The result is as long as its notes (length is the end of the
  * last note).
@@ -51,6 +57,12 @@ typedef enum {
     MOTIVE_RELATION_RHYTHM_SHIFT,
     MOTIVE_RELATION_ADD_UPBEAT,
     MOTIVE_RELATION_CHANGE_METER,
+    MOTIVE_RELATION_ADD_INTERVAL,
+    MOTIVE_RELATION_OMIT_INTERVAL,
+    MOTIVE_RELATION_ANCILLARY_FILL,
+    MOTIVE_RELATION_CONDENSE,
+    MOTIVE_RELATION_REPEAT_FEATURE,
+    MOTIVE_RELATION_SHIFT_FEATURE,
     MOTIVE_RELATION_KIND_COUNT
 } MotiveRelationKind;
 
