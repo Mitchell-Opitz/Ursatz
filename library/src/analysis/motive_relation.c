@@ -945,7 +945,7 @@ static void adapt_melody(const MotiveSketch *before, MotiveSketch *sketch) {
         if (has_pc(pcs, count, pitch_class(note->pitch))) {
             continue;
         }
-        int preferred = i > 0 && note->pitch < before->notes[i - 1].pitch ? -1 : 1;
+        int preferred = i > 0 && before->notes[i].pitch < before->notes[i - 1].pitch ? -1 : 1;
         int nearest = -1;
         int chosen = -1;
         for (int distance = 1; distance <= 12 && chosen < 0; distance++) {
@@ -1222,6 +1222,71 @@ static MotiveRelationResult apply_counter_line(const MotiveSketch *in, const Mot
     return MOTIVE_RELATION_OK;
 }
 
+/*
+ * The dominant form (ch. V): I becomes V; I-V, I-IV, I-II and any other harmony starting on I become V-I (its first
+ * two chords' onsets); I-V-I becomes V-I-V. The melody moves a tonal fourth down, or a fifth up when that is out of
+ * range, keeping rhythm and contour, and is then adapted to the new chords.
+ */
+static MotiveRelationResult apply_dominant_form(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                MotiveSketch *out) {
+    (void)in;
+    (void)step;
+    MotiveRelationResult ready = prepare_harmony(out);
+    if (ready != MOTIVE_RELATION_OK) {
+        return ready;
+    }
+    if (out->chords[0].degree != 1 || out->chords[0].alteration != 0) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    MotiveSketch before = *out;
+    size_t n = out->chord_count;
+    int degrees[3];
+    size_t count;
+    if (n == 1) {
+        degrees[0] = 5;
+        count = 1;
+    } else if (n == 3 && out->chords[1].degree == 5 && out->chords[2].degree == 1) {
+        degrees[0] = 5;
+        degrees[1] = 1;
+        degrees[2] = 5;
+        count = 3;
+    } else {
+        degrees[0] = 5;
+        degrees[1] = 1;
+        count = 2;
+    }
+    for (size_t c = 0; c < count; c++) {
+        out->chords[c].degree = degrees[c];
+        out->chords[c].alteration = 0;
+        out->chords[c].inversion = 0;
+        out->chords[c].seventh = false;
+    }
+    out->chord_count = count;
+    static const long MOVES[2] = {-3, 4};
+    bool moved = false;
+    for (int m = 0; m < 2 && !moved; m++) {
+        int pitches[MOTIVE_SKETCH_MAX_NOTES];
+        moved = true;
+        for (size_t i = 0; i < before.note_count && moved; i++) {
+            int alteration;
+            long at = motive_sketch_step(&before, before.notes[i].pitch, &alteration);
+            long pitch = motive_sketch_pitch_at_step(&before, at + MOVES[m], alteration);
+            moved = midi(pitch);
+            pitches[i] = (int)pitch;
+        }
+        if (moved) {
+            for (size_t i = 0; i < before.note_count; i++) {
+                out->notes[i].pitch = pitches[i];
+            }
+        }
+    }
+    if (!moved) {
+        return MOTIVE_RELATION_RANGE;
+    }
+    adapt_melody(&before, out);
+    return MOTIVE_RELATION_OK;
+}
+
 /* --- the catalog ------------------------------------------------------------------------------ */
 
 static const Entry TABLE[] = {
@@ -1251,6 +1316,7 @@ static const Entry TABLE[] = {
     {"harmony-substitute", 3, 2, apply_harmony_substitute},
     {"passing-harmony", 1, 2, apply_passing_harmony},
     {"counter-line", 0, 2, apply_counter_line},
+    {"dominant-form", 0, 2, apply_dominant_form},
 };
 
 typedef char table_has_every_kind[sizeof(TABLE) / sizeof(TABLE[0]) == MOTIVE_RELATION_KIND_COUNT ? 1 : -1];

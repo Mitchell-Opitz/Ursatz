@@ -43,6 +43,7 @@
  *   harmony-substitute chord (0-based), degree, then (a second degree, 0 for none)
  *   passing-harmony    chord (0-based)
  *   counter-line
+ *   dominant-form      (ch. V: the chords and the melody in the dominant)
  *
  * A harmony relation needs a scale. A sketch without chords is given its best implied chord at 0 first, so its
  * result has chords. A harmony relation then adapts the melody to the chords it changed: a note on a beat whose chord
@@ -80,6 +81,7 @@ typedef enum {
     MOTIVE_RELATION_HARMONY_SUBSTITUTE,
     MOTIVE_RELATION_PASSING_HARMONY,
     MOTIVE_RELATION_COUNTER_LINE,
+    MOTIVE_RELATION_DOMINANT_FORM,
     MOTIVE_RELATION_KIND_COUNT
 } MotiveRelationKind;
 
