@@ -73,7 +73,7 @@ A motif's detail holds the editor; New on the Motifs view opens the same
 editor empty, and the first Save creates the motif (it needs a name and a
 project). The form has the role (melodic or accompaniment), the form (only
 full can be chosen; rhythm and contour are shown disabled, P13), the note
-list with its syntax hint, the meter, an optional key, the pickup in exact
+list with its syntax hint, the meter, a Mode select (major or minor), the pickup in exact
 beats (`0`, `1` or `1/2`), an optional Harmony field and a features table
 (label of 1 to 8 characters, first and last note counted from 1; rows are
 added and removed in place). Harmony is the motif's own chords as the Composer
@@ -82,6 +82,16 @@ for an altered root, figures `6`, `64`, `7`, `65`, `43`, `42`, and `@` the
 onset in beats; the first chord needs no onset; up to 8 chords, at most 200
 characters; empty means none). A chord the Composer cannot read shows its
 message under the Harmony field.
+
+Motifs are written with C as the tonic (R-179): the note list is C-based and
+the Mode select sets major or minor, so every motif is stored with the key
+`C major` or `C minor`. A piece sets the real key. Upload MIDI moves the notes
+to C and says so (`Moved from D minor to C minor.`, or `No key found: read as
+C major.`). A motif saved before this change keeps its old key: the editor
+shows `Written in D minor before motifs moved to C.` with a Rewrite in C
+button that writes the stored degrees in C, and saving waits until it is
+rewritten. The score and playback always use the stored key.
+
 Save as new version writes a version with an optional note; the Composer's
 message for a note list it cannot read shows beside the note list and the
 input is kept. The Analysis panel under the form shows the scale degrees,
@@ -762,14 +772,24 @@ checked before they reach the argument list.
 - `POST /api/materials/items/<id>/reanalyze` (motifs only, else 400 `only
   motifs are analyzed`) analyzes the current version again and writes a new
   version with the note `Re-analyzed`. A refusal is 400 and writes nothing.
+- A motif body whose `key` is not `C major` or `C minor` is 400 `motifs are
+  written with C as the tonic`, checked before the Composer runs (re-analyze
+  keeps an older motif's key).
+- `POST /api/materials/motifs/to-c` `{degrees, mode, meter, pickup?}` writes a
+  full motif's degrees as C notes: `motive <file> --format degrees --key "C
+  <mode>" --meter <m> --pickup <p> --json`, answering `{ok, notes_text}`.
+  `degrees` is 1 to 4000 characters and `mode` `major` or `minor`.
+- `POST /api/materials/motifs/import` answers the notes in C: `{notes_text,
+  meter, key: "C <mode>", moved_from: "D minor" | null, key_found, pickup,
+  analysis}`. With no key found the notes are unchanged and the key is `C
+  major`.
 - `rhythm` and `contour` motifs are saved with `analysis: null` until P13.
   The stored `pickup` is not passed to the Composer yet.
 
 #### Motif score and playback
 
 A motif's stored `motif.degrees` is shown in the score workspace and sounded
-in any of the 24 keys. Nothing is saved; the key only changes how the stored
-list is sounded.
+in the motif's stored key (C major or C minor). Nothing is saved.
 
 - `POST /api/materials/render` takes `{form, degrees, meter, key?, pickup?,
   render_key?, tempo?, role?, harmony?, features?}` (`form` `full`, `rhythm` or `contour`;
@@ -786,9 +806,10 @@ list is sounded.
 - `GET /api/materials/items/<id>/versions/<n>/score?key=` answers MusicXML
   and `.../playback?key=` answers the playback JSON for that stored version;
   `key` defaults to the motif's own key, and a version without degrees is 404.
-- The motif detail mounts `ScoreWorkspace` with these URLs and a render key
-  select in the header. `MaterialsModel.renderRequest(body, renderKey)` builds
-  the POST for an unsaved candidate.
+- The motif detail mounts `ScoreWorkspace` with these URLs. The routes still
+  accept `render_key` and `?key=` (pieces may use them), but the motif detail
+  sends neither. `MaterialsModel.renderRequest(body)` builds the POST for an
+  unsaved candidate.
 
 #### Variant tree
 
@@ -859,11 +880,11 @@ remoteness is measured from the basic motive, not from the parent.
 
 #### Random motifs
 
-The Motifs view has a Random button. Its form takes a mode (major or minor), a meter, an optional key, a form (full,
+The Motifs view has a Random button. Its form takes a mode (major or minor), a meter, a form (full,
 rhythm or contour), an optional style (from the styles list), a count (default 6) and an optional seed. Generate lists
 the candidates; each has Play (rendered by the Composer into the score workspace, nothing stored), Reroll (that one
 again with the next seed) and Save (a name, a project; the role comes from the form), which creates a motif item with
-the candidate's notes text, key, meter and pickup. The backend fills in the analysis and degrees as for any motif.
+the candidate's notes text, key, meter and pickup. Every request is drawn in C (`key: "C <mode>"`). The backend fills in the analysis and degrees as for any motif.
 
 - `POST /api/materials/motifs/random` `{mode, meter, key?, form?, role?, style_id?, count?, seed?}` runs the Composer's
   `random-motive` and answers its JSON (`seed`, `motives`) plus `ok`. `mode` is `major` or `minor`, `meter` is like
