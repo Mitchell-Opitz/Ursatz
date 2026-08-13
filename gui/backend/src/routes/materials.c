@@ -677,8 +677,143 @@ static bool import_key_text(const cJSON *document, char *out, size_t out_size) {
   return true;
 }
 
+/* ---- degrees to C ------------------------------------------------------ */
+
+typedef struct {
+  int status;
+  char message[512];
+} ToCFailure;
+
+static void to_c_fail(ToCFailure *failure, int status, const char *message) {
+  failure->status = status;
+  snprintf(failure->message, sizeof(failure->message), "%s", message);
+}
+
+/* Writes a full motif's degree list as C notes in mode ("major" or "minor"): the Composer reads the degrees in
+   "C <mode>" and answers analysis.notes_text. Returns the notes text (caller frees), or NULL with failure set. */
+static char *degrees_to_c_notes(const char *degrees, const char *mode, const char *meter, const char *pickup,
+                                ToCFailure *failure) {
+  size_t length = degrees ? strlen(degrees) : 0;
+  if (length == 0 || length > 4000) {
+    to_c_fail(failure, 400, "degrees must be a list of 1 to 4000 characters");
+    return NULL;
+  }
+  if (!mode || (strcmp(mode, "major") != 0 && strcmp(mode, "minor") != 0)) {
+    to_c_fail(failure, 400, "mode must be major or minor");
+    return NULL;
+  }
+  if (!meter || !analysis_meter_ok(meter) || !pickup || !analysis_pickup_ok(pickup)) {
+    to_c_fail(failure, 400, "meter must look like 4/4 and pickup like 1 or 1/2");
+    return NULL;
+  }
+  const char *tmp_dir = getenv("TMPDIR");
+  char path[512];
+  if (!tmp_dir || tmp_dir[0] != '/' || snprintf(path, sizeof(path), "%s/ursatz-to-c-XXXXXX", tmp_dir) >= (int)sizeof(path)) {
+    snprintf(path, sizeof(path), "/tmp/ursatz-to-c-XXXXXX");
+  }
+  int fd = mkstemp(path);
+  if (fd < 0) {
+    to_c_fail(failure, 500, "could not write the list for the Composer");
+    return NULL;
+  }
+  bool written = write(fd, degrees, length) == (ssize_t)length;
+  close(fd);
+  if (!written) {
+    unlink(path);
+    to_c_fail(failure, 500, "could not write the list for the Composer");
+    return NULL;
+  }
+  char key[16];
+  snprintf(key, sizeof(key), "C %s", mode);
+  const char *args[14];
+  int n = 0;
+  args[n++] = "motive";
+  args[n++] = path;
+  args[n++] = "--format";
+  args[n++] = "degrees";
+  args[n++] = "--key";
+  args[n++] = key;
+  args[n++] = "--meter";
+  args[n++] = meter;
+  args[n++] = "--pickup";
+  args[n++] = pickup;
+  args[n++] = "--json";
+  args[n] = NULL;
+  UrsatzGuiComposerOutput out = {0, NULL, NULL};
+  UrsatzGuiComposerResult result = ursatz_gui_composer_run(args, &out);
+  unlink(path);
+  if (result == URSATZ_GUI_COMPOSER_ERR_NO_BINARY) {
+    to_c_fail(failure, 503, "composer not found");
+    return NULL;
+  }
+  if (result == URSATZ_GUI_COMPOSER_ERR_TIMEOUT) {
+    to_c_fail(failure, 504, "composer timed out");
+    return NULL;
+  }
+  if (result != URSATZ_GUI_COMPOSER_OK) {
+    to_c_fail(failure, 500, "composer could not be started");
+    return NULL;
+  }
+  char *notes = NULL;
+  if (out.exit_status == 1 || out.exit_status == 2) {
+    char message[512];
+    snprintf(message, sizeof(message), "%s", out.stderr_text[0] ? out.stderr_text : "composer could not read the degrees");
+    size_t end = strlen(message);
+    while (end > 0 && (message[end - 1] == '\n' || message[end - 1] == '\r')) {
+      message[--end] = '\0';
+    }
+    to_c_fail(failure, 400, message);
+  } else {
+    cJSON *document = out.exit_status == 0 ? cJSON_Parse(out.stdout_text) : NULL;
+    const cJSON *text = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "analysis"), "notes_text");
+    if (cJSON_IsString(text)) {
+      notes = strdup(text->valuestring);
+    }
+    cJSON_Delete(document);
+    if (!notes) {
+      to_c_fail(failure, 500, "composer could not write the motif in C");
+    }
+  }
+  ursatz_gui_composer_output_destroy(&out);
+  return notes;
+}
+
+/* POST /api/materials/motifs/to-c {degrees, mode, meter, pickup?}: answers {"ok":true,"notes_text":...} and saves
+   nothing. Full motifs only; rhythm and contour lists hold no pitches. */
+static int handle_motifs_to_c(struct mg_connection *conn) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  const char *degrees = optional_string(body, "degrees", &bad);
+  const char *mode = optional_string(body, "mode", &bad);
+  const char *meter = optional_string(body, "meter", &bad);
+  const char *pickup = optional_string(body, "pickup", &bad);
+  if (bad) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "degrees, mode, meter and pickup must be text");
+  }
+  ToCFailure failure = {0, ""};
+  char *notes = degrees_to_c_notes(degrees, mode, meter, pickup ? pickup : "0", &failure);
+  cJSON_Delete(body);
+  if (!notes) {
+    return send_failure(conn, failure.status, failure.message);
+  }
+  cJSON *answer = cJSON_CreateObject();
+  if (!answer || !cJSON_AddBoolToObject(answer, "ok", 1) || !cJSON_AddStringToObject(answer, "notes_text", notes)) {
+    cJSON_Delete(answer);
+    free(notes);
+    return send_failure(conn, 500, "out of memory");
+  }
+  free(notes);
+  return send_object(conn, answer);
+}
+
 /* POST /api/materials/motifs/import: the body is a MIDI file; ?meter= and ?key= are optional. Answers
-   {"ok":true,"notes_text":...,"meter":"4/4","key":"D minor"|null,"pickup":"0","analysis":{...}} and saves nothing. */
+   {"ok":true,"notes_text":...,"meter":"4/4","key":"C minor","moved_from":"D minor"|null,"pickup":"0",
+   "analysis":{...}} and saves nothing. The notes are moved to C; with no key found they are read as C major. */
 static int handle_import_motif(struct mg_connection *conn) {
   char meter[16];
   char key[32];
@@ -764,19 +899,47 @@ static int handle_import_motif(struct mg_connection *conn) {
   char key_text[32];
   snprintf(meter_text, sizeof(meter_text), "%d/%d", beats->valueint, unit->valueint);
   bool keyed = import_key_text(document, key_text, sizeof(key_text));
+  /* Motifs are written with C as the tonic (R-179): a key on another tonic moves the notes to C in the same mode;
+     no key found reads the notes as C major. */
+  const char *final_notes = notes_text->valuestring;
+  const char *final_key = "C major";
+  const char *moved_from = NULL;
+  char *moved_notes = NULL;
+  char c_key[16];
+  if (keyed) {
+    const char *mode = strchr(key_text, ' ') + 1;
+    snprintf(c_key, sizeof(c_key), "C %s", mode);
+    final_key = c_key;
+    if (strncmp(key_text, "C ", 2) != 0) {
+      const cJSON *degrees_text = cJSON_GetObjectItemCaseSensitive(analysis, "degrees_text");
+      ToCFailure failure = {0, ""};
+      moved_notes = degrees_to_c_notes(cJSON_IsString(degrees_text) ? degrees_text->valuestring : NULL, mode, meter_text,
+                                       pickup->valuestring, &failure);
+      if (!moved_notes) {
+        cJSON_Delete(document);
+        return send_failure(conn, failure.status, failure.message);
+      }
+      final_notes = moved_notes;
+      moved_from = key_text;
+    }
+  }
   cJSON *answer = cJSON_CreateObject();
   if (!answer) {
+    free(moved_notes);
     cJSON_Delete(document);
     return send_failure(conn, 500, "out of memory");
   }
   cJSON_AddBoolToObject(answer, "ok", 1);
-  cJSON_AddStringToObject(answer, "notes_text", notes_text->valuestring);
+  cJSON_AddStringToObject(answer, "notes_text", final_notes);
   cJSON_AddStringToObject(answer, "meter", meter_text);
-  if (keyed) {
-    cJSON_AddStringToObject(answer, "key", key_text);
+  cJSON_AddStringToObject(answer, "key", final_key);
+  cJSON_AddBoolToObject(answer, "key_found", keyed);
+  if (moved_from) {
+    cJSON_AddStringToObject(answer, "moved_from", moved_from);
   } else {
-    cJSON_AddNullToObject(answer, "key");
+    cJSON_AddNullToObject(answer, "moved_from");
   }
+  free(moved_notes);
   cJSON_AddStringToObject(answer, "pickup", pickup->valuestring);
   cJSON_AddItemToObject(answer, "analysis", cJSON_DetachItemFromObjectCaseSensitive(document, "analysis"));
   cJSON_Delete(document);
@@ -1133,6 +1296,16 @@ static int handle_render(struct mg_connection *conn) {
   return send_render_answer(conn, xml, playback);
 }
 
+/* A motif body must name C as its tonic (R-179): "C major" or "C minor". Bodies without a motif are left alone. */
+static bool motif_tonic_ok(const cJSON *version_body) {
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+  if (!cJSON_IsObject(motif)) {
+    return true;
+  }
+  const cJSON *key = cJSON_GetObjectItemCaseSensitive(motif, "key");
+  return cJSON_IsString(key) && (strcmp(key->valuestring, "C major") == 0 || strcmp(key->valuestring, "C minor") == 0);
+}
+
 static int handle_create_item(struct mg_connection *conn) {
   int status = 0;
   cJSON *body = read_json_body(conn, &status);
@@ -1147,6 +1320,10 @@ static int handle_create_item(struct mg_connection *conn) {
   if (bad || !type || !name || !project_id || !cJSON_IsObject(version_body)) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "type, name, project_id and an object body are required");
+  }
+  if (!motif_tonic_ok(version_body)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "motifs are written with C as the tonic");
   }
   char analysis_error[ANALYSIS_ERROR_SIZE];
   char refusal[512] = "";
@@ -1277,6 +1454,10 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
   if (bad || !cJSON_IsObject(version_body)) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "an object body is required; note is a string");
+  }
+  if (!motif_tonic_ok(version_body)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "motifs are written with C as the tonic");
   }
   char analysis_error[ANALYSIS_ERROR_SIZE];
   char refusal[512] = "";
@@ -3265,6 +3446,9 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
   }
   if (count == 2 && strcmp(segments[0], "motifs") == 0 && strcmp(segments[1], "random") == 0) {
     return strcmp(method, "POST") == 0 ? handle_random_motifs(conn) : send_method_not_allowed(conn);
+  }
+  if (count == 2 && strcmp(segments[0], "motifs") == 0 && strcmp(segments[1], "to-c") == 0) {
+    return strcmp(method, "POST") == 0 ? handle_motifs_to_c(conn) : send_method_not_allowed(conn);
   }
   if (count == 2 && strcmp(segments[0], "motifs") == 0 && strcmp(segments[1], "import") == 0) {
     return strcmp(method, "POST") == 0 ? handle_import_motif(conn) : send_method_not_allowed(conn);

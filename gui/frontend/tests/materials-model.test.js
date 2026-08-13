@@ -97,11 +97,15 @@ const body = {
   },
 };
 const values = M.motifFormValues(body);
-check(values.role === "accompaniment" && values.key === "D minor" && values.pickup === "1/2", "form values read the motif");
+check(values.role === "accompaniment" && values.mode === "minor" && values.pickup === "1/2", "form values read the motif and the mode of its key");
+check(values.legacyKey === "D minor", "a key on another tonic is the legacy key");
+check(M.motifFormValues({ motif: { key: "C minor" } }).legacyKey === null && M.motifFormValues({ motif: { key: "C major" } }).mode === "major", "a key on C is not legacy");
+check(M.motifFormValues({ motif: { key: "Eb major" } }).legacyKey === "Eb major" && M.motifFormValues({ motif: { key: null } }).legacyKey === null && M.motifFormValues(null).mode === "major", "mode defaults to major and no key is not legacy");
+check(same(M.MOTIF_MODES, ["major", "minor"]) && M.TONIC_HINT.startsWith("Write the notes with C as the tonic"), "the modes and the tonic hint");
 check(same(values.features, [{ label: "a", first: 1, last: 2 }]), "features show note numbers from 1");
 check(values.harmony === "" && M.motifFormValues({ motif: { harmony: "I V6@2" } }).harmony === "I V6@2", "form values read the harmony");
-check(M.motifFormProblems({ ...values, harmony: "I V6@2 I@3" }).length === 0, "a harmony is fine");
-check(M.motifFormProblems({ ...values, harmony: "I ".repeat(101) })[0].field === "harmony", "a harmony over 200 characters is a problem");
+check(M.motifFormProblems({ ...values, legacyKey: null, harmony: "I V6@2 I@3" }).length === 0, "a harmony is fine");
+check(M.motifFormProblems({ ...values, legacyKey: null, harmony: "I ".repeat(101) })[0].field === "harmony", "a harmony over 200 characters is a problem");
 check(M.buildMotifBody({ ...values, harmony: " I V6@2 " }, null).motif.harmony === "I V6@2", "the body holds the trimmed harmony");
 check(M.buildMotifBody({ ...values, harmony: "  " }, null).motif.harmony === null, "an empty harmony is stored as null");
 check(M.newItemBody("motif").motif.harmony === null, "a new motif has no harmony");
@@ -113,14 +117,16 @@ check(JSON.parse(M.randomRequest({ mode: "major", meter: "4/4", role: "accompani
 const blank = M.motifFormValues(null);
 check(blank.notes === "" && blank.meter === "4/4" && blank.pickup === "0" && blank.form === "full", "a new motif form has defaults");
 check(M.motifFormProblems(blank).length === 1 && M.motifFormProblems(blank)[0].field === "notes", "empty notes are a problem");
-check(M.motifFormProblems(values).length === 0, "a filled form has no problems");
-check(M.motifFormProblems({ ...values, meter: "four" })[0].field === "meter", "a bad meter is a problem");
-check(M.motifFormProblems({ ...values, key: "Dm" })[0].field === "key", "a bad key is a problem");
-check(M.motifFormProblems({ ...values, key: "" }).length === 0, "an empty key is fine");
-check(M.motifFormProblems({ ...values, pickup: "x" })[0].field === "pickup", "a bad pickup is a problem");
+check(M.motifFormProblems({ ...values, legacyKey: null }).length === 0, "a filled form has no problems");
+check(M.motifFormProblems(values)[0].field === "notes" && /Rewrite the motif in C/.test(M.motifFormProblems(values)[0].message), "an older motif must be rewritten in C before saving");
+check(M.motifFormProblems({ ...values, legacyKey: null, meter: "four" })[0].field === "meter", "a bad meter is a problem");
+check(M.motifFormProblems({ ...values, legacyKey: null, key: "Dm" }).length === 0, "the form has no key to check");
+check(M.motifFormProblems({ ...values, legacyKey: null, pickup: "x" })[0].field === "pickup", "a bad pickup is a problem");
 
-const rebuilt = M.buildMotifBody({ ...values, notes: " D4:q ", key: " ", pickup: "" }, body);
-check(rebuilt.motif.notes === "D4:q" && rebuilt.motif.key === null && rebuilt.motif.pickup === "0", "body trims notes, empty key is null, empty pickup is 0");
+const rebuilt = M.buildMotifBody({ ...values, notes: " C4:q ", pickup: "" }, body);
+check(rebuilt.motif.notes === "C4:q" && rebuilt.motif.key === "C minor" && rebuilt.motif.pickup === "0", "body trims notes, writes the key in C and an empty pickup is 0");
+check(M.buildMotifBody({ ...values, mode: "major" }, null).motif.key === "C major" && M.buildMotifBody({ ...values, mode: "dorian" }, null).motif.key === "C major", "the body key is C in the chosen mode, major for anything else");
+check(M.buildMotifBody({ ...values, form: "rhythm", mode: "minor" }, null).motif.key === "C minor", "every form is written in C");
 check(same(rebuilt.motif.features, [{ label: "a", first: 0, last: 1 }]), "body stores features from 0");
 check(rebuilt.uses.length === 1 && rebuilt.motif.derived.source_item === "mot-1", "body keeps uses and derived");
 check(rebuilt.motif.analysis === null, "body leaves the analysis to the backend");
@@ -142,7 +148,7 @@ check(M.featureProblems([{ label: "a", first: 1, last: 1 }, { label: "a", first:
 check(M.featureProblems([{ label: "a", first: 3, last: 2 }]).length === 1, "first after last fails");
 check(M.featureProblems([{ label: "a", first: 0, last: 1 }]).length === 1, "note numbers start at 1");
 check(M.featureProblems([{ label: "a", first: NaN, last: 1 }]).length === 1, "a blank number fails");
-check(M.motifFormProblems({ ...values, features: [{ label: "", first: 1, last: 1 }] })[0].field === "features", "feature problems show on the form");
+check(M.motifFormProblems({ ...values, legacyKey: null, features: [{ label: "", first: 1, last: 1 }] })[0].field === "features", "feature problems show on the form");
 check(M.newFeatureRow([]).label === "a" && M.newFeatureRow([{ label: "a" }]).label === "b", "a new feature row takes the next free letter");
 
 // Analysis rows.
@@ -184,17 +190,25 @@ check(M.formHint("full") === M.NOTE_HINT, "the full form shows the note list hin
 check(M.formHint("rhythm").includes("x:q x:e x:e x:h"), "the rhythm form shows the rhythm syntax");
 check(M.formHint("contour").includes("0 2 1 3"), "the contour form shows the contour syntax");
 check(M.formHint("rhythm") !== M.formHint("contour"), "each form has its own hint");
-const imported = M.importToFormValues({ notes_text: "D4:q F4:q", meter: "3/4", key: "D minor", pickup: "1" });
-check(imported.form === "full" && imported.notes === "D4:q F4:q" && imported.meter === "3/4", "an import fills a full motif");
-check(imported.key === "D minor" && imported.pickup === "1", "an import fills the key and pickup");
-const unkeyedImport = M.importToFormValues({ notes_text: "D4:q", meter: "4/4", key: null, pickup: "0" });
-check(unkeyedImport.key === "" && unkeyedImport.pickup === "0", "an import without a key leaves it empty");
+const imported = M.importToFormValues({ notes_text: "C4:q Eb4:q", meter: "3/4", key: "C minor", moved_from: "D minor", key_found: true, pickup: "1" });
+check(imported.form === "full" && imported.notes === "C4:q Eb4:q" && imported.meter === "3/4", "an import fills a full motif");
+check(imported.mode === "minor" && imported.pickup === "1", "an import fills the mode and pickup");
+const unkeyedImport = M.importToFormValues({ notes_text: "D4:q", meter: "4/4", key: "C major", moved_from: null, key_found: false, pickup: "0" });
+check(unkeyedImport.mode === "major" && unkeyedImport.pickup === "0", "an import without a key reads as C major");
+check(M.importNotice({ key: "C minor", moved_from: "D minor", key_found: true }) === "Moved from D minor to C minor.", "the notice names the key the notes moved from");
+check(M.importNotice({ key: "C major", moved_from: null, key_found: false }) === "No key found: read as C major.", "the notice says when no key was found");
+check(M.importNotice({ key: "C minor", moved_from: null, key_found: true }) === "Filled from the MIDI file.", "a MIDI file already in C is just filled");
+check(M.legacyNotice("D minor") === "Written in D minor before motifs moved to C.", "the older motif notice names its key");
+const toC = M.toCRequest({ motif: { degrees: "1:q 3:e", meter: "3/4", pickup: "" } }, "minor");
+check(toC.method === "POST" && toC.url === "/api/materials/motifs/to-c" && same(JSON.parse(toC.body), { degrees: "1:q 3:e", mode: "minor", meter: "3/4", pickup: "0" }), "to-c posts the stored degrees, mode, meter and pickup");
+check(M.toCRequest({ motif: { degrees: null } }, "minor") === null && M.toCRequest(null, "minor") === null, "a motif without degrees has nothing to rewrite");
+check(JSON.parse(M.toCRequest({ motif: { degrees: "1:q" } }, "dorian").body).mode === "major", "to-c defaults the mode to major");
 check(M.importToFormValues(null).meter === "4/4" && M.importToFormValues(null).notes === "", "an empty import answer gives defaults");
 const importRequest = M.buildImportMidiRequest("file");
 check(importRequest.method === "POST" && importRequest.url === "/api/materials/motifs/import" && importRequest.body === "file", "the import posts the file");
 check(M.buildMotifBody(values, { ...body, motif: { ...body.motif, degrees: "1:q 3:e" } }).motif.degrees === "1:q 3:e", "body keeps the degrees");
 check(M.buildMotifBody(blank, null).motif.degrees === null, "a new body has no degrees");
-check(M.motifFormProblems({ ...values, pickup: "123" })[0].field === "pickup", "a pickup of three digits is a problem");
+check(M.motifFormProblems({ ...values, legacyKey: null, pickup: "123" })[0].field === "pickup", "a pickup of three digits is a problem");
 const withDegrees = M.analysisRows({ form: "full", degrees: "1:q 3:e", analysis: heard.analysis });
 check(withDegrees.rows[0].label === "Degree list" && withDegrees.rows[0].text === "1:q 3:e", "the degree list is the first analysis row");
 const rhythmRows = M.analysisRows({
@@ -267,28 +281,27 @@ check(M.deleteWarning("Hook", 409, null) === null, "a 409 without users is not t
 const renderBody = {
   motif: { role: "accompaniment", form: "full", meter: "3/4", key: "D minor", pickup: "1", degrees: "1:q 3:e 5:e" },
 };
-const rendered = M.renderRequest(renderBody, "G minor");
+const rendered = M.renderRequest(renderBody);
 const renderedBody = JSON.parse(rendered.body);
 check(rendered.method === "POST" && rendered.url === "/api/materials/render", "render request is a POST to /render");
 check(renderedBody.degrees === "1:q 3:e 5:e" && renderedBody.key === "D minor" && renderedBody.pickup === "1", "render request carries the stored motif");
-check(renderedBody.render_key === "G minor" && renderedBody.role === "accompaniment", "render request carries the render key and role");
+check(!("render_key" in renderedBody) && renderedBody.role === "accompaniment", "render request carries the role and no render key");
 const plain = JSON.parse(M.renderRequest({ motif: { form: "rhythm", degrees: "x:q x:q", meter: "4/4", key: null } }).body);
 check(!("key" in plain) && !("render_key" in plain) && plain.pickup === "0" && plain.role === "melodic", "render request leaves out a missing key and defaults the pickup and role");
-check(M.RENDER_KEYS.length === 24 && M.RENDER_KEYS[0] === "C major" && M.RENDER_KEYS.includes("Bb minor"), "24 render keys");
+check(M.RENDER_KEYS === undefined, "the render keys are gone");
 const urls = M.versionScoreUrls("mot-1", 2, "D minor");
-check(urls.musicxmlUrl === "/api/materials/items/mot-1/versions/2/score?key=D%20minor", "score url carries the key");
-check(urls.playbackUrl === "/api/materials/items/mot-1/versions/2/playback?key=D%20minor", "playback url carries the key");
-check(M.versionScoreUrls("mot-1", 2).playbackUrl === "/api/materials/items/mot-1/versions/2/playback", "no key, no query");
+check(urls.musicxmlUrl === "/api/materials/items/mot-1/versions/2/score", "score url has no key query");
+check(urls.playbackUrl === "/api/materials/items/mot-1/versions/2/playback", "playback url has no key query");
 
 const random = M.randomRequest({ mode: "minor", meter: " 3/4 ", key: "", form: "contour", style_id: "", count: "", seed: "" });
 const randomBody = JSON.parse(random.body);
 check(random.method === "POST" && random.url === "/api/materials/motifs/random", "random request is a POST to /motifs/random");
 check(randomBody.mode === "minor" && randomBody.meter === "3/4" && randomBody.form === "contour" && randomBody.count === 6, "random request defaults the count and trims the meter");
-check(!("key" in randomBody) && !("style_id" in randomBody) && !("seed" in randomBody), "random request leaves out an empty key, style and seed");
+check(randomBody.key === "C minor" && !("style_id" in randomBody) && !("seed" in randomBody), "random request draws in C minor and leaves out an empty style and seed");
 const randomFull = JSON.parse(M.randomRequest({ mode: "major", meter: "4/4", key: "D major", form: "full", style_id: "sty-1", count: 20, seed: "7" }).body);
-check(randomFull.key === "D major" && randomFull.style_id === "sty-1" && randomFull.seed === 7 && randomFull.count === 16, "random request carries the key, style and seed and caps the count");
-check(M.randomProblems({ meter: "4/4", key: "", seed: "", count: "6" }).length === 0, "good random values have no problems");
-check(M.randomProblems({ meter: "four", key: "H minor", seed: "x", count: "99" }).map((p) => p.field).join() === "meter,key,seed,count", "each bad random value is reported");
+check(randomFull.key === "C major" && randomFull.style_id === "sty-1" && randomFull.seed === 7 && randomFull.count === 16, "random request always draws in C, carries the style and seed and caps the count");
+check(M.randomProblems({ meter: "4/4", seed: "", count: "6" }).length === 0, "good random values have no problems");
+check(M.randomProblems({ meter: "four", seed: "x", count: "99" }).map((p) => p.field).join() === "meter,seed,count", "each bad random value is reported");
 
 const candidate = {
   seed: 3,

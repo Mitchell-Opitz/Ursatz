@@ -248,7 +248,6 @@ function buildRandomMotifs(statusEl, reload) {
   }
   const mode = field("Mode", select([["major", "Major"], ["minor", "Minor"]]));
   const meter = field("Meter", input("4/4", "4/4"));
-  const key = field("Key", input("optional, e.g. D minor"));
   const formSelect = field("Form", select(MaterialsModel.MOTIF_FORMS.map((f) => [f.value, f.label])));
   const style = field("Style", select([["", "No style"]]));
   const count = field("Count", input("6", "6"));
@@ -273,7 +272,6 @@ function buildRandomMotifs(statusEl, reload) {
     return {
       mode: mode.value,
       meter: meter.value,
-      key: key.value,
       form: formSelect.value,
       style_id: style.value,
       count: count.value.trim() === "" ? 6 : count.value.trim(),
@@ -735,6 +733,7 @@ function buildMotifEditor(body) {
   form.addEventListener("change", () => {
     hint.textContent = MaterialsModel.formHint(form.value);
   });
+  el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.TONIC_HINT));
 
   const importRow = materialsElement("div", "upload-controls");
   const importButton = materialsElement("button", "", "Upload MIDI");
@@ -767,9 +766,51 @@ function buildMotifEditor(body) {
     hint.textContent = MaterialsModel.formHint(filled.form);
     notes.value = filled.notes;
     meter.value = filled.meter;
-    key.value = filled.key;
+    mode.value = filled.mode;
     pickup.value = filled.pickup;
-    importStatus.textContent = "Filled from the MIDI file.";
+    importStatus.textContent = MaterialsModel.importNotice(answer.data);
+  });
+
+  let legacyKey = initial.legacyKey;
+  const legacyRow = materialsElement("div", "upload-controls");
+  const legacyText = materialsElement("span", "materials-hint");
+  const rewriteButton = materialsElement("button", "", "Rewrite in C");
+  rewriteButton.type = "button";
+  const rewriteStatus = materialsElement("span", "upload-status");
+  rewriteStatus.setAttribute("role", "status");
+  legacyRow.append(legacyText, rewriteButton, rewriteStatus);
+  el.appendChild(legacyRow);
+  function showLegacy() {
+    legacyRow.hidden = !legacyKey;
+    legacyText.textContent = legacyKey ? MaterialsModel.legacyNotice(legacyKey) : "";
+  }
+  showLegacy();
+  rewriteButton.addEventListener("click", async () => {
+    rewriteStatus.classList.remove("error");
+    rewriteStatus.textContent = "";
+    if (form.value !== "full") {
+      legacyKey = null;
+      showLegacy();
+      return;
+    }
+    const request = MaterialsModel.toCRequest(body, mode.value);
+    if (!request) {
+      rewriteStatus.classList.add("error");
+      rewriteStatus.textContent = "This version has no degrees to rewrite. Re-analyze it first.";
+      return;
+    }
+    rewriteButton.disabled = true;
+    rewriteStatus.textContent = "Rewriting...";
+    const answer = await sendMaterialsRequest(request);
+    rewriteButton.disabled = false;
+    if (!answer.ok) {
+      rewriteStatus.classList.add("error");
+      rewriteStatus.textContent = MaterialsModel.errorText(answer.data, "Could not rewrite the motif in C");
+      return;
+    }
+    notes.value = answer.data.notes_text;
+    legacyKey = null;
+    showLegacy();
   });
 
   const meter = materialsElement("input");
@@ -778,11 +819,14 @@ function buildMotifEditor(body) {
   meter.size = 6;
   field("Meter", meter, "meter");
 
-  const key = materialsElement("input");
-  key.type = "text";
-  key.value = initial.key;
-  key.placeholder = "D minor (optional)";
-  field("Key", key, "key");
+  const mode = materialsElement("select");
+  for (const option of MaterialsModel.MOTIF_MODES) {
+    const o = materialsElement("option", "", option);
+    o.value = option;
+    mode.appendChild(o);
+  }
+  mode.value = initial.mode;
+  field("Mode", mode, "mode");
 
   const pickup = materialsElement("input");
   pickup.type = "text";
@@ -857,7 +901,8 @@ function buildMotifEditor(body) {
       form: form.value,
       notes: notes.value,
       meter: meter.value,
-      key: key.value,
+      mode: mode.value,
+      legacyKey,
       pickup: pickup.value,
       harmony: harmony.value,
       features: featureRows.map((row) => ({ ...row })),
@@ -961,8 +1006,7 @@ function renderNewMotif(draftName, draftProject) {
   );
 }
 
-/* The score and playback of a motif version in the score workspace, with a render key select in the header. Nothing
- * here is saved: the key only changes how the stored degrees are sounded. */
+/* The score and playback of a motif version in the score workspace, sounded in its stored key. Nothing here is saved. */
 function buildMotifScore(id, item, body) {
   const motif = (body && body.motif) || {};
   const section = materialsElement("section", "panel materials-score");
@@ -970,35 +1014,20 @@ function buildMotifScore(id, item, body) {
     return null;
   }
   const mountEl = materialsElement("div", "materials-score-mount");
-  const keySelect = materialsElement("select");
-  const keys = MaterialsModel.RENDER_KEYS.slice();
-  if (typeof motif.key === "string" && motif.key !== "" && !keys.includes(motif.key)) {
-    keys.unshift(motif.key);
-  }
-  for (const key of keys) {
-    const o = materialsElement("option", "", key);
-    o.value = key;
-    keySelect.appendChild(o);
-  }
-  keySelect.value = typeof motif.key === "string" && motif.key !== "" ? motif.key : "C major";
-  const keyLabel = materialsElement("label", "filter-field", "Render key ");
-  keyLabel.appendChild(keySelect);
   let workspace = null;
   function mountScore() {
     if (workspace) {
       workspace.destroy();
     }
     mountEl.innerHTML = "";
-    const urls = MaterialsModel.versionScoreUrls(id, item.current_version, keySelect.value);
+    const urls = MaterialsModel.versionScoreUrls(id, item.current_version);
     workspace = ScoreWorkspace.mount(mountEl, {
       title: item.name,
-      subtitle: `${motif.form || "full"} motif · v${item.current_version} · ${keySelect.value}`,
+      subtitle: `${motif.form || "full"} motif · v${item.current_version} · ${motif.key || "C major"}`,
       musicxmlUrl: urls.musicxmlUrl,
       playbackUrl: urls.playbackUrl,
-      headerExtra: keyLabel,
     });
   }
-  keySelect.addEventListener("change", mountScore);
   section.appendChild(materialsElement("h2", "section-title", "Score"));
   section.appendChild(mountEl);
   mountScore();

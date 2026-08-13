@@ -161,8 +161,8 @@ static bool ok_true(const cJSON *json) {
 #include "server.h"
 
 static const char *kMotifBody =
-    "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"D4:q F4:e A4:e D5:h\","
-    "\"meter\":\"4/4\",\"key\":\"D minor\",\"pickup\":\"0\",\"features\":[{\"label\":\"a\",\"first\":0,\"last\":2}],"
+    "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q Eb4:e G4:e C5:h\","
+    "\"meter\":\"4/4\",\"key\":\"C minor\",\"pickup\":\"0\",\"features\":[{\"label\":\"a\",\"first\":0,\"last\":2}],"
     "\"analysis\":null,\"derived\":null}}";
 static const char *kBadMotifBody =
     "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"zzz\",\"meter\":\"4/4\",\"key\":null,"
@@ -602,29 +602,29 @@ static void test_motif_forms(void) {
   first_project(project, sizeof(project));
   int status = 0;
 
-  cJSON *saved = save_motif_form(project, "rhythm", "x:q x:e x:e x:h", "null", "0", &status);
-  check(status == 200 && ok_true(saved), "a rhythm-only motif without a key is saved");
+  cJSON *saved = save_motif_form(project, "rhythm", "x:q x:e x:e x:h", "\"C major\"", "0", &status);
+  check(status == 200 && ok_true(saved), "a rhythm-only motif in C is saved");
   cJSON *motif = read_motif(saved);
   check(strcmp(string_of(motif, "degrees"), "x:q x:e x:e x:h") == 0, "a rhythm motif stores its rhythm list as degrees");
   check(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(motif, "analysis")), "a rhythm motif carries the analysis");
   cJSON_Delete(motif);
   cJSON_Delete(saved);
 
-  saved = save_motif_form(project, "contour", "0 2 1 3", "null", "0", &status);
+  saved = save_motif_form(project, "contour", "0 2 1 3", "\"C major\"", "0", &status);
   check(status == 200 && ok_true(saved), "a contour-only motif is saved");
   motif = read_motif(saved);
   check(strcmp(string_of(motif, "degrees"), "0 2 1 3") == 0, "a contour motif stores its contour list as degrees");
   cJSON_Delete(motif);
   cJSON_Delete(saved);
 
-  saved = save_motif_form(project, "full", "D4:q F4:e A4:e D5:h", "\"D minor\"", "0", &status);
+  saved = save_motif_form(project, "full", "C4:q Eb4:e G4:e C5:h", "\"C minor\"", "0", &status);
   check(status == 200 && ok_true(saved), "a full motif with a key is saved");
   motif = read_motif(saved);
   check(strcmp(string_of(motif, "degrees"), "1:q 3:e 5:e 1':h") == 0, "a full motif stores its degree list");
   cJSON_Delete(motif);
   cJSON_Delete(saved);
 
-  saved = save_motif_form(project, "rhythm", "x:q x:q x:h", "null", "1", &status);
+  saved = save_motif_form(project, "rhythm", "x:q x:q x:h", "\"C major\"", "1", &status);
   check(status == 200 && ok_true(saved), "a motif with a pickup is saved");
   motif = read_motif(saved);
   const cJSON *inner = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(motif, "analysis"), "analysis");
@@ -632,11 +632,11 @@ static void test_motif_forms(void) {
   cJSON_Delete(motif);
   cJSON_Delete(saved);
 
-  saved = save_motif_form(project, "full", "D4:q F4:e A4:e D5:h", "null", "0", &status);
-  check(status == 400 && strstr(string_of(saved, "error"), "give a key") != NULL, "a full motif without a key is 400");
+  saved = save_motif_form(project, "full", "C4:q Eb4:e G4:e C5:h", "null", "0", &status);
+  check(status == 400 && strstr(string_of(saved, "error"), "C as the tonic") != NULL, "a full motif without a key is 400");
   cJSON_Delete(saved);
 
-  saved = save_motif_form(project, "rhythm", "x:q x:q x:h", "null", "1;rm", &status);
+  saved = save_motif_form(project, "rhythm", "x:q x:q x:h", "\"C major\"", "1;rm", &status);
   check(status == 400, "a pickup that is not beats is 400");
   cJSON_Delete(saved);
 }
@@ -678,15 +678,19 @@ static void test_motif_import(void) {
   size_t size = midi_file(file, one_voice, sizeof(one_voice));
   cJSON *answer = import_exchange(file, size, "?key=D%20minor", &status);
   check(status == 200 && ok_true(answer), "a one-voice MIDI file is imported");
-  check(strcmp(string_of(answer, "notes_text"), "D4:q F4:q") == 0, "the import answers the notes as a note list");
+  check(strcmp(string_of(answer, "notes_text"), "C4:q D#4:q") == 0, "the import answers the notes moved to C");
   check(strcmp(string_of(answer, "meter"), "4/4") == 0, "the import answers the meter");
-  check(strcmp(string_of(answer, "key"), "D minor") == 0, "the import answers the given key");
+  check(strcmp(string_of(answer, "key"), "C minor") == 0, "the import answers the key in C");
+  check(strcmp(string_of(answer, "moved_from"), "D minor") == 0, "the import answers the key it moved from");
   check(strcmp(string_of(answer, "pickup"), "0") == 0, "the import answers the pickup");
   check(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(answer, "analysis")), "the import answers the analysis");
   cJSON_Delete(answer);
 
   answer = import_exchange(file, size, "", &status);
-  check(status == 200 && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(answer, "key")), "a file without a key answers null");
+  check(status == 200 && strcmp(string_of(answer, "key"), "C major") == 0 &&
+            cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(answer, "moved_from")) &&
+            strcmp(string_of(answer, "notes_text"), "D4:q F4:q") == 0,
+        "a file without a key is read as C major with the notes unchanged");
   cJSON_Delete(answer);
 
   size = midi_file(file, two_voices, sizeof(two_voices));
@@ -704,6 +708,63 @@ static void test_motif_import(void) {
 
   answer = json_exchange("GET", "/api/materials/motifs/import", NULL, &status);
   check(status == 405, "importing is POST only");
+  cJSON_Delete(answer);
+}
+
+/* Motifs are written with C as the tonic (R-179): other keys are refused, and the to-c route writes degrees in C. */
+static void test_motifs_in_c(void) {
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  int status = 0;
+
+  cJSON *saved = save_motif_form(project, "full", "D4:q F4:e A4:e D5:h", "\"D minor\"", "0", &status);
+  check(status == 400 && strstr(string_of(saved, "error"), "motifs are written with C as the tonic") != NULL,
+        "a motif in D minor is 400");
+  cJSON_Delete(saved);
+
+  saved = save_motif_form(project, "rhythm", "x:q x:q x:h", "\"G major\"", "0", &status);
+  check(status == 400, "a rhythm motif in G major is 400");
+  cJSON_Delete(saved);
+
+  saved = save_motif_form(project, "rhythm", "x:q x:q x:h", "\"C major\"", "0", &status);
+  check(status == 200 && ok_true(saved), "a motif in C major is saved");
+  char path[256];
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions", string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id"));
+  cJSON *answer = json_exchange("POST", path,
+                                "{\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"rhythm\",\"notes\":\"x:q x:q x:h\","
+                                "\"meter\":\"4/4\",\"key\":\"E minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,"
+                                "\"derived\":null}}}",
+                                &status);
+  check(status == 400 && strstr(string_of(answer, "error"), "C as the tonic") != NULL, "a new version in E minor is 400");
+  cJSON_Delete(answer);
+  cJSON_Delete(saved);
+
+  answer = json_exchange("POST", "/api/materials/motifs/to-c",
+                         "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"mode\":\"minor\",\"meter\":\"4/4\",\"pickup\":\"0\"}", &status);
+  check(status == 200 && ok_true(answer) && strcmp(string_of(answer, "notes_text"), "C4:q D#4:e G4:e C5:h") == 0,
+        "to-c writes minor degrees in C minor");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("POST", "/api/materials/motifs/to-c",
+                         "{\"degrees\":\"1:q 3:e 5:e 1':h\",\"mode\":\"major\",\"meter\":\"4/4\"}", &status);
+  check(status == 200 && strcmp(string_of(answer, "notes_text"), "C4:q E4:e G4:e C5:h") == 0, "to-c writes major degrees in C major");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("POST", "/api/materials/motifs/to-c",
+                         "{\"degrees\":\"1:q\",\"mode\":\"dorian\",\"meter\":\"4/4\"}", &status);
+  check(status == 400, "to-c refuses a mode that is not major or minor");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("POST", "/api/materials/motifs/to-c", "{\"degrees\":\"\",\"mode\":\"major\",\"meter\":\"4/4\"}", &status);
+  check(status == 400, "to-c refuses an empty degree list");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("POST", "/api/materials/motifs/to-c", "{\"degrees\":\"1:q\",\"mode\":\"major\",\"meter\":\"four\"}", &status);
+  check(status == 400, "to-c refuses a bad meter");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("GET", "/api/materials/motifs/to-c", NULL, &status);
+  check(status == 405, "to-c is POST only");
   cJSON_Delete(answer);
 }
 
@@ -805,12 +866,12 @@ static void test_motif_render(void) {
 
   char project[64] = "";
   first_project(project, sizeof(project));
-  cJSON *saved = save_motif_form(project, "full", "D4:q F4:e A4:e D5:h", "\"D minor\"", "0", &status);
+  cJSON *saved = save_motif_form(project, "full", "C4:q Eb4:e G4:e C5:h", "\"C minor\"", "0", &status);
   const char *id = string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id");
   char path[256];
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback", id);
   answer = json_exchange("GET", path, NULL, &status);
-  check(status == 200 && first_note(answer, &pitch, &on_num, &on_den) && pitch == 62,
+  check(status == 200 && first_note(answer, &pitch, &on_num, &on_den) && pitch == 60,
         "a version sounds in its own key by default");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback?key=G%%20minor", id);
@@ -839,7 +900,7 @@ static char *variant_source(void) {
   char project[64] = "";
   first_project(project, sizeof(project));
   int status = 0;
-  cJSON *saved = save_motif_form(project, "full", "D4:q F4:e A4:e D5:h", "\"D minor\"", "0", &status);
+  cJSON *saved = save_motif_form(project, "full", "C4:q Eb4:e G4:e C5:h", "\"C minor\"", "0", &status);
   char *id = status == 200 ? strdup(string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id")) : NULL;
   cJSON_Delete(saved);
   return id;
@@ -872,8 +933,8 @@ static void test_harmony(void) {
   int status = 0;
   char request[2048];
   const char *shape = "{\"type\":\"motif\",\"name\":\"Own chords\",\"project_id\":\"%s\",\"body\":{\"uses\":[],\"motif\":{"
-                      "\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"D4:q F4:e A4:e D5:h\",\"meter\":\"4/4\","
-                      "\"key\":\"D minor\",\"pickup\":\"0\",\"harmony\":%s,"
+                      "\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q Eb4:e G4:e C5:h\",\"meter\":\"4/4\","
+                      "\"key\":\"C minor\",\"pickup\":\"0\",\"harmony\":%s,"
                       "\"features\":[{\"label\":\"a\",\"first\":0,\"last\":1}],\"analysis\":null,\"derived\":null}}}";
   snprintf(request, sizeof(request), shape, project, "\"I V@2\"");
   cJSON *saved = json_exchange("POST", "/api/materials/items", request, &status);
@@ -1393,6 +1454,7 @@ int main(void) {
 #endif
   test_motif_forms();
   test_motif_import();
+  test_motifs_in_c();
   test_motif_render();
   test_harmony();
   test_variants();

@@ -245,7 +245,7 @@ static char *create_motif(const char *name, const char *form, const char *role, 
   int status = 0;
   snprintf(body, sizeof(body),
            "{\"uses\":[],\"motif\":{\"role\":\"%s\",\"form\":\"%s\",\"notes\":\"%s\",\"meter\":\"4/4\","
-           "\"key\":\"D minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":%s}}",
+           "\"key\":\"C minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":%s}}",
            role, form, notes, derived);
   return create_item("motif", name, body, &status);
 }
@@ -380,17 +380,17 @@ static bool take(char *out, char *id) {
 /* The motifs and their saved forms: A and B are the slot motives, C is another, and A has four forms. */
 static bool make_motifs(Motifs *m) {
   bool ok = true;
-  ok = take(m->a, create_motif("A", "full", "melodic", "D4:e F4:e A4:e F4:e D4:e F4:e A4:e D5:e", "null")) && ok;
-  ok = take(m->b, create_motif("B", "full", "melodic", "A4:e G4:e F4:e E4:e G4:e F4:e E4:e D4:e", "null")) && ok;
-  ok = take(m->c, create_motif("C", "full", "melodic", "D4:q F4:e A4:e D5:h", "null")) && ok;
+  ok = take(m->a, create_motif("A", "full", "melodic", "C4:e Eb4:e G4:e Eb4:e C4:e Eb4:e G4:e C5:e", "null")) && ok;
+  ok = take(m->b, create_motif("B", "full", "melodic", "G4:e F4:e Eb4:e D4:e F4:e Eb4:e D4:e C4:e", "null")) && ok;
+  ok = take(m->c, create_motif("C", "full", "melodic", "C4:q Eb4:e G4:e C5:h", "null")) && ok;
   ok = take(m->rhythm, create_motif("Rhythm", "rhythm", "melodic", "x:q x:e x:e x:h", "null")) && ok;
-  ok = take(m->accompaniment, create_motif("Acc", "full", "accompaniment", "D3:q A3:q F3:q A3:q", "null")) && ok;
-  ok = take(m->approved, create_derived("A up", m->a, "approved", "E4:e G4:e B4:e G4:e E4:e G4:e B4:e E5:e")) && ok;
-  ok = take(m->unflagged, create_derived("A up 2", m->a, "unflagged", "F4:e A4:e C5:e A4:e F4:e A4:e C5:e F5:e")) && ok;
-  ok = take(m->rejected, create_derived("A up 3", m->a, "rejected", "G4:e B4:e D5:e B4:e G4:e B4:e D5:e G5:e")) && ok;
+  ok = take(m->accompaniment, create_motif("Acc", "full", "accompaniment", "C3:q G3:q Eb3:q G3:q", "null")) && ok;
+  ok = take(m->approved, create_derived("A up", m->a, "approved", "D4:e F4:e A4:e F4:e D4:e F4:e A4:e D5:e")) && ok;
+  ok = take(m->unflagged, create_derived("A up 2", m->a, "unflagged", "Eb4:e G4:e Bb4:e G4:e Eb4:e G4:e Bb4:e Eb5:e")) && ok;
+  ok = take(m->rejected, create_derived("A up 3", m->a, "rejected", "F4:e A4:e C5:e A4:e F4:e A4:e C5:e F5:e")) && ok;
   ok = take(m->grandchild,
-            create_derived("A up up", m->approved, "unflagged", "F4:e A4:e D5:e A4:e F4:e A4:e D5:e F5:e")) && ok;
-  ok = take(m->unrelated, create_derived("C up", m->c, "approved", "E4:q G4:e B4:e E5:h")) && ok;
+            create_derived("A up up", m->approved, "unflagged", "Eb4:e G4:e C5:e G4:e Eb4:e G4:e C5:e Eb5:e")) && ok;
+  ok = take(m->unrelated, create_derived("C up", m->c, "approved", "D4:q F4:e A4:e D5:h")) && ok;
   return ok;
 }
 
@@ -923,7 +923,7 @@ static void test_update_uses(const Motifs *m) {
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions", m->a);
   cJSON *answer = exchange("POST", path,
                            "{\"note\":\"changed\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\","
-                           "\"notes\":\"D4:e G4:e A4:e G4:e D4:e G4:e A4:e D5:e\",\"meter\":\"4/4\",\"key\":\"D minor\","
+                           "\"notes\":\"C4:e F4:e G4:e F4:e C4:e F4:e G4:e C5:e\",\"meter\":\"4/4\",\"key\":\"C minor\","
                            "\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}}",
                            &status);
   check(status == 200 && number_of(member(answer, "item"), "current_version") == 2, "motif A has a second version");
