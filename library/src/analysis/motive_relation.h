@@ -37,6 +37,17 @@
  *   condense           first, last (0-based note indices), ratio (below 1)
  *   repeat-feature     feature (0-based), times (1 or 2), steps
  *   shift-feature      feature (0-based), offset (ratio)
+ *   harmony-inversion  chord (0-based), inversion (0 to 3)
+ *   harmony-append     degree (1 to 7), seventh (0/1)
+ *   harmony-insert     chord (0-based), degree
+ *   harmony-substitute chord (0-based), degree, then (a second degree, 0 for none)
+ *   passing-harmony    chord (0-based)
+ *   counter-line
+ *
+ * A harmony relation needs a scale. A sketch without chords is given its best implied chord at 0 first, so its
+ * result has chords. A harmony relation then adapts the melody to the chords it changed: a note on a beat whose chord
+ * changed and that is not a chord tone moves to the nearest chord tone, in the direction from the previous note when
+ * two are equally near, and keeps the directions of the contour it can.
  *
  * motive_relation_apply never changes its input. The result is as long as its notes (length is the end of the
  * last note).
@@ -63,6 +74,12 @@ typedef enum {
     MOTIVE_RELATION_CONDENSE,
     MOTIVE_RELATION_REPEAT_FEATURE,
     MOTIVE_RELATION_SHIFT_FEATURE,
+    MOTIVE_RELATION_HARMONY_INVERSION,
+    MOTIVE_RELATION_HARMONY_APPEND,
+    MOTIVE_RELATION_HARMONY_INSERT,
+    MOTIVE_RELATION_HARMONY_SUBSTITUTE,
+    MOTIVE_RELATION_PASSING_HARMONY,
+    MOTIVE_RELATION_COUNTER_LINE,
     MOTIVE_RELATION_KIND_COUNT
 } MotiveRelationKind;
 

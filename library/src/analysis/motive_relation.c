@@ -818,6 +818,410 @@ static MotiveRelationResult apply_shift_feature(const MotiveSketch *in, const Mo
     return MOTIVE_RELATION_OK;
 }
 
+/* --- harmony and melody adaptation (Exs. 25 to 29) ----------------------------------------------- */
+
+static const MotiveSketchChord *chord_at(const MotiveSketch *sketch, ExactRational onset) {
+    const MotiveSketchChord *found = NULL;
+    for (size_t c = 0; c < sketch->chord_count; c++) {
+        if (msk_cmp(sketch->chords[c].onset, onset) <= 0) {
+            found = &sketch->chords[c];
+        }
+    }
+    return found;
+}
+
+static int pitch_class(int pitch) {
+    return ((pitch % 12) + 12) % 12;
+}
+
+static bool has_pc(const int *pcs, size_t count, int pc) {
+    for (size_t i = 0; i < count; i++) {
+        if (pcs[i] == pc) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool same_tones(const MotiveSketch *sketch, const MotiveSketchChord *a, const MotiveSketchChord *b) {
+    int x[4];
+    int y[4];
+    size_t nx = motive_sketch_chord_tones(sketch, a, x);
+    size_t ny = motive_sketch_chord_tones(sketch, b, y);
+    if (nx != ny) {
+        return false;
+    }
+    for (size_t i = 0; i < nx; i++) {
+        if (!has_pc(y, ny, x[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* The chord whose triad holds the most notes (then the most time), the first of I V IV vi ii iii vii on a tie. */
+static bool implied_chord(const MotiveSketch *sketch, MotiveSketchChord *out) {
+    static const int ORDER[7] = {1, 5, 4, 6, 2, 3, 7};
+    size_t best_hits = 0;
+    ExactRational best_time = msk_int(0);
+    bool found = false;
+    for (int k = 0; k < 7; k++) {
+        MotiveSketchChord chord = {msk_int(0), ORDER[k], 0, 0, false};
+        int pcs[4];
+        size_t count = motive_sketch_chord_tones(sketch, &chord, pcs);
+        size_t hits = 0;
+        ExactRational time = msk_int(0);
+        for (size_t i = 0; i < sketch->note_count; i++) {
+            if (has_pc(pcs, count, pitch_class(sketch->notes[i].pitch))) {
+                hits++;
+                time = msk_add(time, sketch->notes[i].duration);
+            }
+        }
+        if (hits > best_hits || (hits == best_hits && hits > 0 && msk_cmp(time, best_time) > 0)) {
+            best_hits = hits;
+            best_time = time;
+            *out = chord;
+            found = true;
+        }
+    }
+    return found;
+}
+
+/* A harmony relation's start: a scale, pitches, and chords (the best implied chord at 0 when there are none). */
+static MotiveRelationResult prepare_harmony(MotiveSketch *work) {
+    if (!work->has_scale) {
+        return MOTIVE_RELATION_NO_SCALE;
+    }
+    if (!pitched(work)) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    if (work->chord_count == 0) {
+        if (!implied_chord(work, &work->chords[0])) {
+            return MOTIVE_RELATION_NO_HARMONY;
+        }
+        work->chord_count = 1;
+    }
+    return MOTIVE_RELATION_OK;
+}
+
+static int sign_of(long value) {
+    return value > 0 ? 1 : (value < 0 ? -1 : 0);
+}
+
+/* Whether a note moved to pitch keeps the direction into it and out of it that the note had. */
+static bool keeps_directions(const MotiveSketch *before, const MotiveSketch *sketch, size_t index, int pitch) {
+    int was = before->notes[index].pitch;
+    if (index > 0 && sign_of(pitch - sketch->notes[index - 1].pitch) != sign_of(was - before->notes[index - 1].pitch)) {
+        return false;
+    }
+    if (index + 1 < sketch->note_count) {
+        int next = before->notes[index + 1].pitch;
+        if (sign_of(next - pitch) != sign_of(next - was)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
+ * The melody after the chords changed from those of before to those of sketch: a note on a beat whose chord changed
+ * and that is not a chord tone of the new chord moves to the nearest chord tone (within an octave). Of the tones at
+ * one distance, the one in the direction from the previous note comes first (up for the first note); the first of the
+ * nearest that keeps the contour's directions is taken, and if none within six semitones does, the nearest.
+ */
+static void adapt_melody(const MotiveSketch *before, MotiveSketch *sketch) {
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        MotiveSketchNote *note = &sketch->notes[i];
+        if (motive_sketch_strength(sketch, note->onset) == 0) {
+            continue;
+        }
+        const MotiveSketchChord *old_chord = chord_at(before, note->onset);
+        const MotiveSketchChord *new_chord = chord_at(sketch, note->onset);
+        if (!new_chord || (old_chord && same_tones(sketch, old_chord, new_chord))) {
+            continue;
+        }
+        int pcs[4];
+        size_t count = motive_sketch_chord_tones(sketch, new_chord, pcs);
+        if (has_pc(pcs, count, pitch_class(note->pitch))) {
+            continue;
+        }
+        int preferred = i > 0 && note->pitch < before->notes[i - 1].pitch ? -1 : 1;
+        int nearest = -1;
+        int chosen = -1;
+        for (int distance = 1; distance <= 12 && chosen < 0; distance++) {
+            for (int k = 0; k < 2 && chosen < 0; k++) {
+                int pitch = note->pitch + (k == 0 ? preferred : -preferred) * distance;
+                if (!midi(pitch) || !has_pc(pcs, count, pitch_class(pitch))) {
+                    continue;
+                }
+                if (nearest < 0) {
+                    nearest = pitch;
+                }
+                if (keeps_directions(before, sketch, i, pitch)) {
+                    chosen = pitch;
+                } else if (distance > 6) {
+                    chosen = nearest;
+                }
+            }
+        }
+        if (chosen < 0) {
+            chosen = nearest;
+        }
+        if (chosen >= 0) {
+            note->pitch = chosen;
+        }
+    }
+}
+
+/* The span of a chord and the note onset inside it nearest its middle; false when no note starts inside. */
+static bool split_point(const MotiveSketch *sketch, size_t chord, ExactRational *at) {
+    ExactRational start = sketch->chords[chord].onset;
+    ExactRational end = chord + 1 < sketch->chord_count ? sketch->chords[chord + 1].onset : sketch->length;
+    ExactRational middle = msk_add(start, msk_div(msk_sub(end, start), msk_int(2)));
+    bool found = false;
+    ExactRational best_gap = msk_int(0);
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        ExactRational onset = sketch->notes[i].onset;
+        if (msk_cmp(onset, start) <= 0 || msk_cmp(onset, end) >= 0) {
+            continue;
+        }
+        ExactRational gap = msk_cmp(onset, middle) >= 0 ? msk_sub(onset, middle) : msk_sub(middle, onset);
+        if (!found || msk_cmp(gap, best_gap) < 0) {
+            best_gap = gap;
+            *at = onset;
+            found = true;
+        }
+    }
+    return found;
+}
+
+static bool insert_chord(MotiveSketch *sketch, size_t at, MotiveSketchChord chord) {
+    if (sketch->chord_count >= MOTIVE_SKETCH_MAX_CHORDS) {
+        return false;
+    }
+    for (size_t c = sketch->chord_count; c > at; c--) {
+        sketch->chords[c] = sketch->chords[c - 1];
+    }
+    sketch->chords[at] = chord;
+    sketch->chord_count++;
+    return true;
+}
+
+static MotiveRelationResult apply_harmony_inversion(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                    MotiveSketch *out) {
+    MotiveRelationResult ready = prepare_harmony(out);
+    if (ready != MOTIVE_RELATION_OK) {
+        return ready;
+    }
+    long chord = step->value[0];
+    long inversion = step->value[1];
+    if (inversion < 0 || inversion > 3) {
+        return MOTIVE_RELATION_INVALID;
+    }
+    if (chord < 0 || (size_t)chord >= out->chord_count) {
+        return MOTIVE_RELATION_NO_HARMONY;
+    }
+    if (inversion == 3 && !out->chords[chord].seventh) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    MotiveSketch before = *out;
+    out->chords[chord].inversion = (int)inversion;
+    adapt_melody(&before, out);
+    (void)in;
+    return MOTIVE_RELATION_OK;
+}
+
+static MotiveRelationResult apply_harmony_append(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                 MotiveSketch *out) {
+    (void)in;
+    long degree = step->value[0];
+    if (degree < 1 || degree > 7 || (step->value[1] != 0 && step->value[1] != 1)) {
+        return MOTIVE_RELATION_INVALID;
+    }
+    MotiveRelationResult ready = prepare_harmony(out);
+    if (ready != MOTIVE_RELATION_OK) {
+        return ready;
+    }
+    ExactRational at = out->notes[out->note_count - 1].onset;
+    if (msk_cmp(at, out->chords[out->chord_count - 1].onset) <= 0) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    MotiveSketch before = *out;
+    MotiveSketchChord chord = {at, (int)degree, 0, 0, step->value[1] != 0};
+    if (!insert_chord(out, out->chord_count, chord)) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    adapt_melody(&before, out);
+    return MOTIVE_RELATION_OK;
+}
+
+static MotiveRelationResult apply_harmony_insert(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                 MotiveSketch *out) {
+    (void)in;
+    long chord = step->value[0];
+    long degree = step->value[1];
+    if (degree < 1 || degree > 7) {
+        return MOTIVE_RELATION_INVALID;
+    }
+    MotiveRelationResult ready = prepare_harmony(out);
+    if (ready != MOTIVE_RELATION_OK) {
+        return ready;
+    }
+    if (chord < 0 || (size_t)chord >= out->chord_count) {
+        return MOTIVE_RELATION_NO_HARMONY;
+    }
+    ExactRational at;
+    if (!split_point(out, (size_t)chord, &at)) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    MotiveSketch before = *out;
+    MotiveSketchChord added = {at, (int)degree, 0, 0, false};
+    if (!insert_chord(out, (size_t)chord + 1, added)) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    adapt_melody(&before, out);
+    return MOTIVE_RELATION_OK;
+}
+
+static MotiveRelationResult apply_harmony_substitute(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                     MotiveSketch *out) {
+    (void)in;
+    long chord = step->value[0];
+    long degree = step->value[1];
+    long then = step->value[2];
+    if (degree < 1 || degree > 7 || then < 0 || then > 7) {
+        return MOTIVE_RELATION_INVALID;
+    }
+    MotiveRelationResult ready = prepare_harmony(out);
+    if (ready != MOTIVE_RELATION_OK) {
+        return ready;
+    }
+    if (chord < 0 || (size_t)chord >= out->chord_count) {
+        return MOTIVE_RELATION_NO_HARMONY;
+    }
+    MotiveSketch before = *out;
+    MotiveSketchChord replaced = out->chords[chord];
+    replaced.degree = (int)degree;
+    replaced.alteration = 0;
+    replaced.inversion = 0;
+    if (then != 0) {
+        ExactRational at;
+        if (!split_point(out, (size_t)chord, &at)) {
+            return MOTIVE_RELATION_NOT_APPLICABLE;
+        }
+        MotiveSketchChord second = {at, (int)then, 0, 0, false};
+        if (!insert_chord(out, (size_t)chord + 1, second)) {
+            return MOTIVE_RELATION_NOT_APPLICABLE;
+        }
+    }
+    out->chords[chord] = replaced;
+    adapt_melody(&before, out);
+    return MOTIVE_RELATION_OK;
+}
+
+static MotiveRelationResult apply_passing_harmony(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                  MotiveSketch *out) {
+    (void)in;
+    long chord = step->value[0];
+    MotiveRelationResult ready = prepare_harmony(out);
+    if (ready != MOTIVE_RELATION_OK) {
+        return ready;
+    }
+    if (chord < 0 || (size_t)chord + 1 >= out->chord_count) {
+        return MOTIVE_RELATION_NO_HARMONY;
+    }
+    int from = out->chords[chord].degree;
+    int to = out->chords[chord + 1].degree;
+    if (from == to) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    /* The weak note before the change: the last note that starts inside the first chord. */
+    ExactRational start = out->chords[chord].onset;
+    ExactRational change = out->chords[chord + 1].onset;
+    bool found = false;
+    ExactRational at = msk_int(0);
+    for (size_t i = 0; i < out->note_count; i++) {
+        if (msk_cmp(out->notes[i].onset, start) > 0 && msk_cmp(out->notes[i].onset, change) < 0) {
+            at = out->notes[i].onset;
+            found = true;
+        }
+    }
+    if (!found) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    /* A step between the roots, or when they are a step apart the dominant of the second. */
+    int distance = (to - from + 7) % 7;
+    int between;
+    if (distance == 1 || distance == 6) {
+        between = (to - 1 + 4) % 7 + 1;
+    } else if (distance <= 3) {
+        between = (from - 1 + 1) % 7 + 1;
+    } else {
+        between = (from - 1 + 6) % 7 + 1;
+    }
+    MotiveSketch before = *out;
+    MotiveSketchChord added = {at, between, 0, 0, false};
+    if (!insert_chord(out, (size_t)chord + 1, added)) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    adapt_melody(&before, out);
+    return MOTIVE_RELATION_OK;
+}
+
+static MotiveRelationResult apply_counter_line(const MotiveSketch *in, const MotiveRelationStep *step,
+                                               MotiveSketch *out) {
+    (void)step;
+    if (!in->accompaniment) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    MotiveRelationResult ready = prepare_harmony(out);
+    if (ready != MOTIVE_RELATION_OK) {
+        return ready;
+    }
+    size_t i = 0;
+    while (i < out->note_count) {
+        /* A run of notes on one pitch inside one chord. */
+        const MotiveSketchChord *chord = chord_at(out, out->notes[i].onset);
+        size_t end = i + 1;
+        while (end < out->note_count && out->notes[end].pitch == out->notes[i].pitch &&
+               chord_at(out, out->notes[end].onset) == chord) {
+            end++;
+        }
+        if (end - i >= 2 && chord) {
+            /* Toward the nearest tone of the next chord (of its own, in the last). */
+            const MotiveSketchChord *next = chord + 1 < out->chords + out->chord_count ? chord + 1 : chord;
+            int pcs[4];
+            size_t count = motive_sketch_chord_tones(out, next, pcs);
+            int pitch = out->notes[i].pitch;
+            int target = -1;
+            for (int d = 1; d <= 12 && target < 0; d++) {
+                for (int k = 0; k < 2 && target < 0; k++) {
+                    int candidate = pitch + (k == 0 ? d : -d);
+                    if (midi(candidate) && has_pc(pcs, count, pitch_class(candidate))) {
+                        target = candidate;
+                    }
+                }
+            }
+            if (target >= 0) {
+                int alteration;
+                long at = motive_sketch_step(out, pitch, &alteration);
+                long goal = motive_sketch_step(out, target, NULL);
+                int direction = goal > at ? 1 : -1;
+                for (size_t n = i + 1; n < end; n++) {
+                    long stepped = at + direction * (long)(n - i);
+                    if ((direction > 0 && stepped > goal) || (direction < 0 && stepped < goal)) {
+                        stepped = goal;
+                    }
+                    long moved = motive_sketch_pitch_at_step(out, stepped, stepped == goal ? 0 : alteration);
+                    out->notes[n].pitch = stepped == goal ? target : (midi(moved) ? (int)moved : pitch);
+                }
+            }
+        }
+        i = end;
+    }
+    return MOTIVE_RELATION_OK;
+}
+
 /* --- the catalog ------------------------------------------------------------------------------ */
 
 static const Entry TABLE[] = {
@@ -841,6 +1245,12 @@ static const Entry TABLE[] = {
     {"condense", 3, 2, apply_condense},
     {"repeat-feature", 3, 2, apply_repeat_feature},
     {"shift-feature", 2, 2, apply_shift_feature},
+    {"harmony-inversion", 2, 2, apply_harmony_inversion},
+    {"harmony-append", 2, 2, apply_harmony_append},
+    {"harmony-insert", 2, 2, apply_harmony_insert},
+    {"harmony-substitute", 3, 2, apply_harmony_substitute},
+    {"passing-harmony", 1, 2, apply_passing_harmony},
+    {"counter-line", 0, 2, apply_counter_line},
 };
 
 typedef char table_has_every_kind[sizeof(TABLE) / sizeof(TABLE[0]) == MOTIVE_RELATION_KIND_COUNT ? 1 : -1];
