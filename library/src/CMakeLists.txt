@@ -149,6 +149,8 @@ add_library(ursatz
     analysis/cadence_classification.c
     analysis/motif_detection.c
     analysis/motif_window_matching.c
+    analysis/motive_sketch.c
+    analysis/motive_relation.c
     analysis/phrase_segmentation.c
     analysis/phrase_boundary_detection.c
     analysis/period_detection.c
