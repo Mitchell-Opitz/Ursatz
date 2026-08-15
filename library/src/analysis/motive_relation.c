@@ -1287,6 +1287,145 @@ static MotiveRelationResult apply_dominant_form(const MotiveSketch *in, const Mo
     return MOTIVE_RELATION_OK;
 }
 
+/* --- liquidation by characteristic features (ch. VIII, R-144) ------------------------------------------ */
+
+typedef struct {
+    size_t first;
+    size_t last;
+} Group;
+
+/*
+ * The features of a sketch: its labelled ones, or without any, each bar-beat group (the notes from one beat onset to
+ * the next) in order.
+ */
+static size_t feature_groups(const MotiveSketch *sketch, Group *groups) {
+    size_t count = 0;
+    if (sketch->feature_count > 0) {
+        for (size_t f = 0; f < sketch->feature_count; f++) {
+            groups[count].first = sketch->features[f].first;
+            groups[count].last = sketch->features[f].last;
+            count++;
+        }
+        return count;
+    }
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        if (i == 0 || motive_sketch_strength(sketch, sketch->notes[i].onset) >= 1) {
+            groups[count].first = i;
+            count++;
+        }
+        groups[count - 1].last = i;
+    }
+    return count;
+}
+
+/* A feature's leaps (steps of 3 or more, semitones without a scale) and its notes of a duration found only once. */
+static long feature_weight(const MotiveSketch *sketch, const Group *group) {
+    long weight = 0;
+    for (size_t i = group->first; i <= group->last; i++) {
+        if (i > group->first) {
+            long gap = motive_sketch_step(sketch, sketch->notes[i].pitch, NULL) -
+                       motive_sketch_step(sketch, sketch->notes[i - 1].pitch, NULL);
+            weight += (gap < 0 ? -gap : gap) >= 3 ? 1 : 0;
+        }
+        size_t same = 0;
+        for (size_t k = 0; k < sketch->note_count; k++) {
+            same += msk_eq(sketch->notes[k].duration, sketch->notes[i].duration) ? 1 : 0;
+        }
+        weight += same == 1 ? 1 : 0;
+    }
+    return weight;
+}
+
+/* Puts one note of the span of notes first..last in place of them, on the chord tone nearest the first. */
+static MotiveRelationResult replace_with_chord_tone(MotiveSketch *sketch, const Group *group) {
+    const MotiveSketchNote first = sketch->notes[group->first];
+    ExactRational span = msk_sub(msk_add(sketch->notes[group->last].onset, sketch->notes[group->last].duration),
+                                 first.onset);
+    if (!motive_sketch_expressible(span)) {
+        return MOTIVE_RELATION_NOT_EXPRESSIBLE;
+    }
+    const MotiveSketchChord *chord = chord_at(sketch, first.onset);
+    int pcs[4];
+    size_t count = chord ? motive_sketch_chord_tones(sketch, chord, pcs) : 0;
+    int pitch = -1;
+    for (int d = 0; d <= 12 && pitch < 0 && count > 0; d++) {
+        for (int k = 0; k < 2 && pitch < 0; k++) {
+            int candidate = first.pitch + (k == 0 ? d : -d);
+            if (midi(candidate) && has_pc(pcs, count, pitch_class(candidate))) {
+                pitch = candidate;
+            }
+        }
+    }
+    if (pitch < 0) {
+        return MOTIVE_RELATION_NO_HARMONY;
+    }
+    size_t removed = group->last - group->first;
+    sketch->notes[group->first].pitch = pitch;
+    sketch->notes[group->first].duration = span;
+    for (size_t i = group->last + 1; i < sketch->note_count; i++) {
+        sketch->notes[i - removed] = sketch->notes[i];
+    }
+    sketch->note_count -= removed;
+    size_t kept = 0;
+    for (size_t f = 0; f < sketch->feature_count; f++) {
+        MotiveSketchFeature feature = sketch->features[f];
+        if (feature.last >= group->first && feature.first <= group->last) {
+            continue;
+        }
+        if (feature.first > group->last) {
+            feature.first -= removed;
+            feature.last -= removed;
+        }
+        sketch->features[kept++] = feature;
+    }
+    sketch->feature_count = kept;
+    return MOTIVE_RELATION_OK;
+}
+
+static MotiveRelationResult apply_liquidate_features(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                     MotiveSketch *out) {
+    (void)in;
+    long steps = step->value[0];
+    if (steps < 1 || steps > 3 || (step->value[1] != 0 && step->value[1] != 1)) {
+        return MOTIVE_RELATION_INVALID;
+    }
+    MotiveRelationResult ready = prepare_harmony(out);
+    if (ready != MOTIVE_RELATION_OK) {
+        return ready;
+    }
+    for (long round = 0; round < steps; round++) {
+        Group groups[MOTIVE_SKETCH_MAX_NOTES];
+        size_t count = feature_groups(out, groups);
+        /* The heaviest feature of two notes or more goes first; of equals, the later. */
+        size_t heaviest = count;
+        long best = 0;
+        for (size_t g = 0; g < count; g++) {
+            long weight = feature_weight(out, &groups[g]);
+            if (groups[g].last > groups[g].first && (heaviest == count || weight >= best)) {
+                heaviest = g;
+                best = weight;
+            }
+        }
+        if (heaviest == count) {
+            return MOTIVE_RELATION_NOT_APPLICABLE;
+        }
+        MotiveRelationResult replaced = replace_with_chord_tone(out, &groups[heaviest]);
+        if (replaced != MOTIVE_RELATION_OK) {
+            return replaced;
+        }
+    }
+    if (step->value[1] != 0) {
+        MotiveRelationStep half = {MOTIVE_RELATION_DIMINISH, {1}, {2}};
+        settle(out);
+        MotiveSketch shortened = *out;
+        MotiveRelationResult scaled = scale_time(&shortened, &half, out, false);
+        if (scaled != MOTIVE_RELATION_OK) {
+            return scaled;
+        }
+    }
+    return MOTIVE_RELATION_OK;
+}
+
 /* --- the catalog ------------------------------------------------------------------------------ */
 
 static const Entry TABLE[] = {
@@ -1317,6 +1456,7 @@ static const Entry TABLE[] = {
     {"passing-harmony", 1, 2, apply_passing_harmony},
     {"counter-line", 0, 2, apply_counter_line},
     {"dominant-form", 0, 2, apply_dominant_form},
+    {"liquidate-features", 2, 2, apply_liquidate_features},
 };
 
 typedef char table_has_every_kind[sizeof(TABLE) / sizeof(TABLE[0]) == MOTIVE_RELATION_KIND_COUNT ? 1 : -1];
