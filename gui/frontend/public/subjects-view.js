@@ -269,15 +269,21 @@ async function renderSubjectDetail(id) {
 /* The Subjects field of an item detail or a Library piece editor: chips with
  * remove, a picker over the existing subjects, and an inline create. group is
  * "items" or "pieces"; targetId the item or piece id. Returns
- * {el, setSubjects(list)}; the field shows "Loading..." until subjects are
- * set. Every change refreshes the sidebar panel. */
+ * {el, setSubjects(list), applyTo(id)}; the field shows "Loading..." until
+ * subjects are set. Every change refreshes the sidebar panel. With a null
+ * targetId (an item not saved yet) the chosen subjects stay in a pending list
+ * and applyTo(id) links each of them, answering the names that failed. */
 function buildSubjectsField(group, targetId, initial) {
   const el = materialsElement("div", "materials-subjects");
   let current = Array.isArray(initial) ? initial.slice() : null;
   let all = [];
   const errorEl = materialsElement("div", "materials-field-error");
 
-  async function changeLink(subjectId, add) {
+  async function changeLink(subjectId, add, subject) {
+    if (targetId === null || targetId === undefined) {
+      current = add ? SubjectsPanel.withSubject(current, subject) : SubjectsPanel.withoutSubject(current, subjectId);
+      return true;
+    }
     const answer = await sendMaterialsRequest(SubjectsPanel.buildLinkRequest(subjectId, group, targetId, add));
     if (!answer.ok) {
       errorEl.textContent = SubjectsPanel.errorText(answer.data, "Could not change the subject");
@@ -308,7 +314,7 @@ function buildSubjectsField(group, targetId, initial) {
       remove.type = "button";
       remove.setAttribute("aria-label", `Remove ${chip.label}`);
       remove.addEventListener("click", async () => {
-        if (await changeLink(chip.id, false)) {
+        if (await changeLink(chip.id, false, chip)) {
           draw();
         }
       });
@@ -332,7 +338,8 @@ function buildSubjectsField(group, targetId, initial) {
       const add = materialsElement("button", "", "Add subject");
       add.type = "button";
       add.addEventListener("click", async () => {
-        if (await changeLink(select.value, true)) {
+        const picked = all.find((entry) => entry.id === select.value);
+        if (picked && (await changeLink(select.value, true, picked))) {
           draw();
         }
       });
@@ -360,7 +367,7 @@ function buildSubjectsField(group, targetId, initial) {
         return;
       }
       all = [...all, made.data.subject];
-      if (await changeLink(made.data.subject.id, true)) {
+      if (await changeLink(made.data.subject.id, true, made.data.subject)) {
         draw();
       }
     });
@@ -376,10 +383,26 @@ function buildSubjectsField(group, targetId, initial) {
     draw();
   }
 
+  /* Links the pending subjects to a newly created item or piece. Answers the
+   * names that could not be linked. */
+  async function applyTo(id) {
+    const failed = [];
+    for (const entry of current || []) {
+      const answer = await sendMaterialsRequest(SubjectsPanel.buildLinkRequest(entry.id, group, id, true));
+      if (!answer.ok) {
+        failed.push(entry.name);
+      }
+    }
+    if ((current || []).length > 0) {
+      notifySubjectsChanged();
+    }
+    return failed;
+  }
+
   if (current !== null) {
     setSubjects(current);
   } else {
     draw();
   }
-  return { el, setSubjects };
+  return { el, setSubjects, applyTo };
 }
