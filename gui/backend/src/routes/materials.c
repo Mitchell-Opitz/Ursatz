@@ -1306,6 +1306,16 @@ static bool motif_tonic_ok(const cJSON *version_body) {
   return cJSON_IsString(key) && (strcmp(key->valuestring, "C major") == 0 || strcmp(key->valuestring, "C minor") == 0);
 }
 
+/* True when text has a character that is not white space. */
+static bool has_text(const char *text) {
+  for (; text && *text; text++) {
+    if (!isspace((unsigned char)*text)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 static int handle_create_item(struct mg_connection *conn) {
   int status = 0;
   cJSON *body = read_json_body(conn, &status);
@@ -1316,10 +1326,11 @@ static int handle_create_item(struct mg_connection *conn) {
   const char *type = optional_string(body, "type", &bad);
   const char *name = optional_string(body, "name", &bad);
   const char *project_id = optional_string(body, "project_id", &bad);
+  const char *note = optional_string(body, "note", &bad);
   const cJSON *version_body = cJSON_GetObjectItemCaseSensitive(body, "body");
   if (bad || !type || !name || !project_id || !cJSON_IsObject(version_body)) {
     cJSON_Delete(body);
-    return send_failure(conn, 400, "type, name, project_id and an object body are required");
+    return send_failure(conn, 400, "type, name, project_id and an object body are required; note is a string");
   }
   if (!motif_tonic_ok(version_body)) {
     cJSON_Delete(body);
@@ -1333,7 +1344,10 @@ static int handle_create_item(struct mg_connection *conn) {
     return analysis == ANALYSIS_REFUSED ? send_failure(conn, 400, refusal) : send_failure(conn, 500, "out of memory");
   }
   cJSON *item = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_create(type, name, project_id, version_body, &item);
+  /* A new motif's first version is noted "Created" unless the caller gives a note. */
+  const char *first_note = has_text(note) ? note : strcmp(type, "motif") == 0 ? "Created" : NULL;
+  UrsatzGuiMaterialResult result =
+      ursatz_gui_material_item_create_noted(type, name, project_id, version_body, first_note, &item);
   cJSON_Delete(body);
   if (result != URSATZ_GUI_MATERIAL_OK) {
     return send_material_failure(conn, result);
@@ -1454,6 +1468,11 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
   if (bad || !cJSON_IsObject(version_body)) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "an object body is required; note is a string");
+  }
+  /* Every new version of a motif says what changed. */
+  if (cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(version_body, "motif")) && !has_text(note)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "give a version note");
   }
   if (!motif_tonic_ok(version_body)) {
     cJSON_Delete(body);
