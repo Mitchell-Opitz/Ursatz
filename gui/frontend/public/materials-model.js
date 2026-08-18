@@ -328,6 +328,32 @@
     return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/versions`, request);
   }
 
+  const MOTIF_TABS = [
+    { id: "motif", label: "Motif" },
+    { id: "variants", label: "Variants" },
+    { id: "used-by", label: "Used by" },
+    { id: "other", label: "Other" },
+  ];
+  const MOTIF_TAB_KEY = "ursatz.motif.tab";
+
+  /* The remembered motif tab id, "motif" when unset, unknown or storage is unavailable. */
+  function readMotifTab() {
+    try {
+      const saved = localStorage.getItem(MOTIF_TAB_KEY);
+      return MOTIF_TABS.some((tab) => tab.id === saved) ? saved : MOTIF_TABS[0].id;
+    } catch (err) {
+      return MOTIF_TABS[0].id;
+    }
+  }
+
+  function writeMotifTab(id) {
+    try {
+      localStorage.setItem(MOTIF_TAB_KEY, id);
+    } catch (err) {
+      // Storage unavailable: the tab just is not remembered.
+    }
+  }
+
   const COMPOSER_MISSING_TEXT =
     "The Composer is not available: motifs save without analysis, notation or variants. Rebuild the GUI (README, Building).";
 
@@ -804,6 +830,9 @@
     bodyWithUse,
     buildAddVersionRequest,
     buildReanalyzeRequest,
+    MOTIF_TABS,
+    readMotifTab,
+    writeMotifTab,
     COMPOSER_MISSING_TEXT,
     composerAvailable,
     NOTE_HINT,

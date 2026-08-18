@@ -1139,10 +1139,12 @@ async function renderMaterialsDetail(type, id, analysisError) {
   content.append(controls, statusEl);
 
   const versionEl = materialsElement("div");
-  const subjectsField = buildSubjectsField("items", id, answer.data.subjects);
-  const subjectsRow = materialsElement("div", "materials-subjects-row");
-  subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
-  content.appendChild(subjectsRow);
+  if (type !== "motif") {
+    const subjectsField = buildSubjectsField("items", id, answer.data.subjects);
+    const subjectsRow = materialsElement("div", "materials-subjects-row");
+    subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
+    content.appendChild(subjectsRow);
+  }
   const allItemsAnswer = await sendMaterialsRequest(MaterialsModel.buildAllItemsRequest());
   const itemNameOf = (itemId) => {
     const found = (allItemsAnswer.ok ? allItemsAnswer.data.items : []).find((entry) => entry.id === itemId);
@@ -1155,48 +1157,16 @@ async function renderMaterialsDetail(type, id, analysisError) {
       banner.setAttribute("role", "alert");
       content.insertBefore(banner, content.children[1]);
     }
-    const editor = buildMotifEditor(answer.data.body);
-    content.appendChild(editor.el);
-    content.appendChild(
-      buildAnalysisPanel(answer.data.body, analysisError, {
-        send: () => sendMaterialsRequest(MaterialsModel.buildReanalyzeRequest(id)),
-        done: (reason) => renderMaterialsDetail(type, id, reason),
-      }),
-    );
-    const score = buildMotifScore(id, item, answer.data.body);
-    if (score) {
-      content.appendChild(score);
-    }
-    const variants = VariantTreeView.mount(content, {
+    MotifDetailView.render(content, {
       id,
-      name: item.name,
-      body: answer.data.body,
-      send: sendMaterialsRequest,
-      open: (variantId) => renderMaterialsDetail(type, variantId),
+      item,
+      data: answer.data,
+      analysisError,
+      statusEl,
+      allItems: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
+      rerender: (reason) => renderMaterialsDetail(type, id, reason),
     });
-    MotifCompareView.mount(content, {
-      id,
-      version: item.current_version,
-      projectId: item.project_id,
-      projects: materialsState.projects,
-      items: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
-      send: sendMaterialsRequest,
-      linked: () => variants.refresh(),
-    });
-    content.appendChild(
-      buildMotifSaveControls(editor, statusEl, "Save as new version", true, async (values, note) => {
-        const request = MaterialsModel.buildSaveMotifRequest({
-          id,
-          note,
-          body: MaterialsModel.buildMotifBody(values, answer.data.body),
-        });
-        const saved = await sendMaterialsRequest(request);
-        if (saved.ok) {
-          renderMaterialsDetail(type, id, saved.data.item.analysis_error);
-        }
-        return saved;
-      }),
-    );
+    return;
   }
   if (type === "theme") {
     const editor = buildThemeEditor({
