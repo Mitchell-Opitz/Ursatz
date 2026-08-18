@@ -683,6 +683,32 @@
   }
 
   /* Saving a motif: a new item when id is empty, else a new version. */
+  /* True when the editor's values differ from the stored version body: the body they build is compared with the body
+   * the stored values build, so fields the editor does not own do not count. Rewriting an older motif in C counts. */
+  function motifBodyChanged(values, body) {
+    const stored = motifFormValues(body);
+    if (stored.legacyKey && !values.legacyKey) {
+      return true;
+    }
+    return JSON.stringify(buildMotifBody(values, body)) !== JSON.stringify(buildMotifBody(stored, body));
+  }
+
+  const SAVE_NOTE_TEXT = "Give a version note.";
+  const SAVE_NOTHING_TEXT = "Nothing to save.";
+
+  /* What the single Save of a motif does. changes is {name, project, body} booleans; note the version note field.
+   * Answers {kind: "none" | "blocked" | "save", message}: a body change needs a note and nothing is sent without one. */
+  function motifSaveDecision(changes, note) {
+    const c = changes || {};
+    if (!c.name && !c.project && !c.body) {
+      return { kind: "none", message: SAVE_NOTHING_TEXT };
+    }
+    if (c.body && String(note || "").trim() === "") {
+      return { kind: "blocked", message: SAVE_NOTE_TEXT };
+    }
+    return { kind: "save", message: "" };
+  }
+
   function buildSaveMotifRequest(options) {
     const o = options || {};
     if (!o.id) {
@@ -831,6 +857,8 @@
     buildAddVersionRequest,
     buildReanalyzeRequest,
     MOTIF_TABS,
+    motifBodyChanged,
+    motifSaveDecision,
     readMotifTab,
     writeMotifTab,
     COMPOSER_MISSING_TEXT,

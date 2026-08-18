@@ -1135,7 +1135,11 @@ async function renderMaterialsDetail(type, id, analysisError) {
     notifySubjectsChanged();
     renderMaterialsView(type);
   });
-  controls.append(name, project, save, del);
+  if (type === "motif") {
+    controls.append(name, project, del);
+  } else {
+    controls.append(name, project, save, del);
+  }
   content.append(controls, statusEl);
 
   const versionEl = materialsElement("div");
@@ -1163,6 +1167,8 @@ async function renderMaterialsDetail(type, id, analysisError) {
       data: answer.data,
       analysisError,
       statusEl,
+      nameInput: name,
+      projectSelect: project,
       allItems: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
       rerender: (reason) => renderMaterialsDetail(type, id, reason),
     });

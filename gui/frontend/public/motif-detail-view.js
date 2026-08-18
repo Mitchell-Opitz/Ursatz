@@ -70,20 +70,79 @@ const MotifDetailView = (function () {
         done: (reason) => ctx.rerender(reason),
       }),
     );
-    pane.appendChild(
-      buildMotifSaveControls(editor, statusEl, "Save as new version", true, async (values, note) => {
-        const request = MaterialsModel.buildSaveMotifRequest({
-          id,
-          note,
-          body: MaterialsModel.buildMotifBody(values, data.body),
-        });
-        const saved = await sendMaterialsRequest(request);
-        if (saved.ok) {
-          ctx.rerender(saved.data.item.analysis_error);
+    pane.appendChild(buildSaveRow(editor, ctx));
+  }
+
+  /* The one Save of the page: name and project go through the item update, an editor body that differs from the
+   * current version writes a new version with the note. */
+  function buildSaveRow(editor, ctx) {
+    const { id, item, data, statusEl } = ctx;
+    const row = materialsElement("div", "upload-controls");
+    const note = materialsElement("input");
+    note.type = "text";
+    note.placeholder = "What changed? (required)";
+    note.size = 40;
+    const save = materialsElement("button", "", "Save");
+    save.type = "button";
+    const message = materialsElement("span", "materials-field-error");
+    message.setAttribute("role", "status");
+    row.append(note, save, message);
+
+    save.addEventListener("click", async () => {
+      message.textContent = "";
+      statusEl.textContent = "";
+      statusEl.classList.remove("error");
+      const values = editor.values();
+      const fields = {};
+      const typedName = ctx.nameInput.value.trim();
+      if (typedName !== "" && typedName !== item.name) {
+        fields.name = typedName;
+      }
+      if (ctx.projectSelect.value !== item.project_id) {
+        fields.project_id = ctx.projectSelect.value;
+      }
+      const bodyChanged = MaterialsModel.motifBodyChanged(values, data.body);
+      const decision = MaterialsModel.motifSaveDecision(
+        { name: "name" in fields, project: "project_id" in fields, body: bodyChanged },
+        note.value,
+      );
+      if (decision.kind !== "save") {
+        message.textContent = decision.message;
+        return;
+      }
+      if (bodyChanged) {
+        const problems = MaterialsModel.motifFormProblems(values);
+        editor.showProblems(problems);
+        if (problems.length > 0) {
+          return;
         }
-        return saved;
-      }),
-    );
+      }
+      save.disabled = true;
+      let reason;
+      if (bodyChanged) {
+        const saved = await sendMaterialsRequest(
+          MaterialsModel.buildSaveMotifRequest({ id, note: note.value, body: MaterialsModel.buildMotifBody(values, data.body) }),
+        );
+        if (!saved.ok) {
+          save.disabled = false;
+          const text = MaterialsModel.errorText(saved.data, "Could not save the motif");
+          editor.showError(text, MaterialsModel.errorField(text));
+          return;
+        }
+        reason = saved.data.item.analysis_error;
+      }
+      if (Object.keys(fields).length > 0) {
+        const renamed = await sendMaterialsRequest(MaterialsModel.buildUpdateItemRequest(id, fields));
+        if (!renamed.ok) {
+          save.disabled = false;
+          statusEl.textContent = MaterialsModel.errorText(renamed.data, "Could not save");
+          statusEl.classList.add("error");
+          return;
+        }
+      }
+      ctx.rerender(reason);
+    });
+    return row;
   }
 
   function buildVariantsPane(pane, ctx) {
