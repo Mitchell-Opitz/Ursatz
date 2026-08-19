@@ -380,6 +380,7 @@
     { value: "contour", label: "Contour only", enabled: true },
   ];
 
+  const SEGMENTS_HINT = "Named note ranges, for example head and tail. Liquidation and motive-forms keep or drop them.";
   const HARMONY_HINT = "Own chords, e.g. I V6@2 I@3: upper case Roman numerals (b or # before for an altered root; figures 6, 64, 7, 65, 43, 42) and @ the onset in beats. The first chord needs no onset. Up to 8 chords; empty means none.";
   const HARMONY_MAX_CHARS = 200;
 
@@ -504,7 +505,7 @@
     if (/harmony|chord|numeral|token \d+ \(column/i.test(text)) {
       return "harmony";
     }
-    return /feature/i.test(text) ? "features" : "notes";
+    return /feature|segment/i.test(text) ? "features" : "notes";
   }
 
   /* Messages for the feature rows (1-based first and last note). */
@@ -512,7 +513,7 @@
     const messages = [];
     const seen = new Set();
     (features || []).forEach((feature, index) => {
-      const row = `Feature ${index + 1}`;
+      const row = `Segment ${index + 1}`;
       const label = String(feature.label || "").trim();
       if (label === "" || Array.from(label).length > 8) {
         messages.push(`${row}: the label is 1 to 8 characters.`);
@@ -868,6 +869,7 @@
     formHint,
     errorField,
     HARMONY_HINT,
+    SEGMENTS_HINT,
     buildImportMidiRequest,
     importToFormValues,
     importNotice,

@@ -809,7 +809,8 @@ function buildMotifEditor(body) {
   field("Harmony", harmony, "harmony");
   el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.HARMONY_HINT));
 
-  el.appendChild(materialsElement("h2", "section-title", "Features"));
+  el.appendChild(materialsElement("h2", "section-title", "Segments"));
+  el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.SEGMENTS_HINT));
   const featureTable = materialsElement("table", "library-table materials-features");
   el.appendChild(featureTable);
   errors.features = materialsElement("div", "materials-field-error");
@@ -820,7 +821,7 @@ function buildMotifEditor(body) {
     featureTable.innerHTML = "";
     if (featureRows.length > 0) {
       const head = materialsElement("tr");
-      for (const label of ["Label", "First note", "Last note", ""]) {
+      for (const label of ["Segment", "First note", "Last note", ""]) {
         head.appendChild(materialsElement("th", "", label));
       }
       featureTable.appendChild(head);
@@ -832,7 +833,7 @@ function buildMotifEditor(body) {
         input.type = "text";
         input.size = prop === "label" ? 8 : 4;
         input.value = String(row[prop]);
-        input.setAttribute("aria-label", `Feature ${index + 1} ${prop}`);
+        input.setAttribute("aria-label", `Segment ${index + 1} ${prop}`);
         input.addEventListener("input", () => {
           row[prop] = prop === "label" ? input.value : input.value.trim() === "" ? NaN : Number(input.value);
         });
@@ -853,7 +854,7 @@ function buildMotifEditor(body) {
     });
   }
   drawFeatures();
-  const addFeature = materialsElement("button", "", "Add feature");
+  const addFeature = materialsElement("button", "", "Add segment");
   addFeature.type = "button";
   addFeature.addEventListener("click", () => {
     featureRows.push(MaterialsModel.newFeatureRow(featureRows));
