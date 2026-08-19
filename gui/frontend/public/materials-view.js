@@ -8,6 +8,7 @@ const materialsState = {
   filter: MaterialsModel.ALL_PROJECTS,
   type: null,
   loaded: false,
+  notice: "",
 };
 
 function sendMaterialsRequest(request) {
@@ -208,14 +209,12 @@ function buildItemTable(rows, onOpen) {
   return table;
 }
 
-/* The Random dialog of the Motifs list: draws candidates from the Composer, plays them through the score workspace and
- * saves the ones kept as motif items. Nothing is stored until Save. */
-function buildRandomMotifs(statusEl, reload) {
+/* The Random section of the New Motif page: draws candidates from the Composer and plays them through the score
+ * workspace. "Use this" hands a candidate's form values to onUse(values) to fill the editor; nothing is stored. */
+function buildRandomMotifs(statusEl, onUse) {
   const section = materialsElement("section", "panel materials-random");
-  const toggle = materialsElement("button", "", "Random");
-  toggle.type = "button";
+  section.appendChild(materialsElement("h2", "section-title", "Random"));
   const form = materialsElement("div", "upload-controls");
-  form.hidden = true;
   const problemEl = materialsElement("div", "upload-status error");
   const candidatesEl = materialsElement("ol", "variant-candidates");
   const selectedEl = materialsElement("div");
@@ -329,41 +328,6 @@ function buildRandomMotifs(statusEl, reload) {
     drawCandidates();
   }
 
-  function saveControls(candidate) {
-    const row = materialsElement("div", "variant-actions");
-    const name = materialsElement("input");
-    name.type = "text";
-    name.placeholder = "Motif name";
-    const project = materialsElement("select");
-    fillProjectSelect(project, MaterialsModel.defaultProject(materialsState.filter, materialsState.projects));
-    const save = materialsElement("button", "", "Save");
-    save.type = "button";
-    save.addEventListener("click", async () => {
-      if (name.value.trim() === "" || project.value === "") {
-        statusEl.classList.add("error");
-        statusEl.textContent = "Give the motif a name and a project.";
-        return;
-      }
-      save.disabled = true;
-      const answer = await sendMaterialsRequest(
-        MaterialsModel.buildSaveMotifRequest({
-          name: name.value,
-          project_id: project.value,
-          body: MaterialsModel.randomCandidateToBody(candidate, runValues),
-        }),
-      );
-      save.disabled = false;
-      if (!answer.ok) {
-        statusEl.classList.add("error");
-        statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not save the motif");
-        return;
-      }
-      await reload();
-    });
-    row.append(name, project, save);
-    return row;
-  }
-
   function drawCandidates() {
     candidatesEl.innerHTML = "";
     for (const candidate of shown) {
@@ -374,13 +338,14 @@ function buildRandomMotifs(statusEl, reload) {
       card.appendChild(materialsElement("div", "variant-derivation", analysis[textName] || ""));
       card.appendChild(materialsElement("div", "variant-meta", `${runValues.meter}${keyText ? ` · ${keyText}` : ""} · seed ${candidate.seed}`));
       const buttons = materialsElement("div", "variant-actions");
-      for (const [text, action] of [["Play", () => play(candidate)], ["Reroll", () => reroll(candidate)]]) {
+      const use = () => onUse(MaterialsModel.motifFormValues(MaterialsModel.randomCandidateToBody(candidate, runValues)));
+      for (const [text, action] of [["Play", () => play(candidate)], ["Reroll", () => reroll(candidate)], ["Use this", use]]) {
         const button = materialsElement("button", "", text);
         button.type = "button";
         button.addEventListener("click", action);
         buttons.appendChild(button);
       }
-      card.append(buttons, saveControls(candidate));
+      card.appendChild(buttons);
       candidatesEl.appendChild(card);
     }
   }
@@ -409,11 +374,8 @@ function buildRandomMotifs(statusEl, reload) {
     shown = (answer.data.motives || []).map((motive, index) => ({ ...motive, seed: start + index }));
     drawCandidates();
   });
-  toggle.addEventListener("click", () => {
-    form.hidden = !form.hidden;
-  });
   loadStyles();
-  section.append(toggle, form, problemEl, candidatesEl, selectedEl);
+  section.append(form, problemEl, candidatesEl, selectedEl);
   return section;
 }
 
@@ -437,9 +399,6 @@ async function renderMaterialsView(type) {
     statusEl.textContent = "Create a project from the sidebar first.";
   }
   content.append(statusEl);
-  if (type === "motif" && materialsState.projects.length > 0) {
-    content.appendChild(buildRandomMotifs(statusEl, reload));
-  }
   content.append(listEl);
 
   const answer = await sendMaterialsRequest(MaterialsModel.buildItemListRequest(type, materialsState.filter));
@@ -761,15 +720,22 @@ function buildMotifEditor(body) {
       importStatus.textContent = MaterialsModel.errorText(answer.data, "Could not read the MIDI file");
       return;
     }
-    const filled = MaterialsModel.importToFormValues(answer.data);
+    fill(MaterialsModel.importToFormValues(answer.data));
+    importStatus.textContent = MaterialsModel.importNotice(answer.data);
+  });
+
+  /* Sets the form, notes, meter, mode and pickup (and the role when given) from values. */
+  function fill(filled) {
+    if (filled.role) {
+      role.value = filled.role;
+    }
     form.value = filled.form;
     hint.textContent = MaterialsModel.formHint(filled.form);
     notes.value = filled.notes;
     meter.value = filled.meter;
     mode.value = filled.mode;
     pickup.value = filled.pickup;
-    importStatus.textContent = MaterialsModel.importNotice(answer.data);
-  });
+  }
 
   let legacyKey = initial.legacyKey;
   const legacyRow = materialsElement("div", "upload-controls");
@@ -926,7 +892,7 @@ function buildMotifEditor(body) {
     }
   }
 
-  return { el, values, showProblems, showError };
+  return { el, values, fill, showProblems, showError };
 }
 
 /* The Save controls of a motif editor: an optional version note and a
@@ -983,6 +949,11 @@ function renderNewMotif(draftName, draftProject) {
   meta.append(name, project);
   content.append(meta, statusEl);
 
+  const subjectsField = buildSubjectsField("items", null, []);
+  const subjectsRow = materialsElement("div", "materials-subjects-row");
+  subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
+  content.appendChild(subjectsRow);
+
   const editor = buildMotifEditor(null);
   content.appendChild(editor.el);
   content.appendChild(
@@ -995,15 +966,26 @@ function renderNewMotif(draftName, draftProject) {
       const request = MaterialsModel.buildSaveMotifRequest({
         name: name.value,
         project_id: project.value,
+        note: "Created",
         body: MaterialsModel.buildMotifBody(values, null),
       });
       const answer = await sendMaterialsRequest(request);
       if (answer.ok) {
+        const failed = await subjectsField.applyTo(answer.data.item.id);
+        materialsState.notice = failed.length > 0 ? `Could not link the subjects: ${failed.join(", ")}.` : "";
         renderMaterialsDetail("motif", answer.data.item.id, answer.data.item.analysis_error);
       }
       return answer;
     }),
   );
+  if (materialsState.projects.length > 0) {
+    content.appendChild(
+      buildRandomMotifs(statusEl, (values) => {
+        editor.fill(values);
+        editor.el.scrollIntoView();
+      }),
+    );
+  }
 }
 
 /* The score and playback of a motif version in the score workspace, sounded in its stored key. Nothing here is saved. */
@@ -1160,6 +1142,11 @@ async function renderMaterialsDetail(type, id, analysisError) {
       const banner = materialsElement("div", "upload-status error", MaterialsModel.COMPOSER_MISSING_TEXT);
       banner.setAttribute("role", "alert");
       content.insertBefore(banner, content.children[1]);
+    }
+    if (materialsState.notice) {
+      statusEl.textContent = materialsState.notice;
+      statusEl.classList.add("error");
+      materialsState.notice = "";
     }
     MotifDetailView.render(content, {
       id,

@@ -717,6 +717,7 @@
         name: String(o.name || "").trim(),
         project_id: o.project_id,
         body: o.body,
+        ...(o.note && String(o.note).trim() !== "" ? { note: String(o.note).trim() } : {}),
       });
     }
     const request = { body: o.body };
