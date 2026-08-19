@@ -1,7 +1,7 @@
 /* The motif detail page (P18 B3): a header, a tab bar (Motif, Variants, Used by, Other) and one pane per tab. The
  * panes are built once and shown or hidden, so the editor keeps what was typed when another tab is open. The
  * Variants pane mounts the first time it is shown. The pieces (buildMotifEditor, buildMotifScore, buildAnalysisPanel,
- * buildUsedBySection, buildUsesSection, buildVersionsList, buildSubjectsField, VariantTreeView, MotifCompareView)
+ * buildUsedByTable, buildUsesSection, buildVersionsList, buildSubjectsField, VariantTreeView, MotifCompareView)
  * are page globals from materials-view.js and the other view files. */
 const MotifDetailView = (function () {
   /* ctx: {id, item, data (the item answer), analysisError, statusEl, allItems, headerEl, rerender(reason)}.
@@ -16,7 +16,7 @@ const MotifDetailView = (function () {
     const builders = {
       motif: (pane) => buildMotifPane(pane, ctx),
       variants: (pane) => buildVariantsPane(pane, ctx),
-      "used-by": (pane) => pane.appendChild(buildUsedBySection(data.used_by)),
+      "used-by": (pane) => pane.appendChild(buildUsedByTable(data.used_by, item.current_version)),
       other: (pane) => buildOtherPane(pane, ctx),
     };
 
@@ -157,7 +157,7 @@ const MotifDetailView = (function () {
     ctx.variants = variants;
   }
 
-  /* Versions, Uses and Compare. */
+  /* Versions, Derived from and Compare. */
   function buildOtherPane(pane, ctx) {
     const { id, item, data, statusEl } = ctx;
     const versionEl = materialsElement("div");

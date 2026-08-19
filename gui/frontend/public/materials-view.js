@@ -471,8 +471,9 @@ async function showUseComparison(el, row, statusEl) {
  * ctx: {id, type, body, statuses, allItems, statusEl}. */
 function buildUsesSection(ctx) {
   const rows = MaterialsModel.useRows(ctx.statuses, materialsState.projects);
+  const derived = ctx.type === "motif";
   const section = materialsElement("div");
-  section.appendChild(materialsElement("h2", "section-title", "Uses"));
+  section.appendChild(materialsElement("h2", "section-title", derived ? "Derived from" : "Uses"));
   const compareEl = materialsElement("div");
 
   async function change(sourceId, version, add, note) {
@@ -487,7 +488,7 @@ function buildUsesSection(ctx) {
   }
 
   if (rows.length === 0) {
-    section.appendChild(materialsElement("div", "piece-list-status", "Uses nothing yet."));
+    section.appendChild(materialsElement("div", "piece-list-status", derived ? "Not derived from anything yet." : "Uses nothing yet."));
   } else {
     const table = materialsElement("table", "library-table");
     const head = materialsElement("tr");
@@ -580,6 +581,39 @@ function buildUsesSection(ctx) {
   picker.append(query, typeSelect, projectSelect, choice, add);
   section.appendChild(picker);
   section.appendChild(compareEl);
+  return section;
+}
+
+/* The Used by table of a motif: name (opens the item), type, the version it uses, project, and whether its use is
+ * behind currentVersion. */
+function buildUsedByTable(users, currentVersion) {
+  const rows = MaterialsModel.usedByTable(users, materialsState.projects, currentVersion);
+  const section = materialsElement("div");
+  section.appendChild(materialsElement("h2", "section-title", "Used by"));
+  if (rows.length === 0) {
+    section.appendChild(materialsElement("div", "piece-list-status", "Nothing uses this motif yet."));
+    return section;
+  }
+  const table = materialsElement("table", "library-table");
+  const head = materialsElement("tr");
+  for (const label of ["Name", "Type", "Version used", "Project", ""]) {
+    head.appendChild(materialsElement("th", "", label));
+  }
+  table.appendChild(head);
+  for (const row of rows) {
+    const tr = materialsElement("tr");
+    const nameCell = materialsElement("td");
+    const open = materialsElement("a", "clickable", row.name);
+    open.addEventListener("click", () => openLinkedItem(row.type, row.id));
+    nameCell.appendChild(open);
+    tr.appendChild(nameCell);
+    tr.appendChild(materialsElement("td", "", row.type));
+    tr.appendChild(materialsElement("td", "", `v${row.version}`));
+    tr.appendChild(materialsElement("td", "", row.project));
+    tr.appendChild(materialsElement("td", "", row.updateAvailable ? "update available" : ""));
+    table.appendChild(tr);
+  }
+  section.appendChild(table);
   return section;
 }
 

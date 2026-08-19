@@ -259,6 +259,15 @@
   }
 
   /* force true adds ?force=1, which deletes an item other items use. */
+  /* Rows for the Used by table of a motif: usedByRows plus updateAvailable, true when the user's version is behind
+   * currentVersion (the motif's current version). */
+  function usedByTable(users, projects, currentVersion) {
+    return usedByRows(users, projects).map((row) => ({
+      ...row,
+      updateAvailable: Number.isFinite(row.version) && Number(currentVersion) > row.version,
+    }));
+  }
+
   function buildDeleteItemRequest(id, force) {
     return jsonRequest("DELETE", `/api/materials/items/${encodeURIComponent(id)}${force ? "?force=1" : ""}`);
   }
@@ -851,6 +860,7 @@
     buildDeleteItemRequest,
     deleteWarning,
     usedByRows,
+    usedByTable,
     hasUpdatedUse,
     buildUpdateUseRequest,
     buildAllItemsRequest,
