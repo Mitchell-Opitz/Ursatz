@@ -74,6 +74,8 @@ typedef struct {
     const Motive *motive;        /* the piece's basic motive (R-170); NULL for the first motif fill, else an invented one */
     bool has_accompaniment;
     PlanAccompaniment accompaniment;
+    bool has_voicing;            /* a four-part voicing (PlanVoicing) on every section; not with an accompaniment */
+    PlanVoicing voicing;
     bool has_style;
     PlanStyle style;
 } PieceStructure;
@@ -81,7 +83,7 @@ typedef struct {
 /*
  * PIECE_OK, or PIECE_ERR_BAD_REQUEST for: no body section; parts out of order; ids that are empty or repeat; more than
  * PIECE_STRUCTURE_MAX_SECTIONS sections or PIECE_STRUCTURE_MAX_BARS bars; a length under one beat; a pickup that is not
- * a multiple of 1/32 or not shorter than a bar; a meter or key not supported.
+ * a multiple of 1/32 or not shorter than a bar; a meter or key not supported; an accompaniment and a voicing both.
  */
 PieceResult piece_structure_check(const PieceStructure *structure);
 

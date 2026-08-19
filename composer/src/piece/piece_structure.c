@@ -66,7 +66,8 @@ PieceResult piece_structure_check(const PieceStructure *structure) {
         structure->key.tonic_pitch_class > 11 ||
         (structure->key.mode != PLAN_MODE_MAJOR && structure->key.mode != PLAN_MODE_MINOR) ||
         structure->meter.beats_per_bar <= 0 || structure->meter.beat_unit <= 0 ||
-        structure->section_count > PIECE_STRUCTURE_MAX_SECTIONS) {
+        structure->section_count > PIECE_STRUCTURE_MAX_SECTIONS ||
+        (structure->has_accompaniment && structure->has_voicing)) {
         return PIECE_ERR_BAD_REQUEST;
     }
     PlanTime bar = grow_bar_length(&structure->meter);
@@ -398,6 +399,12 @@ static PieceResult add_section(PiecePlan *plan, const PieceStructure *structure,
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_ACCOMPANIMENT;
         constraint.params.accompaniment = structure->accompaniment;
+        result = add_constraint(plan, *out, &constraint);
+    }
+    if (result == PIECE_OK && structure->has_voicing) {
+        memset(&constraint, 0, sizeof(constraint));
+        constraint.kind = PLAN_CONSTRAINT_VOICING;
+        constraint.params.voicing = structure->voicing;
         result = add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK) {
