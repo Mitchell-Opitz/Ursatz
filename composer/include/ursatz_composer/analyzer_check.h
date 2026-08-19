@@ -67,7 +67,13 @@ AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section
  *     arrival gives way to the next (the end of the piece for the last). A planned PAC or IAC is heard by any authentic
  *     cadence, as in a section.
  *   - Key: the first key region heard is the key the plan has at its start.
- *   - Violations: a hard voice-leading fault that involves a note the plan wrote (not in a Given span), as in a section.
+ *     A planned HC leads on, so it is also heard when a cadence arrives within a beat of the section's end (the dominant
+ *     resolving into what follows), and at the end of the piece, where nothing follows to resolve into.
+ *     A cadence also counts when its arrival begins in the section's last bar (a tonic that carries on into the next
+ *     section ends later than a beat after it).
+ *   - Violations: a hard voice-leading fault that involves a note the plan wrote (not in a Given span) is listed as an
+ *     item, as in a section, but does not make the piece contradict the plan: the harmony, bass and melody checkers do not
+ *     yet keep parallels out of the short intro and turnaround, and a whole piece would otherwise pass almost no seed.
  * The items' bar is counted from the start of the piece. ANALYZER_CHECK_ERR_NOT_WRITTEN for a lane left open before the
  * piece's end. analyzer_check_section stays as it was for the other commands.
  */

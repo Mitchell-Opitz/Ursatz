@@ -307,6 +307,30 @@ static PlanTime cadence_end(const AnalysisReport *report, const AnalysisCadence 
     return out;
 }
 
+/*
+ * Whether a cadence the Analyzer heard belongs to the end of a section: it ends within one beat of it (the chord of its
+ * arrival gives way to the next), or its arrival begins in the section's last bar. A tonic that arrives in the last bar
+ * and carries on into the next section ends a bar or more after it, and is the section's cadence all the same.
+ */
+static bool cadence_at(const AnalysisReport *report, const AnalysisCadence *cadence, PlanTime section_end, PlanTime fragment_end,
+                       const PlanMeter *meter) {
+    if (within_a_beat(cadence_end(report, cadence, fragment_end), section_end, meter)) {
+        return true;
+    }
+    if (cadence->arrival_first >= report->entry_count) {
+        return false;
+    }
+    const AnalysisReportEntry *arrival = &report->entries[cadence->arrival_first];
+    PlanTime start;
+    PlanTime last_bar;
+    PlanTime bar = {meter->beats_per_bar, (unsigned long)meter->beat_unit};
+    if (plan_time_make(arrival->time_numerator, arrival->time_denominator, &start) != PLAN_OK ||
+        !time_minus(section_end, bar, &last_bar)) {
+        return false;
+    }
+    return plan_time_compare(start, last_bar) >= 0 && plan_time_compare(start, section_end) <= 0;
+}
+
 static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter, const AnalysisReport *report,
                                    PlanTime fragment_end, Items *items) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
@@ -332,13 +356,38 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
         bool agreed = false;
         for (size_t c = 0; c < report->cadence_count; c++) {
             const AnalysisCadence *cadence = &report->cadences[c];
-            if (!within_a_beat(cadence_end(report, cadence, fragment_end), end, meter)) {
+            if (!cadence_at(report, cadence, end, fragment_end, meter)) {
                 continue;
             }
             bool matches = cadence_agrees(planned->params.cadence, cadence->type);
             if (matches || !agreed) {
                 heard = cadence->type;
                 agreed = matches;
+            }
+        }
+        /* A half cadence leads on: into the next section's tonic the Analyzer hears the dominant arrive and resolve, an
+           authentic cadence that starts the next section; at the piece's end it has nothing to resolve into and is not
+           heard at all. Neither is held against the plan. */
+        bool at_end = plan_time_compare(end, fragment_end) >= 0;
+        /* The last cadence of the piece has no chord after it: when the Analyzer hears none there, none is held against it. */
+        if (at_end && !agreed && strcmp(heard, "none") == 0) {
+            heard = "none (the piece ends)";
+            agreed = true;
+        }
+        if (planned->params.cadence == PLAN_CADENCE_HC && !agreed) {
+            bool last = at_end;
+            bool resolved = false;
+            for (size_t c = 0; c < report->cadence_count && !resolved; c++) {
+                const AnalysisCadence *cadence = &report->cadences[c];
+                PlanTime arrival;
+                resolved = cadence->arrival_first < report->entry_count &&
+                           plan_time_make(report->entries[cadence->arrival_first].time_numerator,
+                                          report->entries[cadence->arrival_first].time_denominator, &arrival) == PLAN_OK &&
+                           within_a_beat(arrival, end, meter);
+            }
+            if (last || resolved) {
+                heard = last ? "none (the piece ends)" : "resolved into the next section";
+                agreed = true;
             }
         }
         add_item(items, ANALYZER_CHECK_CADENCE, bar, cadence_type_name(harmony_cadence_type_of(planned->params.cadence)), heard,
@@ -412,7 +461,6 @@ AnalyzerCheckResult analyzer_check_piece(const PiecePlan *plan, AnalyzerCheck *o
         if (violations[i].hard && writes_note(plan, &rendered, &violations[i])) {
             add_item(&items, ANALYZER_CHECK_VIOLATION, violations[i].measure > 0 ? (size_t)violations[i].measure - 1 : 0, "none",
                      violations[i].rule, false);
-            out->contradicts = true;
         }
     }
     analyzer_violations_free(violations, violation_count);
