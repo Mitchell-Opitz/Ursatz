@@ -1712,10 +1712,11 @@ UrsatzGuiStyleResult ursatz_gui_style_model_path(const char *id, char *buffer, s
     snprintf(path, sizeof(path), "%s/style-model.json", dir);
 
     LOCK();
-    char resolved[PATH_BYTES * 4];
 #ifdef _WIN32
+    char resolved[PATH_BYTES * 4];
     bool found = _fullpath(resolved, path, sizeof(resolved)) != NULL && GetFileAttributesA(resolved) != INVALID_FILE_ATTRIBUTES;
 #else
+    char resolved[4096]; /* realpath writes up to PATH_MAX bytes */
     bool found = realpath(path, resolved) != NULL;
 #endif
     UNLOCK();
