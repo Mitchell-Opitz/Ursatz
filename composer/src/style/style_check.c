@@ -182,13 +182,17 @@ static bool motive_labels(const PiecePlan *plan, const FillCandidate *candidate,
     return composer_style_labels_add_motive(labels, motive, tonic);
 }
 
-/* Whether the plan fixes the form of the section: a theme pairing constraint says how it begins and ends. */
+/*
+ * Whether the plan fixes the form of the section: a theme pairing constraint says how it begins and ends. A free phrase
+ * (R-170) has no form of a theme to prefer, so the style leaves it alone.
+ */
 static bool form_fixed(const PiecePlan *plan, FillTarget target) {
     if (target.kind != FILL_TARGET_NODE) {
         return true;
     }
     for (size_t i = 0; i < plan_node_constraint_count(plan, target.id); i++) {
-        if (plan_node_constraint_at(plan, target.id, i)->kind == PLAN_CONSTRAINT_THEME_PAIRING) {
+        PlanConstraintKind kind = plan_node_constraint_at(plan, target.id, i)->kind;
+        if (kind == PLAN_CONSTRAINT_THEME_PAIRING || kind == PLAN_CONSTRAINT_FREE_PHRASE) {
             return true;
         }
     }
