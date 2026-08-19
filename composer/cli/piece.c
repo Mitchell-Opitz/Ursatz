@@ -1149,11 +1149,13 @@ static int fail_compose(PieceResult result, const Piece *last, unsigned long fir
         const ComposeRejection *rejection =
             stuck->outcome.rejection_count > 0 ? &stuck->outcome.rejections[stuck->outcome.rejection_count - 1] : NULL;
         return cli_fail(CLI_EXIT_UNSATISFIABLE,
-                        "no piece could be composed from seeds %lu to %lu (the last was stuck in the %s version, %s stage%s%s); "
-                        "a section of whole bars needs 2 bars at least to hold its cadence",
+                        "no piece could be composed from seeds %lu to %lu (the last was stuck in the %s version, %s stage%s%s)%s",
                         first_seed, last_seed, stuck == &last->ending ? "ending" : "loop",
                         rejection && rejection->stage[0] ? rejection->stage : "?", rejection ? ", " : "",
-                        rejection ? rejection->reason : "");
+                        rejection ? rejection->reason : "",
+                        rejection && (strcmp(rejection->stage, "seam") == 0 || strcmp(rejection->stage, "structure") == 0 || !rejection->stage[0])
+                            ? "; a section of whole bars needs 2 bars at least to hold its cadence"
+                            : "");
     }
     return cli_fail(CLI_EXIT_UNSATISFIABLE, "%s", piece_result_name(result));
 }
