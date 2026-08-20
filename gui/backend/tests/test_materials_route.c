@@ -422,6 +422,17 @@ static void test_motif_analysis(void) {
   free(motif);
 }
 
+/* The note of version number (1-based) of an item, "" when it has none. */
+static void version_note(const char *item_id, int number, char *out, size_t out_size) {
+  char path[256];
+  int status = 0;
+  snprintf(path, sizeof(path), "/api/materials/items/%s", item_id);
+  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  const cJSON *versions = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "item"), "versions");
+  snprintf(out, out_size, "%s", string_of(cJSON_GetArrayItem(versions, number - 1), "note"));
+  cJSON_Delete(answer);
+}
+
 /* The id of the first project (the default one). */
 static void first_project(char *out, size_t out_size) {
   int status = 0;
@@ -731,7 +742,7 @@ static void test_motifs_in_c(void) {
   char path[256];
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions", string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id"));
   cJSON *answer = json_exchange("POST", path,
-                                "{\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"rhythm\",\"notes\":\"x:q x:q x:h\","
+                                "{\"note\":\"E minor\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"rhythm\",\"notes\":\"x:q x:q x:h\","
                                 "\"meter\":\"4/4\",\"key\":\"E minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,"
                                 "\"derived\":null}}}",
                                 &status);
@@ -768,6 +779,51 @@ static void test_motifs_in_c(void) {
   cJSON_Delete(answer);
 }
 
+/* A new version of a motif says what changed (P18 B3); a new motif's first version is "Created". */
+static void test_version_notes(void) {
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  int status = 0;
+  char *motif = create_item("motif", "Noted", project, kMotifBody);
+  check(motif != NULL, "a motif is saved without a note");
+  if (!motif) {
+    return;
+  }
+  char note[600];
+  version_note(motif, 1, note, sizeof(note));
+  check(strcmp(note, "Created") == 0, "a new motif's first version is noted Created");
+
+  char path[256];
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions", motif);
+  char request[2048];
+  snprintf(request, sizeof(request), "{\"body\":%s}", kMotifBody);
+  cJSON *answer = json_exchange("POST", path, request, &status);
+  check(status == 400 && strcmp(string_of(answer, "error"), "give a version note") == 0, "a motif version without a note is 400");
+  cJSON_Delete(answer);
+  snprintf(request, sizeof(request), "{\"note\":\"   \",\"body\":%s}", kMotifBody);
+  answer = json_exchange("POST", path, request, &status);
+  check(status == 400 && strcmp(string_of(answer, "error"), "give a version note") == 0, "a blank note is 400");
+  cJSON_Delete(answer);
+  check(saved_version_count(motif) == 1, "no version was written without a note");
+
+  snprintf(request, sizeof(request), "{\"note\":\"Shorter\",\"body\":%s}", kMotifBody);
+  answer = json_exchange("POST", path, request, &status);
+  check(status == 200 && ok_true(answer), "a motif version with a note is saved");
+  cJSON_Delete(answer);
+  version_note(motif, 2, note, sizeof(note));
+  check(strcmp(note, "Shorter") == 0, "the note is kept");
+
+  /* A caller's own note on create is kept, and the other item types need no note. */
+  snprintf(request, sizeof(request), "{\"type\":\"motif\",\"name\":\"Own\",\"project_id\":\"%s\",\"note\":\"From MIDI\",\"body\":%s}",
+           project, kMotifBody);
+  answer = json_exchange("POST", "/api/materials/items", request, &status);
+  const char *own = string_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "id");
+  version_note(own, 1, note, sizeof(note));
+  check(status == 200 && strcmp(note, "From MIDI") == 0, "a note given on create is kept");
+  cJSON_Delete(answer);
+  free(motif);
+}
+
 /* A note list the Composer cannot read is refused and no version is written. */
 static void test_motif_refused(void) {
   int status = 0;
@@ -788,7 +844,7 @@ static void test_motif_refused(void) {
   snprintf(versions, sizeof(versions), "%s/versions", path);
 
   char bad_notes[2048];
-  snprintf(bad_notes, sizeof(bad_notes), "{\"body\":%s}", kBadMotifBody);
+  snprintf(bad_notes, sizeof(bad_notes), "{\"note\":\"bad\",\"body\":%s}", kBadMotifBody);
   answer = json_exchange("POST", versions, bad_notes, &status);
   check(status == 400 && !ok_true(answer) && strlen(string_of(answer, "error")) > 0, "a bad note list is 400 with the message");
   cJSON_Delete(answer);
@@ -1448,6 +1504,7 @@ int main(void) {
   test_projects();
   test_items();
   test_motif_analysis();
+  test_version_notes();
   test_motif_refused();
 #ifndef _WIN32
   test_motif_analysis_error();
