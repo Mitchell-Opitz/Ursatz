@@ -35,7 +35,7 @@ const VariantTreeView = (function () {
   function paramControls(operation, values, features) {
     const box = h("div", "variant-params");
     for (const param of operation.params) {
-      const label = h("label", "filter-field", `${param.name} `);
+      const label = h("label", "filter-field", `${param.name === "feature" ? "segment" : param.name} `);
       let control;
       if (param.kind === "bool") {
         control = h("input");

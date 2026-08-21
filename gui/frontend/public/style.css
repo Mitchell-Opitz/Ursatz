@@ -481,6 +481,10 @@ body {
   border-color: var(--accent);
 }
 
+.materials-tab-pane[hidden] {
+  display: none;
+}
+
 .claim-list {
   list-style: none;
   margin: 0;

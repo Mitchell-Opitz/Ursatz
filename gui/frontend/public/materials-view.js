@@ -8,6 +8,7 @@ const materialsState = {
   filter: MaterialsModel.ALL_PROJECTS,
   type: null,
   loaded: false,
+  notice: "",
 };
 
 function sendMaterialsRequest(request) {
@@ -208,14 +209,12 @@ function buildItemTable(rows, onOpen) {
   return table;
 }
 
-/* The Random dialog of the Motifs list: draws candidates from the Composer, plays them through the score workspace and
- * saves the ones kept as motif items. Nothing is stored until Save. */
-function buildRandomMotifs(statusEl, reload) {
+/* The Random section of the New Motif page: draws candidates from the Composer and plays them through the score
+ * workspace. "Use this" hands a candidate's form values to onUse(values) to fill the editor; nothing is stored. */
+function buildRandomMotifs(statusEl, onUse) {
   const section = materialsElement("section", "panel materials-random");
-  const toggle = materialsElement("button", "", "Random");
-  toggle.type = "button";
+  section.appendChild(materialsElement("h2", "section-title", "Random"));
   const form = materialsElement("div", "upload-controls");
-  form.hidden = true;
   const problemEl = materialsElement("div", "upload-status error");
   const candidatesEl = materialsElement("ol", "variant-candidates");
   const selectedEl = materialsElement("div");
@@ -324,44 +323,9 @@ function buildRandomMotifs(statusEl, reload) {
       statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not draw another motif");
       return;
     }
-    next.seed = request.seed;
-    shown = shown.map((other) => (other === candidate ? next : other));
+    const drawn = MaterialsModel.randomCandidate(next, request.seed);
+    shown = shown.map((other) => (other === candidate ? drawn : other));
     drawCandidates();
-  }
-
-  function saveControls(candidate) {
-    const row = materialsElement("div", "variant-actions");
-    const name = materialsElement("input");
-    name.type = "text";
-    name.placeholder = "Motif name";
-    const project = materialsElement("select");
-    fillProjectSelect(project, MaterialsModel.defaultProject(materialsState.filter, materialsState.projects));
-    const save = materialsElement("button", "", "Save");
-    save.type = "button";
-    save.addEventListener("click", async () => {
-      if (name.value.trim() === "" || project.value === "") {
-        statusEl.classList.add("error");
-        statusEl.textContent = "Give the motif a name and a project.";
-        return;
-      }
-      save.disabled = true;
-      const answer = await sendMaterialsRequest(
-        MaterialsModel.buildSaveMotifRequest({
-          name: name.value,
-          project_id: project.value,
-          body: MaterialsModel.randomCandidateToBody(candidate, runValues),
-        }),
-      );
-      save.disabled = false;
-      if (!answer.ok) {
-        statusEl.classList.add("error");
-        statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not save the motif");
-        return;
-      }
-      await reload();
-    });
-    row.append(name, project, save);
-    return row;
   }
 
   function drawCandidates() {
@@ -374,13 +338,14 @@ function buildRandomMotifs(statusEl, reload) {
       card.appendChild(materialsElement("div", "variant-derivation", analysis[textName] || ""));
       card.appendChild(materialsElement("div", "variant-meta", `${runValues.meter}${keyText ? ` · ${keyText}` : ""} · seed ${candidate.seed}`));
       const buttons = materialsElement("div", "variant-actions");
-      for (const [text, action] of [["Play", () => play(candidate)], ["Reroll", () => reroll(candidate)]]) {
+      const use = () => onUse(MaterialsModel.motifFormValues(MaterialsModel.randomCandidateToBody(candidate, runValues)));
+      for (const [text, action] of [["Play", () => play(candidate)], ["Reroll", () => reroll(candidate)], ["Use this", use]]) {
         const button = materialsElement("button", "", text);
         button.type = "button";
         button.addEventListener("click", action);
         buttons.appendChild(button);
       }
-      card.append(buttons, saveControls(candidate));
+      card.appendChild(buttons);
       candidatesEl.appendChild(card);
     }
   }
@@ -406,14 +371,11 @@ function buildRandomMotifs(statusEl, reload) {
     clearSelection();
     runValues = current;
     const start = Number.isInteger(answer.data.seed) ? answer.data.seed : 0;
-    shown = (answer.data.motives || []).map((motive, index) => ({ ...motive, seed: start + index }));
+    shown = (answer.data.motives || []).map((motive, index) => MaterialsModel.randomCandidate(motive, start + index));
     drawCandidates();
   });
-  toggle.addEventListener("click", () => {
-    form.hidden = !form.hidden;
-  });
   loadStyles();
-  section.append(toggle, form, problemEl, candidatesEl, selectedEl);
+  section.append(form, problemEl, candidatesEl, selectedEl);
   return section;
 }
 
@@ -437,9 +399,6 @@ async function renderMaterialsView(type) {
     statusEl.textContent = "Create a project from the sidebar first.";
   }
   content.append(statusEl);
-  if (type === "motif" && materialsState.projects.length > 0) {
-    content.appendChild(buildRandomMotifs(statusEl, reload));
-  }
   content.append(listEl);
 
   const answer = await sendMaterialsRequest(MaterialsModel.buildItemListRequest(type, materialsState.filter));
@@ -512,8 +471,9 @@ async function showUseComparison(el, row, statusEl) {
  * ctx: {id, type, body, statuses, allItems, statusEl}. */
 function buildUsesSection(ctx) {
   const rows = MaterialsModel.useRows(ctx.statuses, materialsState.projects);
+  const derived = ctx.type === "motif";
   const section = materialsElement("div");
-  section.appendChild(materialsElement("h2", "section-title", "Uses"));
+  section.appendChild(materialsElement("h2", "section-title", derived ? "Derived from" : "Uses"));
   const compareEl = materialsElement("div");
 
   async function change(sourceId, version, add, note) {
@@ -528,7 +488,7 @@ function buildUsesSection(ctx) {
   }
 
   if (rows.length === 0) {
-    section.appendChild(materialsElement("div", "piece-list-status", "Uses nothing yet."));
+    section.appendChild(materialsElement("div", "piece-list-status", derived ? "Not derived from anything yet." : "Uses nothing yet."));
   } else {
     const table = materialsElement("table", "library-table");
     const head = materialsElement("tr");
@@ -621,6 +581,39 @@ function buildUsesSection(ctx) {
   picker.append(query, typeSelect, projectSelect, choice, add);
   section.appendChild(picker);
   section.appendChild(compareEl);
+  return section;
+}
+
+/* The Used by table of a motif: name (opens the item), type, the version it uses, project, and whether its use is
+ * behind currentVersion. */
+function buildUsedByTable(users, currentVersion) {
+  const rows = MaterialsModel.usedByTable(users, materialsState.projects, currentVersion);
+  const section = materialsElement("div");
+  section.appendChild(materialsElement("h2", "section-title", "Used by"));
+  if (rows.length === 0) {
+    section.appendChild(materialsElement("div", "piece-list-status", "Nothing uses this motif yet."));
+    return section;
+  }
+  const table = materialsElement("table", "library-table");
+  const head = materialsElement("tr");
+  for (const label of ["Name", "Type", "Version used", "Project", ""]) {
+    head.appendChild(materialsElement("th", "", label));
+  }
+  table.appendChild(head);
+  for (const row of rows) {
+    const tr = materialsElement("tr");
+    const nameCell = materialsElement("td");
+    const open = materialsElement("a", "clickable", row.name);
+    open.addEventListener("click", () => openLinkedItem(row.type, row.id));
+    nameCell.appendChild(open);
+    tr.appendChild(nameCell);
+    tr.appendChild(materialsElement("td", "", row.type));
+    tr.appendChild(materialsElement("td", "", `v${row.version}`));
+    tr.appendChild(materialsElement("td", "", row.project));
+    tr.appendChild(materialsElement("td", "", row.updateAvailable ? "update available" : ""));
+    table.appendChild(tr);
+  }
+  section.appendChild(table);
   return section;
 }
 
@@ -761,15 +754,22 @@ function buildMotifEditor(body) {
       importStatus.textContent = MaterialsModel.errorText(answer.data, "Could not read the MIDI file");
       return;
     }
-    const filled = MaterialsModel.importToFormValues(answer.data);
+    fill(MaterialsModel.importToFormValues(answer.data));
+    importStatus.textContent = MaterialsModel.importNotice(answer.data);
+  });
+
+  /* Sets the form, notes, meter, mode and pickup (and the role when given) from values. */
+  function fill(filled) {
+    if (filled.role) {
+      role.value = filled.role;
+    }
     form.value = filled.form;
     hint.textContent = MaterialsModel.formHint(filled.form);
     notes.value = filled.notes;
     meter.value = filled.meter;
     mode.value = filled.mode;
     pickup.value = filled.pickup;
-    importStatus.textContent = MaterialsModel.importNotice(answer.data);
-  });
+  }
 
   let legacyKey = initial.legacyKey;
   const legacyRow = materialsElement("div", "upload-controls");
@@ -843,7 +843,8 @@ function buildMotifEditor(body) {
   field("Harmony", harmony, "harmony");
   el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.HARMONY_HINT));
 
-  el.appendChild(materialsElement("h2", "section-title", "Features"));
+  el.appendChild(materialsElement("h2", "section-title", "Segments"));
+  el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.SEGMENTS_HINT));
   const featureTable = materialsElement("table", "library-table materials-features");
   el.appendChild(featureTable);
   errors.features = materialsElement("div", "materials-field-error");
@@ -854,7 +855,7 @@ function buildMotifEditor(body) {
     featureTable.innerHTML = "";
     if (featureRows.length > 0) {
       const head = materialsElement("tr");
-      for (const label of ["Label", "First note", "Last note", ""]) {
+      for (const label of ["Segment", "First note", "Last note", ""]) {
         head.appendChild(materialsElement("th", "", label));
       }
       featureTable.appendChild(head);
@@ -866,7 +867,7 @@ function buildMotifEditor(body) {
         input.type = "text";
         input.size = prop === "label" ? 8 : 4;
         input.value = String(row[prop]);
-        input.setAttribute("aria-label", `Feature ${index + 1} ${prop}`);
+        input.setAttribute("aria-label", `Segment ${index + 1} ${prop}`);
         input.addEventListener("input", () => {
           row[prop] = prop === "label" ? input.value : input.value.trim() === "" ? NaN : Number(input.value);
         });
@@ -887,7 +888,7 @@ function buildMotifEditor(body) {
     });
   }
   drawFeatures();
-  const addFeature = materialsElement("button", "", "Add feature");
+  const addFeature = materialsElement("button", "", "Add segment");
   addFeature.type = "button";
   addFeature.addEventListener("click", () => {
     featureRows.push(MaterialsModel.newFeatureRow(featureRows));
@@ -926,7 +927,7 @@ function buildMotifEditor(body) {
     }
   }
 
-  return { el, values, showProblems, showError };
+  return { el, values, fill, showProblems, showError };
 }
 
 /* The Save controls of a motif editor: an optional version note and a
@@ -983,6 +984,11 @@ function renderNewMotif(draftName, draftProject) {
   meta.append(name, project);
   content.append(meta, statusEl);
 
+  const subjectsField = buildSubjectsField("items", null, []);
+  const subjectsRow = materialsElement("div", "materials-subjects-row");
+  subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
+  content.appendChild(subjectsRow);
+
   const editor = buildMotifEditor(null);
   content.appendChild(editor.el);
   content.appendChild(
@@ -995,15 +1001,26 @@ function renderNewMotif(draftName, draftProject) {
       const request = MaterialsModel.buildSaveMotifRequest({
         name: name.value,
         project_id: project.value,
+        note: "Created",
         body: MaterialsModel.buildMotifBody(values, null),
       });
       const answer = await sendMaterialsRequest(request);
       if (answer.ok) {
+        const failed = await subjectsField.applyTo(answer.data.item.id);
+        materialsState.notice = failed.length > 0 ? `Could not link the subjects: ${failed.join(", ")}.` : "";
         renderMaterialsDetail("motif", answer.data.item.id, answer.data.item.analysis_error);
       }
       return answer;
     }),
   );
+  if (materialsState.projects.length > 0) {
+    content.appendChild(
+      buildRandomMotifs(statusEl, (values) => {
+        editor.fill(values);
+        editor.el.scrollIntoView();
+      }),
+    );
+  }
 }
 
 /* The score and playback of a motif version in the score workspace, sounded in its stored key. Nothing here is saved. */
@@ -1135,14 +1152,20 @@ async function renderMaterialsDetail(type, id, analysisError) {
     notifySubjectsChanged();
     renderMaterialsView(type);
   });
-  controls.append(name, project, save, del);
+  if (type === "motif") {
+    controls.append(name, project, del);
+  } else {
+    controls.append(name, project, save, del);
+  }
   content.append(controls, statusEl);
 
   const versionEl = materialsElement("div");
-  const subjectsField = buildSubjectsField("items", id, answer.data.subjects);
-  const subjectsRow = materialsElement("div", "materials-subjects-row");
-  subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
-  content.appendChild(subjectsRow);
+  if (type !== "motif") {
+    const subjectsField = buildSubjectsField("items", id, answer.data.subjects);
+    const subjectsRow = materialsElement("div", "materials-subjects-row");
+    subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
+    content.appendChild(subjectsRow);
+  }
   const allItemsAnswer = await sendMaterialsRequest(MaterialsModel.buildAllItemsRequest());
   const itemNameOf = (itemId) => {
     const found = (allItemsAnswer.ok ? allItemsAnswer.data.items : []).find((entry) => entry.id === itemId);
@@ -1155,48 +1178,23 @@ async function renderMaterialsDetail(type, id, analysisError) {
       banner.setAttribute("role", "alert");
       content.insertBefore(banner, content.children[1]);
     }
-    const editor = buildMotifEditor(answer.data.body);
-    content.appendChild(editor.el);
-    content.appendChild(
-      buildAnalysisPanel(answer.data.body, analysisError, {
-        send: () => sendMaterialsRequest(MaterialsModel.buildReanalyzeRequest(id)),
-        done: (reason) => renderMaterialsDetail(type, id, reason),
-      }),
-    );
-    const score = buildMotifScore(id, item, answer.data.body);
-    if (score) {
-      content.appendChild(score);
+    if (materialsState.notice) {
+      statusEl.textContent = materialsState.notice;
+      statusEl.classList.add("error");
+      materialsState.notice = "";
     }
-    const variants = VariantTreeView.mount(content, {
+    MotifDetailView.render(content, {
       id,
-      name: item.name,
-      body: answer.data.body,
-      send: sendMaterialsRequest,
-      open: (variantId) => renderMaterialsDetail(type, variantId),
+      item,
+      data: answer.data,
+      analysisError,
+      statusEl,
+      nameInput: name,
+      projectSelect: project,
+      allItems: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
+      rerender: (reason) => renderMaterialsDetail(type, id, reason),
     });
-    MotifCompareView.mount(content, {
-      id,
-      version: item.current_version,
-      projectId: item.project_id,
-      projects: materialsState.projects,
-      items: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
-      send: sendMaterialsRequest,
-      linked: () => variants.refresh(),
-    });
-    content.appendChild(
-      buildMotifSaveControls(editor, statusEl, "Save as new version", true, async (values, note) => {
-        const request = MaterialsModel.buildSaveMotifRequest({
-          id,
-          note,
-          body: MaterialsModel.buildMotifBody(values, answer.data.body),
-        });
-        const saved = await sendMaterialsRequest(request);
-        if (saved.ok) {
-          renderMaterialsDetail(type, id, saved.data.item.analysis_error);
-        }
-        return saved;
-      }),
-    );
+    return;
   }
   if (type === "theme") {
     const editor = buildThemeEditor({

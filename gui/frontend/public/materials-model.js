@@ -259,6 +259,15 @@
   }
 
   /* force true adds ?force=1, which deletes an item other items use. */
+  /* Rows for the Used by table of a motif: usedByRows plus updateAvailable, true when the user's version is behind
+   * currentVersion (the motif's current version). */
+  function usedByTable(users, projects, currentVersion) {
+    return usedByRows(users, projects).map((row) => ({
+      ...row,
+      updateAvailable: Number.isFinite(row.version) && Number(currentVersion) > row.version,
+    }));
+  }
+
   function buildDeleteItemRequest(id, force) {
     return jsonRequest("DELETE", `/api/materials/items/${encodeURIComponent(id)}${force ? "?force=1" : ""}`);
   }
@@ -328,6 +337,32 @@
     return jsonRequest("POST", `/api/materials/items/${encodeURIComponent(id)}/versions`, request);
   }
 
+  const MOTIF_TABS = [
+    { id: "motif", label: "Motif" },
+    { id: "variants", label: "Variants" },
+    { id: "used-by", label: "Used by" },
+    { id: "other", label: "Other" },
+  ];
+  const MOTIF_TAB_KEY = "ursatz.motif.tab";
+
+  /* The remembered motif tab id, "motif" when unset, unknown or storage is unavailable. */
+  function readMotifTab() {
+    try {
+      const saved = localStorage.getItem(MOTIF_TAB_KEY);
+      return MOTIF_TABS.some((tab) => tab.id === saved) ? saved : MOTIF_TABS[0].id;
+    } catch (err) {
+      return MOTIF_TABS[0].id;
+    }
+  }
+
+  function writeMotifTab(id) {
+    try {
+      localStorage.setItem(MOTIF_TAB_KEY, id);
+    } catch (err) {
+      // Storage unavailable: the tab just is not remembered.
+    }
+  }
+
   const COMPOSER_MISSING_TEXT =
     "The Composer is not available: motifs save without analysis, notation or variants. Rebuild the GUI (README, Building).";
 
@@ -354,6 +389,7 @@
     { value: "contour", label: "Contour only", enabled: true },
   ];
 
+  const SEGMENTS_HINT = "Named note ranges, for example head and tail. Liquidation and motive-forms keep or drop them.";
   const HARMONY_HINT = "Own chords, e.g. I V6@2 I@3: upper case Roman numerals (b or # before for an altered root; figures 6, 64, 7, 65, 43, 42) and @ the onset in beats. The first chord needs no onset. Up to 8 chords; empty means none.";
   const HARMONY_MAX_CHARS = 200;
 
@@ -478,7 +514,7 @@
     if (/harmony|chord|numeral|token \d+ \(column/i.test(text)) {
       return "harmony";
     }
-    return /feature/i.test(text) ? "features" : "notes";
+    return /feature|segment/i.test(text) ? "features" : "notes";
   }
 
   /* Messages for the feature rows (1-based first and last note). */
@@ -486,7 +522,7 @@
     const messages = [];
     const seen = new Set();
     (features || []).forEach((feature, index) => {
-      const row = `Feature ${index + 1}`;
+      const row = `Segment ${index + 1}`;
       const label = String(feature.label || "").trim();
       if (label === "" || Array.from(label).length > 8) {
         messages.push(`${row}: the label is 1 to 8 characters.`);
@@ -613,6 +649,16 @@
   }
 
   /* The key text of a random candidate's motive ("D minor"), or "" when it has none. */
+  /* A random motive as the rest of the page reads candidates: {seed, motive: {motive, analysis}}. The Composer's
+   * random-motive answers each motive as {motive, analysis}; an already wrapped one is kept. */
+  function randomCandidate(motive, seed) {
+    const m = motive || {};
+    if (m.analysis && typeof m.analysis === "object") {
+      return { seed, motive: { motive: m.motive || null, analysis: m.analysis } };
+    }
+    return { ...m, seed };
+  }
+
   function candidateKeyText(candidate) {
     const key = candidate && candidate.motive && candidate.motive.motive ? candidate.motive.motive.key : null;
     const tonic = key && Number.isInteger(key.tonic_pitch_class) ? KEY_TONICS[key.tonic_pitch_class] : null;
@@ -657,6 +703,32 @@
   }
 
   /* Saving a motif: a new item when id is empty, else a new version. */
+  /* True when the editor's values differ from the stored version body: the body they build is compared with the body
+   * the stored values build, so fields the editor does not own do not count. Rewriting an older motif in C counts. */
+  function motifBodyChanged(values, body) {
+    const stored = motifFormValues(body);
+    if (stored.legacyKey && !values.legacyKey) {
+      return true;
+    }
+    return JSON.stringify(buildMotifBody(values, body)) !== JSON.stringify(buildMotifBody(stored, body));
+  }
+
+  const SAVE_NOTE_TEXT = "Give a version note.";
+  const SAVE_NOTHING_TEXT = "Nothing to save.";
+
+  /* What the single Save of a motif does. changes is {name, project, body} booleans; note the version note field.
+   * Answers {kind: "none" | "blocked" | "save", message}: a body change needs a note and nothing is sent without one. */
+  function motifSaveDecision(changes, note) {
+    const c = changes || {};
+    if (!c.name && !c.project && !c.body) {
+      return { kind: "none", message: SAVE_NOTHING_TEXT };
+    }
+    if (c.body && String(note || "").trim() === "") {
+      return { kind: "blocked", message: SAVE_NOTE_TEXT };
+    }
+    return { kind: "save", message: "" };
+  }
+
   function buildSaveMotifRequest(options) {
     const o = options || {};
     if (!o.id) {
@@ -665,6 +737,7 @@
         name: String(o.name || "").trim(),
         project_id: o.project_id,
         body: o.body,
+        ...(o.note && String(o.note).trim() !== "" ? { note: String(o.note).trim() } : {}),
       });
     }
     const request = { body: o.body };
@@ -797,6 +870,7 @@
     buildDeleteItemRequest,
     deleteWarning,
     usedByRows,
+    usedByTable,
     hasUpdatedUse,
     buildUpdateUseRequest,
     buildAllItemsRequest,
@@ -804,12 +878,18 @@
     bodyWithUse,
     buildAddVersionRequest,
     buildReanalyzeRequest,
+    MOTIF_TABS,
+    motifBodyChanged,
+    motifSaveDecision,
+    readMotifTab,
+    writeMotifTab,
     COMPOSER_MISSING_TEXT,
     composerAvailable,
     NOTE_HINT,
     formHint,
     errorField,
     HARMONY_HINT,
+    SEGMENTS_HINT,
     buildImportMidiRequest,
     importToFormValues,
     importNotice,
@@ -834,6 +914,7 @@
     randomProblems,
     randomCandidateToBody,
     candidateKeyText,
+    randomCandidate,
     rerollSeed,
   };
   if (typeof module !== "undefined" && module.exports) {

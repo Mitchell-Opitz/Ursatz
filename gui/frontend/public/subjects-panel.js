@@ -257,6 +257,19 @@
     }));
   }
 
+  /* A subject list with subject added (by id, no duplicates) or removed. Used
+   * for the pending list of an item that is not saved yet. */
+  function withSubject(list, subject) {
+    const current = Array.isArray(list) ? list : [];
+    return current.some((entry) => entry.id === subject.id)
+      ? current.slice()
+      : [...current, { id: subject.id, name: subject.name, kind: subject.kind }];
+  }
+
+  function withoutSubject(list, subjectId) {
+    return (Array.isArray(list) ? list : []).filter((entry) => entry.id !== subjectId);
+  }
+
   /* The error text of a failed answer, or the fallback. */
   function errorText(data, fallback) {
     if (data && typeof data.error === "string" && data.error !== "") {
@@ -282,6 +295,8 @@
     itemLinkRows,
     pieceLinkRows,
     chipRows,
+    withSubject,
+    withoutSubject,
     errorText,
   };
   if (typeof module !== "undefined" && module.exports) {
