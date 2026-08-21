@@ -69,14 +69,33 @@ branches.
 
 #### Motif editor
 
-A motif's detail holds the editor; New on the Motifs view opens the same
-editor empty, and the first Save creates the motif (it needs a name and a
-project). The form has the role (melodic or accompaniment), the form (only
+A motif's detail (`motif-detail-view.js`) has the name, the project and
+Delete, then four tabs: Motif, Variants, Used by and Other. The chosen tab is
+remembered in the browser (`ursatz.motif.tab`). The Motif tab holds the score
+with its play controls, the editor, the motif's Subjects, the Analysis panel
+and the one Save. Save takes a version note (`What changed? (required)`): a
+change to the editor writes a new version with that note and says `Give a
+version note.` beside the note when it is empty; a changed name or project
+goes through the item update and needs no note; with no change it says
+`Nothing to save.` The backend refuses a new motif version without a note
+(400 `give a version note`); a new motif's first version is noted `Created`.
+Variants holds the variant tree. Used by is a table of the items that use the
+motif (name, type, the version used, project, and `update available` when the
+use is behind the motif's current version). Other holds Versions (open one to
+read it), Derived from (the motif's old Uses section: the motifs it was
+derived from, with Add and Update) and Compare.
+
+New on the Motifs view opens the New Motif page: name, project, a Subjects
+picker (the chosen subjects are linked after the first Save; a link that fails
+shows on the detail page and the motif stays saved), the same editor, Save
+(it sends the note `Created`) and a Random section (below). The form has the role (melodic or accompaniment), the form (only
 full can be chosen; rhythm and contour are shown disabled, P13), the note
 list with its syntax hint, the meter, a Mode select (major or minor), the pickup in exact
-beats (`0`, `1` or `1/2`), an optional Harmony field and a features table
-(label of 1 to 8 characters, first and last note counted from 1; rows are
-added and removed in place). Harmony is the motif's own chords as the Composer
+beats (`0`, `1` or `1/2`), an optional Harmony field and a Segments table
+(named note ranges such as head and tail: label of 1 to 8 characters, first
+and last note counted from 1; rows are added and removed in place; Liquidation
+and the motive-forms keep or drop them, and the variant picker calls the
+`feature` parameter `segment`. The stored field stays `features`). Harmony is the motif's own chords as the Composer
 reads them (`I V6@2 I@3`: upper case Roman numerals, `b` or `#` before one
 for an altered root, figures `6`, `64`, `7`, `65`, `43`, `42`, and `@` the
 onset in beats; the first chord needs no onset; up to 8 chords, at most 200
@@ -92,7 +111,7 @@ shows `Written in D minor before motifs moved to C.` with a Rewrite in C
 button that writes the stored degrees in C, and saving waits until it is
 rewritten. The score and playback always use the stored key.
 
-Save as new version writes a version with an optional note; the Composer's
+The Composer's
 message for a note list it cannot read shows beside the note list and the
 input is kept. The Analysis panel under the form shows the scale degrees,
 intervals (semitones and steps), contour, rhythm and implied harmony stored
@@ -201,7 +220,7 @@ neither. Harmonize is Variations on harmony.
 
 ### Item references in the GUI
 
-An item's detail has a Uses section: each use shows the source's name, type,
+An item's detail has a Uses section (Derived from on a motif, in its Other tab): each use shows the source's name, type,
 project and the version used, with Remove. Add use picks from the items of
 every project (search by name, filter by type and project, the item itself and
 its current uses left out); the use points at the source's current version.
@@ -210,7 +229,7 @@ whose source has a newer version reads "source updated to v<n>" with Update
 (moves the use to the current version, as a new version) and Compare (the used
 and current versions side by side, read only). A use whose source was deleted
 reads "source deleted"; its copy is kept. Used by lists the items that use
-this one, each opening its detail. In the Motifs, Themes and Pieces lists a
+this one, each opening its detail (a table on a motif). In the Motifs, Themes and Pieces lists a
 row gets an "uses updated" badge when any of its uses has a newer source.
 Delete asks to confirm; when other items use the item it names them and asks
 again, and confirming deletes with `?force=1` (their copies stay and their
@@ -880,11 +899,11 @@ remoteness is measured from the basic motive, not from the parent.
 
 #### Random motifs
 
-The Motifs view has a Random button. Its form takes a mode (major or minor), a meter, a form (full,
+The New Motif page has a Random section. Its form takes a mode (major or minor), a meter, a form (full,
 rhythm or contour), an optional style (from the styles list), a count (default 6) and an optional seed. Generate lists
 the candidates; each has Play (rendered by the Composer into the score workspace, nothing stored), Reroll (that one
-again with the next seed) and Save (a name, a project; the role comes from the form), which creates a motif item with
-the candidate's notes text, key, meter and pickup. Every request is drawn in C (`key: "C <mode>"`). The backend fills in the analysis and degrees as for any motif.
+again with the next seed) and Use this, which fills the editor above (form, notes, mode, meter, pickup and role) to
+name and save; nothing is stored until Save. Every request is drawn in C (`key: "C <mode>"`). The backend fills in the analysis and degrees as for any motif.
 
 - `POST /api/materials/motifs/random` `{mode, meter, key?, form?, role?, style_id?, count?, seed?}` runs the Composer's
   `random-motive` and answers its JSON (`seed`, `motives`) plus `ok`. `mode` is `major` or `minor`, `meter` is like
