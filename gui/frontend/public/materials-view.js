@@ -323,8 +323,8 @@ function buildRandomMotifs(statusEl, onUse) {
       statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not draw another motif");
       return;
     }
-    next.seed = request.seed;
-    shown = shown.map((other) => (other === candidate ? next : other));
+    const drawn = MaterialsModel.randomCandidate(next, request.seed);
+    shown = shown.map((other) => (other === candidate ? drawn : other));
     drawCandidates();
   }
 
@@ -371,7 +371,7 @@ function buildRandomMotifs(statusEl, onUse) {
     clearSelection();
     runValues = current;
     const start = Number.isInteger(answer.data.seed) ? answer.data.seed : 0;
-    shown = (answer.data.motives || []).map((motive, index) => ({ ...motive, seed: start + index }));
+    shown = (answer.data.motives || []).map((motive, index) => MaterialsModel.randomCandidate(motive, start + index));
     drawCandidates();
   });
   loadStyles();

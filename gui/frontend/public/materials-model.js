@@ -649,6 +649,16 @@
   }
 
   /* The key text of a random candidate's motive ("D minor"), or "" when it has none. */
+  /* A random motive as the rest of the page reads candidates: {seed, motive: {motive, analysis}}. The Composer's
+   * random-motive answers each motive as {motive, analysis}; an already wrapped one is kept. */
+  function randomCandidate(motive, seed) {
+    const m = motive || {};
+    if (m.analysis && typeof m.analysis === "object") {
+      return { seed, motive: { motive: m.motive || null, analysis: m.analysis } };
+    }
+    return { ...m, seed };
+  }
+
   function candidateKeyText(candidate) {
     const key = candidate && candidate.motive && candidate.motive.motive ? candidate.motive.motive.key : null;
     const tonic = key && Number.isInteger(key.tonic_pitch_class) ? KEY_TONICS[key.tonic_pitch_class] : null;
@@ -904,6 +914,7 @@
     randomProblems,
     randomCandidateToBody,
     candidateKeyText,
+    randomCandidate,
     rerollSeed,
   };
   if (typeof module !== "undefined" && module.exports) {

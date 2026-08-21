@@ -317,6 +317,11 @@ check(saved.motif.pickup === "1" && saved.motif.role === "accompaniment" && save
 const savedRhythm = M.randomCandidateToBody(candidate, { form: "rhythm", meter: "4/4" });
 check(savedRhythm.motif.notes === "x:q x:e x:e" && savedRhythm.motif.role === "melodic", "a rhythm candidate is saved from its rhythm text");
 check(M.randomCandidateToBody({ motive: { analysis: {} } }, {}).motif.key === null, "a candidate without a key saves a null key");
+const drawnMotive = { motive: { key: { tonic_pitch_class: 0, mode: "major" }, notes: [] }, analysis: { notes_text: "C4:q E4:e G4:e", degrees_text: "1:q 3:e 5:e", pickup: "0" } };
+const wrapped = M.randomCandidate(drawnMotive, 5);
+check(wrapped.seed === 5 && wrapped.motive.analysis.notes_text === "C4:q E4:e G4:e" && M.candidateKeyText(wrapped) === "C major", "a motive as the Composer draws it is wrapped for the page");
+check(M.randomCandidateToBody(wrapped, { form: "full", meter: "4/4" }).motif.notes === "C4:q E4:e G4:e", "a drawn candidate gives its notes to the editor");
+check(M.randomCandidate(candidate.motive ? candidate : null, 7).motive.analysis.notes_text === "c4:q eb4:e g4:e", "an already wrapped candidate is kept");
 check(M.rerollSeed(3) === 4 && M.rerollSeed(undefined) === 0, "reroll uses the next seed");
 
 check(M.analysisRows({ analysis: null, analysis_error: "composer not found" }).message === "Not analyzed: composer not found", "the stored reason is read when no argument is given");
