@@ -72,6 +72,14 @@ const drop = S.buildLinkRequest("sub-1", "related", "sub-2", false);
 check(drop.method === "DELETE" && drop.url === "/api/subjects/sub-1/related/sub-2", "unlink deletes");
 check(S.errorText({ error: "not linked" }) === "not linked" && S.errorText(null, "x") === "x", "error text");
 
+const pending = S.withSubject([], { id: "sub-1", name: "Hero", kind: "character", item_count: 4 });
+check(same(pending, [{ id: "sub-1", name: "Hero", kind: "character" }]), "a pending subject keeps its id, name and kind");
+check(S.withSubject(pending, { id: "sub-1", name: "Hero", kind: "character" }).length === 1, "a subject is not added twice");
+check(S.withSubject(pending, { id: "sub-2", name: "Longing", kind: "idea" }).length === 2, "another subject is added");
+check(pending.length === 1, "adding a subject leaves the list alone");
+check(S.withoutSubject(pending, "sub-1").length === 0 && S.withoutSubject(pending, "sub-9").length === 1, "a pending subject is removed by id");
+check(S.withSubject(undefined, { id: "sub-1", name: "Hero", kind: "character" }).length === 1 && S.withoutSubject(null, "sub-1").length === 0, "no list is an empty list");
+
 if (failures > 0) {
   process.exit(1);
 }

@@ -326,6 +326,84 @@ check(M.analysisRows(heard).message === "Analyzed", "an analyzed motif reads Ana
 check(M.buildReanalyzeRequest("mot-1").url === "/api/materials/items/mot-1/reanalyze" && M.buildReanalyzeRequest("mot-1").method === "POST", "re-analyze posts to the item's reanalyze route");
 check(M.composerAvailable({ ok: true, data: { available: true } }) && !M.composerAvailable({ ok: true, data: { available: false } }) && !M.composerAvailable({ ok: false }), "the Composer counts as available only when the status says so");
 
+/* The motif tabs, the single Save and the Used by table (P18 B3). */
+check(same(M.MOTIF_TABS.map((t) => t.label), ["Motif", "Variants", "Used by", "Other"]), "four motif tabs in order");
+check(M.readMotifTab() === "motif", "the motif tab falls back to Motif without storage");
+global.localStorage = { getItem: () => "other", setItem: () => {} };
+check(M.readMotifTab() === "other", "a remembered tab is read");
+global.localStorage = { getItem: () => "nope", setItem: () => {} };
+check(M.readMotifTab() === "motif", "an unknown remembered tab falls back to Motif");
+global.localStorage = {
+  getItem: () => {
+    throw new Error("blocked");
+  },
+  setItem: () => {
+    throw new Error("blocked");
+  },
+};
+check(M.readMotifTab() === "motif", "a throwing storage falls back to Motif");
+let wrote = true;
+try {
+  M.writeMotifTab("variants");
+} catch (err) {
+  wrote = false;
+}
+check(wrote, "a throwing storage does not break writing the tab");
+delete global.localStorage;
+
+const stored = {
+  uses: [],
+  motif: {
+    role: "melodic",
+    form: "full",
+    notes: "C4:q E4:e G4:e",
+    meter: "4/4",
+    key: "C major",
+    pickup: "0",
+    harmony: null,
+    features: [{ label: "head", first: 0, last: 1 }],
+    analysis: { analysis: {} },
+    degrees: "1:q 3:e 5:e",
+    derived: null,
+  },
+};
+const editorValues = () => M.motifFormValues(stored);
+check(!M.motifBodyChanged(editorValues(), stored), "an untouched editor is not a change");
+check(M.motifBodyChanged({ ...editorValues(), notes: "C4:q E4:e A4:e" }, stored), "other notes are a change");
+check(M.motifBodyChanged({ ...editorValues(), mode: "minor" }, stored), "another mode is a change");
+check(M.motifBodyChanged({ ...editorValues(), features: [{ label: "tail", first: 1, last: 2 }] }, stored), "another segment is a change");
+check(!M.motifBodyChanged({ ...editorValues(), notes: "  C4:q E4:e G4:e  " }, stored), "spaces around the notes are not a change");
+check(!M.motifBodyChanged({ ...editorValues(), pickup: "" }, { motif: { ...stored.motif, pickup: "0" } }), "an empty pickup reads as 0");
+const legacy = { uses: [], motif: { ...stored.motif, key: "D minor" } };
+check(M.motifBodyChanged({ ...M.motifFormValues(legacy), legacyKey: null }, legacy), "rewriting an older motif in C is a change");
+check(!M.motifBodyChanged(M.motifFormValues(legacy), legacy), "an older motif left alone is not a change");
+
+check(M.motifSaveDecision({}, "x").kind === "none" && M.motifSaveDecision({}, "x").message === "Nothing to save.", "no change says Nothing to save.");
+check(
+  M.motifSaveDecision({ body: true }, "").kind === "blocked" && M.motifSaveDecision({ body: true }, "  ").message === "Give a version note.",
+  "a body change without a note is blocked",
+);
+check(M.motifSaveDecision({ body: true }, "Shorter").kind === "save", "a body change with a note saves");
+check(M.motifSaveDecision({ name: true }, "").kind === "save" && M.motifSaveDecision({ project: true }, "").kind === "save", "a rename or move needs no note");
+check(M.motifSaveDecision({ nothing: true }, "note").kind === "none", "a note alone is not a change");
+
+const createdRequest = M.buildSaveMotifRequest({ name: " New ", project_id: "prj-a", note: "Created", body: stored });
+check(createdRequest.url === "/api/materials/items" && JSON.parse(createdRequest.body).note === "Created", "a new motif sends the Created note");
+check(!("note" in JSON.parse(M.buildSaveMotifRequest({ name: "n", project_id: "prj-a", body: stored }).body)), "a new motif without a note sends none");
+
+const usedByUsers = [
+  { id: "t1", name: "Theme", type: "theme", project_id: "prj-a", version: 1 },
+  { id: "t2", name: "Piece", type: "piece", project_id: "prj-b", version: 3 },
+];
+const table = M.usedByTable(usedByUsers, projects, 3);
+check(table.length === 2 && table[0].updateAvailable && !table[1].updateAvailable, "a use behind the current version has an update available");
+check(table[0].project === "Sonata" && table[0].version === 1 && table[0].type === "theme", "the Used by row carries project, version and type");
+check(M.usedByTable(null, projects, 1).length === 0, "no usedByUsers, no rows");
+
+check(M.errorField("Segment 1: the label is 1 to 8 characters.") === "features", "a segment problem belongs to the segments field");
+check(M.motifFormProblems({ ...editorValues(), features: [{ label: "", first: 1, last: 1 }] }).some((p) => /^Segment 1:/.test(p.message)), "segment problems are named Segment");
+check(/head and tail/.test(M.SEGMENTS_HINT) && /Liquidation and motive-forms/.test(M.SEGMENTS_HINT), "the segments hint names the use");
+
 if (failures > 0) {
   process.exit(1);
 }
