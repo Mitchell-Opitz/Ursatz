@@ -279,9 +279,9 @@ function buildSubjectsField(group, targetId, initial) {
   let all = [];
   const errorEl = materialsElement("div", "materials-field-error");
 
-  async function changeLink(subjectId, add, subject) {
+  async function changeLink(subjectId, add, chosen) {
     if (targetId === null || targetId === undefined) {
-      current = add ? SubjectsPanel.withSubject(current, subject) : SubjectsPanel.withoutSubject(current, subjectId);
+      current = add ? SubjectsPanel.withSubject(current, chosen) : SubjectsPanel.withoutSubject(current, subjectId);
       return true;
     }
     const answer = await sendMaterialsRequest(SubjectsPanel.buildLinkRequest(subjectId, group, targetId, add));
