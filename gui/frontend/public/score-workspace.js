@@ -13,6 +13,8 @@
  *                                adds the Play ending button
  *     actions: [{label, onClick}],  extra toolbar buttons
  *     headerExtra,               an element shown under the toolbar
+ *     compact,                   the title, Play/Stop, tempo and the score only; no
+ *                                layers, inspector, notation panel or Data view
  *     onBack,                    the Library link
  *   });
  *   ws.on("rendered", (layout) => ...);
@@ -21,6 +23,7 @@
  *   ws.on("select", (selection) => ...);   {item, layer, others} or null
  *
  * Zoom, panel state, view mode, volume and reverb are remembered (WorkspaceState).
+ * One workspace plays at a time per page: starting playback pauses the others.
  * Needs OSMD (window.opensheetmusicdisplay), ScoreNotes, ScoreLayers,
  * InspectorModel, ScoreGeometry, ScoreOverlay, WorkspaceState, Instruments,
  * SoundSources, PlaybackEngine and Reverb loaded first. */
@@ -29,6 +32,25 @@
   /* Most notehead halos drawn for one selection (a whole-piece claim can
    * name thousands of notes). */
   const MAX_HALOS = 2000;
+
+  /* The workspaces mounted on this page, so that one playing at a time is
+   * enforced: claim(entry) pauses every other entry. An entry is {pause}. */
+  function createPlayGroup() {
+    const entries = new Set();
+    return {
+      add: (entry) => entries.add(entry),
+      remove: (entry) => entries.delete(entry),
+      claim(entry) {
+        for (const other of entries) {
+          if (other !== entry) {
+            other.pause();
+          }
+        }
+      },
+      size: () => entries.size,
+    };
+  }
+  const playGroup = createPlayGroup();
 
   function el(tag, className, text) {
     const node = document.createElement(tag);
@@ -53,6 +75,10 @@
     const opts = options || {};
     const storage = safeStorage();
     const state = WorkspaceState.loadUiState(storage);
+    const compact = Boolean(opts.compact);
+    if (compact) {
+      state.mode = "score";
+    }
     /* What is open right now. A floating panel starts closed and is not
      * remembered; only docked panels write to the saved state. */
     const open = { layers: true, inspector: true };
@@ -106,7 +132,7 @@
     let cursorFrame = null;
 
     rootEl.innerHTML = "";
-    const ws = el("div", "ws");
+    const ws = el("div", compact ? "ws ws-compact" : "ws");
     ws.dataset.mode = state.mode;
     rootEl.appendChild(ws);
 
@@ -128,7 +154,11 @@
     title.title = opts.title || "";
     const meta = el("span", "ws-meta", opts.subtitle || "");
     titleWrap.append(title, meta);
-    left.append(back, titleWrap);
+    if (compact) {
+      left.append(titleWrap);
+    } else {
+      left.append(back, titleWrap);
+    }
 
     const transport = el("div", "ws-transport");
 
@@ -167,7 +197,11 @@
       button.addEventListener("click", (event) => action.onClick(event));
       right.appendChild(button);
     }
-    toolbar.append(left, transport, right);
+    if (compact) {
+      toolbar.append(left, transport);
+    } else {
+      toolbar.append(left, transport, right);
+    }
 
     const status = el("div", "ws-status");
     status.setAttribute("role", "status");
@@ -208,7 +242,12 @@
     const inspectorBody = el("div", "ws-insp");
     inspector.append(el("h2", "ws-panel-title", "Inspector"), inspectorBody);
 
-    body.append(rail, main, dataPane, inspector);
+    /* The compact view builds the same parts but leaves the panels out of the page. */
+    if (compact) {
+      body.append(main);
+    } else {
+      body.append(rail, main, dataPane, inspector);
+    }
     ws.append(toolbar, ...(opts.headerExtra ? [opts.headerExtra] : []), status, body);
 
     function emit(name, payload) {
@@ -739,6 +778,9 @@
     }
 
     function savePrefs() {
+      if (compact) {
+        return;
+      }
       WorkspaceState.saveUiState(storage, {
         layersOpen: state.layersOpen,
         inspectorOpen: state.inspectorOpen,
@@ -1234,13 +1276,17 @@
       }
     });
     transport.append(playButton, stopButton);
-    if (opts.loop) {
-      transport.appendChild(loopButton);
+    if (compact) {
+      transport.append(tempoGroup);
+    } else {
+      if (opts.loop) {
+        transport.appendChild(loopButton);
+      }
+      if (opts.ending) {
+        transport.appendChild(endingButton);
+      }
+      transport.append(readout, tempoGroup, volume, soundButton, soundMenu);
     }
-    if (opts.ending) {
-      transport.appendChild(endingButton);
-    }
-    transport.append(readout, tempoGroup, volume, soundButton, soundMenu);
 
     function closeSoundMenu() {
       if (soundMenu.hidden) {
@@ -1634,6 +1680,17 @@
     }
     const readoutTimer = setInterval(updateReadout, 100);
 
+    /* What the page's play group calls when another workspace starts. */
+    const groupEntry = {
+      pause() {
+        if (player && player.state() === "playing") {
+          player.pause();
+          silenceVoices();
+        }
+      },
+    };
+    playGroup.add(groupEntry);
+
     function togglePlay() {
       if (!player || preparing) {
         return;
@@ -1670,6 +1727,7 @@
         }
       }
       silenceVoices();
+      playGroup.claim(groupEntry);
       player.play(from, to);
     }
 
@@ -1851,6 +1909,7 @@
 
     function destroy() {
       destroyed = true;
+      playGroup.remove(groupEntry);
       document.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("resize", onWindowResize);
       closeShortcuts();
@@ -1871,7 +1930,9 @@
     function onWindowResize() {
       applyPanelMode(false);
     }
-    document.addEventListener("keydown", onKeyDown);
+    if (!compact) {
+      document.addEventListener("keydown", onKeyDown);
+    }
     window.addEventListener("resize", onWindowResize);
 
     applyPanelMode(true);
@@ -1899,5 +1960,8 @@
     };
   }
 
-  root.ScoreWorkspace = { mount };
+  root.ScoreWorkspace = { mount, createPlayGroup, playGroup };
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = root.ScoreWorkspace;
+  }
 })(typeof window !== "undefined" ? window : globalThis);
