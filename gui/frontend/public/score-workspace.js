@@ -1956,6 +1956,7 @@
       clearSelection,
       selected: () => selection,
       playback: () => playbackData,
+      play: togglePlay,
       timelineOffset: () => timelineOffset,
     };
   }

@@ -2062,6 +2062,13 @@ body {
 }
 
 /* Motif variants (P13 B9) */
+.variant-score {
+  margin: 0.3rem 0;
+}
+.variant-score.error {
+  color: var(--error, #b00020);
+  font-size: 0.85rem;
+}
 .materials-variants .variant-candidates,
 .materials-variants .variant-steps {
   list-style: none;
