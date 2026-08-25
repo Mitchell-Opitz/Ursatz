@@ -56,6 +56,20 @@ static MotiveRelationStep ratio_step(MotiveRelationKind kind, long num, long den
     return result;
 }
 
+/* A step whose ratio is the third parameter (condense). */
+static MotiveRelationStep ratio_step3(MotiveRelationKind kind, long first, long last, long num, long den) {
+    MotiveRelationStep result = step(kind, first, last, num);
+    result.den[2] = den;
+    return result;
+}
+
+/* A step whose ratio is the second parameter (shift-feature). */
+static MotiveRelationStep ratio_step_at(MotiveRelationKind kind, long which, long num, long den) {
+    MotiveRelationStep result = step(kind, which, num, 0);
+    result.den[1] = den;
+    return result;
+}
+
 /* Applies a step and checks the input did not change. */
 static MotiveRelationResult apply(const MotiveSketch *in, MotiveRelationStep relation, MotiveSketch *out) {
     MotiveSketch before = *in;
@@ -391,6 +405,349 @@ static void test_augment_and_diminish(void) {
     assert(apply(&rhythm, ratio_step(MOTIVE_RELATION_AUGMENT, 0, 0), &out) == MOTIVE_RELATION_OK);
 }
 
+/* --- rhythm ------------------------------------------------------------------------------------------ */
+
+/* C G E D in quarter notes, with one feature "a" on G E. */
+static MotiveSketch cged(void) {
+    static const int pitches[4] = {60, 67, 64, 62};
+    MotiveSketch sketch = line(pitches, 4, q(1, 4));
+    sketch.feature_count = 1;
+    strcpy(sketch.features[0].label, "a");
+    sketch.features[0].first = 1;
+    sketch.features[0].last = 2;
+    return sketch;
+}
+
+static void test_note_repeat(void) {
+    MotiveSketch sketch = cged();
+    MotiveSketch out;
+
+    assert(apply(&sketch, step(MOTIVE_RELATION_NOTE_REPEAT, 1, 2, 0), &out) == MOTIVE_RELATION_OK);
+    int twice[5] = {60, 67, 67, 64, 62};
+    assert_pitches(&out, twice, 5);
+    assert_note(&out, 1, 67, q(1, 4), q(1, 8));
+    assert_note(&out, 2, 67, q(3, 8), q(1, 8));
+    assert_note(&out, 3, 64, q(1, 2), q(1, 4));
+    assert(out.features[0].first == 1 && out.features[0].last == 3);
+
+    assert(apply(&sketch, step(MOTIVE_RELATION_NOTE_REPEAT, 0, 4, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.note_count == 7);
+    assert_note(&out, 3, 60, q(3, 16), q(1, 16));
+    assert(out.features[0].first == 4 && out.features[0].last == 5);
+
+    /* Refusals. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_NOTE_REPEAT, 1, 3, 0), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
+    assert(apply(&sketch, step(MOTIVE_RELATION_NOTE_REPEAT, 1, 1, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_NOTE_REPEAT, 1, 5, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_NOTE_REPEAT, 4, 2, 0), &out) == MOTIVE_RELATION_INVALID);
+}
+
+static void test_rhythm_repeat(void) {
+    /* Quarter, two eighths, quarter, eighth, eighth... */
+    MotiveSketch sketch = cged();
+    sketch.notes[1].duration = q(1, 8);
+    sketch.notes[2].onset = q(3, 8);
+    sketch.notes[2].duration = q(1, 8);
+    sketch.notes[3].onset = q(1, 2);
+    MotiveSketch out;
+
+    /* The rhythm of notes 1 and 2 (two eighths) on notes 2 and 3: the last note gets an eighth. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_RHYTHM_REPEAT, 1, 2, 2), &out) == MOTIVE_RELATION_OK);
+    assert_note(&out, 2, 64, q(3, 8), q(1, 8));
+    assert_note(&out, 3, 62, q(1, 2), q(1, 8));
+    assert(msk_eq(out.length, q(5, 8)));
+
+    /* The first note's quarter onto the second: the notes after it move later. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_RHYTHM_REPEAT, 0, 1, 1), &out) == MOTIVE_RELATION_OK);
+    assert_note(&out, 1, 67, q(1, 4), q(1, 4));
+    assert_note(&out, 2, 64, q(1, 2), q(1, 8));
+    assert_note(&out, 3, 62, q(5, 8), q(1, 4));
+
+    /* Refusals. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_RHYTHM_REPEAT, 1, 2, 1), &out) == MOTIVE_RELATION_UNCHANGED);
+    assert(apply(&sketch, step(MOTIVE_RELATION_RHYTHM_REPEAT, 2, 3, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_RHYTHM_REPEAT, 0, 2, 3), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_RHYTHM_REPEAT, 0, 0, 1), &out) == MOTIVE_RELATION_INVALID);
+}
+
+static void test_rhythm_shift(void) {
+    MotiveSketch sketch = cged();
+    MotiveSketch out;
+
+    /* The notes stay; the motive starts a beat later in the bar, so its first downbeat is 3/4 in. */
+    assert(apply(&sketch, ratio_step(MOTIVE_RELATION_RHYTHM_SHIFT, 1, 4), &out) == MOTIVE_RELATION_OK);
+    assert(msk_eq(out.pickup, q(3, 4)));
+    assert(motive_sketch_equal(&sketch, &out) == false);
+    assert_note(&out, 1, 67, q(1, 4), q(1, 4));
+    /* The metric strength of the first note changes with it: it is now a beat, not the downbeat. */
+    assert(motive_sketch_strength(&out, out.notes[0].onset) == 1);
+
+    /* Shifts add up inside the bar. */
+    MotiveSketch shifted = out;
+    assert(apply(&shifted, ratio_step(MOTIVE_RELATION_RHYTHM_SHIFT, 1, 2), &out) == MOTIVE_RELATION_OK);
+    assert(msk_eq(out.pickup, q(1, 4)));
+
+    /* A bar or more is the same place in the bar, and so is refused. */
+    assert(apply(&sketch, ratio_step(MOTIVE_RELATION_RHYTHM_SHIFT, 1, 1), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    assert(apply(&sketch, ratio_step(MOTIVE_RELATION_RHYTHM_SHIFT, 2, 1), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    assert(apply(&sketch, ratio_step(MOTIVE_RELATION_RHYTHM_SHIFT, 5, 4), &out) == MOTIVE_RELATION_OK);
+    assert(msk_eq(out.pickup, q(3, 4)));
+    assert(apply(&sketch, ratio_step(MOTIVE_RELATION_RHYTHM_SHIFT, 1, 64), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
+    assert(apply(&sketch, ratio_step(MOTIVE_RELATION_RHYTHM_SHIFT, 0, 4), &out) == MOTIVE_RELATION_INVALID);
+}
+
+static void test_add_upbeat(void) {
+    MotiveSketch sketch = cged();
+    sketch.chord_count = 2;
+    sketch.chords[0] = (MotiveSketchChord){q(0, 1), 1, 0, 0, false};
+    sketch.chords[1] = (MotiveSketchChord){q(1, 2), 5, 0, 0, false};
+    MotiveSketch out;
+
+    /* Two eighths stepping up into the C: A and B. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_UPBEAT, 2, 1, 0), &out) == MOTIVE_RELATION_OK);
+    int below[6] = {57, 59, 60, 67, 64, 62};
+    assert_pitches(&out, below, 6);
+    assert_note(&out, 0, 57, q(0, 1), q(1, 8));
+    assert_note(&out, 2, 60, q(1, 4), q(1, 4));
+    assert(msk_eq(out.pickup, q(1, 4)));
+    assert(out.features[0].first == 3 && out.features[0].last == 4);
+    assert(msk_is_zero(out.chords[0].onset) && msk_eq(out.chords[1].onset, q(3, 4)));
+
+    /* From above, stepping down. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_UPBEAT, 1, -1, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.notes[0].pitch == 62);
+    assert(msk_eq(out.pickup, q(1, 8)));
+
+    /* A rhythm sketch gets rhythm upbeats. */
+    MotiveSketch rhythm = sketch;
+    for (size_t i = 0; i < rhythm.note_count; i++) {
+        rhythm.notes[i].pitch = MOTIVE_SKETCH_PITCH_UNKNOWN;
+    }
+    assert(apply(&rhythm, step(MOTIVE_RELATION_ADD_UPBEAT, 3, 1, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.notes[0].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN);
+    assert(msk_eq(out.pickup, q(3, 8)));
+
+    /* Refusals: a pickup of a bar or more is no pickup. */
+    sketch.pickup = q(3, 4);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_UPBEAT, 3, 1, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_UPBEAT, 1, 1, 0), &out) == MOTIVE_RELATION_OK);
+    assert(msk_eq(out.pickup, q(7, 8)));
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_UPBEAT, 0, 1, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_UPBEAT, 4, 1, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_UPBEAT, 1, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    MotiveSketch low = cged();
+    low.notes[0].pitch = 1;
+    assert(apply(&low, step(MOTIVE_RELATION_ADD_UPBEAT, 3, 1, 0), &out) == MOTIVE_RELATION_RANGE);
+}
+
+static void test_change_meter(void) {
+    MotiveSketch sketch = cged();
+    MotiveSketch out;
+
+    /* Each old bar onto one new bar: 4/4 to 3/4 scales the times by 3/4. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_METER, 3, 4, 0), &out) == MOTIVE_RELATION_OK);
+    assert(msk_eq(out.bar, q(3, 4)) && msk_eq(out.beat, q(1, 4)));
+    assert_note(&out, 1, 67, q(3, 16), q(3, 16));
+    assert(msk_eq(out.length, q(3, 4)));
+
+    /* 4/4 to 2/2 keeps the times and changes the beat. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_METER, 2, 2, 0), &out) == MOTIVE_RELATION_OK);
+    assert(msk_eq(out.beat, q(1, 2)));
+    assert_note(&out, 1, 67, q(1, 4), q(1, 4));
+
+    /* 6/8 is 3/4 of a whole note. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_METER, 6, 8, 0), &out) == MOTIVE_RELATION_OK);
+    assert(msk_eq(out.bar, q(3, 4)) && msk_eq(out.beat, q(1, 8)));
+
+    /* Refusals. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_METER, 4, 4, 0), &out) == MOTIVE_RELATION_UNCHANGED);
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_METER, 5, 8, 0), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_METER, 3, 3, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_METER, 0, 4, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_METER, 65, 4, 0), &out) == MOTIVE_RELATION_INVALID);
+}
+
+/* --- intervals ----------------------------------------------------------------------------------------- */
+
+static void test_add_interval(void) {
+    MotiveSketch sketch = cged();
+    MotiveSketch out;
+
+    /* Two steps above the C, in the second half of the C. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_INTERVAL, 1, 2, 0), &out) == MOTIVE_RELATION_OK);
+    int added[5] = {60, 64, 67, 64, 62};
+    assert_pitches(&out, added, 5);
+    assert_note(&out, 0, 60, q(0, 1), q(1, 8));
+    assert_note(&out, 1, 64, q(1, 8), q(1, 8));
+    assert_note(&out, 2, 67, q(1, 4), q(1, 4));
+    assert(out.features[0].first == 2 && out.features[0].last == 3);
+
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_INTERVAL, 2, -1, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.notes[2].pitch == 65);
+    assert(out.features[0].first == 1 && out.features[0].last == 3);
+
+    /* Refusals. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_INTERVAL, 1, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_INTERVAL, 0, 1, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_INTERVAL, 4, 1, 0), &out) == MOTIVE_RELATION_INVALID);
+    sketch.notes[0].duration = q(1, 32);
+    sketch.notes[1].onset = q(1, 32);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_INTERVAL, 1, 1, 0), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
+    sketch = cged();
+    sketch.notes[0].pitch = 126;
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_INTERVAL, 1, 5, 0), &out) == MOTIVE_RELATION_RANGE);
+}
+
+static void test_omit_interval(void) {
+    MotiveSketch sketch = cged();
+    MotiveSketch out;
+
+    /* The G goes; the C is lengthened to hold its time. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_OMIT_INTERVAL, 1, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int omitted[3] = {60, 64, 62};
+    assert_pitches(&out, omitted, 3);
+    assert_note(&out, 0, 60, q(0, 1), q(1, 2));
+    assert_note(&out, 1, 64, q(1, 2), q(1, 4));
+    assert(out.feature_count == 1 && out.features[0].first == 1 && out.features[0].last == 1);
+
+    /* A feature of the note that went goes with it. */
+    sketch.features[0].last = 1;
+    assert(apply(&sketch, step(MOTIVE_RELATION_OMIT_INTERVAL, 1, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.feature_count == 0);
+
+    /* Refusals. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_OMIT_INTERVAL, 0, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_OMIT_INTERVAL, 4, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    int two[2] = {60, 62};
+    MotiveSketch short_line = line(two, 2, q(1, 4));
+    assert(apply(&short_line, step(MOTIVE_RELATION_OMIT_INTERVAL, 1, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    MotiveSketch tied = cged();
+    tied.notes[2].duration = q(3, 8);
+    tied.notes[3].onset = q(7, 8);
+    tied.notes[3].duration = q(1, 8);
+    /* Lengthening the G over the E would make it 5/8 long: not a written value. */
+    assert(apply(&tied, step(MOTIVE_RELATION_OMIT_INTERVAL, 2, 0, 0), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
+}
+
+static void test_ancillary_fill(void) {
+    int leap[3] = {60, 64, 67};
+    MotiveSketch sketch = line(leap, 3, q(1, 4));
+    MotiveSketch out;
+
+    /* The leap C to E is filled by the passing D, in the second half of the C. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ANCILLARY_FILL, 1, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int passing[4] = {60, 62, 64, 67};
+    assert_pitches(&out, passing, 4);
+    assert_note(&out, 0, 60, q(0, 1), q(1, 8));
+    assert_note(&out, 1, 62, q(1, 8), q(1, 8));
+
+    /* A neighbor: the upper one above an ascending interval... */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ANCILLARY_FILL, 1, 1, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.note_count == 4 && out.notes[1].pitch == 62);
+    /* ...and the lower one below a descending interval. */
+    int down[3] = {67, 64, 60};
+    MotiveSketch descending = line(down, 3, q(1, 4));
+    assert(apply(&descending, step(MOTIVE_RELATION_ANCILLARY_FILL, 1, 1, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.notes[1].pitch == 65);
+
+    /* A fifth needs three passing notes in an eighth: not a written value. */
+    MotiveSketch fifth = cged();
+    assert(apply(&fifth, step(MOTIVE_RELATION_ANCILLARY_FILL, 1, 0, 0), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
+
+    /* A step has nothing to fill. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ANCILLARY_FILL, 2, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int stepwise[3] = {60, 62, 64};
+    MotiveSketch scale = line(stepwise, 3, q(1, 4));
+    assert(apply(&scale, step(MOTIVE_RELATION_ANCILLARY_FILL, 1, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ANCILLARY_FILL, 0, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ANCILLARY_FILL, 1, 2, 0), &out) == MOTIVE_RELATION_INVALID);
+}
+
+static void test_condense(void) {
+    MotiveSketch sketch = cged();
+    MotiveSketch out;
+
+    /* G and E at half length; the D moves earlier. */
+    assert(apply(&sketch, ratio_step3(MOTIVE_RELATION_CONDENSE, 1, 2, 1, 2), &out) == MOTIVE_RELATION_OK);
+    assert_note(&out, 0, 60, q(0, 1), q(1, 4));
+    assert_note(&out, 1, 67, q(1, 4), q(1, 8));
+    assert_note(&out, 2, 64, q(3, 8), q(1, 8));
+    assert_note(&out, 3, 62, q(1, 2), q(1, 4));
+    assert(msk_eq(out.length, q(3, 4)));
+
+    /* The last notes condensed leave nothing after them. */
+    assert(apply(&sketch, ratio_step3(MOTIVE_RELATION_CONDENSE, 2, 3, 1, 2), &out) == MOTIVE_RELATION_OK);
+    assert_note(&out, 2, 64, q(1, 2), q(1, 8));
+    assert_note(&out, 3, 62, q(5, 8), q(1, 8));
+
+    /* Refusals. */
+    assert(apply(&sketch, ratio_step3(MOTIVE_RELATION_CONDENSE, 2, 1, 1, 2), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, ratio_step3(MOTIVE_RELATION_CONDENSE, 0, 4, 1, 2), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, ratio_step3(MOTIVE_RELATION_CONDENSE, 1, 2, 3, 2), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, ratio_step3(MOTIVE_RELATION_CONDENSE, 1, 2, 1, 3), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
+}
+
+static void test_repeat_feature(void) {
+    MotiveSketch sketch = cged();
+    MotiveSketch out;
+
+    /* G E repeated once, a step lower: F D, then the D. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_REPEAT_FEATURE, 0, 1, -1), &out) == MOTIVE_RELATION_OK);
+    int once[6] = {60, 67, 64, 65, 62, 62};
+    assert_pitches(&out, once, 6);
+    assert_note(&out, 3, 65, q(3, 4), q(1, 4));
+    assert_note(&out, 5, 62, q(5, 4), q(1, 4));
+    assert(out.features[0].first == 1 && out.features[0].last == 2);
+
+    /* Twice: each repeat a step further. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_REPEAT_FEATURE, 0, 2, -1), &out) == MOTIVE_RELATION_OK);
+    int twice[8] = {60, 67, 64, 65, 62, 64, 60, 62};
+    assert_pitches(&out, twice, 8);
+
+    /* Without a step it is an exact repeat. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_REPEAT_FEATURE, 0, 1, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.notes[3].pitch == 67 && out.notes[4].pitch == 64);
+
+    /* A rhythm sketch repeats the rhythm. */
+    MotiveSketch rhythm = sketch;
+    for (size_t i = 0; i < rhythm.note_count; i++) {
+        rhythm.notes[i].pitch = MOTIVE_SKETCH_PITCH_UNKNOWN;
+    }
+    assert(apply(&rhythm, step(MOTIVE_RELATION_REPEAT_FEATURE, 0, 1, 3), &out) == MOTIVE_RELATION_OK);
+    assert(out.note_count == 6 && out.notes[3].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN);
+
+    /* Refusals. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_REPEAT_FEATURE, 1, 1, 0), &out) == MOTIVE_RELATION_NO_FEATURE);
+    assert(apply(&sketch, step(MOTIVE_RELATION_REPEAT_FEATURE, 0, 3, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_REPEAT_FEATURE, 0, 1, 90), &out) == MOTIVE_RELATION_RANGE);
+    sketch.feature_count = 0;
+    assert(apply(&sketch, step(MOTIVE_RELATION_REPEAT_FEATURE, 0, 1, 0), &out) == MOTIVE_RELATION_NO_FEATURE);
+}
+
+static void test_shift_feature(void) {
+    MotiveSketch sketch = cged();
+    MotiveSketch out;
+
+    /* G E move an eighth later: the C is lengthened and the E shortened. */
+    assert(apply(&sketch, ratio_step_at(MOTIVE_RELATION_SHIFT_FEATURE, 0, 1, 8), &out) == MOTIVE_RELATION_OK);
+    assert_note(&out, 0, 60, q(0, 1), q(3, 8));
+    assert_note(&out, 1, 67, q(3, 8), q(1, 4));
+    assert_note(&out, 2, 64, q(5, 8), q(1, 8));
+    assert_note(&out, 3, 62, q(3, 4), q(1, 4));
+
+    /* A feature on the first note starts the motive later. */
+    sketch.features[0].first = 0;
+    sketch.features[0].last = 0;
+    assert(apply(&sketch, ratio_step_at(MOTIVE_RELATION_SHIFT_FEATURE, 0, 1, 8), &out) == MOTIVE_RELATION_OK);
+    assert_note(&out, 0, 60, q(1, 8), q(1, 8));
+
+    /* Refusals. */
+    assert(apply(&sketch, ratio_step_at(MOTIVE_RELATION_SHIFT_FEATURE, 0, 1, 4), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    assert(apply(&sketch, ratio_step_at(MOTIVE_RELATION_SHIFT_FEATURE, 1, 1, 8), &out) == MOTIVE_RELATION_NO_FEATURE);
+    assert(apply(&sketch, ratio_step_at(MOTIVE_RELATION_SHIFT_FEATURE, 0, 0, 8), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, ratio_step_at(MOTIVE_RELATION_SHIFT_FEATURE, 0, 1, 64), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
+}
+
 int main(void) {
     test_catalog();
     test_invalid_input();
@@ -402,6 +759,17 @@ int main(void) {
     test_fragment();
     test_liquidate();
     test_augment_and_diminish();
+    test_note_repeat();
+    test_rhythm_repeat();
+    test_rhythm_shift();
+    test_add_upbeat();
+    test_change_meter();
+    test_add_interval();
+    test_omit_interval();
+    test_ancillary_fill();
+    test_condense();
+    test_repeat_feature();
+    test_shift_feature();
     printf("motive_relation: ok\n");
     return 0;
 }
