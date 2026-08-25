@@ -192,8 +192,9 @@ const VariantTreeView = (function () {
   }
 
   /* One saved node: indented by depth, with its derivation, flag, kind and actions.
-   * actions: {flag(id, flag), kind(id, kind), reroll(id), open(id), play(row)}. */
-  function treeRow(row, actions) {
+   * actions: {flag(id, flag), kind(id, kind), reroll(id), open(id), play(row), toggle(row)}; isOpen is whether
+   * its notation is shown. The row's scoreHost is where the compact score mounts. */
+  function treeRow(row, actions, isOpen) {
     const item = h("li", `variant-node variant-flag-${row.flag.value}`);
     item.style.marginLeft = `${row.depth * 1.5}rem`;
     const title = h("div", "variant-node-title");
@@ -237,7 +238,10 @@ const VariantTreeView = (function () {
       ...(row.seed === null ? [] : [actionButton("Reroll", () => actions.reroll(row.id))]),
       actionButton("Open", () => actions.open(row.id)),
     );
+    buttons.appendChild(actionButton(isOpen ? "Hide notation" : "Show notation", () => actions.toggle(row)));
     item.appendChild(buttons);
+    item.scoreHost = h("div", "variant-score");
+    item.appendChild(item.scoreHost);
     return item;
   }
 
@@ -457,8 +461,54 @@ const VariantTreeView = (function () {
       });
     }
 
+    /* The saved rows whose notation is open, by item id. The set outlives refreshTree; the scores are mounted again
+     * each time the tree is drawn. */
+    const openRows = new Set();
+    let rowScores = [];
+
+    function clearRowScores() {
+      for (const workspace of rowScores) {
+        workspace.destroy();
+      }
+      rowScores = [];
+    }
+
+    function mountRowScore(row, host, autoplay) {
+      const urls = MaterialsModel.versionScoreUrls(row.id, row.version);
+      rowScores.push(
+        ScoreWorkspace.mount(host, {
+          compact: true,
+          autoplay,
+          title: row.name,
+          subtitle: `variant · v${row.version}`,
+          musicxmlUrl: urls.musicxmlUrl,
+          playbackUrl: urls.playbackUrl,
+        }),
+      );
+    }
+
+    function toggleNotation(row) {
+      if (openRows.has(row.id)) {
+        openRows.delete(row.id);
+      } else {
+        openRows.add(row.id);
+      }
+      drawTree();
+    }
+
+    /* Plays the row's score, opening its notation first when it is closed. */
+    let autoplayId = null;
     function playSaved(row) {
-      showSelection(row.name, `variant · v${row.version}`, MaterialsModel.versionScoreUrls(row.id, row.version));
+      if (openRows.has(row.id)) {
+        const index = rowScoreIds.indexOf(row.id);
+        if (index >= 0) {
+          rowScores[index].play();
+        }
+        return;
+      }
+      openRows.add(row.id);
+      autoplayId = row.id;
+      drawTree();
     }
 
     let savedTree = null;
@@ -485,14 +535,25 @@ const VariantTreeView = (function () {
         ctx.open(id);
       },
       play: playSaved,
+      toggle: toggleNotation,
     };
 
+    let rowScoreIds = [];
     function drawTree() {
+      clearRowScores();
+      rowScoreIds = [];
       tree.innerHTML = "";
       const shownRows = VariantTree.treeRows(savedTree, rejectedBox.checked);
       for (const row of shownRows.rows) {
-        tree.appendChild(treeRow(row, treeActions));
+        const open = !row.isRoot && openRows.has(row.id);
+        const item = treeRow(row, treeActions, open);
+        tree.appendChild(item);
+        if (open) {
+          rowScoreIds.push(row.id);
+          mountRowScore(row, item.scoreHost, autoplayId === row.id);
+        }
       }
+      autoplayId = null;
       const saved = shownRows.rows.length - 1;
       treeNote.textContent =
         saved <= 0 && shownRows.hidden === 0
@@ -546,11 +607,17 @@ const VariantTreeView = (function () {
     return {
       el: section,
       refresh: refreshTree,
-      /* The tab was left: stop and free the candidate scores. Back on the tab they are drawn again. */
-      leave: clearCandidateScores,
+      /* The tab was left: stop and free the scores. Back on the tab they are drawn again. */
+      leave: () => {
+        clearCandidateScores();
+        clearRowScores();
+      },
       enter: () => {
         if (shown.length > 0 && candidateScores.length === 0) {
           drawCandidates();
+        }
+        if (savedTree) {
+          drawTree();
         }
       },
       showRejected: () => rejectedBox.checked,

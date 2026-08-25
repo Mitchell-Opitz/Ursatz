@@ -13,6 +13,7 @@
  *                                adds the Play ending button
  *     actions: [{label, onClick}],  extra toolbar buttons
  *     headerExtra,               an element shown under the toolbar
+ *     autoplay,                  play as soon as the playback data has loaded
  *     compact,                   the title, Play/Stop, tempo and the score only; no
  *                                layers, inspector, notation panel or Data view
  *     onBack,                    the Library link
@@ -1448,6 +1449,9 @@
       syncTransport();
       /* a claim shown before the data arrived gets its Play button */
       inspectorView.show(selection);
+      if (opts.autoplay && playable) {
+        startPlayback();
+      }
     }
 
     function syncTransport() {
