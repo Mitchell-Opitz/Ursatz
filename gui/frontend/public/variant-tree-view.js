@@ -1,5 +1,6 @@
-/* The Variants section of the motif detail (P13 B9): the Generate control
- * with its operation picker, and the unsaved candidates. Renders from
+/* The Variants section of the motif detail (P13 B9), top to bottom: the Generate control with its operation
+ * picker, the unsaved candidates and the saved tree. Each candidate and each saved variant (on request) shows its
+ * notation in a compact score workspace of its own (P18 B4). Renders from
  * VariantTree; ctx is {id, name, body, send(request), open(id)}, send being the page's
  * JSON request helper that answers {ok, status, data}. */
 const VariantTreeView = (function () {
@@ -307,8 +308,7 @@ const VariantTreeView = (function () {
     const candidates = h("ol", "variant-candidates");
     const tree = h("ul", "variant-tree");
     const treeNote = h("div", "piece-list-status");
-    const selectedEl = h("div", "variant-selected");
-    section.append(controls, pickerHost, status, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree, selectedEl);
+    section.append(controls, pickerHost, status, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree);
     parent.appendChild(section);
 
     let picker = null;
@@ -434,31 +434,6 @@ const VariantTreeView = (function () {
         candidates.appendChild(card);
         renderQueue.add(() => (generation === drawGeneration ? showCandidateScore(candidate, card.scoreHost, entry, generation) : null));
       }
-    }
-
-    let workspace = null;
-    let blobUrls = [];
-    function clearSelection() {
-      if (workspace) {
-        workspace.destroy();
-        workspace = null;
-      }
-      for (const url of blobUrls) {
-        URL.revokeObjectURL(url);
-      }
-      blobUrls = [];
-      selectedEl.innerHTML = "";
-    }
-
-    /* Shows a score and playback in the workspace under the saved tree. urls is {musicxmlUrl, playbackUrl}. */
-    function showSelection(title, subtitle, urls) {
-      clearSelection();
-      workspace = ScoreWorkspace.mount(selectedEl, {
-        title,
-        subtitle,
-        musicxmlUrl: urls.musicxmlUrl,
-        playbackUrl: urls.playbackUrl,
-      });
     }
 
     /* The saved rows whose notation is open, by item id. The set outlives refreshTree; the scores are mounted again
