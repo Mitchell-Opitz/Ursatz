@@ -53,6 +53,29 @@
   }
   const playGroup = createPlayGroup();
 
+  /* The parts of the workspace the page shows: the Library link, the toolbar sections, the transport controls and
+   * the body panes. The compact view keeps the title, Play/Stop, tempo and the score. */
+  function layoutFor(opts) {
+    const options = opts || {};
+    if (options.compact) {
+      return { back: false, toolbar: ["left", "transport"], transport: ["play", "stop", "tempo"], body: ["main"] };
+    }
+    const transport = ["play", "stop"];
+    if (options.loop) {
+      transport.push("loop");
+    }
+    if (options.ending) {
+      transport.push("ending");
+    }
+    transport.push("readout", "tempo", "volume", "sound");
+    return {
+      back: true,
+      toolbar: ["left", "transport", "right"],
+      transport,
+      body: ["rail", "main", "data", "inspector"],
+    };
+  }
+
   function el(tag, className, text) {
     const node = document.createElement(tag);
     if (className) {
@@ -155,10 +178,11 @@
     title.title = opts.title || "";
     const meta = el("span", "ws-meta", opts.subtitle || "");
     titleWrap.append(title, meta);
-    if (compact) {
-      left.append(titleWrap);
-    } else {
+    const layoutParts = layoutFor(opts);
+    if (layoutParts.back) {
       left.append(back, titleWrap);
+    } else {
+      left.append(titleWrap);
     }
 
     const transport = el("div", "ws-transport");
@@ -198,11 +222,7 @@
       button.addEventListener("click", (event) => action.onClick(event));
       right.appendChild(button);
     }
-    if (compact) {
-      toolbar.append(left, transport);
-    } else {
-      toolbar.append(left, transport, right);
-    }
+    toolbar.append(...layoutParts.toolbar.map((name) => ({ left, transport, right })[name]));
 
     const status = el("div", "ws-status");
     status.setAttribute("role", "status");
@@ -244,11 +264,7 @@
     inspector.append(el("h2", "ws-panel-title", "Inspector"), inspectorBody);
 
     /* The compact view builds the same parts but leaves the panels out of the page. */
-    if (compact) {
-      body.append(main);
-    } else {
-      body.append(rail, main, dataPane, inspector);
-    }
+    body.append(...layoutParts.body.map((name) => ({ rail, main, data: dataPane, inspector })[name]));
     ws.append(toolbar, ...(opts.headerExtra ? [opts.headerExtra] : []), status, body);
 
     function emit(name, payload) {
@@ -1204,7 +1220,7 @@
     registry.mapProgram(0, "gm-piano");
     let timeline = null;
     let endingTimeline = null;
-    let loopOn = Boolean(opts.loop);
+    let loopOn = Boolean(opts.loop) && !compact;
     /* the score on show is the ending version's while it plays */
     let endingShown = false;
     let loopXmlText = "";
@@ -1276,17 +1292,18 @@
         closeSoundMenu();
       }
     });
-    transport.append(playButton, stopButton);
-    if (compact) {
-      transport.append(tempoGroup);
-    } else {
-      if (opts.loop) {
-        transport.appendChild(loopButton);
-      }
-      if (opts.ending) {
-        transport.appendChild(endingButton);
-      }
-      transport.append(readout, tempoGroup, volume, soundButton, soundMenu);
+    const transportParts = {
+      play: [playButton],
+      stop: [stopButton],
+      loop: [loopButton],
+      ending: [endingButton],
+      readout: [readout],
+      tempo: [tempoGroup],
+      volume: [volume],
+      sound: [soundButton, soundMenu],
+    };
+    for (const name of layoutParts.transport) {
+      transport.append(...transportParts[name]);
     }
 
     function closeSoundMenu() {
@@ -1965,7 +1982,7 @@
     };
   }
 
-  root.ScoreWorkspace = { mount, createPlayGroup, playGroup };
+  root.ScoreWorkspace = { mount, createPlayGroup, playGroup, layoutFor };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = root.ScoreWorkspace;
   }
