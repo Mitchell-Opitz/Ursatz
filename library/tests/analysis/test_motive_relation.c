@@ -748,6 +748,265 @@ static void test_shift_feature(void) {
     assert(apply(&sketch, ratio_step_at(MOTIVE_RELATION_SHIFT_FEATURE, 0, 1, 64), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
 }
 
+/* --- harmony and the dominant form ---------------------------------------------------------------------- */
+
+/* C E G E in quarter notes, with the chord given: I at 0, and optionally another. */
+static MotiveSketch triad_line(void) {
+    static const int pitches[4] = {60, 64, 67, 64};
+    return line(pitches, 4, q(1, 4));
+}
+
+static void set_chords(MotiveSketch *sketch, const int *degrees, const ExactRational *onsets, size_t count) {
+    sketch->chord_count = count;
+    for (size_t i = 0; i < count; i++) {
+        sketch->chords[i] = (MotiveSketchChord){onsets[i], degrees[i], 0, 0, false};
+    }
+}
+
+static void test_implied_chord(void) {
+    MotiveSketch sketch = triad_line();
+    MotiveSketch out;
+    /* No chords: the best implied chord, here the tonic, becomes the one chord at 0. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INVERSION, 0, 1, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 1 && out.chords[0].degree == 1 && msk_is_zero(out.chords[0].onset));
+    assert(out.chords[0].inversion == 1);
+
+    MotiveSketch no_scale = sketch;
+    no_scale.has_scale = false;
+    assert(apply(&no_scale, step(MOTIVE_RELATION_HARMONY_INVERSION, 0, 1, 0), &out) == MOTIVE_RELATION_NO_SCALE);
+    MotiveSketch rhythm = sketch;
+    for (size_t i = 0; i < rhythm.note_count; i++) {
+        rhythm.notes[i].pitch = MOTIVE_SKETCH_PITCH_UNKNOWN;
+    }
+    assert(apply(&rhythm, step(MOTIVE_RELATION_HARMONY_INVERSION, 0, 1, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+}
+
+static void test_harmony_inversion(void) {
+    MotiveSketch sketch = triad_line();
+    int degrees[2] = {1, 5};
+    ExactRational onsets[2] = {q(0, 1), q(1, 2)};
+    set_chords(&sketch, degrees, onsets, 2);
+    sketch.chords[1].seventh = true;
+    MotiveSketch out;
+
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INVERSION, 1, 2, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chords[1].inversion == 2);
+    int same[4] = {60, 64, 67, 64};
+    assert_pitches(&out, same, 4);
+
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INVERSION, 1, 3, 0), &out) == MOTIVE_RELATION_OK);
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INVERSION, 0, 3, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INVERSION, 0, 0, 0), &out) == MOTIVE_RELATION_UNCHANGED);
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INVERSION, 2, 1, 0), &out) == MOTIVE_RELATION_NO_HARMONY);
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INVERSION, 0, 4, 0), &out) == MOTIVE_RELATION_INVALID);
+}
+
+static void test_harmony_append(void) {
+    MotiveSketch sketch = triad_line();
+    MotiveSketch out;
+
+    /* A V at the last note; the E on that beat is not a V tone, so it moves to the D. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_APPEND, 5, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 2 && out.chords[1].degree == 5 && msk_eq(out.chords[1].onset, q(3, 4)));
+    int adapted[4] = {60, 64, 67, 62};
+    assert_pitches(&out, adapted, 4);
+
+    /* With a seventh the F is a chord tone too, and the E goes to the nearer D or F: the F is a step off. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_APPEND, 5, 1, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chords[1].seventh);
+
+    /* Refusals. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_APPEND, 0, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_APPEND, 8, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_APPEND, 5, 2, 0), &out) == MOTIVE_RELATION_INVALID);
+    int degrees[2] = {1, 5};
+    ExactRational onsets[2] = {q(0, 1), q(3, 4)};
+    set_chords(&sketch, degrees, onsets, 2);
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_APPEND, 1, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+}
+
+static void test_harmony_insert(void) {
+    MotiveSketch sketch = triad_line();
+    MotiveSketch out;
+
+    /* The one chord's span is 0 to 1; the note onset nearest its middle is 1/2. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INSERT, 0, 4, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 2 && out.chords[1].degree == 4 && msk_eq(out.chords[1].onset, q(1, 2)));
+    /* The G on the IV beat is not a IV tone, and moves to the A (arrived from E, so up first). */
+    assert(out.notes[2].pitch == 69);
+
+    int degrees[2] = {1, 5};
+    ExactRational onsets[2] = {q(0, 1), q(1, 4)};
+    set_chords(&sketch, degrees, onsets, 2);
+    /* The first chord spans 0 to 1/4, and no note starts inside it. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INSERT, 0, 4, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INSERT, 1, 4, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 3 && msk_eq(out.chords[2].onset, q(1, 2)));
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INSERT, 2, 4, 0), &out) == MOTIVE_RELATION_NO_HARMONY);
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INSERT, 1, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+
+    /* A full chord list takes no more. */
+    MotiveSketch full = triad_line();
+    full.chord_count = MOTIVE_SKETCH_MAX_CHORDS;
+    for (size_t c = 0; c < MOTIVE_SKETCH_MAX_CHORDS; c++) {
+        full.chords[c] = (MotiveSketchChord){q(c, 16), 1, 0, 0, false};
+    }
+    assert(apply(&full, step(MOTIVE_RELATION_HARMONY_INSERT, 7, 4, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+}
+
+static void test_harmony_substitute(void) {
+    MotiveSketch sketch = triad_line();
+    MotiveSketch out;
+
+    /* The tonic becomes V, then I: the C and E of the first half move to B and D. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 0, 5, 1), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 2 && out.chords[0].degree == 5 && out.chords[1].degree == 1);
+    assert(msk_eq(out.chords[1].onset, q(1, 2)));
+    assert(out.notes[0].pitch == 59 && out.notes[1].pitch == 62);
+
+    /* Replaced by one chord without a succession. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 0, 4, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 1 && out.chords[0].degree == 4);
+
+    /* The same chord is no change; with none given, the implied chord is a change to the sketch. */
+    int tonic[1] = {1};
+    ExactRational at_zero[1] = {q(0, 1)};
+    MotiveSketch with_chord = sketch;
+    set_chords(&with_chord, tonic, at_zero, 1);
+    assert(apply(&with_chord, step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 0, 1, 0), &out) == MOTIVE_RELATION_UNCHANGED);
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 0, 1, 0), &out) == MOTIVE_RELATION_OK);
+
+    /* Refusals. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 1, 5, 0), &out) == MOTIVE_RELATION_NO_HARMONY);
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 0, 8, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 0, 5, 9), &out) == MOTIVE_RELATION_INVALID);
+    int one[1] = {60};
+    MotiveSketch one_note = line(one, 1, q(1, 4));
+    assert(apply(&one_note, step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 0, 5, 1), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+}
+
+static void test_passing_harmony(void) {
+    MotiveSketch sketch = triad_line();
+    int degrees[2] = {1, 4};
+    ExactRational onsets[2] = {q(0, 1), q(1, 2)};
+    set_chords(&sketch, degrees, onsets, 2);
+    MotiveSketch out;
+
+    /* I to IV: a step between, the II, on the weak note before the change; its E moves to the F. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_PASSING_HARMONY, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 3);
+    assert(out.chords[1].degree == 2 && msk_eq(out.chords[1].onset, q(1, 4)));
+    assert(out.chords[2].degree == 4);
+    assert(out.notes[1].pitch == 65);
+
+    /* Roots a step apart: the dominant of the second, here the VI before the II. */
+    degrees[1] = 2;
+    set_chords(&sketch, degrees, onsets, 2);
+    assert(apply(&sketch, step(MOTIVE_RELATION_PASSING_HARMONY, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chords[1].degree == 6);
+
+    /* Going down a step lower. */
+    degrees[0] = 4;
+    degrees[1] = 1;
+    set_chords(&sketch, degrees, onsets, 2);
+    assert(apply(&sketch, step(MOTIVE_RELATION_PASSING_HARMONY, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chords[1].degree == 3);
+
+    /* Refusals. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_PASSING_HARMONY, 1, 0, 0), &out) == MOTIVE_RELATION_NO_HARMONY);
+    degrees[0] = 1;
+    degrees[1] = 1;
+    set_chords(&sketch, degrees, onsets, 2);
+    assert(apply(&sketch, step(MOTIVE_RELATION_PASSING_HARMONY, 0, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    degrees[1] = 4;
+    onsets[1] = q(1, 4);
+    set_chords(&sketch, degrees, onsets, 2);
+    /* No note starts between the first chord and the change. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_PASSING_HARMONY, 0, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+}
+
+static void test_counter_line(void) {
+    int pitches[4] = {60, 60, 60, 60};
+    MotiveSketch accompaniment = line(pitches, 4, q(1, 4));
+    accompaniment.accompaniment = true;
+    int degrees[2] = {1, 5};
+    ExactRational onsets[2] = {q(0, 1), q(1, 2)};
+    set_chords(&accompaniment, degrees, onsets, 2);
+    MotiveSketch out;
+
+    /* Repeated notes inside a chord step toward the nearest tone of the next chord: the B of the V. */
+    assert(apply(&accompaniment, step(MOTIVE_RELATION_COUNTER_LINE, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int stepping[4] = {60, 59, 60, 59};
+    assert_pitches(&out, stepping, 4);
+
+    /* A melody is not an accompaniment. */
+    accompaniment.accompaniment = false;
+    assert(apply(&accompaniment, step(MOTIVE_RELATION_COUNTER_LINE, 0, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+
+    /* Notes that do not repeat are left alone. */
+    MotiveSketch moving = triad_line();
+    moving.accompaniment = true;
+    set_chords(&moving, degrees, onsets, 2);
+    assert(apply(&moving, step(MOTIVE_RELATION_COUNTER_LINE, 0, 0, 0), &out) == MOTIVE_RELATION_UNCHANGED);
+}
+
+static void test_dominant_form(void) {
+    MotiveSketch out;
+
+    /* I-V becomes V-I: the melody a tonal fourth down, adapted to the chords, in the same rhythm. */
+    MotiveSketch sketch = triad_line();
+    int degrees[3] = {1, 5, 1};
+    ExactRational onsets[3] = {q(0, 1), q(1, 2), q(3, 4)};
+    set_chords(&sketch, degrees, onsets, 2);
+    assert(apply(&sketch, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 2 && out.chords[0].degree == 5 && out.chords[1].degree == 1);
+    assert(msk_eq(out.chords[1].onset, q(1, 2)));
+    int fourth_down[4] = {55, 59, 67, 60};
+    assert_pitches(&out, fourth_down, 4);
+    for (size_t i = 0; i < 4; i++) {
+        assert(msk_eq(out.notes[i].onset, sketch.notes[i].onset));
+        assert(msk_eq(out.notes[i].duration, sketch.notes[i].duration));
+    }
+
+    /* I alone becomes V. */
+    set_chords(&sketch, degrees, onsets, 1);
+    assert(apply(&sketch, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 1 && out.chords[0].degree == 5);
+    int plain[4] = {55, 59, 62, 59};
+    assert_pitches(&out, plain, 4);
+
+    /* I-V-I becomes V-I-V. */
+    set_chords(&sketch, degrees, onsets, 3);
+    assert(apply(&sketch, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 3 && out.chords[0].degree == 5 && out.chords[1].degree == 1 && out.chords[2].degree == 5);
+
+    /* I-IV, I-II and any other harmony starting on I become V-I. */
+    degrees[1] = 4;
+    set_chords(&sketch, degrees, onsets, 2);
+    assert(apply(&sketch, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 2 && out.chords[0].degree == 5 && out.chords[1].degree == 1);
+    degrees[1] = 6;
+    degrees[2] = 4;
+    set_chords(&sketch, degrees, onsets, 3);
+    assert(apply(&sketch, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 2 && out.chords[0].degree == 5 && out.chords[1].degree == 1);
+
+    /* Refusals: a harmony not starting on I; a fourth down out of range goes up a fifth. */
+    degrees[0] = 4;
+    set_chords(&sketch, degrees, onsets, 2);
+    assert(apply(&sketch, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    degrees[0] = 1;
+    set_chords(&sketch, degrees, onsets, 1);
+    MotiveSketch low = sketch;
+    low.notes[0].pitch = 2;
+    assert(apply(&low, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    /* The fourth down is out of range, so the fifth up (A), which the V then moves to its B. */
+    assert(out.notes[0].pitch == 11);
+    MotiveSketch no_scale = sketch;
+    no_scale.has_scale = false;
+    assert(apply(&no_scale, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_NO_SCALE);
+}
+
 int main(void) {
     test_catalog();
     test_invalid_input();
@@ -770,6 +1029,14 @@ int main(void) {
     test_condense();
     test_repeat_feature();
     test_shift_feature();
+    test_implied_chord();
+    test_harmony_inversion();
+    test_harmony_append();
+    test_harmony_insert();
+    test_harmony_substitute();
+    test_passing_harmony();
+    test_counter_line();
+    test_dominant_form();
     printf("motive_relation: ok\n");
     return 0;
 }
