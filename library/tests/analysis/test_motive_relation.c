@@ -1007,6 +1007,105 @@ static void test_dominant_form(void) {
     assert(apply(&no_scale, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_NO_SCALE);
 }
 
+/* --- liquidation by characteristic features -------------------------------------------------------------- */
+
+/* Eight eighths: C E G C' B G E C. The beat groups are CE, GC', BG and EC. */
+static MotiveSketch arch(void) {
+    static const int pitches[8] = {60, 64, 67, 72, 71, 67, 64, 60};
+    return line(pitches, 8, q(1, 8));
+}
+
+static void test_liquidate_features(void) {
+    MotiveSketch out;
+
+    /* Without labelled features each beat is one. GC' has the only leap (a fourth), so it goes first, replaced by one
+     * note of its span on the nearest tone of its chord (the implied tonic): the G. */
+    MotiveSketch sketch = arch();
+    assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int one[7] = {60, 64, 67, 71, 67, 64, 60};
+    assert_pitches(&out, one, 7);
+    assert_note(&out, 2, 67, q(1, 4), q(1, 4));
+    assert_note(&out, 3, 71, q(1, 2), q(1, 8));
+    assert(out.chord_count == 1 && out.chords[0].degree == 1);
+
+    /* Two steps: of the beats left, all weigh 0 (the G now has a duration of its own but is one note), and of equals
+     * the later goes: the E and C become the E. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 2, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int two[6] = {60, 64, 67, 71, 67, 64};
+    assert_pitches(&out, two, 6);
+    assert_note(&out, 5, 64, q(3, 4), q(1, 4));
+
+    /* Shortened: the result diminished 1:2. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 1, 0), &out) == MOTIVE_RELATION_OK);
+    assert_pitches(&out, one, 7);
+    assert_note(&out, 2, 67, q(1, 8), q(1, 8));
+    assert_note(&out, 3, 71, q(1, 4), q(1, 16));
+    assert(msk_eq(out.length, q(1, 2)));
+}
+
+static void test_liquidate_labelled_features(void) {
+    MotiveSketch out;
+
+    /* The leap makes the second feature the heavier. */
+    MotiveSketch sketch = arch();
+    sketch.feature_count = 2;
+    strcpy(sketch.features[0].label, "a");
+    sketch.features[0].first = 0;
+    sketch.features[0].last = 1;
+    strcpy(sketch.features[1].label, "b");
+    sketch.features[1].first = 2;
+    sketch.features[1].last = 3;
+    assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.note_count == 7 && out.notes[2].pitch == 67);
+    assert(out.feature_count == 1 && strcmp(out.features[0].label, "a") == 0);
+
+    /* Equal weights: the later feature first. */
+    sketch.features[1].first = 6;
+    sketch.features[1].last = 7;
+    assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.note_count == 7 && out.notes[6].pitch == 64);
+    assert(out.feature_count == 1 && strcmp(out.features[0].label, "a") == 0);
+
+    /* A note whose duration is found once weighs 1. */
+    static const int pitches[4] = {60, 62, 64, 65};
+    MotiveSketch durations = line(pitches, 4, q(1, 8));
+    durations.notes[3].duration = q(1, 4);
+    durations.length = q(5, 8);
+    durations.feature_count = 2;
+    strcpy(durations.features[0].label, "a");
+    durations.features[0].first = 0;
+    durations.features[0].last = 1;
+    strcpy(durations.features[1].label, "b");
+    durations.features[1].first = 2;
+    durations.features[1].last = 3;
+    assert(apply(&durations, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.note_count == 3);
+    /* The implied chord of C D E F is the IV (F A C: two notes and the most time), whose nearest tone is the F. */
+    assert_note(&out, 2, 65, q(1, 4), q(3, 8));
+
+    /* Refusals. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 0, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 4, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 2, 0), &out) == MOTIVE_RELATION_INVALID);
+    /* Three steps, but only two features of two notes. */
+    sketch.feature_count = 2;
+    sketch.features[1].first = 2;
+    sketch.features[1].last = 3;
+    assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 3, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    /* One note to a beat: no feature of two notes. */
+    MotiveSketch quarters = cged();
+    quarters.feature_count = 0;
+    assert(apply(&quarters, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    MotiveSketch no_scale = arch();
+    no_scale.has_scale = false;
+    assert(apply(&no_scale, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 0, 0), &out) == MOTIVE_RELATION_NO_SCALE);
+    /* Shortening a 32nd note: half of it is not a written value. */
+    MotiveSketch fine = arch();
+    fine.notes[7].duration = q(1, 32);
+    fine.length = q(29, 32);
+    assert(apply(&fine, step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 1, 0), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
+}
+
 int main(void) {
     test_catalog();
     test_invalid_input();
@@ -1037,6 +1136,8 @@ int main(void) {
     test_passing_harmony();
     test_counter_line();
     test_dominant_form();
+    test_liquidate_features();
+    test_liquidate_labelled_features();
     printf("motive_relation: ok\n");
     return 0;
 }
