@@ -1295,12 +1295,12 @@ typedef struct {
 } Group;
 
 /*
- * The features of a sketch: its labelled ones, or without any, each bar-beat group (the notes from one beat onset to
- * the next) in order.
+ * The features of a sketch: its labelled ones, or when it has none to start with, each bar-beat group (the notes
+ * from one beat onset to the next) in order.
  */
-static size_t feature_groups(const MotiveSketch *sketch, Group *groups) {
+static size_t feature_groups(const MotiveSketch *sketch, bool labelled, Group *groups) {
     size_t count = 0;
-    if (sketch->feature_count > 0) {
+    if (labelled) {
         for (size_t f = 0; f < sketch->feature_count; f++) {
             groups[count].first = sketch->features[f].first;
             groups[count].last = sketch->features[f].last;
@@ -1393,9 +1393,10 @@ static MotiveRelationResult apply_liquidate_features(const MotiveSketch *in, con
     if (ready != MOTIVE_RELATION_OK) {
         return ready;
     }
+    bool labelled = out->feature_count > 0;
     for (long round = 0; round < steps; round++) {
         Group groups[MOTIVE_SKETCH_MAX_NOTES];
-        size_t count = feature_groups(out, groups);
+        size_t count = feature_groups(out, labelled, groups);
         /* The heaviest feature of two notes or more goes first; of equals, the later. */
         size_t heaviest = count;
         long best = 0;
