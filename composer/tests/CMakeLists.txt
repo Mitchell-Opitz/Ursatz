@@ -367,7 +367,7 @@ target_link_libraries(test_analyzer_check PRIVATE ursatz_composer)
 target_compile_options(test_analyzer_check PRIVATE -Wall -Wextra -Wpedantic)
 # The Analyzer check (docs/analyzer-check.md): the modes are quick except the sweep, which CI leaves out (ctest -LE slow);
 # its smoke test is the sweep on one seed.
-foreach(mode contradiction default smoke same candidates)
+foreach(mode contradiction default smoke same candidates piece)
     add_test(NAME test_analyzer_check_${mode} COMMAND test_analyzer_check ${mode})
 endforeach()
 add_test(NAME test_analyzer_check_planned COMMAND test_analyzer_check planned)

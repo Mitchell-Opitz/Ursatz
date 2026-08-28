@@ -11,6 +11,7 @@
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
+#include <ursatz_composer/piece_structure.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
@@ -26,6 +27,9 @@
  *                  key heard as planned, and the completion share is not below its baseline (R-075)
  *   same           the same seed gives byte-identical output with the check on
  *   candidates     compose_candidates: ranked by agreement, score and seed, the same inputs the same order
+ *   piece          analyzer_check_piece (R-172): a piece structure (intro, a sentence, a free phrase, a turnaround) read as one
+ *                  fragment, sections that are not whole bars included; its cadences and key are the planned items, the
+ *                  compose run with analyzer_check keeps the one check, and a plan with nothing written is refused
  */
 
 #define SEEDS 10
@@ -329,6 +333,98 @@ static int test_candidates(void) {
     return 0;
 }
 
+/* ------------------------------------------------------------- the whole piece */
+
+typedef struct {
+    PieceSection sections[PIECE_STRUCTURE_MAX_SECTIONS];
+    PieceStructure structure;
+} PieceFixture;
+
+static void piece_section(PieceFixture *fixture, const char *id, PiecePart part, size_t beats, PieceFillKind fill) {
+    PieceSection *section = &fixture->sections[fixture->structure.section_count++];
+    memset(section, 0, sizeof(*section));
+    snprintf(section->id, sizeof(section->id), "%s", id);
+    snprintf(section->letter, sizeof(section->letter), "%c", id[0] - 32);
+    section->part = part;
+    section->beats = beats;
+    section->pickup = (PlanTime){0, 1};
+    section->fill = fill;
+}
+
+/* The intro 2 bars, a sentence of 8 bars, a free phrase of 4 and a turnaround of 2, D minor 4/4, and the ending a run adds. */
+static void piece_fixture(PieceFixture *fixture) {
+    memset(fixture, 0, sizeof(*fixture));
+    fixture->structure.key.tonic_pitch_class = 2;
+    fixture->structure.key.mode = PLAN_MODE_MINOR;
+    fixture->structure.meter.beats_per_bar = 4;
+    fixture->structure.meter.beat_unit = 4;
+    fixture->structure.sections = fixture->sections;
+    piece_section(fixture, "intro", PIECE_PART_INTRO, 8, PIECE_FILL_EMPTY);
+    piece_section(fixture, "a", PIECE_PART_BODY, 32, PIECE_FILL_MOTIF);
+    fixture->sections[1].has_into = true;
+    fixture->sections[1].into = PLAN_ARCHETYPE_SENTENCE;
+    piece_section(fixture, "b", PIECE_PART_BODY, 16, PIECE_FILL_EMPTY);
+    piece_section(fixture, "t", PIECE_PART_TURNAROUND, 8, PIECE_FILL_EMPTY);
+}
+
+static int test_piece(void) {
+    AnalyzerCheck check;
+    assert(analyzer_check_piece(NULL, &check) == ANALYZER_CHECK_ERR_NULL);
+    PieceFixture fixture;
+    piece_fixture(&fixture);
+    PiecePlan *plan = NULL;
+    assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+    assert(analyzer_check_piece(plan, &check) == ANALYZER_CHECK_ERR_NOT_WRITTEN && check.item_count == 0);
+    plan_destroy(plan);
+    size_t checked = 0;
+    for (unsigned long seed = 1; seed <= 12 && checked < 3; seed++) {
+        ComposeConfig config;
+        ComposeOutcome outcome;
+        memset(&config, 0, sizeof(config));
+        config.seed = seed;
+        assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+        if (compose_run(plan, &config, &outcome) != PIECE_OK) {
+            compose_outcome_destroy(&outcome);
+            plan_destroy(plan);
+            continue;
+        }
+        assert(analyzer_check_piece(plan, &check) == ANALYZER_CHECK_OK);
+        /* A cadence for each of the four sections, and the key. */
+        size_t cadences = 0;
+        size_t keys = 0;
+        for (size_t i = 0; i < check.item_count; i++) {
+            cadences += check.items[i].kind == ANALYZER_CHECK_CADENCE;
+            keys += check.items[i].kind == ANALYZER_CHECK_KEY;
+        }
+        assert(cadences == 4 && keys == 1 && check.planned == 5 && check.agreed <= check.planned);
+        assert(check.contradicts == (check.agreed != check.planned));
+        analyzer_check_destroy(&check);
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+        checked++;
+    }
+    assert(checked > 0);
+    /* A run with analyzer_check keeps the one check of the whole piece, and the planned items are in its score. */
+    size_t kept = 0;
+    for (unsigned long seed = 1; seed <= 12 && kept == 0; seed++) {
+        ComposeConfig config;
+        ComposeOutcome outcome;
+        memset(&config, 0, sizeof(config));
+        config.seed = seed;
+        config.analyzer_check = true;
+        assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
+        if (compose_run(plan, &config, &outcome) == PIECE_OK) {
+            assert(outcome.analyzer_check_count == 1 && outcome.analyzer_planned == 5 && outcome.analyzer_agreed == 5);
+            assert(!outcome.analyzer_checks[0].contradicts);
+            kept++;
+        }
+        compose_outcome_destroy(&outcome);
+        plan_destroy(plan);
+    }
+    assert(kept > 0);
+    return 0;
+}
+
 int main(int argc, char **argv) {
     const char *mode = argc > 1 ? argv[1] : "";
     if (strcmp(mode, "contradiction") == 0) {
@@ -349,6 +445,9 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "candidates") == 0) {
         return test_candidates();
     }
-    fputs("usage: test_analyzer_check contradiction|default|smoke|planned|same|candidates\n", stderr);
+    if (strcmp(mode, "piece") == 0) {
+        return test_piece();
+    }
+    fputs("usage: test_analyzer_check contradiction|default|smoke|planned|same|candidates|piece\n", stderr);
     return 2;
 }
