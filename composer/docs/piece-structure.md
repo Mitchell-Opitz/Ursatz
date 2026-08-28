@@ -117,3 +117,12 @@ a form, so only its structure's score counts.
   longer that end on an even beat composed for all of seeds 1 to 10.
 - A free phrase of whole bars needs the room the cadence's chords need: a bar alone is too short for any cadence; the
   structure stays open at the structure stage.
+- A one-bar turnaround, or any section of one bar on a barline, does not compose either (the structure stage leaves it open);
+  a turnaround of two bars does. The `piece` command ([cli-piece.md](cli-piece.md)) reports the stage and tells you.
+
+## The piece command
+
+`ursatz-composer piece` builds the structure from a request, composes the loop, and builds the ending version from it
+(`piece_ending_plan`: the intro and the body Given from the loop, the turnaround and the seam left out, the ending appended
+open and composed from seed + 20). See [cli-piece.md](cli-piece.md) and [piece-request.md](piece-request.md). A structure
+takes a voicing (`PieceStructure.has_voicing`) as it takes an accompaniment, not both.

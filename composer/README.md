@@ -134,6 +134,15 @@ voicing, a style that gives the tempo, the mode and the note density). See [docs
 [docs/theme-request.md](docs/theme-request.md).
 
 ```sh
+ursatz-composer piece request.json --seed 7 --check --out loop.json --ending-out ending.json --midi loop.mid --ending-midi ending.mid
+```
+
+`piece` composes a looping game track from a request: an intro, a body, a turnaround and an ending, each made of sections of
+any length in beats with a pickup, a cadence and a fill (nothing, a motive, a composed theme or a progression). It writes two
+versions, the loop (its MIDI marks `loopStart` and `loopEnd`) and the ending built from it. See
+[docs/cli-piece.md](docs/cli-piece.md) and [docs/piece-request.md](docs/piece-request.md).
+
+```sh
 ursatz-composer plan --form ternary --key A --mode minor --meter 3/4 --seed 4 --out piece.json
 ursatz-composer fill piece.json --seed 7 --midi piece.mid --musicxml piece.xml
 ```

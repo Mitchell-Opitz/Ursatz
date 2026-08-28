@@ -16,6 +16,8 @@ In C these are `PlanExportOptions` (`export.h`): `tempo_numerator` and `tempo_de
 `track_names` and `section_markers`. `plan_export_options_default()` is no tempo, names and markers on. Every export
 function takes a `const PlanExportOptions *`; NULL means the default.
 
+| (C only) `loop_markers`, `loop_start`, `loop_end` | MIDI: the markers `loopStart` and `loopEnd` ([below](#loop-markers)). The `piece` command sets them on the loop version. |
+
 A plan stores no tempo. The tempo is an export option only, so the same plan can be written at any speed.
 
 ## MIDI
@@ -34,6 +36,14 @@ that does (section starts included).
 - **Tempo.** One region from tick 0. The tempo is written as whole microseconds per quarter note, rounded to the nearest
   (96 is 625000, 195/2 is 615385). A tempo that is zero in one part only, or does not fit 1 to 16777215 microseconds,
   is refused (`PLAN_EXPORT_ERR_NOT_REPRESENTABLE`).
+
+### Loop markers
+
+With `PlanExportOptions.loop_markers` the conductor track also carries a Marker `loopStart` at `loop_start` and a Marker
+`loopEnd` at `loop_end` (whole notes from the start of the piece, as `PlanTime`), after the section markers at the same tick.
+A game reads them to play the intro once and then repeat the region between them without a gap. They are independent of the
+names and section markers (`--plain-midi` keeps them) and are in the conductor track only. A time that no division up to the
+renderer's limit holds is refused (`PLAN_EXPORT_ERR_NOT_REPRESENTABLE`). MusicXML has none.
 
 ## MusicXML
 
