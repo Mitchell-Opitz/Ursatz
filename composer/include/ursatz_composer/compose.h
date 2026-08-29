@@ -59,7 +59,8 @@
  * With analyzer_check (R-080) every theme section is then analyzed through the Analyzer (analyzer_check.h): a run whose
  * analysis contradicts the plan (a planned cadence not heard at its bar, the key not heard, a hard voice-leading fault
  * in material the plan wrote) is rejected the same way. A section the check cannot read (a length that is not whole
- * bars, a lane left open) is not checked. The check is off by default, so a run without it is what it always was.
+ * bars, a lane left open) is not checked. A piece structure plan (a section with a piece part) is checked whole, once,
+ * with analyzer_check_piece: outcome->analyzer_checks holds that one check, and its sections need not be whole bars. The check is off by default, so a run without it is what it always was.
  *
  * With a style (R-080, style.h) the harmony and melody stages prefer the candidates closest to it: their checkers add
  * style_weight times the candidate's closeness to the style (style_labels.h, composer_style_closeness) to the score of

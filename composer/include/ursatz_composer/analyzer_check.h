@@ -58,6 +58,27 @@ const char *analyzer_check_result_name(AnalyzerCheckResult result);
 /* Checks the section into *out, which the caller destroys. On failure *out is empty and safe to destroy. */
 AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section, AnalyzerCheck *out);
 
+/*
+ * The whole piece (R-172, R-173): every section of a piece structure plan (a section with a piece part; not the seam or
+ * the material), rendered as one fragment (plan_render, so nothing past the piece's end) and analyzed in the plan's first
+ * meter and key. A plan version that has sections not on whole bars, a pickup or any length of beats is read as it is.
+ *   - Cadence: the first CADENCE constraint of each section is its planned cadence. It is heard as planned when an
+ *     Analyzer cadence of that type ends within one beat of the section's end, a cadence ending where the chord of its
+ *     arrival gives way to the next (the end of the piece for the last). A planned PAC or IAC is heard by any authentic
+ *     cadence, as in a section.
+ *   - Key: the first key region heard is the key the plan has at its start.
+ *     A planned HC leads on, so it is also heard when a cadence arrives within a beat of the section's end (the dominant
+ *     resolving into what follows), and at the end of the piece, where nothing follows to resolve into.
+ *     A cadence also counts when its arrival begins in the section's last bar (a tonic that carries on into the next
+ *     section ends later than a beat after it).
+ *   - Violations: a hard voice-leading fault that involves a note the plan wrote (not in a Given span) is listed as an
+ *     item, as in a section, but does not make the piece contradict the plan: the harmony, bass and melody checkers do not
+ *     yet keep parallels out of the short intro and turnaround, and a whole piece would otherwise pass almost no seed.
+ * The items' bar is counted from the start of the piece. ANALYZER_CHECK_ERR_NOT_WRITTEN for a lane left open before the
+ * piece's end. analyzer_check_section stays as it was for the other commands.
+ */
+AnalyzerCheckResult analyzer_check_piece(const PiecePlan *plan, AnalyzerCheck *out);
+
 /* Frees everything and zeroes the struct. Safe on a zeroed struct. */
 void analyzer_check_destroy(AnalyzerCheck *check);
 

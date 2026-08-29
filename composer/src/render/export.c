@@ -96,8 +96,13 @@ static bool need_division_for(unsigned long denominator, unsigned long long *lcm
 }
 
 /* 480 when every time is a whole number of ticks at 480, else the smallest division that works; 0 if none fits. */
-static unsigned choose_division(const RenderedPlan *rendered, bool with_markers) {
+static unsigned choose_division(const RenderedPlan *rendered, const PlanExportOptions *options) {
+    bool with_markers = options->section_markers;
     unsigned long long needed = 1;
+    if (options->loop_markers &&
+        (!need_division_for(options->loop_start.den, &needed) || !need_division_for(options->loop_end.den, &needed))) {
+        return 0;
+    }
     for (size_t i = 0; i < rendered->count; i++) {
         const NoteEvent *event = rendered->events[i];
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(event));
@@ -138,7 +143,7 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
         set_message(error, "the plan has no Given or Realized notes to write");
         return PLAN_EXPORT_ERR_NO_CONTENT;
     }
-    unsigned division = choose_division(rendered, options.section_markers);
+    unsigned division = choose_division(rendered, &options);
     if (division == 0) {
         set_message(error, "the note times need more than %d ticks per quarter", MIDI_RENDER_MAX_DIVISION);
         return PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
@@ -174,32 +179,46 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
         names[i].voice_id = voice_ids[i];
         names[i].name = part_names[i];
     }
-    MidiMarker *markers = options.section_markers && rendered->section_count
-                              ? calloc(rendered->section_count, sizeof(*markers))
-                              : NULL;
+    size_t section_markers = options.section_markers ? rendered->section_count : 0;
+    size_t marker_count = section_markers + (options.loop_markers ? 2 : 0);
+    MidiMarker *markers = marker_count ? calloc(marker_count, sizeof(*markers)) : NULL;
+    MusicalTime *loop_positions[2] = {NULL, NULL};
     TempoMap *tempo_map = NULL;
     PlanExportResult tempo_result = build_tempo_map(&options, &tempo_map, error);
-    if ((options.section_markers && rendered->section_count && !markers) || tempo_result != PLAN_EXPORT_OK) {
+    bool loop_ok = !options.loop_markers ||
+                   (musical_time_create(options.loop_start.num, options.loop_start.den, &loop_positions[0]) ==
+                        MUSICAL_TIME_OK &&
+                    musical_time_create(options.loop_end.num, options.loop_end.den, &loop_positions[1]) == MUSICAL_TIME_OK);
+    if ((marker_count && !markers) || !loop_ok || tempo_result != PLAN_EXPORT_OK) {
+        musical_time_destroy(loop_positions[0]);
+        musical_time_destroy(loop_positions[1]);
         free(markers);
         free(voice_ids);
         free(part_names);
         free(names);
         free(keys);
+        tempo_map_destroy(tempo_map);
         if (tempo_result == PLAN_EXPORT_OK) {
-            set_message(error, "out of memory");
-            return PLAN_EXPORT_ERR_ALLOC;
+            set_message(error, loop_ok ? "out of memory" : "the loop markers are not times a file can hold");
+            return loop_ok ? PLAN_EXPORT_ERR_ALLOC : PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
         }
         return tempo_result;
     }
     MidiRenderOptions midi_options;
     memset(&midi_options, 0, sizeof(midi_options));
     if (markers) {
-        for (size_t i = 0; i < rendered->section_count; i++) {
+        for (size_t i = 0; i < section_markers; i++) {
             markers[i].position = rendered->sections[i].position;
             markers[i].text = rendered->sections[i].label;
         }
+        if (options.loop_markers) {
+            markers[section_markers].position = loop_positions[0];
+            markers[section_markers].text = "loopStart";
+            markers[section_markers + 1].position = loop_positions[1];
+            markers[section_markers + 1].text = "loopEnd";
+        }
         midi_options.markers = markers;
-        midi_options.marker_count = rendered->section_count;
+        midi_options.marker_count = marker_count;
     }
     if (options.track_names) {
         midi_options.conductor_name = rendered->form_name ? rendered->form_name : "piece";
@@ -215,6 +234,8 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
     free(part_names);
     free(names);
     free(markers);
+    musical_time_destroy(loop_positions[0]);
+    musical_time_destroy(loop_positions[1]);
     tempo_map_destroy(tempo_map);
     switch (result) {
     case MIDI_RENDER_OK:

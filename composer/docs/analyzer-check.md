@@ -26,6 +26,26 @@ sevenths and leading tones) are the Analyzer's to report; the check does not use
 `agreed < planned` or a hard violation was found. A section the check cannot read (a lane still open, no notes, a length
 that is not whole bars, no meter or key over it) returns an error and is not held against the plan.
 
+## The whole piece
+
+`analyzer_check_piece(plan, &out)` (R-172, R-173) checks a piece structure plan as one fragment. The plan is rendered whole
+(`plan_render`, so nothing past the piece's end: not the seam, not the material), analyzed in its first meter and key, and
+sections need not be whole bars (the per-section check above stays as it was for the other commands). The planned items are,
+for each section with a piece part, its first `CADENCE` constraint, and the key.
+
+- A cadence is heard when an Analyzer cadence of its type (any authentic cadence for a PAC or IAC) either ends within one beat
+  of the section's end (where the chord of its arrival gives way to the next) or has its arrival begin in the section's last
+  bar: a tonic that arrives in the last bar and carries on into the next section ends a bar or more after it.
+- A planned HC leads on, so it is also heard when any cadence arrives within a beat of the section's end (the dominant resolving
+  into what follows). The Analyzer cannot hear a cadence with nothing after it, so a cadence at the end of the piece is not
+  held against the plan when the Analyzer hears none there; a cadence of another type there is.
+- A hard voice-leading fault involving a note the plan wrote is listed as an item, as in a section, but does not make the piece
+  contradict the plan: the checkers do not yet keep parallels out of the short intro and turnaround, and a whole piece would
+  pass almost no seed. `contradicts` is true when `agreed < planned`.
+
+`compose_run` with `analyzer_check` uses it for a structure plan: `ComposeOutcome.analyzer_checks` holds that one check
+(`analyzer_check_count` is 1), and the rejected runs name it `piece`. The `piece` command runs it on both versions.
+
 ## In `compose_run`
 
 `ComposeConfig.analyzer_check` is false by default, so a run without it is what it always was (the P4 baselines and

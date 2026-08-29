@@ -46,7 +46,7 @@ static const char *const SLOT_KEYS[GROW_SLOT_COUNT] = {"basic", "contrasting", "
 
 /* --- the request --------------------------------------------------------------- */
 
-static char *read_whole_file(const char *path) {
+char *request_read_file(const char *path) {
     FILE *file = fopen(path, "rb");
     if (!file) {
         return NULL;
@@ -69,7 +69,7 @@ static char *read_whole_file(const char *path) {
 }
 
 /* A member that is a string (or null / absent when optional). Returns false, with the error printed, for any other type. */
-static bool member_string(const cJSON *object, const char *name, bool required, const char **out) {
+bool request_member_string(const cJSON *object, const char *name, bool required, const char **out) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
     *out = NULL;
     if (!item || cJSON_IsNull(item)) {
@@ -88,7 +88,7 @@ static bool member_string(const cJSON *object, const char *name, bool required, 
 }
 
 /* A pickup written as a string ("0", "1/2") or a number of beats; formats a number into text. */
-static bool member_pickup(const cJSON *object, char *text, size_t size, const char **out) {
+bool request_member_pickup(const cJSON *object, char *text, size_t size, const char **out) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, "pickup");
     *out = NULL;
     if (!item || cJSON_IsNull(item)) {
@@ -108,7 +108,7 @@ static bool member_pickup(const cJSON *object, char *text, size_t size, const ch
 }
 
 /* "0", "1", "1/2": beats of the beat unit, as whole notes. */
-static bool parse_pickup(const char *text, int beat_unit, PlanTime *out) {
+bool request_parse_pickup(const char *text, int beat_unit, PlanTime *out) {
     char *end = NULL;
     long numerator = strtol(text, &end, 10);
     long denominator = 1;
@@ -129,7 +129,7 @@ static bool parse_pickup(const char *text, int beat_unit, PlanTime *out) {
  * Reads a motive of the request, a degree list in the key (R-135), with its pickup, harmony, features and role. `role` is
  * the role to force (NULL for the motive's own member). Returns 0 or the status of the error printed.
  */
-static int read_motive(const char *what, const cJSON *object, const char *role, const PlanMeter *meter,
+int request_read_motive(const char *what, const cJSON *object, const char *role, const PlanMeter *meter,
                        const PlanKey *key, Motive *out) {
     const char *degrees;
     const char *harmony;
@@ -137,9 +137,9 @@ static int read_motive(const char *what, const cJSON *object, const char *role, 
     const char *role_text;
     const char *pickup;
     char pickup_text[32];
-    if (!member_string(object, "degrees", true, &degrees) || !member_string(object, "harmony", false, &harmony) ||
-        !member_string(object, "form", false, &form) || !member_string(object, "role", false, &role_text) ||
-        !member_pickup(object, pickup_text, sizeof(pickup_text), &pickup)) {
+    if (!request_member_string(object, "degrees", true, &degrees) || !request_member_string(object, "harmony", false, &harmony) ||
+        !request_member_string(object, "form", false, &form) || !request_member_string(object, "role", false, &role_text) ||
+        !request_member_pickup(object, pickup_text, sizeof(pickup_text), &pickup)) {
         return CLI_EXIT_USAGE;
     }
     if (form && strcmp(form, "full") != 0) {
@@ -152,7 +152,7 @@ static int read_motive(const char *what, const cJSON *object, const char *role, 
     options.has_key = true;
     options.key = *key;
     if (pickup) {
-        if (!parse_pickup(pickup, meter->beat_unit, &options.pickup)) {
+        if (!request_parse_pickup(pickup, meter->beat_unit, &options.pickup)) {
             return cli_fail(CLI_EXIT_USAGE, "%s: pickup '%s' is not a number of beats; write 0, 1 or 1/2", what, pickup);
         }
         options.has_pickup = true;
@@ -201,7 +201,7 @@ static int read_motive(const char *what, const cJSON *object, const char *role, 
 }
 
 /* The bits of the functions a form lists; false, with the error printed, for a name that is not one. */
-static bool read_functions(const char *what, const cJSON *functions, unsigned *out) {
+bool request_read_functions(const char *what, const cJSON *functions, unsigned *out) {
     *out = 0;
     if (!functions || cJSON_IsNull(functions)) {
         return true;
@@ -283,7 +283,7 @@ static int read_motives(ThemeExt *ext, const cJSON *request) {
     const cJSON *item = NULL;
     cJSON_ArrayForEach(item, motives) {
         const char *id;
-        if (!cJSON_IsObject(item) || !member_string(item, "id", true, &id)) {
+        if (!cJSON_IsObject(item) || !request_member_string(item, "id", true, &id)) {
             return CLI_EXIT_USAGE;
         }
         for (size_t m = 0; m < ext->motive_count; m++) {
@@ -315,8 +315,8 @@ static int read_motives(ThemeExt *ext, const cJSON *request) {
         cJSON_ArrayForEach(form, forms) {
             const char *flag;
             const char *item_id;
-            if (!cJSON_IsObject(form) || !member_string(form, "item", true, &item_id) ||
-                !member_string(form, "flag", true, &flag)) {
+            if (!cJSON_IsObject(form) || !request_member_string(form, "item", true, &item_id) ||
+                !request_member_string(form, "flag", true, &flag)) {
                 return CLI_EXIT_USAGE;
             }
             if (strcmp(flag, "rejected") == 0) {
@@ -342,7 +342,7 @@ static int theme_load(GrowExt *base, const PlanMeter *meter, const PlanKey *key)
         }
         snprintf(what, sizeof(what), "motive '%s'", ext->slot_motive_id[s]);
         Motive *target = s == GROW_SLOT_BASIC ? &ext->base.basic : &ext->base.slot_motives[s];
-        status = read_motive(what, ext->slot_motive[s], NULL, meter, key, target);
+        status = request_read_motive(what, ext->slot_motive[s], NULL, meter, key, target);
         if (status != 0) {
             return status;
         }
@@ -352,7 +352,7 @@ static int theme_load(GrowExt *base, const PlanMeter *meter, const PlanKey *key)
         ext->base.has_slot[s] = s != GROW_SLOT_BASIC;
     }
     if (ext->accompaniment_motive) {
-        status = read_motive("the accompaniment motive", ext->accompaniment_motive, "accompaniment", meter, key,
+        status = request_read_motive("the accompaniment motive", ext->accompaniment_motive, "accompaniment", meter, key,
                              &ext->base.accompaniment_motive);
         if (status != 0) {
             return status;
@@ -376,7 +376,7 @@ static int theme_load(GrowExt *base, const PlanMeter *meter, const PlanKey *key)
             const char *flag = cJSON_GetObjectItemCaseSensitive(form, "flag")->valuestring;
             const cJSON *chain = cJSON_GetObjectItemCaseSensitive(form, "chain");
             snprintf(what, sizeof(what), "form '%s'", item_id);
-            status = read_motive(what, form, NULL, meter, key, &ext->pool_motives[count]);
+            status = request_read_motive(what, form, NULL, meter, key, &ext->pool_motives[count]);
             if (status != 0) {
                 return status;
             }
@@ -386,7 +386,7 @@ static int theme_load(GrowExt *base, const PlanMeter *meter, const PlanKey *key)
             entry->approved = strcmp(flag, "approved") == 0;
             snprintf(entry->item, sizeof(entry->item), "%s", item_id);
             snprintf(entry->chain, sizeof(entry->chain), "%s", cJSON_IsString(chain) ? chain->valuestring : "");
-            if (!read_functions(what, cJSON_GetObjectItemCaseSensitive(form, "functions"), &entry->functions)) {
+            if (!request_read_functions(what, cJSON_GetObjectItemCaseSensitive(form, "functions"), &entry->functions)) {
                 return CLI_EXIT_USAGE;
             }
             count++;
@@ -407,7 +407,7 @@ static void print_number(const ComposerRatio *ratio) {
     }
 }
 
-static void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
+void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
     (void)base;
     if (json) {
         printf("\"brief\":{\"tempo\":{\"qpm\":");
@@ -773,12 +773,12 @@ static int build_args(ThemeExt *ext, const cJSON *request, const Options *option
     const char *style;
     const char *tempo;
     const char *weight;
-    if (!member_string(request, "into", true, &into) || !member_string(request, "hybrid", false, &hybrid) ||
-        !member_string(request, "key", true, &key) || !member_string(request, "mode", true, &mode) ||
-        !member_string(request, "meter", true, &meter) || !member_string(request, "cadence", false, &cadence) ||
-        !member_string(request, "first_cadence", false, &first_cadence) ||
-        !member_string(request, "voicing", false, &voicing) || !member_string(request, "style", false, &style) ||
-        !member_string(request, "style_weight", false, &weight)) {
+    if (!request_member_string(request, "into", true, &into) || !request_member_string(request, "hybrid", false, &hybrid) ||
+        !request_member_string(request, "key", true, &key) || !request_member_string(request, "mode", true, &mode) ||
+        !request_member_string(request, "meter", true, &meter) || !request_member_string(request, "cadence", false, &cadence) ||
+        !request_member_string(request, "first_cadence", false, &first_cadence) ||
+        !request_member_string(request, "voicing", false, &voicing) || !request_member_string(request, "style", false, &style) ||
+        !request_member_string(request, "style_weight", false, &weight)) {
         return CLI_EXIT_USAGE;
     }
     const cJSON *tempo_item = cJSON_GetObjectItemCaseSensitive(request, "tempo");
@@ -817,7 +817,7 @@ static int build_args(ThemeExt *ext, const cJSON *request, const Options *option
     const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(request, "accompaniment");
     if (accompaniment && !cJSON_IsNull(accompaniment)) {
         const char *pattern;
-        if (!cJSON_IsObject(accompaniment) || !member_string(accompaniment, "pattern", true, &pattern)) {
+        if (!cJSON_IsObject(accompaniment) || !request_member_string(accompaniment, "pattern", true, &pattern)) {
             return CLI_EXIT_USAGE;
         }
         if (strcmp(pattern, "motive") == 0) {
@@ -906,7 +906,7 @@ int run_theme(int argc, char **argv) {
     if (!options.input) {
         return cli_fail(CLI_EXIT_USAGE, "theme needs a request file\n%s", THEME_USAGE_LINE);
     }
-    char *text = read_whole_file(options.input);
+    char *text = request_read_file(options.input);
     if (!text) {
         return cli_fail(CLI_EXIT_USAGE, "cannot read the request '%s'", options.input);
     }
@@ -920,7 +920,7 @@ int run_theme(int argc, char **argv) {
     }
     const char *schema;
     const cJSON *version = cJSON_GetObjectItemCaseSensitive(ext.root, "schema_version");
-    if (!member_string(ext.root, "schema", true, &schema) || strcmp(schema, SCHEMA_NAME) != 0 ||
+    if (!request_member_string(ext.root, "schema", true, &schema) || strcmp(schema, SCHEMA_NAME) != 0 ||
         !cJSON_IsNumber(version) || version->valuedouble != 1) {
         status = cJSON_GetObjectItemCaseSensitive(ext.root, "schema") ? cli_fail(CLI_EXIT_USAGE,
                      "the request must have \"schema\": \"%s\" and \"schema_version\": 1", SCHEMA_NAME)

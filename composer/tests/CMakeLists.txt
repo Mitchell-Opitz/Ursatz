@@ -367,7 +367,7 @@ target_link_libraries(test_analyzer_check PRIVATE ursatz_composer)
 target_compile_options(test_analyzer_check PRIVATE -Wall -Wextra -Wpedantic)
 # The Analyzer check (docs/analyzer-check.md): the modes are quick except the sweep, which CI leaves out (ctest -LE slow);
 # its smoke test is the sweep on one seed.
-foreach(mode contradiction default smoke same candidates)
+foreach(mode contradiction default smoke same candidates piece)
     add_test(NAME test_analyzer_check_${mode} COMMAND test_analyzer_check ${mode})
 endforeach()
 add_test(NAME test_analyzer_check_planned COMMAND test_analyzer_check planned)
@@ -519,6 +519,17 @@ target_compile_definitions(test_theme_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FI
 add_dependencies(test_theme_cli ursatz-composer)
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
 add_test(NAME test_theme_cli COMMAND test_theme_cli WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/theme_cli)
+
+# The piece command (docs/cli-piece.md): the loop and the ending version of a looping game track, run as a process. It writes
+# its files in a directory of its own, so it can run beside the other command tests.
+add_executable(test_piece_cli test_piece_cli.c)
+target_link_libraries(test_piece_cli PRIVATE ursatz_composer)
+target_compile_options(test_piece_cli PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_piece_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
+                                                  COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_dependencies(test_piece_cli ursatz-composer)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_cli)
+add_test(NAME test_piece_cli COMMAND test_piece_cli WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/piece_cli)
 
 add_executable(test_harmony_beats test_harmony_beats.c)
 target_link_libraries(test_harmony_beats PRIVATE ursatz_composer)

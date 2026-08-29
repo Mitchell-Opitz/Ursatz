@@ -282,6 +282,50 @@ static void test_refused(const RenderedPlan *rendered) {
     assert(data == NULL);
 }
 
+/* The loop markers (R-172): loopStart and loopEnd in the conductor track at the times asked, after the section markers. */
+static void test_loop_markers(const RenderedPlan *rendered) {
+    PlanExportOptions options = plan_export_options_default();
+    unsigned char *bytes = NULL;
+    size_t size = 0;
+    TrackMeta tracks[8];
+    assert(!options.loop_markers);
+    options.loop_markers = true;
+    options.loop_start = (PlanTime){1, 1};
+    options.loop_end = (PlanTime){11, 2};
+    assert(rendered_plan_midi_bytes(rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_OK);
+    size_t count = scan_tracks(bytes, size, tracks, 8);
+    assert(count >= 2);
+    bool start = false;
+    bool end = false;
+    for (size_t i = 0; i < tracks[0].marker_count; i++) {
+        start = start || (strcmp(tracks[0].markers[i].text, "loopStart") == 0 && tracks[0].markers[i].tick == 4 * DIVISION);
+        end = end || (strcmp(tracks[0].markers[i].text, "loopEnd") == 0 && tracks[0].markers[i].tick == 22 * DIVISION);
+    }
+    assert(start && end);
+    /* The section markers are still there, and no other track carries a loop marker. */
+    assert(tracks[0].marker_count == 3 + 2);
+    for (size_t t = 1; t < count; t++) {
+        assert(tracks[t].marker_count == 0);
+    }
+    free(bytes);
+    /* Without them the file has none; with the plain options they stay, they are not a name or a section. */
+    options.loop_markers = false;
+    assert(rendered_plan_midi_bytes(rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_OK);
+    scan_tracks(bytes, size, tracks, 8);
+    assert(tracks[0].marker_count == 3);
+    free(bytes);
+    options.loop_markers = true;
+    options.section_markers = false;
+    options.track_names = false;
+    assert(rendered_plan_midi_bytes(rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_OK);
+    scan_tracks(bytes, size, tracks, 8);
+    assert(tracks[0].marker_count == 2);
+    free(bytes);
+    /* A time that is not a whole tick at any division is refused. */
+    options.loop_start = (PlanTime){1, 1000003};
+    assert(rendered_plan_midi_bytes(rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
+}
+
 int main(void) {
     PiecePlan *plan = filled_rounded_binary();
     RenderedPlan rendered;
@@ -292,6 +336,7 @@ int main(void) {
     test_plain(&rendered);
     test_musicxml(&rendered);
     test_refused(&rendered);
+    test_loop_markers(&rendered);
 
     rendered_plan_destroy(&rendered);
     plan_destroy(plan);

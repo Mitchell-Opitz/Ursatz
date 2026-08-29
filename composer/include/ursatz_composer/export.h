@@ -24,6 +24,9 @@
  * "A'") or else its node name. With a tempo the file carries one tempo region
  * from 0 (a plan stores none; the tempo is an export option only).
  *
+ * With loop_markers the conductor track also carries a marker "loopStart" at loop_start and one "loopEnd" at loop_end,
+ * after the section markers; a game reads them to repeat the region between. MusicXML has none.
+ *
  * MusicXML: the tempo is written as <sound tempo> in part 0. Names and markers
  * are MIDI only (Ursatz's MusicXML export writes no rehearsal marks).
  *
@@ -59,9 +62,12 @@ typedef struct {
     unsigned long tempo_denominator;
     bool track_names;                /* MIDI: name the conductor track and each part's track */
     bool section_markers;            /* MIDI: a marker at the start of each section that is not material */
+    bool loop_markers;               /* MIDI: markers "loopStart" at loop_start and "loopEnd" at loop_end (R-172) */
+    PlanTime loop_start;             /* whole notes from the start of the piece; used with loop_markers */
+    PlanTime loop_end;
 } PlanExportOptions;
 
-/* No tempo, track names and section markers on. A tempo that is not 0/0 needs both parts at least 1 and rounds to
+/* No tempo, no loop markers, track names and section markers on. A tempo that is not 0/0 needs both parts at least 1 and rounds to
    a whole number of microseconds per quarter note, at most 0xFFFFFF. */
 PlanExportOptions plan_export_options_default(void);
 
