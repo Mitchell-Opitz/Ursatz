@@ -131,7 +131,179 @@ check(V.noDegreesMessage({ degrees: "1:q 5:e" }) === "", "a motif with degrees h
 check(V.noDegreesMessage({ degrees: null, analysis_error: "composer not found" }) === "No analysis yet: composer not found. Re-analyze on the motif first.", "the message carries the stored reason");
 check(V.noDegreesMessage({ degrees: null }).startsWith("No analysis yet: ") && V.noDegreesMessage(null).endsWith("Re-analyze on the motif first."), "a motif with no stored reason still says to re-analyze");
 
-if (failures > 0) {
-  console.error(`${failures} check(s) failed`);
-  process.exit(1);
+
+/* The render queue: no more than the limit run at once, all of them finish, in order. */
+const queue = V.createQueue(V.RENDER_LIMIT);
+let running = 0;
+let peak = 0;
+const order = [];
+const queued = Array.from({ length: 10 }, (_, n) =>
+  queue.add(
+    () =>
+      new Promise((resolve) => {
+        running++;
+        peak = Math.max(peak, running);
+        order.push(n);
+        setTimeout(() => {
+          running--;
+          resolve(n);
+        }, 5);
+      }),
+  ),
+);
+check(V.RENDER_LIMIT === 4 && queue.active() === 4 && queue.waiting() === 6, "ten tasks: four run, six wait");
+
+/* A minimal DOM, enough for VariantTreeView to build and click. */
+class FakeEl {
+  constructor(tag) {
+    this.tag = tag;
+    this.children = [];
+    this.listeners = {};
+    this.attributes = {};
+    this.style = {};
+    this.className = "";
+    this.textContent = "";
+    const owner = this;
+    this.classList = {
+      toggle(name, on) {
+        const names = new Set(owner.className.split(" ").filter(Boolean));
+        if (on) {
+          names.add(name);
+        } else {
+          names.delete(name);
+        }
+        owner.className = [...names].join(" ");
+      },
+      add(name) {
+        this.toggle(name, true);
+      },
+      remove(name) {
+        this.toggle(name, false);
+      },
+    };
+  }
+  set innerHTML(value) {
+    this.children = [];
+  }
+  append(...nodes) {
+    this.children.push(...nodes);
+  }
+  appendChild(node) {
+    this.children.push(node);
+    return node;
+  }
+  setAttribute(name, value) {
+    this.attributes[name] = value;
+  }
+  addEventListener(name, fn) {
+    (this.listeners[name] = this.listeners[name] || []).push(fn);
+  }
+  click() {
+    for (const fn of this.listeners.click || []) {
+      fn({});
+    }
+  }
+  all() {
+    return [this, ...this.children.flatMap((child) => (child instanceof FakeEl ? child.all() : []))];
+  }
 }
+const named = (root, tag, text) => root.all().filter((node) => node.tag === tag && node.textContent === text);
+
+const fs = require("fs");
+const vm = require("vm");
+const mounts = [];
+const destroyed = [];
+const sandbox = {
+  document: { createElement: (tag) => new FakeEl(tag) },
+  window: { localStorage: { getItem: () => null, setItem: () => {} } },
+  VariantTree: V,
+  MaterialsModel: require("../public/materials-model.js"),
+  ScoreWorkspace: {
+    mount(host, options) {
+      mounts.push({ host, options });
+      return { destroy: () => destroyed.push(options.title), play: () => {} };
+    },
+  },
+  URL: { createObjectURL: () => "blob:x", revokeObjectURL: () => {} },
+  Blob: class {},
+  JSON,
+  Promise,
+  Number,
+  Math,
+};
+vm.createContext(sandbox);
+const View = vm.runInContext(fs.readFileSync(`${__dirname}/../public/variant-tree-view.js`, "utf8") + "\n;VariantTreeView", sandbox);
+
+const savedTree = node("root", null, [node("a", "approved", []), node("b", "unflagged", [])]);
+let renderRunning = 0;
+let renderPeak = 0;
+let renderCount = 0;
+const answers = [];
+const ctx = {
+  id: "root",
+  name: "Motif",
+  body: { motif: { degrees: "1:q 5:e", form: "full" } },
+  open: () => {},
+  send(request) {
+    if (request.url.endsWith("variant-operations")) {
+      return Promise.resolve({ ok: true, data: { operations: [] } });
+    }
+    if (request.url.endsWith("variant-tree")) {
+      return Promise.resolve({ ok: true, data: { tree: savedTree } });
+    }
+    if (request.url.endsWith("/variants")) {
+      const variants = Array.from({ length: 6 }, (_, n) => ({ seed: n, derivation: `invert ${n}`, motive: { motive: {}, analysis: {} } }));
+      return Promise.resolve({ ok: true, data: { variants, seed: 1 } });
+    }
+    renderRunning++;
+    renderCount++;
+    renderPeak = Math.max(renderPeak, renderRunning);
+    return new Promise((resolve) => {
+      answers.push(() => {
+        renderRunning--;
+        resolve({ ok: true, data: { musicxml: "<x/>", playback: {} } });
+      });
+    });
+  },
+};
+const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+const parent = new FakeEl("div");
+
+(async () => {
+  const order2 = await Promise.all(queued);
+  check(peak === 4 && order2.length === 10 && same(order, order2), "the queue never runs more than four and finishes every task in order");
+
+  const view = View.mount(parent, ctx);
+  await settle();
+  const rows = () => parent.all().filter((n) => n.className.split(" ")[0] === "variant-node");
+  check(rows().length === 3 && named(parent, "button", "Show notation").length === 2, "the root has no toggle; each saved variant has Show notation");
+
+  named(parent, "button", "Generate")[0].click();
+  await settle();
+  check(renderCount === 4 && renderPeak === 4, "six candidates ask the Composer for four renders at first");
+  answers.shift()();
+  await settle();
+  check(renderCount === 5 && renderPeak === 4, "a finished render lets the next candidate start");
+  while (answers.length > 0) {
+    answers.shift()();
+    await settle();
+  }
+  const candidateMounts = mounts.filter((m) => m.options.subtitle.startsWith("candidate"));
+  check(candidateMounts.length === 6 && candidateMounts.every((m) => m.options.compact === true), "every candidate mounts a compact score");
+
+  view.leave();
+  check(destroyed.length === 6, "leaving the tab destroys the candidate scores");
+
+  named(parent, "button", "Show notation")[0].click();
+  const rowMounts = () => mounts.filter((m) => m.options.subtitle.startsWith("variant"));
+  check(rowMounts().length === 1 && named(parent, "button", "Hide notation").length === 1, "Show notation mounts that row's compact score");
+  await view.refresh();
+  check(rowMounts().length === 2 && named(parent, "button", "Hide notation").length === 1, "the open row stays open when the tree is refreshed");
+  named(parent, "button", "Hide notation")[0].click();
+  check(rowMounts().length === 2 && named(parent, "button", "Show notation").length === 2, "Hide notation closes it again");
+
+  if (failures > 0) {
+    console.error(`${failures} check(s) failed`);
+    process.exit(1);
+  }
+})();
