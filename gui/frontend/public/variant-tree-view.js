@@ -1,5 +1,6 @@
-/* The Variants section of the motif detail (P13 B9): the Generate control
- * with its operation picker, and the unsaved candidates. Renders from
+/* The Variants section of the motif detail (P13 B9), top to bottom: the Generate control with its operation
+ * picker, the unsaved candidates and the saved tree. Each candidate and each saved variant (on request) shows its
+ * notation in a compact score workspace of its own (P18 B4). Renders from
  * VariantTree; ctx is {id, name, body, send(request), open(id)}, send being the page's
  * JSON request helper that answers {ok, status, data}. */
 const VariantTreeView = (function () {
@@ -164,6 +165,8 @@ const VariantTreeView = (function () {
     const view = VariantTree.candidateView(candidate);
     const card = h("li", "variant-candidate");
     card.appendChild(h("div", "variant-derivation", view.derivation));
+    card.scoreHost = h("div", "variant-score");
+    card.appendChild(card.scoreHost);
     const meta = h("div", "variant-meta");
     meta.appendChild(h("span", `variant-badge variant-kind-${view.kind.value}`, view.kind.text));
     meta.appendChild(chipRow(view.chips));
@@ -190,8 +193,9 @@ const VariantTreeView = (function () {
   }
 
   /* One saved node: indented by depth, with its derivation, flag, kind and actions.
-   * actions: {flag(id, flag), kind(id, kind), reroll(id), open(id), play(row)}. */
-  function treeRow(row, actions) {
+   * actions: {flag(id, flag), kind(id, kind), reroll(id), open(id), play(row), toggle(row)}; isOpen is whether
+   * its notation is shown. The row's scoreHost is where the compact score mounts. */
+  function treeRow(row, actions, isOpen) {
     const item = h("li", `variant-node variant-flag-${row.flag.value}`);
     item.style.marginLeft = `${row.depth * 1.5}rem`;
     const title = h("div", "variant-node-title");
@@ -235,7 +239,10 @@ const VariantTreeView = (function () {
       ...(row.seed === null ? [] : [actionButton("Reroll", () => actions.reroll(row.id))]),
       actionButton("Open", () => actions.open(row.id)),
     );
+    buttons.appendChild(actionButton(isOpen ? "Hide notation" : "Show notation", () => actions.toggle(row)));
     item.appendChild(buttons);
+    item.scoreHost = h("div", "variant-score");
+    item.appendChild(item.scoreHost);
     return item;
   }
 
@@ -301,8 +308,7 @@ const VariantTreeView = (function () {
     const candidates = h("ol", "variant-candidates");
     const tree = h("ul", "variant-tree");
     const treeNote = h("div", "piece-list-status");
-    const selectedEl = h("div", "variant-selected");
-    section.append(controls, pickerHost, status, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree, selectedEl);
+    section.append(controls, pickerHost, status, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree);
     parent.appendChild(section);
 
     let picker = null;
@@ -359,66 +365,125 @@ const VariantTreeView = (function () {
       setStatus(status, `Rerolled with seed ${next.seed}`, false);
     }
 
-    function drawCandidates() {
-      candidates.innerHTML = "";
-      for (const candidate of shown) {
-        candidates.appendChild(
-          candidateCard(candidate, {
-            play: () => playCandidate(candidate),
-            approve: () => saveCandidate(candidate, "approved"),
-            reject: () => saveCandidate(candidate, "rejected"),
-            reroll: () => rerollCandidate(candidate),
-          }),
-        );
+    /* Each candidate card carries a compact score. They render through a queue of VariantTree.RENDER_LIMIT, and the
+     * Composer's answer is kept per candidate so a redraw does not ask again. The blob URLs live as long as the cards
+     * (revoked on redraw and when the tab is left). */
+    const renderQueue = VariantTree.createQueue(VariantTree.RENDER_LIMIT);
+    let rendered = new Map();
+    let candidateScores = [];
+    let drawGeneration = 0;
+
+    function clearCandidateScores() {
+      drawGeneration++;
+      for (const entry of candidateScores) {
+        if (entry.workspace) {
+          entry.workspace.destroy();
+        }
+        for (const url of entry.urls) {
+          URL.revokeObjectURL(url);
+        }
       }
+      candidateScores = [];
     }
 
-    let workspace = null;
-    let blobUrls = [];
-    function clearSelection() {
-      if (workspace) {
-        workspace.destroy();
-        workspace = null;
+    async function showCandidateScore(candidate, host, entry, generation) {
+      host.textContent = "Rendering...";
+      let data = rendered.get(candidate);
+      if (!data) {
+        const answer = await ctx.send(MaterialsModel.renderRequest(VariantTree.candidateBody(ctx.body, candidate)));
+        if (generation !== drawGeneration) {
+          return;
+        }
+        if (!answer.ok) {
+          host.textContent = errorText(answer.data, "Could not render the variant");
+          host.classList.add("error");
+          return;
+        }
+        data = answer.data;
+        rendered.set(candidate, data);
       }
-      for (const url of blobUrls) {
-        URL.revokeObjectURL(url);
-      }
-      blobUrls = [];
-      selectedEl.innerHTML = "";
-    }
-
-    /* Shows a score and playback in the workspace under the saved tree. urls is {musicxmlUrl, playbackUrl}. */
-    function showSelection(title, subtitle, urls) {
-      clearSelection();
-      workspace = ScoreWorkspace.mount(selectedEl, {
-        title,
-        subtitle,
-        musicxmlUrl: urls.musicxmlUrl,
-        playbackUrl: urls.playbackUrl,
-      });
-    }
-
-    /* An unsaved candidate: rendered by the Composer, mounted through blob URLs. */
-    async function playCandidate(candidate) {
-      const request = MaterialsModel.renderRequest(VariantTree.candidateBody(ctx.body, candidate));
-      setStatus(status, "Rendering...", false);
-      const answer = await ctx.send(request);
-      if (!answer.ok) {
-        setStatus(status, errorText(answer.data, "Could not render the variant"), true);
+      if (generation !== drawGeneration) {
         return;
       }
-      setStatus(status, "", false);
-      const xml = URL.createObjectURL(new Blob([answer.data.musicxml], { type: "application/xml" }));
-      const playback = URL.createObjectURL(new Blob([JSON.stringify(answer.data.playback)], { type: "application/json" }));
-      showSelection(VariantTree.candidateName(ctx.name, candidate), `candidate · seed ${candidate.seed}`, {
+      host.textContent = "";
+      const xml = URL.createObjectURL(new Blob([data.musicxml], { type: "application/xml" }));
+      const playback = URL.createObjectURL(new Blob([JSON.stringify(data.playback)], { type: "application/json" }));
+      entry.urls = [xml, playback];
+      entry.workspace = ScoreWorkspace.mount(host, {
+        compact: true,
+        title: VariantTree.candidateName(ctx.name, candidate),
+        subtitle: `candidate · seed ${candidate.seed}`,
         musicxmlUrl: xml,
         playbackUrl: playback,
       });
-      blobUrls = [xml, playback];
     }
 
+    function drawCandidates() {
+      clearCandidateScores();
+      const generation = drawGeneration;
+      candidates.innerHTML = "";
+      for (const candidate of shown) {
+        const entry = { workspace: null, urls: [] };
+        candidateScores.push(entry);
+        const card = candidateCard(candidate, {
+          play: () => (entry.workspace ? entry.workspace.play() : setStatus(status, "The notation is still rendering", false)),
+          approve: () => saveCandidate(candidate, "approved"),
+          reject: () => saveCandidate(candidate, "rejected"),
+          reroll: () => rerollCandidate(candidate),
+        });
+        candidates.appendChild(card);
+        renderQueue.add(() => (generation === drawGeneration ? showCandidateScore(candidate, card.scoreHost, entry, generation) : null));
+      }
+    }
+
+    /* The saved rows whose notation is open, by item id. The set outlives refreshTree; the scores are mounted again
+     * each time the tree is drawn. */
+    const openRows = new Set();
+    let rowScores = [];
+
+    function clearRowScores() {
+      for (const workspace of rowScores) {
+        workspace.destroy();
+      }
+      rowScores = [];
+    }
+
+    function mountRowScore(row, host, autoplay) {
+      const urls = MaterialsModel.versionScoreUrls(row.id, row.version);
+      rowScores.push(
+        ScoreWorkspace.mount(host, {
+          compact: true,
+          autoplay,
+          title: row.name,
+          subtitle: `variant · v${row.version}`,
+          musicxmlUrl: urls.musicxmlUrl,
+          playbackUrl: urls.playbackUrl,
+        }),
+      );
+    }
+
+    function toggleNotation(row) {
+      if (openRows.has(row.id)) {
+        openRows.delete(row.id);
+      } else {
+        openRows.add(row.id);
+      }
+      drawTree();
+    }
+
+    /* Plays the row's score, opening its notation first when it is closed. */
+    let autoplayId = null;
     function playSaved(row) {
-      showSelection(row.name, `variant · v${row.version}`, MaterialsModel.versionScoreUrls(row.id, row.version));
+      if (openRows.has(row.id)) {
+        const index = rowScoreIds.indexOf(row.id);
+        if (index >= 0) {
+          rowScores[index].play();
+        }
+        return;
+      }
+      openRows.add(row.id);
+      autoplayId = row.id;
+      drawTree();
     }
 
     let savedTree = null;
@@ -445,14 +510,25 @@ const VariantTreeView = (function () {
         ctx.open(id);
       },
       play: playSaved,
+      toggle: toggleNotation,
     };
 
+    let rowScoreIds = [];
     function drawTree() {
+      clearRowScores();
+      rowScoreIds = [];
       tree.innerHTML = "";
       const shownRows = VariantTree.treeRows(savedTree, rejectedBox.checked);
       for (const row of shownRows.rows) {
-        tree.appendChild(treeRow(row, treeActions));
+        const open = !row.isRoot && openRows.has(row.id);
+        const item = treeRow(row, treeActions, open);
+        tree.appendChild(item);
+        if (open) {
+          rowScoreIds.push(row.id);
+          mountRowScore(row, item.scoreHost, autoplayId === row.id);
+        }
       }
+      autoplayId = null;
       const saved = shownRows.rows.length - 1;
       treeNote.textContent =
         saved <= 0 && shownRows.hidden === 0
@@ -491,6 +567,7 @@ const VariantTreeView = (function () {
         return;
       }
       shown = Array.isArray(answer.data.variants) ? answer.data.variants : [];
+      rendered = new Map();
       drawCandidates();
       setStatus(status, shown.length === 0 ? "No variants came out" : `Seed ${answer.data.seed}`, false);
     });
@@ -505,6 +582,19 @@ const VariantTreeView = (function () {
     return {
       el: section,
       refresh: refreshTree,
+      /* The tab was left: stop and free the scores. Back on the tab they are drawn again. */
+      leave: () => {
+        clearCandidateScores();
+        clearRowScores();
+      },
+      enter: () => {
+        if (shown.length > 0 && candidateScores.length === 0) {
+          drawCandidates();
+        }
+        if (savedTree) {
+          drawTree();
+        }
+      },
       showRejected: () => rejectedBox.checked,
       onShowRejected: (fn) => rejectedListeners.push(fn),
     };

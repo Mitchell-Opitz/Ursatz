@@ -1088,6 +1088,25 @@ body {
   width: 100%;
 }
 
+/* The compact workspace: the toolbar and the score, as tall as the score. */
+.ws-compact {
+  height: auto;
+}
+
+.ws-compact .ws-body {
+  display: block;
+}
+
+.ws-compact .ws-canvas {
+  overflow-y: visible;
+  padding: 8px 0 0;
+}
+
+.ws-compact .ws-paper {
+  min-height: 0;
+  padding: 8px 12px;
+}
+
 /* The claim layers, laid exactly over the OSMD SVG. Only the drawn ribbons
  * and marks take the pointer. */
 .ws-overlay {
@@ -2043,6 +2062,13 @@ body {
 }
 
 /* Motif variants (P13 B9) */
+.variant-score {
+  margin: 0.3rem 0;
+}
+.variant-score.error {
+  color: var(--error, #b00020);
+  font-size: 0.85rem;
+}
 .materials-variants .variant-candidates,
 .materials-variants .variant-steps {
   list-style: none;

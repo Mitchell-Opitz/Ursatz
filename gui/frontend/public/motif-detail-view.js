@@ -20,8 +20,12 @@ const MotifDetailView = (function () {
       other: (pane) => buildOtherPane(pane, ctx),
     };
 
+    let current = null;
     function show(tabId) {
       MaterialsModel.writeMotifTab(tabId);
+      if (current === "variants" && tabId !== "variants" && ctx.variants) {
+        ctx.variants.leave();
+      }
       for (const tab of MaterialsModel.MOTIF_TABS) {
         const active = tab.id === tabId;
         panes[tab.id].hidden = !active;
@@ -31,7 +35,10 @@ const MotifDetailView = (function () {
       if (!mounted[tabId]) {
         mounted[tabId] = true;
         builders[tabId](panes[tabId]);
+      } else if (tabId === "variants" && current !== "variants" && ctx.variants) {
+        ctx.variants.enter();
       }
+      current = tabId;
     }
 
     for (const tab of MaterialsModel.MOTIF_TABS) {

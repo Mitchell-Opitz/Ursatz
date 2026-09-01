@@ -79,7 +79,8 @@ version note.` beside the note when it is empty; a changed name or project
 goes through the item update and needs no note; with no change it says
 `Nothing to save.` The backend refuses a new motif version without a note
 (400 `give a version note`); a new motif's first version is noted `Created`.
-Variants holds the variant tree. Used by is a table of the items that use the
+Variants holds the chain builder with Generate, the candidates, then the saved
+variant tree, each with its notation. Used by is a table of the items that use the
 motif (name, type, the version used, project, and `update available` when the
 use is behind the motif's current version). Other holds Versions (open one to
 read it), Derived from (the motif's old Uses section: the motifs it was
@@ -840,15 +841,20 @@ from the pure `variant-tree.js`, global `VariantTree`).
   (exact, rhythm, intervals, harmony, melody adaptation) with each operation's
   citation and its parameters; a parameter left empty is drawn from the seed.
   With no steps the route draws random chains. Candidates are not saved.
-- A candidate shows its derivation, kind, kept and changed chips and
-  recognizability. Approve and Reject save it as a derived motif with that
-  flag; Reroll replaces only that candidate with the next seed (its drawn
-  parameters drawn again); Play renders it with `POST /api/materials/render`
-  and mounts the answer in the workspace through blob URLs.
+- A candidate shows its derivation, its notation, kind, kept and changed chips
+  and recognizability. The notation is a compact score workspace (title,
+  Play/Stop and tempo only) rendered with `POST /api/materials/render`, at most
+  four requests at a time, and mounted through blob URLs that are revoked when
+  the candidates are redrawn or the tab is left. Approve and Reject save it as
+  a derived motif with that flag; Reroll replaces only that candidate with the
+  next seed (its drawn parameters drawn again); Play plays its own score.
 - Saved variants appear under the motif as the variant tree, indented by
   depth, with the derivation, flag, a kind select, Approve, Reject, Unflag,
-  Reroll (the reroll route), Play (the stored version's score and playback)
-  and Open. Rejected variants and everything under them are hidden unless
+  Reroll (the reroll route), Play (the stored version's score and playback;
+  it opens the notation first), Show notation and Open. Show notation mounts
+  a compact score for that row; open rows stay open when the tree refreshes.
+  Only one workspace plays at a time on the page: starting one pauses the
+  others. Rejected variants and everything under them are hidden unless
   "Show rejected" is on; the choice is kept in `localStorage`.
 
 #### Comparing and linking motifs

@@ -405,7 +405,43 @@
     };
   }
 
+  /* Most render requests the candidate cards have in flight at once. */
+  const RENDER_LIMIT = 4;
+
+  /* Runs async tasks, at most `limit` at a time, in the order they were added. add(task) answers a promise of the
+   * task's result; a task that throws answers its error and frees its slot. active() and waiting() count the running
+   * and the queued tasks. */
+  function createQueue(limit) {
+    const waiting = [];
+    let active = 0;
+    function next() {
+      while (active < limit && waiting.length > 0) {
+        const job = waiting.shift();
+        active++;
+        Promise.resolve()
+          .then(job.task)
+          .then(job.resolve, job.reject)
+          .finally(() => {
+            active--;
+            next();
+          });
+      }
+    }
+    return {
+      add(task) {
+        return new Promise((resolve, reject) => {
+          waiting.push({ task, resolve, reject });
+          next();
+        });
+      },
+      active: () => active,
+      waiting: () => waiting.length,
+    };
+  }
+
   const api = {
+    RENDER_LIMIT,
+    createQueue,
     FLAGS,
     KINDS,
     KIND_LABELS,
