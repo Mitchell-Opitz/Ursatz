@@ -1987,6 +1987,56 @@ body {
   gap: 8px;
 }
 
+/* The motif fields: labels in one 10rem column, right-aligned, controls and their hints and errors in the other.
+ * One column under 700px. */
+.motif-form-grid {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.motif-form-label {
+  text-align: right;
+  color: var(--text-dim);
+  padding-top: 0.4rem;
+}
+
+.motif-form-control {
+  min-width: 0;
+}
+
+.motif-form-control .materials-hint {
+  margin: 0.5rem 0 0;
+}
+
+.motif-form-full {
+  grid-column: 2;
+  margin-top: 0;
+}
+
+.motif-form-grid .motif-form-wide {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+@media (max-width: 700px) {
+  .motif-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  .motif-form-label {
+    text-align: left;
+    padding-top: 0;
+  }
+
+  .motif-form-full {
+    grid-column: 1;
+  }
+}
+
 .materials-notes {
   width: 100%;
   max-width: 600px;

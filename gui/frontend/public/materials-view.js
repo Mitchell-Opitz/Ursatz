@@ -686,15 +686,34 @@ function buildVersionsList(item, viewEl, statusEl, renderBody) {
 function buildMotifEditor(body) {
   const initial = MaterialsModel.motifFormValues(body);
   const el = materialsElement("section", "panel materials-editor");
+  /* The fields sit in a two-column grid: the label in the first, the control with its hints and error under it in
+   * the second (R-191). Rows that belong to no field (the MIDI upload) take the control column. */
+  const grid = materialsElement("div", "motif-form-grid");
+  el.appendChild(grid);
   const errors = {};
 
   function field(labelText, control, key) {
-    const label = materialsElement("label", "filter-field", labelText + " ");
-    label.appendChild(control);
-    el.appendChild(label);
+    control.id = `motif-field-${key}`;
+    const label = materialsElement("label", "motif-form-label", labelText);
+    label.htmlFor = control.id;
+    const cell = materialsElement("div", "motif-form-control");
+    cell.appendChild(control);
     errors[key] = materialsElement("div", "materials-field-error");
-    el.appendChild(errors[key]);
+    cell.appendChild(errors[key]);
+    grid.append(label, cell);
     return control;
+  }
+
+  /* A hint under the control of the field with this key, above its error. */
+  function hintUnder(key, text) {
+    const hintEl = materialsElement("div", "materials-hint", text);
+    errors[key].before(hintEl);
+    return hintEl;
+  }
+
+  function controlRow(row) {
+    row.classList.add("motif-form-full");
+    grid.appendChild(row);
   }
 
   const role = materialsElement("select");
@@ -715,18 +734,18 @@ function buildMotifEditor(body) {
   }
   form.value = initial.form;
   field("Form", form, "form");
+  const hint = hintUnder("form", MaterialsModel.formHint(initial.form));
 
   const notes = materialsElement("textarea", "materials-notes");
   notes.rows = 4;
   notes.spellcheck = false;
+  notes.classList.add("motif-form-wide");
   notes.value = initial.notes;
   field("Notes", notes, "notes");
-  const hint = materialsElement("div", "materials-hint", MaterialsModel.formHint(initial.form));
-  el.appendChild(hint);
+  hintUnder("notes", MaterialsModel.TONIC_HINT);
   form.addEventListener("change", () => {
     hint.textContent = MaterialsModel.formHint(form.value);
   });
-  el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.TONIC_HINT));
 
   const importRow = materialsElement("div", "upload-controls");
   const importButton = materialsElement("button", "", "Upload MIDI");
@@ -738,7 +757,7 @@ function buildMotifEditor(body) {
   const importStatus = materialsElement("span", "upload-status");
   importStatus.setAttribute("role", "status");
   importRow.append(importButton, importFile, importStatus);
-  el.appendChild(importRow);
+  controlRow(importRow);
   importButton.addEventListener("click", () => importFile.click());
   importFile.addEventListener("change", async () => {
     const file = importFile.files && importFile.files[0];
@@ -779,7 +798,7 @@ function buildMotifEditor(body) {
   const rewriteStatus = materialsElement("span", "upload-status");
   rewriteStatus.setAttribute("role", "status");
   legacyRow.append(legacyText, rewriteButton, rewriteStatus);
-  el.appendChild(legacyRow);
+  controlRow(legacyRow);
   function showLegacy() {
     legacyRow.hidden = !legacyKey;
     legacyText.textContent = legacyKey ? MaterialsModel.legacyNotice(legacyKey) : "";
@@ -839,9 +858,10 @@ function buildMotifEditor(body) {
   harmony.value = initial.harmony;
   harmony.size = 30;
   harmony.maxLength = 200;
+  harmony.classList.add("motif-form-wide");
   harmony.placeholder = "I V6@2 I@3 (optional)";
   field("Harmony", harmony, "harmony");
-  el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.HARMONY_HINT));
+  hintUnder("harmony", MaterialsModel.HARMONY_HINT);
 
   el.appendChild(materialsElement("h2", "section-title", "Segments"));
   el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.SEGMENTS_HINT));
