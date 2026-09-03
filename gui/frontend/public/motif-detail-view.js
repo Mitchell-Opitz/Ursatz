@@ -86,12 +86,12 @@ const MotifDetailView = (function () {
    * current version writes a new version with the note. */
   function buildSaveRow(editor, ctx) {
     const { id, item, data, statusEl } = ctx;
-    const row = materialsElement("div", "upload-controls");
+    const row = materialsElement("div", "upload-controls button-row");
     const note = materialsElement("input");
     note.type = "text";
     note.placeholder = "What changed? (required)";
     note.size = 40;
-    const save = materialsElement("button", "", "Save");
+    const save = materialsElement("button", "button-primary", "Save");
     save.type = "button";
     const message = materialsElement("span", "materials-field-error");
     message.setAttribute("role", "status");

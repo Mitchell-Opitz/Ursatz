@@ -521,7 +521,7 @@ function buildUsesSection(ctx) {
         compare.addEventListener("click", () => showUseComparison(compareEl, row, ctx.statusEl));
         actions.append(update, compare);
       }
-      const remove = materialsElement("button", "", "Remove");
+      const remove = materialsElement("button", "button-secondary", "Remove");
       remove.type = "button";
       remove.addEventListener("click", () => change(row.item_id, row.version, false, `Removed use of ${row.name}`));
       actions.appendChild(remove);
@@ -748,7 +748,7 @@ function buildMotifEditor(body) {
   });
 
   const importRow = materialsElement("div", "upload-controls");
-  const importButton = materialsElement("button", "", "Upload MIDI");
+  const importButton = materialsElement("button", "button-secondary", "Upload MIDI");
   importButton.type = "button";
   const importFile = materialsElement("input");
   importFile.type = "file";
@@ -793,7 +793,7 @@ function buildMotifEditor(body) {
   let legacyKey = initial.legacyKey;
   const legacyRow = materialsElement("div", "upload-controls");
   const legacyText = materialsElement("span", "materials-hint");
-  const rewriteButton = materialsElement("button", "", "Rewrite in C");
+  const rewriteButton = materialsElement("button", "button-secondary", "Rewrite in C");
   rewriteButton.type = "button";
   const rewriteStatus = materialsElement("span", "upload-status");
   rewriteStatus.setAttribute("role", "status");
@@ -908,7 +908,7 @@ function buildMotifEditor(body) {
     });
   }
   drawFeatures();
-  const addFeature = materialsElement("button", "", "Add segment");
+  const addFeature = materialsElement("button", "button-secondary", "Add segment");
   addFeature.type = "button";
   addFeature.addEventListener("click", () => {
     featureRows.push(MaterialsModel.newFeatureRow(featureRows));
@@ -1078,7 +1078,7 @@ function buildAnalysisPanel(body, analysisError, onReanalyzed) {
   section.appendChild(materialsElement("h2", "section-title", "Analysis"));
   const statusRow = materialsElement("div", "upload-controls");
   statusRow.appendChild(materialsElement("div", "piece-list-status", info.message));
-  const again = materialsElement("button", "", "Re-analyze");
+  const again = materialsElement("button", "button-secondary", "Re-analyze");
   again.type = "button";
   again.addEventListener("click", async () => {
     again.disabled = true;
@@ -1150,7 +1150,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
     }
     renderMaterialsDetail(type, id);
   });
-  const del = materialsElement("button", "", "Delete");
+  const del = materialsElement("button", "button-danger", "Delete");
   del.type = "button";
   del.addEventListener("click", async () => {
     if (!window.confirm(`Delete ${info.singular} "${item.name}" and all its versions?`)) {

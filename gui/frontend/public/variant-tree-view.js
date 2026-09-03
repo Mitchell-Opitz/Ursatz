@@ -119,7 +119,7 @@ const VariantTreeView = (function () {
               .join(", ")})`
           : "";
         item.appendChild(h("span", "", `${byName.has(step.op) ? byName.get(step.op).label : step.op}${params} `));
-        const remove = h("button", "", "Remove");
+        const remove = h("button", "button-secondary", "Remove");
         remove.type = "button";
         remove.addEventListener("click", () => {
           steps.splice(index, 1);
@@ -131,7 +131,7 @@ const VariantTreeView = (function () {
       });
       onChange();
     }
-    const add = h("button", "", "Add step");
+    const add = h("button", "button-secondary", "Add step");
     add.type = "button";
     add.addEventListener("click", () => {
       const operation = byName.get(select.value);
@@ -153,8 +153,8 @@ const VariantTreeView = (function () {
     return { el: box, clear: () => { steps.length = 0; drawSteps(); } };
   }
 
-  function actionButton(text, onClick) {
-    const button = h("button", "", text);
+  function actionButton(text, onClick, variant) {
+    const button = h("button", variant || "button-secondary", text);
     button.type = "button";
     button.addEventListener("click", onClick);
     return button;
@@ -185,7 +185,7 @@ const VariantTreeView = (function () {
     buttons.append(
       actionButton("Play", actions.play),
       actionButton("Approve", actions.approve),
-      actionButton("Reject", actions.reject),
+      actionButton("Reject", actions.reject, "button-danger"),
       actionButton("Reroll", actions.reroll),
     );
     card.appendChild(buttons);
@@ -234,7 +234,7 @@ const VariantTreeView = (function () {
       kind,
       actionButton("Play", () => actions.play(row)),
       actionButton("Approve", () => actions.flag(row.id, "approved")),
-      actionButton("Reject", () => actions.flag(row.id, "rejected")),
+      actionButton("Reject", () => actions.flag(row.id, "rejected"), "button-danger"),
       actionButton("Unflag", () => actions.flag(row.id, "unflagged")),
       ...(row.seed === null ? [] : [actionButton("Reroll", () => actions.reroll(row.id))]),
       actionButton("Open", () => actions.open(row.id)),
@@ -281,7 +281,7 @@ const VariantTreeView = (function () {
     seed.size = 10;
     seed.placeholder = "seed (random)";
     const summary = h("span", "variant-chain-summary", "Random operations");
-    const generate = h("button", "", "Generate");
+    const generate = h("button", "button-primary", "Generate");
     generate.type = "button";
     const countLabel = h("label", "filter-field", "Count ");
     countLabel.appendChild(count);
