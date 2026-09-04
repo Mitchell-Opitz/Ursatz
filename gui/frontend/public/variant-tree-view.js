@@ -267,7 +267,8 @@ const VariantTreeView = (function () {
   function mount(parent, ctx) {
     const section = h("section", "panel materials-variants");
     section.appendChild(h("h2", "section-title", "Variants"));
-    const status = h("div", "upload-status");
+    /* The tab's one status area, above the panel (R-191). */
+    const status = h("div", "motif-tab-status");
     status.setAttribute("role", "status");
     const steps = [];
     const controls = h("div", "upload-controls");
@@ -308,7 +309,8 @@ const VariantTreeView = (function () {
     const candidates = h("ol", "variant-candidates");
     const tree = h("ul", "variant-tree");
     const treeNote = h("div", "piece-list-status");
-    section.append(controls, pickerHost, status, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree);
+    section.append(controls, pickerHost, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree);
+    parent.appendChild(status);
     parent.appendChild(section);
 
     let picker = null;

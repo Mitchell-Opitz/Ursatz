@@ -683,9 +683,19 @@ function buildVersionsList(item, viewEl, statusEl, renderBody) {
 
 /* The motif form. Returns {el, values(), showProblems(problems), showError(text)}.
  * body is the version body being edited, or null for a new motif. */
-function buildMotifEditor(body) {
+function buildMotifEditor(body, tabStatus) {
   const initial = MaterialsModel.motifFormValues(body);
   const el = materialsElement("section", "panel materials-editor");
+  /* On the motif tab the MIDI upload and the rewrite write to the tab's status area (tabStatus, a
+   * MaterialsModel.motifTabStatus writer). The new-motif page has none and keeps a status line at the end of the
+   * panel. */
+  let status = tabStatus;
+  if (!status) {
+    const line = materialsElement("div", "upload-status");
+    line.setAttribute("role", "status");
+    el.appendChild(line);
+    status = MaterialsModel.motifTabStatus(line);
+  }
   /* The fields sit in a two-column grid: the label in the first, the control with its hints and error under it in
    * the second (R-191). Rows that belong to no field (the MIDI upload) take the control column. */
   const grid = materialsElement("div", "motif-form-grid");
@@ -754,9 +764,7 @@ function buildMotifEditor(body) {
   importFile.type = "file";
   importFile.accept = ".mid,.midi";
   importFile.hidden = true;
-  const importStatus = materialsElement("span", "upload-status");
-  importStatus.setAttribute("role", "status");
-  importRow.append(importButton, importFile, importStatus);
+  importRow.append(importButton, importFile);
   controlRow(importRow);
   importButton.addEventListener("click", () => importFile.click());
   importFile.addEventListener("change", async () => {
@@ -765,16 +773,14 @@ function buildMotifEditor(body) {
     if (!file) {
       return;
     }
-    importStatus.classList.remove("error");
-    importStatus.textContent = "Reading the file...";
+    status.show("Reading the file...");
     const answer = await sendMaterialsRequest(MaterialsModel.buildImportMidiRequest(file));
     if (!answer.ok) {
-      importStatus.classList.add("error");
-      importStatus.textContent = MaterialsModel.errorText(answer.data, "Could not read the MIDI file");
+      status.show(MaterialsModel.errorText(answer.data, "Could not read the MIDI file"), true);
       return;
     }
     fill(MaterialsModel.importToFormValues(answer.data));
-    importStatus.textContent = MaterialsModel.importNotice(answer.data);
+    status.show(MaterialsModel.importNotice(answer.data));
   });
 
   /* Sets the form, notes, meter, mode and pickup (and the role when given) from values. */
@@ -795,9 +801,7 @@ function buildMotifEditor(body) {
   const legacyText = materialsElement("span", "materials-hint");
   const rewriteButton = materialsElement("button", "button-secondary", "Rewrite in C");
   rewriteButton.type = "button";
-  const rewriteStatus = materialsElement("span", "upload-status");
-  rewriteStatus.setAttribute("role", "status");
-  legacyRow.append(legacyText, rewriteButton, rewriteStatus);
+  legacyRow.append(legacyText, rewriteButton);
   controlRow(legacyRow);
   function showLegacy() {
     legacyRow.hidden = !legacyKey;
@@ -805,8 +809,7 @@ function buildMotifEditor(body) {
   }
   showLegacy();
   rewriteButton.addEventListener("click", async () => {
-    rewriteStatus.classList.remove("error");
-    rewriteStatus.textContent = "";
+    status.clear();
     if (form.value !== "full") {
       legacyKey = null;
       showLegacy();
@@ -814,17 +817,15 @@ function buildMotifEditor(body) {
     }
     const request = MaterialsModel.toCRequest(body, mode.value);
     if (!request) {
-      rewriteStatus.classList.add("error");
-      rewriteStatus.textContent = "This version has no degrees to rewrite. Re-analyze it first.";
+      status.show("This version has no degrees to rewrite. Re-analyze it first.", true);
       return;
     }
     rewriteButton.disabled = true;
-    rewriteStatus.textContent = "Rewriting...";
+    status.show("Rewriting...");
     const answer = await sendMaterialsRequest(request);
     rewriteButton.disabled = false;
     if (!answer.ok) {
-      rewriteStatus.classList.add("error");
-      rewriteStatus.textContent = MaterialsModel.errorText(answer.data, "Could not rewrite the motif in C");
+      status.show(MaterialsModel.errorText(answer.data, "Could not rewrite the motif in C"), true);
       return;
     }
     notes.value = answer.data.notes_text;
@@ -1082,13 +1083,14 @@ function buildAnalysisPanel(body, analysisError, onReanalyzed) {
   again.type = "button";
   again.addEventListener("click", async () => {
     again.disabled = true;
+    onReanalyzed.status.show("Re-analyzing...");
     const answer = await onReanalyzed.send();
     if (answer.ok) {
       onReanalyzed.done(answer.data.item.analysis_error);
       return;
     }
     again.disabled = false;
-    statusRow.appendChild(materialsElement("div", "upload-status error", MaterialsModel.errorText(answer.data, "Could not re-analyze")));
+    onReanalyzed.status.show(MaterialsModel.errorText(answer.data, "Could not re-analyze"), true);
   });
   statusRow.appendChild(again);
   section.appendChild(statusRow);

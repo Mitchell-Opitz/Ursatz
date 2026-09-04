@@ -551,6 +551,21 @@ body {
   margin-top: var(--space-field);
 }
 
+/* The status area at the top of each motif tab: saves, errors and progress. */
+.motif-tab-status {
+  min-height: 1.25rem;
+  margin: 0 0 var(--space-field, 1rem);
+  color: var(--text-dim);
+}
+
+.motif-tab-status.error {
+  color: #f87171;
+}
+
+.motif-tab-status:empty {
+  display: none;
+}
+
 /* Buttons: one primary per panel, the rest secondary, destructive ones in the danger colour. */
 button.button-primary,
 button.button-secondary,

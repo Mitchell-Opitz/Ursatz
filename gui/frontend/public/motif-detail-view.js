@@ -62,12 +62,14 @@ const MotifDetailView = (function () {
 
   /* The score, the editor, the analysis and the save row. */
   function buildMotifPane(pane, ctx) {
-    const { id, item, data, statusEl } = ctx;
+    const { id, item, data } = ctx;
+    const status = MaterialsModel.motifTabStatus(buildStatusArea(pane));
+    ctx.motifStatus = status;
     const score = buildMotifScore(id, item, data.body);
     if (score) {
       pane.appendChild(score);
     }
-    const editor = buildMotifEditor(data.body);
+    const editor = buildMotifEditor(data.body, status);
     pane.appendChild(editor.el);
     const subjectsField = buildSubjectsField("items", id, data.subjects);
     const subjectsRow = materialsElement("div", "materials-subjects-row");
@@ -75,6 +77,7 @@ const MotifDetailView = (function () {
     pane.appendChild(subjectsRow);
     pane.appendChild(
       buildAnalysisPanel(data.body, ctx.analysisError, {
+        status,
         send: () => sendMaterialsRequest(MaterialsModel.buildReanalyzeRequest(id)),
         done: (reason) => ctx.rerender(reason),
       }),
@@ -82,10 +85,19 @@ const MotifDetailView = (function () {
     pane.appendChild(buildSaveRow(editor, ctx));
   }
 
+  /* The status area at the top of a tab: saves, errors and progress of every section of the tab show here. */
+  function buildStatusArea(pane) {
+    const area = materialsElement("div", "motif-tab-status");
+    area.setAttribute("role", "status");
+    pane.appendChild(area);
+    return area;
+  }
+
   /* The one Save of the page: name and project go through the item update, an editor body that differs from the
    * current version writes a new version with the note. */
   function buildSaveRow(editor, ctx) {
-    const { id, item, data, statusEl } = ctx;
+    const { id, item, data } = ctx;
+    const status = ctx.motifStatus;
     const row = materialsElement("div", "upload-controls button-row");
     const note = materialsElement("input");
     note.type = "text";
@@ -93,14 +105,10 @@ const MotifDetailView = (function () {
     note.size = 40;
     const save = materialsElement("button", "button-primary", "Save");
     save.type = "button";
-    const message = materialsElement("span", "materials-field-error");
-    message.setAttribute("role", "status");
-    row.append(note, save, message);
+    row.append(note, save);
 
     save.addEventListener("click", async () => {
-      message.textContent = "";
-      statusEl.textContent = "";
-      statusEl.classList.remove("error");
+      status.clear();
       const values = editor.values();
       const fields = {};
       const typedName = ctx.nameInput.value.trim();
@@ -116,7 +124,7 @@ const MotifDetailView = (function () {
         note.value,
       );
       if (decision.kind !== "save") {
-        message.textContent = decision.message;
+        status.show(decision.message, true);
         return;
       }
       if (bodyChanged) {
@@ -127,6 +135,7 @@ const MotifDetailView = (function () {
         }
       }
       save.disabled = true;
+      status.show("Saving...");
       let reason;
       if (bodyChanged) {
         const saved = await sendMaterialsRequest(
@@ -135,6 +144,7 @@ const MotifDetailView = (function () {
         if (!saved.ok) {
           save.disabled = false;
           const text = MaterialsModel.errorText(saved.data, "Could not save the motif");
+          status.show(text, true);
           editor.showError(text, MaterialsModel.errorField(text));
           return;
         }
@@ -144,8 +154,7 @@ const MotifDetailView = (function () {
         const renamed = await sendMaterialsRequest(MaterialsModel.buildUpdateItemRequest(id, fields));
         if (!renamed.ok) {
           save.disabled = false;
-          statusEl.textContent = MaterialsModel.errorText(renamed.data, "Could not save");
-          statusEl.classList.add("error");
+          status.show(MaterialsModel.errorText(renamed.data, "Could not save"), true);
           return;
         }
       }
