@@ -5,7 +5,7 @@
  * are page globals from materials-view.js and the other view files. */
 const MotifDetailView = (function () {
   /* ctx: {id, item, data (the item answer), analysisError, statusEl, allItems, headerEl, rerender(reason)}.
-   * Appends the tab bar and panes to content. */
+   * Appends the tab bar and panes to content, inside a `motif-detail` wrapper (up to 1200px wide). */
   function render(content, ctx) {
     const { id, item, data } = ctx;
     const bar = materialsElement("div", "analysis-tabs");
@@ -51,21 +51,25 @@ const MotifDetailView = (function () {
       panes[tab.id] = materialsElement("div", "materials-tab-pane");
       panes[tab.id].setAttribute("role", "tabpanel");
     }
-    content.appendChild(bar);
+    const wrapper = materialsElement("div", "motif-detail");
+    wrapper.appendChild(bar);
     for (const tab of MaterialsModel.MOTIF_TABS) {
-      content.appendChild(panes[tab.id]);
+      wrapper.appendChild(panes[tab.id]);
     }
+    content.appendChild(wrapper);
     show(MaterialsModel.readMotifTab());
   }
 
   /* The score, the editor, the analysis and the save row. */
   function buildMotifPane(pane, ctx) {
-    const { id, item, data, statusEl } = ctx;
+    const { id, item, data } = ctx;
+    const status = MaterialsModel.motifTabStatus(buildStatusArea(pane));
+    ctx.motifStatus = status;
     const score = buildMotifScore(id, item, data.body);
     if (score) {
       pane.appendChild(score);
     }
-    const editor = buildMotifEditor(data.body);
+    const editor = buildMotifEditor(data.body, status);
     pane.appendChild(editor.el);
     const subjectsField = buildSubjectsField("items", id, data.subjects);
     const subjectsRow = materialsElement("div", "materials-subjects-row");
@@ -73,6 +77,7 @@ const MotifDetailView = (function () {
     pane.appendChild(subjectsRow);
     pane.appendChild(
       buildAnalysisPanel(data.body, ctx.analysisError, {
+        status,
         send: () => sendMaterialsRequest(MaterialsModel.buildReanalyzeRequest(id)),
         done: (reason) => ctx.rerender(reason),
       }),
@@ -80,25 +85,30 @@ const MotifDetailView = (function () {
     pane.appendChild(buildSaveRow(editor, ctx));
   }
 
+  /* The status area at the top of a tab: saves, errors and progress of every section of the tab show here. */
+  function buildStatusArea(pane) {
+    const area = materialsElement("div", "motif-tab-status");
+    area.setAttribute("role", "status");
+    pane.appendChild(area);
+    return area;
+  }
+
   /* The one Save of the page: name and project go through the item update, an editor body that differs from the
    * current version writes a new version with the note. */
   function buildSaveRow(editor, ctx) {
-    const { id, item, data, statusEl } = ctx;
-    const row = materialsElement("div", "upload-controls");
+    const { id, item, data } = ctx;
+    const status = ctx.motifStatus;
+    const row = materialsElement("div", "upload-controls button-row");
     const note = materialsElement("input");
     note.type = "text";
     note.placeholder = "What changed? (required)";
     note.size = 40;
-    const save = materialsElement("button", "", "Save");
+    const save = materialsElement("button", "button-primary", "Save");
     save.type = "button";
-    const message = materialsElement("span", "materials-field-error");
-    message.setAttribute("role", "status");
-    row.append(note, save, message);
+    row.append(note, save);
 
     save.addEventListener("click", async () => {
-      message.textContent = "";
-      statusEl.textContent = "";
-      statusEl.classList.remove("error");
+      status.clear();
       const values = editor.values();
       const fields = {};
       const typedName = ctx.nameInput.value.trim();
@@ -114,7 +124,7 @@ const MotifDetailView = (function () {
         note.value,
       );
       if (decision.kind !== "save") {
-        message.textContent = decision.message;
+        status.show(decision.message, true);
         return;
       }
       if (bodyChanged) {
@@ -125,6 +135,7 @@ const MotifDetailView = (function () {
         }
       }
       save.disabled = true;
+      status.show("Saving...");
       let reason;
       if (bodyChanged) {
         const saved = await sendMaterialsRequest(
@@ -133,6 +144,7 @@ const MotifDetailView = (function () {
         if (!saved.ok) {
           save.disabled = false;
           const text = MaterialsModel.errorText(saved.data, "Could not save the motif");
+          status.show(text, true);
           editor.showError(text, MaterialsModel.errorField(text));
           return;
         }
@@ -142,8 +154,7 @@ const MotifDetailView = (function () {
         const renamed = await sendMaterialsRequest(MaterialsModel.buildUpdateItemRequest(id, fields));
         if (!renamed.ok) {
           save.disabled = false;
-          statusEl.textContent = MaterialsModel.errorText(renamed.data, "Could not save");
-          statusEl.classList.add("error");
+          status.show(MaterialsModel.errorText(renamed.data, "Could not save"), true);
           return;
         }
       }

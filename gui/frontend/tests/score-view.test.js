@@ -55,6 +55,7 @@ const compact = ScoreWorkspace.layoutFor({ compact: true, loop: { start: 0, end:
 check(JSON.stringify(compact.transport) === JSON.stringify(["play", "stop", "tempo"]), "compact transport is Play, Stop and tempo, even with a loop or ending");
 check(JSON.stringify(compact.toolbar) === JSON.stringify(["left", "transport"]) && compact.back === false, "compact toolbar has the title and transport only, no Library link or view buttons");
 check(JSON.stringify(compact.body) === JSON.stringify(["main"]), "compact body is the score only: no layer panel, inspector or Data pane");
+check(compact.zoom === true && ScoreWorkspace.layoutFor({}).zoom === false, "the compact workspace shows the zoom controls (zoom out, label, zoom in); the full one has them in its right-hand section");
 const full = ScoreWorkspace.layoutFor({});
 check(full.back && full.toolbar.includes("right") && full.body.includes("rail") && full.body.includes("inspector") && full.transport.includes("volume"), "the full workspace keeps every part");
 check(!full.transport.includes("loop") && ScoreWorkspace.layoutFor({ loop: {} }).transport.includes("loop") && ScoreWorkspace.layoutFor({ ending: {} }).transport.includes("ending"), "loop and ending buttons follow their options");

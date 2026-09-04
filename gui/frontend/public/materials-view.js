@@ -521,7 +521,7 @@ function buildUsesSection(ctx) {
         compare.addEventListener("click", () => showUseComparison(compareEl, row, ctx.statusEl));
         actions.append(update, compare);
       }
-      const remove = materialsElement("button", "", "Remove");
+      const remove = materialsElement("button", "button-secondary", "Remove");
       remove.type = "button";
       remove.addEventListener("click", () => change(row.item_id, row.version, false, `Removed use of ${row.name}`));
       actions.appendChild(remove);
@@ -683,18 +683,47 @@ function buildVersionsList(item, viewEl, statusEl, renderBody) {
 
 /* The motif form. Returns {el, values(), showProblems(problems), showError(text)}.
  * body is the version body being edited, or null for a new motif. */
-function buildMotifEditor(body) {
+function buildMotifEditor(body, tabStatus) {
   const initial = MaterialsModel.motifFormValues(body);
   const el = materialsElement("section", "panel materials-editor");
+  /* On the motif tab the MIDI upload and the rewrite write to the tab's status area (tabStatus, a
+   * MaterialsModel.motifTabStatus writer). The new-motif page has none and keeps a status line at the end of the
+   * panel. */
+  let status = tabStatus;
+  if (!status) {
+    const line = materialsElement("div", "upload-status");
+    line.setAttribute("role", "status");
+    el.appendChild(line);
+    status = MaterialsModel.motifTabStatus(line);
+  }
+  /* The fields sit in a two-column grid: the label in the first, the control with its hints and error under it in
+   * the second (R-191). Rows that belong to no field (the MIDI upload) take the control column. */
+  const grid = materialsElement("div", "motif-form-grid");
+  el.appendChild(grid);
   const errors = {};
 
   function field(labelText, control, key) {
-    const label = materialsElement("label", "filter-field", labelText + " ");
-    label.appendChild(control);
-    el.appendChild(label);
+    control.id = `motif-field-${key}`;
+    const label = materialsElement("label", "motif-form-label", labelText);
+    label.htmlFor = control.id;
+    const cell = materialsElement("div", "motif-form-control");
+    cell.appendChild(control);
     errors[key] = materialsElement("div", "materials-field-error");
-    el.appendChild(errors[key]);
+    cell.appendChild(errors[key]);
+    grid.append(label, cell);
     return control;
+  }
+
+  /* A hint under the control of the field with this key, above its error. */
+  function hintUnder(key, text) {
+    const hintEl = materialsElement("div", "materials-hint", text);
+    errors[key].before(hintEl);
+    return hintEl;
+  }
+
+  function controlRow(row) {
+    row.classList.add("motif-form-full");
+    grid.appendChild(row);
   }
 
   const role = materialsElement("select");
@@ -715,30 +744,28 @@ function buildMotifEditor(body) {
   }
   form.value = initial.form;
   field("Form", form, "form");
+  const hint = hintUnder("form", MaterialsModel.formHint(initial.form));
 
   const notes = materialsElement("textarea", "materials-notes");
   notes.rows = 4;
   notes.spellcheck = false;
+  notes.classList.add("motif-form-wide");
   notes.value = initial.notes;
   field("Notes", notes, "notes");
-  const hint = materialsElement("div", "materials-hint", MaterialsModel.formHint(initial.form));
-  el.appendChild(hint);
+  hintUnder("notes", MaterialsModel.TONIC_HINT);
   form.addEventListener("change", () => {
     hint.textContent = MaterialsModel.formHint(form.value);
   });
-  el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.TONIC_HINT));
 
   const importRow = materialsElement("div", "upload-controls");
-  const importButton = materialsElement("button", "", "Upload MIDI");
+  const importButton = materialsElement("button", "button-secondary", "Upload MIDI");
   importButton.type = "button";
   const importFile = materialsElement("input");
   importFile.type = "file";
   importFile.accept = ".mid,.midi";
   importFile.hidden = true;
-  const importStatus = materialsElement("span", "upload-status");
-  importStatus.setAttribute("role", "status");
-  importRow.append(importButton, importFile, importStatus);
-  el.appendChild(importRow);
+  importRow.append(importButton, importFile);
+  controlRow(importRow);
   importButton.addEventListener("click", () => importFile.click());
   importFile.addEventListener("change", async () => {
     const file = importFile.files && importFile.files[0];
@@ -746,16 +773,14 @@ function buildMotifEditor(body) {
     if (!file) {
       return;
     }
-    importStatus.classList.remove("error");
-    importStatus.textContent = "Reading the file...";
+    status.show("Reading the file...");
     const answer = await sendMaterialsRequest(MaterialsModel.buildImportMidiRequest(file));
     if (!answer.ok) {
-      importStatus.classList.add("error");
-      importStatus.textContent = MaterialsModel.errorText(answer.data, "Could not read the MIDI file");
+      status.show(MaterialsModel.errorText(answer.data, "Could not read the MIDI file"), true);
       return;
     }
     fill(MaterialsModel.importToFormValues(answer.data));
-    importStatus.textContent = MaterialsModel.importNotice(answer.data);
+    status.show(MaterialsModel.importNotice(answer.data));
   });
 
   /* Sets the form, notes, meter, mode and pickup (and the role when given) from values. */
@@ -774,20 +799,17 @@ function buildMotifEditor(body) {
   let legacyKey = initial.legacyKey;
   const legacyRow = materialsElement("div", "upload-controls");
   const legacyText = materialsElement("span", "materials-hint");
-  const rewriteButton = materialsElement("button", "", "Rewrite in C");
+  const rewriteButton = materialsElement("button", "button-secondary", "Rewrite in C");
   rewriteButton.type = "button";
-  const rewriteStatus = materialsElement("span", "upload-status");
-  rewriteStatus.setAttribute("role", "status");
-  legacyRow.append(legacyText, rewriteButton, rewriteStatus);
-  el.appendChild(legacyRow);
+  legacyRow.append(legacyText, rewriteButton);
+  controlRow(legacyRow);
   function showLegacy() {
     legacyRow.hidden = !legacyKey;
     legacyText.textContent = legacyKey ? MaterialsModel.legacyNotice(legacyKey) : "";
   }
   showLegacy();
   rewriteButton.addEventListener("click", async () => {
-    rewriteStatus.classList.remove("error");
-    rewriteStatus.textContent = "";
+    status.clear();
     if (form.value !== "full") {
       legacyKey = null;
       showLegacy();
@@ -795,17 +817,15 @@ function buildMotifEditor(body) {
     }
     const request = MaterialsModel.toCRequest(body, mode.value);
     if (!request) {
-      rewriteStatus.classList.add("error");
-      rewriteStatus.textContent = "This version has no degrees to rewrite. Re-analyze it first.";
+      status.show("This version has no degrees to rewrite. Re-analyze it first.", true);
       return;
     }
     rewriteButton.disabled = true;
-    rewriteStatus.textContent = "Rewriting...";
+    status.show("Rewriting...");
     const answer = await sendMaterialsRequest(request);
     rewriteButton.disabled = false;
     if (!answer.ok) {
-      rewriteStatus.classList.add("error");
-      rewriteStatus.textContent = MaterialsModel.errorText(answer.data, "Could not rewrite the motif in C");
+      status.show(MaterialsModel.errorText(answer.data, "Could not rewrite the motif in C"), true);
       return;
     }
     notes.value = answer.data.notes_text;
@@ -839,9 +859,10 @@ function buildMotifEditor(body) {
   harmony.value = initial.harmony;
   harmony.size = 30;
   harmony.maxLength = 200;
+  harmony.classList.add("motif-form-wide");
   harmony.placeholder = "I V6@2 I@3 (optional)";
   field("Harmony", harmony, "harmony");
-  el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.HARMONY_HINT));
+  hintUnder("harmony", MaterialsModel.HARMONY_HINT);
 
   el.appendChild(materialsElement("h2", "section-title", "Segments"));
   el.appendChild(materialsElement("div", "materials-hint", MaterialsModel.SEGMENTS_HINT));
@@ -888,7 +909,7 @@ function buildMotifEditor(body) {
     });
   }
   drawFeatures();
-  const addFeature = materialsElement("button", "", "Add segment");
+  const addFeature = materialsElement("button", "button-secondary", "Add segment");
   addFeature.type = "button";
   addFeature.addEventListener("click", () => {
     featureRows.push(MaterialsModel.newFeatureRow(featureRows));
@@ -1058,17 +1079,18 @@ function buildAnalysisPanel(body, analysisError, onReanalyzed) {
   section.appendChild(materialsElement("h2", "section-title", "Analysis"));
   const statusRow = materialsElement("div", "upload-controls");
   statusRow.appendChild(materialsElement("div", "piece-list-status", info.message));
-  const again = materialsElement("button", "", "Re-analyze");
+  const again = materialsElement("button", "button-secondary", "Re-analyze");
   again.type = "button";
   again.addEventListener("click", async () => {
     again.disabled = true;
+    onReanalyzed.status.show("Re-analyzing...");
     const answer = await onReanalyzed.send();
     if (answer.ok) {
       onReanalyzed.done(answer.data.item.analysis_error);
       return;
     }
     again.disabled = false;
-    statusRow.appendChild(materialsElement("div", "upload-status error", MaterialsModel.errorText(answer.data, "Could not re-analyze")));
+    onReanalyzed.status.show(MaterialsModel.errorText(answer.data, "Could not re-analyze"), true);
   });
   statusRow.appendChild(again);
   section.appendChild(statusRow);
@@ -1130,7 +1152,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
     }
     renderMaterialsDetail(type, id);
   });
-  const del = materialsElement("button", "", "Delete");
+  const del = materialsElement("button", "button-danger", "Delete");
   del.type = "button";
   del.addEventListener("click", async () => {
     if (!window.confirm(`Delete ${info.singular} "${item.name}" and all its versions?`)) {

@@ -409,6 +409,24 @@ check(M.errorField("Segment 1: the label is 1 to 8 characters.") === "features",
 check(M.motifFormProblems({ ...editorValues(), features: [{ label: "", first: 1, last: 1 }] }).some((p) => /^Segment 1:/.test(p.message)), "segment problems are named Segment");
 check(/head and tail/.test(M.SEGMENTS_HINT) && /Liquidation and motive-forms/.test(M.SEGMENTS_HINT), "the segments hint names the use");
 
+/* The status area of a motif tab: sections write to it, an empty text clears it, no element is a no-op. */
+const statusEl = { textContent: "", classList: new Set() };
+statusEl.classList.add = Set.prototype.add;
+statusEl.classList.remove = (name) => statusEl.classList.delete(name);
+const tabStatus = M.motifTabStatus(statusEl);
+tabStatus.show("Saving...");
+check(statusEl.textContent === "Saving..." && !statusEl.classList.has("error"), "tab status shows progress without the error style");
+tabStatus.show("Could not save the motif", true);
+check(statusEl.textContent === "Could not save the motif" && statusEl.classList.has("error"), "tab status shows an error with the error style");
+tabStatus.show("Saved");
+check(statusEl.textContent === "Saved" && !statusEl.classList.has("error"), "the next message replaces the error style");
+tabStatus.show("Could not save the motif", true);
+tabStatus.clear();
+check(statusEl.textContent === "" && !statusEl.classList.has("error"), "clear empties the tab status and drops the error style");
+tabStatus.show("", true);
+check(!statusEl.classList.has("error"), "an empty error message leaves no error style");
+check(M.motifTabStatus(null).show("x", true) === undefined, "tab status without an element does nothing");
+
 if (failures > 0) {
   process.exit(1);
 }

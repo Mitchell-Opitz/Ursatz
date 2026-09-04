@@ -485,6 +485,120 @@ body {
   display: none;
 }
 
+/* The motif detail uses the page width: no 480px or 900px caps on its sections, content up to 1200px (R-191). */
+.motif-detail {
+  max-width: 1200px;
+}
+
+.motif-detail .panel,
+.motif-detail .materials-editor,
+.motif-detail .materials-analysis {
+  max-width: none;
+}
+
+.motif-detail .materials-score-mount {
+  width: 100%;
+}
+
+/* One spacing scale for the Motif and Variants tabs: 0.5rem inside rows, 1rem between fields, 1.5rem between panels.
+ * The panels share one border, radius and padding. */
+.motif-detail {
+  --space-row: 0.5rem;
+  --space-field: 1rem;
+  --space-panel: 1.5rem;
+}
+
+.motif-detail .panel {
+  margin: 0 0 var(--space-panel);
+  padding: var(--space-field);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.motif-detail .section-title {
+  margin: 0 0 var(--space-row);
+}
+
+.motif-detail .upload-controls,
+.motif-detail .variant-meta,
+.motif-detail .variant-actions {
+  gap: var(--space-row);
+  margin-top: var(--space-row);
+}
+
+.motif-detail .motif-form-grid {
+  gap: var(--space-field);
+}
+
+.motif-detail .materials-hint {
+  margin: var(--space-row) 0 0;
+}
+
+.motif-detail .variant-candidate,
+.motif-detail .variant-node {
+  padding-top: var(--space-row);
+  padding-bottom: var(--space-row);
+  margin-bottom: 0;
+}
+
+.motif-detail .variant-actions {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.motif-detail .button-row {
+  justify-content: flex-end;
+  margin-top: var(--space-field);
+}
+
+/* The status area at the top of each motif tab: saves, errors and progress. */
+.motif-tab-status {
+  min-height: 1.25rem;
+  margin: 0 0 var(--space-field, 1rem);
+  color: var(--text-dim);
+}
+
+.motif-tab-status.error {
+  color: #f87171;
+}
+
+.motif-tab-status:empty {
+  display: none;
+}
+
+/* Buttons: one primary per panel, the rest secondary, destructive ones in the danger colour. */
+button.button-primary,
+button.button-secondary,
+button.button-danger {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+button.button-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+button.button-danger {
+  border-color: #f87171;
+  color: #f87171;
+}
+
+button.button-primary:disabled,
+button.button-secondary:disabled,
+button.button-danger:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .claim-list {
   list-style: none;
   margin: 0;
@@ -814,6 +928,14 @@ body {
 .ws-icon-btn[aria-pressed="true"] {
   color: var(--accent);
   border-color: var(--accent);
+}
+
+/* The compact workspace has no right-hand toolbar section: its zoom controls sit at the end of the toolbar. */
+.ws-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
 }
 
 .ws-zoom-label {
@@ -1970,6 +2092,56 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 8px;
+}
+
+/* The motif fields: labels in one 10rem column, right-aligned, controls and their hints and errors in the other.
+ * One column under 700px. */
+.motif-form-grid {
+  display: grid;
+  grid-template-columns: 10rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.motif-form-label {
+  text-align: right;
+  color: var(--text-dim);
+  padding-top: 0.4rem;
+}
+
+.motif-form-control {
+  min-width: 0;
+}
+
+.motif-form-control .materials-hint {
+  margin: 0.5rem 0 0;
+}
+
+.motif-form-full {
+  grid-column: 2;
+  margin-top: 0;
+}
+
+.motif-form-grid .motif-form-wide {
+  width: 100%;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+@media (max-width: 700px) {
+  .motif-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  .motif-form-label {
+    text-align: left;
+    padding-top: 0;
+  }
+
+  .motif-form-full {
+    grid-column: 1;
+  }
 }
 
 .materials-notes {

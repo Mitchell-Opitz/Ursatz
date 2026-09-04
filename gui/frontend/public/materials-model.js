@@ -363,6 +363,24 @@
     }
   }
 
+  /* The one status area of a motif tab (R-191): el is the `motif-tab-status` element. show(text, isError) writes a
+   * message (an empty text clears it); clear() empties it. Sections write to it instead of keeping status lines of
+   * their own. Without el the writer does nothing. */
+  function motifTabStatus(el) {
+    function show(text, isError) {
+      if (!el) {
+        return;
+      }
+      el.textContent = text || "";
+      if (isError && text) {
+        el.classList.add("error");
+      } else {
+        el.classList.remove("error");
+      }
+    }
+    return { show, clear: () => show("", false) };
+  }
+
   const COMPOSER_MISSING_TEXT =
     "The Composer is not available: motifs save without analysis, notation or variants. Rebuild the GUI (README, Building).";
 
@@ -883,6 +901,7 @@
     motifSaveDecision,
     readMotifTab,
     writeMotifTab,
+    motifTabStatus,
     COMPOSER_MISSING_TEXT,
     composerAvailable,
     NOTE_HINT,

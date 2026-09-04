@@ -86,6 +86,23 @@ use is behind the motif's current version). Other holds Versions (open one to
 read it), Derived from (the motif's old Uses section: the motifs it was
 derived from, with Add and Update) and Compare.
 
+The Motif and Variants tabs share one page layout (R-191). The tabs sit in a
+`motif-detail` wrapper up to 1200px wide, with no 480px cap on the sections,
+so the score uses the full width; the score's zoom controls stay, and the
+compact scores in the Variants tab show zoom out, the zoom label and zoom in.
+The motif fields are a two-column grid (`motif-form-grid`): labels right-aligned
+in a 10rem column, controls in the other, the note list and Harmony at full
+width, hints and field errors under their control; it is one column under
+700px. Spacing is 0.5rem inside rows, 1rem between fields and 1.5rem between
+panels; panels share one border, radius and padding. Each panel has one primary
+button (`button-primary`: Save on the Motif tab, Generate on the Variants tab),
+the others are `button-secondary`, and Delete and Reject are `button-danger`.
+Button rows are right-aligned. Each tab has one status area at its top
+(`motif-tab-status`, `role="status"`) for saves, errors and progress; the
+sections write to it through `MaterialsModel.motifTabStatus`. The order is
+score, editor, analysis, Save row on the Motif tab, and generate panel,
+candidates, saved variants on the Variants tab.
+
 New on the Motifs view opens the New Motif page: name, project, a Subjects
 picker (the chosen subjects are linked after the first Save; a link that fails
 shows on the detail page and the motif stays saved), the same editor, Save

@@ -14,8 +14,8 @@
  *     actions: [{label, onClick}],  extra toolbar buttons
  *     headerExtra,               an element shown under the toolbar
  *     autoplay,                  play as soon as the playback data has loaded
- *     compact,                   the title, Play/Stop, tempo and the score only; no
- *                                layers, inspector, notation panel or Data view
+ *     compact,                   the title, Play/Stop, tempo, the zoom controls and the
+ *                                score only; no layers, inspector, notation panel or Data view
  *     onBack,                    the Library link
  *   });
  *   ws.on("rendered", (layout) => ...);
@@ -58,7 +58,7 @@
   function layoutFor(opts) {
     const options = opts || {};
     if (options.compact) {
-      return { back: false, toolbar: ["left", "transport"], transport: ["play", "stop", "tempo"], body: ["main"] };
+      return { back: false, toolbar: ["left", "transport"], zoom: true, transport: ["play", "stop", "tempo"], body: ["main"] };
     }
     const transport = ["play", "stop"];
     if (options.loop) {
@@ -70,6 +70,7 @@
     transport.push("readout", "tempo", "volume", "sound");
     return {
       back: true,
+      zoom: false,
       toolbar: ["left", "transport", "right"],
       transport,
       body: ["rail", "main", "data", "inspector"],
@@ -223,6 +224,12 @@
       right.appendChild(button);
     }
     toolbar.append(...layoutParts.toolbar.map((name) => ({ left, transport, right })[name]));
+    /* The compact toolbar has no right-hand section, so the zoom controls get a place of their own. */
+    if (layoutParts.zoom) {
+      const zoomBox = el("div", "ws-zoom-controls");
+      zoomBox.append(zoomOutButton, zoomLabelButton, zoomInButton);
+      toolbar.appendChild(zoomBox);
+    }
 
     const status = el("div", "ws-status");
     status.setAttribute("role", "status");
