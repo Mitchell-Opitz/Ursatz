@@ -181,8 +181,15 @@
   }
 
   /* Table rows {id, name, project, version, updated} newest first. */
+  /* A variant belongs to its motif (R-187): the item answers carry variant_of, the source item, and variants stay out
+   * of every list and picker. */
+  function isVariantItem(item) {
+    return Boolean(item && item.variant_of);
+  }
+
   function itemRows(items, projects) {
     return (Array.isArray(items) ? items : [])
+      .filter((item) => !isVariantItem(item))
       .map((item) => ({
         id: item.id,
         name: item.name,
@@ -291,7 +298,7 @@
   }
 
   /* Items to pick from, by name (case-insensitive part), type and project
-   * ("all" or empty for any); excluded ids are left out. */
+   * ("all" or empty for any); excluded ids and variants are left out. */
   function pickerItems(items, projects, filter) {
     const f = filter || {};
     const query = String(f.query || "").trim().toLowerCase();
@@ -300,6 +307,7 @@
       .filter(
         (item) =>
           !skip.has(item.id) &&
+          !isVariantItem(item) &&
           (!f.type || f.type === "all" || item.type === f.type) &&
           (!f.project || f.project === ALL_PROJECTS || item.project_id === f.project) &&
           (query === "" || String(item.name).toLowerCase().includes(query)),
@@ -893,6 +901,7 @@
     buildUpdateUseRequest,
     buildAllItemsRequest,
     pickerItems,
+    isVariantItem,
     bodyWithUse,
     buildAddVersionRequest,
     buildReanalyzeRequest,
