@@ -1155,7 +1155,8 @@ async function renderMaterialsDetail(type, id, analysisError) {
   const del = materialsElement("button", "button-danger", "Delete");
   del.type = "button";
   del.addEventListener("click", async () => {
-    if (!window.confirm(`Delete ${info.singular} "${item.name}" and all its versions?`)) {
+    const variants = type === "motif" && allItemsAnswer.ok ? MaterialsModel.variantCount(allItemsAnswer.data.items, id) : 0;
+    if (!window.confirm(MaterialsModel.deleteConfirmText(info.singular, item.name, variants))) {
       return;
     }
     let result = await sendMaterialsRequest(MaterialsModel.buildDeleteItemRequest(id, false));

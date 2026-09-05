@@ -210,11 +210,19 @@ UrsatzGuiMaterialResult ursatz_gui_material_derived_motifs(cJSON **out_motifs);
 UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const char *source_id, cJSON **out_item);
 
 /*
- * Deletes the item directory with every version. NOT_FOUND if absent;
- * REFERENCED while other items use it, unless force is true. A forced delete
- * leaves the users' copies untouched; their uses then report missing.
+ * Deletes the item directory with every version, and with it the variants of the item, recursively (R-187: a variant
+ * belongs to its motif). NOT_FOUND if absent; REFERENCED while items outside that set use any member of it, unless
+ * force is true. A forced delete leaves the users' copies untouched; their uses then report missing. Nothing is
+ * deleted on REFERENCED.
  */
 UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool force);
+
+/*
+ * The items that keep ursatz_gui_material_item_delete from deleting id: those outside id and its variants that use any
+ * of them, *out_users a caller-owned array of {id, name, type, project_id, version} (each item once). Empty when
+ * the delete would go through.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_delete_blockers(const char *id, cJSON **out_users);
 
 /* --- version files ------------------------------------------------------- */
 

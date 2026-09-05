@@ -187,6 +187,27 @@
     return Boolean(item && item.variant_of);
   }
 
+  /* How many variants a motif has, counting variants of variants: the items whose variant_of chain reaches id. */
+  function variantCount(items, id) {
+    const list = Array.isArray(items) ? items : [];
+    const reached = new Set();
+    let frontier = [id];
+    while (frontier.length > 0) {
+      const next = list.filter((item) => frontier.includes(item.variant_of) && item.id !== id && !reached.has(item.id));
+      next.forEach((item) => reached.add(item.id));
+      frontier = next.map((item) => item.id);
+    }
+    return reached.size;
+  }
+
+  /* The confirm before deleting an item: a motif with variants takes them with it (R-187). */
+  function deleteConfirmText(singular, name, variants) {
+    if (variants > 0) {
+      return `Delete "${name}" and its ${variants} variant${variants === 1 ? "" : "s"}?`;
+    }
+    return `Delete ${singular} "${name}" and all its versions?`;
+  }
+
   function itemRows(items, projects) {
     return (Array.isArray(items) ? items : [])
       .filter((item) => !isVariantItem(item))
@@ -902,6 +923,8 @@
     buildAllItemsRequest,
     pickerItems,
     isVariantItem,
+    variantCount,
+    deleteConfirmText,
     bodyWithUse,
     buildAddVersionRequest,
     buildReanalyzeRequest,

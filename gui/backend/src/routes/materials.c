@@ -1434,7 +1434,7 @@ static int handle_delete_item(struct mg_connection *conn, const char *id) {
   if (result == URSATZ_GUI_MATERIAL_ERR_REFERENCED) {
     cJSON *used_by = NULL;
     cJSON *object = cJSON_CreateObject();
-    if (ursatz_gui_material_used_by(id, &used_by) != URSATZ_GUI_MATERIAL_OK || !object ||
+    if (ursatz_gui_material_delete_blockers(id, &used_by) != URSATZ_GUI_MATERIAL_OK || !object ||
         !cJSON_AddBoolToObject(object, "ok", 0) || !cJSON_AddStringToObject(object, "error", material_message(result))) {
       cJSON_Delete(used_by);
       cJSON_Delete(object);
