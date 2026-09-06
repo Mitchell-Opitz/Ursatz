@@ -3,7 +3,7 @@
 	"schema_version":	1,
 	"style_name":	"reference",
 	"training_corpus":	"reference",
-	"model_version":	"0.1.0",
+	"model_version":	"0.2.0",
 	"pieces":	5,
 	"statistics":	[{
 			"dimension":	"harmony",
@@ -5729,6 +5729,4452 @@
 			"label":	"major",
 			"count":	5,
 			"total":	5
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"#4 2 7 5 6 2 7 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"#4 4 3 1 3 5 4 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"#4 5 #4 5 #4 5 #4 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"#4 5 #4 5 4 5 6 b7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"#4 5 4 5 6 b7 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"#4 5 6 7 b2 2 #4 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"#4 5 7 1 2 1 7 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"#4 6 b7 1 2 3 #4 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"#4 b3 2 1 b7 5 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"#4 b3 2 1 b7 5 2 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 #4 5 b6 6 b7 7 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 2 3 4 5 6 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 3 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 3 2 1 2 1 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 3 2 1 2 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 4 3 4 5 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 5 1 3 5 3 1",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 5 1 b3 5 b3 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 5 3 2 3 4 b6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 5 3 5 1 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 5 3 5 4 2 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 5 3 5 4 2 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 6 4 5 6 7 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 b3 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 b3 2 1 b7 6 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 1 b7 6 5 #4 6 b7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 2 1 7 6 5 #4 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 2 3 1 6 7 1 b2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 2 3 2 1 2 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 2 3 6 4 1 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 2 b3 #4 5 7 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 3 1 5 1 2 1 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 3 3 7 1 b6 6 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 3 5 1 3 5 1 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 3 5 7 1 2 1 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 4 5 6 7 1 1 b3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 5 1 3 5 3 1 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 5 3 3 3 1 5 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 5 3 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 5 3 5 1 2 1 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 5 3 5 4 2 4 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 5 3 5 4 2 7 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 5 b3 7 4 2 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 5 b3 7 4 2 7 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 6 #4 6 5 5 2 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 6 1 7 1 5 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 6 5 1 5 4 5 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 6 7 1 5 #4 3 #4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 7 1 5 4 3 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 7 1 7 2 1 7 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 7 2 1 3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 7 2 1 3 2 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 7 6 5 #4 2 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 7 6 5 #4 2 7 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 7 6 5 #4 5 6 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 7 6 5 3 2 3 #4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 b3 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 b7 6 5 #4 5 6 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 b7 6 5 #4 6 b7 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"1 b7 b6 5 4 b2 4 b3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 #4 6 5 #4 b3 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 1 1 5 1 3 3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 1 2 1 2 1 2 1",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 1 2 1 2 1 b7 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 1 7 1 7 6 5 #4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 1 7 1 7 6 b6 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 1 7 6 5 6 7 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 1 7 6 6 5 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 2 5 4 5 2 b2 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 3 #4 5 6 #4 b3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 3 #4 b6 6 3 #4 b6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 3 2 1 7 1 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 3 2 2 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 3 4 2 1 7 6 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 3 4 3 2 3 5 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 3 4 5 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 3 4 5 6 5 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 4 2 7 5 3 5 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 4 2 7 6 5 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 5 #4 4 3 1 3 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 5 1 2 3 4 5 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 5 4 5 2 b2 3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 7 2 7 5 3 1 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 7 5 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 b2 3 2 5 4 3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 b3 #4 5 7 1 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 b3 3 4 3 2 b2 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 b7 4 b3 2 1 b7 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"2 b7 4 b3 2 1 b7 b6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 #4 5 #4 3 2 1 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 1 1 5 3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 1 1 5 3 2 3 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 1 2 3 1 2 5 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 1 2 5 6 7 5 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 1 3 2 5 1 2 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 1 3 5 4 2 4 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 1 5 1 2 1 7 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 1 5 5 5 3 2 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 2 1 2 1 7 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 2 1 2 2 1 b2 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 2 1 7 1 2 3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 2 1 7 1 2 5 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 2 3 #4 5 6 7 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 2 3 4 3 2 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 2 3 4 3 2 1 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 2 3 5 7 1 1 b7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 3 5 6 7 1 2 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 3 7 1 b6 6 4 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 4 3 2 5 #4 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 4 5 1 1 6 4 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 4 5 3 1 3 1 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 4 5 6 7 1 7 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 5 1 3 5 1 3 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 5 1 7 1 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 5 3 1 6 4 6 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 5 4 3 4 5 3 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 5 6 7 1 2 3 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 5 7 1 2 1 6 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 5 7 5 3 1 3 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"3 6 4 1 4 3 2 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 1 7 6 7 5 5 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 2 4 2 7 2 b2 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 2 4 2 7 5 3 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 2 4 6 5 3 1 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 2 7 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 2 7 2 1 1 5 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 2 7 2 1 4 5 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 2 7 2 3 4 5 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 2 7 2 b3 1 2 b3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 2 b6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 3 2 1 2 3 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 3 2 1 7 1 2 3",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 3 2 b2 2 3 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 3 2 b2 2 5 1 #4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 3 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 5 2 5 5 3 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 5 2 5 5 3 5 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 5 3 5 4 5 2 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 5 4 3 2 3 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 5 4 5 5 3 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 5 6 7 1 1 b3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 5 6 7 1 1 b7 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 5 6 7 1 3 5 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 5 6 7 1 7 1 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 5 6 b7 1 2 1 b7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 6 1 6 4 2 4 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 b3 2 1 b7 2 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"4 b3 b3 2 2 1 1 b7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 #4 3 2 7 6 6 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 #4 6 5 1 7 6 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 1 2 3 4 5 1 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 1 3 5 5 4 3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 1 7 1 6 1 7 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 3 1 1 2 3 4 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 3 1 1 5 3 5 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 3 1 1 5 3 5 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 3 1 2 3 2 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 3 1 3 1 5 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 3 1 3 4 2 7 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 3 2 3 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 3 5 3 1 1 5 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 3 5 3 1 3 3 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 3 5 3 1 6 4 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 3 5 7 5 3 1 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 4 3 2 1 2 3 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 4 3 2 1 7 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 4 3 2 2 1 1 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 4 3 4 3 4 3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 4 3 4 5 3 1 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 4 6 5 b7 1 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 4 b3 2 1 b6 b3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 5 4 b3 2 1 b6 b3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 6 7 1 2 3 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 6 7 5 1 6 7 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 6 7 b2 2 #4 6 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 7 1 2 1 6 5 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 b2 b3 b7 b3 b3 1 b3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 b3 1 b6 b7 1 b7 b6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"5 b6 6 b6 7 6 5 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 #4 b3 2 1 b7 5 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 1 7 2 1 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 2 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 2 7 5 6 2 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 3 #4 b6 6 7 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 4 1 4 3 2 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 4 5 6 7 1 1 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 4 6 1 6 4 2 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 4 6 5 4 3 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 5 4 3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 5 4 3 2 1 7 6",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 5 4 3 2 3 4 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 5 4 3 2 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 5 4 3 2 4 2 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 5 4 3 2 b2 3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 5 4 3 3 4 5 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 5 4 3 b2 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 5 4 3 b2 2 3 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 5 b6 6 b6 7 6 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 6 7 1 2 3 #4 b6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 7 1 1 1 4 3 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 7 1 2 3 #4 5 #4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 7 1 2 3 #4 b6 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 7 1 2 3 4 5 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 7 1 b2 2 3 4 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"6 7 5 5 6 7 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 1 2 1 6 5 1 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 1 2 1 7 1 b3 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 1 2 2 5 4 5 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 1 2 3 1 3 2 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 1 2 3 4 5 6 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 1 2 5 6 7 1 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 1 7 1 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 1 b2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 1 b2 2 b3 3 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 2 3 4 5 3 1 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 2 7 5 3 1 1 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 2 b2 2 b3 3 4 #4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 4 2 7 1 5 b3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 4 2 7 6 5 4 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 4 5 3 5 4 5 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 5 6 2 7 5 6 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 6 5 #4 5 3 1 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 6 5 #4 5 3 5 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 6 5 4 3 1 3 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 6 6 7 1 2 3 #4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 6 b6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 6 b6 6 5 4 3 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"7 b6 5 4 b3 1 b7 b6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b2 2 3 4 3 2 b2 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b2 2 3 4 6 1 7 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b2 2 5 1 #4 5 b6 6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b2 b3 b7 b3 b3 1 b3 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b3 1 2 b3 4 5 6 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b3 1 2 b7 4 b3 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b3 1 b3 1 2 b7 4 b3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b3 1 b7 b6 5 4 b2 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b3 2 1 7 1 b3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b3 2 1 b7 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b3 2 1 b7 2 1 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b3 2 1 b7 6 4 1 b7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b3 2 4 b3 b3 2 1 7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b3 3 4 #4 5 3 5 3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b3 b3 2 1 b7 6 4 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b6 1 4 3 4 1 b6 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b6 6 4 2 1 1 3 2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b6 6 b7 7 1 b2 2 b3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b7 1 2 1 b7 6 5 b6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b7 1 b7 1 1 6 4 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b7 5 2 1 b7 6 5 4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b7 5 2 5 b7 2 b7 5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-degrees",
+			"label":	"b7 6 5 4 b3 b3 2 1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +1 +1 +1 +1 +1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +1 +1 +1 +1 +1 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +1 +1 +1 -3 +3 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +1 +1 -1 -2 -1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +1 -1 +3 -2 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +2 +1 -1 -2 -1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +2 +1 -8 +3 -1 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +2 +2 +1 +2 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +2 +2 -4 +4 -2 +5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +2 -12 +5 -2 +2 +7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +2 -2 +9 -2 +5 -5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +2 -2 -1 +1 +3 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +2 -3 +8 -32 +8 -5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +2 -7 +2 +2 +1 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +2 -7 0 +9 -4 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +3 +1 +4 +1 +2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +4 +1 +2 -2 -1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 +5 -7 -6 +1 +1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 -1 +1 +7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 -1 +1 -1 +1 -1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 -1 +1 -2 +2 +2 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 -1 -2 +5 -1 -1 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 -2 +2 +2 +1 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+1 -4 -3 -2 0 +4 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+12 -5 +5 +3 +4 -4 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+12 -5 -3 -2 +2 +1 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+12 -9 +9",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+15 +1 +2 +2 +2 +2 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+15 +4 -4 +9 -16 +16 -4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+15 -3 -3 -4 -3 +15 +4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+15 -3 -4 -3 -4 +12 -5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+15 -3 -4 -3 -4 +4 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +1 +1 +1 +2 +1 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +1 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +1 +2 +2 +1 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +1 +2 +2 +2 +1 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +1 +2 +2 +2 +2 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +1 +2 +2 -2 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +1 +3 +1 +4 +1 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +1 -1 -2 +2 -9 +4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +1 -1 -2 -2 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +1 -12 0 +5 -1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +1 -3 -2 -1 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 +1 +2 +2 +1 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 +1 +2 +2 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 +1 +2 -27 -3 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 +2 +1 +24 +3 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 +2 +1 +28 +3 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 +2 +1 +4 +3 -8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 +2 +1 -1 +1 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 +2 +1 -12 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 +2 +1 -5 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 -19 +8 -5 +5 +11",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 -2 -2 +2 -2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 -2 -2 -1 -2 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 -4 +5 -3 +2 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 +2 -4 -3 +2 +1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 -2 +2 +12 -3 -4 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 -2 +2 +24 -3 -4 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 -2 -1 -2 +2 +1 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 -2 -1 -2 -2 -1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 -2 -2 -1 +1 -24",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 -2 0 +5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 -3 +3 -2 +2 -5 +5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 -4 0 +2 +2 +1 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 -5 +5 +12 -15 +15 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 -5 +5 +24 -15 +15 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+2 -5 +5 +24 -3 -4 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+20 +4 -2 -2 -1 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+20 +7 -2 -1 -2 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+24 +3 -1 -2 -2 -1 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+28 +3 -2 -1 -3 -1 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+3 +2 +1 +2 -3 +8 -32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+3 +2 +2 +1 +2 +2 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+3 +4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+3 -1 +1 +1 +1 +1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+3 -1 +3 -2 -24",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+3 -2 -1 +1 +2 -3 -4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+3 -3 -3 +10 -2 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+3 -7 +4 +3 +5 +4 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+3 -7 -1 +1 -24",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+3 -8 +1 +2 -2 +9 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+33 +7 -2 -2 -1 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+36 -5 +1 -4 +1 -4 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+4 +3 -3 +8 -15 +15 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+4 +3 -8 +1 +2 -2 +9",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+4 +5 -1 +1 -5 -4 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+4 -9 +5 -8 +3 -7 +4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+5 +4 +3 0 -2 -1 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+5 -1 -1 -1 -4 +4 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+5 -2 +2 +7 -1 +3 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+5 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+5 -3 -4 +2 +5 -12",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+5 -7 +2 +2 +1 +2 -7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+6 -3 -3 +1 -5 -4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+6 -3 -3 +10 -2 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+7 -3 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+7 -3 +3 +10 -3 +3 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+7 -3 +3 +10 -3 -3 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+7 -3 +3 +17 +2 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+8 -3 -4 +2 +2 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+8 -3 -4 +2 +5 -3 -4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+8 -5 +5 +11 -2 +3 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+8 -5 +5 +26 -2 -1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+9 +2 +1 +2 +2 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+9 -2 +5 -5 -2 +2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"+9 -9 -1 +1 +7 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 +1 +7 -2 -1 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 +1 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 +1 -1 +3 -2 -1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 +3 -2 +4 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 +3 -2 +4 -2 +3 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 +3 -2 +5 -1 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 +3 -2 +5 -2 -1 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 +3 -2 0 -1 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -1 -4 +4 +3 -2 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -1 +1 +2 +1 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -1 +1 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -1 +1 +5 -7 -6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -2 +2 +2 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -2 +21 -2 -12 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -2 +21 -2 -22 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -2 +4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -2 +4 -2 +2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -2 -1 +1 +2 +2",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -2 -1 +1 +2 -12",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -2 -1 +20 +7 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -2 -1 +8 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -2 -1 +8 -3 -4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-1 -2 -2 -2 -12 -1 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-12 +2 +1 +2 +2 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-12 +3 +2 +2 +1 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-12 +5 -2 +2 +7 -1 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-12 +7 -3 +3 +10 -3 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-12 +7 -3 +3 +10 -3 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-12 +7 -3 +3 +17 +2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-12 -1 -2 -2 -1 +20 +7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-12 -2 -1 -2 -1 +15 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-12 -2 -2 -1 -2 +20 +7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-12 -5 +5 +4 +3 -3 -4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-15 +15 -3 -3 -4 -3 +15",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-15 +15 -3 -4 -3 -4 +12",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-15 +15 -3 -4 -3 -4 +4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-15 -2 -2 -1 -2 +20 +4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-18 +2 -3 +3 -2 +2 -5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-19 +2 +2 +2 +1 +24 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-19 +8 -5 +5 +11 -2 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 +1 +1 -1 +3 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 +2 +1 -1 -2 -2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 +2 +1 -1 -2 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 +2 -2 +2 -2 +2 -2",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 +2 -2 +2 -2 -2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 +2 -9 +4 +1 -24 +10",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 +4 -2 +3 +2 +2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 +1 +2 -3 -4 -12",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 +1 -1 +1 -1 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 +1 -1 -2 -1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 +1 -1 -2 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 +1 -2 -2 -1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 -2 -1 +15 +1 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 -2 -1 -23 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 -2 -2 +2 +2 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 -2 -2 +2 +2 -19",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 -2 -2 +4 -2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 -2 -2 -1 +1 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 -2 0 -2 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -1 -2 0 -2 0 -5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -12 +2 +1 +2 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 +2 -2 -1 +3 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 +2 0 -2 +1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 +1 +2 +2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 +1 +2 -7 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 +1 -3 +3 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 +1 -3 -4 -12",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 +10 -2 -1 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 +12 -23 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 -2 +2 +1 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 -2 +20 +4 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 -2 +20 +7 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 -2 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 -2 +3 -3 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 -2 -1 +3 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 -2 -2 -1 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 -3 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -1 -3 +1 +2 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -2 -2 -1 -4 +4 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 -22 +2 +1 +2 +2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 0 -1 0 -2 0 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-2 0 -5 +5 +4 0 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-23 +2 +2 +2 +1 +28 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-23 +2 +2 +2 +1 -1 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-27 -3 -1 -2 -2 +33 +7",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 +15 +4 -4 +9 -16 +16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 +2 +1 -5 -1 -2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 +2 -4 +7 -2 -1 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 +3 +4 -2 -3 -4 0",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 +3 -3 +2 -4 +7 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 +3 -3 +8 -32 +36 -5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 +3 -3 -3 +3 -1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 +3 -3 -4 -12 +7 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 +6",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 +8 -32 +8 -5 +5 +26",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -1 -2 -2 +33 +7 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -1 -2 -2 -15 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -1 -2 -2 -3 -5 +5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -2 +2 -4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -3 +3 +2 +1 +2 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -3 +3 -11 +9 +2 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -3 +3 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -3 +3 -2 -12 -5 +5",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -3 +3 -2 -19 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -4 +2 +2 -2 -2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -4 +4 +1 -3 -3 +3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -4 -12 +7 -3 +3 +10",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -4 -12 +7 -3 +3 +17",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -4 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -4 0 +2 +2 +1 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-3 -5 +5 +3 +4 -4 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-32 +36 -5 +1 -4 +1 -4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-32 +8 -5 +5 +26 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-4 +12 -5 -3 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-4 +12 -5 -3 -2 +2 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-4 +2 +2 +2 +1 -12 0",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-4 +2 +2 -4 +2 -7 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-4 +2 +5 -3 -4 +2 +5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-4 +2 -7 +2 +2 -4 +5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-4 +4 +3 -2 -3 +3 +4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-4 +4 +3 -3 +8 -15 +15",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-4 +4 -2 +5 -7 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-4 +7 -2 -1 -2 -2 +4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-4 +7 0 0 -3 -2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-5 +2 +2 +1 +2 +1 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-5 +5 +4 +3 -3 -4 +4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-5 +9 0 0 -4 +7 0",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-5 -1 -2 +2 -4 0 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-5 -4 +8 +6 -3 -3",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-5 -4 +8 +6 -3 -3 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-6 +1 +1 +1 +1 +1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-6 +2 -5 +5 +12 -15 +15",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-7 +2 +2 +1 +2 -7 0",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-7 -1 +1 +9 -9 -1 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"-8 +1 +2 -2 +9 -2 +5",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"0 +2 +2 +1 +2 +2 +2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"0 +4 -2 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"0 +4 -2 -2 +2 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"0 +4 -2 -2 +2 0 -2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"0 +5 -1 +1 +2 -2 -1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"0 +9 -4 +2 +2 +2 +1",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-intervals",
+			"label":	"0 -5 +5 +4 +3 -3 -4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"#4 6:appoggiatura 5",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"#4 b6:appoggiatura -",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"#4 b6:appoggiatura 5",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"#4 b6:neighbor 5",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"#4 b6:passing -",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"#4 b6:passing 6",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 1:appoggiatura 7",
+			"count":	3,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 2:neighbor 1",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 2:passing 3",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 3:appoggiatura 2",
+			"count":	9,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 3:appoggiatura 4",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 3:suspension 2",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 4:appoggiatura 3",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 4:passing 5",
+			"count":	5,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 5:appoggiatura 4",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 5:passing 4",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- 6:passing 7",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- b3:anticipation 2",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- b3:appoggiatura 2",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- b3:passing 2",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- b3:passing 3",
+			"count":	5,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- b6:appoggiatura 6",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- b6:escape-tone 1",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- b6:passing 6",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- b7:appoggiatura 6",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"- b7:appoggiatura b6",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 #4:appoggiatura -",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 1:appoggiatura -",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 2:neighbor -",
+			"count":	3,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 2:neighbor 1",
+			"count":	5,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 2:passing 3",
+			"count":	22,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 2:passing b3",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 3:appoggiatura -",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 7:appoggiatura 6",
+			"count":	3,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 7:escape-tone -",
+			"count":	5,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 7:escape-tone 2",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 7:neighbor -",
+			"count":	14,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 7:neighbor 1",
+			"count":	5,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 7:passing -",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 7:passing 6",
+			"count":	12,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 b2:passing -",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 b2:passing 2",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 b3:appoggiatura -",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 b7:passing -",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 b7:passing 6",
+			"count":	6,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"1 b7:passing b6",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 1:neighbor -",
+			"count":	3,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 1:neighbor 2",
+			"count":	8,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 1:passing -",
+			"count":	7,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 1:passing 7",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 1:passing b7",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 3:escape-tone -",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 3:escape-tone 4",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 3:passing -",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 3:passing 4",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 4:appoggiatura -",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 4:appoggiatura b3",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 b2:escape-tone 3",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 b2:neighbor 2",
+			"count":	14,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"2 b3:passing -",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"3 #4:passing -",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"3 #4:passing 5",
+			"count":	11,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"3 #4:passing b6",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"3 2:passing -",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"3 2:passing 1",
+			"count":	6,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"3 3:anticipation 2",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"3 4:neighbor 3",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"3 4:passing -",
+			"count":	5,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"3 4:passing 5",
+			"count":	8,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"3 b2:appoggiatura -",
+			"count":	5,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 #4:passing -",
+			"count":	5,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 3:escape-tone 5",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 3:neighbor 4",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 3:passing -",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 3:passing 2",
+			"count":	12,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 4:appoggiatura b3",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 5:escape-tone -",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 5:neighbor 4",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 5:passing 6",
+			"count":	5,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 6:appoggiatura -",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"4 b3:passing 2",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 #4:escape-tone -",
+			"count":	3,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 #4:escape-tone 6",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 #4:neighbor b6",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 #4:passing 3",
+			"count":	8,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 #4:passing b6",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 1:appoggiatura 2",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 4:escape-tone b6",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 4:neighbor 3",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 4:passing -",
+			"count":	3,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 4:passing 3",
+			"count":	9,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 4:passing b3",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 6:passing -",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 6:passing 7",
+			"count":	15,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 6:passing b7",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 b2:appoggiatura b3",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"5 b6:passing 6",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"6 5:passing -",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"6 5:passing 4",
+			"count":	11,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"6 7:passing -",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"6 7:passing 1",
+			"count":	15,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"6 b6:escape-tone 7",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"6 b6:neighbor 6",
+			"count":	3,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"6 b7:escape-tone -",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"6 b7:neighbor 6",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"6 b7:passing 1",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"6 b7:passing 7",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"7 1:passing 2",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"7 2:appoggiatura 1",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"7 6:passing -",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"7 6:passing 5",
+			"count":	14,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"7 b2:passing 2",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"b2 2:passing 3",
+			"count":	3,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"b3 2:passing 1",
+			"count":	5,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"b6 6:escape-tone 4",
+			"count":	1,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"b6 6:neighbor -",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"b7 1:passing -",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"b7 6:passing -",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"b7 6:passing 5",
+			"count":	2,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"b7 b6:neighbor b7",
+			"count":	8,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-nct-figure",
+			"label":	"b7 b6:passing -",
+			"count":	4,
+			"total":	468
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/16",
+			"count":	3,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/16 1/16",
+			"count":	3,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/16 1/16 1/16 1/16",
+			"count":	47,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/16 1/16 1/8 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/16 1/16 3/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/2 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/2 1/4 1/4 3/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/32 1/32 1/32 1/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/4 1/16 1/16 1/16",
+			"count":	21,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/4 1/4 1/16 1/16",
+			"count":	3,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/8 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/8 1/16 1/16 1/16",
+			"count":	5,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/8 1/8 1/8 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/8 1/8 3/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/8 1/8 3/8 1/16",
+			"count":	3,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 1/8 3/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 3/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 3/16 1/16 1/16 1/16",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 3/16 1/16 1/4 1/16",
+			"count":	4,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 3/16 1/16 1/8 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 3/16 1/32 1/32 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 3/8 1/16 1/16 1/16",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/16 1/16 5/16 1/16 1/16 1/16",
+			"count":	4,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/8 1/16 1/16 1/16 1/16 1/16",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/8 1/16 1/16 1/16 1/16 1/8",
+			"count":	3,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/8 1/16 1/16 1/8 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/8 1/4 1/8 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/8 1/8 1/4 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/8 1/8 1/8 1/64 1/64 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/8 1/8 1/8 1/8 1/16 1/16",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 1/8 1/8 1/8 1/8 1/8 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/16 1/16 3/16 1/16 1/16 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/2 1/16 1/16 1/16 1/16 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/2 1/16 1/16 1/16 1/16 1/32 11/320 11/320",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/2 1/16 1/16 1/16 1/16 1/4 1/4 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/2 1/16 1/16 1/16 1/16 3/16 1/16 1/4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/2 1/2 1/4 1/4 1/4 13/320 1/24 1/24",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/2 1/32 7/32 1/32 7/32 1/32 11/32 1/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/2 1/4 1/4 3/8 1/16 1/16 1/2 1/2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/32 1/32 1/32 1/32 1/32 1/32 1/32 1/32",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/32 11/32 1/32 1/32 1/32 1/32 1/8 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/32 7/32 1/32 11/32 1/32 1/32 1/32 1/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/32 7/32 1/32 7/32 1/32 11/32 1/32 1/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/32 7/32 1/32 7/32 1/8 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/32 7/32 1/32 7/32 47/96",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/32 7/32 1/8 1/16 1/16 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/16 1/16 1/16 1/16 1/16 1/16 1/16",
+			"count":	17,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/16 1/16 1/16 1/16 1/2 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/16 1/16 1/16 1/16 1/4 1/16 1/16",
+			"count":	6,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/16 1/16 1/16 1/16 3/16 1/16 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/16 1/16 1/16 1/16 3/8 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/16 1/16 1/16 1/16 5/16 1/16 1/16",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/16 1/16 1/16 1/2 1/32 7/32 1/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/16 1/16 1/16 1/4 1/4 1/16 1/16",
+			"count":	5,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/4 1/16 1/16 1/16 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/4 1/16 1/16 1/16 1/2",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/4 1/16 1/16 1/16 1/2 1/32 7/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/4 1/16 1/16 1/16 1/4 1/4 1/16",
+			"count":	5,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/4 1/4 59/480",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/4 3/8 1/16 1/16 1/2 1/2 1/4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/8 1/16 1/16 1/16 1/16 1/8 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 1/8 1/8 1/8 1/16 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/4 3/8 1/16 1/16 1/2 1/2 1/4 1/4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/64 1/64 1/64 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/16 1/16 1/16 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/16 1/16 1/16 1/16 1/16 1/16 1/16",
+			"count":	3,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/16 1/16 1/16 1/16 1/16 1/16 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/16 1/16 1/16 1/16 1/4 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/16 1/16 1/16 1/16 1/8 1/16 1/16",
+			"count":	4,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/16 1/16 1/16 1/16 1/8 1/4 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/16 1/16 1/16 1/16 1/8 1/8 1/8",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/16 1/16 1/8 1/8 1/16 1/16 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/16 1/16 1/8 1/8 1/8 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/2 1/16 1/16 1/16 1/16 1/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/32 1/32 1/32 1/32 1/32 1/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/64 1/64 1/8 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/8 1/16 1/16 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/8 1/16 1/16 1/16 1/16 1/8",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/8 1/8 1/2 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/8 1/8 1/4 1/4 1/4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/8 1/8 1/8 1/8 1/2 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/8 1/8 1/8 1/8 1/4 1/4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/8 1/8 1/8 1/8 1/8 1/8",
+			"count":	10,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/8 1/8 3/16 1/16 1/4 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 1/8 1/8 5/16 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 3/16 1/16 1/4 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 3/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 3/8 1/16 1/16 1/8 1/8 1/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"1/8 1/8 5/16 1/16 1/16 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/16 1/16 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/16 1/16 1/16 1/16 1/16 1/16 1/16 1/16",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/16 1/16 1/16 1/16 1/16 1/16 1/4 1/4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/16 1/16 1/4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/16 1/16 1/4 1/16 1/16 1/16 1/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/16 1/16 1/4 1/16 1/16 1/16 1/16 3/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/16 1/16 1/4 1/16 1/16 1/16 1/16 3/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/16 1/16 1/4 1/16 1/16 1/16 1/16 5/16",
+			"count":	2,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/16 1/16 1/8 1/8 1/8 1/8 3/16 1/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/16 1/32 1/32 1/8 1/8 1/8 1/8 5/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/4 1/8 1/8 3/8 1/16 1/16 1/8 1/8",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/8 1/16 1/16 1/16 1/16 1/16 1/16 1/4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/8 1/16 1/16 1/16 1/16 1/16 1/16 3/16",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/8 1/16 1/16 1/2 1/2 1/4 1/4 1/4",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"3/8 1/16 1/16 1/8 1/8 1/32 1/32 1/32",
+			"count":	1,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"5/16 1/16 1/16 1/16 1/16 1/16 1/16 1/16",
+			"count":	4,
+			"total":	257
+		}, {
+			"dimension":	"melody",
+			"category":	"motive-rhythm",
+			"label":	"5/16 1/32 3/32 39/1024 391/1024",
+			"count":	1,
+			"total":	257
 		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
