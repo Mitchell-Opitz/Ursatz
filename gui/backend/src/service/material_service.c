@@ -816,6 +816,7 @@ static UrsatzGuiMaterialResult validate_derived(const cJSON *derived, char *erro
     static const char *const dimensions[] = {"rhythm", "intervals", "harmony", "contour", NULL};
     static const char *const functions[] = {"beginning", "continuation", "contrast", "cadential", NULL};
     static const char *const flags[] = {"approved", "rejected", "unflagged", NULL};
+    const cJSON *standalone = cJSON_GetObjectItemCaseSensitive(derived, "standalone");
     const cJSON *source_item = cJSON_GetObjectItemCaseSensitive(derived, "source_item");
     const cJSON *seed = cJSON_GetObjectItemCaseSensitive(derived, "seed");
     if (!cJSON_IsObject(derived)) {
@@ -853,6 +854,9 @@ static UrsatzGuiMaterialResult validate_derived(const cJSON *derived, char *erro
     }
     if (!in_set(cJSON_GetObjectItemCaseSensitive(derived, "flag"), flags)) {
         return invalid_body(error, error_size, "derived flag must be approved, rejected or unflagged");
+    }
+    if (standalone && !cJSON_IsBool(standalone)) {
+        return invalid_body(error, error_size, "derived standalone must be true or false");
     }
     return URSATZ_GUI_MATERIAL_OK;
 }
@@ -1902,6 +1906,34 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_create(const char *type, const 
     return ursatz_gui_material_item_create_noted(type, name, project_id, body, NULL, out_item);
 }
 
+bool ursatz_gui_material_item_is_variant(const cJSON *body) {
+    const cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
+    const cJSON *derived = cJSON_GetObjectItemCaseSensitive(motif, "derived");
+    return cJSON_IsObject(derived) && !cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(derived, "standalone"));
+}
+
+/* Sets "variant_of" on an item object: the source item of a variant, else null. The member is added to answers only;
+ * item.json never carries it. known_body is the item's current version when the caller has it, else NULL and a motif
+ * reads it. */
+static bool annotate_variant_of_locked(cJSON *item, const cJSON *known_body) {
+    cJSON *own_body = NULL;
+    const cJSON *body = known_body;
+    if (!body && strcmp(string_member(item, "type"), "motif") == 0 &&
+        read_version_locked(string_member(item, "id"), current_version_of(item), &own_body) == URSATZ_GUI_MATERIAL_OK) {
+        body = own_body;
+    }
+    cJSON_DeleteItemFromObjectCaseSensitive(item, "variant_of");
+    bool ok;
+    if (body && ursatz_gui_material_item_is_variant(body)) {
+        const cJSON *derived = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "derived");
+        ok = cJSON_AddStringToObject(item, "variant_of", string_member(derived, "source_item")) != NULL;
+    } else {
+        ok = cJSON_AddNullToObject(item, "variant_of") != NULL;
+    }
+    cJSON_Delete(own_body);
+    return ok;
+}
+
 static int compare_items(const void *a, const void *b) {
     const cJSON *left = *(const cJSON *const *)a;
     const cJSON *right = *(const cJSON *const *)b;
@@ -1947,6 +1979,11 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_list(const char *project_id, co
             cJSON_Delete(item);
             continue;
         }
+        if (!annotate_variant_of_locked(item, NULL)) {
+            cJSON_Delete(item);
+            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            break;
+        }
         items[loaded++] = item;
     }
     free_names(names, count);
@@ -1990,6 +2027,9 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_get(const char *id, cJSON **out
     UrsatzGuiMaterialResult result = load_item_locked(id, &item);
     if (result == URSATZ_GUI_MATERIAL_OK && out_body) {
         result = read_version_locked(id, current_version_of(item), &body);
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK && out_meta && !annotate_variant_of_locked(item, body)) {
+        result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
     }
     UNLOCK();
     if (result == URSATZ_GUI_MATERIAL_OK && out_meta) {

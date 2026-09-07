@@ -101,7 +101,8 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id);
  *     pickup (beats, "n" or "n/d"), features [{label 1 to 8 characters,
  *     first, last with 0 <= first <= last}], analysis (null or an object),
  *     derived (null or {source_item, source_version, operations, seed, kind,
- *     kept, changed, harmony, functions, flag}).
+ *     kept, changed, harmony, functions, flag}, plus an optional boolean standalone: a derived motif is a variant
+ *     of its source unless standalone is true (R-187)).
  *   theme: form (null, a string or an object) and slots (an array). A body with a form object, a slot written as
  *     {slot, item_id, version} or any of pool, accompaniment, brief, style_weight, without, tempo, check, seed and
  *     result is a composable theme (R-167):
@@ -142,6 +143,15 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_create_noted(const char *type, 
  * caller-owned array of item objects.
  */
 UrsatzGuiMaterialResult ursatz_gui_material_item_list(const char *project_id, const char *type, cJSON **out_items);
+
+/*
+ * Whether a motif version body is a variant: it has a derived record and standalone is not true (R-187). Any other
+ * body, a non-motif body included, is not.
+ *
+ * Every item object the list and the get answer carries "variant_of": the derived source_item of a variant, else
+ * null. It is computed from the current version and never stored in item.json.
+ */
+bool ursatz_gui_material_item_is_variant(const cJSON *body);
 
 /*
  * Loads one item: *out_meta (may be NULL) is item.json, *out_body (may be
