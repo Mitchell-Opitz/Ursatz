@@ -868,11 +868,26 @@ from the pure `variant-tree.js`, global `VariantTree`).
 - Saved variants appear under the motif as the variant tree, indented by
   depth, with the derivation, flag, a kind select, Approve, Reject, Unflag,
   Reroll (the reroll route), Play (the stored version's score and playback;
-  it opens the notation first), Show notation and Open. Show notation mounts
+  it opens the notation first) and Show notation. Show notation mounts
   a compact score for that row; open rows stay open when the tree refreshes.
   Only one workspace plays at a time on the page: starting one pauses the
   others. Rejected variants and everything under them are hidden unless
   "Show rejected" is on; the choice is kept in `localStorage`.
+- A variant belongs to its motif (R-187). A motif version is a variant when
+  its `motif.derived` record exists and `derived.standalone` is not `true`
+  (`standalone` is an optional boolean the derived validation accepts;
+  `ursatz_gui_material_item_is_variant(body)`). Every item answer from the list
+  routes and the item GET carries `variant_of`: the `derived.source_item` of a
+  variant, else `null`; it is computed from the current version and never
+  stored. Variants are left out of the Motifs list, the motif, theme and piece
+  pickers and their search (`MaterialsModel.isVariantItem`), and have no page
+  of their own: the tree has no Open button, and a link to a variant lands on
+  its motif's Variants tab. Deleting a motif deletes its variants, recursively,
+  after the confirm `Delete "<name>" and its <n> variants?`; a theme or piece
+  that uses the motif or any of its variants still gets the 409 with `used_by`
+  (the users outside that set), and `?force=1` deletes them all. Linking a
+  variant to a subject is refused (400 `variants have no subjects; save it as a
+  new motif first`). Flag, kind and reroll stay on the variant.
 
 #### Comparing and linking motifs
 
