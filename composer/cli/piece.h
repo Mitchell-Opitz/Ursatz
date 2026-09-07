@@ -25,4 +25,10 @@ int run_piece(int argc, char **argv);
     "[--midi <file>] [--musicxml <file>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] " \
     "[--explain <file>] [--format text|json]"
 
+/* The line that makes variations of a section of a loop plan. */
+#define PIECE_VARIATIONS_USAGE_LINE                                                                               \
+    "       ursatz-composer piece --from <loop-plan.json> --request <request.json> --variations <section id> "     \
+    "--lane harmony|bass|melody|inner|all --count <1..8> --out-dir <dir> [--seed <n>] [--check] [--plain-midi] "  \
+    "[--format text|json]"
+
 #endif
