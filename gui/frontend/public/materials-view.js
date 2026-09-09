@@ -1123,6 +1123,12 @@ async function renderMaterialsDetail(type, id, analysisError) {
     return;
   }
   const item = answer.data.item;
+  /* A variant belongs to its motif (R-187) and has no page of its own: its link lands on the parent's Variants tab. */
+  if (type === "motif" && item.variant_of && item.variant_of !== id) {
+    MaterialsModel.writeMotifTab("variants");
+    renderMaterialsDetail("motif", item.variant_of, analysisError);
+    return;
+  }
   content.appendChild(materialsElement("h1", "view-title", item.name));
 
   const controls = materialsElement("div", "upload-controls");

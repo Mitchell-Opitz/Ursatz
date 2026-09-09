@@ -1,7 +1,7 @@
 /* The Variants section of the motif detail (P13 B9), top to bottom: the Generate control with its operation
  * picker, the unsaved candidates and the saved tree. Each candidate and each saved variant (on request) shows its
  * notation in a compact score workspace of its own (P18 B4). Renders from
- * VariantTree; ctx is {id, name, body, send(request), open(id)}, send being the page's
+ * VariantTree; ctx is {id, name, body, send(request)}, send being the page's
  * JSON request helper that answers {ok, status, data}. */
 const VariantTreeView = (function () {
   function h(tag, className, text) {
@@ -193,7 +193,7 @@ const VariantTreeView = (function () {
   }
 
   /* One saved node: indented by depth, with its derivation, flag, kind and actions.
-   * actions: {flag(id, flag), kind(id, kind), reroll(id), open(id), play(row), toggle(row)}; isOpen is whether
+   * actions: {flag(id, flag), kind(id, kind), reroll(id), play(row), toggle(row)}; isOpen is whether
    * its notation is shown. The row's scoreHost is where the compact score mounts. */
   function treeRow(row, actions, isOpen) {
     const item = h("li", `variant-node variant-flag-${row.flag.value}`);
@@ -237,7 +237,6 @@ const VariantTreeView = (function () {
       actionButton("Reject", () => actions.flag(row.id, "rejected"), "button-danger"),
       actionButton("Unflag", () => actions.flag(row.id, "unflagged")),
       ...(row.seed === null ? [] : [actionButton("Reroll", () => actions.reroll(row.id))]),
-      actionButton("Open", () => actions.open(row.id)),
     );
     buttons.appendChild(actionButton(isOpen ? "Hide notation" : "Show notation", () => actions.toggle(row)));
     item.appendChild(buttons);
@@ -507,9 +506,6 @@ const VariantTreeView = (function () {
         const answer = await ctx.send(VariantTree.rerollRequest(id));
         setStatus(status, answer.ok ? "Rerolled" : errorText(answer.data, "Could not reroll"), !answer.ok);
         refreshTree();
-      },
-      open(id) {
-        ctx.open(id);
       },
       play: playSaved,
       toggle: toggleNotation,
