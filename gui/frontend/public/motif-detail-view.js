@@ -170,7 +170,6 @@ const MotifDetailView = (function () {
       name: item.name,
       body: data.body,
       send: sendMaterialsRequest,
-      open: (variantId) => renderMaterialsDetail("motif", variantId),
     });
     ctx.variants = variants;
   }

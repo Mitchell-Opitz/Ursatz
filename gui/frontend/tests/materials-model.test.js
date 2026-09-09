@@ -427,6 +427,26 @@ tabStatus.show("", true);
 check(!statusEl.classList.has("error"), "an empty error message leaves no error style");
 check(M.motifTabStatus(null).show("x", true) === undefined, "tab status without an element does nothing");
 
+/* Variants belong to their motif (R-187): lists and pickers leave them out, and the delete counts them. */
+const withVariants = [
+  { id: "mot-1", name: "Hook", type: "motif", project_id: "prj-a", current_version: 1, updated_at: "2026-01-01T00:00:00Z", variant_of: null },
+  { id: "mot-v1", name: "Hook inverted", type: "motif", project_id: "prj-a", current_version: 1, updated_at: "2026-01-02T00:00:00Z", variant_of: "mot-1" },
+  { id: "mot-v2", name: "Hook inverted augmented", type: "motif", project_id: "prj-a", current_version: 1, updated_at: "2026-01-03T00:00:00Z", variant_of: "mot-v1" },
+  { id: "mot-3", name: "Promoted", type: "motif", project_id: "prj-a", current_version: 1, updated_at: "2026-01-04T00:00:00Z", variant_of: null },
+  { id: "mot-4", name: "Other", type: "motif", project_id: "prj-a", current_version: 1, updated_at: "2026-01-05T00:00:00Z" },
+];
+check(same(M.pickerItems(withVariants, projects, {}).map((i) => i.id), ["mot-1", "mot-4", "mot-3"]), "the picker leaves variants out");
+check(same(M.pickerItems(withVariants, projects, { query: "inverted" }), []), "searching for a variant's name finds nothing");
+check(same(M.itemRows(withVariants, projects).map((r) => r.id), ["mot-4", "mot-3", "mot-1"]), "the Motifs list leaves variants out");
+check(M.isVariantItem(withVariants[1]) && !M.isVariantItem(withVariants[0]) && !M.isVariantItem(withVariants[4]) && !M.isVariantItem(null),
+      "an item is a variant when variant_of is set");
+check(M.variantCount(withVariants, "mot-1") === 2, "variants are counted through variants of variants");
+check(M.variantCount(withVariants, "mot-v1") === 1 && M.variantCount(withVariants, "mot-3") === 0 && M.variantCount(null, "mot-1") === 0,
+      "a leaf, a motif without variants and no list count zero or their own");
+check(M.deleteConfirmText("motif", "Hook", 2) === 'Delete "Hook" and its 2 variants?', "the confirm names the variant count");
+check(M.deleteConfirmText("motif", "Hook", 1) === 'Delete "Hook" and its 1 variant?', "the confirm says variant for one");
+check(M.deleteConfirmText("theme", "Song", 0) === 'Delete theme "Song" and all its versions?', "no variants keeps the old confirm");
+
 if (failures > 0) {
   process.exit(1);
 }

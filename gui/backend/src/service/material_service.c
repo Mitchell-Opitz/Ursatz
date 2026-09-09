@@ -816,6 +816,7 @@ static UrsatzGuiMaterialResult validate_derived(const cJSON *derived, char *erro
     static const char *const dimensions[] = {"rhythm", "intervals", "harmony", "contour", NULL};
     static const char *const functions[] = {"beginning", "continuation", "contrast", "cadential", NULL};
     static const char *const flags[] = {"approved", "rejected", "unflagged", NULL};
+    const cJSON *standalone = cJSON_GetObjectItemCaseSensitive(derived, "standalone");
     const cJSON *source_item = cJSON_GetObjectItemCaseSensitive(derived, "source_item");
     const cJSON *seed = cJSON_GetObjectItemCaseSensitive(derived, "seed");
     if (!cJSON_IsObject(derived)) {
@@ -853,6 +854,9 @@ static UrsatzGuiMaterialResult validate_derived(const cJSON *derived, char *erro
     }
     if (!in_set(cJSON_GetObjectItemCaseSensitive(derived, "flag"), flags)) {
         return invalid_body(error, error_size, "derived flag must be approved, rejected or unflagged");
+    }
+    if (standalone && !cJSON_IsBool(standalone)) {
+        return invalid_body(error, error_size, "derived standalone must be true or false");
     }
     return URSATZ_GUI_MATERIAL_OK;
 }
@@ -1902,6 +1906,34 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_create(const char *type, const 
     return ursatz_gui_material_item_create_noted(type, name, project_id, body, NULL, out_item);
 }
 
+bool ursatz_gui_material_item_is_variant(const cJSON *body) {
+    const cJSON *motif = cJSON_GetObjectItemCaseSensitive(body, "motif");
+    const cJSON *derived = cJSON_GetObjectItemCaseSensitive(motif, "derived");
+    return cJSON_IsObject(derived) && !cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(derived, "standalone"));
+}
+
+/* Sets "variant_of" on an item object: the source item of a variant, else null. The member is added to answers only;
+ * item.json never carries it. known_body is the item's current version when the caller has it, else NULL and a motif
+ * reads it. */
+static bool annotate_variant_of_locked(cJSON *item, const cJSON *known_body) {
+    cJSON *own_body = NULL;
+    const cJSON *body = known_body;
+    if (!body && strcmp(string_member(item, "type"), "motif") == 0 &&
+        read_version_locked(string_member(item, "id"), current_version_of(item), &own_body) == URSATZ_GUI_MATERIAL_OK) {
+        body = own_body;
+    }
+    cJSON_DeleteItemFromObjectCaseSensitive(item, "variant_of");
+    bool ok;
+    if (body && ursatz_gui_material_item_is_variant(body)) {
+        const cJSON *derived = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "derived");
+        ok = cJSON_AddStringToObject(item, "variant_of", string_member(derived, "source_item")) != NULL;
+    } else {
+        ok = cJSON_AddNullToObject(item, "variant_of") != NULL;
+    }
+    cJSON_Delete(own_body);
+    return ok;
+}
+
 static int compare_items(const void *a, const void *b) {
     const cJSON *left = *(const cJSON *const *)a;
     const cJSON *right = *(const cJSON *const *)b;
@@ -1947,6 +1979,11 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_list(const char *project_id, co
             cJSON_Delete(item);
             continue;
         }
+        if (!annotate_variant_of_locked(item, NULL)) {
+            cJSON_Delete(item);
+            result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            break;
+        }
         items[loaded++] = item;
     }
     free_names(names, count);
@@ -1990,6 +2027,9 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_get(const char *id, cJSON **out
     UrsatzGuiMaterialResult result = load_item_locked(id, &item);
     if (result == URSATZ_GUI_MATERIAL_OK && out_body) {
         result = read_version_locked(id, current_version_of(item), &body);
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK && out_meta && !annotate_variant_of_locked(item, body)) {
+        result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
     }
     UNLOCK();
     if (result == URSATZ_GUI_MATERIAL_OK && out_meta) {
@@ -2364,6 +2404,147 @@ UrsatzGuiMaterialResult ursatz_gui_material_update_use(const char *id, const cha
     return result;
 }
 
+/* A set of item ids. */
+typedef struct {
+    char **ids;
+    size_t count;
+    size_t capacity;
+} IdSet;
+
+static bool id_set_has(const IdSet *set, const char *id) {
+    for (size_t i = 0; i < set->count; i++) {
+        if (strcmp(set->ids[i], id) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool id_set_add(IdSet *set, const char *id) {
+    if (set->count == set->capacity) {
+        size_t capacity = set->capacity ? set->capacity * 2 : 8;
+        char **grown = realloc(set->ids, capacity * sizeof(char *));
+        if (!grown) {
+            return false;
+        }
+        set->ids = grown;
+        set->capacity = capacity;
+    }
+    set->ids[set->count] = strdup(id);
+    if (!set->ids[set->count]) {
+        return false;
+    }
+    set->count++;
+    return true;
+}
+
+static void id_set_free(IdSet *set) {
+    for (size_t i = 0; i < set->count; i++) {
+        free(set->ids[i]);
+    }
+    free(set->ids);
+    set->ids = NULL;
+    set->count = 0;
+    set->capacity = 0;
+}
+
+/* Fills out with the ids of the variants of id, recursively (a variant of a variant too), in one scan of the store.
+ * id itself is not in the set. */
+static UrsatzGuiMaterialResult variant_closure_locked(const char *id, IdSet *out) {
+    char dir[PATH_BYTES];
+    char **names = NULL;
+    size_t count = 0;
+    if (snprintf(dir, sizeof(dir), "%s/items", g_dir) >= (int)sizeof(dir) || !list_names(dir, &names, &count)) {
+        return URSATZ_GUI_MATERIAL_ERR_FAILED;
+    }
+    IdSet children = {0};
+    IdSet parents = {0};
+    UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
+    for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < count; i++) {
+        cJSON *item = NULL;
+        cJSON *body = NULL;
+        if (load_item_locked(names[i], &item) == URSATZ_GUI_MATERIAL_OK && strcmp(string_member(item, "type"), "motif") == 0 &&
+            read_version_locked(names[i], current_version_of(item), &body) == URSATZ_GUI_MATERIAL_OK &&
+            ursatz_gui_material_item_is_variant(body)) {
+            const cJSON *derived = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(body, "motif"), "derived");
+            if (!id_set_add(&children, names[i]) || !id_set_add(&parents, string_member(derived, "source_item"))) {
+                result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            }
+        }
+        cJSON_Delete(item);
+        cJSON_Delete(body);
+    }
+    free_names(names, count);
+    /* Walk down from id: the descendants found so far are also parents to look for. */
+    for (size_t level = 0; result == URSATZ_GUI_MATERIAL_OK && level <= out->count; level++) {
+        const char *parent = level == 0 ? id : out->ids[level - 1];
+        for (size_t i = 0; result == URSATZ_GUI_MATERIAL_OK && i < children.count; i++) {
+            if (strcmp(parents.ids[i], parent) == 0 && strcmp(children.ids[i], id) != 0 && !id_set_has(out, children.ids[i]) &&
+                !id_set_add(out, children.ids[i])) {
+                result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+            }
+        }
+    }
+    id_set_free(&children);
+    id_set_free(&parents);
+    return result;
+}
+
+/* The items outside the delete set (id and its variants) that use any member of it, as used_by_locked entries once each. */
+static UrsatzGuiMaterialResult delete_blockers_locked(const char *id, const IdSet *variants, cJSON **out) {
+    cJSON *blockers = cJSON_CreateArray();
+    if (!blockers) {
+        return URSATZ_GUI_MATERIAL_ERR_ALLOC;
+    }
+    UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
+    for (size_t member = 0; result == URSATZ_GUI_MATERIAL_OK && member <= variants->count; member++) {
+        cJSON *users = NULL;
+        result = used_by_locked(member == 0 ? id : variants->ids[member - 1], &users);
+        const cJSON *user = NULL;
+        cJSON_ArrayForEach(user, users) {
+            const char *user_id = string_member(user, "id");
+            bool seen = false;
+            const cJSON *known = NULL;
+            cJSON_ArrayForEach(known, blockers) {
+                seen = seen || strcmp(string_member(known, "id"), user_id) == 0;
+            }
+            if (strcmp(user_id, id) == 0 || id_set_has(variants, user_id) || seen) {
+                continue;
+            }
+            cJSON *copy = cJSON_Duplicate(user, 1);
+            if (!copy) {
+                result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                break;
+            }
+            cJSON_AddItemToArray(blockers, copy);
+        }
+        cJSON_Delete(users);
+    }
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        *out = blockers;
+    } else {
+        cJSON_Delete(blockers);
+    }
+    return result;
+}
+
+UrsatzGuiMaterialResult ursatz_gui_material_delete_blockers(const char *id, cJSON **out_users) {
+    *out_users = NULL;
+    LOCK();
+    if (!g_ready) {
+        UNLOCK();
+        return URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
+    }
+    IdSet variants = {0};
+    UrsatzGuiMaterialResult result = variant_closure_locked(id, &variants);
+    if (result == URSATZ_GUI_MATERIAL_OK) {
+        result = delete_blockers_locked(id, &variants, out_users);
+    }
+    UNLOCK();
+    id_set_free(&variants);
+    return result;
+}
+
 UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool force) {
     LOCK();
     if (!g_ready) {
@@ -2373,27 +2554,43 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool for
     char dir[PATH_BYTES];
     char meta[PATH_BYTES];
     cJSON *users = NULL;
+    IdSet variants = {0};
+    IdSet removed = {0};
     UrsatzGuiMaterialResult result = URSATZ_GUI_MATERIAL_OK;
     if (!item_dir_path(id, dir, sizeof(dir)) || !item_file_path(id, "item.json", meta, sizeof(meta))) {
         result = URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     } else if (!path_exists(meta)) {
         result = URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
-    } else if (!force && (result = used_by_locked(id, &users)) == URSATZ_GUI_MATERIAL_OK && users->child) {
+    } else if ((result = variant_closure_locked(id, &variants)) != URSATZ_GUI_MATERIAL_OK) {
+        /* nothing is deleted when the variants cannot be found */
+    } else if (!force && (result = delete_blockers_locked(id, &variants, &users)) == URSATZ_GUI_MATERIAL_OK && users->child) {
         result = URSATZ_GUI_MATERIAL_ERR_REFERENCED;
     } else if (result == URSATZ_GUI_MATERIAL_OK) {
-        /* item.json first: a half-deleted directory is no longer an item. */
-        if (remove(meta) != 0) {
-            result = URSATZ_GUI_MATERIAL_ERR_FAILED;
-        } else {
-            remove_item_dir(dir);
+        /* The variants go with their motif (R-187), then the motif. item.json first: a half-deleted directory is no
+         * longer an item. */
+        for (size_t member = 0; result == URSATZ_GUI_MATERIAL_OK && member <= variants.count; member++) {
+            const char *member_id = member < variants.count ? variants.ids[member] : id;
+            char member_dir[PATH_BYTES];
+            char member_meta[PATH_BYTES];
+            if (!item_dir_path(member_id, member_dir, sizeof(member_dir)) ||
+                !item_file_path(member_id, "item.json", member_meta, sizeof(member_meta)) || remove(member_meta) != 0) {
+                result = URSATZ_GUI_MATERIAL_ERR_FAILED;
+            } else {
+                remove_item_dir(member_dir);
+                if (!id_set_add(&removed, member_id)) {
+                    result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
+                }
+            }
         }
     }
     UNLOCK();
     cJSON_Delete(users);
     /* Subjects take their own lock, so this runs with the material lock released. */
-    if (result == URSATZ_GUI_MATERIAL_OK) {
-        ursatz_gui_subject_forget_item(id);
+    for (size_t i = 0; i < removed.count; i++) {
+        ursatz_gui_subject_forget_item(removed.ids[i]);
     }
+    id_set_free(&variants);
+    id_set_free(&removed);
     return result;
 }
 

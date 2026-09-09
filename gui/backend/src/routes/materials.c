@@ -1434,7 +1434,7 @@ static int handle_delete_item(struct mg_connection *conn, const char *id) {
   if (result == URSATZ_GUI_MATERIAL_ERR_REFERENCED) {
     cJSON *used_by = NULL;
     cJSON *object = cJSON_CreateObject();
-    if (ursatz_gui_material_used_by(id, &used_by) != URSATZ_GUI_MATERIAL_OK || !object ||
+    if (ursatz_gui_material_delete_blockers(id, &used_by) != URSATZ_GUI_MATERIAL_OK || !object ||
         !cJSON_AddBoolToObject(object, "ok", 0) || !cJSON_AddStringToObject(object, "error", material_message(result))) {
       cJSON_Delete(used_by);
       cJSON_Delete(object);
@@ -3377,6 +3377,16 @@ static int handle_subject_link(struct mg_connection *conn, const char *method, c
   bool already = false;
   cJSON *subject = NULL;
   UrsatzGuiSubjectResult result;
+  if (post && strcmp(kind, "items") == 0) {
+    /* A variant belongs to its motif and has no subjects (R-187). An absent item is left to the subject service. */
+    cJSON *body = NULL;
+    bool variant = ursatz_gui_material_item_get(other, NULL, &body) == URSATZ_GUI_MATERIAL_OK &&
+                   ursatz_gui_material_item_is_variant(body);
+    cJSON_Delete(body);
+    if (variant) {
+      return send_failure(conn, 400, "variants have no subjects; save it as a new motif first");
+    }
+  }
   if (strcmp(kind, "items") == 0) {
     result = post ? ursatz_gui_subject_link_item(id, other, &already, &subject)
                   : ursatz_gui_subject_unlink_item(id, other, &subject);
