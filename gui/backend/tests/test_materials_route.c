@@ -1417,6 +1417,96 @@ static void test_variant_flags_and_tree(void) {
   free(grandchild);
 }
 
+/* R-187: items carry variant_of, and a motif is deleted with its variants. */
+static void test_variant_ownership(void) {
+  int status = 0;
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  char *source = variant_source();
+  char *child = source ? save_inverted(source, 3) : NULL;
+  char *grandchild = child ? save_inverted(child, 4) : NULL;
+  check(source && child && grandchild, "a motif, its variant and the variant's variant are saved");
+  if (!grandchild) {
+    free(source);
+    free(child);
+    return;
+  }
+
+  cJSON *answer = item_get(source, "", &status);
+  check(status == 200 && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "item"), "variant_of")),
+        "the item answer of a motif has variant_of null");
+  cJSON_Delete(answer);
+  answer = item_get(grandchild, "", &status);
+  check(status == 200 && strcmp(string_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "variant_of"), child) == 0,
+        "the item answer of a variant names its motif in variant_of");
+  cJSON_Delete(answer);
+  answer = json_exchange("GET", "/api/materials/items?type=motif", NULL, &status);
+  const cJSON *items = cJSON_GetObjectItemCaseSensitive(answer, "items");
+  int named = 0;
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, items) {
+    if (strcmp(string_of(entry, "id"), child) == 0 && strcmp(string_of(entry, "variant_of"), source) == 0) {
+      named++;
+    }
+    if (strcmp(string_of(entry, "id"), source) == 0 && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(entry, "variant_of"))) {
+      named++;
+    }
+  }
+  check(status == 200 && named == 2, "the item list carries variant_of");
+  cJSON_Delete(answer);
+
+  /* A theme using the variant of the variant keeps the motif from being deleted until forced. */
+  char theme_body[1024];
+  theme_using(grandchild, 1, theme_body, sizeof(theme_body));
+  char *theme = create_item("theme", "Variant user", project, theme_body);
+  check(theme != NULL, "a theme that uses the variant is created");
+  char path[256];
+  snprintf(path, sizeof(path), "/api/materials/items/%s", source);
+  answer = json_exchange("DELETE", path, NULL, &status);
+  const cJSON *used_by = cJSON_GetObjectItemCaseSensitive(answer, "used_by");
+  check(status == 409 && cJSON_GetArraySize(used_by) == 1 && strcmp(string_of(cJSON_GetArrayItem(used_by, 0), "id"), theme ? theme : "") == 0,
+        "deleting a motif whose variant is used is 409 with that user");
+  cJSON_Delete(answer);
+  answer = item_get(grandchild, "", &status);
+  check(status == 200, "the 409 deleted nothing");
+  cJSON_Delete(answer);
+  snprintf(path, sizeof(path), "/api/materials/items/%s?force=1", source);
+  answer = json_exchange("DELETE", path, NULL, &status);
+  check(status == 200 && ok_true(answer), "a forced delete goes through");
+  cJSON_Delete(answer);
+  int gone = 0;
+  const char *ids[] = {source, child, grandchild};
+  for (int i = 0; i < 3; i++) {
+    answer = item_get(ids[i], "", &status);
+    gone += status == 404;
+    cJSON_Delete(answer);
+  }
+  check(gone == 3, "the motif, its variant and the variant's variant are gone");
+  answer = item_get(theme, "", &status);
+  check(status == 200, "the theme stays");
+  cJSON_Delete(answer);
+
+  /* No user: the variants go with the motif. */
+  char *other = variant_source();
+  char *other_child = other ? save_inverted(other, 5) : NULL;
+  check(other && other_child, "a second motif and its variant are saved");
+  if (other_child) {
+    snprintf(path, sizeof(path), "/api/materials/items/%s", other);
+    answer = json_exchange("DELETE", path, NULL, &status);
+    check(status == 200, "deleting a motif without users is 200");
+    cJSON_Delete(answer);
+    answer = item_get(other_child, "", &status);
+    check(status == 404, "its variant went with it");
+    cJSON_Delete(answer);
+  }
+  free(other);
+  free(other_child);
+  free(theme);
+  free(source);
+  free(child);
+  free(grandchild);
+}
+
 /* Random motifs come from the Composer unsaved, with a key of the mode, and bad inputs are refused. */
 static void test_random_motifs(void) {
   int status = 0;
@@ -1516,6 +1606,7 @@ int main(void) {
   test_harmony();
   test_variants();
   test_variant_flags_and_tree();
+  test_variant_ownership();
   test_recognize();
   test_link_form();
   test_theme_placeholder();

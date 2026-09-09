@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -703,6 +704,130 @@ static void test_forced_delete(void) {
     free(home);
 }
 
+/* Creates a motif whose current version is derived from source_id; standalone is "" or ",\"standalone\":true" and so on. */
+static char *new_variant(const char *name, const char *project_id, const char *source_id, const char *standalone) {
+    char derived[600];
+    snprintf(derived, sizeof(derived),
+             "{\"source_item\":\"%s\",\"source_version\":1,\"operations\":[],\"seed\":42,\"kind\":\"variant\","
+             "\"kept\":[\"rhythm\"],\"changed\":[\"intervals\"],\"harmony\":null,\"functions\":[\"continuation\"],"
+             "\"flag\":\"unflagged\"%s}",
+             source_id, standalone);
+    cJSON *body = motif_with("derived", derived);
+    cJSON *item = NULL;
+    char *id = NULL;
+    if (ursatz_gui_material_item_create("motif", name, project_id, body, &item) == OK) {
+        id = strdup(str(item, "id"));
+    }
+    cJSON_Delete(item);
+    cJSON_Delete(body);
+    return id;
+}
+
+static bool exists(const char *id) {
+    return ursatz_gui_material_item_get(id, NULL, NULL) == OK;
+}
+
+/* R-187: a derived motif is a variant unless standalone, it reports variant_of, and it goes with its motif. */
+static void test_variant_ownership(void) {
+    char *home = new_project("Variant home");
+    char *parent = new_item("motif", "Parent", home, kMotifBody);
+    char *variant = new_variant("Parent v1", home, parent, "");
+    char *grandchild = new_variant("Parent v1 v1", home, variant, "");
+    char *promoted = new_variant("Promoted", home, parent, ",\"standalone\":true");
+    CHECK(parent && variant && grandchild && promoted, "create a motif, a variant, its variant and a standalone copy");
+
+    /* Validation and the helper. */
+    char text[700];
+    snprintf(text, sizeof(text), "%s", kDerived);
+    text[strlen(text) - 1] = '\0';
+    char with_flag[760];
+    snprintf(with_flag, sizeof(with_flag), "%s,\"standalone\":false}", text);
+    expect_motif("derived", with_flag, OK);
+    snprintf(with_flag, sizeof(with_flag), "%s,\"standalone\":\"yes\"}", text);
+    expect_motif("derived", with_flag, URSATZ_GUI_MATERIAL_ERR_INVALID_BODY);
+    cJSON *plain = cJSON_Parse(kMotifBody);
+    cJSON *derived_body = motif_with("derived", kDerived);
+    snprintf(with_flag, sizeof(with_flag), "%s,\"standalone\":true}", text);
+    cJSON *standalone_body = motif_with("derived", with_flag);
+    cJSON *theme = cJSON_Parse(kThemeBody);
+    CHECK(!ursatz_gui_material_item_is_variant(plain), "a motif without derived is not a variant");
+    CHECK(ursatz_gui_material_item_is_variant(derived_body), "a derived motif is a variant");
+    CHECK(!ursatz_gui_material_item_is_variant(standalone_body), "a standalone derived motif is not a variant");
+    CHECK(!ursatz_gui_material_item_is_variant(theme) && !ursatz_gui_material_item_is_variant(NULL),
+          "a theme body or no body is not a variant");
+    cJSON_Delete(plain);
+    cJSON_Delete(derived_body);
+    cJSON_Delete(standalone_body);
+    cJSON_Delete(theme);
+
+    /* variant_of in the list and in the get. */
+    cJSON *items = NULL;
+    CHECK(ursatz_gui_material_item_list(home, NULL, &items) == OK, "list the project");
+    const cJSON *entry = find_by_id(items, parent);
+    CHECK(entry && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(entry, "variant_of")), "a motif has variant_of null");
+    entry = find_by_id(items, variant);
+    CHECK(entry && strcmp(str(entry, "variant_of"), parent) == 0, "a variant names its motif in variant_of");
+    entry = find_by_id(items, grandchild);
+    CHECK(entry && strcmp(str(entry, "variant_of"), variant) == 0, "a variant of a variant names the variant");
+    entry = find_by_id(items, promoted);
+    CHECK(entry && cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(entry, "variant_of")), "a standalone copy has variant_of null");
+    cJSON_Delete(items);
+    cJSON *meta = NULL;
+    CHECK(ursatz_gui_material_item_get(variant, &meta, NULL) == OK && strcmp(str(meta, "variant_of"), parent) == 0,
+          "the get answers variant_of too");
+    cJSON_Delete(meta);
+    CHECK(ursatz_gui_material_item_get(parent, &meta, NULL) == OK &&
+              cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(meta, "variant_of")),
+          "the get answers variant_of null for a motif");
+    cJSON_Delete(meta);
+
+    /* A theme using a variant blocks the delete of the motif until forced; nothing is deleted meanwhile. */
+    char *user = new_theme_using("Variant user", home, grandchild);
+    CHECK(user != NULL, "create a theme using the variant of a variant");
+    CHECK(ursatz_gui_material_item_delete(parent, false) == URSATZ_GUI_MATERIAL_ERR_REFERENCED,
+          "a use of a variant blocks the delete of its motif");
+    CHECK(exists(parent) && exists(variant) && exists(grandchild), "nothing was deleted");
+    cJSON *blockers = NULL;
+    CHECK(ursatz_gui_material_delete_blockers(parent, &blockers) == OK && cJSON_GetArraySize(blockers) == 1 &&
+              strcmp(str(cJSON_GetArrayItem(blockers, 0), "id"), user) == 0,
+          "the blockers name the theme");
+    cJSON_Delete(blockers);
+    CHECK(ursatz_gui_material_item_delete(parent, true) == OK, "a forced delete covers the variants");
+    CHECK(!exists(parent) && !exists(variant) && !exists(grandchild), "the motif, its variant and the variant's variant are gone");
+    CHECK(exists(promoted) && exists(user), "a standalone copy and the theme stay");
+
+    /* Without a user the delete takes the variants along. */
+    char *motif2 = new_item("motif", "Second", home, kMotifBody);
+    char *kid = new_variant("Second v1", home, motif2, "");
+    CHECK(motif2 && kid, "create a second motif with a variant");
+    CHECK(ursatz_gui_material_delete_blockers(motif2, &blockers) == OK && cJSON_GetArraySize(blockers) == 0,
+          "nothing blocks the second motif");
+    cJSON_Delete(blockers);
+    CHECK(ursatz_gui_material_item_delete(motif2, false) == OK && !exists(motif2) && !exists(kid),
+          "deleting a motif deletes its variants");
+    CHECK(ursatz_gui_material_item_delete(kid, false) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND, "the variant is gone");
+
+    /* A variant deleted on its own leaves its motif. */
+    char *motif3 = new_item("motif", "Third", home, kMotifBody);
+    char *kid3 = new_variant("Third v1", home, motif3, "");
+    CHECK(ursatz_gui_material_item_delete(kid3, false) == OK && exists(motif3), "deleting a variant leaves its motif");
+
+    ursatz_gui_material_item_delete(user, true);
+    ursatz_gui_material_item_delete(promoted, true);
+    ursatz_gui_material_item_delete(motif3, true);
+    CHECK(ursatz_gui_material_project_delete(home) == OK, "delete the project");
+    free(home);
+    free(parent);
+    free(variant);
+    free(grandchild);
+    free(promoted);
+    free(user);
+    free(motif2);
+    free(kid);
+    free(motif3);
+    free(kid3);
+}
+
 /* Deletes every project, then the store's directories. */
 static void remove_store(void) {
     cJSON *projects = NULL;
@@ -732,6 +857,7 @@ int main(void) {
     test_body_validation();
     test_references();
     test_forced_delete();
+    test_variant_ownership();
 
     remove_store();
     if (failures) {

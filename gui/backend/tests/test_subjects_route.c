@@ -369,6 +369,30 @@ static void test_links(const char *anna, const char *piece) {
   check(status == 404, "linking an unknown item is 404");
   cJSON_Delete(answer);
 
+  /* A variant belongs to its motif and has no subjects (R-187). */
+  char variant_request[1600];
+  snprintf(variant_request, sizeof(variant_request),
+           "{\"type\":\"motif\",\"name\":\"Opening v1\",\"project_id\":\"%s\",\"body\":"
+           "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q Eb4:e G4:e C5:h\","
+           "\"meter\":\"4/4\",\"key\":\"C minor\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,"
+           "\"derived\":{\"source_item\":\"%s\",\"source_version\":1,\"operations\":[],\"seed\":1,\"kind\":\"variant\","
+           "\"kept\":[],\"changed\":[],\"harmony\":null,\"functions\":[],\"flag\":\"unflagged\"}}}}",
+           project, item);
+  answer = json_exchange("POST", "/api/materials/items", variant_request, &status);
+  char variant[64];
+  snprintf(variant, sizeof(variant), "%s", string_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "id"));
+  cJSON_Delete(answer);
+  check(status == 200 && variant[0] != '\0', "a variant is created");
+  char variant_path[400];
+  snprintf(variant_path, sizeof(variant_path), "/api/subjects/%s/items/%s", anna, variant);
+  answer = json_exchange("POST", variant_path, NULL, &status);
+  check(status == 400 && strcmp(string_of(answer, "error"), "variants have no subjects; save it as a new motif first") == 0,
+        "linking a variant to a subject is refused with 400");
+  cJSON_Delete(answer);
+  snprintf(path, sizeof(path), "/api/materials/items/%s", variant);
+  cJSON_Delete(json_exchange("DELETE", path, NULL, &status));
+  check(status == 200, "the variant is deleted again");
+
   snprintf(path, sizeof(path), "/api/materials/items/%s", item);
   answer = json_exchange("GET", path, NULL, &status);
   const cJSON *subjects = cJSON_GetObjectItemCaseSensitive(answer, "subjects");
