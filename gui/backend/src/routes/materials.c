@@ -2515,6 +2515,64 @@ static int handle_flag(struct mg_connection *conn, const char *id) {
   return send_ok_with(conn, "item", item);
 }
 
+/* POST /api/materials/items/<id>/promote {name, project_id, note?}: a variant becomes a motif of its own. A new version
+   with derived.standalone true (R-192), the item renamed and moved. The id, versions and derived record stay. */
+static int handle_promote(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  const char *name = optional_string(body, "name", &bad);
+  const char *project_id = optional_string(body, "project_id", &bad);
+  const char *note = optional_string(body, "note", &bad);
+  if (bad || !name || !project_id) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "promote needs a name and a project_id; note is a string");
+  }
+  cJSON *current = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(body);
+    return send_material_failure(conn, result);
+  }
+  cJSON *derived = derived_of(current);
+  if (!derived || !ursatz_gui_material_item_is_variant(current)) {
+    cJSON_Delete(body);
+    cJSON_Delete(current);
+    return send_failure(conn, 400, "only a variant can be saved as a new motif");
+  }
+  /* The project is checked up front, so a bad name cannot leave the item moved. */
+  cJSON *project = NULL;
+  result = ursatz_gui_material_project_get(project_id, &project);
+  cJSON_Delete(project);
+  cJSON *item = NULL;
+  if (result == URSATZ_GUI_MATERIAL_OK) {
+    result = ursatz_gui_material_item_rename(id, name, &item);
+    cJSON_Delete(item);
+    item = NULL;
+  }
+  if (result == URSATZ_GUI_MATERIAL_OK) {
+    result = ursatz_gui_material_item_move(id, project_id, &item);
+    cJSON_Delete(item);
+    item = NULL;
+  }
+  if (result == URSATZ_GUI_MATERIAL_OK) {
+    cJSON_DeleteItemFromObjectCaseSensitive(derived, "standalone");
+    result = cJSON_AddTrueToObject(derived, "standalone")
+                 ? ursatz_gui_material_item_add_version(id, current, note && *note ? note : "Saved as new motif", &item)
+                 : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+  }
+  cJSON_Delete(body);
+  cJSON_Delete(current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(item);
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
 /* A chain for the Composer from stored operations: the steps with their params, less the ones the seed drew (`open`),
    so a rerun draws them again. NULL when out of memory. */
 static cJSON *chain_for_reroll(const cJSON *operations) {
@@ -3109,6 +3167,9 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 3 && strcmp(segments[2], "link-form") == 0) {
     return post ? handle_link_form(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "promote") == 0) {
+    return post ? handle_promote(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 3 && strcmp(segments[2], "flag") == 0) {
     return post ? handle_flag(conn, segments[1]) : send_method_not_allowed(conn);
