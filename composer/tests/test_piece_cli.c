@@ -27,6 +27,11 @@
  *   progression  a section filled with a progression has its chords from the section's start
  *   structure    a request of empty fills and no motive is exit 0 with an invented motive
  *   errors       a request without a body, a bad pickup and an unknown fill are exit 1
+ *   regenerate   --from a loop plan: the body's first melody written again refills the turnaround and the seam copies the new
+ *                first bar; an intro bass alone changes nothing else; the ending version is built again; an unknown
+ *                section is exit 1
+ *   variations   three variations of a section with different seeds, each written with the loop markers; a theme-filled
+ *                section is harmonized with its melody kept
  *
  * The request fixtures are in tests/fixtures/piece; the @STYLE@ and @THEME@ in them are replaced by the test.
  */
@@ -209,6 +214,98 @@ static size_t count_of(const char *text, const char *needle) {
     return count;
 }
 
+/* ------------------------------------------------------------- reading lanes */
+
+#define DUMP_SIZE 65536
+
+static double to_double(PlanTime time) {
+    return (double)time.num / (double)time.den;
+}
+
+/* The spans of a lane and voice inside [from, to) whole notes as text: the place, and the chord or the notes. */
+static char *dump_lane(const PiecePlan *plan, PlanLaneKind lane, int voice, long from, long to) {
+    char *out = calloc(DUMP_SIZE, 1);
+    LaneSpanId ids[512];
+    PlanSpan range = {{from, 1}, {to - from, 1}};
+    size_t found = plan_lane_find(plan, lane, voice, range, ids, 512);
+    size_t used = 0;
+    assert(out && found <= 512);
+    for (size_t i = 0; i < found; i++) {
+        PlanSpan span = plan_lane_span_span(plan, ids[i]);
+        PlanTime end;
+        const PlanLanePayload *payload = plan_lane_span_payload(plan, ids[i]);
+        assert(plan_span_end(span, &end) == PLAN_OK);
+        if (to_double(span.start) < (double)from || to_double(end) > (double)to) {
+            continue;
+        }
+        used += (size_t)snprintf(out + used, DUMP_SIZE - used, "[%.6f %.6f", to_double(span.start), to_double(end));
+        if (lane == PLAN_LANE_HARMONY) {
+            used += (size_t)snprintf(out + used, DUMP_SIZE - used, " %s", payload->harmony.roman_numeral);
+        } else {
+            for (size_t n = 0; n < payload->notes.note_count; n++) {
+                used += (size_t)snprintf(out + used, DUMP_SIZE - used, " %d@%.6f/%.6f", payload->notes.notes[n].midi_pitch,
+                                         to_double(payload->notes.notes[n].offset), to_double(payload->notes.notes[n].duration));
+            }
+        }
+        used += (size_t)snprintf(out + used, DUMP_SIZE - used, "]");
+        assert(used < DUMP_SIZE - 256);
+    }
+    return out;
+}
+
+/* All the lanes of a region, voices of the inner lane included. */
+static char *dump_region(const PiecePlan *plan, long from, long to) {
+    char *out = calloc(DUMP_SIZE * 5, 1);
+    size_t used = 0;
+    assert(out);
+    for (int lane = PLAN_LANE_HARMONY; lane <= PLAN_LANE_INNER_VOICE; lane++) {
+        for (int voice = 0; voice <= (lane == PLAN_LANE_INNER_VOICE ? 3 : 0); voice++) {
+            char *one = dump_lane(plan, (PlanLaneKind)lane, voice, from, to);
+            used += (size_t)snprintf(out + used, DUMP_SIZE * 5 - used, "<%d.%d>%s", lane, voice, one);
+            free(one);
+        }
+    }
+    return out;
+}
+
+/* What sounds in the bar that starts at the time: each chord or note with its place in the bar. */
+static char *dump_bar(const PiecePlan *plan, PlanLaneKind lane, long bar) {
+    char *out = calloc(DUMP_SIZE, 1);
+    LaneSpanId ids[64];
+    PlanSpan range = {{bar, 1}, {1, 1}};
+    size_t found = plan_lane_find(plan, lane, 0, range, ids, 64);
+    size_t used = 0;
+    assert(out && found <= 64);
+    for (size_t i = 0; i < found; i++) {
+        PlanSpan span = plan_lane_span_span(plan, ids[i]);
+        const PlanLanePayload *payload = plan_lane_span_payload(plan, ids[i]);
+        if (lane == PLAN_LANE_HARMONY) {
+            double start = to_double(span.start) < (double)bar ? (double)bar : to_double(span.start);
+            used += (size_t)snprintf(out + used, DUMP_SIZE - used, "%.6f %s;", start - (double)bar, payload->harmony.roman_numeral);
+            continue;
+        }
+        for (size_t n = 0; n < payload->notes.note_count; n++) {
+            double onset = to_double(span.start) + to_double(payload->notes.notes[n].offset);
+            if (onset >= (double)bar && onset < (double)bar + 1.0) {
+                used += (size_t)snprintf(out + used, DUMP_SIZE - used, "%.6f %d %.6f;", onset - (double)bar,
+                                         payload->notes.notes[n].midi_pitch, to_double(payload->notes.notes[n].duration));
+            }
+        }
+    }
+    return out;
+}
+
+/* The seed of the nth variation in the output, from "seed":. */
+static unsigned long variation_seed(const char *text, size_t index) {
+    const char *at = text;
+    for (size_t i = 0; i <= index; i++) {
+        at = strstr(at, "\"seed\":");
+        assert(at);
+        at += 7;
+    }
+    return strtoul(at - 0, NULL, 10);
+}
+
 /* ------------------------------------------------------------- the done-when case */
 
 static void test_done_when(void) {
@@ -338,6 +435,182 @@ static void test_structure_only(void) {
     free(shown);
 }
 
+/* ------------------------------------------------------------- regenerate and variations */
+
+/* The regions of the done-when piece, in whole notes: intro 0-2, A 2-10, B 10-14, the turnaround 14-16, the seam 16-17. */
+static void expect_region(const PiecePlan *before, const PiecePlan *after, long from, long to, bool same) {
+    char *a = dump_region(before, from, to);
+    char *b = dump_region(after, from, to);
+    assert((strcmp(a, b) == 0) == same);
+    free(a);
+    free(b);
+}
+
+static void test_regenerate(void) {
+    /* loop.json and request.json are the done-when piece, written by test_done_when. */
+    expect_failure("--from loop.json --request request.json --regenerate nowhere --seed 1", 1, "has no section 'nowhere'");
+    expect_failure("--from loop.json --request request.json --seed 1", 1, "--regenerate");
+    expect_failure("--from loop.json --seed 1 --regenerate a", 1, "--request");
+    expect_failure("request.json --regenerate a", 1, "go with --from");
+    expect_failure("--from loop.json --request request.json --regenerate a --lane tenor", 1, "--lane must be");
+
+    /* The body's first melody, written again: the turnaround is refilled and the seam copies the new first bar. */
+    char *shown = piece_output("--from loop.json --request request.json --regenerate a --lane melody --seed 5 --format json "
+                               "--out regen.json --ending-out regen_ending.json");
+    assert(strstr(shown, "\"regenerated\":{\"section\":\"a\",\"lane\":\"melody\"}"));
+    free(shown);
+    PiecePlan *before = load_plan("loop.json");
+    PiecePlan *after = load_plan("regen.json");
+    char *old_melody = dump_lane(before, PLAN_LANE_MELODY, 0, 2, 10);
+    char *new_melody = dump_lane(after, PLAN_LANE_MELODY, 0, 2, 10);
+    assert(strcmp(old_melody, new_melody) != 0);
+    free(old_melody);
+    free(new_melody);
+    expect_region(before, after, 0, 2, true);   /* the intro */
+    expect_region(before, after, 10, 14, true); /* B */
+    char *old_end = dump_region(before, 14, 16);
+    char *new_end = dump_region(after, 14, 16);
+    assert(strcmp(old_end, new_end) != 0); /* the turnaround is written again */
+    free(old_end);
+    free(new_end);
+    static const PlanLaneKind SEAM_LANES[] = {PLAN_LANE_HARMONY, PLAN_LANE_MELODY};
+    for (size_t l = 0; l < 2; l++) {
+        char *first = dump_bar(after, SEAM_LANES[l], 2);
+        char *seam = dump_bar(after, SEAM_LANES[l], 16);
+        char *stale = dump_bar(before, SEAM_LANES[l], 16);
+        assert(first[0] != '\0' && strcmp(first, seam) == 0);
+        if (SEAM_LANES[l] == PLAN_LANE_MELODY) {
+            assert(strcmp(stale, seam) != 0); /* the old copy was not kept */
+        }
+        free(first);
+        free(seam);
+        free(stale);
+    }
+    plan_destroy(before);
+    plan_destroy(after);
+
+    /* The ending version is built again from the new loop: the two agree up to the body's end. */
+    PiecePlan *loop = load_plan("regen.json");
+    PiecePlan *ending = load_plan("regen_ending.json");
+    Note *a = calloc(8192, sizeof(Note));
+    Note *b = calloc(8192, sizeof(Note));
+    size_t loop_count = notes_before(loop, 14.0, a, 8192);
+    size_t ending_count = notes_before(ending, 14.0, b, 8192);
+    assert(loop_count > 100 && loop_count == ending_count);
+    for (size_t i = 0; i < loop_count; i++) {
+        assert(a[i].onset == b[i].onset && a[i].pitch == b[i].pitch && a[i].part == b[i].part);
+    }
+    free(a);
+    free(b);
+    plan_destroy(loop);
+    plan_destroy(ending);
+
+    /* An intro bass alone: nothing else changes. */
+    free(piece_output("--from loop.json --request request.json --regenerate intro --lane bass --seed 5 --out bass.json"));
+    before = load_plan("loop.json");
+    after = load_plan("bass.json");
+    char *old_bass = dump_lane(before, PLAN_LANE_BASS, 0, 0, 2);
+    char *new_bass = dump_lane(after, PLAN_LANE_BASS, 0, 0, 2);
+    assert(strcmp(old_bass, new_bass) != 0);
+    free(old_bass);
+    free(new_bass);
+    expect_region(before, after, 2, 17, true);
+    char *old_chords = dump_lane(before, PLAN_LANE_HARMONY, 0, 0, 2);
+    char *new_chords = dump_lane(after, PLAN_LANE_HARMONY, 0, 0, 2);
+    char *old_tune = dump_lane(before, PLAN_LANE_MELODY, 0, 0, 2);
+    char *new_tune = dump_lane(after, PLAN_LANE_MELODY, 0, 0, 2);
+    assert(strcmp(old_chords, new_chords) == 0 && strcmp(old_tune, new_tune) == 0);
+    free(old_chords);
+    free(new_chords);
+    free(old_tune);
+    free(new_tune);
+    plan_destroy(before);
+    plan_destroy(after);
+
+    /* Nothing reopened: the loop plan is kept and only the ending version is built again. */
+    free(piece_output("--from loop.json --request request.json --regenerate none --seed 2 --out same.json --ending-out same_ending.json"));
+    before = load_plan("loop.json");
+    after = load_plan("same.json");
+    expect_region(before, after, 0, 17, true);
+    plan_destroy(before);
+    plan_destroy(after);
+    assert(exists("same_ending.json"));
+}
+
+static void test_variations(void) {
+    char *shown = piece_output("--from loop.json --request request.json --variations a --lane melody --count 3 --seed 1 "
+                               "--out-dir variations --format json");
+    assert(count_of(shown, "\"index\":") == 3 && strstr(shown, "\"kept\":3,\"requested\":3"));
+    unsigned long seeds[3];
+    for (size_t i = 0; i < 3; i++) {
+        seeds[i] = variation_seed(shown, i);
+    }
+    assert(seeds[0] != seeds[1] && seeds[1] != seeds[2] && seeds[0] != seeds[2]);
+    free(shown);
+    assert(exists("variations/result.json"));
+    PiecePlan *original = load_plan("loop.json");
+    char *old_melody = dump_lane(original, PLAN_LANE_MELODY, 0, 2, 10);
+    char *melodies[3]; /* the whole piece of each */
+    for (size_t i = 0; i < 3; i++) {
+        char path[128];
+        snprintf(path, sizeof(path), "variations/variation-%zu.json", i + 1);
+        assert(exists(path));
+        snprintf(path, sizeof(path), "variations/variation-%zu.musicxml", i + 1);
+        assert(exists(path));
+        snprintf(path, sizeof(path), "variations/variation-%zu.mid", i + 1);
+        assert(marker_tick(path, "loopStart") == (long)(2 * WHOLE_TICKS) && marker_tick(path, "loopEnd") == (long)(16 * WHOLE_TICKS));
+        snprintf(path, sizeof(path), "variations/variation-%zu.json", i + 1);
+        PiecePlan *variation = load_plan(path);
+        melodies[i] = dump_region(variation, 0, 17);
+        char *tune = dump_lane(variation, PLAN_LANE_MELODY, 0, 2, 10);
+        assert(strcmp(tune, old_melody) != 0);
+        free(tune);
+        expect_region(original, variation, 0, 2, true);
+        plan_destroy(variation);
+    }
+    assert(strcmp(melodies[0], melodies[1]) != 0 && strcmp(melodies[1], melodies[2]) != 0 && strcmp(melodies[0], melodies[2]) != 0);
+    for (size_t i = 0; i < 3; i++) {
+        free(melodies[i]);
+    }
+    free(old_melody);
+    plan_destroy(original);
+    expect_failure("--from loop.json --request request.json --variations a --lane melody --count 9 --out-dir variations", 1,
+                   "--count must be");
+    expect_failure("--from loop.json --request request.json --variations a --count 2 --out-dir variations", 1,
+                   "--variations needs --lane");
+    expect_failure("--from loop.json --request request.json --variations nowhere --lane melody --count 2 --out-dir variations", 1,
+                   "has no section 'nowhere'");
+}
+
+/* Harmonizing a section filled with a theme: new chords and a new bass over the theme's own melody. */
+static void test_harmonize_theme(void) {
+    /* theme_loop.json and theme_request.json are written by test_theme_fill. */
+    expect_failure("--from theme_loop.json --request theme_request.json --regenerate a --seed 1", 1, "filled with a theme");
+    expect_failure("--from theme_loop.json --request theme_request.json --regenerate a --lane melody --seed 1", 1, "filled with a theme");
+    char *shown = piece_output("--from theme_loop.json --request theme_request.json --variations a --lane harmony --count 3 "
+                               "--seed 1 --out-dir harmonize --format json");
+    size_t kept = count_of(shown, "\"index\":");
+    assert(kept >= 2 && kept <= 3);
+    free(shown);
+    PiecePlan *original = load_plan("theme_loop.json");
+    char *old_melody = dump_lane(original, PLAN_LANE_MELODY, 0, 2, 10);
+    char *old_chords = dump_lane(original, PLAN_LANE_HARMONY, 0, 2, 10);
+    for (size_t i = 0; i < kept; i++) {
+        char path[128];
+        snprintf(path, sizeof(path), "harmonize/variation-%zu.json", i + 1);
+        PiecePlan *variation = load_plan(path);
+        char *melody = dump_lane(variation, PLAN_LANE_MELODY, 0, 2, 10);
+        char *chords = dump_lane(variation, PLAN_LANE_HARMONY, 0, 2, 10);
+        assert(strcmp(melody, old_melody) == 0 && strcmp(chords, old_chords) != 0);
+        free(melody);
+        free(chords);
+        plan_destroy(variation);
+    }
+    free(old_melody);
+    free(old_chords);
+    plan_destroy(original);
+}
+
 /* ------------------------------------------------------------- the errors */
 
 static void test_errors(void) {
@@ -386,6 +659,9 @@ int main(void) {
     test_theme_fill();
     test_progression_fill();
     test_structure_only();
+    test_regenerate();
+    test_variations();
+    test_harmonize_theme();
     test_errors();
     printf("test_piece_cli: ok\n");
     return 0;

@@ -1,14 +1,19 @@
 #include "piece.h"
 
 #include <ctype.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include <cJSON.h>
 
 #include "cli_options.h"
+#include "fill.h"
 #include "grow.h"
 #include "theme.h"
 
@@ -21,7 +26,10 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece_structure.h>
 #include <ursatz_composer/plan_json.h>
+#include <ursatz_composer/plan_state.h>
+#include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/render.h>
+#include <ursatz_composer/variations.h>
 
 #define SCHEMA_NAME "ursatz-piece-request"
 #define NUMERALS_MAX 32
@@ -604,6 +612,13 @@ typedef struct {
     bool check;
     bool plain_midi;
     const char *input;
+    const char *from;       /* the loop plan to work on (regenerate) */
+    const char *request;    /* the request that plan was made from */
+    const char *regenerate; /* a section id, or "none" */
+    const char *lane;       /* harmony, bass, melody, inner or all */
+    const char *variations; /* a section id: make variations of it instead of regenerating */
+    const char *count;
+    const char *out_dir;
     const char *seed;
     const char *out;
     const char *ending_out;
@@ -615,17 +630,21 @@ typedef struct {
     const char *format;
 } Options;
 
+static void make_config(const Request *request, bool check, unsigned long seed, ComposeConfig *config) {
+    memset(config, 0, sizeof(*config));
+    config->seed = seed;
+    config->analyzer_check = check;
+    config->style = request->style;
+    config->style_weight = request->weight;
+    config->basic = request->basic;
+    config->tempo = request->tempo;
+    config->pool = request->pool;
+    config->pool_count = request->pool_count;
+}
+
 static PieceResult compose_version(const Request *request, bool check, unsigned long seed, Version *version) {
     ComposeConfig config;
-    memset(&config, 0, sizeof(config));
-    config.seed = seed;
-    config.analyzer_check = check;
-    config.style = request->style;
-    config.style_weight = request->weight;
-    config.basic = request->basic;
-    config.tempo = request->tempo;
-    config.pool = request->pool;
-    config.pool_count = request->pool_count;
+    make_config(request, check, seed, &config);
     PieceResult result = compose_run(version->plan, &config, &version->outcome);
     version->composed = true;
     return result;
@@ -639,6 +658,178 @@ static PieceResult compose_piece(const Request *request, bool check, unsigned lo
     if (result == PIECE_OK) {
         result = compose_version(request, check, seed, &piece->loop);
     }
+    if (result == PIECE_OK) {
+        result = piece_ending_plan(piece->loop.plan, &request->structure, &piece->ending.plan);
+    }
+    if (result == PIECE_OK) {
+        result = compose_version(request, check, seed + ENDING_SEED_OFFSET, &piece->ending);
+    }
+    return result;
+}
+
+/* ------------------------------------------------------------- regenerating a section */
+
+typedef struct {
+    const char *text;    /* the loop plan, normalized (cli_load_plan_text) */
+    const char *section; /* the request's section id, or NULL for none: only the ending version is rebuilt */
+    const char *lane;    /* harmony, bass, melody or inner; NULL for the whole section */
+} Edit;
+
+/* A section's fill in the request, or PIECE_FILL_EMPTY for an id the request does not have. */
+static PieceFillKind request_fill(const Request *request, const char *id) {
+    for (size_t s = 0; s < request->structure.section_count; s++) {
+        if (strcmp(request->sections[s].id, id) == 0) {
+            return request->sections[s].fill;
+        }
+    }
+    return PIECE_FILL_EMPTY;
+}
+
+static bool is_node_target(const FillTarget *targets, size_t count, NodeId node) {
+    for (size_t i = 0; i < count; i++) {
+        if (targets[i].kind == FILL_TARGET_NODE && targets[i].id == node) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * The loop plan read again, with what regenerating the section reopens: its lane (a lane the section was given, by a
+ * theme or a progression, is reopened for the lane asked and no other), and, when the section holds the body's first
+ * bar, the seam's copy of that bar dropped and the sections the loop's end holds back reopened, so the seam stage
+ * copies the new bar and writes the end against it. Returns 0 or the status of the error printed.
+ */
+static int open_edit(const Request *request, const Edit *edit, PiecePlan **out, FillTarget **targets, size_t *count,
+                     char *what, size_t what_size) {
+    PlanJsonError error;
+    PiecePlan *plan = NULL;
+    *out = NULL;
+    *targets = NULL;
+    *count = 0;
+    if (plan_from_json(edit->text, &plan, &error) != PLAN_OK) {
+        return cli_fail(CLI_EXIT_USAGE, "cannot read the loop plan: %s", error.message);
+    }
+    NodeId node = piece_section_find(plan, edit->section);
+    if (node == PLAN_NODE_NONE) {
+        plan_destroy(plan);
+        return cli_fail(CLI_EXIT_USAGE, "the loop plan has no section '%s'", edit->section);
+    }
+    if (request_fill(request, edit->section) == PIECE_FILL_THEME && !edit->lane) {
+        plan_destroy(plan);
+        return cli_fail(CLI_EXIT_USAGE,
+                        "section '%s' is filled with a theme: regenerate it with --lane harmony, bass, melody or inner", edit->section);
+    }
+    CliTargetOptions target;
+    char node_text[24];
+    memset(&target, 0, sizeof(target));
+    snprintf(node_text, sizeof(node_text), "%zu", (size_t)node);
+    target.node_text = node_text;
+    target.lane_text = edit->lane;
+    int status = cli_check_target(&target, "piece", PIECE_USAGE_LINE);
+    if (status != 0) {
+        plan_destroy(plan);
+        return status;
+    }
+    if (target.has_lane && request_fill(request, edit->section) == PIECE_FILL_THEME &&
+        (target.lane == PLAN_LANE_MELODY || target.lane == PLAN_LANE_INNER_VOICE)) {
+        plan_destroy(plan);
+        return cli_fail(CLI_EXIT_USAGE,
+                        "section '%s' is filled with a theme: its melody and inner voices are the theme's own; regenerate its harmony "
+                        "or bass, or fill the section another way",
+                        edit->section);
+    }
+    if (target.has_lane) {
+        /* New chords need a bass and inner voices written from them (the melody stays), so these are reopened first. */
+        if (target.lane == PLAN_LANE_HARMONY) {
+            piece_reopen_lane(plan, node, PLAN_LANE_BASS);
+            piece_reopen_lane(plan, node, PLAN_LANE_INNER_VOICE);
+        }
+        piece_reopen_lane(plan, node, target.lane);
+    }
+    FillTarget *found = NULL;
+    size_t found_count = 0;
+    status = cli_find_targets(plan, &target, &found, &found_count);
+    if (status != 0) {
+        plan_destroy(plan);
+        return status;
+    }
+    snprintf(what, what_size, "%s%s section %s", target.has_lane ? "the " : "", target.has_lane ? edit->lane : "", edit->section);
+    NodeId held[PIECE_STRUCTURE_MAX_SECTIONS];
+    size_t held_count = 0;
+    bool refresh = piece_section_holds_body_start(plan, node);
+    if (refresh) {
+        held_count = piece_held_sections(plan, held, PIECE_STRUCTURE_MAX_SECTIONS);
+        held_count = held_count > PIECE_STRUCTURE_MAX_SECTIONS ? PIECE_STRUCTURE_MAX_SECTIONS : held_count;
+    }
+    FillTarget *all = calloc(found_count + held_count + 1, sizeof(FillTarget));
+    if (!all || (refresh && piece_seam_reset(plan) != PIECE_OK)) {
+        free(all);
+        free(found);
+        plan_destroy(plan);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot reopen the seam");
+    }
+    memcpy(all, found, found_count * sizeof(FillTarget));
+    size_t total = found_count;
+    for (size_t h = 0; h < held_count; h++) {
+        if (!is_node_target(all, total, held[h])) {
+            all[total++] = (FillTarget){FILL_TARGET_NODE, held[h]};
+        }
+    }
+    free(found);
+    *out = plan;
+    *targets = all;
+    *count = total;
+    return 0;
+}
+
+/*
+ * The section written again in the loop plan, with seed. With no section the loop plan is kept as it is. A usage error or a
+ * refused target is a status in *status; PIECE_ERR_STUCK is the result of a stuck run, which the next seed may mend.
+ */
+static PieceResult regenerate_loop(const Request *request, const Edit *edit, bool check, unsigned long seed, Version *loop,
+                                   int *status) {
+    memset(loop, 0, sizeof(*loop));
+    *status = 0;
+    if (!edit->section) {
+        /* The plan is complete: nothing is composed, so the loop version has no outcome to report. */
+        PlanJsonError error;
+        if (plan_from_json(edit->text, &loop->plan, &error) != PLAN_OK) {
+            *status = cli_fail(CLI_EXIT_USAGE, "cannot read the loop plan: %s", error.message);
+            return PIECE_ERR_BAD_REQUEST;
+        }
+        return PIECE_OK;
+    }
+    PiecePlan *plan = NULL;
+    FillTarget *targets = NULL;
+    size_t count = 0;
+    char what[96];
+    ComposeConfig config;
+    make_config(request, check, seed, &config);
+    *status = open_edit(request, edit, &plan, &targets, &count, what, sizeof(what));
+    if (*status != 0) {
+        return PIECE_ERR_BAD_REQUEST;
+    }
+    RegenerateResult ran = plan_regenerate_all(plan, targets, count, &config, &loop->outcome);
+    free(targets);
+    loop->plan = plan;
+    loop->composed = true;
+    if (ran == REGENERATE_ERR_STUCK) {
+        return PIECE_ERR_STUCK;
+    }
+    if (ran != REGENERATE_OK) {
+        *status = cli_report_refused(ran, what);
+        return PIECE_ERR_BAD_REQUEST;
+    }
+    return PIECE_OK;
+}
+
+/* One try from a seed: the loop plan written again, then the ending version built from it with seed + 20. */
+static PieceResult regenerate_piece(const Request *request, const Edit *edit, bool check, unsigned long seed, Piece *piece,
+                                    int *status) {
+    memset(piece, 0, sizeof(*piece));
+    piece->seed = seed;
+    PieceResult result = regenerate_loop(request, edit, check, seed, &piece->loop, status);
     if (result == PIECE_OK) {
         result = piece_ending_plan(piece->loop.plan, &request->structure, &piece->ending.plan);
     }
@@ -1013,7 +1204,8 @@ static void print_result(const Options *options, const Request *request, const P
     bool has_loop = loop_region(piece->loop.plan, &start, &end);
     char key[32];
     GrowBrief brief = make_brief(request);
-    (void)options;
+    bool regenerated = options->from && !cli_equals_ignore_case(options->regenerate, "none");
+    bool whole = !options->lane || cli_equals_ignore_case(options->lane, "all");
     cli_key_name(&request->structure.key, key, sizeof(key));
     if (json) {
         printf("{\"schema\":\"ursatz-piece\",\"seed\":%lu,\"key\":", piece->seed);
@@ -1030,6 +1222,16 @@ static void print_result(const Options *options, const Request *request, const P
         } else {
             printf("null");
         }
+        if (options->from) {
+            printf(",\"regenerated\":");
+            if (regenerated) {
+                printf("{\"section\":");
+                cli_print_json_string(options->regenerate);
+                printf(",\"lane\":%s%s%s}", whole ? "" : "\"", whole ? "\"all\"" : options->lane, whole ? "" : "\"");
+            } else {
+                printf("null");
+            }
+        }
         printf(",\"versions\":{");
         print_version_json("loop", request, &piece->loop, output_path(outputs, count, OUT_LOOP_PLAN));
         printf(",");
@@ -1045,6 +1247,11 @@ static void print_result(const Options *options, const Request *request, const P
     printf("piece in %s, meter %d/%d, seed %lu\n", key, request->structure.meter.beats_per_bar,
            request->structure.meter.beat_unit, piece->seed);
     theme_print_brief(NULL, &brief, false);
+    if (regenerated) {
+        printf("regenerated %s of section %s\n", whole ? "all lanes" : options->lane, options->regenerate);
+    } else if (options->from) {
+        printf("regenerated nothing; the ending version is built again\n");
+    }
     if (has_loop) {
         printf("loop from ");
         print_time(start);
@@ -1059,10 +1266,197 @@ static void print_result(const Options *options, const Request *request, const P
     }
 }
 
+/* ------------------------------------------------------------- variations */
+
+#define VARIATIONS_MAX 8
+#define PATH_SIZE 1024
+/* As many seeds are tried as it takes to find the variations asked for, at most this many for each. */
+#define SEEDS_PER_VARIATION 4
+
+typedef struct {
+    Version version;
+    unsigned long seed;
+    uint64_t signature;
+    char plan[PATH_SIZE];
+    char midi[PATH_SIZE];
+    char musicxml[PATH_SIZE];
+} Variation;
+
+typedef struct {
+    const Options *options;
+    const Request *request;
+    const Variation *items;
+    size_t kept;
+    size_t seeds_tried;
+    unsigned long requested;
+} VariationsResult;
+
+static void variations_destroy(Variation *items, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        version_destroy(&items[i].version);
+    }
+}
+
+static void print_variations_json(const VariationsResult *result) {
+    printf("{\"schema\":\"ursatz-piece-variations\",\"section\":");
+    cli_print_json_string(result->options->variations);
+    printf(",\"lane\":");
+    cli_print_json_string(result->options->lane);
+    printf(",\"variations\":[");
+    for (size_t i = 0; i < result->kept; i++) {
+        const Variation *variation = &result->items[i];
+        printf("%s{\"index\":%zu,\"seed\":%lu,\"midi\":", i ? "," : "", i + 1, variation->seed);
+        cli_print_json_string(variation->midi);
+        printf(",\"musicxml\":");
+        cli_print_json_string(variation->musicxml);
+        printf(",");
+        print_version_json("loop", result->request, &variation->version, variation->plan);
+        printf("}");
+    }
+    printf("],\"kept\":%zu,\"requested\":%lu,\"seeds_tried\":%zu}\n", result->kept, result->requested, result->seeds_tried);
+}
+
+static void print_variations_text(const VariationsResult *result) {
+    printf("%s of section %s\n", strcmp(result->options->lane, "harmony") == 0 ? "harmonizations" : "variations",
+           result->options->variations);
+    for (size_t i = 0; i < result->kept; i++) {
+        const Variation *variation = &result->items[i];
+        const ComposeOutcome *outcome = &variation->version.outcome;
+        printf("variation %zu  seed %lu  score %lu/%lu", i + 1, variation->seed, outcome->score.numerator, outcome->score.denominator);
+        if (outcome->seam_planned) {
+            printf("  seam %zu of 4 rules held", outcome->seam.held);
+        }
+        printf("\n");
+    }
+    printf("kept %zu of %lu, %zu seeds tried\n", result->kept, result->requested, result->seeds_tried);
+    for (size_t i = 0; i < result->kept; i++) {
+        printf("wrote %s, %s, %s\n", result->items[i].plan, result->items[i].midi, result->items[i].musicxml);
+    }
+}
+
+/* Writes what print prints to a file next to its final name, then renames it. */
+static int write_result_file(const VariationsResult *result, const char *path) {
+    char temporary[PATH_SIZE + 8];
+    snprintf(temporary, sizeof(temporary), "%s.tmp", path);
+    fflush(stdout);
+    int saved = dup(STDOUT_FILENO);
+    int file = open(temporary, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (saved < 0 || file < 0 || dup2(file, STDOUT_FILENO) < 0) {
+        if (saved >= 0) {
+            close(saved);
+        }
+        if (file >= 0) {
+            close(file);
+        }
+        return cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", path);
+    }
+    close(file);
+    print_variations_json(result);
+    fflush(stdout);
+    dup2(saved, STDOUT_FILENO);
+    close(saved);
+    if (rename(temporary, path) != 0) {
+        remove(temporary);
+        return cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", path);
+    }
+    return 0;
+}
+
+/* variation-<i>.json, .mid and .musicxml of the loop version, and result.json, in the directory. */
+static int write_variations(const Options *options, const Request *request, Variation *items, size_t kept, size_t seeds_tried,
+                            unsigned long requested, bool json) {
+    if (mkdir(options->out_dir, 0755) != 0 && errno != EEXIST) {
+        return cli_fail(CLI_EXIT_WRITE, "cannot create '%s': %s", options->out_dir, strerror(errno));
+    }
+    int status = 0;
+    for (size_t i = 0; status == 0 && i < kept; i++) {
+        Variation *variation = &items[i];
+        if (snprintf(variation->plan, PATH_SIZE, "%s/variation-%zu.json", options->out_dir, i + 1) >= PATH_SIZE ||
+            snprintf(variation->midi, PATH_SIZE, "%s/variation-%zu.mid", options->out_dir, i + 1) >= PATH_SIZE ||
+            snprintf(variation->musicxml, PATH_SIZE, "%s/variation-%zu.musicxml", options->out_dir, i + 1) >= PATH_SIZE) {
+            return cli_fail(CLI_EXIT_WRITE, "file name in '%s' is too long", options->out_dir);
+        }
+        Output outputs[3] = {{OUT_LOOP_PLAN, variation->plan, ""}, {OUT_LOOP_MIDI, variation->midi, ""},
+                             {OUT_LOOP_MUSICXML, variation->musicxml, ""}};
+        Piece piece;
+        memset(&piece, 0, sizeof(piece));
+        piece.loop = variation->version;
+        status = write_files(options, request, &piece, outputs, 3);
+    }
+    VariationsResult result = {options, request, items, kept, seeds_tried, requested};
+    char path[PATH_SIZE];
+    if (status == 0 && snprintf(path, PATH_SIZE, "%s/result.json", options->out_dir) >= PATH_SIZE) {
+        status = cli_fail(CLI_EXIT_WRITE, "file name in '%s' is too long", options->out_dir);
+    }
+    if (status == 0) {
+        status = write_result_file(&result, path);
+    }
+    if (status == 0) {
+        json ? print_variations_json(&result) : print_variations_text(&result);
+    }
+    return status;
+}
+
+/*
+ * Variations of one section: the section is written again from one seed after another (as --regenerate does, the seam and
+ * the loop's end included) and a version is kept when it sounds different from the plan and from the ones kept before.
+ * Returns the exit status.
+ */
+static int make_variations(const Options *options, const Request *request, const Edit *edit, unsigned long seed, bool json) {
+    unsigned long requested = 0;
+    if (!options->count || !cli_parse_whole_number(options->count, VARIATIONS_MAX, &requested) || requested < 1) {
+        return cli_fail(CLI_EXIT_USAGE, "--count must be a whole number from 1 to %d, not '%s'", VARIATIONS_MAX,
+                        options->count ? options->count : "");
+    }
+    PiecePlan *original = NULL;
+    PlanJsonError error;
+    if (plan_from_json(edit->text, &original, &error) != PLAN_OK) {
+        return cli_fail(CLI_EXIT_USAGE, "cannot read the loop plan: %s", error.message);
+    }
+    uint64_t original_signature = plan_signature(original);
+    plan_destroy(original);
+    Variation items[VARIATIONS_MAX];
+    memset(items, 0, sizeof(items));
+    size_t kept = 0;
+    size_t tried = 0;
+    int status = 0;
+    for (size_t attempt = 0; status == 0 && kept < requested && attempt < SEEDS_PER_VARIATION * requested; attempt++) {
+        Variation *next = &items[kept];
+        unsigned long used = (seed + attempt) & CLI_SEED_MAX;
+        PieceResult result = regenerate_loop(request, edit, options->check, used, &next->version, &status);
+        tried++;
+        bool keep = result == PIECE_OK && status == 0;
+        if (keep) {
+            next->signature = plan_signature(next->version.plan);
+            keep = next->signature != original_signature;
+            for (size_t i = 0; keep && i < kept; i++) {
+                keep = items[i].signature != next->signature;
+            }
+        }
+        if (keep) {
+            next->seed = used;
+            kept++;
+        } else {
+            version_destroy(&next->version);
+        }
+    }
+    if (status == 0 && kept == 0) {
+        status = cli_fail(CLI_EXIT_UNSATISFIABLE, "no version of section '%s' that differs from the plan was found in %zu seeds from %lu",
+                          options->variations, tried, seed);
+    }
+    if (status == 0) {
+        status = write_variations(options, request, items, kept, tried, requested, json);
+    }
+    variations_destroy(items, kept);
+    return status;
+}
+
 /* ------------------------------------------------------------- the command */
 
 static void print_help(FILE *out) {
-    fprintf(out, "Usage:\n%s\n\n", PIECE_USAGE_LINE + 7);
+    fprintf(out, "Usage:\n%s\n", PIECE_USAGE_LINE + 7);
+    fprintf(out, "%s\n", PIECE_REGENERATE_USAGE_LINE);
+    fprintf(out, "%s\n\n", PIECE_VARIATIONS_USAGE_LINE);
     fprintf(out, "Composes a looping game track from a request (JSON, schema %s): an intro, a body, a turnaround and an\n", SCHEMA_NAME);
     fprintf(out, "ending, each a list of sections of any length in beats with a pickup, a cadence and a fill (nothing, a motive,\n");
     fprintf(out, "a composed theme or a progression), in a key and a meter, with an accompaniment or a voicing and a style. Two\n");
@@ -1081,6 +1475,17 @@ static void print_help(FILE *out) {
     fprintf(out, "  --plain-midi             MIDI: no track names and no section markers (the loop markers stay)\n");
     fprintf(out, "  --explain <file>         write why each candidate was chosen or rejected, in both versions\n");
     fprintf(out, "  --format <text|json>     how to print the result on stdout (default: text)\n");
+    fprintf(out, "  --from <loop-plan.json>  work on a loop plan the command wrote, with --request (the request it was made from)\n");
+    fprintf(out, "  --regenerate <id|none>   write the section with that id again (the lane given, or all of it), the rest locked;\n");
+    fprintf(out, "                           the seam is written again when the section holds the body's first bar, and the\n");
+    fprintf(out, "                           ending version is always built again from the new loop. none: only the ending version.\n");
+    fprintf(out, "                           A section filled with a theme needs --lane\n");
+    fprintf(out, "  --lane <lane>            harmony, bass, melody, inner or all (default all)\n");
+    fprintf(out, "  --variations <id>        make --count different versions of the section (--lane needed; harmony over a given\n");
+    fprintf(out, "                           melody is a harmonization), each written to --out-dir as variation-<i>.json, .mid and\n");
+    fprintf(out, "                           .musicxml (the loop version) with result.json: the seeds, scores, seam and cadences\n");
+    fprintf(out, "  --count <n>              how many variations, 1 to %d\n", VARIATIONS_MAX);
+    fprintf(out, "  --out-dir <dir>          where the variations are written\n");
     fprintf(out, "  --help                   this text\n\n");
     fprintf(out, "Exit status: 0 success; 1 usage or an invalid request; 2 the request cannot be satisfied; 3 an output file\n");
     fprintf(out, "could not be written.\n");
@@ -1115,6 +1520,20 @@ static int read_options(int argc, char **argv, Options *options) {
             target = &options->explain;
         } else if (strcmp(arg, "--format") == 0) {
             target = &options->format;
+        } else if (strcmp(arg, "--from") == 0) {
+            target = &options->from;
+        } else if (strcmp(arg, "--request") == 0) {
+            target = &options->request;
+        } else if (strcmp(arg, "--regenerate") == 0) {
+            target = &options->regenerate;
+        } else if (strcmp(arg, "--lane") == 0) {
+            target = &options->lane;
+        } else if (strcmp(arg, "--variations") == 0) {
+            target = &options->variations;
+        } else if (strcmp(arg, "--count") == 0) {
+            target = &options->count;
+        } else if (strcmp(arg, "--out-dir") == 0) {
+            target = &options->out_dir;
         } else if (arg[0] == '-' && arg[1] != '\0') {
             return cli_fail(CLI_EXIT_USAGE, "unknown option '%s' (see ursatz-composer piece --help)", arg);
         } else if (!options->input) {
@@ -1160,6 +1579,72 @@ static int fail_compose(PieceResult result, const Piece *last, unsigned long fir
     return cli_fail(CLI_EXIT_UNSATISFIABLE, "%s", piece_result_name(result));
 }
 
+/* The outputs asked for, written, and the result printed. Returns the exit status. */
+static int emit(const Options *options, const Request *request, const Piece *piece, bool json) {
+    Output outputs[OUTPUT_MAX];
+    size_t count = 0;
+    const struct {
+        OutputKind kind;
+        const char *path;
+    } wanted[] = {{OUT_LOOP_PLAN, options->out},          {OUT_ENDING_PLAN, options->ending_out},
+                  {OUT_LOOP_MIDI, options->midi},         {OUT_LOOP_MUSICXML, options->musicxml},
+                  {OUT_ENDING_MIDI, options->ending_midi}, {OUT_ENDING_MUSICXML, options->ending_musicxml},
+                  {OUT_EXPLAIN, options->explain}};
+    for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
+        if (wanted[i].path) {
+            outputs[count].kind = wanted[i].kind;
+            outputs[count].path = wanted[i].path;
+            count++;
+        }
+    }
+    int status = write_files(options, request, piece, outputs, count);
+    if (status == 0) {
+        print_result(options, request, piece, outputs, count, json);
+    }
+    return status;
+}
+
+/* The options that belong with --from, and the ones that do not. Returns 0 or the status of the usage error printed. */
+static int check_edit_options(const Options *options) {
+    if (options->from) {
+        if (options->input) {
+            return cli_fail(CLI_EXIT_USAGE, "with --from the request is given as --request, not as an argument\n%s", PIECE_USAGE_LINE);
+        }
+        if (!options->request) {
+            return cli_fail(CLI_EXIT_USAGE, "--from needs --request <request.json>\n%s", PIECE_USAGE_LINE);
+        }
+        if (!options->regenerate == !options->variations) {
+            return cli_fail(CLI_EXIT_USAGE, "--from needs --regenerate <section id>|none or --variations <section id>, not both\n%s",
+                            PIECE_USAGE_LINE);
+        }
+        if (options->lane && !cli_equals_ignore_case(options->lane, "all") && !cli_equals_ignore_case(options->lane, "harmony") &&
+            !cli_equals_ignore_case(options->lane, "bass") && !cli_equals_ignore_case(options->lane, "melody") &&
+            !cli_equals_ignore_case(options->lane, "inner")) {
+            return cli_fail(CLI_EXIT_USAGE, "--lane must be harmony, bass, melody, inner or all, not '%s'", options->lane);
+        }
+        if (options->variations) {
+            if (!options->lane || !options->count || !options->out_dir) {
+                return cli_fail(CLI_EXIT_USAGE, "--variations needs --lane, --count and --out-dir\n%s", PIECE_VARIATIONS_USAGE_LINE);
+            }
+            if (options->out || options->ending_out || options->midi || options->musicxml || options->ending_midi ||
+                options->ending_musicxml || options->explain) {
+                return cli_fail(CLI_EXIT_USAGE, "--variations writes its files to --out-dir; the other output options do not apply");
+            }
+        } else if (options->count || options->out_dir) {
+            return cli_fail(CLI_EXIT_USAGE, "--count and --out-dir go with --variations");
+        }
+        return 0;
+    }
+    if (options->request || options->regenerate || options->lane || options->variations || options->count || options->out_dir) {
+        return cli_fail(CLI_EXIT_USAGE, "--request, --regenerate, --variations, --lane, --count and --out-dir go with --from\n%s",
+                        PIECE_USAGE_LINE);
+    }
+    if (!options->input) {
+        return cli_fail(CLI_EXIT_USAGE, "piece needs a request file\n%s", PIECE_USAGE_LINE);
+    }
+    return 0;
+}
+
 int run_piece(int argc, char **argv) {
     Options options;
     int status = read_options(argc, argv, &options);
@@ -1170,8 +1655,9 @@ int run_piece(int argc, char **argv) {
         print_help(stdout);
         return 0;
     }
-    if (!options.input) {
-        return cli_fail(CLI_EXIT_USAGE, "piece needs a request file\n%s", PIECE_USAGE_LINE);
+    status = check_edit_options(&options);
+    if (status != 0) {
+        return status;
     }
     unsigned long seed = cli_default_seed();
     if (options.seed && !cli_parse_whole_number(options.seed, CLI_SEED_MAX, &seed)) {
@@ -1188,8 +1674,31 @@ int run_piece(int argc, char **argv) {
     if (!request) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    status = read_request(request, options.input, options.plain_midi);
+    status = read_request(request, options.from ? options.request : options.input, options.plain_midi);
     if (status != 0) {
+        request_destroy(request);
+        free(request);
+        return status;
+    }
+    Edit edit;
+    memset(&edit, 0, sizeof(edit));
+    char *plan_text = NULL;
+    if (options.from) {
+        status = cli_load_plan_text(options.from, &plan_text);
+        if (status != 0) {
+            request_destroy(request);
+            free(request);
+            return status;
+        }
+        edit.text = plan_text;
+        edit.section = options.variations ? options.variations
+                       : cli_equals_ignore_case(options.regenerate, "none") ? NULL : options.regenerate;
+        edit.lane = options.lane && !cli_equals_ignore_case(options.lane, "all") ? options.lane : NULL;
+    }
+
+    if (options.variations) {
+        status = make_variations(&options, request, &edit, seed, json);
+        free(plan_text);
         request_destroy(request);
         free(request);
         return status;
@@ -1203,33 +1712,18 @@ int run_piece(int argc, char **argv) {
     for (unsigned long attempt = 0; attempt < CLI_MAX_SEED_TRIES && result == PIECE_ERR_STUCK; attempt++) {
         piece_destroy(&piece);
         last_seed = (seed + attempt) & CLI_SEED_MAX;
-        result = compose_piece(request, options.check, last_seed, &piece);
+        result = options.from ? regenerate_piece(request, &edit, options.check, last_seed, &piece, &status)
+                              : compose_piece(request, options.check, last_seed, &piece);
     }
-    if (result != PIECE_OK) {
+    if (status != 0) {
+        /* The edit was refused: the error is printed already. */
+    } else if (result != PIECE_OK) {
         status = fail_compose(result, &piece, seed, last_seed);
     } else {
-        Output outputs[OUTPUT_MAX];
-        size_t count = 0;
-        const struct {
-            OutputKind kind;
-            const char *path;
-        } wanted[] = {{OUT_LOOP_PLAN, options.out},          {OUT_ENDING_PLAN, options.ending_out},
-                      {OUT_LOOP_MIDI, options.midi},         {OUT_LOOP_MUSICXML, options.musicxml},
-                      {OUT_ENDING_MIDI, options.ending_midi}, {OUT_ENDING_MUSICXML, options.ending_musicxml},
-                      {OUT_EXPLAIN, options.explain}};
-        for (size_t i = 0; i < sizeof(wanted) / sizeof(wanted[0]); i++) {
-            if (wanted[i].path) {
-                outputs[count].kind = wanted[i].kind;
-                outputs[count].path = wanted[i].path;
-                count++;
-            }
-        }
-        status = write_files(&options, request, &piece, outputs, count);
-        if (status == 0) {
-            print_result(&options, request, &piece, outputs, count, json);
-        }
+        status = emit(&options, request, &piece, json);
     }
     piece_destroy(&piece);
+    free(plan_text);
     request_destroy(request);
     free(request);
     return status;
