@@ -2805,8 +2805,13 @@ static int handle_link_form(struct mg_connection *conn, const char *id) {
     return send_failure(conn, 400, "the recognition lacks a chain, kept and changed");
   }
   cJSON *item = NULL;
-  result = replace_member(motif, "derived", derived) ? ursatz_gui_material_item_add_version(id, current, note, &item)
-                                                     : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+  /* A linked motif already exists on its own, so it is a standalone motif (R-192), not a variant of the source. */
+  bool linked = cJSON_AddTrueToObject(derived, "standalone") != NULL;
+  result = linked && replace_member(motif, "derived", derived) ? ursatz_gui_material_item_add_version(id, current, note, &item)
+                                                              : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+  if (!linked) {
+    cJSON_Delete(derived);
+  }
   cJSON_Delete(body);
   cJSON_Delete(current);
   if (result != URSATZ_GUI_MATERIAL_OK) {
