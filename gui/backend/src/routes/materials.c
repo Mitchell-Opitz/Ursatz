@@ -2911,7 +2911,8 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
 
 static const int kMaxTreeDepth = 32;
 
-/* A tree node {id, name, current_version, derived, children: []} (derived is a copy, or null) with every entry of index
+/* A tree node {id, name, current_version, standalone, derived, children: []} (derived is a copy, or null; standalone
+   is true for a promoted motif) with every entry of index
    whose derived.source_item is id below it. ancestors lists the ids above, so a loop in the stored records ends. */
 static cJSON *variant_node(const cJSON *index, const char *id, const char *name, int version, const cJSON *derived,
                            const char **ancestors, int depth) {
@@ -2920,6 +2921,8 @@ static cJSON *variant_node(const cJSON *index, const char *id, const char *name,
   cJSON *copy = derived ? cJSON_Duplicate(derived, 1) : cJSON_CreateNull();
   if (!node || !children || !copy || !cJSON_AddStringToObject(node, "id", id) ||
       !cJSON_AddStringToObject(node, "name", name) || !cJSON_AddNumberToObject(node, "current_version", version) ||
+      !cJSON_AddBoolToObject(node, "standalone",
+                             cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(derived, "standalone"))) ||
       !cJSON_AddItemToObject(node, "derived", copy)) {
     if (!node || !cJSON_GetObjectItemCaseSensitive(node, "derived")) {
       cJSON_Delete(copy);

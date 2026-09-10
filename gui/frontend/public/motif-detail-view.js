@@ -169,6 +169,13 @@ const MotifDetailView = (function () {
       id,
       name: item.name,
       body: data.body,
+      projectId: item.project_id,
+      projects: materialsState.projects,
+      /* A promoted motif opens on its Motif tab, where subjects can be added. */
+      open: (motifId) => {
+        MaterialsModel.writeMotifTab("motif");
+        renderMaterialsDetail("motif", motifId);
+      },
       send: sendMaterialsRequest,
     });
     ctx.variants = variants;

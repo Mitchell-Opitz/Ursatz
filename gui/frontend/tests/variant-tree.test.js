@@ -243,6 +243,8 @@ const ctx = {
   id: "root",
   name: "Motif",
   body: { motif: { degrees: "1:q 5:e", form: "full" } },
+  projectId: "p1",
+  projects: [{ id: "p1", name: "Project" }],
   open: () => {},
   send(request) {
     if (request.url.endsWith("variant-operations")) {
