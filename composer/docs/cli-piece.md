@@ -44,6 +44,57 @@ JSON: `{"schema": "ursatz-piece", "seed", "key", "meter", "brief", "loop": {"sta
 - `score`: `{"numerator", "denominator"}`; `seam`: the four rules and how many held, for the loop, else `null`;
 - `analyzer_check`: `{"planned", "agreed", "contradicts", "items"}` or `null`; `style_distance`: or `null`.
 
+## Regenerate
+
+```sh
+ursatz-composer piece --from <loop-plan.json> --request <request.json> --regenerate <section id>|none [--lane harmony|bass|melody|inner|all] [--seed <n>] [--check] [--out <loop-plan.json>] [--ending-out <file>] [--midi <file>] [--musicxml <file>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
+```
+
+Writes one section of a loop plan the command wrote again (R-173), and nothing the section does not reach. `--request` is
+the request the plan was made from: it gives the structure for the ending version and the style, the tempo and the
+motives. `--regenerate` names the section by the `id` of the request. Without `--lane` (or with `all`) the section is
+reopened whole; with a lane, that lane of the section and what is written from it (`regenerate.h`; the bass and the melody
+over new chords, the inner voices over a new bass), the rest locked. The outputs are `--out` and the other options above,
+and the JSON gains `"regenerated": {"section", "lane"}`.
+
+- **The seam.** When the section holds the body's first bar, the seam's copy of that bar is dropped and the sections the
+  loop's end holds back (the turnaround) are reopened, so the seam stage copies the new bar and writes the end against it
+  ([loop-seam.md](loop-seam.md)). Regenerating a held section only (the turnaround) leaves the copy as it is.
+- **The ending version** is always built again from the new loop plan (seed + 20 of the seed that worked), so the two stay
+  the same note for note up to the body's end. `--regenerate none` reopens nothing and only builds the ending version again;
+  the loop version then has no score or seam in the output. It is for a variation chosen as the new loop plan.
+- **A section filled with a theme** can be regenerated only with `--lane harmony` or `--lane bass` (exit 1 otherwise): its
+  melody and inner voices are the theme's own. Its lanes are Given, and the lane asked for is reopened for this call only
+  (`piece_reopen_lane`); the file keeps nothing Given that was not Given. Harmony is reopened with the bass and inner voices
+  written from it, over the theme's melody (a harmonization).
+- **Seeds.** As for the other options: the seeds from `--seed` are tried one after another, up to 16, and a seed that gets
+  stuck in the loop or the ending is passed over.
+
+An unknown section id is exit 1 (`the loop plan has no section '<id>'`). A section that cannot be regenerated (Given
+material among its phrases, a progression fill's numerals) is exit 2.
+
+## Variations
+
+```sh
+ursatz-composer piece --from <loop-plan.json> --request <request.json> --variations <section id> --lane harmony|bass|melody|inner|all --count <1..8> --out-dir <dir> [--seed <n>] [--check] [--plain-midi] [--format text|json]
+```
+
+Makes up to `--count` different versions of a section (R-088, R-173). The section is regenerated as above (the seam and the
+loop's end included) for the seeds `--seed`, `--seed + 1`, ..., at most 4 times `--count` of them, and a version is kept when
+its notes differ from the plan's and from every version kept before (the signature of `plan_signature`). A seed that gets
+stuck is skipped. Fewer than `--count` may be kept; none is exit 2.
+
+Each version is written to `--out-dir` (made if missing) as `variation-<i>.json` (the loop plan), `variation-<i>.mid` (with the
+loop markers) and `variation-<i>.musicxml`, and `result.json` lists them: `{"schema": "ursatz-piece-variations", "section",
+"lane", "variations": [{"index", "seed", "midi", "musicxml", "loop": V}], "kept", "requested", "seeds_tried"}` with V as above
+(`plan`, `sections` with the cadence heard, `score`, `seam`, `analyzer_check`, `style_distance`). The same JSON is printed with
+`--format json`. The ending version is not made: choose one, use its `variation-<i>.json` as `--from`, and run
+`--regenerate none`.
+
+Harmonizing is `--lane harmony` on a section whose melody is Given (a theme fill): the chords and the bass are new and every
+melody note is kept. With any other melody the harmony is written again with the melody around it, which is allowed. The
+other output options (`--out`, `--midi`, ...) do not apply and are exit 1.
+
 ## Exit status
 
 | Status | Meaning |
