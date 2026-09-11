@@ -30,6 +30,7 @@ typedef struct {
     const char *function_texts[VARIANT_FUNCTIONS];
     size_t function_count;
     bool list_ops;
+    bool each_op;
     bool json;
     bool help;
 } Options;
@@ -52,6 +53,10 @@ static void print_help(FILE *out) {
     fprintf(out, "                       medium 2 steps and over 1/3 up to 2/3, far 3 or 4 steps and over 2/3. Draws up to %d\n", VARIANTS_DRAWS_PER_COUNT);
     fprintf(out, "                       chains for each variant asked for, so fewer than --count may come back; combines with\n");
     fprintf(out, "                       --function (both must hold). Not with --chain\n");
+    fprintf(out, "  --each-op            one variant for every operation that applies to the motive's form, in registry\n");
+    fprintf(out, "                       order, each a one-step chain with its open parameters drawn from seed + the\n");
+    fprintf(out, "                       operation's position in the registry. An operation the motive refuses is listed as\n");
+    fprintf(out, "                       skipped, with the reason. Not with --chain, --count, --distance or --function\n");
     fprintf(out, "  --chain <file>       a JSON file {\"steps\": [{\"op\": \"invert\", \"params\": {\"tonal\": true}}]}, the same\n");
     fprintf(out, "                       chain for every variant. Default: each variant gets its own random chain\n");
     fprintf(out, "  --count <n>          how many variants, 1 to %d (default %d); variant i uses seed + i\n", VARIANTS_COUNT_MAX, VARIANTS_COUNT_DEFAULT);
@@ -85,6 +90,8 @@ static int read_options(int argc, char **argv, Options *options) {
             options->json = true;
         } else if (strcmp(argument, "--list-ops") == 0) {
             options->list_ops = true;
+        } else if (strcmp(argument, "--each-op") == 0) {
+            options->each_op = true;
         } else if (strcmp(argument, "--function") == 0) {
             if (i + 1 >= argc) {
                 return cli_fail(CLI_EXIT_USAGE, "--function needs a value");
@@ -325,7 +332,14 @@ static char *motive_text(const Motive *motive) {
                                                  : motive_to_notes_text(motive);
 }
 
-static void print_text(unsigned long seed, const Motive *source, const Variant *variants, size_t count) {
+/* An operation --each-op could not apply to the motive, and why. */
+typedef struct {
+    const char *op;
+    char reason[VARIANT_ERROR_MAX];
+} Skipped;
+
+static void print_text(unsigned long seed, const Motive *source, const Variant *variants, size_t count,
+                       const Skipped *skipped, size_t skipped_count) {
     char *source_text = motive_text(source);
     printf("Source: %s\n", source_text ? source_text : "");
     printf("Seed: %lu\n", seed);
@@ -345,6 +359,12 @@ static void print_text(unsigned long seed, const Motive *source, const Variant *
         }
         printf("%s\n", variant->record.function_count ? "" : " none");
         free(text);
+    }
+    if (skipped_count > 0) {
+        printf("\n");
+    }
+    for (size_t i = 0; i < skipped_count; i++) {
+        printf("Skipped %s: %s\n", skipped[i].op, skipped[i].reason);
     }
 }
 
@@ -374,8 +394,9 @@ static cJSON *variant_object(const Variant *variant) {
     return object;
 }
 
-/* {"seed", "source", "variants"}, printed with 2-space indent. False on failure. */
-static bool print_json(unsigned long seed, const Motive *source, const Variant *variants, size_t count) {
+/* {"seed", "source", "variants"} and, for --each-op, "skipped", printed with 2-space indent. False on failure. */
+static bool print_json(unsigned long seed, const Motive *source, const Variant *variants, size_t count,
+                       const Skipped *skipped, size_t skipped_count, bool each_op) {
     cJSON *document = cJSON_CreateObject();
     cJSON *source_document = document ? motive_document(source) : NULL;
     cJSON *array = source_document ? cJSON_CreateArray() : NULL;
@@ -394,6 +415,21 @@ static bool print_json(unsigned long seed, const Motive *source, const Variant *
             return false;
         }
         cJSON_AddItemToArray(array, object);
+    }
+    cJSON *skipped_array = each_op ? cJSON_AddArrayToObject(document, "skipped") : NULL;
+    for (size_t i = 0; each_op && i < skipped_count; i++) {
+        cJSON *entry = skipped_array ? cJSON_CreateObject() : NULL;
+        if (!entry || !cJSON_AddStringToObject(entry, "op", skipped[i].op) ||
+            !cJSON_AddStringToObject(entry, "reason", skipped[i].reason)) {
+            cJSON_Delete(entry);
+            cJSON_Delete(document);
+            return false;
+        }
+        cJSON_AddItemToArray(skipped_array, entry);
+    }
+    if (each_op && !skipped_array) {
+        cJSON_Delete(document);
+        return false;
     }
     char *printed = cJSON_Print(document);
     cJSON_Delete(document);
@@ -449,6 +485,71 @@ static bool suits_a_function(const Options *options, const VariantRecord *record
     return false;
 }
 
+/* Sets the variant's remoteness from the basic motive and the functions it suits. */
+static void measure_variant(const Options *options, const Motive *basic, Variant *variant) {
+    /* From the basic motive, searched as deep as the chain that made the variant unless the basic is another motive. */
+    size_t depth = motive_input_basic_given(&options->basic) ? VARIANT_CHAIN_MAX : variant->record.step_count;
+    if (variant_set_remoteness(basic, &variant->motive, depth, &variant->record) != VARIANT_OK) {
+        variant->record.remoteness_num = 1;
+        variant->record.remoteness_den = 1;
+    }
+    variant_functions(basic, &variant->motive, &variant->record, variant->record.functions,
+                      &variant->record.function_count);
+}
+
+/* --each-op: one one-step variant for each operation that takes the motive's form. */
+static int make_each_op(const Options *options, unsigned long seed, const Motive *source, const Motive *basic) {
+    size_t rows = variant_registry_count();
+    Variant *variants = calloc(rows, sizeof(*variants));
+    Skipped *skipped = calloc(rows, sizeof(*skipped));
+    if (!variants || !skipped) {
+        free(variants);
+        free(skipped);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    size_t made = 0;
+    size_t skipped_count = 0;
+    for (size_t i = 0; i < rows; i++) {
+        const VariantOperation *operation = variant_registry_at(i);
+        if ((operation->forms & VARIANT_FORM_BIT(source->form)) == 0) {
+            continue;
+        }
+        Variant *variant = &variants[made];
+        variant_step_init(&variant->chain.steps[0], operation->name);
+        variant->chain.step_count = 1;
+        VariantResult result =
+            variant_apply_chain(source, &variant->chain, seed + (unsigned long)i, &variant->motive, &variant->record);
+        if (result == VARIANT_OK) {
+            measure_variant(options, basic, variant);
+            made++;
+        } else {
+            skipped[skipped_count].op = operation->name;
+            /* The error often starts with the operation's name; the entry has that already. */
+            const char *reason = variant->record.error[0] ? variant->record.error : variant_result_name(result);
+            size_t name_length = strlen(operation->name);
+            if (strncmp(reason, operation->name, name_length) == 0 && reason[name_length] == ':' &&
+                reason[name_length + 1] == ' ') {
+                reason += name_length + 2;
+            }
+            snprintf(skipped[skipped_count].reason, sizeof(skipped[skipped_count].reason), "%s", reason);
+            skipped_count++;
+        }
+    }
+    int status = 0;
+    if (made == 0) {
+        status = cli_fail(CLI_EXIT_UNSATISFIABLE, "no operation could be applied to this motive");
+    } else if (options->json) {
+        if (!print_json(seed, source, variants, made, skipped, skipped_count, true)) {
+            status = cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+        }
+    } else {
+        print_text(seed, source, variants, made, skipped, skipped_count);
+    }
+    free(variants);
+    free(skipped);
+    return status;
+}
+
 /* The variants command proper: load the source, make --count variants, print them. */
 static int make_variants(const Options *options) {
     unsigned long count = VARIANTS_COUNT_DEFAULT;
@@ -461,6 +562,10 @@ static int make_variants(const Options *options) {
     if (options->seed_text && !cli_parse_whole_number(options->seed_text, seed_max, &seed)) {
         return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to %lu, not '%s'", seed_max,
                         options->seed_text);
+    }
+    if (options->each_op && (options->chain_path || options->count_text || options->distance_text ||
+                             options->function_count > 0)) {
+        return cli_fail(CLI_EXIT_USAGE, "--each-op takes no --chain, --count, --distance or --function");
     }
     const Distance *distance = NULL;
     if (options->distance_text) {
@@ -495,6 +600,10 @@ static int make_variants(const Options *options) {
         }
     }
 
+    if (options->each_op) {
+        return make_each_op(options, seed, &source, &basic);
+    }
+
     Variant *variants = calloc(count, sizeof(*variants));
     if (!variants) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
@@ -518,14 +627,7 @@ static int make_variants(const Options *options) {
         }
         VariantResult result = variant_apply_chain(&source, &variant->chain, variant_seed, &variant->motive, &variant->record);
         if (result == VARIANT_OK) {
-            /* From the basic motive, searched as deep as the chain that made the variant unless the basic is another motive. */
-            size_t depth = motive_input_basic_given(&options->basic) ? VARIANT_CHAIN_MAX : variant->record.step_count;
-            if (variant_set_remoteness(&basic, &variant->motive, depth, &variant->record) != VARIANT_OK) {
-                variant->record.remoteness_num = 1;
-                variant->record.remoteness_den = 1;
-            }
-            variant_functions(&basic, &variant->motive, &variant->record, variant->record.functions,
-                              &variant->record.function_count);
+            measure_variant(options, &basic, variant);
             if ((options->function_count > 0 && !suits_a_function(options, &variant->record)) ||
                 (distance && !in_distance(distance, &variant->record))) {
                 continue;
@@ -552,12 +654,12 @@ static int make_variants(const Options *options) {
         fprintf(stderr, "Only %zu of %lu variants suit the %s within %lu draws\n", made, count, asked, draws);
     }
     if (options->json) {
-        if (!print_json(seed, &source, variants, made)) {
+        if (!print_json(seed, &source, variants, made, NULL, 0, false)) {
             free(variants);
             return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
         }
     } else {
-        print_text(seed, &source, variants, made);
+        print_text(seed, &source, variants, made, NULL, 0);
     }
     free(variants);
     return 0;
