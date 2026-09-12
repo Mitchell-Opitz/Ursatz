@@ -250,6 +250,17 @@ static char *create_motif(const char *name, const char *form, const char *role, 
   return create_item("motif", name, body, &status);
 }
 
+/* A motif promoted from source (R-192): derived from it, with standalone true, approved. */
+static char *create_promoted(const char *name, const char *source, const char *notes) {
+  char derived[800];
+  snprintf(derived, sizeof(derived),
+           "{\"source_item\":\"%s\",\"source_version\":1,\"operations\":[{\"op\":\"transpose\",\"params\":"
+           "{\"tonal\":1,\"by\":1}}],\"seed\":0,\"kind\":\"motive-form\",\"kept\":[\"rhythm\"],\"changed\":"
+           "[\"intervals\"],\"harmony\":null,\"functions\":[\"beginning\"],\"flag\":\"approved\",\"standalone\":true}",
+           source);
+  return create_motif(name, "full", "melodic", notes, derived);
+}
+
 /* A motif derived from source (version 1) with the given flag. */
 static char *create_derived(const char *name, const char *source, const char *flag, const char *notes) {
   char derived[800];
@@ -366,6 +377,8 @@ typedef struct {
   char rejected[64];
   char grandchild[64];
   char unrelated[64];
+  char promoted[64];
+  char promoted_child[64];
 } Motifs;
 
 static bool take(char *out, char *id) {
@@ -391,6 +404,9 @@ static bool make_motifs(Motifs *m) {
   ok = take(m->grandchild,
             create_derived("A up up", m->approved, "unflagged", "Eb4:e G4:e C5:e G4:e Eb4:e G4:e C5:e Eb5:e")) && ok;
   ok = take(m->unrelated, create_derived("C up", m->c, "approved", "D4:q F4:e A4:e D5:h")) && ok;
+  ok = take(m->promoted, create_promoted("A own", m->a, "F4:e A4:e C5:e A4:e F4:e A4:e C5:e A5:e")) && ok;
+  ok = take(m->promoted_child,
+            create_derived("A own up", m->promoted, "approved", "G4:e Bb4:e D5:e Bb4:e G4:e Bb4:e D5:e G5:e")) && ok;
   return ok;
 }
 
@@ -627,6 +643,8 @@ static void test_compose(const Motifs *m) {
   check(forms_have(forms, m->grandchild, "unflagged"), "the pool follows the derived chain");
   check(!forms_have(forms, m->rejected, NULL), "the pool has no rejected form");
   check(!forms_have(forms, m->unrelated, NULL), "the pool has no form of another motive");
+  check(!forms_have(forms, m->promoted, NULL) && !forms_have(forms, m->promoted_child, NULL),
+        "the pool leaves out a promoted motif and its own variants");
   const cJSON *form = cJSON_GetArrayItem(forms, 0);
   check(strcmp(string_of(form, "chain"), "transpose tonal=1 by=1") == 0 && cJSON_GetArraySize(member(form, "functions")) == 1 &&
             strlen(string_of(form, "degrees")) > 0,

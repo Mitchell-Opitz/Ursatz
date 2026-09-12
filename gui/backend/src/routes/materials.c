@@ -2515,6 +2515,64 @@ static int handle_flag(struct mg_connection *conn, const char *id) {
   return send_ok_with(conn, "item", item);
 }
 
+/* POST /api/materials/items/<id>/promote {name, project_id, note?}: a variant becomes a motif of its own. A new version
+   with derived.standalone true (R-192), the item renamed and moved. The id, versions and derived record stay. */
+static int handle_promote(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  bool bad = false;
+  const char *name = optional_string(body, "name", &bad);
+  const char *project_id = optional_string(body, "project_id", &bad);
+  const char *note = optional_string(body, "note", &bad);
+  if (bad || !name || !project_id) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "promote needs a name and a project_id; note is a string");
+  }
+  cJSON *current = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(body);
+    return send_material_failure(conn, result);
+  }
+  cJSON *derived = derived_of(current);
+  if (!derived || !ursatz_gui_material_item_is_variant(current)) {
+    cJSON_Delete(body);
+    cJSON_Delete(current);
+    return send_failure(conn, 400, "only a variant can be saved as a new motif");
+  }
+  /* The project is checked up front, so a bad name cannot leave the item moved. */
+  cJSON *project = NULL;
+  result = ursatz_gui_material_project_get(project_id, &project);
+  cJSON_Delete(project);
+  cJSON *item = NULL;
+  if (result == URSATZ_GUI_MATERIAL_OK) {
+    result = ursatz_gui_material_item_rename(id, name, &item);
+    cJSON_Delete(item);
+    item = NULL;
+  }
+  if (result == URSATZ_GUI_MATERIAL_OK) {
+    result = ursatz_gui_material_item_move(id, project_id, &item);
+    cJSON_Delete(item);
+    item = NULL;
+  }
+  if (result == URSATZ_GUI_MATERIAL_OK) {
+    cJSON_DeleteItemFromObjectCaseSensitive(derived, "standalone");
+    result = cJSON_AddTrueToObject(derived, "standalone")
+                 ? ursatz_gui_material_item_add_version(id, current, note && *note ? note : "Saved as new motif", &item)
+                 : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+  }
+  cJSON_Delete(body);
+  cJSON_Delete(current);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    cJSON_Delete(item);
+    return send_material_failure(conn, result);
+  }
+  return send_ok_with(conn, "item", item);
+}
+
 /* A chain for the Composer from stored operations: the steps with their params, less the ones the seed drew (`open`),
    so a rerun draws them again. NULL when out of memory. */
 static cJSON *chain_for_reroll(const cJSON *operations) {
@@ -2747,8 +2805,13 @@ static int handle_link_form(struct mg_connection *conn, const char *id) {
     return send_failure(conn, 400, "the recognition lacks a chain, kept and changed");
   }
   cJSON *item = NULL;
-  result = replace_member(motif, "derived", derived) ? ursatz_gui_material_item_add_version(id, current, note, &item)
-                                                     : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+  /* A linked motif already exists on its own, so it is a standalone motif (R-192), not a variant of the source. */
+  bool linked = cJSON_AddTrueToObject(derived, "standalone") != NULL;
+  result = linked && replace_member(motif, "derived", derived) ? ursatz_gui_material_item_add_version(id, current, note, &item)
+                                                              : URSATZ_GUI_MATERIAL_ERR_ALLOC;
+  if (!linked) {
+    cJSON_Delete(derived);
+  }
   cJSON_Delete(body);
   cJSON_Delete(current);
   if (result != URSATZ_GUI_MATERIAL_OK) {
@@ -2853,7 +2916,8 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
 
 static const int kMaxTreeDepth = 32;
 
-/* A tree node {id, name, current_version, derived, children: []} (derived is a copy, or null) with every entry of index
+/* A tree node {id, name, current_version, standalone, derived, children: []} (derived is a copy, or null; standalone
+   is true for a promoted motif) with every entry of index
    whose derived.source_item is id below it. ancestors lists the ids above, so a loop in the stored records ends. */
 static cJSON *variant_node(const cJSON *index, const char *id, const char *name, int version, const cJSON *derived,
                            const char **ancestors, int depth) {
@@ -2862,6 +2926,8 @@ static cJSON *variant_node(const cJSON *index, const char *id, const char *name,
   cJSON *copy = derived ? cJSON_Duplicate(derived, 1) : cJSON_CreateNull();
   if (!node || !children || !copy || !cJSON_AddStringToObject(node, "id", id) ||
       !cJSON_AddStringToObject(node, "name", name) || !cJSON_AddNumberToObject(node, "current_version", version) ||
+      !cJSON_AddBoolToObject(node, "standalone",
+                             cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(derived, "standalone"))) ||
       !cJSON_AddItemToObject(node, "derived", copy)) {
     if (!node || !cJSON_GetObjectItemCaseSensitive(node, "derived")) {
       cJSON_Delete(copy);
@@ -3109,6 +3175,9 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 3 && strcmp(segments[2], "link-form") == 0) {
     return post ? handle_link_form(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "promote") == 0) {
+    return post ? handle_promote(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 3 && strcmp(segments[2], "flag") == 0) {
     return post ? handle_flag(conn, segments[1]) : send_method_not_allowed(conn);

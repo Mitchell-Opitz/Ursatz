@@ -888,6 +888,18 @@ from the pure `variant-tree.js`, global `VariantTree`).
   (the users outside that set), and `?force=1` deletes them all. Linking a
   variant to a subject is refused (400 `variants have no subjects; save it as a
   new motif first`). Flag, kind and reroll stay on the variant.
+- Save as new motif (R-188): each saved variant has a `Save as new motif`
+  button that opens an inline form (name, project defaulting to the motif's,
+  Save). Save calls the promote route and opens the new motif's Motif tab,
+  where subjects can be added. A promoted motif keeps its id, versions and
+  `derived` (so Derived from and the lineage stay) and is written with
+  `derived.standalone: true` (R-192), so it is a motif of its own: it appears
+  in the Motifs list and pickers, no longer among the saved variants, and the
+  Variants tab lists it under `Promoted` as `<name> (opens it)` with its
+  derivation line. A motif linked as a form of another (link-form) is written
+  standalone too. A promoted motif and its own variants stay out of the source
+  motif's theme pool: `ursatz_gui_theme_add_pool` skips standalone entries and
+  the derived chain it follows stops at one. Promoting cannot be undone.
 
 #### Comparing and linking motifs
 
@@ -906,7 +918,7 @@ form of this motif" makes the picked motif a form of this one; the variant tree 
   and key, `404` for a version that is not there. The search is the Composer's beam search, not exhaustive.
 - `POST /api/materials/items/<id>/link-form` `{"source":{"item","version"},"recognition"}` writes a new version of the
   item (the target) whose `derived` is `{source_item, source_version, operations, seed: null, kind, kept, changed,
-  harmony, functions, remoteness, flag: "unflagged"}` from the recognition: `kind` is `exact` when every step is
+  harmony, functions, remoteness, flag: "unflagged", standalone: true}` from the recognition: `kind` is `exact` when every step is
   `exact`, otherwise `motive-form`; `harmony` is the target's own chords; `remoteness` is the recognition's. The note
   is `linked: <derivation>`. Answers `{"item"}`. `400` when the recognition found no chain, `404` for a source
   version that is not there, `409` when the item is the source or one of its ancestors.
@@ -1360,6 +1372,11 @@ Items:
   version that changes only `derived.flag` (and `derived.kind`: `exact`,
   `motive-form` or `variant`); the note is the flag. `400` for a motif
   without `derived`.
+- `POST /api/materials/items/<id>/promote`: `{"name","project_id","note"?}` on a
+  variant writes a new version with `derived.standalone: true` (note default
+  `Saved as new motif`), renames the item and moves it to the project. Answers
+  `{"item"}`. `400` for an item that is not a variant or a body without a name
+  and project, `404` for a project that is not there.
 - `POST /api/materials/items/<id>/reroll`: reruns the stored chain, with the
   parameters the seed drew drawn again, on the source's stored version with
   seed + 1000003 (+1 while the result equals the current one, 16 tries).
@@ -1368,7 +1385,7 @@ Items:
   `400` without `derived`, `404` when the source is gone, `409` when no seed
   gives a different motif.
 - `GET /api/materials/items/<id>/variant-tree`: `{"tree"}`, a node
-  `{id, name, current_version, derived, children}` for the item and for every
+  `{id, name, current_version, standalone, derived, children}` for the item and for every
   motif whose current `derived.source_item` leads back to it, built from one
   scan of the store.
 

@@ -1301,6 +1301,8 @@ static void test_link_form(void) {
             cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(derived, "kept")) &&
             cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(derived, "functions")),
         "derived holds the recognition's chain, its kind and what it kept");
+  check(cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(derived, "standalone")),
+        "a linked form is a standalone motif, not a variant");
   cJSON_Delete(read);
   cJSON_Delete(linked);
 
@@ -1507,6 +1509,69 @@ static void test_variant_ownership(void) {
   free(grandchild);
 }
 
+/* Promoting a variant writes a standalone version, renames and moves it, and the tree marks it. */
+static void test_promote(void) {
+  int status = 0;
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  char *source = variant_source();
+  char *child = source ? save_inverted(source, 7) : NULL;
+  char *grandchild = child ? save_inverted(child, 8) : NULL;
+  check(source && child && grandchild, "a motif, its variant and the variant's variant are saved to promote");
+  if (!grandchild) {
+    free(source);
+    free(child);
+    return;
+  }
+  char text[256];
+  snprintf(text, sizeof(text), "{\"name\":\"Own motif\",\"project_id\":\"%s\"}", project);
+  cJSON *answer = item_post(child, "promote", text, &status);
+  const cJSON *item = cJSON_GetObjectItemCaseSensitive(answer, "item");
+  check(status == 200 && ok_true(answer) && strcmp(string_of(item, "name"), "Own motif") == 0 &&
+            strcmp(string_of(item, "project_id"), project) == 0 && strcmp(string_of(item, "id"), child) == 0 &&
+            version_count(answer) == 2,
+        "promoting keeps the item and writes a second version under the new name");
+  check(strcmp(string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(item, "versions"), 1), "note"), "Saved as new motif") == 0,
+        "the note defaults to Saved as new motif");
+  cJSON_Delete(answer);
+  answer = item_get(child, "", &status);
+  const cJSON *derived = cJSON_GetObjectItemCaseSensitive(
+      cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "body"), "motif"), "derived");
+  check(status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(derived, "standalone")) &&
+            strcmp(string_of(derived, "source_item"), source) == 0 &&
+            cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "item"), "variant_of")),
+        "the version is standalone, keeps its derivation and is no longer a variant");
+  cJSON_Delete(answer);
+
+  answer = item_get(source, "/variant-tree", &status);
+  const cJSON *tree = cJSON_GetObjectItemCaseSensitive(answer, "tree");
+  const cJSON *first = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(tree, "children"), 0);
+  check(status == 200 && !cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(tree, "standalone")) && first &&
+            cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(first, "standalone")),
+        "the tree marks the promoted node standalone and the root not");
+  cJSON_Delete(answer);
+
+  cJSON *refused = item_post(source, "promote", text, &status);
+  check(status == 400, "a motif that is not a variant cannot be promoted");
+  cJSON_Delete(refused);
+  refused = item_post(child, "promote", text, &status);
+  check(status == 400, "a promoted motif is not a variant to promote again");
+  cJSON_Delete(refused);
+  refused = item_post(grandchild, "promote", "{\"name\":\"X\"}", &status);
+  check(status == 400, "promote needs a project");
+  cJSON_Delete(refused);
+  refused = item_post(grandchild, "promote", "{\"name\":\"X\",\"project_id\":\"prj-0000000000000000\"}", &status);
+  check(status == 404, "a project that is not there is 404");
+  cJSON_Delete(refused);
+  answer = item_get(grandchild, "", &status);
+  check(status == 200 && strcmp(string_of(cJSON_GetObjectItemCaseSensitive(answer, "item"), "name"), "X") != 0,
+        "a refused promote renames nothing");
+  cJSON_Delete(answer);
+  free(source);
+  free(child);
+  free(grandchild);
+}
+
 /* Random motifs come from the Composer unsaved, with a key of the mode, and bad inputs are refused. */
 static void test_random_motifs(void) {
   int status = 0;
@@ -1607,6 +1672,7 @@ int main(void) {
   test_variants();
   test_variant_flags_and_tree();
   test_variant_ownership();
+  test_promote();
   test_recognize();
   test_link_form();
   test_theme_placeholder();

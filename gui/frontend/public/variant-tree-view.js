@@ -1,8 +1,8 @@
 /* The Variants section of the motif detail (P13 B9), top to bottom: the Generate control with its operation
  * picker, the unsaved candidates and the saved tree. Each candidate and each saved variant (on request) shows its
  * notation in a compact score workspace of its own (P18 B4). Renders from
- * VariantTree; ctx is {id, name, body, send(request)}, send being the page's
- * JSON request helper that answers {ok, status, data}. */
+ * VariantTree; ctx is {id, name, body, projectId, projects, open(id), send(request)}, send being the page's
+ * JSON request helper that answers {ok, status, data}, open going to a motif's Motif tab. */
 const VariantTreeView = (function () {
   function h(tag, className, text) {
     const el = document.createElement(tag);
@@ -192,6 +192,50 @@ const VariantTreeView = (function () {
     return card;
   }
 
+  /* The inline Save as new motif form of a saved variant: its name, the project (the parent's to start with) and
+   * Save, which calls actions.promote(row, name, projectId). Returns the elements to append. */
+  function promoteFields(row, actions) {
+    const name = h("input");
+    name.type = "text";
+    name.value = row.name;
+    const nameLabel = h("label", "filter-field", "Name ");
+    nameLabel.appendChild(name);
+    const project = h("select");
+    for (const entry of actions.projects()) {
+      const option = h("option", "", entry.name);
+      option.value = entry.id;
+      project.appendChild(option);
+    }
+    project.value = actions.projectId();
+    const projectLabel = h("label", "filter-field", "Project ");
+    projectLabel.appendChild(project);
+    const save = actionButton("Save", () => actions.promote(row, name.value, project.value), "button-primary");
+    return [nameLabel, projectLabel, save];
+  }
+
+  /* The Promoted list under the saved variants: each promoted motif as "<name> (opens it)" with its derivation.
+   * open(id) opens that motif. */
+  function promotedList(promoted, open) {
+    const box = h("div", "variant-promoted");
+    if (promoted.length === 0) {
+      return box;
+    }
+    box.appendChild(h("h3", "section-title", "Promoted"));
+    const list = h("ul", "variant-promoted-list");
+    for (const entry of promoted) {
+      const item = h("li", "variant-promoted-item");
+      const link = h("a", "clickable", VariantTree.promotedText(entry));
+      link.addEventListener("click", () => open(entry.id));
+      item.appendChild(link);
+      if (entry.derivation) {
+        item.appendChild(h("div", "variant-derivation", entry.derivation));
+      }
+      list.appendChild(item);
+    }
+    box.appendChild(list);
+    return box;
+  }
+
   /* One saved node: indented by depth, with its derivation, flag, kind and actions.
    * actions: {flag(id, flag), kind(id, kind), reroll(id), play(row), toggle(row)}; isOpen is whether
    * its notation is shown. The row's scoreHost is where the compact score mounts. */
@@ -239,7 +283,16 @@ const VariantTreeView = (function () {
       ...(row.seed === null ? [] : [actionButton("Reroll", () => actions.reroll(row.id))]),
     );
     buttons.appendChild(actionButton(isOpen ? "Hide notation" : "Show notation", () => actions.toggle(row)));
+    const promoteForm = h("div", "variant-promote-form");
+    promoteForm.hidden = true;
+    buttons.appendChild(
+      actionButton("Save as new motif", () => {
+        promoteForm.hidden = !promoteForm.hidden;
+      }),
+    );
     item.appendChild(buttons);
+    item.appendChild(promoteForm);
+    promoteForm.append(...promoteFields(row, actions));
     item.scoreHost = h("div", "variant-score");
     item.appendChild(item.scoreHost);
     return item;
@@ -308,7 +361,8 @@ const VariantTreeView = (function () {
     const candidates = h("ol", "variant-candidates");
     const tree = h("ul", "variant-tree");
     const treeNote = h("div", "piece-list-status");
-    section.append(controls, pickerHost, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree);
+    const promotedHost = h("div");
+    section.append(controls, pickerHost, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree, promotedHost);
     parent.appendChild(status);
     parent.appendChild(section);
 
@@ -507,6 +561,20 @@ const VariantTreeView = (function () {
         setStatus(status, answer.ok ? "Rerolled" : errorText(answer.data, "Could not reroll"), !answer.ok);
         refreshTree();
       },
+      async promote(row, name, projectId) {
+        if (String(name).trim() === "") {
+          setStatus(status, "Give the new motif a name", true);
+          return;
+        }
+        const answer = await ctx.send(VariantTree.promoteRequest(row.id, name, projectId));
+        if (!answer.ok) {
+          setStatus(status, errorText(answer.data, "Could not save the variant as a new motif"), true);
+          return;
+        }
+        ctx.open(row.id);
+      },
+      projects: () => ctx.projects,
+      projectId: () => ctx.projectId,
       play: playSaved,
       toggle: toggleNotation,
     };
@@ -527,6 +595,8 @@ const VariantTreeView = (function () {
         }
       }
       autoplayId = null;
+      promotedHost.innerHTML = "";
+      promotedHost.appendChild(promotedList(shownRows.promoted, ctx.open));
       const saved = shownRows.rows.length - 1;
       treeNote.textContent =
         saved <= 0 && shownRows.hidden === 0

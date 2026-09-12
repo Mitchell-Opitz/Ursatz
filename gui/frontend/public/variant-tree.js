@@ -79,9 +79,12 @@
 
   /* The saved tree as flat rows, depth first, in the order of the children.
    * A rejected variant is left out with everything under it unless
-   * showRejected; hidden counts what was left out. The root is never hidden. */
+   * showRejected; hidden counts what was left out. The root is never hidden.
+   * A promoted motif (standalone) and what is under it are not rows: promoted lists each one reached without
+   * crossing another, as {id, name, derivation} (R-188). */
   function treeRows(tree, showRejected) {
     const rows = [];
+    const promoted = [];
     let hidden = 0;
     function countAll(node) {
       return 1 + (node.children || []).reduce((sum, child) => sum + countAll(child), 0);
@@ -89,6 +92,10 @@
     function walk(node, depth) {
       const derived = node.derived || null;
       const flag = flagOf(derived);
+      if (depth > 0 && node.standalone === true) {
+        promoted.push({ id: node.id, name: String(node.name || ""), derivation: derivationText(derived) });
+        return;
+      }
       if (depth > 0 && flag === "rejected" && !showRejected) {
         hidden += countAll(node);
         return;
@@ -116,7 +123,7 @@
     if (tree) {
       walk(tree, 0);
     }
-    return { rows, hidden };
+    return { rows, hidden, promoted };
   }
 
   /* The operations of GET /api/materials/variant-operations by category, in
@@ -293,6 +300,16 @@
     return jsonRequest("POST", itemUrl(id, "variants/save"), body);
   }
 
+  /* The promote request: the variant becomes a motif of its own, named and in a project. */
+  function promoteRequest(id, name, projectId) {
+    return jsonRequest("POST", itemUrl(id, "promote"), { name: String(name || "").trim(), project_id: projectId });
+  }
+
+  /* The promoted list line: "<name> (opens it)" with the derivation under it. */
+  function promotedText(entry) {
+    return `${entry.name} (opens it)`;
+  }
+
   function flagRequest(id, flag, kind) {
     const body = { flag };
     if (kind) {
@@ -460,6 +477,8 @@
     candidateName,
     saveRequest,
     flagRequest,
+    promoteRequest,
+    promotedText,
     rerollRequest,
     treeRequest,
     operationsRequest,

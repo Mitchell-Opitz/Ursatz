@@ -197,7 +197,9 @@ static const cJSON *find_derived(const cJSON *list, const char *id) {
     return NULL;
 }
 
-/* True when the derived chain of start_id, followed through source_item for at most 32 steps, reaches target. */
+/* True when the derived chain of start_id, followed through source_item for at most 32 steps, reaches target. A
+   standalone motif (R-192) is a motif of its own: the chain stops at it, so it and its variants never lead to the
+   motif it was promoted from. */
 static bool leads_to(const cJSON *list, const char *start_id, const char *target) {
     const char *current = start_id;
     for (int step = 0; step < CHAIN_MAX_STEPS; step++) {
@@ -205,7 +207,11 @@ static bool leads_to(const cJSON *list, const char *start_id, const char *target
         if (!entry) {
             return false;
         }
-        const char *source = text_of(cJSON_GetObjectItemCaseSensitive(entry, "derived"), "source_item");
+        const cJSON *derived = cJSON_GetObjectItemCaseSensitive(entry, "derived");
+        if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(derived, "standalone"))) {
+            return false;
+        }
+        const char *source = text_of(derived, "source_item");
         if (strcmp(source, target) == 0) {
             return true;
         }
