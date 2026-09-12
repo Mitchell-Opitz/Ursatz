@@ -40,6 +40,23 @@ check(view.rows[1].derivation === "invert then augment", "the derivation joins t
 check(same(view.rows[1].chips.map((c) => c.text), ["kept rhythm", "changed intervals"]), "kept and changed chips");
 check(V.treeRows(null, true).rows.length === 0, "no tree gives no rows");
 
+/* Promoted motifs (R-188): a standalone node and what is under it are not rows; each one reached is listed. */
+const promotedTree = node("root", null, [
+  node("a", "approved", [node("a1", "unflagged", [], { standalone: true }), node("a2", "unflagged")]),
+  node("p", "unflagged", [node("p1", "approved")], { standalone: true }),
+  node("r", "rejected", [], { standalone: true }),
+]);
+const split = V.treeRows(promotedTree, false);
+check(same(split.rows.map((r) => r.id), ["root", "a", "a2"]), "a promoted node and what is under it are not saved rows");
+check(same(split.promoted.map((e) => e.id), ["a1", "p", "r"]), "each promoted node is listed once, depth first, rejected or not");
+check(split.promoted[1].name === "Motif p" && split.promoted[1].derivation === "invert then augment", "a promoted entry has its name and derivation");
+check(split.hidden === 0, "promoted nodes are not counted as hidden");
+check(V.promotedText(split.promoted[0]) === "Motif a1 (opens it)", "a promoted entry reads <name> (opens it)");
+check(V.treeRows(tree, true).promoted.length === 0 && V.treeRows(null, true).promoted.length === 0, "no standalone node gives an empty Promoted list");
+const promoteRequest = V.promoteRequest("v1", "  Own  ", "prj-1");
+check(promoteRequest.method === "POST" && promoteRequest.url === "/api/materials/items/v1/promote" &&
+  same(JSON.parse(promoteRequest.body), { name: "Own", project_id: "prj-1" }), "the promote request names the motif and its project");
+
 const operations = [
   { name: "augment", label: "Augment", category: "rhythm", citation: "ch. III", params: [{ name: "ratio", kind: "ratio", min: 0, max: 0 }], forms: ["full"] },
   { name: "transpose", label: "Transpose", category: "melody adaptation", citation: "ch. III", params: [{ name: "steps", kind: "int", min: -7, max: 7 }], forms: [] },
