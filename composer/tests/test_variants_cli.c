@@ -5,6 +5,8 @@
 #include <string.h>
 #include <sys/wait.h>
 
+#include <ursatz_composer/variant_registry.h>
+
 /*
  * The `variants` command, run as a process: the operation list, variants from a chain file, that the same seed gives
  * the same output and another seed does not, the JSON shape, and the exit status and message for a refused step.
@@ -50,6 +52,12 @@ static char *output_of(const char *arguments) {
     char *err = read_file("variants_cli_err.txt");
     assert(err[0] == '\0');
     free(err);
+    return read_file("variants_cli_out.txt");
+}
+
+/* The standard output of a command that must succeed; stderr may hold notes on skipped draws. */
+static char *output_with_notes(const char *arguments) {
+    assert(run(arguments, "variants_cli_out.txt", "variants_cli_err.txt") == 0);
     return read_file("variants_cli_out.txt");
 }
 
@@ -229,6 +237,117 @@ static void test_function_filter(void) {
                          "--function cadential", 1, "--function is given at most 4 times");
 }
 
+/* Every "Remoteness: n/d" line of the output is inside the band: over low and at most high, as fractions. */
+static size_t check_remoteness(const char *out, int low_num, int low_den, int high_num, int high_den) {
+    size_t lines = 0;
+    for (const char *at = strstr(out, "Remoteness: "); at; at = strstr(at + 1, "Remoteness: ")) {
+        int num = 0;
+        int den = 1;
+        assert(sscanf(at, "Remoteness: %d/%d", &num, &den) == 2);
+        assert(num * low_den > low_num * den && num * high_den <= high_num * den);
+        lines++;
+    }
+    return lines;
+}
+
+/* The chain length of every variant: the number of operations on each "Variant n (seed s):" line. */
+static void check_steps(const char *out, size_t min_steps, size_t max_steps) {
+    size_t lines = 0;
+    for (const char *at = strstr(out, "\nVariant "); at; at = strstr(at + 1, "\nVariant ")) {
+        const char *colon = strstr(at, "):");
+        const char *end = strchr(at + 1, '\n');
+        end = end ? strchr(end + 1, '\n') : NULL;
+        assert(colon && end && colon < end);
+        size_t steps = 1;
+        for (const char *c = colon; c < end; c++) {
+            steps += *c == ',';
+        }
+        assert(steps >= min_steps && steps <= max_steps);
+        lines++;
+    }
+    assert(lines >= 1);
+}
+
+/* --distance: the chain length and the remoteness band of each band, on a one-bar motive. */
+static void test_distance(void) {
+    char *out = output_with_notes(THEME " --count 4 --seed 3 --distance close");
+    check_steps(out, 1, 1);
+    assert(check_remoteness(out, 0, 1, 1, 3) >= 1);
+    free(out);
+
+    out = output_with_notes(THEME " --count 4 --seed 3 --distance medium");
+    check_steps(out, 2, 2);
+    assert(check_remoteness(out, 1, 3, 2, 3) >= 1);
+    free(out);
+
+    out = output_with_notes(THEME " --count 4 --seed 3 --distance far");
+    check_steps(out, 3, 4);
+    assert(check_remoteness(out, 2, 3, 1, 1) >= 1);
+    free(out);
+
+    /* With --function both must hold, and --json carries both. */
+    out = output_with_notes(THEME " --count 3 --seed 1 --distance far --function contrast --json");
+    assert(count_of(out, "\"derivation\"") >= 1);
+    assert(count_of(out, "\"contrast\"") == count_of(out, "\"derivation\""));
+    free(out);
+
+    /* Fewer than asked is a note on stderr, not a failure. */
+    out = output_with_notes(THEME " --count 16 --seed 1 --distance far --function cadential");
+    char *err = read_file("variants_cli_err.txt");
+    assert(count_of(out, "\nVariant ") < 16 && strstr(err, "suit the function and distance") != NULL);
+    free(err);
+    free(out);
+
+    expect_failure(THEME " --distance near", 1, "--distance must be close, medium or far, not 'near'");
+    expect_failure(THEME " --distance", 1, "--distance needs a value");
+    expect_failure(THEME " --distance far --distance far", 1, "--distance given twice");
+    write_file("variants_cli_chain.json", "{\"steps\": [{\"op\": \"retrograde\"}]}");
+    expect_failure(THEME " --distance far --chain variants_cli_chain.json", 1,
+                   "--distance takes random chains, not --chain");
+}
+
+/* --each-op: one variant per registry row that takes the form, the others listed as skipped. */
+static void test_each_op(void) {
+    size_t rows = 0;
+    for (size_t i = 0; i < variant_registry_count(); i++) {
+        rows += (variant_registry_at(i)->forms & VARIANT_FORM_BIT(MOTIVE_FORM_FULL)) != 0;
+    }
+    char *out = output_of(THEME " --each-op --seed 3");
+    size_t made = count_of(out, "\nVariant ");
+    size_t skipped = count_of(out, "Skipped ");
+    assert(made >= 1 && skipped >= 1 && made + skipped == rows);
+    assert(strstr(out, "Variant 1 (seed 3): exact") != NULL);
+    assert(strstr(out, "Skipped counter-line: counter-line needs an accompaniment motive") != NULL);
+    assert(strstr(out, "Skipped repeat-feature: repeat-feature needs a labelled feature") != NULL);
+    /* Every variant is one step. */
+    check_steps(out, 1, 1);
+    free(out);
+
+    out = output_of(THEME " --each-op --seed 3 --json");
+    assert(count_of(out, "\"derivation\"") == made);
+    assert(strstr(out, "\"skipped\": [") != NULL && count_of(out, "\"reason\"") == skipped);
+    assert(strstr(out, "\"op\": \"counter-line\"") != NULL);
+    free(out);
+
+    /* A contour motive takes fewer rows, and the skipped ones are the contour's refusals. */
+    size_t contour_rows = 0;
+    for (size_t i = 0; i < variant_registry_count(); i++) {
+        contour_rows += (variant_registry_at(i)->forms & VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR)) != 0;
+    }
+    assert(contour_rows < rows);
+    write_file("variants_cli_contour.txt", "0 2 1 3\n");
+    out = output_of("variants_cli_contour.txt --form contour --meter 4/4 --each-op --seed 2");
+    assert(count_of(out, "\nVariant ") + count_of(out, "Skipped ") == contour_rows);
+    assert(strstr(out, "Skipped interval-change") == NULL);
+    free(out);
+
+    expect_failure(THEME " --each-op --count 2", 1, "--each-op takes no --chain, --count, --distance or --function");
+    expect_failure(THEME " --each-op --distance far", 1, "--each-op takes no --chain");
+    expect_failure(THEME " --each-op --function contrast", 1, "--each-op takes no --chain");
+    write_file("variants_cli_chain.json", "{\"steps\": [{\"op\": \"retrograde\"}]}");
+    expect_failure(THEME " --each-op --chain variants_cli_chain.json", 1, "--each-op takes no --chain");
+}
+
 /* Liquidation by features, from a chain file, and remoteness from a basic motive. */
 static void test_liquidate_features_and_basic(void) {
     write_file("variants_cli_liquidate.json",
@@ -257,6 +376,8 @@ int main(void) {
     test_counter_line();
     test_function_filter();
     test_liquidate_features_and_basic();
+    test_distance();
+    test_each_op();
     printf("variants cli tests passed\n");
     return 0;
 }

@@ -255,6 +255,15 @@ char *variant_record_to_json(const VariantRecord *record);
 bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain *out);
 
 /*
+ * variant_random_chain with a chosen length: min_steps to max_steps steps (1 to VARIANT_CHAIN_MAX, min at most max),
+ * drawn from the same operations by the same rules. variant_random_chain is variant_random_chain_of(..., 1, 2, ...).
+ * A source with fewer usable operations than the length gets as many steps as there are. False for NULL arguments or
+ * a length outside those bounds.
+ */
+bool variant_random_chain_of(const Motive *source, unsigned long seed, size_t min_steps, size_t max_steps,
+                             VariantChain *out);
+
+/*
  * Sets the record's remoteness: the distance of form from basic, searched to at most depth steps (R-142). Distance is
  * from the basic motive, not from the form's parent. Returns what variant_recognize_depth returns; the record is
  * untouched on an error other than VARIANT_OK.

@@ -441,8 +441,9 @@ static bool takes_feature(const VariantOperation *operation) {
     return false;
 }
 
-bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain *out) {
-    if (!source || !out) {
+bool variant_random_chain_of(const Motive *source, unsigned long seed, size_t min_steps, size_t max_steps,
+                             VariantChain *out) {
+    if (!source || !out || min_steps < 1 || max_steps < min_steps || max_steps > VARIANT_CHAIN_MAX) {
         return false;
     }
     const VariantOperation *candidates[VARIANT_CHAIN_MAX * 4 + 16];
@@ -465,7 +466,7 @@ bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain
     }
     FillRng rng;
     fill_rng_seed(&rng, seed);
-    size_t steps = 1 + (size_t)fill_rng_below(&rng, 2);
+    size_t steps = min_steps + (max_steps > min_steps ? (size_t)fill_rng_below(&rng, max_steps - min_steps + 1) : 0);
     if (steps > count) {
         steps = count;
     }
@@ -476,6 +477,10 @@ bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain
     }
     out->step_count = steps;
     return true;
+}
+
+bool variant_random_chain(const Motive *source, unsigned long seed, VariantChain *out) {
+    return variant_random_chain_of(source, seed, 1, 2, out);
 }
 
 /* ------------------------------------------------------------------- JSON */
