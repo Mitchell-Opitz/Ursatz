@@ -445,6 +445,50 @@ static void test_random_chains(void) {
     assert(feature_drawn);
 }
 
+/* A chosen length is drawn exactly, deterministically, and refused outside 1 to the chain limit. */
+static void test_random_chain_lengths(void) {
+    Motive source = source_motive();
+    Motive rhythm = load("x:q x:e x:e x:h", "4/4", NULL, MOTIVE_FORMAT_RHYTHM);
+    Motive contour = load("0 2 1 3", "4/4", NULL, MOTIVE_FORMAT_CONTOUR);
+    const Motive *sources[] = {&source, &rhythm, &contour};
+    for (size_t m = 0; m < 3; m++) {
+        for (size_t steps = 1; steps <= VARIANT_CHAIN_MAX; steps++) {
+            for (unsigned long seed = 0; seed < 50; seed++) {
+                VariantChain a;
+                VariantChain b;
+                assert(variant_random_chain_of(sources[m], seed, steps, steps, &a));
+                assert(variant_random_chain_of(sources[m], seed, steps, steps, &b));
+                assert(a.step_count == steps && b.step_count == steps);
+                for (size_t s = 0; s < steps; s++) {
+                    assert(strcmp(a.steps[s].op, b.steps[s].op) == 0);
+                    assert(strcmp(a.steps[s].op, "exact") != 0 && strcmp(a.steps[s].op, "change-meter") != 0);
+                    for (size_t t = 0; t < s; t++) {
+                        assert(strcmp(a.steps[s].op, a.steps[t].op) != 0);
+                    }
+                }
+            }
+        }
+        /* A range draws every length in it, and 1 to 2 is variant_random_chain. */
+        bool seen[VARIANT_CHAIN_MAX + 1] = {false};
+        for (unsigned long seed = 0; seed < 200; seed++) {
+            VariantChain chain;
+            VariantChain plain;
+            assert(variant_random_chain_of(sources[m], seed, 3, 4, &chain));
+            assert(chain.step_count >= 3 && chain.step_count <= 4);
+            seen[chain.step_count] = true;
+            assert(variant_random_chain_of(sources[m], seed, 1, 2, &chain) && variant_random_chain(sources[m], seed, &plain));
+            assert(chain.step_count == plain.step_count && strcmp(chain.steps[0].op, plain.steps[0].op) == 0);
+        }
+        assert(seen[3] && seen[4]);
+    }
+
+    VariantChain chain;
+    assert(!variant_random_chain_of(NULL, 1, 1, 2, &chain) && !variant_random_chain_of(&source, 1, 1, 2, NULL));
+    assert(!variant_random_chain_of(&source, 1, 0, 2, &chain));
+    assert(!variant_random_chain_of(&source, 1, 3, 2, &chain));
+    assert(!variant_random_chain_of(&source, 1, 1, VARIANT_CHAIN_MAX + 1, &chain));
+}
+
 static void test_json(void) {
     char *registry = variant_registry_to_json();
     assert(registry);
@@ -990,6 +1034,7 @@ int main(void) {
     test_forms_have_only_their_dimensions();
     test_derivation_sentence();
     test_random_chains();
+    test_random_chain_lengths();
     test_json();
     test_rows_name_their_relations();
     test_each_row_applies();
