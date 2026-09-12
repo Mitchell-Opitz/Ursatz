@@ -100,7 +100,7 @@ VariantResult result = variant_apply_chain(&source, &chain, 42, &variant, &recor
 
 `variant_apply_chain` applies the steps in order, each to the result of the one before. The open parameters of every step are drawn from one `FillRng` seeded once with the seed, in step order and in the order of the operation's parameters. A step the operation refuses is drawn again, up to 16 draws. The same chain and seed give the same variant; a reroll is the same chain with another seed.
 
-`variant_random_chain(source, seed, &chain)` draws 1 or 2 different operations that the source's form takes (never `exact`), all parameters open.
+`variant_random_chain(source, seed, &chain)` draws 1 or 2 different operations that the source's form takes (never `exact`), all parameters open. `variant_random_chain_of(source, seed, min_steps, max_steps, &chain)` draws the same way with a chosen length (1 to 4, false outside it); `variant_random_chain` is the 1 to 2 case. The `variants` command's `--distance` asks for 1 step (close), 2 (medium) or 3 to 4 (far) and keeps the variants whose remoteness lies in the band: at most 1/3, over 1/3 up to 2/3, over 2/3.
 
 A chain that cannot be applied returns one of `VARIANT_ERR_EMPTY`, `VARIANT_ERR_UNKNOWN_OP`, `VARIANT_ERR_FORM`, `VARIANT_ERR_PARAM` or `VARIANT_ERR_REFUSED`, and the record's `failed_step` and `error` say which step and why: `interval-change does not apply to a contour motive`.
 
