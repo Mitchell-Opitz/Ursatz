@@ -5,14 +5,12 @@
 #include "analysis/motive_variant_recognition.h"
 
 /*
- * Analysis-regression tests for the variant recognizer. Each relation is applied to a fixture, the result is
- * recognized, and the recovered chain is replayed: replayed through motive_relation_apply it must give the target
- * (the op names may differ from the chain that made it).
+ * Analysis-regression tests for the variant recognizer. Each relation is applied to a fixture, the
+ * result is recognized, and the recovered chain is replayed: replayed through motive_relation_apply
+ * it must give the target (the op names may differ from the chain that made it).
  */
 
-static ExactRational q(unsigned long long n, unsigned long long d) {
-    return er_make(n, d);
-}
+static ExactRational q(unsigned long long n, unsigned long long d) { return er_make(n, d); }
 
 /* C D E G F E in C major, 4/4: q e e q e e, with two labelled features and the chords I and V. */
 static MotiveSketch base(void) {
@@ -58,8 +56,8 @@ static MotiveRelationStep step(MotiveRelationKind kind, long a, long b, long c) 
     return result;
 }
 
-static MotiveRelationStep ratio_step(MotiveRelationKind kind, long a, long b, long c, size_t which, long num,
-                                     long den) {
+static MotiveRelationStep ratio_step(MotiveRelationKind kind, long a, long b, long c, size_t which,
+                                     long num, long den) {
     MotiveRelationStep result = step(kind, a, b, c);
     result.value[which] = num;
     result.den[which] = den;
@@ -75,7 +73,8 @@ static MotiveSketch settled(const MotiveSketch *sketch) {
 }
 
 /* Replays a recognition from the source and checks it ends at the target. */
-static void assert_replays(const MotiveSketch *source, const MotiveSketch *target, const MotiveRecognition *found) {
+static void assert_replays(const MotiveSketch *source, const MotiveSketch *target,
+                           const MotiveRecognition *found) {
     assert(found->found);
     assert(found->step_count >= 1);
     MotiveSketch at = *source;
@@ -105,7 +104,8 @@ static MotiveRecognition recover_one(const MotiveSketch *source, MotiveRelationS
     MotiveSketch target;
     MotiveRelationResult result = motive_relation_apply(source, &relation, &target);
     if (result != MOTIVE_RELATION_OK) {
-        fprintf(stderr, "%s refused: %s\n", motive_relation_name(relation.kind), motive_relation_result_name(result));
+        fprintf(stderr, "%s refused: %s\n", motive_relation_name(relation.kind),
+                motive_relation_result_name(result));
     }
     assert(result == MOTIVE_RELATION_OK);
     MotiveRecognition found = recognize(source, &target);
@@ -226,7 +226,8 @@ static void test_dimensions(void) {
     MotiveRelationStep shorter = step(MOTIVE_RELATION_FRAGMENT, 1, 3, 0);
     assert(motive_relation_apply(&source, &shorter, &target) == MOTIVE_RELATION_OK);
     found = recognize(&source, &target);
-    assert(found.changed[MOTIVE_DIMENSION_RHYTHM] && found.similarity[MOTIVE_DIMENSION_RHYTHM] < 1.0);
+    assert(found.changed[MOTIVE_DIMENSION_RHYTHM] &&
+           found.similarity[MOTIVE_DIMENSION_RHYTHM] < 1.0);
 }
 
 static MotiveSketch rhythm_only(void) {
@@ -247,7 +248,8 @@ static void test_rhythm_sketch_takes_time_relations(void) {
     recover_one(&source, step(MOTIVE_RELATION_AUGMENT, 0, 0, 0));
     recover_one(&source, step(MOTIVE_RELATION_NOTE_REPEAT, 0, 2, 0));
     recover_one(&source, ratio_step(MOTIVE_RELATION_RHYTHM_SHIFT, 0, 0, 0, 0, 1, 8));
-    /* A pitch change is not a rhythm sketch's to make: against a pitched target nothing is found. */
+    /* A pitch change is not a rhythm sketch's to make: against a pitched target nothing is found.
+     */
     MotiveSketch pitched = base();
     pitched.has_scale = false;
     pitched.chord_count = 0;
@@ -277,12 +279,15 @@ static void test_bad_input(void) {
     assert(motive_variant_recognize(&broken, &source, NULL, &found) == MOTIVE_RECOGNIZE_INVALID);
     assert(motive_variant_recognize(&source, &source, NULL, NULL) == MOTIVE_RECOGNIZE_INVALID);
     options.max_depth = 7;
-    assert(motive_variant_recognize(&source, &source, &options, &found) == MOTIVE_RECOGNIZE_INVALID);
+    assert(motive_variant_recognize(&source, &source, &options, &found) ==
+           MOTIVE_RECOGNIZE_INVALID);
     options.max_depth = 0;
-    assert(motive_variant_recognize(&source, &source, &options, &found) == MOTIVE_RECOGNIZE_INVALID);
+    assert(motive_variant_recognize(&source, &source, &options, &found) ==
+           MOTIVE_RECOGNIZE_INVALID);
     motive_recognize_options_default(&options);
     options.beam = 0;
-    assert(motive_variant_recognize(&source, &source, &options, &found) == MOTIVE_RECOGNIZE_INVALID);
+    assert(motive_variant_recognize(&source, &source, &options, &found) ==
+           MOTIVE_RECOGNIZE_INVALID);
 }
 
 int main(void) {
