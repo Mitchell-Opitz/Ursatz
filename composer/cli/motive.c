@@ -9,6 +9,7 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/motive_render.h>
+#include <ursatz_composer/motive_tones.h>
 
 #include "cli_options.h"
 #include "motive_extras.h"
@@ -210,6 +211,9 @@ int run_motive(int argc, char **argv) {
     if (result != MOTIVE_OK) {
         return fail(EXIT_UNLOADABLE, "cannot load '%s' (%s)%s%s: %s", options.input, motive_result_name(result),
                     error.location[0] ? " at " : "", error.location, error.message);
+    }
+    if (!motive_harmony_bar_limit_ok(&motive)) {
+        return fail(EXIT_USAGE, "at most %d harmonies per bar", MOTIVE_MAX_CHORDS_PER_BAR);
     }
     MotiveAnalysis analysis;
     if (!motive_analyze(&motive, &analysis)) {

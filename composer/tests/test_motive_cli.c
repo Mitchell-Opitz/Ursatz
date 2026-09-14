@@ -291,13 +291,13 @@ static void expect_sub_failure(const char *subcommand, const char *arguments, in
     free(err);
 }
 
-#define EXTRAS " --harmony \"I V6@2 I@3\" --feature a:0-1 --feature b:2-3 --role accompaniment"
+#define EXTRAS " --harmony \"I V6@2\" --feature a:0-1 --feature b:2-3 --role accompaniment"
 
 static void test_extras_in_motive(void) {
     assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\"" EXTRAS, "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
     char *out = read_file("motive_cli_out.txt");
-    assert(strstr(out, "Own harmony: I V6@2 I@3") != NULL);
+    assert(strstr(out, "Own harmony: I V6@2") != NULL);
     assert(strstr(out, "  a: notes 0 to 1") != NULL && strstr(out, "  b: notes 2 to 3") != NULL);
     assert(strstr(out, "Role: accompaniment") != NULL);
     free(out);
@@ -305,7 +305,7 @@ static void test_extras_in_motive(void) {
     assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --json" EXTRAS, "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
     out = read_file("motive_cli_out.txt");
-    assert(strstr(out, "\"harmony\": \"I V6@2 I@3\"") != NULL && strstr(out, "\"harmony_text\": \"I V6@2 I@3\"") != NULL);
+    assert(strstr(out, "\"harmony\": \"I V6@2\"") != NULL && strstr(out, "\"harmony_text\": \"I V6@2\"") != NULL);
     assert(strstr(out, "\"label\": \"b\"") != NULL && strstr(out, "\"role\": \"accompaniment\"") != NULL);
     free(out);
 
@@ -379,7 +379,7 @@ static void test_extras_in_variants(void) {
     char *out = read_file("motive_cli_out.txt");
     /* The source keeps all of it. The fragment keeps the feature it holds whole, the chords that land on its notes (the
        one sounding at its start at 0), and the role. */
-    assert(strstr(out, "\"harmony\": \"I V6@2 I@3\"") != NULL);
+    assert(strstr(out, "\"harmony\": \"I V6@2\"") != NULL);
     assert(strstr(out, "\"harmony\": \"I V6@1/2\"") != NULL);
     char *fragment = strstr(out, "\"variants\"");
     assert(fragment != NULL);

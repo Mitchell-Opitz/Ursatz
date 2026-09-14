@@ -7,6 +7,7 @@
 #include "semantics/contour.h"
 
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_tones.h>
 
 /*
  * Motive analysis: what a motive is made of, read once so that later steps can
@@ -46,6 +47,9 @@
  * Roman numerals and functions come from the standard-harmony framework (see
  * harmony_phrase.h); without a key nothing is implied and harmony_known is
  * false.
+ *
+ * Base harmony. The chords the notes are heard against (motive_tones.h): the motive's own harmony, else one proposed from
+ * the notes. Known only for a full motive with a key.
  */
 
 #define MOTIVE_ANALYSIS_MAX_CANDIDATES 9
@@ -127,6 +131,9 @@ typedef struct {
     bool harmony_known; /* the same as key_known */
     MotiveChordCandidate candidates[MOTIVE_ANALYSIS_MAX_CANDIDATES];
     size_t candidate_count;
+
+    bool base_harmony_known;
+    MotiveBaseHarmony base_harmony;
 } MotiveAnalysis;
 
 /* Analyzes the motive into *out. False for a motive that is not valid (see motive.h), leaving *out untouched. */

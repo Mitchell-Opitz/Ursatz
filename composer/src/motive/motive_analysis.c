@@ -314,6 +314,7 @@ bool motive_analyze(const Motive *motive, MotiveAnalysis *out) {
     if (result.harmony_known) {
         analyze_harmony(motive, &result);
     }
+    result.base_harmony_known = motive_base_harmony(motive, &result.base_harmony);
     *out = result;
     return true;
 }
@@ -386,6 +387,14 @@ static void pickup_beats_text(const Motive *motive, char *out, size_t size) {
     }
 }
 
+/* The base harmony in the text syntax of an own harmony; caller frees. */
+static char *base_harmony_text(const Motive *motive, const MotiveBaseHarmony *base) {
+    Motive copy = *motive;
+    memcpy(copy.harmony, base->chords, base->count * sizeof(base->chords[0]));
+    copy.harmony_count = base->count;
+    return motive_harmony_to_text(&copy);
+}
+
 void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis, FILE *out) {
     char text[64];
     char text2[64];
@@ -415,6 +424,13 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
         char *harmony = motive_harmony_to_text(motive);
         fprintf(out, "Own harmony: %s\n", harmony ? harmony : "");
         free(harmony);
+    }
+    if (analysis->base_harmony_known) {
+        char *base = base_harmony_text(motive, &analysis->base_harmony);
+        fprintf(out, "Base harmony: %s%s\n", base ? base : "", analysis->base_harmony.given ? " (given)" : " (proposed)");
+        free(base);
+    } else {
+        fprintf(out, "Base harmony: none\n");
     }
     for (size_t i = 0; i < motive->feature_count; i++) {
         fprintf(out, "%s%s: notes %zu to %zu\n", i == 0 ? "Features:\n  " : "  ", motive->features[i].label,
@@ -723,6 +739,22 @@ static cJSON *rendered_json(const Motive *rendered) {
     return object;
 }
 
+static cJSON *base_harmony_json(const Motive *motive, const MotiveAnalysis *analysis) {
+    if (!analysis->base_harmony_known) {
+        return cJSON_CreateNull();
+    }
+    char *text = base_harmony_text(motive, &analysis->base_harmony);
+    cJSON *object = text ? cJSON_CreateObject() : NULL;
+    bool ok = object && add_string(object, "text", text) &&
+              json_add(object, "given", cJSON_CreateBool(analysis->base_harmony.given));
+    free(text);
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
 static char *analysis_json(const Motive *motive, const MotiveAnalysis *analysis, const Motive *rendered) {
     if (!motive || !analysis) {
         return NULL;
@@ -763,7 +795,8 @@ static char *analysis_json(const Motive *motive, const MotiveAnalysis *analysis,
          json_add(body, "intervals", intervals_json(analysis)) && json_add(body, "contour", contour_json(analysis)) &&
          json_add(body, "rhythm", rhythm_json(analysis)) && json_add(body, "range", range_json(analysis)) &&
          json_add(body, "scale_degrees", degrees_json(analysis)) &&
-         json_add(body, "implied_harmony", harmony_json(analysis));
+         json_add(body, "implied_harmony", harmony_json(analysis)) &&
+         json_add(body, "base_harmony", base_harmony_json(motive, analysis));
     if (ok) {
         ok = json_add(document, "analysis", body);
         body = NULL;
