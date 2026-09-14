@@ -117,6 +117,55 @@ static MotiveRecognition recover_one(const MotiveSketch *source, MotiveRelationS
     return found;
 }
 
+#define CASE_MAX 64
+static MotiveRelationStep CASES[CASE_MAX];
+static size_t CASE_COUNT;
+
+static void add_case(MotiveRelationStep relation) {
+    assert(CASE_COUNT < CASE_MAX);
+    CASES[CASE_COUNT++] = relation;
+}
+
+/* Every relation, with parameters that apply to the base fixture. */
+static void init_cases(void) {
+    add_case(step(MOTIVE_RELATION_TRANSPOSE, 0, 5, 0));
+    add_case(step(MOTIVE_RELATION_TRANSPOSE, 1, 2, 0));
+    add_case(step(MOTIVE_RELATION_TRANSPOSE, 0, 0, 5));
+    add_case(step(MOTIVE_RELATION_INVERT, -1, 0, 0));
+    add_case(step(MOTIVE_RELATION_INVERT, 62, 0, 0));
+    add_case(step(MOTIVE_RELATION_INVERT, -1, 1, 0));
+    add_case(step(MOTIVE_RELATION_RETROGRADE, 0, 0, 0));
+    add_case(step(MOTIVE_RELATION_INTERVAL_CHANGE, 2, 2, 0));
+    add_case(step(MOTIVE_RELATION_INTERVAL_CHANGE, 0, 1, 0));
+    add_case(step(MOTIVE_RELATION_FRAGMENT, 1, 3, 0));
+    add_case(step(MOTIVE_RELATION_FRAGMENT, 2, 4, 0));
+    add_case(step(MOTIVE_RELATION_FRAGMENT, 3, 2, 0));
+    add_case(step(MOTIVE_RELATION_LIQUIDATE, 2, 0, 0));
+    add_case(step(MOTIVE_RELATION_LIQUIDATE, 1, 1, 0));
+    add_case(step(MOTIVE_RELATION_AUGMENT, 0, 0, 0));
+    add_case(step(MOTIVE_RELATION_DIMINISH, 0, 0, 0));
+    add_case(ratio_step(MOTIVE_RELATION_AUGMENT, 0, 0, 0, 0, 3, 2));
+    add_case(step(MOTIVE_RELATION_NOTE_REPEAT, 0, 2, 0));
+    add_case(step(MOTIVE_RELATION_NOTE_REPEAT, 3, 4, 0));
+    add_case(step(MOTIVE_RELATION_RHYTHM_REPEAT, 1, 2, 3));
+    add_case(ratio_step(MOTIVE_RELATION_RHYTHM_SHIFT, 0, 0, 0, 0, 1, 8));
+    add_case(step(MOTIVE_RELATION_ADD_UPBEAT, 1, 1, 0));
+    add_case(step(MOTIVE_RELATION_ADD_UPBEAT, 2, -1, 0));
+    add_case(step(MOTIVE_RELATION_CHANGE_METER, 2, 4, 0));
+    add_case(step(MOTIVE_RELATION_ADD_INTERVAL, 2, 1, 0));
+    add_case(step(MOTIVE_RELATION_OMIT_INTERVAL, 2, 0, 0));
+    add_case(step(MOTIVE_RELATION_ANCILLARY_FILL, 3, 0, 0));
+    add_case(ratio_step(MOTIVE_RELATION_CONDENSE, 0, 2, 0, 2, 1, 2));
+    add_case(step(MOTIVE_RELATION_REPEAT_FEATURE, 0, 1, 1));
+    add_case(ratio_step(MOTIVE_RELATION_SHIFT_FEATURE, 1, 0, 0, 1, 1, 16));
+    add_case(step(MOTIVE_RELATION_HARMONY_INVERSION, 0, 1, 0));
+    add_case(step(MOTIVE_RELATION_HARMONY_APPEND, 4, 0, 0));
+    add_case(step(MOTIVE_RELATION_HARMONY_INSERT, 1, 4, 0));
+    add_case(step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 1, 4, 0));
+    add_case(step(MOTIVE_RELATION_PASSING_HARMONY, 0, 0, 0));
+    add_case(step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0));
+    add_case(step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 0, 0));
+}
 /* Eight eighth notes, four on C and four on B, in I then V: an accompaniment. */
 static MotiveSketch repeated_notes(void) {
     MotiveSketch sketch = base();
@@ -138,49 +187,10 @@ static MotiveSketch repeated_notes(void) {
 
 static void test_every_relation(void) {
     MotiveSketch source = base();
-    const MotiveRelationStep cases[] = {
-        step(MOTIVE_RELATION_TRANSPOSE, 0, 5, 0),
-        step(MOTIVE_RELATION_TRANSPOSE, 1, 2, 0),
-        step(MOTIVE_RELATION_TRANSPOSE, 0, 0, 5),
-        step(MOTIVE_RELATION_INVERT, -1, 0, 0),
-        step(MOTIVE_RELATION_INVERT, 62, 0, 0),
-        step(MOTIVE_RELATION_INVERT, -1, 1, 0),
-        step(MOTIVE_RELATION_RETROGRADE, 0, 0, 0),
-        step(MOTIVE_RELATION_INTERVAL_CHANGE, 2, 2, 0),
-        step(MOTIVE_RELATION_INTERVAL_CHANGE, 0, 1, 0),
-        step(MOTIVE_RELATION_FRAGMENT, 1, 3, 0),
-        step(MOTIVE_RELATION_FRAGMENT, 2, 4, 0),
-        step(MOTIVE_RELATION_FRAGMENT, 3, 2, 0),
-        step(MOTIVE_RELATION_LIQUIDATE, 2, 0, 0),
-        step(MOTIVE_RELATION_LIQUIDATE, 1, 1, 0),
-        step(MOTIVE_RELATION_AUGMENT, 0, 0, 0),
-        step(MOTIVE_RELATION_DIMINISH, 0, 0, 0),
-        ratio_step(MOTIVE_RELATION_AUGMENT, 0, 0, 0, 0, 3, 2),
-        step(MOTIVE_RELATION_NOTE_REPEAT, 0, 2, 0),
-        step(MOTIVE_RELATION_NOTE_REPEAT, 3, 4, 0),
-        step(MOTIVE_RELATION_RHYTHM_REPEAT, 1, 2, 3),
-        ratio_step(MOTIVE_RELATION_RHYTHM_SHIFT, 0, 0, 0, 0, 1, 8),
-        step(MOTIVE_RELATION_ADD_UPBEAT, 1, 1, 0),
-        step(MOTIVE_RELATION_ADD_UPBEAT, 2, -1, 0),
-        step(MOTIVE_RELATION_CHANGE_METER, 2, 4, 0),
-        step(MOTIVE_RELATION_ADD_INTERVAL, 2, 1, 0),
-        step(MOTIVE_RELATION_OMIT_INTERVAL, 2, 0, 0),
-        step(MOTIVE_RELATION_ANCILLARY_FILL, 3, 0, 0),
-        ratio_step(MOTIVE_RELATION_CONDENSE, 0, 2, 0, 2, 1, 2),
-        step(MOTIVE_RELATION_REPEAT_FEATURE, 0, 1, 1),
-        ratio_step(MOTIVE_RELATION_SHIFT_FEATURE, 1, 0, 0, 1, 1, 16),
-        step(MOTIVE_RELATION_HARMONY_INVERSION, 0, 1, 0),
-        step(MOTIVE_RELATION_HARMONY_APPEND, 4, 0, 0),
-        step(MOTIVE_RELATION_HARMONY_INSERT, 1, 4, 0),
-        step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 1, 4, 0),
-        step(MOTIVE_RELATION_PASSING_HARMONY, 0, 0, 0),
-        step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0),
-        step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 0, 0),
-    };
     bool seen[MOTIVE_RELATION_KIND_COUNT] = {false};
-    for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); i++) {
-        recover_one(&source, cases[i]);
-        seen[cases[i].kind] = true;
+    for (size_t i = 0; i < CASE_COUNT; i++) {
+        recover_one(&source, CASES[i]);
+        seen[CASES[i].kind] = true;
     }
     /* The counter-line works on an accompaniment of repeated notes. */
     MotiveSketch accompaniment = repeated_notes();
@@ -267,6 +277,83 @@ static void test_without_a_scale_pitches_move_by_semitones(void) {
     recover_one(&source, step(MOTIVE_RELATION_INTERVAL_CHANGE, 2, 1, 0));
 }
 
+static unsigned next_random(unsigned *state) {
+    *state = *state * 1664525u + 1013904223u;
+    return *state >> 8;
+}
+
+/*
+ * Seeded chains of min_length to max_length relations from the base fixture. Whatever is found
+ * replays to the target. The search is a beam search guided by the nearness to the target, so a
+ * chain whose first steps look no nearer than the beam's other states can be missed: chains of two
+ * are all found, longer ones are found at least as often as required (measured: about 4 in 5).
+ */
+static void test_chains(size_t min_length, size_t max_length, size_t chains, size_t required) {
+    unsigned seed = 14;
+    size_t found_count = 0;
+    for (size_t made = 0; made < chains;) {
+        MotiveSketch source = base();
+        MotiveSketch at = source;
+        size_t length = min_length + next_random(&seed) % (max_length - min_length + 1);
+        size_t applied = 0;
+        for (size_t attempts = 0; applied < length && attempts < 40; attempts++) {
+            MotiveRelationStep relation = CASES[next_random(&seed) % CASE_COUNT];
+            MotiveSketch next;
+            if (motive_relation_apply(&at, &relation, &next) == MOTIVE_RELATION_OK) {
+                at = next;
+                applied++;
+            }
+        }
+        if (applied < length) {
+            continue;
+        }
+        made++;
+        MotiveRecognition found = recognize(&source, &at);
+        if (found.found) {
+            assert_replays(&source, &at, &found);
+            found_count++;
+        } else {
+            assert(msk_eq(found.distance, q(1, 1)));
+        }
+    }
+    assert(found_count >= required);
+}
+
+/* A pair with nothing in common is not found: distance 1, and the steps lead to the closest sketch
+ * reached. */
+static void test_unrelated_pair_is_not_found(void) {
+    MotiveSketch source = base();
+    MotiveSketch other = base();
+    static const int pitches[6] = {71, 48, 77, 50, 70, 52};
+    static const unsigned long long den[7] = {16, 4, 16, 2, 16, 8, 16};
+    ExactRational at = q(0, 1);
+    for (size_t i = 0; i < 6; i++) {
+        other.notes[i].pitch = pitches[i];
+        other.notes[i].onset = at;
+        other.notes[i].duration = q(1, den[i]);
+        at = msk_add(at, other.notes[i].duration);
+    }
+    other.length = at;
+    other.chord_count = 1;
+    other.chords[0].degree = 6;
+    MotiveRecognition found = recognize(&source, &other);
+    assert(!found.found);
+    assert(msk_eq(found.distance, q(1, 1)));
+    assert(found.step_count <= MOTIVE_RECOGNIZE_MAX_DEPTH);
+    MotiveSketch walk = source;
+    for (size_t i = 0; i < found.step_count; i++) {
+        MotiveSketch next;
+        assert(motive_relation_apply(&walk, &found.steps[i], &next) == MOTIVE_RELATION_OK);
+        walk = next;
+    }
+    assert(!motive_sketch_equal(&walk, &other));
+
+    /* The same search is the same answer. */
+    MotiveRecognition again = recognize(&source, &other);
+    assert(again.step_count == found.step_count);
+    assert(memcmp(again.steps, found.steps, found.step_count * sizeof(found.steps[0])) == 0);
+}
+
 static void test_bad_input(void) {
     MotiveSketch source = base();
     MotiveSketch broken = base();
@@ -291,11 +378,15 @@ static void test_bad_input(void) {
 }
 
 int main(void) {
+    init_cases();
     test_every_relation();
     test_equal_sketches_are_exact();
     test_dimensions();
     test_rhythm_sketch_takes_time_relations();
     test_without_a_scale_pitches_move_by_semitones();
+    test_chains(2, 2, 40, 40);
+    test_chains(3, 4, 40, 30);
+    test_unrelated_pair_is_not_found();
     test_bad_input();
     printf("motive_variant_recognition: ok\n");
     return 0;
