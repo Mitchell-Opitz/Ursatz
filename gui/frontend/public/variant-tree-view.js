@@ -343,6 +343,14 @@ const VariantTreeView = (function () {
     rejectedBox.type = "checkbox";
     rejectedBox.checked = loadShowRejected();
     rejectedLabel.appendChild(rejectedBox);
+    const distance = h("select");
+    for (const option of VariantTree.DISTANCES) {
+      const o = h("option", "", option.text);
+      o.value = option.value;
+      distance.appendChild(o);
+    }
+    const distanceLabel = h("label", "filter-field", "Distance ");
+    distanceLabel.appendChild(distance);
     const functionBoxes = new Map();
     const functionFilter = h("span", "variant-function-filter", "Suits ");
     for (const name of VariantTree.FUNCTIONS) {
@@ -353,7 +361,7 @@ const VariantTreeView = (function () {
       functionFilter.appendChild(label);
       functionBoxes.set(name, box);
     }
-    controls.append(countLabel, seed, generate, summary, rejectedLabel);
+    controls.append(countLabel, distanceLabel, seed, generate, summary, rejectedLabel);
     controls.appendChild(functionFilter);
 
     const pickerHost = h("details", "variant-picker-host");
@@ -368,6 +376,11 @@ const VariantTreeView = (function () {
 
     let picker = null;
     function updateSummary() {
+      /* A distance is drawn from random chains, so chosen operations switch it off. */
+      distance.disabled = steps.length > 0;
+      if (distance.disabled) {
+        distance.value = "";
+      }
       summary.textContent = steps.length > 0 ? steps.map((step) => step.op).join(" then ") : "Random operations";
     }
     ctx.send(VariantTree.operationsRequest()).then((answer) => {
@@ -623,6 +636,7 @@ const VariantTreeView = (function () {
         seed: seed.value,
         steps,
         functions: VariantTree.FUNCTIONS.filter((name) => functionBoxes.get(name).checked),
+        distance: distance.value,
       });
       if (made.error) {
         setStatus(status, made.error, true);
@@ -637,7 +651,7 @@ const VariantTreeView = (function () {
       shown = Array.isArray(answer.data.variants) ? answer.data.variants : [];
       rendered = new Map();
       drawCandidates();
-      setStatus(status, shown.length === 0 ? "No variants came out" : `Seed ${answer.data.seed}`, false);
+      setStatus(status, VariantTree.generatedNote(shown, Number(count.value), answer.data.seed, distance.value), false);
     });
 
     const blocked = VariantTree.noDegreesMessage(ctx.body && ctx.body.motif);

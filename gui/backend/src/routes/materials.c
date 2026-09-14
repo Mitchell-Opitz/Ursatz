@@ -1941,8 +1941,8 @@ static const double kMaxVariantSeed = 4294967279.0;
 /* Runs `variants` on the motif member of a version body (its degrees, form, meter, key and pickup). chain (an object
    {"steps": [...]}) is optional and means random chains when NULL; seed is optional (negative: the clock). On success
    returns the Composer's document; otherwise NULL with *status and message set. */
-static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJSON *functions, const cJSON *chain,
-                           int count, double seed, int *status, char *message, size_t message_size) {
+static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJSON *functions, const char *distance,
+                           const cJSON *chain, int count, double seed, int *status, char *message, size_t message_size) {
   bool bad = false;
   const char *form = optional_string(motif, "form", &bad);
   const char *degrees = optional_string(motif, "degrees", &bad);
@@ -2036,6 +2036,10 @@ static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJ
     args[n++] = "--function";
     args[n++] = function->valuestring;
   }
+  if (distance) {
+    args[n++] = "--distance";
+    args[n++] = distance;
+  }
   if (chain) {
     args[n++] = "--chain";
     args[n++] = chain_path;
@@ -2059,7 +2063,7 @@ static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJ
   return document;
 }
 
-/* POST /api/materials/items/<id>/variants {chain?, count?, seed?}: candidates from the item's current degrees; nothing is
+/* POST /api/materials/items/<id>/variants {chain?, count?, seed?, functions?, distance?}: candidates from the item's current degrees; nothing is
    saved. The answer is the Composer's document plus "ok" and "seed". */
 static int handle_variants(struct mg_connection *conn, const char *id) {
   int status = 0;
@@ -2071,6 +2075,10 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
   const cJSON *count_item = cJSON_GetObjectItemCaseSensitive(body, "count");
   const cJSON *seed_item = cJSON_GetObjectItemCaseSensitive(body, "seed");
   const cJSON *functions = cJSON_GetObjectItemCaseSensitive(body, "functions");
+  const cJSON *distance_item = cJSON_GetObjectItemCaseSensitive(body, "distance");
+  if (cJSON_IsNull(distance_item)) {
+    distance_item = NULL;
+  }
   if (cJSON_IsNull(functions)) {
     functions = NULL;
   }
@@ -2091,7 +2099,14 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
     functions_ok = functions_ok && cJSON_IsString(function) && function_name_ok(function->valuestring);
   }
   functions_ok = functions_ok && (!functions || cJSON_GetArraySize(functions) <= 4);
-  bool valid = functions_ok &&
+  const char *distance = cJSON_IsString(distance_item) ? distance_item->valuestring : NULL;
+  bool distance_ok = !distance_item || (distance && (strcmp(distance, "close") == 0 || strcmp(distance, "medium") == 0 ||
+                                                      strcmp(distance, "far") == 0));
+  if (distance_ok && distance && chain) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "distance takes random operations");
+  }
+  bool valid = functions_ok && distance_ok &&
                (!chain || (cJSON_IsObject(chain) && cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(chain, "steps")))) &&
                (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
                                 count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
@@ -2100,7 +2115,7 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
                                seed_item->valuedouble == (double)(long long)seed_item->valuedouble));
   if (!valid) {
     cJSON_Delete(body);
-    return send_failure(conn, 400, "chain is {steps: [...]}, count is 1 to 16, seed a whole number from 0 and functions at most 4 of beginning, continuation, contrast, cadential");
+    return send_failure(conn, 400, "chain is {steps: [...]}, count is 1 to 16, seed a whole number from 0, distance close, medium or far and functions at most 4 of beginning, continuation, contrast, cadential");
   }
   if (count_item) {
     count = (int)count_item->valuedouble;
@@ -2117,7 +2132,7 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
   const cJSON *motif = cJSON_GetObjectItemCaseSensitive(item_body, "motif");
   char message[512];
   cJSON *basic_body = cJSON_IsObject(motif) ? lineage_root(motif) : NULL;
-  cJSON *document = cJSON_IsObject(motif) ? run_variants(motif, basic_body, functions, chain, count, seed, &status,
+  cJSON *document = cJSON_IsObject(motif) ? run_variants(motif, basic_body, functions, distance, chain, count, seed, &status,
                                                          message, sizeof(message))
                                           : NULL;
   cJSON_Delete(basic_body);
@@ -2857,7 +2872,7 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
   for (int attempt = 0; chain && attempt < 16; attempt++) {
     seed = fmod(base + 1000003.0 + attempt, kMaxVariantSeed + 1);
     cJSON_Delete(document);
-    document = run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), basic_body, NULL, chain, 1, seed, &status,
+    document = run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), basic_body, NULL, NULL, chain, 1, seed, &status,
                             message, sizeof(message));
     if (!document) {
       break;

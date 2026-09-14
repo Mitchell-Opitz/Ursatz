@@ -222,8 +222,25 @@
     return /^\d+$/.test(value) && Number.isSafeInteger(number) && number >= min ? number : NaN;
   }
 
-  /* The variants POST. options: {count, seed, steps, functions} (texts or numbers; functions are the names to keep).
-   * Returns {request} or {error}. */
+  const DISTANCES = [
+    { value: "", text: "Any" },
+    { value: "close", text: "Close" },
+    { value: "medium", text: "Medium" },
+    { value: "far", text: "Far" },
+  ];
+
+  /* The status after Generate: the seed, or how many came out when the distance left fewer than asked. */
+  function generatedNote(variants, count, seed, distance) {
+    const found = Array.isArray(variants) ? variants.length : 0;
+    if (found === 0) {
+      return "No variants came out";
+    }
+    const asked = Number.isInteger(count) ? count : DEFAULT_COUNT;
+    return distance && found < asked ? `${found} of ${asked} found at this distance.` : `Seed ${seed}`;
+  }
+
+  /* The variants POST. options: {count, seed, steps, functions, distance} (texts or numbers; functions are the names
+   * to keep; distance is close, medium or far, and takes no steps). Returns {request} or {error}. */
   function generateRequest(id, options) {
     const o = options || {};
     const body = {};
@@ -242,8 +259,15 @@
       body.seed = seed;
     }
     const chain = chainFromSteps(o.steps);
+    const distance = DISTANCES.some((d) => d.value !== "" && d.value === o.distance) ? o.distance : null;
+    if (chain && distance) {
+      return { error: "Distance takes random operations" };
+    }
     if (chain) {
       body.chain = chain;
+    }
+    if (distance) {
+      body.distance = distance;
     }
     const functions = FUNCTIONS.filter((name) => Array.isArray(o.functions) && o.functions.includes(name));
     if (functions.length > 0) {
@@ -465,6 +489,8 @@
     FLAG_LABELS,
     FUNCTIONS,
     DEFAULT_COUNT,
+    DISTANCES,
+    generatedNote,
     MAX_COUNT,
     treeRows,
     operationGroups,
