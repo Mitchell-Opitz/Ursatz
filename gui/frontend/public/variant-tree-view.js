@@ -170,7 +170,6 @@ const VariantTreeView = (function () {
     const meta = h("div", "variant-meta");
     meta.appendChild(h("span", `variant-badge variant-kind-${view.kind.value}`, view.kind.text));
     meta.appendChild(chipRow(view.chips));
-    meta.appendChild(chipRow(view.functions));
     if (view.recognizability) {
       meta.appendChild(h("span", "variant-recognizability", view.recognizability));
     }
@@ -178,6 +177,7 @@ const VariantTreeView = (function () {
       meta.appendChild(h("span", "variant-remoteness", view.remoteness));
     }
     card.appendChild(meta);
+    card.appendChild(h("div", "variant-suits-line", view.suits));
     if (view.harmony) {
       card.appendChild(h("div", "variant-harmony", view.harmony));
     }
@@ -257,11 +257,11 @@ const VariantTreeView = (function () {
     }
     item.appendChild(chipRow(row.chips));
     const meta = h("div", "variant-meta");
-    meta.appendChild(chipRow(row.functions));
     if (row.remoteness) {
       meta.appendChild(h("span", "variant-remoteness", row.remoteness));
     }
     item.appendChild(meta);
+    item.appendChild(h("div", "variant-suits-line", row.suits));
     if (row.harmony) {
       item.appendChild(h("div", "variant-harmony", row.harmony));
     }

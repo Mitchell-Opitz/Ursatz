@@ -52,11 +52,10 @@
 
   const FUNCTIONS = ["beginning", "continuation", "contrast", "cadential"];
 
-  /* One chip per function the form suits (R-143). */
-  function functionChips(functions) {
-    return (Array.isArray(functions) ? functions : [])
-      .filter((name) => FUNCTIONS.includes(name))
-      .map((name) => ({ name, state: "function", text: name }));
+  /* "Suits: beginning, cadential" for the functions that exist, "Suits: none" without any (R-143). */
+  function suitsLine(functions) {
+    const names = (Array.isArray(functions) ? functions : []).filter((name) => FUNCTIONS.includes(name));
+    return `Suits: ${names.length > 0 ? names.join(", ") : "none"}`;
   }
 
   const SUITS_FILTERS = [{ value: "", text: "Any" }, ...FUNCTIONS.map((name) => ({ value: name, text: titleOf(name) }))];
@@ -127,7 +126,7 @@
         kind: derived ? badge(derived.kind, KIND_LABELS) : null,
         kindValue: derived && KINDS.includes(derived.kind) ? derived.kind : "motive-form",
         chips: derived ? chips(derived.kept, derived.changed) : [],
-        functions: derived ? functionChips(derived.functions) : [],
+        suits: derived ? suitsLine(derived.functions) : "",
         remoteness: derived ? remotenessText(derived.remoteness) : "",
         harmony: derived ? harmonyLine(derived.harmony) : "",
         seed: derived && Number.isInteger(derived.seed) ? derived.seed : null,
@@ -415,7 +414,7 @@
       derivation: String(c.derivation || ""),
       kind: badge(c.kind, KIND_LABELS),
       chips: chips(c.kept, c.changed),
-      functions: functionChips(c.functions),
+      suits: suitsLine(c.functions),
       remoteness: remotenessText(c.remoteness),
       harmony: harmonyLine(c.harmony),
       recognizability: recognizability === null ? "" : `${Math.round(recognizability * 100)}% recognizable`,

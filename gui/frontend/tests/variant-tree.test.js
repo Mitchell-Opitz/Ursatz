@@ -115,7 +115,7 @@ check(body.motif.degrees === "x:q x:q" && body.motif.key === "C major", "a candi
 
 const rich = { ...candidate, functions: ["beginning", "bogus", "cadential"], remoteness: 0.3333, harmony: "I V@2", motive: { motive: { features: [{ label: "a", first: 0, last: 1 }] }, analysis: candidate.motive.analysis } };
 const rv = V.candidateView(rich);
-check(same(rv.functions.map((chip) => chip.text), ["beginning", "cadential"]) && rv.functions[0].state === "function", "function chips name the functions that exist");
+check(rv.suits === "Suits: beginning, cadential", "the suits line names the functions that exist");
 check(rv.remoteness === "33% remote from the basic motive" && V.candidateView(candidate).remoteness === "", "remoteness reads as a percentage of the basic motive");
 check(rv.harmony === "Harmony: I V@2" && V.candidateView(candidate).harmony === "", "the harmony line shows only with chords");
 const richBody = V.candidateBody({ motif: { form: "full", degrees: "1:h", harmony: "I", features: [{ label: "z", first: 0, last: 5 }] } }, rich);
@@ -123,8 +123,8 @@ check(richBody.motif.harmony === "I V@2" && same(richBody.motif.features, [{ lab
 check(V.candidateBody({ motif: { harmony: "I" } }, candidate).motif.harmony === null, "a candidate without chords renders without the source's");
 const richTree = { id: "m1", name: "Opening", current_version: 1, derived: null, children: [{ id: "m2", name: "Opening transpose", current_version: 1, derived: { kind: "motive-form", flag: "unflagged", kept: [], changed: [], operations: [], functions: ["contrast"], remoteness: 0.5, harmony: "I V@2" }, children: [] }] };
 const richRows = V.treeRows(richTree, false).rows;
-check(richRows[1].functions[0].text === "contrast" && richRows[1].remoteness === "50% remote from the basic motive" && richRows[1].harmony === "Harmony: I V@2", "saved forms show functions, remoteness and harmony");
-check(richRows[0].functions.length === 0 && richRows[0].remoteness === "", "the root has none");
+check(richRows[1].suits === "Suits: contrast" && richRows[1].remoteness === "50% remote from the basic motive" && richRows[1].harmony === "Harmony: I V@2", "saved forms show functions, remoteness and harmony");
+check(richRows[0].suits === "" && richRows[0].remoteness === "", "the root has none");
 const filtered = JSON.parse(V.generateRequest("m1", { functions: ["cadential", "bogus", "beginning"] }).request.body);
 check(same(filtered.functions, ["beginning", "cadential"]) && JSON.parse(V.generateRequest("m1", {}).request.body).functions === undefined, "the function filter is sent in order and only when set");
 check(same(V.featureOptions([{ label: "a", first: 0, last: 2 }, { label: "turn", first: 3, last: 3 }]), [{ value: "", text: "drawn" }, { value: "0", text: "a (notes 1-3)" }, { value: "1", text: "turn (notes 4-4)" }]) && V.featureOptions(null).length === 1, "feature parameters offer the motif's labels");
