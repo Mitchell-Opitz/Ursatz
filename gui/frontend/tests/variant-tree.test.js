@@ -125,6 +125,23 @@ const richTree = { id: "m1", name: "Opening", current_version: 1, derived: null,
 const richRows = V.treeRows(richTree, false).rows;
 check(richRows[1].suits === "Suits: contrast" && richRows[1].remoteness === "50% remote from the basic motive" && richRows[1].harmony === "Harmony: I V@2", "saved forms show functions, remoteness and harmony");
 check(richRows[0].suits === "" && richRows[0].remoteness === "", "the root has none");
+/* R-189: distance and the Suits filter. */
+check(JSON.parse(V.generateRequest("m1", { distance: "far" }).request.body).distance === "far" &&
+  JSON.parse(V.generateRequest("m1", { distance: "" }).request.body).distance === undefined &&
+  JSON.parse(V.generateRequest("m1", { distance: "bogus" }).request.body).distance === undefined, "distance is sent only when close, medium or far");
+check(V.generateRequest("m1", { distance: "close", steps: [{ op: "invert" }] }).error === "Distance takes random operations", "a distance with chosen steps is refused");
+check(V.generatedNote([1, 2], 6, 9, "close") === "2 of 6 found at this distance." && V.generatedNote([1, 2], 6, 9, "") === "Seed 9" &&
+  V.generatedNote([1, 2, 3, 4, 5, 6], 6, 9, "far") === "Seed 9" && V.generatedNote([], 6, 9, "far") === "No variants came out", "the status says how many were found at the distance");
+check(V.suitsLine(["beginning", "bogus", "cadential"]) === "Suits: beginning, cadential" && V.suitsLine([]) === "Suits: none" && V.suitsLine(null) === "Suits: none", "the suits line lists the functions or none");
+check(same(V.SUITS_FILTERS.map((f) => f.text), ["Any", "Beginning", "Continuation", "Contrast", "Cadential"]), "the Suits filter offers Any and the four functions");
+check(V.suitsMatch(["contrast"], "") && V.suitsMatch(["contrast", "cadential"], "cadential") && !V.suitsMatch(["contrast"], "cadential") && !V.suitsMatch(undefined, "cadential"), "a form passes the filter when it suits the function");
+const suitsTree = { id: "m1", name: "Opening", current_version: 1, derived: null, children: [
+  { id: "s1", name: "One", current_version: 1, derived: { kind: "variant", flag: "unflagged", functions: ["beginning"] }, children: [
+    { id: "s2", name: "Two", current_version: 1, derived: { kind: "variant", flag: "unflagged", functions: ["cadential"] }, children: [] } ] },
+  { id: "s3", name: "Three", current_version: 1, derived: { kind: "variant", flag: "unflagged", functions: [] }, children: [] } ] };
+check(same(V.treeRows(suitsTree, false, "cadential").rows.map((r) => r.id), ["m1", "s2"]), "the Suits filter keeps the root and the saved variants that suit it");
+check(same(V.treeRows(suitsTree, false, "").rows.map((r) => r.id), ["m1", "s1", "s2", "s3"]) && V.treeRows(suitsTree, false).rows.length === 4, "Any keeps every saved variant");
+check(V.treeRows(suitsTree, false).rows[3].suits === "Suits: none" && V.treeRows(suitsTree, false).rows[1].suits === "Suits: beginning", "a saved row has its suits line");
 const filtered = JSON.parse(V.generateRequest("m1", { functions: ["cadential", "bogus", "beginning"] }).request.body);
 check(same(filtered.functions, ["beginning", "cadential"]) && JSON.parse(V.generateRequest("m1", {}).request.body).functions === undefined, "the function filter is sent in order and only when set");
 check(same(V.featureOptions([{ label: "a", first: 0, last: 2 }, { label: "turn", first: 3, last: 3 }]), [{ value: "", text: "drawn" }, { value: "0", text: "a (notes 1-3)" }, { value: "1", text: "turn (notes 4-4)" }]) && V.featureOptions(null).length === 1, "feature parameters offer the motif's labels");

@@ -508,6 +508,7 @@
     SUITS_FILTERS,
     SUITS_EXPLANATION,
     suitsMatch,
+    suitsLine,
     generatedNote,
     MAX_COUNT,
     treeRows,
