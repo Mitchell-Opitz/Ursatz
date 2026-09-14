@@ -352,7 +352,7 @@ const VariantTreeView = (function () {
     const distanceLabel = h("label", "filter-field", "Distance ");
     distanceLabel.appendChild(distance);
     const functionBoxes = new Map();
-    const functionFilter = h("span", "variant-function-filter", "Suits ");
+    const functionFilter = h("span", "variant-function-filter", "Only variants that suit ");
     for (const name of VariantTree.FUNCTIONS) {
       const label = h("label", "filter-field", `${name} `);
       const box = h("input");
@@ -366,11 +366,22 @@ const VariantTreeView = (function () {
 
     const pickerHost = h("details", "variant-picker-host");
     pickerHost.appendChild(h("summary", "", "Choose the operations (empty: random chains)"));
+    /* The Suits filter narrows the candidates and the saved variants shown, not what is generated or stored. */
+    const suitsRow = h("div", "variant-suits");
+    const suits = h("select");
+    for (const option of VariantTree.SUITS_FILTERS) {
+      const o = h("option", "", option.text);
+      o.value = option.value;
+      suits.appendChild(o);
+    }
+    const suitsLabel = h("label", "filter-field", "Suits ");
+    suitsLabel.appendChild(suits);
+    suitsRow.append(suitsLabel, h("div", "piece-list-status", VariantTree.SUITS_EXPLANATION));
     const candidates = h("ol", "variant-candidates");
     const tree = h("ul", "variant-tree");
     const treeNote = h("div", "piece-list-status");
     const promotedHost = h("div");
-    section.append(controls, pickerHost, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree, promotedHost);
+    section.append(controls, pickerHost, suitsRow, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree, promotedHost);
     parent.appendChild(status);
     parent.appendChild(section);
 
@@ -490,7 +501,7 @@ const VariantTreeView = (function () {
       clearCandidateScores();
       const generation = drawGeneration;
       candidates.innerHTML = "";
-      for (const candidate of shown) {
+      for (const candidate of shown.filter((c) => VariantTree.suitsMatch(c.functions, suits.value))) {
         const entry = { workspace: null, urls: [] };
         candidateScores.push(entry);
         const card = candidateCard(candidate, {
@@ -597,7 +608,7 @@ const VariantTreeView = (function () {
       clearRowScores();
       rowScoreIds = [];
       tree.innerHTML = "";
-      const shownRows = VariantTree.treeRows(savedTree, rejectedBox.checked);
+      const shownRows = VariantTree.treeRows(savedTree, rejectedBox.checked, suits.value);
       for (const row of shownRows.rows) {
         const open = !row.isRoot && openRows.has(row.id);
         const item = treeRow(row, treeActions, open);
@@ -613,7 +624,9 @@ const VariantTreeView = (function () {
       const saved = shownRows.rows.length - 1;
       treeNote.textContent =
         saved <= 0 && shownRows.hidden === 0
-          ? "No saved variants yet."
+          ? suits.value
+            ? `No saved variant suits ${suits.value}.`
+            : "No saved variants yet."
           : shownRows.hidden > 0
             ? `${shownRows.hidden} rejected hidden`
             : "";
@@ -629,6 +642,10 @@ const VariantTreeView = (function () {
       drawTree();
     }
     rejectedListeners.push(drawTree);
+    suits.addEventListener("change", () => {
+      drawCandidates();
+      drawTree();
+    });
 
     generate.addEventListener("click", async () => {
       const made = VariantTree.generateRequest(ctx.id, {

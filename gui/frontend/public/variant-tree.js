@@ -59,6 +59,15 @@
       .map((name) => ({ name, state: "function", text: name }));
   }
 
+  const SUITS_FILTERS = [{ value: "", text: "Any" }, ...FUNCTIONS.map((name) => ({ value: name, text: titleOf(name) }))];
+  const SUITS_EXPLANATION =
+    "Where in a phrase a form fits, worked out from its harmony, rhythm and length (Schoenberg). Theme slots use it to pick forms.";
+
+  /* Whether a form with these functions passes the Suits filter ("" is Any). */
+  function suitsMatch(functions, filter) {
+    return !filter || (Array.isArray(functions) && functions.includes(filter));
+  }
+
   /* "N% remote from the basic motive" for a remoteness from 0 to 1; empty when it is unknown. */
   function remotenessText(remoteness) {
     return typeof remoteness === "number" && remoteness >= 0 && remoteness <= 1
@@ -81,8 +90,9 @@
    * A rejected variant is left out with everything under it unless
    * showRejected; hidden counts what was left out. The root is never hidden.
    * A promoted motif (standalone) and what is under it are not rows: promoted lists each one reached without
-   * crossing another, as {id, name, derivation} (R-188). */
-  function treeRows(tree, showRejected) {
+   * crossing another, as {id, name, derivation} (R-188). A Suits filter (a function name) leaves out the variants
+   * that do not suit it; what is under them stays. */
+  function treeRows(tree, showRejected, suits) {
     const rows = [];
     const promoted = [];
     let hidden = 0;
@@ -98,6 +108,12 @@
       }
       if (depth > 0 && flag === "rejected" && !showRejected) {
         hidden += countAll(node);
+        return;
+      }
+      if (depth > 0 && !suitsMatch(derived && derived.functions, suits)) {
+        for (const child of node.children || []) {
+          walk(child, depth + 1);
+        }
         return;
       }
       rows.push({
@@ -490,6 +506,9 @@
     FUNCTIONS,
     DEFAULT_COUNT,
     DISTANCES,
+    SUITS_FILTERS,
+    SUITS_EXPLANATION,
+    suitsMatch,
     generatedNote,
     MAX_COUNT,
     treeRows,
