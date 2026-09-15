@@ -115,6 +115,38 @@ bool motive_to_sketch(const Motive *motive, MotiveSketch *out) {
     return true;
 }
 
+bool motive_to_sketch_with_chords(const Motive *motive, const MotiveChord *chords, size_t count, MotiveSketch *out) {
+    if (!motive || !out || (count > 0 && !chords) || count > MOTIVE_SKETCH_MAX_CHORDS) {
+        return false;
+    }
+    MotiveSketch sketch;
+    if (!motive_to_sketch(motive, &sketch)) {
+        return false;
+    }
+    for (size_t i = 0; i < count; i++) {
+        sketch.chords[i].onset = sketch_time(chords[i].onset);
+        sketch.chords[i].degree = chords[i].degree;
+        sketch.chords[i].alteration = chords[i].alteration;
+        sketch.chords[i].inversion = chords[i].inversion;
+        sketch.chords[i].seventh = chords[i].seventh;
+    }
+    sketch.chord_count = count;
+    if (!motive_sketch_validate(&sketch)) {
+        return false;
+    }
+    *out = sketch;
+    return true;
+}
+
+MotiveToneStatus motive_tone_labels(const Motive *motive, const MotiveChord *chords, size_t chord_count,
+                                    const MotiveToneOverride *overrides, size_t override_count, MotiveToneLabel *out) {
+    MotiveSketch sketch;
+    if (!motive_to_sketch_with_chords(motive, chords, chord_count, &sketch)) {
+        return MOTIVE_TONE_INVALID;
+    }
+    return motive_tone_roles(&sketch, overrides, override_count, out);
+}
+
 /* The meter of a bar and a beat: beats_per_bar over a beat unit of 1, 2, 4, 8 or 16. */
 static bool meter_of(ExactRational bar, ExactRational beat, PlanMeter *meter) {
     if (!msk_ok(bar) || !msk_ok(beat) || beat.n != 1 || (beat.d != 1 && beat.d != 2 && beat.d != 4 && beat.d != 8 && beat.d != 16)) {

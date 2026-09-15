@@ -38,4 +38,8 @@ bool motive_base_harmony(const Motive *motive, MotiveBaseHarmony *out);
 /* True when no bar of the motive's own harmony holds more than MOTIVE_MAX_CHORDS_PER_BAR chords. */
 bool motive_harmony_bar_limit_ok(const Motive *motive);
 
+/* The name of a non-chord tone type as the motive reports it: "passing", "neighbor", "appoggiatura", "suspension",
+   "retardation", "escape", "anticipation", "double-neighbor", "changing-tone" or "pedal". NULL for an invalid type. */
+const char *motive_tone_type_name(NonChordTone type);
+
 #endif

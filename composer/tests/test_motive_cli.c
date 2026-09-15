@@ -313,7 +313,7 @@ static void test_extras_in_motive(void) {
     assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --json", "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
     out = read_file("motive_cli_out.txt");
-    assert(strstr(out, "harmony_text") == NULL && strstr(out, "\"role\"") == NULL && strstr(out, "\"features\"") == NULL);
+    assert(strstr(out, "harmony_text") == NULL && strstr(out, "\"role\": \"accompaniment\"") == NULL && strstr(out, "\"features\"") == NULL);
     free(out);
 
     /* The onsets are in beats of the file's own meter; a pickup given at the same time still applies. */
@@ -412,7 +412,7 @@ static void test_extras_in_grow_and_random_motive(void) {
     free(out);
     assert(run_sub("random-motive", "--mode major --meter 4/4 --seed 5 --role melodic --json") == 0);
     out = read_file("motive_cli_out.txt");
-    assert(strstr(out, "\"role\"") == NULL);
+    assert(strstr(out, "\"role\": \"accompaniment\"") == NULL);
     free(out);
     expect_sub_failure("random-motive", "--mode major --meter 4/4 --role bass", 1, "--role must be");
     expect_sub_failure("random-motive", "--mode major --meter 4/4 --harmony I", 1, "unknown option '--harmony'");

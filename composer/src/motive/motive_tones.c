@@ -223,3 +223,30 @@ bool motive_harmony_bar_limit_ok(const Motive *motive) {
     }
     return true;
 }
+
+const char *motive_tone_type_name(NonChordTone type) {
+    switch (type) {
+    case NON_CHORD_TONE_PASSING:
+        return "passing";
+    case NON_CHORD_TONE_NEIGHBOR:
+        return "neighbor";
+    case NON_CHORD_TONE_APPOGGIATURA:
+        return "appoggiatura";
+    case NON_CHORD_TONE_SUSPENSION:
+        return "suspension";
+    case NON_CHORD_TONE_RETARDATION:
+        return "retardation";
+    case NON_CHORD_TONE_ESCAPE_TONE:
+        return "escape";
+    case NON_CHORD_TONE_ANTICIPATION:
+        return "anticipation";
+    case NON_CHORD_TONE_DOUBLE_NEIGHBOR:
+        return "double-neighbor";
+    case NON_CHORD_TONE_CHANGING_TONE:
+        return "changing-tone";
+    case NON_CHORD_TONE_PEDAL:
+        return "pedal";
+    default:
+        return NULL;
+    }
+}

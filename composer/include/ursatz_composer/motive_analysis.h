@@ -50,6 +50,10 @@
  *
  * Base harmony. The chords the notes are heard against (motive_tones.h): the motive's own harmony, else one proposed from
  * the notes. Known only for a full motive with a key.
+ *
+ * Tones. The harmonic role of every note against the base harmony (the library's motive_tone_roles): a chord tone, a
+ * non-chord tone of one of ten types, or unclassified; where a non-chord tone resolves; and the notes that do not
+ * resolve. Known with the base harmony.
  */
 
 #define MOTIVE_ANALYSIS_MAX_CANDIDATES 9
@@ -134,6 +138,9 @@ typedef struct {
 
     bool base_harmony_known;
     MotiveBaseHarmony base_harmony;
+
+    bool tones_known;
+    MotiveToneLabel tones[MOTIVE_MAX_NOTES];
 } MotiveAnalysis;
 
 /* Analyzes the motive into *out. False for a motive that is not valid (see motive.h), leaving *out untouched. */
