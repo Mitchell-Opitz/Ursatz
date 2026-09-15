@@ -250,3 +250,20 @@ const char *motive_tone_type_name(NonChordTone type) {
         return NULL;
     }
 }
+
+bool motive_tone_type_parse(const char *name, NonChordTone *out) {
+    if (!name || !out) {
+        return false;
+    }
+    if (strcmp(name, "escape-tone") == 0) {
+        *out = NON_CHORD_TONE_ESCAPE_TONE;
+        return true;
+    }
+    for (int type = 0; type < NON_CHORD_TONE_COUNT; type++) {
+        if (strcmp(name, motive_tone_type_name((NonChordTone)type)) == 0) {
+            *out = (NonChordTone)type;
+            return true;
+        }
+    }
+    return false;
+}

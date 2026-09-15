@@ -254,6 +254,11 @@ static void analyze_harmony(const Motive *motive, MotiveAnalysis *out) {
 /* ----------------------------------------------------------------- analyze */
 
 bool motive_analyze(const Motive *motive, MotiveAnalysis *out) {
+    return motive_analyze_with_tones(motive, NULL, 0, out);
+}
+
+bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *overrides, size_t override_count,
+                               MotiveAnalysis *out) {
     PlanTime length;
     if (!motive || !out || motive_check_notes(motive, &length, NULL) != MOTIVE_OK) {
         return false;
@@ -317,8 +322,11 @@ bool motive_analyze(const Motive *motive, MotiveAnalysis *out) {
     }
     result.base_harmony_known = motive_base_harmony(motive, &result.base_harmony);
     result.tones_known = result.base_harmony_known &&
-                         motive_tone_labels(motive, result.base_harmony.chords, result.base_harmony.count, NULL, 0,
-                                            result.tones) == MOTIVE_TONE_OK;
+                         motive_tone_labels(motive, result.base_harmony.chords, result.base_harmony.count, overrides,
+                                            override_count, result.tones) == MOTIVE_TONE_OK;
+    if (override_count > 0 && !result.tones_known) {
+        return false;
+    }
     *out = result;
     return true;
 }

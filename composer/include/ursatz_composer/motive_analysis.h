@@ -146,6 +146,14 @@ typedef struct {
 /* Analyzes the motive into *out. False for a motive that is not valid (see motive.h), leaving *out untouched. */
 bool motive_analyze(const Motive *motive, MotiveAnalysis *out);
 
+/*
+ * motive_analyze with the caller's own tone labels (0-based note indices, see analysis/motive_tone_roles.h). False, *out
+ * untouched, as motive_analyze, and also when there are overrides and the motive has no base harmony to label against
+ * or an override is not valid.
+ */
+bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *overrides, size_t override_count,
+                               MotiveAnalysis *out);
+
 /* "arch", "ascending" and so on. */
 const char *motive_shape_name(MotiveShape shape);
 

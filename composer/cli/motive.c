@@ -30,6 +30,8 @@ typedef struct {
     const char *musicxml_path;
     const char *tempo_text;
     MotiveExtras extras;
+    const char *tone_texts[MOTIVE_MAX_NOTES];
+    size_t tone_count;
     bool json;
     bool help;
 } Options;
@@ -47,6 +49,9 @@ static void print_help(FILE *out) {
     fprintf(out, "                       rhythm (x:q x:e) or a contour (0 2 1 3) instead of a note list\n");
     fprintf(out, "  --pickup <beats>     the beats before the first barline, as 1 or 1/2; default 0\n");
     motive_extras_print_help(out, false);
+    fprintf(out, "  --tone <n>=<role>    label note n (1-based) as chord or as a non-chord tone: passing, neighbor,\n");
+    fprintf(out, "                       appoggiatura, suspension, retardation, escape, anticipation, double-neighbor,\n");
+    fprintf(out, "                       changing-tone or pedal; repeatable\n");
     fprintf(out, "  --render-key <key>   hear the motive in this key (same degrees); default the motive's key\n");
     fprintf(out, "  --midi <file>        write the motive as a MIDI file\n");
     fprintf(out, "  --musicxml <file>    write the motive as a MusicXML file (a pickup is an implicit first measure)\n");
@@ -95,6 +100,14 @@ static int read_options(int argc, char **argv, Options *options) {
             options->help = true;
         } else if (strcmp(argument, "--json") == 0) {
             options->json = true;
+        } else if (strcmp(argument, "--tone") == 0) {
+            if (i + 1 >= argc) {
+                return fail(EXIT_USAGE, "--tone needs a value");
+            }
+            if (options->tone_count == MOTIVE_MAX_NOTES) {
+                return fail(EXIT_USAGE, "at most %d --tone options", MOTIVE_MAX_NOTES);
+            }
+            options->tone_texts[options->tone_count++] = argv[++i];
         } else if (motive_extras_take(&options->extras, argc, argv, &i, false, &extras_status)) {
             if (extras_status != 0) {
                 return extras_status;
@@ -127,6 +140,29 @@ static int read_options(int argc, char **argv, Options *options) {
         } else {
             return fail(EXIT_USAGE, "unexpected argument '%s'; the input is one file", argument);
         }
+    }
+    return 0;
+}
+
+/* "3=passing", "2=chord": the 1-based note and its role. */
+static int parse_tone(const char *text, size_t note_count, MotiveToneOverride *out) {
+    char *end = NULL;
+    long note = strtol(text, &end, 10);
+    if (end == text || *end != '=' || note < 1 || (unsigned long)note > note_count) {
+        return fail(EXIT_USAGE, "--tone '%s': write the note, 1 to %zu, then = and a role, as 3=passing", text, note_count);
+    }
+    const char *role = end + 1;
+    out->note = (size_t)note - 1;
+    out->type = NON_CHORD_TONE_PASSING;
+    if (strcmp(role, "chord") == 0) {
+        out->role = MOTIVE_TONE_CHORD;
+    } else if (motive_tone_type_parse(role, &out->type)) {
+        out->role = MOTIVE_TONE_NON_CHORD;
+    } else {
+        return fail(EXIT_USAGE,
+                    "--tone '%s': the role is chord, passing, neighbor, appoggiatura, suspension, retardation, escape, "
+                    "anticipation, double-neighbor, changing-tone or pedal, not '%s'",
+                    text, role);
     }
     return 0;
 }
@@ -215,8 +251,21 @@ int run_motive(int argc, char **argv) {
     if (!motive_harmony_bar_limit_ok(&motive)) {
         return fail(EXIT_USAGE, "at most %d harmonies per bar", MOTIVE_MAX_CHORDS_PER_BAR);
     }
+    MotiveToneOverride overrides[MOTIVE_MAX_NOTES];
+    for (size_t i = 0; i < options.tone_count; i++) {
+        status = parse_tone(options.tone_texts[i], motive.note_count, &overrides[i]);
+        if (status != 0) {
+            return status;
+        }
+    }
     MotiveAnalysis analysis;
-    if (!motive_analyze(&motive, &analysis)) {
+    if (options.tone_count > 0) {
+        MotiveAnalysis plain;
+        if (motive_analyze(&motive, &plain) && !plain.tones_known) {
+            return fail(EXIT_USAGE, "--tone needs a motive with a key and pitches to label against its base harmony");
+        }
+    }
+    if (!motive_analyze_with_tones(&motive, overrides, options.tone_count, &analysis)) {
         return fail(EXIT_UNLOADABLE, "cannot analyze '%s'", options.input);
     }
 
