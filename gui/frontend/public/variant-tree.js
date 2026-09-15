@@ -52,11 +52,19 @@
 
   const FUNCTIONS = ["beginning", "continuation", "contrast", "cadential"];
 
-  /* One chip per function the form suits (R-143). */
-  function functionChips(functions) {
-    return (Array.isArray(functions) ? functions : [])
-      .filter((name) => FUNCTIONS.includes(name))
-      .map((name) => ({ name, state: "function", text: name }));
+  /* "Suits: beginning, cadential" for the functions that exist, "Suits: none" without any (R-143). */
+  function suitsLine(functions) {
+    const names = (Array.isArray(functions) ? functions : []).filter((name) => FUNCTIONS.includes(name));
+    return `Suits: ${names.length > 0 ? names.join(", ") : "none"}`;
+  }
+
+  const SUITS_FILTERS = [{ value: "", text: "Any" }, ...FUNCTIONS.map((name) => ({ value: name, text: titleOf(name) }))];
+  const SUITS_EXPLANATION =
+    "Where in a phrase a form fits, worked out from its harmony, rhythm and length (Schoenberg). Theme slots use it to pick forms.";
+
+  /* Whether a form with these functions passes the Suits filter ("" is Any). */
+  function suitsMatch(functions, filter) {
+    return !filter || (Array.isArray(functions) && functions.includes(filter));
   }
 
   /* "N% remote from the basic motive" for a remoteness from 0 to 1; empty when it is unknown. */
@@ -81,8 +89,9 @@
    * A rejected variant is left out with everything under it unless
    * showRejected; hidden counts what was left out. The root is never hidden.
    * A promoted motif (standalone) and what is under it are not rows: promoted lists each one reached without
-   * crossing another, as {id, name, derivation} (R-188). */
-  function treeRows(tree, showRejected) {
+   * crossing another, as {id, name, derivation} (R-188). A Suits filter (a function name) leaves out the variants
+   * that do not suit it; what is under them stays. */
+  function treeRows(tree, showRejected, suits) {
     const rows = [];
     const promoted = [];
     let hidden = 0;
@@ -100,6 +109,12 @@
         hidden += countAll(node);
         return;
       }
+      if (depth > 0 && !suitsMatch(derived && derived.functions, suits)) {
+        for (const child of node.children || []) {
+          walk(child, depth + 1);
+        }
+        return;
+      }
       rows.push({
         id: node.id,
         name: String(node.name || ""),
@@ -111,7 +126,7 @@
         kind: derived ? badge(derived.kind, KIND_LABELS) : null,
         kindValue: derived && KINDS.includes(derived.kind) ? derived.kind : "motive-form",
         chips: derived ? chips(derived.kept, derived.changed) : [],
-        functions: derived ? functionChips(derived.functions) : [],
+        suits: derived ? suitsLine(derived.functions) : "",
         remoteness: derived ? remotenessText(derived.remoteness) : "",
         harmony: derived ? harmonyLine(derived.harmony) : "",
         seed: derived && Number.isInteger(derived.seed) ? derived.seed : null,
@@ -222,8 +237,25 @@
     return /^\d+$/.test(value) && Number.isSafeInteger(number) && number >= min ? number : NaN;
   }
 
-  /* The variants POST. options: {count, seed, steps, functions} (texts or numbers; functions are the names to keep).
-   * Returns {request} or {error}. */
+  const DISTANCES = [
+    { value: "", text: "Any" },
+    { value: "close", text: "Close" },
+    { value: "medium", text: "Medium" },
+    { value: "far", text: "Far" },
+  ];
+
+  /* The status after Generate: the seed, or how many came out when the distance left fewer than asked. */
+  function generatedNote(variants, count, seed, distance) {
+    const found = Array.isArray(variants) ? variants.length : 0;
+    if (found === 0) {
+      return "No variants came out";
+    }
+    const asked = Number.isInteger(count) ? count : DEFAULT_COUNT;
+    return distance && found < asked ? `${found} of ${asked} found at this distance.` : `Seed ${seed}`;
+  }
+
+  /* The variants POST. options: {count, seed, steps, functions, distance} (texts or numbers; functions are the names
+   * to keep; distance is close, medium or far, and takes no steps). Returns {request} or {error}. */
   function generateRequest(id, options) {
     const o = options || {};
     const body = {};
@@ -242,8 +274,15 @@
       body.seed = seed;
     }
     const chain = chainFromSteps(o.steps);
+    const distance = DISTANCES.some((d) => d.value !== "" && d.value === o.distance) ? o.distance : null;
+    if (chain && distance) {
+      return { error: "Distance takes random operations" };
+    }
     if (chain) {
       body.chain = chain;
+    }
+    if (distance) {
+      body.distance = distance;
     }
     const functions = FUNCTIONS.filter((name) => Array.isArray(o.functions) && o.functions.includes(name));
     if (functions.length > 0) {
@@ -375,7 +414,7 @@
       derivation: String(c.derivation || ""),
       kind: badge(c.kind, KIND_LABELS),
       chips: chips(c.kept, c.changed),
-      functions: functionChips(c.functions),
+      suits: suitsLine(c.functions),
       remoteness: remotenessText(c.remoteness),
       harmony: harmonyLine(c.harmony),
       recognizability: recognizability === null ? "" : `${Math.round(recognizability * 100)}% recognizable`,
@@ -465,6 +504,12 @@
     FLAG_LABELS,
     FUNCTIONS,
     DEFAULT_COUNT,
+    DISTANCES,
+    SUITS_FILTERS,
+    SUITS_EXPLANATION,
+    suitsMatch,
+    suitsLine,
+    generatedNote,
     MAX_COUNT,
     treeRows,
     operationGroups,

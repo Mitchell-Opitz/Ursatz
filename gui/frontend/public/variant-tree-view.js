@@ -170,7 +170,6 @@ const VariantTreeView = (function () {
     const meta = h("div", "variant-meta");
     meta.appendChild(h("span", `variant-badge variant-kind-${view.kind.value}`, view.kind.text));
     meta.appendChild(chipRow(view.chips));
-    meta.appendChild(chipRow(view.functions));
     if (view.recognizability) {
       meta.appendChild(h("span", "variant-recognizability", view.recognizability));
     }
@@ -178,6 +177,7 @@ const VariantTreeView = (function () {
       meta.appendChild(h("span", "variant-remoteness", view.remoteness));
     }
     card.appendChild(meta);
+    card.appendChild(h("div", "variant-suits-line", view.suits));
     if (view.harmony) {
       card.appendChild(h("div", "variant-harmony", view.harmony));
     }
@@ -257,11 +257,11 @@ const VariantTreeView = (function () {
     }
     item.appendChild(chipRow(row.chips));
     const meta = h("div", "variant-meta");
-    meta.appendChild(chipRow(row.functions));
     if (row.remoteness) {
       meta.appendChild(h("span", "variant-remoteness", row.remoteness));
     }
     item.appendChild(meta);
+    item.appendChild(h("div", "variant-suits-line", row.suits));
     if (row.harmony) {
       item.appendChild(h("div", "variant-harmony", row.harmony));
     }
@@ -343,8 +343,16 @@ const VariantTreeView = (function () {
     rejectedBox.type = "checkbox";
     rejectedBox.checked = loadShowRejected();
     rejectedLabel.appendChild(rejectedBox);
+    const distance = h("select");
+    for (const option of VariantTree.DISTANCES) {
+      const o = h("option", "", option.text);
+      o.value = option.value;
+      distance.appendChild(o);
+    }
+    const distanceLabel = h("label", "filter-field", "Distance ");
+    distanceLabel.appendChild(distance);
     const functionBoxes = new Map();
-    const functionFilter = h("span", "variant-function-filter", "Suits ");
+    const functionFilter = h("span", "variant-function-filter", "Only variants that suit ");
     for (const name of VariantTree.FUNCTIONS) {
       const label = h("label", "filter-field", `${name} `);
       const box = h("input");
@@ -353,21 +361,37 @@ const VariantTreeView = (function () {
       functionFilter.appendChild(label);
       functionBoxes.set(name, box);
     }
-    controls.append(countLabel, seed, generate, summary, rejectedLabel);
+    controls.append(countLabel, distanceLabel, seed, generate, summary, rejectedLabel);
     controls.appendChild(functionFilter);
 
     const pickerHost = h("details", "variant-picker-host");
     pickerHost.appendChild(h("summary", "", "Choose the operations (empty: random chains)"));
+    /* The Suits filter narrows the candidates and the saved variants shown, not what is generated or stored. */
+    const suitsRow = h("div", "variant-suits");
+    const suits = h("select");
+    for (const option of VariantTree.SUITS_FILTERS) {
+      const o = h("option", "", option.text);
+      o.value = option.value;
+      suits.appendChild(o);
+    }
+    const suitsLabel = h("label", "filter-field", "Suits ");
+    suitsLabel.appendChild(suits);
+    suitsRow.append(suitsLabel, h("div", "piece-list-status", VariantTree.SUITS_EXPLANATION));
     const candidates = h("ol", "variant-candidates");
     const tree = h("ul", "variant-tree");
     const treeNote = h("div", "piece-list-status");
     const promotedHost = h("div");
-    section.append(controls, pickerHost, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree, promotedHost);
+    section.append(controls, pickerHost, suitsRow, candidates, h("h3", "section-title", "Saved variants"), treeNote, tree, promotedHost);
     parent.appendChild(status);
     parent.appendChild(section);
 
     let picker = null;
     function updateSummary() {
+      /* A distance is drawn from random chains, so chosen operations switch it off. */
+      distance.disabled = steps.length > 0;
+      if (distance.disabled) {
+        distance.value = "";
+      }
       summary.textContent = steps.length > 0 ? steps.map((step) => step.op).join(" then ") : "Random operations";
     }
     ctx.send(VariantTree.operationsRequest()).then((answer) => {
@@ -477,7 +501,7 @@ const VariantTreeView = (function () {
       clearCandidateScores();
       const generation = drawGeneration;
       candidates.innerHTML = "";
-      for (const candidate of shown) {
+      for (const candidate of shown.filter((c) => VariantTree.suitsMatch(c.functions, suits.value))) {
         const entry = { workspace: null, urls: [] };
         candidateScores.push(entry);
         const card = candidateCard(candidate, {
@@ -584,7 +608,7 @@ const VariantTreeView = (function () {
       clearRowScores();
       rowScoreIds = [];
       tree.innerHTML = "";
-      const shownRows = VariantTree.treeRows(savedTree, rejectedBox.checked);
+      const shownRows = VariantTree.treeRows(savedTree, rejectedBox.checked, suits.value);
       for (const row of shownRows.rows) {
         const open = !row.isRoot && openRows.has(row.id);
         const item = treeRow(row, treeActions, open);
@@ -600,7 +624,9 @@ const VariantTreeView = (function () {
       const saved = shownRows.rows.length - 1;
       treeNote.textContent =
         saved <= 0 && shownRows.hidden === 0
-          ? "No saved variants yet."
+          ? suits.value
+            ? `No saved variant suits ${suits.value}.`
+            : "No saved variants yet."
           : shownRows.hidden > 0
             ? `${shownRows.hidden} rejected hidden`
             : "";
@@ -616,6 +642,10 @@ const VariantTreeView = (function () {
       drawTree();
     }
     rejectedListeners.push(drawTree);
+    suits.addEventListener("change", () => {
+      drawCandidates();
+      drawTree();
+    });
 
     generate.addEventListener("click", async () => {
       const made = VariantTree.generateRequest(ctx.id, {
@@ -623,6 +653,7 @@ const VariantTreeView = (function () {
         seed: seed.value,
         steps,
         functions: VariantTree.FUNCTIONS.filter((name) => functionBoxes.get(name).checked),
+        distance: distance.value,
       });
       if (made.error) {
         setStatus(status, made.error, true);
@@ -637,7 +668,7 @@ const VariantTreeView = (function () {
       shown = Array.isArray(answer.data.variants) ? answer.data.variants : [];
       rendered = new Map();
       drawCandidates();
-      setStatus(status, shown.length === 0 ? "No variants came out" : `Seed ${answer.data.seed}`, false);
+      setStatus(status, VariantTree.generatedNote(shown, Number(count.value), answer.data.seed, distance.value), false);
     });
 
     const blocked = VariantTree.noDegreesMessage(ctx.body && ctx.body.motif);

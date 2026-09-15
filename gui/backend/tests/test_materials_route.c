@@ -1136,6 +1136,24 @@ static void test_variants(void) {
   refused = item_post(id, "variants", "{\"count\":99}", &status);
   check(status == 400, "a count over 16 is refused");
   cJSON_Delete(refused);
+  /* R-189: a distance goes to the Composer as --distance and bounds each variant's remoteness. */
+  cJSON *close = item_post(id, "variants", "{\"distance\":\"close\",\"count\":4,\"seed\":3}", &status);
+  const cJSON *close_variants = cJSON_GetObjectItemCaseSensitive(close, "variants");
+  bool within = cJSON_GetArraySize(close_variants) > 0;
+  const cJSON *near = NULL;
+  cJSON_ArrayForEach(near, close_variants) {
+    within = within && number_of(near, "remoteness") <= 1.0 / 3.0 + 1e-4;
+  }
+  check(status == 200 && within, "a close distance gives variants at most a third remote");
+  cJSON_Delete(close);
+  snprintf(request, sizeof(request), "{\"distance\":\"far\",\"chain\":%s}", chain);
+  refused = item_post(id, "variants", request, &status);
+  check(status == 400 && strstr(string_of(refused, "error"), "distance takes random operations") != NULL,
+        "a distance with chosen operations is refused");
+  cJSON_Delete(refused);
+  refused = item_post(id, "variants", "{\"distance\":\"nearby\"}", &status);
+  check(status == 400, "a distance that is not close, medium or far is refused");
+  cJSON_Delete(refused);
   refused = item_post(id, "variants", "{\"chain\":{\"steps\":[{\"op\":\"nonsense\"}]}}", &status);
   check(status == 400, "an unknown operation is refused");
   cJSON_Delete(refused);

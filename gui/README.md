@@ -936,10 +936,25 @@ remoteness is measured from the basic motive, not from the parent.
 - `POST .../variants` also takes `functions`, up to four of `beginning`,
   `continuation`, `contrast` and `cadential`, sent as `--function`; only
   forms that suit one of them come back (the Composer fails when none does).
-  The generate panel has a checkbox for each.
+  The generate panel has a checkbox for each, labelled `Only variants that
+  suit`.
+- `POST .../variants` also takes `distance` (`close`, `medium` or `far`), sent
+  as `--distance` (R-189): `close` draws 1-step chains with remoteness at most
+  a third, `medium` 2 steps up to two thirds, `far` 3 or 4 steps above that.
+  It is refused with a `chain` (400 `distance takes random operations`) and
+  `400` for any other value. The Generate panel has a `Distance` select (Any,
+  Close, Medium, Far; default Any), switched off while operations are chosen.
+  When the distance leaves fewer variants than the count, the status says
+  `<n> of <count> found at this distance.`
 - A candidate carries `functions`, `remoteness` (0 to 1) and, when it has chords
-  of its own, `harmony`. Cards and tree rows show the function chips, "N% remote
-  from the basic motive" and a `Harmony:` line.
+  of its own, `harmony`. Cards and tree rows show "N% remote
+  from the basic motive", a `Suits: beginning, cadential` line (`Suits: none`
+  without functions) and a `Harmony:` line. A `Suits` select (Any, Beginning,
+  Continuation, Contrast, Cadential) above the candidates filters the
+  candidates and the saved variants in the page; it does not change what is
+  generated or stored. Under it: "Where in a phrase a form fits, worked out
+  from its harmony, rhythm and length (Schoenberg). Theme slots use it to pick
+  forms."
 - Saving a candidate (and rerolling a stored form) writes `motif.harmony`,
   `motif.features` (the labelled runs the form kept) and `derived.harmony`,
   `derived.functions` and `derived.remoteness`.
@@ -1355,7 +1370,7 @@ Items:
   variation <i> seed <n>`. `404` for a set or variation that is not there, `400` for a bad index.
 - `GET /api/materials/variant-operations`: `{"operations"}` from
   `ursatz-composer variants --list-ops --json`, read once per server run.
-- `POST /api/materials/items/<id>/variants`: `{"chain"?,"count"?,"seed"?}`
+- `POST /api/materials/items/<id>/variants`: `{"chain"?,"count"?,"seed"?,"functions"?,"distance"?}`
   runs `variants` on the motif's stored degrees, form, meter, key and pickup.
   `chain` is `{"steps":[{"op","params"?}]}` (random chains when absent),
   `count` 1 to 16 (default 6), `seed` a whole number from 0. Answers the

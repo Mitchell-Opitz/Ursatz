@@ -2267,10 +2267,8 @@ button.button-danger:disabled {
 .variant-chip-changed {
   font-weight: 600;
 }
-.variant-chip-function {
-  font-style: italic;
-}
 .variant-remoteness,
+.variant-suits-line,
 .variant-harmony {
   font-size: 0.85em;
 }
