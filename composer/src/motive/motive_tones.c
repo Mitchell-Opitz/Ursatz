@@ -31,21 +31,10 @@ static ExactRational offset_in_bar(const MotiveSketch *sketch, long bar, ExactRa
     return msk_sub(msk_sub(onset, sketch->pickup), msk_mul(msk_int((unsigned long long)bar), sketch->bar));
 }
 
-/* The downbeat, in 4/4 the third beat as well, in a compound meter every third beat. */
+/* A note is on a strong beat when it starts on a beat of its bar. */
 static bool is_strong(const MotiveSketch *sketch, long bar, ExactRational onset) {
     ExactRational beats = msk_div(offset_in_bar(sketch, bar, onset), sketch->beat);
-    if (!msk_ok(beats) || beats.d != 1) {
-        return false;
-    }
-    ExactRational per_bar = msk_div(sketch->bar, sketch->beat);
-    unsigned long long count = msk_ok(per_bar) ? per_bar.n / per_bar.d : 0;
-    if (beats.n == 0) {
-        return true;
-    }
-    if (count > 3 && count % 3 == 0) {
-        return beats.n % 3 == 0;
-    }
-    return count == 4 && beats.n == 2;
+    return msk_ok(beats) && beats.d == 1;
 }
 
 static bool is_chord_tone(const MotiveSketch *sketch, const MotiveSketchChord *chord, int pitch) {
@@ -160,7 +149,8 @@ static void propose(const MotiveSketch *sketch, MotiveBaseHarmony *out) {
                 if (candidate.degree == best.degree) {
                     continue;
                 }
-                size_t gain = strong_chord_tones(sketch, &strong, &best, &candidate, split) - best_tones;
+                size_t tones = strong_chord_tones(sketch, &strong, &best, &candidate, split);
+                size_t gain = tones > best_tones ? tones - best_tones : 0;
                 if (gain > best_gain) {
                     best_gain = gain;
                     second = candidate;

@@ -24,7 +24,7 @@ typedef struct {
  *
  * An own harmony is the base harmony as it stands. Without one it is proposed bar by bar from the triads of the key (I
  * V IV vi ii iii vii): the triad with the most strong-beat notes as chord tones, ties to I and then to the earlier in
- * that order. A strong beat is the downbeat, and in 4/4 the third beat, in a compound meter every third beat. A bar
+ * that order. A strong-beat note is one that starts on a beat of the meter (the downbeat or another beat). A bar
  * with no note keeps the chord before it. A second chord comes in a bar only when the best single triad leaves two or
  * more strong-beat notes as non-chord tones and a triad starting on a beat inside the bar makes at least two of them
  * chord tones (the one that makes the most, the earliest beat and then the earliest triad on a tie). A chord equal to
