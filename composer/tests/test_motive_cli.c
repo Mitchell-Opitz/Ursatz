@@ -433,6 +433,115 @@ static void test_extras_help(void) {
     free(out);
 }
 
+/* ------------------------------------------- base harmony and tone labels */
+
+static void write_file(const char *path, const char *text) {
+    FILE *file = fopen(path, "wb");
+    assert(file);
+    fputs(text, file);
+    fclose(file);
+}
+
+#define HOLLOW_KNIGHT "motive_cli_hollow_knight.txt"
+#define HOLLOW_ARGS HOLLOW_KNIGHT " --meter 4/4 --key \"C major\""
+
+static char *run_and_read(const char *arguments) {
+    assert(run(arguments, "motive_cli_out.txt", "motive_cli_err.txt") == 0);
+    return read_file("motive_cli_out.txt");
+}
+
+static void test_base_harmony_and_tones(void) {
+    write_file(HOLLOW_KNIGHT, "A5:q A5:q B5:e C6:e B5:h\n");
+
+    /* Proposed: V holds B and B on the beats, as IV and vi hold A and A; the tie goes to the earlier. */
+    char *out = run_and_read(HOLLOW_ARGS);
+    assert(strstr(out, "Base harmony: V (proposed)") != NULL);
+    assert(strstr(out, "Tones: 1 A5 unclassified, 2 A5 unclassified, 3 B5 chord, 4 C6 neighbor, 5 B5 chord") != NULL);
+    assert(strstr(out, "Warning: Note 1 (A5) does not resolve") != NULL);
+    free(out);
+
+    out = run_and_read(HOLLOW_ARGS " --json");
+    assert(strstr(out, "\"base_harmony\": {\n      \"text\": \"V\",\n      \"given\": false") != NULL);
+    assert(strstr(out, "\"warnings\": [\"Note 1 (A5) does not resolve\"]") != NULL);
+    assert(strstr(out, "\"type\": \"neighbor\",\n        \"resolves_to\": 5,\n        \"unresolved\": false,\n        \"overridden\": false") != NULL);
+    assert(strstr(out, "\"overridden\": true") == NULL);
+    free(out);
+
+    /* A given harmony is the base harmony: over VI the B passes, and the last B has nothing after it. */
+    out = run_and_read(HOLLOW_ARGS " --harmony VI");
+    assert(strstr(out, "Base harmony: VI (given)") != NULL);
+    assert(strstr(out, "Tones: 1 A5 chord, 2 A5 chord, 3 B5 passing, 4 C6 chord, 5 B5 unclassified") != NULL);
+    assert(strstr(out, "Warning: Note 5 (B5) does not resolve") != NULL);
+    free(out);
+    out = run_and_read(HOLLOW_ARGS " --harmony VI --json");
+    assert(strstr(out, "\"text\": \"VI\",\n      \"given\": true") != NULL);
+    assert(strstr(out, "\"warnings\": [\"Note 5 (B5) does not resolve\"]") != NULL);
+    free(out);
+
+    /* A second chord inside the bar when it makes two beat notes chord tones. */
+    write_file("motive_cli_two_chords.txt", "C5:q E5:q D5:q B4:q\n");
+    out = run_and_read("motive_cli_two_chords.txt --meter 4/4 --key \"C major\"");
+    assert(strstr(out, "Base harmony: I V@2 (proposed)") != NULL);
+    assert(strstr(out, "Tones: 1 C5 chord, 2 E5 chord, 3 D5 chord, 4 B4 chord") != NULL);
+    assert(strstr(out, "Warning") == NULL);
+    free(out);
+
+    /* A second bar gets its own chord, at its downbeat. */
+    write_file("motive_cli_two_bars.txt", "C5:q E5:q G5:h F5:q A5:q C6:h\n");
+    out = run_and_read("motive_cli_two_bars.txt --meter 4/4 --key \"C major\"");
+    assert(strstr(out, "Base harmony: I IV@4 (proposed)") != NULL);
+    free(out);
+
+    /* No pitches, no base harmony. */
+    write_file("motive_cli_rhythm.txt", "x:q x:e x:e x:h\n");
+    out = run_and_read("motive_cli_rhythm.txt --meter 4/4 --form rhythm");
+    assert(strstr(out, "Base harmony: none") != NULL && strstr(out, "Tones: none") != NULL);
+    free(out);
+    out = run_and_read("motive_cli_rhythm.txt --meter 4/4 --form rhythm --json");
+    assert(strstr(out, "\"base_harmony\": null") != NULL && strstr(out, "\"tones\": []") != NULL);
+    free(out);
+}
+
+static void test_too_many_harmonies_in_a_bar(void) {
+    write_file(HOLLOW_KNIGHT, "A5:q A5:q B5:e C6:e B5:h\n");
+    expect_failure(HOLLOW_ARGS " --harmony \"I V@1 I@2\"", 1, "at most 2 harmonies per bar");
+    /* Two to a bar are fine, in two bars as well. */
+    assert(run(HOLLOW_ARGS " --harmony \"I V@2\"", "motive_cli_out.txt", "motive_cli_err.txt") == 0);
+    write_file("motive_cli_two_bars.txt", "C5:q E5:q G5:h F5:q A5:q C6:h\n");
+    assert(run("motive_cli_two_bars.txt --meter 4/4 --key \"C major\" --harmony \"I V@2 IV@4 I@6\"", "motive_cli_out.txt",
+               "motive_cli_err.txt") == 0);
+    expect_failure("motive_cli_two_bars.txt --meter 4/4 --key \"C major\" --harmony \"I V@2 IV@3 I@4\"", 1,
+                   "at most 2 harmonies per bar");
+}
+
+static void test_tone_overrides(void) {
+    write_file(HOLLOW_KNIGHT, "A5:q A5:q B5:e C6:e B5:h\n");
+    char *out = run_and_read(HOLLOW_ARGS " --harmony VI --tone 3=chord --tone 5=pedal");
+    assert(strstr(out, "Tones: 1 A5 chord, 2 A5 chord, 3 B5 chord, 4 C6 chord, 5 B5 pedal") != NULL);
+    free(out);
+    out = run_and_read(HOLLOW_ARGS " --harmony VI --tone 3=chord --tone 5=escape --json");
+    assert(strstr(out, "\"role\": \"chord\",\n        \"type\": null,\n        \"resolves_to\": null,\n        \"unresolved\": false,\n        \"overridden\": true") != NULL);
+    assert(strstr(out, "\"type\": \"escape\"") != NULL);
+    free(out);
+    /* The later of two labels on one note wins. */
+    out = run_and_read(HOLLOW_ARGS " --harmony VI --tone 3=chord --tone 3=suspension");
+    assert(strstr(out, "3 B5 suspension") != NULL);
+    free(out);
+
+    expect_failure(HOLLOW_ARGS " --tone 0=chord", 1, "--tone '0=chord'");
+    expect_failure(HOLLOW_ARGS " --tone 6=chord", 1, "1 to 5");
+    expect_failure(HOLLOW_ARGS " --tone 3", 1, "--tone '3'");
+    expect_failure(HOLLOW_ARGS " --tone 3=bogus", 1, "not 'bogus'");
+    expect_failure(HOLLOW_ARGS " --tone", 1, "--tone needs a value");
+    /* Nothing to label a rhythm against. */
+    write_file("motive_cli_rhythm.txt", "x:q x:e x:e x:h\n");
+    expect_failure("motive_cli_rhythm.txt --meter 4/4 --form rhythm --tone 1=chord", 1, "--tone needs a motive with a key");
+    assert(run_sub("motive", "--help") == 0);
+    out = read_file("motive_cli_out.txt");
+    assert(strstr(out, "--tone") != NULL);
+    free(out);
+}
+
 int main(void) {
     test_text_output();
     test_json_output();
@@ -447,6 +556,9 @@ int main(void) {
     test_extras_in_variants();
     test_extras_in_grow_and_random_motive();
     test_extras_help();
+    test_base_harmony_and_tones();
+    test_too_many_harmonies_in_a_bar();
+    test_tone_overrides();
     puts("test_motive_cli: ok");
     return 0;
 }
