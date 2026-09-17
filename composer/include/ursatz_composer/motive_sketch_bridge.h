@@ -5,6 +5,7 @@
 
 #include "analysis/motive_relation.h"
 #include "analysis/motive_sketch.h"
+#include "analysis/motive_tone_roles.h"
 
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
@@ -27,6 +28,22 @@
  * False, with *out untouched, for NULL arguments or a motive that is not a valid sketch.
  */
 bool motive_to_sketch(const Motive *motive, MotiveSketch *out);
+
+/*
+ * The motive as a sketch whose chords are the given ones, in place of the motive's own harmony and of the implied
+ * chord. count may be 0 (no chords: the tonic triad of the scale stands in). False, with *out untouched, as
+ * motive_to_sketch, or when a chord is not valid in the sketch.
+ */
+bool motive_to_sketch_with_chords(const Motive *motive, const MotiveChord *chords, size_t count, MotiveSketch *out);
+
+/*
+ * The harmonic role of every note of the motive against the given chords (the library's motive_tone_roles): out has
+ * motive->note_count entries. overrides are 0-based note indices with their own role. Returns the library's status:
+ * MOTIVE_TONE_NO_SCALE for a motive with no key or no pitches, MOTIVE_TONE_INVALID when the motive is not a valid
+ * sketch.
+ */
+MotiveToneStatus motive_tone_labels(const Motive *motive, const MotiveChord *chords, size_t chord_count,
+                                    const MotiveToneOverride *overrides, size_t override_count, MotiveToneLabel *out);
 
 /*
  * The sketch as a motive: the notes, harmony, features, role, pickup and length of the sketch, and the meter and key

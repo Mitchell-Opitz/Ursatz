@@ -387,6 +387,11 @@ static bool is_fragment(const Motive *source, const Motive *result) {
     return false;
 }
 
+/* Kept rhythm: a kept note stays where it was and holds on through the time of the notes dropped after it. */
+static bool kept_note_matches(const PlanNote *source, const PlanNote *kept) {
+    return source->midi_pitch == kept->midi_pitch && tsub(kept->duration, source->duration).num >= 0;
+}
+
 /* Some of the source's notes, in order. Kept rhythm: where they were. Otherwise one after another from 0. */
 static bool matches_from(const Motive *source, const Motive *result, bool keep_rhythm, size_t from_source,
                          size_t from_result, PlanTime at) {
@@ -400,7 +405,8 @@ static bool matches_from(const Motive *source, const Motive *result, bool keep_r
         const PlanNote *candidate = &source->notes[i];
         const PlanNote *note = &result->notes[from_result];
         PlanTime expected = keep_rhythm ? candidate->offset : at;
-        if (note_matches(candidate, note) && teq(note->offset, expected)) {
+        if ((keep_rhythm ? kept_note_matches(candidate, note) : note_matches(candidate, note)) &&
+            teq(note->offset, expected)) {
             PlanTime next = tmake(at.num * (long)candidate->duration.den + candidate->duration.num * (long)at.den,
                                   at.den * candidate->duration.den);
             if (matches_from(source, result, keep_rhythm, i + 1, from_result + 1, next)) {

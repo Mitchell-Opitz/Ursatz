@@ -263,6 +263,9 @@ document above) and an `analysis` member (and, from `motive --render-key`, `--mi
 | `scale_degrees` | `null` without a key, and for a rhythm or a contour. Otherwise `start`, `end` and `all` (one per note), each `{"degree": 1 to 7, "alteration": 0 or 1}`; 1 is a raised degree. |
 | `harmony_text` | Only for a motive with chords of its own: the chords as text, as `harmony` above. |
 | `implied_harmony` | `key_known`, and `candidates`, best fit first: `roman_numeral`, `function`, `fit` (the share of the motive that is chord tones, 0 to 1, to four places), `chord_tones` and `non_chord_tones`. Empty without a key, and for a rhythm or a contour. |
+| `base_harmony` | `null` without a key, and for a rhythm or a contour. Otherwise `text` (the base harmony as `harmony` above) and `given` (true when it is the motive's own harmony, false when it was proposed from the notes; at most 2 chords in a bar). |
+| `tones` | One object per note, `[]` when `base_harmony` is `null`: `note` (1-based), `role` (`chord`, `non-chord` or `unclassified`), `type` (`passing`, `neighbor`, `appoggiatura`, `suspension`, `retardation`, `escape`, `anticipation`, `double-neighbor`, `changing-tone` or `pedal` for a non-chord tone, else `null`), `resolves_to` (1-based note or `null`), `unresolved` and `overridden` (the label came from `--tone`). |
+| `warnings` | One string per unresolved note: `Note 3 (B5) does not resolve`. |
 
 For the motive above, `scale_degrees` gives `1 3 5 1`, the contour is `ascending` and the intervals are `+3`, `+4`
 and `+5` semitones, `+2`, `+2` and `+3` steps. The best implied chord is `i`, with `fit` 1.

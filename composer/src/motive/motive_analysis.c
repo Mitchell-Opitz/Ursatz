@@ -7,6 +7,7 @@
 
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
+#include <ursatz_composer/motive_sketch_bridge.h>
 #include "plan/plan_json_internal.h"
 
 static long floor_div(long a, long b) {
@@ -253,6 +254,11 @@ static void analyze_harmony(const Motive *motive, MotiveAnalysis *out) {
 /* ----------------------------------------------------------------- analyze */
 
 bool motive_analyze(const Motive *motive, MotiveAnalysis *out) {
+    return motive_analyze_with_tones(motive, NULL, 0, out);
+}
+
+bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *overrides, size_t override_count,
+                               MotiveAnalysis *out) {
     PlanTime length;
     if (!motive || !out || motive_check_notes(motive, &length, NULL) != MOTIVE_OK) {
         return false;
@@ -313,6 +319,13 @@ bool motive_analyze(const Motive *motive, MotiveAnalysis *out) {
     }
     if (result.harmony_known) {
         analyze_harmony(motive, &result);
+    }
+    result.base_harmony_known = motive_base_harmony(motive, &result.base_harmony);
+    result.tones_known = result.base_harmony_known &&
+                         motive_tone_labels(motive, result.base_harmony.chords, result.base_harmony.count, overrides,
+                                            override_count, result.tones) == MOTIVE_TONE_OK;
+    if (override_count > 0 && !result.tones_known) {
+        return false;
     }
     *out = result;
     return true;
@@ -386,6 +399,14 @@ static void pickup_beats_text(const Motive *motive, char *out, size_t size) {
     }
 }
 
+/* The base harmony in the text syntax of an own harmony; caller frees. */
+static char *base_harmony_text(const Motive *motive, const MotiveBaseHarmony *base) {
+    Motive copy = *motive;
+    memcpy(copy.harmony, base->chords, base->count * sizeof(base->chords[0]));
+    copy.harmony_count = base->count;
+    return motive_harmony_to_text(&copy);
+}
+
 void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis, FILE *out) {
     char text[64];
     char text2[64];
@@ -415,6 +436,33 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
         char *harmony = motive_harmony_to_text(motive);
         fprintf(out, "Own harmony: %s\n", harmony ? harmony : "");
         free(harmony);
+    }
+    if (analysis->base_harmony_known) {
+        char *base = base_harmony_text(motive, &analysis->base_harmony);
+        fprintf(out, "Base harmony: %s%s\n", base ? base : "", analysis->base_harmony.given ? " (given)" : " (proposed)");
+        free(base);
+    } else {
+        fprintf(out, "Base harmony: none\n");
+    }
+    if (analysis->tones_known) {
+        fprintf(out, "Tones:");
+        for (size_t i = 0; i < analysis->note_count; i++) {
+            const MotiveToneLabel *tone = &analysis->tones[i];
+            motive_pitch_name(motive->notes[i].midi_pitch, text, sizeof(text));
+            const char *name = tone->role == MOTIVE_TONE_CHORD         ? "chord"
+                               : tone->role == MOTIVE_TONE_UNCLASSIFIED ? "unclassified"
+                                                                        : motive_tone_type_name(tone->type);
+            fprintf(out, "%s %zu %s %s", i == 0 ? "" : ",", i + 1, text, name);
+        }
+        fprintf(out, "\n");
+        for (size_t i = 0; i < analysis->note_count; i++) {
+            if (analysis->tones[i].unresolved) {
+                motive_pitch_name(motive->notes[i].midi_pitch, text, sizeof(text));
+                fprintf(out, "Warning: Note %zu (%s) does not resolve\n", i + 1, text);
+            }
+        }
+    } else {
+        fprintf(out, "Tones: none\n");
     }
     for (size_t i = 0; i < motive->feature_count; i++) {
         fprintf(out, "%s%s: notes %zu to %zu\n", i == 0 ? "Features:\n  " : "  ", motive->features[i].label,
@@ -723,6 +771,66 @@ static cJSON *rendered_json(const Motive *rendered) {
     return object;
 }
 
+static cJSON *base_harmony_json(const Motive *motive, const MotiveAnalysis *analysis) {
+    if (!analysis->base_harmony_known) {
+        return cJSON_CreateNull();
+    }
+    char *text = base_harmony_text(motive, &analysis->base_harmony);
+    cJSON *object = text ? cJSON_CreateObject() : NULL;
+    bool ok = object && add_string(object, "text", text) &&
+              json_add(object, "given", cJSON_CreateBool(analysis->base_harmony.given));
+    free(text);
+    if (!ok) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    return object;
+}
+
+static const char *tone_role_name(MotiveToneRole role) {
+    return role == MOTIVE_TONE_CHORD ? "chord" : (role == MOTIVE_TONE_NON_CHORD ? "non-chord" : "unclassified");
+}
+
+static cJSON *tones_json(const Motive *motive, const MotiveAnalysis *analysis, cJSON **warnings_out) {
+    cJSON *tones = cJSON_CreateArray();
+    cJSON *warnings = cJSON_CreateArray();
+    bool ok = tones && warnings;
+    for (size_t i = 0; ok && analysis->tones_known && i < analysis->note_count; i++) {
+        const MotiveToneLabel *label = &analysis->tones[i];
+        cJSON *tone = cJSON_CreateObject();
+        const char *type = label->role == MOTIVE_TONE_NON_CHORD ? motive_tone_type_name(label->type) : NULL;
+        ok = tone && json_add(tone, "note", json_number((long)i + 1)) && add_string(tone, "role", tone_role_name(label->role)) &&
+             json_add(tone, "type", type ? cJSON_CreateString(type) : cJSON_CreateNull()) &&
+             json_add(tone, "resolves_to", label->resolves_to >= 0 ? json_number(label->resolves_to + 1) : cJSON_CreateNull()) &&
+             json_add(tone, "unresolved", cJSON_CreateBool(label->unresolved)) &&
+             json_add(tone, "overridden", cJSON_CreateBool(label->overridden));
+        if (ok) {
+            cJSON_AddItemToArray(tones, tone);
+        } else {
+            cJSON_Delete(tone);
+        }
+        if (ok && label->unresolved) {
+            char name[16];
+            char text[64];
+            motive_pitch_name(motive->notes[i].midi_pitch, name, sizeof(name));
+            snprintf(text, sizeof(text), "Note %zu (%s) does not resolve", i + 1, name);
+            cJSON *warning = cJSON_CreateString(text);
+            if (warning) {
+                cJSON_AddItemToArray(warnings, warning);
+            } else {
+                ok = false;
+            }
+        }
+    }
+    if (!ok) {
+        cJSON_Delete(tones);
+        cJSON_Delete(warnings);
+        return NULL;
+    }
+    *warnings_out = warnings;
+    return tones;
+}
+
 static char *analysis_json(const Motive *motive, const MotiveAnalysis *analysis, const Motive *rendered) {
     if (!motive || !analysis) {
         return NULL;
@@ -763,7 +871,11 @@ static char *analysis_json(const Motive *motive, const MotiveAnalysis *analysis,
          json_add(body, "intervals", intervals_json(analysis)) && json_add(body, "contour", contour_json(analysis)) &&
          json_add(body, "rhythm", rhythm_json(analysis)) && json_add(body, "range", range_json(analysis)) &&
          json_add(body, "scale_degrees", degrees_json(analysis)) &&
-         json_add(body, "implied_harmony", harmony_json(analysis));
+         json_add(body, "implied_harmony", harmony_json(analysis)) &&
+         json_add(body, "base_harmony", base_harmony_json(motive, analysis));
+    cJSON *warnings = NULL;
+    cJSON *tones = ok ? tones_json(motive, analysis, &warnings) : NULL;
+    ok = ok && tones && json_add(body, "tones", tones) && json_add(body, "warnings", warnings);
     if (ok) {
         ok = json_add(document, "analysis", body);
         body = NULL;

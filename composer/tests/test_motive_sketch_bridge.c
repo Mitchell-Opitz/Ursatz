@@ -232,6 +232,46 @@ static void test_result_mapping(void) {
     }
 }
 
+static void test_chords_from_base_harmony(void) {
+    Motive motive = load(MOTIVE_FORMAT_NOTES, "A5:q A5:q B5:e C6:e B5:h", &FOUR_FOUR, &C_MAJOR);
+    add_harmony(&motive, "I");
+    MotiveChord base[2];
+    MotiveError error;
+    size_t base_count = 0;
+    assert(motive_harmony_parse("VI V@2", &FOUR_FOUR, base, &base_count, &error) == MOTIVE_OK && base_count == 2);
+
+    /* The base harmony stands in for the motive's own harmony. */
+    MotiveSketch sketch;
+    assert(motive_to_sketch_with_chords(&motive, base, base_count, &sketch));
+    assert(sketch.chord_count == 2 && sketch.chords[0].degree == 6 && er_is(sketch.chords[0].onset, 0, 1));
+    assert(sketch.chords[1].degree == 5 && er_is(sketch.chords[1].onset, 1, 2));
+    assert(sketch.note_count == 5 && sketch.has_scale);
+
+    /* No chords: none are added, not even the implied one. */
+    Motive plain = load(MOTIVE_FORMAT_NOTES, "A5:q A5:q B5:e C6:e B5:h", &FOUR_FOUR, &C_MAJOR);
+    assert(motive_to_sketch_with_chords(&plain, NULL, 0, &sketch) && sketch.chord_count == 0);
+    assert(!motive_to_sketch_with_chords(&plain, NULL, 1, &sketch));
+
+    /* The labels are the library's against those chords: over VI the B passes up to the C. */
+    MotiveToneLabel labels[MOTIVE_MAX_NOTES];
+    assert(motive_tone_labels(&plain, base, 1, NULL, 0, labels) == MOTIVE_TONE_OK);
+    assert(labels[0].role == MOTIVE_TONE_CHORD && labels[1].role == MOTIVE_TONE_CHORD);
+    assert(labels[2].role == MOTIVE_TONE_NON_CHORD && labels[2].type == NON_CHORD_TONE_PASSING && labels[2].resolves_to == 3);
+    assert(labels[3].role == MOTIVE_TONE_CHORD);
+    assert(labels[4].role == MOTIVE_TONE_UNCLASSIFIED && labels[4].unresolved && labels[4].resolves_to == -1);
+
+    /* An override is kept and marked. */
+    MotiveToneOverride override = {2, MOTIVE_TONE_CHORD, NON_CHORD_TONE_PASSING};
+    assert(motive_tone_labels(&plain, base, 1, &override, 1, labels) == MOTIVE_TONE_OK);
+    assert(labels[2].role == MOTIVE_TONE_CHORD && labels[2].overridden && !labels[0].overridden);
+    override.note = 5;
+    assert(motive_tone_labels(&plain, base, 1, &override, 1, labels) == MOTIVE_TONE_BAD_OVERRIDE);
+
+    /* Without a key or pitches there is nothing to label. */
+    Motive rhythm = load(MOTIVE_FORMAT_RHYTHM, "x:q x:e x:e x:h", &FOUR_FOUR, &C_MAJOR);
+    assert(motive_tone_labels(&rhythm, base, 1, NULL, 0, labels) == MOTIVE_TONE_NO_SCALE);
+}
+
 int main(void) {
     test_sketch_contents();
     test_implied_chord();
@@ -240,6 +280,7 @@ int main(void) {
     test_a_relation_matches_the_registry();
     test_refusals();
     test_result_mapping();
+    test_chords_from_base_harmony();
     puts("test_motive_sketch_bridge: ok");
     return 0;
 }

@@ -132,7 +132,7 @@ stand on the given bass at each chord's start and carry the given melody's downb
 
 | Scenario | Completed | Sections heard | Cadence heard as planned |
 | --- | --- | --- | --- |
-| melody (ternary) | 10 of 10 | 12 of 30 | 12 of 30 |
+| melody (ternary) | 10 of 10 | 10 of 30 | 12 of 30 |
 | progression (rounded binary) | 10 of 10 | 6 of 30 | 24 of 30 |
 | bass (binary) | 9 of 10 | 18 of 18 | 18 of 18 |
 

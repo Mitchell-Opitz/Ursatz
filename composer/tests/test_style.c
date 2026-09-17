@@ -561,10 +561,11 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
 /*
  * The hashes of what main composed for this sentence, seeds 1 to 5 (FNV-1a 64 of the plan's JSON), taken with the same
  * request after the motive-forms (P14 B8) changed the ideas' motives, then again after the shaping preferences (P16 B4)
- * changed the candidates chosen (seeds 1, 3, 4 and 5). A run without a style is byte for byte the same.
+ * changed the candidates chosen (seeds 1, 3, 4 and 5), then again after the harmony relations moved to tone roles
+ * (P18b B2), which changed the variations chosen (seeds 2 and 5). A run without a style is byte for byte the same.
  */
-static const unsigned long long MAIN_HASH[5] = {0xf6fb5576ac8ebeffULL, 0xd13650af257cf1b6ULL, 0x895437b3ea64963bULL,
-                                                0xcf79f6897a39ea5dULL, 0x56dbb6b92e091a11ULL};
+static const unsigned long long MAIN_HASH[5] = {0xf6fb5576ac8ebeffULL, 0xab53446b8651d659ULL, 0x895437b3ea64963bULL,
+                                                0xcf79f6897a39ea5dULL, 0xb0833ecb5db5f197ULL};
 
 static int test_same(void) {
     ComposerStyle *style = NULL;
@@ -742,7 +743,7 @@ static int test_motive_preference(void) {
     repetition_degrees(2, NULL, plain);
     repetition_degrees(2, styled, preferred);
     repetition_degrees(2, switched_off, restored);
-    assert(strcmp(plain, "7 2 1 5 5") == 0);
+    assert(strcmp(plain, "7 2 1 6 5") == 0);
     assert(strcmp(preferred, "4 6 5 3 2") == 0);
     assert(strcmp(restored, plain) == 0);
     composer_style_destroy(styled);
@@ -898,9 +899,12 @@ static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed)
  *
  * Re-measured at P16 B4: the shaping preferences changed the candidates chosen, so every mean moved a little and the
  * order holds (styled closer in melody under both styles).
+ *
+ * Re-measured at P18b B5, after the harmony relations moved to tone roles (P18b B2) changed the variations chosen: the
+ * order still holds.
  */
-static const int STYLED[2][2] = {{727, 763}, {655, 754}};
-static const int UNSTYLED[2][2] = {{715, 770}, {669, 756}};
+static const int STYLED[2][2] = {{727, 763}, {659, 754}};
+static const int UNSTYLED[2][2] = {{714, 773}, {670, 760}};
 
 static int test_sweep(unsigned long last_seed, bool full) {
     const char *const paths[2] = {CHORALES, SONATINAS};

@@ -93,7 +93,7 @@ static void test_each_operation(void) {
     free(out);
 
     out = output_of(THEME " --op liquidate --drop 1 --keep-rhythm");
-    assert(strstr(out, "liquidate drop 1 (keep rhythm)") != NULL && strstr(out, "   D4:q F4:e r:e D5:h") != NULL);
+    assert(strstr(out, "liquidate drop 1 (keep rhythm)") != NULL && strstr(out, "   D4:q F4:q D5:h") != NULL);
     free(out);
 
     out = output_of(THEME " --op augment");
