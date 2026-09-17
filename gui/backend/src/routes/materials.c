@@ -2208,6 +2208,41 @@ static int handle_each_op(struct mg_connection *conn, const char *id) {
   return send_object(conn, document);
 }
 
+/* GET /api/materials/items/<id>/op-checks: the marks of a motif from Try every operation, {"checks": {...}} (R-190). */
+static int handle_op_checks_get(struct mg_connection *conn, const char *id) {
+  cJSON *checks = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_op_checks_get(id, &checks);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  if (!cJSON_AddBoolToObject(checks, "ok", 1)) {
+    cJSON_Delete(checks);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return send_object(conn, checks);
+}
+
+/* PUT /api/materials/items/<id>/op-checks {checks}: replaces the marks. The file is not a version. */
+static int handle_op_checks_put(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  char message[256] = "";
+  cJSON *stored = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_op_checks_put(id, body, message, sizeof(message), &stored);
+  cJSON_Delete(body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return message[0] != '\0' ? send_failure(conn, material_status(result), message) : send_material_failure(conn, result);
+  }
+  if (!cJSON_AddBoolToObject(stored, "ok", 1)) {
+    cJSON_Delete(stored);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return send_object(conn, stored);
+}
+
 /* The motif member of the version body a {item, version} reference names, with the body kept in *body. NULL with
    *message set when the reference is malformed, gone, not a motif or has no degrees (not analyzed). */
 static const cJSON *motif_by_reference(const cJSON *reference, const char *which, cJSON **body, int *status,
@@ -3232,6 +3267,12 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 3 && strcmp(segments[2], "variants") == 0) {
     return post ? handle_variants(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "op-checks") == 0) {
+    if (get) {
+      return handle_op_checks_get(conn, segments[1]);
+    }
+    return strcmp(method, "PUT") == 0 ? handle_op_checks_put(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 3 && strcmp(segments[2], "each-op") == 0) {
     return post ? handle_each_op(conn, segments[1]) : send_method_not_allowed(conn);

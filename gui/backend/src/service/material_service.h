@@ -224,6 +224,26 @@ UrsatzGuiMaterialResult ursatz_gui_material_item_delete(const char *id, bool for
  */
 UrsatzGuiMaterialResult ursatz_gui_material_delete_blockers(const char *id, cJSON **out_users);
 
+/* --- operation marks ----------------------------------------------------- */
+
+/*
+ * The marks a motif keeps from Try every operation (R-190): items/<id>/op-checks.json, beside the versions and not a
+ * version, so a mark never makes a new version. {"checks": {"<op>": {verdict ("works" | "wrong"), comment (text, at
+ * most 500 bytes), seed (whole number from 0), notes_text (the result checked, at most 4000 bytes), date
+ * ("YYYY-MM-DD")}}}, at most 64 operations, each named in lowercase letters, digits and hyphens. Deleting the item
+ * deletes the file with its folder.
+ */
+
+/* Checks body against that shape; INVALID_BODY with the reason in error. */
+UrsatzGuiMaterialResult ursatz_gui_material_op_checks_validate(const cJSON *body, char *error, size_t error_size);
+
+/* *out is the marks of the motif id, {"checks": {}} when it has none. NOT_FOUND for an item that is not a motif. */
+UrsatzGuiMaterialResult ursatz_gui_material_op_checks_get(const char *id, cJSON **out);
+
+/* Replaces the marks of the motif id with body (validated first); *out is what is stored. */
+UrsatzGuiMaterialResult ursatz_gui_material_op_checks_put(const char *id, const cJSON *body, char *error,
+                                                           size_t error_size, cJSON **out);
+
 /* --- version files ------------------------------------------------------- */
 
 /*
