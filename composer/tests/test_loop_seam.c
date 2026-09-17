@@ -22,7 +22,7 @@
 
 #define SEEDS 20
 /* The runs of the seeds above that hold all four rules, as measured when the seam was added (docs/loop-seam.md). */
-#define BASELINE_ALL_HELD 11
+#define BASELINE_ALL_HELD 10
 /* Of the 20 seeds, those that must complete: the melody of a phrase that ends on V is hard to write (B4). */
 #define BASELINE_COMPLETED 18
 

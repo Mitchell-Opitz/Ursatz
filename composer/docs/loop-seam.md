@@ -83,13 +83,13 @@ the loop's end, and the held end was written. The seam rules held:
 
 | Rule | Seeds of 20 |
 | --- | --- |
-| progression | 20 |
-| no parallels | 18 |
-| step | 20 |
-| leading tone | 13 |
-| all four | 11 |
+| progression | 19 |
+| no parallels | 17 |
+| step | 19 |
+| leading tone | 12 |
+| all four | 10 |
 
-The test records 11 as a baseline and fails below it.
+The test records 10 as a baseline and fails below it.
 
 ## Limits
 

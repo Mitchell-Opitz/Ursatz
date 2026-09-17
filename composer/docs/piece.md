@@ -93,7 +93,7 @@ Measured, seeds 1 to 10, C major 4/4, invented motive (`test_return_heard`):
 | --- | --- | --- |
 | rounded binary (24 bars) | 10 of 10 | |
 | ternary (24 bars) | 3 of 10 | A is a period, and standard-form hears no theme in a period (see below), so the section has no entry in the detection |
-| variations (3) | 9 of 30 | The same: the theme and every variation are periods |
+| variations (3) | 6 of 30 | The same: the theme and every variation are periods |
 
 The cause is the kernel's: the detection compares the exact contour and rhythm of the themes standard-form finds, and
 grow never hears a period (0 of 40, [grow.md](grow.md)). A section without a heard theme can neither return nor be
