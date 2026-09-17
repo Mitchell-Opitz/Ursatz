@@ -1,7 +1,7 @@
 # motive command
 
 ```sh
-ursatz-composer motive <input> [--meter <n/m>] [--key <key>] [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] [--form <full|rhythm|contour>] [--pickup <beats>] [--harmony "<text>"] [--feature <label:first-last>]... [--role <melodic|accompaniment>] [--render-key <key>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--json]
+ursatz-composer motive <input> [--meter <n/m>] [--key <key>] [--format <auto|midi|musicxml|notes|degrees|rhythm|contour|json>] [--form <full|rhythm|contour>] [--pickup <beats>] [--harmony "<text>"] [--feature <label:first-last>]... [--role <melodic|accompaniment>] [--tone <n>=<role>]... [--render-key <key>] [--midi <file>] [--musicxml <file>] [--tempo <bpm>] [--json]
 ```
 
 Loads a motive, a short cell of notes (one bar or less, as a rule), and prints its analysis: the
@@ -120,6 +120,28 @@ The onsets are in beats of the motive's meter, which a MIDI or MusicXML file may
 The text output lists `Own harmony:`, the features and the role when the motive has them. The `--json` document has them in `motive` and `harmony_text` in `analysis` (see [plan-format.md](plan-format.md#motive-analysis)).
 
 The same three options are read by [variants](cli-variants.md) and [grow](cli-grow.md); [random-motive](cli-random-motive.md) takes `--role`.
+
+## Base harmony and tones
+
+Every note of a full motive with a key is heard against a base harmony, and has a harmonic role.
+
+The base harmony is the motive's own harmony when it has one (`given`). A motive has at most 2 chords in a bar: more is exit status 1, `at most 2 harmonies per bar`. Without its own harmony the base harmony is proposed, bar by bar, from the triads of the key (`I V IV vi ii iii vii`):
+
+- The triad with the most beat notes (notes that start on a beat of the meter) as chord tones wins. A tie goes to `I`, then to the earlier triad in that order.
+- A second chord comes in a bar only when the best triad leaves two or more beat notes as non-chord tones and a triad starting on a later beat of the bar makes at least two of them chord tones. The triad that gains the most wins, the earlier beat and then the earlier triad on a tie.
+- A bar with no note keeps the chord before it, and a chord equal to the one before it is not repeated.
+
+A rhythm, a contour and a motive without a key have no base harmony.
+
+Tones. Each note is a chord tone, a non-chord tone of one of ten types (`passing`, `neighbor`, `appoggiatura`, `suspension`, `retardation`, `escape`, `anticipation`, `double-neighbor`, `changing-tone`, `pedal`) or unclassified, by the rules of the library's motive tone roles. A non-chord or unclassified note with no chord tone to move to is unresolved.
+
+| Flag | Meaning |
+| --- | --- |
+| `--tone <n>=<role>` | Labels note `n` (1-based) by hand: `chord`, or a type name above. Repeat the flag for more notes; the later label of a note wins. A bad note, a bad role, or a motive with no base harmony is exit status 1. |
+
+Resolution is worked out for the label you give a note; a label on one note never changes how another is labelled.
+
+The text output has a `Base harmony:` line (`I V@2 (proposed)`, `VI (given)`, `none`), a `Tones:` line (`1 A5 chord, 2 B5 passing, ...`, `none`) and a `Warning: Note <n> (<name>) does not resolve` line for each unresolved note. The `analysis` in `--json` has `base_harmony` (`text` in the own-harmony syntax and `given`, or `null`), `tones` (one object per note: `note` 1-based, `role` `chord`, `non-chord` or `unclassified`, `type` or `null`, `resolves_to` 1-based or `null`, `unresolved`, `overridden`) and `warnings`. [variants](cli-variants.md) gives the same fields in every variant's `motive`.
 
 ## Meter and key
 
