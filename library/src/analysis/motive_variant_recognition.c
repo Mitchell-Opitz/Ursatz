@@ -35,22 +35,15 @@ static bool same_ratio(ExactRational a_next, ExactRational a, ExactRational b_ne
     return msk_ok(ra) && msk_ok(rb) && msk_eq(ra, rb);
 }
 
-static Share rhythm_share(const MotiveSketch *a, const MotiveSketch *b) {
-    Share share = {0, longer(a->note_count, b->note_count) - 1};
-    size_t common = a->note_count < b->note_count ? a->note_count : b->note_count;
-    for (size_t i = 0; i + 1 < common; i++) {
-        if (same_ratio(inter_onset(a, i + 1), inter_onset(a, i), inter_onset(b, i + 1),
-                       inter_onset(b, i)) &&
-            same_ratio(a->notes[i + 1].duration, a->notes[i].duration, b->notes[i + 1].duration,
-                       b->notes[i].duration)) {
-            share.matched++;
-        }
-    }
-    if (share.total == 0) {
-        share.total = 1;
-        share.matched = 1;
-    }
-    return share;
+/* How far a sketch may be shifted against the other, in notes, when looking for the alignment that
+ * matches best. */
+#define MAX_SHIFT 3
+
+static bool rhythm_pair_matches(const MotiveSketch *a, size_t i, const MotiveSketch *b, size_t j) {
+    return same_ratio(inter_onset(a, i + 1), inter_onset(a, i), inter_onset(b, j + 1),
+                      inter_onset(b, j)) &&
+           same_ratio(a->notes[i + 1].duration, a->notes[i].duration, b->notes[j + 1].duration,
+                      b->notes[j].duration);
 }
 
 static long interval_at(const MotiveSketch *sketch, size_t index) {
@@ -60,21 +53,44 @@ static long interval_at(const MotiveSketch *sketch, size_t index) {
 
 static int sign_of(long value) { return (value > 0) - (value < 0); }
 
-static Share interval_share(const MotiveSketch *a, const MotiveSketch *b, bool contour) {
-    Share share = {0, longer(a->note_count, b->note_count) - 1};
-    size_t common = a->note_count < b->note_count ? a->note_count : b->note_count;
-    for (size_t i = 0; i + 1 < common; i++) {
-        long x = interval_at(a, i);
-        long y = interval_at(b, i);
-        if (contour ? sign_of(x) == sign_of(y) : x == y) {
-            share.matched++;
+static bool interval_pair_matches(const MotiveSketch *a, size_t i, const MotiveSketch *b,
+                                  size_t j) {
+    return interval_at(a, i) == interval_at(b, j);
+}
+
+static bool contour_pair_matches(const MotiveSketch *a, size_t i, const MotiveSketch *b, size_t j) {
+    return sign_of(interval_at(a, i)) == sign_of(interval_at(b, j));
+}
+
+typedef bool (*PairMatch)(const MotiveSketch *a, size_t i, const MotiveSketch *b, size_t j);
+
+/*
+ * The share of neighbouring note pairs that match, over the longer sketch. The sketches are
+ * compared at the shift (up to MAX_SHIFT notes either way) that matches most, so a fragment, an
+ * added upbeat or an omitted note still shows what it kept. Only the unshifted comparison can match
+ * every pair, so kept is unchanged.
+ */
+static Share pair_share(const MotiveSketch *a, const MotiveSketch *b, PairMatch matches) {
+    Share best = {0, longer(a->note_count, b->note_count) - 1};
+    if (best.total == 0) {
+        best.total = 1;
+        best.matched = 1;
+        return best;
+    }
+    for (int shift = 0; shift <= 2 * MAX_SHIFT; shift++) {
+        int delta = (shift % 2 == 1 ? 1 : -1) * ((shift + 1) / 2);
+        Share share = {0, best.total};
+        for (size_t i = 0; i + 1 < a->note_count; i++) {
+            long j = (long)i + delta;
+            if (j >= 0 && (size_t)j + 1 < b->note_count && matches(a, i, b, (size_t)j)) {
+                share.matched++;
+            }
+        }
+        if (share.matched > best.matched) {
+            best = share;
         }
     }
-    if (share.total == 0) {
-        share.total = 1;
-        share.matched = 1;
-    }
-    return share;
+    return best;
 }
 
 static bool same_chord(const MotiveSketchChord *a, const MotiveSketchChord *b) {
@@ -102,14 +118,14 @@ static void set_dimension(MotiveDimensions *out, MotiveDimension dimension, Shar
 
 void motive_variant_compare(const MotiveSketch *a, const MotiveSketch *b, MotiveDimensions *out) {
     memset(out, 0, sizeof(*out));
-    set_dimension(out, MOTIVE_DIMENSION_RHYTHM, rhythm_share(a, b));
+    set_dimension(out, MOTIVE_DIMENSION_RHYTHM, pair_share(a, b, rhythm_pair_matches));
     bool a_pitched = pitched(a);
     bool b_pitched = pitched(b);
     Share none = {0, 1};
     Share whole = {1, 1};
     if (a_pitched && b_pitched) {
-        set_dimension(out, MOTIVE_DIMENSION_INTERVALS, interval_share(a, b, false));
-        set_dimension(out, MOTIVE_DIMENSION_CONTOUR, interval_share(a, b, true));
+        set_dimension(out, MOTIVE_DIMENSION_INTERVALS, pair_share(a, b, interval_pair_matches));
+        set_dimension(out, MOTIVE_DIMENSION_CONTOUR, pair_share(a, b, contour_pair_matches));
     } else {
         Share pitches = !a_pitched && !b_pitched ? whole : none;
         set_dimension(out, MOTIVE_DIMENSION_INTERVALS, pitches);
@@ -201,7 +217,14 @@ static void propose_transpose(const MotiveSketch *s, const MotiveSketch *t, Prop
             put(p, MOTIVE_RELATION_TRANSPOSE, 1, by_last, 0);
         }
         put(p, MOTIVE_RELATION_TRANSPOSE, 1, 0, motive_sketch_degree_of_step(s, step_of(t, 0)));
+        /* When the target moved by other means too: the usual steps. */
+        static const long USUAL[] = {1, -1, 2, -2, 4, -4};
+        for (size_t i = 0; i < sizeof(USUAL) / sizeof(USUAL[0]); i++) {
+            put(p, MOTIVE_RELATION_TRANSPOSE, 1, USUAL[i], 0);
+        }
     }
+    put(p, MOTIVE_RELATION_TRANSPOSE, 0, 12, 0);
+    put(p, MOTIVE_RELATION_TRANSPOSE, 0, -12, 0);
 }
 
 static void propose_invert(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
@@ -226,7 +249,9 @@ static void propose_invert(const MotiveSketch *s, const MotiveSketch *t, Proposa
     }
 }
 
-static void propose_interval_change(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
+/* The amounts that turn the source's intervals into the target's, when the two have the same
+ * length. */
+static void infer_interval_change(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
     if (s->note_count < 2 || s->note_count != t->note_count) {
         return;
     }
@@ -264,24 +289,49 @@ static void propose_interval_change(const MotiveSketch *s, const MotiveSketch *t
     }
 }
 
+static void propose_interval_change(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
+    infer_interval_change(s, t, p);
+    /* Otherwise a widening or narrowing of every interval, then of each one. */
+    static const long USUAL[] = {1, -1, 2, -2};
+    for (size_t i = 0; i < sizeof(USUAL) / sizeof(USUAL[0]); i++) {
+        put(p, MOTIVE_RELATION_INTERVAL_CHANGE, 0, USUAL[i], 0);
+    }
+    for (size_t interval = 1; interval < s->note_count; interval++) {
+        put(p, MOTIVE_RELATION_INTERVAL_CHANGE, (long)interval, 1, 0);
+        put(p, MOTIVE_RELATION_INTERVAL_CHANGE, (long)interval, -1, 0);
+    }
+}
+
 static void propose_fragment(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    if (t->note_count >= s->note_count) {
+    if (s->note_count < 3) {
         return;
     }
-    long min = t->note_count < 2 ? 1 : 0;
-    for (long position = 1; position <= 3; position++) {
-        put(p, MOTIVE_RELATION_FRAGMENT, position, (long)t->note_count, min);
+    if (t->note_count < s->note_count) {
+        long min = t->note_count < 2 ? 1 : 0;
+        for (long position = 1; position <= 3; position++) {
+            put(p, MOTIVE_RELATION_FRAGMENT, position, (long)t->note_count, min);
+        }
+    }
+    /* Otherwise the longest fragments. */
+    for (size_t length = s->note_count - 1; length >= 2 && length + 5 > s->note_count; length--) {
+        for (long position = 1; position <= 3; position++) {
+            put(p, MOTIVE_RELATION_FRAGMENT, position, (long)length, 0);
+        }
     }
 }
 
 static void propose_liquidate(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    if (t->note_count >= s->note_count) {
-        return;
+    if (t->note_count < s->note_count) {
+        long drop = (long)(s->note_count - t->note_count);
+        long min = t->note_count < 2 ? 1 : 0;
+        put(p, MOTIVE_RELATION_LIQUIDATE, drop, 0, min);
+        put(p, MOTIVE_RELATION_LIQUIDATE, drop, 1, min);
     }
-    long drop = (long)(s->note_count - t->note_count);
-    long min = t->note_count < 2 ? 1 : 0;
-    put(p, MOTIVE_RELATION_LIQUIDATE, drop, 0, min);
-    put(p, MOTIVE_RELATION_LIQUIDATE, drop, 1, min);
+    /* Otherwise one to three of the weakest notes. */
+    for (long drop = 1; drop <= 3; drop++) {
+        put(p, MOTIVE_RELATION_LIQUIDATE, drop, 0, 0);
+        put(p, MOTIVE_RELATION_LIQUIDATE, drop, 1, 0);
+    }
 }
 
 static void propose_scale_time(const MotiveSketch *s, const MotiveSketch *t, Proposals *p,
@@ -305,42 +355,38 @@ static void propose_diminish(const MotiveSketch *s, const MotiveSketch *t, Propo
 }
 
 static void propose_note_repeat(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    if (t->note_count <= s->note_count) {
-        return;
+    long added = t->note_count > s->note_count ? (long)(t->note_count - s->note_count) : 0;
+    for (size_t note = 0; note < s->note_count && added + 1 >= 2 && added + 1 <= 4; note++) {
+        put(p, MOTIVE_RELATION_NOTE_REPEAT, (long)note, added + 1, 0);
     }
-    long added = (long)(t->note_count - s->note_count);
     for (size_t note = 0; note < s->note_count; note++) {
-        if (added + 1 >= 2 && added + 1 <= 4) {
-            put(p, MOTIVE_RELATION_NOTE_REPEAT, (long)note, added + 1, 0);
-        } else {
-            for (long count = 2; count <= 4; count++) {
-                put(p, MOTIVE_RELATION_NOTE_REPEAT, (long)note, count, 0);
-            }
-        }
+        put(p, MOTIVE_RELATION_NOTE_REPEAT, (long)note, 2, 0);
     }
 }
 
 static void propose_rhythm_repeat(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    if (s->note_count != t->note_count || s->note_count < 2) {
+    size_t total = s->note_count;
+    if (total < 2) {
         return;
     }
-    size_t target = s->note_count;
-    for (size_t i = 0; i < s->note_count; i++) {
-        if (!msk_eq(s->notes[i].duration, t->notes[i].duration)) {
-            target = i;
-            break;
+    size_t differing = total;
+    if (t->note_count == total) {
+        for (size_t i = 0; i < total; i++) {
+            if (!msk_eq(s->notes[i].duration, t->notes[i].duration)) {
+                differing = i;
+                break;
+            }
         }
     }
-    if (target == s->note_count) {
-        return;
-    }
-    for (size_t length = 1; length <= 3; length++) {
-        if (target + length > s->note_count) {
-            break;
-        }
-        for (size_t first = 0; first + length <= s->note_count; first++) {
-            if (first != target) {
-                put(p, MOTIVE_RELATION_RHYTHM_REPEAT, (long)first, (long)length, (long)target);
+    for (size_t length = 1; length <= 2; length++) {
+        for (size_t target = 0; target + length <= total; target++) {
+            if (differing != total && target != differing) {
+                continue;
+            }
+            for (size_t first = 0; first + length <= total; first++) {
+                if (first != target) {
+                    put(p, MOTIVE_RELATION_RHYTHM_REPEAT, (long)first, (long)length, (long)target);
+                }
             }
         }
     }
@@ -351,17 +397,21 @@ static void propose_rhythm_shift(const MotiveSketch *s, const MotiveSketch *t, P
     if (msk_ok(inside) && !msk_is_zero(inside)) {
         put_ratio(p, MOTIVE_RELATION_RHYTHM_SHIFT, 0, 0, 0, 0, inside);
     }
+    ExactRational half = msk_div(s->beat, msk_int(2));
+    if (msk_ok(half)) {
+        put_ratio(p, MOTIVE_RELATION_RHYTHM_SHIFT, 0, 0, 0, 0, half);
+    }
+    put_ratio(p, MOTIVE_RELATION_RHYTHM_SHIFT, 0, 0, 0, 0, s->beat);
 }
 
 static void propose_add_upbeat(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
     long added = t->note_count > s->note_count ? (long)(t->note_count - s->note_count) : 0;
-    for (long approach = 1; approach >= -1; approach -= 2) {
-        if (added >= 1 && added <= 3) {
-            put(p, MOTIVE_RELATION_ADD_UPBEAT, added, approach, 0);
-        } else {
-            for (long count = 1; count <= 3; count++) {
-                put(p, MOTIVE_RELATION_ADD_UPBEAT, count, approach, 0);
-            }
+    for (long approach = 1; approach >= -1 && added >= 1 && added <= 3; approach -= 2) {
+        put(p, MOTIVE_RELATION_ADD_UPBEAT, added, approach, 0);
+    }
+    for (long count = 1; count <= 3; count++) {
+        for (long approach = 1; approach >= -1; approach -= 2) {
+            put(p, MOTIVE_RELATION_ADD_UPBEAT, count, approach, 0);
         }
     }
 }
@@ -371,7 +421,6 @@ static bool meter_den(unsigned long long den) {
 }
 
 static void propose_change_meter(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    (void)s;
     if (t->beat.n == 1 && meter_den(t->beat.d)) {
         ExactRational beats = msk_div(t->bar, t->beat);
         if (msk_ok(beats) && beats.d == 1 && beats.n >= 1 && beats.n <= 64) {
@@ -381,38 +430,46 @@ static void propose_change_meter(const MotiveSketch *s, const MotiveSketch *t, P
     if (meter_den(t->bar.d) && t->bar.n <= 64 && !(t->beat.n == 1 && t->bar.d == t->beat.d)) {
         put(p, MOTIVE_RELATION_CHANGE_METER, (long)t->bar.n, (long)t->bar.d, 0);
     }
-}
-
-static void propose_add_interval(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    if (t->note_count != s->note_count + 1) {
-        return;
-    }
-    size_t at = 1;
-    while (at < s->note_count && pitch_of(s, at) == pitch_of(t, at)) {
-        at++;
-    }
-    for (size_t interval = at; interval >= 1 && interval + 3 > at && interval < s->note_count;
-         interval--) {
-        long steps = step_of(t, interval) - step_of(s, interval - 1);
-        if (steps != 0) {
-            put(p, MOTIVE_RELATION_ADD_INTERVAL, (long)interval, steps, 0);
+    /* Otherwise the usual meters other than the state's. */
+    static const long USUAL[][2] = {{2, 4}, {3, 4}, {4, 4}};
+    for (size_t i = 0; i < sizeof(USUAL) / sizeof(USUAL[0]); i++) {
+        ExactRational bar =
+            msk_make((unsigned long long)USUAL[i][0], (unsigned long long)USUAL[i][1]);
+        if (!msk_eq(bar, s->bar)) {
+            put(p, MOTIVE_RELATION_CHANGE_METER, USUAL[i][0], USUAL[i][1], 0);
         }
     }
 }
 
-static void propose_omit_interval(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    if (t->note_count + 1 != s->note_count) {
-        return;
+static void propose_add_interval(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
+    if (t->note_count == s->note_count + 1) {
+        size_t at = 1;
+        while (at < s->note_count && pitch_of(s, at) == pitch_of(t, at)) {
+            at++;
+        }
+        for (size_t interval = at; interval >= 1 && interval + 3 > at && interval < s->note_count;
+             interval--) {
+            long steps = step_of(t, interval) - step_of(s, interval - 1);
+            if (steps != 0) {
+                put(p, MOTIVE_RELATION_ADD_INTERVAL, (long)interval, steps, 0);
+            }
+        }
     }
+    for (size_t interval = 1; interval < s->note_count; interval++) {
+        put(p, MOTIVE_RELATION_ADD_INTERVAL, (long)interval, 1, 0);
+        put(p, MOTIVE_RELATION_ADD_INTERVAL, (long)interval, -1, 0);
+    }
+}
+
+static void propose_omit_interval(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
+    (void)t;
     for (size_t interval = 1; interval < s->note_count; interval++) {
         put(p, MOTIVE_RELATION_OMIT_INTERVAL, (long)interval, 0, 0);
     }
 }
 
 static void propose_ancillary_fill(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    if (t->note_count <= s->note_count) {
-        return;
-    }
+    (void)t;
     for (size_t interval = 1; interval < s->note_count; interval++) {
         for (long kind = 0; kind <= 1; kind++) {
             put(p, MOTIVE_RELATION_ANCILLARY_FILL, (long)interval, kind, 0);
@@ -421,82 +478,96 @@ static void propose_ancillary_fill(const MotiveSketch *s, const MotiveSketch *t,
 }
 
 static void propose_condense(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    if (msk_cmp(t->length, s->length) >= 0) {
-        return;
-    }
-    ExactRational saved = msk_sub(s->length, t->length);
-    for (size_t span = 1; span < s->note_count; span++) {
-        for (size_t first = 0; first + span < s->note_count; first++) {
-            size_t last = first + span;
-            ExactRational old_span = msk_sub(msk_add(s->notes[last].onset, s->notes[last].duration),
-                                             s->notes[first].onset);
-            ExactRational ratio = msk_div(msk_sub(old_span, saved), old_span);
-            if (msk_ok(ratio) && ratio.n != 0 && msk_cmp(ratio, msk_int(1)) < 0) {
-                put_ratio(p, MOTIVE_RELATION_CONDENSE, (long)first, (long)last, 0, 2, ratio);
+    if (msk_cmp(t->length, s->length) < 0) {
+        ExactRational saved = msk_sub(s->length, t->length);
+        for (size_t span = 1; span < s->note_count; span++) {
+            for (size_t first = 0; first + span < s->note_count; first++) {
+                size_t last = first + span;
+                ExactRational old_span = msk_sub(
+                    msk_add(s->notes[last].onset, s->notes[last].duration), s->notes[first].onset);
+                ExactRational ratio = msk_div(msk_sub(old_span, saved), old_span);
+                if (msk_ok(ratio) && ratio.n != 0 && msk_cmp(ratio, msk_int(1)) < 0) {
+                    put_ratio(p, MOTIVE_RELATION_CONDENSE, (long)first, (long)last, 0, 2, ratio);
+                }
             }
+        }
+    }
+    /* Otherwise a run of two or three notes at half the time. */
+    for (size_t span = 1; span <= 2; span++) {
+        for (size_t first = 0; first + span < s->note_count; first++) {
+            put_ratio(p, MOTIVE_RELATION_CONDENSE, (long)first, (long)(first + span), 0, 2,
+                      msk_make(1, 2));
         }
     }
 }
 
 static void propose_repeat_feature(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    if (t->note_count <= s->note_count) {
-        return;
-    }
-    size_t added = t->note_count - s->note_count;
     for (size_t f = 0; f < s->feature_count; f++) {
         size_t first = s->features[f].first;
         size_t last = s->features[f].last;
         size_t length = last - first + 1;
-        if (added % length != 0 || added / length < 1 || added / length > 2 ||
-            last + 1 >= t->note_count) {
-            continue;
+        size_t added = t->note_count > s->note_count ? t->note_count - s->note_count : 0;
+        if (added % length == 0 && added / length >= 1 && added / length <= 2 &&
+            last + 1 < t->note_count && t->notes[last + 1].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN &&
+            s->notes[first].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN) {
+            put(p, MOTIVE_RELATION_REPEAT_FEATURE, (long)f, (long)(added / length),
+                step_of(t, last + 1) - step_of(s, first));
         }
-        long steps = t->notes[last + 1].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN
-                         ? 0
-                         : step_of(t, last + 1) - step_of(s, first);
-        put(p, MOTIVE_RELATION_REPEAT_FEATURE, (long)f, (long)(added / length), steps);
+    }
+    for (size_t f = 0; f < s->feature_count; f++) {
+        for (long steps = -1; steps <= 1; steps++) {
+            put(p, MOTIVE_RELATION_REPEAT_FEATURE, (long)f, 1, steps);
+        }
     }
 }
 
 static void propose_shift_feature(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    if (s->note_count != t->note_count) {
-        return;
-    }
     for (size_t f = 0; f < s->feature_count; f++) {
         size_t first = s->features[f].first;
-        if (msk_cmp(t->notes[first].onset, s->notes[first].onset) > 0) {
+        if (s->note_count == t->note_count &&
+            msk_cmp(t->notes[first].onset, s->notes[first].onset) > 0) {
             ExactRational offset = msk_sub(t->notes[first].onset, s->notes[first].onset);
             put_ratio(p, MOTIVE_RELATION_SHIFT_FEATURE, (long)f, 0, 0, 1, offset);
         }
     }
+    for (size_t f = 0; f < s->feature_count; f++) {
+        put_ratio(p, MOTIVE_RELATION_SHIFT_FEATURE, (long)f, 0, 0, 1, msk_make(1, 16));
+    }
 }
 
 static void propose_harmony_inversion(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
+    for (size_t chord = 0; chord < chords_or_one(s) && chord < t->chord_count; chord++) {
+        put(p, MOTIVE_RELATION_HARMONY_INVERSION, (long)chord, t->chords[chord].inversion, 0);
+    }
     for (size_t chord = 0; chord < chords_or_one(s); chord++) {
-        if (chord < t->chord_count) {
-            put(p, MOTIVE_RELATION_HARMONY_INVERSION, (long)chord, t->chords[chord].inversion, 0);
-        } else {
-            for (long inversion = 0; inversion <= 3; inversion++) {
-                put(p, MOTIVE_RELATION_HARMONY_INVERSION, (long)chord, inversion, 0);
-            }
+        for (long inversion = 1; inversion <= 2; inversion++) {
+            put(p, MOTIVE_RELATION_HARMONY_INVERSION, (long)chord, inversion, 0);
         }
     }
 }
 
 static void propose_harmony_append(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    if (t->chord_count == 0) {
-        return;
-    }
     (void)s;
-    const MotiveSketchChord *last = &t->chords[t->chord_count - 1];
-    put(p, MOTIVE_RELATION_HARMONY_APPEND, last->degree, last->seventh ? 1 : 0, 0);
-    put(p, MOTIVE_RELATION_HARMONY_APPEND, last->degree, last->seventh ? 0 : 1, 0);
+    if (t->chord_count > 0) {
+        const MotiveSketchChord *last = &t->chords[t->chord_count - 1];
+        put(p, MOTIVE_RELATION_HARMONY_APPEND, last->degree, last->seventh ? 1 : 0, 0);
+        put(p, MOTIVE_RELATION_HARMONY_APPEND, last->degree, last->seventh ? 0 : 1, 0);
+    }
+    static const long USUAL[] = {1, 4, 5, 2, 6};
+    for (size_t i = 0; i < sizeof(USUAL) / sizeof(USUAL[0]); i++) {
+        put(p, MOTIVE_RELATION_HARMONY_APPEND, USUAL[i], 0, 0);
+    }
 }
 
 static void propose_harmony_insert(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    (void)s;
     for (size_t chord = 0; chord < t->chord_count; chord++) {
         put(p, MOTIVE_RELATION_HARMONY_INSERT, (long)chord, t->chords[chord].degree, 0);
+    }
+    static const long USUAL[] = {4, 5, 2};
+    for (size_t chord = 0; chord < chords_or_one(s); chord++) {
+        for (size_t i = 0; i < sizeof(USUAL) / sizeof(USUAL[0]); i++) {
+            put(p, MOTIVE_RELATION_HARMONY_INSERT, (long)chord, USUAL[i], 0);
+        }
     }
 }
 
@@ -506,6 +577,12 @@ static void propose_harmony_substitute(const MotiveSketch *s, const MotiveSketch
         if (chord + 1 < t->chord_count && t->chord_count == chords_or_one(s) + 1) {
             put(p, MOTIVE_RELATION_HARMONY_SUBSTITUTE, (long)chord, t->chords[chord].degree,
                 t->chords[chord + 1].degree);
+        }
+    }
+    static const long USUAL[] = {4, 5, 1};
+    for (size_t chord = 0; chord < chords_or_one(s); chord++) {
+        for (size_t i = 0; i < sizeof(USUAL) / sizeof(USUAL[0]); i++) {
+            put(p, MOTIVE_RELATION_HARMONY_SUBSTITUTE, (long)chord, USUAL[i], 0);
         }
     }
 }
@@ -678,6 +755,8 @@ typedef struct {
     int cost;
     double nearness;
     size_t seq;
+    bool leader; /* the nearest state its last relation reached at this depth: never pushed out of
+                    the beam */
 } State;
 
 typedef struct {
@@ -730,9 +809,19 @@ static void fill_chain(MotiveRecognition *out, const MotiveRelationStep *steps, 
     out->step_count = count;
 }
 
-/* Puts a candidate into the next level, unless it repeats a state or does not make the beam. */
+/* The last relation of a state's chain. */
+static MotiveRelationKind last_kind(const State *state) {
+    return state->steps[state->count - 1].kind;
+}
+
+/*
+ * Puts a candidate into the next level, unless it repeats a state or does not make the beam. The
+ * beam keeps the nearest states, except that the nearest state each relation reached stays (a
+ * relation the nearness cannot see, such as a change of meter, would otherwise never survive the
+ * beam). Leaders are only kept when the beam has room for all of them and as many other states.
+ */
 static void insert_candidate(State *levels, size_t *counts, size_t depth, size_t beam,
-                             const State *candidate) {
+                             State *candidate) {
     for (size_t d = 0; d <= depth; d++) {
         State *level = levels + d * beam;
         for (size_t i = 0; i < counts[d]; i++) {
@@ -747,26 +836,48 @@ static void insert_candidate(State *levels, size_t *counts, size_t depth, size_t
         if (motive_sketch_equal(&next[i].sketch, &candidate->sketch)) {
             if (candidate->cost < next[i].cost) {
                 size_t seq = next[i].seq;
+                bool leader = next[i].leader;
                 next[i] = *candidate;
                 next[i].seq = seq;
+                next[i].leader = leader;
             }
             return;
         }
     }
-    if (count < beam) {
-        next[count] = *candidate;
-        counts[depth + 1]++;
-        return;
-    }
-    size_t worst = 0;
-    for (size_t i = 1; i < count; i++) {
-        if (search_better(&next[worst], &next[i])) {
-            worst = i;
+    bool diverse = beam >= 2 * MOTIVE_RELATION_KIND_COUNT;
+    candidate->leader = false;
+    size_t old_leader = count;
+    if (diverse) {
+        for (size_t i = 0; i < count; i++) {
+            if (next[i].leader && last_kind(&next[i]) == last_kind(candidate)) {
+                old_leader = i;
+                break;
+            }
+        }
+        if (old_leader == count || candidate->nearness > next[old_leader].nearness) {
+            candidate->leader = true;
         }
     }
-    if (candidate->nearness > next[worst].nearness) {
-        next[worst] = *candidate;
+    size_t slot;
+    if (count < beam) {
+        slot = count;
+        counts[depth + 1]++;
+    } else {
+        /* The worst state that is not a leader. */
+        slot = count;
+        for (size_t i = 0; i < count; i++) {
+            if (!next[i].leader && (slot == count || search_better(&next[slot], &next[i]))) {
+                slot = i;
+            }
+        }
+        if (slot == count || (!candidate->leader && candidate->nearness <= next[slot].nearness)) {
+            return;
+        }
     }
+    if (candidate->leader && old_leader < count) {
+        next[old_leader].leader = false;
+    }
+    next[slot] = *candidate;
 }
 
 MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
