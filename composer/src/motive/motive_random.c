@@ -4,12 +4,15 @@
 #include <string.h>
 
 #include <ursatz_composer/fill_rng.h>
+#include <ursatz_composer/motive_analysis.h>
 
 #include "motive/motive_internal.h"
 
 /*
- * Random motives: a rhythm drawn in half-beats, then a walk on the key's scale, kept only if it passes the melodic
- * rules of motive invention. The defaults below are the whole of what shapes a random motive; tune them here.
+ * Random motives: a rhythm drawn in half-beats, then a frame of chord tones of I (a walk on the tonic triad) on the beats
+ * of the meter and on the first and last note, then each note between two frame notes either another chord tone or a
+ * non-chord tone that the tone roles label as the type drawn for it. A motive is kept only if it passes the melodic rules
+ * of motive invention. The defaults below are the whole of what shapes a random motive; tune them here.
  */
 
 #define MIN_BARS 1
@@ -21,8 +24,9 @@
 #define PITCH_LOW 48           /* C3 */
 #define PITCH_HIGH 84          /* C6 */
 #define BASE_POSITION 35       /* degree 1 of octave 0: the tonic in MIDI 60 to 71 */
-#define BIG_LEAP_STEPS 4       /* a leap over a fourth, in scale steps; the next move is one step back */
-#define REPEAT_ONE_IN 8        /* a repeated pitch in one move of this many */
+#define BIG_LEAP_RUNGS 2       /* a frame move of this many chord tones or more; the next move is one chord tone back */
+#define REPEAT_ONE_IN 8        /* a repeated frame pitch in one move of this many */
+#define OFF_FRAME_REACH 5      /* scale steps either side of the frame note before, searched for a non-chord tone */
 #define ATTEMPTS_PER_MOTIVE 256
 #define STYLE_CANDIDATES 8   /* candidates drawn per motive when there is a style */
 
@@ -31,11 +35,25 @@ static const long DURATIONS[] = {1, 2, 4};
 static const unsigned long DURATION_WEIGHTS[] = {2, 4, 1};
 #define DURATION_KINDS (sizeof(DURATIONS) / sizeof(DURATIONS[0]))
 
-/* Scale steps a move may take, steps most often, and the degrees (1, 3, 5) a motive may open on. */
-static const int MOVES[] = {1, 1, 1, 1, 1, 1, 2, 2, 3, 4, 5};
-#define MOVE_KINDS (sizeof(MOVES) / sizeof(MOVES[0]))
-static const long OPENINGS[] = {0, 2, 4};
-#define OPENING_KINDS (sizeof(OPENINGS) / sizeof(OPENINGS[0]))
+/*
+ * The frame is a walk on the chord tones of I, the scale steps 0, 2 and 4 of each octave (rungs of a ladder, three to an
+ * octave). A move is a number of rungs, one most often, and a motive opens on degree 1, 3 or 5.
+ */
+static const long TRIAD_STEPS[] = {0, 2, 4};
+#define TRIAD_SIZE (sizeof(TRIAD_STEPS) / sizeof(TRIAD_STEPS[0]))
+static const int FRAME_MOVES[] = {1, 1, 1, 1, 1, 1, 2, 2};
+#define FRAME_MOVE_KINDS (sizeof(FRAME_MOVES) / sizeof(FRAME_MOVES[0]))
+#define BASE_RUNG ((BASE_POSITION / 7) * (long)TRIAD_SIZE)
+
+/*
+ * What a note between two frame notes may be, drawn with equal weight: another chord tone, or a non-chord tone of one of
+ * these types. The harmony stays I and the beats stay on chord tones, so a suspension, retardation and anticipation (they
+ * need a chord change), a double neighbor and a changing tone (they need two non-chord notes side by side) and a pedal
+ * cannot form, and are not drawn.
+ */
+static const NonChordTone DECORATIONS[] = {NON_CHORD_TONE_PASSING, NON_CHORD_TONE_NEIGHBOR, NON_CHORD_TONE_APPOGGIATURA,
+                                           NON_CHORD_TONE_ESCAPE_TONE};
+#define DECORATION_KINDS (sizeof(DECORATIONS) / sizeof(DECORATIONS[0]))
 
 const char *motive_random_result_name(MotiveRandomResult result) {
     switch (result) {
@@ -61,6 +79,7 @@ const char *motive_random_result_name(MotiveRandomResult result) {
 
 typedef struct {
     long ticks[MAX_NOTES];
+    bool on_beat[MAX_NOTES];
     size_t count;
     long pickup;
     long total;
@@ -97,6 +116,7 @@ static bool draw_rhythm(const PlanMeter *meter, FillRng *rng, Rhythm *out) {
         if (out->count == MAX_NOTES) {
             return false;
         }
+        out->on_beat[out->count] = on_beat;
         out->ticks[out->count++] = DURATIONS[chosen];
         position += DURATIONS[chosen];
     }
@@ -105,18 +125,60 @@ static bool draw_rhythm(const PlanMeter *meter, FillRng *rng, Rhythm *out) {
 
 /* ----------------------------------------------------------------- pitch */
 
+typedef struct {
+    int pitches[MAX_NOTES];
+    bool decorated[MAX_NOTES]; /* a non-chord tone of types[i] */
+    NonChordTone types[MAX_NOTES];
+} Melody;
+
+static long rung_position(long rung) {
+    return (rung / (long)TRIAD_SIZE) * 7 + TRIAD_STEPS[rung % (long)TRIAD_SIZE];
+}
+
+static bool is_chord_step(long position) {
+    long step = ((position % 7) + 7) % 7;
+    return step == TRIAD_STEPS[0] || step == TRIAD_STEPS[1] || step == TRIAD_STEPS[2];
+}
+
+static bool in_range(int pitch) {
+    return pitch >= PITCH_LOW && pitch <= PITCH_HIGH;
+}
+
+/* The figure a note makes between the pitch before and the pitch after it, by the semitone rules of the tone roles. */
+static bool forms(NonChordTone type, int before, int pitch, int after) {
+    int in = pitch - before;
+    int out = after - pitch;
+    bool in_step = abs(in) >= 1 && abs(in) <= 2;
+    bool out_step = abs(out) >= 1 && abs(out) <= 2;
+    bool same_way = in != 0 && out != 0 && (in > 0) == (out > 0);
+    switch (type) {
+    case NON_CHORD_TONE_PASSING:
+        return in_step && out_step && same_way;
+    case NON_CHORD_TONE_NEIGHBOR:
+        return in_step && out_step && !same_way;
+    case NON_CHORD_TONE_APPOGGIATURA:
+        return abs(in) > 2 && out_step && !same_way;
+    case NON_CHORD_TONE_ESCAPE_TONE:
+        return in_step && abs(out) > 2 && !same_way;
+    default:
+        return false;
+    }
+}
+
 /*
- * A walk on the key's scale from degree 1, 3 or 5: steps most often, a repeated pitch now and then, leaps up to a sixth,
- * and a leap over a fourth is followed by a step the other way. The draw fails when the walk leaves PITCH_LOW to
- * PITCH_HIGH or spreads over more than a twelfth.
+ * The frame: a walk on the chord tones of I from degree 1, 3 or 5, for the first and last note and every note that starts
+ * on a beat. Steps (one chord tone) most often, a repeated pitch now and then, and a move of two or more chord tones is
+ * followed by one chord tone back. The draw fails when a note leaves PITCH_LOW to PITCH_HIGH.
  */
-static bool draw_pitches(const PlanKey *key, size_t count, FillRng *rng, int *pitches) {
-    long position = BASE_POSITION + OPENINGS[fill_rng_below(rng, OPENING_KINDS)];
-    int step_back = 0; /* the direction the next move must take, after a big leap; 0 when free */
-    int low = 127;
-    int high = 0;
-    for (size_t i = 0; i < count; i++) {
-        if (i > 0) {
+static bool draw_frame(const PlanKey *key, const Rhythm *rhythm, FillRng *rng, long *positions, Melody *melody) {
+    long rung = BASE_RUNG + (long)fill_rng_below(rng, TRIAD_SIZE);
+    int step_back = 0;
+    bool first = true;
+    for (size_t i = 0; i < rhythm->count; i++) {
+        if (!(rhythm->on_beat[i] || i == 0 || i + 1 == rhythm->count)) {
+            continue;
+        }
+        if (!first) {
             int move;
             if (step_back != 0) {
                 move = step_back;
@@ -124,21 +186,82 @@ static bool draw_pitches(const PlanKey *key, size_t count, FillRng *rng, int *pi
             } else if (fill_rng_below(rng, REPEAT_ONE_IN) == 0) {
                 move = 0;
             } else {
-                int size = MOVES[fill_rng_below(rng, MOVE_KINDS)];
+                int size = FRAME_MOVES[fill_rng_below(rng, FRAME_MOVE_KINDS)];
                 move = fill_rng_below(rng, 2) == 0 ? size : -size;
-                if (size >= BIG_LEAP_STEPS) {
+                if (size >= BIG_LEAP_RUNGS) {
                     step_back = move > 0 ? -1 : 1;
                 }
             }
-            position += move;
+            rung += move;
         }
-        int pitch = motive_position_pitch(key, position, 0);
-        if (pitch < PITCH_LOW || pitch > PITCH_HIGH) {
+        first = false;
+        if (rung < 0) {
             return false;
         }
-        pitches[i] = pitch;
-        low = pitch < low ? pitch : low;
-        high = pitch > high ? pitch : high;
+        positions[i] = rung_position(rung);
+        melody->pitches[i] = motive_position_pitch(key, positions[i], 0);
+        if (!in_range(melody->pitches[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
+ * Fills the notes between two frame notes: a type is drawn for each (or none), and a note takes a non-chord pitch near the
+ * frame note before it that makes the figure with the frame notes either side, else a chord tone near it.
+ */
+static bool draw_between(const PlanKey *key, const Rhythm *rhythm, FillRng *rng, long *positions, Melody *melody) {
+    for (size_t i = 1; i + 1 < rhythm->count; i++) {
+        if (rhythm->on_beat[i]) {
+            continue;
+        }
+        long before = positions[i - 1];
+        int after_pitch = melody->pitches[i + 1];
+        size_t kind = (size_t)fill_rng_below(rng, DECORATION_KINDS + 1);
+        long options[2 * OFF_FRAME_REACH + 1];
+        size_t option_count = 0;
+        if (kind > 0) {
+            for (long p = before - OFF_FRAME_REACH; p <= before + OFF_FRAME_REACH; p++) {
+                int pitch = motive_position_pitch(key, p, 0);
+                if (!is_chord_step(p) && in_range(pitch) &&
+                    forms(DECORATIONS[kind - 1], melody->pitches[i - 1], pitch, after_pitch)) {
+                    options[option_count++] = p;
+                }
+            }
+        }
+        if (option_count > 0) {
+            positions[i] = options[fill_rng_below(rng, option_count)];
+            melody->decorated[i] = true;
+            melody->types[i] = DECORATIONS[kind - 1];
+        } else {
+            for (long p = before - 4; p <= before + 4; p++) {
+                if (is_chord_step(p) && in_range(motive_position_pitch(key, p, 0))) {
+                    options[option_count++] = p;
+                }
+            }
+            if (option_count == 0) {
+                return false;
+            }
+            positions[i] = options[fill_rng_below(rng, option_count)];
+        }
+        melody->pitches[i] = motive_position_pitch(key, positions[i], 0);
+    }
+    return true;
+}
+
+/* The frame, the notes between, and a range of no more than a twelfth. */
+static bool draw_melody(const PlanKey *key, const Rhythm *rhythm, FillRng *rng, Melody *melody) {
+    long positions[MAX_NOTES];
+    memset(melody, 0, sizeof(*melody));
+    if (!draw_frame(key, rhythm, rng, positions, melody) || !draw_between(key, rhythm, rng, positions, melody)) {
+        return false;
+    }
+    int low = 127;
+    int high = 0;
+    for (size_t i = 0; i < rhythm->count; i++) {
+        low = melody->pitches[i] < low ? melody->pitches[i] : low;
+        high = melody->pitches[i] > high ? melody->pitches[i] : high;
     }
     return high - low <= MAX_RANGE_SEMITONES;
 }
@@ -146,7 +269,7 @@ static bool draw_pitches(const PlanKey *key, size_t count, FillRng *rng, int *pi
 /* -------------------------------------------------------------- candidate */
 
 static bool build_motive(const MotiveRandomOptions *options, const PlanKey *key, const Rhythm *rhythm,
-                         const int *pitches, Motive *out) {
+                         const Melody *melody, Motive *out) {
     unsigned long den = 2UL * (unsigned long)options->meter.beat_unit;
     memset(out, 0, sizeof(*out));
     out->meter = options->meter;
@@ -154,7 +277,7 @@ static bool build_motive(const MotiveRandomOptions *options, const PlanKey *key,
     out->key_source = MOTIVE_KEY_GIVEN;
     long onset = 0;
     for (size_t i = 0; i < rhythm->count; i++) {
-        out->notes[i].midi_pitch = pitches[i];
+        out->notes[i].midi_pitch = melody->pitches[i];
         if (plan_time_make(onset, den, &out->notes[i].offset) != PLAN_OK ||
             plan_time_make(rhythm->ticks[i], den, &out->notes[i].duration) != PLAN_OK) {
             return false;
@@ -169,17 +292,39 @@ static bool build_motive(const MotiveRandomOptions *options, const PlanKey *key,
 }
 
 /*
+ * True when the tone roles read the motive as it was drawn: the base harmony is I, proposed, every frame or chord note is
+ * a chord tone, and every other note is a non-chord tone of its type that resolves.
+ */
+static bool tones_as_drawn(const Motive *motive, const Melody *melody) {
+    MotiveAnalysis analysis;
+    if (!motive_analyze(motive, &analysis) || !analysis.base_harmony_known || !analysis.tones_known ||
+        analysis.base_harmony.given || analysis.base_harmony.count != 1 || analysis.base_harmony.chords[0].degree != 1) {
+        return false;
+    }
+    for (size_t i = 0; i < motive->note_count; i++) {
+        const MotiveToneLabel *label = &analysis.tones[i];
+        bool expected = melody->decorated[i] ? label->role == MOTIVE_TONE_NON_CHORD && label->type == melody->types[i] &&
+                                                   !label->unresolved
+                                             : label->role == MOTIVE_TONE_CHORD;
+        if (!expected) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
  * One full motive that passes the melodic rules. *found is false when the draw did not (try again); the result is false
  * only when the check itself could not run.
  */
 static bool draw_candidate(const MotiveRandomOptions *options, const PlanKey *key, FillRng *rng, Motive *out,
                            bool *found) {
     Rhythm rhythm;
-    int pitches[MAX_NOTES];
+    Melody melody;
     const char *fault = NULL;
     *found = false;
-    if (!draw_rhythm(&options->meter, rng, &rhythm) || !draw_pitches(key, rhythm.count, rng, pitches) ||
-        !build_motive(options, key, &rhythm, pitches, out)) {
+    if (!draw_rhythm(&options->meter, rng, &rhythm) || !draw_melody(key, &rhythm, rng, &melody) ||
+        !build_motive(options, key, &rhythm, &melody, out) || !tones_as_drawn(out, &melody)) {
         return true;
     }
     if (!motive_melodic_fault(out, &fault)) {
