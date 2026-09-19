@@ -207,6 +207,27 @@
     };
   }
 
+  /* The findings as plain text to paste elsewhere: the motif's name, notes, mode and meter, then one line per marked
+   * operation, `<op>: works|wrong - <comment> (result <notes_text>)`, the wrong ones first. Inside each verdict the
+   * operations follow `order` (registry order) when given, then the rest by name. */
+  function findingsText(name, motif, checks, order) {
+    const m = motif || {};
+    const key = typeof m.key === "string" ? m.key : "";
+    const mode = key.includes(" ") ? key.slice(key.lastIndexOf(" ") + 1) : key;
+    const marks = checks && typeof checks === "object" ? checks : {};
+    const known = Array.isArray(order) ? order : [];
+    const rank = (op) => (known.includes(op) ? known.indexOf(op) : known.length);
+    const ops = Object.keys(marks).sort((a, b) => rank(a) - rank(b) || (a < b ? -1 : a > b ? 1 : 0));
+    const lines = [String(name || ""), `Notes: ${m.notes || ""}`, `Mode: ${mode}`, `Meter: ${m.meter || ""}`, ""];
+    for (const verdict of ["wrong", "works"]) {
+      for (const op of ops.filter((o) => marks[o] && marks[o].verdict === verdict)) {
+        const mark = marks[op];
+        lines.push(`${op}: ${verdict}${mark.comment ? ` - ${mark.comment}` : ""} (result ${mark.notes_text})`);
+      }
+    }
+    return lines.join("\n");
+  }
+
   function eachOpRequest(id, seed) {
     const value = wholeNumber(seed, 0);
     if (Number.isNaN(value)) {
@@ -592,6 +613,7 @@
     resultNotes,
     eachOpGroups,
     makeMark,
+    findingsText,
     markView,
     eachOpRequest,
     opChecksRequest,

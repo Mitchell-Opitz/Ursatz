@@ -693,7 +693,9 @@ const VariantTreeView = (function () {
     eachOpSeed.placeholder = "seed (random)";
     const eachOpRun = h("button", "button-primary", "Run");
     eachOpRun.type = "button";
-    eachOpControls.append(eachOpSeed, eachOpRun);
+    const eachOpCopy = h("button", "button-secondary", "Copy findings");
+    eachOpCopy.type = "button";
+    eachOpControls.append(eachOpSeed, eachOpRun, eachOpCopy);
     const eachOpList = h("div", "variant-each-op-results");
     eachOp.append(eachOpControls, eachOpList);
     section.appendChild(eachOp);
@@ -839,6 +841,21 @@ const VariantTreeView = (function () {
       opRendered.clear();
       drawEachOp();
       setStatus(status, `${eachOpResults.variants.length} operations ran with seed ${eachOpResults.seed}`, false);
+    });
+    /* The marked operations as text, for pasting into a chat. Registry order comes from the operations list. */
+    eachOpCopy.addEventListener("click", async () => {
+      const text = VariantTree.findingsText(
+        ctx.name,
+        ctx.body && ctx.body.motif,
+        opChecks,
+        operationList.map((operation) => operation.name),
+      );
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus(status, "Copied the findings", false);
+      } catch (error) {
+        setStatus(status, "Could not copy the findings", true);
+      }
     });
     ctx.send(VariantTree.opChecksRequest(ctx.id)).then((answer) => {
       if (answer.ok && answer.data.checks) {
