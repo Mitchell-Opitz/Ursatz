@@ -284,6 +284,9 @@ const ctx = {
     if (request.url.endsWith("variant-operations")) {
       return Promise.resolve({ ok: true, data: { operations: [] } });
     }
+    if (request.url.endsWith("op-checks")) {
+      return Promise.resolve({ ok: true, data: { checks: {} } });
+    }
     if (request.url.endsWith("variant-tree")) {
       return Promise.resolve({ ok: true, data: { tree: savedTree } });
     }
