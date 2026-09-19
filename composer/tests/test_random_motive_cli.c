@@ -109,6 +109,16 @@ static void test_json(void) {
     assert(count_of(out, "\"notes_text\"") == 2 && count_of(out, "\"degrees_text\"") == 2);
     assert(count_of(out, "\"tonic_pitch_class\": 2") == 4 && count_of(out, "\"mode\": \"minor\"") == 4);
     assert(count_of(out, "\"beats_per_bar\": 3") == 2);
+    /* Each motive carries its base harmony (I, proposed) and a tone label for each note. */
+    assert(count_of(out, "\"base_harmony\"") == 2 && count_of(out, "\"text\": \"I\"") >= 2);
+    assert(count_of(out, "\"given\": false") >= 2 && count_of(out, "\"tones\"") == 2);
+    assert(count_of(out, "\"role\": \"chord\"") >= 4 && count_of(out, "\"warnings\"") == 2);
+    assert(count_of(out, "\"unresolved\": true") == 0);
+    free(out);
+
+    /* Over some seeds a figure is named. */
+    out = output_of("--mode major --meter 4/4 --count 16 --seed 1 --json");
+    assert(count_of(out, "\"role\": \"non-chord\"") > 0 && count_of(out, "\"unresolved\": true") == 0);
     free(out);
 
     out = output_of("--mode major --meter 4/4 --form rhythm --seed 3 --json");

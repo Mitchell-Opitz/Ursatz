@@ -141,6 +141,61 @@ static void test_minor_three_four_lengths(void) {
     assert(one_bar > 0 && two_bars > 0 && one_bar + two_bars == SEEDS * COUNT);
 }
 
+/*
+ * The frame: the base harmony is I and proposed, the first and last notes and every note on a beat are chord tones, every
+ * other note is a chord tone or a non-chord tone with a type that resolves to a later chord tone, and the same seed gives
+ * the same tones. Over the seeds, all four types that can form are heard.
+ */
+static void test_frames(void) {
+    bool heard[NON_CHORD_TONE_COUNT] = {false};
+    size_t non_chord = 0;
+    for (size_t s = 0; s < sizeof(SCENARIOS) / sizeof(SCENARIOS[0]); s++) {
+        for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+            MotiveRandomOptions options = options_of(&SCENARIOS[s], seed);
+            Motive motives[COUNT];
+            size_t made = 0;
+            assert(motive_random(&options, motives, &made) == MOTIVE_RANDOM_OK && made == COUNT);
+            for (size_t i = 0; i < made; i++) {
+                MotiveAnalysis analysis;
+                assert(motive_analyze(&motives[i], &analysis));
+                assert(analysis.base_harmony_known && !analysis.base_harmony.given);
+                assert(analysis.base_harmony.count == 1 && analysis.base_harmony.chords[0].degree == 1);
+                assert(analysis.tones_known);
+                size_t last = motives[i].note_count - 1;
+                for (size_t n = 0; n <= last; n++) {
+                    const MotiveToneLabel *label = &analysis.tones[n];
+                    if (analysis.rhythm[n].on_beat || n == 0 || n == last) {
+                        assert(label->role == MOTIVE_TONE_CHORD);
+                    } else if (label->role == MOTIVE_TONE_NON_CHORD) {
+                        assert(!label->unresolved && label->resolves_to > (long)n);
+                        assert(analysis.tones[label->resolves_to].role == MOTIVE_TONE_CHORD);
+                        heard[label->type] = true;
+                        non_chord++;
+                    } else {
+                        assert(label->role == MOTIVE_TONE_CHORD);
+                    }
+                }
+            }
+        }
+    }
+    assert(non_chord > 0);
+    assert(heard[NON_CHORD_TONE_PASSING] && heard[NON_CHORD_TONE_NEIGHBOR] && heard[NON_CHORD_TONE_APPOGGIATURA] &&
+           heard[NON_CHORD_TONE_ESCAPE_TONE]);
+
+    MotiveRandomOptions options = options_of(&SCENARIOS[1], 7);
+    Motive first[COUNT];
+    Motive again[COUNT];
+    size_t made = 0;
+    assert(motive_random(&options, first, &made) == MOTIVE_RANDOM_OK);
+    assert(motive_random(&options, again, &made) == MOTIVE_RANDOM_OK);
+    for (size_t i = 0; i < COUNT; i++) {
+        MotiveAnalysis a;
+        MotiveAnalysis b;
+        assert(motive_analyze(&first[i], &a) && motive_analyze(&again[i], &b));
+        assert(memcmp(a.tones, b.tones, first[i].note_count * sizeof(a.tones[0])) == 0);
+    }
+}
+
 static void test_seeds(void) {
     MotiveRandomOptions options = options_of(&SCENARIOS[1], 11);
     Motive first[COUNT];
@@ -233,6 +288,7 @@ static void test_refusals(void) {
 int main(void) {
     test_rules();
     test_minor_three_four_lengths();
+    test_frames();
     test_seeds();
     test_forms();
     test_style();
