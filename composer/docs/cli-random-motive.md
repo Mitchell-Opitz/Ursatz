@@ -13,8 +13,11 @@ The length, pickup, number of notes, rhythm and range are not options. They are 
 | Length | 1 or 2 bars, after a pickup of half a beat or one beat in one motive of four |
 | Notes | 2 to 12 |
 | Rhythm | the meter's beat unit, its half and its double; a note stays in its bar, and a note of a beat or more starts on a beat |
-| Pitch | steps preferred, now and then a repeated pitch or a leap up to a sixth; a leap over a fourth is followed by a step the other way; all within a twelfth, C3 to C6 |
+| Frame | chord tones of I on every beat of the meter and on the first and last note: a walk on the tonic triad, a third most often, now and then a repeated pitch or a move of a fifth or sixth, which is followed by a third back; all within a twelfth, C3 to C6 |
 | Opening | degree 1, 3 or 5 |
+| Between | each note off the beat, between two frame notes, is drawn as none (another chord tone of I) or one of passing, neighbor, appoggiatura and escape tone, with equal weight; when the type drawn cannot be made between its two frame notes, the note is a chord tone |
+
+The motive is heard in I throughout, so suspension, retardation and anticipation (they need a chord change), double neighbor and changing tone (they need two non-chord notes side by side) and pedal are never drawn. A motive is kept only when its tone labels (see `analysis` below) read as it was drawn: the beats are chord tones, and each decorated note has the type drawn and resolves.
 
 ## Options
 
@@ -53,7 +56,7 @@ JSON:
 }
 ```
 
-Each motive is the document of `motive --json` (`motive` and `analysis`, with `notes_text`, `degrees_text` and the rest of the analysis), without `rendered`.
+Each motive is the document of `motive --json` (`motive` and `analysis`, with `notes_text`, `degrees_text` and the rest of the analysis), without `rendered`. The `analysis` carries `base_harmony` (`I`, `given` false: it is proposed from the frame), `tones` (the role of each note, and for a non-chord tone its type and the note it resolves to) and `warnings`, as `motive --json` does.
 
 ## Exit status
 
