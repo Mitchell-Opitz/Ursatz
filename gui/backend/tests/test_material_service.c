@@ -828,6 +828,108 @@ static void test_variant_ownership(void) {
     free(kid3);
 }
 
+static bool exists_file(const char *path) {
+    FILE *file = fopen(path, "r");
+    if (file) {
+        fclose(file);
+    }
+    return file != NULL;
+}
+
+/* The marks of Try every operation: validated, kept in op-checks.json beside the versions, deleted with the item. */
+static void test_op_checks(void) {
+    char *home = new_project("Marks home");
+    char *motif = new_item("motif", "Marked", home, kMotifBody);
+    char *theme = new_item("theme", "Not a motif", home, kThemeBody);
+    CHECK(motif && theme, "create a motif and a theme for the marks");
+    char path[256];
+    snprintf(path, sizeof(path), "%s/items/%s/op-checks.json", g_dir, motif);
+    char error[200] = "";
+
+    cJSON *checks = NULL;
+    CHECK(ursatz_gui_material_op_checks_get(motif, &checks) == OK &&
+              cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(checks, "checks")) == 0,
+          "a motif without marks has an empty set");
+    cJSON_Delete(checks);
+    CHECK(ursatz_gui_material_op_checks_get(theme, &checks) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+          "only a motif has marks");
+    CHECK(ursatz_gui_material_op_checks_get("mot-0000000000000000", &checks) == URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+          "an item that is not there has none");
+
+    const char *good =
+        "{\"checks\":{\"invert\":{\"verdict\":\"wrong\",\"comment\":\"flips the wrong way\",\"seed\":4,"
+        "\"notes_text\":\"C4:q E4:q\",\"date\":\"2026-10-23\",\"extra\":1},\"augment\":{\"verdict\":\"works\","
+        "\"comment\":\"\",\"seed\":0,\"notes_text\":\"C4:h\",\"date\":\"2026-10-23\"}}}";
+    cJSON *body = cJSON_Parse(good);
+    cJSON *stored = NULL;
+    CHECK(ursatz_gui_material_op_checks_put(motif, body, error, sizeof(error), &stored) == OK &&
+              cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(stored, "checks")) == 2,
+          "valid marks are stored");
+    CHECK(!cJSON_GetObjectItemCaseSensitive(
+              cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(stored, "checks"), "invert"), "extra"),
+          "a stray member is not kept");
+    cJSON_Delete(stored);
+    cJSON_Delete(body);
+    CHECK(ursatz_gui_material_op_checks_get(motif, &checks) == OK &&
+              strcmp(str(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(checks, "checks"), "invert"),
+                         "verdict"),
+                     "wrong") == 0,
+          "the marks read back");
+    cJSON_Delete(checks);
+    cJSON *item = NULL;
+    CHECK(ursatz_gui_material_item_get(motif, &item, NULL) == OK &&
+              cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(item, "versions")) == 1,
+          "marking adds no version");
+    cJSON_Delete(item);
+    CHECK(exists_file(path), "the marks are a file in the item folder");
+
+    static const char *const bad[] = {
+        "{}",
+        "{\"checks\":[]}",
+        "{\"checks\":{\"Invert\":{\"verdict\":\"works\",\"comment\":\"\",\"seed\":1,\"notes_text\":\"\",\"date\":\"2026-10-23\"}}}",
+        "{\"checks\":{\"invert\":{\"verdict\":\"fine\",\"comment\":\"\",\"seed\":1,\"notes_text\":\"\",\"date\":\"2026-10-23\"}}}",
+        "{\"checks\":{\"invert\":{\"verdict\":\"works\",\"comment\":5,\"seed\":1,\"notes_text\":\"\",\"date\":\"2026-10-23\"}}}",
+        "{\"checks\":{\"invert\":{\"verdict\":\"works\",\"comment\":\"\",\"seed\":-1,\"notes_text\":\"\",\"date\":\"2026-10-23\"}}}",
+        "{\"checks\":{\"invert\":{\"verdict\":\"works\",\"comment\":\"\",\"seed\":1.5,\"notes_text\":\"\",\"date\":\"2026-10-23\"}}}",
+        "{\"checks\":{\"invert\":{\"verdict\":\"works\",\"comment\":\"\",\"seed\":1,\"date\":\"2026-10-23\"}}}",
+        "{\"checks\":{\"invert\":{\"verdict\":\"works\",\"comment\":\"\",\"seed\":1,\"notes_text\":\"\",\"date\":\"23/10/2026\"}}}",
+        "{\"checks\":{\"invert\":{\"verdict\":\"works\",\"comment\":\"\",\"seed\":1,\"notes_text\":\"\",\"date\":\"2026-13-01\"}}}",
+    };
+    for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
+        cJSON *bad_body = cJSON_Parse(bad[i]);
+        CHECK(ursatz_gui_material_op_checks_put(motif, bad_body, error, sizeof(error), &stored) ==
+                  URSATZ_GUI_MATERIAL_ERR_INVALID_BODY,
+              "a malformed mark is refused");
+        cJSON_Delete(bad_body);
+    }
+    char comment[600];
+    memset(comment, 'x', 501);
+    comment[501] = '\0';
+    char long_text[900];
+    snprintf(long_text, sizeof(long_text),
+             "{\"checks\":{\"invert\":{\"verdict\":\"works\",\"comment\":\"%s\",\"seed\":1,\"notes_text\":\"\",\"date\":\"2026-10-23\"}}}",
+             comment);
+    cJSON *long_body = cJSON_Parse(long_text);
+    CHECK(ursatz_gui_material_op_checks_put(motif, long_body, error, sizeof(error), &stored) ==
+              URSATZ_GUI_MATERIAL_ERR_INVALID_BODY,
+          "a comment over 500 characters is refused");
+    cJSON_Delete(long_body);
+    cJSON *good_body = cJSON_Parse(good);
+    CHECK(ursatz_gui_material_op_checks_put(theme, good_body, error, sizeof(error), &stored) ==
+              URSATZ_GUI_MATERIAL_ERR_NOT_FOUND,
+          "marks cannot be put on a theme");
+    cJSON_Delete(good_body);
+    CHECK(ursatz_gui_material_op_checks_get(motif, &checks) == OK &&
+              cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(checks, "checks")) == 2,
+          "a refused put leaves the marks as they were");
+    cJSON_Delete(checks);
+
+    CHECK(ursatz_gui_material_item_delete(motif, false) == OK && !exists_file(path), "deleting the motif deletes its marks");
+    free(motif);
+    free(theme);
+    free(home);
+}
+
 /* Deletes every project, then the store's directories. */
 static void remove_store(void) {
     cJSON *projects = NULL;
@@ -858,6 +960,7 @@ int main(void) {
     test_references();
     test_forced_delete();
     test_variant_ownership();
+    test_op_checks();
 
     remove_store();
     if (failures) {
