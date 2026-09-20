@@ -10,6 +10,8 @@
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/motive_sketch_bridge.h>
 
+#include "analysis/motive_relation.h"
+
 #include "motive/motive_internal.h"
 #include "motive/variant_internal.h"
 #include "plan/plan_json_internal.h"
@@ -155,10 +157,30 @@ static bool names_figure(const VariantOperation *operation) {
            operation->relation == MOTIVE_RELATION_CHANGE_NON_CHORD_TONE;
 }
 
+/* A row that changes the chords: its open parameters are drawn, where they can be, so that a note moves. */
+static bool changes_chords(const VariantOperation *operation) {
+    return (operation->relation >= MOTIVE_RELATION_HARMONY_INVERSION &&
+            operation->relation <= MOTIVE_RELATION_PASSING_HARMONY) ||
+           operation->relation == MOTIVE_RELATION_REHARMONIZE_FRAME;
+}
+
+/* Whether the step with these values changes at least one pitch of current (motive_relation_harmony_changes_notes). */
+static bool moves_notes(const MotiveSketch *sketch, const VariantOperation *operation, const VariantValue *values) {
+    MotiveRelationStep step;
+    memset(&step, 0, sizeof(step));
+    step.kind = (MotiveRelationKind)operation->relation;
+    for (size_t p = 0; p < operation->param_count && p < MOTIVE_RELATION_MAX_PARAMS; p++) {
+        step.value[p] = values[p].value;
+        step.den[p] = values[p].den;
+    }
+    return motive_relation_harmony_changes_notes(sketch, &step);
+}
+
 /*
  * Draws the open parameters of a step from the combinations the operation accepts for current: every combination of the
- * open int and bool parameters is tried, and one of those that apply is chosen. False, resolved untouched in its open
- * values, when none applies or there are too many to try.
+ * open int and bool parameters is tried, and one of those that apply is chosen. A row that changes the chords chooses
+ * among the combinations that move a note when there are any. False, resolved untouched in its open values, when none
+ * applies or there are too many to try.
  */
 static bool draw_accepted(FillRng *rng, const VariantOperation *operation, VariantStepRecord *resolved,
                           const Motive *current) {
@@ -185,6 +207,10 @@ static bool draw_accepted(FillRng *rng, const VariantOperation *operation, Varia
     }
     size_t accepted[COMBINATIONS_MAX];
     size_t accepted_count = 0;
+    size_t moving[COMBINATIONS_MAX];
+    size_t moving_count = 0;
+    MotiveSketch sketch;
+    bool prefer_moves = changes_chords(operation) && motive_to_sketch(current, &sketch);
     for (size_t combination = 0; combination < total; combination++) {
         VariantValue values[VARIANT_PARAM_MAX];
         memcpy(values, resolved->values, sizeof(values));
@@ -196,12 +222,15 @@ static bool draw_accepted(FillRng *rng, const VariantOperation *operation, Varia
         Motive result;
         if (operation->apply(current, values, &result) == MOTIVE_DEV_OK) {
             accepted[accepted_count++] = combination;
+            if (prefer_moves && moves_notes(&sketch, operation, values)) {
+                moving[moving_count++] = combination;
+            }
         }
     }
     if (accepted_count == 0) {
         return false;
     }
-    size_t rest = accepted[fill_rng_below(rng, accepted_count)];
+    size_t rest = moving_count > 0 ? moving[fill_rng_below(rng, moving_count)] : accepted[fill_rng_below(rng, accepted_count)];
     for (size_t k = 0; k < open_count; k++) {
         resolved->values[open[k]] =
             (VariantValue){true, operation->params[open[k]].min + (long)(rest % (size_t)span[k]), 0};
@@ -485,7 +514,7 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
                     resolved->values[p] = step->values[p];
                 }
             }
-            bool chosen = attempt == 0 && drawn && names_figure(operation) &&
+            bool chosen = attempt == 0 && drawn && (names_figure(operation) || changes_chords(operation)) &&
                           draw_accepted(&rng, operation, resolved, &current);
             for (size_t p = 0; p < operation->param_count; p++) {
                 if (!chosen && !step->values[p].set && !operation->params[p].optional) {
