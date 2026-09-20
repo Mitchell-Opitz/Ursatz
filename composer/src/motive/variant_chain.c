@@ -76,6 +76,22 @@ static long draw_int(FillRng *rng, long min, long max) {
     return min + (long)fill_rng_below(rng, (uint64_t)(max - min + 1));
 }
 
+/* The largest value drawn for an int parameter of a step applied to current. */
+static long param_max(const VariantParam *param, const Motive *current) {
+    long max = param->max;
+    if (param->notes_limit && (long)current->note_count - 1 < max) {
+        max = (long)current->note_count - 1;
+    }
+    if (param->features_limit && (long)current->feature_count - 1 < max) {
+        max = (long)current->feature_count - 1;
+    }
+    if (param->chords_limit) {
+        long chords = current->harmony_count > 0 ? (long)current->harmony_count : 1;
+        max = chords - 1 < max ? chords - 1 : max;
+    }
+    return max;
+}
+
 /* Draws one open parameter for a step that is applied to current. */
 static VariantValue draw_param(FillRng *rng, const VariantParam *param, const Motive *current) {
     VariantValue value = {true, 0, 0};
@@ -119,22 +135,80 @@ static VariantValue draw_param(FillRng *rng, const VariantParam *param, const Mo
         break;
     }
     default: {
-        long max = param->max;
-        if (param->notes_limit && (long)current->note_count - 1 < max) {
-            max = (long)current->note_count - 1;
-        }
-        if (param->features_limit && (long)current->feature_count - 1 < max) {
-            max = (long)current->feature_count - 1;
-        }
-        if (param->chords_limit) {
-            long chords = current->harmony_count > 0 ? (long)current->harmony_count : 1;
-            max = chords - 1 < max ? chords - 1 : max;
-        }
+        long max = param_max(param, current);
         value.value = draw_int(rng, param->min, max < param->min ? param->min : max);
         break;
     }
     }
     return value;
+}
+
+/* ------------------------------------------------------------- applicable draws */
+
+/* The most combinations of open parameters tried at once for one step. */
+#define COMBINATIONS_MAX 512
+
+/* A row that names a figure on a note: its open parameters are drawn from values the motive accepts. */
+static bool names_figure(const VariantOperation *operation) {
+    return operation->relation == MOTIVE_RELATION_ADD_NON_CHORD_TONE ||
+           operation->relation == MOTIVE_RELATION_REMOVE_NON_CHORD_TONE ||
+           operation->relation == MOTIVE_RELATION_CHANGE_NON_CHORD_TONE;
+}
+
+/*
+ * Draws the open parameters of a step from the combinations the operation accepts for current: every combination of the
+ * open int and bool parameters is tried, and one of those that apply is chosen. False, resolved untouched in its open
+ * values, when none applies or there are too many to try.
+ */
+static bool draw_accepted(FillRng *rng, const VariantOperation *operation, VariantStepRecord *resolved,
+                          const Motive *current) {
+    size_t open[VARIANT_PARAM_MAX];
+    long span[VARIANT_PARAM_MAX];
+    size_t open_count = 0;
+    size_t total = 1;
+    for (size_t p = 0; p < operation->param_count; p++) {
+        if (resolved->values[p].set || operation->params[p].optional) {
+            continue;
+        }
+        const VariantParam *param = &operation->params[p];
+        if (param->kind != VARIANT_PARAM_INT && param->kind != VARIANT_PARAM_BOOL) {
+            return false;
+        }
+        long max = param_max(param, current);
+        long width = max < param->min ? 1 : max - param->min + 1;
+        if (total * (size_t)width > COMBINATIONS_MAX) {
+            return false;
+        }
+        open[open_count] = p;
+        span[open_count++] = width;
+        total *= (size_t)width;
+    }
+    size_t accepted[COMBINATIONS_MAX];
+    size_t accepted_count = 0;
+    for (size_t combination = 0; combination < total; combination++) {
+        VariantValue values[VARIANT_PARAM_MAX];
+        memcpy(values, resolved->values, sizeof(values));
+        size_t rest = combination;
+        for (size_t k = 0; k < open_count; k++) {
+            values[open[k]] = (VariantValue){true, operation->params[open[k]].min + (long)(rest % (size_t)span[k]), 0};
+            rest /= (size_t)span[k];
+        }
+        Motive result;
+        if (operation->apply(current, values, &result) == MOTIVE_DEV_OK) {
+            accepted[accepted_count++] = combination;
+        }
+    }
+    if (accepted_count == 0) {
+        return false;
+    }
+    size_t rest = accepted[fill_rng_below(rng, accepted_count)];
+    for (size_t k = 0; k < open_count; k++) {
+        resolved->values[open[k]] =
+            (VariantValue){true, operation->params[open[k]].min + (long)(rest % (size_t)span[k]), 0};
+        resolved->open[open[k]] = true;
+        rest /= (size_t)span[k];
+    }
+    return true;
 }
 
 /* ------------------------------------------------------------------- forms */
@@ -381,7 +455,12 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
             for (size_t p = 0; p < operation->param_count; p++) {
                 if (step->values[p].set) {
                     resolved->values[p] = step->values[p];
-                } else if (!operation->params[p].optional) {
+                }
+            }
+            bool chosen = attempt == 0 && drawn && names_figure(operation) &&
+                          draw_accepted(&rng, operation, resolved, &current);
+            for (size_t p = 0; p < operation->param_count; p++) {
+                if (!chosen && !step->values[p].set && !operation->params[p].optional) {
                     resolved->values[p] = draw_param(&rng, &operation->params[p], &current);
                     resolved->open[p] = true;
                 }

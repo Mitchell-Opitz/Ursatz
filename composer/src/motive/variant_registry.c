@@ -5,6 +5,7 @@
 
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/motive_sketch_bridge.h>
+#include <ursatz_composer/motive_tones.h>
 
 #include "analysis/motive_relation.h"
 
@@ -264,7 +265,8 @@ static void describe_diminish(const VariantValue *values, char *out, size_t size
    features, which keeps the source's chord under the thinned melody. */
 static bool changes_harmony(MotiveRelationKind kind) {
     return (kind >= MOTIVE_RELATION_HARMONY_INVERSION && kind <= MOTIVE_RELATION_PASSING_HARMONY) ||
-           kind == MOTIVE_RELATION_DOMINANT_FORM || kind == MOTIVE_RELATION_LIQUIDATE_FEATURES;
+           kind == MOTIVE_RELATION_DOMINANT_FORM || kind == MOTIVE_RELATION_LIQUIDATE_FEATURES ||
+           kind == MOTIVE_RELATION_REHARMONIZE_FRAME;
 }
 
 /*
@@ -692,6 +694,95 @@ static void describe_liquidate_features(const VariantValue *values, char *out, s
              value_or(&values[LIQUIDATE_FEATURES_SHORTEN], 0) != 0 ? " and shortened by half" : "");
 }
 
+/* ------------------------------------------------------ frame and tones */
+
+/* The type a value names, as the motive reports it: "passing", "double-neighbor". */
+static const char *type_phrase(long type) {
+    const char *name = motive_tone_type_name((NonChordTone)type);
+    return name ? name : "passing";
+}
+
+static MotiveDevResult apply_reduce_to_frame(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_REDUCE_TO_FRAME, source, values, out);
+}
+
+static void describe_reduce_to_frame(const VariantValue *values, char *out, size_t size) {
+    (void)values;
+    snprintf(out, size, "reduced to its frame of chord tones, every other note taken out");
+}
+
+enum { ADD_TONE_AFTER, ADD_TONE_TYPE };
+
+static const VariantParam ADD_TONE_PARAMS[] = {
+    {"after", VARIANT_PARAM_INT, 0, 16, "the 0-based chord tone the figure follows; it must have a note after it", false, true,
+     false, false, false},
+    {"type", VARIANT_PARAM_INT, 0, 9,
+     "the figure: 0 passing, 1 neighbor, 2 double neighbor, 3 changing tone, 4 suspension, 5 anticipation, 6 appoggiatura, 7 "
+     "escape tone, 8 retardation, 9 pedal",
+     false, false, false, false, false}};
+
+static MotiveDevResult apply_add_tone(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_ADD_NON_CHORD_TONE, source, values, out);
+}
+
+static void describe_add_tone(const VariantValue *values, char *out, size_t size) {
+    char note[24];
+    note_name(value_or(&values[ADD_TONE_AFTER], 0), note, sizeof(note));
+    snprintf(out, size, "added a %s after %s", type_phrase(value_or(&values[ADD_TONE_TYPE], 0)), note);
+}
+
+enum { REMOVE_TONE_NOTE };
+
+static const VariantParam REMOVE_TONE_PARAMS[] = {
+    {"note", VARIANT_PARAM_INT, 0, 16, "the 0-based note that is not a chord tone and is taken out", false, true, false,
+     false, false}};
+
+static MotiveDevResult apply_remove_tone(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, source, values, out);
+}
+
+static void describe_remove_tone(const VariantValue *values, char *out, size_t size) {
+    char note[24];
+    note_name(value_or(&values[REMOVE_TONE_NOTE], 0), note, sizeof(note));
+    snprintf(out, size, "took out %s, a non-chord tone", note);
+}
+
+enum { CHANGE_TONE_NOTE, CHANGE_TONE_TYPE };
+
+static const VariantParam CHANGE_TONE_PARAMS[] = {
+    {"note", VARIANT_PARAM_INT, 0, 16, "the 0-based note that is not a chord tone and changes its figure", false, true, false,
+     false, false},
+    {"type", VARIANT_PARAM_INT, 0, 9,
+     "the figure: 0 passing, 1 neighbor, 2 double neighbor, 3 changing tone, 4 suspension, 5 anticipation, 6 appoggiatura, 7 "
+     "escape tone, 8 retardation, 9 pedal",
+     false, false, false, false, false}};
+
+static MotiveDevResult apply_change_tone(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, source, values, out);
+}
+
+static void describe_change_tone(const VariantValue *values, char *out, size_t size) {
+    char note[24];
+    note_name(value_or(&values[CHANGE_TONE_NOTE], 0), note, sizeof(note));
+    snprintf(out, size, "made %s a %s", note, type_phrase(value_or(&values[CHANGE_TONE_TYPE], 0)));
+}
+
+enum { REHARMONIZE_DEGREE, REHARMONIZE_SEVENTH };
+
+static const VariantParam REHARMONIZE_PARAMS[] = {
+    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the one chord that replaces them all", false, false, false,
+     false, false},
+    {"seventh", VARIANT_PARAM_BOOL, 0, 1, "make that chord a seventh chord", false, false, false, false, false}};
+
+static MotiveDevResult apply_reharmonize_frame(const Motive *source, const VariantValue *values, Motive *out) {
+    return relation_apply(MOTIVE_RELATION_REHARMONIZE_FRAME, source, values, out);
+}
+
+static void describe_reharmonize_frame(const VariantValue *values, char *out, size_t size) {
+    snprintf(out, size, "put %s%s under the whole motive, melody adapted", roman_of(value_or(&values[REHARMONIZE_DEGREE], 1)),
+             value_or(&values[REHARMONIZE_SEVENTH], 0) != 0 ? "7" : "");
+}
+
 /* ----------------------------------------------------------------- table */
 
 #define FORMS_ALL (VARIANT_FORM_BIT(MOTIVE_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM) | VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR))
@@ -768,7 +859,20 @@ static const VariantOperation OPERATIONS[] = {
      apply_dominant_form, describe_dominant_form, MOTIVE_RELATION_DOMINANT_FORM},
     {"liquidate-features", "Liquidate features", VARIANT_CATEGORY_INTERVALS, "ch. VIII, Ex. 52",
      PARAMS(LIQUIDATE_FEATURES_PARAMS), FORMS_FULL, apply_liquidate_features, describe_liquidate_features,
-     MOTIVE_RELATION_LIQUIDATE_FEATURES}};
+     MOTIVE_RELATION_LIQUIDATE_FEATURES},
+    {"reduce-to-frame", "Reduce to frame", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. II and III", NULL, 0, FORMS_FULL,
+     apply_reduce_to_frame, describe_reduce_to_frame, MOTIVE_RELATION_REDUCE_TO_FRAME},
+    {"add-non-chord-tone", "Add non-chord tone", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. II and III",
+     PARAMS(ADD_TONE_PARAMS), FORMS_FULL, apply_add_tone, describe_add_tone, MOTIVE_RELATION_ADD_NON_CHORD_TONE},
+    {"remove-non-chord-tone", "Remove non-chord tone", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. II and III",
+     PARAMS(REMOVE_TONE_PARAMS), FORMS_FULL, apply_remove_tone, describe_remove_tone,
+     MOTIVE_RELATION_REMOVE_NON_CHORD_TONE},
+    {"change-non-chord-tone", "Change non-chord tone", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. II and III",
+     PARAMS(CHANGE_TONE_PARAMS), FORMS_FULL, apply_change_tone, describe_change_tone,
+     MOTIVE_RELATION_CHANGE_NON_CHORD_TONE},
+    {"reharmonize-frame", "Reharmonize frame", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. II and III",
+     PARAMS(REHARMONIZE_PARAMS), FORMS_FULL, apply_reharmonize_frame, describe_reharmonize_frame,
+     MOTIVE_RELATION_REHARMONIZE_FRAME}};
 
 size_t variant_registry_count(void) {
     return sizeof(OPERATIONS) / sizeof(OPERATIONS[0]);
