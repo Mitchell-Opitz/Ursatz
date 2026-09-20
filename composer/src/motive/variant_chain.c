@@ -337,6 +337,34 @@ void variant_record_difference(const Motive *source, const Motive *result, Varia
     }
 }
 
+/* ------------------------------------------------------------------- marks */
+
+static size_t unresolved_count(const MotiveAnalysis *analysis) {
+    size_t count = 0;
+    for (size_t i = 0; analysis->tones_known && i < analysis->note_count; i++) {
+        count += analysis->tones[i].unresolved ? 1 : 0;
+    }
+    return count;
+}
+
+bool variant_leaves_harmony(const Motive *source, const Motive *variant) {
+    MotiveAnalysis after;
+    MotiveAnalysis before;
+    if (!variant || !motive_analyze(variant, &after) || !after.tones_known) {
+        return false;
+    }
+    size_t strong = 0;
+    size_t off = 0;
+    for (size_t i = 0; i < after.note_count; i++) {
+        if (after.rhythm[i].on_beat) {
+            strong++;
+            off += after.tones[i].role == MOTIVE_TONE_CHORD ? 0 : 1;
+        }
+    }
+    size_t was = source && motive_analyze(source, &before) ? unresolved_count(&before) : 0;
+    return off * 2 > strong || unresolved_count(&after) > was;
+}
+
 /* ---------------------------------------------------------------- derivation */
 
 static void append(char *out, size_t size, const char *text) {
@@ -488,6 +516,7 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
     }
 
     variant_record_difference(source, &current, log);
+    log->leaves_harmony = variant_leaves_harmony(source, &current);
     if (current.harmony_count > 0) {
         char *harmony = motive_harmony_to_text(&current);
         if (harmony) {

@@ -191,6 +191,8 @@ typedef struct {
     bool rhythm_scaled;
     /* The result's own harmony as text ("V I@2"), or "" when it has none. */
     char harmony[VARIANT_HARMONY_MAX];
+    /* variant_leaves_harmony of the result against the source. Set by variant_apply_chain. */
+    bool leaves_harmony;
     /* motive_recognizability of the result against the source, the total. */
     MotiveScore recognizability;
     /*
@@ -235,6 +237,17 @@ const char *variant_result_name(VariantResult result);
  */
 VariantResult variant_apply_chain(const Motive *source, const VariantChain *chain, unsigned long seed, Motive *out,
                                   VariantRecord *record);
+
+/* The warning a variant that leaves its harmony carries in the "warnings" of its analysis. */
+#define VARIANT_WARNING_LEAVES_HARMONY "Does not outline its harmony"
+
+/*
+ * True when the variant does not outline its harmony (R-197): more than half of its strong-beat notes (notes that start
+ * on a beat of the meter) are non-chord or unclassified against its base harmony, or it has a note that does not resolve
+ * and the source had none more. False when the variant has no base harmony (a rhythm or contour, or no key). The variant
+ * is kept either way; this only marks it.
+ */
+bool variant_leaves_harmony(const Motive *source, const Motive *variant);
 
 /*
  * A record as JSON, 2-space indent, trailing newline; NULL on failure, caller frees. A parameter's value is a boolean,
