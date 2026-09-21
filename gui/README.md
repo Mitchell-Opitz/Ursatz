@@ -80,7 +80,7 @@ goes through the item update and needs no note; with no change it says
 `Nothing to save.` The backend refuses a new motif version without a note
 (400 `give a version note`); a new motif's first version is noted `Created`.
 Variants holds the chain builder with Generate, the candidates, then the saved
-variant tree, each with its notation. Used by is a table of the items that use the
+variant tree, each with its notation, and Try every operation. Used by is a table of the items that use the
 motif (name, type, the version used, project, and `update available` when the
 use is behind the motif's current version). Other holds Versions (open one to
 read it), Derived from (the motif's old Uses section: the motifs it was
@@ -888,6 +888,32 @@ from the pure `variant-tree.js`, global `VariantTree`).
   (the users outside that set), and `?force=1` deletes them all. Linking a
   variant to a subject is refused (400 `variants have no subjects; save it as a
   new motif first`). Flag, kind and reroll stay on the variant.
+- Try every operation (R-190): the last panel of the Variants tab runs every
+  registry operation on the motif so each can be checked by ear and eye. Run
+  (with an optional seed) calls `POST /api/materials/items/<id>/each-op`
+  `{"seed"?}`, which runs the Composer's `variants --each-op --json` on the
+  current version with the same motif arguments as Generate and answers
+  `{seed, variants, skipped}` plus `ok`; nothing is saved. `400` for a seed
+  that is not a whole number from 0. Results are grouped by category in
+  Schoenberg's order and stay in registry order inside it. Each shows the
+  operation's label and citation, a compact score with Play (rendered through
+  the same queue of four as the candidates), the derivation line, `Works` and
+  `Wrong` buttons and a comment field. Operations the motif refuses are listed
+  last with their reason.
+  - Marks are kept per motif in `items/<id>/op-checks.json`, beside the
+    versions and not a version, so marking never makes a new version.
+    `GET /api/materials/items/<id>/op-checks` answers `{"checks"}` (empty when
+    there are none) and `PUT` replaces it: `{"checks": {"<op>": {verdict
+    ("works" | "wrong"), comment (up to 500 characters), seed, notes_text (the
+    result checked), date ("YYYY-MM-DD")}}}`, at most 64 operations, validated
+    by `ursatz_gui_material_op_checks_validate` (`400` with the reason, `404`
+    for an item that is not a motif). Deleting the motif deletes the file.
+  - A marked result shows its verdict, comment and date, and `changed since`
+    when the stored `notes_text` differs from the new result.
+  - `Copy findings` copies plain text for P18b: the motif's name, `Notes:`,
+    `Mode:` and `Meter:`, a blank line, then one line per marked operation,
+    `<op>: works|wrong - <comment> (result <notes_text>)`, the wrong ones first.
+    P18b starts from that text.
 - Save as new motif (R-188): each saved variant has a `Save as new motif`
   button that opens an inline form (name, project defaulting to the motif's,
   Save). Save calls the promote route and opens the new motif's Motif tab,
@@ -1387,6 +1413,8 @@ Items:
   version that changes only `derived.flag` (and `derived.kind`: `exact`,
   `motive-form` or `variant`); the note is the flag. `400` for a motif
   without `derived`.
+- `POST /api/materials/items/<id>/each-op`: `{"seed"?}`, see Try every operation.
+- `GET` and `PUT /api/materials/items/<id>/op-checks`: the operation marks.
 - `POST /api/materials/items/<id>/promote`: `{"name","project_id","note"?}` on a
   variant writes a new version with `derived.standalone: true` (note default
   `Saved as new motif`), renames the item and moves it to the project. Answers
