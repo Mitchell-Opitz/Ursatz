@@ -173,6 +173,53 @@ size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchC
     return count;
 }
 
+/* --- contour ----------------------------------------------------------------- */
+
+bool motive_sketch_contour_normalize(const MotiveSketch *in, MotiveSketch *out) {
+    if (in->note_count == 0 || in->note_count > MOTIVE_SKETCH_MAX_NOTES) {
+        return false;
+    }
+    int ranks[MOTIVE_SKETCH_MAX_NOTES];
+    for (size_t i = 0; i < in->note_count; i++) {
+        if (in->notes[i].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN) {
+            return false;
+        }
+        int below = 0;
+        for (size_t j = 0; j < in->note_count; j++) {
+            if (in->notes[j].pitch >= 0 && in->notes[j].pitch < in->notes[i].pitch) {
+                bool counted = false;
+                for (size_t k = 0; k < j; k++) {
+                    counted = counted || in->notes[k].pitch == in->notes[j].pitch;
+                }
+                below += counted ? 0 : 1;
+            }
+        }
+        ranks[i] = below;
+    }
+    MotiveSketch result = *in;
+    MotiveSketch scale = *in;
+    if (!scale.has_scale) {
+        scale.has_scale = true;
+        scale.tonic_pc = 0;
+        scale.minor = false;
+    }
+    for (size_t i = 0; i < in->note_count; i++) {
+        if (ranks[i] >= 64) {
+            return false;
+        }
+        int pitch = 60 + motive_sketch_pitch_at_step(&scale, ranks[i], 0);
+        if (pitch > 127) {
+            return false;
+        }
+        result.notes[i].pitch = pitch;
+        result.notes[i].onset = msk_make(i, 4);
+        result.notes[i].duration = msk_make(1, 4);
+    }
+    result.length = msk_make(in->note_count, 4);
+    *out = result;
+    return true;
+}
+
 /* --- time ------------------------------------------------------------------- */
 
 bool motive_sketch_expressible(ExactRational duration) {
