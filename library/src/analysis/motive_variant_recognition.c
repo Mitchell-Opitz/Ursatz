@@ -798,6 +798,7 @@ static void sort_level(State *level, size_t count) {
 void motive_recognize_options_default(MotiveRecognizeOptions *options) {
     options->max_depth = 4;
     options->beam = 64;
+    options->contour = false;
 }
 
 static ExactRational distance_of(int cost) {
@@ -902,6 +903,10 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
         motive_relation_apply(target, &exact, &to) != MOTIVE_RELATION_OK) {
         return MOTIVE_RECOGNIZE_INVALID;
     }
+    if (options->contour &&
+        (!motive_sketch_contour_normalize(&from, &from) || !motive_sketch_contour_normalize(&to, &to))) {
+        return MOTIVE_RECOGNIZE_INVALID;
+    }
     memset(out, 0, sizeof(*out));
     MotiveDimensions dimensions;
     motive_variant_compare(&from, &to, &dimensions);
@@ -944,6 +949,10 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
                     State candidate;
                     if (motive_relation_apply(&current[s].sketch, &proposals.list[i],
                                               &candidate.sketch) != MOTIVE_RELATION_OK) {
+                        continue;
+                    }
+                    if (options->contour &&
+                        !motive_sketch_contour_normalize(&candidate.sketch, &candidate.sketch)) {
                         continue;
                     }
                     memcpy(candidate.steps, current[s].steps, depth * sizeof(candidate.steps[0]));

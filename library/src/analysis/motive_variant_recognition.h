@@ -50,6 +50,7 @@ double motive_variant_nearness(const MotiveDimensions *dimensions);
 typedef struct {
     size_t max_depth; /* 1 to MOTIVE_RECOGNIZE_MAX_DEPTH, default 4 */
     size_t beam;      /* 1 to MOTIVE_RECOGNIZE_MAX_BEAM, default 64 */
+    bool contour;     /* compare contour forms (R-148), default false */
 } MotiveRecognizeOptions;
 
 void motive_recognize_options_default(MotiveRecognizeOptions *options);
@@ -87,6 +88,12 @@ typedef enum {
  * depth are kept by nearness to the target (mean of the four similarities, ties by relation order);
  * identical states are merged. A rhythm sketch (unknown pitches) takes only the relations that
  * touch time, a sketch without a scale takes no tonal parameters. Deterministic.
+ *
+ * With options->contour the source and the target are normalized to their contour first
+ * (motive_sketch_contour_normalize) and every state is normalized right after its relation applies
+ * (a state whose normalization fails is dropped), so found means replaying the steps with
+ * motive_relation_apply then motive_sketch_contour_normalize after each step gives the target. A
+ * sketch with unknown pitches is INVALID in contour mode.
  *
  * Both sketches are compared as given: a harmony relation adds the best implied chord at 0 to a
  * sketch without chords (motive_relation.h), so a caller that compares harmony gives both sketches
