@@ -1942,7 +1942,7 @@ static const double kMaxVariantSeed = 4294967279.0;
    {"steps": [...]}) is optional and means random chains when NULL; seed is optional (negative: the clock). On success
    returns the Composer's document; otherwise NULL with *status and message set. */
 static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJSON *functions, const char *distance,
-                           const cJSON *chain, int count, double seed, int *status, char *message, size_t message_size) {
+                           bool each_op, const cJSON *chain, int count, double seed, int *status, char *message, size_t message_size) {
   bool bad = false;
   const char *form = optional_string(motif, "form", &bad);
   const char *degrees = optional_string(motif, "degrees", &bad);
@@ -2044,8 +2044,13 @@ static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJ
     args[n++] = "--chain";
     args[n++] = chain_path;
   }
-  args[n++] = "--count";
-  args[n++] = count_text;
+  if (each_op) {
+    /* One variant per operation in registry order; the Composer takes no count, chain, distance or function. */
+    args[n++] = "--each-op";
+  } else {
+    args[n++] = "--count";
+    args[n++] = count_text;
+  }
   if (seed >= 0) {
     args[n++] = "--seed";
     args[n++] = seed_text;
@@ -2132,7 +2137,7 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
   const cJSON *motif = cJSON_GetObjectItemCaseSensitive(item_body, "motif");
   char message[512];
   cJSON *basic_body = cJSON_IsObject(motif) ? lineage_root(motif) : NULL;
-  cJSON *document = cJSON_IsObject(motif) ? run_variants(motif, basic_body, functions, distance, chain, count, seed, &status,
+  cJSON *document = cJSON_IsObject(motif) ? run_variants(motif, basic_body, functions, distance, false, chain, count, seed, &status,
                                                          message, sizeof(message))
                                           : NULL;
   cJSON_Delete(basic_body);
@@ -2152,6 +2157,90 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
     return send_failure(conn, 500, "out of memory");
   }
   return send_object(conn, document);
+}
+
+/* POST /api/materials/items/<id>/each-op {seed?}: one variant per registry operation on the item's current degrees, in
+   registry order, with the operations the motif refuses in `skipped`; nothing is saved. The answer is the Composer's
+   document plus "ok" and "seed". */
+static int handle_each_op(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  const cJSON *seed_item = cJSON_GetObjectItemCaseSensitive(body, "seed");
+  if (cJSON_IsNull(seed_item)) {
+    seed_item = NULL;
+  }
+  if (seed_item && (!cJSON_IsNumber(seed_item) || seed_item->valuedouble < 0 || seed_item->valuedouble > kMaxVariantSeed ||
+                    seed_item->valuedouble != (double)(long long)seed_item->valuedouble)) {
+    cJSON_Delete(body);
+    return send_failure(conn, 400, "seed is a whole number from 0");
+  }
+  double seed = seed_item ? seed_item->valuedouble : -1;
+  cJSON_Delete(body);
+  cJSON *item_body = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &item_body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(item_body, "motif");
+  char message[512];
+  cJSON *basic_body = cJSON_IsObject(motif) ? lineage_root(motif) : NULL;
+  cJSON *document = cJSON_IsObject(motif)
+                        ? run_variants(motif, basic_body, NULL, NULL, true, NULL, 0, seed, &status, message, sizeof(message))
+                        : NULL;
+  cJSON_Delete(basic_body);
+  if (!cJSON_IsObject(motif)) {
+    status = 400;
+    snprintf(message, sizeof(message), "only a motif has variants");
+  }
+  cJSON_Delete(item_body);
+  if (!document) {
+    return send_failure(conn, status, message);
+  }
+  const cJSON *run_seed = cJSON_GetObjectItemCaseSensitive(document, "seed");
+  if (!cJSON_AddBoolToObject(document, "ok", 1) ||
+      (!run_seed && !cJSON_AddNumberToObject(document, "seed", seed >= 0 ? seed : 0))) {
+    cJSON_Delete(document);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return send_object(conn, document);
+}
+
+/* GET /api/materials/items/<id>/op-checks: the marks of a motif from Try every operation, {"checks": {...}} (R-190). */
+static int handle_op_checks_get(struct mg_connection *conn, const char *id) {
+  cJSON *checks = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_op_checks_get(id, &checks);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  if (!cJSON_AddBoolToObject(checks, "ok", 1)) {
+    cJSON_Delete(checks);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return send_object(conn, checks);
+}
+
+/* PUT /api/materials/items/<id>/op-checks {checks}: replaces the marks. The file is not a version. */
+static int handle_op_checks_put(struct mg_connection *conn, const char *id) {
+  int status = 0;
+  cJSON *body = read_json_body(conn, &status);
+  if (!body) {
+    return status;
+  }
+  char message[256] = "";
+  cJSON *stored = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_op_checks_put(id, body, message, sizeof(message), &stored);
+  cJSON_Delete(body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return message[0] != '\0' ? send_failure(conn, material_status(result), message) : send_material_failure(conn, result);
+  }
+  if (!cJSON_AddBoolToObject(stored, "ok", 1)) {
+    cJSON_Delete(stored);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return send_object(conn, stored);
 }
 
 /* The motif member of the version body a {item, version} reference names, with the body kept in *body. NULL with
@@ -2872,7 +2961,7 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
   for (int attempt = 0; chain && attempt < 16; attempt++) {
     seed = fmod(base + 1000003.0 + attempt, kMaxVariantSeed + 1);
     cJSON_Delete(document);
-    document = run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), basic_body, NULL, NULL, chain, 1, seed, &status,
+    document = run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), basic_body, NULL, NULL, false, chain, 1, seed, &status,
                             message, sizeof(message));
     if (!document) {
       break;
@@ -3178,6 +3267,15 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   }
   if (count == 3 && strcmp(segments[2], "variants") == 0) {
     return post ? handle_variants(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "op-checks") == 0) {
+    if (get) {
+      return handle_op_checks_get(conn, segments[1]);
+    }
+    return strcmp(method, "PUT") == 0 ? handle_op_checks_put(conn, segments[1]) : send_method_not_allowed(conn);
+  }
+  if (count == 3 && strcmp(segments[2], "each-op") == 0) {
+    return post ? handle_each_op(conn, segments[1]) : send_method_not_allowed(conn);
   }
   if (count == 4 && strcmp(segments[2], "variants") == 0 && strcmp(segments[3], "save") == 0) {
     return post ? handle_variant_save(conn, segments[1]) : send_method_not_allowed(conn);

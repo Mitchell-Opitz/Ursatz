@@ -142,6 +142,44 @@ const suitsTree = { id: "m1", name: "Opening", current_version: 1, derived: null
 check(same(V.treeRows(suitsTree, false, "cadential").rows.map((r) => r.id), ["m1", "s2"]), "the Suits filter keeps the root and the saved variants that suit it");
 check(same(V.treeRows(suitsTree, false, "").rows.map((r) => r.id), ["m1", "s1", "s2", "s3"]) && V.treeRows(suitsTree, false).rows.length === 4, "Any keeps every saved variant");
 check(V.treeRows(suitsTree, false).rows[3].suits === "Suits: none" && V.treeRows(suitsTree, false).rows[1].suits === "Suits: beginning", "a saved row has its suits line");
+/* R-190: Try every operation. */
+const mkResult = (op, notes, seed) => ({ seed, chain: { steps: [{ op }] }, derivation: op, motive: { analysis: { notes_text: notes } } });
+const eachOps = [
+  { name: "exact", label: "Exact", category: "exact", citation: "ch. II", params: [], forms: ["full"] },
+  { name: "augment", label: "Augment", category: "rhythm", citation: "ch. III", params: [], forms: ["full"] },
+  { name: "invert", label: "Invert", category: "intervals", citation: "ch. IV", params: [], forms: ["full"] },
+  { name: "transpose", label: "Transpose", category: "intervals", citation: "ch. IV", params: [], forms: ["full"] },
+];
+const eachGroups = V.eachOpGroups([mkResult("exact", "C4:q", 1), mkResult("augment", "C4:h", 2), mkResult("transpose", "D4:q", 3), mkResult("invert", "A3:q", 4), mkResult("mystery", "C4:e", 5)], eachOps);
+check(same(eachGroups.map((g) => g.category), ["exact", "rhythm", "intervals", ""]), "results group by category in Schoenberg's order, an unknown operation last");
+check(same(eachGroups[2].entries.map((e) => e.op), ["transpose", "invert"]) && eachGroups[2].entries[0].label === "Transpose" && eachGroups[2].entries[0].citation === "ch. IV",
+  "inside a category the results keep the order they came in, with label and citation");
+check(eachGroups[3].title === "Other" && eachGroups[3].entries[0].label === "mystery", "an operation not in the list gets an Other group");
+check(V.eachOpGroups([], eachOps).length === 0 && V.eachOpGroups(null, eachOps).length === 0, "no results give no groups");
+check(V.resultNotes(mkResult("exact", "C4:q", 1)) === "C4:q" && V.resultNotes({}) === "", "the result's notes come from its analysis");
+const mark = V.makeMark("wrong", "  too low  ", mkResult("invert", "A3:q", 4), "2026-10-23");
+check(same(mark, { verdict: "wrong", comment: "too low", seed: 4, notes_text: "A3:q", date: "2026-10-23" }), "a mark keeps the verdict, comment, seed, notes and date");
+check(V.makeMark("bogus", "", mkResult("x", "", 1), "2026-10-23").verdict === "works" && V.makeMark("works", "x".repeat(600), mkResult("x", "", 1), "d").comment.length === 500, "a mark's verdict defaults to works and its comment is cut to 500");
+check(V.markView(null, mkResult("invert", "A3:q", 4)) === null && V.markView({ verdict: "fine" }, mkResult("invert", "A3:q", 4)) === null, "no mark, no mark view");
+const sameView = V.markView(mark, mkResult("invert", "A3:q", 4));
+check(sameView.text === "Wrong" && sameView.comment === "too low" && sameView.date === "2026-10-23" && sameView.changed === false, "a mark shows its verdict, comment and date");
+check(V.markView(mark, mkResult("invert", "B3:q", 4)).changed === true, "a mark is changed since when the result's notes differ");
+const eachRequest = V.eachOpRequest("m1", "7");
+check(eachRequest.request.method === "POST" && eachRequest.request.url === "/api/materials/items/m1/each-op" && same(JSON.parse(eachRequest.request.body), { seed: 7 }) &&
+  same(JSON.parse(V.eachOpRequest("m1", "").request.body), {}) && V.eachOpRequest("m1", "x").error !== undefined, "the each-op request takes an optional seed");
+check(V.opChecksRequest("m1").method === "GET" && V.opChecksPutRequest("m1", { invert: mark }).method === "PUT" &&
+  same(JSON.parse(V.opChecksPutRequest("m1", { invert: mark }).body), { checks: { invert: mark } }), "the op-checks requests GET and PUT the marks");
+const findingsMarks = {
+  augment: { verdict: "works", comment: "", seed: 2, notes_text: "C4:h", date: "2026-10-23" },
+  invert: { verdict: "wrong", comment: "too low", seed: 4, notes_text: "A3:q", date: "2026-10-23" },
+  exact: { verdict: "works", comment: "same notes", seed: 1, notes_text: "C4:q", date: "2026-10-23" },
+  transpose: { verdict: "wrong", comment: "", seed: 3, notes_text: "D4:q", date: "2026-10-23" },
+};
+const findings = V.findingsText("Opening", { notes: "C4:q E4:q", key: "C minor", meter: "4/4" }, findingsMarks, ["exact", "augment", "invert", "transpose"]);
+check(findings.split("\n").slice(0, 4).join("|") === "Opening|Notes: C4:q E4:q|Mode: minor|Meter: 4/4", "the findings start with the motif's name, notes, mode and meter");
+check(same(findings.split("\n").slice(5), ["invert: wrong - too low (result A3:q)", "transpose: wrong (result D4:q)", "exact: works - same notes (result C4:q)", "augment: works (result C4:h)"]),
+  "one line per marked operation, wrong first, each in registry order");
+check(V.findingsText("Empty", { notes: "", key: "C major", meter: "3/4" }, {}).split("\n").length === 5, "no marks give only the header");
 const filtered = JSON.parse(V.generateRequest("m1", { functions: ["cadential", "bogus", "beginning"] }).request.body);
 check(same(filtered.functions, ["beginning", "cadential"]) && JSON.parse(V.generateRequest("m1", {}).request.body).functions === undefined, "the function filter is sent in order and only when set");
 check(same(V.featureOptions([{ label: "a", first: 0, last: 2 }, { label: "turn", first: 3, last: 3 }]), [{ value: "", text: "drawn" }, { value: "0", text: "a (notes 1-3)" }, { value: "1", text: "turn (notes 4-4)" }]) && V.featureOptions(null).length === 1, "feature parameters offer the motif's labels");
@@ -283,6 +321,9 @@ const ctx = {
   send(request) {
     if (request.url.endsWith("variant-operations")) {
       return Promise.resolve({ ok: true, data: { operations: [] } });
+    }
+    if (request.url.endsWith("op-checks")) {
+      return Promise.resolve({ ok: true, data: { checks: {} } });
     }
     if (request.url.endsWith("variant-tree")) {
       return Promise.resolve({ ok: true, data: { tree: savedTree } });

@@ -141,6 +141,109 @@
     return { rows, hidden, promoted };
   }
 
+  const COMMENT_MAX = 500;
+  const VERDICT_LABELS = { works: "Works", wrong: "Wrong" };
+
+  /* The result of one operation as notes text, the thing a mark was made against. */
+  function resultNotes(variant) {
+    const analysis = variant && variant.motive && variant.motive.analysis ? variant.motive.analysis : {};
+    return typeof analysis.notes_text === "string" ? analysis.notes_text : "";
+  }
+
+  function variantOp(variant) {
+    const steps = variant && variant.chain && Array.isArray(variant.chain.steps) ? variant.chain.steps : [];
+    return steps.length > 0 ? String(steps[0].op) : "";
+  }
+
+  /* The Try every operation results grouped by category in Schoenberg's order (the operations are those of
+   * operationGroups). Inside a group the results stay in registry order, which is the order the Composer answered.
+   * An entry is {op, label, citation, variant}. A result whose operation is not in the list goes to a group of its own. */
+  function eachOpGroups(variants, operations) {
+    const groups = operationGroups(operations);
+    const info = new Map();
+    for (const group of groups) {
+      for (const operation of group.operations) {
+        info.set(operation.name, { category: group.category, label: operation.label, citation: operation.citation });
+      }
+    }
+    const byCategory = new Map(groups.map((group) => [group.category, []]));
+    for (const variant of Array.isArray(variants) ? variants : []) {
+      const op = variantOp(variant);
+      const known = info.get(op) || { category: "", label: op, citation: "" };
+      if (!byCategory.has(known.category)) {
+        byCategory.set(known.category, []);
+      }
+      byCategory.get(known.category).push({ op, label: known.label, citation: known.citation, variant });
+    }
+    return [...byCategory.keys()]
+      .filter((category) => byCategory.get(category).length > 0)
+      .map((category) => ({ category, title: titleOf(category) || "Other", entries: byCategory.get(category) }));
+  }
+
+  /* One mark to store: the verdict, the trimmed comment (cut to 500), the result's seed and notes, and the date. */
+  function makeMark(verdict, comment, variant, date) {
+    const seed = variant && Number.isInteger(variant.seed) && variant.seed >= 0 ? variant.seed : 0;
+    return {
+      verdict: verdict === "wrong" ? "wrong" : "works",
+      comment: String(comment || "").trim().slice(0, COMMENT_MAX),
+      seed,
+      notes_text: resultNotes(variant),
+      date: String(date),
+    };
+  }
+
+  /* What a result shows of its mark: null without one, else the verdict, its comment and date, and whether the
+   * result now differs from the one that was checked ("changed since"). */
+  function markView(mark, variant) {
+    if (!mark || !VERDICT_LABELS[mark.verdict]) {
+      return null;
+    }
+    return {
+      verdict: mark.verdict,
+      text: VERDICT_LABELS[mark.verdict],
+      comment: String(mark.comment || ""),
+      date: String(mark.date || ""),
+      changed: mark.notes_text !== resultNotes(variant),
+    };
+  }
+
+  /* The findings as plain text to paste elsewhere: the motif's name, notes, mode and meter, then one line per marked
+   * operation, `<op>: works|wrong - <comment> (result <notes_text>)`, the wrong ones first. Inside each verdict the
+   * operations follow `order` (registry order) when given, then the rest by name. */
+  function findingsText(name, motif, checks, order) {
+    const m = motif || {};
+    const key = typeof m.key === "string" ? m.key : "";
+    const mode = key.includes(" ") ? key.slice(key.lastIndexOf(" ") + 1) : key;
+    const marks = checks && typeof checks === "object" ? checks : {};
+    const known = Array.isArray(order) ? order : [];
+    const rank = (op) => (known.includes(op) ? known.indexOf(op) : known.length);
+    const ops = Object.keys(marks).sort((a, b) => rank(a) - rank(b) || (a < b ? -1 : a > b ? 1 : 0));
+    const lines = [String(name || ""), `Notes: ${m.notes || ""}`, `Mode: ${mode}`, `Meter: ${m.meter || ""}`, ""];
+    for (const verdict of ["wrong", "works"]) {
+      for (const op of ops.filter((o) => marks[o] && marks[o].verdict === verdict)) {
+        const mark = marks[op];
+        lines.push(`${op}: ${verdict}${mark.comment ? ` - ${mark.comment}` : ""} (result ${mark.notes_text})`);
+      }
+    }
+    return lines.join("\n");
+  }
+
+  function eachOpRequest(id, seed) {
+    const value = wholeNumber(seed, 0);
+    if (Number.isNaN(value)) {
+      return { error: "Seed must be a whole number from 0" };
+    }
+    return { request: jsonRequest("POST", itemUrl(id, "each-op"), value === null ? {} : { seed: value }) };
+  }
+
+  function opChecksRequest(id) {
+    return jsonRequest("GET", itemUrl(id, "op-checks"));
+  }
+
+  function opChecksPutRequest(id, checks) {
+    return jsonRequest("PUT", itemUrl(id, "op-checks"), { checks });
+  }
+
   /* The operations of GET /api/materials/variant-operations by category, in
    * Schoenberg's order, then any other category alphabetically. */
   function operationGroups(operations) {
@@ -506,6 +609,15 @@
     DEFAULT_COUNT,
     DISTANCES,
     SUITS_FILTERS,
+    COMMENT_MAX,
+    resultNotes,
+    eachOpGroups,
+    makeMark,
+    findingsText,
+    markView,
+    eachOpRequest,
+    opChecksRequest,
+    opChecksPutRequest,
     SUITS_EXPLANATION,
     suitsMatch,
     suitsLine,

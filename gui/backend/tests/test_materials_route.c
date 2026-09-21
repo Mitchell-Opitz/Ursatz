@@ -1590,6 +1590,69 @@ static void test_promote(void) {
   free(grandchild);
 }
 
+/* R-190: each-op runs every registry operation on the motif, and the marks are kept per motif and not as a version. */
+static void test_each_op(void) {
+  int status = 0;
+  char *id = variant_source();
+  check(id != NULL, "a motif is saved for Try every operation");
+  if (!id) {
+    return;
+  }
+  cJSON *answer = item_post(id, "each-op", "{\"seed\":5}", &status);
+  const cJSON *variants = cJSON_GetObjectItemCaseSensitive(answer, "variants");
+  const cJSON *skipped = cJSON_GetObjectItemCaseSensitive(answer, "skipped");
+  check(status == 200 && ok_true(answer) && number_of(answer, "seed") == 5 && cJSON_GetArraySize(variants) >= 9,
+        "each-op answers one variant per operation with the seed");
+  bool one_step = cJSON_GetArraySize(variants) > 0;
+  const cJSON *variant = NULL;
+  cJSON_ArrayForEach(variant, variants) {
+    one_step = one_step &&
+               cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(variant, "chain"), "steps")) == 1;
+  }
+  check(one_step, "each result is a one-step chain");
+  bool listed = cJSON_IsArray(skipped) && cJSON_GetArraySize(skipped) > 0;
+  const cJSON *entry = cJSON_GetArrayItem(skipped, 0);
+  check(listed && strlen(string_of(entry, "op")) > 0 && strlen(string_of(entry, "reason")) > 0,
+        "the operations the motif refuses are skipped with their reason");
+  cJSON_Delete(answer);
+
+  cJSON *refused = item_post(id, "each-op", "{\"seed\":-1}", &status);
+  check(status == 400, "a seed below 0 is refused");
+  cJSON_Delete(refused);
+
+  /* Marks. */
+  cJSON *marks = item_get(id, "/op-checks", &status);
+  check(status == 200 && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(marks, "checks")) == 0, "a motif starts without marks");
+  cJSON_Delete(marks);
+  char path[256];
+  snprintf(path, sizeof(path), "/api/materials/items/%s/op-checks", id);
+  const char *put =
+      "{\"checks\":{\"invert\":{\"verdict\":\"wrong\",\"comment\":\"too low\",\"seed\":5,\"notes_text\":\"C4:q\","
+      "\"date\":\"2026-10-23\"}}}";
+  marks = json_exchange("PUT", path, put, &status);
+  check(status == 200 && ok_true(marks), "the marks are put");
+  cJSON_Delete(marks);
+  marks = item_get(id, "/op-checks", &status);
+  const cJSON *invert = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(marks, "checks"), "invert");
+  check(status == 200 && strcmp(string_of(invert, "verdict"), "wrong") == 0 && strcmp(string_of(invert, "comment"), "too low") == 0 &&
+            number_of(invert, "seed") == 5,
+        "the marks read back");
+  cJSON_Delete(marks);
+  cJSON *read = item_get(id, "", &status);
+  check(status == 200 && version_count(read) == 1, "marking writes no version");
+  cJSON_Delete(read);
+  refused = json_exchange("PUT", path, "{\"checks\":{\"invert\":{\"verdict\":\"fine\"}}}", &status);
+  check(status == 400, "a mark with a verdict that is not works or wrong is refused");
+  cJSON_Delete(refused);
+  refused = json_exchange("PUT", "/api/materials/items/mot-0000000000000000/op-checks", put, &status);
+  check(status == 404, "marks for a motif that is not there are 404");
+  cJSON_Delete(refused);
+  refused = item_post(id, "op-checks", put, &status);
+  check(status == 405, "op-checks takes GET and PUT only");
+  cJSON_Delete(refused);
+  free(id);
+}
+
 /* Random motifs come from the Composer unsaved, with a key of the mode, and bad inputs are refused. */
 static void test_random_motifs(void) {
   int status = 0;
@@ -1691,6 +1754,7 @@ int main(void) {
   test_variant_flags_and_tree();
   test_variant_ownership();
   test_promote();
+  test_each_op();
   test_recognize();
   test_link_form();
   test_theme_placeholder();

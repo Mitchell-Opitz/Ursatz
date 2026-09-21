@@ -386,6 +386,7 @@ const VariantTreeView = (function () {
     parent.appendChild(section);
 
     let picker = null;
+    let operationList = [];
     function updateSummary() {
       /* A distance is drawn from random chains, so chosen operations switch it off. */
       distance.disabled = steps.length > 0;
@@ -398,6 +399,10 @@ const VariantTreeView = (function () {
       if (!answer.ok) {
         setStatus(status, errorText(answer.data, "Could not load the operations"), true);
         return;
+      }
+      operationList = answer.data.operations;
+      if (eachOpResults) {
+        drawEachOp();
       }
       picker = buildPicker(
         VariantTree.operationGroups(answer.data.operations),
@@ -677,6 +682,193 @@ const VariantTreeView = (function () {
       setStatus(status, blocked, true);
     }
 
+    /* Try every operation (R-190): each registry operation on this motif, marked Works or Wrong. The marks live in
+     * the motif's op-checks file, not in a version. Scores render through the same queue as the candidates. */
+    const eachOp = h("div", "variant-each-op");
+    eachOp.appendChild(h("h3", "section-title", "Try every operation"));
+    const eachOpControls = h("div", "upload-controls");
+    const eachOpSeed = h("input");
+    eachOpSeed.type = "text";
+    eachOpSeed.size = 10;
+    eachOpSeed.placeholder = "seed (random)";
+    const eachOpRun = h("button", "button-primary", "Run");
+    eachOpRun.type = "button";
+    const eachOpCopy = h("button", "button-secondary", "Copy findings");
+    eachOpCopy.type = "button";
+    eachOpControls.append(eachOpSeed, eachOpRun, eachOpCopy);
+    const eachOpList = h("div", "variant-each-op-results");
+    eachOp.append(eachOpControls, eachOpList);
+    section.appendChild(eachOp);
+
+    let eachOpResults = null;
+    let opChecks = {};
+    let opScores = [];
+    let opGeneration = 0;
+    const opRendered = new Map();
+
+    function clearOpScores() {
+      opGeneration++;
+      for (const entry of opScores) {
+        if (entry.workspace) {
+          entry.workspace.destroy();
+        }
+        for (const url of entry.urls) {
+          URL.revokeObjectURL(url);
+        }
+      }
+      opScores = [];
+    }
+
+    async function showOpScore(variant, op, host, entry, generation) {
+      host.textContent = "Rendering...";
+      let data = opRendered.get(variant);
+      if (!data) {
+        const answer = await ctx.send(MaterialsModel.renderRequest(VariantTree.candidateBody(ctx.body, variant)));
+        if (generation !== opGeneration) {
+          return;
+        }
+        if (!answer.ok) {
+          host.textContent = errorText(answer.data, "Could not render the result");
+          host.classList.add("error");
+          return;
+        }
+        data = answer.data;
+        opRendered.set(variant, data);
+      }
+      if (generation !== opGeneration) {
+        return;
+      }
+      host.textContent = "";
+      const xml = URL.createObjectURL(new Blob([data.musicxml], { type: "application/xml" }));
+      const playback = URL.createObjectURL(new Blob([JSON.stringify(data.playback)], { type: "application/json" }));
+      entry.urls = [xml, playback];
+      entry.workspace = ScoreWorkspace.mount(host, {
+        compact: true,
+        title: VariantTree.candidateName(ctx.name, variant),
+        subtitle: `${op} · seed ${variant.seed}`,
+        musicxmlUrl: xml,
+        playbackUrl: playback,
+      });
+    }
+
+    async function markOperation(op, verdict, comment, variant) {
+      const next = { ...opChecks, [op]: VariantTree.makeMark(verdict, comment, variant, new Date().toISOString().slice(0, 10)) };
+      const answer = await ctx.send(VariantTree.opChecksPutRequest(ctx.id, next));
+      if (!answer.ok) {
+        setStatus(status, errorText(answer.data, "Could not save the mark"), true);
+        return;
+      }
+      opChecks = answer.data.checks;
+      setStatus(status, `${op} marked ${verdict}`, false);
+      drawEachOp();
+    }
+
+    function eachOpEntry(entry, generation) {
+      const item = h("div", "variant-each-op-entry");
+      item.appendChild(h("strong", "", `${entry.label}${entry.citation ? ` (${entry.citation})` : ""}`));
+      if (entry.variant.derivation) {
+        item.appendChild(h("div", "variant-derivation", entry.variant.derivation));
+      }
+      const score = { workspace: null, urls: [] };
+      opScores.push(score);
+      const host = h("div", "variant-score");
+      item.appendChild(host);
+      const mark = VariantTree.markView(opChecks[entry.op], entry.variant);
+      if (mark) {
+        const line = h("div", `variant-mark variant-mark-${mark.verdict}`);
+        line.appendChild(h("span", "variant-badge", mark.text));
+        line.appendChild(h("span", "", `${mark.comment ? `${mark.comment} ` : ""}(${mark.date})`));
+        if (mark.changed) {
+          line.appendChild(h("span", "variant-badge variant-mark-changed", "changed since"));
+        }
+        item.appendChild(line);
+      }
+      const comment = h("input");
+      comment.type = "text";
+      comment.size = 30;
+      comment.maxLength = VariantTree.COMMENT_MAX;
+      comment.placeholder = "comment";
+      comment.value = opChecks[entry.op] ? String(opChecks[entry.op].comment || "") : "";
+      const buttons = h("div", "variant-actions");
+      buttons.append(
+        actionButton("Play", () => (score.workspace ? score.workspace.play() : setStatus(status, "The notation is still rendering", false))),
+        actionButton("Works", () => markOperation(entry.op, "works", comment.value, entry.variant)),
+        actionButton("Wrong", () => markOperation(entry.op, "wrong", comment.value, entry.variant), "button-danger"),
+        comment,
+      );
+      item.appendChild(buttons);
+      renderQueue.add(() => (generation === opGeneration ? showOpScore(entry.variant, entry.op, host, score, generation) : null));
+      return item;
+    }
+
+    function drawEachOp() {
+      clearOpScores();
+      const generation = opGeneration;
+      eachOpList.innerHTML = "";
+      if (!eachOpResults) {
+        return;
+      }
+      for (const group of VariantTree.eachOpGroups(eachOpResults.variants, operationList)) {
+        eachOpList.appendChild(h("h4", "section-title", group.title));
+        for (const entry of group.entries) {
+          eachOpList.appendChild(eachOpEntry(entry, generation));
+        }
+      }
+      const skipped = Array.isArray(eachOpResults.skipped) ? eachOpResults.skipped : [];
+      if (skipped.length > 0) {
+        eachOpList.appendChild(h("h4", "section-title", "Skipped"));
+        const list = h("ul", "variant-skipped");
+        for (const entry of skipped) {
+          list.appendChild(h("li", "", `${entry.op}: ${entry.reason}`));
+        }
+        eachOpList.appendChild(list);
+      }
+    }
+
+    eachOpRun.addEventListener("click", async () => {
+      const made = VariantTree.eachOpRequest(ctx.id, eachOpSeed.value);
+      if (made.error) {
+        setStatus(status, made.error, true);
+        return;
+      }
+      setStatus(status, "Running every operation...", false);
+      const answer = await ctx.send(made.request);
+      if (!answer.ok) {
+        setStatus(status, errorText(answer.data, "Could not run the operations"), true);
+        return;
+      }
+      eachOpResults = { variants: answer.data.variants || [], skipped: answer.data.skipped || [], seed: answer.data.seed };
+      opRendered.clear();
+      drawEachOp();
+      setStatus(status, `${eachOpResults.variants.length} operations ran with seed ${eachOpResults.seed}`, false);
+    });
+    /* The marked operations as text, for pasting into a chat. Registry order comes from the operations list. */
+    eachOpCopy.addEventListener("click", async () => {
+      const text = VariantTree.findingsText(
+        ctx.name,
+        ctx.body && ctx.body.motif,
+        opChecks,
+        operationList.map((operation) => operation.name),
+      );
+      try {
+        await navigator.clipboard.writeText(text);
+        setStatus(status, "Copied the findings", false);
+      } catch (error) {
+        setStatus(status, "Could not copy the findings", true);
+      }
+    });
+    ctx.send(VariantTree.opChecksRequest(ctx.id)).then((answer) => {
+      if (answer.ok && answer.data.checks) {
+        opChecks = answer.data.checks;
+        if (eachOpResults) {
+          drawEachOp();
+        }
+      }
+    });
+    if (blocked) {
+      eachOpRun.disabled = true;
+    }
+
     refreshTree();
     return {
       el: section,
@@ -685,6 +877,7 @@ const VariantTreeView = (function () {
       leave: () => {
         clearCandidateScores();
         clearRowScores();
+        clearOpScores();
       },
       enter: () => {
         if (shown.length > 0 && candidateScores.length === 0) {
@@ -692,6 +885,9 @@ const VariantTreeView = (function () {
         }
         if (savedTree) {
           drawTree();
+        }
+        if (eachOpResults && opScores.length === 0) {
+          drawEachOp();
         }
       },
       showRejected: () => rejectedBox.checked,
