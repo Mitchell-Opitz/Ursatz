@@ -441,6 +441,55 @@
   const HARMONY_MAX_CHARS = 200;
   const HARMONY_DEFAULT_PLACEHOLDER = "I (proposed)";
 
+  /* The tone label abbreviations (R-195): CT is a chord tone, ? an unclassified note. */
+  const TONE_ABBREVIATIONS = {
+    passing: "PT",
+    neighbor: "NT",
+    appoggiatura: "APP",
+    suspension: "SUS",
+    retardation: "RET",
+    escape: "ET",
+    anticipation: "ANT",
+    "double-neighbor": "DN",
+    "changing-tone": "CT2",
+    pedal: "PED",
+  };
+  const TONE_CHORD_LABEL = "CT";
+  const TONE_UNCLASSIFIED_LABEL = "?";
+
+  /* The label of one entry of analysis.tones. */
+  function toneLabel(tone) {
+    if (tone.role === "chord") {
+      return TONE_CHORD_LABEL;
+    }
+    if (tone.role === "non-chord" && TONE_ABBREVIATIONS[tone.type]) {
+      return TONE_ABBREVIATIONS[tone.type];
+    }
+    return TONE_UNCLASSIFIED_LABEL;
+  }
+
+  /* One chip per note of the current analysis, in note order: {note (1-based), label, text ("2 PT -> 3"), resolvesTo,
+   * unresolved, overridden}. Empty without tones (a rhythm, a contour, no key, or no analysis yet). */
+  function toneChips(body) {
+    const motif = body && body.motif ? body.motif : {};
+    const analysis = motif.analysis && motif.analysis.analysis ? motif.analysis.analysis : null;
+    if (!analysis || !Array.isArray(analysis.tones)) {
+      return [];
+    }
+    return analysis.tones.map((tone) => {
+      const label = toneLabel(tone);
+      const resolvesTo = Number.isInteger(tone.resolves_to) ? tone.resolves_to : null;
+      return {
+        note: tone.note,
+        label,
+        text: `${tone.note} ${label}${resolvesTo === null ? "" : ` -> ${resolvesTo}`}`,
+        resolvesTo,
+        unresolved: tone.unresolved === true,
+        overridden: tone.overridden === true,
+      };
+    });
+  }
+
   /* The placeholder of the Base harmony field: the harmony the Composer proposed in the current analysis
    * ("Proposed: I V@2"), else "I (proposed)" before an analysis or when the analysis used the motif's own harmony. */
   function harmonyPlaceholder(body) {
@@ -954,6 +1003,7 @@
     errorField,
     HARMONY_HINT,
     harmonyPlaceholder,
+    toneChips,
     SEGMENTS_HINT,
     buildImportMidiRequest,
     importToFormValues,

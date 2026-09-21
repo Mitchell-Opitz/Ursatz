@@ -757,6 +757,24 @@ function buildMotifEditor(body, tabStatus) {
     hint.textContent = MaterialsModel.formHint(form.value);
   });
 
+  /* One chip per note with its tone label (R-195); the row is hidden when the analysis has no tones. */
+  const toneChips = materialsElement("div", "materials-chips motif-tone-chips");
+  field("Tones", toneChips, "tones");
+  function drawToneChips() {
+    toneChips.innerHTML = "";
+    const chips = MaterialsModel.toneChips(body);
+    toneChips.parentElement.hidden = chips.length === 0;
+    toneChips.parentElement.previousSibling.hidden = chips.length === 0;
+    for (const chip of chips) {
+      const el = materialsElement("span", "materials-chip motif-tone-chip", chip.text);
+      el.classList.toggle("motif-tone-unresolved", chip.unresolved);
+      el.classList.toggle("motif-tone-overridden", chip.overridden);
+      el.title = chip.unresolved ? "Does not resolve" : chip.overridden ? "Set by hand" : "";
+      toneChips.appendChild(el);
+    }
+  }
+  drawToneChips();
+
   const importRow = materialsElement("div", "upload-controls");
   const importButton = materialsElement("button", "button-secondary", "Upload MIDI");
   importButton.type = "button";

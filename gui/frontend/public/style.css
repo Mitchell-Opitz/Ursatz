@@ -2209,6 +2209,19 @@ button.button-danger:disabled {
   padding: 2px 4px 2px 10px;
 }
 
+.motif-tone-chip {
+  padding: 2px 10px;
+}
+
+.motif-tone-unresolved {
+  border-color: var(--warning, #c77700);
+  color: var(--warning, #c77700);
+}
+
+.motif-tone-overridden {
+  font-weight: 600;
+}
+
 .materials-chip button {
   background: none;
   border: none;
