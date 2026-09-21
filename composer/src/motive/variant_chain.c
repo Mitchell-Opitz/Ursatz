@@ -578,6 +578,27 @@ static bool takes_feature(const VariantOperation *operation) {
     return false;
 }
 
+/* Whether any note of the motive is a non-chord or unclassified tone against its base harmony. */
+static bool has_figure(const Motive *motive) {
+    MotiveAnalysis analysis;
+    if (!motive_analyze(motive, &analysis) || !analysis.tones_known) {
+        return false;
+    }
+    for (size_t i = 0; i < analysis.note_count; i++) {
+        if (analysis.tones[i].role != MOTIVE_TONE_CHORD) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Whether the operation works on a note that is not a chord tone: reduce-to-frame, remove and change. */
+static bool needs_figure(const VariantOperation *operation) {
+    return operation->relation == MOTIVE_RELATION_REDUCE_TO_FRAME ||
+           operation->relation == MOTIVE_RELATION_REMOVE_NON_CHORD_TONE ||
+           operation->relation == MOTIVE_RELATION_CHANGE_NON_CHORD_TONE;
+}
+
 bool variant_random_chain_of(const Motive *source, unsigned long seed, size_t min_steps, size_t max_steps,
                              VariantChain *out) {
     if (!source || !out || min_steps < 1 || max_steps < min_steps || max_steps > VARIANT_CHAIN_MAX) {
@@ -585,15 +606,17 @@ bool variant_random_chain_of(const Motive *source, unsigned long seed, size_t mi
     }
     const VariantOperation *candidates[VARIANT_CHAIN_MAX * 4 + 16];
     size_t count = 0;
+    bool figure = has_figure(source);
     for (size_t i = 0; i < variant_registry_count() && count < sizeof(candidates) / sizeof(candidates[0]); i++) {
         const VariantOperation *operation = variant_registry_at(i);
         /* Change-meter is seldom usable (ch. III, Ex. 24), so no random chain draws it, and a feature operation needs
-           a labelled feature to work on, counter-line the accompaniment role and passing-harmony two chords. */
+           a labelled feature to work on, counter-line the accompaniment role, passing-harmony two chords, and a row
+           that takes out or changes a non-chord tone one to work on. */
         if (operation->category != VARIANT_CATEGORY_EXACT && strcmp(operation->name, "change-meter") != 0 &&
             (operation->forms & VARIANT_FORM_BIT(source->form)) != 0 &&
             (source->feature_count > 0 || !takes_feature(operation)) &&
             (source->role == MOTIVE_ROLE_ACCOMPANIMENT || !needs_accompaniment(operation)) &&
-            (source->harmony_count >= 2 || !needs_two_chords(operation))) {
+            (source->harmony_count >= 2 || !needs_two_chords(operation)) && (figure || !needs_figure(operation))) {
             candidates[count++] = operation;
         }
     }
