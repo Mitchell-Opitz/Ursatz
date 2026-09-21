@@ -57,7 +57,7 @@ Every module and every framework has an architecture test that allowlists the di
 | theory | L7 | Implemented (partial, see doc) | `docs/modules/theory.md` |
 | rules | L7 | Implemented (partial, see doc) | `docs/modules/rules.md` |
 | transform | L8 | Implemented | `docs/modules/transform.md` |
-| analysis | L8 | Implemented | `docs/modules/analysis.md`, `docs/modules/motive-relations.md` |
+| analysis | L8 | Implemented | `docs/modules/analysis.md`, `docs/modules/motive-relations.md`, `docs/modules/motive-variant-recognition.md` |
 | generation | L8 | Implemented (partial, see doc) | `docs/modules/generation.md` |
 | io | L9 | Implemented (partial, see doc) | `docs/modules/io.md` |
 | export | L9 | Implemented (MusicXML from a MeterMap: parts, staves, key, tempo, dynamics; no MXL, repeats or articulations) | `src/export/musicxml_export.h` |
