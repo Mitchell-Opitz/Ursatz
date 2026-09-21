@@ -437,8 +437,21 @@
   ];
 
   const SEGMENTS_HINT = "Named note ranges, for example head and tail. Liquidation and motive-forms keep or drop them.";
-  const HARMONY_HINT = "Own chords, e.g. I V6@2 I@3: upper case Roman numerals (b or # before for an altered root; figures 6, 64, 7, 65, 43, 42) and @ the onset in beats. The first chord needs no onset. Up to 8 chords; empty means none.";
+  const HARMONY_HINT = "Own chords, e.g. I V6@2 I@3: upper case Roman numerals (b or # before for an altered root; figures 6, 64, 7, 65, 43, 42) and @ the onset in beats. The first chord needs no onset. Up to 8 chords, at most 2 in a bar; empty uses the harmony proposed from the notes.";
   const HARMONY_MAX_CHARS = 200;
+  const HARMONY_DEFAULT_PLACEHOLDER = "I (proposed)";
+
+  /* The placeholder of the Base harmony field: the harmony the Composer proposed in the current analysis
+   * ("Proposed: I V@2"), else "I (proposed)" before an analysis or when the analysis used the motif's own harmony. */
+  function harmonyPlaceholder(body) {
+    const motif = body && body.motif ? body.motif : {};
+    const analysis = motif.analysis && motif.analysis.analysis ? motif.analysis.analysis : null;
+    const base = analysis && analysis.base_harmony ? analysis.base_harmony : null;
+    if (base && base.given === false && typeof base.text === "string" && base.text !== "") {
+      return `Proposed: ${base.text}`;
+    }
+    return HARMONY_DEFAULT_PLACEHOLDER;
+  }
 
   /* The syntax hint under the note list for a motif form. */
   function formHint(form) {
@@ -940,6 +953,7 @@
     formHint,
     errorField,
     HARMONY_HINT,
+    harmonyPlaceholder,
     SEGMENTS_HINT,
     buildImportMidiRequest,
     importToFormValues,

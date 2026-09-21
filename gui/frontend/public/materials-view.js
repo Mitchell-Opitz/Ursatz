@@ -860,8 +860,8 @@ function buildMotifEditor(body, tabStatus) {
   harmony.size = 30;
   harmony.maxLength = 200;
   harmony.classList.add("motif-form-wide");
-  harmony.placeholder = "I V6@2 I@3 (optional)";
-  field("Harmony", harmony, "harmony");
+  harmony.placeholder = MaterialsModel.harmonyPlaceholder(body);
+  field("Base harmony", harmony, "harmony");
   hintUnder("harmony", MaterialsModel.HARMONY_HINT);
 
   el.appendChild(materialsElement("h2", "section-title", "Segments"));
