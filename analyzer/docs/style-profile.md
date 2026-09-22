@@ -2,7 +2,7 @@
 
 ```sh
 ursatz-analyzer --style-profile <corpus output dir> --name <style name> [--out <file>]
-ursatz-analyzer --compare-styles <a.json> <b.json> [--format text|json]
+ursatz-analyzer --compare-styles <a.json> <b.json> [--without <category>]... [--format text|json]
 ```
 
 Library: `include/ursatz_analyzer/style_profile.h` (profile, model file, comparison) and `style_labels.h` (the labels).
@@ -29,6 +29,10 @@ material the same way. Only analysis documents of schema version 9 are read.
 | melody | `melodic-interval` | pair of soprano notes | directed semitones: `+2`, `-5`, `0`; `+13+` and `-13+` beyond an octave | `outer_voices.soprano[].pitch.midi` |
 | melody | `contour` | the same pair | `up`, `down`, `same` | the same |
 | melody | `phrase-range` | phrase | soprano range in semitones | `melody[].range.semitones` |
+| melody | `motive-degrees` | motive family with features | the prototype's degrees against the tonic's major scale, `1 b6 5` | `motives[].features.degrees` |
+| melody | `motive-intervals` | motive family with features | the semitones with signs, `+8 -1`, `0` unsigned | `motives[].features.intervals` |
+| melody | `motive-rhythm` | motive family with features | the durations, `1/8 1/8 1/4` | `motives[].features.rhythm` |
+| melody | `motive-nct-figure` | non-chord tone on a motive note (each note once per piece) | the previous note's degree, the note's degree and type joined by `:`, the next note's degree, `1 b6:appoggiatura 5`; `-` for a missing neighbour | `motives[].occurrences[].degrees`, `non_chord_tones[]` |
 | form | `theme-form` | theme | `sentence`, `period`, `hybrid`... | `themes[].label` |
 | form | `phrase-length` | phrase | length in measures | `phrases[].length` |
 | form | `section-letters` | piece | the form plan's letters joined by spaces, `A B A` | `form.sections[].label` |
@@ -40,7 +44,13 @@ Rules the counts follow:
 - A chord with no numeral, or a change of key region, ends a run of numerals. Within a run a numeral that repeats is
   counted as a chord but not as a progression step.
 - The total of a category is the sum of its counts.
-- Motive families are not a category: their ids belong to one piece and cannot be compared across pieces.
+- Motive families are not a category by their ids, which belong to one piece. Their `features` make them comparable:
+  a family is described by its degrees, intervals and rhythm, so two pieces that share a figure share a label. A
+  family without `features` adds nothing to the four motive categories.
+- `motive-nct-figure` reads every occurrence of every family, so it counts non-chord tones on motive notes of any
+  occurrence. A note that several occurrences share counts once, in the first occurrence that names it. A tone the
+  library left unclassified has no figure. The degrees of an occurrence's notes (`occurrences[].degrees`) use the key
+  region each note starts in.
 
 ## The style model file
 
@@ -52,7 +62,7 @@ Rules the counts follow:
   "schema_version": 1,
   "style_name": "sonatinas",
   "training_corpus": "<the corpus run's input folder>",
-  "model_version": "0.1.0",
+  "model_version": "0.2.0",
   "pieces": 2,
   "statistics": [
     { "dimension": "harmony", "category": "cadence-type", "label": "half", "count": 34, "total": 92 }
@@ -66,14 +76,25 @@ unknown dimension or category, a category under the wrong dimension, and a total
 It builds a Ursatz `StyleModel` through `style_model_from_statistics`. The library has no id generator, so the id is
 `style-model-` and the 16 hex digits of the FNV-1a 64 hash of the file's bytes: the same file always gives the same id.
 
+## Leaving categories out
+
+`style_model_file_read_without(path, categories, count, &model, &pieces)` reads a model file and drops the named
+categories before the model is built, so the model holds no statistics of them (`style_model_file_read` is this with
+none). An unknown category name is `STYLE_MODEL_FILE_ERR_ARGUMENT`. `--compare-styles` takes `--without <category>`,
+repeatable, and drops the categories from both models; an unknown name is exit code 1. The Composer reads styles
+without the four motive categories until it uses them as preferences.
+
 ## Distance
 
 `--compare-styles` (and `style_profile_compare`) gives, per category, the total variation distance between the two
 models' label frequencies: half the sum over labels of |count_a/total_a - count_b/total_b|. It is an exact fraction in
 lowest terms, held in 128 bits. A category only one model has is distance 1. A dimension's distance is the mean of its
 categories' distances, and the overall distance is the mean of the dimensions that have a category in either model. A
-result that does not fit in 128 bits is `STYLE_COMPARE_ERR_OVERFLOW`, never a wrapped value. Each category also lists
-each model's three most frequent labels.
+category distance that does not fit in 128 bits is `STYLE_COMPARE_ERR_OVERFLOW`, never a wrapped value. A mean over
+categories (a dimension's or the overall distance) is exact while it fits in 128 bits; with the motive categories, whose
+labels are many, the exact mean of a real corpus needs more, and it is then the nearest fraction over 2^64
+(`dimension_exact` and `overall_exact` in `StyleComparison` say which). Each category also lists each model's three most
+frequent labels.
 
 The text output is `overall`, then each dimension with its categories indented, each as `0.4703 (n/d)`. The JSON output
 has `overall`, `dimensions` and `categories`, each distance as `{"fraction": "n/d", "value": 0.470300}`. Exit codes: 0,
@@ -86,15 +107,15 @@ The ten Bach chorales of the accuracy corpus (`chorales`) against Clementi Op. 3
 
 | Dimension | Distance |
 | --- | --- |
-| harmony | 0.4661 |
+| harmony | 0.4657 |
 | rhythm | 0.5362 |
-| melody | 0.4039 |
-| form | 0.4751 |
-| overall | 0.4703 |
+| melody | 0.7375 |
+| form | 0.4450 |
+| overall | 0.5461 |
 
 | Category | Distance |
 | --- | --- |
-| `cadence-type` | 0.4343 |
+| `cadence-type` | 0.4324 |
 | `chord-numeral` | 0.2407 |
 | `chord-progression-2` | 0.5678 |
 | `chord-progression-3` | 0.8472 |
@@ -104,10 +125,17 @@ The ten Bach chorales of the accuracy corpus (`chorales`) against Clementi Op. 3
 | `syncopation-per-phrase` | 0.4088 |
 | `melodic-interval` | 0.4108 |
 | `contour` | 0.0353 |
-| `phrase-range` | 0.7654 |
-| `theme-form` | 0.1000 |
-| `phrase-length` | 0.4005 |
-| `section-letters` | 1.0000 |
+| `phrase-range` | 0.7816 |
+| `motive-degrees` | 0.9953 |
+| `motive-intervals` | 0.9860 |
+| `motive-rhythm` | 1.0000 |
+| `motive-nct-figure` | 0.9533 |
+| `theme-form` | 0.0524 |
+| `phrase-length` | 0.4276 |
+| `section-letters` | 0.9000 |
 | `mode` | 0.4000 |
+
+The motive categories are far from each other because a figure of 3 to 8 notes rarely repeats between two
+composers: nearly every label is seen in one corpus only. They are best read against pieces that share material.
 
 The distance is symmetric. A model is at distance 0 from itself in every category.
