@@ -503,6 +503,15 @@
     return next;
   }
 
+  /* The warnings of the current analysis (one per unresolved note), as one line for the motif tab's status area; "" when
+   * there are none. */
+  function toneWarningText(body) {
+    const motif = body && body.motif ? body.motif : {};
+    const analysis = motif.analysis && motif.analysis.analysis ? motif.analysis.analysis : null;
+    const warnings = analysis && Array.isArray(analysis.warnings) ? analysis.warnings.filter((w) => typeof w === "string") : [];
+    return warnings.join(". ");
+  }
+
   /* One chip per note of the current analysis, in note order: {note (1-based), label, text ("2 PT -> 3"), resolvesTo,
    * unresolved, overridden}. Empty without tones (a rhythm, a contour, no key, or no analysis yet). */
   function toneChips(body) {
@@ -1041,6 +1050,7 @@
     HARMONY_HINT,
     harmonyPlaceholder,
     toneChips,
+    toneWarningText,
     TONE_ROLE_OPTIONS,
     toneRoleLabel,
     withToneOverride,
