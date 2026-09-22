@@ -720,40 +720,40 @@ A later theme recalls an earlier one when the kernel's thematic return detection
 
 The library's motive analysis found 32 motive families in the soprano, the highest sounding note at each attack. A family is a short figure that recurs; Notes is the length of the figure, Pattern whether its occurrences match by scale steps or by semitones, Measures the measures the occurrences start in, Phrases the phrases they lie in (an occurrence across a phrase boundary lies in none), and Transformations how many occurrences are of each kind the library names against the first occurrence (exact, real-transposed, tonal-transposed, inverted, retrograde, augmented, diminished, fragmented, varied).
 
-| Family | Notes | Pattern | Occurrences | Measures | Phrases | Transformations |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1 | 8 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
-| 2 | 8 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
-| 3 | 8 | scale steps | 8 | 1, 4, 7, 10, 14, 17, 20, 23 | 1, 2 | exact 4, fragmented 4 |
-| 4 | 8 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
-| 5 | 8 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 4 |
-| 6 | 8 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 4 |
-| 7 | 8 | scale steps | 6 | 2, 5, 6, 8, 11, 12 | 1 | exact 4, fragmented 2 |
-| 8 | 8 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 2, fragmented 2 |
-| 9 | 8 | scale steps | 2 | 3, 9 | 1 | exact 2 |
-| 10 | 8 | scale steps | 2 | 3, 9 | 1 | exact 2 |
-| 11 | 8 | scale steps | 2 | 3, 9 | 1 | exact 2 |
-| 12 | 8 | scale steps | 2 | 3, 9 | 1 | exact 2 |
-| 13 | 8 | scale steps | 2 | 5, 11 | 1 | exact 2 |
-| 14 | 8 | scale steps | 2 | 6, 12 | 1 | exact 2 |
-| 15 | 7 | scale steps | 6 | 6, 2, 5, 8, 11, 12 | 1 | exact 2, fragmented 4 |
-| 16 | 8 | scale steps | 2 | 13, 19 | 1, 2 | exact 2 |
-| 17 | 8 | scale steps | 2 | 13, 19 | 1, 2 | exact 2 |
-| 18 | 8 | scale steps | 2 | 13, 19 | 1, 2 | exact 2 |
-| 19 | 8 | scale steps | 2 | 13, 19 | 1, 2 | exact 2 |
-| 20 | 8 | scale steps | 2 | 14, 20 | 1, 2 | exact 2 |
-| 21 | 8 | scale steps | 2 | 14, 20 | 1, 2 | exact 2 |
-| 22 | 8 | scale steps | 4 | 14, 17, 20, 23 | 1, 2 | exact 2, fragmented 2 |
-| 23 | 8 | scale steps | 2 | 14, 20 | 1, 2 | exact 2 |
-| 24 | 8 | scale steps | 2 | 15, 21 | 1, 2 | exact 2 |
-| 25 | 8 | scale steps | 2 | 16, 22 | 2 | exact 2 |
-| 26 | 8 | scale steps | 2 | 16, 22 | 2 | exact 2 |
-| 27 | 8 | scale steps | 2 | 16, 22 | 2 | exact 2 |
-| 28 | 8 | scale steps | 2 | 16, 22 | 2 | exact 2 |
-| 29 | 8 | scale steps | 2 | 17, 23 | 2 | exact 2 |
-| 30 | 8 | scale steps | 2 | 17, 23 | 2 | exact 2 |
-| 31 | 4 | scale steps | 2 | 18, 24 | 2 | exact 2 |
-| 32 | 6 | scale steps | 2 | 18, 24 | 2 | exact 2 |
+| Family | Notes | Degrees | Pattern | Occurrences | Measures | Phrases | Transformations |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 8 | 5 1 2 3 4 5 1 1 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
+| 2 | 8 | 3 4 5 1 1 6 4 5 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
+| 3 | 8 | 1 1 6 4 5 6 7 1 | scale steps | 8 | 1, 4, 7, 10, 14, 17, 20, 23 | 1, 2 | exact 4, fragmented 4 |
+| 4 | 8 | 6 4 5 6 7 1 1 1 | scale steps | 4 | 1, 4, 7, 10 | 1 | exact 4 |
+| 5 | 8 | 6 7 1 1 1 4 3 4 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 4 |
+| 6 | 8 | 1 1 4 3 4 5 4 3 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 4 |
+| 7 | 8 | 4 5 4 3 2 3 4 3 | scale steps | 6 | 2, 5, 6, 8, 11, 12 | 1 | exact 4, fragmented 2 |
+| 8 | 8 | 3 2 3 4 3 2 1 7 | scale steps | 4 | 2, 5, 8, 11 | 1 | exact 2, fragmented 2 |
+| 9 | 8 | 4 3 2 1 7 1 2 3 | scale steps | 2 | 3, 9 | 1 | exact 2 |
+| 10 | 8 | 7 1 2 3 1 3 2 5 | scale steps | 2 | 3, 9 | 1 | exact 2 |
+| 11 | 8 | 3 1 3 2 5 1 2 3 | scale steps | 2 | 3, 9 | 1 | exact 2 |
+| 12 | 8 | 2 5 1 2 3 4 5 1 | scale steps | 2 | 3, 9 | 1 | exact 2 |
+| 13 | 8 | 3 2 3 4 3 2 1 2 | scale steps | 2 | 5, 11 | 1 | exact 2 |
+| 14 | 8 | 4 3 2 1 2 3 2 1 | scale steps | 2 | 6, 12 | 1 | exact 2 |
+| 15 | 7 | 2 3 2 1 7 1 1 | scale steps | 6 | 6, 2, 5, 8, 11, 12 | 1 | exact 2, fragmented 4 |
+| 16 | 8 | 3 1 2 3 1 2 5 6 | scale steps | 2 | 13, 19 | 1, 2 | exact 2 |
+| 17 | 8 | 3 1 2 5 6 7 5 1 | scale steps | 2 | 13, 19 | 1, 2 | exact 2 |
+| 18 | 8 | 5 6 7 5 1 6 7 1 | scale steps | 2 | 13, 19 | 1, 2 | exact 2 |
+| 19 | 8 | 1 6 7 1 5 #4 3 #4 | scale steps | 2 | 13, 19 | 1, 2 | exact 2 |
+| 20 | 8 | 4 1 7 6 7 5 5 6 | scale steps | 2 | 14, 20 | 1, 2 | exact 2 |
+| 21 | 8 | 6 7 5 5 6 7 1 2 | scale steps | 2 | 14, 20 | 1, 2 | exact 2 |
+| 22 | 8 | 5 6 7 1 2 3 4 3 | scale steps | 4 | 14, 17, 20, 23 | 1, 2 | exact 2, fragmented 2 |
+| 23 | 8 | 2 3 4 3 2 3 5 7 | scale steps | 2 | 14, 20 | 1, 2 | exact 2 |
+| 24 | 8 | 3 2 3 5 7 1 1 b7 | scale steps | 2 | 15, 21 | 1, 2 | exact 2 |
+| 25 | 8 | 5 1 7 1 6 1 7 1 | scale steps | 2 | 16, 22 | 2 | exact 2 |
+| 26 | 8 | 1 6 1 7 1 5 4 3 | scale steps | 2 | 16, 22 | 2 | exact 2 |
+| 27 | 8 | 1 7 1 5 4 3 2 1 | scale steps | 2 | 16, 22 | 2 | exact 2 |
+| 28 | 8 | 5 4 3 2 1 7 1 2 | scale steps | 2 | 16, 22 | 2 | exact 2 |
+| 29 | 8 | 3 2 1 7 1 2 5 6 | scale steps | 2 | 17, 23 | 2 | exact 2 |
+| 30 | 8 | 7 1 2 5 6 7 1 2 | scale steps | 2 | 17, 23 | 2 | exact 2 |
+| 31 | 4 | 4 3 4 3 | scale steps | 2 | 18, 24 | 2 | exact 2 |
+| 32 | 6 | 3 5 1 7 1 1 | scale steps | 2 | 18, 24 | 2 | exact 2 |
 
 ## Melody
 

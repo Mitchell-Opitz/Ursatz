@@ -1082,18 +1082,18 @@ A later theme recalls an earlier one when the kernel's thematic return detection
 
 The library's motive analysis found 10 motive families in the soprano, the highest sounding note at each attack. A family is a short figure that recurs; Notes is the length of the figure, Pattern whether its occurrences match by scale steps or by semitones, Measures the measures the occurrences start in, Phrases the phrases they lie in (an occurrence across a phrase boundary lies in none), and Transformations how many occurrences are of each kind the library names against the first occurrence (exact, real-transposed, tonal-transposed, inverted, retrograde, augmented, diminished, fragmented, varied).
 
-| Family | Notes | Pattern | Occurrences | Measures | Phrases | Transformations |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1 | 5 | scale steps | 2 | 14, 36 | 2, 7 | exact 2 |
-| 2 | 8 | scale steps | 4 | 18, 20, 38, 40 | 2, 7 | exact 4 |
-| 3 | 8 | scale steps | 4 | 18, 20, 38, 40 | 2, 7 | exact 4 |
-| 4 | 3 | scale steps | 14 | 18, 19, 20, 21, 38, 39, 40, 41, 42, 43 | 2, 4, 7, 9 | exact 4, inverted 8, tonal-transposed 2 |
-| 5 | 8 | scale steps | 8 | 18, 19, 20, 21, 38, 39, 40, 41 | 9 | exact 4, fragmented 4 |
-| 6 | 8 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 4 |
-| 7 | 8 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 4 |
-| 8 | 8 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 2, fragmented 2 |
-| 9 | 8 | scale steps | 2 | 19, 39 | - | exact 2 |
-| 10 | 8 | scale steps | 2 | 20, 40 | - | exact 2 |
+| Family | Notes | Degrees | Pattern | Occurrences | Measures | Phrases | Transformations |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 5 | 2 3 2 2 5 | scale steps | 2 | 14, 36 | 2, 7 | exact 2 |
+| 2 | 8 | b6 6 b7 7 1 b2 2 b3 | scale steps | 4 | 18, 20, 38, 40 | 2, 7 | exact 4 |
+| 3 | 8 | 7 1 b2 2 b3 3 4 3 | scale steps | 4 | 18, 20, 38, 40 | 2, 7 | exact 4 |
+| 4 | 3 | 7 1 b2 | scale steps | 14 | 18, 19, 20, 21, 38, 39, 40, 41, 42, 43 | 2, 4, 7, 9 | exact 4, inverted 8, tonal-transposed 2 |
+| 5 | 8 | 2 b3 3 4 3 2 b2 2 | scale steps | 8 | 18, 19, 20, 21, 38, 39, 40, 41 | 9 | exact 4, fragmented 4 |
+| 6 | 8 | 4 3 2 b2 2 3 4 3 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 4 |
+| 7 | 8 | b2 2 3 4 3 2 b2 2 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 4 |
+| 8 | 8 | 4 3 2 b2 2 5 1 #4 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 2, fragmented 2 |
+| 9 | 8 | b2 2 5 1 #4 5 b6 6 | scale steps | 2 | 19, 39 | - | exact 2 |
+| 10 | 8 | 1 #4 5 b6 6 b7 7 1 | scale steps | 2 | 20, 40 | - | exact 2 |
 
 ## Melody
 

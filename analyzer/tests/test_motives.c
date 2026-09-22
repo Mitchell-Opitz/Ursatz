@@ -238,6 +238,88 @@ static void check_annotation(const cJSON *motives, const AnnotatedFamily *famili
     CHECK(rate >= TARGET_OCCURRENCES);
 }
 
+/* The features of a family: parallel arrays of the prototype's length, intervals and steps one shorter, intervals the
+   pitch differences, rhythm the durations, a 16 digit fingerprint, and a degree for every note of every occurrence. */
+static void check_features(const cJSON *family) {
+    const cJSON *features = member(family, "features");
+    CHECK(cJSON_IsObject(features));
+    if (!cJSON_IsObject(features)) {
+        return;
+    }
+    const cJSON *notes = member(features, "notes");
+    int count = cJSON_GetArraySize(notes);
+    CHECK(count == (int)number(family, "note_count"));
+    CHECK(cJSON_GetArraySize(member(features, "degrees")) == count);
+    CHECK(cJSON_GetArraySize(member(features, "rhythm")) == count);
+    CHECK(cJSON_GetArraySize(member(features, "ncts")) == count);
+    CHECK(cJSON_GetArraySize(member(features, "intervals")) == count - 1);
+    CHECK(cJSON_GetArraySize(member(features, "steps")) == count - 1);
+    CHECK(strcmp(text(cJSON_GetArrayItem(notes, 0), "onset"), "0/1") == 0);
+    for (int k = 0; k + 1 < count; k++) {
+        double step = number(cJSON_GetArrayItem(notes, k + 1), "pitch") - number(cJSON_GetArrayItem(notes, k), "pitch");
+        CHECK(cJSON_GetArrayItem(member(features, "intervals"), k)->valuedouble == step);
+    }
+    for (int k = 0; k < count; k++) {
+        CHECK(strcmp(cJSON_GetArrayItem(member(features, "rhythm"), k)->valuestring,
+                     text(cJSON_GetArrayItem(notes, k), "duration")) == 0);
+    }
+    const char *fingerprint = text(features, "fingerprint");
+    CHECK(strlen(fingerprint) == 16 && strspn(fingerprint, "0123456789abcdef") == 16);
+    const cJSON *occurrence;
+    cJSON_ArrayForEach(occurrence, member(family, "occurrences")) {
+        CHECK(cJSON_GetArraySize(member(occurrence, "degrees")) == cJSON_GetArraySize(member(occurrence, "note_ids")));
+    }
+}
+
+static char *joined(const cJSON *array, bool numbers) {
+    static char buffer[256];
+    buffer[0] = '\0';
+    const cJSON *item;
+    cJSON_ArrayForEach(item, array) {
+        size_t length = strlen(buffer);
+        if (numbers) {
+            snprintf(buffer + length, sizeof buffer - length, "%s%d", length ? " " : "", (int)item->valuedouble);
+        } else {
+            snprintf(buffer + length, sizeof buffer - length, "%s%s", length ? " " : "", item->valuestring);
+        }
+    }
+    return buffer;
+}
+
+/* The first family of Mozart 545 is the opening figure C5 E5 G5 B4 C5 D5 C5 A5, hand-read; some family in the minor
+   reads b6; a non-chord tone on a motive note is typed; the fingerprints do not change between two runs. */
+static void check_mozart_features(const cJSON *motives, const AnalysisReport *report, const AnalysisReport *again) {
+    const cJSON *first = member(cJSON_GetArrayItem(motives, 0), "features");
+    CHECK(strcmp(joined(member(first, "degrees"), false), "1 3 5 7 1 2 1 6") == 0);
+    CHECK(strcmp(joined(member(first, "intervals"), true), "4 3 -8 1 2 -2 9") == 0);
+    CHECK(strcmp(cJSON_GetArrayItem(member(first, "rhythm"), 0)->valuestring, "1/2") == 0);
+    CHECK(number(first, "tonic_pc") == 0 && !cJSON_IsTrue(member(first, "minor")));
+    CHECK(strcmp(text(first, "bar"), "1/1") == 0 && strcmp(text(first, "beat"), "1/4") == 0 &&
+          strcmp(text(first, "pickup"), "0/1") == 0);
+    bool minor_b6 = false;
+    bool typed = false;
+    const cJSON *family;
+    cJSON_ArrayForEach(family, motives) {
+        const cJSON *features = member(family, "features");
+        const cJSON *item;
+        if (cJSON_IsTrue(member(features, "minor"))) {
+            cJSON_ArrayForEach(item, member(features, "degrees")) {
+                minor_b6 = minor_b6 || strcmp(item->valuestring, "b6") == 0;
+            }
+        }
+        cJSON_ArrayForEach(item, member(features, "ncts")) {
+            typed = typed || (cJSON_IsString(item) && strcmp(item->valuestring, "chord-tone") != 0);
+        }
+    }
+    CHECK(minor_b6);
+    CHECK(typed);
+    CHECK(report->motive_count == again->motive_count);
+    for (size_t i = 0; i < report->motive_count && i < again->motive_count; i++) {
+        CHECK(report->motives[i].has_features && again->motives[i].has_features);
+        CHECK(strcmp(report->motives[i].features.fingerprint, again->motives[i].features.fingerprint) == 0);
+    }
+}
+
 int main(void) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURE_DIR);
@@ -245,6 +327,13 @@ int main(void) {
     AnalysisReport report;
     if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
         fprintf(stderr, "cannot analyze %s\n", path);
+        return 1;
+    }
+    ImportedNotes notes_again;
+    AnalysisReport report_again;
+    if (midi_pipeline_import_file(path, &notes_again) != MIDI_PIPELINE_OK ||
+        !run_analysis_pipeline(&notes_again, &report_again)) {
+        fprintf(stderr, "cannot analyze %s again\n", path);
         return 1;
     }
     char *json = analysis_document_render(path, &notes, &report);
@@ -258,7 +347,9 @@ int main(void) {
         const cJSON *family;
         cJSON_ArrayForEach(family, motives) {
             check_family(family, member(document, "phrases"), notes.count);
+            check_features(family);
         }
+        check_mozart_features(motives, &report, &report_again);
         printf("Mozart 545: %d motive families\n", cJSON_GetArraySize(motives));
         AnnotatedFamily families[16];
         snprintf(path, sizeof(path), "%s/annotations/mozart545_motives.txt", URSATZ_FIXTURE_DIR);
@@ -268,7 +359,9 @@ int main(void) {
         cJSON_Delete(document);
     }
     analysis_report_destroy(&report);
+    analysis_report_destroy(&report_again);
     imported_notes_destroy(&notes);
+    imported_notes_destroy(&notes_again);
     if (failures > 0) {
         fprintf(stderr, "test_motives: %d failure(s)\n", failures);
         return 1;
