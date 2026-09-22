@@ -456,6 +456,29 @@ static const char *motif_harmony(const cJSON *motif) {
   return cJSON_IsString(harmony) && harmony->valuestring[0] != '\0' ? harmony->valuestring : NULL;
 }
 
+/* The --tone n=role options of a motif's tone_overrides (R-196): one pair per override, at most TONE_OVERRIDES_MAX. The
+   texts live in texts, which the caller keeps until the Composer has run. Returns the new argument count. */
+#define TONE_OVERRIDES_MAX 64
+#define TONE_TEXT_SIZE 40
+typedef struct {
+  char text[TONE_OVERRIDES_MAX][TONE_TEXT_SIZE];
+} ToneTexts;
+
+static int append_tone_overrides(const char **args, int n, const cJSON *motif, ToneTexts *texts) {
+  const cJSON *overrides = cJSON_GetObjectItemCaseSensitive(motif, "tone_overrides");
+  int count = 0;
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, overrides) {
+    if (count == TONE_OVERRIDES_MAX || !entry->string || !cJSON_IsString(entry)) {
+      break;
+    }
+    snprintf(texts->text[count], TONE_TEXT_SIZE, "%s=%s", entry->string, entry->valuestring);
+    args[n++] = "--tone";
+    args[n++] = texts->text[count++];
+  }
+  return n;
+}
+
 /* The role as a Composer option value, NULL for anything but melodic or accompaniment. */
 static const char *motif_role_option(const char *role) {
   return role && (strcmp(role, "melodic") == 0 || strcmp(role, "accompaniment") == 0) ? role : NULL;
@@ -534,8 +557,9 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, char *analysis_er
   if (!written) {
     snprintf(analysis_error, ANALYSIS_ERROR_SIZE, "could not write the note list for the Composer");
   } else {
-    const char *args[14 + MOTIF_EXTRA_ARGS];
+    const char *args[14 + MOTIF_EXTRA_ARGS + 2 * TONE_OVERRIDES_MAX];
     MotifExtras extras;
+    ToneTexts tone_texts;
     int n = 0;
     args[n++] = "motive";
     args[n++] = path;
@@ -552,6 +576,9 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, char *analysis_er
     const cJSON *role = cJSON_GetObjectItemCaseSensitive(motif, "role");
     n = append_motif_extras(args, n, motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
                             cJSON_IsString(role) ? role->valuestring : NULL, &extras);
+    if (full && has_key) {
+      n = append_tone_overrides(args, n, motif, &tone_texts);
+    }
     args[n++] = "--json";
     args[n] = NULL;
     UrsatzGuiComposerOutput out = {0, NULL, NULL};

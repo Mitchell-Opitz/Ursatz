@@ -861,6 +861,34 @@ static UrsatzGuiMaterialResult validate_derived(const cJSON *derived, char *erro
     return URSATZ_GUI_MATERIAL_OK;
 }
 
+#define TONE_OVERRIDES_MAX 64
+#define TONE_ROLE_SET                                                                                          \
+    {"chord",     "passing",    "neighbor",       "appoggiatura",  "suspension",  "retardation", "escape",   \
+     "anticipation", "double-neighbor", "changing-tone", "pedal", NULL}
+
+/* motif.tone_overrides is absent, null or an object of "<note>": "<role>" (1-based note, role as the Composer's --tone). */
+static UrsatzGuiMaterialResult validate_tone_overrides(const cJSON *overrides, char *error, size_t error_size) {
+    static const char *const roles[] = TONE_ROLE_SET;
+    if (!overrides || cJSON_IsNull(overrides)) {
+        return URSATZ_GUI_MATERIAL_OK;
+    }
+    if (!cJSON_IsObject(overrides) || cJSON_GetArraySize(overrides) > TONE_OVERRIDES_MAX) {
+        return invalid_body(error, error_size, "motif tone_overrides must be an object of at most 64 notes");
+    }
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, overrides) {
+        const char *name = entry->string ? entry->string : "";
+        char *end = NULL;
+        long note = strtol(name, &end, 10);
+        if (name[0] == '\0' || *end != '\0' || name[0] == '+' || name[0] == '-' || note < 1 || note > TONE_OVERRIDES_MAX ||
+            !in_set(entry, roles)) {
+            return invalid_body(error, error_size,
+                                "motif tone_overrides must map a note number from 1 to 64 to chord or a tone type");
+        }
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
 static UrsatzGuiMaterialResult validate_motif(const cJSON *motif, char *error, size_t error_size) {
     static const char *const roles[] = {"melodic", "accompaniment", NULL};
     static const char *const forms[] = {"full", "rhythm", "contour", NULL};
@@ -908,6 +936,10 @@ static UrsatzGuiMaterialResult validate_motif(const cJSON *motif, char *error, s
     if (harmony && !cJSON_IsNull(harmony) &&
         (!cJSON_IsString(harmony) || utf8_length(harmony->valuestring) > HARMONY_MAX_CHARS)) {
         return invalid_body(error, error_size, "motif harmony must be null or a string of at most 200 characters");
+    }
+    UrsatzGuiMaterialResult tones = validate_tone_overrides(cJSON_GetObjectItemCaseSensitive(motif, "tone_overrides"), error, error_size);
+    if (tones != URSATZ_GUI_MATERIAL_OK) {
+        return tones;
     }
     const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(motif, "analysis");
     if (analysis && !cJSON_IsNull(analysis) && !cJSON_IsObject(analysis)) {

@@ -468,6 +468,41 @@
     return TONE_UNCLASSIFIED_LABEL;
   }
 
+  /* The values of a tone override as the Composer's --tone roles, with the Automatic choice (no override) first. */
+  const TONE_ROLE_OPTIONS = [
+    { value: "", label: "Automatic" },
+    { value: "chord", label: "Chord tone" },
+    { value: "passing", label: "Passing tone" },
+    { value: "neighbor", label: "Neighbor tone" },
+    { value: "appoggiatura", label: "Appoggiatura" },
+    { value: "suspension", label: "Suspension" },
+    { value: "retardation", label: "Retardation" },
+    { value: "escape", label: "Escape tone" },
+    { value: "anticipation", label: "Anticipation" },
+    { value: "double-neighbor", label: "Double neighbor" },
+    { value: "changing-tone", label: "Changing tone" },
+    { value: "pedal", label: "Pedal" },
+  ];
+
+  /* The abbreviation of an override value ("passing" gives "PT", "chord" gives "CT"); null for Automatic. */
+  function toneRoleLabel(value) {
+    if (value === "chord") {
+      return TONE_CHORD_LABEL;
+    }
+    return TONE_ABBREVIATIONS[value] || null;
+  }
+
+  /* The overrides {"<note>": "<role>"} after setting note (1-based) to value; "" (Automatic) removes it. A new object. */
+  function withToneOverride(overrides, note, value) {
+    const next = { ...(overrides || {}) };
+    if (value === "" || value === null || value === undefined) {
+      delete next[String(note)];
+    } else {
+      next[String(note)] = value;
+    }
+    return next;
+  }
+
   /* One chip per note of the current analysis, in note order: {note (1-based), label, text ("2 PT -> 3"), resolvesTo,
    * unresolved, overridden}. Empty without tones (a rhythm, a contour, no key, or no analysis yet). */
   function toneChips(body) {
@@ -530,6 +565,7 @@
       legacyKey: storedKey !== "" && !/^C (major|minor)$/.test(storedKey) ? storedKey : null,
       pickup: typeof motif.pickup === "string" ? motif.pickup : "0",
       harmony: typeof motif.harmony === "string" ? motif.harmony : "",
+      toneOverrides: motif.tone_overrides && typeof motif.tone_overrides === "object" ? { ...motif.tone_overrides } : {},
       features: Array.isArray(motif.features)
         ? motif.features.map((feature) => ({
             label: String(feature.label),
@@ -674,6 +710,7 @@
         key: `C ${MOTIF_MODES.includes(values.mode) ? values.mode : "major"}`,
         pickup: String(values.pickup || "").trim() === "" ? "0" : String(values.pickup).trim(),
         harmony: String(values.harmony || "").trim() === "" ? null : String(values.harmony).trim(),
+        ...(Object.keys(values.toneOverrides || {}).length > 0 ? { tone_overrides: { ...values.toneOverrides } } : {}),
         features: (values.features || []).map((feature) => ({
           label: String(feature.label).trim(),
           first: Number(feature.first) - 1,
@@ -1004,6 +1041,9 @@
     HARMONY_HINT,
     harmonyPlaceholder,
     toneChips,
+    TONE_ROLE_OPTIONS,
+    toneRoleLabel,
+    withToneOverride,
     SEGMENTS_HINT,
     buildImportMidiRequest,
     importToFormValues,
