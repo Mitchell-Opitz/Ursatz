@@ -13,6 +13,15 @@ struct mg_context;
 void ursatz_gui_materials_register(struct mg_context *ctx);
 
 /*
+ * One-time re-analysis for tone labels (R-204): every full motif whose current version's analysis has no tones is
+ * analyzed again and saved as a new version with the note "Re-analyzed" (the Re-analyze path). A motif the Composer
+ * refuses or cannot analyze keeps its analysis_error and does not stop the others. A marker file `tones-migrated` in
+ * materials_dir stops later runs; without a Composer nothing is changed and no marker is written. Returns the number of
+ * motifs re-analyzed. Call after ursatz_gui_material_service_init.
+ */
+int ursatz_gui_materials_migrate_tones(const char *materials_dir);
+
+/*
  * The subjects that link a material item (kind "items") or a Library piece
  * (kind "pieces"): a caller-owned array of {id, name, kind} in name order,
  * empty when none link it. NULL on allocation or store failure.
