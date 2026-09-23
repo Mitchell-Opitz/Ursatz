@@ -45,8 +45,10 @@ typedef struct {
 bool motive_stage_run(MotiveStage *stage, const ImportedNotes *notes, const Segmentation *segmentation,
                       const HarmonyStage *harmony, const AnalysisReport *report);
 
-/* Copies the stage's families and occurrences into the report. Returns false only on allocation failure. */
-bool motive_stage_collect(const MotiveStage *stage, AnalysisReport *report);
+/* Copies the stage's families and occurrences into the report, each family with its features (motive_features.h) read
+   from its prototype, and each occurrence with its degrees. Needs the report's entries, non-chord tones and key
+   regions. Returns false only on allocation failure. */
+bool motive_stage_collect(const MotiveStage *stage, const ImportedNotes *notes, AnalysisReport *report);
 
 void motive_stage_destroy(MotiveStage *stage);
 

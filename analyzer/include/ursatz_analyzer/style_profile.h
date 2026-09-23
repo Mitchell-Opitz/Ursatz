@@ -75,6 +75,14 @@ StyleModelFileResult style_model_file_write(const StyleProfile *profile, const c
  */
 StyleModelFileResult style_model_file_read(const char *path, StyleModel **out, size_t *pieces);
 
+/*
+ * style_model_file_read without the named categories: they are dropped before the model is built, so it holds no
+ * statistics of them. An unknown category name is STYLE_MODEL_FILE_ERR_ARGUMENT. style_model_file_read is this with none.
+ * The Composer reads styles without the motive categories until it uses them as preferences.
+ */
+StyleModelFileResult style_model_file_read_without(const char *path, const char *const *categories, size_t count,
+                                                   StyleModel **out, size_t *pieces);
+
 /* The statistics a model holds (style_features_decode); free with style_statistics_free. */
 StyleModelFileResult style_model_statistics(const StyleModel *model, StyleStatistic **out, size_t *count);
 
@@ -82,7 +90,8 @@ StyleModelFileResult style_model_statistics(const StyleModel *model, StyleStatis
  * Comparison of two models. Per category the distance is the total variation distance between the two models'
  * label frequencies: half the sum over labels of |count_a/total_a - count_b/total_b|, an exact reduced rational in
  * [0, 1]. A category only one model has is distance 1. A dimension's distance is the mean of its categories'; the
- * overall distance is the mean of the dimensions that have a category in either model.
+ * overall distance is the mean of the dimensions that have a category in either model. A mean is exact when it fits in
+ * 128 bits, else the nearest fraction over 2^64 (dimension_exact, overall_exact say which).
  */
 
 /* An exact fraction in lowest terms. The fields are 128 bits wide: the mean of a dimension's categories has a
@@ -116,6 +125,10 @@ typedef struct {
     StyleRational dimension[STYLE_DIMENSION_COUNT];
     bool overall_present;
     StyleRational overall;
+    /* A category's distance is always exact. A mean over categories is exact unless it does not fit in 128 bits; it is
+       then the nearest fraction over 2^64 and these are false. */
+    bool dimension_exact[STYLE_DIMENSION_COUNT];
+    bool overall_exact;
 } StyleComparison;
 
 typedef enum {

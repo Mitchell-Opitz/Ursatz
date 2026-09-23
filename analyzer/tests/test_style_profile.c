@@ -133,6 +133,11 @@ static void test_labels(void) {
     CHECK(style_category_dimension("syncopation-per-phrase", &dimension) && dimension == STYLE_DIMENSION_RHYTHM, "rhythm category");
     CHECK(style_category_dimension("phrase-range", &dimension) && dimension == STYLE_DIMENSION_MELODY, "melody category");
     CHECK(style_category_dimension("mode", &dimension) && dimension == STYLE_DIMENSION_FORM, "form category");
+    CHECK(style_category_dimension("motive-degrees", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
+              style_category_dimension("motive-intervals", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
+              style_category_dimension("motive-rhythm", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
+              style_category_dimension("motive-nct-figure", &dimension) && dimension == STYLE_DIMENSION_MELODY,
+          "motive categories are melody");
     CHECK(!style_category_dimension("tempo", &dimension), "unknown category");
     CHECK(style_dimension_from_name("melody", &dimension) && dimension == STYLE_DIMENSION_MELODY, "dimension from name");
     CHECK(!style_dimension_from_name("timbre", &dimension), "unknown dimension name");
@@ -207,7 +212,7 @@ static void test_profile_statistics(StyleProfile *reference) {
         CHECK(statistics[i].total == sums[category_index], "%s total %lu is not the sum %lu", statistics[i].category,
               statistics[i].total, sums[category_index]);
     }
-    CHECK(categories_seen == 15, "%zu categories, expected 15", categories_seen);
+    CHECK(categories_seen == 19, "%zu categories, expected 19", categories_seen);
 
     /* Hand-checked against the pieces: the five reference pieces each have a home key and a meter. */
     const StyleStatistic *major = find_statistic(statistics, count, "mode", "major");
@@ -329,7 +334,7 @@ static void test_self_comparison(StyleModel *reference) {
     StyleComparison comparison;
     CHECK(style_profile_compare(reference, reference, &comparison) == STYLE_COMPARE_OK, "self comparison failed");
     CHECK(all_zero(&comparison), "a model is not at distance 0 from itself");
-    CHECK(comparison.category_count == 15, "%zu categories compared", comparison.category_count);
+    CHECK(comparison.category_count == 19, "%zu categories compared", comparison.category_count);
     style_comparison_destroy(&comparison);
 }
 
@@ -444,6 +449,132 @@ static void test_overflow(void) {
     style_model_destroy(b);
 }
 
+/* ---- motive categories ---- */
+
+static unsigned long label_count(const StyleStatistic *list, size_t count, const char *category, const char *label) {
+    const StyleStatistic *found = find_statistic(list, count, category, label);
+    return found ? found->count : 0;
+}
+
+static size_t category_size(const StyleStatistic *list, size_t count, const char *category) {
+    size_t size = 0;
+    for (size_t i = 0; i < count; i++) {
+        size += strcmp(list[i].category, category) == 0 ? 1 : 0;
+    }
+    return size;
+}
+
+/* A document with features: two families with the same degrees, intervals and rhythm, one with a zero interval, and a
+   family without features, which adds nothing. Note 3 is an appoggiatura in two occurrences (counted once), note 9 a
+   passing tone, note 7 an unclassified tone (no figure). */
+static void test_motive_categories(void) {
+    const char *document =
+        "{\"schema_version\": 9,"
+        " \"non_chord_tones\": [{\"note_ids\": [3], \"type\": \"appoggiatura\"}, {\"note_ids\": [7], \"type\": null},"
+        " {\"note_ids\": [9], \"type\": \"passing\"}],"
+        " \"motives\": ["
+        "{\"features\": {\"degrees\": [\"1\", \"b6\", \"5\"], \"intervals\": [8, -1], \"rhythm\": [\"1/8\", \"1/8\", \"1/4\"]},"
+        " \"occurrences\": [{\"note_ids\": [2, 3, 4], \"degrees\": [\"1\", \"b6\", \"5\"]},"
+        " {\"note_ids\": [8, 9, 10], \"degrees\": [\"2\", \"3\", \"4\"]}]},"
+        "{\"features\": {\"degrees\": [\"1\", \"b6\", \"5\"], \"intervals\": [8, -1], \"rhythm\": [\"1/8\", \"1/8\", \"1/4\"]},"
+        " \"occurrences\": [{\"note_ids\": [2, 3, 4], \"degrees\": [\"1\", \"b6\", \"5\"]}]},"
+        "{\"features\": {\"degrees\": [\"1\", \"1\", \"2\"], \"intervals\": [0, 2], \"rhythm\": [\"1/4\", \"1/4\", \"1/2\"]},"
+        " \"occurrences\": [{\"note_ids\": [5, 6, 7], \"degrees\": [\"1\", \"1\", \"2\"]}]},"
+        "{\"occurrences\": [{\"note_ids\": [3, 4, 5], \"degrees\": [\"1\", \"2\", \"3\"]}]}"
+        "]}";
+    StyleProfile *profile = style_profile_create();
+    CHECK(profile && style_profile_add_document_json(profile, document) == STYLE_PROFILE_OK, "motive document");
+    StyleStatistic *statistics = NULL;
+    size_t count = 0;
+    if (!profile || style_profile_statistics(profile, &statistics, &count) != STYLE_PROFILE_OK) {
+        style_profile_destroy(profile);
+        return;
+    }
+    CHECK(label_count(statistics, count, "motive-degrees", "1 b6 5") == 2, "motive degrees '1 b6 5' twice");
+    CHECK(label_count(statistics, count, "motive-degrees", "1 1 2") == 1, "motive degrees '1 1 2'");
+    CHECK(category_size(statistics, count, "motive-degrees") == 2, "a family without features adds no degrees");
+    CHECK(label_count(statistics, count, "motive-intervals", "+8 -1") == 2, "motive intervals '+8 -1' twice");
+    CHECK(label_count(statistics, count, "motive-intervals", "0 +2") == 1, "a zero interval is unsigned");
+    CHECK(label_count(statistics, count, "motive-rhythm", "1/8 1/8 1/4") == 2, "motive rhythm twice");
+    CHECK(label_count(statistics, count, "motive-rhythm", "1/4 1/4 1/2") == 1, "motive rhythm once");
+    CHECK(label_count(statistics, count, "motive-nct-figure", "1 b6:appoggiatura 5") == 1,
+          "a note in two occurrences counts one figure");
+    CHECK(label_count(statistics, count, "motive-nct-figure", "2 3:passing 4") == 1, "a figure in the second occurrence");
+    CHECK(category_size(statistics, count, "motive-nct-figure") == 2, "an unclassified tone has no figure");
+    free(statistics);
+    style_profile_destroy(profile);
+}
+
+/* The figure of a tone at the ends of its occurrence has a dash for the missing neighbour. */
+static void test_motive_figure_ends(void) {
+    const char *document =
+        "{\"schema_version\": 9,"
+        " \"non_chord_tones\": [{\"note_ids\": [1], \"type\": \"neighbor\"}, {\"note_ids\": [4], \"type\": \"escape-tone\"}],"
+        " \"motives\": [{\"features\": {\"degrees\": [\"1\", \"2\", \"3\"], \"intervals\": [2, 2], \"rhythm\": [\"1/4\", \"1/4\", \"1/4\"]},"
+        " \"occurrences\": [{\"note_ids\": [1, 2, 3, 4], \"degrees\": [\"6\", \"1\", \"2\", \"3\"]}]}]}";
+    StyleProfile *profile = style_profile_create();
+    CHECK(profile && style_profile_add_document_json(profile, document) == STYLE_PROFILE_OK, "figure document");
+    StyleStatistic *statistics = NULL;
+    size_t count = 0;
+    if (!profile || style_profile_statistics(profile, &statistics, &count) != STYLE_PROFILE_OK) {
+        style_profile_destroy(profile);
+        return;
+    }
+    CHECK(label_count(statistics, count, "motive-nct-figure", "- 6:neighbor 1") == 1, "no previous note");
+    CHECK(label_count(statistics, count, "motive-nct-figure", "2 3:escape-tone -") == 1, "no next note");
+    free(statistics);
+    style_profile_destroy(profile);
+}
+
+/* style_model_file_read_without drops the named categories before the model is built. */
+static void test_read_without(StyleProfile *reference) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/reference.style.json", work_dir);
+    const char *motive[] = {"motive-degrees", "motive-intervals", "motive-rhythm", "motive-nct-figure"};
+    StyleModel *all = NULL, *without = NULL, *none = NULL;
+    CHECK(style_model_file_read(path, &all, NULL) == STYLE_MODEL_FILE_OK, "read all");
+    CHECK(style_model_file_read_without(path, motive, 4, &without, NULL) == STYLE_MODEL_FILE_OK && without, "read without");
+    CHECK(style_model_file_read_without(path, NULL, 0, &none, NULL) == STYLE_MODEL_FILE_OK && none, "read without none");
+    StyleStatistic *all_statistics = NULL, *kept = NULL, *same = NULL;
+    size_t all_count = 0, kept_count = 0, same_count = 0;
+    if (all && without && none && style_model_statistics(all, &all_statistics, &all_count) == STYLE_MODEL_FILE_OK &&
+        style_model_statistics(without, &kept, &kept_count) == STYLE_MODEL_FILE_OK &&
+        style_model_statistics(none, &same, &same_count) == STYLE_MODEL_FILE_OK) {
+        size_t motive_labels = 0;
+        for (size_t i = 0; i < all_count; i++) {
+            motive_labels += strncmp(all_statistics[i].category, "motive-", 7) == 0 ? 1 : 0;
+        }
+        CHECK(motive_labels > 0, "the reference pieces have motive labels");
+        CHECK(kept_count + motive_labels == all_count, "%zu kept and %zu dropped of %zu", kept_count, motive_labels, all_count);
+        for (size_t i = 0; i < kept_count; i++) {
+            CHECK(strncmp(kept[i].category, "motive-", 7) != 0, "%s was kept", kept[i].category);
+        }
+        CHECK(same_count == all_count, "dropping none keeps every statistic");
+        StyleComparison comparison;
+        CHECK(style_profile_compare(all, without, &comparison) == STYLE_COMPARE_OK, "compare with and without");
+        CHECK(comparison.category_count == 19, "%zu categories compared", comparison.category_count);
+        size_t one_sided = 0;
+        for (size_t i = 0; i < comparison.category_count; i++) {
+            one_sided += comparison.categories[i].in_a != comparison.categories[i].in_b ? 1 : 0;
+        }
+        CHECK(one_sided == 4, "%zu categories in one model only", one_sided);
+        style_comparison_destroy(&comparison);
+    }
+    free(all_statistics);
+    style_statistics_free(kept, kept_count);
+    style_statistics_free(same, same_count);
+    style_model_destroy(all);
+    style_model_destroy(without);
+    style_model_destroy(none);
+
+    StyleModel *unknown = NULL;
+    const char *bad[] = {"tempo"};
+    CHECK(style_model_file_read_without(path, bad, 1, &unknown, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT && unknown == NULL,
+          "an unknown category is refused");
+    CHECK(style_model_file_read_without(path, NULL, 1, &unknown, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT, "no list");
+    (void)reference;
+}
+
 /* ---- refusals ---- */
 
 static void test_refusals(void) {
@@ -519,6 +650,7 @@ int main(void) {
         test_profile_statistics(reference);
         test_reference_snapshot(reference);
         test_round_trip(reference);
+        test_read_without(reference);
         StyleModel *model = model_of(reference, "reference-self");
         if (model) {
             test_self_comparison(model);
@@ -527,6 +659,8 @@ int main(void) {
     }
     style_profile_destroy(reference);
 
+    test_motive_categories();
+    test_motive_figure_ends();
     test_chorales_and_sonatinas();
     test_hand_distances();
     test_overflow();

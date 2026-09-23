@@ -299,8 +299,176 @@ static bool count_soprano(StyleProfile *profile, const cJSON *document) {
     return true;
 }
 
+/* The strings of a JSON array joined by single spaces into a new string, or NULL when an entry is not a string or on
+   allocation failure (*failed). An empty array gives NULL without *failed. */
+static char *join_strings(const cJSON *array, bool *failed) {
+    size_t length = 1;
+    const cJSON *item;
+    cJSON_ArrayForEach(item, array) {
+        if (!cJSON_IsString(item)) {
+            return NULL;
+        }
+        length += strlen(item->valuestring) + 1;
+    }
+    if (length == 1) {
+        return NULL;
+    }
+    char *joined = malloc(length);
+    if (!joined) {
+        *failed = true;
+        return NULL;
+    }
+    joined[0] = '\0';
+    cJSON_ArrayForEach(item, array) {
+        if (joined[0]) {
+            strcat(joined, " ");
+        }
+        strcat(joined, item->valuestring);
+    }
+    return joined;
+}
+
+/* The signed semitones joined by spaces: "+8 -1", "0" unsigned. NULL on a non-number entry or allocation failure
+   (*failed). */
+static char *join_intervals(const cJSON *array, bool *failed) {
+    size_t capacity = (size_t)cJSON_GetArraySize(array) * 12 + 1;
+    char *joined = malloc(capacity);
+    if (!joined) {
+        *failed = true;
+        return NULL;
+    }
+    size_t length = 0;
+    const cJSON *item;
+    cJSON_ArrayForEach(item, array) {
+        if (!cJSON_IsNumber(item)) {
+            free(joined);
+            return NULL;
+        }
+        long value = (long)item->valuedouble;
+        int wrote = value == 0 ? snprintf(joined + length, capacity - length, "%s0", length ? " " : "")
+                               : snprintf(joined + length, capacity - length, "%s%+ld", length ? " " : "", value);
+        if (wrote < 0 || (size_t)wrote >= capacity - length) {
+            free(joined);
+            return NULL;
+        }
+        length += (size_t)wrote;
+    }
+    if (length == 0) {
+        free(joined);
+        return NULL;
+    }
+    return joined;
+}
+
+/* The non-chord-tone type the document names for a note, or NULL. The first claim of a note wins. */
+static const char *note_nct_type(const cJSON *claims, long note_id) {
+    const cJSON *claim;
+    cJSON_ArrayForEach(claim, claims) {
+        const char *type = string_member(claim, "type");
+        const cJSON *id;
+        if (!type) {
+            continue;
+        }
+        cJSON_ArrayForEach(id, member(claim, "note_ids")) {
+            if (cJSON_IsNumber(id) && (long)id->valuedouble == note_id) {
+                return type;
+            }
+        }
+    }
+    return NULL;
+}
+
+typedef struct {
+    long *ids;
+    size_t count;
+    size_t capacity;
+} SeenNotes;
+
+/* Records the note; false when it was already there or on allocation failure (*failed). */
+static bool see_note(SeenNotes *seen, long id, bool *failed) {
+    for (size_t i = 0; i < seen->count; i++) {
+        if (seen->ids[i] == id) {
+            return false;
+        }
+    }
+    if (seen->count == seen->capacity) {
+        size_t capacity = seen->capacity ? seen->capacity * 2 : 64;
+        long *grown = realloc(seen->ids, capacity * sizeof *grown);
+        if (!grown) {
+            *failed = true;
+            return false;
+        }
+        seen->ids = grown;
+        seen->capacity = capacity;
+    }
+    seen->ids[seen->count++] = id;
+    return true;
+}
+
+static const char *degree_at(const cJSON *degrees, int index) {
+    const cJSON *item = index >= 0 ? cJSON_GetArrayItem(degrees, index) : NULL;
+    return cJSON_IsString(item) ? item->valuestring : "-";
+}
+
+/* One label per non-chord tone on a note of an occurrence of a family with features: the previous note's degree, the
+   note's degree and type joined by ":", the next note's degree ("1 b6:appoggiatura 5"), a dash for a neighbour the
+   occurrence does not have. A note counts once for the piece, whichever occurrence names it first. The family's
+   degrees, intervals and rhythm are one label each. */
+static bool count_motives(StyleProfile *profile, const cJSON *document) {
+    const cJSON *claims = member(document, "non_chord_tones");
+    SeenNotes seen = {NULL, 0, 0};
+    bool ok = true;
+    bool failed = false;
+    const cJSON *family;
+    cJSON_ArrayForEach(family, member(document, "motives")) {
+        const cJSON *features = member(family, "features");
+        if (!ok || !features) {
+            continue;
+        }
+        char *degrees = join_strings(member(features, "degrees"), &failed);
+        char *intervals = failed ? NULL : join_intervals(member(features, "intervals"), &failed);
+        char *rhythm = failed ? NULL : join_strings(member(features, "rhythm"), &failed);
+        ok = !failed && (!degrees || count_label(profile, STYLE_CATEGORY_MOTIVE_DEGREES, degrees)) &&
+             (!intervals || count_label(profile, STYLE_CATEGORY_MOTIVE_INTERVALS, intervals)) &&
+             (!rhythm || count_label(profile, STYLE_CATEGORY_MOTIVE_RHYTHM, rhythm));
+        free(degrees);
+        free(intervals);
+        free(rhythm);
+        const cJSON *occurrence;
+        cJSON_ArrayForEach(occurrence, member(family, "occurrences")) {
+            const cJSON *ids = member(occurrence, "note_ids");
+            const cJSON *occurrence_degrees = member(occurrence, "degrees");
+            int count = cJSON_GetArraySize(ids);
+            if (!ok || !occurrence_degrees || cJSON_GetArraySize(occurrence_degrees) != count) {
+                continue;
+            }
+            for (int k = 0; ok && k < count; k++) {
+                const cJSON *id = cJSON_GetArrayItem(ids, k);
+                const char *type = cJSON_IsNumber(id) ? note_nct_type(claims, (long)id->valuedouble) : NULL;
+                if (!type || !see_note(&seen, (long)id->valuedouble, &failed)) {
+                    ok = !failed;
+                    continue;
+                }
+                const char *current = degree_at(occurrence_degrees, k);
+                size_t length = strlen(current) + strlen(type) + 2 * 16 + 4;
+                char *label = malloc(length);
+                if (!label) {
+                    ok = false;
+                    break;
+                }
+                snprintf(label, length, "%s %s:%s %s", degree_at(occurrence_degrees, k - 1), current, type,
+                         k + 1 < count ? degree_at(occurrence_degrees, k + 1) : "-");
+                ok = count_label(profile, STYLE_CATEGORY_MOTIVE_NCT_FIGURE, label);
+                free(label);
+            }
+        }
+    }
+    free(seen.ids);
+    return ok && !failed;
+}
+
 static bool count_melody(StyleProfile *profile, const cJSON *document) {
-    if (!count_soprano(profile, document)) {
+    if (!count_soprano(profile, document) || !count_motives(profile, document)) {
         return false;
     }
     const cJSON *phrase;

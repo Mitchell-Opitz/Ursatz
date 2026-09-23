@@ -673,6 +673,7 @@ A motive is a claim (`framework` `"standard-form-v1"`; `span`, `location` and `n
 | `generic` | boolean | The pattern is the scale-step interval sequence, so a diatonic transposition matches; otherwise the semitone sequence. |
 | `occurrences` | array | Every occurrence, at least two: the prototype first, then the library's order, which is not always time order (it searches continuations for fragments first, so a prototype can come after fragments of itself). |
 | `development` | array | The occurrences in time order (see below). |
+| `features` | object | Optional: what the family is made of, read from its prototype (see below). Absent when the first note has no key region or meter. |
 
 An occurrence is a claim over its soprano notes. Its `label` is the library's kind of the occurrence against the
 family's prototype, the transformation: `"exact"` (the same pitches and rhythm; the prototype is always exact),
@@ -692,6 +693,7 @@ family's prototype, the transformation: `"exact"` (the same pitches and rhythm; 
 | `in_continuation` | boolean | A fragment found inside a continuation span of a theme. |
 | `phrase` | integer or null | The index into `phrases` of the phrase the whole occurrence lies in; `null` when it crosses a phrase boundary. |
 | `idea` | integer or null | The index (within that phrase's `ideas`) of the idea it lies in; `null` when it lies in none. |
+| `degrees` | array of strings | Optional: each note's degree against the major scale of the tonic of the key region the note starts in (see `features`). |
 
 `development` is the family's occurrences in time order, one step per occurrence, the sequence of transformations the
 figure goes through in the piece; the analyzer only orders them. A step is `{"occurrence", "measure", "beat",
@@ -699,7 +701,27 @@ figure goes through in the piece; the analyzer only orders them. A step is `{"oc
 kind of that occurrence (`null` for the prototype, the original, which is not always the earliest), and `from` the
 occurrence before it in time (`null` for the first).
 
-The Markdown report renders `## Motives` from this section, a row per family (notes, pattern, occurrence count,
+`features` describes the family by its prototype so families of different pieces can be compared and linked. It is
+optional and additive (the schema version stays 9); the analyzer version is raised with it, so a corpus `--resume`
+and the GUI re-analyze older documents.
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `notes` | array | Per prototype note `{"note_id", "pitch", "onset", "duration"}`: the ImportedNotes index, the MIDI pitch, and the onset (from the first note) and duration as exact `"n/d"` whole-note strings. |
+| `tonic_pc`, `minor` | integer, boolean | The key region the first note starts in. |
+| `bar`, `beat` | string | The meter at the first note as `"n/d"` whole notes; the beat is three units in 6/8, 9/8 and 12/8. |
+| `pickup` | string | The first note's position in its bar, `"0/1"` on a downbeat. |
+| `degrees` | array of strings | Per note, its pitch class against the tonic's major scale: `1 b2 2 b3 3 4 #4 5 b6 6 b7 7`. A minor-key `1 b6 5` reads the same as one in major. |
+| `intervals`, `steps` | array of integers | Signed semitones and signed scale steps (of the key region's scale) between neighbours. |
+| `rhythm` | array of strings | The durations as reduced `"n/d"` strings. |
+| `ncts` | array | Per note, the non-chord-tone type of the segment the note starts in; `"chord-tone"` for a chord tone there; `null` when the segment has no chord or the library left the tone unclassified. |
+| `fingerprint` | string | 16 lowercase hex digits: the library's `motive_sketch_fingerprint` of the prototype as a sketch (the notes, the scale, the meter and the pickup; no chords, features or role). Equal for equal sketches, so a cache can key on it. |
+
+A sketch cannot hold overlapping notes, so a prototype note held past the next onset is cut at it in the sketch; the
+features keep the real durations. The sketch is built by `motive_features_sketch` (`src/pipeline/motive_features.c`),
+from these fields alone.
+
+The Markdown report renders `## Motives` from this section, a row per family (notes, degrees, pattern, occurrence count,
 measures, phrases, kinds), and `### Development`, a line per family as `m1 original > m3 real-transposed > m5
 fragmented`.
 
@@ -1115,7 +1137,8 @@ the slots of its measures (2, 4, 2 and 8 slots to a measure for species 2 to 5).
 
 ### Version history
 
-- **9**: Adds the required placeholders `progressions` (`[]`), `harmonic_rhythm`, `markings` and
+- **9**: Motive claims gain the optional `features` object and motive occurrences the optional `degrees` array, both
+  additive. Adds the required placeholders `progressions` (`[]`), `harmonic_rhythm`, `markings` and
   `counterpoint_check` (`null`) after `schemas`, so the P3 sections fill them without another version. Required
   sections are a breaking change under the rule above. Chord claims gain the optional `context`, which did not
   need a version of its own. `cadences` is filled (its claims are new), and tonicization and modulation claims

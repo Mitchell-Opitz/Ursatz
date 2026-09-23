@@ -64,6 +64,30 @@ expect_line("--format json" "\"category\": \"cadence-type\"")
 check_case("--format text" 0 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json" --format text)
 expect_line("--format text" "^overall ")
 
+# --without drops categories from both models: the motive categories are in a plain comparison and not in a dropped one.
+check_case("motive categories compared" 0 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json")
+expect_line("motive categories compared" "\n  motive-degrees ")
+check_case("--without" 0 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json"
+    --without motive-degrees --without motive-intervals --without motive-rhythm --without motive-nct-figure)
+if(last_output MATCHES "motive-")
+    message(FATAL_ERROR "--without: a motive category is still compared:\n${last_output}")
+endif()
+expect_line("--without" "\n  cadence-type ")
+check_case("--without one" 0 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json" --without motive-degrees)
+if(last_output MATCHES "motive-degrees")
+    message(FATAL_ERROR "--without one: motive-degrees is still compared")
+endif()
+expect_line("--without one" "\n  motive-rhythm ")
+check_case("--without json" 0 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json"
+    --without motive-nct-figure --format json)
+if(last_output MATCHES "motive-nct-figure")
+    message(FATAL_ERROR "--without json: motive-nct-figure is still compared")
+endif()
+check_case("--without unknown" 1 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json" --without tempo)
+check_case("--without no value" 1 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json" --without)
+check_case("--without alone" 1 --without motive-degrees)
+check_case("--without with --style-profile" 1 --style-profile "${REFERENCE}" --name x --without motive-degrees)
+
 # Compare usage errors and run errors.
 check_case("one model" 1 --compare-styles "${REFERENCE}/style-model.json")
 check_case("bad format" 1 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json" --format xml)

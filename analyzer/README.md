@@ -127,11 +127,12 @@ It cannot be combined with an input file, `--json`, `--check-counterpoint`, `--c
 
 ```sh
 ursatz-analyzer --style-profile <corpus output dir> --name <style name> [--out <file>]
-ursatz-analyzer --compare-styles <a.json> <b.json> [--format text|json]
+ursatz-analyzer --compare-styles <a.json> <b.json> [--without <category>]... [--format text|json]
 ```
 
 `--style-profile` counts the harmony, rhythm, melody and form labels of a corpus run's documents and writes them as a
-style model file; `--compare-styles` gives the exact distance between two such files. See
+style model file, with four categories for motive degrees, intervals, rhythms and non-chord-tone figures;
+`--compare-styles` gives the distance between two such files, leaving out the categories named by `--without`. See
 [docs/style-profile.md](docs/style-profile.md) and the [model schema](schema/style-model.v1.schema.json).
 
 ```sh
@@ -627,7 +628,14 @@ A family has a prototype and occurrences, each with the library's kind against t
 tonal-transposed, inverted, retrograde, augmented, diminished, fragmented, varied) and its score. The development of a
 family is its occurrences in time order. The prototype is not always the earliest occurrence, because the library
 searches continuations for fragments first. The document's `motives` holds all of it; the Markdown report has a
-`## Motives` table and a `### Development` list.
+`## Motives` table (with the prototype's degrees) and a `### Development` list.
+
+Each family also carries `features`, read from its prototype: the notes with exact onsets and durations, the key
+region's tonic and mode, the meter, the degrees against the tonic's major scale (`1 b2 2 b3 3 4 #4 5 b6 6 b7 7`, so a
+minor-key `1 b6 5` reads the same as one in major), the intervals in semitones and scale steps, the rhythm, the
+non-chord-tone type of each note's segment, and a fingerprint of the prototype as a library `MotiveSketch`
+(`src/pipeline/motive_features.c` builds the sketch). Each occurrence carries its notes' degrees. See
+[docs/analysis-document.md](docs/analysis-document.md#motives) and [docs/style-profile.md](docs/style-profile.md).
 
 Measured on the reference pieces (MIDI):
 

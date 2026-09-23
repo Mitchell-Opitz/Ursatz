@@ -5463,222 +5463,222 @@ A later theme recalls an earlier one when the kernel's thematic return detection
 
 The library's motive analysis found 214 motive families in the soprano, the highest sounding note at each attack. A family is a short figure that recurs; Notes is the length of the figure, Pattern whether its occurrences match by scale steps or by semitones, Measures the measures the occurrences start in, Phrases the phrases they lie in (an occurrence across a phrase boundary lies in none), and Transformations how many occurrences are of each kind the library names against the first occurrence (exact, real-transposed, tonal-transposed, inverted, retrograde, augmented, diminished, fragmented, varied).
 
-| Family | Notes | Pattern | Occurrences | Measures | Phrases | Transformations |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1 | 8 | scale steps | 4 | 1, 29, 70, 115 | 1 | exact 2, real-transposed 2 |
-| 2 | 8 | scale steps | 4 | 1, 29, 70, 115 | 1 | exact 2, real-transposed 2 |
-| 3 | 8 | scale steps | 4 | 1, 29, 70, 115 | 1 | exact 2, real-transposed 2 |
-| 4 | 8 | scale steps | 4 | 2, 30, 71, 116 | 1, 5 | exact 2, real-transposed 2 |
-| 5 | 8 | scale steps | 4 | 2, 30, 71, 116 | 1, 5 | exact 2, real-transposed 2 |
-| 6 | 8 | scale steps | 20 | 4, 6, 7, 8, 9, 32, 34, 35, 36, 37, 73, 75, 76, 77, 97, 118, 120, 121, 122, 142 | 1, 5, 12, 14, 19, 21 | exact 2, fragmented 16, real-transposed 2 |
-| 7 | 8 | scale steps | 48 | 4, 6, 7, 8, 9, 32, 34, 35, 36, 37, 59, 63, 64, 69, 73, 75, 76, 77, 78, 79, 80, 81, 82, 97, 104, 108, 109, 114, 118, 120, 121, 122, 123, 124, 125, 126, 127, 142, 158, 174, 190, 206, 238, 280, 281, 282 | 1, 5, 10, 11, 12, 14, 18, 19, 21, 24, 25, 27, 29, 31, 41 | exact 2, fragmented 44, real-transposed 2 |
-| 8 | 8 | scale steps | 22 | 5, 6, 7, 8, 9, 33, 34, 35, 36, 37, 69, 74, 75, 76, 77, 82, 114, 119, 120, 121, 122, 127 | 1, 5, 11, 12, 18, 19 | exact 2, tonal-transposed 12, fragmented 6, real-transposed 2 |
-| 9 | 8 | scale steps | 41 | 5, 6, 7, 8, 10, 33, 34, 35, 36, 38, 74, 75, 76, 77, 78, 79, 80, 81, 83, 97, 119, 120, 121, 122, 123, 124, 125, 126, 128, 142, 158, 174, 190, 206, 238, 275, 282 | 1, 5, 12, 14, 19, 21, 24, 25, 27, 29, 31, 40, 41 | exact 4, tonal-transposed 14, real-transposed 6, fragmented 15, retrograde 1, varied 1 |
-| 10 | 5 | scale steps | 91 | 5, 6, 7, 8, 9, 10, 33, 34, 35, 36, 37, 38, 59, 60, 63, 64, 69, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 97, 104, 105, 108, 109, 114, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 142, 158, 174, 190, 206, 238, 250, 258, 259, 266, 267, 272, 275, 278, 280, 281, 282, 286, 287, 291, 319, 320 | 1, 5, 10, 11, 12, 14, 17, 18, 19, 21, 24, 25, 27, 29, 31, 32, 35, 38, 39, 40, 41, 42, 49 | exact 4, inverted 12, tonal-transposed 8, real-transposed 4, fragmented 62, varied 1 |
-| 11 | 8 | scale steps | 63 | 5, 6, 7, 8, 10, 33, 34, 35, 36, 38, 59, 60, 63, 64, 65, 66, 67, 68, 69, 74, 75, 76, 77, 83, 97, 104, 105, 108, 109, 110, 111, 112, 113, 114, 119, 120, 121, 122, 128, 142, 183, 185, 188, 199, 201, 204, 217, 218, 262, 270, 273, 274, 323, 326, 328, 330, 332, 334, 336 | 1, 5, 10, 11, 12, 14, 17, 18, 19, 21, 26, 27, 28, 29, 30, 40, 51, 52 | exact 2, tonal-transposed 14, fragmented 43, real-transposed 2, varied 2 |
-| 12 | 5 | scale steps | 141 | 5, 6, 7, 8, 10, 24, 33, 34, 35, 36, 38, 52, 59, 60, 63, 64, 65, 66, 67, 68, 69, 74, 75, 76, 77, 78, 79, 80, 81, 83, 97, 104, 105, 108, 109, 110, 111, 112, 113, 114, 119, 120, 121, 122, 123, 124, 125, 126, 128, 142, 149, 151, 155, 159, 163, 165, 167, 171, 175, 179, 181, 183, 185, 186, 187, 188, 191, 195, 197, 199, 201, 202, 203, 204, 207, 211, 213, 215, 217, 218, 219, 220, 221, 227, 229, 231, 235, 239, 243, 245, 246, 247, 249, 260, 262, 268, 270, 273, 274, 276, 288, 290, 308, 310, 321, 323, 326, 327, 328, 330, 331, 332, 334, 336 | 1, 3, 5, 7, 10, 11, 12, 14, 17, 18, 19, 21, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 38, 40, 42, 44, 49, 51, 52 | exact 4, tonal-transposed 10, real-transposed 4, fragmented 117, inverted 2, varied 4 |
-| 13 | 8 | scale steps | 12 | 5, 6, 7, 33, 34, 35, 74, 75, 76, 119, 120, 121 | 1, 5, 12, 19 | exact 2, tonal-transposed 8, real-transposed 2 |
-| 14 | 8 | scale steps | 2 | 8, 36 | 1, 5 | exact 2 |
-| 15 | 8 | scale steps | 6 | 9, 37, 60, 82, 105, 127 | 1, 5, 10, 12, 17, 19 | exact 2, fragmented 4 |
-| 16 | 8 | scale steps | 4 | 9, 37, 82, 127 | 1, 5, 12, 19 | exact 4 |
-| 17 | 8 | scale steps | 9 | 9, 37, 82, 127, 158, 174, 190, 206, 238 | 1, 5, 12, 19, 24, 25, 27, 29, 31 | exact 4, fragmented 5 |
-| 18 | 8 | scale steps | 4 | 9, 37, 82, 127 | 1, 5, 12, 19 | exact 4 |
-| 19 | 8 | scale steps | 10 | 10, 38, 83, 97, 128, 142 | 1, 5, 12, 14, 19, 21 | exact 4, tonal-transposed 6 |
-| 20 | 8 | scale steps | 18 | 10, 38, 83, 128, 151, 159, 167, 175, 191, 207, 213, 215, 231, 235, 239, 245, 249, 332 | 1, 5, 12, 19, 24, 25, 27, 29, 31, 32, 51 | exact 4, fragmented 14 |
-| 21 | 7 | scale steps | 130 | 10, 5, 6, 7, 8, 10, 24, 33, 34, 35, 36, 38, 52, 59, 60, 63, 64, 65, 66, 67, 68, 69, 74, 75, 76, 77, 78, 79, 80, 81, 83, 97, 104, 105, 108, 109, 110, 111, 112, 113, 114, 119, 120, 121, 122, 123, 124, 125, 126, 128, 142, 151, 159, 167, 175, 181, 183, 185, 186, 188, 191, 197, 199, 201, 202, 204, 207, 213, 215, 217, 218, 227, 231, 235, 239, 245, 249, 260, 262, 268, 270, 273, 274, 276, 288, 290, 321, 323, 326, 327, 328, 330, 331, 332, 334, 336 | 1, 3, 5, 7, 10, 11, 12, 14, 17, 18, 19, 21, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 38, 40, 42, 49, 51, 52 | exact 3, fragmented 127 |
-| 22 | 3 | scale steps | 4 | 11, 39, 84, 129 | 1, 5, 12, 19 | exact 4 |
-| 23 | 8 | scale steps | 8 | 13, 41, 86, 131 | 1, 5, 12, 19 | exact 2, tonal-transposed 4, real-transposed 2 |
-| 24 | 8 | scale steps | 2 | 13, 41 | - | exact 2 |
-| 25 | 8 | scale steps | 8 | 14, 16, 42, 44, 87, 89, 132, 134 | 2, 6, 13, 20 | exact 4, real-transposed 4 |
-| 26 | 8 | scale steps | 8 | 14, 16, 42, 44, 87, 89, 132, 134 | 2, 6, 13, 20 | exact 4, real-transposed 4 |
-| 27 | 8 | scale steps | 16 | 14, 16, 42, 44, 87, 89, 98, 132, 134, 143 | 2, 6, 13, 14, 20, 21 | exact 4, real-transposed 4, fragmented 8 |
-| 28 | 3 | scale steps | 9 | 14, 16, 42, 44, 87, 89, 132, 134, 311 | 2, 6, 13, 20, 44 | exact 4, real-transposed 4, tonal-transposed 1 |
-| 29 | 8 | scale steps | 4 | 15, 17, 43, 45 | 2, 6 | exact 4 |
-| 30 | 8 | scale steps | 4 | 15, 17, 43, 45 | 2, 6 | exact 4 |
-| 31 | 8 | scale steps | 4 | 15, 17, 43, 45 | 2, 6 | exact 2, fragmented 2 |
-| 32 | 8 | scale steps | 2 | 17, 45 | 2, 6 | exact 2 |
-| 33 | 8 | scale steps | 16 | 18, 19, 20, 21, 46, 47, 48, 49, 91, 92, 93, 94, 136, 137, 138, 139 | 2, 6, 13, 20 | exact 2, tonal-transposed 6, fragmented 6, real-transposed 2 |
-| 34 | 8 | scale steps | 16 | 18, 19, 20, 21, 46, 47, 48, 49, 91, 92, 93, 94, 136, 137, 138, 139 | 2, 6, 13, 20 | exact 2, tonal-transposed 6, fragmented 6, real-transposed 2 |
-| 35 | 8 | scale steps | 10 | 18, 19, 20, 46, 47, 48, 91, 93, 136, 138 | 2, 6, 13, 20 | exact 2, tonal-transposed 6, real-transposed 2 |
-| 36 | 8 | scale steps | 10 | 18, 19, 20, 46, 47, 48, 91, 93, 136, 138 | 2, 6, 13, 20 | exact 2, tonal-transposed 6, real-transposed 2 |
-| 37 | 8 | scale steps | 4 | 21, 49, 94, 139 | 2, 6, 13, 20 | exact 2, real-transposed 2 |
-| 38 | 8 | scale steps | 4 | 21, 49, 94, 139 | 2, 6, 13, 20 | exact 2, real-transposed 2 |
-| 39 | 8 | scale steps | 4 | 21, 49, 94, 139 | - | exact 2, fragmented 2 |
-| 40 | 6 | scale steps | 7 | 21, 49, 94, 139, 296, 301, 303 | 13, 20, 43 | exact 2, fragmented 5 |
-| 41 | 8 | scale steps | 4 | 21, 49, 94, 139 | - | exact 2, fragmented 2 |
-| 42 | 8 | scale steps | 2 | 22, 50 | 3, 7 | exact 2 |
-| 43 | 8 | scale steps | 2 | 22, 50 | 3, 7 | exact 2 |
-| 44 | 8 | scale steps | 2 | 22, 50 | 3, 7 | exact 2 |
-| 45 | 8 | scale steps | 2 | 23, 51 | 3, 7 | exact 2 |
-| 46 | 8 | scale steps | 2 | 23, 51 | 3, 7 | exact 2 |
-| 47 | 8 | scale steps | 2 | 23, 51 | 3, 7 | exact 2 |
-| 48 | 8 | scale steps | 2 | 24, 52 | 3, 7 | exact 2 |
-| 49 | 8 | scale steps | 2 | 24, 52 | 3, 7 | exact 2 |
-| 50 | 8 | scale steps | 16 | 26, 27, 54, 55, 57, 58, 61, 62, 99, 100, 102, 103, 106, 107, 144, 145 | 3, 7, 10, 14, 16, 17, 21 | exact 2, fragmented 12, real-transposed 2 |
-| 51 | 8 | scale steps | 16 | 26, 27, 54, 55, 57, 58, 61, 62, 99, 100, 102, 103, 106, 107, 144, 145 | 3, 7, 10, 14, 16, 17, 21 | exact 2, real-transposed 6, tonal-transposed 8 |
-| 52 | 8 | scale steps | 16 | 26, 27, 54, 55, 57, 58, 61, 62, 99, 100, 102, 103, 106, 107, 144, 145 | 3, 7, 10, 14, 16, 17, 21 | exact 2, real-transposed 6, tonal-transposed 8 |
-| 53 | 8 | scale steps | 11 | 26, 27, 54, 55, 57, 58, 99, 100, 103, 144, 145 | 16 | exact 3, fragmented 6, real-transposed 2 |
-| 54 | 5 | scale steps | 38 | 26, 27, 54, 55, 57, 58, 61, 62, 99, 100, 102, 103, 106, 107, 144, 145, 263, 271, 291, 300, 302, 324 | 3, 7, 10, 14, 16, 17, 21, 36, 39, 42, 43, 50 | exact 3, fragmented 33, real-transposed 2 |
-| 55 | 8 | scale steps | 8 | 27, 55, 58, 62, 100, 103, 107, 145 | 10, 16, 17 | exact 2, tonal-transposed 4, real-transposed 2 |
-| 56 | 8 | scale steps | 2 | 57, 102 | 16 | exact 2 |
-| 57 | 8 | scale steps | 2 | 58, 103 | - | exact 2 |
-| 58 | 8 | scale steps | 2 | 59, 104 | 10 | exact 2 |
-| 59 | 8 | scale steps | 2 | 59, 104 | 10 | exact 2 |
-| 60 | 8 | scale steps | 4 | 59, 104, 217, 218 | 10, 30 | exact 2, varied 2 |
-| 61 | 8 | scale steps | 2 | 59, 104 | 10 | exact 2 |
-| 62 | 8 | scale steps | 2 | 60, 105 | 10, 17 | exact 2 |
-| 63 | 8 | scale steps | 2 | 60, 105 | 10, 17 | exact 2 |
-| 64 | 8 | scale steps | 2 | 60, 105 | 10, 17 | exact 2 |
-| 65 | 8 | scale steps | 2 | 60, 105 | 10, 17 | exact 2 |
-| 66 | 8 | scale steps | 2 | 61, 106 | 10, 17 | exact 2 |
-| 67 | 8 | scale steps | 3 | 61, 102, 106 | 10, 16, 17 | exact 2, real-transposed 1 |
-| 68 | 8 | scale steps | 2 | 62, 107 | 10, 17 | exact 2 |
-| 69 | 8 | scale steps | 2 | 63, 108 | - | exact 2 |
-| 70 | 8 | scale steps | 2 | 63, 108 | - | exact 2 |
-| 71 | 8 | scale steps | 8 | 63, 65, 66, 67, 108, 110, 111, 112 | 11, 18 | exact 2, fragmented 6 |
-| 72 | 8 | scale steps | 2 | 63, 108 | - | exact 2 |
-| 73 | 8 | scale steps | 2 | 64, 109 | 11, 18 | exact 2 |
-| 74 | 8 | scale steps | 2 | 64, 109 | 11, 18 | exact 2 |
-| 75 | 8 | scale steps | 2 | 64, 109 | 11, 18 | exact 2 |
-| 76 | 8 | scale steps | 2 | 64, 109 | 11, 18 | exact 2 |
-| 77 | 8 | scale steps | 2 | 65, 110 | 11, 18 | exact 2 |
-| 78 | 8 | scale steps | 6 | 65, 66, 67, 110, 111, 112 | 11, 18 | exact 2, tonal-transposed 4 |
-| 79 | 8 | scale steps | 2 | 65, 110 | 11, 18 | exact 2 |
-| 80 | 8 | scale steps | 4 | 65, 110, 181, 197 | 11, 18 | exact 2, fragmented 2 |
-| 81 | 8 | scale steps | 6 | 66, 67, 68, 111, 112, 113 | 11, 18 | exact 2, tonal-transposed 4 |
-| 82 | 8 | scale steps | 4 | 66, 67, 111, 112 | 11, 18 | exact 2, tonal-transposed 2 |
-| 83 | 8 | scale steps | 4 | 66, 67, 111, 112 | 11, 18 | exact 2, tonal-transposed 2 |
-| 84 | 8 | scale steps | 2 | 68, 113 | 11, 18 | exact 2 |
-| 85 | 8 | scale steps | 2 | 68, 113 | 11, 18 | exact 2 |
-| 86 | 8 | scale steps | 2 | 68, 113 | 11, 18 | exact 2 |
-| 87 | 8 | scale steps | 2 | 69, 114 | 11, 18 | exact 2 |
-| 88 | 8 | scale steps | 3 | 69, 114, 290 | 11, 18, 42 | exact 2, varied 1 |
-| 89 | 8 | scale steps | 2 | 69, 114 | 11, 18 | exact 2 |
-| 90 | 8 | scale steps | 2 | 69, 114 | 11, 18 | exact 2 |
-| 91 | 8 | scale steps | 7 | 77, 122, 260, 268, 276, 288, 321 | 12, 19, 35, 38, 40, 42, 49 | exact 2, fragmented 5 |
-| 92 | 8 | scale steps | 9 | 78, 79, 80, 81, 123, 124, 125, 126, 275 | 12, 19, 40 | exact 2, tonal-transposed 4, real-transposed 2, fragmented 1 |
-| 93 | 8 | scale steps | 8 | 78, 79, 80, 81, 123, 124, 125, 126 | 12, 19 | exact 2, tonal-transposed 4, fragmented 2 |
-| 94 | 8 | scale steps | 6 | 78, 79, 80, 123, 124, 125 | 12, 19 | exact 2, tonal-transposed 4 |
-| 95 | 8 | scale steps | 2 | 81, 126 | 12, 19 | exact 2 |
-| 96 | 8 | scale steps | 2 | 81, 126 | 12, 19 | exact 2 |
-| 97 | 8 | scale steps | 2 | 82, 127 | 12, 19 | exact 2 |
-| 98 | 8 | scale steps | 4 | 83, 10, 38, 128 | 12, 1, 5, 19 | exact 2, fragmented 2 |
-| 99 | 8 | scale steps | 2 | 84, 129 | 12, 19 | exact 2 |
-| 100 | 8 | scale steps | 2 | 84, 129 | 12, 19 | exact 2 |
-| 101 | 7 | scale steps | 2 | 84, 129 | 12, 19 | exact 2 |
-| 102 | 8 | scale steps | 2 | 86, 131 | - | exact 2 |
-| 103 | 8 | scale steps | 2 | 88, 133 | 13, 20 | exact 2 |
-| 104 | 8 | scale steps | 2 | 90, 135 | 13, 20 | exact 2 |
-| 105 | 8 | scale steps | 2 | 90, 135 | 13, 20 | exact 2 |
-| 106 | 8 | scale steps | 2 | 92, 137 | 13, 20 | exact 2 |
-| 107 | 8 | scale steps | 2 | 92, 137 | 13, 20 | exact 2 |
-| 108 | 8 | scale steps | 2 | 92, 137 | 13, 20 | exact 2 |
-| 109 | 8 | scale steps | 2 | 92, 137 | 13, 20 | exact 2 |
-| 110 | 5 | scale steps | 5 | 95, 96, 140, 141, 149 | 14, 21 | exact 2, fragmented 2, varied 1 |
-| 111 | 8 | scale steps | 6 | 96, 13, 41, 86, 131, 141 | 14, 1, 5, 12, 19, 21 | exact 2, varied 4 |
-| 112 | 8 | scale steps | 2 | 96, 141 | 14, 21 | exact 2 |
-| 113 | 8 | scale steps | 2 | 97, 142 | 14, 21 | exact 2 |
-| 114 | 8 | scale steps | 4 | 97, 142, 227, 328 | 14, 21, 51 | exact 2, fragmented 2 |
-| 115 | 5 | scale steps | 18 | 97, 142, 220, 223, 227, 244, 248, 293, 294, 298, 307, 308 | 14, 21, 30, 32, 42, 43, 44 | exact 2, fragmented 15, varied 1 |
-| 116 | 8 | scale steps | 16 | 98, 15, 17, 43, 45, 88, 90, 98, 133, 135, 143 | 14, 2, 6, 13, 20, 21 | exact 6, fragmented 10 |
-| 117 | 8 | scale steps | 10 | 98, 15, 17, 43, 45, 88, 90, 133, 135, 143 | 14, 2, 6, 13, 20, 21 | exact 2, fragmented 8 |
-| 118 | 8 | scale steps | 6 | 150, 152, 166, 168, 230, 232 | 24, 25, 31 | exact 3, fragmented 3 |
-| 119 | 8 | scale steps | 11 | 150, 152, 160, 166, 168, 176, 192, 208, 230, 232, 240 | 24, 25, 27, 29, 31 | exact 3, fragmented 8 |
-| 120 | 8 | scale steps | 3 | 150, 166, 230 | 24, 25, 31 | exact 3 |
-| 121 | 4 | scale steps | 41 | 150, 152, 157, 160, 161, 162, 166, 168, 173, 176, 177, 178, 189, 192, 193, 194, 205, 208, 209, 210, 214, 224, 230, 232, 237, 240, 241, 242, 311, 312, 313, 314, 315, 325, 329 | 24, 25, 27, 29, 30, 31, 44, 47, 51 | exact 11, fragmented 28, tonal-transposed 1, real-transposed 1 |
-| 122 | 8 | scale steps | 3 | 151, 167, 231 | 24, 25, 31 | exact 3 |
-| 123 | 8 | scale steps | 3 | 151, 167, 231 | 24, 25, 31 | exact 3 |
-| 124 | 8 | scale steps | 8 | 152, 160, 168, 176, 192, 208, 232, 240 | 24, 25, 27, 29, 31 | exact 3, fragmented 5 |
-| 125 | 8 | scale steps | 3 | 152, 168, 232 | 24, 25, 31 | exact 3 |
-| 126 | 8 | scale steps | 3 | 152, 168, 232 | 24, 25, 31 | exact 3 |
-| 127 | 8 | scale steps | 3 | 153, 169, 233 | 24, 25, 31 | exact 3 |
-| 128 | 8 | scale steps | 3 | 153, 169, 233 | 24, 25, 31 | exact 3 |
-| 129 | 8 | scale steps | 3 | 153, 169, 233 | 24, 25, 31 | exact 3 |
-| 130 | 8 | scale steps | 3 | 154, 170, 234 | 24, 25, 31 | exact 3 |
-| 131 | 8 | scale steps | 3 | 154, 170, 234 | 24, 25, 31 | exact 3 |
-| 132 | 8 | scale steps | 3 | 154, 170, 234 | 24, 25, 31 | exact 3 |
-| 133 | 8 | scale steps | 13 | 155, 159, 171, 175, 191, 207, 221, 235, 239, 243, 247 | 24, 25, 27, 29, 30, 31, 32 | exact 3, fragmented 10 |
-| 134 | 8 | scale steps | 3 | 155, 171, 235 | 24, 25, 31 | exact 2, fragmented 1 |
-| 135 | 3 | scale steps | 28 | 155, 158, 161, 171, 174, 177, 187, 188, 190, 193, 203, 204, 206, 209, 235, 238, 241, 263, 271, 275, 297, 298, 309, 310, 324 | 24, 25, 26, 27, 28, 29, 31, 36, 39, 40, 43, 44, 50 | exact 3, retrograde 14, tonal-transposed 9, inverted 2 |
-| 136 | 8 | scale steps | 2 | 155, 171 | 24, 25 | exact 2 |
-| 137 | 8 | scale steps | 3 | 156, 172, 236 | 24, 25, 31 | exact 3 |
-| 138 | 8 | scale steps | 3 | 156, 172, 236 | 24, 25, 31 | exact 3 |
-| 139 | 8 | scale steps | 5 | 156, 172, 189, 205, 236 | 24, 25, 27, 29, 31 | exact 3, fragmented 2 |
-| 140 | 8 | scale steps | 5 | 157, 173, 189, 205, 237 | 24, 25, 27, 29, 31 | exact 5 |
-| 141 | 8 | scale steps | 5 | 157, 173, 189, 205, 237 | 24, 25, 27, 29, 31 | exact 5 |
-| 142 | 8 | scale steps | 5 | 158, 174, 190, 206, 238 | 24, 25, 27, 29, 31 | exact 5 |
-| 143 | 8 | scale steps | 6 | 158, 174, 190, 206, 238, 275 | 24, 25, 27, 29, 31, 40 | exact 5, varied 1 |
-| 144 | 8 | scale steps | 5 | 158, 174, 190, 206, 238 | 24, 25, 27, 29, 31 | exact 5 |
-| 145 | 8 | scale steps | 6 | 159, 175, 191, 207, 227, 239 | 24, 25, 27, 29, 31 | exact 5, varied 1 |
-| 146 | 8 | scale steps | 5 | 159, 175, 191, 207, 239 | 24, 25, 27, 29, 31 | exact 5 |
-| 147 | 8 | scale steps | 5 | 159, 175, 191, 207, 239 | 24, 25, 27, 29, 31 | exact 5 |
-| 148 | 8 | scale steps | 10 | 160, 161, 176, 177, 192, 193, 208, 209, 240, 241 | 24, 25, 27, 29, 31 | exact 5, fragmented 5 |
-| 149 | 8 | scale steps | 5 | 160, 176, 192, 208, 240 | 24, 25, 27, 29, 31 | exact 5 |
-| 150 | 8 | scale steps | 5 | 160, 176, 192, 208, 240 | 24, 25, 27, 29, 31 | exact 5 |
-| 151 | 8 | scale steps | 5 | 161, 177, 193, 209, 241 | 24, 25, 27, 29, 31 | exact 5 |
-| 152 | 8 | scale steps | 5 | 161, 177, 193, 209, 241 | 24, 25, 27, 29, 31 | exact 5 |
-| 153 | 8 | scale steps | 5 | 161, 177, 193, 209, 241 | 24, 25, 27, 29, 31 | exact 5 |
-| 154 | 8 | scale steps | 5 | 162, 178, 194, 210, 242 | 24, 25, 27, 29, 31 | exact 5 |
-| 155 | 8 | scale steps | 5 | 162, 178, 194, 210, 242 | 25, 27, 29 | exact 5 |
-| 156 | 8 | scale steps | 5 | 162, 178, 194, 210, 242 | 25, 27, 29 | exact 5 |
-| 157 | 8 | scale steps | 5 | 163, 179, 195, 211, 243 | 25, 27, 29, 32 | exact 5 |
-| 158 | 8 | scale steps | 10 | 163, 179, 187, 195, 203, 211, 219, 227, 243, 247 | 25, 27, 29, 30, 32 | exact 4, fragmented 5, real-transposed 1 |
-| 159 | 5 | scale steps | 11 | 163, 179, 195, 211, 217, 218, 219, 227, 243, 247, 279 | 25, 27, 29, 30, 32, 41 | exact 6, varied 3, real-transposed 1, fragmented 1 |
-| 160 | 8 | scale steps | 3 | 165, 149, 229 | 25, 31 | exact 2, fragmented 1 |
-| 161 | 8 | scale steps | 3 | 165, 149, 229 | 25, 31 | exact 2, varied 1 |
-| 162 | 8 | scale steps | 4 | 181, 185, 197, 201 | 25, 26, 27, 28 | exact 2, tonal-transposed 2 |
-| 163 | 8 | scale steps | 2 | 181, 197 | - | exact 2 |
-| 164 | 8 | scale steps | 2 | 182, 198 | 26, 28 | exact 2 |
-| 165 | 8 | scale steps | 2 | 182, 198 | 26, 28 | exact 2 |
-| 166 | 8 | scale steps | 2 | 182, 198 | 26, 28 | exact 2 |
-| 167 | 8 | scale steps | 4 | 183, 186, 199, 202 | 26, 28 | exact 4 |
-| 168 | 8 | scale steps | 2 | 183, 199 | 26, 28 | exact 2 |
-| 169 | 8 | scale steps | 3 | 184, 200, 216 | 26, 28 | exact 2, fragmented 1 |
-| 170 | 8 | scale steps | 2 | 184, 200 | 26, 28 | exact 2 |
-| 171 | 8 | scale steps | 3 | 184, 200, 216 | 26, 28 | exact 2, varied 1 |
-| 172 | 8 | scale steps | 2 | 185, 201 | 26, 28 | exact 2 |
-| 173 | 8 | scale steps | 4 | 186, 202, 327, 331 | 26, 28, 51 | exact 2, fragmented 2 |
-| 174 | 8 | scale steps | 2 | 187, 203 | 26, 28 | exact 2 |
-| 175 | 8 | scale steps | 7 | 187, 163, 179, 195, 203, 211, 219 | 25, 27, 29, 30 | exact 2, fragmented 5 |
-| 176 | 8 | scale steps | 2 | 188, 204 | 27, 29 | exact 2 |
-| 177 | 8 | scale steps | 2 | 188, 204 | 27, 29 | exact 2 |
-| 178 | 8 | scale steps | 3 | 188, 204, 218 | 27, 29, 30 | exact 2, varied 1 |
-| 179 | 8 | scale steps | 2 | 213, 215 | 29 | exact 1, tonal-transposed 1 |
-| 180 | 6 | scale steps | 7 | 213, 215, 235, 245, 249, 251, 332 | 29, 31, 32, 51 | exact 1, tonal-transposed 1, varied 5 |
-| 181 | 3 | scale steps | 16 | 214, 150, 152, 153, 158, 166, 168, 169, 174, 190, 206, 222, 230, 232, 233, 238 | 29, 24, 25, 27, 30, 31 | exact 1, inverted 14, real-transposed 1 |
-| 182 | 6 | scale steps | 12 | 218, 158, 174, 190, 206, 217, 221, 238, 262, 270, 274, 323 | 30, 24, 25, 27, 29, 31, 40 | exact 1, retrograde 5, varied 1, fragmented 1, real-transposed 4 |
-| 183 | 8 | scale steps | 11 | 220, 244, 248, 263, 271, 291, 298, 308, 324 | 30, 32, 36, 39, 42, 43, 44, 50 | exact 1, real-transposed 2, fragmented 7, varied 1 |
-| 184 | 6 | scale steps | 14 | 220, 223, 227, 244, 248, 293, 294, 298, 307, 308, 328 | 30, 32, 42, 43, 44, 51 | exact 1, varied 3, real-transposed 2, fragmented 8 |
-| 185 | 3 | scale steps | 7 | 225, 24, 52, 252, 253, 333, 335 | 30, 3, 7, 32, 33, 51, 52 | exact 1, augmented 2, tonal-transposed 2, inverted 2 |
-| 186 | 8 | scale steps | 2 | 243, 247 | 32 | exact 2 |
-| 187 | 8 | scale steps | 2 | 243, 247 | 32 | exact 2 |
-| 188 | 8 | scale steps | 2 | 244, 248 | 32 | exact 2 |
-| 189 | 8 | scale steps | 2 | 245, 249 | 32 | exact 1, tonal-transposed 1 |
-| 190 | 3 | scale steps | 5 | 251, 153, 169, 233, 329 | 32, 24, 25, 31, 51 | exact 1, inverted 3, tonal-transposed 1 |
-| 191 | 8 | scale steps | 2 | 252, 253 | 32, 33 | exact 2 |
-| 192 | 8 | scale steps | 2 | 252, 253 | - | exact 2 |
-| 193 | 5 | scale steps | 3 | 252, 247, 253 | 32 | exact 2, fragmented 1 |
-| 194 | 8 | scale steps | 5 | 258, 266, 278, 286, 319 | 35 | exact 4, fragmented 1 |
-| 195 | 8 | scale steps | 4 | 259, 267, 287, 320 | 35, 38, 42, 49 | exact 4 |
-| 196 | 8 | scale steps | 4 | 259, 267, 287, 320 | 35, 38, 42, 49 | exact 4 |
-| 197 | 8 | scale steps | 5 | 262, 218, 270, 274, 323 | 30, 40 | exact 3, fragmented 1, real-transposed 1 |
-| 198 | 8 | scale steps | 5 | 263, 271, 275, 291, 324 | 36, 39, 40, 42, 50 | exact 3, fragmented 1, varied 1 |
-| 199 | 6 | scale steps | 4 | 263, 271, 291, 324 | 36, 39, 42, 50 | exact 4 |
-| 200 | 4 | scale steps | 2 | 300, 302 | 43 | exact 2 |
-| 201 | 8 | scale steps | 2 | 301, 303 | 43 | exact 2 |
-| 202 | 8 | scale steps | 3 | 309, 298, 310 | 44, 43 | exact 1, fragmented 1, real-transposed 1 |
-| 203 | 8 | scale steps | 2 | 312, 314 | - | exact 2 |
-| 204 | 7 | scale steps | 8 | 312, 311, 313, 314, 315, 325, 329 | 44, 47, 51 | exact 3, fragmented 5 |
-| 205 | 7 | scale steps | 3 | 312, 313, 314 | - | exact 2, varied 1 |
-| 206 | 8 | scale steps | 2 | 325, 329 | 51 | exact 2 |
-| 207 | 8 | scale steps | 3 | 326, 330, 334 | 51, 52 | exact 2, fragmented 1 |
-| 208 | 6 | scale steps | 3 | 326, 220, 330 | 51, 30 | exact 2, varied 1 |
-| 209 | 8 | scale steps | 2 | 326, 330 | 51 | exact 2 |
-| 210 | 8 | scale steps | 2 | 327, 331 | 51 | exact 2 |
-| 211 | 8 | scale steps | 2 | 327, 331 | 51 | exact 2 |
-| 212 | 8 | scale steps | 2 | 333, 335 | 51, 52 | exact 2 |
-| 213 | 8 | scale steps | 3 | 333, 302, 335 | 43, 52 | exact 2, fragmented 1 |
-| 214 | 8 | scale steps | 2 | 334, 336 | 52 | exact 2 |
+| Family | Notes | Degrees | Pattern | Occurrences | Measures | Phrases | Transformations |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 8 | 1 3 5 7 1 2 1 6 | scale steps | 4 | 1, 29, 70, 115 | 1 | exact 2, real-transposed 2 |
+| 2 | 8 | 3 5 7 1 2 1 6 5 | scale steps | 4 | 1, 29, 70, 115 | 1 | exact 2, real-transposed 2 |
+| 3 | 8 | 5 7 1 2 1 6 5 1 | scale steps | 4 | 1, 29, 70, 115 | 1 | exact 2, real-transposed 2 |
+| 4 | 8 | 7 1 2 1 6 5 1 5 | scale steps | 4 | 2, 30, 71, 116 | 1, 5 | exact 2, real-transposed 2 |
+| 5 | 8 | 1 6 5 1 5 4 5 4 | scale steps | 4 | 2, 30, 71, 116 | 1, 5 | exact 2, real-transposed 2 |
+| 6 | 8 | 3 3 5 6 7 1 2 3 | scale steps | 20 | 4, 6, 7, 8, 9, 32, 34, 35, 36, 37, 73, 75, 76, 77, 97, 118, 120, 121, 122, 142 | 1, 5, 12, 14, 19, 21 | exact 2, fragmented 16, real-transposed 2 |
+| 7 | 8 | 3 5 6 7 1 2 3 4 | scale steps | 48 | 4, 6, 7, 8, 9, 32, 34, 35, 36, 37, 59, 63, 64, 69, 73, 75, 76, 77, 78, 79, 80, 81, 82, 97, 104, 108, 109, 114, 118, 120, 121, 122, 123, 124, 125, 126, 127, 142, 158, 174, 190, 206, 238, 280, 281, 282 | 1, 5, 10, 11, 12, 14, 18, 19, 21, 24, 25, 27, 29, 31, 41 | exact 2, fragmented 44, real-transposed 2 |
+| 8 | 8 | 6 7 1 2 3 4 5 6 | scale steps | 22 | 5, 6, 7, 8, 9, 33, 34, 35, 36, 37, 69, 74, 75, 76, 77, 82, 114, 119, 120, 121, 122, 127 | 1, 5, 11, 12, 18, 19 | exact 2, tonal-transposed 12, fragmented 6, real-transposed 2 |
+| 9 | 8 | 2 3 4 5 6 5 4 3 | scale steps | 41 | 5, 6, 7, 8, 10, 33, 34, 35, 36, 38, 74, 75, 76, 77, 78, 79, 80, 81, 83, 97, 119, 120, 121, 122, 123, 124, 125, 126, 128, 142, 158, 174, 190, 206, 238, 275, 282 | 1, 5, 12, 14, 19, 21, 24, 25, 27, 29, 31, 40, 41 | exact 4, tonal-transposed 14, real-transposed 6, fragmented 15, retrograde 1, varied 1 |
+| 10 | 5 | 2 3 4 5 6 | scale steps | 91 | 5, 6, 7, 8, 9, 10, 33, 34, 35, 36, 37, 38, 59, 60, 63, 64, 69, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 97, 104, 105, 108, 109, 114, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 142, 158, 174, 190, 206, 238, 250, 258, 259, 266, 267, 272, 275, 278, 280, 281, 282, 286, 287, 291, 319, 320 | 1, 5, 10, 11, 12, 14, 17, 18, 19, 21, 24, 25, 27, 29, 31, 32, 35, 38, 39, 40, 41, 42, 49 | exact 4, inverted 12, tonal-transposed 8, real-transposed 4, fragmented 62, varied 1 |
+| 11 | 8 | 6 5 4 3 2 1 7 6 | scale steps | 63 | 5, 6, 7, 8, 10, 33, 34, 35, 36, 38, 59, 60, 63, 64, 65, 66, 67, 68, 69, 74, 75, 76, 77, 83, 97, 104, 105, 108, 109, 110, 111, 112, 113, 114, 119, 120, 121, 122, 128, 142, 183, 185, 188, 199, 201, 204, 217, 218, 262, 270, 273, 274, 323, 326, 328, 330, 332, 334, 336 | 1, 5, 10, 11, 12, 14, 17, 18, 19, 21, 26, 27, 28, 29, 30, 40, 51, 52 | exact 2, tonal-transposed 14, fragmented 43, real-transposed 2, varied 2 |
+| 12 | 5 | 6 5 4 3 2 | scale steps | 141 | 5, 6, 7, 8, 10, 24, 33, 34, 35, 36, 38, 52, 59, 60, 63, 64, 65, 66, 67, 68, 69, 74, 75, 76, 77, 78, 79, 80, 81, 83, 97, 104, 105, 108, 109, 110, 111, 112, 113, 114, 119, 120, 121, 122, 123, 124, 125, 126, 128, 142, 149, 151, 155, 159, 163, 165, 167, 171, 175, 179, 181, 183, 185, 186, 187, 188, 191, 195, 197, 199, 201, 202, 203, 204, 207, 211, 213, 215, 217, 218, 219, 220, 221, 227, 229, 231, 235, 239, 243, 245, 246, 247, 249, 260, 262, 268, 270, 273, 274, 276, 288, 290, 308, 310, 321, 323, 326, 327, 328, 330, 331, 332, 334, 336 | 1, 3, 5, 7, 10, 11, 12, 14, 17, 18, 19, 21, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 38, 40, 42, 44, 49, 51, 52 | exact 4, tonal-transposed 10, real-transposed 4, fragmented 117, inverted 2, varied 4 |
+| 13 | 8 | 2 1 7 6 5 6 7 1 | scale steps | 12 | 5, 6, 7, 33, 34, 35, 74, 75, 76, 119, 120, 121 | 1, 5, 12, 19 | exact 2, tonal-transposed 8, real-transposed 2 |
+| 14 | 8 | 6 5 4 3 2 3 4 5 | scale steps | 2 | 8, 36 | 1, 5 | exact 2 |
+| 15 | 8 | 6 7 1 2 3 #4 b6 6 | scale steps | 6 | 9, 37, 60, 82, 105, 127 | 1, 5, 10, 12, 17, 19 | exact 2, fragmented 4 |
+| 16 | 8 | 2 3 #4 b6 6 3 #4 b6 | scale steps | 4 | 9, 37, 82, 127 | 1, 5, 12, 19 | exact 4 |
+| 17 | 8 | 6 3 #4 b6 6 7 1 2 | scale steps | 9 | 9, 37, 82, 127, 158, 174, 190, 206, 238 | 1, 5, 12, 19, 24, 25, 27, 29, 31 | exact 4, fragmented 5 |
+| 18 | 8 | 6 7 1 2 3 #4 5 #4 | scale steps | 4 | 9, 37, 82, 127 | 1, 5, 12, 19 | exact 4 |
+| 19 | 8 | 3 #4 5 #4 3 2 1 7 | scale steps | 10 | 10, 38, 83, 97, 128, 142 | 1, 5, 12, 14, 19, 21 | exact 4, tonal-transposed 6 |
+| 20 | 8 | 3 2 1 7 1 2 3 2 | scale steps | 18 | 10, 38, 83, 128, 151, 159, 167, 175, 191, 207, 213, 215, 231, 235, 239, 245, 249, 332 | 1, 5, 12, 19, 24, 25, 27, 29, 31, 32, 51 | exact 4, fragmented 14 |
+| 21 | 7 | 1 7 6 5 #4 2 7 | scale steps | 130 | 10, 5, 6, 7, 8, 10, 24, 33, 34, 35, 36, 38, 52, 59, 60, 63, 64, 65, 66, 67, 68, 69, 74, 75, 76, 77, 78, 79, 80, 81, 83, 97, 104, 105, 108, 109, 110, 111, 112, 113, 114, 119, 120, 121, 122, 123, 124, 125, 126, 128, 142, 151, 159, 167, 175, 181, 183, 185, 186, 188, 191, 197, 199, 201, 202, 204, 207, 213, 215, 217, 218, 227, 231, 235, 239, 245, 249, 260, 262, 268, 270, 273, 274, 276, 288, 290, 321, 323, 326, 327, 328, 330, 331, 332, 334, 336 | 1, 3, 5, 7, 10, 11, 12, 14, 17, 18, 19, 21, 24, 25, 26, 27, 28, 29, 30, 31, 32, 35, 38, 40, 42, 49, 51, 52 | exact 3, fragmented 127 |
+| 22 | 3 | 6 2 7 | scale steps | 4 | 11, 39, 84, 129 | 1, 5, 12, 19 | exact 4 |
+| 23 | 8 | #4 5 #4 5 #4 5 #4 5 | scale steps | 8 | 13, 41, 86, 131 | 1, 5, 12, 19 | exact 2, tonal-transposed 4, real-transposed 2 |
+| 24 | 8 | 4 5 4 5 5 3 1 2 | scale steps | 2 | 13, 41 | - | exact 2 |
+| 25 | 8 | 5 3 1 2 3 2 1 2 | scale steps | 8 | 14, 16, 42, 44, 87, 89, 132, 134 | 2, 6, 13, 20 | exact 4, real-transposed 4 |
+| 26 | 8 | 1 2 3 2 1 2 1 2 | scale steps | 8 | 14, 16, 42, 44, 87, 89, 132, 134 | 2, 6, 13, 20 | exact 4, real-transposed 4 |
+| 27 | 8 | 2 1 2 1 2 1 2 1 | scale steps | 16 | 14, 16, 42, 44, 87, 89, 98, 132, 134, 143 | 2, 6, 13, 14, 20, 21 | exact 4, real-transposed 4, fragmented 8 |
+| 28 | 3 | 2 1 2 | scale steps | 9 | 14, 16, 42, 44, 87, 89, 132, 134, 311 | 2, 6, 13, 20, 44 | exact 4, real-transposed 4, tonal-transposed 1 |
+| 29 | 8 | 7 4 5 3 5 4 5 2 | scale steps | 4 | 15, 17, 43, 45 | 2, 6 | exact 4 |
+| 30 | 8 | 4 5 3 5 4 5 2 5 | scale steps | 4 | 15, 17, 43, 45 | 2, 6 | exact 4 |
+| 31 | 8 | 4 5 2 5 5 3 1 2 | scale steps | 4 | 15, 17, 43, 45 | 2, 6 | exact 2, fragmented 2 |
+| 32 | 8 | 4 5 2 5 5 3 5 3 | scale steps | 2 | 17, 45 | 2, 6 | exact 2 |
+| 33 | 8 | 5 3 5 3 1 6 4 6 | scale steps | 16 | 18, 19, 20, 21, 46, 47, 48, 49, 91, 92, 93, 94, 136, 137, 138, 139 | 2, 6, 13, 20 | exact 2, tonal-transposed 6, fragmented 6, real-transposed 2 |
+| 34 | 8 | 3 5 3 1 6 4 6 1 | scale steps | 16 | 18, 19, 20, 21, 46, 47, 48, 49, 91, 92, 93, 94, 136, 137, 138, 139 | 2, 6, 13, 20 | exact 2, tonal-transposed 6, fragmented 6, real-transposed 2 |
+| 35 | 8 | 6 4 6 1 6 4 2 4 | scale steps | 10 | 18, 19, 20, 46, 47, 48, 91, 93, 136, 138 | 2, 6, 13, 20 | exact 2, tonal-transposed 6, real-transposed 2 |
+| 36 | 8 | 4 6 1 6 4 2 4 2 | scale steps | 10 | 18, 19, 20, 46, 47, 48, 91, 93, 136, 138 | 2, 6, 13, 20 | exact 2, tonal-transposed 6, real-transposed 2 |
+| 37 | 8 | 2 7 2 7 5 3 1 1 | scale steps | 4 | 21, 49, 94, 139 | 2, 6, 13, 20 | exact 2, real-transposed 2 |
+| 38 | 8 | 7 2 7 5 3 1 1 5 | scale steps | 4 | 21, 49, 94, 139 | 2, 6, 13, 20 | exact 2, real-transposed 2 |
+| 39 | 8 | 3 1 1 5 3 2 3 4 | scale steps | 4 | 21, 49, 94, 139 | - | exact 2, fragmented 2 |
+| 40 | 6 | 3 1 1 5 3 2 | scale steps | 7 | 21, 49, 94, 139, 296, 301, 303 | 13, 20, 43 | exact 2, fragmented 5 |
+| 41 | 8 | 1 1 5 3 2 3 4 b6 | scale steps | 4 | 21, 49, 94, 139 | - | exact 2, fragmented 2 |
+| 42 | 8 | 1 2 b3 #4 5 7 1 2 | scale steps | 2 | 22, 50 | 3, 7 | exact 2 |
+| 43 | 8 | 2 b3 #4 5 7 1 2 1 | scale steps | 2 | 22, 50 | 3, 7 | exact 2 |
+| 44 | 8 | #4 5 7 1 2 1 7 1 | scale steps | 2 | 22, 50 | 3, 7 | exact 2 |
+| 45 | 8 | 7 1 2 1 7 1 b3 1 | scale steps | 2 | 23, 51 | 3, 7 | exact 2 |
+| 46 | 8 | b3 1 b3 1 2 b7 4 b3 | scale steps | 2 | 23, 51 | 3, 7 | exact 2 |
+| 47 | 8 | b3 1 2 b7 4 b3 2 1 | scale steps | 2 | 23, 51 | 3, 7 | exact 2 |
+| 48 | 8 | 2 b7 4 b3 2 1 b7 2 | scale steps | 2 | 24, 52 | 3, 7 | exact 2 |
+| 49 | 8 | 4 b3 2 1 b7 2 1 2 | scale steps | 2 | 24, 52 | 3, 7 | exact 2 |
+| 50 | 8 | 1 1 5 1 3 5 3 1 | scale steps | 16 | 26, 27, 54, 55, 57, 58, 61, 62, 99, 100, 102, 103, 106, 107, 144, 145 | 3, 7, 10, 14, 16, 17, 21 | exact 2, fragmented 12, real-transposed 2 |
+| 51 | 8 | 1 5 1 3 5 3 1 3 | scale steps | 16 | 26, 27, 54, 55, 57, 58, 61, 62, 99, 100, 102, 103, 106, 107, 144, 145 | 3, 7, 10, 14, 16, 17, 21 | exact 2, real-transposed 6, tonal-transposed 8 |
+| 52 | 8 | 5 3 1 3 4 2 7 2 | scale steps | 16 | 26, 27, 54, 55, 57, 58, 61, 62, 99, 100, 102, 103, 106, 107, 144, 145 | 3, 7, 10, 14, 16, 17, 21 | exact 2, real-transposed 6, tonal-transposed 8 |
+| 53 | 8 | 4 2 7 2 1 1 5 1 | scale steps | 11 | 26, 27, 54, 55, 57, 58, 99, 100, 103, 144, 145 | 16 | exact 3, fragmented 6, real-transposed 2 |
+| 54 | 5 | 4 2 7 2 1 | scale steps | 38 | 26, 27, 54, 55, 57, 58, 61, 62, 99, 100, 102, 103, 106, 107, 144, 145, 263, 271, 291, 300, 302, 324 | 3, 7, 10, 14, 16, 17, 21, 36, 39, 42, 43, 50 | exact 3, fragmented 33, real-transposed 2 |
+| 55 | 8 | 1 1 5 1 3 5 3 1 | scale steps | 8 | 27, 55, 58, 62, 100, 103, 107, 145 | 10, 16, 17 | exact 2, tonal-transposed 4, real-transposed 2 |
+| 56 | 8 | 1 1 5 1 b3 5 b3 1 | scale steps | 2 | 57, 102 | 16 | exact 2 |
+| 57 | 8 | 4 2 7 2 1 4 5 6 | scale steps | 2 | 58, 103 | - | exact 2 |
+| 58 | 8 | 1 4 5 6 7 1 1 b3 | scale steps | 2 | 59, 104 | 10 | exact 2 |
+| 59 | 8 | 4 5 6 7 1 1 b3 2 | scale steps | 2 | 59, 104 | 10 | exact 2 |
+| 60 | 8 | 1 1 b3 2 1 b7 6 5 | scale steps | 4 | 59, 104, 217, 218 | 10, 30 | exact 2, varied 2 |
+| 61 | 8 | 1 b7 6 5 #4 5 6 7 | scale steps | 2 | 59, 104 | 10 | exact 2 |
+| 62 | 8 | #4 5 6 7 b2 2 #4 6 | scale steps | 2 | 60, 105 | 10, 17 | exact 2 |
+| 63 | 8 | 5 6 7 b2 2 #4 6 5 | scale steps | 2 | 60, 105 | 10, 17 | exact 2 |
+| 64 | 8 | 2 #4 6 5 #4 b3 2 1 | scale steps | 2 | 60, 105 | 10, 17 | exact 2 |
+| 65 | 8 | #4 b3 2 1 b7 5 2 5 | scale steps | 2 | 60, 105 | 10, 17 | exact 2 |
+| 66 | 8 | b7 5 2 5 b7 2 b7 5 | scale steps | 2 | 61, 106 | 10, 17 | exact 2 |
+| 67 | 8 | 1 6 #4 6 5 5 2 5 | scale steps | 3 | 61, 102, 106 | 10, 16, 17 | exact 2, real-transposed 1 |
+| 68 | 8 | 4 2 7 2 b3 1 2 b3 | scale steps | 2 | 62, 107 | 10, 17 | exact 2 |
+| 69 | 8 | b3 1 2 b3 4 5 6 7 | scale steps | 2 | 63, 108 | - | exact 2 |
+| 70 | 8 | 4 5 6 7 1 1 b7 6 | scale steps | 2 | 63, 108 | - | exact 2 |
+| 71 | 8 | 1 1 b7 6 5 #4 6 b7 | scale steps | 8 | 63, 65, 66, 67, 108, 110, 111, 112 | 11, 18 | exact 2, fragmented 6 |
+| 72 | 8 | 1 b7 6 5 #4 6 b7 1 | scale steps | 2 | 63, 108 | - | exact 2 |
+| 73 | 8 | #4 6 b7 1 2 3 #4 5 | scale steps | 2 | 64, 109 | 11, 18 | exact 2 |
+| 74 | 8 | 2 3 #4 5 6 #4 b3 2 | scale steps | 2 | 64, 109 | 11, 18 | exact 2 |
+| 75 | 8 | 6 #4 b3 2 1 b7 5 2 | scale steps | 2 | 64, 109 | 11, 18 | exact 2 |
+| 76 | 8 | #4 b3 2 1 b7 5 2 1 | scale steps | 2 | 64, 109 | 11, 18 | exact 2 |
+| 77 | 8 | b7 5 2 1 b7 6 5 4 | scale steps | 2 | 65, 110 | 11, 18 | exact 2 |
+| 78 | 8 | b7 6 5 4 b3 b3 2 1 | scale steps | 6 | 65, 66, 67, 110, 111, 112 | 11, 18 | exact 2, tonal-transposed 4 |
+| 79 | 8 | b3 b3 2 1 b7 6 4 1 | scale steps | 2 | 65, 110 | 11, 18 | exact 2 |
+| 80 | 8 | b3 2 1 b7 6 4 1 b7 | scale steps | 4 | 65, 110, 181, 197 | 11, 18 | exact 2, fragmented 2 |
+| 81 | 8 | 2 b7 4 b3 2 1 b7 b6 | scale steps | 6 | 66, 67, 68, 111, 112, 113 | 11, 18 | exact 2, tonal-transposed 4 |
+| 82 | 8 | 5 5 4 b3 2 1 b6 b3 | scale steps | 4 | 66, 67, 111, 112 | 11, 18 | exact 2, tonal-transposed 2 |
+| 83 | 8 | 5 4 b3 2 1 b6 b3 2 | scale steps | 4 | 66, 67, 111, 112 | 11, 18 | exact 2, tonal-transposed 2 |
+| 84 | 8 | 7 b6 5 4 b3 1 b7 b6 | scale steps | 2 | 68, 113 | 11, 18 | exact 2 |
+| 85 | 8 | b3 1 b7 b6 5 4 b2 4 | scale steps | 2 | 68, 113 | 11, 18 | exact 2 |
+| 86 | 8 | 1 b7 b6 5 4 b2 4 b3 | scale steps | 2 | 68, 113 | 11, 18 | exact 2 |
+| 87 | 8 | 6 4 6 5 4 3 2 1 | scale steps | 2 | 69, 114 | 11, 18 | exact 2 |
+| 88 | 8 | 4 3 2 1 7 1 2 3 | scale steps | 3 | 69, 114, 290 | 11, 18, 42 | exact 2, varied 1 |
+| 89 | 8 | 7 1 2 3 4 5 6 7 | scale steps | 2 | 69, 114 | 11, 18 | exact 2 |
+| 90 | 8 | 4 5 6 7 1 3 5 7 | scale steps | 2 | 69, 114 | 11, 18 | exact 2 |
+| 91 | 8 | 6 5 4 3 3 4 5 6 | scale steps | 7 | 77, 122, 260, 268, 276, 288, 321 | 12, 19, 35, 38, 40, 42, 49 | exact 2, fragmented 5 |
+| 92 | 8 | 3 4 5 6 7 1 7 6 | scale steps | 9 | 78, 79, 80, 81, 123, 124, 125, 126, 275 | 12, 19, 40 | exact 2, tonal-transposed 4, real-transposed 2, fragmented 1 |
+| 93 | 8 | 1 7 6 5 3 2 3 #4 | scale steps | 8 | 78, 79, 80, 81, 123, 124, 125, 126 | 12, 19 | exact 2, tonal-transposed 4, fragmented 2 |
+| 94 | 8 | 3 2 3 #4 5 6 7 6 | scale steps | 6 | 78, 79, 80, 123, 124, 125 | 12, 19 | exact 2, tonal-transposed 4 |
+| 95 | 8 | 5 #4 3 2 7 6 6 7 | scale steps | 2 | 81, 126 | 12, 19 | exact 2 |
+| 96 | 8 | 7 6 6 7 1 2 3 #4 | scale steps | 2 | 81, 126 | 12, 19 | exact 2 |
+| 97 | 8 | 6 6 7 1 2 3 #4 b6 | scale steps | 2 | 82, 127 | 12, 19 | exact 2 |
+| 98 | 8 | 1 7 6 5 #4 2 7 5 | scale steps | 4 | 83, 10, 38, 128 | 12, 1, 5, 19 | exact 2, fragmented 2 |
+| 99 | 8 | #4 2 7 5 6 2 7 5 | scale steps | 2 | 84, 129 | 12, 19 | exact 2 |
+| 100 | 8 | 7 5 6 2 7 5 6 2 | scale steps | 2 | 84, 129 | 12, 19 | exact 2 |
+| 101 | 7 | 6 2 7 5 6 2 2 | scale steps | 2 | 84, 129 | 12, 19 | exact 2 |
+| 102 | 8 | b7 1 b7 1 1 6 4 5 | scale steps | 2 | 86, 131 | - | exact 2 |
+| 103 | 8 | 5 b3 1 b6 b7 1 b7 b6 | scale steps | 2 | 88, 133 | 13, 20 | exact 2 |
+| 104 | 8 | 5 b2 b3 b7 b3 b3 1 b3 | scale steps | 2 | 90, 135 | 13, 20 | exact 2 |
+| 105 | 8 | b2 b3 b7 b3 b3 1 b3 1 | scale steps | 2 | 90, 135 | 13, 20 | exact 2 |
+| 106 | 8 | 4 2 4 2 7 5 3 5 | scale steps | 2 | 92, 137 | 13, 20 | exact 2 |
+| 107 | 8 | 2 4 2 7 5 3 5 7 | scale steps | 2 | 92, 137 | 13, 20 | exact 2 |
+| 108 | 8 | 5 3 5 7 5 3 1 3 | scale steps | 2 | 92, 137 | 13, 20 | exact 2 |
+| 109 | 8 | 3 5 7 5 3 1 3 1 | scale steps | 2 | 92, 137 | 13, 20 | exact 2 |
+| 110 | 5 | 7 1 7 1 5 | scale steps | 5 | 95, 96, 140, 141, 149 | 14, 21 | exact 2, fragmented 2, varied 1 |
+| 111 | 8 | #4 5 #4 5 4 5 6 b7 | scale steps | 6 | 96, 13, 41, 86, 131, 141 | 14, 1, 5, 12, 19, 21 | exact 2, varied 4 |
+| 112 | 8 | #4 5 4 5 6 b7 1 2 | scale steps | 2 | 96, 141 | 14, 21 | exact 2 |
+| 113 | 8 | 4 5 6 b7 1 2 1 b7 | scale steps | 2 | 97, 142 | 14, 21 | exact 2 |
+| 114 | 8 | b3 2 1 b7 2 1 2 1 | scale steps | 4 | 97, 142, 227, 328 | 14, 21, 51 | exact 2, fragmented 2 |
+| 115 | 5 | b3 2 1 b7 2 | scale steps | 18 | 97, 142, 220, 223, 227, 244, 248, 293, 294, 298, 307, 308 | 14, 21, 30, 32, 42, 43, 44 | exact 2, fragmented 15, varied 1 |
+| 116 | 8 | 2 1 2 1 2 1 2 1 | scale steps | 16 | 98, 15, 17, 43, 45, 88, 90, 98, 133, 135, 143 | 14, 2, 6, 13, 20, 21 | exact 6, fragmented 10 |
+| 117 | 8 | 2 1 2 1 2 1 b7 1 | scale steps | 10 | 98, 15, 17, 43, 45, 88, 90, 133, 135, 143 | 14, 2, 6, 13, 20, 21 | exact 2, fragmented 8 |
+| 118 | 8 | 5 3 1 1 5 3 5 1 | scale steps | 6 | 150, 152, 166, 168, 230, 232 | 24, 25, 31 | exact 3, fragmented 3 |
+| 119 | 8 | 1 1 5 3 5 1 2 1 | scale steps | 11 | 150, 152, 160, 166, 168, 176, 192, 208, 230, 232, 240 | 24, 25, 27, 29, 31 | exact 3, fragmented 8 |
+| 120 | 8 | 1 5 3 5 1 2 1 7 | scale steps | 3 | 150, 166, 230 | 24, 25, 31 | exact 3 |
+| 121 | 4 | 1 5 3 5 | scale steps | 41 | 150, 152, 157, 160, 161, 162, 166, 168, 173, 176, 177, 178, 189, 192, 193, 194, 205, 208, 209, 210, 214, 224, 230, 232, 237, 240, 241, 242, 311, 312, 313, 314, 315, 325, 329 | 24, 25, 27, 29, 30, 31, 44, 47, 51 | exact 11, fragmented 28, tonal-transposed 1, real-transposed 1 |
+| 122 | 8 | 1 2 1 7 6 5 #4 5 | scale steps | 3 | 151, 167, 231 | 24, 25, 31 | exact 3 |
+| 123 | 8 | 7 6 5 #4 5 3 1 1 | scale steps | 3 | 151, 167, 231 | 24, 25, 31 | exact 3 |
+| 124 | 8 | 5 3 1 1 5 3 5 4 | scale steps | 8 | 152, 160, 168, 176, 192, 208, 232, 240 | 24, 25, 27, 29, 31 | exact 3, fragmented 5 |
+| 125 | 8 | 1 1 5 3 5 4 2 7 | scale steps | 3 | 152, 168, 232 | 24, 25, 31 | exact 3 |
+| 126 | 8 | 1 5 3 5 4 2 7 2 | scale steps | 3 | 152, 168, 232 | 24, 25, 31 | exact 3 |
+| 127 | 8 | 4 2 7 2 3 4 5 3 | scale steps | 3 | 153, 169, 233 | 24, 25, 31 | exact 3 |
+| 128 | 8 | 7 2 3 4 5 3 1 3 | scale steps | 3 | 153, 169, 233 | 24, 25, 31 | exact 3 |
+| 129 | 8 | 3 4 5 3 1 3 1 5 | scale steps | 3 | 153, 169, 233 | 24, 25, 31 | exact 3 |
+| 130 | 8 | 5 3 1 3 1 5 1 2 | scale steps | 3 | 154, 170, 234 | 24, 25, 31 | exact 3 |
+| 131 | 8 | 1 3 1 5 1 2 1 7 | scale steps | 3 | 154, 170, 234 | 24, 25, 31 | exact 3 |
+| 132 | 8 | 3 1 5 1 2 1 7 1 | scale steps | 3 | 154, 170, 234 | 24, 25, 31 | exact 3 |
+| 133 | 8 | 2 1 7 1 7 6 b6 6 | scale steps | 13 | 155, 159, 171, 175, 191, 207, 221, 235, 239, 243, 247 | 24, 25, 27, 29, 30, 31, 32 | exact 3, fragmented 10 |
+| 134 | 8 | 7 6 b6 6 5 4 3 4 | scale steps | 3 | 155, 171, 235 | 24, 25, 31 | exact 2, fragmented 1 |
+| 135 | 3 | 7 6 b6 | scale steps | 28 | 155, 158, 161, 171, 174, 177, 187, 188, 190, 193, 203, 204, 206, 209, 235, 238, 241, 263, 271, 275, 297, 298, 309, 310, 324 | 24, 25, 26, 27, 28, 29, 31, 36, 39, 40, 43, 44, 50 | exact 3, retrograde 14, tonal-transposed 9, inverted 2 |
+| 136 | 8 | 5 4 3 4 3 4 3 2 | scale steps | 2 | 155, 171 | 24, 25 | exact 2 |
+| 137 | 8 | 3 4 3 2 5 #4 4 3 | scale steps | 3 | 156, 172, 236 | 24, 25, 31 | exact 3 |
+| 138 | 8 | 2 5 #4 4 3 1 3 5 | scale steps | 3 | 156, 172, 236 | 24, 25, 31 | exact 3 |
+| 139 | 8 | #4 4 3 1 3 5 4 2 | scale steps | 5 | 156, 172, 189, 205, 236 | 24, 25, 27, 29, 31 | exact 3, fragmented 2 |
+| 140 | 8 | 3 1 3 5 4 2 4 6 | scale steps | 5 | 157, 173, 189, 205, 237 | 24, 25, 27, 29, 31 | exact 5 |
+| 141 | 8 | 4 2 4 6 5 3 1 1 | scale steps | 5 | 157, 173, 189, 205, 237 | 24, 25, 27, 29, 31 | exact 5 |
+| 142 | 8 | 5 3 1 1 2 3 4 5 | scale steps | 5 | 158, 174, 190, 206, 238 | 24, 25, 27, 29, 31 | exact 5 |
+| 143 | 8 | 1 1 2 3 4 5 6 7 | scale steps | 6 | 158, 174, 190, 206, 238, 275 | 24, 25, 27, 29, 31, 40 | exact 5, varied 1 |
+| 144 | 8 | 4 5 6 7 1 7 1 7 | scale steps | 5 | 158, 174, 190, 206, 238 | 24, 25, 27, 29, 31 | exact 5 |
+| 145 | 8 | 1 7 1 7 2 1 7 1 | scale steps | 6 | 159, 175, 191, 207, 227, 239 | 24, 25, 27, 29, 31 | exact 5, varied 1 |
+| 146 | 8 | 2 1 7 1 7 6 5 #4 | scale steps | 5 | 159, 175, 191, 207, 239 | 24, 25, 27, 29, 31 | exact 5 |
+| 147 | 8 | 7 6 5 #4 5 3 5 3 | scale steps | 5 | 159, 175, 191, 207, 239 | 24, 25, 27, 29, 31 | exact 5 |
+| 148 | 8 | 5 3 5 3 1 1 5 3 | scale steps | 10 | 160, 161, 176, 177, 192, 193, 208, 209, 240, 241 | 24, 25, 27, 29, 31 | exact 5, fragmented 5 |
+| 149 | 8 | 1 1 5 3 5 4 2 4 | scale steps | 5 | 160, 176, 192, 208, 240 | 24, 25, 27, 29, 31 | exact 5 |
+| 150 | 8 | 1 5 3 5 4 2 4 2 | scale steps | 5 | 160, 176, 192, 208, 240 | 24, 25, 27, 29, 31 | exact 5 |
+| 151 | 8 | 4 2 4 2 7 2 b2 2 | scale steps | 5 | 161, 177, 193, 209, 241 | 24, 25, 27, 29, 31 | exact 5 |
+| 152 | 8 | 7 2 b2 2 b3 3 4 #4 | scale steps | 5 | 161, 177, 193, 209, 241 | 24, 25, 27, 29, 31 | exact 5 |
+| 153 | 8 | b3 3 4 #4 5 3 5 3 | scale steps | 5 | 161, 177, 193, 209, 241 | 24, 25, 27, 29, 31 | exact 5 |
+| 154 | 8 | 5 3 5 3 1 3 3 7 | scale steps | 5 | 162, 178, 194, 210, 242 | 24, 25, 27, 29, 31 | exact 5 |
+| 155 | 8 | 1 3 3 7 1 b6 6 4 | scale steps | 5 | 162, 178, 194, 210, 242 | 25, 27, 29 | exact 5 |
+| 156 | 8 | 3 3 7 1 b6 6 4 2 | scale steps | 5 | 162, 178, 194, 210, 242 | 25, 27, 29 | exact 5 |
+| 157 | 8 | b6 6 4 2 1 1 3 2 | scale steps | 5 | 163, 179, 195, 211, 243 | 25, 27, 29, 32 | exact 5 |
+| 158 | 8 | 1 1 3 2 1 2 2 1 | scale steps | 10 | 163, 179, 187, 195, 203, 211, 219, 227, 243, 247 | 25, 27, 29, 30, 32 | exact 4, fragmented 5, real-transposed 1 |
+| 159 | 5 | 1 1 3 2 1 | scale steps | 11 | 163, 179, 195, 211, 217, 218, 219, 227, 243, 247, 279 | 25, 27, 29, 30, 32, 41 | exact 6, varied 3, real-transposed 1, fragmented 1 |
+| 160 | 8 | 3 5 4 3 4 5 3 1 | scale steps | 3 | 165, 149, 229 | 25, 31 | exact 2, fragmented 1 |
+| 161 | 8 | 5 4 3 4 5 3 1 1 | scale steps | 3 | 165, 149, 229 | 25, 31 | exact 2, varied 1 |
+| 162 | 8 | 5 #4 6 5 1 7 6 5 | scale steps | 4 | 181, 185, 197, 201 | 25, 26, 27, 28 | exact 2, tonal-transposed 2 |
+| 163 | 8 | 1 7 6 5 #4 5 6 6 | scale steps | 2 | 181, 197 | - | exact 2 |
+| 164 | 8 | 7 1 2 2 5 4 5 2 | scale steps | 2 | 182, 198 | 26, 28 | exact 2 |
+| 165 | 8 | 2 2 5 4 5 2 b2 3 | scale steps | 2 | 182, 198 | 26, 28 | exact 2 |
+| 166 | 8 | 2 5 4 5 2 b2 3 2 | scale steps | 2 | 182, 198 | 26, 28 | exact 2 |
+| 167 | 8 | 2 b2 3 2 5 4 3 2 | scale steps | 4 | 183, 186, 199, 202 | 26, 28 | exact 4 |
+| 168 | 8 | 5 4 3 2 1 2 3 6 | scale steps | 2 | 183, 199 | 26, 28 | exact 2 |
+| 169 | 8 | 1 2 3 6 4 1 4 3 | scale steps | 3 | 184, 200, 216 | 26, 28 | exact 2, fragmented 1 |
+| 170 | 8 | 3 6 4 1 4 3 2 4 | scale steps | 2 | 184, 200 | 26, 28 | exact 2 |
+| 171 | 8 | 6 4 1 4 3 2 4 3 | scale steps | 3 | 184, 200, 216 | 26, 28 | exact 2, varied 1 |
+| 172 | 8 | 6 5 4 3 2 b2 3 2 | scale steps | 2 | 185, 201 | 26, 28 | exact 2 |
+| 173 | 8 | 5 4 3 2 2 1 1 5 | scale steps | 4 | 186, 202, 327, 331 | 26, 28, 51 | exact 2, fragmented 2 |
+| 174 | 8 | 2 1 1 5 1 3 3 2 | scale steps | 2 | 187, 203 | 26, 28 | exact 2 |
+| 175 | 8 | 3 2 1 2 2 1 b2 2 | scale steps | 7 | 187, 163, 179, 195, 203, 211, 219 | 25, 27, 29, 30 | exact 2, fragmented 5 |
+| 176 | 8 | 6 5 b6 6 b6 7 6 5 | scale steps | 2 | 188, 204 | 27, 29 | exact 2 |
+| 177 | 8 | 5 b6 6 b6 7 6 5 4 | scale steps | 2 | 188, 204 | 27, 29 | exact 2 |
+| 178 | 8 | 7 6 5 4 3 1 3 5 | scale steps | 3 | 188, 204, 218 | 27, 29, 30 | exact 2, varied 1 |
+| 179 | 8 | b3 2 4 b3 b3 2 1 7 | scale steps | 2 | 213, 215 | 29 | exact 1, tonal-transposed 1 |
+| 180 | 6 | b3 2 1 7 1 b3 | scale steps | 7 | 213, 215, 235, 245, 249, 251, 332 | 29, 31, 32, 51 | exact 1, tonal-transposed 1, varied 5 |
+| 181 | 3 | 1 b3 5 | scale steps | 16 | 214, 150, 152, 153, 158, 166, 168, 169, 174, 190, 206, 222, 230, 232, 233, 238 | 29, 24, 25, 27, 30, 31 | exact 1, inverted 14, real-transposed 1 |
+| 182 | 6 | 6 5 4 3 b2 2 | scale steps | 12 | 218, 158, 174, 190, 206, 217, 221, 238, 262, 270, 274, 323 | 30, 24, 25, 27, 29, 31, 40 | exact 1, retrograde 5, varied 1, fragmented 1, real-transposed 4 |
+| 183 | 8 | 1 7 2 1 3 2 4 3 | scale steps | 11 | 220, 244, 248, 263, 271, 291, 298, 308, 324 | 30, 32, 36, 39, 42, 43, 44, 50 | exact 1, real-transposed 2, fragmented 7, varied 1 |
+| 184 | 6 | 1 7 2 1 3 2 | scale steps | 14 | 220, 223, 227, 244, 248, 293, 294, 298, 307, 308, 328 | 30, 32, 42, 43, 44, 51 | exact 1, varied 3, real-transposed 2, fragmented 8 |
+| 185 | 3 | 4 2 b6 | scale steps | 7 | 225, 24, 52, 252, 253, 333, 335 | 30, 3, 7, 32, 33, 51, 52 | exact 1, augmented 2, tonal-transposed 2, inverted 2 |
+| 186 | 8 | 1 1 3 2 1 2 1 7 | scale steps | 2 | 243, 247 | 32 | exact 2 |
+| 187 | 8 | 3 2 1 2 1 7 2 1 | scale steps | 2 | 243, 247 | 32 | exact 2 |
+| 188 | 8 | 5 4 6 5 b7 1 2 1 | scale steps | 2 | 244, 248 | 32 | exact 2 |
+| 189 | 8 | b7 1 2 1 b7 6 5 b6 | scale steps | 2 | 245, 249 | 32 | exact 1, tonal-transposed 1 |
+| 190 | 3 | 3 2 1 | scale steps | 5 | 251, 153, 169, 233, 329 | 32, 24, 25, 31, 51 | exact 1, inverted 3, tonal-transposed 1 |
+| 191 | 8 | 1 5 3 3 3 1 5 5 | scale steps | 2 | 252, 253 | 32, 33 | exact 2 |
+| 192 | 8 | 3 1 5 5 5 3 2 3 | scale steps | 2 | 252, 253 | - | exact 2 |
+| 193 | 5 | 5 3 2 3 1 | scale steps | 3 | 252, 247, 253 | 32 | exact 2, fragmented 1 |
+| 194 | 8 | 1 2 3 1 6 7 1 b2 | scale steps | 5 | 258, 266, 278, 286, 319 | 35 | exact 4, fragmented 1 |
+| 195 | 8 | 6 7 1 b2 2 3 4 2 | scale steps | 4 | 259, 267, 287, 320 | 35, 38, 42, 49 | exact 4 |
+| 196 | 8 | 2 3 4 2 1 7 6 5 | scale steps | 4 | 259, 267, 287, 320 | 35, 38, 42, 49 | exact 4 |
+| 197 | 8 | 6 5 4 3 b2 2 3 4 | scale steps | 5 | 262, 218, 270, 274, 323 | 30, 40 | exact 3, fragmented 1, real-transposed 1 |
+| 198 | 8 | b2 2 3 4 6 1 7 2 | scale steps | 5 | 263, 271, 275, 291, 324 | 36, 39, 40, 42, 50 | exact 3, fragmented 1, varied 1 |
+| 199 | 6 | 6 1 7 2 1 1 | scale steps | 4 | 263, 271, 291, 324 | 36, 39, 42, 50 | exact 4 |
+| 200 | 4 | 2 7 5 4 | scale steps | 2 | 300, 302 | 43 | exact 2 |
+| 201 | 8 | b6 1 4 3 4 1 b6 4 | scale steps | 2 | 301, 303 | 43 | exact 2 |
+| 202 | 8 | 4 b3 b3 2 2 1 1 b7 | scale steps | 3 | 309, 298, 310 | 44, 43 | exact 1, fragmented 1, real-transposed 1 |
+| 203 | 8 | 1 5 b3 7 4 2 7 1 | scale steps | 2 | 312, 314 | - | exact 2 |
+| 204 | 7 | 1 5 b3 7 4 2 7 | scale steps | 8 | 312, 311, 313, 314, 315, 325, 329 | 44, 47, 51 | exact 3, fragmented 5 |
+| 205 | 7 | 7 4 2 7 1 5 b3 | scale steps | 3 | 312, 313, 314 | - | exact 2, varied 1 |
+| 206 | 8 | 7 4 2 7 6 5 4 3 | scale steps | 2 | 325, 329 | 51 | exact 2 |
+| 207 | 8 | 6 5 4 3 2 4 2 7 | scale steps | 3 | 326, 330, 334 | 51, 52 | exact 2, fragmented 1 |
+| 208 | 6 | 6 5 4 3 2 4 | scale steps | 3 | 326, 220, 330 | 51, 30 | exact 2, varied 1 |
+| 209 | 8 | 2 4 2 7 6 5 4 3 | scale steps | 2 | 326, 330 | 51 | exact 2 |
+| 210 | 8 | 6 5 4 3 2 1 7 6 | scale steps | 2 | 327, 331 | 51 | exact 2 |
+| 211 | 8 | 2 1 7 6 6 5 4 3 | scale steps | 2 | 327, 331 | 51 | exact 2 |
+| 212 | 8 | 1 3 5 1 3 5 1 3 | scale steps | 2 | 333, 335 | 51, 52 | exact 2 |
+| 213 | 8 | 3 5 1 3 5 1 3 5 | scale steps | 3 | 333, 302, 335 | 43, 52 | exact 2, fragmented 1 |
+| 214 | 8 | 5 1 3 5 5 4 3 2 | scale steps | 2 | 334, 336 | 52 | exact 2 |
 
 ## Melody
 

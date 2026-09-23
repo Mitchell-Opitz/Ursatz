@@ -69,7 +69,7 @@ static void print_usage(const char *program) {
             "[--cantus upper|lower]] [--meter <n/d>] [--value-scale <n or n/d>] [--pickup <n/d>] <input-file-path>\n"
             "       %s --corpus <dir> [--out <dir>] [--resume] [--markdown]\n"
             "       %s --style-profile <corpus output dir> --name <style name> [--out <file>]\n"
-            "       %s --compare-styles <a.json> <b.json> [--format text|json]\n"
+            "       %s --compare-styles <a.json> <b.json> [--without <category>]... [--format text|json]\n"
             "       %s --similar <corpus output dir> (--motive <file> | --progression \"<numerals>\") [--min <n/d>] "
             "[--max <n>] [--format text|json]\n",
             program, program, program, program, program);
@@ -204,13 +204,23 @@ static void print_comparison_json(const StyleComparison *comparison) {
     printf("\n  ]\n}\n");
 }
 
-static int run_compare_styles(const char *path_a, const char *path_b, bool json) {
+#define MAX_WITHOUT 32
+
+static int run_compare_styles(const char *path_a, const char *path_b, const char *const *without, size_t without_count,
+                              bool json) {
     StyleModel *a = NULL, *b = NULL;
-    if (style_model_file_read(path_a, &a, NULL) != STYLE_MODEL_FILE_OK) {
+    for (size_t i = 0; i < without_count; i++) {
+        StyleDimension unused;
+        if (!style_category_dimension(without[i], &unused)) {
+            fprintf(stderr, "Error: unknown style category '%s'\n", without[i]);
+            return 1;
+        }
+    }
+    if (style_model_file_read_without(path_a, without, without_count, &a, NULL) != STYLE_MODEL_FILE_OK) {
         fprintf(stderr, "Error: cannot read style model '%s'\n", path_a);
         return 2;
     }
-    if (style_model_file_read(path_b, &b, NULL) != STYLE_MODEL_FILE_OK) {
+    if (style_model_file_read_without(path_b, without, without_count, &b, NULL) != STYLE_MODEL_FILE_OK) {
         fprintf(stderr, "Error: cannot read style model '%s'\n", path_b);
         style_model_destroy(a);
         return 2;
@@ -411,6 +421,8 @@ int main(int argc, char *argv[]) {
     const char *path = NULL;
     const char *compare_a = NULL;
     const char *compare_b = NULL;
+    const char *without[MAX_WITHOUT];
+    size_t without_count = 0;
     bool format_json = false;
     bool format_set = false;
     const char *style_dir = NULL;
@@ -470,6 +482,12 @@ int main(int argc, char *argv[]) {
             }
             compare_a = argv[++i];
             compare_b = argv[++i];
+        } else if (strcmp(arg, "--without") == 0) {
+            if (i + 1 >= argc || without_count == MAX_WITHOUT) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            without[without_count++] = argv[++i];
         } else if (strcmp(arg, "--format") == 0) {
             if (i + 1 >= argc || (strcmp(argv[i + 1], "text") != 0 && strcmp(argv[i + 1], "json") != 0)) {
                 print_usage(argv[0]);
@@ -532,7 +550,7 @@ int main(int argc, char *argv[]) {
         }
     }
     if (similar_dir || motive_file || progression || similar_flags) {
-        if (!similar_dir || (motive_file != NULL) == (progression != NULL) || compare_a || style_dir || style_name ||
+        if (!similar_dir || (motive_file != NULL) == (progression != NULL) || compare_a || without_count > 0 || style_dir || style_name ||
             corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume || species != 0 || cantus_set ||
             input_format_set || reading_set) {
             print_usage(argv[0]);
@@ -546,7 +564,11 @@ int main(int argc, char *argv[]) {
             print_usage(argv[0]);
             return 1;
         }
-        return run_compare_styles(compare_a, compare_b, format_json);
+        return run_compare_styles(compare_a, compare_b, without, without_count, format_json);
+    }
+    if (without_count > 0) {
+        print_usage(argv[0]);
+        return 1;
     }
     if (format_set) {
         print_usage(argv[0]);

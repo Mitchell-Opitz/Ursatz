@@ -614,10 +614,45 @@
               "type": "array",
               "minItems": 2,
               "items": { "$ref": "#/$defs/motive_development_step" }
-            }
+            },
+            "features": { "$ref": "#/$defs/motive_features" }
           }
         }
       ]
+    },
+    "motive_fraction": { "type": "string", "pattern": "^[0-9]+/[1-9][0-9]*$" },
+    "motive_degree": { "enum": ["1", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7"] },
+    "motive_features": {
+      "type": "object",
+      "required": ["notes", "tonic_pc", "minor", "bar", "beat", "pickup", "degrees", "intervals", "steps", "rhythm",
+                   "ncts", "fingerprint"],
+      "properties": {
+        "notes": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["note_id", "pitch", "onset", "duration"],
+            "properties": {
+              "note_id": { "type": "integer", "minimum": 0 },
+              "pitch": { "type": "integer", "minimum": 0, "maximum": 127 },
+              "onset": { "$ref": "#/$defs/motive_fraction" },
+              "duration": { "$ref": "#/$defs/motive_fraction" }
+            }
+          }
+        },
+        "tonic_pc": { "type": "integer", "minimum": 0, "maximum": 11 },
+        "minor": { "type": "boolean" },
+        "bar": { "$ref": "#/$defs/motive_fraction" },
+        "beat": { "$ref": "#/$defs/motive_fraction" },
+        "pickup": { "$ref": "#/$defs/motive_fraction" },
+        "degrees": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/motive_degree" } },
+        "intervals": { "type": "array", "minItems": 1, "items": { "type": "integer" } },
+        "steps": { "type": "array", "minItems": 1, "items": { "type": "integer" } },
+        "rhythm": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/motive_fraction" } },
+        "ncts": { "type": "array", "minItems": 2, "items": { "type": ["string", "null"] } },
+        "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{16}$" }
+      }
     },
     "motive_development_step": {
       "type": "object",
@@ -652,7 +687,8 @@
             "fragment": { "enum": ["prefix", "suffix", null] },
             "in_continuation": { "type": "boolean" },
             "phrase": { "type": ["integer", "null"], "minimum": 0 },
-            "idea": { "type": ["integer", "null"], "minimum": 0 }
+            "idea": { "type": ["integer", "null"], "minimum": 0 },
+            "degrees": { "type": "array", "minItems": 2, "items": { "$ref": "#/$defs/motive_degree" } }
           }
         }
       ]
