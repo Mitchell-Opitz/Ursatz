@@ -334,16 +334,29 @@ static void propose_liquidate(const MotiveSketch *s, const MotiveSketch *t, Prop
     }
 }
 
+/* The terms of a ratio parameter a composer writes (1 to 3 for a scaling, 1 to 4 for an offset): the registry's
+ * range. A ratio outside it is not proposed, since no registry step could name it. */
+static bool ratio_within(ExactRational ratio, unsigned long long limit) {
+    return msk_ok(ratio) && ratio.n != 0 && ratio.n <= limit && ratio.d <= limit;
+}
+
 static void propose_scale_time(const MotiveSketch *s, const MotiveSketch *t, Proposals *p,
                                MotiveRelationKind kind) {
     ExactRational factor = msk_div(t->length, s->length);
+    bool above = kind == MOTIVE_RELATION_AUGMENT;
     bool wanted = msk_ok(factor) && factor.n != 0 &&
-                  (kind == MOTIVE_RELATION_AUGMENT ? msk_cmp(factor, msk_int(1)) > 0
-                                                   : msk_cmp(factor, msk_int(1)) < 0);
-    if (wanted) {
+                  (above ? msk_cmp(factor, msk_int(1)) > 0 : msk_cmp(factor, msk_int(1)) < 0);
+    if (wanted && ratio_within(factor, 3)) {
         put_ratio(p, kind, 0, 0, 0, 0, factor);
     }
-    put(p, kind, 0, 0, 0);
+    /* The ratios a chain draws, so a later step's effect on the length does not hide the factor. */
+    static const unsigned long long TERMS[3][2] = {{2, 1}, {3, 2}, {3, 1}};
+    for (size_t i = 0; i < 3; i++) {
+        ExactRational ratio = above ? msk_make(TERMS[i][0], TERMS[i][1]) : msk_make(TERMS[i][1], TERMS[i][0]);
+        if (!(wanted && msk_eq(ratio, factor))) {
+            put_ratio(p, kind, 0, 0, 0, 0, ratio);
+        }
+    }
 }
 
 static void propose_augment(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
@@ -477,23 +490,44 @@ static void propose_ancillary_fill(const MotiveSketch *s, const MotiveSketch *t,
     }
 }
 
+static ExactRational note_end(const MotiveSketch *sketch, size_t index) {
+    return msk_add(sketch->notes[index].onset, sketch->notes[index].duration);
+}
+
 static void propose_condense(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
+    /* With the same notes, the run whose durations changed, compressed by the ratio of its spans. */
+    if (s->note_count == t->note_count) {
+        size_t first = s->note_count;
+        size_t last = 0;
+        for (size_t i = 0; i < s->note_count; i++) {
+            if (!msk_eq(s->notes[i].duration, t->notes[i].duration)) {
+                first = first == s->note_count ? i : first;
+                last = i;
+            }
+        }
+        if (first < s->note_count) {
+            ExactRational ratio = msk_div(msk_sub(note_end(t, last), t->notes[first].onset),
+                                          msk_sub(note_end(s, last), s->notes[first].onset));
+            if (ratio_within(ratio, 3) && msk_cmp(ratio, msk_int(1)) < 0) {
+                put_ratio(p, MOTIVE_RELATION_CONDENSE, (long)first, (long)last, 0, 2, ratio);
+            }
+        }
+    }
     if (msk_cmp(t->length, s->length) < 0) {
         ExactRational saved = msk_sub(s->length, t->length);
         for (size_t span = 1; span < s->note_count; span++) {
             for (size_t first = 0; first + span < s->note_count; first++) {
                 size_t last = first + span;
-                ExactRational old_span = msk_sub(
-                    msk_add(s->notes[last].onset, s->notes[last].duration), s->notes[first].onset);
+                ExactRational old_span = msk_sub(note_end(s, last), s->notes[first].onset);
                 ExactRational ratio = msk_div(msk_sub(old_span, saved), old_span);
-                if (msk_ok(ratio) && ratio.n != 0 && msk_cmp(ratio, msk_int(1)) < 0) {
+                if (ratio_within(ratio, 3) && msk_cmp(ratio, msk_int(1)) < 0) {
                     put_ratio(p, MOTIVE_RELATION_CONDENSE, (long)first, (long)last, 0, 2, ratio);
                 }
             }
         }
     }
-    /* Otherwise a run of two or three notes at half the time. */
-    for (size_t span = 1; span <= 2; span++) {
+    /* Otherwise a single note, then a run of two or three, at half the time. */
+    for (size_t span = 0; span <= 2; span++) {
         for (size_t first = 0; first + span < s->note_count; first++) {
             put_ratio(p, MOTIVE_RELATION_CONDENSE, (long)first, (long)(first + span), 0, 2,
                       msk_make(1, 2));
