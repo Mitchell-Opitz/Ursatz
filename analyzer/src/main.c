@@ -8,6 +8,7 @@
 #include <ursatz_analyzer/corpus.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/markdown_report.h>
+#include <ursatz_analyzer/motive_links.h>
 #include <ursatz_analyzer/notation_reading.h>
 #include <ursatz_analyzer/report_writer.h>
 #include <ursatz_analyzer/similar_material.h>
@@ -71,8 +72,10 @@ static void print_usage(const char *program) {
             "       %s --style-profile <corpus output dir> --name <style name> [--out <file>]\n"
             "       %s --compare-styles <a.json> <b.json> [--without <category>]... [--format text|json]\n"
             "       %s --similar <corpus output dir> (--motive <file> | --progression \"<numerals>\") [--min <n/d>] "
-            "[--max <n>] [--format text|json]\n",
-            program, program, program, program, program);
+            "[--max <n>] [--format text|json]\n"
+            "       %s --link-motives <corpus output dir> [--cache <file>] [--depth <1-6>] [--candidates <n>] "
+            "[--format text|json]\n",
+            program, program, program, program, program, program);
 }
 
 static void print_corpus_piece(const char *path, CorpusPieceStatus status, const char *error, void *user) {
@@ -396,6 +399,111 @@ static int run_similar(const char *corpus_output_dir, const char *motive_file, c
 }
 
 /* "n/d" with 0 <= n <= d and d > 0. */
+/* ---- Motive links ---- */
+
+static void print_link_end(const MotiveLinkEnd *end) {
+    printf("%s m.%d b.%g [%s]", end->piece, end->first_measure, end->beat, end->degrees);
+}
+
+static void print_links_text(const MotiveLinks *links) {
+    for (size_t i = 0; i < links->link_count; i++) {
+        const MotiveLinkFound *link = &links->links[i];
+        /* the chain runs from the source to the target: from b to a when the link is reversed */
+        const MotiveLinkEnd *source = link->reversed ? &link->b : &link->a;
+        const MotiveLinkEnd *target = link->reversed ? &link->a : &link->b;
+        print_link_end(source);
+        printf(" -> ");
+        print_link_end(target);
+        printf(": ");
+        for (size_t s = 0; s < link->step_count; s++) {
+            printf("%s%s", s > 0 ? " then " : "", link->step_text[s]);
+        }
+        printf(" (%llu/%llu)\n", link->distance_numerator, link->distance_denominator);
+    }
+    for (size_t g = 0; g < links->group_count; g++) {
+        const MotiveLinkGroup *group = &links->groups[g];
+        printf("group of %zu:", group->member_count);
+        for (size_t m = 0; m < group->member_count; m++) {
+            printf("%s %s #%zu", m > 0 ? "," : "", group->members[m].piece, group->members[m].family);
+        }
+        printf("\n");
+    }
+    printf("compared %zu, cached %zu of %zu pairs\n", links->compared, links->cached, links->pairs);
+}
+
+static int run_link_motives(const char *corpus_output_dir, const char *cache_file, size_t depth, size_t candidates,
+                            bool as_json) {
+    MotiveLinkScope *scope = motive_link_scope_create();
+    if (!scope) {
+        fprintf(stderr, "Error: out of memory while linking motives\n");
+        return 2;
+    }
+    MotiveLinksResult added = motive_link_scope_add_corpus(scope, corpus_output_dir);
+    if (added != MOTIVE_LINKS_OK) {
+        const char *piece = motive_link_scope_failed_piece(scope);
+        if (added == MOTIVE_LINKS_ERR_NO_FEATURES) {
+            fprintf(stderr, "Error: the analysis of '%s' has motives without features; run the corpus again\n",
+                    piece ? piece : corpus_output_dir);
+        } else if (piece) {
+            fprintf(stderr, "Error: cannot read the analysis of '%s'\n", piece);
+        } else {
+            fprintf(stderr, "Error: cannot read the corpus output '%s'\n", corpus_output_dir);
+        }
+        motive_link_scope_destroy(scope);
+        return 2;
+    }
+    char *default_cache = NULL;
+    if (!cache_file) {
+        default_cache = malloc(strlen(corpus_output_dir) + 32);
+        if (!default_cache) {
+            fprintf(stderr, "Error: out of memory while linking motives\n");
+            motive_link_scope_destroy(scope);
+            return 2;
+        }
+        sprintf(default_cache, "%s/motive-link-cache.json", corpus_output_dir);
+        cache_file = default_cache;
+    }
+    int exit_code = 2;
+    MotiveLinkCache *cache = NULL;
+    MotiveLinksResult loaded = motive_link_cache_load(cache_file, &cache);
+    if (loaded != MOTIVE_LINKS_OK) {
+        fprintf(stderr, "Error: cannot read the motive link cache '%s'\n", cache_file);
+    } else {
+        MotiveLinksOptions options;
+        motive_links_options_default(&options);
+        if (depth > 0) {
+            options.link.max_depth = depth;
+        }
+        if (candidates > 0) {
+            options.candidates = candidates;
+        }
+        MotiveLinks links;
+        MotiveLinksResult ran = motive_links_run(scope, cache, &options, &links);
+        char *json = NULL;
+        if (ran == MOTIVE_LINKS_OK && as_json) {
+            ran = motive_links_render(&links, &json);
+        }
+        if (ran != MOTIVE_LINKS_OK) {
+            fprintf(stderr, "Error: cannot link the motives of '%s'\n", corpus_output_dir);
+        } else if (motive_link_cache_save(cache, cache_file) != MOTIVE_LINKS_OK) {
+            fprintf(stderr, "Error: cannot write the motive link cache '%s'\n", cache_file);
+        } else {
+            if (as_json) {
+                fputs(json, stdout);
+            } else {
+                print_links_text(&links);
+            }
+            exit_code = 0;
+        }
+        motive_links_destroy(&links);
+        free(json);
+    }
+    motive_link_cache_destroy(cache);
+    free(default_cache);
+    motive_link_scope_destroy(scope);
+    return exit_code;
+}
+
 static bool parse_minimum(const char *text, unsigned long *numerator, unsigned long *denominator) {
     int used = 0;
     unsigned long n, d;
@@ -440,6 +548,10 @@ int main(int argc, char *argv[]) {
     const char *similar_dir = NULL;
     const char *motive_file = NULL;
     const char *progression = NULL;
+    const char *link_dir = NULL;
+    const char *link_cache = NULL;
+    size_t link_depth = 0;      /* 0: not given */
+    size_t link_candidates = 0; /* 0: not given */
     bool similar_flags = false; /* --min or --max given */
     SimilarOptions similar_options = similar_options_default();
     NotationReading reading = notation_reading_none();
@@ -456,6 +568,20 @@ int main(int argc, char *argv[]) {
                 return 1;
             }
             input_format_set = true;
+        } else if (strcmp(arg, "--link-motives") == 0 || strcmp(arg, "--cache") == 0) {
+            if (i + 1 >= argc) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            *(strcmp(arg, "--cache") == 0 ? &link_cache : &link_dir) = argv[++i];
+        } else if (strcmp(arg, "--depth") == 0 || strcmp(arg, "--candidates") == 0) {
+            bool depth = strcmp(arg, "--depth") == 0;
+            size_t *target = depth ? &link_depth : &link_candidates;
+            if (i + 1 >= argc || !parse_count(argv[i + 1], target) || (depth && *target > MOTIVE_RECOGNIZE_MAX_DEPTH)) {
+                print_usage(argv[0]);
+                return 1;
+            }
+            i++;
         } else if (strcmp(arg, "--similar") == 0 || strcmp(arg, "--motive") == 0 || strcmp(arg, "--progression") == 0) {
             if (i + 1 >= argc) {
                 print_usage(argv[0]);
@@ -548,6 +674,15 @@ int main(int argc, char *argv[]) {
         } else {
             path = arg;
         }
+    }
+    if (link_dir || link_cache || link_depth || link_candidates) {
+        if (!link_dir || similar_dir || motive_file || progression || similar_flags || compare_a || without_count > 0 ||
+            style_dir || style_name || corpus_dir || corpus_out || path || want_json || want_markdown || corpus_resume ||
+            species != 0 || cantus_set || input_format_set || reading_set) {
+            print_usage(argv[0]);
+            return 1;
+        }
+        return run_link_motives(link_dir, link_cache, link_depth, link_candidates, format_json);
     }
     if (similar_dir || motive_file || progression || similar_flags) {
         if (!similar_dir || (motive_file != NULL) == (progression != NULL) || compare_a || without_count > 0 || style_dir || style_name ||
