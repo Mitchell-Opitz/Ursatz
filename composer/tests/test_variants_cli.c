@@ -95,7 +95,7 @@ static void test_list_ops(void) {
 
     out = output_of("--list-ops --json");
     assert(strstr(out, "\"operations\"") != NULL);
-    assert(count_of(out, "\"citation\"") == 28);
+    assert(count_of(out, "\"citation\"") == 33);
     free(out);
 }
 
@@ -306,6 +306,58 @@ static void test_distance(void) {
                    "--distance takes random chains, not --chain");
 }
 
+/* The note list the text output gives for the variant made by this row, or NULL. Not freed; points into out. */
+static const char *notes_of_row(const char *out, const char *op, char *line, size_t size) {
+    char header[64];
+    snprintf(header, sizeof(header), "): %s\n  ", op);
+    const char *at = strstr(out, header);
+    if (!at) {
+        return NULL;
+    }
+    at += strlen(header);
+    size_t length = strcspn(at, "\n");
+    snprintf(line, size, "%.*s", (int)length, at);
+    return line;
+}
+
+/* Whether the JSON variant made by this row has a pickup other than 0. */
+static bool row_has_pickup(const char *json, const char *op) {
+    char needle[64];
+    snprintf(needle, sizeof(needle), "\"op\": \"%s\"", op);
+    const char *at = strstr(json, needle);
+    at = at ? strstr(at, "\"pickup\": \"") : NULL;
+    return at && strncmp(at + strlen("\"pickup\": \""), "0\"", 2) != 0;
+}
+
+/* --each-op on the theme: harmony rows move notes, the upbeat rows give a pickup, and a variant that leaves its harmony is marked. */
+static void test_each_op_labels(void) {
+    char *out = output_of(THEME " --each-op --seed 3");
+    char source[256];
+    assert(strncmp(out, "Source: ", 8) == 0);
+    snprintf(source, sizeof(source), "%.*s", (int)strcspn(out + 8, "\n"), out + 8);
+    static const char *const MOVING[] = {"harmony-append", "harmony-insert", "harmony-inversion", "reharmonize-frame"};
+    for (size_t i = 0; i < sizeof(MOVING) / sizeof(MOVING[0]); i++) {
+        char line[256];
+        const char *notes = notes_of_row(out, MOVING[i], line, sizeof(line));
+        if (!notes) {
+            fprintf(stderr, "no variant for %s\n", MOVING[i]);
+        }
+        assert(notes && strcmp(notes, source) != 0);
+    }
+    assert(strstr(out, "Warning: Does not outline its harmony") != NULL);
+    for (size_t i = 0; i < 5; i++) {
+        static const char *const FRAME[] = {"reduce-to-frame", "add-non-chord-tone", "remove-non-chord-tone",
+                                            "change-non-chord-tone", "reharmonize-frame"};
+        assert(strstr(out, FRAME[i]) != NULL);
+    }
+    free(out);
+
+    out = output_of(THEME " --each-op --seed 3 --json");
+    assert(row_has_pickup(out, "rhythm-shift") && row_has_pickup(out, "add-upbeat"));
+    assert(strstr(out, "\"warnings\": [") != NULL && strstr(out, "Does not outline its harmony") != NULL);
+    free(out);
+}
+
 /* --each-op: one variant per registry row that takes the form, the others listed as skipped. */
 static void test_each_op(void) {
     size_t rows = 0;
@@ -378,6 +430,7 @@ int main(void) {
     test_liquidate_features_and_basic();
     test_distance();
     test_each_op();
+    test_each_op_labels();
     printf("variants cli tests passed\n");
     return 0;
 }

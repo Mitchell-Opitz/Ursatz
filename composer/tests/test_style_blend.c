@@ -331,8 +331,10 @@ static ComposerStyle *blend_with(const ComposerStyle *a, const ComposerStyle *b,
  * Re-measured at P16 B4, when the shaping preferences changed the candidates chosen: 0.7273, 0.7168, 0.7021 to chorales and
  * 0.6794, 0.6702, 0.6553 to sonatinas. Re-measured at P18b B5, when the harmony relations moved to tone roles (P18b B2) changed
  * the variations chosen: the full weight is 0.6980 to chorales and 0.6582 to sonatinas, the others are as before.
+ * Re-measured at P18b B7, when the harmony rows began to draw values that move a note: 0.7224, 0.7244, 0.7137 to chorales
+ * and 0.6813, 0.6812, 0.6645 to sonatinas.
  */
-static const int HARMONY_BASELINE[3][2] = {{7273, 6794}, {7168, 6702}, {6980, 6582}};
+static const int HARMONY_BASELINE[3][2] = {{7224, 6813}, {7244, 6812}, {7137, 6645}};
 #define MELODY_ONLY_REACH 200
 
 static int ten_thousandths(double value) {

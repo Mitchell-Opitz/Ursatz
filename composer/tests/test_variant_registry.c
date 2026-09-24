@@ -65,7 +65,7 @@ static void test_registry_entries(void) {
         {"liquidate", VARIANT_CATEGORY_INTERVALS, "ch. VIII, Ex. 52"},
         {"augment", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17"},
         {"diminish", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17"}};
-    assert(variant_registry_count() == 28);
+    assert(variant_registry_count() == 33);
     for (size_t i = 0; i < 9; i++) {
         const VariantOperation *operation = variant_registry_at(i);
         assert(operation && strcmp(operation->name, ENTRIES[i].name) == 0);
@@ -76,7 +76,7 @@ static void test_registry_entries(void) {
         assert((operation->forms & VARIANT_FORM_BIT(MOTIVE_FORM_FULL)) != 0);
         assert(operation->param_count <= VARIANT_PARAM_MAX);
     }
-    assert(variant_registry_at(28) == NULL);
+    assert(variant_registry_at(33) == NULL);
     assert(variant_registry_find("nope") == NULL);
     assert(strcmp(variant_category_name(VARIANT_CATEGORY_MELODY_ADAPTATION), "melody-adaptation") == 0);
     assert(strcmp(variant_category_name(VARIANT_CATEGORY_EXACT), "exact") == 0);
@@ -736,6 +736,125 @@ static void test_harmony_rows(void) {
     assert(strcmp(record.harmony, "I V@2") == 0);
 }
 
+/* ------------------------------------------------------- frame and tone rows */
+
+typedef struct {
+    const char *op;
+    const char *citation;
+    size_t params;
+} FrameRow;
+
+static const FrameRow FRAME_ROWS[] = {{"reduce-to-frame", "ch. II and III", 0},
+                                      {"add-non-chord-tone", "ch. II and III", 2},
+                                      {"remove-non-chord-tone", "ch. II and III", 1},
+                                      {"change-non-chord-tone", "ch. II and III", 2},
+                                      {"reharmonize-frame", "ch. II and III", 2}};
+
+static void test_frame_rows_are_registered(void) {
+    for (size_t i = 0; i < sizeof(FRAME_ROWS) / sizeof(FRAME_ROWS[0]); i++) {
+        const VariantOperation *operation = variant_registry_find(FRAME_ROWS[i].op);
+        assert(operation && operation->category == VARIANT_CATEGORY_MELODY_ADAPTATION);
+        assert(strcmp(operation->citation, FRAME_ROWS[i].citation) == 0);
+        assert(operation->param_count == FRAME_ROWS[i].params);
+        assert(operation->forms == VARIANT_FORM_BIT(MOTIVE_FORM_FULL));
+    }
+    /* The ranges: a note is 0 to 16, a type 0 to 9, a degree 1 to 7. */
+    VariantStep step = step_of("add-non-chord-tone");
+    assert(variant_step_set(&step, "after", 16, 0) && !variant_step_set(&step, "after", 17, 0));
+    assert(variant_step_set(&step, "type", 9, 0) && !variant_step_set(&step, "type", 10, 0));
+    step = step_of("reharmonize-frame");
+    assert(variant_step_set(&step, "degree", 7, 0) && !variant_step_set(&step, "degree", 0, 0));
+}
+
+static void test_frame_rows_apply(void) {
+    Motive passing = load("C4:q D4:q E4:h", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    Motive frame = load("C4:q E4:q G4:h", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    Motive out;
+    VariantRecord record;
+
+    assert(run_one(&passing, step_of("reduce-to-frame"), 1, &out, &record) == VARIANT_OK);
+    assert(out.note_count == 2 && out.notes[0].midi_pitch == 60 && out.notes[1].midi_pitch == 64);
+
+    VariantStep step = step_of("add-non-chord-tone");
+    assert(variant_step_set(&step, "after", 0, 0) && variant_step_set(&step, "type", 0, 0));
+    assert(run_one(&frame, step, 1, &out, &record) == VARIANT_OK);
+    assert(out.note_count == 4 && out.notes[1].midi_pitch == 62);
+
+    step = step_of("remove-non-chord-tone");
+    assert(variant_step_set(&step, "note", 1, 0));
+    assert(run_one(&passing, step, 1, &out, &record) == VARIANT_OK);
+    assert(out.note_count == 2);
+    assert(strstr(record.derivation, "non-chord tone") != NULL);
+
+    step = step_of("change-non-chord-tone");
+    assert(variant_step_set(&step, "note", 1, 0) && variant_step_set(&step, "type", 6, 0));
+    assert(run_one(&passing, step, 1, &out, &record) == VARIANT_OK);
+    assert(out.note_count == 3 && out.notes[1].midi_pitch != 62);
+    assert(strstr(record.derivation, "appoggiatura") != NULL);
+
+    step = step_of("reharmonize-frame");
+    assert(variant_step_set(&step, "degree", 5, 0) && variant_step_set(&step, "seventh", 0, 0));
+    assert(run_one(&frame, step, 1, &out, &record) == VARIANT_OK);
+    assert(out.harmony_count == 1 && out.harmony[0].degree == 5);
+    assert(strcmp(record.harmony, "V") == 0);
+}
+
+/* Open parameters of the tone rows are drawn only from notes and types the motive accepts, so a step is never refused. */
+static void test_tone_rows_draw_applicable_values(void) {
+    Motive frame = load("C4:q E4:q G4:q E4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    Motive figure = load("C4:q D4:q E4:q G4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    for (unsigned long seed = 1; seed <= 20; seed++) {
+        Motive out;
+        VariantRecord record;
+        assert(run_one(&frame, step_of("add-non-chord-tone"), seed, &out, &record) == VARIANT_OK);
+        assert(out.note_count > frame.note_count && record.steps[0].open[0] && record.steps[0].open[1]);
+        assert(run_one(&figure, step_of("remove-non-chord-tone"), seed, &out, &record) == VARIANT_OK);
+        assert(out.note_count == figure.note_count - 1 && record.steps[0].values[0].value == 1);
+        assert(run_one(&figure, step_of("change-non-chord-tone"), seed, &out, &record) == VARIANT_OK);
+        assert(record.steps[0].values[0].value == 1);
+    }
+}
+
+/* Marks: a variant whose strong beats are mostly outside its chords, or that has a note that does not resolve. */
+static void test_variant_marks(void) {
+    Motive source = harmonized_source();
+    assert(!variant_leaves_harmony(&source, &source));
+    Motive away = load("D4:q F4:q A4:q B4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
+    MotiveError error;
+    assert(motive_harmony_parse("I V@2", &away.meter, away.harmony, &away.harmony_count, &error) == MOTIVE_OK);
+    assert(variant_leaves_harmony(&source, &away));
+    /* A chain's record carries the mark, and a variant is kept either way. */
+    VariantStep step = step_of("interval-change");
+    assert(variant_step_set(&step, "interval", 0, 0) && variant_step_set(&step, "amount", 1, 0));
+    Motive out;
+    VariantRecord record;
+    assert(run_one(&source, step, 1, &out, &record) == VARIANT_OK);
+    assert(record.leaves_harmony == variant_leaves_harmony(&source, &out));
+    assert(strcmp(VARIANT_WARNING_LEAVES_HARMONY, "Does not outline its harmony") == 0);
+}
+
+/* A harmony row draws, where it can, values that move a note. */
+static void test_harmony_draws_move_notes(void) {
+    Motive source = source_motive();
+    static const char *const ROWS_THAT_MOVE[] = {"harmony-inversion", "harmony-append", "harmony-insert",
+                                                 "harmony-substitute", "reharmonize-frame"};
+    for (size_t r = 0; r < sizeof(ROWS_THAT_MOVE) / sizeof(ROWS_THAT_MOVE[0]); r++) {
+        for (unsigned long seed = 1; seed <= 10; seed++) {
+            Motive out;
+            VariantRecord record;
+            assert(run_one(&source, step_of(ROWS_THAT_MOVE[r]), seed, &out, &record) == VARIANT_OK);
+            bool moved = false;
+            for (size_t n = 0; n < source.note_count && n < out.note_count; n++) {
+                moved = moved || out.notes[n].midi_pitch != source.notes[n].midi_pitch;
+            }
+            if (!moved) {
+                fprintf(stderr, "%s seed %lu left every pitch\n", ROWS_THAT_MOVE[r], seed);
+            }
+            assert(moved);
+        }
+    }
+}
+
 static void test_dominant_form_answers_i_v(void) {
     Motive source = harmonized_source();
     Motive out;
@@ -1021,6 +1140,7 @@ static void test_liquidate_features_row(void) {
 
 int main(void) {
     test_registry_entries();
+    test_frame_rows_are_registered();
     test_registry_forms();
     test_step_parameters();
     test_same_seed_same_result();
@@ -1030,6 +1150,10 @@ int main(void) {
     test_transpose_tonal_is_exact();
     test_invert_changes_contour();
     test_own_harmony_in_kept_and_changed();
+    test_frame_rows_apply();
+    test_tone_rows_draw_applicable_values();
+    test_variant_marks();
+    test_harmony_draws_move_notes();
     test_augment_keeps_rhythm_proportions();
     test_forms_have_only_their_dimensions();
     test_derivation_sentence();
