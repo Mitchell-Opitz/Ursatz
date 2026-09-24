@@ -821,17 +821,17 @@ static MotiveRelationKind last_kind(const State *state) {
  * relation the nearness cannot see, such as a change of meter, would otherwise never survive the
  * beam). Leaders are only kept when the beam has room for all of them and as many other states.
  */
-static void insert_candidate(State *levels, size_t *counts, size_t depth, size_t beam,
-                             State *candidate) {
+static void insert_candidate(State *const *levels, const size_t *caps, size_t *counts, size_t depth,
+                             size_t beam, State *candidate) {
     for (size_t d = 0; d <= depth; d++) {
-        State *level = levels + d * beam;
+        State *level = levels[d];
         for (size_t i = 0; i < counts[d]; i++) {
             if (motive_sketch_equal(&level[i].sketch, &candidate->sketch)) {
                 return;
             }
         }
     }
-    State *next = levels + (depth + 1) * beam;
+    State *next = levels[depth + 1];
     size_t count = counts[depth + 1];
     for (size_t i = 0; i < count; i++) {
         if (motive_sketch_equal(&next[i].sketch, &candidate->sketch)) {
@@ -845,7 +845,7 @@ static void insert_candidate(State *levels, size_t *counts, size_t depth, size_t
             return;
         }
     }
-    bool diverse = beam >= 2 * MOTIVE_RELATION_KIND_COUNT;
+    bool diverse = depth + 1 >= 2 && beam >= 2 * MOTIVE_RELATION_KIND_COUNT;
     candidate->leader = false;
     size_t old_leader = count;
     if (diverse) {
@@ -860,7 +860,7 @@ static void insert_candidate(State *levels, size_t *counts, size_t depth, size_t
         }
     }
     size_t slot;
-    if (count < beam) {
+    if (count < caps[depth + 1]) {
         slot = count;
         counts[depth + 1]++;
     } else {
@@ -924,21 +924,32 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
 
     size_t beam = options->beam;
     size_t depth_limit = options->max_depth;
-    State *levels = malloc((depth_limit + 1) * beam * sizeof(State));
-    if (!levels) {
+    /* Level 1 holds every distinct state one relation from the source (R-149); the beam cuts from level 2 on. */
+    size_t caps[MOTIVE_RECOGNIZE_MAX_DEPTH + 1];
+    State *level[MOTIVE_RECOGNIZE_MAX_DEPTH + 1];
+    size_t total = 0;
+    for (size_t d = 0; d <= depth_limit; d++) {
+        caps[d] = d == 0 ? 1 : (d == 1 ? MOTIVE_RELATION_KIND_COUNT * PROPOSAL_MAX : beam);
+        total += caps[d];
+    }
+    State *storage = malloc(total * sizeof(State));
+    if (!storage) {
         return MOTIVE_RECOGNIZE_NO_MEMORY;
     }
+    for (size_t d = 0, at = 0; d <= depth_limit; at += caps[d], d++) {
+        level[d] = storage + at;
+    }
     size_t counts[MOTIVE_RECOGNIZE_MAX_DEPTH + 1] = {0};
-    memset(&levels[0], 0, sizeof(levels[0]));
-    levels[0].sketch = from;
+    memset(&level[0][0], 0, sizeof(level[0][0]));
+    level[0][0].sketch = from;
     motive_variant_compare(&from, &to, &dimensions);
-    levels[0].nearness = motive_variant_nearness(&dimensions);
+    level[0][0].nearness = motive_variant_nearness(&dimensions);
     counts[0] = 1;
     Chain closest = {{{0}}, 0, 0, true};
-    double closest_nearness = levels[0].nearness;
+    double closest_nearness = level[0][0].nearness;
 
     for (size_t depth = 0; depth < depth_limit; depth++) {
-        State *current = levels + depth * beam;
+        State *current = level[depth];
         Chain solution = {{{0}}, 0, 0, false};
         size_t seq = 0;
         for (size_t s = 0; s < counts[depth]; s++) {
@@ -976,7 +987,7 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
                     motive_variant_compare(&candidate.sketch, &to, &dimensions);
                     candidate.nearness = motive_variant_nearness(&dimensions);
                     candidate.seq = seq++;
-                    insert_candidate(levels, counts, depth, beam, &candidate);
+                    insert_candidate(level, caps, counts, depth, beam, &candidate);
                 }
             }
         }
@@ -984,10 +995,10 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
             out->found = true;
             fill_chain(out, solution.steps, solution.count);
             out->distance = distance_of(solution.cost);
-            free(levels);
+            free(storage);
             return MOTIVE_RECOGNIZE_OK;
         }
-        State *next = levels + (depth + 1) * beam;
+        State *next = level[depth + 1];
         sort_level(next, counts[depth + 1]);
         if (counts[depth + 1] > 0 && next[0].nearness > closest_nearness) {
             closest_nearness = next[0].nearness;
@@ -1000,6 +1011,6 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
         }
     }
     fill_chain(out, closest.steps, closest.count);
-    free(levels);
+    free(storage);
     return MOTIVE_RECOGNIZE_OK;
 }

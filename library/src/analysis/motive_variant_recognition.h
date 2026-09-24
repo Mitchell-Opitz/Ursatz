@@ -85,8 +85,10 @@ typedef enum {
  * most 16 parameter sets, inferred from the state and the target where it can be, else a range of
  * 16 or fewer. A state equal to the target ends the search at that depth: of the chains of that
  * depth the lowest cost wins, then the first in relation order. The best `beam` states of each
- * depth are kept by nearness to the target (mean of the four similarities, ties by relation order);
- * identical states are merged. A rhythm sketch (unknown pitches) takes only the relations that
+ * depth are kept by nearness to the target (mean of the four similarities, ties by relation order),
+ * except at depth 1: the states one relation from the source are all kept, so every chain of two
+ * relations whose parameters the proposers give is found at any beam (the cost of a depth-2 miss is
+ * measured in docs/modules/motive-variant-recognition.md); identical states are merged. A rhythm sketch (unknown pitches) takes only the relations that
  * touch time, a sketch without a scale takes no tonal parameters. Deterministic.
  *
  * With options->contour the source and the target are normalized to their contour first
