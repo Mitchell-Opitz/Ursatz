@@ -158,6 +158,7 @@ static bool ok_true(const cJSON *json) {
   return cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(json, "ok"));
 }
 
+#include "routes/materials.h"
 #include "server.h"
 
 static const char *kMotifBody =
@@ -1716,6 +1717,110 @@ static void test_body_limit(void) {
   free(big);
 }
 
+#ifndef _WIN32
+/* The text of a file, or "" when it cannot be read. */
+static const char *file_text(const char *path) {
+  static char text[4096];
+  text[0] = '\0';
+  FILE *file = fopen(path, "rb");
+  if (file) {
+    size_t n = fread(text, 1, sizeof(text) - 1, file);
+    text[n] = '\0';
+    fclose(file);
+  }
+  return text;
+}
+
+static const char *kToneBody =
+    "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q D4:q E4:q G4:q\","
+    "\"meter\":\"4/4\",\"key\":\"C major\",\"pickup\":\"0\",\"harmony\":null,\"tone_overrides\":{\"2\":\"passing\","
+    "\"4\":\"chord\"},\"features\":[],\"analysis\":null,\"derived\":null}}";
+
+/* The tone overrides of a motif reach the Composer as --tone options, and a motif saved before tone labels is analyzed
+   again once. A stand-in Composer records its arguments and answers a fixed analysis. */
+static void test_tones(void) {
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  char *original = getenv("URSATZ_GUI_COMPOSER") ? strdup(getenv("URSATZ_GUI_COMPOSER")) : NULL;
+  char dir[512];
+  char args_path[600];
+  char without[600];
+  char with[600];
+  if (!getcwd(dir, sizeof(dir))) {
+    check(false, "the working directory is known");
+    free(original);
+    return;
+  }
+  snprintf(args_path, sizeof(args_path), "%s/tone-args.txt", dir);
+  char script[1200];
+  snprintf(script, sizeof(script),
+           "#!/bin/sh\nprintf '%%s\\n' \"$@\" > %s\necho '{\"analysis\":{\"degrees_text\":\"1:q 2:q 3:q 5:q\"}}'\n", args_path);
+  bool written = write_stand_in("tone-args-composer.sh", script, without, sizeof(without)) &&
+                 write_stand_in("tone-labels-composer.sh",
+                                "#!/bin/sh\necho '{\"analysis\":{\"degrees_text\":\"1:q 2:q 3:q 5:q\",\"tones\":[]}}'\n", with,
+                                sizeof(with));
+  check(written, "tone stand-in Composers are written");
+
+  /* The overrides are passed as --tone n=role. */
+  setenv("URSATZ_GUI_COMPOSER", without, 1);
+  char *item = create_item("motif", "Tones", project, kToneBody);
+  check(item != NULL, "a motif with tone overrides is saved");
+  const char *args = file_text(args_path);
+  check(strstr(args, "--tone\n2=passing\n") != NULL && strstr(args, "--tone\n4=chord\n") != NULL,
+        "the Composer is run with --tone for each override");
+  check(cJSON_IsNull(cJSON_GetObjectItemCaseSensitive(saved_motif(item, 1), "analysis_error")),
+        "the motif with overrides is analyzed");
+  check(strcmp(string_of(cJSON_GetObjectItemCaseSensitive(saved_motif(item, 1), "tone_overrides"), "2"), "passing") == 0,
+        "the overrides are stored with the version");
+
+  /* A motif without overrides gets no --tone. */
+  char *plain = create_item("motif", "NoTones", project, kMotifBody);
+  check(plain != NULL && strstr(file_text(args_path), "--tone") == NULL, "a motif without overrides is run without --tone");
+
+  /* The migration analyzes a full motif without tones once and leaves a marker. */
+  setenv("URSATZ_GUI_COMPOSER", with, 1);
+  remove("materials/tones-migrated");
+  int versions = saved_version_count(item);
+  int migrated = ursatz_gui_materials_migrate_tones("materials");
+  check(migrated >= 1 && saved_version_count(item) == versions + 1, "the migration adds a version to a motif without tones");
+  const cJSON *migrated_analysis =
+      cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(saved_motif(item, versions + 1), "analysis"), "analysis");
+  check(cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(migrated_analysis, "tones")),
+        "the migrated version holds the new analysis");
+  FILE *marker = fopen("materials/tones-migrated", "r");
+  check(marker != NULL, "the migration leaves its marker file");
+  if (marker) {
+    fclose(marker);
+  }
+  int after_first = saved_version_count(item);
+  check(ursatz_gui_materials_migrate_tones("materials") == 0 && saved_version_count(item) == after_first,
+        "the migration does not run twice");
+
+  /* Without a Composer nothing changes and no marker is written, so the next start tries again. */
+  remove("materials/tones-migrated");
+  setenv("URSATZ_GUI_COMPOSER", without, 1);
+  char *waiting = create_item("motif", "Waiting", project, kMotifBody);
+  setenv("URSATZ_GUI_COMPOSER", "/nonexistent/ursatz-composer", 1);
+  check(waiting != NULL && ursatz_gui_materials_migrate_tones("materials") == 0 && saved_version_count(waiting) == 1,
+        "the migration changes nothing without a Composer");
+  free(waiting);
+  marker = fopen("materials/tones-migrated", "r");
+  check(marker == NULL, "no marker is written without a Composer");
+  if (marker) {
+    fclose(marker);
+  }
+
+  if (original) {
+    setenv("URSATZ_GUI_COMPOSER", original, 1);
+  } else {
+    unsetenv("URSATZ_GUI_COMPOSER");
+  }
+  free(original);
+  free(item);
+  free(plain);
+}
+#endif
+
 int main(void) {
 #ifdef _WIN32
   WSADATA wsa_data;
@@ -1759,6 +1864,9 @@ int main(void) {
   test_link_form();
   test_theme_placeholder();
   test_random_motifs();
+#ifndef _WIN32
+  test_tones();
+#endif
   test_body_limit();
 
   ursatz_gui_server_stop(ctx);
