@@ -83,6 +83,10 @@ const MotifDetailView = (function () {
       }),
     );
     pane.appendChild(buildSaveRow(editor, ctx));
+    const warnings = MaterialsModel.toneWarningText(data.body);
+    if (warnings !== "") {
+      status.show(warnings, true);
+    }
   }
 
   /* The status area at the top of a tab: saves, errors and progress of every section of the tab show here. */

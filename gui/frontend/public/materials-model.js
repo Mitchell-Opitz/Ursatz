@@ -437,8 +437,114 @@
   ];
 
   const SEGMENTS_HINT = "Named note ranges, for example head and tail. Liquidation and motive-forms keep or drop them.";
-  const HARMONY_HINT = "Own chords, e.g. I V6@2 I@3: upper case Roman numerals (b or # before for an altered root; figures 6, 64, 7, 65, 43, 42) and @ the onset in beats. The first chord needs no onset. Up to 8 chords; empty means none.";
+  const HARMONY_HINT = "Own chords, e.g. I V6@2 I@3: upper case Roman numerals (b or # before for an altered root; figures 6, 64, 7, 65, 43, 42) and @ the onset in beats. The first chord needs no onset. Up to 8 chords, at most 2 in a bar; empty uses the harmony proposed from the notes.";
   const HARMONY_MAX_CHARS = 200;
+  const HARMONY_DEFAULT_PLACEHOLDER = "I (proposed)";
+
+  /* The tone label abbreviations (R-195): CT is a chord tone, ? an unclassified note. */
+  const TONE_ABBREVIATIONS = {
+    passing: "PT",
+    neighbor: "NT",
+    appoggiatura: "APP",
+    suspension: "SUS",
+    retardation: "RET",
+    escape: "ET",
+    anticipation: "ANT",
+    "double-neighbor": "DN",
+    "changing-tone": "CT2",
+    pedal: "PED",
+  };
+  const TONE_CHORD_LABEL = "CT";
+  const TONE_UNCLASSIFIED_LABEL = "?";
+
+  /* The label of one entry of analysis.tones. */
+  function toneLabel(tone) {
+    if (tone.role === "chord") {
+      return TONE_CHORD_LABEL;
+    }
+    if (tone.role === "non-chord" && TONE_ABBREVIATIONS[tone.type]) {
+      return TONE_ABBREVIATIONS[tone.type];
+    }
+    return TONE_UNCLASSIFIED_LABEL;
+  }
+
+  /* The values of a tone override as the Composer's --tone roles, with the Automatic choice (no override) first. */
+  const TONE_ROLE_OPTIONS = [
+    { value: "", label: "Automatic" },
+    { value: "chord", label: "Chord tone" },
+    { value: "passing", label: "Passing tone" },
+    { value: "neighbor", label: "Neighbor tone" },
+    { value: "appoggiatura", label: "Appoggiatura" },
+    { value: "suspension", label: "Suspension" },
+    { value: "retardation", label: "Retardation" },
+    { value: "escape", label: "Escape tone" },
+    { value: "anticipation", label: "Anticipation" },
+    { value: "double-neighbor", label: "Double neighbor" },
+    { value: "changing-tone", label: "Changing tone" },
+    { value: "pedal", label: "Pedal" },
+  ];
+
+  /* The abbreviation of an override value ("passing" gives "PT", "chord" gives "CT"); null for Automatic. */
+  function toneRoleLabel(value) {
+    if (value === "chord") {
+      return TONE_CHORD_LABEL;
+    }
+    return TONE_ABBREVIATIONS[value] || null;
+  }
+
+  /* The overrides {"<note>": "<role>"} after setting note (1-based) to value; "" (Automatic) removes it. A new object. */
+  function withToneOverride(overrides, note, value) {
+    const next = { ...(overrides || {}) };
+    if (value === "" || value === null || value === undefined) {
+      delete next[String(note)];
+    } else {
+      next[String(note)] = value;
+    }
+    return next;
+  }
+
+  /* The warnings of the current analysis (one per unresolved note), as one line for the motif tab's status area; "" when
+   * there are none. */
+  function toneWarningText(body) {
+    const motif = body && body.motif ? body.motif : {};
+    const analysis = motif.analysis && motif.analysis.analysis ? motif.analysis.analysis : null;
+    const warnings = analysis && Array.isArray(analysis.warnings) ? analysis.warnings.filter((w) => typeof w === "string") : [];
+    return warnings.join(". ");
+  }
+
+  /* One chip per note of the current analysis, in note order: {note (1-based), label, text ("2 PT -> 3"), resolvesTo,
+   * unresolved, overridden}. Empty without tones (a rhythm, a contour, no key, or no analysis yet). */
+  function toneChips(body) {
+    const motif = body && body.motif ? body.motif : {};
+    const analysis = motif.analysis && motif.analysis.analysis ? motif.analysis.analysis : null;
+    if (!analysis || !Array.isArray(analysis.tones)) {
+      return [];
+    }
+    return analysis.tones.map((tone) => {
+      const label = toneLabel(tone);
+      const resolvesTo = Number.isInteger(tone.resolves_to) ? tone.resolves_to : null;
+      return {
+        note: tone.note,
+        label,
+        text: `${tone.note} ${label}${resolvesTo === null ? "" : ` -> ${resolvesTo}`}`,
+        resolvesTo,
+        unresolved: tone.unresolved === true,
+        overridden: tone.overridden === true,
+      };
+    });
+  }
+
+  /* The placeholder of the Base harmony field: the harmony the Composer proposed in the current analysis
+   * ("Proposed: I V@2"), else "I (proposed)" before an analysis or when the analysis used the motif's own harmony. */
+  function harmonyPlaceholder(body) {
+    const motif = body && body.motif ? body.motif : {};
+    const analysis = motif.analysis && motif.analysis.analysis ? motif.analysis.analysis : null;
+    const base = analysis && analysis.base_harmony ? analysis.base_harmony : null;
+    if (base && base.given === false && typeof base.text === "string" && base.text !== "") {
+      return `Proposed: ${base.text}`;
+    }
+    return HARMONY_DEFAULT_PLACEHOLDER;
+  }
 
   /* The syntax hint under the note list for a motif form. */
   function formHint(form) {
@@ -468,6 +574,7 @@
       legacyKey: storedKey !== "" && !/^C (major|minor)$/.test(storedKey) ? storedKey : null,
       pickup: typeof motif.pickup === "string" ? motif.pickup : "0",
       harmony: typeof motif.harmony === "string" ? motif.harmony : "",
+      toneOverrides: motif.tone_overrides && typeof motif.tone_overrides === "object" ? { ...motif.tone_overrides } : {},
       features: Array.isArray(motif.features)
         ? motif.features.map((feature) => ({
             label: String(feature.label),
@@ -612,6 +719,7 @@
         key: `C ${MOTIF_MODES.includes(values.mode) ? values.mode : "major"}`,
         pickup: String(values.pickup || "").trim() === "" ? "0" : String(values.pickup).trim(),
         harmony: String(values.harmony || "").trim() === "" ? null : String(values.harmony).trim(),
+        ...(Object.keys(values.toneOverrides || {}).length > 0 ? { tone_overrides: { ...values.toneOverrides } } : {}),
         features: (values.features || []).map((feature) => ({
           label: String(feature.label).trim(),
           first: Number(feature.first) - 1,
@@ -940,6 +1048,12 @@
     formHint,
     errorField,
     HARMONY_HINT,
+    harmonyPlaceholder,
+    toneChips,
+    toneWarningText,
+    TONE_ROLE_OPTIONS,
+    toneRoleLabel,
+    withToneOverride,
     SEGMENTS_HINT,
     buildImportMidiRequest,
     importToFormValues,

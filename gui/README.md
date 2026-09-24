@@ -109,16 +109,35 @@ shows on the detail page and the motif stays saved), the same editor, Save
 (it sends the note `Created`) and a Random section (below). The form has the role (melodic or accompaniment), the form (only
 full can be chosen; rhythm and contour are shown disabled, P13), the note
 list with its syntax hint, the meter, a Mode select (major or minor), the pickup in exact
-beats (`0`, `1` or `1/2`), an optional Harmony field and a Segments table
+beats (`0`, `1` or `1/2`), an optional Base harmony field and a Segments table
 (named note ranges such as head and tail: label of 1 to 8 characters, first
 and last note counted from 1; rows are added and removed in place; Liquidation
 and the motive-forms keep or drop them, and the variant picker calls the
-`feature` parameter `segment`. The stored field stays `features`). Harmony is the motif's own chords as the Composer
+`feature` parameter `segment`. The stored field stays `features`). Base harmony is the motif's own chords as the Composer
 reads them (`I V6@2 I@3`: upper case Roman numerals, `b` or `#` before one
 for an altered root, figures `6`, `64`, `7`, `65`, `43`, `42`, and `@` the
-onset in beats; the first chord needs no onset; up to 8 chords, at most 200
-characters; empty means none). A chord the Composer cannot read shows its
-message under the Harmony field.
+onset in beats; the first chord needs no onset; up to 8 chords, at most 2 in a
+bar, at most 200 characters). When the field is empty the Composer proposes a
+base harmony from the notes, and the placeholder shows it (`Proposed: I V@2`,
+`I (proposed)` before the first analysis). A chord the Composer cannot read
+shows its message under the Base harmony field.
+
+Tone labels (R-195, R-196): under the note list the Tones row has one chip per
+note, `<note> <label>` with `-> <n>` for the note it resolves to. The label is
+`CT` (chord tone), a type (`PT` passing, `NT` neighbor, `APP` appoggiatura,
+`SUS` suspension, `RET` retardation, `ET` escape, `ANT` anticipation, `DN`
+double neighbor, `CT2` changing tone, `PED` pedal) or `?` (unclassified). A
+chip with no resolution is drawn in the warning style. Clicking a chip opens a
+select (Automatic, Chord tone, each type) that sets an override, stored in the
+version as `motif.tone_overrides` (`{"2": "passing"}`, 1-based notes, the roles
+of the Composer's `--tone`) and sent as `--tone` when the motif is analyzed on
+save or Re-analyze; Automatic removes it, and a changed override is a new
+version like any edit. The Composer's warnings (`Note 3 (B5) does not resolve`)
+show in the Motif tab's status area. On the first start with this version every
+full motif whose current analysis has no tones is analyzed again (a new version
+noted `Re-analyzed`); the file `materials/tones-migrated` records that it ran,
+and a motif the Composer cannot analyze keeps its `analysis_error`. Without a
+Composer nothing is changed and the next start tries again.
 
 Motifs are written with C as the tonic (R-179): the note list is C-based and
 the Mode select sets major or minor, so every motif is stored with the key

@@ -757,6 +757,52 @@ function buildMotifEditor(body, tabStatus) {
     hint.textContent = MaterialsModel.formHint(form.value);
   });
 
+  /* One chip per note with its tone label (R-195); the row is hidden when the analysis has no tones. */
+  const toneChips = materialsElement("div", "materials-chips motif-tone-chips");
+  field("Tones", toneChips, "tones");
+  let toneOverrides = { ...initial.toneOverrides };
+  let openTone = null;
+  function drawToneChips() {
+    toneChips.innerHTML = "";
+    const chips = MaterialsModel.toneChips(body);
+    toneChips.parentElement.hidden = chips.length === 0;
+    toneChips.parentElement.previousSibling.hidden = chips.length === 0;
+    for (const chip of chips) {
+      const pending = toneOverrides[String(chip.note)];
+      const pendingLabel = pending ? MaterialsModel.toneRoleLabel(pending) : null;
+      const el = materialsElement("span", "materials-chip motif-tone-chip");
+      const button = materialsElement("button", "motif-tone-button", pendingLabel ? `${chip.note} ${pendingLabel}` : chip.text);
+      button.type = "button";
+      button.setAttribute("aria-label", `Note ${chip.note} tone label`);
+      el.classList.toggle("motif-tone-unresolved", chip.unresolved && !pending);
+      el.classList.toggle("motif-tone-overridden", chip.overridden || Boolean(pending));
+      el.title = pending ? "Set by hand" : chip.unresolved ? "Does not resolve" : chip.overridden ? "Set by hand" : "";
+      button.addEventListener("click", () => {
+        openTone = openTone === chip.note ? null : chip.note;
+        drawToneChips();
+      });
+      el.appendChild(button);
+      if (openTone === chip.note) {
+        const select = materialsElement("select");
+        select.setAttribute("aria-label", `Note ${chip.note} label`);
+        for (const option of MaterialsModel.TONE_ROLE_OPTIONS) {
+          const o = materialsElement("option", "", option.label);
+          o.value = option.value;
+          select.appendChild(o);
+        }
+        select.value = pending || "";
+        select.addEventListener("change", () => {
+          toneOverrides = MaterialsModel.withToneOverride(toneOverrides, chip.note, select.value);
+          openTone = null;
+          drawToneChips();
+        });
+        el.appendChild(select);
+      }
+      toneChips.appendChild(el);
+    }
+  }
+  drawToneChips();
+
   const importRow = materialsElement("div", "upload-controls");
   const importButton = materialsElement("button", "button-secondary", "Upload MIDI");
   importButton.type = "button";
@@ -860,8 +906,8 @@ function buildMotifEditor(body, tabStatus) {
   harmony.size = 30;
   harmony.maxLength = 200;
   harmony.classList.add("motif-form-wide");
-  harmony.placeholder = "I V6@2 I@3 (optional)";
-  field("Harmony", harmony, "harmony");
+  harmony.placeholder = MaterialsModel.harmonyPlaceholder(body);
+  field("Base harmony", harmony, "harmony");
   hintUnder("harmony", MaterialsModel.HARMONY_HINT);
 
   el.appendChild(materialsElement("h2", "section-title", "Segments"));
@@ -927,6 +973,7 @@ function buildMotifEditor(body, tabStatus) {
       legacyKey,
       pickup: pickup.value,
       harmony: harmony.value,
+      toneOverrides: { ...toneOverrides },
       features: featureRows.map((row) => ({ ...row })),
     };
   }

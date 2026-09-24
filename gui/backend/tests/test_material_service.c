@@ -461,6 +461,16 @@ static void test_body_validation(void) {
     expect_motif("harmony", "\"I V6@2 I@3\"", OK);
     expect_motif("harmony", "5", INVALID);
     expect_motif("harmony", "[]", INVALID);
+    expect_motif("tone_overrides", "null", OK);
+    expect_motif("tone_overrides", "{}", OK);
+    expect_motif("tone_overrides", "{\"2\":\"passing\",\"3\":\"chord\",\"64\":\"escape\"}", OK);
+    expect_motif("tone_overrides", "{\"0\":\"passing\"}", INVALID);
+    expect_motif("tone_overrides", "{\"65\":\"passing\"}", INVALID);
+    expect_motif("tone_overrides", "{\"-1\":\"passing\"}", INVALID);
+    expect_motif("tone_overrides", "{\"x\":\"chord\"}", INVALID);
+    expect_motif("tone_overrides", "{\"2\":\"bogus\"}", INVALID);
+    expect_motif("tone_overrides", "{\"2\":5}", INVALID);
+    expect_motif("tone_overrides", "[]", INVALID);
     expect_motif("analysis", "{\"degrees\":[]}", OK);
     expect_motif("analysis", "[]", INVALID);
 

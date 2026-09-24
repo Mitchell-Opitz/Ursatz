@@ -456,6 +456,29 @@ static const char *motif_harmony(const cJSON *motif) {
   return cJSON_IsString(harmony) && harmony->valuestring[0] != '\0' ? harmony->valuestring : NULL;
 }
 
+/* The --tone n=role options of a motif's tone_overrides (R-196): one pair per override, at most TONE_OVERRIDES_MAX. The
+   texts live in texts, which the caller keeps until the Composer has run. Returns the new argument count. */
+#define TONE_OVERRIDES_MAX 64
+#define TONE_TEXT_SIZE 40
+typedef struct {
+  char text[TONE_OVERRIDES_MAX][TONE_TEXT_SIZE];
+} ToneTexts;
+
+static int append_tone_overrides(const char **args, int n, const cJSON *motif, ToneTexts *texts) {
+  const cJSON *overrides = cJSON_GetObjectItemCaseSensitive(motif, "tone_overrides");
+  int count = 0;
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, overrides) {
+    if (count == TONE_OVERRIDES_MAX || !entry->string || !cJSON_IsString(entry)) {
+      break;
+    }
+    snprintf(texts->text[count], TONE_TEXT_SIZE, "%s=%s", entry->string, entry->valuestring);
+    args[n++] = "--tone";
+    args[n++] = texts->text[count++];
+  }
+  return n;
+}
+
 /* The role as a Composer option value, NULL for anything but melodic or accompaniment. */
 static const char *motif_role_option(const char *role) {
   return role && (strcmp(role, "melodic") == 0 || strcmp(role, "accompaniment") == 0) ? role : NULL;
@@ -534,8 +557,9 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, char *analysis_er
   if (!written) {
     snprintf(analysis_error, ANALYSIS_ERROR_SIZE, "could not write the note list for the Composer");
   } else {
-    const char *args[14 + MOTIF_EXTRA_ARGS];
+    const char *args[14 + MOTIF_EXTRA_ARGS + 2 * TONE_OVERRIDES_MAX];
     MotifExtras extras;
+    ToneTexts tone_texts;
     int n = 0;
     args[n++] = "motive";
     args[n++] = path;
@@ -552,6 +576,9 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, char *analysis_er
     const cJSON *role = cJSON_GetObjectItemCaseSensitive(motif, "role");
     n = append_motif_extras(args, n, motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
                             cJSON_IsString(role) ? role->valuestring : NULL, &extras);
+    if (full && has_key) {
+      n = append_tone_overrides(args, n, motif, &tone_texts);
+    }
     args[n++] = "--json";
     args[n] = NULL;
     UrsatzGuiComposerOutput out = {0, NULL, NULL};
@@ -3665,6 +3692,71 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
     return strcmp(method, "POST") == 0 ? handle_import_motif(conn) : send_method_not_allowed(conn);
   }
   return send_not_found(conn);
+}
+
+/* True when the current version of a motif body is a full motif whose analysis has no tone labels (R-204). */
+static bool lacks_tones(const cJSON *version_body) {
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(version_body, "motif");
+  const cJSON *form = cJSON_GetObjectItemCaseSensitive(motif, "form");
+  if (!cJSON_IsString(form) || strcmp(form->valuestring, "full") != 0) {
+    return false;
+  }
+  const cJSON *document = cJSON_GetObjectItemCaseSensitive(motif, "analysis");
+  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(document, "analysis");
+  return !cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(analysis, "tones"));
+}
+
+int ursatz_gui_materials_migrate_tones(const char *materials_dir) {
+  char marker[512];
+  if (snprintf(marker, sizeof(marker), "%s/tones-migrated", materials_dir) >= (int)sizeof(marker)) {
+    return 0;
+  }
+  FILE *done = fopen(marker, "r");
+  if (done) {
+    fclose(done);
+    return 0;
+  }
+  cJSON *items = NULL;
+  if (ursatz_gui_material_item_list(NULL, "motif", &items) != URSATZ_GUI_MATERIAL_OK) {
+    return 0;
+  }
+  int migrated = 0;
+  const cJSON *listed = NULL;
+  cJSON_ArrayForEach(listed, items) {
+    const cJSON *id = cJSON_GetObjectItemCaseSensitive(listed, "id");
+    cJSON *meta = NULL;
+    cJSON *version_body = NULL;
+    if (!cJSON_IsString(id) || ursatz_gui_material_item_get(id->valuestring, &meta, &version_body) != URSATZ_GUI_MATERIAL_OK) {
+      continue;
+    }
+    cJSON_Delete(meta);
+    if (lacks_tones(version_body)) {
+      char analysis_error[ANALYSIS_ERROR_SIZE];
+      char refusal[512] = "";
+      AnalysisOutcome analysis = analyze_motif_body(version_body, analysis_error, refusal, sizeof(refusal));
+      if (analysis == ANALYSIS_DONE && strcmp(analysis_error, "composer not found") == 0) {
+        /* No Composer to analyze with: leave every motif alone and try again at the next start. */
+        cJSON_Delete(version_body);
+        cJSON_Delete(items);
+        return migrated;
+      }
+      if (analysis == ANALYSIS_DONE) {
+        cJSON *item = NULL;
+        if (ursatz_gui_material_item_add_version(id->valuestring, version_body, "Re-analyzed", &item) == URSATZ_GUI_MATERIAL_OK) {
+          migrated++;
+        }
+        cJSON_Delete(item);
+      }
+    }
+    cJSON_Delete(version_body);
+  }
+  cJSON_Delete(items);
+  FILE *out = fopen(marker, "w");
+  if (out) {
+    fputs("tones migrated\n", out);
+    fclose(out);
+  }
+  return migrated;
 }
 
 void ursatz_gui_materials_register(struct mg_context *ctx) {

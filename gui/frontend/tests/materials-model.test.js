@@ -447,6 +447,40 @@ check(M.deleteConfirmText("motif", "Hook", 2) === 'Delete "Hook" and its 2 varia
 check(M.deleteConfirmText("motif", "Hook", 1) === 'Delete "Hook" and its 1 variant?', "the confirm says variant for one");
 check(M.deleteConfirmText("theme", "Song", 0) === 'Delete theme "Song" and all its versions?', "no variants keeps the old confirm");
 
+/* Base harmony placeholder and tone chips (R-195, R-196). */
+const toneBody = (tones, extra) => ({
+  motif: {
+    harmony: null,
+    analysis: { analysis: { base_harmony: { text: "I V@2", given: false }, tones, warnings: ["Note 3 (B5) does not resolve"], ...(extra || {}) } },
+  },
+});
+check(M.harmonyPlaceholder(toneBody([])) === "Proposed: I V@2", "the placeholder is the proposed base harmony");
+check(M.harmonyPlaceholder(null) === "I (proposed)" && M.harmonyPlaceholder({ motif: { analysis: null } }) === "I (proposed)", "before an analysis the placeholder is I (proposed)");
+check(M.harmonyPlaceholder({ motif: { analysis: { analysis: { base_harmony: { text: "VI", given: true } } } } }) === "I (proposed)", "a given harmony is not shown as proposed");
+const tones = [
+  { note: 1, role: "chord", type: null, resolves_to: null, unresolved: false, overridden: false },
+  { note: 2, role: "non-chord", type: "passing", resolves_to: 3, unresolved: false, overridden: false },
+  { note: 3, role: "non-chord", type: "changing-tone", resolves_to: null, unresolved: true, overridden: true },
+  { note: 4, role: "unclassified", type: null, resolves_to: null, unresolved: true, overridden: false },
+  { note: 5, role: "non-chord", type: "double-neighbor", resolves_to: 6, unresolved: false, overridden: false },
+];
+const chips = M.toneChips(toneBody(tones));
+check(same(chips.map((c) => c.text), ["1 CT", "2 PT -> 3", "3 CT2", "4 ?", "5 DN -> 6"]), "chips read note, label and resolution");
+check(chips[2].unresolved && chips[2].overridden && !chips[1].unresolved && chips[3].unresolved, "chips carry unresolved and overridden");
+const abbreviations = ["passing", "neighbor", "appoggiatura", "suspension", "retardation", "escape", "anticipation", "double-neighbor", "changing-tone", "pedal"];
+check(same(abbreviations.map((t) => M.toneChips(toneBody([{ note: 1, role: "non-chord", type: t, resolves_to: null, unresolved: false }]))[0].label), ["PT", "NT", "APP", "SUS", "RET", "ET", "ANT", "DN", "CT2", "PED"]), "the ten type abbreviations");
+check(same(M.toneChips(null), []) && same(M.toneChips({ motif: { analysis: { analysis: { tones: null } } } }), []), "no tones, no chips");
+check(M.toneWarningText(toneBody([])) === "Note 3 (B5) does not resolve" && M.toneWarningText(null) === "", "the warnings become one status line");
+check(same(M.TONE_ROLE_OPTIONS.map((o) => o.value), ["", "chord", ...abbreviations]), "the override select offers Automatic, chord and each type");
+check(M.toneRoleLabel("chord") === "CT" && M.toneRoleLabel("changing-tone") === "CT2" && M.toneRoleLabel("") === null, "override values have labels");
+check(same(M.withToneOverride({ 2: "passing" }, 3, "chord"), { 2: "passing", 3: "chord" }), "an override is added");
+check(same(M.withToneOverride({ 2: "passing", 3: "chord" }, 2, ""), { 3: "chord" }), "Automatic removes an override");
+const overridden = { motif: { role: "melodic", form: "full", notes: "C4:q", meter: "4/4", key: "C major", pickup: "0", harmony: null, features: [], tone_overrides: { 2: "passing" } } };
+check(same(M.motifFormValues(overridden).toneOverrides, { 2: "passing" }) && same(M.motifFormValues({ motif: {} }).toneOverrides, {}), "form values read the overrides");
+check(same(M.buildMotifBody({ ...M.motifFormValues(overridden), toneOverrides: { 2: "pedal" } }, overridden).motif.tone_overrides, { 2: "pedal" }), "the body holds the overrides");
+check(!("tone_overrides" in M.buildMotifBody(M.motifFormValues({ motif: {} }), null).motif), "a body without overrides leaves the member out");
+check(M.motifBodyChanged({ ...M.motifFormValues(overridden), toneOverrides: {} }, overridden) && !M.motifBodyChanged(M.motifFormValues(overridden), overridden), "changing an override is a body change");
+
 if (failures > 0) {
   process.exit(1);
 }
