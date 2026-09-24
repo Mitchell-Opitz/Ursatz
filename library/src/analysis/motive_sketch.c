@@ -117,14 +117,18 @@ long motive_sketch_step(const MotiveSketch *sketch, int pitch, int *alteration) 
     int inside = (int)(relative - octave * 12);
     int degree = 0;
     int raised = 0;
-    for (int d = 0; d < 7; d++) {
+    bool exact = false;
+    for (int d = 0; d < 7 && !exact; d++) {
         if (steps[d] == inside) {
             degree = d;
-            break;
+            exact = true;
         }
+    }
+    for (int d = 0; d < 7 && !exact; d++) {
         if (steps[d] == inside - 1) {
             degree = d;
             raised = 1;
+            break;
         }
     }
     if (alteration) {
