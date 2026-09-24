@@ -15,8 +15,8 @@
 #include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/motive.h>
 
-/* At most this many motives in a request (one for each slot), forms for each, and arguments for grow. */
-#define THEME_MOTIVES 4
+/* At most this many motives in a request, forms for each, and arguments for grow. */
+#define THEME_MOTIVES 16
 #define THEME_FORMS 64
 #define THEME_ARGS 80
 #define THEME_ROWS 16
@@ -26,7 +26,6 @@
 typedef struct {
     const cJSON *json;
     const char *id;
-    bool referenced;
 } RequestMotive;
 
 typedef struct {
@@ -227,7 +226,7 @@ bool request_read_functions(const char *what, const cJSON *functions, unsigned *
     return true;
 }
 
-/* The slots: each names a motive of the request, no motive twice, "basic" required. */
+/* The slots: each names a motive of the request (a motive may be in several slots), "basic" required. */
 static int read_slots(ThemeExt *ext, const cJSON *request) {
     const cJSON *slots = cJSON_GetObjectItemCaseSensitive(request, "slots");
     if (!cJSON_IsObject(slots)) {
@@ -264,10 +263,6 @@ static int read_slots(ThemeExt *ext, const cJSON *request) {
             return cli_fail(CLI_EXIT_USAGE, "slot '%s' names the motive '%s', which the request does not have", SLOT_KEYS[s],
                             named->valuestring);
         }
-        if (found->referenced) {
-            return cli_fail(CLI_EXIT_USAGE, "the motive '%s' is in two slots; a motive is in at most one", found->id);
-        }
-        found->referenced = true;
         ext->slot_motive[s] = found->json;
         ext->slot_motive_id[s] = found->id;
     }
@@ -677,8 +672,8 @@ typedef struct {
 
 static void print_help(FILE *out) {
     fprintf(out, "Usage:\n%s\n\n", THEME_USAGE_LINE + 7);
-    fprintf(out, "Grows a theme from the motives of a request (JSON, schema %s): up to four motives, one for each slot of the\n", SCHEMA_NAME);
-    fprintf(out, "theme (basic, contrasting, continuation and cadential), saved forms of them to prefer (approved over\n");
+    fprintf(out, "Grows a theme from the motives of a request (JSON, schema %s): up to 16 motives, which the slots of the\n", SCHEMA_NAME);
+    fprintf(out, "theme (basic, contrasting, continuation and cadential) name, saved forms of them to prefer (approved over\n");
     fprintf(out, "unflagged, the registry's forms invented when none fits), and the brief: key, mode, meter, cadences, an\n");
     fprintf(out, "accompaniment or a voicing, and a style that gives the tempo, the mode and the note density. See\n");
     fprintf(out, "docs/theme-request.md.\n\n");
