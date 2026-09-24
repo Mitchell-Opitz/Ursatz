@@ -352,6 +352,9 @@ static void print_text(unsigned long seed, const Motive *source, const Variant *
         }
         char *text = motive_text(&variant->motive);
         printf("\n  %s\n  %s\n", text ? text : "", variant->record.derivation);
+        if (variant->record.leaves_harmony) {
+            printf("  Warning: %s\n", VARIANT_WARNING_LEAVES_HARMONY);
+        }
         printf("  Remoteness: %llu/%llu\n", variant->record.remoteness_num, variant->record.remoteness_den);
         printf("  Functions:");
         for (size_t f = 0; f < variant->record.function_count; f++) {
@@ -387,6 +390,16 @@ static cJSON *variant_object(const Variant *variant) {
     free(text);
     cJSON *motive = object ? motive_document(&variant->motive) : NULL;
     if (!motive) {
+        cJSON_Delete(object);
+        return NULL;
+    }
+    /* A variant that leaves its harmony is kept and marked: the warning joins the analysis's own. */
+    cJSON *analysis = cJSON_GetObjectItemCaseSensitive(motive, "analysis");
+    cJSON *warnings = cJSON_GetObjectItemCaseSensitive(analysis, "warnings");
+    if (variant->record.leaves_harmony &&
+        (!cJSON_IsArray(warnings) ||
+         !cJSON_AddItemToArray(warnings, cJSON_CreateString(VARIANT_WARNING_LEAVES_HARMONY)))) {
+        cJSON_Delete(motive);
         cJSON_Delete(object);
         return NULL;
     }

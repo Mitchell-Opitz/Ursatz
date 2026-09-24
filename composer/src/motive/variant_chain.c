@@ -10,6 +10,8 @@
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/motive_sketch_bridge.h>
 
+#include "analysis/motive_relation.h"
+
 #include "motive/motive_internal.h"
 #include "motive/variant_internal.h"
 #include "plan/plan_json_internal.h"
@@ -76,6 +78,22 @@ static long draw_int(FillRng *rng, long min, long max) {
     return min + (long)fill_rng_below(rng, (uint64_t)(max - min + 1));
 }
 
+/* The largest value drawn for an int parameter of a step applied to current. */
+static long param_max(const VariantParam *param, const Motive *current) {
+    long max = param->max;
+    if (param->notes_limit && (long)current->note_count - 1 < max) {
+        max = (long)current->note_count - 1;
+    }
+    if (param->features_limit && (long)current->feature_count - 1 < max) {
+        max = (long)current->feature_count - 1;
+    }
+    if (param->chords_limit) {
+        long chords = current->harmony_count > 0 ? (long)current->harmony_count : 1;
+        max = chords - 1 < max ? chords - 1 : max;
+    }
+    return max;
+}
+
 /* Draws one open parameter for a step that is applied to current. */
 static VariantValue draw_param(FillRng *rng, const VariantParam *param, const Motive *current) {
     VariantValue value = {true, 0, 0};
@@ -119,22 +137,107 @@ static VariantValue draw_param(FillRng *rng, const VariantParam *param, const Mo
         break;
     }
     default: {
-        long max = param->max;
-        if (param->notes_limit && (long)current->note_count - 1 < max) {
-            max = (long)current->note_count - 1;
-        }
-        if (param->features_limit && (long)current->feature_count - 1 < max) {
-            max = (long)current->feature_count - 1;
-        }
-        if (param->chords_limit) {
-            long chords = current->harmony_count > 0 ? (long)current->harmony_count : 1;
-            max = chords - 1 < max ? chords - 1 : max;
-        }
+        long max = param_max(param, current);
         value.value = draw_int(rng, param->min, max < param->min ? param->min : max);
         break;
     }
     }
     return value;
+}
+
+/* ------------------------------------------------------------- applicable draws */
+
+/* The most combinations of open parameters tried at once for one step. */
+#define COMBINATIONS_MAX 512
+
+/* A row that names a figure on a note: its open parameters are drawn from values the motive accepts. */
+static bool names_figure(const VariantOperation *operation) {
+    return operation->relation == MOTIVE_RELATION_ADD_NON_CHORD_TONE ||
+           operation->relation == MOTIVE_RELATION_REMOVE_NON_CHORD_TONE ||
+           operation->relation == MOTIVE_RELATION_CHANGE_NON_CHORD_TONE;
+}
+
+/* A row that changes the chords: its open parameters are drawn, where they can be, so that a note moves. */
+static bool changes_chords(const VariantOperation *operation) {
+    return (operation->relation >= MOTIVE_RELATION_HARMONY_INVERSION &&
+            operation->relation <= MOTIVE_RELATION_PASSING_HARMONY) ||
+           operation->relation == MOTIVE_RELATION_REHARMONIZE_FRAME;
+}
+
+/* Whether the step with these values changes at least one pitch of current (motive_relation_harmony_changes_notes). */
+static bool moves_notes(const MotiveSketch *sketch, const VariantOperation *operation, const VariantValue *values) {
+    MotiveRelationStep step;
+    memset(&step, 0, sizeof(step));
+    step.kind = (MotiveRelationKind)operation->relation;
+    for (size_t p = 0; p < operation->param_count && p < MOTIVE_RELATION_MAX_PARAMS; p++) {
+        step.value[p] = values[p].value;
+        step.den[p] = values[p].den;
+    }
+    return motive_relation_harmony_changes_notes(sketch, &step);
+}
+
+/*
+ * Draws the open parameters of a step from the combinations the operation accepts for current: every combination of the
+ * open int and bool parameters is tried, and one of those that apply is chosen. A row that changes the chords chooses
+ * among the combinations that move a note when there are any. False, resolved untouched in its open values, when none
+ * applies or there are too many to try.
+ */
+static bool draw_accepted(FillRng *rng, const VariantOperation *operation, VariantStepRecord *resolved,
+                          const Motive *current) {
+    size_t open[VARIANT_PARAM_MAX];
+    long span[VARIANT_PARAM_MAX];
+    size_t open_count = 0;
+    size_t total = 1;
+    for (size_t p = 0; p < operation->param_count; p++) {
+        if (resolved->values[p].set || operation->params[p].optional) {
+            continue;
+        }
+        const VariantParam *param = &operation->params[p];
+        if (param->kind != VARIANT_PARAM_INT && param->kind != VARIANT_PARAM_BOOL) {
+            return false;
+        }
+        long max = param_max(param, current);
+        long width = max < param->min ? 1 : max - param->min + 1;
+        if (total * (size_t)width > COMBINATIONS_MAX) {
+            return false;
+        }
+        open[open_count] = p;
+        span[open_count++] = width;
+        total *= (size_t)width;
+    }
+    size_t accepted[COMBINATIONS_MAX];
+    size_t accepted_count = 0;
+    size_t moving[COMBINATIONS_MAX];
+    size_t moving_count = 0;
+    MotiveSketch sketch;
+    bool prefer_moves = changes_chords(operation) && motive_to_sketch(current, &sketch);
+    for (size_t combination = 0; combination < total; combination++) {
+        VariantValue values[VARIANT_PARAM_MAX];
+        memcpy(values, resolved->values, sizeof(values));
+        size_t rest = combination;
+        for (size_t k = 0; k < open_count; k++) {
+            values[open[k]] = (VariantValue){true, operation->params[open[k]].min + (long)(rest % (size_t)span[k]), 0};
+            rest /= (size_t)span[k];
+        }
+        Motive result;
+        if (operation->apply(current, values, &result) == MOTIVE_DEV_OK) {
+            accepted[accepted_count++] = combination;
+            if (prefer_moves && moves_notes(&sketch, operation, values)) {
+                moving[moving_count++] = combination;
+            }
+        }
+    }
+    if (accepted_count == 0) {
+        return false;
+    }
+    size_t rest = moving_count > 0 ? moving[fill_rng_below(rng, moving_count)] : accepted[fill_rng_below(rng, accepted_count)];
+    for (size_t k = 0; k < open_count; k++) {
+        resolved->values[open[k]] =
+            (VariantValue){true, operation->params[open[k]].min + (long)(rest % (size_t)span[k]), 0};
+        resolved->open[open[k]] = true;
+        rest /= (size_t)span[k];
+    }
+    return true;
 }
 
 /* ------------------------------------------------------------------- forms */
@@ -263,6 +366,34 @@ void variant_record_difference(const Motive *source, const Motive *result, Varia
     }
 }
 
+/* ------------------------------------------------------------------- marks */
+
+static size_t unresolved_count(const MotiveAnalysis *analysis) {
+    size_t count = 0;
+    for (size_t i = 0; analysis->tones_known && i < analysis->note_count; i++) {
+        count += analysis->tones[i].unresolved ? 1 : 0;
+    }
+    return count;
+}
+
+bool variant_leaves_harmony(const Motive *source, const Motive *variant) {
+    MotiveAnalysis after;
+    MotiveAnalysis before;
+    if (!variant || !motive_analyze(variant, &after) || !after.tones_known) {
+        return false;
+    }
+    size_t strong = 0;
+    size_t off = 0;
+    for (size_t i = 0; i < after.note_count; i++) {
+        if (after.rhythm[i].on_beat) {
+            strong++;
+            off += after.tones[i].role == MOTIVE_TONE_CHORD ? 0 : 1;
+        }
+    }
+    size_t was = source && motive_analyze(source, &before) ? unresolved_count(&before) : 0;
+    return off * 2 > strong || unresolved_count(&after) > was;
+}
+
 /* ---------------------------------------------------------------- derivation */
 
 static void append(char *out, size_t size, const char *text) {
@@ -381,7 +512,12 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
             for (size_t p = 0; p < operation->param_count; p++) {
                 if (step->values[p].set) {
                     resolved->values[p] = step->values[p];
-                } else if (!operation->params[p].optional) {
+                }
+            }
+            bool chosen = attempt == 0 && drawn && (names_figure(operation) || changes_chords(operation)) &&
+                          draw_accepted(&rng, operation, resolved, &current);
+            for (size_t p = 0; p < operation->param_count; p++) {
+                if (!chosen && !step->values[p].set && !operation->params[p].optional) {
                     resolved->values[p] = draw_param(&rng, &operation->params[p], &current);
                     resolved->open[p] = true;
                 }
@@ -409,6 +545,7 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
     }
 
     variant_record_difference(source, &current, log);
+    log->leaves_harmony = variant_leaves_harmony(source, &current);
     if (current.harmony_count > 0) {
         char *harmony = motive_harmony_to_text(&current);
         if (harmony) {
@@ -441,6 +578,27 @@ static bool takes_feature(const VariantOperation *operation) {
     return false;
 }
 
+/* Whether any note of the motive is a non-chord or unclassified tone against its base harmony. */
+static bool has_figure(const Motive *motive) {
+    MotiveAnalysis analysis;
+    if (!motive_analyze(motive, &analysis) || !analysis.tones_known) {
+        return false;
+    }
+    for (size_t i = 0; i < analysis.note_count; i++) {
+        if (analysis.tones[i].role != MOTIVE_TONE_CHORD) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Whether the operation works on a note that is not a chord tone: reduce-to-frame, remove and change. */
+static bool needs_figure(const VariantOperation *operation) {
+    return operation->relation == MOTIVE_RELATION_REDUCE_TO_FRAME ||
+           operation->relation == MOTIVE_RELATION_REMOVE_NON_CHORD_TONE ||
+           operation->relation == MOTIVE_RELATION_CHANGE_NON_CHORD_TONE;
+}
+
 bool variant_random_chain_of(const Motive *source, unsigned long seed, size_t min_steps, size_t max_steps,
                              VariantChain *out) {
     if (!source || !out || min_steps < 1 || max_steps < min_steps || max_steps > VARIANT_CHAIN_MAX) {
@@ -448,15 +606,17 @@ bool variant_random_chain_of(const Motive *source, unsigned long seed, size_t mi
     }
     const VariantOperation *candidates[VARIANT_CHAIN_MAX * 4 + 16];
     size_t count = 0;
+    bool figure = has_figure(source);
     for (size_t i = 0; i < variant_registry_count() && count < sizeof(candidates) / sizeof(candidates[0]); i++) {
         const VariantOperation *operation = variant_registry_at(i);
         /* Change-meter is seldom usable (ch. III, Ex. 24), so no random chain draws it, and a feature operation needs
-           a labelled feature to work on, counter-line the accompaniment role and passing-harmony two chords. */
+           a labelled feature to work on, counter-line the accompaniment role, passing-harmony two chords, and a row
+           that takes out or changes a non-chord tone one to work on. */
         if (operation->category != VARIANT_CATEGORY_EXACT && strcmp(operation->name, "change-meter") != 0 &&
             (operation->forms & VARIANT_FORM_BIT(source->form)) != 0 &&
             (source->feature_count > 0 || !takes_feature(operation)) &&
             (source->role == MOTIVE_ROLE_ACCOMPANIMENT || !needs_accompaniment(operation)) &&
-            (source->harmony_count >= 2 || !needs_two_chords(operation))) {
+            (source->harmony_count >= 2 || !needs_two_chords(operation)) && (figure || !needs_figure(operation))) {
             candidates[count++] = operation;
         }
     }

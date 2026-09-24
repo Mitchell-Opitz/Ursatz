@@ -562,10 +562,11 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
  * The hashes of what main composed for this sentence, seeds 1 to 5 (FNV-1a 64 of the plan's JSON), taken with the same
  * request after the motive-forms (P14 B8) changed the ideas' motives, then again after the shaping preferences (P16 B4)
  * changed the candidates chosen (seeds 1, 3, 4 and 5), then again after the harmony relations moved to tone roles
- * (P18b B2), which changed the variations chosen (seeds 2 and 5). A run without a style is byte for byte the same.
+ * (P18b B2), which changed the variations chosen (seeds 2 and 5), then again after the harmony rows began to draw values that
+ * move a note (P18b B7), which changed the variations chosen (seeds 2 to 5). A run without a style is byte for byte the same.
  */
-static const unsigned long long MAIN_HASH[5] = {0xf6fb5576ac8ebeffULL, 0xab53446b8651d659ULL, 0x895437b3ea64963bULL,
-                                                0xcf79f6897a39ea5dULL, 0xb0833ecb5db5f197ULL};
+static const unsigned long long MAIN_HASH[5] = {0xf6fb5576ac8ebeffULL, 0x095175273d580250ULL, 0xde5c8e6d9212d98fULL,
+                                                0x1a613cfc3207b4ceULL, 0x2f07ec818c29fe5aULL};
 
 static int test_same(void) {
     ComposerStyle *style = NULL;
@@ -902,9 +903,11 @@ static Means unstyled_sweep(const ComposerStyle *style, unsigned long last_seed)
  *
  * Re-measured at P18b B5, after the harmony relations moved to tone roles (P18b B2) changed the variations chosen: the
  * order still holds.
+ *
+ * Re-measured at P18b B7, after the harmony rows began to draw values that move a note: the order still holds.
  */
-static const int STYLED[2][2] = {{727, 763}, {659, 754}};
-static const int UNSTYLED[2][2] = {{714, 773}, {670, 760}};
+static const int STYLED[2][2] = {{722, 764}, {672, 757}};
+static const int UNSTYLED[2][2] = {{710, 772}, {667, 759}};
 
 static int test_sweep(unsigned long last_seed, bool full) {
     const char *const paths[2] = {CHORALES, SONATINAS};
