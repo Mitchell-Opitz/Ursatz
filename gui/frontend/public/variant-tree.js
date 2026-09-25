@@ -79,6 +79,35 @@
     return typeof harmony === "string" && harmony !== "" ? `Harmony: ${harmony}` : "";
   }
 
+  /* The analysis object of a variant document (a candidate's motive); empty without one. */
+  function analysisOf(variant) {
+    return variant && variant.motive && variant.motive.analysis ? variant.motive.analysis : {};
+  }
+
+  /* The base harmony text of a variant document; empty without one. */
+  function variantHarmonyText(variant) {
+    const base = analysisOf(variant).base_harmony;
+    return base && typeof base.text === "string" ? base.text : "";
+  }
+
+  /* The warnings of an analysis, as strings. */
+  function warningList(analysis) {
+    return analysis && Array.isArray(analysis.warnings) ? analysis.warnings.filter((w) => typeof w === "string") : [];
+  }
+
+  /* A body MaterialsModel.toneChips reads, around an analysis object ({tones, warnings, ...}). */
+  function toneBody(analysis) {
+    return { motif: { analysis: { analysis: analysis || {} } } };
+  }
+
+  /* The harmony text a saved variant shows: its base harmony, else its own chords. */
+  function derivedHarmonyText(derived) {
+    if (derived && typeof derived.base_harmony === "string" && derived.base_harmony !== "") {
+      return derived.base_harmony;
+    }
+    return derived && typeof derived.harmony === "string" ? derived.harmony : "";
+  }
+
   /* The derivation line of a stored variant: the steps joined by "then". */
   function derivationText(derived) {
     const steps = derived && Array.isArray(derived.operations) ? derived.operations : [];
@@ -91,15 +120,16 @@
    * A promoted motif (standalone) and what is under it are not rows: promoted lists each one reached without
    * crossing another, as {id, name, derivation} (R-188). A Suits filter (a function name) leaves out the variants
    * that do not suit it; what is under them stays. */
-  function treeRows(tree, showRejected, suits) {
+  function treeRows(tree, showRejected, suits, rootHarmony) {
     const rows = [];
     const promoted = [];
     let hidden = 0;
     function countAll(node) {
       return 1 + (node.children || []).reduce((sum, child) => sum + countAll(child), 0);
     }
-    function walk(node, depth) {
+    function walk(node, depth, parentHarmony) {
       const derived = node.derived || null;
+      const ownHarmony = depth === 0 ? String(rootHarmony || "") : derivedHarmonyText(derived);
       const flag = flagOf(derived);
       if (depth > 0 && node.standalone === true) {
         promoted.push({ id: node.id, name: String(node.name || ""), derivation: derivationText(derived) });
@@ -111,7 +141,7 @@
       }
       if (depth > 0 && !suitsMatch(derived && derived.functions, suits)) {
         for (const child of node.children || []) {
-          walk(child, depth + 1);
+          walk(child, depth + 1, ownHarmony);
         }
         return;
       }
@@ -128,15 +158,17 @@
         chips: derived ? chips(derived.kept, derived.changed) : [],
         suits: derived ? suitsLine(derived.functions) : "",
         remoteness: derived ? remotenessText(derived.remoteness) : "",
-        harmony: derived ? harmonyLine(derived.harmony) : "",
+        harmony: derived ? harmonyLine(derivedHarmonyText(derived)) : "",
+        warnings: derived ? warningList(derived) : [],
+        toneBody: derived ? toneBody({ tones: derived.tones, warnings: derived.warnings }) : null,
         seed: derived && Number.isInteger(derived.seed) ? derived.seed : null,
       });
       for (const child of node.children || []) {
-        walk(child, depth + 1);
+        walk(child, depth + 1, ownHarmony);
       }
     }
     if (tree) {
-      walk(tree, 0);
+      walk(tree, 0, "");
     }
     return { rows, hidden, promoted };
   }
@@ -519,7 +551,9 @@
       chips: chips(c.kept, c.changed),
       suits: suitsLine(c.functions),
       remoteness: remotenessText(c.remoteness),
-      harmony: harmonyLine(c.harmony),
+      harmony: harmonyLine(variantHarmonyText(c) || c.harmony),
+      warnings: warningList(analysisOf(c)),
+      toneBody: toneBody(analysisOf(c)),
       recognizability: recognizability === null ? "" : `${Math.round(recognizability * 100)}% recognizable`,
     };
   }
@@ -643,6 +677,7 @@
     linkFormRequest,
     compareView,
     candidateView,
+    variantHarmonyText,
     candidateDegrees,
     noDegreesMessage,
     candidateFeatures,

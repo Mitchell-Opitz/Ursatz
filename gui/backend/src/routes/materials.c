@@ -2781,7 +2781,8 @@ static bool set_variant_motif_members(cJSON *motif, const cJSON *variant) {
          replace_member(motif, "features", kept);
 }
 
-/* Sets derived.harmony (the variant's own chords as text, or null), derived.functions (the names it suits) and
+/* Sets derived.harmony (the variant's own chords as text, or null), derived.base_harmony (its base harmony as text, or
+   null), derived.tones and derived.warnings (from its analysis), derived.functions (the names it suits) and
    derived.remoteness (its distance from the basic motive, 0 to 1, or null) from a candidate. */
 static bool apply_variant_extras(cJSON *derived, const cJSON *variant) {
   const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(variant, "harmony");
@@ -2793,9 +2794,18 @@ static bool apply_variant_extras(cJSON *derived, const cJSON *variant) {
       cJSON_AddItemToArray(functions, cJSON_CreateString(name->valuestring));
     }
   }
+  const cJSON *analysis = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(variant, "motive"), "analysis");
+  const cJSON *base = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(analysis, "base_harmony"), "text");
+  const cJSON *tones = cJSON_GetObjectItemCaseSensitive(analysis, "tones");
+  const cJSON *warnings = cJSON_GetObjectItemCaseSensitive(analysis, "warnings");
   return replace_member(derived, "harmony",
                         cJSON_IsString(harmony) && harmony->valuestring[0] != '\0' ? cJSON_CreateString(harmony->valuestring)
                                                                                     : cJSON_CreateNull()) &&
+         replace_member(derived, "base_harmony",
+                        cJSON_IsString(base) && base->valuestring[0] != '\0' ? cJSON_CreateString(base->valuestring)
+                                                                              : cJSON_CreateNull()) &&
+         replace_member(derived, "tones", cJSON_IsArray(tones) ? cJSON_Duplicate(tones, 1) : cJSON_CreateArray()) &&
+         replace_member(derived, "warnings", cJSON_IsArray(warnings) ? cJSON_Duplicate(warnings, 1) : cJSON_CreateArray()) &&
          replace_member(derived, "functions", functions) &&
          replace_member(derived, "remoteness",
                         cJSON_IsNumber(remoteness) && remoteness->valuedouble >= 0 && remoteness->valuedouble <= 1

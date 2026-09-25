@@ -32,6 +32,28 @@ const VariantTreeView = (function () {
     return row;
   }
 
+  /* Harmony line, read only tone chips (B8's labels) and warnings of a variant; view is a candidateView or a tree row.
+   * Appends nothing for what the variant does not have. */
+  function harmonyAndTones(parent, view) {
+    if (view.harmony) {
+      parent.appendChild(h("div", "variant-harmony", view.harmony));
+    }
+    const chips = view.toneBody ? MaterialsModel.toneChips(view.toneBody) : [];
+    if (chips.length > 0) {
+      const row = h("div", "materials-chips motif-tone-chips");
+      for (const chip of chips) {
+        const el = h("span", "materials-chip motif-tone-chip", chip.text);
+        el.classList.toggle("motif-tone-unresolved", chip.unresolved);
+        el.classList.toggle("motif-tone-overridden", chip.overridden);
+        row.appendChild(el);
+      }
+      parent.appendChild(row);
+    }
+    for (const warning of view.warnings || []) {
+      parent.appendChild(h("div", "variant-warning", warning));
+    }
+  }
+
   /* One control per parameter of the chosen operation; an empty text leaves it open. */
   function paramControls(operation, values, features) {
     const box = h("div", "variant-params");
@@ -178,9 +200,7 @@ const VariantTreeView = (function () {
     }
     card.appendChild(meta);
     card.appendChild(h("div", "variant-suits-line", view.suits));
-    if (view.harmony) {
-      card.appendChild(h("div", "variant-harmony", view.harmony));
-    }
+    harmonyAndTones(card, view);
     const buttons = h("div", "variant-actions");
     buttons.append(
       actionButton("Play", actions.play),
@@ -262,9 +282,7 @@ const VariantTreeView = (function () {
     }
     item.appendChild(meta);
     item.appendChild(h("div", "variant-suits-line", row.suits));
-    if (row.harmony) {
-      item.appendChild(h("div", "variant-harmony", row.harmony));
-    }
+    harmonyAndTones(item, row);
     const buttons = h("div", "variant-actions");
     const kind = h("select");
     for (const value of VariantTree.KINDS) {
@@ -769,6 +787,7 @@ const VariantTreeView = (function () {
       if (entry.variant.derivation) {
         item.appendChild(h("div", "variant-derivation", entry.variant.derivation));
       }
+      harmonyAndTones(item, VariantTree.candidateView(entry.variant));
       const score = { workspace: null, urls: [] };
       opScores.push(score);
       const host = h("div", "variant-score");
