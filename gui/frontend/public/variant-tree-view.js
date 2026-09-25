@@ -182,9 +182,10 @@ const VariantTreeView = (function () {
     return button;
   }
 
-  /* actions: {play, approve, reject, reroll}, each called with no arguments. */
-  function candidateCard(candidate, actions) {
-    const view = VariantTree.candidateView(candidate);
+  /* actions: {play, approve, reject, reroll}, each called with no arguments. sourceHarmony is the source motif's base
+   * harmony text. */
+  function candidateCard(candidate, actions, sourceHarmony) {
+    const view = VariantTree.candidateView(candidate, sourceHarmony);
     const card = h("li", "variant-candidate");
     card.appendChild(h("div", "variant-derivation", view.derivation));
     card.scoreHost = h("div", "variant-score");
@@ -532,7 +533,7 @@ const VariantTreeView = (function () {
           approve: () => saveCandidate(candidate, "approved"),
           reject: () => saveCandidate(candidate, "rejected"),
           reroll: () => rerollCandidate(candidate),
-        });
+        }, VariantTree.sourceHarmonyText(ctx.body));
         candidates.appendChild(card);
         renderQueue.add(() => (generation === drawGeneration ? showCandidateScore(candidate, card.scoreHost, entry, generation) : null));
       }
@@ -596,7 +597,7 @@ const VariantTreeView = (function () {
         refreshTree();
       },
       async kind(id, kind) {
-        const row = VariantTree.treeRows(savedTree, true).rows.find((r) => r.id === id);
+        const row = VariantTree.treeRows(savedTree, true, "", VariantTree.sourceHarmonyText(ctx.body)).rows.find((r) => r.id === id);
         const flag = row ? row.flag.value : "unflagged";
         const answer = await ctx.send(VariantTree.flagRequest(id, flag, kind));
         setStatus(status, answer.ok ? "" : errorText(answer.data, "Could not change the kind"), !answer.ok);
@@ -631,7 +632,7 @@ const VariantTreeView = (function () {
       clearRowScores();
       rowScoreIds = [];
       tree.innerHTML = "";
-      const shownRows = VariantTree.treeRows(savedTree, rejectedBox.checked, suits.value);
+      const shownRows = VariantTree.treeRows(savedTree, rejectedBox.checked, suits.value, VariantTree.sourceHarmonyText(ctx.body));
       for (const row of shownRows.rows) {
         const open = !row.isRoot && openRows.has(row.id);
         const item = treeRow(row, treeActions, open);
@@ -784,10 +785,11 @@ const VariantTreeView = (function () {
     function eachOpEntry(entry, generation) {
       const item = h("div", "variant-each-op-entry");
       item.appendChild(h("strong", "", `${entry.label}${entry.citation ? ` (${entry.citation})` : ""}`));
-      if (entry.variant.derivation) {
-        item.appendChild(h("div", "variant-derivation", entry.variant.derivation));
+      const view = VariantTree.candidateView(entry.variant, VariantTree.sourceHarmonyText(ctx.body));
+      if (view.derivation) {
+        item.appendChild(h("div", "variant-derivation", view.derivation));
       }
-      harmonyAndTones(item, VariantTree.candidateView(entry.variant));
+      harmonyAndTones(item, view);
       const score = { workspace: null, urls: [] };
       opScores.push(score);
       const host = h("div", "variant-score");

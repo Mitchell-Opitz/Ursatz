@@ -90,6 +90,13 @@
     return base && typeof base.text === "string" ? base.text : "";
   }
 
+  /* The base harmony text of a motif body (the stored analysis); empty without one. */
+  function sourceHarmonyText(body) {
+    const motif = body && body.motif ? body.motif : {};
+    const base = motif.analysis && motif.analysis.analysis ? motif.analysis.analysis.base_harmony : null;
+    return base && typeof base.text === "string" ? base.text : "";
+  }
+
   /* The warnings of an analysis, as strings. */
   function warningList(analysis) {
     return analysis && Array.isArray(analysis.warnings) ? analysis.warnings.filter((w) => typeof w === "string") : [];
@@ -112,6 +119,16 @@
   function derivationText(derived) {
     const steps = derived && Array.isArray(derived.operations) ? derived.operations : [];
     return steps.map((step) => step.op).join(" then ");
+  }
+
+  /* The derivation with a harmony change named: "<steps>, harmony <source> to <result>" when both texts are known and
+   * differ, else the derivation as it is. */
+  function withHarmonyChange(derivation, sourceText, resultText) {
+    if (!sourceText || !resultText || sourceText === resultText) {
+      return derivation;
+    }
+    const change = `harmony ${sourceText} to ${resultText}`;
+    return derivation ? `${derivation}, ${change}` : change;
   }
 
   /* The saved tree as flat rows, depth first, in the order of the children.
@@ -151,7 +168,7 @@
         depth,
         isRoot: depth === 0,
         version: node.current_version,
-        derivation: derivationText(derived),
+        derivation: withHarmonyChange(derivationText(derived), parentHarmony, ownHarmony),
         flag: badge(flag, FLAG_LABELS),
         kind: derived ? badge(derived.kind, KIND_LABELS) : null,
         kindValue: derived && KINDS.includes(derived.kind) ? derived.kind : "motive-form",
@@ -540,13 +557,13 @@
     };
   }
 
-  /* What a candidate card shows. */
-  function candidateView(candidate) {
+  /* What a candidate card shows; sourceHarmony is the source motif's base harmony text (for the derivation line). */
+  function candidateView(candidate, sourceHarmony) {
     const c = candidate || {};
     const recognizability = typeof c.recognizability === "number" ? c.recognizability : null;
     return {
       seed: Number.isInteger(c.seed) ? c.seed : null,
-      derivation: String(c.derivation || ""),
+      derivation: withHarmonyChange(String(c.derivation || ""), sourceHarmony, variantHarmonyText(c)),
       kind: badge(c.kind, KIND_LABELS),
       chips: chips(c.kept, c.changed),
       suits: suitsLine(c.functions),
@@ -678,6 +695,7 @@
     compareView,
     candidateView,
     variantHarmonyText,
+    sourceHarmonyText,
     candidateDegrees,
     noDegreesMessage,
     candidateFeatures,
