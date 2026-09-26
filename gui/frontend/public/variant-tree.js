@@ -258,8 +258,9 @@
 
   /* The findings as plain text to paste elsewhere: the motif's name, notes, mode and meter, then one line per marked
    * operation, `<op>: works|wrong - <comment> (result <notes_text>)`, the wrong ones first. Inside each verdict the
-   * operations follow `order` (registry order) when given, then the rest by name. */
-  function findingsText(name, motif, checks, order) {
+   * operations follow `order` (registry order) when given, then the rest by name. harmonies maps an operation to the base
+   * harmony text of its current result; a line adds ` harmony <text>` after the result notes when there is one. */
+  function findingsText(name, motif, checks, order, harmonies) {
     const m = motif || {};
     const key = typeof m.key === "string" ? m.key : "";
     const mode = key.includes(" ") ? key.slice(key.lastIndexOf(" ") + 1) : key;
@@ -271,10 +272,23 @@
     for (const verdict of ["wrong", "works"]) {
       for (const op of ops.filter((o) => marks[o] && marks[o].verdict === verdict)) {
         const mark = marks[op];
-        lines.push(`${op}: ${verdict}${mark.comment ? ` - ${mark.comment}` : ""} (result ${mark.notes_text})`);
+        const harmony = harmonies && typeof harmonies[op] === "string" ? harmonies[op] : "";
+        lines.push(`${op}: ${verdict}${mark.comment ? ` - ${mark.comment}` : ""} (result ${mark.notes_text}${harmony ? ` harmony ${harmony}` : ""})`);
       }
     }
     return lines.join("\n");
+  }
+
+  /* The base harmony text of each Try every operation result, by operation. */
+  function resultHarmonies(variants) {
+    const harmonies = {};
+    for (const variant of Array.isArray(variants) ? variants : []) {
+      const text = variantHarmonyText(variant);
+      if (text) {
+        harmonies[variantOp(variant)] = text;
+      }
+    }
+    return harmonies;
   }
 
   function eachOpRequest(id, seed) {
@@ -665,6 +679,7 @@
     eachOpGroups,
     makeMark,
     findingsText,
+    resultHarmonies,
     markView,
     eachOpRequest,
     opChecksRequest,

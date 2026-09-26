@@ -870,6 +870,7 @@ const VariantTreeView = (function () {
         ctx.body && ctx.body.motif,
         opChecks,
         operationList.map((operation) => operation.name),
+        VariantTree.resultHarmonies(eachOpResults && eachOpResults.variants),
       );
       try {
         await navigator.clipboard.writeText(text);
