@@ -159,6 +159,35 @@ static void test_steps_in_major(void) {
     assert(motive_sketch_degree_of_step(&sketch, 34) == 7);
 }
 
+/* Every pitch class in C major and A minor: a pitch on a degree is that degree unraised, any other is the degree below raised. */
+static void test_every_pitch_class_is_spelled(void) {
+    MotiveSketch major = four_quarters();
+    static const int MAJOR_DEGREE[12] = {0, 0, 1, 1, 2, 3, 3, 4, 4, 5, 5, 6};
+    static const int MAJOR_RAISED[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
+    for (int pc = 0; pc < 12; pc++) {
+        int alteration = -1;
+        long step = motive_sketch_step(&major, 60 + pc, &alteration);
+        assert(step == 35 + MAJOR_DEGREE[pc]);
+        assert(alteration == MAJOR_RAISED[pc]);
+    }
+    int alteration = -1;
+    assert(motive_sketch_step(&major, 65, &alteration) == 38 && alteration == 0); /* F in C is step 3, unraised */
+    assert(motive_sketch_step(&major, 66, &alteration) == 38 && alteration == 1); /* F# is step 3, raised */
+
+    MotiveSketch minor = four_quarters();
+    minor.tonic_pc = 9;
+    minor.minor = true;
+    static const int MINOR_DEGREE[12] = {0, 0, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6};
+    static const int MINOR_RAISED[12] = {0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1};
+    for (int pc = 0; pc < 12; pc++) {
+        int pitch = 57 + pc; /* A3 up */
+        long step = motive_sketch_step(&minor, pitch, &alteration);
+        assert(step - motive_sketch_step(&minor, 57, NULL) == MINOR_DEGREE[pc]);
+        assert(alteration == MINOR_RAISED[pc]);
+        assert(motive_sketch_pitch_at_step(&minor, step, alteration) == pitch);
+    }
+}
+
 static void test_steps_in_minor(void) {
     MotiveSketch sketch = four_quarters();
     sketch.tonic_pc = 9; /* A natural minor */
@@ -180,6 +209,57 @@ static void test_steps_without_a_scale(void) {
     assert(alteration == 0);
     assert(motive_sketch_pitch_at_step(&sketch, 64, 0) == 64);
     assert(motive_sketch_degree_of_step(&sketch, 64) == 0);
+}
+
+static void test_contour_normalize(void) {
+    MotiveSketch sketch = four_quarters();
+    sketch.notes[1].pitch = 72;
+    sketch.notes[2].pitch = 60; /* C C' C G: ranks 0 2 0 1... */
+    sketch.notes[3].pitch = 64;
+    MotiveSketch out;
+    assert(motive_sketch_contour_normalize(&sketch, &out));
+    assert(out.notes[0].pitch == 60 && out.notes[2].pitch == 60); /* equal pitches, equal ranks */
+    assert(out.notes[3].pitch == 62 && out.notes[1].pitch == 64);  /* ranks 1 and 2 on C major steps */
+    for (unsigned i = 0; i < 4; i++) {
+        assert(msk_eq(out.notes[i].onset, q(i, 4)) && msk_eq(out.notes[i].duration, q(1, 4)));
+    }
+    assert(msk_eq(out.length, q(1, 1)));
+
+    /* In A minor ranks step through the scale from middle C. */
+    MotiveSketch minor = four_quarters();
+    minor.tonic_pc = 9;
+    minor.minor = true;
+    assert(motive_sketch_contour_normalize(&minor, &out));
+    assert(out.notes[3].pitch == motive_sketch_pitch_at_step(&minor, 3, 0) + 60 && out.has_scale && out.minor);
+
+    /* No scale: C major. In place. Pickup, bar and beat are kept. */
+    MotiveSketch bare = four_quarters();
+    bare.has_scale = false;
+    bare.pickup = q(1, 8);
+    assert(motive_sketch_contour_normalize(&bare, &bare));
+    assert(bare.notes[3].pitch == 65 && !bare.has_scale && msk_eq(bare.pickup, q(1, 8)));
+
+    /* Refused, out untouched: unknown pitch, a pitch over 127 after ranking. */
+    MotiveSketch unknown = four_quarters();
+    unknown.notes[1].pitch = MOTIVE_SKETCH_PITCH_UNKNOWN;
+    MotiveSketch keep = four_quarters();
+    out = keep;
+    assert(!motive_sketch_contour_normalize(&unknown, &out));
+    assert(motive_sketch_equal(&out, &keep));
+    MotiveSketch many;
+    memset(&many, 0, sizeof(many));
+    many.has_scale = true;
+    many.bar = q(1, 1);
+    many.beat = q(1, 4);
+    many.pickup = q(0, 1);
+    for (unsigned i = 0; i < 64; i++) {
+        many.notes[i].pitch = (int)i;
+        many.notes[i].onset = q(i, 64);
+        many.notes[i].duration = q(1, 64);
+    }
+    many.note_count = 64;
+    many.length = q(1, 1);
+    assert(!motive_sketch_contour_normalize(&many, &out)); /* rank 63 is step 63: pitch over 127 */
 }
 
 static void test_chord_tones(void) {
@@ -268,7 +348,9 @@ int main(void) {
     test_chords_and_features();
     test_equality();
     test_steps_in_major();
+    test_every_pitch_class_is_spelled();
     test_steps_in_minor();
+    test_contour_normalize();
     test_steps_without_a_scale();
     test_chord_tones();
     test_expressible_durations();
