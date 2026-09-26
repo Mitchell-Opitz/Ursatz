@@ -614,14 +614,30 @@
       : [];
   }
 
+  /* The candidate's own pickup (beats text) and meter (`n/d`), else the source's. */
+  function candidatePickup(candidate, fallback) {
+    const analysis = candidate && candidate.motive && candidate.motive.analysis ? candidate.motive.analysis : {};
+    return typeof analysis.pickup === "string" && analysis.pickup !== "" ? analysis.pickup : fallback;
+  }
+
+  function candidateMeter(candidate, fallback) {
+    const meter = candidate && candidate.motive && candidate.motive.motive ? candidate.motive.motive.meter : null;
+    return meter && Number.isInteger(meter.beats_per_bar) && Number.isInteger(meter.beat_unit)
+      ? `${meter.beats_per_bar}/${meter.beat_unit}`
+      : fallback;
+  }
+
   /* A motif body for rendering a candidate: the source body with the
-   * candidate's degrees, harmony and features (the source's would not fit a
-   * fragment or a retrograde). Feeds MaterialsModel.renderRequest. */
+   * candidate's degrees, harmony, features, pickup and meter (the source's
+   * would not fit a fragment, a retrograde, a rhythm shift or a meter change).
+   * Feeds MaterialsModel.renderRequest. */
   function candidateBody(sourceBody, candidate) {
     const motif = sourceBody && sourceBody.motif ? sourceBody.motif : {};
     return {
       motif: {
         ...motif,
+        pickup: candidatePickup(candidate, motif.pickup),
+        meter: candidateMeter(candidate, motif.meter),
         degrees: candidateDegrees(candidate, motif.form || "full"),
         harmony: candidate && typeof candidate.harmony === "string" ? candidate.harmony : null,
         features: candidateFeatures(candidate),
