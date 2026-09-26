@@ -907,6 +907,15 @@ from the pure `variant-tree.js`, global `VariantTree`).
   (the users outside that set), and `?force=1` deletes them all. Linking a
   variant to a subject is refused (400 `variants have no subjects; save it as a
   new motif first`). Flag, kind and reroll stay on the variant.
+- Variant harmony and tones (R-197): each candidate card, saved variant row and
+  Try every operation result shows `Harmony: <base harmony text>`, the read
+  only tone chips of the Motif tab and its warnings (for example `Does not
+  outline its harmony`). The derivation line adds `, harmony <source text> to
+  <result text>` when the base harmony differs from the one it was made from
+  (the source motif for a candidate, the parent row for a saved variant).
+  Saving a candidate stores `derived.base_harmony`, `derived.tones` and
+  `derived.warnings` from its analysis, which the variant tree route returns
+  with the node.
 - Try every operation (R-190): the last panel of the Variants tab runs every
   registry operation on the motif so each can be checked by ear and eye. Run
   (with an optional seed) calls `POST /api/materials/items/<id>/each-op`
@@ -932,7 +941,8 @@ from the pure `variant-tree.js`, global `VariantTree`).
   - `Copy findings` copies plain text for P18b: the motif's name, `Notes:`,
     `Mode:` and `Meter:`, a blank line, then one line per marked operation,
     `<op>: works|wrong - <comment> (result <notes_text>)`, the wrong ones first.
-    P18b starts from that text.
+    When the operation's current result has a base harmony, the line ends
+    `(result <notes_text> harmony <text>)`. P18b starts from that text.
 - Save as new motif (R-188): each saved variant has a `Save as new motif`
   button that opens an inline form (name, project defaulting to the motif's,
   Save). Save calls the promote route and opens the new motif's Motif tab,

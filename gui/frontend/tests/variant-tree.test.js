@@ -346,6 +346,29 @@ const ctx = {
 const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
 const parent = new FakeEl("div");
 
+
+const withHarmony = (text, tones, warnings) => ({
+  ...candidate,
+  derivation: "transpose",
+  motive: { motive: {}, analysis: { notes_text: "C5:q", base_harmony: { text, given: false }, tones: tones || [], warnings: warnings || [] } },
+});
+const hv = V.candidateView(withHarmony("I V@2", [{ note: 1, role: "chord" }], ["Does not outline its harmony"]), "I");
+check(hv.harmony === "Harmony: I V@2" && same(hv.warnings, ["Does not outline its harmony"]), "a candidate shows its base harmony and warnings");
+check(hv.derivation === "transpose, harmony I to I V@2", "the derivation names the harmony change");
+check(V.candidateView(withHarmony("I"), "I").derivation === "transpose" && V.candidateView(withHarmony("I"), "").derivation === "transpose", "no harmony change is named when it is the same or the source is unknown");
+check(V.sourceHarmonyText({ motif: { analysis: { analysis: { base_harmony: { text: "I IV@3" } } } } }) === "I IV@3" && V.sourceHarmonyText({}) === "", "the source harmony comes from the stored analysis");
+const harmonyTree = { id: "m1", name: "A", current_version: 1, derived: null, children: [
+  { id: "m2", name: "B", current_version: 1, derived: { kind: "variant", flag: "unflagged", kept: [], changed: [], operations: [{ op: "harmony-append" }], base_harmony: "I V@2", tones: [{ note: 1, role: "chord" }], warnings: ["w"] }, children: [
+    { id: "m3", name: "C", current_version: 1, derived: { kind: "variant", flag: "unflagged", kept: [], changed: [], operations: [{ op: "transpose" }], base_harmony: "I V@2" }, children: [] } ] } ] };
+const harmonyRows = V.treeRows(harmonyTree, false, "", "I").rows;
+check(harmonyRows[1].harmony === "Harmony: I V@2" && harmonyRows[1].derivation === "harmony-append, harmony I to I V@2" && same(harmonyRows[1].warnings, ["w"]), "a saved row shows harmony, the change from the source and warnings");
+check(harmonyRows[1].toneBody.motif.analysis.analysis.tones.length === 1 && harmonyRows[2].derivation === "transpose", "a saved row carries its tones and a child with the same harmony names no change");
+const marks = { "harmony-append": { verdict: "works", comment: "ok", notes_text: "C5:q" }, transpose: { verdict: "wrong", comment: "", notes_text: "D5:q" } };
+const harmonies = V.resultHarmonies([{ ...withHarmony("I V@2"), chain: { steps: [{ op: "harmony-append" }] } }]);
+check(same(harmonies, { "harmony-append": "I V@2" }), "result harmonies are by operation");
+const text = V.findingsText("Opening", { key: "C major", notes: "C5:q", meter: "4/4" }, marks, ["harmony-append", "transpose"], harmonies);
+check(text.includes("harmony-append: works - ok (result C5:q harmony I V@2)") && text.includes("transpose: wrong (result D5:q)"), "findings add the harmony only when the variant has one");
+
 (async () => {
   const order2 = await Promise.all(queued);
   check(peak === 4 && order2.length === 10 && same(order, order2), "the queue never runs more than four and finishes every task in order");

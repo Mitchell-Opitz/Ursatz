@@ -2294,6 +2294,10 @@ button.button-danger:disabled {
 .variant-harmony {
   font-size: 0.85em;
 }
+.variant-warning {
+  font-size: 0.85em;
+  color: var(--warning, #c77700);
+}
 .variant-picker-host {
   margin: 0.5rem 0;
 }
