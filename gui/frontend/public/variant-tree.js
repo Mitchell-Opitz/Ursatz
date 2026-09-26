@@ -196,7 +196,9 @@
   /* The result of one operation as notes text, the thing a mark was made against. */
   function resultNotes(variant) {
     const analysis = variant && variant.motive && variant.motive.analysis ? variant.motive.analysis : {};
-    return typeof analysis.notes_text === "string" ? analysis.notes_text : "";
+    const text = typeof analysis.notes_text === "string" ? analysis.notes_text : "";
+    const pickup = typeof analysis.pickup === "string" ? analysis.pickup : "0";
+    return text !== "" && pickup !== "" && pickup !== "0" ? `${text} pickup ${pickup}` : text;
   }
 
   function variantOp(variant) {
