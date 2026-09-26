@@ -183,6 +183,18 @@ check(V.findingsText("Empty", { notes: "", key: "C major", meter: "3/4" }, {}).s
 const filtered = JSON.parse(V.generateRequest("m1", { functions: ["cadential", "bogus", "beginning"] }).request.body);
 check(same(filtered.functions, ["beginning", "cadential"]) && JSON.parse(V.generateRequest("m1", {}).request.body).functions === undefined, "the function filter is sent in order and only when set");
 check(same(V.featureOptions([{ label: "a", first: 0, last: 2 }, { label: "turn", first: 3, last: 3 }]), [{ value: "", text: "drawn" }, { value: "0", text: "a (notes 1-3)" }, { value: "1", text: "turn (notes 4-4)" }]) && V.featureOptions(null).length === 1, "feature parameters offer the motif's labels");
+
+/* a variant's own pickup and meter */
+const pickupSource = { motif: { form: "full", pickup: "0", meter: "4/4", key: "C major" } };
+const pickupCandidate = (pickup, meter) => ({ motive: { motive: { meter }, analysis: { notes_text: "C4:q E4:q", pickup } }, harmony: null });
+const shifted = pickupCandidate("1", { beats_per_bar: 4, beat_unit: 4 });
+check(V.candidateBody(pickupSource, shifted).motif.pickup === "1", "a rhythm-shift or add-upbeat candidate keeps its pickup");
+check(V.candidateBody(pickupSource, pickupCandidate("0", { beats_per_bar: 3, beat_unit: 4 })).motif.meter === "3/4", "a change-meter candidate keeps its meter");
+check(V.candidateBody(pickupSource, { motive: {} }).motif.pickup === "0" && V.candidateBody(pickupSource, { motive: {} }).motif.meter === "4/4", "a candidate without them keeps the source's");
+check(V.resultNotes(shifted) === "C4:q E4:q pickup 1" && V.resultNotes(pickupCandidate("0", null)) === "C4:q E4:q", "the result text names a pickup that is not zero");
+const pickupMark = V.makeMark("works", "", shifted, "2026-10-28");
+check(pickupMark.notes_text === "C4:q E4:q pickup 1" && V.markView(pickupMark, shifted).changed === false && V.markView(pickupMark, pickupCandidate("0", null)).changed === true, "a mark records the pickup and changed since compares it");
+check(V.findingsText("Opening", { notes: "C4:q", key: "C major", meter: "4/4" }, { "rhythm-shift": pickupMark }, ["rhythm-shift"]).includes("(result C4:q E4:q pickup 1)"), "Copy findings shows the pickup");
 check(V.stepFromValues({ name: "repeat-feature", params: [{ name: "feature", kind: "int", min: 0, max: 7 }] }, { feature: "1" }).step.params.feature === 1, "a chosen feature becomes its index");
 
 const compareReq = V.compareRequest({ item: "m1", version: 2 }, { item: "m2", version: 3 });
