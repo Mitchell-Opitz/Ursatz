@@ -186,6 +186,42 @@ static void test_transpose(void) {
     assert(apply(&rhythm, step(MOTIVE_RELATION_TRANSPOSE, 0, 2, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
 }
 
+/* E F B C and a raised F in 3/4, eighth notes, in C major. */
+static MotiveSketch efbc_raised(void) {
+    static const int pitches[5] = {64, 65, 71, 72, 66};
+    MotiveSketch sketch = line(pitches, 5, q(1, 8));
+    sketch.bar = q(3, 4);
+    return sketch;
+}
+
+/* A scale degree keeps its own spelling: F is step 3 unraised, so a tonal move never sharpens it. */
+static void test_tonal_relations_on_every_scale_note(void) {
+    MotiveSketch sketch = efbc_raised();
+    MotiveSketch out;
+    assert(apply(&sketch, step(MOTIVE_RELATION_TRANSPOSE, 1, 1, 0), &out) == MOTIVE_RELATION_OK);
+    int up[5] = {65, 67, 72, 74, 68};
+    assert_pitches(&out, up, 5);
+    assert(apply(&sketch, step(MOTIVE_RELATION_TRANSPOSE, 1, -2, 0), &out) == MOTIVE_RELATION_OK);
+    int down[5] = {60, 62, 67, 69, 63};
+    assert_pitches(&out, down, 5);
+    assert(apply(&sketch, step(MOTIVE_RELATION_INVERT, -1, 1, 0), &out) == MOTIVE_RELATION_OK);
+    int mirrored[5] = {64, 62, 57, 55, 63};
+    assert_pitches(&out, mirrored, 5);
+}
+
+/* Augment and diminish scale the pickup with the notes, and refuse a pickup that reaches the bar. */
+static void test_scaled_pickup(void) {
+    MotiveSketch sketch = efbc_raised();
+    sketch.pickup = q(1, 8);
+    MotiveSketch out;
+    assert(apply(&sketch, ratio_step(MOTIVE_RELATION_AUGMENT, 2, 1), &out) == MOTIVE_RELATION_OK);
+    assert(msk_eq(out.pickup, q(1, 4)));
+    assert(apply(&sketch, ratio_step(MOTIVE_RELATION_DIMINISH, 1, 2), &out) == MOTIVE_RELATION_OK);
+    assert(msk_eq(out.pickup, q(1, 16)));
+    sketch.pickup = q(1, 2);
+    assert(apply(&sketch, ratio_step(MOTIVE_RELATION_AUGMENT, 2, 1), &out) != MOTIVE_RELATION_OK);
+}
+
 static void test_invert(void) {
     MotiveSketch sketch = cdeg();
     MotiveSketch out;
@@ -1112,6 +1148,8 @@ int main(void) {
     test_exact();
     test_transpose();
     test_invert();
+    test_tonal_relations_on_every_scale_note();
+    test_scaled_pickup();
     test_retrograde();
     test_interval_change();
     test_fragment();
