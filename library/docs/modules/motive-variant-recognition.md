@@ -6,7 +6,7 @@ Names the chain of motive relations (`docs/modules/motive-relations.md`) that tu
 
 ## API
 
-- `motive_recognize_options_default(&options)`: `max_depth` 4 (1 to 6), `beam` 64 (1 to 256).
+- `motive_recognize_options_default(&options)`: `max_depth` 4 (1 to 6), `beam` 64 (1 to 256), `contour` false.
 - `motive_variant_recognize(source, target, options, &out)` returns `OK` (the search ran; read `out.found`), `INVALID` (a sketch fails `motive_sketch_validate`, an option is out of range, or `out` is NULL) or `NO_MEMORY` (the beam, about 4 KB a state, could not be allocated).
 - `MotiveRecognition`: `found`, `steps` and `step_count` (a `MotiveRelationStep` chain), `distance`, and per dimension `kept`, `changed`, `similarity`.
 - `motive_variant_compare(a, b, &dimensions)` and `motive_variant_nearness(&dimensions)` expose the per-dimension comparison on its own.
@@ -39,9 +39,21 @@ Breadth first by depth up to `max_depth`.
 1. At each state every relation but `exact` gives its proposals: at most 16 parameter sets. A relation that needs pitches (or a scale, for the harmony relations) gives none for a rhythm sketch (or one without a scale), so a rhythm sketch takes only the relations that touch time and a sketch without a scale takes no tonal parameters (`transpose` and `invert` stay in semitones).
 2. Proposals are inferred from the state and the target first: transpose from the first and last note's difference in semitones and in steps and the target's first degree; invert from the axis that maps first to first; interval-change from the single differing interval or the common difference; fragment and liquidate from the target's note count; augment and diminish from the target's length over the state's; rhythm-shift from the pickup; change-meter from the target's meter; add-interval from the first note that differs; condense from the length saved; repeat-feature and shift-feature from each feature; the harmony relations from the target's chords. Then the usual values of a small range follow (the first and the longest fragments, one to three notes liquidated, a step or two of transposition, each interval or chord in turn), because a state in the middle of a chain is not near enough to the target for the target to show the parameters.
 3. Every proposal is applied. A refused result is dropped. A result equal to the target is a solution at this depth: of the solutions of one depth the lowest cost wins, then the first in relation order (the kinds compared along the chain). The search ends at the depth of the first solution.
-4. Other results become the next depth's states: a state equal to one already kept at any depth is dropped (the cheaper chain stays), and of the rest the best `beam` are kept by nearness to the target (the mean of the four similarities; ties go to the earlier relation). The nearest state each relation reached at this depth is always kept when the beam is at least 56, because a relation the nearness cannot see (a change of meter) would otherwise never survive the beam. Deterministic.
+4. Other results become the next depth's states: a state equal to one already kept at any depth is dropped (the cheaper chain stays), and of the rest the best `beam` are kept (except at depth 1, below) by nearness to the target (the mean of the four similarities; ties go to the earlier relation). The nearest state each relation reached at this depth is always kept when the beam is at least 56, because a relation the nearness cannot see (a change of meter) would otherwise never survive the beam. Deterministic.
 
 When no chain is found, `found` is false, `distance` is 1 and `steps` hold the chain to the closest state any depth reached (`step_count` 0 when the source was the closest).
+
+## Contour mode (R-148)
+
+With `options.contour` the source and the target are first normalized to their contour (`motive_sketch_contour_normalize`: dense ranks over the distinct pitches, each note a quarter), and every state is normalized right after its relation applies; a state whose normalization fails is dropped. `found` then means replaying the steps with `motive_relation_apply` and a normalization after each step gives the target. Without it a target the normalization moved (an inversion or an added interval of a contour form) is out of reach of exact pitches. A sketch with unknown pitches is `INVALID` in contour mode.
+
+## Depth 2 is exhaustive (R-149)
+
+The states one relation from the source are never cut by the beam: level 1 holds every distinct candidate (relations x 16, the proposer cap). The beam cuts from level 2 on. So every chain of two relations whose parameters the proposers give is found at any beam, even 1. A depth-2 miss costs about 270 ms and a depth-3 miss about 430 ms (default build, six-note fixture).
+
+## Proposed parameters
+
+Ratios are proposed inside the range a composer writes (terms 1 to 3), inferred from the target where it can be, plus the usual ratios (2:1, 3:2, 3:1 and their inverses for augment and diminish), because a later step can hide the factor in the length. Condense infers its run from the notes whose durations changed, and tries single notes first.
 
 ## Limits
 

@@ -92,6 +92,10 @@ A harmony relation needs a scale (`NO_SCALE`). A sketch without chords is given 
 
 ## Notes
 
+- Spelling: `motive_sketch_step` gives a pitch on a scale degree that degree unraised (F in C major is step 3, alteration 0). Only a pitch on no degree is the degree below it raised (F# is step 3, alteration 1). Exact degree first, then the lowest degree a half step below, as the Composer's `degree_of`; natural minor.
+- Pickup: `augment` and `diminish` scale the pickup with the notes (`pickup x factor`) and refuse a result whose pickup reaches the bar.
+- `motive_sketch_contour_normalize` writes a sketch as its contour ranks (see `motive-variant-recognition.md`).
+
 - The relation order of `transpose` follows the Composer's registry row (tonal, by, degree).
 - A fragment or liquidation does not change the pickup: the result is a sketch that starts at its first note, as the Composer's motive does.
 - An applied dominant is a diatonic chord on the degree a fifth above the second root: a chord is a degree, an alteration, an inversion and a seventh, with no quality.
