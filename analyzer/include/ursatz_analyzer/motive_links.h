@@ -152,4 +152,10 @@ MotiveLinksResult motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache
 
 void motive_links_destroy(MotiveLinks *links);
 
+/*
+ * The links as JSON text (schema/motive-links.v1.schema.json), formatted, with a final newline, newly allocated
+ * and freed with free(). The same links give the same bytes.
+ */
+MotiveLinksResult motive_links_render(const MotiveLinks *links, char **out);
+
 #endif
