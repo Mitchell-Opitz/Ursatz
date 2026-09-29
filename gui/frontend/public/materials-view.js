@@ -226,7 +226,7 @@ function buildRandomMotifs(statusEl, onUse) {
   use.hidden = true;
   buttons.append(draw, reroll, use);
   const infoEl = materialsElement("div", "variant-meta");
-  const selectedEl = materialsElement("div");
+  const selectedEl = materialsElement("div", "materials-score-mount");
   let workspace = null;
   let blobUrls = [];
   let current = null;
@@ -294,8 +294,9 @@ function buildRandomMotifs(statusEl, onUse) {
 async function renderMaterialsView(type) {
   const info = MaterialsModel.typeInfo(type);
   materialsState.type = type;
-  const content = getContentEl();
-  content.innerHTML = "";
+  const page = getContentEl();
+  page.innerHTML = "";
+  const content = type === "motif" ? page.appendChild(materialsElement("div", "motifs-section")) : page;
   content.appendChild(materialsElement("h1", "view-title", info.label));
   const statusEl = materialsElement("div", "upload-status");
   statusEl.setAttribute("role", "status");
@@ -945,8 +946,9 @@ function buildMotifSaveControls(editor, statusEl, label, withNote, onSave) {
 }
 
 function renderNewMotif(draftName, draftProject) {
-  const content = getContentEl();
-  content.innerHTML = "";
+  const page = getContentEl();
+  page.innerHTML = "";
+  const content = page.appendChild(materialsElement("div", "motifs-section"));
   const back = materialsElement("a", "back-link clickable", "Back to Motifs");
   back.addEventListener("click", () => renderMaterialsView("motif"));
   content.appendChild(back);

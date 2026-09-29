@@ -485,68 +485,68 @@ body {
   display: none;
 }
 
-/* The motif detail uses the page width: no 480px or 900px caps on its sections, content up to 1200px (R-191). */
-.motif-detail {
+/* The whole Motifs section (list, New Motif page, detail) uses the page width: no 480px or 900px caps on its sections, content up to 1200px (R-191, R-193). */
+.motifs-section {
   max-width: 1200px;
 }
 
-.motif-detail .panel,
-.motif-detail .materials-editor,
-.motif-detail .materials-analysis {
+.motifs-section .panel,
+.motifs-section .materials-editor,
+.motifs-section .materials-analysis {
   max-width: none;
 }
 
-.motif-detail .materials-score-mount {
+.motifs-section .materials-score-mount {
   width: 100%;
 }
 
 /* One spacing scale for the Motif and Variants tabs: 0.5rem inside rows, 1rem between fields, 1.5rem between panels.
  * The panels share one border, radius and padding. */
-.motif-detail {
+.motifs-section {
   --space-row: 0.5rem;
   --space-field: 1rem;
   --space-panel: 1.5rem;
 }
 
-.motif-detail .panel {
+.motifs-section .panel {
   margin: 0 0 var(--space-panel);
   padding: var(--space-field);
   border: 1px solid var(--border);
   border-radius: 6px;
 }
 
-.motif-detail .section-title {
+.motifs-section .section-title {
   margin: 0 0 var(--space-row);
 }
 
-.motif-detail .upload-controls,
-.motif-detail .variant-meta,
-.motif-detail .variant-actions {
+.motifs-section .upload-controls,
+.motifs-section .variant-meta,
+.motifs-section .variant-actions {
   gap: var(--space-row);
   margin-top: var(--space-row);
 }
 
-.motif-detail .motif-form-grid {
+.motifs-section .motif-form-grid {
   gap: var(--space-field);
 }
 
-.motif-detail .materials-hint {
+.motifs-section .materials-hint {
   margin: var(--space-row) 0 0;
 }
 
-.motif-detail .variant-candidate,
-.motif-detail .variant-node {
+.motifs-section .variant-candidate,
+.motifs-section .variant-node {
   padding-top: var(--space-row);
   padding-bottom: var(--space-row);
   margin-bottom: 0;
 }
 
-.motif-detail .variant-actions {
+.motifs-section .variant-actions {
   display: flex;
   flex-wrap: wrap;
 }
 
-.motif-detail .button-row {
+.motifs-section .button-row {
   justify-content: flex-end;
   margin-top: var(--space-field);
 }
