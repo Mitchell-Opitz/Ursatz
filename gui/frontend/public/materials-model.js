@@ -756,51 +756,28 @@
     return jsonRequest("POST", "/api/materials/render", request);
   }
 
-  const RANDOM_MODES = ["major", "minor"];
-  const RANDOM_DEFAULT_COUNT = 6;
-  const RANDOM_MAX_COUNT = 16;
+  const RANDOM_METERS = ["4/4", "3/4", "2/4", "6/8"];
 
-  /* The random motifs POST for the dialog values {mode, meter, form, style_id, count, seed}. The key is always C in
-   * the chosen mode (R-179; without a key the Composer gives A minor for minor). Empty style and seed are left out;
-   * count defaults to 6. */
+  /* The mode and meter a seed draws: the seed is mixed, then picks one of major or minor and one of RANDOM_METERS. */
+  function randomSettings(seed) {
+    const n = Number.isInteger(Number(seed)) && Number(seed) >= 0 ? Number(seed) : 0;
+    const mixed = Math.imul((n % 4294967296) + 1, 2654435761) >>> 0;
+    return { mode: (mixed >>> 8) % 2 === 0 ? "major" : "minor", meter: RANDOM_METERS[(mixed >>> 16) % RANDOM_METERS.length] };
+  }
+
+  /* The random motif POST for the drawn values {mode, meter, seed}: one motif, form full, key C in the mode (R-179;
+   * without a key the Composer gives A minor for minor). */
   function randomRequest(values) {
     const v = values || {};
     const mode = v.mode === "minor" ? "minor" : "major";
-    const request = {
+    return jsonRequest("POST", "/api/materials/motifs/random", {
       mode,
       key: `C ${mode}`,
       meter: String(v.meter || "").trim(),
-      form: v.form === "rhythm" || v.form === "contour" ? v.form : "full",
-      count: Number.isInteger(Number(v.count)) && Number(v.count) >= 1 ? Math.min(Number(v.count), RANDOM_MAX_COUNT) : RANDOM_DEFAULT_COUNT,
-    };
-    if (v.role === "accompaniment") {
-      request.role = "accompaniment";
-    }
-    if (String(v.style_id || "") !== "") {
-      request.style_id = String(v.style_id);
-    }
-    if (String(v.seed === undefined || v.seed === null ? "" : v.seed).trim() !== "") {
-      request.seed = Number(v.seed);
-    }
-    return jsonRequest("POST", "/api/materials/motifs/random", request);
-  }
-
-  /* Problems with the dialog values as {field, message}; empty when it can be sent. */
-  function randomProblems(values) {
-    const v = values || {};
-    const problems = [];
-    if (!/^\d{1,2}\/\d{1,2}$/.test(String(v.meter || "").trim())) {
-      problems.push({ field: "meter", message: "Meter looks like 4/4." });
-    }
-    const seed = String(v.seed === undefined || v.seed === null ? "" : v.seed).trim();
-    if (seed !== "" && !/^\d{1,10}$/.test(seed)) {
-      problems.push({ field: "seed", message: "Seed is a whole number from 0, or leave it empty." });
-    }
-    const count = String(v.count === undefined || v.count === null ? "" : v.count).trim();
-    if (count !== "" && !(/^\d{1,2}$/.test(count) && Number(count) >= 1 && Number(count) <= RANDOM_MAX_COUNT)) {
-      problems.push({ field: "count", message: "Count is 1 to 16." });
-    }
-    return problems;
+      form: "full",
+      count: 1,
+      seed: Number(v.seed),
+    });
   }
 
   /* The key text of a random candidate's motive ("D minor"), or "" when it has none. */
@@ -1074,9 +1051,8 @@
     analysisRows,
     renderRequest,
     versionScoreUrls,
-    RANDOM_MODES,
     randomRequest,
-    randomProblems,
+    randomSettings,
     randomCandidateToBody,
     candidateKeyText,
     randomCandidate,
