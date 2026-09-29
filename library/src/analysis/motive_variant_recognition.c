@@ -148,7 +148,7 @@ double motive_variant_nearness(const MotiveDimensions *dimensions) {
 
 /* --- proposals ------------------------------------------------------------------------------ */
 
-#define PROPOSAL_MAX 16
+#define PROPOSAL_MAX 64
 
 typedef struct {
     MotiveRelationStep list[PROPOSAL_MAX];
@@ -577,8 +577,11 @@ static void propose_repeat_feature(const MotiveSketch *s, const MotiveSketch *t,
         }
     }
     for (size_t f = 0; f < s->feature_count; f++) {
-        for (long steps = -1; steps <= 1; steps++) {
-            put(p, MOTIVE_RELATION_REPEAT_FEATURE, (long)f, 1, steps);
+        /* The registry's draw (R-153), so a first step the target cannot show is in level 1. */
+        for (long times = 1; times <= 2; times++) {
+            for (long steps = -7; steps <= 7; steps++) {
+                put(p, MOTIVE_RELATION_REPEAT_FEATURE, (long)f, times, steps);
+            }
         }
     }
 }
