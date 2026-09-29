@@ -158,6 +158,15 @@ bool motive_sketch_equal(const MotiveSketch *a, const MotiveSketch *b);
  */
 bool motive_sketch_validate(const MotiveSketch *sketch);
 
+/*
+ * The sketch as its contour: the pitches are replaced by dense ranks over the distinct pitches (0 the
+ * lowest, equal pitches equal ranks), rank r on the step r of the sketch's scale (C major without one) from
+ * middle C, every note a quarter and note i at onset i/4. length is the end of the last note; bar, beat,
+ * pickup, scale, chords, features and role are kept. False, out untouched, when a pitch is unknown or over
+ * 127 or a rank is 64 or more. in and out may be the same.
+ */
+bool motive_sketch_contour_normalize(const MotiveSketch *in, MotiveSketch *out);
+
 /* --- scale, harmony and meter helpers ------------------------------------ */
 
 /*

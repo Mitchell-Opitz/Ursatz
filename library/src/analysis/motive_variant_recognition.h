@@ -50,6 +50,7 @@ double motive_variant_nearness(const MotiveDimensions *dimensions);
 typedef struct {
     size_t max_depth; /* 1 to MOTIVE_RECOGNIZE_MAX_DEPTH, default 4 */
     size_t beam;      /* 1 to MOTIVE_RECOGNIZE_MAX_BEAM, default 64 */
+    bool contour;     /* compare contour forms (R-148), default false */
 } MotiveRecognizeOptions;
 
 void motive_recognize_options_default(MotiveRecognizeOptions *options);
@@ -84,9 +85,17 @@ typedef enum {
  * most 16 parameter sets, inferred from the state and the target where it can be, else a range of
  * 16 or fewer. A state equal to the target ends the search at that depth: of the chains of that
  * depth the lowest cost wins, then the first in relation order. The best `beam` states of each
- * depth are kept by nearness to the target (mean of the four similarities, ties by relation order);
- * identical states are merged. A rhythm sketch (unknown pitches) takes only the relations that
+ * depth are kept by nearness to the target (mean of the four similarities, ties by relation order),
+ * except at depth 1: the states one relation from the source are all kept, so every chain of two
+ * relations whose parameters the proposers give is found at any beam (the cost of a depth-2 miss is
+ * measured in docs/modules/motive-variant-recognition.md); identical states are merged. A rhythm sketch (unknown pitches) takes only the relations that
  * touch time, a sketch without a scale takes no tonal parameters. Deterministic.
+ *
+ * With options->contour the source and the target are normalized to their contour first
+ * (motive_sketch_contour_normalize) and every state is normalized right after its relation applies
+ * (a state whose normalization fails is dropped), so found means replaying the steps with
+ * motive_relation_apply then motive_sketch_contour_normalize after each step gives the target. A
+ * sketch with unknown pitches is INVALID in contour mode.
  *
  * Both sketches are compared as given: a harmony relation adds the best implied chord at 0 to a
  * sketch without chords (motive_relation.h), so a caller that compares harmony gives both sketches

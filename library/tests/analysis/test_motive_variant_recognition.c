@@ -377,6 +377,156 @@ static void test_bad_input(void) {
            MOTIVE_RECOGNIZE_INVALID);
 }
 
+/* A replay that normalizes to the contour after every step, as contour mode does. */
+static MotiveSketch replay_contour(const MotiveSketch *source, const MotiveRecognition *found) {
+    MotiveSketch at = *source;
+    assert(motive_sketch_contour_normalize(&at, &at));
+    for (size_t i = 0; i < found->step_count; i++) {
+        MotiveSketch next;
+        assert(motive_relation_apply(&at, &found->steps[i], &next) == MOTIVE_RELATION_OK);
+        assert(motive_sketch_contour_normalize(&next, &next));
+        at = next;
+    }
+    return at;
+}
+
+/* Contour mode finds what only the ranks show: each step is normalized, so the target is its contour. */
+static void test_contour_mode(void) {
+    /* The contour 0 2 1 3 2: five quarters on the ranks, in C major. */
+    MotiveSketch source = base();
+    static const int ranks_as_pitches[5] = {60, 64, 62, 65, 64};
+    for (size_t i = 0; i < 5; i++) {
+        source.notes[i].pitch = ranks_as_pitches[i];
+        source.notes[i].onset = q(i, 4);
+        source.notes[i].duration = q(1, 4);
+    }
+    source.note_count = 5;
+    source.length = q(5, 4);
+    source.feature_count = 0;
+    source.chord_count = 0;
+    source.bar = q(1, 1);
+    assert(motive_sketch_contour_normalize(&source, &source));
+    MotiveRelationStep relations[5] = {step(MOTIVE_RELATION_INVERT, -1, 0, 0), step(MOTIVE_RELATION_RETROGRADE, 0, 0, 0),
+                                       step(MOTIVE_RELATION_FRAGMENT, 1, 3, 0), step(MOTIVE_RELATION_ADD_INTERVAL, 1, -3, 0),
+                                       step(MOTIVE_RELATION_OMIT_INTERVAL, 2, 0, 0)};
+    for (size_t i = 0; i < 5; i++) {
+        MotiveSketch target;
+        assert(motive_relation_apply(&source, &relations[i], &target) == MOTIVE_RELATION_OK);
+        assert(motive_sketch_contour_normalize(&target, &target));
+        MotiveRecognizeOptions options;
+        motive_recognize_options_default(&options);
+        options.contour = true;
+        MotiveRecognition found;
+        assert(motive_variant_recognize(&source, &target, &options, &found) == MOTIVE_RECOGNIZE_OK);
+        if (!found.found) {
+            fprintf(stderr, "contour mode: %s not found\n", motive_relation_name(relations[i].kind));
+        }
+        assert(found.found);
+        MotiveSketch want = settled(&target);
+        MotiveSketch got = replay_contour(&source, &found);
+        assert(motive_sketch_equal(&got, &want));
+        /* The same pair without contour mode is not reachable exactly. */
+        MotiveRecognizeOptions one;
+        motive_recognize_options_default(&one);
+        one.max_depth = 1;
+        MotiveRecognition single;
+        assert(motive_variant_recognize(&source, &target, &one, &single) == MOTIVE_RECOGNIZE_OK);
+        /* Without contour mode one step cannot reach a target the normalization moved (retrograde and fragment keep
+         * the ranks dense, so one exact step does reach them). */
+        assert(single.found == (i == 1 || i == 2));
+    }
+    /* Unknown pitches are refused. */
+    MotiveSketch rhythm = base();
+    for (size_t i = 0; i < rhythm.note_count; i++) {
+        rhythm.notes[i].pitch = MOTIVE_SKETCH_PITCH_UNKNOWN;
+    }
+    MotiveRecognizeOptions options;
+    motive_recognize_options_default(&options);
+    options.contour = true;
+    MotiveRecognition found;
+    assert(motive_variant_recognize(&rhythm, &rhythm, &options, &found) == MOTIVE_RECOGNIZE_INVALID);
+}
+
+/* Chains of two relations are all found at beam 1: the first level is never cut. */
+static void test_two_relations_at_beam_one(void) {
+    unsigned seed = 77;
+    for (size_t made = 0; made < 25;) {
+        MotiveSketch source = base();
+        MotiveSketch at = source;
+        size_t applied = 0;
+        for (size_t attempts = 0; applied < 2 && attempts < 40; attempts++) {
+            MotiveRelationStep relation = CASES[next_random(&seed) % CASE_COUNT];
+            MotiveSketch next;
+            if (motive_relation_apply(&at, &relation, &next) == MOTIVE_RELATION_OK) {
+                at = next;
+                applied++;
+            }
+        }
+        if (applied < 2) {
+            continue;
+        }
+        made++;
+        MotiveRecognizeOptions options;
+        motive_recognize_options_default(&options);
+        options.beam = 1;
+        MotiveRecognition found;
+        assert(motive_variant_recognize(&source, &at, &options, &found) == MOTIVE_RECOGNIZE_OK);
+        assert_replays(&source, &at, &found);
+    }
+}
+
+/* A rhythm sketch of q e e q q, for the rhythm relations a chain draws. */
+static MotiveSketch rhythm_five(void) {
+    MotiveSketch sketch = rhythm_only();
+    return sketch;
+}
+
+/* Each parameter the registry draws is proposed: the relation, then a second one, is recovered. */
+static void test_parameters_the_registry_draws(void) {
+    MotiveSketch pitched = base();
+    MotiveSketch rhythm = rhythm_five();
+    MotiveRelationStep second = step(MOTIVE_RELATION_TRANSPOSE, 0, 2, 0);
+    const MotiveRelationStep rhythm_steps[] = {
+        step(MOTIVE_RELATION_NOTE_REPEAT, 0, 4, 0),
+        step(MOTIVE_RELATION_NOTE_REPEAT, 3, 2, 0),
+        ratio_step(MOTIVE_RELATION_CONDENSE, 0, 0, 0, 2, 1, 2),
+        ratio_step(MOTIVE_RELATION_CONDENSE, 1, 2, 0, 2, 1, 2),
+        ratio_step(MOTIVE_RELATION_AUGMENT, 0, 0, 0, 0, 2, 1),
+        ratio_step(MOTIVE_RELATION_AUGMENT, 0, 0, 0, 0, 3, 2),
+        ratio_step(MOTIVE_RELATION_DIMINISH, 0, 0, 0, 0, 1, 2),
+    };
+    for (size_t i = 0; i < sizeof(rhythm_steps) / sizeof(rhythm_steps[0]); i++) {
+        MotiveRecognition found = recover_one(&rhythm, rhythm_steps[i]);
+        (void)found;
+        /* Then a second relation after it. */
+        MotiveRelationStep upbeat = step(MOTIVE_RELATION_ADD_UPBEAT, 2, -1, 0);
+        MotiveSketch middle;
+        MotiveSketch target;
+        assert(motive_relation_apply(&rhythm, &rhythm_steps[i], &middle) == MOTIVE_RELATION_OK);
+        if (motive_relation_apply(&middle, &upbeat, &target) == MOTIVE_RELATION_OK) {
+            MotiveRecognition two = recognize(&rhythm, &target);
+            assert_replays(&rhythm, &target, &two);
+        }
+    }
+    const MotiveRelationStep pitched_steps[] = {
+        step(MOTIVE_RELATION_HARMONY_INSERT, 0, 4, 0),
+        step(MOTIVE_RELATION_HARMONY_APPEND, 6, 1, 0),
+        step(MOTIVE_RELATION_REPEAT_FEATURE, 0, 1, 3),
+        step(MOTIVE_RELATION_REPEAT_FEATURE, 1, 1, -2),
+        step(MOTIVE_RELATION_REPEAT_FEATURE, 0, 2, 5),
+    };
+    for (size_t i = 0; i < sizeof(pitched_steps) / sizeof(pitched_steps[0]); i++) {
+        recover_one(&pitched, pitched_steps[i]);
+        MotiveSketch middle;
+        MotiveSketch target;
+        assert(motive_relation_apply(&pitched, &pitched_steps[i], &middle) == MOTIVE_RELATION_OK);
+        if (motive_relation_apply(&middle, &second, &target) == MOTIVE_RELATION_OK) {
+            MotiveRecognition two = recognize(&pitched, &target);
+            assert_replays(&pitched, &target, &two);
+        }
+    }
+}
+
 int main(void) {
     init_cases();
     test_every_relation();
@@ -388,6 +538,9 @@ int main(void) {
     test_chains(3, 4, 40, 30);
     test_unrelated_pair_is_not_found();
     test_bad_input();
+    test_contour_mode();
+    test_two_relations_at_beam_one();
+    test_parameters_the_registry_draws();
     printf("motive_variant_recognition: ok\n");
     return 0;
 }

@@ -334,16 +334,29 @@ static void propose_liquidate(const MotiveSketch *s, const MotiveSketch *t, Prop
     }
 }
 
+/* The terms of a ratio parameter a composer writes (1 to 3 for a scaling, 1 to 4 for an offset): the registry's
+ * range. A ratio outside it is not proposed, since no registry step could name it. */
+static bool ratio_within(ExactRational ratio, unsigned long long limit) {
+    return msk_ok(ratio) && ratio.n != 0 && ratio.n <= limit && ratio.d <= limit;
+}
+
 static void propose_scale_time(const MotiveSketch *s, const MotiveSketch *t, Proposals *p,
                                MotiveRelationKind kind) {
     ExactRational factor = msk_div(t->length, s->length);
+    bool above = kind == MOTIVE_RELATION_AUGMENT;
     bool wanted = msk_ok(factor) && factor.n != 0 &&
-                  (kind == MOTIVE_RELATION_AUGMENT ? msk_cmp(factor, msk_int(1)) > 0
-                                                   : msk_cmp(factor, msk_int(1)) < 0);
-    if (wanted) {
+                  (above ? msk_cmp(factor, msk_int(1)) > 0 : msk_cmp(factor, msk_int(1)) < 0);
+    if (wanted && ratio_within(factor, 3)) {
         put_ratio(p, kind, 0, 0, 0, 0, factor);
     }
-    put(p, kind, 0, 0, 0);
+    /* The ratios a chain draws, so a later step's effect on the length does not hide the factor. */
+    static const unsigned long long TERMS[3][2] = {{2, 1}, {3, 2}, {3, 1}};
+    for (size_t i = 0; i < 3; i++) {
+        ExactRational ratio = above ? msk_make(TERMS[i][0], TERMS[i][1]) : msk_make(TERMS[i][1], TERMS[i][0]);
+        if (!(wanted && msk_eq(ratio, factor))) {
+            put_ratio(p, kind, 0, 0, 0, 0, ratio);
+        }
+    }
 }
 
 static void propose_augment(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
@@ -477,23 +490,44 @@ static void propose_ancillary_fill(const MotiveSketch *s, const MotiveSketch *t,
     }
 }
 
+static ExactRational note_end(const MotiveSketch *sketch, size_t index) {
+    return msk_add(sketch->notes[index].onset, sketch->notes[index].duration);
+}
+
 static void propose_condense(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
+    /* With the same notes, the run whose durations changed, compressed by the ratio of its spans. */
+    if (s->note_count == t->note_count) {
+        size_t first = s->note_count;
+        size_t last = 0;
+        for (size_t i = 0; i < s->note_count; i++) {
+            if (!msk_eq(s->notes[i].duration, t->notes[i].duration)) {
+                first = first == s->note_count ? i : first;
+                last = i;
+            }
+        }
+        if (first < s->note_count) {
+            ExactRational ratio = msk_div(msk_sub(note_end(t, last), t->notes[first].onset),
+                                          msk_sub(note_end(s, last), s->notes[first].onset));
+            if (ratio_within(ratio, 3) && msk_cmp(ratio, msk_int(1)) < 0) {
+                put_ratio(p, MOTIVE_RELATION_CONDENSE, (long)first, (long)last, 0, 2, ratio);
+            }
+        }
+    }
     if (msk_cmp(t->length, s->length) < 0) {
         ExactRational saved = msk_sub(s->length, t->length);
         for (size_t span = 1; span < s->note_count; span++) {
             for (size_t first = 0; first + span < s->note_count; first++) {
                 size_t last = first + span;
-                ExactRational old_span = msk_sub(
-                    msk_add(s->notes[last].onset, s->notes[last].duration), s->notes[first].onset);
+                ExactRational old_span = msk_sub(note_end(s, last), s->notes[first].onset);
                 ExactRational ratio = msk_div(msk_sub(old_span, saved), old_span);
-                if (msk_ok(ratio) && ratio.n != 0 && msk_cmp(ratio, msk_int(1)) < 0) {
+                if (ratio_within(ratio, 3) && msk_cmp(ratio, msk_int(1)) < 0) {
                     put_ratio(p, MOTIVE_RELATION_CONDENSE, (long)first, (long)last, 0, 2, ratio);
                 }
             }
         }
     }
-    /* Otherwise a run of two or three notes at half the time. */
-    for (size_t span = 1; span <= 2; span++) {
+    /* Otherwise a single note, then a run of two or three, at half the time. */
+    for (size_t span = 0; span <= 2; span++) {
         for (size_t first = 0; first + span < s->note_count; first++) {
             put_ratio(p, MOTIVE_RELATION_CONDENSE, (long)first, (long)(first + span), 0, 2,
                       msk_make(1, 2));
@@ -798,6 +832,7 @@ static void sort_level(State *level, size_t count) {
 void motive_recognize_options_default(MotiveRecognizeOptions *options) {
     options->max_depth = 4;
     options->beam = 64;
+    options->contour = false;
 }
 
 static ExactRational distance_of(int cost) {
@@ -820,17 +855,17 @@ static MotiveRelationKind last_kind(const State *state) {
  * relation the nearness cannot see, such as a change of meter, would otherwise never survive the
  * beam). Leaders are only kept when the beam has room for all of them and as many other states.
  */
-static void insert_candidate(State *levels, size_t *counts, size_t depth, size_t beam,
-                             State *candidate) {
+static void insert_candidate(State *const *levels, const size_t *caps, size_t *counts, size_t depth,
+                             size_t beam, State *candidate) {
     for (size_t d = 0; d <= depth; d++) {
-        State *level = levels + d * beam;
+        State *level = levels[d];
         for (size_t i = 0; i < counts[d]; i++) {
             if (motive_sketch_equal(&level[i].sketch, &candidate->sketch)) {
                 return;
             }
         }
     }
-    State *next = levels + (depth + 1) * beam;
+    State *next = levels[depth + 1];
     size_t count = counts[depth + 1];
     for (size_t i = 0; i < count; i++) {
         if (motive_sketch_equal(&next[i].sketch, &candidate->sketch)) {
@@ -844,7 +879,7 @@ static void insert_candidate(State *levels, size_t *counts, size_t depth, size_t
             return;
         }
     }
-    bool diverse = beam >= 2 * MOTIVE_RELATION_KIND_COUNT;
+    bool diverse = depth + 1 >= 2 && beam >= 2 * MOTIVE_RELATION_KIND_COUNT;
     candidate->leader = false;
     size_t old_leader = count;
     if (diverse) {
@@ -859,7 +894,7 @@ static void insert_candidate(State *levels, size_t *counts, size_t depth, size_t
         }
     }
     size_t slot;
-    if (count < beam) {
+    if (count < caps[depth + 1]) {
         slot = count;
         counts[depth + 1]++;
     } else {
@@ -902,6 +937,10 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
         motive_relation_apply(target, &exact, &to) != MOTIVE_RELATION_OK) {
         return MOTIVE_RECOGNIZE_INVALID;
     }
+    if (options->contour &&
+        (!motive_sketch_contour_normalize(&from, &from) || !motive_sketch_contour_normalize(&to, &to))) {
+        return MOTIVE_RECOGNIZE_INVALID;
+    }
     memset(out, 0, sizeof(*out));
     MotiveDimensions dimensions;
     motive_variant_compare(&from, &to, &dimensions);
@@ -919,21 +958,32 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
 
     size_t beam = options->beam;
     size_t depth_limit = options->max_depth;
-    State *levels = malloc((depth_limit + 1) * beam * sizeof(State));
-    if (!levels) {
+    /* Level 1 holds every distinct state one relation from the source (R-149); the beam cuts from level 2 on. */
+    size_t caps[MOTIVE_RECOGNIZE_MAX_DEPTH + 1];
+    State *level[MOTIVE_RECOGNIZE_MAX_DEPTH + 1];
+    size_t total = 0;
+    for (size_t d = 0; d <= depth_limit; d++) {
+        caps[d] = d == 0 ? 1 : (d == 1 ? MOTIVE_RELATION_KIND_COUNT * PROPOSAL_MAX : beam);
+        total += caps[d];
+    }
+    State *storage = malloc(total * sizeof(State));
+    if (!storage) {
         return MOTIVE_RECOGNIZE_NO_MEMORY;
     }
+    for (size_t d = 0, at = 0; d <= depth_limit; at += caps[d], d++) {
+        level[d] = storage + at;
+    }
     size_t counts[MOTIVE_RECOGNIZE_MAX_DEPTH + 1] = {0};
-    memset(&levels[0], 0, sizeof(levels[0]));
-    levels[0].sketch = from;
+    memset(&level[0][0], 0, sizeof(level[0][0]));
+    level[0][0].sketch = from;
     motive_variant_compare(&from, &to, &dimensions);
-    levels[0].nearness = motive_variant_nearness(&dimensions);
+    level[0][0].nearness = motive_variant_nearness(&dimensions);
     counts[0] = 1;
     Chain closest = {{{0}}, 0, 0, true};
-    double closest_nearness = levels[0].nearness;
+    double closest_nearness = level[0][0].nearness;
 
     for (size_t depth = 0; depth < depth_limit; depth++) {
-        State *current = levels + depth * beam;
+        State *current = level[depth];
         Chain solution = {{{0}}, 0, 0, false};
         size_t seq = 0;
         for (size_t s = 0; s < counts[depth]; s++) {
@@ -944,6 +994,10 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
                     State candidate;
                     if (motive_relation_apply(&current[s].sketch, &proposals.list[i],
                                               &candidate.sketch) != MOTIVE_RELATION_OK) {
+                        continue;
+                    }
+                    if (options->contour &&
+                        !motive_sketch_contour_normalize(&candidate.sketch, &candidate.sketch)) {
                         continue;
                     }
                     memcpy(candidate.steps, current[s].steps, depth * sizeof(candidate.steps[0]));
@@ -967,7 +1021,7 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
                     motive_variant_compare(&candidate.sketch, &to, &dimensions);
                     candidate.nearness = motive_variant_nearness(&dimensions);
                     candidate.seq = seq++;
-                    insert_candidate(levels, counts, depth, beam, &candidate);
+                    insert_candidate(level, caps, counts, depth, beam, &candidate);
                 }
             }
         }
@@ -975,10 +1029,10 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
             out->found = true;
             fill_chain(out, solution.steps, solution.count);
             out->distance = distance_of(solution.cost);
-            free(levels);
+            free(storage);
             return MOTIVE_RECOGNIZE_OK;
         }
-        State *next = levels + (depth + 1) * beam;
+        State *next = level[depth + 1];
         sort_level(next, counts[depth + 1]);
         if (counts[depth + 1] > 0 && next[0].nearness > closest_nearness) {
             closest_nearness = next[0].nearness;
@@ -991,6 +1045,6 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
         }
     }
     fill_chain(out, closest.steps, closest.count);
-    free(levels);
+    free(storage);
     return MOTIVE_RECOGNIZE_OK;
 }
