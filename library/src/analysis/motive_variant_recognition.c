@@ -833,6 +833,8 @@ void motive_recognize_options_default(MotiveRecognizeOptions *options) {
     options->max_depth = 4;
     options->beam = 64;
     options->contour = false;
+    options->admit = NULL;
+    options->admit_context = NULL;
 }
 
 static ExactRational distance_of(int cost) {
@@ -992,6 +994,9 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
                 propose((MotiveRelationKind)k, &current[s].sketch, &to, &proposals);
                 for (size_t i = 0; i < proposals.count; i++) {
                     State candidate;
+                    if (options->admit && !options->admit(&proposals.list[i], options->admit_context)) {
+                        continue;
+                    }
                     if (motive_relation_apply(&current[s].sketch, &proposals.list[i],
                                               &candidate.sketch) != MOTIVE_RELATION_OK) {
                         continue;

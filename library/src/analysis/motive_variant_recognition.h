@@ -51,6 +51,13 @@ typedef struct {
     size_t max_depth; /* 1 to MOTIVE_RECOGNIZE_MAX_DEPTH, default 4 */
     size_t beam;      /* 1 to MOTIVE_RECOGNIZE_MAX_BEAM, default 64 */
     bool contour;     /* compare contour forms (R-148), default false */
+    /*
+     * Optional filter (R-152), NULL by default. When set, every proposal at every depth is passed to admit before it is
+     * applied and a step it returns false for is skipped, so found means a chain of admitted steps. A caller that replays
+     * chains through its own operation table passes the steps that table can take.
+     */
+    bool (*admit)(const MotiveRelationStep *step, const void *context);
+    const void *admit_context;
 } MotiveRecognizeOptions;
 
 void motive_recognize_options_default(MotiveRecognizeOptions *options);
