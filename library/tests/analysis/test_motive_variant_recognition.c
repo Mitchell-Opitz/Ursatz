@@ -527,6 +527,165 @@ static void test_parameters_the_registry_draws(void) {
     }
 }
 
+/* The steps a registry replays (R-152): a transpose by at most 12, and no liquidate or interval-change. */
+static bool admit_registry(const MotiveRelationStep *relation, const void *context) {
+    const bool *contour = context;
+    if (relation->kind == MOTIVE_RELATION_TRANSPOSE && (relation->value[1] > 12 || relation->value[1] < -12)) {
+        return false;
+    }
+    if (*contour && (relation->kind == MOTIVE_RELATION_LIQUIDATE || relation->kind == MOTIVE_RELATION_INTERVAL_CHANGE)) {
+        return false;
+    }
+    return true;
+}
+
+/* D4 F4 A4 D5 C5 in D minor, q e e q q, with a quarter pickup. */
+static MotiveSketch d_minor_with_pickup(void) {
+    static const int pitches[5] = {62, 65, 69, 74, 72};
+    static const unsigned long long den[5] = {4, 8, 8, 4, 4};
+    MotiveSketch sketch = base();
+    ExactRational at = q(0, 1);
+    for (size_t i = 0; i < 5; i++) {
+        sketch.notes[i].pitch = pitches[i];
+        sketch.notes[i].onset = at;
+        sketch.notes[i].duration = q(1, den[i]);
+        at = msk_add(at, sketch.notes[i].duration);
+    }
+    sketch.note_count = 5;
+    sketch.tonic_pc = 2;
+    sketch.minor = true;
+    sketch.pickup = q(1, 4);
+    sketch.length = at;
+    sketch.feature_count = 0;
+    sketch.chord_count = 0;
+    return sketch;
+}
+
+/* Admitted steps only: the chromatic -19 the search finds first is refused, so the tonal -11 comes back (R-152). */
+static void test_admit_refuses_steps_the_registry_cannot_replay(void) {
+    MotiveSketch source = d_minor_with_pickup();
+    MotiveRelationStep relation = step(MOTIVE_RELATION_TRANSPOSE, 1, -11, 0);
+    MotiveSketch target;
+    assert(motive_relation_apply(&source, &relation, &target) == MOTIVE_RELATION_OK);
+    MotiveRecognition plain = recognize(&source, &target);
+    assert(plain.found);
+    assert(plain.step_count != 1 || plain.steps[0].value[1] > 12 || plain.steps[0].value[1] < -12);
+
+    bool contour = false;
+    MotiveRecognizeOptions options;
+    motive_recognize_options_default(&options);
+    options.admit = admit_registry;
+    options.admit_context = &contour;
+    MotiveRecognition found;
+    assert(motive_variant_recognize(&source, &target, &options, &found) == MOTIVE_RECOGNIZE_OK);
+    assert(found.found);
+    assert(found.step_count == 1);
+    assert(found.steps[0].kind == MOTIVE_RELATION_TRANSPOSE);
+    assert(found.steps[0].value[0] == 1 && found.steps[0].value[1] == -11);
+    assert_replays(&source, &target, &found);
+
+    /* A contour pair: omit-interval 3, where the library would give liquidate. */
+    MotiveSketch contour_source = base();
+    static const int ranks_as_pitches[5] = {60, 64, 62, 65, 64};
+    for (size_t i = 0; i < 5; i++) {
+        contour_source.notes[i].pitch = ranks_as_pitches[i];
+        contour_source.notes[i].onset = q(i, 4);
+        contour_source.notes[i].duration = q(1, 4);
+    }
+    contour_source.note_count = 5;
+    contour_source.length = q(5, 4);
+    contour_source.feature_count = 0;
+    contour_source.chord_count = 0;
+    assert(motive_sketch_contour_normalize(&contour_source, &contour_source));
+    MotiveRelationStep omit = step(MOTIVE_RELATION_OMIT_INTERVAL, 3, 0, 0);
+    MotiveSketch contour_target;
+    assert(motive_relation_apply(&contour_source, &omit, &contour_target) == MOTIVE_RELATION_OK);
+    assert(motive_sketch_contour_normalize(&contour_target, &contour_target));
+    contour = true;
+    motive_recognize_options_default(&options);
+    options.contour = true;
+    options.admit = admit_registry;
+    options.admit_context = &contour;
+    assert(motive_variant_recognize(&contour_source, &contour_target, &options, &found) == MOTIVE_RECOGNIZE_OK);
+    assert(found.found);
+    assert(found.step_count == 1);
+    assert(found.steps[0].kind == MOTIVE_RELATION_OMIT_INTERVAL && found.steps[0].value[0] == 3);
+
+    /* Contour mode, an added note that becomes the lowest: add-interval 3, steps -7, found in one step. */
+    MotiveRelationStep add = step(MOTIVE_RELATION_ADD_INTERVAL, 3, -7, 0);
+    assert(motive_relation_apply(&contour_source, &add, &contour_target) == MOTIVE_RELATION_OK);
+    assert(motive_sketch_contour_normalize(&contour_target, &contour_target));
+    motive_recognize_options_default(&options);
+    options.contour = true;
+    options.max_depth = 1;
+    assert(motive_variant_recognize(&contour_source, &contour_target, &options, &found) == MOTIVE_RECOGNIZE_OK);
+    assert(found.found);
+    assert(found.step_count == 1);
+    MotiveSketch want = settled(&contour_target);
+    MotiveSketch got = replay_contour(&contour_source, &found);
+    assert(motive_sketch_equal(&got, &want));
+}
+
+/* A repeated feature whose first step the target cannot show (R-153): repeat-feature, then add-interval, at beam 1. */
+static void test_repeat_feature_under_a_second_step(void) {
+    MotiveSketch source = base();
+    static const int pitches[5] = {60, 64, 67, 65, 64};
+    static const unsigned long long den[5] = {4, 8, 8, 4, 4};
+    ExactRational at = q(0, 1);
+    for (size_t i = 0; i < 5; i++) {
+        source.notes[i].pitch = pitches[i];
+        source.notes[i].onset = at;
+        source.notes[i].duration = q(1, den[i]);
+        at = msk_add(at, source.notes[i].duration);
+    }
+    source.note_count = 5;
+    source.length = at;
+    source.chord_count = 0;
+    source.feature_count = 2;
+    source.features[0].first = 0;
+    source.features[0].last = 1;
+    source.features[1].first = 3;
+    source.features[1].last = 4;
+    MotiveRelationStep repeat = step(MOTIVE_RELATION_REPEAT_FEATURE, 1, 1, 5);
+    MotiveRelationStep add = step(MOTIVE_RELATION_ADD_INTERVAL, 6, 2, 0);
+    MotiveSketch middle;
+    MotiveSketch target;
+    assert(motive_relation_apply(&source, &repeat, &middle) == MOTIVE_RELATION_OK);
+    assert(motive_relation_apply(&middle, &add, &target) == MOTIVE_RELATION_OK);
+    MotiveRecognizeOptions options;
+    motive_recognize_options_default(&options);
+    options.beam = 1;
+    MotiveRecognition found;
+    assert(motive_variant_recognize(&source, &target, &options, &found) == MOTIVE_RECOGNIZE_OK);
+    assert(found.found);
+    assert(found.step_count == 2);
+    assert_replays(&source, &target, &found);
+}
+
+/* A filter that admits everything gives the same chains as none (R-152). */
+static void test_admit_null_and_all_agree(void) {
+    MotiveSketch source = base();
+    for (size_t i = 0; i < CASE_COUNT; i++) {
+        MotiveSketch target;
+        if (motive_relation_apply(&source, &CASES[i], &target) != MOTIVE_RELATION_OK) {
+            continue;
+        }
+        MotiveRecognition plain = recognize(&source, &target);
+        MotiveRecognizeOptions options;
+        motive_recognize_options_default(&options);
+        assert(options.admit == NULL && options.admit_context == NULL);
+        options.admit = admit_registry;
+        bool contour = false;
+        options.admit_context = &contour;
+        MotiveRecognition admitted;
+        assert(motive_variant_recognize(&source, &target, &options, &admitted) == MOTIVE_RECOGNIZE_OK);
+        /* The case table stays inside the registry's ranges, so the filter changes nothing. */
+        assert(admitted.found == plain.found);
+        assert(admitted.step_count == plain.step_count);
+        assert(memcmp(admitted.steps, plain.steps, plain.step_count * sizeof(plain.steps[0])) == 0);
+    }
+}
+
 int main(void) {
     init_cases();
     test_every_relation();
@@ -541,6 +700,9 @@ int main(void) {
     test_contour_mode();
     test_two_relations_at_beam_one();
     test_parameters_the_registry_draws();
+    test_admit_refuses_steps_the_registry_cannot_replay();
+    test_repeat_feature_under_a_second_step();
+    test_admit_null_and_all_agree();
     printf("motive_variant_recognition: ok\n");
     return 0;
 }
