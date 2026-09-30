@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Analyzer/schema/motive-link-cache.v1.schema.json",
+  "title": "Ursatz-Analyzer motive link cache",
+  "description": "The motive pairs compared so far, keyed by the fingerprints of the two sketches, so one cache serves every scope. Valid only for the Ursatz commit, analyzer version and link options it records; a run with others empties it.",
+  "type": "object",
+  "required": ["schema", "schema_version", "ursatz_commit", "analyzer_version", "options", "pairs"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "ursatz-motive-link-cache" },
+    "schema_version": { "const": 1 },
+    "ursatz_commit": { "type": "string" },
+    "analyzer_version": { "type": "string" },
+    "options": {
+      "type": "object",
+      "required": ["max_depth", "beam", "min_nearness", "contour"],
+      "additionalProperties": false,
+      "properties": {
+        "max_depth": { "type": "integer", "minimum": 1, "maximum": 6 },
+        "beam": { "type": "integer", "minimum": 1, "maximum": 256 },
+        "min_nearness": { "type": "number", "minimum": 0, "maximum": 1 },
+        "contour": { "type": "boolean" }
+      }
+    },
+    "pairs": {
+      "description": "Sorted by (a, b), a not above b. reversed and steps are relative to that order: a chain that runs from b to a is reversed.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/pair" }
+    }
+  },
+  "$defs": {
+    "fingerprint": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
+    "fraction": { "type": "string", "pattern": "^[0-9]+/[1-9][0-9]*$" },
+    "pair": {
+      "type": "object",
+      "required": ["a", "b", "gated", "linked", "reversed", "steps", "distance", "similarity"],
+      "additionalProperties": false,
+      "properties": {
+        "a": { "$ref": "#/$defs/fingerprint" },
+        "b": { "$ref": "#/$defs/fingerprint" },
+        "gated": { "type": "boolean", "description": "Nearness below min_nearness: nothing was searched." },
+        "linked": { "type": "boolean" },
+        "reversed": { "type": "boolean" },
+        "steps": {
+          "description": "The chain of relations, as text (motive_relation_step_text), in the order they apply; empty unless linked.",
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "maxItems": 6
+        },
+        "distance": { "$ref": "#/$defs/fraction" },
+        "similarity": {
+          "type": "object",
+          "required": ["rhythm", "intervals", "contour", "harmony"],
+          "additionalProperties": false,
+          "properties": {
+            "rhythm": { "type": "number", "minimum": 0, "maximum": 1 },
+            "intervals": { "type": "number", "minimum": 0, "maximum": 1 },
+            "contour": { "type": "number", "minimum": 0, "maximum": 1 },
+            "harmony": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      }
+    }
+  }
+}

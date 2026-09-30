@@ -131,6 +131,19 @@ typedef struct {
 } MotiveLinks;
 
 /*
+ * The cache of compared pairs, kept by the two sketches' fingerprints so one cache serves every scope (R-156): a pair
+ * compared for one scope is not compared again for another. It is valid only for the Ursatz commit, analyzer version and
+ * link options it was made with; motive_links_run empties one that differs and says so (MotiveLinks.cache_reset).
+ *
+ * Load: a file that does not exist is an empty cache. Save: written to <path>.tmp and renamed over path. The file
+ * follows schema/motive-link-cache.v1.schema.json.
+ */
+MotiveLinksResult motive_link_cache_load(const char *path, MotiveLinkCache **out);
+MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const char *path);
+void motive_link_cache_destroy(MotiveLinkCache *cache);
+size_t motive_link_cache_pair_count(const MotiveLinkCache *cache);
+
+/*
  * Links the scope's families. cache may be NULL (nothing is kept between runs); otherwise it is read and new results are
  * added to it, in memory: the caller saves it. *out is written on MOTIVE_LINKS_OK only.
  */
