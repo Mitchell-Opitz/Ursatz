@@ -148,7 +148,7 @@ double motive_variant_nearness(const MotiveDimensions *dimensions) {
 
 /* --- proposals ------------------------------------------------------------------------------ */
 
-#define PROPOSAL_MAX 16
+#define PROPOSAL_MAX 64
 
 typedef struct {
     MotiveRelationStep list[PROPOSAL_MAX];
@@ -454,8 +454,36 @@ static void propose_change_meter(const MotiveSketch *s, const MotiveSketch *t, P
     }
 }
 
+/* True when the target without its note skip orders its pitches exactly as the state does (every pair: the same sign). */
+static bool orders_like_without(const MotiveSketch *s, const MotiveSketch *t, size_t skip) {
+    for (size_t i = 0; i < s->note_count; i++) {
+        size_t ti = i < skip ? i : i + 1;
+        for (size_t j = i + 1; j < s->note_count; j++) {
+            size_t tj = j < skip ? j : j + 1;
+            long ds = pitch_of(s, j) - pitch_of(s, i);
+            long dt = pitch_of(t, tj) - pitch_of(t, ti);
+            if ((ds > 0) != (dt > 0) || (ds < 0) != (dt < 0)) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 static void propose_add_interval(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
     if (t->note_count == s->note_count + 1) {
+        /* An added note that becomes the lowest or highest of a contour form shifts every rank, so the first difference
+           names only interval 1 (R-153): every interval the target orders like the state without that note, every steps. */
+        for (size_t interval = 1; interval < s->note_count; interval++) {
+            if (!orders_like_without(s, t, interval)) {
+                continue;
+            }
+            for (long steps = -7; steps <= 7; steps++) {
+                if (steps != 0) {
+                    put(p, MOTIVE_RELATION_ADD_INTERVAL, (long)interval, steps, 0);
+                }
+            }
+        }
         size_t at = 1;
         while (at < s->note_count && pitch_of(s, at) == pitch_of(t, at)) {
             at++;
@@ -549,8 +577,11 @@ static void propose_repeat_feature(const MotiveSketch *s, const MotiveSketch *t,
         }
     }
     for (size_t f = 0; f < s->feature_count; f++) {
-        for (long steps = -1; steps <= 1; steps++) {
-            put(p, MOTIVE_RELATION_REPEAT_FEATURE, (long)f, 1, steps);
+        /* The registry's draw (R-153), so a first step the target cannot show is in level 1. */
+        for (long times = 1; times <= 2; times++) {
+            for (long steps = -7; steps <= 7; steps++) {
+                put(p, MOTIVE_RELATION_REPEAT_FEATURE, (long)f, times, steps);
+            }
         }
     }
 }
@@ -833,6 +864,8 @@ void motive_recognize_options_default(MotiveRecognizeOptions *options) {
     options->max_depth = 4;
     options->beam = 64;
     options->contour = false;
+    options->admit = NULL;
+    options->admit_context = NULL;
 }
 
 static ExactRational distance_of(int cost) {
@@ -992,6 +1025,9 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
                 propose((MotiveRelationKind)k, &current[s].sketch, &to, &proposals);
                 for (size_t i = 0; i < proposals.count; i++) {
                     State candidate;
+                    if (options->admit && !options->admit(&proposals.list[i], options->admit_context)) {
+                        continue;
+                    }
                     if (motive_relation_apply(&current[s].sketch, &proposals.list[i],
                                               &candidate.sketch) != MOTIVE_RELATION_OK) {
                         continue;
