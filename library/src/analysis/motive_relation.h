@@ -125,4 +125,25 @@ int motive_relation_cost(MotiveRelationKind kind);
 /* "ok", "not applicable" and so on. */
 const char *motive_relation_result_name(MotiveRelationResult result);
 
+/*
+ * The name of a kind's parameter at index (0-based, below motive_relation_param_count), as the header comment
+ * above names it: "tonal", "by", "ratio". NULL when the kind or the index is out of range.
+ */
+const char *motive_relation_param_name(MotiveRelationKind kind, size_t index);
+
+/*
+ * A step as text: the relation name, then name=value for each parameter, a ratio as n:d. An optional
+ * parameter at its default (0, the invert axis -1) is left out, so "transpose tonal=1 by=-2", "augment
+ * ratio=3:2", "exact". False when it does not fit in size (the buffer is still terminated, if size is above
+ * 0) or the kind is out of range.
+ */
+bool motive_relation_step_text(const MotiveRelationStep *step, char *buffer, size_t size);
+
+/*
+ * The inverse of motive_relation_step_text. Parameters not given take their default. False, out untouched,
+ * for an unknown relation or parameter, a parameter given twice, or a value out of form (a ratio needs n:d
+ * above zero, any other parameter a whole number).
+ */
+bool motive_relation_step_parse(const char *text, MotiveRelationStep *out);
+
 #endif
