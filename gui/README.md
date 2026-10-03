@@ -86,8 +86,8 @@ use is behind the motif's current version). Other holds Versions (open one to
 read it), Derived from (the motif's old Uses section: the motifs it was
 derived from, with Add and Update) and Compare.
 
-The Motif and Variants tabs share one page layout (R-191). The tabs sit in a
-`motif-detail` wrapper up to 1200px wide, with no 480px cap on the sections,
+The whole Motifs section (the Motifs list, the New Motif page and the motif detail, all in a `motifs-section` wrapper) shares one page layout (R-191, R-193); other views keep their widths. The tabs sit in a
+`motifs-section` wrapper up to 1200px wide, with no 480px cap on the sections,
 so the score uses the full width; the score's zoom controls stay, and the
 compact scores in the Variants tab show zoom out, the zoom label and zoom in.
 The motif fields are a two-column grid (`motif-form-grid`): labels right-aligned
@@ -1019,17 +1019,18 @@ remoteness is measured from the basic motive, not from the parent.
 
 #### Random motifs
 
-The New Motif page has a Random section. Its form takes a mode (major or minor), a meter, a form (full,
-rhythm or contour), an optional style (from the styles list), a count (default 6) and an optional seed. Generate lists
-the candidates; each has Play (rendered by the Composer into the score workspace, nothing stored), Reroll (that one
-again with the next seed) and Use this, which fills the editor above (form, notes, mode, meter, pickup and role) to
-name and save; nothing is stored until Save. Every request is drawn in C (`key: "C <mode>"`). The backend fills in the analysis and degrees as for any motif.
+The New Motif page has a Random section with one button and no fields. Random draws one motif: the seed is drawn,
+and the mode (major or minor) and the meter (`4/4`, `3/4`, `2/4` or `6/8`) are drawn from the seed, form full, key C in
+the mode, no style. Its score is shown at full width in the score workspace with playback (nothing stored), with
+Reroll (the next seed, which draws its own mode and meter) and Use, which fills the editor above (notes, mode, meter,
+pickup) to name and save; nothing is stored until Save. The backend fills in the analysis and degrees as for any motif.
 
 - `POST /api/materials/motifs/random` `{mode, meter, key?, form?, role?, style_id?, count?, seed?}` runs the Composer's
   `random-motive` and answers its JSON (`seed`, `motives`) plus `ok`. `mode` is `major` or `minor`, `meter` is like
   `3/4`, `key` is like `D minor`, `count` is 1 to 16, `seed` a whole number from 0. A bad input or an unknown style is
   400. The style model path comes from `ursatz_gui_style_model_path`.
-- Pure helpers in `materials-model.js`: `randomRequest`, `randomProblems`, `randomCandidateToBody`,
+- Pure helpers in `materials-model.js`: `randomSettings` (mode and meter from a seed), `randomRequest` (one motif),
+  `randomCandidateToBody`,
   `candidateKeyText`, `rerollSeed`.
 
 ### Subjects
