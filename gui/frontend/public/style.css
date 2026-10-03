@@ -172,6 +172,7 @@ body {
 }
 
 .content {
+  min-width: 0;
   flex: 1;
   padding: 24px;
 }
@@ -487,12 +488,15 @@ body {
 
 /* The whole Motifs section (list, New Motif page, detail) uses the page width: no 480px or 900px caps on its sections, content up to 1200px (R-191, R-193). */
 .motifs-section {
-  max-width: 1200px;
+  max-width: none;
+  width: 100%;
 }
 
 .motifs-section .panel,
 .motifs-section .materials-editor,
-.motifs-section .materials-analysis {
+.motifs-section .materials-analysis,
+.motifs-section .materials-version-body,
+.motifs-section .materials-notes {
   max-width: none;
 }
 
