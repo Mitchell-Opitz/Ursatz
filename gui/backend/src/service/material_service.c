@@ -960,13 +960,19 @@ static const char *const kThemePools[] = {"approved-and-unflagged", "approved", 
 static const char *const kThemeMotiveCategories[] = {"motive-degrees", "motive-intervals", "motive-rhythm",
                                                      "motive-nct-figure", NULL};
 /* The members a placeholder theme (form null or a string, slots of anything) does not have. */
-static const char *const kThemeNewMembers[] = {"pool",  "accompaniment", "brief", "style_weight", "without",
-                                               "tempo", "check",         "seed",  "result",       NULL};
+static const char *const kThemeNewMembers[] = {"ideas", "chords", "accompaniment", "brief", "style_weight",
+                                               "without", "tempo", "check",         "seed",  "result", NULL};
+static const char *const kThemeIdeas[] = {"basic idea",          "repetition", "contrasting idea", "consequent basic idea",
+                                          "consequent contrasting idea", "fragment 1", "fragment 2", "cadential",
+                                          "cadential 1",         "cadential 2", NULL};
 
 #define THEME_BRIEF_MAX_SCOPES 16
 #define THEME_BRIEF_MAX_PIECES 5000
 #define THEME_BRIEF_MAX_STYLES 16
 #define THEME_WITHOUT_MAX 4
+#define THEME_IDEAS_MAX 10
+#define THEME_CHORD_BARS 8
+#define THEME_CHORD_TEXT_MAX 64
 
 static bool is_string_or_null(const cJSON *object, const char *name) {
     const cJSON *value = cJSON_GetObjectItemCaseSensitive(object, name);
@@ -1027,7 +1033,6 @@ static UrsatzGuiMaterialResult validate_theme_form(const cJSON *form, char *erro
     static const char *const first_cadences[] = {"HC", "IAC", NULL};
     const cJSON *into = cJSON_GetObjectItemCaseSensitive(form, "into");
     const cJSON *hybrid = cJSON_GetObjectItemCaseSensitive(form, "hybrid");
-    const cJSON *key = cJSON_GetObjectItemCaseSensitive(form, "key");
     const cJSON *bars = cJSON_GetObjectItemCaseSensitive(form, "bars");
     if (!is_in_set_or_null(form, "into", intos)) {
         return invalid_body(error, error_size, "theme form into must be sentence, period or hybrid");
@@ -1036,8 +1041,8 @@ static UrsatzGuiMaterialResult validate_theme_form(const cJSON *form, char *erro
         (!cJSON_IsString(hybrid) || !theme_hybrid_ok(hybrid->valuestring))) {
         return invalid_body(error, error_size, "theme form hybrid must look like presentation+continuation");
     }
-    if (!is_absent_or_null(form, "key") && (!cJSON_IsString(key) || !theme_key_ok(key->valuestring))) {
-        return invalid_body(error, error_size, "theme form key must be a tonic such as D or Bb minor");
+    if (cJSON_GetObjectItemCaseSensitive(form, "key")) {
+        return invalid_body(error, error_size, "themes are in C; remove key");
     }
     if (!is_in_set_or_null(form, "mode", modes)) {
         return invalid_body(error, error_size, "theme form mode must be major, minor or style");
@@ -1082,6 +1087,54 @@ static UrsatzGuiMaterialResult validate_theme_slots(const cJSON *slots, char *er
         seen[index] = true;
     }
     return seen[0] ? URSATZ_GUI_MATERIAL_OK : invalid_body(error, error_size, "a theme needs a basic slot");
+}
+
+/* [{idea, item_id, version}]: a motif version for a single idea, each idea named once. */
+static UrsatzGuiMaterialResult validate_theme_ideas(const cJSON *ideas, char *error, size_t error_size) {
+    bool seen[THEME_IDEAS_MAX] = {false};
+    if (!cJSON_IsArray(ideas) || cJSON_GetArraySize(ideas) > THEME_IDEAS_MAX) {
+        return invalid_body(error, error_size, "theme ideas must be a list of at most 10");
+    }
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, ideas) {
+        const cJSON *name = cJSON_GetObjectItemCaseSensitive(entry, "idea");
+        int index = -1;
+        for (int i = 0; cJSON_IsString(name) && kThemeIdeas[i]; i++) {
+            if (strcmp(name->valuestring, kThemeIdeas[i]) == 0) {
+                index = i;
+            }
+        }
+        if (index < 0 || !theme_reference_ok(entry)) {
+            return invalid_body(error, error_size, "each theme idea needs idea, item_id and version");
+        }
+        if (seen[index]) {
+            return invalid_body(error, error_size, "each theme idea may be named once");
+        }
+        seen[index] = true;
+    }
+    return URSATZ_GUI_MATERIAL_OK;
+}
+
+/* [{bar, text}]: the chords given for a bar, bar 0 to 7, each bar once; the Composer checks the syntax. */
+static UrsatzGuiMaterialResult validate_theme_chords(const cJSON *chords, char *error, size_t error_size) {
+    bool seen[THEME_CHORD_BARS] = {false};
+    if (!cJSON_IsArray(chords) || cJSON_GetArraySize(chords) > THEME_CHORD_BARS) {
+        return invalid_body(error, error_size, "theme chords must be a list of at most 8 bars");
+    }
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, chords) {
+        const cJSON *bar = cJSON_GetObjectItemCaseSensitive(entry, "bar");
+        const cJSON *text = cJSON_GetObjectItemCaseSensitive(entry, "text");
+        if (!cJSON_IsObject(entry) || !is_whole_number(bar, 0) || bar->valuedouble >= THEME_CHORD_BARS ||
+            !cJSON_IsString(text) || utf8_length(text->valuestring) > THEME_CHORD_TEXT_MAX) {
+            return invalid_body(error, error_size, "each theme chord needs a bar from 0 to 7 and a text of at most 64 characters");
+        }
+        if (seen[(int)bar->valuedouble]) {
+            return invalid_body(error, error_size, "each theme chord bar may be named once");
+        }
+        seen[(int)bar->valuedouble] = true;
+    }
+    return URSATZ_GUI_MATERIAL_OK;
 }
 
 static UrsatzGuiMaterialResult validate_theme_accompaniment(const cJSON *accompaniment, char *error,
@@ -1169,6 +1222,9 @@ static UrsatzGuiMaterialResult validate_theme(const cJSON *theme, char *error, s
         !cJSON_IsArray(slots)) {
         return invalid_body(error, error_size, "a theme body needs a theme object with form and slots");
     }
+    if (cJSON_GetObjectItemCaseSensitive(theme, "pool")) {
+        return invalid_body(error, error_size, "themes have no pool");
+    }
     if (theme_is_placeholder(theme)) {
         return URSATZ_GUI_MATERIAL_OK;
     }
@@ -1180,8 +1236,13 @@ static UrsatzGuiMaterialResult validate_theme(const cJSON *theme, char *error, s
     if (result != URSATZ_GUI_MATERIAL_OK) {
         return result;
     }
-    if (!is_in_set_or_null(theme, "pool", kThemePools)) {
-        return invalid_body(error, error_size, "theme pool must be approved-and-unflagged, approved or none");
+    const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(theme, "ideas");
+    if (ideas && validate_theme_ideas(ideas, error, error_size) != URSATZ_GUI_MATERIAL_OK) {
+        return URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
+    }
+    const cJSON *chords = cJSON_GetObjectItemCaseSensitive(theme, "chords");
+    if (chords && validate_theme_chords(chords, error, error_size) != URSATZ_GUI_MATERIAL_OK) {
+        return URSATZ_GUI_MATERIAL_ERR_INVALID_BODY;
     }
     const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(theme, "accompaniment");
     if (!is_absent_or_null(theme, "accompaniment") &&
