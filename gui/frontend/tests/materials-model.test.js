@@ -113,7 +113,7 @@ check(M.errorField("harmony: token 2 (column 4) is not a chord") === "harmony" &
 const withHarmony = M.renderRequest({ motif: { form: "full", degrees: "1:q", meter: "4/4", harmony: "I V@2", features: [{ label: "a", first: 0, last: 1 }] } });
 check(JSON.parse(withHarmony.body).harmony === "I V@2" && JSON.parse(withHarmony.body).features.length === 1, "a render passes the harmony and features");
 check(JSON.parse(M.renderRequest({ motif: { form: "full", degrees: "1:q", meter: "4/4" } }).body).harmony === undefined, "a render without harmony leaves it out");
-check(JSON.parse(M.randomRequest({ mode: "major", meter: "4/4", role: "accompaniment" }).body).role === "accompaniment" && JSON.parse(M.randomRequest({ mode: "major", meter: "4/4" }).body).role === undefined, "random motifs pass an accompaniment role");
+check(JSON.parse(M.randomRequest({ mode: "major", meter: "4/4", role: "accompaniment", seed: 1 }).body).role === undefined, "random motifs have no role option");
 const blank = M.motifFormValues(null);
 check(blank.notes === "" && blank.meter === "4/4" && blank.pickup === "0" && blank.form === "full", "a new motif form has defaults");
 check(M.motifFormProblems(blank).length === 1 && M.motifFormProblems(blank)[0].field === "notes", "empty notes are a problem");
@@ -293,15 +293,19 @@ const urls = M.versionScoreUrls("mot-1", 2, "D minor");
 check(urls.musicxmlUrl === "/api/materials/items/mot-1/versions/2/score", "score url has no key query");
 check(urls.playbackUrl === "/api/materials/items/mot-1/versions/2/playback", "playback url has no key query");
 
-const random = M.randomRequest({ mode: "minor", meter: " 3/4 ", key: "", form: "contour", style_id: "", count: "", seed: "" });
+const random = M.randomRequest({ mode: "minor", meter: " 3/4 ", key: "D major", form: "contour", style_id: "sty-1", count: 20, seed: "7" });
 const randomBody = JSON.parse(random.body);
 check(random.method === "POST" && random.url === "/api/materials/motifs/random", "random request is a POST to /motifs/random");
-check(randomBody.mode === "minor" && randomBody.meter === "3/4" && randomBody.form === "contour" && randomBody.count === 6, "random request defaults the count and trims the meter");
-check(randomBody.key === "C minor" && !("style_id" in randomBody) && !("seed" in randomBody), "random request draws in C minor and leaves out an empty style and seed");
-const randomFull = JSON.parse(M.randomRequest({ mode: "major", meter: "4/4", key: "D major", form: "full", style_id: "sty-1", count: 20, seed: "7" }).body);
-check(randomFull.key === "C major" && randomFull.style_id === "sty-1" && randomFull.seed === 7 && randomFull.count === 16, "random request always draws in C, carries the style and seed and caps the count");
-check(M.randomProblems({ meter: "4/4", seed: "", count: "6" }).length === 0, "good random values have no problems");
-check(M.randomProblems({ meter: "four", seed: "x", count: "99" }).map((p) => p.field).join() === "meter,seed,count", "each bad random value is reported");
+check(randomBody.mode === "minor" && randomBody.meter === "3/4" && randomBody.key === "C minor" && randomBody.form === "full", "random request is one full motif in C in the drawn mode, meter trimmed");
+check(randomBody.count === 1 && randomBody.seed === 7 && !("style_id" in randomBody) && M.RANDOM_DEFAULT_COUNT === undefined && M.randomProblems === undefined, "random request draws one motif from the seed with no style and no count option");
+const drawnA = M.randomSettings(12345);
+check(same(drawnA, M.randomSettings(12345)) && same(drawnA, M.randomSettings("12345")), "the same seed draws the same mode and meter");
+const drawn = new Set();
+for (let seed = 0; seed < 200; seed++) {
+  const d = M.randomSettings(seed);
+  drawn.add(`${d.mode} ${d.meter}`);
+}
+check(drawn.size === 8 && [...drawn].every((d) => /^(major|minor) (4\/4|3\/4|2\/4|6\/8)$/.test(d)), "200 seeds draw every mode and meter pair and nothing else");
 
 const candidate = {
   seed: 3,

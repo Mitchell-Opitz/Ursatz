@@ -5,7 +5,7 @@
  * are page globals from materials-view.js and the other view files. */
 const MotifDetailView = (function () {
   /* ctx: {id, item, data (the item answer), analysisError, statusEl, allItems, headerEl, rerender(reason)}.
-   * Appends the tab bar and panes to content, inside a `motif-detail` wrapper (up to 1200px wide). */
+   * Appends the tab bar and panes to content, inside a `motifs-section` wrapper (up to 1200px wide). */
   function render(content, ctx) {
     const { id, item, data } = ctx;
     const bar = materialsElement("div", "analysis-tabs");
@@ -51,7 +51,7 @@ const MotifDetailView = (function () {
       panes[tab.id] = materialsElement("div", "materials-tab-pane");
       panes[tab.id].setAttribute("role", "tabpanel");
     }
-    const wrapper = materialsElement("div", "motif-detail");
+    const wrapper = materialsElement("div", "motifs-section");
     wrapper.appendChild(bar);
     for (const tab of MaterialsModel.MOTIF_TABS) {
       wrapper.appendChild(panes[tab.id]);

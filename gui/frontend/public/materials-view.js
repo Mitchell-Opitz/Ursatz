@@ -209,75 +209,27 @@ function buildItemTable(rows, onOpen) {
   return table;
 }
 
-/* The Random section of the New Motif page: draws candidates from the Composer and plays them through the score
- * workspace. "Use this" hands a candidate's form values to onUse(values) to fill the editor; nothing is stored. */
+/* The Random section of the New Motif page: one button draws one motif from the Composer (seed, mode and meter all
+ * drawn) and shows its score and playback in the score workspace. Reroll draws the next seed; "Use" hands the
+ * motif's form values to onUse(values) to fill the editor. Nothing is stored. */
 function buildRandomMotifs(statusEl, onUse) {
   const section = materialsElement("section", "panel materials-random");
   section.appendChild(materialsElement("h2", "section-title", "Random"));
-  const form = materialsElement("div", "upload-controls");
-  const problemEl = materialsElement("div", "upload-status error");
-  const candidatesEl = materialsElement("ol", "variant-candidates");
-  const selectedEl = materialsElement("div");
+  const buttons = materialsElement("div", "button-row");
+  const draw = materialsElement("button", "", "Random");
+  const reroll = materialsElement("button", "", "Reroll");
+  const use = materialsElement("button", "", "Use");
+  for (const button of [draw, reroll, use]) {
+    button.type = "button";
+  }
+  reroll.hidden = true;
+  use.hidden = true;
+  buttons.append(draw, reroll, use);
+  const infoEl = materialsElement("div", "variant-meta");
+  const selectedEl = materialsElement("div", "materials-score-mount");
   let workspace = null;
   let blobUrls = [];
-  let shown = [];
-  let runValues = null;
-
-  function field(labelText, control) {
-    const label = materialsElement("label", "filter-field", `${labelText} `);
-    label.appendChild(control);
-    form.appendChild(label);
-    return control;
-  }
-  function select(options) {
-    const el = materialsElement("select");
-    for (const [value, text] of options) {
-      const o = materialsElement("option", "", text);
-      o.value = value;
-      el.appendChild(o);
-    }
-    return el;
-  }
-  function input(placeholder, value) {
-    const el = materialsElement("input");
-    el.type = "text";
-    el.placeholder = placeholder;
-    el.value = value || "";
-    return el;
-  }
-  const mode = field("Mode", select([["major", "Major"], ["minor", "Minor"]]));
-  const meter = field("Meter", input("4/4", "4/4"));
-  const formSelect = field("Form", select(MaterialsModel.MOTIF_FORMS.map((f) => [f.value, f.label])));
-  const style = field("Style", select([["", "No style"]]));
-  const count = field("Count", input("6", "6"));
-  const seed = field("Seed", input("random"));
-  const role = field("Role", select(MaterialsModel.MOTIF_ROLES.map((r) => [r.value, r.label])));
-  const generate = materialsElement("button", "", "Generate");
-  generate.type = "button";
-  form.appendChild(generate);
-
-  async function loadStyles() {
-    const answer = await sendMaterialsRequest({ method: "GET", url: "/api/styles" });
-    if (answer.ok && answer.data && Array.isArray(answer.data.styles)) {
-      for (const item of answer.data.styles) {
-        const o = materialsElement("option", "", item.name || item.id);
-        o.value = item.id;
-        style.appendChild(o);
-      }
-    }
-  }
-
-  function values() {
-    return {
-      mode: mode.value,
-      meter: meter.value,
-      form: formSelect.value,
-      style_id: style.value,
-      count: count.value.trim() === "" ? 6 : count.value.trim(),
-      seed: seed.value,
-      role: role.value,
-    };
-  }
+  let current = null;
 
   function clearSelection() {
     if (workspace) {
@@ -291,99 +243,60 @@ function buildRandomMotifs(statusEl, onUse) {
     selectedEl.innerHTML = "";
   }
 
-  async function play(candidate) {
-    const body = VariantTree.candidateBody(MaterialsModel.randomCandidateToBody(candidate, runValues), candidate);
+  function fail(data, fallback) {
+    statusEl.classList.add("error");
+    statusEl.textContent = MaterialsModel.errorText(data, fallback);
+  }
+
+  async function drawSeed(seed) {
+    const settings = MaterialsModel.randomSettings(seed);
+    const values = { form: "full", role: "melodic", meter: settings.meter, mode: settings.mode, seed };
+    draw.disabled = true;
+    reroll.disabled = true;
     statusEl.classList.remove("error");
-    statusEl.textContent = "Rendering...";
-    const answer = await sendMaterialsRequest(MaterialsModel.renderRequest(body));
-    if (!answer.ok) {
-      statusEl.classList.add("error");
-      statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not render the motif");
+    statusEl.textContent = "Drawing a motif...";
+    const answer = await sendMaterialsRequest(MaterialsModel.randomRequest(values));
+    const motive = answer.ok && answer.data && answer.data.motives ? answer.data.motives[0] : null;
+    if (!motive) {
+      draw.disabled = false;
+      reroll.disabled = false;
+      fail(answer.data, "Could not draw a motif");
+      return;
+    }
+    const candidate = MaterialsModel.randomCandidate(motive, seed);
+    const rendered = await sendMaterialsRequest(MaterialsModel.renderRequest(VariantTree.candidateBody(MaterialsModel.randomCandidateToBody(candidate, values), candidate)));
+    draw.disabled = false;
+    reroll.disabled = false;
+    if (!rendered.ok) {
+      fail(rendered.data, "Could not render the motif");
       return;
     }
     statusEl.textContent = "";
     clearSelection();
-    const xml = URL.createObjectURL(new Blob([answer.data.musicxml], { type: "application/xml" }));
-    const playback = URL.createObjectURL(new Blob([JSON.stringify(answer.data.playback)], { type: "application/json" }));
+    current = { candidate, values };
+    const keyText = MaterialsModel.candidateKeyText(candidate);
+    infoEl.textContent = `${values.meter}${keyText ? ` · ${keyText}` : ""} · seed ${seed}`;
+    const xml = URL.createObjectURL(new Blob([rendered.data.musicxml], { type: "application/xml" }));
+    const playback = URL.createObjectURL(new Blob([JSON.stringify(rendered.data.playback)], { type: "application/json" }));
     blobUrls = [xml, playback];
-    workspace = ScoreWorkspace.mount(selectedEl, {
-      title: "Random motif",
-      subtitle: `candidate · seed ${candidate.seed}`,
-      musicxmlUrl: xml,
-      playbackUrl: playback,
-    });
+    workspace = ScoreWorkspace.mount(selectedEl, { title: "Random motif", subtitle: `seed ${seed}`, musicxmlUrl: xml, playbackUrl: playback });
+    reroll.hidden = false;
+    use.hidden = false;
   }
 
-  async function reroll(candidate) {
-    const request = { ...runValues, count: 1, seed: MaterialsModel.rerollSeed(candidate.seed) };
-    const answer = await sendMaterialsRequest(MaterialsModel.randomRequest(request));
-    const next = answer.ok && answer.data && answer.data.motives ? answer.data.motives[0] : null;
-    if (!next) {
-      statusEl.classList.add("error");
-      statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not draw another motif");
-      return;
-    }
-    const drawn = MaterialsModel.randomCandidate(next, request.seed);
-    shown = shown.map((other) => (other === candidate ? drawn : other));
-    drawCandidates();
-  }
-
-  function drawCandidates() {
-    candidatesEl.innerHTML = "";
-    for (const candidate of shown) {
-      const card = materialsElement("li", "variant-candidate");
-      const analysis = (candidate.motive && candidate.motive.analysis) || {};
-      const textName = runValues.form === "rhythm" ? "rhythm_text" : runValues.form === "contour" ? "contour_text" : "notes_text";
-      const keyText = MaterialsModel.candidateKeyText(candidate);
-      card.appendChild(materialsElement("div", "variant-derivation", analysis[textName] || ""));
-      card.appendChild(materialsElement("div", "variant-meta", `${runValues.meter}${keyText ? ` · ${keyText}` : ""} · seed ${candidate.seed}`));
-      const buttons = materialsElement("div", "variant-actions");
-      const use = () => onUse(MaterialsModel.motifFormValues(MaterialsModel.randomCandidateToBody(candidate, runValues)));
-      for (const [text, action] of [["Play", () => play(candidate)], ["Reroll", () => reroll(candidate)], ["Use this", use]]) {
-        const button = materialsElement("button", "", text);
-        button.type = "button";
-        button.addEventListener("click", action);
-        buttons.appendChild(button);
-      }
-      card.appendChild(buttons);
-      candidatesEl.appendChild(card);
-    }
-  }
-
-  generate.addEventListener("click", async () => {
-    const current = values();
-    const problems = MaterialsModel.randomProblems(current);
-    problemEl.textContent = problems.map((p) => p.message).join(" ");
-    if (problems.length > 0) {
-      return;
-    }
-    generate.disabled = true;
-    statusEl.classList.remove("error");
-    statusEl.textContent = "Drawing motifs...";
-    const answer = await sendMaterialsRequest(MaterialsModel.randomRequest(current));
-    generate.disabled = false;
-    if (!answer.ok) {
-      statusEl.classList.add("error");
-      statusEl.textContent = MaterialsModel.errorText(answer.data, "Could not draw motifs");
-      return;
-    }
-    statusEl.textContent = "";
-    clearSelection();
-    runValues = current;
-    const start = Number.isInteger(answer.data.seed) ? answer.data.seed : 0;
-    shown = (answer.data.motives || []).map((motive, index) => MaterialsModel.randomCandidate(motive, start + index));
-    drawCandidates();
-  });
-  loadStyles();
-  section.append(form, problemEl, candidatesEl, selectedEl);
+  draw.addEventListener("click", () => drawSeed(Math.floor(Math.random() * 2147483648)));
+  reroll.addEventListener("click", () => current && drawSeed(MaterialsModel.rerollSeed(current.candidate.seed)));
+  use.addEventListener("click", () => current && onUse(MaterialsModel.motifFormValues(MaterialsModel.randomCandidateToBody(current.candidate, current.values))));
+  section.append(buttons, infoEl, selectedEl);
   return section;
 }
 
 async function renderMaterialsView(type) {
   const info = MaterialsModel.typeInfo(type);
   materialsState.type = type;
-  const content = getContentEl();
-  content.innerHTML = "";
+  const page = getContentEl();
+  page.innerHTML = "";
+  const content = type === "motif" ? page.appendChild(materialsElement("div", "motifs-section")) : page;
   content.appendChild(materialsElement("h1", "view-title", info.label));
   const statusEl = materialsElement("div", "upload-status");
   statusEl.setAttribute("role", "status");
@@ -1033,8 +946,9 @@ function buildMotifSaveControls(editor, statusEl, label, withNote, onSave) {
 }
 
 function renderNewMotif(draftName, draftProject) {
-  const content = getContentEl();
-  content.innerHTML = "";
+  const page = getContentEl();
+  page.innerHTML = "";
+  const content = page.appendChild(materialsElement("div", "motifs-section"));
   const back = materialsElement("a", "back-link clickable", "Back to Motifs");
   back.addEventListener("click", () => renderMaterialsView("motif"));
   content.appendChild(back);
