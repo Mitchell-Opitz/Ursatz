@@ -152,6 +152,7 @@ add_library(ursatz
     analysis/motive_sketch.c
     analysis/motive_relation.c
     analysis/motive_variant_recognition.c
+    analysis/motive_link.c
     analysis/phrase_segmentation.c
     analysis/phrase_boundary_detection.c
     analysis/period_detection.c
