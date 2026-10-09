@@ -25,6 +25,16 @@ add_ursatz_test(motif_window_matching)
 add_ursatz_test(motive_sketch)
 add_ursatz_test(motive_relation)
 add_ursatz_test(motive_variant_recognition)
+add_ursatz_test(motive_link)
+
+# Scoped memcheck for the motive link test only (not a repo-wide valgrind mechanism -- see
+# tests/persistence/CMakeLists.txt for the same pattern). Skips silently if valgrind isn't installed.
+find_program(URSATZ_ANALYSIS_VALGRIND valgrind)
+if(URSATZ_ANALYSIS_VALGRIND)
+  add_test(NAME motive_link_valgrind
+           COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_motive_link>)
+endif()
 add_ursatz_test(phrase_segmentation)
 add_ursatz_test(phrase_boundary_detection)
 add_ursatz_test(period_detection)

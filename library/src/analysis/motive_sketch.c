@@ -51,6 +51,71 @@ bool motive_sketch_equal(const MotiveSketch *a, const MotiveSketch *b) {
     return true;
 }
 
+/* --- fingerprint --------------------------------------------------------------------------------- */
+
+#define FNV_OFFSET 14695981039346656037ULL
+#define FNV_PRIME 1099511628211ULL
+
+static unsigned long long fnv_byte(unsigned long long hash, unsigned char byte) {
+    return (hash ^ byte) * FNV_PRIME;
+}
+
+/* A 64-bit value as 8 bytes, least significant first, whatever the platform. */
+static unsigned long long fnv_value(unsigned long long hash, unsigned long long value) {
+    for (int i = 0; i < 8; i++) {
+        hash = fnv_byte(hash, (unsigned char)(value >> (8 * i)));
+    }
+    return hash;
+}
+
+static unsigned long long fnv_signed(unsigned long long hash, long long value) {
+    return fnv_value(hash, (unsigned long long)value);
+}
+
+static unsigned long long fnv_time(unsigned long long hash, ExactRational time) {
+    return fnv_value(fnv_value(hash, time.n), time.d);
+}
+
+unsigned long long motive_sketch_fingerprint(const MotiveSketch *sketch) {
+    unsigned long long hash = FNV_OFFSET;
+    hash = fnv_value(hash, sketch->note_count);
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        hash = fnv_signed(hash, sketch->notes[i].pitch);
+        hash = fnv_time(hash, sketch->notes[i].onset);
+        hash = fnv_time(hash, sketch->notes[i].duration);
+    }
+    hash = fnv_byte(hash, sketch->has_scale ? 1 : 0);
+    if (sketch->has_scale) {
+        hash = fnv_signed(hash, sketch->tonic_pc);
+        hash = fnv_byte(hash, sketch->minor ? 1 : 0);
+    }
+    hash = fnv_time(hash, sketch->bar);
+    hash = fnv_time(hash, sketch->beat);
+    hash = fnv_time(hash, sketch->pickup);
+    hash = fnv_time(hash, sketch->length);
+    hash = fnv_value(hash, sketch->chord_count);
+    for (size_t i = 0; i < sketch->chord_count; i++) {
+        const MotiveSketchChord *chord = &sketch->chords[i];
+        hash = fnv_time(hash, chord->onset);
+        hash = fnv_signed(hash, chord->degree);
+        hash = fnv_signed(hash, chord->alteration);
+        hash = fnv_signed(hash, chord->inversion);
+        hash = fnv_byte(hash, chord->seventh ? 1 : 0);
+    }
+    hash = fnv_value(hash, sketch->feature_count);
+    for (size_t i = 0; i < sketch->feature_count; i++) {
+        const MotiveSketchFeature *feature = &sketch->features[i];
+        for (size_t c = 0; c < MOTIVE_SKETCH_LABEL_SIZE && feature->label[c] != '\0'; c++) {
+            hash = fnv_byte(hash, (unsigned char)feature->label[c]);
+        }
+        hash = fnv_byte(hash, 0);
+        hash = fnv_value(hash, feature->first);
+        hash = fnv_value(hash, feature->last);
+    }
+    hash = fnv_byte(hash, sketch->accompaniment ? 1 : 0);
+    return hash;
+}
+
 bool motive_sketch_validate(const MotiveSketch *sketch) {
     if (!sketch || sketch->note_count == 0 || sketch->note_count > MOTIVE_SKETCH_MAX_NOTES ||
         sketch->chord_count > MOTIVE_SKETCH_MAX_CHORDS || sketch->feature_count > MOTIVE_SKETCH_MAX_FEATURES) {

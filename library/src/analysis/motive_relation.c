@@ -1,5 +1,8 @@
 #include "analysis/motive_relation.h"
 
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 typedef MotiveRelationResult (*ApplyFn)(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
@@ -1521,4 +1524,191 @@ MotiveRelationResult motive_relation_apply(const MotiveSketch *in, const MotiveR
     }
     *out = work;
     return MOTIVE_RELATION_OK;
+}
+
+/* --- steps as text ------------------------------------------------------------------------------ */
+
+static const char *const PARAM_NAMES[MOTIVE_RELATION_KIND_COUNT][MOTIVE_RELATION_MAX_PARAMS] = {
+    [MOTIVE_RELATION_EXACT] = {NULL},
+    [MOTIVE_RELATION_TRANSPOSE] = {"tonal", "by", "degree"},
+    [MOTIVE_RELATION_INVERT] = {"axis", "tonal"},
+    [MOTIVE_RELATION_RETROGRADE] = {NULL},
+    [MOTIVE_RELATION_INTERVAL_CHANGE] = {"interval", "amount", "keep-contour"},
+    [MOTIVE_RELATION_FRAGMENT] = {"position", "length", "min"},
+    [MOTIVE_RELATION_LIQUIDATE] = {"drop", "keep-rhythm", "min"},
+    [MOTIVE_RELATION_AUGMENT] = {"ratio"},
+    [MOTIVE_RELATION_DIMINISH] = {"ratio"},
+    [MOTIVE_RELATION_NOTE_REPEAT] = {"note", "count"},
+    [MOTIVE_RELATION_RHYTHM_REPEAT] = {"first", "length", "target"},
+    [MOTIVE_RELATION_RHYTHM_SHIFT] = {"offset"},
+    [MOTIVE_RELATION_ADD_UPBEAT] = {"count", "approach"},
+    [MOTIVE_RELATION_CHANGE_METER] = {"num", "den"},
+    [MOTIVE_RELATION_ADD_INTERVAL] = {"interval", "steps"},
+    [MOTIVE_RELATION_OMIT_INTERVAL] = {"interval"},
+    [MOTIVE_RELATION_ANCILLARY_FILL] = {"interval", "kind"},
+    [MOTIVE_RELATION_CONDENSE] = {"first", "last", "ratio"},
+    [MOTIVE_RELATION_REPEAT_FEATURE] = {"feature", "times", "steps"},
+    [MOTIVE_RELATION_SHIFT_FEATURE] = {"feature", "offset"},
+    [MOTIVE_RELATION_HARMONY_INVERSION] = {"chord", "inversion"},
+    [MOTIVE_RELATION_HARMONY_APPEND] = {"degree", "seventh"},
+    [MOTIVE_RELATION_HARMONY_INSERT] = {"chord", "degree"},
+    [MOTIVE_RELATION_HARMONY_SUBSTITUTE] = {"chord", "degree", "then"},
+    [MOTIVE_RELATION_PASSING_HARMONY] = {"chord"},
+    [MOTIVE_RELATION_COUNTER_LINE] = {NULL},
+    [MOTIVE_RELATION_DOMINANT_FORM] = {NULL},
+    [MOTIVE_RELATION_LIQUIDATE_FEATURES] = {"steps", "shorten"},
+};
+
+const char *motive_relation_param_name(MotiveRelationKind kind, size_t index) {
+    if ((unsigned)kind >= MOTIVE_RELATION_KIND_COUNT || index >= motive_relation_param_count(kind)) {
+        return NULL;
+    }
+    return PARAM_NAMES[kind][index];
+}
+
+static bool param_is_ratio(MotiveRelationKind kind, size_t index) {
+    switch (kind) {
+    case MOTIVE_RELATION_AUGMENT:
+    case MOTIVE_RELATION_DIMINISH:
+    case MOTIVE_RELATION_RHYTHM_SHIFT:
+        return index == 0;
+    case MOTIVE_RELATION_CONDENSE:
+        return index == 2;
+    case MOTIVE_RELATION_SHIFT_FEATURE:
+        return index == 1;
+    default:
+        return false;
+    }
+}
+
+static long param_default(MotiveRelationKind kind, size_t index) {
+    return kind == MOTIVE_RELATION_INVERT && index == 0 ? -1 : 0;
+}
+
+bool motive_relation_step_text(const MotiveRelationStep *step, char *buffer, size_t size) {
+    if (!buffer || size == 0) {
+        return false;
+    }
+    buffer[0] = '\0';
+    if (!step || (unsigned)step->kind >= MOTIVE_RELATION_KIND_COUNT) {
+        return false;
+    }
+    size_t used = 0;
+    int written = snprintf(buffer, size, "%s", TABLE[step->kind].name);
+    if (written < 0 || (size_t)written >= size) {
+        buffer[0] = '\0';
+        return false;
+    }
+    used = (size_t)written;
+    for (size_t i = 0; i < TABLE[step->kind].params; i++) {
+        if (step->value[i] == param_default(step->kind, i)) {
+            continue;
+        }
+        if (param_is_ratio(step->kind, i)) {
+            written = snprintf(buffer + used, size - used, " %s=%ld:%ld", PARAM_NAMES[step->kind][i], step->value[i],
+                               step->den[i]);
+        } else {
+            written = snprintf(buffer + used, size - used, " %s=%ld", PARAM_NAMES[step->kind][i], step->value[i]);
+        }
+        if (written < 0 || (size_t)written >= size - used) {
+            buffer[used] = '\0';
+            return false;
+        }
+        used += (size_t)written;
+    }
+    return true;
+}
+
+/* The next space-separated token of *cursor, cut in place; NULL at the end. */
+static char *next_token(char **cursor) {
+    char *start = *cursor;
+    while (*start == ' ') {
+        start++;
+    }
+    if (*start == '\0') {
+        *cursor = start;
+        return NULL;
+    }
+    char *end = start;
+    while (*end != '\0' && *end != ' ') {
+        end++;
+    }
+    if (*end != '\0') {
+        *end++ = '\0';
+    }
+    *cursor = end;
+    return start;
+}
+
+static bool parse_whole(const char *text, long *out) {
+    if (*text == '\0') {
+        return false;
+    }
+    char *end = NULL;
+    errno = 0;
+    long value = strtol(text, &end, 10);
+    if (errno != 0 || *end != '\0') {
+        return false;
+    }
+    *out = value;
+    return true;
+}
+
+bool motive_relation_step_parse(const char *text, MotiveRelationStep *out) {
+    if (!text || !out) {
+        return false;
+    }
+    char copy[160];
+    if (strlen(text) >= sizeof(copy)) {
+        return false;
+    }
+    strcpy(copy, text);
+    char *save = copy;
+    char *name = next_token(&save);
+    MotiveRelationStep step;
+    memset(&step, 0, sizeof(step));
+    if (!name || !motive_relation_find(name, &step.kind)) {
+        return false;
+    }
+    for (size_t i = 0; i < MOTIVE_RELATION_MAX_PARAMS; i++) {
+        step.value[i] = param_default(step.kind, i);
+    }
+    bool seen[MOTIVE_RELATION_MAX_PARAMS] = {false};
+    for (char *token = next_token(&save); token; token = next_token(&save)) {
+        char *equals = strchr(token, '=');
+        if (!equals) {
+            return false;
+        }
+        *equals = '\0';
+        const char *value = equals + 1;
+        size_t index = TABLE[step.kind].params;
+        for (size_t i = 0; i < TABLE[step.kind].params; i++) {
+            if (strcmp(token, PARAM_NAMES[step.kind][i]) == 0) {
+                index = i;
+                break;
+            }
+        }
+        if (index == TABLE[step.kind].params || seen[index]) {
+            return false;
+        }
+        seen[index] = true;
+        if (param_is_ratio(step.kind, index)) {
+            char *colon = strchr(value, ':');
+            long n = 0;
+            long d = 0;
+            if (!colon) {
+                return false;
+            }
+            *colon = '\0';
+            if (!parse_whole(value, &n) || !parse_whole(colon + 1, &d) || n <= 0 || d <= 0) {
+                return false;
+            }
+            step.value[index] = n;
+            step.den[index] = d;
+        } else if (!parse_whole(value, &step.value[index])) {
+            return false;
+        }
+    }
+    *out = step;
+    return true;
 }

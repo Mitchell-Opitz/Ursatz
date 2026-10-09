@@ -4,6 +4,8 @@ Files: `src/analysis/motive_variant_recognition.h/.c`. Tests: `tests/analysis/te
 
 Names the chain of motive relations (`docs/modules/motive-relations.md`) that turns one `MotiveSketch` into another, with the chain's distance and the dimensions it kept and changed. The inputs are plain sketches, the notes the analysis chain already produces (R-006: the recognizer reads no audio and no score of its own).
 
+Linking two motives found in different pieces, with a gate and both directions, is in `docs/modules/motive-link.md`.
+
 ## API
 
 - `motive_recognize_options_default(&options)`: `max_depth` 4 (1 to 6), `beam` 64 (1 to 256), `contour` false, `admit` and `admit_context` NULL.

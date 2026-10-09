@@ -151,6 +151,15 @@ static inline ExactRational msk_int(unsigned long long n) {
 bool motive_sketch_equal(const MotiveSketch *a, const MotiveSketch *b);
 
 /*
+ * FNV-1a 64 over a canonical byte form of every field the sketch carries: the notes, the scale, the meter,
+ * the pickup and length, the chords, the features and the role. Equal sketches (motive_sketch_equal) give
+ * equal fingerprints; a changed onset, pitch, scale or meter changes it. Only the used entries of the
+ * arrays count, and a tonic and mode only when has_scale. Stable across runs and platforms, so a cache can
+ * key on it.
+ */
+unsigned long long motive_sketch_fingerprint(const MotiveSketch *sketch);
+
+/*
  * True when the sketch is well formed: 1 to MAX_NOTES notes with a pitch unknown or 0 to 127, durations above
  * zero, onsets ascending and not overlapping; bar and beat above zero and pickup below bar; length not before
  * the end of the last note; chords ascending inside the length with a degree 1 to 7, alteration -1 to 1 and
