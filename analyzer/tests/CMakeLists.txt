@@ -386,3 +386,28 @@ add_executable(test_meter_check test_meter_check.c)
 target_link_libraries(test_meter_check PRIVATE ursatz_analyzer cjson m)
 target_compile_definitions(test_meter_check PRIVATE URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 add_test(NAME test_meter_check COMMAND test_meter_check)
+
+add_executable(test_motive_links test_motive_links.c)
+target_link_libraries(test_motive_links PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_motive_links PRIVATE
+    URSATZ_LINKS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/links"
+    URSATZ_LINKS_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/motive_links_work")
+add_test(NAME test_motive_links COMMAND test_motive_links)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_motive_links_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
+                     $<TARGET_FILE:test_motive_links>)
+    set_tests_properties(test_motive_links_valgrind PROPERTIES LABELS slow)
+endif()
+add_test(NAME test_cli_link_motives
+         COMMAND ${CMAKE_COMMAND}
+                 -DCLI=$<TARGET_FILE:ursatz-analyzer>
+                 -DFIXTURE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/links
+                 -DPYTHON=${Python3_EXECUTABLE}
+                 -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
+                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DLINKS_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-links.v1.schema.json
+                 -DCACHE_SCHEMA=${PROJECT_SOURCE_DIR}/schema/motive-link-cache.v1.schema.json
+                 -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_link_motives
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_link_motives.cmake)
