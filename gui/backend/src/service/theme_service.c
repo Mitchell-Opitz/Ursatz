@@ -794,20 +794,13 @@ static UrsatzGuiThemeResult compose_locked(const char *id, bool has_seed, long l
                 result = URSATZ_GUI_THEME_ERR_ALLOC;
             }
         }
-        const cJSON *reported = result == URSATZ_GUI_THEME_OK ? reported_seed(summary) : NULL;
-        char note[64];
-        if (reported) {
-            snprintf(note, sizeof(note), "composed seed %.0f", reported->valuedouble);
-        } else {
-            snprintf(note, sizeof(note), "composed");
-        }
         if (result == URSATZ_GUI_THEME_OK) {
             new_body = body_with_result(body, summary, brief_summary, has_brief);
             summary = NULL;
             brief_summary = NULL;
             if (!new_body) {
                 result = URSATZ_GUI_THEME_ERR_ALLOC;
-            } else if (ursatz_gui_material_item_add_version(id, new_body, note, &item) != URSATZ_GUI_MATERIAL_OK) {
+            } else if (ursatz_gui_material_item_add_version(id, new_body, "Composed", &item) != URSATZ_GUI_MATERIAL_OK) {
                 say(message, message_size, "the version could not be written");
                 result = URSATZ_GUI_THEME_ERR_FAILED;
             }

@@ -1371,8 +1371,10 @@ static int handle_create_item(struct mg_connection *conn) {
     return analysis == ANALYSIS_REFUSED ? send_failure(conn, 400, refusal) : send_failure(conn, 500, "out of memory");
   }
   cJSON *item = NULL;
-  /* A new motif's first version is noted "Created" unless the caller gives a note. */
-  const char *first_note = has_text(note) ? note : strcmp(type, "motif") == 0 ? "Created" : NULL;
+  /* A new motif's or theme's first version is noted "Created" unless the caller gives a note. */
+  const char *first_note = has_text(note)                                             ? note
+                           : strcmp(type, "motif") == 0 || strcmp(type, "theme") == 0 ? "Created"
+                                                                                       : NULL;
   UrsatzGuiMaterialResult result =
       ursatz_gui_material_item_create_noted(type, name, project_id, version_body, first_note, &item);
   cJSON_Delete(body);
@@ -1496,8 +1498,9 @@ static int handle_add_version(struct mg_connection *conn, const char *id) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "an object body is required; note is a string");
   }
-  /* Every new version of a motif says what changed. */
-  if (cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(version_body, "motif")) && !has_text(note)) {
+  /* Every new version of a motif or a theme says what changed. */
+  if ((cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(version_body, "motif")) ||
+       cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(version_body, "theme"))) && !has_text(note)) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "give a version note");
   }
