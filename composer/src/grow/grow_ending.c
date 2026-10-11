@@ -10,12 +10,12 @@
 #define ENDING_UNITS 4
 
 /* The ideas of a continuation, in eighths of the theme. */
-static const size_t IDEA_START[GROW_IDEA_COUNT] = {0, 2, 4, 5, 6};
-static const size_t IDEA_UNITS[GROW_IDEA_COUNT] = {2, 2, 1, 1, 2};
+static const size_t IDEA_START[GROW_PLACE_COUNT] = {0, 2, 4, 5, 6};
+static const size_t IDEA_UNITS[GROW_PLACE_COUNT] = {2, 2, 1, 1, 2};
 
 /* The longest leading fragment of at most `wanted` notes that fits an idea of `room`; 0 when none does. */
 static size_t fitting_fragment(GrowThemeSpec *spec, size_t slot, size_t wanted, PlanTime room) {
-    GrowIdea idea = slot == 0 ? GROW_IDEA_FRAGMENT_1 : GROW_IDEA_FRAGMENT_2;
+    GrowPlace idea = slot == 0 ? GROW_PLACE_FRAGMENT_1 : GROW_PLACE_FRAGMENT_2;
     size_t most = grow_idea_source(spec, idea)->note_count - 1;
     for (size_t length = wanted < most ? wanted : most; length >= 1; length--) {
         Motive result;
@@ -28,7 +28,7 @@ static size_t fitting_fragment(GrowThemeSpec *spec, size_t slot, size_t wanted, 
 }
 
 /* Develops an idea of the ending from m0 and keeps it if it fits `units` eighths of the theme. */
-static bool keep_idea(GrowThemeSpec *spec, GrowIdea idea, PlanTime unit, size_t units) {
+static bool keep_idea(GrowThemeSpec *spec, GrowPlace idea, PlanTime unit, size_t units) {
     if (!grow_idea_develop(spec, idea, &spec->developed[idea]) ||
         plan_time_compare(spec->developed[idea].length, grow_scaled(unit, units)) > 0) {
         return false;
@@ -40,18 +40,18 @@ static bool keep_idea(GrowThemeSpec *spec, GrowIdea idea, PlanTime unit, size_t 
 static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, PlanTime unit) {
     size_t first = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
     size_t second = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
-    size_t count = grow_idea_source(spec, GROW_IDEA_CADENTIAL)->note_count;
+    size_t count = grow_idea_source(spec, GROW_PLACE_CADENTIAL)->note_count;
     size_t drop_most = count / 2 > 1 ? count / 2 : 1;
     spec->liquidate_drop = 1 + (size_t)fill_rng_below(rng, drop_most);
     if (spec->liquidate_drop >= count) {
         spec->liquidate_drop = count - 1;
     }
-    if (fitting_fragment(spec, 0, first, grow_scaled(unit, IDEA_UNITS[GROW_IDEA_FRAGMENT_1])) == 0 ||
-        fitting_fragment(spec, 1, second, grow_scaled(unit, IDEA_UNITS[GROW_IDEA_FRAGMENT_2])) == 0) {
+    if (fitting_fragment(spec, 0, first, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_1])) == 0 ||
+        fitting_fragment(spec, 1, second, grow_scaled(unit, IDEA_UNITS[GROW_PLACE_FRAGMENT_2])) == 0) {
         return false;
     }
     /* Each idea after the presentation is made from m0 and has to fit in the room it has. */
-    for (GrowIdea idea = GROW_IDEA_FRAGMENT_1; idea < GROW_IDEA_COUNT; idea++) {
+    for (GrowPlace idea = GROW_PLACE_FRAGMENT_1; idea < GROW_PLACE_COUNT; idea++) {
         if (!keep_idea(spec, idea, unit, IDEA_UNITS[idea])) {
             return false;
         }
@@ -81,10 +81,16 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
     int want = request->cadence == PLAN_CADENCE_PAC ? tonic
                : request->cadence == PLAN_CADENCE_IAC ? (tonic + (ends_in.mode == PLAN_MODE_MINOR ? 3 : 4)) % 12
                                                       : -1;
-    if (!keep_idea(spec, GROW_IDEA_RESTATED, unit, 2) ||
-        !grow_draw_contrast(request, rng, spec, grow_idea_source(spec, GROW_IDEA_CONSEQUENT_CONTRAST), want, avoid,
-                            &spec->consequent_contrast) ||
-        !keep_idea(spec, GROW_IDEA_CONSEQUENT_CONTRAST, unit, 2)) {
+    /* A contrasting idea with a motive of its own is that motive as it is: nothing to draw. */
+    bool own_contrast = grow_idea_own(spec, GROW_PLACE_CONSEQUENT_CONTRAST);
+    if (own_contrast) {
+        spec->consequent_contrast.kind = MOTIVE_DEV_EXACT;
+    }
+    if (!keep_idea(spec, GROW_PLACE_RESTATED, unit, 2) ||
+        (!own_contrast &&
+         !grow_draw_contrast(request, rng, spec, grow_idea_source(spec, GROW_PLACE_CONSEQUENT_CONTRAST), want, avoid,
+                             &spec->consequent_contrast)) ||
+        !keep_idea(spec, GROW_PLACE_CONSEQUENT_CONTRAST, unit, 2)) {
         return false;
     }
     size_t cells = request->bars / 2 * request->cells_per_bar;
@@ -97,7 +103,7 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
 
 /* A cadential ending is two ideas liquidated from m0, the second at least as much as the first. */
 static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, PlanTime unit) {
-    size_t count = grow_idea_source(spec, GROW_IDEA_CADENTIAL_2)->note_count;
+    size_t count = grow_idea_source(spec, GROW_PLACE_CADENTIAL_2)->note_count;
     size_t most = count - 1;
     size_t drop_most = count / 2 > 1 ? count / 2 : 1;
     size_t first = 1 + (size_t)fill_rng_below(rng, drop_most);
@@ -108,8 +114,8 @@ static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowTh
     spec->ending_shape = PLAN_HARMONY_SHAPE_CADENTIAL;
     spec->ending_split = grow_split_possible(request, spec->ending_shape, request->cadence);
     /* A cadential progression has no pivot to open a key with. */
-    return !request->has_end_change && keep_idea(spec, GROW_IDEA_CADENTIAL_1, unit, 2) &&
-           keep_idea(spec, GROW_IDEA_CADENTIAL_2, unit, 2);
+    return !request->has_end_change && keep_idea(spec, GROW_PLACE_CADENTIAL_1, unit, 2) &&
+           keep_idea(spec, GROW_PLACE_CADENTIAL_2, unit, 2);
 }
 
 bool grow_ending_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
@@ -157,9 +163,9 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
                               const char *const *names, const size_t *starts, const size_t *units, size_t first_slot,
                               size_t last_slot) {
     const GrowThemeSpec *spec = build->spec;
-    NodeId ideas[GROW_IDEA_COUNT];
-    NodeId motives[GROW_IDEA_COUNT];
-    PlanMotiveRef refs[GROW_IDEA_COUNT];
+    NodeId ideas[GROW_PLACE_COUNT];
+    NodeId motives[GROW_PLACE_COUNT];
+    PlanMotiveRef refs[GROW_PLACE_COUNT];
     PlanResult result = PLAN_OK;
 
     for (size_t slot = first_slot; result == PLAN_OK && slot <= last_slot; slot++) {
@@ -167,7 +173,7 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
     }
     /* A motive in the material for each idea, each made from m0. */
     for (size_t slot = first_slot; result == PLAN_OK && slot <= last_slot; slot++) {
-        grow_idea_ref(spec, (GrowIdea)slot, grow_idea_node(build, (GrowIdea)slot), &refs[slot]);
+        grow_idea_ref(spec, (GrowPlace)slot, grow_idea_node(build, (GrowPlace)slot), &refs[slot]);
         result = grow_add_motive(build, slot, &refs[slot], &motives[slot]);
     }
     if (result == PLAN_OK) {
@@ -183,7 +189,7 @@ static PlanResult build_parts(GrowBuild *build, NodeId container, const PlanHarm
 }
 
 static PlanResult build_continuation(GrowBuild *build) {
-    static const char *const NAMES[GROW_IDEA_COUNT] = {NULL, NULL, "fragment 1", "fragment 2", "cadential"};
+    static const char *const NAMES[GROW_PLACE_COUNT] = {NULL, NULL, "fragment 1", "fragment 2", "cadential"};
     NodeId continuation;
     PlanHarmonyShape shape;
     PlanResult result = make_container(build, "second phrase", "continuation", &continuation);
@@ -193,16 +199,16 @@ static PlanResult build_continuation(GrowBuild *build) {
     shape.max_cells_per_chord = build->spec->ending_cap;
     shape.split_at_bars = build->spec->ending_split;
     return result == PLAN_OK ? build_parts(build, continuation, &shape, NAMES, IDEA_START, IDEA_UNITS,
-                                           GROW_IDEA_FRAGMENT_1, GROW_IDEA_CADENTIAL)
+                                           GROW_PLACE_FRAGMENT_1, GROW_PLACE_CADENTIAL)
                              : result;
 }
 
 /* The two ideas of a consequent or a cadential ending: the last two quarters of the second half, in eighths. */
-static const size_t HALF_START[GROW_IDEA_COUNT] = {0, 0, 4, 6, 0};
-static const size_t HALF_UNITS[GROW_IDEA_COUNT] = {0, 0, 2, 2, 0};
+static const size_t HALF_START[GROW_PLACE_COUNT] = {0, 0, 4, 6, 0};
+static const size_t HALF_UNITS[GROW_PLACE_COUNT] = {0, 0, 2, 2, 0};
 
 static PlanResult build_consequent(GrowBuild *build) {
-    static const char *const NAMES[GROW_IDEA_COUNT] = {NULL, NULL, "consequent basic idea",
+    static const char *const NAMES[GROW_PLACE_COUNT] = {NULL, NULL, "consequent basic idea",
                                                        "consequent contrasting idea", NULL};
     NodeId consequent;
     PlanHarmonyShape shape;
@@ -212,21 +218,21 @@ static PlanResult build_consequent(GrowBuild *build) {
     shape.kind = build->spec->ending_shape;
     shape.starts_on = build->request->has_end_change ? PLAN_HARMONY_ANCHOR_PIVOT : PLAN_HARMONY_ANCHOR_ANY;
     shape.split_at_bars = build->spec->ending_split;
-    return result == PLAN_OK ? build_parts(build, consequent, &shape, NAMES, HALF_START, HALF_UNITS, GROW_IDEA_RESTATED,
-                                           GROW_IDEA_CONSEQUENT_CONTRAST)
+    return result == PLAN_OK ? build_parts(build, consequent, &shape, NAMES, HALF_START, HALF_UNITS, GROW_PLACE_RESTATED,
+                                           GROW_PLACE_CONSEQUENT_CONTRAST)
                              : result;
 }
 
 static PlanResult build_cadential(GrowBuild *build) {
-    static const char *const NAMES[GROW_IDEA_COUNT] = {NULL, NULL, "cadential 1", "cadential 2", NULL};
+    static const char *const NAMES[GROW_PLACE_COUNT] = {NULL, NULL, "cadential 1", "cadential 2", NULL};
     NodeId cadential;
     PlanHarmonyShape shape;
     PlanResult result = make_container(build, "second phrase", "cadential", &cadential);
     memset(&shape, 0, sizeof(shape));
     shape.kind = PLAN_HARMONY_SHAPE_CADENTIAL;
     shape.split_at_bars = build->spec->ending_split;
-    return result == PLAN_OK ? build_parts(build, cadential, &shape, NAMES, HALF_START, HALF_UNITS, GROW_IDEA_CADENTIAL_1,
-                                           GROW_IDEA_CADENTIAL_2)
+    return result == PLAN_OK ? build_parts(build, cadential, &shape, NAMES, HALF_START, HALF_UNITS, GROW_PLACE_CADENTIAL_1,
+                                           GROW_PLACE_CADENTIAL_2)
                              : result;
 }
 

@@ -35,6 +35,8 @@ typedef struct {
     size_t motive_count;
     const cJSON *slot_motive[GROW_SLOT_COUNT]; /* the request motive of each slot, NULL for none */
     const char *slot_motive_id[GROW_SLOT_COUNT];
+    const cJSON *idea_motive[GROW_IDEA_COUNT]; /* the request motive of each idea with its own, NULL for none */
+    const char *idea_motive_id[GROW_IDEA_COUNT];
     const cJSON *accompaniment_motive; /* the "motive" member of an accompaniment of pattern "motive" */
     GrowPoolForm *pool;
     Motive *pool_motives;
@@ -269,6 +271,59 @@ static int read_slots(ThemeExt *ext, const cJSON *request) {
     return 0;
 }
 
+/* The motive of the request with this id, else NULL. */
+static const RequestMotive *find_motive(const ThemeExt *ext, const char *id) {
+    for (size_t m = 0; m < ext->motive_count; m++) {
+        if (strcmp(ext->motives[m].id, id) == 0) {
+            return &ext->motives[m];
+        }
+    }
+    return NULL;
+}
+
+/* The ideas: each names, by its idea name, a motive of the request (or null for none). */
+static int read_ideas(ThemeExt *ext, const cJSON *request) {
+    const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(request, "ideas");
+    if (!ideas || cJSON_IsNull(ideas)) {
+        return 0;
+    }
+    if (!cJSON_IsObject(ideas)) {
+        return cli_fail(CLI_EXIT_USAGE, "\"ideas\" must be an object: {\"<idea name>\": <motive id>, ...}");
+    }
+    for (const cJSON *entry = ideas->child; entry; entry = entry->next) {
+        int idea = -1;
+        for (int k = 0; k < GROW_IDEA_COUNT; k++) {
+            if (strcmp(entry->string, grow_idea_name((GrowIdea)k)) == 0) {
+                idea = k;
+            }
+        }
+        if (idea < 0) {
+            return cli_fail(CLI_EXIT_USAGE, "unknown idea '%s' in \"ideas\"", entry->string);
+        }
+        if (cJSON_IsNull(entry)) {
+            continue;
+        }
+        if (!cJSON_IsString(entry)) {
+            return cli_fail(CLI_EXIT_USAGE, "idea '%s' must name a motive by its id", entry->string);
+        }
+        const RequestMotive *found = find_motive(ext, entry->valuestring);
+        if (!found) {
+            return cli_fail(CLI_EXIT_USAGE, "idea '%s' names the motive '%s', which the request does not have", entry->string,
+                            entry->valuestring);
+        }
+        if (idea == GROW_IDEA_BASIC) {
+            if (!ext->slot_motive[GROW_SLOT_BASIC] || ext->slot_motive[GROW_SLOT_BASIC] != found->json) {
+                return cli_fail(CLI_EXIT_USAGE, "the basic idea is the basic slot; leave it out of \"ideas\" or name the "
+                                                "motive of the basic slot");
+            }
+            continue;
+        }
+        ext->idea_motive[idea] = found->json;
+        ext->idea_motive_id[idea] = found->id;
+    }
+    return 0;
+}
+
 /* Reads the motives and checks the forms; rejected forms are refused here, before anything is grown. */
 static int read_motives(ThemeExt *ext, const cJSON *request) {
     const cJSON *motives = cJSON_GetObjectItemCaseSensitive(request, "motives");
@@ -291,6 +346,9 @@ static int read_motives(ThemeExt *ext, const cJSON *request) {
         ext->motive_count++;
     }
     int status = read_slots(ext, request);
+    if (status == 0) {
+        status = read_ideas(ext, request);
+    }
     if (status != 0) {
         return status;
     }
@@ -327,7 +385,7 @@ static int read_motives(ThemeExt *ext, const cJSON *request) {
     return 0;
 }
 
-static int theme_load(GrowExt *base, const PlanMeter *meter, const PlanKey *key) {
+static int theme_load(GrowExt *base, const PlanMeter *meter, const PlanKey *key, const PlanThemePairing *pairing) {
     ThemeExt *ext = (ThemeExt *)base;
     char what[96];
     int status;
@@ -345,6 +403,24 @@ static int theme_load(GrowExt *base, const PlanMeter *meter, const PlanKey *key)
             return cli_fail(CLI_EXIT_USAGE, "%s is of the accompaniment role; a slot takes a melodic motive", what);
         }
         ext->base.has_slot[s] = s != GROW_SLOT_BASIC;
+    }
+    for (int idea = GROW_IDEA_BASIC + 1; idea < GROW_IDEA_COUNT; idea++) {
+        if (!ext->idea_motive[idea]) {
+            continue;
+        }
+        if (!grow_idea_in_pairing(pairing, (GrowIdea)idea)) {
+            return cli_fail(CLI_EXIT_USAGE, "idea '%s' is not in this theme; the pairing has no %s", grow_idea_name((GrowIdea)idea),
+                            grow_idea_name((GrowIdea)idea));
+        }
+        snprintf(what, sizeof(what), "motive '%s'", ext->idea_motive_id[idea]);
+        status = request_read_motive(what, ext->idea_motive[idea], NULL, meter, key, &ext->base.idea_motives[idea]);
+        if (status != 0) {
+            return status;
+        }
+        if (ext->base.idea_motives[idea].role != MOTIVE_ROLE_MELODIC) {
+            return cli_fail(CLI_EXIT_USAGE, "%s is of the accompaniment role; an idea takes a melodic motive", what);
+        }
+        ext->base.has_idea[idea] = true;
     }
     if (ext->accompaniment_motive) {
         status = request_read_motive("the accompaniment motive", ext->accompaniment_motive, "accompaniment", meter, key,
@@ -474,6 +550,7 @@ typedef struct {
     GrowSlot slot;
     GrowSlot origin; /* the slot whose motive the idea is made from */
     const char *source;
+    int own_idea; /* the GrowIdea whose own motive the idea is, else -1 */
     char item[64];
     char chain[256];
     long connection; /* percent, -1 for none */
@@ -568,6 +645,7 @@ static size_t collect_rows(const ThemeExt *ext, const PiecePlan *plan, const Gro
                 Row *row = &rows[count];
                 memset(row, 0, sizeof(*row));
                 row->idea = plan_node_name(plan, id);
+                row->own_idea = -1;
                 row->slot = idea_slot(row->idea);
                 row->origin = GROW_SLOT_BASIC;
                 /* The idea's melody asks for its motive node (m1 to m4); that node is made from m0 or a slot's node. */
@@ -586,7 +664,12 @@ static size_t collect_rows(const ThemeExt *ext, const PiecePlan *plan, const Gro
                     }
                 }
                 const char *direct = plan_node_name(plan, constraint->params.motive.motive);
-                if (direct && strcmp(direct, "m0") == 0) {
+                if (direct && direct[0] == 'i' && direct[1] >= '0' && direct[1] <= '9' && direct[2] == '\0') {
+                    /* The idea has a motive of its own: the node "i<k>" of the material. */
+                    row->own_idea = direct[1] - '0';
+                    row->source = "idea";
+                    row->connection = -1;
+                } else if (direct && strcmp(direct, "m0") == 0) {
                     row->source = "motive"; /* the basic idea is the basic motive */
                     row->connection = -1;
                 } else {
@@ -608,7 +691,8 @@ static void theme_print_slots(const GrowExt *base, const PiecePlan *plan, const 
     if (json) {
         printf("\"slots\":[");
         for (size_t i = 0; i < count; i++) {
-            const char *motive = ext->slot_motive_id[rows[i].origin];
+            const char *motive = rows[i].own_idea >= 0 ? ext->idea_motive_id[rows[i].own_idea]
+                                                       : ext->slot_motive_id[rows[i].origin];
             printf("%s{\"idea\":", i ? "," : "");
             cli_print_json_string(rows[i].idea ? rows[i].idea : "");
             printf(",\"slot\":\"%s\",\"motive\":", grow_slot_name(rows[i].slot));
@@ -638,7 +722,8 @@ static void theme_print_slots(const GrowExt *base, const PiecePlan *plan, const 
     }
     printf("\nslots (the motive each idea is made from)\n");
     for (size_t i = 0; i < count; i++) {
-        const char *motive = ext->slot_motive_id[rows[i].origin];
+        const char *motive = rows[i].own_idea >= 0 ? ext->idea_motive_id[rows[i].own_idea]
+                                                   : ext->slot_motive_id[rows[i].origin];
         printf("  %s: %s slot, motive %s, %s", rows[i].idea ? rows[i].idea : "?", grow_slot_name(rows[i].slot),
                motive ? motive : "?", rows[i].source);
         if (rows[i].item[0]) {

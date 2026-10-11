@@ -148,6 +148,16 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
     for (GrowSlot slot = GROW_SLOT_CONTRASTING; slot < GROW_SLOT_COUNT; slot++) {
         request.slot_node[slot] = grow_find_slot_node(plan, slot);
     }
+    /* The ideas with a motive of their own, by their place under the pairing. */
+    for (size_t place = 0; place < GROW_PLACE_COUNT; place++) {
+        request.idea_node[place] = PLAN_NODE_NONE;
+    }
+    for (int idea = GROW_IDEA_BASIC + 1; idea < GROW_IDEA_COUNT; idea++) {
+        GrowPlace place;
+        if (grow_idea_place(&request.pairing, (GrowIdea)idea, &place)) {
+            request.idea_node[place] = grow_find_idea_node(plan, (GrowIdea)idea);
+        }
+    }
     request.source = request.has_motive_ref ? request.motive_ref.motive : grow_find_source(plan);
     if (request.source == PLAN_NODE_NONE || !grow_cells_per_bar(&request.meter, &request.cells_per_bar) ||
         request.bar.num == 0) {
@@ -255,17 +265,15 @@ int grow_pairing_archetype(const PlanThemePairing *pairing) {
     }
 }
 
-bool grow_idea_dev(const GrowThemeSpec *spec, GrowIdea idea, MotiveDevSpec *dev) {
+bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveDevSpec *dev) {
     memset(dev, 0, sizeof(*dev));
-    bool first;
-    GrowSlot slot = grow_idea_slot(&spec->pairing, idea, &first);
-    if (idea != GROW_IDEA_BASIC && first && spec->has_slot_source[slot]) {
-        /* The slot's own motive begins the slot as it is. */
+    if (grow_idea_own(spec, idea)) {
+        /* The idea's own motive, or the slot's own motive beginning the slot, is the idea as it is. */
         dev->kind = MOTIVE_DEV_EXACT;
         return true;
     }
     switch (idea) {
-    case GROW_IDEA_REPETITION: /* also the contrasting idea of the other beginnings */
+    case GROW_PLACE_REPETITION: /* also the contrasting idea of the other beginnings */
         if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION) {
             *dev = spec->contrast;
         } else if (spec->statement_response) {
@@ -276,9 +284,9 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowIdea idea, MotiveDevSpec *dev)
             dev->kind = MOTIVE_DEV_EXACT;
         }
         return true;
-    case GROW_IDEA_FRAGMENT_1:
-    case GROW_IDEA_FRAGMENT_2: {
-        size_t second = idea == GROW_IDEA_FRAGMENT_2;
+    case GROW_PLACE_FRAGMENT_1:
+    case GROW_PLACE_FRAGMENT_2: {
+        size_t second = idea == GROW_PLACE_FRAGMENT_2;
         if (spec->pairing.ending == PLAN_THEME_ENDING_CONSEQUENT) {
             if (second) {
                 *dev = spec->consequent_contrast;
@@ -297,7 +305,7 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowIdea idea, MotiveDevSpec *dev)
         }
         return true;
     }
-    case GROW_IDEA_CADENTIAL:
+    case GROW_PLACE_CADENTIAL:
         if (spec->pairing.ending != PLAN_THEME_ENDING_CONTINUATION) {
             return false;
         }
@@ -352,7 +360,7 @@ void grow_dev_ref(const MotiveDevSpec *dev_spec, NodeId source, PlanMotiveRef *o
     }
 }
 
-void grow_idea_ref(const GrowThemeSpec *spec, GrowIdea idea, NodeId source, PlanMotiveRef *out) {
+void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, PlanMotiveRef *out) {
     MotiveDevSpec dev;
     if (!grow_idea_dev(spec, idea, &dev)) {
         memset(out, 0, sizeof(*out));
@@ -363,18 +371,24 @@ void grow_idea_ref(const GrowThemeSpec *spec, GrowIdea idea, NodeId source, Plan
     grow_dev_ref(&dev, source, out);
 }
 
-const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowIdea idea) {
+const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea) {
+    if (idea != GROW_PLACE_BASIC && spec->has_idea_source[idea]) {
+        return &spec->idea_source[idea];
+    }
     GrowSlot slot = grow_idea_slot(&spec->pairing, idea, NULL);
     return slot != GROW_SLOT_BASIC && spec->has_slot_source[slot] ? &spec->slot_source[slot] : &spec->source;
 }
 
-NodeId grow_idea_node(const GrowBuild *build, GrowIdea idea) {
+NodeId grow_idea_node(const GrowBuild *build, GrowPlace idea) {
+    if (idea != GROW_PLACE_BASIC && build->request->idea_node[idea] != PLAN_NODE_NONE) {
+        return build->request->idea_node[idea];
+    }
     GrowSlot slot = grow_idea_slot(&build->spec->pairing, idea, NULL);
     return slot != GROW_SLOT_BASIC && build->spec->has_slot_source[slot] ? build->request->slot_node[slot]
                                                                          : build->source;
 }
 
-bool grow_idea_develop(const GrowThemeSpec *spec, GrowIdea idea, Motive *out) {
+bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out) {
     MotiveDevSpec dev;
     return grow_idea_dev(spec, idea, &dev) &&
            motive_develop(grow_idea_source(spec, idea), &dev, out) == MOTIVE_DEV_OK;
@@ -621,6 +635,18 @@ static bool draw_spec(const PiecePlan *plan, const ThemeRequest *request, FillRn
         }
         spec->has_slot_source[slot] = true;
     }
+    /* The ideas with a motive of their own. */
+    for (size_t place = GROW_PLACE_BASIC + 1; place < GROW_PLACE_COUNT; place++) {
+        if (request->idea_node[place] == PLAN_NODE_NONE) {
+            continue;
+        }
+        if (!grow_read_motive(plan, request->idea_node[place], &request->meter, &request->key,
+                              &spec->idea_source[place]) ||
+            spec->idea_source[place].note_count < 2) {
+            return false;
+        }
+        spec->has_idea_source[place] = true;
+    }
     /* The basic idea is two bars of eight, one of four. */
     spec->basic_cells = request->bars == 4 ? request->cells_per_bar : 2 * request->cells_per_bar;
     return grow_beginning_draw(request, rng, spec) && grow_ending_draw(request, rng, spec);
@@ -720,7 +746,12 @@ PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, siz
 }
 
 PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *ref, NodeId *out) {
-    static const char *const MOTIVE_NAMES[GROW_IDEA_COUNT] = {"m0", "m1", "m2", "m3", "m4"};
+    static const char *const MOTIVE_NAMES[GROW_PLACE_COUNT] = {"m0", "m1", "m2", "m3", "m4"};
+    /* An idea with a motive of its own asks for that node: no motive is made for it. */
+    if (build->request->idea_node[slot] != PLAN_NODE_NONE) {
+        *out = build->request->idea_node[slot];
+        return PLAN_OK;
+    }
     PlanSpan span = {{0, 1}, build->request->bar};
     PlanResult result = plan_time_add(build->material_span.start,
                                       grow_scaled(build->request->bar, build->slot_base + slot - 1), &span.start);
@@ -1135,7 +1166,7 @@ static PlanResult grow_apply(PiecePlan *plan, FillTarget target, const FillCandi
     build.source = request.source;
     /* A section's motives: its own, when it has one, and the four the ideas are made from. */
     build.slot_base = grow_first_free_bar(plan, build.material, build.material_span, request.bar,
-                                     (spec->has_section_motive ? 1 : 0) + GROW_IDEA_COUNT - 1);
+                                     (spec->has_section_motive ? 1 : 0) + GROW_PLACE_COUNT - 1);
     PlanResult result = PLAN_OK;
     if (spec->has_section_motive) {
         result = add_section_motive(&build, build.slot_base, &build.source);

@@ -20,12 +20,12 @@ static PlanHarmonyShapeKind shape_for(const GrowThemeRequest *request, PlanCaden
 /* The contrasting idea is made from m0 and has to fit its room. */
 static bool draw_contrasting_idea(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
     /* A contrasting slot with a motive of its own gives the idea as it is (grow_idea_dev). */
-    bool drawn = spec->has_slot_source[GROW_SLOT_CONTRASTING]
+    bool drawn = grow_idea_own(spec, GROW_PLACE_CONTRAST)
                      ? (spec->contrast.kind = MOTIVE_DEV_EXACT, true)
                      : grow_draw_contrast(request, rng, spec, &spec->source, -1, NULL, &spec->contrast);
     return drawn &&
-           grow_idea_develop(spec, GROW_IDEA_CONTRAST, &spec->developed[GROW_IDEA_CONTRAST]) &&
-           (spec->has_developed[GROW_IDEA_CONTRAST] = true);
+           grow_idea_develop(spec, GROW_PLACE_CONTRAST, &spec->developed[GROW_PLACE_CONTRAST]) &&
+           (spec->has_developed[GROW_PLACE_CONTRAST] = true);
 }
 
 bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
@@ -39,12 +39,12 @@ bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThem
         bool can_respond = spec->basic_cells >= 2;
         uint64_t response = fill_rng_below(rng, 2);
         spec->statement_response = can_respond && response == 1;
-        if (!grow_idea_develop(spec, GROW_IDEA_REPETITION, &spec->developed[GROW_IDEA_REPETITION]) ||
-            plan_time_compare(spec->developed[GROW_IDEA_REPETITION].length,
+        if (!grow_idea_develop(spec, GROW_PLACE_REPETITION, &spec->developed[GROW_PLACE_REPETITION]) ||
+            plan_time_compare(spec->developed[GROW_PLACE_REPETITION].length,
                               grow_scaled(grow_unit(request), SECOND_UNITS)) > 0) {
             return false;
         }
-        spec->has_developed[GROW_IDEA_REPETITION] = true;
+        spec->has_developed[GROW_PLACE_REPETITION] = true;
         return true;
     }
     case PLAN_THEME_BEGINNING_ANTECEDENT:
@@ -91,11 +91,11 @@ static PlanResult build_presentation(GrowBuild *build) {
         result = grow_add_node(build, presentation, PLAN_NODE_IDEA, SECOND_START, SECOND_UNITS, "repetition",
                                &ideas[1]);
     }
-    for (GrowIdea idea = GROW_IDEA_BASIC; idea <= GROW_IDEA_REPETITION; idea++) {
+    for (GrowPlace idea = GROW_PLACE_BASIC; idea <= GROW_PLACE_REPETITION; idea++) {
         grow_idea_ref(spec, idea, grow_idea_node(build, idea), &refs[idea]);
     }
     if (result == PLAN_OK) {
-        result = grow_add_motive(build, GROW_IDEA_REPETITION, &refs[GROW_IDEA_REPETITION], &motive);
+        result = grow_add_motive(build, GROW_PLACE_REPETITION, &refs[GROW_PLACE_REPETITION], &motive);
     }
 
     /* The harmony and bass to write for each idea. */
@@ -118,11 +118,11 @@ static PlanResult build_presentation(GrowBuild *build) {
 
     /* The melody to write for each idea. */
     if (result == PLAN_OK) {
-        result = grow_add_melody_target(build, ideas[0], &refs[GROW_IDEA_BASIC], NULL);
+        result = grow_add_melody_target(build, ideas[0], &refs[GROW_PLACE_BASIC], NULL);
     }
     if (result == PLAN_OK) {
-        refs[GROW_IDEA_REPETITION].motive = motive;
-        result = grow_add_melody_target(build, ideas[1], &refs[GROW_IDEA_REPETITION], NULL);
+        refs[GROW_PLACE_REPETITION].motive = motive;
+        result = grow_add_melody_target(build, ideas[1], &refs[GROW_PLACE_REPETITION], NULL);
     }
     return result;
 }
@@ -139,18 +139,18 @@ static PlanResult build_ideas(GrowBuild *build, NodeId container, const PlanCons
         result = grow_add_node(build, container, PLAN_NODE_IDEA, SECOND_START, SECOND_UNITS, "contrasting idea",
                                &ideas[1]);
     }
-    for (GrowIdea idea = GROW_IDEA_BASIC; idea <= GROW_IDEA_CONTRAST; idea++) {
+    for (GrowPlace idea = GROW_PLACE_BASIC; idea <= GROW_PLACE_CONTRAST; idea++) {
         grow_idea_ref(spec, idea, grow_idea_node(build, idea), &refs[idea]);
     }
     if (result == PLAN_OK) {
-        result = grow_add_motive(build, GROW_IDEA_CONTRAST, &refs[GROW_IDEA_CONTRAST], &motive);
+        result = grow_add_motive(build, GROW_PLACE_CONTRAST, &refs[GROW_PLACE_CONTRAST], &motive);
     }
     if (result == PLAN_OK) {
-        result = grow_add_melody_target(build, ideas[0], &refs[GROW_IDEA_BASIC], NULL);
+        result = grow_add_melody_target(build, ideas[0], &refs[GROW_PLACE_BASIC], NULL);
     }
     if (result == PLAN_OK) {
-        refs[GROW_IDEA_CONTRAST].motive = motive;
-        result = grow_add_melody_target(build, ideas[1], &refs[GROW_IDEA_CONTRAST], cadence);
+        refs[GROW_PLACE_CONTRAST].motive = motive;
+        result = grow_add_melody_target(build, ideas[1], &refs[GROW_PLACE_CONTRAST], cadence);
     }
     return result;
 }

@@ -84,6 +84,31 @@ const char *grow_slot_name(GrowSlot slot);
 /* The function of the slot's ideas (R-143): "beginning", "contrast", "continuation" or "cadential". */
 const char *grow_slot_function(GrowSlot slot);
 
+/*
+ * The ideas of a theme by name, as the plan names them (R-206). Which ones a theme has depends on its pairing: the
+ * basic idea always; the repetition for a presentation, the contrasting idea for an antecedent or a compound basic
+ * idea; fragment 1, fragment 2 and the cadential idea for a continuation, the consequent basic idea and the
+ * consequent contrasting idea for a consequent, cadential 1 and cadential 2 for a cadential ending.
+ */
+typedef enum {
+    GROW_IDEA_BASIC,
+    GROW_IDEA_REPETITION,
+    GROW_IDEA_CONTRASTING,
+    GROW_IDEA_CONSEQUENT_BASIC,
+    GROW_IDEA_CONSEQUENT_CONTRASTING,
+    GROW_IDEA_FRAGMENT_1,
+    GROW_IDEA_FRAGMENT_2,
+    GROW_IDEA_CADENTIAL,
+    GROW_IDEA_CADENTIAL_1,
+    GROW_IDEA_CADENTIAL_2,
+    GROW_IDEA_COUNT
+} GrowIdea;
+
+/* "basic idea", "repetition", "contrasting idea", ... as the plan's idea nodes are named. */
+const char *grow_idea_name(GrowIdea idea);
+/* Whether a theme of the pairing has the idea. */
+bool grow_idea_in_pairing(const PlanThemePairing *pairing, GrowIdea idea);
+
 typedef struct {
     const Motive *motive;
     const PlanSource *source; /* NULL, or where a corpus gave the motive (corpus_seed.h): a SOURCE constraint on m0 */
@@ -122,6 +147,16 @@ typedef struct {
      * grow_build_plan only.
      */
     const Motive *slot_motives[GROW_SLOT_COUNT];
+    /*
+     * The motive of single ideas (R-206), NULL for none; the entry for GROW_IDEA_BASIC is not read, the basic idea is
+     * `motive`. Each is added to the material as the node "i<k>" (k the GrowIdea value), a Given melody span after the
+     * slot motives, and the idea's melody restates it exactly. It takes the place of the slot's motive for that one
+     * idea; the other ideas of the slot are made as before. The same Motive may be given for several ideas and slots.
+     * Refused (GROW_ERR_BAD_REQUEST) with an idea the pairing does not have, an entry for the basic idea, a motive that
+     * is not a full motive of two notes or more in the theme's key and meter, or one longer than its idea (a bar, or
+     * the idea's eighths of the theme when less). Must outlive grow_build_plan only.
+     */
+    const Motive *idea_motives[GROW_IDEA_COUNT];
     /*
      * A four-part voicing of the harmony and bass (voicing.h), in the alto and the tenor. Read only with has_voicing,
      * and refused together with an accompaniment. With write_soprano the voicing writes the melody too, in one note a
