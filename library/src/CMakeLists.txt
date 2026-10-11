@@ -151,6 +151,7 @@ add_library(ursatz
     analysis/motif_window_matching.c
     analysis/motive_sketch.c
     analysis/motive_relation.c
+    analysis/motive_tone_roles.c
     analysis/motive_variant_recognition.c
     analysis/motive_link.c
     analysis/phrase_segmentation.c
