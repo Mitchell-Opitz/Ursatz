@@ -183,12 +183,22 @@ static long resolution_for(const MotiveSketch *s, const Frame *f, size_t i, Moti
     return -1;
 }
 
-MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, MotiveToneLabel *out) {
-    if (!sketch || !out || sketch->note_count == 0 || sketch->note_count > MOTIVE_SKETCH_MAX_NOTES) {
+MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, const MotiveToneOverride *overrides,
+                                   size_t override_count, MotiveToneLabel *out) {
+    if (!sketch || !out || sketch->note_count == 0 || sketch->note_count > MOTIVE_SKETCH_MAX_NOTES ||
+        (override_count > 0 && !overrides)) {
         return MOTIVE_TONE_INVALID;
     }
     if (!sketch->has_scale) {
         return MOTIVE_TONE_NO_SCALE;
+    }
+    for (size_t k = 0; k < override_count; k++) {
+        const MotiveToneOverride *o = &overrides[k];
+        if (o->note >= sketch->note_count || (int)o->role < MOTIVE_TONE_CHORD ||
+            o->role > MOTIVE_TONE_UNCLASSIFIED ||
+            (o->role == MOTIVE_TONE_NON_CHORD && !non_chord_tone_valid(o->type))) {
+            return MOTIVE_TONE_BAD_OVERRIDE;
+        }
     }
     Frame frame;
     build_frame(sketch, &frame);
@@ -198,6 +208,7 @@ MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, MotiveToneLabel *
         label->type = NON_CHORD_TONE_PASSING;
         label->resolves_to = -1;
         label->unresolved = false;
+        label->overridden = false;
         if (done[i]) {
             continue;
         }
@@ -225,6 +236,15 @@ MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, MotiveToneLabel *
             out[partner].unresolved = out[partner].resolves_to < 0;
             done[partner] = true;
         }
+    }
+    for (size_t k = 0; k < override_count; k++) {
+        const MotiveToneOverride *o = &overrides[k];
+        MotiveToneLabel *label = &out[o->note];
+        label->role = o->role;
+        label->type = o->role == MOTIVE_TONE_NON_CHORD ? o->type : NON_CHORD_TONE_PASSING;
+        label->overridden = true;
+        label->resolves_to = resolution_for(sketch, &frame, o->note, label->role, label->type);
+        label->unresolved = label->role != MOTIVE_TONE_CHORD && label->resolves_to < 0 && known(sketch, o->note);
     }
     return MOTIVE_TONE_OK;
 }

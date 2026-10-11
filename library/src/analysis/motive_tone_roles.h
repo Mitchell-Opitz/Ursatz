@@ -33,6 +33,8 @@
  *                    differ between two successive notes of the run at least twice)
  *   none fits        UNCLASSIFIED
  *
+ * An override replaces the role (and the type, for a non-chord tone) of its note.
+ *
  * A chord tone is a note whose pitch class is in its chord. The first and the last note take no step rule.
  *
  * Resolution: resolves_to is the index of the chord tone the figure moves to: the next note for every type but
@@ -53,17 +55,30 @@ typedef struct {
     NonChordTone type; /* meaningful for MOTIVE_TONE_NON_CHORD; NON_CHORD_TONE_PASSING otherwise */
     long resolves_to;  /* 0-based note index of the chord tone it moves to, or -1 */
     bool unresolved;
+    bool overridden;   /* the role and type came from an override */
 } MotiveToneLabel;
+
+/* A caller's own label for a note (0-based index); type is read only for MOTIVE_TONE_NON_CHORD. */
+typedef struct {
+    size_t note;
+    MotiveToneRole role;
+    NonChordTone type;
+} MotiveToneOverride;
 
 typedef enum {
     MOTIVE_TONE_OK = 0,
     MOTIVE_TONE_NO_SCALE,
-    MOTIVE_TONE_INVALID /* no notes, or more than MOTIVE_SKETCH_MAX_NOTES */
+    MOTIVE_TONE_INVALID, /* no notes, or more than MOTIVE_SKETCH_MAX_NOTES */
+    MOTIVE_TONE_BAD_OVERRIDE /* an override names a note out of range, or a role or type that does not exist */
 } MotiveToneStatus;
 
 /*
- * Labels every note: out has sketch->note_count entries, written only on MOTIVE_TONE_OK.
+ * Labels every note: out has sketch->note_count entries, written only on MOTIVE_TONE_OK. An override sets the
+ * role and type of its note and its overridden flag; the later of two overrides on one note wins. The note's
+ * resolution is computed for the overridden label, from the pitch-class chord tones, so an override on one
+ * note never changes how another is labelled.
  */
-MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, MotiveToneLabel *out);
+MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, const MotiveToneOverride *overrides,
+                                   size_t override_count, MotiveToneLabel *out);
 
 #endif
