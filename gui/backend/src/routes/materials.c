@@ -3772,6 +3772,46 @@ int ursatz_gui_materials_migrate_tones(const char *materials_dir) {
   return migrated;
 }
 
+int ursatz_gui_materials_clear_themes(const char *materials_dir) {
+  char marker[512];
+  if (snprintf(marker, sizeof(marker), "%s/themes-cleared", materials_dir) >= (int)sizeof(marker)) {
+    return 0;
+  }
+  FILE *done = fopen(marker, "r");
+  if (done) {
+    fclose(done);
+    return 0;
+  }
+  cJSON *items = NULL;
+  if (ursatz_gui_material_item_list(NULL, "theme", &items) != URSATZ_GUI_MATERIAL_OK) {
+    fputs("ursatz-gui-backend: the themes could not be listed; they are not cleared\n", stderr);
+    return 0;
+  }
+  int cleared = 0;
+  bool failed = false;
+  const cJSON *listed = NULL;
+  cJSON_ArrayForEach(listed, items) {
+    const cJSON *id = cJSON_GetObjectItemCaseSensitive(listed, "id");
+    if (cJSON_IsString(id) && ursatz_gui_material_item_delete(id->valuestring, true) == URSATZ_GUI_MATERIAL_OK) {
+      cleared++;
+    } else {
+      failed = true;
+      fprintf(stderr, "ursatz-gui-backend: a theme could not be cleared: %s\n", cJSON_IsString(id) ? id->valuestring : "?");
+    }
+  }
+  cJSON_Delete(items);
+  if (!failed) {
+    FILE *out = fopen(marker, "w");
+    if (out) {
+      fputs("themes cleared\n", out);
+      fclose(out);
+    } else {
+      fputs("ursatz-gui-backend: the themes-cleared marker could not be written\n", stderr);
+    }
+  }
+  return cleared;
+}
+
 void ursatz_gui_materials_register(struct mg_context *ctx) {
   mg_set_request_handler(ctx, kMaterialsPrefix, materials_handler, NULL);
   mg_set_request_handler(ctx, kSubjectsPrefix, subjects_handler, NULL);

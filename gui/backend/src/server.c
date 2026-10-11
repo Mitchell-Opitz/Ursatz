@@ -58,6 +58,9 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
   /* Motifs analyzed before tone labels existed are analyzed again, once (R-204). */
   ursatz_gui_materials_migrate_tones(kMaterialsDir);
 
+  /* Themes of the old body are deleted, once (R-205). */
+  ursatz_gui_materials_clear_themes(kMaterialsDir);
+
   struct mg_context *ctx = mg_start(NULL, NULL, options);
   if (!ctx) {
     ursatz_gui_link_service_shutdown();
