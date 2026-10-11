@@ -1703,7 +1703,7 @@ static UrsatzGuiMaterialResult fill_uses_locked(const char *self_id, const cJSON
 typedef enum { REF_MELODIC_MOTIF, REF_ACCOMPANIMENT_MOTIF, REF_THEME } ReferenceKind;
 
 /*
- * The references a body makes to versions of other items: a theme's slots in order, then its accompaniment when its
+ * The references a body makes to versions of other items: a theme's slots in order, its ideas, then its accompaniment when its
  * pattern is "motive"; a piece's motive, then the motif and theme fills of its sections in order. Placeholders make
  * none. refs receives up to BODY_REFERENCES_MAX pointers into body, kinds the kind of each; the count is returned.
  */
@@ -1716,6 +1716,13 @@ static size_t body_references(const cJSON *body, const cJSON *refs[BODY_REFERENC
             if (count < 4) {
                 kinds[count] = REF_MELODIC_MOTIF;
                 refs[count++] = slot;
+            }
+        }
+        const cJSON *idea = NULL;
+        cJSON_ArrayForEach(idea, cJSON_GetObjectItemCaseSensitive(theme, "ideas")) {
+            if (count < BODY_REFERENCES_MAX) {
+                kinds[count] = REF_MELODIC_MOTIF;
+                refs[count++] = idea;
             }
         }
         const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(theme, "accompaniment");
