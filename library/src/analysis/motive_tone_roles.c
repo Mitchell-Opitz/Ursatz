@@ -1,5 +1,7 @@
 #include "analysis/motive_tone_roles.h"
 
+#include "analysis/motive_chord_internal.h"
+
 #include <string.h>
 
 typedef struct {
@@ -7,29 +9,6 @@ typedef struct {
     size_t count[MOTIVE_SKETCH_MAX_NOTES];
     bool chord_tone[MOTIVE_SKETCH_MAX_NOTES];
 } Frame;
-
-static int pitch_class(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
-
-static bool has_pc(const int *pcs, size_t count, int pc) {
-    for (size_t i = 0; i < count; i++) {
-        if (pcs[i] == pc) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static const MotiveSketchChord *chord_at(const MotiveSketch *sketch, ExactRational onset) {
-    const MotiveSketchChord *found = NULL;
-    for (size_t c = 0; c < sketch->chord_count; c++) {
-        if (msk_cmp(sketch->chords[c].onset, onset) <= 0) {
-            found = &sketch->chords[c];
-        }
-    }
-    return found;
-}
 
 static bool known(const MotiveSketch *s, size_t i) {
     return i < s->note_count && s->notes[i].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN;
@@ -55,10 +34,10 @@ static bool is_leap(int a, int b) {
 static void build_frame(const MotiveSketch *s, Frame *f) {
     const MotiveSketchChord tonic = {{0, 1}, 1, 0, 0, false};
     for (size_t i = 0; i < s->note_count; i++) {
-        const MotiveSketchChord *chord = chord_at(s, s->notes[i].onset);
+        const MotiveSketchChord *chord = mch_chord_at(s, s->notes[i].onset);
         f->count[i] = motive_sketch_chord_tones(s, chord ? chord : &tonic, f->pcs[i]);
         f->chord_tone[i] =
-            known(s, i) && has_pc(f->pcs[i], f->count[i], pitch_class(s->notes[i].pitch));
+            known(s, i) && mch_has_pc(f->pcs[i], f->count[i], mch_pitch_class(s->notes[i].pitch));
     }
 }
 
@@ -68,7 +47,7 @@ static bool chord_differs(const Frame *f, size_t i, size_t j) {
         return true;
     }
     for (size_t k = 0; k < f->count[i]; k++) {
-        if (!has_pc(f->pcs[j], f->count[j], f->pcs[i][k])) {
+        if (!mch_has_pc(f->pcs[j], f->count[j], f->pcs[i][k])) {
             return true;
         }
     }
@@ -130,7 +109,7 @@ static bool classify(const MotiveSketch *s, const Frame *f, size_t i, NonChordTo
         *type = d < t ? NON_CHORD_TONE_SUSPENSION : NON_CHORD_TONE_RETARDATION;
         return true;
     }
-    if (has_d && d == t && has_pc(f->pcs[i + 1], f->count[i + 1], pitch_class(d)) && chord_differs(f, i, i + 1)) {
+    if (has_d && d == t && mch_has_pc(f->pcs[i + 1], f->count[i + 1], mch_pitch_class(d)) && chord_differs(f, i, i + 1)) {
         *type = NON_CHORD_TONE_ANTICIPATION;
         return true;
     }
