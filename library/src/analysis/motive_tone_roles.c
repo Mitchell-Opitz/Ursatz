@@ -184,13 +184,13 @@ MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, const MotiveToneO
     bool done[MOTIVE_SKETCH_MAX_NOTES] = {false};
     for (size_t i = 0; i < sketch->note_count; i++) {
         MotiveToneLabel *label = &out[i];
+        if (done[i]) {
+            continue;
+        }
         label->type = NON_CHORD_TONE_PASSING;
         label->resolves_to = -1;
         label->unresolved = false;
         label->overridden = false;
-        if (done[i]) {
-            continue;
-        }
         if (!known(sketch, i)) {
             label->role = MOTIVE_TONE_UNCLASSIFIED;
             continue;
