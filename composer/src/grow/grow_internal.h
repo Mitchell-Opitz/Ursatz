@@ -29,18 +29,18 @@
  *   4  a continuation's cadential idea
  */
 typedef enum {
-    GROW_IDEA_BASIC,
-    GROW_IDEA_REPETITION,
-    GROW_IDEA_FRAGMENT_1,
-    GROW_IDEA_FRAGMENT_2,
-    GROW_IDEA_CADENTIAL,
-    GROW_IDEA_COUNT,
-    GROW_IDEA_CONTRAST = GROW_IDEA_REPETITION,
-    GROW_IDEA_RESTATED = GROW_IDEA_FRAGMENT_1,
-    GROW_IDEA_CONSEQUENT_CONTRAST = GROW_IDEA_FRAGMENT_2,
-    GROW_IDEA_CADENTIAL_1 = GROW_IDEA_FRAGMENT_1,
-    GROW_IDEA_CADENTIAL_2 = GROW_IDEA_FRAGMENT_2
-} GrowIdea;
+    GROW_PLACE_BASIC,
+    GROW_PLACE_REPETITION,
+    GROW_PLACE_FRAGMENT_1,
+    GROW_PLACE_FRAGMENT_2,
+    GROW_PLACE_CADENTIAL,
+    GROW_PLACE_COUNT,
+    GROW_PLACE_CONTRAST = GROW_PLACE_REPETITION,
+    GROW_PLACE_RESTATED = GROW_PLACE_FRAGMENT_1,
+    GROW_PLACE_CONSEQUENT_CONTRAST = GROW_PLACE_FRAGMENT_2,
+    GROW_PLACE_CADENTIAL_1 = GROW_PLACE_FRAGMENT_1,
+    GROW_PLACE_CADENTIAL_2 = GROW_PLACE_FRAGMENT_2
+} GrowPlace;
 
 /* What a candidate of grow-theme asks for: every choice, made from the run's seed. */
 typedef struct {
@@ -74,9 +74,12 @@ typedef struct {
     /* The motives of the slots that have their own (GROW_SLOT_BASIC is source); the ideas of the slot are made from it. */
     Motive slot_source[GROW_SLOT_COUNT];
     bool has_slot_source[GROW_SLOT_COUNT];
+    /* The motives single ideas have of their own, by place (GROW_PLACE_BASIC has none); the idea is the motive exact. */
+    Motive idea_source[GROW_PLACE_COUNT];
+    bool has_idea_source[GROW_PLACE_COUNT];
     /* The motives the ideas after the basic idea are made from m0 as, planned here to be checked. */
-    Motive developed[GROW_IDEA_COUNT];
-    bool has_developed[GROW_IDEA_COUNT];
+    Motive developed[GROW_PLACE_COUNT];
+    bool has_developed[GROW_PLACE_COUNT];
 } GrowThemeSpec;
 
 /* The theme section grow-theme grows, read from the plan. */
@@ -104,6 +107,7 @@ typedef struct {
     bool has_motive_ref;     /* the section names the motive its basic idea is made from */
     PlanMotiveRef motive_ref; /* to m0, with a transform; parameters left open are drawn by grow-theme */
     NodeId slot_node[GROW_SLOT_COUNT]; /* the material node of each slot with a motive of its own, else PLAN_NODE_NONE */
+    NodeId idea_node[GROW_PLACE_COUNT]; /* the material node of each place with a motive of its own (R-206), else none */
 } GrowThemeRequest;
 
 /* Where a build step adds to the plan: the theme, its material, and the node the parts of a phrase go in. */
@@ -175,19 +179,31 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
                         const Motive *source, int want_pc, const MotiveDevSpec *avoid, MotiveDevSpec *out);
 /* The development of m0 an idea is made as, and whether the idea is made from m0 at all. The first idea of a slot with
    a motive of its own is that motive exact. */
-bool grow_idea_dev(const GrowThemeSpec *spec, GrowIdea idea, MotiveDevSpec *out);
+bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveDevSpec *out);
 
 /*
  * The slot an idea belongs to under the pairing, and whether it is the slot's first idea (the one that takes the slot's
  * motive itself): the repetition of a presentation, the consequent basic idea and the basic idea are the basic slot's.
  */
-GrowSlot grow_idea_slot(const PlanThemePairing *pairing, GrowIdea idea, bool *first);
+GrowSlot grow_idea_slot(const PlanThemePairing *pairing, GrowPlace idea, bool *first);
 /* Whether the pairing has an idea of the slot, and the eighths of the theme its first idea has. */
 bool grow_slot_used(const PlanThemePairing *pairing, GrowSlot slot, size_t *units);
-/* The motive an idea is made from: its slot's own, else the spec's source. */
-const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowIdea idea);
+/* Whether the idea's motive is one given for it: its own (R-206), or its slot's for the slot's first idea. */
+bool grow_idea_own(const GrowThemeSpec *spec, GrowPlace idea);
+/* The place an idea has under a pairing; false when the pairing has no such idea. */
+bool grow_idea_place(const PlanThemePairing *pairing, GrowIdea idea, GrowPlace *place);
+/* The named idea of a place under a pairing. */
+GrowIdea grow_place_idea(const PlanThemePairing *pairing, GrowPlace place);
+/* The eighths of the theme the idea at a place has. */
+size_t grow_place_units(const PlanThemePairing *pairing, GrowPlace place);
+/* The material node of an idea's own motive ("i<k>"), else PLAN_NODE_NONE. */
+NodeId grow_find_idea_node(const PiecePlan *plan, GrowIdea idea);
+/* The name of the idea's material node. */
+const char *grow_idea_node_name(GrowIdea idea, char *buffer, size_t size);
+/* The motive an idea is made from: its own, else its slot's, else the spec's source. */
+const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea);
 /* The motive node an idea's motive ref names: its slot's own node, else the build's source. */
-NodeId grow_idea_node(const GrowBuild *build, GrowIdea idea);
+NodeId grow_idea_node(const GrowBuild *build, GrowPlace idea);
 /* The material node of the slot's motive ("s1" to "s3"), else PLAN_NODE_NONE. */
 NodeId grow_find_slot_node(const PiecePlan *plan, GrowSlot slot);
 /* The name of the slot's material node; NULL for the basic slot. */
@@ -222,9 +238,9 @@ NodeId grow_find_source(const PiecePlan *plan);
 bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const PlanKey *key, Motive *out);
 
 /* The development of m0 each idea after the basic idea is, as a spec the motive operators read. */
-void grow_idea_ref(const GrowThemeSpec *spec, GrowIdea idea, NodeId source, PlanMotiveRef *out);
+void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, PlanMotiveRef *out);
 /* The specs those refs make, to make the result here with the same Ursatz call the operators use. */
-bool grow_idea_develop(const GrowThemeSpec *spec, GrowIdea idea, Motive *out);
+bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out);
 
 /* The first section that asks for an archetype and a theme pairing; with open_only, a Constrained one. */
 NodeId grow_find_theme(const PiecePlan *plan, bool open_only);

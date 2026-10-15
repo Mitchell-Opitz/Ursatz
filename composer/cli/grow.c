@@ -629,6 +629,9 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     for (GrowSlot slot = GROW_SLOT_CONTRASTING; options->ext && slot < GROW_SLOT_COUNT; slot++) {
         request.slot_motives[slot] = options->ext->has_slot[slot] ? &options->ext->slot_motives[slot] : NULL;
     }
+    for (int idea = 0; options->ext && idea < GROW_IDEA_COUNT; idea++) {
+        request.idea_motives[idea] = options->ext->has_idea[idea] ? &options->ext->idea_motives[idea] : NULL;
+    }
     memset(theme, 0, sizeof(*theme));
     theme->seed = seed;
     GrowResult built = grow_build_plan(&request, &theme->plan);
@@ -1285,7 +1288,7 @@ int run_grow_ext(int argc, char **argv, GrowExt *ext) {
     }
     Motive motive;
     if (options.ext) {
-        status = options.ext->load(options.ext, &options.meter, &options.key);
+        status = options.ext->load(options.ext, &options.meter, &options.key, &options.pairing);
         if (status != 0) {
             composer_style_destroy(options.style);
             return status;

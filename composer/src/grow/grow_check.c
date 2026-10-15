@@ -54,11 +54,9 @@ static const char *judge_continuation(const GrowThemeSpec *spec) {
     if (basic_ticks == 0 || fragment_ticks == 0 || !standard_form_is_fragmentation(basic_ticks, fragment_ticks)) {
         return "continuation does not fragment";
     }
-    for (GrowIdea idea = GROW_IDEA_FRAGMENT_1; idea <= GROW_IDEA_FRAGMENT_2; idea++) {
+    for (GrowPlace idea = GROW_PLACE_FRAGMENT_1; idea <= GROW_PLACE_FRAGMENT_2; idea++) {
         /* A slot's own motive begins its slot as it is: only a fragment of it is shorter than its source. */
-        bool first;
-        GrowSlot slot = grow_idea_slot(&spec->pairing, idea, &first);
-        bool own = first && spec->has_slot_source[slot];
+        bool own = grow_idea_own(spec, idea);
         if (!spec->has_developed[idea] ||
             (!own && !standard_form_is_fragmentation(ticks_of(grow_idea_source(spec, idea)->length),
                                                      ticks_of(spec->developed[idea].length)))) {
@@ -93,13 +91,13 @@ static const char *judge_sentence(const GrowThemeSpec *spec, Soft *soft) {
     ask(soft, standard_form_sentence_is_archetypal(spec->bars, half, half, true));
     ask(soft, standard_form_presentation_length_usual(half));
     ask(soft, standard_form_continuation_balanced(half, half));
-    ask(soft, spec->has_developed[GROW_IDEA_REPETITION] &&
-                  standard_form_idea_reads_as_repetition(grow_same_contour(&spec->source, &spec->developed[GROW_IDEA_REPETITION])));
+    ask(soft, spec->has_developed[GROW_PLACE_REPETITION] &&
+                  standard_form_idea_reads_as_repetition(grow_same_contour(&spec->source, &spec->developed[GROW_PLACE_REPETITION])));
     return NULL;
 }
 
 /* Whether the contrasting idea of a motive keeps the contour of m0 and so would read as its repetition. */
-static bool reads_as_repetition(const GrowThemeSpec *spec, GrowIdea idea) {
+static bool reads_as_repetition(const GrowThemeSpec *spec, GrowPlace idea) {
     return standard_form_idea_reads_as_repetition(grow_same_contour(&spec->source, &spec->developed[idea]));
 }
 
@@ -130,8 +128,8 @@ static const char *judge_period(const GrowThemeSpec *spec, Soft *soft) {
     ask(soft, standard_form_consequent_cadence_usual(cadence_of(spec->cadence)));
     ask(soft, standard_form_antecedent_length_usual(half));
     ask(soft, standard_form_consequent_length_usual(half, half));
-    ask(soft, standard_form_consequent_contrast_usual(motives_differ(&spec->developed[GROW_IDEA_CONTRAST],
-                                                                     &spec->developed[GROW_IDEA_CONSEQUENT_CONTRAST])));
+    ask(soft, standard_form_consequent_contrast_usual(motives_differ(&spec->developed[GROW_PLACE_CONTRAST],
+                                                                     &spec->developed[GROW_PLACE_CONSEQUENT_CONTRAST])));
     return NULL;
 }
 
@@ -156,7 +154,7 @@ static const char *judge_hybrid(const GrowThemeSpec *spec, Soft *soft) {
     }
     if (spec->pairing.beginning == PLAN_THEME_BEGINNING_PRESENTATION) {
         ask(soft, standard_form_presentation_length_usual(half));
-        ask(soft, spec->has_developed[GROW_IDEA_REPETITION] && reads_as_repetition(spec, GROW_IDEA_REPETITION));
+        ask(soft, spec->has_developed[GROW_PLACE_REPETITION] && reads_as_repetition(spec, GROW_PLACE_REPETITION));
     }
     if (spec->pairing.ending == PLAN_THEME_ENDING_CONTINUATION) {
         ask(soft, standard_form_continuation_balanced(half, half));
@@ -180,8 +178,8 @@ static const char *judge(const GrowThemeSpec *spec, Soft *soft) {
     }
     /* A contrasting idea that keeps m0's contour would read as its repetition. */
     if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION &&
-        (!spec->has_developed[GROW_IDEA_CONTRAST] ||
-         (!spec->has_slot_source[GROW_SLOT_CONTRASTING] && reads_as_repetition(spec, GROW_IDEA_CONTRAST)))) {
+        (!spec->has_developed[GROW_PLACE_CONTRAST] ||
+         (!grow_idea_own(spec, GROW_PLACE_CONTRAST) && reads_as_repetition(spec, GROW_PLACE_CONTRAST)))) {
         return "contrasting idea reads as a repetition";
     }
     /* A theme with an antecedent ends in a cadence stronger than the antecedent's. */

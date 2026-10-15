@@ -1,6 +1,6 @@
 {
  "schema": "ursatz-theme-request",
- "schema_version": 1,
+ "schema_version": 2,
  "into": "sentence",
  "hybrid": null,
  "key": "D",
@@ -18,32 +18,7 @@
    "harmony": null,
    "features": [],
    "role": "melodic",
-   "forms": [
-    {
-     "item": "mot-up1",
-     "degrees": "2:q 4:e 6:e 2':h",
-     "pickup": "0",
-     "harmony": null,
-     "features": [],
-     "chain": "transpose tonal=1 by=1",
-     "functions": [
-      "beginning"
-     ],
-     "flag": "approved"
-    },
-    {
-     "item": "mot-up2",
-     "degrees": "3:q 5:e 7:e 3':h",
-     "pickup": "0",
-     "harmony": null,
-     "features": [],
-     "chain": "transpose tonal=1 by=2",
-     "functions": [
-      "beginning"
-     ],
-     "flag": "unflagged"
-    }
-   ]
+   "forms": []
   }
  ],
  "slots": {

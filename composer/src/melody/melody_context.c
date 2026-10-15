@@ -401,9 +401,34 @@ static NodeId motive_source(const PiecePlan *plan, NodeId node) {
     return PLAN_NODE_NONE;
 }
 
+/* The motive a chain of motive nodes starts from: the node itself when it has no motive_ref. */
+static NodeId motive_root(const PiecePlan *plan, NodeId node) {
+    for (size_t depth = 0; depth < MELODY_MAX_RESTATED; depth++) {
+        NodeId source = motive_source(plan, node);
+        if (source == PLAN_NODE_NONE || !plan_has_node(plan, source)) {
+            break;
+        }
+        node = source;
+    }
+    return node;
+}
+
+/* Whether the melody span asks for a motive made from the same motive as the node (not an idea with a motive of its own). */
+static bool span_from_root(const PiecePlan *plan, LaneSpanId span, NodeId root) {
+    for (size_t k = 0; k < plan_lane_span_constraint_count(plan, span); k++) {
+        const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, span, k);
+        if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && plan_has_node(plan, constraint->params.motive.motive)) {
+            return motive_root(plan, constraint->params.motive.motive) == root;
+        }
+    }
+    return false;
+}
+
 /*
  * The written melody span, as long as the target and before it, that the target restates: the latest one that asks
- * for the motive the target's own motive is a restatement of, else the one right before. False when there is none.
+ * for the motive the target's own motive is a restatement of, else the one right before when it asks for a motive made
+ * from the same motive (an idea with a motive of its own restates that motive, not the idea before). False when there
+ * is none.
  */
 static bool restated_span(const PiecePlan *plan, const MelodyContext *context, LaneSpanId *out) {
     LaneSpanId before[MELODY_MAX_RESTATED];
@@ -432,6 +457,7 @@ static bool restated_span(const PiecePlan *plan, const MelodyContext *context, L
     PlanSpan last_tick = {time_minus(context->span.start, tick), tick};
     return plan_lane_find(plan, PLAN_LANE_MELODY, 0, last_tick, before, 2) == 1 &&
            plan_lane_span_state(plan, before[0]) != PLAN_STATE_CONSTRAINED &&
+           span_from_root(plan, before[0], motive_root(plan, context->motive_node)) &&
            plan_time_compare(plan_lane_span_span(plan, before[0]).length, context->span.length) == 0 &&
            ((*out = before[0]), true);
 }

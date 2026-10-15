@@ -61,30 +61,136 @@ NodeId grow_find_slot_node(const PiecePlan *plan, GrowSlot slot) {
     return PLAN_NODE_NONE;
 }
 
-GrowSlot grow_idea_slot(const PlanThemePairing *pairing, GrowIdea idea, bool *first) {
+const char *grow_idea_name(GrowIdea idea) {
+    static const char *const NAMES[GROW_IDEA_COUNT] = {
+        "basic idea", "repetition", "contrasting idea", "consequent basic idea", "consequent contrasting idea",
+        "fragment 1", "fragment 2", "cadential", "cadential 1", "cadential 2"};
+    return idea >= 0 && idea < GROW_IDEA_COUNT ? NAMES[idea] : "unknown";
+}
+
+bool grow_idea_place(const PlanThemePairing *pairing, GrowIdea idea, GrowPlace *place) {
+    bool presentation = pairing->beginning == PLAN_THEME_BEGINNING_PRESENTATION;
+    bool continuation = pairing->ending == PLAN_THEME_ENDING_CONTINUATION;
+    bool consequent = pairing->ending == PLAN_THEME_ENDING_CONSEQUENT;
+    bool cadential = pairing->ending == PLAN_THEME_ENDING_CADENTIAL;
+    GrowPlace found = GROW_PLACE_BASIC;
+    bool has = false;
+    switch (idea) {
+    case GROW_IDEA_BASIC:
+        has = true;
+        break;
+    case GROW_IDEA_REPETITION:
+        found = GROW_PLACE_REPETITION;
+        has = presentation;
+        break;
+    case GROW_IDEA_CONTRASTING:
+        found = GROW_PLACE_CONTRAST;
+        has = !presentation;
+        break;
+    case GROW_IDEA_CONSEQUENT_BASIC:
+        found = GROW_PLACE_RESTATED;
+        has = consequent;
+        break;
+    case GROW_IDEA_CONSEQUENT_CONTRASTING:
+        found = GROW_PLACE_CONSEQUENT_CONTRAST;
+        has = consequent;
+        break;
+    case GROW_IDEA_FRAGMENT_1:
+        found = GROW_PLACE_FRAGMENT_1;
+        has = continuation;
+        break;
+    case GROW_IDEA_FRAGMENT_2:
+        found = GROW_PLACE_FRAGMENT_2;
+        has = continuation;
+        break;
+    case GROW_IDEA_CADENTIAL:
+        found = GROW_PLACE_CADENTIAL;
+        has = continuation;
+        break;
+    case GROW_IDEA_CADENTIAL_1:
+        found = GROW_PLACE_CADENTIAL_1;
+        has = cadential;
+        break;
+    case GROW_IDEA_CADENTIAL_2:
+        found = GROW_PLACE_CADENTIAL_2;
+        has = cadential;
+        break;
+    case GROW_IDEA_COUNT:
+        break;
+    }
+    if (has && place) {
+        *place = found;
+    }
+    return has;
+}
+
+bool grow_idea_in_pairing(const PlanThemePairing *pairing, GrowIdea idea) {
+    return grow_idea_place(pairing, idea, NULL);
+}
+
+GrowIdea grow_place_idea(const PlanThemePairing *pairing, GrowPlace place) {
+    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
+        GrowPlace at;
+        if (grow_idea_place(pairing, (GrowIdea)idea, &at) && at == place) {
+            return (GrowIdea)idea;
+        }
+    }
+    return GROW_IDEA_BASIC;
+}
+
+size_t grow_place_units(const PlanThemePairing *pairing, GrowPlace place) {
+    bool continuation = pairing->ending == PLAN_THEME_ENDING_CONTINUATION;
+    return (place == GROW_PLACE_FRAGMENT_1 || place == GROW_PLACE_FRAGMENT_2) && continuation ? 1 : 2;
+}
+
+const char *grow_idea_node_name(GrowIdea idea, char *buffer, size_t size) {
+    snprintf(buffer, size, "i%d", (int)idea);
+    return buffer;
+}
+
+NodeId grow_find_idea_node(const PiecePlan *plan, GrowIdea idea) {
+    char wanted[8];
+    grow_idea_node_name(idea, wanted, sizeof(wanted));
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        const char *name = plan_node_name(plan, id);
+        if (plan_node_kind(plan, id) == PLAN_NODE_MOTIVE && name && strcmp(name, wanted) == 0) {
+            return id;
+        }
+    }
+    return PLAN_NODE_NONE;
+}
+
+bool grow_idea_own(const GrowThemeSpec *spec, GrowPlace idea) {
+    bool first;
+    GrowSlot slot = grow_idea_slot(&spec->pairing, idea, &first);
+    return (idea != GROW_PLACE_BASIC && spec->has_idea_source[idea]) ||
+           (idea != GROW_PLACE_BASIC && first && spec->has_slot_source[slot]);
+}
+
+GrowSlot grow_idea_slot(const PlanThemePairing *pairing, GrowPlace idea, bool *first) {
     bool presentation = pairing->beginning == PLAN_THEME_BEGINNING_PRESENTATION;
     GrowSlot slot = GROW_SLOT_BASIC;
     bool is_first = false;
     switch (idea) {
-    case GROW_IDEA_BASIC:
+    case GROW_PLACE_BASIC:
         is_first = true;
         break;
-    case GROW_IDEA_REPETITION: /* also the contrasting idea of the other beginnings */
+    case GROW_PLACE_REPETITION: /* also the contrasting idea of the other beginnings */
         slot = presentation ? GROW_SLOT_BASIC : GROW_SLOT_CONTRASTING;
         is_first = !presentation;
         break;
-    case GROW_IDEA_FRAGMENT_1: /* also the consequent basic idea and cadential 1 */
+    case GROW_PLACE_FRAGMENT_1: /* also the consequent basic idea and cadential 1 */
         slot = pairing->ending == PLAN_THEME_ENDING_CONTINUATION ? GROW_SLOT_CONTINUATION
                : pairing->ending == PLAN_THEME_ENDING_CADENTIAL  ? GROW_SLOT_CADENTIAL
                                                                  : GROW_SLOT_BASIC;
         is_first = slot != GROW_SLOT_BASIC;
         break;
-    case GROW_IDEA_FRAGMENT_2: /* also the consequent contrasting idea and cadential 2 */
+    case GROW_PLACE_FRAGMENT_2: /* also the consequent contrasting idea and cadential 2 */
         slot = pairing->ending == PLAN_THEME_ENDING_CONTINUATION ? GROW_SLOT_CONTINUATION
                : pairing->ending == PLAN_THEME_ENDING_CADENTIAL  ? GROW_SLOT_CADENTIAL
                                                                  : GROW_SLOT_CONTRASTING;
         break;
-    case GROW_IDEA_CADENTIAL:
+    case GROW_PLACE_CADENTIAL:
         slot = GROW_SLOT_CADENTIAL;
         is_first = true;
         break;
@@ -214,6 +320,27 @@ static bool slot_motive_valid(const GrowRequest *request, GrowSlot slot, PlanTim
     return plan_time_compare(motive->length, bar) <= 0;
 }
 
+/* Whether the motive of a single idea is one the theme can be built from: see GrowRequest.idea_motives. */
+static bool idea_motive_valid(const GrowRequest *request, GrowIdea idea, PlanTime bar) {
+    const Motive *motive = request->idea_motives[idea];
+    GrowPlace place;
+    PlanTime room;
+    if (idea == GROW_IDEA_BASIC || !grow_idea_place(&request->pairing, idea, &place) ||
+        motive->form != MOTIVE_FORM_FULL || motive->note_count < 2 ||
+        motive->meter.beats_per_bar != request->meter.beats_per_bar ||
+        motive->meter.beat_unit != request->meter.beat_unit ||
+        (motive->key_source != MOTIVE_KEY_UNSPECIFIED &&
+         (motive->key.tonic_pitch_class != request->key.tonic_pitch_class || motive->key.mode != request->key.mode))) {
+        return false;
+    }
+    size_t units = grow_place_units(&request->pairing, place);
+    if (plan_time_make(bar.num * (long)request->bars * (long)units, bar.den * 8, &room) == PLAN_OK &&
+        plan_time_compare(motive->length, room) > 0) {
+        return false;
+    }
+    return plan_time_compare(motive->length, bar) <= 0;
+}
+
 GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     if (!request || !request->motive || !out) {
         return GROW_ERR_NULL;
@@ -257,7 +384,17 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
             slot_count++;
         }
     }
-    size_t material_bars = GROW_MATERIAL_BARS + slot_count;
+    /* The motives of single ideas follow the slot motives. */
+    size_t idea_count = 0;
+    for (int idea = 0; idea < GROW_IDEA_COUNT; idea++) {
+        if (request->idea_motives[idea]) {
+            if (!idea_motive_valid(request, (GrowIdea)idea, bar)) {
+                return GROW_ERR_BAD_REQUEST;
+            }
+            idea_count++;
+        }
+    }
+    size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count;
     if (accompaniment_motive && plan_time_compare(accompaniment_motive->length, bar) > 0) {
         return GROW_ERR_BAD_REQUEST;
     }
@@ -380,6 +517,20 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         result = from_plan(plan_time_add(material.start, times(bar, slot_bar++), &start));
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, request->slot_motives[slot],
                                                              grow_slot_node_name(slot), NULL, NULL))
+                                   : result;
+    }
+    /* The motives of single ideas follow the slot motives, a bar each. */
+    size_t idea_bar = 1 + slot_count;
+    for (int idea_at = 0; result == GROW_OK && idea_at < GROW_IDEA_COUNT; idea_at++) {
+        PlanTime start;
+        char name[8];
+        if (!request->idea_motives[idea_at]) {
+            continue;
+        }
+        result = from_plan(plan_time_add(material.start, times(bar, idea_bar++), &start));
+        result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, request->idea_motives[idea_at],
+                                                             grow_idea_node_name((GrowIdea)idea_at, name, sizeof(name)),
+                                                             NULL, NULL))
                                    : result;
     }
     if (result == GROW_OK && accompaniment_motive) {

@@ -38,8 +38,11 @@ typedef struct {
  * grow's, with the slots of each theme and the brief added to it.
  */
 typedef struct GrowExt {
-    /* Fills basic, the slot motives, the accompaniment motive and the pool; returns 0 or the status of the error printed. */
-    int (*load)(struct GrowExt *ext, const PlanMeter *meter, const PlanKey *key);
+    /*
+     * Fills basic, the slot motives, the idea motives, the accompaniment motive and the pool; returns 0 or the status of
+     * the error printed. The pairing is the theme's, for the ideas it has.
+     */
+    int (*load)(struct GrowExt *ext, const PlanMeter *meter, const PlanKey *key, const PlanThemePairing *pairing);
     /* Prints, after a theme's developments, the slots of the theme as text, or as the JSON member "slots":[...] when json. */
     void (*print_theme)(const struct GrowExt *ext, const PiecePlan *plan, const GrowOutcome *outcome, bool json);
     /* Prints the brief as text lines, or as the JSON member "brief":{...} (no leading comma) when json. */
@@ -48,6 +51,8 @@ typedef struct GrowExt {
     Motive basic;
     bool has_slot[GROW_SLOT_COUNT]; /* the slots with a motive of their own (not basic) */
     Motive slot_motives[GROW_SLOT_COUNT];
+    bool has_idea[GROW_IDEA_COUNT]; /* the ideas with a motive of their own (not the basic idea) */
+    Motive idea_motives[GROW_IDEA_COUNT];
     bool has_accompaniment_motive;
     Motive accompaniment_motive;
     const GrowPoolForm *pool;
