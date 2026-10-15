@@ -1,6 +1,6 @@
 {
  "schema": "ursatz-theme-request",
- "schema_version": 1,
+ "schema_version": 2,
  "into": "sentence",
  "hybrid": null,
  "key": "D",
@@ -17,8 +17,7 @@
    "pickup": "0",
    "harmony": null,
    "features": [],
-   "role": "melodic",
-   "forms": []
+   "role": "melodic"
   },
   {
    "id": "B",
@@ -27,8 +26,7 @@
    "pickup": "0",
    "harmony": null,
    "features": [],
-   "role": "melodic",
-   "forms": []
+   "role": "melodic"
   }
  ],
  "slots": {

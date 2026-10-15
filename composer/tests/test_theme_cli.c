@@ -8,18 +8,22 @@
 #include "io/midi_importer.h"
 #include "time/tempo_map.h"
 
+#include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 
 /*
- * The `theme` command, run as a process (docs/cli-theme.md, docs/theme-request.md): themes from up to four slot motives, a
- * pool of saved forms and a brief.
+ * The `theme` command, run as a process (docs/cli-theme.md, docs/theme-request.md): themes from up to 16 motives, named
+ * by the slots and the single ideas, and a brief.
  *
  *   one motive   a request with the one motive is the theme `grow` makes of it with the same options and seed
- *   slots        a motive in the contrasting slot of a period gives the antecedent's contrasting idea and the consequent's
- *   pool         an approved saved form is chosen over an unflagged one, either way round; a form whose functions do not fit
- *                is not; a rejected form is refused
+ *   slots        a motive in the contrasting slot of a period gives the antecedent's contrasting idea and the consequent's;
+ *                one motive may be in the basic and the contrasting slot
+ *   ideas        an idea with a motive of its own (the repetition of a sentence, the consequent basic idea of a period)
+ *                asks for that motive, exactly, and its melody is not the idea before it; unknown ideas, ideas the pairing
+ *                has not and a different basic idea are refused
+ *   v2           saved forms and the version 1 request are refused
  *   brief        the done-when case: two motives under a fast minor style with the mode from the style, checked by the
  *                Analyzer: D minor, the style's tempo in the MIDI file, the style's note density in the melody
  *   errors       the exit codes and messages of requests that do not read or cannot be grown
@@ -126,7 +130,6 @@ static void test_contrasting_slot(void) {
         /* The antecedent's contrasting idea is B or a form of B, the consequent's derives from B, the rest from A. */
         slot_line(out, "contrasting idea", line, sizeof(line));
         assert(strstr(line, "contrasting slot, motive B, motive") != NULL ||
-               strstr(line, "contrasting slot, motive B, pool") != NULL ||
                strstr(line, "contrasting slot, motive B, registry") != NULL);
         slot_line(out, "consequent contrasting idea", line, sizeof(line));
         assert(strstr(line, "contrasting slot, motive B,") != NULL);
@@ -134,7 +137,7 @@ static void test_contrasting_slot(void) {
         assert(strstr(line, "basic slot, motive A, motive") != NULL);
         free(out);
     }
-    /* The first idea of the slot is B itself when no saved form is offered. */
+    /* The first idea of the slot is B itself. */
     char *out = theme_output(THEME("period-contrast.json") " --seed 1");
     char line[512];
     slot_line(out, "contrasting idea", line, sizeof(line));
@@ -142,39 +145,145 @@ static void test_contrasting_slot(void) {
     free(out);
 }
 
-/* ------------------------------------------------------------------ pool */
+/* ----------------------------------------------------------------- ideas */
 
-static void test_pool(void) {
+static void test_same_motive(void) {
+    /* One motive in the basic and the contrasting slot: the contrasting ideas are made from it. */
     for (int seed = 1; seed <= 3; seed++) {
         char arguments[512];
         char line[512];
-        snprintf(arguments, sizeof(arguments), "%s --seed %d", THEME("pool-first-approved.json"), seed);
+        snprintf(arguments, sizeof(arguments), "%s --seed %d", THEME("same-motive.json"), seed);
         char *out = theme_output(arguments);
-        slot_line(out, "repetition", line, sizeof(line));
-        assert(strstr(line, "pool mot-up1 (transpose tonal=1 by=1)") != NULL);
-        free(out);
-        /* The flags swapped: the other form is chosen, so it is the flag that decides. */
-        snprintf(arguments, sizeof(arguments), "%s --seed %d", THEME("pool-second-approved.json"), seed);
-        out = theme_output(arguments);
-        slot_line(out, "repetition", line, sizeof(line));
-        assert(strstr(line, "pool mot-up2 (transpose tonal=1 by=2)") != NULL);
-        free(out);
-        /* Forms whose functions do not suit the idea are not offered: the registry's form is. */
-        snprintf(arguments, sizeof(arguments), "%s --seed %d", THEME("pool-unfit.json"), seed);
-        out = theme_output(arguments);
-        slot_line(out, "repetition", line, sizeof(line));
-        assert(strstr(line, "pool") == NULL && strstr(line, "basic slot, motive A, ") != NULL);
+        slot_line(out, "basic idea", line, sizeof(line));
+        assert(strstr(line, "basic slot, motive A,") != NULL);
+        slot_line(out, "contrasting idea", line, sizeof(line));
+        assert(strstr(line, "contrasting slot, motive A,") != NULL);
+        slot_line(out, "consequent contrasting idea", line, sizeof(line));
+        assert(strstr(line, "contrasting slot, motive A,") != NULL);
         free(out);
     }
-    /* The record and --explain name a pool form with its chain. */
-    char *out = theme_output(THEME("pool-first-approved.json") " --seed 1 --explain theme_pool.txt --format json");
-    assert(strstr(out, "\"source\":\"pool\",\"item\":\"mot-up1\",\"chain\":\"transpose tonal=1 by=1\"") != NULL);
+}
+
+/* The melody pitches of the idea named, from the plan; the name of the motive node its melody asks for and how. */
+static size_t idea_melody(const PiecePlan *plan, const char *idea, int *pitches, size_t size, char *node, size_t node_size,
+                          PlanMotiveTransform *transform) {
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        const char *name = plan_node_name(plan, id);
+        if (plan_node_kind(plan, id) != PLAN_NODE_IDEA || !name || strcmp(name, idea) != 0) {
+            continue;
+        }
+        LaneSpanId lanes[16];
+        size_t found = plan_node_lane_spans(plan, id, lanes, 16);
+        for (size_t i = 0; i < found && i < 16; i++) {
+            if (plan_lane_span_lane(plan, lanes[i]) != PLAN_LANE_MELODY || plan_lane_span_voice(plan, lanes[i]) != 0) {
+                continue;
+            }
+            for (size_t k = 0; k < plan_lane_span_constraint_count(plan, lanes[i]); k++) {
+                const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, lanes[i], k);
+                if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
+                    const char *motive = plan_node_name(plan, constraint->params.motive.motive);
+                    snprintf(node, node_size, "%s", motive ? motive : "");
+                    *transform = constraint->params.motive.transform;
+                }
+            }
+            const PlanNotes *notes = &plan_lane_span_payload(plan, lanes[i])->notes;
+            assert(notes->note_count > 0 && notes->note_count <= size);
+            for (size_t n = 0; n < notes->note_count; n++) {
+                pitches[n] = notes->notes[n].midi_pitch;
+            }
+            return notes->note_count;
+        }
+    }
+    assert(!"idea not found");
+    return 0;
+}
+
+static PiecePlan *read_plan(const char *path) {
+    PiecePlan *plan = NULL;
+    PlanJsonError error;
+    assert(plan_read_json_file(path, &plan, &error) == PLAN_OK);
+    return plan;
+}
+
+static void test_idea_motives(void) {
+    for (int seed = 1; seed <= 3; seed++) {
+        char arguments[512];
+        char line[512];
+        /* The repetition of a sentence has the motive R: its melody asks for R exactly, and is not the basic idea's. */
+        snprintf(arguments, sizeof(arguments), "%s --seed %d --out theme_idea.json", THEME("idea-repetition.json"), seed);
+        char *out = theme_output(arguments);
+        slot_line(out, "repetition", line, sizeof(line));
+        assert(strstr(line, "basic slot, motive R, idea") != NULL);
+        slot_line(out, "basic idea", line, sizeof(line));
+        assert(strstr(line, "basic slot, motive A, motive") != NULL);
+        slot_line(out, "fragment 1", line, sizeof(line));
+        assert(strstr(line, "motive A,") != NULL);
+        free(out);
+        PiecePlan *plan = read_plan("theme_idea.json");
+        int basic[64];
+        int repetition[64];
+        char node[32];
+        PlanMotiveTransform transform = PLAN_TRANSFORM_NONE;
+        size_t basic_count = idea_melody(plan, "basic idea", basic, 64, node, sizeof(node), &transform);
+        size_t count = idea_melody(plan, "repetition", repetition, 64, node, sizeof(node), &transform);
+        assert(strcmp(node, "i1") == 0 && transform == PLAN_TRANSFORM_RESTATED);
+        assert(count != basic_count || memcmp(basic, repetition, count * sizeof(int)) != 0);
+        plan_destroy(plan);
+
+        /* The consequent basic idea of a period has the motive C. */
+        snprintf(arguments, sizeof(arguments), "%s --seed %d --out theme_idea.json", THEME("idea-consequent.json"), seed);
+        out = theme_output(arguments);
+        slot_line(out, "consequent basic idea", line, sizeof(line));
+        assert(strstr(line, "basic slot, motive C, idea") != NULL);
+        slot_line(out, "contrasting idea", line, sizeof(line));
+        assert(strstr(line, "contrasting slot, motive B,") != NULL);
+        free(out);
+        plan = read_plan("theme_idea.json");
+        idea_melody(plan, "consequent basic idea", basic, 64, node, sizeof(node), &transform);
+        assert(strcmp(node, "i3") == 0 && transform == PLAN_TRANSFORM_RESTATED);
+        plan_destroy(plan);
+    }
+    /* The JSON names the source of the idea. */
+    char *out = theme_output(THEME("idea-repetition.json") " --seed 1 --format json");
+    assert(strstr(out, "{\"idea\":\"repetition\",\"slot\":\"basic\",\"motive\":\"R\",\"source\":\"idea\"") != NULL);
     free(out);
-    char *explained = read_file("theme_pool.txt");
-    assert(strstr(explained, "pool mot-up1") != NULL && strstr(explained, "transpose tonal=1 by=1") != NULL);
-    free(explained);
-    /* A rejected form is not for a theme. */
-    expect_failure(THEME("rejected-form.json"), 1, "rejected");
+}
+
+/* ------------------------------------------------------------------ v2 */
+
+/* The request of a fixture with the text `from` replaced by `to`, written to `path`. */
+static void write_changed(const char *fixture, const char *from, const char *to, const char *path) {
+    char *text = read_file(fixture);
+    char *at = strstr(text, from);
+    assert(at);
+    FILE *file = fopen(path, "wb");
+    assert(file);
+    fwrite(text, 1, (size_t)(at - text), file);
+    fputs(to, file);
+    fputs(at + strlen(from), file);
+    fclose(file);
+    free(text);
+}
+
+static void test_request_v2(void) {
+    /* Saved forms are no longer read, whatever they hold. */
+    expect_failure(THEME("forms-refused.json"), 1, "saved forms are no longer read; leave \"forms\" out");
+    /* The version 1 request is refused. */
+    write_changed(THEME("one-motive.json"), "\"schema_version\": 2", "\"schema_version\": 1", "theme_v1.json");
+    expect_failure("theme_v1.json", 1, "the request must have \"schema_version\": 2 (see docs/theme-request.md)");
+    /* An idea that is not named so, one the pairing has not, and a basic idea that is not the basic slot's. */
+    write_changed(THEME("idea-repetition.json"), "\"repetition\": \"R\"", "\"first idea\": \"R\"", "theme_idea_unknown.json");
+    expect_failure("theme_idea_unknown.json", 1, "unknown idea 'first idea'");
+    write_changed(THEME("idea-repetition.json"), "\"repetition\": \"R\"", "\"repetition\": \"Z\"", "theme_idea_motive.json");
+    expect_failure("theme_idea_motive.json", 1, "which the request does not have");
+    write_changed(THEME("idea-repetition.json"), "\"into\": \"sentence\"", "\"into\": \"period\"", "theme_idea_pairing.json");
+    expect_failure("theme_idea_pairing.json --seed 1", 1, "idea 'repetition' is not in this theme");
+    write_changed(THEME("idea-repetition.json"), "\"repetition\": \"R\"", "\"basic idea\": \"R\"", "theme_idea_basic.json");
+    expect_failure("theme_idea_basic.json", 1, "the basic idea is the basic slot");
+    /* The basic idea may name the basic slot's own motive. */
+    write_changed(THEME("idea-repetition.json"), "\"repetition\": \"R\"", "\"basic idea\": \"A\", \"repetition\": \"R\"",
+                  "theme_idea_basic_ok.json");
+    free(theme_output("theme_idea_basic_ok.json --seed 1"));
 }
 
 /* ----------------------------------------------------------------- brief */
@@ -283,7 +392,7 @@ static void test_fast_minor(void) {
 static void test_errors(void) {
     FILE *file = fopen("theme_bad.json", "wb");
     assert(file);
-    fputs("{\"schema\": \"something-else\", \"schema_version\": 1}", file);
+    fputs("{\"schema\": \"something-else\", \"schema_version\": 2}", file);
     fclose(file);
     expect_failure("theme_bad.json", 1, "ursatz-theme-request");
     expect_failure("no-such-request.json", 1, "cannot read the request");
@@ -308,7 +417,9 @@ static void test_errors(void) {
 int main(void) {
     test_one_motive();
     test_contrasting_slot();
-    test_pool();
+    test_same_motive();
+    test_idea_motives();
+    test_request_v2();
     test_fast_minor();
     test_errors();
     puts("test_theme_cli: ok");
