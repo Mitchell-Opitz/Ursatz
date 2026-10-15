@@ -56,6 +56,19 @@ longer than the first idea of its slot (two bars of eight for the contrasting id
 or for a slot the pairing has no idea for (a contrasting slot in a sentence, a continuation slot without a continuation, a
 cadential slot in a period). A slot motive keeps no harmony, features or role (a plan keeps only the notes).
 
+### Idea motives
+
+`GrowIdea` names the ideas of a theme as the plan does (`grow_idea_name`: `basic idea`, `repetition`, `contrasting idea`,
+`consequent basic idea`, `consequent contrasting idea`, `fragment 1`, `fragment 2`, `cadential`, `cadential 1`,
+`cadential 2`); `grow_idea_in_pairing` says whether a pairing has one (R-206). `GrowRequest.idea_motives` gives a single idea a
+motive of its own, in place of its slot's for that idea. It is added to the material as the node `i<k>` (k the `GrowIdea`
+value), a Given melody span after the slot motives (the material is a bar longer for each), and the idea's melody asks for it
+directly, as an exact restatement: the motives stage makes no motive for that idea. The other ideas of the slot are made as
+before, and the same `Motive` may back several nodes. Melody-fill places an exact restatement of a motive of its own as that
+motive, not as a copy of the idea before it. `GROW_ERR_BAD_REQUEST` for an idea the pairing does not have, an entry for the
+basic idea, or a motive that is not a full motive of two notes or more in the theme's key and meter or is longer than its idea
+(a bar, or the idea's eighths of the theme when less).
+
 ## The plan
 
 `grow_build_plan` makes a Form over the theme and the material, with the meter and the key as Given lane spans over

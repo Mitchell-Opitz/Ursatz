@@ -1,18 +1,19 @@
 # The theme request
 
-The JSON file `ursatz-composer theme` reads ([cli-theme.md](cli-theme.md), R-166). It holds up to four motives, the slot of
-the theme each one gives the ideas of, the saved forms of those motives the theme may use, and the brief. Schema
-`ursatz-theme-request`, version 1.
+The JSON file `ursatz-composer theme` reads ([cli-theme.md](cli-theme.md), R-166, R-206). It holds up to 16 motives, the slot
+of the theme and the single ideas each one gives, and the brief. Schema `ursatz-theme-request`, version 2: a version 1
+request is an error (`the request must have "schema_version": 2`).
 
 ```json
-{"schema": "ursatz-theme-request", "schema_version": 1,
+{"schema": "ursatz-theme-request", "schema_version": 2,
  "into": "sentence", "hybrid": null, "key": "D", "mode": "minor", "meter": "4/4", "bars": 8,
  "cadence": "PAC", "first_cadence": null,
  "motives": [{"id": "A", "form": "full", "degrees": "1:q b3:e 5:e 1':h", "pickup": "0", "harmony": null,
-              "features": [{"label": "a", "first": 0, "last": 1}], "role": "melodic",
-              "forms": [{"item": "mot-1", "degrees": "2:q 4:e 6:e 2':h", "pickup": "0", "harmony": null, "features": [],
-                         "chain": "transpose tonal=1 by=1", "functions": ["beginning"], "flag": "approved"}]}],
+              "features": [{"label": "a", "first": 0, "last": 1}], "role": "melodic"},
+             {"id": "R", "form": "full", "degrees": "5:e 4:e 3:e 2:e 1:h", "pickup": "0", "harmony": null,
+              "features": [], "role": "melodic"}],
  "slots": {"basic": "A", "contrasting": null, "continuation": null, "cadential": null},
+ "ideas": {"repetition": "R"},
  "accompaniment": null,
  "voicing": null,
  "style": "/abs/path/style.json", "style_weight": "1/2", "without": ["motive-nct-figure"],
@@ -34,20 +35,18 @@ the theme each one gives the ideas of, the saved forms of those motives the them
 
 ## Motives
 
-`motives` has 1 to 4 entries, each with a unique `id`. A motive is a degree list (R-135) read in the key and mode of the
+`motives` has 1 to 16 entries, each with a unique `id`. A motive is a degree list (R-135) read in the key and mode of the
 request, with a `pickup` in beats, its own `harmony` as Roman numerals (or `null`), `features` (`label`, `first` and `last` note
-indices) and a `role`. Only `form: "full"` is read. A slot takes a melodic motive; the accompaniment motive is of the
+indices) and a `role`. Only `form: "full"` is read. A slot or an idea takes a melodic motive; the accompaniment motive is of the
 accompaniment role.
 
-`forms` lists the saved forms of the motive, at most 64: `item` (the saved item's id), `degrees`, `pickup`, `harmony`,
-`features`, `chain` (how the item derives, shown as saved), `functions` (any of `beginning`, `continuation`, `contrast`,
-`cadential`, R-143) and `flag`, `approved` or `unflagged`. A `rejected` form is an error (exit 1): leave it out. The forms
-of a motive belong to the slot that names it; the forms of a motive no slot names are not read.
+`forms` is not read (R-207): a motive with a `forms` member is an error (exit 1, `saved forms are no longer read; leave "forms"
+out`). The forms of the ideas are invented by the motives stage.
 
 ## Slots
 
-`slots` names a motive for each slot by its `id`. `basic` is required; each motive is in at most one slot, and a motive in
-none gives nothing.
+`slots` names a motive for each slot by its `id`. `basic` is required. A motive may be in several slots, and a motive in none
+gives nothing.
 
 | Slot | Ideas it gives |
 | --- | --- |
@@ -59,3 +58,15 @@ none gives nothing.
 A slot the pairing has no idea for (a contrasting slot in a sentence) cannot be grown (exit 2). The motive of a slot other
 than `basic` must be a full motive of two notes or more, in the key and meter, and no longer than the idea it begins: two bars
 of eight for the contrasting idea and the cadential idea, one for fragment 1.
+
+## Ideas
+
+`ideas` gives a single idea a motive of its own: an object from the idea's name to a motive `id` (or `null` for none). The
+names are `basic idea`, `repetition`, `contrasting idea`, `consequent basic idea`, `consequent contrasting idea`,
+`fragment 1`, `fragment 2`, `cadential`, `cadential 1` and `cadential 2`. The idea is made from its motive exactly, in place of
+the slot's motive for that one idea; the other ideas of the slot are made as before. An idea with no entry is made from the
+motive of its slot. The same motive may be given to several ideas and slots.
+
+An unknown idea name, an id the request does not have, or an idea the pairing has not (a `repetition` in a period) is an error
+(exit 1) naming it. The basic idea is the basic slot's: `basic idea` may be named only with the motive of the basic slot.
+The motive of an idea must fit it as a slot motive does (exit 2 when it does not).
