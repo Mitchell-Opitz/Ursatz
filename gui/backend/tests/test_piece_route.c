@@ -264,7 +264,7 @@ static char *create_derived(const char *name, const char *source, const char *fl
 /* The theme body text with the given slots (JSON array text) and the members after "slots" (JSON members, may be ""). */
 static void theme_body(const char *slots, const char *more, char *out, size_t size) {
   snprintf(out, size,
-           "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"key\":\"D\",\"mode\":\"minor\","
+           "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"mode\":\"minor\","
            "\"meter\":\"4/4\",\"bars\":8,\"cadence\":\"PAC\",\"first_cadence\":null},\"slots\":%s%s}}",
            slots, more);
 }
@@ -434,7 +434,7 @@ static bool make_items(Items *m) {
   ok = take(m->unrelated, create_motif("C", "full", "melodic", "C4:q Eb4:e G4:e C5:h", "null")) && ok;
   snprintf(slots, sizeof(slots), "[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1}]", m->a);
   snprintf(body, sizeof(body),
-           "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"key\":\"D\",\"mode\":\"minor\","
+           "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"hybrid\":null,\"mode\":\"minor\","
            "\"meter\":\"4/4\",\"bars\":8,\"cadence\":\"PAC\",\"first_cadence\":null},\"slots\":%s}}",
            slots);
   ok = take(m->theme, create_item("theme", "Theme", body, &status)) && ok;

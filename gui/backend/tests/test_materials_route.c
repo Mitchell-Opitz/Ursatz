@@ -159,6 +159,7 @@ static bool ok_true(const cJSON *json) {
 }
 
 #include "routes/materials.h"
+#include "service/material_service.h"
 #include "server.h"
 
 static const char *kMotifBody =
@@ -1821,6 +1822,42 @@ static void test_tones(void) {
 }
 #endif
 
+/* The one-time clear deletes every theme (referenced or not), leaves its marker, and does not run twice. */
+static void test_clear_themes(void) {
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  remove("materials/themes-cleared");
+  char *motif = create_item("motif", "Kept", project, kMotifBody);
+  char *first = create_item("theme", "Clear one", project, "{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]}}");
+  char *second = create_item("theme", "Clear two", project, "{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]}}");
+  check(motif && first && second, "two themes and a motif are saved");
+  int cleared = ursatz_gui_materials_clear_themes("materials");
+  check(cleared >= 2, "the clear deletes the themes");
+  cJSON *items = NULL;
+  check(ursatz_gui_material_item_list(NULL, "theme", &items) == URSATZ_GUI_MATERIAL_OK && cJSON_GetArraySize(items) == 0,
+        "no theme is left");
+  cJSON_Delete(items);
+  items = NULL;
+  check(ursatz_gui_material_item_list(NULL, "motif", &items) == URSATZ_GUI_MATERIAL_OK && cJSON_GetArraySize(items) >= 1,
+        "the motifs are kept");
+  cJSON_Delete(items);
+  FILE *marker = fopen("materials/themes-cleared", "r");
+  check(marker != NULL, "the clear leaves its marker file");
+  if (marker) {
+    fclose(marker);
+  }
+  char *later = create_item("theme", "Clear later", project, "{\"uses\":[],\"theme\":{\"form\":null,\"slots\":[]}}");
+  check(later != NULL && ursatz_gui_materials_clear_themes("materials") == 0, "the clear does not run twice");
+  items = NULL;
+  check(ursatz_gui_material_item_list(NULL, "theme", &items) == URSATZ_GUI_MATERIAL_OK && cJSON_GetArraySize(items) == 1,
+        "a theme saved after the clear stays");
+  cJSON_Delete(items);
+  free(motif);
+  free(first);
+  free(second);
+  free(later);
+}
+
 int main(void) {
 #ifdef _WIN32
   WSADATA wsa_data;
@@ -1867,6 +1904,7 @@ int main(void) {
 #ifndef _WIN32
   test_tones();
 #endif
+  test_clear_themes();
   test_body_limit();
 
   ursatz_gui_server_stop(ctx);
