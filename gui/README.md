@@ -169,15 +169,12 @@ A theme's detail holds the theme editor (`themes-view.js`; the helpers are in
 composes (see Theme bodies and version files).
 
 - Form: into (sentence, period, hybrid with its pairing, and the first
-  cadence for a period or hybrid), key, mode (major, minor, From the brief),
-  meter, bars (4 or 8) and cadence.
+  cadence for a period or hybrid), mode (major, minor, From the brief),
+  meter, bars (4 or 8) and cadence. A theme is always in C: there is no key.
 - Slots: Basic idea (required), Contrasting idea, Continuation and Cadential.
   Each is a motif picker: a project select, a name search, the motif and its
   version (current by default). Only a full melodic motif is accepted. The
   picker shows the motif's degrees and a Play button (the render route).
-- Pool: Approved and unflagged (default), Approved only or None, with the
-  number of approved and unflagged saved forms each slot motif has (from its
-  variant tree).
 - Accompaniment: None, a pattern (any, block, arpeggiated, Alberti, oom-pah)
   or a motif with the role accompaniment.
 - Brief: collections, composer / source / tag filters, subjects, projects,
@@ -187,7 +184,8 @@ composes (see Theme bodies and version files).
   `without`. Weight is Light (1/4), Normal (1/2) or Strong (1). Tempo (blank
   takes the brief's), Check with the Analyzer and Seed (blank draws one).
 
-Save as new version writes a version without `result`. Compose saves first
+Save as new version writes a version without `result`; its note
+("What changed? (required)") must be filled in. Compose saves first
 when the form changed, then calls the compose route with the buttons disabled
 and a spinner; a refusal shows the backend's message, which carries the
 Composer's message. A slot or accompaniment motif with a newer version shows
@@ -733,21 +731,32 @@ A theme body (the rules are in `service/material_service.h`) is a placeholder or
 placeholder, `form` null or a string and `slots` an array of anything, stays valid so earlier versions still read. A
 body with a `form` object, a slot written as `{slot, item_id, version}` or any of the members below is a composable theme:
 
-- `form`: `{into, hybrid, key, mode, meter, bars, cadence, first_cadence}`; `into` is `sentence`, `period` or
+- `form`: `{into, hybrid, mode, meter, bars, cadence, first_cadence}`; `into` is `sentence`, `period` or
   `hybrid`, `mode` `major`, `minor` or `style` (the style's most common mode), `meter` one of `2/4`, `3/4`, `4/4`,
-  `6/8`, `bars` 4 or 8; each member null or as the Composer routes take it. Compose needs `into`, `key`, `mode` and
-  `meter`.
+  `6/8`, `bars` 4 or 8; each member null or as the Composer routes take it. Compose needs `into`, `mode` and
+  `meter`. A theme is in C: a body with a `key` is refused (`themes are in C; remove key`).
 - `slots`: `[{slot: "basic" | "contrasting" | "continuation" | "cadential", item_id, version}]`, `basic` once and each
-  slot at most once. Each item is a melodic motif of form `full` at an existing version.
-- `pool`: `approved-and-unflagged` (default), `approved` or `none`. `accompaniment`: null, `{pattern}` (`block`,
+  slot at most once; the same item may be in several slots. Each item is a melodic motif of form `full` at an existing
+  version.
+- `ideas`: `[{idea, item_id, version}]`, a motif for a single idea in place of its slot's. `idea` is `basic idea`,
+  `repetition`, `contrasting idea`, `consequent basic idea`, `consequent contrasting idea`, `fragment 1`, `fragment 2`,
+  `cadential`, `cadential 1` or `cadential 2`; each at most once. `chords`: `[{bar, text}]`, the chords given for a
+  bar (`bar` a whole number 0 to 7, `text` up to 64 characters, each bar once; the Composer checks the syntax).
+  `pool` is refused (`themes have no pool`). `accompaniment`: null, `{pattern}` (`block`,
   `arpeggiated`, `alberti`, `oom-pah` or `any`) or `{pattern: "motive", item_id, version}`, a motif of role
   `accompaniment`. `brief`: null or `{scopes, piece_ids, style_ids}` as the styles route takes it. `style_weight`
   `n/d`. `without`: up to 4 of `motive-degrees`, `motive-intervals`, `motive-rhythm`, `motive-nct-figure`. `tempo`:
   null or 20 to 400. `check`: boolean. `seed`: null or a whole number. `result`: null or an object, written by the
   compose route.
-- The server fills `uses` from the slots and the accompaniment motif: a client use of those items is replaced by one
-  use for each version named, with a fresh `copy` (other client uses stay). Moving a use to a newer version moves the
-  slot or accompaniment version with it.
+- The server fills `uses` from the slots, the ideas and the accompaniment motif: a client use of those items is replaced
+  by one use for each version named, with a fresh `copy` (other client uses stay). Moving a use to a newer version moves
+  the slot, idea or accompaniment version with it.
+- The request the compose route writes is `ursatz-theme-request` version 2: key `C`, one motive for each distinct motif
+  version (`M1`, `M2`, ...; the motif's base harmony, its own or the analysis', and its `tone_overrides`), `slots`,
+  `ideas` and `chords`.
+- A new theme version needs a note (`give a version note`); the first is noted `Created` and a compose `Composed`.
+- At start the backend deletes every theme once, for the v2 body (marker `themes-cleared` in `materials/`); a piece
+  that used one then shows its source missing.
 
 A composed version keeps its files beside its body in `items/<id>/v<n>/`: `request.json` (what the Composer read),
 `brief.style.json` (when the theme has a brief), `plan.json`, `theme.mid` and `theme.musicxml`. The folder is written

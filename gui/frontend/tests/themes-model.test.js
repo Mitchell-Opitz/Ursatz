@@ -20,7 +20,6 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 function filled() {
   const state = T.emptyState("thm-1");
-  state.key = "D";
   state.mode = "minor";
   state.slots = [
     { slot: "cadential", item_id: "mot-2", version: 3 },
@@ -34,7 +33,6 @@ const state = filled();
 state.into = "hybrid";
 state.hybrid = "antecedent+continuation";
 state.firstCadence = "IAC";
-state.pool = "approved";
 state.accompaniment = { kind: "motive", pattern: "any", item_id: "mot-9", version: 1 };
 state.picks = [{ kind: "collection", collectionId: "col-1" }, { kind: "piece", id: "pie-1" }];
 state.switches["motive-rhythm"] = false;
@@ -56,7 +54,7 @@ check(back.slots.length === 2 && back.accompaniment.kind === "motive" && back.pi
 check(back.switches["motive-rhythm"] === false && back.switches["motive-degrees"] === true, "the form reads the switches back");
 const sentence = T.bodyFromForm({ ...filled(), into: "sentence", hybrid: "cbi+cadential", firstCadence: "HC" });
 check(sentence.theme.form.hybrid === null && sentence.theme.form.first_cadence === null, "a sentence has no pairing and no first cadence");
-check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-2").key === "C", "a placeholder theme gives the defaults");
+check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-2").mode === "major", "a placeholder theme gives the defaults");
 check(T.bodyFromForm(T.emptyState("x")).theme.brief === null && T.bodyFromForm(T.emptyState("x")).theme.accompaniment === null, "the defaults have no brief and no accompaniment");
 
 /* problems */
@@ -64,18 +62,15 @@ check(same(T.formProblems(filled()), []), "a filled form has no problems");
 check(T.formProblems(T.emptyState("x")).some((p) => /basic/.test(p)), "a missing basic slot is a problem");
 const twice = filled();
 twice.slots = [{ slot: "basic", item_id: "mot-1", version: 1 }, { slot: "continuation", item_id: "mot-1", version: 1 }];
-check(T.formProblems(twice).some((p) => /same motif/.test(p)), "one motif in two slots is a problem");
+check(same(T.formProblems(twice), []), "one motif in two slots is allowed");
 const many = filled();
 many.slots = [1, 2, 3, 4, 5].map((n) => ({ slot: "basic", item_id: `mot-${n}`, version: 1 }));
 check(T.formProblems(many).some((p) => /at most 4/.test(p)), "more than 4 slots is a problem");
-const badKey = filled();
-badKey.key = "H";
-check(T.formProblems(badKey).some((p) => /key/.test(p)), "a bad key is a problem");
-for (const key of ["D", "Bb", "F#", "D minor"]) {
-  const good = filled();
-  good.key = key;
-  check(!T.formProblems(good).some((p) => /key/.test(p)), `the key ${key} is accepted`);
-}
+const keyed = T.bodyFromForm({ ...filled(), key: "D", pool: "approved" });
+check(!("key" in keyed.theme.form) && !("pool" in keyed.theme), "the body has no key and no pool");
+check(!("key" in T.emptyState("x")) && !("pool" in T.emptyState("x")), "the form has no key and no pool");
+const old = T.formFromBody({ uses: [], theme: { form: { into: "sentence", key: "D" }, pool: "approved", slots: [] } }, "thm-3");
+check(!("key" in old) && !("pool" in old), "an old key and pool are not read");
 const badMeter = filled();
 badMeter.meter = "5/4";
 check(T.formProblems(badMeter).some((p) => /meter/.test(p)), "a bad meter is a problem");
@@ -158,7 +153,7 @@ check(same(JSON.parse(T.composeRequest(seeded, {}).body), { seed: 97 }), "the fo
 check(same(JSON.parse(T.composeRequest(seeded, { seed: 5, update_uses: true }).body), { seed: 5, update_uses: true }), "an option seed wins and update_uses is sent");
 check(same(JSON.parse(T.composeRequest(filled(), { seed: "x" }).body), {}), "a seed that is not a number is left out");
 const save = T.saveRequest(filled(), " note ");
-check(save.url === "/api/materials/items/thm-1/versions" && JSON.parse(save.body).note === "note" && JSON.parse(save.body).body.theme.form.key === "D", "save posts a new version");
+check(save.url === "/api/materials/items/thm-1/versions" && JSON.parse(save.body).note === "note" && !("key" in JSON.parse(save.body).body.theme.form), "save posts a new version");
 check(T.versionFileUrl("thm-1", 3, "theme.musicxml") === "/api/materials/items/thm-1/versions/3/files/theme.musicxml", "version file route");
 
 /* pool */

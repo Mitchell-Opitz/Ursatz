@@ -409,6 +409,56 @@ static void test_body_validation(void) {
     CHECK(validate("theme", body) == INVALID, "a theme needs slots");
     cJSON_Delete(body);
 
+    /* the v2 theme body: no key or pool, repeated slot items, ideas and chords */
+    static const char *const kRef = "\"item_id\":\"mot-0123456789abcdef\",\"version\":1";
+    struct {
+        const char *theme;
+        UrsatzGuiMaterialResult result;
+        const char *label;
+    } v2[] = {
+        {"\"form\":{\"into\":\"sentence\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a form with no key"},
+        {"\"form\":{\"into\":\"sentence\",\"key\":\"D\"},\"slots\":[{\"slot\":\"basic\",REF}]", INVALID, "a form key is refused"},
+        {"\"form\":{\"into\":\"sentence\",\"key\":null},\"slots\":[{\"slot\":\"basic\",REF}]", INVALID, "a null form key is refused"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF},{\"slot\":\"cadential\",REF}]", OK, "one item in two slots"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF},{\"slot\":\"basic\",REF}]", INVALID, "a slot named twice"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"pool\":\"approved\"", INVALID, "a pool is refused"},
+        {"\"form\":null,\"slots\":[],\"pool\":\"none\"", INVALID, "a pool is refused on a placeholder too"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[]", OK, "no ideas"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"repetition\",REF},{\"idea\":\"cadential 2\",REF}]", OK,
+         "ideas of a motif"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"repetition\",REF},{\"idea\":\"repetition\",REF}]",
+         INVALID, "an idea named twice"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"coda\",REF}]", INVALID, "an unknown idea"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"repetition\"}]", INVALID, "an idea with no motif"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":{}", INVALID, "ideas that are not a list"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":0,\"text\":\"I\"},{\"bar\":7,\"text\":\"V\"}]", OK,
+         "chords in bars 0 and 7"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":8,\"text\":\"I\"}]", INVALID, "a chord bar of 8"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":-1,\"text\":\"I\"}]", INVALID, "a negative chord bar"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":0.5,\"text\":\"I\"}]", INVALID, "a fractional chord bar"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":1,\"text\":\"I\"},{\"bar\":1,\"text\":\"V\"}]", INVALID,
+         "a chord bar named twice"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":1,\"text\":5}]", INVALID, "a chord text that is not a string"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"chords\":[{\"bar\":1,\"text\":\"" "00000000001111111111222222222233333333334444444444555555555566666\"}]",
+         INVALID, "a chord text of 65 characters"},
+    };
+    for (size_t i = 0; i < sizeof(v2) / sizeof(v2[0]); i++) {
+        char text[900] = "{\"uses\":[],\"theme\":{";
+        for (const char *c = v2[i].theme; *c && strlen(text) + 80 < sizeof(text); c++) {
+            if (strncmp(c, "REF", 3) == 0) {
+                strcat(text, kRef);
+                c += 2;
+            } else {
+                strncat(text, c, 1);
+            }
+        }
+        strcat(text, "}}");
+        body = cJSON_Parse(text);
+        CHECK(body != NULL, "the v2 test body parses");
+        CHECK(validate("theme", body) == v2[i].result, v2[i].label);
+        cJSON_Delete(body);
+    }
+
     /* motif members */
     expect_motif("role", "\"accompaniment\"", OK);
     expect_motif("role", "\"bass\"", INVALID);

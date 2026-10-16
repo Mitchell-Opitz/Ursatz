@@ -1,4 +1,4 @@
-/* The Themes view's editor (P16, R-167): the form, slot motifs, pool and
+/* The Themes view's editor (P16, R-167): the form, slot motifs and
  * accompaniment of a theme, mounted in the theme detail of materials-view.js.
  * Pure parts are in themes-model.js; materialsElement, sendMaterialsRequest,
  * materialsState and renderMaterialsDetail come from materials-view.js. */
@@ -521,9 +521,8 @@ function themeVersionView(viewEl, id, number, body, nameOf, title) {
   const state = ThemesModel.formFromBody(body, id);
   viewEl.appendChild(
     themeFacts([
-      ["Form", `${state.into}${state.into === "hybrid" ? ` (${state.hybrid})` : ""}, ${state.key} ${state.mode}, ${state.meter}, ${state.bars} bars, ${state.cadence}`],
+      ["Form", `${state.into}${state.into === "hybrid" ? ` (${state.hybrid})` : ""}, ${state.mode}, ${state.meter}, ${state.bars} bars, ${state.cadence}`],
       ...state.slots.map((entry) => [ThemesModel.SLOT_LABELS[entry.slot], `${nameOf(entry.item_id)} v${entry.version}`]),
-      ["Pool", state.pool],
       ["Brief", ThemesModel.briefLabel(ThemesModel.briefFromPicks(state.picks))],
     ]),
   );
@@ -606,7 +605,6 @@ function buildThemeEditor(ctx) {
   const [beginning, ending] = state.hybrid.split("+");
   const beginningSelect = themeField(form, "Beginning", themeSelect(ThemesModel.BEGINNINGS, beginning));
   const endingSelect = themeField(form, "Ending", themeSelect(ThemesModel.ENDINGS, ending));
-  const key = themeField(form, "Key", themeInput("D or Bb", state.key));
   const mode = themeField(form, "Mode", themeSelect(ThemesModel.MODES, state.mode));
   const meter = themeField(form, "Meter", themeSelect(ThemesModel.METERS, state.meter));
   const bars = themeField(form, "Bars", themeSelect(ThemesModel.BARS, state.bars));
@@ -619,7 +617,6 @@ function buildThemeEditor(ctx) {
   function syncForm() {
     state.into = into.value;
     state.hybrid = `${beginningSelect.value}+${endingSelect.value}`;
-    state.key = key.value;
     state.mode = mode.value;
     state.meter = meter.value;
     state.bars = Number(bars.value);
@@ -629,7 +626,7 @@ function buildThemeEditor(ctx) {
     endingSelect.parentElement.hidden = state.into !== "hybrid";
     firstCadence.parentElement.hidden = state.into === "sentence";
   }
-  for (const control of [into, beginningSelect, endingSelect, key, mode, meter, bars, cadence, firstCadence]) {
+  for (const control of [into, beginningSelect, endingSelect, mode, meter, bars, cadence, firstCadence]) {
     control.addEventListener("input", syncForm);
   }
   syncForm();
@@ -637,9 +634,6 @@ function buildThemeEditor(ctx) {
 
   /* Slots */
   el.appendChild(materialsElement("h2", "section-title", "Slots"));
-  const pool = buildThemePoolSection(state, nameOf, (value) => {
-    state.pool = value;
-  });
   for (const slot of ThemesModel.SLOT_NAMES) {
     const row = materialsElement("div", "theme-slot");
     row.appendChild(materialsElement("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === "basic" ? " (required)" : ""}`));
@@ -651,16 +645,12 @@ function buildThemeEditor(ctx) {
         if (value) {
           state.slots.push({ slot, item_id: value.item_id, version: value.version });
         }
-        pool.refresh();
       },
     });
     picker.setValue(state.slots.find((entry) => entry.slot === slot));
     row.appendChild(picker.el);
     el.appendChild(row);
   }
-
-  el.appendChild(pool.el);
-  pool.refresh();
 
   el.appendChild(buildThemeAccompanimentSection(state, itemsOf));
 
@@ -679,6 +669,10 @@ function buildThemeEditor(ctx) {
     if (problems().length > 0) {
       return null;
     }
+    if (!note || !note.trim()) {
+      problemsEl.textContent = "Say what changed.";
+      return null;
+    }
     const answer = await sendMaterialsRequest(ThemesModel.saveRequest(state, note));
     if (!answer.ok) {
       ctx.statusEl.classList.add("error");
@@ -688,7 +682,7 @@ function buildThemeEditor(ctx) {
   }
 
   const saveRow = materialsElement("div", "upload-controls");
-  const noteInput = themeInput("Version note (optional)", "");
+  const noteInput = themeInput("What changed? (required)", "");
   const saveButton = themeButton("Save as new version", async () => {
     const answer = await save(noteInput.value);
     if (answer && answer.ok) {

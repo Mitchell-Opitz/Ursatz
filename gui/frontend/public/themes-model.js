@@ -1,8 +1,8 @@
 /* Themes view (P16): the theme form state, the version body it makes, its
  * problems, the brief picks, the compose request and the rows of a result.
  * No DOM; themes-view.js renders from these. The form state is
- *   {id, uses, into, hybrid, key, mode, meter, bars, cadence, firstCadence,
- *    slots: [{slot, item_id, version}], pool, accompaniment: {kind, pattern,
+ *   {id, uses, into, hybrid, mode, meter, bars, cadence, firstCadence,
+ *    slots: [{slot, item_id, version}], accompaniment: {kind, pattern,
  *    item_id, version}, picks: [...], switches: {<category>: bool}, weight,
  *    tempo, check, seed}
  * with tempo and seed as the text typed (blank for none). */
@@ -93,14 +93,12 @@
       uses: [],
       into: "sentence",
       hybrid: "presentation+continuation",
-      key: "C",
       mode: "major",
       meter: "4/4",
       bars: 8,
       cadence: "PAC",
       firstCadence: "",
       slots: [],
-      pool: "approved-and-unflagged",
       accompaniment: { kind: "none", pattern: "any", item_id: "", version: 0 },
       picks: [],
       switches: allSwitches(true),
@@ -286,7 +284,6 @@
       form: {
         into: s.into,
         hybrid: hybrid ? text(s.hybrid) : null,
-        key: text(s.key),
         mode: s.mode,
         meter: s.meter,
         bars: Number(s.bars),
@@ -294,7 +291,6 @@
         first_cadence: firstCadence,
       },
       slots: slotEntries(s.slots),
-      pool: s.pool,
       accompaniment,
       brief,
       style_weight: s.weight,
@@ -319,9 +315,6 @@
     if (typeof form.hybrid === "string" && form.hybrid !== "") {
       state.hybrid = form.hybrid;
     }
-    if (typeof form.key === "string" && form.key !== "") {
-      state.key = form.key;
-    }
     if (MODES.some((entry) => entry.value === form.mode)) {
       state.mode = form.mode;
     }
@@ -338,9 +331,6 @@
       state.firstCadence = form.first_cadence;
     }
     state.slots = slotEntries((Array.isArray(theme.slots) ? theme.slots : []).filter((slot) => slot && typeof slot === "object"));
-    if (POOLS.some((entry) => entry.value === theme.pool)) {
-      state.pool = theme.pool;
-    }
     const acc = theme.accompaniment;
     if (acc && typeof acc === "object") {
       state.accompaniment =
@@ -359,10 +349,6 @@
     return state;
   }
 
-  function keyOk(key) {
-    return /^[A-G][#b]?( (major|minor))?$/.test(text(key)) && text(key).length <= 16;
-  }
-
   function hybridOk(pairing) {
     const parts = text(pairing).split("+");
     return parts.length === 2 && BEGINNINGS.includes(parts[0]) && ENDINGS.includes(parts[1]);
@@ -378,19 +364,6 @@
     }
     if (!slots.some((entry) => entry && entry.slot === "basic" && text(entry.item_id))) {
       problems.push("The basic idea needs a motif.");
-    }
-    const seen = new Set();
-    for (const entry of slots) {
-      if (entry && text(entry.item_id)) {
-        if (seen.has(entry.item_id)) {
-          problems.push("Two slots use the same motif.");
-          break;
-        }
-        seen.add(entry.item_id);
-      }
-    }
-    if (!keyOk(s.key)) {
-      problems.push("The key must be a tonic such as D or Bb.");
     }
     if (!METERS.includes(s.meter)) {
       problems.push("The meter must be 2/4, 3/4, 4/4 or 6/8.");
