@@ -55,6 +55,21 @@ GivenResult plan_give_melody(PiecePlan *plan, NodeId section, size_t bar, const 
 GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, const char *const *numerals, size_t count,
                                   size_t cells_per_chord);
 
+/* One chord at an exact place: onset from the section's start, length to its end. */
+typedef struct {
+    const char *numeral;
+    PlanTime onset;
+    PlanTime length;
+} GivenChord;
+
+/*
+ * One Given harmony span for each chord, exactly its onset and length (not on the cell grid), numerals read as
+ * plan_give_progression reads them. The chords lie inside the section, each inside one key span, clear of each other
+ * and of the harmony already there; the meter must be one the harmony operators support. A refused call leaves the
+ * plan as it was.
+ */
+GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *chords, size_t count);
+
 /* A bass span, as long as the notes need in whole bars, Given. */
 GivenResult plan_give_bass(PiecePlan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count);
 

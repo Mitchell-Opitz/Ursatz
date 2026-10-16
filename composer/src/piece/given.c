@@ -283,6 +283,59 @@ GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, c
     return result;
 }
 
+GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *chords, size_t count) {
+    Placement placement;
+    GivenResult result = read_placement(plan, section, 0, &placement);
+    if (result != GIVEN_OK) {
+        return result;
+    }
+    if (!chords || count == 0 || count > 4096) {
+        return GIVEN_ERR_BAD_NUMERAL;
+    }
+    PlanHarmony *payloads = calloc(count, sizeof(PlanHarmony));
+    PlanSpan *spans = calloc(count, sizeof(PlanSpan));
+    if (!payloads || !spans) {
+        free(payloads);
+        free(spans);
+        return GIVEN_ERR_PLAN;
+    }
+    for (size_t i = 0; result == GIVEN_OK && i < count; i++) {
+        PlanKey key;
+        if (chords[i].onset.num < 0 || chords[i].onset.den <= 0 || chords[i].length.num <= 0 ||
+            chords[i].length.den <= 0 ||
+            plan_time_add(placement.section.start, chords[i].onset, &spans[i].start) != PLAN_OK) {
+            result = GIVEN_ERR_BAD_NUMERAL;
+            break;
+        }
+        spans[i].length = chords[i].length;
+        result = check_room(plan, &placement, PLAN_LANE_HARMONY, 0, spans[i], &key);
+        if (result == GIVEN_OK && !numeral_payload(key.mode, chords[i].numeral, &payloads[i])) {
+            result = GIVEN_ERR_BAD_NUMERAL;
+        }
+        for (size_t j = 0; result == GIVEN_OK && j < i; j++) {
+            PlanTime end_i, end_j;
+            if (plan_span_end(spans[i], &end_i) != PLAN_OK || plan_span_end(spans[j], &end_j) != PLAN_OK) {
+                result = GIVEN_ERR_PLAN;
+            } else if (plan_time_compare(spans[i].start, end_j) < 0 && plan_time_compare(spans[j].start, end_i) < 0) {
+                result = GIVEN_ERR_OVERLAP;
+            }
+        }
+    }
+    for (size_t i = 0; result == GIVEN_OK && i < count; i++) {
+        PlanLanePayload payload;
+        LaneSpanId id;
+        memset(&payload, 0, sizeof(payload));
+        payload.harmony = payloads[i];
+        if (plan_add_lane_span(plan, section, PLAN_LANE_HARMONY, 0, spans[i], &payload, &id) != PLAN_OK ||
+            plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) != PLAN_OK) {
+            result = GIVEN_ERR_PLAN;
+        }
+    }
+    free(payloads);
+    free(spans);
+    return result;
+}
+
 /* ------------------------------------------------------------- a section */
 
 static void drop_motive_refs(PlanConstraint *constraints, size_t *count) {
