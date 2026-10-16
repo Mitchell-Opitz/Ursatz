@@ -24,6 +24,7 @@ add_ursatz_test(motif_detection)
 add_ursatz_test(motif_window_matching)
 add_ursatz_test(motive_sketch)
 add_ursatz_test(motive_relation)
+add_ursatz_test(motive_tone_roles)
 add_ursatz_test(motive_variant_recognition)
 add_ursatz_test(motive_link)
 
@@ -34,6 +35,13 @@ if(URSATZ_ANALYSIS_VALGRIND)
   add_test(NAME motive_link_valgrind
            COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_motive_link>)
+endif()
+
+# Scoped memcheck for the motive tone roles test, same pattern.
+if(URSATZ_ANALYSIS_VALGRIND)
+  add_test(NAME motive_tone_roles_valgrind
+           COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_motive_tone_roles>)
 endif()
 add_ursatz_test(phrase_segmentation)
 add_ursatz_test(phrase_boundary_detection)

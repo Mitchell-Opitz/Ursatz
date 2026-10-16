@@ -1,5 +1,7 @@
 #include "analysis/motive_relation.h"
 
+#include "analysis/motive_chord_internal.h"
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -823,45 +825,6 @@ static MotiveRelationResult apply_shift_feature(const MotiveSketch *in, const Mo
 
 /* --- harmony and melody adaptation (Exs. 25 to 29) ----------------------------------------------- */
 
-static const MotiveSketchChord *chord_at(const MotiveSketch *sketch, ExactRational onset) {
-    const MotiveSketchChord *found = NULL;
-    for (size_t c = 0; c < sketch->chord_count; c++) {
-        if (msk_cmp(sketch->chords[c].onset, onset) <= 0) {
-            found = &sketch->chords[c];
-        }
-    }
-    return found;
-}
-
-static int pitch_class(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
-
-static bool has_pc(const int *pcs, size_t count, int pc) {
-    for (size_t i = 0; i < count; i++) {
-        if (pcs[i] == pc) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool same_tones(const MotiveSketch *sketch, const MotiveSketchChord *a, const MotiveSketchChord *b) {
-    int x[4];
-    int y[4];
-    size_t nx = motive_sketch_chord_tones(sketch, a, x);
-    size_t ny = motive_sketch_chord_tones(sketch, b, y);
-    if (nx != ny) {
-        return false;
-    }
-    for (size_t i = 0; i < nx; i++) {
-        if (!has_pc(y, ny, x[i])) {
-            return false;
-        }
-    }
-    return true;
-}
-
 /* The chord whose triad holds the most notes (then the most time), the first of I V IV vi ii iii vii on a tie. */
 static bool implied_chord(const MotiveSketch *sketch, MotiveSketchChord *out) {
     static const int ORDER[7] = {1, 5, 4, 6, 2, 3, 7};
@@ -875,7 +838,7 @@ static bool implied_chord(const MotiveSketch *sketch, MotiveSketchChord *out) {
         size_t hits = 0;
         ExactRational time = msk_int(0);
         for (size_t i = 0; i < sketch->note_count; i++) {
-            if (has_pc(pcs, count, pitch_class(sketch->notes[i].pitch))) {
+            if (mch_has_pc(pcs, count, mch_pitch_class(sketch->notes[i].pitch))) {
                 hits++;
                 time = msk_add(time, sketch->notes[i].duration);
             }
@@ -938,14 +901,14 @@ static void adapt_melody(const MotiveSketch *before, MotiveSketch *sketch) {
         if (motive_sketch_strength(sketch, note->onset) == 0) {
             continue;
         }
-        const MotiveSketchChord *old_chord = chord_at(before, note->onset);
-        const MotiveSketchChord *new_chord = chord_at(sketch, note->onset);
-        if (!new_chord || (old_chord && same_tones(sketch, old_chord, new_chord))) {
+        const MotiveSketchChord *old_chord = mch_chord_at(before, note->onset);
+        const MotiveSketchChord *new_chord = mch_chord_at(sketch, note->onset);
+        if (!new_chord || (old_chord && mch_same_tones(sketch, old_chord, new_chord))) {
             continue;
         }
         int pcs[4];
         size_t count = motive_sketch_chord_tones(sketch, new_chord, pcs);
-        if (has_pc(pcs, count, pitch_class(note->pitch))) {
+        if (mch_has_pc(pcs, count, mch_pitch_class(note->pitch))) {
             continue;
         }
         int preferred = i > 0 && before->notes[i].pitch < before->notes[i - 1].pitch ? -1 : 1;
@@ -954,7 +917,7 @@ static void adapt_melody(const MotiveSketch *before, MotiveSketch *sketch) {
         for (int distance = 1; distance <= 12 && chosen < 0; distance++) {
             for (int k = 0; k < 2 && chosen < 0; k++) {
                 int pitch = note->pitch + (k == 0 ? preferred : -preferred) * distance;
-                if (!midi(pitch) || !has_pc(pcs, count, pitch_class(pitch))) {
+                if (!midi(pitch) || !mch_has_pc(pcs, count, mch_pitch_class(pitch))) {
                     continue;
                 }
                 if (nearest < 0) {
@@ -1184,10 +1147,10 @@ static MotiveRelationResult apply_counter_line(const MotiveSketch *in, const Mot
     size_t i = 0;
     while (i < out->note_count) {
         /* A run of notes on one pitch inside one chord. */
-        const MotiveSketchChord *chord = chord_at(out, out->notes[i].onset);
+        const MotiveSketchChord *chord = mch_chord_at(out, out->notes[i].onset);
         size_t end = i + 1;
         while (end < out->note_count && out->notes[end].pitch == out->notes[i].pitch &&
-               chord_at(out, out->notes[end].onset) == chord) {
+               mch_chord_at(out, out->notes[end].onset) == chord) {
             end++;
         }
         if (end - i >= 2 && chord) {
@@ -1200,7 +1163,7 @@ static MotiveRelationResult apply_counter_line(const MotiveSketch *in, const Mot
             for (int d = 1; d <= 12 && target < 0; d++) {
                 for (int k = 0; k < 2 && target < 0; k++) {
                     int candidate = pitch + (k == 0 ? d : -d);
-                    if (midi(candidate) && has_pc(pcs, count, pitch_class(candidate))) {
+                    if (midi(candidate) && mch_has_pc(pcs, count, mch_pitch_class(candidate))) {
                         target = candidate;
                     }
                 }
@@ -1347,14 +1310,14 @@ static MotiveRelationResult replace_with_chord_tone(MotiveSketch *sketch, const 
     if (!motive_sketch_expressible(span)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
-    const MotiveSketchChord *chord = chord_at(sketch, first.onset);
+    const MotiveSketchChord *chord = mch_chord_at(sketch, first.onset);
     int pcs[4];
     size_t count = chord ? motive_sketch_chord_tones(sketch, chord, pcs) : 0;
     int pitch = -1;
     for (int d = 0; d <= 12 && pitch < 0 && count > 0; d++) {
         for (int k = 0; k < 2 && pitch < 0; k++) {
             int candidate = first.pitch + (k == 0 ? d : -d);
-            if (midi(candidate) && has_pc(pcs, count, pitch_class(candidate))) {
+            if (midi(candidate) && mch_has_pc(pcs, count, mch_pitch_class(candidate))) {
                 pitch = candidate;
             }
         }
