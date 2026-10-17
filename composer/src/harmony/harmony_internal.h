@@ -142,6 +142,13 @@ typedef struct {
 bool harmony_diatonic_intervals(PlanKeyMode mode, const HarmonyChord *chord, int intervals[4], size_t *count);
 bool harmony_applied_intervals(const HarmonyAppliedChord *applied, int intervals[4], size_t *count);
 
+/*
+ * The Given chords before the target and its one chord, in a row (sequence has room for HARMONY_JOIN_CHORDS + 1), and the
+ * metre they sit on, to judge a target too short for two chords. False when there are no chords before or they do not measure.
+ */
+bool harmony_joined_chain(const PhraseRequest *request, const PhraseChord *chords, PhraseChord *sequence,
+                          PhraseMetre *metre);
+
 /* A phrase as the recognizer is shown it. */
 typedef struct {
     const PhraseChord *chords;
