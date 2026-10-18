@@ -525,6 +525,13 @@ static void print_number(const ComposerRatio *ratio) {
     }
 }
 
+static void theme_print_slots(const GrowExt *base, const PiecePlan *plan, const GrowOutcome *outcome, bool json);
+
+/* Whether the extension is the theme command's: the piece command prints its brief with this function too. */
+static const ThemeExt *theme_ext_of(const GrowExt *base) {
+    return base && base->print_theme == theme_print_slots ? (const ThemeExt *)base : NULL;
+}
+
 /* The chords the request gave, as read: [{"bar", "text"}]. */
 static void print_chords_json(const ThemeExt *ext) {
     const cJSON *list = cJSON_GetObjectItemCaseSensitive(ext->root, "chords");
@@ -540,7 +547,7 @@ static void print_chords_json(const ThemeExt *ext) {
 }
 
 void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
-    const ThemeExt *ext = (const ThemeExt *)base;
+    const ThemeExt *ext = theme_ext_of(base);
     if (json) {
         printf("\"brief\":{\"tempo\":{\"qpm\":");
         if (brief->tempo.denominator > 0) {
@@ -560,8 +567,11 @@ void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
             printf("%s", i ? "," : "");
             cli_print_json_string(brief->without[i]);
         }
-        printf("]},");
-        print_chords_json(ext);
+        printf("]}");
+        if (ext) {
+            printf(",");
+            print_chords_json(ext);
+        }
         return;
     }
     printf("brief: mode %s (%s)", brief->minor ? "minor" : "major", brief->mode_from);
@@ -582,7 +592,7 @@ void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
         }
     }
     printf("\n");
-    const cJSON *list = cJSON_GetObjectItemCaseSensitive(ext->root, "chords");
+    const cJSON *list = ext ? cJSON_GetObjectItemCaseSensitive(ext->root, "chords") : NULL;
     const cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, cJSON_IsArray(list) ? list : NULL) {
         printf("chords bar %ld: %s\n", (long)cJSON_GetObjectItemCaseSensitive(entry, "bar")->valuedouble,
