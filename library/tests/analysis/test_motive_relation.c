@@ -997,7 +997,8 @@ static void test_dominant_form(void) {
     assert(apply(&sketch, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
     assert(out.chord_count == 2 && out.chords[0].degree == 5 && out.chords[1].degree == 1);
     assert(msk_eq(out.chords[1].onset, q(1, 2)));
-    int fourth_down[4] = {55, 59, 67, 60};
+    /* The last E was unclassified (it ends the motive), so it is left where the fourth put it. */
+    int fourth_down[4] = {55, 59, 67, 59};
     assert_pitches(&out, fourth_down, 4);
     for (size_t i = 0; i < 4; i++) {
         assert(msk_eq(out.notes[i].onset, sketch.notes[i].onset));
@@ -1036,8 +1037,8 @@ static void test_dominant_form(void) {
     MotiveSketch low = sketch;
     low.notes[0].pitch = 2;
     assert(apply(&low, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
-    /* The fourth down is out of range, so the fifth up (A), which the V then moves to its B. */
-    assert(out.notes[0].pitch == 11);
+    /* The fourth down is out of range, so the fifth up (A). The D was no chord tone of the I, so the V leaves it. */
+    assert(out.notes[0].pitch == 9);
     MotiveSketch no_scale = sketch;
     no_scale.has_scale = false;
     assert(apply(&no_scale, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_NO_SCALE);

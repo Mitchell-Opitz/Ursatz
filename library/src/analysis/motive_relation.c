@@ -1,6 +1,7 @@
 #include "analysis/motive_relation.h"
 
 #include "analysis/motive_chord_internal.h"
+#include "analysis/motive_tone_roles.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -889,16 +890,50 @@ static bool keeps_directions(const MotiveSketch *before, const MotiveSketch *ske
     return true;
 }
 
+/* The pitch of the new chord's tones nearest note i (within an octave), by the rules of adapt_melody; -1 for none. */
+static int nearest_chord_pitch(const MotiveSketch *before, const MotiveSketch *sketch, size_t i, const int *pcs,
+                               size_t count) {
+    int pitch = sketch->notes[i].pitch;
+    int preferred = i > 0 && before->notes[i].pitch < before->notes[i - 1].pitch ? -1 : 1;
+    int nearest = -1;
+    for (int distance = 1; distance <= 12; distance++) {
+        for (int k = 0; k < 2; k++) {
+            int candidate = pitch + (k == 0 ? preferred : -preferred) * distance;
+            if (!midi(candidate) || !mch_has_pc(pcs, count, mch_pitch_class(candidate))) {
+                continue;
+            }
+            if (nearest < 0) {
+                nearest = candidate;
+            }
+            if (keeps_directions(before, sketch, i, candidate)) {
+                return candidate;
+            }
+            if (distance > 6) {
+                return nearest;
+            }
+        }
+    }
+    return nearest;
+}
+
 /*
- * The melody after the chords changed from those of before to those of sketch: a note on a beat whose chord changed
- * and that is not a chord tone of the new chord moves to the nearest chord tone (within an octave). Of the tones at
- * one distance, the one in the direction from the previous note comes first (up for the first note); the first of the
- * nearest that keeps the contour's directions is taken, and if none within six semitones does, the nearest.
+ * The melody after the chords changed from those of before to those of sketch, through the tone roles of the melody
+ * before the change (motive_tone_roles):
+ *  - a note that was a chord tone and is not one of its new chord moves to the nearest tone of the new chord (within
+ *    an octave). Of the tones at one distance, the one in the direction from the previous note comes first (up for
+ *    the first note); the first of the nearest that keeps the contour's directions is taken, and if none within six
+ *    semitones does, the nearest;
+ *  - a non-chord tone whose resolution target moved moves by the same scale steps, so it still resolves the way it
+ *    did. One whose figure no longer fits after that is left as it is (it is unclassified in the result).
  */
 static void adapt_melody(const MotiveSketch *before, MotiveSketch *sketch) {
+    MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
+    if (motive_tone_roles(before, NULL, 0, labels) != MOTIVE_TONE_OK) {
+        return;
+    }
     for (size_t i = 0; i < sketch->note_count; i++) {
         MotiveSketchNote *note = &sketch->notes[i];
-        if (motive_sketch_strength(sketch, note->onset) == 0) {
+        if (labels[i].role != MOTIVE_TONE_CHORD) {
             continue;
         }
         const MotiveSketchChord *old_chord = mch_chord_at(before, note->onset);
@@ -911,30 +946,29 @@ static void adapt_melody(const MotiveSketch *before, MotiveSketch *sketch) {
         if (mch_has_pc(pcs, count, mch_pitch_class(note->pitch))) {
             continue;
         }
-        int preferred = i > 0 && before->notes[i].pitch < before->notes[i - 1].pitch ? -1 : 1;
-        int nearest = -1;
-        int chosen = -1;
-        for (int distance = 1; distance <= 12 && chosen < 0; distance++) {
-            for (int k = 0; k < 2 && chosen < 0; k++) {
-                int pitch = note->pitch + (k == 0 ? preferred : -preferred) * distance;
-                if (!midi(pitch) || !mch_has_pc(pcs, count, mch_pitch_class(pitch))) {
-                    continue;
-                }
-                if (nearest < 0) {
-                    nearest = pitch;
-                }
-                if (keeps_directions(before, sketch, i, pitch)) {
-                    chosen = pitch;
-                } else if (distance > 6) {
-                    chosen = nearest;
-                }
-            }
-        }
-        if (chosen < 0) {
-            chosen = nearest;
-        }
+        int chosen = nearest_chord_pitch(before, sketch, i, pcs, count);
         if (chosen >= 0) {
             note->pitch = chosen;
+        }
+    }
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        if (labels[i].role != MOTIVE_TONE_NON_CHORD || labels[i].resolves_to < 0) {
+            continue;
+        }
+        /* The target's move in scale steps, less the move the note has already made (dominant-form transposes). */
+        size_t target = (size_t)labels[i].resolves_to;
+        long delta = motive_sketch_step(sketch, sketch->notes[target].pitch, NULL) -
+                     motive_sketch_step(sketch, before->notes[target].pitch, NULL) -
+                     (motive_sketch_step(sketch, sketch->notes[i].pitch, NULL) -
+                      motive_sketch_step(sketch, before->notes[i].pitch, NULL));
+        if (delta == 0) {
+            continue;
+        }
+        int alteration;
+        long at = motive_sketch_step(sketch, sketch->notes[i].pitch, &alteration);
+        long pitch = motive_sketch_pitch_at_step(sketch, at + delta, alteration);
+        if (midi(pitch)) {
+            sketch->notes[i].pitch = (int)pitch;
         }
     }
 }
