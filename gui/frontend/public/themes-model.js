@@ -54,6 +54,13 @@
     { category: "motive-nct-figure", label: "non-chord figures" },
   ];
   const SWITCH_TEXT = "Use the brief's motive degrees, intervals, rhythm, non-chord figures";
+  const THEME_TABS = [
+    { id: "theme", label: "Theme" },
+    { id: "structure", label: "Structure" },
+    { id: "used-by", label: "Used by" },
+    { id: "other", label: "Other" },
+  ];
+  const THEME_TAB_KEY = "ursatz.theme.tab";
   const MAX_SLOTS = 4;
   const TEMPO_MIN = 20;
   const TEMPO_MAX = 400;
@@ -107,6 +114,24 @@
       check: false,
       seed: "",
     };
+  }
+
+  /* The remembered theme tab id, "theme" when unset, unknown or storage is unavailable. */
+  function readThemeTab() {
+    try {
+      const saved = root.localStorage.getItem(THEME_TAB_KEY);
+      return THEME_TABS.some((tab) => tab.id === saved) ? saved : THEME_TABS[0].id;
+    } catch (err) {
+      return THEME_TABS[0].id;
+    }
+  }
+
+  function writeThemeTab(id) {
+    try {
+      root.localStorage.setItem(THEME_TAB_KEY, id);
+    } catch (err) {
+      // Storage unavailable: the tab just is not remembered.
+    }
   }
 
   /* --- the brief ------------------------------------------------------- */
@@ -716,6 +741,9 @@
     WEIGHTS,
     MOTIVE_CATEGORIES,
     SWITCH_TEXT,
+    THEME_TABS,
+    readThemeTab,
+    writeThemeTab,
     emptyState,
     bodyFromForm,
     formFromBody,

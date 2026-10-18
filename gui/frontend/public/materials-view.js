@@ -1187,25 +1187,16 @@ async function renderMaterialsDetail(type, id, analysisError) {
     return;
   }
   if (type === "theme") {
-    const editor = buildThemeEditor({
+    ThemeDetailView.render(content, {
       id,
-      body: answer.data.body,
-      usesStatus: answer.data.uses_status,
-      items: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
+      item,
+      data: answer.data,
       statusEl,
-      saved: () => renderMaterialsDetail(type, id),
-    });
-    content.appendChild(editor.el);
-    const resultEl = buildThemeResult({
-      id,
-      version: item.current_version,
-      theme: answer.data.body.theme,
+      allItems: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
       nameOf: itemNameOf,
-      title: item.name,
+      rerender: () => renderMaterialsDetail(type, id),
     });
-    if (resultEl) {
-      content.appendChild(resultEl);
-    }
+    return;
   }
   if (type === "piece") {
     const editor = buildPieceEditor({
@@ -1241,12 +1232,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
     }),
   );
   content.appendChild(buildUsedBySection(answer.data.used_by));
-  let renderThemeVersion;
-  if (type === "theme") {
-    renderThemeVersion = (number, body) => themeVersionView(versionEl, id, number, body, itemNameOf, item.name);
-  } else if (type === "piece") {
-    renderThemeVersion = (number, body) => pieceVersionView(versionEl, id, number, body, itemNameOf, item.name);
-  }
-  content.appendChild(buildVersionsList(item, versionEl, statusEl, renderThemeVersion));
+  const renderPieceVersion = type === "piece" ? (number, body) => pieceVersionView(versionEl, id, number, body, itemNameOf, item.name) : undefined;
+  content.appendChild(buildVersionsList(item, versionEl, statusEl, renderPieceVersion));
   content.appendChild(versionEl);
 }
