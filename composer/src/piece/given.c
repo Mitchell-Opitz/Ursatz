@@ -234,6 +234,19 @@ static bool numeral_payload(PlanKeyMode mode, const char *numeral, PlanHarmony *
     return false;
 }
 
+/* One Given harmony span with the payload of a numeral. */
+static GivenResult add_given_harmony(PiecePlan *plan, NodeId section, PlanSpan span, const PlanHarmony *harmony) {
+    PlanLanePayload payload;
+    LaneSpanId id;
+    memset(&payload, 0, sizeof(payload));
+    payload.harmony = *harmony;
+    if (plan_add_lane_span(plan, section, PLAN_LANE_HARMONY, 0, span, &payload, &id) != PLAN_OK ||
+        plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) != PLAN_OK) {
+        return GIVEN_ERR_PLAN;
+    }
+    return GIVEN_OK;
+}
+
 GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, const char *const *numerals, size_t count,
                                   size_t cells_per_chord) {
     Placement placement;
@@ -269,15 +282,9 @@ GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, c
     result = GIVEN_OK;
     for (size_t i = 0; result == GIVEN_OK && i < count; i++) {
         PlanSpan span = {{0, 1}, times(cell_length, cells_per_chord)};
-        PlanLanePayload payload;
-        LaneSpanId id;
-        memset(&payload, 0, sizeof(payload));
-        payload.harmony = payloads[i];
-        if (plan_time_add(placement.start, times(cell_length, i * cells_per_chord), &span.start) != PLAN_OK ||
-            plan_add_lane_span(plan, section, PLAN_LANE_HARMONY, 0, span, &payload, &id) != PLAN_OK ||
-            plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) != PLAN_OK) {
-            result = GIVEN_ERR_PLAN;
-        }
+        result = plan_time_add(placement.start, times(cell_length, i * cells_per_chord), &span.start) == PLAN_OK
+                     ? add_given_harmony(plan, section, span, &payloads[i])
+                     : GIVEN_ERR_PLAN;
     }
     free(payloads);
     return result;
@@ -322,14 +329,7 @@ GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *
         }
     }
     for (size_t i = 0; result == GIVEN_OK && i < count; i++) {
-        PlanLanePayload payload;
-        LaneSpanId id;
-        memset(&payload, 0, sizeof(payload));
-        payload.harmony = payloads[i];
-        if (plan_add_lane_span(plan, section, PLAN_LANE_HARMONY, 0, spans[i], &payload, &id) != PLAN_OK ||
-            plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) != PLAN_OK) {
-            result = GIVEN_ERR_PLAN;
-        }
+        result = add_given_harmony(plan, section, spans[i], &payloads[i]);
     }
     free(payloads);
     free(spans);
