@@ -422,6 +422,20 @@ static int read_chords(ThemeExt *ext, const PlanMeter *meter, const PlanKey *key
                 half_beats.den != 1) {
                 return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: a chord starts on a beat or a half beat", bar);
             }
+            PlanTime cell;
+            PlanTime in_cells;
+            if (!given_cell_length(meter, &cell) ||
+                plan_time_make(chord->onset.num * (long)cell.den, chord->onset.den * (unsigned long)cell.num, &in_cells) !=
+                    PLAN_OK ||
+                in_cells.den != 1) {
+                /* The harmony and bass operators write chords on the cells of the meter only (see docs/theme-request.md). */
+                long beats = cell.num * (long)meter->beat_unit / (long)cell.den;
+                return plan_time_compare(cell, bar_length) == 0
+                           ? cli_fail(CLI_EXIT_USAGE, "chords bar %ld: a bar of %d/%d takes one chord", bar,
+                                      meter->beats_per_bar, meter->beat_unit)
+                           : cli_fail(CLI_EXIT_USAGE, "chords bar %ld: in %d/%d a chord starts only every %ld beats (@%ld)",
+                                      bar, meter->beats_per_bar, meter->beat_unit, beats, beats);
+            }
             if (plan_time_compare(chord->onset, bar_length) >= 0) {
                 return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: a chord starts inside the bar", bar);
             }
@@ -511,8 +525,22 @@ static void print_number(const ComposerRatio *ratio) {
     }
 }
 
+/* The chords the request gave, as read: [{"bar", "text"}]. */
+static void print_chords_json(const ThemeExt *ext) {
+    const cJSON *list = cJSON_GetObjectItemCaseSensitive(ext->root, "chords");
+    const cJSON *entry = NULL;
+    size_t at = 0;
+    printf("\"chords\":[");
+    cJSON_ArrayForEach(entry, cJSON_IsArray(list) ? list : NULL) {
+        printf("%s{\"bar\":%ld,\"text\":", at++ ? "," : "", (long)cJSON_GetObjectItemCaseSensitive(entry, "bar")->valuedouble);
+        cli_print_json_string(cJSON_GetObjectItemCaseSensitive(entry, "text")->valuestring);
+        printf("}");
+    }
+    printf("]");
+}
+
 void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
-    (void)base;
+    const ThemeExt *ext = (const ThemeExt *)base;
     if (json) {
         printf("\"brief\":{\"tempo\":{\"qpm\":");
         if (brief->tempo.denominator > 0) {
@@ -532,7 +560,8 @@ void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
             printf("%s", i ? "," : "");
             cli_print_json_string(brief->without[i]);
         }
-        printf("]}");
+        printf("]},");
+        print_chords_json(ext);
         return;
     }
     printf("brief: mode %s (%s)", brief->minor ? "minor" : "major", brief->mode_from);
@@ -553,6 +582,12 @@ void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
         }
     }
     printf("\n");
+    const cJSON *list = cJSON_GetObjectItemCaseSensitive(ext->root, "chords");
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, cJSON_IsArray(list) ? list : NULL) {
+        printf("chords bar %ld: %s\n", (long)cJSON_GetObjectItemCaseSensitive(entry, "bar")->valuedouble,
+               cJSON_GetObjectItemCaseSensitive(entry, "text")->valuestring);
+    }
 }
 
 /* The slot an idea has the function of, by the idea's name (grow_form.c has the same table). */

@@ -336,6 +336,14 @@ GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *
     return result;
 }
 
+bool given_cell_length(const PlanMeter *meter, PlanTime *length) {
+    size_t cells;
+    PlanTime bar;
+    return meter && length && harmony_rhythm_cells_per_bar(meter, &cells) &&
+           plan_time_make(meter->beats_per_bar, (unsigned long)meter->beat_unit * cells, &bar) == PLAN_OK &&
+           ((*length = bar), true);
+}
+
 /* ------------------------------------------------------------- a section */
 
 static void drop_motive_refs(PlanConstraint *constraints, size_t *count) {
