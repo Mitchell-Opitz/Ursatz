@@ -1506,6 +1506,19 @@ static const Entry TABLE[] = {
 
 typedef char table_has_every_kind[sizeof(TABLE) / sizeof(TABLE[0]) == MOTIVE_RELATION_KIND_COUNT ? 1 : -1];
 
+bool motive_relation_harmony_changes_notes(const MotiveSketch *in, const MotiveRelationStep *step) {
+    MotiveSketch out;
+    if (!in || !step || motive_relation_apply(in, step, &out) != MOTIVE_RELATION_OK) {
+        return false;
+    }
+    for (size_t i = 0; i < in->note_count && i < out.note_count; i++) {
+        if (in->notes[i].pitch != out.notes[i].pitch) {
+            return true;
+        }
+    }
+    return false;
+}
+
 size_t motive_relation_count(void) {
     return MOTIVE_RELATION_KIND_COUNT;
 }

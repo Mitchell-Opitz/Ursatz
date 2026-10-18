@@ -122,6 +122,11 @@ const char *motive_relation_name(MotiveRelationKind kind);
 /* False for a name that is not a relation. */
 bool motive_relation_find(const char *name, MotiveRelationKind *kind);
 size_t motive_relation_param_count(MotiveRelationKind kind);
+/*
+ * True when applying step to in succeeds and changes at least one pitch (a harmony step whose chord already holds
+ * the notes changes only the chords). False for a refused step. Used to choose harmony steps a reader can hear.
+ */
+bool motive_relation_harmony_changes_notes(const MotiveSketch *in, const MotiveRelationStep *step);
 /* The fixed cost of a step (R-142): exact 0; transpose, augment, diminish 1; change-meter 3; every other 2. */
 int motive_relation_cost(MotiveRelationKind kind);
 /* "ok", "not applicable" and so on. */
