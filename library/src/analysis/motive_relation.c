@@ -1007,6 +1007,48 @@ static bool insert_chord(MotiveSketch *sketch, size_t at, MotiveSketchChord chor
     return true;
 }
 
+/*
+ * The melody's bass on a chord after its inversion changed: the lowest note that starts inside the chord, when it was
+ * the old bass chord tone, moves to the nearest pitch of the new bass chord tone (the lower one when two are equally
+ * near).
+ */
+static void move_bass(MotiveSketch *sketch, size_t chord, int old_inversion) {
+    const MotiveSketchChord *c = &sketch->chords[chord];
+    int pcs[4];
+    size_t count = motive_sketch_chord_tones(sketch, c, pcs);
+    if (old_inversion < 0 || (size_t)old_inversion >= count || (size_t)c->inversion >= count) {
+        return;
+    }
+    ExactRational start = c->onset;
+    ExactRational end = chord + 1 < sketch->chord_count ? sketch->chords[chord + 1].onset : sketch->length;
+    bool found = false;
+    size_t lowest = 0;
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        if (msk_cmp(sketch->notes[i].onset, start) < 0 || msk_cmp(sketch->notes[i].onset, end) >= 0) {
+            continue;
+        }
+        if (!found || sketch->notes[i].pitch < sketch->notes[lowest].pitch) {
+            lowest = i;
+            found = true;
+        }
+    }
+    int was = pcs[old_inversion];
+    int now = pcs[c->inversion];
+    if (!found || was == now || mch_pitch_class(sketch->notes[lowest].pitch) != was) {
+        return;
+    }
+    int pitch = sketch->notes[lowest].pitch;
+    for (int distance = 1; distance <= 12; distance++) {
+        for (int k = 0; k < 2; k++) {
+            int candidate = pitch + (k == 0 ? -distance : distance);
+            if (midi(candidate) && mch_pitch_class(candidate) == now) {
+                sketch->notes[lowest].pitch = candidate;
+                return;
+            }
+        }
+    }
+}
+
 static MotiveRelationResult apply_harmony_inversion(const MotiveSketch *in, const MotiveRelationStep *step,
                                                     MotiveSketch *out) {
     MotiveRelationResult ready = prepare_harmony(out);
@@ -1025,7 +1067,9 @@ static MotiveRelationResult apply_harmony_inversion(const MotiveSketch *in, cons
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     MotiveSketch before = *out;
+    int old_inversion = out->chords[chord].inversion;
     out->chords[chord].inversion = (int)inversion;
+    move_bass(out, (size_t)chord, old_inversion);
     adapt_melody(&before, out);
     (void)in;
     return MOTIVE_RELATION_OK;
