@@ -12,15 +12,19 @@ const ThemeDetailView = (function () {
     const panes = {};
     const buttons = {};
     const mounted = {};
+    const areas = {};
+    ctx.status = tabStatus(areas, () => current);
     const builders = {
       theme: (pane) => buildThemePane(pane, ctx),
-      structure: () => {},
+      structure: (pane) => buildStructurePane(pane, ctx),
       "used-by": (pane) => pane.appendChild(buildUsedByTable(data.used_by, item.current_version)),
       other: (pane) => buildOtherPane(pane, ctx),
     };
 
+    let current = null;
     function show(tabId) {
       ThemesModel.writeThemeTab(tabId);
+      current = tabId;
       for (const tab of ThemesModel.THEME_TABS) {
         const active = tab.id === tabId;
         panes[tab.id].hidden = !active;
@@ -42,7 +46,7 @@ const ThemeDetailView = (function () {
       bar.appendChild(button);
       panes[tab.id] = materialsElement("div", "materials-tab-pane");
       panes[tab.id].setAttribute("role", "tabpanel");
-      buildStatusArea(panes[tab.id]);
+      areas[tab.id] = buildStatusArea(panes[tab.id]);
     }
     const wrapper = materialsElement("div", "themes-section");
     wrapper.appendChild(bar);
@@ -57,21 +61,49 @@ const ThemeDetailView = (function () {
   function buildStatusArea(pane) {
     const area = materialsElement("div", "motif-tab-status");
     area.setAttribute("role", "status");
+    area.style.whiteSpace = "pre-wrap";
     pane.appendChild(area);
     return area;
   }
 
+  /* One status writer for the page: a message shows in the status area of the tab that is open and clears the
+   * others. */
+  function tabStatus(areas, currentTab) {
+    function show(text, isError) {
+      for (const [tabId, area] of Object.entries(areas)) {
+        MaterialsModel.motifTabStatus(area).show(tabId === currentTab() ? text : "", isError);
+      }
+    }
+    return { show, clear: () => show("", false) };
+  }
+
+  /* The editor is built when the page opens; the Theme and Structure tabs mount its sections. */
+  function editorOf(ctx) {
+    if (!ctx.editor) {
+      ctx.editor = buildThemeEditor({
+        id: ctx.id,
+        item: ctx.item,
+        body: ctx.data.body,
+        usesStatus: ctx.data.uses_status,
+        items: ctx.allItems,
+        status: ctx.status,
+        nameInput: ctx.nameInput,
+        projectSelect: ctx.projectSelect,
+        saved: () => ctx.rerender(),
+      });
+    }
+    return ctx.editor;
+  }
+
+  /* Subjects, the theme fields, Advanced, the composed theme, then the one Save row. */
   function buildThemePane(pane, ctx) {
     const { id, item, data } = ctx;
-    const editor = buildThemeEditor({
-      id,
-      body: data.body,
-      usesStatus: data.uses_status,
-      items: ctx.allItems,
-      statusEl: ctx.statusEl,
-      saved: () => ctx.rerender(),
-    });
-    pane.appendChild(editor.el);
+    const sections = editorOf(ctx).sections;
+    pane.appendChild(sections.notices);
+    const subjectsField = buildSubjectsField("items", id, data.subjects);
+    const subjectsRow = materialsElement("div", "materials-subjects-row");
+    subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
+    pane.append(subjectsRow, sections.theme, sections.advanced);
     const resultEl = buildThemeResult({
       id,
       version: item.current_version,
@@ -82,6 +114,12 @@ const ThemeDetailView = (function () {
     if (resultEl) {
       pane.appendChild(resultEl);
     }
+    pane.appendChild(sections.result);
+  }
+
+  function buildStructurePane(pane, ctx) {
+    const sections = editorOf(ctx).sections;
+    pane.append(sections.structure, sections.slots);
   }
 
   /* Versions with their notes and Derived from (the motifs the theme uses, with update notices). */

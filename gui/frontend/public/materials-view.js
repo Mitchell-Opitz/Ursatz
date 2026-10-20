@@ -1142,7 +1142,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
     notifySubjectsChanged();
     renderMaterialsView(type);
   });
-  if (type === "motif") {
+  if (type === "motif" || type === "theme") {
     controls.append(name, project, del);
   } else {
     controls.append(name, project, save, del);
@@ -1150,7 +1150,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
   content.append(controls, statusEl);
 
   const versionEl = materialsElement("div");
-  if (type !== "motif") {
+  if (type !== "motif" && type !== "theme") {
     const subjectsField = buildSubjectsField("items", id, answer.data.subjects);
     const subjectsRow = materialsElement("div", "materials-subjects-row");
     subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
@@ -1192,6 +1192,8 @@ async function renderMaterialsDetail(type, id, analysisError) {
       item,
       data: answer.data,
       statusEl,
+      nameInput: name,
+      projectSelect: project,
       allItems: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
       nameOf: itemNameOf,
       rerender: () => renderMaterialsDetail(type, id),
