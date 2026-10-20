@@ -534,11 +534,12 @@ static const ThemeExt *theme_ext_of(const GrowExt *base) {
 
 /* The chords the request gave, as read: [{"bar", "text"}]. */
 static void print_chords_json(const ThemeExt *ext) {
-    const cJSON *list = cJSON_GetObjectItemCaseSensitive(ext->root, "chords");
+    const cJSON *found = cJSON_GetObjectItemCaseSensitive(ext->root, "chords");
+    const cJSON *list = cJSON_IsArray(found) ? found : NULL;
     const cJSON *entry = NULL;
     size_t at = 0;
     printf("\"chords\":[");
-    cJSON_ArrayForEach(entry, cJSON_IsArray(list) ? list : NULL) {
+    cJSON_ArrayForEach(entry, list) {
         printf("%s{\"bar\":%ld,\"text\":", at++ ? "," : "", (long)cJSON_GetObjectItemCaseSensitive(entry, "bar")->valuedouble);
         cli_print_json_string(cJSON_GetObjectItemCaseSensitive(entry, "text")->valuestring);
         printf("}");
@@ -592,9 +593,10 @@ void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
         }
     }
     printf("\n");
-    const cJSON *list = ext ? cJSON_GetObjectItemCaseSensitive(ext->root, "chords") : NULL;
+    const cJSON *found = ext ? cJSON_GetObjectItemCaseSensitive(ext->root, "chords") : NULL;
+    const cJSON *list = cJSON_IsArray(found) ? found : NULL;
     const cJSON *entry = NULL;
-    cJSON_ArrayForEach(entry, cJSON_IsArray(list) ? list : NULL) {
+    cJSON_ArrayForEach(entry, list) {
         printf("chords bar %ld: %s\n", (long)cJSON_GetObjectItemCaseSensitive(entry, "bar")->valuedouble,
                cJSON_GetObjectItemCaseSensitive(entry, "text")->valuestring);
     }
