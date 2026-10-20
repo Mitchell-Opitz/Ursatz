@@ -24,7 +24,9 @@
  * filling the bars, because the bass lane is read as one unbroken line. A progression is one harmony span for each
  * chord, cells_per_chord harmony cells long (a cell is a beat or a half bar, as harmony_phrase.h has it); its numerals
  * are parsed in the mode of the key under them (harmony_roman_parse, then harmony_roman_parse_applied_inverted) and
- * GIVEN_ERR_BAD_NUMERAL names the first that cannot be read.
+ * GIVEN_ERR_BAD_NUMERAL names the first that cannot be read. Chords (plan_give_chords) are the same spans at exact onsets
+ * and lengths from the section's start, off the cell grid too (R-208); the stages that write around them need the grid
+ * (given_cell_length).
  */
 typedef enum {
     GIVEN_OK = 0,

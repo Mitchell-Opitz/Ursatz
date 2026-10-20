@@ -14,6 +14,7 @@ request is an error (`the request must have "schema_version": 2`).
               "features": [], "role": "melodic"}],
  "slots": {"basic": "A", "contrasting": null, "continuation": null, "cadential": null},
  "ideas": {"repetition": "R"},
+ "chords": [{"bar": 0, "text": "I"}, {"bar": 1, "text": "IV V@2"}],
  "accompaniment": null,
  "voicing": null,
  "style": "/abs/path/style.json", "style_weight": "1/2", "without": ["motive-nct-figure"],
@@ -70,3 +71,22 @@ motive of its slot. The same motive may be given to several ideas and slots.
 An unknown idea name, an id the request does not have, or an idea the pairing has not (a `repetition` in a period) is an error
 (exit 1) naming it. The basic idea is the basic slot's: `basic idea` may be named only with the motive of the basic slot.
 The motive of an idea must fit it as a slot motive does (exit 2 when it does not).
+
+## Chords
+
+`chords` gives chords of the theme (R-208): a list of `{"bar", "text"}`, at most one entry for a bar. `bar` counts from 0 inside
+the theme's bars. `text` is the own-harmony syntax of a motive ([cli-motive.md](cli-motive.md)) relative to the bar: Roman
+numerals in the theme's key separated by spaces, each with an optional `@<beats>` onset from the start of the bar in beats of
+the beat unit (`I V@2`). At most 2 chords; the first is at 0 unless it is written with an onset, the onsets rise, each is a
+multiple of half a beat and less than a bar. Each chord lasts to the next chord of its bar, or the end of the bar. The
+numerals are diatonic (no `b` or `#`).
+
+The chords are Given: the harmony stage fills only what they leave open, the bass and the melody are written over them, and
+none of them is changed. The harmony and bass operators write chords on the cells of the meter (one for a bar of 2/4 or 3/4,
+two for 4/4 or 6/8), so an onset must fall on one: in 4/4 a second chord starts at `@2`, in 6/8 at `@3`, and a bar of 2/4 or
+3/4 takes one chord. Any other onset, such as the "and" of beat 2 (`@3/2`), is an error (exit 1), not shifted to a cell.
+
+A bad `bar`, text, onset or count exits 1 naming the bar (`chords bar 2: ...`). Chords that leave a stage with a target it
+cannot write (a last bar `V` under a perfect cadence, a gap between two Given chords nothing connects) exit 2 with `the given
+chords in bar <n> do not allow the <cadence>`, `<n>` counted from 0 as `bar` is. The JSON output has a `chords` member, the
+list as read.

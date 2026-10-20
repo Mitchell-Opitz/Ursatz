@@ -16,10 +16,11 @@ The tempo of the brief (the request's, else the style's) is written to the MIDI 
 
 The output of `grow`, with:
 
-- text: a `brief:` line after the tempo, and after each theme's developments a `slots` table, one line for each idea:
+- text: a `brief:` line after the tempo (and a `chords bar <n>: <text>` line for each chord given), and after each theme's developments a `slots` table, one line for each idea:
   `<idea>: <slot> slot, motive <id>, <source>`, with the chain of a registry form or an operator and the connection in percent;
 - JSON: a `brief` member, `{"tempo": {"qpm", "from"}, "mode": {"mode", "from"}, "density", "without"}` (`from` is
-  `request`, `option` or `style`; `density` is the style's attacks per beat, or `null`), and in each theme a `slots` member,
+  `request`, `option` or `style`; `density` is the style's attacks per beat, or `null`), a `chords` member, the chords of the
+  request as read (`[{"bar", "text"}]`, [theme-request.md](theme-request.md#chords)), and in each theme a `slots` member,
   one entry for each idea: `{"idea", "slot", "motive", "source", "item", "chain", "connection"}`.
 
 `slot` is the function slot of the idea and `motive` the id of the request motive it is made from: the motive of the idea
