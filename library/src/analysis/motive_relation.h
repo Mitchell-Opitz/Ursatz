@@ -45,6 +45,8 @@
  *   counter-line
  *   dominant-form      (ch. V: the chords and the melody in the dominant)
  *   liquidate-features steps (1 to 3), shorten (0/1: also diminished 1:2)
+ *   reduce-to-frame    (every non-chord and unclassified note goes; its time to the note before it, a leading
+ *                      one's to the next kept note)
  *
  * A harmony relation needs a scale. A sketch without chords is given its best implied chord at 0 first, so its
  * result has chords. A harmony relation then adapts the melody to the chords it changed, through the tone roles
@@ -86,6 +88,7 @@ typedef enum {
     MOTIVE_RELATION_COUNTER_LINE,
     MOTIVE_RELATION_DOMINANT_FORM,
     MOTIVE_RELATION_LIQUIDATE_FEATURES,
+    MOTIVE_RELATION_REDUCE_TO_FRAME,
     MOTIVE_RELATION_KIND_COUNT
 } MotiveRelationKind;
 

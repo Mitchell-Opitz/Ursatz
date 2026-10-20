@@ -1471,6 +1471,100 @@ static MotiveRelationResult apply_liquidate_features(const MotiveSketch *in, con
     return MOTIVE_RELATION_OK;
 }
 
+/* --- frame relations (R-197) -------------------------------------------------------------------- */
+
+/*
+ * The sketch without the notes marked in drop. A dropped note's time goes to the kept note before it (its duration
+ * grows by the dropped notes that follow it); the dropped notes before the first kept note give theirs to it, which
+ * then starts earlier by that time. A feature keeps the kept notes inside it and goes when it holds none.
+ */
+static MotiveRelationResult drop_notes(MotiveSketch *sketch, const bool *drop) {
+    size_t kept_count = 0;
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        if (!drop[i]) {
+            kept_count++;
+        }
+    }
+    if (kept_count == 0) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    MotiveSketchNote kept[MOTIVE_SKETCH_MAX_NOTES];
+    size_t before[MOTIVE_SKETCH_MAX_NOTES + 1]; /* kept notes among the first i */
+    size_t n = 0;
+    ExactRational leading = msk_int(0);
+    before[0] = 0;
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        if (!drop[i]) {
+            kept[n++] = sketch->notes[i];
+        } else if (n == 0) {
+            leading = msk_add(leading, sketch->notes[i].duration);
+        } else {
+            kept[n - 1].duration = msk_add(kept[n - 1].duration, sketch->notes[i].duration);
+        }
+        before[i + 1] = n;
+    }
+    if (msk_cmp(leading, kept[0].onset) > 0) {
+        return MOTIVE_RELATION_NOT_EXPRESSIBLE;
+    }
+    kept[0].onset = msk_sub(kept[0].onset, leading);
+    kept[0].duration = msk_add(kept[0].duration, leading);
+    for (size_t k = 0; k < kept_count; k++) {
+        if (!nice_time(kept[k].duration) || !msk_ok(kept[k].onset) || !motive_sketch_on_grid(kept[k].onset)) {
+            return MOTIVE_RELATION_NOT_EXPRESSIBLE;
+        }
+    }
+    for (size_t k = 0; k < kept_count; k++) {
+        sketch->notes[k] = kept[k];
+    }
+    sketch->note_count = kept_count;
+    size_t features = 0;
+    for (size_t f = 0; f < sketch->feature_count; f++) {
+        MotiveSketchFeature feature = sketch->features[f];
+        size_t first = before[feature.first];
+        size_t last = before[feature.last + 1];
+        if (last <= first) {
+            continue;
+        }
+        feature.first = first;
+        feature.last = last - 1;
+        sketch->features[features++] = feature;
+    }
+    sketch->feature_count = features;
+    return MOTIVE_RELATION_OK;
+}
+
+/* A frame relation reads the tone roles: a scale and pitches; false, with the result to return, when it lacks them. */
+static bool frame_roles(const MotiveSketch *sketch, MotiveToneLabel *labels, MotiveRelationResult *refused) {
+    if (!sketch->has_scale) {
+        *refused = MOTIVE_RELATION_NO_SCALE;
+        return false;
+    }
+    if (!pitched(sketch)) {
+        *refused = MOTIVE_RELATION_NOT_APPLICABLE;
+        return false;
+    }
+    if (motive_tone_roles(sketch, NULL, 0, labels) != MOTIVE_TONE_OK) {
+        *refused = MOTIVE_RELATION_INVALID;
+        return false;
+    }
+    return true;
+}
+
+static MotiveRelationResult apply_reduce_to_frame(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                  MotiveSketch *out) {
+    (void)step;
+    MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
+    MotiveRelationResult refused;
+    if (!frame_roles(in, labels, &refused)) {
+        return refused;
+    }
+    bool drop[MOTIVE_SKETCH_MAX_NOTES];
+    for (size_t i = 0; i < in->note_count; i++) {
+        drop[i] = labels[i].role != MOTIVE_TONE_CHORD;
+    }
+    return drop_notes(out, drop);
+}
+
 /* --- the catalog ------------------------------------------------------------------------------ */
 
 static const Entry TABLE[] = {
@@ -1502,6 +1596,7 @@ static const Entry TABLE[] = {
     {"counter-line", 0, 2, apply_counter_line},
     {"dominant-form", 0, 2, apply_dominant_form},
     {"liquidate-features", 2, 2, apply_liquidate_features},
+    {"reduce-to-frame", 0, 2, apply_reduce_to_frame},
 };
 
 typedef char table_has_every_kind[sizeof(TABLE) / sizeof(TABLE[0]) == MOTIVE_RELATION_KIND_COUNT ? 1 : -1];
@@ -1611,6 +1706,7 @@ static const char *const PARAM_NAMES[MOTIVE_RELATION_KIND_COUNT][MOTIVE_RELATION
     [MOTIVE_RELATION_COUNTER_LINE] = {NULL},
     [MOTIVE_RELATION_DOMINANT_FORM] = {NULL},
     [MOTIVE_RELATION_LIQUIDATE_FEATURES] = {"steps", "shorten"},
+    [MOTIVE_RELATION_REDUCE_TO_FRAME] = {NULL},
 };
 
 const char *motive_relation_param_name(MotiveRelationKind kind, size_t index) {
