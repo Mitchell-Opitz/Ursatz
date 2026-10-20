@@ -961,6 +961,70 @@ static void test_passing_harmony(void) {
     assert(apply(&sketch, step(MOTIVE_RELATION_PASSING_HARMONY, 0, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
 }
 
+/* Hollow Knight 1 (A A B C B) in quarter notes over the given chords. */
+static MotiveSketch hollow_knight(const int *degrees, const ExactRational *onsets, size_t count) {
+    static const int pitches[5] = {81, 81, 83, 84, 83};
+    MotiveSketch sketch = line(pitches, 5, q(1, 4));
+    set_chords(&sketch, degrees, onsets, count);
+    return sketch;
+}
+
+static void test_tone_role_adaptation(void) {
+    int vi[1] = {6};
+    ExactRational at_zero[1] = {q(0, 1)};
+    MotiveSketch sketch = hollow_knight(vi, at_zero, 1);
+    MotiveSketch out;
+
+    /* A V at the middle: the C (a chord tone of the vi) moves to the D, and the passing B before it follows by a
+       scale step, so it still steps into its target. The last B is unclassified and stays. */
+    MotiveRelationStep insert_v = step(MOTIVE_RELATION_HARMONY_INSERT, 0, 5, 0);
+    assert(apply(&sketch, insert_v, &out) == MOTIVE_RELATION_OK);
+    int re_resolved[5] = {81, 81, 84, 86, 83};
+    assert_pitches(&out, re_resolved, 5);
+    assert(motive_relation_harmony_changes_notes(&sketch, &insert_v));
+
+    /* A I at the middle holds the C already: the chords change, the notes do not. */
+    MotiveRelationStep insert_i = step(MOTIVE_RELATION_HARMONY_INSERT, 0, 1, 0);
+    assert(apply(&sketch, insert_i, &out) == MOTIVE_RELATION_OK);
+    int same[5] = {81, 81, 83, 84, 83};
+    assert_pitches(&out, same, 5);
+    assert(out.chord_count == 2);
+    assert(!motive_relation_harmony_changes_notes(&sketch, &insert_i));
+
+    /* A V appended at the last note: the B is a chord tone of it and was no chord tone before, so nothing moves. */
+    MotiveRelationStep append_v = step(MOTIVE_RELATION_HARMONY_APPEND, 5, 0, 0);
+    assert(apply(&sketch, append_v, &out) == MOTIVE_RELATION_OK);
+    assert_pitches(&out, same, 5);
+    assert(!motive_relation_harmony_changes_notes(&sketch, &append_v));
+
+    /* Substituting a V for the vi moves the A A to the nearest V tone, B. */
+    MotiveRelationStep substitute = step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 0, 5, 0);
+    assert(apply(&sketch, substitute, &out) == MOTIVE_RELATION_OK);
+    int fifth[5] = {83, 83, 84, 86, 83};
+    assert_pitches(&out, fifth, 5);
+    assert(motive_relation_harmony_changes_notes(&sketch, &substitute));
+
+    /* The first inversion puts the C in the bass: the lowest note, the A, moves to the nearest C. */
+    MotiveRelationStep first_inversion = step(MOTIVE_RELATION_HARMONY_INVERSION, 0, 1, 0);
+    assert(apply(&sketch, first_inversion, &out) == MOTIVE_RELATION_OK);
+    assert(out.chords[0].inversion == 1);
+    int bass[5] = {84, 81, 83, 84, 83};
+    assert_pitches(&out, bass, 5);
+    assert(motive_relation_harmony_changes_notes(&sketch, &first_inversion));
+
+    /* A bass that is not the old bass chord tone stays: here the lowest note is the C, not the vi's root A. */
+    int lowest_c[5] = {84, 81, 83, 72, 83};
+    MotiveSketch other = line(lowest_c, 5, q(1, 4));
+    set_chords(&other, vi, at_zero, 1);
+    assert(apply(&other, first_inversion, &out) == MOTIVE_RELATION_OK);
+    assert_pitches(&out, lowest_c, 5);
+    assert(!motive_relation_harmony_changes_notes(&other, &first_inversion));
+
+    /* A refused step changes nothing. */
+    assert(!motive_relation_harmony_changes_notes(&sketch, &(MotiveRelationStep){.kind = MOTIVE_RELATION_HARMONY_INSERT,
+                                                                                .value = {5, 5, 0}}));
+}
+
 static void test_counter_line(void) {
     int pitches[4] = {60, 60, 60, 60};
     MotiveSketch accompaniment = line(pitches, 4, q(1, 4));
@@ -1173,6 +1237,7 @@ int main(void) {
     test_harmony_insert();
     test_harmony_substitute();
     test_passing_harmony();
+    test_tone_role_adaptation();
     test_counter_line();
     test_dominant_form();
     test_liquidate_features();
