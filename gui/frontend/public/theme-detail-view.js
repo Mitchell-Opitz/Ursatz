@@ -17,7 +17,7 @@ const ThemeDetailView = (function () {
     const builders = {
       theme: (pane) => buildThemePane(pane, ctx),
       structure: (pane) => buildStructurePane(pane, ctx),
-      "used-by": (pane) => pane.appendChild(buildUsedByTable(data.used_by, item.current_version)),
+      "used-by": (pane) => pane.appendChild(buildUsedByTable(data.used_by, item.current_version, "theme")),
       other: (pane) => buildOtherPane(pane, ctx),
     };
 

@@ -497,14 +497,14 @@ function buildUsesSection(ctx) {
   return section;
 }
 
-/* The Used by table of a motif: name (opens the item), type, the version it uses, project, and whether its use is
+/* The Used by table of a motif (noun names another type, as "theme"): name (opens the item), type, the version it uses, project, and whether its use is
  * behind currentVersion. */
-function buildUsedByTable(users, currentVersion) {
+function buildUsedByTable(users, currentVersion, noun) {
   const rows = MaterialsModel.usedByTable(users, materialsState.projects, currentVersion);
   const section = materialsElement("div");
   section.appendChild(materialsElement("h2", "section-title", "Used by"));
   if (rows.length === 0) {
-    section.appendChild(materialsElement("div", "piece-list-status", "Nothing uses this motif yet."));
+    section.appendChild(materialsElement("div", "piece-list-status", `Nothing uses this ${noun || "motif"} yet.`));
     return section;
   }
   const table = materialsElement("table", "library-table");
