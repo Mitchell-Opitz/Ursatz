@@ -508,7 +508,61 @@ typedef struct {
 typedef struct {
     ComposeRejection *items;
     size_t count;
+    long chord_bar; /* the bar of the first target a stuck run left open when it holds given chords, else -1 */
 } Passed;
+
+/* The bar (from 0) of a plan time in the theme. */
+static long bar_at(PlanTime time, PlanSpan theme, PlanTime bar) {
+    long long num = ((long long)time.num * theme.start.den - (long long)theme.start.num * time.den) * bar.den;
+    long long den = (long long)time.den * theme.start.den * bar.num;
+    return den > 0 && num >= 0 ? (long)(num / den) : 0;
+}
+
+/*
+ * The bar (from 0) of a chord Given by the request that the earliest span the theme still has open lies in or beside, else
+ * -1: the chords are what the stage could not write around.
+ */
+static long open_bar_with_chords(const PiecePlan *plan, NodeId theme_node, const PlanMeter *meter, const GrowExt *ext,
+                                 GrowStage stage) {
+    PlanTime bar;
+    PlanSpan theme;
+    PlanSpan open = {{0, 1}, {0, 1}};
+    PlanTime open_end;
+    bool any = false;
+    /* Only the stages that write around the chords can be stopped by them. */
+    PlanLaneKind lane = stage == GROW_STAGE_HARMONY ? PLAN_LANE_HARMONY
+                        : stage == GROW_STAGE_BASS  ? PLAN_LANE_BASS
+                                                    : PLAN_LANE_MELODY;
+    if (ext->chord_count == 0 || theme_node == PLAN_NODE_NONE ||
+        (stage != GROW_STAGE_HARMONY && stage != GROW_STAGE_BASS && stage != GROW_STAGE_MELODY) ||
+        plan_time_make(meter->beats_per_bar, (unsigned long)meter->beat_unit, &bar) != PLAN_OK) {
+        return -1;
+    }
+    theme = plan_node_span(plan, theme_node);
+    LaneSpanId ids[MAX_LANE_SPANS];
+    size_t count = plan_lane_find(plan, lane, 0, theme, ids, MAX_LANE_SPANS);
+    for (size_t i = 0; i < count && i < MAX_LANE_SPANS; i++) {
+        PlanSpan span = plan_lane_span_span(plan, ids[i]);
+        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED &&
+            (!any || plan_time_compare(span.start, open.start) < 0)) {
+            open = span;
+            any = true;
+        }
+    }
+    if (!any || plan_span_end(open, &open_end) != PLAN_OK) {
+        return -1;
+    }
+    long first = bar_at(open.start, theme, bar);
+    long last = bar_at(open_end, theme, bar);
+    for (long at = first > 0 ? first - 1 : 0; at <= last; at++) {
+        for (size_t c = 0; c < ext->chord_count; c++) {
+            if (bar_at((PlanTime){ext->chords[c].onset.num, ext->chords[c].onset.den}, (PlanSpan){{0, 1}, {0, 1}}, bar) == at) {
+                return at;
+            }
+        }
+    }
+    return -1;
+}
 
 static void passed_add(Passed *passed, const ComposeRejection *rejection) {
     ComposeRejection *grown = realloc(passed->items, (passed->count + 1) * sizeof(ComposeRejection));
@@ -632,6 +686,10 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     for (int idea = 0; options->ext && idea < GROW_IDEA_COUNT; idea++) {
         request.idea_motives[idea] = options->ext->has_idea[idea] ? &options->ext->idea_motives[idea] : NULL;
     }
+    if (options->ext) {
+        request.chords = options->ext->chord_count > 0 ? options->ext->chords : NULL;
+        request.chord_count = options->ext->chord_count;
+    }
     memset(theme, 0, sizeof(*theme));
     theme->seed = seed;
     GrowResult built = grow_build_plan(&request, &theme->plan);
@@ -651,6 +709,10 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
     }
     GrowResult ran = grow_run(theme->plan, &config, &theme->outcome);
     NodeId theme_node = find_node(theme->plan, "theme");
+    if (ran == GROW_ERR_STUCK && options->ext) {
+        passed->chord_bar = open_bar_with_chords(theme->plan, theme_node, &options->meter, options->ext,
+                                                 theme->outcome.stuck_stage);
+    }
     if (ran == GROW_ERR_STUCK && options->explain_path) {
         ComposeRejection rejection;
         memset(&rejection, 0, sizeof(rejection));
@@ -1342,6 +1404,7 @@ int run_grow_ext(int argc, char **argv, GrowExt *ext) {
     size_t made = 0;
     Passed passed;
     memset(&passed, 0, sizeof(passed));
+    passed.chord_bar = -1;
     unsigned long tries = (unsigned long)CLI_MAX_SEED_TRIES * options.suggest;
     unsigned long last_seed = options.seed;
     for (unsigned long attempt = 0; attempt < tries && made < options.suggest; attempt++) {
@@ -1372,7 +1435,10 @@ int run_grow_ext(int argc, char **argv, GrowExt *ext) {
             break;
         }
     }
-    if (status == 0 && made == 0) {
+    if (status == 0 && made == 0 && passed.chord_bar >= 0) {
+        status = cli_fail(CLI_EXIT_UNSATISFIABLE, "the given chords in bar %ld do not allow the %s", passed.chord_bar,
+                          options.cadence_text ? options.cadence_text : "PAC");
+    } else if (status == 0 && made == 0) {
         status = cli_fail(CLI_EXIT_UNSATISFIABLE, "no theme could be grown for %s, %s, %zu bars, %s from seeds %lu to %lu",
                           options.key_text, options.meter_text, options.bars, options.into_text, options.seed,
                           last_seed);

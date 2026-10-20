@@ -316,6 +316,12 @@ target_compile_definitions(test_plan_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FIL
 add_dependencies(test_plan_cli ursatz-composer)
 add_test(NAME test_plan_cli COMMAND test_plan_cli)
 
+# Chords given at exact onsets (given.h plan_give_chords).
+add_executable(test_given_chords test_given_chords.c)
+target_link_libraries(test_given_chords PRIVATE ursatz_composer)
+target_compile_options(test_given_chords PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_given_chords COMMAND test_given_chords)
+
 add_executable(test_middle_out test_middle_out.c)
 target_link_libraries(test_middle_out PRIVATE ursatz_composer)
 target_include_directories(test_middle_out PRIVATE ${PROJECT_SOURCE_DIR}/src)

@@ -24,7 +24,9 @@
  * filling the bars, because the bass lane is read as one unbroken line. A progression is one harmony span for each
  * chord, cells_per_chord harmony cells long (a cell is a beat or a half bar, as harmony_phrase.h has it); its numerals
  * are parsed in the mode of the key under them (harmony_roman_parse, then harmony_roman_parse_applied_inverted) and
- * GIVEN_ERR_BAD_NUMERAL names the first that cannot be read.
+ * GIVEN_ERR_BAD_NUMERAL names the first that cannot be read. Chords (plan_give_chords) are the same spans at exact onsets
+ * and lengths from the section's start, off the cell grid too (R-208); the stages that write around them need the grid
+ * (given_cell_length).
  */
 typedef enum {
     GIVEN_OK = 0,
@@ -54,6 +56,28 @@ GivenResult plan_give_melody(PiecePlan *plan, NodeId section, size_t bar, const 
  */
 GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, const char *const *numerals, size_t count,
                                   size_t cells_per_chord);
+
+/* One chord at an exact place: onset from the section's start, length to its end. */
+typedef struct {
+    const char *numeral;
+    PlanTime onset;
+    PlanTime length;
+} GivenChord;
+
+/*
+ * One Given harmony span for each chord, exactly its onset and length (not on the cell grid), numerals read as
+ * plan_give_progression reads them. The chords lie inside the section, each inside one key span, clear of each other
+ * and of the harmony already there; the meter must be one the harmony operators support. A refused call leaves the
+ * plan as it was.
+ */
+GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *chords, size_t count);
+
+/*
+ * The length of a harmony cell in the meter, in whole notes: the grid the harmony and bass operators write chords on (a
+ * bar in 2/4 and 3/4, half a bar in 4/4 and 6/8). False for a meter they do not support. plan_give_chords takes a chord
+ * anywhere, but a theme can only be written around chords that start on this grid.
+ */
+bool given_cell_length(const PlanMeter *meter, PlanTime *length);
 
 /* A bass span, as long as the notes need in whole bars, Given. */
 GivenResult plan_give_bass(PiecePlan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count);

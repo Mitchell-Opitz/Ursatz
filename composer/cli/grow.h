@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <ursatz_composer/given.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/motive.h>
@@ -31,6 +32,9 @@ typedef struct {
     size_t without_count;
 } GrowBrief;
 
+/* At most two chords a bar in a theme of eight bars. */
+#define GROW_EXT_CHORDS 16
+
 /*
  * What the `theme` command adds to a grow run (R-166). run_grow_ext reads the grow options from argv as run_grow does,
  * except that the basic motive is not a file: once the key and the meter are known (the style has given the mode), `load`
@@ -55,6 +59,10 @@ typedef struct GrowExt {
     Motive idea_motives[GROW_IDEA_COUNT];
     bool has_accompaniment_motive;
     Motive accompaniment_motive;
+    /* The chords Given over the theme (GrowRequest.chords), numerals written in chord_numerals; set by `load`. */
+    GivenChord chords[GROW_EXT_CHORDS];
+    char chord_numerals[GROW_EXT_CHORDS][PLAN_ROMAN_NUMERAL_MAX];
+    size_t chord_count;
     const GrowPoolForm *pool;
     size_t pool_count;
 } GrowExt;

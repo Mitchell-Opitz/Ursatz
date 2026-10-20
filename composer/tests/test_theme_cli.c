@@ -23,6 +23,9 @@
  *   ideas        an idea with a motive of its own (the repetition of a sentence, the consequent basic idea of a period)
  *                asks for that motive, exactly, and its melody is not the idea before it; unknown ideas, ideas the pairing
  *                has not and a different basic idea are refused
+ *   chords       chords given per bar are kept in the plan's harmony lane, a bar left blank is filled, and what the
+ *                harmony operators cannot write (three chords in a bar, an onset off the cells of the meter or off a half
+ *                beat, a cadence the chords contradict) is refused with the bar named
  *   v2           saved forms and the version 1 request are refused
  *   brief        the done-when case: two motives under a fast minor style with the mode from the style, checked by the
  *                Analyzer: D minor, the style's tempo in the MIDI file, the style's note density in the melody
@@ -387,6 +390,108 @@ static void test_fast_minor(void) {
     free(out);
 }
 
+/* -------------------------------------------------------------- chords */
+
+/* The request chords.json with its chords replaced, written to `path`. */
+static void write_chords(const char *chords, const char *path) {
+    write_changed(THEME("chords.json"), "@CHORDS@", chords, path);
+}
+
+/* The Given harmony spans of the theme in the plan the command wrote: their numerals in order, as "start:numeral" lines. */
+static size_t given_harmony(const char *plan_path, char numerals[][32], PlanTime *starts, size_t capacity) {
+    PiecePlan *plan = NULL;
+    PlanJsonError error;
+    assert(plan_read_json_file(plan_path, &plan, &error) == PLAN_OK);
+    NodeId theme = PLAN_NODE_NONE;
+    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
+        const char *name = plan_node_name(plan, id);
+        if (name && strcmp(name, "theme") == 0) {
+            theme = id;
+        }
+    }
+    assert(theme != PLAN_NODE_NONE);
+    LaneSpanId spans[64];
+    size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, theme), spans, 64);
+    assert(found > 0 && found <= 64);
+    size_t given = 0;
+    for (size_t i = 0; i < found; i++) {
+        if (plan_lane_span_state(plan, spans[i]) != PLAN_STATE_GIVEN) {
+            continue;
+        }
+        assert(given < capacity);
+        snprintf(numerals[given], 32, "%s", plan_lane_span_payload(plan, spans[i])->harmony.roman_numeral);
+        starts[given++] = plan_lane_span_span(plan, spans[i]).start;
+    }
+    plan_destroy(plan);
+    return given;
+}
+
+static void test_chords(void) {
+    char numerals[16][32];
+    PlanTime starts[16];
+    /* I, IV then V on the third beat, vi and V (a half cadence): all of them stay in the harmony lane, where they were put. */
+    write_chords("[{\"bar\": 0, \"text\": \"I\"}, {\"bar\": 1, \"text\": \"IV V@2\"}, {\"bar\": 2, \"text\": \"VI\"}, "
+                 "{\"bar\": 3, \"text\": \"V\"}]",
+                 "theme_chords_all.json");
+    char *out = theme_output("theme_chords_all.json --seed 1 --out theme_chords_all_plan.json --format json");
+    assert(strstr(out, "\"chords\":[{\"bar\":0,\"text\":\"I\"},{\"bar\":1,\"text\":\"IV V@2\"},{\"bar\":2,\"text\":\"VI\"},"
+                       "{\"bar\":3,\"text\":\"V\"}]") != NULL);
+    free(out);
+    size_t count = given_harmony("theme_chords_all_plan.json", numerals, starts, 16);
+    assert(count == 5);
+    const char *expected[5] = {"I", "IV", "V", "vi", "V"};
+    const long start_num[5] = {0, 1, 3, 2, 3};
+    const long start_den[5] = {1, 1, 2, 1, 1};
+    for (size_t i = 0; i < 5; i++) {
+        assert(strcmp(numerals[i], expected[i]) == 0);
+        assert(starts[i].num * start_den[i] == start_num[i] * (long)starts[i].den);
+    }
+    /* A bar left blank is filled; the others stay as given. */
+    write_chords("[{\"bar\": 0, \"text\": \"I\"}, {\"bar\": 2, \"text\": \"VI\"}, {\"bar\": 3, \"text\": \"V\"}]",
+                 "theme_chords_blank.json");
+    out = theme_output("theme_chords_blank.json --seed 1 --out theme_chords_blank_plan.json");
+    free(out);
+    count = given_harmony("theme_chords_blank_plan.json", numerals, starts, 16);
+    assert(count == 3 && strcmp(numerals[0], "I") == 0 && strcmp(numerals[1], "vi") == 0 && strcmp(numerals[2], "V") == 0);
+    /* No chords given: nothing is Given in the harmony lane. */
+    write_chords("[]", "theme_chords_none.json");
+    out = theme_output("theme_chords_none.json --seed 1 --out theme_chords_none_plan.json");
+    free(out);
+    assert(given_harmony("theme_chords_none_plan.json", numerals, starts, 16) == 0);
+
+    /* What cannot be written is refused with the bar named: three chords, an onset of 1/3 of a beat, a half beat the
+       harmony operators have no cell for, a bar past the theme, a bar given twice and text that is no chord. */
+    write_chords("[{\"bar\": 1, \"text\": \"I IV@2 V@3\"}]", "theme_chords_three.json");
+    expect_failure("theme_chords_three.json --seed 1", 1, "chords bar 1: ");
+    write_chords("[{\"bar\": 1, \"text\": \"IV V@1/3\"}]", "theme_chords_third.json");
+    expect_failure("theme_chords_third.json --seed 1", 1, "chords bar 1: a chord starts on a beat or a half beat");
+    write_chords("[{\"bar\": 1, \"text\": \"IV V@3/2\"}]", "theme_chords_half.json");
+    expect_failure("theme_chords_half.json --seed 1", 1, "chords bar 1: in 4/4 a chord starts only every 2 beats (@2)");
+    write_chords("[{\"bar\": 4, \"text\": \"I\"}]", "theme_chords_past.json");
+    expect_failure("theme_chords_past.json --seed 1", 1, "chords bar 4: the theme has bars 0 to 3");
+    write_chords("[{\"bar\": 1, \"text\": \"I\"}, {\"bar\": 1, \"text\": \"V\"}]", "theme_chords_twice.json");
+    expect_failure("theme_chords_twice.json --seed 1", 1, "chords bar 1: given twice");
+    write_chords("[{\"bar\": 2, \"text\": \"Q\"}]", "theme_chords_text.json");
+    expect_failure("theme_chords_text.json --seed 1", 1, "chords bar 2: ");
+
+    /* A half cadence asked for, the last bar a V: fine. A perfect cadence asked for with the last bar a V: no theme can
+       be grown, and the message names the bar. */
+    write_chords("[{\"bar\": 3, \"text\": \"V\"}]", "theme_chords_cadence.json");
+    out = theme_output("theme_chords_cadence.json --seed 1");
+    free(out);
+    char *cadence = read_file("theme_chords_cadence.json");
+    char *hc = strstr(cadence, "\"cadence\": \"HC\"");
+    assert(hc);
+    FILE *file = fopen("theme_chords_contradiction.json", "wb");
+    assert(file);
+    fwrite(cadence, 1, (size_t)(hc - cadence), file);
+    fputs("\"cadence\": \"PAC\"", file);
+    fputs(hc + strlen("\"cadence\": \"HC\""), file);
+    fclose(file);
+    free(cadence);
+    expect_failure("theme_chords_contradiction.json --seed 1", 2, "the given chords in bar 3 do not allow the PAC");
+}
+
 /* ---------------------------------------------------------------- errors */
 
 static void test_errors(void) {
@@ -420,6 +525,7 @@ int main(void) {
     test_same_motive();
     test_idea_motives();
     test_request_v2();
+    test_chords();
     test_fast_minor();
     test_errors();
     puts("test_theme_cli: ok");

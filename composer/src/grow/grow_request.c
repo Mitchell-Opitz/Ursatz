@@ -540,6 +540,11 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
                                                              GROW_ACCOMPANIMENT_NAME, NULL, NULL))
                                    : result;
     }
+    if (result == GROW_OK && request->chord_count > 0) {
+        result = plan_give_chords(plan, theme_id, request->chords, request->chord_count) == GIVEN_OK
+                     ? GROW_OK
+                     : GROW_ERR_BAD_REQUEST;
+    }
     if (result == GROW_OK) {
         result = from_plan(plan_node_set_state(plan, section, PLAN_STATE_REALIZED));
     }

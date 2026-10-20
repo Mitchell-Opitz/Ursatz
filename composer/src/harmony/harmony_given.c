@@ -222,6 +222,43 @@ bool harmony_given_fits(const PhraseRequest *request, const PhraseChord *chords,
     return true;
 }
 
+/* The metre of Given chords before the target and the target, in a row from the first of them. False when it is not measurable. */
+static bool chain_metre(const PhraseRequest *request, size_t cells, PhraseMetre *out) {
+    *out = request->metre;
+    out->lead = (PlanTime){0, 1};
+    out->tail = (PlanTime){0, 1};
+    out->cells = cells;
+    if (request->before_count > 0) {
+        /* The chords before are trimmed to start on a barline. */
+        size_t before_cells = 0;
+        for (size_t i = 0; i < request->before_count; i++) {
+            before_cells += request->before[i].cells;
+        }
+        PlanTime before_length;
+        if (plan_time_make(-request->cell_length.num * (long)before_cells, request->cell_length.den, &before_length) !=
+                PLAN_OK ||
+            plan_time_add(request->span.start, before_length, &out->start) != PLAN_OK) {
+            return false;
+        }
+        out->offset = (PlanTime){0, 1};
+    }
+    return true;
+}
+
+bool harmony_joined_chain(const PhraseRequest *request, const PhraseChord *chords, PhraseChord *sequence,
+                          PhraseMetre *metre) {
+    size_t cells = 0;
+    if (request->before_count == 0 || request->before_count > HARMONY_JOIN_CHORDS) {
+        return false;
+    }
+    memcpy(sequence, request->before, request->before_count * sizeof(PhraseChord));
+    memcpy(sequence + request->before_count, chords, sizeof(PhraseChord));
+    for (size_t i = 0; i <= request->before_count; i++) {
+        cells += sequence[i].cells;
+    }
+    return chain_metre(request, cells, metre);
+}
+
 bool harmony_given_join(const PhraseRequest *request, const PhraseChord *chords, size_t count, bool cadence_planned,
                         const char **why) {
     PhraseChord *sequence = NULL;

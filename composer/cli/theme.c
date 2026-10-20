@@ -10,9 +10,12 @@
 #include "cli_options.h"
 #include "grow.h"
 
+#include <harmony_chord.h>
+
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/grow_form.h>
+#include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
 
 /* At most this many motives in a request, and arguments for grow. */
@@ -359,6 +362,111 @@ static int read_motives(ThemeExt *ext, const cJSON *request) {
     return 0;
 }
 
+/*
+ * The chords: a list of {"bar", "text"}, at most one a bar, the text in the own-harmony syntax relative to the bar. They are
+ * written into ext->base.chords as Given chords from the theme's start, each lasting to the next chord of its bar or the
+ * end of the bar.
+ */
+static int read_chords(ThemeExt *ext, const PlanMeter *meter, const PlanKey *key) {
+    const cJSON *list = cJSON_GetObjectItemCaseSensitive(ext->root, "chords");
+    if (!list || cJSON_IsNull(list)) {
+        return 0;
+    }
+    if (!cJSON_IsArray(list)) {
+        return cli_fail(CLI_EXIT_USAGE, "\"chords\" must be a list of {\"bar\": <number from 0>, \"text\": \"I V@3/2\"}");
+    }
+    const cJSON *bars_item = cJSON_GetObjectItemCaseSensitive(ext->root, "bars");
+    long bars = cJSON_IsNumber(bars_item) ? (long)bars_item->valuedouble : 8;
+    PlanTime bar_length;
+    if (plan_time_make(meter->beats_per_bar, (unsigned long)meter->beat_unit, &bar_length) != PLAN_OK) {
+        return cli_fail(CLI_EXIT_USAGE, "the meter has no bar length");
+    }
+    bool seen[GROW_EXT_CHORDS / 2 + 1] = {false};
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, list) {
+        const cJSON *bar_item = cJSON_IsObject(entry) ? cJSON_GetObjectItemCaseSensitive(entry, "bar") : NULL;
+        const char *text;
+        if (!cJSON_IsObject(entry) || !cJSON_IsNumber(bar_item) || !request_member_string(entry, "text", true, &text)) {
+            return cli_fail(CLI_EXIT_USAGE, "each of \"chords\" must be {\"bar\": <number from 0>, \"text\": \"I V@3/2\"}");
+        }
+        long bar = (long)bar_item->valuedouble;
+        if ((double)bar != bar_item->valuedouble || bar < 0 || bar >= bars) {
+            return cli_fail(CLI_EXIT_USAGE, "chords bar %g: the theme has bars 0 to %ld", bar_item->valuedouble, bars - 1);
+        }
+        if (seen[bar]) {
+            return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: given twice", bar);
+        }
+        seen[bar] = true;
+        MotiveChord parsed[MOTIVE_MAX_CHORDS];
+        size_t count = 0;
+        MotiveError error;
+        if (motive_harmony_parse(text, meter, parsed, &count, &error) != MOTIVE_OK) {
+            return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: '%s' at %s: %s", bar, text, error.location, error.message);
+        }
+        if (count == 0 || count > 2) {
+            return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: write 1 or 2 chords, not %zu", bar, count);
+        }
+        if (ext->base.chord_count + count > GROW_EXT_CHORDS) {
+            return cli_fail(CLI_EXIT_USAGE, "chords: too many chords");
+        }
+        PlanTime bar_start;
+        if (plan_time_make(bar_length.num * bar, bar_length.den, &bar_start) != PLAN_OK) {
+            return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: the bar is out of range", bar);
+        }
+        for (size_t c = 0; c < count; c++) {
+            const MotiveChord *chord = &parsed[c];
+            PlanTime half_beats;
+            PlanTime end = bar_length;
+            /* An onset is a multiple of half a beat of the beat unit, inside the bar. */
+            if (plan_time_make(chord->onset.num * 2 * meter->beat_unit, chord->onset.den, &half_beats) != PLAN_OK ||
+                half_beats.den != 1) {
+                return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: a chord starts on a beat or a half beat", bar);
+            }
+            PlanTime cell;
+            PlanTime in_cells;
+            if (!given_cell_length(meter, &cell) ||
+                plan_time_make(chord->onset.num * (long)cell.den, chord->onset.den * (unsigned long)cell.num, &in_cells) !=
+                    PLAN_OK ||
+                in_cells.den != 1) {
+                /* The harmony and bass operators write chords on the cells of the meter only (see docs/theme-request.md). */
+                long beats = cell.num * (long)meter->beat_unit / (long)cell.den;
+                return plan_time_compare(cell, bar_length) == 0
+                           ? cli_fail(CLI_EXIT_USAGE, "chords bar %ld: a bar of %d/%d takes one chord", bar,
+                                      meter->beats_per_bar, meter->beat_unit)
+                           : cli_fail(CLI_EXIT_USAGE, "chords bar %ld: in %d/%d a chord starts only every %ld beats (@%ld)",
+                                      bar, meter->beats_per_bar, meter->beat_unit, beats, beats);
+            }
+            if (plan_time_compare(chord->onset, bar_length) >= 0) {
+                return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: a chord starts inside the bar", bar);
+            }
+            if (chord->alteration != 0) {
+                return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: altered chords are not given; write a diatonic numeral", bar);
+            }
+            HarmonyChord harmony;
+            memset(&harmony, 0, sizeof(harmony));
+            harmony.degree = chord->degree;
+            harmony.inversion = chord->inversion;
+            harmony.seventh = chord->seventh;
+            size_t at = ext->base.chord_count;
+            if (!harmony_roman_format(key->mode, &harmony, ext->base.chord_numerals[at])) {
+                return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: that chord does not exist in the key", bar);
+            }
+            if (c + 1 < count) {
+                end = parsed[c + 1].onset;
+            }
+            GivenChord *given = &ext->base.chords[at];
+            given->numeral = ext->base.chord_numerals[at];
+            if (plan_time_add(bar_start, chord->onset, &given->onset) != PLAN_OK ||
+                plan_time_make(end.num * (long)chord->onset.den - chord->onset.num * (long)end.den,
+                               end.den * chord->onset.den, &given->length) != PLAN_OK) {
+                return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: the chord has no length", bar);
+            }
+            ext->base.chord_count++;
+        }
+    }
+    return 0;
+}
+
 static int theme_load(GrowExt *base, const PlanMeter *meter, const PlanKey *key, const PlanThemePairing *pairing) {
     ThemeExt *ext = (ThemeExt *)base;
     char what[96];
@@ -404,7 +512,7 @@ static int theme_load(GrowExt *base, const PlanMeter *meter, const PlanKey *key,
         }
         ext->base.has_accompaniment_motive = true;
     }
-    return 0;
+    return read_chords(ext, meter, key);
 }
 
 /* --- the output ------------------------------------------------------------------ */
@@ -417,8 +525,30 @@ static void print_number(const ComposerRatio *ratio) {
     }
 }
 
+static void theme_print_slots(const GrowExt *base, const PiecePlan *plan, const GrowOutcome *outcome, bool json);
+
+/* Whether the extension is the theme command's: the piece command prints its brief with this function too. */
+static const ThemeExt *theme_ext_of(const GrowExt *base) {
+    return base && base->print_theme == theme_print_slots ? (const ThemeExt *)base : NULL;
+}
+
+/* The chords the request gave, as read: [{"bar", "text"}]. */
+static void print_chords_json(const ThemeExt *ext) {
+    const cJSON *found = cJSON_GetObjectItemCaseSensitive(ext->root, "chords");
+    const cJSON *list = cJSON_IsArray(found) ? found : NULL;
+    const cJSON *entry = NULL;
+    size_t at = 0;
+    printf("\"chords\":[");
+    cJSON_ArrayForEach(entry, list) {
+        printf("%s{\"bar\":%ld,\"text\":", at++ ? "," : "", (long)cJSON_GetObjectItemCaseSensitive(entry, "bar")->valuedouble);
+        cli_print_json_string(cJSON_GetObjectItemCaseSensitive(entry, "text")->valuestring);
+        printf("}");
+    }
+    printf("]");
+}
+
 void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
-    (void)base;
+    const ThemeExt *ext = theme_ext_of(base);
     if (json) {
         printf("\"brief\":{\"tempo\":{\"qpm\":");
         if (brief->tempo.denominator > 0) {
@@ -439,6 +569,10 @@ void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
             cli_print_json_string(brief->without[i]);
         }
         printf("]}");
+        if (ext) {
+            printf(",");
+            print_chords_json(ext);
+        }
         return;
     }
     printf("brief: mode %s (%s)", brief->minor ? "minor" : "major", brief->mode_from);
@@ -459,6 +593,13 @@ void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
         }
     }
     printf("\n");
+    const cJSON *found = ext ? cJSON_GetObjectItemCaseSensitive(ext->root, "chords") : NULL;
+    const cJSON *list = cJSON_IsArray(found) ? found : NULL;
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, list) {
+        printf("chords bar %ld: %s\n", (long)cJSON_GetObjectItemCaseSensitive(entry, "bar")->valuedouble,
+               cJSON_GetObjectItemCaseSensitive(entry, "text")->valuestring);
+    }
 }
 
 /* The slot an idea has the function of, by the idea's name (grow_form.c has the same table). */

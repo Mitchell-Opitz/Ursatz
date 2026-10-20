@@ -332,15 +332,31 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
     }
     if (strcmp(operator_->generator.name, HARMONY_PHRASE_OPERATOR_NAME) == 0) {
         const PhraseProgression *progression = candidate->payload;
-        if (!progression || progression->count < 2 || progression->count > HARMONY_MAX_CHORDS) {
+        if (!progression || progression->count < 1 || progression->count > HARMONY_MAX_CHORDS) {
             return false;
         }
-        HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode,
-                              progression->request.cadence, progression->request.cells_per_bar,
-                              progression->request.cell_length, false, NULL, false, false, NULL, NULL, false,
-                              &progression->request.metre};
-        phrase.no_opening_tonic = progression->request.has_shape &&
-                                  progression->request.shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL;
+        PhraseChord sequence[HARMONY_JOIN_CHORDS + 1];
+        PhraseMetre joined;
+        bool short_phrase = progression->count == 1;
+        if (short_phrase) {
+            /* One chord stands alone only after Given chords: it is judged as the end of the chain they make (R-208). */
+            if (!progression->request.around_given || progression->request.before_count == 0 ||
+                !harmony_joined_chain(&progression->request, progression->chords, sequence, &joined)) {
+                memset(out, 0, sizeof(*out));
+                out->score_denominator = 1;
+                out->hard_violation = true;
+                snprintf(out->reason, sizeof(out->reason), "a phrase of one chord");
+                return true;
+            }
+        }
+        HeardPhrase phrase = {short_phrase ? sequence : progression->chords,
+                              short_phrase ? progression->request.before_count + 1 : progression->count,
+                              progression->request.mode, progression->request.cadence,
+                              progression->request.cells_per_bar, progression->request.cell_length, false, NULL, false,
+                              false, NULL, NULL, false, short_phrase ? &joined : &progression->request.metre};
+        /* A phrase joined to Given chords begins in the middle of what they make: no opening tonic is asked. */
+        phrase.no_opening_tonic = short_phrase || (progression->request.has_shape &&
+                                  progression->request.shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL);
         if (progression->request.pivot) {
             /* A phrase that opens a new key starts on a chord both keys have, which need not be a tonic. */
             phrase.no_opening_tonic = true;

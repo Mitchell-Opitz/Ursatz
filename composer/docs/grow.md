@@ -69,6 +69,19 @@ motive, not as a copy of the idea before it. `GROW_ERR_BAD_REQUEST` for an idea 
 basic idea, or a motive that is not a full motive of two notes or more in the theme's key and meter or is longer than its idea
 (a bar, or the idea's eighths of the theme when less).
 
+### Given chords
+
+`GrowRequest.chords` (`chord_count`) gives chords of the theme (R-208), `GivenChord` of [given.h](../include/ursatz_composer/given.h):
+a Roman numeral, an onset from the theme's start and a length. `grow_build_plan` gives them to the theme section with
+`plan_give_chords` once the section is made, one Given harmony span for each, exactly its onset and length;
+`GROW_ERR_BAD_REQUEST` when it refuses them. The harmony stage opens targets only over the gaps (`given_gaps`), so the chords
+stay as they are, the bass is written over them, and a gap between Given chords is judged with the Given chords before it: a
+gap of one chord is allowed when it follows Given chords, and is heard as the end of the chain they make. The harmony and bass
+operators write a chord on the cells of the meter only, so the `theme` command refuses any other onset
+([theme-request.md](theme-request.md#chords)); `plan_give_chords` itself takes any onset (`given_cell_length` is the grid).
+A run stuck at the harmony, bass or melody stage with a chord in or next to the span it left open says so, naming the bar
+(`the given chords in bar <n> do not allow the <cadence>`, exit 2).
+
 ## The plan
 
 `grow_build_plan` makes a Form over the theme and the material, with the meter and the key as Given lane spans over

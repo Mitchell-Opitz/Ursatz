@@ -9,6 +9,7 @@
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/form_hear.h>
+#include <ursatz_composer/given.h>
 #include <ursatz_composer/melody_fill.h>
 #include <ursatz_composer/rejection.h>
 #include <ursatz_composer/motive.h>
@@ -157,6 +158,13 @@ typedef struct {
      * the idea's eighths of the theme when less). Must outlive grow_build_plan only.
      */
     const Motive *idea_motives[GROW_IDEA_COUNT];
+    /*
+     * Chords Given over the theme (R-208), onsets from the theme's start (plan_give_chords), NULL for none. The harmony
+     * stage fills what they leave open. Refused (GROW_ERR_BAD_REQUEST) when plan_give_chords refuses them. Must outlive
+     * grow_build_plan only.
+     */
+    const GivenChord *chords;
+    size_t chord_count;
     /*
      * A four-part voicing of the harmony and bass (voicing.h), in the alto and the tenor. Read only with has_voicing,
      * and refused together with an accompaniment. With write_soprano the voicing writes the melody too, in one note a
