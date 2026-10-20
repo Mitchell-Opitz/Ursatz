@@ -686,9 +686,50 @@ static void test_admit_null_and_all_agree(void) {
     }
 }
 
+/* Hollow Knight 1 (A A B C B) in quarter notes over the given chords. */
+static MotiveSketch hollow_knight(const int *degrees, const ExactRational *onsets, size_t count) {
+    static const int pitches[5] = {81, 81, 83, 84, 83};
+    MotiveSketch sketch = base();
+    sketch.note_count = 5;
+    for (size_t i = 0; i < 5; i++) {
+        sketch.notes[i].pitch = pitches[i];
+        sketch.notes[i].onset = q(i, 4);
+        sketch.notes[i].duration = q(1, 4);
+    }
+    sketch.length = q(5, 4);
+    sketch.feature_count = 0;
+    sketch.chord_count = count;
+    for (size_t c = 0; c < count; c++) {
+        memset(&sketch.chords[c], 0, sizeof(sketch.chords[c]));
+        sketch.chords[c].onset = onsets[c];
+        sketch.chords[c].degree = degrees[c];
+    }
+    return sketch;
+}
+
+/* Every harmony row on Hollow Knight 1, with chords that change the notes and with chords that do not. */
+static void test_harmony_rows_on_tone_roles(void) {
+    int vi[1] = {6};
+    ExactRational at_zero[1] = {q(0, 1)};
+    MotiveSketch sketch = hollow_knight(vi, at_zero, 1);
+    recover_one(&sketch, step(MOTIVE_RELATION_HARMONY_INVERSION, 0, 1, 0));
+    recover_one(&sketch, step(MOTIVE_RELATION_HARMONY_APPEND, 5, 0, 0));
+    recover_one(&sketch, step(MOTIVE_RELATION_HARMONY_INSERT, 0, 5, 0));
+    recover_one(&sketch, step(MOTIVE_RELATION_HARMONY_INSERT, 0, 1, 0));
+    recover_one(&sketch, step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 0, 5, 0));
+    recover_one(&sketch, step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 0, 2, 4));
+
+    int tonic_subdominant[2] = {1, 4};
+    ExactRational onsets[2] = {q(0, 1), q(1, 2)};
+    MotiveSketch two = hollow_knight(tonic_subdominant, onsets, 2);
+    recover_one(&two, step(MOTIVE_RELATION_PASSING_HARMONY, 0, 0, 0));
+    recover_one(&two, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0));
+}
+
 int main(void) {
     init_cases();
     test_every_relation();
+    test_harmony_rows_on_tone_roles();
     test_equal_sketches_are_exact();
     test_dimensions();
     test_rhythm_sketch_takes_time_relations();

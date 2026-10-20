@@ -74,7 +74,15 @@ They match the Composer's `motive_develop` at `466b38c`. A fragment or liquidati
 
 ### Harmony and melody adaptation (ch. V, Exs. 25 to 29)
 
-A harmony relation needs a scale (`NO_SCALE`). A sketch without chords is given its best implied chord at 0 first (the triad holding the most notes, then the most time, the first of I V IV vi ii iii vii on a tie), so the result has chords. Then the melody is adapted to the chords that changed: a note on a beat whose chord changed and that is not a chord tone of the new chord moves to the nearest chord tone within an octave. Of two equally near, the one in the direction from the previous note comes first (up for the first note). The first of the nearest that keeps the contour's directions is taken, and if none within six semitones does, the nearest.
+A harmony relation needs a scale (`NO_SCALE`). A sketch without chords is given its best implied chord at 0 first (the triad holding the most notes, then the most time, the first of I V IV vi ii iii vii on a tie), so the result has chords. Then the melody is adapted to the chords that changed, through the tone roles of the melody before the change (`docs/modules/motive-tone-roles.md`):
+
+- A note that was a chord tone and is not one of its new chord moves to the nearest tone of the new chord within an octave. Of two equally near, the one in the direction from the previous note comes first (up for the first note). The first of the nearest that keeps the contour's directions is taken, and if none within six semitones does, the nearest.
+- A non-chord tone whose resolution target moved moves by the same scale steps, so it still resolves by step to the moved target (a pair figure moves both notes). A non-chord tone whose figure no longer fits after that is left where it is and is unclassified in the result.
+- A note that was unclassified is left. A chord that already holds the notes changes only the chords.
+
+`motive_relation_harmony_changes_notes(in, step)` tells whether a step succeeds and changes at least one pitch; the Composer's draws use it to prefer harmony steps a reader can hear.
+
+`harmony-inversion` also moves the bass: when the lowest note that starts inside the chord was the old bass chord tone, it moves to the nearest pitch of the new bass chord tone (the lower when two are equally near).
 
 | Relation | Parameters | Rule, refusals | Cost |
 |---|---|---|---|

@@ -47,9 +47,11 @@
  *   liquidate-features steps (1 to 3), shorten (0/1: also diminished 1:2)
  *
  * A harmony relation needs a scale. A sketch without chords is given its best implied chord at 0 first, so its
- * result has chords. A harmony relation then adapts the melody to the chords it changed: a note on a beat whose chord
- * changed and that is not a chord tone moves to the nearest chord tone, in the direction from the previous note when
- * two are equally near, and keeps the directions of the contour it can.
+ * result has chords. A harmony relation then adapts the melody to the chords it changed, through the tone roles
+ * (analysis/motive_tone_roles.h) of the melody before: a note that was a chord tone and is not one of its new chord
+ * moves to the nearest tone of the new chord, in the direction from the previous note when two are equally near, and
+ * keeps the directions of the contour it can; a non-chord tone whose resolution target moved moves by the same scale
+ * steps, so it still resolves by step; one whose figure no longer fits is left, and is unclassified in the result.
  *
  * motive_relation_apply never changes its input. The result is as long as its notes (length is the end of the
  * last note).
@@ -120,6 +122,11 @@ const char *motive_relation_name(MotiveRelationKind kind);
 /* False for a name that is not a relation. */
 bool motive_relation_find(const char *name, MotiveRelationKind *kind);
 size_t motive_relation_param_count(MotiveRelationKind kind);
+/*
+ * True when applying step to in succeeds and changes at least one pitch (a harmony step whose chord already holds
+ * the notes changes only the chords). False for a refused step. Used to choose harmony steps a reader can hear.
+ */
+bool motive_relation_harmony_changes_notes(const MotiveSketch *in, const MotiveRelationStep *step);
 /* The fixed cost of a step (R-142): exact 0; transpose, augment, diminish 1; change-meter 3; every other 2. */
 int motive_relation_cost(MotiveRelationKind kind);
 /* "ok", "not applicable" and so on. */
