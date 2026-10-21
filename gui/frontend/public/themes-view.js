@@ -572,6 +572,45 @@ function buildThemeAccompanimentSection(state, itemsOf, options) {
   return section;
 }
 
+/* The slot pickers of the Structure tab: one motif picker per slot, kept in state.slots. basicSet(motifBody,
+ * hadBasic) is called when the basic slot gets a motif. Returns the section element. */
+function buildThemeSlotsSection(state, itemsOf, basicSet) {
+  const section = materialsElement("section", "panel materials-editor theme-editor");
+  section.appendChild(materialsElement("h2", "section-title", "Slots"));
+  for (const slot of ThemesModel.SLOT_NAMES) {
+    const row = materialsElement("div", "theme-slot");
+    row.appendChild(materialsElement("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === "basic" ? " (required)" : ""}`));
+    const picker = buildThemeMotifPicker({
+      role: "melodic",
+      items: itemsOf,
+      onChange: (value, motifBody) => {
+        const hadBasic = state.slots.some((entry) => entry.slot === "basic");
+        state.slots = state.slots.filter((entry) => entry.slot !== slot);
+        if (value) {
+          state.slots.push({ slot, item_id: value.item_id, version: value.version });
+        }
+        if (slot === "basic" && value) {
+          basicSet(motifBody, hadBasic);
+        }
+      },
+    });
+    picker.setValue(state.slots.find((entry) => entry.slot === slot));
+    row.appendChild(picker.el);
+    section.appendChild(row);
+  }
+  return section;
+}
+
+/* The Advanced details of the Theme tab (closed by default): accompaniment, brief with weight and switches, seed
+ * and check. The tempo is a field of the tab itself. */
+function buildThemeAdvancedSection(state, itemsOf) {
+  const section = materialsElement("details", "panel materials-editor theme-editor theme-advanced");
+  section.appendChild(materialsElement("summary", "section-title", "Advanced"));
+  section.appendChild(buildThemeAccompanimentSection(state, itemsOf));
+  section.appendChild(buildThemeBriefSection(state, { tempo: false }));
+  return section;
+}
+
 /*
  * The theme editor, in the sections the tabs mount. ctx: {id, item, body, subjects, usesStatus, items (all items),
  * status (a tab status writer), nameInput, projectSelect, saved()}.
@@ -648,38 +687,14 @@ function buildThemeEditor(ctx) {
   structure.appendChild(form);
   sections.structure = structure;
 
-  /* Structure tab: the slots */
-  const slots = materialsElement("section", "panel materials-editor theme-editor");
-  slots.appendChild(materialsElement("h2", "section-title", "Slots"));
-  for (const slot of ThemesModel.SLOT_NAMES) {
-    const row = materialsElement("div", "theme-slot");
-    row.appendChild(materialsElement("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === "basic" ? " (required)" : ""}`));
-    const picker = buildThemeMotifPicker({
-      role: "melodic",
-      items: itemsOf,
-      onChange: (value, motifBody) => {
-        const hadBasic = state.slots.some((entry) => entry.slot === "basic");
-        state.slots = state.slots.filter((entry) => entry.slot !== slot);
-        if (value) {
-          state.slots.push({ slot, item_id: value.item_id, version: value.version });
-        }
-        if (slot === "basic" && value && ThemesModel.applyBasicMode(state, hadBasic, motifBody)) {
-          mode.value = state.mode;
-        }
-      },
-    });
-    picker.setValue(state.slots.find((entry) => entry.slot === slot));
-    row.appendChild(picker.el);
-    slots.appendChild(row);
-  }
-  sections.slots = slots;
+  /* Structure tab: the slots. The first basic motif sets the mode (R-205). */
+  sections.slots = buildThemeSlotsSection(state, itemsOf, (motifBody, hadBasic) => {
+    if (ThemesModel.applyBasicMode(state, hadBasic, motifBody)) {
+      mode.value = state.mode;
+    }
+  });
 
-  /* Theme tab: Advanced (accompaniment, brief with weight and switches, seed, check) */
-  const advanced = materialsElement("details", "panel materials-editor theme-editor theme-advanced");
-  advanced.appendChild(materialsElement("summary", "section-title", "Advanced"));
-  advanced.appendChild(buildThemeAccompanimentSection(state, itemsOf));
-  advanced.appendChild(buildThemeBriefSection(state, { tempo: false }));
-  sections.advanced = advanced;
+  sections.advanced = buildThemeAdvancedSection(state, itemsOf);
 
   function problems() {
     const list = ThemesModel.formProblems(state);
