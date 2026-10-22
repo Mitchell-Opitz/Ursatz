@@ -1750,6 +1750,25 @@ static MotiveRelationResult apply_change_non_chord_tone(const MotiveSketch *in, 
     return form_pair(out, first, (NonChordTone)type) ? MOTIVE_RELATION_OK : MOTIVE_RELATION_NOT_APPLICABLE;
 }
 
+static MotiveRelationResult apply_reharmonize_frame(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                    MotiveSketch *out) {
+    (void)in;
+    long degree = step->value[0];
+    if (degree < 1 || degree > 7 || (step->value[1] != 0 && step->value[1] != 1)) {
+        return MOTIVE_RELATION_INVALID;
+    }
+    MotiveRelationResult ready = prepare_harmony(out);
+    if (ready != MOTIVE_RELATION_OK) {
+        return ready;
+    }
+    MotiveSketch before = *out;
+    MotiveSketchChord chord = {msk_int(0), (int)degree, 0, 0, step->value[1] != 0};
+    out->chords[0] = chord;
+    out->chord_count = 1;
+    adapt_melody(&before, out);
+    return MOTIVE_RELATION_OK;
+}
+
 /* --- the catalog ------------------------------------------------------------------------------ */
 
 static const Entry TABLE[] = {
@@ -1785,6 +1804,7 @@ static const Entry TABLE[] = {
     {"add-non-chord-tone", 2, 2, apply_add_non_chord_tone},
     {"remove-non-chord-tone", 1, 2, apply_remove_non_chord_tone},
     {"change-non-chord-tone", 2, 2, apply_change_non_chord_tone},
+    {"reharmonize-frame", 2, 2, apply_reharmonize_frame},
 };
 
 typedef char table_has_every_kind[sizeof(TABLE) / sizeof(TABLE[0]) == MOTIVE_RELATION_KIND_COUNT ? 1 : -1];
@@ -1898,6 +1918,7 @@ static const char *const PARAM_NAMES[MOTIVE_RELATION_KIND_COUNT][MOTIVE_RELATION
     [MOTIVE_RELATION_ADD_NON_CHORD_TONE] = {"after", "type"},
     [MOTIVE_RELATION_REMOVE_NON_CHORD_TONE] = {"note"},
     [MOTIVE_RELATION_CHANGE_NON_CHORD_TONE] = {"note", "type"},
+    [MOTIVE_RELATION_REHARMONIZE_FRAME] = {"degree", "seventh"},
 };
 
 const char *motive_relation_param_name(MotiveRelationKind kind, size_t index) {

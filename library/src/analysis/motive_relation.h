@@ -56,6 +56,8 @@
  *   change-non-chord-tone note (0-based index of a note that is not a chord tone), type (a NonChordTone value):
  *                      the note, and for a double neighbor or changing tone its partner, move to form that type
  *                      between the same chord tones
+ *   reharmonize-frame  degree (1 to 7), seventh (0/1): every chord is replaced by that one chord at 0, the melody
+ *                      adapted as a harmony relation does
  *
  * A harmony relation needs a scale. A sketch without chords is given its best implied chord at 0 first, so its
  * result has chords. A harmony relation then adapts the melody to the chords it changed, through the tone roles
@@ -107,6 +109,7 @@ typedef enum {
     MOTIVE_RELATION_ADD_NON_CHORD_TONE,
     MOTIVE_RELATION_REMOVE_NON_CHORD_TONE,
     MOTIVE_RELATION_CHANGE_NON_CHORD_TONE,
+    MOTIVE_RELATION_REHARMONIZE_FRAME,
     MOTIVE_RELATION_KIND_COUNT
 } MotiveRelationKind;
 
