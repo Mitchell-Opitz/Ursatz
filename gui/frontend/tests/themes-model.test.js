@@ -210,6 +210,39 @@ check(playback && playback.ok && playback.parts.length === 2 && playback.notes.l
 check(playback && playback.tempo[0].qpm === 132 && same(playback.end, [15360, 1920]), "the MIDI tempo and the 8 bars of 4/4");
 check(T.playbackFromMidi(Buffer.from("not midi at all, no")) === null, "bytes that are not MIDI give null");
 
+/* Theme tabs (P19 B5) */
+check(same(T.THEME_TABS.map((tab) => tab.id), ["theme", "structure", "used-by", "other"]), "the theme tabs are Theme, Structure, Used by, Other");
+const store = {};
+globalThis.localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = v; } };
+check(T.readThemeTab() === "theme", "the theme tab defaults to Theme");
+T.writeThemeTab("other");
+check(T.readThemeTab() === "other" && store["ursatz.theme.tab"] === "other", "a written tab is read back under its own key");
+store["ursatz.theme.tab"] = "bogus";
+check(T.readThemeTab() === "theme", "an unknown stored tab gives Theme");
+delete globalThis.localStorage;
+check(T.readThemeTab() === "theme", "no storage gives Theme");
+
+/* The one Save reuses the motif decision */
+const M = require("../public/materials-model.js");
+check(M.motifSaveDecision({ body: true }, "").kind === "blocked", "a changed theme body without a note is blocked");
+check(M.motifSaveDecision({ name: true }, "").kind === "save", "a rename alone saves without a note");
+check(M.motifSaveDecision({}, "x").message === "Nothing to save.", "no change says Nothing to save.");
+
+/* Mode default from the basic motif (R-205) */
+const minorBody = { motif: { key: "C minor" } };
+const majorBody = { motif: { key: "C major" } };
+check(T.motifMode(minorBody) === "minor" && T.motifMode(majorBody) === "major" && T.motifMode({}) === null, "a motif body gives its mode");
+const fresh = T.emptyState("thm-2");
+check(T.applyBasicMode(fresh, false, minorBody) && fresh.mode === "minor", "the first basic motif sets the mode");
+const chosen = T.emptyState("thm-2");
+chosen.modeChosen = true;
+check(!T.applyBasicMode(chosen, false, minorBody) && chosen.mode === "major", "a mode set by hand is kept");
+const second = T.emptyState("thm-2");
+check(!T.applyBasicMode(second, true, minorBody) && second.mode === "major", "a second basic motif leaves the mode");
+check(!T.applyBasicMode(T.emptyState("x"), false, { motif: {} }), "a motif without a key leaves the mode");
+check(T.formFromBody(T.bodyFromForm(filled()), "thm-1").modeChosen === true, "a saved theme with a basic motif keeps its mode");
+check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-3").modeChosen === false, "a new theme has not chosen its mode");
+
 if (failures > 0) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);
