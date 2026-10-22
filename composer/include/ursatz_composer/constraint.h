@@ -39,7 +39,8 @@ typedef enum {
     PLAN_CONSTRAINT_PIECE_PART,     /* on a section node: the part of a piece structure it is and its id (R-169) */
     PLAN_CONSTRAINT_FREE_PHRASE,    /* no parameters: on a section node, a phrase of any length in beats (R-170), not a theme */
     PLAN_CONSTRAINT_HOLD,           /* no parameters: on a section node, the stages from structure to texture leave it alone; the seam stage fills it (R-171) */
-    PLAN_CONSTRAINT_SEAM            /* no parameters: on a section node, the bar after the loop's end, a Given copy of the body's first bar (R-171) */
+    PLAN_CONSTRAINT_SEAM,           /* no parameters: on a section node, the bar after the loop's end, a Given copy of the body's first bar (R-171) */
+    PLAN_CONSTRAINT_MOTIVE_TONES    /* on a motive node: its base harmony and the tone role of each note (R-215) */
 } PlanConstraintKind;
 
 typedef enum {
@@ -309,6 +310,33 @@ typedef struct {
     char id[PLAN_PIECE_ID_MAX];
 } PlanPiecePart;
 
+/*
+ * The tones of a motive (R-215), on its motive node beside the melody span's notes: the base harmony the notes were
+ * labelled against, and one role label per note in note order. The melody operator places the motive by these labels.
+ *
+ * A chord is a Roman numeral as a motive's own harmony writes it ("I", "V65", "bVII7") with its onset from the start of
+ * the motive and its length, both in whole notes. A label is "chord", "unclassified" or the name of a non-chord tone
+ * ("passing", "neighbor", "appoggiatura", "suspension", "retardation", "escape", "anticipation", "double-neighbor",
+ * "changing-tone", "pedal"); the plan holds the text, the melody operator reads it. The label count is the note count of
+ * the node's melody span, which the plan reader checks.
+ */
+#define PLAN_TONES_MAX_CHORDS 8
+#define PLAN_TONES_MAX_NOTES 64
+#define PLAN_TONE_LABEL_MAX 16
+
+typedef struct {
+    char numeral[PLAN_ROMAN_NUMERAL_MAX];
+    PlanTime onset;
+    PlanTime length;
+} PlanToneChord;
+
+typedef struct {
+    PlanToneChord chords[PLAN_TONES_MAX_CHORDS];
+    size_t chord_count;
+    char labels[PLAN_TONES_MAX_NOTES][PLAN_TONE_LABEL_MAX];
+    size_t label_count;
+} PlanMotiveTones;
+
 /* The member of params that is used follows the kind. */
 typedef struct {
     PlanConstraintKind kind;
@@ -331,6 +359,7 @@ typedef struct {
         PlanSource source;
         PlanTime pickup; /* the anacrusis: a multiple of 1/32 of a whole note, shorter than a bar */
         PlanPiecePart piece_part;
+        PlanMotiveTones motive_tones;
     } params;
 } PlanConstraint;
 

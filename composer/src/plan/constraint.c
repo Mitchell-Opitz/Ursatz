@@ -125,6 +125,28 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:
         return true;
+    case PLAN_CONSTRAINT_MOTIVE_TONES: {
+        const PlanMotiveTones *tones = &constraint->params.motive_tones;
+        if (tones->chord_count == 0 || tones->chord_count > PLAN_TONES_MAX_CHORDS || tones->label_count == 0 ||
+            tones->label_count > PLAN_TONES_MAX_NOTES) {
+            return false;
+        }
+        for (size_t i = 0; i < tones->chord_count; i++) {
+            const PlanToneChord *chord = &tones->chords[i];
+            size_t length = strnlen(chord->numeral, PLAN_ROMAN_NUMERAL_MAX);
+            if (length == 0 || length >= PLAN_ROMAN_NUMERAL_MAX || chord->onset.den == 0 || chord->onset.num < 0 ||
+                chord->length.den == 0 || chord->length.num <= 0) {
+                return false;
+            }
+        }
+        for (size_t i = 0; i < tones->label_count; i++) {
+            size_t length = strnlen(tones->labels[i], PLAN_TONE_LABEL_MAX);
+            if (length == 0 || length >= PLAN_TONE_LABEL_MAX) {
+                return false;
+            }
+        }
+        return true;
+    }
     case PLAN_CONSTRAINT_PIECE_PART: {
         const PlanPiecePart *part = &constraint->params.piece_part;
         size_t length = strnlen(part->id, PLAN_PIECE_ID_MAX);

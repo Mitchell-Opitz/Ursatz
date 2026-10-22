@@ -27,7 +27,7 @@ static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
-                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam"};
+                                                  "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones"};
 static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
@@ -296,6 +296,27 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         ok = ok && json_add(object, "part", cJSON_CreateString(PIECE_PART_NAMES[constraint->params.piece_part.part])) &&
              json_add(object, "id", cJSON_CreateString(constraint->params.piece_part.id));
         break;
+    case PLAN_CONSTRAINT_MOTIVE_TONES: {
+        const PlanMotiveTones *tones = &constraint->params.motive_tones;
+        cJSON *harmony = cJSON_CreateArray();
+        cJSON *labels = cJSON_CreateArray();
+        ok = ok && json_add(object, "harmony", harmony) && json_add(object, "tones", labels);
+        for (size_t i = 0; ok && i < tones->chord_count; i++) {
+            const PlanToneChord *chord = &tones->chords[i];
+            char onset[64];
+            char length[64];
+            snprintf(onset, sizeof(onset), "%ld/%lu", chord->onset.num, chord->onset.den);
+            snprintf(length, sizeof(length), "%ld/%lu", chord->length.num, chord->length.den);
+            cJSON *item = cJSON_CreateObject();
+            ok = json_append(harmony, item) && json_add(item, "numeral", cJSON_CreateString(chord->numeral)) &&
+                 json_add(item, "onset", cJSON_CreateString(onset)) &&
+                 json_add(item, "length", cJSON_CreateString(length));
+        }
+        for (size_t i = 0; ok && i < tones->label_count; i++) {
+            ok = json_append(labels, cJSON_CreateString(tones->labels[i]));
+        }
+        break;
+    }
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:
@@ -850,6 +871,73 @@ static bool read_motive_ref_options(JsonReader *reader, const cJSON *item, const
     return true;
 }
 
+/* A time like "1/4" in whole notes: the numerator not below `least`. */
+static bool read_tones_time(JsonReader *reader, const cJSON *item, const char *path, const char *name, long least,
+                            PlanTime *out) {
+    const cJSON *text = json_member(reader, item, path, name, true);
+    if (!text) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, path, name);
+    long numerator;
+    unsigned long denominator;
+    char rest;
+    if (!cJSON_IsString(text) || sscanf(text->valuestring, "%ld/%lu%c", &numerator, &denominator, &rest) != 2 ||
+        denominator == 0 || numerator < least || numerator > TIME_LIMIT || denominator > (unsigned long)TIME_LIMIT ||
+        plan_time_make(numerator, denominator, out) != PLAN_OK) {
+        return json_bad_format(reader, at, "expected a time in whole notes like \"1/4\"");
+    }
+    return true;
+}
+
+static bool read_motive_tones(JsonReader *reader, const cJSON *item, const char *path, PlanMotiveTones *out) {
+    const cJSON *harmony = json_member(reader, item, path, "harmony", true);
+    const cJSON *tones = harmony ? json_member(reader, item, path, "tones", true) : NULL;
+    char at[PLAN_JSON_PATH_MAX];
+    if (!tones) {
+        return false;
+    }
+    json_child_path(at, path, "harmony");
+    if (!cJSON_IsArray(harmony) || cJSON_GetArraySize(harmony) < 1 || cJSON_GetArraySize(harmony) > PLAN_TONES_MAX_CHORDS) {
+        return json_bad_format(reader, at, "expected one to eight chords");
+    }
+    const cJSON *chord;
+    cJSON_ArrayForEach(chord, harmony) {
+        char chord_path[PLAN_JSON_PATH_MAX];
+        json_index_path(chord_path, at, out->chord_count);
+        const cJSON *numeral = json_member(reader, chord, chord_path, "numeral", true);
+        PlanToneChord *slot = &out->chords[out->chord_count];
+        if (!numeral) {
+            return false;
+        }
+        if (!cJSON_IsString(numeral) || numeral->valuestring[0] == '\0' ||
+            strlen(numeral->valuestring) >= PLAN_ROMAN_NUMERAL_MAX) {
+            return json_bad_format(reader, chord_path, "expected a Roman numeral of fewer than sixteen characters");
+        }
+        snprintf(slot->numeral, sizeof(slot->numeral), "%s", numeral->valuestring);
+        if (!read_tones_time(reader, chord, chord_path, "onset", 0, &slot->onset) ||
+            !read_tones_time(reader, chord, chord_path, "length", 1, &slot->length)) {
+            return false;
+        }
+        out->chord_count++;
+    }
+    json_child_path(at, path, "tones");
+    if (!cJSON_IsArray(tones) || cJSON_GetArraySize(tones) < 1 || cJSON_GetArraySize(tones) > PLAN_TONES_MAX_NOTES) {
+        return json_bad_format(reader, at, "expected one to sixty-four labels");
+    }
+    const cJSON *label;
+    cJSON_ArrayForEach(label, tones) {
+        if (!cJSON_IsString(label) || label->valuestring[0] == '\0' || strlen(label->valuestring) >= PLAN_TONE_LABEL_MAX) {
+            char label_path[PLAN_JSON_PATH_MAX];
+            json_index_path(label_path, at, out->label_count);
+            return json_bad_format(reader, label_path, "expected a tone label like \"chord\" or \"passing\"");
+        }
+        snprintf(out->labels[out->label_count++], PLAN_TONE_LABEL_MAX, "%s", label->valuestring);
+    }
+    return true;
+}
+
 static bool read_constraint(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, path, "expected an object");
@@ -1210,6 +1298,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         snprintf(out->params.piece_part.id, PLAN_PIECE_ID_MAX, "%s", id->valuestring);
         return true;
     }
+    case PLAN_CONSTRAINT_MOTIVE_TONES:
+        return read_motive_tones(reader, item, path, &out->params.motive_tones);
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:
@@ -1271,6 +1361,18 @@ static bool read_constraints(JsonReader *reader, PiecePlan *plan, const cJSON *c
         PlanConstraint constraint;
         if (!read_constraint(reader, item, at, &constraint)) {
             return false;
+        }
+        if (add_constraint == add_node_constraint && constraint.kind == PLAN_CONSTRAINT_MOTIVE_TONES) {
+            /* The labels are one to a note of the node's melody span. */
+            LaneSpanId spans[16];
+            size_t found = plan_node_lane_spans(plan, (NodeId)id, spans, 16);
+            for (size_t k = 0; k < found && k < 16; k++) {
+                size_t notes = plan_lane_span_payload(plan, spans[k])->notes.note_count;
+                if (plan_lane_span_lane(plan, spans[k]) == PLAN_LANE_MELODY && notes != constraint.params.motive_tones.label_count) {
+                    return json_fail(reader, PLAN_ERR_FORMAT, at, "motive_tones on %zu: %zu labels for %zu notes", id,
+                                     constraint.params.motive_tones.label_count, notes);
+                }
+            }
         }
         PlanResult result = add_constraint(plan, id, &constraint);
         if (result == PLAN_ERR_ALLOC) {
