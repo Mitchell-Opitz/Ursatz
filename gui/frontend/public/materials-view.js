@@ -497,14 +497,14 @@ function buildUsesSection(ctx) {
   return section;
 }
 
-/* The Used by table of a motif: name (opens the item), type, the version it uses, project, and whether its use is
+/* The Used by table of a motif (noun names another type, as "theme"): name (opens the item), type, the version it uses, project, and whether its use is
  * behind currentVersion. */
-function buildUsedByTable(users, currentVersion) {
+function buildUsedByTable(users, currentVersion, noun) {
   const rows = MaterialsModel.usedByTable(users, materialsState.projects, currentVersion);
   const section = materialsElement("div");
   section.appendChild(materialsElement("h2", "section-title", "Used by"));
   if (rows.length === 0) {
-    section.appendChild(materialsElement("div", "piece-list-status", "Nothing uses this motif yet."));
+    section.appendChild(materialsElement("div", "piece-list-status", `Nothing uses this ${noun || "motif"} yet.`));
     return section;
   }
   const table = materialsElement("table", "library-table");
@@ -1142,7 +1142,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
     notifySubjectsChanged();
     renderMaterialsView(type);
   });
-  if (type === "motif") {
+  if (type === "motif" || type === "theme") {
     controls.append(name, project, del);
   } else {
     controls.append(name, project, save, del);
@@ -1150,7 +1150,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
   content.append(controls, statusEl);
 
   const versionEl = materialsElement("div");
-  if (type !== "motif") {
+  if (type !== "motif" && type !== "theme") {
     const subjectsField = buildSubjectsField("items", id, answer.data.subjects);
     const subjectsRow = materialsElement("div", "materials-subjects-row");
     subjectsRow.append(materialsElement("h2", "section-title", "Subjects"), subjectsField.el);
@@ -1187,25 +1187,18 @@ async function renderMaterialsDetail(type, id, analysisError) {
     return;
   }
   if (type === "theme") {
-    const editor = buildThemeEditor({
+    ThemeDetailView.render(content, {
       id,
-      body: answer.data.body,
-      usesStatus: answer.data.uses_status,
-      items: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
+      item,
+      data: answer.data,
       statusEl,
-      saved: () => renderMaterialsDetail(type, id),
-    });
-    content.appendChild(editor.el);
-    const resultEl = buildThemeResult({
-      id,
-      version: item.current_version,
-      theme: answer.data.body.theme,
+      nameInput: name,
+      projectSelect: project,
+      allItems: allItemsAnswer.ok ? allItemsAnswer.data.items : [],
       nameOf: itemNameOf,
-      title: item.name,
+      rerender: () => renderMaterialsDetail(type, id),
     });
-    if (resultEl) {
-      content.appendChild(resultEl);
-    }
+    return;
   }
   if (type === "piece") {
     const editor = buildPieceEditor({
@@ -1241,12 +1234,7 @@ async function renderMaterialsDetail(type, id, analysisError) {
     }),
   );
   content.appendChild(buildUsedBySection(answer.data.used_by));
-  let renderThemeVersion;
-  if (type === "theme") {
-    renderThemeVersion = (number, body) => themeVersionView(versionEl, id, number, body, itemNameOf, item.name);
-  } else if (type === "piece") {
-    renderThemeVersion = (number, body) => pieceVersionView(versionEl, id, number, body, itemNameOf, item.name);
-  }
-  content.appendChild(buildVersionsList(item, versionEl, statusEl, renderThemeVersion));
+  const renderPieceVersion = type === "piece" ? (number, body) => pieceVersionView(versionEl, id, number, body, itemNameOf, item.name) : undefined;
+  content.appendChild(buildVersionsList(item, versionEl, statusEl, renderPieceVersion));
   content.appendChild(versionEl);
 }

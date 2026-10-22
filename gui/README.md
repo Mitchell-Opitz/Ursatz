@@ -164,13 +164,21 @@ in `materials-model.js`.
 
 #### Themes view
 
-A theme's detail holds the theme editor (`themes-view.js`; the helpers are in
-`themes-model.js`, global `ThemesModel`). It edits the theme body the backend
-composes (see Theme bodies and version files).
+A theme's detail is a page in four tabs at the full width (`theme-detail-view.js`,
+`ThemeDetailView`; the editor is in `themes-view.js`, the helpers in
+`themes-model.js`, global `ThemesModel`). The open tab is remembered. It edits
+the theme body the backend composes (see Theme bodies and version files).
 
-- Form: into (sentence, period, hybrid with its pairing, and the first
-  cadence for a period or hybrid), mode (major, minor, From the brief),
-  meter, bars (4 or 8) and cadence. A theme is always in C: there is no key.
+- Theme tab: subjects, mode (major, minor, From the brief; the first basic
+  motif sets it to that motif's mode unless it was changed by hand), meter and
+  tempo (blank takes the brief's). An Advanced section, closed by default,
+  holds the accompaniment, the brief, the switches, weight, Check with the
+  Analyzer and Seed. Below are the composed theme (Result) and the one Save row.
+- Structure tab: form: into (sentence, period, hybrid with its pairing, and the
+  first cadence for a period or hybrid), bars (4 or 8) and cadence. A theme is
+  always in C: there is no key. The slots are below.
+- Used by tab: the items that use the theme. Other tab: the versions with their
+  notes (View opens one read only) and Derived from.
 - Slots: Basic idea (required), Contrasting idea, Continuation and Cadential.
   Each is a motif picker: a project select, a name search, the motif and its
   version (current by default). Only a full melodic motif is accepted. The
@@ -181,12 +189,13 @@ composes (see Theme bodies and version files).
   single pieces and styles, listed as chips with Remove. An empty brief means
   no style. Four checkboxes ("Use the brief's motive degrees, intervals,
   rhythm, non-chord figures") are all on by default; an unchecked one goes to
-  `without`. Weight is Light (1/4), Normal (1/2) or Strong (1). Tempo (blank
-  takes the brief's), Check with the Analyzer and Seed (blank draws one).
+  `without`. Weight is Light (1/4), Normal (1/2) or Strong (1). Check with the
+  Analyzer and Seed (blank draws one).
 
-Save as new version writes a version without `result`; its note
-("What changed? (required)") must be filled in. Compose saves first
-when the form changed, then calls the compose route with the buttons disabled
+Save is the one save of the page: a changed name or project goes through the
+item update, a changed form writes a version without `result` with the note
+("What changed? (required)"), and nothing changed says "Nothing to save."
+Compose saves first when the form changed (the note is required), then calls the compose route with the buttons disabled
 and a spinner; a refusal shows the backend's message, which carries the
 Composer's message. A slot or accompaniment motif with a newer version shows
 "Source updated: <name> v<n>" with Update and compose (the compose route's

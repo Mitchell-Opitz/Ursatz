@@ -486,71 +486,90 @@ body {
   display: none;
 }
 
-/* The whole Motifs section (list, New Motif page, detail) uses the page width: no 480px or 900px caps on its sections, content up to 1200px (R-191, R-193). */
-.motifs-section {
+/* The whole Motifs section and the theme page (list, New Motif page, detail) use the page width: no 480px or 900px caps on its sections, content up to 1200px (R-191, R-193). */
+.motifs-section,
+.themes-section {
   max-width: none;
   width: 100%;
 }
 
 .motifs-section .panel,
+.themes-section .panel,
 .motifs-section .materials-editor,
+.themes-section .materials-editor,
 .motifs-section .materials-analysis,
+.themes-section .materials-analysis,
 .motifs-section .materials-version-body,
-.motifs-section .materials-notes {
+.themes-section .materials-version-body,
+.motifs-section .materials-notes,
+.themes-section .materials-notes {
   max-width: none;
 }
 
-.motifs-section .materials-score-mount {
+.motifs-section .materials-score-mount,
+.themes-section .materials-score-mount {
   width: 100%;
 }
 
 /* One spacing scale for the Motif and Variants tabs: 0.5rem inside rows, 1rem between fields, 1.5rem between panels.
  * The panels share one border, radius and padding. */
-.motifs-section {
+.motifs-section,
+.themes-section {
   --space-row: 0.5rem;
   --space-field: 1rem;
   --space-panel: 1.5rem;
 }
 
-.motifs-section .panel {
+.motifs-section .panel,
+.themes-section .panel {
   margin: 0 0 var(--space-panel);
   padding: var(--space-field);
   border: 1px solid var(--border);
   border-radius: 6px;
 }
 
-.motifs-section .section-title {
+.motifs-section .section-title,
+.themes-section .section-title {
   margin: 0 0 var(--space-row);
 }
 
 .motifs-section .upload-controls,
+.themes-section .upload-controls,
 .motifs-section .variant-meta,
-.motifs-section .variant-actions {
+.themes-section .variant-meta,
+.motifs-section .variant-actions,
+.themes-section .variant-actions {
   gap: var(--space-row);
   margin-top: var(--space-row);
 }
 
-.motifs-section .motif-form-grid {
+.motifs-section .motif-form-grid,
+.themes-section .motif-form-grid {
   gap: var(--space-field);
 }
 
-.motifs-section .materials-hint {
+.motifs-section .materials-hint,
+.themes-section .materials-hint {
   margin: var(--space-row) 0 0;
 }
 
 .motifs-section .variant-candidate,
-.motifs-section .variant-node {
+.themes-section .variant-candidate,
+.motifs-section .variant-node,
+.themes-section .variant-node {
   padding-top: var(--space-row);
   padding-bottom: var(--space-row);
   margin-bottom: 0;
 }
 
-.motifs-section .variant-actions {
+.motifs-section .variant-actions,
+.themes-section .variant-actions {
   display: flex;
   flex-wrap: wrap;
 }
 
-.motifs-section .button-row {
+.motifs-section .button-row,
+.themes-section .button-row {
   justify-content: flex-end;
   margin-top: var(--space-field);
 }

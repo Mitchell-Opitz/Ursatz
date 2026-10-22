@@ -54,6 +54,13 @@
     { category: "motive-nct-figure", label: "non-chord figures" },
   ];
   const SWITCH_TEXT = "Use the brief's motive degrees, intervals, rhythm, non-chord figures";
+  const THEME_TABS = [
+    { id: "theme", label: "Theme" },
+    { id: "structure", label: "Structure" },
+    { id: "used-by", label: "Used by" },
+    { id: "other", label: "Other" },
+  ];
+  const THEME_TAB_KEY = "ursatz.theme.tab";
   const MAX_SLOTS = 4;
   const TEMPO_MIN = 20;
   const TEMPO_MAX = 400;
@@ -94,6 +101,7 @@
       into: "sentence",
       hybrid: "presentation+continuation",
       mode: "major",
+      modeChosen: false,
       meter: "4/4",
       bars: 8,
       cadence: "PAC",
@@ -107,6 +115,24 @@
       check: false,
       seed: "",
     };
+  }
+
+  /* The remembered theme tab id, "theme" when unset, unknown or storage is unavailable. */
+  function readThemeTab() {
+    try {
+      const saved = root.localStorage.getItem(THEME_TAB_KEY);
+      return THEME_TABS.some((tab) => tab.id === saved) ? saved : THEME_TABS[0].id;
+    } catch (err) {
+      return THEME_TABS[0].id;
+    }
+  }
+
+  function writeThemeTab(id) {
+    try {
+      root.localStorage.setItem(THEME_TAB_KEY, id);
+    } catch (err) {
+      // Storage unavailable: the tab just is not remembered.
+    }
   }
 
   /* --- the brief ------------------------------------------------------- */
@@ -331,6 +357,7 @@
       state.firstCadence = form.first_cadence;
     }
     state.slots = slotEntries((Array.isArray(theme.slots) ? theme.slots : []).filter((slot) => slot && typeof slot === "object"));
+    state.modeChosen = state.slots.some((entry) => entry.slot === "basic");
     const acc = theme.accompaniment;
     if (acc && typeof acc === "object") {
       state.accompaniment =
@@ -347,6 +374,26 @@
     state.check = theme.check === true;
     state.seed = Number.isInteger(theme.seed) ? String(theme.seed) : "";
     return state;
+  }
+
+  /* "major" or "minor" from a motif version body's key (`C minor`), null when the body names neither. */
+  function motifMode(body) {
+    const key = body && body.motif && typeof body.motif.key === "string" ? body.motif.key.toLowerCase() : "";
+    if (key.includes("minor")) {
+      return "minor";
+    }
+    return key.includes("major") ? "major" : null;
+  }
+
+  /* R-205: the first time the basic slot is set, the mode takes the motif's mode unless the mode was changed by
+   * hand. Sets state.mode and answers true when it did. */
+  function applyBasicMode(state, hadBasic, motifBody) {
+    const mode = motifMode(motifBody);
+    if (hadBasic || state.modeChosen || mode === null) {
+      return false;
+    }
+    state.mode = mode;
+    return true;
   }
 
   function hybridOk(pairing) {
@@ -716,10 +763,15 @@
     WEIGHTS,
     MOTIVE_CATEGORIES,
     SWITCH_TEXT,
+    THEME_TABS,
+    readThemeTab,
+    writeThemeTab,
     emptyState,
     bodyFromForm,
     formFromBody,
     formProblems,
+    motifMode,
+    applyBasicMode,
     withoutFromSwitches,
     switchesFromWithout,
     briefFromPicks,
