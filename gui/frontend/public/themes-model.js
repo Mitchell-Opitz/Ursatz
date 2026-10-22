@@ -316,7 +316,7 @@
         cadence: s.cadence,
         first_cadence: firstCadence,
       },
-      slots: slotEntries(s.slots),
+      slots: slotEntries(s.slots).filter((entry) => formSlots(s).includes(entry.slot)),
       accompaniment,
       brief,
       style_weight: s.weight,
@@ -394,6 +394,31 @@
     }
     state.mode = mode;
     return true;
+  }
+
+  /* The [beginning, ending] pair of the form: a sentence is presentation+continuation, a period antecedent+consequent. */
+  function pairing(state) {
+    const s = state || emptyState();
+    if (s.into === "sentence") {
+      return ["presentation", "continuation"];
+    }
+    if (s.into === "period") {
+      return ["antecedent", "consequent"];
+    }
+    return text(s.hybrid).split("+");
+  }
+
+  /* The slots the form has, in order: basic always; contrasting for an antecedent or cbi beginning or a consequent
+   * ending; continuation for a continuation ending; cadential for a continuation or cadential ending. */
+  function formSlots(state) {
+    const [beginning, ending] = pairing(state);
+    const has = {
+      basic: true,
+      contrasting: beginning === "antecedent" || beginning === "cbi" || ending === "consequent",
+      continuation: ending === "continuation",
+      cadential: ending === "continuation" || ending === "cadential",
+    };
+    return SLOT_NAMES.filter((name) => has[name]);
   }
 
   function hybridOk(pairing) {
@@ -770,6 +795,7 @@
     bodyFromForm,
     formFromBody,
     formProblems,
+    formSlots,
     motifMode,
     applyBasicMode,
     withoutFromSwitches,

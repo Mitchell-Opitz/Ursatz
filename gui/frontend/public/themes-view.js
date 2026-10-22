@@ -577,6 +577,7 @@ function buildThemeAccompanimentSection(state, itemsOf, options) {
 function buildThemeSlotsSection(state, itemsOf, basicSet) {
   const section = materialsElement("section", "panel materials-editor theme-editor");
   section.appendChild(materialsElement("h2", "section-title", "Slots"));
+  const rows = {};
   for (const slot of ThemesModel.SLOT_NAMES) {
     const row = materialsElement("div", "theme-slot");
     row.appendChild(materialsElement("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === "basic" ? " (required)" : ""}`));
@@ -596,8 +597,17 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
     });
     picker.setValue(state.slots.find((entry) => entry.slot === slot));
     row.appendChild(picker.el);
+    rows[slot] = row;
     section.appendChild(row);
   }
+  /* Shows the rows of the slots the form has. */
+  section.refreshSlots = () => {
+    const shown = ThemesModel.formSlots(state);
+    for (const slot of ThemesModel.SLOT_NAMES) {
+      rows[slot].hidden = !shown.includes(slot);
+    }
+  };
+  section.refreshSlots();
   return section;
 }
 
@@ -675,6 +685,9 @@ function buildThemeEditor(ctx) {
     beginningSelect.parentElement.hidden = state.into !== "hybrid";
     endingSelect.parentElement.hidden = state.into !== "hybrid";
     firstCadence.parentElement.hidden = state.into === "sentence";
+    if (sections.slots) {
+      sections.slots.refreshSlots();
+    }
   }
   for (const control of [into, beginningSelect, endingSelect, meter, bars, cadence, firstCadence]) {
     control.addEventListener("input", syncForm);
