@@ -50,6 +50,9 @@ bool motive_harmony_bar_limit_ok(const Motive *motive);
    "retardation", "escape", "anticipation", "double-neighbor", "changing-tone" or "pedal". NULL for an invalid type. */
 const char *motive_tone_type_name(NonChordTone type);
 
+/* A tone role as a tone option or a request writes it: "chord", or the name of a non-chord tone (motive_tone_type_parse). */
+bool motive_tone_role_parse(const char *text, MotiveToneRole *role, NonChordTone *type);
+
 /* The type a tone option names, by the names motive_tone_type_name gives (also "escape-tone"). False for any other text. */
 bool motive_tone_type_parse(const char *name, NonChordTone *out);
 

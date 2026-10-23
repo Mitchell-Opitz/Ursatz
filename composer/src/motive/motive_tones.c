@@ -241,6 +241,19 @@ const char *motive_tone_type_name(NonChordTone type) {
     }
 }
 
+bool motive_tone_role_parse(const char *text, MotiveToneRole *role, NonChordTone *type) {
+    if (!text || !role || !type) {
+        return false;
+    }
+    *type = NON_CHORD_TONE_PASSING;
+    if (strcmp(text, "chord") == 0) {
+        *role = MOTIVE_TONE_CHORD;
+        return true;
+    }
+    *role = MOTIVE_TONE_NON_CHORD;
+    return motive_tone_type_parse(text, type);
+}
+
 bool motive_tone_type_parse(const char *name, NonChordTone *out) {
     if (!name || !out) {
         return false;
@@ -262,7 +275,8 @@ bool motive_tones_constraint(const Motive *motive, PlanConstraint *out) {
     MotiveBaseHarmony harmony;
     MotiveToneLabel labels[MOTIVE_MAX_NOTES];
     if (!motive || !out || motive->note_count == 0 || !motive_base_harmony(motive, &harmony) ||
-        motive_tone_labels(motive, harmony.chords, harmony.count, NULL, 0, labels) != MOTIVE_TONE_OK) {
+        motive_tone_labels(motive, harmony.chords, harmony.count, motive->tone_overrides,
+                           motive->tone_override_count, labels) != MOTIVE_TONE_OK) {
         return false;
     }
     PlanConstraint constraint;

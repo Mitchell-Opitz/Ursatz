@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "analysis/motive_tone_roles.h"
+
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
@@ -131,6 +133,12 @@ typedef struct {
     size_t feature_count;
     /* Zero-initialized means melodic. */
     MotiveRole role;
+    /*
+     * The caller's own tone labels (0-based note indices, the later of two on one note wins), which replace the labels the
+     * motive's base harmony gives its notes when it is attached to a plan (motive_tones.h). Zero means none.
+     */
+    MotiveToneOverride tone_overrides[MOTIVE_MAX_NOTES];
+    size_t tone_override_count;
 } Motive;
 
 /* What the caller says about the motive. NULL options mean nothing. */

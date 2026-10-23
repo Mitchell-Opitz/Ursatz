@@ -17,6 +17,7 @@
 #include <ursatz_composer/grow_form.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_tones.h>
 
 /* At most this many motives in a request, and arguments for grow. */
 #define THEME_MOTIVES 16
@@ -126,6 +127,48 @@ bool request_parse_pickup(const char *text, int beat_unit, PlanTime *out) {
 }
 
 /*
+ * Reads "tone_overrides" of a motive, {"<n>": "<role>"}: the 1-based note and its role as the motive command's --tone writes
+ * it ("chord" or a non-chord tone). They go on the motive, which a plan keeps as its tones when it is attached.
+ */
+static int read_tone_overrides(const char *what, const cJSON *object, Motive *motive) {
+    const cJSON *overrides = cJSON_GetObjectItemCaseSensitive(object, "tone_overrides");
+    if (!overrides || cJSON_IsNull(overrides)) {
+        return 0;
+    }
+    if (!cJSON_IsObject(overrides)) {
+        return cli_fail(CLI_EXIT_USAGE, "%s: tone_overrides must be {\"<note>\": \"<role>\"}", what);
+    }
+    for (const cJSON *entry = overrides->child; entry; entry = entry->next) {
+        char *end = NULL;
+        long note = strtol(entry->string, &end, 10);
+        if (motive->tone_override_count == MOTIVE_MAX_NOTES) {
+            return cli_fail(CLI_EXIT_USAGE, "%s: tone_overrides names a note twice", what);
+        }
+        MotiveToneOverride *slot = &motive->tone_overrides[motive->tone_override_count];
+        if (end == entry->string || *end != '\0' || note < 1 || (unsigned long)note > motive->note_count) {
+            return cli_fail(CLI_EXIT_USAGE, "%s: tone_overrides \"%s\": the note is a number from 1 to %zu", what,
+                            entry->string, motive->note_count);
+        }
+        if (!cJSON_IsString(entry) ||
+            !motive_tone_role_parse(entry->valuestring, &slot->role, &slot->type)) {
+            return cli_fail(CLI_EXIT_USAGE,
+                            "%s: tone_overrides \"%s\": the role is chord, passing, neighbor, appoggiatura, suspension, "
+                            "retardation, escape, anticipation, double-neighbor, changing-tone or pedal",
+                            what, entry->string);
+        }
+        slot->note = (size_t)note - 1;
+        motive->tone_override_count++;
+    }
+    if (motive->tone_override_count > 0) {
+        PlanConstraint tones;
+        if (!motive_tones_constraint(motive, &tones)) {
+            return cli_fail(CLI_EXIT_USAGE, "%s: tone_overrides need a motive with a key and pitches to label", what);
+        }
+    }
+    return 0;
+}
+
+/*
  * Reads a motive of the request, a degree list in the key (R-135), with its pickup, harmony, features and role. `role` is
  * the role to force (NULL for the motive's own member). Returns 0 or the status of the error printed.
  */
@@ -197,7 +240,7 @@ int request_read_motive(const char *what, const cJSON *object, const char *role,
         return cli_fail(CLI_EXIT_USAGE, "%s: cannot read the degrees '%s'%s%s: %s", what, degrees,
                         error.location[0] ? " at " : "", error.location, error.message);
     }
-    return 0;
+    return read_tone_overrides(what, object, out);
 }
 
 /* The bits of the functions a form lists; false, with the error printed, for a name that is not one. */
