@@ -421,6 +421,33 @@
     return SLOT_NAMES.filter((name) => has[name]);
   }
 
+  /* The motif a slot's item belongs to: the item itself, or the end of its variant_of chain in items (at most 32 hops). */
+  function rootMotif(items, id) {
+    const list = Array.isArray(items) ? items : [];
+    let current = id;
+    for (let hop = 0; hop < 32; hop++) {
+      const item = list.find((entry) => entry.id === current);
+      if (!item || !item.variant_of) {
+        return current;
+      }
+      current = item.variant_of;
+    }
+    return current;
+  }
+
+  /* The Use choices of a motif from VariantTree.treeRows rows: its saved variants, the root left out. A choice is
+   * {value (item id), version, label, title (the derivation line)}. */
+  function variantChoices(rows) {
+    return (Array.isArray(rows) ? rows : [])
+      .filter((row) => !row.isRoot)
+      .map((row) => ({
+        value: row.id,
+        version: Number(row.version),
+        label: `${"- ".repeat(Math.max(0, row.depth - 1))}${row.name}`,
+        title: row.derivation || "",
+      }));
+  }
+
   function hybridOk(pairing) {
     const parts = text(pairing).split("+");
     return parts.length === 2 && BEGINNINGS.includes(parts[0]) && ENDINGS.includes(parts[1]);
@@ -796,6 +823,8 @@
     formFromBody,
     formProblems,
     formSlots,
+    rootMotif,
+    variantChoices,
     motifMode,
     applyBasicMode,
     withoutFromSwitches,

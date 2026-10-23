@@ -2366,6 +2366,17 @@ button.button-danger:disabled {
   margin-bottom: 0.5rem;
 }
 
+.theme-slot-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.theme-use {
+  max-width: 16rem;
+}
+
 .theme-chips {
   display: flex;
   flex-wrap: wrap;

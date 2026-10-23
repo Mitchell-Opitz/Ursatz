@@ -572,8 +572,62 @@ function buildThemeAccompanimentSection(state, itemsOf, options) {
   return section;
 }
 
-/* The slot pickers of the Structure tab: one motif picker per slot, kept in state.slots. basicSet(motifBody,
- * hadBasic) is called when the basic slot gets a motif. Returns the section element. */
+/* A Use select beside a motif picker: "The motif" or one of its saved variants (rejected left out). itemsOf() lists the
+ * items. onUse(value) gets {item_id, version} of the choice. Returns {el, setMotif(motif, keep)}: the motif the picker
+ * holds ({item_id, version}, or null) and the {item_id, version} of the variant to select. */
+function buildThemeUseSelect(itemsOf, onUse) {
+  const select = materialsElement("select", "theme-use");
+  select.title = "Use the motif or one of its saved variants";
+  let motif = null;
+  let choices = [];
+  let loading = 0;
+
+  function fill(keep) {
+    select.innerHTML = "";
+    const base = materialsElement("option", "", "The motif");
+    base.value = "";
+    select.appendChild(base);
+    for (const choice of choices) {
+      const option = materialsElement("option", "", choice.label);
+      option.value = choice.value;
+      option.title = choice.title;
+      select.appendChild(option);
+    }
+    if (keep && !choices.some((choice) => choice.value === keep.item_id)) {
+      const option = materialsElement("option", "", "Saved variant");
+      option.value = keep.item_id;
+      select.appendChild(option);
+      choices = [...choices, { value: keep.item_id, version: Number(keep.version), label: "Saved variant", title: "" }];
+    }
+    select.value = keep ? keep.item_id : "";
+  }
+
+  async function setMotif(next, keep) {
+    motif = next;
+    choices = [];
+    const ticket = ++loading;
+    fill(keep);
+    if (!next || !next.item_id) {
+      return;
+    }
+    const answer = await sendMaterialsRequest(VariantTree.treeRequest(next.item_id));
+    if (ticket !== loading || !answer.ok) {
+      return;
+    }
+    choices = ThemesModel.variantChoices(VariantTree.treeRows(answer.data.tree, false, "", "").rows);
+    fill(keep);
+  }
+
+  select.addEventListener("change", () => {
+    const choice = choices.find((entry) => entry.value === select.value);
+    onUse(choice ? { item_id: choice.value, version: choice.version } : motif);
+  });
+  return { el: select, setMotif };
+}
+
+/* The slot rows of the Structure tab: one motif picker and Use select per slot, kept in state.slots (a variant stores
+ * its own item id and version). basicSet(motifBody, hadBasic) is called when the basic slot gets a motif. Returns the
+ * section element; refreshSlots() shows the slots the form has. */
 function buildThemeSlotsSection(state, itemsOf, basicSet) {
   const section = materialsElement("section", "panel materials-editor theme-editor");
   section.appendChild(materialsElement("h2", "section-title", "Slots"));
@@ -581,22 +635,41 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
   for (const slot of ThemesModel.SLOT_NAMES) {
     const row = materialsElement("div", "theme-slot");
     row.appendChild(materialsElement("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === "basic" ? " (required)" : ""}`));
+    const setSlot = (value) => {
+      state.slots = state.slots.filter((entry) => entry.slot !== slot);
+      if (value) {
+        state.slots.push({ slot, item_id: value.item_id, version: value.version });
+      }
+    };
+    const use = buildThemeUseSelect(itemsOf, setSlot);
     const picker = buildThemeMotifPicker({
       role: "melodic",
       items: itemsOf,
       onChange: (value, motifBody) => {
         const hadBasic = state.slots.some((entry) => entry.slot === "basic");
-        state.slots = state.slots.filter((entry) => entry.slot !== slot);
-        if (value) {
-          state.slots.push({ slot, item_id: value.item_id, version: value.version });
-        }
+        setSlot(value);
+        use.setMotif(value, null);
         if (slot === "basic" && value) {
           basicSet(motifBody, hadBasic);
         }
       },
     });
-    picker.setValue(state.slots.find((entry) => entry.slot === slot));
-    row.appendChild(picker.el);
+    const stored = state.slots.find((entry) => entry.slot === slot);
+    if (stored) {
+      const root = ThemesModel.rootMotif(itemsOf(), stored.item_id);
+      if (root === stored.item_id) {
+        picker.setValue(stored);
+        use.setMotif(stored, null);
+      } else {
+        const rootItem = itemsOf().find((item) => item.id === root);
+        const motif = { item_id: root, version: rootItem ? Number(rootItem.current_version) : 1 };
+        picker.setValue(motif);
+        use.setMotif(motif, stored);
+      }
+    }
+    const controls = materialsElement("div", "theme-slot-row");
+    controls.append(picker.el, use.el);
+    row.appendChild(controls);
     rows[slot] = row;
     section.appendChild(row);
   }
