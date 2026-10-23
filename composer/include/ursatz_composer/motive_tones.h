@@ -32,6 +32,14 @@ typedef struct {
  */
 bool motive_base_harmony(const Motive *motive, MotiveBaseHarmony *out);
 
+/*
+ * The motive's tones as the plan keeps them (PLAN_CONSTRAINT_MOTIVE_TONES): its base harmony, each chord with its onset and
+ * length, and the label of every note (motive_tone_roles against that harmony; "chord", "unclassified" or the name of
+ * the non-chord tone). False, *out untouched, for a motive with no base harmony or tones (a rhythm, a contour, one
+ * with no key).
+ */
+bool motive_tones_constraint(const Motive *motive, PlanConstraint *out);
+
 /* The most chords the base harmony may put in one bar. */
 #define MOTIVE_MAX_CHORDS_PER_BAR 2
 

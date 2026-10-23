@@ -9,6 +9,7 @@
 #include <cJSON.h>
 #include <key_identification.h>
 
+#include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/plan_state.h>
 
 #include "motive/motive_internal.h"
@@ -1085,6 +1086,14 @@ static PlanResult attach(PiecePlan *plan, NodeId parent, PlanTime start, const M
         constraint.kind = PLAN_CONSTRAINT_SOURCE;
         constraint.params.source = *source;
         result = plan_node_add_constraint(plan, node, &constraint);
+        if (result != PLAN_OK) {
+            return result;
+        }
+    }
+    /* An accompaniment motive is not placed on chords by the melody operator, so it carries no tones. */
+    PlanConstraint tones;
+    if (motive->role == MOTIVE_ROLE_MELODIC && motive_tones_constraint(motive, &tones)) {
+        result = plan_node_add_constraint(plan, node, &tones);
         if (result != PLAN_OK) {
             return result;
         }

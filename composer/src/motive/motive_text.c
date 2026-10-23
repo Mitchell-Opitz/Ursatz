@@ -347,6 +347,17 @@ static unsigned long gcd(unsigned long a, unsigned long b) {
     return a;
 }
 
+bool motive_chord_numeral(const MotiveChord *chord, char *out, size_t size) {
+    const char *figure = chord ? chord_figure(chord->inversion, chord->seventh) : NULL;
+    size_t numeral = chord && chord->degree >= 1 && chord->degree <= 7 ? (size_t)(7 - chord->degree) : 7;
+    if (!figure || numeral == 7 || chord->alteration < -1 || chord->alteration > 1 || !out) {
+        return false;
+    }
+    int written = snprintf(out, size, "%s%s%s", chord->alteration < 0 ? "b" : (chord->alteration > 0 ? "#" : ""),
+                           NUMERALS[numeral], figure);
+    return written > 0 && (size_t)written < size;
+}
+
 char *motive_harmony_to_text(const Motive *motive) {
     if (!motive) {
         return NULL;
@@ -354,14 +365,12 @@ char *motive_harmony_to_text(const Motive *motive) {
     Text text = {NULL, 0, 0, false};
     for (size_t i = 0; i < motive->harmony_count; i++) {
         const MotiveChord *chord = &motive->harmony[i];
-        const char *figure = chord_figure(chord->inversion, chord->seventh);
-        size_t numeral = chord->degree >= 1 && chord->degree <= 7 ? (size_t)(7 - chord->degree) : 7;
-        if (!figure || numeral == 7 || chord->alteration < -1 || chord->alteration > 1) {
+        char numeral[MOTIVE_CHORD_NUMERAL_MAX];
+        if (!motive_chord_numeral(chord, numeral, sizeof(numeral))) {
             free(text.data);
             return NULL;
         }
-        text_add(&text, "%s%s%s", chord->alteration < 0 ? "b" : (chord->alteration > 0 ? "#" : ""), NUMERALS[numeral],
-                 figure);
+        text_add(&text, "%s", numeral);
         /* The beats are the onset over the beat length, in lowest terms. */
         long beats = chord->onset.num * (long)motive->meter.beat_unit;
         unsigned long den = chord->onset.den;

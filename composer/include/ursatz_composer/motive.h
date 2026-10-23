@@ -324,6 +324,12 @@ bool motive_in_key(const Motive *source, const PlanKey *key, Motive *out);
  */
 MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, MotiveChord *out, size_t *count,
                                   MotiveError *error);
+/* The most characters of a chord's numeral with its NUL ("bVII65", "#IV43"). */
+#define MOTIVE_CHORD_NUMERAL_MAX 16
+
+/* A chord as the numeral motive_harmony_parse reads, without its onset ("V65", "bVII7"). False for a chord that has none. */
+bool motive_chord_numeral(const MotiveChord *chord, char *out, size_t size);
+
 /* The motive's own harmony as text, in the form motive_harmony_parse reads ("" when it has none); NULL on failure. */
 char *motive_harmony_to_text(const Motive *motive);
 
