@@ -124,11 +124,18 @@ static bool layout(const MelodyContext *context, const MelodyFillParams *params,
     return true;
 }
 
+/* Whether the note carries a chord tone of a motive with tones (R-215): it lands on a tone of its chord, however weak. */
+static bool is_chord_tone_of_motive(const MelodyContext *context, const MelodyNote *note) {
+    return note->motive_index >= 0 && (size_t)note->motive_index < context->motive_tone_count &&
+           context->motive_tone[note->motive_index] == MELODY_TONE_CHORD;
+}
+
 bool melody_is_anchor(const MelodyContext *context, const MelodyFillParams *params, const MelodyCandidate *melody,
                       size_t i) {
     const MelodyNote *note = &melody->notes[i];
     return params->nct_types == 0 || i == 0 || i + 1 == melody->count || note->strong ||
-           note->duration >= context->cell || note->onset + note->duration > context->chord_start[note->chord + 1];
+           note->duration >= context->cell || note->onset + note->duration > context->chord_start[note->chord + 1] ||
+           is_chord_tone_of_motive(context, note);
 }
 
 /*

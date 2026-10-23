@@ -64,6 +64,15 @@ typedef struct {
     long motive_onset[MOTIVE_MAX_NOTES];
     long motive_duration[MOTIVE_MAX_NOTES];
     long motive_length;
+    /*
+     * The tone roles of the motive's notes (R-215), from the motive_tones constraint of its node (motive_tones in the plan,
+     * read through the motive_ref chain of a developed motive). motive_tone[k] is MELODY_TONE_CHORD, MELODY_TONE_NONE (no
+     * role: unclassified) or the NonChordTone of note k. The first motive_tone_count notes have a role; an exact
+     * restatement says the whole melody of the idea before, whose later notes have none. 0 means no motive has tones, and
+     * the motive is placed as it was before tones.
+     */
+    int motive_tone[MOTIVE_MAX_NOTES];
+    size_t motive_tone_count;
 
     /*
      * A target that stands for an idea or a subphrase of a phrase (not the whole phrase) reads the phrase it is in,
@@ -88,6 +97,9 @@ typedef struct {
     int seam_next;
     bool restating;      /* the motive is the melody of the idea before, to be said again as it was */
 } MelodyContext;
+
+#define MELODY_TONE_CHORD (-1)
+#define MELODY_TONE_NONE (-2)
 
 /* Whether a tick of the target is the start of a cell of the meter (a strong beat). */
 static inline bool melody_on_cell(const MelodyContext *context, long tick) {
