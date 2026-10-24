@@ -602,6 +602,7 @@
   const FROM_TEXT = { request: "set here", option: "set here", style: "from the brief", none: "not set" };
   const SOURCE_TEXT = {
     motive: "slot motif, exact",
+    idea: "From its own motif",
     pool: "saved form",
     registry: "registry form",
     operator: "operator",
@@ -670,14 +671,18 @@
     };
   }
 
-  /* {A: "Name"} for the motive ids the backend gives the slots, in slot
-   * order; nameOf(item_id) gives a motif's name. */
+  /* {M1: "Name"} for the motive ids the backend gives the form: one per distinct motif and version, the slots in
+   * order, then the ideas; nameOf(item_id) gives a motif's name. */
   function motiveNames(state, nameOf) {
     const names = {};
-    const ids = ["A", "B", "C", "D"];
-    slotEntries(state.slots).forEach((entry, index) => {
-      names[ids[index]] = nameOf ? nameOf(entry.item_id) || entry.item_id : entry.item_id;
-    });
+    const seen = [];
+    const entries = [...slotEntries(state.slots), ...ideaEntries(state.ideas, formIdeas(state).map((entry) => entry.idea))];
+    for (const entry of entries) {
+      if (!seen.some((other) => other.item_id === entry.item_id && other.version === entry.version)) {
+        seen.push(entry);
+        names[`M${seen.length}`] = nameOf ? nameOf(entry.item_id) || entry.item_id : entry.item_id;
+      }
+    }
     return names;
   }
 

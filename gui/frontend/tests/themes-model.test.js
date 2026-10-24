@@ -187,7 +187,7 @@ check(view.heard === "heard as sentence" && view.heardAsRequested === true, "the
 check(view.check === "no contradiction found" && T.resultView({ summary }, {}).check === "not run", "the Analyzer check line");
 check(view.pieces === "12 pieces in the brief, 1 skipped", "the brief pieces line");
 check(T.resultView(null).rows.length === 0 && T.resultView({}).distance.length === 0, "an empty result gives empty rows");
-check(same(T.motiveNames(filled(), (id) => `n-${id}`), { A: "n-mot-1", B: "n-mot-2" }), "motive ids follow the slot order");
+check(same(T.motiveNames(filled(), (id) => `n-${id}`), { M1: "n-mot-1", M2: "n-mot-2" }), "motive ids follow the slot order, M1 on");
 
 /* sources */
 const item = {
