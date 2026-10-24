@@ -1,5 +1,7 @@
 #include "analysis/motive_variant_recognition.h"
 
+#include "analysis/motive_tone_roles.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -677,6 +679,88 @@ static void propose_liquidate_features(const MotiveSketch *s, const MotiveSketch
     }
 }
 
+/* A proposal not already in the list (the frame relations propose from several sources). */
+static void put_once(Proposals *p, MotiveRelationKind kind, long a, long b) {
+    for (size_t i = 0; i < p->count; i++) {
+        if (p->list[i].kind == kind && p->list[i].value[0] == a && p->list[i].value[1] == b) {
+            return;
+        }
+    }
+    put(p, kind, a, b, 0);
+}
+
+static bool roles_of(const MotiveSketch *sketch, MotiveToneLabel *labels) {
+    return sketch->has_scale && motive_tone_roles(sketch, NULL, 0, labels) == MOTIVE_TONE_OK;
+}
+
+/* The figure the target has after each of the source's chord tones first, then every type after every note. */
+static void propose_add_non_chord_tone(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
+    MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
+    unsigned long seen = 0;
+    if (roles_of(t, labels)) {
+        for (size_t j = 1; j < t->note_count; j++) {
+            if (labels[j].role == MOTIVE_TONE_NON_CHORD) {
+                put_once(p, MOTIVE_RELATION_ADD_NON_CHORD_TONE, (long)j - 1, labels[j].type);
+                seen |= 1ul << labels[j].type;
+            }
+        }
+    }
+    for (int pass = 0; pass < 2; pass++) {
+        for (long after = 0; after + 1 < (long)s->note_count; after++) {
+            for (long type = 0; type < NON_CHORD_TONE_COUNT; type++) {
+                if (pass == 1 || (seen & (1ul << type)) != 0) {
+                    put_once(p, MOTIVE_RELATION_ADD_NON_CHORD_TONE, after, type);
+                }
+            }
+        }
+    }
+}
+
+static void propose_remove_non_chord_tone(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
+    (void)t;
+    MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
+    if (!roles_of(s, labels)) {
+        return;
+    }
+    for (size_t i = 0; i < s->note_count; i++) {
+        if (labels[i].role != MOTIVE_TONE_CHORD) {
+            put_once(p, MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, (long)i, 0);
+        }
+    }
+}
+
+/* For each note of the source that is not a chord tone, the type the target has there first, then every type. */
+static void propose_change_non_chord_tone(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
+    MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
+    MotiveToneLabel wanted[MOTIVE_SKETCH_MAX_NOTES];
+    if (!roles_of(s, labels)) {
+        return;
+    }
+    bool compare = s->note_count == t->note_count && roles_of(t, wanted);
+    for (size_t i = 0; compare && i < s->note_count; i++) {
+        if (labels[i].role != MOTIVE_TONE_CHORD && wanted[i].role == MOTIVE_TONE_NON_CHORD) {
+            put_once(p, MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, (long)i, wanted[i].type);
+        }
+    }
+    for (size_t i = 0; i < s->note_count; i++) {
+        for (long type = 0; labels[i].role != MOTIVE_TONE_CHORD && type < NON_CHORD_TONE_COUNT; type++) {
+            put_once(p, MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, (long)i, type);
+        }
+    }
+}
+
+static void propose_reharmonize_frame(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
+    (void)s;
+    for (size_t chord = 0; chord < t->chord_count; chord++) {
+        put_once(p, MOTIVE_RELATION_REHARMONIZE_FRAME, t->chords[chord].degree, t->chords[chord].seventh ? 1 : 0);
+    }
+    for (long degree = 1; degree <= 7; degree++) {
+        for (long seventh = 0; seventh <= 1; seventh++) {
+            put_once(p, MOTIVE_RELATION_REHARMONIZE_FRAME, degree, seventh);
+        }
+    }
+}
+
 /* Whether a relation reads pitches, and whether it needs a scale. */
 static bool needs_pitch(MotiveRelationKind kind) {
     switch (kind) {
@@ -693,6 +777,11 @@ static bool needs_pitch(MotiveRelationKind kind) {
     case MOTIVE_RELATION_COUNTER_LINE:
     case MOTIVE_RELATION_DOMINANT_FORM:
     case MOTIVE_RELATION_LIQUIDATE_FEATURES:
+    case MOTIVE_RELATION_REDUCE_TO_FRAME:
+    case MOTIVE_RELATION_ADD_NON_CHORD_TONE:
+    case MOTIVE_RELATION_REMOVE_NON_CHORD_TONE:
+    case MOTIVE_RELATION_CHANGE_NON_CHORD_TONE:
+    case MOTIVE_RELATION_REHARMONIZE_FRAME:
         return true;
     default:
         return false;
@@ -709,6 +798,11 @@ static bool needs_scale(MotiveRelationKind kind) {
     case MOTIVE_RELATION_COUNTER_LINE:
     case MOTIVE_RELATION_DOMINANT_FORM:
     case MOTIVE_RELATION_LIQUIDATE_FEATURES:
+    case MOTIVE_RELATION_REDUCE_TO_FRAME:
+    case MOTIVE_RELATION_ADD_NON_CHORD_TONE:
+    case MOTIVE_RELATION_REMOVE_NON_CHORD_TONE:
+    case MOTIVE_RELATION_CHANGE_NON_CHORD_TONE:
+    case MOTIVE_RELATION_REHARMONIZE_FRAME:
         return true;
     default:
         return false;
@@ -804,6 +898,21 @@ static void propose(MotiveRelationKind kind, const MotiveSketch *s, const Motive
         break;
     case MOTIVE_RELATION_LIQUIDATE_FEATURES:
         propose_liquidate_features(s, t, p);
+        break;
+    case MOTIVE_RELATION_REDUCE_TO_FRAME:
+        propose_plain(kind, p);
+        break;
+    case MOTIVE_RELATION_ADD_NON_CHORD_TONE:
+        propose_add_non_chord_tone(s, t, p);
+        break;
+    case MOTIVE_RELATION_REMOVE_NON_CHORD_TONE:
+        propose_remove_non_chord_tone(s, t, p);
+        break;
+    case MOTIVE_RELATION_CHANGE_NON_CHORD_TONE:
+        propose_change_non_chord_tone(s, t, p);
+        break;
+    case MOTIVE_RELATION_REHARMONIZE_FRAME:
+        propose_reharmonize_frame(s, t, p);
         break;
     default:
         propose_none(s, t, p);
