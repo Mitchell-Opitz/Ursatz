@@ -114,4 +114,16 @@ void analyzer_violations_free(AnalyzerViolation *violations, size_t count);
 AnalyzerFragmentResult analyzer_fragment_style_distance(const AnalyzerFragmentAnalysis *analysis,
                                                         const StyleModel *model, StyleComparison *out);
 
+/*
+ * The same distance with the named categories left out: they are dropped from the fragment's statistics and from the
+ * model's before the comparisons, so they appear nowhere in *out (not in the means, not in out->categories). Pass the
+ * list the model was read without (style_model_file_read_without); without it a category the fragment has and the
+ * model lacks counts as distance 1. ANALYZER_FRAGMENT_ERR_ARGUMENT for an unknown category name, or for count > 0
+ * with NULL categories, besides the cases of analyzer_fragment_style_distance.
+ */
+AnalyzerFragmentResult analyzer_fragment_style_distance_without(const AnalyzerFragmentAnalysis *analysis,
+                                                                const StyleModel *model,
+                                                                const char *const *categories, size_t count,
+                                                                StyleComparison *out);
+
 #endif
