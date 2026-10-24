@@ -42,6 +42,9 @@ add_library(ursatz_analyzer STATIC
     style/style_model_file.c
     style/style_compare.c
     style/similar_material.c
+    links/motive_links.c
+    links/motive_link_cache.c
+    links/motive_links_render.c
     pipeline/composer_api.c
 )
 # standard-form and standard-harmony have headers of the same names (analysis_input.h, analysis_phrase.h), so the

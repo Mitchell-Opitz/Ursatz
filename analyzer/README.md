@@ -83,6 +83,11 @@ Tests:
   motive, the same motive moved up, `I IV V I`, the results against `tests/snapshots/similar.reference.txt`, and the
   refusals. `test_cli_similar` checks the flags, the output and the exit codes, and validates the JSON against the
   schema (see below).
+- `test_motive_links`: the library over the four pieces of `tests/links`: a link across keys that replays from one
+  prototype sketch to the other, a family in no link, the groups, the cache (a second run compares nothing, adding a piece
+  compares only its pairs, another analyzer version or other options empty it) and the scope's refusals, also under
+  valgrind. `test_cli_link_motives` checks the flags, the text and JSON output, the cache and the exit codes, and
+  validates both JSON files against their schemas (see below).
 - `test_analysis_document_schema`: validates the documents for the corpus pieces against the
   schema. Optional: needs `python3` with the `jsonschema` module at configure time, and is
   reported as skipped otherwise.
@@ -143,6 +148,14 @@ ursatz-analyzer --similar <corpus output dir> (--motive <file> | --progression "
 file) or a progression (Roman numerals). See [docs/similar-material.md](docs/similar-material.md) and the
 [output schema](schema/similar-material.v1.schema.json).
 
+```sh
+ursatz-analyzer --link-motives <corpus output dir> [--cache <file>] [--depth <1-6>] [--candidates <n>] [--format text|json]
+```
+
+`--link-motives` finds the motive families of a corpus run's documents that are variants of one another (a chain of
+motive relations from one to the other), groups them, and keeps what it compared in a cache so a later run compares only
+what is new. See [docs/motive-links.md](docs/motive-links.md) and the [output schema](schema/motive-links.v1.schema.json).
+
 ## Library
 
 The pipeline builds as the `ursatz_analyzer` static library. The CLI and the tests link it.
@@ -164,6 +177,7 @@ Its public include directory is `include/`, and consumers include headers as
 | `style_labels.h` | The labels a style profile counts (numerals, progressions, intervals, durations) and the category names, shared with the Composer. |
 | `style_profile.h` | `StyleProfile` (counts over documents or a corpus), the style model file reader and writer, and `style_profile_compare`. |
 | `similar_material.h` | `similar_material_find` scores the passages of a corpus against a motive or a progression query. |
+| `motive_links.h` | `MotiveLinkScope` (analysis documents), `motive_links_run` links the motive families of its pieces, `MotiveLinkCache` keeps the pairs compared, `motive_links_render` writes the links as JSON. |
 | `composer_api.h` | `analyzer_analyze_fragment` analyzes a fragment of generated notes in memory; violations and style distance for the Composer. |
 
 The Composer calls `composer_api.h` to analyze a fragment it generated, with no file: see [docs/composer-api.md](docs/composer-api.md).
