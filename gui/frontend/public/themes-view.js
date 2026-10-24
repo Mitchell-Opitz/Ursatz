@@ -625,9 +625,43 @@ function buildThemeUseSelect(itemsOf, onUse) {
   return { el: select, setMotif };
 }
 
+/* A motif picker with its Use select. stored is {item_id, version} (a motif or a variant) or undefined; set(value) gets
+ * {item_id, version} of the choice or null when cleared; picked(value, motifBody) is called when the picker announces a
+ * motif. Returns the element. */
+function buildThemeMotifUse(itemsOf, stored, set, picked) {
+  const use = buildThemeUseSelect(itemsOf, set);
+  const picker = buildThemeMotifPicker({
+    role: "melodic",
+    items: itemsOf,
+    onChange: (value, motifBody) => {
+      set(value);
+      use.setMotif(value, null);
+      if (picked) {
+        picked(value, motifBody);
+      }
+    },
+  });
+  if (stored) {
+    const root = ThemesModel.rootMotif(itemsOf(), stored.item_id);
+    if (root === stored.item_id) {
+      picker.setValue(stored);
+      use.setMotif(stored, null);
+    } else {
+      const rootItem = itemsOf().find((item) => item.id === root);
+      const motif = { item_id: root, version: rootItem ? Number(rootItem.current_version) : 1 };
+      picker.setValue(motif);
+      use.setMotif(motif, stored);
+    }
+  }
+  const el = materialsElement("div", "theme-slot-row");
+  el.append(picker.el, use.el);
+  return el;
+}
+
 /* The slot rows of the Structure tab: one motif picker and Use select per slot, kept in state.slots (a variant stores
- * its own item id and version). basicSet(motifBody, hadBasic) is called when the basic slot gets a motif. Returns the
- * section element; refreshSlots() shows the slots the form has. */
+ * its own item id and version). basicSet(motifBody, hadBasic) is called when the basic slot gets a motif. Below them
+ * More slots (closed) gives single ideas a motif of their own, kept in state.ideas. Returns the section element;
+ * refreshSlots() shows the slots and ideas the form has. */
 function buildThemeSlotsSection(state, itemsOf, basicSet) {
   const section = materialsElement("section", "panel materials-editor theme-editor");
   section.appendChild(materialsElement("h2", "section-title", "Slots"));
@@ -635,50 +669,68 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
   for (const slot of ThemesModel.SLOT_NAMES) {
     const row = materialsElement("div", "theme-slot");
     row.appendChild(materialsElement("h3", "section-title", `${ThemesModel.SLOT_LABELS[slot]}${slot === "basic" ? " (required)" : ""}`));
-    const setSlot = (value) => {
+    let hadBasic = false;
+    const set = (value) => {
+      hadBasic = state.slots.some((entry) => entry.slot === "basic");
       state.slots = state.slots.filter((entry) => entry.slot !== slot);
       if (value) {
         state.slots.push({ slot, item_id: value.item_id, version: value.version });
       }
     };
-    const use = buildThemeUseSelect(itemsOf, setSlot);
-    const picker = buildThemeMotifPicker({
-      role: "melodic",
-      items: itemsOf,
-      onChange: (value, motifBody) => {
-        const hadBasic = state.slots.some((entry) => entry.slot === "basic");
-        setSlot(value);
-        use.setMotif(value, null);
+    row.appendChild(
+      buildThemeMotifUse(itemsOf, state.slots.find((entry) => entry.slot === slot), set, (value, motifBody) => {
         if (slot === "basic" && value) {
           basicSet(motifBody, hadBasic);
         }
-      },
-    });
-    const stored = state.slots.find((entry) => entry.slot === slot);
-    if (stored) {
-      const root = ThemesModel.rootMotif(itemsOf(), stored.item_id);
-      if (root === stored.item_id) {
-        picker.setValue(stored);
-        use.setMotif(stored, null);
-      } else {
-        const rootItem = itemsOf().find((item) => item.id === root);
-        const motif = { item_id: root, version: rootItem ? Number(rootItem.current_version) : 1 };
-        picker.setValue(motif);
-        use.setMotif(motif, stored);
-      }
-    }
-    const controls = materialsElement("div", "theme-slot-row");
-    controls.append(picker.el, use.el);
-    row.appendChild(controls);
+      }),
+    );
     rows[slot] = row;
     section.appendChild(row);
   }
-  /* Shows the rows of the slots the form has. */
+  const more = materialsElement("details", "theme-more-slots");
+  more.appendChild(materialsElement("summary", "section-title", "More slots"));
+  const ideasHost = materialsElement("div");
+  more.appendChild(ideasHost);
+  section.appendChild(more);
+
+  /* One row per idea of the form except the basic idea; "From <slot>" until it has a motif of its own. */
+  let drawn = "";
+  function drawIdeas() {
+    const key = ThemesModel.formIdeas(state).map((entry) => entry.idea).join("|");
+    if (key === drawn) {
+      return;
+    }
+    drawn = key;
+    ideasHost.innerHTML = "";
+    for (const { idea, slot } of ThemesModel.formIdeas(state)) {
+      if (idea === "basic idea") {
+        continue;
+      }
+      const row = materialsElement("div", "theme-slot");
+      const heading = materialsElement("h3", "section-title");
+      const own = () => state.ideas.find((entry) => entry.idea === idea);
+      const title = () => {
+        heading.textContent = `${idea}: ${own() ? "Own motif" : `From ${ThemesModel.SLOT_LABELS[slot].toLowerCase()}`}`;
+      };
+      const set = (value) => {
+        state.ideas = state.ideas.filter((entry) => entry.idea !== idea);
+        if (value) {
+          state.ideas.push({ idea, item_id: value.item_id, version: value.version });
+        }
+        title();
+      };
+      title();
+      row.append(heading, buildThemeMotifUse(itemsOf, own(), set, null));
+      ideasHost.appendChild(row);
+    }
+  }
+  /* Shows the rows of the slots the form has, and the ideas of its pairing. */
   section.refreshSlots = () => {
     const shown = ThemesModel.formSlots(state);
     for (const slot of ThemesModel.SLOT_NAMES) {
       rows[slot].hidden = !shown.includes(slot);
     }
+    drawIdeas();
   };
   section.refreshSlots();
   return section;

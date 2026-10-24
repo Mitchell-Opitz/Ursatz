@@ -2,7 +2,7 @@
  * problems, the brief picks, the compose request and the rows of a result.
  * No DOM; themes-view.js renders from these. The form state is
  *   {id, uses, into, hybrid, mode, meter, bars, cadence, firstCadence,
- *    slots: [{slot, item_id, version}], accompaniment: {kind, pattern,
+ *    slots: [{slot, item_id, version}], ideas: [{idea, item_id, version}], accompaniment: {kind, pattern,
  *    item_id, version}, picks: [...], switches: {<category>: bool}, weight,
  *    tempo, check, seed}
  * with tempo and seed as the text typed (blank for none). */
@@ -62,6 +62,17 @@
   ];
   const THEME_TAB_KEY = "ursatz.theme.tab";
   const MAX_SLOTS = 4;
+  /* The ideas each half of a form has, in order, with the slot each takes its motif from (names as the Composer's). */
+  const BEGINNING_IDEAS = {
+    presentation: [["basic idea", "basic"], ["repetition", "basic"]],
+    antecedent: [["basic idea", "basic"], ["contrasting idea", "contrasting"]],
+    cbi: [["basic idea", "basic"], ["contrasting idea", "contrasting"]],
+  };
+  const ENDING_IDEAS = {
+    continuation: [["fragment 1", "continuation"], ["fragment 2", "continuation"], ["cadential", "cadential"]],
+    consequent: [["consequent basic idea", "basic"], ["consequent contrasting idea", "contrasting"]],
+    cadential: [["cadential 1", "cadential"], ["cadential 2", "cadential"]],
+  };
   const TEMPO_MIN = 20;
   const TEMPO_MAX = 400;
   const MAX_SEED = 4294967295;
@@ -107,6 +118,7 @@
       cadence: "PAC",
       firstCadence: "",
       slots: [],
+      ideas: [],
       accompaniment: { kind: "none", pattern: "any", item_id: "", version: 0 },
       picks: [],
       switches: allSwitches(true),
@@ -283,6 +295,15 @@
     return n >= min && n <= max ? n : null;
   }
 
+  /* The entries of ideas in the order of the form's ideas, those of other forms and `basic idea` left out. */
+  function ideaEntries(ideas, allowed) {
+    const list = Array.isArray(ideas) ? ideas : [];
+    return allowed
+      .map((name) => list.find((entry) => entry && entry.idea === name))
+      .filter(Boolean)
+      .map((entry) => ({ idea: entry.idea, item_id: entry.item_id, version: Number(entry.version) }));
+  }
+
   function slotEntries(slots) {
     const list = Array.isArray(slots) ? slots : [];
     return SLOT_NAMES.flatMap((name) => list.filter((entry) => entry && entry.slot === name)).map((entry) => ({
@@ -317,6 +338,7 @@
         first_cadence: firstCadence,
       },
       slots: slotEntries(s.slots).filter((entry) => formSlots(s).includes(entry.slot)),
+      ideas: ideaEntries(s.ideas, formIdeas(s).map((entry) => entry.idea).filter((name) => name !== "basic idea")),
       accompaniment,
       brief,
       style_weight: s.weight,
@@ -357,6 +379,9 @@
       state.firstCadence = form.first_cadence;
     }
     state.slots = slotEntries((Array.isArray(theme.slots) ? theme.slots : []).filter((slot) => slot && typeof slot === "object"));
+    state.ideas = (Array.isArray(theme.ideas) ? theme.ideas : [])
+      .filter((entry) => entry && typeof entry === "object")
+      .map((entry) => ({ idea: entry.idea, item_id: entry.item_id, version: Number(entry.version) }));
     state.modeChosen = state.slots.some((entry) => entry.slot === "basic");
     const acc = theme.accompaniment;
     if (acc && typeof acc === "object") {
@@ -421,6 +446,12 @@
     return SLOT_NAMES.filter((name) => has[name]);
   }
 
+  /* The form's ideas in order, each {idea, slot} with the slot it takes its motif from. */
+  function formIdeas(state) {
+    const [beginning, ending] = pairing(state);
+    return [...(BEGINNING_IDEAS[beginning] || []), ...(ENDING_IDEAS[ending] || [])].map(([idea, slot]) => ({ idea, slot }));
+  }
+
   /* The motif a slot's item belongs to: the item itself, or the end of its variant_of chain in items (at most 32 hops). */
   function rootMotif(items, id) {
     const list = Array.isArray(items) ? items : [];
@@ -481,6 +512,9 @@
     }
     if (s.mode === "style" && briefFromPicks(s.picks) === null) {
       problems.push("The mode from the brief needs a brief.");
+    }
+    if ((Array.isArray(s.ideas) ? s.ideas : []).some((entry) => entry && !text(entry.item_id))) {
+      problems.push("Each idea with its own motif needs one.");
     }
     const acc = s.accompaniment || {};
     if (acc.kind === "motive" && !text(acc.item_id)) {
@@ -823,6 +857,7 @@
     formFromBody,
     formProblems,
     formSlots,
+    formIdeas,
     rootMotif,
     variantChoices,
     motifMode,
