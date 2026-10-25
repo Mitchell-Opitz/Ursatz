@@ -124,6 +124,39 @@ static bool layout(const MelodyContext *context, const MelodyFillParams *params,
     return true;
 }
 
+/* The bit of params.nct_types for a non-chord tone the operator writes; 0 for one it does not (retardation, escape...). */
+static unsigned figure_bit(int tone) {
+    switch (tone) {
+    case NON_CHORD_TONE_PASSING:
+        return MELODY_NCT_PASSING;
+    case NON_CHORD_TONE_NEIGHBOR:
+        return MELODY_NCT_NEIGHBOR;
+    case NON_CHORD_TONE_APPOGGIATURA:
+        return MELODY_NCT_APPOGGIATURA;
+    case NON_CHORD_TONE_SUSPENSION:
+        return MELODY_NCT_SUSPENSION;
+    case NON_CHORD_TONE_ANTICIPATION:
+        return MELODY_NCT_ANTICIPATION;
+    default:
+        return 0;
+    }
+}
+
+/*
+ * Whether the note is a non-chord tone of the motive that resolves to the next note, a chord tone of the motive, in a
+ * figure the operator writes and the parameters allow (R-215). It is not an anchor, whether it is on a strong beat or not:
+ * it is given a pitch from the chord tones around it. The first note, the last and every other non-chord tone are placed
+ * as they were.
+ */
+static bool is_figure_of_motive(const MelodyContext *context, const MelodyFillParams *params, const MelodyNote *notes,
+                                size_t count, size_t i) {
+    const MelodyNote *note = &notes[i];
+    size_t k = note->motive_index < 0 ? 0 : (size_t)note->motive_index;
+    return note->motive_index > 0 && i > 0 && i + 1 < count && k + 1 < context->motive_tone_count &&
+           context->motive_tone[k] >= 0 && (figure_bit(context->motive_tone[k]) & params->nct_types) != 0 &&
+           context->motive_tone[k + 1] == MELODY_TONE_CHORD && notes[i + 1].motive_index == (int)k + 1;
+}
+
 /* Whether the note carries a chord tone of a motive with tones (R-215): it lands on a tone of its chord, however weak. */
 static bool is_chord_tone_of_motive(const MelodyContext *context, const MelodyNote *note) {
     return note->motive_index >= 0 && (size_t)note->motive_index < context->motive_tone_count &&
@@ -133,9 +166,112 @@ static bool is_chord_tone_of_motive(const MelodyContext *context, const MelodyNo
 bool melody_is_anchor(const MelodyContext *context, const MelodyFillParams *params, const MelodyCandidate *melody,
                       size_t i) {
     const MelodyNote *note = &melody->notes[i];
+    if (is_figure_of_motive(context, params, melody->notes, melody->count, i)) {
+        return false;
+    }
     return params->nct_types == 0 || i == 0 || i + 1 == melody->count || note->strong ||
            note->duration >= context->cell || note->onset + note->duration > context->chord_start[note->chord + 1] ||
            is_chord_tone_of_motive(context, note);
+}
+
+static int sign_of(int value) {
+    return value > 0 ? 1 : (value < 0 ? -1 : 0);
+}
+
+/* Whether a pitch is a tone of every chord the note sounds through. */
+static bool chord_tone_of_all(const MelodyContext *context, const MelodyNote *note, int pitch) {
+    long end = note->onset + note->duration;
+    for (size_t c = note->chord; c < context->count && context->chord_start[c] < end; c++) {
+        if (!((context->chord_mask[c] >> pitch_class(pitch)) & 1u)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/*
+ * The pitch of note j, a non-chord tone of the motive (is_figure_of_motive) between the chord tone before it and the one it
+ * resolves to, when both are placed: the figure the motive's tone names, formed on the moved chord tones. A passing tone
+ * lies between its two neighbours, a neighbor tone, an appoggiatura and a suspension a step from the chord tone they resolve
+ * to, on the side they were on in the motive, an anticipation sounds the chord tone early. Each is tried a step first and
+ * then a tone, within the scale of the chord, a non-chord tone before a pitch that is a tone of its chord, and kept when
+ * melody_figure_ok holds it as that figure alone. False when none is formed.
+ */
+static bool figure_pitch(const MelodyContext *context, const MelodyFillParams *params, MelodyNote *notes, size_t count,
+                         size_t j, int *pitch) {
+    MelodyNote *note = &notes[j];
+    size_t k = (size_t)note->motive_index;
+    int type = context->motive_tone[k];
+    int before = notes[j - 1].pitch;
+    int after = notes[j + 1].pitch;
+    int side = sign_of(context->motive_pitch[k] - context->motive_pitch[k + 1]);
+    unsigned scale = melody_scale_mask(context, note->chord);
+    MelodyFillParams only = *params;
+    int candidates[4];
+    size_t found = 0;
+    only.nct_types = figure_bit(type);
+    if (type == NON_CHORD_TONE_ANTICIPATION) {
+        candidates[found++] = after;
+    } else if (type == NON_CHORD_TONE_PASSING) {
+        int way = sign_of(after - before);
+        for (int step = 1; way != 0 && step <= 2; step++) {
+            candidates[found++] = before + way * step;
+        }
+    } else if (side != 0) {
+        for (int step = 1; step <= 2; step++) {
+            candidates[found++] = after + side * step;
+        }
+    }
+    /* A pitch that is not a tone of its chord first, then one that is. */
+    for (int pass = 0; pass < 2; pass++) {
+        for (size_t c = 0; c < found; c++) {
+            int try_pitch = candidates[c];
+            bool tone = chord_tone_of_all(context, note, try_pitch);
+            if ((pass == 0) == tone || try_pitch < params->range_low || try_pitch > params->range_high ||
+                (type != NON_CHORD_TONE_ANTICIPATION && !((scale >> pitch_class(try_pitch)) & 1u)) ||
+                !leap_allowed(try_pitch - before) || !leap_allowed(after - try_pitch)) {
+                continue;
+            }
+            note->pitch = try_pitch;
+            if (melody_figure_ok(context, &only, notes, count, j)) {
+                *pitch = try_pitch;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+/*
+ * Before the notes between two anchors are filled: the figures among them get their pitches from the anchors (they are kept
+ * by the search), or, when one cannot be formed, a chord tone (R-215).
+ */
+static void place_figures(const MelodyContext *context, const MelodyFillParams *params, MelodyNote *notes, size_t count,
+                          size_t from, size_t to) {
+    for (size_t j = from + 1; j < to; j++) {
+        int pitch;
+        if (!is_figure_of_motive(context, params, notes, count, j)) {
+            continue;
+        }
+        /* The note before is the anchor or a figure before this one, and the note after is the anchor. */
+        bool placed = (j - 1 == from || notes[j - 1].fixed) && j + 1 == to;
+        if (placed && figure_pitch(context, params, notes, count, j, &pitch)) {
+            notes[j].pitch = pitch;
+            notes[j].fixed = true;
+        } else {
+            notes[j].chord_only = true;
+        }
+    }
+}
+
+/* Gives up the figures between two anchors that the search could not keep: they take chord tones. */
+static void give_up_figures(MelodyNote *notes, size_t from, size_t to) {
+    for (size_t j = from + 1; j < to; j++) {
+        if (notes[j].fixed) {
+            notes[j].fixed = false;
+            notes[j].chord_only = true;
+        }
+    }
 }
 
 /*
@@ -261,8 +397,14 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
                                  (note->pitch - out->notes[before].pitch) * (int)(j - before) / (int)(i - before);
                 }
             }
+            if (context->motive_tone_count > 0) {
+                place_figures(context, params, out->notes, out->count, before, i);
+            }
             if (!melody_fill_between(context, params, out->notes, out->count, before, i, between, cap, rng)) {
-                return false;
+                give_up_figures(out->notes, before, i);
+                if (!melody_fill_between(context, params, out->notes, out->count, before, i, between, cap, rng)) {
+                    return false;
+                }
             }
         }
         before = i;
@@ -381,6 +523,10 @@ static bool place_pickup(const MelodyContext *context, const MelodyFillParams *p
 
 bool melody_build(const MelodyContext *context, const MelodyFillParams *params, FillRng *rng, MelodyCandidate *out) {
     MelodyFillParams arch = arch_params(context, params);
+    /* The figures the motive's tones name are allowed in its candidate, unless the parameters allow none. */
+    for (size_t k = 0; arch.nct_types != 0 && k < context->motive_tone_count; k++) {
+        arch.nct_types |= context->motive_tone[k] >= 0 ? figure_bit(context->motive_tone[k]) : 0;
+    }
     memset(out, 0, sizeof(*out));
     out->magic = MELODY_PAYLOAD_MAGIC;
     out->context = *context;

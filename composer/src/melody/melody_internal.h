@@ -126,6 +126,8 @@ typedef struct {
     int motive_index;
     bool strong; /* it starts on a cell */
     size_t chord; /* the chord sounding at its onset */
+    bool fixed;      /* a figure of the motive's tones whose pitch is set; the search between anchors keeps it (R-215) */
+    bool chord_only; /* a figure that could not be formed: the search gives it a chord tone */
 } MelodyNote;
 
 /* A candidate's payload. */
