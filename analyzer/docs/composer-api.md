@@ -64,10 +64,18 @@ for some categories. Those stay out of the dimension and overall means, and stay
 `in_a` false and `in_b` true; a caller lists them as missing. Categories the fragment has and the model lacks are
 distance 1, as in any comparison. Free the result with `style_comparison_destroy`.
 
+`analyzer_fragment_style_distance_without(&analysis, model, categories, count, &comparison)` is the same call with the
+named categories dropped from the fragment's statistics and from the model's before the comparisons, so they appear
+nowhere in the result (not in the means, not in `comparison.categories`). Use it when the model was read without
+categories (`style_model_file_read_without`) and pass that same list. With plain `analyzer_fragment_style_distance`, a
+category the fragment has and the model lacks, such as the four motive categories in a model read without them, counts
+as distance 1 and pulls every mean up. An unknown category name, or `count` above 0 with NULL `categories`, is
+`ANALYZER_FRAGMENT_ERR_ARGUMENT`. `analyzer_fragment_style_distance` is this call with none.
+
 ## Tests
 
 `tests/test_composer_api.c`: Bach 114 imported and passed as a fragment gives the same chords, cadences, phrases and
 document as the file; a four-voice fragment with a parallel fifth gives one `parallel-fifths` at its measure and beat;
-Mozart 545 is closer to the `sonatinas` model than to the `chorales`; the caller's events are unchanged. The
+Mozart 545 is closer to the `sonatinas` model than to the `chorales`; the distance without the four motive categories is the same against a full model as against the model read without them, and the plain call against the latter still lists them as missing; the caller's events are unchanged. The
 `test_composer_api_valgrind` run uses `tests/valgrind.supp`, which silences a few bytes that Ursatz's melody and motive
 code leaks on every analysis.
