@@ -376,7 +376,11 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
             if (adjacent && !leap_allowed(note->pitch - out->notes[before].pitch)) {
                 return false;
             }
-        } else if (!pick(options, kept, reach, rng, context->restating, &note->pitch)) {
+        } else if (!pick(options, kept, reach, rng, context->restating, &note->pitch) &&
+                   /* A chord tone of the motive keeps its interval within the tolerance where a chord tone allows it, else it
+                      takes the nearest chord tone (R-215). */
+                   !(is_chord_tone_of_motive(context, note) &&
+                     pick(options, kept, 127, rng, context->restating, &note->pitch))) {
             return false;
         }
         if (i > 0 && before + 1 < i) {
