@@ -518,26 +518,59 @@ static bool has_category(const StyleStatistic *statistics, size_t count, const c
     return false;
 }
 
-AnalyzerFragmentResult analyzer_fragment_style_distance(const AnalyzerFragmentAnalysis *analysis,
-                                                        const StyleModel *model, StyleComparison *out) {
-    if (!analysis || !analysis->valid || !model || !out) {
+static bool is_dropped(const char *category, const char *const *dropped, size_t dropped_count) {
+    for (size_t i = 0; i < dropped_count; i++) {
+        if (strcmp(category, dropped[i]) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Moves the statistics whose category is not dropped to the front of the array. Returns how many stay. */
+static size_t keep_statistics(StyleStatistic *statistics, size_t count, const char *const *dropped,
+                              size_t dropped_count) {
+    size_t used = 0;
+    for (size_t i = 0; i < count; i++) {
+        if (!is_dropped(statistics[i].category, dropped, dropped_count)) {
+            statistics[used++] = statistics[i];
+        }
+    }
+    return used;
+}
+
+AnalyzerFragmentResult analyzer_fragment_style_distance_without(const AnalyzerFragmentAnalysis *analysis,
+                                                                const StyleModel *model,
+                                                                const char *const *categories, size_t count,
+                                                                StyleComparison *out) {
+    if (!analysis || !analysis->valid || !model || !out || (count > 0 && !categories)) {
         return ANALYZER_FRAGMENT_ERR_ARGUMENT;
+    }
+    for (size_t i = 0; i < count; i++) {
+        StyleDimension dimension;
+        if (!categories[i] || !style_category_dimension(categories[i], &dimension)) {
+            return ANALYZER_FRAGMENT_ERR_ARGUMENT;
+        }
     }
     memset(out, 0, sizeof *out);
     AnalyzerFragmentResult result = ANALYZER_FRAGMENT_ERR_ALLOC;
     StyleProfile *profile = style_profile_create();
     StyleStatistic *fragment_stats = NULL, *model_stats = NULL, *kept = NULL;
     size_t fragment_count = 0, model_count = 0, kept_count = 0;
-    StyleModel *fragment_model = NULL, *kept_model = NULL;
+    StyleModel *fragment_model = NULL, *base_model = NULL, *kept_model = NULL;
     StyleComparison full = {0}, means = {0};
     if (!profile || style_profile_add_document_json(profile, analysis->document_json) != STYLE_PROFILE_OK ||
         style_profile_statistics(profile, &fragment_stats, &fragment_count) != STYLE_PROFILE_OK ||
         style_model_statistics(model, &model_stats, &model_count) != STYLE_MODEL_FILE_OK) {
         goto done;
     }
+    /* The named categories leave both sides before anything is compared. */
+    fragment_count = keep_statistics(fragment_stats, fragment_count, categories, count);
+    model_count = keep_statistics(model_stats, model_count, categories, count);
     kept = calloc(model_count > 0 ? model_count : 1, sizeof *kept);
     fragment_model = model_of("fragment-style", fragment_stats, fragment_count);
-    if (!kept || !fragment_model) {
+    base_model = model_of("fragment-style-base", model_stats, model_count);
+    if (!kept || !fragment_model || !base_model) {
         goto done;
     }
     /* The means come from the model cut down to the categories the fragment has. */
@@ -550,18 +583,18 @@ AnalyzerFragmentResult analyzer_fragment_style_distance(const AnalyzerFragmentAn
     if (!kept_model) {
         goto done;
     }
-    if (style_profile_compare(fragment_model, model, &full) != STYLE_COMPARE_OK ||
+    if (style_profile_compare(fragment_model, base_model, &full) != STYLE_COMPARE_OK ||
         style_profile_compare(fragment_model, kept_model, &means) != STYLE_COMPARE_OK) {
         result = ANALYZER_FRAGMENT_ERR_ARGUMENT;
         goto done;
     }
     /* The full comparison's categories (the missing ones too) with the means of the cut one. */
-    StyleCategoryDistance *categories = means.categories;
+    StyleCategoryDistance *category_list = means.categories;
     size_t category_count = means.category_count;
     *out = means;
     out->categories = full.categories;
     out->category_count = full.category_count;
-    full.categories = categories;
+    full.categories = category_list;
     full.category_count = category_count;
     memset(&means, 0, sizeof means);
     result = ANALYZER_FRAGMENT_OK;
@@ -569,10 +602,16 @@ done:
     style_comparison_destroy(&full);
     style_comparison_destroy(&means);
     style_model_destroy(kept_model);
+    style_model_destroy(base_model);
     style_model_destroy(fragment_model);
     free(kept);
     style_statistics_free(model_stats, model_count);
     free(fragment_stats);
     style_profile_destroy(profile);
     return result;
+}
+
+AnalyzerFragmentResult analyzer_fragment_style_distance(const AnalyzerFragmentAnalysis *analysis,
+                                                        const StyleModel *model, StyleComparison *out) {
+    return analyzer_fragment_style_distance_without(analysis, model, NULL, 0, out);
 }

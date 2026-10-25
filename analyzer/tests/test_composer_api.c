@@ -273,7 +273,12 @@ static void test_refusals(void) {
 
 static char work_dir[512];
 
-static StyleModel *corpus_model(const char *name, size_t pieces) {
+static const char *const motive_categories[] = {STYLE_CATEGORY_MOTIVE_DEGREES, STYLE_CATEGORY_MOTIVE_INTERVALS,
+                                                STYLE_CATEGORY_MOTIVE_RHYTHM, STYLE_CATEGORY_MOTIVE_NCT_FIGURE};
+#define MOTIVE_COUNT (sizeof motive_categories / sizeof *motive_categories)
+
+/* The corpus's style model, read without the named categories (none when count is 0). */
+static StyleModel *corpus_model_without(const char *name, size_t pieces, const char *const *without, size_t count) {
     char input[1024], output[1024], file[1024];
     snprintf(input, sizeof(input), "%s/%s", URSATZ_CORPORA_DIR, name);
     snprintf(output, sizeof(output), "%s/%s", work_dir, name);
@@ -286,15 +291,70 @@ static StyleModel *corpus_model(const char *name, size_t pieces) {
     snprintf(file, sizeof(file), "%s/%s.style.json", work_dir, name);
     StyleModel *model = NULL;
     CHECK(profile && style_model_file_write(profile, name, file) == STYLE_MODEL_FILE_OK &&
-              style_model_file_read(file, &model, NULL) == STYLE_MODEL_FILE_OK,
+              style_model_file_read_without(file, without, count, &model, NULL) == STYLE_MODEL_FILE_OK,
           "%s model", name);
     style_profile_destroy(profile);
     return model;
 }
 
+static StyleModel *corpus_model(const char *name, size_t pieces) {
+    return corpus_model_without(name, pieces, NULL, 0);
+}
+
+static bool same_rational(StyleRational a, StyleRational b) {
+    return a.numerator == b.numerator && a.denominator == b.denominator;
+}
+
+static bool has_motive(const StyleComparison *comparison, bool *fragment_side_only) {
+    bool found = false;
+    *fragment_side_only = true;
+    for (size_t i = 0; i < comparison->category_count; i++) {
+        for (size_t m = 0; m < MOTIVE_COUNT; m++) {
+            if (strcmp(comparison->categories[i].category, motive_categories[m]) == 0) {
+                found = true;
+                *fragment_side_only = *fragment_side_only && comparison->categories[i].in_a &&
+                                      !comparison->categories[i].in_b;
+            }
+        }
+    }
+    return found;
+}
+
+/* The distance without the motive categories: the same against the full model as against the model read without
+   them, and no motive category in the result. The plain call against the cut model still lists them. */
+static void check_without(const AnalyzerFragmentAnalysis *analysis, const StyleModel *full, const StyleModel *cut,
+                          const char *name) {
+    StyleComparison against_full = {0}, against_cut = {0}, plain = {0};
+    CHECK(analyzer_fragment_style_distance_without(analysis, full, motive_categories, MOTIVE_COUNT, &against_full) ==
+                  ANALYZER_FRAGMENT_OK &&
+              analyzer_fragment_style_distance_without(analysis, cut, motive_categories, MOTIVE_COUNT, &against_cut) ==
+                  ANALYZER_FRAGMENT_OK,
+          "%s without", name);
+    CHECK(analyzer_fragment_style_distance(analysis, cut, &plain) == ANALYZER_FRAGMENT_OK, "%s plain", name);
+    bool only = false;
+    CHECK(!has_motive(&against_full, &only) && !has_motive(&against_cut, &only), "%s: motive category left in", name);
+    CHECK(against_full.category_count == against_cut.category_count, "%s: category counts differ", name);
+    CHECK(against_full.overall_present == against_cut.overall_present &&
+              (!against_full.overall_present || same_rational(against_full.overall, against_cut.overall)),
+          "%s: overall differs", name);
+    for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
+        CHECK(against_full.dimension_present[d] == against_cut.dimension_present[d] &&
+                  (!against_full.dimension_present[d] ||
+                   same_rational(against_full.dimension[d], against_cut.dimension[d])),
+              "%s: dimension %d differs", name, d);
+    }
+    /* Why the call exists: the plain call lists the fragment's motive categories with in_b false. */
+    CHECK(has_motive(&plain, &only) && only, "%s: plain call does not list motive categories as missing", name);
+    style_comparison_destroy(&against_full);
+    style_comparison_destroy(&against_cut);
+    style_comparison_destroy(&plain);
+}
+
 static void test_style_distance(void) {
     StyleModel *sonatinas = corpus_model("sonatinas", 2);
     StyleModel *chorales = corpus_model("chorales", 10);
+    StyleModel *sonatinas_cut = corpus_model_without("sonatinas", 2, motive_categories, MOTIVE_COUNT);
+    StyleModel *chorales_cut = corpus_model_without("chorales", 10, motive_categories, MOTIVE_COUNT);
     char path[1024];
     piece_path(path, sizeof(path), "Mozart 545.mid");
     ImportedNotes notes;
@@ -322,6 +382,23 @@ static void test_style_distance(void) {
     }
     style_comparison_destroy(&near_style);
     style_comparison_destroy(&far_style);
+    if (sonatinas && chorales && sonatinas_cut && chorales_cut) {
+        check_without(&analysis, sonatinas, sonatinas_cut, "sonatinas");
+        check_without(&analysis, chorales, chorales_cut, "chorales");
+        StyleComparison refused = {0};
+        const char *unknown[] = {"no-such-category"};
+        const char *known[] = {STYLE_CATEGORY_MOTIVE_RHYTHM};
+        CHECK(analyzer_fragment_style_distance_without(&analysis, sonatinas, unknown, 1, &refused) ==
+                  ANALYZER_FRAGMENT_ERR_ARGUMENT,
+              "unknown category name");
+        CHECK(analyzer_fragment_style_distance_without(&analysis, sonatinas, NULL, 1, &refused) ==
+                  ANALYZER_FRAGMENT_ERR_ARGUMENT,
+              "NULL categories with a count");
+        CHECK(analyzer_fragment_style_distance_without(&analysis, sonatinas, known, 1, &refused) ==
+                  ANALYZER_FRAGMENT_OK,
+              "one category left out");
+        style_comparison_destroy(&refused);
+    }
     analyzer_fragment_analysis_destroy(&analysis);
     imported_notes_destroy(&notes);
 
@@ -355,6 +432,8 @@ static void test_style_distance(void) {
     tuning_system_destroy(tuning);
     style_model_destroy(sonatinas);
     style_model_destroy(chorales);
+    style_model_destroy(sonatinas_cut);
+    style_model_destroy(chorales_cut);
 }
 
 int main(int argc, char **argv) {

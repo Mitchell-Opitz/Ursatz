@@ -82,7 +82,9 @@ It builds a Ursatz `StyleModel` through `style_model_from_statistics`. The libra
 categories before the model is built, so the model holds no statistics of them (`style_model_file_read` is this with
 none). An unknown category name is `STYLE_MODEL_FILE_ERR_ARGUMENT`. `--compare-styles` takes `--without <category>`,
 repeatable, and drops the categories from both models; an unknown name is exit code 1. The Composer reads styles
-without the four motive categories until it uses them as preferences.
+without the four motive categories until it uses them as preferences. To measure a fragment against such a model, use
+`analyzer_fragment_style_distance_without` with the same list ([composer-api.md](composer-api.md)); the plain call
+counts each category the model lacks as distance 1.
 
 ## Distance
 
