@@ -338,7 +338,7 @@
         first_cadence: firstCadence,
       },
       slots: slotEntries(s.slots).filter((entry) => formSlots(s).includes(entry.slot)),
-      ideas: ideaEntries(s.ideas, formIdeas(s).map((entry) => entry.idea).filter((name) => name !== "basic idea")),
+      ideas: ideaEntries(s.ideas, ownIdeaNames(s)),
       accompaniment,
       brief,
       style_weight: s.weight,
@@ -450,6 +450,11 @@
   function formIdeas(state) {
     const [beginning, ending] = pairing(state);
     return [...(BEGINNING_IDEAS[beginning] || []), ...(ENDING_IDEAS[ending] || [])].map(([idea, slot]) => ({ idea, slot }));
+  }
+
+  /* The ideas that can have a motif of their own: those of the form but the basic idea (the basic slot). */
+  function ownIdeaNames(state) {
+    return formIdeas(state).map((entry) => entry.idea).filter((name) => name !== "basic idea");
   }
 
   /* The motif a slot's item belongs to: the item itself, or the end of its variant_of chain in items (at most 32 hops). */
@@ -676,7 +681,7 @@
   function motiveNames(state, nameOf) {
     const names = {};
     const seen = [];
-    const entries = [...slotEntries(state.slots), ...ideaEntries(state.ideas, formIdeas(state).map((entry) => entry.idea))];
+    const entries = [...slotEntries(state.slots), ...ideaEntries(state.ideas, ownIdeaNames(state))];
     for (const entry of entries) {
       if (!seen.some((other) => other.item_id === entry.item_id && other.version === entry.version)) {
         seen.push(entry);

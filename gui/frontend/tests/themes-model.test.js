@@ -243,6 +243,102 @@ check(!T.applyBasicMode(T.emptyState("x"), false, { motif: {} }), "a motif witho
 check(T.formFromBody(T.bodyFromForm(filled()), "thm-1").modeChosen === true, "a saved theme with a basic motif keeps its mode");
 check(T.formFromBody({ uses: [], theme: { form: null, slots: [] } }, "thm-3").modeChosen === false, "a new theme has not chosen its mode");
 
+/* slots and ideas of each form */
+function formOf(into, hybrid) {
+  const f = T.emptyState("thm-1");
+  f.into = into;
+  if (hybrid) {
+    f.hybrid = hybrid;
+  }
+  return f;
+}
+const slotsOf = (f) => T.formSlots(f).join(",");
+const ideasOf = (f) => T.formIdeas(f).map((entry) => `${entry.idea}>${entry.slot}`).join(",");
+check(slotsOf(formOf("sentence")) === "basic,continuation,cadential", "a sentence has basic, continuation and cadential slots");
+check(slotsOf(formOf("period")) === "basic,contrasting", "a period has basic and contrasting slots");
+check(slotsOf(formOf("hybrid", "antecedent+continuation")) === "basic,contrasting,continuation,cadential", "antecedent+continuation has all four");
+check(slotsOf(formOf("hybrid", "cbi+cadential")) === "basic,contrasting,cadential", "cbi+cadential has no continuation slot");
+check(slotsOf(formOf("hybrid", "presentation+consequent")) === "basic,contrasting", "presentation+consequent has basic and contrasting");
+check(slotsOf(formOf("hybrid", "presentation+cadential")) === "basic,cadential", "presentation+cadential has basic and cadential");
+check(
+  ideasOf(formOf("sentence")) === "basic idea>basic,repetition>basic,fragment 1>continuation,fragment 2>continuation,cadential>cadential",
+  "the ideas of a sentence",
+);
+check(
+  ideasOf(formOf("period")) ===
+    "basic idea>basic,contrasting idea>contrasting,consequent basic idea>basic,consequent contrasting idea>contrasting",
+  "the ideas of a period",
+);
+check(ideasOf(formOf("hybrid", "cbi+cadential")) === "basic idea>basic,contrasting idea>contrasting,cadential 1>cadential,cadential 2>cadential", "the ideas of cbi+cadential");
+
+/* a variant in a slot, the same motif shared */
+const shared = filled();
+shared.slots = [
+  { slot: "basic", item_id: "mot-1", version: 2 },
+  { slot: "continuation", item_id: "var-7", version: 4 },
+  { slot: "cadential", item_id: "mot-1", version: 2 },
+];
+const sharedBody = T.bodyFromForm(shared);
+check(
+  same(sharedBody.theme.slots, [
+    { slot: "basic", item_id: "mot-1", version: 2 },
+    { slot: "continuation", item_id: "var-7", version: 4 },
+    { slot: "cadential", item_id: "mot-1", version: 2 },
+  ]),
+  "a variant and the same motif in two slots are kept",
+);
+check(T.formProblems(shared).length === 0, "the same motif in two slots is not a problem");
+check(
+  T.rootMotif([{ id: "var-7", variant_of: "var-6" }, { id: "var-6", variant_of: "mot-1" }, { id: "mot-1" }], "var-7") === "mot-1",
+  "a variant's motif is the end of its variant_of chain",
+);
+check(
+  same(
+    T.variantChoices([
+      { id: "mot-1", isRoot: true, depth: 0, name: "A", version: 2, derivation: "" },
+      { id: "var-6", isRoot: false, depth: 1, name: "A up", version: 3, derivation: "transpose" },
+      { id: "var-7", isRoot: false, depth: 2, name: "A up slow", version: 1, derivation: "transpose then augment" },
+    ]),
+    [
+      { value: "var-6", version: 3, label: "A up", title: "transpose" },
+      { value: "var-7", version: 1, label: "- A up slow", title: "transpose then augment" },
+    ],
+  ),
+  "the Use choices are the variants below the root",
+);
+
+/* ideas in the body, dropped with the form */
+const withIdeas = formOf("sentence");
+withIdeas.slots = [{ slot: "basic", item_id: "mot-1", version: 2 }];
+withIdeas.ideas = [
+  { idea: "fragment 2", item_id: "mot-3", version: 1 },
+  { idea: "repetition", item_id: "mot-2", version: 5 },
+  { idea: "consequent basic idea", item_id: "mot-4", version: 1 },
+  { idea: "basic idea", item_id: "mot-9", version: 1 },
+];
+check(
+  same(T.bodyFromForm(withIdeas).theme.ideas, [
+    { idea: "repetition", item_id: "mot-2", version: 5 },
+    { idea: "fragment 2", item_id: "mot-3", version: 1 },
+  ]),
+  "the body holds the ideas of the form in order, without the basic idea or other forms' ideas",
+);
+withIdeas.into = "period";
+check(same(T.bodyFromForm(withIdeas).theme.ideas, [{ idea: "consequent basic idea", item_id: "mot-4", version: 1 }]), "changing the form drops the ideas it does not have");
+withIdeas.into = "sentence";
+const loaded = T.formFromBody(T.bodyFromForm(withIdeas), "thm-1");
+check(same(loaded.ideas.map((entry) => entry.idea), ["repetition", "fragment 2"]), "the ideas come back from the body");
+check(same(T.bodyFromForm(formOf("sentence")).theme.ideas, []), "a form without ideas has an empty list");
+check(T.formProblems({ ...withIdeas, ideas: [{ idea: "repetition", item_id: "", version: 1 }] }).length > 0, "an idea without a motif is a problem");
+check(
+  same(T.motiveNames(withIdeas, (id) => `n-${id}`), { M1: "n-mot-1", M2: "n-mot-2", M3: "n-mot-3" }),
+  "motive ids go over the slots, then the ideas, one per distinct motif",
+);
+
+/* the result names idea sources */
+const ideaRow = T.resultView({ summary: { themes: [{ slots: [{ idea: "repetition", slot: "basic", motive: "M2", source: "idea" }] }] } }, { motiveNames: { M2: "Two" } });
+check(ideaRow.rows[0].source === "From its own motif" && ideaRow.rows[0].motive === "Two", "an idea source reads From its own motif");
+
 if (failures > 0) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);
