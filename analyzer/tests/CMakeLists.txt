@@ -313,6 +313,10 @@ add_test(NAME test_corpus_index_schema
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_corpus_index.cmake)
 set_tests_properties(test_corpus_index_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
 
+add_executable(test_style_labels test_style_labels.c)
+target_link_libraries(test_style_labels PRIVATE ursatz_analyzer)
+add_test(NAME test_style_labels COMMAND test_style_labels)
+
 add_executable(test_style_profile test_style_profile.c)
 target_link_libraries(test_style_profile PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_style_profile PRIVATE
