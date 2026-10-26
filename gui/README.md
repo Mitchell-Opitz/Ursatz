@@ -179,10 +179,20 @@ the theme body the backend composes (see Theme bodies and version files).
   always in C: there is no key. The slots are below.
 - Used by tab: the items that use the theme. Other tab: the versions with their
   notes (View opens one read only) and Derived from.
-- Slots: Basic idea (required), Contrasting idea, Continuation and Cadential.
-  Each is a motif picker: a project select, a name search, the motif and its
-  version (current by default). Only a full melodic motif is accepted. The
-  picker shows the motif's degrees and a Play button (the render route).
+- Slots: only the slots the form has are shown. Basic idea (required) is always
+  there; Contrasting idea comes with an antecedent or cbi beginning or a
+  consequent ending, Continuation with a continuation ending, Cadential with a
+  continuation or cadential ending. Each is a motif picker: a project select, a
+  name search, the motif and its version (current by default). Only a full
+  melodic motif is accepted. The picker shows the motif's degrees and a Play
+  button (the render route). Beside it a Use select takes the motif itself or
+  one of its saved variants (rejected ones left out; the derivation is the
+  option title); a variant stores its own item id and version. The same motif
+  or variant may fill several slots.
+- More slots (closed by default): every idea of the form but the basic idea,
+  each "From <slot>" until it gets a motif (and Use) of its own. Ideas are kept
+  in the body's `ideas`; those the form does not have are dropped on save. The
+  result table says "From its own motif" for them.
 - Accompaniment: None, a pattern (any, block, arpeggiated, Alberti, oom-pah)
   or a motif with the role accompaniment.
 - Brief: collections, composer / source / tag filters, subjects, projects,
