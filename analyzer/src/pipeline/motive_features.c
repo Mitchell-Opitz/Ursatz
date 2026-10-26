@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-static const char *const degree_labels[12] = {"1", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7"};
+#include <ursatz_analyzer/style_labels.h>
 
 const char *motive_features_degree_label(int pitch_class, int tonic_pc) {
-    return degree_labels[(((pitch_class - tonic_pc) % 12) + 12) % 12];
+    return style_label_degree(pitch_class, tonic_pc);
 }
 
 static ExactRational fraction(unsigned long long numerator, unsigned long long denominator) {

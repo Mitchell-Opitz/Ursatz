@@ -228,3 +228,74 @@ void style_label_duration(unsigned long numerator, unsigned long denominator, ch
     unsigned long divisor = gcd(numerator, denominator);
     snprintf(buffer, size, "%lu/%lu", numerator / divisor, denominator / divisor);
 }
+
+static const char *const degree_labels[12] = {"1", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7"};
+
+const char *style_label_degree(int pitch_class, int tonic_pc) {
+    return degree_labels[(((pitch_class - tonic_pc) % 12) + 12) % 12];
+}
+
+char *style_label_join(const char *const *parts, size_t count) {
+    if (!parts || count == 0) {
+        return NULL;
+    }
+    size_t length = 1;
+    for (size_t i = 0; i < count; i++) {
+        length += strlen(parts[i]) + 1;
+    }
+    char *joined = malloc(length);
+    if (!joined) {
+        return NULL;
+    }
+    size_t at = 0;
+    for (size_t i = 0; i < count; i++) {
+        size_t part = strlen(parts[i]);
+        if (i > 0) {
+            joined[at++] = ' ';
+        }
+        memcpy(joined + at, parts[i], part);
+        at += part;
+    }
+    joined[at] = '\0';
+    return joined;
+}
+
+char *style_label_motive_intervals(const int *semitones, size_t count) {
+    if (!semitones || count == 0) {
+        return NULL;
+    }
+    size_t capacity = count * 13 + 1;
+    char *joined = malloc(capacity);
+    if (!joined) {
+        return NULL;
+    }
+    size_t length = 0;
+    for (size_t i = 0; i < count; i++) {
+        int wrote = semitones[i] == 0 ? snprintf(joined + length, capacity - length, "%s0", length ? " " : "")
+                                      : snprintf(joined + length, capacity - length, "%s%+d", length ? " " : "",
+                                                 semitones[i]);
+        if (wrote < 0 || (size_t)wrote >= capacity - length) {
+            free(joined);
+            return NULL;
+        }
+        length += (size_t)wrote;
+    }
+    return joined;
+}
+
+bool style_label_nct_figure(const char *previous, const char *degree, const char *type, const char *next,
+                            char *buffer, size_t size) {
+    if (!buffer || size == 0) {
+        return false;
+    }
+    buffer[0] = '\0';
+    if (!degree || !type) {
+        return false;
+    }
+    int wrote = snprintf(buffer, size, "%s %s:%s %s", previous ? previous : "-", degree, type, next ? next : "-");
+    if (wrote < 0 || (size_t)wrote >= size) {
+        buffer[0] = '\0';
+        return false;
+    }
+    return true;
+}
