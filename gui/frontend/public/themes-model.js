@@ -28,6 +28,12 @@
   ];
   const METERS = ["2/4", "3/4", "4/4", "6/8"];
   const BARS = [4, 8];
+  const CHORD_BARS = 8;
+  const CHORD_TEXT_MAX = 64;
+  /* The beats in a bar, and the beat of the one cell a second chord may start on (the Composer writes chords on
+   * the cells of the meter only: 2 a bar in 4/4 and 6/8, 1 in 2/4 and 3/4). */
+  const METER_BEATS = { "2/4": 2, "3/4": 3, "4/4": 4, "6/8": 6 };
+  const SECOND_CHORD_BEAT = { "4/4": 2, "6/8": 3 };
   const CADENCES = ["PAC", "IAC", "HC"];
   const FIRST_CADENCES = ["HC", "IAC"];
   const POOLS = [
@@ -119,6 +125,7 @@
       firstCadence: "",
       slots: [],
       ideas: [],
+      chords: Array(CHORD_BARS).fill(""),
       accompaniment: { kind: "none", pattern: "any", item_id: "", version: 0 },
       picks: [],
       switches: allSwitches(true),
@@ -313,6 +320,28 @@
     }));
   }
 
+  /* The chords given per bar as [{bar, text}], bar from 0, for the filled bars of the theme only. */
+  function chordEntries(state) {
+    const list = Array.isArray(state.chords) ? state.chords : [];
+    const entries = [];
+    for (let bar = 0; bar < Math.min(CHORD_BARS, Number(state.bars)); bar++) {
+      const value = text(list[bar]);
+      if (value !== "") {
+        entries.push({ bar, text: value });
+      }
+    }
+    return entries;
+  }
+
+  /* The hint under the chord row, for the meter. */
+  function chordHint(meter) {
+    const beat = SECOND_CHORD_BEAT[meter];
+    const second = beat
+      ? `a second chord only at @${beat}: I V@${beat}`
+      : "one chord a bar in " + meter;
+    return `Roman numerals in C, at most 2 per bar; @ sets the beat a chord starts on, from 0 (${second}).`;
+  }
+
   /* The version body of a form state: {uses, theme}. The result is left out;
    * the backend fills the uses of the slot and accompaniment motifs. */
   function bodyFromForm(state) {
@@ -339,6 +368,7 @@
       },
       slots: slotEntries(s.slots).filter((entry) => formSlots(s).includes(entry.slot)),
       ideas: ideaEntries(s.ideas, ownIdeaNames(s)),
+      chords: chordEntries(s),
       accompaniment,
       brief,
       style_weight: s.weight,
@@ -382,6 +412,11 @@
     state.ideas = (Array.isArray(theme.ideas) ? theme.ideas : [])
       .filter((entry) => entry && typeof entry === "object")
       .map((entry) => ({ idea: entry.idea, item_id: entry.item_id, version: Number(entry.version) }));
+    for (const entry of Array.isArray(theme.chords) ? theme.chords : []) {
+      if (entry && Number.isInteger(entry.bar) && entry.bar >= 0 && entry.bar < CHORD_BARS && typeof entry.text === "string") {
+        state.chords[entry.bar] = entry.text;
+      }
+    }
     state.modeChosen = state.slots.some((entry) => entry.slot === "basic");
     const acc = theme.accompaniment;
     if (acc && typeof acc === "object") {
@@ -852,6 +887,9 @@
     MODES,
     METERS,
     BARS,
+    CHORD_BARS,
+    chordHint,
+    chordEntries,
     CADENCES,
     FIRST_CADENCES,
     POOLS,

@@ -738,6 +738,32 @@ function buildThemeSlotsSection(state, itemsOf, basicSet) {
 
 /* The Advanced details of the Theme tab (closed by default): accompaniment, brief with weight and switches, seed
  * and check. The tempo is a field of the tab itself. */
+/* The chord row: one text field per bar of the theme, empty bars left to the Composer. Returns {element, refresh()}. */
+function buildThemeChordRow(state) {
+  const element = materialsElement("div", "theme-chords");
+  element.appendChild(materialsElement("h3", "section-title", "Chords"));
+  const row = materialsElement("div", "upload-controls");
+  const fields = [];
+  for (let bar = 0; bar < ThemesModel.CHORD_BARS; bar++) {
+    const input = themeInput("Composer", state.chords[bar]);
+    input.addEventListener("input", () => {
+      state.chords[bar] = input.value;
+    });
+    fields.push(themeField(row, `Bar ${bar + 1}`, input).parentElement);
+  }
+  element.appendChild(row);
+  const hint = materialsElement("div", "materials-hint");
+  element.appendChild(hint);
+  function refresh() {
+    fields.forEach((field, bar) => {
+      field.hidden = bar >= state.bars;
+    });
+    hint.textContent = ThemesModel.chordHint(state.meter);
+  }
+  refresh();
+  return { element, refresh };
+}
+
 function buildThemeAdvancedSection(state, itemsOf) {
   const section = materialsElement("details", "panel materials-editor theme-editor theme-advanced");
   section.appendChild(materialsElement("summary", "section-title", "Advanced"));
@@ -813,7 +839,11 @@ function buildThemeEditor(ctx) {
     if (sections.slots) {
       sections.slots.refreshSlots();
     }
+    if (chordRow) {
+      chordRow.refresh();
+    }
   }
+  let chordRow = null;
   for (const control of [into, beginningSelect, endingSelect, meter, bars, cadence, firstCadence]) {
     control.addEventListener("input", syncForm);
   }
@@ -831,6 +861,10 @@ function buildThemeEditor(ctx) {
       mode.value = state.mode;
     }
   });
+
+  /* Structure tab: the chords, under the slots. */
+  chordRow = buildThemeChordRow(state);
+  sections.slots.appendChild(chordRow.element);
 
   sections.advanced = buildThemeAdvancedSection(state, itemsOf);
 
