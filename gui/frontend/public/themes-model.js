@@ -2,7 +2,7 @@
  * problems, the brief picks, the compose request and the rows of a result.
  * No DOM; themes-view.js renders from these. The form state is
  *   {id, uses, into, hybrid, mode, meter, bars, cadence, firstCadence,
- *    slots: [{slot, item_id, version}], accompaniment: {kind, pattern,
+ *    slots: [{slot, item_id, version}], ideas: [{idea, item_id, version}], accompaniment: {kind, pattern,
  *    item_id, version}, picks: [...], switches: {<category>: bool}, weight,
  *    tempo, check, seed}
  * with tempo and seed as the text typed (blank for none). */
@@ -62,6 +62,17 @@
   ];
   const THEME_TAB_KEY = "ursatz.theme.tab";
   const MAX_SLOTS = 4;
+  /* The ideas each half of a form has, in order, with the slot each takes its motif from (names as the Composer's). */
+  const BEGINNING_IDEAS = {
+    presentation: [["basic idea", "basic"], ["repetition", "basic"]],
+    antecedent: [["basic idea", "basic"], ["contrasting idea", "contrasting"]],
+    cbi: [["basic idea", "basic"], ["contrasting idea", "contrasting"]],
+  };
+  const ENDING_IDEAS = {
+    continuation: [["fragment 1", "continuation"], ["fragment 2", "continuation"], ["cadential", "cadential"]],
+    consequent: [["consequent basic idea", "basic"], ["consequent contrasting idea", "contrasting"]],
+    cadential: [["cadential 1", "cadential"], ["cadential 2", "cadential"]],
+  };
   const TEMPO_MIN = 20;
   const TEMPO_MAX = 400;
   const MAX_SEED = 4294967295;
@@ -107,6 +118,7 @@
       cadence: "PAC",
       firstCadence: "",
       slots: [],
+      ideas: [],
       accompaniment: { kind: "none", pattern: "any", item_id: "", version: 0 },
       picks: [],
       switches: allSwitches(true),
@@ -283,6 +295,15 @@
     return n >= min && n <= max ? n : null;
   }
 
+  /* The entries of ideas in the order of the form's ideas, those of other forms and `basic idea` left out. */
+  function ideaEntries(ideas, allowed) {
+    const list = Array.isArray(ideas) ? ideas : [];
+    return allowed
+      .map((name) => list.find((entry) => entry && entry.idea === name))
+      .filter(Boolean)
+      .map((entry) => ({ idea: entry.idea, item_id: entry.item_id, version: Number(entry.version) }));
+  }
+
   function slotEntries(slots) {
     const list = Array.isArray(slots) ? slots : [];
     return SLOT_NAMES.flatMap((name) => list.filter((entry) => entry && entry.slot === name)).map((entry) => ({
@@ -316,7 +337,8 @@
         cadence: s.cadence,
         first_cadence: firstCadence,
       },
-      slots: slotEntries(s.slots),
+      slots: slotEntries(s.slots).filter((entry) => formSlots(s).includes(entry.slot)),
+      ideas: ideaEntries(s.ideas, ownIdeaNames(s)),
       accompaniment,
       brief,
       style_weight: s.weight,
@@ -357,6 +379,9 @@
       state.firstCadence = form.first_cadence;
     }
     state.slots = slotEntries((Array.isArray(theme.slots) ? theme.slots : []).filter((slot) => slot && typeof slot === "object"));
+    state.ideas = (Array.isArray(theme.ideas) ? theme.ideas : [])
+      .filter((entry) => entry && typeof entry === "object")
+      .map((entry) => ({ idea: entry.idea, item_id: entry.item_id, version: Number(entry.version) }));
     state.modeChosen = state.slots.some((entry) => entry.slot === "basic");
     const acc = theme.accompaniment;
     if (acc && typeof acc === "object") {
@@ -396,6 +421,69 @@
     return true;
   }
 
+  /* The [beginning, ending] pair of the form: a sentence is presentation+continuation, a period antecedent+consequent. */
+  function pairing(state) {
+    const s = state || emptyState();
+    if (s.into === "sentence") {
+      return ["presentation", "continuation"];
+    }
+    if (s.into === "period") {
+      return ["antecedent", "consequent"];
+    }
+    return text(s.hybrid).split("+");
+  }
+
+  /* The slots the form has, in order: basic always; contrasting for an antecedent or cbi beginning or a consequent
+   * ending; continuation for a continuation ending; cadential for a continuation or cadential ending. */
+  function formSlots(state) {
+    const [beginning, ending] = pairing(state);
+    const has = {
+      basic: true,
+      contrasting: beginning === "antecedent" || beginning === "cbi" || ending === "consequent",
+      continuation: ending === "continuation",
+      cadential: ending === "continuation" || ending === "cadential",
+    };
+    return SLOT_NAMES.filter((name) => has[name]);
+  }
+
+  /* The form's ideas in order, each {idea, slot} with the slot it takes its motif from. */
+  function formIdeas(state) {
+    const [beginning, ending] = pairing(state);
+    return [...(BEGINNING_IDEAS[beginning] || []), ...(ENDING_IDEAS[ending] || [])].map(([idea, slot]) => ({ idea, slot }));
+  }
+
+  /* The ideas that can have a motif of their own: those of the form but the basic idea (the basic slot). */
+  function ownIdeaNames(state) {
+    return formIdeas(state).map((entry) => entry.idea).filter((name) => name !== "basic idea");
+  }
+
+  /* The motif a slot's item belongs to: the item itself, or the end of its variant_of chain in items (at most 32 hops). */
+  function rootMotif(items, id) {
+    const list = Array.isArray(items) ? items : [];
+    let current = id;
+    for (let hop = 0; hop < 32; hop++) {
+      const item = list.find((entry) => entry.id === current);
+      if (!item || !item.variant_of) {
+        return current;
+      }
+      current = item.variant_of;
+    }
+    return current;
+  }
+
+  /* The Use choices of a motif from VariantTree.treeRows rows: its saved variants, the root left out. A choice is
+   * {value (item id), version, label, title (the derivation line)}. */
+  function variantChoices(rows) {
+    return (Array.isArray(rows) ? rows : [])
+      .filter((row) => !row.isRoot)
+      .map((row) => ({
+        value: row.id,
+        version: Number(row.version),
+        label: `${"- ".repeat(Math.max(0, row.depth - 1))}${row.name}`,
+        title: row.derivation || "",
+      }));
+  }
+
   function hybridOk(pairing) {
     const parts = text(pairing).split("+");
     return parts.length === 2 && BEGINNINGS.includes(parts[0]) && ENDINGS.includes(parts[1]);
@@ -429,6 +517,9 @@
     }
     if (s.mode === "style" && briefFromPicks(s.picks) === null) {
       problems.push("The mode from the brief needs a brief.");
+    }
+    if ((Array.isArray(s.ideas) ? s.ideas : []).some((entry) => entry && !text(entry.item_id))) {
+      problems.push("Each idea with its own motif needs one.");
     }
     const acc = s.accompaniment || {};
     if (acc.kind === "motive" && !text(acc.item_id)) {
@@ -516,6 +607,7 @@
   const FROM_TEXT = { request: "set here", option: "set here", style: "from the brief", none: "not set" };
   const SOURCE_TEXT = {
     motive: "slot motif, exact",
+    idea: "From its own motif",
     pool: "saved form",
     registry: "registry form",
     operator: "operator",
@@ -584,14 +676,18 @@
     };
   }
 
-  /* {A: "Name"} for the motive ids the backend gives the slots, in slot
-   * order; nameOf(item_id) gives a motif's name. */
+  /* {M1: "Name"} for the motive ids the backend gives the form: one per distinct motif and version, the slots in
+   * order, then the ideas; nameOf(item_id) gives a motif's name. */
   function motiveNames(state, nameOf) {
     const names = {};
-    const ids = ["A", "B", "C", "D"];
-    slotEntries(state.slots).forEach((entry, index) => {
-      names[ids[index]] = nameOf ? nameOf(entry.item_id) || entry.item_id : entry.item_id;
-    });
+    const seen = [];
+    const entries = [...slotEntries(state.slots), ...ideaEntries(state.ideas, ownIdeaNames(state))];
+    for (const entry of entries) {
+      if (!seen.some((other) => other.item_id === entry.item_id && other.version === entry.version)) {
+        seen.push(entry);
+        names[`M${seen.length}`] = nameOf ? nameOf(entry.item_id) || entry.item_id : entry.item_id;
+      }
+    }
     return names;
   }
 
@@ -770,6 +866,10 @@
     bodyFromForm,
     formFromBody,
     formProblems,
+    formSlots,
+    formIdeas,
+    rootMotif,
+    variantChoices,
     motifMode,
     applyBasicMode,
     withoutFromSwitches,
