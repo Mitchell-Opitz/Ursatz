@@ -157,11 +157,20 @@ static bool is_figure_of_motive(const MelodyContext *context, const MelodyFillPa
            context->motive_tone[k + 1] == MELODY_TONE_CHORD && notes[i + 1].motive_index == (int)k + 1;
 }
 
+/* Whether the note is the chord tone a figure of the motive resolves to: it is placed before the figure is formed. */
+static bool resolves_figure(const MelodyContext *context, const MelodyFillParams *params, const MelodyNote *notes,
+                            size_t count, size_t i) {
+    return i > 0 && is_figure_of_motive(context, params, notes, count, i - 1);
+}
+
 bool melody_is_anchor(const MelodyContext *context, const MelodyFillParams *params, const MelodyCandidate *melody,
                       size_t i) {
     const MelodyNote *note = &melody->notes[i];
     if (is_figure_of_motive(context, params, melody->notes, melody->count, i)) {
         return false;
+    }
+    if (resolves_figure(context, params, melody->notes, melody->count, i)) {
+        return true;
     }
     return params->nct_types == 0 || i == 0 || i + 1 == melody->count || note->strong ||
            note->duration >= context->cell || note->onset + note->duration > context->chord_start[note->chord + 1];
@@ -383,7 +392,11 @@ static bool assign(const MelodyContext *context, const MelodyFillParams *params,
             if (adjacent && !leap_allowed(note->pitch - out->notes[before].pitch)) {
                 return false;
             }
-        } else if (!pick(options, kept, reach, rng, context->restating, &note->pitch)) {
+        } else if (!pick(options, kept, reach, rng, context->restating, &note->pitch) &&
+                   /* The chord tone a figure of the motive resolves to keeps its interval within the tolerance where a chord tone
+                      allows it, else it takes the nearest chord tone (R-215). */
+                   !(resolves_figure(context, params, out->notes, out->count, i) &&
+                     pick(options, kept, 127, rng, context->restating, &note->pitch))) {
             return false;
         }
         if (i > 0 && before + 1 < i) {
