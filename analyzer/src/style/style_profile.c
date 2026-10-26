@@ -229,6 +229,30 @@ static bool count_rhythm(StyleProfile *profile, const cJSON *document) {
             return false;
         }
     }
+    const cJSON *tempo = member(member(member(document, "metadata"), "input"), "tempo");
+    const cJSON *declared = member(tempo, "declared");
+    const cJSON *quarters = member(tempo, "quarters_per_minute");
+    if (cJSON_IsTrue(declared) && cJSON_IsNumber(quarters)) {
+        char label[32];
+        style_label_tempo(quarters->valuedouble, label, sizeof label);
+        if (!count_label(profile, STYLE_CATEGORY_TEMPO, label)) {
+            return false;
+        }
+    }
+    const cJSON *rhythm_claim;
+    cJSON_ArrayForEach(rhythm_claim, member(document, "rhythm")) {
+        const char *claim_label = string_member(rhythm_claim, "label");
+        const char *claim_line = string_member(rhythm_claim, "line");
+        const cJSON *mean = member(member(rhythm_claim, "attacks_per_beat"), "mean");
+        if (claim_label && claim_line && strcmp(claim_label, "density") == 0 && strcmp(claim_line, "all") == 0 &&
+            cJSON_IsNumber(mean)) {
+            char label[32];
+            style_label_density(mean->valuedouble, label, sizeof label);
+            if (!count_label(profile, STYLE_CATEGORY_NOTE_DENSITY, label)) {
+                return false;
+            }
+        }
+    }
     const cJSON *phrase;
     cJSON_ArrayForEach(phrase, member(document, "phrases")) {
         long first, last;

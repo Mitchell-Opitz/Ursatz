@@ -25,7 +25,7 @@
           "category": {
             "enum": [
               "chord-numeral", "chord-progression-2", "chord-progression-3", "cadence-type", "harmonic-rhythm",
-              "duration", "meter", "syncopation-per-phrase",
+              "duration", "tempo", "note-density", "meter", "syncopation-per-phrase",
               "melodic-interval", "contour", "phrase-range",
               "motive-degrees", "motive-intervals", "motive-rhythm", "motive-nct-figure",
               "theme-form", "phrase-length", "section-letters", "mode"

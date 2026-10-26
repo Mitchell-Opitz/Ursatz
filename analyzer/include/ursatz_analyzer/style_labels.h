@@ -39,6 +39,8 @@ typedef enum {
 #define STYLE_CATEGORY_PHRASE_LENGTH "phrase-length"
 #define STYLE_CATEGORY_SECTION_LETTERS "section-letters"
 #define STYLE_CATEGORY_MODE "mode"
+#define STYLE_CATEGORY_TEMPO "tempo"
+#define STYLE_CATEGORY_NOTE_DENSITY "note-density"
 
 /* "harmony", "rhythm", "melody" or "form"; NULL for a value out of range. */
 const char *style_dimension_name(StyleDimension dimension);
@@ -70,6 +72,18 @@ const char *style_label_contour(int semitones);
 
 /* A duration in whole notes as a reduced fraction: "1/8", "3/16", "1/1". A zero denominator reads "0/1". */
 void style_label_duration(unsigned long numerator, unsigned long denominator, char *buffer, size_t size);
+
+/*
+ * A tempo in quarter notes per minute as a band of 20 from 40: "<40", "40-59", "60-79", ..., "200-219", "220+". A
+ * value on a boundary goes to the upper band, so 140 reads "140-159". Writes at most size bytes, always terminated.
+ */
+void style_label_tempo(double quarters_per_minute, char *buffer, size_t size);
+
+/*
+ * Attacks per beat rounded to the nearest 1/2 (halves up) and written as a reduced fraction: "1/2", "1", "3/2",
+ * "2"; 0 reads "0" and a rounded value of 4 or more reads "4+". Writes at most size bytes, always terminated.
+ */
+void style_label_density(double attacks_per_beat, char *buffer, size_t size);
 
 /* The degree label of a pitch class against a tonic pitch class: "1 b2 2 b3 3 4 #4 5 b6 6 b7 7" by the semitones
    above the tonic. Any pitch class number is accepted (taken modulo 12). The returned text is static. */

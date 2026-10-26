@@ -17,6 +17,8 @@ static const struct {
     {STYLE_CATEGORY_CADENCE_TYPE, STYLE_DIMENSION_HARMONY},
     {STYLE_CATEGORY_HARMONIC_RHYTHM, STYLE_DIMENSION_HARMONY},
     {STYLE_CATEGORY_DURATION, STYLE_DIMENSION_RHYTHM},
+    {STYLE_CATEGORY_TEMPO, STYLE_DIMENSION_RHYTHM},
+    {STYLE_CATEGORY_NOTE_DENSITY, STYLE_DIMENSION_RHYTHM},
     {STYLE_CATEGORY_METER, STYLE_DIMENSION_RHYTHM},
     {STYLE_CATEGORY_SYNCOPATION, STYLE_DIMENSION_RHYTHM},
     {STYLE_CATEGORY_MELODIC_INTERVAL, STYLE_DIMENSION_MELODY},
@@ -298,4 +300,35 @@ bool style_label_nct_figure(const char *previous, const char *degree, const char
         return false;
     }
     return true;
+}
+
+void style_label_tempo(double quarters_per_minute, char *buffer, size_t size) {
+    if (!buffer || size == 0) {
+        return;
+    }
+    if (!(quarters_per_minute >= 40.0)) {
+        snprintf(buffer, size, "<40");
+    } else if (quarters_per_minute >= 220.0) {
+        snprintf(buffer, size, "220+");
+    } else {
+        int low = 40 + 20 * (int)((quarters_per_minute - 40.0) / 20.0);
+        snprintf(buffer, size, "%d-%d", low, low + 19);
+    }
+}
+
+void style_label_density(double attacks_per_beat, char *buffer, size_t size) {
+    if (!buffer || size == 0) {
+        return;
+    }
+    double halves = attacks_per_beat > 0.0 ? attacks_per_beat * 2.0 + 0.5 : 0.0;
+    if (halves >= 8.0) {
+        snprintf(buffer, size, "4+");
+        return;
+    }
+    int whole_halves = (int)halves;
+    if (whole_halves % 2 == 0) {
+        snprintf(buffer, size, "%d", whole_halves / 2);
+    } else {
+        snprintf(buffer, size, "%d/2", whole_halves);
+    }
 }
