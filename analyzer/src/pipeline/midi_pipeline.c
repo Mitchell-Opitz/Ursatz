@@ -402,7 +402,8 @@ static void read_opening_tempo(const unsigned char *buffer, size_t size, Importe
     if (tempo.tempo_map && !tempo_map_is_defaulted(tempo.tempo_map) && tempo_map_region_count(tempo.tempo_map) > 0) {
         const TempoMapRegion *region = tempo_map_region(tempo.tempo_map, 0);
         unsigned long microseconds = tempo_map_region_microseconds_per_quarter(region);
-        if (microseconds > 0 && musical_time_numerator(tempo_map_region_start(region)) == 0) {
+        if (microseconds > 0 && !tempo_map_region_is_defaulted(region) &&
+            musical_time_numerator(tempo_map_region_start(region)) == 0) {
             source->tempo_declared = true;
             source->initial_quarters_per_minute = 60000000.0 / (double)microseconds;
         }
