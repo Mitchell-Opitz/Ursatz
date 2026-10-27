@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analysis/motive_variant_recognition.h"
+#include "semantics/non_chord_tone.h"
 
 /*
  * Analysis-regression tests for the variant recognizer. Each relation is applied to a fixture, the
@@ -165,7 +166,57 @@ static void init_cases(void) {
     add_case(step(MOTIVE_RELATION_PASSING_HARMONY, 0, 0, 0));
     add_case(step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0));
     add_case(step(MOTIVE_RELATION_LIQUIDATE_FEATURES, 1, 0, 0));
+    add_case(step(MOTIVE_RELATION_REDUCE_TO_FRAME, 0, 0, 0));
+    add_case(step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 2, NON_CHORD_TONE_PASSING, 0));
+    add_case(step(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, 1, 0, 0));
+    add_case(step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 1, NON_CHORD_TONE_APPOGGIATURA, 0));
+    add_case(step(MOTIVE_RELATION_REHARMONIZE_FRAME, 4, 0, 0));
 }
+/*
+ * Each frame relation of the base fixture's cases in a chain of two with every stride-th case, in both orders. All must be
+ * recovered. The full run (stride 1) is the slow test.
+ */
+static void test_frame_relation_chains(size_t stride, size_t required) {
+    static const MotiveRelationKind frame[] = {
+        MOTIVE_RELATION_REDUCE_TO_FRAME,       MOTIVE_RELATION_ADD_NON_CHORD_TONE,
+        MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, MOTIVE_RELATION_CHANGE_NON_CHORD_TONE,
+        MOTIVE_RELATION_REHARMONIZE_FRAME,
+    };
+    MotiveSketch source = base();
+    size_t chains = 0;
+    for (size_t i = 0; i < CASE_COUNT; i++) {
+        bool is_frame = false;
+        for (size_t k = 0; k < sizeof(frame) / sizeof(frame[0]); k++) {
+            is_frame = is_frame || CASES[i].kind == frame[k];
+        }
+        if (!is_frame) {
+            continue;
+        }
+        for (size_t j = 0; j < CASE_COUNT; j += stride) {
+            for (int order = 0; order < 2; order++) {
+                MotiveRelationStep first = order == 0 ? CASES[i] : CASES[j];
+                MotiveRelationStep second = order == 0 ? CASES[j] : CASES[i];
+                MotiveSketch middle;
+                MotiveSketch target;
+                if (motive_relation_apply(&source, &first, &middle) != MOTIVE_RELATION_OK ||
+                    motive_relation_apply(&middle, &second, &target) != MOTIVE_RELATION_OK ||
+                    motive_sketch_equal(&source, &target)) {
+                    continue;
+                }
+                MotiveRecognition found = recognize(&source, &target);
+                if (!found.found) {
+                    fprintf(stderr, "chain %s then %s not recovered\n", motive_relation_name(first.kind),
+                            motive_relation_name(second.kind));
+                }
+                assert(found.found);
+                assert_replays(&source, &target, &found);
+                chains++;
+            }
+        }
+    }
+    assert(chains >= required);
+}
+
 /* Eight eighth notes, four on C and four on B, in I then V: an accompaniment. */
 static MotiveSketch repeated_notes(void) {
     MotiveSketch sketch = base();
@@ -726,14 +777,20 @@ static void test_harmony_rows_on_tone_roles(void) {
     recover_one(&two, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0));
 }
 
-int main(void) {
+int main(int argc, char **argv) {
     init_cases();
+    if (argc > 1 && strcmp(argv[1], "frame-chains") == 0) {
+        test_frame_relation_chains(1, 100);
+        printf("motive_variant_recognition frame chains: ok\n");
+        return 0;
+    }
     test_every_relation();
     test_harmony_rows_on_tone_roles();
     test_equal_sketches_are_exact();
     test_dimensions();
     test_rhythm_sketch_takes_time_relations();
     test_without_a_scale_pitches_move_by_semitones();
+    test_frame_relation_chains(11, 10);
     test_chains(2, 2, 40, 40);
     test_chains(3, 4, 40, 30);
     test_unrelated_pair_is_not_found();
