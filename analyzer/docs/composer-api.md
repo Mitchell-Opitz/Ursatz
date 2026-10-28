@@ -72,6 +72,13 @@ category the fragment has and the model lacks, such as the four motive categorie
 as distance 1 and pulls every mean up. An unknown category name, or `count` above 0 with NULL `categories`, is
 `ANALYZER_FRAGMENT_ERR_ARGUMENT`. `analyzer_fragment_style_distance` is this call with none.
 
+## Style labels
+
+A caller that labels its own material to meet a style's counts uses the label builders of `style_labels.h`, the ones the
+profile uses ([style-profile.md](style-profile.md#label-builders)): `style_label_tempo`, `style_label_density`,
+`style_label_degree`, `style_label_join`, `style_label_motive_intervals` and `style_label_nct_figure`. A caller frees
+what `style_label_join` and `style_label_motive_intervals` return.
+
 ## Tests
 
 `tests/test_composer_api.c`: Bach 114 imported and passed as a fragment gives the same chords, cadences, phrases and

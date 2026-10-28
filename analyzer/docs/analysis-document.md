@@ -73,7 +73,7 @@ itself states.
 | `key` | `"notated"`, `"embedded"` or `"inferred"` | The same, for the key signature. `"inferred"` means the input has no key signature, so keys come from the notes alone. |
 | `spelling` | `"notated"` or `"rule"` | `"notated"`: pitch names in chord roots, chord basses and outer voices follow the score. `"rule"`: spelled by the pipeline's minimal-accidental rule (MIDI). |
 | `parts` | array | The score's parts, merged into one texture for the analysis; empty for MIDI. Each has `id`, `name`, `staff_count` and `note_count`. |
-| `tempo` | object | `declared`, `quarters_per_minute` (`null` when not declared) and `marking_count`. The markings themselves are in `markings`. |
+| `tempo` | object | `declared`, `quarters_per_minute` (`null` when not declared) and `marking_count`. The markings themselves are in `markings`. MusicXML input declares the tempo of its first metronome mark; MIDI input declares it from the first set-tempo event when that event is at tick 0 (a file whose first set-tempo comes later, or has none, leaves it undeclared). |
 | `dynamics_count` | integer | Dynamics markings the input carries. The markings themselves are in `markings`. |
 | `warning_count` | integer | Importer warnings (skipped grace notes, rounded values, and so on). |
 

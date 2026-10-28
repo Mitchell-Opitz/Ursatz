@@ -24,6 +24,8 @@ material the same way. Only analysis documents of schema version 9 are read.
 | harmony | `cadence-type` | cadence | `perfect-authentic` | `cadences[].type` |
 | harmony | `harmonic-rhythm` | measure | chord changes in the measure, `3` | `harmonic_rhythm.per_measure[].changes` |
 | rhythm | `duration` | soprano note | reduced fraction of a whole note, `1/8` | `outer_voices.soprano[].duration` |
+| rhythm | `tempo` | piece that declares a tempo | the opening tempo in quarter notes per minute as a band of 20: `<40`, `40-59`, ..., `200-219`, `220+`; a value on a boundary goes to the upper band, 140 is `140-159` | `metadata.input.tempo` (`declared`, `quarters_per_minute`) |
+| rhythm | `note-density` | phrase | attacks per beat of the whole phrase to the nearest 1/2, halves up, as a reduced fraction: `0`, `1/2`, `1`, `3/2`, ..., `4+` for 4 or more | `rhythm[]` (density, line `all`) `attacks_per_beat.mean` |
 | rhythm | `meter` | time signature (the opening one and each change) | `3/4` | `meter.time_signature`, `meter.changes[]` |
 | rhythm | `syncopation-per-phrase` | phrase | soprano syncopations in the phrase, `4+` for four or more | `rhythm[]` (syncopation, soprano) and `phrases[].measures` |
 | melody | `melodic-interval` | pair of soprano notes | directed semitones: `+2`, `-5`, `0`; `+13+` and `-13+` beyond an octave | `outer_voices.soprano[].pitch.midi` |
@@ -40,6 +42,10 @@ material the same way. Only analysis documents of schema version 9 are read.
 
 Rules the counts follow:
 
+- `tempo` is the opening tempo only: a MusicXML score's first metronome mark or a MIDI file's set-tempo event at tick 0
+  (see [analysis-document.md](analysis-document.md)). A piece with no declared tempo adds nothing to it. Tempo changes
+  within a piece are not counted.
+
 - A note held across several chord segments is one soprano note. A rest bridged inside the line does not break it.
 - A chord with no numeral, or a change of key region, ends a run of numerals. Within a run a numeral that repeats is
   counted as a chord but not as a progression step.
@@ -52,6 +58,14 @@ Rules the counts follow:
   library left unclassified has no figure. The degrees of an occurrence's notes (`occurrences[].degrees`) use the key
   region each note starts in.
 
+## Label builders
+
+The Composer labels its own material with the same functions the profile uses, all in `style_labels.h`:
+`style_label_tempo` and `style_label_density` (the bands above), `style_label_degree` (`1 b2 2 b3 3 4 #4 5 b6 6 b7 7`
+by the semitones above the tonic), `style_label_join` (the `motive-degrees` and `motive-rhythm` labels),
+`style_label_motive_intervals` (the `motive-intervals` label; no octave cap) and `style_label_nct_figure` (the
+`motive-nct-figure` label).
+
 ## The style model file
 
 `schema/style-model.v1.schema.json`:
@@ -62,7 +76,7 @@ Rules the counts follow:
   "schema_version": 1,
   "style_name": "sonatinas",
   "training_corpus": "<the corpus run's input folder>",
-  "model_version": "0.2.0",
+  "model_version": "0.3.0",
   "pieces": 2,
   "statistics": [
     { "dimension": "harmony", "category": "cadence-type", "label": "half", "count": 34, "total": 92 }
@@ -110,10 +124,10 @@ The ten Bach chorales of the accuracy corpus (`chorales`) against Clementi Op. 3
 | Dimension | Distance |
 | --- | --- |
 | harmony | 0.4657 |
-| rhythm | 0.5362 |
+| rhythm | 0.6604 |
 | melody | 0.7375 |
 | form | 0.4450 |
-| overall | 0.5461 |
+| overall | 0.5771 |
 
 | Category | Distance |
 | --- | --- |
@@ -123,6 +137,8 @@ The ten Bach chorales of the accuracy corpus (`chorales`) against Clementi Op. 3
 | `chord-progression-3` | 0.8472 |
 | `harmonic-rhythm` | 0.2403 |
 | `duration` | 0.7998 |
+| `tempo` | 1.0000 |
+| `note-density` | 0.6935 |
 | `meter` | 0.4000 |
 | `syncopation-per-phrase` | 0.4088 |
 | `melodic-interval` | 0.4108 |
