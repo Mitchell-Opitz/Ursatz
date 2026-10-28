@@ -48,7 +48,7 @@ They match the Composer's `motive_develop` at `466b38c`. A fragment or liquidati
 | `retrograde` | none | each note's span mirrored in time, notes reversed | ch. III, Exs. 14, 19 | 2 |
 | `interval-change` | interval (0 every one), amount, keep-contour | the interval widened or narrowed, later notes carried along; a repeated note is left alone; keep-contour refuses a changed direction | ch. III, Ex. 21 | 2 |
 | `fragment` | position (1 leading, 2 trailing, 3 middle), length, min | a run of notes, moved to start at 0 | ch. III, Ex. 21; ch. VIII, Ex. 52 | 2 |
-| `liquidate` | drop, keep-rhythm, min | the weakest notes go first (off the beat, then beats, then downbeats; the later of equals); kept notes keep their onsets, or follow one another from 0 | ch. VIII, Ex. 52 | 2 |
+| `liquidate` | drop, keep-rhythm, min | the weakest notes go first (off the beat, then beats, then downbeats; the later of equals); kept notes keep their onsets, or follow one another from 0. With keep-rhythm a dropped note's time goes to the kept note before it (each kept note runs to the next kept note's onset, the last to the end of the last original note), so no rest is left; a dropped first note's time goes to the first kept note, which starts at the first note's onset; a duration that is not a written value is `NOT_EXPRESSIBLE` | ch. VIII, Ex. 52 | 2 |
 | `augment`, `diminish` | ratio (0:0 for 2:1 and 1:2) | onsets and durations scaled; every duration must be writable and every onset on the grid, and a source of whole beats stays whole beats | ch. III, Exs. 14, 17 | 1 |
 
 ### Rhythm (ch. III)
