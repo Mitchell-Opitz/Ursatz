@@ -26,6 +26,9 @@ add_ursatz_test(motive_sketch)
 add_ursatz_test(motive_relation)
 add_ursatz_test(motive_tone_roles)
 add_ursatz_test(motive_variant_recognition)
+# Every frame relation in a chain of two with every other case, both orders (about 2 minutes); CI runs ctest -LE slow.
+add_test(NAME motive_variant_recognition_frame_chains COMMAND test_motive_variant_recognition frame-chains)
+set_tests_properties(motive_variant_recognition_frame_chains PROPERTIES LABELS slow)
 add_ursatz_test(motive_link)
 
 # Scoped memcheck for the motive link test only (not a repo-wide valgrind mechanism -- see

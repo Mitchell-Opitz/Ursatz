@@ -45,6 +45,19 @@
  *   counter-line
  *   dominant-form      (ch. V: the chords and the melody in the dominant)
  *   liquidate-features steps (1 to 3), shorten (0/1: also diminished 1:2)
+ *   reduce-to-frame    (every non-chord and unclassified note goes; its time to the note before it, a leading
+ *                      one's to the next kept note)
+ *   add-non-chord-tone after (0-based index of a chord tone with a note after it), type (a NonChordTone value,
+ *                      semantics/non_chord_tone.h): the figure goes between that note and the next, taking half of
+ *                      the earlier note's duration (a double neighbor or changing tone, two notes, half of it split
+ *                      in two)
+ *   remove-non-chord-tone note (0-based index of a note that is not a chord tone; its time to the note before it,
+ *                      a first note's to the next)
+ *   change-non-chord-tone note (0-based index of a note that is not a chord tone), type (a NonChordTone value):
+ *                      the note, and for a double neighbor or changing tone its partner, move to form that type
+ *                      between the same chord tones
+ *   reharmonize-frame  degree (1 to 7), seventh (0/1): every chord is replaced by that one chord at 0, the melody
+ *                      adapted as a harmony relation does
  *
  * A harmony relation needs a scale. A sketch without chords is given its best implied chord at 0 first, so its
  * result has chords. A harmony relation then adapts the melody to the chords it changed, through the tone roles
@@ -52,6 +65,12 @@
  * moves to the nearest tone of the new chord, in the direction from the previous note when two are equally near, and
  * keeps the directions of the contour it can; a non-chord tone whose resolution target moved moves by the same scale
  * steps, so it still resolves by step; one whose figure no longer fits is left, and is unclassified in the result.
+ *
+ * The frame relations work from the tone roles too. A figure they add or change is formed from the notes either side of
+ * it, by the rules of motive_tone_roles: the pitch is the first of a fixed list of candidates (the scale steps next to
+ * the notes either side, then those notes' own pitches, then two steps away) for which the tone roles of the result
+ * label the note with that type; a type that no candidate forms there is NOT_APPLICABLE. A figure the rules cannot
+ * tell from another (a suspension needs a chord change at its onset) is formed only where they can.
  *
  * motive_relation_apply never changes its input. The result is as long as its notes (length is the end of the
  * last note).
@@ -86,6 +105,11 @@ typedef enum {
     MOTIVE_RELATION_COUNTER_LINE,
     MOTIVE_RELATION_DOMINANT_FORM,
     MOTIVE_RELATION_LIQUIDATE_FEATURES,
+    MOTIVE_RELATION_REDUCE_TO_FRAME,
+    MOTIVE_RELATION_ADD_NON_CHORD_TONE,
+    MOTIVE_RELATION_REMOVE_NON_CHORD_TONE,
+    MOTIVE_RELATION_CHANGE_NON_CHORD_TONE,
+    MOTIVE_RELATION_REHARMONIZE_FRAME,
     MOTIVE_RELATION_KIND_COUNT
 } MotiveRelationKind;
 

@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "analysis/motive_relation.h"
+#include "analysis/motive_tone_roles.h"
 
 /*
  * Analysis-regression tests for the motive relations. Each relation has a case that checks its result, the
@@ -122,6 +123,26 @@ static void test_catalog(void) {
     assert(motive_relation_param_count(MOTIVE_RELATION_TRANSPOSE) == 3);
     assert(motive_relation_param_count(MOTIVE_RELATION_RETROGRADE) == 0);
     assert(strcmp(motive_relation_result_name(MOTIVE_RELATION_NO_SCALE), "no scale") == 0);
+
+    assert(strcmp(motive_relation_name(MOTIVE_RELATION_REDUCE_TO_FRAME), "reduce-to-frame") == 0);
+    assert(strcmp(motive_relation_name(MOTIVE_RELATION_ADD_NON_CHORD_TONE), "add-non-chord-tone") == 0);
+    assert(strcmp(motive_relation_name(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE), "remove-non-chord-tone") == 0);
+    assert(strcmp(motive_relation_name(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE), "change-non-chord-tone") == 0);
+    assert(strcmp(motive_relation_name(MOTIVE_RELATION_REHARMONIZE_FRAME), "reharmonize-frame") == 0);
+    assert(strcmp(motive_relation_param_name(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 1), "type") == 0);
+    assert(strcmp(motive_relation_param_name(MOTIVE_RELATION_REHARMONIZE_FRAME, 0), "degree") == 0);
+    assert(motive_relation_cost(MOTIVE_RELATION_REDUCE_TO_FRAME) == 2);
+
+    char text[80];
+    MotiveRelationStep parsed;
+    MotiveRelationStep add = step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 2, NON_CHORD_TONE_NEIGHBOR, 0);
+    assert(motive_relation_step_text(&add, text, sizeof(text)));
+    assert(strcmp(text, "add-non-chord-tone after=2 type=1") == 0);
+    assert(motive_relation_step_parse(text, &parsed) && parsed.kind == add.kind && parsed.value[0] == 2 &&
+           parsed.value[1] == 1);
+    assert(motive_relation_step_parse("reharmonize-frame degree=5 seventh=1", &parsed) &&
+           parsed.kind == MOTIVE_RELATION_REHARMONIZE_FRAME && parsed.value[0] == 5 && parsed.value[1] == 1);
+    assert(motive_relation_step_parse("reduce-to-frame", &parsed) && parsed.kind == MOTIVE_RELATION_REDUCE_TO_FRAME);
 }
 
 static void test_invalid_input(void) {
@@ -1025,6 +1046,382 @@ static void test_tone_role_adaptation(void) {
                                                                                 .value = {5, 5, 0}}));
 }
 
+/* --- frame relations (R-197) -------------------------------------------------------------------- */
+
+/* Whether the tone roles label a note as a non-chord tone of the type. */
+static bool is_figure(const MotiveSketch *sketch, size_t note, NonChordTone type) {
+    MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
+    assert(motive_tone_roles(sketch, NULL, 0, labels) == MOTIVE_TONE_OK);
+    return labels[note].role == MOTIVE_TONE_NON_CHORD && labels[note].type == type;
+}
+
+static bool is_chord_tone(const MotiveSketch *sketch, size_t note) {
+    MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
+    assert(motive_tone_roles(sketch, NULL, 0, labels) == MOTIVE_TONE_OK);
+    return labels[note].role == MOTIVE_TONE_CHORD;
+}
+
+/* C E E G E C C in quarter notes over the tonic triad: chord tones only. */
+static MotiveSketch frame_line(void) {
+    static const int pitches[7] = {60, 64, 64, 67, 64, 60, 60};
+    return line(pitches, 7, q(1, 4));
+}
+
+static void test_reduce_to_frame(void) {
+    int vi[1] = {6};
+    ExactRational at_zero[1] = {q(0, 1)};
+    MotiveSketch sketch = hollow_knight(vi, at_zero, 1);
+    sketch.feature_count = 2;
+    strcpy(sketch.features[0].label, "a");
+    sketch.features[0].first = 0;
+    sketch.features[0].last = 1;
+    strcpy(sketch.features[1].label, "b");
+    sketch.features[1].first = 2;
+    sketch.features[1].last = 2;
+    MotiveSketch out;
+
+    /* The passing B and the unclassified last B go; their time goes to the A and the C before them. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_REDUCE_TO_FRAME, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int frame[3] = {81, 81, 84};
+    assert_pitches(&out, frame, 3);
+    assert_note(&out, 0, 81, q(0, 1), q(1, 4));
+    assert_note(&out, 1, 81, q(1, 4), q(1, 2));
+    assert_note(&out, 2, 84, q(3, 4), q(1, 2));
+    assert(msk_eq(out.length, q(5, 4)));
+    assert(out.chord_count == 1);
+    /* The feature on the B alone goes; the one on the two As stays. */
+    assert(out.feature_count == 1 && out.features[0].first == 0 && out.features[0].last == 1);
+
+    /* A leading non-chord note gives its time to the first kept note, which then starts at 0. */
+    int leading[4] = {83, 81, 81, 84};
+    MotiveSketch lead = line(leading, 4, q(1, 4));
+    set_chords(&lead, vi, at_zero, 1);
+    assert(apply(&lead, step(MOTIVE_RELATION_REDUCE_TO_FRAME, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int after_lead[3] = {81, 81, 84};
+    assert_pitches(&out, after_lead, 3);
+    assert_note(&out, 0, 81, q(0, 1), q(1, 2));
+    assert_note(&out, 1, 81, q(1, 2), q(1, 4));
+    assert_note(&out, 2, 84, q(3, 4), q(1, 4));
+
+    /* No chord is given: the tonic triad frames it. C D E G is C E G with the D's time on the C. */
+    MotiveSketch plain = cdeg();
+    assert(apply(&plain, step(MOTIVE_RELATION_REDUCE_TO_FRAME, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int triad[3] = {60, 64, 67};
+    assert_pitches(&out, triad, 3);
+    assert_note(&out, 0, 60, q(0, 1), q(1, 2));
+    assert(out.chord_count == 0);
+
+    /* Refusals. */
+    MotiveSketch chord_tones = frame_line();
+    assert(apply(&chord_tones, step(MOTIVE_RELATION_REDUCE_TO_FRAME, 0, 0, 0), &out) == MOTIVE_RELATION_UNCHANGED);
+    int none_in_frame[3] = {62, 65, 62};
+    MotiveSketch no_frame = line(none_in_frame, 3, q(1, 4));
+    assert(apply(&no_frame, step(MOTIVE_RELATION_REDUCE_TO_FRAME, 0, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    MotiveSketch no_scale = cdeg();
+    no_scale.has_scale = false;
+    assert(apply(&no_scale, step(MOTIVE_RELATION_REDUCE_TO_FRAME, 0, 0, 0), &out) == MOTIVE_RELATION_NO_SCALE);
+    MotiveSketch rhythm = cdeg();
+    rhythm.notes[1].pitch = MOTIVE_SKETCH_PITCH_UNKNOWN;
+    assert(apply(&rhythm, step(MOTIVE_RELATION_REDUCE_TO_FRAME, 0, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    /* An eighth and four more on one note (five eighths) are not a written value. */
+    int eighths[6] = {60, 62, 62, 62, 62, 64};
+    MotiveSketch long_run = line(eighths, 6, q(1, 8));
+    assert(apply(&long_run, step(MOTIVE_RELATION_REDUCE_TO_FRAME, 0, 0, 0), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
+    assert(motive_relation_param_count(MOTIVE_RELATION_REDUCE_TO_FRAME) == 0);
+}
+
+static void test_add_non_chord_tone(void) {
+    MotiveSketch sketch = frame_line();
+    MotiveSketch out;
+
+    /* A passing tone between the E and the G: half of the E's quarter. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 2, NON_CHORD_TONE_PASSING, 0), &out) ==
+           MOTIVE_RELATION_OK);
+    int passing[8] = {60, 64, 64, 65, 67, 64, 60, 60};
+    assert_pitches(&out, passing, 8);
+    assert_note(&out, 2, 64, q(1, 2), q(1, 8));
+    assert_note(&out, 3, 65, q(5, 8), q(1, 8));
+    assert_note(&out, 4, 67, q(3, 4), q(1, 4));
+    assert(is_figure(&out, 3, NON_CHORD_TONE_PASSING));
+    assert(msk_eq(out.length, sketch.length));
+
+    /* Every type that can be formed there is labelled so by the tone roles. */
+    static const struct {
+        long after;
+        NonChordTone type;
+    } formed[] = {
+        {1, NON_CHORD_TONE_NEIGHBOR},     {1, NON_CHORD_TONE_DOUBLE_NEIGHBOR}, {1, NON_CHORD_TONE_CHANGING_TONE},
+        {0, NON_CHORD_TONE_APPOGGIATURA}, {0, NON_CHORD_TONE_ESCAPE_TONE},     {5, NON_CHORD_TONE_NEIGHBOR},
+    };
+    for (size_t i = 0; i < sizeof(formed) / sizeof(formed[0]); i++) {
+        assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, formed[i].after, formed[i].type, 0), &out) ==
+               MOTIVE_RELATION_OK);
+        size_t first = (size_t)formed[i].after + 1;
+        size_t added = formed[i].type == NON_CHORD_TONE_DOUBLE_NEIGHBOR || formed[i].type == NON_CHORD_TONE_CHANGING_TONE ? 2 : 1;
+        assert(out.note_count == sketch.note_count + added);
+        for (size_t k = 0; k < added; k++) {
+            assert(is_figure(&out, first + k, formed[i].type));
+        }
+        assert(is_chord_tone(&out, (size_t)formed[i].after));
+        assert(msk_eq(out.length, sketch.length));
+    }
+    /* The pair splits half of the E: C E [F D] E. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 1, NON_CHORD_TONE_CHANGING_TONE, 0), &out) ==
+           MOTIVE_RELATION_OK);
+    int changing[9] = {60, 64, 65, 62, 64, 67, 64, 60, 60};
+    assert_pitches(&out, changing, 9);
+    assert_note(&out, 1, 64, q(1, 4), q(1, 8));
+    assert_note(&out, 2, 65, q(3, 8), q(1, 16));
+    assert_note(&out, 3, 62, q(7, 16), q(1, 16));
+    /* A double neighbor is a semitone each side (a third apart is a changing tone). */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 1, NON_CHORD_TONE_DOUBLE_NEIGHBOR, 0), &out) ==
+           MOTIVE_RELATION_OK);
+    assert(out.notes[2].pitch - out.notes[3].pitch == 2 || out.notes[3].pitch - out.notes[2].pitch == 2);
+
+    /* A suspension needs a chord change where the figure starts: a V from the middle of the C. */
+    int held[2] = {60, 59};
+    MotiveSketch suspended = line(held, 2, q(1, 2));
+    int degrees[2] = {1, 5};
+    ExactRational onsets[2] = {q(0, 1), q(1, 4)};
+    MotiveSketch no_change = suspended;
+    assert(apply(&no_change, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 0, NON_CHORD_TONE_SUSPENSION, 0), &out) ==
+           MOTIVE_RELATION_NOT_APPLICABLE);
+    set_chords(&suspended, degrees, onsets, 2);
+    assert(apply(&suspended, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 0, NON_CHORD_TONE_SUSPENSION, 0), &out) ==
+           MOTIVE_RELATION_OK);
+    int suspension[3] = {60, 60, 59};
+    assert_pitches(&out, suspension, 3);
+    assert(is_figure(&out, 1, NON_CHORD_TONE_SUSPENSION));
+    /* An anticipation needs the chord change where the next note starts. */
+    int early[2] = {67, 71};
+    MotiveSketch arriving = line(early, 2, q(1, 2));
+    ExactRational at_half[2] = {q(0, 1), q(1, 2)};
+    set_chords(&arriving, degrees, at_half, 2);
+    assert(apply(&arriving, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 0, NON_CHORD_TONE_ANTICIPATION, 0), &out) ==
+           MOTIVE_RELATION_OK);
+    int anticipation[3] = {67, 71, 71};
+    assert_pitches(&out, anticipation, 3);
+    assert(is_figure(&out, 1, NON_CHORD_TONE_ANTICIPATION));
+
+    /* Features: one that holds the note before keeps its start and takes the new note. */
+    MotiveSketch featured = frame_line();
+    featured.feature_count = 1;
+    strcpy(featured.features[0].label, "a");
+    featured.features[0].first = 1;
+    featured.features[0].last = 3;
+    assert(apply(&featured, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 1, NON_CHORD_TONE_NEIGHBOR, 0), &out) ==
+           MOTIVE_RELATION_OK);
+    assert(out.features[0].first == 1 && out.features[0].last == 4);
+
+    /* Refusals. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 7, NON_CHORD_TONE_PASSING, 0), &out) ==
+           MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, -1, NON_CHORD_TONE_PASSING, 0), &out) ==
+           MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 0, NON_CHORD_TONE_COUNT, 0), &out) ==
+           MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 0, -1, 0), &out) == MOTIVE_RELATION_INVALID);
+    /* No note after the last. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 6, NON_CHORD_TONE_PASSING, 0), &out) ==
+           MOTIVE_RELATION_NOT_APPLICABLE);
+    /* The note before must be a chord tone: the passing F added above is not. */
+    MotiveSketch embellished;
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 2, NON_CHORD_TONE_PASSING, 0), &embellished) ==
+           MOTIVE_RELATION_OK);
+    assert(apply(&embellished, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 3, NON_CHORD_TONE_NEIGHBOR, 0), &out) ==
+           MOTIVE_RELATION_NOT_APPLICABLE);
+    /* A passing tone cannot join a C to the same C, nor a pedal be formed by one note. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 5, NON_CHORD_TONE_PASSING, 0), &out) ==
+           MOTIVE_RELATION_NOT_APPLICABLE);
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 1, NON_CHORD_TONE_PEDAL, 0), &out) ==
+           MOTIVE_RELATION_NOT_APPLICABLE);
+    /* A double neighbor needs the same note again after it: E then G is not. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 2, NON_CHORD_TONE_DOUBLE_NEIGHBOR, 0), &out) ==
+           MOTIVE_RELATION_NOT_APPLICABLE);
+    MotiveSketch no_scale = frame_line();
+    no_scale.has_scale = false;
+    assert(apply(&no_scale, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 1, NON_CHORD_TONE_NEIGHBOR, 0), &out) ==
+           MOTIVE_RELATION_NO_SCALE);
+    /* Half of a thirty-second is not a written value, nor is a quarter of a sixteenth. */
+    static const int three[3] = {60, 64, 64};
+    MotiveSketch fine = line(three, 3, q(1, 32));
+    assert(apply(&fine, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 0, NON_CHORD_TONE_PASSING, 0), &out) ==
+           MOTIVE_RELATION_NOT_EXPRESSIBLE);
+    MotiveSketch sixteenths = line(three, 3, q(1, 16));
+    assert(apply(&sixteenths, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 1, NON_CHORD_TONE_NEIGHBOR, 0), &out) ==
+           MOTIVE_RELATION_OK);
+    assert(apply(&sixteenths, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 1, NON_CHORD_TONE_DOUBLE_NEIGHBOR, 0), &out) ==
+           MOTIVE_RELATION_NOT_EXPRESSIBLE);
+    /* The sketch cannot hold another note. */
+    int alternating[MOTIVE_SKETCH_MAX_NOTES];
+    for (size_t i = 0; i < MOTIVE_SKETCH_MAX_NOTES; i++) {
+        alternating[i] = i % 2 ? 64 : 60;
+    }
+    MotiveSketch full = line(alternating, MOTIVE_SKETCH_MAX_NOTES, q(1, 8));
+    assert(apply(&full, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 0, NON_CHORD_TONE_NEIGHBOR, 0), &out) ==
+           MOTIVE_RELATION_NOT_APPLICABLE);
+}
+
+static void test_remove_non_chord_tone(void) {
+    int vi[1] = {6};
+    ExactRational at_zero[1] = {q(0, 1)};
+    MotiveSketch sketch = hollow_knight(vi, at_zero, 1);
+    MotiveSketch out;
+
+    /* The passing B goes; its quarter goes to the A before it. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, 2, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int without_passing[4] = {81, 81, 84, 83};
+    assert_pitches(&out, without_passing, 4);
+    assert_note(&out, 1, 81, q(1, 4), q(1, 2));
+    assert_note(&out, 2, 84, q(3, 4), q(1, 4));
+    /* The unclassified last B goes too. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, 4, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int without_last[4] = {81, 81, 83, 84};
+    assert_pitches(&out, without_last, 4);
+    assert_note(&out, 3, 84, q(3, 4), q(1, 2));
+
+    /* A first note that is not a chord tone gives its time to the next. */
+    int leading[4] = {83, 81, 81, 84};
+    MotiveSketch lead = line(leading, 4, q(1, 4));
+    set_chords(&lead, vi, at_zero, 1);
+    assert(apply(&lead, step(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int after_lead[3] = {81, 81, 84};
+    assert_pitches(&out, after_lead, 3);
+    assert_note(&out, 0, 81, q(0, 1), q(1, 2));
+
+    /* Removing one of a pair leaves the other. */
+    MotiveSketch pair;
+    MotiveSketch plain = frame_line();
+    assert(apply(&plain, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 1, NON_CHORD_TONE_CHANGING_TONE, 0), &pair) ==
+           MOTIVE_RELATION_OK);
+    assert(apply(&pair, step(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, 2, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.note_count == pair.note_count - 1);
+    assert_note(&out, 1, 64, q(1, 4), q(3, 16));
+
+    /* Refusals: a chord tone, a note out of range, a sketch with no scale. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, 0, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+    assert(apply(&sketch, step(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, 5, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, -1, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    sketch.has_scale = false;
+    assert(apply(&sketch, step(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, 2, 0, 0), &out) == MOTIVE_RELATION_NO_SCALE);
+    assert(motive_relation_param_count(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE) == 1);
+}
+
+static void test_change_non_chord_tone(void) {
+    int vi[1] = {6};
+    ExactRational at_zero[1] = {q(0, 1)};
+    MotiveSketch sketch = hollow_knight(vi, at_zero, 1);
+    MotiveSketch out;
+
+    /* The passing B between A and C becomes an appoggiatura (the D above the C) or an escape tone (the G below). */
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 2, NON_CHORD_TONE_APPOGGIATURA, 0), &out) ==
+           MOTIVE_RELATION_OK);
+    int appoggiatura[5] = {81, 81, 86, 84, 83};
+    assert_pitches(&out, appoggiatura, 5);
+    assert(is_figure(&out, 2, NON_CHORD_TONE_APPOGGIATURA));
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 2, NON_CHORD_TONE_ESCAPE_TONE, 0), &out) ==
+           MOTIVE_RELATION_OK);
+    int escape[5] = {81, 81, 79, 84, 83};
+    assert_pitches(&out, escape, 5);
+    assert(is_figure(&out, 2, NON_CHORD_TONE_ESCAPE_TONE));
+    /* The frame around it, the chord tones, is the same. */
+    assert(is_chord_tone(&out, 0) && is_chord_tone(&out, 1) && is_chord_tone(&out, 3));
+
+    /* Same type: nothing to do. A neighbor between A and C cannot be formed. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 2, NON_CHORD_TONE_PASSING, 0), &out) ==
+           MOTIVE_RELATION_UNCHANGED);
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 2, NON_CHORD_TONE_NEIGHBOR, 0), &out) ==
+           MOTIVE_RELATION_NOT_APPLICABLE);
+    /* A pair type needs a non-chord note beside it. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 2, NON_CHORD_TONE_CHANGING_TONE, 0), &out) ==
+           MOTIVE_RELATION_NOT_APPLICABLE);
+    /* A chord tone, and the last note (no note after it), are refused; out of range is invalid. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 0, NON_CHORD_TONE_NEIGHBOR, 0), &out) ==
+           MOTIVE_RELATION_NOT_APPLICABLE);
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 4, NON_CHORD_TONE_NEIGHBOR, 0), &out) ==
+           MOTIVE_RELATION_NOT_APPLICABLE);
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 5, NON_CHORD_TONE_NEIGHBOR, 0), &out) ==
+           MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 2, NON_CHORD_TONE_COUNT, 0), &out) ==
+           MOTIVE_RELATION_INVALID);
+
+    /* A double neighbor becomes a changing tone: both notes move, the chord tones stay. */
+    MotiveSketch pair;
+    MotiveSketch plain = frame_line();
+    assert(apply(&plain, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 1, NON_CHORD_TONE_DOUBLE_NEIGHBOR, 0), &pair) ==
+           MOTIVE_RELATION_OK);
+    assert(apply(&pair, step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 3, NON_CHORD_TONE_CHANGING_TONE, 0), &out) ==
+           MOTIVE_RELATION_OK);
+    assert(out.note_count == pair.note_count);
+    assert(is_figure(&out, 2, NON_CHORD_TONE_CHANGING_TONE) && is_figure(&out, 3, NON_CHORD_TONE_CHANGING_TONE));
+    assert(out.notes[1].pitch == pair.notes[1].pitch && out.notes[4].pitch == pair.notes[4].pitch);
+    /* ... and back, from either note of the pair. */
+    MotiveSketch back;
+    assert(apply(&out, step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 2, NON_CHORD_TONE_DOUBLE_NEIGHBOR, 0), &back) ==
+           MOTIVE_RELATION_OK);
+    assert(is_figure(&back, 2, NON_CHORD_TONE_DOUBLE_NEIGHBOR) && is_figure(&back, 3, NON_CHORD_TONE_DOUBLE_NEIGHBOR));
+
+    /* A single figure beside another non-chord note becomes a pair. */
+    int two[6] = {60, 65, 62, 60, 64, 67};
+    MotiveSketch beside = line(two, 6, q(1, 4));
+    assert(apply(&beside, step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 1, NON_CHORD_TONE_CHANGING_TONE, 0), &out) ==
+           MOTIVE_RELATION_OK);
+    assert(is_figure(&out, 1, NON_CHORD_TONE_CHANGING_TONE) && is_figure(&out, 2, NON_CHORD_TONE_CHANGING_TONE));
+    assert(motive_relation_param_count(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE) == 2);
+}
+
+static void test_reharmonize_frame(void) {
+    int vi[1] = {6};
+    ExactRational at_zero[1] = {q(0, 1)};
+    MotiveSketch sketch = hollow_knight(vi, at_zero, 1);
+    MotiveSketch out;
+
+    /* The A A move to the nearest tone of the V, the C to the D (keeping the contour), and the passing B follows its
+       target by a scale step. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_REHARMONIZE_FRAME, 5, 0, 0), &out) == MOTIVE_RELATION_OK);
+    int fifth[5] = {83, 83, 84, 86, 83};
+    assert_pitches(&out, fifth, 5);
+    assert(out.chord_count == 1 && out.chords[0].degree == 5 && !out.chords[0].seventh);
+    assert(msk_eq(out.chords[0].onset, q(0, 1)));
+    assert(is_chord_tone(&out, 0) && is_chord_tone(&out, 1) && is_chord_tone(&out, 3));
+    assert(is_figure(&out, 2, NON_CHORD_TONE_PASSING));
+    assert(out.chords[0].inversion == 0 && out.chords[0].alteration == 0);
+
+    /* With a seventh. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_REHARMONIZE_FRAME, 5, 1, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chords[0].seventh);
+
+    /* Several chords become the one: a vi then a V is a I. The A A fall to the G, the B to the C, the last B to the G
+       (the nearest I tone that keeps its fall); the neighbor C, whose B moved, no longer fits and is unclassified. */
+    int degrees[2] = {6, 5};
+    ExactRational onsets[2] = {q(0, 1), q(1, 2)};
+    MotiveSketch two = hollow_knight(degrees, onsets, 2);
+    assert(apply(&two, step(MOTIVE_RELATION_REHARMONIZE_FRAME, 1, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 1 && out.chords[0].degree == 1);
+    int tonic[5] = {79, 79, 84, 81, 79};
+    assert_pitches(&out, tonic, 5);
+    assert(is_chord_tone(&out, 0) && is_chord_tone(&out, 1) && is_chord_tone(&out, 2) && is_chord_tone(&out, 4));
+    assert(!is_chord_tone(&out, 3));
+
+    /* A sketch with no chords gets the one. */
+    MotiveSketch bare = frame_line();
+    assert(apply(&bare, step(MOTIVE_RELATION_REHARMONIZE_FRAME, 4, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert(out.chord_count == 1 && out.chords[0].degree == 4);
+    for (size_t i = 0; i < out.note_count; i++) {
+        assert(is_chord_tone(&out, i));
+    }
+
+    /* The chord it already has changes nothing. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_REHARMONIZE_FRAME, 6, 0, 0), &out) == MOTIVE_RELATION_UNCHANGED);
+    /* Refusals. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_REHARMONIZE_FRAME, 0, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_REHARMONIZE_FRAME, 8, 0, 0), &out) == MOTIVE_RELATION_INVALID);
+    assert(apply(&sketch, step(MOTIVE_RELATION_REHARMONIZE_FRAME, 5, 2, 0), &out) == MOTIVE_RELATION_INVALID);
+    sketch.has_scale = false;
+    assert(apply(&sketch, step(MOTIVE_RELATION_REHARMONIZE_FRAME, 5, 0, 0), &out) == MOTIVE_RELATION_NO_SCALE);
+    assert(motive_relation_param_count(MOTIVE_RELATION_REHARMONIZE_FRAME) == 2);
+}
+
 static void test_counter_line(void) {
     int pitches[4] = {60, 60, 60, 60};
     MotiveSketch accompaniment = line(pitches, 4, q(1, 4));
@@ -1238,6 +1635,11 @@ int main(void) {
     test_harmony_substitute();
     test_passing_harmony();
     test_tone_role_adaptation();
+    test_reduce_to_frame();
+    test_add_non_chord_tone();
+    test_remove_non_chord_tone();
+    test_change_non_chord_tone();
+    test_reharmonize_frame();
     test_counter_line();
     test_dominant_form();
     test_liquidate_features();

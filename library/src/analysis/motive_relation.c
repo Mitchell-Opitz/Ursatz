@@ -1471,6 +1471,304 @@ static MotiveRelationResult apply_liquidate_features(const MotiveSketch *in, con
     return MOTIVE_RELATION_OK;
 }
 
+/* --- frame relations (R-197) -------------------------------------------------------------------- */
+
+/*
+ * The sketch without the notes marked in drop. A dropped note's time goes to the kept note before it (its duration
+ * grows by the dropped notes that follow it); the dropped notes before the first kept note give theirs to it, which
+ * then starts earlier by that time. A feature keeps the kept notes inside it and goes when it holds none.
+ */
+static MotiveRelationResult drop_notes(MotiveSketch *sketch, const bool *drop) {
+    size_t kept_count = 0;
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        if (!drop[i]) {
+            kept_count++;
+        }
+    }
+    if (kept_count == 0) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    MotiveSketchNote kept[MOTIVE_SKETCH_MAX_NOTES];
+    size_t before[MOTIVE_SKETCH_MAX_NOTES + 1]; /* kept notes among the first i */
+    size_t n = 0;
+    ExactRational leading = msk_int(0);
+    before[0] = 0;
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        if (!drop[i]) {
+            kept[n++] = sketch->notes[i];
+        } else if (n == 0) {
+            leading = msk_add(leading, sketch->notes[i].duration);
+        } else {
+            kept[n - 1].duration = msk_add(kept[n - 1].duration, sketch->notes[i].duration);
+        }
+        before[i + 1] = n;
+    }
+    if (msk_cmp(leading, kept[0].onset) > 0) {
+        return MOTIVE_RELATION_NOT_EXPRESSIBLE;
+    }
+    kept[0].onset = msk_sub(kept[0].onset, leading);
+    kept[0].duration = msk_add(kept[0].duration, leading);
+    for (size_t k = 0; k < kept_count; k++) {
+        if (!nice_time(kept[k].duration) || !msk_ok(kept[k].onset) || !motive_sketch_on_grid(kept[k].onset)) {
+            return MOTIVE_RELATION_NOT_EXPRESSIBLE;
+        }
+    }
+    for (size_t k = 0; k < kept_count; k++) {
+        sketch->notes[k] = kept[k];
+    }
+    sketch->note_count = kept_count;
+    size_t features = 0;
+    for (size_t f = 0; f < sketch->feature_count; f++) {
+        MotiveSketchFeature feature = sketch->features[f];
+        size_t first = before[feature.first];
+        size_t last = before[feature.last + 1];
+        if (last <= first) {
+            continue;
+        }
+        feature.first = first;
+        feature.last = last - 1;
+        sketch->features[features++] = feature;
+    }
+    sketch->feature_count = features;
+    return MOTIVE_RELATION_OK;
+}
+
+/* A frame relation reads the tone roles: a scale and pitches; false, with the result to return, when it lacks them. */
+static bool frame_roles(const MotiveSketch *sketch, MotiveToneLabel *labels, MotiveRelationResult *refused) {
+    if (!sketch->has_scale) {
+        *refused = MOTIVE_RELATION_NO_SCALE;
+        return false;
+    }
+    if (!pitched(sketch)) {
+        *refused = MOTIVE_RELATION_NOT_APPLICABLE;
+        return false;
+    }
+    if (motive_tone_roles(sketch, NULL, 0, labels) != MOTIVE_TONE_OK) {
+        *refused = MOTIVE_RELATION_INVALID;
+        return false;
+    }
+    return true;
+}
+
+static MotiveRelationResult apply_reduce_to_frame(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                  MotiveSketch *out) {
+    (void)step;
+    MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
+    MotiveRelationResult refused;
+    if (!frame_roles(in, labels, &refused)) {
+        return refused;
+    }
+    bool drop[MOTIVE_SKETCH_MAX_NOTES];
+    for (size_t i = 0; i < in->note_count; i++) {
+        drop[i] = labels[i].role != MOTIVE_TONE_CHORD;
+    }
+    return drop_notes(out, drop);
+}
+
+/* Whether the tone roles of the sketch label a note as a non-chord tone of the type. */
+static bool labelled_as(const MotiveSketch *sketch, size_t note, NonChordTone type) {
+    MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
+    if (motive_tone_roles(sketch, NULL, 0, labels) != MOTIVE_TONE_OK) {
+        return false;
+    }
+    return labels[note].role == MOTIVE_TONE_NON_CHORD && labels[note].type == type;
+}
+
+static bool pair_type(NonChordTone type) {
+    return type == NON_CHORD_TONE_DOUBLE_NEIGHBOR || type == NON_CHORD_TONE_CHANGING_TONE;
+}
+
+/*
+ * Puts a pitch on a note, from the candidates in order, the first that the tone roles label as the type. The
+ * candidates are the scale steps next to the notes either side, then those notes' own pitches, then two steps away.
+ * False, the note as it was, when none does.
+ */
+static bool form_single(MotiveSketch *sketch, size_t index, NonChordTone type) {
+    if (index == 0 || index + 1 >= sketch->note_count) {
+        return false;
+    }
+    int around[2] = {sketch->notes[index - 1].pitch, sketch->notes[index + 1].pitch};
+    int candidates[16];
+    size_t count = 0;
+    for (int reach = 1; reach <= 2; reach++) {
+        for (int k = 0; k < 2; k++) {
+            int alteration;
+            long at = motive_sketch_step(sketch, around[k], &alteration);
+            for (int direction = 1; direction >= -1; direction -= 2) {
+                long pitch = motive_sketch_pitch_at_step(sketch, at + direction * reach, alteration);
+                if (midi(pitch)) {
+                    candidates[count++] = (int)pitch;
+                }
+            }
+        }
+        if (reach == 1) {
+            candidates[count++] = around[0];
+            candidates[count++] = around[1];
+        }
+    }
+    int was = sketch->notes[index].pitch;
+    for (size_t k = 0; k < count; k++) {
+        sketch->notes[index].pitch = candidates[k];
+        if (labelled_as(sketch, index, type)) {
+            return true;
+        }
+    }
+    sketch->notes[index].pitch = was;
+    return false;
+}
+
+/*
+ * The same for the two notes at first and first + 1, between a chord tone and the same pitch again (c t d c): the
+ * scale steps above and below c in either order, and, for a double neighbor, the semitones above and below (a
+ * diatonic pair is a third apart, so a changing tone). False, the notes as they were, when none is labelled so.
+ */
+static bool form_pair(MotiveSketch *sketch, size_t first, NonChordTone type) {
+    if (first == 0 || first + 2 >= sketch->note_count ||
+        sketch->notes[first + 2].pitch != sketch->notes[first - 1].pitch) {
+        return false;
+    }
+    int c = sketch->notes[first - 1].pitch;
+    int alteration;
+    long at = motive_sketch_step(sketch, c, &alteration);
+    long above = motive_sketch_pitch_at_step(sketch, at + 1, alteration);
+    long below = motive_sketch_pitch_at_step(sketch, at - 1, alteration);
+    int pairs[4][2] = {{(int)above, (int)below}, {(int)below, (int)above}, {c + 1, c - 1}, {c - 1, c + 1}};
+    int was[2] = {sketch->notes[first].pitch, sketch->notes[first + 1].pitch};
+    for (size_t k = 0; k < (type == NON_CHORD_TONE_DOUBLE_NEIGHBOR ? 4u : 2u); k++) {
+        if (!midi(pairs[k][0]) || !midi(pairs[k][1])) {
+            continue;
+        }
+        sketch->notes[first].pitch = pairs[k][0];
+        sketch->notes[first + 1].pitch = pairs[k][1];
+        if (labelled_as(sketch, first, type) && labelled_as(sketch, first + 1, type)) {
+            return true;
+        }
+    }
+    sketch->notes[first].pitch = was[0];
+    sketch->notes[first + 1].pitch = was[1];
+    return false;
+}
+
+static MotiveRelationResult apply_add_non_chord_tone(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                     MotiveSketch *out) {
+    long after = step->value[0];
+    long type = step->value[1];
+    if (after < 0 || (size_t)after >= in->note_count || type < 0 || type >= NON_CHORD_TONE_COUNT) {
+        return MOTIVE_RELATION_INVALID;
+    }
+    MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
+    MotiveRelationResult refused;
+    if (!frame_roles(in, labels, &refused)) {
+        return refused;
+    }
+    size_t before = (size_t)after;
+    if (before + 1 >= in->note_count || labels[before].role != MOTIVE_TONE_CHORD) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    size_t added = pair_type((NonChordTone)type) ? 2 : 1;
+    ExactRational half = msk_div(in->notes[before].duration, msk_int(2));
+    ExactRational part = msk_div(half, msk_int(added));
+    if (!nice_time(half) || !nice_time(part)) {
+        return MOTIVE_RELATION_NOT_EXPRESSIBLE;
+    }
+    MotiveSketchNote notes[2];
+    for (size_t k = 0; k < added; k++) {
+        notes[k].pitch = in->notes[before].pitch;
+        notes[k].duration = part;
+        notes[k].onset = msk_add(msk_add(in->notes[before].onset, half), msk_mul(part, msk_int(k)));
+    }
+    if (!insert_notes(in, out, before + 1, notes, added)) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    out->notes[before].duration = half;
+    bool formed = added == 2 ? form_pair(out, before + 1, (NonChordTone)type)
+                             : form_single(out, before + 1, (NonChordTone)type);
+    return formed ? MOTIVE_RELATION_OK : MOTIVE_RELATION_NOT_APPLICABLE;
+}
+
+static MotiveRelationResult apply_remove_non_chord_tone(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                        MotiveSketch *out) {
+    long note = step->value[0];
+    if (note < 0 || (size_t)note >= in->note_count) {
+        return MOTIVE_RELATION_INVALID;
+    }
+    MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
+    MotiveRelationResult refused;
+    if (!frame_roles(in, labels, &refused)) {
+        return refused;
+    }
+    if (labels[note].role == MOTIVE_TONE_CHORD) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    bool drop[MOTIVE_SKETCH_MAX_NOTES] = {false};
+    drop[note] = true;
+    return drop_notes(out, drop);
+}
+
+static MotiveRelationResult apply_change_non_chord_tone(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                        MotiveSketch *out) {
+    long note = step->value[0];
+    long type = step->value[1];
+    if (note < 0 || (size_t)note >= in->note_count || type < 0 || type >= NON_CHORD_TONE_COUNT) {
+        return MOTIVE_RELATION_INVALID;
+    }
+    MotiveToneLabel labels[MOTIVE_SKETCH_MAX_NOTES];
+    MotiveRelationResult refused;
+    if (!frame_roles(in, labels, &refused)) {
+        return refused;
+    }
+    size_t index = (size_t)note;
+    if (labels[index].role == MOTIVE_TONE_CHORD) {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    NonChordTone now = labels[index].type;
+    bool is_figure = labels[index].role == MOTIVE_TONE_NON_CHORD;
+    if (is_figure && now == (NonChordTone)type) {
+        return MOTIVE_RELATION_UNCHANGED;
+    }
+    if (!pair_type((NonChordTone)type)) {
+        return form_single(out, index, (NonChordTone)type) ? MOTIVE_RELATION_OK : MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    /* The partner of the pair: the neighbouring note of the same pair type, else a neighbouring non-chord note. */
+    bool next_free = index + 1 < in->note_count && labels[index + 1].role != MOTIVE_TONE_CHORD;
+    bool previous_free = index > 0 && labels[index - 1].role != MOTIVE_TONE_CHORD;
+    bool next_pair = next_free && labels[index + 1].role == MOTIVE_TONE_NON_CHORD && labels[index + 1].type == now;
+    bool previous_pair =
+        previous_free && labels[index - 1].role == MOTIVE_TONE_NON_CHORD && labels[index - 1].type == now;
+    size_t first;
+    if (is_figure && pair_type(now) && next_pair) {
+        first = index;
+    } else if (is_figure && pair_type(now) && previous_pair) {
+        first = index - 1;
+    } else if (next_free) {
+        first = index;
+    } else if (previous_free) {
+        first = index - 1;
+    } else {
+        return MOTIVE_RELATION_NOT_APPLICABLE;
+    }
+    return form_pair(out, first, (NonChordTone)type) ? MOTIVE_RELATION_OK : MOTIVE_RELATION_NOT_APPLICABLE;
+}
+
+static MotiveRelationResult apply_reharmonize_frame(const MotiveSketch *in, const MotiveRelationStep *step,
+                                                    MotiveSketch *out) {
+    (void)in;
+    long degree = step->value[0];
+    if (degree < 1 || degree > 7 || (step->value[1] != 0 && step->value[1] != 1)) {
+        return MOTIVE_RELATION_INVALID;
+    }
+    MotiveRelationResult ready = prepare_harmony(out);
+    if (ready != MOTIVE_RELATION_OK) {
+        return ready;
+    }
+    MotiveSketch before = *out;
+    MotiveSketchChord chord = {msk_int(0), (int)degree, 0, 0, step->value[1] != 0};
+    out->chords[0] = chord;
+    out->chord_count = 1;
+    adapt_melody(&before, out);
+    return MOTIVE_RELATION_OK;
+}
+
 /* --- the catalog ------------------------------------------------------------------------------ */
 
 static const Entry TABLE[] = {
@@ -1502,6 +1800,11 @@ static const Entry TABLE[] = {
     {"counter-line", 0, 2, apply_counter_line},
     {"dominant-form", 0, 2, apply_dominant_form},
     {"liquidate-features", 2, 2, apply_liquidate_features},
+    {"reduce-to-frame", 0, 2, apply_reduce_to_frame},
+    {"add-non-chord-tone", 2, 2, apply_add_non_chord_tone},
+    {"remove-non-chord-tone", 1, 2, apply_remove_non_chord_tone},
+    {"change-non-chord-tone", 2, 2, apply_change_non_chord_tone},
+    {"reharmonize-frame", 2, 2, apply_reharmonize_frame},
 };
 
 typedef char table_has_every_kind[sizeof(TABLE) / sizeof(TABLE[0]) == MOTIVE_RELATION_KIND_COUNT ? 1 : -1];
@@ -1611,6 +1914,11 @@ static const char *const PARAM_NAMES[MOTIVE_RELATION_KIND_COUNT][MOTIVE_RELATION
     [MOTIVE_RELATION_COUNTER_LINE] = {NULL},
     [MOTIVE_RELATION_DOMINANT_FORM] = {NULL},
     [MOTIVE_RELATION_LIQUIDATE_FEATURES] = {"steps", "shorten"},
+    [MOTIVE_RELATION_REDUCE_TO_FRAME] = {NULL},
+    [MOTIVE_RELATION_ADD_NON_CHORD_TONE] = {"after", "type"},
+    [MOTIVE_RELATION_REMOVE_NON_CHORD_TONE] = {"note"},
+    [MOTIVE_RELATION_CHANGE_NON_CHORD_TONE] = {"note", "type"},
+    [MOTIVE_RELATION_REHARMONIZE_FRAME] = {"degree", "seventh"},
 };
 
 const char *motive_relation_param_name(MotiveRelationKind kind, size_t index) {

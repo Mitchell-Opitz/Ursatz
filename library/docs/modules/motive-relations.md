@@ -34,7 +34,7 @@ Helpers:
 
 Results: `OK`, `NOT_APPLICABLE` (nothing to do, or a rule refuses), `UNCHANGED`, `RANGE` (a pitch outside MIDI 0 to 127), `NOT_EXPRESSIBLE` (a duration or onset that cannot be written), `NO_SCALE`, `NO_HARMONY`, `NO_FEATURE`, `INVALID` (the sketch or the step is malformed).
 
-Cost (used for a chain's distance): exact 0; transpose, augment, diminish 1; change-meter 3; every other relation 2. A relation that needs pitches (transpose, invert, interval-change, add-interval, ancillary-fill and the harmony relations) is `NOT_APPLICABLE` on a rhythm sketch.
+Cost (used for a chain's distance): exact 0; transpose, augment, diminish 1; change-meter 3; every other relation 2. A relation that needs pitches (transpose, invert, interval-change, add-interval, ancillary-fill, the harmony relations and the frame relations) is `NOT_APPLICABLE` on a rhythm sketch.
 
 ### The nine development relations
 
@@ -97,6 +97,20 @@ A harmony relation needs a scale (`NO_SCALE`). A sketch without chords is given 
 ### Liquidation by features (ch. VIII, R-144)
 
 `liquidate-features` (steps 1 to 3, shorten): removes the steps most characteristic features one by one. A feature's weight is its leaps (steps of 3 or more, semitones without a scale) plus its notes whose duration occurs only once in the motive. The heaviest goes first, the later of equals. A removed feature is replaced by one note of its span on the nearest chord tone of its chord (the implied chord when there are none). Only a feature of two notes or more can go. Without labelled features each beat group is a feature, and a sketch that starts with labelled features keeps to them. With shorten the result is diminished 1:2. Cost 2.
+
+### Frame relations (R-197)
+
+Five relations that work from the tone roles (`motive-tone-roles.md`): they need a scale and pitches (`NO_SCALE`, `NOT_APPLICABLE` otherwise), and a sketch without chords is read against the tonic triad of its scale. Cost 2 each.
+
+| Relation | Parameters | Effect |
+|---|---|---|
+| `reduce-to-frame` | none | Every note that is not a chord tone (non-chord or unclassified) goes. Its time goes to the kept note before it; a leading one's time goes to the next kept note, which then starts earlier. A feature keeps its kept notes and goes when it has none. `NOT_APPLICABLE` when no chord tone is left, `UNCHANGED` when every note is one, `NOT_EXPRESSIBLE` when a kept note's grown duration is not a written value. |
+| `add-non-chord-tone` | after, type | `after` is the 0-based index of a chord tone with a note after it; `type` is a `NonChordTone` value. The figure goes between that note and the next, taking half of the earlier note's duration (a double neighbor or changing tone is two notes sharing that half). `INVALID` for an index or type out of range, `NOT_APPLICABLE` for a last note, a note that is not a chord tone, or a type that cannot be formed there, `NOT_EXPRESSIBLE` when the shared time is not a written value. |
+| `remove-non-chord-tone` | note | The note goes, its time as in `reduce-to-frame`. `NOT_APPLICABLE` for a chord tone. A note that is unclassified can go too. Removing one of a pair leaves the other. |
+| `change-non-chord-tone` | note, type | Re-pitches the note (a pair type: the pair, so the note and its neighbour) to form the new type between the same chord tones. `UNCHANGED` for the type it already has, `NOT_APPLICABLE` for a chord tone, a first or last note, or a type that cannot be formed. Changing a double neighbor or changing tone to a single type re-pitches the note asked for and leaves its partner as it is. |
+| `reharmonize-frame` | degree, seventh | Every chord is replaced by the one chord at 0. The melody is adapted as for a harmony relation: chord tones move to the nearest tone of the new chord, a non-chord tone follows the target it resolves to, one whose figure no longer fits is left and is unclassified. |
+
+A figure is formed from the notes either side of it: the pitch is the first of a fixed list of candidates (scale steps next to the note before and the note after, then those notes' own pitches, then two steps away; for a pair, the scale steps above and below the note it embellishes in either order, and for a double neighbor the semitones above and below) for which the tone roles of the result label the note with that type. The rules of `motive-tone-roles.md` decide, so a type they can only tell by context is formed only where that context is: a suspension or retardation needs a chord change at the figure's onset, an anticipation one where the next note starts, a double neighbor (a pair less than a third apart) uses chromatic neighbours, and a pedal is never formed by one note.
 
 ## Notes
 
