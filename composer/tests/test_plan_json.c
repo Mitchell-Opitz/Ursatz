@@ -47,8 +47,9 @@ static PlanLanePayload harmony(const char *roman, PlanHarmonicFunction function)
     return payload;
 }
 
-/* The 8-bar sentence from test_piece_plan_sentence, with a mix of states and constraints. */
-static PiecePlan *build_sentence_plan(void) {
+/* The 8-bar sentence from test_piece_plan_sentence, with a mix of states and constraints. tone_labels is how many labels
+   of a motive_tones constraint its first motive node carries (0 for none). */
+static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     PiecePlan *plan = plan_create();
     assert(plan != NULL);
     NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 8), "form");
@@ -143,11 +144,31 @@ static PiecePlan *build_sentence_plan(void) {
     pairing.params.theme_pairing.ending = (PlanThemeEnding)7;
     assert(plan_node_add_constraint(plan, phrase, &pairing) == PLAN_ERR_BAD_PAYLOAD);
 
+    if (tone_labels > 0) {
+        PlanConstraint tones;
+        memset(&tones, 0, sizeof(tones));
+        tones.kind = PLAN_CONSTRAINT_MOTIVE_TONES;
+        PlanMotiveTones *body = &tones.params.motive_tones;
+        snprintf(body->chords[0].numeral, sizeof(body->chords[0].numeral), "i");
+        assert(plan_time_make(0, 1, &body->chords[0].onset) == PLAN_OK && plan_time_make(1, 2, &body->chords[0].length) == PLAN_OK);
+        snprintf(body->chords[1].numeral, sizeof(body->chords[1].numeral), "bVII65");
+        assert(plan_time_make(1, 2, &body->chords[1].onset) == PLAN_OK && plan_time_make(1, 2, &body->chords[1].length) == PLAN_OK);
+        body->chord_count = 2;
+        for (size_t k = 0; k < tone_labels; k++) {
+            snprintf(body->labels[k], sizeof(body->labels[k]), "%s", k == 1 ? "passing" : "chord");
+        }
+        body->label_count = tone_labels;
+        assert(plan_node_add_constraint(plan, m1, &tones) == PLAN_OK);
+    }
     assert(plan_node_set_state(plan, m1, PLAN_STATE_GIVEN) == PLAN_OK);
     assert(plan_node_set_state(plan, repetition, PLAN_STATE_REALIZED) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, meter_span, PLAN_STATE_GIVEN) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, melody_span, PLAN_STATE_REALIZED) == PLAN_OK);
     return plan;
+}
+
+static PiecePlan *build_sentence_plan(void) {
+    return build_sentence_plan_with_tones(0);
 }
 
 static bool same_span(PlanSpan a, PlanSpan b) {
@@ -209,6 +230,26 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
     case PLAN_CONSTRAINT_PIECE_PART:
         return a->params.piece_part.part == b->params.piece_part.part &&
                strcmp(a->params.piece_part.id, b->params.piece_part.id) == 0;
+    case PLAN_CONSTRAINT_MOTIVE_TONES: {
+        const PlanMotiveTones *x = &a->params.motive_tones;
+        const PlanMotiveTones *y = &b->params.motive_tones;
+        if (x->chord_count != y->chord_count || x->label_count != y->label_count) {
+            return false;
+        }
+        for (size_t i = 0; i < x->chord_count; i++) {
+            if (strcmp(x->chords[i].numeral, y->chords[i].numeral) != 0 ||
+                plan_time_compare(x->chords[i].onset, y->chords[i].onset) != 0 ||
+                plan_time_compare(x->chords[i].length, y->chords[i].length) != 0) {
+                return false;
+            }
+        }
+        for (size_t i = 0; i < x->label_count; i++) {
+            if (strcmp(x->labels[i], y->labels[i]) != 0) {
+                return false;
+            }
+        }
+        return true;
+    }
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:
@@ -336,6 +377,55 @@ static void test_round_trip(void) {
     plan_destroy(plan);
     plan_destroy(parsed);
     plan_destroy(from_file);
+}
+
+/*
+ * The tones of a motive (R-215): the constraint round-trips with the base harmony and the labels, a plan without it is
+ * written as it always was, and a label count that is not the note count is refused when the plan is read.
+ */
+static void test_motive_tones(void) {
+    PlanJsonError error;
+    PiecePlan *plain = build_sentence_plan();
+    char *plain_text = plan_to_json(plain, &error);
+    assert(plain_text && strstr(plain_text, "motive_tones") == NULL);
+
+    PiecePlan *plan = build_sentence_plan_with_tones(2);
+    char *text = plan_to_json(plan, &error);
+    assert(text && strstr(text, "\"kind\": \"motive_tones\"") != NULL && strstr(text, "\"numeral\": \"bVII65\"") != NULL &&
+           strstr(text, "\"passing\"") != NULL);
+    PiecePlan *parsed = NULL;
+    expect_ok(plan_from_json(text, &parsed, &error), &error);
+    assert(plans_equal(plan, parsed));
+    const PlanConstraint *tones = plan_node_constraint_at(parsed, 6, 0);
+    assert(tones && tones->kind == PLAN_CONSTRAINT_MOTIVE_TONES && tones->params.motive_tones.label_count == 2 &&
+           strcmp(tones->params.motive_tones.labels[1], "passing") == 0 && tones->params.motive_tones.chord_count == 2);
+    char *again = plan_to_json(parsed, &error);
+    assert(again && strcmp(text, again) == 0);
+
+    /* Three labels for the two notes of the node. */
+    PiecePlan *mismatch = build_sentence_plan_with_tones(3);
+    char *bad = plan_to_json(mismatch, &error);
+    assert(bad);
+    PiecePlan *refused = (PiecePlan *)0x1;
+    assert(plan_from_json(bad, &refused, &error) == PLAN_ERR_FORMAT && refused == NULL);
+    assert(strstr(error.message, "motive_tones on 6: 3 labels for 2 notes") != NULL);
+
+    /* A constraint with no chord or no label is not valid. */
+    PlanConstraint empty;
+    memset(&empty, 0, sizeof(empty));
+    empty.kind = PLAN_CONSTRAINT_MOTIVE_TONES;
+    PiecePlan *scratch = build_sentence_plan();
+    assert(plan_node_add_constraint(scratch, 7, &empty) == PLAN_ERR_BAD_PAYLOAD);
+
+    free(plain_text);
+    free(text);
+    free(again);
+    free(bad);
+    plan_destroy(plain);
+    plan_destroy(plan);
+    plan_destroy(parsed);
+    plan_destroy(mismatch);
+    plan_destroy(scratch);
 }
 
 /*
@@ -683,6 +773,7 @@ static void test_analysis_document_errors(void) {
 
 int main(void) {
     test_round_trip();
+    test_motive_tones();
     test_section_constraints();
     test_empty_plan();
     test_malformed_input();

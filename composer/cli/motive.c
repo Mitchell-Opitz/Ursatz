@@ -153,12 +153,7 @@ static int parse_tone(const char *text, size_t note_count, MotiveToneOverride *o
     }
     const char *role = end + 1;
     out->note = (size_t)note - 1;
-    out->type = NON_CHORD_TONE_PASSING;
-    if (strcmp(role, "chord") == 0) {
-        out->role = MOTIVE_TONE_CHORD;
-    } else if (motive_tone_type_parse(role, &out->type)) {
-        out->role = MOTIVE_TONE_NON_CHORD;
-    } else {
+    if (!motive_tone_role_parse(role, &out->role, &out->type)) {
         return fail(EXIT_USAGE,
                     "--tone '%s': the role is chord, passing, neighbor, appoggiatura, suspension, retardation, escape, "
                     "anticipation, double-neighbor, changing-tone or pedal, not '%s'",

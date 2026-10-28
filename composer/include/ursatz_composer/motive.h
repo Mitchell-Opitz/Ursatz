@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "analysis/motive_tone_roles.h"
+
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
@@ -131,6 +133,12 @@ typedef struct {
     size_t feature_count;
     /* Zero-initialized means melodic. */
     MotiveRole role;
+    /*
+     * The caller's own tone labels (0-based note indices, the later of two on one note wins), which replace the labels the
+     * motive's base harmony gives its notes when it is attached to a plan (motive_tones.h). Zero means none.
+     */
+    MotiveToneOverride tone_overrides[MOTIVE_MAX_NOTES];
+    size_t tone_override_count;
 } Motive;
 
 /* What the caller says about the motive. NULL options mean nothing. */
@@ -324,6 +332,12 @@ bool motive_in_key(const Motive *source, const PlanKey *key, Motive *out);
  */
 MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, MotiveChord *out, size_t *count,
                                   MotiveError *error);
+/* The most characters of a chord's numeral with its NUL ("bVII65", "#IV43"). */
+#define MOTIVE_CHORD_NUMERAL_MAX 16
+
+/* A chord as the numeral motive_harmony_parse reads, without its onset ("V65", "bVII7"). False for a chord that has none. */
+bool motive_chord_numeral(const MotiveChord *chord, char *out, size_t size);
+
 /* The motive's own harmony as text, in the form motive_harmony_parse reads ("" when it has none); NULL on failure. */
 char *motive_harmony_to_text(const Motive *motive);
 

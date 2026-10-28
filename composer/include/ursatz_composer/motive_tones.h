@@ -32,6 +32,14 @@ typedef struct {
  */
 bool motive_base_harmony(const Motive *motive, MotiveBaseHarmony *out);
 
+/*
+ * The motive's tones as the plan keeps them (PLAN_CONSTRAINT_MOTIVE_TONES): its base harmony, each chord with its onset and
+ * length, and the label of every note (motive_tone_roles against that harmony; "chord", "unclassified" or the name of
+ * the non-chord tone). False, *out untouched, for a motive with no base harmony or tones (a rhythm, a contour, one
+ * with no key).
+ */
+bool motive_tones_constraint(const Motive *motive, PlanConstraint *out);
+
 /* The most chords the base harmony may put in one bar. */
 #define MOTIVE_MAX_CHORDS_PER_BAR 2
 
@@ -41,6 +49,9 @@ bool motive_harmony_bar_limit_ok(const Motive *motive);
 /* The name of a non-chord tone type as the motive reports it: "passing", "neighbor", "appoggiatura", "suspension",
    "retardation", "escape", "anticipation", "double-neighbor", "changing-tone" or "pedal". NULL for an invalid type. */
 const char *motive_tone_type_name(NonChordTone type);
+
+/* A tone role as a tone option or a request writes it: "chord", or the name of a non-chord tone (motive_tone_type_parse). */
+bool motive_tone_role_parse(const char *text, MotiveToneRole *role, NonChordTone *type);
 
 /* The type a tone option names, by the names motive_tone_type_name gives (also "escape-tone"). False for any other text. */
 bool motive_tone_type_parse(const char *name, NonChordTone *out);

@@ -1,5 +1,6 @@
 #include <ursatz_composer/motive_tones.h>
 
+#include <stdio.h>
 #include <string.h>
 
 #include "analysis/motive_sketch.h"
@@ -241,6 +242,19 @@ const char *motive_tone_type_name(NonChordTone type) {
     }
 }
 
+bool motive_tone_role_parse(const char *text, MotiveToneRole *role, NonChordTone *type) {
+    if (!text || !role || !type) {
+        return false;
+    }
+    *type = NON_CHORD_TONE_PASSING;
+    if (strcmp(text, "chord") == 0) {
+        *role = MOTIVE_TONE_CHORD;
+        return true;
+    }
+    *role = MOTIVE_TONE_NON_CHORD;
+    return motive_tone_type_parse(text, type);
+}
+
 bool motive_tone_type_parse(const char *name, NonChordTone *out) {
     if (!name || !out) {
         return false;
@@ -256,4 +270,43 @@ bool motive_tone_type_parse(const char *name, NonChordTone *out) {
         }
     }
     return false;
+}
+
+bool motive_tones_constraint(const Motive *motive, PlanConstraint *out) {
+    MotiveBaseHarmony harmony;
+    MotiveToneLabel labels[MOTIVE_MAX_NOTES];
+    if (!motive || !out || motive->note_count == 0 || !motive_base_harmony(motive, &harmony) ||
+        motive_tone_labels(motive, harmony.chords, harmony.count, motive->tone_overrides,
+                           motive->tone_override_count, labels) != MOTIVE_TONE_OK) {
+        return false;
+    }
+    PlanConstraint constraint;
+    memset(&constraint, 0, sizeof(constraint));
+    constraint.kind = PLAN_CONSTRAINT_MOTIVE_TONES;
+    PlanMotiveTones *tones = &constraint.params.motive_tones;
+    if (harmony.count > PLAN_TONES_MAX_CHORDS || motive->note_count > PLAN_TONES_MAX_NOTES) {
+        return false;
+    }
+    for (size_t i = 0; i < harmony.count; i++) {
+        PlanToneChord *chord = &tones->chords[tones->chord_count++];
+        PlanTime end = i + 1 < harmony.count ? harmony.chords[i + 1].onset : motive->length;
+        PlanTime onset = harmony.chords[i].onset;
+        if (!motive_chord_numeral(&harmony.chords[i], chord->numeral, sizeof(chord->numeral)) ||
+            plan_time_make(onset.num, onset.den, &chord->onset) != PLAN_OK ||
+            plan_time_make(end.num * (long)onset.den - onset.num * (long)end.den, end.den * onset.den, &chord->length) !=
+                PLAN_OK) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < motive->note_count; i++) {
+        const char *label = labels[i].role == MOTIVE_TONE_CHORD         ? "chord"
+                            : labels[i].role == MOTIVE_TONE_NON_CHORD   ? motive_tone_type_name(labels[i].type)
+                                                                        : "unclassified";
+        if (!label) {
+            return false;
+        }
+        snprintf(tones->labels[tones->label_count++], PLAN_TONE_LABEL_MAX, "%s", label);
+    }
+    *out = constraint;
+    return true;
 }

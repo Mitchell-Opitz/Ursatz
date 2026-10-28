@@ -22,7 +22,7 @@
   {
    "id": "B",
    "form": "full",
-   "degrees": "5:e 4:e 3:e 2:e 4:e 3:e 2:e 1:e",
+   "degrees": "5:e 3:e 1:e 3:e 5:e 3:e 2:e 1:e",
    "pickup": "0",
    "harmony": null,
    "features": [],

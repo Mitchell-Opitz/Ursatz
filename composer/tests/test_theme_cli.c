@@ -492,6 +492,68 @@ static void test_chords(void) {
     expect_failure("theme_chords_contradiction.json --seed 1", 2, "the given chords in bar 3 do not allow the PAC");
 }
 
+/* ----------------------------------------------------------- tone roles */
+
+/* Whether a pitch is a tone of the triad of the chord (D major: IV is G B D). */
+static bool in_triad(int pitch, const int *triad) {
+    for (int i = 0; i < 3; i++) {
+        if (((pitch % 12) + 12) % 12 == triad[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void test_tone_roles(void) {
+    static const int TONIC[3] = {2, 6, 9};     /* D F# A */
+    static const int SUBDOMINANT[3] = {7, 11, 2}; /* G B D */
+    /* The chords I and then IV: the motive of the request, written for I, is placed on the chord tones of each, so the
+       repetition over IV is not the basic idea over I. */
+    write_chords("[{\"bar\": 0, \"text\": \"I\"}, {\"bar\": 1, \"text\": \"IV\"}]", "theme_tones_chords.json");
+    for (int seed = 1; seed <= 3; seed++) {
+        char arguments[256];
+        snprintf(arguments, sizeof(arguments), "theme_tones_chords.json --seed %d --out theme_tones_plan.json", seed);
+        free(theme_output(arguments));
+        PiecePlan *plan = read_plan("theme_tones_plan.json");
+        int basic[64];
+        int repetition[64];
+        char node[32];
+        PlanMotiveTransform transform = PLAN_TRANSFORM_NONE;
+        size_t basic_count = idea_melody(plan, "basic idea", basic, 64, node, sizeof(node), &transform);
+        size_t count = idea_melody(plan, "repetition", repetition, 64, node, sizeof(node), &transform);
+        assert(basic_count >= 4 && count >= 4);
+        /* The four notes of the motive are chord tones of the chord under them. */
+        for (int k = 0; k < 4; k++) {
+            assert(in_triad(basic[k], TONIC));
+            assert(in_triad(repetition[k], SUBDOMINANT));
+        }
+        assert(count != basic_count || memcmp(basic, repetition, 4 * sizeof(int)) != 0);
+        plan_destroy(plan);
+    }
+    /* The plan keeps the tones of the motive in its material node. */
+    char *plan_text = read_file("theme_tones_plan.json");
+    assert(strstr(plan_text, "\"kind\": \"motive_tones\"") != NULL);
+    free(plan_text);
+
+    /* An override is read, applied to the labels the plan keeps, and checked: a note past the motive, a role that is not
+       one, and a motive that cannot be labelled exit 1 naming the motive. */
+    write_changed(THEME("one-motive.json"), "\"features\": []", "\"features\": [], \"tone_overrides\": {\"2\": \"passing\"}",
+                  "theme_tones_override.json");
+    free(theme_output("theme_tones_override.json --seed 1 --out theme_tones_override_plan.json"));
+    plan_text = read_file("theme_tones_override_plan.json");
+    assert(strstr(plan_text, "\"passing\"") != NULL);
+    free(plan_text);
+    write_changed(THEME("one-motive.json"), "\"features\": []", "\"features\": [], \"tone_overrides\": {\"9\": \"passing\"}",
+                  "theme_tones_note.json");
+    expect_failure("theme_tones_note.json --seed 1", 1, "motive 'A': tone_overrides \"9\": the note is a number from 1 to ");
+    write_changed(THEME("one-motive.json"), "\"features\": []", "\"features\": [], \"tone_overrides\": {\"2\": \"nope\"}",
+                  "theme_tones_role.json");
+    expect_failure("theme_tones_role.json --seed 1", 1, "motive 'A': tone_overrides \"2\": the role is chord, passing");
+    write_changed(THEME("one-motive.json"), "\"features\": []", "\"features\": [], \"tone_overrides\": [1]",
+                  "theme_tones_shape.json");
+    expect_failure("theme_tones_shape.json --seed 1", 1, "tone_overrides must be");
+}
+
 /* ---------------------------------------------------------------- errors */
 
 static void test_errors(void) {
@@ -526,6 +588,7 @@ int main(void) {
     test_idea_motives();
     test_request_v2();
     test_chords();
+    test_tone_roles();
     test_fast_minor();
     test_errors();
     puts("test_theme_cli: ok");

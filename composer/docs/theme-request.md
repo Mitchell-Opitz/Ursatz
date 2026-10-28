@@ -41,6 +41,13 @@ request, with a `pickup` in beats, its own `harmony` as Roman numerals (or `null
 indices) and a `role`. Only `form: "full"` is read. A slot or an idea takes a melodic motive; the accompaniment motive is of the
 accompaniment role.
 
+A motive may also have `tone_overrides`, `{"<n>": "<role>"}`: the role of note `<n>` (1 from the first), `chord` or a non-chord tone
+(`passing`, `neighbor`, `appoggiatura`, `suspension`, `retardation`, `escape`, `anticipation`, `double-neighbor`,
+`changing-tone`, `pedal`), as the `motive` command's `--tone` writes it. It replaces the role the motive's base harmony gives the
+note, and the plan keeps the result as the motive's tones ([melody-fill.md](melody-fill.md#tone-roles)). A note out of range, a
+role that is not one, or a motive with no key and pitches to label exits 1, naming the motive (`motive 'A': tone_overrides "9":
+...`). A piece request's motives read it too.
+
 `forms` is not read (R-207): a motive with a `forms` member is an error (exit 1, `saved forms are no longer read; leave "forms"
 out`). The forms of the ideas are invented by the motives stage.
 

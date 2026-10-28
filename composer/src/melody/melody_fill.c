@@ -93,6 +93,11 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
     for (size_t attempt = 0; ok && attempt < MELODY_ATTEMPTS && kept_count < MELODY_KEEP; attempt++) {
         bool repeat = false;
         PhraseVerdict verdict;
+        /* A motive that cannot be placed by its tone roles in half the attempts is placed as it was before tones, rather than
+           leave the span open (R-215). */
+        if (attempt == MELODY_ATTEMPTS / 2 && kept_count == 0) {
+            read->motive_tone_count = 0;
+        }
         if (!melody_build(read, params, rng, scratch)) {
             continue;
         }

@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/seam_hear.h>
 
@@ -125,6 +126,73 @@ static bool read_bass(const PiecePlan *plan, MelodyContext *context) {
     return at == context->length;
 }
 
+/* The motive_tones constraint of a node, or NULL. */
+static const PlanMotiveTones *node_tones(const PiecePlan *plan, NodeId node) {
+    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
+        if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_TONES) {
+            return &constraint->params.motive_tones;
+        }
+    }
+    return NULL;
+}
+
+/* The tone of a label of the plan: MELODY_TONE_CHORD, MELODY_TONE_NONE or the NonChordTone it names. */
+static int tone_of_label(const char *label) {
+    NonChordTone type;
+    if (strcmp(label, "chord") == 0) {
+        return MELODY_TONE_CHORD;
+    }
+    return motive_tone_type_parse(label, &type) ? (int)type : MELODY_TONE_NONE;
+}
+
+/*
+ * The tones of the motive node: its own motive_tones, else those of the motive it was made from (its motive_ref) when the
+ * transform keeps the notes (a retrograde reverses the labels). A motive with a different number of notes than labels
+ * has none.
+ */
+static void read_tones(const PiecePlan *plan, NodeId node, MelodyContext *context) {
+    bool reversed = false;
+    context->motive_tone_count = 0;
+    for (size_t depth = 0; depth < 16; depth++) {
+        const PlanMotiveTones *tones = node_tones(plan, node);
+        if (tones) {
+            if (tones->label_count != context->motive_count) {
+                return;
+            }
+            for (size_t k = 0; k < tones->label_count; k++) {
+                context->motive_tone[k] = tone_of_label(tones->labels[reversed ? tones->label_count - 1 - k : k]);
+            }
+            context->motive_tone_count = tones->label_count;
+            return;
+        }
+        const PlanMotiveRef *source = NULL;
+        for (size_t i = 0; !source && i < plan_node_constraint_count(plan, node); i++) {
+            const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
+            source = constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF ? &constraint->params.motive : NULL;
+        }
+        if (!source || !plan_has_node(plan, source->motive)) {
+            return;
+        }
+        switch (source->transform) {
+        case PLAN_TRANSFORM_NONE:
+        case PLAN_TRANSFORM_TRANSPOSED:
+        case PLAN_TRANSFORM_INVERTED:
+        case PLAN_TRANSFORM_AUGMENTED:
+        case PLAN_TRANSFORM_DIMINISHED:
+        case PLAN_TRANSFORM_RESTATED:
+        case PLAN_TRANSFORM_INTERVAL_CHANGED:
+            break;
+        case PLAN_TRANSFORM_RETROGRADE:
+            reversed = !reversed;
+            break;
+        default:
+            return;
+        }
+        node = source->motive;
+    }
+}
+
 /* The motive named by the span's motive_ref constraint, in ticks. */
 static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
     PlanConstraint constraint;
@@ -157,6 +225,7 @@ static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
         }
         context->motive_length = end;
     }
+    read_tones(plan, constraint.params.motive.motive, context);
     return true;
 }
 
@@ -492,6 +561,10 @@ static void restate_previous(const PiecePlan *plan, MelodyContext *context) {
     }
     context->motive_count = notes->note_count;
     context->motive_length = onset[notes->note_count - 1] + duration[notes->note_count - 1];
+    /* Its first notes are the motive's, which keep their tones; a melody with fewer notes than labels has none. */
+    if (context->motive_tone_count > notes->note_count) {
+        context->motive_tone_count = 0;
+    }
     context->motive_given = false;
     context->restating = true;
 }
