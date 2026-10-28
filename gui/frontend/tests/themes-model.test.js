@@ -339,6 +339,38 @@ check(
 const ideaRow = T.resultView({ summary: { themes: [{ slots: [{ idea: "repetition", slot: "basic", motive: "M2", source: "idea" }] }] } }, { motiveNames: { M2: "Two" } });
 check(ideaRow.rows[0].source === "From its own motif" && ideaRow.rows[0].motive === "Two", "an idea source reads From its own motif");
 
+/* the chord row (R-208): the cell grid of B2 allows a second chord at @2 in 4/4, @3 in 6/8 and none in 2/4 and 3/4 */
+function chordState(chords, meter, bars) {
+  const state = T.emptyState("c");
+  state.meter = meter || "4/4";
+  state.bars = bars || 8;
+  Object.entries(chords).forEach(([bar, value]) => {
+    state.chords[Number(bar)] = value;
+  });
+  return state;
+}
+check(T.chordProblems(chordState({ 0: "IV V@2", 3: "I" })).length === 0, "chords IV V@2 and I are accepted");
+check(T.chordProblems(chordState({ 0: "I V@3", 1: "V" }, "6/8")).length === 0, "6/8 takes a second chord at @3");
+const threeChords = T.chordProblems(chordState({ 2: "I V@2 I@3" }));
+check(threeChords.length === 1 && threeChords[0].startsWith("Bar 3:"), "three chords in a bar are refused, naming the bar");
+check(T.chordProblems(chordState({ 0: "I V@1/3" })).length === 1, "an onset of 1/3 is refused");
+check(T.chordProblems(chordState({ 0: "I V@4" })).length === 1, "an onset past the bar is refused");
+check(T.chordProblems(chordState({ 0: "I V@3/2" })).length === 1, "a half beat off the cell grid is refused");
+check(T.chordProblems(chordState({ 0: "I V@2", 1: "I V" , 2: "I V@0"})).length === 2, "a missing onset and a falling onset are refused");
+check(T.chordProblems(chordState({ 0: "I V@2" }, "3/4")).length === 1, "3/4 takes one chord a bar");
+check(T.chordProblems(chordState({ 0: "X" })).length === 1, "a word that is not a numeral is refused");
+check(T.formProblems(chordState({ 0: "I V@3/2" })).some((p) => p.startsWith("Bar 1:")), "formProblems carries the chord problems");
+const eightToFour = chordState({ 1: "IV", 5: "V", 7: "I" });
+eightToFour.bars = 4;
+check(T.dropChords(eightToFour).join() === "6,8", "bars 8 to 4 drops the chords of bars 6 and 8");
+check(eightToFour.chords.slice(4).every((value) => value === ""), "the dropped bars are blank");
+check(JSON.stringify(T.bodyFromForm(eightToFour).theme.chords) === '[{"bar":1,"text":"IV"}]', "the body keeps the chords of the bars left");
+const chordBody = T.bodyFromForm(chordState({ 0: "I V@2", 2: " IV " }));
+check(JSON.stringify(chordBody.theme.chords) === '[{"bar":0,"text":"I V@2"},{"bar":2,"text":"IV"}]', "the body chords are {bar, text} for filled bars only");
+check(T.bodyFromForm(T.emptyState("c")).theme.chords.length === 0, "no chords typed gives an empty list");
+check(T.formFromBody(chordBody, "c").chords[2] === "IV", "the chords round trip through the body");
+check(T.chordsText(T.formFromBody(chordBody, "c")) === "Bar 1: I V@2; Bar 3: IV", "the facts row lists the given chords");
+
 if (failures > 0) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);
