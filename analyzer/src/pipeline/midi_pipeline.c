@@ -382,6 +382,35 @@ static size_t *note_parts(const unsigned char *buffer, size_t size, const NoteEv
     return streams;
 }
 
+/* The opening tempo of the file, when its first set-tempo event is at tick 0: the importer's tempo map (a second parse
+   of the same bytes, as the library has no call returning meter and tempo together), kept only for region 0. A tempo
+   import failure leaves the tempo undeclared. */
+static void read_opening_tempo(const unsigned char *buffer, size_t size, ImportedSource *source) {
+    NoteEvent **events = NULL;
+    PitchNumericValue **pitch_values = NULL;
+    size_t count = 0;
+    MidiTempoImport tempo = {NULL, NULL, 0};
+    if (midi_importer_import_with_tempo(buffer, size, &events, &pitch_values, &count, &tempo) != MIDI_IMPORT_OK) {
+        return;
+    }
+    for (size_t i = 0; i < count; i++) {
+        note_event_destroy(events[i]);
+        pitch_numeric_value_destroy(pitch_values[i]);
+    }
+    free(events);
+    free(pitch_values);
+    if (tempo.tempo_map && !tempo_map_is_defaulted(tempo.tempo_map) && tempo_map_region_count(tempo.tempo_map) > 0) {
+        const TempoMapRegion *region = tempo_map_region(tempo.tempo_map, 0);
+        unsigned long microseconds = tempo_map_region_microseconds_per_quarter(region);
+        if (microseconds > 0 && !tempo_map_region_is_defaulted(region) &&
+            musical_time_numerator(tempo_map_region_start(region)) == 0) {
+            source->tempo_declared = true;
+            source->initial_quarters_per_minute = 60000000.0 / (double)microseconds;
+        }
+    }
+    midi_tempo_import_destroy(&tempo);
+}
+
 MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *out) {
     FILE *file = fopen(path, "rb");
     if (!file) {
@@ -451,6 +480,9 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
     ImportedSource source = {.format = INPUT_FORMAT_MIDI};
     if (import_result == MIDI_IMPORT_OK) {
         streams = note_parts(buffer, (size_t)size, (const NoteEvent *const *)events, pitch_values, count, &source);
+        if (streams) {
+            read_opening_tempo(buffer, (size_t)size, &source);
+        }
         if (!streams) {
             import_result = MIDI_IMPORT_ERR_ALLOC;
             for (size_t i = 0; i < count; i++) {

@@ -83,7 +83,7 @@ check_case("--without json" 0 --compare-styles "${REFERENCE}/style-model.json" "
 if(last_output MATCHES "motive-nct-figure")
     message(FATAL_ERROR "--without json: motive-nct-figure is still compared")
 endif()
-check_case("--without unknown" 1 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json" --without tempo)
+check_case("--without unknown" 1 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json" --without no-such-category)
 check_case("--without no value" 1 --compare-styles "${REFERENCE}/style-model.json" "${WORK_DIR}/sonatinas.json" --without)
 check_case("--without alone" 1 --without motive-degrees)
 check_case("--without with --style-profile" 1 --style-profile "${REFERENCE}" --name x --without motive-degrees)

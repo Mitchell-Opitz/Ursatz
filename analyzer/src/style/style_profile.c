@@ -229,6 +229,30 @@ static bool count_rhythm(StyleProfile *profile, const cJSON *document) {
             return false;
         }
     }
+    const cJSON *tempo = member(member(member(document, "metadata"), "input"), "tempo");
+    const cJSON *declared = member(tempo, "declared");
+    const cJSON *quarters = member(tempo, "quarters_per_minute");
+    if (cJSON_IsTrue(declared) && cJSON_IsNumber(quarters)) {
+        char label[32];
+        style_label_tempo(quarters->valuedouble, label, sizeof label);
+        if (!count_label(profile, STYLE_CATEGORY_TEMPO, label)) {
+            return false;
+        }
+    }
+    const cJSON *rhythm_claim;
+    cJSON_ArrayForEach(rhythm_claim, member(document, "rhythm")) {
+        const char *claim_label = string_member(rhythm_claim, "label");
+        const char *claim_line = string_member(rhythm_claim, "line");
+        const cJSON *mean = member(member(rhythm_claim, "attacks_per_beat"), "mean");
+        if (claim_label && claim_line && strcmp(claim_label, "density") == 0 && strcmp(claim_line, "all") == 0 &&
+            cJSON_IsNumber(mean)) {
+            char label[32];
+            style_label_density(mean->valuedouble, label, sizeof label);
+            if (!count_label(profile, STYLE_CATEGORY_NOTE_DENSITY, label)) {
+                return false;
+            }
+        }
+    }
     const cJSON *phrase;
     cJSON_ArrayForEach(phrase, member(document, "phrases")) {
         long first, last;
@@ -302,61 +326,54 @@ static bool count_soprano(StyleProfile *profile, const cJSON *document) {
 /* The strings of a JSON array joined by single spaces into a new string, or NULL when an entry is not a string or on
    allocation failure (*failed). An empty array gives NULL without *failed. */
 static char *join_strings(const cJSON *array, bool *failed) {
-    size_t length = 1;
+    int count = cJSON_GetArraySize(array);
+    if (count <= 0) {
+        return NULL;
+    }
+    const char **parts = malloc((size_t)count * sizeof *parts);
+    if (!parts) {
+        *failed = true;
+        return NULL;
+    }
+    int n = 0;
     const cJSON *item;
     cJSON_ArrayForEach(item, array) {
         if (!cJSON_IsString(item)) {
+            free(parts);
             return NULL;
         }
-        length += strlen(item->valuestring) + 1;
+        parts[n++] = item->valuestring;
     }
-    if (length == 1) {
-        return NULL;
-    }
-    char *joined = malloc(length);
-    if (!joined) {
-        *failed = true;
-        return NULL;
-    }
-    joined[0] = '\0';
-    cJSON_ArrayForEach(item, array) {
-        if (joined[0]) {
-            strcat(joined, " ");
-        }
-        strcat(joined, item->valuestring);
-    }
+    char *joined = style_label_join(parts, (size_t)n);
+    free(parts);
+    *failed = *failed || !joined;
     return joined;
 }
 
-/* The signed semitones joined by spaces: "+8 -1", "0" unsigned. NULL on a non-number entry or allocation failure
-   (*failed). */
+/* The signed semitones of a JSON array as a motive-intervals label. NULL on a non-number entry, an empty array or
+   allocation failure (*failed). */
 static char *join_intervals(const cJSON *array, bool *failed) {
-    size_t capacity = (size_t)cJSON_GetArraySize(array) * 12 + 1;
-    char *joined = malloc(capacity);
-    if (!joined) {
+    int count = cJSON_GetArraySize(array);
+    if (count <= 0) {
+        return NULL;
+    }
+    int *steps = malloc((size_t)count * sizeof *steps);
+    if (!steps) {
         *failed = true;
         return NULL;
     }
-    size_t length = 0;
+    int n = 0;
     const cJSON *item;
     cJSON_ArrayForEach(item, array) {
         if (!cJSON_IsNumber(item)) {
-            free(joined);
+            free(steps);
             return NULL;
         }
-        long value = (long)item->valuedouble;
-        int wrote = value == 0 ? snprintf(joined + length, capacity - length, "%s0", length ? " " : "")
-                               : snprintf(joined + length, capacity - length, "%s%+ld", length ? " " : "", value);
-        if (wrote < 0 || (size_t)wrote >= capacity - length) {
-            free(joined);
-            return NULL;
-        }
-        length += (size_t)wrote;
+        steps[n++] = (int)item->valuedouble;
     }
-    if (length == 0) {
-        free(joined);
-        return NULL;
-    }
+    char *joined = style_label_motive_intervals(steps, (size_t)n);
+    free(steps);
+    *failed = *failed || !joined;
     return joined;
 }
 
@@ -456,8 +473,8 @@ static bool count_motives(StyleProfile *profile, const cJSON *document) {
                     ok = false;
                     break;
                 }
-                snprintf(label, length, "%s %s:%s %s", degree_at(occurrence_degrees, k - 1), current, type,
-                         k + 1 < count ? degree_at(occurrence_degrees, k + 1) : "-");
+                style_label_nct_figure(degree_at(occurrence_degrees, k - 1), current, type,
+                                       k + 1 < count ? degree_at(occurrence_degrees, k + 1) : NULL, label, length);
                 ok = count_label(profile, STYLE_CATEGORY_MOTIVE_NCT_FIGURE, label);
                 free(label);
             }

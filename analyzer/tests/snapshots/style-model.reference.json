@@ -3,7 +3,7 @@
 	"schema_version":	1,
 	"style_name":	"reference",
 	"training_corpus":	"reference",
-	"model_version":	"0.2.0",
+	"model_version":	"0.3.0",
 	"pieces":	5,
 	"statistics":	[{
 			"dimension":	"harmony",
@@ -10176,6 +10176,48 @@
 			"count":	1,
 			"total":	257
 		}, {
+			"dimension":	"rhythm",
+			"category":	"note-density",
+			"label":	"1",
+			"count":	7,
+			"total":	83
+		}, {
+			"dimension":	"rhythm",
+			"category":	"note-density",
+			"label":	"2",
+			"count":	6,
+			"total":	83
+		}, {
+			"dimension":	"rhythm",
+			"category":	"note-density",
+			"label":	"3",
+			"count":	18,
+			"total":	83
+		}, {
+			"dimension":	"rhythm",
+			"category":	"note-density",
+			"label":	"3/2",
+			"count":	7,
+			"total":	83
+		}, {
+			"dimension":	"rhythm",
+			"category":	"note-density",
+			"label":	"4+",
+			"count":	24,
+			"total":	83
+		}, {
+			"dimension":	"rhythm",
+			"category":	"note-density",
+			"label":	"5/2",
+			"count":	2,
+			"total":	83
+		}, {
+			"dimension":	"rhythm",
+			"category":	"note-density",
+			"label":	"7/2",
+			"count":	19,
+			"total":	83
+		}, {
 			"dimension":	"form",
 			"category":	"phrase-length",
 			"label":	"1",
@@ -10463,6 +10505,30 @@
 			"label":	"4+",
 			"count":	14,
 			"total":	83
+		}, {
+			"dimension":	"rhythm",
+			"category":	"tempo",
+			"label":	"120-139",
+			"count":	1,
+			"total":	5
+		}, {
+			"dimension":	"rhythm",
+			"category":	"tempo",
+			"label":	"160-179",
+			"count":	1,
+			"total":	5
+		}, {
+			"dimension":	"rhythm",
+			"category":	"tempo",
+			"label":	"60-79",
+			"count":	1,
+			"total":	5
+		}, {
+			"dimension":	"rhythm",
+			"category":	"tempo",
+			"label":	"80-99",
+			"count":	2,
+			"total":	5
 		}, {
 			"dimension":	"form",
 			"category":	"theme-form",

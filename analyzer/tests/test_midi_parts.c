@@ -162,6 +162,35 @@ int main(void) {
         assert(notes.source.staff[i] == expected_staff);
     }
     imported_notes_destroy(&notes);
+
+    /* A set-tempo event at tick 0 (400000 microseconds per quarter, 150 per minute) is the declared opening tempo; one
+       that first comes later leaves the opening undeclared. */
+    const unsigned char tempo[] = {0x00, 0xff, 0x51, 0x03, 0x06, 0x1a, 0x80};
+    Track tempo_track = {{0}, 0};
+    for (size_t i = 0; i < sizeof tempo; i++) {
+        put(&tempo_track, tempo[i]);
+    }
+    put_note(&tempo_track, 0, 0, 60);
+    put_end(&tempo_track);
+    write_file(path, &tempo_track, 1);
+    assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
+    remove(path);
+    assert(notes.source.tempo_declared);
+    assert(notes.source.initial_quarters_per_minute > 149.99 && notes.source.initial_quarters_per_minute < 150.01);
+    imported_notes_destroy(&notes);
+
+    Track late_track = {{0}, 0};
+    put_note(&late_track, 0, 0, 60);
+    put_delta(&late_track, 480);
+    for (size_t i = 1; i < sizeof tempo; i++) {
+        put(&late_track, tempo[i]);
+    }
+    put_end(&late_track);
+    write_file(path, &late_track, 1);
+    assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);
+    remove(path);
+    assert(!notes.source.tempo_declared);
+    imported_notes_destroy(&notes);
     puts("test_midi_parts: ok");
     return 0;
 }
