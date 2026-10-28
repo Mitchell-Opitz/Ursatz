@@ -143,6 +143,7 @@ static void init_cases(void) {
     add_case(step(MOTIVE_RELATION_FRAGMENT, 3, 2, 0));
     add_case(step(MOTIVE_RELATION_LIQUIDATE, 2, 0, 0));
     add_case(step(MOTIVE_RELATION_LIQUIDATE, 1, 1, 0));
+    add_case(step(MOTIVE_RELATION_LIQUIDATE, 3, 1, 0));
     add_case(step(MOTIVE_RELATION_AUGMENT, 0, 0, 0));
     add_case(step(MOTIVE_RELATION_DIMINISH, 0, 0, 0));
     add_case(ratio_step(MOTIVE_RELATION_AUGMENT, 0, 0, 0, 0, 3, 2));
@@ -172,6 +173,23 @@ static void init_cases(void) {
     add_case(step(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, 1, NON_CHORD_TONE_APPOGGIATURA, 0));
     add_case(step(MOTIVE_RELATION_REHARMONIZE_FRAME, 4, 0, 0));
 }
+/* Liquidation that keeps the rhythm leaves no rest, also when the first note is dropped (the pickup makes it weak). */
+static void test_liquidate_without_rests(void) {
+    MotiveSketch source = base();
+    source.pickup = q(1, 8);
+    source.chord_count = 0;
+    source.feature_count = 0;
+    MotiveRelationStep drop = step(MOTIVE_RELATION_LIQUIDATE, 2, 1, 0);
+    MotiveSketch target;
+    assert(motive_relation_apply(&source, &drop, &target) == MOTIVE_RELATION_OK);
+    assert(msk_eq(target.notes[0].onset, source.notes[0].onset));
+    for (size_t i = 0; i + 1 < target.note_count; i++) {
+        assert(msk_eq(msk_add(target.notes[i].onset, target.notes[i].duration), target.notes[i + 1].onset));
+    }
+    recover_one(&source, drop);
+    recover_one(&source, step(MOTIVE_RELATION_LIQUIDATE, 4, 1, 0));
+}
+
 /*
  * Each frame relation of the base fixture's cases in a chain of two with every stride-th case, in both orders. All must be
  * recovered. The full run (stride 1) is the slow test.
@@ -790,6 +808,7 @@ int main(int argc, char **argv) {
     test_dimensions();
     test_rhythm_sketch_takes_time_relations();
     test_without_a_scale_pitches_move_by_semitones();
+    test_liquidate_without_rests();
     test_frame_relation_chains(11, 10);
     test_chains(2, 2, 40, 40);
     test_chains(3, 4, 40, 30);

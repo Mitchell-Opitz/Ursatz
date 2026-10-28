@@ -401,14 +401,14 @@ static void test_liquidate(void) {
     assert(out.note_count == 3);
     assert_note(&out, 0, 60, q(0, 1), q(1, 8));
     assert_note(&out, 1, 62, q(1, 8), q(1, 8));
-    assert_note(&out, 2, 64, q(1, 4), q(1, 8));
-    assert(msk_eq(out.length, q(3, 8)));
+    assert_note(&out, 2, 64, q(1, 4), q(1, 4));
+    assert(msk_eq(out.length, q(1, 2)));
 
-    /* Two dropped, keeping the rhythm: the rests stay. */
+    /* Two dropped, keeping the rhythm: the time of each goes to the note before it, no rest is left. */
     assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE, 2, 1, 0), &out) == MOTIVE_RELATION_OK);
     assert(out.note_count == 2);
-    assert_note(&out, 0, 60, q(0, 1), q(1, 8));
-    assert_note(&out, 1, 64, q(1, 4), q(1, 8));
+    assert_note(&out, 0, 60, q(0, 1), q(1, 4));
+    assert_note(&out, 1, 64, q(1, 4), q(1, 4));
 
     /* Without keep-rhythm the notes left follow one another from 0. */
     assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE, 2, 0, 0), &out) == MOTIVE_RELATION_OK);
@@ -420,6 +420,52 @@ static void test_liquidate(void) {
     assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE, 3, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
     assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE, 3, 0, 1), &out) == MOTIVE_RELATION_OK);
     assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE, 4, 0, 1), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
+}
+
+static void test_liquidate_keeps_time(void) {
+    static const int pitches[5] = {81, 81, 83, 84, 83};
+    static const unsigned long long den[5] = {4, 4, 8, 8, 2};
+    MotiveSketch sketch = line(pitches, 5, q(1, 4));
+    ExactRational at = q(0, 1);
+    for (size_t i = 0; i < 5; i++) {
+        sketch.notes[i].onset = at;
+        sketch.notes[i].duration = q(1, den[i]);
+        at = msk_add(at, sketch.notes[i].duration);
+    }
+    sketch.length = at;
+    MotiveSketch out;
+
+    /* A A B C B (q q e e h): the C, the last B and the second B go; each note's time runs to the next kept note and the
+       last kept note's to the end, so the rhythm has no rest. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE, 3, 1, 0), &out) == MOTIVE_RELATION_OK);
+    int kept[2] = {81, 81};
+    assert_pitches(&out, kept, 2);
+    assert_note(&out, 0, 81, q(0, 1), q(1, 4));
+    assert_note(&out, 1, 81, q(1, 4), q(1, 1));
+    assert(msk_eq(out.length, q(5, 4)));
+    for (size_t i = 0; i + 1 < out.note_count; i++) {
+        assert(msk_eq(msk_add(out.notes[i].onset, out.notes[i].duration), out.notes[i + 1].onset));
+    }
+
+    /* A dropped first note gives its time to the next kept note, which starts where the first did. */
+    int eighths[4] = {60, 62, 64, 67};
+    MotiveSketch upbeat = line(eighths, 4, q(1, 8));
+    upbeat.pickup = q(1, 8);
+    assert(apply(&upbeat, step(MOTIVE_RELATION_LIQUIDATE, 2, 1, 0), &out) == MOTIVE_RELATION_OK);
+    int after_first[2] = {62, 67};
+    assert_pitches(&out, after_first, 2);
+    assert_note(&out, 0, 62, q(0, 1), q(3, 8));
+    assert_note(&out, 1, 67, q(3, 8), q(1, 8));
+
+    /* Without keep-rhythm nothing changes: the notes follow one another from 0 with their own durations. */
+    assert(apply(&sketch, step(MOTIVE_RELATION_LIQUIDATE, 3, 0, 0), &out) == MOTIVE_RELATION_OK);
+    assert_note(&out, 0, 81, q(0, 1), q(1, 4));
+    assert_note(&out, 1, 81, q(1, 4), q(1, 4));
+
+    /* A time that is not a written value is refused: five eighths. */
+    int run[7] = {60, 62, 62, 62, 62, 62, 64};
+    MotiveSketch long_gap = line(run, 7, q(1, 8));
+    assert(apply(&long_gap, step(MOTIVE_RELATION_LIQUIDATE, 5, 1, 0), &out) == MOTIVE_RELATION_NOT_EXPRESSIBLE);
 }
 
 static void test_augment_and_diminish(void) {
@@ -1616,6 +1662,7 @@ int main(void) {
     test_interval_change();
     test_fragment();
     test_liquidate();
+    test_liquidate_keeps_time();
     test_augment_and_diminish();
     test_note_repeat();
     test_rhythm_repeat();
