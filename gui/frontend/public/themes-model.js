@@ -7,6 +7,7 @@
  *    tempo, check, seed}
  * with tempo and seed as the text typed (blank for none). */
 (function (root) {
+  const Materials = root.MaterialsModel || (typeof require === "function" ? require("./materials-model.js") : null);
   const SLOT_NAMES = ["basic", "contrasting", "continuation", "cadential"];
   const SLOT_LABELS = {
     basic: "Basic idea",
@@ -333,6 +334,63 @@
     return entries;
   }
 
+  /* What is wrong with the chords typed for the bars of the theme, as sentences naming the bar. A bar takes at most
+   * 2 chords, each a numeral the harmony field accepts; onsets rise, are halves of a beat, stay inside the bar and
+   * fall on the cells of the meter (the Composer refuses the rest). */
+  function chordProblems(state) {
+    const s = state || emptyState();
+    const beats = METER_BEATS[s.meter] || 4;
+    const second = SECOND_CHORD_BEAT[s.meter];
+    const parse = Materials.parseHarmonyToken;
+    const problems = [];
+    for (const entry of chordEntries(s)) {
+      const name = `Bar ${entry.bar + 1}`;
+      const tokens = entry.text.split(/\s+/);
+      if (tokens.length > 2) {
+        problems.push(`${name}: at most 2 chords.`);
+        continue;
+      }
+      if (tokens.length === 2 && !second) {
+        problems.push(`${name}: ${s.meter} takes one chord a bar.`);
+        continue;
+      }
+      let last = -1;
+      tokens.forEach((token, index) => {
+        const chord = parse(token);
+        if (!chord) {
+          problems.push(`${name}: "${token}" is not a chord (a Roman numeral such as IV or V6, then @ and the beat).`);
+          return;
+        }
+        const onset = chord.onset === null ? (index === 0 ? 0 : null) : chord.onset;
+        if (onset === null) {
+          problems.push(`${name}: "${token}" needs an onset, such as ${token}@${second || 2}.`);
+        } else if (!Number.isFinite(onset) || Math.round(onset * 2) !== onset * 2) {
+          problems.push(`${name}: the onset of "${token}" must be a whole or half beat.`);
+        } else if (onset >= beats) {
+          problems.push(`${name}: the onset of "${token}" is past the bar (${beats} beats, from 0).`);
+        } else if (onset <= last) {
+          problems.push(`${name}: the onsets must rise.`);
+        } else if (onset !== 0 && onset !== second) {
+          problems.push(`${name}: in ${s.meter} a chord starts only ${second ? `at @${second}` : "on the downbeat"}.`);
+        }
+        last = Number.isFinite(onset) ? onset : last;
+      });
+    }
+    return problems;
+  }
+
+  /* Clears the chords of the bars the theme no longer has; the bar numbers (from 1) that held one. */
+  function dropChords(state) {
+    const dropped = [];
+    for (let bar = Number(state.bars); bar < CHORD_BARS; bar++) {
+      if (text(state.chords[bar]) !== "") {
+        dropped.push(bar + 1);
+      }
+      state.chords[bar] = "";
+    }
+    return dropped;
+  }
+
   /* The hint under the chord row, for the meter. */
   function chordHint(meter) {
     const beat = SECOND_CHORD_BEAT[meter];
@@ -556,6 +614,7 @@
     if ((Array.isArray(s.ideas) ? s.ideas : []).some((entry) => entry && !text(entry.item_id))) {
       problems.push("Each idea with its own motif needs one.");
     }
+    problems.push(...chordProblems(s));
     const acc = s.accompaniment || {};
     if (acc.kind === "motive" && !text(acc.item_id)) {
       problems.push("The accompaniment needs a motif.");
@@ -890,6 +949,8 @@
     CHORD_BARS,
     chordHint,
     chordEntries,
+    chordProblems,
+    dropChords,
     CADENCES,
     FIRST_CADENCES,
     POOLS,

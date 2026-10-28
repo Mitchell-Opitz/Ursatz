@@ -757,6 +757,7 @@ function buildThemeChordRow(state) {
   function refresh() {
     fields.forEach((field, bar) => {
       field.hidden = bar >= state.bars;
+      field.querySelector("input").value = state.chords[bar];
     });
     hint.textContent = ThemesModel.chordHint(state.meter);
   }
@@ -831,6 +832,10 @@ function buildThemeEditor(ctx) {
     state.mode = mode.value;
     state.meter = meter.value;
     state.bars = Number(bars.value);
+    const dropped = chordRow ? ThemesModel.dropChords(state) : [];
+    if (dropped.length > 0) {
+      status.show(`Bars changed: the chords of ${dropped.length === 1 ? "bar" : "bars"} ${dropped.join(", ")} were removed.`);
+    }
     state.cadence = cadence.value;
     state.firstCadence = firstCadence.value;
     beginningSelect.parentElement.hidden = state.into !== "hybrid";
