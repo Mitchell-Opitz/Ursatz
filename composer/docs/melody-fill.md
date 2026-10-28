@@ -67,6 +67,31 @@ whole of it. The enclosing phrase node's span is the phrase. A phrase is then wr
 - **Cadence.** The last note is the cadence's stable tone: the tonic for a PAC or PC, the third of the
   tonic for an IAC (the soprano the harmony operators' recognizer is told).
 
+## Tone roles
+
+A motive made from a request carries its **tones** in the plan (`motive_tones` on its node, [plan-format.md](plan-format.md#constraints)):
+the role of every note against the motive's base harmony, its own harmony or the one proposed from the notes
+(`ursatz-composer motive` shows them; the request's `tone_overrides` change them, [theme-request.md](theme-request.md#motives)).
+A developed motive (a `motive_ref` that keeps the notes: transposed, inverted, augmented, diminished, restated, interval changed;
+a retrograde reads the labels in reverse) takes the tones of the motive it was made from. A motive whose tones are not there, or
+whose label count is not its note count, is placed as it always was. An exact restatement keeps the tones of the notes of the
+motive; the notes after them have none.
+
+Placed by its tones, the motive bends to the chords it lands on, a repetition over a new chord included:
+
+- **Chord tones.** A note labelled a chord tone is a tone of the chord under it, the one nearest the pitch the interval rule gives
+  (the interval to the note before kept within `tolerance` where a chord tone allows it, else the nearest chord tone). Those on a
+  strong beat, held notes and the first and last note are placed first, as for any motive; the others are chosen between them, from
+  the chord tones only.
+- **Non-chord tones.** A note labelled passing, neighbor, appoggiatura, suspension or anticipation, between a chord tone and the
+  chord tone it resolves to, keeps its type and is formed again on the chords it lands on once they are placed: a passing tone
+  between its two neighbours, a neighbor tone or an appoggiatura a step (a tone, else a semitone, in the scale of the chord) from
+  the tone it resolves to, on the side it was on in the motive, a suspension a step above that tone, an anticipation on that tone's
+  pitch. The figure is kept only if the NonChordTone framework reads it as that figure alone (so a passing tone between two notes of
+  one pitch, or a neighbor tone not between two equal ones, cannot be formed); a figure that cannot be formed becomes the nearest
+  chord tone. Its type is then allowed in the melody, whatever `nct_types` says, unless `nct_types` is empty. A note with any
+  other label (retardation, escape, double neighbor, changing tone, pedal, unclassified) is placed as before.
+
 ## Spans on beats
 
 The melody reads the same cell grid as the harmony (`harmony_cells_of_span`): the places a chord may start are
