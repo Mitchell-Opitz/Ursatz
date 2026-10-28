@@ -1,5 +1,6 @@
 #include <ursatz_composer/motive_tones.h>
 
+#include <stdio.h>
 #include <string.h>
 
 #include "analysis/motive_sketch.h"
