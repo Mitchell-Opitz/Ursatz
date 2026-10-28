@@ -7,6 +7,7 @@
  *    tempo, check, seed}
  * with tempo and seed as the text typed (blank for none). */
 (function (root) {
+  const Materials = root.MaterialsModel || (typeof require === "function" ? require("./materials-model.js") : null);
   const SLOT_NAMES = ["basic", "contrasting", "continuation", "cadential"];
   const SLOT_LABELS = {
     basic: "Basic idea",
@@ -28,6 +29,12 @@
   ];
   const METERS = ["2/4", "3/4", "4/4", "6/8"];
   const BARS = [4, 8];
+  const CHORD_BARS = 8;
+  const CHORD_TEXT_MAX = 64;
+  /* The beats in a bar, and the beat of the one cell a second chord may start on (the Composer writes chords on
+   * the cells of the meter only: 2 a bar in 4/4 and 6/8, 1 in 2/4 and 3/4). */
+  const METER_BEATS = { "2/4": 2, "3/4": 3, "4/4": 4, "6/8": 6 };
+  const SECOND_CHORD_BEAT = { "4/4": 2, "6/8": 3 };
   const CADENCES = ["PAC", "IAC", "HC"];
   const FIRST_CADENCES = ["HC", "IAC"];
   const POOLS = [
@@ -119,6 +126,7 @@
       firstCadence: "",
       slots: [],
       ideas: [],
+      chords: Array(CHORD_BARS).fill(""),
       accompaniment: { kind: "none", pattern: "any", item_id: "", version: 0 },
       picks: [],
       switches: allSwitches(true),
@@ -313,6 +321,92 @@
     }));
   }
 
+  /* The chords given per bar as [{bar, text}], bar from 0, for the filled bars of the theme only. */
+  function chordEntries(state) {
+    const list = Array.isArray(state.chords) ? state.chords : [];
+    const entries = [];
+    for (let bar = 0; bar < Math.min(CHORD_BARS, Number(state.bars)); bar++) {
+      const value = text(list[bar]);
+      if (value !== "") {
+        entries.push({ bar, text: value });
+      }
+    }
+    return entries;
+  }
+
+  /* What is wrong with the chords typed for the bars of the theme, as sentences naming the bar. A bar takes at most
+   * 2 chords, each a numeral the harmony field accepts; onsets rise, are halves of a beat, stay inside the bar and
+   * fall on the cells of the meter (the Composer refuses the rest). */
+  function chordProblems(state) {
+    const s = state || emptyState();
+    const beats = METER_BEATS[s.meter] || 4;
+    const second = SECOND_CHORD_BEAT[s.meter];
+    const parse = Materials.parseHarmonyToken;
+    const problems = [];
+    for (const entry of chordEntries(s)) {
+      const name = `Bar ${entry.bar + 1}`;
+      const tokens = entry.text.split(/\s+/);
+      if (tokens.length > 2) {
+        problems.push(`${name}: at most 2 chords.`);
+        continue;
+      }
+      if (tokens.length === 2 && !second) {
+        problems.push(`${name}: ${s.meter} takes one chord a bar.`);
+        continue;
+      }
+      let last = -1;
+      tokens.forEach((token, index) => {
+        const chord = parse(token);
+        if (!chord) {
+          problems.push(`${name}: "${token}" is not a chord (a Roman numeral such as IV or V6, then @ and the beat).`);
+          return;
+        }
+        const onset = chord.onset === null ? (index === 0 ? 0 : null) : chord.onset;
+        if (onset === null) {
+          problems.push(`${name}: "${token}" needs an onset, such as ${token}@${second || 2}.`);
+        } else if (!Number.isFinite(onset) || Math.round(onset * 2) !== onset * 2) {
+          problems.push(`${name}: the onset of "${token}" must be a whole or half beat.`);
+        } else if (onset >= beats) {
+          problems.push(`${name}: the onset of "${token}" is past the bar (${beats} beats, from 0).`);
+        } else if (onset <= last) {
+          problems.push(`${name}: the onsets must rise.`);
+        } else if (onset !== 0 && onset !== second) {
+          problems.push(`${name}: in ${s.meter} a chord starts only ${second ? `at @${second}` : "on the downbeat"}.`);
+        }
+        last = Number.isFinite(onset) ? onset : last;
+      });
+    }
+    return problems;
+  }
+
+  /* The chords given, one line for the facts of a composed theme (`Bar 1: I V@2; Bar 3: IV`), blank when none. */
+  function chordsText(state) {
+    return chordEntries(state)
+      .map((entry) => `Bar ${entry.bar + 1}: ${entry.text}`)
+      .join("; ");
+  }
+
+  /* Clears the chords of the bars the theme no longer has; the bar numbers (from 1) that held one. */
+  function dropChords(state) {
+    const dropped = [];
+    for (let bar = Number(state.bars); bar < CHORD_BARS; bar++) {
+      if (text(state.chords[bar]) !== "") {
+        dropped.push(bar + 1);
+      }
+      state.chords[bar] = "";
+    }
+    return dropped;
+  }
+
+  /* The hint under the chord row, for the meter. */
+  function chordHint(meter) {
+    const beat = SECOND_CHORD_BEAT[meter];
+    const second = beat
+      ? `a second chord only at @${beat}: I V@${beat}`
+      : "one chord a bar in " + meter;
+    return `Roman numerals in C, at most 2 per bar; @ sets the beat a chord starts on, from 0 (${second}).`;
+  }
+
   /* The version body of a form state: {uses, theme}. The result is left out;
    * the backend fills the uses of the slot and accompaniment motifs. */
   function bodyFromForm(state) {
@@ -339,6 +433,7 @@
       },
       slots: slotEntries(s.slots).filter((entry) => formSlots(s).includes(entry.slot)),
       ideas: ideaEntries(s.ideas, ownIdeaNames(s)),
+      chords: chordEntries(s),
       accompaniment,
       brief,
       style_weight: s.weight,
@@ -382,6 +477,11 @@
     state.ideas = (Array.isArray(theme.ideas) ? theme.ideas : [])
       .filter((entry) => entry && typeof entry === "object")
       .map((entry) => ({ idea: entry.idea, item_id: entry.item_id, version: Number(entry.version) }));
+    for (const entry of Array.isArray(theme.chords) ? theme.chords : []) {
+      if (entry && Number.isInteger(entry.bar) && entry.bar >= 0 && entry.bar < CHORD_BARS && typeof entry.text === "string") {
+        state.chords[entry.bar] = entry.text;
+      }
+    }
     state.modeChosen = state.slots.some((entry) => entry.slot === "basic");
     const acc = theme.accompaniment;
     if (acc && typeof acc === "object") {
@@ -521,6 +621,7 @@
     if ((Array.isArray(s.ideas) ? s.ideas : []).some((entry) => entry && !text(entry.item_id))) {
       problems.push("Each idea with its own motif needs one.");
     }
+    problems.push(...chordProblems(s));
     const acc = s.accompaniment || {};
     if (acc.kind === "motive" && !text(acc.item_id)) {
       problems.push("The accompaniment needs a motif.");
@@ -852,6 +953,12 @@
     MODES,
     METERS,
     BARS,
+    CHORD_BARS,
+    chordHint,
+    chordEntries,
+    chordProblems,
+    chordsText,
+    dropChords,
     CADENCES,
     FIRST_CADENCES,
     POOLS,

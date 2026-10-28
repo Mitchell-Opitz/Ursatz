@@ -439,6 +439,22 @@
   const SEGMENTS_HINT = "Named note ranges, for example head and tail. Liquidation and motive-forms keep or drop them.";
   const HARMONY_HINT = "Own chords, e.g. I V6@2 I@3: upper case Roman numerals (b or # before for an altered root; figures 6, 64, 7, 65, 43, 42) and @ the onset in beats. The first chord needs no onset. Up to 8 chords, at most 2 in a bar; empty uses the harmony proposed from the notes.";
   const HARMONY_MAX_CHARS = 200;
+  const HARMONY_TOKEN = /^([b#]?)(VII|VI|IV|V|III|II|I)(6|64|7|65|43|42)?(?:@(\d+(?:\/\d+)?))?$/;
+
+  /* Reads one chord of a harmony text (`V6@3/2`): {numeral, onset} with the onset in beats (null when none), or null
+   * when it is not a chord the Composer reads. The harmony field and the theme chord row share it. */
+  function parseHarmonyToken(token) {
+    const match = HARMONY_TOKEN.exec(String(token));
+    if (!match) {
+      return null;
+    }
+    let onset = null;
+    if (match[4] !== undefined) {
+      const [top, bottom] = match[4].split("/").map(Number);
+      onset = bottom === undefined ? top : bottom === 0 ? NaN : top / bottom;
+    }
+    return { numeral: `${match[1]}${match[2]}${match[3] || ""}`, onset };
+  }
   const HARMONY_DEFAULT_PLACEHOLDER = "I (proposed)";
 
   /* The tone label abbreviations (R-195): CT is a chord tone, ? an unclassified note. */
@@ -1025,6 +1041,7 @@
     formHint,
     errorField,
     HARMONY_HINT,
+    parseHarmonyToken,
     harmonyPlaceholder,
     toneChips,
     toneWarningText,
