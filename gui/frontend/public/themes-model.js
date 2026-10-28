@@ -379,6 +379,13 @@
     return problems;
   }
 
+  /* The chords given, one line for the facts of a composed theme (`Bar 1: I V@2; Bar 3: IV`), blank when none. */
+  function chordsText(state) {
+    return chordEntries(state)
+      .map((entry) => `Bar ${entry.bar + 1}: ${entry.text}`)
+      .join("; ");
+  }
+
   /* Clears the chords of the bars the theme no longer has; the bar numbers (from 1) that held one. */
   function dropChords(state) {
     const dropped = [];
@@ -950,6 +957,7 @@
     chordHint,
     chordEntries,
     chordProblems,
+    chordsText,
     dropChords,
     CADENCES,
     FIRST_CADENCES,

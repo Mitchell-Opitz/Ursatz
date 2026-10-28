@@ -479,6 +479,7 @@ function buildThemeResult(ctx) {
   section.appendChild(
     themeFacts([
       ["Seed", view.seed === null ? "" : String(view.seed)],
+      ["Given chords", ThemesModel.chordsText(state)],
       ["Form heard", view.heard],
       ["Tempo", view.brief.tempo],
       ["Mode", view.brief.mode],
@@ -523,6 +524,7 @@ function themeVersionView(viewEl, id, number, body, nameOf, title) {
     themeFacts([
       ["Form", `${state.into}${state.into === "hybrid" ? ` (${state.hybrid})` : ""}, ${state.mode}, ${state.meter}, ${state.bars} bars, ${state.cadence}`],
       ...state.slots.map((entry) => [ThemesModel.SLOT_LABELS[entry.slot], `${nameOf(entry.item_id)} v${entry.version}`]),
+      ["Given chords", ThemesModel.chordsText(state)],
       ["Brief", ThemesModel.briefLabel(ThemesModel.briefFromPicks(state.picks))],
     ]),
   );
