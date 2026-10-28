@@ -278,6 +278,8 @@ static MotiveRelationResult apply_fragment(const MotiveSketch *in, const MotiveR
     return MOTIVE_RELATION_OK;
 }
 
+static bool nice_time(ExactRational duration);
+
 static MotiveRelationResult apply_liquidate(const MotiveSketch *in, const MotiveRelationStep *step,
                                             MotiveSketch *out) {
     size_t total = in->note_count;
@@ -324,6 +326,20 @@ static MotiveRelationResult apply_liquidate(const MotiveSketch *in, const Motive
         new_index[i] = kept++;
     }
     out->note_count = kept;
+    if (keep_rhythm) {
+        /* A dropped note's time goes to the kept note before it; a dropped first note's, to the first kept note. */
+        ExactRational end = note_end(&in->notes[total - 1]);
+        for (size_t k = kept; k-- > 0;) {
+            if (k == 0) {
+                out->notes[0].onset = in->notes[0].onset;
+            }
+            out->notes[k].duration = msk_sub(end, out->notes[k].onset);
+            if (!nice_time(out->notes[k].duration)) {
+                return MOTIVE_RELATION_NOT_EXPRESSIBLE;
+            }
+            end = out->notes[k].onset;
+        }
+    }
     out->feature_count = 0;
     for (size_t f = 0; f < in->feature_count; f++) {
         bool whole = true;

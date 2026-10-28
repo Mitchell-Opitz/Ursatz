@@ -24,7 +24,8 @@
  *   retrograde
  *   interval-change    interval (1-based, 0 every one), amount (semitones), keep-contour (0/1)
  *   fragment           position (1 leading, 2 trailing, 3 middle), length, min (0 for 2)
- *   liquidate          drop, keep-rhythm (0/1), min (0 for 2)
+ *   liquidate          drop, keep-rhythm (0/1: the kept notes keep their onsets and each runs to the next kept
+ *                      note, the last to the end, so a dropped note leaves no rest), min (0 for 2)
  *   augment, diminish  ratio (0:0 for 2:1 and 1:2)
  *   note-repeat        note (0-based), count (2 to 4)
  *   rhythm-repeat      first, length, target (0-based note indices)
