@@ -91,6 +91,8 @@ Placed by its tones, the motive bends to the chords it lands on, a repetition ov
   one pitch, or a neighbor tone not between two equal ones, cannot be formed); a figure that cannot be formed becomes the nearest
   chord tone. Its type is then allowed in the melody, whatever `nct_types` says, unless `nct_types` is empty. A note with any
   other label (retardation, escape, double neighbor, changing tone, pedal, unclassified) is placed as before.
+- **Fallback.** When no melody has passed the hard rules in half of the attempts (24 of 48), the rest are made as if the motive had no tones, so
+  a motive that cannot be bent to its chords leaves the span no more often open than it was.
 
 ## Spans on beats
 
