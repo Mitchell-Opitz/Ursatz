@@ -138,7 +138,10 @@ static void test_labels(void) {
               style_category_dimension("motive-rhythm", &dimension) && dimension == STYLE_DIMENSION_MELODY &&
               style_category_dimension("motive-nct-figure", &dimension) && dimension == STYLE_DIMENSION_MELODY,
           "motive categories are melody");
-    CHECK(!style_category_dimension("tempo", &dimension), "unknown category");
+    CHECK(style_category_dimension("tempo", &dimension) && dimension == STYLE_DIMENSION_RHYTHM &&
+              style_category_dimension("note-density", &dimension) && dimension == STYLE_DIMENSION_RHYTHM,
+          "tempo and note density are rhythm");
+    CHECK(!style_category_dimension("no-such-category", &dimension), "unknown category");
     CHECK(style_dimension_from_name("melody", &dimension) && dimension == STYLE_DIMENSION_MELODY, "dimension from name");
     CHECK(!style_dimension_from_name("timbre", &dimension), "unknown dimension name");
 }
@@ -212,7 +215,7 @@ static void test_profile_statistics(StyleProfile *reference) {
         CHECK(statistics[i].total == sums[category_index], "%s total %lu is not the sum %lu", statistics[i].category,
               statistics[i].total, sums[category_index]);
     }
-    CHECK(categories_seen == 19, "%zu categories, expected 19", categories_seen);
+    CHECK(categories_seen == 21, "%zu categories, expected 21", categories_seen);
 
     /* Hand-checked against the pieces: the five reference pieces each have a home key and a meter. */
     const StyleStatistic *major = find_statistic(statistics, count, "mode", "major");
@@ -334,8 +337,43 @@ static void test_self_comparison(StyleModel *reference) {
     StyleComparison comparison;
     CHECK(style_profile_compare(reference, reference, &comparison) == STYLE_COMPARE_OK, "self comparison failed");
     CHECK(all_zero(&comparison), "a model is not at distance 0 from itself");
-    CHECK(comparison.category_count == 19, "%zu categories compared", comparison.category_count);
+    CHECK(comparison.category_count == 21, "%zu categories compared", comparison.category_count);
     style_comparison_destroy(&comparison);
+}
+
+/* The sonatinas are MIDI files with a set-tempo event at tick 0 (Clementi 36 at 120 to 139, Mozart 545 at 160 to 179
+   quarter notes per minute): one tempo label each. Both corpora count a note density per phrase. */
+static void check_tempo_and_density(const StyleProfile *chorale_profile, const StyleProfile *sonatina_profile) {
+    const StyleProfile *profiles[2] = {chorale_profile, sonatina_profile};
+    for (int p = 0; p < 2; p++) {
+        StyleStatistic *statistics = NULL;
+        size_t count = 0;
+        if (!profiles[p] || style_profile_statistics(profiles[p], &statistics, &count) != STYLE_PROFILE_OK) {
+            CHECK(false, "no statistics for profile %d", p);
+            continue;
+        }
+        size_t density_labels = 0;
+        size_t tempo_labels = 0;
+        for (size_t i = 0; i < count; i++) {
+            if (strcmp(statistics[i].category, "note-density") == 0) {
+                density_labels++;
+                printf("profile %d note-density %s x%lu\n", p, statistics[i].label, statistics[i].count);
+            } else if (strcmp(statistics[i].category, "tempo") == 0) {
+                tempo_labels++;
+                printf("profile %d tempo %s x%lu\n", p, statistics[i].label, statistics[i].count);
+                CHECK(strchr(statistics[i].label, '-') != NULL || strchr(statistics[i].label, '<') != NULL ||
+                          strchr(statistics[i].label, '+') != NULL,
+                      "tempo label '%s'", statistics[i].label);
+            }
+        }
+        CHECK(density_labels > 0, "profile %d has no note-density labels", p);
+        if (p == 1) {
+            CHECK(tempo_labels == 2 && find_statistic(statistics, count, "tempo", "120-139") != NULL &&
+                      find_statistic(statistics, count, "tempo", "160-179") != NULL,
+                  "the sonatinas' MIDI tempos are not read");
+        }
+        free(statistics);
+    }
 }
 
 static void test_chorales_and_sonatinas(void) {
@@ -368,6 +406,7 @@ static void test_chorales_and_sonatinas(void) {
         style_comparison_destroy(&forward);
         style_comparison_destroy(&backward);
     }
+    check_tempo_and_density(chorale_profile, sonatina_profile);
     style_model_destroy(chorales);
     style_model_destroy(sonatinas);
     style_profile_destroy(chorale_profile);
@@ -552,7 +591,7 @@ static void test_read_without(StyleProfile *reference) {
         CHECK(same_count == all_count, "dropping none keeps every statistic");
         StyleComparison comparison;
         CHECK(style_profile_compare(all, without, &comparison) == STYLE_COMPARE_OK, "compare with and without");
-        CHECK(comparison.category_count == 19, "%zu categories compared", comparison.category_count);
+        CHECK(comparison.category_count == 21, "%zu categories compared", comparison.category_count);
         size_t one_sided = 0;
         for (size_t i = 0; i < comparison.category_count; i++) {
             one_sided += comparison.categories[i].in_a != comparison.categories[i].in_b ? 1 : 0;
@@ -568,7 +607,7 @@ static void test_read_without(StyleProfile *reference) {
     style_model_destroy(none);
 
     StyleModel *unknown = NULL;
-    const char *bad[] = {"tempo"};
+    const char *bad[] = {"no-such-category"};
     CHECK(style_model_file_read_without(path, bad, 1, &unknown, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT && unknown == NULL,
           "an unknown category is refused");
     CHECK(style_model_file_read_without(path, NULL, 1, &unknown, NULL) == STYLE_MODEL_FILE_ERR_ARGUMENT, "no list");

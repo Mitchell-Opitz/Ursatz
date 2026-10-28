@@ -101,7 +101,9 @@ static void test_bach_round_trip(void) {
     CHECK(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK, "cannot import %s", path);
     AnalysisReport direct;
     CHECK(run_analysis_pipeline(&notes, &direct), "direct analysis");
-    /* A fragment has no parts: leave the file's out of the document it is compared with. */
+    /* A fragment has no parts and no tempo: leave the file's out of the document it is compared with. */
+    notes.source.tempo_declared = false;
+    notes.source.initial_quarters_per_minute = 0;
     for (size_t i = 0; i < notes.source.part_count; i++) {
         free(notes.source.parts[i].id);
         free(notes.source.parts[i].name);
