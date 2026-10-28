@@ -1041,6 +1041,16 @@ static void test_scores_in_the_loop(void) {
 
 /* ---------------------------------------------------------------- plan JSON */
 
+/* Whether the JSON writes a "length" that is a number, as a fragment's does (a motive_tones chord's is a time in quotes). */
+static bool has_numeric_length(const char *json) {
+    for (const char *at = strstr(json, "\"length\": "); at; at = strstr(at + 1, "\"length\": ")) {
+        if (at[10] != '"') {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void test_constraint_json(void) {
     PlanMotiveRef plain = ref_of(PLAN_TRANSFORM_INVERTED);
     Motive source = load_source(&SOURCES[0]);
@@ -1048,7 +1058,7 @@ static void test_constraint_json(void) {
     char *json = plan_to_json(scene.plan, NULL);
     assert(json && strstr(json, "\"transform\": \"inverted\"") != NULL);
     /* A plain constraint writes what it always did. */
-    assert(strstr(json, "\"tonal\"") == NULL && strstr(json, "\"axis\"") == NULL && strstr(json, "\"length\"") == NULL);
+    assert(strstr(json, "\"tonal\"") == NULL && strstr(json, "\"axis\"") == NULL && !has_numeric_length(json));
     free(json);
     plan_destroy(scene.plan);
 

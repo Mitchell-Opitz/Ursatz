@@ -803,12 +803,180 @@ static void test_ideas_in_order(void) {
     assert(stuck_second_first > 0);
 }
 
+/*
+ * Tone roles (R-215). A motive of a bar with a passing tone and a neighbor tone is placed in two ideas, over I and then over
+ * IV. Held to, worked out here from the plan:
+ *   - a note the motive labels a chord tone is a tone of the chord it sounds over, in both ideas;
+ *   - a note the motive labels a non-chord tone is either a chord tone (a figure that could not be formed becomes the
+ *     nearest chord tone) or a figure that resolves: a step from the next note, a chord tone;
+ *   - over IV, which the motive was not written for, the neighbor tone is kept as a figure in some of the seeds.
+ * A motive with no key has no tones, and its plan carries no motive_tones constraint.
+ */
+typedef struct {
+    PiecePlan *plan;
+    NodeId source;
+    LaneSpanId first;
+    LaneSpanId second;
+} ToneScene;
+
+static ToneScene build_tone_scene(bool keyed) {
+    static const char *const MOTIVE = "C4:q D4:e E4:e G4:e A4:e G4:q";
+    ToneScene scene;
+    PlanLanePayload payload;
+    LaneSpanId id;
+    NodeId form;
+    NodeId section;
+    NodeId phrase;
+    NodeId idea_one;
+    NodeId idea_two;
+    NodeId material;
+    NodeId material_idea;
+    PlanSpan bar_zero = {fraction(0, 1), fraction(1, 1)};
+    PlanSpan bar_one = {fraction(1, 1), fraction(1, 1)};
+    PlanSpan phrase_span = {fraction(0, 1), fraction(2, 1)};
+    PlanSpan form_span = {fraction(0, 1), fraction(3, 1)};
+    PlanSpan extra = {fraction(2, 1), fraction(1, 1)};
+    MotiveOptions options;
+    Motive motive;
+    memset(&scene, 0, sizeof(scene));
+    scene.plan = plan_create();
+    assert(plan_add_node(scene.plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form_span, NULL, &form) == PLAN_OK);
+    assert(plan_add_node(scene.plan, form, PLAN_NODE_SECTION, phrase_span, NULL, &section) == PLAN_OK);
+    assert(plan_add_node(scene.plan, section, PLAN_NODE_PHRASE, phrase_span, "phrase", &phrase) == PLAN_OK);
+    assert(plan_add_node(scene.plan, phrase, PLAN_NODE_IDEA, bar_zero, "first", &idea_one) == PLAN_OK);
+    assert(plan_add_node(scene.plan, phrase, PLAN_NODE_IDEA, bar_one, "second", &idea_two) == PLAN_OK);
+    assert(plan_add_node(scene.plan, form, PLAN_NODE_SECTION, extra, NULL, &material) == PLAN_OK);
+    assert(plan_add_node(scene.plan, material, PLAN_NODE_PHRASE, extra, NULL, &material_idea) == PLAN_OK);
+    assert(plan_add_node(scene.plan, material_idea, PLAN_NODE_IDEA, extra, NULL, &material_idea) == PLAN_OK);
+    memset(&options, 0, sizeof(options));
+    options.has_meter = true;
+    options.meter.beats_per_bar = 4;
+    options.meter.beat_unit = 4;
+    if (keyed) {
+        options.has_key = true;
+        options.key.tonic_pitch_class = 0;
+        options.key.mode = PLAN_MODE_MAJOR;
+    }
+    assert(motive_from_notes_text(MOTIVE, &options, &motive, NULL) == MOTIVE_OK);
+    assert(motive_attach(scene.plan, material_idea, extra.start, &motive, "m0", &scene.source, NULL) == PLAN_OK);
+    assert(plan_node_has_constraint(scene.plan, scene.source, PLAN_CONSTRAINT_MOTIVE_TONES) == keyed);
+    for (NodeId node = 1; node <= plan_node_count(scene.plan); node++) {
+        if (plan_node_kind(scene.plan, node) != PLAN_NODE_MOTIVE) {
+            assert(plan_node_set_state(scene.plan, node, PLAN_STATE_GIVEN) == PLAN_OK);
+        }
+    }
+    memset(&payload, 0, sizeof(payload));
+    payload.meter.beats_per_bar = 4;
+    payload.meter.beat_unit = 4;
+    assert(plan_add_lane_span(scene.plan, form, PLAN_LANE_METER, 0, form_span, &payload, &id) == PLAN_OK);
+    assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
+    memset(&payload, 0, sizeof(payload));
+    payload.key.tonic_pitch_class = 0;
+    payload.key.mode = PLAN_MODE_MAJOR;
+    assert(plan_add_lane_span(scene.plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &id) == PLAN_OK);
+    assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
+    static const char *const CHORDS[2] = {"I", "IV"};
+    static const int BASS[2] = {48, 41};
+    PlanSpan bars[2] = {bar_zero, bar_one};
+    for (int bar = 0; bar < 2; bar++) {
+        memset(&payload, 0, sizeof(payload));
+        strcpy(payload.harmony.roman_numeral, CHORDS[bar]);
+        payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+        assert(plan_add_lane_span(scene.plan, phrase, PLAN_LANE_HARMONY, 0, bars[bar], &payload, &id) == PLAN_OK);
+        assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
+        id = add_notes(scene.plan, phrase, PLAN_LANE_BASS, bars[bar], BASS[bar]);
+        assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
+    }
+    PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
+    ref.params.motive.motive = scene.source;
+    ref.params.motive.transform = PLAN_TRANSFORM_NONE;
+    scene.first = add_notes(scene.plan, idea_one, PLAN_LANE_MELODY, bar_zero, 60);
+    scene.second = add_notes(scene.plan, idea_two, PLAN_LANE_MELODY, bar_one, 60);
+    assert(plan_lane_span_add_constraint(scene.plan, scene.first, &ref) == PLAN_OK);
+    assert(plan_lane_span_add_constraint(scene.plan, scene.second, &ref) == PLAN_OK);
+    return scene;
+}
+
+/* Whether a pitch is a tone of the chord. */
+static bool tone_of(const char *roman, int pitch) {
+    return ((chord_pcs(PLAN_MODE_MAJOR, 0, roman) >> (((pitch % 12) + 12) % 12)) & 1u) != 0;
+}
+
+static int step_between(int a, int b) {
+    int distance = a > b ? a - b : b - a;
+    return distance >= 1 && distance <= 2;
+}
+
+static void test_tone_roles(void) {
+    /* The motive's labels against its base harmony I: the passing and the neighbor tone, the rest chord tones. */
+    static const bool CHORD_NOTE[6] = {true, false, true, true, false, true};
+    int kept[2][2] = {{0, 0}, {0, 0}}; /* [idea][passing, neighbor] kept as non-chord tones */
+    int completed = 0;
+    for (unsigned long seed = 1; seed <= 24; seed++) {
+        ToneScene scene = build_tone_scene(true);
+        Fixture fixture;
+        FillRecord *record = NULL;
+        memset(&fixture, 0, sizeof(fixture));
+        fixture.plan = scene.plan;
+        MelodyFillParams params = melody_fill_params_default();
+        FillOutcome outcome = run(&fixture, seed, false, false, false, &params, &record);
+        if (outcome.status != FILL_STATUS_COMPLETE) {
+            fill_outcome_destroy(&outcome);
+            fill_record_destroy(record);
+            plan_destroy(scene.plan);
+            continue;
+        }
+        completed++;
+        const LaneSpanId spans[2] = {scene.first, scene.second};
+        const char *const chords[2] = {"I", "IV"};
+        for (int idea = 0; idea < 2; idea++) {
+            const PlanNotes *notes = &plan_lane_span_payload(scene.plan, spans[idea])->notes;
+            assert(notes->note_count >= 6);
+            for (size_t k = 0; k < 6; k++) {
+                int pitch = notes->notes[k].midi_pitch;
+                bool chord_tone = tone_of(chords[idea], pitch);
+                if (CHORD_NOTE[k]) {
+                    assert(chord_tone);
+                } else if (!chord_tone) {
+                    /* A figure that resolves: a step from the next note, which is a chord tone. */
+                    assert(step_between(pitch, notes->notes[k + 1].midi_pitch));
+                    assert(tone_of(chords[idea], notes->notes[k + 1].midi_pitch));
+                    kept[idea][k == 1 ? 0 : 1]++;
+                }
+            }
+        }
+        fill_outcome_destroy(&outcome);
+        fill_record_destroy(record);
+        plan_destroy(scene.plan);
+    }
+    assert(completed >= 12);
+    /* Over the chord the motive was written for both figures are kept; over IV the neighbor tone is formed on its chord tones
+       too (the passing tone between two notes of one pitch cannot be, and is a chord tone). */
+    assert(kept[0][0] > 0 && kept[0][1] > 0);
+    assert(kept[1][1] > 0);
+
+    /* A motive with no key has no tones: the plan carries no motive_tones constraint and it is placed over both chords. */
+    ToneScene plain = build_tone_scene(false);
+    Fixture fixture;
+    FillRecord *record = NULL;
+    memset(&fixture, 0, sizeof(fixture));
+    fixture.plan = plain.plan;
+    MelodyFillParams params = melody_fill_params_default();
+    FillOutcome outcome = run(&fixture, 3, false, false, false, &params, &record);
+    assert(outcome.status == FILL_STATUS_COMPLETE);
+    assert(plan_lane_span_state(plain.plan, plain.first) != PLAN_STATE_CONSTRAINED);
+    fill_outcome_destroy(&outcome);
+    fill_record_destroy(record);
+    plan_destroy(plain.plan);
+}
+
 int main(void) {
     test_ideas_in_order();
     test_sweep();
     test_chord_tones_only();
     test_unplaceable_motive();
     test_needs_harmony_and_bass();
+    test_tone_roles();
     puts("test_melody_fill: ok");
     return 0;
 }

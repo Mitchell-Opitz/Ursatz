@@ -461,6 +461,17 @@ static void test_regenerate(void) {
     free(shown);
     PiecePlan *before = load_plan("loop.json");
     PiecePlan *after = load_plan("regen.json");
+    /* The motives' tones are in the plan the piece was read from and in the one regenerated from it (R-215), so the melody
+       written again is placed by them. */
+    size_t toned_before = 0;
+    size_t toned_after = 0;
+    for (NodeId node = 1; node <= plan_node_count(before); node++) {
+        toned_before += plan_node_has_constraint(before, node, PLAN_CONSTRAINT_MOTIVE_TONES);
+    }
+    for (NodeId node = 1; node <= plan_node_count(after); node++) {
+        toned_after += plan_node_has_constraint(after, node, PLAN_CONSTRAINT_MOTIVE_TONES);
+    }
+    assert(toned_before > 0 && toned_after == toned_before);
     char *old_melody = dump_lane(before, PLAN_LANE_MELODY, 0, 2, 10);
     char *new_melody = dump_lane(after, PLAN_LANE_MELODY, 0, 2, 10);
     assert(strcmp(old_melody, new_melody) != 0);
@@ -506,7 +517,7 @@ static void test_regenerate(void) {
     plan_destroy(ending);
 
     /* An intro bass alone: nothing else changes. */
-    free(piece_output("--from loop.json --request request.json --regenerate intro --lane bass --seed 5 --out bass.json"));
+    free(piece_output("--from loop.json --request request.json --regenerate intro --lane bass --seed 2 --out bass.json"));
     before = load_plan("loop.json");
     after = load_plan("bass.json");
     char *old_bass = dump_lane(before, PLAN_LANE_BASS, 0, 0, 2);
