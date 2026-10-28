@@ -193,6 +193,16 @@ the theme body the backend composes (see Theme bodies and version files).
   each "From <slot>" until it gets a motif (and Use) of its own. Ideas are kept
   in the body's `ideas`; those the form does not have are dropped on save. The
   result table says "From its own motif" for them.
+- Chords: under the slots, one text field per bar (`Bar 1` to `Bar 4` or `Bar 8`),
+  placeholder `Composer`. Roman numerals in C, at most 2 a bar, `@` the beat a
+  chord starts on from 0. The Composer writes chords on the cells of the meter
+  only: a second chord at `@2` in 4/4, `@3` in 6/8, none in 2/4 and 3/4 (the
+  hint under the row follows the meter). A filled bar is checked before Save and
+  Compose (numeral, onsets rising, whole or half beats, inside the bar, on the
+  cell); the message names the bar. Bars 8 to 4 clears the chords of bars 5 to
+  8 with a status line. The body keeps `chords` as `[{bar, text}]` (bar from 0)
+  for filled bars only; the result lists them as Given chords. A Composer
+  refusal naming a bar shows in the tab status.
 - Accompaniment: None, a pattern (any, block, arpeggiated, Alberti, oom-pah)
   or a motif with the role accompaniment.
 - Brief: collections, composer / source / tag filters, subjects, projects,
