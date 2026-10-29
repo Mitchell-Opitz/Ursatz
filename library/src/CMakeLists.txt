@@ -165,6 +165,7 @@ add_library(ursatz
     analysis/motive_tone_roles.c
     analysis/motive_variant_recognition.c
     analysis/motive_link.c
+    analysis/progression_patterns.c
     analysis/phrase_segmentation.c
     analysis/phrase_boundary_detection.c
     analysis/period_detection.c
