@@ -1,5 +1,7 @@
 #include "texture_analysis_classify.h"
-#include "texture_util.h"
+#include "texture_analysis_input.h"
+#include "ursatz_chain/chain_inputs.h"
+#include "weighted_pipeline.h"
 
 /*
  * The texture changes of Field 1 (Nocturne No. 1 in E-flat major, in 12/8), against tests/fixtures/annotations/field1_texture.txt: a DRAFT
@@ -81,10 +83,10 @@ int main(void) {
     TextureAnnotation annotation = load_texture_annotation();
     WeightedPipeline p = pipeline_run(URSATZ_CORPUS_DIR, "Field 1.mid", NULL);
     const MeterMap *map = p.meter.meter_map;
-    TextureBuild build;
-    char midi_path[1024];
-    snprintf(midi_path, sizeof(midi_path), "%s/Field 1.mid", URSATZ_CORPUS_DIR);
-    texture_build_from_import(&build, &p, map, midi_path);
+    ChainPitches pitches;
+    assert(chain_build_pitches(&p.set, &pitches) == CHAIN_INPUT_OK);
+    ChainTextureInput build;
+    assert(chain_build_texture_input(&p.set, &pitches, &build) == CHAIN_INPUT_OK);
     printf("Field 1, measures %d-%d (draft hand analysis): %zu notes in %zu track(s)\n", annotation.range_first, annotation.range_last,
            build.input.note_count, build.stream_count);
     size_t per_track[8] = {0};
@@ -184,7 +186,8 @@ int main(void) {
     assert(found_changes == annotation.change_count);
 
     standard_texture_analysis_destroy(&analysis);
-    texture_build_destroy(&build);
+    chain_texture_input_destroy(&build);
+    chain_pitches_destroy(&pitches);
     pipeline_destroy(&p);
     printf("test_texture_field1: ok\n");
     return 0;

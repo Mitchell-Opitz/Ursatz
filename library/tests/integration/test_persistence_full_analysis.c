@@ -3,7 +3,8 @@
 #include "framework_v1_chain.h"
 
 #include "analysis_motive.h"
-#include "motive_util.h"
+#include "form_kernel_bridge.h"
+#include "ursatz_chain/chain_inputs.h"
 
 #include "interpretation/chord.h"
 #include "interpretation/key.h"
@@ -393,11 +394,9 @@ int main(void) {
     fv1_chain_run(&c, &FORM_PIECES[1]); /* Mozart 545 */
 
     /* the motive analysis on the same piece, with the chain's cadences */
-    FormBuild build;
-    form_build_init(&build, c.map);
-    motive_build_soprano(&build, &c.p, c.x.keys_first, c.x.keys_last, 0, COMMON_PRACTICE_KEY_MAJOR);
-    add_chain_cadences(&build, &c.p, &c.cadences);
-    assert(standard_form_input_finish(&build.input) == STANDARD_FORM_ANALYSIS_OK);
+    ChainFormInput build;
+    assert(chain_build_motive_input(&c.p.set, analysis_chain_segments(c.chain), c.x.keys_first, c.x.keys_last, 0, COMMON_PRACTICE_KEY_MAJOR,
+                                    &c.cadences, &build) == CHAIN_INPUT_OK);
     StandardFormPhrases phrases;
     StandardFormSegmentation segmentation;
     StandardFormThemes themes;
@@ -433,7 +432,7 @@ int main(void) {
     standard_form_themes_destroy(&themes);
     standard_form_segmentation_destroy(&segmentation);
     standard_form_phrases_destroy(&phrases);
-    form_build_destroy(&build);
+    chain_form_input_destroy(&build);
     fv1_chain_destroy(&c);
     printf("test_persistence_full_analysis: all tests passed\n");
     return 0;

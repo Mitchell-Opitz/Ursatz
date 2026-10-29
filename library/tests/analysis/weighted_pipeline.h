@@ -31,6 +31,7 @@ typedef struct {
     size_t note_count;
     MidiMeterImport meter;
     AnalysisNote *notes;
+    AnalysisNoteSet set; /* the notes on the map the pipeline was run with */
     AnalysisChain *chain;
     AdaptiveSonorities sonorities;
     AdaptiveSonorities voice_sonorities;
@@ -80,11 +81,14 @@ static inline WeightedPipeline pipeline_run(const char *corpus_dir, const char *
 
     size_t note_count = 0;
     assert(midi_import_analysis_notes(&p.import, &p.notes, &note_count));
-    AnalysisNoteSet set = {p.notes, note_count, map};
+    p.set.notes = p.notes;
+    p.set.count = note_count;
+    p.set.map = map;
+    const AnalysisNoteSet *set = &p.set;
     AnalysisChainConfig config = analysis_chain_config_default();
     config.stages = ANALYSIS_CHAIN_STAGE_SEGMENTS | ANALYSIS_CHAIN_STAGE_OUTER_VOICES;
     config.first_measure = 0;
-    assert(analysis_chain_run(&set, NULL, 0, &config, &p.chain) == ANALYSIS_CHAIN_OK);
+    assert(analysis_chain_run(set, NULL, 0, &config, &p.chain) == ANALYSIS_CHAIN_OK);
 
     const ChainSegments *segments = analysis_chain_segments(p.chain);
     p.sonorities = segments->sonorities;

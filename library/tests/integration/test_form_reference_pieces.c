@@ -32,7 +32,9 @@
 #include "analysis_ideas.h"
 #include "analysis_phrase.h"
 #include "analysis_theme.h"
-#include "form_util.h"
+#include "form_kernel_bridge.h"
+#include "hand_cadences.h"
+#include "analysis_input.h"
 #include "harmony_cadence_rules.h"
 #include "phrase_level_form.h"
 
@@ -142,13 +144,13 @@ typedef struct {
     StandardFormExpansions expansions;
 } FormAnalysis;
 
-static void form_analyze(const FormBuild *build, FormAnalysis *out) {
-    assert(standard_form_segment_phrases(&build->input, NULL, form_kernel_detect, NULL, &out->phrases) ==
+static void form_analyze(const StandardFormInput *input, FormAnalysis *out) {
+    assert(standard_form_segment_phrases(input, NULL, form_kernel_detect, NULL, &out->phrases) ==
            STANDARD_FORM_ANALYSIS_OK);
-    assert(standard_form_segment_ideas(&build->input, &out->phrases, NULL, &out->segmentation) == STANDARD_FORM_ANALYSIS_OK);
-    assert(standard_form_identify_themes(&build->input, &out->phrases, &out->segmentation, NULL, &out->themes) ==
+    assert(standard_form_segment_ideas(input, &out->phrases, NULL, &out->segmentation) == STANDARD_FORM_ANALYSIS_OK);
+    assert(standard_form_identify_themes(input, &out->phrases, &out->segmentation, NULL, &out->themes) ==
            STANDARD_FORM_ANALYSIS_OK);
-    assert(standard_form_detect_expansions(&build->input, &out->phrases, &out->segmentation, &out->themes, NULL,
+    assert(standard_form_detect_expansions(input, &out->phrases, &out->segmentation, &out->themes, NULL,
                                            &out->expansions) == STANDARD_FORM_ANALYSIS_OK);
 }
 
@@ -263,28 +265,13 @@ static FormScore form_evaluate(const char *label, const FormAnnotation *a, const
 
 /* --- the two runs of a piece --- */
 
-static void add_hand_cadences(FormBuild *build, const FormAnnotation *a) {
+/* The annotated phrase ends as hand cadences, each arriving in its whole measure. */
+static size_t hand_ends(const FormAnnotation *a, HandCadence *out) {
     for (size_t i = 0; i < a->end_count; i++) {
-        TimeSpan *measure = NULL;
-        assert(meter_map_measure_span(build->input.map, a->ends[i].measure, &measure) == METER_MAP_OK);
-        char id[32];
-        snprintf(id, sizeof(id), "hand-%d", a->ends[i].measure);
-        form_build_cadence(build, id, time_span_start(measure), time_span_end(measure), a->ends[i].type,
-                           harmony_cadence_strength(a->ends[i].type), false, 0.0);
-        time_span_destroy(measure);
+        out[i].measure = a->ends[i].measure;
+        out[i].type = a->ends[i].type;
     }
-}
-
-static void add_chain_cadences(FormBuild *build, const WeightedPipeline *p, const HarmonyCadences *found) {
-    for (size_t i = 0; i < found->count; i++) {
-        const HarmonyCadenceResult *c = &found->items[i];
-        const TimeSpan *first = sonority_time_window(p->sonorities.items[c->arrival_first].sonority);
-        const TimeSpan *last = sonority_time_window(p->sonorities.items[c->arrival_last].sonority);
-        char id[32];
-        snprintf(id, sizeof(id), "chain-%zu", i);
-        form_build_cadence(build, id, time_span_start(first), time_span_end(last), c->type, harmony_cadence_strength(c->type),
-                           c->post_cadential, c->uncertainty);
-    }
+    return a->end_count;
 }
 
 /* The cadences of the whole chain for a piece: copied from run_whole_chain of test_cadences_reference_pieces.c, which returns only
@@ -392,36 +379,35 @@ static void run_piece(const FormPiece *fp, FormScore *alone_total, FormScore *ch
     printf("%s, measures %d-%d (draft hand analysis):\n", fp->piece.name, annotation.range_first, annotation.range_last);
 
     {
-        FormBuild build;
-        form_build_init(&build, map);
-        form_build_melody(&build, &p, &lines, annotation.range_first, annotation.range_last);
-        add_hand_cadences(&build, &annotation);
-        assert(standard_form_input_finish(&build.input) == STANDARD_FORM_ANALYSIS_OK);
+        HandCadence ends[32];
+        HarmonyCadences hand = hand_cadences_make(analysis_chain_segments(p.chain), map, ends, hand_ends(&annotation, ends));
+        ChainFormInput build;
+        assert(chain_build_form_input(&p.set, analysis_chain_segments(p.chain), &lines, annotation.range_first, annotation.range_last,
+                                      &hand, &build) == CHAIN_INPUT_OK);
         FormAnalysis analysis;
         memset(&analysis, 0, sizeof(analysis));
-        form_analyze(&build, &analysis);
+        form_analyze(&build.input, &analysis);
         FormScore s = form_evaluate("the form adapter alone, on the annotated cadences", &annotation, &analysis);
         form_score_add(alone_total, &s);
         form_analysis_destroy(&analysis);
-        form_build_destroy(&build);
+        chain_form_input_destroy(&build);
+        hand_cadences_destroy(&hand);
     }
     {
         HarmonySegment *segments = NULL;
         Inputs inputs;
         HarmonyCadences found = chain_cadences(&fp->piece, &p, map, &lines, &cadence_annotation, &segments, &inputs);
-        FormBuild build;
-        form_build_init(&build, map);
-        form_build_melody(&build, &p, &lines, annotation.range_first, annotation.range_last);
-        add_chain_cadences(&build, &p, &found);
-        assert(standard_form_input_finish(&build.input) == STANDARD_FORM_ANALYSIS_OK);
+        ChainFormInput build;
+        assert(chain_build_form_input(&p.set, analysis_chain_segments(p.chain), &lines, annotation.range_first, annotation.range_last,
+                                      &found, &build) == CHAIN_INPUT_OK);
         FormAnalysis analysis;
         memset(&analysis, 0, sizeof(analysis));
-        form_analyze(&build, &analysis);
+        form_analyze(&build.input, &analysis);
         printf("  (the cadence adapter reported %zu cadence(s) in the stretches it read)\n", found.count);
         FormScore s = form_evaluate("the whole chain, on the cadence adapter's cadences", &annotation, &analysis);
         form_score_add(chain_total, &s);
         form_analysis_destroy(&analysis);
-        form_build_destroy(&build);
+        chain_form_input_destroy(&build);
         harmony_cadences_destroy(&found);
         harmony_analysis_destroy(segments);
         destroy_inputs(&inputs);

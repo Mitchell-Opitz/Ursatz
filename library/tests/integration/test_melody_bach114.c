@@ -1,14 +1,16 @@
 #include "analysis_melody_climax.h"
 #include "analysis_melody_leaps.h"
 #include "analysis_melody_nct.h"
-#include "melody_util.h"
+#include "outer_scale_degrees.h"
+#include "ursatz_chain/chain_inputs.h"
+#include "weighted_pipeline.h"
 #include "pitch/tuning_system.h"
 #include "time/meter_map.h"
 
 /*
  * Melody analysis of Bach 114 (Minuet in G, BWV Anh. 114), measures 1-8: the soprano the outer-voice extractor produces from
  * the corpus MIDI file (read in the score's 3/4, as the other Bach 114 tests do), with the L2.6 scale degrees and the L2.5
- * non-chord-tone results attached (tests/integration/melody_util.h), is run through standard-counterpoint's melody adapter
+ * non-chord-tone results attached (chain_build_melody_line), is run through standard-counterpoint's melody adapter
  * over the phrase spans of tests/fixtures/annotations/bach114_melody.txt (placeholders: measures 1-4 and 5-8, until phrase
  * segmentation exists).
  *
@@ -43,6 +45,57 @@ static MeterMap *three_four_map(void) {
     time_signature_destroy(three_four);
     musical_time_destroy(zero);
     return map;
+}
+
+
+/* --- the melody line --- */
+
+typedef struct {
+    StandardCounterpointMelodyLine line;
+    size_t *segment; /* each entry's first segment */
+    long *tick;      /* each entry's start in ticks (384 per quarter; a rest's: the first segment where the line is absent) */
+} MelodyBuild;
+
+static void melody_build_destroy(MelodyBuild *build) {
+    standard_counterpoint_melody_line_destroy(&build->line);
+    free(build->segment);
+    free(build->tick);
+    memset(build, 0, sizeof(*build));
+}
+
+/* The degree and alteration of an L2.6 label ("1".."7", optionally "b" or "#" first). */
+static void melody_parse_degree(const char *label, int *degree, int *alteration) {
+    assert(label != NULL);
+    *alteration = 0;
+    if (*label == 'b') {
+        *alteration = -1;
+        label++;
+    } else if (*label == '#') {
+        *alteration = 1;
+        label++;
+    }
+    assert(*label >= '1' && *label <= '7');
+    *degree = *label - '0';
+}
+
+/* The chain's melody line of one outer line over the segments starting before `limit_ticks`. */
+static void melody_build_from_chain(const WeightedPipeline *p, const OuterVoiceEntry *entries, const CommonPracticeWeightedResults *results,
+                                    int tonic_pitch_class, CommonPracticeKeyMode mode, long limit_ticks, MelodyBuild *out) {
+    size_t count = 0;
+    while (count < p->segment_count && (long)(p->starts[count] * 1536.0 + 0.5) < limit_ticks) {
+        count++;
+    }
+    ChainMelodyLine line;
+    assert(chain_build_melody_line(analysis_chain_segments(p->chain), count, entries, results->items, tonic_pitch_class, mode, &line) ==
+           CHAIN_INPUT_OK);
+    memset(out, 0, sizeof(*out));
+    out->line = line.line;
+    out->segment = line.segment;
+    out->tick = (long *)calloc(line.line.count + 1, sizeof(long));
+    assert(out->tick != NULL);
+    for (size_t i = 0; i < line.line.count; i++) {
+        out->tick[i] = (long)(p->starts[line.segment[i]] * 1536.0 + 0.5);
+    }
 }
 
 /* --- the annotation --- */
@@ -420,7 +473,7 @@ static void test_bach_114(void) {
     assert(common_practice_identify_weighted_sequence(p.segments, p.segment_count, 7, COMMON_PRACTICE_KEY_MAJOR, NULL,
                                                       &results) == COMMON_PRACTICE_WEIGHTED_OK);
     MelodyBuild build;
-    melody_build_from_line(&p, lines.soprano, &results, 7, COMMON_PRACTICE_KEY_MAJOR, 8 * MEASURE_TICKS, &build);
+    melody_build_from_chain(&p, lines.soprano, &results, 7, COMMON_PRACTICE_KEY_MAJOR, 8 * MEASURE_TICKS, &build);
     Report chain;
     analyze("Bach 114, the extracted soprano (the whole chain)", &build, &annotation, &chain);
     print_nct_counts(&annotation, &chain);
