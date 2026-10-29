@@ -169,6 +169,32 @@ Rules about how pitches relate within a key:
   V and VII and as major elsewhere. Parse and format, and a `Chord`
   labeled with the numeral. common-practice-minimal's own triad labels
   are separate and unchanged.
+- **Roman numeral grammar** (`roman_numeral_grammar.h`): one public
+  grammar for every numeral form, read into `StandardTonalityNumeralText`
+  and written back in one canonical spelling. Case-sensitive:
+  `[alteration] numeral [mark] [figure] ["/" target]`.
+
+  | Part | Accepted |
+  |---|---|
+  | alteration | `b` `#` (also the UTF-8 flat and sharp signs) |
+  | numeral | `I`..`VII` (major third), `i`..`vii` (minor third) |
+  | mark | `o` or `°` diminished (lowercase); `+` augmented (uppercase, triad); `ø`, `∅`, `/o` or `%` half-diminished (lowercase, seventh figure required); `M` or `maj` major seventh (uppercase, seventh figure required) |
+  | figure | triad `6`, `64`; seventh `7`, `65`, `43`, `42`, `2`; `6/4`, `6/5`, `4/3`, `4/2` as the same |
+  | target | `/` then a numeral with its own alteration, no mark or figure: `V7/V`, `viio7/ii`, `V/bVI`; lowercase is a minor target |
+
+  An uppercase numeral with a seventh figure and no mark is a dominant
+  seventh, a lowercase one a minor seventh, `o` with a seventh figure a
+  fully diminished seventh. Rejected: mixed case, a mark that
+  contradicts the case, `+` with a seventh figure, `ø` or `M` without
+  one, trailing text, empty input. Canonical form is ASCII `o` and `+`,
+  `ø`, `M`, figures `6 64 7 65 43 42`; parse then format is stable.
+  `standard_tonality_numeral_root_semitone` resolves an applied numeral
+  through its target (major for an uppercase target, harmonic minor for a
+  lowercase one). `standard_tonality_roman_numeral_parse`/`_format` and
+  `standard_tonality_format_roman_reading` run on it unchanged: the older
+  entry points keep `°`, `∅` and slashed figures (`style` display) or the
+  RomanText spelling (`viio6/5`, `ii/o7`). standard-harmony keeps its own
+  `harmony_applied_label`; a test checks its labels parse here.
 - **Roman numeral analysis** (`roman_numeral_analysis_rules.h`): key
   labels (capital note name for major, "mi" or a lowercase letter for
   minor), the root's degree in a major or minor key, and the numeral of
