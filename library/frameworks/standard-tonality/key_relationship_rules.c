@@ -6,6 +6,7 @@
 #include "minor_scale_rules.h"
 #include "rule_pair.h"
 #include "tonal_pitch.h"
+#include "pitch/pitch_arithmetic.h"
 
 static const char *const NAMES[STANDARD_TONALITY_KEY_RELATIONSHIP_RULE_COUNT] = {
     "key-relationship-parallel", "key-relationship-relative", "key-relationship-relative-spelling"};
@@ -79,14 +80,6 @@ bool standard_tonality_relative_major(PitchLetter minor_letter, int minor_accide
     return scale_note_name(false, minor_letter, minor_accidental, 2, major_letter, major_accidental);
 }
 
-static int pitch_class(PitchLetter letter, int accidental) {
-    int value = (standard_tonality_letter_semitone(letter) + accidental) % STANDARD_TONALITY_SEMITONES_PER_OCTAVE;
-    if (value < 0) {
-        value += STANDARD_TONALITY_SEMITONES_PER_OCTAVE;
-    }
-    return value;
-}
-
 bool standard_tonality_keys_relative(PitchLetter major_letter, int major_accidental, PitchLetter minor_letter,
                                      int minor_accidental) {
     PitchLetter expected_letter;
@@ -97,7 +90,8 @@ bool standard_tonality_keys_relative(PitchLetter major_letter, int major_acciden
     if (expected_letter != minor_letter || expected_accidental != minor_accidental) {
         return false;
     }
-    int below = pitch_class(major_letter, major_accidental) - pitch_class(minor_letter, minor_accidental);
+    int below = pitch_class_of_letter(major_letter, major_accidental) -
+                pitch_class_of_letter(minor_letter, minor_accidental);
     if (below < 0) {
         below += STANDARD_TONALITY_SEMITONES_PER_OCTAVE;
     }

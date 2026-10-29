@@ -6,6 +6,7 @@
 #include "interval_size_rules.h"
 #include "rule_pair.h"
 #include "tonal_pitch.h"
+#include "pitch/pitch_arithmetic.h"
 
 static const char *const NAMES[STANDARD_TONALITY_INTERVAL_ENHARMONIC_RULE_COUNT] = {"interval-enharmonic-semitones",
                                                                                      "interval-enharmonic-notes"};
@@ -73,32 +74,13 @@ bool standard_tonality_spellings_enharmonic(const PitchSpelling *a, const PitchS
            !pitch_spelling_equals(a, b);
 }
 
-static int letter_place(PitchLetter letter) {
-    /* Letters counted from C: C 0 ... B 6. */
-    int place = 0;
-    PitchLetter walk = PITCH_LETTER_C;
-    while (walk != letter) {
-        walk = standard_tonality_next_letter(walk);
-        place++;
-    }
-    return place;
-}
-
-static PitchLetter letter_at(int place) {
-    PitchLetter letter = PITCH_LETTER_C;
-    for (int i = 0; i < ((place % 7) + 7) % 7; i++) {
-        letter = standard_tonality_next_letter(letter);
-    }
-    return letter;
-}
-
 /* The plainest spelling of a semitone number: natural, then sharp, then
    flat. Returns false only if none exists, which cannot happen. */
 static bool plainest_spelling(int number, PitchLetter *letter, int *accidental, int *octave) {
     static const int ACCIDENTALS[3] = {0, 1, -1};
     for (size_t a = 0; a < 3; a++) {
         for (int place = 0; place < 7; place++) {
-            PitchLetter candidate = letter_at(place);
+            PitchLetter candidate = pitch_letter_offset(PITCH_LETTER_C, place);
             int rest = number - standard_tonality_letter_semitone(candidate) - ACCIDENTALS[a];
             if (rest % STANDARD_TONALITY_SEMITONES_PER_OCTAVE == 0) {
                 *letter = candidate;
@@ -130,16 +112,16 @@ bool standard_tonality_interval_quality_via_enharmonic(const PitchSpelling *lowe
 
     /* Move the upper note the same number of letters as the lower, so
        the size stays; it keeps its sound. */
-    int letter_shift = letter_place(new_letter) - letter_place(pitch_spelling_letter(lower));
-    PitchLetter upper_letter = letter_at(letter_place(pitch_spelling_letter(upper)) + letter_shift);
+    int letter_shift = pitch_letter_index(new_letter) - pitch_letter_index(pitch_spelling_letter(lower));
+    PitchLetter upper_letter = pitch_letter_offset(PITCH_LETTER_C, pitch_letter_index(pitch_spelling_letter(upper)) + letter_shift);
     int upper_number = standard_tonality_semitone_number(upper);
 
     /* Find the octave and accidental of that letter with the upper
        note's sound. The octave number belongs to the letter, so it is
        the one that keeps the staff distance the same. */
-    int lower_place = 7 * new_octave + letter_place(new_letter);
+    int lower_place = 7 * new_octave + pitch_letter_index(new_letter);
     int upper_place = lower_place + (generic - 1);
-    int upper_octave = (upper_place - letter_place(upper_letter)) / 7;
+    int upper_octave = (upper_place - pitch_letter_index(upper_letter)) / 7;
     int upper_accidental = upper_number - (STANDARD_TONALITY_SEMITONES_PER_OCTAVE * upper_octave +
                                            standard_tonality_letter_semitone(upper_letter));
 

@@ -76,6 +76,26 @@ bool standard_tonality_spell_degree(PitchLetter tonic_letter, int tonic_accident
     return true;
 }
 
+int standard_tonality_scale_degree_in_mode(PitchLetter tonic_letter, int tonic_accidental,
+                                           StandardTonalityMode mode, PitchLetter note_letter,
+                                           int note_accidental) {
+    for (int degree = 1; degree <= KEY_DEGREE_COUNT; degree++) {
+        PitchLetter letter;
+        int accidental;
+        if (!standard_tonality_spell_degree(tonic_letter, tonic_accidental, mode, degree, 0,
+                                            &letter, &accidental)) {
+            return 0;
+        }
+    }
+    int degree;
+    int alteration;
+    if (!standard_tonality_degree_of(tonic_letter, tonic_accidental, mode, note_letter,
+                                     note_accidental, &degree, &alteration)) {
+        return 0;
+    }
+    return alteration == 0 ? degree : 0;
+}
+
 bool standard_tonality_key_fifths(PitchLetter tonic_letter, int tonic_accidental, bool minor,
                                   int *fifths) {
     if (fifths == NULL || !letter_valid(tonic_letter)) {

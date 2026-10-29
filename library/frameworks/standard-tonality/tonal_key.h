@@ -51,6 +51,15 @@ bool standard_tonality_spell_degree(PitchLetter tonic_letter, int tonic_accident
                                     PitchLetter *letter, int *accidental);
 
 /*
+ * The degree (1 to 7) of the note in the mode's scale on that tonic, 0 when the note is not in the
+ * scale (letter and accidental must match) or the tonic has no such scale (a degree would need more
+ * than a double accidental).
+ */
+int standard_tonality_scale_degree_in_mode(PitchLetter tonic_letter, int tonic_accidental,
+                                           StandardTonalityMode mode, PitchLetter note_letter,
+                                           int note_accidental);
+
+/*
  * The signature of a key as sharps (positive) or flats (negative). The
  * tonic's place on the line of fifths, less 3 for a minor key. Harmonic and
  * melodic minor use the natural-minor signature. Imaginary keys (beyond

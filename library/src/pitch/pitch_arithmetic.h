@@ -29,6 +29,9 @@ int pitch_letter_index(PitchLetter letter);
 /* The letter `steps` places along C D E F G A B. Wraps both ways. */
 PitchLetter pitch_letter_offset(PitchLetter letter, int steps);
 
+/* 0 to 11 for a letter and accidental, whatever the octave. */
+int pitch_class_of_letter(PitchLetter letter, int accidental);
+
 /* 0 to 11. spelling must not be NULL. */
 int pitch_spelling_pitch_class(const PitchSpelling *spelling);
 

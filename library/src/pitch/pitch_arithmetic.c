@@ -68,10 +68,12 @@ PitchLetter pitch_letter_offset(PitchLetter letter, int steps) {
         pitch_letter_index(letter) + floor_mod(steps, PITCH_LETTER_COUNT), PITCH_LETTER_COUNT)];
 }
 
+int pitch_class_of_letter(PitchLetter letter, int accidental) {
+    return floor_mod(pitch_letter_semitone(letter) + accidental, PITCH_SEMITONES_PER_OCTAVE);
+}
+
 int pitch_spelling_pitch_class(const PitchSpelling *spelling) {
-    return floor_mod(pitch_letter_semitone(pitch_spelling_letter(spelling)) +
-                         pitch_spelling_accidental(spelling),
-                     PITCH_SEMITONES_PER_OCTAVE);
+    return pitch_class_of_letter(pitch_spelling_letter(spelling), pitch_spelling_accidental(spelling));
 }
 
 int pitch_spelling_midi_number(const PitchSpelling *spelling) {
