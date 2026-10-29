@@ -363,3 +363,7 @@ Owned here (moved from `src/semantics/`; type names and values unchanged):
 
 - `CounterpointSpecies` is a plain enum value naming one of the five species of strict counterpoint (first through fifth, ordered simplest to most elaborate), with a helper for the counterpoint notes against each cantus firmus note (1, 2, 4, 2, and 0 for the fifth, which mixes ratios). It carries no `EntityID`, rules, or framework claim. What each species requires of a line is a convention of `frameworks/standard-counterpoint`.
 - `ImitationAnswer` is a plain enum value naming how a later entry of a melody answers an earlier one in imitative writing: real (every interval kept at a fixed transposition), tonal (adjusted by a step to stay in the key), or free (keeps the rhythm and opening shape, then goes its own way). `imitation_answer_keeps_intervals` is true only for the real answer. It carries no `EntityID`, pitches, or framework claim. Which answer a style expects, and how closely it is kept, is a convention of a framework (`frameworks/sixteenth-century-style`).
+
+## Neutral analysis input
+
+`StandardCounterpointVoiceCell` and `StandardCounterpointVoiceGrid` are the shared `AnalysisVoiceCell` and `AnalysisVoiceGrid` (`semantics/voice_grid.h`), the same grid standard-harmony reads. `slot_note.h` defines `StandardCounterpointSlotNote` and `StandardCounterpointRuleResult`, which the fugue, ground bass and sixteenth-century frameworks use as their note and result types.

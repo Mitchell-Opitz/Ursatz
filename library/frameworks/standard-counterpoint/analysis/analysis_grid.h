@@ -6,12 +6,12 @@
 
 #include "pitch/pitch_numeric_value.h"
 #include "pitch/pitch_spelling.h"
+#include "semantics/voice_grid.h"
 
 /*
  * The standard-counterpoint analysis adapter (L3): turns separated voices into this framework's inputs and returns
- * Interpretations. This file is the input, the VOICE-PITCH GRID. standard-counterpoint does not include
- * standard-harmony: standard-harmony's adapter defines the same grid in its own header with identical semantics, and
- * the caller (tests/integration/) builds both from the same voice assignment.
+ * Interpretations. This file is the input, the VOICE-PITCH GRID. The grid is the shared AnalysisVoiceGrid
+ * (semantics/voice_grid.h), which the standard-harmony adapter reads too; the caller builds one from a voice assignment.
  *
  * The grid has one row per chord segment, in time order, and one column per voice. Voice 0 is the TOP voice (the
  * soprano) and the last voice is the bottom (the bass), as voice separation (analysis/voice_separation.h) indexes
@@ -37,21 +37,8 @@
  * (a copy of the given one, or the derived one) and its semitone, so the rules read one representation.
  */
 
-typedef struct {
-    bool present;
-    const PitchNumericValue *pitch;
-    const PitchSpelling *spelling;
-    const char *note_id;
-    bool attacked;
-    double confidence;
-} StandardCounterpointVoiceCell;
-
-typedef struct {
-    size_t segment_count;
-    size_t voice_count;
-    const char *const *segment_ids;
-    const StandardCounterpointVoiceCell *cells;
-} StandardCounterpointVoiceGrid;
+typedef AnalysisVoiceCell StandardCounterpointVoiceCell;
+typedef AnalysisVoiceGrid StandardCounterpointVoiceGrid;
 
 typedef struct {
     const StandardCounterpointVoiceGrid *grid;

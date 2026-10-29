@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "core/rational.h"
+#include "pitch/pitch_arithmetic.h"
 #include "time/time_rational.h"
 
 static const char *const TONIC_NAMES[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
@@ -1057,4 +1058,38 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
     }
     *out = result;
     return COMMON_PRACTICE_KEY_REGIONS_OK;
+}
+
+bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, AnalysisKey *out) {
+    if (region == NULL || out == NULL) {
+        return false;
+    }
+    const char *name = common_practice_key_index_tonic_name(region->key_index);
+    if (name == NULL) {
+        return false;
+    }
+    static const PitchLetter LETTERS[7] = {PITCH_LETTER_A, PITCH_LETTER_B, PITCH_LETTER_C, PITCH_LETTER_D,
+                                           PITCH_LETTER_E, PITCH_LETTER_F, PITCH_LETTER_G};
+    out->id = NULL;
+    out->tonic_letter = LETTERS[name[0] - 'A'];
+    out->tonic_accidental = name[1] == '#' ? 1 : (name[1] == 'b' ? -1 : 0);
+    out->mode = common_practice_key_index_mode(region->key_index) == COMMON_PRACTICE_KEY_MINOR ? KEY_STRUCTURE_MODE_MINOR
+                                                                                              : KEY_STRUCTURE_MODE_MAJOR;
+    return true;
+}
+
+bool common_practice_key_signature_event_from_analysis(const AnalysisKeyEvent *event, CommonPracticeKeySignatureEvent *out) {
+    if (event == NULL || out == NULL || event->time == NULL) {
+        return false;
+    }
+    int fifths = pitch_spelling_fifths(event->key.tonic_letter, event->key.tonic_accidental);
+    if (event->key.mode == KEY_STRUCTURE_MODE_MINOR) {
+        fifths -= 3;
+    }
+    if (fifths < -7 || fifths > 7) {
+        return false;
+    }
+    out->position = event->time;
+    out->sharps_flats = fifths;
+    return true;
 }

@@ -249,3 +249,14 @@ add_test(NAME standard_harmony_analysis_cadence_readings COMMAND test_standard_h
 add_executable(test_standard_harmony_applied_label_grammar test_harmony_applied_label_grammar.c)
 target_link_libraries(test_standard_harmony_applied_label_grammar PRIVATE standard_harmony standard_tonality)
 add_test(NAME standard_harmony_applied_label_grammar COMMAND test_standard_harmony_applied_label_grammar)
+
+add_executable(test_standard_harmony_analysis_key test_harmony_analysis_key.c)
+target_link_libraries(test_standard_harmony_analysis_key PRIVATE standard_harmony)
+add_test(NAME standard_harmony_analysis_key COMMAND test_standard_harmony_analysis_key)
+
+# Memcheck for the analysis note mapping test. Skips silently if valgrind isn't installed.
+find_program(URSATZ_HARMONY_KEY_VALGRIND valgrind)
+if(URSATZ_HARMONY_KEY_VALGRIND)
+  add_test(NAME standard_harmony_analysis_key_valgrind
+           COMMAND ${URSATZ_HARMONY_KEY_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_harmony_analysis_key>)
+endif()

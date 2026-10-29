@@ -102,3 +102,14 @@ add_test(NAME standard_meter_analysis_hypermeter COMMAND test_standard_meter_ana
 add_executable(test_standard_meter_analysis_density test_analysis_density.c)
 target_link_libraries(test_standard_meter_analysis_density PRIVATE standard_meter)
 add_test(NAME standard_meter_analysis_density COMMAND test_standard_meter_analysis_density)
+
+add_executable(test_standard_meter_analysis_note test_meter_analysis_note.c)
+target_link_libraries(test_standard_meter_analysis_note PRIVATE standard_meter)
+add_test(NAME standard_meter_analysis_note COMMAND test_standard_meter_analysis_note)
+
+# Memcheck for the analysis note mapping test. Skips silently if valgrind isn't installed.
+find_program(URSATZ_METER_NOTE_VALGRIND valgrind)
+if(URSATZ_METER_NOTE_VALGRIND)
+  add_test(NAME standard_meter_analysis_note_valgrind
+           COMMAND ${URSATZ_METER_NOTE_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_meter_analysis_note>)
+endif()

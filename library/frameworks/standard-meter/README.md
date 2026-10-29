@@ -135,3 +135,7 @@ American only; the syllables are a table so another system can be added.
 ## Analysis of real music
 
 `analysis/` reads real music against these rules: syncopation per line, hemiola, hypermeter inferred from phrase and cadence placement, and a rhythmic density profile per phrase. The input is neutral structs the caller fills; standard-meter includes no other framework. See `docs/modules/rhythm-meter-analysis.md`.
+
+## Neutral analysis input
+
+`standard_meter_input_add_analysis_note` (`analysis/meter_analysis_input.h`) takes an `AnalysisNote` (`semantics/analysis_note.h`) field for field: `line` is the note's voice (0 when it has none) and `pitch` is its `midi`. A note with an unknown pitch is rejected. The caller no longer writes the converter.

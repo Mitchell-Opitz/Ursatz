@@ -380,3 +380,7 @@ and 0/1 when it does not.
 ## Voice leading analysis
 
 `analysis/analysis_resolution.h` checks seventh and leading-tone resolution per voice from a voice-pitch grid and a chord run list, using `harmony_resolution_rules.h`. See `docs/modules/voice-leading-analysis.md`.
+
+## Neutral analysis input
+
+`harmony_mode_of_analysis_key` and `harmony_segment_input_set_segment` (`analysis/analysis_input.h`) read an `AnalysisKey` and an `AnalysisSegment` (`semantics/analysis_key.h`, `analysis_segment.h`). `HarmonyVoiceCell` and `HarmonyVoiceGrid` are the shared `AnalysisVoiceCell` and `AnalysisVoiceGrid` (`semantics/voice_grid.h`); `segment_ids` is not read here.

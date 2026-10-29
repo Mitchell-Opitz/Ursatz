@@ -148,3 +148,14 @@ add_test(NAME standard_form_phrase_level_form COMMAND test_standard_form_phrase_
 add_executable(test_standard_form_phrase_role test_phrase_role.c)
 target_link_libraries(test_standard_form_phrase_role PRIVATE standard_form)
 add_test(NAME standard_form_phrase_role COMMAND test_standard_form_phrase_role)
+
+add_executable(test_standard_form_analysis_note test_form_analysis_note.c)
+target_link_libraries(test_standard_form_analysis_note PRIVATE standard_form)
+add_test(NAME standard_form_analysis_note COMMAND test_standard_form_analysis_note)
+
+# Memcheck for the analysis note mapping test. Skips silently if valgrind isn't installed.
+find_program(URSATZ_FORM_NOTE_VALGRIND valgrind)
+if(URSATZ_FORM_NOTE_VALGRIND)
+  add_test(NAME standard_form_analysis_note_valgrind
+           COMMAND ${URSATZ_FORM_NOTE_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_form_analysis_note>)
+endif()

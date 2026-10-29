@@ -48,6 +48,9 @@ RationalResult rational_ceil(Rational a, long long *out);
 
 /* -1, 0 or 1. Overflow-free. */
 int rational_cmp(Rational a, Rational b);
+
+/* (double)num / (double)den, for a valid Rational (den > 0). Inexact beyond 2^53. */
+double rational_to_double(Rational a);
 bool rational_equals(Rational a, Rational b);
 bool rational_is_zero(Rational a);
 bool rational_is_negative(Rational a);

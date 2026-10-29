@@ -103,3 +103,7 @@ here.
 Owned here (moved from `src/semantics/`; type names and values unchanged):
 
 - `SchemaFunction` is a plain enum value naming where a Galant schema typically appears in a piece, in the order they occur: opening gambit (to start a piece), continuation (after an opening, as a response to it or to carry the music on: the answer, process, and transition schemas), pre-cadential (just before the cadence, to lead into it), cadence (to conclude), or post-cadential (after the cadence). It carries no `EntityID`, pitches, or framework claim. Which schemas have which function is a convention of a framework (`frameworks/galant-schemas`).
+
+## Neutral analysis input
+
+`galant_segment_set_analysis_segment` and `galant_segment_set_analysis_key` (`analysis/galant_analysis_input.h`) fill a `GalantSegment` from an `AnalysisSegment` and an `AnalysisKey`. The key degree is the key's tonic read from the tonic of the home `AnalysisKey`, so the setter takes both.

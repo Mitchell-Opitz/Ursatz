@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "semantics/analysis_note.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
 #include "time/time_span.h"
@@ -107,6 +108,10 @@ StandardMeterAnalysisStatus standard_meter_input_init(StandardMeterInput *input,
 /* Adds a note. ERR_INVALID for an empty or too long id, a NULL span or one that is not ahead (end after start). */
 StandardMeterAnalysisStatus standard_meter_input_add_note(StandardMeterInput *input, const char *id, const TimeSpan *span,
                                                           long pitch, int line);
+
+/* Adds an AnalysisNote (semantics/analysis_note.h) field for field: id, span, `pitch` is midi and `line` is voice, or 0 when voice
+   is ANALYSIS_INDEX_NONE. ERR_INVALID for an unknown pitch or what standard_meter_input_add_note rejects. */
+StandardMeterAnalysisStatus standard_meter_input_add_analysis_note(StandardMeterInput *input, const AnalysisNote *note);
 
 /* Adds a phrase. ERR_INVALID for a bad id or span, a negative measure count, or a measure count with no expansion. */
 StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *input, const char *id, const TimeSpan *span,

@@ -254,3 +254,7 @@ bool rational_checked_add_unsigned(unsigned long long a, unsigned long long b, u
     *out = a + b;
     return true;
 }
+
+double rational_to_double(Rational a) {
+    return (double)a.num / (double)a.den;
+}

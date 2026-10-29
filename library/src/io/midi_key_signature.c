@@ -491,3 +491,11 @@ MidiKeySignatureScanAllResult midi_key_signature_scan_all(const unsigned char *d
     midi_key_signature_collector_destroy(collector);
     return failure;
 }
+
+bool midi_key_signature_analysis_key(const MidiKeySignature *signature, AnalysisKey *out) {
+    if (signature == NULL || out == NULL || !signature->found) {
+        return false;
+    }
+    return analysis_key_from_fifths(signature->sharps_flats,
+                                    signature->is_minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR, out);
+}

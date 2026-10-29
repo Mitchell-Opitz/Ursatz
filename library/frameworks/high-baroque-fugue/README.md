@@ -90,3 +90,7 @@ they begin; entries beyond the number of voices are redundant entries
 Owned here (moved from `src/semantics/`; type names and values unchanged):
 
 - `FugueRole` is a plain enum value naming the part a passage of one voice plays in a fugue: subject (the main theme), answer (a transposition of it, sometimes altered), countersubject (a line sounded with the subject or answer), free counterpoint (an accompanying part that need not recur), link (a short interpolation between entries), or episode (a longer passage between statements). `fugue_role_is_entry` is true for the subject and the answer. It carries no `EntityID`, pitches, or framework claim. Which roles appear where is a convention of a framework (`frameworks/high-baroque-fugue`).
+
+## Shared slot types
+
+`FugueNote` and `FugueResult` are typedefs of `StandardCounterpointSlotNote` and `StandardCounterpointRuleResult` (`standard-counterpoint/slot_note.h`).
