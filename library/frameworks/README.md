@@ -63,6 +63,10 @@ textbook; each README names the chapters it covers.
 
 A framework builds its durable claims through the kernel helpers in `interpretation/claim_interpretation.h`. Each `analysis/*claim.c` keeps its public names and is a one-line call with the framework's id and short name: `claim_interpretation_create` for the Interpretation, `claim_interpretation_note_group` for the note shell, `claim_interpretation_relationship` for the Relationship. A framework builds its rule and constraint pairs through `rules/rule_pair.h`: its `rule_pair.h` has `typedef RulePair <Framework>RulePair;` and a static inline `<framework>_build_rule_pair` that passes its framework and id prefix to `rule_pair_build` (or `rule_pair_build_typed` for hard and soft rules). A framework needs no claim or rule pair code of its own.
 
+## Singleton and rule table
+
+A framework declares its `Framework` with `static FrameworkSingleton g_singleton = FRAMEWORK_SINGLETON_INIT("<framework>-v1");` and an accessor that returns `framework_singleton_get(&g_singleton)` (`theory/framework_singleton.h`). A rule file declares its rules with `static RulePairTable g_table = RULE_PAIR_TABLE_INIT(<framework>_framework, "<prefix>", NAMES, COUNT);` and its accessors return `rule_pair_table_get(&g_table, which)`'s `rule` or `constraint` (`rules/rule_pair.h`). A table with hardness, evaluation or scoring callbacks uses the framework's `*_rule_table.h` with `static UrsatzOnce g_built[N];`. Both are built once under `ursatz_once` (`core/once.h`), so the first call may come from any thread. Any other lazily built static in a framework uses `ursatz_once` the same way; never a bare `static bool` check-then-set.
+
 ## Building and testing
 
 The root build compiles every framework library and adds each framework's `tests/` directory, so
