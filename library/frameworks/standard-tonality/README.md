@@ -244,6 +244,10 @@ Each rule has a backing `Rule`/`Constraint` pair referencing this
 Framework, plus a pure check function. `constraint_evaluate` is never
 called here.
 
+## Modes on pitch classes and semitones
+
+`standard_tonality_mode_pitch_classes` (`tonal_key.h`) gives a mode's scale on a tonic as a 12-bit pitch class mask; a minor set built from several forms is a union of masks. `standard_tonality_degree_of_semitone` reads a semitone above the tonic as a degree and an alteration, a note outside the scale being the lower degree raised. Owners for the Composer's scale mask and degree tables.
+
 ## Not covered
 
 Interval spelling beyond triply augmented or diminished, intervals
