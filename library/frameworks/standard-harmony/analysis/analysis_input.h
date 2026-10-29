@@ -6,6 +6,8 @@
 
 #include "harmony_applied.h"
 #include "harmony_chord.h"
+#include "semantics/analysis_key.h"
+#include "semantics/analysis_segment.h"
 #include "semantics/applied_chord_kind.h"
 #include "semantics/beat_strength.h"
 #include "time/duration.h"
@@ -105,6 +107,12 @@ typedef enum {
  * (harmony_analysis_destroy) and holds `count` segments, each pointing at its input, which must outlive it;
  * otherwise *out is untouched. `count` may be 0.
  */
+/* The mode of an AnalysisKey: major or minor. False, *out untouched, for a NULL argument or a mode that is neither. */
+bool harmony_mode_of_analysis_key(const AnalysisKey *key, HarmonyMode *out);
+
+/* Sets the segment id, span, position and beat strength of `input` from an AnalysisSegment, and nothing else. False for a NULL argument. */
+bool harmony_segment_input_set_segment(HarmonySegmentInput *input, const AnalysisSegment *segment);
+
 HarmonyAnalysisStatus harmony_analysis_prepare(const HarmonySegmentInput *inputs, size_t count,
                                                HarmonySegment **out);
 

@@ -10,6 +10,7 @@
 
 #include "interpretation/key.h"
 #include "key_vocabulary.h"
+#include "semantics/analysis_key.h"
 #include "semantics/key_change_extent.h"
 #include "time/time_span.h"
 #include "time/meter_map.h"
@@ -276,6 +277,11 @@ typedef struct {
     int sharps_flats;              /* -7..7 */
 } CommonPracticeKeySignatureEvent;
 
+/* The key signature event an AnalysisKeyEvent places: position is the event's time (borrowed) and sharps_flats the signature of its key,
+   the major tonic's place on the line of fifths and the minor tonic's three places less. False, *out untouched, for a NULL argument, a
+   NULL time or a signature beyond -7..7. */
+bool common_practice_key_signature_event_from_analysis(const AnalysisKeyEvent *event, CommonPracticeKeySignatureEvent *out);
+
 typedef enum {
     COMMON_PRACTICE_REGION_SOURCE_PROFILE = 0,
     COMMON_PRACTICE_REGION_SOURCE_KEY_SIGNATURE
@@ -290,6 +296,10 @@ typedef struct {
     double uncertainty;            /* [0, 1] */
     CommonPracticeRegionSource source;
 } CommonPracticeKeyRegion;
+
+/* The AnalysisKey of a region's key_index: the tonic spelled as common_practice_key_index_tonic_name spells it, the mode major or minor,
+   id NULL. False, *out untouched, for a NULL argument or an index outside 0..23. */
+bool common_practice_key_region_analysis_key(const CommonPracticeKeyRegion *region, AnalysisKey *out);
 
 typedef struct {
     size_t from_region;            /* indices into regions[]; to_region == from_region + 1 */

@@ -1,6 +1,7 @@
 #include "galant_analysis_input.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 static const int MAJOR_SEMITONES[7] = {0, 2, 4, 5, 7, 9, 11};
@@ -95,4 +96,37 @@ void galant_segments_destroy(GalantSegmentList *list) {
     }
     free(list->items);
     memset(list, 0, sizeof(*list));
+}
+
+bool galant_segment_set_analysis_segment(GalantSegment *segment, const AnalysisSegment *analysis) {
+    if (segment == NULL || analysis == NULL || analysis->id == NULL || analysis->id[0] == '\0' ||
+        strlen(analysis->id) >= GALANT_ANALYSIS_ID_MAX || analysis->span == NULL) {
+        return false;
+    }
+    strcpy(segment->id, analysis->id);
+    segment->span = analysis->span;
+    segment->position = analysis->position;
+    segment->strength = analysis->strength;
+    return true;
+}
+
+bool galant_segment_set_analysis_key(GalantSegment *segment, const AnalysisKey *key, const AnalysisKey *home) {
+    static const GalantPitchDegree DEGREE_OF_OFFSET[12] = {{1, 0}, {2, -1}, {2, 0}, {3, -1}, {3, 0}, {4, 0},
+                                                           {4, 1}, {5, 0},  {6, -1}, {6, 0}, {7, -1}, {7, 0}};
+    if (segment == NULL || key == NULL || home == NULL) {
+        return false;
+    }
+    char id[GALANT_ANALYSIS_ID_MAX];
+    if (key->id != NULL) {
+        if (strlen(key->id) >= sizeof(id)) {
+            return false;
+        }
+        strcpy(id, key->id);
+    } else {
+        snprintf(id, sizeof(id), "key-%d%s", analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR ? "m" : "");
+    }
+    int offset = analysis_key_tonic_pitch_class(key) - analysis_key_tonic_pitch_class(home);
+    strcpy(segment->key_id, id);
+    segment->key = DEGREE_OF_OFFSET[((offset % 12) + 12) % 12];
+    return true;
 }

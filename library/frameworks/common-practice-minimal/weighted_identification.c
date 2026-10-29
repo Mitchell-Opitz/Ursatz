@@ -2,6 +2,9 @@
 
 #include <math.h>
 
+#include "core/rational.h"
+#include "time/time_rational.h"
+
 CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     CommonPracticeWeightedConfig config;
     config.strength_factor[BEAT_STRENGTH_STRONG] = 1.0;
@@ -273,4 +276,36 @@ unsigned common_practice_ranked_chord_mask(const CommonPracticeRankedChord *chor
         mask |= 1u << ((chord->root_pitch_class + intervals[i]) % 12);
     }
     return mask;
+}
+
+bool common_practice_member_from_analysis_note(const AnalysisNote *note, const TimeSpan *segment, BeatStrength strength,
+                                               CommonPracticeMember *out) {
+    if (note == NULL || segment == NULL || out == NULL || !analysis_note_valid(note) ||
+        note->midi == ANALYSIS_PITCH_UNKNOWN) {
+        return false;
+    }
+    Rational onset;
+    Rational release;
+    Rational from;
+    Rational to;
+    if (rational_of_musical_time(time_span_start(note->span), &onset) != RATIONAL_OK ||
+        rational_of_musical_time(time_span_end(note->span), &release) != RATIONAL_OK ||
+        rational_of_musical_time(time_span_start(segment), &from) != RATIONAL_OK ||
+        rational_of_musical_time(time_span_end(segment), &to) != RATIONAL_OK) {
+        return false;
+    }
+    Rational start = rational_cmp(onset, from) > 0 ? onset : from;
+    Rational stop = rational_cmp(release, to) < 0 ? release : to;
+    Rational overlap;
+    if (rational_cmp(stop, start) <= 0 || rational_sub(stop, start, &overlap) != RATIONAL_OK) {
+        return false;
+    }
+    out->note_id = note->note_id;
+    out->pitch = note->midi;
+    out->held = rational_cmp(onset, from) < 0;
+    out->duration = rational_to_double(overlap);
+    out->strength = strength;
+    out->voice_id = note->voice_id;
+    out->onset = rational_to_double(onset);
+    return true;
 }
