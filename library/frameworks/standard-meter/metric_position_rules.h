@@ -2,6 +2,7 @@
 #define URSATZ_FRAMEWORKS_STANDARD_METER_METRIC_POSITION_RULES_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
@@ -93,5 +94,16 @@ bool standard_meter_beat_strength(const TimeSignature *time_signature, const Met
 /* BEAT_STRENGTH: the mapping from a level alone: downbeat STRONG, secondary beat MEDIUM, the rest
    WEAK. */
 BeatStrength standard_meter_level_strength(StandardMeterLevel level);
+
+/*
+ * The accented beats of one bar: the 0-based beat indexes whose standard_meter_beat_strength on the
+ * beat is STRONG or MEDIUM, in order, with their strengths (strengths may be NULL). 4/4 and 12/8 give
+ * beats 0 (strong) and 2 (medium); 2/4, 3/4 and 6/8 give beat 0 alone, as the downbeat is the only
+ * accent outside a quadruple meter. *count is the number written. False, leaving the outputs
+ * untouched, for a NULL signature, beats or count, a capacity too small for the accents, or on
+ * allocation failure.
+ */
+bool standard_meter_accent_beats(const TimeSignature *time_signature, unsigned *beats, BeatStrength *strengths,
+                                 size_t capacity, size_t *count);
 
 #endif
