@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "analysis_input.h"
+#include "analysis_motive_shape.h"
 #include "ursatz_chain/chain_inputs.h"
 #include "semantics/tone_line.h"
 #include "weighted_chord_identification.h"

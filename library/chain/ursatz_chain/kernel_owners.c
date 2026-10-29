@@ -7,7 +7,6 @@
 #include "analysis/motive_tone_roles.h"
 #include "analysis/motive_variant_recognition.h"
 #include "analysis_melody_nct.h"
-#include "analysis_motive_shape.h"
 
 bool chain_classify_tones(const ToneLineNote *notes, size_t count, ToneLineLabel *out, void *context) {
     return motive_tone_roles_line(notes, count, out, context);
