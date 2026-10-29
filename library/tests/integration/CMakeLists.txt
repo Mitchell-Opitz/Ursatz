@@ -34,7 +34,7 @@ target_compile_definitions(test_melody_bach114 PRIVATE
 add_test(NAME melody_bach114 COMMAND test_melody_bach114)
 
 add_executable(test_form_reference_pieces test_form_reference_pieces.c)
-target_link_libraries(test_form_reference_pieces PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+target_link_libraries(test_form_reference_pieces PRIVATE ursatz_chain standard_form standard_harmony standard_tonality common_practice_minimal
                       standard_meter)
 target_include_directories(test_form_reference_pieces PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_form_reference_pieces PRIVATE
@@ -43,7 +43,7 @@ target_compile_definitions(test_form_reference_pieces PRIVATE
 add_test(NAME form_reference_pieces COMMAND test_form_reference_pieces)
 
 add_executable(test_motive_mozart545 test_motive_mozart545.c)
-target_link_libraries(test_motive_mozart545 PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+target_link_libraries(test_motive_mozart545 PRIVATE ursatz_chain standard_form standard_harmony standard_tonality common_practice_minimal
                       standard_meter)
 target_include_directories(test_motive_mozart545 PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_motive_mozart545 PRIVATE
@@ -52,7 +52,7 @@ target_compile_definitions(test_motive_mozart545 PRIVATE
 add_test(NAME motive_mozart545 COMMAND test_motive_mozart545)
 
 add_executable(test_rhythm_field5 test_rhythm_field5.c)
-target_link_libraries(test_rhythm_field5 PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+target_link_libraries(test_rhythm_field5 PRIVATE ursatz_chain standard_form standard_harmony standard_tonality common_practice_minimal
                       standard_meter)
 target_include_directories(test_rhythm_field5 PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_rhythm_field5 PRIVATE
@@ -81,7 +81,7 @@ target_compile_definitions(test_schema_sequence PRIVATE
 add_test(NAME schema_sequence COMMAND test_schema_sequence)
 
 add_executable(test_framework_v1_verification framework_v1_verification.c)
-target_link_libraries(test_framework_v1_verification PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+target_link_libraries(test_framework_v1_verification PRIVATE ursatz_chain standard_form standard_harmony standard_tonality common_practice_minimal
                       standard_meter)
 target_include_directories(test_framework_v1_verification PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_framework_v1_verification PRIVATE
@@ -92,7 +92,7 @@ target_compile_definitions(test_framework_v1_verification PRIVATE
 add_test(NAME framework_v1_verification COMMAND test_framework_v1_verification)
 
 add_executable(test_framework_v1_thematic_returns framework_v1_thematic_returns.c)
-target_link_libraries(test_framework_v1_thematic_returns PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+target_link_libraries(test_framework_v1_thematic_returns PRIVATE ursatz_chain standard_form standard_harmony standard_tonality common_practice_minimal
                       standard_meter)
 target_include_directories(test_framework_v1_thematic_returns PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_framework_v1_thematic_returns PRIVATE
@@ -103,7 +103,7 @@ target_compile_definitions(test_framework_v1_thematic_returns PRIVATE
 add_test(NAME framework_v1_thematic_returns COMMAND test_framework_v1_thematic_returns)
 
 add_executable(test_corpus_style_statistics test_corpus_style_statistics.c)
-target_link_libraries(test_corpus_style_statistics PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+target_link_libraries(test_corpus_style_statistics PRIVATE ursatz_chain standard_form standard_harmony standard_tonality common_practice_minimal
                       standard_meter)
 target_include_directories(test_corpus_style_statistics PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis
                            ${PROJECT_SOURCE_DIR}/tests/corpus_stats)
@@ -114,7 +114,7 @@ target_compile_definitions(test_corpus_style_statistics PRIVATE
 add_test(NAME corpus_style_statistics COMMAND test_corpus_style_statistics)
 
 add_executable(test_corpus_similarity_search test_corpus_similarity_search.c)
-target_link_libraries(test_corpus_similarity_search PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+target_link_libraries(test_corpus_similarity_search PRIVATE ursatz_chain standard_form standard_harmony standard_tonality common_practice_minimal
                       standard_meter)
 target_include_directories(test_corpus_similarity_search PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis
                            ${PROJECT_SOURCE_DIR}/tests/corpus_stats)
@@ -125,7 +125,7 @@ target_compile_definitions(test_corpus_similarity_search PRIVATE
 add_test(NAME corpus_similarity_search COMMAND test_corpus_similarity_search)
 
 add_executable(test_persistence_full_analysis test_persistence_full_analysis.c)
-target_link_libraries(test_persistence_full_analysis PRIVATE standard_form standard_harmony standard_tonality common_practice_minimal
+target_link_libraries(test_persistence_full_analysis PRIVATE ursatz_chain standard_form standard_harmony standard_tonality common_practice_minimal
                       standard_meter)
 target_include_directories(test_persistence_full_analysis PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_persistence_full_analysis PRIVATE
