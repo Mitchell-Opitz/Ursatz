@@ -9,6 +9,7 @@
 #include "segmentation_beat_grid.h"
 #include "time/time_span.h"
 #include "ursatz_chain/form_bridge.h"
+#include "ursatz_chain/kernel_owners.h"
 
 /* The results of the stages from the key regions to the form, which run twice when the keys are refined. */
 typedef struct {
@@ -40,6 +41,7 @@ typedef struct {
 
 struct AnalysisChain {
     AnalysisChainConfig config;
+    ChainRelationContext relation_context; /* the key the motive stage reads generic shapes in */
     unsigned stages;
     const AnalysisNoteSet *notes;
     const AnalysisKeyEvent *key_events;
@@ -130,6 +132,7 @@ AnalysisChainConfig analysis_chain_config_default(void) {
     config.first_measure = 1;
     config.last_measure = 0;
     config.home_key_index = -1;
+    config.inject_kernel_owners = true;
     return config;
 }
 
@@ -515,6 +518,9 @@ static AnalysisChainStatus motive_stage(AnalysisChain *chain) {
         return ANALYSIS_CHAIN_ERR_FORM;
     }
     chain->have_motive_input = true;
+    chain->relation_context.has_key = true;
+    chain->relation_context.tonic_pitch_class = common_practice_key_index_tonic(home);
+    chain->relation_context.minor = common_practice_key_index_mode(home) == COMMON_PRACTICE_KEY_MINOR;
     const StandardFormInput *input = &chain->motive_input.input;
     if (standard_form_segment_phrases(input, &chain->config.form, chain_form_boundary_detect, NULL, &chain->motive_phrases) !=
         STANDARD_FORM_ANALYSIS_OK) {
@@ -626,6 +632,11 @@ static AnalysisChainStatus melody_stage(AnalysisChain *chain) {
         return ANALYSIS_CHAIN_ERR_MELODY;
     }
     chain->have_melody_line = true;
+    if (chain->config.weighting.classifier != NULL &&
+        !chain_relabel_melody_line(&chain->melody.line, chain->pass.chords, chain->count, chain->config.weighting.classifier,
+                                   chain->config.weighting.classifier_context)) {
+        return ANALYSIS_CHAIN_ERR_MELODY;
+    }
     const StandardCounterpointMelodyLine *line = &chain->melody.line.line;
     if (line->count == 0) {
         return ANALYSIS_CHAIN_ERR_MELODY;
@@ -783,6 +794,15 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
         return ANALYSIS_CHAIN_ERR_ALLOC;
     }
     chain->config = *config;
+    if (config->inject_kernel_owners) {
+        if (chain->config.weighting.classifier == NULL) {
+            chain->config.weighting.classifier = chain_classify_tones;
+        }
+        if (chain->config.form.relation_matcher == NULL) {
+            chain->config.form.relation_matcher = chain_match_motive_relation;
+            chain->config.form.relation_context = &chain->relation_context;
+        }
+    }
     chain->stages = stage_closure(config->stages);
     chain->notes = notes;
     chain->key_events = key_events;
