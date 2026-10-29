@@ -14,6 +14,8 @@ jobs:
         run: |
           git config --global url."https://x-access-token:${{ secrets.URSATZ_SUBMODULE_TOKEN }}@github.com/Mitchell-Opitz/Ursatz".insteadOf "https://github.com/Mitchell-Opitz/Ursatz"
           git submodule update --init --recursive
+      - name: Check submodule pins
+        run: scripts/check-pins.sh
       - name: Configure
         run: cmake -S . -B build
       - name: Build
