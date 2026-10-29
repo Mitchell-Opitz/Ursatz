@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "semantics/analysis_note.h"
 #include "time/meter_map.h"
 #include "time/time_span.h"
 
@@ -84,6 +85,10 @@ StandardTextureAnalysisStatus standard_texture_input_init(StandardTextureInput *
    outside [0, 1]. */
 StandardTextureAnalysisStatus standard_texture_input_add_note(StandardTextureInput *input, const char *id, const TimeSpan *span,
                                                               long pitch, size_t track, size_t voice, double voice_confidence);
+
+/* Adds an AnalysisNote (semantics/analysis_note.h) field for field: id, span, `pitch` is midi, track, voice and voice_confidence
+   carried. ERR_INVALID for an unknown pitch or what standard_texture_input_add_note rejects. */
+StandardTextureAnalysisStatus standard_texture_input_add_analysis_note(StandardTextureInput *input, const AnalysisNote *note);
 
 void standard_texture_input_destroy(StandardTextureInput *input);
 

@@ -186,6 +186,17 @@ StandardFormAnalysisStatus standard_form_input_set_degree(StandardFormInput *inp
     return STANDARD_FORM_ANALYSIS_OK;
 }
 
+StandardFormAnalysisStatus standard_form_input_add_analysis_note(StandardFormInput *input, const AnalysisNote *note, bool bass) {
+    if (input == NULL || note == NULL) {
+        return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
+    }
+    if (note->midi == ANALYSIS_PITCH_UNKNOWN) {
+        return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
+    }
+    return bass ? standard_form_input_add_bass_note(input, note->note_id, note->event, note->span, NULL, note->midi)
+                : standard_form_input_add_note(input, note->note_id, note->event, note->span, NULL, note->midi);
+}
+
 StandardFormAnalysisStatus standard_form_input_add_segment(StandardFormInput *input, const char *id,
                                                            const TimeSpan *span, int function, int phrase_model_label) {
     if (input == NULL) {
@@ -207,6 +218,14 @@ StandardFormAnalysisStatus standard_form_input_add_segment(StandardFormInput *in
     segment->phrase_model_label = phrase_model_label;
     input->segment_count++;
     return STANDARD_FORM_ANALYSIS_OK;
+}
+
+StandardFormAnalysisStatus standard_form_input_add_analysis_segment(StandardFormInput *input, const AnalysisSegment *segment,
+                                                                    int function, int phrase_model_label) {
+    if (input == NULL || segment == NULL) {
+        return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
+    }
+    return standard_form_input_add_segment(input, segment->id, segment->span, function, phrase_model_label);
 }
 
 static int compare_cadences(const void *a, const void *b) {

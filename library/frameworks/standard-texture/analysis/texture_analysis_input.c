@@ -56,6 +56,17 @@ StandardTextureAnalysisStatus standard_texture_input_add_note(StandardTextureInp
     return STANDARD_TEXTURE_ANALYSIS_OK;
 }
 
+StandardTextureAnalysisStatus standard_texture_input_add_analysis_note(StandardTextureInput *input, const AnalysisNote *note) {
+    if (input == NULL || note == NULL) {
+        return STANDARD_TEXTURE_ANALYSIS_ERR_NULL_ARGUMENT;
+    }
+    if (note->midi == ANALYSIS_PITCH_UNKNOWN) {
+        return STANDARD_TEXTURE_ANALYSIS_ERR_INVALID;
+    }
+    return standard_texture_input_add_note(input, note->note_id, note->span, note->midi, note->track, note->voice,
+                                           note->voice_confidence);
+}
+
 void standard_texture_input_destroy(StandardTextureInput *input) {
     if (input == NULL) {
         return;

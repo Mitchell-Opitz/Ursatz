@@ -61,6 +61,17 @@ StandardMeterAnalysisStatus standard_meter_input_add_note(StandardMeterInput *in
     return STANDARD_METER_ANALYSIS_OK;
 }
 
+StandardMeterAnalysisStatus standard_meter_input_add_analysis_note(StandardMeterInput *input, const AnalysisNote *note) {
+    if (input == NULL || note == NULL) {
+        return STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT;
+    }
+    if (note->midi == ANALYSIS_PITCH_UNKNOWN) {
+        return STANDARD_METER_ANALYSIS_ERR_INVALID;
+    }
+    return standard_meter_input_add_note(input, note->note_id, note->span, note->midi,
+                                         note->voice == ANALYSIS_INDEX_NONE ? 0 : (int)note->voice);
+}
+
 StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *input, const char *id, const TimeSpan *span,
                                                             const TimeSpan *cadence_arrival,
                                                             StandardMeterExpansionKind expansion, int expansion_measures,

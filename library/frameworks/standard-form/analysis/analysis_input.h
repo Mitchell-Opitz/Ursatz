@@ -5,6 +5,8 @@
 #include <stddef.h>
 
 #include "events/note_event.h"
+#include "semantics/analysis_note.h"
+#include "semantics/analysis_segment.h"
 #include "semantics/cadence_type.h"
 #include "semantics/contour.h"
 #include "time/meter_map.h"
@@ -104,12 +106,18 @@ StandardFormAnalysisStatus standard_form_input_add_note(StandardFormInput *input
 StandardFormAnalysisStatus standard_form_input_add_bass_note(StandardFormInput *input, const char *note_id,
                                                              const NoteEvent *event, const TimeSpan *span,
                                                              const MetricalPosition *position, long semitone);
+/* Adds an AnalysisNote to the soprano line (bass false) or the bass line (bass true): `semitone` is midi, position is NULL, the next-note
+   fields are set by standard_form_input_finish. BAD_INPUT for an unknown pitch, no event, or what the line's add rejects. */
+StandardFormAnalysisStatus standard_form_input_add_analysis_note(StandardFormInput *input, const AnalysisNote *note, bool bass);
 /* The scale degree (1..7) and alteration (-1, 0, +1) of note `index` of the soprano (bass false) or the bass line. Degrees give the
    motive analysis a generic (scale-step) interval, so a diatonic sequence matches. BAD_INPUT for an index out of range. */
 StandardFormAnalysisStatus standard_form_input_set_degree(StandardFormInput *input, bool bass, size_t index, int degree,
                                                           int alteration);
 StandardFormAnalysisStatus standard_form_input_add_segment(StandardFormInput *input, const char *id,
                                                            const TimeSpan *span, int function, int phrase_model_label);
+/* Adds an AnalysisSegment (id and span) with the function and phrase model label the caller reads for it. */
+StandardFormAnalysisStatus standard_form_input_add_analysis_segment(StandardFormInput *input, const AnalysisSegment *segment,
+                                                                    int function, int phrase_model_label);
 /* Fills the interval and contour to the next note and sorts the cadences by arrival. Call once, after the last add. */
 StandardFormAnalysisStatus standard_form_input_finish(StandardFormInput *input);
 void standard_form_input_destroy(StandardFormInput *input);
