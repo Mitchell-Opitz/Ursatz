@@ -12,6 +12,7 @@
 #include "analysis/motif_detection.h"
 #include "identity/entity_id.h"
 #include "semantics/contour.h"
+#include "semantics/motif_window.h"
 #include "semantics/rhythmic_pattern.h"
 
 /*
@@ -53,12 +54,7 @@
  * partial-credit dimension to score).
  */
 
-typedef struct {
-    const Contour *contour;
-    const RhythmicPattern *rhythm;
-    const EntityID *const *event_ids;
-    size_t event_id_count;
-} MotifWindow;
+/* MotifWindow is defined in semantics/motif_window.h (one window value, shared with standard-form). */
 
 typedef enum {
     MOTIF_WINDOW_MATCHING_OK = 0,

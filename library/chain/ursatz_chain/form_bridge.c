@@ -84,20 +84,10 @@ StandardFormAnalysisStatus chain_form_match_windows(const StandardFormMotifWindo
     if (count == 0) {
         return STANDARD_FORM_ANALYSIS_OK;
     }
-    MotifWindow *kernel = (MotifWindow *)calloc(count, sizeof(MotifWindow));
-    if (kernel == NULL) {
-        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
-    }
-    for (size_t i = 0; i < count; i++) {
-        kernel[i].contour = windows[i].contour;
-        kernel[i].rhythm = windows[i].rhythm;
-        kernel[i].event_ids = windows[i].event_ids;
-        kernel[i].event_id_count = windows[i].event_id_count;
-    }
     MotifDetectionOccurrence *found = NULL;
     size_t found_count = 0;
     StandardFormAnalysisStatus status = STANDARD_FORM_ANALYSIS_ERR_DETECTOR;
-    if (motif_window_matching_find(kernel, count, &found, &found_count) == MOTIF_WINDOW_MATCHING_OK) {
+    if (motif_window_matching_find(windows, count, &found, &found_count) == MOTIF_WINDOW_MATCHING_OK) {
         status = STANDARD_FORM_ANALYSIS_OK;
         for (size_t j = 0; j < found_count; j++) {
             for (size_t i = 0; i < count; i++) {
@@ -108,6 +98,5 @@ StandardFormAnalysisStatus chain_form_match_windows(const StandardFormMotifWindo
         }
     }
     motif_window_matching_destroy_occurrences(found);
-    free(kernel);
     return status;
 }
