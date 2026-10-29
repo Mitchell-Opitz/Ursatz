@@ -11,6 +11,10 @@ the L7 kernel itself"). This is the first module in that pattern;
 future extensions (jazz harmony, species counterpoint, etc.) are
 expected to follow the same `frameworks/<name>/` shape.
 
+The subset-match chord analyzer and the key collection analyzer that were once compiled into this
+target now live in the analysis chain (`chain/ursatz_chain/`); this framework compiles no kernel
+source.
+
 ## Scope
 
 Basic diatonic triad identification and major/natural-minor key naming
@@ -62,7 +66,7 @@ covers exactly:
   degrees rather than a raw `Sonority` -- `PitchIdentity` carries no
   numeric semantics yet, so no numeric pitch-class analysis is possible
   at this layer; this mirrors the same limitation
-  `analysis/chord_identification.c` already documents).
+  `chain/ursatz_chain/subset_chord_analyzer.c` already documents).
 
 ## Deliberately out of scope (not omitted by oversight)
 

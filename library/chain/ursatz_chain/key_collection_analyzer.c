@@ -1,4 +1,4 @@
-#include "analysis/key_estimation.h"
+#include "ursatz_chain/key_collection_analyzer.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,7 +11,7 @@
 #include "interpretation/key.h"
 #include "key_identification.h"
 
-AnalyzerResult key_estimation_analyze(const void *input, const Context *context, const Value *config,
+AnalyzerResult chain_key_collection_analyze(const void *input, const Context *context, const Value *config,
                                        AnalysisResult **out) {
     (void)context;
     (void)config;
@@ -23,7 +23,7 @@ AnalyzerResult key_estimation_analyze(const void *input, const Context *context,
         return ANALYZER_ERR_NULL_OUT;
     }
 
-    const KeyEstimationInput *analysis_input = (const KeyEstimationInput *)input;
+    const ChainKeyCollectionInput *analysis_input = (const ChainKeyCollectionInput *)input;
     if (analysis_input->region == NULL || analysis_input->framework == NULL ||
         analysis_input->tonic_name == NULL || analysis_input->tonic_name[0] == '\0' ||
         analysis_input->tonic_relative_pitch_classes == NULL || analysis_input->pitch_class_count == 0) {
@@ -95,4 +95,4 @@ AnalyzerResult key_estimation_analyze(const void *input, const Context *context,
     return ANALYZER_OK;
 }
 
-const Analyzer KEY_ESTIMATION_ANALYZER = {"KeyEstimation", key_estimation_analyze};
+const Analyzer CHAIN_KEY_COLLECTION_ANALYZER = {"KeyEstimation", chain_key_collection_analyze};

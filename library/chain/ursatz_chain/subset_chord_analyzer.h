@@ -1,5 +1,5 @@
-#ifndef MUSIC_ANALYSIS_CHORD_IDENTIFICATION_H
-#define MUSIC_ANALYSIS_CHORD_IDENTIFICATION_H
+#ifndef URSATZ_CHAIN_SUBSET_CHORD_ANALYZER_H
+#define URSATZ_CHAIN_SUBSET_CHORD_ANALYZER_H
 
 /*
  * Not the chord identification owner (common_practice_identify_weighted_sequence and
@@ -77,11 +77,11 @@ typedef struct {
     size_t scale_degree_count;
     const int *root_relative_intervals;
     size_t interval_count;
-} ChordIdentificationInput;
+} ChainSubsetChordInput;
 
 /*
  * Conforms to AnalyzerFn (analysis/analyzer.h): input MUST point to a
- * ChordIdentificationInput with a non-NULL sonority, a non-NULL
+ * ChainSubsetChordInput with a non-NULL sonority, a non-NULL
  * framework, and at least one of (scale_degrees, scale_degree_count) or
  * (root_relative_intervals, interval_count) populated; context and
  * config are accepted per the interface but unused (chord matching
@@ -102,9 +102,9 @@ typedef struct {
  * not match any of its four diatonic seventh-chord qualities -- this
  * analyzer does not force a bad match.
  */
-AnalyzerResult chord_identification_analyze(const void *input, const Context *context, const Value *config,
+AnalyzerResult chain_subset_chord_analyze(const void *input, const Context *context, const Value *config,
                                              AnalysisResult **out);
 
-extern const Analyzer CHORD_IDENTIFICATION_ANALYZER;
+extern const Analyzer CHAIN_SUBSET_CHORD_ANALYZER;
 
 #endif

@@ -17,7 +17,7 @@
 /*
  * SonorityBuilder: derives Sonority objects (semantics/sonority.h) from
  * raw NoteEvents by onset/release activity tracking, so chord
- * identification (analysis/chord_identification.h) has a real Sonority
+ * identification (ursatz_chain/subset_chord_analyzer.h) has a real Sonority
  * to consume instead of requiring the caller to hand-assemble one.
  *
  * SCOPE (System Registry, Problem A only): each NoteEvent is modeled as

@@ -1,4 +1,4 @@
-#include "analysis/chord_identification.h"
+#include "ursatz_chain/subset_chord_analyzer.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -12,7 +12,7 @@
 #include "seventh_identification.h"
 #include "triad_identification.h"
 
-AnalyzerResult chord_identification_analyze(const void *input, const Context *context, const Value *config,
+AnalyzerResult chain_subset_chord_analyze(const void *input, const Context *context, const Value *config,
                                              AnalysisResult **out) {
     (void)context;
     (void)config;
@@ -24,7 +24,7 @@ AnalyzerResult chord_identification_analyze(const void *input, const Context *co
         return ANALYZER_ERR_NULL_OUT;
     }
 
-    const ChordIdentificationInput *analysis_input = (const ChordIdentificationInput *)input;
+    const ChainSubsetChordInput *analysis_input = (const ChainSubsetChordInput *)input;
     bool has_scale_degrees = analysis_input->scale_degrees != NULL && analysis_input->scale_degree_count != 0;
     bool has_intervals = analysis_input->root_relative_intervals != NULL && analysis_input->interval_count != 0;
     if (analysis_input->sonority == NULL || analysis_input->framework == NULL ||
@@ -105,4 +105,4 @@ AnalyzerResult chord_identification_analyze(const void *input, const Context *co
     return ANALYZER_OK;
 }
 
-const Analyzer CHORD_IDENTIFICATION_ANALYZER = {"ChordIdentification", chord_identification_analyze};
+const Analyzer CHAIN_SUBSET_CHORD_ANALYZER = {"ChordIdentification", chain_subset_chord_analyze};

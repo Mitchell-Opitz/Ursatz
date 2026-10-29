@@ -1,5 +1,5 @@
-#ifndef MUSIC_ANALYSIS_KEY_ESTIMATION_H
-#define MUSIC_ANALYSIS_KEY_ESTIMATION_H
+#ifndef URSATZ_CHAIN_KEY_COLLECTION_ANALYZER_H
+#define URSATZ_CHAIN_KEY_COLLECTION_ANALYZER_H
 
 /*
  * Not the key identification owner (key_regions_estimate). Moves into the chain in P22
@@ -21,7 +21,7 @@
  * analyzer.h).
  *
  * Key estimation is framework-relative the same way chord
- * identification is (analysis/chord_identification.h). KeyEstimation is
+ * identification is (ursatz_chain/subset_chord_analyzer.h). KeyEstimation is
  * now wired to a real Theory Framework instance --
  * frameworks/common-practice-minimal/ -- so it produces a real,
  * populated Key (interpretation/key.h, L6) rather than a bare
@@ -63,11 +63,11 @@ typedef struct {
     const char *tonic_name;
     const int *tonic_relative_pitch_classes;
     size_t pitch_class_count;
-} KeyEstimationInput;
+} ChainKeyCollectionInput;
 
 /*
  * Conforms to AnalyzerFn (analysis/analyzer.h): input MUST point to a
- * KeyEstimationInput with a non-NULL region, a non-NULL framework, a
+ * ChainKeyCollectionInput with a non-NULL region, a non-NULL framework, a
  * non-empty tonic_name, and at least one pitch class; context and
  * config are accepted per the interface but unused (key estimation
  * needs neither yet).
@@ -87,9 +87,9 @@ typedef struct {
  * under common-practice-minimal-v1 -- this analyzer does not force a
  * bad match.
  */
-AnalyzerResult key_estimation_analyze(const void *input, const Context *context, const Value *config,
+AnalyzerResult chain_key_collection_analyze(const void *input, const Context *context, const Value *config,
                                        AnalysisResult **out);
 
-extern const Analyzer KEY_ESTIMATION_ANALYZER;
+extern const Analyzer CHAIN_KEY_COLLECTION_ANALYZER;
 
 #endif

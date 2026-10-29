@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "analysis/chord_identification.h"
+#include "ursatz_chain/subset_chord_analyzer.h"
 #include "core/value.h"
 #include "identity/entity_id.h"
 #include "interpretation/evidence.h"
@@ -52,10 +52,10 @@ static Sonority *make_sonority(const char *event_id_value) {
 static void check_triad(Framework *framework, const int *degrees, size_t degree_count, const char *expected_label,
                          const char *sonority_event_id) {
     Sonority *sonority = make_sonority(sonority_event_id);
-    ChordIdentificationInput input = {sonority, framework, degrees, degree_count, NULL, 0};
+    ChainSubsetChordInput input = {sonority, framework, degrees, degree_count, NULL, 0};
 
     AnalysisResult *result;
-    assert(CHORD_IDENTIFICATION_ANALYZER.analyze(&input, NULL, NULL, &result) == ANALYZER_OK);
+    assert(CHAIN_SUBSET_CHORD_ANALYZER.analyze(&input, NULL, NULL, &result) == ANALYZER_OK);
     assert(analysis_result_interpretation_count(result) == 1);
     assert(analysis_result_evidence_count(result) == 1);
 
@@ -74,10 +74,10 @@ static void check_triad(Framework *framework, const int *degrees, size_t degree_
 static void check_seventh(Framework *framework, const int *intervals, size_t interval_count,
                            const char *expected_label, const char *sonority_event_id) {
     Sonority *sonority = make_sonority(sonority_event_id);
-    ChordIdentificationInput input = {sonority, framework, NULL, 0, intervals, interval_count};
+    ChainSubsetChordInput input = {sonority, framework, NULL, 0, intervals, interval_count};
 
     AnalysisResult *result;
-    assert(CHORD_IDENTIFICATION_ANALYZER.analyze(&input, NULL, NULL, &result) == ANALYZER_OK);
+    assert(CHAIN_SUBSET_CHORD_ANALYZER.analyze(&input, NULL, NULL, &result) == ANALYZER_OK);
     assert(analysis_result_interpretation_count(result) == 1);
     assert(analysis_result_evidence_count(result) == 1);
 
@@ -96,9 +96,9 @@ static void check_seventh(Framework *framework, const int *intervals, size_t int
 int main(void) {
     /* Behavioral contract: NULL input is rejected without touching *out. */
     AnalysisResult *untouched = (AnalysisResult *)0x1;
-    assert(CHORD_IDENTIFICATION_ANALYZER.analyze(NULL, NULL, NULL, &untouched) == ANALYZER_ERR_NULL_INPUT);
+    assert(CHAIN_SUBSET_CHORD_ANALYZER.analyze(NULL, NULL, NULL, &untouched) == ANALYZER_ERR_NULL_INPUT);
     assert(untouched == (AnalysisResult *)0x1);
-    assert(strcmp(CHORD_IDENTIFICATION_ANALYZER.name, "ChordIdentification") == 0);
+    assert(strcmp(CHAIN_SUBSET_CHORD_ANALYZER.name, "ChordIdentification") == 0);
 
     Framework *framework;
     assert(framework_create(make_id("framework-common-practice-minimal"), "common-practice-minimal-v1",
@@ -108,21 +108,21 @@ int main(void) {
     int degrees[] = {1, 3, 5};
 
     /* Behavioral contract: a NULL sonority is rejected. */
-    ChordIdentificationInput no_sonority_input = {NULL, framework, degrees, 3};
+    ChainSubsetChordInput no_sonority_input = {NULL, framework, degrees, 3};
     AnalysisResult *no_sonority_result;
-    assert(chord_identification_analyze(&no_sonority_input, NULL, NULL, &no_sonority_result) ==
+    assert(chain_subset_chord_analyze(&no_sonority_input, NULL, NULL, &no_sonority_result) ==
            ANALYZER_ERR_NULL_INPUT);
 
     /* Behavioral contract: a NULL framework is rejected. */
-    ChordIdentificationInput no_framework_input = {sonority, NULL, degrees, 3};
+    ChainSubsetChordInput no_framework_input = {sonority, NULL, degrees, 3};
     AnalysisResult *no_framework_result;
-    assert(chord_identification_analyze(&no_framework_input, NULL, NULL, &no_framework_result) ==
+    assert(chain_subset_chord_analyze(&no_framework_input, NULL, NULL, &no_framework_result) ==
            ANALYZER_ERR_NULL_INPUT);
 
     /* Behavioral contract: an empty scale-degree set is rejected. */
-    ChordIdentificationInput no_degrees_input = {sonority, framework, NULL, 0};
+    ChainSubsetChordInput no_degrees_input = {sonority, framework, NULL, 0};
     AnalysisResult *no_degrees_result;
-    assert(chord_identification_analyze(&no_degrees_input, NULL, NULL, &no_degrees_result) == ANALYZER_ERR_NULL_INPUT);
+    assert(chain_subset_chord_analyze(&no_degrees_input, NULL, NULL, &no_degrees_result) == ANALYZER_ERR_NULL_INPUT);
 
     sonority_destroy(sonority);
 
@@ -146,9 +146,9 @@ int main(void) {
        failed analysis, never a forced guess. */
     Sonority *no_match_sonority = make_sonority("sonority-no-match");
     int no_match_degrees[] = {1, 2, 4};
-    ChordIdentificationInput no_match_input = {no_match_sonority, framework, no_match_degrees, 3, NULL, 0};
+    ChainSubsetChordInput no_match_input = {no_match_sonority, framework, no_match_degrees, 3, NULL, 0};
     AnalysisResult *no_match_result;
-    assert(chord_identification_analyze(&no_match_input, NULL, NULL, &no_match_result) ==
+    assert(chain_subset_chord_analyze(&no_match_input, NULL, NULL, &no_match_result) ==
            ANALYZER_ERR_ANALYSIS_FAILED);
     sonority_destroy(no_match_sonority);
 
@@ -167,10 +167,10 @@ int main(void) {
        guess. */
     Sonority *no_seventh_match_sonority = make_sonority("sonority-no-seventh-match");
     int no_seventh_match_intervals[] = {0, 3, 6, 9};
-    ChordIdentificationInput no_seventh_match_input = {
+    ChainSubsetChordInput no_seventh_match_input = {
         no_seventh_match_sonority, framework, NULL, 0, no_seventh_match_intervals, 4};
     AnalysisResult *no_seventh_match_result;
-    assert(chord_identification_analyze(&no_seventh_match_input, NULL, NULL, &no_seventh_match_result) ==
+    assert(chain_subset_chord_analyze(&no_seventh_match_input, NULL, NULL, &no_seventh_match_result) ==
            ANALYZER_ERR_ANALYSIS_FAILED);
     sonority_destroy(no_seventh_match_sonority);
 

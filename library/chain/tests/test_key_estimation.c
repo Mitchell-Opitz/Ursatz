@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "analysis/key_estimation.h"
+#include "ursatz_chain/key_collection_analyzer.h"
 #include "core/entity.h"
 #include "core/provenance_reference.h"
 #include "core/value.h"
@@ -49,9 +49,9 @@ static Structure *make_region(const char *id_value, const char *event_id_value) 
 int main(void) {
     /* Behavioral contract: NULL input is rejected without touching *out. */
     AnalysisResult *untouched = (AnalysisResult *)0x1;
-    assert(KEY_ESTIMATION_ANALYZER.analyze(NULL, NULL, NULL, &untouched) == ANALYZER_ERR_NULL_INPUT);
+    assert(CHAIN_KEY_COLLECTION_ANALYZER.analyze(NULL, NULL, NULL, &untouched) == ANALYZER_ERR_NULL_INPUT);
     assert(untouched == (AnalysisResult *)0x1);
-    assert(strcmp(KEY_ESTIMATION_ANALYZER.name, "KeyEstimation") == 0);
+    assert(strcmp(CHAIN_KEY_COLLECTION_ANALYZER.name, "KeyEstimation") == 0);
 
     Framework *framework;
     assert(framework_create(make_id("framework-common-practice-minimal"), "common-practice-minimal-v1", &framework) ==
@@ -62,33 +62,33 @@ int main(void) {
     Structure *no_region_check_region = make_region("structure-unused", "note-unused");
 
     /* Behavioral contract: a NULL region is rejected. */
-    KeyEstimationInput no_region_input = {NULL, framework, "C", c_major, 7};
+    ChainKeyCollectionInput no_region_input = {NULL, framework, "C", c_major, 7};
     AnalysisResult *no_region_result;
-    assert(key_estimation_analyze(&no_region_input, NULL, NULL, &no_region_result) == ANALYZER_ERR_NULL_INPUT);
+    assert(chain_key_collection_analyze(&no_region_input, NULL, NULL, &no_region_result) == ANALYZER_ERR_NULL_INPUT);
 
     /* Behavioral contract: a NULL framework is rejected. */
-    KeyEstimationInput no_framework_input = {no_region_check_region, NULL, "C", c_major, 7};
+    ChainKeyCollectionInput no_framework_input = {no_region_check_region, NULL, "C", c_major, 7};
     AnalysisResult *no_framework_result;
-    assert(key_estimation_analyze(&no_framework_input, NULL, NULL, &no_framework_result) == ANALYZER_ERR_NULL_INPUT);
+    assert(chain_key_collection_analyze(&no_framework_input, NULL, NULL, &no_framework_result) == ANALYZER_ERR_NULL_INPUT);
 
     /* Behavioral contract: a missing tonic name is rejected. */
-    KeyEstimationInput no_tonic_input = {no_region_check_region, framework, NULL, c_major, 7};
+    ChainKeyCollectionInput no_tonic_input = {no_region_check_region, framework, NULL, c_major, 7};
     AnalysisResult *no_tonic_result;
-    assert(key_estimation_analyze(&no_tonic_input, NULL, NULL, &no_tonic_result) == ANALYZER_ERR_NULL_INPUT);
+    assert(chain_key_collection_analyze(&no_tonic_input, NULL, NULL, &no_tonic_result) == ANALYZER_ERR_NULL_INPUT);
 
     /* Behavioral contract: an empty pitch-class set is rejected. */
-    KeyEstimationInput no_pitch_classes_input = {no_region_check_region, framework, "C", NULL, 0};
+    ChainKeyCollectionInput no_pitch_classes_input = {no_region_check_region, framework, "C", NULL, 0};
     AnalysisResult *no_pitch_classes_result;
-    assert(key_estimation_analyze(&no_pitch_classes_input, NULL, NULL, &no_pitch_classes_result) ==
+    assert(chain_key_collection_analyze(&no_pitch_classes_input, NULL, NULL, &no_pitch_classes_result) ==
            ANALYZER_ERR_NULL_INPUT);
 
     structure_destroy(no_region_check_region);
 
     /* Identification: a real major key. */
     Structure *major_region = make_region("structure-c-major", "note-c-major-1");
-    KeyEstimationInput major_input = {major_region, framework, "C", c_major, 7};
+    ChainKeyCollectionInput major_input = {major_region, framework, "C", c_major, 7};
     AnalysisResult *major_result;
-    assert(KEY_ESTIMATION_ANALYZER.analyze(&major_input, NULL, NULL, &major_result) == ANALYZER_OK);
+    assert(CHAIN_KEY_COLLECTION_ANALYZER.analyze(&major_input, NULL, NULL, &major_result) == ANALYZER_OK);
     assert(analysis_result_interpretation_count(major_result) == 1);
     assert(analysis_result_evidence_count(major_result) == 1);
 
@@ -107,9 +107,9 @@ int main(void) {
     /* Identification: a real minor key. */
     int a_minor[] = {0, 2, 3, 5, 7, 8, 10};
     Structure *minor_region = make_region("structure-a-minor", "note-a-minor-1");
-    KeyEstimationInput minor_input = {minor_region, framework, "A", a_minor, 7};
+    ChainKeyCollectionInput minor_input = {minor_region, framework, "A", a_minor, 7};
     AnalysisResult *minor_result;
-    assert(KEY_ESTIMATION_ANALYZER.analyze(&minor_input, NULL, NULL, &minor_result) == ANALYZER_OK);
+    assert(CHAIN_KEY_COLLECTION_ANALYZER.analyze(&minor_input, NULL, NULL, &minor_result) == ANALYZER_OK);
 
     const Interpretation *minor_interpretation = analysis_result_interpretation_at(minor_result, 0);
     size_t minor_claim_size;
@@ -124,9 +124,9 @@ int main(void) {
        analysis, never a forced guess. */
     int chromatic_cluster[] = {0, 1, 2, 3, 4, 5, 6};
     Structure *no_match_region = make_region("structure-no-match", "note-no-match-1");
-    KeyEstimationInput no_match_input = {no_match_region, framework, "C", chromatic_cluster, 7};
+    ChainKeyCollectionInput no_match_input = {no_match_region, framework, "C", chromatic_cluster, 7};
     AnalysisResult *no_match_result;
-    assert(key_estimation_analyze(&no_match_input, NULL, NULL, &no_match_result) == ANALYZER_ERR_ANALYSIS_FAILED);
+    assert(chain_key_collection_analyze(&no_match_input, NULL, NULL, &no_match_result) == ANALYZER_ERR_ANALYSIS_FAILED);
     structure_destroy(no_match_region);
 
     framework_destroy(framework);

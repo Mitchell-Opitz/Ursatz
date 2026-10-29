@@ -21,7 +21,7 @@
  * Input shape: PitchIdentity (pitch/pitch_identity.h) carries no
  * numeric semantics yet, and Sonority (semantics/sonority.h) never
  * resolves its event_ids to actual pitch content -- the same limitation
- * analysis/chord_identification.c already documents ("candidate chord
+ * ursatz_chain/subset_chord_analyzer.c already documents ("candidate chord
  * labels and their fit weights are supplied already computed by
  * whoever has the tuning-system and framework knowledge to measure
  * them"). Following that precedent, this module takes caller-supplied
