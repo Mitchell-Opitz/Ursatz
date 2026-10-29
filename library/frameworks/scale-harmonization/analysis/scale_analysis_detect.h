@@ -1,11 +1,11 @@
 #ifndef URSATZ_FRAMEWORKS_SCALE_HARMONIZATION_ANALYSIS_SCALE_ANALYSIS_DETECT_H
 #define URSATZ_FRAMEWORKS_SCALE_HARMONIZATION_ANALYSIS_SCALE_ANALYSIS_DETECT_H
 
-#include "galant_analysis_input.h"
+#include "galant-schemas/analysis/galant_analysis_input.h"
 #include "interpretation/interpretation.h"
 #include "relationship/relationship.h"
-#include "scale_patterns.h"
-#include "sequence_kind.h"
+#include "scale-harmonization/scale_patterns.h"
+#include "scale-harmonization/sequence_kind.h"
 
 /*
  * Sequence detection (the scale-harmonization adapter): harmonic sequences found in the outer voices and Roman numerals of a run of segments,

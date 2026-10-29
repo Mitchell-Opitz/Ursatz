@@ -48,6 +48,10 @@ static int check_file(const char *path) {
         }
         *end = '\0';
 
+        if (strncmp(start, "galant-schemas/", 15) == 0) {
+            continue; /* same-framework header, by its public path */
+        }
+
         if (strchr(start, '/') == NULL) {
             continue; /* same-module header */
         }

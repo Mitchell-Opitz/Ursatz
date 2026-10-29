@@ -9,7 +9,7 @@
 #include "interpretation/evidence.h"
 #include "interpretation/interpretation.h"
 #include "interpretation/key.h"
-#include "key_identification.h"
+#include "common-practice-minimal/key_identification.h"
 
 AnalyzerResult chain_key_collection_analyze(const void *input, const Context *context, const Value *config,
                                        AnalysisResult **out) {

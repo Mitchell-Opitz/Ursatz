@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "galant_degree.h"
+#include "galant-schemas/galant_degree.h"
 #include "semantics/analysis_key.h"
 #include "semantics/analysis_segment.h"
 #include "semantics/beat_strength.h"

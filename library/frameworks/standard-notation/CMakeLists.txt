@@ -15,9 +15,11 @@ add_library(standard_notation
     enharmonic_rules.c
     key_signature_rules.c
 )
-target_include_directories(standard_notation PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PROJECT_SOURCE_DIR}/src
+# No app, chain or framework source includes a header of standard-notation yet, so nothing is public (R-223).
+ursatz_public_headers(standard_notation
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX standard-notation
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(standard_notation PUBLIC ursatz)
 

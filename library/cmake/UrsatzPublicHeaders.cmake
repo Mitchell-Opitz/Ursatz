@@ -5,7 +5,7 @@
 #       BASE <dir>                 directory the HEADERS are relative to
 #       [PREFIX <prefix>]          folder the headers are staged under (none: the BASE layout)
 #       [SOURCE_DIRS <dir>...]     the target's source directories (PRIVATE)
-#       HEADERS <relative path>...)
+#       [HEADERS <relative path>...])   none: the target has no public header yet
 #
 # Each header is copied to ${PROJECT_BINARY_DIR}/public/<target>/<prefix>/<path>
 # and ${PROJECT_BINARY_DIR}/public/<target> becomes a PUBLIC include directory.
@@ -19,12 +19,13 @@
 #   URSATZ_SOURCE_DIRS     the source directories
 function(ursatz_public_headers target)
     cmake_parse_arguments(ARG "" "BASE;PREFIX" "HEADERS;SOURCE_DIRS" ${ARGN})
-    if(NOT ARG_BASE OR NOT ARG_HEADERS)
-        message(FATAL_ERROR "ursatz_public_headers(${target}): BASE and HEADERS are required")
+    if(NOT ARG_BASE)
+        message(FATAL_ERROR "ursatz_public_headers(${target}): BASE is required")
     endif()
 
     set(root "${PROJECT_BINARY_DIR}/public/${target}")
     set(staged "")
+    file(MAKE_DIRECTORY "${root}")
     foreach(header IN LISTS ARG_HEADERS)
         if(ARG_PREFIX)
             set(as_included "${ARG_PREFIX}/${header}")

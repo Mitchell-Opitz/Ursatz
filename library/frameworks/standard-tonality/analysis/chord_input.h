@@ -6,7 +6,7 @@
 
 #include "interpretation/chord.h"
 #include "interpretation/key.h"
-#include "roman_numeral_analysis_rules.h"
+#include "standard-tonality/roman_numeral_analysis_rules.h"
 #include "time/musical_time.h"
 
 /*

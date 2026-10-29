@@ -5,10 +5,10 @@
 #include <string.h>
 #include "../integration/reference_pieces.h"
 
-#include "applied_chords.h"
-#include "chord_input.h"
-#include "key_regions.h"
-#include "roman_numeral_adapter.h"
+#include "standard-tonality/analysis/applied_chords.h"
+#include "standard-tonality/analysis/chord_input.h"
+#include "common-practice-minimal/key_regions.h"
+#include "standard-tonality/analysis/roman_numeral_adapter.h"
 #include "time/note_value.h"
 #include "time/time_signature.h"
 #include "weighted_pipeline.h"

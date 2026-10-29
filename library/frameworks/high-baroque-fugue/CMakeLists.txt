@@ -8,10 +8,11 @@ add_library(high_baroque_fugue
     fugue_rules.c
     fugue_role.c
 )
-target_include_directories(high_baroque_fugue PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PROJECT_SOURCE_DIR}/frameworks
-    ${PROJECT_SOURCE_DIR}/src
+# No app, chain or framework source includes a header of high-baroque-fugue yet, so nothing is public (R-223).
+ursatz_public_headers(high_baroque_fugue
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX high-baroque-fugue
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(high_baroque_fugue PUBLIC standard_counterpoint ursatz)
 

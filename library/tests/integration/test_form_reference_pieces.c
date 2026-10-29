@@ -28,15 +28,15 @@
 #include "test_cadences_reference_pieces.c"
 #undef main
 
-#include "analysis_expansion.h"
-#include "analysis_ideas.h"
-#include "analysis_phrase.h"
-#include "analysis_theme.h"
+#include "standard-form/analysis/analysis_expansion.h"
+#include "standard-form/analysis/analysis_ideas.h"
+#include "standard-form/analysis/analysis_phrase.h"
+#include "standard-form/analysis/analysis_theme.h"
 #include "ursatz_chain/form_bridge.h"
 #include "hand_cadences.h"
-#include "analysis_input.h"
-#include "harmony_cadence_rules.h"
-#include "phrase_level_form.h"
+#include "standard-form/analysis/analysis_input.h"
+#include "standard-harmony/harmony_cadence_rules.h"
+#include "standard-form/phrase_level_form.h"
 
 #define FORM_TARGET_BOUNDARIES 0.80
 #define FORM_TARGET_THEMES 0.70

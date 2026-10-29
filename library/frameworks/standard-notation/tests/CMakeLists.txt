@@ -1,3 +1,5 @@
+ursatz_test_includes()
+
 add_executable(test_standard_notation_framework test_framework.c)
 target_link_libraries(test_standard_notation_framework PRIVATE standard_notation)
 add_test(NAME standard_notation_framework COMMAND test_standard_notation_framework)

@@ -39,10 +39,24 @@ add_library(standard_tonality
     analysis/roman_numeral_adapter.c
     analysis/applied_chords.c
 )
-target_include_directories(standard_tonality PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
-    ${PROJECT_SOURCE_DIR}/src
+# Public headers (R-223), staged under standard-tonality/ in the build tree; the source directories are private.
+ursatz_public_headers(standard_tonality
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX standard-tonality
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/analysis
+    HEADERS
+        analysis/applied_chords.h
+        analysis/chord_input.h
+        analysis/roman_numeral_adapter.h
+        chord_symbol_rules.h
+        interval_quality_rules.h
+        minor_scale_rules.h
+        roman_numeral_analysis_rules.h
+        roman_numeral_grammar.h
+        roman_numeral_rules.h
+        seventh_rules.h
+        tonal_key.h
+        triad_rules.h
 )
 target_link_libraries(standard_tonality PUBLIC ursatz)
 

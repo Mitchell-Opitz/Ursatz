@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "interpretation/chord.h"
-#include "outer_scale_degrees.h"
-#include "segmentation_beat_grid.h"
+#include "common-practice-minimal/outer_scale_degrees.h"
+#include "standard-meter/segmentation_beat_grid.h"
 #include "time/time_span.h"
 #include "ursatz_chain/form_bridge.h"
 #include "ursatz_chain/kernel_owners.h"

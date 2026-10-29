@@ -1,3 +1,5 @@
+ursatz_test_includes()
+
 add_executable(test_sixteenth_century_framework test_framework.c)
 target_link_libraries(test_sixteenth_century_framework PRIVATE sixteenth_century_style)
 add_test(NAME sixteenth_century_framework COMMAND test_sixteenth_century_framework)

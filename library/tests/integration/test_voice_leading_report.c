@@ -1,6 +1,6 @@
-#include "analysis_motion.h"
-#include "analysis_perfects.h"
-#include "analysis_resolution.h"
+#include "standard-counterpoint/analysis/analysis_motion.h"
+#include "standard-counterpoint/analysis/analysis_perfects.h"
+#include "standard-harmony/analysis/analysis_resolution.h"
 #include "voice_leading_util.h"
 
 /*

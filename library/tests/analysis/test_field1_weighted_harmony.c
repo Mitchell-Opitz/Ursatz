@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "weighted_pipeline.h"
-#include "metric_position_rules.h"
+#include "standard-meter/metric_position_rules.h"
 #include "../rational_test_util.h"
 
 /*

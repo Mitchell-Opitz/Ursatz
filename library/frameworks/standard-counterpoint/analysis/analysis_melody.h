@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "counterpoint_interval.h"
+#include "standard-counterpoint/counterpoint_interval.h"
 #include "interpretation/interpretation.h"
 #include "pitch/pitch_identity.h"
 #include "pitch/pitch_numeric_value.h"

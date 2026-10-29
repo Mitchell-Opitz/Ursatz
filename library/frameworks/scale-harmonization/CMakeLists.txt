@@ -10,11 +10,17 @@ add_library(scale_harmonization
     scale_direction.c
     sequence_kind.c
 )
-target_include_directories(scale_harmonization PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
-    ${PROJECT_SOURCE_DIR}/frameworks
-    ${PROJECT_SOURCE_DIR}/src
+# Public headers (R-223), staged under scale-harmonization/ in the build tree; the source directories are private.
+ursatz_public_headers(scale_harmonization
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX scale-harmonization
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/analysis
+    HEADERS
+        analysis/scale_analysis_detect.h
+        scale_direction.h
+        scale_framework.h
+        scale_patterns.h
+        sequence_kind.h
 )
 target_link_libraries(scale_harmonization PUBLIC galant_schemas standard_counterpoint ursatz)
 

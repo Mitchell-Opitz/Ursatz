@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "identity/entity_id.h"
-#include "roman_numeral_adapter.h"
+#include "standard-tonality/analysis/roman_numeral_adapter.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
 #include "time/note_value.h"

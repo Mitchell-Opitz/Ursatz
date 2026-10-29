@@ -3,7 +3,7 @@
 #include <string.h>
 
 #include "harmony_applied.h"
-#include "roman_numeral_grammar.h"
+#include "standard-tonality/roman_numeral_grammar.h"
 
 /*
  * harmony_applied_label keeps its own formatter (standard-harmony does not depend on standard-tonality). This

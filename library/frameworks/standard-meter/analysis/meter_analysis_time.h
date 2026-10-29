@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #include "meter_analysis_input.h"
-#include "metric_position_rules.h"
+#include "standard-meter/metric_position_rules.h"
 
 /*
  * Internal to the rhythm adapter: exact times, the measure arithmetic over a MeterMap, and the metric reading of a time. A

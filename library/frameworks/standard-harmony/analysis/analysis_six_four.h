@@ -6,7 +6,7 @@
 
 #include "analysis_input.h"
 #include "interpretation/interpretation.h"
-#include "six_four_type.h"
+#include "standard-harmony/six_four_type.h"
 
 /*
  * 6/4 chords (the standard-harmony analysis adapter, step 3). Every valid diatonic segment that is a triad in

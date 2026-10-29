@@ -1,3 +1,5 @@
+ursatz_test_includes()
+
 add_executable(test_western_periods_framework test_framework.c)
 target_link_libraries(test_western_periods_framework PRIVATE western_periods)
 add_test(NAME western_periods_framework COMMAND test_western_periods_framework)

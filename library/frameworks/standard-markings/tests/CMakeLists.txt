@@ -1,3 +1,5 @@
+ursatz_test_includes()
+
 add_executable(test_standard_markings_framework test_framework.c)
 target_link_libraries(test_standard_markings_framework PRIVATE standard_markings)
 add_test(NAME standard_markings_framework COMMAND test_standard_markings_framework)
