@@ -280,6 +280,7 @@ ursatz_public_headers(ursatz
         interpretation/scale_degree.h
         interpretation/texture.h
         interpretation/uncertainty.h
+        io/import_notes.h
         io/midi_importer.h
         io/midi_key_signature.h
         io/midi_renderer.h
