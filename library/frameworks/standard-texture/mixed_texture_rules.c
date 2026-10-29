@@ -13,29 +13,21 @@
 static const char *const NAMES[STANDARD_TEXTURE_MIXED_RULE_COUNT] = {"mixed-texture-segments", "mixed-texture-changes",
                                                                       "mixed-texture-label"};
 
-static StandardTextureRulePair g_pairs[STANDARD_TEXTURE_MIXED_RULE_COUNT];
-static bool g_built[STANDARD_TEXTURE_MIXED_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_texture_framework, "standard-texture",
+    NAMES, STANDARD_TEXTURE_MIXED_RULE_COUNT);
 
 static bool valid_rule(StandardTextureMixedRule which) {
     return which >= 0 && which < STANDARD_TEXTURE_MIXED_RULE_COUNT;
 }
 
-static void ensure_built(StandardTextureMixedRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_texture_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_texture_mixed_rule(StandardTextureMixedRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_texture_mixed_constraint(StandardTextureMixedRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 bool standard_texture_segments_valid(const StandardTextureSegment *segments, size_t count) {

@@ -31,3 +31,7 @@ void ursatz_once(UrsatzOnce *once, void (*init)(void *arg), void *arg) {
     }
     pthread_mutex_unlock(&g_mutex);
 }
+
+bool ursatz_once_is_done(const UrsatzOnce *once) {
+    return once != NULL && atomic_load_explicit(&((UrsatzOnce *)once)->state, memory_order_acquire) == ONCE_DONE;
+}

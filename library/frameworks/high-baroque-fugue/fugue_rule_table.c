@@ -18,16 +18,27 @@ bool fugue_rule_table_never_hard(int which) {
     return false;
 }
 
-static void ensure_built(const FugueRuleTable *table, int which) {
-    if (!fugue_rule_table_valid(table, which) || table->built[which]) {
-        return;
-    }
-    table->built[which] = true;
+typedef struct {
+    const FugueRuleTable *table;
+    int which;
+} BuildPairArg;
+
+static void build_pair(void *arg) {
+    const FugueRuleTable *table = ((const BuildPairArg *)arg)->table;
+    int which = ((const BuildPairArg *)arg)->which;
     char name[96];
     snprintf(name, sizeof(name), "%s-%s", table->prefix, table->names[which]);
     fugue_build_rule_pair(
         name, fugue_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
         &table->pairs[which]);
+}
+
+static void ensure_built(const FugueRuleTable *table, int which) {
+    if (!fugue_rule_table_valid(table, which)) {
+        return;
+    }
+    BuildPairArg arg = {table, which};
+    ursatz_once(&table->built[which], build_pair, &arg);
 }
 
 const Rule *fugue_rule_table_rule(const FugueRuleTable *table, int which) {

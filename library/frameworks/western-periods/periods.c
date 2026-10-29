@@ -8,29 +8,21 @@
 
 static const char *const NAMES[WESTERN_PERIODS_RULE_COUNT] = {"period-boundaries", "period-overlap"};
 
-static WesternPeriodsRulePair g_pairs[WESTERN_PERIODS_RULE_COUNT];
-static bool g_built[WESTERN_PERIODS_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(western_periods_framework, "western-periods",
+    NAMES, WESTERN_PERIODS_RULE_COUNT);
 
 static bool valid_rule(WesternPeriodsRule which) {
     return which >= 0 && which < WESTERN_PERIODS_RULE_COUNT;
 }
 
-static void ensure_built(WesternPeriodsRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    western_periods_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *western_periods_rule(WesternPeriodsRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *western_periods_constraint(WesternPeriodsRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 typedef struct {

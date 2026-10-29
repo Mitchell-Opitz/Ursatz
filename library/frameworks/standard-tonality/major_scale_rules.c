@@ -8,29 +8,21 @@
 static const char *const NAMES[STANDARD_TONALITY_MAJOR_SCALE_RULE_COUNT] = {"major-scale-step-pattern",
                                                                              "major-scale-named-by-tonic"};
 
-static StandardTonalityRulePair g_pairs[STANDARD_TONALITY_MAJOR_SCALE_RULE_COUNT];
-static bool g_built[STANDARD_TONALITY_MAJOR_SCALE_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
+    NAMES, STANDARD_TONALITY_MAJOR_SCALE_RULE_COUNT);
 
 static bool valid_rule(StandardTonalityMajorScaleRule which) {
     return which >= 0 && which < STANDARD_TONALITY_MAJOR_SCALE_RULE_COUNT;
 }
 
-static void ensure_built(StandardTonalityMajorScaleRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_tonality_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_tonality_major_scale_rule(StandardTonalityMajorScaleRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_tonality_major_scale_constraint(StandardTonalityMajorScaleRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 static const int STEPS[STANDARD_TONALITY_MAJOR_SCALE_STEP_COUNT] = {2, 2, 1, 2, 2, 2, 1};

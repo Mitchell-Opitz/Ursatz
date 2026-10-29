@@ -2,6 +2,7 @@
 #define URSATZ_CORE_ONCE_H
 
 #include <stdatomic.h>
+#include <stdbool.h>
 
 /*
  * One-time initialization that is safe when several threads make their first call at the same time. Declare a
@@ -20,5 +21,8 @@ typedef struct {
 #define URSATZ_ONCE_INIT {0}
 
 void ursatz_once(UrsatzOnce *once, void (*init)(void *arg), void *arg);
+
+/* True once `init` has finished for this UrsatzOnce (acquire load). */
+bool ursatz_once_is_done(const UrsatzOnce *once);
 
 #endif

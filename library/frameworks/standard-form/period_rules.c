@@ -13,29 +13,21 @@ static const char *const NAMES[STANDARD_FORM_PERIOD_RULE_COUNT] = {
     "period-modulation",
     "period-consequent-ideas"};
 
-static StandardFormRulePair g_pairs[STANDARD_FORM_PERIOD_RULE_COUNT];
-static bool g_built[STANDARD_FORM_PERIOD_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
+    NAMES, STANDARD_FORM_PERIOD_RULE_COUNT);
 
 static bool valid_rule(StandardFormPeriodRule which) {
     return which >= 0 && which < STANDARD_FORM_PERIOD_RULE_COUNT;
 }
 
-static void ensure_built(StandardFormPeriodRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_form_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_form_period_rule(StandardFormPeriodRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_form_period_constraint(StandardFormPeriodRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 bool standard_form_phrase_roles_in_order(PhraseRole first, PhraseRole second) {

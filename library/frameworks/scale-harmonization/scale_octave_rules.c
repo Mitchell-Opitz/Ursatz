@@ -13,7 +13,7 @@ static bool table_is_hard(int which) {
 }
 
 static ScaleRulePair g_pairs[SCALE_OCTAVE_RULE_COUNT];
-static bool g_built[SCALE_OCTAVE_RULE_COUNT];
+static UrsatzOnce g_built[SCALE_OCTAVE_RULE_COUNT];
 static const ScaleRuleTable TABLE = {"octave", NAMES, SCALE_OCTAVE_RULE_COUNT, table_is_hard, g_pairs, g_built};
 
 const Rule *scale_octave_rule(ScaleOctaveRule which) {

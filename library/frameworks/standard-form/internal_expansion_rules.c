@@ -11,29 +11,21 @@ static const char *const NAMES[STANDARD_FORM_INTERNAL_EXPANSION_RULE_COUNT] = {
     "internal-expansion-alternative-path",
     "internal-expansion-technique-choice"};
 
-static StandardFormRulePair g_pairs[STANDARD_FORM_INTERNAL_EXPANSION_RULE_COUNT];
-static bool g_built[STANDARD_FORM_INTERNAL_EXPANSION_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
+    NAMES, STANDARD_FORM_INTERNAL_EXPANSION_RULE_COUNT);
 
 static bool valid_rule(StandardFormInternalExpansionRule which) {
     return which >= 0 && which < STANDARD_FORM_INTERNAL_EXPANSION_RULE_COUNT;
 }
 
-static void ensure_built(StandardFormInternalExpansionRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_form_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_form_internal_expansion_rule(StandardFormInternalExpansionRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_form_internal_expansion_constraint(StandardFormInternalExpansionRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 bool standard_form_internal_expansion_inside(size_t beginning_end, size_t cadence_start, size_t position) {

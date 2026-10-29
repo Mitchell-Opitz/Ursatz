@@ -2,6 +2,8 @@
 #define URSATZ_FRAMEWORKS_STANDARD_COUNTERPOINT_RULE_TABLE_H
 
 #include <stdbool.h>
+
+#include "core/once.h"
 #include <stddef.h>
 
 #include "rule_pair.h"
@@ -21,7 +23,7 @@
  * A module defines its table at file scope, with static storage for the cache:
  *
  *   static StandardCounterpointRulePair g_pairs[N];
- *   static bool g_built[N];
+ *   static UrsatzOnce g_built[N];
  *   static const StandardCounterpointRuleTable TABLE = {"prefix", NAMES, N, is_hard, g_pairs, g_built};
  *
  * A pair is built the first time it is asked for, with the id
@@ -60,7 +62,7 @@ typedef struct {
     /* NULL when every rule is hard. */
     StandardCounterpointRuleHard is_hard;
     StandardCounterpointRulePair *pairs;
-    bool *built;
+    UrsatzOnce *built;
     /* NULL when the table registers no evaluation callback. */
     ConstraintEvaluateFn evaluate;
     /* NULL when the table registers no scoring callback. */

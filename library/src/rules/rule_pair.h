@@ -35,8 +35,8 @@ bool rule_pair_build_typed(const Framework *framework, const char *prefix, const
 
 /*
  * A framework's table of rules, built once and safe for concurrent first use. Declare it static with
- * RULE_PAIR_TABLE_INIT(framework_accessor, "<prefix>", NAMES, COUNT) (or RULE_PAIR_TABLE_INIT_TYPED when the rules
- * are not hard), where NAMES holds `count` rule names. The first rule_pair_table_get() from any thread builds every
+ * RULE_PAIR_TABLE_INIT(framework_accessor, "<prefix>", NAMES, COUNT) (RULE_PAIR_TABLE_INIT_TYPED when every rule has one
+ * other type, RULE_PAIR_TABLE_INIT_MIXED with a per-rule type function), where NAMES holds `count` rule names. The first rule_pair_table_get() from any thread builds every
  * pair, ids "<prefix>-rule-<name>" and "<prefix>-constraint-<name>", and caches them for the life of the process.
  */
 typedef struct {
@@ -46,11 +46,15 @@ typedef struct {
     const char *const *names;
     size_t count;
     ConstraintType type;
+    /* NULL when every rule has `type`; otherwise the type of rule number `which`. */
+    ConstraintType (*type_of)(size_t which);
     RulePair *pairs;
 } RulePairTable;
 
 #define RULE_PAIR_TABLE_INIT_TYPED(framework_fn, table_prefix, rule_names, rule_count, constraint_type) \
-    {URSATZ_ONCE_INIT, (framework_fn), (table_prefix), (rule_names), (rule_count), (constraint_type), NULL}
+    {URSATZ_ONCE_INIT, (framework_fn), (table_prefix), (rule_names), (rule_count), (constraint_type), NULL, NULL}
+#define RULE_PAIR_TABLE_INIT_MIXED(framework_fn, table_prefix, rule_names, rule_count, type_fn) \
+    {URSATZ_ONCE_INIT, (framework_fn), (table_prefix), (rule_names), (rule_count), CONSTRAINT_TYPE_HARD, (type_fn), NULL}
 #define RULE_PAIR_TABLE_INIT(framework_fn, table_prefix, rule_names, rule_count) \
     RULE_PAIR_TABLE_INIT_TYPED(framework_fn, table_prefix, rule_names, rule_count, CONSTRAINT_TYPE_HARD)
 

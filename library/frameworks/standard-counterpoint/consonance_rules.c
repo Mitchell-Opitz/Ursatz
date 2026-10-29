@@ -9,7 +9,7 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT] = {
     "consonance-melodic"};
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT];
-static bool g_built[STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT];
+static UrsatzOnce g_built[STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT];
 static const StandardCounterpointRuleTable TABLE = {
     NULL, NAMES, STANDARD_COUNTERPOINT_CONSONANCE_RULE_COUNT, NULL, g_pairs, g_built};
 

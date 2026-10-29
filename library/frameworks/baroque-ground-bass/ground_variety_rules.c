@@ -9,7 +9,7 @@ static const char *const NAMES[GROUND_VARIETY_RULE_COUNT] = {"upper-parts-vary",
                                                              "every-iteration-imitates"};
 
 static GroundRulePair g_pairs[GROUND_VARIETY_RULE_COUNT];
-static bool g_built[GROUND_VARIETY_RULE_COUNT];
+static UrsatzOnce g_built[GROUND_VARIETY_RULE_COUNT];
 static const GroundRuleTable TABLE = {"variety", NAMES, GROUND_VARIETY_RULE_COUNT, ground_rule_table_never_hard,
                                       g_pairs, g_built};
 

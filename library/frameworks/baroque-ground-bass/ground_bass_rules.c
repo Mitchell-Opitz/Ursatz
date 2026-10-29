@@ -11,7 +11,7 @@ static bool table_is_hard(int which) {
 }
 
 static GroundRulePair g_pairs[GROUND_BASS_RULE_COUNT];
-static bool g_built[GROUND_BASS_RULE_COUNT];
+static UrsatzOnce g_built[GROUND_BASS_RULE_COUNT];
 static const GroundRuleTable TABLE = {"ground", NAMES, GROUND_BASS_RULE_COUNT, table_is_hard, g_pairs, g_built};
 
 const Rule *ground_bass_rule(GroundBassRule which) {

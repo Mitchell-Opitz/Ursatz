@@ -58,7 +58,8 @@ static void build_table(void *arg) {
     }
     const Framework *framework = table->framework();
     for (size_t i = 0; i < table->count; i++) {
-        rule_pair_build_typed(framework, table->prefix, table->names[i], table->type, &pairs[i]);
+        ConstraintType type = table->type_of != NULL ? table->type_of(i) : table->type;
+        rule_pair_build_typed(framework, table->prefix, table->names[i], type, &pairs[i]);
     }
     table->pairs = pairs;
 }

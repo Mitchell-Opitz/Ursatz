@@ -11,7 +11,7 @@ static bool table_is_hard(int which) {
 }
 
 static GroundRulePair g_pairs[GROUND_IMITATION_RULE_COUNT];
-static bool g_built[GROUND_IMITATION_RULE_COUNT];
+static UrsatzOnce g_built[GROUND_IMITATION_RULE_COUNT];
 static const GroundRuleTable TABLE = {"imitation", NAMES, GROUND_IMITATION_RULE_COUNT, table_is_hard, g_pairs,
                                       g_built};
 

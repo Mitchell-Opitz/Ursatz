@@ -18,16 +18,27 @@ bool galant_rule_table_never_hard(int which) {
     return false;
 }
 
-static void ensure_built(const GalantRuleTable *table, int which) {
-    if (!galant_rule_table_valid(table, which) || table->built[which]) {
-        return;
-    }
-    table->built[which] = true;
+typedef struct {
+    const GalantRuleTable *table;
+    int which;
+} BuildPairArg;
+
+static void build_pair(void *arg) {
+    const GalantRuleTable *table = ((const BuildPairArg *)arg)->table;
+    int which = ((const BuildPairArg *)arg)->which;
     char name[96];
     snprintf(name, sizeof(name), "%s-%s", table->prefix, table->names[which]);
     galant_build_rule_pair(
         name, galant_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
         &table->pairs[which]);
+}
+
+static void ensure_built(const GalantRuleTable *table, int which) {
+    if (!galant_rule_table_valid(table, which)) {
+        return;
+    }
+    BuildPairArg arg = {table, which};
+    ursatz_once(&table->built[which], build_pair, &arg);
 }
 
 const Rule *galant_rule_table_rule(const GalantRuleTable *table, int which) {

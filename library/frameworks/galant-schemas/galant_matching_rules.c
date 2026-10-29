@@ -12,7 +12,7 @@ static bool table_is_hard(int which) {
 }
 
 static GalantRulePair g_pairs[GALANT_MATCH_RULE_COUNT];
-static bool g_built[GALANT_MATCH_RULE_COUNT];
+static UrsatzOnce g_built[GALANT_MATCH_RULE_COUNT];
 static const GalantRuleTable TABLE = {"matching", NAMES, GALANT_MATCH_RULE_COUNT, table_is_hard, g_pairs, g_built};
 
 const Rule *galant_matching_rule(GalantMatchRule which) {

@@ -7,29 +7,21 @@
 static const char *const NAMES[STANDARD_METER_BEAMING_RULE_COUNT] = {"beaming-beamable", "beaming-notes-per-beat",
                                                                       "beaming-within-beat"};
 
-static StandardMeterRulePair g_pairs[STANDARD_METER_BEAMING_RULE_COUNT];
-static bool g_built[STANDARD_METER_BEAMING_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
+    NAMES, STANDARD_METER_BEAMING_RULE_COUNT);
 
 static bool valid_rule(StandardMeterBeamingRule which) {
     return which >= 0 && which < STANDARD_METER_BEAMING_RULE_COUNT;
 }
 
-static void ensure_built(StandardMeterBeamingRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_meter_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_meter_beaming_rule(StandardMeterBeamingRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_meter_beaming_constraint(StandardMeterBeamingRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 #define EIGHTH_EXPONENT 3

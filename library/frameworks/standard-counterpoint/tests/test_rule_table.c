@@ -17,15 +17,15 @@ static bool is_hard(int which) {
 }
 
 static StandardCounterpointRulePair g_pairs[COUNT];
-static bool g_built[COUNT];
+static UrsatzOnce g_built[COUNT];
 static const StandardCounterpointRuleTable TABLE = {"test-group", NAMES, COUNT, is_hard, g_pairs, g_built};
 
 static StandardCounterpointRulePair g_bare_pairs[COUNT];
-static bool g_bare_built[COUNT];
+static UrsatzOnce g_bare_built[COUNT];
 static const StandardCounterpointRuleTable BARE = {NULL, NAMES, COUNT, NULL, g_bare_pairs, g_bare_built};
 
 static StandardCounterpointRulePair g_soft_pairs[COUNT];
-static bool g_soft_built[COUNT];
+static UrsatzOnce g_soft_built[COUNT];
 static const StandardCounterpointRuleTable SOFT = {
     "test-soft", NAMES, COUNT, standard_counterpoint_rule_table_never_hard, g_soft_pairs, g_soft_built};
 
@@ -39,7 +39,7 @@ static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, con
                                                const Context *context);
 static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static StandardCounterpointRulePair g_eval_pairs[COUNT];
-static bool g_eval_built[COUNT];
+static UrsatzOnce g_eval_built[COUNT];
 static const StandardCounterpointRuleTable EVAL = {"test-eval", NAMES, COUNT,         is_hard,
                                                    g_eval_pairs,  g_eval_built, evaluate_candidate, score_candidate};
 STANDARD_COUNTERPOINT_RULE_TABLE_EVALUATOR(evaluate_candidate, EVAL, holds, unsigned)

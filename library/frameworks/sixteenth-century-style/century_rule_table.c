@@ -18,16 +18,27 @@ bool sixteenth_century_rule_table_never_hard(int which) {
     return false;
 }
 
-static void ensure_built(const SixteenthCenturyRuleTable *table, int which) {
-    if (!sixteenth_century_rule_table_valid(table, which) || table->built[which]) {
-        return;
-    }
-    table->built[which] = true;
+typedef struct {
+    const SixteenthCenturyRuleTable *table;
+    int which;
+} BuildPairArg;
+
+static void build_pair(void *arg) {
+    const SixteenthCenturyRuleTable *table = ((const BuildPairArg *)arg)->table;
+    int which = ((const BuildPairArg *)arg)->which;
     char name[96];
     snprintf(name, sizeof(name), "%s-%s", table->prefix, table->names[which]);
     sixteenth_century_build_rule_pair(
         name, sixteenth_century_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
         &table->pairs[which]);
+}
+
+static void ensure_built(const SixteenthCenturyRuleTable *table, int which) {
+    if (!sixteenth_century_rule_table_valid(table, which)) {
+        return;
+    }
+    BuildPairArg arg = {table, which};
+    ursatz_once(&table->built[which], build_pair, &arg);
 }
 
 const Rule *sixteenth_century_rule_table_rule(const SixteenthCenturyRuleTable *table, int which) {

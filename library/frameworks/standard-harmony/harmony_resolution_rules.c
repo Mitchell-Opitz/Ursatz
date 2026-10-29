@@ -7,7 +7,7 @@ static const char *const NAMES[HARMONY_RESOLUTION_RULE_COUNT] = {"seventh-resolv
                                                                  "leading-tone-resolves"};
 
 static HarmonyRulePair g_pairs[HARMONY_RESOLUTION_RULE_COUNT];
-static bool g_built[HARMONY_RESOLUTION_RULE_COUNT];
+static UrsatzOnce g_built[HARMONY_RESOLUTION_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);
 static const HarmonyRuleTable TABLE = {"resolution", NAMES,   HARMONY_RESOLUTION_RULE_COUNT,

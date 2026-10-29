@@ -8,29 +8,21 @@ static const char *const NAMES[STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT] = {
     "key-signature-sharp-order", "key-signature-flat-order", "key-signature-order-palindrome",
     "key-signature-all-octaves", "key-signature-placement", "key-signature-minor-same-order"};
 
-static StandardNotationRulePair g_pairs[STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT];
-static bool g_built[STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_notation_framework, "standard-notation",
+    NAMES, STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT);
 
 static bool valid_rule(StandardNotationKeySignatureRule which) {
     return which >= 0 && which < STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT;
 }
 
-static void ensure_built(StandardNotationKeySignatureRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_notation_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_notation_key_signature_rule(StandardNotationKeySignatureRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_notation_key_signature_constraint(StandardNotationKeySignatureRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 static const PitchLetter SHARP_ORDER[STANDARD_NOTATION_KEY_SIGNATURE_MAX_ACCIDENTALS] = {

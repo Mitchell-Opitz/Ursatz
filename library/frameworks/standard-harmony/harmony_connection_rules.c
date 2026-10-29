@@ -11,7 +11,7 @@ static const char *const NAMES[HARMONY_CONNECTION_RULE_COUNT] = {"progression", 
                                                                  "step-or-common-tone", "no-parallels"};
 
 static HarmonyRulePair g_pairs[HARMONY_CONNECTION_RULE_COUNT];
-static bool g_built[HARMONY_CONNECTION_RULE_COUNT];
+static UrsatzOnce g_built[HARMONY_CONNECTION_RULE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                     const Context *context);
 static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
