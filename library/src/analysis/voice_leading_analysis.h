@@ -1,6 +1,11 @@
 #ifndef MUSIC_ANALYSIS_VOICE_LEADING_ANALYSIS_H
 #define MUSIC_ANALYSIS_VOICE_LEADING_ANALYSIS_H
 
+/*
+ * Not the motion classification owner (standard_counterpoint_classify_motions). Kept as packaging of
+ * caller-supplied motions (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

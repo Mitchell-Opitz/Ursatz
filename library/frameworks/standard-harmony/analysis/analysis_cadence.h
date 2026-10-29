@@ -1,6 +1,11 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_HARMONY_ANALYSIS_ANALYSIS_CADENCE_H
 #define URSATZ_FRAMEWORKS_STANDARD_HARMONY_ANALYSIS_ANALYSIS_CADENCE_H
 
+/*
+ * Owner of cadence detection (harmony_analysis_find_cadences) (docs/ARCHITECTURE.md, Analytic job
+ * owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

@@ -1,6 +1,12 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_FORM_ANALYSIS_ANALYSIS_MOTIVE_MATCH_H
 #define URSATZ_FRAMEWORKS_STANDARD_FORM_ANALYSIS_ANALYSIS_MOTIVE_MATCH_H
 
+/*
+ * Not the motive matching owner (motive_variant_recognize with the motive_relation_apply relations).
+ * The transposed, inverted and retrograde matchers switch to the kernel relations in P23
+ * (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

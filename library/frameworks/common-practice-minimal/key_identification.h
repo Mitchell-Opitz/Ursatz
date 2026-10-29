@@ -1,6 +1,11 @@
 #ifndef URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_KEY_IDENTIFICATION_H
 #define URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_KEY_IDENTIFICATION_H
 
+/*
+ * Deprecated. Not the key identification owner (key_regions_estimate). Kept while Ursatz-GUI calls it;
+ * removed in P27 (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

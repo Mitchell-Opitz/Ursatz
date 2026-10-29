@@ -1,6 +1,11 @@
 #ifndef MUSIC_ANALYSIS_CADENCE_DETECTION_H
 #define MUSIC_ANALYSIS_CADENCE_DETECTION_H
 
+/*
+ * Not the cadence detection owner (harmony_analysis_find_cadences). Kept as packaging of caller
+ * candidates into Cadence shells (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stddef.h>
 
 #include "analysis/analyzer.h"

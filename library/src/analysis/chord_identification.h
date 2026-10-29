@@ -1,6 +1,12 @@
 #ifndef MUSIC_ANALYSIS_CHORD_IDENTIFICATION_H
 #define MUSIC_ANALYSIS_CHORD_IDENTIFICATION_H
 
+/*
+ * Not the chord identification owner (common_practice_identify_weighted_sequence and
+ * common_practice_identify_weighted). Kept only for the subset coverage reports (known duplicate-id
+ * gap); the analyzer moves into the chain in P22 (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stddef.h>
 
 #include "analysis/analyzer.h"

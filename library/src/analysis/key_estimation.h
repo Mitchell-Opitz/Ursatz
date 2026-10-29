@@ -1,6 +1,11 @@
 #ifndef MUSIC_ANALYSIS_KEY_ESTIMATION_H
 #define MUSIC_ANALYSIS_KEY_ESTIMATION_H
 
+/*
+ * Not the key identification owner (key_regions_estimate). Moves into the chain in P22
+ * (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stddef.h>
 
 #include "analysis/analyzer.h"

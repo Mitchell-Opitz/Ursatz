@@ -1,6 +1,11 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_FORM_ANALYSIS_ANALYSIS_PHRASE_H
 #define URSATZ_FRAMEWORKS_STANDARD_FORM_ANALYSIS_ANALYSIS_PHRASE_H
 
+/*
+ * Owner of phrase segmentation (standard_form_segment_phrases) (docs/ARCHITECTURE.md, Analytic job
+ * owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 
