@@ -138,4 +138,27 @@ MidiKeySignatureScanAllResult midi_key_signature_scan_all(const unsigned char *d
    events NULL and count 0. */
 void midi_key_signature_events_destroy(MidiKeySignatureEvents *events);
 
+/*
+ * Collector (internal to the io module, not part of the public surface): the per-event hook that
+ * lets one pass over a file's tracks feed the key signatures too. midi_key_signature_scan_all walks
+ * the tracks itself and feeds a collector; midi_importer_import_complete feeds the same collector
+ * from the one walk midi_event_decoder_scan makes, so the file is not scanned a second time.
+ *
+ * midi_key_signature_collector_meta takes any meta-event (type, payload, absolute tick) and keeps it
+ * only if it is a well-formed key signature (type 0x59, length 2, sf in -7..7); every other event is
+ * ignored and returns 0. It returns -1 on allocation failure.
+ *
+ * midi_key_signature_collector_finish turns the kept events into the list midi_key_signature_scan_all
+ * documents (time order, duplicates merged), with positions tick / (4 * division). A division of 0 is
+ * UNSUPPORTED_DIVISION. On OK, *out owns its events. The collector can be destroyed after either call.
+ */
+typedef struct MidiKeySignatureCollector MidiKeySignatureCollector;
+
+MidiKeySignatureCollector *midi_key_signature_collector_create(void);
+void midi_key_signature_collector_destroy(MidiKeySignatureCollector *collector);
+int midi_key_signature_collector_meta(MidiKeySignatureCollector *collector, size_t track_index, uint64_t tick,
+                                      unsigned char meta_type, const unsigned char *data, uint32_t length);
+MidiKeySignatureScanAllResult midi_key_signature_collector_finish(MidiKeySignatureCollector *collector,
+                                                                   uint16_t division, MidiKeySignatureEvents *out);
+
 #endif

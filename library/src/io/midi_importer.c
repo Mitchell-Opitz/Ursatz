@@ -4,11 +4,13 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "core/provenance_reference.h"
 #include "core/voice_reference.h"
 #include "identity/entity_id.h"
 #include "io/midi_event_decoder.h"
+#include "io/midi_key_signature.h"
 #include "io/smf_reader.h"
 #include "pitch/pitch_identity.h"
 #include "pitch/pitch_numeric_value.h"
@@ -392,45 +394,42 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
     return NOTE_EVENT_OK;
 }
 
-MidiImportResult midi_importer_import(const unsigned char *data, size_t size, NoteEvent ***out_events,
-                                       PitchNumericValue ***out_pitch_values, size_t *out_count) {
-    if (data == NULL || out_events == NULL || out_pitch_values == NULL || out_count == NULL) {
+static MidiImportResult map_smf_failure(SmfReaderResult smf_result) {
+    switch (smf_result) {
+    case SMF_READER_ERR_NULL_BUFFER:
         return MIDI_IMPORT_ERR_NULL_BUFFER;
+    case SMF_READER_ERR_TRUNCATED:
+        return MIDI_IMPORT_ERR_TRUNCATED;
+    case SMF_READER_ERR_UNSUPPORTED_FORMAT:
+        return MIDI_IMPORT_ERR_UNSUPPORTED_FORMAT;
+    case SMF_READER_ERR_UNSUPPORTED_DIVISION:
+        return MIDI_IMPORT_ERR_UNSUPPORTED_DIVISION;
+    case SMF_READER_ERR_BAD_TRACK:
+        return MIDI_IMPORT_ERR_BAD_TRACK;
+    case SMF_READER_ERR_BAD_HEADER:
+    default:
+        return MIDI_IMPORT_ERR_BAD_HEADER;
     }
+}
 
-    SmfHeader header;
-    SmfTrack *tracks = NULL;
-    size_t track_count = 0;
-    SmfReaderResult smf_result = smf_reader_parse(data, size, &header, &tracks, &track_count);
-    if (smf_result != SMF_READER_OK) {
-        switch (smf_result) {
-        case SMF_READER_ERR_NULL_BUFFER:
-            return MIDI_IMPORT_ERR_NULL_BUFFER;
-        case SMF_READER_ERR_TRUNCATED:
-            return MIDI_IMPORT_ERR_TRUNCATED;
-        case SMF_READER_ERR_UNSUPPORTED_FORMAT:
-            return MIDI_IMPORT_ERR_UNSUPPORTED_FORMAT;
-        case SMF_READER_ERR_UNSUPPORTED_DIVISION:
-            return MIDI_IMPORT_ERR_UNSUPPORTED_DIVISION;
-        case SMF_READER_ERR_BAD_TRACK:
-            return MIDI_IMPORT_ERR_BAD_TRACK;
-        case SMF_READER_ERR_BAD_HEADER:
-        default:
-            return MIDI_IMPORT_ERR_BAD_HEADER;
-        }
-    }
+static MidiImportResult map_decoder_failure(MidiEventDecoderResult decoded) {
+    return decoded == MIDI_EVENT_DECODER_ERR_ALLOC ? MIDI_IMPORT_ERR_ALLOC : MIDI_IMPORT_ERR_BAD_TRACK;
+}
 
-    unsigned long ticks_denominator = 4UL * (unsigned long)header.division;
+/* Pairs, sorts, voices and builds the notes of already-scanned tracks. On OK the outputs are new
+   arrays (NULL when there are no notes); otherwise they are untouched. */
+static MidiImportResult build_notes(uint16_t division, const MidiTrackScan *scan_tracks, size_t track_count,
+                                    NoteEvent ***out_events, PitchNumericValue ***out_pitch_values,
+                                    size_t **out_note_tracks, uint8_t **out_note_channels, size_t *out_count) {
+    unsigned long ticks_denominator = 4UL * (unsigned long)division;
 
     EntityID *tuning_id = NULL;
     if (entity_id_create("midi-note-number", &tuning_id) != ENTITY_ID_OK) {
-        free(tracks);
         return MIDI_IMPORT_ERR_ALLOC;
     }
     TuningSystem *tuning_system = NULL;
     if (tuning_system_create(tuning_id, "MIDI note number", &tuning_system) != TUNING_SYSTEM_OK) {
         entity_id_destroy(tuning_id);
-        free(tracks);
         return MIDI_IMPORT_ERR_ALLOC;
     }
 
@@ -440,20 +439,9 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
     MidiImportResult failure = MIDI_IMPORT_OK;
 
     for (size_t t = 0; t < track_count && failure == MIDI_IMPORT_OK; t++) {
-        MidiNoteEvent *events = NULL;
-        size_t event_count = 0;
-        MidiEventDecoderResult decode_result =
-            midi_event_decoder_decode(tracks[t].data, tracks[t].size, &events, &event_count);
-        if (decode_result != MIDI_EVENT_DECODER_OK) {
-            failure = MIDI_IMPORT_ERR_BAD_TRACK;
-            break;
-        }
-
         MatchedNote *matched = NULL;
         size_t matched_count = 0;
-        int pair_result = pair_notes(events, event_count, &matched, &matched_count);
-        free(events);
-        if (pair_result != 0) {
+        if (pair_notes(scan_tracks[t].notes, scan_tracks[t].note_count, &matched, &matched_count) != 0) {
             failure = MIDI_IMPORT_ERR_BAD_TRACK;
             break;
         }
@@ -477,8 +465,6 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
         all_matched_count += matched_count;
         free(matched);
     }
-
-    free(tracks);
 
     if (failure != MIDI_IMPORT_OK) {
         free(all_matched);
@@ -504,12 +490,18 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
 
     NoteEvent **note_events = NULL;
     PitchNumericValue **pitch_values = NULL;
+    size_t *note_tracks = NULL;
+    uint8_t *note_channels = NULL;
     if (all_matched_count > 0) {
         note_events = malloc(sizeof(NoteEvent *) * all_matched_count);
         pitch_values = malloc(sizeof(PitchNumericValue *) * all_matched_count);
-        if (note_events == NULL || pitch_values == NULL) {
+        note_tracks = malloc(sizeof(size_t) * all_matched_count);
+        note_channels = malloc(sizeof(uint8_t) * all_matched_count);
+        if (note_events == NULL || pitch_values == NULL || note_tracks == NULL || note_channels == NULL) {
             free(note_events);
             free(pitch_values);
+            free(note_tracks);
+            free(note_channels);
             free(all_matched);
             tuning_system_destroy(tuning_system);
             return MIDI_IMPORT_ERR_ALLOC;
@@ -525,12 +517,16 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
         if (r != NOTE_EVENT_OK) {
             destroy_note_events(note_events, built_count);
             destroy_pitch_values(pitch_values, built_count);
+            free(note_tracks);
+            free(note_channels);
             free(all_matched);
             tuning_system_destroy(tuning_system);
             return MIDI_IMPORT_ERR_ALLOC;
         }
         note_events[built_count] = note_event;
         pitch_values[built_count] = pitch_value;
+        note_tracks[built_count] = all_matched[i].track_index;
+        note_channels[built_count] = all_matched[i].channel;
         built_count++;
     }
 
@@ -539,8 +535,41 @@ MidiImportResult midi_importer_import(const unsigned char *data, size_t size, No
 
     *out_events = note_events;
     *out_pitch_values = pitch_values;
+    *out_note_tracks = note_tracks;
+    *out_note_channels = note_channels;
     *out_count = built_count;
     return MIDI_IMPORT_OK;
+}
+
+MidiImportResult midi_importer_import(const unsigned char *data, size_t size, NoteEvent ***out_events,
+                                       PitchNumericValue ***out_pitch_values, size_t *out_count) {
+    if (data == NULL || out_events == NULL || out_pitch_values == NULL || out_count == NULL) {
+        return MIDI_IMPORT_ERR_NULL_BUFFER;
+    }
+
+    SmfHeader header;
+    SmfTrack *tracks = NULL;
+    size_t track_count = 0;
+    SmfReaderResult smf_result = smf_reader_parse(data, size, &header, &tracks, &track_count);
+    if (smf_result != SMF_READER_OK) {
+        return map_smf_failure(smf_result);
+    }
+
+    MidiFileScan scan;
+    MidiEventDecoderResult scanned = midi_event_decoder_scan(tracks, track_count, NULL, &scan);
+    free(tracks);
+    if (scanned != MIDI_EVENT_DECODER_OK) {
+        return map_decoder_failure(scanned);
+    }
+
+    size_t *note_tracks = NULL;
+    uint8_t *note_channels = NULL;
+    MidiImportResult built = build_notes(header.division, scan.tracks, scan.track_count, out_events,
+                                         out_pitch_values, &note_tracks, &note_channels, out_count);
+    midi_file_scan_destroy(&scan);
+    free(note_tracks);
+    free(note_channels);
+    return built;
 }
 
 void midi_meter_import_destroy(MidiMeterImport *meter) {
@@ -556,74 +585,43 @@ void midi_meter_import_destroy(MidiMeterImport *meter) {
     meter->conflict_count = 0;
 }
 
-/* Reads the meter of a file midi_importer_import has already accepted, so the SMF header and tracks
-   are known to parse. Reparsing keeps midi_importer_import itself untouched. */
-static MidiImportResult build_meter(const unsigned char *data, size_t size, MidiMeterImport *out) {
-    SmfHeader header;
-    SmfTrack *tracks = NULL;
-    size_t track_count = 0;
-    if (smf_reader_parse(data, size, &header, &tracks, &track_count) != SMF_READER_OK) {
-        return MIDI_IMPORT_ERR_BAD_TRACK;
-    }
-    unsigned long denominator = 4UL * (unsigned long)header.division;
-
-    uint32_t end_tick = 0;
-    for (size_t t = 0; t < track_count; t++) {
-        MidiNoteEvent *events = NULL;
-        size_t event_count = 0;
-        if (midi_event_decoder_decode(tracks[t].data, tracks[t].size, &events, &event_count) !=
-            MIDI_EVENT_DECODER_OK) {
-            free(tracks);
-            return MIDI_IMPORT_ERR_BAD_TRACK;
-        }
-        for (size_t i = 0; i < event_count; i++) {
-            if (events[i].kind == MIDI_NOTE_OFF && events[i].tick > end_tick) {
-                end_tick = events[i].tick;
-            }
-        }
-        free(events);
-    }
-
-    MidiTimeSignatureEvents signatures = {NULL, 0, NULL, 0};
-    MidiEventDecoderResult collected = midi_event_decoder_collect_time_signatures(tracks, track_count, &signatures);
-    free(tracks);
-    if (collected != MIDI_EVENT_DECODER_OK) {
-        return collected == MIDI_EVENT_DECODER_ERR_ALLOC ? MIDI_IMPORT_ERR_ALLOC : MIDI_IMPORT_ERR_BAD_TRACK;
-    }
-
+/* Builds the meter from signatures already collected (they stay owned by the caller). denominator is
+   4 * division; end_tick is the tick of the last note-off. */
+static MidiImportResult build_meter_from(unsigned long denominator, uint32_t end_tick,
+                                         const MidiTimeSignatureEvents *signatures, MidiMeterImport *out) {
     MidiMeterImport result = {NULL, NULL, NULL, 0};
     MidiImportResult failure = MIDI_IMPORT_OK;
 
     EntityID *map_id = NULL;
     if (entity_id_create("midi-meter-map", &map_id) != ENTITY_ID_OK) {
         failure = MIDI_IMPORT_ERR_ALLOC;
-    } else if (signatures.count == 0) {
+    } else if (signatures->count == 0) {
         if (meter_map_create_defaulted(map_id, &result.meter_map) != METER_MAP_OK) {
             entity_id_destroy(map_id);
             failure = MIDI_IMPORT_ERR_ALLOC;
         }
     } else {
-        MeterMapChangePoint *points = calloc(signatures.count, sizeof(MeterMapChangePoint));
-        MusicalTime **starts = calloc(signatures.count, sizeof(MusicalTime *));
+        MeterMapChangePoint *points = calloc(signatures->count, sizeof(MeterMapChangePoint));
+        MusicalTime **starts = calloc(signatures->count, sizeof(MusicalTime *));
         if (points == NULL || starts == NULL) {
             failure = MIDI_IMPORT_ERR_ALLOC;
         } else {
-            for (size_t i = 0; i < signatures.count && failure == MIDI_IMPORT_OK; i++) {
-                if (musical_time_create((long)signatures.events[i].tick, denominator, &starts[i]) !=
+            for (size_t i = 0; i < signatures->count && failure == MIDI_IMPORT_OK; i++) {
+                if (musical_time_create((long)signatures->events[i].tick, denominator, &starts[i]) !=
                     MUSICAL_TIME_OK) {
                     failure = MIDI_IMPORT_ERR_ALLOC;
                     break;
                 }
-                points[i].time_signature = signatures.events[i].time_signature;
+                points[i].time_signature = signatures->events[i].time_signature;
                 points[i].start = starts[i];
             }
             if (failure == MIDI_IMPORT_OK &&
-                meter_map_create(map_id, points, signatures.count, &result.meter_map) != METER_MAP_OK) {
+                meter_map_create(map_id, points, signatures->count, &result.meter_map) != METER_MAP_OK) {
                 failure = MIDI_IMPORT_ERR_ALLOC;
             }
         }
         if (starts != NULL) {
-            for (size_t i = 0; i < signatures.count; i++) {
+            for (size_t i = 0; i < signatures->count; i++) {
                 musical_time_destroy(starts[i]);
             }
         }
@@ -638,18 +636,17 @@ static MidiImportResult build_meter(const unsigned char *data, size_t size, Midi
         musical_time_create((long)end_tick, denominator, &result.end_time) != MUSICAL_TIME_OK) {
         failure = MIDI_IMPORT_ERR_ALLOC;
     }
-    if (failure == MIDI_IMPORT_OK && signatures.conflict_count > 0) {
-        result.conflict_ticks = malloc(sizeof(uint64_t) * signatures.conflict_count);
+    if (failure == MIDI_IMPORT_OK && signatures->conflict_count > 0) {
+        result.conflict_ticks = malloc(sizeof(uint64_t) * signatures->conflict_count);
         if (result.conflict_ticks == NULL) {
             failure = MIDI_IMPORT_ERR_ALLOC;
         } else {
-            for (size_t i = 0; i < signatures.conflict_count; i++) {
-                result.conflict_ticks[i] = signatures.conflict_ticks[i];
+            for (size_t i = 0; i < signatures->conflict_count; i++) {
+                result.conflict_ticks[i] = signatures->conflict_ticks[i];
             }
-            result.conflict_count = signatures.conflict_count;
+            result.conflict_count = signatures->conflict_count;
         }
     }
-    midi_time_signature_events_destroy(&signatures);
 
     if (failure != MIDI_IMPORT_OK) {
         midi_meter_import_destroy(&result);
@@ -657,6 +654,42 @@ static MidiImportResult build_meter(const unsigned char *data, size_t size, Midi
     }
     *out = result;
     return MIDI_IMPORT_OK;
+}
+
+/* The tick of the last note-off over all scanned tracks, 0 with no notes. */
+static uint32_t last_note_off_tick(const MidiTrackScan *tracks, size_t track_count) {
+    uint32_t end_tick = 0;
+    for (size_t t = 0; t < track_count; t++) {
+        for (size_t i = 0; i < tracks[t].note_count; i++) {
+            if (tracks[t].notes[i].kind == MIDI_NOTE_OFF && tracks[t].notes[i].tick > end_tick) {
+                end_tick = tracks[t].notes[i].tick;
+            }
+        }
+    }
+    return end_tick;
+}
+
+/* Reads the meter of a file midi_importer_import has already accepted, so the SMF header and tracks
+   are known to parse. Reparsing keeps midi_importer_import itself untouched. */
+static MidiImportResult build_meter(const unsigned char *data, size_t size, MidiMeterImport *out) {
+    SmfHeader header;
+    SmfTrack *tracks = NULL;
+    size_t track_count = 0;
+    if (smf_reader_parse(data, size, &header, &tracks, &track_count) != SMF_READER_OK) {
+        return MIDI_IMPORT_ERR_BAD_TRACK;
+    }
+
+    MidiFileScan scan;
+    MidiEventDecoderResult scanned = midi_event_decoder_scan(tracks, track_count, NULL, &scan);
+    free(tracks);
+    if (scanned != MIDI_EVENT_DECODER_OK) {
+        return map_decoder_failure(scanned);
+    }
+    MidiImportResult built = build_meter_from(4UL * (unsigned long)header.division,
+                                              last_note_off_tick(scan.tracks, scan.track_count),
+                                              &scan.time_signatures, out);
+    midi_file_scan_destroy(&scan);
+    return built;
 }
 
 MidiImportResult midi_importer_import_with_meter(const unsigned char *data, size_t size, NoteEvent ***out_events,
@@ -700,58 +733,42 @@ void midi_tempo_import_destroy(MidiTempoImport *tempo) {
     tempo->conflict_count = 0;
 }
 
-/* Reads the tempo of a file midi_importer_import has already accepted, so the SMF header and
-   tracks are known to parse. Like build_meter, it reparses and leaves midi_importer_import
-   untouched. */
-static MidiImportResult build_tempo(const unsigned char *data, size_t size, MidiTempoImport *out) {
-    SmfHeader header;
-    SmfTrack *tracks = NULL;
-    size_t track_count = 0;
-    if (smf_reader_parse(data, size, &header, &tracks, &track_count) != SMF_READER_OK) {
-        return MIDI_IMPORT_ERR_BAD_TRACK;
-    }
-    unsigned long denominator = 4UL * (unsigned long)header.division;
-
-    MidiTempoEvents tempos = {NULL, 0, NULL, 0};
-    MidiEventDecoderResult collected = midi_event_decoder_collect_tempos(tracks, track_count, &tempos);
-    free(tracks);
-    if (collected != MIDI_EVENT_DECODER_OK) {
-        return collected == MIDI_EVENT_DECODER_ERR_ALLOC ? MIDI_IMPORT_ERR_ALLOC : MIDI_IMPORT_ERR_BAD_TRACK;
-    }
-
+/* Builds the tempo map from tempos already collected (they stay owned by the caller). */
+static MidiImportResult build_tempo_from(unsigned long denominator, const MidiTempoEvents *tempos,
+                                         MidiTempoImport *out) {
     MidiTempoImport result = {NULL, NULL, 0};
     MidiImportResult failure = MIDI_IMPORT_OK;
 
     EntityID *map_id = NULL;
     if (entity_id_create("midi-tempo-map", &map_id) != ENTITY_ID_OK) {
         failure = MIDI_IMPORT_ERR_ALLOC;
-    } else if (tempos.count == 0) {
+    } else if (tempos->count == 0) {
         if (tempo_map_create_defaulted(map_id, &result.tempo_map) != TEMPO_MAP_OK) {
             entity_id_destroy(map_id);
             failure = MIDI_IMPORT_ERR_ALLOC;
         }
     } else {
-        TempoMapChangePoint *points = calloc(tempos.count, sizeof(TempoMapChangePoint));
-        MusicalTime **starts = calloc(tempos.count, sizeof(MusicalTime *));
+        TempoMapChangePoint *points = calloc(tempos->count, sizeof(TempoMapChangePoint));
+        MusicalTime **starts = calloc(tempos->count, sizeof(MusicalTime *));
         if (points == NULL || starts == NULL) {
             failure = MIDI_IMPORT_ERR_ALLOC;
         } else {
-            for (size_t i = 0; i < tempos.count && failure == MIDI_IMPORT_OK; i++) {
-                if (tempos.events[i].tick > (uint64_t)LONG_MAX ||
-                    musical_time_create((long)tempos.events[i].tick, denominator, &starts[i]) != MUSICAL_TIME_OK) {
+            for (size_t i = 0; i < tempos->count && failure == MIDI_IMPORT_OK; i++) {
+                if (tempos->events[i].tick > (uint64_t)LONG_MAX ||
+                    musical_time_create((long)tempos->events[i].tick, denominator, &starts[i]) != MUSICAL_TIME_OK) {
                     failure = MIDI_IMPORT_ERR_ALLOC;
                     break;
                 }
                 points[i].start = starts[i];
-                points[i].microseconds_per_quarter = tempos.events[i].microseconds_per_quarter;
+                points[i].microseconds_per_quarter = tempos->events[i].microseconds_per_quarter;
             }
             if (failure == MIDI_IMPORT_OK &&
-                tempo_map_create(map_id, points, tempos.count, &result.tempo_map) != TEMPO_MAP_OK) {
+                tempo_map_create(map_id, points, tempos->count, &result.tempo_map) != TEMPO_MAP_OK) {
                 failure = MIDI_IMPORT_ERR_ALLOC;
             }
         }
         if (starts != NULL) {
-            for (size_t i = 0; i < tempos.count; i++) {
+            for (size_t i = 0; i < tempos->count; i++) {
                 musical_time_destroy(starts[i]);
             }
         }
@@ -762,18 +779,17 @@ static MidiImportResult build_tempo(const unsigned char *data, size_t size, Midi
         }
     }
 
-    if (failure == MIDI_IMPORT_OK && tempos.conflict_count > 0) {
-        result.conflict_ticks = malloc(sizeof(uint64_t) * tempos.conflict_count);
+    if (failure == MIDI_IMPORT_OK && tempos->conflict_count > 0) {
+        result.conflict_ticks = malloc(sizeof(uint64_t) * tempos->conflict_count);
         if (result.conflict_ticks == NULL) {
             failure = MIDI_IMPORT_ERR_ALLOC;
         } else {
-            for (size_t i = 0; i < tempos.conflict_count; i++) {
-                result.conflict_ticks[i] = tempos.conflict_ticks[i];
+            for (size_t i = 0; i < tempos->conflict_count; i++) {
+                result.conflict_ticks[i] = tempos->conflict_ticks[i];
             }
-            result.conflict_count = tempos.conflict_count;
+            result.conflict_count = tempos->conflict_count;
         }
     }
-    midi_tempo_events_destroy(&tempos);
 
     if (failure != MIDI_IMPORT_OK) {
         midi_tempo_import_destroy(&result);
@@ -781,6 +797,28 @@ static MidiImportResult build_tempo(const unsigned char *data, size_t size, Midi
     }
     *out = result;
     return MIDI_IMPORT_OK;
+}
+
+/* Reads the tempo of a file midi_importer_import has already accepted, so the SMF header and
+   tracks are known to parse. Like build_meter, it reparses and leaves midi_importer_import
+   untouched. */
+static MidiImportResult build_tempo(const unsigned char *data, size_t size, MidiTempoImport *out) {
+    SmfHeader header;
+    SmfTrack *tracks = NULL;
+    size_t track_count = 0;
+    if (smf_reader_parse(data, size, &header, &tracks, &track_count) != SMF_READER_OK) {
+        return MIDI_IMPORT_ERR_BAD_TRACK;
+    }
+
+    MidiFileScan scan;
+    MidiEventDecoderResult scanned = midi_event_decoder_scan(tracks, track_count, NULL, &scan);
+    free(tracks);
+    if (scanned != MIDI_EVENT_DECODER_OK) {
+        return map_decoder_failure(scanned);
+    }
+    MidiImportResult built = build_tempo_from(4UL * (unsigned long)header.division, &scan.tempos, out);
+    midi_file_scan_destroy(&scan);
+    return built;
 }
 
 MidiImportResult midi_importer_import_with_tempo(const unsigned char *data, size_t size, NoteEvent ***out_events,
@@ -810,5 +848,136 @@ MidiImportResult midi_importer_import_with_tempo(const unsigned char *data, size
     *out_pitch_values = pitch_values;
     *out_count = count;
     *out_tempo = tempo;
+    return MIDI_IMPORT_OK;
+}
+
+void midi_import_destroy(MidiImport *import) {
+    if (import == NULL) {
+        return;
+    }
+    destroy_note_events(import->events, import->count);
+    destroy_pitch_values(import->pitch_values, import->count);
+    free(import->note_tracks);
+    free(import->note_channels);
+    midi_meter_import_destroy(&import->meter);
+    midi_tempo_import_destroy(&import->tempo);
+    midi_key_signature_events_destroy(&import->key_signatures);
+    if (import->tracks != NULL) {
+        for (size_t t = 0; t < import->track_count; t++) {
+            free(import->tracks[t].name);
+            for (size_t p = 0; p < import->tracks[t].program_count; p++) {
+                musical_time_destroy(import->tracks[t].programs[p].time);
+            }
+            free(import->tracks[t].programs);
+        }
+        free(import->tracks);
+    }
+    memset(import, 0, sizeof(*import));
+}
+
+/* Moves each scanned track's name and program changes into MidiTrackInfo, with the exact time of each
+   program change. */
+static MidiImportResult build_track_info(unsigned long denominator, MidiFileScan *scan, MidiImport *result) {
+    if (scan->track_count == 0) {
+        return MIDI_IMPORT_OK;
+    }
+    result->tracks = calloc(scan->track_count, sizeof(MidiTrackInfo));
+    if (result->tracks == NULL) {
+        return MIDI_IMPORT_ERR_ALLOC;
+    }
+    result->track_count = scan->track_count;
+
+    for (size_t t = 0; t < scan->track_count; t++) {
+        MidiTrackInfo *info = &result->tracks[t];
+        MidiTrackScan *scanned = &scan->tracks[t];
+        info->index = t;
+        info->name = scanned->name;
+        scanned->name = NULL;
+        if (scanned->program_count == 0) {
+            continue;
+        }
+        info->programs = calloc(scanned->program_count, sizeof(MidiProgramChange));
+        if (info->programs == NULL) {
+            return MIDI_IMPORT_ERR_ALLOC;
+        }
+        for (size_t p = 0; p < scanned->program_count; p++) {
+            MidiProgramChange *change = &info->programs[p];
+            if (musical_time_create((long)scanned->programs[p].tick, denominator, &change->time) !=
+                MUSICAL_TIME_OK) {
+                return MIDI_IMPORT_ERR_ALLOC;
+            }
+            change->tick = scanned->programs[p].tick;
+            change->channel = scanned->programs[p].channel;
+            change->program = scanned->programs[p].program;
+            info->program_count++;
+        }
+    }
+    return MIDI_IMPORT_OK;
+}
+
+MidiImportResult midi_importer_import_complete(const unsigned char *data, size_t size, MidiImport *out) {
+    if (data == NULL || out == NULL) {
+        return MIDI_IMPORT_ERR_NULL_BUFFER;
+    }
+
+    SmfHeader header;
+    SmfTrack *tracks = NULL;
+    size_t track_count = 0;
+    SmfReaderResult smf_result = smf_reader_parse(data, size, &header, &tracks, &track_count);
+    if (smf_result != SMF_READER_OK) {
+        return map_smf_failure(smf_result);
+    }
+    if (header.division == 0) {
+        free(tracks);
+        return MIDI_IMPORT_ERR_UNSUPPORTED_DIVISION;
+    }
+    unsigned long denominator = 4UL * (unsigned long)header.division;
+
+    MidiKeySignatureCollector *keys = midi_key_signature_collector_create();
+    if (keys == NULL) {
+        free(tracks);
+        return MIDI_IMPORT_ERR_ALLOC;
+    }
+    MidiFileScan scan;
+    MidiEventDecoderResult scanned = midi_event_decoder_scan(tracks, track_count, keys, &scan);
+    free(tracks);
+    if (scanned != MIDI_EVENT_DECODER_OK) {
+        midi_key_signature_collector_destroy(keys);
+        return map_decoder_failure(scanned);
+    }
+
+    MidiImport result;
+    memset(&result, 0, sizeof(result));
+    result.format = header.format;
+    result.division = header.division;
+
+    MidiImportResult failure = build_notes(header.division, scan.tracks, scan.track_count, &result.events,
+                                           &result.pitch_values, &result.note_tracks, &result.note_channels,
+                                           &result.count);
+    if (failure == MIDI_IMPORT_OK) {
+        failure = build_meter_from(denominator, last_note_off_tick(scan.tracks, scan.track_count),
+                                   &scan.time_signatures, &result.meter);
+    }
+    if (failure == MIDI_IMPORT_OK) {
+        failure = build_tempo_from(denominator, &scan.tempos, &result.tempo);
+    }
+    if (failure == MIDI_IMPORT_OK) {
+        MidiKeySignatureScanAllResult finished =
+            midi_key_signature_collector_finish(keys, header.division, &result.key_signatures);
+        if (finished != MIDI_KEY_SIGNATURE_SCAN_ALL_OK) {
+            failure = MIDI_IMPORT_ERR_ALLOC;
+        }
+    }
+    if (failure == MIDI_IMPORT_OK) {
+        failure = build_track_info(denominator, &scan, &result);
+    }
+    midi_file_scan_destroy(&scan);
+    midi_key_signature_collector_destroy(keys);
+
+    if (failure != MIDI_IMPORT_OK) {
+        midi_import_destroy(&result);
+        return failure;
+    }
+    *out = result;
     return MIDI_IMPORT_OK;
 }

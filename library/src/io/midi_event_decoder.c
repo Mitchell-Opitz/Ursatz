@@ -1,7 +1,9 @@
 #include "io/midi_event_decoder.h"
 
+#include <limits.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "time/note_value.h"
 
@@ -109,14 +111,47 @@ static int raw_tempo_push(RawTempoList *list, RawTempo event) {
     return 0;
 }
 
-/* Walks one track, appending note events to notes (when non-NULL), well-formed time signature
-   meta-events (0xFF 0x58) to time_signatures (when non-NULL) and well-formed set-tempo meta-events
-   (0xFF 0x51) to tempos (when non-NULL). The caller owns the lists, also on failure. */
-static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t track_size, EventList *notes,
-                                          RawTimeSignatureList *time_signatures, RawTempoList *tempos) {
+typedef struct {
+    MidiProgramEvent *items;
+    size_t count;
+    size_t capacity;
+} ProgramList;
+
+static int program_list_push(ProgramList *list, MidiProgramEvent event) {
+    if (list->count == list->capacity) {
+        size_t new_capacity = (list->capacity == 0) ? 4 : list->capacity * 2;
+        MidiProgramEvent *grown = realloc(list->items, sizeof(MidiProgramEvent) * new_capacity);
+        if (grown == NULL) {
+            return -1;
+        }
+        list->items = grown;
+        list->capacity = new_capacity;
+    }
+    list->items[list->count++] = event;
+    return 0;
+}
+
+/* Where one walk of a track puts what it finds; every sink is optional (NULL: that kind of event is
+   skipped). The caller owns everything the sinks point at, also on failure. */
+typedef struct {
+    EventList *notes;
+    RawTimeSignatureList *time_signatures;
+    RawTempoList *tempos;
+    ProgramList *programs;
+    char **name; /* the first track name (0xFF 0x03) of the track is stored here; *name starts NULL */
+    MidiKeySignatureCollector *keys;
+    size_t track_index; /* for keys */
+} TrackSinks;
+
+/* Walks one track once, handing note events, well-formed time signature meta-events (0xFF 0x58),
+   set-tempo meta-events (0xFF 0x51), program changes (0xC0), the first track name and key signature
+   meta-events (0xFF 0x59) to whichever sinks are set. */
+static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t track_size,
+                                          const TrackSinks *sinks) {
     Cursor c = {track_data, track_size, 0};
 
     uint32_t tick = 0;
+    uint64_t wide_tick = 0; /* the key signature collector's tick, which does not wrap */
     unsigned char running_status = 0;
 
     while (c.pos < c.size) {
@@ -125,6 +160,10 @@ static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t
             return MIDI_EVENT_DECODER_ERR_TRUNCATED;
         }
         tick += delta;
+        wide_tick += delta;
+        if (sinks->keys != NULL && wide_tick > (uint64_t)LONG_MAX) {
+            return MIDI_EVENT_DECODER_ERR_TRUNCATED;
+        }
 
         if (!cursor_has(&c, 1)) {
             return MIDI_EVENT_DECODER_ERR_TRUNCATED;
@@ -150,28 +189,42 @@ static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t
             if (read_vlq(&c, &len) != 0 || !cursor_has(&c, len)) {
                 return MIDI_EVENT_DECODER_ERR_TRUNCATED;
             }
-            if (meta_type == 0x58 && time_signatures != NULL && len == 4) {
+            if (meta_type == 0x58 && sinks->time_signatures != NULL && len == 4) {
                 /* nn dd cc bb: cc and bb are only required to be present. A signature the
                    TimeSignature type cannot hold is malformed and skipped. */
                 unsigned char nn = c.data[c.pos];
                 unsigned char dd = c.data[c.pos + 1];
                 if (nn >= 1 && nn <= TIME_SIGNATURE_MAX_TOP_NUMBER && dd <= TIME_SIGNATURE_MAX_BOTTOM_UNIT_EXPONENT) {
                     RawTimeSignature raw = {tick, nn, dd};
-                    if (raw_time_signature_push(time_signatures, raw) != 0) {
+                    if (raw_time_signature_push(sinks->time_signatures, raw) != 0) {
                         return MIDI_EVENT_DECODER_ERR_ALLOC;
                     }
                 }
             }
-            if (meta_type == 0x51 && tempos != NULL && len == 3) {
+            if (meta_type == 0x51 && sinks->tempos != NULL && len == 3) {
                 /* Three bytes, big-endian: microseconds per quarter note. Zero is malformed. */
                 uint32_t value = ((uint32_t)c.data[c.pos] << 16) | ((uint32_t)c.data[c.pos + 1] << 8) |
                                  (uint32_t)c.data[c.pos + 2];
                 if (value != 0) {
                     RawTempo raw = {tick, value};
-                    if (raw_tempo_push(tempos, raw) != 0) {
+                    if (raw_tempo_push(sinks->tempos, raw) != 0) {
                         return MIDI_EVENT_DECODER_ERR_ALLOC;
                     }
                 }
+            }
+            if (meta_type == 0x03 && sinks->name != NULL && *sinks->name == NULL) {
+                char *text = malloc((size_t)len + 1);
+                if (text == NULL) {
+                    return MIDI_EVENT_DECODER_ERR_ALLOC;
+                }
+                memcpy(text, c.data + c.pos, len);
+                text[len] = '\0';
+                *sinks->name = text;
+            }
+            if (sinks->keys != NULL &&
+                midi_key_signature_collector_meta(sinks->keys, sinks->track_index, wide_tick, meta_type,
+                                                  c.data + c.pos, len) != 0) {
+                return MIDI_EVENT_DECODER_ERR_ALLOC;
             }
             c.pos += len;
             continue;
@@ -205,7 +258,7 @@ static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t
             event.velocity = velocity;
             event.kind = (high_nibble == 0x90 && velocity > 0) ? MIDI_NOTE_ON : MIDI_NOTE_OFF;
 
-            if (notes != NULL && event_list_push(notes, event) != 0) {
+            if (sinks->notes != NULL && event_list_push(sinks->notes, event) != 0) {
                 return MIDI_EVENT_DECODER_ERR_ALLOC;
             }
         } else if (high_nibble == 0xA0 || high_nibble == 0xB0 || high_nibble == 0xE0) {
@@ -215,11 +268,18 @@ static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t
             }
             c.pos += 2;
         } else if (high_nibble == 0xC0 || high_nibble == 0xD0) {
-            /* Program change, channel aftertouch: 1 data byte, ignored. */
+            /* Program change (0xC0) is read when a sink wants it; channel aftertouch (0xD0) is ignored.
+               Both have 1 data byte. */
             if (!cursor_has(&c, 1)) {
                 return MIDI_EVENT_DECODER_ERR_TRUNCATED;
             }
-            c.pos += 1;
+            unsigned char program = cursor_byte(&c);
+            if (high_nibble == 0xC0 && sinks->programs != NULL) {
+                MidiProgramEvent event = {tick, channel, program};
+                if (program_list_push(sinks->programs, event) != 0) {
+                    return MIDI_EVENT_DECODER_ERR_ALLOC;
+                }
+            }
         } else {
             /* Unrecognized status byte with no defined length: cannot
                safely skip, so fail cleanly rather than guess. */
@@ -237,7 +297,7 @@ MidiEventDecoderResult midi_event_decoder_decode(const unsigned char *track_data
     }
 
     EventList list = {NULL, 0, 0};
-    MidiEventDecoderResult result = walk_track(track_data, track_size, &list, NULL, NULL);
+    MidiEventDecoderResult result = walk_track(track_data, track_size, &(TrackSinks){.notes = &list});
     if (result != MIDI_EVENT_DECODER_OK) {
         free(list.items);
         return result;
@@ -294,45 +354,31 @@ static int build_time_signature(const RawTimeSignature *raw, TimeSignature **out
     return r == TIME_SIGNATURE_OK ? 0 : -1;
 }
 
-MidiEventDecoderResult midi_event_decoder_collect_time_signatures(const SmfTrack *tracks, size_t track_count,
-                                                                    MidiTimeSignatureEvents *out) {
-    if ((tracks == NULL && track_count > 0) || out == NULL) {
-        return MIDI_EVENT_DECODER_ERR_NULL_TRACK;
+static MidiEventDecoderResult append_time_signatures(SequencedTimeSignature **all, size_t *all_count,
+                                                      size_t *all_capacity, size_t track_index,
+                                                      const RawTimeSignatureList *raw) {
+    if (*all_count + raw->count > *all_capacity) {
+        size_t new_capacity = *all_count + raw->count;
+        SequencedTimeSignature *grown = realloc(*all, sizeof(SequencedTimeSignature) * new_capacity);
+        if (grown == NULL) {
+            return MIDI_EVENT_DECODER_ERR_ALLOC;
+        }
+        *all = grown;
+        *all_capacity = new_capacity;
     }
+    for (size_t i = 0; i < raw->count; i++) {
+        (*all)[*all_count].raw = raw->items[i];
+        (*all)[*all_count].track_index = track_index;
+        (*all)[*all_count].sequence = *all_count;
+        (*all_count)++;
+    }
+    return MIDI_EVENT_DECODER_OK;
+}
 
-    SequencedTimeSignature *all = NULL;
-    size_t all_count = 0;
-    size_t all_capacity = 0;
+/* Merges the collected events into *out (see the header for the rules). Frees all. */
+static MidiEventDecoderResult finish_time_signatures(SequencedTimeSignature *all, size_t all_count,
+                                                      MidiTimeSignatureEvents *out) {
     MidiEventDecoderResult failure = MIDI_EVENT_DECODER_OK;
-
-    for (size_t t = 0; t < track_count && failure == MIDI_EVENT_DECODER_OK; t++) {
-        RawTimeSignatureList raw = {NULL, 0, 0};
-        failure = walk_track(tracks[t].data, tracks[t].size, NULL, &raw, NULL);
-        if (failure == MIDI_EVENT_DECODER_OK && all_count + raw.count > all_capacity) {
-            size_t new_capacity = all_count + raw.count;
-            SequencedTimeSignature *grown = realloc(all, sizeof(SequencedTimeSignature) * new_capacity);
-            if (grown == NULL) {
-                failure = MIDI_EVENT_DECODER_ERR_ALLOC;
-            } else {
-                all = grown;
-                all_capacity = new_capacity;
-            }
-        }
-        if (failure == MIDI_EVENT_DECODER_OK) {
-            for (size_t i = 0; i < raw.count; i++) {
-                all[all_count].raw = raw.items[i];
-                all[all_count].track_index = t;
-                all[all_count].sequence = all_count;
-                all_count++;
-            }
-        }
-        free(raw.items);
-    }
-    if (failure != MIDI_EVENT_DECODER_OK) {
-        free(all);
-        return failure;
-    }
-
     MidiTimeSignatureEvents result = {NULL, 0, NULL, 0};
     if (all_count > 0) {
         qsort(all, all_count, sizeof(SequencedTimeSignature), compare_sequenced_time_signatures);
@@ -392,6 +438,32 @@ MidiEventDecoderResult midi_event_decoder_collect_time_signatures(const SmfTrack
     return MIDI_EVENT_DECODER_OK;
 }
 
+MidiEventDecoderResult midi_event_decoder_collect_time_signatures(const SmfTrack *tracks, size_t track_count,
+                                                                    MidiTimeSignatureEvents *out) {
+    if ((tracks == NULL && track_count > 0) || out == NULL) {
+        return MIDI_EVENT_DECODER_ERR_NULL_TRACK;
+    }
+
+    SequencedTimeSignature *all = NULL;
+    size_t all_count = 0;
+    size_t all_capacity = 0;
+    MidiEventDecoderResult failure = MIDI_EVENT_DECODER_OK;
+
+    for (size_t t = 0; t < track_count && failure == MIDI_EVENT_DECODER_OK; t++) {
+        RawTimeSignatureList raw = {NULL, 0, 0};
+        failure = walk_track(tracks[t].data, tracks[t].size, &(TrackSinks){.time_signatures = &raw});
+        if (failure == MIDI_EVENT_DECODER_OK) {
+            failure = append_time_signatures(&all, &all_count, &all_capacity, t, &raw);
+        }
+        free(raw.items);
+    }
+    if (failure != MIDI_EVENT_DECODER_OK) {
+        free(all);
+        return failure;
+    }
+    return finish_time_signatures(all, all_count, out);
+}
+
 typedef struct {
     RawTempo raw;
     size_t track_index;
@@ -425,45 +497,28 @@ void midi_tempo_events_destroy(MidiTempoEvents *events) {
     events->conflict_count = 0;
 }
 
-MidiEventDecoderResult midi_event_decoder_collect_tempos(const SmfTrack *tracks, size_t track_count,
-                                                          MidiTempoEvents *out) {
-    if ((tracks == NULL && track_count > 0) || out == NULL) {
-        return MIDI_EVENT_DECODER_ERR_NULL_TRACK;
-    }
-
-    SequencedTempo *all = NULL;
-    size_t all_count = 0;
-    size_t all_capacity = 0;
-    MidiEventDecoderResult failure = MIDI_EVENT_DECODER_OK;
-
-    for (size_t t = 0; t < track_count && failure == MIDI_EVENT_DECODER_OK; t++) {
-        RawTempoList raw = {NULL, 0, 0};
-        failure = walk_track(tracks[t].data, tracks[t].size, NULL, NULL, &raw);
-        if (failure == MIDI_EVENT_DECODER_OK && all_count + raw.count > all_capacity) {
-            size_t new_capacity = all_count + raw.count;
-            SequencedTempo *grown = realloc(all, sizeof(SequencedTempo) * new_capacity);
-            if (grown == NULL) {
-                failure = MIDI_EVENT_DECODER_ERR_ALLOC;
-            } else {
-                all = grown;
-                all_capacity = new_capacity;
-            }
+static MidiEventDecoderResult append_tempos(SequencedTempo **all, size_t *all_count, size_t *all_capacity,
+                                             size_t track_index, const RawTempoList *raw) {
+    if (*all_count + raw->count > *all_capacity) {
+        size_t new_capacity = *all_count + raw->count;
+        SequencedTempo *grown = realloc(*all, sizeof(SequencedTempo) * new_capacity);
+        if (grown == NULL) {
+            return MIDI_EVENT_DECODER_ERR_ALLOC;
         }
-        if (failure == MIDI_EVENT_DECODER_OK) {
-            for (size_t i = 0; i < raw.count; i++) {
-                all[all_count].raw = raw.items[i];
-                all[all_count].track_index = t;
-                all[all_count].sequence = all_count;
-                all_count++;
-            }
-        }
-        free(raw.items);
+        *all = grown;
+        *all_capacity = new_capacity;
     }
-    if (failure != MIDI_EVENT_DECODER_OK) {
-        free(all);
-        return failure;
+    for (size_t i = 0; i < raw->count; i++) {
+        (*all)[*all_count].raw = raw->items[i];
+        (*all)[*all_count].track_index = track_index;
+        (*all)[*all_count].sequence = *all_count;
+        (*all_count)++;
     }
+    return MIDI_EVENT_DECODER_OK;
+}
 
+/* Merges the collected events into *out (see the header for the rules). Frees all. */
+static MidiEventDecoderResult finish_tempos(SequencedTempo *all, size_t all_count, MidiTempoEvents *out) {
     MidiTempoEvents result = {NULL, 0, NULL, 0};
     if (all_count > 0) {
         qsort(all, all_count, sizeof(SequencedTempo), compare_sequenced_tempos);
@@ -510,6 +565,122 @@ MidiEventDecoderResult midi_event_decoder_collect_tempos(const SmfTrack *tracks,
         result.events = NULL;
         result.conflict_ticks = NULL;
     }
+    *out = result;
+    return MIDI_EVENT_DECODER_OK;
+}
+
+MidiEventDecoderResult midi_event_decoder_collect_tempos(const SmfTrack *tracks, size_t track_count,
+                                                          MidiTempoEvents *out) {
+    if ((tracks == NULL && track_count > 0) || out == NULL) {
+        return MIDI_EVENT_DECODER_ERR_NULL_TRACK;
+    }
+
+    SequencedTempo *all = NULL;
+    size_t all_count = 0;
+    size_t all_capacity = 0;
+    MidiEventDecoderResult failure = MIDI_EVENT_DECODER_OK;
+
+    for (size_t t = 0; t < track_count && failure == MIDI_EVENT_DECODER_OK; t++) {
+        RawTempoList raw = {NULL, 0, 0};
+        failure = walk_track(tracks[t].data, tracks[t].size, &(TrackSinks){.tempos = &raw});
+        if (failure == MIDI_EVENT_DECODER_OK) {
+            failure = append_tempos(&all, &all_count, &all_capacity, t, &raw);
+        }
+        free(raw.items);
+    }
+    if (failure != MIDI_EVENT_DECODER_OK) {
+        free(all);
+        return failure;
+    }
+    return finish_tempos(all, all_count, out);
+}
+
+void midi_file_scan_destroy(MidiFileScan *scan) {
+    if (scan == NULL) {
+        return;
+    }
+    for (size_t t = 0; t < scan->track_count; t++) {
+        free(scan->tracks[t].notes);
+        free(scan->tracks[t].programs);
+        free(scan->tracks[t].name);
+    }
+    free(scan->tracks);
+    midi_time_signature_events_destroy(&scan->time_signatures);
+    midi_tempo_events_destroy(&scan->tempos);
+    memset(scan, 0, sizeof(*scan));
+}
+
+MidiEventDecoderResult midi_event_decoder_scan(const SmfTrack *tracks, size_t track_count,
+                                                MidiKeySignatureCollector *keys, MidiFileScan *out) {
+    if ((tracks == NULL && track_count > 0) || out == NULL) {
+        return MIDI_EVENT_DECODER_ERR_NULL_TRACK;
+    }
+
+    MidiFileScan result;
+    memset(&result, 0, sizeof(result));
+    SequencedTimeSignature *signatures = NULL;
+    size_t signature_count = 0;
+    size_t signature_capacity = 0;
+    SequencedTempo *tempos = NULL;
+    size_t tempo_count = 0;
+    size_t tempo_capacity = 0;
+    MidiEventDecoderResult failure = MIDI_EVENT_DECODER_OK;
+
+    if (track_count > 0) {
+        result.tracks = calloc(track_count, sizeof(MidiTrackScan));
+        if (result.tracks == NULL) {
+            return MIDI_EVENT_DECODER_ERR_ALLOC;
+        }
+    }
+    result.track_count = track_count;
+
+    for (size_t t = 0; t < track_count && failure == MIDI_EVENT_DECODER_OK; t++) {
+        EventList notes = {NULL, 0, 0};
+        RawTimeSignatureList raw_signatures = {NULL, 0, 0};
+        RawTempoList raw_tempos = {NULL, 0, 0};
+        ProgramList programs = {NULL, 0, 0};
+        char *name = NULL;
+        TrackSinks sinks = {.notes = &notes,
+                            .time_signatures = &raw_signatures,
+                            .tempos = &raw_tempos,
+                            .programs = &programs,
+                            .name = &name,
+                            .keys = keys,
+                            .track_index = t};
+        failure = walk_track(tracks[t].data, tracks[t].size, &sinks);
+        if (failure == MIDI_EVENT_DECODER_OK) {
+            failure = append_time_signatures(&signatures, &signature_count, &signature_capacity, t, &raw_signatures);
+        }
+        if (failure == MIDI_EVENT_DECODER_OK) {
+            failure = append_tempos(&tempos, &tempo_count, &tempo_capacity, t, &raw_tempos);
+        }
+        free(raw_signatures.items);
+        free(raw_tempos.items);
+        result.tracks[t].notes = notes.items;
+        result.tracks[t].note_count = notes.count;
+        result.tracks[t].programs = programs.items;
+        result.tracks[t].program_count = programs.count;
+        result.tracks[t].name = name;
+    }
+    if (failure != MIDI_EVENT_DECODER_OK) {
+        free(signatures);
+        free(tempos);
+        midi_file_scan_destroy(&result);
+        return failure;
+    }
+
+    failure = finish_time_signatures(signatures, signature_count, &result.time_signatures);
+    if (failure != MIDI_EVENT_DECODER_OK) {
+        free(tempos);
+        midi_file_scan_destroy(&result);
+        return failure;
+    }
+    failure = finish_tempos(tempos, tempo_count, &result.tempos);
+    if (failure != MIDI_EVENT_DECODER_OK) {
+        midi_file_scan_destroy(&result);
+        return failure;
+    }
+
     *out = result;
     return MIDI_EVENT_DECODER_OK;
 }

@@ -4,6 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "io/midi_key_signature.h"
 #include "io/smf_reader.h"
 #include "time/time_signature.h"
 
@@ -134,5 +135,44 @@ MidiEventDecoderResult midi_event_decoder_collect_tempos(const SmfTrack *tracks,
 
 /* Destroys the lists. NULL is a no-op. */
 void midi_tempo_events_destroy(MidiTempoEvents *events);
+
+/*
+ * One pass over every track (internal to the io module; the importer's complete import is built on
+ * it). Each track is walked once and yields, together: its note events (as midi_event_decoder_decode),
+ * its program changes (0xC0, with the tick and channel they happen at, in byte order), its name (the
+ * first 0xFF 0x03 in the track; NULL if none) and the time signature and set-tempo events, merged
+ * across tracks with the rules above. When keys is not NULL, every 0xFF 0x59 meta-event is also handed
+ * to that collector (midi_key_signature.h), so the key signatures come from the same walk.
+ *
+ * A structurally malformed track fails with TRUNCATED, as for the other functions. On OK, *out owns
+ * everything (midi_file_scan_destroy); otherwise *out is untouched. keys is not destroyed here.
+ */
+
+typedef struct {
+    uint32_t tick;
+    uint8_t channel; /* 0-15 */
+    uint8_t program; /* 0-127 */
+} MidiProgramEvent;
+
+typedef struct {
+    MidiNoteEvent *notes; /* owned; NULL when note_count is 0 */
+    size_t note_count;
+    MidiProgramEvent *programs; /* owned; NULL when program_count is 0 */
+    size_t program_count;
+    char *name; /* owned, NUL-terminated; NULL when the track has no name event */
+} MidiTrackScan;
+
+typedef struct {
+    MidiTrackScan *tracks; /* owned; track_count entries, NULL when track_count is 0 */
+    size_t track_count;
+    MidiTimeSignatureEvents time_signatures;
+    MidiTempoEvents tempos;
+} MidiFileScan;
+
+MidiEventDecoderResult midi_event_decoder_scan(const SmfTrack *tracks, size_t track_count,
+                                                MidiKeySignatureCollector *keys, MidiFileScan *out);
+
+/* Destroys everything the scan owns. NULL is a no-op; leaves *scan zeroed. */
+void midi_file_scan_destroy(MidiFileScan *scan);
 
 #endif
