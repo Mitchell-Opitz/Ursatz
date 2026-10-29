@@ -25,10 +25,32 @@ add_executable(test_form_bridge test_form_bridge.c)
 target_link_libraries(test_form_bridge PRIVATE ursatz_chain)
 add_test(NAME chain_form_bridge COMMAND test_form_bridge)
 
-# Memcheck for the bridges. Skips silently if valgrind isn't installed.
+add_executable(test_chain_inputs test_chain_inputs.c)
+target_link_libraries(test_chain_inputs PRIVATE ursatz_chain)
+add_test(NAME chain_inputs COMMAND test_chain_inputs)
+
+# The chain against the test glue it replaces, on four reference pieces (the glue lives in tests/integration and tests/analysis).
+add_executable(test_analysis_chain test_analysis_chain.c)
+target_link_libraries(test_analysis_chain PRIVATE ursatz_chain)
+target_include_directories(test_analysis_chain PRIVATE
+    ${PROJECT_SOURCE_DIR}/tests/integration ${PROJECT_SOURCE_DIR}/tests/analysis)
+target_compile_definitions(test_analysis_chain PRIVATE
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
+    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+add_test(NAME analysis_chain COMMAND test_analysis_chain)
+
+# Memcheck for the bridges and the input builders. Skips silently if valgrind isn't installed.
 find_program(URSATZ_CHAIN_VALGRIND valgrind)
 if(URSATZ_CHAIN_VALGRIND)
   add_test(NAME chain_form_bridge_valgrind
            COMMAND ${URSATZ_CHAIN_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_form_bridge>)
+  # the smallest fixture only, to keep CI time
+  add_test(NAME analysis_chain_valgrind
+           COMMAND ${URSATZ_CHAIN_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_analysis_chain>)
+  set_tests_properties(analysis_chain_valgrind PROPERTIES ENVIRONMENT "URSATZ_CHAIN_PIECE=field1")
+  add_test(NAME chain_inputs_valgrind
+           COMMAND ${URSATZ_CHAIN_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_chain_inputs>)
 endif()
