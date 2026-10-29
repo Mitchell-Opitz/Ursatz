@@ -23,6 +23,7 @@ add_library(standard_meter
     analysis/meter_analysis_hypermeter.c
     analysis/meter_analysis_density.c
     analysis/meter_analysis_check.c
+    analysis/meter_analysis_tuplet.c
 )
 target_include_directories(standard_meter PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
