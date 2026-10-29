@@ -113,6 +113,7 @@ add_library(ursatz
     interpretation/scale_degree.c
     interpretation/texture.c
     theory/framework.c
+    theory/framework_singleton.c
     rules/rule.c
     rules/constraint.c
     rules/rule_pair.c
