@@ -213,3 +213,7 @@ Same ceiling as `Framework` itself: `identity` (L0), `core` (L1),
 `theory/framework.h`, `rules/rule.h`, and `rules/constraint.h`
 specifically. Enforced by
 `tests/test_architecture_common_practice_minimal.c`.
+
+## Neutral analysis input
+
+`common_practice_member_from_analysis_note` (`weighted_identification.h`) makes a `CommonPracticeMember` from an `AnalysisNote` and the segment's span: `held` when the note starts before the segment, `duration` the overlap and `onset` the note start, in whole notes as `double` (`rational_to_double`), `pitch` the note's `midi`. `key_regions.h` maps a region's key to an `AnalysisKey` (`common_practice_key_region_analysis_key`) and an `AnalysisKeyEvent` to a `CommonPracticeKeySignatureEvent` (`common_practice_key_signature_event_from_analysis`).

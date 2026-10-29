@@ -102,3 +102,7 @@ called here.
   minor sixths and 54 rising major sixths in the masses, major final triads in
   about 85% of final chords) are the reason for the soft rules, not data the
   framework holds.
+
+## Shared slot types
+
+`SixteenthCenturyNote` and `SixteenthCenturyResult` are typedefs of `StandardCounterpointSlotNote` and `StandardCounterpointRuleResult` (`standard-counterpoint/slot_note.h`).

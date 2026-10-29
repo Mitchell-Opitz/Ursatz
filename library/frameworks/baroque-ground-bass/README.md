@@ -78,3 +78,7 @@ Owned here (moved from `src/semantics/`; type names and values unchanged):
 
 - `OstinatoType` is a plain enum value naming the kind of repeating pattern a work or section is built on, from broad to specific: ostinato (any pattern that repeats throughout in one voice), ground bass (an ostinato in the bass), chaconne, and passacaglia (the Baroque sub-genres of the ground bass, in triple meter). `ostinato_type_is_ground_bass` is true for the ground bass, chaconne, and passacaglia, and `ostinato_type_is_triple_meter_form` for the last two. It carries no `EntityID`, pitches, or framework claim. What a framework asks of each kind is its own convention (`frameworks/baroque-ground-bass`).
 - `ImitativeRole` is a plain enum value naming the part a voice plays in an imitation: dux (the leader, which states the melody first) or comes (the follower, which imitates it). It carries no `EntityID`, pitches, or framework claim, and is neither `ImitationAnswer` (how closely an entry follows) nor `FugueRole` (the part a passage plays in a fugue).
+
+## Shared slot types
+
+`GroundNote` and `GroundResult` are typedefs of `StandardCounterpointSlotNote` and `StandardCounterpointRuleResult` (`standard-counterpoint/slot_note.h`).

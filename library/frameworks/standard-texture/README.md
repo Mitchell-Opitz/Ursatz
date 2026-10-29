@@ -58,3 +58,7 @@ kinds of polyphony such as imitative or free) are not in this framework.
 
 `analysis/` measures texture features per measure from separated voices, classifies each measure with the rules above (no category is added) and merges the measures into passages with change points. The input is a neutral struct the caller fills; standard-texture includes no other framework. Accompaniment patterns (Alberti, arpeggiated, block chords, oom-pah) are not categories or subtypes here, so none is classified; the repeated-pattern score is measured and reported as evidence for them. See `docs/modules/texture-analysis.md`.
 
+
+## Neutral analysis input
+
+`standard_texture_input_add_analysis_note` (`analysis/texture_analysis_input.h`) takes an `AnalysisNote` (`semantics/analysis_note.h`): id, span, `midi` as the pitch, track, voice and voice confidence carry over. A note with an unknown pitch is rejected.
