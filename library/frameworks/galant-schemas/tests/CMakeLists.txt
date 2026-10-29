@@ -37,3 +37,14 @@ add_test(NAME galant_schemas_analysis_match COMMAND test_galant_schemas_analysis
 add_executable(test_galant_schemas_schema_function test_schema_function.c)
 target_link_libraries(test_galant_schemas_schema_function PRIVATE galant_schemas)
 add_test(NAME galant_schemas_schema_function COMMAND test_galant_schemas_schema_function)
+
+add_executable(test_galant_schemas_analysis_segment test_galant_analysis_segment.c)
+target_link_libraries(test_galant_schemas_analysis_segment PRIVATE galant_schemas)
+add_test(NAME galant_schemas_analysis_segment COMMAND test_galant_schemas_analysis_segment)
+
+# Memcheck for the analysis note mapping test. Skips silently if valgrind isn't installed.
+find_program(URSATZ_GALANT_SEGMENT_VALGRIND valgrind)
+if(URSATZ_GALANT_SEGMENT_VALGRIND)
+  add_test(NAME galant_schemas_analysis_segment_valgrind
+           COMMAND ${URSATZ_GALANT_SEGMENT_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_galant_schemas_analysis_segment>)
+endif()

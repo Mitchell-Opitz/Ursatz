@@ -25,3 +25,14 @@ add_test(NAME standard_texture_analysis_features COMMAND test_standard_texture_a
 add_executable(test_standard_texture_analysis_classify test_analysis_classify.c)
 target_link_libraries(test_standard_texture_analysis_classify PRIVATE standard_texture)
 add_test(NAME standard_texture_analysis_classify COMMAND test_standard_texture_analysis_classify)
+
+add_executable(test_standard_texture_analysis_note test_texture_analysis_note.c)
+target_link_libraries(test_standard_texture_analysis_note PRIVATE standard_texture)
+add_test(NAME standard_texture_analysis_note COMMAND test_standard_texture_analysis_note)
+
+# Memcheck for the analysis note mapping test. Skips silently if valgrind isn't installed.
+find_program(URSATZ_TEXTURE_NOTE_VALGRIND valgrind)
+if(URSATZ_TEXTURE_NOTE_VALGRIND)
+  add_test(NAME standard_texture_analysis_note_valgrind
+           COMMAND ${URSATZ_TEXTURE_NOTE_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_texture_analysis_note>)
+endif()

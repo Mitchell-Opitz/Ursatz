@@ -51,3 +51,14 @@ add_test(NAME architecture_common_practice_minimal COMMAND test_architecture_com
 add_executable(test_common_practice_minimal_key_regions test_key_regions.c)
 target_link_libraries(test_common_practice_minimal_key_regions PRIVATE common_practice_minimal)
 add_test(NAME common_practice_minimal_key_regions COMMAND test_common_practice_minimal_key_regions)
+
+add_executable(test_common_practice_minimal_analysis_note test_common_practice_analysis_note.c)
+target_link_libraries(test_common_practice_minimal_analysis_note PRIVATE common_practice_minimal)
+add_test(NAME common_practice_minimal_analysis_note COMMAND test_common_practice_minimal_analysis_note)
+
+# Memcheck for the analysis note mapping test. Skips silently if valgrind isn't installed.
+find_program(URSATZ_COMMON_PRACTICE_NOTE_VALGRIND valgrind)
+if(URSATZ_COMMON_PRACTICE_NOTE_VALGRIND)
+  add_test(NAME common_practice_minimal_analysis_note_valgrind
+           COMMAND ${URSATZ_COMMON_PRACTICE_NOTE_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_common_practice_minimal_analysis_note>)
+endif()
