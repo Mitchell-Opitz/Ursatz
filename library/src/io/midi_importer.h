@@ -132,7 +132,9 @@ void midi_tempo_import_destroy(MidiTempoImport *tempo);
 /*
  * Complete import: one call that parses the file once and returns everything the importer reads --
  * notes, meter, tempo, key signatures, and the tracks with their names and program changes. The file's
- * header is parsed once and every track is walked once. smf_reader.h and midi_event_decoder.h stay
+ * header is parsed once and every track is walked once. midi_importer_import,
+ * midi_importer_import_with_meter and midi_importer_import_with_tempo are wrappers over this call: they
+ * keep the part they return and destroy the rest. smf_reader.h and midi_event_decoder.h stay
  * implementation details of this module.
  *
  * events, pitch_values and count are exactly what midi_importer_import returns (same order, same
@@ -153,7 +155,7 @@ void midi_tempo_import_destroy(MidiTempoImport *tempo);
  * Fails as midi_importer_import does, and also with MIDI_IMPORT_ERR_UNSUPPORTED_DIVISION for a division
  * of 0 (no position can be formed). On any failure *out is untouched and nothing leaks. Because every
  * part is built, a file whose tempo times do not fit a TempoMap (MIDI_IMPORT_ERR_ALLOC, see
- * midi_importer_import_with_tempo) fails here.
+ * midi_importer_import_with_tempo) fails here, and so also in the three entry points above.
  */
 typedef struct {
     uint64_t tick;
