@@ -23,6 +23,8 @@ Every concrete subtype now implements real transformation logic via a `<subtype>
 Two judgment calls, made explicitly rather than left implicit: `Contraction`'s "remove a declared sub-range" is implemented as "remove by declared `EntityID` set" (an arbitrary subset, not a contiguous range) -- flagged in `contraction.h`'s construction doc comment. `Expansion`'s insertion point is a single caller-supplied index (`position`) into the source sequence, not a more general splice description.
 
 `Retrograde`, `Augmentation`, and `Diminution` currently implement only one dimension each (`RETROGRADE_DIMENSION_EVENT_ORDER`, `AUGMENTATION_DIMENSION_DURATIONS`/`DIMINUTION_DIMENSION_DURATIONS` respectively); their other declared dimensions return a dedicated "not implemented" error rather than silently doing nothing.
+`transform_support.h` is an internal helper for the transform files only and is not part of the public API. It holds the note clone helpers every transform used to carry its own copy of (`transform_support_clone_note_event`, `_with_new_pitch`, `_with_new_duration`, `_with_new_onset`, the pitch, spelling and voice clones, `make_derived_id`, `make_provenance_from`, `dimension_name`). The copies differed only in the one field a transform changes, which is the argument of the matching helper.
+
 
 ## Dependencies
 

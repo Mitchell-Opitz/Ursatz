@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
+
 struct StatisticalModel {
     EntityID *id;
     Value *input_features;
@@ -13,15 +15,6 @@ struct StatisticalModel {
     char *model_version;
     Value *calibration;
 };
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
 
 StatisticalModelResult statistical_model_create(EntityID *id, Value *input_features, Value *output,
                                                   unsigned long probability_numerator,
@@ -55,13 +48,13 @@ StatisticalModelResult statistical_model_create(EntityID *id, Value *input_featu
         return STATISTICAL_MODEL_ERR_ALLOC;
     }
 
-    model->training_corpus = copy_string(training_corpus);
+    model->training_corpus = ursatz_string_copy(training_corpus);
     if (model->training_corpus == NULL) {
         free(model);
         return STATISTICAL_MODEL_ERR_ALLOC;
     }
 
-    model->model_version = copy_string(model_version);
+    model->model_version = ursatz_string_copy(model_version);
     if (model->model_version == NULL) {
         free(model->training_corpus);
         free(model);

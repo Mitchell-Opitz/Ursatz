@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
+
 struct GenerationRecord {
     EntityID *id;
     unsigned long random_seed;
@@ -11,15 +13,6 @@ struct GenerationRecord {
     Value *configuration;
     ProvenanceReference *provenance;
 };
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
 
 GenerationRecordResult generation_record_create(EntityID *id, unsigned long random_seed,
                                                  const char *generator_version, const char *framework_version,
@@ -40,7 +33,7 @@ GenerationRecordResult generation_record_create(EntityID *id, unsigned long rand
         return GENERATION_RECORD_ERR_ALLOC;
     }
 
-    record->generator_version = copy_string(generator_version);
+    record->generator_version = ursatz_string_copy(generator_version);
     if (record->generator_version == NULL) {
         free(record);
         return GENERATION_RECORD_ERR_ALLOC;
@@ -48,7 +41,7 @@ GenerationRecordResult generation_record_create(EntityID *id, unsigned long rand
 
     record->framework_version = NULL;
     if (framework_version != NULL) {
-        record->framework_version = copy_string(framework_version);
+        record->framework_version = ursatz_string_copy(framework_version);
         if (record->framework_version == NULL) {
             free(record->generator_version);
             free(record);

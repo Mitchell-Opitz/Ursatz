@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "core/provenance_reference.h"
+#include "core/string_copy.h"
 #include "identity/entity_id.h"
 #include "persistence/persistence_context_query.h"
 #include "query/query_fraction.h"
@@ -47,15 +48,6 @@ static void free_matches(Matches *matches) {
     matches->count = 0;
 }
 
-static char *copy_string(const char *text) {
-    size_t length = strlen(text);
-    char *copy = (char *)malloc(length + 1);
-    if (copy != NULL) {
-        memcpy(copy, text, length + 1);
-    }
-    return copy;
-}
-
 static CorpusSearchResult add_match(Matches *matches, size_t piece_index, size_t start, QueryFraction similarity,
                                     const SimilarityBreakdown *breakdown, const char *first_id, const char *last_id) {
     if (matches->count == matches->capacity) {
@@ -72,8 +64,8 @@ static CorpusSearchResult add_match(Matches *matches, size_t piece_index, size_t
     match->start = start;
     match->similarity = similarity;
     match->breakdown = *breakdown;
-    match->first_id = copy_string(first_id);
-    match->last_id = copy_string(last_id);
+    match->first_id = ursatz_string_copy(first_id);
+    match->last_id = ursatz_string_copy(last_id);
     if (match->first_id == NULL || match->last_id == NULL) {
         free_match(match);
         return CORPUS_SEARCH_ERR_ALLOC;

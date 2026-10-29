@@ -5,6 +5,8 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
+#include "rules/rule_pair.h"
+#include "ground_framework.h"
 
 /*
  * Shared construction helper for this module's Rule/Constraint pairs.
@@ -16,10 +18,7 @@
  * work (docs/modules/rules.md).
  */
 
-typedef struct {
-    Rule *rule;
-    Constraint *constraint;
-} GroundRulePair;
+typedef RulePair GroundRulePair;
 
 /*
  * Builds the pair with ids "ground-rule-<name>" and
@@ -28,6 +27,8 @@ typedef struct {
  * untouched) on allocation failure or a WEIGHTED type. Callers cache the
  * pair for process lifetime.
  */
-bool ground_build_rule_pair(const char *name, ConstraintType type, GroundRulePair *out);
+static inline bool ground_build_rule_pair(const char *name, ConstraintType type, GroundRulePair *out) {
+    return rule_pair_build_typed(baroque_ground_bass_framework(), "ground", name, type, out);
+}
 
 #endif

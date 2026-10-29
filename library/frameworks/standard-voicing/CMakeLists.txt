@@ -1,6 +1,5 @@
 add_library(standard_voicing
     framework.c
-    rule_pair.c
     voicing_pitch.c
     voicing_rules.c
     stem_rules.c

@@ -5,6 +5,8 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
+#include "rules/rule_pair.h"
+#include "framework.h"
 
 /*
  * Shared construction helper for this module's Rule/Constraint pairs.
@@ -16,10 +18,7 @@
  * work (docs/modules/rules.md).
  */
 
-typedef struct {
-    Rule *rule;
-    Constraint *constraint;
-} StandardRhythmRulePair;
+typedef RulePair StandardRhythmRulePair;
 
 /*
  * Builds the pair with ids "standard-rhythm-rule-<name>" and
@@ -28,6 +27,8 @@ typedef struct {
  * free separately -- callers cache the pair for process lifetime, as
  * chord_vocabulary does.
  */
-bool standard_rhythm_build_rule_pair(const char *name, StandardRhythmRulePair *out);
+static inline bool standard_rhythm_build_rule_pair(const char *name, StandardRhythmRulePair *out) {
+    return rule_pair_build(standard_rhythm_framework(), "standard-rhythm", name, out);
+}
 
 #endif

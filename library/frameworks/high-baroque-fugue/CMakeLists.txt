@@ -1,6 +1,5 @@
 add_library(high_baroque_fugue
     fugue_framework.c
-    fugue_rule_pair.c
     fugue_rule_table.c
     fugue_exposition.c
     fugue_entry_rules.c

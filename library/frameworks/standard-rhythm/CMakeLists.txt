@@ -1,6 +1,5 @@
 add_library(standard_rhythm
     framework.c
-    rule_pair.c
     name_rules.c
     hierarchy_rules.c
     notehead_rules.c

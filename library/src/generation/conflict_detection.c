@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
+
 struct ConflictDetection {
     EntityID **conflicting_ids;
     size_t conflicting_id_count;
@@ -12,15 +14,6 @@ struct ConflictDetection {
     unsigned long weight_numerator;
     unsigned long weight_denominator;
 };
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
 
 ConflictDetectionResult conflict_detection_create(EntityID **conflicting_ids, size_t conflicting_id_count,
                                                    const char *description, unsigned long priority,
@@ -55,7 +48,7 @@ ConflictDetectionResult conflict_detection_create(EntityID **conflicting_ids, si
         owned_ids[i] = conflicting_ids[i];
     }
 
-    char *copied_description = copy_string(description);
+    char *copied_description = ursatz_string_copy(description);
     if (copied_description == NULL) {
         free(owned_ids);
         free(conflict);

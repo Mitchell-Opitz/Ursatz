@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
+
 struct Candidate {
     EntityID *id;
     EntityID *material_id;
@@ -27,15 +29,6 @@ struct CandidateSet {
     char *framework_version;
     ProvenanceReference *provenance;
 };
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
 
 static Interpretation **copy_interpretation_pointers(Interpretation **interpretations, size_t count) {
     Interpretation **copy = (Interpretation **)malloc(sizeof(Interpretation *) * count);
@@ -240,7 +233,7 @@ CandidateSetResult candidate_set_create(EntityID *id, Candidate **candidates, si
         }
     }
 
-    char *copied_version = copy_string(generator_version);
+    char *copied_version = ursatz_string_copy(generator_version);
     if (copied_version == NULL) {
         free(copied_candidates);
         free(set);
@@ -249,7 +242,7 @@ CandidateSetResult candidate_set_create(EntityID *id, Candidate **candidates, si
 
     char *copied_framework_version = NULL;
     if (framework_version != NULL) {
-        copied_framework_version = copy_string(framework_version);
+        copied_framework_version = ursatz_string_copy(framework_version);
         if (copied_framework_version == NULL) {
             free(copied_version);
             free(copied_candidates);

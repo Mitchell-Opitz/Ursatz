@@ -1,6 +1,5 @@
 add_library(standard_texture
     framework.c
-    rule_pair.c
     texture_rules.c
     texture_classification_rules.c
     mixed_texture_rules.c

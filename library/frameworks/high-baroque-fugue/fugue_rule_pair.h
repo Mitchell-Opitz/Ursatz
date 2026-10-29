@@ -5,6 +5,8 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
+#include "rules/rule_pair.h"
+#include "fugue_framework.h"
 
 /*
  * Shared construction helper for this module's Rule/Constraint pairs.
@@ -16,10 +18,7 @@
  * work (docs/modules/rules.md).
  */
 
-typedef struct {
-    Rule *rule;
-    Constraint *constraint;
-} FugueRulePair;
+typedef RulePair FugueRulePair;
 
 /*
  * Builds the pair with ids "fugue-rule-<name>" and
@@ -28,6 +27,8 @@ typedef struct {
  * untouched) on allocation failure or a WEIGHTED type. Callers cache the
  * pair for process lifetime.
  */
-bool fugue_build_rule_pair(const char *name, ConstraintType type, FugueRulePair *out);
+static inline bool fugue_build_rule_pair(const char *name, ConstraintType type, FugueRulePair *out) {
+    return rule_pair_build_typed(high_baroque_fugue_framework(), "fugue", name, type, out);
+}
 
 #endif

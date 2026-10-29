@@ -5,6 +5,8 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
+#include "rules/rule_pair.h"
+#include "framework.h"
 
 /*
  * Shared construction helper for this module's Rule/Constraint pairs.
@@ -16,10 +18,7 @@
  * generation-pipeline work (docs/modules/rules.md).
  */
 
-typedef struct {
-    Rule *rule;
-    Constraint *constraint;
-} StandardVoicingRulePair;
+typedef RulePair StandardVoicingRulePair;
 
 /*
  * Builds the pair with ids "standard-voicing-rule-<name>" and
@@ -29,6 +28,8 @@ typedef struct {
  * owns nothing it must free separately -- callers cache the pair for
  * process lifetime.
  */
-bool standard_voicing_build_rule_pair(const char *name, ConstraintType type, StandardVoicingRulePair *out);
+static inline bool standard_voicing_build_rule_pair(const char *name, ConstraintType type, StandardVoicingRulePair *out) {
+    return rule_pair_build_typed(standard_voicing_framework(), "standard-voicing", name, type, out);
+}
 
 #endif

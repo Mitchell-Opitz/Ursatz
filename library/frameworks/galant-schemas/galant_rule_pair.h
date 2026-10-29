@@ -5,6 +5,8 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
+#include "rules/rule_pair.h"
+#include "galant_framework.h"
 
 /*
  * Shared construction helper for this module's Rule/Constraint pairs.
@@ -16,10 +18,7 @@
  * work (docs/modules/rules.md).
  */
 
-typedef struct {
-    Rule *rule;
-    Constraint *constraint;
-} GalantRulePair;
+typedef RulePair GalantRulePair;
 
 /*
  * Builds the pair with ids "galant-rule-<name>" and
@@ -28,6 +27,8 @@ typedef struct {
  * untouched) on allocation failure or a WEIGHTED type. Callers cache the
  * pair for process lifetime.
  */
-bool galant_build_rule_pair(const char *name, ConstraintType type, GalantRulePair *out);
+static inline bool galant_build_rule_pair(const char *name, ConstraintType type, GalantRulePair *out) {
+    return rule_pair_build_typed(galant_schemas_framework(), "galant", name, type, out);
+}
 
 #endif

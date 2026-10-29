@@ -2,57 +2,34 @@
 
 #include <stdlib.h>
 
+#include "containers/id_array.h"
+
 struct Movement {
     EntityID *id;
     EntityID **section_ids;
     size_t section_id_count;
 };
 
-static EntityID **copy_id_array(EntityID **ids, size_t count) {
-    if (count == 0) {
-        return NULL;
-    }
-    EntityID **copy = (EntityID **)malloc(sizeof(EntityID *) * count);
-    if (copy == NULL) {
-        return NULL;
-    }
-    for (size_t i = 0; i < count; i++) {
-        copy[i] = ids[i];
-    }
-    return copy;
-}
-
-static void destroy_id_array(EntityID **ids, size_t count) {
-    if (ids == NULL) {
-        return;
-    }
-    for (size_t i = 0; i < count; i++) {
-        entity_id_destroy(ids[i]);
-    }
-    free(ids);
-}
-
 MovementResult movement_create(EntityID *id, EntityID **section_ids, size_t section_id_count, Movement **out) {
-    if (id == NULL) {
-        return MOVEMENT_ERR_NULL_ID;
-    }
-    for (size_t i = 0; i < section_id_count; i++) {
-        if (section_ids[i] == NULL) {
+    EntityID **copy = NULL;
+    switch (container_shell_create(id, section_ids, section_id_count, &copy)) {
+        case CONTAINER_SHELL_OK:
+            break;
+        case CONTAINER_SHELL_ERR_NULL_OWNER:
+            return MOVEMENT_ERR_NULL_ID;
+        case CONTAINER_SHELL_ERR_NULL_ID:
             return MOVEMENT_ERR_NULL_SECTION_ID;
-        }
+        default:
+            return MOVEMENT_ERR_ALLOC;
     }
 
     Movement *movement = (Movement *)malloc(sizeof(Movement));
     if (movement == NULL) {
+        free(copy);
         return MOVEMENT_ERR_ALLOC;
     }
 
-    movement->section_ids = copy_id_array(section_ids, section_id_count);
-    if (section_id_count > 0 && movement->section_ids == NULL) {
-        free(movement);
-        return MOVEMENT_ERR_ALLOC;
-    }
-
+    movement->section_ids = copy;
     movement->id = id;
     movement->section_id_count = section_id_count;
 
@@ -65,7 +42,7 @@ void movement_destroy(Movement *movement) {
         return;
     }
     entity_id_destroy(movement->id);
-    destroy_id_array(movement->section_ids, movement->section_id_count);
+    id_array_destroy(movement->section_ids, movement->section_id_count);
     free(movement);
 }
 

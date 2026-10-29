@@ -1,6 +1,5 @@
 add_library(baroque_ground_bass
     ground_framework.c
-    ground_rule_pair.c
     ground_rule_table.c
     ground_piece.c
     ground_bass_rules.c

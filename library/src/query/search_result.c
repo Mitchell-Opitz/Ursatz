@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
 #include "query/query_fraction.h"
 
 struct SearchResult {
@@ -17,15 +18,6 @@ struct SearchResult {
     size_t evidence_count;
     ProvenanceReference *provenance;
 };
-
-static char *copy_string(const char *text) {
-    size_t length = strlen(text);
-    char *copy = (char *)malloc(length + 1);
-    if (copy != NULL) {
-        memcpy(copy, text, length + 1);
-    }
-    return copy;
-}
 
 static int known_dimension(SimilarityDimension dimension) {
     return (int)dimension >= 0 && dimension < SIMILARITY_DIMENSION_COUNT;
@@ -78,10 +70,10 @@ SearchResultResult search_result_create(const char *piece_ref, const char *match
     if (result == NULL) {
         return SEARCH_RESULT_ERR_ALLOC;
     }
-    result->piece_ref = copy_string(piece_ref);
-    result->matched_object_id = copy_string(matched_object_id);
-    result->region_start_id = copy_string(region_start_id);
-    result->region_end_id = copy_string(region_end_id);
+    result->piece_ref = ursatz_string_copy(piece_ref);
+    result->matched_object_id = ursatz_string_copy(matched_object_id);
+    result->region_start_id = ursatz_string_copy(region_start_id);
+    result->region_end_id = ursatz_string_copy(region_end_id);
     result->criteria = (SearchResultCriterion *)malloc(criterion_count * sizeof(*result->criteria));
     result->evidence = (SearchResultEvidence *)malloc(evidence_count * sizeof(*result->evidence));
     if (result->piece_ref == NULL || result->matched_object_id == NULL || result->region_start_id == NULL ||

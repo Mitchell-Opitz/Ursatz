@@ -1,6 +1,5 @@
 add_library(standard_form
     framework.c
-    rule_pair.c
     motive_rules.c
     hierarchy_rules.c
     phrase_rules.c

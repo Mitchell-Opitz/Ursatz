@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
+
 struct StyleModel {
     EntityID *id;
     char *style_name;
@@ -10,15 +12,6 @@ struct StyleModel {
     char *training_corpus;
     char *model_version;
 };
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
 
 StyleModelResult style_model_create(EntityID *id, const char *style_name, Value *style_features,
                                      const char *training_corpus, const char *model_version, StyleModel **out) {
@@ -43,20 +36,20 @@ StyleModelResult style_model_create(EntityID *id, const char *style_name, Value 
         return STYLE_MODEL_ERR_ALLOC;
     }
 
-    model->style_name = copy_string(style_name);
+    model->style_name = ursatz_string_copy(style_name);
     if (model->style_name == NULL) {
         free(model);
         return STYLE_MODEL_ERR_ALLOC;
     }
 
-    model->training_corpus = copy_string(training_corpus);
+    model->training_corpus = ursatz_string_copy(training_corpus);
     if (model->training_corpus == NULL) {
         free(model->style_name);
         free(model);
         return STYLE_MODEL_ERR_ALLOC;
     }
 
-    model->model_version = copy_string(model_version);
+    model->model_version = ursatz_string_copy(model_version);
     if (model->model_version == NULL) {
         free(model->style_name);
         free(model->training_corpus);

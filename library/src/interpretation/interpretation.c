@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
+
 struct Interpretation {
     EntityID *id;
     EntityID *target_id;
@@ -16,15 +18,6 @@ struct Interpretation {
     InterpretationStatus status;
     ProvenanceReference *provenance;
 };
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
 
 InterpretationResult interpretation_create(EntityID *id, EntityID *target_id, Value *claim, EntityID *context_id,
                                             EntityID *evidence_id, FrameworkReference *framework_reference,
@@ -58,13 +51,13 @@ InterpretationResult interpretation_create(EntityID *id, EntityID *target_id, Va
         return INTERPRETATION_ERR_ALLOC;
     }
 
-    interpretation->author = copy_string(author);
+    interpretation->author = ursatz_string_copy(author);
     if (interpretation->author == NULL) {
         free(interpretation);
         return INTERPRETATION_ERR_ALLOC;
     }
 
-    interpretation->method = copy_string(method);
+    interpretation->method = ursatz_string_copy(method);
     if (interpretation->method == NULL) {
         free(interpretation->author);
         free(interpretation);

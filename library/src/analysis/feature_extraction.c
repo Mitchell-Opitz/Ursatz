@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
+
 struct FeatureExtraction {
     bool has_interval;
     Interval *interval;
@@ -12,15 +14,6 @@ struct FeatureExtraction {
     unsigned long density_numerator;
     unsigned long density_denominator;
 };
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
 
 FeatureExtractionResult feature_extraction_create(bool has_interval, Interval *interval, bool has_contour,
                                                    const char *contour, bool has_density,
@@ -43,7 +36,7 @@ FeatureExtractionResult feature_extraction_create(bool has_interval, Interval *i
 
     char *copied_contour = NULL;
     if (has_contour) {
-        copied_contour = copy_string(contour);
+        copied_contour = ursatz_string_copy(contour);
         if (copied_contour == NULL) {
             free(feature_extraction);
             return FEATURE_EXTRACTION_ERR_ALLOC;

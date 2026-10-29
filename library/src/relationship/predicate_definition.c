@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
+
 struct PredicateDefinition {
     EntityID *id;
     char *name;
@@ -15,15 +17,6 @@ struct PredicateDefinition {
     size_t allowed_target_type_count;
     bool contextual;
 };
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
 
 static PredicateDefinitionResult copy_type_list(const char **types, size_t count, char ***out) {
     if (count == 0) {
@@ -44,7 +37,7 @@ static PredicateDefinitionResult copy_type_list(const char **types, size_t count
         return PREDICATE_DEFINITION_ERR_ALLOC;
     }
     for (size_t i = 0; i < count; i++) {
-        copies[i] = copy_string(types[i]);
+        copies[i] = ursatz_string_copy(types[i]);
         if (copies[i] == NULL) {
             for (size_t j = 0; j < i; j++) {
                 free(copies[j]);
@@ -84,7 +77,7 @@ PredicateDefinitionResult predicate_definition_create(EntityID *id, const char *
         return PREDICATE_DEFINITION_ERR_ALLOC;
     }
 
-    definition->name = copy_string(name);
+    definition->name = ursatz_string_copy(name);
     if (definition->name == NULL) {
         free(definition);
         return PREDICATE_DEFINITION_ERR_ALLOC;
@@ -92,7 +85,7 @@ PredicateDefinitionResult predicate_definition_create(EntityID *id, const char *
 
     definition->inverse = NULL;
     if (inverse != NULL) {
-        definition->inverse = copy_string(inverse);
+        definition->inverse = ursatz_string_copy(inverse);
         if (definition->inverse == NULL) {
             free(definition->name);
             free(definition);

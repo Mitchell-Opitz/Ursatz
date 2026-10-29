@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 
+#include "containers/id_array.h"
+
 struct Staff {
     EntityID *id;
     EntityID **voice_ids;
@@ -9,30 +11,6 @@ struct Staff {
     EntityID **layer_ids;
     size_t layer_id_count;
 };
-
-static EntityID **copy_id_array(EntityID **ids, size_t count) {
-    if (count == 0) {
-        return NULL;
-    }
-    EntityID **copy = (EntityID **)malloc(sizeof(EntityID *) * count);
-    if (copy == NULL) {
-        return NULL;
-    }
-    for (size_t i = 0; i < count; i++) {
-        copy[i] = ids[i];
-    }
-    return copy;
-}
-
-static void destroy_id_array(EntityID **ids, size_t count) {
-    if (ids == NULL) {
-        return;
-    }
-    for (size_t i = 0; i < count; i++) {
-        entity_id_destroy(ids[i]);
-    }
-    free(ids);
-}
 
 StaffResult staff_create(EntityID *id, EntityID **voice_ids, size_t voice_id_count, EntityID **layer_ids,
                           size_t layer_id_count, Staff **out) {
@@ -55,13 +33,13 @@ StaffResult staff_create(EntityID *id, EntityID **voice_ids, size_t voice_id_cou
         return STAFF_ERR_ALLOC;
     }
 
-    staff->voice_ids = copy_id_array(voice_ids, voice_id_count);
+    staff->voice_ids = id_array_copy(voice_ids, voice_id_count);
     if (voice_id_count > 0 && staff->voice_ids == NULL) {
         free(staff);
         return STAFF_ERR_ALLOC;
     }
 
-    staff->layer_ids = copy_id_array(layer_ids, layer_id_count);
+    staff->layer_ids = id_array_copy(layer_ids, layer_id_count);
     if (layer_id_count > 0 && staff->layer_ids == NULL) {
         free(staff->voice_ids);
         free(staff);
@@ -81,8 +59,8 @@ void staff_destroy(Staff *staff) {
         return;
     }
     entity_id_destroy(staff->id);
-    destroy_id_array(staff->voice_ids, staff->voice_id_count);
-    destroy_id_array(staff->layer_ids, staff->layer_id_count);
+    id_array_destroy(staff->voice_ids, staff->voice_id_count);
+    id_array_destroy(staff->layer_ids, staff->layer_id_count);
     free(staff);
 }
 

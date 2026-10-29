@@ -5,6 +5,8 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
+#include "rules/rule_pair.h"
+#include "framework.h"
 
 /*
  * Shared construction helper for this module's Rule/Constraint pairs.
@@ -16,10 +18,7 @@
  * work (docs/modules/rules.md).
  */
 
-typedef struct {
-    Rule *rule;
-    Constraint *constraint;
-} StandardMeterRulePair;
+typedef RulePair StandardMeterRulePair;
 
 /*
  * Builds the pair with ids "standard-meter-rule-<name>" and
@@ -28,6 +27,8 @@ typedef struct {
  * free separately -- callers cache the pair for process lifetime, as
  * chord_vocabulary does.
  */
-bool standard_meter_build_rule_pair(const char *name, StandardMeterRulePair *out);
+static inline bool standard_meter_build_rule_pair(const char *name, StandardMeterRulePair *out) {
+    return rule_pair_build(standard_meter_framework(), "standard-meter", name, out);
+}
 
 #endif

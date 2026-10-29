@@ -1,6 +1,5 @@
 add_library(standard_notation
     framework.c
-    rule_pair.c
     staff_clef_rules.c
     ledger_line_rules.c
     stem_rules.c

@@ -1,6 +1,5 @@
 add_library(galant_schemas
     galant_framework.c
-    galant_rule_pair.c
     galant_rule_table.c
     galant_degree.c
     galant_exemplar.c

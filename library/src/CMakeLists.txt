@@ -5,6 +5,7 @@ add_library(ursatz
     identity/version_model.c
     identity/schema_version.c
     core/entity.c
+    core/string_copy.c
     core/value.c
     core/occurrence.c
     core/equality.c
@@ -55,6 +56,7 @@ add_library(ursatz
     containers/voice.c
     containers/layer.c
     containers/staff.c
+    containers/id_array.c
     containers/part.c
     containers/measure.c
     containers/phrase.c
@@ -100,6 +102,7 @@ add_library(ursatz
     interpretation/observation.c
     interpretation/hypothesis.c
     interpretation/interpretation.c
+    interpretation/claim_interpretation.c
     interpretation/chord.c
     interpretation/key.c
     interpretation/scale_degree.c
@@ -107,6 +110,7 @@ add_library(ursatz
     theory/framework.c
     rules/rule.c
     rules/constraint.c
+    rules/rule_pair.c
     rules/preference.c
     rules/preference_weight.c
     rules/preference_ranking.c
@@ -120,6 +124,7 @@ add_library(ursatz
     theory/style_model_build.c
     theory/style_model_blend.c
     transform/transformation.c
+    transform/transform_support.c
     transform/transform_result.c
     transform/transposition.c
     transform/inversion.c

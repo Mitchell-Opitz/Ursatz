@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "containers/id_array.h"
 #include "containers/phrase.h"
 #include "core/occurrence.h"
 #include "core/provenance_reference.h"
@@ -356,24 +357,14 @@ AnalyzerResult phrase_boundary_detection_signal_analyze(const void *input, const
 const Analyzer PHRASE_BOUNDARY_DETECTION_SIGNAL_ANALYZER = {"PhraseBoundaryDetectionSignal",
                                                               phrase_boundary_detection_signal_analyze};
 
-static void destroy_id_array(EntityID **ids, size_t count) {
-    if (ids == NULL) {
-        return;
-    }
-    for (size_t i = 0; i < count; i++) {
-        entity_id_destroy(ids[i]);
-    }
-    free(ids);
-}
-
-static bool copy_id_array(const EntityID *const *source, size_t count, EntityID ***out) {
+static bool clone_id_array(const EntityID *const *source, size_t count, EntityID ***out) {
     EntityID **copy = (EntityID **)malloc(sizeof(EntityID *) * count);
     if (copy == NULL) {
         return false;
     }
     for (size_t i = 0; i < count; i++) {
         if (entity_id_create(entity_id_value(source[i]), &copy[i]) != ENTITY_ID_OK) {
-            destroy_id_array(copy, i);
+            id_array_destroy(copy, i);
             return false;
         }
     }
@@ -391,13 +382,13 @@ static bool build_phrase_occurrence(size_t phrase_index, const EntityID *const *
         return false;
     }
     EntityID **phrase_event_ids;
-    if (!copy_id_array(event_ids, event_id_count, &phrase_event_ids)) {
+    if (!clone_id_array(event_ids, event_id_count, &phrase_event_ids)) {
         entity_id_destroy(phrase_own_id);
         return false;
     }
     Phrase *phrase;
     if (phrase_create(phrase_own_id, phrase_event_ids, event_id_count, &phrase) != PHRASE_OK) {
-        destroy_id_array(phrase_event_ids, event_id_count);
+        id_array_destroy(phrase_event_ids, event_id_count);
         entity_id_destroy(phrase_own_id);
         return false;
     }
@@ -423,7 +414,7 @@ static bool build_phrase_occurrence(size_t phrase_index, const EntityID *const *
     }
 
     EntityID **region_event_ids;
-    if (!copy_id_array(event_ids, event_id_count, &region_event_ids)) {
+    if (!clone_id_array(event_ids, event_id_count, &region_event_ids)) {
         occurrence_destroy(occurrence);
         return false;
     }
@@ -431,7 +422,7 @@ static bool build_phrase_occurrence(size_t phrase_index, const EntityID *const *
     PhraseOccurrence *phrase_occurrence;
     if (phrase_occurrence_create(occurrence, region_event_ids, event_id_count, &phrase_occurrence) !=
         PHRASE_OCCURRENCE_OK) {
-        destroy_id_array(region_event_ids, event_id_count);
+        id_array_destroy(region_event_ids, event_id_count);
         occurrence_destroy(occurrence);
         return false;
     }

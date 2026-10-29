@@ -1,6 +1,5 @@
 add_library(scale_harmonization
     scale_framework.c
-    scale_rule_pair.c
     scale_rule_table.c
     scale_harmonization.c
     scale_patterns.c

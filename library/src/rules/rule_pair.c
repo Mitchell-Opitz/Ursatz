@@ -1,19 +1,22 @@
-#include "rule_pair.h"
+#include "rules/rule_pair.h"
 
 #include <stdio.h>
 
-#include "framework.h"
 #include "identity/entity_id.h"
 
-bool standard_notation_build_rule_pair(const char *name, StandardNotationRulePair *out) {
-    const Framework *framework = standard_notation_framework();
-    if (framework == NULL) {
+bool rule_pair_build(const Framework *framework, const char *prefix, const char *name, RulePair *out) {
+    return rule_pair_build_typed(framework, prefix, name, CONSTRAINT_TYPE_HARD, out);
+}
+
+bool rule_pair_build_typed(const Framework *framework, const char *prefix, const char *name, ConstraintType type,
+                           RulePair *out) {
+    if (framework == NULL || prefix == NULL || name == NULL || out == NULL || type == CONSTRAINT_TYPE_WEIGHTED) {
         return false;
     }
 
     char id_value[256];
 
-    snprintf(id_value, sizeof(id_value), "standard-notation-rule-%s", name);
+    snprintf(id_value, sizeof(id_value), "%s-rule-%s", prefix, name);
     EntityID *rule_id;
     if (entity_id_create(id_value, &rule_id) != ENTITY_ID_OK) {
         return false;
@@ -24,14 +27,14 @@ bool standard_notation_build_rule_pair(const char *name, StandardNotationRulePai
         return false;
     }
 
-    snprintf(id_value, sizeof(id_value), "standard-notation-constraint-%s", name);
+    snprintf(id_value, sizeof(id_value), "%s-constraint-%s", prefix, name);
     EntityID *constraint_id;
     if (entity_id_create(id_value, &constraint_id) != ENTITY_ID_OK) {
         rule_destroy(rule);
         return false;
     }
     Constraint *constraint;
-    if (constraint_create(constraint_id, framework, NULL, CONSTRAINT_TYPE_HARD, 0, 0, NULL, &constraint) !=
+    if (constraint_create(constraint_id, framework, NULL, type, 0, 0, NULL, &constraint) !=
         CONSTRAINT_OK) {
         entity_id_destroy(constraint_id);
         rule_destroy(rule);

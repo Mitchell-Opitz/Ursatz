@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
+
 struct Evidence {
     EntityID *id;
 
@@ -28,15 +30,6 @@ static EvidenceResult check_fraction(unsigned long numerator, unsigned long deno
         return EVIDENCE_ERR_SCORE_OUT_OF_RANGE;
     }
     return EVIDENCE_OK;
-}
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
 }
 
 EvidenceResult evidence_create(EntityID *id, unsigned long strength_numerator, unsigned long strength_denominator,
@@ -72,13 +65,13 @@ EvidenceResult evidence_create(EntityID *id, unsigned long strength_numerator, u
         return EVIDENCE_ERR_ALLOC;
     }
 
-    evidence->method = copy_string(method);
+    evidence->method = ursatz_string_copy(method);
     if (evidence->method == NULL) {
         free(evidence);
         return EVIDENCE_ERR_ALLOC;
     }
 
-    evidence->source = copy_string(source);
+    evidence->source = ursatz_string_copy(source);
     if (evidence->source == NULL) {
         free(evidence->method);
         free(evidence);
