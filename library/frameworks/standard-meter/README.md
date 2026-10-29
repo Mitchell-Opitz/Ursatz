@@ -136,6 +136,11 @@ American only; the syllables are a table so another system can be added.
 
 `analysis/` reads real music against these rules: syncopation per line, hemiola, hypermeter inferred from phrase and cadence placement, and a rhythmic density profile per phrase. The input is neutral structs the caller fills; standard-meter includes no other framework. See `docs/modules/rhythm-meter-analysis.md`.
 
+Two adapters carry the rules the Analyzer used to hold (R-217, P23 B1):
+
+- `analysis/meter_analysis_check.h`: the meter check. Input: `StandardMeterCheckEvidence` (harmonic-change times, cadence-arrival times and every note onset, in whole notes on `Rational`) and the `MeterMap`. The effective reading is the map's first full measure; the candidates are 2/4, 3/4, 4/4, 3/8, 6/8, 9/8 and 12/8 at scale 1/2, 1 and 2 with each beat as a pickup, scored from the share of changes on downbeats (harmonic mean with the share of downbeats carrying a change), on beats, and of arrivals on downbeats; a secondary downbeat of a four-beat meter counts half. The best candidate with different barlines is offered when it beats the effective reading by `STANDARD_METER_CHECK_MIN_MARGIN` (0.15); on equal score and barlines the one nearest an eighth by the common onset gap is shown, then the quarter-beat signature. `standard_meter_check_changes` finds the change times from labels and regions. An exact time that does not fit 64 bits is `STANDARD_METER_ANALYSIS_ERR_OVERFLOW`. Claim type `standard-meter/meter-check`, read back with `standard_meter_check_claim_read`.
+- `analysis/meter_analysis_tuplet.h`: tuplets and duplets from an `AnalysisNoteSet`. Onsets are read on a 96-step grid within a quarter step (rubato is left out); a triplet is an attack or distance off the 1/32 grid, a duplet is two halves of a compound beat; runs are per ratio, a single attack is dropped, and the order is smaller `actual`, measure, beat. `in_line` selects the notes to read. Claim type `standard-meter/tuplet`, read back with `standard_meter_tuplet_claim_read`.
+
 ## Neutral analysis input
 
 `standard_meter_input_add_analysis_note` (`analysis/meter_analysis_input.h`) takes an `AnalysisNote` (`semantics/analysis_note.h`) field for field: `line` is the note's voice (0 when it has none) and `pitch` is its `midi`. A note with an unknown pitch is rejected. The caller no longer writes the converter.
