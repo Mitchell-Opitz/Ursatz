@@ -102,25 +102,6 @@ bool diminution_identity_equals(const Diminution *a, const Diminution *b) {
     return transformation_identity_equals(a->transformation, b->transformation);
 }
 
-static unsigned long gcd_ul(unsigned long a, unsigned long b) {
-    while (b != 0) {
-        unsigned long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
-}
-
-static void rational_reduce(long *numerator, unsigned long *denominator) {
-    unsigned long abs_numerator = *numerator < 0 ? (unsigned long)(-*numerator) : (unsigned long)*numerator;
-    unsigned long divisor = gcd_ul(abs_numerator, *denominator);
-    if (divisor == 0) {
-        divisor = 1;
-    }
-    *numerator = *numerator / (long)divisor;
-    *denominator = *denominator / divisor;
-}
-
 DiminutionApplyResult diminution_apply(const Diminution *diminution, const NoteEvent *event, TransformResult **out) {
     if (diminution == NULL) {
         return DIMINUTION_APPLY_ERR_NULL_DIMINUTION;
@@ -133,9 +114,13 @@ DiminutionApplyResult diminution_apply(const Diminution *diminution, const NoteE
     }
 
     const Duration *source_duration = note_event_duration(event);
-    long new_numerator = duration_numerator(source_duration) * (long)diminution->scale_numerator;
-    unsigned long new_denominator = duration_denominator(source_duration) * diminution->scale_denominator;
-    rational_reduce(&new_numerator, &new_denominator);
+    long new_numerator = 0;
+    unsigned long new_denominator = 1;
+    if (!transform_support_rational_scale(duration_numerator(source_duration), duration_denominator(source_duration),
+                                          diminution->scale_numerator, diminution->scale_denominator, &new_numerator,
+                                          &new_denominator)) {
+        return DIMINUTION_APPLY_ERR_ALLOC;
+    }
 
     NoteEvent *derived = transform_support_clone_note_event_with_new_duration(event, new_numerator, new_denominator, "-diminished");
     if (derived == NULL) {

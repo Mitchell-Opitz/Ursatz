@@ -102,25 +102,6 @@ bool displacement_identity_equals(const Displacement *a, const Displacement *b) 
     return transformation_identity_equals(a->transformation, b->transformation);
 }
 
-static unsigned long gcd_ul(unsigned long a, unsigned long b) {
-    while (b != 0) {
-        unsigned long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
-}
-
-static void rational_reduce(long *numerator, unsigned long *denominator) {
-    unsigned long abs_numerator = *numerator < 0 ? (unsigned long)(-*numerator) : (unsigned long)*numerator;
-    unsigned long divisor = gcd_ul(abs_numerator, *denominator);
-    if (divisor == 0) {
-        divisor = 1;
-    }
-    *numerator = *numerator / (long)divisor;
-    *denominator = *denominator / divisor;
-}
-
 DisplacementApplyResult displacement_apply(const Displacement *displacement, const NoteEvent *event,
                                             TransformResult **out) {
     if (displacement == NULL) {
@@ -136,15 +117,16 @@ DisplacementApplyResult displacement_apply(const Displacement *displacement, con
     long magnitude_n = duration_numerator(displacement->magnitude);
     unsigned long magnitude_d = duration_denominator(displacement->magnitude);
 
-    long new_onset_n;
-    unsigned long new_onset_d;
-    if (displacement->direction == DISPLACEMENT_DIRECTION_FORWARD) {
-        new_onset_n = onset_n * (long)magnitude_d + magnitude_n * (long)onset_d;
-    } else {
-        new_onset_n = onset_n * (long)magnitude_d - magnitude_n * (long)onset_d;
+    long new_onset_n = 0;
+    unsigned long new_onset_d = 1;
+    bool computed = displacement->direction == DISPLACEMENT_DIRECTION_FORWARD
+                        ? transform_support_rational_add(onset_n, onset_d, magnitude_n, magnitude_d, &new_onset_n,
+                                                         &new_onset_d)
+                        : transform_support_rational_subtract(onset_n, onset_d, magnitude_n, magnitude_d,
+                                                              &new_onset_n, &new_onset_d);
+    if (!computed) {
+        return DISPLACEMENT_APPLY_ERR_ALLOC;
     }
-    new_onset_d = onset_d * magnitude_d;
-    rational_reduce(&new_onset_n, &new_onset_d);
 
     NoteEvent *derived = transform_support_clone_note_event_with_new_onset(event, new_onset_n, new_onset_d, "-displaced");
     if (derived == NULL) {
