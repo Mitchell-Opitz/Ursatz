@@ -83,6 +83,10 @@ bool standard_tonality_triad_intervals(StandardTonalityTriadQuality quality,
                                        StandardTonalityIntervalQuality *third,
                                        StandardTonalityIntervalQuality *fifth);
 
+/* QUALITIES: the root, third and fifth of a triad of the quality as semitones above the root: 0 4 7, 0 3 7,
+   0 3 6, 0 4 8. False (out untouched) for an invalid quality or NULL out. */
+bool standard_tonality_triad_quality_semitones(StandardTonalityTriadQuality quality, int out[3]);
+
 /* QUALITIES: the triad quality with the given third and fifth, or false
    (output untouched) when the pair is not one of the four (a major third
    with a diminished fifth, for example) or *out is NULL. */

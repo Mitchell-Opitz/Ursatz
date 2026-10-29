@@ -109,6 +109,11 @@ int standard_tonality_seventh_member_size(StandardTonalitySeventhMember member);
 bool standard_tonality_seventh_parts(StandardTonalitySeventhQuality quality, StandardTonalityTriadQuality *triad,
                                      StandardTonalityIntervalQuality *seventh);
 
+/* QUALITIES: the root, third, fifth and seventh of a seventh chord of the quality as semitones above the
+   root, in StandardTonalitySeventhQuality order: 0 4 7 11, 0 4 7 10, 0 3 7 10, 0 3 6 10, 0 3 6 9. False (out
+   untouched) for an invalid quality or NULL out. */
+bool standard_tonality_seventh_quality_semitones(StandardTonalitySeventhQuality quality, int out[4]);
+
 /* QUALITIES: the seventh chord quality with the given triad quality and
    seventh, or false (output untouched) when the pair is not one of the
    five (a minor triad with a major seventh, for example) or *out is
