@@ -34,8 +34,12 @@ If you cloned without `--recurse-submodules`, run `git submodule update --init -
 
 | Path | Pinned at |
 | --- | --- |
-| `external/ursatz` | Ursatz `main` at PR #142, the P1 analysis library (Framework v1). |
-| `external/ursatz-analyzer` | Ursatz-Analyzer `main` at PR #11. |
+| `external/ursatz` | Ursatz `main` at PR #161 (`1ed8aa1`). |
+| `external/ursatz-analyzer` | Ursatz-Analyzer `main` at PR #46 (`b356fb7`), version 0.3.0. |
+
+cJSON 1.7.18 is vendored at `external/cjson` and added before the submodules, so the Analyzer reuses it. `scripts/check-pins.sh`
+fails when a pin is not on its remote's `main` or when one repository is pinned at two commits; CI runs it after the
+submodule checkout.
 
 ## Structure
 

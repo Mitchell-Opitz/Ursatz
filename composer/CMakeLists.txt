@@ -18,6 +18,8 @@ endif()
 # Subprojects are built without their tests; Ursatz must come first so the Analyzer reuses its target.
 set(URSATZ_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(URSATZ_ANALYZER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+# The Composer vendors cJSON; it comes first so the Analyzer reuses this target instead of adding its own.
+add_subdirectory(external/cjson)
 add_subdirectory(external/ursatz)
 add_subdirectory(external/ursatz-analyzer)
 # Submodule headers are not ours to warn about.
