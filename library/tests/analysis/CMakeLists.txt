@@ -5,6 +5,7 @@ add_ursatz_test(scale_analysis)
 
 add_ursatz_test(voice_leading_analysis)
 add_ursatz_test(outer_voice)
+add_ursatz_test(outer_voice_attack_soprano)
 add_ursatz_test(voice_separation)
 add_ursatz_test(cadence_detection)
 add_ursatz_test(cadence_classification)
@@ -33,6 +34,13 @@ if(URSATZ_ANALYSIS_VALGRIND)
   add_test(NAME motive_tone_roles_valgrind
            COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_motive_tone_roles>)
+endif()
+
+# Scoped memcheck for the attack soprano test, same pattern.
+if(URSATZ_ANALYSIS_VALGRIND)
+  add_test(NAME outer_voice_attack_soprano_valgrind
+           COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_outer_voice_attack_soprano>)
 endif()
 add_ursatz_test(phrase_segmentation)
 add_ursatz_test(phrase_boundary_detection)
