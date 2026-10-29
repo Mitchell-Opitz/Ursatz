@@ -76,6 +76,16 @@ bool standard_tonality_key_signature_of(PitchLetter tonic_letter, int tonic_acci
 /* The tonic of the key with that signature count. False for NULL outputs. */
 bool standard_tonality_key_of_fifths(int fifths, bool minor, PitchLetter *letter, int *accidental);
 
+/* The tonic of the key on `pitch_class` (0..11) spelled with the fewer accidentals in its signature, sharps on a
+ * tie (F# major, D# minor). A minor key is judged by its relative major. False (outputs untouched) for a
+ * pitch class outside 0..11 or NULL outputs. */
+bool standard_tonality_key_tonic_of_pitch_class(int pitch_class, bool minor, PitchLetter *letter,
+                                                int *accidental);
+
+/* The label of the chromatic scale degree `semitones_above_tonic` (any integer, reduced mod 12): "1" "b2" "2"
+ * "b3" "3" "4" "#4" "5" "b6" "6" "b7" "7". */
+const char *standard_tonality_chromatic_degree_label(int semitones_above_tonic);
+
 /* The relative key's tonic: a minor third down for a major key, up for a minor key. */
 bool standard_tonality_relative_key(PitchLetter tonic_letter, int tonic_accidental, bool minor,
                                     PitchLetter *letter, int *accidental);

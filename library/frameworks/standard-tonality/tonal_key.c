@@ -199,3 +199,32 @@ bool standard_tonality_mode_of_roman_key_mode(StandardTonalityRomanKeyMode mode,
         return false;
     }
 }
+
+const char *standard_tonality_chromatic_degree_label(int semitones_above_tonic) {
+    static const char *const LABELS[12] = {"1", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7"};
+    return LABELS[((semitones_above_tonic % 12) + 12) % 12];
+}
+
+/* Major tonics by signature size 0 to 7, sharps then flats (circle of fifths). */
+static const int SHARP_MAJOR_TONICS[8] = {0, 7, 2, 9, 4, 11, 6, 1};
+static const int FLAT_MAJOR_TONICS[8] = {0, 5, 10, 3, 8, 1, 6, 11};
+
+static int signature_size(const int tonics[8], int pitch_class) {
+    for (int size = 0; size < 8; size++) {
+        if (tonics[size] == pitch_class) {
+            return size;
+        }
+    }
+    return 99;
+}
+
+bool standard_tonality_key_tonic_of_pitch_class(int pitch_class, bool minor, PitchLetter *letter,
+                                                int *accidental) {
+    if (pitch_class < 0 || pitch_class > 11 || letter == NULL || accidental == NULL) {
+        return false;
+    }
+    int major_pitch_class = minor ? (pitch_class + 3) % 12 : pitch_class;
+    int sharps = signature_size(SHARP_MAJOR_TONICS, major_pitch_class);
+    int flats = signature_size(FLAT_MAJOR_TONICS, major_pitch_class);
+    return standard_tonality_key_of_fifths(flats < sharps ? -flats : sharps, minor, letter, accidental);
+}
