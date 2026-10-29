@@ -6,6 +6,7 @@
 
 #include "pitch/pitch_spelling.h"
 #include "standard-counterpoint/counterpoint_slots.h"
+#include "standard-counterpoint/slot_note.h"
 
 /*
  * The subject of every rule in sixteenth-century-style-v1: a polyphonic
@@ -49,13 +50,8 @@ typedef enum {
     SIXTEENTH_CENTURY_POSITION_SUB
 } SixteenthCenturyPosition;
 
-/* A note of a voice: the slot it begins on, the slots it lasts (ties
-   included), and its pitch. */
-typedef struct {
-    size_t start;
-    size_t length;
-    const PitchSpelling *pitch;
-} SixteenthCenturyNote;
+/* A note of a voice (standard-counterpoint/slot_note.h): the slot it begins on, the slots it lasts (ties included), and its pitch. */
+typedef StandardCounterpointSlotNote SixteenthCenturyNote;
 
 /* True when the score has one to MAX_VOICES voices of the same length (at
    most MAX_SLOTS), an even tactus of at least two slots, an attack or tie

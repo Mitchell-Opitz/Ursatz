@@ -8,6 +8,7 @@
 #include "fugue_role.h"
 #include "semantics/voice_part.h"
 #include "standard-counterpoint/counterpoint_slots.h"
+#include "standard-counterpoint/slot_note.h"
 
 /*
  * The subject of every rule in high-baroque-fugue-v1: the opening of a fugue.
@@ -75,13 +76,8 @@ typedef struct {
     const FugueLimits *limits;
 } FugueExposition;
 
-/* A note of a voice: the slot it begins on, the slots it lasts (ties
-   included), and its pitch. */
-typedef struct {
-    size_t start;
-    size_t length;
-    const PitchSpelling *pitch;
-} FugueNote;
+/* A note of a voice (standard-counterpoint/slot_note.h): the slot it begins on, the slots it lasts (ties included), and its pitch. */
+typedef StandardCounterpointSlotNote FugueNote;
 
 /*
  * True when the exposition has two to FUGUE_MAX_VOICES voices of the same

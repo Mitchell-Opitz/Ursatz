@@ -6,6 +6,7 @@
 
 #include "century_imitation_rules.h"
 #include "century_score.h"
+#include "standard-counterpoint/slot_note.h"
 
 /*
  * Checking a whole score against the rule groups of
@@ -45,10 +46,8 @@ typedef struct {
     size_t point_count;
 } SixteenthCenturyInput;
 
-typedef struct {
-    unsigned hard_violations;
-    unsigned soft_violations;
-} SixteenthCenturyResult;
+/* The hard and soft violations of a run (standard-counterpoint/slot_note.h). */
+typedef StandardCounterpointRuleResult SixteenthCenturyResult;
 
 /* Runs the groups over the score. False (*out untouched) for invalid input:
    NULL, an invalid score, a point whose score is not this one, or an invalid

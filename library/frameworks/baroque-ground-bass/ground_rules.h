@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "ground_piece.h"
+#include "standard-counterpoint/slot_note.h"
 
 /*
  * Checking a whole piece against the rule groups of baroque-ground-bass-v1:
@@ -28,10 +29,8 @@ typedef enum {
 /* "ground" "variety" "imitation"; NULL for an invalid group. */
 const char *ground_group_name(GroundGroup group);
 
-typedef struct {
-    unsigned hard_violations;
-    unsigned soft_violations;
-} GroundResult;
+/* The hard and soft violations of a run (standard-counterpoint/slot_note.h). */
+typedef StandardCounterpointRuleResult GroundResult;
 
 /* Runs the groups over the piece. False (*out untouched) for an invalid piece
    or NULL. */

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 
 #include "fugue_exposition.h"
+#include "standard-counterpoint/slot_note.h"
 
 /*
  * Checking a whole exposition against the rule groups of
@@ -29,10 +30,8 @@ typedef enum {
 /* "entries" "answer" "countersubject"; NULL for an invalid group. */
 const char *fugue_group_name(FugueGroup group);
 
-typedef struct {
-    unsigned hard_violations;
-    unsigned soft_violations;
-} FugueResult;
+/* The hard and soft violations of a run (standard-counterpoint/slot_note.h). */
+typedef StandardCounterpointRuleResult FugueResult;
 
 /* Runs the groups over the exposition. False (*out untouched) for an invalid
    exposition or NULL. */
