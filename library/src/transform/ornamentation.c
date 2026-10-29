@@ -7,6 +7,7 @@
 #include "pitch/pitch_spelling.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
+#include "transform/transform_support.h"
 
 struct Ornamentation {
     Transformation *transformation;
@@ -177,41 +178,6 @@ static ProvenanceReference *copy_provenance_reference(const ProvenanceReference 
     return copy;
 }
 
-static PitchIdentity *clone_pitch_identity(const PitchIdentity *source) {
-    size_t size = 0;
-    const void *token = pitch_identity_token(source, &size);
-    PitchIdentity *clone = NULL;
-    if (pitch_identity_create(token, size, &clone) != PITCH_IDENTITY_OK) {
-        return NULL;
-    }
-    return clone;
-}
-
-static bool clone_pitch_spelling_or_null(const PitchSpelling *source, PitchSpelling **out) {
-    if (source == NULL) {
-        *out = NULL;
-        return true;
-    }
-    return pitch_spelling_create(pitch_spelling_letter(source), pitch_spelling_accidental(source),
-                                  pitch_spelling_octave(source), out) == PITCH_SPELLING_OK;
-}
-
-static bool clone_voice_reference_or_null(const VoiceReference *source, VoiceReference **out) {
-    if (source == NULL) {
-        *out = NULL;
-        return true;
-    }
-    EntityID *target_copy = copy_entity_id(voice_reference_target_id(source));
-    if (target_copy == NULL) {
-        return false;
-    }
-    if (voice_reference_create(target_copy, out) != VOICE_REFERENCE_OK) {
-        entity_id_destroy(target_copy);
-        return false;
-    }
-    return true;
-}
-
 /* Builds one derived NoteEvent for spec, using id/provenance already
    declared (and validated) by ornamentation_create at index i, rather
    than minting new ones. Returns NULL on any allocation failure. */
@@ -235,7 +201,7 @@ static NoteEvent *build_derived_event(const Ornamentation *ornamentation, const 
         return NULL;
     }
 
-    PitchIdentity *pitch = clone_pitch_identity(spec->pitch);
+    PitchIdentity *pitch = transform_support_clone_pitch_identity(spec->pitch);
     if (pitch == NULL) {
         duration_destroy(duration);
         temporal_anchor_destroy(anchor);
@@ -243,7 +209,7 @@ static NoteEvent *build_derived_event(const Ornamentation *ornamentation, const 
     }
 
     PitchSpelling *spelling = NULL;
-    if (!clone_pitch_spelling_or_null(note_event_optional_pitch_spelling(source_event), &spelling)) {
+    if (!transform_support_clone_pitch_spelling_or_null(note_event_optional_pitch_spelling(source_event), &spelling)) {
         pitch_identity_destroy(pitch);
         duration_destroy(duration);
         temporal_anchor_destroy(anchor);
@@ -251,7 +217,7 @@ static NoteEvent *build_derived_event(const Ornamentation *ornamentation, const 
     }
 
     VoiceReference *voice = NULL;
-    if (!clone_voice_reference_or_null(note_event_optional_voice(source_event), &voice)) {
+    if (!transform_support_clone_voice_reference_or_null(note_event_optional_voice(source_event), &voice)) {
         pitch_spelling_destroy(spelling);
         pitch_identity_destroy(pitch);
         duration_destroy(duration);
