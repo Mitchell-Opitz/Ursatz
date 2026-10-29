@@ -172,3 +172,53 @@ bool standard_meter_beat_strength(const TimeSignature *time_signature, const Met
     *out = standard_meter_level_strength(level);
     return true;
 }
+
+bool standard_meter_accent_beats(const TimeSignature *time_signature, unsigned *beats, BeatStrength *strengths,
+                                 size_t capacity, size_t *count) {
+    if (time_signature == NULL || beats == NULL || count == NULL) {
+        return false;
+    }
+    Duration *beat = NULL;
+    unsigned per_measure = 0;
+    if (!standard_meter_beat_grid(time_signature, &beat, &per_measure)) {
+        return false;
+    }
+
+    unsigned found_beats[64];
+    BeatStrength found_strengths[64];
+    size_t found = 0;
+    Duration *start = NULL;
+    bool ok = duration_create(0, 1, &start) == DURATION_OK;
+    for (unsigned index = 0; ok && index < per_measure && index < 64; index++) {
+        MetricalPosition *position = NULL;
+        BeatStrength strength;
+        ok = metrical_position_create(1, start, &position) == METRICAL_POSITION_OK &&
+             standard_meter_beat_strength(time_signature, position, &strength);
+        metrical_position_destroy(position);
+        if (!ok) {
+            break;
+        }
+        if (strength == BEAT_STRENGTH_STRONG || strength == BEAT_STRENGTH_MEDIUM) {
+            found_beats[found] = index;
+            found_strengths[found] = strength;
+            found++;
+        }
+        Duration *next = NULL;
+        ok = duration_add(start, beat, &next) == DURATION_OK;
+        duration_destroy(start);
+        start = next;
+    }
+    duration_destroy(start);
+    duration_destroy(beat);
+    if (!ok || found > capacity) {
+        return false;
+    }
+    for (size_t i = 0; i < found; i++) {
+        beats[i] = found_beats[i];
+        if (strengths != NULL) {
+            strengths[i] = found_strengths[i];
+        }
+    }
+    *count = found;
+    return true;
+}

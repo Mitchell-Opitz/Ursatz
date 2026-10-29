@@ -347,6 +347,10 @@ the test:
 
 The melody adapter (`analysis/analysis_melody*.h`) reads one line: melodic intervals and contour, the climax of each caller-supplied span, leap recovery and consecutive leaps by the cantus firmus rules, and the non-chord-tone result of each note attached by reference. See `docs/modules/melody-analysis.md`.
 
+## Semitone forms
+
+`standard_counterpoint_melodic_semitones_allowed` and `standard_counterpoint_is_step` (`melodic_rules.h`) are the forbidden-leap rule and the step test on a move in semitones, for a caller that holds MIDI numbers. `standard_counterpoint_imperfect_run` (`harmonic_rules.h`) is the soft preference against the last `run` vertical intervals being the same third or sixth; it is a plain function, not a rule table entry. Owners for the Composer's `move_ok`, `is_step` and `parallel_cost`.
+
 ## Not covered
 
 Dissonance treatment beyond the figures above, three or more parts, and imitation. Note values and

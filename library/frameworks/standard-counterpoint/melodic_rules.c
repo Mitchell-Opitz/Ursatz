@@ -271,3 +271,13 @@ bool standard_counterpoint_melodic_check(const StandardCounterpointLine *line,
                                            soft_violations);
     return true;
 }
+
+bool standard_counterpoint_melodic_semitones_allowed(int semitones) {
+    int size = semitones < 0 ? -semitones : semitones;
+    return size <= 12 && size != 6 && size != 9 && size != 10 && size != 11 && !(size == 8 && semitones < 0);
+}
+
+bool standard_counterpoint_is_step(int semitones) {
+    int size = semitones < 0 ? -semitones : semitones;
+    return size == 1 || size == 2;
+}

@@ -226,3 +226,23 @@ bool standard_counterpoint_harmonic_check(const StandardCounterpointPair *pair, 
                                            soft_violations);
     return true;
 }
+
+bool standard_counterpoint_imperfect_run(const int *upper, const int *lower, size_t count, size_t run) {
+    if (upper == NULL || lower == NULL || run == 0 || count < run) {
+        return false;
+    }
+    int first = 0;
+    for (size_t k = 0; k < run; k++) {
+        long gap = (long)upper[count - run + k] - (long)lower[count - run + k];
+        int size = (int)((gap < 0 ? -gap : gap) % 12);
+        if (size != 3 && size != 4 && size != 8 && size != 9) {
+            return false;
+        }
+        if (k == 0) {
+            first = size;
+        } else if (size != first) {
+            return false;
+        }
+    }
+    return true;
+}
