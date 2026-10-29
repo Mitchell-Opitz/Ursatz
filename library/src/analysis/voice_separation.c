@@ -37,15 +37,15 @@ void voice_assignment_destroy(VoiceAssignment *assignment) {
 /* --- arithmetic --- */
 
 /* |a - b|, 0 on success. */
-static int abs_diff(ExactRational a, ExactRational b, ExactRational *out) {
-    return er_cmp(a, b) >= 0 ? er_sub(a, b, out) : er_sub(b, a, out);
+static int abs_diff(Rational a, Rational b, Rational *out) {
+    return rational_cmp(a, b) >= 0 ? rational_sub(a, b, out) : rational_sub(b, a, out);
 }
 
 /* --- step 4: assign the attacks to free voices --- */
 
 typedef struct {
     size_t violations;
-    ExactRational cost;
+    Rational cost;
     unsigned long recency;
     size_t voice[VS_MAX_VOICES_LIMIT]; /* by position in the attack order */
     bool valid;
@@ -71,7 +71,7 @@ static bool candidate_better(const Candidate *a, const Candidate *b, const size_
     if (a->violations != b->violations) {
         return a->violations < b->violations;
     }
-    int by_cost = er_cmp(a->cost, b->cost);
+    int by_cost = rational_cmp(a->cost, b->cost);
     if (by_cost != 0) {
         return by_cost < 0;
     }
@@ -90,14 +90,14 @@ static bool candidate_better(const Candidate *a, const Candidate *b, const size_
 static void evaluate(Search *search) {
     Candidate candidate;
     memset(&candidate, 0, sizeof(candidate));
-    candidate.cost = er_make(0, 1);
+    candidate.cost = rational_ratio(0, 1);
     candidate.valid = true;
     for (size_t k = 0; k < search->attack_count; k++) {
         size_t voice = search->chosen[k];
-        ExactRational pitch = search->attacks[search->order[k]].pitch;
-        ExactRational distance = {0, 1};
+        Rational pitch = search->attacks[search->order[k]].pitch;
+        Rational distance = {0, 1};
         if (abs_diff(pitch, search->voices[voice].pitch, &distance) != 0 ||
-            er_add(candidate.cost, distance, &candidate.cost) != 0) {
+            rational_add(candidate.cost, distance, &candidate.cost) != RATIONAL_OK) {
             search->failure = -1;
             return;
         }
@@ -108,7 +108,7 @@ static void evaluate(Search *search) {
                 if (!search->voices[h].held) {
                     continue;
                 }
-                int against = er_cmp(search->voices[h].pitch, pitch);
+                int against = rational_cmp(search->voices[h].pitch, pitch);
                 if ((h < voice && against < 0) || (h > voice && against > 0)) {
                     candidate.violations++;
                 }
@@ -154,7 +154,7 @@ static void order_attacks(const VsAttack *attacks, size_t count, size_t *order) 
         while (j > 0) {
             const VsAttack *before = &attacks[order[j - 1]];
             const VsAttack *now = &attacks[value];
-            int by_pitch = er_cmp(before->pitch, now->pitch);
+            int by_pitch = rational_cmp(before->pitch, now->pitch);
             if (by_pitch > 0 || (by_pitch == 0 && strcmp(before->id, now->id) <= 0)) {
                 break;
             }
@@ -214,15 +214,15 @@ int vs_assign_onset(const VsVoice *voices, size_t voice_count, const VsAttack *a
 
     double margin = 1.0;
     if (search.second.valid && search.second.violations == search.best.violations) {
-        if (er_cmp(search.second.cost, search.best.cost) == 0) {
+        if (rational_cmp(search.second.cost, search.best.cost) == 0) {
             margin = 0.0;
         } else {
-            ExactRational gap = {0, 1};
-            if (er_sub(search.second.cost, search.best.cost, &gap) != 0) {
+            Rational gap = {0, 1};
+            if (rational_sub(search.second.cost, search.best.cost, &gap) != RATIONAL_OK) {
                 return -1;
             }
-            margin = ((double)gap.n * (double)search.second.cost.d) /
-                     ((double)gap.d * (double)search.second.cost.n);
+            margin = ((double)gap.num * (double)search.second.cost.den) /
+                     ((double)gap.den * (double)search.second.cost.num);
         }
     }
     *out_margin = margin;
@@ -245,7 +245,7 @@ int vs_split_overflow(const VsAttack *attacks, size_t attack_count, size_t keep,
     }
     /* equal pitches: the reversal puts the higher id first; put the lower id first */
     for (size_t i = 1; i < attack_count; i++) {
-        if (er_cmp(attacks[order[i - 1]].pitch, attacks[order[i]].pitch) == 0 &&
+        if (rational_cmp(attacks[order[i - 1]].pitch, attacks[order[i]].pitch) == 0 &&
             strcmp(attacks[order[i - 1]].id, attacks[order[i]].id) > 0) {
             size_t swap = order[i - 1];
             order[i - 1] = order[i];
@@ -259,7 +259,7 @@ int vs_split_overflow(const VsAttack *attacks, size_t attack_count, size_t keep,
     while (present > keep) {
         bool found = false;
         size_t drop = 0;
-        ExactRational smallest = {0, 1};
+        Rational smallest = {0, 1};
         size_t previous = 0;
         bool have_previous = false;
         for (size_t i = 0; i < attack_count; i++) {
@@ -267,11 +267,11 @@ int vs_split_overflow(const VsAttack *attacks, size_t attack_count, size_t keep,
                 continue;
             }
             if (have_previous) {
-                ExactRational gap = {0, 1};
+                Rational gap = {0, 1};
                 if (abs_diff(attacks[order[i]].pitch, attacks[order[previous]].pitch, &gap) != 0) {
                     return -1;
                 }
-                if (!found || er_cmp(gap, smallest) < 0) {
+                if (!found || rational_cmp(gap, smallest) < 0) {
                     found = true;
                     smallest = gap;
                     drop = order[previous]; /* the lower note of the closest pair */
@@ -295,19 +295,19 @@ int vs_split_overflow(const VsAttack *attacks, size_t attack_count, size_t keep,
     return 0;
 }
 
-size_t vs_nearest_voice(const ExactRational *current, const bool *has_current, size_t voice_count,
-                        ExactRational pitch) {
+size_t vs_nearest_voice(const Rational *current, const bool *has_current, size_t voice_count,
+                        Rational pitch) {
     size_t best = voice_count;
-    ExactRational best_distance = {0, 1};
+    Rational best_distance = {0, 1};
     for (size_t v = 0; v < voice_count; v++) {
         if (!has_current[v]) {
             continue;
         }
-        ExactRational distance = {0, 1};
+        Rational distance = {0, 1};
         if (abs_diff(pitch, current[v], &distance) != 0) {
             continue; /* overflow: farthest */
         }
-        if (best == voice_count || er_cmp(distance, best_distance) < 0) {
+        if (best == voice_count || rational_cmp(distance, best_distance) < 0) {
             best = v;
             best_distance = distance;
         }
@@ -317,25 +317,25 @@ size_t vs_nearest_voice(const ExactRational *current, const bool *has_current, s
 
 /* --- step 5: continuity across rests --- */
 
-int vs_reference_kept(ExactRational last_release, ExactRational at, ExactRational hold_beats,
+int vs_reference_kept(Rational last_release, Rational at, Rational hold_beats,
                       VsBeatLength beat_length, void *beat_context, bool *out_kept) {
-    if (er_cmp(last_release, at) >= 0) {
+    if (rational_cmp(last_release, at) >= 0) {
         *out_kept = true;
         return 0;
     }
-    ExactRational rest = {0, 1};
-    ExactRational beat = {0, 1};
-    ExactRational window = {0, 1};
-    if (er_sub(at, last_release, &rest) != 0) {
+    Rational rest = {0, 1};
+    Rational beat = {0, 1};
+    Rational window = {0, 1};
+    if (rational_sub(at, last_release, &rest) != RATIONAL_OK) {
         return -1;
     }
     if (!beat_length(beat_context, last_release, &beat)) {
         return -3;
     }
-    if (er_mul(beat, hold_beats, &window) != 0) {
+    if (rational_mul(beat, hold_beats, &window) != RATIONAL_OK) {
         return -1;
     }
-    *out_kept = er_cmp(rest, window) <= 0;
+    *out_kept = rational_cmp(rest, window) <= 0;
     return 0;
 }
 
@@ -346,9 +346,9 @@ typedef struct {
     void *provider_context;
 } BeatGridContext;
 
-static bool grid_beat_length(void *context, ExactRational at, ExactRational *out) {
+static bool grid_beat_length(void *context, Rational at, Rational *out) {
     const BeatGridContext *grid = (const BeatGridContext *)context;
-    MusicalTime *time = er_to_time(at);
+    MusicalTime *time = musical_time_from_rational_or_null(at);
     if (time == NULL) {
         return false;
     }
@@ -359,8 +359,12 @@ static bool grid_beat_length(void *context, ExactRational at, ExactRational *out
     if (indexed != METER_MAP_OK || meter_map_measure_span(grid->map, measure, &span) != METER_MAP_OK) {
         return false;
     }
-    ExactRational measure_end = er_of_time(time_span_end(span));
+    Rational measure_end;
+    bool measure_ok = rational_of_musical_time(time_span_end(span), &measure_end) == RATIONAL_OK;
     time_span_destroy(span);
+    if (!measure_ok) {
+        return false;
+    }
 
     MusicalTime **starts = NULL;
     size_t count = 0;
@@ -369,10 +373,14 @@ static bool grid_beat_length(void *context, ExactRational at, ExactRational *out
     }
     bool found = false;
     for (size_t k = 0; k < count && !found; k++) {
-        ExactRational beat_start = er_of_time(starts[k]);
-        ExactRational beat_end = k + 1 < count ? er_of_time(starts[k + 1]) : measure_end;
-        if (er_cmp(beat_start, at) <= 0 && er_cmp(at, beat_end) < 0) {
-            found = er_sub(beat_end, beat_start, out) == 0;
+        Rational beat_start;
+        Rational beat_end = measure_end;
+        if (rational_of_musical_time(starts[k], &beat_start) != RATIONAL_OK ||
+            (k + 1 < count && rational_of_musical_time(starts[k + 1], &beat_end) != RATIONAL_OK)) {
+            break;
+        }
+        if (rational_cmp(beat_start, at) <= 0 && rational_cmp(at, beat_end) < 0) {
+            found = rational_sub(beat_end, beat_start, out) == 0;
             break;
         }
     }
@@ -387,15 +395,15 @@ static bool grid_beat_length(void *context, ExactRational at, ExactRational *out
 
 typedef struct {
     const char *id;
-    ExactRational onset;
-    ExactRational release;
-    ExactRational pitch;
+    Rational onset;
+    Rational release;
+    Rational pitch;
     size_t stream;
 } VsNote;
 
 typedef struct {
     size_t stream;
-    ExactRational onset;
+    Rational onset;
     size_t index;
 } SortKey;
 
@@ -405,7 +413,7 @@ static int compare_keys(const void *a, const void *b) {
     if (x->stream != y->stream) {
         return x->stream < y->stream ? -1 : 1;
     }
-    int by_onset = er_cmp(x->onset, y->onset);
+    int by_onset = rational_cmp(x->onset, y->onset);
     if (by_onset != 0) {
         return by_onset;
     }
@@ -420,7 +428,7 @@ typedef struct {
 
 /* The most notes sounding at once among the stream's notes (keys[lo..hi), in onset order). */
 static int max_simultaneous(const VsNote *notes, const SortKey *keys, size_t lo, size_t hi, size_t *out) {
-    ExactRational *active = (ExactRational *)calloc(hi - lo > 0 ? hi - lo : 1, sizeof(ExactRational));
+    Rational *active = (Rational *)calloc(hi - lo > 0 ? hi - lo : 1, sizeof(Rational));
     if (active == NULL) {
         return -2;
     }
@@ -428,15 +436,15 @@ static int max_simultaneous(const VsNote *notes, const SortKey *keys, size_t lo,
     size_t most = 0;
     size_t i = lo;
     while (i < hi) {
-        ExactRational onset = notes[keys[i].index].onset;
+        Rational onset = notes[keys[i].index].onset;
         size_t kept = 0;
         for (size_t a = 0; a < active_count; a++) {
-            if (er_cmp(active[a], onset) > 0) {
+            if (rational_cmp(active[a], onset) > 0) {
                 active[kept++] = active[a];
             }
         }
         active_count = kept;
-        while (i < hi && er_cmp(notes[keys[i].index].onset, onset) == 0) {
+        while (i < hi && rational_cmp(notes[keys[i].index].onset, onset) == 0) {
             active[active_count++] = notes[keys[i].index].release;
             i++;
         }
@@ -451,26 +459,26 @@ static int max_simultaneous(const VsNote *notes, const SortKey *keys, size_t lo,
 
 typedef struct {
     bool has_note;
-    ExactRational pitch;    /* the voice's last primary pitch */
-    ExactRational release;  /* the last primary's release */
+    Rational pitch;    /* the voice's last primary pitch */
+    Rational release;  /* the last primary's release */
     unsigned long recency;
 } VoiceState;
 
-static int nominal_pitch(ExactRational lowest, ExactRational highest, size_t voice, size_t voice_count,
-                         ExactRational *out) {
-    ExactRational range = {0, 1};
-    ExactRational offset = {0, 1};
-    if (er_sub(highest, lowest, &range) != 0 ||
-        er_mul(range, er_make(2 * voice + 1, 2 * voice_count), &offset) != 0) {
+static int nominal_pitch(Rational lowest, Rational highest, size_t voice, size_t voice_count,
+                         Rational *out) {
+    Rational range = {0, 1};
+    Rational offset = {0, 1};
+    if (rational_sub(highest, lowest, &range) != RATIONAL_OK ||
+        rational_mul(range, rational_ratio(2 * voice + 1, 2 * voice_count), &offset) != RATIONAL_OK) {
         return -1;
     }
-    return er_sub(highest, offset, out);
+    return rational_sub(highest, offset, out);
 }
 
 /* The pitch a voice is measured from at `onset` is its last pitch while it keeps a reference (step 5), else
    its nominal pitch (the middle of its band of the stream's range). */
 static int separate_stream(const VsNote *notes, const SortKey *keys, size_t lo, size_t hi,
-                           const VoiceSeparationConfig *config, ExactRational hold, const BeatGridContext *grid,
+                           const VoiceSeparationConfig *config, Rational hold, const BeatGridContext *grid,
                            NoteResult *results, size_t *out_voice_count) {
     size_t simultaneous = 0;
     int status = max_simultaneous(notes, keys, lo, hi, &simultaneous);
@@ -483,14 +491,14 @@ static int separate_stream(const VsNote *notes, const SortKey *keys, size_t lo, 
     }
     *out_voice_count = voice_count;
 
-    ExactRational lowest = notes[keys[lo].index].pitch;
-    ExactRational highest = lowest;
+    Rational lowest = notes[keys[lo].index].pitch;
+    Rational highest = lowest;
     for (size_t i = lo; i < hi; i++) {
-        ExactRational pitch = notes[keys[i].index].pitch;
-        if (er_cmp(pitch, lowest) < 0) {
+        Rational pitch = notes[keys[i].index].pitch;
+        if (rational_cmp(pitch, lowest) < 0) {
             lowest = pitch;
         }
-        if (er_cmp(pitch, highest) > 0) {
+        if (rational_cmp(pitch, highest) > 0) {
             highest = pitch;
         }
     }
@@ -501,9 +509,9 @@ static int separate_stream(const VsNote *notes, const SortKey *keys, size_t lo, 
 
     size_t i = lo;
     while (i < hi) {
-        ExactRational onset = notes[keys[i].index].onset;
+        Rational onset = notes[keys[i].index].onset;
         size_t group_end = i;
-        while (group_end < hi && er_cmp(notes[keys[group_end].index].onset, onset) == 0) {
+        while (group_end < hi && rational_cmp(notes[keys[group_end].index].onset, onset) == 0) {
             group_end++;
         }
         size_t attacked = group_end - i;
@@ -511,7 +519,7 @@ static int separate_stream(const VsNote *notes, const SortKey *keys, size_t lo, 
         VsVoice voices[VS_MAX_VOICES_LIMIT];
         size_t free_count = 0;
         for (size_t v = 0; v < voice_count; v++) {
-            voices[v].held = state[v].has_note && er_cmp(state[v].release, onset) > 0;
+            voices[v].held = state[v].has_note && rational_cmp(state[v].release, onset) > 0;
             voices[v].recency = state[v].recency;
             bool kept = false;
             if (state[v].has_note) {
@@ -577,10 +585,10 @@ static int separate_stream(const VsNote *notes, const SortKey *keys, size_t lo, 
             state[voice].recency = ++counter;
         }
 
-        ExactRational current[VS_MAX_VOICES_LIMIT];
+        Rational current[VS_MAX_VOICES_LIMIT];
         bool has_current[VS_MAX_VOICES_LIMIT];
         for (size_t v = 0; v < voice_count; v++) {
-            has_current[v] = state[v].has_note && er_cmp(state[v].release, onset) > 0;
+            has_current[v] = state[v].has_note && rational_cmp(state[v].release, onset) > 0;
             current[v] = state[v].pitch;
         }
         for (size_t k = 0; k < attacked; k++) {
@@ -609,7 +617,7 @@ VoiceSeparationResult voice_separate(NoteEvent *const *notes, PitchNumericValue 
         effective.rest_hold_denominator == 0) {
         return VOICE_SEPARATION_ERR_BAD_CONFIG;
     }
-    ExactRational hold = er_make(effective.rest_hold_numerator, effective.rest_hold_denominator);
+    Rational hold = rational_ratio(effective.rest_hold_numerator, effective.rest_hold_denominator);
     BeatGridContext grid = {map, provider, provider_context};
 
     VsNote *facts = (VsNote *)calloc(note_count > 0 ? note_count : 1, sizeof(VsNote));
@@ -640,13 +648,15 @@ VoiceSeparationResult voice_separate(NoteEvent *const *notes, PitchNumericValue 
             break;
         }
         facts[i].id = entity_id_value(note_event_id(notes[i]));
-        facts[i].onset = er_of_time(position);
-        if (er_add(facts[i].onset, er_of_duration(note_event_duration(notes[i])), &facts[i].release) != 0) {
+        Rational length;
+        if (rational_of_musical_time(position, &facts[i].onset) != RATIONAL_OK ||
+            rational_of_duration(note_event_duration(notes[i]), &length) != RATIONAL_OK ||
+            rational_add(facts[i].onset, length, &facts[i].release) != RATIONAL_OK) {
             failure = VOICE_SEPARATION_ERR_OVERFLOW;
             break;
         }
         facts[i].pitch =
-            er_make((unsigned long long)numerator, pitch_numeric_value_position_denominator(pitch_values[i]));
+            rational_ratio((unsigned long long)numerator, pitch_numeric_value_position_denominator(pitch_values[i]));
         facts[i].stream = stream_of_note != NULL ? stream_of_note[i] : 0;
         keys[i].stream = facts[i].stream;
         keys[i].onset = facts[i].onset;

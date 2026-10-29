@@ -20,7 +20,8 @@
 #include "pitch/pitch_spelling.h"
 #include "pitch/tuning_system.h"
 #include "time/duration.h"
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 #include "time/meter_map.h"
 #include "time/note_value.h"
 #include "time/tempo_map.h"
@@ -36,7 +37,7 @@
  * MusicXMLImporter: see musicxml_importer.h and docs/modules/io.md. This is the only file that includes the
  * vendored XML parser (third_party/ezxml), and it does not let one of its types out through the header.
  *
- * One pass per part, in document order. Time is an ExactRational count of whole notes (a duration of d
+ * One pass per part, in document order. Time is an Rational count of whole notes (a duration of d
  * divisions at D divisions per quarter note is d / (4 * D)), so no step rounds. A note is collected first and its
  * NoteEvent is built last, because a tie may still lengthen it.
  */
@@ -44,8 +45,8 @@
 #define MUSICXML_IMPORTER_PROVENANCE_ID "musicxml-importer-v1"
 
 typedef struct {
-    ExactRational onset;
-    ExactRational duration;
+    Rational onset;
+    Rational duration;
     PitchLetter letter;
     int accidental;
     int octave;
@@ -58,43 +59,43 @@ typedef struct {
 
 typedef struct {
     size_t note;     /* index into notes */
-    ExactRational end;
+    Rational end;
 } OpenTie;
 
 typedef struct {
-    ExactRational position;
+    Rational position;
     unsigned beats;
     int exponent;       /* the beat unit is 2^-exponent of a whole note: 0 whole, 2 quarter, 3 eighth */
     size_t part;
 } TimeEvent;
 
 typedef struct {
-    ExactRational position;
+    Rational position;
     int fifths;
     MusicXmlModeHint hint;
     size_t part;
 } KeyEvent;
 
 typedef struct {
-    ExactRational position;
+    Rational position;
     unsigned long microseconds_per_quarter;
     size_t part;
 } TempoEvent;
 
 typedef struct {
-    ExactRational position;
+    Rational position;
     size_t part;
     size_t order;
     bool has_text;
     char text[160];
     bool has_metronome;
-    ExactRational beat_unit;
+    Rational beat_unit;
     unsigned long bpm_numerator;
     unsigned long bpm_denominator;
 } MarkingEvent;
 
 typedef struct {
-    ExactRational position;
+    Rational position;
     size_t part;
     size_t order;
     int staff;
@@ -114,7 +115,7 @@ typedef struct {
     size_t dynamic_capacity;
     size_t unclassified_words;
     size_t direction_order;
-    ExactRational *part_end;       /* per part: where its last measure ends */
+    Rational *part_end;       /* per part: where its last measure ends */
     TimeEvent *times;
     size_t time_count;
     size_t time_capacity;
@@ -122,7 +123,7 @@ typedef struct {
     size_t key_count;
     size_t key_capacity;
     bool has_pickup;               /* the first part's first measure is implicit and shorter than a measure */
-    ExactRational pickup_length;
+    Rational pickup_length;
     XNote *notes;
     size_t note_count;
     size_t note_capacity;
@@ -225,7 +226,7 @@ static bool add_note(Ctx *ctx, const XNote *note, size_t *out_index) {
     return true;
 }
 
-static bool add_open_tie(Ctx *ctx, size_t note, ExactRational end) {
+static bool add_open_tie(Ctx *ctx, size_t note, Rational end) {
     if (ctx->tie_count == ctx->tie_capacity) {
         size_t capacity = ctx->tie_capacity == 0 ? 16 : ctx->tie_capacity * 2;
         OpenTie *grown = (OpenTie *)realloc(ctx->ties, capacity * sizeof(OpenTie));
@@ -315,7 +316,7 @@ static bool read_pitch(Ctx *ctx, ezxml_t pitch, XNote *note) {
     return true;
 }
 
-static bool to_whole_notes(Ctx *ctx, long divisions, long duration, ExactRational *out) {
+static bool to_whole_notes(Ctx *ctx, long divisions, long duration, Rational *out) {
     if (divisions <= 0) {
         fail(ctx, MUSICXML_IMPORT_ERR_MISSING_DIVISIONS, "a duration appears before any <divisions>");
         return false;
@@ -324,33 +325,31 @@ static bool to_whole_notes(Ctx *ctx, long divisions, long duration, ExactRationa
         fail(ctx, MUSICXML_IMPORT_ERR_BAD_VALUE, "a negative <duration>");
         return false;
     }
-    unsigned long long unit = 0;
-    if (er_mul_u64(4ull, (unsigned long long)divisions, &unit) != 0) {
+    if (divisions > LONG_MAX / 4 || rational_make(duration, 4LL * divisions, out) != RATIONAL_OK) {
         fail(ctx, MUSICXML_IMPORT_ERR_OVERFLOW, "<divisions> %ld is too large", divisions);
         return false;
     }
-    *out = er_make((unsigned long long)duration, unit);
     return true;
 }
 
 typedef struct {
     bool has_signature;      /* a <time> has been read in this part */
-    ExactRational measure_length; /* of that signature, in whole notes */
+    Rational measure_length; /* of that signature, in whole notes */
     long divisions;          /* 0 until the first <divisions> */
-    ExactRational cursor;    /* where the next note starts */
-    ExactRational reached;   /* the furthest the measure has gone: where the next measure starts */
-    ExactRational measure_start;
-    ExactRational last_onset;/* the onset of the last note that was not a chord note */
+    Rational cursor;    /* where the next note starts */
+    Rational reached;   /* the furthest the measure has gone: where the next measure starts */
+    Rational measure_start;
+    Rational last_onset;/* the onset of the last note that was not a chord note */
     long transpose;          /* semitones from written to sounding pitch */
     int staves;              /* <staves> */
 } PartState;
 
-static bool advance(Ctx *ctx, PartState *state, ExactRational by) {
-    if (er_add(state->cursor, by, &state->cursor) != 0) {
+static bool advance(Ctx *ctx, PartState *state, Rational by) {
+    if (rational_add(state->cursor, by, &state->cursor) != RATIONAL_OK) {
         fail(ctx, MUSICXML_IMPORT_ERR_OVERFLOW, "the position does not fit");
         return false;
     }
-    if (er_cmp(state->cursor, state->reached) > 0) {
+    if (rational_cmp(state->cursor, state->reached) > 0) {
         state->reached = state->cursor;
     }
     return true;
@@ -373,12 +372,12 @@ static bool handle_note(Ctx *ctx, PartState *state, size_t part, size_t *order, 
         fail(ctx, MUSICXML_IMPORT_ERR_BAD_VALUE, "a note without a usable <duration>");
         return false;
     }
-    ExactRational length = {0, 1};
+    Rational length = {0, 1};
     if (!to_whole_notes(ctx, state->divisions, duration, &length)) {
         return false;
     }
 
-    ExactRational onset = is_chord ? state->last_onset : state->cursor;
+    Rational onset = is_chord ? state->last_onset : state->cursor;
     if (!is_chord) {
         state->last_onset = state->cursor;
     }
@@ -411,7 +410,7 @@ static bool handle_note(Ctx *ctx, PartState *state, size_t part, size_t *order, 
     parsed.staff = (int)staff;
     parsed.midi += state->transpose;
 
-    if (length.n == 0) {
+    if (length.num == 0) {
         warn(ctx, "note with a zero duration skipped");
         return is_chord ? true : advance(ctx, state, length);
     }
@@ -427,10 +426,10 @@ static bool handle_note(Ctx *ctx, PartState *state, size_t part, size_t *order, 
         for (size_t t = 0; t < ctx->tie_count; t++) {
             XNote *open = &ctx->notes[ctx->ties[t].note];
             if (open->part == part && open->midi == parsed.midi && strcmp(open->voice, parsed.voice) == 0 &&
-                er_cmp(ctx->ties[t].end, onset) == 0) {
-                ExactRational extended = {0, 1};
-                ExactRational end = {0, 1};
-                if (er_add(open->duration, length, &extended) != 0 || er_add(onset, length, &end) != 0) {
+                rational_cmp(ctx->ties[t].end, onset) == 0) {
+                Rational extended = {0, 1};
+                Rational end = {0, 1};
+                if (rational_add(open->duration, length, &extended) != RATIONAL_OK || rational_add(onset, length, &end) != RATIONAL_OK) {
                     fail(ctx, MUSICXML_IMPORT_ERR_OVERFLOW, "a tied note does not fit");
                     return false;
                 }
@@ -450,8 +449,8 @@ static bool handle_note(Ctx *ctx, PartState *state, size_t part, size_t *order, 
     }
     if (!merged) {
         size_t index = 0;
-        ExactRational end = {0, 1};
-        if (!add_note(ctx, &parsed, &index) || er_add(onset, length, &end) != 0) {
+        Rational end = {0, 1};
+        if (!add_note(ctx, &parsed, &index) || rational_add(onset, length, &end) != RATIONAL_OK) {
             if (ctx->status == MUSICXML_IMPORT_OK) {
                 fail(ctx, MUSICXML_IMPORT_ERR_OVERFLOW, "a note does not fit");
             }
@@ -470,15 +469,15 @@ static bool handle_move(Ctx *ctx, PartState *state, ezxml_t element, bool backwa
         fail(ctx, MUSICXML_IMPORT_ERR_BAD_VALUE, "<%s> without a usable <duration>", backward ? "backup" : "forward");
         return false;
     }
-    ExactRational length = {0, 1};
+    Rational length = {0, 1};
     if (!to_whole_notes(ctx, state->divisions, duration, &length)) {
         return false;
     }
     if (!backward) {
         return advance(ctx, state, length);
     }
-    if (er_cmp(length, state->cursor) > 0 || er_cmp(state->cursor, state->measure_start) < 0 ||
-        er_sub(state->cursor, length, &state->cursor) != 0 || er_cmp(state->cursor, state->measure_start) < 0) {
+    if (rational_cmp(length, state->cursor) > 0 || rational_cmp(state->cursor, state->measure_start) < 0 ||
+        rational_sub(state->cursor, length, &state->cursor) != RATIONAL_OK || rational_cmp(state->cursor, state->measure_start) < 0) {
         warn(ctx, "<backup> goes before the start of the measure; stopped at the start");
         state->cursor = state->measure_start;
     }
@@ -556,7 +555,7 @@ static bool handle_time(Ctx *ctx, PartState *state, ezxml_t time) {
     event->exponent = exponent;
     event->part = ctx->current_part;
     state->has_signature = true;
-    state->measure_length = er_make(beats, 1ull << exponent);
+    state->measure_length = rational_ratio(beats, 1ull << exponent);
     return true;
 }
 
@@ -616,14 +615,14 @@ static bool read_decimal(const char *text, unsigned long *numerator, unsigned lo
     if (thousandths == 0) {
         return false;
     }
-    ExactRational reduced = er_make(thousandths, 1000);
-    *numerator = (unsigned long)reduced.n;
-    *denominator = (unsigned long)reduced.d;
+    Rational reduced = rational_ratio(thousandths, 1000);
+    *numerator = (unsigned long)reduced.num;
+    *denominator = (unsigned long)reduced.den;
     return true;
 }
 
 /* The duration of a <beat-unit> name with its dots, in whole notes. */
-static bool beat_unit_duration(const char *name, int dots, ExactRational *out) {
+static bool beat_unit_duration(const char *name, int dots, Rational *out) {
     static const struct {
         const char *name;
         unsigned long long numerator;
@@ -633,14 +632,14 @@ static bool beat_unit_duration(const char *name, int dots, ExactRational *out) {
     for (size_t i = 0; i < sizeof(UNITS) / sizeof(UNITS[0]); i++) {
         if (strcmp(name, UNITS[i].name) == 0 && dots >= 0 && dots <= 4) {
             /* base * (2^(dots+1) - 1) / 2^dots */
-            *out = er_make(UNITS[i].numerator * ((1ull << (dots + 1)) - 1), UNITS[i].denominator * (1ull << dots));
+            *out = rational_ratio(UNITS[i].numerator * ((1ull << (dots + 1)) - 1), UNITS[i].denominator * (1ull << dots));
             return true;
         }
     }
     return false;
 }
 
-static void record_tempo(Ctx *ctx, ExactRational position, const char *text) {
+static void record_tempo(Ctx *ctx, Rational position, const char *text) {
     char *end = NULL;
     double bpm = strtod(text, &end);
     if (end == text || *end != '\0' || !isfinite(bpm) || bpm <= 0.0) {
@@ -666,7 +665,7 @@ static void record_tempo(Ctx *ctx, ExactRational position, const char *text) {
 }
 
 static bool handle_direction(Ctx *ctx, PartState *state, ezxml_t direction) {
-    ExactRational position = state->cursor;
+    Rational position = state->cursor;
     long offset = 0;
     if (ezxml_child(direction, "offset") != NULL) {
         if (!read_long(ezxml_child(direction, "offset"), &offset)) {
@@ -676,14 +675,14 @@ static bool handle_direction(Ctx *ctx, PartState *state, ezxml_t direction) {
     }
     bool before_zero = false;
     if (offset != 0 && state->divisions > 0) {
-        ExactRational shift = {0, 1};
+        Rational shift = {0, 1};
         if (to_whole_notes(ctx, state->divisions, offset < 0 ? -offset : offset, &shift)) {
             if (offset > 0) {
-                if (er_add(position, shift, &position) != 0) {
+                if (rational_add(position, shift, &position) != RATIONAL_OK) {
                     return fail(ctx, MUSICXML_IMPORT_ERR_OVERFLOW, "a direction's position does not fit") ==
                            MUSICXML_IMPORT_OK;
                 }
-            } else if (er_cmp(shift, position) > 0 || er_sub(position, shift, &position) != 0) {
+            } else if (rational_cmp(shift, position) > 0 || rational_sub(position, shift, &position) != RATIONAL_OK) {
                 before_zero = true;
             }
         } else {
@@ -835,7 +834,7 @@ static bool handle_attributes(Ctx *ctx, PartState *state, ezxml_t attributes) {
 static bool process_part(Ctx *ctx, ezxml_t part, size_t part_index) {
     PartState state;
     memset(&state, 0, sizeof(state));
-    state.cursor = state.reached = state.measure_start = state.last_onset = er_make(0, 1);
+    state.cursor = state.reached = state.measure_start = state.last_onset = rational_ratio(0, 1);
     state.staves = 1;
     size_t order = 0;
     bool first_measure = true;
@@ -868,23 +867,23 @@ static bool process_part(Ctx *ctx, ezxml_t part, size_t part_index) {
                 return false;
             }
         }
-        ExactRational length = {0, 1};
-        if (er_sub(state.reached, state.measure_start, &length) != 0) {
+        Rational length = {0, 1};
+        if (rational_sub(state.reached, state.measure_start, &length) != RATIONAL_OK) {
             return fail(ctx, MUSICXML_IMPORT_ERR_OVERFLOW, "the measure length does not fit") == MUSICXML_IMPORT_OK;
         }
         const char *implicit = ezxml_attr(measure, "implicit");
         bool is_implicit = implicit != NULL && strcmp(implicit, "yes") == 0;
         if (first_measure) {
             first_measure = false;
-            if (part_index == 0 && is_implicit && length.n > 0 &&
-                (!state.has_signature || er_cmp(length, state.measure_length) < 0)) {
+            if (part_index == 0 && is_implicit && length.num > 0 &&
+                (!state.has_signature || rational_cmp(length, state.measure_length) < 0)) {
                 ctx->has_pickup = true;
                 ctx->pickup_length = length;
             }
         }
-        if (state.has_signature && !is_implicit && er_cmp(length, state.measure_length) != 0) {
+        if (state.has_signature && !is_implicit && rational_cmp(length, state.measure_length) != 0) {
             warn(ctx, "measure is %llu/%llu of a whole note, its time signature's is %llu/%llu",
-                 length.n, length.d, state.measure_length.n, state.measure_length.d);
+                 length.num, length.den, state.measure_length.num, state.measure_length.den);
         }
         state.measure_start = state.reached;
         if (state.staves > ctx->part_staves[part_index]) {
@@ -901,7 +900,7 @@ static bool process_part(Ctx *ctx, ezxml_t part, size_t part_index) {
 /* --- building the NoteEvents --- */
 
 typedef struct {
-    ExactRational onset;
+    Rational onset;
     size_t part;
     size_t order;
     size_t index; /* into the collected notes */
@@ -911,7 +910,7 @@ typedef struct {
 static int compare_items(const void *a, const void *b) {
     const SortItem *x = (const SortItem *)a;
     const SortItem *y = (const SortItem *)b;
-    int by_onset = er_cmp(x->onset, y->onset);
+    int by_onset = rational_cmp(x->onset, y->onset);
     if (by_onset != 0) {
         return by_onset;
     }
@@ -940,11 +939,11 @@ static bool build_event(Ctx *ctx, const XNote *note, const char *part_id, const 
     snprintf(id_text, sizeof(id_text), "musicxml-%s-%zu", part_id, note->order);
     char voice_text[128];
     snprintf(voice_text, sizeof(voice_text), "musicxml-voice-%s-%s", part_id, note->voice);
-    position = er_to_time(note->onset);
-    bool fits = note->duration.n <= (unsigned long long)LONG_MAX && note->duration.d <= (unsigned long long)ULONG_MAX;
+    position = musical_time_from_rational_or_null(note->onset);
+    bool fits = note->duration.num <= (unsigned long long)LONG_MAX && note->duration.den <= (unsigned long long)ULONG_MAX;
     bool ok = position != NULL && fits && entity_id_create(id_text, &id) == ENTITY_ID_OK &&
               temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK &&
-              duration_create((long)note->duration.n, (unsigned long)note->duration.d, &duration) == DURATION_OK &&
+              duration_create((long)note->duration.num, (unsigned long)note->duration.den, &duration) == DURATION_OK &&
               pitch_numeric_value_create(tuning, note->midi, 1, &numeric) == PITCH_NUMERIC_VALUE_OK &&
               pitch_numeric_value_to_identity(numeric, &pitch) == PITCH_NUMERIC_VALUE_TO_IDENTITY_OK &&
               pitch_spelling_create(note->letter, note->accidental, note->octave, &spelling) == PITCH_SPELLING_OK &&
@@ -1034,7 +1033,7 @@ void musicxml_import_destroy(MusicXmlImport *import) {
 static int compare_time_events(const void *a, const void *b) {
     const TimeEvent *x = (const TimeEvent *)a;
     const TimeEvent *y = (const TimeEvent *)b;
-    int by_position = er_cmp(x->position, y->position);
+    int by_position = rational_cmp(x->position, y->position);
     if (by_position != 0) {
         return by_position;
     }
@@ -1044,7 +1043,7 @@ static int compare_time_events(const void *a, const void *b) {
 static int compare_key_events(const void *a, const void *b) {
     const KeyEvent *x = (const KeyEvent *)a;
     const KeyEvent *y = (const KeyEvent *)b;
-    int by_position = er_cmp(x->position, y->position);
+    int by_position = rational_cmp(x->position, y->position);
     if (by_position != 0) {
         return by_position;
     }
@@ -1078,7 +1077,7 @@ static bool build_meter_map(Ctx *ctx) {
     }
     size_t kept_count = 0;
     for (size_t i = 0; i < ctx->time_count; i++) {
-        if (kept_count > 0 && er_cmp(kept[kept_count - 1].position, ctx->times[i].position) == 0) {
+        if (kept_count > 0 && rational_cmp(kept[kept_count - 1].position, ctx->times[i].position) == 0) {
             if (!same_signature(&kept[kept_count - 1], &ctx->times[i])) {
                 warn(ctx, "parts disagree about the time signature at one position; part %zu's is used",
                      kept[kept_count - 1].part);
@@ -1088,9 +1087,9 @@ static bool build_meter_map(Ctx *ctx) {
         kept[kept_count++] = ctx->times[i];
     }
     if (ctx->has_pickup) {
-        if (kept[0].position.n != 0) {
+        if (kept[0].position.num != 0) {
             warn(ctx, "the implicit first measure is not read as a pickup: no time signature starts the piece");
-        } else if (kept_count == 1 || er_cmp(kept[1].position, ctx->pickup_length) > 0) {
+        } else if (kept_count == 1 || rational_cmp(kept[1].position, ctx->pickup_length) > 0) {
             /* nothing ends the pickup's region where the pickup ends: end it there, with the same signature, which
                is what the MeterMap reads as a short first region (a pickup) */
             for (size_t m = kept_count; m > 1; m--) {
@@ -1108,7 +1107,7 @@ static bool build_meter_map(Ctx *ctx) {
     bool ok = points != NULL && starts != NULL && signatures != NULL;
     for (size_t i = 0; i < kept_count && ok; i++) {
         NoteValue *unit = NULL;
-        starts[i] = er_to_time(kept[i].position);
+        starts[i] = musical_time_from_rational_or_null(kept[i].position);
         ok = starts[i] != NULL && note_value_create(kept[i].exponent, &unit) == NOTE_VALUE_OK &&
              time_signature_create(kept[i].beats, unit, &signatures[i]) == TIME_SIGNATURE_OK;
         note_value_destroy(unit);
@@ -1146,7 +1145,7 @@ static bool build_key_signatures(Ctx *ctx) {
         bool duplicate = false;
         for (size_t k = 0; k < out->key_signature_count && !duplicate; k++) {
             const MusicXmlKeySignatureEvent *seen = &out->key_signatures[k];
-            MusicalTime *position = er_to_time(event->position);
+            MusicalTime *position = musical_time_from_rational_or_null(event->position);
             duplicate = position != NULL && musical_time_equals(seen->position, position) &&
                         seen->sharps_flats == event->fifths && seen->mode_hint == event->hint;
             musical_time_destroy(position);
@@ -1155,7 +1154,7 @@ static bool build_key_signatures(Ctx *ctx) {
             continue;
         }
         MusicXmlKeySignatureEvent *slot = &out->key_signatures[out->key_signature_count];
-        slot->position = er_to_time(event->position);
+        slot->position = musical_time_from_rational_or_null(event->position);
         slot->sharps_flats = (int8_t)event->fifths;
         slot->mode_hint = event->hint;
         slot->part_index = event->part;
@@ -1172,7 +1171,7 @@ static bool build_key_signatures(Ctx *ctx) {
 static int compare_tempo_events(const void *a, const void *b) {
     const TempoEvent *x = (const TempoEvent *)a;
     const TempoEvent *y = (const TempoEvent *)b;
-    int by_position = er_cmp(x->position, y->position);
+    int by_position = rational_cmp(x->position, y->position);
     if (by_position != 0) {
         return by_position;
     }
@@ -1182,7 +1181,7 @@ static int compare_tempo_events(const void *a, const void *b) {
 static int compare_marking_events(const void *a, const void *b) {
     const MarkingEvent *x = (const MarkingEvent *)a;
     const MarkingEvent *y = (const MarkingEvent *)b;
-    int by_position = er_cmp(x->position, y->position);
+    int by_position = rational_cmp(x->position, y->position);
     if (by_position != 0) {
         return by_position;
     }
@@ -1195,7 +1194,7 @@ static int compare_marking_events(const void *a, const void *b) {
 static int compare_dynamic_events(const void *a, const void *b) {
     const DynamicEvent *x = (const DynamicEvent *)a;
     const DynamicEvent *y = (const DynamicEvent *)b;
-    int by_position = er_cmp(x->position, y->position);
+    int by_position = rational_cmp(x->position, y->position);
     if (by_position != 0) {
         return by_position;
     }
@@ -1225,7 +1224,7 @@ static bool build_tempo_map(Ctx *ctx) {
     size_t kept_count = 0;
     bool ok = kept != NULL && points != NULL && starts != NULL;
     for (size_t i = 0; i < ctx->tempo_count && ok; i++) {
-        if (kept_count > 0 && er_cmp(kept[kept_count - 1].position, ctx->tempos[i].position) == 0) {
+        if (kept_count > 0 && rational_cmp(kept[kept_count - 1].position, ctx->tempos[i].position) == 0) {
             if (kept[kept_count - 1].microseconds_per_quarter != ctx->tempos[i].microseconds_per_quarter) {
                 warn(ctx, "parts disagree about the tempo at one position; part %zu's is used", kept[kept_count - 1].part);
             }
@@ -1234,7 +1233,7 @@ static bool build_tempo_map(Ctx *ctx) {
         kept[kept_count++] = ctx->tempos[i];
     }
     for (size_t i = 0; i < kept_count && ok; i++) {
-        starts[i] = er_to_time(kept[i].position);
+        starts[i] = musical_time_from_rational_or_null(kept[i].position);
         ok = starts[i] != NULL;
         points[i].start = starts[i];
         points[i].microseconds_per_quarter = kept[i].microseconds_per_quarter;
@@ -1267,14 +1266,14 @@ static bool build_tempo_markings(Ctx *ctx) {
     }
     for (size_t i = 0; i < ctx->marking_count; i++) {
         const MarkingEvent *event = &ctx->markings[i];
-        MusicalTime *position = er_to_time(event->position);
+        MusicalTime *position = musical_time_from_rational_or_null(event->position);
         TemporalAnchor *anchor = NULL;
         Duration *unit = NULL;
         MetronomeMarking *metronome = NULL;
         bool ok = position != NULL && temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK;
         if (ok && event->has_metronome) {
-            ok = event->beat_unit.n <= (unsigned long long)LONG_MAX && event->beat_unit.d <= (unsigned long long)ULONG_MAX &&
-                 duration_create((long)event->beat_unit.n, (unsigned long)event->beat_unit.d, &unit) == DURATION_OK &&
+            ok = event->beat_unit.num <= (unsigned long long)LONG_MAX && event->beat_unit.den <= (unsigned long long)ULONG_MAX &&
+                 duration_create((long)event->beat_unit.num, (unsigned long)event->beat_unit.den, &unit) == DURATION_OK &&
                  metronome_marking_create(unit, event->bpm_numerator, event->bpm_denominator, &metronome) ==
                      METRONOME_MARKING_OK;
         }
@@ -1313,19 +1312,19 @@ static bool build_dynamics(Ctx *ctx) {
     for (size_t i = 0; i < ctx->dynamic_count; i++) {
         const DynamicEvent *event = &ctx->dynamics[i];
         /* in force until the next later marking in the same part, or the part's end */
-        ExactRational end = ctx->part_end[event->part];
+        Rational end = ctx->part_end[event->part];
         for (size_t j = i + 1; j < ctx->dynamic_count; j++) {
-            if (ctx->dynamics[j].part == event->part && er_cmp(ctx->dynamics[j].position, event->position) > 0) {
+            if (ctx->dynamics[j].part == event->part && rational_cmp(ctx->dynamics[j].position, event->position) > 0) {
                 end = ctx->dynamics[j].position;
                 break;
             }
         }
-        if (er_cmp(end, event->position) <= 0) {
+        if (rational_cmp(end, event->position) <= 0) {
             warn(ctx, "dynamic marking %s has no extent (it is at or after the end of the part); skipped", event->name);
             continue;
         }
-        MusicalTime *from = er_to_time(event->position);
-        MusicalTime *to = er_to_time(end);
+        MusicalTime *from = musical_time_from_rational_or_null(event->position);
+        MusicalTime *to = musical_time_from_rational_or_null(end);
         TimeSpan *span = NULL;
         Dynamics *dynamics = NULL;
         bool ok = from != NULL && to != NULL &&
@@ -1364,7 +1363,7 @@ static MusicXmlImportStatus import_document(Ctx *ctx, ezxml_t root) {
     }
     part_ids = (char **)calloc(part_count > 0 ? part_count : 1, sizeof(char *));
     ctx->part_staves = (int *)calloc(part_count > 0 ? part_count : 1, sizeof(int));
-    ctx->part_end = (ExactRational *)calloc(part_count > 0 ? part_count : 1, sizeof(ExactRational));
+    ctx->part_end = (Rational *)calloc(part_count > 0 ? part_count : 1, sizeof(Rational));
     if (part_ids == NULL || ctx->part_staves == NULL || ctx->part_end == NULL) {
         free(part_ids);
         return fail(ctx, MUSICXML_IMPORT_ERR_ALLOC, "out of memory");

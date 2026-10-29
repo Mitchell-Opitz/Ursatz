@@ -5,7 +5,8 @@
 #include <stddef.h>
 
 #include "semantics/sonority_segmentation.h"
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 
 /*
  * Internal to adaptive sonority segmentation: the three algorithm steps as separate functions, so each
@@ -15,8 +16,8 @@
 
 /* One input note, reduced to what the steps need. */
 typedef struct {
-    ExactRational onset;
-    ExactRational release; /* onset + duration */
+    Rational onset;
+    Rational release; /* onset + duration */
     int pitch;             /* semitone number, C4 = 60 */
     int pitch_class;       /* pitch mod 12, 0..11 */
 } NoteSpan;
@@ -28,8 +29,8 @@ typedef struct {
 } SegmentMember;
 
 typedef struct {
-    ExactRational start;
-    ExactRational end;
+    Rational start;
+    Rational end;
     SegmentMember *members; /* owned; NULL when member_count is 0 */
     size_t member_count;
     bool starts_measure; /* the segment starts at a barline */
@@ -49,8 +50,8 @@ AdaptiveSegmentationResult segmentation_prepare_notes(NoteEvent *const *notes, s
 /* The members of the span [start, end): every note with onset < end and release > start, in note
    order. attacked is onset >= start. On OK, *out_members is allocated (NULL when there are none) and
    the caller frees it. */
-AdaptiveSegmentationResult segmentation_members_of(const NoteSpan *spans, size_t span_count, ExactRational start,
-                                                    ExactRational end, SegmentMember **out_members,
+AdaptiveSegmentationResult segmentation_members_of(const NoteSpan *spans, size_t span_count, Rational start,
+                                                    Rational end, SegmentMember **out_members,
                                                     size_t *out_count);
 
 /*

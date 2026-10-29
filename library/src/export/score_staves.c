@@ -2,10 +2,14 @@
 
 #include <stdlib.h>
 
+#include "core/rational.h"
 #include "time/duration.h"
-#include "time/exact_rational.h"
+#include "time/time_rational.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
+
+static const Rational zero = {0, 1};
+static const Rational one = {1, 1};
 
 bool score_program_uses_grand_staff(int program) {
     return (program >= 0 && program <= 8) || (program >= 16 && program <= 21) || program == 46;
@@ -20,8 +24,8 @@ bool score_program_uses_grand_staff(int program) {
 
 typedef struct {
     size_t event;
-    ExactRational start;
-    ExactRational end;
+    Rational start;
+    Rational end;
     long pitch;
     int staff;
 } Item;
@@ -29,7 +33,7 @@ typedef struct {
 static int compare_items(const void *left, const void *right) {
     const Item *a = (const Item *)left;
     const Item *b = (const Item *)right;
-    int order = er_cmp(a->start, b->start);
+    int order = rational_cmp(a->start, b->start);
     if (order != 0) {
         return order;
     }
@@ -42,7 +46,7 @@ static long labs_diff(long a, long b) {
 
 /* The staff for a note outside a chord split: by middle C, or in the window by the nearer last pitch. items[0..index)
    are the notes before the group of this note, ascending by start, already assigned. */
-static int staff_of_note(const Item *items, size_t group_start, size_t index, ExactRational reach) {
+static int staff_of_note(const Item *items, size_t group_start, size_t index, Rational reach) {
     const Item *note = &items[index];
     int by_pitch = note->pitch >= MIDDLE_C ? 1 : 2;
     if (note->pitch < WINDOW_LOW || note->pitch > WINDOW_HIGH) {
@@ -50,17 +54,17 @@ static int staff_of_note(const Item *items, size_t group_start, size_t index, Ex
     }
     const Item *last[3] = {NULL, NULL, NULL}; /* by staff: the latest ending note within the last whole note */
     for (size_t k = group_start; k-- > 0;) {
-        ExactRational limit;
-        if (er_add(items[k].start, reach, &limit) != 0 || er_cmp(limit, note->start) <= 0) {
+        Rational limit;
+        if (rational_add(items[k].start, reach, &limit) != RATIONAL_OK || rational_cmp(limit, note->start) <= 0) {
             break;
         }
-        ExactRational floor_end;
-        if (er_cmp(items[k].end, note->start) > 0 || er_add(items[k].end, er_make(1, 1), &floor_end) != 0 ||
-            er_cmp(floor_end, note->start) <= 0) {
+        Rational floor_end;
+        if (rational_cmp(items[k].end, note->start) > 0 || rational_add(items[k].end, one, &floor_end) != RATIONAL_OK ||
+            rational_cmp(floor_end, note->start) <= 0) {
             continue;
         }
         int staff = items[k].staff;
-        if (last[staff] == NULL || er_cmp(items[k].end, last[staff]->end) > 0) {
+        if (last[staff] == NULL || rational_cmp(items[k].end, last[staff]->end) > 0) {
             last[staff] = &items[k];
         }
     }
@@ -123,12 +127,12 @@ static bool split_chord(Item *items, size_t from, size_t to) {
     return true;
 }
 
-static ScoreStavesResult assign_part(Item *items, size_t n, ExactRational reach) {
+static ScoreStavesResult assign_part(Item *items, size_t n, Rational reach) {
     qsort(items, n, sizeof(Item), compare_items);
     size_t from = 0;
     while (from < n) {
         size_t to = from + 1;
-        while (to < n && er_cmp(items[to].start, items[from].start) == 0) {
+        while (to < n && rational_cmp(items[to].start, items[from].start) == 0) {
             to++;
         }
         if (!split_chord(items, from, to)) {
@@ -172,7 +176,7 @@ ScoreStavesResult score_staves_assign(NoteEvent *const *events, PitchNumericValu
             continue;
         }
         size_t n = 0;
-        ExactRational longest = er_make(0, 1);
+        Rational longest = zero;
         for (size_t i = 0; i < count && result == SCORE_STAVES_OK; i++) {
             if ((part_index != NULL ? part_index[i] : 0) != p) {
                 continue;
@@ -185,19 +189,20 @@ ScoreStavesResult score_staves_assign(NoteEvent *const *events, PitchNumericValu
             }
             Item *item = &items[n++];
             item->event = i;
-            item->start = er_of_time(position);
             item->staff = 1;
             item->pitch = pitch_numeric_value_position_numerator(pitch_values[i]) /
                           (long)pitch_numeric_value_position_denominator(pitch_values[i]);
-            if (er_add(item->start, er_of_duration(duration), &item->end) != 0) {
+            Rational length;
+            if (rational_of_musical_time(position, &item->start) != RATIONAL_OK ||
+                rational_of_duration(duration, &length) != RATIONAL_OK ||
+                rational_add(item->start, length, &item->end) != RATIONAL_OK) {
                 result = SCORE_STAVES_ERR_INCONSISTENT_INPUT;
                 break;
             }
-            ExactRational length = er_of_duration(duration);
-            longest = er_cmp(length, longest) > 0 ? length : longest;
+            longest = rational_cmp(length, longest) > 0 ? length : longest;
         }
-        ExactRational reach;
-        if (result == SCORE_STAVES_OK && er_add(longest, er_make(1, 1), &reach) != 0) {
+        Rational reach;
+        if (result == SCORE_STAVES_OK && rational_add(longest, one, &reach) != RATIONAL_OK) {
             result = SCORE_STAVES_ERR_INCONSISTENT_INPUT;
         }
         if (result == SCORE_STAVES_OK) {

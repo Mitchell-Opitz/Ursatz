@@ -59,8 +59,10 @@ AdaptiveSegmentationResult segmentation_prepare_notes(NoteEvent *const *notes, s
             free(spans);
             return AD_SEGMENTATION_ERR_METER_MAP;
         }
-        spans[i].onset = er_of_time(position);
-        if (er_add(spans[i].onset, er_of_duration(note_event_duration(note)), &spans[i].release) != 0) {
+        Rational length;
+        if (rational_of_musical_time(position, &spans[i].onset) != RATIONAL_OK ||
+            rational_of_duration(note_event_duration(note), &length) != RATIONAL_OK ||
+            rational_add(spans[i].onset, length, &spans[i].release) != RATIONAL_OK) {
             free(spans);
             return AD_SEGMENTATION_ERR_OVERFLOW;
         }
@@ -71,8 +73,8 @@ AdaptiveSegmentationResult segmentation_prepare_notes(NoteEvent *const *notes, s
     return AD_SEGMENTATION_OK;
 }
 
-AdaptiveSegmentationResult segmentation_members_of(const NoteSpan *spans, size_t span_count, ExactRational start,
-                                                    ExactRational end, SegmentMember **out_members,
+AdaptiveSegmentationResult segmentation_members_of(const NoteSpan *spans, size_t span_count, Rational start,
+                                                    Rational end, SegmentMember **out_members,
                                                     size_t *out_count) {
     SegmentMember *members = NULL;
     size_t count = 0;
@@ -83,9 +85,9 @@ AdaptiveSegmentationResult segmentation_members_of(const NoteSpan *spans, size_t
         }
     }
     for (size_t i = 0; i < span_count; i++) {
-        if (er_cmp(spans[i].onset, end) < 0 && er_cmp(spans[i].release, start) > 0) {
+        if (rational_cmp(spans[i].onset, end) < 0 && rational_cmp(spans[i].release, start) > 0) {
             members[count].note = i;
-            members[count].attacked = er_cmp(spans[i].onset, start) >= 0;
+            members[count].attacked = rational_cmp(spans[i].onset, start) >= 0;
             count++;
         }
     }
@@ -147,9 +149,9 @@ AdaptiveSegmentationResult segmentation_cut(const NoteSpan *spans, size_t span_c
         return AD_SEGMENTATION_ERR_NULL_ARGUMENT;
     }
 
-    ExactRational sounding_end = spans[0].release;
+    Rational sounding_end = spans[0].release;
     for (size_t i = 1; i < span_count; i++) {
-        if (er_cmp(spans[i].release, sounding_end) > 0) {
+        if (rational_cmp(spans[i].release, sounding_end) > 0) {
             sounding_end = spans[i].release;
         }
     }
@@ -164,10 +166,16 @@ AdaptiveSegmentationResult segmentation_cut(const NoteSpan *spans, size_t span_c
             failure = AD_SEGMENTATION_ERR_METER_MAP;
             break;
         }
-        ExactRational measure_start = er_of_time(time_span_start(measure_span));
-        ExactRational measure_end = er_of_time(time_span_end(measure_span));
+        Rational measure_start;
+        Rational measure_end;
+        bool measure_ok = rational_of_musical_time(time_span_start(measure_span), &measure_start) == RATIONAL_OK &&
+                          rational_of_musical_time(time_span_end(measure_span), &measure_end) == RATIONAL_OK;
         time_span_destroy(measure_span);
-        if (er_cmp(measure_start, sounding_end) >= 0) {
+        if (!measure_ok) {
+            failure = AD_SEGMENTATION_ERR_OVERFLOW;
+            break;
+        }
+        if (rational_cmp(measure_start, sounding_end) >= 0) {
             break;
         }
 
@@ -180,10 +188,15 @@ AdaptiveSegmentationResult segmentation_cut(const NoteSpan *spans, size_t span_c
         }
 
         for (size_t beat = 0; beat < start_count && failure == AD_SEGMENTATION_OK; beat++) {
-            ExactRational beat_start = er_of_time(starts[beat]);
-            ExactRational beat_end = beat + 1 < start_count ? er_of_time(starts[beat + 1]) : measure_end;
-            bool starts_ok = beat > 0 || er_cmp(beat_start, measure_start) == 0;
-            if (!starts_ok || er_cmp(beat_start, beat_end) >= 0 || er_cmp(beat_end, measure_end) > 0) {
+            Rational beat_start;
+            Rational beat_end = measure_end;
+            if (rational_of_musical_time(starts[beat], &beat_start) != RATIONAL_OK ||
+                (beat + 1 < start_count && rational_of_musical_time(starts[beat + 1], &beat_end) != RATIONAL_OK)) {
+                failure = AD_SEGMENTATION_ERR_OVERFLOW;
+                break;
+            }
+            bool starts_ok = beat > 0 || rational_cmp(beat_start, measure_start) == 0;
+            if (!starts_ok || rational_cmp(beat_start, beat_end) >= 0 || rational_cmp(beat_end, measure_end) > 0) {
                 failure = AD_SEGMENTATION_ERR_BEAT_GRID;
                 break;
             }
@@ -218,13 +231,13 @@ AdaptiveSegmentationResult segmentation_cut(const NoteSpan *spans, size_t span_c
 /* The lowest sounding pitch among the members sounding at `t` (onset <= t < release) when `after`,
    or sounding just before it (onset < t <= release) otherwise; -1 for none. *out_attacked is set when
    a note with onset == t has that lowest pitch. */
-static int lowest_at(const NoteSpan *spans, const Segment *segment, ExactRational t, bool after,
+static int lowest_at(const NoteSpan *spans, const Segment *segment, Rational t, bool after,
                      bool *out_attacked) {
     int lowest = -1;
     for (size_t i = 0; i < segment->member_count; i++) {
         const NoteSpan *note = &spans[segment->members[i].note];
-        bool sounding = after ? (er_cmp(note->onset, t) <= 0 && er_cmp(note->release, t) > 0)
-                              : (er_cmp(note->onset, t) < 0 && er_cmp(note->release, t) >= 0);
+        bool sounding = after ? (rational_cmp(note->onset, t) <= 0 && rational_cmp(note->release, t) > 0)
+                              : (rational_cmp(note->onset, t) < 0 && rational_cmp(note->release, t) >= 0);
         if (sounding && (lowest < 0 || note->pitch < lowest)) {
             lowest = note->pitch;
         }
@@ -233,7 +246,7 @@ static int lowest_at(const NoteSpan *spans, const Segment *segment, ExactRationa
         *out_attacked = false;
         for (size_t i = 0; lowest >= 0 && i < segment->member_count; i++) {
             const NoteSpan *note = &spans[segment->members[i].note];
-            if (er_cmp(note->onset, t) == 0 && note->pitch == lowest) {
+            if (rational_cmp(note->onset, t) == 0 && note->pitch == lowest) {
                 *out_attacked = true;
             }
         }
@@ -248,7 +261,7 @@ static int pitch_class_of(int pitch) {
 /* The accepted split times inside `segment`, ascending. *out is allocated (NULL when none). */
 static AdaptiveSegmentationResult split_points_of(const NoteSpan *spans, const Segment *segment,
                                                    const AdaptiveSegmentationConfig *config,
-                                                   ExactRational **out, size_t *out_count) {
+                                                   Rational **out, size_t *out_count) {
     *out = NULL;
     *out_count = 0;
     if (segment->member_count == 0) {
@@ -256,8 +269,8 @@ static AdaptiveSegmentationResult split_points_of(const NoteSpan *spans, const S
     }
 
     /* The attack times strictly inside the beat, ascending and without repeats. */
-    ExactRational *attacks = (ExactRational *)malloc(segment->member_count * sizeof(ExactRational));
-    ExactRational *changes = (ExactRational *)malloc(segment->member_count * sizeof(ExactRational));
+    Rational *attacks = (Rational *)malloc(segment->member_count * sizeof(Rational));
+    Rational *changes = (Rational *)malloc(segment->member_count * sizeof(Rational));
     if (attacks == NULL || changes == NULL) {
         free(attacks);
         free(changes);
@@ -265,15 +278,15 @@ static AdaptiveSegmentationResult split_points_of(const NoteSpan *spans, const S
     }
     size_t attack_count = 0;
     for (size_t i = 0; i < segment->member_count; i++) {
-        ExactRational onset = spans[segment->members[i].note].onset;
-        if (er_cmp(onset, segment->start) <= 0 || er_cmp(onset, segment->end) >= 0) {
+        Rational onset = spans[segment->members[i].note].onset;
+        if (rational_cmp(onset, segment->start) <= 0 || rational_cmp(onset, segment->end) >= 0) {
             continue;
         }
         size_t at = 0;
-        while (at < attack_count && er_cmp(attacks[at], onset) < 0) {
+        while (at < attack_count && rational_cmp(attacks[at], onset) < 0) {
             at++;
         }
-        if (at < attack_count && er_cmp(attacks[at], onset) == 0) {
+        if (at < attack_count && rational_cmp(attacks[at], onset) == 0) {
             continue;
         }
         for (size_t j = attack_count; j > at; j--) {
@@ -296,23 +309,23 @@ static AdaptiveSegmentationResult split_points_of(const NoteSpan *spans, const S
     free(attacks);
 
     /* The shortest a new bass may last: the minimum fraction of the beat. */
-    ExactRational beat = {0, 1};
-    ExactRational minimum = {0, 1};
-    if (er_sub(segment->end, segment->start, &beat) != 0 ||
-        er_mul(beat, er_make(config->min_split_numerator, config->min_split_denominator), &minimum) != 0) {
+    Rational beat = {0, 1};
+    Rational minimum = {0, 1};
+    if (rational_sub(segment->end, segment->start, &beat) != RATIONAL_OK ||
+        rational_mul(beat, rational_ratio(config->min_split_numerator, config->min_split_denominator), &minimum) != RATIONAL_OK) {
         free(changes);
         return AD_SEGMENTATION_ERR_OVERFLOW;
     }
 
     size_t accepted = 0;
     for (size_t i = 0; i < change_count; i++) {
-        ExactRational until = i + 1 < change_count ? changes[i + 1] : segment->end;
-        ExactRational lasts = {0, 1};
-        if (er_sub(until, changes[i], &lasts) != 0) {
+        Rational until = i + 1 < change_count ? changes[i + 1] : segment->end;
+        Rational lasts = {0, 1};
+        if (rational_sub(until, changes[i], &lasts) != RATIONAL_OK) {
             free(changes);
             return AD_SEGMENTATION_ERR_OVERFLOW;
         }
-        if (er_cmp(lasts, minimum) >= 0) {
+        if (rational_cmp(lasts, minimum) >= 0) {
             changes[accepted++] = changes[i]; /* in place: accepted never passes i */
             /* the next candidate's end is read from changes[i + 1], untouched while accepted <= i */
         }
@@ -327,8 +340,8 @@ static AdaptiveSegmentationResult split_points_of(const NoteSpan *spans, const S
 }
 
 /* The members of `parent` that sound in [start, end). */
-static AdaptiveSegmentationResult members_within(const NoteSpan *spans, const Segment *parent, ExactRational start,
-                                                  ExactRational end, SegmentMember **out, size_t *out_count) {
+static AdaptiveSegmentationResult members_within(const NoteSpan *spans, const Segment *parent, Rational start,
+                                                  Rational end, SegmentMember **out, size_t *out_count) {
     SegmentMember *members = NULL;
     size_t count = 0;
     if (parent->member_count > 0) {
@@ -339,9 +352,9 @@ static AdaptiveSegmentationResult members_within(const NoteSpan *spans, const Se
     }
     for (size_t i = 0; i < parent->member_count; i++) {
         const NoteSpan *note = &spans[parent->members[i].note];
-        if (er_cmp(note->onset, end) < 0 && er_cmp(note->release, start) > 0) {
+        if (rational_cmp(note->onset, end) < 0 && rational_cmp(note->release, start) > 0) {
             members[count].note = parent->members[i].note;
-            members[count].attacked = er_cmp(note->onset, start) >= 0;
+            members[count].attacked = rational_cmp(note->onset, start) >= 0;
             count++;
         }
     }
@@ -366,7 +379,7 @@ AdaptiveSegmentationResult segmentation_split_bass(const NoteSpan *spans, const 
 
     for (size_t i = 0; i < segments->count && failure == AD_SEGMENTATION_OK; i++) {
         Segment *segment = &segments->items[i];
-        ExactRational *points = NULL;
+        Rational *points = NULL;
         size_t point_count = 0;
         failure = split_points_of(spans, segment, config, &points, &point_count);
         if (failure != AD_SEGMENTATION_OK) {
@@ -382,7 +395,7 @@ AdaptiveSegmentationResult segmentation_split_bass(const NoteSpan *spans, const 
             continue;
         }
 
-        ExactRational piece_start = segment->start;
+        Rational piece_start = segment->start;
         for (size_t piece = 0; piece <= point_count && failure == AD_SEGMENTATION_OK; piece++) {
             Segment part;
             part.start = piece_start;
@@ -473,7 +486,7 @@ AdaptiveSegmentationResult segmentation_merge(const NoteSpan *spans, const Adapt
             bool same_content = last->member_count > 0 && segment->member_count > 0 &&
                                 segment_pitch_class_set(spans, last) == segment_pitch_class_set(spans, segment) &&
                                 bass_pitch_class(spans, last) == bass_pitch_class(spans, segment);
-            if (same_content && !crosses_barline && er_cmp(last->end, segment->start) == 0) {
+            if (same_content && !crosses_barline && rational_cmp(last->end, segment->start) == 0) {
                 AdaptiveSegmentationResult merged = union_members(last, segment);
                 if (merged != AD_SEGMENTATION_OK) {
                     return merged;
@@ -573,7 +586,7 @@ AdaptiveSegmentationResult segmentation_merge_unchanged_harmony(const NoteSpan *
         if (kept > 0) {
             Segment *last = &segments->items[kept - 1];
             bool crosses_barline = segment->starts_measure && !config->merge_across_barlines;
-            if (!crosses_barline && last->member_count > 0 && er_cmp(last->end, segment->start) == 0 &&
+            if (!crosses_barline && last->member_count > 0 && rational_cmp(last->end, segment->start) == 0 &&
                 holds_unchanged_harmony(spans, segment, chord_set)) {
                 AdaptiveSegmentationResult merged = union_members(last, segment);
                 if (merged != AD_SEGMENTATION_OK) {
@@ -612,8 +625,8 @@ void adaptive_sonorities_destroy(AdaptiveSonorities *sonorities) {
 /* One AdaptiveSonority for a non-empty segment. */
 static AdaptiveSegmentationResult assemble_one(NoteEvent *const *notes, const Segment *segment,
                                                 AdaptiveSonority *out) {
-    MusicalTime *start = er_to_time(segment->start);
-    MusicalTime *end = er_to_time(segment->end);
+    MusicalTime *start = musical_time_from_rational_or_null(segment->start);
+    MusicalTime *end = musical_time_from_rational_or_null(segment->end);
     if (start == NULL || end == NULL) {
         musical_time_destroy(start);
         musical_time_destroy(end);

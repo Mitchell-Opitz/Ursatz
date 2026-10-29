@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "weighted_pipeline.h"
+#include "../rational_test_util.h"
 
 /*
  * Weighted chord identification on John Field, Nocturne No. 1 in E-flat major (12/8): the opening, which
@@ -20,7 +21,7 @@
 #define TONIC_EB 3
 
 typedef struct {
-    ExactRational start;
+    Rational start;
     int degree; /* 0 for END */
 } Mark;
 
@@ -64,14 +65,14 @@ static Marks load_marks(const MeterMap *map) {
 
         TimeSpan *span = NULL;
         assert(meter_map_measure_span(map, measure, &span) == METER_MAP_OK);
-        ExactRational at = er_of_time(time_span_start(span));
+        Rational at = test_rational_of_time(time_span_start(span));
         const TimeSignature *reading = NULL;
         assert(metrical_position_reading_signature(map, measure, &reading) == METRICAL_POSITION_OK);
         Duration *beat_length = NULL;
         unsigned beats = 0;
         assert(standard_meter_beat_grid(reading, &beat_length, &beats));
         for (int b = 1; b < beat; b++) {
-            assert(er_add(at, er_of_duration(beat_length), &at) == 0);
+            assert(rational_add(at, test_rational_of_duration(beat_length), &at) == 0);
         }
         duration_destroy(beat_length);
         time_span_destroy(span);
@@ -88,32 +89,32 @@ static Marks load_marks(const MeterMap *map) {
 }
 
 /* The annotated degree at a time, or -1 outside the annotated span. */
-static int annotated_degree_at(const Marks *marks, ExactRational t) {
-    if (er_cmp(t, marks->marks[0].start) < 0 || er_cmp(t, marks->marks[marks->count - 1].start) >= 0) {
+static int annotated_degree_at(const Marks *marks, Rational t) {
+    if (rational_cmp(t, marks->marks[0].start) < 0 || rational_cmp(t, marks->marks[marks->count - 1].start) >= 0) {
         return -1;
     }
     int degree = -1;
     for (size_t i = 0; i + 1 < marks->count; i++) {
-        if (er_cmp(marks->marks[i].start, t) <= 0) {
+        if (rational_cmp(marks->marks[i].start, t) <= 0) {
             degree = marks->marks[i].degree;
         }
     }
     return degree;
 }
 
-static ExactRational rational_of(double whole_notes) {
+static Rational rational_of(double whole_notes) {
     /* The segment starts are ratios of small integers over 960; recover them exactly. */
-    return er_make((unsigned long long)(whole_notes * 960.0 + 0.5), 960);
+    return rational_ratio((unsigned long long)(whole_notes * 960.0 + 0.5), 960);
 }
 
-static void print_where(const MeterMap *map, ExactRational t) {
-    MusicalTime *time = er_to_time(t);
+static void print_where(const MeterMap *map, Rational t) {
+    MusicalTime *time = musical_time_from_rational_or_null(t);
     int measure = 0;
     assert(meter_map_measure_index_at(map, time, &measure) == METER_MAP_OK);
     TimeSpan *span = NULL;
     assert(meter_map_measure_span(map, measure, &span) == METER_MAP_OK);
-    ExactRational into = {0, 1};
-    assert(er_sub(t, er_of_time(time_span_start(span)), &into) == 0);
+    Rational into = {0, 1};
+    assert(rational_sub(t, test_rational_of_time(time_span_start(span)), &into) == 0);
     printf("measure %d, %.3f of a whole note in", measure, pipeline_as_double(into));
     time_span_destroy(span);
     musical_time_destroy(time);
@@ -135,7 +136,7 @@ static void test_field_1_follows_i_v_i_and_resolves_the_annotated_harmony(void) 
     printf("Field 1, weighted chord identification against %zu hand-marked harmony changes (draft marks)\n",
            marks.count - 1);
     for (size_t s = 0; s < p.segment_count; s++) {
-        ExactRational start = rational_of(p.starts[s]);
+        Rational start = rational_of(p.starts[s]);
         int expected = annotated_degree_at(&marks, start);
         if (expected < 0) {
             continue;
@@ -164,8 +165,8 @@ static void test_field_1_follows_i_v_i_and_resolves_the_annotated_harmony(void) 
     for (int m = 0; m < 3; m++) {
         TimeSpan *span = NULL;
         assert(meter_map_measure_span(map, m + 2, &span) == METER_MAP_OK);
-        double from = pipeline_as_double(er_of_time(time_span_start(span)));
-        double to = pipeline_as_double(er_of_time(time_span_end(span)));
+        double from = pipeline_as_double(test_rational_of_time(time_span_start(span)));
+        double to = pipeline_as_double(test_rational_of_time(time_span_end(span)));
         time_span_destroy(span);
         double by_degree[8] = {0};
         for (size_t s = 0; s < p.segment_count; s++) {

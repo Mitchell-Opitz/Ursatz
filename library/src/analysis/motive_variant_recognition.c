@@ -23,17 +23,17 @@ static bool pitched(const MotiveSketch *sketch) {
 static size_t longer(size_t a, size_t b) { return a > b ? a : b; }
 
 /* The time from a note's onset to the next onset; the last note's duration for the last. */
-static ExactRational inter_onset(const MotiveSketch *sketch, size_t index) {
+static Rational inter_onset(const MotiveSketch *sketch, size_t index) {
     if (index + 1 < sketch->note_count) {
         return msk_sub(sketch->notes[index + 1].onset, sketch->notes[index].onset);
     }
     return sketch->notes[index].duration;
 }
 
-static bool same_ratio(ExactRational a_next, ExactRational a, ExactRational b_next,
-                       ExactRational b) {
-    ExactRational ra = msk_div(a_next, a);
-    ExactRational rb = msk_div(b_next, b);
+static bool same_ratio(Rational a_next, Rational a, Rational b_next,
+                       Rational b) {
+    Rational ra = msk_div(a_next, a);
+    Rational rb = msk_div(b_next, b);
     return msk_ok(ra) && msk_ok(rb) && msk_eq(ra, rb);
 }
 
@@ -179,10 +179,10 @@ static void put(Proposals *p, MotiveRelationKind kind, long a, long b, long c) {
 
 /* A step whose ratio parameter is at index which. */
 static void put_ratio(Proposals *p, MotiveRelationKind kind, long a, long b, long c, size_t which,
-                      ExactRational ratio) {
+                      Rational ratio) {
     MotiveRelationStep step = make_step(kind, a, b, c);
-    step.value[which] = (long)ratio.n;
-    step.den[which] = (long)ratio.d;
+    step.value[which] = (long)ratio.num;
+    step.den[which] = (long)ratio.den;
     put_step(p, step);
 }
 
@@ -338,15 +338,15 @@ static void propose_liquidate(const MotiveSketch *s, const MotiveSketch *t, Prop
 
 /* The terms of a ratio parameter a composer writes (1 to 3 for a scaling, 1 to 4 for an offset): the registry's
  * range. A ratio outside it is not proposed, since no registry step could name it. */
-static bool ratio_within(ExactRational ratio, unsigned long long limit) {
-    return msk_ok(ratio) && ratio.n != 0 && ratio.n <= limit && ratio.d <= limit;
+static bool ratio_within(Rational ratio, unsigned long long limit) {
+    return msk_ok(ratio) && ratio.num != 0 && ratio.num <= limit && ratio.den <= limit;
 }
 
 static void propose_scale_time(const MotiveSketch *s, const MotiveSketch *t, Proposals *p,
                                MotiveRelationKind kind) {
-    ExactRational factor = msk_div(t->length, s->length);
+    Rational factor = msk_div(t->length, s->length);
     bool above = kind == MOTIVE_RELATION_AUGMENT;
-    bool wanted = msk_ok(factor) && factor.n != 0 &&
+    bool wanted = msk_ok(factor) && factor.num != 0 &&
                   (above ? msk_cmp(factor, msk_int(1)) > 0 : msk_cmp(factor, msk_int(1)) < 0);
     if (wanted && ratio_within(factor, 3)) {
         put_ratio(p, kind, 0, 0, 0, 0, factor);
@@ -354,7 +354,7 @@ static void propose_scale_time(const MotiveSketch *s, const MotiveSketch *t, Pro
     /* The ratios a chain draws, so a later step's effect on the length does not hide the factor. */
     static const unsigned long long TERMS[3][2] = {{2, 1}, {3, 2}, {3, 1}};
     for (size_t i = 0; i < 3; i++) {
-        ExactRational ratio = above ? msk_make(TERMS[i][0], TERMS[i][1]) : msk_make(TERMS[i][1], TERMS[i][0]);
+        Rational ratio = above ? msk_make(TERMS[i][0], TERMS[i][1]) : msk_make(TERMS[i][1], TERMS[i][0]);
         if (!(wanted && msk_eq(ratio, factor))) {
             put_ratio(p, kind, 0, 0, 0, 0, ratio);
         }
@@ -408,11 +408,11 @@ static void propose_rhythm_repeat(const MotiveSketch *s, const MotiveSketch *t, 
 }
 
 static void propose_rhythm_shift(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    ExactRational inside = msk_mod(msk_sub(msk_add(s->pickup, s->bar), t->pickup), s->bar);
+    Rational inside = msk_mod(msk_sub(msk_add(s->pickup, s->bar), t->pickup), s->bar);
     if (msk_ok(inside) && !msk_is_zero(inside)) {
         put_ratio(p, MOTIVE_RELATION_RHYTHM_SHIFT, 0, 0, 0, 0, inside);
     }
-    ExactRational half = msk_div(s->beat, msk_int(2));
+    Rational half = msk_div(s->beat, msk_int(2));
     if (msk_ok(half)) {
         put_ratio(p, MOTIVE_RELATION_RHYTHM_SHIFT, 0, 0, 0, 0, half);
     }
@@ -436,19 +436,19 @@ static bool meter_den(unsigned long long den) {
 }
 
 static void propose_change_meter(const MotiveSketch *s, const MotiveSketch *t, Proposals *p) {
-    if (t->beat.n == 1 && meter_den(t->beat.d)) {
-        ExactRational beats = msk_div(t->bar, t->beat);
-        if (msk_ok(beats) && beats.d == 1 && beats.n >= 1 && beats.n <= 64) {
-            put(p, MOTIVE_RELATION_CHANGE_METER, (long)beats.n, (long)t->beat.d, 0);
+    if (t->beat.num == 1 && meter_den(t->beat.den)) {
+        Rational beats = msk_div(t->bar, t->beat);
+        if (msk_ok(beats) && beats.den == 1 && beats.num >= 1 && beats.num <= 64) {
+            put(p, MOTIVE_RELATION_CHANGE_METER, (long)beats.num, (long)t->beat.den, 0);
         }
     }
-    if (meter_den(t->bar.d) && t->bar.n <= 64 && !(t->beat.n == 1 && t->bar.d == t->beat.d)) {
-        put(p, MOTIVE_RELATION_CHANGE_METER, (long)t->bar.n, (long)t->bar.d, 0);
+    if (meter_den(t->bar.den) && t->bar.num <= 64 && !(t->beat.num == 1 && t->bar.den == t->beat.den)) {
+        put(p, MOTIVE_RELATION_CHANGE_METER, (long)t->bar.num, (long)t->bar.den, 0);
     }
     /* Otherwise the usual meters other than the state's. */
     static const long USUAL[][2] = {{2, 4}, {3, 4}, {4, 4}};
     for (size_t i = 0; i < sizeof(USUAL) / sizeof(USUAL[0]); i++) {
-        ExactRational bar =
+        Rational bar =
             msk_make((unsigned long long)USUAL[i][0], (unsigned long long)USUAL[i][1]);
         if (!msk_eq(bar, s->bar)) {
             put(p, MOTIVE_RELATION_CHANGE_METER, USUAL[i][0], USUAL[i][1], 0);
@@ -520,7 +520,7 @@ static void propose_ancillary_fill(const MotiveSketch *s, const MotiveSketch *t,
     }
 }
 
-static ExactRational note_end(const MotiveSketch *sketch, size_t index) {
+static Rational note_end(const MotiveSketch *sketch, size_t index) {
     return msk_add(sketch->notes[index].onset, sketch->notes[index].duration);
 }
 
@@ -536,7 +536,7 @@ static void propose_condense(const MotiveSketch *s, const MotiveSketch *t, Propo
             }
         }
         if (first < s->note_count) {
-            ExactRational ratio = msk_div(msk_sub(note_end(t, last), t->notes[first].onset),
+            Rational ratio = msk_div(msk_sub(note_end(t, last), t->notes[first].onset),
                                           msk_sub(note_end(s, last), s->notes[first].onset));
             if (ratio_within(ratio, 3) && msk_cmp(ratio, msk_int(1)) < 0) {
                 put_ratio(p, MOTIVE_RELATION_CONDENSE, (long)first, (long)last, 0, 2, ratio);
@@ -544,12 +544,12 @@ static void propose_condense(const MotiveSketch *s, const MotiveSketch *t, Propo
         }
     }
     if (msk_cmp(t->length, s->length) < 0) {
-        ExactRational saved = msk_sub(s->length, t->length);
+        Rational saved = msk_sub(s->length, t->length);
         for (size_t span = 1; span < s->note_count; span++) {
             for (size_t first = 0; first + span < s->note_count; first++) {
                 size_t last = first + span;
-                ExactRational old_span = msk_sub(note_end(s, last), s->notes[first].onset);
-                ExactRational ratio = msk_div(msk_sub(old_span, saved), old_span);
+                Rational old_span = msk_sub(note_end(s, last), s->notes[first].onset);
+                Rational ratio = msk_div(msk_sub(old_span, saved), old_span);
                 if (ratio_within(ratio, 3) && msk_cmp(ratio, msk_int(1)) < 0) {
                     put_ratio(p, MOTIVE_RELATION_CONDENSE, (long)first, (long)last, 0, 2, ratio);
                 }
@@ -593,7 +593,7 @@ static void propose_shift_feature(const MotiveSketch *s, const MotiveSketch *t, 
         size_t first = s->features[f].first;
         if (s->note_count == t->note_count &&
             msk_cmp(t->notes[first].onset, s->notes[first].onset) > 0) {
-            ExactRational offset = msk_sub(t->notes[first].onset, s->notes[first].onset);
+            Rational offset = msk_sub(t->notes[first].onset, s->notes[first].onset);
             put_ratio(p, MOTIVE_RELATION_SHIFT_FEATURE, (long)f, 0, 0, 1, offset);
         }
     }
@@ -977,7 +977,7 @@ void motive_recognize_options_default(MotiveRecognizeOptions *options) {
     options->admit_context = NULL;
 }
 
-static ExactRational distance_of(int cost) {
+static Rational distance_of(int cost) {
     return msk_make((unsigned long long)cost, (unsigned long long)cost + 4);
 }
 

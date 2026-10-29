@@ -4,7 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 
 /*
  * MotiveSketch (L8 analysis value): a motive as plain data, the input of the motive relations
@@ -13,11 +14,11 @@
  * scale, a meter, chords, labelled features and a role. It is theory-neutral: nothing here knows a
  * composer's motive type, and nothing is allocated.
  *
- * Times are ExactRational counts of whole notes from the start of the sketch. bar and beat are the
+ * Times are Rational counts of whole notes from the start of the sketch. bar and beat are the
  * lengths of a bar and a beat; pickup is the length before the first downbeat (0 when the sketch starts
  * on one, below bar otherwise). length is the end of the last note.
  *
- * A time that overflowed is the "bad" ExactRational {0, 0} (msk_bad): the msk_ helpers below pass it on
+ * A time that overflowed is the "bad" Rational {0, 0} (msk_bad): the msk_ helpers below pass it on
  * through every operation, and motive_sketch_validate refuses any sketch holding one.
  */
 
@@ -29,13 +30,13 @@
 
 typedef struct {
     int pitch;
-    ExactRational onset;
-    ExactRational duration;
+    Rational onset;
+    Rational duration;
 } MotiveSketchNote;
 
 /* degree 1 to 7, alteration -1/0/1, inversion 0 to 3. */
 typedef struct {
-    ExactRational onset;
+    Rational onset;
     int degree;
     int alteration;
     int inversion;
@@ -55,10 +56,10 @@ typedef struct {
     bool has_scale;
     int tonic_pc; /* 0 to 11 */
     bool minor;   /* natural minor steps */
-    ExactRational bar;
-    ExactRational beat;
-    ExactRational pickup;
-    ExactRational length;
+    Rational bar;
+    Rational beat;
+    Rational pickup;
+    Rational length;
     MotiveSketchChord chords[MOTIVE_SKETCH_MAX_CHORDS];
     size_t chord_count;
     MotiveSketchFeature features[MOTIVE_SKETCH_MAX_FEATURES];
@@ -68,82 +69,82 @@ typedef struct {
 
 /* --- checked rational helpers ------------------------------------------- */
 
-static inline ExactRational msk_bad(void) {
-    ExactRational r = {0, 0};
+static inline Rational msk_bad(void) {
+    Rational r = {0, 0};
     return r;
 }
 
-static inline bool msk_ok(ExactRational r) {
-    return r.d != 0;
+static inline bool msk_ok(Rational r) {
+    return r.den != 0;
 }
 
-static inline ExactRational msk_make(unsigned long long n, unsigned long long d) {
-    return d == 0 ? msk_bad() : er_make(n, d);
+static inline Rational msk_make(unsigned long long n, unsigned long long d) {
+    return d == 0 ? msk_bad() : rational_ratio(n, d);
 }
 
-static inline ExactRational msk_add(ExactRational a, ExactRational b) {
-    ExactRational out;
-    if (!msk_ok(a) || !msk_ok(b) || er_add(a, b, &out) != 0) {
+static inline Rational msk_add(Rational a, Rational b) {
+    Rational out;
+    if (!msk_ok(a) || !msk_ok(b) || rational_add(a, b, &out) != RATIONAL_OK) {
         return msk_bad();
     }
     return out;
 }
 
 /* a - b; bad when a < b. */
-static inline ExactRational msk_sub(ExactRational a, ExactRational b) {
-    ExactRational out;
-    if (!msk_ok(a) || !msk_ok(b) || er_cmp(a, b) < 0 || er_sub(a, b, &out) != 0) {
+static inline Rational msk_sub(Rational a, Rational b) {
+    Rational out;
+    if (!msk_ok(a) || !msk_ok(b) || rational_cmp(a, b) < 0 || rational_sub(a, b, &out) != RATIONAL_OK) {
         return msk_bad();
     }
     return out;
 }
 
-static inline ExactRational msk_mul(ExactRational a, ExactRational b) {
-    ExactRational out;
-    if (!msk_ok(a) || !msk_ok(b) || er_mul(a, b, &out) != 0) {
+static inline Rational msk_mul(Rational a, Rational b) {
+    Rational out;
+    if (!msk_ok(a) || !msk_ok(b) || rational_mul(a, b, &out) != RATIONAL_OK) {
         return msk_bad();
     }
     return out;
 }
 
 /* a / b; bad when b is 0. */
-static inline ExactRational msk_div(ExactRational a, ExactRational b) {
-    if (!msk_ok(a) || !msk_ok(b) || b.n == 0) {
+static inline Rational msk_div(Rational a, Rational b) {
+    if (!msk_ok(a) || !msk_ok(b) || b.num == 0) {
         return msk_bad();
     }
-    ExactRational inverse = er_make(b.d, b.n);
+    Rational inverse = rational_ratio(b.den, b.num);
     return msk_mul(a, inverse);
 }
 
-static inline int msk_cmp(ExactRational a, ExactRational b) {
-    return er_cmp(a, b);
+static inline int msk_cmp(Rational a, Rational b) {
+    return rational_cmp(a, b);
 }
 
-static inline bool msk_eq(ExactRational a, ExactRational b) {
-    return a.n == b.n && a.d == b.d;
+static inline bool msk_eq(Rational a, Rational b) {
+    return a.num == b.num && a.den == b.den;
 }
 
-static inline bool msk_is_zero(ExactRational r) {
-    return msk_ok(r) && r.n == 0;
+static inline bool msk_is_zero(Rational r) {
+    return msk_ok(r) && r.num == 0;
 }
 
 /* The whole number of times b goes into a, rounded down; 0 for a bad value. */
-static inline unsigned long long msk_floor_div(ExactRational a, ExactRational b) {
-    if (!msk_ok(a) || !msk_ok(b) || b.n == 0) {
+static inline unsigned long long msk_floor_div(Rational a, Rational b) {
+    if (!msk_ok(a) || !msk_ok(b) || b.num == 0) {
         return 0;
     }
-    ExactRational q = msk_div(a, b);
-    return msk_ok(q) ? q.n / q.d : 0;
+    Rational q = msk_div(a, b);
+    return msk_ok(q) ? q.num / q.den : 0;
 }
 
 /* a minus the largest multiple of b not above it. */
-static inline ExactRational msk_mod(ExactRational a, ExactRational b) {
-    ExactRational whole = msk_make(msk_floor_div(a, b), 1);
+static inline Rational msk_mod(Rational a, Rational b) {
+    Rational whole = msk_make(msk_floor_div(a, b), 1);
     return msk_sub(a, msk_mul(whole, b));
 }
 
-static inline ExactRational msk_int(unsigned long long n) {
-    return er_make(n, 1);
+static inline Rational msk_int(unsigned long long n) {
+    return rational_ratio(n, 1);
 }
 
 /* --- the value ---------------------------------------------------------- */
@@ -200,12 +201,12 @@ int motive_sketch_degree_of_step(const MotiveSketch *sketch, long step);
 size_t motive_sketch_chord_tones(const MotiveSketch *sketch, const MotiveSketchChord *chord, int pcs[4]);
 
 /* A duration a note list can write: w h q e s t, plain or with up to two dots. */
-bool motive_sketch_expressible(ExactRational duration);
+bool motive_sketch_expressible(Rational duration);
 
 /* An onset on the grid: a multiple of a thirty-second. */
-bool motive_sketch_on_grid(ExactRational onset);
+bool motive_sketch_on_grid(Rational onset);
 
 /* How firmly an onset sits in the bar: 2 on the downbeat, 1 on another beat, 0 off the beat. */
-int motive_sketch_strength(const MotiveSketch *sketch, ExactRational onset);
+int motive_sketch_strength(const MotiveSketch *sketch, Rational onset);
 
 #endif

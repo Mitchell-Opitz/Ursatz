@@ -36,13 +36,13 @@ static void test_layout(void) {
     assert(layout.time_top == 3 && layout.time_bottom == 4);
     assert(layout.measure_count == 4 && layout.continued_count == 1);
     assert(layout.has_pickup && layout.irregular_count == 0);
-    assert(layout.measures[0].number == 0 && layout.measures[0].start.n == 0 && layout.measures[0].length.n == 1 &&
-           layout.measures[0].length.d == 4);
-    assert(layout.measures[1].start.n == 1 && layout.measures[1].start.d == 4); /* m1 starts after the pickup */
-    assert(layout.measures[2].start.n == 1 && layout.measures[2].start.d == 1);
-    assert(layout.measures[2].number == 2 && layout.measures[2].length.n == 3 && layout.measures[2].length.d == 4);
-    assert(layout.measures[3].number == 3 && layout.measures[3].length.n == 3 && layout.measures[3].length.d == 4);
-    assert(layout.end.n == 5 && layout.end.d == 2 && layout.measures[3].start.n == 7 && layout.measures[3].start.d == 4);
+    assert(layout.measures[0].number == 0 && layout.measures[0].start.num == 0 && layout.measures[0].length.num == 1 &&
+           layout.measures[0].length.den == 4);
+    assert(layout.measures[1].start.num == 1 && layout.measures[1].start.den == 4); /* m1 starts after the pickup */
+    assert(layout.measures[2].start.num == 1 && layout.measures[2].start.den == 1);
+    assert(layout.measures[2].number == 2 && layout.measures[2].length.num == 3 && layout.measures[2].length.den == 4);
+    assert(layout.measures[3].number == 3 && layout.measures[3].length.num == 3 && layout.measures[3].length.den == 4);
+    assert(layout.end.num == 5 && layout.end.den == 2 && layout.measures[3].start.num == 7 && layout.measures[3].start.den == 4);
     score_layout_destroy(&layout);
 }
 

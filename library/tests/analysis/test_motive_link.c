@@ -9,8 +9,8 @@
  * sketch fingerprints and the text form of relation steps.
  */
 
-static ExactRational q(unsigned long long n, unsigned long long d) {
-    return er_make(n, d);
+static Rational q(unsigned long long n, unsigned long long d) {
+    return rational_ratio(n, d);
 }
 
 /* C4:q E4:e G4:e F4:q E4:q in C major, 4/4. */

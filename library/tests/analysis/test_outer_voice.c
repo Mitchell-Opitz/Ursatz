@@ -15,6 +15,7 @@
 #include "time/note_value.h"
 #include "time/temporal_anchor.h"
 #include "time/time_signature.h"
+#include "../rational_test_util.h"
 
 /*
  * Outer voice extraction tests: the highest and lowest sounding note of each segment, absent entries kept
@@ -96,14 +97,14 @@ static bool quarter_grid(const MeterMap *map, int measure, void *context, Musica
     if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return false;
     }
-    ExactRational at = er_of_time(time_span_start(span));
-    ExactRational end = er_of_time(time_span_end(span));
+    Rational at = test_rational_of_time(time_span_start(span));
+    Rational end = test_rational_of_time(time_span_end(span));
     time_span_destroy(span);
     MusicalTime **starts = (MusicalTime **)calloc(64, sizeof(MusicalTime *));
     size_t count = 0;
-    while (er_cmp(at, end) < 0 && count < 64) {
-        starts[count++] = er_to_time(at);
-        assert(er_add(at, er_make(1, 4), &at) == 0);
+    while (rational_cmp(at, end) < 0 && count < 64) {
+        starts[count++] = musical_time_from_rational_or_null(at);
+        assert(rational_add(at, rational_ratio(1, 4), &at) == 0);
     }
     *out_starts = starts;
     *out_count = count;
@@ -308,19 +309,19 @@ static void test_pick_line_directly(void) {
     OuterNote notes[3];
     memset(notes, 0, sizeof(notes));
     notes[0].id = "low";
-    notes[0].onset = er_make(0, 1);
-    notes[0].pitch = er_make(48, 1);
+    notes[0].onset = rational_ratio(0, 1);
+    notes[0].pitch = rational_ratio(48, 1);
     notes[1].id = "high";
-    notes[1].onset = er_make(0, 1);
-    notes[1].pitch = er_make(72, 1);
+    notes[1].onset = rational_ratio(0, 1);
+    notes[1].pitch = rational_ratio(72, 1);
     notes[2].id = "high-later";
-    notes[2].onset = er_make(1, 4);
-    notes[2].pitch = er_make(72, 1);
+    notes[2].onset = rational_ratio(1, 4);
+    notes[2].pitch = rational_ratio(72, 1);
     size_t all[3] = {0, 1, 2};
     size_t first_two[2] = {0, 1};
-    OuterSegment segments[3] = {{er_make(0, 1), er_make(1, 4), first_two, 2},
-                                {er_make(1, 4), er_make(1, 2), all, 3},
-                                {er_make(1, 2), er_make(3, 4), NULL, 0}};
+    OuterSegment segments[3] = {{rational_ratio(0, 1), rational_ratio(1, 4), first_two, 2},
+                                {rational_ratio(1, 4), rational_ratio(1, 2), all, 3},
+                                {rational_ratio(1, 2), rational_ratio(3, 4), NULL, 0}};
     OuterNode soprano[3];
     OuterNode bass[3];
     outer_voice_pick_line(notes, segments, 3, true, soprano);
@@ -388,10 +389,10 @@ static void test_config_defaults(void) {
 
 /* --- the smoothing rules, each on its own (a constant quarter-note beat) --- */
 
-static bool constant_beat(void *context, ExactRational at, ExactRational *out) {
+static bool constant_beat(void *context, Rational at, Rational *out) {
     (void)context;
     (void)at;
-    *out = er_make(1, 4);
+    *out = rational_ratio(1, 4);
     return true;
 }
 
@@ -400,17 +401,17 @@ static OuterNote note16(const char *id, unsigned long onset, unsigned long relea
     OuterNote n;
     memset(&n, 0, sizeof(n));
     n.id = id;
-    n.onset = er_make(onset, 16);
-    n.release = er_make(release, 16);
-    n.pitch = er_make(pitch, 1);
+    n.onset = rational_ratio(onset, 16);
+    n.release = rational_ratio(release, 16);
+    n.pitch = rational_ratio(pitch, 1);
     return n;
 }
 
 /* A one-beat (4/16) segment starting at beat `beat` (0-based). */
 static OuterSegment beat_segment(unsigned long beat, const size_t *members, size_t count) {
     OuterSegment s;
-    s.start = er_make(beat * 4, 16);
-    s.end = er_make(beat * 4 + 4, 16);
+    s.start = rational_ratio(beat * 4, 16);
+    s.end = rational_ratio(beat * 4 + 4, 16);
     s.members = members;
     s.member_count = count;
     return s;
@@ -427,13 +428,13 @@ static void test_the_soprano_guard_keeps_a_resting_melody_absent(void) {
     OuterSegment segments[3] = {beat_segment(0, beat0, 2), beat_segment(1, beat1, 2), beat_segment(2, beat2, 2)};
     OuterNode nodes[3];
     outer_voice_pick_line(notes, segments, 3, true, nodes);
-    assert(nodes[1].present && notes[nodes[1].note].pitch.n == 64); /* before the guard: the accompaniment */
+    assert(nodes[1].present && notes[nodes[1].note].pitch.num == 64); /* before the guard: the accompaniment */
 
-    assert(outer_voice_guard_register(notes, segments, 3, true, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+    assert(outer_voice_guard_register(notes, segments, 3, true, 12, rational_ratio(1, 1), constant_beat, NULL, nodes) ==
            OUTER_VOICE_OK);
     assert(nodes[0].present && !nodes[0].guarded);
     assert(!nodes[1].present && nodes[1].guarded);
-    assert(nodes[2].present && notes[nodes[2].note].pitch.n == 86);
+    assert(nodes[2].present && notes[nodes[2].note].pitch.num == 86);
 }
 
 static void test_the_soprano_guard_does_not_fire_without_a_big_enough_drop_or_a_short_enough_gap(void) {
@@ -444,7 +445,7 @@ static void test_the_soprano_guard_does_not_fire_without_a_big_enough_drop_or_a_
     OuterSegment two[2] = {beat_segment(0, first, 1), beat_segment(1, second, 1)};
     OuterNode nodes[2];
     outer_voice_pick_line(exact, two, 2, true, nodes);
-    assert(outer_voice_guard_register(exact, two, 2, true, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+    assert(outer_voice_guard_register(exact, two, 2, true, 12, rational_ratio(1, 1), constant_beat, NULL, nodes) ==
            OUTER_VOICE_OK);
     assert(nodes[1].present);
 
@@ -453,7 +454,7 @@ static void test_the_soprano_guard_does_not_fire_without_a_big_enough_drop_or_a_
     OuterNote late[2] = {note16("a", 0, 4, 84), note16("b", 8, 12, 60)};
     OuterSegment far[2] = {beat_segment(0, first, 1), beat_segment(2, second, 1)};
     outer_voice_pick_line(late, far, 2, true, nodes);
-    assert(outer_voice_guard_register(late, far, 2, true, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+    assert(outer_voice_guard_register(late, far, 2, true, 12, rational_ratio(1, 1), constant_beat, NULL, nodes) ==
            OUTER_VOICE_OK);
     assert(nodes[1].present && !nodes[1].guarded);
 
@@ -461,14 +462,14 @@ static void test_the_soprano_guard_does_not_fire_without_a_big_enough_drop_or_a_
     OuterNote sounding[2] = {note16("a", 0, 12, 84), note16("b", 4, 8, 60)};
     OuterSegment overlapped[2] = {beat_segment(0, first, 1), beat_segment(1, second, 1)};
     outer_voice_pick_line(sounding, overlapped, 2, true, nodes);
-    assert(outer_voice_guard_register(sounding, overlapped, 2, true, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+    assert(outer_voice_guard_register(sounding, overlapped, 2, true, 12, rational_ratio(1, 1), constant_beat, NULL, nodes) ==
            OUTER_VOICE_OK);
     assert(nodes[1].present);
 
     /* The threshold is configurable: a 20 semitone drop is under a 24 semitone guard. */
     OuterNote big[2] = {note16("a", 0, 4, 84), note16("b", 4, 8, 64)};
     outer_voice_pick_line(big, two, 2, true, nodes);
-    assert(outer_voice_guard_register(big, two, 2, true, 24, er_make(1, 1), constant_beat, NULL, nodes) ==
+    assert(outer_voice_guard_register(big, two, 2, true, 24, rational_ratio(1, 1), constant_beat, NULL, nodes) ==
            OUTER_VOICE_OK);
     assert(nodes[1].present);
 }
@@ -484,14 +485,14 @@ static void test_the_soprano_stays_absent_until_the_window_passes(void) {
     OuterSegment segments[3] = {beat_segment(0, a, 1), beat_segment(1, b, 1), beat_segment(2, c, 1)};
     OuterNode nodes[3];
     outer_voice_pick_line(notes, segments, 3, true, nodes);
-    assert(outer_voice_guard_register(notes, segments, 3, true, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+    assert(outer_voice_guard_register(notes, segments, 3, true, 12, rational_ratio(1, 1), constant_beat, NULL, nodes) ==
            OUTER_VOICE_OK);
     assert(!nodes[1].present && nodes[1].guarded);
     assert(nodes[2].present && !nodes[2].guarded);
 
     /* A wider window (two beats) keeps beat 2 absent too. */
     outer_voice_pick_line(notes, segments, 3, true, nodes);
-    assert(outer_voice_guard_register(notes, segments, 3, true, 12, er_make(2, 1), constant_beat, NULL, nodes) ==
+    assert(outer_voice_guard_register(notes, segments, 3, true, 12, rational_ratio(2, 1), constant_beat, NULL, nodes) ==
            OUTER_VOICE_OK);
     assert(!nodes[1].present && !nodes[2].present);
 }
@@ -504,8 +505,8 @@ static void test_the_bass_guard_mirrors_the_soprano_guard(void) {
     OuterSegment segments[2] = {beat_segment(0, beat0, 2), beat_segment(1, beat1, 2)};
     OuterNode nodes[2];
     outer_voice_pick_line(notes, segments, 2, false, nodes);
-    assert(nodes[1].present && notes[nodes[1].note].pitch.n == 60);
-    assert(outer_voice_guard_register(notes, segments, 2, false, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+    assert(nodes[1].present && notes[nodes[1].note].pitch.num == 60);
+    assert(outer_voice_guard_register(notes, segments, 2, false, 12, rational_ratio(1, 1), constant_beat, NULL, nodes) ==
            OUTER_VOICE_OK);
     assert(nodes[0].present);
     assert(!nodes[1].present && nodes[1].guarded);
@@ -516,7 +517,7 @@ static void test_the_bass_guard_mirrors_the_soprano_guard(void) {
     size_t two[1] = {1};
     OuterSegment pair[2] = {beat_segment(0, one, 1), beat_segment(1, two, 1)};
     outer_voice_pick_line(falling, pair, 2, false, nodes);
-    assert(outer_voice_guard_register(falling, pair, 2, false, 12, er_make(1, 1), constant_beat, NULL, nodes) ==
+    assert(outer_voice_guard_register(falling, pair, 2, false, 12, rational_ratio(1, 1), constant_beat, NULL, nodes) ==
            OUTER_VOICE_OK);
     assert(nodes[1].present);
 }
@@ -532,14 +533,14 @@ static void test_gap_bridging_marks_short_rests_only(void) {
        is 4/16: exactly one beat, not under it), beats 3-4 rest, beat 5 note c. */
     OuterNode nodes[6];
     outer_voice_pick_line(notes, segments, 6, true, nodes);
-    assert(outer_voice_mark_bridged_gaps(notes, segments, 6, er_make(2, 1), constant_beat, NULL, nodes) ==
+    assert(outer_voice_mark_bridged_gaps(notes, segments, 6, rational_ratio(2, 1), constant_beat, NULL, nodes) ==
            OUTER_VOICE_OK);
     assert(nodes[1].bridged);                       /* 4/16 of a gap is under two beats */
     assert(!nodes[3].bridged && !nodes[4].bridged); /* b ends at 12/16, c starts at 20/16: two beats, not under */
 
     /* With the limit at one beat, the first gap (exactly a beat) is no longer short. */
     outer_voice_pick_line(notes, segments, 6, true, nodes);
-    assert(outer_voice_mark_bridged_gaps(notes, segments, 6, er_make(1, 1), constant_beat, NULL, nodes) ==
+    assert(outer_voice_mark_bridged_gaps(notes, segments, 6, rational_ratio(1, 1), constant_beat, NULL, nodes) ==
            OUTER_VOICE_OK);
     assert(!nodes[1].bridged && !nodes[3].bridged);
 }
@@ -550,7 +551,7 @@ static void test_rests_at_the_ends_of_a_line_are_not_bridged(void) {
     OuterSegment segments[3] = {beat_segment(0, NULL, 0), beat_segment(1, a, 1), beat_segment(2, NULL, 0)};
     OuterNode nodes[3];
     outer_voice_pick_line(notes, segments, 3, true, nodes);
-    assert(outer_voice_mark_bridged_gaps(notes, segments, 3, er_make(4, 1), constant_beat, NULL, nodes) ==
+    assert(outer_voice_mark_bridged_gaps(notes, segments, 3, rational_ratio(4, 1), constant_beat, NULL, nodes) ==
            OUTER_VOICE_OK);
     assert(!nodes[0].bridged && !nodes[2].bridged);
 }

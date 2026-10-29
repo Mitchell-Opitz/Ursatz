@@ -14,7 +14,7 @@ typedef struct {
     size_t capacity;
 } Reader;
 
-static bool reader_push(Reader *r, int number, ExactRational start) {
+static bool reader_push(Reader *r, int number, Rational start) {
     ScoreLayout *layout = r->layout;
     if (layout->measure_count == r->capacity) {
         size_t capacity = r->capacity == 0 ? 32 : r->capacity * 2;
@@ -28,7 +28,7 @@ static bool reader_push(Reader *r, int number, ExactRational start) {
     ScoreMeasure *m = &layout->measures[layout->measure_count++];
     m->number = number;
     m->start = start;
-    m->length = er_make(0, 1);
+    m->length = rational_ratio(0, 1);
     return true;
 }
 
@@ -96,7 +96,7 @@ ScoreLayoutStatus score_layout_read(const char *musicxml, size_t size, ScoreLayo
 
     /* Units are division units of the divisions in force; a change of divisions rescales what is stored, so the
        layout is accumulated in whole notes as exact rationals once a measure closes. */
-    ExactRational position = er_make(0, 1);
+    Rational position = rational_ratio(0, 1);
 
     const char *p = musicxml;
     while (p < end && (p = memchr(p, '<', (size_t)(end - p))) != NULL) {
@@ -188,14 +188,14 @@ ScoreLayoutStatus score_layout_read(const char *musicxml, size_t size, ScoreLayo
                 } else if (tag_is(name, name_length, "measure")) {
                     in_measure = false;
                     /* the measure's length in whole notes: units / (4 * divisions) */
-                    ExactRational length = er_make((unsigned long long)measure_max, 4ull * (unsigned long long)divisions);
+                    Rational length = rational_ratio((unsigned long long)measure_max, 4ull * (unsigned long long)divisions);
                     char *rest = NULL;
                     long digits = strtol(number_text, &rest, 10);
                     bool continuation = last_number_set && rest != NULL && *rest != '\0' && digits == last_number &&
                                         reader.layout->measure_count > 0;
                     if (continuation) {
                         ScoreMeasure *previous = &out->measures[out->measure_count - 1];
-                        if (er_add(previous->length, length, &previous->length) != 0) {
+                        if (rational_add(previous->length, length, &previous->length) != RATIONAL_OK) {
                             score_layout_destroy(out);
                             return SCORE_LAYOUT_ERR_BAD_VALUE;
                         }
@@ -209,7 +209,7 @@ ScoreLayoutStatus score_layout_read(const char *musicxml, size_t size, ScoreLayo
                         last_number = (int)digits;
                         last_number_set = true;
                     }
-                    if (er_add(position, length, &position) != 0) {
+                    if (rational_add(position, length, &position) != RATIONAL_OK) {
                         score_layout_destroy(out);
                         return SCORE_LAYOUT_ERR_BAD_VALUE;
                     }
@@ -225,10 +225,10 @@ ScoreLayoutStatus score_layout_read(const char *musicxml, size_t size, ScoreLayo
     }
     out->end = position;
     if (out->time_top != 0) {
-        ExactRational full = er_make(out->time_top, out->time_bottom);
-        out->has_pickup = out->measures[0].number == 0 && er_cmp(out->measures[0].length, full) < 0;
+        Rational full = rational_ratio(out->time_top, out->time_bottom);
+        out->has_pickup = out->measures[0].number == 0 && rational_cmp(out->measures[0].length, full) < 0;
         for (size_t i = out->has_pickup ? 1 : 0; i + 1 < out->measure_count; i++) {
-            if (er_cmp(out->measures[i].length, full) != 0) {
+            if (rational_cmp(out->measures[i].length, full) != 0) {
                 out->irregular_count++;
             }
         }
@@ -264,23 +264,23 @@ static bool layout_time_at(const void *context, int measure, long thousandths, M
     }
     /* A pickup's beats are counted from where a full measure would have started, so beat 3 of a one-beat pickup in
        3/4 is its start: shift by the missing part of the measure. */
-    ExactRational offset = er_make((unsigned long long)numerator, denominator);
+    Rational offset = rational_ratio((unsigned long long)numerator, denominator);
     if (layout->has_pickup && found == &layout->measures[0]) {
-        ExactRational full = er_make(layout->time_top, layout->time_bottom);
-        ExactRational missing = {0, 1};
-        if (er_sub(full, found->length, &missing) != 0 || er_cmp(offset, missing) < 0 ||
-            er_sub(offset, missing, &offset) != 0) {
+        Rational full = rational_ratio(layout->time_top, layout->time_bottom);
+        Rational missing = {0, 1};
+        if (rational_sub(full, found->length, &missing) != RATIONAL_OK || rational_cmp(offset, missing) < 0 ||
+            rational_sub(offset, missing, &offset) != RATIONAL_OK) {
             return false;
         }
     }
-    if (er_cmp(offset, found->length) >= 0) {
+    if (rational_cmp(offset, found->length) >= 0) {
         return false;
     }
-    ExactRational at = {0, 1};
-    if (er_add(found->start, offset, &at) != 0) {
+    Rational at = {0, 1};
+    if (rational_add(found->start, offset, &at) != RATIONAL_OK) {
         return false;
     }
-    return musical_time_create((long)at.n, (unsigned long)at.d, out_time) == MUSICAL_TIME_OK;
+    return musical_time_create((long)at.num, (unsigned long)at.den, out_time) == MUSICAL_TIME_OK;
 }
 
 RomanTextGrid score_layout_grid(const ScoreLayout *layout) {
@@ -312,7 +312,7 @@ MeterMap *score_layout_meter_map(const ScoreLayout *layout, const char *id_text)
     EntityID *id = NULL;
     if (musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK) {
         bool pickup = layout->has_pickup;
-        if (!pickup || musical_time_create((long)layout->measures[0].length.n, (unsigned long)layout->measures[0].length.d, &later) == MUSICAL_TIME_OK) {
+        if (!pickup || musical_time_create((long)layout->measures[0].length.num, (unsigned long)layout->measures[0].length.den, &later) == MUSICAL_TIME_OK) {
             MeterMapChangePoint points[2] = {{signature, zero}, {signature, later}};
             if (entity_id_create(id_text, &id) == ENTITY_ID_OK) {
                 if (meter_map_create(id, points, pickup ? 2 : 1, &map) != METER_MAP_OK) {

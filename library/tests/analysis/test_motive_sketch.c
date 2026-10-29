@@ -10,8 +10,8 @@
  * onset.
  */
 
-static ExactRational q(unsigned long long n, unsigned long long d) {
-    return er_make(n, d);
+static Rational q(unsigned long long n, unsigned long long d) {
+    return rational_ratio(n, d);
 }
 
 /* Four quarter notes, C D E G, in 4/4 in C major. */

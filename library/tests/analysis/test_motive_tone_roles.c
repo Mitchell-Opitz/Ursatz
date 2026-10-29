@@ -10,15 +10,15 @@
  * motive, overrides, and the refusals.
  */
 
-static ExactRational q(unsigned long long n, unsigned long long d) {
-    return er_make(n, d);
+static Rational q(unsigned long long n, unsigned long long d) {
+    return rational_ratio(n, d);
 }
 
 /* Quarter notes from the given pitches in C major, 4/4. */
 static MotiveSketch line(const int *pitches, size_t count) {
     MotiveSketch sketch;
     memset(&sketch, 0, sizeof(sketch));
-    ExactRational at = q(0, 1);
+    Rational at = q(0, 1);
     for (size_t i = 0; i < count; i++) {
         sketch.notes[i].pitch = pitches[i];
         sketch.notes[i].onset = at;

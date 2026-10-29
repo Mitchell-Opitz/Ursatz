@@ -5,7 +5,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 
 static const char *const TONIC_NAMES[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
@@ -602,16 +603,19 @@ static CommonPracticeKeyRegionsStatus nearest_barline(const MeterMap *map, const
         meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
     }
-    ExactRational at = er_of_time(position);
-    ExactRational start = er_of_time(time_span_start(span));
-    ExactRational end = er_of_time(time_span_end(span));
+    Rational at;
+    Rational start;
+    Rational end;
+    bool converted = rational_of_musical_time(position, &at) == RATIONAL_OK &&
+                     rational_of_musical_time(time_span_start(span), &start) == RATIONAL_OK &&
+                     rational_of_musical_time(time_span_end(span), &end) == RATIONAL_OK;
     time_span_destroy(span);
-    ExactRational since = {0, 1};
-    ExactRational until = {0, 1};
-    if (er_sub(at, start, &since) != 0 || er_sub(end, at, &until) != 0) {
+    Rational since = {0, 1};
+    Rational until = {0, 1};
+    if (!converted || rational_sub(at, start, &since) != RATIONAL_OK || rational_sub(end, at, &until) != RATIONAL_OK) {
         return COMMON_PRACTICE_KEY_REGIONS_ERR_METER_MAP;
     }
-    *out_measure = er_cmp(since, until) > 0 ? measure + 1 : measure;
+    *out_measure = rational_cmp(since, until) > 0 ? measure + 1 : measure;
     return COMMON_PRACTICE_KEY_REGIONS_OK;
 }
 

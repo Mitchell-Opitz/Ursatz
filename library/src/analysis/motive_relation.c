@@ -28,7 +28,7 @@ static bool pitched(const MotiveSketch *sketch) {
     return true;
 }
 
-static ExactRational note_end(const MotiveSketchNote *note) {
+static Rational note_end(const MotiveSketchNote *note) {
     return msk_add(note->onset, note->duration);
 }
 
@@ -51,8 +51,8 @@ static void settle(MotiveSketch *sketch) {
  * The chords after a change that moved the kept notes from old_onset[j] to new_onset[j]: a chord goes to the first
  * kept note at or after it, and of several chords that land on one note the last, the one in force, stays.
  */
-static void remap_chords(const MotiveSketch *in, MotiveSketch *out, const ExactRational *old_onset,
-                         const ExactRational *new_onset, size_t kept) {
+static void remap_chords(const MotiveSketch *in, MotiveSketch *out, const Rational *old_onset,
+                         const Rational *new_onset, size_t kept) {
     out->chord_count = 0;
     for (size_t c = 0; c < in->chord_count; c++) {
         size_t j = 0;
@@ -168,7 +168,7 @@ static MotiveRelationResult apply_retrograde(const MotiveSketch *in, const Motiv
     (void)step;
     size_t count = in->note_count;
     /* Each note moves to the mirror of its span about the middle of the notes; the order reverses. */
-    ExactRational span = msk_add(in->notes[0].onset, note_end(&in->notes[count - 1]));
+    Rational span = msk_add(in->notes[0].onset, note_end(&in->notes[count - 1]));
     for (size_t i = 0; i < count; i++) {
         const MotiveSketchNote *note = &in->notes[count - 1 - i];
         out->notes[i].pitch = note->pitch;
@@ -255,9 +255,9 @@ static MotiveRelationResult apply_fragment(const MotiveSketch *in, const MotiveR
     default:
         return MOTIVE_RELATION_INVALID;
     }
-    ExactRational start = in->notes[first].onset;
-    ExactRational old_onset[MOTIVE_SKETCH_MAX_NOTES];
-    ExactRational new_onset[MOTIVE_SKETCH_MAX_NOTES];
+    Rational start = in->notes[first].onset;
+    Rational old_onset[MOTIVE_SKETCH_MAX_NOTES];
+    Rational new_onset[MOTIVE_SKETCH_MAX_NOTES];
     for (size_t i = 0; i < length; i++) {
         out->notes[i] = in->notes[first + i];
         old_onset[i] = in->notes[first + i].onset;
@@ -278,7 +278,7 @@ static MotiveRelationResult apply_fragment(const MotiveSketch *in, const MotiveR
     return MOTIVE_RELATION_OK;
 }
 
-static bool nice_time(ExactRational duration);
+static bool nice_time(Rational duration);
 
 static MotiveRelationResult apply_liquidate(const MotiveSketch *in, const MotiveRelationStep *step,
                                             MotiveSketch *out) {
@@ -308,9 +308,9 @@ static MotiveRelationResult apply_liquidate(const MotiveSketch *in, const Motive
     }
     size_t kept = 0;
     size_t new_index[MOTIVE_SKETCH_MAX_NOTES];
-    ExactRational old_onset[MOTIVE_SKETCH_MAX_NOTES];
-    ExactRational new_onset[MOTIVE_SKETCH_MAX_NOTES];
-    ExactRational at = msk_int(0);
+    Rational old_onset[MOTIVE_SKETCH_MAX_NOTES];
+    Rational new_onset[MOTIVE_SKETCH_MAX_NOTES];
+    Rational at = msk_int(0);
     for (size_t i = 0; i < total; i++) {
         new_index[i] = total;
         if (dropped[i]) {
@@ -328,7 +328,7 @@ static MotiveRelationResult apply_liquidate(const MotiveSketch *in, const Motive
     out->note_count = kept;
     if (keep_rhythm) {
         /* A dropped note's time goes to the kept note before it; a dropped first note's, to the first kept note. */
-        ExactRational end = note_end(&in->notes[total - 1]);
+        Rational end = note_end(&in->notes[total - 1]);
         for (size_t k = kept; k-- > 0;) {
             if (k == 0) {
                 out->notes[0].onset = in->notes[0].onset;
@@ -361,9 +361,9 @@ static MotiveRelationResult apply_liquidate(const MotiveSketch *in, const Motive
 
 /* --- augment, diminish ---------------------------------------------------------------------- */
 
-static bool whole_beats(const MotiveSketch *sketch, ExactRational time) {
-    ExactRational beats = msk_div(time, sketch->beat);
-    return msk_ok(beats) && beats.d == 1;
+static bool whole_beats(const MotiveSketch *sketch, Rational time) {
+    Rational beats = msk_div(time, sketch->beat);
+    return msk_ok(beats) && beats.den == 1;
 }
 
 static MotiveRelationResult scale_time(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out,
@@ -377,7 +377,7 @@ static MotiveRelationResult scale_time(const MotiveSketch *in, const MotiveRelat
     if (num <= 0 || den <= 0 || (augment && num <= den) || (!augment && num >= den)) {
         return MOTIVE_RELATION_INVALID;
     }
-    ExactRational factor = msk_make((unsigned long long)num, (unsigned long long)den);
+    Rational factor = msk_make((unsigned long long)num, (unsigned long long)den);
     for (size_t i = 0; i < in->note_count; i++) {
         out->notes[i].onset = msk_mul(in->notes[i].onset, factor);
         out->notes[i].duration = msk_mul(in->notes[i].duration, factor);
@@ -421,7 +421,7 @@ static MotiveRelationResult apply_note_repeat(const MotiveSketch *in, const Moti
     if (in->note_count + (size_t)count - 1 > MOTIVE_SKETCH_MAX_NOTES) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
-    ExactRational part = msk_div(in->notes[note].duration, msk_int((unsigned long long)count));
+    Rational part = msk_div(in->notes[note].duration, msk_int((unsigned long long)count));
     if (!motive_sketch_expressible(part) || !motive_sketch_on_grid(part)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
@@ -460,8 +460,8 @@ static MotiveRelationResult apply_rhythm_repeat(const MotiveSketch *in, const Mo
         (size_t)(target + length) > total) {
         return MOTIVE_RELATION_INVALID;
     }
-    ExactRational at = in->notes[target].onset;
-    ExactRational old_end = note_end(&in->notes[target + length - 1]);
+    Rational at = in->notes[target].onset;
+    Rational old_end = note_end(&in->notes[target + length - 1]);
     for (long k = 0; k < length; k++) {
         out->notes[target + k].duration = in->notes[first + k].duration;
         out->notes[target + k].onset = at;
@@ -469,7 +469,7 @@ static MotiveRelationResult apply_rhythm_repeat(const MotiveSketch *in, const Mo
     }
     /* The notes after the run keep their distance from it. */
     for (size_t i = (size_t)(target + length); i < total; i++) {
-        ExactRational gap = msk_sub(in->notes[i].onset, old_end);
+        Rational gap = msk_sub(in->notes[i].onset, old_end);
         out->notes[i].onset = msk_add(at, gap);
         old_end = note_end(&in->notes[i]);
         at = note_end(&out->notes[i]);
@@ -487,11 +487,11 @@ static MotiveRelationResult apply_rhythm_shift(const MotiveSketch *in, const Mot
     if (step->value[0] <= 0 || step->den[0] <= 0) {
         return MOTIVE_RELATION_INVALID;
     }
-    ExactRational offset = msk_make((unsigned long long)step->value[0], (unsigned long long)step->den[0]);
+    Rational offset = msk_make((unsigned long long)step->value[0], (unsigned long long)step->den[0]);
     if (!motive_sketch_on_grid(offset)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
-    ExactRational inside = msk_mod(offset, in->bar);
+    Rational inside = msk_mod(offset, in->bar);
     if (msk_is_zero(inside)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
@@ -510,9 +510,9 @@ static MotiveRelationResult apply_add_upbeat(const MotiveSketch *in, const Motiv
     if (in->note_count + (size_t)count > MOTIVE_SKETCH_MAX_NOTES) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
-    ExactRational part = msk_div(in->beat, msk_int(2));
-    ExactRational total = msk_mul(part, msk_int((unsigned long long)count));
-    ExactRational pickup = msk_add(in->pickup, total);
+    Rational part = msk_div(in->beat, msk_int(2));
+    Rational total = msk_mul(part, msk_int((unsigned long long)count));
+    Rational pickup = msk_add(in->pickup, total);
     if (!motive_sketch_expressible(part) || !motive_sketch_on_grid(part)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
@@ -559,8 +559,8 @@ static MotiveRelationResult apply_change_meter(const MotiveSketch *in, const Mot
     if (num < 1 || num > 64 || (den != 1 && den != 2 && den != 4 && den != 8 && den != 16)) {
         return MOTIVE_RELATION_INVALID;
     }
-    ExactRational bar = msk_make((unsigned long long)num, (unsigned long long)den);
-    ExactRational factor = msk_div(bar, in->bar);
+    Rational bar = msk_make((unsigned long long)num, (unsigned long long)den);
+    Rational factor = msk_div(bar, in->bar);
     out->bar = bar;
     out->beat = msk_make(1, (unsigned long long)den);
     for (size_t i = 0; i < in->note_count; i++) {
@@ -608,7 +608,7 @@ static bool insert_notes(const MotiveSketch *in, MotiveSketch *out, size_t at, c
     return true;
 }
 
-static bool nice_time(ExactRational duration) {
+static bool nice_time(Rational duration) {
     return motive_sketch_expressible(duration) && motive_sketch_on_grid(duration);
 }
 
@@ -629,7 +629,7 @@ static MotiveRelationResult apply_add_interval(const MotiveSketch *in, const Mot
     if (!midi(pitch)) {
         return MOTIVE_RELATION_RANGE;
     }
-    ExactRational half = msk_div(in->notes[before].duration, msk_int(2));
+    Rational half = msk_div(in->notes[before].duration, msk_int(2));
     if (!nice_time(half)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
@@ -654,7 +654,7 @@ static MotiveRelationResult apply_omit_interval(const MotiveSketch *in, const Mo
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     size_t gone = (size_t)interval;
-    ExactRational lengthened = msk_sub(note_end(&in->notes[gone]), in->notes[gone - 1].onset);
+    Rational lengthened = msk_sub(note_end(&in->notes[gone]), in->notes[gone - 1].onset);
     if (!nice_time(lengthened)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
@@ -702,8 +702,8 @@ static MotiveRelationResult apply_ancillary_fill(const MotiveSketch *in, const M
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     /* The added notes share the second half of the first note. */
-    ExactRational half = msk_div(in->notes[before].duration, msk_int(2));
-    ExactRational part = msk_div(half, msk_int((unsigned long long)count));
+    Rational half = msk_div(in->notes[before].duration, msk_int(2));
+    Rational part = msk_div(half, msk_int((unsigned long long)count));
     if (!nice_time(half) || !nice_time(part)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }
@@ -733,10 +733,10 @@ static MotiveRelationResult apply_condense(const MotiveSketch *in, const MotiveR
     if (first < 0 || last < first || (size_t)last >= in->note_count || num <= 0 || den <= 0 || num >= den) {
         return MOTIVE_RELATION_INVALID;
     }
-    ExactRational ratio = msk_make((unsigned long long)num, (unsigned long long)den);
-    ExactRational start = in->notes[first].onset;
-    ExactRational old_span = msk_sub(note_end(&in->notes[last]), start);
-    ExactRational saved = msk_sub(old_span, msk_mul(old_span, ratio));
+    Rational ratio = msk_make((unsigned long long)num, (unsigned long long)den);
+    Rational start = in->notes[first].onset;
+    Rational old_span = msk_sub(note_end(&in->notes[last]), start);
+    Rational saved = msk_sub(old_span, msk_mul(old_span, ratio));
     for (long i = first; i <= last; i++) {
         out->notes[i].onset = msk_add(start, msk_mul(msk_sub(in->notes[i].onset, start), ratio));
         out->notes[i].duration = msk_mul(in->notes[i].duration, ratio);
@@ -770,9 +770,9 @@ static MotiveRelationResult apply_repeat_feature(const MotiveSketch *in, const M
     if (in->note_count + added > MOTIVE_SKETCH_MAX_NOTES) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
-    ExactRational from = note_end(&in->notes[last]);
-    ExactRational span = msk_sub(from, in->notes[first].onset);
-    ExactRational shift = msk_mul(span, msk_int((unsigned long long)times));
+    Rational from = note_end(&in->notes[last]);
+    Rational span = msk_sub(from, in->notes[first].onset);
+    Rational shift = msk_mul(span, msk_int((unsigned long long)times));
     for (size_t i = last + 1; i < in->note_count; i++) {
         out->notes[i + added] = in->notes[i];
         out->notes[i + added].onset = msk_add(in->notes[i].onset, shift);
@@ -819,7 +819,7 @@ static MotiveRelationResult apply_shift_feature(const MotiveSketch *in, const Mo
     if (which < 0 || (size_t)which >= in->feature_count) {
         return MOTIVE_RELATION_NO_FEATURE;
     }
-    ExactRational offset = msk_make((unsigned long long)step->value[1], (unsigned long long)step->den[1]);
+    Rational offset = msk_make((unsigned long long)step->value[1], (unsigned long long)step->den[1]);
     size_t first = in->features[which].first;
     size_t last = in->features[which].last;
     if (msk_cmp(offset, in->notes[last].duration) >= 0) {
@@ -846,14 +846,14 @@ static MotiveRelationResult apply_shift_feature(const MotiveSketch *in, const Mo
 static bool implied_chord(const MotiveSketch *sketch, MotiveSketchChord *out) {
     static const int ORDER[7] = {1, 5, 4, 6, 2, 3, 7};
     size_t best_hits = 0;
-    ExactRational best_time = msk_int(0);
+    Rational best_time = msk_int(0);
     bool found = false;
     for (int k = 0; k < 7; k++) {
         MotiveSketchChord chord = {msk_int(0), ORDER[k], 0, 0, false};
         int pcs[4];
         size_t count = motive_sketch_chord_tones(sketch, &chord, pcs);
         size_t hits = 0;
-        ExactRational time = msk_int(0);
+        Rational time = msk_int(0);
         for (size_t i = 0; i < sketch->note_count; i++) {
             if (mch_has_pc(pcs, count, mch_pitch_class(sketch->notes[i].pitch))) {
                 hits++;
@@ -990,18 +990,18 @@ static void adapt_melody(const MotiveSketch *before, MotiveSketch *sketch) {
 }
 
 /* The span of a chord and the note onset inside it nearest its middle; false when no note starts inside. */
-static bool split_point(const MotiveSketch *sketch, size_t chord, ExactRational *at) {
-    ExactRational start = sketch->chords[chord].onset;
-    ExactRational end = chord + 1 < sketch->chord_count ? sketch->chords[chord + 1].onset : sketch->length;
-    ExactRational middle = msk_add(start, msk_div(msk_sub(end, start), msk_int(2)));
+static bool split_point(const MotiveSketch *sketch, size_t chord, Rational *at) {
+    Rational start = sketch->chords[chord].onset;
+    Rational end = chord + 1 < sketch->chord_count ? sketch->chords[chord + 1].onset : sketch->length;
+    Rational middle = msk_add(start, msk_div(msk_sub(end, start), msk_int(2)));
     bool found = false;
-    ExactRational best_gap = msk_int(0);
+    Rational best_gap = msk_int(0);
     for (size_t i = 0; i < sketch->note_count; i++) {
-        ExactRational onset = sketch->notes[i].onset;
+        Rational onset = sketch->notes[i].onset;
         if (msk_cmp(onset, start) <= 0 || msk_cmp(onset, end) >= 0) {
             continue;
         }
-        ExactRational gap = msk_cmp(onset, middle) >= 0 ? msk_sub(onset, middle) : msk_sub(middle, onset);
+        Rational gap = msk_cmp(onset, middle) >= 0 ? msk_sub(onset, middle) : msk_sub(middle, onset);
         if (!found || msk_cmp(gap, best_gap) < 0) {
             best_gap = gap;
             *at = onset;
@@ -1035,8 +1035,8 @@ static void move_bass(MotiveSketch *sketch, size_t chord, int old_inversion) {
     if (old_inversion < 0 || (size_t)old_inversion >= count || (size_t)c->inversion >= count) {
         return;
     }
-    ExactRational start = c->onset;
-    ExactRational end = chord + 1 < sketch->chord_count ? sketch->chords[chord + 1].onset : sketch->length;
+    Rational start = c->onset;
+    Rational end = chord + 1 < sketch->chord_count ? sketch->chords[chord + 1].onset : sketch->length;
     bool found = false;
     size_t lowest = 0;
     for (size_t i = 0; i < sketch->note_count; i++) {
@@ -1102,7 +1102,7 @@ static MotiveRelationResult apply_harmony_append(const MotiveSketch *in, const M
     if (ready != MOTIVE_RELATION_OK) {
         return ready;
     }
-    ExactRational at = out->notes[out->note_count - 1].onset;
+    Rational at = out->notes[out->note_count - 1].onset;
     if (msk_cmp(at, out->chords[out->chord_count - 1].onset) <= 0) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
@@ -1130,7 +1130,7 @@ static MotiveRelationResult apply_harmony_insert(const MotiveSketch *in, const M
     if (chord < 0 || (size_t)chord >= out->chord_count) {
         return MOTIVE_RELATION_NO_HARMONY;
     }
-    ExactRational at;
+    Rational at;
     if (!split_point(out, (size_t)chord, &at)) {
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
@@ -1165,7 +1165,7 @@ static MotiveRelationResult apply_harmony_substitute(const MotiveSketch *in, con
     replaced.alteration = 0;
     replaced.inversion = 0;
     if (then != 0) {
-        ExactRational at;
+        Rational at;
         if (!split_point(out, (size_t)chord, &at)) {
             return MOTIVE_RELATION_NOT_APPLICABLE;
         }
@@ -1196,10 +1196,10 @@ static MotiveRelationResult apply_passing_harmony(const MotiveSketch *in, const 
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     /* The weak note before the change: the last note that starts inside the first chord. */
-    ExactRational start = out->chords[chord].onset;
-    ExactRational change = out->chords[chord + 1].onset;
+    Rational start = out->chords[chord].onset;
+    Rational change = out->chords[chord + 1].onset;
     bool found = false;
-    ExactRational at = msk_int(0);
+    Rational at = msk_int(0);
     for (size_t i = 0; i < out->note_count; i++) {
         if (msk_cmp(out->notes[i].onset, start) > 0 && msk_cmp(out->notes[i].onset, change) < 0) {
             at = out->notes[i].onset;
@@ -1399,7 +1399,7 @@ static long feature_weight(const MotiveSketch *sketch, const Group *group) {
 /* Puts one note of the span of notes first..last in place of them, on the chord tone nearest the first. */
 static MotiveRelationResult replace_with_chord_tone(MotiveSketch *sketch, const Group *group) {
     const MotiveSketchNote first = sketch->notes[group->first];
-    ExactRational span = msk_sub(msk_add(sketch->notes[group->last].onset, sketch->notes[group->last].duration),
+    Rational span = msk_sub(msk_add(sketch->notes[group->last].onset, sketch->notes[group->last].duration),
                                  first.onset);
     if (!motive_sketch_expressible(span)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
@@ -1507,7 +1507,7 @@ static MotiveRelationResult drop_notes(MotiveSketch *sketch, const bool *drop) {
     MotiveSketchNote kept[MOTIVE_SKETCH_MAX_NOTES];
     size_t before[MOTIVE_SKETCH_MAX_NOTES + 1]; /* kept notes among the first i */
     size_t n = 0;
-    ExactRational leading = msk_int(0);
+    Rational leading = msk_int(0);
     before[0] = 0;
     for (size_t i = 0; i < sketch->note_count; i++) {
         if (!drop[i]) {
@@ -1682,8 +1682,8 @@ static MotiveRelationResult apply_add_non_chord_tone(const MotiveSketch *in, con
         return MOTIVE_RELATION_NOT_APPLICABLE;
     }
     size_t added = pair_type((NonChordTone)type) ? 2 : 1;
-    ExactRational half = msk_div(in->notes[before].duration, msk_int(2));
-    ExactRational part = msk_div(half, msk_int(added));
+    Rational half = msk_div(in->notes[before].duration, msk_int(2));
+    Rational part = msk_div(half, msk_int(added));
     if (!nice_time(half) || !nice_time(part)) {
         return MOTIVE_RELATION_NOT_EXPRESSIBLE;
     }

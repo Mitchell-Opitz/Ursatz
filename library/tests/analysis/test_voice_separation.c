@@ -13,12 +13,14 @@
 #include "pitch/pitch_spelling.h"
 #include "pitch/tuning_system.h"
 #include "time/duration.h"
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 #include "time/meter_map.h"
 #include "time/note_value.h"
 #include "time/time_signature.h"
 #include "time/time_span.h"
 #include "time/temporal_anchor.h"
+#include "../rational_test_util.h"
 
 /*
  * Voice separation tests: two voices in contrary motion, a note that would cross a held note (crossing off
@@ -102,24 +104,24 @@ static bool quarter_grid(const MeterMap *map, int measure, void *context, Musica
     if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return false;
     }
-    ExactRational at = er_of_time(time_span_start(span));
-    ExactRational end = er_of_time(time_span_end(span));
+    Rational at = test_rational_of_time(time_span_start(span));
+    Rational end = test_rational_of_time(time_span_end(span));
     time_span_destroy(span);
     MusicalTime **starts = (MusicalTime **)calloc(64, sizeof(MusicalTime *));
     size_t count = 0;
-    while (er_cmp(at, end) < 0 && count < 64) {
-        starts[count++] = er_to_time(at);
-        assert(er_add(at, er_make(1, 4), &at) == 0);
+    while (rational_cmp(at, end) < 0 && count < 64) {
+        starts[count++] = musical_time_from_rational_or_null(at);
+        assert(rational_add(at, rational_ratio(1, 4), &at) == 0);
     }
     *out_starts = starts;
     *out_count = count;
     return true;
 }
 
-static bool quarter_beat_length(void *context, ExactRational at, ExactRational *out) {
+static bool quarter_beat_length(void *context, Rational at, Rational *out) {
     (void)context;
     (void)at;
-    *out = er_make(1, 4);
+    *out = rational_ratio(1, 4);
     return true;
 }
 
@@ -132,7 +134,7 @@ static bool empty_grid(const MeterMap *map, int measure, void *context, MusicalT
     return true;
 }
 
-static bool broken_beat_length(void *context, ExactRational at, ExactRational *out) {
+static bool broken_beat_length(void *context, Rational at, Rational *out) {
     (void)context;
     (void)at;
     (void)out;
@@ -330,12 +332,12 @@ static void test_bad_input_and_no_notes(void) {
 /* --- the internal steps --- */
 
 static VsVoice free_voice(unsigned long pitch, unsigned long recency) {
-    VsVoice v = {false, er_make(pitch, 1), recency};
+    VsVoice v = {false, rational_ratio(pitch, 1), recency};
     return v;
 }
 
 static VsAttack attack(const char *id, unsigned long pitch) {
-    VsAttack a = {id, er_make(pitch, 1)};
+    VsAttack a = {id, rational_ratio(pitch, 1)};
     return a;
 }
 
@@ -368,7 +370,7 @@ static void test_assign_onset_ties_go_to_recency_then_id(void) {
 }
 
 static void test_assign_onset_counts_crossings_against_held_notes(void) {
-    VsVoice voices[3] = {free_voice(70, 1), {true, er_make(64, 1), 1}, free_voice(50, 1)};
+    VsVoice voices[3] = {free_voice(70, 1), {true, rational_ratio(64, 1), 1}, free_voice(50, 1)};
     VsAttack attacks[1] = {attack("a", 63)};
     size_t out[1];
     double margin = 0.0;
@@ -395,19 +397,19 @@ static void test_split_overflow_drops_the_lower_of_the_closest_pair(void) {
 }
 
 static void test_nearest_voice(void) {
-    ExactRational current[3] = {er_make(72, 1), er_make(65, 1), er_make(48, 1)};
+    Rational current[3] = {rational_ratio(72, 1), rational_ratio(65, 1), rational_ratio(48, 1)};
     bool has[3] = {true, true, true};
-    assert(vs_nearest_voice(current, has, 3, er_make(70, 1)) == 0);
-    assert(vs_nearest_voice(current, has, 3, er_make(50, 1)) == 2);
-    assert(vs_nearest_voice(current, has, 3, er_make(68, 1)) == 1); /* 3 from 65, 4 from 72 */
-    assert(vs_nearest_voice(current, has, 3, er_make(69, 2)) == 2); /* 34.5: nearer 48 */
+    assert(vs_nearest_voice(current, has, 3, rational_ratio(70, 1)) == 0);
+    assert(vs_nearest_voice(current, has, 3, rational_ratio(50, 1)) == 2);
+    assert(vs_nearest_voice(current, has, 3, rational_ratio(68, 1)) == 1); /* 3 from 65, 4 from 72 */
+    assert(vs_nearest_voice(current, has, 3, rational_ratio(69, 2)) == 2); /* 34.5: nearer 48 */
     has[1] = false;
-    assert(vs_nearest_voice(current, has, 3, er_make(68, 1)) == 0);
+    assert(vs_nearest_voice(current, has, 3, rational_ratio(68, 1)) == 0);
     has[0] = has[2] = false;
-    assert(vs_nearest_voice(current, has, 3, er_make(68, 1)) == 3);
-    ExactRational even[2] = {er_make(60, 1), er_make(64, 1)};
+    assert(vs_nearest_voice(current, has, 3, rational_ratio(68, 1)) == 3);
+    Rational even[2] = {rational_ratio(60, 1), rational_ratio(64, 1)};
     bool both[2] = {true, true};
-    assert(vs_nearest_voice(even, both, 2, er_make(62, 1)) == 0); /* a tie: the lower index */
+    assert(vs_nearest_voice(even, both, 2, rational_ratio(62, 1)) == 0); /* a tie: the lower index */
 }
 
 /* Two voices (76 and 70) sound together, both rest, then one note re-enters; a low note at the end only
@@ -468,18 +470,18 @@ static void test_a_broken_beat_grid_is_reported(void) {
 }
 
 static void test_reference_kept(void) {
-    ExactRational two = er_make(2, 1);
+    Rational two = rational_ratio(2, 1);
     bool kept = false;
     /* still sounding, or ending exactly at the onset: no beat grid needed */
-    assert(vs_reference_kept(er_make(1, 2), er_make(1, 4), two, broken_beat_length, NULL, &kept) == 0 && kept);
-    assert(vs_reference_kept(er_make(1, 4), er_make(1, 4), two, broken_beat_length, NULL, &kept) == 0 && kept);
+    assert(vs_reference_kept(rational_ratio(1, 2), rational_ratio(1, 4), two, broken_beat_length, NULL, &kept) == 0 && kept);
+    assert(vs_reference_kept(rational_ratio(1, 4), rational_ratio(1, 4), two, broken_beat_length, NULL, &kept) == 0 && kept);
     /* a rest of 1 beat, 2 beats (inclusive), then 2.25 beats */
-    assert(vs_reference_kept(er_make(0, 1), er_make(1, 4), two, quarter_beat_length, NULL, &kept) == 0 && kept);
-    assert(vs_reference_kept(er_make(0, 1), er_make(1, 2), two, quarter_beat_length, NULL, &kept) == 0 && kept);
-    assert(vs_reference_kept(er_make(0, 1), er_make(9, 16), two, quarter_beat_length, NULL, &kept) == 0 && !kept);
-    assert(vs_reference_kept(er_make(0, 1), er_make(1, 4), er_make(0, 1), quarter_beat_length, NULL, &kept) == 0 &&
+    assert(vs_reference_kept(rational_ratio(0, 1), rational_ratio(1, 4), two, quarter_beat_length, NULL, &kept) == 0 && kept);
+    assert(vs_reference_kept(rational_ratio(0, 1), rational_ratio(1, 2), two, quarter_beat_length, NULL, &kept) == 0 && kept);
+    assert(vs_reference_kept(rational_ratio(0, 1), rational_ratio(9, 16), two, quarter_beat_length, NULL, &kept) == 0 && !kept);
+    assert(vs_reference_kept(rational_ratio(0, 1), rational_ratio(1, 4), rational_ratio(0, 1), quarter_beat_length, NULL, &kept) == 0 &&
            !kept);
-    assert(vs_reference_kept(er_make(0, 1), er_make(1, 4), two, broken_beat_length, NULL, &kept) == -3);
+    assert(vs_reference_kept(rational_ratio(0, 1), rational_ratio(1, 4), two, broken_beat_length, NULL, &kept) == -3);
 }
 
 int main(void) {

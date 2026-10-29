@@ -5,7 +5,8 @@
 #include <stddef.h>
 
 #include "romantext.h"
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 #include "time/meter_map.h"
 
 /*
@@ -27,8 +28,8 @@
 
 typedef struct {
     int number;            /* the measure number as RomanText counts it (a pickup is 0) */
-    ExactRational start;   /* whole notes from the start of the score */
-    ExactRational length;
+    Rational start;   /* whole notes from the start of the score */
+    Rational length;
 } ScoreMeasure;
 
 typedef struct {
@@ -39,7 +40,7 @@ typedef struct {
     size_t continued_count; /* measures folded into the one before ("7a") */
     size_t irregular_count; /* measures, other than a pickup or the last, not one signature long */
     bool has_pickup;        /* the first measure is shorter than one signature and numbered 0 */
-    ExactRational end;      /* the end of the last measure */
+    Rational end;      /* the end of the last measure */
 } ScoreLayout;
 
 typedef enum {

@@ -14,7 +14,7 @@
 #include "pitch/pitch_spelling.h"
 #include "events/dynamics.h"
 #include "time/duration.h"
-#include "time/exact_rational.h"
+#include "core/rational.h"
 #include "time/metronome_marking.h"
 #include "time/tempo_map.h"
 #include "time/musical_time.h"
@@ -368,18 +368,23 @@ static MusicXmlExportResult apply_quantize(Prep *prep) {
     }
     MusicXmlExportResult result = MUSICXML_EXPORT_OK;
     for (size_t i = 0; i < prep->note_count && result == MUSICXML_EXPORT_OK; i++) {
-        ExactRational start = er_make(quantized.start_num[i], quantized.start_den[i]);
-        ExactRational end = er_make(quantized.end_num[i], quantized.end_den[i]);
-        ExactRational duration;
-        if (er_cmp(end, start) <= 0 || er_sub(end, start, &duration) != 0 || start.n > (unsigned long long)LONG_MAX ||
-            duration.n > (unsigned long long)LONG_MAX || start.d > ULONG_MAX || duration.d > ULONG_MAX) {
+        Rational start;
+        Rational end;
+        Rational duration;
+        if (quantized.start_num[i] > (unsigned long long)LLONG_MAX || quantized.start_den[i] > (unsigned long long)LLONG_MAX ||
+            quantized.end_num[i] > (unsigned long long)LLONG_MAX || quantized.end_den[i] > (unsigned long long)LLONG_MAX ||
+            rational_make((long long)quantized.start_num[i], (long long)quantized.start_den[i], &start) != RATIONAL_OK ||
+            rational_make((long long)quantized.end_num[i], (long long)quantized.end_den[i], &end) != RATIONAL_OK ||
+            rational_cmp(end, start) <= 0 || rational_sub(end, start, &duration) != RATIONAL_OK ||
+            start.num > (long long)LONG_MAX || duration.num > (long long)LONG_MAX ||
+            (unsigned long long)start.den > ULONG_MAX || (unsigned long long)duration.den > ULONG_MAX) {
             result = MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE;
             break;
         }
-        prep->notes[i].start_n = (long)start.n;
-        prep->notes[i].start_d = (unsigned long)start.d;
-        prep->notes[i].dur_n = (long)duration.n;
-        prep->notes[i].dur_d = (unsigned long)duration.d;
+        prep->notes[i].start_n = (long)start.num;
+        prep->notes[i].start_d = (unsigned long)start.den;
+        prep->notes[i].dur_n = (long)duration.num;
+        prep->notes[i].dur_d = (unsigned long)duration.den;
     }
     score_quantized_destroy(&quantized);
     return result;

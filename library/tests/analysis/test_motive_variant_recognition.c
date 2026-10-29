@@ -11,7 +11,7 @@
  * it must give the target (the op names may differ from the chain that made it).
  */
 
-static ExactRational q(unsigned long long n, unsigned long long d) { return er_make(n, d); }
+static Rational q(unsigned long long n, unsigned long long d) { return rational_ratio(n, d); }
 
 /* C D E G F E in C major, 4/4: q e e q e e, with two labelled features and the chords I and V. */
 static MotiveSketch base(void) {
@@ -19,7 +19,7 @@ static MotiveSketch base(void) {
     static const unsigned long long den[6] = {4, 8, 8, 4, 8, 8};
     MotiveSketch sketch;
     memset(&sketch, 0, sizeof(sketch));
-    ExactRational at = q(0, 1);
+    Rational at = q(0, 1);
     for (size_t i = 0; i < 6; i++) {
         sketch.notes[i].pitch = pitches[i];
         sketch.notes[i].onset = at;
@@ -88,7 +88,7 @@ static void assert_replays(const MotiveSketch *source, const MotiveSketch *targe
     }
     MotiveSketch want = settled(target);
     assert(motive_sketch_equal(&at, &want));
-    ExactRational distance = er_make((unsigned long long)cost, (unsigned long long)cost + 4);
+    Rational distance = rational_ratio((unsigned long long)cost, (unsigned long long)cost + 4);
     assert(msk_eq(found->distance, distance));
 }
 
@@ -395,7 +395,7 @@ static void test_unrelated_pair_is_not_found(void) {
     MotiveSketch other = base();
     static const int pitches[6] = {71, 48, 77, 50, 70, 52};
     static const unsigned long long den[7] = {16, 4, 16, 2, 16, 8, 16};
-    ExactRational at = q(0, 1);
+    Rational at = q(0, 1);
     for (size_t i = 0; i < 6; i++) {
         other.notes[i].pitch = pitches[i];
         other.notes[i].onset = at;
@@ -613,7 +613,7 @@ static MotiveSketch d_minor_with_pickup(void) {
     static const int pitches[5] = {62, 65, 69, 74, 72};
     static const unsigned long long den[5] = {4, 8, 8, 4, 4};
     MotiveSketch sketch = base();
-    ExactRational at = q(0, 1);
+    Rational at = q(0, 1);
     for (size_t i = 0; i < 5; i++) {
         sketch.notes[i].pitch = pitches[i];
         sketch.notes[i].onset = at;
@@ -700,7 +700,7 @@ static void test_repeat_feature_under_a_second_step(void) {
     MotiveSketch source = base();
     static const int pitches[5] = {60, 64, 67, 65, 64};
     static const unsigned long long den[5] = {4, 8, 8, 4, 4};
-    ExactRational at = q(0, 1);
+    Rational at = q(0, 1);
     for (size_t i = 0; i < 5; i++) {
         source.notes[i].pitch = pitches[i];
         source.notes[i].onset = at;
@@ -756,7 +756,7 @@ static void test_admit_null_and_all_agree(void) {
 }
 
 /* Hollow Knight 1 (A A B C B) in quarter notes over the given chords. */
-static MotiveSketch hollow_knight(const int *degrees, const ExactRational *onsets, size_t count) {
+static MotiveSketch hollow_knight(const int *degrees, const Rational *onsets, size_t count) {
     static const int pitches[5] = {81, 81, 83, 84, 83};
     MotiveSketch sketch = base();
     sketch.note_count = 5;
@@ -779,7 +779,7 @@ static MotiveSketch hollow_knight(const int *degrees, const ExactRational *onset
 /* Every harmony row on Hollow Knight 1, with chords that change the notes and with chords that do not. */
 static void test_harmony_rows_on_tone_roles(void) {
     int vi[1] = {6};
-    ExactRational at_zero[1] = {q(0, 1)};
+    Rational at_zero[1] = {q(0, 1)};
     MotiveSketch sketch = hollow_knight(vi, at_zero, 1);
     recover_one(&sketch, step(MOTIVE_RELATION_HARMONY_INVERSION, 0, 1, 0));
     recover_one(&sketch, step(MOTIVE_RELATION_HARMONY_APPEND, 5, 0, 0));
@@ -789,7 +789,7 @@ static void test_harmony_rows_on_tone_roles(void) {
     recover_one(&sketch, step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 0, 2, 4));
 
     int tonic_subdominant[2] = {1, 4};
-    ExactRational onsets[2] = {q(0, 1), q(1, 2)};
+    Rational onsets[2] = {q(0, 1), q(1, 2)};
     MotiveSketch two = hollow_knight(tonic_subdominant, onsets, 2);
     recover_one(&two, step(MOTIVE_RELATION_PASSING_HARMONY, 0, 0, 0));
     recover_one(&two, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0));
