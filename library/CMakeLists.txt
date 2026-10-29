@@ -25,3 +25,8 @@ add_subdirectory(third_party)
 add_subdirectory(src)
 add_subdirectory(frameworks)
 add_subdirectory(chain)
+
+ursatz_write_public_manifest()
+if(URSATZ_BUILD_TESTS)
+    ursatz_add_public_header_tests()
+endif()
