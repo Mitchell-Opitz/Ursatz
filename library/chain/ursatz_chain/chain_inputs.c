@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "analysis/outer_voice.h"
 #include "core/rational.h"
 #include "analysis_time.h"
 #include "time/time_signature.h"
@@ -714,53 +715,49 @@ static bool parse_degree(const char *label, int *degree, int *alteration) {
     return true;
 }
 
-/* The soprano notes of the measures [first, last], in time order. *out is allocated; its count is returned. */
+/* The soprano notes of the measures [first, last], in time order. *out is allocated; its count is returned.
+   Only notes starting in the measures compete, so a note held in from an earlier measure does not hide an attack. */
 static bool motive_soprano(const AnalysisNoteSet *notes, int first_measure, int last_measure, MotiveNote **out, size_t *kept_out) {
-    MotiveNote *all = calloc(notes->count > 0 ? notes->count : 1, sizeof(MotiveNote));
-    MotiveNote *line = calloc(notes->count > 0 ? notes->count : 1, sizeof(MotiveNote));
-    if (all == NULL || line == NULL) {
-        free(all);
-        free(line);
+    AnalysisNote *window = calloc(notes->count > 0 ? notes->count : 1, sizeof(AnalysisNote));
+    size_t *origin = calloc(notes->count > 0 ? notes->count : 1, sizeof(size_t));
+    if (window == NULL || origin == NULL) {
+        free(window);
+        free(origin);
         return false;
     }
     size_t count = 0;
     for (size_t i = 0; i < notes->count; i++) {
-        const MusicalTime *time = time_span_start(notes->notes[i].span);
-        int measure = measure_of(notes->map, time);
+        int measure = measure_of(notes->map, time_span_start(notes->notes[i].span));
         if (measure < first_measure || measure > last_measure) {
             continue;
         }
-        all[count].index = i;
-        all[count].start = q_of_time(time);
-        all[count].end = q_of_time(time_span_end(notes->notes[i].span));
-        all[count].semitone = notes->notes[i].midi;
+        window[count] = notes->notes[i];
+        origin[count] = i;
         count++;
     }
+    AnalysisNoteSet in_window = {window, count, notes->map};
+    size_t *picked = NULL;
     size_t kept = 0;
-    for (size_t i = 0; i < count; i++) {
-        /* the first note of each onset group decides: skip an onset already handled */
-        if (i > 0 && standard_form_q_compare(all[i - 1].start, all[i].start) == 0) {
-            continue;
-        }
-        StandardFormQ onset = all[i].start;
-        const MotiveNote *top = NULL;
-        for (size_t j = 0; j < count; j++) {
-            if (standard_form_q_compare(all[j].start, onset) > 0) {
-                break;
-            }
-            if (standard_form_q_compare(all[j].end, onset) <= 0) {
-                continue;
-            }
-            if (top == NULL || all[j].semitone > top->semitone ||
-                (all[j].semitone == top->semitone && standard_form_q_compare(all[j].start, top->start) > 0)) {
-                top = &all[j];
-            }
-        }
-        if (top != NULL && standard_form_q_compare(top->start, onset) == 0) {
-            line[kept++] = *top;
-        }
+    MotiveNote *line = NULL;
+    bool ok = count == 0 || outer_voice_attack_soprano(&in_window, &picked, &kept) == OUTER_VOICE_OK;
+    if (ok) {
+        line = calloc(kept > 0 ? kept : 1, sizeof(MotiveNote));
+        ok = line != NULL;
     }
-    free(all);
+    for (size_t k = 0; ok && k < kept; k++) {
+        const AnalysisNote *source = &window[picked[k]];
+        line[k].index = origin[picked[k]];
+        line[k].start = q_of_time(time_span_start(source->span));
+        line[k].end = q_of_time(time_span_end(source->span));
+        line[k].semitone = source->midi;
+    }
+    free(window);
+    free(origin);
+    free(picked);
+    if (!ok) {
+        free(line);
+        return false;
+    }
     *out = line;
     *kept_out = kept;
     return true;
