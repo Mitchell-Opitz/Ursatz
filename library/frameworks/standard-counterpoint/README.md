@@ -371,3 +371,5 @@ Owned here (moved from `src/semantics/`; type names and values unchanged):
 ## Neutral analysis input
 
 `StandardCounterpointVoiceCell` and `StandardCounterpointVoiceGrid` are the shared `AnalysisVoiceCell` and `AnalysisVoiceGrid` (`semantics/voice_grid.h`), the same grid standard-harmony reads. `slot_note.h` defines `StandardCounterpointSlotNote` and `StandardCounterpointRuleResult`, which the fugue, ground bass and sixteenth-century frameworks use as their note and result types.
+
+`standard_counterpoint_melody_nct_labels_with` takes a `NonChordToneClassifier` (`semantics/tone_line.h`; the owner is `motive_tone_roles_line`) and relabels the notes that carry a `chord_pitch_classes` mask, run by run; `standard_counterpoint_melody_nct_labels` is the same with no classifier, the attached results as given.

@@ -41,7 +41,7 @@ Stages, in the order they run, with the owner each calls (`docs/ARCHITECTURE.md`
 | `METER` | `chain_build_meter_input` | standard-meter: syncopations, hemiolas, hypermeter, density |
 | `TEXTURE` | `chain_build_texture_input` | `voice_separate`, standard-texture |
 | `VOICE_LEADING` | `chain_build_voice_grid` | `standard_counterpoint_classify_motions`, perfect intervals, harmony resolutions |
-| `MELODY` | `chain_build_melody_line` | standard-counterpoint melody: intervals, contour, climax, leap recovery, non-chord tones |
+| `MELODY` | `chain_build_melody_line` | standard-counterpoint melody: intervals, contour, climax, leap recovery, non-chord tones (relabelled by the injected kernel classifier) |
 | `SCHEMAS` | `chain_build_galant_segments` | `galant_schema_match`, `scale_sequence_detect` |
 
 A stage pulls in the stages it needs (keys pull segments, chords keys, numerals chords, cadences numerals and outer voices, form cadences, meter form and chords and outer voices, voice leading cadences, melody chords and outer voices, schemas numerals and outer voices; texture reads only the notes). The accessors (`analysis_chain_chords`, `_key_regions`, `_numerals`, `_outer_voices`, `_cadences`, `_phrases`, `_ideas`, `_themes`, `_expansions`, `_motives`, `_meter`, `_texture`, `_voice_leading`, `_melody`, `_schemas`, `_sequences`) return the frameworks' own result structs and their Interpretations, or NULL for a stage that did not run.
@@ -62,3 +62,7 @@ Known behavior, kept from the test glue the chain replaced (deleted in P22 B5; t
 ## Tests
 
 The library's tests run analysis through the chain: `tests/analysis/weighted_pipeline.h` runs the segments and outer-voice stages, `tests/accuracy/chorale_chain.c` the keys, chords and numerals, `tests/integration/framework_v1_chain.h` the stages to the form, and `chain/tests/test_analysis_chain.c` every stage on Bach 114, Mozart 545, Clementi 36 and Field 1 against fixed expected results (a digest per stage). A test that feeds a stage an annotation's answer builds that stage's input with the builders in `chain_inputs.h`; `tests/integration/hand_cadences.h` turns annotated cadences into the cadences the builders take.
+
+## Kernel owners (`ursatz_chain/kernel_owners.h`)
+
+With `AnalysisChainConfig.inject_kernel_owners` (default on) the chain hands the kernel owners to the frameworks, which cannot call L8: `chain_classify_tones` (`motive_tone_roles_line`) is the `NonChordToneClassifier` of the weighted chord identifier and of the melody stage (`chain_relabel_melody_line`), and `chain_match_motive_relation` (`motive_variant_recognize` at depth 1: transpose, invert, retrograde) is the `StandardFormRelationMatcher` of the motive stage. Turn it off to get the frameworks' own fallback rules. A classifier or matcher already set in `weighting` or `form` is kept.
