@@ -28,6 +28,10 @@ static const char *FRAMEWORK_HEADERS[] = {
     "key_identification.h",
     "analysis_motive.h",
     "analysis_phrase.h",
+    "key_regions.h",
+    "weighted_chord_identification.h",
+    "metric_position_rules.h",
+    "segmentation_beat_grid.h",
 };
 
 static int has_prefix(const char *s, const char *prefix) {
