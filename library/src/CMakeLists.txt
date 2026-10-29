@@ -101,6 +101,7 @@ add_library(ursatz
     semantics/subphrase_role.c
     semantics/analysis_note.c
     semantics/analysis_segment.c
+    semantics/analysis_key.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c

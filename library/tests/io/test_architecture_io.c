@@ -49,8 +49,9 @@ static int check_file(const char *path) {
 
         if (strncmp(start, "identity/", 9) != 0 && strncmp(start, "core/", 5) != 0 &&
             strncmp(start, "time/", 5) != 0 && strncmp(start, "pitch/", 6) != 0 &&
-            strncmp(start, "events/", 7) != 0 && strncmp(start, "io/", 3) != 0) {
-            fprintf(stderr, "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, or io/)\n",
+            strncmp(start, "events/", 7) != 0 && strncmp(start, "io/", 3) != 0 &&
+            strcmp(start, "semantics/analysis_key.h") != 0) {
+            fprintf(stderr, "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, io/, or semantics/analysis_key.h)\n",
                     path, start);
             violations++;
         }

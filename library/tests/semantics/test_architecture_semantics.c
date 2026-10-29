@@ -46,10 +46,10 @@ static int check_file(const char *path) {
         if (strncmp(start, "identity/", 9) != 0 && strncmp(start, "core/", 5) != 0 &&
             strncmp(start, "time/", 5) != 0 && strncmp(start, "pitch/", 6) != 0 &&
             strncmp(start, "events/", 7) != 0 && strncmp(start, "containers/", 11) != 0 &&
-            strncmp(start, "structure/", 10) != 0 && strncmp(start, "semantics/", 10) != 0) {
+            strncmp(start, "structure/", 10) != 0 && strncmp(start, "semantics/", 10) != 0 && strcmp(start, "interpretation/key.h") != 0) {
             fprintf(stderr,
                     "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, "
-                    "containers/, structure/, or semantics/)\n",
+                    "containers/, structure/, semantics/, or interpretation/key.h)\n",
                     path, start);
             violations++;
         }

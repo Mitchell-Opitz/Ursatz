@@ -6,6 +6,7 @@
 #include <stdint.h>
 
 #include "pitch/key_signature.h"
+#include "semantics/analysis_key.h"
 #include "time/musical_time.h"
 
 /*
@@ -51,6 +52,13 @@ typedef enum {
  * left untouched.
  */
 MidiKeySignatureResult midi_key_signature_scan(const unsigned char *data, size_t size, MidiKeySignature *out);
+
+/*
+ * midi_key_signature_analysis_key: the AnalysisKey a scanned key signature names, through
+ * analysis_key_from_fifths (the "mi" byte picks major or minor). False when no key signature was
+ * found, for NULL arguments, or for an sf outside -7..7; *out is then untouched. The id is NULL.
+ */
+bool midi_key_signature_analysis_key(const MidiKeySignature *signature, AnalysisKey *out);
 
 /*
  * midi_key_signature_build: the KeySignature a MIDI "sf" (sharps/flats count) value
