@@ -59,6 +59,10 @@ textbook; each README names the chapters it covers.
   as plain enums in `src/semantics/` and carry no framework claim. What each name means is the
   framework's convention. See `docs/modules/semantics.md`.
 
+## Using a kernel analysis owner
+
+A framework may not include kernel L8 (`analysis/`), so when a job's owner lives there (docs/ARCHITECTURE.md, Analytic job owners) the framework takes it as an injected callback and never re-derives it. The pattern is `StandardFormBoundaryDetector` in `standard-form/analysis/analysis_phrase.h`: the framework declares the function type, the caller (in practice the `chain/` target) passes the L8 owner behind it.
+
 ## Claims and rule pairs
 
 A framework builds its durable claims through the kernel helpers in `interpretation/claim_interpretation.h`. Each `analysis/*claim.c` keeps its public names and is a one-line call with the framework's id and short name: `claim_interpretation_create` for the Interpretation, `claim_interpretation_note_group` for the note shell, `claim_interpretation_relationship` for the Relationship. A framework builds its rule and constraint pairs through `rules/rule_pair.h`: its `rule_pair.h` has `typedef RulePair <Framework>RulePair;` and a static inline `<framework>_build_rule_pair` that passes its framework and id prefix to `rule_pair_build` (or `rule_pair_build_typed` for hard and soft rules). A framework needs no claim or rule pair code of its own.
