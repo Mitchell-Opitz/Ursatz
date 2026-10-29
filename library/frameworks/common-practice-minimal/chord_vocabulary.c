@@ -1,11 +1,13 @@
 #include "chord_vocabulary.h"
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "core/framework_reference.h"
+#include "core/once.h"
 #include "core/provenance_reference.h"
 #include "core/value.h"
 #include "framework.h"
@@ -52,7 +54,7 @@ static const int TRIAD_INTERVALS[COMMON_PRACTICE_TRIAD_COUNT][3] = {
 
 static Rule *g_rules[COMMON_PRACTICE_TRIAD_COUNT];
 static Constraint *g_constraints[COMMON_PRACTICE_TRIAD_COUNT];
-static bool g_init_attempted[COMMON_PRACTICE_TRIAD_COUNT];
+static UrsatzOnce g_once[COMMON_PRACTICE_TRIAD_COUNT];
 
 static bool valid_triad(CommonPracticeTriad triad) {
     return triad >= 0 && triad < COMMON_PRACTICE_TRIAD_COUNT;
@@ -68,11 +70,8 @@ bool common_practice_triad_intervals(CommonPracticeTriad triad, int out[3]) {
     return true;
 }
 
-static void ensure_built(CommonPracticeTriad triad) {
-    if (!valid_triad(triad) || g_init_attempted[triad]) {
-        return;
-    }
-    g_init_attempted[triad] = true;
+static void build_one(void *arg) {
+    CommonPracticeTriad triad = (CommonPracticeTriad)(intptr_t)arg;
 
     const Framework *framework = common_practice_minimal_framework();
     if (framework == NULL) {
@@ -104,6 +103,13 @@ static void ensure_built(CommonPracticeTriad triad) {
 
     g_rules[triad] = rule;
     g_constraints[triad] = constraint;
+}
+
+static void ensure_built(CommonPracticeTriad triad) {
+    if (!valid_triad(triad)) {
+        return;
+    }
+    ursatz_once(&g_once[triad], build_one, (void *)(intptr_t)triad);
 }
 
 const char *common_practice_triad_label(CommonPracticeTriad triad) {

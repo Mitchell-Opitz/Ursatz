@@ -1,11 +1,13 @@
 #include "chord_vocabulary_seventh.h"
 
 #include <stdbool.h>
+#include <stdint.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "core/framework_reference.h"
+#include "core/once.h"
 #include "core/provenance_reference.h"
 #include "core/value.h"
 #include "framework.h"
@@ -37,7 +39,7 @@ static const int SEVENTH_INTERVALS[COMMON_PRACTICE_SEVENTH_COUNT][4] = {
 
 static Rule *g_rules[COMMON_PRACTICE_SEVENTH_COUNT];
 static Constraint *g_constraints[COMMON_PRACTICE_SEVENTH_COUNT];
-static bool g_init_attempted[COMMON_PRACTICE_SEVENTH_COUNT];
+static UrsatzOnce g_once[COMMON_PRACTICE_SEVENTH_COUNT];
 
 static bool valid_seventh(CommonPracticeSeventh seventh) {
     return seventh >= 0 && seventh < COMMON_PRACTICE_SEVENTH_COUNT;
@@ -53,11 +55,8 @@ bool common_practice_seventh_intervals(CommonPracticeSeventh seventh, int out[4]
     return true;
 }
 
-static void ensure_built(CommonPracticeSeventh seventh) {
-    if (!valid_seventh(seventh) || g_init_attempted[seventh]) {
-        return;
-    }
-    g_init_attempted[seventh] = true;
+static void build_one(void *arg) {
+    CommonPracticeSeventh seventh = (CommonPracticeSeventh)(intptr_t)arg;
 
     const Framework *framework = common_practice_minimal_framework();
     if (framework == NULL) {
@@ -89,6 +88,13 @@ static void ensure_built(CommonPracticeSeventh seventh) {
 
     g_rules[seventh] = rule;
     g_constraints[seventh] = constraint;
+}
+
+static void ensure_built(CommonPracticeSeventh seventh) {
+    if (!valid_seventh(seventh)) {
+        return;
+    }
+    ursatz_once(&g_once[seventh], build_one, (void *)(intptr_t)seventh);
 }
 
 const char *common_practice_seventh_label(CommonPracticeSeventh seventh) {

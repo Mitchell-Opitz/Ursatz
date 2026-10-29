@@ -1,6 +1,8 @@
 #ifndef URSATZ_THEORY_FRAMEWORK_SINGLETON_H
 #define URSATZ_THEORY_FRAMEWORK_SINGLETON_H
 
+#include <stddef.h>
+
 #include "core/once.h"
 #include "theory/framework.h"
 

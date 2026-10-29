@@ -52,7 +52,8 @@ static int check_file(const char *path) {
         if (strchr(start, '/') == NULL) {
             continue; /* same-module header */
         }
-        if (strcmp(start, "theory/framework.h") == 0 || strcmp(start, "rules/rule.h") == 0 ||
+        if (strcmp(start, "theory/framework.h") == 0 ||
+            strcmp(start, "theory/framework_singleton.h") == 0 || strcmp(start, "rules/rule.h") == 0 ||
             strcmp(start, "rules/constraint.h") == 0 ||
             strcmp(start, "rules/preference.h") == 0) {
             continue;
@@ -67,7 +68,7 @@ static int check_file(const char *path) {
             fprintf(stderr,
                     "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, "
                     "containers/, structure/, context/, semantics/, relationship/, interpretation/, "
-                    "theory/framework.h, rules/rule.h, rules/constraint.h, or rules/preference.h)\n",
+                    "theory/framework.h, theory/framework_singleton.h, rules/rule.h, rules/constraint.h, or rules/preference.h)\n",
                     path, start);
             violations++;
         }
