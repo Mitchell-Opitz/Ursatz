@@ -3,9 +3,8 @@
 Theory Framework extension modules. Each one lives under `frameworks/<name>/`, outside
 `src/`, and builds on the kernel's `Framework`, `Rule` and `Constraint` types
 (`src/theory/`, `src/rules/`) without changing them. The kernel never includes a framework
-header. The one exception is `src/analysis/chord_identification.c` and `key_estimation.c`,
-which are compiled into `common_practice_minimal`, not into `ursatz` (see
-`docs/modules/analysis.md`).
+header, and a framework never compiles a kernel source. Code that needs both lives in the
+analysis chain (`chain/`, see `chain/README.md`).
 
 Each framework's own `README.md` holds its full scope and exclusions. This page is the
 catalog and the shared conventions.
