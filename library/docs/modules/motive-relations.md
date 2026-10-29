@@ -1,6 +1,6 @@
 # Motive relations (analysis, L8)
 
-Files: `src/analysis/motive_sketch.h/.c`, `src/analysis/motive_relation.h/.c`. Tests: `tests/analysis/test_motive_sketch.c`, `tests/analysis/test_motive_relation.c`. Tone labels for a sketch's notes: `docs/modules/motive-tone-roles.md`. Part of `analysis` (see `docs/modules/analysis.md`); includes only `time/exact_rational.h` and C headers.
+Files: `src/analysis/motive_sketch.h/.c`, `src/analysis/motive_relation.h/.c`. Tests: `tests/analysis/test_motive_sketch.c`, `tests/analysis/test_motive_sketch_value.c`, `tests/analysis/test_motive_relation.c`, `tests/analysis/test_motive_relation_params.c`. Tone labels for a sketch's notes: `docs/modules/motive-tone-roles.md`. Part of `analysis` (see `docs/modules/analysis.md`); includes only `time/exact_rational.h` and C headers.
 
 A theory-neutral catalog of the ways a motive can be made into a variant of itself, one relation per operation of a composer's variant registry, with an `apply` over a plain value. The variant recognizer searches chains of these relations. A registry row maps to a relation by name, with the same parameters in the same order. Citations are Schoenberg, *Fundamentals of Musical Composition*.
 
@@ -18,6 +18,12 @@ A motive as plain data, never allocated.
 | `chords` (up to 8) | `onset`, `degree` 1 to 7, `alteration` -1/0/1, `inversion` 0 to 3, `seventh` |
 | `features` (up to 8) | `label` 1 to 8 characters, `first`, `last` (0-based note indices, inclusive) |
 | `accompaniment` | the sketch is an accompaniment, not a melody |
+| `form` | `MOTIVE_SKETCH_FORM_FULL` (0), `_RHYTHM` or `_CONTOUR`: what the motive keeps of itself (the Composer's `MotiveForm`) |
+| `key_source` | `MOTIVE_SKETCH_KEY_UNSPECIFIED` (0), `_GIVEN` or `_INFERRED`; read only when `has_scale` |
+| `has_tonic_spelling`, `tonic_letter`, `tonic_accidental` | the spelled tonic (a `PitchLetter` and -2 to 2); `tonic_pc` stays the pitch class and `motive_sketch_validate` checks they agree and that a scale is present |
+| `tone_overrides` (up to 64), `tone_override_count` | the caller's own tone labels (`MotiveToneOverride`, which with `MotiveToneRole` is defined in `motive_sketch.h`) |
+
+The sketch is the one motive value (R-246): the Composer's `Motive` and the Analyzer's motive features switch to it in P25 and P24. The added fields are zero in every sketch that does not use them, so every earlier initializer means what it did. `motive_sketch_fingerprint` hashes each added field only when it is not zero (and the key source only with a scale), so a sketch without them keeps the fingerprint it had before; `test_motive_sketch_value.c` pins three. `motive_sketch_equal` compares them.
 
 Times are `ExactRational`. An overflow is the bad value `{0, 0}`, which the `msk_` helpers pass on and `motive_sketch_validate` refuses. `motive_sketch_validate` also checks ascending, non-overlapping onsets, a pickup below the bar, a length not before the last note's end, chords ascending inside the length, and features inside the notes. `motive_sketch_equal` compares everything the counts say is in use.
 
@@ -27,6 +33,8 @@ Helpers:
 - `motive_sketch_chord_tones`: the pitch classes of a chord stacked in thirds from its root in the scale. An altered chord is a major triad (a dominant seventh) on the altered root. In minor, degree 5 has its third raised.
 - `motive_sketch_expressible`: a duration a note list can write, w h q e s t with up to two dots. `motive_sketch_on_grid`: an onset on the 1/32 grid.
 - `motive_sketch_strength`: 2 on the downbeat, 1 on another beat, 0 off the beat, from the pickup and the bar.
+- `motive_sketch_bar_of(sketch, time)`, `motive_sketch_offset_in_bar(sketch, bar, time)`, `motive_sketch_on_beat(sketch, time)` (ports of Composer `motive_tones.c`): bar 0 starts at the first downbeat (time `pickup`, or 0 without one) and a time before it is in bar -1, the pickup bar; `bar_of` is -1 for a bad time. The offset is the distance from the start of the bar (bad before it, or for bar -1 without a pickup); a time is on the beat when its offset is a whole number of beats.
+- `motive_tone_roles_of(sketch, out)` labels the notes with the sketch's own overrides (`motive-tone-roles.md`).
 
 ## MotiveRelation
 
@@ -111,6 +119,35 @@ Five relations that work from the tone roles (`motive-tone-roles.md`): they need
 | `reharmonize-frame` | degree, seventh | Every chord is replaced by the one chord at 0. The melody is adapted as for a harmony relation: chord tones move to the nearest tone of the new chord, a non-chord tone follows the target it resolves to, one whose figure no longer fits is left and is unclassified. |
 
 A figure is formed from the notes either side of it: the pitch is the first of a fixed list of candidates (scale steps next to the note before and the note after, then those notes' own pitches, then two steps away; for a pair, the scale steps above and below the note it embellishes in either order, and for a double neighbor the semitones above and below) for which the tone roles of the result label the note with that type. The rules of `motive-tone-roles.md` decide, so a type they can only tell by context is formed only where that context is: a suspension or retardation needs a chord change at the figure's onset, an anticipation one where the next note starts, a double neighbor (a pair less than a third apart) uses chromatic neighbours, and a pedal is never formed by one note.
+
+### Parameter metadata
+
+`motive_relation_param_info(kind, index, &info)` gives a `MotiveRelationParamInfo` for each parameter in the order of `motive_relation_param_name`: `name`, `kind` (`INT`, `BOOL`, `RATIO`, `CHOICE`), `min` and `max` (what the relation accepts at all; an index is also limited by the sketch it meets, and a ratio is only bounded by being above zero and writable in the meter), `default_value` and `default_den` (a parameter left out, as in the step text: 0, and the invert axis -1), `optional` (that default is accepted as it stands), `choices` (a choice's names, the name of value v at `choices[v - min]`: `position`, the ancillary-fill `kind`, the non-chord-tone `type`) and `description`. A caller builds a transform form from it and needs no spec table of its own. The values are what the relations already enforced; no relation changed.
+
+### Composer fields to relation parameters (for P25)
+
+Checked against the Composer at its pin (`MotiveDevSpec` in `motive_develop.h`, `PlanMotiveRef` in `constraint.h`, the `VariantParam` tables in `variant_registry.c`). Every field maps to a parameter that exists; no parameter was added. A registry row keeps its parameters in the relation's order and under the relation's names.
+
+| Composer field | Relation, parameter |
+|---|---|
+| `MotiveDevSpec.kind`, `PlanMotiveRef.transform` | the relation of the same name: exact, transpose, invert, retrograde, interval-change, fragment, liquidate, augment, diminish |
+| `tonal` | `transpose.tonal`, `invert.tonal` |
+| `MotiveDevSpec.amount` (transpose) | `transpose.by` |
+| `PlanMotiveRef.semitones` (a real transposition) | `transpose.by` with `tonal` 0 |
+| `PlanMotiveRef.steps` (tonal) | `transpose.by` with `tonal` 1 |
+| the registry's `degree` (transpose) | `transpose.degree` (0 for none) |
+| `has_axis`, `axis` | `invert.axis`; -1 when `has_axis` is false |
+| `interval` | `interval-change.interval` (0 every one) |
+| `amount` (interval change) | `interval-change.amount` |
+| `keep_contour` | `interval-change.keep-contour` |
+| `position` (`PlanFragmentPosition`: leading 1, trailing 2, middle 3; `PLAN_FRAGMENT_ANY` is not a position) | `fragment.position` |
+| `length` | `fragment.length` |
+| `drop` | `liquidate.drop` |
+| `keep_rhythm` | `liquidate.keep-rhythm` |
+| `min_length` (0 for `MOTIVE_DEV_MIN_LENGTH`) | `fragment.min`, `liquidate.min` |
+| `ratio_num`, `ratio_den` (0:0 for 2:1 and 1:2) | `augment.ratio`, `diminish.ratio` |
+
+Differences for P25 to declare: the registry's `by` is drawn from -12 to 12 and the relation accepts any value that stays in MIDI range; the registry's `optional` means never drawn, the library's means the default is accepted; the registry's index limits (16 notes) are the sketch's note count in the library.
 
 ## Notes
 
