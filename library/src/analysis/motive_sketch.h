@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "core/rational.h"
+#include "semantics/non_chord_tone.h"
 #include "time/time_rational.h"
 
 /*
@@ -50,6 +51,33 @@ typedef struct {
     size_t last;
 } MotiveSketchFeature;
 
+/* What a motive keeps of itself: every note, only the rhythm, or only the contour. */
+typedef enum {
+    MOTIVE_SKETCH_FORM_FULL = 0,
+    MOTIVE_SKETCH_FORM_RHYTHM,
+    MOTIVE_SKETCH_FORM_CONTOUR
+} MotiveSketchForm;
+
+/* Where the scale came from; read only when has_scale. */
+typedef enum {
+    MOTIVE_SKETCH_KEY_UNSPECIFIED = 0,
+    MOTIVE_SKETCH_KEY_GIVEN,
+    MOTIVE_SKETCH_KEY_INFERRED
+} MotiveSketchKeySource;
+
+typedef enum {
+    MOTIVE_TONE_CHORD = 0,
+    MOTIVE_TONE_NON_CHORD,
+    MOTIVE_TONE_UNCLASSIFIED
+} MotiveToneRole;
+
+/* A caller's own label for a note (0-based index); type is read only for MOTIVE_TONE_NON_CHORD. */
+typedef struct {
+    size_t note;
+    MotiveToneRole role;
+    NonChordTone type;
+} MotiveToneOverride;
+
 typedef struct {
     MotiveSketchNote notes[MOTIVE_SKETCH_MAX_NOTES];
     size_t note_count;
@@ -65,6 +93,14 @@ typedef struct {
     MotiveSketchFeature features[MOTIVE_SKETCH_MAX_FEATURES];
     size_t feature_count;
     bool accompaniment;
+    /* Added fields; zero keeps the meaning a sketch had without them. */
+    MotiveSketchForm form;
+    MotiveSketchKeySource key_source; /* read only when has_scale */
+    bool has_tonic_spelling;          /* tonic_letter (a PitchLetter) and tonic_accidental spell tonic_pc */
+    int tonic_letter;
+    int tonic_accidental;
+    MotiveToneOverride tone_overrides[MOTIVE_SKETCH_MAX_NOTES];
+    size_t tone_override_count;
 } MotiveSketch;
 
 /* --- checked rational helpers ------------------------------------------- */
@@ -153,7 +189,9 @@ bool motive_sketch_equal(const MotiveSketch *a, const MotiveSketch *b);
 
 /*
  * FNV-1a 64 over a canonical byte form of every field the sketch carries: the notes, the scale, the meter,
- * the pickup and length, the chords, the features and the role. Equal sketches (motive_sketch_equal) give
+ * the pickup and length, the chords, the features and the role, then the form, key source, tonic spelling and
+ * tone overrides, each only when not zero (so a sketch without them keeps the fingerprint it had before they
+ * existed). Equal sketches (motive_sketch_equal) give
  * equal fingerprints; a changed onset, pitch, scale or meter changes it. Only the used entries of the
  * arrays count, and a tonic and mode only when has_scale. Stable across runs and platforms, so a cache can
  * key on it.
@@ -164,7 +202,9 @@ unsigned long long motive_sketch_fingerprint(const MotiveSketch *sketch);
  * True when the sketch is well formed: 1 to MAX_NOTES notes with a pitch unknown or 0 to 127, durations above
  * zero, onsets ascending and not overlapping; bar and beat above zero and pickup below bar; length not before
  * the end of the last note; chords ascending inside the length with a degree 1 to 7, alteration -1 to 1 and
- * inversion 0 to 3; features with a 1 to 8 character label, inside the notes; no bad time anywhere.
+ * inversion 0 to 3; features with a 1 to 8 character label, inside the notes; no bad time anywhere; a form and key
+ * source in range; a tonic spelling (letter 0 to 6, accidental -2 to 2) whose pitch class is tonic_pc and that needs
+ * a scale; tone overrides on existing notes with a role and type that exist.
  */
 bool motive_sketch_validate(const MotiveSketch *sketch);
 

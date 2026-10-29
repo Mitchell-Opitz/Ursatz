@@ -49,11 +49,7 @@
  * unresolved true.
  */
 
-typedef enum {
-    MOTIVE_TONE_CHORD = 0,
-    MOTIVE_TONE_NON_CHORD,
-    MOTIVE_TONE_UNCLASSIFIED
-} MotiveToneRole;
+/* MotiveToneRole and MotiveToneOverride are defined in analysis/motive_sketch.h. */
 
 typedef struct {
     MotiveToneRole role;
@@ -62,13 +58,6 @@ typedef struct {
     bool unresolved;
     bool overridden;   /* the role and type came from an override */
 } MotiveToneLabel;
-
-/* A caller's own label for a note (0-based index); type is read only for MOTIVE_TONE_NON_CHORD. */
-typedef struct {
-    size_t note;
-    MotiveToneRole role;
-    NonChordTone type;
-} MotiveToneOverride;
 
 typedef enum {
     MOTIVE_TONE_OK = 0,
