@@ -387,3 +387,38 @@ int motive_sketch_strength(const MotiveSketch *sketch, Rational onset) {
     Rational beats = msk_div(inside, sketch->beat);
     return msk_ok(beats) && beats.den == 1 ? 1 : 0;
 }
+
+/* --- bars and beats ------------------------------------------------------------ */
+
+/* The length added to a time so the first downbeat falls on a barline of the sketch's bar grid. */
+static Rational bar_shift(const MotiveSketch *sketch) {
+    return msk_is_zero(sketch->pickup) ? msk_int(0) : msk_sub(sketch->bar, sketch->pickup);
+}
+
+long motive_sketch_bar_of(const MotiveSketch *sketch, Rational time) {
+    if (!sketch || !msk_ok(time) || !msk_ok(sketch->bar) || sketch->bar.num == 0) {
+        return -1;
+    }
+    Rational shifted = msk_add(time, bar_shift(sketch));
+    if (!msk_ok(shifted)) {
+        return -1;
+    }
+    long grid = (long)msk_floor_div(shifted, sketch->bar);
+    return msk_is_zero(sketch->pickup) ? grid : grid - 1;
+}
+
+Rational motive_sketch_offset_in_bar(const MotiveSketch *sketch, long bar, Rational time) {
+    if (!sketch || bar < -1 || (bar == -1 && msk_is_zero(sketch->pickup))) {
+        return msk_bad();
+    }
+    long grid = msk_is_zero(sketch->pickup) ? bar : bar + 1;
+    Rational shifted = msk_add(time, bar_shift(sketch));
+    Rational start = msk_mul(msk_int((unsigned long long)grid), sketch->bar);
+    return msk_sub(shifted, start);
+}
+
+bool motive_sketch_on_beat(const MotiveSketch *sketch, Rational time) {
+    Rational offset = motive_sketch_offset_in_bar(sketch, motive_sketch_bar_of(sketch, time), time);
+    Rational beats = msk_div(offset, sketch->beat);
+    return msk_ok(beats) && beats.den == 1;
+}

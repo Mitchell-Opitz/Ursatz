@@ -249,4 +249,14 @@ bool motive_sketch_on_grid(Rational onset);
 /* How firmly an onset sits in the bar: 2 on the downbeat, 1 on another beat, 0 off the beat. */
 int motive_sketch_strength(const MotiveSketch *sketch, Rational onset);
 
+/*
+ * Bars of the sketch. Bar 0 starts at the first downbeat (at time pickup; at 0 without a pickup); a time before it
+ * is in bar -1, the pickup bar, and bar_of is -1 for a bad sketch or time too. offset_in_bar is the distance of a
+ * time from the start of the given bar (bad when the time is before that bar, or bar -1 is asked of a sketch
+ * without a pickup). on_beat is true when that offset is a whole number of beats.
+ */
+long motive_sketch_bar_of(const MotiveSketch *sketch, Rational time);
+Rational motive_sketch_offset_in_bar(const MotiveSketch *sketch, long bar, Rational time);
+bool motive_sketch_on_beat(const MotiveSketch *sketch, Rational time);
+
 #endif
