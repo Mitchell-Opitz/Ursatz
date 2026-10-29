@@ -169,6 +169,14 @@ CommonPracticeWeightedStatus common_practice_rank_candidates(const CommonPractic
    Returns the count, 0 for an invalid chord. */
 size_t common_practice_ranked_chord_intervals(const CommonPracticeRankedChord *chord, int out[4]);
 
+/* The quality name of the chord: "major", "minor", "diminished" or "augmented" for a triad read from its
+   intervals, common_practice_seventh_label for a seventh; NULL for NULL or a set outside the vocabulary. */
+const char *common_practice_ranked_chord_quality_name(const CommonPracticeRankedChord *chord);
+
+/* Where the bass sits among the chord's tones: 0 root, 1 third, 2 fifth, 3 seventh; -1 when bass_pitch_class
+   (0..11) is no chord tone, the chord is invalid or an argument is NULL. */
+int common_practice_ranked_chord_inversion(const CommonPracticeRankedChord *chord, int bass_pitch_class);
+
 /* The chord's pitch classes as a 12-bit mask (bit pc set): its root, third and fifth, and its seventh when
    is_seventh. 0 for an invalid chord. tonic_pitch_class (0..11) is only validated: the chord carries its root. */
 unsigned common_practice_ranked_chord_mask(const CommonPracticeRankedChord *chord, int tonic_pitch_class);

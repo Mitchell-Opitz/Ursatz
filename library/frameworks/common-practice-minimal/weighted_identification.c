@@ -309,3 +309,42 @@ bool common_practice_member_from_analysis_note(const AnalysisNote *note, const T
     out->onset = rational_to_double(onset);
     return true;
 }
+
+const char *common_practice_ranked_chord_quality_name(const CommonPracticeRankedChord *chord) {
+    int offsets[4];
+    size_t count = chord != NULL ? common_practice_ranked_chord_intervals(chord, offsets) : 0;
+    if (count == 4) {
+        return common_practice_seventh_label(chord->seventh);
+    }
+    if (count != 3) {
+        return NULL;
+    }
+    if (offsets[1] == 4 && offsets[2] == 7) {
+        return "major";
+    }
+    if (offsets[1] == 3 && offsets[2] == 7) {
+        return "minor";
+    }
+    if (offsets[1] == 3 && offsets[2] == 6) {
+        return "diminished";
+    }
+    if (offsets[1] == 4 && offsets[2] == 8) {
+        return "augmented";
+    }
+    return NULL;
+}
+
+int common_practice_ranked_chord_inversion(const CommonPracticeRankedChord *chord, int bass_pitch_class) {
+    int offsets[4];
+    size_t count = chord != NULL ? common_practice_ranked_chord_intervals(chord, offsets) : 0;
+    if (count == 0 || bass_pitch_class < 0 || bass_pitch_class > 11) {
+        return -1;
+    }
+    int bass_offset = ((bass_pitch_class - chord->root_pitch_class) % 12 + 12) % 12;
+    for (size_t i = 0; i < count; i++) {
+        if (offsets[i] == bass_offset) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
