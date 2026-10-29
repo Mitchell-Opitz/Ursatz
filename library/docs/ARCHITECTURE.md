@@ -26,6 +26,13 @@ A framework may depend on L0 to L6, on `theory/framework.h`, `rules/rule.h` and 
 
 Every module and every framework has an architecture test that allowlists the directories it may include (for example `tests/events/test_architecture_events.c`). A disallowed include fails that test. Framework architecture tests run from the root build like the module ones (since PR #99); see `docs/BUILDING.md`.
 
+## Shared primitives
+
+Small public helpers that every layer above reuses instead of writing its own copy.
+
+- `core/string_copy.h`: `ursatz_string_copy`.
+- `core/rational.h`: `Rational`, a signed exact rational on 64-bit integers, always in lowest terms. Every operation is checked and reports `RATIONAL_ERR_OVERFLOW`; nothing wraps. `time/time_rational.h` bridges it to `MusicalTime`, `Duration` and `PerformanceTime`. `time/exact_rational.h` is deprecated and kept until the Analyzer switches (P24).
+
 ## Vocabulary enums
 
 `src/semantics/` holds plain enums that name theory concepts frameworks share (`CadenceType`, `VoicePart`, `NonChordTone`, and others). Each carries no `EntityID`, no data, and no framework claim, only a name and small name-level predicates. What a name means, and which music it applies to, is always the framework's convention. New enums of this kind are admitted to the kernel only when at least two frameworks need them; a name only one framework uses belongs in that framework. Existing single-framework enums stay until their framework is next changed, then move into it.
