@@ -1,6 +1,7 @@
 #ifndef URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_OUTER_SCALE_DEGREES_H
 #define URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_OUTER_SCALE_DEGREES_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "analysis/outer_voice.h"
@@ -67,5 +68,11 @@ void common_practice_outer_degrees_destroy(CommonPracticeOuterDegreeList *list);
 /* The label of the pitch class `pitch_class` (0..11) in a key on tonic_pitch_class and mode, per the table
    above; NULL for an invalid argument or an unsupported mode. */
 const char *common_practice_scale_degree_label(int pitch_class, int tonic_pitch_class, CommonPracticeKeyMode mode);
+
+/* The numbers behind the label: *degree 1..7 and *alteration -1, 0 or 1 ("b" flat, "#" sharp), so no caller
+   parses the label. False, outputs untouched, for NULL outputs, a pitch class or tonic outside 0..11 or an
+   unsupported mode. */
+bool common_practice_scale_degree_of(int pitch_class, int tonic_pitch_class, CommonPracticeKeyMode mode, int *degree,
+                                     int *alteration);
 
 #endif
