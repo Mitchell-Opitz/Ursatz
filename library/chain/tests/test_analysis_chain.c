@@ -14,6 +14,7 @@
 #include "time/time_signature.h"
 #include "time/time_span.h"
 #include "ursatz_chain/analysis_chain.h"
+#include "../../tests/integration/reference_pieces.h"
 
 /*
  * analysis_chain_run on four reference pieces (Bach 114, Mozart 545, Clementi 36 and Field 1 from tests/fixtures) against fixed expected
@@ -133,24 +134,6 @@ typedef struct {
     size_t event_count;
     AnalysisNoteSet set;
 } ChainInput;
-
-static MeterMap *three_four_map(void) {
-    NoteValue *quarter = NULL;
-    assert(note_value_create(2, &quarter) == NOTE_VALUE_OK);
-    TimeSignature *three_four = NULL;
-    assert(time_signature_create(3, quarter, &three_four) == TIME_SIGNATURE_OK);
-    note_value_destroy(quarter);
-    MusicalTime *zero = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
-    MeterMapChangePoint point = {three_four, zero};
-    EntityID *id = NULL;
-    assert(entity_id_create("bach-114-score-meter", &id) == ENTITY_ID_OK);
-    MeterMap *map = NULL;
-    assert(meter_map_create(id, &point, 1, &map) == METER_MAP_OK);
-    time_signature_destroy(three_four);
-    musical_time_destroy(zero);
-    return map;
-}
 
 static unsigned char *read_file(const char *path, size_t *out_size) {
     FILE *file = fopen(path, "rb");

@@ -331,7 +331,7 @@ static HarmonyCadences chain_cadences(const Piece *piece, const WeightedPipeline
         const StandardTonalityRomanClaim *claim = &romans[s].claim;
         int intervals[4];
         size_t interval_count = 0;
-        intervals_of(claim, intervals, &interval_count);
+        claim_intervals(claim, intervals, &interval_count);
         set_intervals(input, intervals, interval_count);
         input->degree = claim->degree;
         input->inversion = claim->inversion;

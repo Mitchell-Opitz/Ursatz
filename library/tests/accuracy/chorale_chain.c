@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include "chorale_chain.h"
+#include "../integration/reference_pieces.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -205,19 +206,6 @@ static bool same_set(const int *a, size_t an, const int *b, size_t bn) {
         }
     }
     return true;
-}
-
-static void claim_intervals(const StandardTonalityRomanClaim *claim, int out[4], size_t *count) {
-    static const int TRIADS[4][3] = {{0, 4, 7}, {0, 3, 7}, {0, 3, 6}, {0, 4, 8}};
-    static const int SEVENTHS[5][4] = {{0, 4, 7, 11}, {0, 4, 7, 10}, {0, 3, 7, 10}, {0, 3, 6, 10}, {0, 3, 6, 9}};
-    memset(out, 0, 4 * sizeof(int));
-    if (claim->seventh) {
-        memcpy(out, SEVENTHS[claim->quality], 4 * sizeof(int));
-        *count = 4;
-    } else {
-        memcpy(out, TRIADS[claim->quality], 3 * sizeof(int));
-        *count = 3;
-    }
 }
 
 static bool numeral_matches(const RomanTextChord *want, const StandardTonalityRomanResult *got) {

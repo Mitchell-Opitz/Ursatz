@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "reference_pieces.h"
 
 #include "analysis/outer_voice.h"
 #include "analysis_cadence.h"
@@ -89,21 +90,6 @@ static int tonic_of(const char *name) {
         }
     }
     assert(!"unknown tonic");
-    return -1;
-}
-
-static int roman_degree(const char *letters, size_t length) {
-    static const char *const NAMES[7] = {"i", "ii", "iii", "iv", "v", "vi", "vii"};
-    char lower[8] = {0};
-    assert(length < sizeof(lower));
-    for (size_t i = 0; i < length; i++) {
-        lower[i] = (char)tolower((unsigned char)letters[i]);
-    }
-    for (int d = 0; d < 7; d++) {
-        if (strcmp(lower, NAMES[d]) == 0) {
-            return d + 1;
-        }
-    }
     return -1;
 }
 
@@ -219,24 +205,6 @@ static const HandChord *chord_at(const Annotation *a, double t) {
         }
     }
     return NULL;
-}
-
-static MeterMap *three_four_map(void) {
-    NoteValue *quarter = NULL;
-    assert(note_value_create(2, &quarter) == NOTE_VALUE_OK);
-    TimeSignature *three_four = NULL;
-    assert(time_signature_create(3, quarter, &three_four) == TIME_SIGNATURE_OK);
-    note_value_destroy(quarter);
-    MusicalTime *zero = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
-    MeterMapChangePoint point = {three_four, zero};
-    EntityID *id = NULL;
-    assert(entity_id_create("bach-114-score-meter", &id) == ENTITY_ID_OK);
-    MeterMap *map = NULL;
-    assert(meter_map_create(id, &point, 1, &map) == METER_MAP_OK);
-    time_signature_destroy(three_four);
-    musical_time_destroy(zero);
-    return map;
 }
 
 /* --- segment inputs --- */
@@ -458,19 +426,6 @@ static Score run_adapter_alone(const Piece *piece) {
 
 /* --- the whole chain --- */
 
-static void intervals_of(const StandardTonalityRomanClaim *claim, int out[4], size_t *count) {
-    static const int TRIADS[4][3] = {{0, 4, 7}, {0, 3, 7}, {0, 3, 6}, {0, 4, 8}};
-    static const int SEVENTHS[5][4] = {{0, 4, 7, 11}, {0, 4, 7, 10}, {0, 3, 7, 10}, {0, 3, 6, 10}, {0, 3, 6, 9}};
-    memset(out, 0, 4 * sizeof(int));
-    if (claim->seventh) {
-        memcpy(out, SEVENTHS[claim->quality], 4 * sizeof(int));
-        *count = 4;
-    } else {
-        memcpy(out, TRIADS[claim->quality], 3 * sizeof(int));
-        *count = 3;
-    }
-}
-
 static Score run_whole_chain(const Piece *piece) {
     Annotation a = load_annotation(piece->fixture);
     MeterMap *own = piece->score_three_four ? three_four_map() : NULL;
@@ -531,7 +486,7 @@ static Score run_whole_chain(const Piece *piece) {
         const StandardTonalityRomanClaim *claim = &romans[s].claim;
         int intervals[4];
         size_t interval_count = 0;
-        intervals_of(claim, intervals, &interval_count);
+        claim_intervals(claim, intervals, &interval_count);
         set_intervals(input, intervals, interval_count);
         input->degree = claim->degree;
         input->inversion = claim->inversion;

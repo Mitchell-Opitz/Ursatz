@@ -6,6 +6,7 @@
 #include "weighted_pipeline.h"
 #include "pitch/tuning_system.h"
 #include "time/meter_map.h"
+#include "reference_pieces.h"
 
 /*
  * Melody analysis of Bach 114 (Minuet in G, BWV Anh. 114), measures 1-8: the soprano the outer-voice extractor produces from
@@ -28,24 +29,6 @@
 #define FLOOR_CLIMAXES 2
 #define FLOOR_RANGES 0 /* the extractor adopts a left-hand note where the right hand rests (measure 4, beat 1) */
 #define FLOOR_LEAPS 4 /* of 11: one soprano note per segment drops the quick notes the leaps arrive on */
-
-static MeterMap *three_four_map(void) {
-    NoteValue *quarter = NULL;
-    assert(note_value_create(2, &quarter) == NOTE_VALUE_OK);
-    TimeSignature *three_four = NULL;
-    assert(time_signature_create(3, quarter, &three_four) == TIME_SIGNATURE_OK);
-    note_value_destroy(quarter);
-    MusicalTime *zero = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
-    MeterMapChangePoint point = {three_four, zero};
-    EntityID *id = NULL;
-    assert(entity_id_create("bach-114-score-meter", &id) == ENTITY_ID_OK);
-    MeterMap *map = NULL;
-    assert(meter_map_create(id, &point, 1, &map) == METER_MAP_OK);
-    time_signature_destroy(three_four);
-    musical_time_destroy(zero);
-    return map;
-}
 
 
 /* --- the melody line --- */

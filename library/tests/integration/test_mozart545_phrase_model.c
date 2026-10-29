@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "reference_pieces.h"
 
 #include "analysis_phrase.h"
 #include "analysis_six_four.h"
@@ -74,21 +75,6 @@ static int tonic_of(const char *name) {
     }
     assert(strcmp(name, "G") == 0);
     return 7;
-}
-
-static int roman_degree(const char *letters, size_t length) {
-    static const char *const NAMES[7] = {"i", "ii", "iii", "iv", "v", "vi", "vii"};
-    char lower[8] = {0};
-    assert(length < sizeof(lower));
-    for (size_t i = 0; i < length; i++) {
-        lower[i] = (char)tolower((unsigned char)letters[i]);
-    }
-    for (int d = 0; d < 7; d++) {
-        if (strcmp(lower, NAMES[d]) == 0) {
-            return d + 1;
-        }
-    }
-    return -1;
 }
 
 /* "V4/3", "ii6", "viio/V", "I6/4": degree, seventh, diminished, inversion, applied target. */
@@ -395,19 +381,6 @@ static void test_adapter_alone(void) {
 
 /* --- the whole chain --- */
 
-static void intervals_of(const StandardTonalityRomanClaim *claim, int out[4], size_t *count) {
-    static const int TRIADS[4][3] = {{0, 4, 7}, {0, 3, 7}, {0, 3, 6}, {0, 4, 8}};
-    static const int SEVENTHS[5][4] = {{0, 4, 7, 11}, {0, 4, 7, 10}, {0, 3, 7, 10}, {0, 3, 6, 10}, {0, 3, 6, 9}};
-    memset(out, 0, 4 * sizeof(int));
-    if (claim->seventh) {
-        memcpy(out, SEVENTHS[claim->quality], 4 * sizeof(int));
-        *count = 4;
-    } else {
-        memcpy(out, TRIADS[claim->quality], 3 * sizeof(int));
-        *count = 3;
-    }
-}
-
 /* The degree (1..7) of a pitch position in a major key on `tonic`, or 0 for a chromatic note or an absent one. */
 static int degree_of(const OuterVoiceEntry *entry, int tonic) {
     static const int DEGREE_OF_OFFSET[12] = {1, 0, 2, 0, 3, 4, 0, 5, 0, 6, 0, 7};
@@ -480,7 +453,7 @@ static void test_whole_chain(void) {
         const StandardTonalityRomanClaim *claim = &romans[s].claim;
         int intervals[4];
         size_t interval_count = 0;
-        intervals_of(claim, intervals, &interval_count);
+        claim_intervals(claim, intervals, &interval_count);
         set_intervals(input, intervals, interval_count);
         input->degree = claim->degree;
         input->inversion = claim->inversion;

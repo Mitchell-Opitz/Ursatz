@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../integration/reference_pieces.h"
 
 #include "analysis/outer_voice.h"
 #include "weighted_pipeline.h"
@@ -74,24 +75,6 @@ static long expected_pitch(const Written *notes, size_t count, long from, long t
         }
     }
     return found;
-}
-
-static MeterMap *three_four_map(void) {
-    NoteValue *quarter = NULL;
-    assert(note_value_create(2, &quarter) == NOTE_VALUE_OK);
-    TimeSignature *three_four = NULL;
-    assert(time_signature_create(3, quarter, &three_four) == TIME_SIGNATURE_OK);
-    note_value_destroy(quarter);
-    MusicalTime *zero = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
-    MeterMapChangePoint point = {three_four, zero};
-    EntityID *id = NULL;
-    assert(entity_id_create("bach-114-score-meter", &id) == ENTITY_ID_OK);
-    MeterMap *map = NULL;
-    assert(meter_map_create(id, &point, 1, &map) == METER_MAP_OK);
-    time_signature_destroy(three_four);
-    musical_time_destroy(zero);
-    return map;
 }
 
 typedef struct {
