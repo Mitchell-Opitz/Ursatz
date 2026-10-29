@@ -5,9 +5,14 @@
 #include <stddef.h>
 
 #include "analysis/outer_voice.h"
+#include "analysis/voice_separation.h"
+#include "analysis_expansion.h"
+#include "analysis_phrase.h"
 #include "analysis_cadence.h"
 #include "chord_input.h"
 #include "key_regions.h"
+#include "meter_analysis_input.h"
+#include "texture_analysis_input.h"
 #include "roman_numeral_adapter.h"
 #include "semantics/analysis_key.h"
 #include "semantics/analysis_note.h"
@@ -15,6 +20,8 @@
 #include "semantics/sonority_segmentation.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
+#include "pitch/pitch_numeric_value.h"
+#include "pitch/tuning_system.h"
 #include "weighted_chord_identification.h"
 
 /*
@@ -120,5 +127,89 @@ ChainInputStatus chain_add_boundary_cadences(const HarmonySegment *prepared, siz
  * (ChainSegments.starts), indexed like the cadences' arrivals.
  */
 ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, const double *segment_starts, const HarmonyCadences *cadences);
+
+/*
+ * The notes' events and sounding pitches as the kernel's analyses take them (outer_voice_extract, voice_separate): a NoteEvent array
+ * parallel to the note set (borrowed) and a PitchNumericValue per note under one MIDI tuning system (owned here, the semitone number as the
+ * position, as the importers make them). Every note needs its event and a known pitch.
+ */
+typedef struct {
+    NoteEvent **events;             /* owned array of borrowed events; count entries, in the note set's order */
+    PitchNumericValue **values;     /* owned; parallel to events */
+    TuningSystem *tuning;           /* owned */
+    size_t count;
+} ChainPitches;
+
+ChainInputStatus chain_build_pitches(const AnalysisNoteSet *notes, ChainPitches *out);
+void chain_pitches_destroy(ChainPitches *pitches);
+
+/*
+ * The input of standard-form's adapter (analysis_input.h) as the chain builds it: spans copied for the input to borrow, kept here.
+ */
+typedef struct {
+    StandardFormInput input;
+    TimeSpan **spans;     /* owned: every span the input borrows */
+    size_t span_count;
+    size_t span_capacity;
+} ChainFormInput;
+
+/*
+ * The form input over the measures [first_measure, last_measure] (MeterMap numbers): the soprano of the outer lines as notes (consecutive
+ * segments on one note id are one note), every segment starting in the measures as a segment, and the cadences found (NULL for none),
+ * each arriving over the windows of its first to last arrival segment, then finished. `lines` are the outer lines of the segmentation
+ * `segments` (the notes' events are found in `notes` by id). Destroy with chain_form_input_destroy.
+ */
+ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const ChainSegments *segments, const OuterVoiceLines *lines,
+                                        int first_measure, int last_measure, const HarmonyCadences *cadences, ChainFormInput *out);
+
+/*
+ * The form input for the motive analysis (analysis_motive.h): a NOTE-LEVEL soprano, which the outer-voice line (one note per segment)
+ * cannot give. The soprano is the highest sounding note at each attack: at every onset, among the notes sounding then, the highest (the
+ * later attack among equals); it is a soprano note when it is attacked then. Each note carries its scale degree in the key on
+ * `tonic_pitch_class` (a chromatic note its altered degree). Only notes starting in the measures [first_measure, last_measure]. The
+ * cadences (NULL for none) are added over the windows of `segments`. Finished.
+ */
+ChainInputStatus chain_build_motive_input(const AnalysisNoteSet *notes, const ChainSegments *segments, int first_measure,
+                                          int last_measure, int tonic_pitch_class, CommonPracticeKeyMode mode,
+                                          const HarmonyCadences *cadences, ChainFormInput *out);
+void chain_form_input_destroy(ChainFormInput *input);
+
+/*
+ * The input of standard-meter's adapter (meter_analysis_input.h): the notes starting in the measures [first_measure, last_measure] (line 0
+ * for a note of the outer soprano, 1 for the bass, 2 for any other), a chord change at the start of every segment whose chord label
+ * differs from the one before (both non-NULL; `chord_labels` has one entry per segment, compared as text), and the phrases of the form
+ * adapter (a span with its extension, the arrival chord of its cadence, its length change). `form`, `phrases` and `expansions` may be NULL
+ * for none. The form adapter reports no elided cadences, so a detected phrase is never elided.
+ */
+typedef struct {
+    StandardMeterInput input;
+    TimeSpan **spans;      /* owned: every span the input borrows */
+    size_t span_count;
+    size_t span_capacity;
+    MusicalTime **times;   /* owned: every time the input borrows */
+    size_t time_count;
+    size_t time_capacity;
+} ChainMeterInput;
+
+ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const OuterVoiceLines *lines, const ChainSegments *segments,
+                                         const char *const *chord_labels, int first_measure, int last_measure,
+                                         const StandardFormInput *form, const StandardFormPhrases *phrases,
+                                         const StandardFormExpansions *expansions, ChainMeterInput *out);
+void chain_meter_input_destroy(ChainMeterInput *input);
+
+/*
+ * The input of standard-texture's adapter (texture_analysis_input.h): every note with the voice the kernel's rule-based voice separation
+ * (voice_separate, L2.7) gives it. The separation runs per stream, and a note's stream is its track (a MIDI track chunk is usually a hand);
+ * a note with no track is in stream 0. The note's voice is the separation's index inside its stream (0 the top) and its confidence the
+ * separation's. Destroy with chain_texture_input_destroy.
+ */
+typedef struct {
+    StandardTextureInput input;
+    VoiceAssignment assignment;  /* owned; one entry per note, in the note set's order */
+    size_t stream_count;
+} ChainTextureInput;
+
+ChainInputStatus chain_build_texture_input(const AnalysisNoteSet *notes, const ChainPitches *pitches, ChainTextureInput *out);
+void chain_texture_input_destroy(ChainTextureInput *input);
 
 #endif
