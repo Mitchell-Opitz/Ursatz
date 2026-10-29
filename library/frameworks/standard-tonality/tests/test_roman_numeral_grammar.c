@@ -334,9 +334,12 @@ static void test_base_and_from_base(void) {
            base.seventh_quality == STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED);
 
     Text bad = plain(0, Q(MAJOR), 0);
-    StandardTonalityRomanNumeral untouched = {9, false, STANDARD_TONALITY_TRIAD_MINOR, STANDARD_TONALITY_SEVENTH_MINOR_MINOR};
-    base = untouched;
-    assert(!standard_tonality_numeral_base(&bad, &base) && memcmp(&base, &untouched, sizeof(base)) == 0);
+    base.degree = 9;
+    base.seventh = false;
+    base.triad = STANDARD_TONALITY_TRIAD_MINOR;
+    base.seventh_quality = STANDARD_TONALITY_SEVENTH_MINOR_MINOR;
+    assert(!standard_tonality_numeral_base(&bad, &base) && base.degree == 9 && !base.seventh &&
+           base.triad == STANDARD_TONALITY_TRIAD_MINOR && base.seventh_quality == STANDARD_TONALITY_SEVENTH_MINOR_MINOR);
     assert(!standard_tonality_numeral_base(&text, NULL));
     assert(!standard_tonality_numeral_base(NULL, &base));
 
