@@ -1,6 +1,6 @@
 #include "analysis_motive.h"
 #include "harmony_cadence_rules.h"
-#include "form_kernel_bridge.h"
+#include "ursatz_chain/form_bridge.h"
 #include "hand_cadences.h"
 #include "weighted_pipeline.h"
 
@@ -10,7 +10,7 @@
  *
  * The motive adapter runs on a note-level soprano (the highest sounding note at each attack, chain_build_motive_input) with its scale degrees, the
  * phrases the form adapter finds from the annotated phrase end of tests/fixtures/annotations/mozart545_phrase_form.txt, and the themes,
- * with the library's defaults and the kernel's window matching injected (form_kernel_bridge.h).
+ * with the library's defaults and the kernel's window matching injected (ursatz_chain/form_bridge.h).
  *
  * A FAMILY is found when the adapter has a family with an occurrence starting within one beat of the annotated family's first occurrence.
  * An OCCURRENCE is found, with the right kind, when the adapter has an occurrence within one beat of it of the annotated kind (exact, real
@@ -122,10 +122,10 @@ static void test_mozart_545(void) {
     StandardFormSegmentation segmentation;
     StandardFormThemes themes;
     StandardFormMotives motives;
-    assert(standard_form_segment_phrases(&build.input, NULL, form_kernel_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
+    assert(standard_form_segment_phrases(&build.input, NULL, chain_form_boundary_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_segment_ideas(&build.input, &phrases, NULL, &segmentation) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_identify_themes(&build.input, &phrases, &segmentation, NULL, &themes) == STANDARD_FORM_ANALYSIS_OK);
-    assert(standard_form_find_motives(&build.input, &phrases, &segmentation, &themes, NULL, form_kernel_match_windows, NULL,
+    assert(standard_form_find_motives(&build.input, &phrases, &segmentation, &themes, NULL, chain_form_match_windows, NULL,
                                       &motives) == STANDARD_FORM_ANALYSIS_OK);
     printf("  the adapter found %zu motive famil%s\n", motives.family_count, motives.family_count == 1 ? "y" : "ies");
 

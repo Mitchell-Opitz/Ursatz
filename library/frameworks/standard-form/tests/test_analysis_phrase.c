@@ -14,7 +14,7 @@ static const int RISING[4] = {60, 62, 64, 65};
 
 static StandardFormPhrases segment(const FormFixture *f, const StandardFormConfig *config) {
     StandardFormPhrases phrases;
-    assert(standard_form_segment_phrases(&f->input, config, form_kernel_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
+    assert(standard_form_segment_phrases(&f->input, config, chain_form_boundary_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
     return phrases;
 }
 
@@ -251,15 +251,15 @@ static void test_bad_calls_are_refused(void) {
     form_init(&f, 4, 0);
     form_measures(&f, 1, 4, RISING);
     StandardFormPhrases phrases;
-    assert(standard_form_segment_phrases(&f.input, NULL, form_kernel_detect, NULL, &phrases) ==
+    assert(standard_form_segment_phrases(&f.input, NULL, chain_form_boundary_detect, NULL, &phrases) ==
            STANDARD_FORM_ANALYSIS_ERR_BAD_CONFIG); /* not finished */
     form_finish(&f);
     assert(standard_form_segment_phrases(&f.input, NULL, NULL, NULL, &phrases) == STANDARD_FORM_ANALYSIS_ERR_NO_DETECTOR);
     StandardFormConfig bad = standard_form_config_default();
     bad.similarity_min = 0.0;
-    assert(standard_form_segment_phrases(&f.input, &bad, form_kernel_detect, NULL, &phrases) ==
+    assert(standard_form_segment_phrases(&f.input, &bad, chain_form_boundary_detect, NULL, &phrases) ==
            STANDARD_FORM_ANALYSIS_ERR_BAD_CONFIG);
-    assert(standard_form_segment_phrases(NULL, NULL, form_kernel_detect, NULL, &phrases) ==
+    assert(standard_form_segment_phrases(NULL, NULL, chain_form_boundary_detect, NULL, &phrases) ==
            STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT);
     assert(standard_form_input_add_cadence(&f.input, "x", NULL, PAC, 3, false, 0.1) == STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);
     assert(standard_form_input_add_cadence(&f.input, "x", f.note_spans[0], PAC, 3, false, 1.5) ==
@@ -269,7 +269,7 @@ static void test_bad_calls_are_refused(void) {
     FormFixture empty;
     form_init(&empty, 4, 0);
     form_finish(&empty);
-    assert(standard_form_segment_phrases(&empty.input, NULL, form_kernel_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
+    assert(standard_form_segment_phrases(&empty.input, NULL, chain_form_boundary_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
     assert(phrases.count == 0 && phrases.items == NULL);
     form_destroy(&empty);
 }

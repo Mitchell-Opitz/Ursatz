@@ -8,7 +8,7 @@
 #include "analysis_input.h"
 #include "core/provenance_reference.h"
 #include "events/note_event.h"
-#include "form_kernel_bridge.h"
+#include "ursatz_chain/form_bridge.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_identity.h"
 #include "time/duration.h"

@@ -22,7 +22,7 @@ static void phrase_of(FormFixture *f, int measures, const int *pattern_for_measu
 }
 
 static StandardFormSegmentation analyze(const FormFixture *f, StandardFormPhrases *phrases) {
-    assert(standard_form_segment_phrases(&f->input, NULL, form_kernel_detect, NULL, phrases) == STANDARD_FORM_ANALYSIS_OK);
+    assert(standard_form_segment_phrases(&f->input, NULL, chain_form_boundary_detect, NULL, phrases) == STANDARD_FORM_ANALYSIS_OK);
     StandardFormSegmentation segmentation;
     assert(standard_form_segment_ideas(&f->input, phrases, NULL, &segmentation) == STANDARD_FORM_ANALYSIS_OK);
     return segmentation;

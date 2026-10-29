@@ -3,7 +3,7 @@
 #include "framework_v1_chain.h"
 
 #include "analysis_motive.h"
-#include "form_kernel_bridge.h"
+#include "ursatz_chain/form_bridge.h"
 #include "ursatz_chain/chain_inputs.h"
 
 #include "interpretation/chord.h"
@@ -401,12 +401,12 @@ int main(void) {
     StandardFormSegmentation segmentation;
     StandardFormThemes themes;
     StandardFormMotives motives;
-    assert(standard_form_segment_phrases(&build.input, NULL, form_kernel_detect, NULL, &phrases) ==
+    assert(standard_form_segment_phrases(&build.input, NULL, chain_form_boundary_detect, NULL, &phrases) ==
            STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_segment_ideas(&build.input, &phrases, NULL, &segmentation) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_identify_themes(&build.input, &phrases, &segmentation, NULL, &themes) ==
            STANDARD_FORM_ANALYSIS_OK);
-    assert(standard_form_find_motives(&build.input, &phrases, &segmentation, &themes, NULL, form_kernel_match_windows, NULL,
+    assert(standard_form_find_motives(&build.input, &phrases, &segmentation, &themes, NULL, chain_form_match_windows, NULL,
                                       &motives) == STANDARD_FORM_ANALYSIS_OK);
 
     /* one file per process: the plain and the valgrind runs may be scheduled together */

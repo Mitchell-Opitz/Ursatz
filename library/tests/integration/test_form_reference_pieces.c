@@ -32,7 +32,7 @@
 #include "analysis_ideas.h"
 #include "analysis_phrase.h"
 #include "analysis_theme.h"
-#include "form_kernel_bridge.h"
+#include "ursatz_chain/form_bridge.h"
 #include "hand_cadences.h"
 #include "analysis_input.h"
 #include "harmony_cadence_rules.h"
@@ -145,7 +145,7 @@ typedef struct {
 } FormAnalysis;
 
 static void form_analyze(const StandardFormInput *input, FormAnalysis *out) {
-    assert(standard_form_segment_phrases(input, NULL, form_kernel_detect, NULL, &out->phrases) ==
+    assert(standard_form_segment_phrases(input, NULL, chain_form_boundary_detect, NULL, &out->phrases) ==
            STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_segment_ideas(input, &out->phrases, NULL, &out->segmentation) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_identify_themes(input, &out->phrases, &out->segmentation, NULL, &out->themes) ==
