@@ -18,6 +18,9 @@ include(FetchContent)
 # `if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)` so it doesn't
 # try to build its tests when consumed this way.
 set(URSATZ_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+# The GUI vendors cJSON. It comes first so the Analyzer reuses this target
+# instead of adding its own.
+add_subdirectory(external/cjson)
 add_subdirectory(external/ursatz)
 
 # --- Ursatz Analyzer dependency ------------------------------------------
