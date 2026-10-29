@@ -4,7 +4,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "analysis/outer_voice.h"
+#include "analysis_cadence.h"
+#include "chord_input.h"
 #include "key_regions.h"
+#include "roman_numeral_adapter.h"
 #include "semantics/analysis_key.h"
 #include "semantics/analysis_note.h"
 #include "semantics/beat_strength.h"
@@ -78,5 +82,43 @@ void chain_key_segments_destroy(CommonPracticeKeySegment *key_segments);
 ChainInputStatus chain_estimate_key_regions(const CommonPracticeKeySegment *key_segments, size_t count, const MeterMap *map,
                                             const AnalysisKeyEvent *events, size_t event_count,
                                             const CommonPracticeKeyRegionsConfig *config, CommonPracticeKeyRegions *out);
+
+/*
+ * The inputs of standard-harmony's cadence adapter, one HarmonySegmentInput per segment, as the Roman numerals and the outer voices read them
+ * (HarmonySegmentInput, analysis_input.h): the segment (through harmony_segment_input_set_segment), the numeral's degree, intervals,
+ * inversion, applied target, mode and uncertainty, and the degrees of the outer lines' notes in the local key (0 for a chromatic or an
+ * absent note). A segment with no numeral is passed as not a chord (degree 0). One beat length, the first beat of measure 1's, serves
+ * every segment.
+ *
+ * `chords` and `romans` are the standard-tonality chord inputs and Roman results of the first `count` segments, `lines` the outer lines
+ * of the same segmentation (count entries at least). The result borrows from them and from the segments and map.
+ */
+typedef struct {
+    HarmonySegmentInput *inputs;  /* owned; count entries */
+    MetricalPosition **positions; /* owned */
+    Duration *beat_length;        /* owned */
+    size_t count;
+} ChainHarmonyInputs;
+
+ChainInputStatus chain_build_harmony_segments(const ChainSegments *segments, size_t count, const MeterMap *map,
+                                              const StandardTonalityChordInput *chords, const StandardTonalityRomanResult *romans,
+                                              const OuterVoiceLines *lines, ChainHarmonyInputs *out);
+void chain_harmony_inputs_destroy(ChainHarmonyInputs *inputs);
+
+/*
+ * Dominants before a section start are half cadences of the earlier section (R-038). A section starts where the key regions come back to
+ * `home_key_index` (0..23, the key_index of a region) after leaving it; the regions are the ones the chords were read in. Adds the
+ * boundary readings to `cadences` (harmony_analysis_add_boundary_cadences). `prepared` is the output of harmony_analysis_prepare over
+ * the same `count` segments.
+ */
+ChainInputStatus chain_add_boundary_cadences(const HarmonySegment *prepared, size_t count, const CommonPracticeKeyRegions *regions,
+                                             int home_key_index, HarmonyCadences *cadences);
+
+/*
+ * The key changes' extents confirmed by the cadences found (B5): a region is a modulation only when a cadence arrives inside it, and the
+ * change out of an excursion takes the excursion's extent. `segment_starts` is each segment's start in whole notes
+ * (ChainSegments.starts), indexed like the cadences' arrivals.
+ */
+ChainInputStatus chain_confirm_key_changes(CommonPracticeKeyRegions *regions, const double *segment_starts, const HarmonyCadences *cadences);
 
 #endif

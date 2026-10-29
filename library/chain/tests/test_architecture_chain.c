@@ -32,6 +32,10 @@ static const char *FRAMEWORK_HEADERS[] = {
     "weighted_chord_identification.h",
     "metric_position_rules.h",
     "segmentation_beat_grid.h",
+    "analysis_cadence.h",
+    "chord_input.h",
+    "roman_numeral_adapter.h",
+    "harmony_key_change.h",
 };
 
 static int has_prefix(const char *s, const char *prefix) {
