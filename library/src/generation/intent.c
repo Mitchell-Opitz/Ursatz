@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
+
 struct Intent {
     EntityID *id;
     char *purpose;
@@ -19,22 +21,13 @@ struct Intent {
     ProvenanceReference *provenance;
 };
 
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
-
 /* Returns false only on allocation failure; *out is NULL for a NULL value without that being a failure. */
 static bool copy_optional_string(const char *value, char **out) {
     if (value == NULL) {
         *out = NULL;
         return true;
     }
-    *out = copy_string(value);
+    *out = ursatz_string_copy(value);
     return *out != NULL;
 }
 
@@ -91,13 +84,13 @@ IntentResult intent_create(EntityID *id, const char *purpose, const char *target
         return INTENT_ERR_ALLOC;
     }
 
-    intent->purpose = copy_string(purpose);
+    intent->purpose = ursatz_string_copy(purpose);
     if (intent->purpose == NULL) {
         free(intent);
         return INTENT_ERR_ALLOC;
     }
 
-    intent->target = copy_string(target);
+    intent->target = ursatz_string_copy(target);
     if (intent->target == NULL) {
         free(intent->purpose);
         free(intent);

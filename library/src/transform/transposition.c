@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
 #include "core/voice_reference.h"
 #include "pitch/pitch_identity.h"
 #include "pitch/pitch_spelling.h"
@@ -20,15 +21,6 @@ struct Transposition {
     bool has_range_policy;
     bool has_instrument_context;
 };
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
 
 TranspositionResult transposition_create(EntityID *id, long semitones, const char *spelling_behavior,
                                           bool has_tuning_behavior, bool has_range_policy,
@@ -58,7 +50,7 @@ TranspositionResult transposition_create(EntityID *id, long semitones, const cha
         return TRANSPOSITION_ERR_ALLOC;
     }
 
-    transposition->spelling_behavior = copy_string(spelling_behavior);
+    transposition->spelling_behavior = ursatz_string_copy(spelling_behavior);
     if (transposition->spelling_behavior == NULL) {
         free(transposition);
         return TRANSPOSITION_ERR_ALLOC;

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
 #include "core/voice_reference.h"
 #include "pitch/pitch_spelling.h"
 #include "time/duration.h"
@@ -18,15 +19,6 @@ struct Inversion {
     char *spelling_policy;
     bool has_tuning_semantics;
 };
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
 
 InversionResult inversion_create(EntityID *id, PitchIdentity *axis, const char *pitch_space,
                                   const char *spelling_policy, bool has_tuning_semantics,
@@ -55,13 +47,13 @@ InversionResult inversion_create(EntityID *id, PitchIdentity *axis, const char *
         return INVERSION_ERR_ALLOC;
     }
 
-    inversion->pitch_space = copy_string(pitch_space);
+    inversion->pitch_space = ursatz_string_copy(pitch_space);
     if (inversion->pitch_space == NULL) {
         free(inversion);
         return INVERSION_ERR_ALLOC;
     }
 
-    inversion->spelling_policy = copy_string(spelling_policy);
+    inversion->spelling_policy = ursatz_string_copy(spelling_policy);
     if (inversion->spelling_policy == NULL) {
         free(inversion->pitch_space);
         free(inversion);

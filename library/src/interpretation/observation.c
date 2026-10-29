@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
+
 struct Observation {
     EntityID *id;
     EntityID *subject_id;
@@ -14,15 +16,6 @@ struct Observation {
     Value *timestamp;
     ProvenanceReference *provenance;
 };
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
 
 ObservationResult observation_create(EntityID *id, EntityID *subject_id, const char *property,
                                       Value *value_or_candidates, const char *method, const char *source,
@@ -58,20 +51,20 @@ ObservationResult observation_create(EntityID *id, EntityID *subject_id, const c
         return OBSERVATION_ERR_ALLOC;
     }
 
-    observation->property = copy_string(property);
+    observation->property = ursatz_string_copy(property);
     if (observation->property == NULL) {
         free(observation);
         return OBSERVATION_ERR_ALLOC;
     }
 
-    observation->method = copy_string(method);
+    observation->method = ursatz_string_copy(method);
     if (observation->method == NULL) {
         free(observation->property);
         free(observation);
         return OBSERVATION_ERR_ALLOC;
     }
 
-    observation->source = copy_string(source);
+    observation->source = ursatz_string_copy(source);
     if (observation->source == NULL) {
         free(observation->method);
         free(observation->property);

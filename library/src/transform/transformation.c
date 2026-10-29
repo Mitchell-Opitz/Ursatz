@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/string_copy.h"
+
 struct Transformation {
     EntityID *id;
     char *input_type;
@@ -15,15 +17,6 @@ struct Transformation {
     bool deterministic;
     ProvenanceReference *provenance;
 };
-
-static char *copy_string(const char *value) {
-    size_t len = strlen(value);
-    char *copy = (char *)malloc(len + 1);
-    if (copy != NULL) {
-        memcpy(copy, value, len + 1);
-    }
-    return copy;
-}
 
 TransformationResult transformation_create(EntityID *id, const char *input_type, Value *parameters,
                                             const char *output_type, const char *preserved_dimensions,
@@ -60,20 +53,20 @@ TransformationResult transformation_create(EntityID *id, const char *input_type,
         return TRANSFORMATION_ERR_ALLOC;
     }
 
-    transformation->input_type = copy_string(input_type);
+    transformation->input_type = ursatz_string_copy(input_type);
     if (transformation->input_type == NULL) {
         free(transformation);
         return TRANSFORMATION_ERR_ALLOC;
     }
 
-    transformation->output_type = copy_string(output_type);
+    transformation->output_type = ursatz_string_copy(output_type);
     if (transformation->output_type == NULL) {
         free(transformation->input_type);
         free(transformation);
         return TRANSFORMATION_ERR_ALLOC;
     }
 
-    transformation->preserved_dimensions = copy_string(preserved_dimensions);
+    transformation->preserved_dimensions = ursatz_string_copy(preserved_dimensions);
     if (transformation->preserved_dimensions == NULL) {
         free(transformation->output_type);
         free(transformation->input_type);
@@ -81,7 +74,7 @@ TransformationResult transformation_create(EntityID *id, const char *input_type,
         return TRANSFORMATION_ERR_ALLOC;
     }
 
-    transformation->modified_dimensions = copy_string(modified_dimensions);
+    transformation->modified_dimensions = ursatz_string_copy(modified_dimensions);
     if (transformation->modified_dimensions == NULL) {
         free(transformation->preserved_dimensions);
         free(transformation->output_type);
@@ -90,7 +83,7 @@ TransformationResult transformation_create(EntityID *id, const char *input_type,
         return TRANSFORMATION_ERR_ALLOC;
     }
 
-    transformation->mapping_behavior = copy_string(mapping_behavior);
+    transformation->mapping_behavior = ursatz_string_copy(mapping_behavior);
     if (transformation->mapping_behavior == NULL) {
         free(transformation->modified_dimensions);
         free(transformation->preserved_dimensions);
@@ -100,7 +93,7 @@ TransformationResult transformation_create(EntityID *id, const char *input_type,
         return TRANSFORMATION_ERR_ALLOC;
     }
 
-    transformation->validation = copy_string(validation);
+    transformation->validation = ursatz_string_copy(validation);
     if (transformation->validation == NULL) {
         free(transformation->mapping_behavior);
         free(transformation->modified_dimensions);

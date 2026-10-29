@@ -5,6 +5,7 @@ add_library(ursatz
     identity/version_model.c
     identity/schema_version.c
     core/entity.c
+    core/string_copy.c
     core/value.c
     core/occurrence.c
     core/equality.c
