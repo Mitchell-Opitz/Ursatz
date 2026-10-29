@@ -14,3 +14,11 @@ explicit, named Theory Framework.
 See [docs/BUILDING.md](docs/BUILDING.md) for build and test instructions, and
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the layer model and current module status.
 Per-module detail lives under `docs/modules/`.
+
+## Using the library
+
+Link `ursatz` (and the frameworks and `ursatz_chain` you need) from a submodule build. A consumer sees only the
+public headers: kernel headers by their module path (`time/meter_map.h`), framework headers by their folder
+name (`standard-form/analysis/analysis_phrase.h`), the chain as `ursatz_chain/analysis_chain.h`. An app that
+still includes source paths builds with `-DURSATZ_LEGACY_INCLUDE_DIRS=ON` until it switches. Details in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), Public surface.

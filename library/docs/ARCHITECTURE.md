@@ -60,6 +60,24 @@ One owner per analytic job (R-224). Every other implementation of the job is ret
 | Voice assignment | `voice_separate` (`src/analysis/voice_separation.c`); outer lines are their own job, owner `outer_voice_extract` | `standard_texture_consolidate_voices`: texture's merge step over assigned voices, not assignment, kept. `vl_separated` (`tests/integration/voice_leading_util.h`): kept, and it calls `voice_separate` itself; it separates the notes of a hand-labelled four-part fixture next to the fixture's true parts, an input `chain_build_voice_grid` (which separates the notes of a piece) does not take. |
 | Motion classification | `standard_counterpoint_classify_motions` (`frameworks/standard-counterpoint/analysis/analysis_motion.c`, `MotionType`) | `voice_leading_analysis_analyze`: packaging of caller-supplied motions (its docs say so), kept as packaging. |
 
+## Public surface
+
+A library target exposes only the headers it names (R-223). `ursatz_public_headers` (`cmake/UrsatzPublicHeaders.cmake`) copies each public header at configure time to `build/public/<target>/<prefix>/<path>` and makes that folder the target's public include directory. The target's own source directories are private. Re-running configure stages an edited header again.
+
+| Target | Included as | Example |
+|---|---|---|
+| `ursatz` (kernel) | its module folder, no prefix | `time/meter_map.h`, `analysis/motive_sketch.h` |
+| a framework | its folder name, then the path in the framework | `standard-form/analysis/analysis_motive.h`, `common-practice-minimal/key_regions.h` |
+| `ursatz_chain` | `ursatz_chain/` | `ursatz_chain/analysis_chain.h` |
+
+A framework or chain source that includes another framework's header uses that path, never the bare name, so the eight names that exist in more than one framework (`analysis_claim.h`, `analysis_input.h`, `analysis_phrase.h`, `framework.h`, `hierarchy_rules.h`, `key_signature_rules.h`, `rule_pair.h`, `stem_rules.h`) mean one header each. A sibling or a header of the same framework stays bare. `rule_pair.h` stays private in each framework.
+
+The public set of a target is: every header the apps include (`docs/public-headers-baseline.txt`, made by `scripts/app_includes.sh <app checkout>...`), the owners named on this page, every header a framework or the chain takes from another target, every header those include, and nothing named `*_internal.h`. `time/exact_rational.h` is not public: no library header includes it (the B-A-3 note about `motive_sketch.h` no longer holds) and the apps use `core/rational.h`. `internal_expansion_technique.h` is a plain enum and is public. A framework with nothing in the set stages nothing.
+
+`URSATZ_LEGACY_INCLUDE_DIRS` (default OFF) also exposes each target's source directories, as before the public sets. An app turns it ON in its bump commit and OFF when its includes are switched (P24 Analyzer, P25 Composer, P27 GUI); P27 removes the option. A test sees the internals of what it tests (`ursatz_test_includes()`); an app does not.
+
+Three tests guard this: `architecture_public_headers` (a public header includes only public headers of its own or a linked target), `public_headers_compile` (a generated file per target includes every public header and compiles with only the staged folders of the target and its links), `architecture_header_paths` (no bare include of another framework's header).
+
 ## Placement rule
 
 Every analysis algorithm is library code (R-217). The kernel owns what needs no theory; a framework owns what one theory defines; the chain owns what joins them. The Analyzer orchestrates, combines, caches and exports: it calls owners, places their results in its report, stores them and renders documents. It holds no copy of an algorithm a library owns. What stays in the Analyzer is the names of its own style statistics (`style_label_interval`, `_contour`, `_duration`, `_tempo`, `_density`, `_join`, `_nct_figure`, `_progression` and the style dimension and category tables), the window search and scoring of similar material over stored documents, motive link caching and scope reading, report placement, and document rendering. The Composer and the GUI follow the same rule: a theory rule either app needs is added here first and the app calls it.
