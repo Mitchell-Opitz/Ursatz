@@ -10,7 +10,7 @@ ID. The expected values are verified, and the chain reports both readings of a V
 
 ## What is asserted
 
-The chain is the full chain as `framework_v1_chain.h` runs it: import, the piece's meter, adaptive segments, local key regions (with the file's key
+The chain is the production chain, `analysis_chain_run` to the form stage on the piece's notes (`framework_v1_chain.h` loads the expected values, runs it and keeps the results for the checks): import, the piece's meter, adaptive segments, local key regions (with the file's key
 signature events), chords identified in each region's key, Roman numerals, outer voices, the cadence adapter, and the L3.6 adapter (phrases, ideas, themes,
 expansions). No stage is given an answer, and every default is the library's. (Bach 114's file declares 4/4 and the piece is 3/4, so a 3/4 meter replaces it, as in
 every other reference-piece test. Chord identification reads each key region in its own mode: the major set in a major region, the diatonic triads and sevenths of natural, harmonic and melodic minor in a minor one.)
