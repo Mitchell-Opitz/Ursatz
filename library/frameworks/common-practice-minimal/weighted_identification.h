@@ -9,6 +9,7 @@
 #include "key_vocabulary.h"
 #include "semantics/analysis_note.h"
 #include "semantics/beat_strength.h"
+#include "semantics/tone_line.h"
 #include "time/time_span.h"
 
 /*
@@ -65,6 +66,14 @@ typedef struct {
     double missing_third_penalty;  /* used by scoring */
     double bass_chord_tone_bonus;  /* used by scoring */
     double min_coverage;           /* used by scoring: a best score below it is "no match" */
+    /* Labels leftover tones in common_practice_identify_weighted_sequence. NULL (the default) keeps
+       common_practice_label_leftover_tones. With one, the leftover members that have a voice_id are labelled per
+       voice: the voice's attacks in time order form a line, each note carries the chord mask of the segment it
+       starts in, and the labels are mapped back to the leftover members (a held member takes the label of the
+       note it continues, found by note_id). Members without a voice_id, and a voice the classifier refuses,
+       keep the framework rule. Line onsets are the member onsets rounded to 1/960 of a whole note. */
+    NonChordToneClassifier classifier;
+    void *classifier_context;
 } CommonPracticeWeightedConfig;
 
 /* The documented defaults: strong 1.0, medium 0.7, weak 0.4, held 0.6, bass 1.1, missing-third penalty
