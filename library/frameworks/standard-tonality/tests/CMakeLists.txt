@@ -165,3 +165,15 @@ if(URSATZ_NUMERAL_GRAMMAR_VALGRIND)
            COMMAND ${URSATZ_NUMERAL_GRAMMAR_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_standard_tonality_roman_numeral_grammar>)
 endif()
+
+add_executable(test_standard_tonality_quality_semitones test_quality_semitones.c)
+target_link_libraries(test_standard_tonality_quality_semitones PRIVATE standard_tonality)
+add_test(NAME standard_tonality_quality_semitones COMMAND test_standard_tonality_quality_semitones)
+
+add_executable(test_standard_tonality_chromatic_degree_label test_chromatic_degree_label.c)
+target_link_libraries(test_standard_tonality_chromatic_degree_label PRIVATE standard_tonality)
+add_test(NAME standard_tonality_chromatic_degree_label COMMAND test_standard_tonality_chromatic_degree_label)
+
+add_executable(test_standard_tonality_key_tonic_of_pitch_class test_key_tonic_of_pitch_class.c)
+target_link_libraries(test_standard_tonality_key_tonic_of_pitch_class PRIVATE standard_tonality)
+add_test(NAME standard_tonality_key_tonic_of_pitch_class COMMAND test_standard_tonality_key_tonic_of_pitch_class)
