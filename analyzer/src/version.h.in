@@ -1,0 +1,21 @@
+#ifndef URSATZ_ANALYZER_VERSION_H
+#define URSATZ_ANALYZER_VERSION_H
+
+#define URSATZ_ANALYZER_VERSION "@PROJECT_VERSION@"
+#define URSATZ_ANALYZER_URSATZ_COMMIT "@URSATZ_ANALYZER_URSATZ_COMMIT@"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/* The Analyzer's version, from project(). */
+const char *ursatz_analyzer_version(void);
+
+/* The commit of the Ursatz submodule the Analyzer was configured against, or "unknown". */
+const char *ursatz_analyzer_ursatz_commit(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

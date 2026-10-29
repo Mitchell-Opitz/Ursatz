@@ -6,6 +6,7 @@
 #include <cJSON.h>
 
 #include <ursatz_analyzer/motive_links.h>
+#include <ursatz_analyzer/version.h>
 
 #include "links_internal.h"
 #include "style/style_internal.h"

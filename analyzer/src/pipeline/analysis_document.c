@@ -1,4 +1,5 @@
 #include <ursatz_analyzer/analysis_document.h>
+#include <ursatz_analyzer/version.h>
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -23,13 +24,6 @@
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
 #include "time/time_signature.h"
-
-#ifndef URSATZ_ANALYZER_VERSION
-#define URSATZ_ANALYZER_VERSION "unknown"
-#endif
-#ifndef URSATZ_ANALYZER_URSATZ_COMMIT
-#define URSATZ_ANALYZER_URSATZ_COMMIT "unknown"
-#endif
 
 /* How the home key is chosen: the library offers no determination of its own, so it is the key with the
    greatest total duration over all its regions, a tie going to the key that appears first. */

@@ -13,6 +13,7 @@
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/report_writer.h>
+#include <ursatz_analyzer/version.h>
 
 #include "cJSON.h"
 #include "pipeline/analysis_document_internal.h"
