@@ -1,0 +1,209 @@
+#ifndef URSATZ_CHAIN_ANALYSIS_CHAIN_H
+#define URSATZ_CHAIN_ANALYSIS_CHAIN_H
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#include "analysis/outer_voice.h"
+#include "analysis/voice_separation.h"
+#include "analysis_cadence.h"
+#include "analysis_expansion.h"
+#include "analysis_grid.h"
+#include "analysis_ideas.h"
+#include "analysis_melody.h"
+#include "analysis_melody_climax.h"
+#include "analysis_melody_leaps.h"
+#include "analysis_melody_nct.h"
+#include "analysis_motion.h"
+#include "analysis_motive.h"
+#include "analysis_perfects.h"
+#include "analysis_phrase.h"
+#include "analysis_resolution.h"
+#include "analysis_theme.h"
+#include "chord_input.h"
+#include "galant_analysis_match.h"
+#include "key_regions.h"
+#include "meter_analysis_density.h"
+#include "meter_analysis_hemiola.h"
+#include "meter_analysis_hypermeter.h"
+#include "meter_analysis_syncopation.h"
+#include "roman_numeral_adapter.h"
+#include "scale_analysis_detect.h"
+#include "semantics/analysis_key.h"
+#include "semantics/analysis_note.h"
+#include "semantics/sonority_segmentation.h"
+#include "texture_analysis_classify.h"
+#include "ursatz_chain/chain_inputs.h"
+#include "weighted_chord_identification.h"
+
+/*
+ * The production analysis chain (R-217, R-241): one run from neutral notes to every analysis the libraries own, in the order of
+ * dependency-spec.md "Analysis chain":
+ *
+ *   segments            adaptive sonority segments and their members (the owner of segmentation)
+ *   keys                local key regions, with the key signature events (key_regions_estimate)
+ *   chords              weighted chord identification in each region's own key and mode, a minor region in the minor vocabulary
+ *   numerals            Roman numerals in the regions' keys (standard-tonality)
+ *   outer voices        the soprano and bass lines of the segmentation that keeps every melody note (kernel analysis)
+ *   cadences            the cadences, with the boundary cadences at section starts, and the key changes they confirm (standard-harmony)
+ *   form                phrases, ideas, themes, expansions (standard-form, the phrase detector injected from the kernel), and the motive
+ *                       families on a note-level soprano (the window matcher injected from the kernel)
+ *   meter               syncopations, hemiolas, hypermeter and density (standard-meter)
+ *   texture             windows, passages and changes over the separated voices (standard-texture)
+ *   voice leading       motions and perfect-interval violations (standard-counterpoint), resolutions (standard-harmony)
+ *   melody              the soprano as a melody: intervals, contour, climax, leap recovery, non-chord tones (standard-counterpoint)
+ *   schemas             galant schemas (galant-schemas) and scale sequences (scale-harmonization)
+ *
+ * KEYS AND PHRASES. The key regions depend on the phrases, which depend on the cadences, which depend on the keys. With the form stage the
+ * run goes through the stages once for the keys from the pitch classes alone; the chords of that pass are then evidence for the keys and
+ * the phrase ends their boundaries, and every stage from the keys on runs again on that answer (config.refine_keys). No further iteration.
+ *
+ * ONE-STAGE RUNS. A stage pulls in the stages it needs: keys pull segments; chords keys; numerals chords; cadences numerals and outer
+ * voices; form cadences; meter form, chords and outer voices; voice leading cadences; melody chords and outer voices; schemas numerals and
+ * outer voices. Texture reads only the notes. Accessors of a stage that did not run return NULL.
+ *
+ * The notes, their events and the key events are borrowed and must outlive the chain. AnalysisChain owns every result.
+ */
+
+#define ANALYSIS_CHAIN_STAGE_SEGMENTS      (1u << 0)
+#define ANALYSIS_CHAIN_STAGE_KEYS          (1u << 1)
+#define ANALYSIS_CHAIN_STAGE_CHORDS        (1u << 2)
+#define ANALYSIS_CHAIN_STAGE_NUMERALS      (1u << 3)
+#define ANALYSIS_CHAIN_STAGE_OUTER_VOICES  (1u << 4)
+#define ANALYSIS_CHAIN_STAGE_CADENCES      (1u << 5)
+#define ANALYSIS_CHAIN_STAGE_FORM          (1u << 6)
+#define ANALYSIS_CHAIN_STAGE_METER         (1u << 7)
+#define ANALYSIS_CHAIN_STAGE_TEXTURE       (1u << 8)
+#define ANALYSIS_CHAIN_STAGE_VOICE_LEADING (1u << 9)
+#define ANALYSIS_CHAIN_STAGE_MELODY        (1u << 10)
+#define ANALYSIS_CHAIN_STAGE_SCHEMAS       (1u << 11)
+#define ANALYSIS_CHAIN_STAGE_ALL           ((1u << 12) - 1u)
+
+/*
+ * One field per stage config; analysis_chain_config_default() fills every one with the library's default. `segmentation` cuts the segments
+ * the chords are read in; the outer voices use the same config with merge_unchanged_harmony off (one segment per melody note).
+ *
+ * first_measure / last_measure: the part of the piece analysed (MeterMap measure numbers). The segments, keys, chords, numerals, cadences,
+ * voice leading, melody and schemas run over the segments that START before the end of last_measure (last_measure 0: all); the form,
+ * meter and motive stages read the notes and segments of the measures first_measure to last_measure.
+ *
+ * home_key_index: the home key as a key index 0..23 (key_regions.h), or -1 for the key of the first key region. It is the key of the
+ * boundary cadences, the motive degrees, the melody degrees and the schema key degrees.
+ */
+typedef struct {
+    unsigned stages;
+    AdaptiveSegmentationConfig segmentation;
+    CommonPracticeWeightedConfig weighting;
+    CommonPracticeKeyRegionsConfig key_regions;
+    OuterVoiceConfig outer_voices;
+    HarmonyCadenceConfig cadences;
+    StandardFormConfig form;
+    StandardMeterConfig meter;
+    StandardTextureConfig texture;
+    HarmonyResolutionConfig resolutions;
+    StandardCounterpointMelodyConfig melody;
+    GalantMatchConfig schemas;
+    ScaleDetectConfig sequences;
+    bool refine_keys;
+    int first_measure;
+    int last_measure;
+    int home_key_index;
+} AnalysisChainConfig;
+
+AnalysisChainConfig analysis_chain_config_default(void);
+
+typedef enum {
+    ANALYSIS_CHAIN_OK = 0,
+    ANALYSIS_CHAIN_ERR_NULL_ARGUMENT,
+    ANALYSIS_CHAIN_ERR_BAD_CONFIG,
+    ANALYSIS_CHAIN_ERR_NOTES,          /* an invalid note set, a note without its event or with an unknown pitch, or a scope with no segment */
+    ANALYSIS_CHAIN_ERR_SEGMENTS,
+    ANALYSIS_CHAIN_ERR_KEYS,
+    ANALYSIS_CHAIN_ERR_CHORDS,
+    ANALYSIS_CHAIN_ERR_NUMERALS,
+    ANALYSIS_CHAIN_ERR_OUTER_VOICES,
+    ANALYSIS_CHAIN_ERR_CADENCES,
+    ANALYSIS_CHAIN_ERR_FORM,
+    ANALYSIS_CHAIN_ERR_METER,
+    ANALYSIS_CHAIN_ERR_TEXTURE,
+    ANALYSIS_CHAIN_ERR_VOICE_LEADING,
+    ANALYSIS_CHAIN_ERR_MELODY,
+    ANALYSIS_CHAIN_ERR_SCHEMAS,
+    ANALYSIS_CHAIN_ERR_ALLOC
+} AnalysisChainStatus;
+
+/* The name of a status, e.g. "keys"; "ok" for ANALYSIS_CHAIN_OK. */
+const char *analysis_chain_status_name(AnalysisChainStatus status);
+
+typedef struct AnalysisChain AnalysisChain;
+
+/*
+ * Runs the chain. `notes` is sorted (analysis_note_set_valid) and every note has its NoteEvent and a known pitch. key_events may be NULL
+ * with key_event_count 0. config may be NULL for the defaults. On OK, *out is owned by the caller (analysis_chain_destroy); on an error
+ * *out is untouched and the status names the failing stage.
+ */
+AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const AnalysisKeyEvent *key_events, size_t key_event_count,
+                                       const AnalysisChainConfig *config, AnalysisChain **out);
+
+/* NULL is a no-op. */
+void analysis_chain_destroy(AnalysisChain *chain);
+
+/* --- the results --- */
+
+/* How many segments the stages ran over (those starting inside the scope). */
+size_t analysis_chain_segment_count(const AnalysisChain *chain);
+/* The segments of the chords (sonorities, ids, windows in whole notes, members). */
+const ChainSegments *analysis_chain_segments(const AnalysisChain *chain);
+/* The home key as a key index, 0..23; -1 when no key stage ran. */
+int analysis_chain_home_key(const AnalysisChain *chain);
+
+const CommonPracticeKeyRegions *analysis_chain_key_regions(const AnalysisChain *chain);
+/* One result per segment (analysis_chain_segment_count). */
+const CommonPracticeWeightedResult *analysis_chain_chords(const AnalysisChain *chain);
+/* The chord input and the Roman numeral of each segment (analysis_chain_segment_count of each). */
+const StandardTonalityChordInput *analysis_chain_chord_inputs(const AnalysisChain *chain);
+const StandardTonalityRomanResult *analysis_chain_numerals(const AnalysisChain *chain);
+/* The segmentation the outer lines are read on (one segment per melody note), and the lines (one entry per such segment). */
+const ChainSegments *analysis_chain_voice_segments(const AnalysisChain *chain);
+const OuterVoiceLines *analysis_chain_outer_voices(const AnalysisChain *chain);
+const HarmonyCadences *analysis_chain_cadences(const AnalysisChain *chain);
+
+const StandardFormPhrases *analysis_chain_phrases(const AnalysisChain *chain);
+const StandardFormSegmentation *analysis_chain_ideas(const AnalysisChain *chain);
+const StandardFormThemes *analysis_chain_themes(const AnalysisChain *chain);
+const StandardFormExpansions *analysis_chain_expansions(const AnalysisChain *chain);
+const StandardFormMotives *analysis_chain_motives(const AnalysisChain *chain);
+
+typedef struct {
+    StandardMeterSyncopations syncopations;
+    StandardMeterHemiolas hemiolas;
+    StandardMeterHypermeter hypermeter;
+    StandardMeterDensities densities;
+} AnalysisChainMeter;
+const AnalysisChainMeter *analysis_chain_meter(const AnalysisChain *chain);
+
+const StandardTextureAnalysis *analysis_chain_texture(const AnalysisChain *chain);
+
+typedef struct {
+    StandardCounterpointMotions motions;
+    StandardCounterpointViolations perfects;
+    HarmonyResolutions resolutions;
+    size_t voice_count;
+} AnalysisChainVoiceLeading;
+const AnalysisChainVoiceLeading *analysis_chain_voice_leading(const AnalysisChain *chain);
+
+/* The soprano as a melody. The one span covering the whole line serves the span-based results. */
+typedef struct {
+    ChainMelodyLine line;
+    StandardCounterpointMelodicIntervals intervals;
+    StandardCounterpointContourSummaries summaries;
+    StandardCounterpointClimaxes climaxes;
+    StandardCounterpointLeapRecoveries recoveries;
+    StandardCounterpointNctCountList counts;
+} AnalysisChainMelody;
+const AnalysisChainMelody *analysis_chain_melody(const AnalysisChain *chain);
+
+const GalantSchemaMatches *analysis_chain_schemas(const AnalysisChain *chain);
+const ScaleSequenceMatches *analysis_chain_sequences(const AnalysisChain *chain);
+
+#endif
