@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "core/rational.h"
 #include "identity/entity_id.h"
 
 struct PitchNumericValue {
@@ -10,15 +11,6 @@ struct PitchNumericValue {
     long numerator;
     unsigned long denominator;
 };
-
-static unsigned long gcd(unsigned long a, unsigned long b) {
-    while (b != 0) {
-        unsigned long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
-}
 
 static unsigned long abs_long(long v) {
     return v < 0 ? (unsigned long)(-v) : (unsigned long)v;
@@ -40,7 +32,7 @@ static TuningSystemResult tuning_system_copy(const TuningSystem *src, TuningSyst
 
 /* Reduces numerator/denominator to lowest terms in place. denominator must already be positive. */
 static void reduce(long *numerator, unsigned long *denominator) {
-    unsigned long divisor = gcd(abs_long(*numerator), *denominator);
+    unsigned long divisor = rational_gcd_unsigned(abs_long(*numerator), *denominator);
     if (divisor == 0) {
         divisor = 1;
     }
