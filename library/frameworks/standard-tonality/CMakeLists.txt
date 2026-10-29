@@ -33,6 +33,7 @@ add_library(standard_tonality
     seventh_identification_rules.c
     seventh_in_key_rules.c
     roman_numeral_rules.c
+    roman_numeral_grammar.c
     roman_numeral_analysis_rules.c
     analysis/chord_input.c
     analysis/roman_numeral_adapter.c
