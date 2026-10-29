@@ -8,6 +8,7 @@ add_ursatz_test(contour)
 add_ursatz_test(voice_part)
 add_ursatz_test(beat_strength)
 add_ursatz_test(non_chord_tone)
+add_ursatz_test(tone_line)
 add_ursatz_test(cadence_type)
 add_ursatz_test(applied_chord_kind)
 add_ursatz_test(key_change_extent)
@@ -23,7 +24,7 @@ add_ursatz_architecture_test(semantics)
 # silently if valgrind isn't installed.
 find_program(URSATZ_SEMANTICS_VALGRIND valgrind)
 if(URSATZ_SEMANTICS_VALGRIND)
-  foreach(semantics_test_name analysis_note analysis_key voice_grid)
+  foreach(semantics_test_name analysis_note analysis_key voice_grid tone_line)
     add_test(NAME ${semantics_test_name}_valgrind
              COMMAND ${URSATZ_SEMANTICS_VALGRIND} --leak-check=full --error-exitcode=1
                      $<TARGET_FILE:test_${semantics_test_name}>)

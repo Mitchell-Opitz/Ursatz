@@ -81,3 +81,14 @@ if(URSATZ_COMMON_PRACTICE_HOME_KEY_VALGRIND)
   add_test(NAME common_practice_minimal_home_key_region_valgrind
            COMMAND ${URSATZ_COMMON_PRACTICE_HOME_KEY_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_common_practice_minimal_home_key_region>)
 endif()
+
+add_executable(test_common_practice_minimal_injected_classifier test_injected_classifier.c)
+target_link_libraries(test_common_practice_minimal_injected_classifier PRIVATE common_practice_minimal)
+add_test(NAME common_practice_minimal_injected_classifier COMMAND test_common_practice_minimal_injected_classifier)
+
+# Memcheck for the injected classifier test (the sequence allocates the lines it hands over). Skips silently if valgrind isn't installed.
+find_program(URSATZ_COMMON_PRACTICE_INJECTED_VALGRIND valgrind)
+if(URSATZ_COMMON_PRACTICE_INJECTED_VALGRIND)
+  add_test(NAME common_practice_minimal_injected_classifier_valgrind
+           COMMAND ${URSATZ_COMMON_PRACTICE_INJECTED_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_common_practice_minimal_injected_classifier>)
+endif()
