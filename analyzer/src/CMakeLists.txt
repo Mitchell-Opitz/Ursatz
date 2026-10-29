@@ -1,4 +1,5 @@
 add_library(ursatz_analyzer STATIC
+    version.c
     pipeline/imported_notes.c
     pipeline/notation_reading.c
     pipeline/midi_pipeline.c
@@ -77,8 +78,9 @@ get_target_property(GALANT_SCHEMAS_SOURCE_DIR galant_schemas SOURCE_DIR)
 get_target_property(SCALE_HARMONIZATION_SOURCE_DIR scale_harmonization SOURCE_DIR)
 set_source_files_properties(pipeline/schema_pipeline.c PROPERTIES INCLUDE_DIRECTORIES
     "${GALANT_SCHEMAS_SOURCE_DIR};${GALANT_SCHEMAS_SOURCE_DIR}/analysis;${SCALE_HARMONIZATION_SOURCE_DIR};${SCALE_HARMONIZATION_SOURCE_DIR}/analysis;${STANDARD_COUNTERPOINT_SOURCE_DIR}")
+configure_file(version.h.in ${PROJECT_BINARY_DIR}/include/ursatz_analyzer/version.h @ONLY)
 target_include_directories(ursatz_analyzer
-    PUBLIC ${PROJECT_SOURCE_DIR}/include ${URSATZ_FRAMEWORKS_DIR}
+    PUBLIC ${PROJECT_SOURCE_DIR}/include ${PROJECT_BINARY_DIR}/include ${URSATZ_FRAMEWORKS_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
@@ -86,10 +88,6 @@ target_link_libraries(ursatz_analyzer
     PRIVATE cjson $<LINK_ONLY:standard_counterpoint> $<LINK_ONLY:standard_texture> $<LINK_ONLY:standard_voicing>
     $<LINK_ONLY:standard_markings>
     $<LINK_ONLY:galant_schemas> $<LINK_ONLY:scale_harmonization>
-)
-target_compile_definitions(ursatz_analyzer PRIVATE
-    URSATZ_ANALYZER_VERSION="${PROJECT_VERSION}"
-    URSATZ_ANALYZER_URSATZ_COMMIT="${URSATZ_ANALYZER_URSATZ_COMMIT}"
 )
 
 add_executable(ursatz-analyzer main.c)

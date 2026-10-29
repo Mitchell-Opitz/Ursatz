@@ -22,6 +22,7 @@
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer/version.h>
 
 #include "pipeline/counterpoint_pipeline.h"
 

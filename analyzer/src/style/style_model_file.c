@@ -1,4 +1,5 @@
 #include <ursatz_analyzer/style_profile.h>
+#include <ursatz_analyzer/version.h>
 
 #include <stdint.h>
 #include <stdio.h>
