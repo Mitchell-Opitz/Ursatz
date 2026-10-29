@@ -25,6 +25,9 @@
  * time/, pitch/, events/, containers/, structure/, or interpretation/
  * itself. The scan is directory-driven rather than a fixed file list,
  * so this test does not need editing as interpretation/ grows.
+ *
+ * One sideways L6 edge is allowed: interpretation/claim_interpretation.c includes relationship/relationship.h to build the
+ * Relationship half of the shared framework claim pattern (R-236).
  */
 
 static int check_file(const char *path) {
@@ -54,10 +57,11 @@ static int check_file(const char *path) {
         if (strncmp(start, "identity/", 9) != 0 && strncmp(start, "core/", 5) != 0 &&
             strncmp(start, "time/", 5) != 0 && strncmp(start, "pitch/", 6) != 0 &&
             strncmp(start, "events/", 7) != 0 && strncmp(start, "containers/", 11) != 0 &&
-            strncmp(start, "structure/", 10) != 0 && strncmp(start, "interpretation/", 15) != 0) {
+            strncmp(start, "structure/", 10) != 0 && strncmp(start, "interpretation/", 15) != 0 &&
+            strncmp(start, "relationship/", 13) != 0) {
             fprintf(stderr,
                     "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, "
-                    "containers/, structure/, or interpretation/)\n",
+                    "containers/, structure/, interpretation/, or relationship/)\n",
                     path, start);
             violations++;
         }

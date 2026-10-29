@@ -100,6 +100,7 @@ add_library(ursatz
     interpretation/observation.c
     interpretation/hypothesis.c
     interpretation/interpretation.c
+    interpretation/claim_interpretation.c
     interpretation/chord.c
     interpretation/key.c
     interpretation/scale_degree.c
