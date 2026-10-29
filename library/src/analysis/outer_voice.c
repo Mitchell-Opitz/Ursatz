@@ -5,6 +5,7 @@
 
 #include "analysis/beat_grid_length.h"
 #include "analysis/outer_voice_internal.h"
+#include "core/rational.h"
 #include "time/temporal_anchor.h"
 
 OuterVoiceConfig outer_voice_config_default(void) {
@@ -392,4 +393,84 @@ OuterVoiceResult outer_voice_extract(const AdaptiveSonorities *segments, NoteEve
     }
     *out = lines;
     return OUTER_VOICE_OK;
+}
+
+typedef struct {
+    size_t index;
+    Rational start;
+    Rational end;
+    int midi;
+} AttackNote;
+
+static bool attack_time(const MusicalTime *time, Rational *out) {
+    return rational_make(musical_time_numerator(time), (long long)musical_time_denominator(time), out) == RATIONAL_OK;
+}
+
+OuterVoiceResult outer_voice_attack_soprano(const AnalysisNoteSet *notes, size_t **out, size_t *count) {
+    if (notes == NULL || out == NULL || count == NULL) {
+        return OUTER_VOICE_ERR_NULL_ARGUMENT;
+    }
+    if (!analysis_note_set_valid(notes)) {
+        return OUTER_VOICE_ERR_NULL_NOTE;
+    }
+    size_t total = 0;
+    AttackNote *all = calloc(notes->count > 0 ? notes->count : 1, sizeof(AttackNote));
+    AttackNote **active = calloc(notes->count > 0 ? notes->count : 1, sizeof(AttackNote *));
+    size_t *line = calloc(notes->count > 0 ? notes->count : 1, sizeof(size_t));
+    if (all == NULL || active == NULL || line == NULL) {
+        free(all);
+        free(active);
+        free(line);
+        return OUTER_VOICE_ERR_ALLOC;
+    }
+    OuterVoiceResult result = OUTER_VOICE_OK;
+    for (size_t i = 0; i < notes->count && result == OUTER_VOICE_OK; i++) {
+        if (notes->notes[i].midi == ANALYSIS_PITCH_UNKNOWN) {
+            continue;
+        }
+        AttackNote *note = &all[total];
+        note->index = i;
+        note->midi = notes->notes[i].midi;
+        if (!attack_time(time_span_start(notes->notes[i].span), &note->start) ||
+            !attack_time(time_span_end(notes->notes[i].span), &note->end)) {
+            result = OUTER_VOICE_ERR_OVERFLOW;
+        }
+        total++;
+    }
+    size_t active_count = 0;
+    size_t kept = 0;
+    for (size_t i = 0; i < total && result == OUTER_VOICE_OK;) {
+        Rational onset = all[i].start;
+        for (; i < total && rational_cmp(all[i].start, onset) == 0; i++) {
+            active[active_count++] = &all[i];
+        }
+        size_t live = 0;
+        const AttackNote *top = NULL;
+        for (size_t a = 0; a < active_count; a++) {
+            if (rational_cmp(active[a]->end, onset) <= 0) {
+                continue;
+            }
+            active[live++] = active[a];
+            if (top == NULL || active[a]->midi > top->midi ||
+                (active[a]->midi == top->midi && rational_cmp(active[a]->start, top->start) > 0)) {
+                top = active[a];
+            }
+        }
+        active_count = live;
+        if (top != NULL && rational_cmp(top->start, onset) == 0) {
+            line[kept++] = top->index;
+        }
+    }
+    free(all);
+    free(active);
+    if (result != OUTER_VOICE_OK || kept == 0) {
+        free(line);
+        line = NULL;
+        kept = 0;
+    }
+    if (result == OUTER_VOICE_OK) {
+        *out = line;
+        *count = kept;
+    }
+    return result;
 }
