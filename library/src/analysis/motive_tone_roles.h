@@ -75,4 +75,11 @@ typedef enum {
 MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, const MotiveToneOverride *overrides,
                                    size_t override_count, MotiveToneLabel *out);
 
+/*
+ * The same labelling with the overrides the sketch carries (tone_overrides, tone_override_count), so a motive
+ * value brings its own corrections: equal to motive_tone_roles(sketch, sketch->tone_overrides,
+ * sketch->tone_override_count, out). MOTIVE_TONE_BAD_OVERRIDE when the count is above MOTIVE_SKETCH_MAX_NOTES.
+ */
+MotiveToneStatus motive_tone_roles_of(const MotiveSketch *sketch, MotiveToneLabel *out);
+
 #endif
