@@ -9,7 +9,19 @@ add_library(ursatz_chain
     ursatz_chain/kernel_owners.c
     ursatz_chain/analysis_chain.c
 )
-target_include_directories(ursatz_chain PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# Public headers (R-223), staged under ursatz_chain/ in the build tree; the chain directory is private.
+ursatz_public_headers(ursatz_chain
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}/ursatz_chain
+    PREFIX ursatz_chain
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
+    HEADERS
+        analysis_chain.h
+        chain_inputs.h
+        form_bridge.h
+        kernel_owners.h
+        key_collection_analyzer.h
+        subset_chord_analyzer.h
+)
 target_link_libraries(ursatz_chain PUBLIC
     ursatz
     common_practice_minimal
