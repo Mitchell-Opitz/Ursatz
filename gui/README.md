@@ -1685,14 +1685,17 @@ ctest --test-dir build
 ```
 
 Requires CMake 3.20 or newer, a C11 compiler, SQLite development headers and
-pkg-config. Ursatz is a git submodule at `external/ursatz`, pinned at PR #147
-(`e74cafc`), which writes chords and overlapping notes in the score export. The
-Analyzer (version 0.1.0) is a second submodule, `external/ursatz-analyzer`,
-pinned at PR #38 (`8a2fd29`).
+pkg-config. Ursatz is a git submodule at `external/ursatz`, pinned at PR #161
+(`1ed8aa1`). The Analyzer (version 0.3.0) is a second submodule,
+`external/ursatz-analyzer`, pinned at PR #46 (`b356fb7`). cJSON 1.7.18 is
+vendored at `external/cjson` and added first, so the Ursatz Analyzer reuses it.
+`scripts/check-pins.sh` fails when a pin is not on its remote's `main` or when
+one repository is pinned at two commits; CI runs it after the submodule
+checkout.
 `git submodule update --init --recursive` (or `git clone --recurse-submodules`
 up front) is required before the first build. Ursatz's own tests are not
 built (`URSATZ_BUILD_TESTS` is OFF). The Composer is a third submodule,
-`external/ursatz-composer`, pinned at PR #40 (`466b38c`). It is built by an
+`external/ursatz-composer`, pinned at PR #68 (`6e96950`). It is built by an
 `ExternalProject` in `build/composer` (its tests off), so it brings its own
 Ursatz and Analyzer; the build runs it as `ursatz-composer` and does not link
 it. The `ExternalProject` has `BUILD_ALWAYS ON`, so the Composer's own
