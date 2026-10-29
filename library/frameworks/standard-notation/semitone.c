@@ -2,24 +2,10 @@
 
 #include <stddef.h>
 
+#include "pitch/pitch_arithmetic.h"
+
 int standard_notation_letter_semitone(PitchLetter letter) {
-    switch (letter) {
-        case PITCH_LETTER_C:
-            return 0;
-        case PITCH_LETTER_D:
-            return 2;
-        case PITCH_LETTER_E:
-            return 4;
-        case PITCH_LETTER_F:
-            return 5;
-        case PITCH_LETTER_G:
-            return 7;
-        case PITCH_LETTER_A:
-            return 9;
-        case PITCH_LETTER_B:
-        default:
-            return 11;
-    }
+    return pitch_letter_semitone(letter);
 }
 
 int standard_notation_semitone_number(const PitchSpelling *spelling) {
