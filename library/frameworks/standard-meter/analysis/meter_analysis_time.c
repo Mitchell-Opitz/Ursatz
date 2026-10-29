@@ -5,6 +5,7 @@
 #include "beat_grid.h"
 #include "core/rational.h"
 #include "meter_class_rules.h"
+#include "time/meter_arithmetic.h"
 #include "time/duration.h"
 #include "time/metrical_position.h"
 #include "time/time_signature.h"
@@ -22,17 +23,32 @@ StandardMeterQ standard_meter_q(long long n, long long d) {
     return q;
 }
 
+static inline Rational to_rational(StandardMeterQ q) {
+    return rational_ratio(q.n, q.d);
+}
+
+static inline StandardMeterQ of_rational(Rational r) {
+    StandardMeterQ q = {r.num, r.den};
+    return q;
+}
+
 int standard_meter_q_compare(StandardMeterQ a, StandardMeterQ b) {
-    long long left = a.n * b.d;
-    long long right = b.n * a.d;
-    return (left > right) - (left < right);
+    return rational_cmp(to_rational(a), to_rational(b));
 }
 
 StandardMeterQ standard_meter_q_add(StandardMeterQ a, StandardMeterQ b) {
+    Rational sum;
+    if (rational_add(to_rational(a), to_rational(b), &sum) == RATIONAL_OK) {
+        return of_rational(sum);
+    }
     return standard_meter_q(a.n * b.d + b.n * a.d, a.d * b.d);
 }
 
 StandardMeterQ standard_meter_q_sub(StandardMeterQ a, StandardMeterQ b) {
+    Rational difference;
+    if (rational_sub(to_rational(a), to_rational(b), &difference) == RATIONAL_OK) {
+        return of_rational(difference);
+    }
     return standard_meter_q(a.n * b.d - b.n * a.d, a.d * b.d);
 }
 
@@ -106,41 +122,26 @@ static bool time_of(StandardMeterQ q, MusicalTime **out) {
 }
 
 bool standard_meter_measure_at(const MeterMap *map, StandardMeterQ time, int *measure) {
-    MusicalTime *at = NULL;
-    if (map == NULL || measure == NULL || !time_of(time, &at)) {
-        return false;
-    }
-    int index = 0;
-    bool ok = meter_map_measure_index_at(map, at, &index) == METER_MAP_OK;
-    musical_time_destroy(at);
-    if (ok) {
-        *measure = index;
-    }
-    return ok;
+    return meter_map_measure_of(map, to_rational(time), measure) == METER_MAP_OK;
 }
 
 bool standard_meter_measure_bounds(const MeterMap *map, int index, StandardMeterQ *start, StandardMeterQ *end) {
-    TimeSpan *span = NULL;
-    if (map == NULL || meter_map_measure_span(map, index, &span) != METER_MAP_OK) {
+    Rational from;
+    Rational to;
+    if (meter_map_measure_bounds(map, index, &from, &to) != METER_MAP_OK) {
         return false;
     }
-    bool ok = standard_meter_span_q(span, start, end);
-    time_span_destroy(span);
-    return ok;
+    if (start != NULL) {
+        *start = of_rational(from);
+    }
+    if (end != NULL) {
+        *end = of_rational(to);
+    }
+    return true;
 }
 
 bool standard_meter_last_measure_touched(const MeterMap *map, StandardMeterQ end, int *measure) {
-    int index = 0;
-    StandardMeterQ start;
-    StandardMeterQ stop;
-    if (!standard_meter_measure_at(map, end, &index) || !standard_meter_measure_bounds(map, index, &start, &stop)) {
-        return false;
-    }
-    if (standard_meter_q_compare(end, start) == 0 && index > meter_map_first_measure_number(map)) {
-        index--;
-    }
-    *measure = index;
-    return true;
+    return meter_map_last_measure_touched(map, to_rational(end), measure) == METER_MAP_OK;
 }
 
 static StandardMeterQ q_of_duration(const Duration *duration) {

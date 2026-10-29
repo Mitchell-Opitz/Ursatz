@@ -54,16 +54,6 @@ static bool degree_ok(GalantPitchDegree degree) {
     return degree.degree >= 1 && degree.degree <= 7 && degree.alteration >= -2 && degree.alteration <= 2;
 }
 
-static bool span_ok(const TimeSpan *span) {
-    if (span == NULL || time_span_start(span) == NULL || time_span_end(span) == NULL) {
-        return false;
-    }
-    const MusicalTime *start = time_span_start(span);
-    const MusicalTime *end = time_span_end(span);
-    return (long long)musical_time_numerator(end) * (long long)musical_time_denominator(start) >
-           (long long)musical_time_numerator(start) * (long long)musical_time_denominator(end);
-}
-
 static bool starts_before(const TimeSpan *a, const TimeSpan *b) {
     const MusicalTime *x = time_span_start(a);
     const MusicalTime *y = time_span_start(b);
@@ -76,7 +66,7 @@ GalantAnalysisStatus galant_segments_add(GalantSegmentList *list, const GalantSe
         return GALANT_ANALYSIS_ERR_NULL_ARGUMENT;
     }
     if (segment->id[0] == '\0' || memchr(segment->id, '\0', GALANT_ANALYSIS_ID_MAX) == NULL ||
-        memchr(segment->key_id, '\0', GALANT_ANALYSIS_ID_MAX) == NULL || !span_ok(segment->span) ||
+        memchr(segment->key_id, '\0', GALANT_ANALYSIS_ID_MAX) == NULL || !time_span_is_valid(segment->span) ||
         !beat_strength_valid(segment->strength) || segment->beat_numerator <= 0 || segment->beat_denominator == 0 ||
         !degree_ok(segment->key) || (segment->has_bass && !degree_ok(segment->bass)) ||
         (segment->has_soprano && !degree_ok(segment->soprano)) || (segment->has_numeral && !degree_ok(segment->root)) ||
