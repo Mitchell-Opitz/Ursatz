@@ -29,6 +29,7 @@ add_library(ursatz
     time/tempo_map.c
     time/tuplet.c
     time/time_rational.c
+    time/meter_arithmetic.c
     pitch/pitch_identity.c
     pitch/pitch_spelling.c
     pitch/pitch_arithmetic.c
