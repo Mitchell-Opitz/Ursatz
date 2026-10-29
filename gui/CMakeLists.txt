@@ -76,14 +76,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(civetweb)
 
-# The Analyzer defines its version privately; read it from its project()
-# line so meta.json can record it.
-file(STRINGS external/ursatz-analyzer/CMakeLists.txt URSATZ_GUI_ANALYZER_PROJECT_LINE
-     REGEX "^project\\(UrsatzAnalyzer VERSION [0-9.]+")
-if(URSATZ_GUI_ANALYZER_PROJECT_LINE MATCHES "VERSION ([0-9.]+)")
-  add_compile_definitions(URSATZ_ANALYZER_VERSION="${CMAKE_MATCH_1}")
-endif()
-
 add_subdirectory(backend)
 
 enable_testing()

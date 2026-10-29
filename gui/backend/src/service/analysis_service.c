@@ -35,6 +35,7 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/notation_reading.h>
+#include <ursatz_analyzer/version.h>
 
 static char *dup_string(const char *value) {
     if (!value) {
@@ -215,11 +216,7 @@ static void iso_utc_now(char *out, size_t out_size) {
 }
 
 static const char *analyzer_version_string(void) {
-#ifdef URSATZ_ANALYZER_VERSION
-    return URSATZ_ANALYZER_VERSION;
-#else
-    return "unknown";
-#endif
+    return ursatz_analyzer_version();
 }
 
 /* Writes <dir_path>/meta.json. */
