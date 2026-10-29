@@ -173,3 +173,5 @@ Owned here (moved from `src/semantics/`; type names and values unchanged), each 
 ## Neutral analysis input
 
 `standard_form_input_add_analysis_note` (`analysis/analysis_input.h`) adds an `AnalysisNote` to the soprano or the bass line (`semitone` is `midi`, no metrical position; the interval and contour to the next note are still set by `standard_form_input_finish`). `standard_form_input_add_analysis_segment` adds an `AnalysisSegment` with its function and phrase model label. A note with an unknown pitch is rejected.
+
+`StandardFormConfig.relation_matcher` (a `StandardFormRelationMatcher`, `analysis/analysis_input.h`) replaces the framework's pattern, inversion and retrograde motive matchers in the match order when set; NULL (the default) keeps them. Augmentation, diminution, varied and fragment matching stay in the framework.

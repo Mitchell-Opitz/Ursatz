@@ -14,7 +14,7 @@
 
 StandardFormConfig standard_form_config_default(void) {
     StandardFormConfig config = {0, DEFAULT_LEAP_SEMITONES, DEFAULT_LOOKAHEAD, DEFAULT_MAX_TAIL, DEFAULT_SIMILARITY_MIN,
-                                 DEFAULT_NO_SIGNAL_UNCERTAINTY, 3, 8, 1, false};
+                                 DEFAULT_NO_SIGNAL_UNCERTAINTY, 3, 8, 1, false, NULL, NULL};
     return config;
 }
 

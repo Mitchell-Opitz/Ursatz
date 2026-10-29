@@ -58,6 +58,8 @@ static const char *FRAMEWORK_HEADERS[] = {
     "analysis_melody.h",
     "galant_analysis_input.h",
     "analysis_time.h",
+    "analysis_input.h",
+    "analysis_motive_shape.h",
     "meter_analysis_input.h",
     "texture_analysis_input.h",
 };

@@ -256,3 +256,14 @@ add_test(NAME standard_counterpoint_melodic_semitones COMMAND test_standard_coun
 add_executable(test_standard_counterpoint_imperfect_run test_imperfect_run.c)
 target_link_libraries(test_standard_counterpoint_imperfect_run PRIVATE standard_counterpoint)
 add_test(NAME standard_counterpoint_imperfect_run COMMAND test_standard_counterpoint_imperfect_run)
+
+add_executable(test_standard_counterpoint_melody_nct_injected test_melody_nct_injected.c)
+target_link_libraries(test_standard_counterpoint_melody_nct_injected PRIVATE standard_counterpoint)
+add_test(NAME standard_counterpoint_melody_nct_injected COMMAND test_standard_counterpoint_melody_nct_injected)
+
+# Memcheck for the injected melody classifier test (it builds heap lines and claims). Skips silently if valgrind isn't installed.
+find_program(URSATZ_COUNTERPOINT_NCT_INJECTED_VALGRIND valgrind)
+if(URSATZ_COUNTERPOINT_NCT_INJECTED_VALGRIND)
+  add_test(NAME standard_counterpoint_melody_nct_injected_valgrind
+           COMMAND ${URSATZ_COUNTERPOINT_NCT_INJECTED_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_counterpoint_melody_nct_injected>)
+endif()

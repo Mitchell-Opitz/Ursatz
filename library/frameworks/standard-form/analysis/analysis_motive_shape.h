@@ -14,7 +14,7 @@
 
 #define STANDARD_FORM_MOTIVE_MAX_INTERVALS 31
 
-typedef struct {
+typedef struct StandardFormMotiveShape {
     bool generic;                 /* `steps` are generic intervals; else they are the semitones */
     size_t intervals;             /* notes - 1 */
     int steps[STANDARD_FORM_MOTIVE_MAX_INTERVALS];     /* the pattern's intervals, signed */

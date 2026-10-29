@@ -78,5 +78,11 @@ bool standard_form_motive_match_fragment(const StandardFormMotiveShape *prototyp
 /* The kind that applies to the candidate by the precedence rule, with its match. False when none applies. */
 bool standard_form_motive_classify(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
                                    size_t varied_max_mismatch, StandardFormMotiveMatch *out);
+/* The same, with an injected matcher (StandardFormConfig.relation_matcher) in the place of the pattern, inversion and retrograde
+   matchers: its kind and score are used for a comparable pair (same dimension, same interval count); when it refuses, the pair goes on
+   to augmentation, diminution and varied. matcher NULL is standard_form_motive_classify. */
+bool standard_form_motive_classify_with(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
+                                        size_t varied_max_mismatch, StandardFormRelationMatcher matcher, void *context,
+                                        StandardFormMotiveMatch *out);
 
 #endif

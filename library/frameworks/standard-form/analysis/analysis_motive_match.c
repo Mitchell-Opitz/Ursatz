@@ -153,16 +153,37 @@ bool standard_form_motive_match_fragment(const StandardFormMotiveShape *prototyp
     return false;
 }
 
-bool standard_form_motive_classify(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                   size_t varied_max_mismatch, StandardFormMotiveMatch *out) {
+bool standard_form_motive_classify_with(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
+                                        size_t varied_max_mismatch, StandardFormRelationMatcher matcher, void *context,
+                                        StandardFormMotiveMatch *out) {
     if (out == NULL) {
         return false;
     }
     /* the order is the precedence: the first that applies wins */
+    if (matcher != NULL) {
+        StandardFormMotiveKind kind;
+        double score = 0.0;
+        if (comparable(prototype, candidate) && matcher(prototype, candidate, &kind, &score, context) &&
+            (kind == STANDARD_FORM_MOTIVE_EXACT || kind == STANDARD_FORM_MOTIVE_REAL || kind == STANDARD_FORM_MOTIVE_TONAL ||
+             kind == STANDARD_FORM_MOTIVE_INVERTED || kind == STANDARD_FORM_MOTIVE_RETROGRADE) &&
+            score > 0.0 && score <= 1.0) {
+            full(out, kind, prototype->intervals);
+            out->score = score;
+            return true;
+        }
+        return standard_form_motive_match_augmentation(prototype, candidate, out) ||
+               standard_form_motive_match_diminution(prototype, candidate, out) ||
+               standard_form_motive_match_varied(prototype, candidate, varied_max_mismatch, out);
+    }
     return standard_form_motive_match_pattern(prototype, candidate, out) ||
            standard_form_motive_match_inversion(prototype, candidate, out) ||
            standard_form_motive_match_retrograde(prototype, candidate, out) ||
            standard_form_motive_match_augmentation(prototype, candidate, out) ||
            standard_form_motive_match_diminution(prototype, candidate, out) ||
            standard_form_motive_match_varied(prototype, candidate, varied_max_mismatch, out);
+}
+
+bool standard_form_motive_classify(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
+                                   size_t varied_max_mismatch, StandardFormMotiveMatch *out) {
+    return standard_form_motive_classify_with(prototype, candidate, varied_max_mismatch, NULL, NULL, out);
 }

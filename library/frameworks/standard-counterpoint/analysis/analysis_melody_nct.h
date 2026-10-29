@@ -2,15 +2,16 @@
 #define URSATZ_FRAMEWORKS_STANDARD_COUNTERPOINT_ANALYSIS_ANALYSIS_MELODY_NCT_H
 
 /*
- * Not the non-chord-tone owner (motive_tone_roles, src/analysis/motive_tone_roles.h). Switches to the
- * owner through an injected classifier in P23; frameworks cannot call kernel L8 (docs/ARCHITECTURE.md,
- * Analytic job owners).
+ * Not the non-chord-tone owner (motive_tone_roles, src/analysis/motive_tone_roles.h). The owner arrives as an
+ * injected NonChordToneClassifier (standard_counterpoint_melody_nct_labels_with); frameworks cannot call kernel
+ * L8 (docs/ARCHITECTURE.md, Analytic job owners).
  */
 
 #include <stdbool.h>
 #include <stddef.h>
 
 #include "analysis_melody.h"
+#include "semantics/tone_line.h"
 
 /*
  * Non-chord tones in the melody (the melody adapter, step 3). The adapter does NOT label non-chord tones: that is the
@@ -57,6 +58,19 @@ typedef struct {
 
 StandardCounterpointMelodyStatus standard_counterpoint_melody_nct_labels(const StandardCounterpointMelodyLine *line,
                                                                          StandardCounterpointNctLabels *out);
+/*
+ * The same labels, with the results taken from an injected classifier where the line knows the chord. A run of
+ * consecutive present notes whose chord_pitch_classes is not 0 (a rest or a note with no chord ends the run) is
+ * passed to the classifier as a tone line (onsets and durations from the note spans, or the entry index and 1
+ * when a note has no span); its labels replace the notes' attached results field for field: chord tone is
+ * CHORD_TONE, a classified figure NON_CHORD_TONE with its type, anything else UNCLASSIFIED. The nct_ref and the
+ * confidence stay. A run the classifier refuses, and the notes outside a run, keep their attached results.
+ * classifier NULL is standard_counterpoint_melody_nct_labels. The line is not changed.
+ */
+StandardCounterpointMelodyStatus standard_counterpoint_melody_nct_labels_with(const StandardCounterpointMelodyLine *line,
+                                                                              NonChordToneClassifier classifier,
+                                                                              void *context,
+                                                                              StandardCounterpointNctLabels *out);
 void standard_counterpoint_nct_labels_destroy(StandardCounterpointNctLabels *labels);
 bool standard_counterpoint_nct_claim_read(const Interpretation *interpretation, StandardCounterpointNctClaim *out);
 

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "analysis/motive_chord_internal.h"
 #include "analysis/motive_tone_roles.h"
 
 /*
@@ -39,8 +40,43 @@ static void add_chord(MotiveSketch *sketch, unsigned long long num, unsigned lon
     sketch->chords[sketch->chord_count++] = chord;
 }
 
+/* The same sketch as a tone line: each note with the pitch-class mask of the chord in force at its onset. */
+static void to_tone_line(const MotiveSketch *sketch, ToneLineNote *notes) {
+    const MotiveSketchChord tonic = {{0, 1}, 1, 0, 0, false};
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        const MotiveSketchChord *chord = mch_chord_at(sketch, sketch->notes[i].onset);
+        int pcs[4];
+        size_t n = motive_sketch_chord_tones(sketch, chord ? chord : &tonic, pcs);
+        notes[i].midi = sketch->notes[i].pitch;
+        notes[i].onset = sketch->notes[i].onset;
+        notes[i].duration = sketch->notes[i].duration;
+        notes[i].chord_pitch_classes = 0;
+        for (size_t k = 0; k < n; k++) {
+            notes[i].chord_pitch_classes |= 1u << pcs[k];
+        }
+    }
+}
+
+/* motive_tone_roles_line gives the sketch labelling field for field (without overrides). */
+static void expect_line_equal(const MotiveSketch *sketch, const MotiveToneLabel *labels) {
+    ToneLineNote notes[MOTIVE_SKETCH_MAX_NOTES];
+    ToneLineLabel line[MOTIVE_SKETCH_MAX_NOTES];
+    to_tone_line(sketch, notes);
+    assert(motive_tone_roles_line(notes, sketch->note_count, line, NULL));
+    for (size_t i = 0; i < sketch->note_count; i++) {
+        assert(line[i].chord_tone == (labels[i].role == MOTIVE_TONE_CHORD));
+        assert(line[i].classified == (labels[i].role != MOTIVE_TONE_UNCLASSIFIED));
+        if (labels[i].role == MOTIVE_TONE_NON_CHORD) {
+            assert(line[i].type == labels[i].type);
+        }
+        assert(line[i].resolves_to == labels[i].resolves_to);
+        assert(line[i].unresolved == labels[i].unresolved);
+    }
+}
+
 static void expect_ok(const MotiveSketch *sketch, MotiveToneLabel *labels) {
     assert(motive_tone_roles(sketch, NULL, 0, labels) == MOTIVE_TONE_OK);
+    expect_line_equal(sketch, labels);
 }
 
 static void expect_chord(const MotiveToneLabel *label) {
@@ -258,12 +294,35 @@ static void test_refusals(void) {
     assert(labels[1].role == MOTIVE_TONE_UNCLASSIFIED && !labels[1].unresolved);
 }
 
+/* A line has no note limit: 200 notes, a passing tone between chord tones every third note. */
+static void test_line_without_a_note_limit(void) {
+    enum { COUNT = 200 };
+    static ToneLineNote notes[COUNT];
+    static ToneLineLabel labels[COUNT];
+    const int cycle[3] = {60, 62, 64}; /* C D E over a C major triad */
+    for (size_t i = 0; i < COUNT; i++) {
+        notes[i].midi = cycle[i % 3];
+        notes[i].onset = q(i, 4);
+        notes[i].duration = q(1, 4);
+        notes[i].chord_pitch_classes = (1u << 0) | (1u << 4) | (1u << 7);
+    }
+    assert(motive_tone_roles_line(notes, COUNT, labels, NULL));
+    assert(labels[0].chord_tone && labels[2].chord_tone);
+    assert(labels[1].classified && !labels[1].chord_tone && labels[1].type == NON_CHORD_TONE_PASSING);
+    assert(labels[1].resolves_to == 2);
+    assert(!labels[199].classified && labels[199].unresolved);
+    assert(!motive_tone_roles_line(NULL, 3, labels, NULL));
+    assert(!motive_tone_roles_line(notes, 3, NULL, NULL));
+    assert(motive_tone_roles_line(NULL, 0, labels, NULL));
+}
+
 int main(void) {
     test_simple_figures();
     test_unresolved_end();
     test_hollow_knight();
     test_overrides();
     test_refusals();
+    test_line_without_a_note_limit();
     printf("motive tone roles: ok\n");
     return 0;
 }

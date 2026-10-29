@@ -51,3 +51,12 @@ if(URSATZ_CHAIN_VALGRIND)
            COMMAND ${URSATZ_CHAIN_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_chain_inputs>)
 endif()
+
+add_executable(test_kernel_owners test_kernel_owners.c)
+target_link_libraries(test_kernel_owners PRIVATE ursatz_chain)
+add_test(NAME chain_kernel_owners COMMAND test_kernel_owners)
+if(URSATZ_CHAIN_VALGRIND)
+  add_test(NAME chain_kernel_owners_valgrind
+           COMMAND ${URSATZ_CHAIN_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_kernel_owners>)
+endif()

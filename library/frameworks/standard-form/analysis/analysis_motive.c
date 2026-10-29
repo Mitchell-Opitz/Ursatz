@@ -500,7 +500,8 @@ static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fa
             /* the whole motive under a transformation */
             if (standard_form_motive_shape(line, first, fam->proto_n, fam->generic, &shape) &&
                 !held_by_equal_or_longer(families, family_count, f, first, fam->proto_n) &&
-                standard_form_motive_classify(&fam->proto, &shape, config->varied_max_mismatch, &match) &&
+                standard_form_motive_classify_with(&fam->proto, &shape, config->varied_max_mismatch, config->relation_matcher,
+                                                   config->relation_context, &match) &&
                 match.kind > (int)STANDARD_FORM_MOTIVE_TONAL) {
                 fill_rec(&rec, f, fam->line, first, fam->proto_n, &match);
                 if (!push_rec(&recs, &rec_count, &capacity, &rec)) {

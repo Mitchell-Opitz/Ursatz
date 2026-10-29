@@ -122,6 +122,29 @@ StandardFormAnalysisStatus standard_form_input_add_analysis_segment(StandardForm
 StandardFormAnalysisStatus standard_form_input_finish(StandardFormInput *input);
 void standard_form_input_destroy(StandardFormInput *input);
 
+typedef enum {
+    STANDARD_FORM_MOTIVE_EXACT = 0,
+    STANDARD_FORM_MOTIVE_REAL,
+    STANDARD_FORM_MOTIVE_TONAL,
+    STANDARD_FORM_MOTIVE_INVERTED,
+    STANDARD_FORM_MOTIVE_RETROGRADE,
+    STANDARD_FORM_MOTIVE_AUGMENTED,
+    STANDARD_FORM_MOTIVE_DIMINISHED,
+    STANDARD_FORM_MOTIVE_FRAGMENTED,
+    STANDARD_FORM_MOTIVE_VARIED,
+    STANDARD_FORM_MOTIVE_KIND_COUNT
+} StandardFormMotiveKind;
+
+typedef struct StandardFormMotiveShape StandardFormMotiveShape;
+
+/*
+ * An injected matcher for the transformed occurrences the kernel owns (motive_relation_apply: transposition, inversion,
+ * retrograde). True when the candidate is the prototype under one of them: *kind is EXACT, REAL, TONAL, INVERTED or RETROGRADE and
+ * *score in (0, 1]. False: no relation. context is the config's relation_context.
+ */
+typedef bool (*StandardFormRelationMatcher)(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
+                                            StandardFormMotiveKind *kind, double *score, void *context);
+
 /*
  * THE CONFIGURATION. Defaults are stated, not learned.
  *
@@ -135,6 +158,9 @@ void standard_form_input_destroy(StandardFormInput *input);
  *   no_signal_uncertainty        the uncertainty of a phrase that ends with no cadence and no discontinuity, only at the end of
  *                                the input (default 0.5)
  *   motive_min_notes, motive_max_notes, varied_max_mismatch, include_bass   the motive analysis (analysis_motive.h): 3, 8, 1, false
+ *   relation_matcher, relation_context   NULL (default): standard-form's own pattern, inversion and retrograde matchers. Set: the
+ *                                matcher replaces those three, in their place in the match order (analysis_motive_match.h); the
+ *                                other kinds (augmentation, diminution, varied, fragment) keep the framework's matchers
  */
 typedef struct {
     size_t max_length_without_cadence;
@@ -147,6 +173,8 @@ typedef struct {
     size_t motive_max_notes;      /* the most (default 8) */
     size_t varied_max_mismatch;   /* interval mismatches a varied motive allows (default 1) */
     bool include_bass;            /* also look for motives in the bass line, apart from the soprano's (default false) */
+    StandardFormRelationMatcher relation_matcher; /* injected owner of transposed, inverted and retrograde (default NULL) */
+    void *relation_context;
 } StandardFormConfig;
 
 StandardFormConfig standard_form_config_default(void);

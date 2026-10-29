@@ -2,9 +2,9 @@
 #define URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_NON_CHORD_TONES_H
 
 /*
- * Not the non-chord-tone owner (motive_tone_roles, src/analysis/motive_tone_roles.h). Switches to the
- * owner through an injected classifier in P23; frameworks cannot call kernel L8 (docs/ARCHITECTURE.md,
- * Analytic job owners).
+ * The fallback when no classifier is injected. The non-chord-tone owner is motive_tone_roles
+ * (src/analysis/motive_tone_roles.h); frameworks cannot call kernel L8, so the owner arrives as a
+ * NonChordToneClassifier in CommonPracticeWeightedConfig (docs/ARCHITECTURE.md, Analytic job owners).
  */
 
 #include <stdbool.h>

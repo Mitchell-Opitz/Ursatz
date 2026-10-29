@@ -15,6 +15,8 @@ CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     config.missing_third_penalty = 0.15;
     config.bass_chord_tone_bonus = 0.05;
     config.min_coverage = 0.5;
+    config.classifier = NULL;
+    config.classifier_context = NULL;
     return config;
 }
 

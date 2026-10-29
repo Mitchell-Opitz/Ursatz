@@ -1,10 +1,13 @@
 #include "weighted_chord_identification.h"
 
 #include <stdio.h>
+#include <math.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "chord_vocabulary.h"
 #include "chord_vocabulary_seventh.h"
+#include "core/rational.h"
 #include "identity/entity_id.h"
 
 #define CONFIDENCE_DENOMINATOR 1000000UL
@@ -370,6 +373,120 @@ static CommonPracticeWeightedStatus resolve_from_neighbours(const CommonPractice
     return COMMON_PRACTICE_WEIGHTED_OK;
 }
 
+typedef struct {
+    size_t segment;
+    size_t member;
+} LineRef;
+
+static bool same_text(const char *a, const char *b) {
+    return a != NULL && b != NULL && strcmp(a, b) == 0;
+}
+
+static Rational grid_time(double whole_notes) {
+    return rational_ratio((long long)llround(whole_notes * 960.0), 960);
+}
+
+/* Replaces the framework label of every leftover member of one voice with the injected classifier's. Silent
+   when the classifier refuses the line or the voice has none: the framework label stays. */
+static CommonPracticeWeightedStatus relabel_voice(const CommonPracticeSegment *segments, const unsigned *masks,
+                                                  size_t segment_count, size_t index, const char *voice_id,
+                                                  const CommonPracticeWeightedConfig *config,
+                                                  CommonPracticeToneLabel *labels, size_t label_count) {
+    size_t total = 0;
+    for (size_t s = 0; s < segment_count; s++) {
+        total += segments[s].member_count;
+    }
+    LineRef *refs = (LineRef *)malloc((total > 0 ? total : 1) * sizeof(LineRef));
+    if (refs == NULL) {
+        return COMMON_PRACTICE_WEIGHTED_ERR_ALLOC;
+    }
+    size_t n = 0;
+    for (size_t s = 0; s < segment_count; s++) {
+        for (size_t m = 0; m < segments[s].member_count; m++) {
+            const CommonPracticeMember *member = &segments[s].members[m];
+            if (same_text(member->voice_id, voice_id)) {
+                refs[n].segment = s;
+                refs[n].member = m;
+                n++;
+            }
+        }
+    }
+    if (n == 0) {
+        free(refs);
+        return COMMON_PRACTICE_WEIGHTED_OK;
+    }
+    ToneLineNote *notes = (ToneLineNote *)malloc(n * sizeof(ToneLineNote));
+    ToneLineLabel *out = (ToneLineLabel *)malloc(n * sizeof(ToneLineLabel));
+    if (notes == NULL || out == NULL) {
+        free(refs);
+        free(notes);
+        free(out);
+        return COMMON_PRACTICE_WEIGHTED_ERR_ALLOC;
+    }
+    for (size_t k = 0; k < n; k++) {
+        const CommonPracticeMember *member = &segments[refs[k].segment].members[refs[k].member];
+        notes[k].midi = member->pitch;
+        notes[k].onset = grid_time(member->onset);
+        notes[k].duration = grid_time(member->duration);
+        notes[k].chord_pitch_classes = masks[refs[k].segment];
+    }
+    if (config->classifier(notes, n, out, config->classifier_context)) {
+        const CommonPracticeSegment *segment = &segments[index];
+        for (size_t l = 0; l < label_count; l++) {
+            const CommonPracticeMember *member = &segment->members[labels[l].member_index];
+            if (!same_text(member->voice_id, voice_id)) {
+                continue;
+            }
+            for (size_t k = 0; k < n; k++) {
+                if (refs[k].segment == index && &segments[index].members[refs[k].member] == member) {
+                    labels[l].classified = out[k].classified && !out[k].chord_tone;
+                    labels[l].tone = out[k].type;
+                    break;
+                }
+            }
+        }
+    }
+    free(refs);
+    free(notes);
+    free(out);
+    return COMMON_PRACTICE_WEIGHTED_OK;
+}
+
+/* The leftover labels of segments[index]: the framework's, with the injected classifier's replacing those of
+   members that have a voice. */
+static CommonPracticeWeightedStatus label_leftover(const CommonPracticeSegment *segments, const unsigned *masks,
+                                                   size_t segment_count, size_t index,
+                                                   const CommonPracticeWeightedConfig *config,
+                                                   CommonPracticeToneLabel **labels, size_t *label_count) {
+    if (common_practice_label_leftover_tones(segments, masks, segment_count, index, labels, label_count) !=
+        COMMON_PRACTICE_TONES_OK) {
+        return COMMON_PRACTICE_WEIGHTED_ERR_ALLOC;
+    }
+    if (config->classifier == NULL || *label_count == 0) {
+        return COMMON_PRACTICE_WEIGHTED_OK;
+    }
+    const CommonPracticeSegment *segment = &segments[index];
+    for (size_t l = 0; l < *label_count; l++) {
+        const char *voice = segment->members[(*labels)[l].member_index].voice_id;
+        bool seen = false;
+        for (size_t p = 0; p < l && !seen; p++) {
+            seen = same_text(segment->members[(*labels)[p].member_index].voice_id, voice);
+        }
+        if (voice == NULL || seen) {
+            continue;
+        }
+        CommonPracticeWeightedStatus status =
+            relabel_voice(segments, masks, segment_count, index, voice, config, *labels, *label_count);
+        if (status != COMMON_PRACTICE_WEIGHTED_OK) {
+            free(*labels);
+            *labels = NULL;
+            *label_count = 0;
+            return status;
+        }
+    }
+    return COMMON_PRACTICE_WEIGHTED_OK;
+}
+
 CommonPracticeWeightedStatus common_practice_identify_weighted_sequence(const CommonPracticeSegment *segments,
                                                                          size_t segment_count,
                                                                          int tonic_pitch_class,
@@ -421,9 +538,8 @@ CommonPracticeWeightedStatus common_practice_identify_weighted_sequence(const Co
         }
         CommonPracticeToneLabel *labels = NULL;
         size_t label_count = 0;
-        if (common_practice_label_leftover_tones(segments, masks, segment_count, i, &labels, &label_count) !=
-            COMMON_PRACTICE_TONES_OK) {
-            status = COMMON_PRACTICE_WEIGHTED_ERR_ALLOC;
+        status = label_leftover(segments, masks, segment_count, i, effective, &labels, &label_count);
+        if (status != COMMON_PRACTICE_WEIGHTED_OK) {
             break;
         }
         if (label_count > 0) {

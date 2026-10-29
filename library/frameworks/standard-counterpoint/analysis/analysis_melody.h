@@ -90,6 +90,8 @@ typedef struct {
     NonChordTone nct_type;
     const char *nct_ref;
     double confidence;
+    unsigned chord_pitch_classes; /* 12-bit mask (bit pc set) of the note's chord; 0 (the default): none known. Read only
+                                     by standard_counterpoint_melody_nct_labels_with. */
 } StandardCounterpointMelodyNote;
 
 typedef struct {
