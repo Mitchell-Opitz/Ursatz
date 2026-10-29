@@ -152,6 +152,7 @@ add_library(ursatz
     # which itself depends on ursatz, so compiling them here would be a
     # circular library dependency.
     analysis/voice_leading_analysis.c
+    analysis/beat_grid_length.c
     analysis/outer_voice.c
     analysis/voice_separation.c
     analysis/cadence_detection.c

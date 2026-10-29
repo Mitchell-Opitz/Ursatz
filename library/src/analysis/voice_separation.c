@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "analysis/beat_grid_length.h"
 #include "analysis/voice_separation_internal.h"
 #include "pitch/tuning_system.h"
 #include "time/time_span.h"
@@ -339,58 +340,6 @@ int vs_reference_kept(Rational last_release, Rational at, Rational hold_beats,
     return 0;
 }
 
-/* The beat length from the injected beat grid: the length of the beat that holds `at`. */
-typedef struct {
-    const MeterMap *map;
-    BeatGridProvider provider;
-    void *provider_context;
-} BeatGridContext;
-
-static bool grid_beat_length(void *context, Rational at, Rational *out) {
-    const BeatGridContext *grid = (const BeatGridContext *)context;
-    MusicalTime *time = musical_time_from_rational_or_null(at);
-    if (time == NULL) {
-        return false;
-    }
-    int measure = 0;
-    MeterMapResult indexed = meter_map_measure_index_at(grid->map, time, &measure);
-    musical_time_destroy(time);
-    TimeSpan *span = NULL;
-    if (indexed != METER_MAP_OK || meter_map_measure_span(grid->map, measure, &span) != METER_MAP_OK) {
-        return false;
-    }
-    Rational measure_end;
-    bool measure_ok = rational_of_musical_time(time_span_end(span), &measure_end) == RATIONAL_OK;
-    time_span_destroy(span);
-    if (!measure_ok) {
-        return false;
-    }
-
-    MusicalTime **starts = NULL;
-    size_t count = 0;
-    if (!grid->provider(grid->map, measure, grid->provider_context, &starts, &count) || count == 0) {
-        return false;
-    }
-    bool found = false;
-    for (size_t k = 0; k < count && !found; k++) {
-        Rational beat_start;
-        Rational beat_end = measure_end;
-        if (rational_of_musical_time(starts[k], &beat_start) != RATIONAL_OK ||
-            (k + 1 < count && rational_of_musical_time(starts[k + 1], &beat_end) != RATIONAL_OK)) {
-            break;
-        }
-        if (rational_cmp(beat_start, at) <= 0 && rational_cmp(at, beat_end) < 0) {
-            found = rational_sub(beat_end, beat_start, out) == 0;
-            break;
-        }
-    }
-    for (size_t k = 0; k < count; k++) {
-        musical_time_destroy(starts[k]);
-    }
-    free(starts);
-    return found;
-}
-
 /* --- the notes of one stream --- */
 
 typedef struct {
@@ -523,7 +472,7 @@ static int separate_stream(const VsNote *notes, const SortKey *keys, size_t lo, 
             voices[v].recency = state[v].recency;
             bool kept = false;
             if (state[v].has_note) {
-                int status = vs_reference_kept(state[v].release, onset, hold, grid_beat_length, (void *)grid, &kept);
+                int status = vs_reference_kept(state[v].release, onset, hold, beat_grid_beat_length, (void *)grid, &kept);
                 if (status != 0) {
                     return status;
                 }

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "analysis/beat_grid_length.h"
 #include "analysis/outer_voice_internal.h"
 #include "time/temporal_anchor.h"
 
@@ -175,58 +176,6 @@ OuterVoiceResult outer_voice_mark_bridged_gaps(const OuterNote *notes, const Out
     return OUTER_VOICE_OK;
 }
 
-/* The beat length from the injected beat grid: the length of the beat that holds `at`. */
-typedef struct {
-    const MeterMap *map;
-    BeatGridProvider provider;
-    void *provider_context;
-} BeatGridContext;
-
-static bool grid_beat_length(void *context, Rational at, Rational *out) {
-    const BeatGridContext *grid = (const BeatGridContext *)context;
-    MusicalTime *time = musical_time_from_rational_or_null(at);
-    if (time == NULL) {
-        return false;
-    }
-    int measure = 0;
-    MeterMapResult indexed = meter_map_measure_index_at(grid->map, time, &measure);
-    musical_time_destroy(time);
-    TimeSpan *span = NULL;
-    if (indexed != METER_MAP_OK || meter_map_measure_span(grid->map, measure, &span) != METER_MAP_OK) {
-        return false;
-    }
-    Rational measure_end;
-    bool measure_ok = rational_of_musical_time(time_span_end(span), &measure_end) == RATIONAL_OK;
-    time_span_destroy(span);
-    if (!measure_ok) {
-        return false;
-    }
-
-    MusicalTime **starts = NULL;
-    size_t count = 0;
-    if (!grid->provider(grid->map, measure, grid->provider_context, &starts, &count) || count == 0) {
-        return false;
-    }
-    bool found = false;
-    for (size_t k = 0; k < count && !found; k++) {
-        Rational beat_start;
-        Rational beat_end = measure_end;
-        if (rational_of_musical_time(starts[k], &beat_start) != RATIONAL_OK ||
-            (k + 1 < count && rational_of_musical_time(starts[k + 1], &beat_end) != RATIONAL_OK)) {
-            break;
-        }
-        if (rational_cmp(beat_start, at) <= 0 && rational_cmp(at, beat_end) < 0) {
-            found = rational_sub(beat_end, beat_start, out) == 0;
-            break;
-        }
-    }
-    for (size_t k = 0; k < count; k++) {
-        musical_time_destroy(starts[k]);
-    }
-    free(starts);
-    return found;
-}
-
 typedef struct {
     const char *id;
     size_t index;
@@ -393,19 +342,19 @@ OuterVoiceResult outer_voice_extract(const AdaptiveSonorities *segments, NoteEve
             Rational window = rational_ratio(effective.gap_bridge_max_numerator, effective.gap_bridge_max_denominator);
             if (effective.guard_soprano_register) {
                 failure = outer_voice_guard_register(facts, views, segment_count, true,
-                                                     effective.register_guard_semitones, window, grid_beat_length,
+                                                     effective.register_guard_semitones, window, beat_grid_beat_length,
                                                      &grid, soprano_nodes);
             }
             if (failure == OUTER_VOICE_OK && effective.guard_bass_register) {
                 failure = outer_voice_guard_register(facts, views, segment_count, false,
-                                                     effective.register_guard_semitones, window, grid_beat_length,
+                                                     effective.register_guard_semitones, window, beat_grid_beat_length,
                                                      &grid, bass_nodes);
             }
             if (failure == OUTER_VOICE_OK && effective.bridge_gaps) {
-                failure = outer_voice_mark_bridged_gaps(facts, views, segment_count, window, grid_beat_length, &grid,
+                failure = outer_voice_mark_bridged_gaps(facts, views, segment_count, window, beat_grid_beat_length, &grid,
                                                         soprano_nodes);
                 if (failure == OUTER_VOICE_OK) {
-                    failure = outer_voice_mark_bridged_gaps(facts, views, segment_count, window, grid_beat_length,
+                    failure = outer_voice_mark_bridged_gaps(facts, views, segment_count, window, beat_grid_beat_length,
                                                             &grid, bass_nodes);
                 }
             }
