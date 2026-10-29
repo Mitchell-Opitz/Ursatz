@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "roman_numeral_grammar.h"
 #include "rule_pair.h"
 
 static const char *const NAMES[STANDARD_TONALITY_ROMAN_NUMERAL_RULE_COUNT] = {
@@ -139,88 +140,16 @@ bool standard_tonality_roman_numeral_is_unambiguous(const StandardTonalityRomanN
 }
 
 bool standard_tonality_roman_numeral_format(const StandardTonalityRomanNumeral *numeral, char *buffer, size_t size) {
-    if (buffer == NULL || size == 0 || !valid_numeral(numeral)) {
-        return false;
-    }
-    bool uppercase = numeral->seventh ? standard_tonality_roman_numeral_seventh_uppercase(numeral->seventh_quality)
-                                      : standard_tonality_roman_numeral_triad_uppercase(numeral->triad);
-    const char *symbol = numeral->seventh ? standard_tonality_roman_numeral_seventh_symbol(numeral->seventh_quality)
-                                          : standard_tonality_roman_numeral_triad_symbol(numeral->triad);
-
-    char text[32];
-    int length = snprintf(text, sizeof(text), "%s%s", standard_tonality_roman_numeral_degree(numeral->degree, uppercase),
-                          symbol);
-    if (length < 0 || (size_t)length >= sizeof(text) || (size_t)length >= size) {
-        return false;
-    }
-    memcpy(buffer, text, (size_t)length + 1);
-    return true;
-}
-
-/* Reads the numeral letters at the start of the text: the degree and
-   whether they were uppercase. Longest first, so VII is not VI then I.
-   Returns the bytes taken, or 0. */
-static size_t parse_degree(const char *text, int *degree, bool *uppercase) {
-    for (int d = 7; d >= 1; d--) {
-        size_t upper_length = strlen(UPPERCASE[d - 1]);
-        if (strncmp(text, UPPERCASE[d - 1], upper_length) == 0) {
-            *degree = d;
-            *uppercase = true;
-            return upper_length;
-        }
-        size_t lower_length = strlen(LOWERCASE[d - 1]);
-        if (strncmp(text, LOWERCASE[d - 1], lower_length) == 0) {
-            *degree = d;
-            *uppercase = false;
-            return lower_length;
-        }
-    }
-    return 0;
+    StandardTonalityNumeralText text;
+    return standard_tonality_numeral_from_base(numeral, &text) &&
+           standard_tonality_numeral_format_styled(&text, STANDARD_TONALITY_NUMERAL_STYLE_DISPLAY, buffer, size);
 }
 
 bool standard_tonality_roman_numeral_parse(const char *text, StandardTonalityRomanNumeral *out) {
-    if (text == NULL || out == NULL) {
-        return false;
-    }
-    int degree;
-    bool uppercase;
-    size_t taken = parse_degree(text, &degree, &uppercase);
-    if (taken == 0) {
-        return false;
-    }
-    const char *rest = text + taken;
-
-    if (uppercase) {
-        if (rest[0] == '\0') {
-            return standard_tonality_roman_numeral_triad(degree, STANDARD_TONALITY_TRIAD_MAJOR, out);
-        }
-        if (strcmp(rest, "+") == 0) {
-            return standard_tonality_roman_numeral_triad(degree, STANDARD_TONALITY_TRIAD_AUGMENTED, out);
-        }
-        if (strcmp(rest, "7") == 0) {
-            StandardTonalitySeventhQuality inferred;
-            return standard_tonality_roman_numeral_inferred_seventh(degree, &inferred) &&
-                   standard_tonality_roman_numeral_seventh_chord(degree, inferred, out);
-        }
-        return false;
-    }
-
-    if (rest[0] == '\0') {
-        return standard_tonality_roman_numeral_triad(degree, STANDARD_TONALITY_TRIAD_MINOR, out);
-    }
-    if (strcmp(rest, "\xC2\xB0") == 0 || strcmp(rest, "o") == 0) {
-        return standard_tonality_roman_numeral_triad(degree, STANDARD_TONALITY_TRIAD_DIMINISHED, out);
-    }
-    if (strcmp(rest, "7") == 0) {
-        return standard_tonality_roman_numeral_seventh_chord(degree, STANDARD_TONALITY_SEVENTH_MINOR_MINOR, out);
-    }
-    if (strcmp(rest, "\xE2\x88\x85" "7") == 0 || strcmp(rest, "\xC3\xB8" "7") == 0) {
-        return standard_tonality_roman_numeral_seventh_chord(degree, STANDARD_TONALITY_SEVENTH_HALF_DIMINISHED, out);
-    }
-    if (strcmp(rest, "\xC2\xB0" "7") == 0 || strcmp(rest, "o7") == 0) {
-        return standard_tonality_roman_numeral_seventh_chord(degree, STANDARD_TONALITY_SEVENTH_FULLY_DIMINISHED, out);
-    }
-    return false;
+    StandardTonalityNumeralText parsed;
+    /* The plain numeral has no place for an alteration, an inversion, or an applied target. */
+    return standard_tonality_numeral_parse(text, &parsed) && parsed.alteration == 0 && parsed.inversion == 0 &&
+           !parsed.has_target && standard_tonality_numeral_base(&parsed, out);
 }
 
 ChordResult standard_tonality_build_roman_numeral_chord(const StandardTonalityRomanNumeral *numeral,

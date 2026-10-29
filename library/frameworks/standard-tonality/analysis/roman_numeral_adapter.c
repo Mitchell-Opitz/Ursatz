@@ -13,6 +13,7 @@
 #include "identity/entity_id.h"
 #include "interpretation/uncertainty.h"
 #include "roman_numeral_analysis_rules.h"
+#include "roman_numeral_grammar.h"
 #include "seventh_rules.h"
 #include "theory/framework.h"
 #include "triad_rules.h"
@@ -160,66 +161,32 @@ bool standard_tonality_read_roman_numeral(const StandardTonalityChordInput *inpu
     return true;
 }
 
-static const char *figure_of(bool seventh, int inversion) {
-    static const char *const TRIAD_FIGURES[3] = {"", "6", "6/4"};
-    static const char *const SEVENTH_FIGURES[4] = {"", "6/5", "4/3", "4/2"};
-    if (seventh) {
-        return inversion >= 0 && inversion < 4 ? SEVENTH_FIGURES[inversion] : NULL;
-    }
-    return inversion >= 0 && inversion < 3 ? TRIAD_FIGURES[inversion] : NULL;
-}
-
-/* RomanText spelling (R-031): the circle of a diminished chord is "o" and the slashed circle of a half-diminished
-   one "/o" -- "viio7", "ii/o7" -- not the degree sign and the empty set sign the standard-tonality numeral uses. */
-static void respell_romantext(char *label, size_t size) {
-    char spelled[STANDARD_TONALITY_ROMAN_LABEL_MAX];
-    size_t out = 0;
-    for (const char *in = label; *in != '\0' && out + 3 < sizeof(spelled); in++) {
-        if ((unsigned char)in[0] == 0xC2 && (unsigned char)in[1] == 0xB0) {
-            spelled[out++] = 'o';
-            in++;
-        } else if ((unsigned char)in[0] == 0xE2 && (unsigned char)in[1] == 0x88 && (unsigned char)in[2] == 0x85) {
-            spelled[out++] = '/';
-            spelled[out++] = 'o';
-            in += 2;
-        } else {
-            spelled[out++] = *in;
-        }
-    }
-    spelled[out] = '\0';
-    snprintf(label, size, "%s", spelled);
-}
-
 bool standard_tonality_format_roman_reading(const StandardTonalityRomanReading *reading, char *buffer, size_t size) {
     if (reading == NULL || buffer == NULL || size == 0) {
         return false;
     }
-    const char *figure = figure_of(reading->numeral.seventh, reading->inversion);
-    if (figure == NULL || !standard_tonality_roman_numeral_format(&reading->numeral, buffer, size)) {
+    StandardTonalityNumeralText text;
+    if (!standard_tonality_numeral_from_base(&reading->numeral, &text)) {
         return false;
     }
-    size_t length = strlen(buffer);
-    if (reading->numeral.seventh && reading->inversion > 0 && length > 0) {
-        buffer[--length] = '\0'; /* every seventh numeral ends in the 7, which the figure replaces */
-    }
-    if (length + strlen(figure) + 1 > size) {
-        return false;
-    }
-    strcpy(buffer + length, figure);
-    length += strlen(figure);
+    text.inversion = reading->inversion;
     if (reading->applied) {
-        char target[16];
-        if (!standard_tonality_roman_numeral_format(&reading->applied_target, target, sizeof(target)) ||
-            length + 1 + strlen(target) + 1 > size) {
+        StandardTonalityNumeralText target;
+        if (!standard_tonality_numeral_from_base(&reading->applied_target, &target)) {
             return false;
         }
-        buffer[length++] = '/';
-        strcpy(buffer + length, target);
+        text.has_target = true;
+        text.target_degree = target.degree;
+        text.target_minor = target.quality != STANDARD_TONALITY_NUMERAL_MAJOR &&
+                            target.quality != STANDARD_TONALITY_NUMERAL_AUGMENTED &&
+                            target.quality != STANDARD_TONALITY_NUMERAL_DOMINANT_SEVENTH;
     }
-    if (reading->romantext_spelling) {
-        respell_romantext(buffer, size);
-    }
-    return true;
+    /* RomanText spelling (R-031): "viio7", "ii/o7" rather than the degree sign and the empty set sign. */
+    return standard_tonality_numeral_format_styled(&text,
+                                                   reading->romantext_spelling
+                                                       ? STANDARD_TONALITY_NUMERAL_STYLE_ROMANTEXT
+                                                       : STANDARD_TONALITY_NUMERAL_STYLE_DISPLAY,
+                                                   buffer, size);
 }
 
 static double clamp01(double value) {

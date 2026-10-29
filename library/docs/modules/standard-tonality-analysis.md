@@ -44,7 +44,7 @@ Candidates for each target x (major: ii, iii, IV, V, vi; minor: III, iv, V, VI, 
 2. the best applied candidate scores strictly above the diatonic chord;
 3. the next segment whose chord is not a repeat of this one (same root) has the target's root, or the target's submediant root (nine semitones above the target's root: a deceptive-style resolution, recorded as `deceptive`).
 
-Otherwise the diatonic label stands. The kind is the existing `AppliedChordKind` (`src/semantics/`, shared with standard-harmony, so it stays there): `SECONDARY_DOMINANT` for V and V7, `SECONDARY_LEADING_TONE` for the diminished chords. The label is the numeral as it reads in the tonicized key, a slash, and the target numeral: V7/V, V6/5/V, vii°6/V.
+Otherwise the diatonic label stands. The kind is the existing `AppliedChordKind` (`src/semantics/`, shared with standard-harmony, so it stays there): `SECONDARY_DOMINANT` for V and V7, `SECONDARY_LEADING_TONE` for the diminished chords. The label is the numeral as it reads in the tonicized key, a slash, and the target numeral: V7/V, V6/5/V, vii°6/V. The label is written by `standard_tonality_numeral_format_styled` (`roman_numeral_grammar.h`): the same grammar `standard_tonality_numeral_parse` reads, in the display style (`°`, `∅`, figures `6/5`) or, for a minor key, the RomanText style (`viio6/5`, `ii/o7`).
 
 An applied chord is linked to the segment it resolves to by a `Relationship`, predicate `resolves-to`, source = the applied segment's Sonority id, target = the resolution segment's. The link is its own object (the durable claim pattern), owned by the result.
 
