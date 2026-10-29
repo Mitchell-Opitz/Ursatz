@@ -20,3 +20,15 @@ add_executable(test_framework_v1_corpus_subset_match_report test_framework_v1_co
 target_link_libraries(test_framework_v1_corpus_subset_match_report PRIVATE ursatz_chain)
 add_test(NAME framework_v1_corpus_subset_match_report COMMAND test_framework_v1_corpus_subset_match_report
          WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/tests/analysis)
+
+add_executable(test_form_bridge test_form_bridge.c)
+target_link_libraries(test_form_bridge PRIVATE ursatz_chain)
+add_test(NAME chain_form_bridge COMMAND test_form_bridge)
+
+# Memcheck for the bridges. Skips silently if valgrind isn't installed.
+find_program(URSATZ_CHAIN_VALGRIND valgrind)
+if(URSATZ_CHAIN_VALGRIND)
+  add_test(NAME chain_form_bridge_valgrind
+           COMMAND ${URSATZ_CHAIN_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_form_bridge>)
+endif()
