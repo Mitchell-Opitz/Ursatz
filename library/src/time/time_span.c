@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 
+#include "time/time_rational.h"
+
 struct TimeSpan {
     MusicalTime *start;
     MusicalTime *end;
@@ -83,4 +85,15 @@ const MusicalTime *time_span_end(const TimeSpan *span) {
 
 TimeSpanBoundary time_span_boundary(const TimeSpan *span) {
     return span->boundary;
+}
+
+bool time_span_is_valid(const TimeSpan *span) {
+    Rational start;
+    Rational end;
+    if (span == NULL || time_span_start(span) == NULL || time_span_end(span) == NULL ||
+        rational_of_musical_time(time_span_start(span), &start) != RATIONAL_OK ||
+        rational_of_musical_time(time_span_end(span), &end) != RATIONAL_OK) {
+        return false;
+    }
+    return rational_cmp(end, start) > 0;
 }
