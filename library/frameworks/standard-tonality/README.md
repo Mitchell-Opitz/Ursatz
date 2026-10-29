@@ -133,6 +133,11 @@ Rules about how pitches relate within a key:
   raised leading tone makes the sol triad major and the ti triad
   diminished. The me triad of harmonic minor (augmented) is not in the
   source and is included because it follows from the spelled scale.
+- **Quality semitones** (`triad_rules.h`, `seventh_rules.h`):
+  `standard_tonality_triad_quality_semitones` and
+  `standard_tonality_seventh_quality_semitones` give the root-relative
+  semitones of each triad and seventh quality, checked against the interval
+  rules.
 - **Seventh chord structure** (`seventh_rules.h`): four notes stacked in
   thirds, all on lines or all on spaces; root, third, fifth, seventh;
   five qualities set by the triad and the seventh above the root
@@ -225,6 +230,10 @@ Rules about how pitches relate within a key:
   ascending form; a bare "minor" is never implied). `standard_tonality_mode_of_minor_form`
   and `standard_tonality_mode_of_roman_key_mode` map the older enums.
   Spelling arithmetic comes from `src/pitch/pitch_arithmetic.h`.
+  `standard_tonality_key_tonic_of_pitch_class` spells the tonic of a key from its
+  pitch class with the fewer accidentals in its signature (sharps on a tie; a
+  minor key by its relative major), and `standard_tonality_chromatic_degree_label`
+  names a semitone distance above the tonic ("1", "b2", ... "7").
 
 How accidentals are written and ordered in a key signature is notation
 and lives in `frameworks/standard-notation/`. Built on `KeySignature`

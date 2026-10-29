@@ -1093,3 +1093,50 @@ bool common_practice_key_signature_event_from_analysis(const AnalysisKeyEvent *e
     out->sharps_flats = fifths;
     return true;
 }
+
+static bool region_duration(const CommonPracticeKeyRegion *region, Rational *out) {
+    Rational start;
+    Rational end;
+    if (region->span == NULL || region->key_index < 0 || region->key_index >= COMMON_PRACTICE_KEY_COUNT ||
+        rational_of_musical_time(time_span_start(region->span), &start) != RATIONAL_OK ||
+        rational_of_musical_time(time_span_end(region->span), &end) != RATIONAL_OK) {
+        return false;
+    }
+    return rational_sub(end, start, out) == RATIONAL_OK;
+}
+
+bool common_practice_home_key_region(const CommonPracticeKeyRegion *regions, size_t count, size_t *home,
+                                     Rational *duration) {
+    if (regions == NULL || home == NULL || count == 0) {
+        return false;
+    }
+    size_t best_region = 0;
+    Rational best = {0, 1};
+    for (size_t i = 0; i < count; i++) {
+        bool first_of_key = true;
+        for (size_t earlier = 0; earlier < i && first_of_key; earlier++) {
+            first_of_key = regions[earlier].key_index != regions[i].key_index;
+        }
+        if (!first_of_key) {
+            continue;
+        }
+        Rational total = {0, 1};
+        for (size_t j = i; j < count; j++) {
+            Rational length;
+            if (regions[j].key_index == regions[i].key_index) {
+                if (!region_duration(&regions[j], &length) || rational_add(total, length, &total) != RATIONAL_OK) {
+                    return false;
+                }
+            }
+        }
+        if (i == 0 || rational_cmp(best, total) < 0) {
+            best_region = i;
+            best = total;
+        }
+    }
+    *home = best_region;
+    if (duration != NULL) {
+        *duration = best;
+    }
+    return true;
+}

@@ -62,3 +62,22 @@ if(URSATZ_COMMON_PRACTICE_NOTE_VALGRIND)
   add_test(NAME common_practice_minimal_analysis_note_valgrind
            COMMAND ${URSATZ_COMMON_PRACTICE_NOTE_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_common_practice_minimal_analysis_note>)
 endif()
+
+add_executable(test_common_practice_minimal_home_key_region test_home_key_region.c)
+target_link_libraries(test_common_practice_minimal_home_key_region PRIVATE common_practice_minimal)
+add_test(NAME common_practice_minimal_home_key_region COMMAND test_common_practice_minimal_home_key_region)
+
+add_executable(test_common_practice_minimal_ranked_chord_names test_ranked_chord_names.c)
+target_link_libraries(test_common_practice_minimal_ranked_chord_names PRIVATE common_practice_minimal)
+add_test(NAME common_practice_minimal_ranked_chord_names COMMAND test_common_practice_minimal_ranked_chord_names)
+
+add_executable(test_common_practice_minimal_scale_degree_of test_scale_degree_of.c)
+target_link_libraries(test_common_practice_minimal_scale_degree_of PRIVATE common_practice_minimal)
+add_test(NAME common_practice_minimal_scale_degree_of COMMAND test_common_practice_minimal_scale_degree_of)
+
+# Memcheck for the home key test (it builds heap spans). Skips silently if valgrind isn't installed.
+find_program(URSATZ_COMMON_PRACTICE_HOME_KEY_VALGRIND valgrind)
+if(URSATZ_COMMON_PRACTICE_HOME_KEY_VALGRIND)
+  add_test(NAME common_practice_minimal_home_key_region_valgrind
+           COMMAND ${URSATZ_COMMON_PRACTICE_HOME_KEY_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_common_practice_minimal_home_key_region>)
+endif()

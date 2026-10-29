@@ -166,3 +166,14 @@ bool standard_tonality_triad_stack_quality(const PitchSpelling *root, const Pitc
     }
     return standard_tonality_triad_quality_from_intervals(third_quality, fifth_quality, quality);
 }
+
+bool standard_tonality_triad_quality_semitones(StandardTonalityTriadQuality quality, int out[3]) {
+    static const int SEMITONES[STANDARD_TONALITY_TRIAD_QUALITY_COUNT][3] = {{0, 4, 7}, {0, 3, 7}, {0, 3, 6}, {0, 4, 8}};
+    if (!valid_quality(quality) || out == NULL) {
+        return false;
+    }
+    for (int i = 0; i < 3; i++) {
+        out[i] = SEMITONES[quality][i];
+    }
+    return true;
+}

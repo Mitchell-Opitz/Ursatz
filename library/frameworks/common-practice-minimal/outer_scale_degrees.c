@@ -11,21 +11,42 @@
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
 
-static const char *const MAJOR_LABELS[12] = {"1", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7"};
-static const char *const MINOR_LABELS[12] = {"1", "b2", "2", "3", "#3", "4", "#4", "5", "6", "#6", "7", "#7"};
+typedef struct {
+    int degree;     /* 1..7 */
+    int alteration; /* -1, 0 or 1 */
+} DegreeOfOffset;
 
-const char *common_practice_scale_degree_label(int pitch_class, int tonic_pitch_class, CommonPracticeKeyMode mode) {
-    if (pitch_class < 0 || pitch_class > 11 || tonic_pitch_class < 0 || tonic_pitch_class > 11) {
-        return NULL;
+/* Indexed by semitones above the tonic. Major: 1 b2 2 b3 3 4 #4 5 b6 6 b7 7. Natural minor: 1 b2 2 3 #3 4 #4 5 6 #6 7 #7. */
+static const DegreeOfOffset MAJOR_DEGREES[12] = {{1, 0}, {2, -1}, {2, 0}, {3, -1}, {3, 0}, {4, 0},
+                                                 {4, 1}, {5, 0},  {6, -1}, {6, 0}, {7, -1}, {7, 0}};
+static const DegreeOfOffset MINOR_DEGREES[12] = {{1, 0}, {2, -1}, {2, 0}, {3, 0}, {3, 1}, {4, 0},
+                                                 {4, 1}, {5, 0},  {6, 0}, {6, 1}, {7, 0}, {7, 1}};
+
+/* [degree - 1][alteration + 1]: flat, natural, sharp. */
+static const char *const DEGREE_LABELS[7][3] = {{"b1", "1", "#1"}, {"b2", "2", "#2"}, {"b3", "3", "#3"},
+                                                {"b4", "4", "#4"}, {"b5", "5", "#5"}, {"b6", "6", "#6"},
+                                                {"b7", "7", "#7"}};
+
+bool common_practice_scale_degree_of(int pitch_class, int tonic_pitch_class, CommonPracticeKeyMode mode, int *degree,
+                                     int *alteration) {
+    if (degree == NULL || alteration == NULL || pitch_class < 0 || pitch_class > 11 || tonic_pitch_class < 0 ||
+        tonic_pitch_class > 11 || (mode != COMMON_PRACTICE_KEY_MAJOR && mode != COMMON_PRACTICE_KEY_MINOR)) {
+        return false;
     }
     int offset = ((pitch_class - tonic_pitch_class) % 12 + 12) % 12;
-    if (mode == COMMON_PRACTICE_KEY_MAJOR) {
-        return MAJOR_LABELS[offset];
+    const DegreeOfOffset *entry = mode == COMMON_PRACTICE_KEY_MAJOR ? &MAJOR_DEGREES[offset] : &MINOR_DEGREES[offset];
+    *degree = entry->degree;
+    *alteration = entry->alteration;
+    return true;
+}
+
+const char *common_practice_scale_degree_label(int pitch_class, int tonic_pitch_class, CommonPracticeKeyMode mode) {
+    int degree = 0;
+    int alteration = 0;
+    if (!common_practice_scale_degree_of(pitch_class, tonic_pitch_class, mode, &degree, &alteration)) {
+        return NULL;
     }
-    if (mode == COMMON_PRACTICE_KEY_MINOR) {
-        return MINOR_LABELS[offset];
-    }
-    return NULL;
+    return DEGREE_LABELS[degree - 1][alteration + 1];
 }
 
 void common_practice_outer_degrees_destroy(CommonPracticeOuterDegreeList *list) {

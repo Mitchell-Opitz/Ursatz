@@ -218,6 +218,10 @@ Same ceiling as `Framework` itself: `identity` (L0), `core` (L1),
 specifically. Enforced by
 `tests/test_architecture_common_practice_minimal.c`.
 
+## Theory owners (P23)
+
+`common_practice_home_key_region` (`key_regions.h`) gives the home key of a piece from its regions: the key with the longest total duration, the earliest on a tie, summed on checked `Rational`. `common_practice_ranked_chord_quality_name` and `common_practice_ranked_chord_inversion` (`weighted_identification.h`) name a ranked chord's quality and place its bass among its tones. `common_practice_scale_degree_of` (`outer_scale_degrees.h`) gives a pitch class's scale degree (1 to 7) and alteration (-1, 0, 1) as numbers; `common_practice_scale_degree_label` is built over it.
+
 ## Neutral analysis input
 
 `common_practice_member_from_analysis_note` (`weighted_identification.h`) makes a `CommonPracticeMember` from an `AnalysisNote` and the segment's span: `held` when the note starts before the segment, `duration` the overlap and `onset` the note start, in whole notes as `double` (`rational_to_double`), `pitch` the note's `midi`. `key_regions.h` maps a region's key to an `AnalysisKey` (`common_practice_key_region_analysis_key`) and an `AnalysisKeyEvent` to a `CommonPracticeKeySignatureEvent` (`common_practice_key_signature_event_from_analysis`).
