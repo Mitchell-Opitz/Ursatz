@@ -2,6 +2,8 @@
 
 #include <limits.h>
 #include <stdlib.h>
+#include "core/rational.h"
+#include "time/time_rational.h"
 
 struct MetricalPosition {
     int measure;
@@ -50,120 +52,17 @@ bool metrical_position_equals(const MetricalPosition *a, const MetricalPosition 
     return a->measure == b->measure && duration_equals(a->offset, b->offset);
 }
 
-/* Exact non-negative rational on unsigned 64-bit integers, in lowest terms. Every operation is
-   checked and returns -1 on overflow. */
-typedef struct {
-    unsigned long long n;
-    unsigned long long d;
-} Rat;
-
-static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
-    while (b != 0) {
-        unsigned long long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
+/* Exact arithmetic is core/rational.h; every operation is checked and reports overflow. */
+static int rat_of_time(const MusicalTime *time, Rational *out) {
+    return rational_of_musical_time(time, out) == RATIONAL_OK ? 0 : -1;
 }
 
-static int mul_checked(unsigned long long a, unsigned long long b, unsigned long long *out) {
-    if (a != 0 && b > ULLONG_MAX / a) {
-        return -1;
-    }
-    *out = a * b;
-    return 0;
+static int rat_of_duration(const Duration *duration, Rational *out) {
+    return rational_of_duration(duration, out) == RATIONAL_OK ? 0 : -1;
 }
 
-static int add_checked(unsigned long long a, unsigned long long b, unsigned long long *out) {
-    if (b > ULLONG_MAX - a) {
-        return -1;
-    }
-    *out = a + b;
-    return 0;
-}
-
-static Rat rat_reduced(unsigned long long n, unsigned long long d) {
-    unsigned long long g = gcd_ull(n, d);
-    Rat r;
-    r.n = g > 1 ? n / g : n;
-    r.d = g > 1 ? d / g : d;
-    return r;
-}
-
-static int rat_add(Rat a, Rat b, Rat *out) {
-    unsigned long long g = gcd_ull(a.d, b.d);
-    unsigned long long ad_over_g = a.d / g;
-    unsigned long long bd_over_g = b.d / g;
-    unsigned long long left = 0;
-    unsigned long long right = 0;
-    unsigned long long n = 0;
-    unsigned long long d = 0;
-    if (mul_checked(a.n, bd_over_g, &left) != 0 || mul_checked(b.n, ad_over_g, &right) != 0 ||
-        add_checked(left, right, &n) != 0 || mul_checked(ad_over_g, b.d, &d) != 0) {
-        return -1;
-    }
-    *out = rat_reduced(n, d);
-    return 0;
-}
-
-/* a - b, for a >= b. */
-static int rat_sub(Rat a, Rat b, Rat *out) {
-    unsigned long long g = gcd_ull(a.d, b.d);
-    unsigned long long ad_over_g = a.d / g;
-    unsigned long long bd_over_g = b.d / g;
-    unsigned long long left = 0;
-    unsigned long long right = 0;
-    unsigned long long d = 0;
-    if (mul_checked(a.n, bd_over_g, &left) != 0 || mul_checked(b.n, ad_over_g, &right) != 0 ||
-        mul_checked(ad_over_g, b.d, &d) != 0) {
-        return -1;
-    }
-    *out = rat_reduced(left - right, d);
-    return 0;
-}
-
-/* -1, 0, 1, by comparing integer parts and then reciprocals of remainders (never multiplies). */
-static int rat_cmp(Rat x, Rat y) {
-    unsigned long long a = x.n;
-    unsigned long long b = x.d;
-    unsigned long long c = y.n;
-    unsigned long long d = y.d;
-    int sign = 1;
-    for (;;) {
-        unsigned long long qa = a / b;
-        unsigned long long qc = c / d;
-        if (qa != qc) {
-            return qa < qc ? -sign : sign;
-        }
-        unsigned long long ra = a % b;
-        unsigned long long rc = c % d;
-        if (ra == 0 && rc == 0) {
-            return 0;
-        }
-        if (ra == 0) {
-            return -sign;
-        }
-        if (rc == 0) {
-            return sign;
-        }
-        a = b;
-        b = ra;
-        c = d;
-        d = rc;
-        sign = -sign;
-    }
-}
-
-static Rat rat_of_time(const MusicalTime *time) {
-    return rat_reduced((unsigned long long)musical_time_numerator(time), musical_time_denominator(time));
-}
-
-static Rat rat_of_duration(const Duration *duration) {
-    return rat_reduced((unsigned long long)duration_numerator(duration), duration_denominator(duration));
-}
-
-static int fits(Rat r) {
-    return r.n <= (unsigned long long)LONG_MAX && r.d <= (unsigned long long)ULONG_MAX;
+static int fits(Rational r) {
+    return r.num >= 0 && r.num <= (long long)LONG_MAX && (unsigned long long)r.den <= ULONG_MAX;
 }
 
 static MetricalPositionResult meter_map_failure(MeterMapResult result) {
@@ -199,11 +98,14 @@ MetricalPositionResult metrical_position_reading_signature(const MeterMap *map, 
         if (time_signature_measure_duration(signature, &own) != DURATION_OK) {
             return METRICAL_POSITION_ERR_ALLOC;
         }
-        Rat length = {0, 1};
-        Rat start = rat_of_time(meter_map_region_start(region));
-        Rat end = rat_of_time(meter_map_region_end(region));
-        int failed = rat_sub(end, start, &length);
-        int is_short_leading_signature = failed == 0 && rat_cmp(length, rat_of_duration(own)) >= 0;
+        Rational length = {0, 1};
+        Rational start = {0, 1};
+        Rational end = {0, 1};
+        Rational own_length = {0, 1};
+        int failed = rat_of_time(meter_map_region_start(region), &start) != 0 ||
+                     rat_of_time(meter_map_region_end(region), &end) != 0 ||
+                     rat_of_duration(own, &own_length) != 0 || rational_sub(end, start, &length) != RATIONAL_OK;
+        int is_short_leading_signature = failed == 0 && rational_cmp(length, own_length) >= 0;
         duration_destroy(own);
         if (failed != 0) {
             return METRICAL_POSITION_ERR_OVERFLOW;
@@ -218,8 +120,8 @@ MetricalPositionResult metrical_position_reading_signature(const MeterMap *map, 
 
 /* For measure 0 of a pickup map: how far into a full measure the pickup starts (full measure length
    less the pickup's own length). */
-static MetricalPositionResult pickup_base(const MeterMap *map, Rat span_start, Rat span_end, Rat *out_base,
-                                           Rat *out_full) {
+static MetricalPositionResult pickup_base(const MeterMap *map, Rational span_start, Rational span_end, Rational *out_base,
+                                           Rational *out_full) {
     const TimeSignature *reading = NULL;
     MetricalPositionResult got = metrical_position_reading_signature(map, 0, &reading);
     if (got != METRICAL_POSITION_OK) {
@@ -229,28 +131,31 @@ static MetricalPositionResult pickup_base(const MeterMap *map, Rat span_start, R
     if (time_signature_measure_duration(reading, &measure) != DURATION_OK) {
         return METRICAL_POSITION_ERR_ALLOC;
     }
-    Rat full = rat_of_duration(measure);
+    Rational full = {0, 1};
+    int full_failed = rat_of_duration(measure, &full) != 0;
     duration_destroy(measure);
+    if (full_failed) {
+        return METRICAL_POSITION_ERR_OVERFLOW;
+    }
 
-    Rat length = {0, 1};
-    if (rat_sub(span_end, span_start, &length) != 0 || rat_cmp(length, full) > 0 ||
-        rat_sub(full, length, out_base) != 0) {
+    Rational length = {0, 1};
+    if (rational_sub(span_end, span_start, &length) != 0 || rational_cmp(length, full) > 0 ||
+        rational_sub(full, length, out_base) != 0) {
         return METRICAL_POSITION_ERR_OVERFLOW;
     }
     *out_full = full;
     return METRICAL_POSITION_OK;
 }
 
-static MetricalPositionResult span_bounds(const MeterMap *map, int measure, Rat *out_start, Rat *out_end) {
+static MetricalPositionResult span_bounds(const MeterMap *map, int measure, Rational *out_start, Rational *out_end) {
     TimeSpan *span = NULL;
     MeterMapResult made = meter_map_measure_span(map, measure, &span);
     if (made != METER_MAP_OK) {
         return meter_map_failure(made);
     }
-    *out_start = rat_of_time(time_span_start(span));
-    *out_end = rat_of_time(time_span_end(span));
+    int failed = rat_of_time(time_span_start(span), out_start) != 0 || rat_of_time(time_span_end(span), out_end) != 0;
     time_span_destroy(span);
-    return METRICAL_POSITION_OK;
+    return failed ? METRICAL_POSITION_ERR_OVERFLOW : METRICAL_POSITION_OK;
 }
 
 MetricalPositionResult metrical_position_from_time(const MeterMap *map, const MusicalTime *time,
@@ -268,8 +173,8 @@ MetricalPositionResult metrical_position_from_time(const MeterMap *map, const Mu
         return meter_map_failure(indexed);
     }
 
-    Rat start = {0, 1};
-    Rat end = {0, 1};
+    Rational start = {0, 1};
+    Rational end = {0, 1};
     MetricalPositionResult bounded = span_bounds(map, measure, &start, &end);
     if (bounded == METRICAL_POSITION_ERR_MEASURE_OUT_OF_RANGE) {
         /* The index came from the map itself, so it can only be out of range if it wrapped. */
@@ -281,23 +186,26 @@ MetricalPositionResult metrical_position_from_time(const MeterMap *map, const Mu
 
     /* The measure number is an int: a time so far out that the number wrapped lands in a measure that
        does not contain it. */
-    Rat t = rat_of_time(time);
-    if (rat_cmp(t, start) < 0 || rat_cmp(t, end) >= 0) {
+    Rational t = {0, 1};
+    if (rat_of_time(time, &t) != 0) {
+        return METRICAL_POSITION_ERR_OVERFLOW;
+    }
+    if (rational_cmp(t, start) < 0 || rational_cmp(t, end) >= 0) {
         return METRICAL_POSITION_ERR_OVERFLOW;
     }
 
-    Rat offset = {0, 1};
-    if (rat_sub(t, start, &offset) != 0) {
+    Rational offset = {0, 1};
+    if (rational_sub(t, start, &offset) != 0) {
         return METRICAL_POSITION_ERR_OVERFLOW;
     }
     if (measure == 0 && meter_map_has_pickup(map)) {
-        Rat base = {0, 1};
-        Rat full = {0, 1};
+        Rational base = {0, 1};
+        Rational full = {0, 1};
         MetricalPositionResult based = pickup_base(map, start, end, &base, &full);
         if (based != METRICAL_POSITION_OK) {
             return based;
         }
-        if (rat_add(base, offset, &offset) != 0) {
+        if (rational_add(base, offset, &offset) != 0) {
             return METRICAL_POSITION_ERR_OVERFLOW;
         }
     }
@@ -306,7 +214,7 @@ MetricalPositionResult metrical_position_from_time(const MeterMap *map, const Mu
         return METRICAL_POSITION_ERR_OVERFLOW;
     }
     Duration *offset_duration = NULL;
-    if (duration_create((long)offset.n, (unsigned long)offset.d, &offset_duration) != DURATION_OK) {
+    if (duration_create((long)offset.num, (unsigned long)offset.den, &offset_duration) != DURATION_OK) {
         return METRICAL_POSITION_ERR_ALLOC;
     }
     MetricalPositionResult created = metrical_position_create(measure, offset_duration, out);
@@ -320,40 +228,43 @@ MetricalPositionResult metrical_position_to_time(const MeterMap *map, const Metr
         return METRICAL_POSITION_ERR_NULL_ARGUMENT;
     }
     int measure = metrical_position_measure(position);
-    Rat start = {0, 1};
-    Rat end = {0, 1};
+    Rational start = {0, 1};
+    Rational end = {0, 1};
     MetricalPositionResult bounded = span_bounds(map, measure, &start, &end);
     if (bounded != METRICAL_POSITION_OK) {
         return bounded;
     }
 
-    Rat offset = rat_of_duration(metrical_position_offset(position));
-    Rat into_span = offset; /* how far past the measure's start in time */
+    Rational offset = {0, 1};
+    if (rat_of_duration(metrical_position_offset(position), &offset) != 0) {
+        return METRICAL_POSITION_ERR_OVERFLOW;
+    }
+    Rational into_span = offset; /* how far past the measure's start in time */
     if (measure == 0 && meter_map_has_pickup(map)) {
-        Rat base = {0, 1};
-        Rat full = {0, 1};
+        Rational base = {0, 1};
+        Rational full = {0, 1};
         MetricalPositionResult based = pickup_base(map, start, end, &base, &full);
         if (based != METRICAL_POSITION_OK) {
             return based;
         }
-        if (rat_cmp(offset, base) < 0 || rat_cmp(offset, full) >= 0 || rat_sub(offset, base, &into_span) != 0) {
+        if (rational_cmp(offset, base) < 0 || rational_cmp(offset, full) >= 0 || rational_sub(offset, base, &into_span) != 0) {
             return METRICAL_POSITION_ERR_OFFSET_OUT_OF_RANGE;
         }
     } else {
-        Rat length = {0, 1};
-        if (rat_sub(end, start, &length) != 0) {
+        Rational length = {0, 1};
+        if (rational_sub(end, start, &length) != 0) {
             return METRICAL_POSITION_ERR_OVERFLOW;
         }
-        if (rat_cmp(offset, length) >= 0) {
+        if (rational_cmp(offset, length) >= 0) {
             return METRICAL_POSITION_ERR_OFFSET_OUT_OF_RANGE;
         }
     }
 
-    Rat time = {0, 1};
-    if (rat_add(start, into_span, &time) != 0 || !fits(time)) {
+    Rational time = {0, 1};
+    if (rational_add(start, into_span, &time) != 0 || !fits(time)) {
         return METRICAL_POSITION_ERR_OVERFLOW;
     }
-    if (musical_time_create((long)time.n, (unsigned long)time.d, out) != MUSICAL_TIME_OK) {
+    if (musical_time_create((long)time.num, (unsigned long)time.den, out) != MUSICAL_TIME_OK) {
         return METRICAL_POSITION_ERR_ALLOC;
     }
     return METRICAL_POSITION_OK;

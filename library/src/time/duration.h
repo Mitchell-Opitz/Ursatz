@@ -17,7 +17,8 @@ typedef enum {
     DURATION_OK = 0,
     DURATION_ERR_NON_POSITIVE_DENOMINATOR,
     DURATION_ERR_NEGATIVE,
-    DURATION_ERR_ALLOC
+    DURATION_ERR_ALLOC,
+    DURATION_ERR_OVERFLOW /* an arithmetic result does not fit the numerator or denominator */
 } DurationResult;
 
 /* Reduces numerator/denominator to lowest terms at construction. */

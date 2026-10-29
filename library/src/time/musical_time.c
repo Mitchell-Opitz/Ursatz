@@ -1,6 +1,8 @@
 #include "time/musical_time.h"
 
+#include <limits.h>
 #include <stdlib.h>
+#include "core/rational.h"
 #include "core/value.h"
 
 struct MusicalTime {
@@ -16,21 +18,12 @@ static unsigned long abs_ul(long n) {
     return n < 0 ? (unsigned long)(-n) : (unsigned long)n;
 }
 
-static unsigned long gcd(unsigned long a, unsigned long b) {
-    while (b != 0) {
-        unsigned long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
-}
-
 MusicalTimeResult musical_time_create(long numerator, unsigned long denominator, MusicalTime **out) {
     if (denominator == 0) {
         return MUSICAL_TIME_ERR_NON_POSITIVE_DENOMINATOR;
     }
 
-    unsigned long divisor = gcd(abs_ul(numerator), denominator);
+    unsigned long divisor = (unsigned long)rational_gcd_unsigned(numerator < 0 ? 0UL - (unsigned long)numerator : (unsigned long)numerator, denominator);
     if (divisor == 0) {
         divisor = 1;
     }
@@ -80,27 +73,41 @@ unsigned long musical_time_denominator(const MusicalTime *time) {
     return musical_time_content(time)->denominator;
 }
 
+static bool rational_of_content(const MusicalTimeContent *content, Rational *out) {
+    return content->denominator <= (unsigned long)LLONG_MAX &&
+           rational_make(content->numerator, (long long)content->denominator, out) == RATIONAL_OK;
+}
+
+static bool rational_of_duration_parts(const Duration *duration, Rational *out) {
+    unsigned long denominator = duration_denominator(duration);
+    return denominator <= (unsigned long)LLONG_MAX &&
+           rational_make(duration_numerator(duration), (long long)denominator, out) == RATIONAL_OK;
+}
+
 MusicalTimeResult musical_time_add(const MusicalTime *time, const Duration *duration, MusicalTime **out) {
-    const MusicalTimeContent *ct = musical_time_content(time);
-    long d_numerator = duration_numerator(duration);
-    unsigned long d_denominator = duration_denominator(duration);
-
-    long numerator = ct->numerator * (long)d_denominator + d_numerator * (long)ct->denominator;
-    unsigned long denominator = ct->denominator * d_denominator;
-
-    return musical_time_create(numerator, denominator, out);
+    Rational a;
+    Rational b;
+    Rational sum;
+    if (!rational_of_content(musical_time_content(time), &a) || !rational_of_duration_parts(duration, &b) ||
+        rational_add(a, b, &sum) != RATIONAL_OK || sum.num < LONG_MIN || sum.num > LONG_MAX ||
+        (unsigned long long)sum.den > ULONG_MAX) {
+        return MUSICAL_TIME_ERR_OVERFLOW;
+    }
+    return musical_time_create((long)sum.num, (unsigned long)sum.den, out);
 }
 
 DurationResult musical_time_subtract(const MusicalTime *a, const MusicalTime *b, Duration **out) {
-    const MusicalTimeContent *ca = musical_time_content(a);
-    const MusicalTimeContent *cb = musical_time_content(b);
-
-    long numerator = ca->numerator * (long)cb->denominator - cb->numerator * (long)ca->denominator;
-    unsigned long denominator = ca->denominator * cb->denominator;
-
-    if (numerator < 0) {
+    Rational left;
+    Rational right;
+    Rational difference;
+    if (!rational_of_content(musical_time_content(a), &left) ||
+        !rational_of_content(musical_time_content(b), &right) ||
+        rational_sub(left, right, &difference) != RATIONAL_OK || difference.num > LONG_MAX ||
+        (unsigned long long)difference.den > ULONG_MAX) {
+        return DURATION_ERR_OVERFLOW;
+    }
+    if (difference.num < 0) {
         return DURATION_ERR_NEGATIVE;
     }
-
-    return duration_create(numerator, denominator, out);
+    return duration_create((long)difference.num, (unsigned long)difference.den, out);
 }
