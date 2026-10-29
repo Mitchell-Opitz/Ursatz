@@ -24,8 +24,12 @@
 
 #include <events/note_event.h>
 #include <export/musicxml_export.h>
+#include <export/score_quantize.h>
 #include <identity/entity_id.h>
+#include <io/midi_importer.h>
+#include <io/midi_key_signature.h>
 #include <time/meter_map.h>
+#include <time/tempo_map.h>
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/analysis_report.h>
