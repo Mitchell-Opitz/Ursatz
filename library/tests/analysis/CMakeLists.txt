@@ -14,6 +14,7 @@ add_ursatz_test(motif_window_matching)
 add_ursatz_test(motive_sketch)
 add_ursatz_test(motive_sketch_value)
 add_ursatz_test(motive_relation)
+add_ursatz_test(motive_relation_params)
 add_ursatz_test(motive_tone_roles)
 add_ursatz_test(motive_variant_recognition)
 # Every frame relation in a chain of two with every other case, both orders (about 2 minutes); CI runs ctest -LE slow.
@@ -44,6 +45,13 @@ if(URSATZ_ANALYSIS_VALGRIND)
   add_test(NAME motive_sketch_value_valgrind
            COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_motive_sketch_value>)
+endif()
+
+# Scoped memcheck for the motive relation parameter test, same pattern.
+if(URSATZ_ANALYSIS_VALGRIND)
+  add_test(NAME motive_relation_params_valgrind
+           COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_motive_relation_params>)
 endif()
 
 # Scoped memcheck for the attack soprano test, same pattern.
