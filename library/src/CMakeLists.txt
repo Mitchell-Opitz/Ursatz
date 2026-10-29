@@ -102,6 +102,7 @@ add_library(ursatz
     semantics/analysis_note.c
     semantics/analysis_segment.c
     semantics/analysis_key.c
+    semantics/voice_grid.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
