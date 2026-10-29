@@ -87,6 +87,10 @@
  * voice leading, melody and schemas run over the segments that START before the end of last_measure (last_measure 0: all); the form,
  * meter and motive stages read the notes and segments of the measures first_measure to last_measure.
  *
+ * refine_with_given_boundaries: with no form stage there are no phrases to bound the second key pass; when set (and refine_keys is on) the
+ * second pass runs anyway, on the first pass's chords as evidence and key_regions.phrase_boundaries as the boundaries (possibly none), as a
+ * caller that finds its own phrase ends does (the accuracy harness). The boundaries are borrowed and must outlive the run. Default off.
+ *
  * home_key_index: the home key as a key index 0..23 (key_regions.h), or -1 for the key of the first key region. It is the key of the
  * boundary cadences, the motive degrees, the melody degrees and the schema key degrees.
  */
@@ -105,6 +109,7 @@ typedef struct {
     GalantMatchConfig schemas;
     ScaleDetectConfig sequences;
     bool refine_keys;
+    bool refine_with_given_boundaries;
     int first_measure;
     int last_measure;
     int home_key_index;
