@@ -36,6 +36,7 @@ typedef int socket_t;
 #endif
 
 #include <cJSON.h>
+#include <ursatz_analyzer/version.h>
 
 #include "server.h"
 #include "service/subject_service.h"
@@ -1172,6 +1173,8 @@ int main(void) {
     check(cJSON_IsString(version) && strcmp(version->valuestring, "old") != 0 && cJSON_IsNumber(schema) &&
               schema->valuedouble == 9,
           "re-running the analysis rewrites the versions in meta.json");
+    check(cJSON_IsString(version) && strcmp(version->valuestring, ursatz_analyzer_version()) == 0,
+          "meta.json records the version the Analyzer reports");
     check(cJSON_IsString(uploaded_after) && strcmp(uploaded_after->valuestring, uploaded_at_before) == 0 &&
               cJSON_IsString(filename) && strcmp(filename->valuestring, "Mozart 545.mid") == 0,
           "re-running the analysis keeps the filename and uploaded_at");
