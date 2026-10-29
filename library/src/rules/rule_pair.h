@@ -25,4 +25,9 @@ typedef struct {
  */
 bool rule_pair_build(const Framework *framework, const char *prefix, const char *name, RulePair *out);
 
+/* The same with the given constraint type, for the frameworks whose rules are hard or soft. WEIGHTED is refused (no weight is
+   supplied): false. */
+bool rule_pair_build_typed(const Framework *framework, const char *prefix, const char *name, ConstraintType type,
+                           RulePair *out);
+
 #endif

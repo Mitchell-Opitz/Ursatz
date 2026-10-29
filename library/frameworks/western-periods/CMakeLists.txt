@@ -1,6 +1,5 @@
 add_library(western_periods
     framework.c
-    rule_pair.c
     periods.c
 )
 target_include_directories(western_periods PUBLIC

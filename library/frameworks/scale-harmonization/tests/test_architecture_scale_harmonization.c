@@ -55,7 +55,8 @@ static int check_file(const char *path) {
             continue; /* the allowed framework dependencies, one way */
         }
         if (strcmp(start, "theory/framework.h") == 0 || strcmp(start, "rules/rule.h") == 0 ||
-            strcmp(start, "rules/constraint.h") == 0) {
+            strcmp(start, "rules/constraint.h") == 0 ||
+            strcmp(start, "rules/rule_pair.h") == 0) {
             continue;
         }
 
@@ -68,7 +69,7 @@ static int check_file(const char *path) {
             fprintf(stderr,
                     "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, "
                     "containers/, structure/, context/, semantics/, relationship/, interpretation/, "
-                    "theory/framework.h, rules/rule.h, rules/constraint.h, standard-counterpoint/, or galant-schemas/)\n",
+                    "theory/framework.h, rules/rule.h, rules/constraint.h, rules/rule_pair.h, standard-counterpoint/, or galant-schemas/)\n",
                     path, start);
             violations++;
         }

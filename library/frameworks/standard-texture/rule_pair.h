@@ -5,6 +5,8 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
+#include "rules/rule_pair.h"
+#include "framework.h"
 
 /*
  * Shared construction helper for this module's Rule/Constraint pairs.
@@ -16,10 +18,7 @@
  * work (docs/modules/rules.md).
  */
 
-typedef struct {
-    Rule *rule;
-    Constraint *constraint;
-} StandardTextureRulePair;
+typedef RulePair StandardTextureRulePair;
 
 /*
  * Builds the pair with ids "standard-texture-rule-<name>" and
@@ -28,6 +27,8 @@ typedef struct {
  * free separately -- callers cache the pair for process lifetime, as
  * chord_vocabulary does.
  */
-bool standard_texture_build_rule_pair(const char *name, StandardTextureRulePair *out);
+static inline bool standard_texture_build_rule_pair(const char *name, StandardTextureRulePair *out) {
+    return rule_pair_build(standard_texture_framework(), "standard-texture", name, out);
+}
 
 #endif

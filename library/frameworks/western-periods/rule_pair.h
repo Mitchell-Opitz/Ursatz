@@ -5,6 +5,8 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
+#include "rules/rule_pair.h"
+#include "framework.h"
 
 /*
  * Shared construction helper for this module's Rule/Constraint pairs.
@@ -16,10 +18,7 @@
  * work (docs/modules/rules.md).
  */
 
-typedef struct {
-    Rule *rule;
-    Constraint *constraint;
-} WesternPeriodsRulePair;
+typedef RulePair WesternPeriodsRulePair;
 
 /*
  * Builds the pair with ids "western-periods-rule-<name>" and
@@ -28,6 +27,8 @@ typedef struct {
  * free separately -- callers cache the pair for process lifetime, as
  * chord_vocabulary does.
  */
-bool western_periods_build_rule_pair(const char *name, WesternPeriodsRulePair *out);
+static inline bool western_periods_build_rule_pair(const char *name, WesternPeriodsRulePair *out) {
+    return rule_pair_build(western_periods_framework(), "western-periods", name, out);
+}
 
 #endif

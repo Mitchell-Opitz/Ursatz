@@ -1,6 +1,5 @@
 add_library(standard_meter
     framework.c
-    rule_pair.c
     grouping_rules.c
     time_signature_rules.c
     meter_class_rules.c

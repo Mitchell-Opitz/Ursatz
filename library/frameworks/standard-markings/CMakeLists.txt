@@ -1,6 +1,5 @@
 add_library(standard_markings
     framework.c
-    rule_pair.c
     dynamics_rules.c
     articulation_rules.c
     tempo_rules.c

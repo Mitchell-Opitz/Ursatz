@@ -5,7 +5,12 @@
 #include "identity/entity_id.h"
 
 bool rule_pair_build(const Framework *framework, const char *prefix, const char *name, RulePair *out) {
-    if (framework == NULL || prefix == NULL || name == NULL || out == NULL) {
+    return rule_pair_build_typed(framework, prefix, name, CONSTRAINT_TYPE_HARD, out);
+}
+
+bool rule_pair_build_typed(const Framework *framework, const char *prefix, const char *name, ConstraintType type,
+                           RulePair *out) {
+    if (framework == NULL || prefix == NULL || name == NULL || out == NULL || type == CONSTRAINT_TYPE_WEIGHTED) {
         return false;
     }
 
@@ -29,7 +34,7 @@ bool rule_pair_build(const Framework *framework, const char *prefix, const char 
         return false;
     }
     Constraint *constraint;
-    if (constraint_create(constraint_id, framework, NULL, CONSTRAINT_TYPE_HARD, 0, 0, NULL, &constraint) !=
+    if (constraint_create(constraint_id, framework, NULL, type, 0, 0, NULL, &constraint) !=
         CONSTRAINT_OK) {
         entity_id_destroy(constraint_id);
         rule_destroy(rule);

@@ -5,6 +5,8 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
+#include "rules/rule_pair.h"
+#include "framework.h"
 
 /*
  * Shared construction helper for this module's Rule/Constraint pairs.
@@ -16,10 +18,7 @@
  * work (docs/modules/rules.md).
  */
 
-typedef struct {
-    Rule *rule;
-    Constraint *constraint;
-} StandardNotationRulePair;
+typedef RulePair StandardNotationRulePair;
 
 /*
  * Builds the pair with ids "standard-notation-rule-<name>" and
@@ -28,6 +27,8 @@ typedef struct {
  * free separately -- callers cache the pair for process lifetime, as
  * chord_vocabulary does.
  */
-bool standard_notation_build_rule_pair(const char *name, StandardNotationRulePair *out);
+static inline bool standard_notation_build_rule_pair(const char *name, StandardNotationRulePair *out) {
+    return rule_pair_build(standard_notation_framework(), "standard-notation", name, out);
+}
 
 #endif

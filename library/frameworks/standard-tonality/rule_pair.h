@@ -5,6 +5,8 @@
 
 #include "rules/constraint.h"
 #include "rules/rule.h"
+#include "rules/rule_pair.h"
+#include "framework.h"
 
 /*
  * Shared construction helper for this module's Rule/Constraint pairs.
@@ -16,10 +18,7 @@
  * work (docs/modules/rules.md).
  */
 
-typedef struct {
-    Rule *rule;
-    Constraint *constraint;
-} StandardTonalityRulePair;
+typedef RulePair StandardTonalityRulePair;
 
 /*
  * Builds the pair with ids "standard-tonality-rule-<name>" and
@@ -28,6 +27,8 @@ typedef struct {
  * free separately -- callers cache the pair for process lifetime, as
  * chord_vocabulary does.
  */
-bool standard_tonality_build_rule_pair(const char *name, StandardTonalityRulePair *out);
+static inline bool standard_tonality_build_rule_pair(const char *name, StandardTonalityRulePair *out) {
+    return rule_pair_build(standard_tonality_framework(), "standard-tonality", name, out);
+}
 
 #endif
