@@ -12,6 +12,7 @@ endif()
 option(URSATZ_BUILD_TESTS "Build and register kernel and framework tests" ${URSATZ_TESTS_DEFAULT})
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/UrsatzTests.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/UrsatzPublicHeaders.cmake)
 
 if(URSATZ_BUILD_TESTS)
     enable_testing()
