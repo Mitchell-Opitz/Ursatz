@@ -99,6 +99,8 @@ add_library(ursatz
     semantics/form_level.c
     semantics/expected_length_basis.c
     semantics/subphrase_role.c
+    semantics/analysis_note.c
+    semantics/analysis_segment.c
     relationship/relationship.c
     relationship/predicate_definition.c
     interpretation/uncertainty.c
