@@ -190,14 +190,15 @@ static bool build_values(const StandardCounterpointMelodyNote *a, const Standard
         free(directions);
         return false;
     }
-    if (contour_create(contour_ids, 2, directions, 1, &item->contour) != CONTOUR_OK) {
+    /* contour_create takes the identities and copies the two arrays, which stay ours */
+    ContourResult created = contour_create(contour_ids, 2, directions, 1, &item->contour);
+    if (created != CONTOUR_OK) {
         pitch_identity_destroy(contour_ids[0]);
         pitch_identity_destroy(contour_ids[1]);
-        free(contour_ids);
-        free(directions);
-        return false;
     }
-    return true;
+    free(contour_ids);
+    free(directions);
+    return created == CONTOUR_OK;
 }
 
 StandardCounterpointMelodyStatus standard_counterpoint_melody_intervals(const StandardCounterpointMelodyLine *line,
