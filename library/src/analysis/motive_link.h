@@ -59,4 +59,36 @@ typedef enum {
 MotiveLinkResult motive_link_pair(const MotiveSketch *a, const MotiveSketch *b, const MotiveLinkOptions *options,
                                   MotiveLink *out);
 
+/*
+ * Choosing and grouping. A caller with many motives picks the pairs worth comparing, runs motive_link_pair on
+ * them, and groups the motives the links join.
+ */
+
+/* An unordered pair of sketches by index, low first (low < high). */
+typedef struct {
+    size_t low;
+    size_t high;
+} MotiveLinkPair;
+
+/*
+ * For each sketch, its per_sketch nearest other sketches in a different group (groups[i], the piece the sketch
+ * belongs to) whose motive_link_nearness is at least min_nearness, nearest first, equal nearness by index. The
+ * pairs are unordered, sorted by low then high, and unique. per_sketch is 1 or more and min_nearness 0 to 1,
+ * else MOTIVE_LINK_INVALID (as for a NULL argument with a count). On OK, *out is owned by the caller (free) and
+ * NULL with *out_count 0 when there is no pair; otherwise *out and *out_count are untouched.
+ */
+MotiveLinkResult motive_link_candidates(const MotiveSketch *sketches, const size_t *groups, size_t count,
+                                        size_t per_sketch, double min_nearness, MotiveLinkPair **out,
+                                        size_t *out_count);
+
+/*
+ * The connected components of the linked pairs: pairs[p] joins its two sketches when linked[p]. Groups are
+ * numbered from 0 in the order of their lowest member. (*group_of)[i] is the number of the group of sketch i,
+ * or (size_t)-1 when no linked pair touches it (a singleton, left out). *group_of is owned by the caller (free;
+ * NULL when count is 0). A pair with low >= high or high >= count is MOTIVE_LINK_INVALID. *group_of and
+ * *group_count are written on OK only.
+ */
+MotiveLinkResult motive_link_groups(size_t count, const MotiveLinkPair *pairs, const bool *linked, size_t pair_count,
+                                    size_t **group_of, size_t *group_count);
+
 #endif

@@ -5,6 +5,7 @@ add_ursatz_test(scale_analysis)
 
 add_ursatz_test(voice_leading_analysis)
 add_ursatz_test(outer_voice)
+add_ursatz_test(outer_voice_attack_soprano)
 add_ursatz_test(voice_separation)
 add_ursatz_test(cadence_detection)
 add_ursatz_test(cadence_classification)
@@ -18,6 +19,8 @@ add_ursatz_test(motive_variant_recognition)
 add_test(NAME motive_variant_recognition_frame_chains COMMAND test_motive_variant_recognition frame-chains)
 set_tests_properties(motive_variant_recognition_frame_chains PROPERTIES LABELS slow)
 add_ursatz_test(motive_link)
+add_ursatz_test(motive_link_groups)
+add_ursatz_test(progression_patterns)
 
 # Scoped memcheck for the motive link test only (not a repo-wide valgrind mechanism -- see
 # tests/persistence/CMakeLists.txt for the same pattern). Skips silently if valgrind isn't installed.
@@ -33,6 +36,23 @@ if(URSATZ_ANALYSIS_VALGRIND)
   add_test(NAME motive_tone_roles_valgrind
            COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_motive_tone_roles>)
+endif()
+
+# Scoped memcheck for the attack soprano test, same pattern.
+if(URSATZ_ANALYSIS_VALGRIND)
+  add_test(NAME outer_voice_attack_soprano_valgrind
+           COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_outer_voice_attack_soprano>)
+endif()
+
+# Scoped memcheck for the progression patterns and motive link groups tests, same pattern.
+if(URSATZ_ANALYSIS_VALGRIND)
+  add_test(NAME progression_patterns_valgrind
+           COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_progression_patterns>)
+  add_test(NAME motive_link_groups_valgrind
+           COMMAND ${URSATZ_ANALYSIS_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_motive_link_groups>)
 endif()
 add_ursatz_test(phrase_segmentation)
 add_ursatz_test(phrase_boundary_detection)

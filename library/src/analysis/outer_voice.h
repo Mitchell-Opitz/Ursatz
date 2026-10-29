@@ -11,6 +11,7 @@
 #include "events/note_event.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_numeric_value.h"
+#include "semantics/analysis_note.h"
 #include "semantics/sonority_segmentation.h"
 #include "time/meter_map.h"
 #include "time/time_span.h"
@@ -101,5 +102,15 @@ OuterVoiceResult outer_voice_extract(const AdaptiveSonorities *segments, NoteEve
 
 /* Destroys every entry's note id, pitch and span, and the arrays. NULL is a no-op. */
 void outer_voice_lines_destroy(OuterVoiceLines *lines);
+
+/*
+ * The soprano at every attack: indices into notes->notes of the line that, at each distinct onset, is the
+ * highest note sounding then (the later attack among equal pitches), kept when it is attacked at that onset.
+ * Notes of unknown pitch (ANALYSIS_PITCH_UNKNOWN) are skipped. notes must be a valid, sorted AnalysisNoteSet
+ * (analysis_note_set_valid), else OUTER_VOICE_ERR_NULL_NOTE. On OK, *out is owned by the caller (free) and
+ * NULL with *count 0 when there is no soprano; otherwise *out and *count are untouched. Overflow of the
+ * exact times is OUTER_VOICE_ERR_OVERFLOW.
+ */
+OuterVoiceResult outer_voice_attack_soprano(const AnalysisNoteSet *notes, size_t **out, size_t *count);
 
 #endif
