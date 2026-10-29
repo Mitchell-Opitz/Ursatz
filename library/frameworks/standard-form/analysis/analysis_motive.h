@@ -53,18 +53,7 @@
 #define STANDARD_FORM_MOTIVE_CLAIM_TYPE "standard-form/motive"
 #define STANDARD_FORM_MOTIVE_OCCURRENCE_CLAIM_TYPE "standard-form/motive-occurrence"
 
-typedef enum {
-    STANDARD_FORM_MOTIVE_EXACT = 0,
-    STANDARD_FORM_MOTIVE_REAL,
-    STANDARD_FORM_MOTIVE_TONAL,
-    STANDARD_FORM_MOTIVE_INVERTED,
-    STANDARD_FORM_MOTIVE_RETROGRADE,
-    STANDARD_FORM_MOTIVE_AUGMENTED,
-    STANDARD_FORM_MOTIVE_DIMINISHED,
-    STANDARD_FORM_MOTIVE_FRAGMENTED,
-    STANDARD_FORM_MOTIVE_VARIED,
-    STANDARD_FORM_MOTIVE_KIND_COUNT
-} StandardFormMotiveKind;
+/* StandardFormMotiveKind is defined in analysis_input.h (the relation matcher of StandardFormConfig names it). */
 
 /* "exact" "real-transposed" "tonal-transposed" "inverted" "retrograde" "augmented" "diminished" "fragmented" "varied"; NULL otherwise. */
 const char *standard_form_motive_kind_name(StandardFormMotiveKind kind);
