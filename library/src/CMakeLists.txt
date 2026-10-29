@@ -6,6 +6,7 @@ add_library(ursatz
     identity/schema_version.c
     core/entity.c
     core/string_copy.c
+    core/once.c
     core/rational.c
     core/value.c
     core/occurrence.c
@@ -227,3 +228,6 @@ target_link_libraries(ursatz PUBLIC PkgConfig::SQLITE3)
 target_link_libraries(ursatz PRIVATE ursatz_ezxml)
 # lround, floor and friends (musicxml_importer.c)
 target_link_libraries(ursatz PUBLIC m)
+# core/once.c (thread-safe lazy initialization)
+find_package(Threads REQUIRED)
+target_link_libraries(ursatz PUBLIC Threads::Threads)
