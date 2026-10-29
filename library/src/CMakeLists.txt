@@ -6,6 +6,7 @@ add_library(ursatz
     identity/schema_version.c
     core/entity.c
     core/string_copy.c
+    core/rational.c
     core/value.c
     core/occurrence.c
     core/equality.c
