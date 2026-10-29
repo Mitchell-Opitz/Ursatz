@@ -2,27 +2,20 @@
 
 #include <stdlib.h>
 
+#include "core/rational.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
 #include "time/time_signature.h"
-
-static long long gcd_ll(long long a, long long b) {
-    a = a < 0 ? -a : a;
-    b = b < 0 ? -b : b;
-    while (b != 0) {
-        long long t = a % b;
-        a = b;
-        b = t;
-    }
-    return a == 0 ? 1 : a;
-}
 
 StandardFormQ standard_form_q(long long n, long long d) {
     if (d < 0) {
         n = -n;
         d = -d;
     }
-    long long g = gcd_ll(n, d);
+    long long g = rational_gcd(n, d);
+    if (g == 0) {
+        g = 1;
+    }
     StandardFormQ q = {n / g, d / g};
     return q;
 }
