@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "core/rational.h"
 #include "core/value.h"
 
 struct MetronomeMarking {
@@ -15,17 +16,8 @@ typedef struct {
     unsigned long bpm_denominator;
 } MetronomeMarkingContent;
 
-static unsigned long gcd(unsigned long a, unsigned long b) {
-    while (b != 0) {
-        unsigned long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
-}
-
 static void reduce(unsigned long *numerator, unsigned long *denominator) {
-    unsigned long divisor = gcd(*numerator, *denominator);
+    unsigned long divisor = (unsigned long)rational_gcd_unsigned(*numerator, *denominator);
     if (divisor > 1) {
         *numerator /= divisor;
         *denominator /= divisor;

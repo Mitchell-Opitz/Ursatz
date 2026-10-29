@@ -25,7 +25,7 @@ static inline bool mch_has_pc(const int *pcs, size_t count, int pc) {
 }
 
 /* The chord in force at an onset: the last one at or before it, NULL before the first. */
-static inline const MotiveSketchChord *mch_chord_at(const MotiveSketch *sketch, ExactRational onset) {
+static inline const MotiveSketchChord *mch_chord_at(const MotiveSketch *sketch, Rational onset) {
     const MotiveSketchChord *found = NULL;
     for (size_t c = 0; c < sketch->chord_count; c++) {
         if (msk_cmp(sketch->chords[c].onset, onset) <= 0) {

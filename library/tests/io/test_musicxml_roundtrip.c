@@ -9,8 +9,10 @@
 #include "io/musicxml_importer.h"
 #include "persistence/persistence.h"
 #include "persistence/persistence_note_events.h"
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 #include "time/temporal_anchor.h"
+#include "../rational_test_util.h"
 
 /*
  * Round trip: each framework-v1 reference piece is imported from MIDI, written by MusicXmlExport, and read back by
@@ -32,8 +34,8 @@
 
 typedef struct {
     long midi;
-    ExactRational onset;
-    ExactRational duration;
+    Rational onset;
+    Rational duration;
 } Item;
 
 static unsigned char *read_file(const char *path, size_t *out_size) {
@@ -55,8 +57,8 @@ static Item *collect(NoteEvent *const *events, PitchNumericValue *const *values,
     assert(items != NULL);
     for (size_t i = 0; i < count; i++) {
         items[i].midi = pitch_numeric_value_position_numerator(values[i]);
-        items[i].onset = er_of_time(temporal_anchor_position(note_event_temporal_anchor(events[i])));
-        items[i].duration = er_of_duration(note_event_duration(events[i]));
+        items[i].onset = test_rational_of_time(temporal_anchor_position(note_event_temporal_anchor(events[i])));
+        items[i].duration = test_rational_of_duration(note_event_duration(events[i]));
     }
     return items;
 }
@@ -67,12 +69,12 @@ static int compare_items(const void *a, const void *b) {
     if (x->midi != y->midi) {
         return x->midi < y->midi ? -1 : 1;
     }
-    int by_onset = er_cmp(x->onset, y->onset);
-    return by_onset != 0 ? by_onset : er_cmp(x->duration, y->duration);
+    int by_onset = rational_cmp(x->onset, y->onset);
+    return by_onset != 0 ? by_onset : rational_cmp(x->duration, y->duration);
 }
 
-static double as_double(ExactRational r) {
-    return (double)r.n / (double)r.d;
+static double as_double(Rational r) {
+    return (double)r.num / (double)r.den;
 }
 
 /* exact: the file's tick divides the export's unit evenly (asserted equal). cannot_export: the export is known to refuse
@@ -126,7 +128,7 @@ static void roundtrip(const char *file, bool exact, bool cannot_export) {
         size_t equal = 0;
         for (size_t i = 0; i < count; i++) {
             assert(before[i].midi == after[i].midi); /* the pitch multiset is always equal */
-            bool same = er_cmp(before[i].onset, after[i].onset) == 0 && er_cmp(before[i].duration, after[i].duration) == 0;
+            bool same = rational_cmp(before[i].onset, after[i].onset) == 0 && rational_cmp(before[i].duration, after[i].duration) == 0;
             equal += same ? 1 : 0;
             double onset = fabs(as_double(before[i].onset) - as_double(after[i].onset)) * UNITS_PER_WHOLE;
             double duration = fabs(as_double(before[i].duration) - as_double(after[i].duration)) * UNITS_PER_WHOLE;

@@ -4,9 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/rational.h"
 #include "identity/entity_id.h"
 #include "time/duration.h"
-#include "time/exact_rational.h"
+#include "time/time_rational.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
 #include "time/time_signature.h"
@@ -35,18 +36,18 @@ void score_quantized_destroy(ScoreQuantized *quantized) {
 /* --- the beat grid --- */
 
 typedef struct {
-    ExactRational start;
-    ExactRational end; /* the next beat, or the barline when the measure is short */
-    ExactRational len; /* the nominal beat length */
+    Rational start;
+    Rational end; /* the next beat, or the barline when the measure is short */
+    Rational len; /* the nominal beat length */
 } Span;
 
 typedef struct {
-    ExactRational start;
-    ExactRational end;
+    Rational start;
+    Rational end;
     Span beat;
-    ExactRational step; /* the grid step chosen for the beat of the onset */
-    ExactRational snapped_start;
-    ExactRational snapped_end;
+    Rational step; /* the grid step chosen for the beat of the onset */
+    Rational snapped_start;
+    Rational snapped_end;
     size_t part;
     int staff;
     const char *voice; /* the VoiceReference's target id, NULL for none */
@@ -54,19 +55,19 @@ typedef struct {
 } Item;
 
 typedef struct {
-    ExactRational start;
-    ExactRational step;
+    Rational start;
+    Rational step;
 } BeatGrid;
 
 typedef struct {
-    ExactRational beat_start;
+    Rational beat_start;
     size_t item;
 } BeatKey;
 
 static int compare_keys(const void *left, const void *right) {
     const BeatKey *a = (const BeatKey *)left;
     const BeatKey *b = (const BeatKey *)right;
-    int order = er_cmp(a->beat_start, b->beat_start);
+    int order = rational_cmp(a->beat_start, b->beat_start);
     if (order != 0) {
         return order;
     }
@@ -74,19 +75,19 @@ static int compare_keys(const void *left, const void *right) {
 }
 
 static int compare_grids(const void *key, const void *entry) {
-    return er_cmp(*(const ExactRational *)key, ((const BeatGrid *)entry)->start);
+    return rational_cmp(*(const Rational *)key, ((const BeatGrid *)entry)->start);
 }
 
 /* |a - b| */
-static int er_distance(ExactRational a, ExactRational b, ExactRational *out) {
-    return er_cmp(a, b) >= 0 ? er_sub(a, b, out) : er_sub(b, a, out);
+static int rational_distance(Rational a, Rational b, Rational *out) {
+    return (rational_cmp(a, b) >= 0 ? rational_sub(a, b, out) : rational_sub(b, a, out)) != RATIONAL_OK;
 }
 
 /* The beat that holds time t: a simple meter's beat is its bottom unit, a compound meter's (6, 9 or 12 over 8 or 16)
    is three of them. A short measure's last beat ends at its barline. */
-static ScoreQuantizeResult locate_beat(const MeterMap *meter, ExactRational t, Span *beat) {
-    MusicalTime *time = er_to_time(t);
-    if (time == NULL) {
+static ScoreQuantizeResult locate_beat(const MeterMap *meter, Rational t, Span *beat) {
+    MusicalTime *time = NULL;
+    if (musical_time_from_rational(t, &time) != TIME_RATIONAL_OK) {
         return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
     }
     int index = 0;
@@ -96,9 +97,14 @@ static ScoreQuantizeResult locate_beat(const MeterMap *meter, ExactRational t, S
     if (status != METER_MAP_OK || meter_map_measure_span(meter, index, &span) != METER_MAP_OK) {
         return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
     }
-    ExactRational measure_start = er_of_time(time_span_start(span));
-    ExactRational measure_end = er_of_time(time_span_end(span));
+    Rational measure_start;
+    Rational measure_end;
+    bool converted = rational_of_musical_time(time_span_start(span), &measure_start) == RATIONAL_OK &&
+                     rational_of_musical_time(time_span_end(span), &measure_end) == RATIONAL_OK;
     time_span_destroy(span);
+    if (!converted) {
+        return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
+    }
     const MeterMapRegion *region = NULL;
     if (meter_map_region_of_measure(meter, index, &region) != METER_MAP_OK) {
         return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
@@ -106,39 +112,41 @@ static ScoreQuantizeResult locate_beat(const MeterMap *meter, ExactRational t, S
     const TimeSignature *signature = meter_map_region_time_signature(region);
     unsigned top = time_signature_top_number(signature);
     unsigned bottom = time_signature_bottom_number(signature);
-    ExactRational len = (top > 3 && top % 3 == 0 && bottom >= 8) ? er_make(3, bottom) : er_make(1, bottom);
+    Rational len = (top > 3 && top % 3 == 0 && bottom >= 8) ? rational_ratio(3, bottom) : rational_ratio(1, bottom);
 
-    ExactRational offset;
-    ExactRational beats;
-    ExactRational whole;
-    ExactRational beat_end;
-    if (er_sub(t, measure_start, &offset) != 0 || er_mul(offset, er_make(len.d, len.n), &beats) != 0 ||
-        er_mul(len, er_make(beats.n / beats.d, 1), &whole) != 0 || er_add(measure_start, whole, &beat->start) != 0 ||
-        er_add(beat->start, len, &beat_end) != 0) {
+    Rational offset;
+    Rational beats;
+    Rational whole;
+    Rational beat_end;
+    long long whole_beats = 0;
+    if (rational_sub(t, measure_start, &offset) != RATIONAL_OK || rational_div(offset, len, &beats) != RATIONAL_OK ||
+        rational_floor(beats, &whole_beats) != RATIONAL_OK || rational_mul_int(len, whole_beats, &whole) != RATIONAL_OK ||
+        rational_add(measure_start, whole, &beat->start) != RATIONAL_OK ||
+        rational_add(beat->start, len, &beat_end) != RATIONAL_OK) {
         return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
     }
-    beat->end = er_cmp(beat_end, measure_end) > 0 ? measure_end : beat_end;
+    beat->end = rational_cmp(beat_end, measure_end) > 0 ? measure_end : beat_end;
     beat->len = len;
     return SCORE_QUANTIZE_OK;
 }
 
 /* The point of the grid (beat start plus whole steps, and the beat end) nearest to t, a tie rounding up. t lies in
    [beat.start, beat.end]. */
-static int snap(ExactRational t, const Span *beat, ExactRational step, ExactRational *point) {
-    ExactRational offset;
-    ExactRational steps;
-    ExactRational whole;
-    if (er_sub(t, beat->start, &offset) != 0 || er_mul(offset, er_make(step.d, step.n), &steps) != 0) {
+static int snap(Rational t, const Span *beat, Rational step, Rational *point) {
+    Rational offset;
+    Rational steps;
+    Rational whole;
+    if (rational_sub(t, beat->start, &offset) != RATIONAL_OK || rational_div(offset, step, &steps) != RATIONAL_OK) {
         return -1;
     }
-    unsigned long long count = steps.n / steps.d;
-    if (steps.n % steps.d >= steps.d - steps.n % steps.d) {
+    long long count = steps.num / steps.den;
+    if (steps.num % steps.den >= steps.den - steps.num % steps.den) {
         count++;
     }
-    if (er_mul(step, er_make(count, 1), &whole) != 0 || er_add(beat->start, whole, point) != 0) {
+    if (rational_mul_int(step, count, &whole) != RATIONAL_OK || rational_add(beat->start, whole, point) != RATIONAL_OK) {
         return -1;
     }
-    if (er_cmp(*point, beat->end) > 0) {
+    if (rational_cmp(*point, beat->end) > 0) {
         *point = beat->end;
     }
     return 0;
@@ -146,33 +154,33 @@ static int snap(ExactRational t, const Span *beat, ExactRational step, ExactRati
 
 /* The grid step for the onsets of one beat: the candidate with the lowest total snap error, the straight grid on a tie. */
 static ScoreQuantizeResult choose_step(const Item *items, const BeatKey *keys, size_t from, size_t to,
-                                       const ScoreQuantizeOptions *options, ExactRational *step) {
+                                       const ScoreQuantizeOptions *options, Rational *step) {
     const Span *beat = &items[keys[from].item].beat;
-    ExactRational candidates[3];
+    Rational candidates[3];
     size_t candidate_count = 0;
-    candidates[candidate_count++] = er_make(1, options->grid_denominator);
+    candidates[candidate_count++] = rational_ratio(1, options->grid_denominator);
     if (options->allow_triplets) {
-        ExactRational third;
-        ExactRational sixth;
-        if (er_mul(beat->len, er_make(1, 3), &third) != 0 || er_mul(beat->len, er_make(1, 6), &sixth) != 0) {
+        Rational third;
+        Rational sixth;
+        if (rational_mul(beat->len, rational_ratio(1, 3), &third) != RATIONAL_OK || rational_mul(beat->len, rational_ratio(1, 6), &sixth) != RATIONAL_OK) {
             return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
         }
         candidates[candidate_count++] = third;
         candidates[candidate_count++] = sixth;
     }
-    ExactRational best_error = {0, 1};
+    Rational best_error = {0, 1};
     for (size_t c = 0; c < candidate_count; c++) {
-        ExactRational total = {0, 1};
+        Rational total = {0, 1};
         for (size_t k = from; k < to; k++) {
             const Item *item = &items[keys[k].item];
-            ExactRational point;
-            ExactRational error;
-            if (snap(item->start, beat, candidates[c], &point) != 0 || er_distance(item->start, point, &error) != 0 ||
-                er_add(total, error, &total) != 0) {
+            Rational point;
+            Rational error;
+            if (snap(item->start, beat, candidates[c], &point) != 0 || rational_distance(item->start, point, &error) != 0 ||
+                rational_add(total, error, &total) != RATIONAL_OK) {
                 return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
             }
         }
-        if (c == 0 || er_cmp(total, best_error) < 0) {
+        if (c == 0 || rational_cmp(total, best_error) < 0) {
             best_error = total;
             *step = candidates[c];
         }
@@ -194,8 +202,10 @@ static ScoreQuantizeResult fill_items(Item *items, NoteEvent *const *events, siz
         if (musical_time_numerator(position) < 0 || duration_numerator(duration) <= 0) {
             return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
         }
-        items[i].start = er_of_time(position);
-        if (er_add(items[i].start, er_of_duration(duration), &items[i].end) != 0) {
+        Rational length;
+        if (rational_of_musical_time(position, &items[i].start) != RATIONAL_OK ||
+            rational_of_duration(duration, &length) != RATIONAL_OK ||
+            rational_add(items[i].start, length, &items[i].end) != RATIONAL_OK) {
             return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
         }
         ScoreQuantizeResult located = locate_beat(meter, items[i].start, &items[i].beat);
@@ -222,10 +232,10 @@ static ScoreQuantizeResult choose_grids(Item *items, size_t count, const ScoreQu
     size_t from = 0;
     while (from < count && result == SCORE_QUANTIZE_OK) {
         size_t to = from + 1;
-        while (to < count && er_cmp(keys[to].beat_start, keys[from].beat_start) == 0) {
+        while (to < count && rational_cmp(keys[to].beat_start, keys[from].beat_start) == 0) {
             to++;
         }
-        ExactRational step;
+        Rational step;
         result = choose_step(items, keys, from, to, options, &step);
         if (result == SCORE_QUANTIZE_OK) {
             grids[*grid_count].start = keys[from].beat_start;
@@ -257,13 +267,13 @@ static ScoreQuantizeResult snap_items(Item *items, size_t count, const MeterMap 
         }
         const BeatGrid *grid = (const BeatGrid *)bsearch(&end_beat.start, grids, grid_count, sizeof(BeatGrid),
                                                          compare_grids);
-        ExactRational end_step = grid != NULL ? grid->step : er_make(1, options->grid_denominator);
-        ExactRational shortest;
+        Rational end_step = grid != NULL ? grid->step : rational_ratio(1, options->grid_denominator);
+        Rational shortest;
         if (snap(item->end, &end_beat, end_step, &item->snapped_end) != 0 ||
-            er_add(item->snapped_start, item->step, &shortest) != 0) {
+            rational_add(item->snapped_start, item->step, &shortest) != RATIONAL_OK) {
             return SCORE_QUANTIZE_ERR_NOT_REPRESENTABLE;
         }
-        if (er_cmp(item->snapped_end, shortest) < 0) {
+        if (rational_cmp(item->snapped_end, shortest) < 0) {
             item->snapped_end = shortest;
         }
     }
@@ -297,7 +307,7 @@ static void assign_groups(Item *items, size_t count) {
 
 typedef struct {
     size_t group;
-    ExactRational start;
+    Rational start;
     size_t item;
 } VoiceKey;
 
@@ -307,7 +317,7 @@ static int compare_voice_keys(const void *left, const void *right) {
     if (a->group != b->group) {
         return a->group < b->group ? -1 : 1;
     }
-    int order = er_cmp(a->start, b->start);
+    int order = rational_cmp(a->start, b->start);
     if (order != 0) {
         return order;
     }
@@ -316,19 +326,19 @@ static int compare_voice_keys(const void *left, const void *right) {
 
 /* True when the end of a note should move to the next onset of its voice: the gap is positive, less than a beat and at
    most gap_absorb times the note's own notated length. */
-static int absorbs(const Item *item, ExactRational next, const ScoreQuantizeOptions *options, bool *absorb) {
+static int absorbs(const Item *item, Rational next, const ScoreQuantizeOptions *options, bool *absorb) {
     *absorb = false;
-    if (er_cmp(next, item->snapped_end) <= 0) {
+    if (rational_cmp(next, item->snapped_end) <= 0) {
         return 0;
     }
-    ExactRational gap;
-    ExactRational length;
-    ExactRational limit;
-    if (er_sub(next, item->snapped_end, &gap) != 0 || er_sub(item->snapped_end, item->snapped_start, &length) != 0 ||
-        er_mul(length, er_make(options->gap_absorb_numerator, options->gap_absorb_denominator), &limit) != 0) {
+    Rational gap;
+    Rational length;
+    Rational limit;
+    if (rational_sub(next, item->snapped_end, &gap) != RATIONAL_OK || rational_sub(item->snapped_end, item->snapped_start, &length) != RATIONAL_OK ||
+        rational_mul(length, rational_ratio(options->gap_absorb_numerator, options->gap_absorb_denominator), &limit) != RATIONAL_OK) {
         return -1;
     }
-    *absorb = er_cmp(gap, item->beat.len) < 0 && er_cmp(gap, limit) <= 0;
+    *absorb = rational_cmp(gap, item->beat.len) < 0 && rational_cmp(gap, limit) <= 0;
     return 0;
 }
 
@@ -340,7 +350,7 @@ static ScoreQuantizeResult absorb_gaps(Item *items, size_t count, const ScoreQua
     }
     assign_groups(items, count);
     VoiceKey *keys = (VoiceKey *)malloc(count * sizeof(VoiceKey));
-    ExactRational *ends = (ExactRational *)malloc(count * sizeof(ExactRational));
+    Rational *ends = (Rational *)malloc(count * sizeof(Rational));
     if (keys == NULL || ends == NULL) {
         free(keys);
         free(ends);
@@ -356,7 +366,7 @@ static ScoreQuantizeResult absorb_gaps(Item *items, size_t count, const ScoreQua
     ScoreQuantizeResult result = SCORE_QUANTIZE_OK;
     for (size_t k = count; k-- > 0 && result == SCORE_QUANTIZE_OK;) {
         size_t next = k + 1;
-        while (next < count && keys[next].group == keys[k].group && er_cmp(keys[next].start, keys[k].start) == 0) {
+        while (next < count && keys[next].group == keys[k].group && rational_cmp(keys[next].start, keys[k].start) == 0) {
             next++;
         }
         if (next >= count || keys[next].group != keys[k].group) {
@@ -387,10 +397,10 @@ static ScoreQuantizeResult store_items(const Item *items, size_t count, ScoreQua
         return SCORE_QUANTIZE_ERR_ALLOC;
     }
     for (size_t i = 0; i < count; i++) {
-        out->start_num[i] = items[i].snapped_start.n;
-        out->start_den[i] = items[i].snapped_start.d;
-        out->end_num[i] = items[i].snapped_end.n;
-        out->end_den[i] = items[i].snapped_end.d;
+        out->start_num[i] = items[i].snapped_start.num;
+        out->start_den[i] = items[i].snapped_start.den;
+        out->end_num[i] = items[i].snapped_end.num;
+        out->end_den[i] = items[i].snapped_end.den;
     }
     out->count = count;
     return SCORE_QUANTIZE_OK;

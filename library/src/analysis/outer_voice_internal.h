@@ -5,7 +5,8 @@
 #include <stddef.h>
 
 #include "analysis/outer_voice.h"
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 
 /*
  * Internal to outer-voice extraction: the steps as separate functions so each has its own unit tests. Not
@@ -15,15 +16,15 @@
 /* One note, reduced to what the steps need. */
 typedef struct {
     const char *id;       /* the note's EntityID value (borrowed) */
-    ExactRational onset;
-    ExactRational release;
-    ExactRational pitch;  /* pitch height: the position value, under one tuning (never negative) */
+    Rational onset;
+    Rational release;
+    Rational pitch;  /* pitch height: the position value, under one tuning (never negative) */
 } OuterNote;
 
 /* One segment: its window and the notes sounding in it (indices into the OuterNote array). */
 typedef struct {
-    ExactRational start;
-    ExactRational end;
+    Rational start;
+    Rational end;
     const size_t *members;
     size_t member_count;
 } OuterSegment;
@@ -48,7 +49,7 @@ void outer_voice_pick_line(const OuterNote *notes, const OuterSegment *segments,
  * The length of the beat at time `at`, from the beat grid (injected). False on failure. Smoothing measures
  * gaps in beats with it, so a gap is "short" by the beat of the meter it falls in (a dotted-quarter in 6/8).
  */
-typedef bool (*OuterBeatLength)(void *context, ExactRational at, ExactRational *out_beat);
+typedef bool (*OuterBeatLength)(void *context, Rational at, Rational *out_beat);
 
 /*
  * Rules 2 and 3, the register guard. For a segment whose picked note falls more than `semitones` away from
@@ -60,7 +61,7 @@ typedef bool (*OuterBeatLength)(void *context, ExactRational at, ExactRational *
  */
 OuterVoiceResult outer_voice_guard_register(const OuterNote *notes, const OuterSegment *segments,
                                              size_t segment_count, bool soprano, int semitones,
-                                             ExactRational window_beats, OuterBeatLength beat_length,
+                                             Rational window_beats, OuterBeatLength beat_length,
                                              void *beat_context, OuterNode *nodes);
 
 /*
@@ -70,7 +71,7 @@ OuterVoiceResult outer_voice_guard_register(const OuterNote *notes, const OuterS
  * another voice. Runs at either end of the line are not bridged.
  */
 OuterVoiceResult outer_voice_mark_bridged_gaps(const OuterNote *notes, const OuterSegment *segments,
-                                                size_t segment_count, ExactRational window_beats,
+                                                size_t segment_count, Rational window_beats,
                                                 OuterBeatLength beat_length, void *beat_context,
                                                 OuterNode *nodes);
 

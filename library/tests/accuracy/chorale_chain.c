@@ -18,11 +18,13 @@
 #include "segmentation_beat_grid.h"
 #include "semantics/sonority_segmentation.h"
 #include "time/duration.h"
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 #include "time/metrical_position.h"
 #include "time/temporal_anchor.h"
 #include "time/time_span.h"
 #include "weighted_chord_identification.h"
+#include "../rational_test_util.h"
 
 /* The glue after the import is the same as tests/analysis/weighted_pipeline.h's (which imports MIDI); it is kept
    here so that the existing test helper stays as it is. */
@@ -60,8 +62,8 @@ static BeatStrength attack_strength(const MeterMap *map, const MusicalTime *onse
     return strength;
 }
 
-static double as_double(ExactRational r) {
-    return (double)r.n / (double)r.d;
+static double as_double(Rational r) {
+    return (double)r.num / (double)r.den;
 }
 
 typedef struct {
@@ -193,8 +195,8 @@ static void fail(char *message, size_t size, const char *text) {
 
 /* The beat a segment [start, end) lies inside, as a non-zero index (measure and beat), or 0 when it spans beats or
    the grid cannot be read. */
-static long beat_index(const MeterMap *map, ExactRational start, ExactRational end) {
-    MusicalTime *at = er_to_time(start);
+static long beat_index(const MeterMap *map, Rational start, Rational end) {
+    MusicalTime *at = musical_time_from_rational_or_null(start);
     int measure = 0;
     bool found = at != NULL && meter_map_measure_index_at(map, at, &measure) == METER_MAP_OK;
     musical_time_destroy(at);
@@ -206,12 +208,12 @@ static long beat_index(const MeterMap *map, ExactRational start, ExactRational e
     TimeSpan *span = NULL;
     long index = 0;
     if (meter_map_measure_span(map, measure, &span) == METER_MAP_OK) {
-        ExactRational measure_end = er_of_time(time_span_end(span));
+        Rational measure_end = test_rational_of_time(time_span_end(span));
         for (size_t b = 0; b < count; b++) {
-            ExactRational beat_start = er_of_time(starts[b]);
-            ExactRational beat_end = b + 1 < count ? er_of_time(starts[b + 1]) : measure_end;
-            if (er_cmp(beat_start, start) <= 0 && er_cmp(start, beat_end) < 0) {
-                if (er_cmp(end, beat_end) <= 0) {
+            Rational beat_start = test_rational_of_time(starts[b]);
+            Rational beat_end = b + 1 < count ? test_rational_of_time(starts[b + 1]) : measure_end;
+            if (rational_cmp(beat_start, start) <= 0 && rational_cmp(start, beat_end) < 0) {
+                if (rational_cmp(end, beat_end) <= 0) {
                     index = ((long)measure + 1) * 1000 + (long)b + 1;
                 }
                 break;
@@ -263,8 +265,8 @@ static bool build_segments(Run *r, char *message, size_t message_size) {
     for (size_t s = 0; s < r->segment_count; s++) {
         const AdaptiveSonority *segment = &r->sonorities.items[s];
         const TimeSpan *window = sonority_time_window(segment->sonority);
-        ExactRational start = er_of_time(time_span_start(window));
-        ExactRational end = er_of_time(time_span_end(window));
+        Rational start = test_rational_of_time(time_span_start(window));
+        Rational end = test_rational_of_time(time_span_end(window));
         r->starts[s] = as_double(start);
         r->ends[s] = as_double(end);
         snprintf(r->segment_ids[s], sizeof(r->segment_ids[s]), "seg-%zu", s);
@@ -283,16 +285,16 @@ static bool build_segments(Run *r, char *message, size_t message_size) {
             }
             const NoteEvent *note = imp->events[found->index];
             const MusicalTime *onset_time = temporal_anchor_position(note_event_temporal_anchor(note));
-            ExactRational onset = er_of_time(onset_time);
-            ExactRational release = {0, 1};
-            ExactRational overlap = {0, 1};
-            if (er_add(onset, er_of_duration(note_event_duration(note)), &release) != 0) {
+            Rational onset = test_rational_of_time(onset_time);
+            Rational release = {0, 1};
+            Rational overlap = {0, 1};
+            if (rational_add(onset, test_rational_of_duration(note_event_duration(note)), &release) != 0) {
                 free(keys);
                 return false;
             }
-            ExactRational from = er_cmp(onset, start) > 0 ? onset : start;
-            ExactRational to = er_cmp(release, end) < 0 ? release : end;
-            if (er_cmp(to, from) <= 0 || er_sub(to, from, &overlap) != 0) {
+            Rational from = rational_cmp(onset, start) > 0 ? onset : start;
+            Rational to = rational_cmp(release, end) < 0 ? release : end;
+            if (rational_cmp(to, from) <= 0 || rational_sub(to, from, &overlap) != RATIONAL_OK) {
                 free(keys);
                 fail(message, message_size, "a segment holds a note that does not sound in it");
                 return false;
@@ -361,7 +363,7 @@ static bool estimate_keys(Run *r, const MusicalTime *const *boundaries, size_t b
 static size_t region_at(const CommonPracticeKeyRegions *regions, double t) {
     size_t found = 0;
     for (size_t i = 0; i < regions->region_count; i++) {
-        ExactRational start = er_of_time(time_span_start(regions->regions[i].span));
+        Rational start = test_rational_of_time(time_span_start(regions->regions[i].span));
         if (as_double(start) <= t + 1e-12) {
             found = i;
         }
@@ -541,10 +543,10 @@ static bool beat_duration(const MeterMap *map, Duration **out) {
     }
     bool ok = false;
     if (meter_map_measure_span(map, 1, &span) == METER_MAP_OK) {
-        ExactRational next = count > 1 ? er_of_time(starts[1]) : er_of_time(time_span_end(span));
-        ExactRational length = {0, 1};
-        ok = er_sub(next, er_of_time(starts[0]), &length) == 0 &&
-             duration_create((long)length.n, (unsigned long)length.d, out) == DURATION_OK;
+        Rational next = count > 1 ? test_rational_of_time(starts[1]) : test_rational_of_time(time_span_end(span));
+        Rational length = {0, 1};
+        ok = rational_sub(next, test_rational_of_time(starts[0]), &length) == 0 &&
+             duration_create((long)length.num, (unsigned long)length.den, out) == DURATION_OK;
         time_span_destroy(span);
     }
     for (size_t b = 0; b < count; b++) {
@@ -642,7 +644,7 @@ static int compare_double(const void *a, const void *b) {
 static const RomanTextChord *chord_at(const RomanTextAnalysis *a, double t) {
     const RomanTextChord *found = NULL;
     for (size_t i = 0; i < a->chord_count; i++) {
-        ExactRational at = er_of_time(a->chords[i].time);
+        Rational at = test_rational_of_time(a->chords[i].time);
         if (as_double(at) <= t + 1e-12) {
             found = &a->chords[i];
         }
@@ -653,7 +655,7 @@ static const RomanTextChord *chord_at(const RomanTextAnalysis *a, double t) {
 static const RomanTextKey *key_at(const RomanTextAnalysis *a, double t) {
     const RomanTextKey *found = NULL;
     for (size_t i = 0; i < a->key_count; i++) {
-        ExactRational at = er_of_time(a->keys[i].time);
+        Rational at = test_rational_of_time(a->keys[i].time);
         if (as_double(at) <= t + 1e-12) {
             found = &a->keys[i];
         }
@@ -684,7 +686,7 @@ static void compare(const Run *r, ChoraleScore *out) {
         return;
     }
     size_t n = 0;
-    double first = as_double(er_of_time(r->annotation.chords[0].time));
+    double first = as_double(test_rational_of_time(r->annotation.chords[0].time));
     double end = as_double(r->layout.end);
     cuts[n++] = first;
     cuts[n++] = end;
@@ -693,10 +695,10 @@ static void compare(const Run *r, ChoraleScore *out) {
         cuts[n++] = r->ends[s];
     }
     for (size_t i = 0; i < r->annotation.chord_count; i++) {
-        cuts[n++] = as_double(er_of_time(r->annotation.chords[i].time));
+        cuts[n++] = as_double(test_rational_of_time(r->annotation.chords[i].time));
     }
     for (size_t i = 0; i < r->annotation.key_count; i++) {
-        cuts[n++] = as_double(er_of_time(r->annotation.keys[i].time));
+        cuts[n++] = as_double(test_rational_of_time(r->annotation.keys[i].time));
     }
     qsort(cuts, n, sizeof(double), compare_double);
 

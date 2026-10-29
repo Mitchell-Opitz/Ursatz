@@ -1,9 +1,11 @@
 #include "segmentation_beat_grid.h"
 
+#include <limits.h>
 #include <stdlib.h>
 
 #include "metric_position_rules.h"
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 #include "time/metrical_position.h"
 #include "time/time_span.h"
 
@@ -25,8 +27,13 @@ bool standard_meter_segmentation_beat_grid(const MeterMap *map, int measure, voi
     if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return false;
     }
-    ExactRational start = er_of_time(time_span_start(span));
-    ExactRational end = er_of_time(time_span_end(span));
+    Rational start;
+    Rational end;
+    if (rational_of_musical_time(time_span_start(span), &start) != RATIONAL_OK ||
+        rational_of_musical_time(time_span_end(span), &end) != RATIONAL_OK) {
+        time_span_destroy(span);
+        return false;
+    }
 
     const TimeSignature *reading = NULL;
     Duration *beat_duration = NULL;
@@ -43,10 +50,15 @@ bool standard_meter_segmentation_beat_grid(const MeterMap *map, int measure, voi
     }
 
     /* How far into a full measure the measure's start is: 0, except for a pickup. */
-    ExactRational beat = er_of_duration(beat_duration);
-    ExactRational offset = er_of_duration(metrical_position_offset(first_position));
+    Rational beat;
+    Rational offset;
+    bool converted = rational_of_duration(beat_duration, &beat) == RATIONAL_OK &&
+                     rational_of_duration(metrical_position_offset(first_position), &offset) == RATIONAL_OK;
     duration_destroy(beat_duration);
     metrical_position_destroy(first_position);
+    if (!converted) {
+        return false;
+    }
 
     size_t capacity = 8;
     size_t count = 0;
@@ -57,28 +69,29 @@ bool standard_meter_segmentation_beat_grid(const MeterMap *map, int measure, voi
 
     /* The measure's own start is its first beat start. The beat lines after it are the multiples of
        the beat length past the offset, as times, until the measure ends. */
-    starts[count] = er_to_time(start);
-    if (starts[count] == NULL) {
+    if (musical_time_from_rational(start, &starts[count]) != TIME_RATIONAL_OK) {
         free(starts);
         return false;
     }
     count++;
 
     /* First multiple of the beat strictly past the offset: floor(offset / beat) + 1. */
-    ExactRational quotient = er_make(0, 1);
-    bool failed = er_mul(offset, er_make(beat.d, beat.n), &quotient) != 0;
-    unsigned long long k = quotient.n / quotient.d + 1;
+    Rational quotient = {0, 1};
+    long long k = 1;
+    bool failed = rational_div(offset, beat, &quotient) != RATIONAL_OK || rational_floor(quotient, &k) != RATIONAL_OK ||
+                  k == LLONG_MAX;
+    k++;
 
     while (!failed) {
-        ExactRational line = {0, 1};
-        ExactRational past = {0, 1};
-        ExactRational at = {0, 1};
-        if (er_mul(beat, er_make(k, 1), &line) != 0 || er_sub(line, offset, &past) != 0 ||
-            er_add(start, past, &at) != 0) {
+        Rational line = {0, 1};
+        Rational past = {0, 1};
+        Rational at = {0, 1};
+        if (rational_mul_int(beat, k, &line) != RATIONAL_OK || rational_sub(line, offset, &past) != RATIONAL_OK ||
+            rational_add(start, past, &at) != RATIONAL_OK) {
             failed = true;
             break;
         }
-        if (er_cmp(at, end) >= 0) {
+        if (rational_cmp(at, end) >= 0) {
             break;
         }
         if (count == capacity) {
@@ -90,8 +103,7 @@ bool standard_meter_segmentation_beat_grid(const MeterMap *map, int measure, voi
             starts = grown;
             capacity *= 2;
         }
-        starts[count] = er_to_time(at);
-        if (starts[count] == NULL) {
+        if (musical_time_from_rational(at, &starts[count]) != TIME_RATIONAL_OK) {
             failed = true;
             break;
         }

@@ -7,7 +7,8 @@
 #include "meter_test_util.h"
 #include "segmentation_beat_grid.h"
 #include "semantics/sonority_segmentation.h"
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 #include "time/time_span.h"
 
 /*
@@ -70,21 +71,21 @@ static void release(Imported *imported) {
     midi_meter_import_destroy(&imported->meter);
 }
 
-static double as_double(ExactRational r) {
-    return (double)r.n / (double)r.d;
+static double as_double(Rational r) {
+    return (double)r.num / (double)r.den;
 }
 
 /* --- the annotation file: "<measure> <beat>" in 3/4, beat in quarter notes, a half beat as .5 --- */
 
 typedef struct {
-    ExactRational *times;
+    Rational *times;
     size_t count;
 } Marks;
 
 static Marks load_marks(void) {
     size_t size = 0;
     unsigned char *text = read_file(URSATZ_ANNOTATION_DIR, "bach114_chord_changes.txt", &size);
-    Marks marks = {(ExactRational *)calloc(256, sizeof(ExactRational)), 0};
+    Marks marks = {(Rational *)calloc(256, sizeof(Rational)), 0};
     char *line = strtok((char *)text, "\n");
     while (line != NULL) {
         if (line[0] != '#' && line[0] != '\0') {
@@ -99,7 +100,7 @@ static Marks load_marks(void) {
                 halves += 1;
             }
             /* time = ((measure - 1) * 3 + (beat - 1)) / 4 whole notes = ((measure-1)*6 + halves - 2) / 8 */
-            marks.times[marks.count++] = er_make((unsigned long long)((measure - 1) * 6 + halves - 2), 8);
+            marks.times[marks.count++] = rational_ratio((unsigned long long)((measure - 1) * 6 + halves - 2), 8);
             assert(marks.count < 256);
         }
         line = strtok(NULL, "\n");
@@ -109,15 +110,16 @@ static Marks load_marks(void) {
 }
 
 /* The start of every segment, in time order. */
-static ExactRational *segment_starts(const AdaptiveSonorities *sonorities) {
-    ExactRational *starts = (ExactRational *)calloc(sonorities->count + 1, sizeof(ExactRational));
+static Rational *segment_starts(const AdaptiveSonorities *sonorities) {
+    Rational *starts = (Rational *)calloc(sonorities->count + 1, sizeof(Rational));
     for (size_t i = 0; i < sonorities->count; i++) {
-        starts[i] = er_of_time(time_span_start(sonority_time_window(sonorities->items[i].sonority)));
+        assert(rational_of_musical_time(time_span_start(sonority_time_window(sonorities->items[i].sonority)), &starts[i]) ==
+               RATIONAL_OK);
     }
     return starts;
 }
 
-static void print_position(const char *label, ExactRational t) {
+static void print_position(const char *label, Rational t) {
     /* 3/4: a measure is 3/4 of a whole note; the beat is a quarter note. */
     double whole = as_double(t);
     long measure = (long)(whole / 0.75) + 1;
@@ -131,11 +133,11 @@ typedef struct {
 } Score;
 
 /* Greedy one-to-one matching within an eighth note, over predicted boundaries before `limit`. */
-static Score evaluate(const ExactRational *predicted, size_t predicted_count, const Marks *marks,
-                      ExactRational limit, bool print_failures) {
-    ExactRational tolerance = er_make(1, 8);
+static Score evaluate(const Rational *predicted, size_t predicted_count, const Marks *marks,
+                      Rational limit, bool print_failures) {
+    Rational tolerance = rational_ratio(1, 8);
     size_t used = 0;
-    while (used < predicted_count && er_cmp(predicted[used], limit) < 0) {
+    while (used < predicted_count && rational_cmp(predicted[used], limit) < 0) {
         used++;
     }
 
@@ -143,15 +145,15 @@ static Score evaluate(const ExactRational *predicted, size_t predicted_count, co
     size_t i = 0;
     size_t j = 0;
     while (i < marks->count && j < used) {
-        ExactRational low = er_cmp(marks->times[i], predicted[j]) < 0 ? marks->times[i] : predicted[j];
-        ExactRational high = er_cmp(marks->times[i], predicted[j]) < 0 ? predicted[j] : marks->times[i];
-        ExactRational gap = {0, 1};
-        assert(er_sub(high, low, &gap) == 0);
-        if (er_cmp(gap, tolerance) <= 0) {
+        Rational low = rational_cmp(marks->times[i], predicted[j]) < 0 ? marks->times[i] : predicted[j];
+        Rational high = rational_cmp(marks->times[i], predicted[j]) < 0 ? predicted[j] : marks->times[i];
+        Rational gap = {0, 1};
+        assert(rational_sub(high, low, &gap) == 0);
+        if (rational_cmp(gap, tolerance) <= 0) {
             matched++;
             i++;
             j++;
-        } else if (er_cmp(predicted[j], marks->times[i]) < 0) {
+        } else if (rational_cmp(predicted[j], marks->times[i]) < 0) {
             if (print_failures) {
                 print_position("extra boundary at", predicted[j]);
             }
@@ -202,21 +204,21 @@ static void test_bach_114_boundaries_against_hand_marked_changes(void) {
     Imported bach = import_corpus_file("Bach 114.mid");
     Marks marks = load_marks();
     assert(marks.count >= 30); /* measures 1 to 16 */
-    ExactRational limit = er_make(12, 1); /* 16 measures of 3/4 */
+    Rational limit = rational_ratio(12, 1); /* 16 measures of 3/4 */
 
     printf("Bach 114, boundary precision and recall against %zu hand-marked changes (within an eighth note)\n",
            marks.count);
 
     MeterMap *score_meter = three_four_map();
     AdaptiveSonorities scored = segment(&bach, score_meter);
-    ExactRational *starts = segment_starts(&scored);
+    Rational *starts = segment_starts(&scored);
     printf("  3/4 (the score's meter), %zu segments in all:\n", scored.count);
     Score result = evaluate(starts, scored.count, &marks, limit, true);
     printf("  3/4: precision %.3f, recall %.3f\n", result.precision, result.recall);
 
     /* For information only: the same notes under the file's own, wrong, 4/4 meter. */
     AdaptiveSonorities filed = segment(&bach, bach.meter.meter_map);
-    ExactRational *filed_starts = segment_starts(&filed);
+    Rational *filed_starts = segment_starts(&filed);
     Score informational = evaluate(filed_starts, filed.count, &marks, limit, false);
     printf("  4/4 (as the file declares it, not asserted): precision %.3f, recall %.3f\n", informational.precision,
            informational.recall);
@@ -253,7 +255,11 @@ static void report_corpus_statistics(void) {
         double total = 0.0;
         for (size_t i = 0; i < out.count; i++) {
             const TimeSpan *window = sonority_time_window(out.items[i].sonority);
-            total += as_double(er_of_time(time_span_end(window))) - as_double(er_of_time(time_span_start(window)));
+            Rational window_start;
+            Rational window_end;
+            assert(rational_of_musical_time(time_span_end(window), &window_end) == RATIONAL_OK);
+            assert(rational_of_musical_time(time_span_start(window), &window_start) == RATIONAL_OK);
+            total += as_double(window_end) - as_double(window_start);
         }
         double mean_whole = out.count == 0 ? 0.0 : total / (double)out.count;
         printf("  %-16s %6zu notes  %5zu segments  mean segment %.3f quarter notes\n", names[p], piece.count,

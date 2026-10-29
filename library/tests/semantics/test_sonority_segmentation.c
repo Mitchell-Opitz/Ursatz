@@ -14,6 +14,7 @@
 #include "time/note_value.h"
 #include "time/temporal_anchor.h"
 #include "time/time_signature.h"
+#include "../rational_test_util.h"
 
 /*
  * Adaptive sonority segmentation tests. Step 1, the grid cut: a beat boundary of the current meter
@@ -112,16 +113,16 @@ static bool stub_provider(const MeterMap *map, int measure, void *context, Music
     if (meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
         return false;
     }
-    ExactRational at = er_of_time(time_span_start(span));
-    ExactRational end = er_of_time(time_span_end(span));
+    Rational at = test_rational_of_time(time_span_start(span));
+    Rational end = test_rational_of_time(time_span_end(span));
     time_span_destroy(span);
 
-    ExactRational step = er_make((unsigned long long)beat->n, beat->d);
+    Rational step = rational_ratio((unsigned long long)beat->n, beat->d);
     MusicalTime **starts = (MusicalTime **)calloc(64, sizeof(MusicalTime *));
     size_t count = 0;
-    while (er_cmp(at, end) < 0 && count < 64) {
-        starts[count++] = er_to_time(at);
-        assert(er_add(at, step, &at) == 0);
+    while (rational_cmp(at, end) < 0 && count < 64) {
+        starts[count++] = musical_time_from_rational_or_null(at);
+        assert(rational_add(at, step, &at) == 0);
     }
     *out_starts = starts;
     *out_count = count;

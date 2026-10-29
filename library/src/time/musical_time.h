@@ -23,7 +23,8 @@ typedef struct MusicalTime MusicalTime;
 typedef enum {
     MUSICAL_TIME_OK = 0,
     MUSICAL_TIME_ERR_NON_POSITIVE_DENOMINATOR,
-    MUSICAL_TIME_ERR_ALLOC
+    MUSICAL_TIME_ERR_ALLOC,
+    MUSICAL_TIME_ERR_OVERFLOW /* an arithmetic result does not fit the numerator or denominator */
 } MusicalTimeResult;
 
 MusicalTimeResult musical_time_create(long numerator, unsigned long denominator, MusicalTime **out);

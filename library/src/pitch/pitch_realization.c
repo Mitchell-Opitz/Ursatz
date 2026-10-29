@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 
+#include "core/rational.h"
 #include "identity/entity_id.h"
 
 struct PitchRealization {
@@ -9,15 +10,6 @@ struct PitchRealization {
     long numerator;
     unsigned long denominator;
 };
-
-static unsigned long gcd(unsigned long a, unsigned long b) {
-    while (b != 0) {
-        unsigned long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
-}
 
 static TuningSystemResult tuning_system_copy(const TuningSystem *src, TuningSystem **out) {
     EntityID *id_copy = NULL;
@@ -56,7 +48,7 @@ PitchRealizationResult pitch_realization_create(const TuningSystem *tuning_syste
         return PITCH_REALIZATION_ERR_ALLOC;
     }
 
-    unsigned long divisor = gcd((unsigned long)ratio_numerator, ratio_denominator);
+    unsigned long divisor = rational_gcd_unsigned((unsigned long)ratio_numerator, ratio_denominator);
     if (divisor == 0) {
         divisor = 1;
     }
@@ -100,7 +92,7 @@ PitchRealizationFrequencyResult pitch_realization_frequency(const PitchRealizati
     long numerator = pitch_realization->numerator * reference_numerator;
     unsigned long denominator = pitch_realization->denominator * reference_denominator;
 
-    unsigned long divisor = gcd((unsigned long)(numerator < 0 ? -numerator : numerator), denominator);
+    unsigned long divisor = rational_gcd_unsigned((unsigned long)(numerator < 0 ? -numerator : numerator), denominator);
     if (divisor == 0) {
         divisor = 1;
     }

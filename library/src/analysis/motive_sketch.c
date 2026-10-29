@@ -72,8 +72,8 @@ static unsigned long long fnv_signed(unsigned long long hash, long long value) {
     return fnv_value(hash, (unsigned long long)value);
 }
 
-static unsigned long long fnv_time(unsigned long long hash, ExactRational time) {
-    return fnv_value(fnv_value(hash, time.n), time.d);
+static unsigned long long fnv_time(unsigned long long hash, Rational time) {
+    return fnv_value(fnv_value(hash, time.num), time.den);
 }
 
 unsigned long long motive_sketch_fingerprint(const MotiveSketch *sketch) {
@@ -125,14 +125,14 @@ bool motive_sketch_validate(const MotiveSketch *sketch) {
         return false;
     }
     if (!msk_ok(sketch->bar) || !msk_ok(sketch->beat) || !msk_ok(sketch->pickup) || !msk_ok(sketch->length) ||
-        sketch->bar.n == 0 || sketch->beat.n == 0 || msk_cmp(sketch->pickup, sketch->bar) >= 0) {
+        sketch->bar.num == 0 || sketch->beat.num == 0 || msk_cmp(sketch->pickup, sketch->bar) >= 0) {
         return false;
     }
-    ExactRational end = msk_int(0);
+    Rational end = msk_int(0);
     for (size_t i = 0; i < sketch->note_count; i++) {
         const MotiveSketchNote *note = &sketch->notes[i];
         if ((note->pitch != MOTIVE_SKETCH_PITCH_UNKNOWN && (note->pitch < 0 || note->pitch > 127)) ||
-            !msk_ok(note->onset) || !msk_ok(note->duration) || note->duration.n == 0 ||
+            !msk_ok(note->onset) || !msk_ok(note->duration) || note->duration.num == 0 ||
             msk_cmp(note->onset, end) < 0) {
             return false;
         }
@@ -291,15 +291,15 @@ bool motive_sketch_contour_normalize(const MotiveSketch *in, MotiveSketch *out) 
 
 /* --- time ------------------------------------------------------------------- */
 
-bool motive_sketch_expressible(ExactRational duration) {
-    if (!msk_ok(duration) || duration.n == 0) {
+bool motive_sketch_expressible(Rational duration) {
+    if (!msk_ok(duration) || duration.num == 0) {
         return false;
     }
     /* 1/2^k times 1, 3/2 or 7/4, for the values w to t. */
     for (unsigned k = 0; k < 6; k++) {
-        ExactRational plain = er_make(1, 1ULL << k);
-        ExactRational one_dot = msk_mul(plain, er_make(3, 2));
-        ExactRational two_dots = msk_mul(plain, er_make(7, 4));
+        Rational plain = rational_ratio(1, 1ULL << k);
+        Rational one_dot = msk_mul(plain, rational_ratio(3, 2));
+        Rational two_dots = msk_mul(plain, rational_ratio(7, 4));
         if (msk_eq(duration, plain) || msk_eq(duration, one_dot) || msk_eq(duration, two_dots)) {
             return true;
         }
@@ -307,19 +307,19 @@ bool motive_sketch_expressible(ExactRational duration) {
     return false;
 }
 
-bool motive_sketch_on_grid(ExactRational onset) {
-    return msk_ok(onset) && 32 % onset.d == 0;
+bool motive_sketch_on_grid(Rational onset) {
+    return msk_ok(onset) && 32 % onset.den == 0;
 }
 
-int motive_sketch_strength(const MotiveSketch *sketch, ExactRational onset) {
-    ExactRational shift = msk_is_zero(sketch->pickup) ? msk_int(0) : msk_sub(sketch->bar, sketch->pickup);
-    ExactRational inside = msk_mod(msk_add(onset, shift), sketch->bar);
+int motive_sketch_strength(const MotiveSketch *sketch, Rational onset) {
+    Rational shift = msk_is_zero(sketch->pickup) ? msk_int(0) : msk_sub(sketch->bar, sketch->pickup);
+    Rational inside = msk_mod(msk_add(onset, shift), sketch->bar);
     if (!msk_ok(inside)) {
         return 0;
     }
-    if (inside.n == 0) {
+    if (inside.num == 0) {
         return 2;
     }
-    ExactRational beats = msk_div(inside, sketch->beat);
-    return msk_ok(beats) && beats.d == 1 ? 1 : 0;
+    Rational beats = msk_div(inside, sketch->beat);
+    return msk_ok(beats) && beats.den == 1 ? 1 : 0;
 }

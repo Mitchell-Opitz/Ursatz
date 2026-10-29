@@ -151,50 +151,6 @@ bool retrograde_identity_equals(const Retrograde *a, const Retrograde *b) {
     return transformation_identity_equals(a->transformation, b->transformation);
 }
 
-static unsigned long gcd_ul(unsigned long a, unsigned long b) {
-    while (b != 0) {
-        unsigned long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
-}
-
-static void rational_reduce(long *numerator, unsigned long *denominator) {
-    unsigned long abs_numerator = *numerator < 0 ? (unsigned long)(-*numerator) : (unsigned long)*numerator;
-    unsigned long divisor = gcd_ul(abs_numerator, *denominator);
-    if (divisor == 0) {
-        divisor = 1;
-    }
-    *numerator = *numerator / (long)divisor;
-    *denominator = *denominator / divisor;
-}
-
-static void rational_add(long n1, unsigned long d1, long n2, unsigned long d2, long *out_n, unsigned long *out_d) {
-    *out_n = n1 * (long)d2 + n2 * (long)d1;
-    *out_d = d1 * d2;
-    rational_reduce(out_n, out_d);
-}
-
-static void rational_subtract(long n1, unsigned long d1, long n2, unsigned long d2, long *out_n,
-                               unsigned long *out_d) {
-    *out_n = n1 * (long)d2 - n2 * (long)d1;
-    *out_d = d1 * d2;
-    rational_reduce(out_n, out_d);
-}
-
-static int rational_compare(long n1, unsigned long d1, long n2, unsigned long d2) {
-    long lhs = n1 * (long)d2;
-    long rhs = n2 * (long)d1;
-    if (lhs < rhs) {
-        return -1;
-    }
-    if (lhs > rhs) {
-        return 1;
-    }
-    return 0;
-}
-
 RetrogradeApplyResult retrograde_apply(const Retrograde *retrograde, NoteEvent **events, size_t event_count,
                                         TransformResult **out) {
     if (retrograde == NULL) {
@@ -221,16 +177,26 @@ RetrogradeApplyResult retrograde_apply(const Retrograde *retrograde, NoteEvent *
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(events[i]));
         long onset_n = musical_time_numerator(position);
         unsigned long onset_d = musical_time_denominator(position);
-        if (rational_compare(onset_n, onset_d, earliest_onset_n, earliest_onset_d) < 0) {
+        int order = 0;
+        long end_n = 0;
+        unsigned long end_d = 1;
+        const Duration *duration = note_event_duration(events[i]);
+        if (!transform_support_rational_compare(onset_n, onset_d, earliest_onset_n, earliest_onset_d, &order) ||
+            !transform_support_rational_add(onset_n, onset_d, duration_numerator(duration),
+                                            duration_denominator(duration), &end_n, &end_d)) {
+            return RETROGRADE_APPLY_ERR_ALLOC;
+        }
+        if (order < 0) {
             earliest_onset_n = onset_n;
             earliest_onset_d = onset_d;
         }
 
-        const Duration *duration = note_event_duration(events[i]);
-        long end_n = 0;
-        unsigned long end_d = 1;
-        rational_add(onset_n, onset_d, duration_numerator(duration), duration_denominator(duration), &end_n, &end_d);
-        if (!latest_end_set || rational_compare(end_n, end_d, latest_end_n, latest_end_d) > 0) {
+        int end_order = 1;
+        if (latest_end_set &&
+            !transform_support_rational_compare(end_n, end_d, latest_end_n, latest_end_d, &end_order)) {
+            return RETROGRADE_APPLY_ERR_ALLOC;
+        }
+        if (!latest_end_set || end_order > 0) {
             latest_end_n = end_n;
             latest_end_d = end_d;
             latest_end_set = true;
@@ -244,7 +210,11 @@ RetrogradeApplyResult retrograde_apply(const Retrograde *retrograde, NoteEvent *
 
     long span_n = 0;
     unsigned long span_d = 1;
-    rational_add(earliest_onset_n, earliest_onset_d, latest_end_n, latest_end_d, &span_n, &span_d);
+    if (!transform_support_rational_add(earliest_onset_n, earliest_onset_d, latest_end_n, latest_end_d, &span_n,
+                                        &span_d)) {
+        free(derived);
+        return RETROGRADE_APPLY_ERR_ALLOC;
+    }
 
     for (size_t i = 0; i < event_count; i++) {
         const MusicalTime *position = temporal_anchor_position(note_event_temporal_anchor(events[i]));
@@ -253,11 +223,17 @@ RetrogradeApplyResult retrograde_apply(const Retrograde *retrograde, NoteEvent *
         const Duration *duration = note_event_duration(events[i]);
         long end_n = 0;
         unsigned long end_d = 1;
-        rational_add(onset_n, onset_d, duration_numerator(duration), duration_denominator(duration), &end_n, &end_d);
-
         long new_onset_n = 0;
         unsigned long new_onset_d = 1;
-        rational_subtract(span_n, span_d, end_n, end_d, &new_onset_n, &new_onset_d);
+        if (!transform_support_rational_add(onset_n, onset_d, duration_numerator(duration),
+                                            duration_denominator(duration), &end_n, &end_d) ||
+            !transform_support_rational_subtract(span_n, span_d, end_n, end_d, &new_onset_n, &new_onset_d)) {
+            for (size_t j = 0; j < i; j++) {
+                note_event_destroy(derived[j]);
+            }
+            free(derived);
+            return RETROGRADE_APPLY_ERR_ALLOC;
+        }
 
         derived[i] = transform_support_clone_note_event_with_new_onset(events[i], new_onset_n, new_onset_d, "-retrograde");
         if (derived[i] == NULL) {

@@ -3,6 +3,7 @@
 #include <limits.h>
 
 #include "beat_grid.h"
+#include "core/rational.h"
 #include "grouping_rules.h"
 #include "meter_class_rules.h"
 #include "rule_pair.h"
@@ -35,15 +36,6 @@ const Constraint *standard_meter_metric_constraint(StandardMeterMetricRule which
     return valid_rule(which) ? g_pairs[which].constraint : NULL;
 }
 
-static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
-    while (b != 0) {
-        unsigned long long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
-}
-
 bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration **out_beat, unsigned *out_beats) {
     if (time_signature == NULL || out_beat == NULL || out_beats == NULL) {
         return false;
@@ -73,7 +65,7 @@ static bool split_into_beats(const Duration *offset, const Duration *beat, unsig
     unsigned long long denominator = offset_d * beat_n;
     *out_index = numerator / denominator;
     unsigned long long remainder = numerator % denominator;
-    unsigned long long g = gcd_ull(remainder, denominator);
+    unsigned long long g = rational_gcd_unsigned(remainder, denominator);
     *out_fraction_numerator = remainder / g;
     *out_fraction_denominator = denominator / g;
     return true;

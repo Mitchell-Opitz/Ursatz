@@ -49,4 +49,20 @@ NoteEvent *transform_support_clone_note_event_with_new_duration(const NoteEvent 
 NoteEvent *transform_support_clone_note_event_with_new_onset(const NoteEvent *source, long new_onset_numerator,
                                                              unsigned long new_onset_denominator, const char *id_suffix);
 
+/*
+ * Exact event arithmetic on a numerator over a positive denominator, on core/rational.h. Each returns
+ * false when an input does not fit a Rational or a result does not fit long / unsigned long (the
+ * callers report that through their existing allocation-failure result); outputs are in lowest terms
+ * and untouched on failure.
+ */
+bool transform_support_rational_add(long n1, unsigned long d1, long n2, unsigned long d2, long *out_n,
+                                    unsigned long *out_d);
+bool transform_support_rational_subtract(long n1, unsigned long d1, long n2, unsigned long d2, long *out_n,
+                                         unsigned long *out_d);
+/* (n / d) * (scale_n / scale_d). */
+bool transform_support_rational_scale(long n, unsigned long d, unsigned long scale_n, unsigned long scale_d,
+                                      long *out_n, unsigned long *out_d);
+/* *out is -1, 0 or 1. */
+bool transform_support_rational_compare(long n1, unsigned long d1, long n2, unsigned long d2, int *out);
+
 #endif

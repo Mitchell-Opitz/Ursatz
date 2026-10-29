@@ -74,7 +74,7 @@ typedef struct {
     bool found;
     MotiveRelationStep steps[MOTIVE_RECOGNIZE_MAX_DEPTH];
     size_t step_count;
-    ExactRational distance;
+    Rational distance;
     bool kept[MOTIVE_DIMENSION_COUNT];
     bool changed[MOTIVE_DIMENSION_COUNT];
     double similarity[MOTIVE_DIMENSION_COUNT];

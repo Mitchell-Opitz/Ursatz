@@ -10,15 +10,15 @@
  * refusals it makes, and that the input is never changed.
  */
 
-static ExactRational q(unsigned long long n, unsigned long long d) {
-    return er_make(n, d);
+static Rational q(unsigned long long n, unsigned long long d) {
+    return rational_ratio(n, d);
 }
 
 /* Notes at consecutive onsets of one duration, in 4/4 in C major from the given pitches. */
-static MotiveSketch line(const int *pitches, size_t count, ExactRational each) {
+static MotiveSketch line(const int *pitches, size_t count, Rational each) {
     MotiveSketch sketch;
     memset(&sketch, 0, sizeof(sketch));
-    ExactRational at = q(0, 1);
+    Rational at = q(0, 1);
     for (size_t i = 0; i < count; i++) {
         sketch.notes[i].pitch = pitches[i];
         sketch.notes[i].onset = at;
@@ -86,8 +86,8 @@ static void assert_pitches(const MotiveSketch *sketch, const int *pitches, size_
     }
 }
 
-static void assert_note(const MotiveSketch *sketch, size_t index, int pitch, ExactRational onset,
-                        ExactRational duration) {
+static void assert_note(const MotiveSketch *sketch, size_t index, int pitch, Rational onset,
+                        Rational duration) {
     assert(sketch->notes[index].pitch == pitch);
     assert(msk_eq(sketch->notes[index].onset, onset));
     assert(msk_eq(sketch->notes[index].duration, duration));
@@ -426,7 +426,7 @@ static void test_liquidate_keeps_time(void) {
     static const int pitches[5] = {81, 81, 83, 84, 83};
     static const unsigned long long den[5] = {4, 4, 8, 8, 2};
     MotiveSketch sketch = line(pitches, 5, q(1, 4));
-    ExactRational at = q(0, 1);
+    Rational at = q(0, 1);
     for (size_t i = 0; i < 5; i++) {
         sketch.notes[i].onset = at;
         sketch.notes[i].duration = q(1, den[i]);
@@ -859,7 +859,7 @@ static MotiveSketch triad_line(void) {
     return line(pitches, 4, q(1, 4));
 }
 
-static void set_chords(MotiveSketch *sketch, const int *degrees, const ExactRational *onsets, size_t count) {
+static void set_chords(MotiveSketch *sketch, const int *degrees, const Rational *onsets, size_t count) {
     sketch->chord_count = count;
     for (size_t i = 0; i < count; i++) {
         sketch->chords[i] = (MotiveSketchChord){onsets[i], degrees[i], 0, 0, false};
@@ -887,7 +887,7 @@ static void test_implied_chord(void) {
 static void test_harmony_inversion(void) {
     MotiveSketch sketch = triad_line();
     int degrees[2] = {1, 5};
-    ExactRational onsets[2] = {q(0, 1), q(1, 2)};
+    Rational onsets[2] = {q(0, 1), q(1, 2)};
     set_chords(&sketch, degrees, onsets, 2);
     sketch.chords[1].seventh = true;
     MotiveSketch out;
@@ -923,7 +923,7 @@ static void test_harmony_append(void) {
     assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_APPEND, 8, 0, 0), &out) == MOTIVE_RELATION_INVALID);
     assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_APPEND, 5, 2, 0), &out) == MOTIVE_RELATION_INVALID);
     int degrees[2] = {1, 5};
-    ExactRational onsets[2] = {q(0, 1), q(3, 4)};
+    Rational onsets[2] = {q(0, 1), q(3, 4)};
     set_chords(&sketch, degrees, onsets, 2);
     assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_APPEND, 1, 0, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
 }
@@ -939,7 +939,7 @@ static void test_harmony_insert(void) {
     assert(out.notes[2].pitch == 69);
 
     int degrees[2] = {1, 5};
-    ExactRational onsets[2] = {q(0, 1), q(1, 4)};
+    Rational onsets[2] = {q(0, 1), q(1, 4)};
     set_chords(&sketch, degrees, onsets, 2);
     /* The first chord spans 0 to 1/4, and no note starts inside it. */
     assert(apply(&sketch, step(MOTIVE_RELATION_HARMONY_INSERT, 0, 4, 0), &out) == MOTIVE_RELATION_NOT_APPLICABLE);
@@ -973,7 +973,7 @@ static void test_harmony_substitute(void) {
 
     /* The same chord is no change; with none given, the implied chord is a change to the sketch. */
     int tonic[1] = {1};
-    ExactRational at_zero[1] = {q(0, 1)};
+    Rational at_zero[1] = {q(0, 1)};
     MotiveSketch with_chord = sketch;
     set_chords(&with_chord, tonic, at_zero, 1);
     assert(apply(&with_chord, step(MOTIVE_RELATION_HARMONY_SUBSTITUTE, 0, 1, 0), &out) == MOTIVE_RELATION_UNCHANGED);
@@ -991,7 +991,7 @@ static void test_harmony_substitute(void) {
 static void test_passing_harmony(void) {
     MotiveSketch sketch = triad_line();
     int degrees[2] = {1, 4};
-    ExactRational onsets[2] = {q(0, 1), q(1, 2)};
+    Rational onsets[2] = {q(0, 1), q(1, 2)};
     set_chords(&sketch, degrees, onsets, 2);
     MotiveSketch out;
 
@@ -1029,7 +1029,7 @@ static void test_passing_harmony(void) {
 }
 
 /* Hollow Knight 1 (A A B C B) in quarter notes over the given chords. */
-static MotiveSketch hollow_knight(const int *degrees, const ExactRational *onsets, size_t count) {
+static MotiveSketch hollow_knight(const int *degrees, const Rational *onsets, size_t count) {
     static const int pitches[5] = {81, 81, 83, 84, 83};
     MotiveSketch sketch = line(pitches, 5, q(1, 4));
     set_chords(&sketch, degrees, onsets, count);
@@ -1038,7 +1038,7 @@ static MotiveSketch hollow_knight(const int *degrees, const ExactRational *onset
 
 static void test_tone_role_adaptation(void) {
     int vi[1] = {6};
-    ExactRational at_zero[1] = {q(0, 1)};
+    Rational at_zero[1] = {q(0, 1)};
     MotiveSketch sketch = hollow_knight(vi, at_zero, 1);
     MotiveSketch out;
 
@@ -1115,7 +1115,7 @@ static MotiveSketch frame_line(void) {
 
 static void test_reduce_to_frame(void) {
     int vi[1] = {6};
-    ExactRational at_zero[1] = {q(0, 1)};
+    Rational at_zero[1] = {q(0, 1)};
     MotiveSketch sketch = hollow_knight(vi, at_zero, 1);
     sketch.feature_count = 2;
     strcpy(sketch.features[0].label, "a");
@@ -1228,7 +1228,7 @@ static void test_add_non_chord_tone(void) {
     int held[2] = {60, 59};
     MotiveSketch suspended = line(held, 2, q(1, 2));
     int degrees[2] = {1, 5};
-    ExactRational onsets[2] = {q(0, 1), q(1, 4)};
+    Rational onsets[2] = {q(0, 1), q(1, 4)};
     MotiveSketch no_change = suspended;
     assert(apply(&no_change, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 0, NON_CHORD_TONE_SUSPENSION, 0), &out) ==
            MOTIVE_RELATION_NOT_APPLICABLE);
@@ -1241,7 +1241,7 @@ static void test_add_non_chord_tone(void) {
     /* An anticipation needs the chord change where the next note starts. */
     int early[2] = {67, 71};
     MotiveSketch arriving = line(early, 2, q(1, 2));
-    ExactRational at_half[2] = {q(0, 1), q(1, 2)};
+    Rational at_half[2] = {q(0, 1), q(1, 2)};
     set_chords(&arriving, degrees, at_half, 2);
     assert(apply(&arriving, step(MOTIVE_RELATION_ADD_NON_CHORD_TONE, 0, NON_CHORD_TONE_ANTICIPATION, 0), &out) ==
            MOTIVE_RELATION_OK);
@@ -1310,7 +1310,7 @@ static void test_add_non_chord_tone(void) {
 
 static void test_remove_non_chord_tone(void) {
     int vi[1] = {6};
-    ExactRational at_zero[1] = {q(0, 1)};
+    Rational at_zero[1] = {q(0, 1)};
     MotiveSketch sketch = hollow_knight(vi, at_zero, 1);
     MotiveSketch out;
 
@@ -1355,7 +1355,7 @@ static void test_remove_non_chord_tone(void) {
 
 static void test_change_non_chord_tone(void) {
     int vi[1] = {6};
-    ExactRational at_zero[1] = {q(0, 1)};
+    Rational at_zero[1] = {q(0, 1)};
     MotiveSketch sketch = hollow_knight(vi, at_zero, 1);
     MotiveSketch out;
 
@@ -1418,7 +1418,7 @@ static void test_change_non_chord_tone(void) {
 
 static void test_reharmonize_frame(void) {
     int vi[1] = {6};
-    ExactRational at_zero[1] = {q(0, 1)};
+    Rational at_zero[1] = {q(0, 1)};
     MotiveSketch sketch = hollow_knight(vi, at_zero, 1);
     MotiveSketch out;
 
@@ -1440,7 +1440,7 @@ static void test_reharmonize_frame(void) {
     /* Several chords become the one: a vi then a V is a I. The A A fall to the G, the B to the C, the last B to the G
        (the nearest I tone that keeps its fall); the neighbor C, whose B moved, no longer fits and is unclassified. */
     int degrees[2] = {6, 5};
-    ExactRational onsets[2] = {q(0, 1), q(1, 2)};
+    Rational onsets[2] = {q(0, 1), q(1, 2)};
     MotiveSketch two = hollow_knight(degrees, onsets, 2);
     assert(apply(&two, step(MOTIVE_RELATION_REHARMONIZE_FRAME, 1, 0, 0), &out) == MOTIVE_RELATION_OK);
     assert(out.chord_count == 1 && out.chords[0].degree == 1);
@@ -1473,7 +1473,7 @@ static void test_counter_line(void) {
     MotiveSketch accompaniment = line(pitches, 4, q(1, 4));
     accompaniment.accompaniment = true;
     int degrees[2] = {1, 5};
-    ExactRational onsets[2] = {q(0, 1), q(1, 2)};
+    Rational onsets[2] = {q(0, 1), q(1, 2)};
     set_chords(&accompaniment, degrees, onsets, 2);
     MotiveSketch out;
 
@@ -1499,7 +1499,7 @@ static void test_dominant_form(void) {
     /* I-V becomes V-I: the melody a tonal fourth down, adapted to the chords, in the same rhythm. */
     MotiveSketch sketch = triad_line();
     int degrees[3] = {1, 5, 1};
-    ExactRational onsets[3] = {q(0, 1), q(1, 2), q(3, 4)};
+    Rational onsets[3] = {q(0, 1), q(1, 2), q(3, 4)};
     set_chords(&sketch, degrees, onsets, 2);
     assert(apply(&sketch, step(MOTIVE_RELATION_DOMINANT_FORM, 0, 0, 0), &out) == MOTIVE_RELATION_OK);
     assert(out.chord_count == 2 && out.chords[0].degree == 5 && out.chords[1].degree == 1);

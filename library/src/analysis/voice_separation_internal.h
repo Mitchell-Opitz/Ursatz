@@ -5,7 +5,8 @@
 #include <stddef.h>
 
 #include "analysis/voice_separation.h"
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 
 /*
  * Internal to voice separation: the steps as separate functions so each has its own unit tests. Not part of
@@ -15,14 +16,14 @@
 /* One voice as it stands at an onset. */
 typedef struct {
     bool held;                /* a sounding note keeps it: it cannot take a new note */
-    ExactRational pitch;      /* the held note's pitch when held, else the pitch to measure from */
+    Rational pitch;      /* the held note's pitch when held, else the pitch to measure from */
     unsigned long recency;    /* larger = sounded more recently (the keep-the-previous-voice tie-break) */
 } VsVoice;
 
 /* One note attacked at the onset. */
 typedef struct {
     const char *id;
-    ExactRational pitch;
+    Rational pitch;
 } VsAttack;
 
 /*
@@ -40,7 +41,7 @@ int vs_assign_onset(const VsVoice *voices, size_t voice_count, const VsAttack *a
 /*
  * The length of the beat at time `at`, from the beat grid (injected). False on failure.
  */
-typedef bool (*VsBeatLength)(void *context, ExactRational at, ExactRational *out_beat);
+typedef bool (*VsBeatLength)(void *context, Rational at, Rational *out_beat);
 
 /*
  * Step 5: whether a voice whose last note ended at last_release still has a reference at `at`: true when the
@@ -48,7 +49,7 @@ typedef bool (*VsBeatLength)(void *context, ExactRational at, ExactRational *out
  * hold_beats beats of the beat that holds last_release. Returns 0 on success, -1 on overflow, -3 when the
  * beat grid fails.
  */
-int vs_reference_kept(ExactRational last_release, ExactRational at, ExactRational hold_beats,
+int vs_reference_kept(Rational last_release, Rational at, Rational hold_beats,
                       VsBeatLength beat_length, void *beat_context, bool *out_kept);
 
 /*
@@ -64,7 +65,7 @@ int vs_split_overflow(const VsAttack *attacks, size_t attack_count, size_t keep,
  * is nearest the member's pitch; the lower voice index wins a tie. Returns voice_count when no voice has a
  * current pitch. -1 is not used: distances that overflow count as farthest.
  */
-size_t vs_nearest_voice(const ExactRational *current, const bool *has_current, size_t voice_count,
-                        ExactRational pitch);
+size_t vs_nearest_voice(const Rational *current, const bool *has_current, size_t voice_count,
+                        Rational pitch);
 
 #endif

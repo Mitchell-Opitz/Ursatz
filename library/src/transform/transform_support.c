@@ -2,9 +2,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <string.h>
 
 #include "core/provenance_reference.h"
+#include "core/rational.h"
 #include "core/voice_reference.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_identity.h"
@@ -398,4 +400,55 @@ NoteEvent *transform_support_clone_note_event(const NoteEvent *source, const cha
         return NULL;
     }
     return derived;
+}
+
+static bool rational_of(long n, unsigned long d, Rational *out) {
+    return d <= (unsigned long)LLONG_MAX && rational_make((long long)n, (long long)d, out) == RATIONAL_OK;
+}
+
+static bool rational_to(Rational r, long *out_n, unsigned long *out_d) {
+    if (r.num < LONG_MIN || r.num > LONG_MAX || (unsigned long long)r.den > ULONG_MAX) {
+        return false;
+    }
+    *out_n = (long)r.num;
+    *out_d = (unsigned long)r.den;
+    return true;
+}
+
+bool transform_support_rational_add(long n1, unsigned long d1, long n2, unsigned long d2, long *out_n,
+                                    unsigned long *out_d) {
+    Rational a;
+    Rational b;
+    Rational sum;
+    return rational_of(n1, d1, &a) && rational_of(n2, d2, &b) && rational_add(a, b, &sum) == RATIONAL_OK &&
+           rational_to(sum, out_n, out_d);
+}
+
+bool transform_support_rational_subtract(long n1, unsigned long d1, long n2, unsigned long d2, long *out_n,
+                                         unsigned long *out_d) {
+    Rational a;
+    Rational b;
+    Rational difference;
+    return rational_of(n1, d1, &a) && rational_of(n2, d2, &b) && rational_sub(a, b, &difference) == RATIONAL_OK &&
+           rational_to(difference, out_n, out_d);
+}
+
+bool transform_support_rational_scale(long n, unsigned long d, unsigned long scale_n, unsigned long scale_d,
+                                      long *out_n, unsigned long *out_d) {
+    Rational a;
+    Rational scale;
+    Rational product;
+    return rational_of(n, d, &a) && scale_n <= (unsigned long)LLONG_MAX &&
+           rational_of((long)scale_n, scale_d, &scale) && rational_mul(a, scale, &product) == RATIONAL_OK &&
+           rational_to(product, out_n, out_d);
+}
+
+bool transform_support_rational_compare(long n1, unsigned long d1, long n2, unsigned long d2, int *out) {
+    Rational a;
+    Rational b;
+    if (!rational_of(n1, d1, &a) || !rational_of(n2, d2, &b)) {
+        return false;
+    }
+    *out = rational_cmp(a, b);
+    return true;
 }

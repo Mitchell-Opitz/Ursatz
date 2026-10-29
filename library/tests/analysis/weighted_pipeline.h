@@ -13,11 +13,13 @@
 #include "pitch/pitch_spelling.h"
 #include "segmentation_beat_grid.h"
 #include "semantics/sonority_segmentation.h"
-#include "time/exact_rational.h"
+#include "core/rational.h"
+#include "time/time_rational.h"
 #include "time/metrical_position.h"
 #include "time/temporal_anchor.h"
 #include "time/time_span.h"
 #include "weighted_chord_identification.h"
+#include "../rational_test_util.h"
 
 /*
  * Test glue for weighted chord identification: imports a corpus MIDI file, cuts its notes into adaptive
@@ -44,8 +46,8 @@ typedef struct {
     double *ends;
 } WeightedPipeline;
 
-static inline double pipeline_as_double(ExactRational r) {
-    return (double)r.n / (double)r.d;
+static inline double pipeline_as_double(Rational r) {
+    return (double)r.num / (double)r.den;
 }
 
 static inline unsigned char *pipeline_read_file(const char *path, size_t *out_size) {
@@ -101,8 +103,8 @@ static inline BeatStrength pipeline_attack_strength(const MeterMap *map, const M
 
 /* The beat a segment [start, end) lies inside, as a non-zero index (measure and beat), or 0 when it spans beats or
    the grid cannot be read. Shared by the context chord reading (CommonPracticeSegment.beat). */
-static inline long pipeline_beat_index(const MeterMap *map, ExactRational start, ExactRational end) {
-    MusicalTime *at = er_to_time(start);
+static inline long pipeline_beat_index(const MeterMap *map, Rational start, Rational end) {
+    MusicalTime *at = musical_time_from_rational_or_null(start);
     int measure = 0;
     bool found = at != NULL && meter_map_measure_index_at(map, at, &measure) == METER_MAP_OK;
     musical_time_destroy(at);
@@ -114,12 +116,12 @@ static inline long pipeline_beat_index(const MeterMap *map, ExactRational start,
     TimeSpan *span = NULL;
     long index = 0;
     if (meter_map_measure_span(map, measure, &span) == METER_MAP_OK) {
-        ExactRational measure_end = er_of_time(time_span_end(span));
+        Rational measure_end = test_rational_of_time(time_span_end(span));
         for (size_t b = 0; b < count; b++) {
-            ExactRational beat_start = er_of_time(starts[b]);
-            ExactRational beat_end = b + 1 < count ? er_of_time(starts[b + 1]) : measure_end;
-            if (er_cmp(beat_start, start) <= 0 && er_cmp(start, beat_end) < 0) {
-                if (er_cmp(end, beat_end) <= 0) {
+            Rational beat_start = test_rational_of_time(starts[b]);
+            Rational beat_end = b + 1 < count ? test_rational_of_time(starts[b + 1]) : measure_end;
+            if (rational_cmp(beat_start, start) <= 0 && rational_cmp(start, beat_end) < 0) {
+                if (rational_cmp(end, beat_end) <= 0) {
                     index = ((long)measure + 1) * 1000 + (long)b + 1;
                 }
                 break;
@@ -180,8 +182,8 @@ static inline WeightedPipeline pipeline_run(const char *corpus_dir, const char *
     for (size_t s = 0; s < p.segment_count; s++) {
         const AdaptiveSonority *segment = &p.sonorities.items[s];
         const TimeSpan *window = sonority_time_window(segment->sonority);
-        ExactRational start = er_of_time(time_span_start(window));
-        ExactRational end = er_of_time(time_span_end(window));
+        Rational start = test_rational_of_time(time_span_start(window));
+        Rational end = test_rational_of_time(time_span_end(window));
         p.starts[s] = pipeline_as_double(start);
         p.ends[s] = pipeline_as_double(end);
         snprintf(p.segment_ids[s], sizeof(p.segment_ids[s]), "seg-%zu", s);
@@ -199,13 +201,13 @@ static inline WeightedPipeline pipeline_run(const char *corpus_dir, const char *
             assert(found != NULL);
             const NoteEvent *note = p.events[found->index];
             const MusicalTime *onset_time = temporal_anchor_position(note_event_temporal_anchor(note));
-            ExactRational onset = er_of_time(onset_time);
-            ExactRational release = {0, 1};
-            assert(er_add(onset, er_of_duration(note_event_duration(note)), &release) == 0);
-            ExactRational from = er_cmp(onset, start) > 0 ? onset : start;
-            ExactRational to = er_cmp(release, end) < 0 ? release : end;
-            ExactRational overlap = {0, 1};
-            assert(er_cmp(to, from) > 0 && er_sub(to, from, &overlap) == 0);
+            Rational onset = test_rational_of_time(onset_time);
+            Rational release = {0, 1};
+            assert(rational_add(onset, test_rational_of_duration(note_event_duration(note)), &release) == 0);
+            Rational from = rational_cmp(onset, start) > 0 ? onset : start;
+            Rational to = rational_cmp(release, end) < 0 ? release : end;
+            Rational overlap = {0, 1};
+            assert(rational_cmp(to, from) > 0 && rational_sub(to, from, &overlap) == 0);
 
             CommonPracticeMember *member = &p.members[next++];
             member->note_id = entity_id_value(note_event_id(note));

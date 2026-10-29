@@ -15,6 +15,10 @@
  * its own: it is only the arithmetic. Header-only (static inline), so each user compiles its own copy.
  *
  * All values are non-negative. er_sub requires a >= b.
+ *
+ * DEPRECATED in favor of core/rational.h (Rational, signed and checked, with bridges in
+ * time/time_rational.h). No library code includes this header any more; it is kept, unchanged in
+ * behavior, until the Analyzer switches to Rational (P24).
  */
 
 typedef struct {

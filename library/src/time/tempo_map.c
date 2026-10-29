@@ -5,156 +5,32 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Exact non-negative rational on unsigned 64-bit integers, always in lowest terms. Every operation
-   is checked and returns -1 on overflow: nothing here wraps. */
-typedef struct {
-    unsigned long long n;
-    unsigned long long d;
-} Rat;
+#include "core/rational.h"
+#include "time/time_rational.h"
 
-static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
-    while (b != 0) {
-        unsigned long long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
+/* Exact arithmetic is core/rational.h; every operation is checked and reports overflow. */
+static int rat_of_time(const MusicalTime *time, Rational *out) {
+    return rational_of_musical_time(time, out) == RATIONAL_OK ? 0 : -1;
 }
 
-static int mul_checked(unsigned long long a, unsigned long long b, unsigned long long *out) {
-    if (a != 0 && b > ULLONG_MAX / a) {
-        return -1;
-    }
-    *out = a * b;
-    return 0;
+static int rat_of_performance_time(const PerformanceTime *time, Rational *out) {
+    return rational_of_performance_time(time, out) == RATIONAL_OK ? 0 : -1;
 }
 
-static int add_checked(unsigned long long a, unsigned long long b, unsigned long long *out) {
-    if (b > ULLONG_MAX - a) {
-        return -1;
-    }
-    *out = a + b;
-    return 0;
-}
-
-static Rat rat_reduced(unsigned long long n, unsigned long long d) {
-    unsigned long long g = gcd_ull(n, d);
-    Rat r;
-    r.n = g > 1 ? n / g : n;
-    r.d = g > 1 ? d / g : d;
-    return r;
-}
-
-static int rat_mul(Rat a, Rat b, Rat *out) {
-    /* Cross-reduce first so the products are as small as they can be. */
-    unsigned long long g1 = gcd_ull(a.n, b.d);
-    unsigned long long g2 = gcd_ull(b.n, a.d);
-    unsigned long long an = g1 > 1 ? a.n / g1 : a.n;
-    unsigned long long bd = g1 > 1 ? b.d / g1 : b.d;
-    unsigned long long bn = g2 > 1 ? b.n / g2 : b.n;
-    unsigned long long ad = g2 > 1 ? a.d / g2 : a.d;
-    unsigned long long n = 0;
-    unsigned long long d = 0;
-    if (mul_checked(an, bn, &n) != 0 || mul_checked(ad, bd, &d) != 0) {
-        return -1;
-    }
-    *out = rat_reduced(n, d);
-    return 0;
-}
-
-/* a / b, for b > 0. */
-static int rat_div(Rat a, Rat b, Rat *out) {
-    Rat inverse = {b.d, b.n};
-    return rat_mul(a, inverse, out);
-}
-
-static int rat_add(Rat a, Rat b, Rat *out) {
-    unsigned long long g = gcd_ull(a.d, b.d);
-    unsigned long long ad_over_g = a.d / g;
-    unsigned long long bd_over_g = b.d / g;
-    unsigned long long left = 0;
-    unsigned long long right = 0;
-    unsigned long long n = 0;
-    unsigned long long d = 0;
-    if (mul_checked(a.n, bd_over_g, &left) != 0 || mul_checked(b.n, ad_over_g, &right) != 0 ||
-        add_checked(left, right, &n) != 0 || mul_checked(ad_over_g, b.d, &d) != 0) {
-        return -1;
-    }
-    *out = rat_reduced(n, d);
-    return 0;
-}
-
-/* a - b, for a >= b. */
-static int rat_sub(Rat a, Rat b, Rat *out) {
-    unsigned long long g = gcd_ull(a.d, b.d);
-    unsigned long long ad_over_g = a.d / g;
-    unsigned long long bd_over_g = b.d / g;
-    unsigned long long left = 0;
-    unsigned long long right = 0;
-    unsigned long long d = 0;
-    if (mul_checked(a.n, bd_over_g, &left) != 0 || mul_checked(b.n, ad_over_g, &right) != 0 ||
-        mul_checked(ad_over_g, b.d, &d) != 0) {
-        return -1;
-    }
-    *out = rat_reduced(left - right, d);
-    return 0;
-}
-
-/* -1, 0, 1. Compares the integer parts and then the reciprocals of the remainders, as in Euclid's
-   algorithm, so it never multiplies and cannot overflow. */
-static int rat_cmp(Rat x, Rat y) {
-    unsigned long long a = x.n;
-    unsigned long long b = x.d;
-    unsigned long long c = y.n;
-    unsigned long long d = y.d;
-    int sign = 1;
-    for (;;) {
-        unsigned long long qa = a / b;
-        unsigned long long qc = c / d;
-        if (qa != qc) {
-            return qa < qc ? -sign : sign;
-        }
-        unsigned long long ra = a % b;
-        unsigned long long rc = c % d;
-        if (ra == 0 && rc == 0) {
-            return 0;
-        }
-        if (ra == 0) {
-            return -sign;
-        }
-        if (rc == 0) {
-            return sign;
-        }
-        a = b;
-        b = ra;
-        c = d;
-        d = rc;
-        sign = -sign;
-    }
-}
-
-static Rat rat_of_time(const MusicalTime *time) {
-    return rat_reduced((unsigned long long)musical_time_numerator(time), musical_time_denominator(time));
-}
-
-static Rat rat_of_performance_time(const PerformanceTime *time) {
-    return rat_reduced((unsigned long long)performance_time_numerator(time), performance_time_denominator(time));
-}
-
-static int fits_time(Rat r) {
-    return r.n <= (unsigned long long)LONG_MAX && r.d <= (unsigned long long)ULONG_MAX;
+static int fits_time(Rational r) {
+    return r.num >= 0 && r.num <= (long long)LONG_MAX && (unsigned long long)r.den <= ULONG_MAX;
 }
 
 struct TempoMapRegion {
     EntityID *id;
     MusicalTime *start;
     MusicalTime *end; /* NULL while open */
-    Rat start_r;
-    Rat end_r; /* meaningful only when !open */
+    Rational start_r;
+    Rational end_r; /* meaningful only when !open */
     bool open;
     unsigned long microseconds_per_quarter;
-    Rat seconds_per_whole_note; /* 4 * T / 1,000,000 */
-    Rat seconds_at_start;
+    Rational seconds_per_whole_note; /* 4 * T / 1,000,000 */
+    Rational seconds_at_start;
     bool defaulted;
 };
 
@@ -164,9 +40,9 @@ struct TempoMap {
     size_t count;
 };
 
-static MusicalTime *time_of_rat(Rat r) {
+static MusicalTime *time_of_rat(Rational r) {
     MusicalTime *t = NULL;
-    if (!fits_time(r) || musical_time_create((long)r.n, (unsigned long)r.d, &t) != MUSICAL_TIME_OK) {
+    if (!fits_time(r) || musical_time_create((long)r.num, (unsigned long)r.den, &t) != MUSICAL_TIME_OK) {
         return NULL;
     }
     return t;
@@ -186,10 +62,11 @@ static void map_release(TempoMap *map, size_t filled) {
     free(map);
 }
 
-static TempoMapResult region_fill(TempoMapRegion *region, Rat start, unsigned long microseconds_per_quarter,
+static TempoMapResult region_fill(TempoMapRegion *region, Rational start, unsigned long microseconds_per_quarter,
                                    bool defaulted) {
-    unsigned long long four_t = 0;
-    if (mul_checked(4ULL, (unsigned long long)microseconds_per_quarter, &four_t) != 0) {
+    Rational seconds_per_whole_note;
+    if (microseconds_per_quarter > (unsigned long)(LLONG_MAX / 4) ||
+        rational_make(4LL * (long long)microseconds_per_quarter, 1000000LL, &seconds_per_whole_note) != RATIONAL_OK) {
         return TEMPO_MAP_ERR_OVERFLOW;
     }
     MusicalTime *start_time = time_of_rat(start);
@@ -201,7 +78,7 @@ static TempoMapResult region_fill(TempoMapRegion *region, Rat start, unsigned lo
     region->start_r = start;
     region->open = true;
     region->microseconds_per_quarter = microseconds_per_quarter;
-    region->seconds_per_whole_note = rat_reduced(four_t, 1000000ULL);
+    region->seconds_per_whole_note = seconds_per_whole_note;
     region->defaulted = defaulted;
     return TEMPO_MAP_OK;
 }
@@ -209,7 +86,7 @@ static TempoMapResult region_fill(TempoMapRegion *region, Rat start, unsigned lo
 /* Closes each region at the next one's start, accumulates the seconds at each start, and mints the
    region ids. */
 static TempoMapResult finalize(TempoMap *map) {
-    Rat running = {0, 1};
+    Rational running = {0, 1};
     for (size_t i = 0; i < map->count; i++) {
         TempoMapRegion *region = &map->regions[i];
         region->seconds_at_start = running;
@@ -221,11 +98,11 @@ static TempoMapResult finalize(TempoMap *map) {
             if (region->end == NULL) {
                 return TEMPO_MAP_ERR_ALLOC;
             }
-            Rat length = {0, 1};
-            Rat seconds = {0, 1};
-            if (rat_sub(region->end_r, region->start_r, &length) != 0 ||
-                rat_mul(length, region->seconds_per_whole_note, &seconds) != 0 ||
-                rat_add(running, seconds, &running) != 0) {
+            Rational length = {0, 1};
+            Rational seconds = {0, 1};
+            if (rational_sub(region->end_r, region->start_r, &length) != 0 ||
+                rational_mul(length, region->seconds_per_whole_note, &seconds) != 0 ||
+                rational_add(running, seconds, &running) != 0) {
                 return TEMPO_MAP_ERR_OVERFLOW;
             }
         }
@@ -257,8 +134,16 @@ TempoMapResult tempo_map_create(EntityID *id, const TempoMapChangePoint *change_
         if (musical_time_numerator(change_points[i].start) < 0) {
             return TEMPO_MAP_ERR_NEGATIVE_START;
         }
-        if (i > 0 && rat_cmp(rat_of_time(change_points[i - 1].start), rat_of_time(change_points[i].start)) >= 0) {
-            return TEMPO_MAP_ERR_NOT_ASCENDING;
+        if (i > 0) {
+            Rational previous;
+            Rational current;
+            if (rat_of_time(change_points[i - 1].start, &previous) != 0 ||
+                rat_of_time(change_points[i].start, &current) != 0) {
+                return TEMPO_MAP_ERR_OVERFLOW;
+            }
+            if (rational_cmp(previous, current) >= 0) {
+                return TEMPO_MAP_ERR_NOT_ASCENDING;
+            }
         }
     }
 
@@ -272,8 +157,13 @@ TempoMapResult tempo_map_create(EntityID *id, const TempoMapChangePoint *change_
         return TEMPO_MAP_ERR_ALLOC;
     }
 
-    Rat zero = {0, 1};
-    if (rat_cmp(rat_of_time(change_points[0].start), zero) != 0) {
+    Rational zero = {0, 1};
+    Rational first;
+    if (rat_of_time(change_points[0].start, &first) != 0) {
+        map_release(map, 0);
+        return TEMPO_MAP_ERR_OVERFLOW;
+    }
+    if (rational_cmp(first, zero) != 0) {
         TempoMapResult filled = region_fill(&map->regions[0], zero, TEMPO_MAP_DEFAULT_MICROSECONDS_PER_QUARTER, true);
         if (filled != TEMPO_MAP_OK) {
             map_release(map, 0);
@@ -283,7 +173,12 @@ TempoMapResult tempo_map_create(EntityID *id, const TempoMapChangePoint *change_
     }
 
     for (size_t i = 0; i < count; i++) {
-        TempoMapResult filled = region_fill(&map->regions[map->count], rat_of_time(change_points[i].start),
+        Rational start;
+        if (rat_of_time(change_points[i].start, &start) != 0) {
+            map_release(map, map->count);
+            return TEMPO_MAP_ERR_OVERFLOW;
+        }
+        TempoMapResult filled = region_fill(&map->regions[map->count], start,
                                             change_points[i].microseconds_per_quarter, false);
         if (filled != TEMPO_MAP_OK) {
             map_release(map, map->count);
@@ -317,7 +212,7 @@ TempoMapResult tempo_map_create_defaulted(EntityID *id, TempoMap **out) {
         free(map);
         return TEMPO_MAP_ERR_ALLOC;
     }
-    Rat zero = {0, 1};
+    Rational zero = {0, 1};
     TempoMapResult filled = region_fill(&map->regions[0], zero, TEMPO_MAP_DEFAULT_MICROSECONDS_PER_QUARTER, true);
     if (filled != TEMPO_MAP_OK) {
         map_release(map, 0);
@@ -365,9 +260,9 @@ const TempoMapRegion *tempo_map_region(const TempoMap *map, size_t index) {
 }
 
 /* The last region that starts at or before t, for t >= 0. */
-static const TempoMapRegion *find_region(const TempoMap *map, Rat t) {
+static const TempoMapRegion *find_region(const TempoMap *map, Rational t) {
     for (size_t i = map->count; i > 0; i--) {
-        if (rat_cmp(map->regions[i - 1].start_r, t) <= 0) {
+        if (rational_cmp(map->regions[i - 1].start_r, t) <= 0) {
             return &map->regions[i - 1];
         }
     }
@@ -381,7 +276,11 @@ TempoMapResult tempo_map_region_at(const TempoMap *map, const MusicalTime *time,
     if (musical_time_numerator(time) < 0) {
         return TEMPO_MAP_ERR_TIME_BEFORE_START;
     }
-    *out = find_region(map, rat_of_time(time));
+    Rational t;
+    if (rat_of_time(time, &t) != 0) {
+        return TEMPO_MAP_ERR_OVERFLOW;
+    }
+    *out = find_region(map, t);
     return TEMPO_MAP_OK;
 }
 
@@ -412,24 +311,24 @@ TempoMapResult tempo_map_tempo_at(const TempoMap *map, const MusicalTime *time,
     return TEMPO_MAP_OK;
 }
 
-static TempoMapResult performance_time_of_rat(Rat r, PerformanceTime **out) {
-    if (r.n > (unsigned long long)LONG_MAX || r.d > (unsigned long long)ULONG_MAX) {
+static TempoMapResult performance_time_of_rat(Rational r, PerformanceTime **out) {
+    if (!fits_time(r)) {
         return TEMPO_MAP_ERR_OVERFLOW;
     }
-    PerformanceTimeResult created = performance_time_create((long)r.n, (unsigned long)r.d, out);
+    PerformanceTimeResult created = performance_time_create((long)r.num, (unsigned long)r.den, out);
     if (created == PERFORMANCE_TIME_OK) {
         return TEMPO_MAP_OK;
     }
     return created == PERFORMANCE_TIME_ERR_OVERFLOW ? TEMPO_MAP_ERR_OVERFLOW : TEMPO_MAP_ERR_ALLOC;
 }
 
-/* Seconds from 0 to t (t >= 0), as a Rat. */
-static TempoMapResult seconds_rat_at(const TempoMap *map, Rat t, Rat *out) {
+/* Seconds from 0 to t (t >= 0), as a Rational. */
+static TempoMapResult seconds_rat_at(const TempoMap *map, Rational t, Rational *out) {
     const TempoMapRegion *region = find_region(map, t);
-    Rat into = {0, 1};
-    Rat seconds = {0, 1};
-    if (rat_sub(t, region->start_r, &into) != 0 || rat_mul(into, region->seconds_per_whole_note, &seconds) != 0 ||
-        rat_add(region->seconds_at_start, seconds, out) != 0) {
+    Rational into = {0, 1};
+    Rational seconds = {0, 1};
+    if (rational_sub(t, region->start_r, &into) != 0 || rational_mul(into, region->seconds_per_whole_note, &seconds) != 0 ||
+        rational_add(region->seconds_at_start, seconds, out) != 0) {
         return TEMPO_MAP_ERR_OVERFLOW;
     }
     return TEMPO_MAP_OK;
@@ -442,8 +341,12 @@ TempoMapResult tempo_map_seconds_at(const TempoMap *map, const MusicalTime *time
     if (musical_time_numerator(time) < 0) {
         return TEMPO_MAP_ERR_TIME_BEFORE_START;
     }
-    Rat seconds = {0, 1};
-    TempoMapResult computed = seconds_rat_at(map, rat_of_time(time), &seconds);
+    Rational seconds = {0, 1};
+    Rational t;
+    if (rat_of_time(time, &t) != 0) {
+        return TEMPO_MAP_ERR_OVERFLOW;
+    }
+    TempoMapResult computed = seconds_rat_at(map, t, &seconds);
     if (computed != TEMPO_MAP_OK) {
         return computed;
     }
@@ -454,23 +357,26 @@ TempoMapResult tempo_map_time_at_seconds(const TempoMap *map, const PerformanceT
     if (map == NULL || seconds == NULL || out == NULL) {
         return TEMPO_MAP_ERR_NULL_ARGUMENT;
     }
-    Rat s = rat_of_performance_time(seconds);
+    Rational s;
+    if (rat_of_performance_time(seconds, &s) != 0) {
+        return TEMPO_MAP_ERR_OVERFLOW;
+    }
 
     /* The last region whose seconds at start are at or before s. */
     const TempoMapRegion *region = &map->regions[0];
     for (size_t i = map->count; i > 0; i--) {
-        if (rat_cmp(map->regions[i - 1].seconds_at_start, s) <= 0) {
+        if (rational_cmp(map->regions[i - 1].seconds_at_start, s) <= 0) {
             region = &map->regions[i - 1];
             break;
         }
     }
 
-    Rat into = {0, 1};
-    Rat whole_notes = {0, 1};
-    Rat time = {0, 1};
-    if (rat_sub(s, region->seconds_at_start, &into) != 0 ||
-        rat_div(into, region->seconds_per_whole_note, &whole_notes) != 0 ||
-        rat_add(region->start_r, whole_notes, &time) != 0) {
+    Rational into = {0, 1};
+    Rational whole_notes = {0, 1};
+    Rational time = {0, 1};
+    if (rational_sub(s, region->seconds_at_start, &into) != 0 ||
+        rational_div(into, region->seconds_per_whole_note, &whole_notes) != 0 ||
+        rational_add(region->start_r, whole_notes, &time) != 0) {
         return TEMPO_MAP_ERR_OVERFLOW;
     }
     if (!fits_time(time)) {
@@ -493,17 +399,22 @@ TempoMapResult tempo_map_duration_seconds(const TempoMap *map, const TimeSpan *s
     if (musical_time_numerator(start) < 0) {
         return TEMPO_MAP_ERR_TIME_BEFORE_START;
     }
-    Rat at_start = {0, 1};
-    Rat at_end = {0, 1};
-    Rat length = {0, 1};
-    TempoMapResult computed = seconds_rat_at(map, rat_of_time(start), &at_start);
+    Rational at_start = {0, 1};
+    Rational at_end = {0, 1};
+    Rational length = {0, 1};
+    Rational start_r;
+    Rational end_r;
+    if (rat_of_time(start, &start_r) != 0 || rat_of_time(end, &end_r) != 0) {
+        return TEMPO_MAP_ERR_OVERFLOW;
+    }
+    TempoMapResult computed = seconds_rat_at(map, start_r, &at_start);
     if (computed == TEMPO_MAP_OK) {
-        computed = seconds_rat_at(map, rat_of_time(end), &at_end);
+        computed = seconds_rat_at(map, end_r, &at_end);
     }
     if (computed != TEMPO_MAP_OK) {
         return computed;
     }
-    if (rat_sub(at_end, at_start, &length) != 0) {
+    if (rational_sub(at_end, at_start, &length) != 0) {
         return TEMPO_MAP_ERR_OVERFLOW;
     }
     return performance_time_of_rat(length, out);
