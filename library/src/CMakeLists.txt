@@ -187,6 +187,7 @@ add_library(ursatz
     io/smf_reader.c
     io/midi_renderer.c
     io/musicxml_importer.c
+    io/import_notes.c
     persistence/persistence.c
     persistence/persistence_note_events.c
     persistence/persistence_uncertainty.c
