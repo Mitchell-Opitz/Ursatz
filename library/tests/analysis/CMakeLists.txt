@@ -42,20 +42,20 @@ add_ursatz_test(sentence_detection)
 add_ursatz_test(form_structure_detection)
 add_ursatz_test(thematic_return_detection)
 add_executable(test_field1_weighted_harmony test_field1_weighted_harmony.c)
-target_link_libraries(test_field1_weighted_harmony PRIVATE common_practice_minimal standard_meter)
+target_link_libraries(test_field1_weighted_harmony PRIVATE ursatz_chain common_practice_minimal standard_meter)
 target_compile_definitions(test_field1_weighted_harmony PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
 add_test(NAME field1_weighted_harmony COMMAND test_field1_weighted_harmony)
 
 add_executable(test_weighted_coverage_report test_weighted_coverage_report.c)
-target_link_libraries(test_weighted_coverage_report PRIVATE common_practice_minimal standard_meter)
+target_link_libraries(test_weighted_coverage_report PRIVATE ursatz_chain common_practice_minimal standard_meter)
 target_compile_definitions(test_weighted_coverage_report PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
 add_test(NAME weighted_coverage_report COMMAND test_weighted_coverage_report)
 
 add_executable(test_outer_voices_written_parts test_outer_voices_written_parts.c)
-target_link_libraries(test_outer_voices_written_parts PRIVATE common_practice_minimal standard_meter)
+target_link_libraries(test_outer_voices_written_parts PRIVATE ursatz_chain common_practice_minimal standard_meter)
 target_compile_definitions(test_outer_voices_written_parts PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
@@ -69,7 +69,7 @@ target_compile_definitions(test_voice_separation_corpus PRIVATE
 add_test(NAME voice_separation_corpus COMMAND test_voice_separation_corpus)
 
 add_executable(test_key_regions_corpus test_key_regions_corpus.c)
-target_link_libraries(test_key_regions_corpus PRIVATE common_practice_minimal standard_meter)
+target_link_libraries(test_key_regions_corpus PRIVATE ursatz_chain common_practice_minimal standard_meter)
 target_compile_definitions(test_key_regions_corpus PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
@@ -78,7 +78,7 @@ add_test(NAME key_regions_corpus COMMAND test_key_regions_corpus)
 add_ursatz_architecture_test(analysis)
 
 add_executable(test_bach114_roman_numerals test_bach114_roman_numerals.c)
-target_link_libraries(test_bach114_roman_numerals PRIVATE standard_tonality common_practice_minimal standard_meter)
+target_link_libraries(test_bach114_roman_numerals PRIVATE ursatz_chain standard_tonality common_practice_minimal standard_meter)
 target_compile_definitions(test_bach114_roman_numerals PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")

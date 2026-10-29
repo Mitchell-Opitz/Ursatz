@@ -230,7 +230,7 @@ static Inputs make_inputs(const WeightedPipeline *p, const MeterMap *map, size_t
         input->segment_id = p->segment_ids[s];
         input->span = window;
         input->position = in.positions[s];
-        input->beat_strength = pipeline_attack_strength(map, time_span_start(window));
+        input->beat_strength = chain_attack_strength(map, time_span_start(window));
         input->key_ref = "key";
         input->mode = HARMONY_MODE_MAJOR;
     }

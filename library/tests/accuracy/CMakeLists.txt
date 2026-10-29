@@ -48,21 +48,21 @@ function(accuracy_fixture name test_file)
   target_link_libraries(accuracy_fixture_${name} PRIVATE ${ARGN})
 endfunction()
 
-accuracy_fixture(cadences test_cadences_reference_pieces.c standard_harmony standard_tonality common_practice_minimal standard_meter)
+accuracy_fixture(cadences test_cadences_reference_pieces.c ursatz_chain standard_harmony standard_tonality common_practice_minimal standard_meter)
 accuracy_fixture(form test_form_reference_pieces.c standard_form standard_harmony standard_tonality common_practice_minimal standard_meter ursatz_chain)
-accuracy_fixture(texture test_texture_field1.c standard_texture standard_harmony standard_tonality common_practice_minimal standard_meter)
+accuracy_fixture(texture test_texture_field1.c ursatz_chain standard_texture standard_harmony standard_tonality common_practice_minimal standard_meter)
 accuracy_fixture(rhythm test_rhythm_field5.c standard_form standard_harmony standard_tonality common_practice_minimal standard_meter ursatz_chain)
-accuracy_fixture(melody test_melody_bach114.c standard_counterpoint common_practice_minimal standard_meter)
+accuracy_fixture(melody test_melody_bach114.c ursatz_chain standard_counterpoint common_practice_minimal standard_meter)
 accuracy_fixture(motive test_motive_mozart545.c standard_form standard_harmony standard_tonality common_practice_minimal standard_meter ursatz_chain)
-accuracy_fixture(phrase_model test_mozart545_phrase_model.c standard_harmony standard_tonality common_practice_minimal standard_meter)
-accuracy_fixture(schema test_schema_sequence.c galant_schemas scale_harmonization standard_harmony standard_tonality common_practice_minimal
+accuracy_fixture(phrase_model test_mozart545_phrase_model.c ursatz_chain standard_harmony standard_tonality common_practice_minimal standard_meter)
+accuracy_fixture(schema test_schema_sequence.c ursatz_chain galant_schemas scale_harmonization standard_harmony standard_tonality common_practice_minimal
                  standard_meter)
 
 # The chorale chain and the report: common-practice-minimal, standard-meter, standard-tonality and standard-harmony (the cadences
 # that give the key regions their second pass).
 add_library(accuracy_chain STATIC chorale_chain.c)
 target_include_directories(accuracy_chain PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(accuracy_chain PUBLIC accuracy_support PRIVATE standard_harmony common_practice_minimal standard_meter standard_tonality)
+target_link_libraries(accuracy_chain PUBLIC accuracy_support PRIVATE ursatz_chain standard_harmony common_practice_minimal standard_meter standard_tonality)
 
 add_executable(accuracy_harness accuracy_harness.c accuracy_report.c accuracy_gate.c fixtures.c)
 target_link_libraries(accuracy_harness PRIVATE accuracy_chain

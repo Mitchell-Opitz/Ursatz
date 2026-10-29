@@ -331,7 +331,7 @@ static inline void schema_build_from_chain(SchemaBuild *build, const WeightedPip
         snprintf(segment.id, sizeof(segment.id), "seg-%zu", s);
         snprintf(segment.key_id, sizeof(segment.key_id), "key-%d%s", tonic_pc[s], minor[s] ? "m" : "");
         segment.span = window;
-        segment.strength = pipeline_attack_strength(map, time_span_start(window));
+        segment.strength = chain_attack_strength(map, time_span_start(window));
         schema_beat_length(map, time_span_start(window), &segment.beat_numerator, &segment.beat_denominator);
         segment.key = schema_degree_of_offset(tonic_pc[s] - home_pc);
         if (lines->bass[s].present) {

@@ -64,7 +64,7 @@ static bool fv1_window_of_events(const NoteEvent *const *events, size_t count, c
     assert(pitch_ids != NULL && directions != NULL && durations != NULL);
     long previous = 0;
     for (size_t i = 0; i < count; i++) {
-        long semitone = pipeline_semitone(note_event_optional_pitch_spelling(events[i]));
+        long semitone = pitch_spelling_midi_number(note_event_optional_pitch_spelling(events[i]));
         pitch_ids[i] = fv1_pitch_identity(semitone, i);
         if (i > 0) {
             directions[i - 1] = semitone > previous ? CONTOUR_DIRECTION_UP : (semitone < previous ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME);

@@ -1,6 +1,6 @@
 # Integration tests chain several frameworks. Framework sources never do; these may.
 add_executable(test_mozart545_phrase_model test_mozart545_phrase_model.c)
-target_link_libraries(test_mozart545_phrase_model PRIVATE standard_harmony standard_tonality common_practice_minimal
+target_link_libraries(test_mozart545_phrase_model PRIVATE ursatz_chain standard_harmony standard_tonality common_practice_minimal
                       standard_meter)
 target_include_directories(test_mozart545_phrase_model PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_mozart545_phrase_model PRIVATE
@@ -9,7 +9,7 @@ target_compile_definitions(test_mozart545_phrase_model PRIVATE
 add_test(NAME mozart545_phrase_model COMMAND test_mozart545_phrase_model)
 
 add_executable(test_cadences_reference_pieces test_cadences_reference_pieces.c)
-target_link_libraries(test_cadences_reference_pieces PRIVATE standard_harmony standard_tonality common_practice_minimal
+target_link_libraries(test_cadences_reference_pieces PRIVATE ursatz_chain standard_harmony standard_tonality common_practice_minimal
                       standard_meter)
 target_include_directories(test_cadences_reference_pieces PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_cadences_reference_pieces PRIVATE
@@ -18,7 +18,7 @@ target_compile_definitions(test_cadences_reference_pieces PRIVATE
 add_test(NAME cadences_reference_pieces COMMAND test_cadences_reference_pieces)
 
 add_executable(test_voice_leading_report test_voice_leading_report.c)
-target_link_libraries(test_voice_leading_report PRIVATE standard_counterpoint standard_harmony standard_meter)
+target_link_libraries(test_voice_leading_report PRIVATE ursatz_chain standard_counterpoint standard_harmony standard_meter)
 target_include_directories(test_voice_leading_report PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_voice_leading_report PRIVATE
     URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations"
@@ -26,7 +26,7 @@ target_compile_definitions(test_voice_leading_report PRIVATE
 add_test(NAME voice_leading_report COMMAND test_voice_leading_report)
 
 add_executable(test_melody_bach114 test_melody_bach114.c)
-target_link_libraries(test_melody_bach114 PRIVATE standard_counterpoint common_practice_minimal standard_meter)
+target_link_libraries(test_melody_bach114 PRIVATE ursatz_chain standard_counterpoint common_practice_minimal standard_meter)
 target_include_directories(test_melody_bach114 PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_melody_bach114 PRIVATE
     URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
@@ -61,7 +61,7 @@ target_compile_definitions(test_rhythm_field5 PRIVATE
 add_test(NAME rhythm_field5 COMMAND test_rhythm_field5)
 
 add_executable(test_texture_field1 test_texture_field1.c)
-target_link_libraries(test_texture_field1 PRIVATE standard_texture standard_harmony standard_tonality common_practice_minimal
+target_link_libraries(test_texture_field1 PRIVATE ursatz_chain standard_texture standard_harmony standard_tonality common_practice_minimal
                       standard_meter)
 target_include_directories(test_texture_field1 PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_texture_field1 PRIVATE
@@ -70,7 +70,7 @@ target_compile_definitions(test_texture_field1 PRIVATE
 add_test(NAME texture_field1 COMMAND test_texture_field1)
 
 add_executable(test_schema_sequence test_schema_sequence.c)
-target_link_libraries(test_schema_sequence PRIVATE galant_schemas scale_harmonization standard_harmony standard_tonality
+target_link_libraries(test_schema_sequence PRIVATE ursatz_chain galant_schemas scale_harmonization standard_harmony standard_tonality
                       common_practice_minimal standard_meter)
 target_include_directories(test_schema_sequence PRIVATE ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_schema_sequence PRIVATE
