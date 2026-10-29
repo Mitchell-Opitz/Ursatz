@@ -20,6 +20,9 @@ jobs:
           git config --global url."https://x-access-token:${{ secrets.URSATZ_SUBMODULE_TOKEN }}@github.com/Mitchell-Opitz/Ursatz".insteadOf "https://github.com/Mitchell-Opitz/Ursatz"
           git submodule update --init --recursive
 
+      - name: Check submodule pins
+        run: scripts/check-pins.sh
+
       - name: Install dependencies
         run: |
           dpkg -s libsqlite3-dev pkg-config > /dev/null 2>&1 ||
