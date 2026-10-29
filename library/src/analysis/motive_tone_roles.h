@@ -11,6 +11,7 @@
 
 #include "analysis/motive_sketch.h"
 #include "semantics/non_chord_tone.h"
+#include "semantics/tone_line.h"
 
 /*
  * MotiveToneRoles (L8 analysis): the harmonic role of every note of a motive sketch against the sketch's
@@ -81,5 +82,13 @@ MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, const MotiveToneO
  * sketch->tone_override_count, out). MOTIVE_TONE_BAD_OVERRIDE when the count is above MOTIVE_SKETCH_MAX_NOTES.
  */
 MotiveToneStatus motive_tone_roles_of(const MotiveSketch *sketch, MotiveToneLabel *out);
+
+/*
+ * The same rules over a tone line of any length (a NonChordToneClassifier, semantics/tone_line.h): the notes of
+ * one voice in time order, each with the pitch-class mask of its chord. Equal to motive_tone_roles for a
+ * sketch's notes and chord masks, without a note limit and without overrides. context is unused. False for
+ * out NULL, or notes NULL with a count above 0.
+ */
+bool motive_tone_roles_line(const ToneLineNote *notes, size_t count, ToneLineLabel *out, void *context);
 
 #endif
