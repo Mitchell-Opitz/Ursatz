@@ -378,16 +378,6 @@ typedef struct {
     size_t member;
 } LineRef;
 
-/* Whether attack x comes before attack y: by onset, then by position in the sequence. */
-static bool line_ref_before(const CommonPracticeSegment *segments, const LineRef *x, const LineRef *y) {
-    double ox = segments[x->segment].members[x->member].onset;
-    double oy = segments[y->segment].members[y->member].onset;
-    if (ox != oy) {
-        return ox < oy;
-    }
-    return x->segment != y->segment ? x->segment < y->segment : x->member < y->member;
-}
-
 static bool same_text(const char *a, const char *b) {
     return a != NULL && b != NULL && strcmp(a, b) == 0;
 }
@@ -414,7 +404,7 @@ static CommonPracticeWeightedStatus relabel_voice(const CommonPracticeSegment *s
     for (size_t s = 0; s < segment_count; s++) {
         for (size_t m = 0; m < segments[s].member_count; m++) {
             const CommonPracticeMember *member = &segments[s].members[m];
-            if (!member->held && same_text(member->voice_id, voice_id)) {
+            if (same_text(member->voice_id, voice_id)) {
                 refs[n].segment = s;
                 refs[n].member = m;
                 n++;
@@ -424,15 +414,6 @@ static CommonPracticeWeightedStatus relabel_voice(const CommonPracticeSegment *s
     if (n == 0) {
         free(refs);
         return COMMON_PRACTICE_WEIGHTED_OK;
-    }
-    for (size_t k = 1; k < n; k++) {
-        LineRef moved = refs[k];
-        size_t j = k;
-        while (j > 0 && line_ref_before(segments, &moved, &refs[j - 1])) {
-            refs[j] = refs[j - 1];
-            j--;
-        }
-        refs[j] = moved;
     }
     ToneLineNote *notes = (ToneLineNote *)malloc(n * sizeof(ToneLineNote));
     ToneLineLabel *out = (ToneLineLabel *)malloc(n * sizeof(ToneLineLabel));
@@ -457,10 +438,7 @@ static CommonPracticeWeightedStatus relabel_voice(const CommonPracticeSegment *s
                 continue;
             }
             for (size_t k = 0; k < n; k++) {
-                const CommonPracticeMember *line_member = &segments[refs[k].segment].members[refs[k].member];
-                bool is_it = member->held ? same_text(member->note_id, line_member->note_id)
-                                          : (refs[k].segment == index && &segment->members[refs[k].member] == member);
-                if (is_it) {
+                if (refs[k].segment == index && &segments[index].members[refs[k].member] == member) {
                     labels[l].classified = out[k].classified && !out[k].chord_tone;
                     labels[l].tone = out[k].type;
                     break;

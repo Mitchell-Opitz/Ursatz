@@ -68,10 +68,11 @@ typedef struct {
     double min_coverage;           /* used by scoring: a best score below it is "no match" */
     /* Labels leftover tones in common_practice_identify_weighted_sequence. NULL (the default) keeps
        common_practice_label_leftover_tones. With one, the leftover members that have a voice_id are labelled per
-       voice: the voice's attacks in time order form a line, each note carries the chord mask of the segment it
-       starts in, and the labels are mapped back to the leftover members (a held member takes the label of the
-       note it continues, found by note_id). Members without a voice_id, and a voice the classifier refuses,
-       keep the framework rule. Line onsets are the member onsets rounded to 1/960 of a whole note. */
+       voice: the voice's members, segment after segment, form a line, each entry carrying the chord mask of the
+       segment it sounds in (a held note is an entry in every segment it sounds in: the suspension and pedal rules
+       need it against the new chord), and the labels are mapped back to the leftover members. Members without a
+       voice_id, and a voice the classifier refuses, keep the framework rule. Line onsets are the member onsets
+       rounded to 1/960 of a whole note. */
     NonChordToneClassifier classifier;
     void *classifier_context;
 } CommonPracticeWeightedConfig;
