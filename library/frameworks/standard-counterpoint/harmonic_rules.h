@@ -2,6 +2,7 @@
 #define URSATZ_FRAMEWORKS_STANDARD_COUNTERPOINT_HARMONIC_RULES_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #include "counterpoint_line.h"
 #include "rules/constraint.h"
@@ -84,5 +85,15 @@ bool standard_counterpoint_harmonic_rule_holds(StandardCounterpointHarmonicRule 
    False (both untouched) for an invalid pair. */
 bool standard_counterpoint_harmonic_check(const StandardCounterpointPair *pair, unsigned *hard_violations,
                                           unsigned *soft_violations);
+
+/*
+ * A run of equal imperfect consonances between two parts given as MIDI numbers: true when the last
+ * `run` vertical intervals (the distance between the parts, mod 12) are all the same imperfect
+ * consonance, a third or sixth (3, 4, 8 or 9 semitones). With `run` 3 it is the preference against
+ * three of them in a row. This is a preference, not a hard rule (Law 13); it is a plain function and
+ * not an entry of the rule table, so the table and every check built on it are unchanged. False for
+ * NULL arrays, a `run` of 0, or fewer than `run` intervals.
+ */
+bool standard_counterpoint_imperfect_run(const int *upper, const int *lower, size_t count, size_t run);
 
 #endif

@@ -121,6 +121,10 @@ Each rule has a backing `Rule`/`Constraint` pair referencing this
 Framework, plus a pure check function. `constraint_evaluate` is never
 called here.
 
+## Accented beats
+
+`standard_meter_accent_beats` (`metric_position_rules.h`) lists the beats of a bar that read strong or medium by `standard_meter_beat_strength`: beat 0 in every meter, and beat 2 in a quadruple meter (4/4, 12/8). It works for irregular meters too, where every bottom-unit pulse is a beat. Owner for the Composer's accented harmony cells.
+
 ## Not covered
 
 Irregular meter groupings (5/8, 7/8 are read as bottom-unit pulses; a 2+3 or

@@ -105,4 +105,24 @@ bool standard_tonality_mode_of_minor_form(StandardTonalityMinorForm form,
 bool standard_tonality_mode_of_roman_key_mode(StandardTonalityRomanKeyMode mode,
                                               StandardTonalityMode *out);
 
+/*
+ * The scale of a mode on a tonic as a 12-bit mask over pitch classes (bit n is pitch class n), for a
+ * caller that holds MIDI numbers and no spellings. 0 for a tonic outside 0..11 or an invalid mode.
+ * A minor set a caller needs beyond one form is a union of masks:
+ *
+ *   counterpoint minor  natural | melodic    (the raised sixth and seventh beside the natural ones)
+ *   chord with a raised seventh  natural | (1u << ((tonic + 11) % 12)), or the harmonic mask
+ */
+unsigned standard_tonality_mode_pitch_classes(int tonic_pitch_class, StandardTonalityMode mode);
+
+/*
+ * The degree (1 to 7) a chromatic semitone above the tonic is read as in the mode, and its
+ * alteration from that degree: 0 for a note of the scale, otherwise the note is read as the next
+ * lower degree raised (+1; +2 where the mode has a gap of a minor third, as the harmonic minor's
+ * sixth to seventh). Any whole number of semitones is taken mod 12. False (outputs untouched) for
+ * NULL outputs or an invalid mode.
+ */
+bool standard_tonality_degree_of_semitone(int semitones_above_tonic, StandardTonalityMode mode, int *degree,
+                                          int *alteration);
+
 #endif

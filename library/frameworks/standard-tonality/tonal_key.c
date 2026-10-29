@@ -36,6 +36,34 @@ int standard_tonality_degree_semitone(StandardTonalityMode mode, int degree) {
     return MODE_SEMITONES[mode][degree - 1];
 }
 
+unsigned standard_tonality_mode_pitch_classes(int tonic_pitch_class, StandardTonalityMode mode) {
+    if (!mode_valid(mode) || tonic_pitch_class < 0 || tonic_pitch_class >= PITCH_SEMITONES_PER_OCTAVE) {
+        return 0;
+    }
+    unsigned mask = 0;
+    for (int d = 0; d < KEY_DEGREE_COUNT; d++) {
+        mask |= 1u << ((tonic_pitch_class + MODE_SEMITONES[mode][d]) % PITCH_SEMITONES_PER_OCTAVE);
+    }
+    return mask;
+}
+
+bool standard_tonality_degree_of_semitone(int semitones_above_tonic, StandardTonalityMode mode, int *degree,
+                                          int *alteration) {
+    if (degree == NULL || alteration == NULL || !mode_valid(mode)) {
+        return false;
+    }
+    int inside = floor_mod(semitones_above_tonic, PITCH_SEMITONES_PER_OCTAVE);
+    int found = 0;
+    for (int d = 0; d < KEY_DEGREE_COUNT; d++) {
+        if (MODE_SEMITONES[mode][d] <= inside) {
+            found = d;
+        }
+    }
+    *degree = found + 1;
+    *alteration = inside - MODE_SEMITONES[mode][found];
+    return true;
+}
+
 bool standard_tonality_degree_of(PitchLetter tonic_letter, int tonic_accidental,
                                  StandardTonalityMode mode, PitchLetter note_letter,
                                  int note_accidental, int *degree, int *alteration) {

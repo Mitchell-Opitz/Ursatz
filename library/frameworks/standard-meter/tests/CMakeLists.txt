@@ -130,3 +130,14 @@ if(URSATZ_METER_CHECK_VALGRIND)
   add_test(NAME standard_meter_analysis_tuplet_valgrind
            COMMAND ${URSATZ_METER_CHECK_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_meter_analysis_tuplet>)
 endif()
+
+add_executable(test_standard_meter_accent_beats test_accent_beats.c)
+target_link_libraries(test_standard_meter_accent_beats PRIVATE standard_meter)
+add_test(NAME standard_meter_accent_beats COMMAND test_standard_meter_accent_beats)
+
+# Memcheck for the accent beats test. Skips silently if valgrind isn't installed.
+find_program(URSATZ_METER_ACCENT_VALGRIND valgrind)
+if(URSATZ_METER_ACCENT_VALGRIND)
+  add_test(NAME standard_meter_accent_beats_valgrind
+           COMMAND ${URSATZ_METER_ACCENT_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_meter_accent_beats>)
+endif()

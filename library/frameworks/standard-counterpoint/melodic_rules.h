@@ -90,4 +90,18 @@ bool standard_counterpoint_melodic_check(const StandardCounterpointLine *line,
                                          const StandardCounterpointLimits *limits, unsigned *hard_violations,
                                          unsigned *soft_violations);
 
+/*
+ * The melodic rules on a move in semitones (upward positive), for a caller that holds MIDI numbers
+ * and no spellings. Each is the same rule as its spelled form.
+ *
+ * standard_counterpoint_melodic_semitones_allowed is FORBIDDEN_LEAP: a move of up to an octave, never
+ * a tritone, never a seventh, and a sixth only as the ascending minor sixth (8 semitones up). A step
+ * or a repeated note is allowed.
+ *
+ * standard_counterpoint_is_step: a second, 1 or 2 semitones either way. A repeated note is not a
+ * step.
+ */
+bool standard_counterpoint_melodic_semitones_allowed(int semitones);
+bool standard_counterpoint_is_step(int semitones);
+
 #endif
