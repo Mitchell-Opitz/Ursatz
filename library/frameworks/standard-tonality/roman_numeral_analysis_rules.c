@@ -13,6 +13,7 @@
 #include "tonal_pitch.h"
 #include "triad_identification_rules.h"
 #include "triad_in_key_rules.h"
+#include "pitch/pitch_arithmetic.h"
 
 static const char *const NAMES[STANDARD_TONALITY_ROMAN_NUMERAL_ANALYSIS_RULE_COUNT] = {
     "roman-numeral-analysis-key",
@@ -135,16 +136,6 @@ bool standard_tonality_roman_numeral_implies_raised_leading_tone(StandardTonalit
            (numeral->degree == 3 && numeral->triad == STANDARD_TONALITY_TRIAD_AUGMENTED);
 }
 
-static int letter_index(PitchLetter letter) {
-    int index = 0;
-    PitchLetter walk = PITCH_LETTER_C;
-    while (walk != letter) {
-        walk = standard_tonality_next_letter(walk);
-        index++;
-    }
-    return index;
-}
-
 typedef struct {
     PitchLetter letter;
     int accidental;
@@ -207,7 +198,7 @@ static bool identify_without_fifth(const PitchSpelling *const *notes, size_t cou
             if (j == r) {
                 continue;
             }
-            int step = (letter_index(names[j].letter) - letter_index(names[r].letter) + 7) % 7;
+            int step = (pitch_letter_index(names[j].letter) - pitch_letter_index(names[r].letter) + 7) % 7;
             if (step == 2) {
                 third = j;
             } else if (step == 6) {
@@ -222,7 +213,7 @@ static bool identify_without_fifth(const PitchSpelling *const *notes, size_t cou
         PitchSpelling *root = NULL;
         PitchSpelling *third_note = NULL;
         PitchSpelling *seventh_note = NULL;
-        int root_index = letter_index(names[r].letter);
+        int root_index = pitch_letter_index(names[r].letter);
         bool ok = pitch_spelling_create(names[r].letter, names[r].accidental, 4, &root) == PITCH_SPELLING_OK &&
                   pitch_spelling_create(names[third].letter, names[third].accidental, 4 + (root_index + 2) / 7,
                                         &third_note) == PITCH_SPELLING_OK &&

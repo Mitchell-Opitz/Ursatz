@@ -7,6 +7,7 @@
 #include "core/provenance_reference.h"
 #include "core/value.h"
 #include "framework.h"
+#include "tonal_key.h"
 #include "interpretation/uncertainty.h"
 #include "major_scale_rules.h"
 #include "rule_pair.h"
@@ -109,24 +110,9 @@ int standard_tonality_scale_degree_of(const PitchSpelling *tonic, const PitchSpe
     if (tonic == NULL || note == NULL) {
         return 0;
     }
-
-    PitchSpelling *scale[STANDARD_TONALITY_MAJOR_SCALE_NOTE_COUNT];
-    if (!standard_tonality_build_major_scale(tonic, scale)) {
-        return 0;
-    }
-
-    int found = 0;
-    for (int i = 0; i < STANDARD_TONALITY_SCALE_DEGREE_COUNT; i++) {
-        if (standard_tonality_same_scale_name(scale[i], note)) {
-            found = i + 1;
-            break;
-        }
-    }
-
-    for (int i = 0; i < STANDARD_TONALITY_MAJOR_SCALE_NOTE_COUNT; i++) {
-        pitch_spelling_destroy(scale[i]);
-    }
-    return found;
+    return standard_tonality_scale_degree_in_mode(pitch_spelling_letter(tonic), pitch_spelling_accidental(tonic),
+                                                  STANDARD_TONALITY_MODE_MAJOR, pitch_spelling_letter(note),
+                                                  pitch_spelling_accidental(note));
 }
 
 ScaleDegreeResult standard_tonality_build_scale_degree(int degree, EntityID *scale_target_id, PitchIdentity *pitch,

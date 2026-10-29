@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 
+#include "pitch/pitch_arithmetic.h"
+
 struct GenericInterval {
     int size;
 };
@@ -21,31 +23,9 @@ GenericIntervalResult generic_interval_create(int size, GenericInterval **out) {
     return GENERIC_INTERVAL_OK;
 }
 
-/* Place of the letter in an octave counted from C: C 0 ... B 6 (an
-   octave number starts at C). */
-static int letter_index(PitchLetter letter) {
-    switch (letter) {
-        case PITCH_LETTER_C:
-            return 0;
-        case PITCH_LETTER_D:
-            return 1;
-        case PITCH_LETTER_E:
-            return 2;
-        case PITCH_LETTER_F:
-            return 3;
-        case PITCH_LETTER_G:
-            return 4;
-        case PITCH_LETTER_A:
-            return 5;
-        case PITCH_LETTER_B:
-        default:
-            return 6;
-    }
-}
-
 static int staff_place(const PitchSpelling *spelling) {
     return GENERIC_INTERVAL_LETTERS_PER_OCTAVE * pitch_spelling_octave(spelling) +
-           letter_index(pitch_spelling_letter(spelling));
+           pitch_letter_index(pitch_spelling_letter(spelling));
 }
 
 GenericIntervalResult generic_interval_between(const PitchSpelling *lower, const PitchSpelling *upper,

@@ -7,6 +7,7 @@
 #include "rule_pair.h"
 #include "tonal_pitch.h"
 #include "triad_spelling_rules.h"
+#include "pitch/pitch_arithmetic.h"
 
 static const char *const NAMES[STANDARD_TONALITY_TRIAD_IDENTIFICATION_RULE_COUNT] = {
     "triad-identification-root-and-quality", "triad-identification-octave-equivalence",
@@ -35,16 +36,6 @@ const Rule *standard_tonality_triad_identification_rule(StandardTonalityTriadIde
 const Constraint *standard_tonality_triad_identification_constraint(StandardTonalityTriadIdentificationRule which) {
     ensure_built(which);
     return valid_rule(which) ? g_pairs[which].constraint : NULL;
-}
-
-static int letter_index(PitchLetter letter) {
-    int index = 0;
-    PitchLetter walk = PITCH_LETTER_C;
-    while (walk != letter) {
-        walk = standard_tonality_next_letter(walk);
-        index++;
-    }
-    return index;
 }
 
 typedef struct {
@@ -96,7 +87,7 @@ static bool find_stack(const Name names[3], int *root, int *third, int *fifth) {
             if (j == r) {
                 continue;
             }
-            int step = (letter_index(names[j].letter) - letter_index(names[r].letter) + 7) % 7;
+            int step = (pitch_letter_index(names[j].letter) - pitch_letter_index(names[r].letter) + 7) % 7;
             if (step == 2) {
                 third_index = j;
             } else if (step == 4) {
@@ -134,7 +125,7 @@ static bool analyze(const PitchSpelling *const *notes, size_t count, Name names[
    letters wrap. */
 static bool spell_in_closed_position(const Name *name, const Name *root, int root_octave, int letters_above,
                                      PitchSpelling **out) {
-    int octave = root_octave + (letter_index(root->letter) + letters_above) / 7;
+    int octave = root_octave + (pitch_letter_index(root->letter) + letters_above) / 7;
     (void)name;
     return pitch_spelling_create(name->letter, name->accidental, octave, out) == PITCH_SPELLING_OK;
 }

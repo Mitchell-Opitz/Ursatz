@@ -141,3 +141,15 @@ add_test(NAME standard_tonality_roman_numeral_adapter COMMAND test_standard_tona
 add_executable(test_standard_tonality_applied_chords test_applied_chords.c)
 target_link_libraries(test_standard_tonality_applied_chords PRIVATE standard_tonality)
 add_test(NAME standard_tonality_applied_chords COMMAND test_standard_tonality_applied_chords)
+
+add_executable(test_standard_tonality_tonal_key test_tonal_key.c)
+target_link_libraries(test_standard_tonality_tonal_key PRIVATE standard_tonality)
+add_test(NAME standard_tonality_tonal_key COMMAND test_standard_tonality_tonal_key)
+
+# Scoped memcheck coverage for the key functions. Skips silently if valgrind isn't installed.
+find_program(URSATZ_TONAL_KEY_VALGRIND valgrind)
+if(URSATZ_TONAL_KEY_VALGRIND)
+  add_test(NAME standard_tonality_tonal_key_valgrind
+           COMMAND ${URSATZ_TONAL_KEY_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_standard_tonality_tonal_key>)
+endif()

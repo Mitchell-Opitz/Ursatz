@@ -4,6 +4,7 @@
 
 #include "rule_pair.h"
 #include "tonal_pitch.h"
+#include "pitch/pitch_arithmetic.h"
 
 static const char *const NAMES[STANDARD_TONALITY_INTERVAL_SPELLING_RULE_COUNT] = {"interval-spelling-above"};
 
@@ -32,17 +33,6 @@ const Constraint *standard_tonality_interval_spelling_constraint(StandardTonalit
     return valid_rule(which) ? g_pairs[which].constraint : NULL;
 }
 
-/* Place of the letter in an octave counted from C: C 0 ... B 6. */
-static int letter_place(PitchLetter letter) {
-    int place = 0;
-    PitchLetter walk = PITCH_LETTER_C;
-    while (walk != letter) {
-        walk = standard_tonality_next_letter(walk);
-        place++;
-    }
-    return place;
-}
-
 bool standard_tonality_spell_above(const PitchSpelling *lower, int size, StandardTonalityIntervalQuality quality,
                                    PitchSpelling **out) {
     if (lower == NULL || out == NULL || size < 1 || !standard_tonality_interval_quality_fits_size(size, quality)) {
@@ -56,7 +46,7 @@ bool standard_tonality_spell_above(const PitchSpelling *lower, int size, Standar
 
     /* The letter size - 1 letters above, and the octave number it falls
        in (the octave number belongs to the letter). */
-    int lower_place = letter_place(pitch_spelling_letter(lower));
+    int lower_place = pitch_letter_index(pitch_spelling_letter(lower));
     int upper_place = lower_place + size - 1;
     PitchLetter letter = pitch_spelling_letter(lower);
     for (int i = 1; i < size; i++) {

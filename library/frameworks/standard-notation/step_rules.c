@@ -3,6 +3,7 @@
 #include <stddef.h>
 
 #include "rule_pair.h"
+#include "pitch/pitch_arithmetic.h"
 #include "semitone.h"
 
 static const char *const NAMES[STANDARD_NOTATION_STEP_RULE_COUNT] = {"half-step", "whole-step",
@@ -61,23 +62,7 @@ int standard_notation_semitone_above(const PitchSpelling *spelling, int half_ste
 }
 
 PitchLetter standard_notation_next_letter(PitchLetter letter) {
-    switch (letter) {
-        case PITCH_LETTER_C:
-            return PITCH_LETTER_D;
-        case PITCH_LETTER_D:
-            return PITCH_LETTER_E;
-        case PITCH_LETTER_E:
-            return PITCH_LETTER_F;
-        case PITCH_LETTER_F:
-            return PITCH_LETTER_G;
-        case PITCH_LETTER_G:
-            return PITCH_LETTER_A;
-        case PITCH_LETTER_A:
-            return PITCH_LETTER_B;
-        case PITCH_LETTER_B:
-        default:
-            return PITCH_LETTER_C;
-    }
+    return pitch_letter_offset(letter, 1);
 }
 
 int standard_notation_natural_step_size(PitchLetter letter) {

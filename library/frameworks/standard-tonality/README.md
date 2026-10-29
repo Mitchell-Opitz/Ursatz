@@ -189,6 +189,17 @@ Rules about how pitches relate within a key:
   chord, else the chord reads as root position. A caller that passes no
   segment pitches keeps the Chord's own bass.
 
+- **Key functions** (`tonal_key.h`): degree and alteration of a note in a
+  key and mode (`standard_tonality_degree_of`), the note at a degree
+  (`standard_tonality_spell_degree`), semitones above the tonic of a degree
+  (`standard_tonality_degree_semitone`), the signature of a key as a count
+  of sharps or flats or as a `KeySignature`, the key of a signature count,
+  relative keys, and steps around the circle of fifths. Modes are major
+  and the three minor forms (`STANDARD_TONALITY_MODE_*`; melodic is the
+  ascending form; a bare "minor" is never implied). `standard_tonality_mode_of_minor_form`
+  and `standard_tonality_mode_of_roman_key_mode` map the older enums.
+  Spelling arithmetic comes from `src/pitch/pitch_arithmetic.h`.
+
 How accidentals are written and ordered in a key signature is notation
 and lives in `frameworks/standard-notation/`. Built on `KeySignature`
 (`src/pitch/`), `Scale`, `ScaleDegree`, and `Key` stay the entity types;
@@ -212,6 +223,5 @@ unified).
 ## 12-TET assumption
 
 `tonal_pitch.h` assumes twelve-tone equal temperament, as
-`frameworks/standard-notation/semitone.h` does. Frameworks may not depend
-on each other, so each carries its own copy; extraction waits for a
-shared module.
+`frameworks/standard-notation/semitone.h` does. Both now call
+`src/pitch/pitch_arithmetic.h`, which holds the one letter table.

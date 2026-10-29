@@ -31,6 +31,7 @@ add_library(ursatz
     time/time_rational.c
     pitch/pitch_identity.c
     pitch/pitch_spelling.c
+    pitch/pitch_arithmetic.c
     pitch/tuning_system.c
     pitch/pitch_class.c
     pitch/pitch_realization.c

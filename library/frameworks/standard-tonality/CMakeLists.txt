@@ -1,6 +1,7 @@
 add_library(standard_tonality
     framework.c
     tonal_pitch.c
+    tonal_key.c
     scale_pattern.c
     major_scale_rules.c
     minor_scale_rules.c

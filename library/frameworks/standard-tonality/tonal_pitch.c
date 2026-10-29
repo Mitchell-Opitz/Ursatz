@@ -1,23 +1,9 @@
 #include "tonal_pitch.h"
 
+#include "pitch/pitch_arithmetic.h"
+
 int standard_tonality_letter_semitone(PitchLetter letter) {
-    switch (letter) {
-        case PITCH_LETTER_C:
-            return 0;
-        case PITCH_LETTER_D:
-            return 2;
-        case PITCH_LETTER_E:
-            return 4;
-        case PITCH_LETTER_F:
-            return 5;
-        case PITCH_LETTER_G:
-            return 7;
-        case PITCH_LETTER_A:
-            return 9;
-        case PITCH_LETTER_B:
-        default:
-            return 11;
-    }
+    return pitch_letter_semitone(letter);
 }
 
 int standard_tonality_semitone_number(const PitchSpelling *spelling) {
@@ -26,21 +12,5 @@ int standard_tonality_semitone_number(const PitchSpelling *spelling) {
 }
 
 PitchLetter standard_tonality_next_letter(PitchLetter letter) {
-    switch (letter) {
-        case PITCH_LETTER_C:
-            return PITCH_LETTER_D;
-        case PITCH_LETTER_D:
-            return PITCH_LETTER_E;
-        case PITCH_LETTER_E:
-            return PITCH_LETTER_F;
-        case PITCH_LETTER_F:
-            return PITCH_LETTER_G;
-        case PITCH_LETTER_G:
-            return PITCH_LETTER_A;
-        case PITCH_LETTER_A:
-            return PITCH_LETTER_B;
-        case PITCH_LETTER_B:
-        default:
-            return PITCH_LETTER_C;
-    }
+    return pitch_letter_offset(letter, 1);
 }

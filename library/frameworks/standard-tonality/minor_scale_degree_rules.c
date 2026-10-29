@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #include "rule_pair.h"
+#include "tonal_key.h"
 #include "scale_degree_rules.h"
 #include "tonal_pitch.h"
 
@@ -113,32 +114,13 @@ bool standard_tonality_minor_degree_is_lowered(StandardTonalityMinorForm form, i
 
 int standard_tonality_minor_scale_degree_of(StandardTonalityMinorForm form, const PitchSpelling *tonic,
                                             const PitchSpelling *note) {
-    if (!valid_form(form) || tonic == NULL || note == NULL) {
+    StandardTonalityMode mode;
+    if (tonic == NULL || note == NULL || !standard_tonality_mode_of_minor_form(form, &mode)) {
         return 0;
     }
-    /* A descending scale is listed from the top; its degrees are
-       natural minor's. */
-    StandardTonalityMinorForm ascending =
-        form == STANDARD_TONALITY_MINOR_MELODIC_DESCENDING ? STANDARD_TONALITY_MINOR_NATURAL : form;
-
-    PitchSpelling *scale[STANDARD_TONALITY_MINOR_SCALE_NOTE_COUNT];
-    if (!standard_tonality_build_minor_scale(ascending, tonic, scale)) {
-        return 0;
-    }
-
-    int found = 0;
-    for (int i = 0; i < STANDARD_TONALITY_SCALE_DEGREE_COUNT; i++) {
-        if (pitch_spelling_letter(scale[i]) == pitch_spelling_letter(note) &&
-            pitch_spelling_accidental(scale[i]) == pitch_spelling_accidental(note)) {
-            found = i + 1;
-            break;
-        }
-    }
-
-    for (int i = 0; i < STANDARD_TONALITY_MINOR_SCALE_NOTE_COUNT; i++) {
-        pitch_spelling_destroy(scale[i]);
-    }
-    return found;
+    /* A descending scale is listed from the top; its degrees are natural minor's. */
+    return standard_tonality_scale_degree_in_mode(pitch_spelling_letter(tonic), pitch_spelling_accidental(tonic), mode,
+                                                  pitch_spelling_letter(note), pitch_spelling_accidental(note));
 }
 
 ScaleDegreeResult standard_tonality_build_minor_scale_degree(StandardTonalityMinorForm form, int degree,
