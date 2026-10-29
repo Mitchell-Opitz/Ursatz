@@ -6,6 +6,8 @@ Labels every note of a `MotiveSketch` (`docs/modules/motive-relations.md`) again
 
 `motive_tone_roles(sketch, overrides, override_count, out)` writes one `MotiveToneLabel` per note (`role`, `type`, `resolves_to`, `unresolved`, `overridden`). Results: `OK`, `NO_SCALE`, `INVALID` (no notes, too many notes, a NULL), `BAD_OVERRIDE`.
 
+`motive_tone_roles_of(sketch, out)` is the same call with the overrides the sketch carries (`tone_overrides`, `tone_override_count`), so a motive value brings its own corrections; it gives what `motive_tone_roles` gives for the same overrides. `MotiveToneRole` and `MotiveToneOverride` are defined in `analysis/motive_sketch.h`, which `motive_tone_roles.h` includes.
+
 ## Chords
 
 A note's chord is the last chord whose onset is at or before the note's onset. A sketch without chords is labelled against the tonic triad of its scale. A note is a chord tone when its pitch class is in its chord. A note with an unknown pitch is unclassified, never unresolved, and breaks every rule that needs a neighbouring pitch.

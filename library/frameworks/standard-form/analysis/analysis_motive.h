@@ -8,6 +8,7 @@
 #include "identity/entity_id.h"
 #include "relationship/relationship.h"
 #include "semantics/contour.h"
+#include "semantics/motif_window.h"
 #include "semantics/rhythmic_pattern.h"
 #include "structure/motif.h"
 #include "structure/motif_occurrence.h"
@@ -71,13 +72,8 @@ const char *standard_form_motive_kind_name(StandardFormMotiveKind kind);
    diminished 3, fragmented 4, varied 5. -1 for an invalid kind. */
 int standard_form_motive_kind_rank(StandardFormMotiveKind kind);
 
-/* One window handed to the injected matcher: the kernel's MotifWindow fields. Borrowed for the call. */
-typedef struct {
-    const Contour *contour;
-    const RhythmicPattern *rhythm;
-    const EntityID *const *event_ids;
-    size_t event_id_count;
-} StandardFormMotifWindow;
+/* One window handed to the injected matcher: the kernel's MotifWindow (semantics/motif_window.h). Borrowed for the call. */
+typedef MotifWindow StandardFormMotifWindow;
 
 /* Sets matched[i] for each window: true when it matches at least one other window (the kernel's rule). */
 typedef StandardFormAnalysisStatus (*StandardFormWindowMatcher)(const StandardFormMotifWindow *windows, size_t count,

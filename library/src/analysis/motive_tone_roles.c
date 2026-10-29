@@ -227,3 +227,13 @@ MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, const MotiveToneO
     }
     return MOTIVE_TONE_OK;
 }
+
+MotiveToneStatus motive_tone_roles_of(const MotiveSketch *sketch, MotiveToneLabel *out) {
+    if (!sketch) {
+        return MOTIVE_TONE_INVALID;
+    }
+    if (sketch->tone_override_count > MOTIVE_SKETCH_MAX_NOTES) {
+        return MOTIVE_TONE_BAD_OVERRIDE;
+    }
+    return motive_tone_roles(sketch, sketch->tone_overrides, sketch->tone_override_count, out);
+}

@@ -163,6 +163,37 @@ const char *motive_relation_result_name(MotiveRelationResult result);
  */
 const char *motive_relation_param_name(MotiveRelationKind kind, size_t index);
 
+typedef enum {
+    MOTIVE_RELATION_PARAM_INT,
+    MOTIVE_RELATION_PARAM_BOOL,
+    MOTIVE_RELATION_PARAM_RATIO,
+    MOTIVE_RELATION_PARAM_CHOICE
+} MotiveRelationParamKind;
+
+/*
+ * What a parameter is, for a caller that builds steps without a transform table of its own. min and max are the
+ * values the relation accepts at all (an index is also limited by the sketch it is applied to; a ratio's min and
+ * max bound its numerator and denominator: both above zero, and the result must be writable in the meter). A choice has choice_count names in choices, the name of value v at
+ * choices[v - min]. default_value (and default_den for a ratio) is the value of a parameter left out, as in
+ * motive_relation_step_text. optional is true when that default is accepted as it stands (the relation applies with
+ * it); a parameter that is not optional must be given. description is one lower-case phrase.
+ */
+typedef struct {
+    const char *name;
+    MotiveRelationParamKind kind;
+    long min;
+    long max;
+    long default_value;
+    long default_den;
+    bool optional;
+    const char *const *choices;
+    size_t choice_count;
+    const char *description;
+} MotiveRelationParamInfo;
+
+/* Fills *out for the parameter at index (0-based, below motive_relation_param_count). False, out untouched, otherwise. */
+bool motive_relation_param_info(MotiveRelationKind kind, size_t index, MotiveRelationParamInfo *out);
+
 /*
  * A step as text: the relation name, then name=value for each parameter, a ratio as n:d. An optional
  * parameter at its default (0, the invert axis -1) is left out, so "transpose tonal=1 by=-2", "augment
