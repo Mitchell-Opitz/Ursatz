@@ -55,6 +55,7 @@ add_library(ursatz
     containers/voice.c
     containers/layer.c
     containers/staff.c
+    containers/id_array.c
     containers/part.c
     containers/measure.c
     containers/phrase.c

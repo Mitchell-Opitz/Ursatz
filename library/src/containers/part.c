@@ -2,57 +2,34 @@
 
 #include <stdlib.h>
 
+#include "containers/id_array.h"
+
 struct Part {
     EntityID *id;
     EntityID **staff_ids;
     size_t staff_id_count;
 };
 
-static EntityID **copy_id_array(EntityID **ids, size_t count) {
-    if (count == 0) {
-        return NULL;
-    }
-    EntityID **copy = (EntityID **)malloc(sizeof(EntityID *) * count);
-    if (copy == NULL) {
-        return NULL;
-    }
-    for (size_t i = 0; i < count; i++) {
-        copy[i] = ids[i];
-    }
-    return copy;
-}
-
-static void destroy_id_array(EntityID **ids, size_t count) {
-    if (ids == NULL) {
-        return;
-    }
-    for (size_t i = 0; i < count; i++) {
-        entity_id_destroy(ids[i]);
-    }
-    free(ids);
-}
-
 PartResult part_create(EntityID *id, EntityID **staff_ids, size_t staff_id_count, Part **out) {
-    if (id == NULL) {
-        return PART_ERR_NULL_ID;
-    }
-    for (size_t i = 0; i < staff_id_count; i++) {
-        if (staff_ids[i] == NULL) {
+    EntityID **copy = NULL;
+    switch (container_shell_create(id, staff_ids, staff_id_count, &copy)) {
+        case CONTAINER_SHELL_OK:
+            break;
+        case CONTAINER_SHELL_ERR_NULL_OWNER:
+            return PART_ERR_NULL_ID;
+        case CONTAINER_SHELL_ERR_NULL_ID:
             return PART_ERR_NULL_STAFF_ID;
-        }
+        default:
+            return PART_ERR_ALLOC;
     }
 
     Part *part = (Part *)malloc(sizeof(Part));
     if (part == NULL) {
+        free(copy);
         return PART_ERR_ALLOC;
     }
 
-    part->staff_ids = copy_id_array(staff_ids, staff_id_count);
-    if (staff_id_count > 0 && part->staff_ids == NULL) {
-        free(part);
-        return PART_ERR_ALLOC;
-    }
-
+    part->staff_ids = copy;
     part->id = id;
     part->staff_id_count = staff_id_count;
 
@@ -65,7 +42,7 @@ void part_destroy(Part *part) {
         return;
     }
     entity_id_destroy(part->id);
-    destroy_id_array(part->staff_ids, part->staff_id_count);
+    id_array_destroy(part->staff_ids, part->staff_id_count);
     free(part);
 }
 

@@ -2,57 +2,34 @@
 
 #include <stdlib.h>
 
+#include "containers/id_array.h"
+
 struct Section {
     EntityID *id;
     EntityID **phrase_ids;
     size_t phrase_id_count;
 };
 
-static EntityID **copy_id_array(EntityID **ids, size_t count) {
-    if (count == 0) {
-        return NULL;
-    }
-    EntityID **copy = (EntityID **)malloc(sizeof(EntityID *) * count);
-    if (copy == NULL) {
-        return NULL;
-    }
-    for (size_t i = 0; i < count; i++) {
-        copy[i] = ids[i];
-    }
-    return copy;
-}
-
-static void destroy_id_array(EntityID **ids, size_t count) {
-    if (ids == NULL) {
-        return;
-    }
-    for (size_t i = 0; i < count; i++) {
-        entity_id_destroy(ids[i]);
-    }
-    free(ids);
-}
-
 SectionResult section_create(EntityID *id, EntityID **phrase_ids, size_t phrase_id_count, Section **out) {
-    if (id == NULL) {
-        return SECTION_ERR_NULL_ID;
-    }
-    for (size_t i = 0; i < phrase_id_count; i++) {
-        if (phrase_ids[i] == NULL) {
+    EntityID **copy = NULL;
+    switch (container_shell_create(id, phrase_ids, phrase_id_count, &copy)) {
+        case CONTAINER_SHELL_OK:
+            break;
+        case CONTAINER_SHELL_ERR_NULL_OWNER:
+            return SECTION_ERR_NULL_ID;
+        case CONTAINER_SHELL_ERR_NULL_ID:
             return SECTION_ERR_NULL_PHRASE_ID;
-        }
+        default:
+            return SECTION_ERR_ALLOC;
     }
 
     Section *section = (Section *)malloc(sizeof(Section));
     if (section == NULL) {
+        free(copy);
         return SECTION_ERR_ALLOC;
     }
 
-    section->phrase_ids = copy_id_array(phrase_ids, phrase_id_count);
-    if (phrase_id_count > 0 && section->phrase_ids == NULL) {
-        free(section);
-        return SECTION_ERR_ALLOC;
-    }
-
+    section->phrase_ids = copy;
     section->id = id;
     section->phrase_id_count = phrase_id_count;
 
@@ -65,7 +42,7 @@ void section_destroy(Section *section) {
         return;
     }
     entity_id_destroy(section->id);
-    destroy_id_array(section->phrase_ids, section->phrase_id_count);
+    id_array_destroy(section->phrase_ids, section->phrase_id_count);
     free(section);
 }
 

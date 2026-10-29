@@ -2,57 +2,34 @@
 
 #include <stdlib.h>
 
+#include "containers/id_array.h"
+
 struct Phrase {
     EntityID *id;
     EntityID **event_ids;
     size_t event_id_count;
 };
 
-static EntityID **copy_id_array(EntityID **ids, size_t count) {
-    if (count == 0) {
-        return NULL;
-    }
-    EntityID **copy = (EntityID **)malloc(sizeof(EntityID *) * count);
-    if (copy == NULL) {
-        return NULL;
-    }
-    for (size_t i = 0; i < count; i++) {
-        copy[i] = ids[i];
-    }
-    return copy;
-}
-
-static void destroy_id_array(EntityID **ids, size_t count) {
-    if (ids == NULL) {
-        return;
-    }
-    for (size_t i = 0; i < count; i++) {
-        entity_id_destroy(ids[i]);
-    }
-    free(ids);
-}
-
 PhraseResult phrase_create(EntityID *id, EntityID **event_ids, size_t event_id_count, Phrase **out) {
-    if (id == NULL) {
-        return PHRASE_ERR_NULL_ID;
-    }
-    for (size_t i = 0; i < event_id_count; i++) {
-        if (event_ids[i] == NULL) {
+    EntityID **copy = NULL;
+    switch (container_shell_create(id, event_ids, event_id_count, &copy)) {
+        case CONTAINER_SHELL_OK:
+            break;
+        case CONTAINER_SHELL_ERR_NULL_OWNER:
+            return PHRASE_ERR_NULL_ID;
+        case CONTAINER_SHELL_ERR_NULL_ID:
             return PHRASE_ERR_NULL_EVENT_ID;
-        }
+        default:
+            return PHRASE_ERR_ALLOC;
     }
 
     Phrase *phrase = (Phrase *)malloc(sizeof(Phrase));
     if (phrase == NULL) {
+        free(copy);
         return PHRASE_ERR_ALLOC;
     }
 
-    phrase->event_ids = copy_id_array(event_ids, event_id_count);
-    if (event_id_count > 0 && phrase->event_ids == NULL) {
-        free(phrase);
-        return PHRASE_ERR_ALLOC;
-    }
-
+    phrase->event_ids = copy;
     phrase->id = id;
     phrase->event_id_count = event_id_count;
 
@@ -65,7 +42,7 @@ void phrase_destroy(Phrase *phrase) {
         return;
     }
     entity_id_destroy(phrase->id);
-    destroy_id_array(phrase->event_ids, phrase->event_id_count);
+    id_array_destroy(phrase->event_ids, phrase->event_id_count);
     free(phrase);
 }
 
