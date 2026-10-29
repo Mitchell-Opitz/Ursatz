@@ -6,6 +6,7 @@
 
 #include "core/rational.h"
 #include "analysis_time.h"
+#include "time/time_signature.h"
 #include "harmony_cadence_rules.h"
 #include "harmony_key_change.h"
 #include "outer_scale_degrees.h"
@@ -1044,6 +1045,353 @@ ChainInputStatus chain_build_texture_input(const AnalysisNoteSet *notes, const C
     free(stream);
     if (status != CHAIN_INPUT_OK) {
         chain_texture_input_destroy(&build);
+        return status;
+    }
+    *out = build;
+    return CHAIN_INPUT_OK;
+}
+
+/* --- the voice grid --- */
+
+void chain_voice_grid_destroy(ChainVoiceGrid *grid) {
+    if (grid == NULL) {
+        return;
+    }
+    voice_assignment_destroy(&grid->assignment);
+    free(grid->cells);
+    free(grid->segment_ids);
+    memset(grid, 0, sizeof(*grid));
+}
+
+ChainInputStatus chain_build_voice_grid(const AnalysisNoteSet *notes, const ChainPitches *pitches, const ChainSegments *segments,
+                                        size_t count, ChainVoiceGrid *out) {
+    if (notes == NULL || pitches == NULL || segments == NULL || out == NULL) {
+        return CHAIN_INPUT_ERR_NULL_ARGUMENT;
+    }
+    if (!analysis_note_set_valid(notes) || notes->count == 0 || pitches->count != notes->count || count == 0 ||
+        count > segments->count) {
+        return CHAIN_INPUT_ERR_BAD_NOTES;
+    }
+    ChainVoiceGrid built;
+    memset(&built, 0, sizeof(built));
+    if (voice_separate(pitches->events, pitches->values, notes->count, NULL, notes->map, standard_meter_segmentation_beat_grid, NULL,
+                       NULL, &built.assignment) != VOICE_SEPARATION_OK) {
+        return CHAIN_INPUT_ERR_SEGMENTATION;
+    }
+    size_t voices = 0;
+    for (size_t s = 0; s < built.assignment.stream_count; s++) {
+        voices = built.assignment.streams[s].voice_count > voices ? built.assignment.streams[s].voice_count : voices;
+    }
+    if (voices == 0) {
+        chain_voice_grid_destroy(&built);
+        return CHAIN_INPUT_ERR_BAD_NOTES;
+    }
+    built.cells = calloc(count * voices, sizeof(AnalysisVoiceCell));
+    built.segment_ids = calloc(count, sizeof(char *));
+    if (built.cells == NULL || built.segment_ids == NULL) {
+        chain_voice_grid_destroy(&built);
+        return CHAIN_INPUT_ERR_ALLOC;
+    }
+    for (size_t s = 0; s < count; s++) {
+        built.segment_ids[s] = segments->ids[s];
+        const TimeSpan *window = sonority_time_window(segments->sonorities.items[s].sonority);
+        Rational start;
+        if (!rational_of(time_span_start(window), &start)) {
+            chain_voice_grid_destroy(&built);
+            return CHAIN_INPUT_ERR_SEGMENTATION;
+        }
+        for (size_t i = 0; i < notes->count; i++) {
+            const AnalysisNote *note = &notes->notes[i];
+            Rational on;
+            Rational off;
+            if (!rational_of(time_span_start(note->span), &on) || !rational_of(time_span_end(note->span), &off)) {
+                chain_voice_grid_destroy(&built);
+                return CHAIN_INPUT_ERR_SEGMENTATION;
+            }
+            if (!(rational_cmp(on, start) <= 0 && rational_cmp(start, off) < 0)) {
+                continue;
+            }
+            size_t voice = built.assignment.entries[i].voice;
+            if (voice >= voices || built.cells[s * voices + voice].present) {
+                continue; /* an extra note in the same voice: the first stands */
+            }
+            AnalysisVoiceCell *cell = &built.cells[s * voices + voice];
+            cell->present = true;
+            cell->pitch = pitches->values[i];
+            cell->spelling = note->spelling;
+            cell->note_id = note->note_id;
+            cell->attacked = rational_cmp(on, start) == 0;
+            cell->confidence = built.assignment.entries[i].confidence;
+        }
+    }
+    built.grid.segment_count = count;
+    built.grid.voice_count = voices;
+    built.grid.segment_ids = built.segment_ids;
+    built.grid.cells = built.cells;
+    *out = built;
+    return CHAIN_INPUT_OK;
+}
+
+/* --- the melody line --- */
+
+void chain_melody_line_destroy(ChainMelodyLine *melody) {
+    if (melody == NULL) {
+        return;
+    }
+    standard_counterpoint_melody_line_destroy(&melody->line);
+    free(melody->segment);
+    memset(melody, 0, sizeof(*melody));
+}
+
+static BeatStrength member_attack_strength(const CommonPracticeSegment *segment, const char *note_id, bool *found) {
+    for (size_t j = 0; j < segment->member_count; j++) {
+        const CommonPracticeMember *member = &segment->members[j];
+        if (member->note_id != NULL && strcmp(member->note_id, note_id) == 0 && !member->held) {
+            *found = true;
+            return member->strength;
+        }
+    }
+    *found = false;
+    return BEAT_STRENGTH_WEAK;
+}
+
+ChainInputStatus chain_build_melody_line(const ChainSegments *segments, size_t count, const OuterVoiceEntry *entries,
+                                         const CommonPracticeWeightedResult *results, int tonic_pitch_class,
+                                         CommonPracticeKeyMode mode, ChainMelodyLine *out) {
+    if (segments == NULL || entries == NULL || results == NULL || out == NULL) {
+        return CHAIN_INPUT_ERR_NULL_ARGUMENT;
+    }
+    if (segments->segments == NULL || count == 0 || count > segments->count) {
+        return CHAIN_INPUT_ERR_BAD_NOTES;
+    }
+    ChainMelodyLine built;
+    memset(&built, 0, sizeof(built));
+    standard_counterpoint_melody_line_init(&built.line);
+    built.segment = calloc(count + 1, sizeof(size_t));
+    if (built.segment == NULL) {
+        return CHAIN_INPUT_ERR_ALLOC;
+    }
+    const char *previous_id = NULL;
+    for (size_t s = 0; s < count; s++) {
+        const OuterVoiceEntry *entry = &entries[s];
+        if (!entry->present) {
+            if (previous_id != NULL || built.line.count == 0) {
+                built.segment[built.line.count] = s;
+                if (standard_counterpoint_melody_line_add_rest(&built.line) != STANDARD_COUNTERPOINT_MELODY_OK) {
+                    chain_melody_line_destroy(&built);
+                    return CHAIN_INPUT_ERR_BAD_NOTES;
+                }
+            }
+            previous_id = NULL;
+            continue;
+        }
+        const char *id = entity_id_value(entry->note_id);
+        if (previous_id != NULL && strcmp(previous_id, id) == 0) {
+            continue; /* the same note, held into this segment */
+        }
+        previous_id = id;
+        StandardCounterpointMelodyNote note;
+        memset(&note, 0, sizeof(note));
+        note.present = true;
+        note.note_id = id;
+        note.pitch = entry->pitch;
+        note.confidence = 1.0;
+        long midi = pitch_numeric_value_position_numerator(entry->pitch);
+        if (!parse_degree(common_practice_scale_degree_label((int)(((midi % 12) + 12) % 12), tonic_pitch_class, mode), &note.degree,
+                          &note.alteration)) {
+            chain_melody_line_destroy(&built);
+            return CHAIN_INPUT_ERR_BAD_NOTES;
+        }
+        bool has_strength = false;
+        note.strength = member_attack_strength(&segments->segments[s], id, &has_strength);
+        note.has_strength = has_strength;
+
+        note.nct = STANDARD_COUNTERPOINT_NCT_UNCLASSIFIED;
+        const CommonPracticeWeightedResult *result = &results[s];
+        if (result->matched) {
+            note.nct = STANDARD_COUNTERPOINT_NCT_CHORD_TONE;
+            for (size_t k = 0; k < result->leftover_count; k++) {
+                if (strcmp(result->leftover[k].note_id, id) == 0) {
+                    if (result->leftover[k].classified) {
+                        note.nct = STANDARD_COUNTERPOINT_NCT_NON_CHORD_TONE;
+                        note.nct_type = result->leftover[k].tone;
+                    } else {
+                        note.nct = STANDARD_COUNTERPOINT_NCT_UNCLASSIFIED;
+                    }
+                }
+            }
+        }
+        char ref[160];
+        snprintf(ref, sizeof(ref), "%s/%s", segments->ids[s], id);
+        note.nct_ref = ref;
+        built.segment[built.line.count] = s;
+        if (standard_counterpoint_melody_line_add_note(&built.line, &note) != STANDARD_COUNTERPOINT_MELODY_OK) {
+            chain_melody_line_destroy(&built);
+            return CHAIN_INPUT_ERR_BAD_NOTES;
+        }
+    }
+    *out = built;
+    return CHAIN_INPUT_OK;
+}
+
+/* --- the galant segments --- */
+
+void chain_galant_segments_destroy(ChainGalantSegments *segments) {
+    if (segments == NULL) {
+        return;
+    }
+    galant_segments_destroy(&segments->list);
+    for (size_t i = 0; i < segments->span_count; i++) {
+        time_span_destroy(segments->spans[i]);
+    }
+    free(segments->spans);
+    memset(segments, 0, sizeof(*segments));
+}
+
+static const TimeSpan *galant_span(ChainGalantSegments *build, const MusicalTime *start, const MusicalTime *end) {
+    if (build->span_count == build->span_capacity) {
+        size_t capacity = build->span_capacity == 0 ? 256 : build->span_capacity * 2;
+        TimeSpan **grown = realloc(build->spans, capacity * sizeof(TimeSpan *));
+        if (grown == NULL) {
+            return NULL;
+        }
+        build->spans = grown;
+        build->span_capacity = capacity;
+    }
+    TimeSpan *span = NULL;
+    if (time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) != TIME_SPAN_OK) {
+        return NULL;
+    }
+    build->spans[build->span_count++] = span;
+    return span;
+}
+
+static GalantPitchDegree degree_of_offset(int semitones) {
+    static const GalantPitchDegree TABLE[12] = {{1, 0}, {2, -1}, {2, 0}, {3, -1}, {3, 0}, {4, 0},
+                                                {4, 1}, {5, 0},  {6, -1}, {6, 0}, {7, -1}, {7, 0}};
+    return TABLE[((semitones % 12) + 12) % 12];
+}
+
+/* The length of a beat at `time`, in whole notes (a compound meter's beat is its dotted unit); a quarter when it cannot be read. */
+static void beat_length_at(const MeterMap *map, const MusicalTime *time, long *numerator, unsigned long *denominator) {
+    const MeterMapRegion *region = NULL;
+    *numerator = 1;
+    *denominator = 4;
+    if (meter_map_region_at(map, time, &region) != METER_MAP_OK) {
+        return;
+    }
+    const TimeSignature *signature = meter_map_region_time_signature(region);
+    Duration *unit = NULL;
+    if (signature == NULL || time_signature_unit_duration(signature, &unit) != DURATION_OK) {
+        return;
+    }
+    long n = duration_numerator(unit);
+    unsigned long d = duration_denominator(unit);
+    duration_destroy(unit);
+    unsigned top = time_signature_top_number(signature);
+    if ((top == 6 || top == 9 || top == 12) && time_signature_bottom_number(signature) >= 8) {
+        n *= 3;
+    }
+    *numerator = n;
+    *denominator = d;
+}
+
+static int pitch_class_of(const OuterVoiceEntry *entry) {
+    long position = pitch_numeric_value_position_numerator(entry->pitch);
+    return (int)(((position % 12) + 12) % 12);
+}
+
+static double clamp01(double x) {
+    return x < 0.0 ? 0.0 : (x > 1.0 ? 1.0 : x);
+}
+
+static bool same_harmony(const GalantSegment *a, const GalantSegment *b) {
+    return strcmp(a->key_id, b->key_id) == 0 && a->has_bass == b->has_bass && a->has_soprano == b->has_soprano &&
+           (!a->has_bass || galant_degree_equal(a->bass, b->bass)) &&
+           (!a->has_soprano || galant_degree_equal(a->soprano, b->soprano)) && a->has_numeral == b->has_numeral &&
+           (!a->has_numeral || (galant_degree_equal(a->root, b->root) && a->inversion == b->inversion));
+}
+
+ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size_t count, const MeterMap *map,
+                                             const OuterVoiceLines *lines, int home_key_index,
+                                             const StandardTonalityChordInput *chords, const StandardTonalityRomanResult *romans,
+                                             ChainGalantSegments *out) {
+    if (segments == NULL || map == NULL || lines == NULL || chords == NULL || romans == NULL || out == NULL) {
+        return CHAIN_INPUT_ERR_NULL_ARGUMENT;
+    }
+    int home_pc = common_practice_key_index_tonic(home_key_index);
+    if (count == 0 || count > segments->count || count > lines->count || home_pc < 0) {
+        return CHAIN_INPUT_ERR_BAD_NOTES;
+    }
+    ChainGalantSegments build;
+    memset(&build, 0, sizeof(build));
+    galant_segments_init(&build.list);
+    ChainInputStatus status = CHAIN_INPUT_OK;
+    for (size_t s = 0; s < count && status == CHAIN_INPUT_OK; s++) {
+        const TimeSpan *window = sonority_time_window(segments->sonorities.items[s].sonority);
+        int tonic_pc = chords[s].tonic_pitch_class;
+        bool minor = chords[s].mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
+        GalantSegment segment;
+        memset(&segment, 0, sizeof(segment));
+        AnalysisSegment analysis = {segments->ids[s], window, NULL, chain_attack_strength(map, time_span_start(window))};
+        if (!galant_segment_set_analysis_segment(&segment, &analysis)) {
+            status = CHAIN_INPUT_ERR_BAD_NOTES;
+            break;
+        }
+        beat_length_at(map, time_span_start(window), &segment.beat_numerator, &segment.beat_denominator);
+        snprintf(segment.key_id, sizeof(segment.key_id), "key-%d%s", tonic_pc, minor ? "m" : "");
+        segment.key = degree_of_offset(tonic_pc - home_pc);
+        if (lines->bass[s].present) {
+            segment.has_bass = true;
+            segment.bass = degree_of_offset(pitch_class_of(&lines->bass[s]) - tonic_pc);
+        }
+        if (lines->soprano[s].present) {
+            segment.has_soprano = true;
+            segment.soprano = degree_of_offset(pitch_class_of(&lines->soprano[s]) - tonic_pc);
+        }
+        segment.uncertainty = 0.5;
+        if (romans[s].has_numeral) {
+            const StandardTonalityRomanClaim *claim = &romans[s].claim;
+            int lowered = minor && (claim->degree == 3 || claim->degree == 6 || claim->degree == 7) &&
+                                  !romans[s].reading.raised_leading_tone
+                              ? -1
+                              : 0;
+            segment.has_numeral = true;
+            segment.root = (GalantPitchDegree){claim->degree, lowered};
+            if (claim->applied) {
+                int target_lowered = minor && (claim->applied_target_degree == 3 || claim->applied_target_degree == 6 ||
+                                               claim->applied_target_degree == 7)
+                                         ? -1
+                                         : 0;
+                segment.root = galant_degree_plus((GalantPitchDegree){claim->applied_target_degree, target_lowered},
+                                                  (GalantPitchDegree){claim->degree, 0});
+                segment.applied_to = claim->applied_target_degree;
+            }
+            segment.quality = claim->quality;
+            segment.seventh = claim->seventh;
+            segment.inversion = claim->inversion;
+            segment.uncertainty = clamp01(romans[s].uncertainty);
+        }
+        /* a held chord continues the segment before it */
+        if (build.list.count > 0) {
+            GalantSegment *last = &build.list.items[build.list.count - 1];
+            if (same_harmony(last, &segment)) {
+                const TimeSpan *merged = galant_span(&build, time_span_start(last->span), time_span_end(window));
+                if (merged == NULL) {
+                    status = CHAIN_INPUT_ERR_ALLOC;
+                    break;
+                }
+                last->span = merged;
+                last->uncertainty = last->uncertainty > segment.uncertainty ? last->uncertainty : segment.uncertainty;
+                continue;
+            }
+        }
+        if (galant_segments_add(&build.list, &segment) != GALANT_ANALYSIS_OK) {
+            status = CHAIN_INPUT_ERR_BAD_NOTES;
+        }
+    }
+    if (status != CHAIN_INPUT_OK) {
+        chain_galant_segments_destroy(&build);
         return status;
     }
     *out = build;

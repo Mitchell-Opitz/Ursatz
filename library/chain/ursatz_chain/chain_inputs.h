@@ -7,9 +7,11 @@
 #include "analysis/outer_voice.h"
 #include "analysis/voice_separation.h"
 #include "analysis_expansion.h"
+#include "analysis_melody.h"
 #include "analysis_phrase.h"
 #include "analysis_cadence.h"
 #include "chord_input.h"
+#include "galant_analysis_input.h"
 #include "key_regions.h"
 #include "meter_analysis_input.h"
 #include "texture_analysis_input.h"
@@ -17,6 +19,7 @@
 #include "semantics/analysis_key.h"
 #include "semantics/analysis_note.h"
 #include "semantics/beat_strength.h"
+#include "semantics/voice_grid.h"
 #include "semantics/sonority_segmentation.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
@@ -211,5 +214,68 @@ typedef struct {
 
 ChainInputStatus chain_build_texture_input(const AnalysisNoteSet *notes, const ChainPitches *pitches, ChainTextureInput *out);
 void chain_texture_input_destroy(ChainTextureInput *input);
+
+/*
+ * The voice grid (semantics/voice_grid.h) both counterpoint and harmony read: each voice's sounding note in each of the first `count`
+ * segments. The voices are the kernel's rule-based separation (voice_separate, L2.7) of ALL notes as one stream, so voice 0 is the top and
+ * the last voice the bottom. A note is in a segment's row when it sounds at the segment's start (attacked when it starts there); two notes of
+ * one voice in a segment keep the first. Cells borrow the pitches, spellings and ids of `pitches` and `notes`. Destroy with
+ * chain_voice_grid_destroy.
+ */
+typedef struct {
+    VoiceAssignment assignment;    /* owned; one entry per note, in the note set's order */
+    AnalysisVoiceCell *cells;      /* owned; count * voice_count */
+    const char **segment_ids;      /* owned array of borrowed ids */
+    AnalysisVoiceGrid grid;        /* views the arrays above */
+} ChainVoiceGrid;
+
+ChainInputStatus chain_build_voice_grid(const AnalysisNoteSet *notes, const ChainPitches *pitches, const ChainSegments *segments,
+                                        size_t count, ChainVoiceGrid *out);
+void chain_voice_grid_destroy(ChainVoiceGrid *grid);
+
+/*
+ * The melody line of standard-counterpoint (analysis_melody.h) from one outer line (the soprano or the bass of the outer lines), over the
+ * first `count` segments:
+ *   - consecutive segments on one note id are ONE note (held across segments); a note repeated at the same pitch is a second note.
+ *     Segments where the line is absent become ONE rest.
+ *   - pitch: the line's PitchNumericValue (borrowed from the lines). No spelling.
+ *   - degree and alteration: the scale degree label of the pitch class in the key on `tonic_pitch_class` and `mode`.
+ *   - strength: the BeatStrength of the note's attack, from the segment members.
+ *   - nct: from the chord result of the note's FIRST segment (`results`, one per segment): no chord match gives UNCLASSIFIED; a note listed
+ *     among the chord's leftover tones gives NON_CHORD_TONE with its NonChordTone (UNCLASSIFIED when it was left unclassified); a note not
+ *     listed gives CHORD_TONE. nct_ref is "<segment id>/<note id>".
+ * `segment[i]` is the first segment of entry i. Destroy with chain_melody_line_destroy.
+ */
+typedef struct {
+    StandardCounterpointMelodyLine line; /* owned */
+    size_t *segment;                     /* owned; line.count entries */
+} ChainMelodyLine;
+
+ChainInputStatus chain_build_melody_line(const ChainSegments *segments, size_t count, const OuterVoiceEntry *entries,
+                                         const CommonPracticeWeightedResult *results, int tonic_pitch_class,
+                                         CommonPracticeKeyMode mode, ChainMelodyLine *out);
+void chain_melody_line_destroy(ChainMelodyLine *melody);
+
+/*
+ * The segments of the schema and sequence adapters (galant_analysis_input.h) from the first `count` segments, their outer lines, the local
+ * key of each (its chord input's tonic and mode) and its Roman numeral. A pitch class is a degree of a key by its offset above
+ * the tonic, with the alteration against the major scale: 0 1 2 3 4 5 6 7 8 9 10 11 -> 1  2- 2  3- 3  4  4+ 5  6- 6  7- 7. The key's own
+ * tonic is a degree of the home key (`home_key_index`, 0..23) by the same table. Consecutive segments with the same key, outer-voice
+ * degrees and numeral (a held chord) are ONE segment, with the uncertainty of the least certain. A segment's uncertainty is its numeral's
+ * (0.5 with none). The root of an applied chord is the sounding root, from the tonicized degree and the chord's degree. Destroy with
+ * chain_galant_segments_destroy.
+ */
+typedef struct {
+    GalantSegmentList list;  /* owned */
+    TimeSpan **spans;        /* owned: the spans of merged segments */
+    size_t span_count;
+    size_t span_capacity;
+} ChainGalantSegments;
+
+ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size_t count, const MeterMap *map,
+                                             const OuterVoiceLines *lines, int home_key_index,
+                                             const StandardTonalityChordInput *chords, const StandardTonalityRomanResult *romans,
+                                             ChainGalantSegments *out);
+void chain_galant_segments_destroy(ChainGalantSegments *segments);
 
 #endif

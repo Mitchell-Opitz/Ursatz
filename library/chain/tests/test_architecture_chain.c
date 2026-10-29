@@ -39,6 +39,8 @@ static const char *FRAMEWORK_HEADERS[] = {
     "harmony_cadence_rules.h",
     "outer_scale_degrees.h",
     "analysis_expansion.h",
+    "analysis_melody.h",
+    "galant_analysis_input.h",
     "analysis_time.h",
     "meter_analysis_input.h",
     "texture_analysis_input.h",
