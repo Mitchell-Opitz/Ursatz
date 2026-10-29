@@ -10,7 +10,8 @@ thin consumer of the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) library 
 ## Build
 
 Requires CMake 3.20+, a C11 compiler, and SQLite3 (for Ursatz). Ursatz is a git submodule at
-`external/ursatz`, pinned to Ursatz main at PR #146 (`60bfe6b`).
+`external/ursatz`, pinned to Ursatz main at PR #161 (`1ed8aa1`). cJSON 1.7.18 is vendored at `external/cjson`; it is added only when no
+parent project already provides a `cjson` target.
 
 ```sh
 git submodule update --init --recursive
@@ -88,9 +89,20 @@ Tests:
   compares only its pairs, another analyzer version or other options empty it) and the scope's refusals, also under
   valgrind. `test_cli_link_motives` checks the flags, the text and JSON output, the cache and the exit codes, and
   validates both JSON files against their schemas (see below).
+- `test_version`: the public version header returns the macros, the version of `project()` and a non-empty Ursatz
+  commit.
 - `test_analysis_document_schema`: validates the documents for the corpus pieces against the
   schema. Optional: needs `python3` with the `jsonschema` module at configure time, and is
   reported as skipped otherwise.
+
+### Version header and pin check
+
+`<ursatz_analyzer/version.h>` is generated at configure time. It defines `URSATZ_ANALYZER_VERSION` and
+`URSATZ_ANALYZER_URSATZ_COMMIT` and declares `ursatz_analyzer_version()` and `ursatz_analyzer_ursatz_commit()`, so a
+consumer reads the version from the library instead of parsing `CMakeLists.txt`.
+
+`scripts/check-pins.sh` fails when a submodule pin is not on its remote's `main`, or when one repository is pinned at
+two different commits anywhere in the tree. CI runs it right after the submodule checkout.
 
 ## Usage
 
