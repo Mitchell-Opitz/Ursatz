@@ -108,6 +108,7 @@ add_library(ursatz
     theory/framework.c
     rules/rule.c
     rules/constraint.c
+    rules/rule_pair.c
     rules/preference.c
     rules/preference_weight.c
     rules/preference_ranking.c
