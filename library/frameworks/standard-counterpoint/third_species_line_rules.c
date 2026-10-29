@@ -27,7 +27,7 @@ static bool table_is_hard(int which) {
 }
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT];
-static bool g_built[STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT];
+static UrsatzOnce g_built[STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
 static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);

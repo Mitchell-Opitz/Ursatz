@@ -9,29 +9,21 @@ static const char *const NAMES[STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT] = {
     "cadential-bass-clearest",
     "cadential-bass-variants"};
 
-static StandardFormRulePair g_pairs[STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT];
-static bool g_built[STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
+    NAMES, STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT);
 
 static bool valid_rule(StandardFormCadentialBassRule which) {
     return which >= 0 && which < STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT;
 }
 
-static void ensure_built(StandardFormCadentialBassRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_form_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_form_cadential_bass_rule(StandardFormCadentialBassRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_form_cadential_bass_constraint(StandardFormCadentialBassRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 static const int CORE_DEGREES[4] = {3, 4, 5, 1};

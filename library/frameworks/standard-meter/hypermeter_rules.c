@@ -6,29 +6,21 @@ static const char *const NAMES[STANDARD_METER_HYPERMETER_RULE_COUNT] = {"hyperme
                                                                          "hypermeter-accent", "hypermeter-length",
                                                                          "hypermeter-expansion", "hypermeter-elision"};
 
-static StandardMeterRulePair g_pairs[STANDARD_METER_HYPERMETER_RULE_COUNT];
-static bool g_built[STANDARD_METER_HYPERMETER_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
+    NAMES, STANDARD_METER_HYPERMETER_RULE_COUNT);
 
 static bool valid_rule(StandardMeterHypermeterRule which) {
     return which >= 0 && which < STANDARD_METER_HYPERMETER_RULE_COUNT;
 }
 
-static void ensure_built(StandardMeterHypermeterRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_meter_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_meter_hypermeter_rule(StandardMeterHypermeterRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_meter_hypermeter_constraint(StandardMeterHypermeterRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 /* Measures per hypermetric group, or 0 for no grouping. */

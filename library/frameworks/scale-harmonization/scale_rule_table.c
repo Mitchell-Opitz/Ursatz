@@ -18,16 +18,27 @@ bool scale_rule_table_never_hard(int which) {
     return false;
 }
 
-static void ensure_built(const ScaleRuleTable *table, int which) {
-    if (!scale_rule_table_valid(table, which) || table->built[which]) {
-        return;
-    }
-    table->built[which] = true;
+typedef struct {
+    const ScaleRuleTable *table;
+    int which;
+} BuildPairArg;
+
+static void build_pair(void *arg) {
+    const ScaleRuleTable *table = ((const BuildPairArg *)arg)->table;
+    int which = ((const BuildPairArg *)arg)->which;
     char name[96];
     snprintf(name, sizeof(name), "%s-%s", table->prefix, table->names[which]);
     scale_build_rule_pair(
         name, scale_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
         &table->pairs[which]);
+}
+
+static void ensure_built(const ScaleRuleTable *table, int which) {
+    if (!scale_rule_table_valid(table, which)) {
+        return;
+    }
+    BuildPairArg arg = {table, which};
+    ursatz_once(&table->built[which], build_pair, &arg);
 }
 
 const Rule *scale_rule_table_rule(const ScaleRuleTable *table, int which) {

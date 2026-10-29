@@ -7,31 +7,25 @@
 static const char *const NAMES[STANDARD_VOICING_DOUBLING_RULE_COUNT] = {
     "doubling-bass-doubled", "doubling-leading-tone", "doubling-seventh", "doubling-seventh-chord"};
 
-static StandardVoicingRulePair g_pairs[STANDARD_VOICING_DOUBLING_RULE_COUNT];
-static bool g_built[STANDARD_VOICING_DOUBLING_RULE_COUNT];
+static ConstraintType rule_type(size_t which) {
+    return which == STANDARD_VOICING_DOUBLING_BASS_DOUBLED ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD;
+}
+
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT_MIXED(standard_voicing_framework, "standard-voicing", NAMES,
+                                                          STANDARD_VOICING_DOUBLING_RULE_COUNT, rule_type);
 
 static bool valid_rule(StandardVoicingDoublingRule which) {
     return which >= 0 && which < STANDARD_VOICING_DOUBLING_RULE_COUNT;
 }
 
-static void ensure_built(StandardVoicingDoublingRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    ConstraintType type =
-        which == STANDARD_VOICING_DOUBLING_BASS_DOUBLED ? CONSTRAINT_TYPE_SOFT : CONSTRAINT_TYPE_HARD;
-    standard_voicing_build_rule_pair(NAMES[which], type, &g_pairs[which]);
-}
-
 const Rule *standard_voicing_doubling_rule(StandardVoicingDoublingRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_voicing_doubling_constraint(StandardVoicingDoublingRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 static bool chord_complete(const StandardVoicingChord *chord) {

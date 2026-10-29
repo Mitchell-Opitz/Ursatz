@@ -11,29 +11,21 @@
 static const char *const NAMES[STANDARD_METER_METRIC_RULE_COUNT] = {"metric-beat-position", "metric-level",
                                                                      "metric-beat-strength"};
 
-static StandardMeterRulePair g_pairs[STANDARD_METER_METRIC_RULE_COUNT];
-static bool g_built[STANDARD_METER_METRIC_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
+    NAMES, STANDARD_METER_METRIC_RULE_COUNT);
 
 static bool valid_rule(StandardMeterMetricRule which) {
     return which >= 0 && which < STANDARD_METER_METRIC_RULE_COUNT;
 }
 
-static void ensure_built(StandardMeterMetricRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_meter_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_meter_metric_rule(StandardMeterMetricRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_meter_metric_constraint(StandardMeterMetricRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration **out_beat, unsigned *out_beats) {

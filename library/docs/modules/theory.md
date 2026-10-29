@@ -13,6 +13,7 @@ Layer L7 (`music-theory`). Path `src/theory/`, tests `tests/theory/`. Sibling of
 - `StatisticalModel`'s output cannot be silently promoted to a `Rule`. `theory/statistical_model.h` does not include `rules/rule.h`, and no function anywhere converts a `StatisticalModel` into a `Rule`. `training_corpus` is a plain string label (TDD §100), never a corpus object reference.
 - `Heuristic` exposes no evaluate/pass-fail API at all. `theory/heuristic.h` is identity plus a label only (TDD §98); nothing on the type could be evaluated as true or false in the first place.
 - `StyleModel` keeps `style_features` as an opaque `Value` and `training_corpus` as a plain label string; its shape is unchanged. Corpus style statistics fill it (below). There is still no fitting: every number is a count or an exact rational.
+- **Framework singletons (`theory/framework_singleton.h`).** Each framework accessor (`standard_form_framework()` and its 16 siblings) returns `framework_singleton_get(&g_singleton)` with a static `FrameworkSingleton` declared `FRAMEWORK_SINGLETON_INIT("<framework>-v1")`. The first call from any thread creates the `Framework` (the string is both its entity id and its name) under `ursatz_once`; every caller gets the same pointer, and a failed creation stays NULL for good. The Framework lives as long as the process.
 
 ## Theory to Corpus open issue (Dependency Spec §7.2)
 

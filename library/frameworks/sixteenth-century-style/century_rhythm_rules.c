@@ -7,7 +7,7 @@
 static const char *const NAMES[SIXTEENTH_CENTURY_RHYTHM_RULE_COUNT] = {"short-notes-off-beat", "slow-start-end"};
 
 static SixteenthCenturyRulePair g_pairs[SIXTEENTH_CENTURY_RHYTHM_RULE_COUNT];
-static bool g_built[SIXTEENTH_CENTURY_RHYTHM_RULE_COUNT];
+static UrsatzOnce g_built[SIXTEENTH_CENTURY_RHYTHM_RULE_COUNT];
 static const SixteenthCenturyRuleTable TABLE = {"rhythm", NAMES, SIXTEENTH_CENTURY_RHYTHM_RULE_COUNT,
                                                 sixteenth_century_rule_table_never_hard, g_pairs, g_built};
 

@@ -6,29 +6,21 @@ static const char *const NAMES[STANDARD_NOTATION_STEM_RULE_COUNT] = {"stem-above
                                                                       "stem-below-middle-up",
                                                                       "stem-on-middle-either"};
 
-static StandardNotationRulePair g_pairs[STANDARD_NOTATION_STEM_RULE_COUNT];
-static bool g_built[STANDARD_NOTATION_STEM_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_notation_framework, "standard-notation",
+    NAMES, STANDARD_NOTATION_STEM_RULE_COUNT);
 
 static bool valid_rule(StandardNotationStemRule which) {
     return which >= 0 && which < STANDARD_NOTATION_STEM_RULE_COUNT;
 }
 
-static void ensure_built(StandardNotationStemRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_notation_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_notation_stem_rule(StandardNotationStemRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_notation_stem_constraint(StandardNotationStemRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 int standard_notation_stem_direction_option_count(const StaffPosition *position) {

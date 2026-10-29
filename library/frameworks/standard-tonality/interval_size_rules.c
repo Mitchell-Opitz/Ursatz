@@ -8,29 +8,21 @@
 static const char *const NAMES[STANDARD_TONALITY_INTERVAL_SIZE_RULE_COUNT] = {
     "interval-size-counting", "interval-size-names", "interval-size-generic", "interval-size-compound"};
 
-static StandardTonalityRulePair g_pairs[STANDARD_TONALITY_INTERVAL_SIZE_RULE_COUNT];
-static bool g_built[STANDARD_TONALITY_INTERVAL_SIZE_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
+    NAMES, STANDARD_TONALITY_INTERVAL_SIZE_RULE_COUNT);
 
 static bool valid_rule(StandardTonalityIntervalSizeRule which) {
     return which >= 0 && which < STANDARD_TONALITY_INTERVAL_SIZE_RULE_COUNT;
 }
 
-static void ensure_built(StandardTonalityIntervalSizeRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_tonality_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_tonality_interval_size_rule(StandardTonalityIntervalSizeRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_tonality_interval_size_constraint(StandardTonalityIntervalSizeRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 static const char *const SIZE_NAMES[13] = {"unison", "second", "third",  "fourth",   "fifth",

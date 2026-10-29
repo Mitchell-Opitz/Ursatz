@@ -9,7 +9,7 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_MOTION_RULE_COUNT] = {
     "motion-contrary", "motion-similar", "motion-parallel", "motion-oblique", "motion-static"};
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_MOTION_RULE_COUNT];
-static bool g_built[STANDARD_COUNTERPOINT_MOTION_RULE_COUNT];
+static UrsatzOnce g_built[STANDARD_COUNTERPOINT_MOTION_RULE_COUNT];
 static const StandardCounterpointRuleTable TABLE = {
     NULL, NAMES, STANDARD_COUNTERPOINT_MOTION_RULE_COUNT, NULL, g_pairs, g_built};
 

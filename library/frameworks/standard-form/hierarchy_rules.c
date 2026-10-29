@@ -7,29 +7,21 @@ static const char *const NAMES[STANDARD_FORM_HIERARCHY_RULE_COUNT] = {
     "hierarchy-levels-collapse",
     "hierarchy-phrase-scope"};
 
-static StandardFormRulePair g_pairs[STANDARD_FORM_HIERARCHY_RULE_COUNT];
-static bool g_built[STANDARD_FORM_HIERARCHY_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
+    NAMES, STANDARD_FORM_HIERARCHY_RULE_COUNT);
 
 static bool valid_rule(StandardFormHierarchyRule which) {
     return which >= 0 && which < STANDARD_FORM_HIERARCHY_RULE_COUNT;
 }
 
-static void ensure_built(StandardFormHierarchyRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_form_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_form_hierarchy_rule(StandardFormHierarchyRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_form_hierarchy_constraint(StandardFormHierarchyRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 bool standard_form_level_contains(FormLevel outer, FormLevel inner) {

@@ -12,7 +12,7 @@ static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT] 
     "begin", "cantus-ends-re-do", "penultimate-suspension", "final-bar"};
 
 static StandardCounterpointRulePair g_pairs[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT];
-static bool g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT];
+static UrsatzOnce g_built[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT];
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
 static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);

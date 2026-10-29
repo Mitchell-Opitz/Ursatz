@@ -1,6 +1,7 @@
 #include "rules/rule_pair.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "identity/entity_id.h"
 
@@ -44,4 +45,32 @@ bool rule_pair_build_typed(const Framework *framework, const char *prefix, const
     out->rule = rule;
     out->constraint = constraint;
     return true;
+}
+
+static void build_table(void *arg) {
+    RulePairTable *table = arg;
+    if (table->count == 0 || table->framework == NULL) {
+        return;
+    }
+    RulePair *pairs = calloc(table->count, sizeof(RulePair));
+    if (pairs == NULL) {
+        return;
+    }
+    const Framework *framework = table->framework();
+    for (size_t i = 0; i < table->count; i++) {
+        ConstraintType type = table->type_of != NULL ? table->type_of(i) : table->type;
+        rule_pair_build_typed(framework, table->prefix, table->names[i], type, &pairs[i]);
+    }
+    table->pairs = pairs;
+}
+
+const RulePair *rule_pair_table_get(RulePairTable *table, size_t which) {
+    if (table == NULL || which >= table->count) {
+        return NULL;
+    }
+    ursatz_once(&table->once, build_table, table);
+    if (table->pairs == NULL || table->pairs[which].rule == NULL) {
+        return NULL;
+    }
+    return &table->pairs[which];
 }

@@ -9,29 +9,21 @@
 static const char *const NAMES[STANDARD_TONALITY_TRIAD_SPELLING_RULE_COUNT] = {"triad-spelling-key-signature",
                                                                                 "triad-spelling-alteration"};
 
-static StandardTonalityRulePair g_pairs[STANDARD_TONALITY_TRIAD_SPELLING_RULE_COUNT];
-static bool g_built[STANDARD_TONALITY_TRIAD_SPELLING_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
+    NAMES, STANDARD_TONALITY_TRIAD_SPELLING_RULE_COUNT);
 
 static bool valid_rule(StandardTonalityTriadSpellingRule which) {
     return which >= 0 && which < STANDARD_TONALITY_TRIAD_SPELLING_RULE_COUNT;
 }
 
-static void ensure_built(StandardTonalityTriadSpellingRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_tonality_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_tonality_triad_spelling_rule(StandardTonalityTriadSpellingRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_tonality_triad_spelling_constraint(StandardTonalityTriadSpellingRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 bool standard_tonality_triad_alteration(StandardTonalityTriadQuality quality, int *third_shift, int *fifth_shift) {

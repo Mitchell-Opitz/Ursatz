@@ -3,6 +3,8 @@
 
 #include <stdbool.h>
 
+#include "core/once.h"
+
 #include "scale_rule_pair.h"
 #include "rules/constraint.h"
 #include "rules/rule.h"
@@ -18,7 +20,7 @@
  * cache:
  *
  *   static ScaleRulePair g_pairs[N];
- *   static bool g_built[N];
+ *   static UrsatzOnce g_built[N];
  *   static const ScaleRuleTable TABLE = {"prefix", NAMES, N, is_hard, g_pairs, g_built};
  *
  * A pair is built the first time it is asked for, with the id
@@ -40,7 +42,7 @@ typedef struct {
     /* NULL when every rule is hard. */
     ScaleRuleHard is_hard;
     ScaleRulePair *pairs;
-    bool *built;
+    UrsatzOnce *built;
 } ScaleRuleTable;
 
 /* True for a rule number from 0 to count - 1. */

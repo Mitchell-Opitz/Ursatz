@@ -4,7 +4,8 @@
 - CMake 3.20+
 - A C11 compiler (gcc, clang, MSVC, or MinGW)
 - SQLite3, found through pkg-config (the only third-party dependency)
-- valgrind (optional; enables the `*_valgrind` tests)
+- POSIX threads (`find_package(Threads)`; `core/once.h` uses `pthread_mutex_t`; the `ursatz` target links `Threads::Threads` publicly)
+- valgrind (optional; enables the `*_valgrind` tests and the helgrind run of `concurrent_first_use`)
 
 ## Build
 ```sh

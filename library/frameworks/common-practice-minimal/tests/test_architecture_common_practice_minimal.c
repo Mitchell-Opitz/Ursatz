@@ -49,6 +49,7 @@ static int check_file(const char *path) {
         *end = '\0';
 
         if (strcmp(start, "framework.h") == 0 || strcmp(start, "theory/framework.h") == 0 ||
+            strcmp(start, "theory/framework_singleton.h") == 0 ||
             strcmp(start, "rules/rule.h") == 0 || strcmp(start, "rules/constraint.h") == 0 ||
             strcmp(start, "chord_vocabulary.h") == 0 || strcmp(start, "key_vocabulary.h") == 0 ||
             strcmp(start, "triad_identification.h") == 0 || strcmp(start, "key_identification.h") == 0 ||
@@ -68,7 +69,7 @@ static int check_file(const char *path) {
             fprintf(stderr,
                     "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, "
                     "containers/, structure/, context/, semantics/, relationship/, interpretation/, "
-                    "theory/framework.h, rules/rule.h, or rules/constraint.h)\n",
+                    "theory/framework.h, theory/framework_singleton.h, rules/rule.h, or rules/constraint.h)\n",
                     path, start);
             violations++;
         }

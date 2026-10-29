@@ -25,21 +25,21 @@ static bool applies(int which, const void *subject) {
 }
 
 static HarmonyRulePair g_pairs[COUNT];
-static bool g_built[COUNT];
+static UrsatzOnce g_built[COUNT];
 static const HarmonyRuleTable PLAIN = {"test-plain", NAMES, COUNT, is_hard, g_pairs, g_built, NULL};
 
 static ConstraintEvalResult evaluate_candidate(const Constraint *constraint, const Value *candidate,
                                                const Context *context);
 static PreferenceScore score_candidate(const Preference *preference, const Value *candidate, const Context *context);
 static HarmonyRulePair g_eval_pairs[COUNT];
-static bool g_eval_built[COUNT];
+static UrsatzOnce g_eval_built[COUNT];
 static const HarmonyRuleTable EVAL = {"test-eval", NAMES, COUNT, is_hard, g_eval_pairs, g_eval_built,
                                       evaluate_candidate, score_candidate};
 HARMONY_RULE_TABLE_EVALUATOR(evaluate_candidate, EVAL, holds, unsigned)
 HARMONY_RULE_TABLE_SCORER(score_candidate, EVAL, holds, unsigned)
 
 static HarmonyRulePair g_bare_pairs[COUNT];
-static bool g_bare_built[COUNT];
+static UrsatzOnce g_bare_built[COUNT];
 static const HarmonyRuleTable BARE = {NULL, NAMES, COUNT, NULL, g_bare_pairs, g_bare_built, NULL};
 
 static ConstraintEvalResult evaluate_mask(const Constraint *constraint, const char *tag, unsigned mask) {

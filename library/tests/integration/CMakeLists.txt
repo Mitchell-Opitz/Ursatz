@@ -137,3 +137,21 @@ add_test(NAME persistence_full_analysis COMMAND test_persistence_full_analysis)
 # Not run under valgrind: standard_form_find_motives (frameworks/standard-form/analysis/analysis_motive.c, make_kernel_window)
 # leaks 66 KB on this piece, which is the analysis' own and not the persistence code's -- valgrind reports no frame in
 # persistence/. The persistence repositories are leak-checked by their own tests in tests/persistence.
+
+# Eight threads make the first call of every framework accessor and one rule accessor per framework together (core/once.h).
+# Under helgrind where valgrind is installed (memcheck as well), else plain.
+add_executable(test_concurrent_first_use test_concurrent_first_use.c)
+target_link_libraries(test_concurrent_first_use PRIVATE baroque_ground_bass common_practice_minimal galant_schemas
+                      high_baroque_fugue scale_harmonization sixteenth_century_style standard_counterpoint standard_form
+                      standard_harmony standard_markings standard_meter standard_notation standard_rhythm
+                      standard_texture standard_tonality standard_voicing western_periods)
+add_test(NAME concurrent_first_use COMMAND test_concurrent_first_use)
+find_program(URSATZ_INTEGRATION_VALGRIND valgrind)
+if(URSATZ_INTEGRATION_VALGRIND)
+  add_test(NAME concurrent_first_use_valgrind
+           COMMAND ${URSATZ_INTEGRATION_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_concurrent_first_use>)
+  add_test(NAME concurrent_first_use_helgrind
+           COMMAND ${URSATZ_INTEGRATION_VALGRIND} --tool=helgrind --error-exitcode=1
+                   $<TARGET_FILE:test_concurrent_first_use>)
+endif()

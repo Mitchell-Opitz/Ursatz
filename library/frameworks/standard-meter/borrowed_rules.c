@@ -5,29 +5,21 @@
 static const char *const NAMES[STANDARD_METER_BORROWED_RULE_COUNT] = {"borrowed-borrowed", "borrowed-level",
                                                                        "borrowed-typical-level"};
 
-static StandardMeterRulePair g_pairs[STANDARD_METER_BORROWED_RULE_COUNT];
-static bool g_built[STANDARD_METER_BORROWED_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
+    NAMES, STANDARD_METER_BORROWED_RULE_COUNT);
 
 static bool valid_rule(StandardMeterBorrowedRule which) {
     return which >= 0 && which < STANDARD_METER_BORROWED_RULE_COUNT;
 }
 
-static void ensure_built(StandardMeterBorrowedRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_meter_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_meter_borrowed_rule(StandardMeterBorrowedRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_meter_borrowed_constraint(StandardMeterBorrowedRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 static bool is_triplet(const Tuplet *tuplet) {

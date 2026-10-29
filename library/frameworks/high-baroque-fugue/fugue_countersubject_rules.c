@@ -13,7 +13,7 @@ static bool table_is_hard(int which) {
 }
 
 static FugueRulePair g_pairs[FUGUE_COUNTERSUBJECT_RULE_COUNT];
-static bool g_built[FUGUE_COUNTERSUBJECT_RULE_COUNT];
+static UrsatzOnce g_built[FUGUE_COUNTERSUBJECT_RULE_COUNT];
 static const FugueRuleTable TABLE = {"countersubject", NAMES, FUGUE_COUNTERSUBJECT_RULE_COUNT, table_is_hard,
                                      g_pairs, g_built};
 

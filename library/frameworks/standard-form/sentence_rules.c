@@ -14,29 +14,21 @@ static const char *const NAMES[STANDARD_FORM_SENTENCE_RULE_COUNT] = {
     "sentence-sentential",
     "sentence-archetypal"};
 
-static StandardFormRulePair g_pairs[STANDARD_FORM_SENTENCE_RULE_COUNT];
-static bool g_built[STANDARD_FORM_SENTENCE_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
+    NAMES, STANDARD_FORM_SENTENCE_RULE_COUNT);
 
 static bool valid_rule(StandardFormSentenceRule which) {
     return which >= 0 && which < STANDARD_FORM_SENTENCE_RULE_COUNT;
 }
 
-static void ensure_built(StandardFormSentenceRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_form_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_form_sentence_rule(StandardFormSentenceRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_form_sentence_constraint(StandardFormSentenceRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 bool standard_form_subphrase_roles_in_order(SubphraseRole first, SubphraseRole second) {

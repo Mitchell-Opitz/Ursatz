@@ -19,16 +19,27 @@ bool harmony_rule_table_never_hard(int which) {
     return false;
 }
 
-static void ensure_built(const HarmonyRuleTable *table, int which) {
-    if (!harmony_rule_table_valid(table, which) || table->built[which]) {
-        return;
-    }
-    table->built[which] = true;
+typedef struct {
+    const HarmonyRuleTable *table;
+    int which;
+} BuildPairArg;
+
+static void build_pair(void *arg) {
+    const HarmonyRuleTable *table = ((const BuildPairArg *)arg)->table;
+    int which = ((const BuildPairArg *)arg)->which;
     char name[96];
     snprintf(name, sizeof(name), "%s-%s", table->prefix, table->names[which]);
     harmony_build_rule_pair(
         name, harmony_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
         table->evaluate, table->score, &table->pairs[which]);
+}
+
+static void ensure_built(const HarmonyRuleTable *table, int which) {
+    if (!harmony_rule_table_valid(table, which)) {
+        return;
+    }
+    BuildPairArg arg = {table, which};
+    ursatz_once(&table->built[which], build_pair, &arg);
 }
 
 const Rule *harmony_rule_table_rule(const HarmonyRuleTable *table, int which) {
@@ -85,7 +96,7 @@ ConstraintEvalResult harmony_rule_table_evaluate(const HarmonyRuleTable *table, 
     }
     int which = -1;
     for (int i = 0; i < table->count; i++) {
-        if (table->built[i] && table->pairs[i].constraint == constraint) {
+        if (ursatz_once_is_done(&table->built[i]) && table->pairs[i].constraint == constraint) {
             which = i;
             break;
         }
@@ -120,7 +131,7 @@ PreferenceScore harmony_rule_table_score(const HarmonyRuleTable *table, HarmonyR
     }
     int which = -1;
     for (int i = 0; i < table->count; i++) {
-        if (table->built[i] && table->pairs[i].preference == preference) {
+        if (ursatz_once_is_done(&table->built[i]) && table->pairs[i].preference == preference) {
             which = i;
             break;
         }

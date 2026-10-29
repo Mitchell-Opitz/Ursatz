@@ -54,7 +54,8 @@ static int check_file(const char *path) {
         if (strncmp(start, "standard-counterpoint/", 22) == 0 || strncmp(start, "galant-schemas/", 15) == 0) {
             continue; /* the allowed framework dependencies, one way */
         }
-        if (strcmp(start, "theory/framework.h") == 0 || strcmp(start, "rules/rule.h") == 0 ||
+        if (strcmp(start, "theory/framework.h") == 0 ||
+            strcmp(start, "theory/framework_singleton.h") == 0 || strcmp(start, "rules/rule.h") == 0 ||
             strcmp(start, "rules/constraint.h") == 0 ||
             strcmp(start, "rules/rule_pair.h") == 0) {
             continue;
@@ -69,7 +70,7 @@ static int check_file(const char *path) {
             fprintf(stderr,
                     "violation: %s includes \"%s\" (outside identity/, core/, time/, pitch/, events/, "
                     "containers/, structure/, context/, semantics/, relationship/, interpretation/, "
-                    "theory/framework.h, rules/rule.h, rules/constraint.h, rules/rule_pair.h, standard-counterpoint/, or galant-schemas/)\n",
+                    "theory/framework.h, theory/framework_singleton.h, rules/rule.h, rules/constraint.h, rules/rule_pair.h, standard-counterpoint/, or galant-schemas/)\n",
                     path, start);
             violations++;
         }

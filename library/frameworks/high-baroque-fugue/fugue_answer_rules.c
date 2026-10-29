@@ -15,7 +15,7 @@ static bool table_is_hard(int which) {
 }
 
 static FugueRulePair g_pairs[FUGUE_ANSWER_RULE_COUNT];
-static bool g_built[FUGUE_ANSWER_RULE_COUNT];
+static UrsatzOnce g_built[FUGUE_ANSWER_RULE_COUNT];
 static const FugueRuleTable TABLE = {"answer", NAMES, FUGUE_ANSWER_RULE_COUNT, table_is_hard, g_pairs, g_built};
 
 const Rule *fugue_answer_rule(FugueAnswerRule which) {

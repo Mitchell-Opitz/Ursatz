@@ -19,11 +19,14 @@ bool standard_counterpoint_rule_table_never_hard(int which) {
     return false;
 }
 
-static void ensure_built(const StandardCounterpointRuleTable *table, int which) {
-    if (!standard_counterpoint_rule_table_valid(table, which) || table->built[which]) {
-        return;
-    }
-    table->built[which] = true;
+typedef struct {
+    const StandardCounterpointRuleTable *table;
+    int which;
+} BuildPairArg;
+
+static void build_pair(void *arg) {
+    const StandardCounterpointRuleTable *table = ((const BuildPairArg *)arg)->table;
+    int which = ((const BuildPairArg *)arg)->which;
     char name[96];
     if (table->prefix != NULL) {
         snprintf(name, sizeof(name), "%s-%s", table->prefix, table->names[which]);
@@ -33,6 +36,14 @@ static void ensure_built(const StandardCounterpointRuleTable *table, int which) 
     standard_counterpoint_build_rule_pair(
         name, standard_counterpoint_rule_table_is_hard(table, which) ? CONSTRAINT_TYPE_HARD : CONSTRAINT_TYPE_SOFT,
         table->evaluate, table->score, &table->pairs[which]);
+}
+
+static void ensure_built(const StandardCounterpointRuleTable *table, int which) {
+    if (!standard_counterpoint_rule_table_valid(table, which)) {
+        return;
+    }
+    BuildPairArg arg = {table, which};
+    ursatz_once(&table->built[which], build_pair, &arg);
 }
 
 const Rule *standard_counterpoint_rule_table_rule(const StandardCounterpointRuleTable *table, int which) {
@@ -91,7 +102,7 @@ ConstraintEvalResult standard_counterpoint_rule_table_evaluate(const StandardCou
     }
     int which = -1;
     for (int i = 0; i < table->count; i++) {
-        if (table->built[i] && table->pairs[i].constraint == constraint) {
+        if (ursatz_once_is_done(&table->built[i]) && table->pairs[i].constraint == constraint) {
             which = i;
             break;
         }
@@ -124,7 +135,7 @@ PreferenceScore standard_counterpoint_rule_table_score(const StandardCounterpoin
     }
     int which = -1;
     for (int i = 0; i < table->count; i++) {
-        if (table->built[i] && table->pairs[i].preference == preference) {
+        if (ursatz_once_is_done(&table->built[i]) && table->pairs[i].preference == preference) {
             which = i;
             break;
         }

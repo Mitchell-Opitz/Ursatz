@@ -14,30 +14,22 @@ static const char *const NAMES[STANDARD_TONALITY_SEVENTH_IDENTIFICATION_RULE_COU
     "seventh-identification-root-and-quality", "seventh-identification-octave-equivalence",
     "seventh-identification-closed-position"};
 
-static StandardTonalityRulePair g_pairs[STANDARD_TONALITY_SEVENTH_IDENTIFICATION_RULE_COUNT];
-static bool g_built[STANDARD_TONALITY_SEVENTH_IDENTIFICATION_RULE_COUNT];
+static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
+    NAMES, STANDARD_TONALITY_SEVENTH_IDENTIFICATION_RULE_COUNT);
 
 static bool valid_rule(StandardTonalitySeventhIdentificationRule which) {
     return which >= 0 && which < STANDARD_TONALITY_SEVENTH_IDENTIFICATION_RULE_COUNT;
 }
 
-static void ensure_built(StandardTonalitySeventhIdentificationRule which) {
-    if (!valid_rule(which) || g_built[which]) {
-        return;
-    }
-    g_built[which] = true;
-    standard_tonality_build_rule_pair(NAMES[which], &g_pairs[which]);
-}
-
 const Rule *standard_tonality_seventh_identification_rule(StandardTonalitySeventhIdentificationRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].rule : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->rule : NULL;
 }
 
 const Constraint *standard_tonality_seventh_identification_constraint(
     StandardTonalitySeventhIdentificationRule which) {
-    ensure_built(which);
-    return valid_rule(which) ? g_pairs[which].constraint : NULL;
+    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
+    return pair != NULL ? pair->constraint : NULL;
 }
 
 typedef struct {

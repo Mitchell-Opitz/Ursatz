@@ -14,7 +14,7 @@ static bool table_is_hard(int which) {
 }
 
 static SixteenthCenturyRulePair g_pairs[SIXTEENTH_CENTURY_DISSONANCE_RULE_COUNT];
-static bool g_built[SIXTEENTH_CENTURY_DISSONANCE_RULE_COUNT];
+static UrsatzOnce g_built[SIXTEENTH_CENTURY_DISSONANCE_RULE_COUNT];
 static const SixteenthCenturyRuleTable TABLE = {"dissonance", NAMES, SIXTEENTH_CENTURY_DISSONANCE_RULE_COUNT,
                                                 table_is_hard, g_pairs, g_built};
 
