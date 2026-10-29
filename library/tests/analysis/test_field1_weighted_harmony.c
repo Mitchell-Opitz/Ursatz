@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "weighted_pipeline.h"
+#include "metric_position_rules.h"
 #include "../rational_test_util.h"
 
 /*
@@ -115,7 +116,7 @@ static void print_where(const MeterMap *map, Rational t) {
     assert(meter_map_measure_span(map, measure, &span) == METER_MAP_OK);
     Rational into = {0, 1};
     assert(rational_sub(t, test_rational_of_time(time_span_start(span)), &into) == 0);
-    printf("measure %d, %.3f of a whole note in", measure, pipeline_as_double(into));
+    printf("measure %d, %.3f of a whole note in", measure, rational_to_double(into));
     time_span_destroy(span);
     musical_time_destroy(time);
 }
@@ -165,8 +166,8 @@ static void test_field_1_follows_i_v_i_and_resolves_the_annotated_harmony(void) 
     for (int m = 0; m < 3; m++) {
         TimeSpan *span = NULL;
         assert(meter_map_measure_span(map, m + 2, &span) == METER_MAP_OK);
-        double from = pipeline_as_double(test_rational_of_time(time_span_start(span)));
-        double to = pipeline_as_double(test_rational_of_time(time_span_end(span)));
+        double from = rational_to_double(test_rational_of_time(time_span_start(span)));
+        double to = rational_to_double(test_rational_of_time(time_span_end(span)));
         time_span_destroy(span);
         double by_degree[8] = {0};
         for (size_t s = 0; s < p.segment_count; s++) {

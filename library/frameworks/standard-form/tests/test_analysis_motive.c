@@ -39,7 +39,7 @@ static StandardFormMotives find(Piece *p, const StandardFormConfig *config) {
     StandardFormPhrases phrases = {NULL, 0};
     StandardFormSegmentation segmentation = {NULL, 0, NULL, 0};
     StandardFormMotives motives;
-    assert(standard_form_find_motives(&p->f.input, &phrases, &segmentation, NULL, config, form_kernel_match_windows, NULL,
+    assert(standard_form_find_motives(&p->f.input, &phrases, &segmentation, NULL, config, chain_form_match_windows, NULL,
                                       &motives) == STANDARD_FORM_ANALYSIS_OK);
     return motives;
 }
@@ -189,10 +189,10 @@ static void test_the_output_is_shells_interpretations_and_links(void) {
     form_finish(&p.f);
     StandardFormPhrases phrases;
     StandardFormSegmentation segmentation;
-    assert(standard_form_segment_phrases(&p.f.input, NULL, form_kernel_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
+    assert(standard_form_segment_phrases(&p.f.input, NULL, chain_form_boundary_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_segment_ideas(&p.f.input, &phrases, NULL, &segmentation) == STANDARD_FORM_ANALYSIS_OK);
     StandardFormMotives m;
-    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, NULL, form_kernel_match_windows, NULL, &m) ==
+    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, NULL, chain_form_match_windows, NULL, &m) ==
            STANDARD_FORM_ANALYSIS_OK);
     assert(m.family_count == 1);
     const StandardFormMotiveFamily *f = &m.families[0];
@@ -236,7 +236,7 @@ static void test_an_occurrence_outside_every_idea_is_contained_in_the_phrase(voi
     form_finish(&p.f);
     StandardFormPhrases phrases;
     StandardFormSegmentation segmentation;
-    assert(standard_form_segment_phrases(&p.f.input, NULL, form_kernel_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
+    assert(standard_form_segment_phrases(&p.f.input, NULL, chain_form_boundary_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_segment_ideas(&p.f.input, &phrases, NULL, &segmentation) == STANDARD_FORM_ANALYSIS_OK);
     StandardFormConfig config = standard_form_config_default();
     config.motive_min_notes = 3;
@@ -244,7 +244,7 @@ static void test_an_occurrence_outside_every_idea_is_contained_in_the_phrase(voi
     StandardFormMotives m;
     /* with only the phrase given (no ideas) the occurrences link to the phrase */
     StandardFormSegmentation none = {NULL, 0, NULL, 0};
-    assert(standard_form_find_motives(&p.f.input, &phrases, &none, NULL, &config, form_kernel_match_windows, NULL, &m) ==
+    assert(standard_form_find_motives(&p.f.input, &phrases, &none, NULL, &config, chain_form_match_windows, NULL, &m) ==
            STANDARD_FORM_ANALYSIS_OK);
     assert(m.family_count >= 1);
     const StandardFormMotiveOccurrence *o = &m.families[0].occurrences[0];
@@ -421,7 +421,7 @@ static void test_prefix_and_suffix_fragments_are_found_in_a_continuation_first(v
     StandardFormPhrases phrases = {NULL, 0};
     StandardFormSegmentation segmentation = {NULL, 0, NULL, 0};
     StandardFormMotives m;
-    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, &themes, NULL, form_kernel_match_windows, NULL, &m) ==
+    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, &themes, NULL, chain_form_match_windows, NULL, &m) ==
            STANDARD_FORM_ANALYSIS_OK);
     assert(m.family_count == 1); /* the shorter patterns are explained by the fragments of the longer one */
     const StandardFormMotiveFamily *f = &m.families[0];
@@ -460,15 +460,15 @@ static void test_bad_calls_are_refused(void) {
     StandardFormPhrases phrases = {NULL, 0};
     StandardFormSegmentation segmentation = {NULL, 0, NULL, 0};
     StandardFormMotives m;
-    assert(standard_form_find_motives(NULL, &phrases, &segmentation, NULL, NULL, form_kernel_match_windows, NULL, &m) ==
+    assert(standard_form_find_motives(NULL, &phrases, &segmentation, NULL, NULL, chain_form_match_windows, NULL, &m) ==
            STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT);
     assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, NULL, NULL, NULL, &m) ==
            STANDARD_FORM_ANALYSIS_ERR_NO_DETECTOR);
     StandardFormConfig bad = standard_form_config_default();
     bad.motive_max_notes = 2;
-    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, &bad, form_kernel_match_windows, NULL, &m) ==
+    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, &bad, chain_form_match_windows, NULL, &m) ==
            STANDARD_FORM_ANALYSIS_ERR_BAD_CONFIG);
-    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, NULL, form_kernel_match_windows, NULL, &m) ==
+    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, NULL, NULL, chain_form_match_windows, NULL, &m) ==
                STANDARD_FORM_ANALYSIS_OK &&
            m.family_count == 0);
     assert(standard_form_input_set_degree(&p.f.input, false, 5, 1, 0) == STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT);

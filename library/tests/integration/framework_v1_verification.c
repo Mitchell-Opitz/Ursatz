@@ -168,7 +168,7 @@ static void fv1_beat_text(double beat, char out[16]) {
 static bool fv1_reading_matches(const Chain *c, const XReadingSide *want, bool prolongation, CadenceType type, size_t arrival_first) {
     double at = fv1_time_of(c, want->measure, want->beat);
     return want->prolongation == prolongation && (prolongation || want->type == type) &&
-           fabs(c->p.starts[arrival_first] - at) <= c->shim.beat_length + 1e-9;
+           fabs(c->p.starts[arrival_first] - at) <= c->beat_length + 1e-9;
 }
 
 static void fv1_reading_text(const Chain *c, bool prolongation, CadenceType type, size_t arrival_first, int share, char *out, size_t size) {
@@ -189,7 +189,7 @@ static void fv1_reading_text(const Chain *c, bool prolongation, CadenceType type
 static void fv1_check_readings(const Chain *c, Fv1Verifier *v, bool *used) {
     const V1Expected *x = &c->x;
     const HarmonyCadences *found = &c->cadences;
-    double tolerance = c->shim.beat_length + 1e-9;
+    double tolerance = c->beat_length + 1e-9;
     for (size_t i = 0; i < x->readings_count; i++) {
         const XReadings *want = &x->readings[i];
         char beat[16];
@@ -263,7 +263,7 @@ static void fv1_check_cadences(const Chain *c, Fv1Verifier *v) {
     for (size_t k = 0; k < found->count; k++) {
         used[k] = claimed[k];
     }
-    double tolerance = c->shim.beat_length + 1e-9;
+    double tolerance = c->beat_length + 1e-9;
     for (size_t i = 0; i < x->cadence_count; i++) {
         const XCadence *want = &x->cadences[i];
         char beat[16];

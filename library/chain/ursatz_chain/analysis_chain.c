@@ -794,15 +794,20 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
         status = run_pass(chain, NULL, 0);
         /* The keys depend on the phrases, which depend on the cadences, which depend on the keys: the chords of the first pass are
            evidence for the keys and its phrase ends their boundaries, and everything from the keys on runs once more. */
-        if (status == ANALYSIS_CHAIN_OK && chain->config.refine_keys && wants(chain, ANALYSIS_CHAIN_STAGE_FORM)) {
+        bool from_phrases = wants(chain, ANALYSIS_CHAIN_STAGE_FORM);
+        if (status == ANALYSIS_CHAIN_OK && chain->config.refine_keys && (from_phrases || chain->config.refine_with_given_boundaries)) {
             for (size_t s = 0; s < chain->count; s++) {
                 chain->key_segments[s].chord = common_practice_key_chord_of(&chain->pass.chords[s]);
             }
-            if (!phrase_boundaries(chain)) {
+            if (from_phrases && !phrase_boundaries(chain)) {
                 status = ANALYSIS_CHAIN_ERR_FORM;
             } else {
+                /* the boundaries are the phrase ends of the first pass, or, with no form, the caller's own */
+                const MusicalTime *const *boundaries = from_phrases ? (const MusicalTime *const *)chain->boundaries
+                                                                    : chain->config.key_regions.phrase_boundaries;
+                size_t boundary_count = from_phrases ? chain->boundary_count : chain->config.key_regions.phrase_boundary_count;
                 pass_destroy(chain);
-                status = run_pass(chain, (const MusicalTime *const *)chain->boundaries, chain->boundary_count);
+                status = run_pass(chain, boundaries, boundary_count);
             }
         }
     }

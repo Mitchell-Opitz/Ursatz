@@ -2,14 +2,12 @@
 #define URSATZ_TESTS_INTEGRATION_FRAMEWORK_V1_CHAIN_H
 
 /*
- * The full chain over one Framework v1 reference piece, and the expected values it is checked against (test glue).
+ * The full chain over one Framework v1 reference piece, and the expected values it is checked against.
  *
- * THE CHAIN. Import, the piece's MeterMap (Bach 114's file declares 4/4 and the piece is 3/4, so a 3/4 map replaces it, as in the other
- * reference-piece tests), adaptive segments, weights, local key regions (with the file's key signature events), weighted chord
- * identification in each key region's key and mode (a minor region is read in the minor vocabulary),
- * the Roman numeral adapter, outer voices, the cadence adapter, and the L3.6 standard-form adapter (phrases, ideas, themes, expansions) on
- * the cadences the chain found. No stage is given an answer: the key is not the annotation's home key, and the cadences are not the hand
- * cadences. Every default is the library's.
+ * THE CHAIN is analysis_chain_run (ursatz_chain) to the form stage on the piece's notes. The piece's MeterMap is the file's, except
+ * that Bach 114's file declares 4/4 and the piece is 3/4, so a 3/4 map replaces it, as in the other reference-piece tests. No stage is
+ * given an answer: the key is not the annotation's home key (it is only the home key of the boundary cadences, the degrees and the
+ * motives, as in the library), and the cadences are not the hand cadences. Every default is the library's.
  *
  * It includes test_form_reference_pieces.c as a library, the way test_rhythm_field5.c does, so the helpers of the cadence and form tests are
  * the same code those tests run.
@@ -20,8 +18,8 @@
 #define URSATZ_FORM_PIECES_AS_LIBRARY
 #include "test_form_reference_pieces.c"
 
-#include "harmony_key_change.h"
-#include "io/midi_key_signature.h"
+#include "io/midi_importer.h"
+#include "ursatz_chain/analysis_chain.h"
 
 /* --- the expected values --- */
 
@@ -282,6 +280,8 @@ static void fv1_load_expected(const char *prefix, V1Expected *x) {
 
 /* --- the chain --- */
 
+/* The full chain over one piece: analysis_chain_run to the form (cadences and key regions included) on the piece's notes, with the file's
+   key signature events, in the keys scope of the expected file. The fields view the chain's results. */
 typedef struct {
     const FormPiece *fp;
     V1Expected x;
@@ -289,228 +289,24 @@ typedef struct {
     WeightedPipeline p;
     const MeterMap *map;
     size_t count; /* segments of the chain: those that start inside the keys scope */
-    Annotation shim; /* only the beat length is read from it (make_inputs) */
+    double beat_length; /* in whole notes */
 
+    AnalysisKeyEvent *key_events;
+    size_t key_event_count;
+    AnalysisChain *chain;
     CommonPracticeKeySegment *key_segments;
-    MusicalTime **boundaries; /* pass 2: the phrase ends of pass 1, owned copies */
-    size_t boundary_count;
-    MidiKeySignatureEvents scanned;
-    CommonPracticeKeySignatureEvent *events;
     CommonPracticeKeyRegions regions;
-    CommonPracticeWeightedResult *chords; /* one per segment */
-    StandardTonalityKeyRegionInput *region_inputs;
-    StandardTonalitySegmentInput *segment_inputs;
-    int *segment_pitches; /* the members' pitches, segment after segment, for the chord bass */
-    StandardTonalityChordInput *tonal_inputs;
-    size_t tonal_count;
-    StandardTonalityRomanResult *romans;
+    const CommonPracticeWeightedResult *chords; /* one per segment */
+    const StandardTonalityChordInput *tonal_inputs;
+    const StandardTonalityRomanResult *romans;
     OuterVoiceLines lines;
-    Inputs in;
-    HarmonySegment *harmony;
     HarmonyCadences cadences;
-    FormBuild build;
     FormAnalysis form;
 } Chain;
 
 static double fv1_time_double(const MusicalTime *t) {
     return (double)musical_time_numerator(t) / (double)musical_time_denominator(t);
 }
-
-/* The region holding the segment that starts at `start` whole notes: the last whose start is not after it. */
-static size_t fv1_region_at(const CommonPracticeKeyRegions *regions, double start) {
-    size_t found = 0;
-    for (size_t i = 0; i < regions->region_count; i++) {
-        if (fv1_time_double(time_span_start(regions->regions[i].span)) <= start + 1e-12) {
-            found = i;
-        }
-    }
-    return found;
-}
-
-/* The sections' start times, in whole notes: the chain has no separate section step, so a section starts where the key regions come
-   back to the home key after leaving it (a recapitulation), on the regions pass 2 placed on the phrases (B6). */
-static size_t fv1_section_starts(const Chain *c, double *out, size_t capacity) {
-    const CommonPracticeKeyRegions *r = &c->regions;
-    size_t n = 0;
-    for (size_t i = 1; i < r->region_count && n < capacity; i++) {
-        if (r->regions[i].key_index == c->x.home_key && r->regions[i - 1].key_index != c->x.home_key) {
-            out[n++] = fv1_time_double(time_span_start(r->regions[i].span));
-        }
-    }
-    return n;
-}
-
-/* Dominants before a section start are half cadences of the earlier section (R-038); sections are not recomputed from them. */
-static void fv1_add_boundary_cadences(Chain *c) {
-    double starts[16];
-    size_t n = fv1_section_starts(c, starts, 16);
-    assert(harmony_analysis_add_boundary_cadences(c->harmony, c->count, NULL, starts, n, &c->cadences) ==
-           HARMONY_CADENCE_ANALYSIS_OK);
-}
-
-/* The key changes' extents confirmed by the cadences the chain found (B5): a region is a modulation only when a cadence arrives
-   inside it, and the change out of an excursion takes the excursion's extent. */
-static void fv1_confirm_key_changes(Chain *c) {
-    CommonPracticeKeyRegions *r = &c->regions;
-    double *arrivals = (double *)calloc(c->cadences.count + 1, sizeof(double));
-    assert(arrivals != NULL);
-    for (size_t k = 0; k < c->cadences.count; k++) {
-        arrivals[k] = c->p.starts[c->cadences.items[k].arrival_first];
-    }
-    for (size_t i = 0; i < r->change_count; i++) {
-        CommonPracticeKeyChange *change = &r->changes[i];
-        if (change->is_return) {
-            continue;
-        }
-        const CommonPracticeKeyRegion *into = &r->regions[change->to_region];
-        KeyChangeExtent confirmed = change->extent;
-        assert(harmony_key_change_confirm(change->extent, fv1_time_double(time_span_start(into->span)),
-                                          fv1_time_double(time_span_end(into->span)), arrivals, c->cadences.count,
-                                          &confirmed));
-        change->extent = confirmed;
-        change->cadence_confirmed = key_change_extent_is_modulation(confirmed);
-    }
-    for (size_t i = 1; i < r->change_count; i++) {
-        if (r->changes[i].is_return) {
-            r->changes[i].extent = r->changes[i - 1].extent;
-            r->changes[i].cadence_confirmed = r->changes[i - 1].cadence_confirmed;
-        }
-    }
-    free(arrivals);
-}
-
-/* The stages from the key regions to the L3.6 form, over the chain's setup. A pass can be run again after fv1_pass_destroy. */
-static void fv1_chain_pass(Chain *c, const MusicalTime *const *boundaries, size_t boundary_count) {
-    const V1Expected *x = &c->x;
-    size_t count = c->count;
-    CommonPracticeKeyRegionsConfig key_config = common_practice_key_regions_config_default();
-    key_config.phrase_boundaries = boundaries;
-    key_config.phrase_boundary_count = boundary_count;
-    assert(key_regions_estimate(c->key_segments, count, c->map, c->events, c->scanned.count, &key_config, &c->regions) ==
-           COMMON_PRACTICE_KEY_REGIONS_OK);
-
-    /* chords in each region's own key and mode */
-    c->chords = (CommonPracticeWeightedResult *)calloc(count, sizeof(CommonPracticeWeightedResult));
-    assert(c->chords != NULL);
-    size_t s = 0;
-    while (s < count) {
-        size_t region = fv1_region_at(&c->regions, c->p.starts[s]);
-        size_t end = s + 1;
-        while (end < count && fv1_region_at(&c->regions, c->p.starts[end]) == region) {
-            end++;
-        }
-        int key_index = c->regions.regions[region].key_index;
-        int tonic = common_practice_key_index_tonic(key_index);
-        CommonPracticeKeyMode mode = common_practice_key_index_mode(key_index);
-        CommonPracticeWeightedResults group = {0};
-        assert(common_practice_identify_weighted_sequence(&c->p.segments[s], end - s, tonic, mode, NULL, &group) ==
-               COMMON_PRACTICE_WEIGHTED_OK);
-        for (size_t i = 0; i < group.count; i++) {
-            c->chords[s + i] = group.items[i];
-        }
-        free(group.items);
-        s = end;
-    }
-
-    /* Roman numerals in the chain's keys */
-    c->region_inputs = (StandardTonalityKeyRegionInput *)calloc(c->regions.region_count, sizeof(StandardTonalityKeyRegionInput));
-    c->segment_inputs = (StandardTonalitySegmentInput *)calloc(count, sizeof(StandardTonalitySegmentInput));
-    size_t pitch_total = 0;
-    for (size_t i = 0; i < count; i++) {
-        pitch_total += c->p.segments[i].member_count;
-    }
-    c->segment_pitches = (int *)calloc(pitch_total > 0 ? pitch_total : 1, sizeof(int));
-    assert(c->region_inputs != NULL && c->segment_inputs != NULL && c->segment_pitches != NULL);
-    pitch_total = 0;
-    for (size_t i = 0; i < c->regions.region_count; i++) {
-        c->region_inputs[i].key = c->regions.regions[i].key;
-        c->region_inputs[i].start = time_span_start(c->regions.regions[i].span);
-        c->region_inputs[i].uncertainty = c->regions.regions[i].uncertainty;
-    }
-    for (size_t i = 0; i < count; i++) {
-        c->segment_inputs[i].segment_id = c->p.segment_ids[i];
-        c->segment_inputs[i].start = c->key_segments[i].start;
-        c->segment_inputs[i].chord = c->chords[i].matched ? c->chords[i].best_chord : NULL;
-        c->segment_inputs[i].weights = c->key_segments[i].weights.pitch_class;
-        c->segment_inputs[i].pitches = &c->segment_pitches[pitch_total];
-        c->segment_inputs[i].pitch_count = c->p.segments[i].member_count;
-        for (size_t j = 0; j < c->p.segments[i].member_count; j++) {
-            c->segment_pitches[pitch_total++] = c->p.segments[i].members[j].pitch;
-        }
-    }
-    assert(standard_tonality_build_chord_inputs(c->segment_inputs, count, c->region_inputs, c->regions.region_count,
-                                                &c->tonal_inputs, &c->tonal_count) == STANDARD_TONALITY_CHORD_INPUT_OK);
-    assert(standard_tonality_build_roman_numerals(c->tonal_inputs, c->tonal_count, &c->romans) == STANDARD_TONALITY_ROMAN_OK);
-
-    /* outer voices and the cadences */
-    assert(outer_voice_extract(&c->p.voice_sonorities, c->p.events, c->p.pitch_values, c->p.note_count, c->map,
-                               standard_meter_segmentation_beat_grid, NULL, NULL, &c->lines) == OUTER_VOICE_OK);
-    c->in = make_inputs(&c->p, c->map, &c->shim, count);
-    for (size_t i = 0; i < count; i++) {
-        HarmonySegmentInput *input = &c->in.inputs[i];
-        if (!c->romans[i].has_numeral) {
-            input->degree = 0;
-            input->interval_count = 3;
-            continue;
-        }
-        const StandardTonalityRomanClaim *claim = &c->romans[i].claim;
-        int intervals[4];
-        size_t interval_count = 0;
-        intervals_of(claim, intervals, &interval_count);
-        set_intervals(input, intervals, interval_count);
-        input->degree = claim->degree;
-        input->inversion = claim->inversion;
-        input->applied_to = claim->applied ? claim->applied_target_degree : 0;
-        input->mode = c->tonal_inputs[i].mode == STANDARD_TONALITY_ROMAN_KEY_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
-        input->uncertainty = c->romans[i].uncertainty;
-        input->bass_degree = degree_of(&c->lines.bass[i], c->tonal_inputs[i].tonic_pitch_class);
-        input->soprano_degree = degree_of(&c->lines.soprano[i], c->tonal_inputs[i].tonic_pitch_class);
-    }
-    assert(harmony_analysis_prepare(c->in.inputs, count, &c->harmony) == HARMONY_ANALYSIS_OK);
-    assert(harmony_analysis_find_cadences(c->harmony, count, NULL, &c->cadences) == HARMONY_CADENCE_ANALYSIS_OK);
-    fv1_add_boundary_cadences(c);
-    fv1_confirm_key_changes(c);
-
-    /* the L3.6 adapter over the keys scope, on the cadences the chain found */
-    form_build_init(&c->build, c->map);
-    form_build_melody(&c->build, &c->p, &c->lines, x->keys_first, x->keys_last);
-    add_chain_cadences(&c->build, &c->p, &c->cadences);
-    assert(standard_form_input_finish(&c->build.input) == STANDARD_FORM_ANALYSIS_OK);
-    form_analyze(&c->build, &c->form);
-}
-
-static void fv1_pass_destroy(Chain *c) {
-    form_analysis_destroy(&c->form);
-    form_build_destroy(&c->build);
-    harmony_cadences_destroy(&c->cadences);
-    harmony_analysis_destroy(c->harmony);
-    destroy_inputs(&c->in);
-    outer_voice_lines_destroy(&c->lines);
-    standard_tonality_roman_results_destroy(c->romans, c->tonal_count);
-    standard_tonality_chord_inputs_destroy(c->tonal_inputs);
-    free(c->segment_inputs);
-    free(c->segment_pitches);
-    free(c->region_inputs);
-    for (size_t i = 0; i < c->count; i++) {
-        common_practice_weighted_result_destroy(&c->chords[i]);
-    }
-    free(c->chords);
-    common_practice_key_regions_destroy(&c->regions);
-    memset(&c->form, 0, sizeof(c->form));
-    memset(&c->build, 0, sizeof(c->build));
-    memset(&c->cadences, 0, sizeof(c->cadences));
-    memset(&c->in, 0, sizeof(c->in));
-    memset(&c->lines, 0, sizeof(c->lines));
-    c->harmony = NULL;
-    c->romans = NULL;
-    c->tonal_inputs = NULL;
-    c->tonal_count = 0;
-    c->segment_inputs = NULL;
-    c->segment_pitches = NULL;
-    c->region_inputs = NULL;
-    c->chords = NULL;
-}
-
 
 static void fv1_chain_run(Chain *c, const FormPiece *fp) {
     memset(c, 0, sizeof(*c));
@@ -520,76 +316,46 @@ static void fv1_chain_run(Chain *c, const FormPiece *fp) {
     c->own = fp->piece.score_three_four ? three_four_map() : NULL;
     c->p = pipeline_run(URSATZ_CORPUS_DIR, fp->piece.midi, c->own);
     c->map = c->own != NULL ? c->own : c->p.meter.meter_map;
-    c->shim.beats = x->beats;
-    c->shim.beat_num = x->beat_num;
-    c->shim.beat_den = x->beat_den;
-    c->shim.beat_length = (double)x->beat_num / (double)x->beat_den;
+    c->beat_length = (double)x->beat_num / (double)x->beat_den;
 
-    /* the segments of the keys scope */
-    TimeSpan *last_measure = NULL;
-    assert(meter_map_measure_span(c->map, x->keys_last, &last_measure) == METER_MAP_OK);
-    double scope_end = fv1_time_double(time_span_end(last_measure));
-    time_span_destroy(last_measure);
-    while (c->count < c->p.segment_count && c->p.starts[c->count] < scope_end - 1e-12) {
-        c->count++;
+    c->key_event_count = c->p.import.key_signatures.count;
+    c->key_events = (AnalysisKeyEvent *)calloc(c->key_event_count + 1, sizeof(AnalysisKeyEvent));
+    assert(c->key_events != NULL);
+    for (size_t i = 0; i < c->key_event_count; i++) {
+        const MidiKeySignatureEvent *event = &c->p.import.key_signatures.events[i];
+        c->key_events[i].time = event->position;
+        assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &c->key_events[i].key));
     }
+    AnalysisNoteSet set = {c->p.notes, c->p.note_count, c->map};
+    AnalysisChainConfig config = analysis_chain_config_default();
+    config.stages = ANALYSIS_CHAIN_STAGE_FORM;
+    config.first_measure = x->keys_first;
+    config.last_measure = x->keys_last;
+    config.home_key_index = x->home_key;
+    assert(analysis_chain_run(&set, c->key_events, c->key_event_count, &config, &c->chain) == ANALYSIS_CHAIN_OK);
+
+    c->count = analysis_chain_segment_count(c->chain);
     assert(c->count > 0);
-    size_t count = c->count;
-
-    /* weights, and the key regions with the file's key signature events */
-    CommonPracticeWeightedConfig weighting = common_practice_weighted_config_default();
-    c->key_segments = (CommonPracticeKeySegment *)calloc(count, sizeof(CommonPracticeKeySegment));
-    assert(c->key_segments != NULL);
-    for (size_t s = 0; s < count; s++) {
-        const TimeSpan *window = sonority_time_window(c->p.sonorities.items[s].sonority);
-        c->key_segments[s].start = time_span_start(window);
-        c->key_segments[s].end = time_span_end(window);
-        c->key_segments[s].source = &c->p.segments[s];
-        assert(common_practice_weight_segment(c->p.segments[s].members, c->p.segments[s].member_count, &weighting,
-                                              &c->key_segments[s].weights) == COMMON_PRACTICE_WEIGHTED_OK);
-    }
-    char path[1024];
-    snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, fp->piece.midi);
-    size_t size = 0;
-    unsigned char *data = pipeline_read_file(path, &size);
-    assert(midi_key_signature_scan_all(data, size, &c->scanned) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);
-    free(data);
-    c->events = (CommonPracticeKeySignatureEvent *)calloc(c->scanned.count + 1, sizeof(CommonPracticeKeySignatureEvent));
-    assert(c->events != NULL);
-    for (size_t i = 0; i < c->scanned.count; i++) {
-        c->events[i].position = c->scanned.events[i].position;
-        c->events[i].sharps_flats = c->scanned.events[i].sharps_flats;
-    }
-    /* Pass 1: the key regions from the pitch classes alone. Its chords, cadences and phrase ends then inform pass 2 (the keys depend on
-       the phrases, which depend on the cadences, which depend on the keys): pass 2 runs once, with the chords as evidence and the phrase
-       ends as boundaries, and everything after the key regions re-runs on its answer. No further iteration. */
-    fv1_chain_pass(c, NULL, 0);
-    for (size_t s = 0; s < count; s++) {
+    c->regions = *analysis_chain_key_regions(c->chain);
+    c->chords = analysis_chain_chords(c->chain);
+    c->tonal_inputs = analysis_chain_chord_inputs(c->chain);
+    c->romans = analysis_chain_numerals(c->chain);
+    c->lines = *analysis_chain_outer_voices(c->chain);
+    c->cadences = *analysis_chain_cadences(c->chain);
+    c->form.phrases = *analysis_chain_phrases(c->chain);
+    c->form.segmentation = *analysis_chain_ideas(c->chain);
+    c->form.themes = *analysis_chain_themes(c->chain);
+    c->form.expansions = *analysis_chain_expansions(c->chain);
+    assert(chain_build_key_segments(analysis_chain_segments(c->chain), c->count, NULL, &c->key_segments) == CHAIN_INPUT_OK);
+    for (size_t s = 0; s < c->count; s++) {
         c->key_segments[s].chord = common_practice_key_chord_of(&c->chords[s]);
     }
-    if (c->form.phrases.count > 1) {
-        c->boundaries = (MusicalTime **)calloc(c->form.phrases.count, sizeof(MusicalTime *));
-        assert(c->boundaries != NULL);
-        for (size_t k = 0; k + 1 < c->form.phrases.count; k++) {
-            const MusicalTime *end = time_span_end(c->form.phrases.items[k].span);
-            assert(musical_time_create(musical_time_numerator(end), musical_time_denominator(end),
-                                       &c->boundaries[c->boundary_count]) == MUSICAL_TIME_OK);
-            c->boundary_count++;
-        }
-    }
-    fv1_pass_destroy(c);
-    fv1_chain_pass(c, (const MusicalTime *const *)c->boundaries, c->boundary_count);
 }
 
 static void fv1_chain_destroy(Chain *c) {
-    fv1_pass_destroy(c);
-    for (size_t i = 0; i < c->boundary_count; i++) {
-        musical_time_destroy(c->boundaries[i]);
-    }
-    free(c->boundaries);
-    free(c->events);
-    midi_key_signature_events_destroy(&c->scanned);
-    free(c->key_segments);
+    chain_key_segments_destroy(c->key_segments);
+    analysis_chain_destroy(c->chain);
+    free(c->key_events);
     pipeline_destroy(&c->p);
     if (c->own != NULL) {
         meter_map_destroy(c->own);
@@ -603,7 +369,7 @@ static void fv1_where(const Chain *c, size_t segment, int *measure, double *beat
     assert(metrical_position_from_time(c->map, time_span_start(window), &position) == METRICAL_POSITION_OK);
     *measure = metrical_position_measure(position);
     const Duration *offset = metrical_position_offset(position);
-    *beat = 1.0 + ((double)duration_numerator(offset) / (double)duration_denominator(offset)) / c->shim.beat_length;
+    *beat = 1.0 + ((double)duration_numerator(offset) / (double)duration_denominator(offset)) / c->beat_length;
     metrical_position_destroy(position);
 }
 
@@ -613,7 +379,7 @@ static double fv1_time_of(const Chain *c, int measure, double beat) {
     assert(meter_map_measure_span(c->map, measure, &span) == METER_MAP_OK);
     double start = fv1_time_double(time_span_start(span));
     time_span_destroy(span);
-    return start + (beat - 1.0) * c->shim.beat_length;
+    return start + (beat - 1.0) * c->beat_length;
 }
 
 #endif

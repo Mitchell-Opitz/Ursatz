@@ -29,14 +29,11 @@ add_executable(test_chain_inputs test_chain_inputs.c)
 target_link_libraries(test_chain_inputs PRIVATE ursatz_chain)
 add_test(NAME chain_inputs COMMAND test_chain_inputs)
 
-# The chain against the test glue it replaces, on four reference pieces (the glue lives in tests/integration and tests/analysis).
+# The chain on four reference pieces against fixed expected results (captured while it was proven equal to the test glue it replaced).
 add_executable(test_analysis_chain test_analysis_chain.c)
 target_link_libraries(test_analysis_chain PRIVATE ursatz_chain)
-target_include_directories(test_analysis_chain PRIVATE
-    ${PROJECT_SOURCE_DIR}/tests/integration ${PROJECT_SOURCE_DIR}/tests/analysis)
 target_compile_definitions(test_analysis_chain PRIVATE
-    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus"
-    URSATZ_ANNOTATION_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/annotations")
+    URSATZ_CORPUS_DIR="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus")
 add_test(NAME analysis_chain COMMAND test_analysis_chain)
 
 # Memcheck for the bridges and the input builders. Skips silently if valgrind isn't installed.

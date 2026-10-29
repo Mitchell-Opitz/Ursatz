@@ -1,6 +1,6 @@
 #include "framework_v1_chain.h"
 #include "framework_v1_deviations.h"
-#include "motive_util.h"
+#include "ursatz_chain/chain_inputs.h"
 
 #include "analysis/thematic_return_detection.h"
 #include "core/occurrence.h"
@@ -64,7 +64,7 @@ static bool fv1_window_of_events(const NoteEvent *const *events, size_t count, c
     assert(pitch_ids != NULL && directions != NULL && durations != NULL);
     long previous = 0;
     for (size_t i = 0; i < count; i++) {
-        long semitone = pipeline_semitone(note_event_optional_pitch_spelling(events[i]));
+        long semitone = pitch_spelling_midi_number(note_event_optional_pitch_spelling(events[i]));
         pitch_ids[i] = fv1_pitch_identity(semitone, i);
         if (i > 0) {
             directions[i - 1] = semitone > previous ? CONTOUR_DIRECTION_UP : (semitone < previous ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME);
@@ -92,6 +92,15 @@ static EntityID *fv1_id(const char *value) {
     return id;
 }
 
+static const NoteEvent *fv1_find_event(const WeightedPipeline *p, const char *id) {
+    for (size_t i = 0; i < p->note_count; i++) {
+        if (strcmp(entity_id_value(note_event_id(p->events[i])), id) == 0) {
+            return p->events[i];
+        }
+    }
+    return NULL;
+}
+
 /* One occurrence per L3.6 theme of the chain. */
 static Occs fv1_occurrences(const Chain *c) {
     Occs occs = {NULL, 0};
@@ -111,7 +120,7 @@ static Occs fv1_occurrences(const Chain *c) {
         for (size_t i = 0; i < n; i++) {
             const char *value = entity_id_value(structure_event_id_at(theme->shell, i));
             region[i] = fv1_id(value);
-            events[i] = form_find_event(&c->p, value);
+            events[i] = fv1_find_event(&c->p, value);
             assert(events[i] != NULL);
         }
         char target[48];
@@ -258,18 +267,22 @@ static void fv1_check_returns(const Chain *c, Fv1Verifier *v) {
 
 static void fv1_bach_minimum_window(const Chain *c) {
     /* the note-level soprano of the first strain and its written-out repeat (measures 1-16): at each attack the highest sounding note */
-    MotiveNote *line = NULL;
-    size_t n = motive_soprano(&c->p, c->map, 1, 16, &line);
+    ChainFormInput soprano;
+    assert(chain_build_motive_input(&c->p.set, analysis_chain_segments(c->chain), 1, 16, 0, COMMON_PRACTICE_KEY_MAJOR, NULL, &soprano) ==
+           CHAIN_INPUT_OK);
+    size_t n = soprano.input.note_count;
     const NoteEvent **events = (const NoteEvent **)calloc(n > 0 ? n : 1, sizeof(NoteEvent *));
     const EntityID **ids = (const EntityID **)calloc(n > 0 ? n : 1, sizeof(EntityID *));
     int *measures_of = (int *)calloc(n > 0 ? n : 1, sizeof(int));
     assert(events != NULL && ids != NULL && measures_of != NULL);
     for (size_t k = 0; k < n; k++) {
-        events[k] = c->p.events[line[k].index];
+        events[k] = soprano.input.notes[k].event;
         ids[k] = note_event_id(events[k]);
-        measures_of[k] = form_measure_of(c->map, temporal_anchor_position(note_event_temporal_anchor(events[k])));
+        int measure = 0;
+        assert(meter_map_measure_index_at(c->map, temporal_anchor_position(note_event_temporal_anchor(events[k])), &measure) == METER_MAP_OK);
+        measures_of[k] = measure;
     }
-    free(line);
+    chain_form_input_destroy(&soprano);
     assert(n > 40);
 
     /* every sliding window of three notes */

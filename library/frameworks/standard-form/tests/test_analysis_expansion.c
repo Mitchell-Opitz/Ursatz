@@ -31,7 +31,7 @@ typedef struct {
 
 static void run(Run *r) {
     form_finish(&r->f);
-    assert(standard_form_segment_phrases(&r->f.input, NULL, form_kernel_detect, NULL, &r->phrases) ==
+    assert(standard_form_segment_phrases(&r->f.input, NULL, chain_form_boundary_detect, NULL, &r->phrases) ==
            STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_segment_ideas(&r->f.input, &r->phrases, NULL, &r->segmentation) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_identify_themes(&r->f.input, &r->phrases, &r->segmentation, NULL, &r->themes) ==

@@ -14,17 +14,12 @@
 #include "weighted_pipeline.h"
 
 /*
- * Glue for the schema and sequence adapters: builds the neutral per-segment input (galant_analysis_input.h) from the outer voices (L2.6), the
- * local key of each segment (L2.8, through the standard-tonality chord inputs), the Roman numerals (L3.1) and the meter, and from a hand-written
- * fixture. galant-schemas and scale-harmonization include none of these; this glue, which includes them all, lives in the tests.
+ * Helpers for the schema and sequence test: the neutral per-segment input (galant_analysis_input.h) from a hand-written fixture, and the
+ * fixture's MIDI file. The input from a piece's outer voices, keys and Roman numerals is chain_build_galant_segments (ursatz_chain).
  *
  * DEGREES. A pitch class is a degree of a key by the offset above its tonic, with the alteration against the major scale (galant_degree.h):
  *     0 1 2 3 4 5 6 7 8 9 10 11  ->  1  2- 2  3- 3  4  4+ 5  6- 6  7- 7
  * the same in major and minor keys (a minor key's third is 3 lowered). The key's own tonic is a degree of the home key by the same table.
- *
- * FROM THE CHAIN. Segment i is the i-th adaptive segment of the pipeline; consecutive segments with the same key, outer-voice degrees and
- * numeral (a held chord) are ONE segment, with the uncertainty of the least certain. A segment's uncertainty is its numeral's (0.5 with none).
- * The root of a chord is its degree in the local key (for an applied chord the sounding root, from the tonicized degree and the chord's degree).
  */
 
 typedef struct {
@@ -277,7 +272,7 @@ static inline size_t schema_midi_bytes(const Fixture *fixture, unsigned char **o
     return t + 22;
 }
 
-/* --- from the chain --- */
+/* --- reports --- */
 
 static inline void schema_beat_length(const MeterMap *map, const MusicalTime *time, long *numerator, unsigned long *denominator) {
     const MeterMapRegion *region = NULL;
@@ -300,78 +295,6 @@ static inline void schema_beat_length(const MeterMap *map, const MusicalTime *ti
     }
     *numerator = n;
     *denominator = d;
-}
-
-static inline int schema_pitch_class(const OuterVoiceEntry *entry) {
-    long position = pitch_numeric_value_position_numerator(entry->pitch);
-    return (int)(((position % 12) + 12) % 12);
-}
-
-static inline double schema_clamp(double x) {
-    return x < 0.0 ? 0.0 : (x > 1.0 ? 1.0 : x);
-}
-
-static inline bool schema_same_harmony(const GalantSegment *a, const GalantSegment *b) {
-    return strcmp(a->key_id, b->key_id) == 0 && a->has_bass == b->has_bass && a->has_soprano == b->has_soprano &&
-           (!a->has_bass || galant_degree_equal(a->bass, b->bass)) && (!a->has_soprano || galant_degree_equal(a->soprano, b->soprano)) &&
-           a->has_numeral == b->has_numeral && (!a->has_numeral || (galant_degree_equal(a->root, b->root) && a->inversion == b->inversion));
-}
-
-/*
- * The segments of the chain. `tonic_pc[i]` and `minor[i]` are the local key of segment i (from the chord inputs), `romans` its numeral (may
- * say it has none), `count` the segments. `home_pc` is the piece's home tonic.
- */
-static inline void schema_build_from_chain(SchemaBuild *build, const WeightedPipeline *p, const OuterVoiceLines *lines, const MeterMap *map,
-                                           int home_pc, const int *tonic_pc, const bool *minor, const StandardTonalityRomanResult *romans,
-                                           size_t count) {
-    for (size_t s = 0; s < count; s++) {
-        const TimeSpan *window = sonority_time_window(p->sonorities.items[s].sonority);
-        GalantSegment segment;
-        memset(&segment, 0, sizeof(segment));
-        snprintf(segment.id, sizeof(segment.id), "seg-%zu", s);
-        snprintf(segment.key_id, sizeof(segment.key_id), "key-%d%s", tonic_pc[s], minor[s] ? "m" : "");
-        segment.span = window;
-        segment.strength = pipeline_attack_strength(map, time_span_start(window));
-        schema_beat_length(map, time_span_start(window), &segment.beat_numerator, &segment.beat_denominator);
-        segment.key = schema_degree_of_offset(tonic_pc[s] - home_pc);
-        if (lines->bass[s].present) {
-            segment.has_bass = true;
-            segment.bass = schema_degree_of_offset(schema_pitch_class(&lines->bass[s]) - tonic_pc[s]);
-        }
-        if (lines->soprano[s].present) {
-            segment.has_soprano = true;
-            segment.soprano = schema_degree_of_offset(schema_pitch_class(&lines->soprano[s]) - tonic_pc[s]);
-        }
-        segment.uncertainty = 0.5;
-        if (romans[s].has_numeral) {
-            const StandardTonalityRomanClaim *claim = &romans[s].claim;
-            int lowered = minor[s] && (claim->degree == 3 || claim->degree == 6 || claim->degree == 7) && !romans[s].reading.raised_leading_tone ? -1 : 0;
-            segment.has_numeral = true;
-            segment.root = (GalantPitchDegree){claim->degree, lowered};
-            if (claim->applied) {
-                int target_lowered = minor[s] && (claim->applied_target_degree == 3 || claim->applied_target_degree == 6 ||
-                                                  claim->applied_target_degree == 7) ? -1 : 0;
-                segment.root = galant_degree_plus((GalantPitchDegree){claim->applied_target_degree, target_lowered},
-                                                  (GalantPitchDegree){claim->degree, 0});
-                segment.applied_to = claim->applied_target_degree;
-            }
-            segment.quality = claim->quality;
-            segment.seventh = claim->seventh;
-            segment.inversion = claim->inversion;
-            segment.uncertainty = schema_clamp(romans[s].uncertainty);
-        }
-        /* a held chord continues the segment before it */
-        if (build->list.count > 0) {
-            GalantSegment *last = &build->list.items[build->list.count - 1];
-            if (schema_same_harmony(last, &segment)) {
-                const MusicalTime *from = time_span_start(last->span);
-                last->span = schema_build_span(build, from, time_span_end(window));
-                last->uncertainty = last->uncertainty > segment.uncertainty ? last->uncertainty : segment.uncertainty;
-                continue;
-            }
-        }
-        assert(galant_segments_add(&build->list, &segment) == GALANT_ANALYSIS_OK);
-    }
 }
 
 /* The measure and beat (1-based, fractional) of a time, for reports. */

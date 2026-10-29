@@ -5,6 +5,8 @@ adapters) against published annotations and the repository's hand-annotated fixt
 and fails CI when it drops below a recorded baseline. It is test infrastructure, not library code. Nothing in it
 changes how the analysis runs: every library default is used as it is.
 
+The analysis it measures is `analysis_chain_run` (`chain/`), the production chain, run on the score's notes in two passes: the first for the key regions from the pitch classes alone, then the harness finds the phrase ends (the ends of the cadences that pass reads, on outer degrees taken from the highest and lowest member of each segment), and the second pass reads the keys again with the first pass's chords as evidence and those ends as boundaries (`refine_with_given_boundaries`). What stays in `tests/accuracy/chorale_chain.c` is the fixture loading, the RomanText alignment, those phrase ends, the numerals in the annotation's keys and the scoring.
+
 The CTest target is `accuracy_harness`. Run it directly with `build/tests/accuracy/accuracy_harness`; it takes about
 a second.
 

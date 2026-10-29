@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../integration/reference_pieces.h"
 
 #include "analysis/voice_separation.h"
 #include "core/provenance_reference.h"
@@ -228,22 +229,6 @@ static void destroy_imported(Imported *imported) {
 static long onset_ticks(const Imported *imported, size_t i) {
     const MusicalTime *at = temporal_anchor_position(note_event_temporal_anchor(imported->events[i]));
     return musical_time_numerator(at) * 4 * imported->ticks_per_quarter / (long)musical_time_denominator(at);
-}
-
-static MeterMap *three_four_map(void) {
-    NoteValue *quarter = NULL;
-    assert(note_value_create(2, &quarter) == NOTE_VALUE_OK);
-    TimeSignature *three_four = NULL;
-    assert(time_signature_create(3, quarter, &three_four) == TIME_SIGNATURE_OK);
-    note_value_destroy(quarter);
-    MusicalTime *zero = NULL;
-    assert(musical_time_create(0, 1, &zero) == MUSICAL_TIME_OK);
-    MeterMapChangePoint point = {three_four, zero};
-    MeterMap *map = NULL;
-    assert(meter_map_create(make_id("bach-114-score-meter"), &point, 1, &map) == METER_MAP_OK);
-    time_signature_destroy(three_four);
-    musical_time_destroy(zero);
-    return map;
 }
 
 typedef struct {

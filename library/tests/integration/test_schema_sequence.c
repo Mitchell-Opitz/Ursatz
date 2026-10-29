@@ -5,6 +5,7 @@
 #include "galant_analysis_match.h"
 #include "scale_analysis_detect.h"
 #include "schema_util.h"
+#include "ursatz_chain/chain_inputs.h"
 
 /*
  * Schema and sequence detection (L3.10) on a hand-written galant fixture, tests/fixtures/galant/galant_fixture.txt: 24 measures in C major planted with a
@@ -230,17 +231,19 @@ static void chain_destroy(Chain *chain) {
 }
 
 /* The adapters over the chain of a pipeline; the results are the caller's. */
-static void chain_adapters(const WeightedPipeline *p, const OuterVoiceLines *lines, const MeterMap *map, int home, SchemaBuild *build,
+static void chain_adapters(const WeightedPipeline *p, const OuterVoiceLines *lines, const MeterMap *map, int home, ChainGalantSegments *build,
                            GalantSchemaMatches *schemas, ScaleSequenceMatches *sequences) {
     Chain chain;
     chain_run(&chain, p, map, home, p->segment_count);
-    schema_build_from_chain(build, p, lines, map, home, chain.tonic_pc, chain.minor, chain.romans, chain.count);
+    assert(chain_build_galant_segments(analysis_chain_segments(p->chain), chain.count, map, lines,
+                                       common_practice_key_index_of(home, COMMON_PRACTICE_KEY_MAJOR), chain.tonal_inputs, chain.romans,
+                                       build) == CHAIN_INPUT_OK);
     chain_destroy(&chain);
     assert(galant_schema_match(&build->list, NULL, schemas) == GALANT_ANALYSIS_OK);
     assert(scale_sequence_detect(&build->list, NULL, sequences) == GALANT_ANALYSIS_OK);
 }
 
-static void print_matches(const char *name, const MeterMap *map, const SchemaBuild *build, const GalantSchemaMatches *schemas,
+static void print_matches(const char *name, const MeterMap *map, const ChainGalantSegments *build, const GalantSchemaMatches *schemas,
                           const ScaleSequenceMatches *sequences) {
     printf("%s: %zu segments, %zu schema(s), %zu sequence(s)\n", name, build->list.count, schemas->count, sequences->count);
     for (size_t i = 0; i < schemas->count; i++) {
@@ -306,8 +309,7 @@ static void run_fixture_alone(const PlantedList *planted) {
     OuterVoiceLines lines = {0};
     assert(outer_voice_extract(&p.voice_sonorities, p.events, p.pitch_values, p.note_count, chain_map, standard_meter_segmentation_beat_grid, NULL, NULL,
                                &lines) == OUTER_VOICE_OK);
-    SchemaBuild chain_build;
-    schema_build_init(&chain_build);
+    ChainGalantSegments chain_build;
     GalantSchemaMatches chain_schemas = {NULL, 0};
     ScaleSequenceMatches chain_sequences = {NULL, 0};
     chain_adapters(&p, &lines, chain_map, fixture.home, &chain_build, &chain_schemas, &chain_sequences);
@@ -316,7 +318,7 @@ static void run_fixture_alone(const PlantedList *planted) {
     assert(chain_outcome.found >= CHAIN_FLOOR_FOUND);
     galant_schema_matches_destroy(&chain_schemas);
     scale_sequence_matches_destroy(&chain_sequences);
-    schema_build_destroy(&chain_build);
+    chain_galant_segments_destroy(&chain_build);
     outer_voice_lines_destroy(&lines);
     pipeline_destroy(&p);
     schema_fixture_destroy(&fixture);
@@ -335,15 +337,14 @@ static void run_real_piece(const RealPiece *piece) {
     OuterVoiceLines lines = {0};
     assert(outer_voice_extract(&p.voice_sonorities, p.events, p.pitch_values, p.note_count, map, standard_meter_segmentation_beat_grid, NULL, NULL,
                                &lines) == OUTER_VOICE_OK);
-    SchemaBuild build;
-    schema_build_init(&build);
+    ChainGalantSegments build;
     GalantSchemaMatches schemas = {NULL, 0};
     ScaleSequenceMatches sequences = {NULL, 0};
     chain_adapters(&p, &lines, map, a.home, &build, &schemas, &sequences);
     print_matches(piece->name, map, &build, &schemas, &sequences);
     galant_schema_matches_destroy(&schemas);
     scale_sequence_matches_destroy(&sequences);
-    schema_build_destroy(&build);
+    chain_galant_segments_destroy(&build);
     outer_voice_lines_destroy(&lines);
     pipeline_destroy(&p);
 }

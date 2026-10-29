@@ -1,14 +1,16 @@
 #include "analysis_motive.h"
 #include "harmony_cadence_rules.h"
-#include "motive_util.h"
+#include "ursatz_chain/form_bridge.h"
+#include "hand_cadences.h"
+#include "weighted_pipeline.h"
 
 /*
  * The motive families of Mozart 545, the exposition (measures 1-28), against tests/fixtures/annotations/mozart545_motives.txt: a DRAFT hand
  * reading, not yet checked against the score (see its header), made from the pitch content of the file and not from this code's output.
  *
- * The motive adapter runs on a note-level soprano (the highest sounding note at each attack, motive_util.h) with its scale degrees, the
+ * The motive adapter runs on a note-level soprano (the highest sounding note at each attack, chain_build_motive_input) with its scale degrees, the
  * phrases the form adapter finds from the annotated phrase end of tests/fixtures/annotations/mozart545_phrase_form.txt, and the themes,
- * with the library's defaults and the kernel's window matching injected (form_kernel_bridge.h).
+ * with the library's defaults and the kernel's window matching injected (ursatz_chain/form_bridge.h).
  *
  * A FAMILY is found when the adapter has a family with an occurrence starting within one beat of the annotated family's first occurrence.
  * An OCCURRENCE is found, with the right kind, when the adapter has an occurrence within one beat of it of the annotated kind (exact, real
@@ -81,27 +83,26 @@ static double distance(double a, double b) {
 }
 
 /* The cadences of the form annotation: its phrase-end lines, each arriving in the whole measure. */
-static void add_phrase_ends(FormBuild *build) {
+static size_t read_phrase_ends(HandCadence *out, size_t capacity) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/mozart545_phrase_form.txt", URSATZ_ANNOTATION_DIR);
     size_t size = 0;
     unsigned char *text = pipeline_read_file(path, &size);
+    size_t count = 0;
     for (char *line = strtok((char *)text, "\n"); line != NULL; line = strtok(NULL, "\n")) {
         int measure = 0;
         char type[8];
         if (strncmp(line, "phrase-end ", 11) != 0 || sscanf(line, "phrase-end %d %7s", &measure, type) != 2) {
             continue;
         }
-        CadenceType cadence = strcmp(type, "pac") == 0 ? CADENCE_TYPE_PERFECT_AUTHENTIC
-                                                       : (strcmp(type, "iac") == 0 ? CADENCE_TYPE_IMPERFECT_AUTHENTIC : CADENCE_TYPE_HALF);
-        TimeSpan *span = NULL;
-        assert(meter_map_measure_span(build->input.map, measure, &span) == METER_MAP_OK);
-        char id[32];
-        snprintf(id, sizeof(id), "hand-%d", measure);
-        form_build_cadence(build, id, time_span_start(span), time_span_end(span), cadence, harmony_cadence_strength(cadence), false, 0.0);
-        time_span_destroy(span);
+        assert(count < capacity);
+        out[count].measure = measure;
+        out[count].type = strcmp(type, "pac") == 0 ? CADENCE_TYPE_PERFECT_AUTHENTIC
+                                                    : (strcmp(type, "iac") == 0 ? CADENCE_TYPE_IMPERFECT_AUTHENTIC : CADENCE_TYPE_HALF);
+        count++;
     }
     free(text);
+    return count;
 }
 
 static void test_mozart_545(void) {
@@ -109,21 +110,22 @@ static void test_mozart_545(void) {
     WeightedPipeline p = pipeline_run(URSATZ_CORPUS_DIR, "Mozart 545.mid", NULL);
     const MeterMap *map = p.meter.meter_map;
 
-    FormBuild build;
-    form_build_init(&build, map);
-    motive_build_soprano(&build, &p, annotation.range_first, annotation.range_last, 0, COMMON_PRACTICE_KEY_MAJOR);
-    add_phrase_ends(&build);
-    assert(standard_form_input_finish(&build.input) == STANDARD_FORM_ANALYSIS_OK);
+    HandCadence ends[64];
+    size_t end_count = read_phrase_ends(ends, 64);
+    HarmonyCadences hand = hand_cadences_make(analysis_chain_segments(p.chain), map, ends, end_count);
+    ChainFormInput build;
+    assert(chain_build_motive_input(&p.set, analysis_chain_segments(p.chain), annotation.range_first, annotation.range_last, 0,
+                                    COMMON_PRACTICE_KEY_MAJOR, &hand, &build) == CHAIN_INPUT_OK);
     printf("Mozart 545, measures %d-%d: %zu soprano notes\n", annotation.range_first, annotation.range_last, build.input.note_count);
 
     StandardFormPhrases phrases;
     StandardFormSegmentation segmentation;
     StandardFormThemes themes;
     StandardFormMotives motives;
-    assert(standard_form_segment_phrases(&build.input, NULL, form_kernel_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
+    assert(standard_form_segment_phrases(&build.input, NULL, chain_form_boundary_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_segment_ideas(&build.input, &phrases, NULL, &segmentation) == STANDARD_FORM_ANALYSIS_OK);
     assert(standard_form_identify_themes(&build.input, &phrases, &segmentation, NULL, &themes) == STANDARD_FORM_ANALYSIS_OK);
-    assert(standard_form_find_motives(&build.input, &phrases, &segmentation, &themes, NULL, form_kernel_match_windows, NULL,
+    assert(standard_form_find_motives(&build.input, &phrases, &segmentation, &themes, NULL, chain_form_match_windows, NULL,
                                       &motives) == STANDARD_FORM_ANALYSIS_OK);
     printf("  the adapter found %zu motive famil%s\n", motives.family_count, motives.family_count == 1 ? "y" : "ies");
 
@@ -200,7 +202,8 @@ static void test_mozart_545(void) {
     standard_form_themes_destroy(&themes);
     standard_form_segmentation_destroy(&segmentation);
     standard_form_phrases_destroy(&phrases);
-    form_build_destroy(&build);
+    chain_form_input_destroy(&build);
+    hand_cadences_destroy(&hand);
     pipeline_destroy(&p);
 }
 

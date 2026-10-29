@@ -1,24 +1,28 @@
-#define URSATZ_FORM_PIECES_AS_LIBRARY
-#include "framework_v1_chain.h"
-#include "melody_util.h"
-#include "motive_util.h"
-#include "rhythm_util.h"
-#include "schema_util.h"
-#include "texture_util.h"
-
+#include <assert.h>
 #include <math.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include "identity/entity_id.h"
 #include "io/import_notes.h"
 #include "io/midi_importer.h"
+#include "pitch/pitch_numeric_value.h"
+#include "time/meter_map.h"
+#include "time/note_value.h"
+#include "time/time_signature.h"
+#include "time/time_span.h"
 #include "ursatz_chain/analysis_chain.h"
+#include "../../tests/integration/reference_pieces.h"
 
 /*
- * analysis_chain_run against the test glue that ran the chain before it existed (tests/integration/framework_v1_chain.h and the *_util.h
- * helpers). The glue runs one reference piece (Bach 114, Mozart 545, Clementi 36, Field 1 from tests/fixtures) stage by stage; the chain is
- * run from the same file's neutral notes and every stage is compared field by field: segments and members, key regions and changes,
- * chords, Roman numerals, outer voices, cadences, phrases, ideas, themes and expansions, motive families, meter, texture and the melody and
- * schemas of the chain's own inputs. Then a stage subset runs only what it needs. The next branch deletes the glue and keeps these results as
- * fixed expected values.
+ * analysis_chain_run on four reference pieces (Bach 114, Mozart 545, Clementi 36 and Field 1 from tests/fixtures) against fixed expected
+ * values. The values were captured from the chain at the commit where it was proven field by field equal to the test glue that ran the
+ * chain before it existed (B4 of P22); the glue is gone and these are the record. Each stage of a piece is reduced to one digest over its
+ * results (every field the glue comparison checked, doubles rounded to 1e-6, order-free sets sorted) beside the counts that make a
+ * mismatch readable. A change in a digest is a change in the analysis: if it is deliberate, capture the new values in their own commit with
+ * `URSATZ_CHAIN_DUMP=1 test_analysis_chain` (R-015). Then a stage subset runs only what it needs.
  */
 
 #define CHECK(condition)                                                                                                   \
@@ -29,14 +33,101 @@
         }                                                                                                                  \
     } while (0)
 
-/* The chain reads the notes in the order of analysis_note_compare (onset, pitch, id); the glue reads them in the importer's order, which
-   differs among simultaneous notes. Sets are the same, but sums over a segment's members run in another order, so the weights, scores
-   and uncertainties derived from them agree to within rounding. Scores within 1e-9 are tied by definition in the library. */
-#define NEAR(a, b) (fabs((a) - (b)) <= 1e-9)
+/* --- the pieces and their expected values --- */
 
-/* The chain's inputs: the file's notes and key signature events, read once. */
+enum { STAGE_SEGMENTS, STAGE_KEYS, STAGE_CHORDS, STAGE_NUMERALS, STAGE_OUTER, STAGE_CADENCES, STAGE_FORM, STAGE_MOTIVES, STAGE_METER,
+       STAGE_TEXTURE, STAGE_MELODY, STAGE_SCHEMAS, STAGE_VOICE_LEADING, STAGE_COUNT };
+
+static const char *const STAGE_NAMES[STAGE_COUNT] = {"segments", "keys",    "chords", "numerals", "outer voices", "cadences", "form",
+                                                     "motives",  "meter",   "texture", "melody",  "schemas",      "voice leading"};
+
+typedef struct {
+    const char *name;
+    const char *midi;
+    bool three_four; /* Bach 114's file declares 4/4 and the piece is 3/4: a 3/4 map replaces it */
+    int tonic_pitch_class;
+    int first_measure;
+    int last_measure;
+    size_t segments;
+    size_t key_regions;
+    size_t cadences;
+    size_t phrases;
+    uint64_t digest[STAGE_COUNT];
+} Reference;
+
+static const Reference REFERENCES[4] = {
+    {"Bach 114", "Bach 114.mid", true, 7, 1, 32, 155, 5, 3, 3,
+     {0x9a4efa7f407f6ba7ULL, 0xb18c9a8b461e1844ULL, 0xe5a6e8deb5801af1ULL,
+      0x39dd155e733cdf08ULL, 0x7dcbf37f1948fe14ULL, 0xa728a6fe1bd1c868ULL,
+      0x18e33b4d9d30baa5ULL, 0x0f48a6eaf948673fULL, 0xbe420b5fa1e1ecd8ULL,
+      0x6e5efa0dc17f5c39ULL, 0xf0d748eb6b8f18b8ULL, 0x1e722d3fedc9d5ebULL,
+      0x255ca0ef986d4743ULL}},
+    {"Mozart 545", "Mozart 545.mid", false, 0, 1, 146, 606, 27, 14, 22,
+     {0x2338052cadd5e4c3ULL, 0x7c8bd8e3d20546e6ULL, 0xa840dbf30c4c0aaaULL,
+      0x4ff5643bc3ad6daeULL, 0xa39de52139b49bc1ULL, 0x6ea13cfa89f3aa82ULL,
+      0x64b23d2559a9fc24ULL, 0x355ffea9b58ca9f3ULL, 0x4839419f5f8d7ee3ULL,
+      0x7111050c5383e144ULL, 0xa03eecc0ccf05419ULL, 0x57d04173346e440fULL,
+      0x4bc79346862fa8b2ULL}},
+    {"Clementi 36", "Clementi 36.mid", false, 0, 1, 38, 205, 5, 15, 10,
+     {0x8920dda27f6b473bULL, 0xc1a934f0f800f5fbULL, 0xc576064647fc764bULL,
+      0x9d14219700d2a3ddULL, 0x4d10887062cc5a59ULL, 0x5a0d27e8a2bed0a0ULL,
+      0x0594deda7b1f2659ULL, 0x47fe0d7eaf8e51e3ULL, 0xc5b2a82e1e376dc5ULL,
+      0x63f983fedb650d5fULL, 0x56ff4e8423f3e00dULL, 0x5801d2306e9d637bULL,
+      0x2df26bfede4b253eULL}},
+    {"Field 1", "Field 1.mid", false, 3, 1, 16, 62, 1, 3, 5,
+     {0xfe7825f8f4c85a2fULL, 0x12fc762e759cc078ULL, 0x7538c74305fb931eULL,
+      0x511e6e6a1aa3af28ULL, 0xc121b0921a83f0afULL, 0x6abe42c83cb0877cULL,
+      0x2e27d18917bf000fULL, 0x47fe0d7eaf8e51e3ULL, 0xac9d8038f7340eddULL,
+      0x20c7011fc0a70dc0ULL, 0x8a9d8cefede1482bULL, 0xa31e272015f12c43ULL,
+      0xfa9906a586af5c84ULL}},
+};
+
+/* --- digests --- */
+
+typedef struct {
+    uint64_t h;
+} Digest;
+
+static void digest_init(Digest *d) {
+    d->h = 1469598103934665603ULL;
+}
+
+static void digest_bytes(Digest *d, const void *data, size_t size) {
+    const unsigned char *p = (const unsigned char *)data;
+    for (size_t i = 0; i < size; i++) {
+        d->h = (d->h ^ p[i]) * 1099511628211ULL;
+    }
+}
+
+static void digest_int(Digest *d, long long value) {
+    digest_bytes(d, &value, sizeof(value));
+}
+
+/* Doubles agree to within rounding: scores within 1e-9 are tied by definition in the library, so a digest holds 1e-6. */
+static void digest_double(Digest *d, double value) {
+    digest_int(d, llround(value * 1e6));
+}
+
+static void digest_string(Digest *d, const char *text) {
+    digest_bytes(d, text != NULL ? text : "", text != NULL ? strlen(text) + 1 : 1);
+    digest_int(d, text != NULL);
+}
+
+static void digest_time(Digest *d, const MusicalTime *time) {
+    digest_int(d, (long long)musical_time_numerator(time));
+    digest_int(d, (long long)musical_time_denominator(time));
+}
+
+static void digest_span(Digest *d, const TimeSpan *span) {
+    digest_time(d, time_span_start(span));
+    digest_time(d, time_span_end(span));
+}
+
+/* --- the chain's input: a file's notes and key signature events --- */
+
 typedef struct {
     MidiImport import;
+    MeterMap *own;
     AnalysisNote *notes;
     size_t note_count;
     AnalysisKeyEvent *events;
@@ -44,12 +135,28 @@ typedef struct {
     AnalysisNoteSet set;
 } ChainInput;
 
-static void chain_input_init(ChainInput *in, const Chain *glue) {
+static unsigned char *read_file(const char *path, size_t *out_size) {
+    FILE *file = fopen(path, "rb");
+    assert(file != NULL);
+    fseek(file, 0, SEEK_END);
+    long length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    assert(length > 0);
+    unsigned char *data = (unsigned char *)malloc((size_t)length + 1);
+    assert(data != NULL);
+    size_t read_count = fread(data, 1, (size_t)length, file);
+    fclose(file);
+    assert(read_count == (size_t)length);
+    *out_size = (size_t)length;
+    return data;
+}
+
+static void chain_input_init(ChainInput *in, const Reference *ref) {
     memset(in, 0, sizeof(*in));
     char path[1024];
-    snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, glue->fp->piece.midi);
+    snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, ref->midi);
     size_t size = 0;
-    unsigned char *data = pipeline_read_file(path, &size);
+    unsigned char *data = read_file(path, &size);
     assert(midi_importer_import_complete(data, size, &in->import) == MIDI_IMPORT_OK);
     free(data);
     assert(midi_import_analysis_notes(&in->import, &in->notes, &in->note_count));
@@ -61,412 +168,408 @@ static void chain_input_init(ChainInput *in, const Chain *glue) {
         in->events[i].time = event->position;
         assert(analysis_key_from_fifths(event->sharps_flats, KEY_STRUCTURE_MODE_MAJOR, &in->events[i].key));
     }
+    in->own = ref->three_four ? three_four_map() : NULL;
     in->set.notes = in->notes;
     in->set.count = in->note_count;
-    in->set.map = glue->map;
+    in->set.map = in->own != NULL ? in->own : in->import.meter.meter_map;
     assert(analysis_note_set_valid(&in->set));
 }
 
 static void chain_input_destroy(ChainInput *in) {
     free(in->events);
     import_analysis_notes_destroy(in->notes, in->note_count);
+    if (in->own != NULL) {
+        meter_map_destroy(in->own);
+    }
     midi_import_destroy(&in->import);
+}
+
+static AnalysisChainConfig reference_config(const Reference *ref) {
+    AnalysisChainConfig config = analysis_chain_config_default();
+    config.first_measure = ref->first_measure;
+    config.last_measure = ref->last_measure;
+    config.home_key_index = common_practice_key_index_of(ref->tonic_pitch_class, COMMON_PRACTICE_KEY_MAJOR);
+    return config;
 }
 
 /* --- the stages --- */
 
-static void compare_segments(const char *context, const Chain *g, const AnalysisChain *c) {
+static int compare_strings(const void *a, const void *b) {
+    return strcmp(*(const char *const *)a, *(const char *const *)b);
+}
+
+static void digest_segments(Digest *d, const AnalysisChain *c) {
     const ChainSegments *segs = analysis_chain_segments(c);
-    CHECK(segs != NULL && analysis_chain_segment_count(c) == g->count);
-    CHECK(segs->count == g->p.segment_count);
+    digest_int(d, (long long)analysis_chain_segment_count(c));
+    digest_int(d, (long long)segs->count);
     for (size_t s = 0; s < segs->count; s++) {
-        CHECK(strcmp(segs->ids[s], g->p.segment_ids[s]) == 0);
-        CHECK(segs->starts[s] == g->p.starts[s] && segs->ends[s] == g->p.ends[s]);
-        const CommonPracticeSegment *want = &g->p.segments[s];
-        const CommonPracticeSegment *got = &segs->segments[s];
-        CHECK(got->member_count == want->member_count && got->beat == want->beat && strcmp(got->id, want->id) == 0);
-        /* the chain reads the notes sorted by onset, pitch and id, the glue in the importer's order: the members of a segment are
-           the same set */
-        for (size_t j = 0; j < got->member_count; j++) {
-            const CommonPracticeMember *match = NULL;
-            for (size_t k = 0; k < want->member_count && match == NULL; k++) {
-                match = strcmp(got->members[j].note_id, want->members[k].note_id) == 0 ? &want->members[k] : NULL;
-            }
-            CHECK(match != NULL);
-            CHECK(got->members[j].pitch == match->pitch && got->members[j].held == match->held);
-            CHECK(got->members[j].duration == match->duration && got->members[j].onset == match->onset);
-            CHECK(got->members[j].strength == match->strength);
-            CHECK((got->members[j].voice_id == NULL) == (match->voice_id == NULL));
-            CHECK(match->voice_id == NULL || strcmp(got->members[j].voice_id, match->voice_id) == 0);
+        digest_string(d, segs->ids[s]);
+        digest_double(d, segs->starts[s]);
+        digest_double(d, segs->ends[s]);
+        const CommonPracticeSegment *seg = &segs->segments[s];
+        digest_int(d, (long long)seg->member_count);
+        digest_int(d, seg->beat);
+        /* the members of a segment are a set; they are read in the notes' order */
+        const char **ids = calloc(seg->member_count + 1, sizeof(char *));
+        assert(ids != NULL);
+        for (size_t j = 0; j < seg->member_count; j++) {
+            ids[j] = seg->members[j].note_id;
         }
-    }
-}
-
-static void compare_keys(const char *context, const Chain *g, const AnalysisChain *c) {
-    const CommonPracticeKeyRegions *got = analysis_chain_key_regions(c);
-    const CommonPracticeKeyRegions *want = &g->regions;
-    CHECK(got != NULL && got->region_count == want->region_count && got->change_count == want->change_count);
-    for (size_t i = 0; i < got->region_count; i++) {
-        CHECK(got->regions[i].key_index == want->regions[i].key_index);
-        CHECK(got->regions[i].first_measure == want->regions[i].first_measure && got->regions[i].last_measure == want->regions[i].last_measure);
-        CHECK(NEAR(got->regions[i].uncertainty, want->regions[i].uncertainty) && got->regions[i].source == want->regions[i].source);
-        CHECK(time_span_equals(got->regions[i].span, want->regions[i].span));
-    }
-    for (size_t i = 0; i < got->change_count; i++) {
-        CHECK(got->changes[i].from_region == want->changes[i].from_region && got->changes[i].to_region == want->changes[i].to_region);
-        CHECK(got->changes[i].extent == want->changes[i].extent && got->changes[i].is_return == want->changes[i].is_return);
-        CHECK(got->changes[i].cadence_confirmed == want->changes[i].cadence_confirmed);
-        CHECK(got->changes[i].has_pivot == want->changes[i].has_pivot);
-        CHECK(!got->changes[i].has_pivot || got->changes[i].pivot_segment == want->changes[i].pivot_segment);
-    }
-}
-
-static void compare_chords(const char *context, const Chain *g, const AnalysisChain *c) {
-    const CommonPracticeWeightedResult *got = analysis_chain_chords(c);
-    CHECK(got != NULL);
-    for (size_t s = 0; s < g->count; s++) {
-        const CommonPracticeWeightedResult *want = &g->chords[s];
-        CHECK(got[s].matched == want->matched && NEAR(got[s].best_score, want->best_score));
-        CHECK(NEAR(got[s].runner_up_score, want->runner_up_score) && NEAR(got[s].uncertainty, want->uncertainty));
-        CHECK((got[s].best_chord == NULL) == (want->best_chord == NULL));
-        CHECK(want->best_chord == NULL || strcmp(chord_label(got[s].best_chord), chord_label(want->best_chord)) == 0);
-        CHECK(got[s].leftover_count == want->leftover_count);
-        for (size_t k = 0; k < got[s].leftover_count; k++) { /* the leftover tones in member order: the same set */
-            const CommonPracticeLeftoverTone *match = NULL;
-            for (size_t m = 0; m < want->leftover_count && match == NULL; m++) {
-                match = strcmp(got[s].leftover[k].note_id, want->leftover[m].note_id) == 0 ? &want->leftover[m] : NULL;
+        qsort(ids, seg->member_count, sizeof(char *), compare_strings);
+        for (size_t k = 0; k < seg->member_count; k++) {
+            for (size_t j = 0; j < seg->member_count; j++) {
+                if (seg->members[j].note_id != ids[k]) {
+                    continue;
+                }
+                const CommonPracticeMember *m = &seg->members[j];
+                digest_string(d, m->note_id);
+                digest_int(d, m->pitch);
+                digest_int(d, m->held);
+                digest_double(d, m->duration);
+                digest_double(d, m->onset);
+                digest_int(d, m->strength);
+                digest_string(d, m->voice_id);
             }
-            CHECK(match != NULL && got[s].leftover[k].classified == match->classified);
-            CHECK(!match->classified || got[s].leftover[k].tone == match->tone);
         }
+        free(ids);
     }
 }
 
-static void compare_numerals(const char *context, const Chain *g, const AnalysisChain *c) {
+static void digest_keys(Digest *d, const AnalysisChain *c) {
+    const CommonPracticeKeyRegions *keys = analysis_chain_key_regions(c);
+    digest_int(d, (long long)keys->region_count);
+    digest_int(d, (long long)keys->change_count);
+    for (size_t i = 0; i < keys->region_count; i++) {
+        const CommonPracticeKeyRegion *r = &keys->regions[i];
+        digest_int(d, r->key_index);
+        digest_int(d, r->first_measure);
+        digest_int(d, r->last_measure);
+        digest_double(d, r->uncertainty);
+        digest_int(d, r->source);
+        digest_span(d, r->span);
+    }
+    for (size_t i = 0; i < keys->change_count; i++) {
+        const CommonPracticeKeyChange *k = &keys->changes[i];
+        digest_int(d, (long long)k->from_region);
+        digest_int(d, (long long)k->to_region);
+        digest_int(d, k->extent);
+        digest_int(d, k->is_return);
+        digest_int(d, k->cadence_confirmed);
+        digest_int(d, k->has_pivot);
+        digest_int(d, k->has_pivot ? (long long)k->pivot_segment : -1);
+    }
+}
+
+static void digest_chords(Digest *d, const AnalysisChain *c) {
+    const CommonPracticeWeightedResult *chords = analysis_chain_chords(c);
+    for (size_t s = 0; s < analysis_chain_segment_count(c); s++) {
+        const CommonPracticeWeightedResult *r = &chords[s];
+        digest_int(d, r->matched);
+        digest_double(d, r->best_score);
+        digest_double(d, r->runner_up_score);
+        digest_double(d, r->uncertainty);
+        digest_string(d, r->best_chord != NULL ? chord_label(r->best_chord) : NULL);
+        digest_int(d, (long long)r->leftover_count);
+        const char **ids = calloc(r->leftover_count + 1, sizeof(char *));
+        assert(ids != NULL);
+        for (size_t k = 0; k < r->leftover_count; k++) {
+            ids[k] = r->leftover[k].note_id;
+        }
+        qsort(ids, r->leftover_count, sizeof(char *), compare_strings);
+        for (size_t k = 0; k < r->leftover_count; k++) {
+            for (size_t m = 0; m < r->leftover_count; m++) {
+                if (r->leftover[m].note_id != ids[k]) {
+                    continue;
+                }
+                digest_string(d, r->leftover[m].note_id);
+                digest_int(d, r->leftover[m].classified);
+                digest_int(d, r->leftover[m].classified ? (long long)r->leftover[m].tone : -1);
+            }
+        }
+        free(ids);
+    }
+}
+
+static void digest_numerals(Digest *d, const AnalysisChain *c) {
     const StandardTonalityChordInput *inputs = analysis_chain_chord_inputs(c);
     const StandardTonalityRomanResult *romans = analysis_chain_numerals(c);
-    CHECK(inputs != NULL && romans != NULL);
-    for (size_t s = 0; s < g->count; s++) {
-        const StandardTonalityChordInput *want_input = &g->tonal_inputs[s];
-        CHECK(inputs[s].has_numeral == want_input->has_numeral && inputs[s].root_pitch_class == want_input->root_pitch_class);
-        CHECK(inputs[s].bass_pitch_class == want_input->bass_pitch_class && inputs[s].interval_count == want_input->interval_count);
-        CHECK(memcmp(inputs[s].intervals, want_input->intervals, sizeof(inputs[s].intervals)) == 0);
-        CHECK(inputs[s].tonic_pitch_class == want_input->tonic_pitch_class && inputs[s].mode == want_input->mode);
-        CHECK(inputs[s].region_index == want_input->region_index && NEAR(inputs[s].chord_uncertainty, want_input->chord_uncertainty));
-        CHECK(NEAR(inputs[s].key_uncertainty, want_input->key_uncertainty));
-        const StandardTonalityRomanResult *want = &g->romans[s];
-        CHECK(romans[s].has_numeral == want->has_numeral && NEAR(romans[s].uncertainty, want->uncertainty));
-        if (want->has_numeral) {
-            CHECK(strcmp(romans[s].claim.label, want->claim.label) == 0);
-            CHECK(memcmp(&romans[s].claim, &want->claim, sizeof(want->claim)) == 0);
-            CHECK(romans[s].deceptive == want->deceptive);
+    for (size_t s = 0; s < analysis_chain_segment_count(c); s++) {
+        digest_int(d, inputs[s].has_numeral);
+        digest_int(d, inputs[s].root_pitch_class);
+        digest_int(d, inputs[s].bass_pitch_class);
+        digest_int(d, (long long)inputs[s].interval_count);
+        digest_bytes(d, inputs[s].intervals, sizeof(inputs[s].intervals));
+        digest_int(d, inputs[s].tonic_pitch_class);
+        digest_int(d, inputs[s].mode);
+        digest_int(d, (long long)inputs[s].region_index);
+        digest_double(d, inputs[s].chord_uncertainty);
+        digest_double(d, inputs[s].key_uncertainty);
+        digest_int(d, romans[s].has_numeral);
+        digest_double(d, romans[s].uncertainty);
+        if (romans[s].has_numeral) {
+            digest_string(d, romans[s].claim.label);
+            digest_bytes(d, &romans[s].claim, sizeof(romans[s].claim));
+            digest_int(d, romans[s].deceptive);
         }
     }
 }
 
-static void compare_entries(const char *context, const OuterVoiceEntry *got, const OuterVoiceEntry *want, size_t count) {
+static void digest_entries(Digest *d, const OuterVoiceEntry *entries, size_t count) {
     for (size_t s = 0; s < count; s++) {
-        CHECK(got[s].present == want[s].present && got[s].bridged == want[s].bridged && got[s].guarded == want[s].guarded);
-        if (want[s].present) {
-            CHECK(strcmp(entity_id_value(got[s].note_id), entity_id_value(want[s].note_id)) == 0);
-            CHECK(pitch_numeric_value_position_numerator(got[s].pitch) == pitch_numeric_value_position_numerator(want[s].pitch));
+        digest_int(d, entries[s].present);
+        digest_int(d, entries[s].bridged);
+        digest_int(d, entries[s].guarded);
+        if (entries[s].present) {
+            digest_string(d, entity_id_value(entries[s].note_id));
+            digest_int(d, (long long)pitch_numeric_value_position_numerator(entries[s].pitch));
         }
-        CHECK(time_span_equals(got[s].span, want[s].span));
+        digest_span(d, entries[s].span);
     }
 }
 
-static void compare_outer_voices(const char *context, const Chain *g, const AnalysisChain *c) {
+static void digest_outer_voices(Digest *d, const AnalysisChain *c) {
     const OuterVoiceLines *lines = analysis_chain_outer_voices(c);
-    CHECK(lines != NULL && lines->count == g->lines.count && lines->count == g->p.voice_sonorities.count);
-    compare_entries(context, lines->soprano, g->lines.soprano, lines->count);
-    compare_entries(context, lines->bass, g->lines.bass, lines->count);
+    digest_int(d, (long long)lines->count);
+    digest_entries(d, lines->soprano, lines->count);
+    digest_entries(d, lines->bass, lines->count);
 }
 
-static void compare_cadences(const char *context, const Chain *g, const AnalysisChain *c) {
-    const HarmonyCadences *got = analysis_chain_cadences(c);
-    CHECK(got != NULL && got->count == g->cadences.count);
-    for (size_t k = 0; k < got->count; k++) {
-        const HarmonyCadenceResult *a = &got->items[k];
-        const HarmonyCadenceResult *b = &g->cadences.items[k];
-        CHECK(a->type == b->type && a->dominant_first == b->dominant_first && a->dominant_last == b->dominant_last);
-        CHECK(a->has_six_four == b->has_six_four && a->arrival_first == b->arrival_first && a->arrival_last == b->arrival_last);
-        CHECK(a->soprano_degree == b->soprano_degree && a->post_cadential == b->post_cadential);
-        CHECK(a->arrival_beat_strength == b->arrival_beat_strength && NEAR(a->uncertainty, b->uncertainty) && a->share == b->share);
-        CHECK(time_span_equals(a->span, b->span));
-        CHECK(a->alternative.share == b->alternative.share && (a->alternative.interpretation == NULL) == (b->alternative.interpretation == NULL));
+static void digest_cadences(Digest *d, const AnalysisChain *c) {
+    const HarmonyCadences *cadences = analysis_chain_cadences(c);
+    digest_int(d, (long long)cadences->count);
+    for (size_t k = 0; k < cadences->count; k++) {
+        const HarmonyCadenceResult *a = &cadences->items[k];
+        digest_int(d, a->type);
+        digest_int(d, (long long)a->dominant_first);
+        digest_int(d, (long long)a->dominant_last);
+        digest_int(d, a->has_six_four);
+        digest_int(d, (long long)a->arrival_first);
+        digest_int(d, (long long)a->arrival_last);
+        digest_int(d, a->soprano_degree);
+        digest_int(d, a->post_cadential);
+        digest_int(d, a->arrival_beat_strength);
+        digest_double(d, a->uncertainty);
+        digest_int(d, a->share);
+        digest_span(d, a->span);
+        digest_int(d, a->alternative.share);
+        digest_int(d, a->alternative.interpretation != NULL);
     }
 }
 
-static void compare_form(const char *context, const FormAnalysis *want, const StandardFormPhrases *phrases,
-                         const StandardFormSegmentation *ideas, const StandardFormThemes *themes,
-                         const StandardFormExpansions *expansions) {
-    CHECK(phrases != NULL && phrases->count == want->phrases.count);
+static void digest_form(Digest *d, const AnalysisChain *c) {
+    const StandardFormPhrases *phrases = analysis_chain_phrases(c);
+    const StandardFormSegmentation *ideas = analysis_chain_ideas(c);
+    const StandardFormThemes *themes = analysis_chain_themes(c);
+    const StandardFormExpansions *expansions = analysis_chain_expansions(c);
+    digest_int(d, (long long)phrases->count);
     for (size_t i = 0; i < phrases->count; i++) {
-        CHECK(memcmp(&phrases->items[i].claim, &want->phrases.items[i].claim, sizeof(StandardFormPhraseClaim)) == 0);
-        CHECK(NEAR(phrases->items[i].uncertainty, want->phrases.items[i].uncertainty));
-        CHECK(time_span_equals(phrases->items[i].span, want->phrases.items[i].span));
+        digest_bytes(d, &phrases->items[i].claim, sizeof(StandardFormPhraseClaim));
+        digest_double(d, phrases->items[i].uncertainty);
+        digest_span(d, phrases->items[i].span);
     }
-    CHECK(ideas != NULL && ideas->idea_count == want->segmentation.idea_count && ideas->subphrase_count == want->segmentation.subphrase_count);
+    digest_int(d, (long long)ideas->idea_count);
+    digest_int(d, (long long)ideas->subphrase_count);
     for (size_t i = 0; i < ideas->idea_count; i++) {
-        CHECK(memcmp(&ideas->ideas[i].claim, &want->segmentation.ideas[i].claim, sizeof(StandardFormIdeaClaim)) == 0);
-        CHECK(NEAR(ideas->ideas[i].uncertainty, want->segmentation.ideas[i].uncertainty));
+        digest_bytes(d, &ideas->ideas[i].claim, sizeof(StandardFormIdeaClaim));
+        digest_double(d, ideas->ideas[i].uncertainty);
     }
     for (size_t i = 0; i < ideas->subphrase_count; i++) {
-        CHECK(memcmp(&ideas->subphrases[i].claim, &want->segmentation.subphrases[i].claim, sizeof(StandardFormSubphraseClaim)) == 0);
+        digest_bytes(d, &ideas->subphrases[i].claim, sizeof(StandardFormSubphraseClaim));
     }
-    CHECK(themes != NULL && themes->count == want->themes.count);
+    digest_int(d, (long long)themes->count);
     for (size_t i = 0; i < themes->count; i++) {
-        CHECK(memcmp(&themes->items[i].claim, &want->themes.items[i].claim, sizeof(StandardFormThemeClaim)) == 0);
-        CHECK(NEAR(themes->items[i].uncertainty, want->themes.items[i].uncertainty));
+        digest_bytes(d, &themes->items[i].claim, sizeof(StandardFormThemeClaim));
+        digest_double(d, themes->items[i].uncertainty);
     }
-    CHECK(expansions != NULL && expansions->count == want->expansions.count);
+    digest_int(d, (long long)expansions->count);
     for (size_t i = 0; i < expansions->count; i++) {
-        CHECK(memcmp(&expansions->items[i].claim, &want->expansions.items[i].claim, sizeof(StandardFormExpansionClaim)) == 0);
-        CHECK(NEAR(expansions->items[i].uncertainty, want->expansions.items[i].uncertainty));
+        digest_bytes(d, &expansions->items[i].claim, sizeof(StandardFormExpansionClaim));
+        digest_double(d, expansions->items[i].uncertainty);
     }
 }
 
-/* The motive families: the glue builds the note-level soprano with the chain's cadences and runs the form adapter on it. */
-static void compare_motives(const char *context, const Chain *g, const AnalysisChain *c) {
-    int home = g->x.home_key;
-    FormBuild build;
-    form_build_init(&build, g->map);
-    motive_build_soprano(&build, &g->p, g->x.keys_first, g->x.keys_last, common_practice_key_index_tonic(home),
-                         common_practice_key_index_mode(home));
-    add_chain_cadences(&build, &g->p, &g->cadences);
-    assert(standard_form_input_finish(&build.input) == STANDARD_FORM_ANALYSIS_OK);
-    StandardFormPhrases phrases;
-    StandardFormSegmentation ideas;
-    StandardFormThemes themes;
-    StandardFormMotives want;
-    assert(standard_form_segment_phrases(&build.input, NULL, form_kernel_detect, NULL, &phrases) == STANDARD_FORM_ANALYSIS_OK);
-    assert(standard_form_segment_ideas(&build.input, &phrases, NULL, &ideas) == STANDARD_FORM_ANALYSIS_OK);
-    assert(standard_form_identify_themes(&build.input, &phrases, &ideas, NULL, &themes) == STANDARD_FORM_ANALYSIS_OK);
-    assert(standard_form_find_motives(&build.input, &phrases, &ideas, &themes, NULL, form_kernel_match_windows, NULL, &want) ==
-           STANDARD_FORM_ANALYSIS_OK);
-
-    const StandardFormMotives *got = analysis_chain_motives(c);
-    CHECK(got != NULL && got->family_count == want.family_count);
-    for (size_t f = 0; f < got->family_count; f++) {
-        const StandardFormMotiveFamily *a = &got->families[f];
-        const StandardFormMotiveFamily *b = &want.families[f];
-        CHECK(memcmp(&a->claim, &b->claim, sizeof(a->claim)) == 0 && a->occurrence_count == b->occurrence_count);
-        for (size_t o = 0; o < a->occurrence_count; o++) {
-            CHECK(memcmp(&a->occurrences[o].claim, &b->occurrences[o].claim, sizeof(a->occurrences[o].claim)) == 0);
-            CHECK(NEAR(a->occurrences[o].uncertainty, b->occurrences[o].uncertainty));
+static void digest_motives(Digest *d, const AnalysisChain *c) {
+    const StandardFormMotives *motives = analysis_chain_motives(c);
+    digest_int(d, (long long)motives->family_count);
+    for (size_t f = 0; f < motives->family_count; f++) {
+        const StandardFormMotiveFamily *family = &motives->families[f];
+        digest_bytes(d, &family->claim, sizeof(family->claim));
+        digest_int(d, (long long)family->occurrence_count);
+        for (size_t o = 0; o < family->occurrence_count; o++) {
+            digest_bytes(d, &family->occurrences[o].claim, sizeof(family->occurrences[o].claim));
+            digest_double(d, family->occurrences[o].uncertainty);
         }
     }
-    printf("  %s: %zu motive families equal\n", context, got->family_count);
-    standard_form_motives_destroy(&want);
-    standard_form_themes_destroy(&themes);
-    standard_form_segmentation_destroy(&ideas);
-    standard_form_phrases_destroy(&phrases);
-    form_build_destroy(&build);
 }
 
-/* Meter: the glue's rhythm input from the same notes, outer lines, chord labels and the form adapter's phrases. */
-static void compare_meter(const char *context, const Chain *g, const AnalysisChain *c) {
-    const char **labels = calloc(g->p.segment_count + 1, sizeof(char *));
-    assert(labels != NULL);
-    for (size_t s = 0; s < g->count; s++) {
-        labels[s] = g->chords[s].matched ? chord_label(g->chords[s].best_chord) : NULL;
+static void digest_meter(Digest *d, const AnalysisChain *c) {
+    const AnalysisChainMeter *meter = analysis_chain_meter(c);
+    digest_int(d, (long long)meter->syncopations.count);
+    digest_int(d, (long long)meter->hemiolas.count);
+    /* simultaneous notes come in another order: the syncopations are a set, ordered by note */
+    const char **ids = calloc(meter->syncopations.count + 1, sizeof(char *));
+    assert(ids != NULL);
+    for (size_t i = 0; i < meter->syncopations.count; i++) {
+        ids[i] = meter->syncopations.items[i].claim.note_id;
     }
-    RhythmBuild rb;
-    rhythm_build_init(&rb, g->map);
-    rhythm_build_notes(&rb, &g->p, &g->lines, g->x.keys_first, g->x.keys_last);
-    rhythm_build_chord_changes(&rb, &g->p, labels, g->x.keys_first, g->x.keys_last);
-    rhythm_build_detected_phrases(&rb, &g->build.input, &g->form.phrases, &g->form.expansions);
-    free(labels);
-    StandardMeterSyncopations sync = {NULL, 0};
-    StandardMeterHemiolas hemi = {NULL, 0};
-    StandardMeterHypermeter hyper;
-    StandardMeterDensities dens = {NULL, 0};
-    memset(&hyper, 0, sizeof(hyper));
-    assert(standard_meter_find_syncopations(&rb.input, NULL, &sync) == STANDARD_METER_ANALYSIS_OK);
-    assert(standard_meter_find_hemiolas(&rb.input, NULL, &hemi) == STANDARD_METER_ANALYSIS_OK);
-    assert(standard_meter_find_hypermeter(&rb.input, NULL, &hyper) == STANDARD_METER_ANALYSIS_OK);
-    assert(standard_meter_find_densities(&rb.input, NULL, &dens) == STANDARD_METER_ANALYSIS_OK);
-
-    const AnalysisChainMeter *got = analysis_chain_meter(c);
-    CHECK(got != NULL && got->syncopations.count == sync.count && got->hemiolas.count == hemi.count);
-    for (size_t i = 0; i < sync.count; i++) { /* simultaneous notes come in another order: matched by note */
-        const StandardMeterSyncopation *a = &got->syncopations.items[i];
-        const StandardMeterSyncopation *b = NULL;
-        for (size_t k = 0; k < sync.count && b == NULL; k++) {
-            b = strcmp(a->claim.note_id, sync.items[k].claim.note_id) == 0 ? &sync.items[k] : NULL;
+    qsort(ids, meter->syncopations.count, sizeof(char *), compare_strings);
+    for (size_t k = 0; k < meter->syncopations.count; k++) {
+        for (size_t i = 0; i < meter->syncopations.count; i++) {
+            const StandardMeterSyncopation *a = &meter->syncopations.items[i];
+            if (a->claim.note_id != ids[k]) {
+                continue;
+            }
+            digest_string(d, a->claim.note_id);
+            digest_int(d, a->claim.line);
+            digest_int(d, a->claim.measure);
+            digest_int(d, a->claim.beat);
+            digest_int(d, a->claim.attack_level);
+            digest_int(d, a->claim.through_level);
+            digest_int(d, a->claim.strength);
+            digest_int(d, a->claim.through_measure);
+            digest_int(d, a->claim.through_beat);
+            digest_double(d, a->uncertainty);
         }
-        CHECK(b != NULL && a->claim.line == b->claim.line && a->claim.measure == b->claim.measure && a->claim.beat == b->claim.beat);
-        CHECK(a->claim.attack_level == b->claim.attack_level && a->claim.through_level == b->claim.through_level);
-        CHECK(a->claim.strength == b->claim.strength && a->claim.through_measure == b->claim.through_measure);
-        CHECK(a->claim.through_beat == b->claim.through_beat && NEAR(a->uncertainty, b->uncertainty));
     }
-    for (size_t i = 0; i < hemi.count; i++) {
-        CHECK(memcmp(&got->hemiolas.items[i].claim, &hemi.items[i].claim, sizeof(hemi.items[i].claim)) == 0);
+    free(ids);
+    for (size_t i = 0; i < meter->hemiolas.count; i++) {
+        digest_bytes(d, &meter->hemiolas.items[i].claim, sizeof(meter->hemiolas.items[i].claim));
     }
-    CHECK(got->hypermeter.phrase_count == hyper.phrase_count && got->hypermeter.hypermeasure_count == hyper.hypermeasure_count);
-    CHECK(got->hypermeter.reinterpretation_count == hyper.reinterpretation_count);
-    for (size_t i = 0; i < hyper.hypermeasure_count; i++) {
-        CHECK(memcmp(&got->hypermeter.hypermeasures[i].claim, &hyper.hypermeasures[i].claim, sizeof(hyper.hypermeasures[i].claim)) == 0);
+    digest_int(d, (long long)meter->hypermeter.phrase_count);
+    digest_int(d, (long long)meter->hypermeter.hypermeasure_count);
+    digest_int(d, (long long)meter->hypermeter.reinterpretation_count);
+    for (size_t i = 0; i < meter->hypermeter.hypermeasure_count; i++) {
+        digest_bytes(d, &meter->hypermeter.hypermeasures[i].claim, sizeof(meter->hypermeter.hypermeasures[i].claim));
     }
-    CHECK(got->densities.count == dens.count);
-    for (size_t i = 0; i < dens.count; i++) {
-        CHECK(memcmp(&got->densities.items[i].claim, &dens.items[i].claim, sizeof(dens.items[i].claim)) == 0);
+    digest_int(d, (long long)meter->densities.count);
+    for (size_t i = 0; i < meter->densities.count; i++) {
+        digest_bytes(d, &meter->densities.items[i].claim, sizeof(meter->densities.items[i].claim));
     }
-    printf("  %s: meter equal (%zu syncopations, %zu hemiolas, %zu hypermeasures)\n", context, sync.count, hemi.count,
-           hyper.hypermeasure_count);
-    standard_meter_densities_destroy(&dens);
-    standard_meter_hypermeter_destroy(&hyper);
-    standard_meter_hemiolas_destroy(&hemi);
-    standard_meter_syncopations_destroy(&sync);
-    rhythm_build_destroy(&rb);
 }
 
-/* Texture: the glue separates the voices per MIDI track, reading the track of each note back from the file. */
-static void compare_texture(const char *context, const Chain *g, const AnalysisChain *c) {
-    char path[1024];
-    snprintf(path, sizeof(path), "%s/%s", URSATZ_CORPUS_DIR, g->fp->piece.midi);
-    TextureBuild tb;
-    texture_build_from_import(&tb, &g->p, g->map, path);
-    StandardTextureAnalysis want;
-    memset(&want, 0, sizeof(want));
-    assert(standard_texture_analyze(&tb.input, NULL, &want) == STANDARD_TEXTURE_ANALYSIS_OK);
-
-    const StandardTextureAnalysis *got = analysis_chain_texture(c);
-    CHECK(got != NULL && got->windows.count == want.windows.count && got->passage_count == want.passage_count);
-    CHECK(got->change_count == want.change_count);
-    /* The voice separation reads simultaneous notes in the order it is given them, and the chain's order (onset, pitch, id) is not the
-       importer's: a few notes (10 of 430 in Bach 114) take another voice or confidence. So the textures, passages and changes are compared,
-       and the numbers that carry a voice confidence are not. */
-    for (size_t w = 0; w < want.windows.count; w++) {
-        const StandardTextureWindowFeatures *a = &got->windows.items[w];
-        const StandardTextureWindowFeatures *b = &want.windows.items[w];
-        CHECK(a->measure == b->measure && a->events == b->events && a->attacks == b->attacks);
-        const StandardTextureWindowClass *ca = &got->classes[w];
-        const StandardTextureWindowClass *cb = &want.classes[w];
-        CHECK(ca->has_texture == cb->has_texture && (!cb->has_texture || ca->texture == cb->texture));
-        CHECK(got->window_texture[w] == want.window_texture[w]);
+/* The voice separation reads simultaneous notes in the order it is given them, and the chain's order (onset, pitch, id) is not the
+   importer's order the numbers were first compared in: the digest holds the textures, passages and changes, not the numbers that carry a
+   voice confidence. */
+static void digest_texture(Digest *d, const AnalysisChain *c) {
+    const StandardTextureAnalysis *texture = analysis_chain_texture(c);
+    digest_int(d, (long long)texture->windows.count);
+    digest_int(d, (long long)texture->passage_count);
+    digest_int(d, (long long)texture->change_count);
+    for (size_t w = 0; w < texture->windows.count; w++) {
+        const StandardTextureWindowFeatures *a = &texture->windows.items[w];
+        digest_int(d, a->measure);
+        digest_int(d, (long long)a->events);
+        digest_int(d, (long long)a->attacks);
+        digest_int(d, texture->classes[w].has_texture);
+        digest_int(d, texture->classes[w].has_texture ? (long long)texture->classes[w].texture : -1);
+        digest_int(d, texture->window_texture[w]);
     }
-    for (size_t i = 0; i < want.passage_count; i++) {
-        const StandardTexturePassageClaim *a = &got->passages[i].claim;
-        const StandardTexturePassageClaim *b = &want.passages[i].claim;
-        CHECK(a->index == b->index && a->first_measure == b->first_measure && a->last_measure == b->last_measure);
-        CHECK(a->texture == b->texture && a->category == b->category && a->windows == b->windows);
-        CHECK(a->unclassified_windows == b->unclassified_windows);
+    for (size_t i = 0; i < texture->passage_count; i++) {
+        const StandardTexturePassageClaim *a = &texture->passages[i].claim;
+        digest_int(d, (long long)a->index);
+        digest_int(d, a->first_measure);
+        digest_int(d, a->last_measure);
+        digest_int(d, a->texture);
+        digest_int(d, a->category);
+        digest_int(d, (long long)a->windows);
+        digest_int(d, (long long)a->unclassified_windows);
     }
-    for (size_t i = 0; i < want.change_count; i++) {
-        const StandardTextureChangeClaim *a = &got->changes[i].claim;
-        const StandardTextureChangeClaim *b = &want.changes[i].claim;
-        CHECK(a->from == b->from && a->to == b->to && a->boundary_measure == b->boundary_measure);
-        CHECK(a->from_texture == b->from_texture && a->to_texture == b->to_texture && a->category_changed == b->category_changed);
+    for (size_t i = 0; i < texture->change_count; i++) {
+        const StandardTextureChangeClaim *a = &texture->changes[i].claim;
+        digest_int(d, (long long)a->from);
+        digest_int(d, (long long)a->to);
+        digest_int(d, a->boundary_measure);
+        digest_int(d, a->from_texture);
+        digest_int(d, a->to_texture);
+        digest_int(d, a->category_changed);
     }
-    printf("  %s: texture equal (%zu windows, %zu passages)\n", context, want.windows.count, want.passage_count);
-    standard_texture_analysis_destroy(&want);
-    texture_build_destroy(&tb);
 }
 
-/* Melody: the glue's soprano melody line over the scope's segments, and the intervals and summaries of the one span. */
-static void compare_melody(const char *context, const Chain *g, const AnalysisChain *c) {
-    int home = g->x.home_key;
-    long limit = g->count < g->p.segment_count ? (long)(g->p.starts[g->count] * 1536.0 + 0.5) : 0x7fffffff;
-    CommonPracticeWeightedResults results = {g->chords, g->count};
-    MelodyBuild want;
-    melody_build_from_line(&g->p, g->lines.soprano, &results, common_practice_key_index_tonic(home),
-                           common_practice_key_index_mode(home), limit, &want);
-    const AnalysisChainMelody *got = analysis_chain_melody(c);
-    CHECK(got != NULL && got->line.line.count == want.line.count);
-    for (size_t i = 0; i < want.line.count; i++) {
-        const StandardCounterpointMelodyNote *a = &got->line.line.notes[i];
-        const StandardCounterpointMelodyNote *b = &want.line.notes[i];
-        CHECK(a->present == b->present && got->line.segment[i] == want.segment[i]);
-        if (!b->present) {
+static void digest_melody(Digest *d, const AnalysisChain *c) {
+    const AnalysisChainMelody *melody = analysis_chain_melody(c);
+    digest_int(d, (long long)melody->line.line.count);
+    for (size_t i = 0; i < melody->line.line.count; i++) {
+        const StandardCounterpointMelodyNote *a = &melody->line.line.notes[i];
+        digest_int(d, a->present);
+        digest_int(d, (long long)melody->line.segment[i]);
+        if (!a->present) {
             continue;
         }
-        CHECK(strcmp(a->note_id, b->note_id) == 0 && a->degree == b->degree && a->alteration == b->alteration);
-        CHECK(a->has_strength == b->has_strength && a->strength == b->strength && a->nct == b->nct);
-        CHECK(a->nct != STANDARD_COUNTERPOINT_NCT_NON_CHORD_TONE || a->nct_type == b->nct_type);
-        CHECK(pitch_numeric_value_position_numerator(a->pitch) == pitch_numeric_value_position_numerator(b->pitch));
+        digest_string(d, a->note_id);
+        digest_int(d, a->degree);
+        digest_int(d, a->alteration);
+        digest_int(d, a->has_strength);
+        digest_int(d, a->strength);
+        digest_int(d, a->nct);
+        digest_int(d, a->nct == STANDARD_COUNTERPOINT_NCT_NON_CHORD_TONE ? (long long)a->nct_type : -1);
+        digest_int(d, (long long)pitch_numeric_value_position_numerator(a->pitch));
     }
-    StandardCounterpointMelodySpan span = {"line", 0, want.line.count - 1};
-    StandardCounterpointMelodicIntervals intervals;
-    StandardCounterpointContourSummaries summaries;
-    StandardCounterpointNctCountList counts;
-    assert(standard_counterpoint_melody_intervals(&want.line, NULL, &intervals) == STANDARD_COUNTERPOINT_MELODY_OK);
-    assert(standard_counterpoint_melody_contour_summaries(&want.line, &intervals, &span, 1, &summaries) ==
-           STANDARD_COUNTERPOINT_MELODY_OK);
-    assert(standard_counterpoint_melody_nct_counts(&want.line, &span, 1, &counts) == STANDARD_COUNTERPOINT_MELODY_OK);
-    CHECK(got->intervals.count == intervals.count && got->summaries.count == summaries.count && got->counts.count == counts.count);
-    for (size_t i = 0; i < intervals.count; i++) {
-        CHECK(memcmp(&got->intervals.items[i].claim, &intervals.items[i].claim, sizeof(intervals.items[i].claim)) == 0);
-        CHECK(NEAR(got->intervals.items[i].uncertainty, intervals.items[i].uncertainty));
+    digest_int(d, (long long)melody->intervals.count);
+    digest_int(d, (long long)melody->summaries.count);
+    digest_int(d, (long long)melody->counts.count);
+    for (size_t i = 0; i < melody->intervals.count; i++) {
+        digest_bytes(d, &melody->intervals.items[i].claim, sizeof(melody->intervals.items[i].claim));
+        digest_double(d, melody->intervals.items[i].uncertainty);
     }
-    for (size_t i = 0; i < summaries.count; i++) {
-        CHECK(memcmp(&got->summaries.items[i].claim, &summaries.items[i].claim, sizeof(summaries.items[i].claim)) == 0);
+    for (size_t i = 0; i < melody->summaries.count; i++) {
+        digest_bytes(d, &melody->summaries.items[i].claim, sizeof(melody->summaries.items[i].claim));
     }
-    printf("  %s: melody equal (%zu notes, %zu intervals)\n", context, want.line.count, intervals.count);
-    standard_counterpoint_nct_count_list_destroy(&counts);
-    standard_counterpoint_contour_summaries_destroy(&summaries);
-    standard_counterpoint_melodic_intervals_destroy(&intervals);
-    melody_build_destroy(&want);
 }
 
-/* Schemas and sequences from the galant segments of the chain's keys, numerals and outer lines. */
-static void compare_schemas(const char *context, const Chain *g, const AnalysisChain *c) {
-    int tonic_pc[g->count];
-    bool minor[g->count];
-    for (size_t s = 0; s < g->count; s++) {
-        tonic_pc[s] = g->tonal_inputs[s].tonic_pitch_class;
-        minor[s] = g->tonal_inputs[s].mode == STANDARD_TONALITY_ROMAN_KEY_MINOR;
+static void digest_schemas(Digest *d, const AnalysisChain *c) {
+    const GalantSchemaMatches *schemas = analysis_chain_schemas(c);
+    const ScaleSequenceMatches *sequences = analysis_chain_sequences(c);
+    digest_int(d, (long long)schemas->count);
+    digest_int(d, (long long)sequences->count);
+    for (size_t i = 0; i < schemas->count; i++) {
+        digest_bytes(d, &schemas->items[i].claim, sizeof(schemas->items[i].claim));
+        digest_double(d, schemas->items[i].uncertainty);
     }
-    SchemaBuild sb;
-    schema_build_init(&sb);
-    schema_build_from_chain(&sb, &g->p, &g->lines, g->map, common_practice_key_index_tonic(g->x.home_key), tonic_pc, minor, g->romans,
-                            g->count);
-    GalantSchemaMatches schemas = {NULL, 0};
-    ScaleSequenceMatches sequences = {NULL, 0};
-    assert(galant_schema_match(&sb.list, NULL, &schemas) == GALANT_ANALYSIS_OK);
-    assert(scale_sequence_detect(&sb.list, NULL, &sequences) == GALANT_ANALYSIS_OK);
-
-    const GalantSchemaMatches *got_schemas = analysis_chain_schemas(c);
-    const ScaleSequenceMatches *got_sequences = analysis_chain_sequences(c);
-    CHECK(got_schemas != NULL && got_sequences != NULL);
-    CHECK(got_schemas->count == schemas.count && got_sequences->count == sequences.count);
-    for (size_t i = 0; i < schemas.count; i++) {
-        CHECK(memcmp(&got_schemas->items[i].claim, &schemas.items[i].claim, sizeof(schemas.items[i].claim)) == 0);
-        CHECK(NEAR(got_schemas->items[i].uncertainty, schemas.items[i].uncertainty));
+    for (size_t i = 0; i < sequences->count; i++) {
+        digest_bytes(d, &sequences->items[i].claim, sizeof(sequences->items[i].claim));
     }
-    for (size_t i = 0; i < sequences.count; i++) {
-        CHECK(memcmp(&got_sequences->items[i].claim, &sequences.items[i].claim, sizeof(sequences.items[i].claim)) == 0);
-    }
-    printf("  %s: %zu schemas, %zu sequences equal\n", context, schemas.count, sequences.count);
-    scale_sequence_matches_destroy(&sequences);
-    galant_schema_matches_destroy(&schemas);
-    schema_build_destroy(&sb);
 }
 
-/* The voice-leading stage has no real-piece glue (the glue builds hand-labelled fixtures): it is checked for its shape. */
-static void check_voice_leading(const char *context, const Chain *g, const AnalysisChain *c) {
+/* The voice-leading stage is held to its shape and its counts. */
+static void digest_voice_leading(Digest *d, const AnalysisChain *c) {
     const AnalysisChainVoiceLeading *vl = analysis_chain_voice_leading(c);
+    digest_int(d, (long long)vl->voice_count);
+    digest_int(d, (long long)vl->motions.count);
+    digest_int(d, (long long)vl->perfects.count);
+    digest_int(d, (long long)vl->resolutions.count);
+}
+
+static void check_voice_leading(const char *context, const AnalysisChain *c) {
+    const AnalysisChainVoiceLeading *vl = analysis_chain_voice_leading(c);
+    size_t count = analysis_chain_segment_count(c);
     CHECK(vl != NULL && vl->voice_count >= 2 && vl->voice_count <= 8);
     CHECK(vl->motions.count > 0);
     for (size_t i = 0; i < vl->motions.count; i++) {
-        CHECK(vl->motions.items[i].segment_to < g->count);
+        CHECK(vl->motions.items[i].segment_to < count);
     }
     for (size_t i = 0; i < vl->perfects.count; i++) {
-        CHECK(vl->perfects.items[i].segment_to < g->count && vl->perfects.items[i].upper_voice < vl->perfects.items[i].lower_voice);
+        CHECK(vl->perfects.items[i].segment_to < count && vl->perfects.items[i].upper_voice < vl->perfects.items[i].lower_voice);
     }
     for (size_t i = 0; i < vl->resolutions.count; i++) {
-        CHECK(vl->resolutions.items[i].segment_to < g->count && vl->resolutions.items[i].voice < vl->voice_count);
+        CHECK(vl->resolutions.items[i].segment_to < count && vl->resolutions.items[i].voice < vl->voice_count);
     }
-    printf("  %s: voice leading %zu voices, %zu motions, %zu perfects, %zu resolutions\n", context, vl->voice_count, vl->motions.count,
-           vl->perfects.count, vl->resolutions.count);
+}
+
+typedef void (*DigestFn)(Digest *, const AnalysisChain *);
+static const DigestFn DIGESTS[STAGE_COUNT] = {digest_segments, digest_keys,    digest_chords,  digest_numerals, digest_outer_voices,
+                                              digest_cadences, digest_form,    digest_motives, digest_meter,    digest_texture,
+                                              digest_melody,   digest_schemas, digest_voice_leading};
+
+static uint64_t stage_digest(int stage, const AnalysisChain *c) {
+    Digest d;
+    digest_init(&d);
+    DIGESTS[stage](&d, c);
+    return d.h;
 }
 
 /* A run of a subset of the stages gives the stages asked for and what they need, and nothing else. */
-static void check_subsets(const char *context, ChainInput *input, const Chain *g, const AnalysisChain *full) {
-    AnalysisChainConfig config = analysis_chain_config_default();
-    config.first_measure = g->x.keys_first;
-    config.last_measure = g->x.keys_last;
-    config.home_key_index = g->x.home_key;
+static void check_subsets(const char *context, ChainInput *input, const Reference *ref, const AnalysisChain *full) {
+    AnalysisChainConfig config = reference_config(ref);
 
     config.stages = ANALYSIS_CHAIN_STAGE_CADENCES;
     AnalysisChain *cadences = NULL;
@@ -477,23 +580,21 @@ static void check_subsets(const char *context, ChainInput *input, const Chain *g
     CHECK(analysis_chain_texture(cadences) == NULL && analysis_chain_voice_leading(cadences) == NULL && analysis_chain_melody(cadences) == NULL);
     CHECK(analysis_chain_schemas(cadences) == NULL && analysis_chain_sequences(cadences) == NULL);
     /* with no form there is no second pass: the keys are the first pass's, and the cadences their own */
-    CHECK(analysis_chain_home_key(cadences) == g->x.home_key);
+    CHECK(analysis_chain_home_key(cadences) == config.home_key_index);
     analysis_chain_destroy(cadences);
 
     config.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
     AnalysisChain *texture = NULL;
     assert(analysis_chain_run(&input->set, input->events, input->event_count, &config, &texture) == ANALYSIS_CHAIN_OK);
     CHECK(analysis_chain_texture(texture) != NULL && analysis_chain_segments(texture) == NULL && analysis_chain_key_regions(texture) == NULL);
-    CHECK(analysis_chain_texture(texture)->windows.count == analysis_chain_texture(full)->windows.count);
-    CHECK(analysis_chain_texture(texture)->passage_count == analysis_chain_texture(full)->passage_count);
+    CHECK(stage_digest(STAGE_TEXTURE, texture) == stage_digest(STAGE_TEXTURE, full));
     analysis_chain_destroy(texture);
 
     config.stages = ANALYSIS_CHAIN_STAGE_FORM;
     AnalysisChain *form = NULL;
     assert(analysis_chain_run(&input->set, input->events, input->event_count, &config, &form) == ANALYSIS_CHAIN_OK);
-    compare_keys(context, g, form);
-    compare_form(context, &g->form, analysis_chain_phrases(form), analysis_chain_ideas(form), analysis_chain_themes(form),
-                 analysis_chain_expansions(form));
+    CHECK(stage_digest(STAGE_KEYS, form) == ref->digest[STAGE_KEYS]);
+    CHECK(stage_digest(STAGE_FORM, form) == ref->digest[STAGE_FORM]);
     CHECK(analysis_chain_motives(form) != NULL && analysis_chain_meter(form) == NULL && analysis_chain_texture(form) == NULL);
     analysis_chain_destroy(form);
 
@@ -504,58 +605,63 @@ static void check_subsets(const char *context, ChainInput *input, const Chain *g
     CHECK(analysis_chain_key_regions(keys) != NULL && analysis_chain_chords(keys) == NULL && analysis_chain_cadences(keys) == NULL);
     CHECK(analysis_chain_key_regions(keys)->region_count >= 1);
     analysis_chain_destroy(keys);
-    (void)full;
 }
 
-static void compare_piece(const FormPiece *fp) {
-    Chain glue;
-    fv1_chain_run(&glue, fp);
+static void check_piece(const Reference *ref, bool dump) {
     ChainInput input;
-    chain_input_init(&input, &glue);
-    const char *context = fp->piece.name;
+    chain_input_init(&input, ref);
+    const char *context = ref->name;
 
-    AnalysisChainConfig config = analysis_chain_config_default();
-    config.first_measure = glue.x.keys_first;
-    config.last_measure = glue.x.keys_last;
-    config.home_key_index = glue.x.home_key;
+    AnalysisChainConfig config = reference_config(ref);
     AnalysisChain *chain = NULL;
     AnalysisChainStatus status = analysis_chain_run(&input.set, input.events, input.event_count, &config, &chain);
     if (status != ANALYSIS_CHAIN_OK) {
         fprintf(stderr, "%s: the chain failed at %s\n", context, analysis_chain_status_name(status));
         abort();
     }
-    compare_segments(context, &glue, chain);
-    compare_keys(context, &glue, chain);
-    compare_chords(context, &glue, chain);
-    compare_numerals(context, &glue, chain);
-    compare_outer_voices(context, &glue, chain);
-    compare_cadences(context, &glue, chain);
-    compare_form(context, &glue.form, analysis_chain_phrases(chain), analysis_chain_ideas(chain), analysis_chain_themes(chain),
-                 analysis_chain_expansions(chain));
-    printf("  %s: %zu segments, %zu key regions, %zu cadences, %zu phrases equal\n", context, glue.count,
-           glue.regions.region_count, glue.cadences.count, glue.form.phrases.count);
-    compare_motives(context, &glue, chain);
-    compare_meter(context, &glue, chain);
-    compare_texture(context, &glue, chain);
-    compare_melody(context, &glue, chain);
-    compare_schemas(context, &glue, chain);
-    check_voice_leading(context, &glue, chain);
-    check_subsets(context, &input, &glue, chain);
-
+    size_t segments = analysis_chain_segment_count(chain);
+    size_t key_regions = analysis_chain_key_regions(chain)->region_count;
+    size_t cadences = analysis_chain_cadences(chain)->count;
+    size_t phrases = analysis_chain_phrases(chain)->count;
+    if (dump) {
+        printf("    {\"%s\", \"%s\", %s, %d, %d, %d, %zu, %zu, %zu, %zu,\n     {", ref->name, ref->midi, ref->three_four ? "true" : "false",
+               ref->tonic_pitch_class, ref->first_measure, ref->last_measure, segments, key_regions, cadences, phrases);
+        for (int s = 0; s < STAGE_COUNT; s++) {
+            printf("%s0x%016llxULL", s == 0 ? "" : (s % 3 == 0 ? ",\n      " : ", "), (unsigned long long)stage_digest(s, chain));
+        }
+        printf("}},\n");
+    } else {
+        CHECK(segments == ref->segments && key_regions == ref->key_regions && cadences == ref->cadences && phrases == ref->phrases);
+        for (int s = 0; s < STAGE_COUNT; s++) {
+            if (stage_digest(s, chain) != ref->digest[s]) {
+                fprintf(stderr, "%s: the %s stage no longer gives its expected results\n", context, STAGE_NAMES[s]);
+                abort();
+            }
+        }
+        check_voice_leading(context, chain);
+        check_subsets(context, &input, ref, chain);
+        printf("  %s: %zu segments, %zu key regions, %zu cadences, %zu phrases; %d stages as expected\n", context, segments, key_regions,
+               cadences, phrases, STAGE_COUNT);
+    }
     analysis_chain_destroy(chain);
     chain_input_destroy(&input);
-    fv1_chain_destroy(&glue);
 }
 
 int main(void) {
-    printf("the analysis chain against the test glue:\n");
+    bool dump = getenv("URSATZ_CHAIN_DUMP") != NULL;
     const char *only = getenv("URSATZ_CHAIN_PIECE");
+    static const char *const PREFIXES[4] = {"bach114", "mozart545", "clementi36", "field1"};
+    if (!dump) {
+        printf("the analysis chain against its expected results:\n");
+    }
     for (size_t i = 0; i < 4; i++) {
-        if (only != NULL && strcmp(FORM_PIECES[i].prefix, only) != 0) {
+        if (only != NULL && strcmp(PREFIXES[i], only) != 0) {
             continue;
         }
-        compare_piece(&FORM_PIECES[i]);
+        check_piece(&REFERENCES[i], dump);
     }
-    printf("test_analysis_chain: ok\n");
+    if (!dump) {
+        printf("test_analysis_chain: ok\n");
+    }
     return 0;
 }
