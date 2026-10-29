@@ -25,10 +25,17 @@ add_executable(test_form_bridge test_form_bridge.c)
 target_link_libraries(test_form_bridge PRIVATE ursatz_chain)
 add_test(NAME chain_form_bridge COMMAND test_form_bridge)
 
-# Memcheck for the bridges. Skips silently if valgrind isn't installed.
+add_executable(test_chain_inputs test_chain_inputs.c)
+target_link_libraries(test_chain_inputs PRIVATE ursatz_chain)
+add_test(NAME chain_inputs COMMAND test_chain_inputs)
+
+# Memcheck for the bridges and the input builders. Skips silently if valgrind isn't installed.
 find_program(URSATZ_CHAIN_VALGRIND valgrind)
 if(URSATZ_CHAIN_VALGRIND)
   add_test(NAME chain_form_bridge_valgrind
            COMMAND ${URSATZ_CHAIN_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_form_bridge>)
+  add_test(NAME chain_inputs_valgrind
+           COMMAND ${URSATZ_CHAIN_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_chain_inputs>)
 endif()
