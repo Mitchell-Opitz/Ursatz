@@ -152,11 +152,6 @@ add_library(ursatz
     analysis/feature_extraction.c
     analysis/interval_analysis.c
     analysis/scale_analysis.c
-    # analysis/chord_identification.c and analysis/key_estimation.c are
-    # compiled into common_practice_minimal instead (frameworks/common-
-    # practice-minimal/CMakeLists.txt) -- they depend on that framework,
-    # which itself depends on ursatz, so compiling them here would be a
-    # circular library dependency.
     analysis/voice_leading_analysis.c
     analysis/beat_grid_length.c
     analysis/outer_voice.c

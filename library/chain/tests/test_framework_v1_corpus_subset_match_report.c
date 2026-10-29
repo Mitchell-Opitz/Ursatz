@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/chord_identification.h"
+#include "ursatz_chain/subset_chord_analyzer.h"
 #include "core/value.h"
 #include "events/note_event.h"
 #include "identity/entity_id.h"
@@ -170,9 +170,9 @@ static void run_piece(const CorpusPiece *piece, Framework *framework) {
             degrees[j] = scale_degree_for_offset(offset);
         }
 
-        ChordIdentificationInput input = {sonorities[i], framework, degrees, degree_count, NULL, 0};
+        ChainSubsetChordInput input = {sonorities[i], framework, degrees, degree_count, NULL, 0};
         AnalysisResult *result;
-        AnalyzerResult analyze_result = chord_identification_analyze(&input, NULL, NULL, &result);
+        AnalyzerResult analyze_result = chain_subset_chord_analyze(&input, NULL, NULL, &result);
         free(degrees);
 
         const char *label = "(no match)";

@@ -3,6 +3,8 @@
 # here (R-241). Sources are added as the chain grows.
 add_library(ursatz_chain
     ursatz_chain/form_bridge.c
+    ursatz_chain/subset_chord_analyzer.c
+    ursatz_chain/key_collection_analyzer.c
 )
 target_include_directories(ursatz_chain PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ursatz_chain PUBLIC

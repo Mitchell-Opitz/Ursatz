@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/chord_identification.h"
+#include "ursatz_chain/subset_chord_analyzer.h"
 #include "core/value.h"
 #include "events/note_event.h"
 #include "identity/entity_id.h"
@@ -23,7 +23,7 @@
  * fixture's raw NoteEvents by grouping notes onto a fixed quarter-note
  * beat grid (one Sonority per beat, formed from whichever notes onset
  * within it), and each beat-grid Sonority is fed unmodified into
- * chord_identification (src/analysis/chord_identification.h). Checks
+ * chord_identification (chain/ursatz_chain/subset_chord_analyzer.h). Checks
  * the result against the known-correct harmonic analysis of the
  * fixture's first 8 measures. See sonority_builder.h and
  * docs/modules/semantics.md for why the beat grid is fixed rather than
@@ -75,7 +75,7 @@ static unsigned char *read_fixture(const char *path, size_t *out_size) {
 
 /*
  * common-practice-minimal-v1's diatonic scale degrees are caller-
- * supplied (chord_identification.h documents this: PitchIdentity has no
+ * supplied (subset_chord_analyzer.h documents this: PitchIdentity has no
  * numeric semantics for the analyzer to derive them itself). This
  * fixture is known to stay in C major for the checked measures (C Dm G
  * C Am D-major-as-V/V G C), so scale degree is computed directly from
@@ -185,9 +185,9 @@ static void run_chord_identification_pipeline(NoteEvent *const *events, PitchNum
                 degrees[j] = scale_degree_for_pitch_class(pitch_class);
             }
 
-            ChordIdentificationInput input = {sonorities[i], framework, degrees, degree_count, NULL, 0};
+            ChainSubsetChordInput input = {sonorities[i], framework, degrees, degree_count, NULL, 0};
             AnalysisResult *result;
-            AnalyzerResult analyze_result = chord_identification_analyze(&input, NULL, NULL, &result);
+            AnalyzerResult analyze_result = chain_subset_chord_analyze(&input, NULL, NULL, &result);
             free(degrees);
 
             if (analyze_result == ANALYZER_OK) {

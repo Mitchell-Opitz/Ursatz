@@ -30,7 +30,7 @@
  * comes from cadence_type_label.
  *
  * Root-motion signal: ChordIdentification (analysis/
- * chord_identification.h) reports a chord's Roman-numeral/quality LABEL
+ * subset_chord_analyzer.h) reports a chord's Roman-numeral/quality LABEL
  * as an opaque string -- it does not expose the chord's scale-degree
  * root as a separate queryable field, and a seventh-chord's label
  * ("dominant7") carries no root information at all (seventh_

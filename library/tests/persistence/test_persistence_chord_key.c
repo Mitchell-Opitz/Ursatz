@@ -19,8 +19,8 @@
 
 /*
  * Round-trip test against real Chord/Key objects, built the same way
- * ChordIdentification/KeyEstimation (analysis/chord_identification.c,
- * analysis/key_estimation.c) build them -- via common-practice-minimal's
+ * ChordIdentification/KeyEstimation (ursatz_chain/subset_chord_analyzer.c,
+ * ursatz_chain/key_collection_analyzer.c) build them -- via common-practice-minimal's
  * own identification helpers, which those analyzers call internally.
  */
 
