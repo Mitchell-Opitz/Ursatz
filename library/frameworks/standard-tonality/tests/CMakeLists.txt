@@ -153,3 +153,15 @@ if(URSATZ_TONAL_KEY_VALGRIND)
            COMMAND ${URSATZ_TONAL_KEY_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_standard_tonality_tonal_key>)
 endif()
+
+add_executable(test_standard_tonality_roman_numeral_grammar test_roman_numeral_grammar.c)
+target_link_libraries(test_standard_tonality_roman_numeral_grammar PRIVATE standard_tonality)
+add_test(NAME standard_tonality_roman_numeral_grammar COMMAND test_standard_tonality_roman_numeral_grammar)
+
+# Scoped memcheck coverage for the numeral grammar. Skips silently if valgrind isn't installed.
+find_program(URSATZ_NUMERAL_GRAMMAR_VALGRIND valgrind)
+if(URSATZ_NUMERAL_GRAMMAR_VALGRIND)
+  add_test(NAME standard_tonality_roman_numeral_grammar_valgrind
+           COMMAND ${URSATZ_NUMERAL_GRAMMAR_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_standard_tonality_roman_numeral_grammar>)
+endif()
