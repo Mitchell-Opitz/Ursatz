@@ -173,7 +173,7 @@ typedef enum {
 /*
  * What a parameter is, for a caller that builds steps without a transform table of its own. min and max are the
  * values the relation accepts at all (an index is also limited by the sketch it is applied to; a ratio's min and
- * max bound its numerator and denominator). A choice has choice_count names in choices, the name of value v at
+ * max bound its numerator and denominator: both above zero, and the result must be writable in the meter). A choice has choice_count names in choices, the name of value v at
  * choices[v - min]. default_value (and default_den for a ratio) is the value of a parameter left out, as in
  * motive_relation_step_text. optional is true when that default is accepted as it stands (the relation applies with
  * it); a parameter that is not optional must be given. description is one lower-case phrase.

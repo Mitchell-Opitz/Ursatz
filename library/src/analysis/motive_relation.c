@@ -4,6 +4,7 @@
 #include "analysis/motive_tone_roles.h"
 
 #include <errno.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1950,7 +1951,7 @@ const char *motive_relation_param_name(MotiveRelationKind kind, size_t index) {
 #define INT_P(name, lo, hi, optional, text) \
     {name, MOTIVE_RELATION_PARAM_INT, lo, hi, 0, 0, optional, NULL, 0, text}
 #define BOOL_P(name, text) {name, MOTIVE_RELATION_PARAM_BOOL, 0, 1, 0, 0, true, NULL, 0, text}
-#define RATIO_P(name, optional, text) {name, MOTIVE_RELATION_PARAM_RATIO, 1, 64, 0, 0, optional, NULL, 0, text}
+#define RATIO_P(name, optional, text) {name, MOTIVE_RELATION_PARAM_RATIO, 1, LONG_MAX, 0, 0, optional, NULL, 0, text}
 #define CHOICE_P(name, lo, count, choices, optional, text) \
     {name, MOTIVE_RELATION_PARAM_CHOICE, lo, (lo) + (long)(count) - 1, 0, 0, optional, choices, count, text}
 
