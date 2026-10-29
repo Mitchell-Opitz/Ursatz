@@ -15,6 +15,7 @@ Layer L1 (`music-core`). Path `src/core/`, tests `tests/core/`. Depends on `iden
 - `VoiceReference`, `RelationshipReference`, and `ProvenanceReference` are implemented here. Domain Ontology Specification v0.2 once marked all three "proposed only"; all three have since been authorized in the System Registry, so there is no longer a spec gap.
 - `RelationshipReference` currently has no consumer anywhere in the codebase. It exists as a type with no module holding one yet.
 - `FrameworkReference` follows the same opaque-EntityID-wrapper shape as the other three. Its consumer is `interpretation`'s `Interpretation.framework_reference` field. See `docs/modules/interpretation.md`.
+- `core/string_copy.h` holds `ursatz_string_copy`, the one heap string copy for modules that may include `core/` (NULL in, NULL out; NULL on allocation failure). `corpus/` may not include `core/`, so its two copies stay local.
 
 ## Dependencies
 

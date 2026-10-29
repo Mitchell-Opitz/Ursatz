@@ -4,7 +4,7 @@ Layer L6 (`music-interpretation`). Path `src/interpretation/`, tests `tests/inte
 
 ## Provides
 
-`Uncertainty`, `Evidence`, `Assertion`, `Observation`, `Hypothesis`, `Interpretation`, `Chord`, `Key`, `ScaleDegree`, `Texture`.
+`Uncertainty`, `Evidence`, `Assertion`, `Observation`, `Hypothesis`, `Interpretation`, `Chord`, `Key`, `ScaleDegree`, `Texture`, and the framework claim helpers in `claim_interpretation.h`.
 
 ## Notes
 
@@ -15,6 +15,8 @@ Layer L6 (`music-interpretation`). Path `src/interpretation/`, tests `tests/inte
   2. **A `FrameworkReference`**, also carried by the embedded `Interpretation` -- but required at these four constructors specifically (`chord_create`/`key_create`/`scale_degree_create`/`texture_create` all reject a `NULL` `interpretation_framework_reference()`), unlike the base `Interpretation` type where the field stays optional. `Chord`/`Key`/`ScaleDegree`/`Texture` are precisely the Registry's framework-relative interpretation types; the base type stays permissive because most other producers are framework-neutral.
   3. **An opaque, non-enumerated `label` string** naming what the framework calls this thing (e.g. `"V7"`, `"D major"`, `"V"`, `"homorhythm"`) -- own field, new on each of these four types, not present on the base `Interpretation`. Same opaque-token convention already used for `Articulation.kind`, `Dynamics.marking`, `Instrument`'s illustrative properties, and `SourceVariant`'s descriptor: the label vocabulary belongs to whichever framework produced the claim (`frameworks/`), so hard-coding one here would prejudge which framework's vocabulary is authoritative.
   `ScaleDegree` additionally owns a `pitch` (`PitchIdentity`, `pitch`, L2) by value -- the specific pitch within the referenced Scale this degree names. It is owned, not referenced by `EntityID`, since `PitchIdentity` is an opaque token, not an Entity with its own identity.
+- **Claim helpers (`claim_interpretation.h`, R-236).** Every framework builds its durable claims the same way, so the kernel owns one body: `claim_interpretation_create(framework_id, framework_name, interpretation_id, target_id, claim_type, content, size, uncertainty, method)` builds the `Interpretation` (a `FrameworkReference` to `framework_id`, a claim `Value`, scalar confidence `(1 - uncertainty)` in millionths rounded to nearest, author `"<framework_name>-v1"`, status `MACHINE_GENERATED`, absent provenance) and returns NULL on any invalid argument or failure with everything freed. `claim_interpretation_note_group(framework_name, shell_id, note_ids, count)` builds the L5 shell of type `"<framework_name>/note-group"` over the de-duplicated note ids. `claim_interpretation_relationship(framework_name, kind, key, source_id, target_id, predicate)` builds the `Relationship` `"<framework_name>-<kind>-<key>"`. The framework id and name are strings, so a framework passes `entity_id_value(framework_id(...))` and its short name and `interpretation/` needs no `theory/` import.
+- The relationship helper is the one sideways L6 edge: `claim_interpretation.c` includes `relationship/relationship.h`. `relationship/` includes only `identity/` and `core/`, so there is no cycle, and `tests/interpretation/test_architecture_interpretation.c` allows exactly that directory.
 
 ## Deferred
 
@@ -24,4 +26,4 @@ Out of scope entirely, not missing. `Framework`, `Rule`, `Constraint`, `Preferen
 
 ## Dependencies
 
-Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), `events` (L3), `containers` (L4), and `structure` (L5) only. Never imports `context`, `semantics`, or `relationship`.
+Depends on `identity` (L0), `core` (L1), `time`/`pitch` (L2), `events` (L3), `containers` (L4), and `structure` (L5) only. Never imports `context` or `semantics`. `relationship` is imported only by `claim_interpretation.c`, for the relationship helper.
