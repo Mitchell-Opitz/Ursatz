@@ -113,3 +113,20 @@ if(URSATZ_METER_NOTE_VALGRIND)
   add_test(NAME standard_meter_analysis_note_valgrind
            COMMAND ${URSATZ_METER_NOTE_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_meter_analysis_note>)
 endif()
+
+add_executable(test_standard_meter_analysis_check test_meter_analysis_check.c)
+target_link_libraries(test_standard_meter_analysis_check PRIVATE standard_meter)
+add_test(NAME standard_meter_analysis_check COMMAND test_standard_meter_analysis_check)
+
+add_executable(test_standard_meter_analysis_tuplet test_meter_analysis_tuplet.c)
+target_link_libraries(test_standard_meter_analysis_tuplet PRIVATE standard_meter)
+add_test(NAME standard_meter_analysis_tuplet COMMAND test_standard_meter_analysis_tuplet)
+
+# Memcheck for the check and tuplet adapters. Skips silently if valgrind isn't installed.
+find_program(URSATZ_METER_CHECK_VALGRIND valgrind)
+if(URSATZ_METER_CHECK_VALGRIND)
+  add_test(NAME standard_meter_analysis_check_valgrind
+           COMMAND ${URSATZ_METER_CHECK_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_meter_analysis_check>)
+  add_test(NAME standard_meter_analysis_tuplet_valgrind
+           COMMAND ${URSATZ_METER_CHECK_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_meter_analysis_tuplet>)
+endif()

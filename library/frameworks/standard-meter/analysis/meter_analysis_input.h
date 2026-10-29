@@ -38,7 +38,8 @@ typedef enum {
     STANDARD_METER_ANALYSIS_OK = 0,
     STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT,
     STANDARD_METER_ANALYSIS_ERR_INVALID,
-    STANDARD_METER_ANALYSIS_ERR_ALLOC
+    STANDARD_METER_ANALYSIS_ERR_ALLOC,
+    STANDARD_METER_ANALYSIS_ERR_OVERFLOW /* an exact time does not fit 64 bits; nothing is wrapped */
 } StandardMeterAnalysisStatus;
 
 typedef enum {
