@@ -1944,6 +1944,157 @@ const char *motive_relation_param_name(MotiveRelationKind kind, size_t index) {
     return PARAM_NAMES[kind][index];
 }
 
+/* --- parameter metadata --------------------------------------------------------------------------- */
+
+#define NOTE_MAX (MOTIVE_SKETCH_MAX_NOTES - 1)
+#define INT_P(name, lo, hi, optional, text) \
+    {name, MOTIVE_RELATION_PARAM_INT, lo, hi, 0, 0, optional, NULL, 0, text}
+#define BOOL_P(name, text) {name, MOTIVE_RELATION_PARAM_BOOL, 0, 1, 0, 0, true, NULL, 0, text}
+#define RATIO_P(name, optional, text) {name, MOTIVE_RELATION_PARAM_RATIO, 1, 64, 0, 0, optional, NULL, 0, text}
+#define CHOICE_P(name, lo, count, choices, optional, text) \
+    {name, MOTIVE_RELATION_PARAM_CHOICE, lo, (lo) + (long)(count) - 1, 0, 0, optional, choices, count, text}
+
+static const char *const POSITION_CHOICES[] = {"leading", "trailing", "middle"};
+static const char *const FILL_CHOICES[] = {"passing", "neighbor"};
+static const char *const TONE_CHOICES[NON_CHORD_TONE_COUNT] = {
+    "passing",      "neighbor",    "double-neighbor", "changing-tone", "suspension",
+    "anticipation", "appoggiatura", "escape-tone",    "retardation",   "pedal"};
+
+#define TONE_P(name, text) CHOICE_P(name, 0, NON_CHORD_TONE_COUNT, TONE_CHOICES, false, text)
+#define CHORD_P(name, text) INT_P(name, 0, MOTIVE_SKETCH_MAX_CHORDS - 1, false, text)
+#define FEATURE_P(name, text) INT_P(name, 0, MOTIVE_SKETCH_MAX_FEATURES - 1, false, text)
+#define DEGREE_P(name, text) INT_P(name, 1, 7, false, text)
+
+static const MotiveRelationParamInfo TRANSPOSE_INFO[] = {
+    BOOL_P("tonal", "move in steps of the key's scale instead of semitones"),
+    INT_P("by", -127, 127, false, "how far to move: semitones, or steps when tonal; not 0"),
+    {"degree", MOTIVE_RELATION_PARAM_INT, 1, 7, 0, 0, true, NULL, 0,
+     "move the first note to this scale degree instead of using by; tonal"}};
+static const MotiveRelationParamInfo INVERT_INFO[] = {
+    {"axis", MOTIVE_RELATION_PARAM_INT, 0, 127, -1, 0, true, NULL, 0,
+     "the pitch mirrored about, a MIDI note number; the first note when -1"},
+    BOOL_P("tonal", "mirror in steps of the key's scale instead of semitones")};
+static const MotiveRelationParamInfo INTERVAL_CHANGE_INFO[] = {
+    INT_P("interval", 0, NOTE_MAX, true, "the 1-based interval changed; 0 for every one"),
+    INT_P("amount", -127, 127, false, "semitones to widen by, negative to narrow; not 0"),
+    BOOL_P("keep-contour", "refuse a result that changes a direction")};
+static const MotiveRelationParamInfo FRAGMENT_INFO[] = {
+    CHOICE_P("position", 1, 3, POSITION_CHOICES, false, "where the fragment is taken from: leading, trailing or middle"),
+    INT_P("length", 1, NOTE_MAX, false, "how many notes the fragment has"),
+    INT_P("min", 0, NOTE_MAX, true, "the fewest notes the result may have; 0 for 2")};
+static const MotiveRelationParamInfo LIQUIDATE_INFO[] = {
+    INT_P("drop", 1, NOTE_MAX, false, "how many notes to drop, the weakest first"),
+    BOOL_P("keep-rhythm", "leave a dropped note's time as a rest"),
+    INT_P("min", 0, NOTE_MAX, true, "the fewest notes the result may have; 0 for 2")};
+static const MotiveRelationParamInfo AUGMENT_INFO[] = {
+    RATIO_P("ratio", true, "the factor times and durations are multiplied by, n:m above 1; 0:0 for 2:1")};
+static const MotiveRelationParamInfo DIMINISH_INFO[] = {
+    RATIO_P("ratio", true, "the factor times and durations are multiplied by, n:m below 1; 0:0 for 1:2")};
+static const MotiveRelationParamInfo NOTE_REPEAT_INFO[] = {
+    INT_P("note", 0, NOTE_MAX, false, "the 0-based note repeated"),
+    INT_P("count", 2, 4, false, "how many notes it becomes")};
+static const MotiveRelationParamInfo RHYTHM_REPEAT_INFO[] = {
+    INT_P("first", 0, NOTE_MAX, false, "the first note whose rhythm is copied"),
+    INT_P("length", 1, NOTE_MAX, false, "how many notes of rhythm are copied"),
+    INT_P("target", 0, NOTE_MAX, false, "the note where the copied rhythm starts")};
+static const MotiveRelationParamInfo RHYTHM_SHIFT_INFO[] = {
+    RATIO_P("offset", false, "how far later in the bar the rhythm moves, as a fraction of a whole note")};
+static const MotiveRelationParamInfo ADD_UPBEAT_INFO[] = {
+    INT_P("count", 1, 3, false, "how many upbeat notes"),
+    INT_P("approach", -1, 1, false, "+1 approach from below, -1 from above; not 0")};
+static const MotiveRelationParamInfo CHANGE_METER_INFO[] = {
+    INT_P("num", 1, 64, false, "beats in the new meter"),
+    INT_P("den", 1, 16, false, "the new beat value: 1, 2, 4, 8 or 16")};
+static const MotiveRelationParamInfo ADD_INTERVAL_INFO[] = {
+    INT_P("interval", 1, NOTE_MAX, false, "the 1-based interval a note is added in"),
+    INT_P("steps", -NOTE_MAX, NOTE_MAX, false, "scale steps from the note before the interval; not 0")};
+static const MotiveRelationParamInfo OMIT_INTERVAL_INFO[] = {
+    INT_P("interval", 1, NOTE_MAX, false, "the 1-based interval; the note after it goes")};
+static const MotiveRelationParamInfo ANCILLARY_FILL_INFO[] = {
+    INT_P("interval", 1, NOTE_MAX, false, "the 1-based interval filled"),
+    CHOICE_P("kind", 0, 2, FILL_CHOICES, true, "passing notes or a neighbor")};
+static const MotiveRelationParamInfo CONDENSE_INFO[] = {
+    INT_P("first", 0, NOTE_MAX, false, "the first note condensed"),
+    INT_P("last", 0, NOTE_MAX, false, "the last note condensed"),
+    RATIO_P("ratio", false, "the factor the span is shortened by, below 1")};
+static const MotiveRelationParamInfo REPEAT_FEATURE_INFO[] = {
+    FEATURE_P("feature", "the 0-based labelled feature repeated"),
+    INT_P("times", 1, 2, false, "how many repeats"),
+    INT_P("steps", -NOTE_MAX, NOTE_MAX, false, "scale steps each repeat moves by")};
+static const MotiveRelationParamInfo SHIFT_FEATURE_INFO[] = {
+    FEATURE_P("feature", "the 0-based labelled feature moved"),
+    RATIO_P("offset", false, "how far later the feature moves, as a fraction of a whole note")};
+static const MotiveRelationParamInfo HARMONY_INVERSION_INFO[] = {
+    CHORD_P("chord", "the 0-based chord"),
+    INT_P("inversion", 0, 3, false, "the new inversion; 3 needs a seventh chord")};
+static const MotiveRelationParamInfo HARMONY_APPEND_INFO[] = {
+    DEGREE_P("degree", "the scale degree of the chord added at the end"),
+    BOOL_P("seventh", "make it a seventh chord")};
+static const MotiveRelationParamInfo HARMONY_INSERT_INFO[] = {
+    CHORD_P("chord", "the 0-based chord the new one goes before"), DEGREE_P("degree", "the scale degree of the new chord")};
+static const MotiveRelationParamInfo HARMONY_SUBSTITUTE_INFO[] = {
+    CHORD_P("chord", "the 0-based chord replaced"), DEGREE_P("degree", "the scale degree of the new chord"),
+    INT_P("then", 0, 7, true, "a second degree that follows it; 0 for none")};
+static const MotiveRelationParamInfo PASSING_HARMONY_INFO[] = {
+    CHORD_P("chord", "the 0-based chord a passing chord goes before")};
+static const MotiveRelationParamInfo LIQUIDATE_FEATURES_INFO[] = {
+    INT_P("steps", 1, 3, false, "how many liquidation steps"), BOOL_P("shorten", "also diminish the result 1:2")};
+static const MotiveRelationParamInfo ADD_TONE_INFO[] = {
+    INT_P("after", 0, NOTE_MAX, false, "the 0-based chord tone the figure follows"),
+    TONE_P("type", "the non-chord tone added")};
+static const MotiveRelationParamInfo REMOVE_TONE_INFO[] = {
+    INT_P("note", 0, NOTE_MAX, false, "the 0-based note that is not a chord tone")};
+static const MotiveRelationParamInfo CHANGE_TONE_INFO[] = {
+    INT_P("note", 0, NOTE_MAX, false, "the 0-based note that is not a chord tone"),
+    TONE_P("type", "the type it becomes")};
+static const MotiveRelationParamInfo REHARMONIZE_INFO[] = {
+    DEGREE_P("degree", "the scale degree of the one chord"), BOOL_P("seventh", "make it a seventh chord")};
+
+typedef struct {
+    const MotiveRelationParamInfo *info;
+} InfoRow;
+
+#define ROW(kind, array) [kind] = {array}
+static const InfoRow INFO[MOTIVE_RELATION_KIND_COUNT] = {
+    ROW(MOTIVE_RELATION_TRANSPOSE, TRANSPOSE_INFO),
+    ROW(MOTIVE_RELATION_INVERT, INVERT_INFO),
+    ROW(MOTIVE_RELATION_INTERVAL_CHANGE, INTERVAL_CHANGE_INFO),
+    ROW(MOTIVE_RELATION_FRAGMENT, FRAGMENT_INFO),
+    ROW(MOTIVE_RELATION_LIQUIDATE, LIQUIDATE_INFO),
+    ROW(MOTIVE_RELATION_AUGMENT, AUGMENT_INFO),
+    ROW(MOTIVE_RELATION_DIMINISH, DIMINISH_INFO),
+    ROW(MOTIVE_RELATION_NOTE_REPEAT, NOTE_REPEAT_INFO),
+    ROW(MOTIVE_RELATION_RHYTHM_REPEAT, RHYTHM_REPEAT_INFO),
+    ROW(MOTIVE_RELATION_RHYTHM_SHIFT, RHYTHM_SHIFT_INFO),
+    ROW(MOTIVE_RELATION_ADD_UPBEAT, ADD_UPBEAT_INFO),
+    ROW(MOTIVE_RELATION_CHANGE_METER, CHANGE_METER_INFO),
+    ROW(MOTIVE_RELATION_ADD_INTERVAL, ADD_INTERVAL_INFO),
+    ROW(MOTIVE_RELATION_OMIT_INTERVAL, OMIT_INTERVAL_INFO),
+    ROW(MOTIVE_RELATION_ANCILLARY_FILL, ANCILLARY_FILL_INFO),
+    ROW(MOTIVE_RELATION_CONDENSE, CONDENSE_INFO),
+    ROW(MOTIVE_RELATION_REPEAT_FEATURE, REPEAT_FEATURE_INFO),
+    ROW(MOTIVE_RELATION_SHIFT_FEATURE, SHIFT_FEATURE_INFO),
+    ROW(MOTIVE_RELATION_HARMONY_INVERSION, HARMONY_INVERSION_INFO),
+    ROW(MOTIVE_RELATION_HARMONY_APPEND, HARMONY_APPEND_INFO),
+    ROW(MOTIVE_RELATION_HARMONY_INSERT, HARMONY_INSERT_INFO),
+    ROW(MOTIVE_RELATION_HARMONY_SUBSTITUTE, HARMONY_SUBSTITUTE_INFO),
+    ROW(MOTIVE_RELATION_PASSING_HARMONY, PASSING_HARMONY_INFO),
+    ROW(MOTIVE_RELATION_LIQUIDATE_FEATURES, LIQUIDATE_FEATURES_INFO),
+    ROW(MOTIVE_RELATION_ADD_NON_CHORD_TONE, ADD_TONE_INFO),
+    ROW(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, REMOVE_TONE_INFO),
+    ROW(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, CHANGE_TONE_INFO),
+    ROW(MOTIVE_RELATION_REHARMONIZE_FRAME, REHARMONIZE_INFO),
+};
+
+bool motive_relation_param_info(MotiveRelationKind kind, size_t index, MotiveRelationParamInfo *out) {
+    if (!out || (unsigned)kind >= MOTIVE_RELATION_KIND_COUNT || index >= motive_relation_param_count(kind) ||
+        !INFO[kind].info) {
+        return false;
+    }
+    *out = INFO[kind].info[index];
+    return true;
+}
+
 static bool param_is_ratio(MotiveRelationKind kind, size_t index) {
     switch (kind) {
     case MOTIVE_RELATION_AUGMENT:
