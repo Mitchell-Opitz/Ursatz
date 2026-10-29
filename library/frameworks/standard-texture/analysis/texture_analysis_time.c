@@ -1,9 +1,8 @@
 #include "texture_analysis_time.h"
 
 #include "core/rational.h"
-#include "time/duration.h"
+#include "time/meter_arithmetic.h"
 #include "time/musical_time.h"
-#include "time/time_signature.h"
 
 StandardTextureQ standard_texture_q(long long n, long long d) {
     if (d < 0) {
@@ -18,17 +17,32 @@ StandardTextureQ standard_texture_q(long long n, long long d) {
     return q;
 }
 
+static inline Rational to_rational(StandardTextureQ q) {
+    return rational_ratio(q.n, q.d);
+}
+
+static inline StandardTextureQ of_rational(Rational r) {
+    StandardTextureQ q = {r.num, r.den};
+    return q;
+}
+
 int standard_texture_q_compare(StandardTextureQ a, StandardTextureQ b) {
-    long long left = a.n * b.d;
-    long long right = b.n * a.d;
-    return (left > right) - (left < right);
+    return rational_cmp(to_rational(a), to_rational(b));
 }
 
 StandardTextureQ standard_texture_q_add(StandardTextureQ a, StandardTextureQ b) {
+    Rational sum;
+    if (rational_add(to_rational(a), to_rational(b), &sum) == RATIONAL_OK) {
+        return of_rational(sum);
+    }
     return standard_texture_q(a.n * b.d + b.n * a.d, a.d * b.d);
 }
 
 StandardTextureQ standard_texture_q_sub(StandardTextureQ a, StandardTextureQ b) {
+    Rational difference;
+    if (rational_sub(to_rational(a), to_rational(b), &difference) == RATIONAL_OK) {
+        return of_rational(difference);
+    }
     return standard_texture_q(a.n * b.d - b.n * a.d, a.d * b.d);
 }
 
@@ -80,60 +94,34 @@ StandardTextureQ standard_texture_snap(const StandardTextureConfig *config, Stan
 }
 
 bool standard_texture_measure_at(const MeterMap *map, StandardTextureQ time, int *measure) {
-    MusicalTime *at = NULL;
-    if (map == NULL || measure == NULL || time.n < 0 || musical_time_create((long)time.n, (unsigned long)time.d, &at) != MUSICAL_TIME_OK) {
-        return false;
-    }
-    int index = 0;
-    bool ok = meter_map_measure_index_at(map, at, &index) == METER_MAP_OK;
-    musical_time_destroy(at);
-    if (ok) {
-        *measure = index;
-    }
-    return ok;
+    return meter_map_measure_of(map, to_rational(time), measure) == METER_MAP_OK;
 }
 
 bool standard_texture_measure_bounds(const MeterMap *map, int index, StandardTextureQ *start, StandardTextureQ *end) {
-    TimeSpan *span = NULL;
-    if (map == NULL || meter_map_measure_span(map, index, &span) != METER_MAP_OK) {
+    Rational from;
+    Rational to;
+    if (meter_map_measure_bounds(map, index, &from, &to) != METER_MAP_OK) {
         return false;
     }
-    bool ok = standard_texture_span_q(span, start, end);
-    time_span_destroy(span);
-    return ok;
-}
-
-bool standard_texture_last_measure_touched(const MeterMap *map, StandardTextureQ end, int *measure) {
-    int index = 0;
-    StandardTextureQ start;
-    StandardTextureQ stop;
-    if (!standard_texture_measure_at(map, end, &index) || !standard_texture_measure_bounds(map, index, &start, &stop)) {
-        return false;
+    if (start != NULL) {
+        *start = of_rational(from);
     }
-    if (standard_texture_q_compare(end, start) == 0 && index > meter_map_first_measure_number(map)) {
-        index--;
+    if (end != NULL) {
+        *end = of_rational(to);
     }
-    *measure = index;
     return true;
 }
 
+bool standard_texture_last_measure_touched(const MeterMap *map, StandardTextureQ end, int *measure) {
+    return meter_map_last_measure_touched(map, to_rational(end), measure) == METER_MAP_OK;
+}
+
 bool standard_texture_beat_length(const MeterMap *map, int index, StandardTextureQ *beat) {
-    const MeterMapRegion *region = NULL;
-    if (map == NULL || beat == NULL || meter_map_region_of_measure(map, index, &region) != METER_MAP_OK) {
+    Rational length;
+    if (beat == NULL || meter_map_beat_length(map, index, &length) != METER_MAP_OK) {
         return false;
     }
-    const TimeSignature *signature = meter_map_region_time_signature(region);
-    Duration *unit = NULL;
-    if (signature == NULL || time_signature_unit_duration(signature, &unit) != DURATION_OK) {
-        return false;
-    }
-    StandardTextureQ length = standard_texture_q(duration_numerator(unit), (long long)duration_denominator(unit));
-    duration_destroy(unit);
-    unsigned top = time_signature_top_number(signature);
-    if ((top == 6 || top == 9 || top == 12) && time_signature_bottom_number(signature) >= 8) {
-        length = standard_texture_q(length.n * 3, length.d);
-    }
-    *beat = length;
+    *beat = of_rational(length);
     return true;
 }
 

@@ -27,22 +27,12 @@ StandardTextureAnalysisStatus standard_texture_input_init(StandardTextureInput *
     return STANDARD_TEXTURE_ANALYSIS_OK;
 }
 
-static bool valid_span(const TimeSpan *span) {
-    if (span == NULL || time_span_start(span) == NULL || time_span_end(span) == NULL) {
-        return false;
-    }
-    const MusicalTime *start = time_span_start(span);
-    const MusicalTime *end = time_span_end(span);
-    return (long long)musical_time_numerator(end) * (long long)musical_time_denominator(start) >
-           (long long)musical_time_numerator(start) * (long long)musical_time_denominator(end);
-}
-
 StandardTextureAnalysisStatus standard_texture_input_add_note(StandardTextureInput *input, const char *id, const TimeSpan *span,
                                                               long pitch, size_t track, size_t voice, double voice_confidence) {
     if (input == NULL) {
         return STANDARD_TEXTURE_ANALYSIS_ERR_NULL_ARGUMENT;
     }
-    if (id == NULL || id[0] == '\0' || strlen(id) >= STANDARD_TEXTURE_ID_MAX || !valid_span(span) ||
+    if (id == NULL || id[0] == '\0' || strlen(id) >= STANDARD_TEXTURE_ID_MAX || !time_span_is_valid(span) ||
         !(voice_confidence >= 0.0 && voice_confidence <= 1.0)) {
         return STANDARD_TEXTURE_ANALYSIS_ERR_INVALID;
     }

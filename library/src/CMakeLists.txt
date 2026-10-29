@@ -29,6 +29,7 @@ add_library(ursatz
     time/tempo_map.c
     time/tuplet.c
     time/time_rational.c
+    time/meter_arithmetic.c
     pitch/pitch_identity.c
     pitch/pitch_spelling.c
     pitch/pitch_arithmetic.c
@@ -151,6 +152,7 @@ add_library(ursatz
     # which itself depends on ursatz, so compiling them here would be a
     # circular library dependency.
     analysis/voice_leading_analysis.c
+    analysis/beat_grid_length.c
     analysis/outer_voice.c
     analysis/voice_separation.c
     analysis/cadence_detection.c

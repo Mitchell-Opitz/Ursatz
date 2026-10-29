@@ -45,4 +45,8 @@ const MusicalTime *time_span_start(const TimeSpan *span);
 const MusicalTime *time_span_end(const TimeSpan *span);
 TimeSpanBoundary time_span_boundary(const TimeSpan *span);
 
+/* True when the span has both ends and its end is strictly after its start (a non-empty span). Compared
+   exactly; false for NULL or for ends that do not fit a Rational. */
+bool time_span_is_valid(const TimeSpan *span);
+
 #endif

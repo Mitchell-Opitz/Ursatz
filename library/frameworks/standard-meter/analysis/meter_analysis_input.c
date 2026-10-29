@@ -27,17 +27,6 @@ static bool valid_id(const char *id) {
     return id != NULL && id[0] != '\0' && strlen(id) < STANDARD_METER_ID_MAX;
 }
 
-static bool valid_span(const TimeSpan *span) {
-    if (span == NULL || time_span_start(span) == NULL || time_span_end(span) == NULL) {
-        return false;
-    }
-    const MusicalTime *start = time_span_start(span);
-    const MusicalTime *end = time_span_end(span);
-    /* end after start: compare by cross-multiplication */
-    return (long long)musical_time_numerator(end) * (long long)musical_time_denominator(start) >
-           (long long)musical_time_numerator(start) * (long long)musical_time_denominator(end);
-}
-
 static bool grow(void **items, size_t *capacity, size_t count, size_t size) {
     if (count < *capacity) {
         return true;
@@ -57,7 +46,7 @@ StandardMeterAnalysisStatus standard_meter_input_add_note(StandardMeterInput *in
     if (input == NULL) {
         return STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT;
     }
-    if (!valid_id(id) || !valid_span(span)) {
+    if (!valid_id(id) || !time_span_is_valid(span)) {
         return STANDARD_METER_ANALYSIS_ERR_INVALID;
     }
     if (!grow((void **)&input->notes, &input->note_capacity, input->note_count, sizeof(StandardMeterNote))) {
@@ -79,7 +68,7 @@ StandardMeterAnalysisStatus standard_meter_input_add_phrase(StandardMeterInput *
     if (input == NULL) {
         return STANDARD_METER_ANALYSIS_ERR_NULL_ARGUMENT;
     }
-    if (!valid_id(id) || !valid_span(span) || (cadence_arrival != NULL && !valid_span(cadence_arrival)) ||
+    if (!valid_id(id) || !time_span_is_valid(span) || (cadence_arrival != NULL && !time_span_is_valid(cadence_arrival)) ||
         expansion < STANDARD_METER_EXPANSION_NONE || expansion > STANDARD_METER_EXPANSION_CONTRACTION ||
         expansion_measures < 0 || (expansion == STANDARD_METER_EXPANSION_NONE && expansion_measures != 0)) {
         return STANDARD_METER_ANALYSIS_ERR_INVALID;

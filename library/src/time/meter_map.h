@@ -74,7 +74,8 @@ typedef enum {
     METER_MAP_ERR_TIME_BEFORE_START,
     METER_MAP_ERR_INDEX_OUT_OF_RANGE,
     METER_MAP_ERR_NOT_FOUND,
-    METER_MAP_ERR_ALLOC
+    METER_MAP_ERR_ALLOC,
+    METER_MAP_ERR_OVERFLOW /* an exact time or length does not fit (time/meter_arithmetic.h) */
 } MeterMapResult;
 
 /*
