@@ -1,6 +1,11 @@
 #ifndef MUSIC_SEMANTICS_SONORITY_SEGMENTATION_H
 #define MUSIC_SEMANTICS_SONORITY_SEGMENTATION_H
 
+/*
+ * Owner of sonority segmentation (sonority_builder_build_adaptive) (docs/ARCHITECTURE.md, Analytic job
+ * owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

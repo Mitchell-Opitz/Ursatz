@@ -1,6 +1,12 @@
 #ifndef MUSIC_SEMANTICS_SONORITY_BUILDER_H
 #define MUSIC_SEMANTICS_SONORITY_BUILDER_H
 
+/*
+ * sonority_builder_build_from_notes is not the sonority segmentation owner
+ * (sonority_builder_build_adaptive). Kept as the fixed-grid primitive: a caller-given grid is a
+ * different job (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

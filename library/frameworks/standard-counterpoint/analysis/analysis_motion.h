@@ -1,6 +1,11 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_COUNTERPOINT_ANALYSIS_ANALYSIS_MOTION_H
 #define URSATZ_FRAMEWORKS_STANDARD_COUNTERPOINT_ANALYSIS_ANALYSIS_MOTION_H
 
+/*
+ * Owner of motion classification (standard_counterpoint_classify_motions) (docs/ARCHITECTURE.md,
+ * Analytic job owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

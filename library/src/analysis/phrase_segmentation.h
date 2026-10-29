@@ -1,6 +1,11 @@
 #ifndef MUSIC_ANALYSIS_PHRASE_SEGMENTATION_H
 #define MUSIC_ANALYSIS_PHRASE_SEGMENTATION_H
 
+/*
+ * Not the phrase segmentation owner (standard_form_segment_phrases). Kept as an internal step of the
+ * kernel boundary detector (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

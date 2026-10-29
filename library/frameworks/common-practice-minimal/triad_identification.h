@@ -1,6 +1,12 @@
 #ifndef URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_TRIAD_IDENTIFICATION_H
 #define URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_TRIAD_IDENTIFICATION_H
 
+/*
+ * Not the chord identification owner (common_practice_identify_weighted_sequence and
+ * common_practice_identify_weighted). Kept only for the subset coverage reports (known duplicate-id
+ * gap) (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

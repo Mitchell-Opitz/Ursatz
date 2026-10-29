@@ -1,6 +1,11 @@
 #ifndef MUSIC_ANALYSIS_MOTIVE_VARIANT_RECOGNITION_H
 #define MUSIC_ANALYSIS_MOTIVE_VARIANT_RECOGNITION_H
 
+/*
+ * Owner of motive matching (motive_variant_recognize with the motive_relation_apply relations)
+ * (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

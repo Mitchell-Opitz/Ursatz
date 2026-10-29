@@ -1,6 +1,10 @@
 #ifndef URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_KEY_REGIONS_H
 #define URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_KEY_REGIONS_H
 
+/*
+ * Owner of key identification (key_regions_estimate) (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

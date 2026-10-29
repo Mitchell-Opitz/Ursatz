@@ -1,6 +1,11 @@
 #ifndef URSATZ_FRAMEWORKS_STANDARD_TEXTURE_ANALYSIS_TEXTURE_ANALYSIS_FEATURES_H
 #define URSATZ_FRAMEWORKS_STANDARD_TEXTURE_ANALYSIS_TEXTURE_ANALYSIS_FEATURES_H
 
+/*
+ * standard_texture_consolidate_voices is not the voice assignment owner (voice_separate). It is
+ * texture's merge step over assigned voices, kept (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

@@ -1,6 +1,11 @@
 #ifndef MUSIC_ANALYSIS_MOTIVE_TONE_ROLES_H
 #define MUSIC_ANALYSIS_MOTIVE_TONE_ROLES_H
 
+/*
+ * Owner of non-chord-tone classification (motive_tone_roles) (docs/ARCHITECTURE.md, Analytic job
+ * owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

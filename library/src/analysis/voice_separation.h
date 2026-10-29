@@ -1,6 +1,10 @@
 #ifndef MUSIC_ANALYSIS_VOICE_SEPARATION_H
 #define MUSIC_ANALYSIS_VOICE_SEPARATION_H
 
+/*
+ * Owner of voice assignment (voice_separate) (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 

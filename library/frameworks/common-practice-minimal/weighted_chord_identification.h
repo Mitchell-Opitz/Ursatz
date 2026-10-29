@@ -1,6 +1,11 @@
 #ifndef URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_WEIGHTED_CHORD_IDENTIFICATION_H
 #define URSATZ_FRAMEWORKS_COMMON_PRACTICE_MINIMAL_WEIGHTED_CHORD_IDENTIFICATION_H
 
+/*
+ * Owner of chord identification (common_practice_identify_weighted_sequence and
+ * common_practice_identify_weighted) (docs/ARCHITECTURE.md, Analytic job owners).
+ */
+
 #include <stdbool.h>
 #include <stddef.h>
 
