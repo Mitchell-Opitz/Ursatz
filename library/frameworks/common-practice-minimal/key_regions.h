@@ -3,11 +3,13 @@
 
 /*
  * Owner of key identification (key_regions_estimate) (docs/ARCHITECTURE.md, Analytic job owners).
+ * Owner of the home key (docs/ARCHITECTURE.md, Analytic job owners).
  */
 
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "core/rational.h"
 #include "interpretation/key.h"
 #include "key_vocabulary.h"
 #include "semantics/analysis_key.h"
@@ -334,5 +336,14 @@ CommonPracticeKeyRegionsStatus key_regions_estimate(const CommonPracticeKeySegme
 
 /* Destroys every region's Key and TimeSpan and the arrays. NULL is a no-op. */
 void common_practice_key_regions_destroy(CommonPracticeKeyRegions *regions);
+
+/*
+ * The home key of a piece: the key (tonic and mode) with the longest total duration over all its regions, the
+ * earliest such key on a tie. *home is the index of the first region of that key and *duration, when not NULL,
+ * its total. The sums are checked Rational sums. False, outputs untouched, for NULL regions or home, a count of
+ * 0, a region without a span or a key index outside 0..23, or an overflow.
+ */
+bool common_practice_home_key_region(const CommonPracticeKeyRegion *regions, size_t count, size_t *home,
+                                     Rational *duration);
 
 #endif
