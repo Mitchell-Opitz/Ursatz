@@ -58,6 +58,14 @@ MidiEventDecoderResult midi_event_decoder_decode(const unsigned char *track_data
                                                   MidiNoteEvent **out_events, size_t *out_count);
 
 /*
+ * Reads a MIDI variable-length quantity from data[*pos..size) (at most 4 bytes) and advances *pos past
+ * it. Returns 0 on success, -1 if the bytes run out before a terminating byte (top bit clear) or the
+ * quantity is longer than 4 bytes; *pos and *out are then untouched. Internal to the io module: the one
+ * reader midi_event_decoder.c and midi_key_signature.c both use.
+ */
+int midi_event_decoder_read_vlq(const unsigned char *data, size_t size, size_t *pos, uint32_t *out);
+
+/*
  * Time signature meta-events: 0xFF 0x58, length 4, payload nn dd cc bb. nn is the top number and
  * dd the bottom number as a power of two (dd = 3 is an eighth-note bottom, so nn dd = 6 3 is 6/8).
  * cc (MIDI clocks per metronome click) and bb (32nd notes per quarter) are not read except that

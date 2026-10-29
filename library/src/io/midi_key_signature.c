@@ -3,6 +3,7 @@
 #include <limits.h>
 #include <stdlib.h>
 
+#include "io/midi_event_decoder.h"
 #include "io/smf_reader.h"
 
 typedef struct {
@@ -19,25 +20,6 @@ static unsigned char cursor_byte(Cursor *c) {
     return c->data[c->pos++];
 }
 
-/* Reads a MIDI variable-length quantity. Returns 0 on success, -1 if
-   the cursor runs out of bytes before a terminating byte (top bit
-   clear) is found. Mirrors midi_event_decoder's read_vlq. */
-static int read_vlq(Cursor *c, uint32_t *out) {
-    uint32_t value = 0;
-    for (int i = 0; i < 4; i++) {
-        if (!cursor_has(c, 1)) {
-            return -1;
-        }
-        unsigned char b = cursor_byte(c);
-        value = (value << 7) | (uint32_t)(b & 0x7F);
-        if ((b & 0x80) == 0) {
-            *out = value;
-            return 0;
-        }
-    }
-    return -1;
-}
-
 /* Walks one track's raw bytes looking for a Key Signature meta-event
    (0xFF 0x59, 2-byte payload: sf as signed, mi as 0=major/1=minor).
    Skips every other event just enough to keep byte offsets correct
@@ -50,7 +32,7 @@ static int scan_track_for_key_signature(const unsigned char *track_data, size_t 
 
     while (c.pos < c.size) {
         uint32_t delta = 0;
-        if (read_vlq(&c, &delta) != 0) {
+        if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &delta) != 0) {
             return -1;
         }
 
@@ -72,7 +54,7 @@ static int scan_track_for_key_signature(const unsigned char *track_data, size_t 
             }
             unsigned char meta_type = cursor_byte(&c);
             uint32_t len = 0;
-            if (read_vlq(&c, &len) != 0 || !cursor_has(&c, len)) {
+            if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &len) != 0 || !cursor_has(&c, len)) {
                 return -1;
             }
             if (meta_type == 0x59 && len == 2 && !out->found) {
@@ -86,7 +68,7 @@ static int scan_track_for_key_signature(const unsigned char *track_data, size_t 
 
         if (status == 0xF0 || status == 0xF7) {
             uint32_t len = 0;
-            if (read_vlq(&c, &len) != 0 || !cursor_has(&c, len)) {
+            if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &len) != 0 || !cursor_has(&c, len)) {
                 return -1;
             }
             c.pos += len;
@@ -251,7 +233,7 @@ static int scan_track_for_all_key_signatures(const unsigned char *track_data, si
 
     while (c.pos < c.size) {
         uint32_t delta = 0;
-        if (read_vlq(&c, &delta) != 0) {
+        if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &delta) != 0) {
             return -1;
         }
         tick += delta;
@@ -277,7 +259,7 @@ static int scan_track_for_all_key_signatures(const unsigned char *track_data, si
             }
             unsigned char meta_type = cursor_byte(&c);
             uint32_t len = 0;
-            if (read_vlq(&c, &len) != 0 || !cursor_has(&c, len)) {
+            if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &len) != 0 || !cursor_has(&c, len)) {
                 return -1;
             }
             if (midi_key_signature_collector_meta(collector, track_index, tick, meta_type, c.data + c.pos, len) !=
@@ -290,7 +272,7 @@ static int scan_track_for_all_key_signatures(const unsigned char *track_data, si
 
         if (status == 0xF0 || status == 0xF7) {
             uint32_t len = 0;
-            if (read_vlq(&c, &len) != 0 || !cursor_has(&c, len)) {
+            if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &len) != 0 || !cursor_has(&c, len)) {
                 return -1;
             }
             c.pos += len;

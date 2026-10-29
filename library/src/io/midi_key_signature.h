@@ -15,10 +15,9 @@
  * discards meta-event contents without interpreting them).
  *
  * Reuses smf_reader for header/track chunking, then walks each track's
- * raw bytes with its own minimal delta-time/event-length skipping --
- * deliberately duplicated rather than extending
- * midi_event_decoder_decode's signature, to keep this addition isolated
- * from the existing decoder and its callers.
+ * raw bytes with its own minimal event-length skipping (the delta-time
+ * reader is midi_event_decoder_read_vlq), keeping this scan isolated from
+ * midi_event_decoder_decode and its callers.
  *
  * Only the first key signature meta-event encountered (scanning tracks
  * in order, byte order within each track) is reported; later key

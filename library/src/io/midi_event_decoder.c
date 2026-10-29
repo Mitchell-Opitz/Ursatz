@@ -21,19 +21,18 @@ static unsigned char cursor_byte(Cursor *c) {
     return c->data[c->pos++];
 }
 
-/* Reads a MIDI variable-length quantity. Returns 0 on success, -1 if
-   the cursor runs out of bytes before a terminating byte (top bit
-   clear) is found. */
-static int read_vlq(Cursor *c, uint32_t *out) {
+int midi_event_decoder_read_vlq(const unsigned char *data, size_t size, size_t *pos, uint32_t *out) {
     uint32_t value = 0;
+    size_t at = *pos;
     for (int i = 0; i < 4; i++) {
-        if (!cursor_has(c, 1)) {
+        if (at >= size) {
             return -1;
         }
-        unsigned char b = cursor_byte(c);
+        unsigned char b = data[at++];
         value = (value << 7) | (uint32_t)(b & 0x7F);
         if ((b & 0x80) == 0) {
             *out = value;
+            *pos = at;
             return 0;
         }
     }
@@ -156,7 +155,7 @@ static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t
 
     while (c.pos < c.size) {
         uint32_t delta = 0;
-        if (read_vlq(&c, &delta) != 0) {
+        if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &delta) != 0) {
             return MIDI_EVENT_DECODER_ERR_TRUNCATED;
         }
         tick += delta;
@@ -186,7 +185,7 @@ static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t
             }
             unsigned char meta_type = cursor_byte(&c);
             uint32_t len = 0;
-            if (read_vlq(&c, &len) != 0 || !cursor_has(&c, len)) {
+            if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &len) != 0 || !cursor_has(&c, len)) {
                 return MIDI_EVENT_DECODER_ERR_TRUNCATED;
             }
             if (meta_type == 0x58 && sinks->time_signatures != NULL && len == 4) {
@@ -233,7 +232,7 @@ static MidiEventDecoderResult walk_track(const unsigned char *track_data, size_t
         if (status == 0xF0 || status == 0xF7) {
             /* Sysex / escape: VLQ length + data. */
             uint32_t len = 0;
-            if (read_vlq(&c, &len) != 0 || !cursor_has(&c, len)) {
+            if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &len) != 0 || !cursor_has(&c, len)) {
                 return MIDI_EVENT_DECODER_ERR_TRUNCATED;
             }
             c.pos += len;
