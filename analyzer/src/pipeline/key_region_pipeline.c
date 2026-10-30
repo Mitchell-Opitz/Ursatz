@@ -58,7 +58,7 @@ static bool copy_region(const CommonPracticeKeyRegion *source, AnalysisKeyRegion
     }
     out->tonic_pitch_class = tonic;
     out->is_major = is_major;
-    out->prefer_flats = tonic_prefers_flats(tonic);
+    out->prefer_flats = tonic_prefers_flats(tonic, is_major);
     out->start_numerator = musical_time_numerator(start);
     out->start_denominator = musical_time_denominator(start);
     out->end_numerator = musical_time_numerator(end);
@@ -173,48 +173,4 @@ bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmen
     free(segments);
     free(events);
     return ok;
-}
-
-/* The region's length in whole notes; false when it does not fit a Rational. */
-static bool region_duration(const AnalysisKeyRegion *region, Rational *length) {
-    Rational start;
-    Rational end;
-    return rational_make(region->start_numerator, (long long)region->start_denominator, &start) == RATIONAL_OK &&
-           rational_make(region->end_numerator, (long long)region->end_denominator, &end) == RATIONAL_OK &&
-           rational_sub(end, start, length) == RATIONAL_OK;
-}
-
-static bool same_key(const AnalysisKeyRegion *a, const AnalysisKeyRegion *b) {
-    return a->tonic_pitch_class == b->tonic_pitch_class && a->is_major == b->is_major;
-}
-
-bool home_key_region(const AnalysisKeyRegion *regions, size_t region_count, size_t *home_region,
-                     long *duration_numerator, unsigned long *duration_denominator) {
-    size_t home = 0;
-    Rational best = {0, 1};
-    for (size_t i = 0; i < region_count; i++) {
-        bool first_of_key = true;
-        for (size_t earlier = 0; earlier < i && first_of_key; earlier++) {
-            first_of_key = !same_key(&regions[earlier], &regions[i]);
-        }
-        if (!first_of_key) {
-            continue;
-        }
-        Rational total = {0, 1};
-        for (size_t j = i; j < region_count; j++) {
-            Rational length;
-            if (same_key(&regions[i], &regions[j]) &&
-                (!region_duration(&regions[j], &length) || rational_add(total, length, &total) != RATIONAL_OK)) {
-                return false;
-            }
-        }
-        if (i == 0 || rational_cmp(best, total) < 0) {
-            home = i;
-            best = total;
-        }
-    }
-    *home_region = home;
-    *duration_numerator = (long)best.num;
-    *duration_denominator = (unsigned long)best.den;
-    return true;
 }

@@ -121,26 +121,6 @@ static const AnalysisKeyRegion *region_at(const AnalysisReport *report, long lon
     return &report->key_regions[report->key_region_count - 1];
 }
 
-/* A degree label as the library names it: "1" to "7", with a "b" or "#" before it for an altered degree. */
-static bool parse_degree(const char *label, int *degree, int *alteration) {
-    *alteration = 0;
-    if (!label) {
-        return false;
-    }
-    if (*label == 'b') {
-        *alteration = -1;
-        label++;
-    } else if (*label == '#') {
-        *alteration = 1;
-        label++;
-    }
-    if (*label < '1' || *label > '7') {
-        return false;
-    }
-    *degree = *label - '0';
-    return true;
-}
-
 /* Adds the soprano to the stage's input, with each note's scale degree in its key region. The input's notes and
    form.note_indices are parallel. */
 static bool add_soprano(FormStage *form, const ImportedNotes *notes, const SopranoNote *line, size_t count,
@@ -176,10 +156,9 @@ static bool add_soprano(FormStage *form, const ImportedNotes *notes, const Sopra
         int pitch_class = (int)(((note->semitone % 12) + 12) % 12);
         int degree = 0;
         int alteration = 0;
-        if (parse_degree(common_practice_scale_degree_label(
-                             pitch_class, region->tonic_pitch_class,
-                             region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR),
-                         &degree, &alteration) &&
+        if (common_practice_scale_degree_of(pitch_class, region->tonic_pitch_class,
+                                            region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR,
+                                            &degree, &alteration) &&
             standard_form_input_set_degree(&form->input, false, form->input.note_count - 1, degree, alteration) ==
                 STANDARD_FORM_ANALYSIS_ERR_ALLOC) {
             return false;

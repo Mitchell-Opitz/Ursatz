@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common-practice-minimal/key_regions.h"
+#include "core/rational.h"
 #include "pipeline/form_plan_pipeline.h"
 #include "pipeline/harmonic_rhythm_pipeline.h"
 #include "pipeline/key_region_pipeline.h"
@@ -129,6 +131,18 @@ static bool collect_non_chord_tones(AnalysisChain *chain) {
     return true;
 }
 
+/* The home key: the library's key with the longest total duration over its regions. */
+static bool home_key(const AnalysisChain *chain, AnalysisReport *report) {
+    Rational duration;
+    if (!common_practice_home_key_region(chain->key_regions.regions, chain->key_regions.region_count,
+                                         &report->home_region, &duration)) {
+        return false;
+    }
+    report->home_duration_numerator = (long)duration.num;
+    report->home_duration_denominator = (unsigned long)duration.den;
+    return true;
+}
+
 bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size_t boundary_count) {
     const Segmentation *segmentation = &chain->segmentation;
     AnalysisReport *report = &chain->report;
@@ -155,8 +169,7 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         return false;
     }
     if (report->key_region_count > 0 &&
-        !home_key_region(report->key_regions, report->key_region_count, &report->home_region,
-                         &report->home_duration_numerator, &report->home_duration_denominator)) {
+        !home_key(chain, report)) {
         return false;
     }
     if (!harmony_stage_prepare(chain->notes, segmentation, &chain->romans, report->entries, &chain->harmony) ||

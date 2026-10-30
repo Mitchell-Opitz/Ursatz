@@ -65,26 +65,6 @@ static const AnalysisKeyRegion *region_at(const AnalysisReport *report, long lon
     return report->key_region_count > 0 ? &report->key_regions[report->key_region_count - 1] : NULL;
 }
 
-/* A degree label as the library names it: "1" to "7", with a "b" or "#" before it for an altered degree. */
-static bool parse_degree(const char *label, int *degree, int *alteration) {
-    *alteration = 0;
-    if (!label) {
-        return false;
-    }
-    if (*label == 'b') {
-        *alteration = -1;
-        label++;
-    } else if (*label == '#') {
-        *alteration = 1;
-        label++;
-    }
-    if (*label < '1' || *label > '7') {
-        return false;
-    }
-    *degree = *label - '0';
-    return true;
-}
-
 /* The note's name as the outer voice lines name it: as the input spells it when it does, else by the key region's
    flats or sharps. */
 static void name_note(const ImportedNotes *notes, size_t note, long pitch, const AnalysisKeyRegion *region,
@@ -147,10 +127,9 @@ static bool add_note(PhraseLine *built, const ImportedNotes *notes, const Analys
     const AnalysisKeyRegion *region = region_at(report, segment->start_numerator, (long long)segment->start_denominator);
     long pitch = pitch_numeric_value_position_numerator(entry->pitch);
     if (region) {
-        parse_degree(common_practice_scale_degree_label(
-                         (int)(((pitch % 12) + 12) % 12), region->tonic_pitch_class,
-                         region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR),
-                     &note.degree, &note.alteration);
+        common_practice_scale_degree_of((int)(((pitch % 12) + 12) % 12), region->tonic_pitch_class,
+                                        region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR,
+                                        &note.degree, &note.alteration);
     }
     classify_note(report, segment, segment->note_indices[member], chord, tone, &note);
     char ref[96];
