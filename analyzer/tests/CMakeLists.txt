@@ -12,13 +12,14 @@ add_test(NAME test_report_output COMMAND test_report_output)
 
 add_executable(test_corpus_key_estimation test_corpus_key_estimation.c)
 target_link_libraries(test_corpus_key_estimation PRIVATE ursatz_analyzer)
-add_test(NAME test_corpus_key_estimation COMMAND test_corpus_key_estimation
-         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(test_corpus_key_estimation PRIVATE
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_test(NAME test_corpus_key_estimation COMMAND test_corpus_key_estimation)
 
 add_executable(test_long_labels test_long_labels.c)
 target_link_libraries(test_long_labels PRIVATE ursatz_analyzer)
 target_compile_definitions(test_long_labels PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_long_labels COMMAND test_long_labels)
 
 add_executable(test_analysis_document test_analysis_document.c)
@@ -28,7 +29,7 @@ add_test(NAME test_analysis_document COMMAND test_analysis_document)
 add_test(NAME test_cli_output_flags
          COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DFIXTURE=${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid
+                 -DFIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_output_flags
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_output_flags.cmake)
 
@@ -53,7 +54,7 @@ add_test(NAME test_analysis_document_schema
                  -DHAVE_JSONSCHEMA=${URSATZ_ANALYZER_HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
                  -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/analysis-document.v9.schema.json
-                 -DFIXTURE_DIR=${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/framework-v1-corpus
+                 -DFIXTURE_DIR=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/framework-v1-corpus
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/analysis_document_schema
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_analysis_document.cmake)
 set_tests_properties(test_analysis_document_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
@@ -61,7 +62,7 @@ set_tests_properties(test_analysis_document_schema PROPERTIES SKIP_REGULAR_EXPRE
 add_executable(test_report_snapshots test_report_snapshots.c)
 target_link_libraries(test_report_snapshots PRIVATE ursatz_analyzer analyzer_test_support)
 target_compile_definitions(test_report_snapshots PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 add_test(NAME test_report_snapshots COMMAND test_report_snapshots)
@@ -69,20 +70,20 @@ add_test(NAME test_report_snapshots COMMAND test_report_snapshots)
 add_executable(test_document_snapshots test_document_snapshots.c)
 target_link_libraries(test_document_snapshots PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_document_snapshots PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 add_test(NAME test_document_snapshots COMMAND test_document_snapshots)
 
 add_executable(test_measure_locations test_measure_locations.c)
 target_link_libraries(test_measure_locations PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_measure_locations PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_measure_locations COMMAND test_measure_locations)
 
 add_executable(test_chord_coverage test_chord_coverage.c)
 target_link_libraries(test_chord_coverage PRIVATE ursatz_analyzer)
 target_compile_definitions(test_chord_coverage PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_chord_coverage COMMAND test_chord_coverage)
 
 add_executable(test_chord_details test_chord_details.c)
@@ -92,7 +93,7 @@ add_test(NAME test_chord_details COMMAND test_chord_details)
 add_executable(test_key_regions test_key_regions.c)
 target_link_libraries(test_key_regions PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_key_regions PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 # Expected to fail: Ursatz's key-region detection does not reach the hand-read regions (see README, Known
 # limits). Measured with cadence-confirmed key changes (R-044): Clementi misses 1 core measure (m. 20), Mozart misses
 # 38 core measures and 5 modulations: to G at m. 13, to C at m. 29, to G at m. 41 (no cadence arrives in them, so they
@@ -106,7 +107,7 @@ add_test(NAME test_key_regions_constructed COMMAND test_key_regions constructed)
 add_executable(test_roman_numerals test_roman_numerals.c)
 target_link_libraries(test_roman_numerals PRIVATE ursatz_analyzer analyzer_test_support cjson m)
 target_compile_definitions(test_roman_numerals PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_roman_numerals COMMAND test_roman_numerals)
 
 add_executable(test_outer_voices test_outer_voices.c)
@@ -116,20 +117,20 @@ add_test(NAME test_outer_voices COMMAND test_outer_voices)
 add_executable(test_cadences test_cadences.c)
 target_link_libraries(test_cadences PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_cadences PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_cadences COMMAND test_cadences)
 
 add_executable(test_harmonic_function test_harmonic_function.c)
 target_link_libraries(test_harmonic_function PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_harmonic_function PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_harmonic_function COMMAND test_harmonic_function)
 
 add_executable(test_progressions test_progressions.c)
 target_link_libraries(test_progressions PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_include_directories(test_progressions PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_definitions(test_progressions PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_progressions COMMAND test_progressions)
 # Expected to fail: the library's Roman numerals give Bach 114 the most common progression I > IV7 (6 occurrences,
 # tied with ii > iii7), which ends on IV7, not I (see README, Known limits). The assertion stays as the target; remove
@@ -140,33 +141,33 @@ set_tests_properties(test_progressions_bach_114_top PROPERTIES WILL_FAIL TRUE)
 add_executable(test_phrases test_phrases.c)
 target_link_libraries(test_phrases PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_phrases PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_phrases COMMAND test_phrases)
 
 add_executable(test_themes test_themes.c)
 target_link_libraries(test_themes PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_themes PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 add_test(NAME test_themes COMMAND test_themes)
 
 add_executable(test_form_plan test_form_plan.c)
 target_link_libraries(test_form_plan PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_form_plan PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 add_test(NAME test_form_plan COMMAND test_form_plan)
 
 add_executable(test_motives test_motives.c)
 target_link_libraries(test_motives PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_motives PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_motives COMMAND test_motives)
 
 add_executable(test_melody test_melody.c)
 target_link_libraries(test_melody PRIVATE ursatz_analyzer analyzer_test_support cjson m)
 target_compile_definitions(test_melody PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_melody COMMAND test_melody)
 # Expected to fail: the extracted soprano of Bach 114 misses the annotated ranges (the extractor adopts a left-hand note
 # where the right hand rests, at the start of measure 4) and gets the right recovery status for 4 of the 11 annotated
@@ -178,7 +179,7 @@ set_tests_properties(test_melody_bach_114_target PROPERTIES WILL_FAIL TRUE)
 add_executable(test_rhythm test_rhythm.c)
 target_link_libraries(test_rhythm PRIVATE ursatz_analyzer analyzer_test_support cjson m)
 target_compile_definitions(test_rhythm PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_rhythm COMMAND test_rhythm)
 add_test(NAME test_rhythm_constructed COMMAND test_rhythm constructed)
 # Expected to fail: the form adapter reports no elided cadence, so the hypermeter has no reinterpretation, and Field 5's
@@ -191,7 +192,7 @@ set_tests_properties(test_rhythm_field5_target PROPERTIES WILL_FAIL TRUE)
 add_executable(test_texture test_texture.c)
 target_link_libraries(test_texture PRIVATE ursatz_analyzer)
 target_compile_definitions(test_texture PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_texture COMMAND test_texture)
 
 add_executable(test_voice_leading test_voice_leading.c)
@@ -209,21 +210,21 @@ add_test(NAME test_markings COMMAND test_markings)
 add_executable(test_schemas test_schemas.c)
 target_link_libraries(test_schemas PRIVATE ursatz_analyzer m)
 target_compile_definitions(test_schemas PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_TEST_OUTPUT_DIR="${CMAKE_CURRENT_BINARY_DIR}")
 add_test(NAME test_schemas COMMAND test_schemas)
 
 add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
 target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_musicxml_midi_agreement PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 add_test(NAME test_musicxml_midi_agreement COMMAND test_musicxml_midi_agreement)
 
 add_executable(test_musicxml_input test_musicxml_input.c)
 target_link_libraries(test_musicxml_input PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_musicxml_input PRIVATE
-    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 add_test(NAME test_musicxml_input COMMAND test_musicxml_input)
 
@@ -250,7 +251,7 @@ add_test(NAME test_cli_notation_reading
 add_test(NAME test_cli_input_formats
          COMMAND ${CMAKE_COMMAND}
                  -DCLI=$<TARGET_FILE:ursatz-analyzer>
-                 -DMIDI_FIXTURE=${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid
+                 -DMIDI_FIXTURE=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/arpeggiation-investigation/Bach_Prelude_C_Major.mid
                  -DMUSICXML_DIR=${CMAKE_CURRENT_SOURCE_DIR}/musicxml
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_input_formats
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_input_formats.cmake)
@@ -276,7 +277,7 @@ add_test(NAME test_cli_counterpoint_check
 # Test corpora, built in the build tree at configure time (never committed twice). "reference" is the five framework-v1
 # pieces; "mixed" has one MIDI, one MusicXML in a subfolder, one .txt and one broken .mid.
 set(URSATZ_CORPORA_DIR ${CMAKE_CURRENT_BINARY_DIR}/corpora)
-set(URSATZ_REFERENCE_FIXTURES ${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/framework-v1-corpus)
+set(URSATZ_REFERENCE_FIXTURES ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/framework-v1-corpus)
 file(REMOVE_RECURSE ${URSATZ_CORPORA_DIR})
 file(GLOB reference_pieces ${URSATZ_REFERENCE_FIXTURES}/*.mid)
 file(COPY ${reference_pieces} DESTINATION ${URSATZ_CORPORA_DIR}/reference)
@@ -284,15 +285,10 @@ file(COPY "${URSATZ_REFERENCE_FIXTURES}/Bach 114.mid" DESTINATION ${URSATZ_CORPO
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/musicxml/field-1.musicxml DESTINATION ${URSATZ_CORPORA_DIR}/mixed/sub)
 file(WRITE ${URSATZ_CORPORA_DIR}/mixed/notes.txt "not a piece\n")
 file(WRITE ${URSATZ_CORPORA_DIR}/mixed/broken.mid "not a midi file\n")
-# "chorales" is the ten accuracy-corpus chorales (private use, R-016), one MusicXML file each, named after its folder;
+# "chorales" is the ten accuracy-corpus chorales (private use, R-016), one MusicXML file each;
 # "sonatinas" is the two sonatina movements.
-file(GLOB chorale_scores ${PROJECT_SOURCE_DIR}/external/ursatz/tests/accuracy/corpus/*/score.musicxml)
-foreach(score ${chorale_scores})
-    get_filename_component(score_dir ${score} DIRECTORY)
-    get_filename_component(chorale_name ${score_dir} NAME)
-    file(COPY ${score} DESTINATION ${URSATZ_CORPORA_DIR}/chorales)
-    file(RENAME ${URSATZ_CORPORA_DIR}/chorales/score.musicxml ${URSATZ_CORPORA_DIR}/chorales/${chorale_name}.musicxml)
-endforeach()
+file(GLOB chorale_scores ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/chorales/*.musicxml)
+file(COPY ${chorale_scores} DESTINATION ${URSATZ_CORPORA_DIR}/chorales)
 file(COPY "${URSATZ_REFERENCE_FIXTURES}/Clementi 36.mid" "${URSATZ_REFERENCE_FIXTURES}/Mozart 545.mid"
      DESTINATION ${URSATZ_CORPORA_DIR}/sonatinas)
 
@@ -383,7 +379,7 @@ set_tests_properties(test_cli_similar PROPERTIES FIXTURES_REQUIRED similar_motiv
 add_executable(test_composer_api test_composer_api.c)
 target_link_libraries(test_composer_api PRIVATE ursatz_analyzer cjson)
 target_compile_definitions(test_composer_api PRIVATE
-    URSATZ_FIXTURE_DIR="${URSATZ_REFERENCE_FIXTURES}"
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_COMPOSER_API_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/composer_api_work")
 add_test(NAME test_composer_api_smoke COMMAND test_composer_api smoke)

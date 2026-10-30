@@ -310,7 +310,7 @@ static void check_mozart_features(const cJSON *motives, const AnalysisReport *re
 
 int main(void) {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_FIXTURE_DIR);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Mozart 545.mid", URSATZ_ANALYZER_FIXTURE_DIR);
     ImportedNotes notes;
     AnalysisReport report;
     if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
@@ -340,7 +340,7 @@ int main(void) {
         check_mozart_features(motives, &report, &report_again);
         printf("Mozart 545: %d motive families\n", cJSON_GetArraySize(motives));
         AnnotatedFamily families[16];
-        snprintf(path, sizeof(path), "%s/annotations/mozart545_motives.txt", URSATZ_FIXTURE_DIR);
+        snprintf(path, sizeof(path), "%s/annotations/mozart545_motives.txt", URSATZ_ANALYZER_FIXTURE_DIR);
         size_t family_count = load_annotation(path, families, 16);
         CHECK(family_count > 0);
         check_annotation(motives, families, family_count);

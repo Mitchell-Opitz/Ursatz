@@ -381,7 +381,7 @@ static void check_annotation(const ImportedNotes *notes, const AnalysisReport *r
 int main(int argc, char **argv) {
     bool target = argc > 1 && strcmp(argv[1], "bach-114-target") == 0;
     char path[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURE_DIR);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_ANALYZER_FIXTURE_DIR);
     ImportedNotes notes;
     AnalysisReport report;
     if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {
@@ -397,7 +397,7 @@ int main(int argc, char **argv) {
         check_melody(&notes, &report, document);
     }
     if (document) {
-        snprintf(path, sizeof(path), "%s/annotations/bach114_melody.txt", URSATZ_FIXTURE_DIR);
+        snprintf(path, sizeof(path), "%s/annotations/bach114_melody.txt", URSATZ_ANALYZER_FIXTURE_DIR);
         check_annotation(&notes, &report, path, target);
     }
     cJSON_Delete(document);

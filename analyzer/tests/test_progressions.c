@@ -260,7 +260,7 @@ static void check_progressions(const cJSON *document, const AnalysisReport *repo
 
 static cJSON *analyze(const Piece *piece, AnalysisReport *report, ImportedNotes *notes) {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURE_DIR, piece->file);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, piece->file);
     if (midi_pipeline_import_file(path, notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(notes, report)) {
         fprintf(stderr, "%s: cannot analyze %s\n", piece->name, path);
         failures++;

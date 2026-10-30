@@ -538,7 +538,7 @@ static void test_modulation(const char *path) {
 
 static void test_reference_piece(const char *file) {
     char path[512];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURE_DIR, file);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, file);
     Analyzed analyzed;
     analyze(path, &analyzed);
     check_vocabulary(&analyzed, file);

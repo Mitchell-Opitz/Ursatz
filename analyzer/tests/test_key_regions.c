@@ -76,10 +76,10 @@ static const ExpectedModulation MOZART_MODULATIONS[] = {
     {13, "G major"}, {29, "C major"}, {41, "G major"}, {79, "C major"}, {124, "C major"}};
 
 static const ReferencePiece PIECES[] = {
-    {"clementi", URSATZ_FIXTURE_DIR "/framework-v1-corpus/Clementi 36.mid", "C major", "C major", CLEMENTI_REGIONS,
+    {"clementi", URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Clementi 36.mid", "C major", "C major", CLEMENTI_REGIONS,
      sizeof(CLEMENTI_REGIONS) / sizeof(CLEMENTI_REGIONS[0]), CLEMENTI_MODULATIONS,
      sizeof(CLEMENTI_MODULATIONS) / sizeof(CLEMENTI_MODULATIONS[0])},
-    {"mozart", URSATZ_FIXTURE_DIR "/framework-v1-corpus/Mozart 545.mid", NULL, "C major", MOZART_REGIONS,
+    {"mozart", URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Mozart 545.mid", NULL, "C major", MOZART_REGIONS,
      sizeof(MOZART_REGIONS) / sizeof(MOZART_REGIONS[0]), MOZART_MODULATIONS,
      sizeof(MOZART_MODULATIONS) / sizeof(MOZART_MODULATIONS[0])},
 };

@@ -24,7 +24,7 @@
  *
  * John Field, Nocturne No. 1 in E-flat major must be above 90%. The other
  * four reference pieces must still produce chords. The files are Ursatz's
- * framework-v1 corpus (URSATZ_FIXTURE_DIR/framework-v1-corpus).
+ * framework-v1 corpus (URSATZ_ANALYZER_FIXTURE_DIR/framework-v1-corpus).
  */
 
 #define COVERAGE_TARGET 0.90
@@ -90,7 +90,7 @@ static double coverage(const ImportedNotes *notes, const AnalysisReport *report,
 int main(void) {
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
         char path[512];
-        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURE_DIR, PIECES[i].file);
+        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, PIECES[i].file);
 
         ImportedNotes notes;
         assert(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK);

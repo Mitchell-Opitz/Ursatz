@@ -38,7 +38,7 @@ static int failures = 0;
     } while (0)
 
 static void piece_path(char *out, size_t size, const char *file) {
-    snprintf(out, size, "%s/%s", URSATZ_FIXTURE_DIR, file);
+    snprintf(out, size, "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, file);
 }
 
 /* A fingerprint of the events: id, onset, duration and pitch token of each, to see they are not changed. */

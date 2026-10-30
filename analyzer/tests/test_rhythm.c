@@ -415,14 +415,14 @@ int main(int argc, char **argv) {
         check_hemiola();
     } else {
         char path[1024];
-        snprintf(path, sizeof(path), "%s/framework-v1-corpus/Field 5.mid", URSATZ_FIXTURE_DIR);
+        snprintf(path, sizeof(path), "%s/framework-v1-corpus/Field 5.mid", URSATZ_ANALYZER_FIXTURE_DIR);
         Analysis analysis;
         Annotation annotation;
         if (!analyze(path, &analysis)) {
             fprintf(stderr, "cannot analyze %s\n", path);
             return 1;
         }
-        snprintf(path, sizeof(path), "%s/annotations/field5_rhythm.txt", URSATZ_FIXTURE_DIR);
+        snprintf(path, sizeof(path), "%s/annotations/field5_rhythm.txt", URSATZ_ANALYZER_FIXTURE_DIR);
         if (!load_annotation(path, &annotation)) {
             fprintf(stderr, "cannot read %s\n", path);
             analysis_destroy(&analysis);

@@ -167,7 +167,7 @@ int main(void) {
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
         char midi_path[512];
         char xml_path[512];
-        snprintf(midi_path, sizeof(midi_path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURE_DIR, PIECES[i].midi);
+        snprintf(midi_path, sizeof(midi_path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, PIECES[i].midi);
         snprintf(xml_path, sizeof(xml_path), "%s/%s", URSATZ_MUSICXML_DIR, PIECES[i].musicxml);
         cJSON *midi = test_analyze_midi(midi_path);
         cJSON *xml = test_analyze_midi(xml_path);
