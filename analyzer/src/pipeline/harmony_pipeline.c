@@ -13,8 +13,10 @@
 #include "standard-harmony/six_four_type.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
+#include "time/meter_arithmetic.h"
 #include "time/meter_map.h"
 #include "time/metrical_position.h"
+#include "time/time_rational.h"
 #include "time/time_span.h"
 
 /* The chord's root-relative semitone intervals, from the quality the library's Roman numeral claim names
@@ -50,14 +52,12 @@ static int degree_of(const AnalysisOuterNote *note) {
     return note->degree[0] - '0';
 }
 
-/* The length of one beat in the signature of the measure the position lies in, or NULL when the meter gives none. */
+/* The length of one beat in the measure the position lies in, or NULL when the meter gives none. */
 static Duration *beat_length_at(const MeterMap *map, const MetricalPosition *position) {
-    const TimeSignature *reading = NULL;
+    Rational length;
     Duration *beat = NULL;
-    unsigned beats = 0;
-    if (metrical_position_reading_signature(map, metrical_position_measure(position), &reading) !=
-            METRICAL_POSITION_OK ||
-        !standard_meter_beat_grid(reading, &beat, &beats)) {
+    if (meter_map_beat_length(map, metrical_position_measure(position), &length) != METER_MAP_OK ||
+        duration_from_rational(length, &beat) != TIME_RATIONAL_OK) {
         return NULL;
     }
     return beat;

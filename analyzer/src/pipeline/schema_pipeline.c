@@ -16,8 +16,10 @@
 #include "semantics/beat_strength.h"
 #include "theory/framework.h"
 #include "time/duration.h"
+#include "time/meter_arithmetic.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
+#include "time/time_rational.h"
 #include "time/time_signature.h"
 #include "time/time_span.h"
 
@@ -68,24 +70,15 @@ static bool outer_pitch_class(const AnalysisOuterNote *note, int *out) {
 static void beat_length(const MeterMap *map, const MusicalTime *time, long *numerator, unsigned long *denominator) {
     *numerator = 1;
     *denominator = 4;
-    const MeterMapRegion *region = NULL;
-    if (meter_map_region_at(map, time, &region) != METER_MAP_OK) {
+    Rational at;
+    Rational length;
+    int measure = 0;
+    if (rational_of_musical_time(time, &at) != RATIONAL_OK || meter_map_measure_of(map, at, &measure) != METER_MAP_OK ||
+        meter_map_beat_length(map, measure, &length) != METER_MAP_OK) {
         return;
     }
-    const TimeSignature *signature = meter_map_region_time_signature(region);
-    Duration *unit = NULL;
-    if (!signature || time_signature_unit_duration(signature, &unit) != DURATION_OK) {
-        return;
-    }
-    long n = duration_numerator(unit);
-    unsigned long d = duration_denominator(unit);
-    duration_destroy(unit);
-    unsigned top = time_signature_top_number(signature);
-    if ((top == 6 || top == 9 || top == 12) && time_signature_bottom_number(signature) >= 8) {
-        n *= 3;
-    }
-    *numerator = n;
-    *denominator = d;
+    *numerator = (long)length.num;
+    *denominator = (unsigned long)length.den;
 }
 
 /* True when two consecutive segments are one harmony: the same key, outer voice degrees and numeral. */

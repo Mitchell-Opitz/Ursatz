@@ -21,6 +21,7 @@
 #include "structure/structure.h"
 #include "theory/framework.h"
 #include "time/duration.h"
+#include "time/meter_arithmetic.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
@@ -566,6 +567,25 @@ static int compare_tuplet_notes(const void *a, const void *b) {
     return x->note < y->note ? -1 : (x->note > y->note ? 1 : 0);
 }
 
+/* The measure of a time and the beat in it, 1-based and fractional (beat 2 and a half is 2.5). */
+static bool beat_position(const MeterMap *map, StandardMeterQ time, int *measure, double *beat) {
+    Rational at;
+    Rational offset;
+    Rational length;
+    Rational whole_beats;
+    Rational from_start;
+    int whole = 0;
+    if (rational_make(time.n, time.d, &at) != RATIONAL_OK ||
+        meter_map_beat_of(map, at, measure, &whole, &offset) != METER_MAP_OK ||
+        meter_map_beat_length(map, *measure, &length) != METER_MAP_OK ||
+        rational_mul_int(length, whole - 1, &whole_beats) != RATIONAL_OK ||
+        rational_add(whole_beats, offset, &from_start) != RATIONAL_OK) {
+        return false;
+    }
+    *beat = 1.0 + rational_to_double(from_start) / rational_to_double(length);
+    return true;
+}
+
 /* Reads a note's attack on the tuplet grid, and its release when that is on the grid too (a performer's articulation
    leaves it off, and the library's own release snap would pull a triplet's onto its 1/32 grid, so the raw release is
    rounded here). False when the attack is off the grid or the meter has no beat to read against. */
@@ -705,7 +725,7 @@ static bool emit_tuplet(AnalysisTuplet **items, size_t *count, size_t *capacity,
     item->meter = "unclassified";
     int measure = 0;
     double beat = 1.0;
-    if (standard_meter_beat_of(map, run->first, &measure, &beat)) {
+    if (beat_position(map, run->first, &measure, &beat)) {
         item->measure = measure;
         item->beat = beat;
     }
