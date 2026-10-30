@@ -8,6 +8,7 @@
 
 #include "cJSON.h"
 #include "pipeline/analysis_document_internal.h"
+#include "util/json_util.h"
 
 typedef struct {
     char *data;
@@ -75,13 +76,8 @@ static bool sb_appendf(StringBuilder *sb, const char *format, ...) {
 
 /* ---- Document access ---- */
 
-static const char *string_member(const cJSON *object, const char *key) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-    return cJSON_IsString(item) ? item->valuestring : NULL;
-}
-
-static double number_member(const cJSON *object, const char *key) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
+static double number_or_zero(const cJSON *object, const char *key) {
+    const cJSON *item = json_member(object, key);
     return cJSON_IsNumber(item) ? item->valuedouble : 0.0;
 }
 
@@ -93,7 +89,7 @@ typedef bool (*SectionRenderer)(StringBuilder *sb, const cJSON *document, const 
 
 static bool render_title(StringBuilder *sb, const cJSON *document, const cJSON *metadata) {
     (void)document;
-    const char *source_file = string_member(metadata, "source_file");
+    const char *source_file = json_string_member(metadata, "source_file");
     return sb_appendf(sb, "# Analysis Report: %s\n\n", source_file ? source_file : "");
 }
 
@@ -132,7 +128,7 @@ static bool count_chord_labels(const cJSON *chords, LabelCount **out_counts, siz
     size_t distinct = 0;
     const cJSON *chord;
     cJSON_ArrayForEach(chord, chords) {
-        const char *label = string_member(chord, "label");
+        const char *label = json_string_member(chord, "label");
         if (!label || strcmp(label, "no match") == 0) {
             continue;
         }
@@ -166,25 +162,25 @@ static bool append_input_line(StringBuilder *sb, const cJSON *input) {
     if (!cJSON_IsObject(input)) {
         return true;
     }
-    const char *format = string_member(input, "format");
+    const char *format = json_string_member(input, "format");
     bool score = format && strcmp(format, "musicxml") == 0;
     size_t part_count = (size_t)cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(input, "parts"));
-    const char *spelling = string_member(input, "spelling");
+    const char *spelling = json_string_member(input, "spelling");
     bool ok = sb_appendf(sb, "- **Input:** %s", score ? "MusicXML score" : "MIDI file");
     if (score) {
         ok = ok && sb_appendf(sb, ", %zu %s merged into one texture", part_count, plural(part_count, "part", "parts"));
     }
     return ok && sb_appendf(sb, ". Meter: %s. Key signature: %s. Pitch spelling: %s.\n",
-                            knowledge_phrase(string_member(input, "meter")),
-                            knowledge_phrase(string_member(input, "key")),
+                            knowledge_phrase(json_string_member(input, "meter")),
+                            knowledge_phrase(json_string_member(input, "key")),
                             spelling && strcmp(spelling, "notated") == 0 ? "notated" : "by rule");
 }
 
 /* A few plain-language lines for a composer: the piece, its key, how
    much of it resolved to chords, and the chords it leans on most. */
 static bool render_summary(StringBuilder *sb, const cJSON *document, const cJSON *metadata) {
-    size_t note_count = (size_t)number_member(metadata, "note_count");
-    const char *source_file = string_member(metadata, "source_file");
+    size_t note_count = (size_t)number_or_zero(metadata, "note_count");
+    const char *source_file = json_string_member(metadata, "source_file");
     bool ok = sb_append(sb, "## Summary\n\n") &&
               sb_appendf(sb, "- **File:** %s, %zu %s.\n", source_file ? source_file : "", note_count,
                          plural(note_count, "note", "notes"));
@@ -192,7 +188,7 @@ static bool render_summary(StringBuilder *sb, const cJSON *document, const cJSON
     ok = ok && append_input_line(sb, cJSON_GetObjectItemCaseSensitive(metadata, "input"));
 
     const cJSON *keys = cJSON_GetObjectItemCaseSensitive(document, "keys");
-    const char *home_label = string_member(cJSON_GetObjectItemCaseSensitive(keys, "home_key"), "label");
+    const char *home_label = json_string_member(cJSON_GetObjectItemCaseSensitive(keys, "home_key"), "label");
     size_t region_count = (size_t)cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(keys, "regions"));
     if (home_label && region_count == 1) {
         ok = ok && sb_appendf(sb, "- **Key:** %s, the only key region.\n", home_label);
@@ -242,8 +238,8 @@ static bool render_summary(StringBuilder *sb, const cJSON *document, const cJSON
 
 /* "1/3" for a rational, "2" when it is whole. */
 static bool append_rational(StringBuilder *sb, const cJSON *rational) {
-    long long num = (long long)number_member(rational, "num");
-    long long den = (long long)number_member(rational, "den");
+    long long num = (long long)number_or_zero(rational, "num");
+    long long den = (long long)number_or_zero(rational, "den");
     if (den <= 1) {
         return sb_appendf(sb, "%lld", num);
     }
@@ -251,8 +247,8 @@ static bool append_rational(StringBuilder *sb, const cJSON *rational) {
 }
 
 static bool append_time_signature(StringBuilder *sb, const cJSON *time_signature) {
-    return sb_appendf(sb, "%d/%d", (int)number_member(time_signature, "numerator"),
-                      (int)number_member(time_signature, "denominator"));
+    return sb_appendf(sb, "%d/%d", (int)number_or_zero(time_signature, "numerator"),
+                      (int)number_or_zero(time_signature, "denominator"));
 }
 
 /* The time signature, how many measures there are, a pickup if the piece
@@ -261,7 +257,7 @@ static bool append_time_signature(StringBuilder *sb, const cJSON *time_signature
 static bool render_meter(StringBuilder *sb, const cJSON *document, const cJSON *meter) {
     (void)document;
     const cJSON *time_signature = cJSON_GetObjectItemCaseSensitive(meter, "time_signature");
-    const char *source = string_member(meter, "source");
+    const char *source = json_string_member(meter, "source");
     bool inferred = source && strcmp(source, "inferred") == 0;
 
     bool ok = sb_append(sb, "## Meter\n\n") && sb_append(sb, "- **Time signature:** ") &&
@@ -303,7 +299,7 @@ static bool render_meter(StringBuilder *sb, const cJSON *document, const cJSON *
                 ok = ok && sb_append(sb, ", ");
             }
             ok = ok && append_time_signature(sb, cJSON_GetObjectItemCaseSensitive(change, "time_signature")) &&
-                 sb_appendf(sb, " at m. %d", (int)number_member(change, "measure"));
+                 sb_appendf(sb, " at m. %d", (int)number_or_zero(change, "measure"));
         }
         ok = ok && sb_append(sb, ".\n");
     }
@@ -318,8 +314,8 @@ static bool append_position(StringBuilder *sb, const cJSON *position) {
         return sb_append(sb, "unknown position");
     }
     const cJSON *subdivision = cJSON_GetObjectItemCaseSensitive(position, "subdivision");
-    double beat = number_member(position, "beat") +
-                  number_member(subdivision, "num") / number_member(subdivision, "den");
+    double beat = number_or_zero(position, "beat") +
+                  number_or_zero(subdivision, "num") / number_or_zero(subdivision, "den");
     char beat_text[32];
     snprintf(beat_text, sizeof(beat_text), "%.2f", beat);
     size_t length = strlen(beat_text);
@@ -329,7 +325,7 @@ static bool append_position(StringBuilder *sb, const cJSON *position) {
     if (length > 0 && beat_text[length - 1] == '.') {
         beat_text[--length] = '\0';
     }
-    return sb_appendf(sb, "m. %d, beat %s", (int)number_member(position, "measure"), beat_text);
+    return sb_appendf(sb, "m. %d, beat %s", (int)number_or_zero(position, "measure"), beat_text);
 }
 
 static const char *region_source_phrase(const char *source) {
@@ -346,11 +342,11 @@ static bool append_key_region_row(StringBuilder *sb, const cJSON *region) {
     if (cJSON_IsNumber(uncertainty)) {
         snprintf(uncertainty_text, sizeof(uncertainty_text), "%.2f", uncertainty->valuedouble);
     }
-    const char *label = string_member(region, "label");
+    const char *label = json_string_member(region, "label");
     return sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
            sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
            sb_appendf(sb, " | %s | %s | %s |\n", label ? label : "", uncertainty_text,
-                      region_source_phrase(string_member(region, "source")));
+                      region_source_phrase(json_string_member(region, "source")));
 }
 
 /* The key regions with the home key, the opening and closing keys, any notated key signatures, and the notes
@@ -361,15 +357,15 @@ static bool render_key(StringBuilder *sb, const cJSON *document, const cJSON *ke
         return true;
     }
     const cJSON *home = cJSON_GetObjectItemCaseSensitive(keys, "home_key");
-    const cJSON *opening = cJSON_GetArrayItem(regions, (int)number_member(keys, "opening_region"));
-    const cJSON *closing = cJSON_GetArrayItem(regions, (int)number_member(keys, "closing_region"));
+    const cJSON *opening = cJSON_GetArrayItem(regions, (int)number_or_zero(keys, "opening_region"));
+    const cJSON *closing = cJSON_GetArrayItem(regions, (int)number_or_zero(keys, "closing_region"));
 
     bool ok = sb_append(sb, "## Key regions\n\n") &&
               sb_append(sb, "Positions are measure and beat. Uncertainty is the library's, from 0 (clearly this key) "
                             "to 1 (another key fits as well or better). The home key is the key with the most time across its regions.\n\n") &&
-              sb_appendf(sb, "- **Home key:** %s.\n", string_member(home, "label")) &&
-              sb_appendf(sb, "- **Opening key:** %s.\n", string_member(opening, "label")) &&
-              sb_appendf(sb, "- **Closing key:** %s.\n", string_member(closing, "label"));
+              sb_appendf(sb, "- **Home key:** %s.\n", json_string_member(home, "label")) &&
+              sb_appendf(sb, "- **Opening key:** %s.\n", json_string_member(opening, "label")) &&
+              sb_appendf(sb, "- **Closing key:** %s.\n", json_string_member(closing, "label"));
 
     const cJSON *signatures =
         cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "metadata"), "key_signatures");
@@ -381,8 +377,8 @@ static bool render_key(StringBuilder *sb, const cJSON *document, const cJSON *ke
                 ok = ok && sb_append(sb, ", ");
             }
             ok = ok &&
-                 sb_appendf(sb, "%s or %s at ", string_member(signature, "major_key"),
-                            string_member(signature, "minor_key")) &&
+                 sb_appendf(sb, "%s or %s at ", json_string_member(signature, "major_key"),
+                            json_string_member(signature, "minor_key")) &&
                  append_position(sb, cJSON_GetObjectItemCaseSensitive(signature, "location"));
         }
         ok = ok && sb_append(sb, ".\n");
@@ -400,9 +396,9 @@ static bool render_key(StringBuilder *sb, const cJSON *document, const cJSON *ke
     const cJSON *notes = cJSON_GetObjectItemCaseSensitive(document, "notes");
     const cJSON *note;
     cJSON_ArrayForEach(note, notes) {
-        const char *kind = string_member(note, "kind");
+        const char *kind = json_string_member(note, "kind");
         if (ok && kind && strcmp(kind, "key_signature_disagreement") == 0) {
-            ok = sb_appendf(sb, "\n**Note:** %s\n", string_member(note, "message"));
+            ok = sb_appendf(sb, "\n**Note:** %s\n", json_string_member(note, "message"));
         }
     }
     return ok && sb_append(sb, "\n");
@@ -435,7 +431,7 @@ static bool render_tonicizations(StringBuilder *sb, const cJSON *document, const
             break;
         }
         ok = sb_append(sb, "| ") && append_location(sb, item) &&
-             sb_appendf(sb, " | %s | %s |\n", string_member(item, "from_key"), string_member(item, "to_key"));
+             sb_appendf(sb, " | %s | %s |\n", json_string_member(item, "from_key"), json_string_member(item, "to_key"));
     }
     return ok && sb_append(sb, "\n");
 }
@@ -455,8 +451,8 @@ static bool render_modulations(StringBuilder *sb, const cJSON *document, const c
         }
         const cJSON *location = cJSON_GetObjectItemCaseSensitive(item, "location");
         ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
-             sb_appendf(sb, " | %s | %s | %s | %s | %s |\n", string_member(item, "from_key"),
-                        string_member(item, "to_key"), string_member(item, "extent"), string_member(item, "type"),
+             sb_appendf(sb, " | %s | %s | %s | %s | %s |\n", json_string_member(item, "from_key"),
+                        json_string_member(item, "to_key"), json_string_member(item, "extent"), json_string_member(item, "type"),
                         cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(item, "is_return")) ? "yes" : "no");
     }
     return ok && sb_append(sb, "\n");
@@ -481,9 +477,9 @@ static bool render_pivot_chords(StringBuilder *sb, const cJSON *document, const 
             inversion_text = INVERSION_NAMES[inversion->valueint];
         }
         ok = sb_append(sb, "| ") && append_location(sb, item) &&
-             sb_appendf(sb, " | %s | %s | %s | %s | %s | %d |\n", string_member(item, "label"),
-                        string_member(item, "bass"), inversion_text, string_member(item, "from_key"),
-                        string_member(item, "to_key"), (int)number_member(item, "modulation_index") + 1);
+             sb_appendf(sb, " | %s | %s | %s | %s | %s | %d |\n", json_string_member(item, "label"),
+                        json_string_member(item, "bass"), inversion_text, json_string_member(item, "from_key"),
+                        json_string_member(item, "to_key"), (int)number_or_zero(item, "modulation_index") + 1);
     }
     return ok && sb_append(sb, "\n");
 }
@@ -506,8 +502,8 @@ static void format_number(double value, char *buffer, size_t size) {
 
 static double rational_member(const cJSON *object, const char *key) {
     const cJSON *rational = cJSON_GetObjectItemCaseSensitive(object, key);
-    double denominator = number_member(rational, "den");
-    return denominator == 0.0 ? 0.0 : number_member(rational, "num") / denominator;
+    double denominator = number_or_zero(rational, "den");
+    return denominator == 0.0 ? 0.0 : number_or_zero(rational, "num") / denominator;
 }
 
 /* The chord's Roman numeral cell. The key region is named on the first labelled chord and wherever it changes,
@@ -515,13 +511,13 @@ static double rational_member(const cJSON *object, const char *key) {
    region of the last numeral that named its key, -1 before the first. */
 static bool append_numeral_cell(StringBuilder *sb, const cJSON *chord, long *last_region) {
     const cJSON *roman = cJSON_GetObjectItemCaseSensitive(chord, "roman_numeral");
-    const char *numeral = string_member(roman, "label");
+    const char *numeral = json_string_member(roman, "label");
     if (!numeral) {
-        const char *reason = string_member(roman, "unlabelled_reason");
+        const char *reason = json_string_member(roman, "unlabelled_reason");
         return sb_appendf(sb, "unlabelled: %s | ", reason ? reason : "no reason given");
     }
     const cJSON *region = cJSON_GetObjectItemCaseSensitive(roman, "key_region");
-    const char *key = string_member(roman, "key");
+    const char *key = json_string_member(roman, "key");
     if (cJSON_IsNumber(region) && key && (long)region->valuedouble != *last_region) {
         *last_region = (long)region->valuedouble;
         return sb_appendf(sb, "%s (in %s) | ", numeral, key);
@@ -533,13 +529,13 @@ static bool append_numeral_cell(StringBuilder *sb, const cJSON *chord, long *las
    strength of a predominant) and six-four type, or "-" where it gives none. */
 static bool append_function_cells(StringBuilder *sb, const cJSON *chord) {
     const cJSON *function = cJSON_GetObjectItemCaseSensitive(chord, "function");
-    const char *name = string_member(function, "name");
+    const char *name = json_string_member(function, "name");
     bool ok;
     if (!name) {
         ok = sb_append(sb, "- | ");
     } else {
         const cJSON *applied_to = cJSON_GetObjectItemCaseSensitive(function, "applied_to");
-        const char *strength = string_member(function, "predominant");
+        const char *strength = json_string_member(function, "predominant");
         ok = sb_append(sb, name);
         if (ok && cJSON_IsNumber(applied_to)) {
             ok = sb_appendf(sb, " of %d", (int)applied_to->valuedouble);
@@ -549,14 +545,14 @@ static bool append_function_cells(StringBuilder *sb, const cJSON *chord) {
         }
         ok = ok && sb_append(sb, " | ");
     }
-    const char *six_four = string_member(cJSON_GetObjectItemCaseSensitive(chord, "six_four"), "type");
+    const char *six_four = json_string_member(cJSON_GetObjectItemCaseSensitive(chord, "six_four"), "type");
     return ok && sb_appendf(sb, "%s | ", six_four ? six_four : "-");
 }
 
 static bool append_chord_row(StringBuilder *sb, const cJSON *chord, long *last_region) {
     const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
-    const char *label = string_member(chord, "label");
-    const char *root = string_member(chord, "root");
+    const char *label = json_string_member(chord, "label");
+    const char *root = json_string_member(chord, "root");
     bool matched = root != NULL;
 
     bool ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
@@ -588,19 +584,19 @@ static bool append_chord_row(StringBuilder *sb, const cJSON *chord, long *last_r
         snprintf(confidence_text, sizeof(confidence_text), "%.2f", uncertainty->valuedouble);
     }
 
-    ok = sb_appendf(sb, "%s | %s | %s | %s | %s | %s | ", root, string_member(chord, "quality"),
-                    string_member(chord, "bass"), inversion_text, beats_text, confidence_text);
+    ok = sb_appendf(sb, "%s | %s | %s | %s | %s | %s | ", root, json_string_member(chord, "quality"),
+                    json_string_member(chord, "bass"), inversion_text, beats_text, confidence_text);
     if (!ok) {
         return false;
     }
 
     const cJSON *runner_up = cJSON_GetObjectItemCaseSensitive(chord, "runner_up");
-    double margin = number_member(chord, "score") - number_member(runner_up, "score");
+    double margin = number_or_zero(chord, "score") - number_or_zero(runner_up, "score");
     if (cJSON_IsObject(runner_up) && margin < RUNNER_UP_MARGIN_THRESHOLD) {
         char score_text[32];
-        snprintf(score_text, sizeof(score_text), "%.2f", number_member(runner_up, "score"));
-        return sb_appendf(sb, "%s (%s %s, score %s) |\n", string_member(runner_up, "label"),
-                          string_member(runner_up, "root"), string_member(runner_up, "quality"), score_text);
+        snprintf(score_text, sizeof(score_text), "%.2f", number_or_zero(runner_up, "score"));
+        return sb_appendf(sb, "%s (%s %s, score %s) |\n", json_string_member(runner_up, "label"),
+                          json_string_member(runner_up, "root"), json_string_member(runner_up, "quality"), score_text);
     }
     return sb_append(sb, "- |\n");
 }
@@ -664,17 +660,17 @@ static bool render_applied_chords(StringBuilder *sb, const cJSON *document, cons
             continue;
         }
         const cJSON *location = cJSON_GetObjectItemCaseSensitive(chord, "location");
-        const char *agreement = string_member(applied, "tonicization_agreement");
-        const char *tonicization_key = string_member(applied, "tonicization_key");
-        const char *target_tonic = string_member(applied, "target_tonic");
-        const char *kind = string_member(applied, "kind");
+        const char *agreement = json_string_member(applied, "tonicization_agreement");
+        const char *tonicization_key = json_string_member(applied, "tonicization_key");
+        const char *target_tonic = json_string_member(applied, "target_tonic");
+        const char *kind = json_string_member(applied, "kind");
         const char *resolution = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(applied, "deceptive"))
                                      ? "deceptive"
                                      : "to the target";
         ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
              sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
-             sb_appendf(sb, " | %s (%s) | %s (%s) | %s | ", string_member(applied, "numeral"),
-                        kind ? kind : "-", string_member(applied, "target_numeral"),
+             sb_appendf(sb, " | %s (%s) | %s (%s) | %s | ", json_string_member(applied, "numeral"),
+                        kind ? kind : "-", json_string_member(applied, "target_numeral"),
                         target_tonic ? target_tonic : "-", resolution);
         if (!ok) {
             break;
@@ -693,9 +689,9 @@ static bool render_applied_chords(StringBuilder *sb, const cJSON *document, cons
 /* One voice's cells in the outer-voices table: its pitch and its degree, or what the library made of its
    absence. Appends " pitch | degree |". */
 static bool append_outer_voice_cells(StringBuilder *sb, const cJSON *voice) {
-    const char *status = string_member(voice, "status");
-    const char *pitch = string_member(voice, "pitch");
-    const char *degree = string_member(voice, "degree");
+    const char *status = json_string_member(voice, "status");
+    const char *pitch = json_string_member(voice, "pitch");
+    const char *degree = json_string_member(voice, "degree");
     if (pitch) {
         return sb_appendf(sb, " %s | %s |", pitch, degree ? degree : "-");
     }
@@ -730,7 +726,7 @@ static bool render_outer_voices(StringBuilder *sb, const cJSON *document, const 
         const cJSON *outer = cJSON_GetObjectItemCaseSensitive(chord, "outer");
         ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
              sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
-             sb_appendf(sb, " | %s |", string_member(chord, "key_label")) &&
+             sb_appendf(sb, " | %s |", json_string_member(chord, "key_label")) &&
              append_outer_voice_cells(sb, cJSON_GetObjectItemCaseSensitive(outer, "soprano")) &&
              append_outer_voice_cells(sb, cJSON_GetObjectItemCaseSensitive(outer, "bass")) && sb_append(sb, "\n");
     }
@@ -743,8 +739,8 @@ static bool append_vocabulary_table(StringBuilder *sb, const cJSON *entries, con
     bool any = false;
     const cJSON *entry;
     cJSON_ArrayForEach(entry, entries) {
-        const char *entry_group = string_member(entry, "group");
-        const char *entry_level = string_member(entry, "level");
+        const char *entry_group = json_string_member(entry, "group");
+        const char *entry_level = json_string_member(entry, "level");
         const cJSON *key_region = cJSON_GetObjectItemCaseSensitive(entry, "key_region");
         bool in_scope = scope_key ? (cJSON_IsNumber(key_region) && (long)key_region->valuedouble == atol(scope_key))
                                   : !cJSON_IsNumber(key_region);
@@ -764,9 +760,9 @@ static bool append_vocabulary_table(StringBuilder *sb, const cJSON *entries, con
             format_number(rational_member(duration, "beats"), beats_text, sizeof(beats_text));
         }
         const cJSON *first = cJSON_GetObjectItemCaseSensitive(entry, "first");
-        if (!(sb_appendf(sb, "| %s | %d | %d | %s | %.1f%% | ", string_member(entry, "numeral"),
-                         (int)number_member(entry, "count"), (int)number_member(entry, "runs"), beats_text,
-                         number_member(entry, "share") * 100.0) &&
+        if (!(sb_appendf(sb, "| %s | %d | %d | %s | %.1f%% | ", json_string_member(entry, "numeral"),
+                         (int)number_or_zero(entry, "count"), (int)number_or_zero(entry, "runs"), beats_text,
+                         number_or_zero(entry, "share") * 100.0) &&
               append_position(sb, cJSON_GetObjectItemCaseSensitive(first, "position")) && sb_append(sb, " |\n"))) {
             return false;
         }
@@ -785,7 +781,7 @@ static bool append_vocabulary_scope(StringBuilder *sb, const cJSON *entries, con
         const cJSON *entry;
         cJSON_ArrayForEach(entry, entries) {
             const cJSON *key_region = cJSON_GetObjectItemCaseSensitive(entry, "key_region");
-            const char *group = string_member(entry, "group");
+            const char *group = json_string_member(entry, "group");
             if (group && strcmp(group, GROUPS[g].group) == 0 &&
                 (scope_key ? (cJSON_IsNumber(key_region) && (long)key_region->valuedouble == atol(scope_key))
                            : !cJSON_IsNumber(key_region))) {
@@ -832,7 +828,7 @@ static bool render_chord_vocabulary(StringBuilder *sb, const cJSON *document, co
             present = present || (cJSON_IsNumber(key_region) && (int)key_region->valuedouble == index);
         }
         if (ok && present) {
-            ok = sb_appendf(sb, "### %s (region %d)\n\n", string_member(region, "label"), index) &&
+            ok = sb_appendf(sb, "### %s (region %d)\n\n", json_string_member(region, "label"), index) &&
                  append_vocabulary_scope(sb, entries, scope_key);
         }
         index++;
@@ -847,7 +843,7 @@ static const char *region_label(const cJSON *document, const cJSON *index) {
     }
     const cJSON *keys = cJSON_GetObjectItemCaseSensitive(document, "keys");
     const cJSON *region = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(keys, "regions"), (int)index->valuedouble);
-    const char *label = string_member(region, "label");
+    const char *label = json_string_member(region, "label");
     return label ? label : "none";
 }
 
@@ -884,11 +880,11 @@ static bool render_prolongations(StringBuilder *sb, const cJSON *document, const
             break;
         }
         const cJSON *location = cJSON_GetObjectItemCaseSensitive(prolongation, "location");
-        int first = (int)number_member(cJSON_GetObjectItemCaseSensitive(location, "start"), "measure");
-        int last = (int)number_member(cJSON_GetObjectItemCaseSensitive(location, "end"), "measure");
-        const char *numeral = string_member(prolongation, "numeral");
+        int first = (int)number_or_zero(cJSON_GetObjectItemCaseSensitive(location, "start"), "measure");
+        int last = (int)number_or_zero(cJSON_GetObjectItemCaseSensitive(location, "end"), "measure");
+        const char *numeral = json_string_member(prolongation, "numeral");
         ok = (first == last ? sb_appendf(sb, "| m. %d | ", first) : sb_appendf(sb, "| mm. %d to %d | ", first, last)) &&
-             sb_appendf(sb, "%s | %s | %s | ", string_member(prolongation, "function"), numeral ? numeral : "-",
+             sb_appendf(sb, "%s | %s | %s | ", json_string_member(prolongation, "function"), numeral ? numeral : "-",
                         region_label(document, cJSON_GetObjectItemCaseSensitive(prolongation, "region"))) &&
              append_reasons(sb, cJSON_GetObjectItemCaseSensitive(prolongation, "reasons")) && sb_append(sb, " |\n");
     }
@@ -916,11 +912,11 @@ static bool render_non_chord_tones(StringBuilder *sb, const cJSON *document, con
         }
         const cJSON *location = cJSON_GetObjectItemCaseSensitive(tone, "location");
         const cJSON *note_ids = cJSON_GetObjectItemCaseSensitive(tone, "note_ids");
-        const char *type = string_member(tone, "type");
+        const char *type = json_string_member(tone, "type");
         ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
              sb_append(sb, " to ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "end")) &&
              sb_appendf(sb, " | %d | %s | %s |\n", (int)cJSON_GetArrayItem(note_ids, 0)->valuedouble,
-                        type ? type : "unclassified", string_member(tone, "chord_label"));
+                        type ? type : "unclassified", json_string_member(tone, "chord_label"));
     }
     return ok && sb_append(sb, "\n");
 }
@@ -937,7 +933,7 @@ static bool append_short_position(StringBuilder *sb, const cJSON *position) {
     if (!cJSON_IsObject(position)) {
         return sb_append(sb, "unknown position");
     }
-    return sb_appendf(sb, "m%d b%d", (int)number_member(position, "measure"), (int)number_member(position, "beat"));
+    return sb_appendf(sb, "m%d b%d", (int)number_or_zero(position, "measure"), (int)number_or_zero(position, "beat"));
 }
 
 /* A share in thousandths as a percentage: "60%" or "62.5%". */
@@ -969,26 +965,26 @@ static bool render_cadence_readings(StringBuilder *sb, const cJSON *cadences) {
         }
         const cJSON *location = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cadence, "arrival"),
                                                                  "location");
-        bool prolongation = string_member(alternative, "reading") &&
-                            strcmp(string_member(alternative, "reading"), "prolongation") == 0;
+        bool prolongation = json_string_member(alternative, "reading") &&
+                            strcmp(json_string_member(alternative, "reading"), "prolongation") == 0;
         bool ok = (heading || sb_append(sb, "### Competing readings\n\n"
                                             "A cadence the evidence does not settle has two readings, the likelier "
                                             "first, each with its share of the evidence.\n\n")) &&
                   sb_append(sb, "- ") && append_short_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
-                  sb_append(sb, " ") && append_cadence_phrase(sb, string_member(cadence, "type")) &&
-                  sb_append(sb, " (") && append_share(sb, number_member(cadence, "share")) && sb_append(sb, "), or ");
+                  sb_append(sb, " ") && append_cadence_phrase(sb, json_string_member(cadence, "type")) &&
+                  sb_append(sb, " (") && append_share(sb, number_or_zero(cadence, "share")) && sb_append(sb, "), or ");
         heading = true;
         if (ok && prolongation) {
             ok = sb_append(sb, "tonic prolongation");
         } else if (ok) {
             const cJSON *measure = cJSON_GetObjectItemCaseSensitive(alternative, "measure");
             const cJSON *beat = cJSON_GetObjectItemCaseSensitive(alternative, "beat");
-            ok = append_cadence_phrase(sb, string_member(alternative, "type")) && sb_append(sb, " at ") &&
+            ok = append_cadence_phrase(sb, json_string_member(alternative, "type")) && sb_append(sb, " at ") &&
                  (cJSON_IsNumber(measure) && cJSON_IsNumber(beat)
                       ? sb_appendf(sb, "m%d b%d", (int)measure->valuedouble, (int)beat->valuedouble)
                       : sb_append(sb, "unknown position"));
         }
-        if (!(ok && sb_append(sb, " (") && append_share(sb, number_member(alternative, "share")) &&
+        if (!(ok && sb_append(sb, " (") && append_share(sb, number_or_zero(alternative, "share")) &&
               sb_append(sb, ")\n"))) {
             return false;
         }
@@ -1015,7 +1011,7 @@ static bool render_cadence_plan(StringBuilder *sb, const cJSON *document, const 
         }
         const cJSON *location = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cadence, "arrival"),
                                                                  "location");
-        const char *type = cadence_type_label(string_member(cadence, "type"));
+        const char *type = cadence_type_label(json_string_member(cadence, "type"));
         ok = sb_appendf(sb, "%d. ", number++) &&
              append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
              sb_appendf(sb, ": %s in %s\n", type, region_label(document, cJSON_GetObjectItemCaseSensitive(cadence, "region")));
@@ -1054,11 +1050,11 @@ static bool render_cadences(StringBuilder *sb, const cJSON *document, const cJSO
         }
         const cJSON *arrival = cJSON_GetObjectItemCaseSensitive(cadence, "arrival");
         const cJSON *location = cJSON_GetObjectItemCaseSensitive(arrival, "location");
-        const char *soprano = string_member(cadence, "soprano_degree");
+        const char *soprano = json_string_member(cadence, "soprano_degree");
         ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
-             sb_appendf(sb, " | %s | %s | %s | %s | %s |\n", cadence_type_label(string_member(cadence, "type")),
+             sb_appendf(sb, " | %s | %s | %s | %s | %s |\n", cadence_type_label(json_string_member(cadence, "type")),
                         region_label(document, cJSON_GetObjectItemCaseSensitive(cadence, "region")),
-                        soprano ? soprano : "none", string_member(cadence, "arrival_beat_strength"),
+                        soprano ? soprano : "none", json_string_member(cadence, "arrival_beat_strength"),
                         cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(cadence, "boundary")) ? "yes" : "no");
     }
     return ok && sb_append(sb, "\n") && render_cadence_readings(sb, cadences) &&
@@ -1076,7 +1072,7 @@ static bool append_motive_measures(StringBuilder *sb, const cJSON *occurrences) 
     bool ok = true;
     const cJSON *occurrence;
     cJSON_ArrayForEach(occurrence, occurrences) {
-        int measure = (int)number_member(cJSON_GetObjectItemCaseSensitive(occurrence, "measures"), "first");
+        int measure = (int)number_or_zero(cJSON_GetObjectItemCaseSensitive(occurrence, "measures"), "first");
         if (ok && (first || measure != previous)) {
             ok = sb_appendf(sb, "%s%d", first ? "" : ", ", measure);
             first = false;
@@ -1121,21 +1117,21 @@ static bool append_motive_kinds(StringBuilder *sb, const cJSON *occurrences) {
     bool ok = true;
     bool first = true;
     cJSON_ArrayForEach(occurrence, occurrences) {
-        const char *kind = string_member(occurrence, "label");
+        const char *kind = json_string_member(occurrence, "label");
         bool counted = false;
         const cJSON *earlier;
         cJSON_ArrayForEach(earlier, occurrences) {
             if (earlier == occurrence) {
                 break;
             }
-            counted = counted || strcmp(string_member(earlier, "label"), kind) == 0;
+            counted = counted || strcmp(json_string_member(earlier, "label"), kind) == 0;
         }
         if (!ok || counted) {
             continue;
         }
         int count = 0;
         cJSON_ArrayForEach(earlier, occurrences) {
-            count += strcmp(string_member(earlier, "label"), kind) == 0 ? 1 : 0;
+            count += strcmp(json_string_member(earlier, "label"), kind) == 0 ? 1 : 0;
         }
         ok = sb_appendf(sb, "%s%s %d", first ? "" : ", ", kind, count);
         first = false;
@@ -1180,8 +1176,8 @@ static bool render_motives(StringBuilder *sb, const cJSON *document, const cJSON
             break;
         }
         const cJSON *occurrences = cJSON_GetObjectItemCaseSensitive(motive, "occurrences");
-        ok = sb_appendf(sb, "| %d | %d | ", (int)number_member(motive, "index") + 1,
-                        (int)number_member(motive, "note_count")) &&
+        ok = sb_appendf(sb, "| %d | %d | ", (int)number_or_zero(motive, "index") + 1,
+                        (int)number_or_zero(motive, "note_count")) &&
              append_motive_degrees(sb, cJSON_GetObjectItemCaseSensitive(motive, "features")) &&
              sb_appendf(sb, " | %s | %d | ",
                         cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(motive, "generic")) ? "scale steps" : "semitones",
@@ -1213,12 +1209,12 @@ static bool render_motive_development(StringBuilder *sb, const cJSON *document, 
         if (!ok || cJSON_GetArraySize(steps) == 0) {
             continue;
         }
-        ok = sb_appendf(sb, "- **Family %d:** ", (int)number_member(motive, "index") + 1);
+        ok = sb_appendf(sb, "- **Family %d:** ", (int)number_or_zero(motive, "index") + 1);
         bool first = true;
         const cJSON *step;
         cJSON_ArrayForEach(step, steps) {
             const cJSON *transformation = cJSON_GetObjectItemCaseSensitive(step, "transformation");
-            ok = ok && sb_appendf(sb, "%sm%d %s", first ? "" : " > ", (int)number_member(step, "measure"),
+            ok = ok && sb_appendf(sb, "%sm%d %s", first ? "" : " > ", (int)number_or_zero(step, "measure"),
                                   cJSON_IsString(transformation) ? transformation->valuestring : "original");
             first = false;
         }
@@ -1230,8 +1226,8 @@ static bool render_motive_development(StringBuilder *sb, const cJSON *document, 
 /* The measure a chord of the document's chords starts in, or -1 when the index or its location is missing. */
 /* "m. 8" or "mm. 5 to 8" for a measures object. */
 static bool append_measures(StringBuilder *sb, const cJSON *measures) {
-    int first = (int)number_member(measures, "first");
-    int last = (int)number_member(measures, "last");
+    int first = (int)number_or_zero(measures, "first");
+    int last = (int)number_or_zero(measures, "last");
     return first == last ? sb_appendf(sb, "m. %d", first) : sb_appendf(sb, "mm. %d to %d", first, last);
 }
 
@@ -1256,19 +1252,19 @@ static bool render_melody(StringBuilder *sb, const cJSON *document, const cJSON 
         const cJSON *climax = cJSON_GetObjectItemCaseSensitive(entry, "climax");
         const cJSON *contour = cJSON_GetObjectItemCaseSensitive(entry, "contour");
         const cJSON *highest = cJSON_GetObjectItemCaseSensitive(range, "highest");
-        int occurrences = (int)number_member(climax, "occurrences");
-        ok = sb_appendf(sb, "| %d | ", (int)number_member(entry, "index") + 1) &&
+        int occurrences = (int)number_or_zero(climax, "occurrences");
+        ok = sb_appendf(sb, "| %d | ", (int)number_or_zero(entry, "index") + 1) &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(entry, "measures")) &&
-             sb_appendf(sb, " | %d | %s to %s (%d) | %s, ", (int)number_member(entry, "note_count"),
-                        string_member(cJSON_GetObjectItemCaseSensitive(range, "lowest"), "name"),
-                        string_member(highest, "name"), (int)number_member(range, "semitones"),
-                        string_member(highest, "name")) &&
+             sb_appendf(sb, " | %d | %s to %s (%d) | %s, ", (int)number_or_zero(entry, "note_count"),
+                        json_string_member(cJSON_GetObjectItemCaseSensitive(range, "lowest"), "name"),
+                        json_string_member(highest, "name"), (int)number_or_zero(range, "semitones"),
+                        json_string_member(highest, "name")) &&
              append_position(sb, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(climax, "location"),
                                                                   "start")) &&
              (occurrences > 1 ? sb_appendf(sb, ", %d notes", occurrences) : true) &&
-             sb_appendf(sb, " | %d | %d | %d | %d | %d |\n", (int)number_member(contour, "up"),
-                        (int)number_member(contour, "down"), (int)number_member(contour, "same"),
-                        (int)number_member(contour, "steps"), (int)number_member(contour, "leaps"));
+             sb_appendf(sb, " | %d | %d | %d | %d | %d |\n", (int)number_or_zero(contour, "up"),
+                        (int)number_or_zero(contour, "down"), (int)number_or_zero(contour, "same"),
+                        (int)number_or_zero(contour, "steps"), (int)number_or_zero(contour, "leaps"));
     }
     ok = ok && sb_append(sb, "\n") &&
          sb_append(sb, "### Leaps\n\n") &&
@@ -1284,10 +1280,10 @@ static bool render_melody(StringBuilder *sb, const cJSON *document, const cJSON 
             break;
         }
         const cJSON *leaps = cJSON_GetObjectItemCaseSensitive(entry, "leaps");
-        ok = sb_appendf(sb, "| %d | %d | %d | %d | %d | %d | %d |\n", (int)number_member(entry, "index") + 1,
+        ok = sb_appendf(sb, "| %d | %d | %d | %d | %d | %d | %d |\n", (int)number_or_zero(entry, "index") + 1,
                         cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(leaps, "items")),
-                        (int)number_member(leaps, "recovered"), (int)number_member(leaps, "unrecovered"),
-                        (int)number_member(leaps, "not_required"), (int)number_member(leaps, "not_judged"),
+                        (int)number_or_zero(leaps, "recovered"), (int)number_or_zero(leaps, "unrecovered"),
+                        (int)number_or_zero(leaps, "not_required"), (int)number_or_zero(leaps, "not_judged"),
                         cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(entry, "consecutive_leaps")));
     }
     ok = ok && sb_append(sb, "\n") &&
@@ -1304,13 +1300,13 @@ static bool render_melody(StringBuilder *sb, const cJSON *document, const cJSON 
         }
         const cJSON *tones = cJSON_GetObjectItemCaseSensitive(entry, "non_chord_tones");
         const cJSON *by_type = cJSON_GetObjectItemCaseSensitive(tones, "by_type");
-        ok = sb_appendf(sb, "| %d | %d | %d | %d | %d | ", (int)number_member(entry, "index") + 1,
-                        (int)number_member(entry, "note_count"), (int)number_member(tones, "chord_tones"),
-                        (int)number_member(tones, "non_chord_tones"), (int)number_member(tones, "unclassified"));
+        ok = sb_appendf(sb, "| %d | %d | %d | %d | %d | ", (int)number_or_zero(entry, "index") + 1,
+                        (int)number_or_zero(entry, "note_count"), (int)number_or_zero(tones, "chord_tones"),
+                        (int)number_or_zero(tones, "non_chord_tones"), (int)number_or_zero(tones, "unclassified"));
         const cJSON *type;
         cJSON_ArrayForEach(type, by_type) {
-            ok = ok && sb_appendf(sb, "%s%s %d", type == by_type->child ? "" : ", ", string_member(type, "type"),
-                                  (int)number_member(type, "count"));
+            ok = ok && sb_appendf(sb, "%s%s %d", type == by_type->child ? "" : ", ", json_string_member(type, "type"),
+                                  (int)number_or_zero(type, "count"));
         }
         ok = ok && sb_append(sb, cJSON_GetArraySize(by_type) == 0 ? "-" : "") && sb_append(sb, " |\n");
     }
@@ -1336,7 +1332,7 @@ static bool render_melody(StringBuilder *sb, const cJSON *document, const cJSON 
         const cJSON *tendencies = cJSON_GetObjectItemCaseSensitive(entry, "tendencies");
         const cJSON *line = cJSON_GetObjectItemCaseSensitive(tendencies, "line");
         const cJSON *seventh = cJSON_GetObjectItemCaseSensitive(tendencies, "seventh_degree");
-        ok = sb_appendf(sb, "| %d | ", (int)number_member(entry, "index") + 1);
+        ok = sb_appendf(sb, "| %d | ", (int)number_or_zero(entry, "index") + 1);
         for (int t = 0; ok && t < 5; t++) {
             const cJSON *item = cJSON_GetArrayItem(line, t);
             ok = sb_appendf(sb, "%s | ",
@@ -1344,7 +1340,7 @@ static bool render_melody(StringBuilder *sb, const cJSON *document, const cJSON 
                                  : "-");
         }
         if (ok && cJSON_IsObject(seventh)) {
-            ok = sb_appendf(sb, "%d | %d", (int)number_member(seventh, "followed"), (int)number_member(seventh, "broken"));
+            ok = sb_appendf(sb, "%d | %d", (int)number_or_zero(seventh, "followed"), (int)number_or_zero(seventh, "broken"));
             const cJSON *broken;
             const cJSON *breaks = cJSON_GetObjectItemCaseSensitive(seventh, "breaks");
             cJSON_ArrayForEach(broken, breaks) {
@@ -1373,14 +1369,14 @@ static bool append_phrase_cadence(StringBuilder *sb, const cJSON *document, cons
     }
     const cJSON *location = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cadence, "arrival"),
                                                              "location");
-    return sb_appendf(sb, "%s (", cadence_type_label(string_member(cadence, "type"))) &&
+    return sb_appendf(sb, "%s (", cadence_type_label(json_string_member(cadence, "type"))) &&
            append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) && sb_append(sb, ")");
 }
 
 /* One line per phrase: its ideas with their labels and measures, its subphrases, and its phrase model (the chords the
    library labelled Tb, PD, D and Te, each with where it begins). */
 static bool append_phrase_line(StringBuilder *sb, const cJSON *document, const cJSON *phrase) {
-    bool ok = sb_appendf(sb, "- **Phrase %d:** ", (int)number_member(phrase, "index") + 1);
+    bool ok = sb_appendf(sb, "- **Phrase %d:** ", (int)number_or_zero(phrase, "index") + 1);
     const cJSON *ideas = cJSON_GetObjectItemCaseSensitive(phrase, "ideas");
     if (cJSON_GetArraySize(ideas) == 0) {
         ok = ok && sb_append(sb, "no ideas");
@@ -1389,7 +1385,7 @@ static bool append_phrase_line(StringBuilder *sb, const cJSON *document, const c
     }
     const cJSON *idea;
     cJSON_ArrayForEach(idea, ideas) {
-        ok = ok && sb_appendf(sb, "%s%s (", idea == ideas->child ? "" : ", ", string_member(idea, "label")) &&
+        ok = ok && sb_appendf(sb, "%s%s (", idea == ideas->child ? "" : ", ", json_string_member(idea, "label")) &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(idea, "measures")) && sb_append(sb, ")");
     }
     const cJSON *subphrases = cJSON_GetObjectItemCaseSensitive(phrase, "subphrases");
@@ -1402,10 +1398,10 @@ static bool append_phrase_line(StringBuilder *sb, const cJSON *document, const c
     const cJSON *chords = cJSON_GetObjectItemCaseSensitive(document, "chords");
     const cJSON *segment;
     cJSON_ArrayForEach(segment, model) {
-        const cJSON *chord = cJSON_GetArrayItem(chords, (int)number_member(segment, "chord"));
+        const cJSON *chord = cJSON_GetArrayItem(chords, (int)number_or_zero(segment, "chord"));
         const cJSON *start = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(chord, "location"), "start");
         ok = ok && sb_append(sb, segment == model->child ? "; phrase model " : ", ") &&
-             sb_appendf(sb, "%s (", string_member(segment, "label")) && append_position(sb, start) && sb_append(sb, ")");
+             sb_appendf(sb, "%s (", json_string_member(segment, "label")) && append_position(sb, start) && sb_append(sb, ")");
     }
     return ok && sb_append(sb, "\n");
 }
@@ -1421,12 +1417,12 @@ static bool append_phrase_expansions(StringBuilder *sb, const cJSON *phrase) {
     bool ok = true;
     cJSON_ArrayForEach(expansion, expansions) {
         const cJSON *external = cJSON_GetObjectItemCaseSensitive(expansion, "external_kind");
-        bool contraction = strcmp(string_member(expansion, "change"), "contraction") == 0;
+        bool contraction = strcmp(json_string_member(expansion, "change"), "contraction") == 0;
         ok = ok && sb_appendf(sb, "%s%s %s%s%+d (", expansion == expansions->child ? "" : "; ",
-                              string_member(expansion, "label"), cJSON_IsString(external) ? external->valuestring : "",
+                              json_string_member(expansion, "label"), cJSON_IsString(external) ? external->valuestring : "",
                               cJSON_IsString(external) ? " " : "",
-                              contraction ? -(int)number_member(expansion, "measures_changed")
-                                          : (int)number_member(expansion, "measures_changed")) &&
+                              contraction ? -(int)number_or_zero(expansion, "measures_changed")
+                                          : (int)number_or_zero(expansion, "measures_changed")) &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(expansion, "measures")) && sb_append(sb, ")");
     }
     return ok;
@@ -1449,11 +1445,11 @@ static bool render_phrases(StringBuilder *sb, const cJSON *document, const cJSON
         if (!ok) {
             break;
         }
-        ok = sb_appendf(sb, "| %d | ", (int)number_member(phrase, "index") + 1) &&
+        ok = sb_appendf(sb, "| %d | ", (int)number_or_zero(phrase, "index") + 1) &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(phrase, "measures")) &&
-             sb_appendf(sb, " | %d | ", (int)number_member(phrase, "length")) &&
+             sb_appendf(sb, " | %d | ", (int)number_or_zero(phrase, "length")) &&
              append_phrase_cadence(sb, document, phrase) &&
-             sb_appendf(sb, " | %s | %s | ", string_member(phrase, "signal"), string_member(phrase, "role")) &&
+             sb_appendf(sb, " | %s | %s | ", json_string_member(phrase, "signal"), json_string_member(phrase, "role")) &&
              append_phrase_expansions(sb, phrase) && sb_append(sb, " |\n");
     }
     ok = ok && sb_append(sb, "\n");
@@ -1513,10 +1509,10 @@ static bool render_themes(StringBuilder *sb, const cJSON *document, const cJSON 
             break;
         }
         const cJSON *commonality = cJSON_GetObjectItemCaseSensitive(theme, "commonality");
-        ok = sb_appendf(sb, "| %d | %s | %s | ", (int)number_member(theme, "index") + 1, string_member(theme, "label"),
+        ok = sb_appendf(sb, "| %d | %s | %s | ", (int)number_or_zero(theme, "index") + 1, json_string_member(theme, "label"),
                         cJSON_IsString(commonality) ? commonality->valuestring : "-") &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(theme, "measures")) &&
-             sb_appendf(sb, " | %d | ", (int)number_member(theme, "length")) && append_theme_parts(sb, document, theme) &&
+             sb_appendf(sb, " | %d | ", (int)number_or_zero(theme, "length")) && append_theme_parts(sb, document, theme) &&
              sb_append(sb, " | ") && append_theme_traits(sb, theme) && sb_append(sb, " |\n");
     }
     ok = ok && sb_append(sb, "\n");
@@ -1526,7 +1522,7 @@ static bool render_themes(StringBuilder *sb, const cJSON *document, const cJSON 
         if (ok && cJSON_GetArraySize(halves) == 2) {
             any_compound = true;
             ok = sb_appendf(sb, "- **Theme %d** is a compound period of themes %d and %d.\n",
-                            (int)number_member(theme, "index") + 1,
+                            (int)number_or_zero(theme, "index") + 1,
                             (int)cJSON_GetArrayItem(halves, 0)->valuedouble + 1,
                             (int)cJSON_GetArrayItem(halves, 1)->valuedouble + 1);
         }
@@ -1541,8 +1537,8 @@ static bool section_is_empty(const cJSON *section);
 /* The phrases of a section as "1" or "1 to 4": the first and last phrase numbers. */
 static bool append_section_phrases(StringBuilder *sb, const cJSON *section) {
     const cJSON *phrases = cJSON_GetObjectItemCaseSensitive(section, "phrases");
-    int first = (int)number_member(cJSON_GetArrayItem(phrases, 0), "phrase") + 1;
-    int last = (int)number_member(cJSON_GetArrayItem(phrases, cJSON_GetArraySize(phrases) - 1), "phrase") + 1;
+    int first = (int)number_or_zero(cJSON_GetArrayItem(phrases, 0), "phrase") + 1;
+    int last = (int)number_or_zero(cJSON_GetArrayItem(phrases, cJSON_GetArraySize(phrases) - 1), "phrase") + 1;
     return first == last ? sb_appendf(sb, "%d", first) : sb_appendf(sb, "%d to %d", first, last);
 }
 
@@ -1555,8 +1551,8 @@ static bool append_section_return(StringBuilder *sb, const cJSON *form, const cJ
     }
     const cJSON *earlier = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(form, "sections"), (int)from->valuedouble);
     const cJSON *item = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(form, "returns"), (int)index->valuedouble);
-    return sb_appendf(sb, "returns %s (similarity %.2f)", string_member(earlier, "label"),
-                      number_member(cJSON_GetObjectItemCaseSensitive(item, "similarity"), "value"));
+    return sb_appendf(sb, "returns %s (similarity %.2f)", json_string_member(earlier, "label"),
+                      number_or_zero(cJSON_GetObjectItemCaseSensitive(item, "similarity"), "value"));
 }
 
 static bool append_outline_line(StringBuilder *sb, int depth, const char *level, const char *text,
@@ -1573,7 +1569,7 @@ static bool append_idea_outline(StringBuilder *sb, int depth, const cJSON *ideas
     const cJSON *idea;
     bool ok = true;
     cJSON_ArrayForEach(idea, ideas) {
-        ok = ok && append_outline_line(sb, depth, "idea", string_member(idea, "label"),
+        ok = ok && append_outline_line(sb, depth, "idea", json_string_member(idea, "label"),
                                        cJSON_GetObjectItemCaseSensitive(idea, "measures"), "");
     }
     return ok;
@@ -1581,12 +1577,12 @@ static bool append_idea_outline(StringBuilder *sb, int depth, const cJSON *ideas
 
 static bool append_phrase_outline(StringBuilder *sb, int depth, const cJSON *phrase) {
     char number[24];
-    snprintf(number, sizeof(number), "%d", (int)number_member(phrase, "phrase") + 1);
+    snprintf(number, sizeof(number), "%d", (int)number_or_zero(phrase, "phrase") + 1);
     bool ok = append_outline_line(sb, depth, "phrase", number, cJSON_GetObjectItemCaseSensitive(phrase, "measures"), "");
     const cJSON *subphrases = cJSON_GetObjectItemCaseSensitive(phrase, "subphrases");
     const cJSON *subphrase;
     cJSON_ArrayForEach(subphrase, subphrases) {
-        snprintf(number, sizeof(number), "%d", (int)number_member(subphrase, "index") + 1);
+        snprintf(number, sizeof(number), "%d", (int)number_or_zero(subphrase, "index") + 1);
         ok = ok && append_outline_line(sb, depth + 1, "subphrase", number,
                                        cJSON_GetObjectItemCaseSensitive(subphrase, "measures"), "") &&
              append_idea_outline(sb, depth + 2, cJSON_GetObjectItemCaseSensitive(subphrase, "ideas"));
@@ -1602,7 +1598,7 @@ static bool render_form_outline(StringBuilder *sb, const cJSON *form) {
     const cJSON *section;
     cJSON_ArrayForEach(section, sections) {
         const cJSON *key = cJSON_GetObjectItemCaseSensitive(section, "key");
-        ok = ok && append_outline_line(sb, 1, "section", string_member(section, "label"),
+        ok = ok && append_outline_line(sb, 1, "section", json_string_member(section, "label"),
                                        cJSON_GetObjectItemCaseSensitive(section, "measures"),
                                        cJSON_IsString(key) ? key->valuestring : "");
         const cJSON *phrase;
@@ -1623,15 +1619,15 @@ static bool render_thematic_returns(StringBuilder *sb, const cJSON *form, const 
                             "| --- | --- | --- | --- | --- | --- | --- |\n");
     const cJSON *item;
     cJSON_ArrayForEach(item, returns) {
-        const cJSON *later = cJSON_GetArrayItem(sections, (int)number_member(item, "later_section"));
-        const cJSON *earlier = cJSON_GetArrayItem(sections, (int)number_member(item, "earlier_section"));
-        ok = ok && sb_appendf(sb, "| %d | ", (int)number_member(item, "later_theme") + 1) &&
+        const cJSON *later = cJSON_GetArrayItem(sections, (int)number_or_zero(item, "later_section"));
+        const cJSON *earlier = cJSON_GetArrayItem(sections, (int)number_or_zero(item, "earlier_section"));
+        ok = ok && sb_appendf(sb, "| %d | ", (int)number_or_zero(item, "later_theme") + 1) &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(item, "later")) &&
-             sb_appendf(sb, " | %s | %d | ", string_member(later, "label"),
-                        (int)number_member(item, "earlier_theme") + 1) &&
+             sb_appendf(sb, " | %s | %d | ", json_string_member(later, "label"),
+                        (int)number_or_zero(item, "earlier_theme") + 1) &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(item, "earlier")) &&
-             sb_appendf(sb, " | %s | %.2f |\n", string_member(earlier, "label"),
-                        number_member(cJSON_GetObjectItemCaseSensitive(item, "similarity"), "value"));
+             sb_appendf(sb, " | %s | %.2f |\n", json_string_member(earlier, "label"),
+                        number_or_zero(cJSON_GetObjectItemCaseSensitive(item, "similarity"), "value"));
     }
     return ok && sb_append(sb, "\n");
 }
@@ -1653,7 +1649,7 @@ static bool render_form_plan(StringBuilder *sb, const cJSON *document, const cJS
     const cJSON *section;
     cJSON_ArrayForEach(section, sections) {
         const cJSON *key = cJSON_GetObjectItemCaseSensitive(section, "key");
-        ok = ok && sb_appendf(sb, "| %s | ", string_member(section, "label")) &&
+        ok = ok && sb_appendf(sb, "| %s | ", json_string_member(section, "label")) &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(section, "measures")) &&
              sb_appendf(sb, " | %s | ", cJSON_IsString(key) ? key->valuestring : "-") &&
              append_section_phrases(sb, section) && sb_append(sb, " | ") &&
@@ -1673,7 +1669,7 @@ static int chord_start_measure(const cJSON *document, const cJSON *index) {
                                             (int)index->valuedouble);
     const cJSON *start = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(chord, "location"),
                                                           "start");
-    return cJSON_IsObject(start) ? (int)number_member(start, "measure") : -1;
+    return cJSON_IsObject(start) ? (int)number_or_zero(start, "measure") : -1;
 }
 
 /* "m. 3" or "mm. 3 to 4" for the measures an occurrence's first and last chord start in. */
@@ -1706,8 +1702,8 @@ static bool render_progression_patterns(StringBuilder *sb, const cJSON *document
         if (!ok || rank > PROGRESSION_TABLE_ROWS) {
             break;
         }
-        ok = sb_appendf(sb, "| %d | %s | %d | ", rank++, string_member(progression, "label"),
-                        (int)number_member(progression, "count"));
+        ok = sb_appendf(sb, "| %d | %s | %d | ", rank++, json_string_member(progression, "label"),
+                        (int)number_or_zero(progression, "count"));
         const cJSON *occurrence;
         cJSON_ArrayForEach(occurrence, cJSON_GetObjectItemCaseSensitive(progression, "occurrences")) {
             ok = ok && sb_append(sb, occurrence == cJSON_GetObjectItemCaseSensitive(progression, "occurrences")->child
@@ -1747,8 +1743,8 @@ static bool render_cadence_approaches(StringBuilder *sb, const cJSON *approaches
         if (!ok) {
             break;
         }
-        ok = sb_appendf(sb, "| %d | m. %d | ", (int)number_member(approach, "cadence") + 1,
-                        (int)number_member(approach, "arrival_measure")) &&
+        ok = sb_appendf(sb, "| %d | m. %d | ", (int)number_or_zero(approach, "cadence") + 1,
+                        (int)number_or_zero(approach, "arrival_measure")) &&
              append_window_mean(sb, approach, "before") && sb_append(sb, " | ") &&
              append_window_mean(sb, approach, "approach") &&
              sb_appendf(sb, " | %s |\n",
@@ -1773,14 +1769,14 @@ static bool render_harmonic_rhythm(StringBuilder *sb, const cJSON *document, con
         if (!ok) {
             break;
         }
-        int first = (int)number_member(window, "first_measure");
-        int last = (int)number_member(window, "last_measure");
+        int first = (int)number_or_zero(window, "first_measure");
+        int last = (int)number_or_zero(window, "last_measure");
         ok = (first == last ? sb_appendf(sb, "| m. %d | ", first) : sb_appendf(sb, "| mm. %d to %d | ", first, last));
         const cJSON *measure;
         cJSON_ArrayForEach(measure, per_measure) {
-            int number = (int)number_member(measure, "measure");
+            int number = (int)number_or_zero(measure, "measure");
             if (ok && number >= first && number <= last) {
-                ok = sb_appendf(sb, "%s%d", number == first ? "" : ", ", (int)number_member(measure, "changes"));
+                ok = sb_appendf(sb, "%s%d", number == first ? "" : ", ", (int)number_or_zero(measure, "changes"));
             }
         }
         ok = ok && sb_append(sb, " | ") && append_mean(sb, window, "mean_per_measure") && sb_append(sb, " |\n");
@@ -1796,7 +1792,7 @@ static bool render_harmonic_rhythm(StringBuilder *sb, const cJSON *document, con
 
 /* The rhythm claims are one flat list, each labelled by the result it is. */
 static bool has_label(const cJSON *claim, const char *label) {
-    const char *own = string_member(claim, "label");
+    const char *own = json_string_member(claim, "label");
     return own && strcmp(own, label) == 0;
 }
 
@@ -1817,8 +1813,8 @@ static bool append_durations(StringBuilder *sb, const cJSON *claim) {
     bool ok = true;
     cJSON_ArrayForEach(bin, durations) {
         const cJSON *duration = cJSON_GetObjectItemCaseSensitive(bin, "duration");
-        ok = ok && sb_appendf(sb, "%s%d/%d (%d)", bin == durations->child ? "" : ", ", (int)number_member(duration, "num"),
-                              (int)number_member(duration, "den"), (int)number_member(bin, "count"));
+        ok = ok && sb_appendf(sb, "%s%d/%d (%d)", bin == durations->child ? "" : ", ", (int)number_or_zero(duration, "num"),
+                              (int)number_or_zero(duration, "den"), (int)number_or_zero(bin, "count"));
     }
     const cJSON *truncated = cJSON_GetObjectItemCaseSensitive(claim, "durations_truncated");
     return ok && sb_append(sb, cJSON_GetArraySize(durations) == 0 ? "-" : "") &&
@@ -1849,14 +1845,14 @@ static bool render_densities(StringBuilder *sb, const cJSON *rhythm) {
         char mean[32];
         char max[32];
         char gap[32];
-        format_number(number_member(per_beat, "mean"), mean, sizeof(mean));
-        format_number(number_member(per_beat, "max"), max, sizeof(max));
-        format_number(number_member(claim, "mean_inter_onset"), gap, sizeof(gap));
-        ok = sb_appendf(sb, "| %d | ", (int)number_member(claim, "phrase") + 1) &&
+        format_number(number_or_zero(per_beat, "mean"), mean, sizeof(mean));
+        format_number(number_or_zero(per_beat, "max"), max, sizeof(max));
+        format_number(number_or_zero(claim, "mean_inter_onset"), gap, sizeof(gap));
+        ok = sb_appendf(sb, "| %d | ", (int)number_or_zero(claim, "phrase") + 1) &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
-             sb_appendf(sb, " | %s | %d | %d | %s | %s | %s | %.1f%% | ", string_member(claim, "line"),
-                        (int)number_member(claim, "notes"), (int)number_member(claim, "attacks"), mean, max, gap,
-                        100.0 * number_member(claim, "on_beat_share")) &&
+             sb_appendf(sb, " | %s | %d | %d | %s | %s | %s | %.1f%% | ", json_string_member(claim, "line"),
+                        (int)number_or_zero(claim, "notes"), (int)number_or_zero(claim, "attacks"), mean, max, gap,
+                        100.0 * number_or_zero(claim, "on_beat_share")) &&
              append_durations(sb, claim) && sb_append(sb, " |\n");
     }
     return ok && sb_append(sb, "\n");
@@ -1885,12 +1881,12 @@ static bool render_syncopations(StringBuilder *sb, const cJSON *rhythm) {
         const cJSON *through = cJSON_GetObjectItemCaseSensitive(claim, "held_through");
         char beat[32];
         char through_beat[32];
-        format_number(number_member(claim, "beat"), beat, sizeof(beat));
-        format_number(number_member(through, "beat"), through_beat, sizeof(through_beat));
-        ok = sb_appendf(sb, "| %s | %d | %s | %s | %s (m. %d, beat %s) | %d |\n", string_member(claim, "line"),
-                        (int)number_member(claim, "measure"), beat, string_member(claim, "attack_level"),
-                        string_member(through, "level"), (int)number_member(through, "measure"), through_beat,
-                        (int)number_member(claim, "strength"));
+        format_number(number_or_zero(claim, "beat"), beat, sizeof(beat));
+        format_number(number_or_zero(through, "beat"), through_beat, sizeof(through_beat));
+        ok = sb_appendf(sb, "| %s | %d | %s | %s | %s (m. %d, beat %s) | %d |\n", json_string_member(claim, "line"),
+                        (int)number_or_zero(claim, "measure"), beat, json_string_member(claim, "attack_level"),
+                        json_string_member(through, "level"), (int)number_or_zero(through, "measure"), through_beat,
+                        (int)number_or_zero(claim, "strength"));
     }
     return ok && sb_append(sb, "\n");
 }
@@ -1923,7 +1919,7 @@ static bool render_hemiolas(StringBuilder *sb, const cJSON *rhythm) {
         ok = sb_append(sb, "| ") && append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
              sb_appendf(sb, " | %s | %s | %s | %d of %d |\n", evidence_text(evidence, "duration"),
                         evidence_text(evidence, "chord"), evidence_text(evidence, "accent"),
-                        (int)number_member(evidence, "agreeing"), (int)number_member(evidence, "available"));
+                        (int)number_or_zero(evidence, "agreeing"), (int)number_or_zero(evidence, "available"));
     }
     return ok && sb_append(sb, "\n");
 }
@@ -1937,7 +1933,7 @@ static bool append_hypermeasure_kinds(StringBuilder *sb, const cJSON *hypermeasu
         int count = 0;
         const cJSON *item;
         cJSON_ArrayForEach(item, hypermeasures) {
-            const char *kind = string_member(item, "kind");
+            const char *kind = json_string_member(item, "kind");
             count += kind && strcmp(kind, KINDS[k]) == 0 ? 1 : 0;
         }
         if (count > 0) {
@@ -1970,10 +1966,10 @@ static bool render_hypermeters(StringBuilder *sb, const cJSON *rhythm) {
         const cJSON *downbeats = cJSON_GetObjectItemCaseSensitive(claim, "hyperdownbeats");
         const cJSON *arrival = cJSON_GetObjectItemCaseSensitive(claim, "arrival_measure");
         char score[32];
-        format_number(number_member(claim, "score"), score, sizeof(score));
-        ok = sb_appendf(sb, "| %d | ", (int)number_member(claim, "phrase") + 1) &&
+        format_number(number_or_zero(claim, "score"), score, sizeof(score));
+        ok = sb_appendf(sb, "| %d | ", (int)number_or_zero(claim, "phrase") + 1) &&
              append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
-             sb_appendf(sb, " | %d | ", (int)number_member(claim, "length"));
+             sb_appendf(sb, " | %d | ", (int)number_or_zero(claim, "length"));
         const cJSON *downbeat;
         cJSON_ArrayForEach(downbeat, downbeats) {
             ok = ok && sb_appendf(sb, "%s%d", downbeat == downbeats->child ? "" : ", ", (int)downbeat->valuedouble);
@@ -2007,24 +2003,24 @@ static bool render_tuplets(StringBuilder *sb, const cJSON *rhythm) {
             break;
         }
         const cJSON *ratio = cJSON_GetObjectItemCaseSensitive(claim, "ratio");
-        if (!has_label(claim, "tuplet") || (long)number_member(ratio, "actual") == previous) {
+        if (!has_label(claim, "tuplet") || (long)number_or_zero(ratio, "actual") == previous) {
             continue;
         }
-        previous = (long)number_member(ratio, "actual");
+        previous = (long)number_or_zero(ratio, "actual");
         int runs = 0;
         int attacks = 0;
         int borrowed = 0;
         const cJSON *other;
         cJSON_ArrayForEach(other, rhythm) {
             if (has_label(other, "tuplet") &&
-                (long)number_member(cJSON_GetObjectItemCaseSensitive(other, "ratio"), "actual") == previous) {
+                (long)number_or_zero(cJSON_GetObjectItemCaseSensitive(other, "ratio"), "actual") == previous) {
                 runs++;
-                attacks += (int)number_member(other, "attacks");
+                attacks += (int)number_or_zero(other, "attacks");
                 borrowed += cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(other, "borrowed")) ? 1 : 0;
             }
         }
         ok = sb_appendf(sb, "| %d:%d | %s | %d | %d | %s |\n", (int)previous,
-                        (int)number_member(ratio, "normal"), string_member(claim, "name"), runs, attacks,
+                        (int)number_or_zero(ratio, "normal"), json_string_member(claim, "name"), runs, attacks,
                         borrowed == 0 ? "no" : (borrowed == runs ? "yes" : "some"));
     }
     ok = ok && sb_append(sb, "\n| Measure | Beat | Ratio | Name | Meter | Borrowed | Level | Attacks |\n"
@@ -2040,14 +2036,14 @@ static bool render_tuplets(StringBuilder *sb, const cJSON *rhythm) {
         const cJSON *level = cJSON_GetObjectItemCaseSensitive(claim, "level");
         const cJSON *typical = cJSON_GetObjectItemCaseSensitive(claim, "level_typical");
         char beat[32];
-        format_number(number_member(claim, "beat"), beat, sizeof(beat));
-        ok = sb_appendf(sb, "| %d | %s | %d:%d | %s | %s | %s | ", (int)number_member(claim, "measure"), beat, (int)number_member(ratio, "actual"),
-                        (int)number_member(ratio, "normal"), string_member(claim, "name"),
-                        string_member(claim, "meter"),
+        format_number(number_or_zero(claim, "beat"), beat, sizeof(beat));
+        ok = sb_appendf(sb, "| %d | %s | %d:%d | %s | %s | %s | ", (int)number_or_zero(claim, "measure"), beat, (int)number_or_zero(ratio, "actual"),
+                        (int)number_or_zero(ratio, "normal"), json_string_member(claim, "name"),
+                        json_string_member(claim, "meter"),
                         cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(claim, "borrowed")) ? "yes" : "no") &&
              (cJSON_IsString(level) ? sb_appendf(sb, "%s%s", level->valuestring, cJSON_IsTrue(typical) ? "" : " (not typical)")
                                     : sb_append(sb, "not placed")) &&
-             sb_appendf(sb, " | %d |\n", (int)number_member(claim, "attacks"));
+             sb_appendf(sb, " | %d |\n", (int)number_or_zero(claim, "attacks"));
     }
     return ok && sb_append(sb, "\n");
 }
@@ -2057,18 +2053,18 @@ static bool append_meter_reading(StringBuilder *sb, const cJSON *reading) {
     const cJSON *meter = cJSON_GetObjectItemCaseSensitive(reading, "meter");
     const cJSON *scale = cJSON_GetObjectItemCaseSensitive(reading, "scale");
     const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(reading, "pickup");
-    bool ok = sb_appendf(sb, "%d/%d, scale %d", (int)number_member(meter, "numerator"),
-                         (int)number_member(meter, "denominator"), (int)number_member(scale, "num"));
-    if ((int)number_member(scale, "den") != 1) {
-        ok = ok && sb_appendf(sb, "/%d", (int)number_member(scale, "den"));
+    bool ok = sb_appendf(sb, "%d/%d, scale %d", (int)number_or_zero(meter, "numerator"),
+                         (int)number_or_zero(meter, "denominator"), (int)number_or_zero(scale, "num"));
+    if ((int)number_or_zero(scale, "den") != 1) {
+        ok = ok && sb_appendf(sb, "/%d", (int)number_or_zero(scale, "den"));
     }
     ok = ok && sb_append(sb, ", ");
-    if ((int)number_member(pickup, "num") == 0) {
+    if ((int)number_or_zero(pickup, "num") == 0) {
         ok = ok && sb_append(sb, "no pickup");
     } else {
-        ok = ok && sb_appendf(sb, "pickup %d/%d", (int)number_member(pickup, "num"), (int)number_member(pickup, "den"));
+        ok = ok && sb_appendf(sb, "pickup %d/%d", (int)number_or_zero(pickup, "num"), (int)number_or_zero(pickup, "den"));
     }
-    return ok && sb_appendf(sb, " (fit %.2f)", number_member(reading, "score"));
+    return ok && sb_appendf(sb, " (fit %.2f)", number_or_zero(reading, "score"));
 }
 
 /* The meter check: how well the meter used carries the harmonic rhythm and cadences, and a better reading if there is
@@ -2127,12 +2123,12 @@ static bool render_texture(StringBuilder *sb, const cJSON *document, const cJSON
         char synchrony[32];
         char pattern[32];
         char overall[32];
-        format_number(number_member(features, "synchrony"), synchrony, sizeof(synchrony));
-        format_number(number_member(features, "pattern"), pattern, sizeof(pattern));
-        format_number(number_member(confidence, "overall"), overall, sizeof(overall));
+        format_number(number_or_zero(features, "synchrony"), synchrony, sizeof(synchrony));
+        format_number(number_or_zero(features, "pattern"), pattern, sizeof(pattern));
+        format_number(number_or_zero(confidence, "overall"), overall, sizeof(overall));
         ok = sb_append(sb, "| ") && append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
-             sb_appendf(sb, " | %s | %s | %d | %s | %s | %s |\n", string_member(claim, "texture"),
-                        string_member(claim, "category"), (int)number_member(features, "voices_max"), synchrony, pattern,
+             sb_appendf(sb, " | %s | %s | %d | %s | %s | %s |\n", json_string_member(claim, "texture"),
+                        json_string_member(claim, "category"), (int)number_or_zero(features, "voices_max"), synchrony, pattern,
                         overall);
     }
     ok = ok && sb_append(sb, "\n");
@@ -2148,8 +2144,8 @@ static bool render_texture(StringBuilder *sb, const cJSON *document, const cJSON
         if (!has_label(claim, "change")) {
             continue;
         }
-        ok = sb_appendf(sb, "| %d | %s | %s | %s |\n", (int)number_member(claim, "boundary_measure"),
-                        string_member(claim, "from_texture"), string_member(claim, "to_texture"),
+        ok = sb_appendf(sb, "| %d | %s | %s | %s |\n", (int)number_or_zero(claim, "boundary_measure"),
+                        json_string_member(claim, "from_texture"), json_string_member(claim, "to_texture"),
                         cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(claim, "category_changed")) ? "yes" : "no");
     }
     return ok && sb_append(sb, "\n");
@@ -2172,11 +2168,11 @@ static const cJSON *find_claim(const cJSON *claims, const char *label) {
 static bool render_motions(StringBuilder *sb, const cJSON *claim) {
     const cJSON *totals = cJSON_GetObjectItemCaseSensitive(claim, "totals");
     bool ok = sb_appendf(sb, "%d %s over %d chord segments, %d motions between consecutive segments: ",
-                         (int)number_member(claim, "voices"),
-                         (int)number_member(claim, "voices") == 1 ? "voice" : "voices",
-                         (int)number_member(claim, "segments"), (int)number_member(claim, "motion_count"));
+                         (int)number_or_zero(claim, "voices"),
+                         (int)number_or_zero(claim, "voices") == 1 ? "voice" : "voices",
+                         (int)number_or_zero(claim, "segments"), (int)number_or_zero(claim, "motion_count"));
     for (size_t type = 0; ok && type < sizeof(MOTION_NAMES) / sizeof(MOTION_NAMES[0]); type++) {
-        ok = sb_appendf(sb, "%s%d %s", type == 0 ? "" : ", ", (int)number_member(totals, MOTION_NAMES[type]),
+        ok = sb_appendf(sb, "%s%d %s", type == 0 ? "" : ", ", (int)number_or_zero(totals, MOTION_NAMES[type]),
                         MOTION_NAMES[type]);
     }
     ok = ok && sb_append(sb, ".\n\n") &&
@@ -2187,14 +2183,14 @@ static bool render_motions(StringBuilder *sb, const cJSON *claim) {
         if (!ok) {
             break;
         }
-        if ((int)number_member(pair, "total") == 0) {
+        if ((int)number_or_zero(pair, "total") == 0) {
             continue;
         }
         const cJSON *counts = cJSON_GetObjectItemCaseSensitive(pair, "counts");
-        ok = sb_appendf(sb, "| %d and %d |", (int)number_member(pair, "upper_voice"),
-                        (int)number_member(pair, "lower_voice"));
+        ok = sb_appendf(sb, "| %d and %d |", (int)number_or_zero(pair, "upper_voice"),
+                        (int)number_or_zero(pair, "lower_voice"));
         for (size_t type = 0; ok && type < sizeof(MOTION_NAMES) / sizeof(MOTION_NAMES[0]); type++) {
-            ok = sb_appendf(sb, " %d |", (int)number_member(counts, MOTION_NAMES[type]));
+            ok = sb_appendf(sb, " %d |", (int)number_or_zero(counts, MOTION_NAMES[type]));
         }
         ok = ok && sb_append(sb, "\n");
     }
@@ -2206,7 +2202,7 @@ static int count_claims_with_rule(const cJSON *claims, const char *label, const 
     int count = 0;
     const cJSON *claim;
     cJSON_ArrayForEach(claim, claims) {
-        const char *own = string_member(claim, "rule");
+        const char *own = json_string_member(claim, "rule");
         count += has_label(claim, label) && own && strcmp(own, rule) == 0 ? 1 : 0;
     }
     return count;
@@ -2235,11 +2231,11 @@ static bool render_voice_faults(StringBuilder *sb, const cJSON *voice_leading) {
         }
         if (has_label(claim, "violation")) {
             ok = sb_append(sb, "| ") && append_location(sb, claim) &&
-                 sb_appendf(sb, " | %s | %d and %d |\n", string_member(claim, "rule"),
-                            (int)number_member(claim, "upper_voice"), (int)number_member(claim, "lower_voice"));
+                 sb_appendf(sb, " | %s | %d and %d |\n", json_string_member(claim, "rule"),
+                            (int)number_or_zero(claim, "upper_voice"), (int)number_or_zero(claim, "lower_voice"));
         } else if (has_label(claim, "resolution")) {
             ok = sb_append(sb, "| ") && append_location(sb, claim) &&
-                 sb_appendf(sb, " | %s | %d |\n", string_member(claim, "rule"), (int)number_member(claim, "voice"));
+                 sb_appendf(sb, " | %s | %d |\n", json_string_member(claim, "rule"), (int)number_or_zero(claim, "voice"));
         }
     }
     return ok && sb_append(sb, "\n");
@@ -2260,7 +2256,7 @@ static bool render_voice_chords(StringBuilder *sb, const cJSON *voice_leading) {
         }
         chords++;
         const cJSON *member = cJSON_GetObjectItemCaseSensitive(claim, "doubled");
-        const char *name = string_member(member, "member");
+        const char *name = json_string_member(member, "member");
         int index = -1;
         for (int m = 0; name && m < 4; m++) {
             index = strcmp(name, MEMBERS[m]) == 0 ? m : index;
@@ -2300,9 +2296,9 @@ static bool render_voice_chords(StringBuilder *sb, const cJSON *voice_leading) {
         if (!has_label(claim, "doubling") || !cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(spacing, "valid"))) {
             continue;
         }
-        int upper = (int)number_member(spacing, "wide_voice");
+        int upper = (int)number_or_zero(spacing, "wide_voice");
         ok = sb_append(sb, "| ") && append_location(sb, claim) &&
-             sb_appendf(sb, " | %d | %s |\n", (int)number_member(claim, "chord"), PAIRS[upper < 0 || upper > 2 ? 0 : upper]);
+             sb_appendf(sb, " | %d | %s |\n", (int)number_or_zero(claim, "chord"), PAIRS[upper < 0 || upper > 2 ? 0 : upper]);
     }
     return ok && sb_append(sb, "\n");
 }
@@ -2330,9 +2326,9 @@ static bool append_galant_degree(StringBuilder *sb, const cJSON *degree) {
     if (!cJSON_IsObject(degree)) {
         return sb_append(sb, "-");
     }
-    int alteration = (int)number_member(degree, "alteration");
+    int alteration = (int)number_or_zero(degree, "alteration");
     const char *mark = alteration < 0 ? "b" : (alteration > 0 ? "#" : "");
-    return sb_appendf(sb, "%s%d", mark, (int)number_member(degree, "degree"));
+    return sb_appendf(sb, "%s%d", mark, (int)number_or_zero(degree, "degree"));
 }
 
 /* "m. 1 1/1, m. 2 7/5": the measure, soprano degree and bass degree of each stage (a two-note stage shows both
@@ -2343,7 +2339,7 @@ static bool append_schema_stages(StringBuilder *sb, const cJSON *stages) {
     const cJSON *stage;
     cJSON_ArrayForEach(stage, stages) {
         const cJSON *second = cJSON_GetObjectItemCaseSensitive(stage, "second_soprano");
-        ok = ok && (first || sb_append(sb, ", ")) && sb_appendf(sb, "m. %d ", (int)number_member(stage, "measure")) &&
+        ok = ok && (first || sb_append(sb, ", ")) && sb_appendf(sb, "m. %d ", (int)number_or_zero(stage, "measure")) &&
              append_galant_degree(sb, cJSON_GetObjectItemCaseSensitive(stage, "soprano")) &&
              (!cJSON_IsObject(second) || (sb_append(sb, "+") && append_galant_degree(sb, second))) &&
              sb_append(sb, "/") && append_galant_degree(sb, cJSON_GetObjectItemCaseSensitive(stage, "bass"));
@@ -2364,10 +2360,10 @@ static bool render_schema_matches(StringBuilder *sb, const cJSON *schemas) {
             continue;
         }
         char overall[32];
-        format_number(number_member(cJSON_GetObjectItemCaseSensitive(claim, "confidence"), "overall"), overall,
+        format_number(number_or_zero(cJSON_GetObjectItemCaseSensitive(claim, "confidence"), "overall"), overall,
                       sizeof(overall));
         ok = sb_append(sb, "| ") && append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
-             sb_appendf(sb, " | %s | %s | ", string_member(claim, "name"), string_member(claim, "function")) &&
+             sb_appendf(sb, " | %s | %s | ", json_string_member(claim, "name"), json_string_member(claim, "function")) &&
              append_schema_stages(sb, cJSON_GetObjectItemCaseSensitive(claim, "stages")) && sb_append(sb, " | ") &&
              append_galant_degree(sb, cJSON_GetObjectItemCaseSensitive(claim, "frame")) &&
              sb_appendf(sb, " | %s |\n", overall);
@@ -2381,7 +2377,7 @@ static bool append_sequence_stages(StringBuilder *sb, const cJSON *stages) {
     bool first = true;
     const cJSON *stage;
     cJSON_ArrayForEach(stage, stages) {
-        ok = ok && (first || sb_append(sb, ", ")) && sb_appendf(sb, "m. %d ", (int)number_member(stage, "measure")) &&
+        ok = ok && (first || sb_append(sb, ", ")) && sb_appendf(sb, "m. %d ", (int)number_or_zero(stage, "measure")) &&
              append_galant_degree(sb, cJSON_GetObjectItemCaseSensitive(stage, "soprano")) && sb_append(sb, "/") &&
              append_galant_degree(sb, cJSON_GetObjectItemCaseSensitive(stage, "bass"));
         first = false;
@@ -2409,15 +2405,15 @@ static bool render_sequence_matches(StringBuilder *sb, const cJSON *schemas) {
         if (!has_label(claim, "sequence")) {
             continue;
         }
-        const char *direction = string_member(claim, "direction");
+        const char *direction = json_string_member(claim, "direction");
         char overall[32];
-        format_number(number_member(cJSON_GetObjectItemCaseSensitive(claim, "confidence"), "overall"), overall,
+        format_number(number_or_zero(cJSON_GetObjectItemCaseSensitive(claim, "confidence"), "overall"), overall,
                       sizeof(overall));
         ok = sb_append(sb, "| ") && append_measures(sb, cJSON_GetObjectItemCaseSensitive(claim, "measures")) &&
-             sb_appendf(sb, " | %s | %s | %s | %d (%d) | %+d | ", string_member(claim, "kind"),
+             sb_appendf(sb, " | %s | %s | %s | %d (%d) | %+d | ", json_string_member(claim, "kind"),
                         cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(claim, "rule_backed")) ? "yes" : "no",
-                        direction ? direction : "-", (int)number_member(claim, "units"),
-                        (int)number_member(claim, "unit_length"), (int)number_member(claim, "transposition_steps")) &&
+                        direction ? direction : "-", (int)number_or_zero(claim, "units"),
+                        (int)number_or_zero(claim, "unit_length"), (int)number_or_zero(claim, "transposition_steps")) &&
              append_sequence_stages(sb, cJSON_GetObjectItemCaseSensitive(claim, "stages")) &&
              sb_appendf(sb, " | %s |\n", overall);
     }
@@ -2445,11 +2441,11 @@ static bool render_schemas(StringBuilder *sb, const cJSON *document, const cJSON
 
 /* The part's name from the metadata, else its number: the markings name the part by index. */
 static bool append_part(StringBuilder *sb, const cJSON *document, const cJSON *claim) {
-    int index = (int)number_member(claim, "part");
+    int index = (int)number_or_zero(claim, "part");
     const cJSON *metadata = cJSON_GetObjectItemCaseSensitive(document, "metadata");
     const cJSON *input = cJSON_GetObjectItemCaseSensitive(metadata, "input");
     const cJSON *part = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(input, "parts"), index);
-    const char *name = string_member(part, "name");
+    const char *name = json_string_member(part, "name");
     return name && name[0] ? sb_append(sb, name) : sb_appendf(sb, "part %d", index + 1);
 }
 
@@ -2462,8 +2458,8 @@ static bool render_tempo_markings(StringBuilder *sb, const cJSON *tempo) {
             break;
         }
         const cJSON *metronome = cJSON_GetObjectItemCaseSensitive(claim, "metronome");
-        const char *text = string_member(claim, "text");
-        const char *group = string_member(claim, "group");
+        const char *text = json_string_member(claim, "text");
+        const char *group = json_string_member(claim, "group");
         ok = sb_append(sb, "| ") &&
              append_position(sb, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(claim, "location"),
                                                                   "start")) &&
@@ -2474,7 +2470,7 @@ static bool render_tempo_markings(StringBuilder *sb, const cJSON *tempo) {
         } else {
             ok = ok && sb_append(sb, "-");
         }
-        ok = ok && sb_appendf(sb, " | %s | %s |\n", group ? group : "-", string_member(claim, "change"));
+        ok = ok && sb_appendf(sb, " | %s | %s |\n", group ? group : "-", json_string_member(claim, "change"));
     }
     return ok && sb_append(sb, "\n");
 }
@@ -2488,12 +2484,12 @@ static bool render_dynamics(StringBuilder *sb, const cJSON *document, const cJSO
         if (!ok) {
             break;
         }
-        const char *relation = string_member(claim, "relation");
+        const char *relation = json_string_member(claim, "relation");
         ok = sb_append(sb, "| ") &&
              append_position(sb, cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(claim, "location"),
                                                                   "start")) &&
-             sb_appendf(sb, " | %s | ", string_member(claim, "marking")) && append_part(sb, document, claim) &&
-             sb_appendf(sb, " | %s | %s |\n", string_member(claim, "change"), relation ? relation : "-");
+             sb_appendf(sb, " | %s | ", json_string_member(claim, "marking")) && append_part(sb, document, claim) &&
+             sb_appendf(sb, " | %s | %s |\n", json_string_member(claim, "change"), relation ? relation : "-");
     }
     return ok && sb_append(sb, "\n");
 }
@@ -2501,7 +2497,7 @@ static bool render_dynamics(StringBuilder *sb, const cJSON *document, const cJSO
 static bool render_markings(StringBuilder *sb, const cJSON *document, const cJSON *markings) {
     const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(markings, "tempo");
     const cJSON *dynamics = cJSON_GetObjectItemCaseSensitive(markings, "dynamics");
-    const char *source = string_member(markings, "source");
+    const char *source = json_string_member(markings, "source");
     bool ok = sb_append(sb, "## Markings\n\n");
     if (source && strcmp(source, "none") == 0) {
         return ok && sb_append(sb, "A MIDI file carries no tempo or dynamics markings.\n\n");
@@ -2524,15 +2520,15 @@ static bool render_counterpoint_check(StringBuilder *sb, const cJSON *document, 
     (void)document;
     const cJSON *violations = cJSON_GetObjectItemCaseSensitive(check, "violations");
     const cJSON *valid = cJSON_GetObjectItemCaseSensitive(check, "valid");
-    const char *shape_error = string_member(check, "shape_error");
-    int species = (int)number_member(check, "species");
+    const char *shape_error = json_string_member(check, "shape_error");
+    int species = (int)number_or_zero(check, "species");
     bool ok = sb_append(sb, "## Counterpoint check\n\n") &&
               sb_appendf(sb,
                          "The two voices checked as a %s-species exercise with the %s voice as the cantus firmus, "
                          "against the library's standard-counterpoint rules. The library judges each rule group over "
                          "the whole exercise and does not say where a rule broke, so every violation covers the "
                          "exercise.\n\n",
-                         species >= 1 && species <= 5 ? SPECIES_NAMES[species] : "?", string_member(check, "cantus"));
+                         species >= 1 && species <= 5 ? SPECIES_NAMES[species] : "?", json_string_member(check, "cantus"));
     if (!ok) {
         return false;
     }
@@ -2549,7 +2545,7 @@ static bool render_counterpoint_check(StringBuilder *sb, const cJSON *document, 
         if (!ok) {
             break;
         }
-        ok = sb_appendf(sb, "| %s | %s | ", string_member(violation, "group"), string_member(violation, "severity")) &&
+        ok = sb_appendf(sb, "| %s | %s | ", json_string_member(violation, "group"), json_string_member(violation, "severity")) &&
              append_location(sb, violation) && sb_append(sb, " |\n");
     }
     return ok && sb_append(sb, "\n");

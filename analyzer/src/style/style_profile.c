@@ -10,6 +10,7 @@
 #include <ursatz_analyzer/analysis_document.h>
 
 #include "style_internal.h"
+#include "util/json_util.h"
 
 #define SYNCOPATION_CAP 4
 
@@ -112,27 +113,9 @@ static bool count_number(StyleProfile *profile, const char *category, long value
 
 /* ---- reading the document ---- */
 
-static const cJSON *member(const cJSON *object, const char *name) {
-    return cJSON_IsObject(object) ? cJSON_GetObjectItemCaseSensitive(object, name) : NULL;
-}
-
-static const char *string_member(const cJSON *object, const char *name) {
-    const cJSON *item = member(object, name);
-    return cJSON_IsString(item) ? item->valuestring : NULL;
-}
-
-static bool number_member(const cJSON *object, const char *name, long *out) {
-    const cJSON *item = member(object, name);
-    if (!cJSON_IsNumber(item)) {
-        return false;
-    }
-    *out = (long)item->valuedouble;
-    return true;
-}
-
 static bool fraction_member(const cJSON *object, const char *name, long *numerator, long *denominator) {
-    const cJSON *fraction = member(object, name);
-    return number_member(fraction, "num", numerator) && number_member(fraction, "den", denominator) && *denominator > 0 &&
+    const cJSON *fraction = json_member(object, name);
+    return json_number_member(fraction, "num", numerator) && json_number_member(fraction, "den", denominator) && *denominator > 0 &&
            *numerator >= 0;
 }
 
@@ -142,11 +125,11 @@ static bool count_harmony(StyleProfile *profile, const cJSON *document) {
     long run_region = -1;
     bool ok = true;
     const cJSON *chord;
-    cJSON_ArrayForEach(chord, member(document, "chords")) {
-        const cJSON *roman = member(chord, "roman_numeral");
-        const char *base = string_member(roman, "base_numeral");
+    cJSON_ArrayForEach(chord, json_member(document, "chords")) {
+        const cJSON *roman = json_member(chord, "roman_numeral");
+        const char *base = json_string_member(roman, "base_numeral");
         long region = 0;
-        if (!base || !number_member(roman, "key_region", &region)) {
+        if (!base || !json_number_member(roman, "key_region", &region)) {
             free(previous);
             free(before_previous);
             previous = before_previous = NULL;
@@ -193,16 +176,16 @@ static bool count_harmony(StyleProfile *profile, const cJSON *document) {
         return false;
     }
     const cJSON *cadence;
-    cJSON_ArrayForEach(cadence, member(document, "cadences")) {
-        const char *type = string_member(cadence, "type");
+    cJSON_ArrayForEach(cadence, json_member(document, "cadences")) {
+        const char *type = json_string_member(cadence, "type");
         if (type && !count_label(profile, STYLE_CATEGORY_CADENCE_TYPE, type)) {
             return false;
         }
     }
     const cJSON *measure;
-    cJSON_ArrayForEach(measure, member(member(document, "harmonic_rhythm"), "per_measure")) {
+    cJSON_ArrayForEach(measure, json_member(json_member(document, "harmonic_rhythm"), "per_measure")) {
         long changes;
-        if (number_member(measure, "changes", &changes) && !count_number(profile, STYLE_CATEGORY_HARMONIC_RHYTHM, changes)) {
+        if (json_number_member(measure, "changes", &changes) && !count_number(profile, STYLE_CATEGORY_HARMONIC_RHYTHM, changes)) {
             return false;
         }
     }
@@ -211,7 +194,7 @@ static bool count_harmony(StyleProfile *profile, const cJSON *document) {
 
 static bool count_time_signature(StyleProfile *profile, const cJSON *signature) {
     long numerator, denominator;
-    if (!number_member(signature, "numerator", &numerator) || !number_member(signature, "denominator", &denominator)) {
+    if (!json_number_member(signature, "numerator", &numerator) || !json_number_member(signature, "denominator", &denominator)) {
         return true;
     }
     char label[32];
@@ -220,19 +203,19 @@ static bool count_time_signature(StyleProfile *profile, const cJSON *signature) 
 }
 
 static bool count_rhythm(StyleProfile *profile, const cJSON *document) {
-    const cJSON *meter = member(document, "meter");
-    if (!count_time_signature(profile, member(meter, "time_signature"))) {
+    const cJSON *meter = json_member(document, "meter");
+    if (!count_time_signature(profile, json_member(meter, "time_signature"))) {
         return false;
     }
     const cJSON *change;
-    cJSON_ArrayForEach(change, member(meter, "changes")) {
-        if (!count_time_signature(profile, member(change, "time_signature"))) {
+    cJSON_ArrayForEach(change, json_member(meter, "changes")) {
+        if (!count_time_signature(profile, json_member(change, "time_signature"))) {
             return false;
         }
     }
-    const cJSON *tempo = member(member(member(document, "metadata"), "input"), "tempo");
-    const cJSON *declared = member(tempo, "declared");
-    const cJSON *quarters = member(tempo, "quarters_per_minute");
+    const cJSON *tempo = json_member(json_member(json_member(document, "metadata"), "input"), "tempo");
+    const cJSON *declared = json_member(tempo, "declared");
+    const cJSON *quarters = json_member(tempo, "quarters_per_minute");
     if (cJSON_IsTrue(declared) && cJSON_IsNumber(quarters)) {
         char label[32];
         style_label_tempo(quarters->valuedouble, label, sizeof label);
@@ -241,10 +224,10 @@ static bool count_rhythm(StyleProfile *profile, const cJSON *document) {
         }
     }
     const cJSON *rhythm_claim;
-    cJSON_ArrayForEach(rhythm_claim, member(document, "rhythm")) {
-        const char *claim_label = string_member(rhythm_claim, "label");
-        const char *claim_line = string_member(rhythm_claim, "line");
-        const cJSON *mean = member(member(rhythm_claim, "attacks_per_beat"), "mean");
+    cJSON_ArrayForEach(rhythm_claim, json_member(document, "rhythm")) {
+        const char *claim_label = json_string_member(rhythm_claim, "label");
+        const char *claim_line = json_string_member(rhythm_claim, "line");
+        const cJSON *mean = json_member(json_member(rhythm_claim, "attacks_per_beat"), "mean");
         if (claim_label && claim_line && strcmp(claim_label, "density") == 0 && strcmp(claim_line, "all") == 0 &&
             cJSON_IsNumber(mean)) {
             char label[32];
@@ -255,20 +238,20 @@ static bool count_rhythm(StyleProfile *profile, const cJSON *document) {
         }
     }
     const cJSON *phrase;
-    cJSON_ArrayForEach(phrase, member(document, "phrases")) {
+    cJSON_ArrayForEach(phrase, json_member(document, "phrases")) {
         long first, last;
-        const cJSON *measures = member(phrase, "measures");
-        if (!number_member(measures, "first", &first) || !number_member(measures, "last", &last)) {
+        const cJSON *measures = json_member(phrase, "measures");
+        if (!json_number_member(measures, "first", &first) || !json_number_member(measures, "last", &last)) {
             continue;
         }
         long syncopations = 0;
         const cJSON *claim;
-        cJSON_ArrayForEach(claim, member(document, "rhythm")) {
-            const char *label = string_member(claim, "label");
-            const char *line = string_member(claim, "line");
+        cJSON_ArrayForEach(claim, json_member(document, "rhythm")) {
+            const char *label = json_string_member(claim, "label");
+            const char *line = json_string_member(claim, "line");
             long measure;
             if (label && line && strcmp(label, "syncopation") == 0 && strcmp(line, "soprano") == 0 &&
-                number_member(claim, "measure", &measure) && measure >= first && measure <= last) {
+                json_number_member(claim, "measure", &measure) && measure >= first && measure <= last) {
                 syncopations++;
             }
         }
@@ -291,17 +274,17 @@ static bool count_soprano(StyleProfile *profile, const cJSON *document) {
     long previous_id = 0;
     long previous_pitch = 0;
     const cJSON *entry;
-    cJSON_ArrayForEach(entry, member(member(document, "outer_voices"), "soprano")) {
-        const char *status = string_member(entry, "status");
+    cJSON_ArrayForEach(entry, json_member(json_member(document, "outer_voices"), "soprano")) {
+        const char *status = json_string_member(entry, "status");
         long id, pitch, numerator, denominator;
-        if (!status || strcmp(status, "present") != 0 || !number_member(entry, "note_id", &id) ||
-            !number_member(member(entry, "pitch"), "midi", &pitch)) {
+        if (!status || strcmp(status, "present") != 0 || !json_number_member(entry, "note_id", &id) ||
+            !json_number_member(json_member(entry, "pitch"), "midi", &pitch)) {
             continue;
         }
         if (have_previous && id == previous_id) {
             continue;
         }
-        if (fraction_member(member(entry, "duration"), "whole_notes", &numerator, &denominator)) {
+        if (fraction_member(json_member(entry, "duration"), "whole_notes", &numerator, &denominator)) {
             char label[48];
             style_label_duration((unsigned long)numerator, (unsigned long)denominator, label, sizeof label);
             if (!count_label(profile, STYLE_CATEGORY_DURATION, label)) {
@@ -382,12 +365,12 @@ static char *join_intervals(const cJSON *array, bool *failed) {
 static const char *note_nct_type(const cJSON *claims, long note_id) {
     const cJSON *claim;
     cJSON_ArrayForEach(claim, claims) {
-        const char *type = string_member(claim, "type");
+        const char *type = json_string_member(claim, "type");
         const cJSON *id;
         if (!type) {
             continue;
         }
-        cJSON_ArrayForEach(id, member(claim, "note_ids")) {
+        cJSON_ArrayForEach(id, json_member(claim, "note_ids")) {
             if (cJSON_IsNumber(id) && (long)id->valuedouble == note_id) {
                 return type;
             }
@@ -433,19 +416,19 @@ static const char *degree_at(const cJSON *degrees, int index) {
    occurrence does not have. A note counts once for the piece, whichever occurrence names it first. The family's
    degrees, intervals and rhythm are one label each. */
 static bool count_motives(StyleProfile *profile, const cJSON *document) {
-    const cJSON *claims = member(document, "non_chord_tones");
+    const cJSON *claims = json_member(document, "non_chord_tones");
     SeenNotes seen = {NULL, 0, 0};
     bool ok = true;
     bool failed = false;
     const cJSON *family;
-    cJSON_ArrayForEach(family, member(document, "motives")) {
-        const cJSON *features = member(family, "features");
+    cJSON_ArrayForEach(family, json_member(document, "motives")) {
+        const cJSON *features = json_member(family, "features");
         if (!ok || !features) {
             continue;
         }
-        char *degrees = join_strings(member(features, "degrees"), &failed);
-        char *intervals = failed ? NULL : join_intervals(member(features, "intervals"), &failed);
-        char *rhythm = failed ? NULL : join_strings(member(features, "rhythm"), &failed);
+        char *degrees = join_strings(json_member(features, "degrees"), &failed);
+        char *intervals = failed ? NULL : join_intervals(json_member(features, "intervals"), &failed);
+        char *rhythm = failed ? NULL : join_strings(json_member(features, "rhythm"), &failed);
         ok = !failed && (!degrees || count_label(profile, STYLE_CATEGORY_MOTIVE_DEGREES, degrees)) &&
              (!intervals || count_label(profile, STYLE_CATEGORY_MOTIVE_INTERVALS, intervals)) &&
              (!rhythm || count_label(profile, STYLE_CATEGORY_MOTIVE_RHYTHM, rhythm));
@@ -453,9 +436,9 @@ static bool count_motives(StyleProfile *profile, const cJSON *document) {
         free(intervals);
         free(rhythm);
         const cJSON *occurrence;
-        cJSON_ArrayForEach(occurrence, member(family, "occurrences")) {
-            const cJSON *ids = member(occurrence, "note_ids");
-            const cJSON *occurrence_degrees = member(occurrence, "degrees");
+        cJSON_ArrayForEach(occurrence, json_member(family, "occurrences")) {
+            const cJSON *ids = json_member(occurrence, "note_ids");
+            const cJSON *occurrence_degrees = json_member(occurrence, "degrees");
             int count = cJSON_GetArraySize(ids);
             if (!ok || !occurrence_degrees || cJSON_GetArraySize(occurrence_degrees) != count) {
                 continue;
@@ -490,9 +473,9 @@ static bool count_melody(StyleProfile *profile, const cJSON *document) {
         return false;
     }
     const cJSON *phrase;
-    cJSON_ArrayForEach(phrase, member(document, "melody")) {
+    cJSON_ArrayForEach(phrase, json_member(document, "melody")) {
         long semitones;
-        if (number_member(member(phrase, "range"), "semitones", &semitones) &&
+        if (json_number_member(json_member(phrase, "range"), "semitones", &semitones) &&
             !count_number(profile, STYLE_CATEGORY_PHRASE_RANGE, semitones)) {
             return false;
         }
@@ -502,24 +485,24 @@ static bool count_melody(StyleProfile *profile, const cJSON *document) {
 
 static bool count_form(StyleProfile *profile, const cJSON *document) {
     const cJSON *theme;
-    cJSON_ArrayForEach(theme, member(document, "themes")) {
-        const char *form = string_member(theme, "label");
+    cJSON_ArrayForEach(theme, json_member(document, "themes")) {
+        const char *form = json_string_member(theme, "label");
         if (form && !count_label(profile, STYLE_CATEGORY_THEME_FORM, form)) {
             return false;
         }
     }
     const cJSON *phrase;
-    cJSON_ArrayForEach(phrase, member(document, "phrases")) {
+    cJSON_ArrayForEach(phrase, json_member(document, "phrases")) {
         long length;
-        if (number_member(phrase, "length", &length) && !count_number(profile, STYLE_CATEGORY_PHRASE_LENGTH, length)) {
+        if (json_number_member(phrase, "length", &length) && !count_number(profile, STYLE_CATEGORY_PHRASE_LENGTH, length)) {
             return false;
         }
     }
-    const cJSON *sections = member(member(document, "form"), "sections");
+    const cJSON *sections = json_member(json_member(document, "form"), "sections");
     size_t length = 1;
     const cJSON *section;
     cJSON_ArrayForEach(section, sections) {
-        const char *letter = string_member(section, "label");
+        const char *letter = json_string_member(section, "label");
         length += letter ? strlen(letter) + 1 : 0;
     }
     if (length > 1) {
@@ -529,7 +512,7 @@ static bool count_form(StyleProfile *profile, const cJSON *document) {
         }
         letters[0] = '\0';
         cJSON_ArrayForEach(section, sections) {
-            const char *letter = string_member(section, "label");
+            const char *letter = json_string_member(section, "label");
             if (letter) {
                 if (letters[0]) {
                     strcat(letters, " ");
@@ -543,7 +526,7 @@ static bool count_form(StyleProfile *profile, const cJSON *document) {
             return false;
         }
     }
-    const char *home = string_member(member(member(document, "keys"), "home_key"), "label");
+    const char *home = json_string_member(json_member(json_member(document, "keys"), "home_key"), "label");
     const char *mode = home ? strrchr(home, ' ') : NULL;
     if (mode && mode[1] && !count_label(profile, STYLE_CATEGORY_MODE, mode + 1)) {
         return false;
@@ -557,7 +540,7 @@ StyleProfileResult style_profile_add_document_json(StyleProfile *profile, const 
     }
     cJSON *document = cJSON_Parse(json);
     long version;
-    if (!document || !number_member(document, "schema_version", &version) || version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+    if (!document || !json_number_member(document, "schema_version", &version) || version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(document);
         return STYLE_PROFILE_ERR_FORMAT;
     }
@@ -635,9 +618,9 @@ StyleProfileResult style_profile_add_corpus(StyleProfile *profile, const char *o
     }
     cJSON *index = cJSON_Parse(index_text);
     free(index_text);
-    const char *schema = string_member(index, "schema");
-    const char *input_dir = string_member(index, "input_dir");
-    const cJSON *pieces = member(index, "pieces");
+    const char *schema = json_string_member(index, "schema");
+    const char *input_dir = json_string_member(index, "input_dir");
+    const cJSON *pieces = json_member(index, "pieces");
     if (!schema || strcmp(schema, "ursatz-corpus-index") != 0 || !input_dir || !cJSON_IsArray(pieces)) {
         cJSON_Delete(index);
         return STYLE_PROFILE_ERR_FORMAT;
@@ -645,8 +628,8 @@ StyleProfileResult style_profile_add_corpus(StyleProfile *profile, const char *o
     StyleProfileResult result = STYLE_PROFILE_OK;
     const cJSON *piece;
     cJSON_ArrayForEach(piece, pieces) {
-        const char *status = string_member(piece, "status");
-        const char *document = string_member(piece, "document");
+        const char *status = json_string_member(piece, "status");
+        const char *document = json_string_member(piece, "document");
         if (!status || strcmp(status, "analyzed") != 0 || !document) {
             continue;
         }

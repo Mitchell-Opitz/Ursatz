@@ -47,6 +47,7 @@ add_library(ursatz_analyzer STATIC
     links/motive_link_cache.c
     links/motive_links_render.c
     pipeline/composer_api.c
+    util/json_util.c
 )
 # standard-form and standard-harmony have headers of the same names (analysis_input.h, analysis_phrase.h), so the
 # analyzer includes the form ones as "standard-form/analysis/...", from the frameworks directory.

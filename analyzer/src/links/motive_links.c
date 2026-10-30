@@ -11,6 +11,7 @@
 #include "links_internal.h"
 #include "pipeline/motive_features.h"
 #include "style/style_internal.h"
+#include "util/json_util.h"
 
 
 /* ---- Scope ---- */
@@ -50,10 +51,6 @@ static char *copy_text(const char *text) {
     return copy;
 }
 
-static const cJSON *member(const cJSON *object, const char *name) {
-    return cJSON_IsObject(object) ? cJSON_GetObjectItemCaseSensitive(object, name) : NULL;
-}
-
 static bool number_value(const cJSON *item, double *out) {
     if (!cJSON_IsNumber(item)) {
         return false;
@@ -64,7 +61,7 @@ static bool number_value(const cJSON *item, double *out) {
 
 static bool int_member(const cJSON *object, const char *name, int *out) {
     double value;
-    if (!number_value(member(object, name), &value) || value < -2147483647.0 || value > 2147483647.0 ||
+    if (!number_value(json_member(object, name), &value) || value < -2147483647.0 || value > 2147483647.0 ||
         value != (double)(int)value) {
         return false;
     }
@@ -90,12 +87,12 @@ static bool fraction_value(const cJSON *item, unsigned long long *numerator, uns
 
 static bool fraction_member(const cJSON *object, const char *name, unsigned long long *numerator,
                             unsigned long long *denominator) {
-    return fraction_value(member(object, name), numerator, denominator);
+    return fraction_value(json_member(object, name), numerator, denominator);
 }
 
 /* The prototype's sketch from a family's "features": the document side of motive_features_sketch. */
 static MotiveLinksResult features_sketch(const cJSON *features, MotiveSketch *sketch) {
-    const cJSON *notes = member(features, "notes");
+    const cJSON *notes = json_member(features, "notes");
     int count = cJSON_IsArray(notes) ? cJSON_GetArraySize(notes) : 0;
     if (count <= 0 || count > MOTIVE_SKETCH_MAX_NOTES) {
         return MOTIVE_LINKS_ERR_FORMAT;
@@ -117,13 +114,13 @@ static MotiveLinksResult features_sketch(const cJSON *features, MotiveSketch *sk
     }
     int tonic;
     ok = ok && int_member(features, "tonic_pc", &tonic) && tonic >= 0 && tonic < 12 &&
-         cJSON_IsBool(member(features, "minor")) &&
+         cJSON_IsBool(json_member(features, "minor")) &&
          fraction_member(features, "bar", &read.bar_numerator, &read.bar_denominator) &&
          fraction_member(features, "beat", &read.beat_numerator, &read.beat_denominator) &&
          fraction_member(features, "pickup", &read.pickup_numerator, &read.pickup_denominator);
     if (ok) {
         read.tonic_pc = tonic;
-        read.minor = cJSON_IsTrue(member(features, "minor"));
+        read.minor = cJSON_IsTrue(json_member(features, "minor"));
     }
     ok = ok && motive_features_sketch(&read, sketch);
     free(read.notes);
@@ -184,18 +181,18 @@ static void family_clear(Family *family) {
 /* The family of one motive claim: where its prototype sits and its sketch. */
 static MotiveLinksResult read_family(const cJSON *motive, size_t piece, Family *family) {
     memset(family, 0, sizeof *family);
-    const cJSON *features = member(motive, "features");
+    const cJSON *features = json_member(motive, "features");
     if (!cJSON_IsObject(features)) {
         return MOTIVE_LINKS_ERR_NO_FEATURES;
     }
     family->piece = piece;
-    const cJSON *index = member(motive, "index");
-    const cJSON *occurrences = member(motive, "occurrences");
+    const cJSON *index = json_member(motive, "index");
+    const cJSON *occurrences = json_member(motive, "occurrences");
     const cJSON *prototype = cJSON_IsArray(occurrences) ? cJSON_GetArrayItem(occurrences, 0) : NULL;
-    const cJSON *measures = member(prototype, "measures");
+    const cJSON *measures = json_member(prototype, "measures");
     double beat;
     if (!cJSON_IsNumber(index) || index->valuedouble < 0 || !int_member(measures, "first", &family->first_measure) ||
-        !int_member(measures, "last", &family->last_measure) || !number_value(member(prototype, "beat"), &beat)) {
+        !int_member(measures, "last", &family->last_measure) || !number_value(json_member(prototype, "beat"), &beat)) {
         return MOTIVE_LINKS_ERR_FORMAT;
     }
     family->family = (size_t)index->valuedouble;
@@ -207,7 +204,7 @@ static MotiveLinksResult read_family(const cJSON *motive, size_t piece, Family *
     if (!normalize_key(&family->sketch)) {
         return MOTIVE_LINKS_ERR_FORMAT;
     }
-    family->degrees = join_degrees(member(features, "degrees"));
+    family->degrees = join_degrees(json_member(features, "degrees"));
     if (!family->degrees) {
         return MOTIVE_LINKS_ERR_FORMAT;
     }
@@ -293,8 +290,8 @@ static MotiveLinksResult add_document(MotiveLinkScope *scope, const char *piece_
         }
     }
     cJSON *document = cJSON_Parse(json);
-    const cJSON *version = member(document, "schema_version");
-    const cJSON *motives = member(document, "motives");
+    const cJSON *version = json_member(document, "schema_version");
+    const cJSON *motives = json_member(document, "motives");
     if (!cJSON_IsNumber(version) || version->valuedouble != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION || !cJSON_IsArray(motives)) {
         cJSON_Delete(document);
         return MOTIVE_LINKS_ERR_FORMAT;
@@ -365,8 +362,8 @@ MotiveLinksResult motive_link_scope_add_corpus(MotiveLinkScope *scope, const cha
     }
     cJSON *index = cJSON_Parse(index_text);
     free(index_text);
-    const cJSON *schema = member(index, "schema");
-    const cJSON *pieces = member(index, "pieces");
+    const cJSON *schema = json_member(index, "schema");
+    const cJSON *pieces = json_member(index, "pieces");
     if (!cJSON_IsString(schema) || strcmp(schema->valuestring, "ursatz-corpus-index") != 0 || !cJSON_IsArray(pieces)) {
         cJSON_Delete(index);
         return MOTIVE_LINKS_ERR_FORMAT;
@@ -374,9 +371,9 @@ MotiveLinksResult motive_link_scope_add_corpus(MotiveLinkScope *scope, const cha
     MotiveLinksResult result = MOTIVE_LINKS_OK;
     const cJSON *piece;
     cJSON_ArrayForEach(piece, pieces) {
-        const cJSON *status = member(piece, "status");
-        const cJSON *document = member(piece, "document");
-        const cJSON *path = member(piece, "path");
+        const cJSON *status = json_member(piece, "status");
+        const cJSON *document = json_member(piece, "document");
+        const cJSON *path = json_member(piece, "path");
         if (!cJSON_IsString(status) || strcmp(status->valuestring, "analyzed") != 0 || !cJSON_IsString(document) ||
             !cJSON_IsString(path)) {
             continue;

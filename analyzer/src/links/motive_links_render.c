@@ -5,6 +5,7 @@
 #include <cJSON.h>
 
 #include <ursatz_analyzer/motive_links.h>
+#include "util/json_util.h"
 
 static const char *const dimension_keys[MOTIVE_DIMENSION_COUNT] = {"rhythm", "intervals", "contour", "harmony"};
 
@@ -17,28 +18,15 @@ static bool put(cJSON *object, const char *name, cJSON **item) {
     return true;
 }
 
-/* Adds a new item under name, freeing it when it cannot be made or added. */
-static bool add(cJSON *object, const char *name, cJSON *item) {
-    return put(object, name, &item) || (cJSON_Delete(item), false);
-}
-
-static bool append(cJSON *array, cJSON *item) {
-    if (!item || !cJSON_AddItemToArray(array, item)) {
-        cJSON_Delete(item);
-        return false;
-    }
-    return true;
-}
-
 static cJSON *end_json(const MotiveLinkEnd *end) {
     cJSON *object = cJSON_CreateObject();
     cJSON *measures = cJSON_CreateObject();
-    bool ok = object && measures && add(measures, "first", cJSON_CreateNumber(end->first_measure)) &&
-              add(measures, "last", cJSON_CreateNumber(end->last_measure)) &&
-              add(object, "piece", cJSON_CreateString(end->piece)) &&
-              add(object, "family", cJSON_CreateNumber((double)end->family)) && put(object, "measures", &measures) &&
-              add(object, "beat", cJSON_CreateNumber(end->beat)) &&
-              add(object, "degrees", cJSON_CreateString(end->degrees));
+    bool ok = object && measures && json_add(measures, "first", cJSON_CreateNumber(end->first_measure)) &&
+              json_add(measures, "last", cJSON_CreateNumber(end->last_measure)) &&
+              json_add(object, "piece", cJSON_CreateString(end->piece)) &&
+              json_add(object, "family", cJSON_CreateNumber((double)end->family)) && put(object, "measures", &measures) &&
+              json_add(object, "beat", cJSON_CreateNumber(end->beat)) &&
+              json_add(object, "degrees", cJSON_CreateString(end->degrees));
     cJSON_Delete(measures);
     if (!ok) {
         cJSON_Delete(object);
@@ -58,14 +46,14 @@ static cJSON *link_json(const MotiveLinkFound *link) {
     double value = link->distance_denominator ? (double)link->distance_numerator / (double)link->distance_denominator : 1.0;
     bool ok = object && steps && distance && similarity;
     for (size_t i = 0; ok && i < link->step_count; i++) {
-        ok = append(steps, cJSON_CreateString(link->step_text[i]));
+        ok = json_append(steps, cJSON_CreateString(link->step_text[i]));
     }
     for (int d = 0; ok && d < MOTIVE_DIMENSION_COUNT; d++) {
-        ok = add(similarity, dimension_keys[d], cJSON_CreateNumber(link->similarity[d]));
+        ok = json_add(similarity, dimension_keys[d], cJSON_CreateNumber(link->similarity[d]));
     }
-    ok = ok && add(distance, "fraction", cJSON_CreateString(fraction)) &&
-         add(distance, "value", cJSON_CreateNumber(value)) && add(object, "a", end_json(&link->a)) &&
-         add(object, "b", end_json(&link->b)) && add(object, "reversed", cJSON_CreateBool(link->reversed)) &&
+    ok = ok && json_add(distance, "fraction", cJSON_CreateString(fraction)) &&
+         json_add(distance, "value", cJSON_CreateNumber(value)) && json_add(object, "a", end_json(&link->a)) &&
+         json_add(object, "b", end_json(&link->b)) && json_add(object, "reversed", cJSON_CreateBool(link->reversed)) &&
          put(object, "steps", &steps) && put(object, "distance", &distance) && put(object, "similarity", &similarity);
     cJSON_Delete(steps);
     cJSON_Delete(distance);
@@ -83,10 +71,10 @@ static cJSON *group_json(const MotiveLinkGroup *group) {
     bool ok = object && members;
     for (size_t i = 0; ok && i < group->member_count; i++) {
         cJSON *member = cJSON_CreateObject();
-        bool built = member && add(member, "piece", cJSON_CreateString(group->members[i].piece)) &&
-                     add(member, "family", cJSON_CreateNumber((double)group->members[i].family));
+        bool built = member && json_add(member, "piece", cJSON_CreateString(group->members[i].piece)) &&
+                     json_add(member, "family", cJSON_CreateNumber((double)group->members[i].family));
         if (built) {
-            ok = append(members, member);
+            ok = json_append(members, member);
         } else {
             cJSON_Delete(member);
             ok = false;
@@ -109,18 +97,18 @@ MotiveLinksResult motive_links_render(const MotiveLinks *links, char **out) {
     cJSON *root = cJSON_CreateObject();
     cJSON *list = cJSON_CreateArray();
     cJSON *groups = cJSON_CreateArray();
-    bool ok = root && list && groups && add(root, "schema", cJSON_CreateString("ursatz-motive-links")) &&
-              add(root, "schema_version", cJSON_CreateNumber(1)) &&
-              add(root, "pieces", cJSON_CreateNumber((double)links->pieces)) &&
-              add(root, "pairs", cJSON_CreateNumber((double)links->pairs)) &&
-              add(root, "compared", cJSON_CreateNumber((double)links->compared)) &&
-              add(root, "cached", cJSON_CreateNumber((double)links->cached)) &&
-              add(root, "cache_reset", cJSON_CreateBool(links->cache_reset));
+    bool ok = root && list && groups && json_add(root, "schema", cJSON_CreateString("ursatz-motive-links")) &&
+              json_add(root, "schema_version", cJSON_CreateNumber(1)) &&
+              json_add(root, "pieces", cJSON_CreateNumber((double)links->pieces)) &&
+              json_add(root, "pairs", cJSON_CreateNumber((double)links->pairs)) &&
+              json_add(root, "compared", cJSON_CreateNumber((double)links->compared)) &&
+              json_add(root, "cached", cJSON_CreateNumber((double)links->cached)) &&
+              json_add(root, "cache_reset", cJSON_CreateBool(links->cache_reset));
     for (size_t i = 0; ok && i < links->link_count; i++) {
-        ok = append(list, link_json(&links->links[i]));
+        ok = json_append(list, link_json(&links->links[i]));
     }
     for (size_t i = 0; ok && i < links->group_count; i++) {
-        ok = append(groups, group_json(&links->groups[i]));
+        ok = json_append(groups, group_json(&links->groups[i]));
     }
     ok = ok && put(root, "links", &list) && put(root, "groups", &groups);
     cJSON_Delete(list);
