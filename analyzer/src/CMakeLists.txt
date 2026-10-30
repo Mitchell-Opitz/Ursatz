@@ -61,7 +61,7 @@ target_include_directories(ursatz_analyzer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
-    PUBLIC ursatz common_practice_minimal standard_meter standard_tonality standard_harmony standard_form
+    PUBLIC ursatz ursatz_chain common_practice_minimal standard_meter standard_tonality standard_harmony standard_form
     PRIVATE cjson standard_counterpoint standard_texture standard_voicing standard_markings galant_schemas
     scale_harmonization
 )

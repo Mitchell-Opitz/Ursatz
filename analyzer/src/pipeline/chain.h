@@ -7,7 +7,10 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
+#include <ursatz_chain/analysis_chain.h>
+
 #include "analysis/outer_voice.h"
+#include "pipeline/chain_input.h"
 #include "pipeline/chord_pipeline.h"
 #include "pipeline/form_pipeline.h"
 #include "pipeline/harmony_pipeline.h"
@@ -17,23 +20,24 @@
 #include "time/musical_time.h"
 
 /*
- * The analysis as one chain over a piece, ported from Ursatz's test glue (tests/integration/framework_v1_chain.h,
- * R-053) as a rewrite with error returns. chain_init cuts the notes into segments once; chain_pass runs every
- * stage from the key regions on, in order, and collects the results into report. A pass can be run again after
- * chain_pass_destroy (with the evidence of the pass before it, or with phrase boundaries), and every later stage
- * is added at the end of chain_pass with its results in report.
+ * The analyzer's pass over a piece: it runs the library's analysis chain once (analysis_chain_run of ursatz_chain,
+ * R-217, R-241) over the neutral notes of chain_input.h, and collects the library's results into report. The chain
+ * does the analysis, including the second key pass on the first pass's chords and phrase ends; the stage files only
+ * read its accessors, and the Analyzer-only stages (progressions, harmonic rhythm, meter check, rhythm, markings, form
+ * plan, voicing check, counterpoint check) read the collected report and the chain's results.
  *
- * The chain borrows notes, which must outlive it. Every function returns false only on allocation or library
- * failure; on false the chain still holds what was built and chain_destroy releases it.
+ * The pass borrows notes, which must outlive it. analyzer_pass_run returns false only on allocation or library
+ * failure; on false the pass still holds what was built and analyzer_pass_destroy releases it.
  */
-typedef struct AnalysisChain {
+typedef struct AnalyzerPass {
     const ImportedNotes *notes;
+    ChainInput input;                /* the library chain's neutral notes and key events */
+    AnalysisChain *library;          /* owned; NULL for a piece with no notes */
+    AnalysisReport report;           /* the pass's results: entries, non-chord tones, key regions and changes */
+
+    /* The collectors not yet moved onto the library chain's accessors (this branch removes them one by one). */
     Segmentation segmentation;       /* the chord segments, merged over unchanged harmony */
     Segmentation voice_segmentation; /* the voice segments, not merged: one per melody note, for the outer voices */
-    CommonPracticeKeyChord *key_chords; /* owned; each chord segment's chord from an earlier pass, as functional
-                                           evidence for the key regions; NULL before chain_keep_chord_evidence */
-
-    /* one pass */
     CommonPracticeKeyRegions key_regions; /* the library's regions and changes, parallel to report's */
     ChordEstimate *chords;   /* segmentation.segment_count of them */
     RomanNumerals romans;    /* the Roman numeral inputs and results, one per chord segment */
@@ -41,21 +45,12 @@ typedef struct AnalysisChain {
     HarmonyStage harmony;    /* the standard-harmony inputs, prepared segments and cadences, one per chord segment */
     FormStage form;          /* the standard-form input, phrases, ideas and subphrases */
     MotiveStage motives;     /* the note-level soprano input, its phrases, ideas and themes, and the motive families */
-    AnalysisReport report;   /* the pass's results: entries, non-chord tones, key regions and changes */
-} AnalysisChain;
+} AnalyzerPass;
 
-bool chain_init(AnalysisChain *chain, const ImportedNotes *notes);
+/* Runs the pass over notes. */
+bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes);
 
-/* Runs the stages from the key regions on. boundaries are phrase boundary times for the key regions (any
-   order, borrowed for the call), or NULL with boundary_count 0. */
-bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size_t boundary_count);
-
-/* Keeps the pass's chords as functional evidence for the key regions of every later pass (R-043). */
-bool chain_keep_chord_evidence(AnalysisChain *chain);
-
-/* Releases one pass's results, leaving the segments for the next pass. */
-void chain_pass_destroy(AnalysisChain *chain);
-
-void chain_destroy(AnalysisChain *chain);
+/* Releases the pass and the report it still holds. */
+void analyzer_pass_destroy(AnalyzerPass *pass);
 
 #endif

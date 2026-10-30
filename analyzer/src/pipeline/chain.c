@@ -22,9 +22,7 @@
 
 static const AnalysisChordReading NO_READING = {NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
 
-bool chain_init(AnalysisChain *chain, const ImportedNotes *notes) {
-    memset(chain, 0, sizeof(*chain));
-    chain->notes = notes;
+static bool legacy_init(AnalyzerPass *chain, const ImportedNotes *notes) {
     if (notes->count == 0) {
         return true;
     }
@@ -32,7 +30,7 @@ bool chain_init(AnalysisChain *chain, const ImportedNotes *notes) {
 }
 
 /* Names the roots and basses of the readings as the notated score spells them. */
-static bool respell_chords(AnalysisChain *chain) {
+static bool respell_chords(AnalyzerPass *chain) {
     const Segmentation *segmentation = &chain->segmentation;
     for (size_t i = 0; i < segmentation->segment_count; i++) {
         if (!respell_chord_reading(&chain->chords[i].best, chain->notes, &segmentation->segments[i]) ||
@@ -67,7 +65,7 @@ static AnalysisChordContext chord_context(const ChordEstimate *chord) {
 }
 
 /* One entry per chord segment: its span, notes, key and chord. The readings move out of the estimates. */
-static bool build_entries(AnalysisChain *chain) {
+static bool build_entries(AnalyzerPass *chain) {
     const Segmentation *segmentation = &chain->segmentation;
     size_t count = segmentation->segment_count;
     AnalysisReport *report = &chain->report;
@@ -107,7 +105,7 @@ static bool build_entries(AnalysisChain *chain) {
 }
 
 /* The estimates' non-chord tones, in time order, each against its chord's entry. The tones move out. */
-static bool collect_non_chord_tones(AnalysisChain *chain) {
+static bool collect_non_chord_tones(AnalyzerPass *chain) {
     size_t count = chain->segmentation.segment_count;
     size_t tone_count = 0;
     for (size_t i = 0; i < count; i++) {
@@ -132,7 +130,7 @@ static bool collect_non_chord_tones(AnalysisChain *chain) {
 }
 
 /* The home key: the library's key with the longest total duration over its regions. */
-static bool home_key(const AnalysisChain *chain, AnalysisReport *report) {
+static bool home_key(const AnalyzerPass *chain, AnalysisReport *report) {
     Rational duration;
     if (!common_practice_home_key_region(chain->key_regions.regions, chain->key_regions.region_count,
                                          &report->home_region, &duration)) {
@@ -143,14 +141,14 @@ static bool home_key(const AnalysisChain *chain, AnalysisReport *report) {
     return true;
 }
 
-bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size_t boundary_count) {
+static bool legacy_pass(AnalyzerPass *chain, const MusicalTime *const *boundaries, size_t boundary_count) {
     const Segmentation *segmentation = &chain->segmentation;
     AnalysisReport *report = &chain->report;
     if (segmentation->segment_count == 0) {
         return true;
     }
 
-    if (!estimate_key_regions(chain->notes, segmentation, chain->key_chords, boundaries, boundary_count,
+    if (!estimate_key_regions(chain->notes, segmentation, NULL, boundaries, boundary_count,
                               &chain->key_regions, &report->key_regions, &report->key_region_count,
                               &report->key_changes, &report->key_change_count) ||
         !identify_pivot_chords(segmentation, report->key_regions, report->key_changes, report->key_change_count) ||
@@ -201,24 +199,7 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
     return true;
 }
 
-bool chain_keep_chord_evidence(AnalysisChain *chain) {
-    size_t count = chain->segmentation.segment_count;
-    if (count == 0 || !chain->chords) {
-        return true;
-    }
-    if (!chain->key_chords) {
-        chain->key_chords = calloc(count, sizeof(CommonPracticeKeyChord));
-        if (!chain->key_chords) {
-            return false;
-        }
-    }
-    for (size_t i = 0; i < count; i++) {
-        chain->key_chords[i] = common_practice_key_chord_of(&chain->chords[i].result);
-    }
-    return true;
-}
-
-void chain_pass_destroy(AnalysisChain *chain) {
+static void legacy_pass_destroy(AnalyzerPass *chain) {
     chord_estimates_destroy(chain->chords, chain->segmentation.segment_count);
     chain->chords = NULL;
     roman_numerals_destroy(&chain->romans);
@@ -234,10 +215,32 @@ void chain_pass_destroy(AnalysisChain *chain) {
     chain->report.home_duration_denominator = 1;
 }
 
-void chain_destroy(AnalysisChain *chain) {
-    chain_pass_destroy(chain);
-    segmentation_destroy(&chain->segmentation);
-    segmentation_destroy(&chain->voice_segmentation);
-    free(chain->key_chords);
-    chain->key_chords = NULL;
+bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes) {
+    memset(pass, 0, sizeof(*pass));
+    pass->notes = notes;
+    pass->report.home_duration_denominator = 1;
+    if (notes->count == 0) {
+        return true;
+    }
+    if (!chain_input_build(notes, &pass->input)) {
+        return false;
+    }
+    AnalysisChainConfig config = analysis_chain_config_default();
+    config.stages = ANALYSIS_CHAIN_STAGE_ALL;
+    config.refine_keys = true;
+    config.inject_kernel_owners = true;
+    if (analysis_chain_run(&pass->input.set, pass->input.key_events, pass->input.key_event_count, &config,
+                           &pass->library) != ANALYSIS_CHAIN_OK) {
+        return false;
+    }
+    return legacy_init(pass, notes) && legacy_pass(pass, NULL, 0);
+}
+
+void analyzer_pass_destroy(AnalyzerPass *pass) {
+    legacy_pass_destroy(pass);
+    segmentation_destroy(&pass->segmentation);
+    segmentation_destroy(&pass->voice_segmentation);
+    analysis_chain_destroy(pass->library);
+    chain_input_destroy(&pass->input);
+    memset(pass, 0, sizeof(*pass));
 }
