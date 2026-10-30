@@ -3,14 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "harmonic_function.h"
-#include "harmony_functions.h"
-#include "harmony_key_change.h"
-#include "metric_position_rules.h"
-#include "phrase_model_label.h"
+#include "standard-harmony/harmonic_function.h"
+#include "standard-harmony/harmony_functions.h"
+#include "standard-harmony/harmony_key_change.h"
+#include "standard-meter/metric_position_rules.h"
+#include "standard-harmony/phrase_model_label.h"
 #include "standard-harmony/analysis/analysis_phrase.h"
 #include "semantics/key_change_extent.h"
-#include "six_four_type.h"
+#include "standard-harmony/six_four_type.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
 #include "time/meter_map.h"

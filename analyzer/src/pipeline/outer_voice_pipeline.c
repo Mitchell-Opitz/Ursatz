@@ -5,11 +5,11 @@
 #include <string.h>
 
 #include "analysis/outer_voice.h"
-#include "key_vocabulary.h"
-#include "outer_scale_degrees.h"
+#include "common-practice-minimal/key_vocabulary.h"
+#include "common-practice-minimal/outer_scale_degrees.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/spelling_util.h"
-#include "segmentation_beat_grid.h"
+#include "standard-meter/segmentation_beat_grid.h"
 
 /* The position of the segment's member that is the entry's note, or segment->member_count when it is none. */
 static size_t member_of(const Segment *segment, const OuterVoiceEntry *entry) {

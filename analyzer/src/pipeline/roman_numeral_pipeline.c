@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "applied_chords.h"
-#include "chord_input.h"
-#include "roman_numeral_adapter.h"
+#include "standard-tonality/analysis/applied_chords.h"
+#include "standard-tonality/analysis/chord_input.h"
+#include "standard-tonality/analysis/roman_numeral_adapter.h"
 #include "time/time_span.h"
-#include "weighted_identification.h"
+#include "common-practice-minimal/weighted_identification.h"
 
 #define REASON_NO_REGION "no key region"
 #define REASON_NO_CHORD "the library identified no chord"

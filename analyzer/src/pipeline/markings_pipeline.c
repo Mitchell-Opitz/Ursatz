@@ -4,10 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "dynamics_rules.h"
-#include "framework.h"
-#include "tempo_rules.h"
+#include "standard-markings/dynamics_rules.h"
+#include "theory/framework.h"
+#include "standard-markings/tempo_rules.h"
 #include "time/musical_time.h"
+
+/* standard-markings stages no framework.h; the symbol is in the linked library. */
+const Framework *standard_markings_framework(void);
 
 static const char *tempo_group_name(TempoGroup group) {
     switch (group) {

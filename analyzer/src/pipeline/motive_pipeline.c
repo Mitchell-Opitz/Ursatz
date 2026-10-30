@@ -5,8 +5,8 @@
 #include <string.h>
 
 #include "analysis/motif_window_matching.h"
-#include "key_vocabulary.h"
-#include "outer_scale_degrees.h"
+#include "common-practice-minimal/key_vocabulary.h"
+#include "common-practice-minimal/outer_scale_degrees.h"
 #include "pipeline/motive_features.h"
 #include "pitch/pitch_numeric_value.h"
 #include "standard-form/analysis/analysis_time.h"

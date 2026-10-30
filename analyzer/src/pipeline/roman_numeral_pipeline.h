@@ -7,10 +7,10 @@
 #include <ursatz_analyzer/analysis_report.h>
 
 #include "pipeline/chord_pipeline.h"
-#include "chord_input.h"
-#include "key_regions.h"
+#include "standard-tonality/analysis/chord_input.h"
+#include "common-practice-minimal/key_regions.h"
 #include "pipeline/segmentation.h"
-#include "roman_numeral_adapter.h"
+#include "standard-tonality/analysis/roman_numeral_adapter.h"
 
 /*
  * The Roman numeral of every chord segment, from Ursatz's standard-tonality adapter: the chord inputs

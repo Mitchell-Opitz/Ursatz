@@ -3,11 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "key_regions.h"
+#include "common-practice-minimal/key_regions.h"
 #include "pipeline/pitch_class_util.h"
 #include "time/musical_time.h"
 #include "time/time_span.h"
-#include "weighted_identification.h"
+#include "common-practice-minimal/weighted_identification.h"
 
 static AnalysisKeyChangeExtent change_extent(KeyChangeExtent extent) {
     switch (extent) {

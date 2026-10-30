@@ -6,11 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "beat_grid.h"
+#include "standard-meter/beat_grid.h"
 #include "cJSON.h"
-#include "framework.h"
-#include "harmony_framework.h"
-#include "metric_position_rules.h"
+#include "common-practice-minimal/framework.h"
+#include "standard-harmony/harmony_framework.h"
+#include "standard-meter/metric_position_rules.h"
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/path_util.h"
 #include "pipeline/pitch_class_util.h"
