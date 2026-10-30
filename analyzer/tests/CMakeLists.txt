@@ -231,6 +231,19 @@ add_test(NAME test_musicxml_input COMMAND test_musicxml_input)
 add_executable(test_midi_parts test_midi_parts.c)
 target_link_libraries(test_midi_parts PRIVATE ursatz_analyzer)
 add_test(NAME test_midi_parts COMMAND test_midi_parts)
+find_program(VALGRIND_PROGRAM valgrind)
+
+add_executable(test_tempo_map_import test_tempo_map_import.c)
+target_link_libraries(test_tempo_map_import PRIVATE ursatz_analyzer analyzer_test_support cjson)
+target_include_directories(test_tempo_map_import PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(test_tempo_map_import PRIVATE URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
+add_test(NAME test_tempo_map_import COMMAND test_tempo_map_import)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_tempo_map_import_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
+                     $<TARGET_FILE:test_tempo_map_import>)
+endif()
 
 add_executable(test_notation_reading test_notation_reading.c)
 target_link_libraries(test_notation_reading PRIVATE ursatz_analyzer)
