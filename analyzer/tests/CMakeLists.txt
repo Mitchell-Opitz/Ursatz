@@ -164,6 +164,21 @@ target_compile_definitions(test_motives PRIVATE
     URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_motives COMMAND test_motives)
 
+add_executable(test_motive_sketch_map test_motive_sketch_map.c)
+target_link_libraries(test_motive_sketch_map PRIVATE ursatz_analyzer analyzer_test_support cjson)
+target_include_directories(test_motive_sketch_map PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_motive_sketch_map PRIVATE
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_test(NAME test_motive_sketch_map COMMAND test_motive_sketch_map)
+find_program(VALGRIND_PROGRAM valgrind)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_motive_sketch_map_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
+                     $<TARGET_FILE:test_motive_sketch_map>)
+    set_tests_properties(test_motive_sketch_map_valgrind PROPERTIES LABELS slow)
+endif()
+
 add_executable(test_melody test_melody.c)
 target_link_libraries(test_melody PRIVATE ursatz_analyzer analyzer_test_support cjson m)
 target_compile_definitions(test_melody PRIVATE
