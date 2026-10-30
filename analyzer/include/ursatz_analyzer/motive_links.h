@@ -40,7 +40,7 @@ void motive_link_scope_destroy(MotiveLinkScope *scope);
 
 /*
  * Adds the piece whose analysis document is json: every motive family's features become a sketch (the same one the
- * Analyzer fingerprints, motive_features_sketch). A piece without families is added with none. On any result other
+ * Analyzer fingerprints, motive_features_to_sketch). A piece without families is added with none. On any result other
  * than MOTIVE_LINKS_OK the scope is unchanged.
  */
 MotiveLinksResult motive_link_scope_add_document(MotiveLinkScope *scope, const char *piece_id, const char *json);
@@ -58,7 +58,7 @@ MotiveLinksResult motive_link_scope_add_corpus(MotiveLinkScope *scope, const cha
 const char *motive_link_scope_failed_piece(const MotiveLinkScope *scope);
 
 /*
- * The sketch a family is linked as: its prototype's features as a melodic sketch (motive_features_sketch) moved to the
+ * The sketch a family is linked as: its prototype's features as a melodic sketch (motive_features_to_sketch) moved to the
  * key of C, keeping its mode, by the shortest way that puts its tonic on C. The library's relations keep a sketch's
  * scale, so motives of different keys could never be made equal without this; the chain of a link applies to these
  * sketches (motive_relation_apply). False when the piece or family is not in the scope.

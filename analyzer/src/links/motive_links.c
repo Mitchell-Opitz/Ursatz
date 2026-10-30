@@ -9,7 +9,7 @@
 #include <ursatz_analyzer/analysis_document.h>
 
 #include "links_internal.h"
-#include "pipeline/motive_features.h"
+#include "pipeline/motive_sketch_map.h"
 #include "util/json_util.h"
 #include "pipeline/corpus_walk.h"
 #include "util/misc_util.h"
@@ -82,7 +82,7 @@ static bool fraction_member(const cJSON *object, const char *name, unsigned long
     return fraction_value(json_member(object, name), numerator, denominator);
 }
 
-/* The prototype's sketch from a family's "features": the document side of motive_features_sketch. */
+/* The prototype's sketch from a family's "features": the document side of motive_features_to_sketch. */
 static MotiveLinksResult features_sketch(const cJSON *features, MotiveSketch *sketch) {
     const cJSON *notes = json_member(features, "notes");
     int count = cJSON_IsArray(notes) ? cJSON_GetArraySize(notes) : 0;
@@ -114,7 +114,7 @@ static MotiveLinksResult features_sketch(const cJSON *features, MotiveSketch *sk
         read.tonic_pc = tonic;
         read.minor = cJSON_IsTrue(json_member(features, "minor"));
     }
-    ok = ok && motive_features_sketch(&read, sketch);
+    ok = ok && motive_features_to_sketch(&read, sketch);
     free(read.notes);
     return ok ? MOTIVE_LINKS_OK : MOTIVE_LINKS_ERR_FORMAT;
 }

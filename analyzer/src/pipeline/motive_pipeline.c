@@ -9,6 +9,7 @@
 #include "common-practice-minimal/outer_scale_degrees.h"
 #include "core/rational.h"
 #include "pipeline/motive_features.h"
+#include "pipeline/motive_sketch_map.h"
 #include "pitch/pitch_numeric_value.h"
 #include "time/duration.h"
 #include "time/meter_arithmetic.h"
@@ -549,7 +550,7 @@ static bool collect_features(const MotiveStage *stage, const ImportedNotes *note
     features->pickup_numerator = position.num;
     features->pickup_denominator = position.den;
     MotiveSketch sketch;
-    if (!motive_features_sketch(features, &sketch)) {
+    if (!motive_features_to_sketch(features, &sketch)) {
         goto skip;
     }
     for (size_t k = 0; k + 1 < count; k++) {
