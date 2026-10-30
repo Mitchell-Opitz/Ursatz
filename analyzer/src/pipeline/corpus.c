@@ -18,6 +18,7 @@
 #include "cJSON.h"
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/corpus_internal.h"
+#include "pipeline/run_file.h"
 #include "util/file_util.h"
 #include "util/misc_util.h"
 
@@ -254,21 +255,18 @@ static CorpusRunResult analyze_piece(const CorpusRunOptions *options, const char
     record->content_hash = fnv1a_file(input_path);
 
     ImportedNotes notes;
-    InputPipelineResult imported = input_pipeline_import_file(input_path, INPUT_FORMAT_AUTO, &notes);
-    if (imported != INPUT_PIPELINE_OK) {
+    AnalysisReport report;
+    InputPipelineResult imported = INPUT_PIPELINE_OK;
+    RunFileResult ran = analyzer_run_file(input_path, INPUT_FORMAT_AUTO, NULL, &notes, &report, &imported, NULL);
+    if (ran == RUN_FILE_ERR_IMPORT) {
         record->error = import_error_text(imported);
         return CORPUS_RUN_OK;
     }
-
-    AnalysisReport report;
-    if (!run_analysis_pipeline(&notes, &report)) {
-        imported_notes_destroy(&notes);
+    if (ran != RUN_FILE_OK) {
         record->error = "out of memory";
         return CORPUS_RUN_OK;
     }
-    AnalysisDocument *document = analysis_document_build(input_path, &notes, &report);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    AnalysisDocument *document = analyzer_run_file_document(input_path, &notes, &report);
     if (!document) {
         record->error = "out of memory";
         return CORPUS_RUN_OK;

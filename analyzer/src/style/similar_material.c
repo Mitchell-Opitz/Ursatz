@@ -15,6 +15,7 @@
 #include "query/similarity_model.h"
 #include "util/json_util.h"
 #include "pipeline/corpus_walk.h"
+#include "pipeline/run_file.h"
 
 
 /* ---- reading the document ---- */
@@ -188,17 +189,12 @@ SimilarResult similar_query_from_file(const char *path, SimilarQuery *query) {
         return SIMILAR_ERR_ARGUMENT;
     }
     ImportedNotes imported;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &imported) != INPUT_PIPELINE_OK) {
-        return SIMILAR_ERR_IO;
-    }
     AnalysisReport report;
-    if (!run_analysis_pipeline(&imported, &report)) {
-        imported_notes_destroy(&imported);
-        return SIMILAR_ERR_ALLOC;
+    RunFileResult ran = analyzer_run_file(path, INPUT_FORMAT_AUTO, NULL, &imported, &report, NULL, NULL);
+    if (ran != RUN_FILE_OK) {
+        return ran == RUN_FILE_ERR_IMPORT ? SIMILAR_ERR_IO : SIMILAR_ERR_ALLOC;
     }
-    AnalysisDocument *built = analysis_document_build(path, &imported, &report);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&imported);
+    AnalysisDocument *built = analyzer_run_file_document(path, &imported, &report);
     char *json = built ? analysis_document_to_json(built) : NULL;
     analysis_document_destroy(built);
     if (!json) {

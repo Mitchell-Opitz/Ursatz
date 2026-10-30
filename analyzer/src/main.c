@@ -15,52 +15,34 @@
 #include <ursatz_analyzer/style_profile.h>
 
 #include "pipeline/counterpoint_pipeline.h"
+#include "pipeline/run_file.h"
 
-static bool write_markdown_report(const char *path, const AnalysisDocument *document) {
-    char *markdown = markdown_report_render(document);
-    if (!markdown) {
-        fprintf(stderr, "Error: out of memory while rendering report for '%s'\n", path);
+typedef char *(*RenderOutput)(const AnalysisDocument *document);
+typedef char *(*DeriveOutputPath)(const char *input_path);
+
+/* Renders the document, writes it to the path derived from the input path, and says where it went. */
+static bool write_output(const char *path, const char *what, const char *written, RenderOutput render,
+                         DeriveOutputPath derive, const AnalysisDocument *document) {
+    char *text = render(document);
+    if (!text) {
+        fprintf(stderr, "Error: out of memory while rendering %s for '%s'\n", what, path);
         return false;
     }
 
-    char *output_path = derive_report_path(path);
+    char *output_path = derive(path);
     if (!output_path) {
-        fprintf(stderr, "Error: out of memory while deriving report path for '%s'\n", path);
-        free(markdown);
+        fprintf(stderr, "Error: out of memory while deriving %s path for '%s'\n", what, path);
+        free(text);
         return false;
     }
 
-    bool wrote = write_report_file(output_path, markdown);
+    bool wrote = write_report_file(output_path, text);
     if (wrote) {
-        printf("Report written to %s\n", output_path);
+        printf("%s written to %s\n", written, output_path);
     }
 
     free(output_path);
-    free(markdown);
-    return wrote;
-}
-
-static bool write_analysis_document(const char *path, const AnalysisDocument *analysis_document) {
-    char *document = analysis_document_to_json(analysis_document);
-    if (!document) {
-        fprintf(stderr, "Error: out of memory while rendering analysis document for '%s'\n", path);
-        return false;
-    }
-
-    char *output_path = derive_analysis_document_path(path);
-    if (!output_path) {
-        fprintf(stderr, "Error: out of memory while deriving analysis document path for '%s'\n", path);
-        free(document);
-        return false;
-    }
-
-    bool wrote = write_report_file(output_path, document);
-    if (wrote) {
-        printf("Analysis document written to %s\n", output_path);
-    }
-
-    free(output_path);
-    free(document);
+    free(text);
     return wrote;
 }
 
@@ -738,25 +720,23 @@ int main(int argc, char *argv[]) {
     }
 
     ImportedNotes notes;
-    if (input_pipeline_import_file(path, input_format, &notes) != INPUT_PIPELINE_OK) {
-        return 1;
-    }
-    if (reading_set) {
-        NotationReadingResult applied = notation_reading_apply(&notes, &reading);
-        if (applied != NOTATION_READING_OK) {
-            fprintf(stderr, "Error: cannot apply the notation reading to '%s': %s\n", path,
-                    applied == NOTATION_READING_ERR_INVALID
-                        ? "the pickup must be shorter than one measure of the meter"
-                        : (applied == NOTATION_READING_ERR_OVERFLOW ? "a scaled time is too large" : "out of memory"));
-            imported_notes_destroy(&notes);
-            return 1;
-        }
-    }
-
     AnalysisReport report;
-    if (!run_analysis_pipeline(&notes, &report)) {
+    InputPipelineResult import_status;
+    NotationReadingResult reading_status = NOTATION_READING_OK;
+    switch (analyzer_run_file(path, input_format, reading_set ? &reading : NULL, &notes, &report, &import_status,
+                              &reading_status)) {
+    case RUN_FILE_OK:
+        break;
+    case RUN_FILE_ERR_IMPORT:
+        return 1;
+    case RUN_FILE_ERR_READING:
+        fprintf(stderr, "Error: cannot apply the notation reading to '%s': %s\n", path,
+                reading_status == NOTATION_READING_ERR_INVALID
+                    ? "the pickup must be shorter than one measure of the meter"
+                    : (reading_status == NOTATION_READING_ERR_OVERFLOW ? "a scaled time is too large" : "out of memory"));
+        return 1;
+    case RUN_FILE_ERR_ALLOC:
         fprintf(stderr, "Error: out of memory while analyzing '%s'\n", path);
-        imported_notes_destroy(&notes);
         return 1;
     }
 
@@ -775,16 +755,15 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    AnalysisDocument *document = analysis_document_build(path, &notes, &report);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    AnalysisDocument *document = analyzer_run_file_document(path, &notes, &report);
     if (!document) {
         fprintf(stderr, "Error: out of memory while building analysis document for '%s'\n", path);
         return 1;
     }
 
-    bool ok = (!want_markdown || write_markdown_report(path, document)) &&
-              (!want_json || write_analysis_document(path, document));
+    bool ok = (!want_markdown || write_output(path, "report", "Report", markdown_report_render, derive_report_path, document)) &&
+              (!want_json || write_output(path, "analysis document", "Analysis document", analysis_document_to_json,
+                                      derive_analysis_document_path, document));
 
     analysis_document_destroy(document);
     return ok ? exit_code : 1;
