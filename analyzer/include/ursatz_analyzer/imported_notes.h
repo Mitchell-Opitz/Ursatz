@@ -122,6 +122,12 @@ typedef struct {
  * signature event gets a single 4/4 region marked defaulted
  * (meter_map_is_defaulted), so meter.meter_map is never NULL after a
  * successful import.
+ *
+ * tempo_map is the file's set-tempo events as a TempoMap (time/tempo_map.h),
+ * from the one library parse of the file: a MIDI import always has one (a
+ * single defaulted region when the file has no tempo event), a MusicXML
+ * import has NULL. Owned; imported_notes_destroy releases it. Note times
+ * do not depend on it.
  */
 typedef struct ImportedNotes {
     NoteEvent **events;
