@@ -9,8 +9,8 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 
+#include "pipeline/corpus_walk.h"
 #include "util/json_util.h"
-#include "util/file_util.h"
 
 #define SYNCOPATION_CAP 4
 
@@ -573,6 +573,19 @@ static bool add_training_corpus(StyleProfile *profile, const char *input_dir) {
     return true;
 }
 
+typedef struct {
+    StyleProfile *profile;
+    StyleProfileResult result;
+} CorpusAdd;
+
+static bool add_corpus_document(const char *piece_path, const char *document, const char *json, void *context) {
+    (void)piece_path;
+    (void)document;
+    CorpusAdd *add = context;
+    add->result = style_profile_add_document_json(add->profile, json);
+    return add->result == STYLE_PROFILE_OK;
+}
+
 StyleProfileResult style_profile_add_corpus(StyleProfile *profile, const char *output_dir) {
     if (!profile || !output_dir) {
         return STYLE_PROFILE_ERR_ARGUMENT;
@@ -582,52 +595,31 @@ StyleProfileResult style_profile_add_corpus(StyleProfile *profile, const char *o
         return STYLE_PROFILE_ERR_ALLOC;
     }
     sprintf(index_path, "%s/corpus-index.json", output_dir);
-    char *index_text = NULL;
-    file_read_all(index_path, &index_text, NULL);
+    CorpusAdd add = {profile, STYLE_PROFILE_OK};
+    char *input_dir = NULL;
+    CorpusWalkResult walked = corpus_walk_documents(index_path, add_corpus_document, &add, &input_dir);
     free(index_path);
-    if (!index_text) {
-        return STYLE_PROFILE_ERR_IO;
-    }
-    cJSON *index = cJSON_Parse(index_text);
-    free(index_text);
-    const char *schema = json_string_member(index, "schema");
-    const char *input_dir = json_string_member(index, "input_dir");
-    const cJSON *pieces = json_member(index, "pieces");
-    if (!schema || strcmp(schema, "ursatz-corpus-index") != 0 || !input_dir || !cJSON_IsArray(pieces)) {
-        cJSON_Delete(index);
-        return STYLE_PROFILE_ERR_FORMAT;
-    }
     StyleProfileResult result = STYLE_PROFILE_OK;
-    const cJSON *piece;
-    cJSON_ArrayForEach(piece, pieces) {
-        const char *status = json_string_member(piece, "status");
-        const char *document = json_string_member(piece, "document");
-        if (!status || strcmp(status, "analyzed") != 0 || !document) {
-            continue;
-        }
-        char *path = malloc(strlen(output_dir) + strlen(document) + 2);
-        if (!path) {
+    switch (walked) {
+    case CORPUS_WALK_OK:
+        if (!add_training_corpus(profile, input_dir)) {
             result = STYLE_PROFILE_ERR_ALLOC;
-            break;
         }
-        sprintf(path, "%s/%s", output_dir, document);
-        char *json = NULL;
-        file_read_all(path, &json, NULL);
-        free(path);
-        if (!json) {
-            result = STYLE_PROFILE_ERR_IO;
-            break;
-        }
-        result = style_profile_add_document_json(profile, json);
-        free(json);
-        if (result != STYLE_PROFILE_OK) {
-            break;
-        }
-    }
-    if (result == STYLE_PROFILE_OK && !add_training_corpus(profile, input_dir)) {
+        break;
+    case CORPUS_WALK_ERR_ALLOC:
         result = STYLE_PROFILE_ERR_ALLOC;
+        break;
+    case CORPUS_WALK_ERR_IO:
+        result = STYLE_PROFILE_ERR_IO;
+        break;
+    case CORPUS_WALK_ERR_FORMAT:
+        result = STYLE_PROFILE_ERR_FORMAT;
+        break;
+    case CORPUS_WALK_ERR_VISIT:
+        result = add.result;
+        break;
     }
-    cJSON_Delete(index);
+    free(input_dir);
     return result;
 }
 

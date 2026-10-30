@@ -14,7 +14,7 @@
 
 #include "query/similarity_model.h"
 #include "util/json_util.h"
-#include "util/file_util.h"
+#include "pipeline/corpus_walk.h"
 
 
 /* ---- reading the document ---- */
@@ -805,6 +805,32 @@ static SimilarResult search_document(const Search *search, const char *piece, co
     return result;
 }
 
+typedef struct {
+    Search *search;
+    Matches matches;
+    size_t searched;
+    SimilarResult result;
+} SearchWalk;
+
+static bool search_walk_document(const char *piece_path, const char *document, const char *json, void *context) {
+    SearchWalk *walk = context;
+    cJSON *parsed = cJSON_Parse(json);
+    long version;
+    if (!parsed || !json_number_member(parsed, "schema_version", &version) ||
+        version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+        cJSON_Delete(parsed);
+        walk->result = SIMILAR_ERR_FORMAT;
+        return false;
+    }
+    walk->result = search_document(walk->search, piece_path, document, parsed, &walk->matches);
+    cJSON_Delete(parsed);
+    if (walk->result != SIMILAR_OK) {
+        return false;
+    }
+    walk->searched++;
+    return true;
+}
+
 SimilarResult similar_material_find(const char *corpus_output_dir, const SimilarQuery *query, const SimilarOptions *options,
                                     SimilarResults *results) {
     if (!corpus_output_dir || !query || !results) {
@@ -834,62 +860,27 @@ SimilarResult similar_material_find(const char *corpus_output_dir, const Similar
         return SIMILAR_ERR_ALLOC;
     }
     sprintf(index_path, "%s/corpus-index.json", corpus_output_dir);
-    char *index_text = NULL;
-    file_read_all(index_path, &index_text, NULL);
+    SearchWalk walk = {&search, {0}, 0, SIMILAR_OK};
+    CorpusWalkResult walked = corpus_walk_documents(index_path, search_walk_document, &walk, NULL);
     free(index_path);
-    if (!index_text) {
-        search_free(&search);
-        return SIMILAR_ERR_IO;
+    Matches matches = walk.matches;
+    size_t searched = walk.searched;
+    switch (walked) {
+    case CORPUS_WALK_OK:
+        break;
+    case CORPUS_WALK_ERR_ALLOC:
+        result = SIMILAR_ERR_ALLOC;
+        break;
+    case CORPUS_WALK_ERR_IO:
+        result = SIMILAR_ERR_IO;
+        break;
+    case CORPUS_WALK_ERR_FORMAT:
+        result = SIMILAR_ERR_FORMAT;
+        break;
+    case CORPUS_WALK_ERR_VISIT:
+        result = walk.result;
+        break;
     }
-    cJSON *index = cJSON_Parse(index_text);
-    free(index_text);
-    const cJSON *schema = json_member(index, "schema");
-    const cJSON *pieces = json_member(index, "pieces");
-    if (!cJSON_IsString(schema) || strcmp(schema->valuestring, "ursatz-corpus-index") != 0 || !cJSON_IsArray(pieces)) {
-        cJSON_Delete(index);
-        search_free(&search);
-        return SIMILAR_ERR_FORMAT;
-    }
-    Matches matches = {0};
-    size_t searched = 0;
-    const cJSON *piece;
-    cJSON_ArrayForEach(piece, pieces) {
-        const cJSON *status = json_member(piece, "status");
-        const cJSON *document = json_member(piece, "document");
-        const cJSON *path = json_member(piece, "path");
-        if (!cJSON_IsString(status) || strcmp(status->valuestring, "analyzed") != 0 || !cJSON_IsString(document) ||
-            !cJSON_IsString(path)) {
-            continue;
-        }
-        char *file = malloc(strlen(corpus_output_dir) + strlen(document->valuestring) + 2);
-        if (!file) {
-            result = SIMILAR_ERR_ALLOC;
-            break;
-        }
-        sprintf(file, "%s/%s", corpus_output_dir, document->valuestring);
-        char *json = NULL;
-        file_read_all(file, &json, NULL);
-        free(file);
-        if (!json) {
-            result = SIMILAR_ERR_IO;
-            break;
-        }
-        cJSON *parsed = cJSON_Parse(json);
-        free(json);
-        long version;
-        if (!parsed || !json_number_member(parsed, "schema_version", &version) || version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
-            cJSON_Delete(parsed);
-            result = SIMILAR_ERR_FORMAT;
-            break;
-        }
-        result = search_document(&search, path->valuestring, document->valuestring, parsed, &matches);
-        cJSON_Delete(parsed);
-        if (result != SIMILAR_OK) {
-            break;
-        }
-        searched++;
-    }
-    cJSON_Delete(index);
     search_free(&search);
     if (result != SIMILAR_OK) {
         for (size_t i = 0; i < matches.count; i++) {

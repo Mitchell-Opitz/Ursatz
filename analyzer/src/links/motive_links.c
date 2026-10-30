@@ -11,7 +11,7 @@
 #include "links_internal.h"
 #include "pipeline/motive_features.h"
 #include "util/json_util.h"
-#include "util/file_util.h"
+#include "pipeline/corpus_walk.h"
 #include "util/misc_util.h"
 
 
@@ -337,6 +337,18 @@ const char *motive_link_scope_failed_piece(const MotiveLinkScope *scope) {
     return scope ? scope->failed : NULL;
 }
 
+typedef struct {
+    MotiveLinkScope *scope;
+    MotiveLinksResult result;
+} ScopeAdd;
+
+static bool add_scope_document(const char *piece_path, const char *document, const char *json, void *context) {
+    (void)document;
+    ScopeAdd *add = context;
+    add->result = motive_link_scope_add_document(add->scope, piece_path, json);
+    return add->result == MOTIVE_LINKS_OK;
+}
+
 MotiveLinksResult motive_link_scope_add_corpus(MotiveLinkScope *scope, const char *output_dir) {
     if (!scope || !output_dir) {
         return MOTIVE_LINKS_ERR_ARGUMENT;
@@ -347,51 +359,22 @@ MotiveLinksResult motive_link_scope_add_corpus(MotiveLinkScope *scope, const cha
         return MOTIVE_LINKS_ERR_ALLOC;
     }
     sprintf(index_path, "%s/corpus-index.json", output_dir);
-    char *index_text = NULL;
-    file_read_all(index_path, &index_text, NULL);
+    ScopeAdd add = {scope, MOTIVE_LINKS_OK};
+    CorpusWalkResult walked = corpus_walk_documents(index_path, add_scope_document, &add, NULL);
     free(index_path);
-    if (!index_text) {
+    switch (walked) {
+    case CORPUS_WALK_OK:
+        return MOTIVE_LINKS_OK;
+    case CORPUS_WALK_ERR_ALLOC:
+        return MOTIVE_LINKS_ERR_ALLOC;
+    case CORPUS_WALK_ERR_IO:
         return MOTIVE_LINKS_ERR_IO;
-    }
-    cJSON *index = cJSON_Parse(index_text);
-    free(index_text);
-    const cJSON *schema = json_member(index, "schema");
-    const cJSON *pieces = json_member(index, "pieces");
-    if (!cJSON_IsString(schema) || strcmp(schema->valuestring, "ursatz-corpus-index") != 0 || !cJSON_IsArray(pieces)) {
-        cJSON_Delete(index);
+    case CORPUS_WALK_ERR_FORMAT:
         return MOTIVE_LINKS_ERR_FORMAT;
+    case CORPUS_WALK_ERR_VISIT:
+        break;
     }
-    MotiveLinksResult result = MOTIVE_LINKS_OK;
-    const cJSON *piece;
-    cJSON_ArrayForEach(piece, pieces) {
-        const cJSON *status = json_member(piece, "status");
-        const cJSON *document = json_member(piece, "document");
-        const cJSON *path = json_member(piece, "path");
-        if (!cJSON_IsString(status) || strcmp(status->valuestring, "analyzed") != 0 || !cJSON_IsString(document) ||
-            !cJSON_IsString(path)) {
-            continue;
-        }
-        char *file = malloc(directory + strlen(document->valuestring) + 2);
-        if (!file) {
-            result = MOTIVE_LINKS_ERR_ALLOC;
-            break;
-        }
-        sprintf(file, "%s/%s", output_dir, document->valuestring);
-        char *json = NULL;
-        file_read_all(file, &json, NULL);
-        free(file);
-        if (!json) {
-            result = MOTIVE_LINKS_ERR_IO;
-            break;
-        }
-        result = motive_link_scope_add_document(scope, path->valuestring, json);
-        free(json);
-        if (result != MOTIVE_LINKS_OK) {
-            break;
-        }
-    }
-    cJSON_Delete(index);
-    return result;
+    return add.result;
 }
 
 /* ---- Run ---- */
