@@ -15,8 +15,15 @@ parent project already provides a `cjson` target.
 
 Library headers are included only by their staged public paths (`time/meter_map.h`, `standard-harmony/analysis/analysis_cadence.h`,
 `common-practice-minimal/key_regions.h`), never by a framework's source directory. `URSATZ_LEGACY_INCLUDE_DIRS` is set ON in the root
-`CMakeLists.txt` for the internal headers the Analyzer still uses (`time/exact_rational.h`, `analysis_time.h`, `smf_reader.h`); it goes off
+`CMakeLists.txt` for the internal headers the Analyzer still uses (`analysis_time.h`, `smf_reader.h`); it goes off
 when P24 B4 switches them. Tests read their input from `tests/fixtures/`, not from the submodule (see `tests/fixtures/README.md`).
+
+The Analyzer holds no arithmetic of its own on times, pitches, key signatures or numerals. Exact times are `Rational`
+(`core/rational.h`, with the `time/time_rational.h` bridges); an overflow fails the stage that met it, and a document
+build that meets one returns no document. Pitch names, letters, pitch classes and the line of fifths come from
+`pitch/pitch_arithmetic.h`; key signature counts and key tonics from `standard-tonality/tonal_key.h`; Roman numerals are
+read, formatted and resolved to a root by `standard-tonality/roman_numeral_grammar.h`. `StyleRational` and the meter
+check's own fraction stay until the library owns them.
 
 ```sh
 git submodule update --init --recursive

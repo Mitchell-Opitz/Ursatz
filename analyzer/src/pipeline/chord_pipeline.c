@@ -4,11 +4,12 @@
 #include <string.h>
 
 #include "common-practice-minimal/chord_vocabulary_seventh.h"
+#include "common-practice-minimal/weighted_chord_identification.h"
+#include "core/rational.h"
 #include "interpretation/chord.h"
 #include "pipeline/interpretation_util.h"
 #include "pipeline/pitch_class_util.h"
 #include "semantics/non_chord_tone.h"
-#include "common-practice-minimal/weighted_chord_identification.h"
 
 /* Root-relative semitone offsets of the chord's tones, ascending (the stack-of-thirds order for every chord in
    the library's vocabulary), as the library reports them. */
@@ -111,9 +112,10 @@ static bool fill_tones(const Segment *segment, const CommonPracticeWeightedResul
     return true;
 }
 
-/* a/b <= c/d for positive denominators. */
-static bool rational_at_most(long long a, unsigned long long b, long long c, unsigned long long d) {
-    return a * (long long)d <= c * (long long)b;
+/* Whether the region ends at or before the segment starts. */
+static bool region_ends_by(const AnalysisKeyRegion *region, const Segment *segment) {
+    return rational_cmp_unsigned((unsigned long long)region->end_numerator, region->end_denominator,
+                                 (unsigned long long)segment->start_numerator, segment->start_denominator) <= 0;
 }
 
 /* Identifies segments [first, first + count) together, in the region's key, filling their estimates. False
@@ -171,19 +173,14 @@ bool identify_chords(const Segmentation *segmentation, const AnalysisKeyRegion *
     size_t i = 0;
     while (i < count) {
         const Segment *segment = &segmentation->segments[i];
-        while (region < region_count &&
-               rational_at_most((long long)regions[region].end_numerator, regions[region].end_denominator,
-                                (long long)segment->start_numerator, segment->start_denominator)) {
+        while (region < region_count && region_ends_by(&regions[region], segment)) {
             region++;
         }
         if (region >= region_count) {
             break;
         }
         size_t last = i;
-        while (last < count &&
-               !rational_at_most((long long)regions[region].end_numerator, regions[region].end_denominator,
-                                 (long long)segmentation->segments[last].start_numerator,
-                                 segmentation->segments[last].start_denominator)) {
+        while (last < count && !region_ends_by(&regions[region], &segmentation->segments[last])) {
             estimates[last].in_region = true;
             estimates[last].region = region;
             last++;

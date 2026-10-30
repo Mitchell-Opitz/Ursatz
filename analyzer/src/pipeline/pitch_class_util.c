@@ -3,14 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-const char *const PITCH_CLASS_NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-
-const char *const PITCH_CLASS_NAMES_FLAT[12] = {"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"};
+#include "standard-tonality/tonal_key.h"
 
 int pitch_class_of(long midi_note_number) {
-    long remainder = midi_note_number % 12;
+    long remainder = midi_note_number % PITCH_SEMITONES_PER_OCTAVE;
     if (remainder < 0) {
-        remainder += 12;
+        remainder += PITCH_SEMITONES_PER_OCTAVE;
     }
     return (int)remainder;
 }
@@ -49,8 +47,11 @@ char *key_label_create(int tonic_pitch_class, bool is_major) {
 }
 
 int key_signature_major_tonic(int sharps_flats) {
-    if (sharps_flats < -7 || sharps_flats > 7) {
+    PitchLetter letter;
+    int accidental;
+    if (sharps_flats < -7 || sharps_flats > 7 ||
+        !standard_tonality_key_of_fifths(sharps_flats, false, &letter, &accidental)) {
         return -1;
     }
-    return sharps_flats >= 0 ? SHARPS_MAJOR_TONIC[sharps_flats] : FLATS_MAJOR_TONIC[-sharps_flats];
+    return pitch_class_of_letter(letter, accidental);
 }

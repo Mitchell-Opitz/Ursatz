@@ -154,9 +154,10 @@ bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size
         !collect_non_chord_tones(chain)) {
         return false;
     }
-    if (report->key_region_count > 0) {
-        report->home_region = home_key_region(report->key_regions, report->key_region_count,
-                                              &report->home_duration_numerator, &report->home_duration_denominator);
+    if (report->key_region_count > 0 &&
+        !home_key_region(report->key_regions, report->key_region_count, &report->home_region,
+                         &report->home_duration_numerator, &report->home_duration_denominator)) {
+        return false;
     }
     if (!harmony_stage_prepare(chain->notes, segmentation, &chain->romans, report->entries, &chain->harmony) ||
         !harmony_stage_find_cadences(&chain->harmony) ||

@@ -6,6 +6,7 @@
 
 #include <ursatz_analyzer/imported_notes.h>
 
+#include "core/rational.h"
 #include "identity/entity_id.h"
 #include "time/duration.h"
 #include "time/meter_map.h"
@@ -103,35 +104,21 @@ NotationReading notation_reading_none(void) {
 
 /* ---- Applying a reading ---- */
 
-static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
-    while (b != 0) {
-        unsigned long long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
-}
-
 /* num/den times the reading's scale, in lowest terms; false when it does not fit. */
 static bool scale_fraction(long num, unsigned long den, const NotationReading *reading, long *out_num,
                            unsigned long *out_den) {
-    unsigned long long magnitude = num < 0 ? (unsigned long long)(-(num + 1)) + 1 : (unsigned long long)num;
-    unsigned long long n = magnitude * (unsigned long long)reading->scale_numerator;
-    unsigned long long d = (unsigned long long)den * reading->scale_denominator;
-    if ((magnitude != 0 && n / magnitude != (unsigned long long)reading->scale_numerator) ||
-        (den != 0 && d / reading->scale_denominator != den) || d == 0) {
+    Rational value;
+    Rational scale;
+    Rational scaled;
+    if (den > (unsigned long)LLONG_MAX || reading->scale_denominator > (unsigned long)LLONG_MAX ||
+        rational_make(num, (long long)den, &value) != RATIONAL_OK ||
+        rational_make(reading->scale_numerator, (long long)reading->scale_denominator, &scale) != RATIONAL_OK ||
+        rational_mul(value, scale, &scaled) != RATIONAL_OK || scaled.num < LONG_MIN || scaled.num > LONG_MAX ||
+        (unsigned long long)scaled.den > ULONG_MAX) {
         return false;
     }
-    unsigned long long divisor = gcd_ull(n, d);
-    if (divisor > 1) {
-        n /= divisor;
-        d /= divisor;
-    }
-    if (n > (unsigned long long)LONG_MAX || d > ULONG_MAX) {
-        return false;
-    }
-    *out_num = num < 0 ? -(long)n : (long)n;
-    *out_den = (unsigned long)d;
+    *out_num = (long)scaled.num;
+    *out_den = (unsigned long)scaled.den;
     return true;
 }
 

@@ -5,21 +5,23 @@
 #include <string.h>
 
 #include "analysis/voice_separation.h"
+#include "core/rational.h"
+#include "pipeline/pitch_class_util.h"
+#include "pipeline/spelling_util.h"
 #include "standard-counterpoint/counterpoint_slots.h"
 #include "standard-counterpoint/fifth_species_rules.h"
 #include "standard-counterpoint/first_species_rules.h"
 #include "standard-counterpoint/fourth_species_rules.h"
-#include "pipeline/pitch_class_util.h"
-#include "pipeline/spelling_util.h"
-#include "standard-counterpoint/second_species_rules.h"
-#include "standard-meter/segmentation_beat_grid.h"
 #include "standard-counterpoint/framework.h"
-#include "theory/framework.h"
+#include "standard-counterpoint/second_species_rules.h"
 #include "standard-counterpoint/third_species_rules.h"
+#include "standard-meter/segmentation_beat_grid.h"
+#include "theory/framework.h"
 #include "time/duration.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
+#include "time/time_rational.h"
 #include "time/time_span.h"
 #include "util/misc_util.h"
 
@@ -52,8 +54,9 @@ static int compare_onset(const void *left, const void *right) {
     size_t b = *(const size_t *)right;
     const MusicalTime *time_a = onset_of(sort_notes, a);
     const MusicalTime *time_b = onset_of(sort_notes, b);
-    int order = fraction_compare((long long)musical_time_numerator(time_a), (long long)musical_time_denominator(time_a),
-                                 (long long)musical_time_numerator(time_b), (long long)musical_time_denominator(time_b));
+    int order = rational_cmp(
+        rational_ratio((long long)musical_time_numerator(time_a), (long long)musical_time_denominator(time_a)),
+        rational_ratio((long long)musical_time_numerator(time_b), (long long)musical_time_denominator(time_b)));
     if (order != 0) {
         return order;
     }
@@ -146,41 +149,41 @@ static CounterpointCheckResult voices_from_separation(const ImportedNotes *notes
 
 /* ---- Exact times ---- */
 
-typedef struct {
-    long long n;
-    long long d; /* positive, in lowest terms */
-} Q;
+/* Set when a time does not fit a Rational; the species check then ends in failure instead of reading a wrapped time. */
+static bool q_overflowed;
 
-static long long gcd_of(long long a, long long b) {
-    a = a < 0 ? -a : a;
-    while (b != 0) {
-        long long rest = a % b;
-        a = b;
-        b = rest;
+static Rational q_checked(RationalResult result, Rational value) {
+    if (result != RATIONAL_OK) {
+        q_overflowed = true;
+        return (Rational){0, 1};
     }
-    return a;
+    return value;
 }
 
-static Q q_make(long long n, long long d) {
-    long long g = gcd_of(n, d);
-    g = g == 0 ? 1 : g;
-    return (Q){n / g, d / g};
+static Rational q_add(Rational a, Rational b) {
+    Rational sum = {0, 1};
+    return q_checked(rational_add(a, b, &sum), sum);
+}
+static Rational q_mul(Rational a, long long k) {
+    Rational product = {0, 1};
+    return q_checked(rational_mul_int(a, k, &product), product);
+}
+static Rational q_div(Rational a, long long k) {
+    Rational quotient = {0, 1};
+    return q_checked(rational_div_int(a, k, &quotient), quotient);
+}
+static int q_cmp(Rational a, Rational b) { return rational_cmp(a, b); }
+static Rational q_of_time(const MusicalTime *time) {
+    Rational value = {0, 1};
+    return q_checked(rational_of_musical_time(time, &value), value);
 }
 
-static Q q_add(Q a, Q b) { return q_make(a.n * b.d + b.n * a.d, a.d * b.d); }
-static Q q_mul(Q a, long long k) { return q_make(a.n * k, a.d); }
-static Q q_div(Q a, long long k) { return q_make(a.n, a.d * k); }
-static int q_cmp(Q a, Q b) { return fraction_compare(a.n, a.d, b.n, b.d); }
-static Q q_of_time(const MusicalTime *time) {
-    return q_make((long long)musical_time_numerator(time), (long long)musical_time_denominator(time));
-}
+static Rational onset_q(const ImportedNotes *notes, size_t note) { return q_of_time(onset_of(notes, note)); }
 
-static Q onset_q(const ImportedNotes *notes, size_t note) { return q_of_time(onset_of(notes, note)); }
-
-static Q release_q(const ImportedNotes *notes, size_t note) {
-    const Duration *duration = note_event_duration(notes->events[note]);
+static Rational release_q(const ImportedNotes *notes, size_t note) {
+    Rational length = {0, 1};
     return q_add(onset_q(notes, note),
-                 q_make((long long)duration_numerator(duration), (long long)duration_denominator(duration)));
+                 q_checked(rational_of_duration(note_event_duration(notes->events[note]), &length), length));
 }
 
 /* ---- The lines of a species ---- */
@@ -254,11 +257,11 @@ static const char *build_slotted(const ImportedNotes *notes, int species, const 
     size_t next = 0; /* the first note of the counterpoint that has not ended */
     int previous_measure = 0;
     for (size_t bar = 0; bar < cantus->count; bar++) {
-        Q onset = onset_q(notes, cantus->notes[bar]);
+        Rational onset = onset_q(notes, cantus->notes[bar]);
         MusicalTime *at = NULL;
         TimeSpan *span = NULL;
         int measure = 0;
-        if (musical_time_create((long)onset.n, (unsigned long)onset.d, &at) != MUSICAL_TIME_OK) {
+        if (musical_time_create((long)onset.num, (unsigned long)onset.den, &at) != MUSICAL_TIME_OK) {
             return NULL;
         }
         MeterMapResult found = meter_map_measure_index_at(map, at, &measure);
@@ -266,8 +269,8 @@ static const char *build_slotted(const ImportedNotes *notes, int species, const 
         if (found != METER_MAP_OK || meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
             return "the measures cannot be read";
         }
-        Q start = q_of_time(time_span_start(span));
-        Q end = q_of_time(time_span_end(span));
+        Rational start = q_of_time(time_span_start(span));
+        Rational end = q_of_time(time_span_end(span));
         time_span_destroy(span);
         if (q_cmp(onset, start) != 0 || (bar > 0 && measure != previous_measure + 1)) {
             return "the cantus firmus is not one note to a measure";
@@ -275,7 +278,7 @@ static const char *build_slotted(const ImportedNotes *notes, int species, const 
         previous_measure = measure;
         out->cantus[bar] = spelled[cantus->notes[bar]];
         for (int slot = 0; slot < per_bar; slot++) {
-            Q at_slot = q_add(start, q_div(q_mul(q_add(end, q_mul(start, -1)), slot), per_bar));
+            Rational at_slot = q_add(start, q_div(q_mul(q_add(end, q_mul(start, -1)), slot), per_bar));
             while (next < line->count && q_cmp(release_q(notes, line->notes[next]), at_slot) <= 0) {
                 next++;
             }
@@ -419,26 +422,26 @@ static bool record_span(const ImportedNotes *notes, const TwoVoices *voices, Ana
     if (!out->note_ids) {
         return false;
     }
-    Q start = {0, 1};
-    Q end = {0, 1};
+    Rational start = {0, 1};
+    Rational end = {0, 1};
     bool first = true;
     for (int v = 0; v < 2; v++) {
         const VoiceNotes *voice = v == 0 ? &voices->upper : &voices->lower;
         for (size_t i = 0; i < voice->count; i++) {
             size_t note = voice->notes[i];
             out->note_ids[out->note_id_count++] = note;
-            Q on = onset_q(notes, note);
-            Q off = release_q(notes, note);
+            Rational on = onset_q(notes, note);
+            Rational off = release_q(notes, note);
             start = first || q_cmp(on, start) < 0 ? on : start;
             end = first || q_cmp(off, end) > 0 ? off : end;
             first = false;
         }
     }
     qsort(out->note_ids, out->note_id_count, sizeof(size_t), size_compare);
-    out->start_numerator = (long)start.n;
-    out->start_denominator = (unsigned long)start.d;
-    out->end_numerator = (long)end.n;
-    out->end_denominator = (unsigned long)end.d;
+    out->start_numerator = (long)start.num;
+    out->start_denominator = (unsigned long)start.den;
+    out->end_numerator = (long)end.num;
+    out->end_denominator = (unsigned long)end.den;
     return true;
 }
 
@@ -446,6 +449,7 @@ static bool record_span(const ImportedNotes *notes, const TwoVoices *voices, Ana
 static CounterpointCheckResult check_voices(const ImportedNotes *notes, const TwoVoices *voices, bool cantus_upper,
                                             AnalysisReport *report, AnalysisCounterpointCheck *out) {
     CounterpointCheckResult result = COUNTERPOINT_CHECK_ERR_ALLOC;
+    q_overflowed = false;
     bool prefer_flats = report->key_region_count > 0 ? report->key_regions[report->home_region].prefer_flats : false;
     PitchSpelling **spelled = calloc(notes->count, sizeof(PitchSpelling *));
     PitchSpelling *tonic = NULL;
@@ -492,6 +496,9 @@ static CounterpointCheckResult check_voices(const ImportedNotes *notes, const Tw
         } else {
             out->shape_error = "the voices are not an exercise of the species";
         }
+    }
+    if (q_overflowed) {
+        goto done; /* a time does not fit an exact rational */
     }
     result = COUNTERPOINT_CHECK_OK;
 done:

@@ -4,10 +4,11 @@
 #include <string.h>
 
 #include "common-practice-minimal/key_regions.h"
+#include "common-practice-minimal/weighted_identification.h"
+#include "core/rational.h"
 #include "pipeline/pitch_class_util.h"
 #include "time/musical_time.h"
 #include "time/time_span.h"
-#include "common-practice-minimal/weighted_identification.h"
 
 static AnalysisKeyChangeExtent change_extent(KeyChangeExtent extent) {
     switch (extent) {
@@ -174,50 +175,23 @@ bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmen
     return ok;
 }
 
-typedef struct {
-    long long num;
-    unsigned long long den;
-} RegionRational;
-
-static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
-    while (b != 0) {
-        unsigned long long t = a % b;
-        a = b;
-        b = t;
-    }
-    return a;
-}
-
-static RegionRational rational_sum(RegionRational a, RegionRational b) {
-    RegionRational sum = {a.num * (long long)b.den + b.num * (long long)a.den, a.den * b.den};
-    unsigned long long magnitude = sum.num < 0 ? (unsigned long long)(-sum.num) : (unsigned long long)sum.num;
-    unsigned long long divisor = gcd_ull(magnitude, sum.den);
-    if (divisor > 1) {
-        sum.num /= (long long)divisor;
-        sum.den /= divisor;
-    }
-    return sum;
-}
-
-static bool rational_less(RegionRational a, RegionRational b) {
-    return a.num * (long long)b.den < b.num * (long long)a.den;
-}
-
-static RegionRational region_duration(const AnalysisKeyRegion *region) {
-    RegionRational length = {(long long)region->end_numerator * (long long)region->start_denominator -
-                           (long long)region->start_numerator * (long long)region->end_denominator,
-                       (unsigned long long)region->start_denominator * region->end_denominator};
-    return rational_sum(length, (RegionRational){0, 1});
+/* The region's length in whole notes; false when it does not fit a Rational. */
+static bool region_duration(const AnalysisKeyRegion *region, Rational *length) {
+    Rational start;
+    Rational end;
+    return rational_make(region->start_numerator, (long long)region->start_denominator, &start) == RATIONAL_OK &&
+           rational_make(region->end_numerator, (long long)region->end_denominator, &end) == RATIONAL_OK &&
+           rational_sub(end, start, length) == RATIONAL_OK;
 }
 
 static bool same_key(const AnalysisKeyRegion *a, const AnalysisKeyRegion *b) {
     return a->tonic_pitch_class == b->tonic_pitch_class && a->is_major == b->is_major;
 }
 
-size_t home_key_region(const AnalysisKeyRegion *regions, size_t region_count, long *duration_numerator,
-                       unsigned long *duration_denominator) {
+bool home_key_region(const AnalysisKeyRegion *regions, size_t region_count, size_t *home_region,
+                     long *duration_numerator, unsigned long *duration_denominator) {
     size_t home = 0;
-    RegionRational best = {0, 1};
+    Rational best = {0, 1};
     for (size_t i = 0; i < region_count; i++) {
         bool first_of_key = true;
         for (size_t earlier = 0; earlier < i && first_of_key; earlier++) {
@@ -226,18 +200,21 @@ size_t home_key_region(const AnalysisKeyRegion *regions, size_t region_count, lo
         if (!first_of_key) {
             continue;
         }
-        RegionRational total = {0, 1};
+        Rational total = {0, 1};
         for (size_t j = i; j < region_count; j++) {
-            if (same_key(&regions[i], &regions[j])) {
-                total = rational_sum(total, region_duration(&regions[j]));
+            Rational length;
+            if (same_key(&regions[i], &regions[j]) &&
+                (!region_duration(&regions[j], &length) || rational_add(total, length, &total) != RATIONAL_OK)) {
+                return false;
             }
         }
-        if (i == 0 || rational_less(best, total)) {
+        if (i == 0 || rational_cmp(best, total) < 0) {
             home = i;
             best = total;
         }
     }
+    *home_region = home;
     *duration_numerator = (long)best.num;
     *duration_denominator = (unsigned long)best.den;
-    return home;
+    return true;
 }

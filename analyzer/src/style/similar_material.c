@@ -12,11 +12,12 @@
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/style_labels.h>
 
-#include "query/similarity_model.h"
-#include "util/json_util.h"
+#include "core/rational.h"
 #include "pipeline/corpus_walk.h"
 #include "pipeline/run_file.h"
-
+#include "query/similarity_model.h"
+#include "standard-tonality/roman_numeral_grammar.h"
+#include "util/json_util.h"
 
 /* ---- reading the document ---- */
 
@@ -385,69 +386,13 @@ static bool read_chords(const cJSON *document, DocChord **out, size_t *count) {
 
 /* ---- numerals as root steps ---- */
 
-static const int major_scale[7] = {0, 2, 4, 5, 7, 9, 11};
-static const int minor_scale[7] = {0, 2, 3, 5, 7, 8, 10};
-
-/* The pitch class above the tonic of one numeral segment (accidentals, then Roman letters), by the scale given.
-   false when the letters are not a degree from I to VII. */
-static bool segment_offset(const char *segment, size_t length, const int *scale, int *out) {
-    size_t i = 0;
-    int accidental = 0;
-    while (i < length && (segment[i] == '#' || segment[i] == 'b')) {
-        accidental += segment[i] == '#' ? 1 : -1;
-        i++;
-    }
-    char letters[8];
-    size_t n = 0;
-    while (i < length && strchr("IViv", segment[i]) && n < sizeof letters - 1) {
-        letters[n++] = (char)(segment[i] | 0x20);
-        i++;
-    }
-    letters[n] = '\0';
-    static const char *const degrees[7] = {"i", "ii", "iii", "iv", "v", "vi", "vii"};
-    for (int d = 0; d < 7; d++) {
-        if (strcmp(letters, degrees[d]) == 0) {
-            *out = scale[d] + accidental;
-            return true;
-        }
-    }
-    return false;
-}
-
-/*
- * The pitch class of a numeral's root above its tonic, in a major or a minor key. An applied chord ("V7/V") is
- * the first segment's degree of the major scale on the target's root.
+/* The pitch class of a numeral's root above its tonic, in a major or a minor key; false for text that is not a numeral.
  */
 static bool numeral_root_offset(const char *numeral, bool minor, int *out) {
-    const char *segments[4];
-    size_t lengths[4];
-    size_t count = 0;
-    const char *cursor = numeral;
-    while (count < 4) {
-        size_t end = 0;
-        while (cursor[end] && !(cursor[end] == '/' && (cursor[end + 1] < '0' || cursor[end + 1] > '9'))) {
-            end++;
-        }
-        segments[count] = cursor;
-        lengths[count++] = end;
-        if (!cursor[end]) {
-            break;
-        }
-        cursor += end + 1;
-    }
-    int offset;
-    if (!segment_offset(segments[count - 1], lengths[count - 1], minor ? minor_scale : major_scale, &offset)) {
-        return false;
-    }
-    for (size_t k = count - 1; k > 0; k--) {
-        int step;
-        if (!segment_offset(segments[k - 1], lengths[k - 1], major_scale, &step)) {
-            return false;
-        }
-        offset += step;
-    }
-    *out = ((offset % 12) + 12) % 12;
-    return true;
+    StandardTonalityNumeralText parsed;
+    return standard_tonality_numeral_parse(numeral, &parsed) &&
+           standard_tonality_numeral_root_semitone(
+               &parsed, minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR, out);
 }
 
 /* The directed semitone step from one pitch class to another, -6 to +5. */
@@ -481,16 +426,10 @@ typedef struct {
     size_t numeral_matches;
 } Candidate;
 
-/* -1, 0 or 1 as a/b is less than, equal to or more than c/d. */
-static int compare_fractions(unsigned long a, unsigned long b, unsigned long c, unsigned long d) {
-    WideInt left = (WideInt)a * d, right = (WideInt)c * b;
-    return left < right ? -1 : (left > right ? 1 : 0);
-}
-
 static int compare_candidates(const void *x, const void *y) {
     const Candidate *a = x, *b = y;
-    int order = compare_fractions(b->score.similarity.numerator, b->score.similarity.denominator, a->score.similarity.numerator,
-                                  a->score.similarity.denominator);
+    int order = rational_cmp_unsigned(b->score.similarity.numerator, b->score.similarity.denominator,
+                                      a->score.similarity.numerator, a->score.similarity.denominator);
     if (order != 0) {
         return order;
     }
@@ -602,8 +541,8 @@ static bool consider_window(const Search *search, const long *query_intervals, s
     if (scored != SIMILARITY_SCORE_OK) {
         return false;
     }
-    if (compare_fractions(breakdown.similarity.numerator, breakdown.similarity.denominator,
-                          search->options->minimum_numerator, search->options->minimum_denominator) < 0) {
+    if (rational_cmp_unsigned(breakdown.similarity.numerator, breakdown.similarity.denominator,
+                              search->options->minimum_numerator, search->options->minimum_denominator) < 0) {
         return true;
     }
     if (candidates->count == candidates->capacity) {
@@ -674,11 +613,11 @@ static bool progression_windows(const Search *search, const DocChord *chords, si
 static bool notes_between(const DocNote *notes, size_t count, unsigned long start_n, unsigned long start_d,
                           unsigned long end_n, unsigned long end_d, SimilarNote **out, size_t *found) {
     size_t first = 0;
-    while (first < count && compare_fractions(notes[first].onset_n, notes[first].onset_d, start_n, start_d) < 0) {
+    while (first < count && rational_cmp_unsigned(notes[first].onset_n, notes[first].onset_d, start_n, start_d) < 0) {
         first++;
     }
     size_t last = first;
-    while (last < count && compare_fractions(notes[last].onset_n, notes[last].onset_d, end_n, end_d) < 0) {
+    while (last < count && rational_cmp_unsigned(notes[last].onset_n, notes[last].onset_d, end_n, end_d) < 0) {
         last++;
     }
     *out = NULL;
@@ -711,8 +650,8 @@ static bool matches_add(Matches *matches, SimilarMatch match) {
 
 static int compare_matches(const void *x, const void *y) {
     const SimilarMatch *a = x, *b = y;
-    int order = compare_fractions(b->score.similarity.numerator, b->score.similarity.denominator, a->score.similarity.numerator,
-                                  a->score.similarity.denominator);
+    int order = rational_cmp_unsigned(b->score.similarity.numerator, b->score.similarity.denominator,
+                                      a->score.similarity.numerator, a->score.similarity.denominator);
     if (order == 0) {
         order = strcmp(a->piece, b->piece);
     }

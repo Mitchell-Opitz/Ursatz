@@ -15,7 +15,8 @@ the dimensions scored; it does not say the passage is the motive.
 - `--motive <file>` is a MIDI or MusicXML file. The file is analyzed and the notes of its soprano (the highest line,
   a note held across several chord segments counting once) are the motive. It needs at least two notes.
 - `--progression "<numerals>"` is Roman numerals separated by spaces or `-`: `"I IV V7 I"`, `"ii-V7-I"`. Each token must
-  be a numeral the Analyzer can print; an inversion figure is dropped, so `V6/5` reads `V7`. It needs at least two.
+  be a numeral of the library's grammar; an inversion figure is dropped, so `V6/5` reads `V7`, and the label is the
+  grammar's canonical spelling (`viio`, `viiø7`, whatever mark the document wrote). It needs at least two.
 
 Give exactly one of the two. `--min <n/d>` is the lowest score reported (default `1/2`, from `0/1` to `1/1`);
 `--max <n>` is how many results are returned (default 10).
@@ -36,7 +37,9 @@ The combined score is the weighted mean of the dimension scores, so the weights 
 A progression has no contour. Its query carries no durations, so its chords are taken to be of equal length: a window
 of chords of equal length scores 1 on rhythm. The roots of the query come from its numerals: the degree in the major or
 the natural minor scale (by the mode of the window's key region), with a leading `b` or `#` moving it a semitone, and
-an applied chord (`V7/V`) taken as the first numeral's degree of the major scale above the target's root. The roots of a
+an applied chord (`V7/V`) taken as the numeral's degree of the target's own scale above the target's root: the major
+scale for an uppercase target and the harmonic minor scale for a lowercase one (`viio7/ii` reads the leading tone of ii,
+a raised seventh). An applied chord with more than one target (`V/V/V`) is not a numeral. The roots of a
 window come from the documents' chord roots.
 
 A window of a progression lies inside one run of labelled chords of one key region. Chords that follow each other with

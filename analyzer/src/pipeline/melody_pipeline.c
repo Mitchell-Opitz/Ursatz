@@ -6,17 +6,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common-practice-minimal/key_vocabulary.h"
+#include "common-practice-minimal/outer_scale_degrees.h"
+#include "core/rational.h"
+#include "pipeline/pitch_class_util.h"
+#include "pipeline/spelling_util.h"
+#include "pitch/pitch_spelling.h"
+#include "semantics/beat_strength.h"
 #include "standard-counterpoint/analysis/analysis_melody.h"
 #include "standard-counterpoint/analysis/analysis_melody_climax.h"
 #include "standard-counterpoint/analysis/analysis_melody_leaps.h"
 #include "standard-counterpoint/analysis/analysis_melody_nct.h"
 #include "standard-counterpoint/cantus_firmus_rules.h"
-#include "common-practice-minimal/key_vocabulary.h"
-#include "common-practice-minimal/outer_scale_degrees.h"
-#include "pipeline/pitch_class_util.h"
-#include "pipeline/spelling_util.h"
-#include "semantics/beat_strength.h"
-#include "pitch/pitch_spelling.h"
 #include "standard-counterpoint/framework.h"
 #include "standard-counterpoint/tendency_rules.h"
 #include "theory/framework.h"
@@ -56,7 +57,8 @@ static size_t member_of(const Segment *segment, const OuterVoiceEntry *entry) {
 static const AnalysisKeyRegion *region_at(const AnalysisReport *report, long long n, long long d) {
     for (size_t r = 0; r < report->key_region_count; r++) {
         const AnalysisKeyRegion *region = &report->key_regions[r];
-        if (fraction_compare(n, d, region->end_numerator, (long long)region->end_denominator) < 0) {
+        if (rational_cmp(rational_ratio(n, d),
+                         rational_ratio(region->end_numerator, (long long)region->end_denominator)) < 0) {
             return region;
         }
     }
@@ -90,8 +92,7 @@ static void name_note(const ImportedNotes *notes, size_t note, long pitch, const
     if (notes->source.spelling_notated && spelled_note_name(notes->events[note], pitch, true, out)) {
         return;
     }
-    snprintf(out, 16, "%s%d", pitch_class_name(pitch_class_of(pitch), region ? region->prefer_flats : false),
-             (int)(pitch / 12) - 1);
+    note_name(pitch, region ? region->prefer_flats : false, out);
 }
 
 /* The library's non-chord-tone result for a note, from the chord identification of the chord segment its voice segment
@@ -102,9 +103,9 @@ static void classify_note(const AnalysisReport *report, const Segment *segment, 
                           size_t *tone, StandardCounterpointMelodyNote *out) {
     out->nct = STANDARD_COUNTERPOINT_NCT_UNCLASSIFIED;
     while (*chord + 1 < report->entry_count &&
-           fraction_compare(segment->start_numerator, (long long)segment->start_denominator,
-                            report->entries[*chord].end_numerator,
-                            (long long)report->entries[*chord].end_denominator) >= 0) {
+           rational_cmp(rational_ratio(segment->start_numerator, (long long)segment->start_denominator),
+                        rational_ratio(report->entries[*chord].end_numerator,
+                                       (long long)report->entries[*chord].end_denominator)) >= 0) {
         (*chord)++;
     }
     if (*chord >= report->entry_count || report->entries[*chord].chord.label == NULL) {
@@ -182,12 +183,12 @@ static bool build_phrase_line(const ImportedNotes *notes, const Segmentation *vo
     size_t tone = 0;
     for (size_t v = 0; v < voices->segment_count; v++) {
         const Segment *segment = &voices->segments[v];
-        if (fraction_compare(segment->start_numerator, (long long)segment->start_denominator, phrase->start_numerator,
-                             (long long)phrase->start_denominator) < 0) {
+        if (rational_cmp(rational_ratio(segment->start_numerator, (long long)segment->start_denominator),
+                         rational_ratio(phrase->start_numerator, (long long)phrase->start_denominator)) < 0) {
             continue;
         }
-        if (fraction_compare(segment->start_numerator, (long long)segment->start_denominator, phrase->end_numerator,
-                             (long long)phrase->end_denominator) >= 0) {
+        if (rational_cmp(rational_ratio(segment->start_numerator, (long long)segment->start_denominator),
+                         rational_ratio(phrase->end_numerator, (long long)phrase->end_denominator)) >= 0) {
             break;
         }
         const OuterVoiceEntry *entry = &lines->soprano[v];
