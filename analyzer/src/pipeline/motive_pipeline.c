@@ -5,17 +5,20 @@
 #include <string.h>
 
 #include "analysis/motif_window_matching.h"
+#include "analysis/outer_voice.h"
 #include "common-practice-minimal/key_vocabulary.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
 #include "core/rational.h"
 #include "pipeline/motive_features.h"
 #include "pipeline/motive_sketch_map.h"
 #include "pitch/pitch_numeric_value.h"
+#include "semantics/analysis_note.h"
 #include "time/duration.h"
 #include "time/meter_arithmetic.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
+#include "time/time_span.h"
 #include "util/misc_util.h"
 
 /* A soprano note: an index into the ImportedNotes, with exact start and end in whole notes. */
@@ -28,36 +31,81 @@ typedef struct {
     long semitone;
 } SopranoNote;
 
-/* Sort by start, then by the order of the notes. */
-static int compare_start(const void *left, const void *right) {
-    const SopranoNote *a = left;
-    const SopranoNote *b = right;
-    int order = rational_cmp(rational_ratio(a->start_n, a->start_d), rational_ratio(b->start_n, b->start_d));
-    return order != 0 ? order : (a->index < b->index ? -1 : (a->index > b->index ? 1 : 0));
+/* A note of the library's note set and its place in the ImportedNotes. */
+typedef struct {
+    AnalysisNote note;
+    size_t index;
+} SetNote;
+
+static int compare_set_notes(const void *left, const void *right) {
+    return analysis_note_compare(&((const SetNote *)left)->note, &((const SetNote *)right)->note);
 }
 
 /* The soprano: at every onset the highest sounding note (the later attack among equals), kept when it is attacked
-   there. Ported from motive_soprano; the active list holds the notes sounding at the onset instead of rescanning every
-   earlier note. *out is owned, NULL when there are no notes. */
+   there. The kernel's outer_voice_attack_soprano finds it; this builds its note set from the imported notes (a note
+   of unknown pitch or no length is not in it) and reads the chosen notes back. *out is owned, NULL when there are no
+   notes. */
 static bool find_soprano(const ImportedNotes *notes, SopranoNote **out, size_t *out_count) {
     *out = NULL;
     *out_count = 0;
     if (notes->count == 0) {
         return true;
     }
-    SopranoNote *all = calloc(notes->count, sizeof(SopranoNote));
-    SopranoNote **active = calloc(notes->count, sizeof(SopranoNote *));
-    SopranoNote *line = calloc(notes->count, sizeof(SopranoNote));
-    if (!all || !active || !line) {
-        free(all);
-        free(active);
-        free(line);
-        return false;
+    SetNote *sorted = calloc(notes->count, sizeof(SetNote));
+    AnalysisNote *set_notes = calloc(notes->count, sizeof(AnalysisNote));
+    TimeSpan **spans = calloc(notes->count, sizeof(TimeSpan *));
+    size_t set_count = 0;
+    size_t *chosen = NULL;
+    size_t chosen_count = 0;
+    SopranoNote *line = NULL;
+    bool ok = sorted && set_notes && spans;
+    for (size_t i = 0; ok && i < notes->count; i++) {
+        const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(notes->events[i]));
+        long semitone = pitch_numeric_value_position_numerator(notes->pitch_values[i]);
+        if (duration_numerator(note_event_duration(notes->events[i])) <= 0) {
+            continue; /* a note with no length is never sounding at an onset */
+        }
+        MusicalTime *end = NULL;
+        if (musical_time_add(start, note_event_duration(notes->events[i]), &end) != MUSICAL_TIME_OK) {
+            ok = false;
+            break;
+        }
+        TimeSpan *span = NULL;
+        TimeSpanResult made = time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span);
+        musical_time_destroy(end);
+        if (made != TIME_SPAN_OK) {
+            ok = false;
+            break;
+        }
+        spans[set_count] = span;
+        sorted[set_count].note = (AnalysisNote){.note_id = entity_id_value(note_event_id(notes->events[i])),
+                                                .event = notes->events[i],
+                                                .span = span,
+                                                .midi = semitone >= 0 && semitone <= 127 ? (int)semitone
+                                                                                          : ANALYSIS_PITCH_UNKNOWN,
+                                                .track = ANALYSIS_INDEX_NONE,
+                                                .voice = ANALYSIS_INDEX_NONE,
+                                                .voice_confidence = 1.0};
+        sorted[set_count].index = i;
+        set_count++;
     }
-    for (size_t i = 0; i < notes->count; i++) {
+    if (ok) {
+        qsort(sorted, set_count, sizeof(SetNote), compare_set_notes);
+        for (size_t i = 0; i < set_count; i++) {
+            set_notes[i] = sorted[i].note;
+        }
+        AnalysisNoteSet set = {set_notes, set_count, notes->meter.meter_map};
+        ok = set_count == 0 || outer_voice_attack_soprano(&set, &chosen, &chosen_count) == OUTER_VOICE_OK;
+    }
+    if (ok && chosen_count > 0) {
+        line = calloc(chosen_count, sizeof(SopranoNote));
+        ok = line != NULL;
+    }
+    for (size_t k = 0; ok && k < chosen_count; k++) {
+        size_t i = sorted[chosen[k]].index;
         const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(notes->events[i]));
         const Duration *duration = note_event_duration(notes->events[i]);
-        SopranoNote *note = &all[i];
+        SopranoNote *note = &line[k];
         note->index = i;
         note->start_n = musical_time_numerator(start);
         note->start_d = (long long)musical_time_denominator(start);
@@ -67,45 +115,19 @@ static bool find_soprano(const ImportedNotes *notes, SopranoNote **out, size_t *
         note->end_d = note->start_d * duration_d;
         note->semitone = pitch_numeric_value_position_numerator(notes->pitch_values[i]);
     }
-    qsort(all, notes->count, sizeof(SopranoNote), compare_start);
-    size_t active_count = 0;
-    size_t kept = 0;
-    for (size_t i = 0; i < notes->count;) {
-        long long onset_n = all[i].start_n;
-        long long onset_d = all[i].start_d;
-        for (; i < notes->count &&
-               rational_cmp(rational_ratio(all[i].start_n, all[i].start_d), rational_ratio(onset_n, onset_d)) == 0;
-             i++) {
-            active[active_count++] = &all[i];
-        }
-        size_t live = 0;
-        const SopranoNote *top = NULL;
-        for (size_t a = 0; a < active_count; a++) {
-            if (rational_cmp(rational_ratio(active[a]->end_n, active[a]->end_d), rational_ratio(onset_n, onset_d)) <=
-                0) {
-                continue; /* ended before this onset */
-            }
-            active[live++] = active[a];
-            if (!top || active[a]->semitone > top->semitone ||
-                (active[a]->semitone == top->semitone &&
-                 rational_cmp(rational_ratio(active[a]->start_n, active[a]->start_d),
-                              rational_ratio(top->start_n, top->start_d)) > 0)) {
-                top = active[a];
-            }
-        }
-        active_count = live;
-        if (top && rational_cmp(rational_ratio(top->start_n, top->start_d), rational_ratio(onset_n, onset_d)) == 0) {
-            line[kept++] = *top;
-        }
+    for (size_t i = 0; spans && i < set_count; i++) {
+        time_span_destroy(spans[i]);
     }
-    free(all);
-    free(active);
-    *out = line;
-    *out_count = kept;
-    if (kept == 0) {
+    free(spans);
+    free(set_notes);
+    free(sorted);
+    free(chosen);
+    if (!ok) {
         free(line);
-        *out = NULL;
+        return false;
     }
+    *out = line;
+    *out_count = chosen_count;
     return true;
 }
 

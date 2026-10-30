@@ -8,6 +8,7 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 
+#include "analysis/motive_link.h"
 #include "links_internal.h"
 #include "pipeline/motive_sketch_map.h"
 #include "util/json_util.h"
@@ -385,84 +386,34 @@ void motive_links_options_default(MotiveLinksOptions *options) {
     options->candidates = 4;
 }
 
-/* An unordered pair of families by scope index, low first. */
-typedef struct {
-    size_t low;
-    size_t high;
-} FamilyPair;
-
-typedef struct {
-    size_t family;
-    double nearness;
-} Candidate;
-
-/* Nearest first; ties by scope order, which is piece order and then family index. */
-static int compare_candidates(const void *left, const void *right) {
-    const Candidate *a = left;
-    const Candidate *b = right;
-    if (a->nearness != b->nearness) {
-        return a->nearness > b->nearness ? -1 : 1;
-    }
-    return a->family < b->family ? -1 : (a->family > b->family ? 1 : 0);
-}
-
-static int compare_pairs(const void *left, const void *right) {
-    const FamilyPair *a = left;
-    const FamilyPair *b = right;
-    if (a->low != b->low) {
-        return a->low < b->low ? -1 : 1;
-    }
-    return a->high < b->high ? -1 : (a->high > b->high ? 1 : 0);
-}
-
-/* The pairs to compare: for each family its nearest candidates in other pieces, as unordered pairs, sorted and unique. */
+/* The pairs to compare: for each family its nearest candidates in other pieces, as the kernel's unordered pairs
+   (motive_link_candidates), sorted and unique. *out is owned by the caller (free). */
 static MotiveLinksResult collect_pairs(const MotiveLinkScope *scope, const MotiveLinksOptions *options,
-                                       FamilyPair **out, size_t *count) {
+                                       MotiveLinkPair **out, size_t *count) {
     *out = NULL;
     *count = 0;
     size_t families = scope->family_count;
     if (families == 0) {
         return MOTIVE_LINKS_OK;
     }
-    size_t per_family = options->candidates < families ? options->candidates : families;
-    Candidate *candidates = malloc(families * sizeof *candidates);
-    FamilyPair *pairs = malloc(families * per_family * sizeof *pairs);
-    if (!candidates || !pairs) {
-        free(candidates);
-        free(pairs);
+    MotiveSketch *sketches = malloc(families * sizeof *sketches);
+    size_t *pieces = malloc(families * sizeof *pieces);
+    if (!sketches || !pieces) {
+        free(sketches);
+        free(pieces);
         return MOTIVE_LINKS_ERR_ALLOC;
     }
-    size_t total = 0;
     for (size_t f = 0; f < families; f++) {
-        size_t found = 0;
-        for (size_t g = 0; g < families; g++) {
-            if (scope->families[g].piece == scope->families[f].piece) {
-                continue;
-            }
-            double nearness = motive_link_nearness(&scope->families[f].sketch, &scope->families[g].sketch);
-            if (nearness >= options->link.min_nearness) {
-                candidates[found++] = (Candidate){g, nearness};
-            }
-        }
-        qsort(candidates, found, sizeof *candidates, compare_candidates);
-        if (found > per_family) {
-            found = per_family;
-        }
-        for (size_t c = 0; c < found; c++) {
-            size_t g = candidates[c].family;
-            pairs[total++] = (FamilyPair){f < g ? f : g, f < g ? g : f};
-        }
+        sketches[f] = scope->families[f].sketch;
+        pieces[f] = scope->families[f].piece;
     }
-    free(candidates);
-    qsort(pairs, total, sizeof *pairs, compare_pairs);
-    size_t unique = 0;
-    for (size_t i = 0; i < total; i++) {
-        if (unique == 0 || compare_pairs(&pairs[unique - 1], &pairs[i]) != 0) {
-            pairs[unique++] = pairs[i];
-        }
+    MotiveLinkResult found = motive_link_candidates(sketches, pieces, families, options->candidates,
+                                                    options->link.min_nearness, out, count);
+    free(sketches);
+    free(pieces);
+    if (found != MOTIVE_LINK_OK) {
+        return found == MOTIVE_LINK_NO_MEMORY ? MOTIVE_LINKS_ERR_ALLOC : MOTIVE_LINKS_ERR_FORMAT;
     }
-    *out = pairs;
-    *count = unique;
     return MOTIVE_LINKS_OK;
 }
 
@@ -546,99 +497,52 @@ static bool found_fill(MotiveLinkFound *link, const MotiveLinkScope *scope, cons
     return true;
 }
 
-static size_t find_root(size_t *parent, size_t node) {
-    while (parent[node] != node) {
-        parent[node] = parent[parent[node]];
-        node = parent[node];
-    }
-    return node;
-}
-
 typedef struct {
-    size_t first; /* the group's first member, scope index */
+    size_t number; /* the kernel's group number: groups are numbered in the order of their first member */
     size_t size;
-    size_t root;
-} GroupKey;
+} GroupSize;
 
-/* Largest first, then by first member in scope order. */
+/* Largest first, then by first member in scope order (the kernel's number). */
 static int compare_groups(const void *left, const void *right) {
-    const GroupKey *a = left;
-    const GroupKey *b = right;
+    const GroupSize *a = left;
+    const GroupSize *b = right;
     if (a->size != b->size) {
         return a->size > b->size ? -1 : 1;
     }
-    return a->first < b->first ? -1 : (a->first > b->first ? 1 : 0);
+    return a->number < b->number ? -1 : (a->number > b->number ? 1 : 0);
 }
 
-/* The groups of the linked families: families joined by links, found by union. */
-static bool build_groups(const MotiveLinkScope *scope, const FamilyPair *pairs, const bool *linked, size_t pair_count,
-                         MotiveLinks *out) {
+/* The groups of the linked families: the kernel's connected components of the links (motive_link_groups), put largest
+   first here. */
+static bool build_groups(const MotiveLinkScope *scope, const MotiveLinkPair *pairs, const bool *linked,
+                         size_t pair_count, MotiveLinks *out) {
     size_t families = scope->family_count;
-    size_t *parent = malloc((families ? families : 1) * sizeof *parent);
-    size_t *size = calloc(families ? families : 1, sizeof *size);
-    size_t *first = malloc((families ? families : 1) * sizeof *first);
-    if (!parent || !size || !first) {
-        free(parent);
-        free(size);
-        free(first);
-        return false;
-    }
-    for (size_t i = 0; i < families; i++) {
-        parent[i] = i;
-        first[i] = families;
-    }
-    for (size_t p = 0; p < pair_count; p++) {
-        if (linked[p]) {
-            size_t low = find_root(parent, pairs[p].low);
-            size_t high = find_root(parent, pairs[p].high);
-            if (low != high) {
-                parent[high] = low;
-            }
-        }
-    }
-    /* A family is in a group when a link touches it. */
-    bool *touched = calloc(families ? families : 1, sizeof *touched);
-    if (!touched) {
-        free(parent);
-        free(size);
-        free(first);
-        return false;
-    }
-    for (size_t p = 0; p < pair_count; p++) {
-        if (linked[p]) {
-            touched[pairs[p].low] = true;
-            touched[pairs[p].high] = true;
-        }
-    }
+    size_t *group_of = NULL;
     size_t group_count = 0;
-    for (size_t f = 0; f < families; f++) {
-        if (!touched[f]) {
-            continue;
-        }
-        size_t root = find_root(parent, f);
-        if (size[root] == 0) {
-            first[root] = f;
-            group_count++;
-        }
-        size[root]++;
+    if (motive_link_groups(families, pairs, linked, pair_count, &group_of, &group_count) != MOTIVE_LINK_OK) {
+        return false;
     }
-    GroupKey *keys = group_count ? malloc(group_count * sizeof *keys) : NULL;
+    GroupSize *order = group_count ? calloc(group_count, sizeof *order) : NULL;
     MotiveLinkGroup *groups = group_count ? calloc(group_count, sizeof *groups) : NULL;
-    bool ok = (!group_count || (keys && groups));
-    size_t made = 0;
+    bool ok = !group_count || (order && groups);
+    for (size_t g = 0; ok && g < group_count; g++) {
+        order[g].number = g;
+    }
     for (size_t f = 0; ok && f < families; f++) {
-        if (touched[f] && find_root(parent, f) == f) {
-            keys[made++] = (GroupKey){first[f], size[f], f};
+        if (group_of[f] != (size_t)-1) {
+            order[group_of[f]].size++;
         }
     }
-    if (ok && made > 1) {
-        qsort(keys, made, sizeof *keys, compare_groups);
+    if (ok && group_count > 1) {
+        qsort(order, group_count, sizeof *order, compare_groups);
     }
-    for (size_t g = 0; ok && g < made; g++) {
-        groups[g].members = malloc(keys[g].size * sizeof *groups[g].members);
+    size_t made = 0;
+    for (size_t g = 0; ok && g < group_count; g++) {
+        made = g + 1;
+        groups[g].members = malloc(order[g].size * sizeof *groups[g].members);
         ok = groups[g].members != NULL;
         for (size_t f = 0; ok && f < families; f++) {
-            if (touched[f] && find_root(parent, f) == keys[g].root) {
+            if (group_of[f] == order[g].number) {
                 MotiveLinkMember *member = &groups[g].members[groups[g].member_count];
                 member->piece = text_copy(scope->pieces[scope->families[f].piece].id);
                 member->family = scope->families[f].family;
@@ -646,15 +550,9 @@ static bool build_groups(const MotiveLinkScope *scope, const FamilyPair *pairs, 
                 ok = member->piece != NULL;
             }
         }
-        if (!ok) {
-            made = g + 1;
-        }
     }
-    free(parent);
-    free(size);
-    free(first);
-    free(touched);
-    free(keys);
+    free(group_of);
+    free(order);
     if (!ok) {
         for (size_t g = 0; groups && g < made; g++) {
             for (size_t m = 0; groups[g].members && m < groups[g].member_count; m++) {
@@ -702,7 +600,7 @@ MotiveLinksResult motive_links_run(const MotiveLinkScope *scope, MotiveLinkCache
     if (!motive_link_cache_prepare(use, &options->link, &reset)) {
         return MOTIVE_LINKS_ERR_ALLOC;
     }
-    FamilyPair *pairs;
+    MotiveLinkPair *pairs;
     size_t pair_count;
     MotiveLinksResult result = collect_pairs(scope, options, &pairs, &pair_count);
     if (result != MOTIVE_LINKS_OK) {
