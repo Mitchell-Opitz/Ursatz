@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "core/rational.h"
+#include "standard-tonality/roman_numeral_grammar.h"
 
 static const char *const dimension_names[STYLE_DIMENSION_COUNT] = {"harmony", "rhythm", "melody", "form"};
 
@@ -69,101 +70,17 @@ bool style_category_dimension(const char *category, StyleDimension *out) {
     return false;
 }
 
-static bool is_roman_letter(char c) {
-    return c != '\0' && strchr("IViv", c) != NULL;
-}
-
-/* Length of the numeral part of one segment: accidentals, Roman letters, then quality marks. 0 if there are no
-   Roman letters. */
-static size_t numeral_prefix_length(const char *segment) {
-    size_t i = 0;
-    while (segment[i] == '#' || segment[i] == 'b') {
-        i++;
-    }
-    size_t letters = 0;
-    while (is_roman_letter(segment[i])) {
-        i++;
-        letters++;
-    }
-    if (letters == 0) {
-        return 0;
-    }
-    /* Quality marks: '+', 'o', and the UTF-8 degree sign (C2 B0) and o-slash (C3 B8). */
-    while (segment[i] == '+' || segment[i] == 'o' || (unsigned char)segment[i] == 0xC2 ||
-           (unsigned char)segment[i] == 0xB0 || (unsigned char)segment[i] == 0xC3 || (unsigned char)segment[i] == 0xB8) {
-        i++;
-    }
-    return i;
-}
-
-static bool figure_is(const char *figure, const char *const *list) {
-    for (size_t i = 0; list[i]; i++) {
-        if (strcmp(figure, list[i]) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
 char *style_label_numeral(const char *numeral) {
-    static const char *const triad_figures[] = {"", "6", "6/4", "64", "63", NULL};
-    static const char *const seventh_figures[] = {"7", "6/5", "65", "4/3", "43", "4/2", "42", "2", NULL};
-
-    if (!numeral || !numeral[0]) {
+    StandardTonalityNumeralText parsed;
+    char text[32];
+    if (!numeral || !standard_tonality_numeral_parse(numeral, &parsed)) {
         return NULL;
     }
-    /* The first segment ends at a '/' followed by a letter or accidental (an applied target); a '/' followed by a
-       digit belongs to the figure. */
-    size_t first_end = 0;
-    while (numeral[first_end] && !(numeral[first_end] == '/' && !isdigit((unsigned char)numeral[first_end + 1]))) {
-        first_end++;
-    }
-    size_t prefix = numeral_prefix_length(numeral);
-    if (prefix == 0 || prefix > first_end) {
+    parsed.inversion = 0;
+    if (!standard_tonality_numeral_format(&parsed, text, sizeof text)) {
         return NULL;
     }
-    size_t figure_length = first_end - prefix;
-    char figure[16];
-    if (figure_length >= sizeof figure) {
-        return NULL;
-    }
-    memcpy(figure, numeral + prefix, figure_length);
-    figure[figure_length] = '\0';
-
-    const char *kept;
-    if (figure_is(figure, triad_figures)) {
-        kept = "";
-    } else if (figure_is(figure, seventh_figures)) {
-        kept = "7";
-    } else {
-        kept = figure;
-    }
-    /* Every applied target must itself be a numeral. */
-    const char *rest = numeral + first_end;
-    const char *target = rest;
-    while (*target == '/') {
-        target++;
-        size_t target_prefix = numeral_prefix_length(target);
-        if (target_prefix == 0) {
-            return NULL;
-        }
-        target += target_prefix;
-        while (isdigit((unsigned char)*target)) {
-            target++;
-        }
-    }
-    if (*target != '\0') {
-        return NULL;
-    }
-    size_t length = prefix + strlen(kept) + strlen(rest);
-    char *label = malloc(length + 1);
-    if (!label) {
-        return NULL;
-    }
-    memcpy(label, numeral, prefix);
-    strcpy(label + prefix, kept);
-    strcat(label, rest);
-    return label;
+    return strdup(text);
 }
 
 char *style_label_progression(const char *const *numerals, size_t count) {
