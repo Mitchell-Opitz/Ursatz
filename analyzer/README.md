@@ -45,6 +45,10 @@ Tests:
   named `form`, `section`, `phrase`, `subphrase` and `idea`, the letters following from the returns, and the
   section and return counts and letters as the library gives them (see "Form plan").
 - `test_long_labels`: labels past 31 characters render intact.
+- `test_report_snapshots` and `test_document_snapshots`: the Markdown report (MIDI and MusicXML) and the analysis
+  document (MIDI, without `analyzer_version`, `ursatz_commit` and `input`) of the five reference pieces, byte for byte
+  against `tests/snapshots/<piece>.report.md` and `<piece>.analysis.json`. Run a test with `UPDATE_SNAPSHOTS=1` (or
+  `URSATZ_UPDATE_SNAPSHOTS=1`) to rewrite its files; a claim that moves is recaptured in its own commit.
 - `test_analysis_document`: the analysis document's sections, claims and values.
 - `test_measure_locations`: time signature, measure count, pickup, meter changes, and the measure
   and beat of the chords covering chosen positions, for the five reference pieces and two
@@ -206,6 +210,19 @@ or the report, so those can be destroyed as soon as it is built. Strings returne
 add_subdirectory(external/ursatz-analyzer)
 target_link_libraries(my_app PRIVATE ursatz_analyzer)
 ```
+
+Private helper modules, each the one home of what several files used to copy:
+
+| Module | Holds |
+| --- | --- |
+| `src/util/json_util.h` | `json_member`, `json_string_member`, `json_number_member`, `json_add`, `json_append`. |
+| `src/util/file_util.h` | `file_read_all`, `file_write_atomic` (temporary name, then rename). |
+| `src/util/misc_util.h` | `text_copy`, `size_compare`, `fraction_compare`, `entity_id_copy`, `notes_last_end`, `fnv1a_bytes`. |
+| `src/pipeline/corpus_walk.h` | `corpus_walk_documents`: opens `corpus-index.json` and visits the document of every analyzed piece. |
+| `src/pipeline/run_file.h` | `analyzer_run_file` (import, optional reading, pipeline) and `analyzer_run_file_document`. |
+
+The tests share `tests/support/test_support.h` (the `analyzer_test_support` library): a MIDI builder, JSON accessors,
+file helpers and a document analyzer.
 
 ## Pipeline
 
