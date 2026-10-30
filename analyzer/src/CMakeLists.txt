@@ -7,6 +7,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/musicxml_pipeline.c
     pipeline/input_pipeline.c
     pipeline/segmentation.c
+    pipeline/chain_input.c
     pipeline/pitch_class_util.c
     pipeline/spelling_util.c
     pipeline/key_region_pipeline.c
