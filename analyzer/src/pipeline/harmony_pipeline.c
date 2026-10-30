@@ -7,6 +7,8 @@
 #include "standard-harmony/harmony_functions.h"
 #include "standard-harmony/harmony_key_change.h"
 #include "standard-meter/metric_position_rules.h"
+#include "standard-tonality/seventh_rules.h"
+#include "standard-tonality/triad_rules.h"
 #include "standard-harmony/phrase_model_label.h"
 #include "standard-harmony/analysis/analysis_phrase.h"
 #include "semantics/key_change_extent.h"
@@ -20,23 +22,20 @@
 #include "time/time_span.h"
 
 /* The chord's root-relative semitone intervals, from the quality the library's Roman numeral claim names
-   (StandardTonalityTriadQuality, StandardTonalitySeventhQuality). False for a quality outside the library's tables. */
+   (standard_tonality_triad_quality_semitones, standard_tonality_seventh_quality_semitones). False for a quality outside
+   the library's tables. */
 static bool intervals_of(const StandardTonalityRomanClaim *claim, int out[HARMONY_SEGMENT_MAX_INTERVALS],
                          size_t *count) {
-    static const int TRIADS[4][3] = {{0, 4, 7}, {0, 3, 7}, {0, 3, 6}, {0, 4, 8}};
-    static const int SEVENTHS[5][4] = {{0, 4, 7, 11}, {0, 4, 7, 10}, {0, 3, 7, 10}, {0, 3, 6, 10}, {0, 3, 6, 9}};
     memset(out, 0, HARMONY_SEGMENT_MAX_INTERVALS * sizeof(int));
     if (claim->seventh) {
-        if (claim->quality < 0 || claim->quality >= (int)STANDARD_TONALITY_SEVENTH_QUALITY_COUNT) {
+        if (!standard_tonality_seventh_quality_semitones((StandardTonalitySeventhQuality)claim->quality, out)) {
             return false;
         }
-        memcpy(out, SEVENTHS[claim->quality], 4 * sizeof(int));
         *count = 4;
     } else {
-        if (claim->quality < 0 || claim->quality >= (int)STANDARD_TONALITY_TRIAD_QUALITY_COUNT) {
+        if (!standard_tonality_triad_quality_semitones((StandardTonalityTriadQuality)claim->quality, out)) {
             return false;
         }
-        memcpy(out, TRIADS[claim->quality], 3 * sizeof(int));
         *count = 3;
     }
     return true;

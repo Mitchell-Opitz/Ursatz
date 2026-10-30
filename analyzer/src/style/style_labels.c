@@ -7,6 +7,7 @@
 
 #include "core/rational.h"
 #include "standard-tonality/roman_numeral_grammar.h"
+#include "standard-tonality/tonal_key.h"
 
 static const char *const dimension_names[STYLE_DIMENSION_COUNT] = {"harmony", "rhythm", "melody", "form"};
 
@@ -141,10 +142,8 @@ void style_label_duration(unsigned long numerator, unsigned long denominator, ch
     snprintf(buffer, size, "%lu/%lu", numerator / divisor, denominator / divisor);
 }
 
-static const char *const degree_labels[12] = {"1", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7"};
-
 const char *style_label_degree(int pitch_class, int tonic_pc) {
-    return degree_labels[(((pitch_class - tonic_pc) % 12) + 12) % 12];
+    return standard_tonality_chromatic_degree_label(pitch_class - tonic_pc);
 }
 
 char *style_label_join(const char *const *parts, size_t count) {

@@ -21,7 +21,8 @@ analyzer 0.2.0) is `MOTIVE_LINKS_ERR_NO_FEATURES`: analyze the piece again. The 
 corpus again. The scope is the caller's choice (a corpus run, a collection, a subject), so one cache serves them all.
 
 Each family is read from its prototype's `features` (see [analysis-document.md](analysis-document.md)) as a melodic
-sketch, without chords, in the key region of the prototype's first note (`motive_features_sketch`). The sketch is then
+sketch, without chords, in the key region of the prototype's first note (`motive_features_to_sketch`, the one mapping from features to a sketch; the report builds the same sketch for the
+fingerprint it prints, so a family has one sketch whichever side it is read from). The sketch is then
 moved to the key of C, keeping its mode, by the shortest way that puts its tonic on C. The relations keep a sketch's
 scale, so two motives in different keys could never be made equal otherwise; once both are in C they differ only by the
 relations. A link between a G major motive and a C major one therefore reads as the same chain as between two C major
@@ -34,7 +35,7 @@ Recognizing a pair that is not a link costs time: a depth-2 miss takes about 330
 [motive-link.md](../external/ursatz/docs/modules/motive-link.md)). So each family takes only the families of other pieces
 at nearness at least 1/2 (the mean of the four dimension similarities, `motive_link_nearness`), nearest first, ties by
 piece order and then family index, and at most `--candidates` of them (default 4). The union of these as unordered pairs
-is what gets compared, each pair once.
+is what gets compared, each pair once. The kernel picks them (`motive_link_candidates`).
 
 A pair is compared with `motive_link_pair`, the earlier family in scope order as the source, depth 2 (`--depth`) and no
 admit filter. A chain is directional: a fragment of a motive is reached from the whole, not the whole from the fragment.
@@ -42,7 +43,9 @@ So when no chain runs from the source to the other family, the other way is trie
 from b to a. In the text output a link is printed in the direction of its chain, source first.
 
 Linked families are grouped by union: if A links to B and B to C, the group is A, B, C even when A and C were not
-compared. Groups list their members in scope order, the largest group first.
+compared. The kernel finds the groups (`motive_link_groups`, connected components numbered by their first member); the
+analyzer puts them in order, the largest group first and equal sizes by first member, and lists each group's members in
+scope order.
 
 ## The cache
 

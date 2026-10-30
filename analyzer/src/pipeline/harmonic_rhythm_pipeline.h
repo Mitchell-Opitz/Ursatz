@@ -2,6 +2,7 @@
 #define URSATZ_ANALYZER_HARMONIC_RHYTHM_PIPELINE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
@@ -20,8 +21,10 @@
  */
 bool harmonic_rhythm_stage_collect(const ImportedNotes *notes, AnalysisReport *report);
 
-/* Whether entry starts different harmony from previous: another base numeral, or another key region (a segment with no
-   numeral differs from one that has one). The rhythm stage uses the same definition for its chord changes. */
-bool harmonic_rhythm_is_change(const AnalysisReportEntry *previous, const AnalysisReportEntry *entry);
+/* Marks in *flags (one per entry, owned by the caller, free) the entries that start different harmony from the entry
+   before: another base numeral or key region (a segment with no numeral differs from one that has one), and the first
+   entry. The rule is the library's standard_meter_check_changes. The rhythm stage and the meter check use the same
+   changes. False, *flags NULL, when a time does not fit or on allocation failure. */
+bool harmonic_rhythm_change_flags(const AnalysisReportEntry *entries, size_t count, bool **flags);
 
 #endif

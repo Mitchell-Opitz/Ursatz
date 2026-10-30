@@ -47,27 +47,58 @@ static const MusicalTime *onset_of(const ImportedNotes *notes, size_t note) {
     return temporal_anchor_position(note_event_temporal_anchor(notes->events[note]));
 }
 
-static const ImportedNotes *sort_notes;
-
-static int compare_onset(const void *left, const void *right) {
-    size_t a = *(const size_t *)left;
-    size_t b = *(const size_t *)right;
-    const MusicalTime *time_a = onset_of(sort_notes, a);
-    const MusicalTime *time_b = onset_of(sort_notes, b);
+/* The order of two notes of a voice: onset, then pitch. */
+static int compare_onset(const ImportedNotes *notes, size_t a, size_t b) {
+    const MusicalTime *time_a = onset_of(notes, a);
+    const MusicalTime *time_b = onset_of(notes, b);
     int order = rational_cmp(
         rational_ratio((long long)musical_time_numerator(time_a), (long long)musical_time_denominator(time_a)),
         rational_ratio((long long)musical_time_numerator(time_b), (long long)musical_time_denominator(time_b)));
     if (order != 0) {
         return order;
     }
-    long pitch_a = pitch_numeric_value_position_numerator(sort_notes->pitch_values[a]);
-    long pitch_b = pitch_numeric_value_position_numerator(sort_notes->pitch_values[b]);
+    long pitch_a = pitch_numeric_value_position_numerator(notes->pitch_values[a]);
+    long pitch_b = pitch_numeric_value_position_numerator(notes->pitch_values[b]);
     return pitch_a < pitch_b ? -1 : (pitch_a > pitch_b ? 1 : 0);
 }
 
-static void sort_voice(const ImportedNotes *notes, VoiceNotes *voice) {
-    sort_notes = notes;
-    qsort(voice->notes, voice->count, sizeof(size_t), compare_onset);
+/* A stable merge sort of the voice's note indexes by onset, then pitch. False on allocation failure. */
+static bool sort_voice(const ImportedNotes *notes, VoiceNotes *voice) {
+    if (voice->count < 2) {
+        return true;
+    }
+    size_t *buffer = malloc(voice->count * sizeof(size_t));
+    if (!buffer) {
+        return false;
+    }
+    size_t *from = voice->notes;
+    size_t *to = buffer;
+    for (size_t width = 1; width < voice->count; width *= 2) {
+        for (size_t low = 0; low < voice->count; low += 2 * width) {
+            size_t mid = low + width < voice->count ? low + width : voice->count;
+            size_t high = low + 2 * width < voice->count ? low + 2 * width : voice->count;
+            size_t left = low;
+            size_t right = mid;
+            size_t out = low;
+            while (left < mid && right < high) {
+                to[out++] = compare_onset(notes, from[right], from[left]) < 0 ? from[right++] : from[left++];
+            }
+            while (left < mid) {
+                to[out++] = from[left++];
+            }
+            while (right < high) {
+                to[out++] = from[right++];
+            }
+        }
+        size_t *swap = from;
+        from = to;
+        to = swap;
+    }
+    if (from != voice->notes) {
+        memcpy(voice->notes, from, voice->count * sizeof(size_t));
+    }
+    free(buffer);
+    return true;
 }
 
 /* The sum of the voice's pitches over its note count, compared across voices without dividing. */
@@ -92,8 +123,11 @@ static CounterpointCheckResult voices_from_streams(const ImportedNotes *notes, T
         VoiceNotes *voice = &voices[notes->streams[i] == first ? 0 : 1];
         voice->notes[voice->count++] = i;
     }
-    sort_voice(notes, &voices[0]);
-    sort_voice(notes, &voices[1]);
+    if (!sort_voice(notes, &voices[0]) || !sort_voice(notes, &voices[1])) {
+        free(voices[0].notes);
+        free(voices[1].notes);
+        return COUNTERPOINT_CHECK_ERR_ALLOC;
+    }
     /* the higher mean pitch is the upper voice: sum_a / count_a against sum_b / count_b */
     bool first_is_upper = pitch_sum(notes, &voices[0]) * (long)voices[1].count >=
                           pitch_sum(notes, &voices[1]) * (long)voices[0].count;
@@ -149,41 +183,39 @@ static CounterpointCheckResult voices_from_separation(const ImportedNotes *notes
 
 /* ---- Exact times ---- */
 
-/* Set when a time does not fit a Rational; the species check then ends in failure instead of reading a wrapped time. */
-static bool q_overflowed;
-
-static Rational q_checked(RationalResult result, Rational value) {
+/* *overflow is set when a time does not fit a Rational; the species check then ends in failure instead of reading a wrapped time. */
+static Rational q_checked(bool *overflow, RationalResult result, Rational value) {
     if (result != RATIONAL_OK) {
-        q_overflowed = true;
+        *overflow = true;
         return (Rational){0, 1};
     }
     return value;
 }
 
-static Rational q_add(Rational a, Rational b) {
+static Rational q_add(bool *overflow, Rational a, Rational b) {
     Rational sum = {0, 1};
-    return q_checked(rational_add(a, b, &sum), sum);
+    return q_checked(overflow, rational_add(a, b, &sum), sum);
 }
-static Rational q_mul(Rational a, long long k) {
+static Rational q_mul(bool *overflow, Rational a, long long k) {
     Rational product = {0, 1};
-    return q_checked(rational_mul_int(a, k, &product), product);
+    return q_checked(overflow, rational_mul_int(a, k, &product), product);
 }
-static Rational q_div(Rational a, long long k) {
+static Rational q_div(bool *overflow, Rational a, long long k) {
     Rational quotient = {0, 1};
-    return q_checked(rational_div_int(a, k, &quotient), quotient);
+    return q_checked(overflow, rational_div_int(a, k, &quotient), quotient);
 }
 static int q_cmp(Rational a, Rational b) { return rational_cmp(a, b); }
-static Rational q_of_time(const MusicalTime *time) {
+static Rational q_of_time(bool *overflow, const MusicalTime *time) {
     Rational value = {0, 1};
-    return q_checked(rational_of_musical_time(time, &value), value);
+    return q_checked(overflow, rational_of_musical_time(time, &value), value);
 }
 
-static Rational onset_q(const ImportedNotes *notes, size_t note) { return q_of_time(onset_of(notes, note)); }
+static Rational onset_q(bool *overflow, const ImportedNotes *notes, size_t note) { return q_of_time(overflow, onset_of(notes, note)); }
 
-static Rational release_q(const ImportedNotes *notes, size_t note) {
+static Rational release_q(bool *overflow, const ImportedNotes *notes, size_t note) {
     Rational length = {0, 1};
-    return q_add(onset_q(notes, note),
-                 q_checked(rational_of_duration(note_event_duration(notes->events[note]), &length), length));
+    return q_add(overflow, onset_q(overflow, notes, note),
+                 q_checked(overflow, rational_of_duration(note_event_duration(notes->events[note]), &length), length));
 }
 
 /* ---- The lines of a species ---- */
@@ -210,9 +242,9 @@ static int slots_per_bar(int species) {
 }
 
 /* Whether each voice is a line of single notes, one after the other. */
-static bool is_monophonic(const ImportedNotes *notes, const VoiceNotes *voice) {
+static bool is_monophonic(bool *overflow, const ImportedNotes *notes, const VoiceNotes *voice) {
     for (size_t i = 0; i + 1 < voice->count; i++) {
-        if (q_cmp(release_q(notes, voice->notes[i]), onset_q(notes, voice->notes[i + 1])) > 0) {
+        if (q_cmp(release_q(overflow, notes, voice->notes[i]), onset_q(overflow, notes, voice->notes[i + 1])) > 0) {
             return false;
         }
     }
@@ -220,8 +252,8 @@ static bool is_monophonic(const ImportedNotes *notes, const VoiceNotes *voice) {
 }
 
 /* Species 1: the lines note against note, position by position. */
-static const char *build_first_species(const ImportedNotes *notes, const VoiceNotes *cantus, const VoiceNotes *line,
-                                       PitchSpelling *const *spelled, SpeciesLines *out) {
+static const char *build_first_species(bool *overflow, const ImportedNotes *notes, const VoiceNotes *cantus,
+                                       const VoiceNotes *line, PitchSpelling *const *spelled, SpeciesLines *out) {
     if (cantus->count != line->count) {
         return "the voices do not have the same number of notes";
     }
@@ -231,7 +263,7 @@ static const char *build_first_species(const ImportedNotes *notes, const VoiceNo
         return NULL;
     }
     for (size_t i = 0; i < cantus->count; i++) {
-        if (q_cmp(onset_q(notes, cantus->notes[i]), onset_q(notes, line->notes[i])) != 0) {
+        if (q_cmp(onset_q(overflow, notes, cantus->notes[i]), onset_q(overflow, notes, line->notes[i])) != 0) {
             return "the voices do not move together note against note";
         }
         out->cantus[i] = spelled[cantus->notes[i]];
@@ -244,7 +276,7 @@ static const char *build_first_species(const ImportedNotes *notes, const VoiceNo
 
 /* Species 2 to 5: one cantus firmus note to a measure, the counterpoint sampled on the slots of each measure. A slot
    holds an attack when a note starts on it, a tie when a note sounds on it from before, a rest when none sounds. */
-static const char *build_slotted(const ImportedNotes *notes, int species, const VoiceNotes *cantus,
+static const char *build_slotted(bool *overflow, const ImportedNotes *notes, int species, const VoiceNotes *cantus,
                                  const VoiceNotes *line, PitchSpelling *const *spelled, SpeciesLines *out) {
     const MeterMap *map = notes->meter.meter_map;
     int per_bar = slots_per_bar(species);
@@ -257,7 +289,7 @@ static const char *build_slotted(const ImportedNotes *notes, int species, const 
     size_t next = 0; /* the first note of the counterpoint that has not ended */
     int previous_measure = 0;
     for (size_t bar = 0; bar < cantus->count; bar++) {
-        Rational onset = onset_q(notes, cantus->notes[bar]);
+        Rational onset = onset_q(overflow, notes, cantus->notes[bar]);
         MusicalTime *at = NULL;
         TimeSpan *span = NULL;
         int measure = 0;
@@ -269,8 +301,8 @@ static const char *build_slotted(const ImportedNotes *notes, int species, const 
         if (found != METER_MAP_OK || meter_map_measure_span(map, measure, &span) != METER_MAP_OK) {
             return "the measures cannot be read";
         }
-        Rational start = q_of_time(time_span_start(span));
-        Rational end = q_of_time(time_span_end(span));
+        Rational start = q_of_time(overflow, time_span_start(span));
+        Rational end = q_of_time(overflow, time_span_end(span));
         time_span_destroy(span);
         if (q_cmp(onset, start) != 0 || (bar > 0 && measure != previous_measure + 1)) {
             return "the cantus firmus is not one note to a measure";
@@ -278,13 +310,13 @@ static const char *build_slotted(const ImportedNotes *notes, int species, const 
         previous_measure = measure;
         out->cantus[bar] = spelled[cantus->notes[bar]];
         for (int slot = 0; slot < per_bar; slot++) {
-            Rational at_slot = q_add(start, q_div(q_mul(q_add(end, q_mul(start, -1)), slot), per_bar));
-            while (next < line->count && q_cmp(release_q(notes, line->notes[next]), at_slot) <= 0) {
+            Rational at_slot = q_add(overflow, start, q_div(overflow, q_mul(overflow, q_add(overflow, end, q_mul(overflow, start, -1)), slot), per_bar));
+            while (next < line->count && q_cmp(release_q(overflow, notes, line->notes[next]), at_slot) <= 0) {
                 next++;
             }
             StandardCounterpointSlot *cell = &out->slots[out->slot_count++];
-            if (next < line->count && q_cmp(onset_q(notes, line->notes[next]), at_slot) <= 0) {
-                bool attack = q_cmp(onset_q(notes, line->notes[next]), at_slot) == 0;
+            if (next < line->count && q_cmp(onset_q(overflow, notes, line->notes[next]), at_slot) <= 0) {
+                bool attack = q_cmp(onset_q(overflow, notes, line->notes[next]), at_slot) == 0;
                 attacks += attack ? 1 : 0;
                 *cell = (StandardCounterpointSlot){attack ? STANDARD_COUNTERPOINT_SLOT_ATTACK
                                                           : STANDARD_COUNTERPOINT_SLOT_TIE,
@@ -417,7 +449,7 @@ static int stream_count(const ImportedNotes *notes) {
 }
 
 /* The span and the notes of both voices. False on allocation failure. */
-static bool record_span(const ImportedNotes *notes, const TwoVoices *voices, AnalysisCounterpointCheck *out) {
+static bool record_span(bool *overflow, const ImportedNotes *notes, const TwoVoices *voices, AnalysisCounterpointCheck *out) {
     out->note_ids = malloc((voices->upper.count + voices->lower.count) * sizeof(size_t));
     if (!out->note_ids) {
         return false;
@@ -430,8 +462,8 @@ static bool record_span(const ImportedNotes *notes, const TwoVoices *voices, Ana
         for (size_t i = 0; i < voice->count; i++) {
             size_t note = voice->notes[i];
             out->note_ids[out->note_id_count++] = note;
-            Rational on = onset_q(notes, note);
-            Rational off = release_q(notes, note);
+            Rational on = onset_q(overflow, notes, note);
+            Rational off = release_q(overflow, notes, note);
             start = first || q_cmp(on, start) < 0 ? on : start;
             end = first || q_cmp(off, end) > 0 ? off : end;
             first = false;
@@ -449,12 +481,13 @@ static bool record_span(const ImportedNotes *notes, const TwoVoices *voices, Ana
 static CounterpointCheckResult check_voices(const ImportedNotes *notes, const TwoVoices *voices, bool cantus_upper,
                                             AnalysisReport *report, AnalysisCounterpointCheck *out) {
     CounterpointCheckResult result = COUNTERPOINT_CHECK_ERR_ALLOC;
-    q_overflowed = false;
+    bool overflowed = false;
+    bool *overflow = &overflowed;
     bool prefer_flats = report->key_region_count > 0 ? report->key_regions[report->home_region].prefer_flats : false;
     PitchSpelling **spelled = calloc(notes->count, sizeof(PitchSpelling *));
     PitchSpelling *tonic = NULL;
     SpeciesLines lines = {0};
-    if (!spelled || !record_span(notes, voices, out)) {
+    if (!spelled || !record_span(overflow, notes, voices, out)) {
         goto done;
     }
     for (size_t i = 0; i < out->note_id_count; i++) {
@@ -468,12 +501,12 @@ static CounterpointCheckResult check_voices(const ImportedNotes *notes, const Tw
     for (size_t i = 0; i < out->note_id_count && !out->shape_error; i++) {
         out->shape_error = spelled[out->note_ids[i]] ? NULL : "a note has no pitch name";
     }
-    if (!out->shape_error && !(is_monophonic(notes, cantus) && is_monophonic(notes, line))) {
+    if (!out->shape_error && !(is_monophonic(overflow, notes, cantus) && is_monophonic(overflow, notes, line))) {
         out->shape_error = "a voice has notes that sound together";
     }
     if (!out->shape_error) {
-        out->shape_error = out->species == 1 ? build_first_species(notes, cantus, line, spelled, &lines)
-                                              : build_slotted(notes, out->species, cantus, line, spelled, &lines);
+        out->shape_error = out->species == 1 ? build_first_species(overflow, notes, cantus, line, spelled, &lines)
+                                              : build_slotted(overflow, notes, out->species, cantus, line, spelled, &lines);
         if (!out->shape_error && (!lines.cantus || (out->species == 1 ? !lines.line : !lines.slots))) {
             goto done; /* an allocation failed in the builder */
         }
@@ -497,7 +530,7 @@ static CounterpointCheckResult check_voices(const ImportedNotes *notes, const Tw
             out->shape_error = "the voices are not an exercise of the species";
         }
     }
-    if (q_overflowed) {
+    if (overflowed) {
         goto done; /* a time does not fit an exact rational */
     }
     result = COUNTERPOINT_CHECK_OK;

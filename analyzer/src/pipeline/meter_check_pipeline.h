@@ -21,7 +21,7 @@
  * nearest an eighth note, then the one with denominator 4 over 8.
  *
  * Score: over the weights of the evidence the piece has, the harmony changes (report entries as
- * harmonic_rhythm_is_change reads them, the first segment included) on a downbeat, weight 2, plus on any beat, weight 1,
+ * harmonic_rhythm_change_flags reads them, the first segment included) on a downbeat, weight 2, plus on any beat, weight 1,
  * and the cadence arrivals on a downbeat, weight 3. The downbeat share of the changes is the harmonic mean of the share
  * of the changes on a downbeat and the share of the downbeats that carry a change: raw shares always favour a grid with
  * a barline at every beat, which holds every downbeat of the real meter and more. For the same reason a candidate whose

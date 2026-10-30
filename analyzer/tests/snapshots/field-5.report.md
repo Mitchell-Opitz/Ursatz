@@ -68,7 +68,7 @@ Positions are measure and beat. Numeral is the Roman numeral in the local key re
 | m. 6, beat 1 to m. 6, beat 2 | minor | i (in D minor) | tonic | - | D | minor | D | root position | 1 | 0.35 | - |
 | m. 6, beat 2 to m. 6, beat 3 | minor | i6/4 | tonic | - | D | minor | A | second | 1 | 0.13 | - |
 | m. 6, beat 3 to m. 6, beat 4 | minor7 | ii4/3 | predominant (strong) | - | E | minor7 | B | second | 1 | 0.53 | - |
-| m. 6, beat 4 to m. 7, beat 1 | minor | i | tonic | - | D | minor | G# | - | 1 | 0.98 | - |
+| m. 6, beat 4 to m. 7, beat 1 | minor | i | tonic | - | D | minor | Ab | - | 1 | 0.98 | - |
 | m. 7, beat 1 to m. 7, beat 2 | dominant7 | VII7 | predominant (weak) | - | C | dominant7 | C | root position | 1 | 0.83 | - |
 | m. 7, beat 2 to m. 7, beat 3 | dominant7 | VII4/3 | predominant (weak) | - | C | dominant7 | G | second | 1 | 0.56 | - |
 | m. 7, beat 3 to m. 7, beat 4 | minor | iv | predominant (strong) | - | G | minor | C | - | 1 | 0.11 | minor7 (D minor7, score 0.68) |
@@ -257,7 +257,7 @@ The highest (soprano) and lowest (bass) sounding note of each chord's span, with
 | m. 6, beat 1 to m. 6, beat 2 | D minor | F5 | 3 | D3 | 1 |
 | m. 6, beat 2 to m. 6, beat 3 | D minor | F5 | 3 | A3 | 5 |
 | m. 6, beat 3 to m. 6, beat 4 | D minor | E5 | 2 | B2 | #6 |
-| m. 6, beat 4 to m. 7, beat 1 | D minor | D5 | 1 | G#3 | #4 |
+| m. 6, beat 4 to m. 7, beat 1 | D minor | D5 | 1 | Ab3 | #4 |
 | m. 7, beat 1 to m. 7, beat 2 | D minor | C5 | 7 | C3 | 7 |
 | m. 7, beat 2 to m. 7, beat 3 | D minor | C5 | 7 | G3 | 4 |
 | m. 7, beat 3 to m. 7, beat 4 | D minor | D5 | 1 | C3 | 7 |
