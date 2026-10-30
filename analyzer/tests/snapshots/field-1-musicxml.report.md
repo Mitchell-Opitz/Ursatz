@@ -896,7 +896,7 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 
 ## Non-chord tones
 
-217 notes sound against a chord without being one of its tones; 145 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
+217 notes sound against a chord without being one of its tones; 137 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
 
 | Position | Note | Type | Against |
 | --- | --- | --- | --- |
@@ -906,25 +906,25 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 3, beat 1 to m. 3, beat 2 | 15 | unclassified | V |
 | m. 3, beat 1 to m. 3, beat 2 | 20 | anticipation | V |
 | m. 3, beat 2 to m. 3, beat 3 | 23 | escape-tone | half-diminished7 |
-| m. 3, beat 3 to m. 3, beat 4 | 20 | unclassified | V |
+| m. 3, beat 3 to m. 3, beat 4 | 20 | pedal | V |
 | m. 6, beat 4 to m. 7, beat 1 | 59 | unclassified | minor7 |
 | m. 6, beat 4 to m. 7, beat 1 | 72 | unclassified | minor7 |
 | m. 7, beat 1 to m. 7, beat 2 | 77 | anticipation | V |
-| m. 7, beat 2 to m. 7, beat 3 | 80 | unclassified | half-diminished7 |
+| m. 7, beat 2 to m. 7, beat 3 | 80 | escape-tone | half-diminished7 |
 | m. 7, beat 2 to m. 7, beat 3 | 81 | anticipation | half-diminished7 |
 | m. 10, beat 1 to m. 10, beat 2 | 119 | unclassified | vii° |
-| m. 10, beat 2 to m. 10, beat 3 | 117 | unclassified | IV |
+| m. 10, beat 2 to m. 10, beat 3 | 117 | pedal | IV |
 | m. 11, beat 1 to m. 11, beat 2 | 128 | unclassified | dominant7 |
 | m. 11, beat 1 to m. 11, beat 2 | 134 | escape-tone | dominant7 |
 | m. 11, beat 1 to m. 11, beat 2 | 137 | unclassified | dominant7 |
 | m. 11, beat 2 to m. 11, beat 3 | 137 | unclassified | dominant7 |
 | m. 11, beat 3 to m. 11, beat 4 | 146 | anticipation | vii° |
-| m. 11, beat 4 to m. 12, beat 1 | 148 | unclassified | iii |
+| m. 11, beat 4 to m. 12, beat 1 | 148 | pedal | iii |
 | m. 12, beat 1 to m. 12, beat 2 | 151 | unclassified | I |
 | m. 12, beat 2 to m. 12, beat 3 | 151 | unclassified | I |
 | m. 13, beat 2 to m. 13, beat 3 | 171 | unclassified | minor7 |
 | m. 13, beat 3 to m. 13, beat 4 | 173 | unclassified | I |
-| m. 14, beat 1 to m. 14, beat 2 | 184 | unclassified | half-diminished7 |
+| m. 14, beat 1 to m. 14, beat 2 | 184 | anticipation | half-diminished7 |
 | m. 14, beat 2 to m. 14, beat 3 | 182 | unclassified | IV |
 | m. 15, beat 1 to m. 15, beat 2 | 199 | unclassified | V |
 | m. 15, beat 1 to m. 15, beat 2 | 202 | unclassified | V |
@@ -935,7 +935,7 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 16, beat 4 to m. 17, beat 1 | 227 | unclassified | I |
 | m. 17, beat 1 to m. 17, beat 2 | 229 | suspension | half-diminished7 |
 | m. 17, beat 2 to m. 17, beat 3 | 235 | unclassified | dominant7 |
-| m. 17, beat 3 to m. 17, beat 4 | 243 | anticipation | minor7 |
+| m. 17, beat 3 to m. 17, beat 4 | 243 | unclassified | minor7 |
 | m. 17, beat 4 to m. 18, beat 1 | 242 | unclassified | dominant7 |
 | m. 18, beat 1 to m. 18, beat 2 | 247 | unclassified | major7 |
 | m. 18, beat 1 to m. 18, beat 2 | 252 | neighbor | major7 |
@@ -943,38 +943,38 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 19, beat 1 to m. 19, beat 2 | 270 | suspension | vii° |
 | m. 19, beat 2 to m. 19, beat 3 | 275 | unclassified | half-diminished7 |
 | m. 19, beat 3 to m. 19, beat 4 | 280 | unclassified | half-diminished7 |
-| m. 19, beat 3 to m. 19, beat 4 | 282 | unclassified | half-diminished7 |
+| m. 19, beat 3 to m. 19, beat 4 | 282 | anticipation | half-diminished7 |
 | m. 20, beat 1 to m. 20, beat 2 | 288 | unclassified | I |
 | m. 20, beat 3 to m. 20, beat 4 | 300 | anticipation | I |
 | m. 21, beat 1 to m. 21, beat 2 | 303 | unclassified | I |
-| m. 22, beat 1 to m. 22, beat 2 | 321 | escape-tone | dominant7 |
-| m. 22, beat 1 to m. 22, beat 2 | 324 | appoggiatura | dominant7 |
+| m. 22, beat 1 to m. 22, beat 2 | 321 | changing-tone | dominant7 |
+| m. 22, beat 1 to m. 22, beat 2 | 324 | changing-tone | dominant7 |
 | m. 22, beat 3 to m. 22, beat 4 | 333 | anticipation | dominant7 |
 | m. 22, beat 4 to m. 23, beat 1 | 335 | unclassified | minor7 |
-| m. 23, beat 1 to m. 23, beat 2 | 333 | unclassified | minor7 |
+| m. 23, beat 1 to m. 23, beat 2 | 333 | pedal | minor7 |
 | m. 23, beat 1 to m. 23, beat 2 | 339 | unclassified | minor7 |
-| m. 23, beat 2 to m. 23, beat 3 | 337 | unclassified | I |
-| m. 23, beat 3 to m. 23, beat 4 | 348 | appoggiatura | I |
+| m. 23, beat 2 to m. 23, beat 3 | 337 | pedal | I |
+| m. 23, beat 3 to m. 23, beat 4 | 348 | unclassified | I |
 | m. 23, beat 4 to m. 24, beat 1 | 348 | suspension | major7 |
 | m. 23, beat 4 to m. 24, beat 1 | 354 | unclassified | major7 |
 | m. 24, beat 4 to m. 25, beat 1 | 371 | unclassified | minor7 |
 | m. 25, beat 1 to m. 25, beat 2 | 371 | unclassified | minor7 |
-| m. 25, beat 4 to m. 26, beat 1 | 391 | escape-tone | I |
+| m. 25, beat 4 to m. 26, beat 1 | 391 | unclassified | I |
 | m. 26, beat 1 to m. 26, beat 3 | 391 | unclassified | dominant7 |
 | m. 26, beat 3 to m. 26, beat 4 | 400 | appoggiatura | dominant7 |
 | m. 26, beat 3 to m. 26, beat 4 | 403 | escape-tone | dominant7 |
 | m. 27, beat 1 to m. 27, beat 2 | 413 | unclassified | minor7 |
-| m. 27, beat 2 to m. 27, beat 3 | 411 | unclassified | I |
+| m. 27, beat 2 to m. 27, beat 3 | 411 | pedal | I |
 | m. 30, beat 1 to m. 30, beat 2 | 460 | anticipation | major |
 | m. 30, beat 2 to m. 30, beat 3 | 462 | unclassified | half-diminished7 |
 | m. 30, beat 2 to m. 30, beat 3 | 463 | escape-tone | half-diminished7 |
-| m. 30, beat 3 to m. 30, beat 4 | 460 | unclassified | major |
-| m. 30, beat 4 to m. 31, beat 1 | 464 | unclassified | augmented |
+| m. 30, beat 3 to m. 30, beat 4 | 460 | anticipation | major |
+| m. 30, beat 4 to m. 31, beat 1 | 464 | pedal | augmented |
 | m. 30, beat 4 to m. 31, beat 1 | 468 | appoggiatura | augmented |
 | m. 30, beat 4 to m. 31, beat 1 | 472 | anticipation | augmented |
 | m. 31, beat 1 to m. 31, beat 2 | 469 | unclassified | half-diminished7 |
 | m. 31, beat 1 to m. 31, beat 2 | 475 | appoggiatura | half-diminished7 |
-| m. 31, beat 2 to m. 31, beat 3 | 472 | unclassified | minor |
+| m. 31, beat 2 to m. 31, beat 3 | 472 | pedal | minor |
 | m. 32, beat 4 to m. 33, beat 1 | 496 | escape-tone | minor7 |
 | m. 33, beat 1 to m. 33, beat 2 | 498 | unclassified | major |
 | m. 33, beat 4 to m. 34, beat 1 | 512 | unclassified | minor |
@@ -996,7 +996,7 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 38, beat 4 to m. 39, beat 1 | 600 | appoggiatura | dominant7 |
 | m. 38, beat 4 to m. 39, beat 1 | 604 | anticipation | dominant7 |
 | m. 39, beat 1 to m. 39, beat 2 | 602 | unclassified | major7 |
-| m. 39, beat 1 to m. 39, beat 2 | 607 | unclassified | major7 |
+| m. 39, beat 1 to m. 39, beat 2 | 607 | pedal | major7 |
 | m. 39, beat 4 to m. 40, beat 1 | 621 | unclassified | major7 |
 | m. 40, beat 2 to m. 40, beat 3 | 632 | unclassified | minor7 |
 | m. 40, beat 2 to m. 40, beat 3 | 634 | unclassified | minor7 |
@@ -1004,17 +1004,17 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 40, beat 3 to m. 40, beat 4 | 641 | unclassified | vii° |
 | m. 40, beat 4 to m. 41, beat 1 | 644 | unclassified | V |
 | m. 40, beat 4 to m. 41, beat 1 | 648 | anticipation | V |
-| m. 41, beat 3 to m. 41, beat 4 | 658 | anticipation | dominant7 |
+| m. 41, beat 3 to m. 41, beat 4 | 658 | unclassified | dominant7 |
 | m. 41, beat 3 to m. 41, beat 4 | 660 | unclassified | dominant7 |
 | m. 41, beat 3 to m. 41, beat 4 | 663 | unclassified | dominant7 |
-| m. 41, beat 3 to m. 41, beat 4 | 664 | anticipation | dominant7 |
 | m. 41, beat 3 to m. 41, beat 4 | 665 | anticipation | dominant7 |
+| m. 41, beat 3 to m. 41, beat 4 | 664 | anticipation | dominant7 |
 | m. 41, beat 4.33 to m. 42, beat 1 | 672 | unclassified | ii |
 | m. 41, beat 4.33 to m. 42, beat 1 | 674 | unclassified | ii |
 | m. 41, beat 4.33 to m. 42, beat 1 | 675 | anticipation | ii |
 | m. 42, beat 2 to m. 42, beat 3 | 688 | unclassified | major7 |
 | m. 42, beat 3 to m. 42, beat 4 | 691 | escape-tone | iii |
-| m. 42, beat 3 to m. 42, beat 4 | 695 | unclassified | iii |
+| m. 42, beat 3 to m. 42, beat 4 | 695 | anticipation | iii |
 | m. 42, beat 4 to m. 43, beat 1 | 693 | unclassified | dominant7 |
 | m. 42, beat 4 to m. 43, beat 1 | 697 | appoggiatura | dominant7 |
 | m. 44, beat 3 to m. 44, beat 4 | 724 | unclassified | vi |
@@ -1025,11 +1025,11 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 44, beat 4 to m. 45, beat 1 | 729 | unclassified | vii° |
 | m. 45, beat 1 to m. 45, beat 2 | 734 | anticipation | V |
 | m. 45, beat 2 to m. 45, beat 3 | 737 | escape-tone | half-diminished7 |
-| m. 45, beat 3 to m. 45, beat 4 | 734 | unclassified | V |
+| m. 45, beat 3 to m. 45, beat 4 | 734 | pedal | V |
 | m. 45, beat 4.33 to m. 46, beat 1 | 746 | anticipation | V |
-| m. 47, beat 3 to m. 47, beat 4 | 770 | passing | I |
+| m. 47, beat 3 to m. 47, beat 4 | 770 | unclassified | I |
 | m. 47, beat 3 to m. 47, beat 4 | 772 | unclassified | I |
-| m. 47, beat 4 to m. 48, beat 1 | 770 | suspension | I |
+| m. 47, beat 4 to m. 48, beat 1 | 770 | unclassified | I |
 | m. 47, beat 4 to m. 48, beat 1 | 772 | unclassified | I |
 | m. 47, beat 4 to m. 48, beat 1 | 776 | unclassified | I |
 | m. 48, beat 3 to m. 48, beat 4 | 790 | unclassified | major7 |
@@ -1051,7 +1051,7 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 51, beat 1 to m. 51, beat 3 | 854 | unclassified | minor7 |
 | m. 51, beat 1 to m. 51, beat 3 | 857 | unclassified | minor7 |
 | m. 51, beat 3 to m. 51, beat 4 | 860 | unclassified | vii° |
-| m. 51, beat 3 to m. 51, beat 4 | 861 | unclassified | vii° |
+| m. 51, beat 3 to m. 51, beat 4 | 861 | anticipation | vii° |
 | m. 51, beat 4 to m. 52, beat 1 | 863 | unclassified | major7 |
 | m. 51, beat 4 to m. 52, beat 1 | 865 | unclassified | major7 |
 | m. 52, beat 1 to m. 52, beat 2 | 865 | unclassified | IV |
@@ -1072,14 +1072,14 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 56, beat 3 to m. 56, beat 4 | 945 | unclassified | major7 |
 | m. 56, beat 4 to m. 57, beat 1 | 952 | appoggiatura | minor7 |
 | m. 56, beat 4 to m. 57, beat 1 | 956 | unclassified | minor7 |
-| m. 56, beat 4 to m. 57, beat 1 | 957 | appoggiatura | minor7 |
+| m. 56, beat 4 to m. 57, beat 1 | 957 | unclassified | minor7 |
 | m. 57, beat 1 to m. 57, beat 1.33 | 957 | unclassified | V |
 | m. 57, beat 1.33 to m. 57, beat 2 | 961 | neighbor | V |
 | m. 57, beat 1.33 to m. 57, beat 2 | 964 | unclassified | V |
 | m. 57, beat 2 to m. 57, beat 3 | 968 | unclassified | IV |
 | m. 57, beat 2 to m. 57, beat 3 | 969 | escape-tone | IV |
 | m. 57, beat 3 to m. 57, beat 4 | 971 | unclassified | minor7 |
-| m. 57, beat 4 to m. 58, beat 1 | 967 | unclassified | dominant7 |
+| m. 57, beat 4 to m. 58, beat 1 | 967 | pedal | dominant7 |
 | m. 59, beat 1 to m. 59, beat 2 | 991 | appoggiatura | dominant7 |
 | m. 59, beat 1 to m. 59, beat 2 | 995 | unclassified | dominant7 |
 | m. 59, beat 2 to m. 59, beat 3 | 997 | passing | dominant7 |
@@ -1098,14 +1098,14 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 63, beat 3 to m. 63, beat 4 | 1098 | unclassified | vii° |
 | m. 63, beat 3 to m. 63, beat 4 | 1101 | escape-tone | vii° |
 | m. 63, beat 3 to m. 63, beat 4 | 1102 | escape-tone | vii° |
-| m. 63, beat 4 to m. 64, beat 1 | 1109 | escape-tone | dominant7 |
+| m. 63, beat 4 to m. 64, beat 1 | 1109 | unclassified | dominant7 |
 | m. 64, beat 1 to m. 64, beat 2 | 1109 | unclassified | I |
 | m. 64, beat 2 to m. 64, beat 3 | 1117 | unclassified | iii |
 | m. 64, beat 2 to m. 64, beat 3 | 1118 | unclassified | iii |
 | m. 64, beat 2 to m. 64, beat 3 | 1119 | unclassified | iii |
 | m. 64, beat 3 to m. 64, beat 4 | 1119 | unclassified | ii |
 | m. 64, beat 3 to m. 64, beat 4 | 1121 | unclassified | ii |
-| m. 64, beat 3 to m. 64, beat 4 | 1125 | appoggiatura | ii |
+| m. 64, beat 3 to m. 64, beat 4 | 1125 | unclassified | ii |
 | m. 64, beat 4 to m. 65, beat 1 | 1125 | unclassified | ii |
 | m. 64, beat 4 to m. 65, beat 1 | 1127 | unclassified | ii |
 | m. 64, beat 4 to m. 65, beat 1 | 1132 | unclassified | ii |
@@ -1847,23 +1847,22 @@ The library's texture adapter read every measure of the piece from the voices th
 
 The kernel separated the notes of the whole piece into voices (voice 0 is the top) and the library's counterpoint adapter classified how each pair of voices moves from one chord segment to the next. Parallel motion keeps the interval type, similar motion changes it; a voice that rests in either segment gives no motion. Faults are the library's: parallel fifths and octaves between any pair of voices, direct fifths and octaves in the outer pair, and a seventh or leading tone left unresolved when its chord changes (voice 0 is the top).
 
-4 voices over 268 chord segments, 128 motions between consecutive segments: 25 contrary, 24 similar, 4 parallel, 72 oblique, 3 static.
+4 voices over 268 chord segments, 128 motions between consecutive segments: 25 contrary, 23 similar, 3 parallel, 73 oblique, 4 static.
 
 | Voices | Contrary | Similar | Parallel | Oblique | Static |
 | --- | --- | --- | --- | --- | --- |
 | 0 and 1 | 2 | 2 | 0 | 3 | 1 |
 | 0 and 2 | 3 | 2 | 0 | 7 | 0 |
-| 0 and 3 | 5 | 8 | 2 | 14 | 2 |
+| 0 and 3 | 5 | 7 | 2 | 15 | 2 |
 | 1 and 2 | 2 | 3 | 0 | 5 | 0 |
-| 1 and 3 | 9 | 4 | 2 | 31 | 0 |
-| 2 and 3 | 4 | 5 | 0 | 12 | 0 |
+| 1 and 3 | 9 | 4 | 1 | 32 | 0 |
+| 2 and 3 | 4 | 5 | 0 | 11 | 1 |
 
-0 parallel fifths, 1 parallel octave, 1 direct fifths or octaves in the outer voices, 19 unresolved sevenths, 2 unresolved leading tones.
+0 parallel fifths, 0 parallel octaves, 1 direct fifths or octaves in the outer voices, 20 unresolved sevenths, 2 unresolved leading tones.
 
 | Location | Fault | Voices |
 | --- | --- | --- |
 | m. 23, beat 3 to m. 24, beat 1 | direct-perfects | 0 and 3 |
-| m. 41, beat 4 to m. 42, beat 1 | parallel-octaves | 1 and 3 |
 | m. 3, beat 4 to m. 4, beat 1 | seventh-resolves-down | 3 |
 | m. 7, beat 4 to m. 8, beat 2 | leading-tone-resolves | 0 |
 | m. 7, beat 4 to m. 8, beat 2 | seventh-resolves-down | 3 |
@@ -1879,6 +1878,7 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | m. 34, beat 2 to m. 34, beat 4 | seventh-resolves-down | 3 |
 | m. 36, beat 2 to m. 36, beat 4 | seventh-resolves-down | 2 |
 | m. 36, beat 4 to m. 37, beat 2 | seventh-resolves-down | 2 |
+| m. 41, beat 4 to m. 42, beat 1 | seventh-resolves-down | 0 |
 | m. 42, beat 4 to m. 43, beat 2 | seventh-resolves-down | 3 |
 | m. 43, beat 1 to m. 43, beat 3 | seventh-resolves-down | 0 |
 | m. 48, beat 4 to m. 49, beat 2 | seventh-resolves-down | 3 |
@@ -1886,7 +1886,7 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | m. 55, beat 3 to m. 56, beat 1 | leading-tone-resolves | 3 |
 | m. 63, beat 4 to m. 64, beat 2 | seventh-resolves-down | 1 |
 
-43 chords with three or more voices sounding: the root is doubled in 13, the third in 5, the fifth in 2, the seventh in 2, no member doubled in 21. Doubling is counted, not judged. Spacing is judged by the library for the 4 chords with four voices all sounding: 2 too wide.
+43 chords with three or more voices sounding: the root is doubled in 13, the third in 4, the fifth in 2, the seventh in 2, no member doubled in 22. Doubling is counted, not judged. Spacing is judged by the library for the 4 chords with four voices all sounding: 2 too wide.
 
 | Location | Chord | Gap too wide |
 | --- | --- | --- |

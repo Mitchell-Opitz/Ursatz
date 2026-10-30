@@ -143,7 +143,7 @@ Positions are measure and beat. Numeral is the Roman numeral in the local key re
 | m. 14, beat 4.5 to m. 15, beat 1 | ii | ii | predominant (strong) | - | A | minor | A | root position | 0.5 | 1.00 | - |
 | m. 15, beat 1 to m. 15, beat 1.5 | major | V (in C minor) | dominant | - | G | major | G | root position | 0.5 | 1.00 | - |
 | m. 15, beat 1.5 to m. 15, beat 2 | major | V6 | dominant | - | G | major | B | first | 0.5 | 0.71 | - |
-| m. 15, beat 2 to m. 15, beat 3 | major | V6/4 | dominant | - | G | major | D | second | 1 | 0.88 | - |
+| m. 15, beat 2 to m. 15, beat 3 | major | V6/4 | dominant | arpeggiating | G | major | D | second | 1 | 0.88 | - |
 | m. 15, beat 3 to m. 15, beat 4 | major | V | dominant | - | G | major | G | root position | 1 | 1.00 | - |
 | m. 16, beat 1 to m. 16, beat 2 | diminished | viio6/4 | dominant | - | B | diminished | F | second | 1 | 0.17 | - |
 | m. 16, beat 2 to m. 16, beat 3 | diminished | viio6/4 | dominant | - | B | diminished | F | second | 1 | 0.17 | - |

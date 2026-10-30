@@ -575,14 +575,14 @@ By base numeral (inversions together):
 
 ## Non-chord tones
 
-54 notes sound against a chord without being one of its tones; 19 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
+54 notes sound against a chord without being one of its tones; 11 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
 
 | Position | Note | Type | Against |
 | --- | --- | --- | --- |
 | m. 1, beat 1 to m. 1, beat 2 | 5 | unclassified | I |
 | m. 1, beat 2 to m. 1, beat 2.5 | 6 | unclassified | ii |
 | m. 1, beat 4 to m. 2, beat 1 | 18 | escape-tone | major7 |
-| m. 2, beat 2.5 to m. 2, beat 3 | 25 | unclassified | I |
+| m. 2, beat 2.5 to m. 2, beat 3 | 25 | appoggiatura | I |
 | m. 2, beat 3 to m. 2, beat 4 | 29 | neighbor | ii |
 | m. 3, beat 1 to m. 3, beat 2 | 36 | passing | minor7 |
 | m. 3, beat 2.5 to m. 3, beat 3 | 43 | passing | I |
@@ -594,11 +594,11 @@ By base numeral (inversions together):
 | m. 5, beat 2 to m. 5, beat 3 | 79 | passing | minor7 |
 | m. 5, beat 2 to m. 5, beat 3 | 84 | unclassified | minor7 |
 | m. 5, beat 3 to m. 5, beat 4 | 87 | neighbor | ii |
-| m. 6, beat 1.25 to m. 6, beat 2 | 96 | unclassified | major7 |
+| m. 6, beat 1.25 to m. 6, beat 2 | 96 | passing | major7 |
 | m. 7, beat 1 to m. 7, beat 2 | 115 | unclassified | I |
 | m. 7, beat 2 to m. 7, beat 2.5 | 116 | unclassified | ii |
 | m. 7, beat 4 to m. 8, beat 1 | 128 | escape-tone | major7 |
-| m. 8, beat 2.5 to m. 8, beat 3 | 135 | unclassified | I |
+| m. 8, beat 2.5 to m. 8, beat 3 | 135 | appoggiatura | I |
 | m. 8, beat 3 to m. 8, beat 4 | 139 | neighbor | ii |
 | m. 9, beat 1 to m. 9, beat 2 | 146 | passing | minor7 |
 | m. 9, beat 2.5 to m. 9, beat 3 | 153 | passing | I |
@@ -610,25 +610,25 @@ By base numeral (inversions together):
 | m. 11, beat 2 to m. 11, beat 3 | 189 | passing | minor7 |
 | m. 11, beat 2 to m. 11, beat 3 | 194 | unclassified | minor7 |
 | m. 11, beat 3 to m. 11, beat 4 | 197 | neighbor | ii |
-| m. 12, beat 1.25 to m. 12, beat 2 | 206 | unclassified | major7 |
+| m. 12, beat 1.25 to m. 12, beat 2 | 206 | passing | major7 |
 | m. 13, beat 1 to m. 13, beat 2 | 223 | passing | I |
 | m. 13, beat 3 to m. 13, beat 4 | 229 | passing | V |
 | m. 13, beat 4.5 to m. 14, beat 1 | 236 | unclassified | vi |
-| m. 14, beat 2 to m. 14, beat 3 | 242 | unclassified | V |
+| m. 14, beat 2 to m. 14, beat 3 | 242 | neighbor | V |
 | m. 14, beat 3 to m. 14, beat 4 | 249 | passing | minor7 |
 | m. 16, beat 3 to m. 16, beat 3.5 | 280 | neighbor | vi |
-| m. 17, beat 1.5 to m. 17, beat 2 | 291 | unclassified | V |
+| m. 17, beat 1.5 to m. 17, beat 2 | 291 | passing | V |
 | m. 17, beat 3 to m. 17, beat 4 | 298 | passing | minor7 |
 | m. 18, beat 1 to m. 18, beat 1.5 | 306 | appoggiatura | I |
 | m. 18, beat 1 to m. 18, beat 1.5 | 308 | neighbor | I |
 | m. 19, beat 1 to m. 19, beat 2 | 328 | passing | I |
 | m. 19, beat 3 to m. 19, beat 4 | 334 | passing | V |
 | m. 19, beat 4.5 to m. 20, beat 1 | 341 | unclassified | vi |
-| m. 20, beat 2 to m. 20, beat 3 | 347 | unclassified | V |
+| m. 20, beat 2 to m. 20, beat 3 | 347 | neighbor | V |
 | m. 20, beat 3 to m. 20, beat 4 | 354 | passing | minor7 |
 | m. 22, beat 2.5 to m. 22, beat 3 | 382 | unclassified | ii |
 | m. 22, beat 3 to m. 22, beat 3.5 | 385 | neighbor | ii |
-| m. 23, beat 1.5 to m. 23, beat 2 | 396 | unclassified | I |
+| m. 23, beat 1.5 to m. 23, beat 2 | 396 | passing | I |
 | m. 23, beat 3 to m. 23, beat 4 | 403 | passing | minor7 |
 | m. 23, beat 4.5 to m. 24, beat 1 | 408 | escape-tone | ii |
 | m. 24, beat 1 to m. 24, beat 1.5 | 411 | appoggiatura | IV |
@@ -944,7 +944,7 @@ The library's texture adapter read every measure of the piece from the voices th
 | --- | --- | --- | --- | --- | --- | --- |
 | mm. 1 to 2 | melody and accompaniment | homophony | 4 | 0.27 | 0.12 | 0.51 |
 | mm. 3 to 4 | polyphony | polyphony | 2 | 0.41 | 0.13 | 0.24 |
-| mm. 5 to 8 | melody and accompaniment | homophony | 4 | 0.35 | 0.17 | 0.41 |
+| mm. 5 to 8 | melody and accompaniment | homophony | 4 | 0.35 | 0.17 | 0.4 |
 | mm. 9 to 10 | polyphony | polyphony | 2 | 0.41 | 0.13 | 0.24 |
 | mm. 11 to 14 | melody and accompaniment | homophony | 2 | 0.39 | 0.24 | 0.4 |
 | mm. 15 to 16 | homorhythm | homophony | 2 | 0.78 | 0.11 | 0.31 |
@@ -969,13 +969,13 @@ The library's texture adapter read every measure of the piece from the voices th
 
 The kernel separated the notes of the whole piece into voices (voice 0 is the top) and the library's counterpoint adapter classified how each pair of voices moves from one chord segment to the next. Parallel motion keeps the interval type, similar motion changes it; a voice that rests in either segment gives no motion. Faults are the library's: parallel fifths and octaves between any pair of voices, direct fifths and octaves in the outer pair, and a seventh or leading tone left unresolved when its chord changes (voice 0 is the top).
 
-4 voices over 155 chord segments, 74 motions between consecutive segments: 20 contrary, 6 similar, 13 parallel, 21 oblique, 14 static.
+4 voices over 155 chord segments, 76 motions between consecutive segments: 18 contrary, 10 similar, 13 parallel, 21 oblique, 14 static.
 
 | Voices | Contrary | Similar | Parallel | Oblique | Static |
 | --- | --- | --- | --- | --- | --- |
 | 0 and 1 | 4 | 2 | 0 | 4 | 2 |
-| 0 and 2 | 4 | 1 | 9 | 5 | 3 |
-| 0 and 3 | 4 | 2 | 2 | 5 | 2 |
+| 0 and 2 | 4 | 5 | 9 | 5 | 3 |
+| 0 and 3 | 2 | 2 | 2 | 5 | 2 |
 | 1 and 2 | 4 | 0 | 1 | 7 | 3 |
 | 1 and 3 | 4 | 1 | 1 | 0 | 2 |
 | 2 and 3 | 0 | 0 | 0 | 0 | 2 |
