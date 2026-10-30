@@ -6,6 +6,7 @@
 
 #include "core/rational.h"
 #include "pipeline/pitch_class_util.h"
+#include "pitch/pitch_arithmetic.h"
 #include "pitch/pitch_spelling.h"
 #include "semantics/sonority_segmentation.h"
 #include "standard-meter/metric_position_rules.h"
@@ -27,9 +28,8 @@ static int compare_note_keys(const void *a, const void *b) {
 
 /* Semitone number of a spelled pitch, C4 = 60, as Ursatz's segmentation reads it. */
 static int semitone_of(const PitchSpelling *spelling) {
-    static const int LETTER_SEMITONE[7] = {9, 11, 0, 2, 4, 5, 7};
-    return 12 * (pitch_spelling_octave(spelling) + 1) + LETTER_SEMITONE[pitch_spelling_letter(spelling)] +
-           pitch_spelling_accidental(spelling);
+    return PITCH_SEMITONES_PER_OCTAVE * (pitch_spelling_octave(spelling) + 1) +
+           pitch_letter_semitone(pitch_spelling_letter(spelling)) + pitch_spelling_accidental(spelling);
 }
 
 /* The strength of an attack at onset, read in the signature of its measure; weak if it cannot be read. */

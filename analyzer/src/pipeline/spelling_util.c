@@ -1,51 +1,47 @@
 #include "pipeline/spelling_util.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "pipeline/pitch_class_util.h"
+#include "pitch/pitch_arithmetic.h"
 #include "pitch/pitch_spelling.h"
-
-static const char LETTER_NAME[7] = {'A', 'B', 'C', 'D', 'E', 'F', 'G'};
-static const int LETTER_SEMITONE[7] = {9, 11, 0, 2, 4, 5, 7};
 
 bool spelled_note_name(const NoteEvent *note, long sounding_pitch, bool with_octave, char out[16]) {
     const PitchSpelling *spelling = note_event_optional_pitch_spelling(note);
     if (!spelling) {
         return false;
     }
-    int letter = (int)pitch_spelling_letter(spelling);
+    PitchLetter letter = pitch_spelling_letter(spelling);
     int accidental = pitch_spelling_accidental(spelling);
-    if (letter < 0 || letter > 6 || accidental < -2 || accidental > 2 ||
-        pitch_class_of(LETTER_SEMITONE[letter] + accidental) != pitch_class_of(sounding_pitch)) {
+    char name[8];
+    if (!pitch_spelling_name(letter, accidental, name, sizeof(name)) ||
+        pitch_class_of_letter(letter, accidental) != pitch_class_of(sounding_pitch)) {
         return false;
     }
-    static const char *const ACCIDENTAL[5] = {"bb", "b", "", "#", "##"};
     if (with_octave) {
-        snprintf(out, 16, "%c%s%d", LETTER_NAME[letter], ACCIDENTAL[accidental + 2], pitch_spelling_octave(spelling));
+        snprintf(out, 16, "%s%d", name, pitch_spelling_octave(spelling));
     } else {
-        snprintf(out, 16, "%c%s", LETTER_NAME[letter], ACCIDENTAL[accidental + 2]);
+        snprintf(out, 16, "%s", name);
     }
     return true;
 }
 
+void note_name(long midi, bool prefer_flats, char out[16]) {
+    snprintf(out, 16, "%s%d", pitch_class_name(pitch_class_of(midi), prefer_flats), (int)(midi / 12) - 1);
+}
+
 int spelling_from_name(const char *name, PitchSpelling **out) {
     *out = NULL;
-    if (name[0] < 'A' || name[0] > 'G') {
+    PitchLetter letter;
+    int accidental;
+    int octave = INT_MIN;
+    if (!pitch_spelling_parse_name(name, &letter, &accidental, &octave) || octave == INT_MIN) {
         return 0;
     }
-    int accidental = 0;
-    const char *rest = name + 1;
-    for (; *rest == '#' || *rest == 'b' || *rest == 'x'; rest++) {
-        accidental += *rest == '#' ? 1 : (*rest == 'b' ? -1 : 2);
-    }
-    char *end = NULL;
-    long octave = strtol(rest, &end, 10);
-    if (end == rest || *end != '\0') {
-        return 0;
-    }
-    PitchSpellingResult result = pitch_spelling_create((PitchLetter)(name[0] - 'A'), accidental, (int)octave, out);
+    PitchSpellingResult result = pitch_spelling_create(letter, accidental, octave, out);
     return result == PITCH_SPELLING_OK ? 1 : (result == PITCH_SPELLING_ERR_ALLOC ? -1 : 0);
 }
 
@@ -53,18 +49,16 @@ int note_pitch_spelling(const ImportedNotes *notes, size_t note, bool prefer_fla
     long pitch = pitch_numeric_value_position_numerator(notes->pitch_values[note]);
     char name[16];
     if (!(notes->source.spelling_notated && spelled_note_name(notes->events[note], pitch, true, name))) {
-        snprintf(name, sizeof(name), "%s%d", pitch_class_name(pitch_class_of(pitch), prefer_flats), (int)(pitch / 12) - 1);
+        note_name(pitch, prefer_flats, name);
     }
     return spelling_from_name(name, out);
 }
 
+/* The pitch class of a note name without an octave ("C#", "Db"); -1 for text that is not one. */
 static int pitch_class_of_name(const char *name) {
-    for (int pitch_class = 0; pitch_class < 12; pitch_class++) {
-        if (strcmp(name, PITCH_CLASS_NAMES[pitch_class]) == 0 || strcmp(name, PITCH_CLASS_NAMES_FLAT[pitch_class]) == 0) {
-            return pitch_class;
-        }
-    }
-    return -1;
+    PitchLetter letter;
+    int accidental;
+    return pitch_spelling_parse_name(name, &letter, &accidental, NULL) ? pitch_class_of_letter(letter, accidental) : -1;
 }
 
 /* The spelling of the lowest note of the segment that has pitch_class; false when none is spelled. */

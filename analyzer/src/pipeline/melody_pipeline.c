@@ -92,8 +92,7 @@ static void name_note(const ImportedNotes *notes, size_t note, long pitch, const
     if (notes->source.spelling_notated && spelled_note_name(notes->events[note], pitch, true, out)) {
         return;
     }
-    snprintf(out, 16, "%s%d", pitch_class_name(pitch_class_of(pitch), region ? region->prefer_flats : false),
-             (int)(pitch / 12) - 1);
+    note_name(pitch, region ? region->prefer_flats : false, out);
 }
 
 /* The library's non-chord-tone result for a note, from the chord identification of the chord segment its voice segment

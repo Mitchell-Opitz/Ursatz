@@ -3,18 +3,8 @@
 
 #include <stdbool.h>
 
-/* Index 0-11 = C, C#, D, ... B. */
-extern const char *const PITCH_CLASS_NAMES[12];
-
-/* Index 0-11 = C, Db, D, ... B -- the flat spelling of each pitch
-   class, for keys whose signature is more naturally written in flats
-   (F major and its relatives, and every key with a negative
-   sharps_flats count from a MIDI key signature meta-event). */
-extern const char *const PITCH_CLASS_NAMES_FLAT[12];
-
-/* Reduces a MIDI note number (the numeric value MIDIImporter exposes
-   per NoteEvent, under its "MIDI note number" tuning system) to a
-   pitch class 0-11. */
+/* Reduces a semitone number (a MIDI note number, or the number segmentation reads from a spelling) to a pitch class
+   0-11. The library reduces only spellings (pitch_spelling_pitch_class), not a bare number. */
 int pitch_class_of(long midi_note_number);
 
 /* pitch_class_name(pitch_class, prefer_flats) is the library's: the flat spelling when prefer_flats is true. */

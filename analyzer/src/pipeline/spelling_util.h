@@ -18,6 +18,9 @@
  */
 bool spelled_note_name(const NoteEvent *note, long sounding_pitch, bool with_octave, char out[16]);
 
+/* "E5" or "Bb3" for a MIDI note number, its pitch class named in flats or sharps (prefer_flats). */
+void note_name(long midi, bool prefer_flats, char out[16]);
+
 /*
  * The spelling of a note name such as "F#4", "Bb3" or "E5": a letter, accidentals (# b x) and an octave. Returns 1 and
  * sets *out (the caller releases it with pitch_spelling_destroy), 0 for a name that is not one, -1 on allocation

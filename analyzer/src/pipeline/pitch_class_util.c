@@ -3,14 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-const char *const PITCH_CLASS_NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-
-const char *const PITCH_CLASS_NAMES_FLAT[12] = {"C", "Db", "D", "Eb", "E", "F", "Gb", "G", "Ab", "A", "Bb", "B"};
-
 int pitch_class_of(long midi_note_number) {
-    long remainder = midi_note_number % 12;
+    long remainder = midi_note_number % PITCH_SEMITONES_PER_OCTAVE;
     if (remainder < 0) {
-        remainder += 12;
+        remainder += PITCH_SEMITONES_PER_OCTAVE;
     }
     return (int)remainder;
 }

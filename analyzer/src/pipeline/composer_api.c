@@ -8,12 +8,13 @@
 #include "core/voice_reference.h"
 #include "identity/entity_id.h"
 #include "io/midi_key_signature.h"
+#include "pitch/pitch_arithmetic.h"
 #include "pitch/pitch_identity.h"
 #include "pitch/pitch_numeric_value.h"
 #include "pitch/pitch_spelling.h"
 #include "pitch/tuning_system.h"
-#include "time/duration.h"
 #include "theory/style_model_build.h"
+#include "time/duration.h"
 #include "time/metrical_position.h"
 #include "time/note_value.h"
 #include "time/temporal_anchor.h"
@@ -30,11 +31,12 @@
 #define MIDI_NOTE_COUNT 128
 #define FRAGMENT_PROVENANCE_ID "composer-fragment-v1"
 
-/* How the MIDI importer spells a note: sharps only (io/midi_importer.c). */
-static const PitchLetter SHARPS_ONLY_LETTER[12] = {PITCH_LETTER_C, PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LETTER_D,
-                                                   PITCH_LETTER_E, PITCH_LETTER_F, PITCH_LETTER_F, PITCH_LETTER_G,
-                                                   PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_A, PITCH_LETTER_B};
-static const int SHARPS_ONLY_ACCIDENTAL[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
+/* How the MIDI importer spells a note: sharps only (io/midi_importer.c), the pitch class's place on the line of fifths
+   from F (-1) to A# (10). */
+static void sharps_only_spelling(int pitch_class, PitchLetter *letter, int *accidental) {
+    int fifths = pitch_class * 7 % PITCH_SEMITONES_PER_OCTAVE;
+    pitch_spelling_from_fifths(fifths == 11 ? -1 : fifths, letter, accidental);
+}
 
 /* The pitch identity of every MIDI note number, made the way the MIDI importer makes it. An event's pitch cannot be
    decoded (by design), so it is recovered by finding the note number whose identity equals it. */
@@ -127,8 +129,11 @@ static AnalyzerFragmentResult copy_event(const NoteEvent *event, const PitchTabl
             ok = pitch_spelling_create(pitch_spelling_letter(event_spelling), pitch_spelling_accidental(event_spelling),
                                        pitch_spelling_octave(event_spelling), &spelling) == PITCH_SPELLING_OK;
         } else {
-            ok = pitch_spelling_create(SHARPS_ONLY_LETTER[midi % 12], SHARPS_ONLY_ACCIDENTAL[midi % 12], midi / 12 - 1,
-                                       &spelling) == PITCH_SPELLING_OK;
+            PitchLetter letter;
+            int accidental;
+            sharps_only_spelling(midi % PITCH_SEMITONES_PER_OCTAVE, &letter, &accidental);
+            ok = pitch_spelling_create(letter, accidental, midi / PITCH_SEMITONES_PER_OCTAVE - 1, &spelling) ==
+                 PITCH_SPELLING_OK;
         }
     }
     if (ok && event_voice) {

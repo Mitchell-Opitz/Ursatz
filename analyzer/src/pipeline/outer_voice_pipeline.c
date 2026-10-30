@@ -25,7 +25,7 @@ static size_t member_of(const Segment *segment, const OuterVoiceEntry *entry) {
 /* "E5" for a MIDI note number, spelled with flats or sharps. */
 static char *pitch_name_create(int midi, bool prefer_flats) {
     char name[16];
-    snprintf(name, sizeof(name), "%s%d", pitch_class_name(pitch_class_of(midi), prefer_flats), midi / 12 - 1);
+    note_name(midi, prefer_flats, name);
     return strdup(name);
 }
 
