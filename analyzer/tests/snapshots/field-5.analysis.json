@@ -55833,7 +55833,7 @@
 				"intervals":	[1, 1, 1, 1, 1, 1, 1],
 				"steps":	[1, 0, 1, 1, 0, 1, 0],
 				"rhythm":	["1/8", "1/8", "1/8", "1/8", "1/8", "1/8", "1/8", "1/8"],
-				"ncts":	["passing", "chord-tone", "passing", "chord-tone", "chord-tone", "passing", null, "passing"],
+				"ncts":	["passing", "chord-tone", "passing", "chord-tone", "chord-tone", "passing", "passing", "passing"],
 				"fingerprint":	"2df073b3dc839c53"
 			}
 		}, {
@@ -56137,7 +56137,7 @@
 				"intervals":	[1, 1, 1, 1, 1, 1, -1],
 				"steps":	[1, 0, 1, 0, 1, 1, -1],
 				"rhythm":	["1/8", "1/8", "1/8", "1/8", "1/8", "1/8", "1/8", "1/8"],
-				"ncts":	["chord-tone", "chord-tone", "passing", null, "passing", "chord-tone", "chord-tone", null],
+				"ncts":	["chord-tone", "chord-tone", "passing", "passing", "passing", "chord-tone", "chord-tone", "passing"],
 				"fingerprint":	"d334660838a8b50b"
 			}
 		}, {
@@ -56227,100 +56227,6 @@
 					"framework":	"standard-form-v1",
 					"span":	{
 						"start":	{
-							"num":	27,
-							"den":	1
-						},
-						"end":	{
-							"num":	219,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	19,
-							"beat":	1,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	19,
-							"beat":	2,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						}
-					},
-					"note_ids":	[331, 336, 341],
-					"label":	"inverted",
-					"uncertainty":	0,
-					"index":	1,
-					"measures":	{
-						"first":	19,
-						"last":	19
-					},
-					"beat":	1,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	2,
-					"fragment":	null,
-					"in_continuation":	false,
-					"phrase":	1,
-					"idea":	4,
-					"degrees":	["4", "3", "2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	111,
-							"den":	4
-						},
-						"end":	{
-							"num":	225,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	19,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	19,
-							"beat":	4,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						}
-					},
-					"note_ids":	[361, 366, 371],
-					"label":	"inverted",
-					"uncertainty":	0,
-					"index":	2,
-					"measures":	{
-						"first":	19,
-						"last":	19
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	2,
-					"fragment":	null,
-					"in_continuation":	false,
-					"phrase":	null,
-					"idea":	null,
-					"degrees":	["4", "3", "2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
 							"num":	117,
 							"den":	4
 						},
@@ -56350,7 +56256,7 @@
 					"note_ids":	[420, 425, 430],
 					"label":	"exact",
 					"uncertainty":	0,
-					"index":	3,
+					"index":	1,
 					"measures":	{
 						"first":	20,
 						"last":	20
@@ -56364,100 +56270,6 @@
 					"phrase":	null,
 					"idea":	null,
 					"degrees":	["7", "1", "b2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	30,
-							"den":	1
-						},
-						"end":	{
-							"num":	243,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	21,
-							"beat":	1,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	21,
-							"beat":	2,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						}
-					},
-					"note_ids":	[450, 455, 460],
-					"label":	"inverted",
-					"uncertainty":	0,
-					"index":	4,
-					"measures":	{
-						"first":	21,
-						"last":	21
-					},
-					"beat":	1,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	2,
-					"fragment":	null,
-					"in_continuation":	false,
-					"phrase":	3,
-					"idea":	0,
-					"degrees":	["4", "3", "2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	123,
-							"den":	4
-						},
-						"end":	{
-							"num":	249,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	21,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	21,
-							"beat":	4,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						}
-					},
-					"note_ids":	[480, 485, 490],
-					"label":	"inverted",
-					"uncertainty":	0,
-					"index":	5,
-					"measures":	{
-						"first":	21,
-						"last":	21
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	2,
-					"fragment":	null,
-					"in_continuation":	false,
-					"phrase":	null,
-					"idea":	null,
-					"degrees":	["4", "3", "2"]
 				}, {
 					"framework":	"standard-form-v1",
 					"span":	{
@@ -56491,7 +56303,7 @@
 					"note_ids":	[823, 828, 833],
 					"label":	"exact",
 					"uncertainty":	0,
-					"index":	6,
+					"index":	2,
 					"measures":	{
 						"first":	38,
 						"last":	38
@@ -56505,100 +56317,6 @@
 					"phrase":	6,
 					"idea":	1,
 					"degrees":	["7", "1", "b2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	57,
-							"den":	1
-						},
-						"end":	{
-							"num":	459,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	39,
-							"beat":	1,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	39,
-							"beat":	2,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						}
-					},
-					"note_ids":	[853, 858, 863],
-					"label":	"inverted",
-					"uncertainty":	0,
-					"index":	7,
-					"measures":	{
-						"first":	39,
-						"last":	39
-					},
-					"beat":	1,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	2,
-					"fragment":	null,
-					"in_continuation":	false,
-					"phrase":	6,
-					"idea":	1,
-					"degrees":	["4", "3", "2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	231,
-							"den":	4
-						},
-						"end":	{
-							"num":	465,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	39,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	39,
-							"beat":	4,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						}
-					},
-					"note_ids":	[883, 888, 893],
-					"label":	"inverted",
-					"uncertainty":	0,
-					"index":	8,
-					"measures":	{
-						"first":	39,
-						"last":	39
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	2,
-					"fragment":	null,
-					"in_continuation":	false,
-					"phrase":	null,
-					"idea":	null,
-					"degrees":	["4", "3", "2"]
 				}, {
 					"framework":	"standard-form-v1",
 					"span":	{
@@ -56632,7 +56350,7 @@
 					"note_ids":	[942, 947, 952],
 					"label":	"exact",
 					"uncertainty":	0,
-					"index":	9,
+					"index":	3,
 					"measures":	{
 						"first":	40,
 						"last":	40
@@ -56646,100 +56364,6 @@
 					"phrase":	null,
 					"idea":	null,
 					"degrees":	["7", "1", "b2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	60,
-							"den":	1
-						},
-						"end":	{
-							"num":	483,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	41,
-							"beat":	1,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	41,
-							"beat":	2,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						}
-					},
-					"note_ids":	[972, 977, 982],
-					"label":	"inverted",
-					"uncertainty":	0,
-					"index":	10,
-					"measures":	{
-						"first":	41,
-						"last":	41
-					},
-					"beat":	1,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	2,
-					"fragment":	null,
-					"in_continuation":	false,
-					"phrase":	8,
-					"idea":	0,
-					"degrees":	["4", "3", "2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	243,
-							"den":	4
-						},
-						"end":	{
-							"num":	489,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	41,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	41,
-							"beat":	4,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						}
-					},
-					"note_ids":	[1002, 1007, 1012],
-					"label":	"inverted",
-					"uncertainty":	0,
-					"index":	11,
-					"measures":	{
-						"first":	41,
-						"last":	41
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	2,
-					"fragment":	null,
-					"in_continuation":	false,
-					"phrase":	8,
-					"idea":	0,
-					"degrees":	["4", "3", "2"]
 				}, {
 					"framework":	"standard-form-v1",
 					"span":	{
@@ -56773,7 +56397,7 @@
 					"note_ids":	[1038, 1041, 1044],
 					"label":	"tonal-transposed",
 					"uncertainty":	0,
-					"index":	12,
+					"index":	4,
 					"measures":	{
 						"first":	42,
 						"last":	42
@@ -56820,7 +56444,7 @@
 					"note_ids":	[1067, 1071, 1076],
 					"label":	"tonal-transposed",
 					"uncertainty":	0,
-					"index":	13,
+					"index":	5,
 					"measures":	{
 						"first":	43,
 						"last":	43
@@ -56843,82 +56467,34 @@
 					"from":	null
 				}, {
 					"occurrence":	1,
-					"measure":	19,
-					"beat":	1,
-					"transformation":	"inverted",
+					"measure":	20,
+					"beat":	3,
+					"transformation":	"exact",
 					"from":	0
 				}, {
 					"occurrence":	2,
-					"measure":	19,
+					"measure":	38,
 					"beat":	3,
-					"transformation":	"inverted",
+					"transformation":	"exact",
 					"from":	1
 				}, {
 					"occurrence":	3,
-					"measure":	20,
+					"measure":	40,
 					"beat":	3,
 					"transformation":	"exact",
 					"from":	2
 				}, {
 					"occurrence":	4,
-					"measure":	21,
-					"beat":	1,
-					"transformation":	"inverted",
-					"from":	3
-				}, {
-					"occurrence":	5,
-					"measure":	21,
-					"beat":	3,
-					"transformation":	"inverted",
-					"from":	4
-				}, {
-					"occurrence":	6,
-					"measure":	38,
-					"beat":	3,
-					"transformation":	"exact",
-					"from":	5
-				}, {
-					"occurrence":	7,
-					"measure":	39,
-					"beat":	1,
-					"transformation":	"inverted",
-					"from":	6
-				}, {
-					"occurrence":	8,
-					"measure":	39,
-					"beat":	3,
-					"transformation":	"inverted",
-					"from":	7
-				}, {
-					"occurrence":	9,
-					"measure":	40,
-					"beat":	3,
-					"transformation":	"exact",
-					"from":	8
-				}, {
-					"occurrence":	10,
-					"measure":	41,
-					"beat":	1,
-					"transformation":	"inverted",
-					"from":	9
-				}, {
-					"occurrence":	11,
-					"measure":	41,
-					"beat":	3,
-					"transformation":	"inverted",
-					"from":	10
-				}, {
-					"occurrence":	12,
 					"measure":	42,
 					"beat":	2,
 					"transformation":	"tonal-transposed",
-					"from":	11
+					"from":	3
 				}, {
-					"occurrence":	13,
+					"occurrence":	5,
 					"measure":	43,
 					"beat":	2,
 					"transformation":	"tonal-transposed",
-					"from":	12
+					"from":	4
 				}],
 			"features":	{
 				"notes":	[{
@@ -57462,7 +57038,7 @@
 				"intervals":	[1, 1, 1, -1, -2, -1, 1],
 				"steps":	[0, 1, 1, -1, -1, -1, 1],
 				"rhythm":	["1/8", "1/8", "1/8", "1/8", "1/8", "1/8", "1/8", "1/8"],
-				"ncts":	[null, "passing", "chord-tone", "chord-tone", null, "chord-tone", "neighbor", null],
+				"ncts":	["passing", "passing", "chord-tone", "chord-tone", "passing", "chord-tone", "neighbor", "passing"],
 				"fingerprint":	"58ad589f021e300e"
 			}
 		}, {
@@ -57766,7 +57342,7 @@
 				"intervals":	[-1, -2, -1, 1, 2, 1, -1],
 				"steps":	[-1, -1, -1, 1, 1, 1, -1],
 				"rhythm":	["1/8", "1/8", "1/8", "1/8", "1/8", "1/8", "1/8", "1/8"],
-				"ncts":	["chord-tone", null, "chord-tone", "neighbor", null, "chord-tone", "chord-tone", "passing"],
+				"ncts":	["chord-tone", "passing", "chord-tone", "neighbor", "passing", "chord-tone", "chord-tone", "passing"],
 				"fingerprint":	"c624831b64d72410"
 			}
 		}, {
@@ -58070,7 +57646,7 @@
 				"intervals":	[1, 2, 1, -1, -2, -1, 1],
 				"steps":	[1, 1, 1, -1, -1, -1, 1],
 				"rhythm":	["1/8", "1/8", "1/8", "1/8", "1/8", "1/8", "1/8", "1/8"],
-				"ncts":	["neighbor", null, "chord-tone", "chord-tone", "passing", "chord-tone", "neighbor", "chord-tone"],
+				"ncts":	["neighbor", "passing", "chord-tone", "chord-tone", "passing", "chord-tone", "neighbor", "chord-tone"],
 				"fingerprint":	"a2cf328132330d1a"
 			}
 		}, {

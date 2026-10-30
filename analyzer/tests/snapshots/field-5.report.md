@@ -1083,7 +1083,7 @@ The library's motive analysis found 10 motive families in the soprano, the highe
 | 1 | 5 | 2 3 2 2 5 | scale steps | 2 | 14, 36 | 2, 7 | exact 2 |
 | 2 | 8 | b6 6 b7 7 1 b2 2 b3 | scale steps | 4 | 18, 20, 38, 40 | 2, 7 | exact 4 |
 | 3 | 8 | 7 1 b2 2 b3 3 4 3 | scale steps | 4 | 18, 20, 38, 40 | 2, 7 | exact 4 |
-| 4 | 3 | 7 1 b2 | scale steps | 14 | 18, 19, 20, 21, 38, 39, 40, 41, 42, 43 | 2, 4, 7, 9 | exact 4, inverted 8, tonal-transposed 2 |
+| 4 | 3 | 7 1 b2 | scale steps | 6 | 18, 20, 38, 40, 42, 43 | 2, 7, 9 | exact 4, tonal-transposed 2 |
 | 5 | 8 | 2 b3 3 4 3 2 b2 2 | scale steps | 8 | 18, 19, 20, 21, 38, 39, 40, 41 | 9 | exact 4, fragmented 4 |
 | 6 | 8 | 4 3 2 b2 2 3 4 3 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 4 |
 | 7 | 8 | b2 2 3 4 3 2 b2 2 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 4 |
