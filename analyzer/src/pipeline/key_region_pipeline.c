@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "common-practice-minimal/key_regions.h"
-#include "common-practice-minimal/weighted_identification.h"
 #include "core/rational.h"
 #include "pipeline/pitch_class_util.h"
 #include "time/musical_time.h"
@@ -21,30 +20,6 @@ static AnalysisKeyChangeExtent change_extent(KeyChangeExtent extent) {
         default:
             return ANALYSIS_KEY_CHANGE_TONICIZATION;
     }
-}
-
-/* The library's segments for key scoring: each segment's window and weights (the L2.5 weighting the chord
-   identification uses), and its members for the pivot search. times owns the MusicalTimes the segments borrow. */
-static bool build_key_segments(const Segmentation *segmentation, CommonPracticeKeySegment *segments,
-                               MusicalTime **times, bool *library_ok) {
-    CommonPracticeWeightedConfig config = common_practice_weighted_config_default();
-    for (size_t i = 0; i < segmentation->segment_count; i++) {
-        const Segment *segment = &segmentation->segments[i];
-        if (musical_time_create(segment->start_numerator, segment->start_denominator, &times[2 * i]) !=
-                MUSICAL_TIME_OK ||
-            musical_time_create(segment->end_numerator, segment->end_denominator, &times[2 * i + 1]) !=
-                MUSICAL_TIME_OK) {
-            return false;
-        }
-        segments[i].start = times[2 * i];
-        segments[i].end = times[2 * i + 1];
-        segments[i].source = &segmentation->library_segments[i];
-        if (common_practice_weight_segment(segment->members, segment->member_count, &config,
-                                           &segments[i].weights) != COMMON_PRACTICE_WEIGHTED_OK) {
-            *library_ok = false;
-        }
-    }
-    return true;
 }
 
 static bool copy_region(const CommonPracticeKeyRegion *source, AnalysisKeyRegion *out) {
@@ -71,13 +46,6 @@ static bool copy_region(const CommonPracticeKeyRegion *source, AnalysisKeyRegion
     return true;
 }
 
-void sync_key_change_extents(const CommonPracticeKeyRegions *found, AnalysisKeyChange *changes) {
-    for (size_t i = 0; i < found->change_count; i++) {
-        changes[i].extent = change_extent(found->changes[i].extent);
-        changes[i].cadence_confirmed = found->changes[i].cadence_confirmed;
-    }
-}
-
 static void copy_change(const CommonPracticeKeyChange *source, AnalysisKeyChange *out) {
     out->from_region = source->from_region;
     out->to_region = source->to_region;
@@ -89,88 +57,31 @@ static void copy_change(const CommonPracticeKeyChange *source, AnalysisKeyChange
     out->pivot = (AnalysisChordReading){NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
 }
 
-bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmentation,
-                          const CommonPracticeKeyChord *chords, const MusicalTime *const *boundaries,
-                          size_t boundary_count, CommonPracticeKeyRegions *found,
-                          AnalysisKeyRegion **regions, size_t *region_count, AnalysisKeyChange **changes,
-                          size_t *change_count) {
-    *found = (CommonPracticeKeyRegions){0};
-    *regions = NULL;
-    *region_count = 0;
-    *changes = NULL;
-    *change_count = 0;
-    size_t segment_count = segmentation->segment_count;
-    if (segment_count == 0) {
+bool key_regions_collect(const CommonPracticeKeyRegions *found, AnalysisReport *report) {
+    if (!found || found->region_count == 0) {
         return true;
     }
-
-    CommonPracticeKeySegment *segments = calloc(segment_count, sizeof(CommonPracticeKeySegment));
-    MusicalTime **times = calloc(2 * segment_count, sizeof(MusicalTime *));
-    size_t event_count = notes->key_signature_events.count;
-    CommonPracticeKeySignatureEvent *events =
-        calloc(event_count > 0 ? event_count : 1, sizeof(CommonPracticeKeySignatureEvent));
-    if (!segments || !times || !events) {
-        free(segments);
-        free(times);
-        free(events);
+    report->key_regions = calloc(found->region_count, sizeof(AnalysisKeyRegion));
+    report->key_changes = calloc(found->change_count > 0 ? found->change_count : 1, sizeof(AnalysisKeyChange));
+    if (!report->key_regions || !report->key_changes) {
         return false;
     }
-    for (size_t i = 0; i < event_count; i++) {
-        events[i].position = notes->key_signature_events.events[i].position;
-        events[i].sharps_flats = notes->key_signature_events.events[i].sharps_flats;
-    }
-
-    bool library_ok = true;
-    bool ok = build_key_segments(segmentation, segments, times, &library_ok);
-    for (size_t i = 0; chords && i < segment_count; i++) {
-        segments[i].chord = chords[i];
-    }
-    CommonPracticeKeyRegionsConfig config = common_practice_key_regions_config_default();
-    config.phrase_boundaries = boundaries;
-    config.phrase_boundary_count = boundary_count;
-    if (ok && library_ok &&
-        key_regions_estimate(segments, segment_count, notes->meter.meter_map, events, event_count, &config, found) !=
-            COMMON_PRACTICE_KEY_REGIONS_OK) {
-        library_ok = false;
-    }
-
-    AnalysisKeyRegion *out_regions = NULL;
-    AnalysisKeyChange *out_changes = NULL;
-    if (ok && library_ok) {
-        out_regions = calloc(found->region_count, sizeof(AnalysisKeyRegion));
-        out_changes = calloc(found->change_count > 0 ? found->change_count : 1, sizeof(AnalysisKeyChange));
-        ok = out_regions && out_changes;
-        for (size_t i = 0; ok && i < found->region_count; i++) {
-            ok = copy_region(&found->regions[i], &out_regions[i]);
-        }
-        if (ok) {
-            for (size_t i = 0; i < found->change_count; i++) {
-                copy_change(&found->changes[i], &out_changes[i]);
-            }
-            *regions = out_regions;
-            *region_count = found->region_count;
-            *changes = out_changes;
-            *change_count = found->change_count;
-        } else {
-            if (out_regions) {
-                for (size_t i = 0; i < found->region_count; i++) {
-                    free(out_regions[i].label);
-                }
-            }
-            free(out_regions);
-            free(out_changes);
-        }
-        if (!ok) {
-            common_practice_key_regions_destroy(found);
-            *found = (CommonPracticeKeyRegions){0};
+    report->key_region_count = found->region_count;
+    report->key_change_count = found->change_count;
+    for (size_t i = 0; i < found->region_count; i++) {
+        if (!copy_region(&found->regions[i], &report->key_regions[i])) {
+            return false;
         }
     }
-
-    for (size_t i = 0; i < 2 * segment_count; i++) {
-        musical_time_destroy(times[i]);
+    for (size_t i = 0; i < found->change_count; i++) {
+        copy_change(&found->changes[i], &report->key_changes[i]);
     }
-    free(times);
-    free(segments);
-    free(events);
-    return ok;
+    /* The home key: the library's key with the longest total duration over its regions. */
+    Rational duration;
+    if (!common_practice_home_key_region(found->regions, found->region_count, &report->home_region, &duration)) {
+        return false;
+    }
+    report->home_duration_numerator = (long)duration.num;
+    report->home_duration_denominator = (unsigned long)duration.den;
+    return true;
 }

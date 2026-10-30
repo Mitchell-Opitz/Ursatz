@@ -292,7 +292,7 @@ static int pitch_class(long semitone) {
 /* Fills the doubling and spacing of one row; false when the row has fewer than three voices or is not a chord the harmony
    stage read. */
 static bool fill_chord(const VoiceGrid *build, const HarmonyStage *harmony, size_t row, AnalysisVoiceChord *chord) {
-    const HarmonySegmentInput *input = &harmony->inputs[row];
+    const HarmonySegmentInput *input = &harmony->inputs.inputs[row];
     size_t sounding[ANALYSIS_VOICE_LEADING_MAX_VOICES];
     size_t count = 0;
     for (size_t voice = 0; voice < build->voice_count; voice++) {
@@ -360,7 +360,7 @@ static bool fill_chord(const VoiceGrid *build, const HarmonyStage *harmony, size
 
 /* The doubling and spacing of every chord segment three or more voices sound. false only on allocation failure. */
 static bool collect_chords(const VoiceGrid *build, const HarmonyStage *harmony, AnalysisVoiceLeading *out) {
-    if (!harmony->inputs || harmony->count != build->row_count) {
+    if (!harmony->inputs.inputs || harmony->count != build->row_count) {
         return true;
     }
     out->chords = calloc(build->row_count, sizeof(AnalysisVoiceChord));

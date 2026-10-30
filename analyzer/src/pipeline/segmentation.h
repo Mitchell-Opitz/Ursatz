@@ -13,15 +13,14 @@
 #include "common-practice-minimal/weighted_chord_identification.h"
 
 /*
- * One sonority segment cut by Ursatz's adaptive segmentation
- * (semantics/sonority_segmentation.h): every note sounding in its time
- * window, those attacked in it and those held over from earlier.
+ * One sonority segment of the library chain (analysis_chain_segments, analysis_chain_voice_segments: Ursatz's adaptive
+ * segmentation on the beat grid of the file's MeterMap): every note sounding in its time window, those attacked in it
+ * and those held over from earlier.
  *
- * note_indices are ImportedNotes indices, parallel to members. The
- * members are the plain per-note view Ursatz's weighted chord
- * identification reads (pitch, duration inside the segment, held flag,
- * beat strength of the attack, voice, onset); their note_id and voice_id
- * borrow from the ImportedNotes, which must outlive the Segmentation.
+ * note_indices are ImportedNotes indices, parallel to members. The members are the plain per-note view Ursatz's
+ * weighted chord identification reads (pitch, duration inside the segment, held flag, beat strength of the attack,
+ * voice, onset); their note_id and voice_id borrow from the ImportedNotes. A Segmentation is a view onto the chain's
+ * segments: the chain must outlive it.
  */
 typedef struct {
     size_t *note_indices;
@@ -36,25 +35,10 @@ typedef struct {
 typedef struct {
     Segment *segments;
     size_t segment_count;
-    CommonPracticeSegment *library_segments; /* parallel to segments; views onto their members */
-    char (*segment_ids)[32];                 /* backs library_segments[i].id */
-    AdaptiveSonorities sonorities;           /* parallel to segments; the library's own segments, which the
-                                                outer-voice extraction reads */
+    CommonPracticeSegment *library_segments; /* parallel to segments; the chain's, borrowed */
+    char (*segment_ids)[32];                 /* backs library_segments[i].id; the chain's, borrowed */
+    AdaptiveSonorities sonorities;           /* parallel to segments; the library's own segments, borrowed */
 } Segmentation;
-
-/*
- * Cuts notes into sonority segments on the beat grid of the file's
- * MeterMap using Ursatz's adaptive segmentation, and builds the weighted
- * identification members for each, and each library segment's beat
- * (segments inside one beat share one non-zero value). The chord
- * segments merge over unchanged harmony; the voice segments, which the
- * outer-voice extraction reads, do not (one segment per melody note), as
- * merge_unchanged_harmony says. On success *out is owned by the
- * caller (release with segmentation_destroy). Returns false on a library
- * or allocation failure, with *out left empty.
- */
-bool segment_notes(const ImportedNotes *notes, bool merge_unchanged_harmony, Segmentation *out);
-void segmentation_destroy(Segmentation *segmentation);
 
 /* The strength of an attack at onset, read in the signature of its measure; weak if it cannot be read. */
 BeatStrength beat_strength_at(const MeterMap *map, const MusicalTime *onset);

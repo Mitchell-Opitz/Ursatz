@@ -40,7 +40,6 @@ void chord_estimates_destroy(ChordEstimate *estimates, size_t count) {
             free(estimates[i].tones[t].type);
         }
         free(estimates[i].tones);
-        common_practice_weighted_result_destroy(&estimates[i].result);
     }
     free(estimates);
 }
@@ -79,20 +78,14 @@ static bool region_ends_by(const AnalysisKeyRegion *region, const Segment *segme
                                  (unsigned long long)segment->start_numerator, segment->start_denominator) <= 0;
 }
 
-/* Identifies segments [first, first + count) together, in the region's key, filling their estimates. False
-   on allocation failure. */
-static bool identify_in_region(const Segmentation *segmentation, size_t first, size_t count,
-                               const AnalysisKeyRegion *region, ChordEstimate *estimates) {
-    CommonPracticeKeyMode mode = region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR;
-    CommonPracticeWeightedResults results = {0};
-    if (common_practice_identify_weighted_sequence(segmentation->library_segments + first, count,
-                                                   region->tonic_pitch_class, mode, NULL,
-                                                   &results) != COMMON_PRACTICE_WEIGHTED_OK) {
-        return true;
-    }
+/* Reads segments [first, first + count) from the library's results, filling their estimates. The results stay the
+   library chain's. False on allocation failure. */
+static bool read_in_region(const Segmentation *segmentation, size_t first, size_t count,
+                           const CommonPracticeWeightedResult *results, const AnalysisKeyRegion *region,
+                           ChordEstimate *estimates) {
     for (size_t k = 0; k < count; k++) {
         size_t i = first + k;
-        const CommonPracticeWeightedResult *result = &results.items[k];
+        const CommonPracticeWeightedResult *result = &results[i];
         if (!result->matched) {
             continue;
         }
@@ -103,21 +96,17 @@ static bool identify_in_region(const Segmentation *segmentation, size_t first, s
              !fill_reading(&result->runner_up, result->runner_up_chord, result->runner_up_score, bass,
                            region->prefer_flats, &estimates[i].runner_up)) ||
             !fill_tones(&segmentation->segments[i], result, &estimates[i])) {
-            common_practice_weighted_results_destroy(&results);
             return false;
         }
         estimates[i].context = result->context;
         estimates[i].found = true;
+        estimates[i].result = *result;
     }
-    for (size_t k = 0; k < count; k++) {
-        estimates[first + k].result = results.items[k];
-    }
-    free(results.items);
     return true;
 }
 
-bool identify_chords(const Segmentation *segmentation, const AnalysisKeyRegion *regions, size_t region_count,
-                     ChordEstimate **out) {
+bool collect_chords(const Segmentation *segmentation, const CommonPracticeWeightedResult *results,
+                    const AnalysisKeyRegion *regions, size_t region_count, ChordEstimate **out) {
     size_t count = segmentation->segment_count;
     ChordEstimate *estimates = calloc(count > 0 ? count : 1, sizeof(ChordEstimate));
     if (!estimates) {
@@ -132,7 +121,7 @@ bool identify_chords(const Segmentation *segmentation, const AnalysisKeyRegion *
        segments of one region are contiguous. */
     size_t region = 0;
     size_t i = 0;
-    while (i < count) {
+    while (results && i < count) {
         const Segment *segment = &segmentation->segments[i];
         while (region < region_count && region_ends_by(&regions[region], segment)) {
             region++;
@@ -146,7 +135,7 @@ bool identify_chords(const Segmentation *segmentation, const AnalysisKeyRegion *
             estimates[last].region = region;
             last++;
         }
-        if (!identify_in_region(segmentation, i, last - i, &regions[region], estimates)) {
+        if (!read_in_region(segmentation, i, last - i, results, &regions[region], estimates)) {
             chord_estimates_destroy(estimates, count);
             return false;
         }

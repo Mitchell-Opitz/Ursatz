@@ -36,13 +36,13 @@ typedef struct AnalyzerPass {
     AnalysisReport report;           /* the pass's results: entries, non-chord tones, key regions and changes */
 
     /* The collectors not yet moved onto the library chain's accessors (this branch removes them one by one). */
-    Segmentation segmentation;       /* the chord segments, merged over unchanged harmony */
-    Segmentation voice_segmentation; /* the voice segments, not merged: one per melody note, for the outer voices */
-    CommonPracticeKeyRegions key_regions; /* the library's regions and changes, parallel to report's */
+    Segmentation segmentation;       /* the chord segments (analysis_chain_segments), merged over unchanged harmony */
+    Segmentation voice_segmentation; /* the voice segments (analysis_chain_voice_segments), not merged: one per melody
+                                        note, for the outer voices */
     ChordEstimate *chords;   /* segmentation.segment_count of them */
-    RomanNumerals romans;    /* the Roman numeral inputs and results, one per chord segment */
-    OuterVoiceLines lines;   /* one entry per voice segment */
-    HarmonyStage harmony;    /* the standard-harmony inputs, prepared segments and cadences, one per chord segment */
+    RomanNumerals romans;    /* the chain's Roman numeral inputs and results, one per chord segment */
+    OuterVoiceLines lines;   /* the chain's outer lines, one entry per voice segment; borrowed */
+    HarmonyStage harmony;    /* the prepared harmony segments and the chain's cadences, one per chord segment */
     FormStage form;          /* the standard-form input, phrases, ideas and subphrases */
     MotiveStage motives;     /* the note-level soprano input, its phrases, ideas and themes, and the motive families */
 } AnalyzerPass;

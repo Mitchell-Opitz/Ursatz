@@ -12,25 +12,24 @@
 #include "pipeline/segmentation.h"
 
 /*
- * The soprano and bass lines, from Ursatz's outer-voice extraction (outer_voice_extract in analysis/outer_voice.h)
- * over the voice segments (no merge over unchanged harmony, so one segment per melody note): the highest and
- * lowest sounding line of each segment, smoothed across short gaps and register leaps by the library. *lines
- * holds them, one entry per voice segment, owned by the caller (outer_voice_lines_destroy); empty when the library
- * declines the piece. Each chord segment's soprano and bass are the lines' entries at the chord's start (the voice
- * segment holding it). The analyzer adds no music theory here: it
- * names each line's pitch and asks the library for its scale degree
- * (common_practice_scale_degree_label in frameworks/common-practice-minimal/outer_scale_degrees.h) against
- * the key of the region the segment lies in, so a note inside a tonicized or modulated region is read in that
- * region's key. A segment outside every key region has pitches but no degrees.
+ * The soprano and bass lines, from the library chain's outer voices (analysis_chain_outer_voices: Ursatz's
+ * outer-voice extraction over the voice segments, which are not merged over unchanged harmony, so one segment per
+ * melody note): the highest and lowest sounding line of each segment, smoothed across short gaps and register leaps by
+ * the library. lines holds them, one entry per voice segment, borrowed from the chain. Each chord segment's soprano and
+ * bass are the lines' entries at the chord's start (the voice segment holding it). The analyzer adds no music theory
+ * here: it names each line's pitch and asks the library for its scale degree
+ * (common_practice_scale_degree_label in frameworks/common-practice-minimal/outer_scale_degrees.h) against the key of
+ * the region the segment lies in, so a note inside a tonicized or modulated region is read in that region's key. A
+ * segment outside every key region has pitches but no degrees.
  *
- * Fills entries[i].soprano and entries[i].bass, and the entry's key region, for every segment, using the
- * regions the chord estimates recorded. entries must hold segmentation->segment_count entries. A line the
- * library leaves absent in a segment (a rest, a bridged gap, a register guard) is reported as such, never
- * filled from another voice. The library declining a piece (a negative pitch, mixed tunings) leaves every
- * entry's lines absent. Returns false only on allocation failure.
+ * Fills entries[i].soprano and entries[i].bass, and the entry's key region, for every segment, using the regions the
+ * chord estimates recorded. entries must hold segmentation->segment_count entries. A line the library leaves absent in
+ * a segment (a rest, a bridged gap, a register guard) is reported as such, never filled from another voice. Lines the
+ * library did not give (NULL, or not one per voice segment) leave every entry's lines absent. Returns false only on
+ * allocation failure.
  */
-bool extract_outer_voices(const ImportedNotes *notes, const Segmentation *voices, const Segmentation *segmentation,
-                          const ChordEstimate *chords, const AnalysisKeyRegion *regions, AnalysisReportEntry *entries,
-                          OuterVoiceLines *lines);
+bool collect_outer_voices(const ImportedNotes *notes, const Segmentation *voices, const Segmentation *segmentation,
+                          const ChordEstimate *chords, const AnalysisKeyRegion *regions, const OuterVoiceLines *lines,
+                          AnalysisReportEntry *entries);
 
 #endif

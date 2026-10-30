@@ -9,7 +9,6 @@
 #include "common-practice-minimal/outer_scale_degrees.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/spelling_util.h"
-#include "standard-meter/segmentation_beat_grid.h"
 
 /* The position of the segment's member that is the entry's note, or segment->member_count when it is none. */
 static size_t member_of(const Segment *segment, const OuterVoiceEntry *entry) {
@@ -90,10 +89,9 @@ static size_t voice_segment_at(const Segmentation *voices, const Segment *chord,
     return voices->segment_count;
 }
 
-bool extract_outer_voices(const ImportedNotes *notes, const Segmentation *voices, const Segmentation *segmentation,
-                          const ChordEstimate *chords, const AnalysisKeyRegion *regions, AnalysisReportEntry *entries,
-                          OuterVoiceLines *lines) {
-    *lines = (OuterVoiceLines){NULL, NULL, 0};
+bool collect_outer_voices(const ImportedNotes *notes, const Segmentation *voices, const Segmentation *segmentation,
+                          const ChordEstimate *chords, const AnalysisKeyRegion *regions, const OuterVoiceLines *lines,
+                          AnalysisReportEntry *entries) {
     size_t count = segmentation->segment_count;
     for (size_t i = 0; i < count; i++) {
         entries[i].in_region = chords[i].in_region;
@@ -101,20 +99,8 @@ bool extract_outer_voices(const ImportedNotes *notes, const Segmentation *voices
         entries[i].soprano.status = ANALYSIS_OUTER_ABSENT;
         entries[i].bass.status = ANALYSIS_OUTER_ABSENT;
     }
-    if (count == 0 || voices->segment_count == 0) {
-        return true;
-    }
-
-    OuterVoiceResult result = outer_voice_extract(&voices->sonorities, notes->events, notes->pitch_values,
-                                                   notes->count, notes->meter.meter_map,
-                                                   standard_meter_segmentation_beat_grid, NULL, NULL, lines);
-    if (result == OUTER_VOICE_ERR_ALLOC) {
-        return false;
-    }
-    if (result != OUTER_VOICE_OK || lines->count != voices->segment_count) {
-        outer_voice_lines_destroy(lines);
-        *lines = (OuterVoiceLines){NULL, NULL, 0};
-        return true; /* the library declined this piece: every line stays absent */
+    if (count == 0 || voices->segment_count == 0 || !lines || lines->count != voices->segment_count) {
+        return true; /* the library gave no lines for this piece: every line stays absent */
     }
 
     bool ok = true;

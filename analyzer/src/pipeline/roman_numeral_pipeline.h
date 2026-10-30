@@ -5,38 +5,28 @@
 #include <stddef.h>
 
 #include <ursatz_analyzer/analysis_report.h>
+#include <ursatz_chain/analysis_chain.h>
 
 #include "pipeline/chord_pipeline.h"
 #include "standard-tonality/analysis/chord_input.h"
-#include "common-practice-minimal/key_regions.h"
-#include "pipeline/segmentation.h"
 #include "standard-tonality/analysis/roman_numeral_adapter.h"
 
 /*
- * The Roman numeral of every chord segment, from Ursatz's standard-tonality adapter: the chord inputs
- * (standard_tonality_build_chord_inputs) from the library's own chords, key regions, the segments' pitch-class
- * weights and their sounding pitches, then the numerals (standard_tonality_build_roman_numerals). Each segment
- * is read in the key region it starts in, so numerals are relative to that local key, not the home key. The
- * label, its figure (6, 6/4, 6/5, 4/3, 4/2), the chord bass the figure is read from (the lowest sounding chord
- * tone), quality marks and the applied form V/x are the library's; this only builds the neutral inputs and keeps
- * what comes back.
+ * The Roman numeral of every chord segment, from the library chain (analysis_chain_chord_inputs and
+ * analysis_chain_numerals: Ursatz's standard-tonality adapter over the chain's chords, key regions, the segments'
+ * pitch-class weights and their sounding pitches). Each segment is read in the key region it starts in, so numerals are
+ * relative to that local key, not the home key. The label, its figure (6, 6/4, 6/5, 4/3, 4/2), the chord bass the
+ * figure is read from (the lowest sounding chord tone), quality marks and the applied form V/x are the library's; this
+ * only keeps what comes back, borrowed from the chain.
  */
 typedef struct {
-    StandardTonalityKeyRegionInput *regions;  /* owned; one per key region */
-    StandardTonalitySegmentInput *segments;   /* owned; one per chord segment */
-    MusicalTime **starts;                     /* owned; the segments' starts, which segments borrow */
-    double (*weights)[12];                    /* owned; the segments' weights, which segments borrow */
-    int *pitches;                             /* owned; the segments' sounding pitches, which segments borrow */
-    size_t segment_count;
-    StandardTonalityChordInput *inputs;       /* owned; the adapter's inputs, one per chord segment */
-    StandardTonalityRomanResult *results;     /* owned; one per chord segment */
+    const StandardTonalityChordInput *inputs;  /* borrowed; one per chord segment */
+    const StandardTonalityRomanResult *results; /* borrowed; one per chord segment */
     size_t count;
 } RomanNumerals;
 
-/* Builds the inputs and the numerals. found holds the key regions the chords were read in. On false *out holds
-   what was built (release with roman_numerals_destroy). Returns false only on allocation or library failure. */
-bool build_roman_numerals(const Segmentation *segmentation, const ChordEstimate *chords,
-                          const CommonPracticeKeyRegions *found, RomanNumerals *out);
+/* Points romans at the chain's inputs and results. count is 0 when the chain has none. */
+bool read_roman_numerals(const AnalysisChain *library, RomanNumerals *out);
 
 /*
  * Copies each segment's numeral into its entry, or the reason the library gives none: the segment lies in no
@@ -44,7 +34,6 @@ bool build_roman_numerals(const Segmentation *segmentation, const ChordEstimate 
  * Returns false only on allocation failure.
  */
 bool assign_roman_numerals(const RomanNumerals *romans, const ChordEstimate *chords, AnalysisReportEntry *entries);
-
 void roman_numerals_destroy(RomanNumerals *romans);
 
 #endif
