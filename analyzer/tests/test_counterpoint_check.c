@@ -13,6 +13,8 @@
 
 #include "pipeline/counterpoint_pipeline.h"
 
+#include "test_support.h"
+
 /*
  * The counterpoint check, on Fux's Dorian cantus firmus exercises (the first and second species exercises of Ursatz's
  * frameworks/standard-counterpoint/tests/first_species_test_util.h and second_species_test_util.h, written as MusicXML
@@ -94,10 +96,6 @@ static void check_exercise(const char *name, int species, bool valid, const char
     imported_notes_destroy(&notes);
 }
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    return cJSON_GetObjectItemCaseSensitive(object, key);
-}
-
 /* The document and the Markdown of a check with a parallel fifth, and of the same piece with the check off. */
 static void check_output(void) {
     ImportedNotes notes;
@@ -110,23 +108,23 @@ static void check_output(void) {
     AnalysisDocument *document = analysis_document_build("first-species-parallel-fifth.musicxml", &notes, &report);
     char *markdown = document ? markdown_report_render(document) : NULL;
     cJSON *parsed = json ? cJSON_Parse(json) : NULL;
-    const cJSON *check = parsed ? member(parsed, "counterpoint_check") : NULL;
+    const cJSON *check = parsed ? test_json_member(parsed, "counterpoint_check") : NULL;
     CHECK(cJSON_IsObject(check));
     if (cJSON_IsObject(check)) {
-        CHECK(cJSON_GetNumberValue(member(check, "species")) == 1);
-        CHECK(strcmp(cJSON_GetStringValue(member(check, "cantus")), "lower") == 0);
-        CHECK(cJSON_IsFalse(member(check, "valid")));
-        CHECK(cJSON_IsNull(member(check, "shape_error")));
-        const cJSON *violations = member(check, "violations");
+        CHECK(cJSON_GetNumberValue(test_json_member(check, "species")) == 1);
+        CHECK(strcmp(cJSON_GetStringValue(test_json_member(check, "cantus")), "lower") == 0);
+        CHECK(cJSON_IsFalse(test_json_member(check, "valid")));
+        CHECK(cJSON_IsNull(test_json_member(check, "shape_error")));
+        const cJSON *violations = test_json_member(check, "violations");
         bool found = false;
         const cJSON *violation;
         cJSON_ArrayForEach(violation, violations) {
-            const char *group = cJSON_GetStringValue(member(violation, "group"));
-            const char *severity = cJSON_GetStringValue(member(violation, "severity"));
+            const char *group = cJSON_GetStringValue(test_json_member(violation, "group"));
+            const char *severity = cJSON_GetStringValue(test_json_member(violation, "severity"));
             found = found || (group && severity && strcmp(group, "harmony") == 0 && strcmp(severity, "hard") == 0);
-            CHECK(cJSON_IsObject(member(violation, "location")));
-            CHECK(cJSON_IsArray(member(violation, "note_ids")));
-            CHECK(strcmp(cJSON_GetStringValue(member(violation, "framework")), "standard-counterpoint-v1") == 0);
+            CHECK(cJSON_IsObject(test_json_member(violation, "location")));
+            CHECK(cJSON_IsArray(test_json_member(violation, "note_ids")));
+            CHECK(strcmp(cJSON_GetStringValue(test_json_member(violation, "framework")), "standard-counterpoint-v1") == 0);
         }
         CHECK(found);
     }
@@ -151,7 +149,7 @@ static void check_output(void) {
     document = analysis_document_build("first-species-parallel-fifth.musicxml", &notes, &report);
     markdown = document ? markdown_report_render(document) : NULL;
     parsed = json ? cJSON_Parse(json) : NULL;
-    CHECK(parsed && cJSON_IsNull(member(parsed, "counterpoint_check")));
+    CHECK(parsed && cJSON_IsNull(test_json_member(parsed, "counterpoint_check")));
     CHECK(markdown && strstr(markdown, "Counterpoint check") == NULL);
     cJSON_Delete(parsed);
     free(markdown);

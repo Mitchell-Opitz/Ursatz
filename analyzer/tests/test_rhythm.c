@@ -10,6 +10,8 @@
 
 #include "cJSON.h"
 
+#include "test_support.h"
+
 /*
  * The rhythm and meter of the report.
  *
@@ -45,20 +47,6 @@ static int failures = 0;
         }                                                                                          \
     } while (0)
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    return cJSON_GetObjectItemCaseSensitive(object, key);
-}
-
-static double number(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
-    return cJSON_IsNumber(item) ? item->valuedouble : -1e9;
-}
-
-static const char *text(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
-    return cJSON_IsString(item) ? item->valuestring : "";
-}
-
 /* --- the analysis of a file --- */
 
 typedef struct {
@@ -92,8 +80,8 @@ static void analysis_destroy(Analysis *analysis) {
 static size_t claims_of(const cJSON *document, const char *label, const cJSON **out, size_t capacity) {
     size_t count = 0;
     const cJSON *claim;
-    cJSON_ArrayForEach(claim, member(document, "rhythm")) {
-        if (strcmp(text(claim, "label"), label) == 0 && count < capacity) {
+    cJSON_ArrayForEach(claim, test_json_member(document, "rhythm")) {
+        if (strcmp(test_json_string(claim, "label"), label) == 0 && count < capacity) {
             out[count++] = claim;
         }
     }
@@ -104,7 +92,7 @@ static size_t claims_of(const cJSON *document, const char *label, const cJSON **
 
 static void check_structure(const Analysis *analysis) {
     const AnalysisReport *report = &analysis->report;
-    const cJSON *rhythm = member(analysis->document, "rhythm");
+    const cJSON *rhythm = test_json_member(analysis->document, "rhythm");
     size_t expected = report->density_count + report->syncopation_count + report->hemiola_count +
                       report->hypermeter_count + report->tuplet_count + (report->meter_check.present ? 1 : 0);
     CHECK(cJSON_IsArray(rhythm) && (size_t)cJSON_GetArraySize(rhythm) == expected);
@@ -341,12 +329,12 @@ static void check_triplets(void) {
     size_t found = claims_of(analysis.document, "tuplet", claims, 8);
     CHECK(found == 1);
     if (found == 1) {
-        CHECK(number(member(claims[0], "ratio"), "actual") == 3 && number(member(claims[0], "ratio"), "normal") == 2);
-        CHECK(strcmp(text(claims[0], "name"), "triplet") == 0 && strcmp(text(claims[0], "meter"), "simple") == 0);
-        CHECK(cJSON_IsTrue(member(claims[0], "borrowed")));
-        CHECK(strcmp(text(claims[0], "level"), "beat") == 0 && cJSON_IsTrue(member(claims[0], "level_typical")));
-        CHECK(number(claims[0], "attacks") == 6 && cJSON_GetArraySize(member(claims[0], "note_ids")) == 6);
-        CHECK(number(claims[0], "measure") == 1 && fabs(number(claims[0], "beat") - 1.0) < BEAT_TOLERANCE);
+        CHECK(test_json_number(test_json_member(claims[0], "ratio"), "actual") == 3 && test_json_number(test_json_member(claims[0], "ratio"), "normal") == 2);
+        CHECK(strcmp(test_json_string(claims[0], "name"), "triplet") == 0 && strcmp(test_json_string(claims[0], "meter"), "simple") == 0);
+        CHECK(cJSON_IsTrue(test_json_member(claims[0], "borrowed")));
+        CHECK(strcmp(test_json_string(claims[0], "level"), "beat") == 0 && cJSON_IsTrue(test_json_member(claims[0], "level_typical")));
+        CHECK(test_json_number(claims[0], "attacks") == 6 && cJSON_GetArraySize(test_json_member(claims[0], "note_ids")) == 6);
+        CHECK(test_json_number(claims[0], "measure") == 1 && fabs(test_json_number(claims[0], "beat") - 1.0) < BEAT_TOLERANCE);
     }
     check_structure(&analysis);
     analysis_destroy(&analysis);
@@ -375,11 +363,11 @@ static void check_duplet(void) {
     size_t found = claims_of(analysis.document, "tuplet", claims, 8);
     CHECK(found == 1);
     if (found == 1) {
-        CHECK(number(member(claims[0], "ratio"), "actual") == 2 && number(member(claims[0], "ratio"), "normal") == 3);
-        CHECK(strcmp(text(claims[0], "name"), "duplet") == 0 && strcmp(text(claims[0], "meter"), "compound") == 0);
-        CHECK(cJSON_IsTrue(member(claims[0], "borrowed")));
-        CHECK(strcmp(text(claims[0], "level"), "beat") == 0);
-        CHECK(number(claims[0], "attacks") == 2);
+        CHECK(test_json_number(test_json_member(claims[0], "ratio"), "actual") == 2 && test_json_number(test_json_member(claims[0], "ratio"), "normal") == 3);
+        CHECK(strcmp(test_json_string(claims[0], "name"), "duplet") == 0 && strcmp(test_json_string(claims[0], "meter"), "compound") == 0);
+        CHECK(cJSON_IsTrue(test_json_member(claims[0], "borrowed")));
+        CHECK(strcmp(test_json_string(claims[0], "level"), "beat") == 0);
+        CHECK(test_json_number(claims[0], "attacks") == 2);
     }
     check_structure(&analysis);
     analysis_destroy(&analysis);
@@ -409,9 +397,9 @@ static void check_hemiola(void) {
     size_t found = claims_of(analysis.document, "hemiola", claims, 8);
     CHECK(found == 1);
     if (found == 1) {
-        CHECK(number(member(claims[0], "measures"), "first") == 3 && number(member(claims[0], "measures"), "last") == 4);
-        CHECK(number(member(claims[0], "evidence"), "agreeing") >= 2);
-        CHECK(cJSON_GetArraySize(member(claims[0], "note_ids")) == 3);
+        CHECK(test_json_number(test_json_member(claims[0], "measures"), "first") == 3 && test_json_number(test_json_member(claims[0], "measures"), "last") == 4);
+        CHECK(test_json_number(test_json_member(claims[0], "evidence"), "agreeing") >= 2);
+        CHECK(cJSON_GetArraySize(test_json_member(claims[0], "note_ids")) == 3);
     }
     check_structure(&analysis);
     analysis_destroy(&analysis);

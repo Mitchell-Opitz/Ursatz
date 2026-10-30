@@ -20,13 +20,7 @@
 #include "standard-counterpoint/framework.h"
 #include "tendency_rules.h"
 #include "theory/framework.h"
-
-/* a/b compared with c/d for positive denominators: negative, zero or positive. */
-static int compare_rational(long long a, long long b, long long c, long long d) {
-    long long left = a * d;
-    long long right = c * b;
-    return left < right ? -1 : (left > right ? 1 : 0);
-}
+#include "util/misc_util.h"
 
 _Static_assert(NON_CHORD_TONE_COUNT == ANALYSIS_MELODY_NCT_TYPES, "the report counts every NonChordTone");
 
@@ -62,7 +56,7 @@ static size_t member_of(const Segment *segment, const OuterVoiceEntry *entry) {
 static const AnalysisKeyRegion *region_at(const AnalysisReport *report, long long n, long long d) {
     for (size_t r = 0; r < report->key_region_count; r++) {
         const AnalysisKeyRegion *region = &report->key_regions[r];
-        if (compare_rational(n, d, region->end_numerator, (long long)region->end_denominator) < 0) {
+        if (fraction_compare(n, d, region->end_numerator, (long long)region->end_denominator) < 0) {
             return region;
         }
     }
@@ -108,7 +102,7 @@ static void classify_note(const AnalysisReport *report, const Segment *segment, 
                           size_t *tone, StandardCounterpointMelodyNote *out) {
     out->nct = STANDARD_COUNTERPOINT_NCT_UNCLASSIFIED;
     while (*chord + 1 < report->entry_count &&
-           compare_rational(segment->start_numerator, (long long)segment->start_denominator,
+           fraction_compare(segment->start_numerator, (long long)segment->start_denominator,
                             report->entries[*chord].end_numerator,
                             (long long)report->entries[*chord].end_denominator) >= 0) {
         (*chord)++;
@@ -188,11 +182,11 @@ static bool build_phrase_line(const ImportedNotes *notes, const Segmentation *vo
     size_t tone = 0;
     for (size_t v = 0; v < voices->segment_count; v++) {
         const Segment *segment = &voices->segments[v];
-        if (compare_rational(segment->start_numerator, (long long)segment->start_denominator, phrase->start_numerator,
+        if (fraction_compare(segment->start_numerator, (long long)segment->start_denominator, phrase->start_numerator,
                              (long long)phrase->start_denominator) < 0) {
             continue;
         }
-        if (compare_rational(segment->start_numerator, (long long)segment->start_denominator, phrase->end_numerator,
+        if (fraction_compare(segment->start_numerator, (long long)segment->start_denominator, phrase->end_numerator,
                              (long long)phrase->end_denominator) >= 0) {
             break;
         }

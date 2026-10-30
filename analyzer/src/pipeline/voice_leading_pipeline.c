@@ -21,6 +21,7 @@
 #include "time/duration.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
+#include "util/misc_util.h"
 
 #define NO_NOTE SIZE_MAX
 
@@ -53,13 +54,6 @@ static void grid_destroy(VoiceGrid *build) {
     memset(build, 0, sizeof(*build));
 }
 
-/* a/b compared with c/d for positive denominators: negative, zero or positive. */
-static int compare_rational(long long a, long long b, long long c, long long d) {
-    long long left = a * d;
-    long long right = c * b;
-    return left < right ? -1 : (left > right ? 1 : 0);
-}
-
 /* The first entry that starts at or after n/d (entries are in time order); entry_count when there is none. */
 static size_t first_entry_from(const AnalysisReport *report, long long n, long long d) {
     size_t low = 0;
@@ -67,7 +61,7 @@ static size_t first_entry_from(const AnalysisReport *report, long long n, long l
     while (low < high) {
         size_t middle = low + (high - low) / 2;
         const AnalysisReportEntry *entry = &report->entries[middle];
-        if (compare_rational(entry->time_numerator, (long long)entry->time_denominator, n, d) < 0) {
+        if (fraction_compare(entry->time_numerator, (long long)entry->time_denominator, n, d) < 0) {
             low = middle + 1;
         } else {
             high = middle;
@@ -101,7 +95,7 @@ static bool place_note(const ImportedNotes *notes, const AnalysisReport *report,
             : NULL;
     for (size_t row = first_entry_from(report, on_n, on_d); row < report->entry_count; row++) {
         const AnalysisReportEntry *entry = &report->entries[row];
-        if (compare_rational(entry->time_numerator, (long long)entry->time_denominator, off_n, off_d) >= 0) {
+        if (fraction_compare(entry->time_numerator, (long long)entry->time_denominator, off_n, off_d) >= 0) {
             break;
         }
         size_t index = row * build->voice_count + assigned->voice;
@@ -114,7 +108,7 @@ static bool place_note(const ImportedNotes *notes, const AnalysisReport *report,
             notes->pitch_values[note],
             spelling,
             entity_id_value(note_event_id(event)),
-            compare_rational(entry->time_numerator, (long long)entry->time_denominator, on_n, on_d) == 0,
+            fraction_compare(entry->time_numerator, (long long)entry->time_denominator, on_n, on_d) == 0,
             confidence,
         };
         const StandardCounterpointVoiceCell *cell = &build->cells[index];

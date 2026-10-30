@@ -11,6 +11,8 @@
 #include <ursatz_analyzer/style_labels.h>
 #include <ursatz_analyzer/style_profile.h>
 
+#include "test_support.h"
+
 /*
  * Style labels and profiles over the corpora CMake builds in the build tree: "reference" (the five framework-v1
  * pieces), "chorales" (ten Bach chorales) and "sonatinas" (Clementi 36 and Mozart 545). Checks the labels on hand
@@ -30,35 +32,6 @@ static int failures = 0;
             failures++;                                                                                                \
         }                                                                                                              \
     } while (0)
-
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    rewind(file);
-    char *data = malloc((size_t)size + 1);
-    if (data && fread(data, 1, (size_t)size, file) != (size_t)size) {
-        free(data);
-        data = NULL;
-    }
-    fclose(file);
-    if (data) {
-        data[size] = '\0';
-    }
-    return data;
-}
-
-static bool write_file(const char *path, const char *data) {
-    FILE *file = fopen(path, "wb");
-    if (!file) {
-        return false;
-    }
-    bool ok = fputs(data, file) >= 0;
-    return fclose(file) == 0 && ok;
-}
 
 static void make_dir(const char *path) {
     mkdir(path, 0777);
@@ -232,7 +205,7 @@ static void test_profile_statistics(StyleProfile *reference) {
 }
 
 static char *masked_model(const char *path) {
-    char *text = read_file(path);
+    char *text = test_read_file(path);
     cJSON *root = cJSON_Parse(text);
     free(text);
     if (!root) {
@@ -260,9 +233,9 @@ static void test_reference_snapshot(StyleProfile *reference) {
     snprintf(snapshot_path, sizeof(snapshot_path), "%s/style-model.reference.json", URSATZ_SNAPSHOT_DIR);
     const char *update = getenv("UPDATE_SNAPSHOTS");
     if (update && strcmp(update, "1") == 0) {
-        CHECK(masked && write_file(snapshot_path, masked), "cannot write %s", snapshot_path);
+        CHECK(masked && test_write_file(snapshot_path, masked), "cannot write %s", snapshot_path);
     } else {
-        char *expected = read_file(snapshot_path);
+        char *expected = test_read_file(snapshot_path);
         CHECK(expected && masked && strcmp(expected, masked) == 0, "model differs from %s", snapshot_path);
         free(expected);
     }
@@ -301,7 +274,7 @@ static void test_round_trip(StyleProfile *reference) {
 
     /* The same profile written again gives the same bytes, and reading a file twice gives the same id. */
     CHECK(style_model_file_write(reference, "reference", second) == STYLE_MODEL_FILE_OK, "cannot write again");
-    char *a = read_file(first), *b = read_file(second);
+    char *a = test_read_file(first), *b = test_read_file(second);
     CHECK(a && b && strcmp(a, b) == 0, "writing twice gives different bytes");
     free(a);
     free(b);
@@ -657,7 +630,7 @@ static void test_refusals(void) {
     };
     for (size_t i = 0; i < sizeof(refused) / sizeof(refused[0]); i++) {
         StyleModel *model = NULL;
-        CHECK(write_file(path, refused[i]), "cannot write %s", path);
+        CHECK(test_write_file(path, refused[i]), "cannot write %s", path);
         CHECK(style_model_file_read(path, &model, NULL) == STYLE_MODEL_FILE_ERR_FORMAT && model == NULL, "refused file %zu was read", i);
         style_model_destroy(model);
     }

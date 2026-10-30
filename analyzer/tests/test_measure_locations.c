@@ -12,6 +12,8 @@
 
 #include "cJSON.h"
 
+#include "test_support.h"
+
 /*
  * Meter and measure/beat location test. The five reference pieces
  * (Ursatz framework-v1 corpus) and two constructed files are imported,
@@ -96,34 +98,9 @@ static void append_bytes(unsigned char *buf, size_t *pos, const void *bytes, siz
     *pos += len;
 }
 
-static void append_u32(unsigned char *buf, size_t *pos, uint32_t v) {
-    unsigned char b[4] = {(unsigned char)(v >> 24), (unsigned char)(v >> 16), (unsigned char)(v >> 8),
-                           (unsigned char)v};
-    append_bytes(buf, pos, b, 4);
-}
-
-static void append_u16(unsigned char *buf, size_t *pos, uint16_t v) {
-    unsigned char b[2] = {(unsigned char)(v >> 8), (unsigned char)v};
-    append_bytes(buf, pos, b, 2);
-}
-
-static size_t build_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body,
-                               size_t track_body_size) {
-    size_t pos = 0;
-    append_bytes(buf, &pos, "MThd", 4);
-    append_u32(buf, &pos, 6);
-    append_u16(buf, &pos, 0);
-    append_u16(buf, &pos, 1);
-    append_u16(buf, &pos, division);
-    append_bytes(buf, &pos, "MTrk", 4);
-    append_u32(buf, &pos, (uint32_t)track_body_size);
-    append_bytes(buf, &pos, track_body, track_body_size);
-    return pos;
-}
-
 static void write_fixture(const char *path, const unsigned char *track, size_t track_size) {
     unsigned char buf[512];
-    size_t size = build_smf_type0(buf, 96, track, track_size);
+    size_t size = test_smf_type0(buf, 96, track, track_size);
     FILE *file = fopen(path, "wb");
     assert(file != NULL);
     assert(fwrite(buf, 1, size, file) == size);
@@ -159,14 +136,8 @@ static void write_no_meter_fixture(const char *path) {
 
 /* ---- Checks ---- */
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-    assert(item != NULL);
-    return item;
-}
-
 static long number(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
+    const cJSON *item = test_json_require(object, key);
     assert(cJSON_IsNumber(item));
     return (long)item->valuedouble;
 }
@@ -179,8 +150,8 @@ static double position_key(int measure, int beat, long sub_num, long sub_den) {
 static double position_key_of(const cJSON *position) {
     assert(cJSON_IsObject(position));
     return position_key((int)number(position, "measure"), (int)number(position, "beat"),
-                        number(member(position, "subdivision"), "num"),
-                        number(member(position, "subdivision"), "den"));
+                        number(test_json_require(position, "subdivision"), "num"),
+                        number(test_json_require(position, "subdivision"), "den"));
 }
 
 static void check_piece(const char *path, const char *display_name, const Expectation *expected) {
@@ -201,32 +172,32 @@ static void check_piece(const char *path, const char *display_name, const Expect
     cJSON *document = cJSON_Parse(json);
     assert(document != NULL);
 
-    const cJSON *meter = member(document, "meter");
-    assert(strcmp(member(meter, "source")->valuestring, expected->source) == 0);
-    assert(number(member(meter, "time_signature"), "numerator") == expected->numerator);
-    assert(number(member(meter, "time_signature"), "denominator") == expected->denominator);
+    const cJSON *meter = test_json_require(document, "meter");
+    assert(strcmp(test_json_require(meter, "source")->valuestring, expected->source) == 0);
+    assert(number(test_json_require(meter, "time_signature"), "numerator") == expected->numerator);
+    assert(number(test_json_require(meter, "time_signature"), "denominator") == expected->denominator);
     assert(number(meter, "measure_count") == expected->measure_count);
     assert(number(meter, "last_measure") == expected->last_measure);
 
-    const cJSON *pickup = member(meter, "pickup");
+    const cJSON *pickup = test_json_require(meter, "pickup");
     if (expected->pickup_beats < 0) {
         assert(cJSON_IsNull(pickup));
     } else {
         assert(cJSON_IsObject(pickup));
-        assert(number(member(pickup, "beats"), "num") == expected->pickup_beats);
-        assert(number(member(pickup, "beats"), "den") == 1);
-        assert(number(member(pickup, "length"), "num") == 1);
-        assert(number(member(pickup, "length"), "den") == 4);
+        assert(number(test_json_require(pickup, "beats"), "num") == expected->pickup_beats);
+        assert(number(test_json_require(pickup, "beats"), "den") == 1);
+        assert(number(test_json_require(pickup, "length"), "num") == 1);
+        assert(number(test_json_require(pickup, "length"), "den") == 4);
         assert(strstr(markdown, "- **Pickup:** 1 beat(s), numbered measure 0.\n") != NULL);
     }
 
-    const cJSON *changes = member(meter, "changes");
+    const cJSON *changes = test_json_require(meter, "changes");
     assert((size_t)cJSON_GetArraySize(changes) == expected->change_count);
     for (size_t i = 0; i < expected->change_count; i++) {
         const cJSON *change = cJSON_GetArrayItem(changes, (int)i);
         assert(number(change, "measure") == expected->changes[i].measure);
-        assert(number(member(change, "time_signature"), "numerator") == expected->changes[i].numerator);
-        assert(number(member(change, "time_signature"), "denominator") == expected->changes[i].denominator);
+        assert(number(test_json_require(change, "time_signature"), "numerator") == expected->changes[i].numerator);
+        assert(number(test_json_require(change, "time_signature"), "denominator") == expected->changes[i].denominator);
     }
 
     if (strcmp(expected->source, "inferred") == 0) {
@@ -235,7 +206,7 @@ static void check_piece(const char *path, const char *display_name, const Expect
         assert(strstr(markdown, "(inferred") == NULL);
     }
 
-    const cJSON *chords = member(document, "chords");
+    const cJSON *chords = test_json_require(document, "chords");
     assert((size_t)cJSON_GetArraySize(chords) == expected->chord_count);
     for (size_t i = 0; i < expected->chord_expectation_count; i++) {
         const ChordExpectation *chord = &expected->chords[i];
@@ -243,10 +214,10 @@ static void check_piece(const char *path, const char *display_name, const Expect
         bool covered = false;
         const cJSON *claim;
         cJSON_ArrayForEach(claim, chords) {
-            const cJSON *location = member(claim, "location");
-            assert(cJSON_IsObject(member(location, "end")));
-            if (position_key_of(member(location, "start")) <= at + 1e-9 &&
-                at < position_key_of(member(location, "end")) - 1e-9) {
+            const cJSON *location = test_json_require(claim, "location");
+            assert(cJSON_IsObject(test_json_require(location, "end")));
+            if (position_key_of(test_json_require(location, "start")) <= at + 1e-9 &&
+                at < position_key_of(test_json_require(location, "end")) - 1e-9) {
                 covered = true;
                 break;
             }
@@ -257,13 +228,13 @@ static void check_piece(const char *path, const char *display_name, const Expect
     /* Every claim, not only the chosen chords, carries a location. */
     const cJSON *chord;
     cJSON_ArrayForEach(chord, chords) {
-        assert(cJSON_IsObject(member(member(chord, "location"), "start")));
-        assert(cJSON_IsObject(member(member(chord, "location"), "end")));
+        assert(cJSON_IsObject(test_json_require(test_json_require(chord, "location"), "start")));
+        assert(cJSON_IsObject(test_json_require(test_json_require(chord, "location"), "end")));
     }
-    assert(cJSON_IsObject(member(member(meter, "location"), "start")));
-    const cJSON *key = cJSON_GetArrayItem(member(member(document, "keys"), "regions"), 0);
+    assert(cJSON_IsObject(test_json_require(test_json_require(meter, "location"), "start")));
+    const cJSON *key = cJSON_GetArrayItem(test_json_require(test_json_require(document, "keys"), "regions"), 0);
     if (key) {
-        assert(cJSON_IsObject(member(member(key, "location"), "start")));
+        assert(cJSON_IsObject(test_json_require(test_json_require(key, "location"), "start")));
     }
 
     /* The report shows measure and beat, not raw beats from the start of the file. */

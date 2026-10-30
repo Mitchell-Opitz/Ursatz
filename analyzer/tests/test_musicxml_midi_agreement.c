@@ -10,6 +10,8 @@
 
 #include "cJSON.h"
 
+#include "test_support.h"
+
 /*
  * The five reference pieces (Ursatz framework-v1 corpus) are analyzed from
  * their MIDI files and from their MusicXML versions (tests/musicxml, see its
@@ -37,29 +39,8 @@ static const struct {
     {"Field 5.mid", "field-5.musicxml"},
 };
 
-static cJSON *analyze(const char *path) {
-    ImportedNotes notes;
-    assert(input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK);
-    AnalysisReport report;
-    assert(run_analysis_pipeline(&notes, &report));
-    char *json = analysis_document_render(path, &notes, &report);
-    assert(json != NULL);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
-    cJSON *document = cJSON_Parse(json);
-    assert(document != NULL);
-    free(json);
-    return document;
-}
-
-static const cJSON *member(const cJSON *object, const char *key) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-    assert(item != NULL);
-    return item;
-}
-
 static const char *string(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
+    const cJSON *item = test_json_require(object, key);
     assert(cJSON_IsString(item));
     return item->valuestring;
 }
@@ -87,28 +68,28 @@ static bool optional_string_equal(const cJSON *a, const cJSON *b) {
 }
 
 static void compare_meter(const cJSON *midi, const cJSON *xml, const char *piece) {
-    const cJSON *midi_meter = member(midi, "meter");
-    const cJSON *xml_meter = member(xml, "meter");
-    assert(same(member(midi_meter, "time_signature"), member(xml_meter, "time_signature")));
-    assert(same(member(midi_meter, "measure_count"), member(xml_meter, "measure_count")));
-    assert(same(member(midi_meter, "last_measure"), member(xml_meter, "last_measure")));
-    assert(cJSON_IsObject(member(midi_meter, "pickup")) == cJSON_IsObject(member(xml_meter, "pickup")));
-    assert(cJSON_GetArraySize(member(midi_meter, "changes")) == cJSON_GetArraySize(member(xml_meter, "changes")));
+    const cJSON *midi_meter = test_json_require(midi, "meter");
+    const cJSON *xml_meter = test_json_require(xml, "meter");
+    assert(same(test_json_require(midi_meter, "time_signature"), test_json_require(xml_meter, "time_signature")));
+    assert(same(test_json_require(midi_meter, "measure_count"), test_json_require(xml_meter, "measure_count")));
+    assert(same(test_json_require(midi_meter, "last_measure"), test_json_require(xml_meter, "last_measure")));
+    assert(cJSON_IsObject(test_json_require(midi_meter, "pickup")) == cJSON_IsObject(test_json_require(xml_meter, "pickup")));
+    assert(cJSON_GetArraySize(test_json_require(midi_meter, "changes")) == cJSON_GetArraySize(test_json_require(xml_meter, "changes")));
 
     /* Notated for the score; embedded (or inferred, when the file has no time signature) for MIDI. */
     assert(strcmp(string(xml_meter, "source"), "notated") == 0);
     const char *midi_source = string(midi_meter, "source");
     assert(strcmp(midi_source, "file") == 0 || strcmp(midi_source, "inferred") == 0);
-    const cJSON *midi_input = member(member(midi, "metadata"), "input");
-    const cJSON *xml_input = member(member(xml, "metadata"), "input");
+    const cJSON *midi_input = test_json_require(test_json_require(midi, "metadata"), "input");
+    const cJSON *xml_input = test_json_require(test_json_require(xml, "metadata"), "input");
     assert(strcmp(string(xml_input, "meter"), "notated") == 0);
     assert(strcmp(string(midi_input, "meter"), strcmp(midi_source, "file") == 0 ? "embedded" : "inferred") == 0);
-    printf("%s: %ld measures, meter agrees\n", piece, (long)member(xml_meter, "measure_count")->valuedouble);
+    printf("%s: %ld measures, meter agrees\n", piece, (long)test_json_require(xml_meter, "measure_count")->valuedouble);
 }
 
 static void compare_keys(const cJSON *midi, const cJSON *xml) {
-    const cJSON *midi_regions = member(member(midi, "keys"), "regions");
-    const cJSON *xml_regions = member(member(xml, "keys"), "regions");
+    const cJSON *midi_regions = test_json_require(test_json_require(midi, "keys"), "regions");
+    const cJSON *xml_regions = test_json_require(test_json_require(xml, "keys"), "regions");
     assert(cJSON_GetArraySize(midi_regions) == cJSON_GetArraySize(xml_regions));
     assert(cJSON_GetArraySize(midi_regions) > 0);
     for (int i = 0; i < cJSON_GetArraySize(midi_regions); i++) {
@@ -116,22 +97,22 @@ static void compare_keys(const cJSON *midi, const cJSON *xml) {
         const cJSON *b = cJSON_GetArrayItem(xml_regions, i);
         assert(strcmp(string(a, "tonic"), string(b, "tonic")) == 0);
         assert(strcmp(string(a, "mode"), string(b, "mode")) == 0);
-        assert(same(member(a, "measures"), member(b, "measures")));
+        assert(same(test_json_require(a, "measures"), test_json_require(b, "measures")));
     }
-    const cJSON *midi_input = member(member(midi, "metadata"), "input");
-    const cJSON *xml_input = member(member(xml, "metadata"), "input");
-    bool midi_notates_key = cJSON_GetArraySize(member(member(midi, "metadata"), "key_signatures")) > 0;
+    const cJSON *midi_input = test_json_require(test_json_require(midi, "metadata"), "input");
+    const cJSON *xml_input = test_json_require(test_json_require(xml, "metadata"), "input");
+    bool midi_notates_key = cJSON_GetArraySize(test_json_require(test_json_require(midi, "metadata"), "key_signatures")) > 0;
     assert(strcmp(string(midi_input, "key"), midi_notates_key ? "embedded" : "inferred") == 0);
     assert(strcmp(string(xml_input, "key"), midi_notates_key ? "notated" : "inferred") == 0);
 }
 
 static const cJSON *outer_degree(const cJSON *chord, const char *line) {
-    return member(member(member(chord, "outer"), line), "degree");
+    return test_json_require(test_json_require(test_json_require(chord, "outer"), line), "degree");
 }
 
 static void compare_chords(const cJSON *midi, const cJSON *xml, const char *piece) {
-    const cJSON *midi_chords = member(midi, "chords");
-    const cJSON *xml_chords = member(xml, "chords");
+    const cJSON *midi_chords = test_json_require(midi, "chords");
+    const cJSON *xml_chords = test_json_require(xml, "chords");
     int total = cJSON_GetArraySize(midi_chords);
     assert(total > 0);
 
@@ -141,11 +122,11 @@ static void compare_chords(const cJSON *midi, const cJSON *xml, const char *piec
     int degree_total = 0;
     for (int i = 0; i < total; i++) {
         const cJSON *a = cJSON_GetArrayItem(midi_chords, i);
-        const cJSON *start = member(member(a, "span"), "start");
+        const cJSON *start = test_json_require(test_json_require(a, "span"), "start");
         const cJSON *b = NULL;
         const cJSON *candidate;
         cJSON_ArrayForEach(candidate, xml_chords) {
-            if (same(member(member(candidate, "span"), "start"), start)) {
+            if (same(test_json_require(test_json_require(candidate, "span"), "start"), start)) {
                 b = candidate;
                 break;
             }
@@ -154,13 +135,13 @@ static void compare_chords(const cJSON *midi, const cJSON *xml, const char *piec
             degree_total += 2;
             continue;
         }
-        const cJSON *a_root = member(a, "root");
-        const cJSON *b_root = member(b, "root");
+        const cJSON *a_root = test_json_require(a, "root");
+        const cJSON *b_root = test_json_require(b, "root");
         bool roots = cJSON_IsNull(a_root) || cJSON_IsNull(b_root)
                          ? cJSON_IsNull(a_root) && cJSON_IsNull(b_root)
                          : pitch_class_of_name(a_root->valuestring) == pitch_class_of_name(b_root->valuestring);
-        if (roots && optional_string_equal(member(a, "quality"), member(b, "quality")) &&
-            same(member(a, "inversion"), member(b, "inversion"))) {
+        if (roots && optional_string_equal(test_json_require(a, "quality"), test_json_require(b, "quality")) &&
+            same(test_json_require(a, "inversion"), test_json_require(b, "inversion"))) {
             chord_matches++;
         }
         static const char *const LINES[2] = {"soprano", "bass"};
@@ -188,16 +169,16 @@ int main(void) {
         char xml_path[512];
         snprintf(midi_path, sizeof(midi_path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURE_DIR, PIECES[i].midi);
         snprintf(xml_path, sizeof(xml_path), "%s/%s", URSATZ_MUSICXML_DIR, PIECES[i].musicxml);
-        cJSON *midi = analyze(midi_path);
-        cJSON *xml = analyze(xml_path);
+        cJSON *midi = test_analyze_midi(midi_path);
+        cJSON *xml = test_analyze_midi(xml_path);
 
-        const cJSON *xml_input = member(member(xml, "metadata"), "input");
-        const cJSON *midi_input = member(member(midi, "metadata"), "input");
+        const cJSON *xml_input = test_json_require(test_json_require(xml, "metadata"), "input");
+        const cJSON *midi_input = test_json_require(test_json_require(midi, "metadata"), "input");
         assert(strcmp(string(xml_input, "format"), "musicxml") == 0);
         assert(strcmp(string(xml_input, "source_type"), "score") == 0);
         assert(strcmp(string(midi_input, "format"), "midi") == 0);
         assert(strcmp(string(midi_input, "source_type"), "performance") == 0);
-        assert(same(member(member(midi, "metadata"), "note_count"), member(member(xml, "metadata"), "note_count")));
+        assert(same(test_json_require(test_json_require(midi, "metadata"), "note_count"), test_json_require(test_json_require(xml, "metadata"), "note_count")));
 
         compare_meter(midi, xml, PIECES[i].musicxml);
         compare_keys(midi, xml);

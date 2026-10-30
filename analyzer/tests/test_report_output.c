@@ -10,6 +10,8 @@
 #include <ursatz_analyzer/midi_pipeline.h>
 #include <ursatz_analyzer/report_writer.h>
 
+#include "test_support.h"
+
 /*
  * End-to-end test: runs the same real MIDI fixture used by
  * test_analysis_pipeline.c through the full pipeline, renders it to
@@ -22,31 +24,6 @@
 static void append_bytes(unsigned char *buf, size_t *pos, const void *bytes, size_t len) {
     memcpy(buf + *pos, bytes, len);
     *pos += len;
-}
-
-static void append_u32(unsigned char *buf, size_t *pos, uint32_t v) {
-    unsigned char b[4] = {(unsigned char)(v >> 24), (unsigned char)(v >> 16), (unsigned char)(v >> 8),
-                           (unsigned char)v};
-    append_bytes(buf, pos, b, 4);
-}
-
-static void append_u16(unsigned char *buf, size_t *pos, uint16_t v) {
-    unsigned char b[2] = {(unsigned char)(v >> 8), (unsigned char)v};
-    append_bytes(buf, pos, b, 2);
-}
-
-static size_t build_smf_type0(unsigned char *buf, uint16_t division, const unsigned char *track_body,
-                               size_t track_body_size) {
-    size_t pos = 0;
-    append_bytes(buf, &pos, "MThd", 4);
-    append_u32(buf, &pos, 6);
-    append_u16(buf, &pos, 0);
-    append_u16(buf, &pos, 1);
-    append_u16(buf, &pos, division);
-    append_bytes(buf, &pos, "MTrk", 4);
-    append_u32(buf, &pos, (uint32_t)track_body_size);
-    append_bytes(buf, &pos, track_body, track_body_size);
-    return pos;
 }
 
 static char *read_whole_file(const char *path) {
@@ -85,7 +62,7 @@ int main(void) {
     };
 
     unsigned char buf[256];
-    size_t size = build_smf_type0(buf, 96, track, sizeof(track));
+    size_t size = test_smf_type0(buf, 96, track, sizeof(track));
 
     const char *input_path = "/tmp/ursatz_analyzer_report_test_fixture.mid";
     FILE *file = fopen(input_path, "wb");

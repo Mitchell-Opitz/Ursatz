@@ -11,6 +11,8 @@
 
 #include "cJSON.h"
 
+#include "test_support.h"
+
 /*
  * Cadences, boundary cadences and cadence-confirmed key changes on the five reference pieces (Ursatz's
  * framework-v1-corpus).
@@ -60,65 +62,52 @@ static const Piece PIECES[] = {{"Bach 114", "Bach 114.mid"},
 static const char *const TYPES[] = {"perfect-authentic", "imperfect-authentic", "half",       "subverted",
                                     "plagal",            "deceptive",           "authentic-unspecified", "unknown"};
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    return cJSON_GetObjectItemCaseSensitive(object, key);
-}
-
-static double rational_of(const cJSON *rational) {
-    return member(rational, "num")->valuedouble / member(rational, "den")->valuedouble;
-}
-
 static bool rational_equals(const cJSON *rational, long num, long den) {
-    return (long)member(rational, "num")->valuedouble * den == num * (long)member(rational, "den")->valuedouble;
+    return (long)test_json_member(rational, "num")->valuedouble * den == num * (long)test_json_member(rational, "den")->valuedouble;
 }
 
 static bool position_valid(const cJSON *position) {
-    return cJSON_IsObject(position) && member(position, "measure")->valuedouble >= 0 &&
-           member(position, "beat")->valuedouble >= 1;
-}
-
-static bool within(const cJSON *inner, const cJSON *outer) {
-    return rational_of(member(inner, "start")) >= rational_of(member(outer, "start")) - 1e-12 &&
-           rational_of(member(inner, "end")) <= rational_of(member(outer, "end")) + 1e-12;
+    return cJSON_IsObject(position) && test_json_member(position, "measure")->valuedouble >= 0 &&
+           test_json_member(position, "beat")->valuedouble >= 1;
 }
 
 static size_t count_type(const cJSON *cadences, const char *type) {
     size_t count = 0;
     const cJSON *cadence;
     cJSON_ArrayForEach(cadence, cadences) {
-        count += strcmp(member(cadence, "type")->valuestring, type) == 0 ? 1 : 0;
+        count += strcmp(test_json_member(cadence, "type")->valuestring, type) == 0 ? 1 : 0;
     }
     return count;
 }
 
 static void check_claims(const Piece *piece, const ImportedNotes *notes, const AnalysisReport *report,
                          const cJSON *document) {
-    const cJSON *cadences = member(document, "cadences");
-    const cJSON *regions = member(member(document, "keys"), "regions");
+    const cJSON *cadences = test_json_member(document, "cadences");
+    const cJSON *regions = test_json_member(test_json_member(document, "keys"), "regions");
     CHECK((size_t)cJSON_GetArraySize(cadences) == report->cadence_count);
     double previous_arrival = -1.0;
     const cJSON *cadence;
     cJSON_ArrayForEach(cadence, cadences) {
-        const cJSON *span = member(cadence, "span");
-        const cJSON *location = member(cadence, "location");
-        const cJSON *arrival = member(cadence, "arrival");
-        const cJSON *dominant = member(cadence, "dominant");
-        CHECK(strcmp(member(cadence, "framework")->valuestring, "standard-harmony-v1") == 0);
-        CHECK(position_valid(member(location, "start")) && position_valid(member(location, "end")));
-        CHECK(position_valid(member(member(arrival, "location"), "start")) &&
-              position_valid(member(member(arrival, "location"), "end")));
-        CHECK(within(member(arrival, "span"), span) && within(member(dominant, "span"), span));
-        CHECK(rational_of(member(member(dominant, "span"), "start")) <=
-              rational_of(member(member(arrival, "span"), "start")));
+        const cJSON *span = test_json_member(cadence, "span");
+        const cJSON *location = test_json_member(cadence, "location");
+        const cJSON *arrival = test_json_member(cadence, "arrival");
+        const cJSON *dominant = test_json_member(cadence, "dominant");
+        CHECK(strcmp(test_json_member(cadence, "framework")->valuestring, "standard-harmony-v1") == 0);
+        CHECK(position_valid(test_json_member(location, "start")) && position_valid(test_json_member(location, "end")));
+        CHECK(position_valid(test_json_member(test_json_member(arrival, "location"), "start")) &&
+              position_valid(test_json_member(test_json_member(arrival, "location"), "end")));
+        CHECK(test_within(test_json_member(arrival, "span"), span) && test_within(test_json_member(dominant, "span"), span));
+        CHECK(test_rational_of(test_json_member(test_json_member(dominant, "span"), "start")) <=
+              test_rational_of(test_json_member(test_json_member(arrival, "span"), "start")));
 
         bool known = false;
         for (size_t t = 0; t < sizeof(TYPES) / sizeof(TYPES[0]); t++) {
-            known = known || strcmp(member(cadence, "type")->valuestring, TYPES[t]) == 0;
+            known = known || strcmp(test_json_member(cadence, "type")->valuestring, TYPES[t]) == 0;
         }
         CHECK(known);
-        CHECK(strcmp(member(cadence, "label")->valuestring, member(cadence, "type")->valuestring) == 0);
+        CHECK(strcmp(test_json_member(cadence, "label")->valuestring, test_json_member(cadence, "type")->valuestring) == 0);
 
-        const cJSON *ids = member(cadence, "note_ids");
+        const cJSON *ids = test_json_member(cadence, "note_ids");
         CHECK(cJSON_GetArraySize(ids) > 0);
         double last_id = -1.0;
         const cJSON *id;
@@ -127,17 +116,17 @@ static void check_claims(const Piece *piece, const ImportedNotes *notes, const A
             last_id = id->valuedouble;
         }
 
-        const cJSON *region = member(cadence, "region");
+        const cJSON *region = test_json_member(cadence, "region");
         CHECK(cJSON_IsNull(region) || (cJSON_IsNumber(region) && region->valuedouble < cJSON_GetArraySize(regions)));
-        const cJSON *soprano = member(cadence, "soprano_degree");
+        const cJSON *soprano = test_json_member(cadence, "soprano_degree");
         CHECK(cJSON_IsNull(soprano) || cJSON_IsString(soprano));
-        const char *strength = member(cadence, "arrival_beat_strength")->valuestring;
+        const char *strength = test_json_member(cadence, "arrival_beat_strength")->valuestring;
         CHECK(strcmp(strength, "strong") == 0 || strcmp(strength, "medium") == 0 || strcmp(strength, "weak") == 0);
-        if (cJSON_IsTrue(member(cadence, "boundary"))) {
-            CHECK(strcmp(member(cadence, "type")->valuestring, "half") == 0);
+        if (cJSON_IsTrue(test_json_member(cadence, "boundary"))) {
+            CHECK(strcmp(test_json_member(cadence, "type")->valuestring, "half") == 0);
         }
 
-        double arrival_start = rational_of(member(member(arrival, "span"), "start"));
+        double arrival_start = test_rational_of(test_json_member(test_json_member(arrival, "span"), "start"));
         CHECK(arrival_start >= previous_arrival);
         previous_arrival = arrival_start;
     }
@@ -147,8 +136,8 @@ static void check_claims(const Piece *piece, const ImportedNotes *notes, const A
 /* A change into a new key is a modulation exactly when a cadence arrives in the new region (R-044); a return takes
    the extent of the excursion before it. */
 static void check_key_changes(const cJSON *document, const AnalysisReport *report) {
-    const cJSON *cadences = member(document, "cadences");
-    const cJSON *regions = member(member(document, "keys"), "regions");
+    const cJSON *cadences = test_json_member(document, "cadences");
+    const cJSON *regions = test_json_member(test_json_member(document, "keys"), "regions");
     for (size_t i = 0; i < report->key_change_count; i++) {
         const AnalysisKeyChange *change = &report->key_changes[i];
         bool modulation = change->extent == ANALYSIS_KEY_CHANGE_WEAK_MODULATION ||
@@ -158,13 +147,13 @@ static void check_key_changes(const cJSON *document, const AnalysisReport *repor
             CHECK(change->cadence_confirmed == report->key_changes[i - 1].cadence_confirmed);
             continue;
         }
-        const cJSON *into = member(cJSON_GetArrayItem(regions, (int)change->to_region), "span");
+        const cJSON *into = test_json_member(cJSON_GetArrayItem(regions, (int)change->to_region), "span");
         bool arrives = false;
         const cJSON *cadence;
         cJSON_ArrayForEach(cadence, cadences) {
-            double arrival = rational_of(member(member(member(cadence, "arrival"), "span"), "start"));
-            arrives = arrives || (arrival >= rational_of(member(into, "start")) - 1e-12 &&
-                                  arrival < rational_of(member(into, "end")) - 1e-12);
+            double arrival = test_rational_of(test_json_member(test_json_member(test_json_member(cadence, "arrival"), "span"), "start"));
+            arrives = arrives || (arrival >= test_rational_of(test_json_member(into, "start")) - 1e-12 &&
+                                  arrival < test_rational_of(test_json_member(into, "end")) - 1e-12);
         }
         CHECK(modulation == arrives);
         CHECK(change->cadence_confirmed == modulation);
@@ -179,15 +168,15 @@ static void check_key_changes(const cJSON *document, const AnalysisReport *repor
         modulations += is_modulation ? 1 : 0;
         tonicizations += !is_modulation && !change->is_return ? 1 : 0;
     }
-    CHECK((size_t)cJSON_GetArraySize(member(document, "tonicizations")) == tonicizations);
-    CHECK((size_t)cJSON_GetArraySize(member(document, "modulations")) == modulations);
+    CHECK((size_t)cJSON_GetArraySize(test_json_member(document, "tonicizations")) == tonicizations);
+    CHECK((size_t)cJSON_GetArraySize(test_json_member(document, "modulations")) == modulations);
 }
 
 static bool has_cadence_at(const cJSON *cadences, const char *type, long num, long den) {
     const cJSON *cadence;
     cJSON_ArrayForEach(cadence, cadences) {
-        if (strcmp(member(cadence, "type")->valuestring, type) == 0 &&
-            rational_equals(member(member(member(cadence, "arrival"), "span"), "start"), num, den)) {
+        if (strcmp(test_json_member(cadence, "type")->valuestring, type) == 0 &&
+            rational_equals(test_json_member(test_json_member(test_json_member(cadence, "arrival"), "span"), "start"), num, den)) {
             return true;
         }
     }
@@ -198,8 +187,8 @@ static bool has_cadence_at(const cJSON *cadences, const char *type, long num, lo
 static const cJSON *cadence_at(const cJSON *cadences, int measure, int beat) {
     const cJSON *cadence;
     cJSON_ArrayForEach(cadence, cadences) {
-        const cJSON *start = member(member(member(cadence, "arrival"), "location"), "start");
-        if ((int)member(start, "measure")->valuedouble == measure && (int)member(start, "beat")->valuedouble == beat) {
+        const cJSON *start = test_json_member(test_json_member(test_json_member(cadence, "arrival"), "location"), "start");
+        if ((int)test_json_member(start, "measure")->valuedouble == measure && (int)test_json_member(start, "beat")->valuedouble == beat) {
             return cadence;
         }
     }
@@ -210,19 +199,19 @@ static const cJSON *cadence_at(const cJSON *cadences, int measure, int beat) {
 static void check_readings(const cJSON *cadences) {
     const cJSON *cadence;
     cJSON_ArrayForEach(cadence, cadences) {
-        const cJSON *share = member(cadence, "share");
+        const cJSON *share = test_json_member(cadence, "share");
         CHECK(cJSON_IsNumber(share) && share->valuedouble >= 0 && share->valuedouble <= 1000);
-        const cJSON *alternative = member(cadence, "alternative");
+        const cJSON *alternative = test_json_member(cadence, "alternative");
         if (!alternative) {
             CHECK(share->valuedouble == 1000);
             continue;
         }
-        const char *reading = member(alternative, "reading")->valuestring;
+        const char *reading = test_json_member(alternative, "reading")->valuestring;
         CHECK(strcmp(reading, "cadence") == 0 || strcmp(reading, "prolongation") == 0);
-        CHECK((strcmp(reading, "prolongation") == 0) == cJSON_IsNull(member(alternative, "type")));
-        CHECK(share->valuedouble + member(alternative, "share")->valuedouble == 1000);
-        CHECK(cJSON_IsNumber(member(alternative, "measure")) && cJSON_IsNumber(member(alternative, "beat")));
-        CHECK(cJSON_GetArraySize(member(alternative, "note_ids")) > 0);
+        CHECK((strcmp(reading, "prolongation") == 0) == cJSON_IsNull(test_json_member(alternative, "type")));
+        CHECK(share->valuedouble + test_json_member(alternative, "share")->valuedouble == 1000);
+        CHECK(cJSON_IsNumber(test_json_member(alternative, "measure")) && cJSON_IsNumber(test_json_member(alternative, "beat")));
+        CHECK(cJSON_GetArraySize(test_json_member(alternative, "note_ids")) > 0);
     }
 }
 
@@ -231,22 +220,22 @@ static void check_clementi_readings(const cJSON *cadences) {
     static const int EVADED_MEASURES[] = {12, 35};
     for (size_t i = 0; i < sizeof(EVADED_MEASURES) / sizeof(EVADED_MEASURES[0]); i++) {
         const cJSON *evaded = cadence_at(cadences, EVADED_MEASURES[i], 1);
-        const cJSON *alternative = evaded ? member(evaded, "alternative") : NULL;
-        CHECK(evaded && strcmp(member(evaded, "type")->valuestring, "subverted") == 0);
-        CHECK(evaded && member(evaded, "share")->valuedouble == 500);
-        CHECK(alternative && strcmp(member(alternative, "reading")->valuestring, "prolongation") == 0);
-        CHECK(alternative && cJSON_IsNull(member(alternative, "type")));
-        CHECK(alternative && member(alternative, "share")->valuedouble == 500);
-        CHECK(alternative && member(alternative, "measure")->valuedouble == EVADED_MEASURES[i] &&
-              member(alternative, "beat")->valuedouble == 1);
+        const cJSON *alternative = evaded ? test_json_member(evaded, "alternative") : NULL;
+        CHECK(evaded && strcmp(test_json_member(evaded, "type")->valuestring, "subverted") == 0);
+        CHECK(evaded && test_json_member(evaded, "share")->valuedouble == 500);
+        CHECK(alternative && strcmp(test_json_member(alternative, "reading")->valuestring, "prolongation") == 0);
+        CHECK(alternative && cJSON_IsNull(test_json_member(alternative, "type")));
+        CHECK(alternative && test_json_member(alternative, "share")->valuedouble == 500);
+        CHECK(alternative && test_json_member(alternative, "measure")->valuedouble == EVADED_MEASURES[i] &&
+              test_json_member(alternative, "beat")->valuedouble == 1);
     }
     const cJSON *pac = cadence_at(cadences, 24, 1);
-    const cJSON *half = pac ? member(pac, "alternative") : NULL;
-    CHECK(pac && strcmp(member(pac, "type")->valuestring, "perfect-authentic") == 0);
-    CHECK(half && strcmp(member(half, "reading")->valuestring, "cadence") == 0);
-    CHECK(half && strcmp(member(half, "type")->valuestring, "half") == 0);
-    CHECK(half && member(half, "measure")->valuedouble == 23);
-    CHECK(pac && half && member(pac, "share")->valuedouble > member(half, "share")->valuedouble);
+    const cJSON *half = pac ? test_json_member(pac, "alternative") : NULL;
+    CHECK(pac && strcmp(test_json_member(pac, "type")->valuestring, "perfect-authentic") == 0);
+    CHECK(half && strcmp(test_json_member(half, "reading")->valuestring, "cadence") == 0);
+    CHECK(half && strcmp(test_json_member(half, "type")->valuestring, "half") == 0);
+    CHECK(half && test_json_member(half, "measure")->valuedouble == 23);
+    CHECK(pac && half && test_json_member(pac, "share")->valuedouble > test_json_member(half, "share")->valuedouble);
 }
 
 /* The report prints each competing pair, the primary first, and calls a subverted cadence evaded. */
@@ -281,7 +270,7 @@ static void check_counts(const Piece *piece, const cJSON *cadences) {
         size_t boundary = 0;
         const cJSON *cadence;
         cJSON_ArrayForEach(cadence, cadences) {
-            boundary += cJSON_IsTrue(member(cadence, "boundary")) ? 1 : 0;
+            boundary += cJSON_IsTrue(test_json_member(cadence, "boundary")) ? 1 : 0;
         }
         CHECK(boundary > 0);
     }
@@ -304,10 +293,10 @@ static void run_piece(const Piece *piece) {
     if (document) {
         check_claims(piece, &notes, &report, document);
         check_key_changes(document, &report);
-        check_counts(piece, member(document, "cadences"));
-        check_readings(member(document, "cadences"));
+        check_counts(piece, test_json_member(document, "cadences"));
+        check_readings(test_json_member(document, "cadences"));
         if (strcmp(piece->name, "Clementi 36") == 0) {
-            check_clementi_readings(member(document, "cadences"));
+            check_clementi_readings(test_json_member(document, "cadences"));
             check_clementi_report(path, &notes, &report);
         }
         printf("%s: %zu cadences\n", piece->name, report.cadence_count);

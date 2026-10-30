@@ -12,6 +12,8 @@
 
 #include "cJSON.h"
 
+#include "test_support.h"
+
 /*
  * The meter check: Bach 114 as the file declares it (4/4) is offered 3/4 at scale 2; read as 3/4 at scale 2 it is
  * offered nothing; Mozart 545 is offered nothing. Clementi 36 is offered 4/4 at scale 2 (half-length bars): the check
@@ -53,33 +55,29 @@ static void analysis_destroy(Analysis *analysis) {
     imported_notes_destroy(&analysis->notes);
 }
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    return cJSON_GetObjectItemCaseSensitive(object, key);
-}
-
 static double number(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
+    const cJSON *item = test_json_member(object, key);
     assert(cJSON_IsNumber(item));
     return item->valuedouble;
 }
 
 /* A reading of the claim is the meter, scale and pickup it names. */
 static bool reading_is(const cJSON *reading, int beats, int beat_type, double scale, double pickup) {
-    const cJSON *meter = member(reading, "meter");
+    const cJSON *meter = test_json_member(reading, "meter");
     return number(meter, "numerator") == beats && number(meter, "denominator") == beat_type &&
-           number(member(reading, "scale"), "num") / number(member(reading, "scale"), "den") == scale &&
-           number(member(reading, "pickup"), "num") / number(member(reading, "pickup"), "den") == pickup;
+           number(test_json_member(reading, "scale"), "num") / number(test_json_member(reading, "scale"), "den") == scale &&
+           number(test_json_member(reading, "pickup"), "num") / number(test_json_member(reading, "pickup"), "den") == pickup;
 }
 
 static const cJSON *claim_of(const Analysis *analysis) {
-    const cJSON *rhythm = member(analysis->document, "rhythm");
+    const cJSON *rhythm = test_json_member(analysis->document, "rhythm");
     assert(cJSON_IsArray(rhythm) && cJSON_GetArraySize(rhythm) > 0);
     const cJSON *claim = cJSON_GetArrayItem(rhythm, 0);
-    assert(strcmp(member(claim, "label")->valuestring, "meter-fit") == 0);
+    assert(strcmp(test_json_member(claim, "label")->valuestring, "meter-fit") == 0);
     int count = 0;
     const cJSON *other;
     cJSON_ArrayForEach(other, rhythm) {
-        count += strcmp(member(other, "label")->valuestring, "meter-fit") == 0 ? 1 : 0;
+        count += strcmp(test_json_member(other, "label")->valuestring, "meter-fit") == 0 ? 1 : 0;
     }
     assert(count == 1);
     return claim;
@@ -90,19 +88,19 @@ static void check_claim(const Analysis *analysis) {
     const AnalysisMeterCheck *check = &analysis->report.meter_check;
     const cJSON *claim = claim_of(analysis);
     assert(check->present);
-    assert(strcmp(member(claim, "framework")->valuestring, "standard-meter-v1") == 0);
-    assert(cJSON_GetArraySize(member(claim, "note_ids")) == 0);
+    assert(strcmp(test_json_member(claim, "framework")->valuestring, "standard-meter-v1") == 0);
+    assert(cJSON_GetArraySize(test_json_member(claim, "note_ids")) == 0);
     assert(fabs(number(claim, "uncertainty") - check->uncertainty) < 1e-9);
     assert(check->uncertainty >= 0.0 && check->uncertainty <= 1.0);
 
-    const cJSON *declared = member(claim, "declared");
+    const cJSON *declared = test_json_member(claim, "declared");
     assert(reading_is(declared, check->effective.beats, check->effective.beat_type,
                       (double)check->effective.scale_numerator / (double)check->effective.scale_denominator,
                       (double)check->effective.pickup_numerator / (double)check->effective.pickup_denominator));
     assert(fabs(number(declared, "score") - check->effective.score) < 1e-9);
     assert(check->effective.score >= 0.0 && check->effective.score <= 1.0);
 
-    const cJSON *alternative = member(claim, "alternative");
+    const cJSON *alternative = test_json_member(claim, "alternative");
     if (check->has_alternative) {
         assert(cJSON_IsObject(alternative) && check->has_other);
         assert(check->other.score - check->effective.score >= 0.15 - 1e-9);
@@ -120,8 +118,8 @@ static void test_bach_as_declared(void) {
     analyze("bach-114.musicxml", NULL, &analysis);
     check_claim(&analysis);
     const cJSON *claim = claim_of(&analysis);
-    assert(reading_is(member(claim, "declared"), 4, 4, 1.0, 0.0));
-    assert(reading_is(member(claim, "alternative"), 3, 4, 2.0, 0.0));
+    assert(reading_is(test_json_member(claim, "declared"), 4, 4, 1.0, 0.0));
+    assert(reading_is(test_json_member(claim, "alternative"), 3, 4, 2.0, 0.0));
     assert(analysis.report.meter_check.other.score > analysis.report.meter_check.effective.score + 0.4);
     /* offered, never applied: the analysis still reads the file's 4/4 */
     assert(!analysis.notes.source.reading_applied);
@@ -136,8 +134,8 @@ static void test_bach_with_reading_applied(void) {
     analyze("bach-114.musicxml", &reading, &analysis);
     check_claim(&analysis);
     const cJSON *claim = claim_of(&analysis);
-    assert(reading_is(member(claim, "declared"), 3, 4, 1.0, 0.0));
-    assert(cJSON_IsNull(member(claim, "alternative")));
+    assert(reading_is(test_json_member(claim, "declared"), 3, 4, 1.0, 0.0));
+    assert(cJSON_IsNull(test_json_member(claim, "alternative")));
     assert(!analysis.report.meter_check.has_alternative);
     analysis_destroy(&analysis);
 }
@@ -147,8 +145,8 @@ static void test_mozart_has_no_alternative(void) {
     analyze("mozart-545.musicxml", NULL, &analysis);
     check_claim(&analysis);
     const cJSON *claim = claim_of(&analysis);
-    assert(reading_is(member(claim, "declared"), 4, 4, 1.0, 0.0));
-    assert(cJSON_IsNull(member(claim, "alternative")));
+    assert(reading_is(test_json_member(claim, "declared"), 4, 4, 1.0, 0.0));
+    assert(cJSON_IsNull(test_json_member(claim, "alternative")));
     analysis_destroy(&analysis);
 }
 
@@ -158,9 +156,9 @@ static void test_clementi_alternative_is_offered_only(void) {
     analyze("clementi-36.musicxml", NULL, &analysis);
     check_claim(&analysis);
     const cJSON *claim = claim_of(&analysis);
-    assert(reading_is(member(claim, "declared"), 4, 4, 1.0, 0.0));
+    assert(reading_is(test_json_member(claim, "declared"), 4, 4, 1.0, 0.0));
     assert(analysis.report.meter_check.has_alternative);
-    assert(reading_is(member(claim, "alternative"), 4, 4, 2.0, 0.0));
+    assert(reading_is(test_json_member(claim, "alternative"), 4, 4, 2.0, 0.0));
     assert(number(claim, "uncertainty") > 0.5);
     assert(!analysis.notes.source.reading_applied);
     analysis_destroy(&analysis);

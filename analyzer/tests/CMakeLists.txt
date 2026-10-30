@@ -1,9 +1,13 @@
+add_library(analyzer_test_support STATIC support/test_support.c)
+target_include_directories(analyzer_test_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/support)
+target_link_libraries(analyzer_test_support PUBLIC ursatz_analyzer cjson)
+
 add_executable(test_analysis_pipeline test_analysis_pipeline.c)
-target_link_libraries(test_analysis_pipeline PRIVATE ursatz_analyzer)
+target_link_libraries(test_analysis_pipeline PRIVATE ursatz_analyzer analyzer_test_support)
 add_test(NAME test_analysis_pipeline COMMAND test_analysis_pipeline)
 
 add_executable(test_report_output test_report_output.c)
-target_link_libraries(test_report_output PRIVATE ursatz_analyzer)
+target_link_libraries(test_report_output PRIVATE ursatz_analyzer analyzer_test_support)
 add_test(NAME test_report_output COMMAND test_report_output)
 
 add_executable(test_corpus_key_estimation test_corpus_key_estimation.c)
@@ -18,7 +22,7 @@ target_compile_definitions(test_long_labels PRIVATE
 add_test(NAME test_long_labels COMMAND test_long_labels)
 
 add_executable(test_analysis_document test_analysis_document.c)
-target_link_libraries(test_analysis_document PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_analysis_document PRIVATE ursatz_analyzer analyzer_test_support cjson)
 add_test(NAME test_analysis_document COMMAND test_analysis_document)
 
 add_test(NAME test_cli_output_flags
@@ -55,15 +59,22 @@ add_test(NAME test_analysis_document_schema
 set_tests_properties(test_analysis_document_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
 
 add_executable(test_report_snapshots test_report_snapshots.c)
-target_link_libraries(test_report_snapshots PRIVATE ursatz_analyzer)
+target_link_libraries(test_report_snapshots PRIVATE ursatz_analyzer analyzer_test_support)
 target_compile_definitions(test_report_snapshots PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 add_test(NAME test_report_snapshots COMMAND test_report_snapshots)
 
+add_executable(test_document_snapshots test_document_snapshots.c)
+target_link_libraries(test_document_snapshots PRIVATE ursatz_analyzer analyzer_test_support cjson)
+target_compile_definitions(test_document_snapshots PRIVATE
+    URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+add_test(NAME test_document_snapshots COMMAND test_document_snapshots)
+
 add_executable(test_measure_locations test_measure_locations.c)
-target_link_libraries(test_measure_locations PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_measure_locations PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_measure_locations PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_measure_locations COMMAND test_measure_locations)
@@ -75,7 +86,7 @@ target_compile_definitions(test_chord_coverage PRIVATE
 add_test(NAME test_chord_coverage COMMAND test_chord_coverage)
 
 add_executable(test_chord_details test_chord_details.c)
-target_link_libraries(test_chord_details PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_chord_details PRIVATE ursatz_analyzer analyzer_test_support cjson)
 add_test(NAME test_chord_details COMMAND test_chord_details)
 
 add_executable(test_key_regions test_key_regions.c)
@@ -93,7 +104,7 @@ set_tests_properties(test_key_regions_clementi_36 test_key_regions_mozart_545 PR
 add_test(NAME test_key_regions_constructed COMMAND test_key_regions constructed)
 
 add_executable(test_roman_numerals test_roman_numerals.c)
-target_link_libraries(test_roman_numerals PRIVATE ursatz_analyzer cjson m)
+target_link_libraries(test_roman_numerals PRIVATE ursatz_analyzer analyzer_test_support cjson m)
 target_compile_definitions(test_roman_numerals PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_roman_numerals COMMAND test_roman_numerals)
@@ -103,19 +114,19 @@ target_link_libraries(test_outer_voices PRIVATE ursatz_analyzer cjson)
 add_test(NAME test_outer_voices COMMAND test_outer_voices)
 
 add_executable(test_cadences test_cadences.c)
-target_link_libraries(test_cadences PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_cadences PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_cadences PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_cadences COMMAND test_cadences)
 
 add_executable(test_harmonic_function test_harmonic_function.c)
-target_link_libraries(test_harmonic_function PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_harmonic_function PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_harmonic_function PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_harmonic_function COMMAND test_harmonic_function)
 
 add_executable(test_progressions test_progressions.c)
-target_link_libraries(test_progressions PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_progressions PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_include_directories(test_progressions PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_definitions(test_progressions PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
@@ -127,33 +138,33 @@ add_test(NAME test_progressions_bach_114_top COMMAND test_progressions bach-top)
 set_tests_properties(test_progressions_bach_114_top PROPERTIES WILL_FAIL TRUE)
 
 add_executable(test_phrases test_phrases.c)
-target_link_libraries(test_phrases PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_phrases PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_phrases PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_phrases COMMAND test_phrases)
 
 add_executable(test_themes test_themes.c)
-target_link_libraries(test_themes PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_themes PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_themes PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 add_test(NAME test_themes COMMAND test_themes)
 
 add_executable(test_form_plan test_form_plan.c)
-target_link_libraries(test_form_plan PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_form_plan PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_form_plan PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 add_test(NAME test_form_plan COMMAND test_form_plan)
 
 add_executable(test_motives test_motives.c)
-target_link_libraries(test_motives PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_motives PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_motives PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_motives COMMAND test_motives)
 
 add_executable(test_melody test_melody.c)
-target_link_libraries(test_melody PRIVATE ursatz_analyzer cjson m)
+target_link_libraries(test_melody PRIVATE ursatz_analyzer analyzer_test_support cjson m)
 target_compile_definitions(test_melody PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_melody COMMAND test_melody)
@@ -165,7 +176,7 @@ add_test(NAME test_melody_bach_114_target COMMAND test_melody bach-114-target)
 set_tests_properties(test_melody_bach_114_target PROPERTIES WILL_FAIL TRUE)
 
 add_executable(test_rhythm test_rhythm.c)
-target_link_libraries(test_rhythm PRIVATE ursatz_analyzer cjson m)
+target_link_libraries(test_rhythm PRIVATE ursatz_analyzer analyzer_test_support cjson m)
 target_compile_definitions(test_rhythm PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures")
 add_test(NAME test_rhythm COMMAND test_rhythm)
@@ -203,14 +214,14 @@ target_compile_definitions(test_schemas PRIVATE
 add_test(NAME test_schemas COMMAND test_schemas)
 
 add_executable(test_musicxml_midi_agreement test_musicxml_midi_agreement.c)
-target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_musicxml_midi_agreement PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_musicxml_midi_agreement PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 add_test(NAME test_musicxml_midi_agreement COMMAND test_musicxml_midi_agreement)
 
 add_executable(test_musicxml_input test_musicxml_input.c)
-target_link_libraries(test_musicxml_input PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_musicxml_input PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_musicxml_input PRIVATE
     URSATZ_FIXTURE_DIR="${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures"
     URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
@@ -245,7 +256,7 @@ add_test(NAME test_cli_input_formats
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_input_formats.cmake)
 
 add_executable(test_counterpoint_check test_counterpoint_check.c)
-target_link_libraries(test_counterpoint_check PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_counterpoint_check PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_include_directories(test_counterpoint_check PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_definitions(test_counterpoint_check PRIVATE
     URSATZ_COUNTERPOINT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/counterpoint"
@@ -318,7 +329,7 @@ target_link_libraries(test_style_labels PRIVATE ursatz_analyzer)
 add_test(NAME test_style_labels COMMAND test_style_labels)
 
 add_executable(test_style_profile test_style_profile.c)
-target_link_libraries(test_style_profile PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_style_profile PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_style_profile PRIVATE
     URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_STYLE_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/style_work"
@@ -346,7 +357,7 @@ add_test(NAME test_style_model_schema
 set_tests_properties(test_style_model_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED:")
 
 add_executable(test_similar_material test_similar_material.c)
-target_link_libraries(test_similar_material PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_similar_material PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_similar_material PRIVATE
     URSATZ_CORPORA_DIR="${URSATZ_CORPORA_DIR}"
     URSATZ_SIMILAR_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/similar_work"
@@ -387,7 +398,7 @@ if(VALGRIND_PROGRAM)
 endif()
 
 add_executable(test_meter_check test_meter_check.c)
-target_link_libraries(test_meter_check PRIVATE ursatz_analyzer cjson m)
+target_link_libraries(test_meter_check PRIVATE ursatz_analyzer analyzer_test_support cjson m)
 target_compile_definitions(test_meter_check PRIVATE URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
 add_test(NAME test_meter_check COMMAND test_meter_check)
 

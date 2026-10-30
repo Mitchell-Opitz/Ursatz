@@ -10,6 +10,8 @@
 
 #include "cJSON.h"
 
+#include "test_support.h"
+
 /*
  * The form plan: sections, thematic returns and the form tree, for the five reference pieces and the three constructed
  * ones (tests/musicxml/README.md).
@@ -53,45 +55,31 @@ static int failures = 0;
         }                                                                                          \
     } while (0)
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    return cJSON_GetObjectItemCaseSensitive(object, key);
-}
-
-static double number(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
-    return cJSON_IsNumber(item) ? item->valuedouble : -1e9;
-}
-
-static const char *text(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
-    return cJSON_IsString(item) ? item->valuestring : "";
-}
-
 static bool measures_equal(const cJSON *a, const cJSON *b) {
-    return number(a, "first") == number(b, "first") && number(a, "last") == number(b, "last");
+    return test_json_number(a, "first") == test_json_number(b, "first") && test_json_number(a, "last") == test_json_number(b, "last");
 }
 
 /* Two rationals {num, den} are the same time. */
 static bool same_time(const cJSON *a, const cJSON *b) {
-    return number(a, "num") * number(b, "den") == number(b, "num") * number(a, "den");
+    return test_json_number(a, "num") * test_json_number(b, "den") == test_json_number(b, "num") * test_json_number(a, "den");
 }
 
 static double time_of(const cJSON *rational) {
-    return number(rational, "num") / number(rational, "den");
+    return test_json_number(rational, "num") / test_json_number(rational, "den");
 }
 
 static bool position_valid(const cJSON *position) {
-    return cJSON_IsObject(position) && number(position, "measure") >= 0 && number(position, "beat") >= 1;
+    return cJSON_IsObject(position) && test_json_number(position, "measure") >= 0 && test_json_number(position, "beat") >= 1;
 }
 
 static void check_claim(const cJSON *claim, size_t note_count) {
-    CHECK(strcmp(text(claim, "framework"), "standard-form-v1") == 0);
-    CHECK(position_valid(member(member(claim, "location"), "start")) &&
-          position_valid(member(member(claim, "location"), "end")));
-    CHECK(time_of(member(member(claim, "span"), "start")) < time_of(member(member(claim, "span"), "end")));
-    const cJSON *uncertainty = member(claim, "uncertainty");
+    CHECK(strcmp(test_json_string(claim, "framework"), "standard-form-v1") == 0);
+    CHECK(position_valid(test_json_member(test_json_member(claim, "location"), "start")) &&
+          position_valid(test_json_member(test_json_member(claim, "location"), "end")));
+    CHECK(time_of(test_json_member(test_json_member(claim, "span"), "start")) < time_of(test_json_member(test_json_member(claim, "span"), "end")));
+    const cJSON *uncertainty = test_json_member(claim, "uncertainty");
     CHECK(cJSON_IsNumber(uncertainty) && uncertainty->valuedouble >= 0 && uncertainty->valuedouble <= 1);
-    const cJSON *ids = member(claim, "note_ids");
+    const cJSON *ids = test_json_member(claim, "note_ids");
     CHECK(cJSON_IsArray(ids));
     double last = -1.0;
     const cJSON *id;
@@ -106,10 +94,10 @@ static int check_idea_nodes(const cJSON *ideas, int phrase) {
     int count = 0;
     const cJSON *idea;
     cJSON_ArrayForEach(idea, ideas) {
-        CHECK(strcmp(text(idea, "level"), "idea") == 0);
-        CHECK((int)number(idea, "phrase") == phrase);
-        CHECK(strcmp(text(idea, "label"), "basic-idea") == 0 || strcmp(text(idea, "label"), "contrasting-idea") == 0 ||
-              strcmp(text(idea, "label"), "fragment") == 0 || strcmp(text(idea, "label"), "unit") == 0);
+        CHECK(strcmp(test_json_string(idea, "level"), "idea") == 0);
+        CHECK((int)test_json_number(idea, "phrase") == phrase);
+        CHECK(strcmp(test_json_string(idea, "label"), "basic-idea") == 0 || strcmp(test_json_string(idea, "label"), "contrasting-idea") == 0 ||
+              strcmp(test_json_string(idea, "label"), "fragment") == 0 || strcmp(test_json_string(idea, "label"), "unit") == 0);
         count++;
     }
     return count;
@@ -117,30 +105,30 @@ static int check_idea_nodes(const cJSON *ideas, int phrase) {
 
 /* A phrase node holds the subphrases and ideas of its phrase claim, each once, and repeats its measures. */
 static void check_phrase_node(const cJSON *node, const cJSON *phrases, int expected) {
-    CHECK(strcmp(text(node, "level"), "phrase") == 0);
-    CHECK((int)number(node, "phrase") == expected);
+    CHECK(strcmp(test_json_string(node, "level"), "phrase") == 0);
+    CHECK((int)test_json_number(node, "phrase") == expected);
     const cJSON *claim = cJSON_GetArrayItem(phrases, expected);
     CHECK(claim != NULL);
     if (!claim) {
         return;
     }
-    CHECK(measures_equal(member(node, "measures"), member(claim, "measures")));
-    CHECK(number(node, "length") == number(claim, "length"));
-    CHECK(cJSON_IsNull(member(node, "cadence")) == cJSON_IsNull(member(claim, "cadence")) &&
-          (cJSON_IsNull(member(node, "cadence")) || number(node, "cadence") == number(claim, "cadence")));
-    const cJSON *subphrases = member(node, "subphrases");
-    CHECK(cJSON_GetArraySize(subphrases) == cJSON_GetArraySize(member(claim, "subphrases")));
-    int ideas = check_idea_nodes(member(node, "ideas"), expected);
+    CHECK(measures_equal(test_json_member(node, "measures"), test_json_member(claim, "measures")));
+    CHECK(test_json_number(node, "length") == test_json_number(claim, "length"));
+    CHECK(cJSON_IsNull(test_json_member(node, "cadence")) == cJSON_IsNull(test_json_member(claim, "cadence")) &&
+          (cJSON_IsNull(test_json_member(node, "cadence")) || test_json_number(node, "cadence") == test_json_number(claim, "cadence")));
+    const cJSON *subphrases = test_json_member(node, "subphrases");
+    CHECK(cJSON_GetArraySize(subphrases) == cJSON_GetArraySize(test_json_member(claim, "subphrases")));
+    int ideas = check_idea_nodes(test_json_member(node, "ideas"), expected);
     const cJSON *subphrase;
     int index = 0;
     cJSON_ArrayForEach(subphrase, subphrases) {
-        CHECK(strcmp(text(subphrase, "level"), "subphrase") == 0);
-        CHECK((int)number(subphrase, "phrase") == expected && (int)number(subphrase, "index") == index++);
-        CHECK(measures_equal(member(subphrase, "measures"),
-                             member(cJSON_GetArrayItem(member(claim, "subphrases"), index - 1), "measures")));
-        ideas += check_idea_nodes(member(subphrase, "ideas"), expected);
+        CHECK(strcmp(test_json_string(subphrase, "level"), "subphrase") == 0);
+        CHECK((int)test_json_number(subphrase, "phrase") == expected && (int)test_json_number(subphrase, "index") == index++);
+        CHECK(measures_equal(test_json_member(subphrase, "measures"),
+                             test_json_member(cJSON_GetArrayItem(test_json_member(claim, "subphrases"), index - 1), "measures")));
+        ideas += check_idea_nodes(test_json_member(subphrase, "ideas"), expected);
     }
-    CHECK(ideas == cJSON_GetArraySize(member(claim, "ideas")));
+    CHECK(ideas == cJSON_GetArraySize(test_json_member(claim, "ideas")));
 }
 
 static bool is_authentic(const char *type) {
@@ -155,27 +143,27 @@ static void base_letters(const char *label, char *out) {
 }
 
 static void check_sections(const cJSON *document, const cJSON *form, size_t note_count) {
-    const cJSON *sections = member(form, "sections");
-    const cJSON *phrases = member(document, "phrases");
-    const cJSON *cadences = member(document, "cadences");
-    const cJSON *returns = member(form, "returns");
+    const cJSON *sections = test_json_member(form, "sections");
+    const cJSON *phrases = test_json_member(document, "phrases");
+    const cJSON *cadences = test_json_member(document, "cadences");
+    const cJSON *returns = test_json_member(form, "returns");
     int expected_phrase = 0;
     const cJSON *previous = NULL;
     int index = 0;
     const cJSON *section;
     cJSON_ArrayForEach(section, sections) {
         check_claim(section, note_count);
-        CHECK(strcmp(text(section, "level"), "section") == 0);
-        CHECK((int)number(section, "index") == index);
-        CHECK(number(member(section, "measures"), "first") <= number(member(section, "measures"), "last"));
+        CHECK(strcmp(test_json_string(section, "level"), "section") == 0);
+        CHECK((int)test_json_number(section, "index") == index);
+        CHECK(test_json_number(test_json_member(section, "measures"), "first") <= test_json_number(test_json_member(section, "measures"), "last"));
         /* the sections follow each other by measure, as the phrases do: a phrase ends at its cadence's arrival and the
            next begins with the next measure, so the spans do not overlap */
         if (previous) {
-            CHECK(time_of(member(member(section, "span"), "start")) >= time_of(member(member(previous, "span"), "end")));
-            CHECK(number(member(section, "measures"), "first") == number(member(previous, "measures"), "last") + 1);
+            CHECK(time_of(test_json_member(test_json_member(section, "span"), "start")) >= time_of(test_json_member(test_json_member(previous, "span"), "end")));
+            CHECK(test_json_number(test_json_member(section, "measures"), "first") == test_json_number(test_json_member(previous, "measures"), "last") + 1);
         }
         /* every phrase lies in exactly one section: the nodes count the phrases up, in order */
-        const cJSON *nodes = member(section, "phrases");
+        const cJSON *nodes = test_json_member(section, "phrases");
         CHECK(cJSON_GetArraySize(nodes) > 0);
         const cJSON *node;
         const cJSON *first_phrase = cJSON_GetArrayItem(phrases, expected_phrase);
@@ -185,42 +173,42 @@ static void check_sections(const cJSON *document, const cJSON *form, size_t note
         const cJSON *last_phrase = cJSON_GetArrayItem(phrases, expected_phrase - 1);
         CHECK(first_phrase && last_phrase);
         if (first_phrase && last_phrase) {
-            CHECK(same_time(member(member(section, "span"), "start"), member(member(first_phrase, "span"), "start")));
-            CHECK(same_time(member(member(section, "span"), "end"), member(member(last_phrase, "span"), "end")));
-            CHECK(number(member(section, "measures"), "first") == number(member(first_phrase, "measures"), "first"));
+            CHECK(same_time(test_json_member(test_json_member(section, "span"), "start"), test_json_member(test_json_member(first_phrase, "span"), "start")));
+            CHECK(same_time(test_json_member(test_json_member(section, "span"), "end"), test_json_member(test_json_member(last_phrase, "span"), "end")));
+            CHECK(test_json_number(test_json_member(section, "measures"), "first") == test_json_number(test_json_member(first_phrase, "measures"), "first"));
             /* it ends with its last phrase's cadence */
-            CHECK(cJSON_IsNull(member(section, "cadence")) == cJSON_IsNull(member(last_phrase, "cadence")) &&
-                  (cJSON_IsNull(member(section, "cadence")) ||
-                   number(section, "cadence") == number(last_phrase, "cadence")));
+            CHECK(cJSON_IsNull(test_json_member(section, "cadence")) == cJSON_IsNull(test_json_member(last_phrase, "cadence")) &&
+                  (cJSON_IsNull(test_json_member(section, "cadence")) ||
+                   test_json_number(section, "cadence") == test_json_number(last_phrase, "cadence")));
         }
         /* a section is closed by an authentic cadence; only the last may be open */
-        if (cJSON_IsTrue(member(section, "closed"))) {
-            const cJSON *cadence = cJSON_GetArrayItem(cadences, (int)number(section, "cadence"));
-            CHECK(cJSON_IsNumber(member(section, "cadence")) && is_authentic(text(cadence, "type")));
+        if (cJSON_IsTrue(test_json_member(section, "closed"))) {
+            const cJSON *cadence = cJSON_GetArrayItem(cadences, (int)test_json_number(section, "cadence"));
+            CHECK(cJSON_IsNumber(test_json_member(section, "cadence")) && is_authentic(test_json_string(cadence, "type")));
         } else {
             CHECK(index + 1 == cJSON_GetArraySize(sections));
         }
-        CHECK(cJSON_IsString(member(section, "key")) == cJSON_IsNumber(member(section, "region")));
+        CHECK(cJSON_IsString(test_json_member(section, "key")) == cJSON_IsNumber(test_json_member(section, "region")));
         /* the letters follow from the returns alone */
         char base[8];
-        base_letters(text(section, "label"), base);
-        const cJSON *from = member(section, "returns_from");
+        base_letters(test_json_string(section, "label"), base);
+        const cJSON *from = test_json_member(section, "returns_from");
         if (cJSON_IsNumber(from)) {
             const cJSON *earlier = cJSON_GetArrayItem(sections, (int)from->valuedouble);
             char earlier_base[8];
-            base_letters(text(earlier, "label"), earlier_base);
+            base_letters(test_json_string(earlier, "label"), earlier_base);
             CHECK(from->valuedouble < (double)index);
             CHECK(strcmp(base, earlier_base) == 0);
-            CHECK(strchr(text(section, "label"), '\'') != NULL);
-            const cJSON *item = cJSON_GetArrayItem(returns, (int)number(section, "return"));
-            CHECK(item != NULL && number(item, "later_section") == (double)index &&
-                  number(item, "earlier_section") == from->valuedouble);
+            CHECK(strchr(test_json_string(section, "label"), '\'') != NULL);
+            const cJSON *item = cJSON_GetArrayItem(returns, (int)test_json_number(section, "return"));
+            CHECK(item != NULL && test_json_number(item, "later_section") == (double)index &&
+                  test_json_number(item, "earlier_section") == from->valuedouble);
         } else {
-            CHECK(cJSON_IsNull(member(section, "return")));
-            CHECK(strchr(text(section, "label"), '\'') == NULL);
+            CHECK(cJSON_IsNull(test_json_member(section, "return")));
+            CHECK(strchr(test_json_string(section, "label"), '\'') == NULL);
             for (int k = 0; k < index; k++) {
                 char other[8];
-                base_letters(text(cJSON_GetArrayItem(sections, k), "label"), other);
+                base_letters(test_json_string(cJSON_GetArrayItem(sections, k), "label"), other);
                 CHECK(strcmp(base, other) != 0);
             }
         }
@@ -229,16 +217,16 @@ static void check_sections(const cJSON *document, const cJSON *form, size_t note
     }
     CHECK(expected_phrase == cJSON_GetArraySize(phrases));
     const cJSON *first = cJSON_GetArrayItem(sections, 0);
-    CHECK(strcmp(text(first, "label"), "A") == 0);
-    CHECK((int)number(member(form, "measures"), "first") == (int)number(member(first, "measures"), "first"));
-    CHECK((int)number(member(form, "measures"), "last") ==
-          (int)number(member(cJSON_GetArrayItem(sections, index - 1), "measures"), "last"));
+    CHECK(strcmp(test_json_string(first, "label"), "A") == 0);
+    CHECK((int)test_json_number(test_json_member(form, "measures"), "first") == (int)test_json_number(test_json_member(first, "measures"), "first"));
+    CHECK((int)test_json_number(test_json_member(form, "measures"), "last") ==
+          (int)test_json_number(test_json_member(cJSON_GetArrayItem(sections, index - 1), "measures"), "last"));
 }
 
 static const cJSON *theme_phrases(const cJSON *document, const cJSON *item, const char *key, int *first, int *count) {
-    const cJSON *theme = cJSON_GetArrayItem(member(document, "themes"), (int)number(item, key));
-    *first = (int)number(member(theme, "phrases"), "first");
-    *count = (int)number(member(theme, "phrases"), "count");
+    const cJSON *theme = cJSON_GetArrayItem(test_json_member(document, "themes"), (int)test_json_number(item, key));
+    *first = (int)test_json_number(test_json_member(theme, "phrases"), "first");
+    *count = (int)test_json_number(test_json_member(theme, "phrases"), "count");
     return theme;
 }
 
@@ -248,8 +236,8 @@ static int section_holding(const cJSON *sections, int phrase) {
     const cJSON *section;
     cJSON_ArrayForEach(section, sections) {
         const cJSON *node;
-        cJSON_ArrayForEach(node, member(section, "phrases")) {
-            if ((int)number(node, "phrase") == phrase) {
+        cJSON_ArrayForEach(node, test_json_member(section, "phrases")) {
+            if ((int)test_json_number(node, "phrase") == phrase) {
                 return index;
             }
         }
@@ -262,14 +250,14 @@ static int section_holding(const cJSON *sections, int phrase) {
    section of its first phrase, the similarity is the lower of the two scores and reaches the detection's default
    threshold (0.8), and the returns are ordered by later theme, then earlier. */
 static void check_returns(const cJSON *document, const cJSON *form, size_t note_count) {
-    const cJSON *returns = member(form, "returns");
-    const cJSON *sections = member(form, "sections");
+    const cJSON *returns = test_json_member(form, "returns");
+    const cJSON *sections = test_json_member(form, "sections");
     double previous_later = -1;
     double previous_earlier = -1;
     const cJSON *item;
     cJSON_ArrayForEach(item, returns) {
         check_claim(item, note_count);
-        CHECK(strcmp(text(item, "label"), "thematic-return") == 0);
+        CHECK(strcmp(test_json_string(item, "label"), "thematic-return") == 0);
         int earlier_first = 0, earlier_count = 0, later_first = 0, later_count = 0;
         const cJSON *earlier = theme_phrases(document, item, "earlier_theme", &earlier_first, &earlier_count);
         const cJSON *later = theme_phrases(document, item, "later_theme", &later_first, &later_count);
@@ -278,21 +266,21 @@ static void check_returns(const cJSON *document, const cJSON *form, size_t note_
             continue;
         }
         CHECK(earlier_first + earlier_count <= later_first);
-        CHECK(measures_equal(member(item, "earlier"), member(earlier, "measures")));
-        CHECK(measures_equal(member(item, "later"), member(later, "measures")));
-        CHECK((int)number(item, "earlier_section") == section_holding(sections, earlier_first));
-        CHECK((int)number(item, "later_section") == section_holding(sections, later_first));
-        CHECK(number(item, "earlier_section") <= number(item, "later_section"));
-        const cJSON *similarity = member(item, "similarity");
-        double value = number(similarity, "value");
-        double lower = number(similarity, "contour") < number(similarity, "rhythm") ? number(similarity, "contour")
-                                                                                      : number(similarity, "rhythm");
+        CHECK(measures_equal(test_json_member(item, "earlier"), test_json_member(earlier, "measures")));
+        CHECK(measures_equal(test_json_member(item, "later"), test_json_member(later, "measures")));
+        CHECK((int)test_json_number(item, "earlier_section") == section_holding(sections, earlier_first));
+        CHECK((int)test_json_number(item, "later_section") == section_holding(sections, later_first));
+        CHECK(test_json_number(item, "earlier_section") <= test_json_number(item, "later_section"));
+        const cJSON *similarity = test_json_member(item, "similarity");
+        double value = test_json_number(similarity, "value");
+        double lower = test_json_number(similarity, "contour") < test_json_number(similarity, "rhythm") ? test_json_number(similarity, "contour")
+                                                                                      : test_json_number(similarity, "rhythm");
         CHECK(value >= 0.8 && value <= 1.0);
         CHECK(value - lower < 1e-9 && lower - value < 1e-9);
-        CHECK(number(similarity, "window") >= 4);
-        CHECK(number(item, "uncertainty") - (1.0 - value) < 1e-9 && (1.0 - value) - number(item, "uncertainty") < 1e-9);
-        double later_theme = number(item, "later_theme");
-        double earlier_theme = number(item, "earlier_theme");
+        CHECK(test_json_number(similarity, "window") >= 4);
+        CHECK(test_json_number(item, "uncertainty") - (1.0 - value) < 1e-9 && (1.0 - value) - test_json_number(item, "uncertainty") < 1e-9);
+        double later_theme = test_json_number(item, "later_theme");
+        double earlier_theme = test_json_number(item, "earlier_theme");
         CHECK(later_theme > previous_later || (later_theme == previous_later && earlier_theme > previous_earlier));
         previous_later = later_theme;
         previous_earlier = earlier_theme;
@@ -318,18 +306,18 @@ static void run_piece(const Piece *piece, const char *midi_dir, const char *musi
     free(json);
     CHECK(document != NULL);
     if (document) {
-        const cJSON *form = member(document, "form");
+        const cJSON *form = test_json_member(document, "form");
         CHECK(cJSON_IsObject(form));
         if (cJSON_IsObject(form)) {
-            CHECK(strcmp(text(form, "level"), "form") == 0);
-            CHECK((size_t)cJSON_GetArraySize(member(form, "sections")) == piece->sections);
-            CHECK((size_t)cJSON_GetArraySize(member(form, "returns")) == piece->returns);
+            CHECK(strcmp(test_json_string(form, "level"), "form") == 0);
+            CHECK((size_t)cJSON_GetArraySize(test_json_member(form, "sections")) == piece->sections);
+            CHECK((size_t)cJSON_GetArraySize(test_json_member(form, "returns")) == piece->returns);
             char labels[512] = "";
             const cJSON *section;
-            cJSON_ArrayForEach(section, member(form, "sections")) {
-                if (strlen(labels) + strlen(text(section, "label")) + 2 < sizeof(labels)) {
+            cJSON_ArrayForEach(section, test_json_member(form, "sections")) {
+                if (strlen(labels) + strlen(test_json_string(section, "label")) + 2 < sizeof(labels)) {
                     strcat(labels, labels[0] ? " " : "");
-                    strcat(labels, text(section, "label"));
+                    strcat(labels, test_json_string(section, "label"));
                 }
             }
             if (strcmp(labels, piece->labels) != 0) {

@@ -13,29 +13,17 @@
 #include <ursatz_analyzer/style_labels.h>
 
 #include "query/similarity_model.h"
-#include "style_internal.h"
+#include "util/json_util.h"
+#include "pipeline/corpus_walk.h"
+#include "pipeline/run_file.h"
 
-#define DOCUMENT_SCHEMA_VERSION 9
 
 /* ---- reading the document ---- */
 
-static const cJSON *member(const cJSON *object, const char *name) {
-    return cJSON_IsObject(object) ? cJSON_GetObjectItemCaseSensitive(object, name) : NULL;
-}
-
-static bool number_member(const cJSON *object, const char *name, long *out) {
-    const cJSON *item = member(object, name);
-    if (!cJSON_IsNumber(item)) {
-        return false;
-    }
-    *out = (long)item->valuedouble;
-    return true;
-}
-
 static bool fraction_member(const cJSON *object, const char *name, unsigned long *numerator, unsigned long *denominator) {
-    const cJSON *fraction = member(object, name);
+    const cJSON *fraction = json_member(object, name);
     long n, d;
-    if (!number_member(fraction, "num", &n) || !number_member(fraction, "den", &d) || d <= 0 || n < 0) {
+    if (!json_number_member(fraction, "num", &n) || !json_number_member(fraction, "den", &d) || d <= 0 || n < 0) {
         return false;
     }
     *numerator = (unsigned long)n;
@@ -45,11 +33,11 @@ static bool fraction_member(const cJSON *object, const char *name, unsigned long
 
 /* A position as a measure and a beat (the beat plus the fraction of it). */
 static bool location_member(const cJSON *entry, const char *edge, int *measure, double *beat) {
-    const cJSON *position = member(member(entry, "location"), edge);
+    const cJSON *position = json_member(json_member(entry, "location"), edge);
     long m, b, n, d;
-    if (!number_member(position, "measure", &m) || !number_member(position, "beat", &b) ||
-        !number_member(member(position, "subdivision"), "num", &n) ||
-        !number_member(member(position, "subdivision"), "den", &d) || d <= 0) {
+    if (!json_number_member(position, "measure", &m) || !json_number_member(position, "beat", &b) ||
+        !json_number_member(json_member(position, "subdivision"), "num", &n) ||
+        !json_number_member(json_member(position, "subdivision"), "den", &d) || d <= 0) {
         return false;
     }
     *measure = (int)m;
@@ -104,7 +92,7 @@ typedef struct {
  * *out is NULL when *count is 0. false on allocation failure or an entry that cannot be read.
  */
 static bool read_notes(const cJSON *document, DocNote **out, size_t *count) {
-    const cJSON *soprano = member(member(document, "outer_voices"), "soprano");
+    const cJSON *soprano = json_member(json_member(document, "outer_voices"), "soprano");
     size_t capacity = cJSON_IsArray(soprano) ? (size_t)cJSON_GetArraySize(soprano) : 0;
     *out = NULL;
     *count = 0;
@@ -120,10 +108,10 @@ static bool read_notes(const cJSON *document, DocNote **out, size_t *count) {
     long previous_id = 0;
     const cJSON *entry;
     cJSON_ArrayForEach(entry, soprano) {
-        const cJSON *status = member(entry, "status");
+        const cJSON *status = json_member(entry, "status");
         long id, pitch;
-        if (!cJSON_IsString(status) || strcmp(status->valuestring, "present") != 0 || !number_member(entry, "note_id", &id) ||
-            !number_member(member(entry, "pitch"), "midi", &pitch)) {
+        if (!cJSON_IsString(status) || strcmp(status->valuestring, "present") != 0 || !json_number_member(entry, "note_id", &id) ||
+            !json_number_member(json_member(entry, "pitch"), "midi", &pitch)) {
             continue;
         }
         if (have_previous && id == previous_id) {
@@ -134,9 +122,9 @@ static bool read_notes(const cJSON *document, DocNote **out, size_t *count) {
             continue;
         }
         DocNote *note = &notes[n];
-        const cJSON *onset = member(entry, "onset");
+        const cJSON *onset = json_member(entry, "onset");
         if (!fraction_member(onset, "time", &note->onset_n, &note->onset_d) ||
-            !fraction_member(member(entry, "duration"), "whole_notes", &note->duration_n, &note->duration_d) ||
+            !fraction_member(json_member(entry, "duration"), "whole_notes", &note->duration_n, &note->duration_d) ||
             note->duration_n == 0 || !location_member(entry, "start", &note->start_measure, &note->start_beat) ||
             !location_member(entry, "end", &note->end_measure, &note->end_beat)) {
             free(notes);
@@ -201,17 +189,12 @@ SimilarResult similar_query_from_file(const char *path, SimilarQuery *query) {
         return SIMILAR_ERR_ARGUMENT;
     }
     ImportedNotes imported;
-    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &imported) != INPUT_PIPELINE_OK) {
-        return SIMILAR_ERR_IO;
-    }
     AnalysisReport report;
-    if (!run_analysis_pipeline(&imported, &report)) {
-        imported_notes_destroy(&imported);
-        return SIMILAR_ERR_ALLOC;
+    RunFileResult ran = analyzer_run_file(path, INPUT_FORMAT_AUTO, NULL, &imported, &report, NULL, NULL);
+    if (ran != RUN_FILE_OK) {
+        return ran == RUN_FILE_ERR_IMPORT ? SIMILAR_ERR_IO : SIMILAR_ERR_ALLOC;
     }
-    AnalysisDocument *built = analysis_document_build(path, &imported, &report);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&imported);
+    AnalysisDocument *built = analyzer_run_file_document(path, &imported, &report);
     char *json = built ? analysis_document_to_json(built) : NULL;
     analysis_document_destroy(built);
     if (!json) {
@@ -220,7 +203,7 @@ SimilarResult similar_query_from_file(const char *path, SimilarQuery *query) {
     cJSON *document = cJSON_Parse(json);
     free(json);
     long version;
-    if (!document || !number_member(document, "schema_version", &version) || version != DOCUMENT_SCHEMA_VERSION) {
+    if (!document || !json_number_member(document, "schema_version", &version) || version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(document);
         return SIMILAR_ERR_FORMAT;
     }
@@ -328,7 +311,7 @@ static bool root_pitch_class(const char *name, int *out) {
 /* The chords in time order. A chord the document has no numeral or root for ends the run. *out is NULL when *count
    is 0. false on allocation failure or an entry that cannot be read. */
 static bool read_chords(const cJSON *document, DocChord **out, size_t *count) {
-    const cJSON *entries = member(document, "chords");
+    const cJSON *entries = json_member(document, "chords");
     size_t capacity = cJSON_IsArray(entries) ? (size_t)cJSON_GetArraySize(entries) : 0;
     *out = NULL;
     *count = 0;
@@ -344,14 +327,14 @@ static bool read_chords(const cJSON *document, DocChord **out, size_t *count) {
     bool joined = false; /* the last chord can take the next entry */
     const cJSON *entry;
     cJSON_ArrayForEach(entry, entries) {
-        const cJSON *roman = member(entry, "roman_numeral");
-        const cJSON *base = member(roman, "base_numeral");
-        const cJSON *root_name = member(entry, "root");
-        const cJSON *key = member(entry, "key_label");
+        const cJSON *roman = json_member(entry, "roman_numeral");
+        const cJSON *base = json_member(roman, "base_numeral");
+        const cJSON *root_name = json_member(entry, "root");
+        const cJSON *key = json_member(entry, "key_label");
         long region;
         int root;
         if (!cJSON_IsString(base) || !cJSON_IsString(root_name) || !root_pitch_class(root_name->valuestring, &root) ||
-            !number_member(roman, "key_region", &region)) {
+            !json_number_member(roman, "key_region", &region)) {
             run++;
             joined = false;
             continue;
@@ -365,8 +348,8 @@ static bool read_chords(const cJSON *document, DocChord **out, size_t *count) {
         unsigned long start_n, start_d, end_n, end_d;
         int start_measure, end_measure;
         double start_beat, end_beat;
-        if (!fraction_member(member(entry, "span"), "start", &start_n, &start_d) ||
-            !fraction_member(member(entry, "span"), "end", &end_n, &end_d) ||
+        if (!fraction_member(json_member(entry, "span"), "start", &start_n, &start_d) ||
+            !fraction_member(json_member(entry, "span"), "end", &end_n, &end_d) ||
             !location_member(entry, "start", &start_measure, &start_beat) ||
             !location_member(entry, "end", &end_measure, &end_beat)) {
             free(numeral);
@@ -818,6 +801,32 @@ static SimilarResult search_document(const Search *search, const char *piece, co
     return result;
 }
 
+typedef struct {
+    Search *search;
+    Matches matches;
+    size_t searched;
+    SimilarResult result;
+} SearchWalk;
+
+static bool search_walk_document(const char *piece_path, const char *document, const char *json, void *context) {
+    SearchWalk *walk = context;
+    cJSON *parsed = cJSON_Parse(json);
+    long version;
+    if (!parsed || !json_number_member(parsed, "schema_version", &version) ||
+        version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+        cJSON_Delete(parsed);
+        walk->result = SIMILAR_ERR_FORMAT;
+        return false;
+    }
+    walk->result = search_document(walk->search, piece_path, document, parsed, &walk->matches);
+    cJSON_Delete(parsed);
+    if (walk->result != SIMILAR_OK) {
+        return false;
+    }
+    walk->searched++;
+    return true;
+}
+
 SimilarResult similar_material_find(const char *corpus_output_dir, const SimilarQuery *query, const SimilarOptions *options,
                                     SimilarResults *results) {
     if (!corpus_output_dir || !query || !results) {
@@ -847,60 +856,27 @@ SimilarResult similar_material_find(const char *corpus_output_dir, const Similar
         return SIMILAR_ERR_ALLOC;
     }
     sprintf(index_path, "%s/corpus-index.json", corpus_output_dir);
-    char *index_text = style_read_file(index_path);
+    SearchWalk walk = {&search, {0}, 0, SIMILAR_OK};
+    CorpusWalkResult walked = corpus_walk_documents(index_path, search_walk_document, &walk, NULL);
     free(index_path);
-    if (!index_text) {
-        search_free(&search);
-        return SIMILAR_ERR_IO;
+    Matches matches = walk.matches;
+    size_t searched = walk.searched;
+    switch (walked) {
+    case CORPUS_WALK_OK:
+        break;
+    case CORPUS_WALK_ERR_ALLOC:
+        result = SIMILAR_ERR_ALLOC;
+        break;
+    case CORPUS_WALK_ERR_IO:
+        result = SIMILAR_ERR_IO;
+        break;
+    case CORPUS_WALK_ERR_FORMAT:
+        result = SIMILAR_ERR_FORMAT;
+        break;
+    case CORPUS_WALK_ERR_VISIT:
+        result = walk.result;
+        break;
     }
-    cJSON *index = cJSON_Parse(index_text);
-    free(index_text);
-    const cJSON *schema = member(index, "schema");
-    const cJSON *pieces = member(index, "pieces");
-    if (!cJSON_IsString(schema) || strcmp(schema->valuestring, "ursatz-corpus-index") != 0 || !cJSON_IsArray(pieces)) {
-        cJSON_Delete(index);
-        search_free(&search);
-        return SIMILAR_ERR_FORMAT;
-    }
-    Matches matches = {0};
-    size_t searched = 0;
-    const cJSON *piece;
-    cJSON_ArrayForEach(piece, pieces) {
-        const cJSON *status = member(piece, "status");
-        const cJSON *document = member(piece, "document");
-        const cJSON *path = member(piece, "path");
-        if (!cJSON_IsString(status) || strcmp(status->valuestring, "analyzed") != 0 || !cJSON_IsString(document) ||
-            !cJSON_IsString(path)) {
-            continue;
-        }
-        char *file = malloc(strlen(corpus_output_dir) + strlen(document->valuestring) + 2);
-        if (!file) {
-            result = SIMILAR_ERR_ALLOC;
-            break;
-        }
-        sprintf(file, "%s/%s", corpus_output_dir, document->valuestring);
-        char *json = style_read_file(file);
-        free(file);
-        if (!json) {
-            result = SIMILAR_ERR_IO;
-            break;
-        }
-        cJSON *parsed = cJSON_Parse(json);
-        free(json);
-        long version;
-        if (!parsed || !number_member(parsed, "schema_version", &version) || version != DOCUMENT_SCHEMA_VERSION) {
-            cJSON_Delete(parsed);
-            result = SIMILAR_ERR_FORMAT;
-            break;
-        }
-        result = search_document(&search, path->valuestring, document->valuestring, parsed, &matches);
-        cJSON_Delete(parsed);
-        if (result != SIMILAR_OK) {
-            break;
-        }
-        searched++;
-    }
-    cJSON_Delete(index);
     search_free(&search);
     if (result != SIMILAR_OK) {
         for (size_t i = 0; i < matches.count; i++) {

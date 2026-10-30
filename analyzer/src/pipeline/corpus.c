@@ -18,13 +18,14 @@
 #include "cJSON.h"
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/corpus_internal.h"
+#include "pipeline/run_file.h"
+#include "util/file_util.h"
+#include "util/misc_util.h"
 
 #define ANALYSIS_DOCUMENT_SUFFIX ".analysis.json"
 #define REPORT_SUFFIX ".report.md"
 #define INDEX_NAME "corpus-index.json"
 #define HOME_KEY_CAPACITY 64
-#define FNV_OFFSET_BASIS 0xcbf29ce484222325ULL
-#define FNV_PRIME 0x100000001b3ULL
 
 /* What the corpus index records about one piece. */
 typedef struct {
@@ -213,7 +214,7 @@ static bool write_output_file(const char *output_dir, const char *relative, cons
 }
 
 static unsigned long long fnv1a_file(const char *path) {
-    unsigned long long hash = FNV_OFFSET_BASIS;
+    uint64_t hash = FNV1A_OFFSET_BASIS;
     FILE *file = fopen(path, "rb");
     if (!file) {
         return hash;
@@ -221,9 +222,7 @@ static unsigned long long fnv1a_file(const char *path) {
     unsigned char chunk[8192];
     size_t got;
     while ((got = fread(chunk, 1, sizeof(chunk), file)) > 0) {
-        for (size_t i = 0; i < got; i++) {
-            hash = (hash ^ chunk[i]) * FNV_PRIME;
-        }
+        hash = fnv1a_bytes(hash, chunk, got);
     }
     fclose(file);
     return hash;
@@ -256,21 +255,18 @@ static CorpusRunResult analyze_piece(const CorpusRunOptions *options, const char
     record->content_hash = fnv1a_file(input_path);
 
     ImportedNotes notes;
-    InputPipelineResult imported = input_pipeline_import_file(input_path, INPUT_FORMAT_AUTO, &notes);
-    if (imported != INPUT_PIPELINE_OK) {
+    AnalysisReport report;
+    InputPipelineResult imported = INPUT_PIPELINE_OK;
+    RunFileResult ran = analyzer_run_file(input_path, INPUT_FORMAT_AUTO, NULL, &notes, &report, &imported, NULL);
+    if (ran == RUN_FILE_ERR_IMPORT) {
         record->error = import_error_text(imported);
         return CORPUS_RUN_OK;
     }
-
-    AnalysisReport report;
-    if (!run_analysis_pipeline(&notes, &report)) {
-        imported_notes_destroy(&notes);
+    if (ran != RUN_FILE_OK) {
         record->error = "out of memory";
         return CORPUS_RUN_OK;
     }
-    AnalysisDocument *document = analysis_document_build(input_path, &notes, &report);
-    analysis_report_destroy(&report);
-    imported_notes_destroy(&notes);
+    AnalysisDocument *document = analyzer_run_file_document(input_path, &notes, &report);
     if (!document) {
         record->error = "out of memory";
         return CORPUS_RUN_OK;
@@ -405,28 +401,12 @@ static CorpusRunResult load_previous_index(const char *output_dir, cJSON **out) 
         fprintf(stderr, "Error: out of memory\n");
         return CORPUS_RUN_ERR_INDEX;
     }
-    FILE *file = fopen(path, "rb");
-    if (!file) {
+    char *text = NULL;
+    if (!file_read_all(path, &text, NULL)) {
         free(path);
         return CORPUS_RUN_OK;
     }
-    size_t length = 0;
-    char *text = NULL;
-    char chunk[8192];
-    size_t got;
-    bool ok = true;
-    while (ok && (got = fread(chunk, 1, sizeof(chunk), file)) > 0) {
-        char *grown = realloc(text, length + got + 1);
-        ok = grown != NULL;
-        if (ok) {
-            text = grown;
-            memcpy(text + length, chunk, got);
-            length += got;
-            text[length] = '\0';
-        }
-    }
-    fclose(file);
-    cJSON *root = ok && text ? cJSON_Parse(text) : NULL;
+    cJSON *root = cJSON_Parse(text);
     free(text);
     const cJSON *name = cJSON_GetObjectItemCaseSensitive(root, "schema");
     const cJSON *pieces = cJSON_GetObjectItemCaseSensitive(root, "pieces");
@@ -508,20 +488,14 @@ static bool reuse_previous(const cJSON *previous, const CorpusRunOptions *option
     return true;
 }
 
-/* Writes the index for the first count pieces to a temporary file, then renames it over corpus-index.json. */
+/* Writes the index for the first count pieces atomically over corpus-index.json. */
 static bool write_index(const char *output_dir, const char *input_dir, const char *const *paths,
                         const PieceRecord *records, size_t count) {
     char *text = render_index(input_dir, paths, records, count);
     char *final_path = corpus_join(output_dir, INDEX_NAME);
-    char *temp_path = corpus_join(output_dir, INDEX_NAME ".tmp");
-    bool ok = text && final_path && temp_path && write_report_file(temp_path, text) &&
-              rename(temp_path, final_path) == 0;
-    if (text && final_path && temp_path && !ok) {
-        remove(temp_path);
-    }
+    bool ok = text && final_path && file_write_atomic(final_path, text);
     free(text);
     free(final_path);
-    free(temp_path);
     return ok;
 }
 
