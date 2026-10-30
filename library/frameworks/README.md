@@ -79,3 +79,7 @@ A framework declares its `Framework` with `static FrameworkSingleton g_singleton
 The root build compiles every framework library and adds each framework's `tests/` directory, so
 root `ctest` and CI run every framework test, its architecture test included (since PR #99). A
 framework built as the top-level project still runs its own tests.
+
+## Public headers
+
+A framework stages the headers others need under its folder name (`standard-form/analysis/analysis_phrase.h`) and keeps its source directories private; the list is in its `CMakeLists.txt` (`ursatz_public_headers`). A header of another framework is always included by that path, never by its bare name; `architecture_header_paths` checks it. Rules and layout: `docs/ARCHITECTURE.md`, Public surface.

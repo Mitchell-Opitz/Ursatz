@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "triad_identification.h"
+#include "common-practice-minimal/triad_identification.h"
 #include "weighted_pipeline.h"
 
 /*

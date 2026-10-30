@@ -9,13 +9,13 @@
 #include "interpretation/chord.h"
 #include "interpretation/key.h"
 #include "interpretation/uncertainty.h"
-#include "chord_vocabulary.h"
-#include "chord_vocabulary_seventh.h"
-#include "key_identification.h"
+#include "common-practice-minimal/chord_vocabulary.h"
+#include "common-practice-minimal/chord_vocabulary_seventh.h"
+#include "common-practice-minimal/key_identification.h"
 #include "persistence/persistence.h"
 #include "persistence/persistence_chord.h"
 #include "persistence/persistence_key.h"
-#include "triad_identification.h"
+#include "common-practice-minimal/triad_identification.h"
 
 /*
  * Round-trip test against real Chord/Key objects, built the same way

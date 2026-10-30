@@ -1,3 +1,5 @@
+ursatz_test_includes()
+
 add_executable(test_high_baroque_fugue_framework test_framework.c)
 target_link_libraries(test_high_baroque_fugue_framework PRIVATE high_baroque_fugue)
 add_test(NAME high_baroque_fugue_framework COMMAND test_high_baroque_fugue_framework)

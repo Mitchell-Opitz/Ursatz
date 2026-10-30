@@ -63,10 +63,53 @@ add_library(standard_counterpoint
     counterpoint_species.c
     imitation_answer.c
 )
-target_include_directories(standard_counterpoint PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
-    ${PROJECT_SOURCE_DIR}/src
+# Public headers (R-223), staged under standard-counterpoint/ in the build tree; the source directories are private.
+ursatz_public_headers(standard_counterpoint
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX standard-counterpoint
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/analysis
+    HEADERS
+        analysis/analysis_grid.h
+        analysis/analysis_melody.h
+        analysis/analysis_melody_climax.h
+        analysis/analysis_melody_leaps.h
+        analysis/analysis_melody_nct.h
+        analysis/analysis_motion.h
+        analysis/analysis_perfects.h
+        cantus_firmus_rules.h
+        consonance_rules.h
+        counterpoint_interval.h
+        counterpoint_limits.h
+        counterpoint_line.h
+        counterpoint_pitch.h
+        counterpoint_rules.h
+        counterpoint_slots.h
+        fifth_species_exercise.h
+        fifth_species_rules.h
+        first_species_ends_rules.h
+        first_species_harmony_rules.h
+        first_species_independence_rules.h
+        first_species_line_rules.h
+        first_species_rules.h
+        fourth_species_ends_rules.h
+        fourth_species_exercise.h
+        fourth_species_line_rules.h
+        fourth_species_rules.h
+        framework.h
+        harmonic_rules.h
+        imitation_answer.h
+        melodic_rules.h
+        motion_type.h
+        second_species_ends_rules.h
+        second_species_exercise.h
+        second_species_line_rules.h
+        second_species_rules.h
+        slot_note.h
+        tendency_rules.h
+        third_species_ends_rules.h
+        third_species_exercise.h
+        third_species_line_rules.h
+        third_species_rules.h
 )
 target_link_libraries(standard_counterpoint PUBLIC ursatz)
 

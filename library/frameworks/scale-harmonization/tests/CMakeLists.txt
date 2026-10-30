@@ -1,3 +1,5 @@
+ursatz_test_includes()
+
 add_executable(test_scale_harmonization_framework test_framework.c)
 target_link_libraries(test_scale_harmonization_framework PRIVATE scale_harmonization)
 add_test(NAME scale_harmonization_framework COMMAND test_scale_harmonization_framework)

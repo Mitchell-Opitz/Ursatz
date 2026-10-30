@@ -12,9 +12,24 @@ add_library(common_practice_minimal
     outer_scale_degrees.c
     key_regions.c
 )
-target_include_directories(common_practice_minimal PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PROJECT_SOURCE_DIR}/src
+# Public headers (R-223), staged under common-practice-minimal/ in the build tree; the source directories are private.
+ursatz_public_headers(common_practice_minimal
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX common-practice-minimal
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
+    HEADERS
+        chord_vocabulary.h
+        chord_vocabulary_seventh.h
+        framework.h
+        key_identification.h
+        key_regions.h
+        key_vocabulary.h
+        non_chord_tones.h
+        outer_scale_degrees.h
+        seventh_identification.h
+        triad_identification.h
+        weighted_chord_identification.h
+        weighted_identification.h
 )
 target_link_libraries(common_practice_minimal PUBLIC ursatz m)
 

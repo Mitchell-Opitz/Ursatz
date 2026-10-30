@@ -25,10 +25,27 @@ add_library(standard_meter
     analysis/meter_analysis_check.c
     analysis/meter_analysis_tuplet.c
 )
-target_include_directories(standard_meter PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
-    ${PROJECT_SOURCE_DIR}/src
+# Public headers (R-223), staged under standard-meter/ in the build tree; the source directories are private.
+ursatz_public_headers(standard_meter
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX standard-meter
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/analysis
+    HEADERS
+        analysis/meter_analysis_check.h
+        analysis/meter_analysis_density.h
+        analysis/meter_analysis_hemiola.h
+        analysis/meter_analysis_hypermeter.h
+        analysis/meter_analysis_input.h
+        analysis/meter_analysis_syncopation.h
+        analysis/meter_analysis_time.h
+        analysis/meter_analysis_tuplet.h
+        beat_grid.h
+        borrowed_rules.h
+        framework.h
+        grouping_rules.h
+        meter_class_rules.h
+        metric_position_rules.h
+        segmentation_beat_grid.h
 )
 target_link_libraries(standard_meter PUBLIC ursatz)
 

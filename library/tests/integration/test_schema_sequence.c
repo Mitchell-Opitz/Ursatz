@@ -2,8 +2,8 @@
 #include "test_cadences_reference_pieces.c"
 #undef main
 
-#include "galant_analysis_match.h"
-#include "scale_analysis_detect.h"
+#include "galant-schemas/analysis/galant_analysis_match.h"
+#include "scale-harmonization/analysis/scale_analysis_detect.h"
 #include "schema_util.h"
 #include "ursatz_chain/chain_inputs.h"
 

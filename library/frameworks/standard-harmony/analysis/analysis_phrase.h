@@ -6,7 +6,7 @@
 
 #include "analysis_input.h"
 #include "interpretation/interpretation.h"
-#include "phrase_model_label.h"
+#include "standard-harmony/phrase_model_label.h"
 #include "semantics/cadence_type.h"
 
 /*

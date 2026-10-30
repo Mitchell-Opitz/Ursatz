@@ -4,8 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "harmony_applied.h"
-#include "harmony_chord.h"
+#include "standard-harmony/harmony_applied.h"
+#include "standard-harmony/harmony_chord.h"
 #include "semantics/analysis_key.h"
 #include "semantics/analysis_segment.h"
 #include "semantics/applied_chord_kind.h"

@@ -1,6 +1,6 @@
 #include "period_rules.h"
 
-#include "harmony_cadence_rules.h"
+#include "standard-harmony/harmony_cadence_rules.h"
 #include "rule_pair.h"
 
 static const char *const NAMES[STANDARD_FORM_PERIOD_RULE_COUNT] = {

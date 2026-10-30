@@ -1,6 +1,6 @@
 # Analysis chain
 
-`ursatz_chain` is the library that joins the kernel (`src/`) and the Theory Frameworks (`frameworks/`) for analysis. A framework never compiles kernel sources (R-241), so anything that needs both lives here. Headers are included as `ursatz_chain/<name>.h`.
+`ursatz_chain` is the library that joins the kernel (`src/`) and the Theory Frameworks (`frameworks/`) for analysis. A framework never compiles kernel sources (R-241), so anything that needs both lives here. Headers are included as `ursatz_chain/<name>.h`; only the six listed in `chain/CMakeLists.txt` are public, and the framework headers it takes are included by their public path (`standard-form/analysis/analysis_phrase.h`).
 
 ## Layer
 

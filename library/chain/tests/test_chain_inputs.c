@@ -1,9 +1,9 @@
 #include "ursatz_chain/chain_inputs.h"
 
 #include "chain_test_piece.h"
-#include "harmony_cadence_rules.h"
-#include "outer_scale_degrees.h"
-#include "segmentation_beat_grid.h"
+#include "standard-harmony/harmony_cadence_rules.h"
+#include "common-practice-minimal/outer_scale_degrees.h"
+#include "standard-meter/segmentation_beat_grid.h"
 #include "ursatz_chain/analysis_chain.h"
 
 /*

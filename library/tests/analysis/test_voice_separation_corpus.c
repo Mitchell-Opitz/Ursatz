@@ -11,7 +11,7 @@
 #include "pitch/pitch_identity.h"
 #include "pitch/pitch_spelling.h"
 #include "pitch/tuning_system.h"
-#include "segmentation_beat_grid.h"
+#include "standard-meter/segmentation_beat_grid.h"
 #include "time/duration.h"
 #include "core/rational.h"
 #include "time/time_rational.h"

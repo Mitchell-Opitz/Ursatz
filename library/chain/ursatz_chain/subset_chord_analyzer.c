@@ -9,8 +9,8 @@
 #include "interpretation/chord.h"
 #include "interpretation/evidence.h"
 #include "interpretation/interpretation.h"
-#include "seventh_identification.h"
-#include "triad_identification.h"
+#include "common-practice-minimal/seventh_identification.h"
+#include "common-practice-minimal/triad_identification.h"
 
 AnalyzerResult chain_subset_chord_analyze(const void *input, const Context *context, const Value *config,
                                              AnalysisResult **out) {

@@ -1,3 +1,5 @@
+ursatz_test_includes()
+
 add_executable(test_baroque_ground_bass_framework test_framework.c)
 target_link_libraries(test_baroque_ground_bass_framework PRIVATE baroque_ground_bass)
 add_test(NAME baroque_ground_bass_framework COMMAND test_baroque_ground_bass_framework)

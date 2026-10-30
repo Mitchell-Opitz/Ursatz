@@ -68,6 +68,10 @@ static int check_file(const char *path) {
         }
         *end = '\0';
 
+        if (strncmp(start, "standard-tonality/", 18) == 0) {
+            continue; /* same-framework header, by its public path */
+        }
+
         if (is_module_header(start)) {
             continue;
         }

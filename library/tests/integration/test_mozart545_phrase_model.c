@@ -5,12 +5,12 @@
 #include <string.h>
 #include "reference_pieces.h"
 
-#include "analysis_phrase.h"
-#include "analysis_six_four.h"
-#include "applied_chords.h"
-#include "chord_input.h"
-#include "key_regions.h"
-#include "roman_numeral_adapter.h"
+#include "standard-harmony/analysis/analysis_phrase.h"
+#include "standard-harmony/analysis/analysis_six_four.h"
+#include "standard-tonality/analysis/applied_chords.h"
+#include "standard-tonality/analysis/chord_input.h"
+#include "common-practice-minimal/key_regions.h"
+#include "standard-tonality/analysis/roman_numeral_adapter.h"
 #include "weighted_pipeline.h"
 #include "analysis/outer_voice.h"
 

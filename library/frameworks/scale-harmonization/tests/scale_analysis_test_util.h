@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "galant_analysis_input.h"
+#include "galant-schemas/analysis/galant_analysis_input.h"
 #include "scale_analysis_detect.h"
 #include "time/musical_time.h"
 #include "time/time_span.h"

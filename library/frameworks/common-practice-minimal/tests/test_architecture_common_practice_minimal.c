@@ -48,6 +48,10 @@ static int check_file(const char *path) {
         }
         *end = '\0';
 
+        if (strncmp(start, "common-practice-minimal/", 24) == 0) {
+            continue; /* same-framework header, by its public path */
+        }
+
         if (strcmp(start, "framework.h") == 0 || strcmp(start, "theory/framework.h") == 0 ||
             strcmp(start, "theory/framework_singleton.h") == 0 ||
             strcmp(start, "rules/rule.h") == 0 || strcmp(start, "rules/constraint.h") == 0 ||

@@ -48,6 +48,10 @@ static int check_file(const char *path) {
         }
         *end = '\0';
 
+        if (strncmp(start, "standard-form/", 14) == 0 || strncmp(start, "standard-harmony/", 17) == 0) {
+            continue; /* same-framework header, or standard-harmony (recorded edge), by its public path */
+        }
+
         if (strchr(start, '/') == NULL) {
             continue; /* same-module header */
         }

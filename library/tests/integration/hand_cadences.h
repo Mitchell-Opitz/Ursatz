@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis_cadence.h"
+#include "standard-harmony/analysis/analysis_cadence.h"
 #include "ursatz_chain/chain_inputs.h"
 
 /*

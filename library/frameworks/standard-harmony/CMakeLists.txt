@@ -63,11 +63,38 @@ add_library(standard_harmony
     analysis/analysis_cadence.c
     analysis/analysis_cadence_readings.c
 )
-target_include_directories(standard_harmony PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
-    ${PROJECT_SOURCE_DIR}/frameworks
-    ${PROJECT_SOURCE_DIR}/src
+# Public headers (R-223), staged under standard-harmony/ in the build tree; the source directories are private.
+ursatz_public_headers(standard_harmony
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX standard-harmony
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/analysis
+    HEADERS
+        analysis/analysis_cadence.h
+        analysis/analysis_function.h
+        analysis/analysis_input.h
+        analysis/analysis_phrase.h
+        analysis/analysis_prolongation.h
+        analysis/analysis_resolution.h
+        analysis/analysis_six_four.h
+        analysis/analysis_voices.h
+        harmonic_function.h
+        harmony_applied.h
+        harmony_cadence_rules.h
+        harmony_chord.h
+        harmony_deceptive.h
+        harmony_framework.h
+        harmony_functions.h
+        harmony_key_change.h
+        harmony_phrase_rules.h
+        harmony_pivot.h
+        harmony_plagal.h
+        harmony_predominant_seventh.h
+        harmony_related_key.h
+        harmony_resolution_rules.h
+        harmony_strong_predominants.h
+        modulation_kind.h
+        phrase_model_label.h
+        six_four_type.h
 )
 target_link_libraries(standard_harmony PUBLIC ursatz)
 

@@ -8,9 +8,11 @@ add_library(standard_rhythm
     tie_rules.c
     tuplet_rules.c
 )
-target_include_directories(standard_rhythm PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PROJECT_SOURCE_DIR}/src
+# No app, chain or framework source includes a header of standard-rhythm yet, so nothing is public (R-223).
+ursatz_public_headers(standard_rhythm
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX standard-rhythm
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(standard_rhythm PUBLIC ursatz)
 

@@ -1,3 +1,5 @@
+ursatz_test_includes()
+
 add_executable(test_standard_texture_framework test_framework.c)
 target_link_libraries(test_standard_texture_framework PRIVATE standard_texture)
 add_test(NAME standard_texture_framework COMMAND test_standard_texture_framework)

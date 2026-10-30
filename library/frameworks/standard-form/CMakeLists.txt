@@ -39,10 +39,37 @@ add_library(standard_form
     phrase_level_form.c
     phrase_role.c
 )
-target_include_directories(standard_form PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/analysis
-    ${PROJECT_SOURCE_DIR}/src
+# Public headers (R-223), staged under standard-form/ in the build tree; the source directories are private.
+ursatz_public_headers(standard_form
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX standard-form
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/analysis
+    HEADERS
+        analysis/analysis_expansion.h
+        analysis/analysis_ideas.h
+        analysis/analysis_input.h
+        analysis/analysis_motive.h
+        analysis/analysis_motive_match.h
+        analysis/analysis_motive_shape.h
+        analysis/analysis_phrase.h
+        analysis/analysis_similarity.h
+        analysis/analysis_theme.h
+        analysis/analysis_time.h
+        continuation_trait.h
+        expansion_placement.h
+        external_expansion_kind.h
+        framework.h
+        hybrid_rules.h
+        idea_label.h
+        internal_expansion_technique.h
+        period_rules.h
+        phrase_beginning.h
+        phrase_ending.h
+        phrase_length_change.h
+        phrase_level_form.h
+        phrase_role.h
+        phrase_rules.h
+        sentence_rules.h
 )
 target_link_libraries(standard_form PUBLIC ursatz standard_harmony)
 

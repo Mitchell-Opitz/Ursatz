@@ -9,10 +9,11 @@ add_library(baroque_ground_bass
     imitative_role.c
     ostinato_type.c
 )
-target_include_directories(baroque_ground_bass PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PROJECT_SOURCE_DIR}/frameworks
-    ${PROJECT_SOURCE_DIR}/src
+# No app, chain or framework source includes a header of baroque-ground-bass yet, so nothing is public (R-223).
+ursatz_public_headers(baroque_ground_bass
+    BASE ${CMAKE_CURRENT_SOURCE_DIR}
+    PREFIX baroque-ground-bass
+    SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(baroque_ground_bass PUBLIC standard_counterpoint ursatz)
 

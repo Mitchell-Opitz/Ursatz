@@ -2,7 +2,7 @@
 
 #include "framework_v1_chain.h"
 
-#include "analysis_motive.h"
+#include "standard-form/analysis/analysis_motive.h"
 #include "ursatz_chain/form_bridge.h"
 #include "ursatz_chain/chain_inputs.h"
 

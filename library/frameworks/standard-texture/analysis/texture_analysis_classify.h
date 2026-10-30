@@ -5,8 +5,8 @@
 #include "interpretation/texture.h"
 #include "relationship/relationship.h"
 #include "texture_analysis_features.h"
-#include "texture_rules.h"
-#include "texture_classification_rules.h"
+#include "standard-texture/texture_rules.h"
+#include "standard-texture/texture_classification_rules.h"
 
 /*
  * Classification of the windows with standard-texture's rules, and the passages they merge into. No category is added: a window's
