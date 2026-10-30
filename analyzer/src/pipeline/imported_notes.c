@@ -13,6 +13,8 @@ void imported_notes_destroy(ImportedNotes *notes) {
     free(notes->events);
     free(notes->pitch_values);
     free(notes->streams);
+    tempo_map_destroy(notes->tempo_map);
+    notes->tempo_map = NULL;
     midi_meter_import_destroy(&notes->meter);
     midi_key_signature_events_destroy(&notes->key_signature_events);
     for (size_t i = 0; i < notes->source.part_count; i++) {

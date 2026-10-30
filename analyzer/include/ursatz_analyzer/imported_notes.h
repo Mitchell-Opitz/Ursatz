@@ -8,6 +8,7 @@
 #include "io/midi_importer.h"
 #include "io/midi_key_signature.h"
 #include "pitch/pitch_numeric_value.h"
+#include "time/tempo_map.h"
 
 #include <ursatz_analyzer/notation_reading.h>
 
@@ -133,6 +134,7 @@ typedef struct ImportedNotes {
     unsigned ticks_per_quarter; /* SMF header division (PPQN); 0 when unavailable */
     MidiMeterImport meter;
     ImportedSource source;
+    TempoMap *tempo_map; /* owned; the file's tempo changes (MIDI); NULL for MusicXML */
 } ImportedNotes;
 
 void imported_notes_destroy(ImportedNotes *notes);
