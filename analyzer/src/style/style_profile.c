@@ -9,8 +9,8 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 
-#include "style_internal.h"
 #include "util/json_util.h"
+#include "util/file_util.h"
 
 #define SYNCOPATION_CAP 4
 
@@ -556,35 +556,6 @@ StyleProfileResult style_profile_add_document_json(StyleProfile *profile, const 
 
 /* ---- corpus ---- */
 
-char *style_read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    size_t capacity = 1 << 16, length = 0;
-    char *text = malloc(capacity);
-    while (text) {
-        size_t got = fread(text + length, 1, capacity - length - 1, file);
-        length += got;
-        if (length < capacity - 1) {
-            break;
-        }
-        char *grown = realloc(text, capacity * 2);
-        if (!grown) {
-            free(text);
-            text = NULL;
-            break;
-        }
-        text = grown;
-        capacity *= 2;
-    }
-    fclose(file);
-    if (text) {
-        text[length] = '\0';
-    }
-    return text;
-}
-
 static bool add_training_corpus(StyleProfile *profile, const char *input_dir) {
     if (strcmp(profile->training_corpus, input_dir) == 0) {
         return true;
@@ -611,7 +582,8 @@ StyleProfileResult style_profile_add_corpus(StyleProfile *profile, const char *o
         return STYLE_PROFILE_ERR_ALLOC;
     }
     sprintf(index_path, "%s/corpus-index.json", output_dir);
-    char *index_text = style_read_file(index_path);
+    char *index_text = NULL;
+    file_read_all(index_path, &index_text, NULL);
     free(index_path);
     if (!index_text) {
         return STYLE_PROFILE_ERR_IO;
@@ -639,7 +611,8 @@ StyleProfileResult style_profile_add_corpus(StyleProfile *profile, const char *o
             break;
         }
         sprintf(path, "%s/%s", output_dir, document);
-        char *json = style_read_file(path);
+        char *json = NULL;
+        file_read_all(path, &json, NULL);
         free(path);
         if (!json) {
             result = STYLE_PROFILE_ERR_IO;

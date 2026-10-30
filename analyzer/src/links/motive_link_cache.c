@@ -9,8 +9,8 @@
 #include <ursatz_analyzer/version.h>
 
 #include "links_internal.h"
-#include "style/style_internal.h"
 #include "util/json_util.h"
+#include "util/file_util.h"
 
 #define CACHE_SCHEMA "ursatz-motive-link-cache"
 #define CACHE_SCHEMA_VERSION 1
@@ -245,7 +245,8 @@ MotiveLinksResult motive_link_cache_load(const char *path, MotiveLinkCache **out
         return MOTIVE_LINKS_ERR_IO;
     }
     fclose(probe);
-    char *text = style_read_file(path);
+    char *text = NULL;
+    file_read_all(path, &text, NULL);
     cJSON *root = text ? cJSON_Parse(text) : NULL;
     MotiveLinksResult result = !text ? MOTIVE_LINKS_ERR_IO : (root ? read_cache(root, cache) : MOTIVE_LINKS_ERR_FORMAT);
     free(text);
@@ -353,20 +354,16 @@ MotiveLinksResult motive_link_cache_save(const MotiveLinkCache *cache, const cha
     if (!text) {
         return MOTIVE_LINKS_ERR_ALLOC;
     }
-    size_t length = strlen(path);
-    char *temporary = malloc(length + 5);
-    if (!temporary) {
+    size_t text_length = strlen(text);
+    char *terminated = malloc(text_length + 2);
+    if (!terminated) {
         cJSON_free(text);
         return MOTIVE_LINKS_ERR_ALLOC;
     }
-    sprintf(temporary, "%s.tmp", path);
-    FILE *file = fopen(temporary, "wb");
-    bool wrote = file && fputs(text, file) >= 0 && fputc('\n', file) != EOF;
-    wrote = (file ? fclose(file) == 0 : false) && wrote && rename(temporary, path) == 0;
-    if (!wrote) {
-        remove(temporary);
-    }
-    free(temporary);
+    memcpy(terminated, text, text_length);
+    memcpy(terminated + text_length, "\n", 2);
+    bool wrote = file_write_atomic(path, terminated);
+    free(terminated);
     cJSON_free(text);
     return wrote ? MOTIVE_LINKS_OK : MOTIVE_LINKS_ERR_IO;
 }

@@ -13,8 +13,8 @@
 #include <ursatz_analyzer/style_labels.h>
 
 #include "query/similarity_model.h"
-#include "style_internal.h"
 #include "util/json_util.h"
+#include "util/file_util.h"
 
 
 /* ---- reading the document ---- */
@@ -834,7 +834,8 @@ SimilarResult similar_material_find(const char *corpus_output_dir, const Similar
         return SIMILAR_ERR_ALLOC;
     }
     sprintf(index_path, "%s/corpus-index.json", corpus_output_dir);
-    char *index_text = style_read_file(index_path);
+    char *index_text = NULL;
+    file_read_all(index_path, &index_text, NULL);
     free(index_path);
     if (!index_text) {
         search_free(&search);
@@ -866,7 +867,8 @@ SimilarResult similar_material_find(const char *corpus_output_dir, const Similar
             break;
         }
         sprintf(file, "%s/%s", corpus_output_dir, document->valuestring);
-        char *json = style_read_file(file);
+        char *json = NULL;
+        file_read_all(file, &json, NULL);
         free(file);
         if (!json) {
             result = SIMILAR_ERR_IO;

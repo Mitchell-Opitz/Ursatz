@@ -18,6 +18,7 @@
 #include "cJSON.h"
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/corpus_internal.h"
+#include "util/file_util.h"
 
 #define ANALYSIS_DOCUMENT_SUFFIX ".analysis.json"
 #define REPORT_SUFFIX ".report.md"
@@ -405,28 +406,12 @@ static CorpusRunResult load_previous_index(const char *output_dir, cJSON **out) 
         fprintf(stderr, "Error: out of memory\n");
         return CORPUS_RUN_ERR_INDEX;
     }
-    FILE *file = fopen(path, "rb");
-    if (!file) {
+    char *text = NULL;
+    if (!file_read_all(path, &text, NULL)) {
         free(path);
         return CORPUS_RUN_OK;
     }
-    size_t length = 0;
-    char *text = NULL;
-    char chunk[8192];
-    size_t got;
-    bool ok = true;
-    while (ok && (got = fread(chunk, 1, sizeof(chunk), file)) > 0) {
-        char *grown = realloc(text, length + got + 1);
-        ok = grown != NULL;
-        if (ok) {
-            text = grown;
-            memcpy(text + length, chunk, got);
-            length += got;
-            text[length] = '\0';
-        }
-    }
-    fclose(file);
-    cJSON *root = ok && text ? cJSON_Parse(text) : NULL;
+    cJSON *root = cJSON_Parse(text);
     free(text);
     const cJSON *name = cJSON_GetObjectItemCaseSensitive(root, "schema");
     const cJSON *pieces = cJSON_GetObjectItemCaseSensitive(root, "pieces");
@@ -508,20 +493,14 @@ static bool reuse_previous(const cJSON *previous, const CorpusRunOptions *option
     return true;
 }
 
-/* Writes the index for the first count pieces to a temporary file, then renames it over corpus-index.json. */
+/* Writes the index for the first count pieces atomically over corpus-index.json. */
 static bool write_index(const char *output_dir, const char *input_dir, const char *const *paths,
                         const PieceRecord *records, size_t count) {
     char *text = render_index(input_dir, paths, records, count);
     char *final_path = corpus_join(output_dir, INDEX_NAME);
-    char *temp_path = corpus_join(output_dir, INDEX_NAME ".tmp");
-    bool ok = text && final_path && temp_path && write_report_file(temp_path, text) &&
-              rename(temp_path, final_path) == 0;
-    if (text && final_path && temp_path && !ok) {
-        remove(temp_path);
-    }
+    bool ok = text && final_path && file_write_atomic(final_path, text);
     free(text);
     free(final_path);
-    free(temp_path);
     return ok;
 }
 

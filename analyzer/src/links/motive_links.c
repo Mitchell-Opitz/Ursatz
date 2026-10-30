@@ -10,8 +10,8 @@
 
 #include "links_internal.h"
 #include "pipeline/motive_features.h"
-#include "style/style_internal.h"
 #include "util/json_util.h"
+#include "util/file_util.h"
 
 
 /* ---- Scope ---- */
@@ -355,7 +355,8 @@ MotiveLinksResult motive_link_scope_add_corpus(MotiveLinkScope *scope, const cha
         return MOTIVE_LINKS_ERR_ALLOC;
     }
     sprintf(index_path, "%s/corpus-index.json", output_dir);
-    char *index_text = style_read_file(index_path);
+    char *index_text = NULL;
+    file_read_all(index_path, &index_text, NULL);
     free(index_path);
     if (!index_text) {
         return MOTIVE_LINKS_ERR_IO;
@@ -384,7 +385,8 @@ MotiveLinksResult motive_link_scope_add_corpus(MotiveLinkScope *scope, const cha
             break;
         }
         sprintf(file, "%s/%s", output_dir, document->valuestring);
-        char *json = style_read_file(file);
+        char *json = NULL;
+        file_read_all(file, &json, NULL);
         free(file);
         if (!json) {
             result = MOTIVE_LINKS_ERR_IO;

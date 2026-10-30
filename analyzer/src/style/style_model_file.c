@@ -10,8 +10,8 @@
 
 #include "identity/entity_id.h"
 #include "theory/style_model_build.h"
+#include "util/file_util.h"
 
-#include "style_internal.h"
 
 #define FILE_SCHEMA "ursatz-style-model"
 #define FILE_SCHEMA_VERSION 1
@@ -112,7 +112,8 @@ StyleModelFileResult style_model_file_read_without(const char *path, const char 
         }
     }
     *out = NULL;
-    char *text = style_read_file(path);
+    char *text = NULL;
+    file_read_all(path, &text, NULL);
     if (!text) {
         return STYLE_MODEL_FILE_ERR_IO;
     }
