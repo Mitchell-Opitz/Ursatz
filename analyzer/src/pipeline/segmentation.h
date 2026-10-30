@@ -10,7 +10,7 @@
 #include "semantics/sonority_segmentation.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
-#include "weighted_chord_identification.h"
+#include "common-practice-minimal/weighted_chord_identification.h"
 
 /*
  * One sonority segment cut by Ursatz's adaptive segmentation

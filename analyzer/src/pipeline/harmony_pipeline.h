@@ -7,12 +7,12 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include "analysis_cadence.h"
-#include "analysis_function.h"
-#include "analysis_prolongation.h"
-#include "analysis_six_four.h"
-#include "key_regions.h"
-#include "analysis_input.h"
+#include "standard-harmony/analysis/analysis_cadence.h"
+#include "standard-harmony/analysis/analysis_function.h"
+#include "standard-harmony/analysis/analysis_prolongation.h"
+#include "standard-harmony/analysis/analysis_six_four.h"
+#include "common-practice-minimal/key_regions.h"
+#include "standard-harmony/analysis/analysis_input.h"
 #include "pipeline/roman_numeral_pipeline.h"
 #include "pipeline/segmentation.h"
 

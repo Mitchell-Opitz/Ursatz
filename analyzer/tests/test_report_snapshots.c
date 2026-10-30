@@ -40,7 +40,7 @@ static char *render_piece(const char *fixture, bool musicxml) {
     if (musicxml) {
         snprintf(path, sizeof(path), "%s/%s", URSATZ_MUSICXML_DIR, fixture);
     } else {
-        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURE_DIR, fixture);
+        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
     }
 
     ImportedNotes notes;

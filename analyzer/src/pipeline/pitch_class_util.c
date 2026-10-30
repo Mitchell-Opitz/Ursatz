@@ -15,10 +15,6 @@ int pitch_class_of(long midi_note_number) {
     return (int)remainder;
 }
 
-const char *pitch_class_name(int pitch_class, bool prefer_flats) {
-    return prefer_flats ? PITCH_CLASS_NAMES_FLAT[pitch_class] : PITCH_CLASS_NAMES[pitch_class];
-}
-
 /* Major-key tonic pitch class for each sharps/flats count 0-7, per the circle of fifths. */
 static const int SHARPS_MAJOR_TONIC[8] = {0, 7, 2, 9, 4, 11, 6, 1}; /* C G D A E B F# C# */
 static const int FLATS_MAJOR_TONIC[8] = {0, 5, 10, 3, 8, 1, 6, 11}; /* C F Bb Eb Ab Db Gb Cb */

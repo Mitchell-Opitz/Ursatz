@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "metric_position_rules.h"
+#include "standard-meter/metric_position_rules.h"
 #include "pipeline/pitch_class_util.h"
 #include "pitch/pitch_spelling.h"
-#include "segmentation_beat_grid.h"
+#include "standard-meter/segmentation_beat_grid.h"
 #include "semantics/sonority_segmentation.h"
 #include "time/exact_rational.h"
 #include "time/meter_map.h"

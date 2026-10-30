@@ -6,19 +6,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis_melody.h"
-#include "analysis_melody_climax.h"
-#include "analysis_melody_leaps.h"
-#include "analysis_melody_nct.h"
-#include "cantus_firmus_rules.h"
-#include "key_vocabulary.h"
-#include "outer_scale_degrees.h"
+#include "standard-counterpoint/analysis/analysis_melody.h"
+#include "standard-counterpoint/analysis/analysis_melody_climax.h"
+#include "standard-counterpoint/analysis/analysis_melody_leaps.h"
+#include "standard-counterpoint/analysis/analysis_melody_nct.h"
+#include "standard-counterpoint/cantus_firmus_rules.h"
+#include "common-practice-minimal/key_vocabulary.h"
+#include "common-practice-minimal/outer_scale_degrees.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/spelling_util.h"
 #include "semantics/beat_strength.h"
 #include "pitch/pitch_spelling.h"
 #include "standard-counterpoint/framework.h"
-#include "tendency_rules.h"
+#include "standard-counterpoint/tendency_rules.h"
 #include "theory/framework.h"
 #include "util/misc_util.h"
 

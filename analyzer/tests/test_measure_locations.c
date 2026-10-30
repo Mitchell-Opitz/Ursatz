@@ -250,7 +250,7 @@ static void check_piece(const char *path, const char *display_name, const Expect
 int main(void) {
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
         char path[512];
-        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURE_DIR, PIECES[i].name);
+        snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, PIECES[i].name);
         check_piece(path, PIECES[i].name, &PIECES[i]);
     }
 

@@ -7,7 +7,7 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include "key_regions.h"
+#include "common-practice-minimal/key_regions.h"
 #include "pipeline/segmentation.h"
 #include "time/musical_time.h"
 

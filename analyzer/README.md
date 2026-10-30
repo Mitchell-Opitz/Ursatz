@@ -10,8 +10,13 @@ thin consumer of the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) library 
 ## Build
 
 Requires CMake 3.20+, a C11 compiler, and SQLite3 (for Ursatz). Ursatz is a git submodule at
-`external/ursatz`, pinned to Ursatz main at PR #161 (`1ed8aa1`). cJSON 1.7.18 is vendored at `external/cjson`; it is added only when no
+`external/ursatz`, pinned to Ursatz main at PR #181 (`2c53118`). cJSON 1.7.18 is vendored at `external/cjson`; it is added only when no
 parent project already provides a `cjson` target.
+
+Library headers are included only by their staged public paths (`time/meter_map.h`, `standard-harmony/analysis/analysis_cadence.h`,
+`common-practice-minimal/key_regions.h`), never by a framework's source directory. `URSATZ_LEGACY_INCLUDE_DIRS` is set ON in the root
+`CMakeLists.txt` for the internal headers the Analyzer still uses (`time/exact_rational.h`, `analysis_time.h`, `smf_reader.h`); it goes off
+when P24 B4 switches them. Tests read their input from `tests/fixtures/`, not from the submodule (see `tests/fixtures/README.md`).
 
 ```sh
 git submodule update --init --recursive

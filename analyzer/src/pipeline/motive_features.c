@@ -9,7 +9,7 @@ const char *motive_features_degree_label(int pitch_class, int tonic_pc) {
     return style_label_degree(pitch_class, tonic_pc);
 }
 
-static ExactRational fraction(unsigned long long numerator, unsigned long long denominator) {
+static Rational fraction(unsigned long long numerator, unsigned long long denominator) {
     return msk_make(numerator, denominator);
 }
 
@@ -28,7 +28,7 @@ bool motive_features_sketch(const AnalysisMotiveFeatures *features, MotiveSketch
     }
     sketch->note_count = features->note_count;
     for (size_t i = 0; i + 1 < sketch->note_count; i++) {
-        ExactRational gap = msk_sub(sketch->notes[i + 1].onset, sketch->notes[i].onset);
+        Rational gap = msk_sub(sketch->notes[i + 1].onset, sketch->notes[i].onset);
         if (msk_ok(gap) && msk_cmp(sketch->notes[i].duration, gap) > 0) {
             sketch->notes[i].duration = gap;
         }
@@ -39,7 +39,7 @@ bool motive_features_sketch(const AnalysisMotiveFeatures *features, MotiveSketch
     sketch->minor = features->minor;
     sketch->bar = fraction(features->bar_numerator, features->bar_denominator);
     sketch->beat = fraction(features->beat_numerator, features->beat_denominator);
-    ExactRational position = fraction(features->pickup_numerator, features->pickup_denominator);
+    Rational position = fraction(features->pickup_numerator, features->pickup_denominator);
     sketch->pickup = msk_is_zero(position) ? position : msk_sub(sketch->bar, position);
     sketch->length = msk_add(last->onset, last->duration);
     if (!motive_sketch_validate(sketch)) {

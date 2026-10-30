@@ -204,7 +204,7 @@ static void test_enharmonic_spelling(void) {
 
 static void test_midi_keeps_rule_spelling(void) {
     char path[512];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURE_DIR);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_ANALYZER_FIXTURE_DIR);
     ImportedNotes notes;
     cJSON *document = analyze(path, &notes);
     assert(notes.source.format == INPUT_FORMAT_MIDI);
@@ -249,7 +249,7 @@ static void test_errors(void) {
     /* A format forced against the content fails cleanly. */
     expect_failure(musicxml("pickup.musicxml"), INPUT_FORMAT_MIDI, INPUT_PIPELINE_ERR_IMPORT_FAILED);
     char midi[512];
-    snprintf(midi, sizeof(midi), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_FIXTURE_DIR);
+    snprintf(midi, sizeof(midi), "%s/framework-v1-corpus/Bach 114.mid", URSATZ_ANALYZER_FIXTURE_DIR);
     expect_failure(midi, INPUT_FORMAT_MUSICXML, INPUT_PIPELINE_ERR_IMPORT_FAILED);
 }
 

@@ -3,12 +3,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "chord_vocabulary_seventh.h"
+#include "common-practice-minimal/chord_vocabulary_seventh.h"
 #include "interpretation/chord.h"
 #include "pipeline/interpretation_util.h"
 #include "pipeline/pitch_class_util.h"
 #include "semantics/non_chord_tone.h"
-#include "weighted_chord_identification.h"
+#include "common-practice-minimal/weighted_chord_identification.h"
 
 /* Root-relative semitone offsets of the chord's tones, ascending (the stack-of-thirds order for every chord in
    the library's vocabulary), as the library reports them. */

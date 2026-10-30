@@ -335,7 +335,7 @@ static void run_piece(const Piece *piece, const char *midi_dir, const char *musi
 
 int main(void) {
     char midi_dir[1024];
-    snprintf(midi_dir, sizeof(midi_dir), "%s/framework-v1-corpus", URSATZ_FIXTURE_DIR);
+    snprintf(midi_dir, sizeof(midi_dir), "%s/framework-v1-corpus", URSATZ_ANALYZER_FIXTURE_DIR);
     for (size_t i = 0; i < sizeof(PIECES) / sizeof(PIECES[0]); i++) {
         run_piece(&PIECES[i], midi_dir, URSATZ_MUSICXML_DIR);
     }

@@ -489,8 +489,8 @@ static MotiveLinkCachePair cache_pair_of(const Family *earlier, const Family *la
     if (link->linked) {
         pair.step_count = link->recognition.step_count;
         memcpy(pair.steps, link->recognition.steps, pair.step_count * sizeof pair.steps[0]);
-        pair.distance_numerator = link->recognition.distance.n;
-        pair.distance_denominator = link->recognition.distance.d;
+        pair.distance_numerator = link->recognition.distance.num;
+        pair.distance_denominator = link->recognition.distance.den;
         memcpy(pair.similarity, link->recognition.similarity, sizeof pair.similarity);
     }
     return pair;

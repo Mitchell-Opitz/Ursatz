@@ -130,7 +130,7 @@ static void check_prolongations(const cJSON *document, const AnalysisReport *rep
 
 static void run_piece(const Piece *piece) {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURE_DIR, piece->file);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, piece->file);
     ImportedNotes notes;
     AnalysisReport report;
     if (midi_pipeline_import_file(path, &notes) != MIDI_PIPELINE_OK || !run_analysis_pipeline(&notes, &report)) {

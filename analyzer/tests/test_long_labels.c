@@ -31,7 +31,7 @@ int main(void) {
     assert(strlen(chord_label) > 31);
 
     ImportedNotes notes;
-    assert(midi_pipeline_import_file(URSATZ_FIXTURE_DIR "/framework-v1-corpus/Mozart 545.mid", &notes) ==
+    assert(midi_pipeline_import_file(URSATZ_ANALYZER_FIXTURE_DIR "/framework-v1-corpus/Mozart 545.mid", &notes) ==
            MIDI_PIPELINE_OK);
     AnalysisReport report;
     assert(run_analysis_pipeline(&notes, &report));

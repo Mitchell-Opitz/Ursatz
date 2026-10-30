@@ -34,6 +34,8 @@ endif()
 
 # A parent project that already provides Ursatz supplies the ursatz target itself.
 if(NOT TARGET ursatz)
+    # On until B4 of P24 switches the internal includes to the public paths.
+    set(URSATZ_LEGACY_INCLUDE_DIRS ON CACHE BOOL "" FORCE)
     add_subdirectory(external/ursatz)
 endif()
 # A parent project that vendors cJSON supplies the cjson target itself.

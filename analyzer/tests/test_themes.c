@@ -331,7 +331,7 @@ static const Piece PIECES[] = {{"Bach 114", "Bach 114.mid"},
 
 static void check_piece(const Piece *piece) {
     char path[1024];
-    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_FIXTURE_DIR, piece->file);
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, piece->file);
     ImportedNotes notes;
     AnalysisReport report;
     cJSON *document = NULL;
