@@ -35,7 +35,7 @@ typedef struct AnalyzerPass {
     AnalysisChain *library;          /* owned; NULL for a piece with no notes */
     AnalysisReport report;           /* the pass's results: entries, non-chord tones, key regions and changes */
 
-    /* The collectors not yet moved onto the library chain's accessors (this branch removes them one by one). */
+    /* Views of the chain's results that the stage files and the Analyzer-only stages read. */
     Segmentation segmentation;       /* the chord segments (analysis_chain_segments), merged over unchanged harmony */
     Segmentation voice_segmentation; /* the voice segments (analysis_chain_voice_segments), not merged: one per melody
                                         note, for the outer voices */
