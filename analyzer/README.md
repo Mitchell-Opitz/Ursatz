@@ -118,6 +118,29 @@ Ursatz header that is not under a staged public root of the build, names a `*_in
 file reads `SOURCE_DIR` of an Ursatz target or a path under `external/ursatz/tests`. It prints each offending line. CI
 runs it after the build.
 
+### File scope state check
+
+`scripts/check-statics.sh` fails when a file in `src/` declares a file-scope `static` variable that is not `const`
+(a pointer to const data counts as mutable; write `static const T *const name`). It prints each file and line. State a
+stage needs is passed through its caller's context. CI runs it after the library include check.
+
+### Theory the analyzer takes from the library
+
+The analyzer holds no theory of its own (R-217). The rules below are Ursatz's, and the stages only collect evidence,
+call them and render the result:
+
+- Meter: `standard_meter_check_changes` and `standard_meter_check_meter` (the meter check and the harmonic rhythm's
+  changes), `standard_meter_find_tuplets` (tuplets and duplets, with their meter type and level).
+- Tonality: `common_practice_home_key_region`, `common_practice_ranked_chord_quality_name` and
+  `common_practice_ranked_chord_inversion` (an inversion is -1 for a bass that is no chord tone),
+  `standard_tonality_triad_quality_semitones` and `standard_tonality_seventh_quality_semitones`,
+  `standard_tonality_chromatic_degree_label` (`style_label_degree` wraps it), `common_practice_scale_degree_of`, and
+  `standard_tonality_key_tonic_of_pitch_class` (a minor key's tonic is spelled through its relative major, so C minor
+  reads in flats and D# minor in sharps).
+- Kernel: `outer_voice_attack_soprano` (the soprano the motives are read over; a note of unknown pitch is skipped),
+  `progression_patterns_find` and `progression_pattern_label` (repeated progressions), `motive_link_candidates` and
+  `motive_link_groups` (the motive links; the analyzer orders the groups, largest first).
+
 ### Version header and pin check
 
 `<ursatz_analyzer/version.h>` is generated at configure time. It defines `URSATZ_ANALYZER_VERSION` and
@@ -701,7 +724,8 @@ Each family also carries `features`, read from its prototype: the notes with exa
 region's tonic and mode, the meter, the degrees against the tonic's major scale (`1 b2 2 b3 3 4 #4 5 b6 6 b7 7`, so a
 minor-key `1 b6 5` reads the same as one in major), the intervals in semitones and scale steps, the rhythm, the
 non-chord-tone type of each note's segment, and a fingerprint of the prototype as a library `MotiveSketch`
-(`src/pipeline/motive_features.c` builds the sketch). Each occurrence carries its notes' degrees. See
+(`src/pipeline/motive_sketch_map.c` is the one mapping from features to the sketch, shared by the report and the
+motive links). Each occurrence carries its notes' degrees. See
 [docs/analysis-document.md](docs/analysis-document.md#motives) and [docs/style-profile.md](docs/style-profile.md).
 
 Measured on the reference pieces (MIDI):

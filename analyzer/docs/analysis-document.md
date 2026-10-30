@@ -718,7 +718,7 @@ and the GUI re-analyze older documents.
 | `fingerprint` | string | 16 lowercase hex digits: the library's `motive_sketch_fingerprint` of the prototype as a sketch (the notes, the scale, the meter and the pickup; no chords, features or role). Equal for equal sketches, so a cache can key on it. |
 
 A sketch cannot hold overlapping notes, so a prototype note held past the next onset is cut at it in the sketch; the
-features keep the real durations. The sketch is built by `motive_features_sketch` (`src/pipeline/motive_features.c`),
+features keep the real durations. The sketch is built by `motive_features_to_sketch` (`src/pipeline/motive_sketch_map.c`),
 from these fields alone.
 
 The Markdown report renders `## Motives` from this section, a row per family (notes, degrees, pattern, occurrence count,
