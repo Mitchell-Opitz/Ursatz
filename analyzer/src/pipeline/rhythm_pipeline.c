@@ -26,6 +26,7 @@
 #include "time/time_signature.h"
 #include "time/time_span.h"
 #include "time/tuplet.h"
+#include "util/misc_util.h"
 
 /* The line of a note in the library's input: 0 the outer-voice soprano, 1 the bass, 2 any other. */
 #define LINE_SOPRANO 0
@@ -109,12 +110,6 @@ static const char **line_ids(const OuterVoiceEntry *entries, size_t count, size_
 
 static bool in_ids(const char **ids, size_t count, const char *id) {
     return bsearch(&id, ids, count, sizeof(char *), compare_ids) != NULL;
-}
-
-static int compare_sizes(const void *a, const void *b) {
-    size_t x = *(const size_t *)a;
-    size_t y = *(const size_t *)b;
-    return x < y ? -1 : (x > y ? 1 : 0);
 }
 
 static int compare_id_index(const void *a, const void *b) {
@@ -422,7 +417,7 @@ static bool collect_hemiolas(const RhythmBuild *build, AnalysisReport *report) {
             }
         }
         if (ok && item->note_id_count > 1) {
-            qsort(item->note_ids, item->note_id_count, sizeof(size_t), compare_sizes);
+            qsort(item->note_ids, item->note_id_count, sizeof(size_t), size_compare);
         }
     }
     standard_meter_hemiolas_destroy(&found);

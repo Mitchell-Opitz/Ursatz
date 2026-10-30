@@ -5,36 +5,13 @@
 #include <string.h>
 
 #include "io/musicxml_importer.h"
+#include "util/misc_util.h"
 
 static bool is_compressed(FILE *file) {
     unsigned char head[4];
     size_t count = fread(head, 1, sizeof head, file);
     rewind(file);
     return count == sizeof head && memcmp(head, "PK\x03\x04", 4) == 0;
-}
-
-/* The end of the last note, in whole notes: what the meter's measure count is taken to. NULL on failure. */
-static MusicalTime *last_note_end(NoteEvent *const *events, size_t count) {
-    MusicalTime *latest = NULL;
-    for (size_t i = 0; i < count; i++) {
-        MusicalTime *end = NULL;
-        if (musical_time_add(temporal_anchor_position(note_event_temporal_anchor(events[i])),
-                             note_event_duration(events[i]), &end) != MUSICAL_TIME_OK) {
-            musical_time_destroy(latest);
-            return NULL;
-        }
-        if (!latest || musical_time_numerator(end) * (long)musical_time_denominator(latest) >
-                           musical_time_numerator(latest) * (long)musical_time_denominator(end)) {
-            musical_time_destroy(latest);
-            latest = end;
-        } else {
-            musical_time_destroy(end);
-        }
-    }
-    if (!latest && musical_time_create(0, 1, &latest) != MUSICAL_TIME_OK) {
-        return NULL;
-    }
-    return latest;
 }
 
 static MidiModeHint mode_hint_of(MusicXmlModeHint hint) {
@@ -224,7 +201,7 @@ MusicXmlPipelineResult musicxml_pipeline_import_file(const char *path, ImportedN
         }
     }
 
-    MusicalTime *end_time = last_note_end(import.events, import.count);
+    MusicalTime *end_time = notes_last_end((const NoteEvent *const *)import.events, import.count);
     bool ok = end_time && take_key_signatures(&import, &notes.key_signature_events, &notes.key_signature) &&
               copy_parts(&import, &notes.source) &&
               copy_markings(&import, &notes.source);

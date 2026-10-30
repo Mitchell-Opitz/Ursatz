@@ -12,6 +12,7 @@
 #include "pipeline/motive_features.h"
 #include "util/json_util.h"
 #include "util/file_util.h"
+#include "util/misc_util.h"
 
 
 /* ---- Scope ---- */
@@ -41,15 +42,6 @@ struct MotiveLinkScope {
     size_t family_capacity;
     char *failed; /* the piece id of the last add that failed */
 };
-
-static char *copy_text(const char *text) {
-    size_t length = strlen(text) + 1;
-    char *copy = malloc(length);
-    if (copy) {
-        memcpy(copy, text, length);
-    }
-    return copy;
-}
 
 static bool number_value(const cJSON *item, double *out) {
     if (!cJSON_IsNumber(item)) {
@@ -272,7 +264,7 @@ static bool grow(void **items, size_t *capacity, size_t needed, size_t size) {
 
 /* Remembers the id of a piece that was not added; a failure to remember it is not worth failing the add for. */
 static MotiveLinksResult add_failed(MotiveLinkScope *scope, const char *piece_id, MotiveLinksResult result) {
-    char *copy = copy_text(piece_id);
+    char *copy = text_copy(piece_id);
     if (copy) {
         free(scope->failed);
         scope->failed = copy;
@@ -310,7 +302,7 @@ static MotiveLinksResult add_document(MotiveLinkScope *scope, const char *piece_
     cJSON_Delete(document);
     char *id = NULL;
     if (result == MOTIVE_LINKS_OK) {
-        id = copy_text(piece_id);
+        id = text_copy(piece_id);
         if (!id || !grow((void **)&scope->pieces, &scope->piece_capacity, scope->piece_count + 1, sizeof(Piece)) ||
             !grow((void **)&scope->families, &scope->family_capacity, scope->family_count + count, sizeof(Family))) {
             result = MOTIVE_LINKS_ERR_ALLOC;
@@ -522,8 +514,8 @@ static MotiveLinkCachePair cache_pair_of(const Family *earlier, const Family *la
 }
 
 static bool end_fill(MotiveLinkEnd *end, const MotiveLinkScope *scope, const Family *family) {
-    end->piece = copy_text(scope->pieces[family->piece].id);
-    end->degrees = copy_text(family->degrees);
+    end->piece = text_copy(scope->pieces[family->piece].id);
+    end->degrees = text_copy(family->degrees);
     end->family = family->family;
     end->first_measure = family->first_measure;
     end->last_measure = family->last_measure;
@@ -560,7 +552,7 @@ static bool found_fill(MotiveLinkFound *link, const MotiveLinkScope *scope, cons
     memcpy(link->steps, pair->steps, pair->step_count * sizeof pair->steps[0]);
     for (size_t i = 0; i < pair->step_count; i++) {
         char text[128];
-        if (!motive_relation_step_text(&pair->steps[i], text, sizeof text) || !(link->step_text[i] = copy_text(text))) {
+        if (!motive_relation_step_text(&pair->steps[i], text, sizeof text) || !(link->step_text[i] = text_copy(text))) {
             found_clear(link);
             return false;
         }
@@ -665,7 +657,7 @@ static bool build_groups(const MotiveLinkScope *scope, const FamilyPair *pairs, 
         for (size_t f = 0; ok && f < families; f++) {
             if (touched[f] && find_root(parent, f) == keys[g].root) {
                 MotiveLinkMember *member = &groups[g].members[groups[g].member_count];
-                member->piece = copy_text(scope->pieces[scope->families[f].piece].id);
+                member->piece = text_copy(scope->pieces[scope->families[f].piece].id);
                 member->family = scope->families[f].family;
                 groups[g].member_count++;
                 ok = member->piece != NULL;

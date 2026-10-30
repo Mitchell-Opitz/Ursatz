@@ -25,6 +25,7 @@
 #include <ursatz_analyzer/version.h>
 
 #include "pipeline/counterpoint_pipeline.h"
+#include "util/misc_util.h"
 
 #define MIDI_NOTE_COUNT 128
 #define FRAGMENT_PROVENANCE_ID "composer-fragment-v1"
@@ -87,11 +88,6 @@ static int pitch_table_find(const PitchTable *table, const PitchIdentity *pitch)
     return -1;
 }
 
-static EntityID *copy_entity_id(const EntityID *id) {
-    EntityID *copy = NULL;
-    return entity_id_create(entity_id_value(id), &copy) == ENTITY_ID_OK ? copy : NULL;
-}
-
 /* A copy of the event, with the pitch rebuilt from its MIDI note number (the numeric value the importer would have
    computed goes to *out_value). The copy takes the event's spelling, voice and provenance when it has them. */
 static AnalyzerFragmentResult copy_event(const NoteEvent *event, const PitchTable *table, NoteEvent **out,
@@ -106,7 +102,7 @@ static AnalyzerFragmentResult copy_event(const NoteEvent *event, const PitchTabl
     const VoiceReference *event_voice = note_event_optional_voice(event);
     const ProvenanceReference *event_provenance = note_event_provenance(event);
 
-    EntityID *id = copy_entity_id(note_event_id(event));
+    EntityID *id = entity_id_copy(note_event_id(event));
     MusicalTime *position = NULL;
     TemporalAnchor *anchor = NULL;
     Duration *duration = NULL;
@@ -136,7 +132,7 @@ static AnalyzerFragmentResult copy_event(const NoteEvent *event, const PitchTabl
         }
     }
     if (ok && event_voice) {
-        EntityID *voice_id = copy_entity_id(voice_reference_target_id(event_voice));
+        EntityID *voice_id = entity_id_copy(voice_reference_target_id(event_voice));
         ok = voice_id && voice_reference_create(voice_id, &voice) == VOICE_REFERENCE_OK;
         if (voice_id && !voice) {
             entity_id_destroy(voice_id);
@@ -144,7 +140,7 @@ static AnalyzerFragmentResult copy_event(const NoteEvent *event, const PitchTabl
     }
     if (ok) {
         if (provenance_reference_state(event_provenance) == PROVENANCE_REFERENCE_PRESENT) {
-            EntityID *target = copy_entity_id(provenance_reference_target_id(event_provenance));
+            EntityID *target = entity_id_copy(provenance_reference_target_id(event_provenance));
             ok = target && provenance_reference_create_present(target, &provenance) == PROVENANCE_REFERENCE_OK;
             if (target && !provenance) {
                 entity_id_destroy(target);
@@ -247,30 +243,6 @@ static bool add_key_signature(ImportedNotes *notes, int tonic, bool minor) {
     return true;
 }
 
-/* The end of the last note, for the meter's measure count. */
-static MusicalTime *fragment_end_time(const NoteEvent *const *events, size_t count) {
-    MusicalTime *latest = NULL;
-    for (size_t i = 0; i < count; i++) {
-        MusicalTime *end = NULL;
-        if (musical_time_add(temporal_anchor_position(note_event_temporal_anchor(events[i])),
-                             note_event_duration(events[i]), &end) != MUSICAL_TIME_OK) {
-            musical_time_destroy(latest);
-            return NULL;
-        }
-        if (!latest || musical_time_numerator(end) * (long)musical_time_denominator(latest) >
-                           musical_time_numerator(latest) * (long)musical_time_denominator(end)) {
-            musical_time_destroy(latest);
-            latest = end;
-        } else {
-            musical_time_destroy(end);
-        }
-    }
-    if (!latest && musical_time_create(0, 1, &latest) != MUSICAL_TIME_OK) {
-        return NULL;
-    }
-    return latest;
-}
-
 static AnalyzerFragmentResult fragment_to_notes(const AnalyzerFragment *fragment, ImportedNotes *notes) {
     *notes = (ImportedNotes){0};
     notes->source = (ImportedSource){.format = INPUT_FORMAT_MIDI};
@@ -295,7 +267,7 @@ static AnalyzerFragmentResult fragment_to_notes(const AnalyzerFragment *fragment
     pitch_table_destroy(&table);
     if (result == ANALYZER_FRAGMENT_OK) {
         notes->meter.meter_map = copy_meter_map(fragment->meter);
-        notes->meter.end_time = fragment_end_time((const NoteEvent *const *)notes->events, notes->count);
+        notes->meter.end_time = notes_last_end((const NoteEvent *const *)notes->events, notes->count);
         if (!notes->meter.meter_map || !notes->meter.end_time) {
             result = ANALYZER_FRAGMENT_ERR_ALLOC;
         } else if (fragment->has_key && !add_key_signature(notes, fragment->key_tonic_pitch_class,

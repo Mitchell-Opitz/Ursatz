@@ -11,20 +11,12 @@
 #include "links_internal.h"
 #include "util/json_util.h"
 #include "util/file_util.h"
+#include "util/misc_util.h"
 
 #define CACHE_SCHEMA "ursatz-motive-link-cache"
 #define CACHE_SCHEMA_VERSION 1
 
 static const char *const dimension_keys[MOTIVE_DIMENSION_COUNT] = {"rhythm", "intervals", "contour", "harmony"};
-
-static char *copy_text(const char *text) {
-    size_t length = strlen(text) + 1;
-    char *copy = malloc(length);
-    if (copy) {
-        memcpy(copy, text, length);
-    }
-    return copy;
-}
 
 /* ---- In memory ---- */
 
@@ -95,8 +87,8 @@ bool motive_link_cache_prepare(MotiveLinkCache *cache, const MotiveLinkOptions *
         strcmp(cache->analyzer_version, URSATZ_ANALYZER_VERSION) == 0 && options_equal(&cache->options, options)) {
         return true;
     }
-    char *commit = copy_text(URSATZ_ANALYZER_URSATZ_COMMIT);
-    char *version = copy_text(URSATZ_ANALYZER_VERSION);
+    char *commit = text_copy(URSATZ_ANALYZER_URSATZ_COMMIT);
+    char *version = text_copy(URSATZ_ANALYZER_VERSION);
     if (!commit || !version) {
         free(commit);
         free(version);
@@ -207,8 +199,8 @@ static MotiveLinksResult read_cache(const cJSON *root, MotiveLinkCache *cache) {
     }
     cache->options.min_nearness = nearness->valuedouble;
     cache->options.contour = cJSON_IsTrue(contour);
-    cache->ursatz_commit = copy_text(commit->valuestring);
-    cache->analyzer_version = copy_text(analyzer->valuestring);
+    cache->ursatz_commit = text_copy(commit->valuestring);
+    cache->analyzer_version = text_copy(analyzer->valuestring);
     if (!cache->ursatz_commit || !cache->analyzer_version) {
         return MOTIVE_LINKS_ERR_ALLOC;
     }

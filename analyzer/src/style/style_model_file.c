@@ -11,18 +11,11 @@
 #include "identity/entity_id.h"
 #include "theory/style_model_build.h"
 #include "util/file_util.h"
+#include "util/misc_util.h"
 
 
 #define FILE_SCHEMA "ursatz-style-model"
 #define FILE_SCHEMA_VERSION 1
-
-static uint64_t fnv1a(const char *text) {
-    uint64_t hash = 14695981039346656037ULL;
-    for (; *text; text++) {
-        hash = (hash ^ (unsigned char)*text) * 1099511628211ULL;
-    }
-    return hash;
-}
 
 StyleModelFileResult style_model_file_write(const StyleProfile *profile, const char *name, const char *path) {
     if (!profile || !name || !name[0] || !path) {
@@ -118,7 +111,7 @@ StyleModelFileResult style_model_file_read_without(const char *path, const char 
         return STYLE_MODEL_FILE_ERR_IO;
     }
     cJSON *root = cJSON_Parse(text);
-    uint64_t hash = fnv1a(text);
+    uint64_t hash = fnv1a_bytes(FNV1A_OFFSET_BASIS, text, strlen(text));
     free(text);
 
     StyleModelFileResult result = STYLE_MODEL_FILE_ERR_FORMAT;

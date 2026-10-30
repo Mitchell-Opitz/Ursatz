@@ -25,6 +25,7 @@
 #include "time/temporal_anchor.h"
 #include "time/time_signature.h"
 #include "util/json_util.h"
+#include "util/misc_util.h"
 
 /* How the home key is chosen: the library offers no determination of its own, so it is the key with the
    greatest total duration over all its regions, a tie going to the key that appears first. */
@@ -1245,12 +1246,6 @@ static cJSON *non_chord_tones_json(const ImportedNotes *notes, const AnalysisRep
 
 /* ---- Cadences ---- */
 
-static int compare_note_ids(const void *a, const void *b) {
-    size_t x = *(const size_t *)a;
-    size_t y = *(const size_t *)b;
-    return x < y ? -1 : (x > y ? 1 : 0);
-}
-
 /* The note ids of entries first..last, each once, in order. NULL on allocation failure (*count 0 with none). */
 static size_t *entry_range_note_ids(const AnalysisReport *report, size_t first, size_t last, size_t *count) {
     size_t total = 0;
@@ -1266,7 +1261,7 @@ static size_t *entry_range_note_ids(const AnalysisReport *report, size_t first, 
         memcpy(ids + next, report->entries[i].note_ids, sizeof(size_t) * report->entries[i].note_id_count);
         next += report->entries[i].note_id_count;
     }
-    qsort(ids, total, sizeof(size_t), compare_note_ids);
+    qsort(ids, total, sizeof(size_t), size_compare);
     size_t unique = 0;
     for (size_t i = 0; i < total; i++) {
         if (i == 0 || ids[i] != ids[i - 1]) {

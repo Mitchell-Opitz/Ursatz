@@ -15,6 +15,7 @@
 #include "time/meter_map.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
+#include "util/misc_util.h"
 
 /* A soprano note: an index into the ImportedNotes, with exact start and end in whole notes. */
 typedef struct {
@@ -26,18 +27,11 @@ typedef struct {
     long semitone;
 } SopranoNote;
 
-/* a/b compared with c/d for positive denominators: negative, zero or positive. */
-static int compare_rational(long long a, long long b, long long c, long long d) {
-    long long left = a * d;
-    long long right = c * b;
-    return left < right ? -1 : (left > right ? 1 : 0);
-}
-
 /* Sort by start, then by the order of the notes. */
 static int compare_start(const void *left, const void *right) {
     const SopranoNote *a = left;
     const SopranoNote *b = right;
-    int order = compare_rational(a->start_n, a->start_d, b->start_n, b->start_d);
+    int order = fraction_compare(a->start_n, a->start_d, b->start_n, b->start_d);
     return order != 0 ? order : (a->index < b->index ? -1 : (a->index > b->index ? 1 : 0));
 }
 
@@ -78,24 +72,24 @@ static bool find_soprano(const ImportedNotes *notes, SopranoNote **out, size_t *
     for (size_t i = 0; i < notes->count;) {
         long long onset_n = all[i].start_n;
         long long onset_d = all[i].start_d;
-        for (; i < notes->count && compare_rational(all[i].start_n, all[i].start_d, onset_n, onset_d) == 0; i++) {
+        for (; i < notes->count && fraction_compare(all[i].start_n, all[i].start_d, onset_n, onset_d) == 0; i++) {
             active[active_count++] = &all[i];
         }
         size_t live = 0;
         const SopranoNote *top = NULL;
         for (size_t a = 0; a < active_count; a++) {
-            if (compare_rational(active[a]->end_n, active[a]->end_d, onset_n, onset_d) <= 0) {
+            if (fraction_compare(active[a]->end_n, active[a]->end_d, onset_n, onset_d) <= 0) {
                 continue; /* ended before this onset */
             }
             active[live++] = active[a];
             if (!top || active[a]->semitone > top->semitone ||
                 (active[a]->semitone == top->semitone &&
-                 compare_rational(active[a]->start_n, active[a]->start_d, top->start_n, top->start_d) > 0)) {
+                 fraction_compare(active[a]->start_n, active[a]->start_d, top->start_n, top->start_d) > 0)) {
                 top = active[a];
             }
         }
         active_count = live;
-        if (top && compare_rational(top->start_n, top->start_d, onset_n, onset_d) == 0) {
+        if (top && fraction_compare(top->start_n, top->start_d, onset_n, onset_d) == 0) {
             line[kept++] = *top;
         }
     }
@@ -114,7 +108,7 @@ static bool find_soprano(const ImportedNotes *notes, SopranoNote **out, size_t *
 static const AnalysisKeyRegion *region_at(const AnalysisReport *report, long long n, long long d) {
     for (size_t r = 0; r < report->key_region_count; r++) {
         const AnalysisKeyRegion *region = &report->key_regions[r];
-        if (compare_rational(n, d, region->end_numerator, (long long)region->end_denominator) < 0) {
+        if (fraction_compare(n, d, region->end_numerator, (long long)region->end_denominator) < 0) {
             return region;
         }
     }
@@ -278,16 +272,16 @@ static void link_occurrence(const AnalysisReport *report, const MusicalTime *fir
         const AnalysisPhrase *phrase = &report->phrases[p];
         long long end_d = (long long)phrase->end_denominator;
         long long start_d = (long long)phrase->start_denominator;
-        if (compare_rational(first_n, first_d, phrase->start_numerator, start_d) < 0 ||
-            compare_rational(last_n, last_d, phrase->end_numerator, end_d) >= 0) {
+        if (fraction_compare(first_n, first_d, phrase->start_numerator, start_d) < 0 ||
+            fraction_compare(last_n, last_d, phrase->end_numerator, end_d) >= 0) {
             continue;
         }
         occurrence->has_phrase = true;
         occurrence->phrase = p;
         for (size_t k = 0; k < phrase->idea_count; k++) {
             const AnalysisIdea *idea = &report->ideas[phrase->first_idea + k];
-            if (compare_rational(first_n, first_d, idea->start_numerator, (long long)idea->start_denominator) >= 0 &&
-                compare_rational(last_n, last_d, idea->end_numerator, (long long)idea->end_denominator) < 0) {
+            if (fraction_compare(first_n, first_d, idea->start_numerator, (long long)idea->start_denominator) >= 0 &&
+                fraction_compare(last_n, last_d, idea->end_numerator, (long long)idea->end_denominator) < 0) {
                 occurrence->has_idea = true;
                 occurrence->idea = phrase->first_idea + k;
                 break;
@@ -355,7 +349,7 @@ static bool order_development(AnalysisMotive *motive) {
         while (at > 0) {
             const AnalysisMotiveOccurrence *before = &motive->occurrences[motive->development[at - 1]];
             const AnalysisMotiveOccurrence *now = &motive->occurrences[i];
-            if (compare_rational(before->start_numerator, (long long)before->start_denominator, now->start_numerator,
+            if (fraction_compare(before->start_numerator, (long long)before->start_denominator, now->start_numerator,
                                  (long long)now->start_denominator) <= 0) {
                 break;
             }

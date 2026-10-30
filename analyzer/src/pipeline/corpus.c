@@ -19,13 +19,12 @@
 #include "pipeline/analysis_document_internal.h"
 #include "pipeline/corpus_internal.h"
 #include "util/file_util.h"
+#include "util/misc_util.h"
 
 #define ANALYSIS_DOCUMENT_SUFFIX ".analysis.json"
 #define REPORT_SUFFIX ".report.md"
 #define INDEX_NAME "corpus-index.json"
 #define HOME_KEY_CAPACITY 64
-#define FNV_OFFSET_BASIS 0xcbf29ce484222325ULL
-#define FNV_PRIME 0x100000001b3ULL
 
 /* What the corpus index records about one piece. */
 typedef struct {
@@ -214,7 +213,7 @@ static bool write_output_file(const char *output_dir, const char *relative, cons
 }
 
 static unsigned long long fnv1a_file(const char *path) {
-    unsigned long long hash = FNV_OFFSET_BASIS;
+    uint64_t hash = FNV1A_OFFSET_BASIS;
     FILE *file = fopen(path, "rb");
     if (!file) {
         return hash;
@@ -222,9 +221,7 @@ static unsigned long long fnv1a_file(const char *path) {
     unsigned char chunk[8192];
     size_t got;
     while ((got = fread(chunk, 1, sizeof(chunk), file)) > 0) {
-        for (size_t i = 0; i < got; i++) {
-            hash = (hash ^ chunk[i]) * FNV_PRIME;
-        }
+        hash = fnv1a_bytes(hash, chunk, got);
     }
     fclose(file);
     return hash;

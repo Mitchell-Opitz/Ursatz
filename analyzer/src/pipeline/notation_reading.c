@@ -13,6 +13,7 @@
 #include "time/note_value.h"
 #include "time/temporal_anchor.h"
 #include "time/time_signature.h"
+#include "util/misc_util.h"
 
 /* One unsigned decimal number from *text, advancing past it; false when there is none or it overflows. */
 static bool parse_number(const char **text, unsigned long *out) {
@@ -134,11 +135,6 @@ static bool scale_fraction(long num, unsigned long den, const NotationReading *r
     return true;
 }
 
-static EntityID *clone_id(const EntityID *id) {
-    EntityID *copy = NULL;
-    return entity_id_create(entity_id_value(id), &copy) == ENTITY_ID_OK ? copy : NULL;
-}
-
 /* A NoteEvent like note, its start and duration scaled; NULL on allocation failure or overflow. */
 static NoteEvent *scaled_event(const NoteEvent *note, const NotationReading *reading, bool *overflow) {
     const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(note));
@@ -155,7 +151,7 @@ static NoteEvent *scaled_event(const NoteEvent *note, const NotationReading *rea
         return NULL;
     }
 
-    EntityID *id = clone_id(note_event_id(note));
+    EntityID *id = entity_id_copy(note_event_id(note));
     MusicalTime *time = NULL;
     TemporalAnchor *anchor = NULL;
     Duration *length = NULL;
@@ -184,7 +180,7 @@ static NoteEvent *scaled_event(const NoteEvent *note, const NotationReading *rea
     }
     const VoiceReference *old_voice = note_event_optional_voice(note);
     if (ok && old_voice) {
-        EntityID *voice_id = clone_id(voice_reference_target_id(old_voice));
+        EntityID *voice_id = entity_id_copy(voice_reference_target_id(old_voice));
         ok = voice_id && voice_reference_create(voice_id, &voice) == VOICE_REFERENCE_OK;
         if (!ok) {
             entity_id_destroy(voice_id);
@@ -192,7 +188,7 @@ static NoteEvent *scaled_event(const NoteEvent *note, const NotationReading *rea
     }
     const ProvenanceReference *old_provenance = note_event_provenance(note);
     if (ok && provenance_reference_state(old_provenance) == PROVENANCE_REFERENCE_PRESENT) {
-        EntityID *source_id = clone_id(provenance_reference_target_id(old_provenance));
+        EntityID *source_id = entity_id_copy(provenance_reference_target_id(old_provenance));
         ok = source_id && provenance_reference_create_present(source_id, &provenance) == PROVENANCE_REFERENCE_OK;
         if (!ok) {
             entity_id_destroy(source_id);
@@ -345,7 +341,7 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
             list[count] = (MeterMapChangePoint){meter_map_region_time_signature(region), scaled[count]};
             count++;
         }
-        EntityID *id = ok ? clone_id(meter_map_id(old)) : NULL;
+        EntityID *id = ok ? entity_id_copy(meter_map_id(old)) : NULL;
         if (ok && count == 0) {
             ok = id && meter_map_create_defaulted(id, &map) == METER_MAP_OK;
         } else if (ok) {
@@ -364,7 +360,7 @@ static MeterMap *prepared_meter_map(const ImportedNotes *notes, const NotationRe
     }
 
     if (ok) {
-        EntityID *id = clone_id(meter_map_id(old));
+        EntityID *id = entity_id_copy(meter_map_id(old));
         ok = id && meter_map_create(id, points, count, &map) == METER_MAP_OK;
         if (!map) {
             entity_id_destroy(id);

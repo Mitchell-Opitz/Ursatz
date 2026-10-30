@@ -21,6 +21,7 @@
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
 #include "time/time_span.h"
+#include "util/misc_util.h"
 
 /* The notes of one voice, as ImportedNotes indices in onset order. */
 typedef struct {
@@ -40,13 +41,6 @@ static void two_voices_destroy(TwoVoices *voices) {
     memset(voices, 0, sizeof(*voices));
 }
 
-/* a/b compared with c/d for positive denominators: negative, zero or positive. */
-static int compare_rational(long long a, long long b, long long c, long long d) {
-    long long left = a * d;
-    long long right = c * b;
-    return left < right ? -1 : (left > right ? 1 : 0);
-}
-
 static const MusicalTime *onset_of(const ImportedNotes *notes, size_t note) {
     return temporal_anchor_position(note_event_temporal_anchor(notes->events[note]));
 }
@@ -58,7 +52,7 @@ static int compare_onset(const void *left, const void *right) {
     size_t b = *(const size_t *)right;
     const MusicalTime *time_a = onset_of(sort_notes, a);
     const MusicalTime *time_b = onset_of(sort_notes, b);
-    int order = compare_rational((long long)musical_time_numerator(time_a), (long long)musical_time_denominator(time_a),
+    int order = fraction_compare((long long)musical_time_numerator(time_a), (long long)musical_time_denominator(time_a),
                                  (long long)musical_time_numerator(time_b), (long long)musical_time_denominator(time_b));
     if (order != 0) {
         return order;
@@ -66,12 +60,6 @@ static int compare_onset(const void *left, const void *right) {
     long pitch_a = pitch_numeric_value_position_numerator(sort_notes->pitch_values[a]);
     long pitch_b = pitch_numeric_value_position_numerator(sort_notes->pitch_values[b]);
     return pitch_a < pitch_b ? -1 : (pitch_a > pitch_b ? 1 : 0);
-}
-
-static int compare_size(const void *left, const void *right) {
-    size_t a = *(const size_t *)left;
-    size_t b = *(const size_t *)right;
-    return a < b ? -1 : (a > b ? 1 : 0);
 }
 
 static void sort_voice(const ImportedNotes *notes, VoiceNotes *voice) {
@@ -182,7 +170,7 @@ static Q q_make(long long n, long long d) {
 static Q q_add(Q a, Q b) { return q_make(a.n * b.d + b.n * a.d, a.d * b.d); }
 static Q q_mul(Q a, long long k) { return q_make(a.n * k, a.d); }
 static Q q_div(Q a, long long k) { return q_make(a.n, a.d * k); }
-static int q_cmp(Q a, Q b) { return compare_rational(a.n, a.d, b.n, b.d); }
+static int q_cmp(Q a, Q b) { return fraction_compare(a.n, a.d, b.n, b.d); }
 static Q q_of_time(const MusicalTime *time) {
     return q_make((long long)musical_time_numerator(time), (long long)musical_time_denominator(time));
 }
@@ -446,7 +434,7 @@ static bool record_span(const ImportedNotes *notes, const TwoVoices *voices, Ana
             first = false;
         }
     }
-    qsort(out->note_ids, out->note_id_count, sizeof(size_t), compare_size);
+    qsort(out->note_ids, out->note_id_count, sizeof(size_t), size_compare);
     out->start_numerator = (long)start.n;
     out->start_denominator = (unsigned long)start.d;
     out->end_numerator = (long)end.n;
