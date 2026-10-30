@@ -86,9 +86,16 @@ static bool entry_ranges(const AnalysisReport *report, SchemaBuild *build) {
     return true;
 }
 
-/* The input segment a stage claim names (its id is "seg-<index>"). false when the id is not one of ours. */
+/* The input segment a stage claim names: the merged segment whose id (that of its first chord segment) it is. false when
+   the id is not one of ours. */
 static bool segment_of_id(const SchemaBuild *build, const char *id, size_t *out) {
-    return sscanf(id, "seg-%zu", out) == 1 && *out < build->galant.list.count;
+    for (size_t i = 0; i < build->galant.list.count; i++) {
+        if (strcmp(build->galant.list.items[i].id, id) == 0) {
+            *out = i;
+            return true;
+        }
+    }
+    return false;
 }
 
 static bool copy_stage(const SchemaBuild *build, const GalantStageClaim *claim, AnalysisSchemaStage *out) {
