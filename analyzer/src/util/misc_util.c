@@ -23,12 +23,6 @@ int size_compare(const void *left, const void *right) {
     return a < b ? -1 : (a > b ? 1 : 0);
 }
 
-int fraction_compare(long long a, long long b, long long c, long long d) {
-    long long left = a * d;
-    long long right = c * b;
-    return left < right ? -1 : (left > right ? 1 : 0);
-}
-
 EntityID *entity_id_copy(const EntityID *id) {
     EntityID *copy = NULL;
     return entity_id_create(entity_id_value(id), &copy) == ENTITY_ID_OK ? copy : NULL;

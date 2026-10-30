@@ -56,11 +56,12 @@ void sync_key_change_extents(const CommonPracticeKeyRegions *found, AnalysisKeyC
 /*
  * The home key: the library offers no determination of its own, so it is the key (tonic and mode) with
  * the greatest total duration over all its regions, a tie going to the key that appears first. Returns the
- * first region in that key and sets *duration to the key's total time in whole notes, as a rational.
+ * first region in that key in *home_region and sets *duration to the key's total time in whole notes, as a rational.
+ * False when a time does not fit an exact rational.
  * Total time, not the longest single region, so a key the detection splits into several regions is not
  * outweighed by one long stretch of another. region_count must be at least 1.
  */
-size_t home_key_region(const AnalysisKeyRegion *regions, size_t region_count, long *duration_numerator,
-                       unsigned long *duration_denominator);
+bool home_key_region(const AnalysisKeyRegion *regions, size_t region_count, size_t *home_region,
+                     long *duration_numerator, unsigned long *duration_denominator);
 
 #endif

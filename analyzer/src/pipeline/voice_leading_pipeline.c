@@ -6,17 +6,18 @@
 #include <string.h>
 
 #include "analysis/voice_separation.h"
+#include "core/rational.h"
+#include "events/note_event.h"
+#include "pipeline/spelling_util.h"
+#include "pipeline/voicing_check.h"
+#include "pitch/pitch_numeric_value.h"
 #include "standard-counterpoint/analysis/analysis_grid.h"
 #include "standard-counterpoint/analysis/analysis_motion.h"
 #include "standard-counterpoint/analysis/analysis_perfects.h"
+#include "standard-counterpoint/framework.h"
 #include "standard-harmony/analysis/analysis_resolution.h"
 #include "standard-harmony/analysis/analysis_voices.h"
-#include "events/note_event.h"
-#include "pitch/pitch_numeric_value.h"
-#include "pipeline/spelling_util.h"
-#include "pipeline/voicing_check.h"
 #include "standard-meter/segmentation_beat_grid.h"
-#include "standard-counterpoint/framework.h"
 #include "theory/framework.h"
 #include "time/duration.h"
 #include "time/musical_time.h"
@@ -59,7 +60,8 @@ static size_t first_entry_from(const AnalysisReport *report, long long n, long l
     while (low < high) {
         size_t middle = low + (high - low) / 2;
         const AnalysisReportEntry *entry = &report->entries[middle];
-        if (fraction_compare(entry->time_numerator, (long long)entry->time_denominator, n, d) < 0) {
+        if (rational_cmp(rational_ratio(entry->time_numerator, (long long)entry->time_denominator),
+                         rational_ratio(n, d)) < 0) {
             low = middle + 1;
         } else {
             high = middle;
@@ -93,7 +95,8 @@ static bool place_note(const ImportedNotes *notes, const AnalysisReport *report,
             : NULL;
     for (size_t row = first_entry_from(report, on_n, on_d); row < report->entry_count; row++) {
         const AnalysisReportEntry *entry = &report->entries[row];
-        if (fraction_compare(entry->time_numerator, (long long)entry->time_denominator, off_n, off_d) >= 0) {
+        if (rational_cmp(rational_ratio(entry->time_numerator, (long long)entry->time_denominator),
+                         rational_ratio(off_n, off_d)) >= 0) {
             break;
         }
         size_t index = row * build->voice_count + assigned->voice;
@@ -106,7 +109,8 @@ static bool place_note(const ImportedNotes *notes, const AnalysisReport *report,
             notes->pitch_values[note],
             spelling,
             entity_id_value(note_event_id(event)),
-            fraction_compare(entry->time_numerator, (long long)entry->time_denominator, on_n, on_d) == 0,
+            rational_cmp(rational_ratio(entry->time_numerator, (long long)entry->time_denominator),
+                         rational_ratio(on_n, on_d)) == 0,
             confidence,
         };
         build->note_of_cell[index] = note;

@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/rational.h"
+
 static const char *const dimension_names[STYLE_DIMENSION_COUNT] = {"harmony", "rhythm", "melody", "form"};
 
 static const struct {
@@ -210,15 +212,6 @@ const char *style_label_contour(int semitones) {
     return semitones > 0 ? "up" : (semitones < 0 ? "down" : "same");
 }
 
-static unsigned long gcd(unsigned long a, unsigned long b) {
-    while (b) {
-        unsigned long t = a % b;
-        a = b;
-        b = t;
-    }
-    return a;
-}
-
 void style_label_duration(unsigned long numerator, unsigned long denominator, char *buffer, size_t size) {
     if (!buffer || size == 0) {
         return;
@@ -227,7 +220,7 @@ void style_label_duration(unsigned long numerator, unsigned long denominator, ch
         snprintf(buffer, size, "0/1");
         return;
     }
-    unsigned long divisor = gcd(numerator, denominator);
+    unsigned long divisor = (unsigned long)rational_gcd_unsigned(numerator, denominator);
     snprintf(buffer, size, "%lu/%lu", numerator / divisor, denominator / divisor);
 }
 

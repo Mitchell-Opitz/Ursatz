@@ -16,9 +16,6 @@ char *text_copy(const char *text);
 /* qsort comparator for size_t values, ascending. */
 int size_compare(const void *left, const void *right);
 
-/* a/b compared with c/d for positive denominators: negative, zero or positive. */
-int fraction_compare(long long a, long long b, long long c, long long d);
-
 /* A new EntityID with the same value as id; NULL on failure. */
 EntityID *entity_id_copy(const EntityID *id);
 

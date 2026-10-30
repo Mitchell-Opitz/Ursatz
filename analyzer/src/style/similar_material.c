@@ -12,11 +12,11 @@
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/style_labels.h>
 
-#include "query/similarity_model.h"
-#include "util/json_util.h"
+#include "core/rational.h"
 #include "pipeline/corpus_walk.h"
 #include "pipeline/run_file.h"
-
+#include "query/similarity_model.h"
+#include "util/json_util.h"
 
 /* ---- reading the document ---- */
 
@@ -481,16 +481,10 @@ typedef struct {
     size_t numeral_matches;
 } Candidate;
 
-/* -1, 0 or 1 as a/b is less than, equal to or more than c/d. */
-static int compare_fractions(unsigned long a, unsigned long b, unsigned long c, unsigned long d) {
-    WideInt left = (WideInt)a * d, right = (WideInt)c * b;
-    return left < right ? -1 : (left > right ? 1 : 0);
-}
-
 static int compare_candidates(const void *x, const void *y) {
     const Candidate *a = x, *b = y;
-    int order = compare_fractions(b->score.similarity.numerator, b->score.similarity.denominator, a->score.similarity.numerator,
-                                  a->score.similarity.denominator);
+    int order = rational_cmp_unsigned(b->score.similarity.numerator, b->score.similarity.denominator,
+                                      a->score.similarity.numerator, a->score.similarity.denominator);
     if (order != 0) {
         return order;
     }
@@ -602,8 +596,8 @@ static bool consider_window(const Search *search, const long *query_intervals, s
     if (scored != SIMILARITY_SCORE_OK) {
         return false;
     }
-    if (compare_fractions(breakdown.similarity.numerator, breakdown.similarity.denominator,
-                          search->options->minimum_numerator, search->options->minimum_denominator) < 0) {
+    if (rational_cmp_unsigned(breakdown.similarity.numerator, breakdown.similarity.denominator,
+                              search->options->minimum_numerator, search->options->minimum_denominator) < 0) {
         return true;
     }
     if (candidates->count == candidates->capacity) {
@@ -674,11 +668,11 @@ static bool progression_windows(const Search *search, const DocChord *chords, si
 static bool notes_between(const DocNote *notes, size_t count, unsigned long start_n, unsigned long start_d,
                           unsigned long end_n, unsigned long end_d, SimilarNote **out, size_t *found) {
     size_t first = 0;
-    while (first < count && compare_fractions(notes[first].onset_n, notes[first].onset_d, start_n, start_d) < 0) {
+    while (first < count && rational_cmp_unsigned(notes[first].onset_n, notes[first].onset_d, start_n, start_d) < 0) {
         first++;
     }
     size_t last = first;
-    while (last < count && compare_fractions(notes[last].onset_n, notes[last].onset_d, end_n, end_d) < 0) {
+    while (last < count && rational_cmp_unsigned(notes[last].onset_n, notes[last].onset_d, end_n, end_d) < 0) {
         last++;
     }
     *out = NULL;
@@ -711,8 +705,8 @@ static bool matches_add(Matches *matches, SimilarMatch match) {
 
 static int compare_matches(const void *x, const void *y) {
     const SimilarMatch *a = x, *b = y;
-    int order = compare_fractions(b->score.similarity.numerator, b->score.similarity.denominator, a->score.similarity.numerator,
-                                  a->score.similarity.denominator);
+    int order = rational_cmp_unsigned(b->score.similarity.numerator, b->score.similarity.denominator,
+                                      a->score.similarity.numerator, a->score.similarity.denominator);
     if (order == 0) {
         order = strcmp(a->piece, b->piece);
     }

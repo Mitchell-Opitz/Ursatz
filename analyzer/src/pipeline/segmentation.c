@@ -4,15 +4,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "standard-meter/metric_position_rules.h"
+#include "core/rational.h"
 #include "pipeline/pitch_class_util.h"
 #include "pitch/pitch_spelling.h"
-#include "standard-meter/segmentation_beat_grid.h"
 #include "semantics/sonority_segmentation.h"
-#include "time/exact_rational.h"
+#include "standard-meter/metric_position_rules.h"
+#include "standard-meter/segmentation_beat_grid.h"
 #include "time/meter_map.h"
 #include "time/metrical_position.h"
 #include "time/temporal_anchor.h"
+#include "time/time_rational.h"
 #include "time/time_span.h"
 
 typedef struct {
@@ -22,10 +23,6 @@ typedef struct {
 
 static int compare_note_keys(const void *a, const void *b) {
     return strcmp(((const NoteKey *)a)->id, ((const NoteKey *)b)->id);
-}
-
-static double as_double(ExactRational r) {
-    return (double)r.n / (double)r.d;
 }
 
 /* Semitone number of a spelled pitch, C4 = 60, as Ursatz's segmentation reads it. */
@@ -55,38 +52,41 @@ BeatStrength beat_strength_at(const MeterMap *map, const MusicalTime *onset) {
 }
 
 /* Fills one member from its note, for the segment window [start, end). False when the note does not overlap it. */
-static bool build_member(const NoteEvent *note, const MeterMap *map, ExactRational start, ExactRational end,
-                         bool held, CommonPracticeMember *member) {
+static bool build_member(const NoteEvent *note, const MeterMap *map, Rational start, Rational end, bool held,
+                         CommonPracticeMember *member) {
     const MusicalTime *onset_time = temporal_anchor_position(note_event_temporal_anchor(note));
-    ExactRational onset = er_of_time(onset_time);
-    ExactRational release = {0, 1};
-    if (er_add(onset, er_of_duration(note_event_duration(note)), &release) != 0) {
+    Rational onset;
+    Rational length;
+    Rational release;
+    if (rational_of_musical_time(onset_time, &onset) != RATIONAL_OK ||
+        rational_of_duration(note_event_duration(note), &length) != RATIONAL_OK ||
+        rational_add(onset, length, &release) != RATIONAL_OK) {
         return false;
     }
-    ExactRational from = er_cmp(onset, start) > 0 ? onset : start;
-    ExactRational to = er_cmp(release, end) < 0 ? release : end;
-    ExactRational overlap = {0, 1};
-    if (er_cmp(to, from) <= 0 || er_sub(to, from, &overlap) != 0) {
+    Rational from = rational_cmp(onset, start) > 0 ? onset : start;
+    Rational to = rational_cmp(release, end) < 0 ? release : end;
+    Rational overlap;
+    if (rational_cmp(to, from) <= 0 || rational_sub(to, from, &overlap) != RATIONAL_OK) {
         return false;
     }
 
     member->note_id = entity_id_value(note_event_id(note));
     member->pitch = semitone_of(note_event_optional_pitch_spelling(note));
     member->held = held;
-    member->duration = as_double(overlap);
+    member->duration = rational_to_double(overlap);
     member->strength = held ? BEAT_STRENGTH_STRONG : beat_strength_at(map, onset_time);
     const VoiceReference *voice = note_event_optional_voice(note);
     member->voice_id = voice != NULL ? entity_id_value(voice_reference_target_id(voice)) : NULL;
-    member->onset = as_double(onset);
+    member->onset = rational_to_double(onset);
     return true;
 }
 
 /* The beat a segment [start, end) lies inside, as a non-zero index (measure and beat), or 0 when it spans beats or
    the grid cannot be read: segments inside one beat share one value (CommonPracticeSegment.beat). False only on
-   allocation failure. */
-static bool beat_index(const MeterMap *map, ExactRational start, ExactRational end, long *out) {
+   allocation failure or when a time does not fit an exact rational. */
+static bool beat_index(const MeterMap *map, Rational start, Rational end, long *out) {
     *out = 0;
-    MusicalTime *at = er_to_time(start);
+    MusicalTime *at = musical_time_from_rational_or_null(start);
     if (!at) {
         return false;
     }
@@ -99,13 +99,20 @@ static bool beat_index(const MeterMap *map, ExactRational start, ExactRational e
         return true;
     }
     TimeSpan *span = NULL;
+    bool read = true;
     if (meter_map_measure_span(map, measure, &span) == METER_MAP_OK) {
-        ExactRational measure_end = er_of_time(time_span_end(span));
-        for (size_t b = 0; b < count; b++) {
-            ExactRational beat_start = er_of_time(starts[b]);
-            ExactRational beat_end = b + 1 < count ? er_of_time(starts[b + 1]) : measure_end;
-            if (er_cmp(beat_start, start) <= 0 && er_cmp(start, beat_end) < 0) {
-                if (er_cmp(end, beat_end) <= 0) {
+        Rational measure_end;
+        read = rational_of_musical_time(time_span_end(span), &measure_end) == RATIONAL_OK;
+        for (size_t b = 0; read && b < count; b++) {
+            Rational beat_start;
+            Rational beat_end = measure_end;
+            read = rational_of_musical_time(starts[b], &beat_start) == RATIONAL_OK &&
+                   (b + 1 >= count || rational_of_musical_time(starts[b + 1], &beat_end) == RATIONAL_OK);
+            if (!read) {
+                break;
+            }
+            if (rational_cmp(beat_start, start) <= 0 && rational_cmp(start, beat_end) < 0) {
+                if (rational_cmp(end, beat_end) <= 0) {
                     *out = ((long)measure + 1) * 1000 + (long)b + 1;
                 }
                 break;
@@ -117,7 +124,7 @@ static bool beat_index(const MeterMap *map, ExactRational start, ExactRational e
         musical_time_destroy(starts[b]);
     }
     free(starts);
-    return true;
+    return read;
 }
 
 static bool fill_segments(const ImportedNotes *notes, const AdaptiveSonorities *sonorities, Segmentation *out) {
@@ -145,15 +152,20 @@ static bool fill_segments(const ImportedNotes *notes, const AdaptiveSonorities *
     for (size_t s = 0; s < sonorities->count; s++) {
         const AdaptiveSonority *item = &sonorities->items[s];
         const TimeSpan *window = sonority_time_window(item->sonority);
-        ExactRational start = er_of_time(time_span_start(window));
-        ExactRational end = er_of_time(time_span_end(window));
+        Rational start;
+        Rational end;
+        if (rational_of_musical_time(time_span_start(window), &start) != RATIONAL_OK ||
+            rational_of_musical_time(time_span_end(window), &end) != RATIONAL_OK) {
+            free(keys);
+            return false;
+        }
         size_t count = sonority_event_id_count(item->sonority);
 
         Segment *segment = &out->segments[s];
-        segment->start_numerator = (long)start.n;
-        segment->start_denominator = (unsigned long)start.d;
-        segment->end_numerator = (long)end.n;
-        segment->end_denominator = (unsigned long)end.d;
+        segment->start_numerator = (long)start.num;
+        segment->start_denominator = (unsigned long)start.den;
+        segment->end_numerator = (long)end.num;
+        segment->end_denominator = (unsigned long)end.den;
         segment->note_indices = malloc(sizeof(size_t) * count);
         segment->members = malloc(sizeof(CommonPracticeMember) * count);
         if (!segment->note_indices || !segment->members) {
