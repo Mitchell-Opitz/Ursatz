@@ -229,12 +229,12 @@ static bool collect_pass(AnalyzerPass *pass) {
         !harmony_stage_collect_six_fours_and_prolongations(&pass->harmony, report) ||
         !progression_stage_collect(report) || !harmonic_rhythm_stage_collect(notes, report) ||
         !meter_check_stage_collect(notes, report) ||
-        !form_stage_run(&pass->form, notes, &pass->voice_segmentation, segmentation, &pass->lines, &pass->harmony) ||
+        !form_stage_read(&pass->form, notes, &pass->input, pass->library) ||
         !form_stage_collect(&pass->form, report) || !harmony_stage_collect_phrase_model(&pass->harmony, report) ||
         !form_plan_stage_collect(&pass->form, report) ||
-        !motive_stage_run(&pass->motives, notes, segmentation, &pass->harmony, report) ||
+        !motive_stage_read(&pass->motives, &pass->input, pass->library) ||
         !motive_stage_collect(&pass->motives, notes, report) ||
-        !melody_stage_collect(notes, &pass->voice_segmentation, &pass->lines, report) ||
+        !melody_stage_collect(notes, &pass->input, pass->library, segmentation, report) ||
         !rhythm_stage_collect(notes, &pass->lines, &pass->form, report) ||
         !texture_stage_collect(notes, report) || !markings_stage_collect(notes, report) ||
         !voice_leading_stage_collect(notes, &pass->harmony, report) ||

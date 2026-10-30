@@ -14,69 +14,45 @@
 #include "standard-form/analysis/analysis_theme.h"
 #include "standard-form/analysis/analysis_input.h"
 #include "standard-form/analysis/analysis_phrase.h"
-#include "pipeline/harmony_pipeline.h"
-#include "pipeline/segmentation.h"
-#include "time/time_span.h"
+#include <ursatz_chain/analysis_chain.h>
+#include <ursatz_chain/chain_inputs.h>
+
+#include "pipeline/chain_input.h"
 
 /*
- * Ursatz's standard-form analysis over the chain: phrases, then ideas and subphrases, then themes and expansions. Ported from the test glue
- * (tests/integration/form_util.h form_build_*, test_form_reference_pieces.c add_chain_cadences and form_analyze,
- * R-053) as a rewrite with error returns. The analyzer adds no music theory: the input is the outer-voice soprano, the
- * chord segments, the meter and the cadences of the harmony stage, and every phrase, idea and subphrase is the
- * library's.
+ * Ursatz's standard-form analysis over the library chain: phrases, then ideas and subphrases, then themes and
+ * expansions (analysis_chain_phrases, analysis_chain_ideas, analysis_chain_themes, analysis_chain_expansions), read from
+ * the outer-voice soprano, the chord segments, the meter and the cadences of the harmony stage. The analyzer adds no
+ * music theory: every phrase, idea and subphrase is the library's.
  *
- * The soprano. Consecutive voice segments in which the soprano is the same note are ONE note (a held note) that spans
- * from the start of its first segment to the end of its last; a voice segment with no soprano is a gap. The outer
- * voice lines are indexed by voice segment, not by chord segment (do not port Ursatz's glue, which indexes them by
- * chord segment).
- *
- * The cadences are the harmony stage's, in its order, each with the span from its first arrival chord's start to its
- * last arrival chord's end, ids "chain-<index into the stage's cadences>".
- *
- * A FormStage owns the input and the results; the phrases and ideas borrow the notes, the meter and the segmentation,
- * which must outlive the stage. A piece the library cannot read as phrases (no soprano, a time the meter cannot place)
- * leaves the stage without phrases; that is not an error.
+ * The chain keeps its form input to itself. A FormStage rebuilds it with the chain's own builder (chain_build_form_input)
+ * from the same segments, lines and cadences, for what the results index into: the input's notes (the soprano as notes,
+ * consecutive voice segments on one note being one note), its cadences (ids "chain-<index into the cadences>") and the
+ * meter. The results are the chain's, borrowed: the chain, the chain input and the notes must outlive the stage.
+ * A piece the library cannot read as phrases leaves the stage without phrases; that is not an error.
  */
 typedef struct {
-    StandardFormInput input;
-    TimeSpan **spans; /* owned: every span copied into the input */
-    size_t span_count;
-    size_t span_capacity;
-    size_t *note_indices; /* owned; per input note, the ImportedNotes index of its first constituent note */
+    ChainFormInput built;                  /* owned; the form input again, for the indices the results use */
+    bool have_input;                       /* built holds an input */
+    size_t *note_indices;                  /* owned; per input note, the ImportedNotes index of its first constituent note */
     size_t note_index_count;
-    bool built;       /* input holds a finished input */
-    StandardFormPhrases phrases;
-    StandardFormSegmentation segmentation;
-    StandardFormThemes themes;
-    StandardFormExpansions expansions;
+    StandardFormPhrases phrases;           /* borrowed from the chain */
+    StandardFormSegmentation segmentation; /* borrowed */
+    StandardFormThemes themes;             /* borrowed */
+    StandardFormExpansions expansions;     /* borrowed */
 } FormStage;
 
-/* Builds the input and runs standard_form_segment_phrases, standard_form_segment_ideas and
-   standard_form_identify_themes and standard_form_detect_expansions with the default config.
-   lines is the outer voice lines over voices; harmony the stage's cadences. Returns false only on allocation
-   failure. */
-bool form_stage_run(FormStage *stage, const ImportedNotes *notes, const Segmentation *voices,
-                    const Segmentation *segmentation, const OuterVoiceLines *lines, const HarmonyStage *harmony);
-
-/* The parts of a stage that do not depend on its melody, for a stage that builds a form input of its own from another
-   melody (motive_pipeline.c, whose note-level soprano the motive analysis needs, R-053). The stage must have been
-   zeroed and its input initialised, with stage->built set. form_stage_keep_span copies [start, end) into the stage
-   (NULL on failure); form_stage_add_segments and form_stage_add_cadences add the chord segments and the harmony stage's
-   cadences as form_stage_run does; form_stage_analyze finishes the input and runs the phrases, ideas, themes and
-   expansions with the default config. All return false only on allocation failure. */
-const TimeSpan *form_stage_keep_span(FormStage *stage, const MusicalTime *start, const MusicalTime *end);
-bool form_stage_add_segments(FormStage *stage, const Segmentation *segmentation);
-bool form_stage_add_cadences(FormStage *stage, const Segmentation *segmentation, const HarmonyStage *harmony);
-bool form_stage_analyze(FormStage *stage);
+/* Takes the chain's phrases, ideas, themes and expansions, and rebuilds the input they index. Returns false only on
+   allocation failure. */
+bool form_stage_read(FormStage *stage, const ImportedNotes *notes, const ChainInput *input,
+                     const AnalysisChain *library);
 
 /* The index into the harmony stage's cadences of phrase i's cadence, or -1 when it has none. */
 long form_stage_phrase_cadence(const FormStage *stage, size_t phrase);
-
 /* Copies the stage's phrases, ideas, subphrases, themes and expansions into the report, each phrase with its span, the chord entries inside it (entries must be the
    ones the stage was built from), measures, cadence and signal, and its ideas and subphrases. A stage without phrases leaves the report without.
    Returns false only on allocation failure. */
 bool form_stage_collect(const FormStage *stage, AnalysisReport *report);
-
 void form_stage_destroy(FormStage *stage);
 
 #endif

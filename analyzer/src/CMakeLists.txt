@@ -15,7 +15,6 @@ add_library(ursatz_analyzer STATIC
     pipeline/outer_voice_pipeline.c
     pipeline/roman_numeral_pipeline.c
     pipeline/harmony_pipeline.c
-    pipeline/form_boundary.c
     pipeline/form_pipeline.c
     pipeline/form_plan_pipeline.c
     pipeline/motive_pipeline.c

@@ -235,7 +235,7 @@ static bool build_phrases(RhythmBuild *build, const FormStage *form) {
         const TimeSpan *span = keep_span(build, time_span_start(phrase->span), time_span_end(phrase->span));
         const TimeSpan *arrival = NULL;
         if (phrase->claim.cadence_index >= 0) {
-            const TimeSpan *chord = form->input.cadences[phrase->claim.cadence_index].arrival;
+            const TimeSpan *chord = form->built.input.cadences[phrase->claim.cadence_index].arrival;
             arrival = keep_span(build, time_span_start(chord), time_span_end(chord));
             if (!arrival) {
                 return false;
@@ -603,7 +603,7 @@ static bool collect_tuplets(const RhythmBuild *build, const ImportedNotes *notes
 bool rhythm_stage_collect(const ImportedNotes *notes, const OuterVoiceLines *lines, const FormStage *form,
                           AnalysisReport *report) {
     const MeterMap *map = notes->meter.meter_map;
-    if (!map || notes->count == 0 || !form->built || form->phrases.count == 0 ||
+    if (!map || notes->count == 0 || !form->have_input || form->phrases.count == 0 ||
         form->phrases.count != report->phrase_count || lines->count == 0) {
         return true;
     }
