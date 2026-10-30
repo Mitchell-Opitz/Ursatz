@@ -10,8 +10,8 @@
 #include "core/rational.h"
 #include "pipeline/motive_features.h"
 #include "pitch/pitch_numeric_value.h"
-#include "standard-form/analysis/analysis_time.h"
 #include "time/duration.h"
+#include "time/meter_arithmetic.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
@@ -405,10 +405,6 @@ static bool collect_occurrence_degrees(const ImportedNotes *notes, const Analysi
     return true;
 }
 
-static Rational rational_of(StandardFormQ q) {
-    return msk_make((unsigned long long)q.n, (unsigned long long)q.d);
-}
-
 /* The bar and beat at the first note and its position in the bar. A pickup measure is short, so its bar and beat are
    the following region's. */
 static bool meter_at(const MeterMap *map, Rational start, Rational *bar, Rational *beat,
@@ -422,9 +418,9 @@ static bool meter_at(const MeterMap *map, Rational start, Rational *bar, Rationa
     bool ok = meter_map_measure_index_at(map, time, &measure) == METER_MAP_OK &&
               meter_map_region_of_measure(map, measure, &region) == METER_MAP_OK;
     musical_time_destroy(time);
-    StandardFormQ measure_start;
-    StandardFormQ measure_end;
-    if (!ok || !standard_form_measure_bounds(map, measure, &measure_start, &measure_end)) {
+    Rational measure_start;
+    Rational measure_end;
+    if (!ok || meter_map_measure_bounds(map, measure, &measure_start, &measure_end) != METER_MAP_OK) {
         return false;
     }
     bool pickup = meter_map_region_is_pickup(region);
@@ -436,20 +432,20 @@ static bool meter_at(const MeterMap *map, Rational start, Rational *bar, Rationa
         reference_region = region;
     }
     Duration *bar_duration = NULL;
-    StandardFormQ beat_length;
+    Rational beat_length;
     if (time_signature_measure_duration(meter_map_region_time_signature(reference_region), &bar_duration) !=
             DURATION_OK ||
-        !standard_form_beat_length(map, reference, &beat_length)) {
+        meter_map_beat_length(map, reference, &beat_length) != METER_MAP_OK) {
         return false;
     }
     *bar = msk_make((unsigned long long)duration_numerator(bar_duration), duration_denominator(bar_duration));
     duration_destroy(bar_duration);
-    *beat = rational_of(beat_length);
+    *beat = beat_length;
     if (pickup) {
-        Rational remaining = msk_sub(rational_of(measure_end), start);
+        Rational remaining = msk_sub(measure_end, start);
         *position = msk_ok(remaining) && msk_cmp(remaining, *bar) < 0 ? msk_sub(*bar, remaining) : msk_int(0);
     } else {
-        *position = msk_sub(start, rational_of(measure_start));
+        *position = msk_sub(start, measure_start);
     }
     return msk_ok(*bar) && msk_ok(*beat) && msk_ok(*position);
 }

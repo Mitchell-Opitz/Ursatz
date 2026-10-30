@@ -8,6 +8,7 @@
 #include "io/midi_importer.h"
 #include "io/midi_key_signature.h"
 #include "pitch/pitch_numeric_value.h"
+#include "time/tempo_map.h"
 
 #include <ursatz_analyzer/notation_reading.h>
 
@@ -121,6 +122,12 @@ typedef struct {
  * signature event gets a single 4/4 region marked defaulted
  * (meter_map_is_defaulted), so meter.meter_map is never NULL after a
  * successful import.
+ *
+ * tempo_map is the file's set-tempo events as a TempoMap (time/tempo_map.h),
+ * from the one library parse of the file: a MIDI import always has one (a
+ * single defaulted region when the file has no tempo event), a MusicXML
+ * import has NULL. Owned; imported_notes_destroy releases it. Note times
+ * do not depend on it.
  */
 typedef struct ImportedNotes {
     NoteEvent **events;
@@ -133,6 +140,7 @@ typedef struct ImportedNotes {
     unsigned ticks_per_quarter; /* SMF header division (PPQN); 0 when unavailable */
     MidiMeterImport meter;
     ImportedSource source;
+    TempoMap *tempo_map; /* owned; the file's tempo changes (MIDI); NULL for MusicXML */
 } ImportedNotes;
 
 void imported_notes_destroy(ImportedNotes *notes);

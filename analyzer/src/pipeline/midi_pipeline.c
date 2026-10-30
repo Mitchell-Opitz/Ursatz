@@ -7,7 +7,6 @@
 #include "io/midi_importer.h"
 #include "io/midi_key_signature.h"
 #include "export/score_staves.h"
-#include "io/smf_reader.h"
 #include "pipeline/gm_names.h"
 
 static const char *midi_import_error_message(MidiImportResult result) {
@@ -32,186 +31,38 @@ static const char *midi_import_error_message(MidiImportResult result) {
     }
 }
 
-/* A note-on of the file with the track chunk and channel it is in. */
-typedef struct {
-    long long tick;
-    int pitch;
-    size_t track;
-    int channel;
-    bool used;
-} TrackNoteOn;
-
-/* A program change (0xC0) of the file. */
-typedef struct {
-    long long tick;
-    size_t track;
-    int channel;
-    int program;
-} ProgramChange;
-
-/* What the track chunks say beyond their note-ons: the first track name (meta 0x03) of each track, NULL when it has
-   none, and every program change in file order. */
-typedef struct {
-    char **track_names; /* owned; one entry per track */
-    size_t track_count;
-    ProgramChange *programs;
-    size_t program_count;
-    size_t program_capacity;
-} MidiFileInfo;
-
-static void midi_file_info_destroy(MidiFileInfo *info) {
-    for (size_t t = 0; t < info->track_count; t++) {
-        free(info->track_names[t]);
-    }
-    free(info->track_names);
-    free(info->programs);
-    *info = (MidiFileInfo){0};
-}
-
-/* Reads a variable-length quantity at data[at], within end; returns the bytes used, 0 when it runs past end. */
-static size_t read_vlq(const unsigned char *data, size_t at, size_t end, unsigned long *value) {
-    *value = 0;
-    size_t used = 0;
-    unsigned char c;
-    do {
-        if (at + used >= end || used >= 5) {
-            return 0;
-        }
-        c = data[at + used];
-        *value = (*value << 7) | (c & 0x7f);
-        used++;
-    } while ((c & 0x80) != 0);
-    return used;
-}
-
-static bool add_program_change(MidiFileInfo *info, ProgramChange change) {
-    if (info->program_count == info->program_capacity) {
-        size_t capacity = info->program_capacity > 0 ? info->program_capacity * 2 : 16;
-        ProgramChange *grown = realloc(info->programs, capacity * sizeof *grown);
-        if (!grown) {
-            return false;
-        }
-        info->programs = grown;
-        info->program_capacity = capacity;
-    }
-    info->programs[info->program_count++] = change;
-    return true;
-}
-
-/* The note-ons of every track chunk (running status honoured), ported from Ursatz's tests/integration/texture_util.h
-   texture_read_note_ons as a rewrite with error returns, with each track's first name and every program change in
-   info (empty on failure). false on a malformed track or allocation failure. */
-static bool read_note_ons(const SmfTrack *tracks, size_t track_count, TrackNoteOn **out, size_t *out_count,
-                          MidiFileInfo *info) {
-    size_t capacity = 1024;
-    size_t count = 0;
-    *info = (MidiFileInfo){0};
-    TrackNoteOn *ons = malloc(capacity * sizeof *ons);
-    info->track_names = calloc(track_count > 0 ? track_count : 1, sizeof *info->track_names);
-    if (!ons || !info->track_names) {
-        free(ons);
-        midi_file_info_destroy(info);
-        return false;
-    }
-    info->track_count = track_count;
-    for (size_t t = 0; t < track_count; t++) {
-        const unsigned char *data = tracks[t].data;
-        size_t end = tracks[t].size;
-        size_t p = 0;
-        long long tick = 0;
-        unsigned char running = 0;
-        while (p < end) {
-            unsigned long delta = 0;
-            size_t used = read_vlq(data, p, end, &delta);
-            if (used == 0 || p + used >= end) {
-                free(ons);
-                midi_file_info_destroy(info);
-                return false;
-            }
-            p += used;
-            tick += (long long)delta;
-            unsigned char status = data[p];
-            if (status == 0xff || status == 0xf0 || status == 0xf7) {
-                unsigned long length = 0;
-                unsigned char meta_type = (status == 0xff && p + 1 < end) ? data[p + 1] : 0;
-                p += status == 0xff ? 2 : 1;
-                used = p < end ? read_vlq(data, p, end, &length) : 0;
-                if (used == 0 || p + used + length > end) {
-                    free(ons);
-                    return false;
-                }
-                if (meta_type == 0x03 && !info->track_names[t]) {
-                    info->track_names[t] = malloc(length + 1);
-                    if (!info->track_names[t]) {
-                        free(ons);
-                        midi_file_info_destroy(info);
-                        return false;
-                    }
-                    memcpy(info->track_names[t], data + p + used, length);
-                    info->track_names[t][length] = '\0';
-                }
-                p += used + length;
-                continue;
-            }
-            if ((status & 0x80) != 0) {
-                running = status;
-                p++;
-            } else {
-                status = running;
-            }
-            unsigned char kind = status & 0xf0;
-            size_t data_bytes = (kind == 0xc0 || kind == 0xd0) ? 1 : 2;
-            if (kind < 0x80 || p + data_bytes > end) {
-                free(ons);
-                midi_file_info_destroy(info);
-                return false;
-            }
-            if (kind == 0x90 && data[p + 1] > 0) {
-                if (count == capacity) {
-                    capacity *= 2;
-                    TrackNoteOn *grown = realloc(ons, capacity * sizeof *ons);
-                    if (!grown) {
-                        free(ons);
-                        midi_file_info_destroy(info);
-                        return false;
-                    }
-                    ons = grown;
-                }
-                ons[count++] = (TrackNoteOn){tick, data[p], t, status & 0x0f, false};
-            } else if (kind == 0xc0 &&
-                       !add_program_change(info, (ProgramChange){tick, t, status & 0x0f, data[p]})) {
-                free(ons);
-                midi_file_info_destroy(info);
-                return false;
-            }
-            p += data_bytes;
-        }
-    }
-    *out = ons;
-    *out_count = count;
-    return true;
-}
-
 /* A part of a MIDI file: the notes of one channel of one track. */
 typedef struct {
     size_t track;
     int channel;
     long long first_tick;
+    size_t first_event;
 } PartKey;
 
 #define PERCUSSION_CHANNEL 9
 
+/* The tick of a note's onset: the position in whole notes times four quarters times the file's division. */
+static long long onset_tick(const NoteEvent *event, unsigned division) {
+    const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(event));
+    long long numerator = (long long)musical_time_numerator(onset) * 4 * (long long)division;
+    long long denominator = (long long)musical_time_denominator(onset);
+    return denominator > 0 ? numerator / denominator : 0;
+}
+
 /* The program a part starts with: the last program change of its track and channel at or before its first note, 0
    (the General MIDI default) when there is none, -1 for the percussion channel. */
-static int part_program(const MidiFileInfo *info, const PartKey *key) {
+static int part_program(const MidiImport *import, const PartKey *key) {
     if (key->channel == PERCUSSION_CHANNEL) {
         return -1;
     }
     int program = 0;
-    for (size_t i = 0; i < info->program_count; i++) {
-        const ProgramChange *change = &info->programs[i];
-        if (change->track == key->track && change->channel == key->channel && change->tick <= key->first_tick) {
-            program = change->program;
+    if (key->track < import->track_count) {
+        const MidiTrackInfo *track = &import->tracks[key->track];
+        for (size_t i = 0; i < track->program_count; i++) {
+            const MidiProgramChange *change = &track->programs[i];
+            if (change->channel == key->channel && (long long)change->tick <= key->first_tick) {
+                program = change->program;
+            }
         }
     }
     return program;
@@ -219,8 +70,8 @@ static int part_program(const MidiFileInfo *info, const PartKey *key) {
 
 /* The part name: the track name when the track has one and only one part, else the track name and the instrument
    name, else the instrument name. NULL on allocation failure. */
-static char *part_name(const MidiFileInfo *info, const PartKey *keys, size_t key_count, size_t part, int program) {
-    const char *track_name = info->track_names[keys[part].track];
+static char *part_name(const MidiImport *import, const PartKey *keys, size_t key_count, size_t part, int program) {
+    const char *track_name = keys[part].track < import->track_count ? import->tracks[keys[part].track].name : NULL;
     if (track_name && track_name[0] == '\0') {
         track_name = NULL;
     }
@@ -243,31 +94,66 @@ static char *part_name(const MidiFileInfo *info, const PartKey *keys, size_t key
     return name;
 }
 
-/* One part per distinct (track, channel) that has a note-on, in order of first appearance in the file: its
-   id, name and program. Writes the part of each note-on to on_part (on_count entries). false on allocation failure,
-   with source untouched. */
-static bool build_parts(const TrackNoteOn *ons, size_t on_count, const MidiFileInfo *info, ImportedSource *source,
-                        size_t *on_part) {
-    PartKey *keys = calloc(on_count > 0 ? on_count : 1, sizeof *keys);
-    ImportedPart *parts = calloc(on_count > 0 ? on_count : 1, sizeof *parts);
+/* Parts in order of first appearance in the file: by track, then by the tick of the first note. */
+static int part_key_compare(const void *a, const void *b) {
+    const PartKey *x = a;
+    const PartKey *y = b;
+    if (x->track != y->track) {
+        return x->track < y->track ? -1 : 1;
+    }
+    if (x->first_tick != y->first_tick) {
+        return x->first_tick < y->first_tick ? -1 : 1;
+    }
+    return x->first_event < y->first_event ? -1 : (x->first_event > y->first_event ? 1 : 0);
+}
+
+static void parts_destroy(ImportedPart *parts, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        free(parts[i].id);
+        free(parts[i].name);
+    }
+    free(parts);
+}
+
+/* One part per distinct (track, channel) that has a note, in order of first appearance: its id, name and program.
+   Writes the part of each note to streams (import->count entries). false on allocation failure, with source
+   untouched. */
+static bool build_parts(const MidiImport *import, ImportedSource *source, size_t *streams) {
+    size_t count = import->count;
+    PartKey *keys = calloc(count > 0 ? count : 1, sizeof *keys);
+    ImportedPart *parts = calloc(count > 0 ? count : 1, sizeof *parts);
     size_t key_count = 0;
     bool ok = keys && parts;
-    for (size_t k = 0; ok && k < on_count; k++) {
+    for (size_t i = 0; ok && i < count; i++) {
+        size_t track = import->note_tracks[i];
+        int channel = import->note_channels[i];
+        long long tick = onset_tick(import->events[i], import->division);
         size_t part = 0;
-        while (part < key_count && !(keys[part].track == ons[k].track && keys[part].channel == ons[k].channel)) {
+        while (part < key_count && !(keys[part].track == track && keys[part].channel == channel)) {
             part++;
         }
         if (part == key_count) {
-            keys[key_count++] = (PartKey){ons[k].track, ons[k].channel, ons[k].tick};
+            keys[key_count++] = (PartKey){track, channel, tick, i};
+        } else if (tick < keys[part].first_tick) {
+            keys[part].first_tick = tick;
         }
-        on_part[k] = part;
+    }
+    if (ok) {
+        qsort(keys, key_count, sizeof *keys, part_key_compare);
+        for (size_t i = 0; i < count; i++) {
+            size_t part = 0;
+            while (keys[part].track != import->note_tracks[i] || keys[part].channel != import->note_channels[i]) {
+                part++;
+            }
+            streams[i] = part;
+        }
     }
     for (size_t part = 0; ok && part < key_count; part++) {
-        int program = part_program(info, &keys[part]);
+        int program = part_program(import, &keys[part]);
         char id[32];
         snprintf(id, sizeof id, "P%zu", part + 1);
         parts[part].id = strdup(id);
-        parts[part].name = part_name(info, keys, key_count, part, program);
+        parts[part].name = part_name(import, keys, key_count, part, program);
         parts[part].staff_count = score_program_uses_grand_staff(program) ? 2 : 1;
         parts[part].midi_program = program;
         ok = parts[part].id && parts[part].name;
@@ -275,132 +161,56 @@ static bool build_parts(const TrackNoteOn *ons, size_t on_count, const MidiFileI
     if (ok) {
         source->parts = parts;
         source->part_count = key_count;
-    } else if (parts) {
-        for (size_t part = 0; part < key_count; part++) {
-            free(parts[part].id);
-            free(parts[part].name);
-        }
-        free(parts);
+    } else {
+        parts_destroy(parts, key_count);
     }
     free(keys);
     return ok;
 }
 
-/* The part (track and channel) each imported note was read from, matched to the file's note-ons by tick and pitch,
-   as ImportedNotes.streams and source.part_index, with source.parts. A note with no match (the importer and this
-   reader disagree) is in part 0. NULL on failure. */
-static size_t *note_parts(const unsigned char *buffer, size_t size, const NoteEvent *const *events,
-                          PitchNumericValue *const *pitch_values, size_t count, ImportedSource *source) {
+/* The part (track and channel) each imported note was read from, as ImportedNotes.streams and source.part_index, with
+   source.parts and the staff of each note. NULL on failure. */
+static size_t *note_parts(const MidiImport *import, ImportedSource *source) {
+    size_t count = import->count;
     size_t *streams = calloc(count > 0 ? count : 1, sizeof *streams);
-    SmfHeader header;
-    SmfTrack *tracks = NULL;
-    size_t track_count = 0;
-    if (!streams || smf_reader_parse(buffer, size, &header, &tracks, &track_count) != SMF_READER_OK) {
+    if (!streams || !build_parts(import, source, streams)) {
         free(streams);
         return NULL;
     }
-    TrackNoteOn *ons = NULL;
-    size_t on_count = 0;
-    MidiFileInfo info;
-    bool ok = read_note_ons(tracks, track_count, &ons, &on_count, &info);
-    free(tracks);
-    size_t *on_part = ok ? calloc(on_count > 0 ? on_count : 1, sizeof *on_part) : NULL;
-    if (!on_part || !build_parts(ons, on_count, &info, source, on_part)) {
-        if (ok) {
-            free(ons);
-            midi_file_info_destroy(&info);
-        }
-        free(on_part);
-        free(streams);
-        return NULL;
+    if (source->part_count == 0) {
+        return streams;
     }
-    size_t *part_index = source->part_count > 0 ? calloc(count > 0 ? count : 1, sizeof *part_index) : NULL;
-    if (source->part_count > 0 && !part_index) {
-        for (size_t i = 0; i < source->part_count; i++) {
-            free(source->parts[i].id);
-            free(source->parts[i].name);
-        }
-        free(source->parts);
-        *source = (ImportedSource){.format = INPUT_FORMAT_MIDI};
-        free(on_part);
-        free(ons);
-        midi_file_info_destroy(&info);
-        free(streams);
-        return NULL;
-    }
-    for (size_t i = 0; i < count; i++) {
-        const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(events[i]));
-        long long numerator = (long long)musical_time_numerator(onset) * 4 * (long long)header.division;
-        long long denominator = (long long)musical_time_denominator(onset);
-        if (denominator <= 0 || numerator % denominator != 0) {
-            continue;
-        }
-        long long tick = numerator / denominator;
-        int pitch = (int)pitch_numeric_value_position_numerator(pitch_values[i]);
-        for (size_t k = 0; k < on_count; k++) {
-            if (!ons[k].used && ons[k].tick == tick && ons[k].pitch == pitch) {
-                ons[k].used = true;
-                streams[i] = on_part[k];
-                break;
-            }
-        }
+    size_t *part_index = calloc(count > 0 ? count : 1, sizeof *part_index);
+    int *part_staff_count = malloc(source->part_count * sizeof *part_staff_count);
+    int *staff = malloc((count > 0 ? count : 1) * sizeof *staff);
+    for (size_t i = 0; part_staff_count && i < source->part_count; i++) {
+        part_staff_count[i] = source->parts[i].staff_count;
     }
     if (part_index) {
         memcpy(part_index, streams, count * sizeof *part_index);
     }
-    source->part_index = part_index;
-    if (part_index) {
-        int *part_staff_count = malloc(source->part_count * sizeof *part_staff_count);
-        int *staff = malloc((count > 0 ? count : 1) * sizeof *staff);
-        for (size_t i = 0; part_staff_count && i < source->part_count; i++) {
-            part_staff_count[i] = source->parts[i].staff_count;
-        }
-        if (!part_staff_count || !staff ||
-            score_staves_assign((NoteEvent *const *)events, pitch_values, count, part_index, part_staff_count,
-                                source->part_count, staff) != SCORE_STAVES_OK) {
-            free(part_staff_count);
-            free(staff);
-            for (size_t i = 0; i < source->part_count; i++) {
-                free(source->parts[i].id);
-                free(source->parts[i].name);
-            }
-            free(source->parts);
-            free(part_index);
-            *source = (ImportedSource){.format = INPUT_FORMAT_MIDI};
-            free(on_part);
-            free(ons);
-            midi_file_info_destroy(&info);
-            free(streams);
-            return NULL;
-        }
+    if (!part_index || !part_staff_count || !staff ||
+        score_staves_assign((NoteEvent *const *)import->events, import->pitch_values, count, part_index,
+                            part_staff_count, source->part_count, staff) != SCORE_STAVES_OK) {
         free(part_staff_count);
-        source->staff = staff;
+        free(staff);
+        free(part_index);
+        parts_destroy(source->parts, source->part_count);
+        *source = (ImportedSource){.format = INPUT_FORMAT_MIDI};
+        free(streams);
+        return NULL;
     }
-    free(on_part);
-    free(ons);
-    midi_file_info_destroy(&info);
+    free(part_staff_count);
+    source->part_index = part_index;
+    source->staff = staff;
     return streams;
 }
 
-/* The opening tempo of the file, when its first set-tempo event is at tick 0: the importer's tempo map (a second parse
-   of the same bytes, as the library has no call returning meter and tempo together), kept only for region 0. A tempo
-   import failure leaves the tempo undeclared. */
-static void read_opening_tempo(const unsigned char *buffer, size_t size, ImportedSource *source) {
-    NoteEvent **events = NULL;
-    PitchNumericValue **pitch_values = NULL;
-    size_t count = 0;
-    MidiTempoImport tempo = {NULL, NULL, 0};
-    if (midi_importer_import_with_tempo(buffer, size, &events, &pitch_values, &count, &tempo) != MIDI_IMPORT_OK) {
-        return;
-    }
-    for (size_t i = 0; i < count; i++) {
-        note_event_destroy(events[i]);
-        pitch_numeric_value_destroy(pitch_values[i]);
-    }
-    free(events);
-    free(pitch_values);
-    if (tempo.tempo_map && !tempo_map_is_defaulted(tempo.tempo_map) && tempo_map_region_count(tempo.tempo_map) > 0) {
-        const TempoMapRegion *region = tempo_map_region(tempo.tempo_map, 0);
+/* The opening tempo of the file, when its first set-tempo event is at tick 0 (a defaulted region is not a declared
+   tempo). */
+static void read_opening_tempo(const TempoMap *tempo_map, ImportedSource *source) {
+    if (tempo_map && !tempo_map_is_defaulted(tempo_map) && tempo_map_region_count(tempo_map) > 0) {
+        const TempoMapRegion *region = tempo_map_region(tempo_map, 0);
         unsigned long microseconds = tempo_map_region_microseconds_per_quarter(region);
         if (microseconds > 0 && !tempo_map_region_is_defaulted(region) &&
             musical_time_numerator(tempo_map_region_start(region)) == 0) {
@@ -408,7 +218,23 @@ static void read_opening_tempo(const unsigned char *buffer, size_t size, Importe
             source->initial_quarters_per_minute = 60000000.0 / (double)microseconds;
         }
     }
-    midi_tempo_import_destroy(&tempo);
+}
+
+/* The first key signature of the file in track then byte order, as midi_key_signature_scan reports it. */
+static MidiKeySignature first_key_signature(const MidiKeySignatureEvents *events) {
+    MidiKeySignature first = {false, 0, false};
+    const MidiKeySignatureEvent *best = NULL;
+    for (size_t i = 0; i < events->count; i++) {
+        const MidiKeySignatureEvent *event = &events->events[i];
+        if (!best || event->track_index < best->track_index ||
+            (event->track_index == best->track_index && event->tick < best->tick)) {
+            best = event;
+        }
+    }
+    if (best) {
+        first = (MidiKeySignature){true, best->sharps_flats, best->mode_byte == 1};
+    }
+    return first;
 }
 
 MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *out) {
@@ -446,74 +272,45 @@ MidiPipelineResult midi_pipeline_import_file(const char *path, ImportedNotes *ou
         return MIDI_PIPELINE_ERR_CANNOT_READ_FILE;
     }
 
-    NoteEvent **events = NULL;
-    PitchNumericValue **pitch_values = NULL;
-    size_t count = 0;
-    MidiMeterImport meter = {NULL, NULL, NULL, 0};
-    MidiImportResult import_result =
-        midi_importer_import_with_meter(buffer, (size_t)size, &events, &pitch_values, &count, &meter);
-
-    MidiKeySignature key_signature = {false, 0, false};
-    MidiKeySignatureEvents key_signature_events = {NULL, 0};
-    unsigned ticks_per_quarter = 0;
-    if (import_result == MIDI_IMPORT_OK) {
-        SmfHeader header;
-        SmfTrack *tracks = NULL;
-        size_t track_count = 0;
-        if (smf_reader_parse(buffer, (size_t)size, &header, &tracks, &track_count) == SMF_READER_OK) {
-            ticks_per_quarter = header.division;
-            free(tracks);
-        }
-
-        /* A malformed key signature meta-event doesn't fail an
-           otherwise-valid import -- it just means no key signature is
-           reported, same as a file that never had one. */
-        if (midi_key_signature_scan(buffer, (size_t)size, &key_signature) != MIDI_KEY_SIGNATURE_OK) {
-            key_signature = (MidiKeySignature){false, 0, false};
-        }
-        if (midi_key_signature_scan_all(buffer, (size_t)size, &key_signature_events) !=
-            MIDI_KEY_SIGNATURE_SCAN_ALL_OK) {
-            key_signature_events = (MidiKeySignatureEvents){NULL, 0};
-        }
-    }
-    size_t *streams = NULL;
-    ImportedSource source = {.format = INPUT_FORMAT_MIDI};
-    if (import_result == MIDI_IMPORT_OK) {
-        streams = note_parts(buffer, (size_t)size, (const NoteEvent *const *)events, pitch_values, count, &source);
-        if (streams) {
-            read_opening_tempo(buffer, (size_t)size, &source);
-        }
-        if (!streams) {
-            import_result = MIDI_IMPORT_ERR_ALLOC;
-            for (size_t i = 0; i < count; i++) {
-                note_event_destroy(events[i]);
-                pitch_numeric_value_destroy(pitch_values[i]);
-            }
-            free(events);
-            free(pitch_values);
-            midi_meter_import_destroy(&meter);
-        }
-    }
+    MidiImport import;
+    MidiImportResult import_result = midi_importer_import_complete(buffer, (size_t)size, &import);
     free(buffer);
-
     if (import_result != MIDI_IMPORT_OK) {
-        midi_key_signature_events_destroy(&key_signature_events);
         fprintf(stderr, "Error: failed to import '%s': %s\n", path, midi_import_error_message(import_result));
         return MIDI_PIPELINE_ERR_IMPORT_FAILED;
     }
 
-    out->events = events;
-    out->pitch_values = pitch_values;
-    out->count = count;
-    out->streams = streams;
-    out->key_signature = key_signature;
-    out->key_signature_events = key_signature_events;
-    out->ticks_per_quarter = ticks_per_quarter;
-    out->meter = meter;
-    out->source = source;
-    for (size_t i = 0; i < meter.conflict_count; i++) {
-        fprintf(stderr, "Warning: '%s' declares different time signatures at tick %llu; the last one is used\n",
-                path, (unsigned long long)meter.conflict_ticks[i]);
+    ImportedSource source = {.format = INPUT_FORMAT_MIDI};
+    size_t *streams = note_parts(&import, &source);
+    if (!streams) {
+        midi_import_destroy(&import);
+        fprintf(stderr, "Error: failed to import '%s': %s\n", path,
+                midi_import_error_message(MIDI_IMPORT_ERR_ALLOC));
+        return MIDI_PIPELINE_ERR_IMPORT_FAILED;
     }
+    read_opening_tempo(import.tempo.tempo_map, &source);
+
+    out->events = import.events;
+    out->pitch_values = import.pitch_values;
+    out->count = import.count;
+    out->streams = streams;
+    out->key_signature = first_key_signature(&import.key_signatures);
+    out->key_signature_events = import.key_signatures;
+    out->ticks_per_quarter = import.division;
+    out->meter = import.meter;
+    out->source = source;
+    out->tempo_map = import.tempo.tempo_map;
+    for (size_t i = 0; i < import.meter.conflict_count; i++) {
+        fprintf(stderr, "Warning: '%s' declares different time signatures at tick %llu; the last one is used\n",
+                path, (unsigned long long)import.meter.conflict_ticks[i]);
+    }
+    /* The notes, meter, key signatures and tempo map now belong to out. */
+    import.events = NULL;
+    import.pitch_values = NULL;
+    import.count = 0;
+    import.meter = (MidiMeterImport){NULL, NULL, NULL, 0};
+    import.key_signatures = (MidiKeySignatureEvents){NULL, 0};
+    import.tempo.tempo_map = NULL;
+    midi_import_destroy(&import);
     return MIDI_PIPELINE_OK;
 }

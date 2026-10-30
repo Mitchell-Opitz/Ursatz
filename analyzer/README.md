@@ -14,9 +14,9 @@ Requires CMake 3.20+, a C11 compiler, and SQLite3 (for Ursatz). Ursatz is a git 
 parent project already provides a `cjson` target.
 
 Library headers are included only by their staged public paths (`time/meter_map.h`, `standard-harmony/analysis/analysis_cadence.h`,
-`common-practice-minimal/key_regions.h`), never by a framework's source directory. `URSATZ_LEGACY_INCLUDE_DIRS` is set ON in the root
-`CMakeLists.txt` for the internal headers the Analyzer still uses (`analysis_time.h`, `smf_reader.h`); it goes off
-when P24 B4 switches them. Tests read their input from `tests/fixtures/`, not from the submodule (see `tests/fixtures/README.md`).
+`common-practice-minimal/key_regions.h`), never by a framework's source directory. `URSATZ_LEGACY_INCLUDE_DIRS` is off
+(Ursatz's default), so the build sees only the staged public headers. `scripts/check-library-includes.sh` checks this
+(see "Library include check" below). Tests read their input from `tests/fixtures/`, not from the submodule (see `tests/fixtures/README.md`).
 
 The Analyzer holds no arithmetic of its own on times, pitches, key signatures or numerals. Exact times are `Rational`
 (`core/rational.h`, with the `time/time_rational.h` bridges); an overflow fails the stage that met it, and a document
@@ -110,6 +110,13 @@ Tests:
 - `test_analysis_document_schema`: validates the documents for the corpus pieces against the
   schema. Optional: needs `python3` with the `jsonschema` module at configure time, and is
   reported as skipped otherwise.
+
+### Library include check
+
+`scripts/check-library-includes.sh <build dir>` runs after the build and fails when `src/` or `include/` includes an
+Ursatz header that is not under a staged public root of the build, names a `*_internal.h` of Ursatz, or when a CMake
+file reads `SOURCE_DIR` of an Ursatz target or a path under `external/ursatz/tests`. It prints each offending line. CI
+runs it after the build.
 
 ### Version header and pin check
 
@@ -325,7 +332,12 @@ read by Ursatz's MusicXMLImporter.
   the track name alone when the track has one part, the track name and the instrument when it has
   several, the instrument when the track has no name. Keyboard-like programs (pianos, harpsichord,
   celesta, organs, accordion, harp) are on two staves, split at middle C by Ursatz's
-  `score_staves_assign`; every other part has one.
+  `score_staves_assign`; every other part has one. The file is parsed once, by the library's
+  `midi_importer_import_complete`; the parts, their names and programs, the meter, the key signatures and the
+  tempo map all come from that one import.
+- **Tempo map.** A MIDI file's set-tempo events are kept as `ImportedNotes.tempo_map` (one region per distinct
+  tick; a file with none gets one defaulted region of 120 quarters per minute). A MusicXML file has none (NULL).
+  Note times do not depend on it.
 - **Tempo, dynamics, articulation.** Tempo and dynamics markings are imported, kept with their part
   and position, and reported in `markings` and a `## Markings` section, read with the library's
   standard-markings rules (tempo group and change, dynamic rank and change, louder or quieter than the
