@@ -940,39 +940,35 @@ By base numeral (inversions together):
 
 ## Cadences
 
-The library's standard-harmony analysis found 12 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
+The library's standard-harmony analysis found 10 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
 
 | Position | Type | Key | Soprano | Beat strength | Boundary |
 | --- | --- | --- | --- | --- | --- |
 | m. 8, beat 1 | half | Bb major | 5 | strong | no |
 | m. 19, beat 1 | half | Bb major | 4 | strong | no |
-| m. 20, beat 1 | perfect-authentic | Bb major | 1 | strong | no |
+| m. 20, beat 1 | imperfect-authentic | Bb major | 1 | strong | no |
 | m. 21, beat 1 | half | Bb major | 4 | strong | no |
 | m. 22, beat 1 | imperfect-authentic | Bb major | 3 | strong | no |
 | m. 34, beat 3 | half | Bb major | 1 | medium | no |
 | m. 39, beat 1 | half | Bb major | 4 | strong | no |
-| m. 40, beat 1 | perfect-authentic | Bb major | 1 | strong | no |
+| m. 40, beat 1 | imperfect-authentic | Bb major | 1 | strong | no |
 | m. 41, beat 1 | half | Bb major | 4 | strong | no |
 | m. 41, beat 3 | half | Bb major | 4 | medium | no |
-| m. 42, beat 3 | evaded | Bb major | 1 | medium | no |
-| m. 43, beat 1 | evaded | Bb major | 1 | strong | no |
 
 ### Cadence plan
 
 1. m. 8, beat 1: half in Bb major
 2. m. 19, beat 1: half in Bb major
-3. m. 20, beat 1: perfect-authentic in Bb major
+3. m. 20, beat 1: imperfect-authentic in Bb major
 4. m. 21, beat 1: half in Bb major
 5. m. 22, beat 1: imperfect-authentic in Bb major
 6. m. 34, beat 3: half in Bb major
 7. m. 39, beat 1: half in Bb major
-8. m. 40, beat 1: perfect-authentic in Bb major
+8. m. 40, beat 1: imperfect-authentic in Bb major
 9. m. 41, beat 1: half in Bb major
 10. m. 41, beat 3: half in Bb major
-11. m. 42, beat 3: evaded in Bb major
-12. m. 43, beat 1: evaded in Bb major
 
-**Counts:** half 7, perfect-authentic 2, imperfect-authentic 1, evaded 2.
+**Counts:** half 7, imperfect-authentic 3.
 
 ## Phrases
 
@@ -982,12 +978,12 @@ The library's standard-form analysis found 9 phrases from the soprano, the meter
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | mm. 1 to 8 | 8 | half (m. 8, beat 1) | cadence | beginning | - |
 | 2 | mm. 9 to 19 | 11 | half (m. 19, beat 1) | cadence | middle | internal +3 (mm. 13 to 19) |
-| 3 | m. 20 | 1 | perfect-authentic (m. 20, beat 1) | cadence | middle | - |
+| 3 | m. 20 | 1 | imperfect-authentic (m. 20, beat 1) | cadence | middle | - |
 | 4 | m. 21 | 1 | half (m. 21, beat 1) | cadence | middle | - |
 | 5 | m. 22 | 1 | imperfect-authentic (m. 22, beat 1) | cadence | middle | - |
 | 6 | mm. 23 to 34 | 12 | half (m. 34, beat 3) | cadence | middle | internal +4 (mm. 27 to 34) |
 | 7 | mm. 35 to 39 | 5 | half (m. 39, beat 1) | cadence | middle | - |
-| 8 | m. 40 | 1 | perfect-authentic (m. 40, beat 1) | cadence | middle | contraction -4 (m. 40) |
+| 8 | m. 40 | 1 | imperfect-authentic (m. 40, beat 1) | cadence | middle | contraction -4 (m. 40) |
 | 9 | m. 41 | 1 | half (m. 41, beat 1) | cadence | ending | external post-cadential-extension +2 (mm. 42 to 43) |
 
 - **Phrase 1:** ideas basic-idea (mm. 1 to 2), contrasting-idea (mm. 3 to 4), contrasting-idea (mm. 5 to 6), contrasting-idea (mm. 7 to 8); subphrases mm. 1 to 4, mm. 5 to 8; phrase model Tb (m. 1, beat 1), PD (m. 7, beat 3), D (m. 8, beat 1)
@@ -1009,7 +1005,7 @@ The library's standard-form analysis found 4 themes from the phrases, their idea
 | 1 | hybrid | slightly-less-common | mm. 1 to 8 | 8 | compound-basic-idea (mm. 1 to 4), continuation (mm. 5 to 8, half (m. 8, beat 1)) | - |
 | 2 | hybrid | slightly-less-common | mm. 9 to 19 | 11 | compound-basic-idea (mm. 9 to 12), continuation (mm. 13 to 19, half (m. 19, beat 1)) | - |
 | 3 | hybrid | slightly-less-common | mm. 23 to 34 | 12 | compound-basic-idea (mm. 23 to 26), continuation (mm. 27 to 34, half (m. 34, beat 3)) | - |
-| 4 | hybrid | slightly-less-common | mm. 35 to 40 | 6 | antecedent (mm. 35 to 39, half (m. 39, beat 1)), continuation (m. 40, perfect-authentic (m. 40, beat 1)) | fragmentation |
+| 4 | hybrid | slightly-less-common | mm. 35 to 40 | 6 | antecedent (mm. 35 to 39, half (m. 39, beat 1)), continuation (m. 40, imperfect-authentic (m. 40, beat 1)) | fragmentation |
 
 ## Form plan
 
@@ -1017,9 +1013,9 @@ The kernel's form structure detection grouped the phrases into 4 sections, closi
 
 | Section | Measures | Key | Phrases | Closing cadence | Returns |
 | --- | --- | --- | --- | --- | --- |
-| A | mm. 1 to 20 | Bb major | 1 to 3 | perfect-authentic (m. 20, beat 1) | - |
+| A | mm. 1 to 20 | Bb major | 1 to 3 | imperfect-authentic (m. 20, beat 1) | - |
 | B | mm. 21 to 22 | Bb major | 4 to 5 | imperfect-authentic (m. 22, beat 1) | - |
-| A' | mm. 23 to 40 | Bb major | 6 to 8 | perfect-authentic (m. 40, beat 1) | returns A (similarity 0.83) |
+| A' | mm. 23 to 40 | Bb major | 6 to 8 | imperfect-authentic (m. 40, beat 1) | returns A (similarity 0.83) |
 | C | mm. 41 to 43 | Bb major | 9 | half (m. 41, beat 1) | - |
 
 ### Thematic returns

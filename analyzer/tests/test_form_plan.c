@@ -36,8 +36,8 @@ typedef struct {
 static const Piece PIECES[] = {
     {"Bach 114", "Bach 114.mid", true, 2, 1, "A A'"},
     {"Clementi 36", "Clementi 36.mid", true, 6, 3, "A B C D E F"},
-    {"Mozart 545", "Mozart 545.mid", true, 24, 77,
-     "A B C D E F G H I J K L M M' N O M'' P M''' Q R S T U"},
+    {"Mozart 545", "Mozart 545.mid", true, 22, 46,
+     "A B C D E F G H I J K L M N L' O K' P Q R S T"},
     {"Field 1", "Field 1.mid", true, 5, 0, "A B C D E"},
     {"Field 5", "Field 5.mid", true, 4, 4, "A B A' C"},
     {"sentence", "sentence.musicxml", false, 1, 0, "A"},
