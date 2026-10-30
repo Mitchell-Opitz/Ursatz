@@ -1,8 +1,11 @@
 #include "pipeline/harmonic_rhythm_pipeline.h"
 
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/rational.h"
+#include "standard-meter/analysis/meter_analysis_check.h"
 #include "time/meter_map.h"
 #include "time/metrical_position.h"
 #include "time/musical_time.h"
@@ -24,16 +27,46 @@ static bool measure_at(const MeterMap *map, long numerator, unsigned long denomi
     return true;
 }
 
-bool harmonic_rhythm_is_change(const AnalysisReportEntry *previous, const AnalysisReportEntry *entry) {
-    if (previous->in_region != entry->in_region || (entry->in_region && previous->region != entry->region)) {
-        return true;
+static bool entry_time(const AnalysisReportEntry *entry, Rational *time) {
+    return entry->time_denominator <= (unsigned long)LLONG_MAX &&
+           rational_make((long long)entry->time_numerator, (long long)entry->time_denominator, time) == RATIONAL_OK;
+}
+
+bool harmonic_rhythm_change_flags(const AnalysisReportEntry *entries, size_t count, bool **flags) {
+    *flags = calloc(count > 0 ? count : 1, sizeof(bool));
+    const char **labels = calloc(count > 0 ? count : 1, sizeof(const char *));
+    long *regions = calloc(count > 0 ? count : 1, sizeof(long));
+    Rational *times = calloc(count > 0 ? count : 1, sizeof(Rational));
+    Rational *changes = NULL;
+    size_t change_count = 0;
+    bool ok = *flags && labels && regions && times;
+    for (size_t i = 0; ok && i < count; i++) {
+        labels[i] = entries[i].roman.labelled ? entries[i].roman.base_numeral : NULL;
+        regions[i] = entries[i].in_region ? (long)entries[i].region : -1;
+        ok = entry_time(&entries[i], &times[i]);
     }
-    const char *before = previous->roman.labelled ? previous->roman.base_numeral : NULL;
-    const char *after = entry->roman.labelled ? entry->roman.base_numeral : NULL;
-    if (!before || !after) {
-        return before != after;
+    ok = ok && standard_meter_check_changes(labels, regions, times, count, &changes, &change_count) ==
+                   STANDARD_METER_ANALYSIS_OK;
+    /* the library returns the times of the changes; the entries are in time order, so one pass finds them */
+    size_t entry = 0;
+    for (size_t c = 0; ok && c < change_count; c++) {
+        while (entry < count && rational_cmp(times[entry], changes[c]) != 0) {
+            entry++;
+        }
+        ok = entry < count;
+        if (ok) {
+            (*flags)[entry++] = true;
+        }
     }
-    return strcmp(before, after) != 0;
+    free(changes);
+    free(times);
+    free(regions);
+    free(labels);
+    if (!ok) {
+        free(*flags);
+        *flags = NULL;
+    }
+    return ok;
 }
 
 /* The changes in measures from..to (inclusive) that the piece has, and how many measures that is. */
@@ -106,11 +139,18 @@ bool harmonic_rhythm_stage_collect(const ImportedNotes *notes, AnalysisReport *r
     for (size_t m = 0; m < measure_count; m++) {
         rhythm[m].measure = first + (int)m;
     }
+    bool *change = NULL;
+    if (!harmonic_rhythm_change_flags(report->entries, count, &change)) {
+        free(rhythm);
+        free(measures);
+        return false;
+    }
     for (size_t i = 0; i < count; i++) {
-        if (i == 0 || harmonic_rhythm_is_change(&report->entries[i - 1], &report->entries[i])) {
+        if (change[i]) {
             rhythm[measures[i] - first].changes++;
         }
     }
+    free(change);
     report->harmonic_rhythm = rhythm;
     report->harmonic_rhythm_count = measure_count;
     bool ok = collect_approaches(measures, report);
