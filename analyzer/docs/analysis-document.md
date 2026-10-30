@@ -113,6 +113,29 @@ A pickup is detected by the library from what the file says (a partial first mea
 later time signature, or a short leading signature such as 1/8 before 12/8), never from note
 content.
 
+## Sources of each section
+
+The Analyzer runs the library's analysis chain (`analysis_chain_run` of `ursatz_chain`) once and collects its results.
+Each section comes from one accessor, or from a library call over the chain's results where the chain runs none.
+
+| Section | Source |
+| --- | --- |
+| `keys`, `tonicizations`, `modulations` | `analysis_chain_key_regions`; the home key is the region key with the longest total duration |
+| `pivot_chords` | the weighted chord identification of the pivot segment in the old key (not a chain result) |
+| `chords`, `non_chord_tones` | `analysis_chain_chords`, with the Roman numerals of `analysis_chain_numerals` |
+| `outer_voices` | `analysis_chain_outer_voices` |
+| `cadences` | `analysis_chain_cadences` |
+| `prolongations`, harmonic functions, six-four types, the phrase model | standard-harmony over `chain_build_harmony_segments` (the chain runs none of them) |
+| `phrases`, `themes` | `analysis_chain_phrases`, `_ideas`, `_themes`, `_expansions` |
+| `form` | standard-form structure detection over the chain's themes (Analyzer-only) |
+| `motives` | `analysis_chain_motives`; degrees are in the home key |
+| `melody` | each phrase's part of `analysis_chain_melody`; degrees are in the home key |
+| `rhythm` | standard-meter over the notes, chord changes and phrases (Analyzer-only) |
+| `texture` | `analysis_chain_texture` |
+| `voice_leading` | `analysis_chain_voice_leading` |
+| `schemas` | `analysis_chain_schemas`, `analysis_chain_sequences` |
+| `progressions`, `harmonic_rhythm`, `markings`, `counterpoint_check` | the collected report (Analyzer-only) |
+
 ## Claims
 
 Every key region and every entry in `chords` and `non_chord_tones` is a claim. A claim mirrors the library's Interpretation.
@@ -519,13 +542,13 @@ version bump), and empty when the library finds none or declines the piece.
 `analysis_ideas.h`), in time order. The analyzer builds the library's neutral input from the chain (the outer-voice
 soprano as notes, with consecutive segments of one note merged, the chord segments, the meter and the cadences of the
 cadence step, each with its arrival span) and injects the kernel's Phrase Boundary Detection as the boundary detector
-(`src/pipeline/form_pipeline.c`, `form_boundary.c`, ported from Ursatz's test glue). Phrases, ideas and subphrases
+(the chain's `analysis_chain_phrases`, read out by `src/pipeline/form_pipeline.c`). Phrases, ideas and subphrases
 are the library's; the analyzer only reads them out. A phrase runs from the measure after the one before it to the end
 of its cadence's arrival chord, snapped to the next beat, so the phrases tile the measures of the analysed range and
 their spans may leave the rest of a phrase's last measure out.
 
-The ends of all but the last phrase are the boundaries of the second key pass (R-039): the chain runs once, reads the
-phrases, and runs again with those ends as phrase boundaries and its chords as evidence for the key regions, so
+The ends of all but the last phrase are the boundaries of the second key pass (R-039): the library chain reads the
+phrases and runs again with those ends as phrase boundaries and its chords as evidence for the key regions, so
 everything in the document comes from the second pass. There is no further iteration.
 
 | Field | Type | Meaning |
@@ -734,7 +757,7 @@ builds the adapter's neutral line in `src/pipeline/melody_pipeline.c`, ported fr
 climax and verdict is the library's. The line of a phrase is the outer voice soprano (the highest sounding line, one
 entry per voice segment) for the notes whose first segment starts inside the phrase's span: consecutive segments with
 the same note id are one note, a note held in from the previous phrase is left out, and a gap in the line is a rest that
-breaks the chain, so no interval is formed across it. Each note carries its scale degree in the key region it starts in
+breaks the chain, so no interval is formed across it. Each note carries its scale degree in the home key
 and the beat strength of its attack. The bass is not read.
 
 A melody is a claim (`framework` `"standard-counterpoint-v1"`; `span` is the phrase's, `location` its position and
