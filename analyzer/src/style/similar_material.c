@@ -15,7 +15,6 @@
 #include "query/similarity_model.h"
 #include "style_internal.h"
 
-#define DOCUMENT_SCHEMA_VERSION 9
 
 /* ---- reading the document ---- */
 
@@ -220,7 +219,7 @@ SimilarResult similar_query_from_file(const char *path, SimilarQuery *query) {
     cJSON *document = cJSON_Parse(json);
     free(json);
     long version;
-    if (!document || !number_member(document, "schema_version", &version) || version != DOCUMENT_SCHEMA_VERSION) {
+    if (!document || !number_member(document, "schema_version", &version) || version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(document);
         return SIMILAR_ERR_FORMAT;
     }
@@ -888,7 +887,7 @@ SimilarResult similar_material_find(const char *corpus_output_dir, const Similar
         cJSON *parsed = cJSON_Parse(json);
         free(json);
         long version;
-        if (!parsed || !number_member(parsed, "schema_version", &version) || version != DOCUMENT_SCHEMA_VERSION) {
+        if (!parsed || !number_member(parsed, "schema_version", &version) || version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
             cJSON_Delete(parsed);
             result = SIMILAR_ERR_FORMAT;
             break;

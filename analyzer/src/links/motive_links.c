@@ -6,11 +6,12 @@
 
 #include <cJSON.h>
 
+#include <ursatz_analyzer/analysis_document.h>
+
 #include "links_internal.h"
 #include "pipeline/motive_features.h"
 #include "style/style_internal.h"
 
-#define DOCUMENT_SCHEMA_VERSION 9
 
 /* ---- Scope ---- */
 
@@ -294,7 +295,7 @@ static MotiveLinksResult add_document(MotiveLinkScope *scope, const char *piece_
     cJSON *document = cJSON_Parse(json);
     const cJSON *version = member(document, "schema_version");
     const cJSON *motives = member(document, "motives");
-    if (!cJSON_IsNumber(version) || version->valuedouble != DOCUMENT_SCHEMA_VERSION || !cJSON_IsArray(motives)) {
+    if (!cJSON_IsNumber(version) || version->valuedouble != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION || !cJSON_IsArray(motives)) {
         cJSON_Delete(document);
         return MOTIVE_LINKS_ERR_FORMAT;
     }

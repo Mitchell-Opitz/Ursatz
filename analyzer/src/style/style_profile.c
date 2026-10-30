@@ -7,9 +7,10 @@
 
 #include <cJSON.h>
 
+#include <ursatz_analyzer/analysis_document.h>
+
 #include "style_internal.h"
 
-#define DOCUMENT_SCHEMA_VERSION 9
 #define SYNCOPATION_CAP 4
 
 typedef struct {
@@ -556,7 +557,7 @@ StyleProfileResult style_profile_add_document_json(StyleProfile *profile, const 
     }
     cJSON *document = cJSON_Parse(json);
     long version;
-    if (!document || !number_member(document, "schema_version", &version) || version != DOCUMENT_SCHEMA_VERSION) {
+    if (!document || !number_member(document, "schema_version", &version) || version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         cJSON_Delete(document);
         return STYLE_PROFILE_ERR_FORMAT;
     }
