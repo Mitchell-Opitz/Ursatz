@@ -487,7 +487,7 @@
 					}
 				}
 			},
-			"note_ids":	[58, 59, 60],
+			"note_ids":	[59, 58, 60],
 			"label":	"A minor7",
 			"uncertainty":	0.116959,
 			"modulation_index":	0,
@@ -569,7 +569,7 @@
 					}
 				}
 			},
-			"note_ids":	[202, 203],
+			"note_ids":	[203, 202],
 			"label":	"C major",
 			"uncertainty":	1,
 			"modulation_index":	3,
@@ -611,7 +611,7 @@
 					}
 				}
 			},
-			"note_ids":	[0, 1],
+			"note_ids":	[1, 0],
 			"label":	"I",
 			"uncertainty":	1,
 			"key_label":	"C major",
@@ -949,7 +949,7 @@
 					}
 				}
 			},
-			"note_ids":	[6, 7],
+			"note_ids":	[7, 6],
 			"label":	"I",
 			"uncertainty":	1,
 			"key_label":	"C major",
@@ -1286,7 +1286,7 @@
 					}
 				}
 			},
-			"note_ids":	[12, 13, 14],
+			"note_ids":	[13, 12, 14],
 			"label":	"major7",
 			"uncertainty":	0.133634,
 			"key_label":	"C major",
@@ -1550,7 +1550,7 @@
 					}
 				}
 			},
-			"note_ids":	[17, 18, 19],
+			"note_ids":	[18, 17, 19],
 			"label":	"major7",
 			"uncertainty":	0.883838,
 			"key_label":	"C major",
@@ -1820,7 +1820,7 @@
 					}
 				}
 			},
-			"note_ids":	[22, 23, 24],
+			"note_ids":	[23, 22, 24],
 			"label":	"V",
 			"uncertainty":	0.204778,
 			"key_label":	"C major",
@@ -2085,7 +2085,7 @@
 					}
 				}
 			},
-			"note_ids":	[27, 28],
+			"note_ids":	[28, 27],
 			"label":	"V",
 			"uncertainty":	1,
 			"key_label":	"C major",
@@ -2427,7 +2427,7 @@
 					}
 				}
 			},
-			"note_ids":	[32, 33],
+			"note_ids":	[33, 32],
 			"label":	"I",
 			"uncertainty":	1,
 			"key_label":	"C major",
@@ -2770,7 +2770,7 @@
 					}
 				}
 			},
-			"note_ids":	[38, 39],
+			"note_ids":	[39, 38],
 			"label":	"I",
 			"uncertainty":	0.689342,
 			"key_label":	"C major",
@@ -3130,7 +3130,7 @@
 					}
 				}
 			},
-			"note_ids":	[43, 44, 45],
+			"note_ids":	[44, 43, 45],
 			"label":	"no match",
 			"uncertainty":	null,
 			"key_label":	"C major",
@@ -3207,7 +3207,7 @@
 					}
 				}
 			},
-			"note_ids":	[46, 47, 48],
+			"note_ids":	[47, 46, 48],
 			"label":	"V",
 			"uncertainty":	0.63964,
 			"key_label":	"C major",
@@ -3297,7 +3297,7 @@
 					}
 				}
 			},
-			"note_ids":	[49, 50, 51],
+			"note_ids":	[50, 49, 51],
 			"label":	"vi",
 			"uncertainty":	0.359307,
 			"key_label":	"C major",
@@ -3387,7 +3387,7 @@
 					}
 				}
 			},
-			"note_ids":	[52, 53, 54],
+			"note_ids":	[53, 52, 54],
 			"label":	"V",
 			"uncertainty":	0.140573,
 			"key_label":	"C major",
@@ -3477,7 +3477,7 @@
 					}
 				}
 			},
-			"note_ids":	[55, 56, 57],
+			"note_ids":	[56, 55, 57],
 			"label":	"ii",
 			"uncertainty":	0.876307,
 			"key_label":	"C major",
@@ -3567,7 +3567,7 @@
 					}
 				}
 			},
-			"note_ids":	[58, 59, 60],
+			"note_ids":	[59, 58, 60],
 			"label":	"minor7",
 			"uncertainty":	0.116959,
 			"key_label":	"G major",
@@ -4161,7 +4161,7 @@
 					}
 				}
 			},
-			"note_ids":	[67, 68],
+			"note_ids":	[68, 67],
 			"label":	"vii°",
 			"uncertainty":	0.668643,
 			"key_label":	"G major",
@@ -4341,7 +4341,7 @@
 					}
 				}
 			},
-			"note_ids":	[70, 71],
+			"note_ids":	[71, 70],
 			"label":	"V",
 			"uncertainty":	0.525641,
 			"key_label":	"G major",
@@ -4524,7 +4524,7 @@
 					}
 				}
 			},
-			"note_ids":	[73, 74],
+			"note_ids":	[74, 73],
 			"label":	"vii°",
 			"uncertainty":	0.668643,
 			"key_label":	"G major",
@@ -4705,7 +4705,7 @@
 					}
 				}
 			},
-			"note_ids":	[76, 77],
+			"note_ids":	[77, 76],
 			"label":	"V",
 			"uncertainty":	0.525641,
 			"key_label":	"G major",
@@ -4889,7 +4889,7 @@
 					}
 				}
 			},
-			"note_ids":	[79, 80, 81],
+			"note_ids":	[80, 79, 81],
 			"label":	"I",
 			"uncertainty":	0.044476,
 			"key_label":	"G major",
@@ -5490,7 +5490,7 @@
 					}
 				}
 			},
-			"note_ids":	[88, 89],
+			"note_ids":	[89, 88],
 			"label":	"ii",
 			"uncertainty":	0.668643,
 			"key_label":	"G major",
@@ -5670,7 +5670,7 @@
 					}
 				}
 			},
-			"note_ids":	[91, 92],
+			"note_ids":	[92, 91],
 			"label":	"dominant7",
 			"uncertainty":	0.525641,
 			"key_label":	"G major",
@@ -5850,7 +5850,7 @@
 					}
 				}
 			},
-			"note_ids":	[94, 95],
+			"note_ids":	[95, 94],
 			"label":	"ii",
 			"uncertainty":	0.668643,
 			"key_label":	"G major",
@@ -6030,7 +6030,7 @@
 					}
 				}
 			},
-			"note_ids":	[97, 98],
+			"note_ids":	[98, 97],
 			"label":	"dominant7",
 			"uncertainty":	0.525641,
 			"key_label":	"G major",
@@ -6210,7 +6210,7 @@
 					}
 				}
 			},
-			"note_ids":	[100, 101, 102],
+			"note_ids":	[101, 100, 102],
 			"label":	"I",
 			"uncertainty":	0.10296,
 			"key_label":	"G major",
@@ -6816,7 +6816,7 @@
 					}
 				}
 			},
-			"note_ids":	[109, 110, 111],
+			"note_ids":	[110, 109, 111],
 			"label":	"half-diminished7",
 			"uncertainty":	0.133634,
 			"key_label":	"G major",
@@ -7074,7 +7074,7 @@
 					}
 				}
 			},
-			"note_ids":	[114, 115, 116],
+			"note_ids":	[115, 114, 116],
 			"label":	"minor7",
 			"uncertainty":	0.38886,
 			"key_label":	"G major",
@@ -7332,7 +7332,7 @@
 					}
 				}
 			},
-			"note_ids":	[119, 120, 121],
+			"note_ids":	[120, 119, 121],
 			"label":	"minor7",
 			"uncertainty":	0.297089,
 			"key_label":	"G major",
@@ -7591,7 +7591,7 @@
 					}
 				}
 			},
-			"note_ids":	[124, 125, 126],
+			"note_ids":	[125, 124, 126],
 			"label":	"dominant7",
 			"uncertainty":	1,
 			"key_label":	"G major",
@@ -7850,7 +7850,7 @@
 					}
 				}
 			},
-			"note_ids":	[129, 130],
+			"note_ids":	[130, 129],
 			"label":	"major",
 			"uncertainty":	1,
 			"key_label":	"C minor",
@@ -8077,6 +8077,9 @@
 				"unlabelled_reason":	null,
 				"applied":	null
 			},
+			"six_four":	{
+				"type":	"arpeggiating"
+			},
 			"function":	{
 				"name":	"dominant",
 				"applied_to":	null,
@@ -8198,7 +8201,7 @@
 					}
 				}
 			},
-			"note_ids":	[135, 136],
+			"note_ids":	[136, 135],
 			"label":	"diminished",
 			"uncertainty":	0.170068,
 			"key_label":	"C minor",
@@ -8468,7 +8471,7 @@
 					}
 				}
 			},
-			"note_ids":	[141, 142, 143, 144],
+			"note_ids":	[142, 141, 143, 144],
 			"label":	"minor",
 			"uncertainty":	0.449716,
 			"key_label":	"C minor",
@@ -8648,7 +8651,7 @@
 					}
 				}
 			},
-			"note_ids":	[147, 148],
+			"note_ids":	[148, 147],
 			"label":	"diminished",
 			"uncertainty":	0.649348,
 			"key_label":	"C minor",
@@ -8828,7 +8831,7 @@
 					}
 				}
 			},
-			"note_ids":	[150, 151],
+			"note_ids":	[151, 150],
 			"label":	"minor",
 			"uncertainty":	0.699441,
 			"key_label":	"C minor",
@@ -9008,7 +9011,7 @@
 					}
 				}
 			},
-			"note_ids":	[153, 154, 155],
+			"note_ids":	[154, 153, 155],
 			"label":	"major",
 			"uncertainty":	0.325905,
 			"key_label":	"C minor",
@@ -9281,7 +9284,7 @@
 					}
 				}
 			},
-			"note_ids":	[160, 161, 162],
+			"note_ids":	[161, 160, 162],
 			"label":	"no match",
 			"uncertainty":	null,
 			"key_label":	"G major",
@@ -9358,7 +9361,7 @@
 					}
 				}
 			},
-			"note_ids":	[163, 164, 165],
+			"note_ids":	[164, 163, 165],
 			"label":	"I",
 			"uncertainty":	1,
 			"key_label":	"G major",
@@ -9443,7 +9446,7 @@
 					}
 				}
 			},
-			"note_ids":	[166, 167, 168],
+			"note_ids":	[167, 166, 168],
 			"label":	"I",
 			"uncertainty":	0.451005,
 			"key_label":	"G major",
@@ -9536,7 +9539,7 @@
 					}
 				}
 			},
-			"note_ids":	[169, 170, 171],
+			"note_ids":	[170, 169, 171],
 			"label":	"I",
 			"uncertainty":	1,
 			"key_label":	"G major",
@@ -9621,7 +9624,7 @@
 					}
 				}
 			},
-			"note_ids":	[172, 173, 174],
+			"note_ids":	[173, 172, 174],
 			"label":	"no match",
 			"uncertainty":	null,
 			"key_label":	"G major",
@@ -9698,7 +9701,7 @@
 					}
 				}
 			},
-			"note_ids":	[175, 176, 177],
+			"note_ids":	[176, 175, 177],
 			"label":	"IV",
 			"uncertainty":	0.715662,
 			"key_label":	"G major",
@@ -9788,7 +9791,7 @@
 					}
 				}
 			},
-			"note_ids":	[178, 179, 180],
+			"note_ids":	[179, 178, 180],
 			"label":	"IV",
 			"uncertainty":	0.715662,
 			"key_label":	"G major",
@@ -9878,7 +9881,7 @@
 					}
 				}
 			},
-			"note_ids":	[181, 182, 183],
+			"note_ids":	[182, 181, 183],
 			"label":	"IV",
 			"uncertainty":	0.715662,
 			"key_label":	"G major",
@@ -9968,7 +9971,7 @@
 					}
 				}
 			},
-			"note_ids":	[184, 185, 186],
+			"note_ids":	[185, 184, 186],
 			"label":	"iii",
 			"uncertainty":	0.87231,
 			"key_label":	"G major",
@@ -10219,7 +10222,7 @@
 					}
 				}
 			},
-			"note_ids":	[189, 190, 191],
+			"note_ids":	[190, 189, 191],
 			"label":	"no match",
 			"uncertainty":	null,
 			"key_label":	"G major",
@@ -10464,7 +10467,7 @@
 					}
 				}
 			},
-			"note_ids":	[194, 195, 196],
+			"note_ids":	[196, 194, 195],
 			"label":	"I",
 			"uncertainty":	0.845238,
 			"key_label":	"G major",
@@ -10890,7 +10893,7 @@
 					}
 				}
 			},
-			"note_ids":	[202, 203],
+			"note_ids":	[203, 202],
 			"label":	"I",
 			"uncertainty":	1,
 			"key_label":	"C major",
@@ -11227,7 +11230,7 @@
 					}
 				}
 			},
-			"note_ids":	[208, 209],
+			"note_ids":	[209, 208],
 			"label":	"I",
 			"uncertainty":	1,
 			"key_label":	"C major",
@@ -11563,7 +11566,7 @@
 					}
 				}
 			},
-			"note_ids":	[214, 215, 216],
+			"note_ids":	[215, 214, 216],
 			"label":	"major7",
 			"uncertainty":	0.133634,
 			"key_label":	"C major",
@@ -11827,7 +11830,7 @@
 					}
 				}
 			},
-			"note_ids":	[219, 220, 221],
+			"note_ids":	[220, 219, 221],
 			"label":	"major7",
 			"uncertainty":	0.883838,
 			"key_label":	"C major",
@@ -12097,7 +12100,7 @@
 					}
 				}
 			},
-			"note_ids":	[224, 225, 226],
+			"note_ids":	[225, 224, 226],
 			"label":	"V",
 			"uncertainty":	0.204778,
 			"key_label":	"C major",
@@ -12362,7 +12365,7 @@
 					}
 				}
 			},
-			"note_ids":	[229, 230],
+			"note_ids":	[230, 229],
 			"label":	"V",
 			"uncertainty":	1,
 			"key_label":	"C major",
@@ -12704,7 +12707,7 @@
 					}
 				}
 			},
-			"note_ids":	[234, 235],
+			"note_ids":	[235, 234],
 			"label":	"I",
 			"uncertainty":	1,
 			"key_label":	"C major",
@@ -13047,7 +13050,7 @@
 					}
 				}
 			},
-			"note_ids":	[240, 241],
+			"note_ids":	[241, 240],
 			"label":	"I",
 			"uncertainty":	0.689342,
 			"key_label":	"C major",
@@ -13497,7 +13500,7 @@
 					}
 				}
 			},
-			"note_ids":	[246, 247, 248],
+			"note_ids":	[248, 246, 247],
 			"label":	"I",
 			"uncertainty":	0.689342,
 			"key_label":	"C major",
@@ -13677,7 +13680,7 @@
 					}
 				}
 			},
-			"note_ids":	[251, 252, 253],
+			"note_ids":	[253, 251, 252],
 			"label":	"I",
 			"uncertainty":	0.30722,
 			"key_label":	"C major",
@@ -13857,7 +13860,7 @@
 					}
 				}
 			},
-			"note_ids":	[256, 257, 258],
+			"note_ids":	[257, 256, 258],
 			"label":	"minor7",
 			"uncertainty":	0.116959,
 			"key_label":	"C major",
@@ -14451,7 +14454,7 @@
 					}
 				}
 			},
-			"note_ids":	[265, 266],
+			"note_ids":	[266, 265],
 			"label":	"vii°",
 			"uncertainty":	0.668643,
 			"key_label":	"C major",
@@ -14631,7 +14634,7 @@
 					}
 				}
 			},
-			"note_ids":	[268, 269],
+			"note_ids":	[269, 268],
 			"label":	"V",
 			"uncertainty":	0.525641,
 			"key_label":	"C major",
@@ -14814,7 +14817,7 @@
 					}
 				}
 			},
-			"note_ids":	[271, 272],
+			"note_ids":	[272, 271],
 			"label":	"vii°",
 			"uncertainty":	0.668643,
 			"key_label":	"C major",
@@ -14995,7 +14998,7 @@
 					}
 				}
 			},
-			"note_ids":	[274, 275],
+			"note_ids":	[275, 274],
 			"label":	"V",
 			"uncertainty":	0.525641,
 			"key_label":	"C major",
@@ -15179,7 +15182,7 @@
 					}
 				}
 			},
-			"note_ids":	[277, 278, 279],
+			"note_ids":	[278, 277, 279],
 			"label":	"I",
 			"uncertainty":	0.044476,
 			"key_label":	"C major",
@@ -15780,7 +15783,7 @@
 					}
 				}
 			},
-			"note_ids":	[286, 287],
+			"note_ids":	[287, 286],
 			"label":	"ii",
 			"uncertainty":	0.668643,
 			"key_label":	"C major",
@@ -15960,7 +15963,7 @@
 					}
 				}
 			},
-			"note_ids":	[289, 290],
+			"note_ids":	[290, 289],
 			"label":	"dominant7",
 			"uncertainty":	0.525641,
 			"key_label":	"C major",
@@ -16140,7 +16143,7 @@
 					}
 				}
 			},
-			"note_ids":	[292, 293],
+			"note_ids":	[293, 292],
 			"label":	"ii",
 			"uncertainty":	0.668643,
 			"key_label":	"C major",
@@ -16320,7 +16323,7 @@
 					}
 				}
 			},
-			"note_ids":	[295, 296],
+			"note_ids":	[296, 295],
 			"label":	"dominant7",
 			"uncertainty":	0.525641,
 			"key_label":	"C major",
@@ -16500,7 +16503,7 @@
 					}
 				}
 			},
-			"note_ids":	[298, 299, 300],
+			"note_ids":	[299, 298, 300],
 			"label":	"I",
 			"uncertainty":	0.10296,
 			"key_label":	"C major",
@@ -17112,7 +17115,7 @@
 					}
 				}
 			},
-			"note_ids":	[307, 308, 309],
+			"note_ids":	[308, 307, 309],
 			"label":	"IV",
 			"uncertainty":	0.33142,
 			"key_label":	"C major",
@@ -17376,7 +17379,7 @@
 					}
 				}
 			},
-			"note_ids":	[312, 313, 314],
+			"note_ids":	[313, 312, 314],
 			"label":	"minor7",
 			"uncertainty":	0.38886,
 			"key_label":	"C major",
@@ -17634,7 +17637,7 @@
 					}
 				}
 			},
-			"note_ids":	[317, 318, 319],
+			"note_ids":	[318, 317, 319],
 			"label":	"minor7",
 			"uncertainty":	0.116959,
 			"key_label":	"C major",
@@ -17892,7 +17895,7 @@
 					}
 				}
 			},
-			"note_ids":	[322, 323, 324],
+			"note_ids":	[323, 322, 324],
 			"label":	"iii",
 			"uncertainty":	0.288898,
 			"key_label":	"C major",
@@ -18150,7 +18153,7 @@
 					}
 				}
 			},
-			"note_ids":	[327, 328],
+			"note_ids":	[328, 327],
 			"label":	"I",
 			"uncertainty":	1,
 			"key_label":	"C major",
@@ -55104,23 +55107,89 @@
 					}],
 				"seventh_degree":	{
 					"rule":	"leading-tone",
-					"followed":	1,
-					"broken":	2,
+					"followed":	0,
+					"broken":	3,
 					"breaks":	[{
 							"framework":	"standard-counterpoint-v1",
 							"span":	{
 								"start":	{
-									"num":	99,
-									"den":	8
+									"num":	45,
+									"den":	4
 								},
 								"end":	{
-									"num":	1211,
+									"num":	1103,
 									"den":	96
 								}
 							},
 							"location":	{
 								"start":	{
-									"measure":	13,
+									"measure":	12,
+									"beat":	2,
+									"subdivision":	{
+										"num":	0,
+										"den":	1
+									}
+								},
+								"end":	{
+									"measure":	12,
+									"beat":	2,
+									"subdivision":	{
+										"num":	23,
+										"den":	24
+									}
+								}
+							},
+							"note_ids":	[103, 104],
+							"label":	"leading-tone",
+							"uncertainty":	0.79667033194761949
+						}, {
+							"framework":	"standard-counterpoint-v1",
+							"span":	{
+								"start":	{
+									"num":	93,
+									"den":	8
+								},
+								"end":	{
+									"num":	1139,
+									"den":	96
+								}
+							},
+							"location":	{
+								"start":	{
+									"measure":	12,
+									"beat":	3,
+									"subdivision":	{
+										"num":	1,
+										"den":	2
+									}
+								},
+								"end":	{
+									"measure":	12,
+									"beat":	4,
+									"subdivision":	{
+										"num":	11,
+										"den":	24
+									}
+								}
+							},
+							"note_ids":	[106, 107],
+							"label":	"leading-tone",
+							"uncertainty":	0.79667033194761949
+						}, {
+							"framework":	"standard-counterpoint-v1",
+							"span":	{
+								"start":	{
+									"num":	107,
+									"den":	8
+								},
+								"end":	{
+									"num":	1307,
+									"den":	96
+								}
+							},
+							"location":	{
+								"start":	{
+									"measure":	14,
 									"beat":	2,
 									"subdivision":	{
 										"num":	1,
@@ -55128,7 +55197,7 @@
 									}
 								},
 								"end":	{
-									"measure":	13,
+									"measure":	14,
 									"beat":	3,
 									"subdivision":	{
 										"num":	11,
@@ -55136,42 +55205,9 @@
 									}
 								}
 							},
-							"note_ids":	[113, 114],
+							"note_ids":	[123, 124],
 							"label":	"leading-tone",
-							"uncertainty":	0.89379255450865724
-						}, {
-							"framework":	"standard-counterpoint-v1",
-							"span":	{
-								"start":	{
-									"num":	51,
-									"den":	4
-								},
-								"end":	{
-									"num":	1247,
-									"den":	96
-								}
-							},
-							"location":	{
-								"start":	{
-									"measure":	13,
-									"beat":	4,
-									"subdivision":	{
-										"num":	0,
-										"den":	1
-									}
-								},
-								"end":	{
-									"measure":	13,
-									"beat":	4,
-									"subdivision":	{
-										"num":	23,
-										"den":	24
-									}
-								}
-							},
-							"note_ids":	[117, 118],
-							"label":	"leading-tone",
-							"uncertainty":	0.89379255450865724
+							"uncertainty":	0.79667033194761949
 						}]
 				}
 			}
@@ -55659,10 +55695,46 @@
 				}],
 			"non_chord_tones":	{
 				"chord_tones":	12,
-				"non_chord_tones":	0,
-				"unclassified":	1,
-				"by_type":	[],
-				"items":	[]
+				"non_chord_tones":	1,
+				"unclassified":	0,
+				"by_type":	[{
+						"type":	"retardation",
+						"count":	1
+					}],
+				"items":	[{
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	145,
+								"den":	8
+							},
+							"end":	{
+								"num":	1751,
+								"den":	96
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	19,
+								"beat":	1,
+								"subdivision":	{
+									"num":	1,
+									"den":	2
+								}
+							},
+							"end":	{
+								"measure":	19,
+								"beat":	1,
+								"subdivision":	{
+									"num":	23,
+									"den":	24
+								}
+							}
+						},
+						"note_ids":	[155],
+						"label":	"retardation",
+						"uncertainty":	0
+					}]
 			},
 			"tendencies":	{
 				"line":	[{
@@ -55717,7 +55789,7 @@
 							},
 							"note_ids":	[135, 137],
 							"label":	"leading-tone",
-							"uncertainty":	0.92176495585235019
+							"uncertainty":	0.79667033194761949
 						}]
 				}
 			}
@@ -56054,7 +56126,7 @@
 						"uncertainty":	0,
 						"semitones":	10,
 						"direction":	"up",
-						"generic_size":	4,
+						"generic_size":	7,
 						"approximate":	false,
 						"status":	"not-judged"
 					}]
@@ -56097,46 +56169,10 @@
 				}],
 			"non_chord_tones":	{
 				"chord_tones":	13,
-				"non_chord_tones":	1,
-				"unclassified":	5,
-				"by_type":	[{
-						"type":	"appoggiatura",
-						"count":	1
-					}],
-				"items":	[{
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	169,
-								"den":	8
-							},
-							"end":	{
-								"num":	2039,
-								"den":	96
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	22,
-								"beat":	1,
-								"subdivision":	{
-									"num":	1,
-									"den":	2
-								}
-							},
-							"end":	{
-								"measure":	22,
-								"beat":	1,
-								"subdivision":	{
-									"num":	23,
-									"den":	24
-								}
-							}
-						},
-						"note_ids":	[186],
-						"label":	"appoggiatura",
-						"uncertainty":	0
-					}]
+				"non_chord_tones":	0,
+				"unclassified":	6,
+				"by_type":	[],
+				"items":	[]
 			},
 			"tendencies":	{
 				"line":	[{
@@ -56157,7 +56193,7 @@
 					}],
 				"seventh_degree":	{
 					"rule":	"leading-tone",
-					"followed":	3,
+					"followed":	0,
 					"broken":	0,
 					"breaks":	[]
 				}
@@ -57841,7 +57877,7 @@
 							},
 							"note_ids":	[315, 316],
 							"label":	"leading-tone",
-							"uncertainty":	0.686714918255223
+							"uncertainty":	0.79667033194761949
 						}]
 				}
 			}

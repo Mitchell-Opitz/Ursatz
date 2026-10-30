@@ -4,7 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis/motif_window_matching.h"
+#include <limits.h>
+
 #include "analysis/outer_voice.h"
 #include "common-practice-minimal/key_vocabulary.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
@@ -21,116 +22,6 @@
 #include "time/time_span.h"
 #include "util/misc_util.h"
 
-/* A soprano note: an index into the ImportedNotes, with exact start and end in whole notes. */
-typedef struct {
-    size_t index;
-    long long start_n;
-    long long start_d;
-    long long end_n;
-    long long end_d;
-    long semitone;
-} SopranoNote;
-
-/* A note of the library's note set and its place in the ImportedNotes. */
-typedef struct {
-    AnalysisNote note;
-    size_t index;
-} SetNote;
-
-static int compare_set_notes(const void *left, const void *right) {
-    return analysis_note_compare(&((const SetNote *)left)->note, &((const SetNote *)right)->note);
-}
-
-/* The soprano: at every onset the highest sounding note (the later attack among equals), kept when it is attacked
-   there. The kernel's outer_voice_attack_soprano finds it; this builds its note set from the imported notes (a note
-   of unknown pitch or no length is not in it) and reads the chosen notes back. *out is owned, NULL when there are no
-   notes. */
-static bool find_soprano(const ImportedNotes *notes, SopranoNote **out, size_t *out_count) {
-    *out = NULL;
-    *out_count = 0;
-    if (notes->count == 0) {
-        return true;
-    }
-    SetNote *sorted = calloc(notes->count, sizeof(SetNote));
-    AnalysisNote *set_notes = calloc(notes->count, sizeof(AnalysisNote));
-    TimeSpan **spans = calloc(notes->count, sizeof(TimeSpan *));
-    size_t set_count = 0;
-    size_t *chosen = NULL;
-    size_t chosen_count = 0;
-    SopranoNote *line = NULL;
-    bool ok = sorted && set_notes && spans;
-    for (size_t i = 0; ok && i < notes->count; i++) {
-        const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(notes->events[i]));
-        long semitone = pitch_numeric_value_position_numerator(notes->pitch_values[i]);
-        if (duration_numerator(note_event_duration(notes->events[i])) <= 0) {
-            continue; /* a note with no length is never sounding at an onset */
-        }
-        MusicalTime *end = NULL;
-        if (musical_time_add(start, note_event_duration(notes->events[i]), &end) != MUSICAL_TIME_OK) {
-            ok = false;
-            break;
-        }
-        TimeSpan *span = NULL;
-        TimeSpanResult made = time_span_create(start, end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span);
-        musical_time_destroy(end);
-        if (made != TIME_SPAN_OK) {
-            ok = false;
-            break;
-        }
-        spans[set_count] = span;
-        sorted[set_count].note = (AnalysisNote){.note_id = entity_id_value(note_event_id(notes->events[i])),
-                                                .event = notes->events[i],
-                                                .span = span,
-                                                .midi = semitone >= 0 && semitone <= 127 ? (int)semitone
-                                                                                          : ANALYSIS_PITCH_UNKNOWN,
-                                                .track = ANALYSIS_INDEX_NONE,
-                                                .voice = ANALYSIS_INDEX_NONE,
-                                                .voice_confidence = 1.0};
-        sorted[set_count].index = i;
-        set_count++;
-    }
-    if (ok) {
-        qsort(sorted, set_count, sizeof(SetNote), compare_set_notes);
-        for (size_t i = 0; i < set_count; i++) {
-            set_notes[i] = sorted[i].note;
-        }
-        AnalysisNoteSet set = {set_notes, set_count, notes->meter.meter_map};
-        ok = set_count == 0 || outer_voice_attack_soprano(&set, &chosen, &chosen_count) == OUTER_VOICE_OK;
-    }
-    if (ok && chosen_count > 0) {
-        line = calloc(chosen_count, sizeof(SopranoNote));
-        ok = line != NULL;
-    }
-    for (size_t k = 0; ok && k < chosen_count; k++) {
-        size_t i = sorted[chosen[k]].index;
-        const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(notes->events[i]));
-        const Duration *duration = note_event_duration(notes->events[i]);
-        SopranoNote *note = &line[k];
-        note->index = i;
-        note->start_n = musical_time_numerator(start);
-        note->start_d = (long long)musical_time_denominator(start);
-        long long duration_n = duration_numerator(duration);
-        long long duration_d = (long long)duration_denominator(duration);
-        note->end_n = note->start_n * duration_d + duration_n * note->start_d;
-        note->end_d = note->start_d * duration_d;
-        note->semitone = pitch_numeric_value_position_numerator(notes->pitch_values[i]);
-    }
-    for (size_t i = 0; spans && i < set_count; i++) {
-        time_span_destroy(spans[i]);
-    }
-    free(spans);
-    free(set_notes);
-    free(sorted);
-    free(chosen);
-    if (!ok) {
-        free(line);
-        return false;
-    }
-    *out = line;
-    *out_count = chosen_count;
-    return true;
-}
-
 /* The key region the time lies in, or the last one for a time past the end. Regions are ordered and gap-free. */
 static const AnalysisKeyRegion *region_at(const AnalysisReport *report, long long n, long long d) {
     for (size_t r = 0; r < report->key_region_count; r++) {
@@ -143,126 +34,40 @@ static const AnalysisKeyRegion *region_at(const AnalysisReport *report, long lon
     return &report->key_regions[report->key_region_count - 1];
 }
 
-/* Adds the soprano to the stage's input, with each note's scale degree in its key region. The input's notes and
-   form.note_indices are parallel. */
-static bool add_soprano(FormStage *form, const ImportedNotes *notes, const SopranoNote *line, size_t count,
-                        const AnalysisReport *report) {
-    form->note_indices = malloc(sizeof(size_t) * (count > 0 ? count : 1));
-    if (!form->note_indices) {
-        return false;
-    }
-    for (size_t k = 0; k < count; k++) {
-        const SopranoNote *note = &line[k];
-        MusicalTime *start = NULL;
-        MusicalTime *end = NULL;
-        if (musical_time_create((long)note->start_n, (unsigned long)note->start_d, &start) != MUSICAL_TIME_OK ||
-            musical_time_create((long)note->end_n, (unsigned long)note->end_d, &end) != MUSICAL_TIME_OK) {
-            musical_time_destroy(start);
-            musical_time_destroy(end);
-            return false;
-        }
-        const TimeSpan *span = form_stage_keep_span(form, start, end);
-        musical_time_destroy(start);
-        musical_time_destroy(end);
-        const NoteEvent *event = notes->events[note->index];
-        size_t before = form->input.note_count;
-        if (!span || standard_form_input_add_note(&form->input, entity_id_value(note_event_id(event)), event, span, NULL,
-                                                  note->semitone) == STANDARD_FORM_ANALYSIS_ERR_ALLOC) {
-            return false;
-        }
-        if (form->input.note_count == before) {
-            continue; /* the library declined the note */
-        }
-        form->note_indices[form->note_index_count++] = note->index;
-        const AnalysisKeyRegion *region = region_at(report, note->start_n, note->start_d);
-        int pitch_class = (int)(((note->semitone % 12) + 12) % 12);
-        int degree = 0;
-        int alteration = 0;
-        if (common_practice_scale_degree_of(pitch_class, region->tonic_pitch_class,
-                                            region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR,
-                                            &degree, &alteration) &&
-            standard_form_input_set_degree(&form->input, false, form->input.note_count - 1, degree, alteration) ==
-                STANDARD_FORM_ANALYSIS_ERR_ALLOC) {
-            return false;
-        }
-    }
-    return true;
-}
-
-/* The injected window matcher: the kernel's Motif Window Matching finds the windows whose contour direction sequence
-   and rhythm both equal another window's, and returns one occurrence per matched window, borrowing its event ids.
-   Ported from form_kernel_match_windows. */
-static StandardFormAnalysisStatus match_windows(const StandardFormMotifWindow *windows, size_t count, bool *matched,
-                                                void *context) {
-    (void)context;
-    if (count > 0 && (windows == NULL || matched == NULL)) {
-        return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
-    }
-    if (count == 0) {
-        return STANDARD_FORM_ANALYSIS_OK;
-    }
-    memset(matched, 0, count * sizeof(bool));
-    MotifWindow *kernel = calloc(count, sizeof(MotifWindow));
-    if (!kernel) {
-        return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
-    }
-    for (size_t i = 0; i < count; i++) {
-        kernel[i].contour = windows[i].contour;
-        kernel[i].rhythm = windows[i].rhythm;
-        kernel[i].event_ids = windows[i].event_ids;
-        kernel[i].event_id_count = windows[i].event_id_count;
-    }
-    MotifDetectionOccurrence *found = NULL;
-    size_t found_count = 0;
-    StandardFormAnalysisStatus status = STANDARD_FORM_ANALYSIS_ERR_DETECTOR;
-    if (motif_window_matching_find(kernel, count, &found, &found_count) == MOTIF_WINDOW_MATCHING_OK) {
-        status = STANDARD_FORM_ANALYSIS_OK;
-        for (size_t j = 0; j < found_count; j++) {
-            for (size_t i = 0; i < count; i++) {
-                if (found[j].matched_event_ids == windows[i].event_ids) {
-                    matched[i] = true;
-                }
-            }
-        }
-    }
-    motif_window_matching_destroy_occurrences(found);
-    free(kernel);
-    return status;
-}
-
-bool motive_stage_run(MotiveStage *stage, const ImportedNotes *notes, const Segmentation *segmentation,
-                      const HarmonyStage *harmony, const AnalysisReport *report) {
+bool motive_stage_read(MotiveStage *stage, const ChainInput *input, const AnalysisChain *library) {
     memset(stage, 0, sizeof(*stage));
-    if (!notes->meter.meter_map || segmentation->segment_count == 0 || report->key_region_count == 0) {
-        return true; /* nothing to place the notes in */
+    const StandardFormMotives *motives = analysis_chain_motives(library);
+    const ChainSegments *segments = analysis_chain_segments(library);
+    const HarmonyCadences *cadences = analysis_chain_cadences(library);
+    int home = analysis_chain_home_key(library);
+    if (!motives || !segments || !cadences || home < 0 || motives->family_count == 0) {
+        return true; /* the chain found no motive, or had no key to read the degrees in */
     }
-    SopranoNote *line = NULL;
-    size_t count = 0;
-    if (!find_soprano(notes, &line, &count)) {
+    /* The chain keeps the note-level input to itself; its builder gives it again, for the notes the occurrences index
+       and the meter. */
+    ChainInputStatus built =
+        chain_build_motive_input(&input->set, segments, 1, INT_MAX, common_practice_key_index_tonic(home),
+                                 common_practice_key_index_mode(home), cadences, &stage->built);
+    if (built != CHAIN_INPUT_OK) {
+        chain_form_input_destroy(&stage->built);
+        memset(&stage->built, 0, sizeof(stage->built));
+        return built != CHAIN_INPUT_ERR_ALLOC;
+    }
+    stage->have_input = true;
+    size_t count = stage->built.input.note_count;
+    stage->note_indices = malloc(sizeof(size_t) * (count > 0 ? count : 1));
+    if (!stage->note_indices) {
         return false;
     }
-    if (count == 0) {
-        return true;
+    for (size_t n = 0; n < count; n++) {
+        size_t index = chain_input_import_index(input, stage->built.input.notes[n].note_id);
+        if (index == (size_t)-1) {
+            return false;
+        }
+        stage->note_indices[stage->note_index_count++] = index;
     }
-    FormStage *form = &stage->form;
-    standard_form_input_init(&form->input, notes->meter.meter_map);
-    form->built = true;
-    bool ok = add_soprano(form, notes, line, count, report) && form_stage_add_segments(form, segmentation) &&
-              form_stage_add_cadences(form, segmentation, harmony);
-    free(line);
-    if (!ok || !form_stage_analyze(form)) {
-        return false;
-    }
-    if (form->phrases.count == 0) {
-        return true; /* the library read no phrases, and the motive analysis needs them */
-    }
-    StandardFormAnalysisStatus status = standard_form_find_motives(&form->input, &form->phrases, &form->segmentation,
-                                                                   &form->themes, NULL, match_windows, NULL,
-                                                                   &stage->motives);
-    if (status != STANDARD_FORM_ANALYSIS_OK) {
-        memset(&stage->motives, 0, sizeof(stage->motives));
-    }
-    return status != STANDARD_FORM_ANALYSIS_ERR_ALLOC;
+    stage->motives = *motives;
+    return true;
 }
 
 /* The phrase and idea of the report an occurrence lies in, by span: the phrase whose span holds the start of its first
@@ -303,7 +108,7 @@ static void link_occurrence(const AnalysisReport *report, const MusicalTime *fir
 static bool collect_occurrence(const MotiveStage *stage, const AnalysisReport *report,
                                const StandardFormMotiveOccurrence *found, size_t index,
                                AnalysisMotiveOccurrence *occurrence) {
-    const FormStage *form = &stage->form;
+    const MotiveStage *form = stage;
     const StandardFormMotiveOccurrenceClaim *claim = &found->claim;
     if (claim->note_first < 0 || claim->note_count < 1 ||
         (size_t)(claim->note_first + claim->note_count) > form->note_index_count) {
@@ -311,9 +116,9 @@ static bool collect_occurrence(const MotiveStage *stage, const AnalysisReport *r
     }
     size_t first = (size_t)claim->note_first;
     size_t last = first + (size_t)claim->note_count - 1;
-    const MusicalTime *start = time_span_start(form->input.notes[first].span);
-    const MusicalTime *last_start = time_span_start(form->input.notes[last].span);
-    const MusicalTime *end = time_span_end(form->input.notes[last].span);
+    const MusicalTime *start = time_span_start(form->built.input.notes[first].span);
+    const MusicalTime *last_start = time_span_start(form->built.input.notes[last].span);
+    const MusicalTime *end = time_span_end(form->built.input.notes[last].span);
     occurrence->index = index;
     occurrence->start_numerator = musical_time_numerator(start);
     occurrence->start_denominator = musical_time_denominator(start);
@@ -322,7 +127,7 @@ static bool collect_occurrence(const MotiveStage *stage, const AnalysisReport *r
     occurrence->first_measure = claim->first_measure;
     occurrence->first_beat = claim->first_beat;
     link_occurrence(report, start, last_start, occurrence);
-    if (meter_map_measure_index_at(form->input.map, last_start, &occurrence->last_measure) != METER_MAP_OK) {
+    if (meter_map_measure_index_at(form->built.input.map, last_start, &occurrence->last_measure) != METER_MAP_OK) {
         return false;
     }
     occurrence->kind = standard_form_motive_kind_name((StandardFormMotiveKind)claim->kind);
@@ -541,7 +346,7 @@ static bool collect_features(const MotiveStage *stage, const ImportedNotes *note
     Rational bar;
     Rational beat;
     Rational position;
-    if (!meter_at(stage->form.input.map, first_start, &bar, &beat, &position)) {
+    if (!meter_at(stage->built.input.map, first_start, &bar, &beat, &position)) {
         goto skip;
     }
     features->bar_numerator = bar.num;
@@ -612,7 +417,9 @@ void motive_stage_destroy(MotiveStage *stage) {
     if (!stage) {
         return;
     }
-    standard_form_motives_destroy(&stage->motives);
-    form_stage_destroy(&stage->form);
+    free(stage->note_indices);
+    if (stage->have_input) {
+        chain_form_input_destroy(&stage->built);
+    }
     memset(stage, 0, sizeof(*stage));
 }

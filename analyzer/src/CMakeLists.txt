@@ -6,7 +6,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/gm_names.c
     pipeline/musicxml_pipeline.c
     pipeline/input_pipeline.c
-    pipeline/segmentation.c
+    pipeline/chain_input.c
     pipeline/pitch_class_util.c
     pipeline/spelling_util.c
     pipeline/key_region_pipeline.c
@@ -14,7 +14,6 @@ add_library(ursatz_analyzer STATIC
     pipeline/outer_voice_pipeline.c
     pipeline/roman_numeral_pipeline.c
     pipeline/harmony_pipeline.c
-    pipeline/form_boundary.c
     pipeline/form_pipeline.c
     pipeline/form_plan_pipeline.c
     pipeline/motive_pipeline.c
@@ -60,7 +59,7 @@ target_include_directories(ursatz_analyzer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
-    PUBLIC ursatz common_practice_minimal standard_meter standard_tonality standard_harmony standard_form
+    PUBLIC ursatz ursatz_chain common_practice_minimal standard_meter standard_tonality standard_harmony standard_form
     PRIVATE cjson standard_counterpoint standard_texture standard_voicing standard_markings galant_schemas
     scale_harmonization
 )

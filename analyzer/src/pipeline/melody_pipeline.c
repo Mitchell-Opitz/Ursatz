@@ -11,6 +11,7 @@
 #include "core/rational.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/spelling_util.h"
+#include <ursatz_chain/analysis_chain.h>
 #include "pitch/pitch_spelling.h"
 #include "semantics/beat_strength.h"
 #include "standard-counterpoint/analysis/analysis_melody.h"
@@ -35,22 +36,10 @@ typedef struct {
 } PhraseLine;
 
 static void phrase_line_destroy(PhraseLine *built) {
-    standard_counterpoint_melody_line_destroy(&built->line);
     free(built->note);
     free(built->name);
     free(built->region);
     memset(built, 0, sizeof(*built));
-}
-
-/* The position of the voice segment's member that is the entry's note, or member_count when it is none. */
-static size_t member_of(const Segment *segment, const OuterVoiceEntry *entry) {
-    const char *id = entity_id_value(entry->note_id);
-    for (size_t m = 0; m < segment->member_count; m++) {
-        if (strcmp(segment->members[m].note_id, id) == 0) {
-            return m;
-        }
-    }
-    return segment->member_count;
 }
 
 /* The key region the time lies in, or the last one for a time past the end; NULL with none. */
@@ -75,125 +64,87 @@ static void name_note(const ImportedNotes *notes, size_t note, long pitch, const
     note_name(pitch, region ? region->prefer_flats : false, out);
 }
 
-/* The library's non-chord-tone result for a note, from the chord identification of the chord segment its voice segment
-   starts in: no chord gives UNCLASSIFIED; a note listed among the chord's non-chord tones gives NON_CHORD_TONE with the
-   type (UNCLASSIFIED when the library left the type open); a note not listed gives CHORD_TONE. Ported from
-   melody_build_from_line. chord is a cursor over the entries, which only moves forward. */
-static void classify_note(const AnalysisReport *report, const Segment *segment, size_t note, size_t *chord,
-                          size_t *tone, StandardCounterpointMelodyNote *out) {
-    out->nct = STANDARD_COUNTERPOINT_NCT_UNCLASSIFIED;
-    while (*chord + 1 < report->entry_count &&
-           rational_cmp(rational_ratio(segment->start_numerator, (long long)segment->start_denominator),
-                        rational_ratio(report->entries[*chord].end_numerator,
-                                       (long long)report->entries[*chord].end_denominator)) >= 0) {
-        (*chord)++;
+/* a/b < c/d for positive denominators. */
+static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
+    return (long long)a * (long long)d < (long long)c * (long long)b;
+}
+
+/* The key region of the chain's home key: the first region in that key, or none. */
+static const AnalysisKeyRegion *home_region_of(const AnalysisReport *report, int home) {
+    if (home < 0) {
+        return NULL;
     }
-    if (*chord >= report->entry_count || report->entries[*chord].chord.label == NULL) {
-        return;
+    int tonic = common_practice_key_index_tonic(home);
+    bool is_major = common_practice_key_index_mode(home) == COMMON_PRACTICE_KEY_MAJOR;
+    for (size_t r = 0; r < report->key_region_count; r++) {
+        if (report->key_regions[r].tonic_pitch_class == tonic && report->key_regions[r].is_major == is_major) {
+            return &report->key_regions[r];
+        }
     }
-    out->nct = STANDARD_COUNTERPOINT_NCT_CHORD_TONE;
-    while (*tone < report->non_chord_tone_count && report->non_chord_tones[*tone].chord_index < *chord) {
-        (*tone)++;
-    }
-    for (size_t t = *tone; t < report->non_chord_tone_count && report->non_chord_tones[t].chord_index == *chord; t++) {
-        const AnalysisNonChordTone *found = &report->non_chord_tones[t];
-        if (found->note_id != note) {
+    return NULL;
+}
+
+/* A phrase's line: the entries of the chain's melody line (analysis_chain_melody) whose first chord segment starts in
+   [start, end) of the phrase, as a view of the chain's notes. The chain reads the whole soprano as one line, in the home
+   key, with the beat strength of each attack and the non-chord-tone result of each note's first chord segment; a phrase
+   takes its part of it. Leading and trailing rests are not part of a phrase's line. False on allocation failure or a
+   note the input does not know. */
+static bool build_phrase_line(const ImportedNotes *notes, const ChainInput *input, const AnalysisChainMelody *melody,
+                              const Segmentation *segmentation, const AnalysisReport *report,
+                              const AnalysisKeyRegion *home, const AnalysisPhrase *phrase, PhraseLine *built) {
+    memset(built, 0, sizeof(*built));
+    const StandardCounterpointMelodyLine *line = &melody->line.line;
+    size_t first = line->count;
+    size_t end = line->count;
+    for (size_t i = 0; i < line->count; i++) {
+        const Segment *segment = &segmentation->segments[melody->line.segment[i]];
+        if (rational_less(segment->start_numerator, segment->start_denominator, phrase->start_numerator,
+                          phrase->start_denominator)) {
             continue;
         }
-        out->nct = STANDARD_COUNTERPOINT_NCT_UNCLASSIFIED;
-        for (int type = 0; found->type && type < NON_CHORD_TONE_COUNT; type++) {
-            if (strcmp(non_chord_tone_name((NonChordTone)type), found->type) == 0) {
-                out->nct = STANDARD_COUNTERPOINT_NCT_NON_CHORD_TONE;
-                out->nct_type = (NonChordTone)type;
-            }
+        if (!rational_less(segment->start_numerator, segment->start_denominator, phrase->end_numerator,
+                           phrase->end_denominator)) {
+            end = i;
+            break;
+        }
+        if (first == line->count) {
+            first = i;
         }
     }
-}
-
-/* Adds the soprano note of voice segment v to the line. False on allocation or library failure. */
-static bool add_note(PhraseLine *built, const ImportedNotes *notes, const AnalysisReport *report,
-                     const Segmentation *voices, size_t v, const OuterVoiceEntry *entry, size_t member,
-                     size_t *chord, size_t *tone) {
-    const Segment *segment = &voices->segments[v];
-    const CommonPracticeMember *attack = &segment->members[member];
-    StandardCounterpointMelodyNote note;
-    memset(&note, 0, sizeof(note));
-    note.present = true;
-    note.note_id = entity_id_value(entry->note_id);
-    note.pitch = entry->pitch;
-    note.confidence = 1.0;
-    note.has_strength = !attack->held;
-    note.strength = attack->strength;
-    const AnalysisKeyRegion *region = region_at(report, segment->start_numerator, (long long)segment->start_denominator);
-    long pitch = pitch_numeric_value_position_numerator(entry->pitch);
-    if (region) {
-        common_practice_scale_degree_of((int)(((pitch % 12) + 12) % 12), region->tonic_pitch_class,
-                                        region->is_major ? COMMON_PRACTICE_KEY_MAJOR : COMMON_PRACTICE_KEY_MINOR,
-                                        &note.degree, &note.alteration);
+    while (first < end && !line->notes[first].present) {
+        first++;
     }
-    classify_note(report, segment, segment->note_indices[member], chord, tone, &note);
-    char ref[96];
-    snprintf(ref, sizeof(ref), "%s/%s", voices->segment_ids[v], note.note_id);
-    note.nct_ref = ref;
-    built->note[built->line.count] = segment->note_indices[member];
-    name_note(notes, segment->note_indices[member], pitch, region, built->name[built->line.count]);
-    built->region[built->line.count] = region;
-    if (standard_counterpoint_melody_line_add_note(&built->line, &note) != STANDARD_COUNTERPOINT_MELODY_OK) {
-        return false;
+    while (end > first && !line->notes[end - 1].present) {
+        end--;
     }
-    built->note_count++;
-    return true;
-}
-
-/* Builds the line of the soprano notes whose voice segment starts in [start, end). */
-static bool build_phrase_line(const ImportedNotes *notes, const Segmentation *voices, const OuterVoiceLines *lines, const AnalysisReport *report,
-                              const AnalysisPhrase *phrase, PhraseLine *built) {
-    memset(built, 0, sizeof(*built));
-    standard_counterpoint_melody_line_init(&built->line);
-    built->note = malloc(sizeof(size_t) * (voices->segment_count + 1));
-    built->name = calloc(voices->segment_count + 1, sizeof(char[16]));
-    built->region = calloc(voices->segment_count + 1, sizeof(const AnalysisKeyRegion *));
+    if (first >= end) {
+        return true;
+    }
+    size_t count = end - first;
+    built->line = (StandardCounterpointMelodyLine){line->notes + first, count, count};
+    built->note = malloc(sizeof(size_t) * count);
+    built->name = calloc(count, sizeof(char[16]));
+    built->region = calloc(count, sizeof(const AnalysisKeyRegion *));
     if (!built->note || !built->name || !built->region) {
         return false;
     }
-    const char *previous = NULL;
-    bool started = false;
-    size_t chord = 0;
-    size_t tone = 0;
-    for (size_t v = 0; v < voices->segment_count; v++) {
-        const Segment *segment = &voices->segments[v];
-        if (rational_cmp(rational_ratio(segment->start_numerator, (long long)segment->start_denominator),
-                         rational_ratio(phrase->start_numerator, (long long)phrase->start_denominator)) < 0) {
+    for (size_t k = 0; k < count; k++) {
+        const StandardCounterpointMelodyNote *note = &line->notes[first + k];
+        built->note[k] = SIZE_MAX;
+        if (!note->present) {
             continue;
         }
-        if (rational_cmp(rational_ratio(segment->start_numerator, (long long)segment->start_denominator),
-                         rational_ratio(phrase->end_numerator, (long long)phrase->end_denominator)) >= 0) {
-            break;
-        }
-        const OuterVoiceEntry *entry = &lines->soprano[v];
-        size_t member = entry->present ? member_of(segment, entry) : segment->member_count;
-        if (member >= segment->member_count) {
-            if (started && previous != NULL) { /* one rest for a gap, none before the first note */
-                built->note[built->line.count] = SIZE_MAX;
-                if (standard_counterpoint_melody_line_add_rest(&built->line) != STANDARD_COUNTERPOINT_MELODY_OK) {
-                    return false;
-                }
-            }
-            previous = NULL;
-            continue;
-        }
-        const char *id = entity_id_value(entry->note_id);
-        if (previous != NULL && strcmp(previous, id) == 0) {
-            continue; /* the same note, held into this segment */
-        }
-        previous = id;
-        if (!started && segment->members[member].held) {
-            continue; /* held in from the phrase before: not an attack of this phrase */
-        }
-        started = true;
-        if (!add_note(built, notes, report, voices, v, entry, member, &chord, &tone)) {
+        size_t index = chain_input_import_index(input, note->note_id);
+        if (index == (size_t)-1) {
             return false;
         }
+        const Segment *segment = &segmentation->segments[melody->line.segment[first + k]];
+        const AnalysisKeyRegion *local =
+            region_at(report, segment->start_numerator, (long long)segment->start_denominator);
+        built->note[k] = index;
+        built->region[k] = home ? home : local;
+        name_note(notes, index, pitch_numeric_value_position_numerator(note->pitch), local, built->name[k]);
+        built->note_count++;
     }
     return true;
 }
@@ -443,11 +394,14 @@ done:
     return result;
 }
 
-bool melody_stage_collect(const ImportedNotes *notes, const Segmentation *voices, const OuterVoiceLines *lines,
-                          AnalysisReport *report) {
-    if (report->phrase_count == 0 || lines->count == 0 || lines->count != voices->segment_count) {
+bool melody_stage_collect(const ImportedNotes *notes, const ChainInput *input, const AnalysisChain *library,
+                          const Segmentation *segmentation, AnalysisReport *report) {
+    const AnalysisChainMelody *melody = analysis_chain_melody(library);
+    if (report->phrase_count == 0 || !melody || melody->line.line.count == 0 ||
+        segmentation->segment_count == 0) {
         return true;
     }
+    const AnalysisKeyRegion *home = home_region_of(report, analysis_chain_home_key(library));
     AnalysisMelody *melodies = calloc(report->phrase_count, sizeof(AnalysisMelody));
     if (!melodies) {
         return false;
@@ -456,7 +410,7 @@ bool melody_stage_collect(const ImportedNotes *notes, const Segmentation *voices
     bool ok = true;
     for (size_t p = 0; ok && p < report->phrase_count; p++) {
         PhraseLine built;
-        ok = build_phrase_line(notes, voices, lines, report, &report->phrases[p], &built);
+        ok = build_phrase_line(notes, input, melody, segmentation, report, home, &report->phrases[p], &built);
         if (ok && built.note_count > 0) {
             AnalyzeResult result = analyze_phrase(&built, p, &report->phrases[p], &melodies[count]);
             ok = result != ANALYZE_ALLOC;

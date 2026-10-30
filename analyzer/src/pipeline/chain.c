@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include "common-practice-minimal/key_regions.h"
-#include "core/rational.h"
+#include "time/time_span.h"
 #include "pipeline/form_plan_pipeline.h"
 #include "pipeline/harmonic_rhythm_pipeline.h"
 #include "pipeline/key_region_pipeline.h"
@@ -22,17 +22,80 @@
 
 static const AnalysisChordReading NO_READING = {NULL, NULL, NULL, NULL, -1, 0.0, {false, 0, 0}};
 
-bool chain_init(AnalysisChain *chain, const ImportedNotes *notes) {
-    memset(chain, 0, sizeof(*chain));
-    chain->notes = notes;
-    if (notes->count == 0) {
+/* A Segmentation that views the chain's segments: the exact windows from the library's sonorities and the members' notes
+   as ImportedNotes indices. The library's segments, ids and sonorities are borrowed; the voice segments carry no
+   members in the chain, so theirs are built here from the sonority's events. */
+static bool segmentation_view(const AnalyzerPass *pass, const ChainSegments *source, bool with_members,
+                              Segmentation *out) {
+    *out = (Segmentation){NULL, 0, NULL, NULL, {NULL, 0}};
+    if (!source || source->count == 0) {
         return true;
     }
-    return segment_notes(notes, true, &chain->segmentation) && segment_notes(notes, false, &chain->voice_segmentation);
+    out->segments = calloc(source->count, sizeof(Segment));
+    if (!out->segments) {
+        return false;
+    }
+    out->segment_count = source->count;
+    out->library_segments = source->segments;
+    out->segment_ids = source->ids;
+    out->sonorities = source->sonorities;
+    for (size_t s = 0; s < source->count; s++) {
+        const AdaptiveSonority *item = &source->sonorities.items[s];
+        const TimeSpan *window = sonority_time_window(item->sonority);
+        Segment *segment = &out->segments[s];
+        segment->start_numerator = musical_time_numerator(time_span_start(window));
+        segment->start_denominator = musical_time_denominator(time_span_start(window));
+        segment->end_numerator = musical_time_numerator(time_span_end(window));
+        segment->end_denominator = musical_time_denominator(time_span_end(window));
+        size_t count = sonority_event_id_count(item->sonority);
+        segment->member_count = count;
+        segment->note_indices = malloc(sizeof(size_t) * (count > 0 ? count : 1));
+        if (!segment->note_indices) {
+            return false;
+        }
+        if (!with_members) {
+            segment->members = (CommonPracticeMember *)source->segments[s].members;
+        } else {
+            segment->members = NULL;
+        }
+        CommonPracticeMember *own = with_members ? calloc(count > 0 ? count : 1, sizeof(CommonPracticeMember)) : NULL;
+        if (with_members && !own) {
+            return false;
+        }
+        for (size_t j = 0; j < count; j++) {
+            const char *id = entity_id_value(sonority_event_id_at(item->sonority, j));
+            size_t index = chain_input_import_index(&pass->input, id);
+            if (index == (size_t)-1) {
+                free(own);
+                return false;
+            }
+            segment->note_indices[j] = index;
+            if (own) {
+                own[j].note_id = id;
+                own[j].pitch = (int)pitch_numeric_value_position_numerator(pass->notes->pitch_values[index]);
+                own[j].held = item->held[j];
+            }
+        }
+        if (own) {
+            segment->members = own;
+        }
+    }
+    return true;
+}
+
+static void segmentation_view_destroy(Segmentation *view, bool owns_members) {
+    for (size_t i = 0; i < view->segment_count; i++) {
+        free(view->segments[i].note_indices);
+        if (owns_members) {
+            free(view->segments[i].members);
+        }
+    }
+    free(view->segments);
+    *view = (Segmentation){NULL, 0, NULL, NULL, {NULL, 0}};
 }
 
 /* Names the roots and basses of the readings as the notated score spells them. */
-static bool respell_chords(AnalysisChain *chain) {
+static bool respell_chords(AnalyzerPass *chain) {
     const Segmentation *segmentation = &chain->segmentation;
     for (size_t i = 0; i < segmentation->segment_count; i++) {
         if (!respell_chord_reading(&chain->chords[i].best, chain->notes, &segmentation->segments[i]) ||
@@ -67,7 +130,7 @@ static AnalysisChordContext chord_context(const ChordEstimate *chord) {
 }
 
 /* One entry per chord segment: its span, notes, key and chord. The readings move out of the estimates. */
-static bool build_entries(AnalysisChain *chain) {
+static bool build_entries(AnalyzerPass *chain) {
     const Segmentation *segmentation = &chain->segmentation;
     size_t count = segmentation->segment_count;
     AnalysisReport *report = &chain->report;
@@ -107,7 +170,7 @@ static bool build_entries(AnalysisChain *chain) {
 }
 
 /* The estimates' non-chord tones, in time order, each against its chord's entry. The tones move out. */
-static bool collect_non_chord_tones(AnalysisChain *chain) {
+static bool collect_non_chord_tones(AnalyzerPass *chain) {
     size_t count = chain->segmentation.segment_count;
     size_t tone_count = 0;
     for (size_t i = 0; i < count; i++) {
@@ -132,112 +195,88 @@ static bool collect_non_chord_tones(AnalysisChain *chain) {
 }
 
 /* The home key: the library's key with the longest total duration over its regions. */
-static bool home_key(const AnalysisChain *chain, AnalysisReport *report) {
-    Rational duration;
-    if (!common_practice_home_key_region(chain->key_regions.regions, chain->key_regions.region_count,
-                                         &report->home_region, &duration)) {
-        return false;
-    }
-    report->home_duration_numerator = (long)duration.num;
-    report->home_duration_denominator = (unsigned long)duration.den;
-    return true;
-}
-
-bool chain_pass(AnalysisChain *chain, const MusicalTime *const *boundaries, size_t boundary_count) {
-    const Segmentation *segmentation = &chain->segmentation;
-    AnalysisReport *report = &chain->report;
+static bool collect_pass(AnalyzerPass *pass) {
+    const Segmentation *segmentation = &pass->segmentation;
+    AnalysisReport *report = &pass->report;
+    const ImportedNotes *notes = pass->notes;
     if (segmentation->segment_count == 0) {
         return true;
     }
 
-    if (!estimate_key_regions(chain->notes, segmentation, chain->key_chords, boundaries, boundary_count,
-                              &chain->key_regions, &report->key_regions, &report->key_region_count,
-                              &report->key_changes, &report->key_change_count) ||
+    if (!key_regions_collect(analysis_chain_key_regions(pass->library), report) ||
         !identify_pivot_chords(segmentation, report->key_regions, report->key_changes, report->key_change_count) ||
-        !identify_chords(segmentation, report->key_regions, report->key_region_count, &chain->chords)) {
+        !collect_chords(segmentation, analysis_chain_chords(pass->library), report->key_regions,
+                        report->key_region_count, &pass->chords)) {
         return false;
     }
-    if (chain->notes->source.spelling_notated && !respell_chords(chain)) {
+    if (notes->source.spelling_notated && !respell_chords(pass)) {
         return false;
     }
-    if (!build_entries(chain) ||
-        !build_roman_numerals(segmentation, chain->chords, &chain->key_regions, &chain->romans) ||
-        !assign_roman_numerals(&chain->romans, chain->chords, report->entries) ||
-        !extract_outer_voices(chain->notes, &chain->voice_segmentation, segmentation, chain->chords,
-                              report->key_regions, report->entries, &chain->lines) ||
-        !collect_non_chord_tones(chain)) {
+    const OuterVoiceLines *lines = analysis_chain_outer_voices(pass->library);
+    if (lines) {
+        pass->lines = *lines;
+    }
+    if (!build_entries(pass) || !read_roman_numerals(pass->library, &pass->romans) ||
+        !assign_roman_numerals(&pass->romans, pass->chords, report->entries) ||
+        !collect_outer_voices(notes, &pass->voice_segmentation, segmentation, pass->chords, report->key_regions,
+                              lines, report->entries) ||
+        !collect_non_chord_tones(pass)) {
         return false;
     }
-    if (report->key_region_count > 0 &&
-        !home_key(chain, report)) {
+    if (!harmony_stage_prepare(notes->meter.meter_map, pass->library, &pass->harmony) ||
+        !harmony_stage_collect_cadences(&pass->harmony, report) ||
+        !harmony_stage_collect_functions(&pass->harmony, report) ||
+        !harmony_stage_collect_six_fours_and_prolongations(&pass->harmony, report) ||
+        !progression_stage_collect(report) || !harmonic_rhythm_stage_collect(notes, report) ||
+        !meter_check_stage_collect(notes, report) ||
+        !form_stage_read(&pass->form, notes, &pass->input, pass->library) ||
+        !form_stage_collect(&pass->form, report) || !harmony_stage_collect_phrase_model(&pass->harmony, report) ||
+        !form_plan_stage_collect(&pass->form, report) ||
+        !motive_stage_read(&pass->motives, &pass->input, pass->library) ||
+        !motive_stage_collect(&pass->motives, notes, report) ||
+        !melody_stage_collect(notes, &pass->input, pass->library, segmentation, report) ||
+        !rhythm_stage_collect(notes, &pass->lines, &pass->form, report) ||
+        !texture_stage_collect(notes, pass->library, report) || !markings_stage_collect(notes, report) ||
+        !voice_leading_stage_collect(notes, &pass->input, pass->library, &pass->harmony, report) ||
+        !schema_stage_collect(notes, pass->library, report)) {
         return false;
     }
-    if (!harmony_stage_prepare(chain->notes, segmentation, &chain->romans, report->entries, &chain->harmony) ||
-        !harmony_stage_find_cadences(&chain->harmony) ||
-        !harmony_stage_add_boundary_cadences(&chain->harmony, &chain->key_regions,
-                                             report->key_region_count > 0
-                                                 ? chain->key_regions.regions[report->home_region].key_index
-                                                 : -1) ||
-        !harmony_stage_confirm_key_changes(&chain->harmony, segmentation, &chain->key_regions) ||
-        !harmony_stage_collect_cadences(&chain->harmony, report) ||
-        !harmony_stage_collect_functions(&chain->harmony, report) ||
-        !harmony_stage_collect_six_fours_and_prolongations(&chain->harmony, report) ||
-        !progression_stage_collect(report) || !harmonic_rhythm_stage_collect(chain->notes, report) ||
-        !meter_check_stage_collect(chain->notes, report) ||
-        !form_stage_run(&chain->form, chain->notes, &chain->voice_segmentation, segmentation, &chain->lines,
-                        &chain->harmony) ||
-        !form_stage_collect(&chain->form, report) || !harmony_stage_collect_phrase_model(&chain->harmony, report) ||
-        !form_plan_stage_collect(&chain->form, report) ||
-        !motive_stage_run(&chain->motives, chain->notes, segmentation, &chain->harmony, report) ||
-        !motive_stage_collect(&chain->motives, chain->notes, report) ||
-        !melody_stage_collect(chain->notes, &chain->voice_segmentation, &chain->lines, report) ||
-        !rhythm_stage_collect(chain->notes, &chain->lines, &chain->form, report) ||
-        !texture_stage_collect(chain->notes, report) || !markings_stage_collect(chain->notes, report) ||
-        !voice_leading_stage_collect(chain->notes, &chain->harmony, report) ||
-        !schema_stage_collect(chain->notes, segmentation, &chain->romans, report)) {
-        return false;
-    }
-    sync_key_change_extents(&chain->key_regions, report->key_changes);
     return true;
 }
 
-bool chain_keep_chord_evidence(AnalysisChain *chain) {
-    size_t count = chain->segmentation.segment_count;
-    if (count == 0 || !chain->chords) {
+bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes) {
+    memset(pass, 0, sizeof(*pass));
+    pass->notes = notes;
+    pass->report.home_duration_denominator = 1;
+    if (notes->count == 0) {
         return true;
     }
-    if (!chain->key_chords) {
-        chain->key_chords = calloc(count, sizeof(CommonPracticeKeyChord));
-        if (!chain->key_chords) {
-            return false;
-        }
+    if (!chain_input_build(notes, &pass->input)) {
+        return false;
     }
-    for (size_t i = 0; i < count; i++) {
-        chain->key_chords[i] = common_practice_key_chord_of(&chain->chords[i].result);
+    AnalysisChainConfig config = analysis_chain_config_default();
+    config.stages = ANALYSIS_CHAIN_STAGE_ALL;
+    config.refine_keys = true;
+    config.inject_kernel_owners = true;
+    if (analysis_chain_run(&pass->input.set, pass->input.key_events, pass->input.key_event_count, &config,
+                           &pass->library) != ANALYSIS_CHAIN_OK) {
+        return false;
     }
-    return true;
+    return segmentation_view(pass, analysis_chain_segments(pass->library), false, &pass->segmentation) &&
+           segmentation_view(pass, analysis_chain_voice_segments(pass->library), true, &pass->voice_segmentation) &&
+           collect_pass(pass);
 }
 
-void chain_pass_destroy(AnalysisChain *chain) {
-    chord_estimates_destroy(chain->chords, chain->segmentation.segment_count);
-    chain->chords = NULL;
-    roman_numerals_destroy(&chain->romans);
-    common_practice_key_regions_destroy(&chain->key_regions);
-    chain->key_regions = (CommonPracticeKeyRegions){0};
-    outer_voice_lines_destroy(&chain->lines);
-    chain->lines = (OuterVoiceLines){NULL, NULL, 0};
-    form_stage_destroy(&chain->form);
-    motive_stage_destroy(&chain->motives);
-    harmony_stage_destroy(&chain->harmony);
-    analysis_report_destroy(&chain->report);
-    memset(&chain->report, 0, sizeof(chain->report));
-    chain->report.home_duration_denominator = 1;
-}
-
-void chain_destroy(AnalysisChain *chain) {
-    chain_pass_destroy(chain);
-    segmentation_destroy(&chain->segmentation);
-    segmentation_destroy(&chain->voice_segmentation);
-    free(chain->key_chords);
-    chain->key_chords = NULL;
+void analyzer_pass_destroy(AnalyzerPass *pass) {
+    chord_estimates_destroy(pass->chords, pass->segmentation.segment_count);
+    roman_numerals_destroy(&pass->romans);
+    form_stage_destroy(&pass->form);
+    motive_stage_destroy(&pass->motives);
+    harmony_stage_destroy(&pass->harmony);
+    analysis_report_destroy(&pass->report);
+    segmentation_view_destroy(&pass->segmentation, false);
+    segmentation_view_destroy(&pass->voice_segmentation, true);
+    analysis_chain_destroy(pass->library);
+    chain_input_destroy(&pass->input);
+    memset(pass, 0, sizeof(*pass));
 }

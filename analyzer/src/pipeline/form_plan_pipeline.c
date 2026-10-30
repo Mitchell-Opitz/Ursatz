@@ -243,13 +243,13 @@ static bool make_theme_window(const FormStage *stage, size_t t, ThemeWindow *win
     size_t hint = 0;
     for (size_t i = 0; ok && i < count; i++) {
         const char *value = entity_id_value(structure_event_id_at(shell, i));
-        positions[i] = find_note(&stage->input, value, hint);
-        ok = positions[i] < stage->input.note_count &&
+        positions[i] = find_note(&stage->built.input, value, hint);
+        ok = positions[i] < stage->built.input.note_count &&
              entity_id_create(value, &window->event_ids[i]) == ENTITY_ID_OK;
         window->event_count = ok ? i + 1 : i;
         hint = positions[i] + 1;
     }
-    ok = ok && make_contour_and_rhythm(&stage->input, positions, count, &window->contour, &window->rhythm);
+    ok = ok && make_contour_and_rhythm(&stage->built.input, positions, count, &window->contour, &window->rhythm);
     free(positions);
     if (ok) {
         window->window.contour = window->contour;

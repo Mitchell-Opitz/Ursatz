@@ -1007,8 +1007,8 @@ The library's standard-harmony analysis found 1 prolongation: a tonic or dominan
 | m. 41, beat 3 to m. 41, beat 4 | 658 | anticipation | dominant7 |
 | m. 41, beat 3 to m. 41, beat 4 | 660 | passing | dominant7 |
 | m. 41, beat 3 to m. 41, beat 4 | 663 | passing | dominant7 |
-| m. 41, beat 3 to m. 41, beat 4 | 664 | unclassified | dominant7 |
 | m. 41, beat 3 to m. 41, beat 4 | 665 | anticipation | dominant7 |
+| m. 41, beat 3 to m. 41, beat 4 | 664 | unclassified | dominant7 |
 | m. 41, beat 4.33 to m. 42, beat 1 | 672 | passing | ii |
 | m. 41, beat 4.33 to m. 42, beat 1 | 674 | anticipation | ii |
 | m. 41, beat 4.33 to m. 42, beat 1 | 675 | anticipation | ii |
@@ -1294,8 +1294,8 @@ The library's melody adapter read the soprano of each phrase as a line of notes:
 | 2 | m. 4 | 1 | Eb5 to Eb5 (0) | Eb5, m. 4, beat 1.05 | 0 | 0 | 0 | 0 | 0 |
 | 3 | mm. 5 to 7 | 4 | Eb5 to C6 (9) | C6, m. 7, beat 1.97 | 2 | 1 | 0 | 1 | 2 |
 | 4 | mm. 8 to 15 | 17 | B4 to C6 (13) | C6, m. 15, beat 2.15 | 4 | 10 | 2 | 9 | 3 |
-| 5 | mm. 16 to 30 | 37 | Eb5 to Eb6 (12) | Eb6, m. 22, beat 2.09 | 14 | 16 | 5 | 19 | 9 |
-| 6 | mm. 31 to 37 | 15 | D4 to Eb6 (25) | Eb6, m. 37, beat 1.99 | 6 | 5 | 3 | 5 | 5 |
+| 5 | mm. 16 to 30 | 37 | Eb5 to Eb6 (12) | Eb6, m. 22, beat 2.09 | 14 | 16 | 5 | 20 | 9 |
+| 6 | mm. 31 to 37 | 16 | D4 to Eb6 (25) | Eb6, m. 37, beat 1.99 | 6 | 5 | 3 | 6 | 5 |
 | 7 | mm. 38 to 46 | 24 | C5 to Ab6 (20) | Ab6, m. 38, beat 1.34 | 9 | 13 | 0 | 11 | 11 |
 | 8 | mm. 47 to 50 | 11 | Eb5 to G6 (16) | G6, m. 48, beat 3.33 | 4 | 6 | 0 | 1 | 9 |
 | 9 | mm. 51 to 57 | 19 | F4 to C6 (19) | C6, m. 56, beat 3.33 | 7 | 11 | 0 | 6 | 9 |
@@ -1324,16 +1324,16 @@ Each melody note is set against the chord of the segment it starts in, as the li
 
 | Phrase | Notes | Chord tones | Non-chord tones | Unclassified | By type |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 4 | 3 | 1 | 0 | suspension 1 |
+| 1 | 4 | 3 | 1 | 0 | passing 1 |
 | 2 | 1 | 1 | 0 | 0 | - |
-| 3 | 4 | 3 | 0 | 1 | - |
-| 4 | 17 | 11 | 2 | 4 | anticipation 1, escape-tone 1 |
-| 5 | 37 | 26 | 2 | 9 | neighbor 1, escape-tone 1 |
-| 6 | 15 | 13 | 1 | 1 | passing 1 |
-| 7 | 24 | 14 | 2 | 8 | neighbor 1, anticipation 1 |
+| 3 | 4 | 3 | 1 | 0 | appoggiatura 1 |
+| 4 | 17 | 11 | 3 | 3 | passing 3 |
+| 5 | 37 | 26 | 3 | 8 | passing 1, neighbor 1, appoggiatura 1 |
+| 6 | 16 | 13 | 2 | 1 | passing 2 |
+| 7 | 24 | 14 | 2 | 8 | appoggiatura 1, escape-tone 1 |
 | 8 | 11 | 9 | 0 | 2 | - |
-| 9 | 19 | 11 | 1 | 7 | escape-tone 1 |
-| 10 | 32 | 21 | 6 | 5 | passing 2, suspension 1, appoggiatura 2, escape-tone 1 |
+| 9 | 19 | 11 | 4 | 4 | passing 2, appoggiatura 2 |
+| 10 | 32 | 21 | 5 | 6 | passing 3, appoggiatura 2 |
 
 ### Tendencies
 
@@ -1345,8 +1345,8 @@ The library's melodic tendencies are soft preferences a well-formed line usually
 | 2 | holds | holds | holds | holds | does not hold | 0 | 0 |
 | 3 | does not hold | does not hold | holds | holds | does not hold | 0 | 0 |
 | 4 | does not hold | holds | holds | does not hold | does not hold | 0 | 2 (m. 10, beat 1.08; m. 14, beat 1.03) |
-| 5 | holds | holds | holds | does not hold | holds | 0 | 0 |
-| 6 | holds | holds | holds | does not hold | does not hold | 2 | 0 |
+| 5 | holds | holds | holds | does not hold | holds | 0 | 2 (m. 22, beat 3.97; m. 23, beat 3.37) |
+| 6 | holds | holds | holds | does not hold | does not hold | 1 | 2 (m. 32, beat 1.33; m. 32, beat 2.33) |
 | 7 | does not hold | does not hold | does not hold | does not hold | does not hold | 1 | 1 (m. 44, beat 4.93) |
 | 8 | does not hold | holds | holds | does not hold | holds | 0 | 2 (m. 48, beat 3.83; m. 49, beat 3) |
 | 9 | does not hold | holds | holds | does not hold | does not hold | 0 | 2 (m. 52, beat 1.02; m. 56, beat 1.01) |
@@ -1775,23 +1775,22 @@ The library's texture adapter read every measure of the piece from the voices th
 
 The kernel separated the notes of the whole piece into voices (voice 0 is the top) and the library's counterpoint adapter classified how each pair of voices moves from one chord segment to the next. Parallel motion keeps the interval type, similar motion changes it; a voice that rests in either segment gives no motion. Faults are the library's: parallel fifths and octaves between any pair of voices, direct fifths and octaves in the outer pair, and a seventh or leading tone left unresolved when its chord changes (voice 0 is the top).
 
-4 voices over 268 chord segments, 128 motions between consecutive segments: 25 contrary, 24 similar, 4 parallel, 72 oblique, 3 static.
+4 voices over 268 chord segments, 128 motions between consecutive segments: 25 contrary, 23 similar, 3 parallel, 73 oblique, 4 static.
 
 | Voices | Contrary | Similar | Parallel | Oblique | Static |
 | --- | --- | --- | --- | --- | --- |
 | 0 and 1 | 2 | 2 | 0 | 3 | 1 |
 | 0 and 2 | 3 | 2 | 0 | 7 | 0 |
-| 0 and 3 | 5 | 8 | 2 | 14 | 2 |
+| 0 and 3 | 5 | 7 | 2 | 15 | 2 |
 | 1 and 2 | 2 | 3 | 0 | 5 | 0 |
-| 1 and 3 | 9 | 4 | 2 | 31 | 0 |
-| 2 and 3 | 4 | 5 | 0 | 12 | 0 |
+| 1 and 3 | 9 | 4 | 1 | 32 | 0 |
+| 2 and 3 | 4 | 5 | 0 | 11 | 1 |
 
-0 parallel fifths, 1 parallel octave, 1 direct fifths or octaves in the outer voices, 19 unresolved sevenths, 2 unresolved leading tones.
+0 parallel fifths, 0 parallel octaves, 1 direct fifths or octaves in the outer voices, 20 unresolved sevenths, 2 unresolved leading tones.
 
 | Location | Fault | Voices |
 | --- | --- | --- |
 | m. 23, beat 3 to m. 24, beat 1 | direct-perfects | 0 and 3 |
-| m. 41, beat 4 to m. 42, beat 1 | parallel-octaves | 1 and 3 |
 | m. 3, beat 4 to m. 4, beat 1 | seventh-resolves-down | 3 |
 | m. 7, beat 4 to m. 8, beat 2 | leading-tone-resolves | 0 |
 | m. 7, beat 4 to m. 8, beat 2 | seventh-resolves-down | 3 |
@@ -1807,6 +1806,7 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | m. 34, beat 2 to m. 34, beat 4 | seventh-resolves-down | 3 |
 | m. 36, beat 2 to m. 36, beat 4 | seventh-resolves-down | 2 |
 | m. 36, beat 4 to m. 37, beat 2 | seventh-resolves-down | 2 |
+| m. 41, beat 4 to m. 42, beat 1 | seventh-resolves-down | 0 |
 | m. 42, beat 4 to m. 43, beat 2 | seventh-resolves-down | 3 |
 | m. 43, beat 1 to m. 43, beat 3 | seventh-resolves-down | 0 |
 | m. 48, beat 4 to m. 49, beat 2 | seventh-resolves-down | 3 |
@@ -1814,7 +1814,7 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | m. 55, beat 3 to m. 56, beat 1 | leading-tone-resolves | 3 |
 | m. 63, beat 4 to m. 64, beat 2 | seventh-resolves-down | 1 |
 
-43 chords with three or more voices sounding: the root is doubled in 13, the third in 5, the fifth in 2, the seventh in 2, no member doubled in 21. Doubling is counted, not judged. Spacing is judged by the library for the 4 chords with four voices all sounding: 2 too wide.
+43 chords with three or more voices sounding: the root is doubled in 13, the third in 4, the fifth in 2, the seventh in 2, no member doubled in 22. Doubling is counted, not judged. Spacing is judged by the library for the 4 chords with four voices all sounding: 2 too wide.
 
 | Location | Chord | Gap too wide |
 | --- | --- | --- |

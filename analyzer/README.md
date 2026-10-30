@@ -269,53 +269,23 @@ file helpers and a document analyzer.
 ## Pipeline
 
 `main.c` runs `input_pipeline` (MIDI or MusicXML import through Ursatz, both into `ImportedNotes`), then `analysis_pipeline`,
-which runs the analysis as one chain (`chain.h`, ported from Ursatz's `tests/integration/framework_v1_chain.h`):
+which runs the analysis as one `AnalyzerPass` (`chain.h`). The Analyzer orchestrates the library's analysis chain
+(`analysis_chain_run` of `ursatz_chain`, R-217, R-241) and collects its results; it adds no analysis of its own to them.
 
-1. `segmentation` (once): cuts the notes into sonority segments with Ursatz's adaptive segmentation, on the
-   beats of the file's meter, twice: the chord segments merge over unchanged harmony, the voice segments
-   (one per melody note, for the outer voices) do not. Each segment gets its members for chord
-   identification and the beat it lies inside.
-2. `key_region_pipeline`: finds the local key regions with Ursatz's key-region detection.
-3. `chord_pipeline`: identifies each segment's chord with Ursatz's weighted chord identification, in its
-   region's key and mode, with its runner-up, the segment's non-chord tones and the context the reading
-   came from.
-4. `roman_numeral_pipeline`: gives each segment the Roman numeral Ursatz's standard-tonality adapter
-   reads for its chord in its local key, applied chords included.
-5. `outer_voice_pipeline`: extracts the soprano and bass lines over the voice segments with Ursatz's
-   outer-voice extraction and names their scale degrees in the local key.
-6. `harmony_pipeline`: builds Ursatz's standard-harmony inputs from the numerals, outer voices and meter,
-   finds the cadences, adds the half cadences before section starts, and confirms the key changes with the
-   cadences (see "Cadences").
-7. `progression_pipeline` and `harmonic_rhythm_pipeline`: count the recurring progressions and the changes of
-   harmony per measure over the numerals and cadences (see "Progressions and harmonic rhythm").
-8. `form_pipeline` (with `form_boundary`): builds Ursatz's standard-form input from the soprano, the segments, the
-   meter and the cadences, and finds the phrases, ideas and subphrases; `harmony_pipeline` then labels the phrase
-   model (see "Phrases").
-9. `form_plan_pipeline`: groups the phrases into sections with Ursatz's form structure detection, finds the
-   thematic returns between the themes, and letters the sections (see "Form plan"). The sections are reported only:
-   they do not feed back into the cadences or the key regions.
-10. `motive_pipeline`: builds a note-level soprano, reruns the form adapter's phrases, ideas and themes on it, and finds
-   the motive families with Ursatz's motive analysis (see "Motives").
-11. `melody_pipeline`: builds the soprano line of each phrase and reads it with the melody adapter of standard-counterpoint
-   (see "Melody").
-11a. `meter_check_pipeline`: scores the effective meter and the other readings of 2/4, 3/4, 4/4, 3/8, 6/8, 9/8 and 12/8 at
-   the scales 1/2, 1 and 2, with every pickup, by how well their barlines carry the harmonic rhythm and the cadences, and
-   reports the best other reading, which it never applies (see "Rhythm and meter").
-12. `rhythm_pipeline`: builds the neutral input of the rhythm adapter of standard-meter from the notes, the chord changes
-   and the phrases, and reads the density, syncopation, hemiola and hypermeter; finds the tuplets (see "Rhythm and meter").
-13. `texture_pipeline`: separates the voices of each stream (MIDI track or part) with the kernel, builds the neutral input of
-   the texture adapter of standard-texture and reads the texture per measure, merged into passages (see "Texture").
-14. `voice_leading_pipeline`: separates the voices of the whole piece with the kernel, builds the voice-pitch grid of the
-   counterpoint and harmony adapters over the chord segments and reads the motion between voices, the parallel and
-   direct perfect intervals, the unresolved sevenths and leading tones, and the doubling and spacing of each chord (see
-   "Voice leading").
-15. `schema_pipeline`: builds the neutral input of the galant-schemas and scale-harmonization adapters (the outer voices'
-   degrees, local keys, Roman numerals and meter per chord, held chords merged) and reads the galant schemas and the
-   harmonic sequences (see "Schemas and sequences").
-
-Steps 2 to 12 are one pass. The chain runs it twice: the first pass reads the key regions from the pitch
-classes alone, and its chords are the functional evidence, and the ends of its phrases the boundaries, for the key
-regions of the second pass, whose results are the report (R-039, R-043).
+1. `chain_input`: builds the chain's neutral input from the imported notes: one `AnalysisNote` per event, sorted, and the
+   file's key signature events.
+2. `analysis_chain_run` runs once, over every stage: segments, key regions (a second pass on the chords and phrase ends of
+   the first, so the Analyzer runs no pass of its own), chords, Roman numerals, outer voices, cadences, form, motives,
+   meter, texture, voice leading, melody, schemas and sequences.
+3. The stage files read the chain's accessors into the `AnalysisReport` and nothing more: `key_region_pipeline`,
+   `chord_pipeline` (with the respelling of a notated score), `roman_numeral_pipeline`, `outer_voice_pipeline`,
+   `harmony_pipeline` (cadences; the functions, six-fours, prolongations and phrase model, which the chain does not
+   run, are library calls over the chain's own inputs), `form_pipeline`, `motive_pipeline`, `melody_pipeline` (each
+   phrase's part of the chain's soprano line), `texture_pipeline`, `voice_leading_pipeline` and `schema_pipeline`.
+4. The Analyzer-only stages read the collected report and the chain's results: `progression_pipeline` and
+   `harmonic_rhythm_pipeline`, `form_plan_pipeline` (sections, thematic returns), `meter_check_pipeline`,
+   `rhythm_pipeline` (density, syncopation, hemiola, hypermeter, tuplets), `markings_pipeline`, `voicing_check` and
+   `counterpoint_pipeline`. `identify_pivot_chords` also stays: the chain has no pivot reading.
 
 `analysis_document` then builds the analysis document once. It is the single source of truth:
 the JSON file is its serialization, and `markdown_report` renders the report from it, never from

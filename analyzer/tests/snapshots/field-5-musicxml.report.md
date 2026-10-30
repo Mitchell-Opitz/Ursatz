@@ -708,7 +708,7 @@ By base numeral (inversions together):
 
 ## Non-chord tones
 
-225 notes sound against a chord without being one of its tones; 147 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
+225 notes sound against a chord without being one of its tones; 115 the library left unclassified. Type is the library's name for the figure. Note is the imported note's index.
 
 | Position | Note | Type | Against |
 | --- | --- | --- | --- |
@@ -719,7 +719,7 @@ By base numeral (inversions together):
 | m. 3, beat 3 to m. 3, beat 4 | 36 | suspension | vii° |
 | m. 3, beat 3 to m. 3, beat 4 | 38 | unclassified | vii° |
 | m. 4, beat 1 to m. 4, beat 2 | 41 | unclassified | I |
-| m. 4, beat 2 to m. 4, beat 3 | 53 | escape-tone | I |
+| m. 4, beat 2 to m. 4, beat 3 | 53 | unclassified | I |
 | m. 4, beat 3 to m. 4, beat 4 | 53 | unclassified | I |
 | m. 5, beat 4 to m. 6, beat 1 | 74 | unclassified | half-diminished7 |
 | m. 6, beat 3 to m. 6, beat 4 | 86 | unclassified | minor7 |
@@ -741,7 +741,7 @@ By base numeral (inversions together):
 | m. 11, beat 3 to m. 11, beat 4 | 165 | suspension | vii° |
 | m. 11, beat 3 to m. 11, beat 4 | 167 | unclassified | vii° |
 | m. 12, beat 1 to m. 12, beat 2 | 170 | unclassified | I |
-| m. 12, beat 2 to m. 12, beat 3 | 182 | escape-tone | I |
+| m. 12, beat 2 to m. 12, beat 3 | 182 | unclassified | I |
 | m. 12, beat 3 to m. 12, beat 4 | 182 | unclassified | I |
 | m. 13, beat 3 to m. 13, beat 4 | 190 | unclassified | I |
 | m. 13, beat 4 to m. 14, beat 1 | 203 | unclassified | I |
@@ -761,9 +761,9 @@ By base numeral (inversions together):
 | m. 16, beat 4 to m. 17, beat 1 | 241 | unclassified | vii° |
 | m. 16, beat 4 to m. 17, beat 1 | 250 | suspension | vii° |
 | m. 16, beat 4 to m. 17, beat 1 | 253 | unclassified | vii° |
-| m. 17, beat 1 to m. 17, beat 3 | 258 | anticipation | minor7 |
-| m. 17, beat 1 to m. 17, beat 3 | 259 | unclassified | minor7 |
+| m. 17, beat 1 to m. 17, beat 3 | 258 | unclassified | minor7 |
 | m. 17, beat 1 to m. 17, beat 3 | 260 | unclassified | minor7 |
+| m. 17, beat 1 to m. 17, beat 3 | 259 | unclassified | minor7 |
 | m. 17, beat 1 to m. 17, beat 3 | 263 | anticipation | minor7 |
 | m. 17, beat 3 to m. 17, beat 4 | 260 | unclassified | minor7 |
 | m. 17, beat 3 to m. 17, beat 4 | 262 | unclassified | minor7 |
@@ -775,48 +775,48 @@ By base numeral (inversions together):
 | m. 18, beat 2 to m. 18, beat 3 | 286 | passing | minor7 |
 | m. 18, beat 2 to m. 18, beat 3 | 296 | passing | minor7 |
 | m. 18, beat 3 to m. 18, beat 4 | 311 | passing | major7 |
-| m. 18, beat 4 to m. 19, beat 1 | 316 | unclassified | I |
+| m. 18, beat 4 to m. 19, beat 1 | 316 | passing | I |
 | m. 18, beat 4 to m. 19, beat 1 | 321 | passing | I |
-| m. 19, beat 1 to m. 19, beat 2 | 334 | anticipation | dominant7 |
-| m. 19, beat 1 to m. 19, beat 2 | 336 | unclassified | dominant7 |
-| m. 19, beat 1 to m. 19, beat 2 | 339 | anticipation | dominant7 |
+| m. 19, beat 1 to m. 19, beat 2 | 334 | pedal | dominant7 |
+| m. 19, beat 1 to m. 19, beat 2 | 339 | pedal | dominant7 |
+| m. 19, beat 1 to m. 19, beat 2 | 336 | passing | dominant7 |
 | m. 19, beat 1 to m. 19, beat 2 | 344 | anticipation | dominant7 |
+| m. 19, beat 2 to m. 19, beat 3 | 347 | pedal | major7 |
 | m. 19, beat 2 to m. 19, beat 3 | 346 | neighbor | major7 |
-| m. 19, beat 2 to m. 19, beat 3 | 347 | anticipation | major7 |
-| m. 19, beat 2 to m. 19, beat 3 | 351 | unclassified | major7 |
-| m. 19, beat 2 to m. 19, beat 3 | 352 | anticipation | major7 |
+| m. 19, beat 2 to m. 19, beat 3 | 352 | pedal | major7 |
+| m. 19, beat 2 to m. 19, beat 3 | 351 | passing | major7 |
 | m. 19, beat 2 to m. 19, beat 3 | 357 | anticipation | major7 |
-| m. 19, beat 3 to m. 19, beat 4 | 364 | unclassified | dominant7 |
+| m. 19, beat 3 to m. 19, beat 4 | 364 | pedal | dominant7 |
+| m. 19, beat 3 to m. 19, beat 4 | 369 | pedal | dominant7 |
 | m. 19, beat 3 to m. 19, beat 4 | 366 | passing | dominant7 |
-| m. 19, beat 3 to m. 19, beat 4 | 369 | unclassified | dominant7 |
-| m. 19, beat 3 to m. 19, beat 4 | 374 | unclassified | dominant7 |
+| m. 19, beat 3 to m. 19, beat 4 | 374 | pedal | dominant7 |
+| m. 19, beat 4 to m. 20, beat 1 | 379 | pedal | dominant7 |
 | m. 19, beat 4 to m. 20, beat 1 | 376 | neighbor | dominant7 |
-| m. 19, beat 4 to m. 20, beat 1 | 379 | unclassified | dominant7 |
-| m. 19, beat 4 to m. 20, beat 1 | 384 | unclassified | dominant7 |
-| m. 19, beat 4 to m. 20, beat 1 | 389 | unclassified | dominant7 |
+| m. 19, beat 4 to m. 20, beat 1 | 384 | pedal | dominant7 |
+| m. 19, beat 4 to m. 20, beat 1 | 389 | pedal | dominant7 |
 | m. 20, beat 1 to m. 20, beat 2 | 395 | appoggiatura | I |
 | m. 20, beat 2 to m. 20, beat 3 | 405 | passing | minor7 |
 | m. 20, beat 2 to m. 20, beat 3 | 415 | passing | minor7 |
 | m. 20, beat 3 to m. 20, beat 4 | 430 | passing | major7 |
-| m. 20, beat 4 to m. 21, beat 1 | 435 | unclassified | I |
+| m. 20, beat 4 to m. 21, beat 1 | 435 | passing | I |
 | m. 20, beat 4 to m. 21, beat 1 | 440 | passing | I |
-| m. 21, beat 1 to m. 21, beat 2 | 453 | anticipation | dominant7 |
-| m. 21, beat 1 to m. 21, beat 2 | 455 | unclassified | dominant7 |
-| m. 21, beat 1 to m. 21, beat 2 | 458 | anticipation | dominant7 |
+| m. 21, beat 1 to m. 21, beat 2 | 453 | pedal | dominant7 |
+| m. 21, beat 1 to m. 21, beat 2 | 458 | pedal | dominant7 |
+| m. 21, beat 1 to m. 21, beat 2 | 455 | passing | dominant7 |
 | m. 21, beat 1 to m. 21, beat 2 | 463 | anticipation | dominant7 |
+| m. 21, beat 2 to m. 21, beat 3 | 466 | pedal | major7 |
 | m. 21, beat 2 to m. 21, beat 3 | 465 | neighbor | major7 |
-| m. 21, beat 2 to m. 21, beat 3 | 466 | anticipation | major7 |
-| m. 21, beat 2 to m. 21, beat 3 | 470 | unclassified | major7 |
-| m. 21, beat 2 to m. 21, beat 3 | 471 | anticipation | major7 |
+| m. 21, beat 2 to m. 21, beat 3 | 471 | pedal | major7 |
+| m. 21, beat 2 to m. 21, beat 3 | 470 | passing | major7 |
 | m. 21, beat 2 to m. 21, beat 3 | 476 | anticipation | major7 |
-| m. 21, beat 3 to m. 21, beat 4 | 483 | unclassified | dominant7 |
+| m. 21, beat 3 to m. 21, beat 4 | 483 | pedal | dominant7 |
+| m. 21, beat 3 to m. 21, beat 4 | 488 | pedal | dominant7 |
 | m. 21, beat 3 to m. 21, beat 4 | 485 | passing | dominant7 |
-| m. 21, beat 3 to m. 21, beat 4 | 488 | unclassified | dominant7 |
-| m. 21, beat 3 to m. 21, beat 4 | 493 | unclassified | dominant7 |
+| m. 21, beat 3 to m. 21, beat 4 | 493 | pedal | dominant7 |
+| m. 21, beat 4 to m. 22, beat 1 | 498 | pedal | dominant7 |
 | m. 21, beat 4 to m. 22, beat 1 | 495 | neighbor | dominant7 |
-| m. 21, beat 4 to m. 22, beat 1 | 498 | unclassified | dominant7 |
-| m. 21, beat 4 to m. 22, beat 1 | 503 | unclassified | dominant7 |
-| m. 21, beat 4 to m. 22, beat 1 | 508 | unclassified | dominant7 |
+| m. 21, beat 4 to m. 22, beat 1 | 503 | pedal | dominant7 |
+| m. 21, beat 4 to m. 22, beat 1 | 508 | pedal | dominant7 |
 | m. 23, beat 4 to m. 24, beat 1 | 534 | unclassified | vi |
 | m. 23, beat 4 to m. 24, beat 1 | 539 | unclassified | vi |
 | m. 23, beat 4 to m. 24, beat 1 | 540 | unclassified | vi |
@@ -826,9 +826,9 @@ By base numeral (inversions together):
 | m. 24, beat 4 to m. 25, beat 1 | 564 | unclassified | major7 |
 | m. 25, beat 1 to m. 25, beat 2 | 564 | unclassified | I |
 | m. 25, beat 3 to m. 25, beat 4 | 565 | unclassified | vii° |
-| m. 25, beat 3 to m. 25, beat 4 | 571 | unclassified | vii° |
+| m. 25, beat 3 to m. 25, beat 4 | 571 | retardation | vii° |
 | m. 25, beat 3 to m. 25, beat 4 | 573 | unclassified | vii° |
-| m. 26, beat 2 to m. 26, beat 3 | 590 | escape-tone | major7 |
+| m. 26, beat 2 to m. 26, beat 3 | 590 | unclassified | major7 |
 | m. 26, beat 3 to m. 26, beat 4 | 590 | unclassified | I |
 | m. 27, beat 4 to m. 28, beat 1 | 605 | unclassified | half-diminished7 |
 | m. 27, beat 4 to m. 28, beat 1 | 611 | unclassified | half-diminished7 |
@@ -838,9 +838,9 @@ By base numeral (inversions together):
 | m. 28, beat 4 to m. 29, beat 1 | 631 | unclassified | minor7 |
 | m. 29, beat 1 to m. 29, beat 2 | 633 | unclassified | iii |
 | m. 29, beat 3 to m. 29, beat 4 | 642 | unclassified | minor7 |
-| m. 29, beat 3 to m. 29, beat 4 | 644 | passing | minor7 |
+| m. 29, beat 3 to m. 29, beat 4 | 644 | unclassified | minor7 |
 | m. 29, beat 4 to m. 30, beat 1 | 641 | unclassified | dominant7 |
-| m. 29, beat 4 to m. 30, beat 1 | 644 | unclassified | dominant7 |
+| m. 29, beat 4 to m. 30, beat 1 | 644 | retardation | dominant7 |
 | m. 30, beat 2 to m. 30, beat 3 | 653 | unclassified | I |
 | m. 30, beat 3 to m. 30, beat 4 | 657 | suspension | IV |
 | m. 31, beat 1 to m. 31, beat 2 | 670 | unclassified | minor7 |
@@ -854,7 +854,7 @@ By base numeral (inversions together):
 | m. 32, beat 2 to m. 32, beat 3 | 687 | unclassified | minor7 |
 | m. 32, beat 2 to m. 32, beat 3 | 690 | unclassified | minor7 |
 | m. 32, beat 2 to m. 32, beat 3 | 694 | appoggiatura | minor7 |
-| m. 32, beat 4 to m. 33, beat 1 | 698 | unclassified | I |
+| m. 32, beat 4 to m. 33, beat 1 | 698 | retardation | I |
 | m. 32, beat 4 to m. 33, beat 1 | 703 | unclassified | I |
 | m. 33, beat 4 to m. 34, beat 1 | 716 | unclassified | minor7 |
 | m. 34, beat 3 to m. 34, beat 4 | 719 | unclassified | V |
@@ -877,7 +877,7 @@ By base numeral (inversions together):
 | m. 37, beat 2 to m. 37, beat 3 | 777 | unclassified | ii |
 | m. 37, beat 2 to m. 37, beat 3 | 780 | unclassified | ii |
 | m. 37, beat 3 to m. 37, beat 4 | 784 | unclassified | minor7 |
-| m. 37, beat 4 to m. 38, beat 1 | 786 | unclassified | minor7 |
+| m. 37, beat 4 to m. 38, beat 1 | 786 | retardation | minor7 |
 | m. 37, beat 4 to m. 38, beat 1 | 789 | unclassified | minor7 |
 | m. 37, beat 4 to m. 38, beat 1 | 792 | unclassified | minor7 |
 | m. 38, beat 1 to m. 38, beat 2 | 793 | unclassified | I |
@@ -885,94 +885,90 @@ By base numeral (inversions together):
 | m. 38, beat 2 to m. 38, beat 3 | 808 | passing | minor7 |
 | m. 38, beat 2 to m. 38, beat 3 | 818 | passing | minor7 |
 | m. 38, beat 3 to m. 38, beat 4 | 833 | passing | major7 |
-| m. 38, beat 4 to m. 39, beat 1 | 838 | unclassified | I |
+| m. 38, beat 4 to m. 39, beat 1 | 838 | passing | I |
 | m. 38, beat 4 to m. 39, beat 1 | 843 | passing | I |
-| m. 39, beat 1 to m. 39, beat 2 | 856 | anticipation | dominant7 |
-| m. 39, beat 1 to m. 39, beat 2 | 858 | unclassified | dominant7 |
-| m. 39, beat 1 to m. 39, beat 2 | 861 | anticipation | dominant7 |
+| m. 39, beat 1 to m. 39, beat 2 | 856 | pedal | dominant7 |
+| m. 39, beat 1 to m. 39, beat 2 | 861 | pedal | dominant7 |
+| m. 39, beat 1 to m. 39, beat 2 | 858 | passing | dominant7 |
 | m. 39, beat 1 to m. 39, beat 2 | 866 | anticipation | dominant7 |
+| m. 39, beat 2 to m. 39, beat 3 | 869 | pedal | major7 |
 | m. 39, beat 2 to m. 39, beat 3 | 868 | neighbor | major7 |
-| m. 39, beat 2 to m. 39, beat 3 | 869 | anticipation | major7 |
-| m. 39, beat 2 to m. 39, beat 3 | 873 | unclassified | major7 |
-| m. 39, beat 2 to m. 39, beat 3 | 874 | anticipation | major7 |
+| m. 39, beat 2 to m. 39, beat 3 | 874 | pedal | major7 |
+| m. 39, beat 2 to m. 39, beat 3 | 873 | passing | major7 |
 | m. 39, beat 2 to m. 39, beat 3 | 879 | anticipation | major7 |
-| m. 39, beat 3 to m. 39, beat 4 | 886 | unclassified | dominant7 |
+| m. 39, beat 3 to m. 39, beat 4 | 886 | pedal | dominant7 |
+| m. 39, beat 3 to m. 39, beat 4 | 891 | pedal | dominant7 |
 | m. 39, beat 3 to m. 39, beat 4 | 888 | passing | dominant7 |
-| m. 39, beat 3 to m. 39, beat 4 | 891 | unclassified | dominant7 |
-| m. 39, beat 3 to m. 39, beat 4 | 896 | unclassified | dominant7 |
+| m. 39, beat 3 to m. 39, beat 4 | 896 | pedal | dominant7 |
+| m. 39, beat 4 to m. 40, beat 1 | 901 | pedal | dominant7 |
 | m. 39, beat 4 to m. 40, beat 1 | 898 | neighbor | dominant7 |
-| m. 39, beat 4 to m. 40, beat 1 | 901 | unclassified | dominant7 |
-| m. 39, beat 4 to m. 40, beat 1 | 906 | unclassified | dominant7 |
-| m. 39, beat 4 to m. 40, beat 1 | 911 | unclassified | dominant7 |
+| m. 39, beat 4 to m. 40, beat 1 | 906 | pedal | dominant7 |
+| m. 39, beat 4 to m. 40, beat 1 | 911 | pedal | dominant7 |
 | m. 40, beat 1 to m. 40, beat 2 | 917 | appoggiatura | I |
 | m. 40, beat 2 to m. 40, beat 3 | 927 | passing | minor7 |
 | m. 40, beat 2 to m. 40, beat 3 | 937 | passing | minor7 |
 | m. 40, beat 3 to m. 40, beat 4 | 952 | passing | major7 |
-| m. 40, beat 4 to m. 41, beat 1 | 957 | unclassified | I |
+| m. 40, beat 4 to m. 41, beat 1 | 957 | passing | I |
 | m. 40, beat 4 to m. 41, beat 1 | 962 | passing | I |
-| m. 41, beat 1 to m. 41, beat 2 | 975 | anticipation | dominant7 |
-| m. 41, beat 1 to m. 41, beat 2 | 977 | unclassified | dominant7 |
-| m. 41, beat 1 to m. 41, beat 2 | 980 | anticipation | dominant7 |
+| m. 41, beat 1 to m. 41, beat 2 | 975 | pedal | dominant7 |
+| m. 41, beat 1 to m. 41, beat 2 | 980 | pedal | dominant7 |
+| m. 41, beat 1 to m. 41, beat 2 | 977 | passing | dominant7 |
 | m. 41, beat 1 to m. 41, beat 2 | 985 | anticipation | dominant7 |
+| m. 41, beat 2 to m. 41, beat 3 | 988 | pedal | major7 |
 | m. 41, beat 2 to m. 41, beat 3 | 987 | neighbor | major7 |
-| m. 41, beat 2 to m. 41, beat 3 | 988 | anticipation | major7 |
-| m. 41, beat 2 to m. 41, beat 3 | 992 | unclassified | major7 |
-| m. 41, beat 2 to m. 41, beat 3 | 993 | anticipation | major7 |
+| m. 41, beat 2 to m. 41, beat 3 | 993 | pedal | major7 |
+| m. 41, beat 2 to m. 41, beat 3 | 992 | passing | major7 |
 | m. 41, beat 2 to m. 41, beat 3 | 998 | anticipation | major7 |
-| m. 41, beat 3 to m. 41, beat 4 | 1005 | unclassified | dominant7 |
+| m. 41, beat 3 to m. 41, beat 4 | 1005 | pedal | dominant7 |
+| m. 41, beat 3 to m. 41, beat 4 | 1010 | pedal | dominant7 |
 | m. 41, beat 3 to m. 41, beat 4 | 1007 | passing | dominant7 |
-| m. 41, beat 3 to m. 41, beat 4 | 1010 | unclassified | dominant7 |
-| m. 41, beat 3 to m. 41, beat 4 | 1015 | unclassified | dominant7 |
+| m. 41, beat 3 to m. 41, beat 4 | 1015 | pedal | dominant7 |
+| m. 41, beat 4 to m. 42, beat 1 | 1020 | pedal | dominant7 |
 | m. 41, beat 4 to m. 42, beat 1 | 1017 | neighbor | dominant7 |
-| m. 41, beat 4 to m. 42, beat 1 | 1020 | anticipation | dominant7 |
-| m. 41, beat 4 to m. 42, beat 1 | 1025 | anticipation | dominant7 |
+| m. 41, beat 4 to m. 42, beat 1 | 1025 | pedal | dominant7 |
 | m. 41, beat 4 to m. 42, beat 1 | 1030 | anticipation | dominant7 |
 | m. 42, beat 2 to m. 42, beat 3 | 1039 | unclassified | dominant7 |
 | m. 42, beat 2 to m. 42, beat 3 | 1040 | neighbor | dominant7 |
 | m. 42, beat 2 to m. 42, beat 3 | 1041 | unclassified | dominant7 |
 | m. 42, beat 3 to m. 42, beat 3.33 | 1043 | unclassified | major7 |
 | m. 42, beat 4 to m. 43, beat 1 | 1051 | unclassified | dominant7 |
-| m. 42, beat 4 to m. 43, beat 1 | 1056 | escape-tone | dominant7 |
 | m. 42, beat 4 to m. 43, beat 1 | 1057 | unclassified | dominant7 |
+| m. 42, beat 4 to m. 43, beat 1 | 1056 | escape-tone | dominant7 |
 | m. 43, beat 1 to m. 43, beat 1.33 | 1059 | unclassified | major7 |
 | m. 43, beat 2 to m. 43, beat 3 | 1069 | unclassified | dominant7 |
 | m. 43, beat 2 to m. 43, beat 3 | 1071 | unclassified | dominant7 |
 
 ## Cadences
 
-The library's standard-harmony analysis found 12 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
+The library's standard-harmony analysis found 10 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
 
 | Position | Type | Key | Soprano | Beat strength | Boundary |
 | --- | --- | --- | --- | --- | --- |
 | m. 8, beat 1 | half | Bb major | 5 | strong | no |
 | m. 19, beat 1 | half | Bb major | 4 | strong | no |
-| m. 20, beat 1 | perfect-authentic | Bb major | 1 | strong | no |
+| m. 20, beat 1 | imperfect-authentic | Bb major | 1 | strong | no |
 | m. 21, beat 1 | half | Bb major | 4 | strong | no |
 | m. 22, beat 1 | imperfect-authentic | Bb major | 3 | strong | no |
 | m. 34, beat 3 | half | Bb major | 1 | medium | no |
 | m. 39, beat 1 | half | Bb major | 4 | strong | no |
-| m. 40, beat 1 | perfect-authentic | Bb major | 1 | strong | no |
+| m. 40, beat 1 | imperfect-authentic | Bb major | 1 | strong | no |
 | m. 41, beat 1 | half | Bb major | 4 | strong | no |
 | m. 41, beat 3 | half | Bb major | 4 | medium | no |
-| m. 42, beat 3 | evaded | Bb major | 1 | medium | no |
-| m. 43, beat 1 | evaded | Bb major | 1 | strong | no |
 
 ### Cadence plan
 
 1. m. 8, beat 1: half in Bb major
 2. m. 19, beat 1: half in Bb major
-3. m. 20, beat 1: perfect-authentic in Bb major
+3. m. 20, beat 1: imperfect-authentic in Bb major
 4. m. 21, beat 1: half in Bb major
 5. m. 22, beat 1: imperfect-authentic in Bb major
 6. m. 34, beat 3: half in Bb major
 7. m. 39, beat 1: half in Bb major
-8. m. 40, beat 1: perfect-authentic in Bb major
+8. m. 40, beat 1: imperfect-authentic in Bb major
 9. m. 41, beat 1: half in Bb major
 10. m. 41, beat 3: half in Bb major
-11. m. 42, beat 3: evaded in Bb major
-12. m. 43, beat 1: evaded in Bb major
 
-**Counts:** half 7, perfect-authentic 2, imperfect-authentic 1, evaded 2.
+**Counts:** half 7, imperfect-authentic 3.
 
 ## Phrases
 
@@ -982,12 +978,12 @@ The library's standard-form analysis found 9 phrases from the soprano, the meter
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | mm. 1 to 8 | 8 | half (m. 8, beat 1) | cadence | beginning | - |
 | 2 | mm. 9 to 19 | 11 | half (m. 19, beat 1) | cadence | middle | internal +3 (mm. 13 to 19) |
-| 3 | m. 20 | 1 | perfect-authentic (m. 20, beat 1) | cadence | middle | - |
+| 3 | m. 20 | 1 | imperfect-authentic (m. 20, beat 1) | cadence | middle | - |
 | 4 | m. 21 | 1 | half (m. 21, beat 1) | cadence | middle | - |
 | 5 | m. 22 | 1 | imperfect-authentic (m. 22, beat 1) | cadence | middle | - |
 | 6 | mm. 23 to 34 | 12 | half (m. 34, beat 3) | cadence | middle | internal +4 (mm. 27 to 34) |
 | 7 | mm. 35 to 39 | 5 | half (m. 39, beat 1) | cadence | middle | - |
-| 8 | m. 40 | 1 | perfect-authentic (m. 40, beat 1) | cadence | middle | contraction -4 (m. 40) |
+| 8 | m. 40 | 1 | imperfect-authentic (m. 40, beat 1) | cadence | middle | contraction -4 (m. 40) |
 | 9 | m. 41 | 1 | half (m. 41, beat 1) | cadence | ending | external post-cadential-extension +2 (mm. 42 to 43) |
 
 - **Phrase 1:** ideas basic-idea (mm. 1 to 2), contrasting-idea (mm. 3 to 4), contrasting-idea (mm. 5 to 6), contrasting-idea (mm. 7 to 8); subphrases mm. 1 to 4, mm. 5 to 8; phrase model Tb (m. 1, beat 1), PD (m. 7, beat 3), D (m. 8, beat 1)
@@ -1009,7 +1005,7 @@ The library's standard-form analysis found 4 themes from the phrases, their idea
 | 1 | hybrid | slightly-less-common | mm. 1 to 8 | 8 | compound-basic-idea (mm. 1 to 4), continuation (mm. 5 to 8, half (m. 8, beat 1)) | - |
 | 2 | hybrid | slightly-less-common | mm. 9 to 19 | 11 | compound-basic-idea (mm. 9 to 12), continuation (mm. 13 to 19, half (m. 19, beat 1)) | - |
 | 3 | hybrid | slightly-less-common | mm. 23 to 34 | 12 | compound-basic-idea (mm. 23 to 26), continuation (mm. 27 to 34, half (m. 34, beat 3)) | - |
-| 4 | hybrid | slightly-less-common | mm. 35 to 40 | 6 | antecedent (mm. 35 to 39, half (m. 39, beat 1)), continuation (m. 40, perfect-authentic (m. 40, beat 1)) | fragmentation |
+| 4 | hybrid | slightly-less-common | mm. 35 to 40 | 6 | antecedent (mm. 35 to 39, half (m. 39, beat 1)), continuation (m. 40, imperfect-authentic (m. 40, beat 1)) | fragmentation |
 
 ## Form plan
 
@@ -1017,9 +1013,9 @@ The kernel's form structure detection grouped the phrases into 4 sections, closi
 
 | Section | Measures | Key | Phrases | Closing cadence | Returns |
 | --- | --- | --- | --- | --- | --- |
-| A | mm. 1 to 20 | Bb major | 1 to 3 | perfect-authentic (m. 20, beat 1) | - |
+| A | mm. 1 to 20 | Bb major | 1 to 3 | imperfect-authentic (m. 20, beat 1) | - |
 | B | mm. 21 to 22 | Bb major | 4 to 5 | imperfect-authentic (m. 22, beat 1) | - |
-| A' | mm. 23 to 40 | Bb major | 6 to 8 | perfect-authentic (m. 40, beat 1) | returns A (similarity 0.83) |
+| A' | mm. 23 to 40 | Bb major | 6 to 8 | imperfect-authentic (m. 40, beat 1) | returns A (similarity 0.83) |
 | C | mm. 41 to 43 | Bb major | 9 | half (m. 41, beat 1) | - |
 
 ### Thematic returns
@@ -1087,7 +1083,7 @@ The library's motive analysis found 10 motive families in the soprano, the highe
 | 1 | 5 | 2 3 2 2 5 | scale steps | 2 | 14, 36 | 2, 7 | exact 2 |
 | 2 | 8 | b6 6 b7 7 1 b2 2 b3 | scale steps | 4 | 18, 20, 38, 40 | 2, 7 | exact 4 |
 | 3 | 8 | 7 1 b2 2 b3 3 4 3 | scale steps | 4 | 18, 20, 38, 40 | 2, 7 | exact 4 |
-| 4 | 3 | 7 1 b2 | scale steps | 14 | 18, 19, 20, 21, 38, 39, 40, 41, 42, 43 | 2, 4, 7, 9 | exact 4, inverted 8, tonal-transposed 2 |
+| 4 | 3 | 7 1 b2 | scale steps | 6 | 18, 20, 38, 40, 42, 43 | 2, 7, 9 | exact 4, tonal-transposed 2 |
 | 5 | 8 | 2 b3 3 4 3 2 b2 2 | scale steps | 8 | 18, 19, 20, 21, 38, 39, 40, 41 | 9 | exact 4, fragmented 4 |
 | 6 | 8 | 4 3 2 b2 2 3 4 3 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 4 |
 | 7 | 8 | b2 2 3 4 3 2 b2 2 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 4 |
@@ -1101,15 +1097,15 @@ The library's melody adapter read the soprano of each phrase as a line of notes:
 
 | Phrase | Measures | Notes | Range | Climax | Up | Down | Same | Steps | Leaps |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | mm. 1 to 8 | 21 | F4 to G5 (14) | G5, m. 1, beat 4 | 10 | 9 | 1 | 11 | 8 |
-| 2 | mm. 9 to 19 | 29 | F4 to G5 (14) | G5, m. 9, beat 4 | 14 | 11 | 3 | 13 | 12 |
-| 3 | m. 20 | 1 | A#4 to A#4 (0) | A#4, m. 20, beat 1 | 0 | 0 | 0 | 0 | 0 |
-| 4 | m. 21 | 1 | D#5 to D#5 (0) | D#5, m. 21, beat 1 | 0 | 0 | 0 | 0 | 0 |
-| 5 | m. 22 | 1 | D5 to D5 (0) | D5, m. 22, beat 2 | 0 | 0 | 0 | 0 | 0 |
-| 6 | mm. 23 to 34 | 37 | F4 to C6 (19) | C6, m. 24, beat 3.5 | 15 | 16 | 5 | 21 | 10 |
-| 7 | mm. 35 to 39 | 11 | G#4 to A#6 (26) | A#6, m. 36, beat 2.67 | 5 | 4 | 0 | 5 | 4 |
-| 8 | m. 40 | 1 | A#4 to A#4 (0) | A#4, m. 40, beat 1 | 0 | 0 | 0 | 0 | 0 |
-| 9 | mm. 41 to 43 | 11 | A#3 to A#5 (24) | A#5, m. 42, beat 3 | 5 | 3 | 0 | 4 | 4 |
+| 1 | mm. 1 to 8 | 21 | F4 to G5 (14) | G5, m. 1, beat 4 | 10 | 9 | 1 | 12 | 7 |
+| 2 | mm. 9 to 19 | 28 | F4 to G5 (14) | G5, m. 9, beat 4 | 13 | 11 | 3 | 12 | 12 |
+| 3 | m. 20 | 1 | F5 to F5 (0) | F5, m. 19, beat 4.67 | 0 | 0 | 0 | 0 | 0 |
+| 4 | m. 21 | 1 | D5 to D5 (0) | D5, m. 20, beat 4.67 | 0 | 0 | 0 | 0 | 0 |
+| 5 | m. 22 | 1 | F5 to F5 (0) | F5, m. 21, beat 4.67 | 0 | 0 | 0 | 0 | 0 |
+| 6 | mm. 23 to 34 | 38 | F4 to C6 (19) | C6, m. 24, beat 3.5 | 16 | 16 | 5 | 20 | 12 |
+| 7 | mm. 35 to 39 | 14 | G#4 to A#6 (26) | A#6, m. 36, beat 2.67 | 5 | 7 | 0 | 6 | 5 |
+| 8 | m. 40 | 1 | F5 to F5 (0) | F5, m. 39, beat 4.67 | 0 | 0 | 0 | 0 | 0 |
+| 9 | mm. 41 to 43 | 11 | A#4 to A#5 (12) | A#5, m. 42, beat 3 | 6 | 3 | 0 | 5 | 4 |
 
 ### Leaps
 
@@ -1117,13 +1113,13 @@ A leap is an interval of a third or larger. The library's rule asks a leap of a 
 
 | Phrase | Leaps | Recovered | Unrecovered | Not required | Not judged | Consecutive |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 8 | 1 | 5 | 1 | 1 | 0 |
+| 1 | 7 | 1 | 5 | 1 | 0 | 0 |
 | 2 | 12 | 1 | 6 | 5 | 0 | 2 |
 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 4 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 5 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 6 | 10 | 2 | 6 | 2 | 0 | 0 |
-| 7 | 4 | 2 | 0 | 2 | 0 | 0 |
+| 6 | 12 | 2 | 6 | 4 | 0 | 0 |
+| 7 | 5 | 2 | 1 | 2 | 0 | 1 |
 | 8 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 4 | 0 | 3 | 1 | 0 | 2 |
 
@@ -1133,15 +1129,15 @@ Each melody note is set against the chord of the segment it starts in, as the li
 
 | Phrase | Notes | Chord tones | Non-chord tones | Unclassified | By type |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 21 | 18 | 0 | 3 | - |
-| 2 | 29 | 18 | 2 | 9 | passing 2 |
+| 1 | 21 | 18 | 1 | 2 | appoggiatura 1 |
+| 2 | 28 | 17 | 3 | 8 | passing 1, anticipation 1, appoggiatura 1 |
 | 3 | 1 | 1 | 0 | 0 | - |
-| 4 | 1 | 1 | 0 | 0 | - |
+| 4 | 1 | 0 | 0 | 1 | - |
 | 5 | 1 | 1 | 0 | 0 | - |
-| 6 | 37 | 26 | 0 | 11 | - |
-| 7 | 11 | 5 | 2 | 4 | passing 2 |
+| 6 | 38 | 23 | 6 | 9 | passing 4, neighbor 1, appoggiatura 1 |
+| 7 | 14 | 5 | 2 | 7 | passing 1, appoggiatura 1 |
 | 8 | 1 | 1 | 0 | 0 | - |
-| 9 | 11 | 10 | 0 | 1 | - |
+| 9 | 11 | 8 | 2 | 1 | neighbor 2 |
 
 ### Tendencies
 
@@ -1149,15 +1145,15 @@ The library's melodic tendencies are soft preferences a well-formed line usually
 
 | Phrase | Pitch proximity | Step declination | Step inertia | Melodic regression | Melodic arch | Seventh degree followed | Seventh degree broken |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | does not hold | holds | does not hold | does not hold | does not hold | 0 | 2 (m. 5, beat 4; m. 7, beat 1) |
+| 1 | does not hold | holds | does not hold | does not hold | does not hold | 0 | 1 (m. 5, beat 4) |
 | 2 | does not hold | holds | does not hold | does not hold | does not hold | 1 | 0 |
 | 3 | holds | holds | holds | holds | does not hold | 0 | 0 |
 | 4 | holds | holds | holds | holds | does not hold | 0 | 0 |
 | 5 | holds | holds | holds | holds | does not hold | 0 | 0 |
-| 6 | holds | does not hold | holds | holds | does not hold | 3 | 1 (m. 28, beat 3.75) |
-| 7 | does not hold | holds | holds | does not hold | does not hold | 1 | 0 |
+| 6 | does not hold | does not hold | holds | holds | does not hold | 0 | 1 (m. 28, beat 3.75) |
+| 7 | does not hold | holds | holds | does not hold | holds | 1 | 0 |
 | 8 | holds | holds | holds | holds | does not hold | 0 | 0 |
-| 9 | does not hold | holds | holds | does not hold | holds | 0 | 1 (m. 42, beat 2.67) |
+| 9 | does not hold | holds | does not hold | does not hold | holds | 0 | 1 (m. 42, beat 2.67) |
 
 ### Development
 
@@ -1166,7 +1162,7 @@ Each family's occurrences in time order, as the measure they start in and the ki
 - **Family 1:** m14 original > m36 exact
 - **Family 2:** m18 original > m20 exact > m38 exact > m40 exact
 - **Family 3:** m18 original > m20 exact > m38 exact > m40 exact
-- **Family 4:** m18 original > m19 inverted > m19 inverted > m20 exact > m21 inverted > m21 inverted > m38 exact > m39 inverted > m39 inverted > m40 exact > m41 inverted > m41 inverted > m42 tonal-transposed > m43 tonal-transposed
+- **Family 4:** m18 original > m20 exact > m38 exact > m40 exact > m42 tonal-transposed > m43 tonal-transposed
 - **Family 5:** m18 original > m19 fragmented > m20 exact > m21 fragmented > m38 exact > m39 fragmented > m40 exact > m41 fragmented
 - **Family 6:** m19 original > m21 exact > m39 exact > m41 exact
 - **Family 7:** m19 original > m21 exact > m39 exact > m41 exact
@@ -1227,12 +1223,10 @@ Changes per measure over the two measures before each cadence's arrival (Approac
 | 8 | m. 40 | 3.5 | 3.5 | no |
 | 9 | m. 41 | 4 | 3.5 | no |
 | 10 | m. 41 | 4 | 3.5 | no |
-| 11 | m. 42 | 3.5 | 3.5 | no |
-| 12 | m. 43 | 3.5 | 4.5 | yes |
 
 ## Rhythm and meter
 
-**Meter fit:** 12/8, scale 1, no pickup (fit 0.79); no better reading found
+**Meter fit:** 12/8, scale 1, no pickup (fit 0.80); no better reading found
 
 ### Density
 
@@ -1381,18 +1375,18 @@ The library's texture adapter read every measure of the piece from the voices th
 
 The kernel separated the notes of the whole piece into voices (voice 0 is the top) and the library's counterpoint adapter classified how each pair of voices moves from one chord segment to the next. Parallel motion keeps the interval type, similar motion changes it; a voice that rests in either segment gives no motion. Faults are the library's: parallel fifths and octaves between any pair of voices, direct fifths and octaves in the outer pair, and a seventh or leading tone left unresolved when its chord changes (voice 0 is the top).
 
-4 voices over 169 chord segments, 531 motions between consecutive segments: 91 contrary, 78 similar, 5 parallel, 269 oblique, 88 static.
+4 voices over 169 chord segments, 531 motions between consecutive segments: 96 contrary, 80 similar, 4 parallel, 266 oblique, 85 static.
 
 | Voices | Contrary | Similar | Parallel | Oblique | Static |
 | --- | --- | --- | --- | --- | --- |
-| 0 and 1 | 11 | 14 | 0 | 53 | 4 |
-| 0 and 2 | 13 | 12 | 2 | 60 | 2 |
-| 0 and 3 | 9 | 13 | 2 | 58 | 2 |
-| 1 and 2 | 18 | 8 | 0 | 41 | 24 |
-| 1 and 3 | 17 | 14 | 1 | 32 | 24 |
-| 2 and 3 | 23 | 17 | 0 | 25 | 32 |
+| 0 and 1 | 15 | 12 | 0 | 51 | 4 |
+| 0 and 2 | 14 | 12 | 2 | 59 | 2 |
+| 0 and 3 | 9 | 14 | 1 | 58 | 2 |
+| 1 and 2 | 18 | 9 | 0 | 42 | 22 |
+| 1 and 3 | 17 | 15 | 1 | 32 | 23 |
+| 2 and 3 | 23 | 18 | 0 | 24 | 32 |
 
-0 parallel fifths, 0 parallel octaves, 2 direct fifths or octaves in the outer voices, 24 unresolved sevenths, 2 unresolved leading tones.
+0 parallel fifths, 0 parallel octaves, 2 direct fifths or octaves in the outer voices, 28 unresolved sevenths, 2 unresolved leading tones.
 
 | Location | Fault | Voices |
 | --- | --- | --- |
@@ -1409,8 +1403,10 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | m. 17, beat 3 to m. 18, beat 1 | seventh-resolves-down | 3 |
 | m. 18, beat 2 to m. 18, beat 4 | seventh-resolves-down | 2 |
 | m. 18, beat 3 to m. 19, beat 1 | seventh-resolves-down | 0 |
+| m. 19, beat 2 to m. 19, beat 4 | seventh-resolves-down | 0 |
 | m. 20, beat 2 to m. 20, beat 4 | seventh-resolves-down | 2 |
 | m. 20, beat 3 to m. 21, beat 1 | seventh-resolves-down | 0 |
+| m. 21, beat 2 to m. 21, beat 4 | seventh-resolves-down | 0 |
 | m. 28, beat 3 to m. 29, beat 1 | seventh-resolves-down | 1 |
 | m. 28, beat 4 to m. 29, beat 2 | seventh-resolves-down | 2 |
 | m. 31, beat 1 to m. 31, beat 3 | seventh-resolves-down | 0 |
@@ -1421,11 +1417,13 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | m. 37, beat 4 to m. 38, beat 2 | seventh-resolves-down | 2 |
 | m. 38, beat 2 to m. 38, beat 4 | seventh-resolves-down | 2 |
 | m. 38, beat 3 to m. 39, beat 1 | seventh-resolves-down | 0 |
+| m. 39, beat 2 to m. 39, beat 4 | seventh-resolves-down | 0 |
 | m. 40, beat 2 to m. 40, beat 4 | seventh-resolves-down | 2 |
 | m. 40, beat 3 to m. 41, beat 1 | seventh-resolves-down | 0 |
+| m. 41, beat 2 to m. 41, beat 4 | seventh-resolves-down | 0 |
 | m. 42, beat 4 to m. 43, beat 1.33 | seventh-resolves-down | 0 |
 
-127 chords with three or more voices sounding: the root is doubled in 28, the third in 7, the fifth in 11, the seventh in 0, no member doubled in 81. Doubling is counted, not judged. Spacing is judged by the library for the 83 chords with four voices all sounding: 39 too wide.
+127 chords with three or more voices sounding: the root is doubled in 36, the third in 10, the fifth in 10, the seventh in 0, no member doubled in 71. Doubling is counted, not judged. Spacing is judged by the library for the 83 chords with four voices all sounding: 44 too wide.
 
 | Location | Chord | Gap too wide |
 | --- | --- | --- |
@@ -1438,6 +1436,7 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | m. 8, beat 1 to m. 8, beat 2 | 27 | voices 1 and 2 |
 | m. 9, beat 1 to m. 9, beat 3 | 31 | voices 1 and 2 |
 | m. 9, beat 3 to m. 9, beat 4 | 32 | voices 1 and 2 |
+| m. 9, beat 4 to m. 10, beat 1 | 33 | voices 1 and 2 |
 | m. 10, beat 1 to m. 10, beat 2 | 34 | voices 0 and 1 |
 | m. 11, beat 3 to m. 11, beat 4 | 40 | voices 1 and 2 |
 | m. 12, beat 3 to m. 12, beat 4 | 44 | voices 1 and 2 |
@@ -1449,6 +1448,8 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | m. 16, beat 4 to m. 17, beat 1 | 61 | voices 1 and 2 |
 | m. 17, beat 3 to m. 17, beat 4 | 63 | voices 0 and 1 |
 | m. 17, beat 4 to m. 18, beat 1 | 64 | voices 0 and 1 |
+| m. 18, beat 4 to m. 19, beat 1 | 69 | voices 0 and 1 |
+| m. 20, beat 4 to m. 21, beat 1 | 77 | voices 0 and 1 |
 | m. 24, beat 3 to m. 24, beat 4 | 89 | voices 1 and 2 |
 | m. 25, beat 3 to m. 25, beat 4 | 93 | voices 0 and 1 |
 | m. 26, beat 3 to m. 26, beat 4 | 97 | voices 1 and 2 |
@@ -1466,6 +1467,8 @@ The kernel separated the notes of the whole piece into voices (voice 0 is the to
 | m. 36, beat 3 to m. 36, beat 4 | 137 | voices 0 and 1 |
 | m. 37, beat 3 to m. 37, beat 4 | 141 | voices 1 and 2 |
 | m. 37, beat 4 to m. 38, beat 1 | 142 | voices 1 and 2 |
+| m. 38, beat 4 to m. 39, beat 1 | 146 | voices 0 and 1 |
+| m. 40, beat 4 to m. 41, beat 1 | 154 | voices 0 and 1 |
 | m. 42, beat 3 to m. 42, beat 3.33 | 162 | voices 1 and 2 |
 | m. 42, beat 4 to m. 43, beat 1 | 164 | voices 0 and 1 |
 
