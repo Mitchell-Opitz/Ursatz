@@ -6,7 +6,7 @@
 
 #include <ursatz_analyzer/midi_pipeline.h>
 
-#include "semantics/beat_strength.h"
+#include "pipeline/pitch_class_util.h"
 #include "semantics/sonority_segmentation.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
@@ -40,10 +40,15 @@ typedef struct {
     AdaptiveSonorities sonorities;           /* parallel to segments; the library's own segments, borrowed */
 } Segmentation;
 
-/* The strength of an attack at onset, read in the signature of its measure; weak if it cannot be read. */
-BeatStrength beat_strength_at(const MeterMap *map, const MusicalTime *onset);
-
 /* Pitch class (0-11) of the lowest note sounding in a segment. */
-int segment_bass_pitch_class(const Segment *segment);
+static inline int segment_bass_pitch_class(const Segment *segment) {
+    int lowest = segment->members[0].pitch;
+    for (size_t i = 1; i < segment->member_count; i++) {
+        if (segment->members[i].pitch < lowest) {
+            lowest = segment->members[i].pitch;
+        }
+    }
+    return pitch_class_of(lowest);
+}
 
 #endif

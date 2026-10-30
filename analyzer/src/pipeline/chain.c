@@ -236,9 +236,9 @@ static bool collect_pass(AnalyzerPass *pass) {
         !motive_stage_collect(&pass->motives, notes, report) ||
         !melody_stage_collect(notes, &pass->input, pass->library, segmentation, report) ||
         !rhythm_stage_collect(notes, &pass->lines, &pass->form, report) ||
-        !texture_stage_collect(notes, report) || !markings_stage_collect(notes, report) ||
-        !voice_leading_stage_collect(notes, &pass->harmony, report) ||
-        !schema_stage_collect(notes, segmentation, &pass->romans, report)) {
+        !texture_stage_collect(notes, pass->library, report) || !markings_stage_collect(notes, report) ||
+        !voice_leading_stage_collect(notes, &pass->input, pass->library, &pass->harmony, report) ||
+        !schema_stage_collect(notes, pass->library, report)) {
         return false;
     }
     return true;
