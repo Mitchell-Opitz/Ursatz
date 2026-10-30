@@ -1294,8 +1294,8 @@ The library's melody adapter read the soprano of each phrase as a line of notes:
 | 2 | m. 4 | 1 | D#5 to D#5 (0) | D#5, m. 4, beat 1.05 | 0 | 0 | 0 | 0 | 0 |
 | 3 | mm. 5 to 7 | 4 | D#5 to C6 (9) | C6, m. 7, beat 1.97 | 2 | 1 | 0 | 1 | 2 |
 | 4 | mm. 8 to 15 | 17 | B4 to C6 (13) | C6, m. 15, beat 2.15 | 4 | 10 | 2 | 9 | 3 |
-| 5 | mm. 16 to 30 | 37 | D#5 to D#6 (12) | D#6, m. 22, beat 2.09 | 14 | 16 | 5 | 19 | 9 |
-| 6 | mm. 31 to 37 | 15 | D4 to D#6 (25) | D#6, m. 37, beat 1.99 | 6 | 5 | 3 | 5 | 5 |
+| 5 | mm. 16 to 30 | 37 | D#5 to D#6 (12) | D#6, m. 22, beat 2.09 | 14 | 16 | 5 | 20 | 9 |
+| 6 | mm. 31 to 37 | 16 | D4 to D#6 (25) | D#6, m. 37, beat 1.99 | 6 | 5 | 3 | 6 | 5 |
 | 7 | mm. 38 to 46 | 24 | C5 to G#6 (20) | G#6, m. 38, beat 1.34 | 9 | 13 | 0 | 11 | 11 |
 | 8 | mm. 47 to 50 | 11 | D#5 to G6 (16) | G6, m. 48, beat 3.33 | 4 | 6 | 0 | 1 | 9 |
 | 9 | mm. 51 to 57 | 19 | F4 to C6 (19) | C6, m. 56, beat 3.33 | 7 | 11 | 0 | 6 | 9 |
@@ -1324,16 +1324,16 @@ Each melody note is set against the chord of the segment it starts in, as the li
 
 | Phrase | Notes | Chord tones | Non-chord tones | Unclassified | By type |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 4 | 3 | 0 | 1 | - |
+| 1 | 4 | 3 | 1 | 0 | passing 1 |
 | 2 | 1 | 1 | 0 | 0 | - |
-| 3 | 4 | 3 | 1 | 0 | anticipation 1 |
-| 4 | 17 | 11 | 2 | 4 | anticipation 1, escape-tone 1 |
-| 5 | 37 | 26 | 7 | 4 | neighbor 1, suspension 2, anticipation 1, escape-tone 3 |
-| 6 | 15 | 13 | 0 | 2 | - |
-| 7 | 24 | 14 | 4 | 6 | anticipation 3, escape-tone 1 |
-| 8 | 11 | 9 | 1 | 1 | suspension 1 |
-| 9 | 19 | 11 | 1 | 7 | neighbor 1 |
-| 10 | 32 | 21 | 3 | 8 | passing 1, appoggiatura 1, escape-tone 1 |
+| 3 | 4 | 3 | 1 | 0 | appoggiatura 1 |
+| 4 | 17 | 11 | 3 | 3 | passing 3 |
+| 5 | 37 | 26 | 3 | 8 | passing 1, neighbor 1, appoggiatura 1 |
+| 6 | 16 | 13 | 2 | 1 | passing 2 |
+| 7 | 24 | 14 | 2 | 8 | appoggiatura 1, escape-tone 1 |
+| 8 | 11 | 9 | 0 | 2 | - |
+| 9 | 19 | 11 | 4 | 4 | passing 2, appoggiatura 2 |
+| 10 | 32 | 21 | 5 | 6 | passing 3, appoggiatura 2 |
 
 ### Tendencies
 
@@ -1345,8 +1345,8 @@ The library's melodic tendencies are soft preferences a well-formed line usually
 | 2 | holds | holds | holds | holds | does not hold | 0 | 0 |
 | 3 | does not hold | holds | holds | holds | does not hold | 0 | 0 |
 | 4 | holds | holds | holds | does not hold | does not hold | 0 | 2 (m. 10, beat 1.08; m. 14, beat 1.03) |
-| 5 | does not hold | holds | holds | does not hold | holds | 0 | 0 |
-| 6 | does not hold | holds | holds | does not hold | does not hold | 1 | 1 (m. 34, beat 1.04) |
+| 5 | does not hold | holds | holds | does not hold | holds | 0 | 2 (m. 22, beat 3.97; m. 23, beat 3.37) |
+| 6 | does not hold | holds | holds | does not hold | does not hold | 0 | 3 (m. 32, beat 1.33; m. 32, beat 2.33; m. 34, beat 1.04) |
 | 7 | does not hold | holds | does not hold | does not hold | does not hold | 0 | 2 (m. 44, beat 4.93; m. 45, beat 3.01) |
 | 8 | does not hold | holds | holds | does not hold | holds | 0 | 2 (m. 48, beat 3.83; m. 49, beat 3) |
 | 9 | does not hold | holds | holds | does not hold | does not hold | 0 | 2 (m. 52, beat 1.02; m. 56, beat 1.01) |

@@ -5637,58 +5637,57 @@ The library's melody adapter read the soprano of each phrase as a line of notes:
 
 | Phrase | Measures | Notes | Range | Climax | Up | Down | Same | Steps | Leaps |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | mm. 1 to 13 | 49 | D4 to C6 (22) | C6, m. 3, beat 4, 2 notes | 23 | 23 | 2 | 9 | 36 |
+| 1 | mm. 1 to 13 | 49 | D4 to C6 (22) | C6, m. 3, beat 4, 2 notes | 23 | 23 | 2 | 10 | 35 |
 | 2 | mm. 14 to 21 | 20 | D4 to D6 (24) | D6, m. 14, beat 1, 3 notes | 7 | 10 | 0 | 3 | 14 |
-| 3 | mm. 22 to 27 | 21 | A4 to D6 (17) | D6, m. 24, beat 2, 2 notes | 8 | 5 | 7 | 5 | 7 |
+| 3 | mm. 22 to 27 | 21 | A4 to D6 (17) | D6, m. 24, beat 2, 2 notes | 8 | 5 | 7 | 6 | 7 |
 | 4 | mm. 28 to 29 | 4 | G4 to B5 (16) | B5, m. 28, beat 2 | 1 | 2 | 0 | 0 | 3 |
-| 5 | mm. 30 to 41 | 46 | D4 to C6 (22) | C6, m. 31, beat 4, 2 notes | 21 | 22 | 2 | 9 | 33 |
+| 5 | mm. 30 to 41 | 46 | D4 to C6 (22) | C6, m. 31, beat 4, 2 notes | 21 | 22 | 2 | 10 | 32 |
 | 6 | mm. 42 to 49 | 20 | D4 to D6 (24) | D6, m. 42, beat 1, 3 notes | 7 | 10 | 0 | 3 | 14 |
-| 7 | mm. 50 to 55 | 21 | A4 to D6 (17) | D6, m. 52, beat 2, 2 notes | 8 | 5 | 7 | 5 | 7 |
+| 7 | mm. 50 to 55 | 21 | A4 to D6 (17) | D6, m. 52, beat 2, 2 notes | 8 | 5 | 7 | 6 | 7 |
 | 8 | mm. 56 to 57 | 4 | G4 to B5 (16) | B5, m. 56, beat 2 | 1 | 2 | 0 | 0 | 3 |
 | 9 | m. 58 | 1 | G5 to G5 (0) | G5, m. 58, beat 1 | 0 | 0 | 0 | 0 | 0 |
-| 10 | mm. 59 to 63 | 15 | F4 to E6 (23) | E6, m. 60, beat 3.5 | 2 | 9 | 1 | 3 | 7 |
-| 11 | mm. 64 to 71 | 28 | D4 to E6 (26) | E6, m. 65, beat 1.5 | 10 | 15 | 0 | 4 | 21 |
-| 12 | mm. 72 to 86 | 56 | C4 to F6 (29) | F6, m. 72, beat 4 | 23 | 25 | 3 | 11 | 35 |
+| 10 | mm. 59 to 63 | 15 | F4 to E6 (23) | E6, m. 60, beat 3.5 | 2 | 9 | 1 | 4 | 7 |
+| 11 | mm. 64 to 71 | 28 | D4 to E6 (26) | E6, m. 65, beat 1.5 | 10 | 15 | 0 | 5 | 20 |
+| 12 | mm. 72 to 86 | 56 | C4 to F6 (29) | F6, m. 72, beat 4 | 23 | 25 | 3 | 12 | 34 |
 | 13 | mm. 87 to 94 | 19 | G4 to E6 (21) | E6, m. 93, beat 2.25 | 8 | 10 | 0 | 3 | 15 |
-| 14 | mm. 95 to 100 | 17 | C5 to E6 (16) | E6, m. 97, beat 2.5 | 5 | 6 | 5 | 4 | 7 |
+| 14 | mm. 95 to 100 | 17 | C5 to E6 (16) | E6, m. 97, beat 2.5 | 5 | 6 | 5 | 3 | 8 |
 | 15 | m. 101 | 3 | C4 to C6 (24) | C6, m. 101, beat 2 | 1 | 1 | 0 | 0 | 2 |
-| 16 | mm. 102 to 104 | 9 | G4 to D6 (19) | D6, m. 102, beat 3 | 3 | 5 | 0 | 2 | 5 |
-| 17 | mm. 105 to 108 | 12 | F4 to E6 (23) | E6, m. 105, beat 3.5 | 2 | 7 | 1 | 3 | 5 |
-| 18 | mm. 109 to 116 | 28 | D4 to E6 (26) | E6, m. 110, beat 1.5 | 10 | 15 | 0 | 4 | 21 |
-| 19 | mm. 117 to 131 | 56 | C4 to F6 (29) | F6, m. 117, beat 4 | 23 | 25 | 3 | 11 | 35 |
+| 16 | mm. 102 to 104 | 9 | G4 to D6 (19) | D6, m. 102, beat 3 | 3 | 5 | 0 | 2 | 6 |
+| 17 | mm. 105 to 108 | 12 | F4 to E6 (23) | E6, m. 105, beat 3.5 | 2 | 7 | 1 | 4 | 5 |
+| 18 | mm. 109 to 116 | 28 | D4 to E6 (26) | E6, m. 110, beat 1.5 | 10 | 15 | 0 | 5 | 20 |
+| 19 | mm. 117 to 131 | 56 | C4 to F6 (29) | F6, m. 117, beat 4 | 23 | 25 | 3 | 12 | 34 |
 | 20 | mm. 132 to 139 | 19 | G4 to E6 (21) | E6, m. 138, beat 2.25 | 8 | 10 | 0 | 3 | 15 |
-| 21 | mm. 140 to 145 | 17 | C5 to E6 (16) | E6, m. 142, beat 2.5 | 5 | 6 | 5 | 4 | 7 |
+| 21 | mm. 140 to 145 | 17 | C5 to E6 (16) | E6, m. 142, beat 2.5 | 5 | 6 | 5 | 3 | 8 |
 | 22 | m. 146 | 3 | C4 to C6 (24) | C6, m. 146, beat 2 | 1 | 1 | 0 | 0 | 2 |
 | 23 | mm. 147 to 149 | 1 | B4 to B4 (0) | B4, m. 149, beat 1 | 0 | 0 | 0 | 0 | 0 |
-| 24 | mm. 150 to 162 | 32 | A4 to B5 (14) | B5, m. 162, beat 3.25 | 15 | 15 | 0 | 13 | 16 |
-| 25 | mm. 163 to 181 | 47 | G4 to B5 (16) | B5, m. 178, beat 3.25 | 22 | 22 | 1 | 18 | 25 |
-| 26 | mm. 182 to 187 | 17 | G4 to B5 (16) | B5, m. 185, beat 3 | 10 | 4 | 2 | 6 | 8 |
-| 27 | mm. 188 to 197 | 26 | G4 to B5 (16) | B5, m. 194, beat 3.25 | 13 | 11 | 1 | 10 | 14 |
-| 28 | mm. 198 to 203 | 17 | G4 to B5 (16) | B5, m. 201, beat 3 | 10 | 4 | 2 | 6 | 8 |
-| 29 | mm. 204 to 216 | 31 | G4 to B5 (16) | B5, m. 210, beat 3.25 | 15 | 13 | 2 | 13 | 15 |
-| 30 | mm. 217 to 227 | 28 | G4 to D#6 (20) | D#6, m. 225, beat 3.5 | 12 | 11 | 3 | 6 | 17 |
-| 31 | mm. 228 to 242 | 37 | G#4 to B5 (15) | B5, m. 242, beat 3.25 | 18 | 16 | 1 | 14 | 17 |
-| 32 | mm. 243 to 252 | 30 | G4 to A5 (14) | A5, m. 245, beat 2.75, 2 notes | 17 | 10 | 2 | 10 | 16 |
-| 33 | m. 253 | 3 | B4 to D5 (3) | D5, m. 253, beat 2.75 | 1 | 0 | 1 | 0 | 1 |
-| 34 | m. 254 | 1 | G4 to G4 (0) | G4, m. 254, beat 2 | 0 | 0 | 0 | 0 | 0 |
-| 35 | mm. 255 to 262 | 15 | C5 to A5 (9) | A5, m. 261, beat 2, 2 notes | 3 | 6 | 2 | 3 | 6 |
-| 36 | mm. 263 to 264 | 4 | C5 to F5 (5) | F5, m. 263, beat 1.75 | 1 | 2 | 0 | 2 | 1 |
-| 37 | mm. 265 to 266 | 4 | D5 to F5 (3) | F5, m. 265, beat 2, 2 notes | 0 | 1 | 1 | 0 | 1 |
-| 38 | mm. 267 to 270 | 9 | C5 to A5 (9) | A5, m. 269, beat 2, 2 notes | 3 | 3 | 1 | 2 | 4 |
-| 39 | mm. 271 to 272 | 5 | C5 to G5 (7) | G5, m. 272, beat 2.75 | 2 | 2 | 0 | 2 | 2 |
-| 40 | mm. 273 to 278 | 12 | D5 to E6 (14) | E6, m. 274, beat 2 | 4 | 6 | 1 | 3 | 7 |
-| 41 | mm. 279 to 286 | 18 | G4 to A5 (14) | A5, m. 283, beat 1 | 5 | 8 | 1 | 6 | 6 |
-| 42 | mm. 287 to 296 | 20 | C5 to C6 (12) | C6, m. 294, beat 2.5 | 7 | 8 | 1 | 5 | 10 |
-| 43 | mm. 297 to 307 | 24 | B3 to C6 (25) | C6, m. 299, beat 1.5 | 10 | 10 | 2 | 10 | 10 |
-| 44 | mm. 308 to 312 | 13 | A4 to F6 (20) | F6, m. 308, beat 1.5 | 1 | 10 | 1 | 9 | 2 |
-| 45 | m. 313 | 1 | A4 to A4 (0) | A4, m. 313, beat 1 | 0 | 0 | 0 | 0 | 0 |
-| 46 | m. 314 | 1 | A4 to A4 (0) | A4, m. 314, beat 1 | 0 | 0 | 0 | 0 | 0 |
-| 47 | m. 315 | 1 | E5 to E5 (0) | E5, m. 315, beat 1.25 | 0 | 0 | 0 | 0 | 0 |
-| 48 | mm. 316 to 319 | 5 | D5 to G5 (5) | G5, m. 317, beat 2.5 | 0 | 2 | 1 | 0 | 2 |
-| 49 | mm. 320 to 323 | 9 | C5 to A5 (9) | A5, m. 322, beat 2, 2 notes | 3 | 3 | 1 | 2 | 4 |
-| 50 | mm. 324 to 325 | 4 | C5 to F5 (5) | F5, m. 324, beat 1.75 | 1 | 2 | 0 | 2 | 1 |
-| 51 | mm. 326 to 333 | 16 | G4 to D6 (19) | D6, m. 327, beat 2, 2 notes | 6 | 8 | 1 | 1 | 13 |
-| 52 | mm. 334 to 338 | 11 | G4 to C6 (17) | C6, m. 337, beat 1.5 | 2 | 4 | 4 | 0 | 6 |
+| 24 | mm. 150 to 162 | 32 | A4 to B5 (14) | B5, m. 162, beat 3.25 | 15 | 15 | 0 | 12 | 16 |
+| 25 | mm. 163 to 181 | 47 | G4 to B5 (16) | B5, m. 178, beat 3.25 | 22 | 22 | 1 | 17 | 25 |
+| 26 | mm. 182 to 197 | 43 | G4 to B5 (16) | B5, m. 185, beat 3, 2 notes | 23 | 16 | 3 | 16 | 22 |
+| 27 | mm. 198 to 210 | 35 | G4 to B5 (16) | B5, m. 201, beat 3, 2 notes | 19 | 12 | 3 | 13 | 17 |
+| 28 | mm. 211 to 216 | 13 | G4 to G5 (12) | G5, m. 216, beat 2 | 6 | 5 | 1 | 6 | 5 |
+| 29 | mm. 217 to 224 | 22 | A#4 to C6 (14) | C6, m. 217, beat 2.5 | 10 | 7 | 3 | 4 | 12 |
+| 30 | mm. 225 to 242 | 43 | G4 to D#6 (20) | D#6, m. 225, beat 3.5 | 19 | 21 | 1 | 15 | 21 |
+| 31 | mm. 243 to 252 | 30 | G4 to A5 (14) | A5, m. 245, beat 2.75, 2 notes | 17 | 10 | 2 | 10 | 16 |
+| 32 | m. 253 | 3 | B4 to D5 (3) | D5, m. 253, beat 2.75 | 1 | 0 | 1 | 0 | 1 |
+| 33 | m. 254 | 1 | G4 to G4 (0) | G4, m. 254, beat 2 | 0 | 0 | 0 | 0 | 0 |
+| 34 | mm. 255 to 262 | 15 | C5 to A5 (9) | A5, m. 261, beat 2, 2 notes | 3 | 6 | 2 | 3 | 6 |
+| 35 | mm. 263 to 264 | 4 | C5 to F5 (5) | F5, m. 263, beat 1.75 | 1 | 2 | 0 | 2 | 1 |
+| 36 | mm. 265 to 266 | 4 | D5 to F5 (3) | F5, m. 265, beat 2, 2 notes | 0 | 1 | 1 | 0 | 1 |
+| 37 | mm. 267 to 270 | 9 | C5 to A5 (9) | A5, m. 269, beat 2, 2 notes | 3 | 3 | 1 | 2 | 4 |
+| 38 | mm. 271 to 272 | 5 | C5 to G5 (7) | G5, m. 272, beat 2.75 | 2 | 2 | 0 | 2 | 2 |
+| 39 | mm. 273 to 278 | 12 | D5 to E6 (14) | E6, m. 274, beat 2 | 4 | 6 | 1 | 3 | 7 |
+| 40 | mm. 279 to 286 | 18 | G4 to A5 (14) | A5, m. 283, beat 1 | 5 | 8 | 1 | 6 | 5 |
+| 41 | mm. 287 to 296 | 20 | C5 to C6 (12) | C6, m. 294, beat 2.5 | 7 | 8 | 1 | 6 | 9 |
+| 42 | mm. 297 to 307 | 24 | B3 to C6 (25) | C6, m. 299, beat 1.5 | 10 | 10 | 2 | 10 | 8 |
+| 43 | mm. 308 to 312 | 13 | A4 to F6 (20) | F6, m. 308, beat 1.5 | 1 | 10 | 1 | 9 | 2 |
+| 44 | m. 313 | 1 | A4 to A4 (0) | A4, m. 313, beat 1 | 0 | 0 | 0 | 0 | 0 |
+| 45 | m. 314 | 1 | A4 to A4 (0) | A4, m. 314, beat 1 | 0 | 0 | 0 | 0 | 0 |
+| 46 | m. 315 | 1 | E5 to E5 (0) | E5, m. 315, beat 1.25 | 0 | 0 | 0 | 0 | 0 |
+| 47 | mm. 316 to 319 | 5 | D5 to G5 (5) | G5, m. 317, beat 2.5 | 0 | 2 | 1 | 0 | 2 |
+| 48 | mm. 320 to 323 | 9 | C5 to A5 (9) | A5, m. 322, beat 2, 2 notes | 3 | 3 | 1 | 2 | 4 |
+| 49 | mm. 324 to 325 | 4 | C5 to F5 (5) | F5, m. 324, beat 1.75 | 1 | 2 | 0 | 2 | 1 |
+| 50 | mm. 326 to 333 | 16 | G4 to D6 (19) | D6, m. 327, beat 2, 2 notes | 6 | 8 | 1 | 1 | 13 |
+| 51 | mm. 334 to 338 | 11 | G4 to C6 (17) | C6, m. 337, beat 1.5 | 2 | 4 | 4 | 0 | 6 |
 
 ### Leaps
 
@@ -5696,58 +5695,57 @@ A leap is an interval of a third or larger. The library's rule asks a leap of a 
 
 | Phrase | Leaps | Recovered | Unrecovered | Not required | Not judged | Consecutive |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 36 | 1 | 20 | 15 | 0 | 19 |
+| 1 | 35 | 1 | 19 | 15 | 0 | 16 |
 | 2 | 14 | 1 | 9 | 4 | 0 | 6 |
 | 3 | 7 | 0 | 1 | 5 | 1 | 3 |
 | 4 | 3 | 0 | 1 | 1 | 1 | 2 |
-| 5 | 33 | 1 | 19 | 13 | 0 | 17 |
+| 5 | 32 | 1 | 18 | 13 | 0 | 14 |
 | 6 | 14 | 1 | 9 | 4 | 0 | 6 |
 | 7 | 7 | 0 | 1 | 5 | 1 | 3 |
 | 8 | 3 | 0 | 1 | 1 | 1 | 2 |
 | 9 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 10 | 7 | 0 | 2 | 4 | 1 | 2 |
-| 11 | 21 | 0 | 12 | 8 | 1 | 15 |
-| 12 | 35 | 4 | 17 | 13 | 1 | 18 |
+| 10 | 7 | 0 | 3 | 3 | 1 | 2 |
+| 11 | 20 | 1 | 11 | 7 | 1 | 12 |
+| 12 | 34 | 4 | 17 | 12 | 1 | 15 |
 | 13 | 15 | 1 | 9 | 5 | 0 | 9 |
-| 14 | 7 | 0 | 3 | 3 | 1 | 2 |
+| 14 | 8 | 0 | 3 | 4 | 1 | 3 |
 | 15 | 2 | 0 | 1 | 0 | 1 | 0 |
-| 16 | 5 | 0 | 2 | 2 | 1 | 1 |
-| 17 | 5 | 0 | 2 | 3 | 0 | 1 |
-| 18 | 21 | 0 | 12 | 8 | 1 | 15 |
-| 19 | 35 | 4 | 17 | 13 | 1 | 18 |
+| 16 | 6 | 0 | 3 | 2 | 1 | 2 |
+| 17 | 5 | 0 | 3 | 2 | 0 | 1 |
+| 18 | 20 | 1 | 11 | 7 | 1 | 12 |
+| 19 | 34 | 4 | 17 | 12 | 1 | 15 |
 | 20 | 15 | 1 | 9 | 5 | 0 | 9 |
-| 21 | 7 | 0 | 3 | 3 | 1 | 2 |
+| 21 | 8 | 0 | 3 | 4 | 1 | 3 |
 | 22 | 2 | 0 | 1 | 0 | 1 | 0 |
 | 23 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 24 | 16 | 0 | 3 | 12 | 1 | 1 |
-| 25 | 25 | 0 | 7 | 17 | 1 | 3 |
-| 26 | 8 | 3 | 2 | 3 | 0 | 0 |
-| 27 | 14 | 0 | 5 | 9 | 0 | 3 |
-| 28 | 8 | 3 | 2 | 3 | 0 | 0 |
-| 29 | 15 | 0 | 4 | 10 | 1 | 3 |
-| 30 | 17 | 2 | 7 | 8 | 0 | 5 |
-| 31 | 17 | 0 | 3 | 13 | 1 | 1 |
-| 32 | 16 | 1 | 2 | 13 | 0 | 2 |
-| 33 | 1 | 0 | 0 | 1 | 0 | 0 |
-| 34 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 35 | 6 | 0 | 2 | 2 | 2 | 1 |
-| 36 | 1 | 1 | 0 | 0 | 0 | 0 |
-| 37 | 1 | 0 | 0 | 1 | 0 | 0 |
-| 38 | 4 | 0 | 2 | 1 | 1 | 1 |
-| 39 | 2 | 1 | 0 | 0 | 1 | 0 |
-| 40 | 7 | 1 | 2 | 4 | 0 | 1 |
-| 41 | 6 | 1 | 3 | 2 | 0 | 1 |
-| 42 | 10 | 1 | 3 | 5 | 1 | 2 |
-| 43 | 10 | 1 | 5 | 3 | 1 | 2 |
-| 44 | 2 | 0 | 1 | 1 | 0 | 0 |
+| 24 | 16 | 0 | 4 | 11 | 1 | 1 |
+| 25 | 25 | 0 | 8 | 16 | 1 | 3 |
+| 26 | 22 | 3 | 8 | 11 | 0 | 3 |
+| 27 | 17 | 3 | 5 | 9 | 0 | 1 |
+| 28 | 5 | 0 | 1 | 3 | 1 | 0 |
+| 29 | 12 | 0 | 6 | 6 | 0 | 3 |
+| 30 | 21 | 0 | 6 | 14 | 1 | 3 |
+| 31 | 16 | 1 | 2 | 13 | 0 | 2 |
+| 32 | 1 | 0 | 0 | 1 | 0 | 0 |
+| 33 | 0 | 0 | 0 | 0 | 0 | 0 |
+| 34 | 6 | 0 | 2 | 3 | 1 | 1 |
+| 35 | 1 | 1 | 0 | 0 | 0 | 0 |
+| 36 | 1 | 0 | 0 | 1 | 0 | 0 |
+| 37 | 4 | 0 | 2 | 1 | 1 | 1 |
+| 38 | 2 | 1 | 0 | 0 | 1 | 0 |
+| 39 | 7 | 1 | 2 | 4 | 0 | 1 |
+| 40 | 5 | 0 | 3 | 2 | 0 | 1 |
+| 41 | 9 | 1 | 3 | 3 | 2 | 2 |
+| 42 | 8 | 1 | 4 | 2 | 1 | 2 |
+| 43 | 2 | 0 | 1 | 1 | 0 | 0 |
+| 44 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 45 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 46 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 47 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 48 | 2 | 0 | 0 | 1 | 1 | 0 |
-| 49 | 4 | 0 | 2 | 1 | 1 | 1 |
-| 50 | 1 | 1 | 0 | 0 | 0 | 0 |
-| 51 | 13 | 0 | 6 | 6 | 1 | 10 |
-| 52 | 6 | 0 | 5 | 1 | 0 | 2 |
+| 47 | 2 | 0 | 0 | 2 | 0 | 0 |
+| 48 | 4 | 0 | 2 | 1 | 1 | 1 |
+| 49 | 1 | 1 | 0 | 0 | 0 | 0 |
+| 50 | 13 | 0 | 6 | 6 | 1 | 10 |
+| 51 | 6 | 0 | 5 | 1 | 0 | 2 |
 
 ### Non-chord tones
 
@@ -5755,58 +5753,57 @@ Each melody note is set against the chord of the segment it starts in, as the li
 
 | Phrase | Notes | Chord tones | Non-chord tones | Unclassified | By type |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 49 | 42 | 2 | 5 | passing 1, neighbor 1 |
+| 1 | 49 | 42 | 1 | 6 | passing 1 |
 | 2 | 20 | 20 | 0 | 0 | - |
-| 3 | 21 | 15 | 5 | 1 | passing 1, neighbor 1, anticipation 3 |
+| 3 | 21 | 15 | 6 | 0 | passing 2, anticipation 3, pedal 1 |
 | 4 | 4 | 4 | 0 | 0 | - |
-| 5 | 46 | 39 | 2 | 5 | passing 1, neighbor 1 |
+| 5 | 46 | 39 | 1 | 6 | passing 1 |
 | 6 | 20 | 20 | 0 | 0 | - |
-| 7 | 21 | 15 | 5 | 1 | passing 1, neighbor 1, anticipation 3 |
+| 7 | 21 | 15 | 6 | 0 | passing 2, anticipation 3, pedal 1 |
 | 8 | 4 | 4 | 0 | 0 | - |
 | 9 | 1 | 1 | 0 | 0 | - |
-| 10 | 15 | 9 | 1 | 5 | appoggiatura 1 |
-| 11 | 28 | 25 | 1 | 2 | passing 1 |
+| 10 | 15 | 9 | 0 | 6 | - |
+| 11 | 28 | 25 | 1 | 2 | escape-tone 1 |
 | 12 | 56 | 49 | 2 | 5 | passing 1, neighbor 1 |
 | 13 | 19 | 19 | 0 | 0 | - |
-| 14 | 17 | 12 | 3 | 2 | passing 2, neighbor 1 |
+| 14 | 17 | 12 | 0 | 5 | - |
 | 15 | 3 | 3 | 0 | 0 | - |
 | 16 | 9 | 7 | 0 | 2 | - |
 | 17 | 12 | 10 | 0 | 2 | - |
-| 18 | 28 | 25 | 1 | 2 | passing 1 |
+| 18 | 28 | 25 | 1 | 2 | escape-tone 1 |
 | 19 | 56 | 49 | 2 | 5 | passing 1, neighbor 1 |
 | 20 | 19 | 19 | 0 | 0 | - |
-| 21 | 17 | 12 | 3 | 2 | passing 2, neighbor 1 |
+| 21 | 17 | 12 | 0 | 5 | - |
 | 22 | 3 | 3 | 0 | 0 | - |
 | 23 | 1 | 1 | 0 | 0 | - |
-| 24 | 32 | 24 | 5 | 3 | passing 3, neighbor 1, appoggiatura 1 |
-| 25 | 47 | 35 | 9 | 3 | passing 3, neighbor 1, appoggiatura 5 |
-| 26 | 17 | 12 | 4 | 1 | passing 2, appoggiatura 2 |
-| 27 | 26 | 20 | 5 | 1 | passing 1, neighbor 1, appoggiatura 3 |
-| 28 | 17 | 12 | 4 | 1 | passing 2, appoggiatura 2 |
-| 29 | 31 | 23 | 7 | 1 | passing 1, neighbor 2, anticipation 1, appoggiatura 2, escape-tone 1 |
-| 30 | 28 | 20 | 5 | 3 | appoggiatura 5 |
-| 31 | 37 | 28 | 5 | 4 | passing 3, neighbor 1, appoggiatura 1 |
-| 32 | 30 | 15 | 7 | 8 | neighbor 2, appoggiatura 5 |
-| 33 | 3 | 3 | 0 | 0 | - |
-| 34 | 1 | 1 | 0 | 0 | - |
-| 35 | 15 | 11 | 2 | 2 | passing 1, escape-tone 1 |
+| 24 | 32 | 24 | 1 | 7 | neighbor 1 |
+| 25 | 47 | 35 | 3 | 9 | neighbor 1, appoggiatura 2 |
+| 26 | 43 | 32 | 6 | 5 | suspension 1, appoggiatura 4, retardation 1 |
+| 27 | 35 | 27 | 5 | 3 | suspension 1, appoggiatura 3, retardation 1 |
+| 28 | 13 | 8 | 4 | 1 | neighbor 2, appoggiatura 1, escape-tone 1 |
+| 29 | 22 | 15 | 3 | 4 | passing 1, anticipation 1, appoggiatura 1 |
+| 30 | 43 | 33 | 2 | 8 | neighbor 1, appoggiatura 1 |
+| 31 | 30 | 15 | 6 | 9 | passing 1, anticipation 1, appoggiatura 2, escape-tone 2 |
+| 32 | 3 | 3 | 0 | 0 | - |
+| 33 | 1 | 1 | 0 | 0 | - |
+| 34 | 15 | 11 | 0 | 4 | - |
+| 35 | 4 | 4 | 0 | 0 | - |
 | 36 | 4 | 4 | 0 | 0 | - |
-| 37 | 4 | 4 | 0 | 0 | - |
-| 38 | 9 | 7 | 2 | 0 | passing 1, escape-tone 1 |
-| 39 | 5 | 5 | 0 | 0 | - |
-| 40 | 12 | 11 | 0 | 1 | - |
-| 41 | 18 | 16 | 0 | 2 | - |
-| 42 | 20 | 17 | 3 | 0 | passing 1, appoggiatura 1, escape-tone 1 |
-| 43 | 24 | 16 | 1 | 7 | appoggiatura 1 |
-| 44 | 13 | 7 | 5 | 1 | appoggiatura 5 |
+| 37 | 9 | 7 | 0 | 2 | - |
+| 38 | 5 | 5 | 0 | 0 | - |
+| 39 | 12 | 11 | 1 | 0 | escape-tone 1 |
+| 40 | 18 | 16 | 0 | 2 | - |
+| 41 | 20 | 17 | 0 | 3 | - |
+| 42 | 24 | 16 | 1 | 7 | neighbor 1 |
+| 43 | 13 | 7 | 5 | 1 | passing 3, anticipation 1, escape-tone 1 |
+| 44 | 1 | 1 | 0 | 0 | - |
 | 45 | 1 | 1 | 0 | 0 | - |
 | 46 | 1 | 1 | 0 | 0 | - |
-| 47 | 1 | 1 | 0 | 0 | - |
-| 48 | 5 | 5 | 0 | 0 | - |
-| 49 | 9 | 7 | 2 | 0 | passing 1, escape-tone 1 |
-| 50 | 4 | 4 | 0 | 0 | - |
-| 51 | 16 | 14 | 1 | 1 | anticipation 1 |
-| 52 | 11 | 11 | 0 | 0 | - |
+| 47 | 5 | 5 | 0 | 0 | - |
+| 48 | 9 | 7 | 0 | 2 | - |
+| 49 | 4 | 4 | 0 | 0 | - |
+| 50 | 16 | 14 | 1 | 1 | anticipation 1 |
+| 51 | 11 | 11 | 0 | 0 | - |
 
 ### Tendencies
 
@@ -5814,58 +5811,57 @@ The library's melodic tendencies are soft preferences a well-formed line usually
 
 | Phrase | Pitch proximity | Step declination | Step inertia | Melodic regression | Melodic arch | Seventh degree followed | Seventh degree broken |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | does not hold | does not hold | does not hold | does not hold | does not hold | 0 | 5 (m. 2, beat 1; m. 6, beat 1.75; m. 7, beat 4; m. 11, beat 2; m. 11, beat 4) |
-| 2 | does not hold | holds | does not hold | holds | does not hold | 0 | 1 (m. 19, beat 4.5) |
-| 3 | does not hold | holds | holds | does not hold | holds | 0 | 0 |
-| 4 | does not hold | holds | holds | holds | holds | 0 | 0 |
-| 5 | does not hold | does not hold | does not hold | does not hold | does not hold | 0 | 5 (m. 30, beat 1; m. 34, beat 1.75; m. 35, beat 4; m. 39, beat 2; m. 39, beat 4) |
-| 6 | does not hold | holds | does not hold | holds | does not hold | 0 | 1 (m. 47, beat 4.5) |
-| 7 | does not hold | holds | holds | does not hold | holds | 0 | 0 |
-| 8 | does not hold | holds | holds | holds | holds | 0 | 0 |
+| 1 | does not hold | does not hold | does not hold | does not hold | does not hold | 0 | 3 (m. 2, beat 1; m. 6, beat 1.75; m. 7, beat 4) |
+| 2 | does not hold | holds | does not hold | holds | does not hold | 0 | 3 (m. 14, beat 3.75; m. 16, beat 3.75; m. 20, beat 2.25) |
+| 3 | does not hold | holds | holds | does not hold | holds | 1 | 9 (m. 25, beat 1.25; m. 25, beat 1.75; m. 25, beat 2.25; m. 25, beat 2.75; m. 25, beat 3.25; m. 25, beat 3.75; m. 25, beat 4.25; m. 25, beat 4.5; m. 26, beat 2.75) |
+| 4 | does not hold | holds | holds | holds | holds | 0 | 1 (m. 28, beat 2) |
+| 5 | does not hold | does not hold | does not hold | does not hold | does not hold | 0 | 3 (m. 30, beat 1; m. 34, beat 1.75; m. 35, beat 4) |
+| 6 | does not hold | holds | does not hold | holds | does not hold | 0 | 3 (m. 42, beat 3.75; m. 44, beat 3.75; m. 48, beat 2.25) |
+| 7 | does not hold | holds | holds | does not hold | holds | 1 | 9 (m. 53, beat 1.25; m. 53, beat 1.75; m. 53, beat 2.25; m. 53, beat 2.75; m. 53, beat 3.25; m. 53, beat 3.75; m. 53, beat 4.25; m. 53, beat 4.5; m. 54, beat 2.75) |
+| 8 | does not hold | holds | holds | holds | holds | 0 | 1 (m. 56, beat 2) |
 | 9 | holds | holds | holds | holds | does not hold | 0 | 0 |
-| 10 | does not hold | holds | does not hold | does not hold | holds | 2 | 0 |
-| 11 | does not hold | does not hold | holds | does not hold | does not hold | 2 | 2 (m. 68, beat 2; m. 71, beat 1) |
-| 12 | does not hold | holds | does not hold | does not hold | does not hold | 0 | 6 (m. 75, beat 1.75; m. 76, beat 4; m. 79, beat 3; m. 81, beat 4; m. 84, beat 2; m. 84, beat 4) |
-| 13 | does not hold | holds | does not hold | does not hold | does not hold | 2 | 1 (m. 92, beat 4.5) |
-| 14 | does not hold | holds | holds | does not hold | holds | 1 | 0 |
+| 10 | does not hold | holds | does not hold | does not hold | holds | 1 | 0 |
+| 11 | does not hold | does not hold | holds | does not hold | does not hold | 1 | 2 (m. 66, beat 2; m. 68, beat 1.5) |
+| 12 | does not hold | holds | does not hold | does not hold | does not hold | 3 | 0 |
+| 13 | does not hold | holds | does not hold | does not hold | does not hold | 0 | 3 (m. 88, beat 2; m. 90, beat 2; m. 92, beat 4.5) |
+| 14 | does not hold | holds | holds | does not hold | holds | 0 | 1 (m. 97, beat 1.75) |
 | 15 | does not hold | holds | does not hold | holds | holds | 0 | 0 |
-| 16 | does not hold | holds | holds | does not hold | does not hold | 1 | 0 |
-| 17 | does not hold | holds | holds | does not hold | does not hold | 2 | 0 |
-| 18 | does not hold | does not hold | holds | does not hold | does not hold | 2 | 2 (m. 113, beat 2; m. 116, beat 1) |
-| 19 | does not hold | holds | does not hold | does not hold | does not hold | 0 | 6 (m. 120, beat 1.75; m. 121, beat 4; m. 124, beat 3; m. 126, beat 4; m. 129, beat 2; m. 129, beat 4) |
-| 20 | does not hold | holds | does not hold | does not hold | does not hold | 2 | 1 (m. 137, beat 4.5) |
-| 21 | does not hold | holds | holds | does not hold | holds | 1 | 0 |
+| 16 | does not hold | holds | holds | does not hold | does not hold | 2 | 0 |
+| 17 | does not hold | holds | holds | does not hold | does not hold | 0 | 0 |
+| 18 | does not hold | does not hold | holds | does not hold | does not hold | 1 | 2 (m. 111, beat 2; m. 113, beat 1.5) |
+| 19 | does not hold | holds | does not hold | does not hold | does not hold | 3 | 0 |
+| 20 | does not hold | holds | does not hold | does not hold | does not hold | 0 | 3 (m. 133, beat 2; m. 135, beat 2; m. 137, beat 4.5) |
+| 21 | does not hold | holds | holds | does not hold | holds | 0 | 1 (m. 142, beat 1.75) |
 | 22 | does not hold | holds | does not hold | holds | holds | 0 | 0 |
 | 23 | holds | holds | holds | holds | does not hold | 0 | 0 |
-| 24 | does not hold | does not hold | holds | does not hold | does not hold | 1 | 3 (m. 151, beat 3; m. 155, beat 2; m. 159, beat 3) |
-| 25 | does not hold | does not hold | holds | does not hold | does not hold | 1 | 3 (m. 167, beat 3; m. 171, beat 2; m. 175, beat 3) |
-| 26 | does not hold | does not hold | does not hold | does not hold | holds | 0 | 0 |
-| 27 | does not hold | does not hold | holds | does not hold | holds | 1 | 2 (m. 188, beat 3; m. 191, beat 3) |
-| 28 | does not hold | does not hold | does not hold | does not hold | holds | 0 | 0 |
-| 29 | does not hold | does not hold | does not hold | does not hold | holds | 1 | 2 (m. 204, beat 3; m. 207, beat 3) |
-| 30 | does not hold | does not hold | does not hold | holds | does not hold | 1 | 1 (m. 217, beat 3) |
-| 31 | holds | does not hold | holds | does not hold | does not hold | 1 | 3 (m. 231, beat 3; m. 235, beat 2; m. 239, beat 3) |
-| 32 | does not hold | does not hold | does not hold | does not hold | does not hold | 3 | 0 |
-| 33 | does not hold | holds | holds | holds | does not hold | 0 | 0 |
-| 34 | holds | holds | holds | holds | does not hold | 0 | 0 |
-| 35 | does not hold | does not hold | does not hold | holds | does not hold | 2 | 0 |
-| 36 | holds | holds | does not hold | holds | does not hold | 0 | 0 |
-| 37 | holds | does not hold | holds | holds | holds | 0 | 0 |
-| 38 | does not hold | does not hold | does not hold | holds | holds | 0 | 0 |
-| 39 | holds | holds | does not hold | holds | does not hold | 0 | 0 |
-| 40 | does not hold | does not hold | does not hold | holds | holds | 0 | 0 |
-| 41 | holds | does not hold | holds | does not hold | holds | 0 | 1 (m. 283, beat 2.5) |
-| 42 | does not hold | does not hold | does not hold | does not hold | does not hold | 0 | 0 |
-| 43 | holds | does not hold | does not hold | does not hold | holds | 2 | 0 |
-| 44 | holds | holds | holds | holds | does not hold | 1 | 0 |
+| 24 | does not hold | does not hold | holds | does not hold | does not hold | 0 | 1 (m. 158, beat 2.75) |
+| 25 | does not hold | does not hold | holds | does not hold | does not hold | 0 | 5 (m. 163, beat 3; m. 165, beat 1; m. 174, beat 2.75; m. 178, beat 3.25; m. 179, beat 3) |
+| 26 | does not hold | does not hold | does not hold | does not hold | does not hold | 0 | 4 (m. 185, beat 3; m. 190, beat 2.75; m. 194, beat 3.25; m. 195, beat 3) |
+| 27 | does not hold | does not hold | does not hold | does not hold | does not hold | 0 | 2 (m. 201, beat 3; m. 206, beat 2.75) |
+| 28 | does not hold | holds | does not hold | does not hold | does not hold | 2 | 1 (m. 211, beat 3) |
+| 29 | does not hold | does not hold | does not hold | does not hold | does not hold | 3 | 0 |
+| 30 | does not hold | does not hold | holds | does not hold | does not hold | 2 | 2 (m. 229, beat 1; m. 238, beat 2.75) |
+| 31 | does not hold | does not hold | does not hold | does not hold | does not hold | 0 | 5 (m. 243, beat 3; m. 247, beat 3; m. 251, beat 3; m. 252, beat 1.75; m. 252, beat 2) |
+| 32 | does not hold | holds | holds | holds | does not hold | 0 | 2 (m. 253, beat 1.75; m. 253, beat 2) |
+| 33 | holds | holds | holds | holds | does not hold | 0 | 0 |
+| 34 | does not hold | does not hold | does not hold | holds | does not hold | 0 | 0 |
+| 35 | holds | holds | does not hold | holds | does not hold | 0 | 0 |
+| 36 | holds | does not hold | holds | holds | holds | 0 | 0 |
+| 37 | does not hold | does not hold | does not hold | holds | holds | 0 | 0 |
+| 38 | holds | holds | does not hold | holds | does not hold | 0 | 0 |
+| 39 | does not hold | does not hold | does not hold | holds | holds | 1 | 0 |
+| 40 | holds | does not hold | holds | does not hold | holds | 0 | 0 |
+| 41 | does not hold | does not hold | does not hold | does not hold | does not hold | 0 | 1 (m. 295, beat 2.5) |
+| 42 | holds | does not hold | does not hold | does not hold | holds | 0 | 3 (m. 300, beat 2; m. 302, beat 2; m. 306, beat 1) |
+| 43 | holds | holds | holds | holds | does not hold | 0 | 1 (m. 309, beat 2) |
+| 44 | holds | holds | holds | holds | does not hold | 0 | 0 |
 | 45 | holds | holds | holds | holds | does not hold | 0 | 0 |
 | 46 | holds | holds | holds | holds | does not hold | 0 | 0 |
-| 47 | holds | holds | holds | holds | does not hold | 0 | 0 |
-| 48 | does not hold | does not hold | does not hold | holds | does not hold | 1 | 0 |
-| 49 | does not hold | does not hold | does not hold | holds | holds | 0 | 0 |
-| 50 | holds | holds | does not hold | holds | does not hold | 0 | 0 |
-| 51 | does not hold | holds | holds | holds | does not hold | 0 | 0 |
-| 52 | does not hold | holds | does not hold | holds | holds | 0 | 0 |
+| 47 | does not hold | does not hold | does not hold | holds | does not hold | 0 | 0 |
+| 48 | does not hold | does not hold | does not hold | holds | holds | 0 | 0 |
+| 49 | holds | holds | does not hold | holds | does not hold | 0 | 0 |
+| 50 | does not hold | holds | holds | holds | does not hold | 0 | 0 |
+| 51 | does not hold | holds | does not hold | holds | holds | 0 | 0 |
 
 ### Development
 
@@ -5877,40 +5873,40 @@ Each family's occurrences in time order, as the measure they start in and the ki
 - **Family 4:** m2 original > m30 exact > m71 real-transposed > m116 real-transposed
 - **Family 5:** m2 original > m30 exact > m71 real-transposed > m116 real-transposed
 - **Family 6:** m4 original > m6 fragmented > m7 fragmented > m8 fragmented > m9 fragmented > m32 exact > m34 fragmented > m35 fragmented > m36 fragmented > m37 fragmented > m73 real-transposed > m75 fragmented > m76 fragmented > m77 fragmented > m97 fragmented > m118 real-transposed > m120 fragmented > m121 fragmented > m122 fragmented > m142 fragmented
-- **Family 7:** m4 original > m6 fragmented > m7 fragmented > m8 fragmented > m9 fragmented > m9 fragmented > m32 exact > m34 fragmented > m35 fragmented > m36 fragmented > m37 fragmented > m37 fragmented > m59 fragmented > m63 fragmented > m64 fragmented > m69 fragmented > m73 real-transposed > m75 fragmented > m76 fragmented > m77 fragmented > m78 fragmented > m79 fragmented > m80 fragmented > m81 fragmented > m82 fragmented > m97 fragmented > m104 fragmented > m108 fragmented > m109 fragmented > m114 fragmented > m118 real-transposed > m120 fragmented > m121 fragmented > m122 fragmented > m123 fragmented > m124 fragmented > m125 fragmented > m126 fragmented > m127 fragmented > m142 fragmented > m158 fragmented > m174 fragmented > m190 fragmented > m206 fragmented > m238 fragmented > m280 fragmented > m281 fragmented > m282 fragmented
+- **Family 7:** m4 original > m6 fragmented > m7 fragmented > m8 fragmented > m9 fragmented > m9 fragmented > m32 exact > m34 fragmented > m35 fragmented > m36 fragmented > m37 fragmented > m37 fragmented > m59 fragmented > m69 fragmented > m73 real-transposed > m75 fragmented > m76 fragmented > m77 fragmented > m78 fragmented > m79 fragmented > m80 fragmented > m81 fragmented > m82 fragmented > m97 fragmented > m104 fragmented > m114 fragmented > m118 real-transposed > m120 fragmented > m121 fragmented > m122 fragmented > m123 fragmented > m124 fragmented > m125 fragmented > m126 fragmented > m127 fragmented > m142 fragmented > m158 fragmented > m174 fragmented > m190 fragmented > m206 fragmented > m238 fragmented > m280 fragmented > m281 fragmented > m282 fragmented
 - **Family 8:** m5 original > m6 tonal-transposed > m7 tonal-transposed > m8 tonal-transposed > m9 fragmented > m33 exact > m34 tonal-transposed > m35 tonal-transposed > m36 tonal-transposed > m37 fragmented > m69 fragmented > m74 real-transposed > m75 tonal-transposed > m76 tonal-transposed > m77 tonal-transposed > m82 fragmented > m114 fragmented > m119 real-transposed > m120 tonal-transposed > m121 tonal-transposed > m122 tonal-transposed > m127 fragmented
-- **Family 9:** m5 original > m6 tonal-transposed > m7 tonal-transposed > m8 real-transposed > m10 fragmented > m10 fragmented > m33 exact > m34 tonal-transposed > m35 tonal-transposed > m36 real-transposed > m38 fragmented > m38 fragmented > m74 real-transposed > m75 tonal-transposed > m76 tonal-transposed > m77 exact > m78 tonal-transposed > m79 real-transposed > m80 tonal-transposed > m81 tonal-transposed > m83 fragmented > m83 fragmented > m97 fragmented > m119 real-transposed > m120 tonal-transposed > m121 tonal-transposed > m122 exact > m123 tonal-transposed > m124 real-transposed > m125 tonal-transposed > m126 tonal-transposed > m128 fragmented > m128 fragmented > m142 fragmented > m158 fragmented > m174 fragmented > m190 fragmented > m206 fragmented > m238 fragmented > m275 retrograde > m282 varied
-- **Family 10:** m5 original > m5 inverted > m6 tonal-transposed > m6 inverted > m7 tonal-transposed > m7 inverted > m8 real-transposed > m9 fragmented > m9 fragmented > m10 fragmented > m10 fragmented > m33 exact > m33 inverted > m34 tonal-transposed > m34 inverted > m35 tonal-transposed > m35 inverted > m36 real-transposed > m37 fragmented > m37 fragmented > m38 fragmented > m38 fragmented > m59 fragmented > m60 fragmented > m63 fragmented > m64 fragmented > m69 fragmented > m69 fragmented > m74 real-transposed > m74 inverted > m75 tonal-transposed > m75 inverted > m76 tonal-transposed > m76 inverted > m77 exact > m78 fragmented > m79 fragmented > m80 fragmented > m81 fragmented > m82 fragmented > m82 fragmented > m83 fragmented > m83 fragmented > m97 fragmented > m104 fragmented > m105 fragmented > m108 fragmented > m109 fragmented > m114 fragmented > m114 fragmented > m119 real-transposed > m119 inverted > m120 tonal-transposed > m120 inverted > m121 tonal-transposed > m121 inverted > m122 exact > m123 fragmented > m124 fragmented > m125 fragmented > m126 fragmented > m127 fragmented > m127 fragmented > m128 fragmented > m128 fragmented > m142 fragmented > m158 fragmented > m174 fragmented > m190 fragmented > m206 fragmented > m238 fragmented > m250 varied > m258 fragmented > m259 fragmented > m259 fragmented > m266 fragmented > m267 fragmented > m267 fragmented > m272 fragmented > m275 fragmented > m278 fragmented > m280 fragmented > m281 fragmented > m282 fragmented > m286 fragmented > m287 fragmented > m287 fragmented > m291 fragmented > m319 fragmented > m320 fragmented > m320 fragmented
-- **Family 11:** m5 original > m6 tonal-transposed > m7 tonal-transposed > m8 tonal-transposed > m10 fragmented > m33 exact > m34 tonal-transposed > m35 tonal-transposed > m36 tonal-transposed > m38 fragmented > m59 fragmented > m60 fragmented > m63 fragmented > m64 fragmented > m65 fragmented > m66 fragmented > m66 fragmented > m67 fragmented > m67 fragmented > m68 fragmented > m69 fragmented > m74 real-transposed > m75 tonal-transposed > m76 tonal-transposed > m77 tonal-transposed > m83 fragmented > m97 tonal-transposed > m104 fragmented > m105 fragmented > m108 fragmented > m109 fragmented > m110 fragmented > m111 fragmented > m111 fragmented > m112 fragmented > m112 fragmented > m113 fragmented > m114 fragmented > m119 real-transposed > m120 tonal-transposed > m121 tonal-transposed > m122 tonal-transposed > m128 fragmented > m142 tonal-transposed > m183 fragmented > m185 fragmented > m188 fragmented > m199 fragmented > m201 fragmented > m204 fragmented > m217 fragmented > m218 fragmented > m262 fragmented > m270 fragmented > m273 fragmented > m274 fragmented > m323 fragmented > m326 fragmented > m328 varied > m330 fragmented > m332 varied > m334 fragmented > m336 fragmented
-- **Family 12:** m5 original > m6 tonal-transposed > m7 tonal-transposed > m8 real-transposed > m10 fragmented > m10 fragmented > m24 fragmented > m33 exact > m34 tonal-transposed > m35 tonal-transposed > m36 real-transposed > m38 fragmented > m38 fragmented > m52 fragmented > m59 fragmented > m60 fragmented > m63 fragmented > m64 fragmented > m65 fragmented > m65 fragmented > m66 fragmented > m66 fragmented > m67 fragmented > m67 fragmented > m68 fragmented > m68 fragmented > m69 fragmented > m69 inverted > m74 real-transposed > m75 tonal-transposed > m76 tonal-transposed > m77 exact > m78 fragmented > m79 fragmented > m80 fragmented > m81 fragmented > m83 fragmented > m83 fragmented > m97 tonal-transposed > m104 fragmented > m105 fragmented > m108 fragmented > m109 fragmented > m110 fragmented > m110 fragmented > m111 fragmented > m111 fragmented > m112 fragmented > m112 fragmented > m113 fragmented > m113 fragmented > m114 fragmented > m114 inverted > m119 real-transposed > m120 tonal-transposed > m121 tonal-transposed > m122 exact > m123 fragmented > m124 fragmented > m125 fragmented > m126 fragmented > m128 fragmented > m128 fragmented > m142 tonal-transposed > m149 fragmented > m151 fragmented > m155 fragmented > m155 fragmented > m159 fragmented > m159 fragmented > m163 fragmented > m165 fragmented > m167 fragmented > m171 fragmented > m171 fragmented > m175 fragmented > m175 fragmented > m179 fragmented > m181 fragmented > m183 fragmented > m185 fragmented > m186 fragmented > m187 fragmented > m188 fragmented > m191 fragmented > m191 fragmented > m195 fragmented > m197 fragmented > m199 fragmented > m201 fragmented > m202 fragmented > m203 fragmented > m204 fragmented > m207 fragmented > m207 fragmented > m211 fragmented > m213 fragmented > m215 fragmented > m217 fragmented > m218 fragmented > m219 fragmented > m220 varied > m221 fragmented > m227 fragmented > m229 fragmented > m231 fragmented > m235 fragmented > m235 fragmented > m239 fragmented > m239 fragmented > m243 fragmented > m245 fragmented > m246 varied > m247 fragmented > m249 fragmented > m260 fragmented > m262 fragmented > m268 fragmented > m270 fragmented > m273 fragmented > m274 fragmented > m274 fragmented > m276 fragmented > m288 fragmented > m290 fragmented > m308 varied > m310 varied > m321 fragmented > m323 fragmented > m326 fragmented > m327 fragmented > m327 fragmented > m328 fragmented > m328 fragmented > m330 fragmented > m331 fragmented > m331 fragmented > m332 fragmented > m332 fragmented > m334 fragmented > m336 fragmented
-- **Family 13:** m5 original > m6 tonal-transposed > m7 tonal-transposed > m33 exact > m34 tonal-transposed > m35 tonal-transposed > m74 real-transposed > m75 tonal-transposed > m76 tonal-transposed > m119 real-transposed > m120 tonal-transposed > m121 tonal-transposed
-- **Family 14:** m8 original > m36 exact
-- **Family 15:** m9 original > m37 exact > m60 fragmented > m82 fragmented > m105 fragmented > m127 fragmented
-- **Family 16:** m9 original > m37 exact > m82 exact > m127 exact
-- **Family 17:** m9 original > m37 exact > m82 exact > m127 exact > m158 fragmented > m174 fragmented > m190 fragmented > m206 fragmented > m238 fragmented
-- **Family 18:** m9 original > m37 exact > m82 exact > m127 exact
-- **Family 19:** m10 original > m10 tonal-transposed > m38 exact > m38 tonal-transposed > m83 exact > m83 tonal-transposed > m97 tonal-transposed > m128 exact > m128 tonal-transposed > m142 tonal-transposed
-- **Family 20:** m10 original > m38 exact > m83 exact > m128 exact > m151 fragmented > m159 fragmented > m167 fragmented > m175 fragmented > m191 fragmented > m207 fragmented > m213 fragmented > m215 fragmented > m231 fragmented > m235 fragmented > m239 fragmented > m245 fragmented > m249 fragmented > m332 fragmented
-- **Family 21:** m5 fragmented > m5 fragmented > m6 fragmented > m6 fragmented > m7 fragmented > m7 fragmented > m8 fragmented > m8 fragmented > m10 fragmented > m10 original > m24 fragmented > m33 fragmented > m33 fragmented > m34 fragmented > m34 fragmented > m35 fragmented > m35 fragmented > m36 fragmented > m36 fragmented > m38 fragmented > m38 fragmented > m52 fragmented > m59 fragmented > m60 fragmented > m63 fragmented > m64 fragmented > m65 fragmented > m65 fragmented > m66 fragmented > m66 fragmented > m67 fragmented > m67 fragmented > m68 fragmented > m68 fragmented > m69 fragmented > m74 fragmented > m74 fragmented > m75 fragmented > m75 fragmented > m76 fragmented > m76 fragmented > m77 fragmented > m77 fragmented > m78 fragmented > m79 fragmented > m80 fragmented > m81 fragmented > m83 fragmented > m83 exact > m97 fragmented > m97 fragmented > m104 fragmented > m105 fragmented > m108 fragmented > m109 fragmented > m110 fragmented > m110 fragmented > m111 fragmented > m111 fragmented > m112 fragmented > m112 fragmented > m113 fragmented > m113 fragmented > m114 fragmented > m119 fragmented > m119 fragmented > m120 fragmented > m120 fragmented > m121 fragmented > m121 fragmented > m122 fragmented > m122 fragmented > m123 fragmented > m124 fragmented > m125 fragmented > m126 fragmented > m128 fragmented > m128 exact > m142 fragmented > m142 fragmented > m151 fragmented > m159 fragmented > m167 fragmented > m175 fragmented > m181 fragmented > m183 fragmented > m185 fragmented > m186 fragmented > m188 fragmented > m191 fragmented > m197 fragmented > m199 fragmented > m201 fragmented > m202 fragmented > m204 fragmented > m207 fragmented > m213 fragmented > m215 fragmented > m217 fragmented > m218 fragmented > m227 fragmented > m231 fragmented > m235 fragmented > m239 fragmented > m245 fragmented > m249 fragmented > m260 fragmented > m262 fragmented > m268 fragmented > m270 fragmented > m273 fragmented > m274 fragmented > m274 fragmented > m276 fragmented > m288 fragmented > m290 fragmented > m321 fragmented > m323 fragmented > m326 fragmented > m327 fragmented > m327 fragmented > m328 fragmented > m328 fragmented > m330 fragmented > m331 fragmented > m331 fragmented > m332 fragmented > m332 fragmented > m334 fragmented > m336 fragmented
-- **Family 22:** m11 original > m39 exact > m84 exact > m129 exact
-- **Family 23:** m13 original > m13 tonal-transposed > m41 exact > m41 tonal-transposed > m86 real-transposed > m86 tonal-transposed > m131 real-transposed > m131 tonal-transposed
+- **Family 9:** m5 original > m6 tonal-transposed > m7 tonal-transposed > m8 real-transposed > m10 fragmented > m10 fragmented > m33 exact > m34 tonal-transposed > m35 tonal-transposed > m36 real-transposed > m38 fragmented > m38 fragmented > m74 real-transposed > m75 tonal-transposed > m76 tonal-transposed > m77 exact > m78 tonal-transposed > m79 real-transposed > m80 tonal-transposed > m81 tonal-transposed > m83 fragmented > m83 fragmented > m97 fragmented > m119 real-transposed > m120 tonal-transposed > m121 tonal-transposed > m122 exact > m123 tonal-transposed > m124 real-transposed > m125 tonal-transposed > m126 tonal-transposed > m128 fragmented > m128 fragmented > m142 fragmented > m158 fragmented > m174 fragmented > m190 fragmented > m206 fragmented > m238 fragmented > m275 fragmented > m282 varied
+- **Family 10:** m5 original > m5 inverted > m6 tonal-transposed > m7 tonal-transposed > m7 inverted > m8 real-transposed > m9 fragmented > m9 fragmented > m10 fragmented > m10 fragmented > m33 exact > m33 inverted > m34 tonal-transposed > m35 tonal-transposed > m35 inverted > m36 real-transposed > m37 fragmented > m37 fragmented > m38 fragmented > m38 fragmented > m59 fragmented > m60 fragmented > m63 fragmented > m69 fragmented > m69 fragmented > m74 real-transposed > m75 tonal-transposed > m76 tonal-transposed > m77 exact > m78 fragmented > m79 fragmented > m80 fragmented > m81 fragmented > m82 fragmented > m82 fragmented > m83 fragmented > m83 fragmented > m97 fragmented > m104 fragmented > m105 fragmented > m108 fragmented > m114 fragmented > m114 fragmented > m119 real-transposed > m120 tonal-transposed > m121 tonal-transposed > m122 exact > m123 fragmented > m124 fragmented > m125 fragmented > m126 fragmented > m127 fragmented > m127 fragmented > m128 fragmented > m128 fragmented > m142 fragmented > m158 fragmented > m174 fragmented > m190 fragmented > m206 fragmented > m238 fragmented > m250 varied > m258 fragmented > m259 fragmented > m259 fragmented > m266 fragmented > m267 fragmented > m267 fragmented > m272 fragmented > m275 fragmented > m278 fragmented > m280 fragmented > m281 fragmented > m282 fragmented > m286 fragmented > m287 fragmented > m287 fragmented > m319 fragmented > m320 fragmented > m320 fragmented
+- **Family 11:** m5 original > m6 tonal-transposed > m7 tonal-transposed > m8 tonal-transposed > m10 fragmented > m33 exact > m34 tonal-transposed > m35 tonal-transposed > m36 tonal-transposed > m38 fragmented > m65 fragmented > m65 fragmented > m66 fragmented > m66 fragmented > m67 fragmented > m68 fragmented > m69 fragmented > m74 real-transposed > m75 tonal-transposed > m76 tonal-transposed > m77 tonal-transposed > m83 fragmented > m97 tonal-transposed > m110 fragmented > m110 fragmented > m111 fragmented > m111 fragmented > m112 fragmented > m113 fragmented > m114 fragmented > m119 real-transposed > m120 tonal-transposed > m121 tonal-transposed > m122 tonal-transposed > m128 fragmented > m142 tonal-transposed > m183 fragmented > m185 fragmented > m188 fragmented > m199 fragmented > m201 fragmented > m204 fragmented > m217 fragmented > m221 varied > m262 fragmented > m270 fragmented > m273 fragmented > m274 fragmented > m290 fragmented > m323 fragmented > m326 fragmented > m328 varied > m330 fragmented > m332 varied > m334 fragmented > m336 fragmented
+- **Family 12:** m5 original > m6 tonal-transposed > m7 tonal-transposed > m8 real-transposed > m33 exact > m34 tonal-transposed > m35 tonal-transposed > m36 real-transposed > m74 real-transposed > m75 tonal-transposed > m76 tonal-transposed > m77 exact > m97 tonal-transposed > m119 real-transposed > m120 tonal-transposed > m121 tonal-transposed > m122 exact > m142 tonal-transposed > m218 varied > m220 varied > m221 varied > m246 varied > m274 varied > m310 varied
+- **Family 13:** m5 original > m6 tonal-transposed > m7 tonal-transposed > m8 tonal-transposed > m33 exact > m34 tonal-transposed > m35 tonal-transposed > m36 tonal-transposed > m74 real-transposed > m75 tonal-transposed > m76 tonal-transposed > m119 real-transposed > m120 tonal-transposed > m121 tonal-transposed
+- **Family 14:** m9 original > m37 exact > m60 fragmented > m63 fragmented > m82 fragmented > m105 fragmented > m108 fragmented > m127 fragmented
+- **Family 15:** m9 original > m37 exact > m82 exact > m127 exact
+- **Family 16:** m9 original > m37 exact > m82 exact > m127 exact > m158 fragmented > m174 fragmented > m190 fragmented > m206 fragmented > m238 fragmented
+- **Family 17:** m9 original > m37 exact > m82 exact > m127 exact > m275 fragmented
+- **Family 18:** m10 original > m10 tonal-transposed > m38 exact > m38 tonal-transposed > m83 exact > m83 tonal-transposed > m97 tonal-transposed > m128 exact > m128 tonal-transposed > m142 tonal-transposed
+- **Family 19:** m10 original > m38 exact > m83 exact > m128 exact > m213 fragmented > m215 fragmented > m221 fragmented > m235 fragmented > m245 fragmented > m249 fragmented > m332 fragmented
+- **Family 20:** m5 fragmented > m5 fragmented > m6 fragmented > m6 fragmented > m7 fragmented > m7 fragmented > m8 fragmented > m8 fragmented > m10 fragmented > m10 original > m24 fragmented > m33 fragmented > m33 fragmented > m34 fragmented > m34 fragmented > m35 fragmented > m35 fragmented > m36 fragmented > m36 fragmented > m38 fragmented > m38 fragmented > m52 fragmented > m59 fragmented > m63 fragmented > m65 fragmented > m65 fragmented > m66 fragmented > m66 fragmented > m67 fragmented > m67 fragmented > m68 fragmented > m69 fragmented > m74 fragmented > m74 fragmented > m75 fragmented > m75 fragmented > m76 fragmented > m76 fragmented > m77 fragmented > m77 fragmented > m78 fragmented > m79 fragmented > m80 fragmented > m81 fragmented > m83 fragmented > m83 exact > m97 fragmented > m97 fragmented > m104 fragmented > m108 fragmented > m110 fragmented > m110 fragmented > m111 fragmented > m111 fragmented > m112 fragmented > m112 fragmented > m113 fragmented > m114 fragmented > m119 fragmented > m119 fragmented > m120 fragmented > m120 fragmented > m121 fragmented > m121 fragmented > m122 fragmented > m122 fragmented > m123 fragmented > m124 fragmented > m125 fragmented > m126 fragmented > m128 fragmented > m128 exact > m142 fragmented > m142 fragmented > m181 fragmented > m183 fragmented > m185 fragmented > m186 fragmented > m188 fragmented > m197 fragmented > m199 fragmented > m201 fragmented > m202 fragmented > m204 fragmented > m213 fragmented > m215 fragmented > m217 fragmented > m218 fragmented > m221 fragmented > m227 fragmented > m235 fragmented > m245 fragmented > m249 fragmented > m260 fragmented > m262 fragmented > m268 fragmented > m270 fragmented > m273 fragmented > m274 fragmented > m274 fragmented > m276 fragmented > m288 fragmented > m290 fragmented > m321 fragmented > m323 fragmented > m326 fragmented > m327 fragmented > m327 fragmented > m328 fragmented > m328 fragmented > m330 fragmented > m331 fragmented > m331 fragmented > m332 fragmented > m332 fragmented > m334 fragmented > m336 fragmented
+- **Family 21:** m11 original > m39 exact > m84 exact > m129 exact > m312 diminished > m313 diminished > m314 diminished
+- **Family 22:** m13 original > m41 exact
+- **Family 23:** m13 original > m13 exact > m41 exact > m41 exact > m228 tonal-transposed > m297 tonal-transposed > m311 augmented
 - **Family 24:** m13 original > m41 exact
-- **Family 25:** m14 original > m16 exact > m42 exact > m44 exact > m87 real-transposed > m89 real-transposed > m132 real-transposed > m134 real-transposed
-- **Family 26:** m14 original > m16 exact > m42 exact > m44 exact > m87 real-transposed > m89 real-transposed > m132 real-transposed > m134 real-transposed
-- **Family 27:** m14 original > m16 exact > m42 exact > m44 exact > m87 real-transposed > m89 real-transposed > m98 fragmented > m98 fragmented > m98 fragmented > m98 fragmented > m132 real-transposed > m134 real-transposed > m143 fragmented > m143 fragmented > m143 fragmented > m143 fragmented
-- **Family 28:** m14 original > m16 exact > m42 exact > m44 exact > m87 real-transposed > m89 real-transposed > m132 real-transposed > m134 real-transposed > m311 tonal-transposed
-- **Family 29:** m15 original > m17 exact > m43 exact > m45 exact
+- **Family 25:** m13 original > m41 exact > m86 tonal-transposed > m86 real-transposed > m131 tonal-transposed > m131 real-transposed
+- **Family 26:** m13 original > m41 exact
+- **Family 27:** m14 original > m16 exact > m42 exact > m44 exact > m87 real-transposed > m89 real-transposed > m132 real-transposed > m134 real-transposed
+- **Family 28:** m14 original > m16 exact > m42 exact > m44 exact > m87 real-transposed > m89 real-transposed > m132 real-transposed > m134 real-transposed
+- **Family 29:** m14 original > m16 exact > m42 exact > m44 exact > m87 real-transposed > m89 real-transposed > m98 fragmented > m98 fragmented > m98 fragmented > m98 fragmented > m132 real-transposed > m134 real-transposed > m143 fragmented > m143 fragmented > m143 fragmented > m143 fragmented
 - **Family 30:** m15 original > m17 exact > m43 exact > m45 exact
-- **Family 31:** m15 original > m17 fragmented > m43 exact > m45 fragmented
-- **Family 32:** m17 original > m45 exact
-- **Family 33:** m18 original > m19 tonal-transposed > m20 tonal-transposed > m21 fragmented > m46 exact > m47 tonal-transposed > m48 tonal-transposed > m49 fragmented > m91 real-transposed > m92 fragmented > m93 tonal-transposed > m94 fragmented > m136 real-transposed > m137 fragmented > m138 tonal-transposed > m139 fragmented
+- **Family 31:** m15 original > m17 exact > m43 exact > m45 exact
+- **Family 32:** m15 original > m17 fragmented > m43 exact > m45 fragmented
+- **Family 33:** m17 original > m45 exact
 - **Family 34:** m18 original > m19 tonal-transposed > m20 tonal-transposed > m21 fragmented > m46 exact > m47 tonal-transposed > m48 tonal-transposed > m49 fragmented > m91 real-transposed > m92 fragmented > m93 tonal-transposed > m94 fragmented > m136 real-transposed > m137 fragmented > m138 tonal-transposed > m139 fragmented
-- **Family 35:** m18 original > m19 tonal-transposed > m20 tonal-transposed > m46 exact > m47 tonal-transposed > m48 tonal-transposed > m91 real-transposed > m93 tonal-transposed > m136 real-transposed > m138 tonal-transposed
+- **Family 35:** m18 original > m19 tonal-transposed > m20 tonal-transposed > m21 fragmented > m46 exact > m47 tonal-transposed > m48 tonal-transposed > m49 fragmented > m91 real-transposed > m92 fragmented > m93 tonal-transposed > m94 fragmented > m136 real-transposed > m137 fragmented > m138 tonal-transposed > m139 fragmented
 - **Family 36:** m18 original > m19 tonal-transposed > m20 tonal-transposed > m46 exact > m47 tonal-transposed > m48 tonal-transposed > m91 real-transposed > m93 tonal-transposed > m136 real-transposed > m138 tonal-transposed
-- **Family 37:** m21 original > m49 exact > m94 real-transposed > m139 real-transposed
+- **Family 37:** m18 original > m19 tonal-transposed > m20 tonal-transposed > m46 exact > m47 tonal-transposed > m48 tonal-transposed > m91 real-transposed > m93 tonal-transposed > m136 real-transposed > m138 tonal-transposed
 - **Family 38:** m21 original > m49 exact > m94 real-transposed > m139 real-transposed
-- **Family 39:** m21 original > m49 exact > m94 fragmented > m139 fragmented
-- **Family 40:** m21 original > m49 exact > m94 fragmented > m139 fragmented > m296 fragmented > m301 fragmented > m303 fragmented
+- **Family 39:** m21 original > m49 exact > m94 real-transposed > m139 real-transposed
+- **Family 40:** m21 original > m49 exact > m94 fragmented > m139 fragmented
 - **Family 41:** m21 original > m49 exact > m94 fragmented > m139 fragmented
 - **Family 42:** m22 original > m50 exact
 - **Family 43:** m22 original > m50 exact
@@ -5918,173 +5914,179 @@ Each family's occurrences in time order, as the measure they start in and the ki
 - **Family 45:** m23 original > m51 exact
 - **Family 46:** m23 original > m51 exact
 - **Family 47:** m23 original > m51 exact
-- **Family 48:** m24 original > m52 exact
-- **Family 49:** m24 original > m52 exact
-- **Family 50:** m26 original > m27 fragmented > m54 exact > m55 fragmented > m57 fragmented > m58 fragmented > m61 fragmented > m62 fragmented > m99 real-transposed > m100 fragmented > m102 fragmented > m103 fragmented > m106 fragmented > m107 fragmented > m144 real-transposed > m145 fragmented
-- **Family 51:** m26 original > m27 real-transposed > m54 exact > m55 real-transposed > m57 tonal-transposed > m58 tonal-transposed > m61 tonal-transposed > m62 tonal-transposed > m99 real-transposed > m100 real-transposed > m102 tonal-transposed > m103 tonal-transposed > m106 tonal-transposed > m107 tonal-transposed > m144 real-transposed > m145 real-transposed
+- **Family 48:** m24 original > m52 exact > m97 fragmented > m142 fragmented > m227 fragmented > m328 fragmented
+- **Family 49:** m24 original > m52 exact > m97 fragmented > m142 fragmented
+- **Family 50:** m24 original > m52 exact > m220 fragmented > m220 fragmented > m223 varied > m227 fragmented > m244 fragmented > m244 fragmented > m244 fragmented > m248 fragmented > m248 fragmented > m248 fragmented > m298 fragmented
+- **Family 51:** m26 original > m27 fragmented > m54 exact > m55 fragmented > m57 fragmented > m58 fragmented > m61 fragmented > m62 fragmented > m99 real-transposed > m100 fragmented > m102 fragmented > m103 fragmented > m106 fragmented > m107 fragmented > m144 real-transposed > m145 fragmented
 - **Family 52:** m26 original > m27 real-transposed > m54 exact > m55 real-transposed > m57 tonal-transposed > m58 tonal-transposed > m61 tonal-transposed > m62 tonal-transposed > m99 real-transposed > m100 real-transposed > m102 tonal-transposed > m103 tonal-transposed > m106 tonal-transposed > m107 tonal-transposed > m144 real-transposed > m145 real-transposed
-- **Family 53:** m26 original > m27 fragmented > m54 exact > m55 fragmented > m57 exact > m58 fragmented > m99 real-transposed > m100 fragmented > m103 fragmented > m144 real-transposed > m145 fragmented
-- **Family 54:** m26 fragmented > m26 original > m27 fragmented > m27 fragmented > m54 fragmented > m54 exact > m55 fragmented > m55 fragmented > m57 fragmented > m57 exact > m58 fragmented > m58 fragmented > m61 fragmented > m61 fragmented > m62 fragmented > m62 fragmented > m99 fragmented > m99 real-transposed > m100 fragmented > m100 fragmented > m102 fragmented > m102 fragmented > m103 fragmented > m103 fragmented > m106 fragmented > m106 fragmented > m107 fragmented > m107 fragmented > m144 fragmented > m144 real-transposed > m145 fragmented > m145 fragmented > m263 fragmented > m271 fragmented > m291 fragmented > m300 fragmented > m302 fragmented > m324 fragmented
+- **Family 53:** m26 original > m27 real-transposed > m54 exact > m55 real-transposed > m57 tonal-transposed > m58 tonal-transposed > m61 fragmented > m62 fragmented > m99 real-transposed > m100 real-transposed > m102 tonal-transposed > m103 tonal-transposed > m106 fragmented > m107 fragmented > m144 real-transposed > m145 real-transposed
+- **Family 54:** m26 original > m27 fragmented > m54 exact > m55 fragmented > m57 exact > m58 fragmented > m99 real-transposed > m100 fragmented > m102 exact > m103 fragmented > m144 real-transposed > m145 fragmented
 - **Family 55:** m27 original > m55 exact > m58 tonal-transposed > m62 tonal-transposed > m100 real-transposed > m103 tonal-transposed > m107 tonal-transposed > m145 real-transposed
 - **Family 56:** m57 original > m102 exact
 - **Family 57:** m58 original > m103 exact
 - **Family 58:** m59 original > m104 exact
 - **Family 59:** m59 original > m104 exact
 - **Family 60:** m59 original > m104 exact > m217 varied > m218 varied
-- **Family 61:** m59 original > m104 exact
+- **Family 61:** m59 original > m63 fragmented > m67 fragmented > m104 exact > m108 fragmented > m112 fragmented > m181 fragmented > m186 fragmented > m197 fragmented > m202 fragmented > m327 fragmented > m331 fragmented
 - **Family 62:** m60 original > m105 exact
 - **Family 63:** m60 original > m105 exact
 - **Family 64:** m60 original > m105 exact
-- **Family 65:** m60 original > m105 exact
+- **Family 65:** m60 original > m64 fragmented > m68 fragmented > m105 exact > m109 fragmented > m113 fragmented
 - **Family 66:** m61 original > m106 exact
-- **Family 67:** m61 original > m102 real-transposed > m106 exact
-- **Family 68:** m62 original > m107 exact
-- **Family 69:** m63 original > m108 exact
+- **Family 67:** m61 original > m62 real-transposed > m106 exact > m107 real-transposed
+- **Family 68:** m61 original > m106 exact
+- **Family 69:** m62 original > m107 exact
 - **Family 70:** m63 original > m108 exact
-- **Family 71:** m63 original > m65 fragmented > m66 fragmented > m67 fragmented > m108 exact > m110 fragmented > m111 fragmented > m112 fragmented
-- **Family 72:** m63 original > m108 exact
-- **Family 73:** m64 original > m109 exact
+- **Family 71:** m63 original > m108 exact
+- **Family 72:** m63 original > m65 fragmented > m66 fragmented > m67 fragmented > m108 exact > m110 fragmented > m111 fragmented > m112 fragmented
+- **Family 73:** m63 original > m108 exact
 - **Family 74:** m64 original > m109 exact
 - **Family 75:** m64 original > m109 exact
-- **Family 76:** m64 original > m109 exact
-- **Family 77:** m65 original > m110 exact
-- **Family 78:** m65 original > m66 tonal-transposed > m67 tonal-transposed > m110 exact > m111 tonal-transposed > m112 tonal-transposed
+- **Family 76:** m8 inverted > m36 inverted > m64 original > m74 inverted > m76 inverted > m77 inverted > m109 exact > m119 inverted > m121 inverted > m122 inverted > m151 inverted > m159 inverted > m167 inverted > m175 inverted > m187 inverted > m188 inverted > m191 inverted > m203 inverted > m204 inverted > m207 inverted > m215 inverted > m219 tonal-transposed > m219 inverted > m231 inverted > m239 inverted > m274 inverted > m328 inverted > m332 inverted
+- **Family 77:** m64 original > m109 exact
+- **Family 78:** m64 original > m109 exact
 - **Family 79:** m65 original > m110 exact
-- **Family 80:** m65 original > m110 exact > m181 fragmented > m197 fragmented
-- **Family 81:** m66 original > m67 tonal-transposed > m68 tonal-transposed > m111 exact > m112 tonal-transposed > m113 tonal-transposed
-- **Family 82:** m66 original > m67 tonal-transposed > m111 exact > m112 tonal-transposed
+- **Family 80:** m65 original > m66 tonal-transposed > m67 tonal-transposed > m110 exact > m111 tonal-transposed > m112 tonal-transposed
+- **Family 81:** m65 original > m66 tonal-transposed > m110 exact > m111 tonal-transposed
+- **Family 82:** m65 original > m66 tonal-transposed > m68 fragmented > m110 exact > m111 tonal-transposed > m113 fragmented
 - **Family 83:** m66 original > m67 tonal-transposed > m111 exact > m112 tonal-transposed
-- **Family 84:** m68 original > m113 exact
-- **Family 85:** m68 original > m113 exact
+- **Family 84:** m67 original > m112 exact
+- **Family 85:** m67 original > m112 exact
 - **Family 86:** m68 original > m113 exact
-- **Family 87:** m69 original > m114 exact
-- **Family 88:** m69 original > m114 exact > m290 varied
-- **Family 89:** m69 original > m114 exact
+- **Family 87:** m68 original > m113 exact
+- **Family 88:** m68 original > m113 exact
+- **Family 89:** m68 original > m113 exact > m217 varied
 - **Family 90:** m69 original > m114 exact
-- **Family 91:** m77 original > m122 exact > m260 fragmented > m268 fragmented > m276 fragmented > m288 fragmented > m321 fragmented
-- **Family 92:** m78 original > m79 tonal-transposed > m80 tonal-transposed > m81 real-transposed > m123 exact > m124 tonal-transposed > m125 tonal-transposed > m126 real-transposed > m275 fragmented
-- **Family 93:** m78 original > m79 tonal-transposed > m80 tonal-transposed > m81 fragmented > m123 exact > m124 tonal-transposed > m125 tonal-transposed > m126 fragmented
-- **Family 94:** m78 original > m79 tonal-transposed > m80 tonal-transposed > m123 exact > m124 tonal-transposed > m125 tonal-transposed
-- **Family 95:** m81 original > m126 exact
-- **Family 96:** m81 original > m126 exact
-- **Family 97:** m82 original > m127 exact
-- **Family 98:** m10 fragmented > m38 fragmented > m83 original > m128 exact
-- **Family 99:** m84 original > m129 exact
-- **Family 100:** m84 original > m129 exact
-- **Family 101:** m84 original > m129 exact
-- **Family 102:** m86 original > m131 exact
-- **Family 103:** m88 original > m133 exact
-- **Family 104:** m90 original > m135 exact
-- **Family 105:** m90 original > m135 exact
-- **Family 106:** m92 original > m137 exact
-- **Family 107:** m92 original > m137 exact
-- **Family 108:** m92 original > m137 exact
+- **Family 91:** m69 original > m114 exact
+- **Family 92:** m69 original > m114 exact
+- **Family 93:** m69 original > m114 exact
+- **Family 94:** m77 original > m122 exact > m260 fragmented > m268 fragmented > m276 fragmented > m288 fragmented > m321 fragmented
+- **Family 95:** m78 original > m79 tonal-transposed > m80 tonal-transposed > m81 real-transposed > m123 exact > m124 tonal-transposed > m125 tonal-transposed > m126 real-transposed > m275 fragmented
+- **Family 96:** m78 original > m79 tonal-transposed > m80 tonal-transposed > m81 fragmented > m123 exact > m124 tonal-transposed > m125 tonal-transposed > m126 fragmented
+- **Family 97:** m78 original > m79 tonal-transposed > m80 tonal-transposed > m123 exact > m124 tonal-transposed > m125 tonal-transposed
+- **Family 98:** m81 original > m126 exact
+- **Family 99:** m81 original > m126 exact
+- **Family 100:** m82 original > m127 exact
+- **Family 101:** m10 fragmented > m38 fragmented > m83 original > m128 exact
+- **Family 102:** m84 original > m129 exact
+- **Family 103:** m84 original > m129 exact
+- **Family 104:** m84 original > m129 exact
+- **Family 105:** m86 original > m131 exact
+- **Family 106:** m88 original > m133 exact
+- **Family 107:** m90 original > m135 exact
+- **Family 108:** m90 original > m135 exact
 - **Family 109:** m92 original > m137 exact
-- **Family 110:** m95 original > m96 fragmented > m140 exact > m141 fragmented > m149 varied
-- **Family 111:** m13 varied > m41 varied > m86 varied > m96 original > m131 varied > m141 exact
-- **Family 112:** m96 original > m141 exact
-- **Family 113:** m97 original > m142 exact
-- **Family 114:** m97 original > m142 exact > m227 fragmented > m328 fragmented
-- **Family 115:** m97 original > m142 exact > m220 fragmented > m220 fragmented > m223 varied > m227 fragmented > m244 fragmented > m244 fragmented > m244 fragmented > m248 fragmented > m248 fragmented > m248 fragmented > m293 fragmented > m294 fragmented > m298 fragmented > m307 fragmented > m308 fragmented > m308 fragmented
-- **Family 116:** m15 fragmented > m17 fragmented > m43 fragmented > m45 fragmented > m88 fragmented > m90 fragmented > m98 original > m98 exact > m98 exact > m98 fragmented > m133 fragmented > m135 fragmented > m143 exact > m143 exact > m143 exact > m143 fragmented
-- **Family 117:** m15 fragmented > m17 fragmented > m43 fragmented > m45 fragmented > m88 fragmented > m90 fragmented > m98 original > m133 fragmented > m135 fragmented > m143 exact
-- **Family 118:** m150 original > m152 fragmented > m166 exact > m168 fragmented > m230 exact > m232 fragmented
-- **Family 119:** m150 original > m152 fragmented > m160 fragmented > m166 exact > m168 fragmented > m176 fragmented > m192 fragmented > m208 fragmented > m230 exact > m232 fragmented > m240 fragmented
-- **Family 120:** m150 original > m166 exact > m230 exact
-- **Family 121:** m150 original > m152 exact > m157 fragmented > m160 fragmented > m160 exact > m161 fragmented > m162 fragmented > m166 exact > m168 exact > m173 fragmented > m176 fragmented > m176 exact > m177 fragmented > m178 fragmented > m189 fragmented > m192 fragmented > m192 exact > m193 fragmented > m194 fragmented > m205 fragmented > m208 fragmented > m208 exact > m209 fragmented > m210 fragmented > m214 tonal-transposed > m224 real-transposed > m230 exact > m232 exact > m237 fragmented > m240 fragmented > m240 exact > m241 fragmented > m242 fragmented > m311 fragmented > m312 fragmented > m313 fragmented > m314 fragmented > m315 fragmented > m315 fragmented > m325 fragmented > m329 fragmented
-- **Family 122:** m151 original > m167 exact > m231 exact
-- **Family 123:** m151 original > m167 exact > m231 exact
-- **Family 124:** m152 original > m160 fragmented > m168 exact > m176 fragmented > m192 fragmented > m208 fragmented > m232 exact > m240 fragmented
-- **Family 125:** m152 original > m168 exact > m232 exact
-- **Family 126:** m152 original > m168 exact > m232 exact
-- **Family 127:** m153 original > m169 exact > m233 exact
-- **Family 128:** m153 original > m169 exact > m233 exact
-- **Family 129:** m153 original > m169 exact > m233 exact
-- **Family 130:** m154 original > m170 exact > m234 exact
-- **Family 131:** m154 original > m170 exact > m234 exact
-- **Family 132:** m154 original > m170 exact > m234 exact
-- **Family 133:** m155 original > m155 fragmented > m159 fragmented > m171 exact > m171 fragmented > m175 fragmented > m191 fragmented > m207 fragmented > m221 fragmented > m235 exact > m239 fragmented > m243 fragmented > m247 fragmented
-- **Family 134:** m155 original > m171 exact > m235 fragmented
-- **Family 135:** m155 original > m158 retrograde > m161 retrograde > m171 exact > m174 retrograde > m177 retrograde > m187 tonal-transposed > m188 inverted > m190 retrograde > m193 retrograde > m203 tonal-transposed > m204 inverted > m206 retrograde > m209 retrograde > m235 exact > m238 retrograde > m241 retrograde > m263 retrograde > m271 retrograde > m275 retrograde > m297 tonal-transposed > m297 tonal-transposed > m298 tonal-transposed > m309 tonal-transposed > m309 tonal-transposed > m310 tonal-transposed > m310 tonal-transposed > m324 retrograde
-- **Family 136:** m155 original > m171 exact
-- **Family 137:** m156 original > m172 exact > m236 exact
-- **Family 138:** m156 original > m172 exact > m236 exact
-- **Family 139:** m156 original > m172 exact > m189 fragmented > m205 fragmented > m236 exact
-- **Family 140:** m157 original > m173 exact > m189 exact > m205 exact > m237 exact
-- **Family 141:** m157 original > m173 exact > m189 exact > m205 exact > m237 exact
-- **Family 142:** m158 original > m174 exact > m190 exact > m206 exact > m238 exact
-- **Family 143:** m158 original > m174 exact > m190 exact > m206 exact > m238 exact > m275 varied
-- **Family 144:** m158 original > m174 exact > m190 exact > m206 exact > m238 exact
-- **Family 145:** m159 original > m175 exact > m191 exact > m207 exact > m227 varied > m239 exact
-- **Family 146:** m159 original > m175 exact > m191 exact > m207 exact > m239 exact
-- **Family 147:** m159 original > m175 exact > m191 exact > m207 exact > m239 exact
-- **Family 148:** m160 original > m161 fragmented > m176 exact > m177 fragmented > m192 exact > m193 fragmented > m208 exact > m209 fragmented > m240 exact > m241 fragmented
-- **Family 149:** m160 original > m176 exact > m192 exact > m208 exact > m240 exact
-- **Family 150:** m160 original > m176 exact > m192 exact > m208 exact > m240 exact
-- **Family 151:** m161 original > m177 exact > m193 exact > m209 exact > m241 exact
-- **Family 152:** m161 original > m177 exact > m193 exact > m209 exact > m241 exact
-- **Family 153:** m161 original > m177 exact > m193 exact > m209 exact > m241 exact
-- **Family 154:** m162 original > m178 exact > m194 exact > m210 exact > m242 exact
-- **Family 155:** m162 original > m178 exact > m194 exact > m210 exact > m242 exact
-- **Family 156:** m162 original > m178 exact > m194 exact > m210 exact > m242 exact
-- **Family 157:** m163 original > m179 exact > m195 exact > m211 exact > m243 exact
-- **Family 158:** m163 original > m179 exact > m187 fragmented > m195 exact > m203 fragmented > m211 exact > m219 real-transposed > m227 fragmented > m243 fragmented > m247 fragmented
-- **Family 159:** m163 original > m179 exact > m195 exact > m211 exact > m217 varied > m218 varied > m219 real-transposed > m227 fragmented > m243 exact > m247 exact > m279 varied
-- **Family 160:** m149 fragmented > m165 original > m229 exact
-- **Family 161:** m149 varied > m165 original > m229 exact
-- **Family 162:** m181 original > m185 tonal-transposed > m197 exact > m201 tonal-transposed
-- **Family 163:** m181 original > m197 exact
-- **Family 164:** m182 original > m198 exact
-- **Family 165:** m182 original > m198 exact
-- **Family 166:** m182 original > m198 exact
-- **Family 167:** m183 original > m186 exact > m199 exact > m202 exact
-- **Family 168:** m183 original > m199 exact
-- **Family 169:** m184 original > m200 exact > m216 fragmented
-- **Family 170:** m184 original > m200 exact
-- **Family 171:** m184 original > m200 exact > m216 varied
-- **Family 172:** m185 original > m201 exact
-- **Family 173:** m186 original > m202 exact > m327 fragmented > m331 fragmented
-- **Family 174:** m187 original > m203 exact
-- **Family 175:** m163 fragmented > m179 fragmented > m187 original > m195 fragmented > m203 exact > m211 fragmented > m219 fragmented
-- **Family 176:** m188 original > m204 exact
-- **Family 177:** m188 original > m204 exact
-- **Family 178:** m188 original > m204 exact > m218 varied
-- **Family 179:** m213 original > m215 tonal-transposed
-- **Family 180:** m213 original > m215 tonal-transposed > m235 varied > m245 varied > m249 varied > m251 varied > m332 varied
-- **Family 181:** m150 inverted > m152 inverted > m153 inverted > m158 inverted > m166 inverted > m168 inverted > m169 inverted > m174 inverted > m190 inverted > m206 inverted > m214 original > m222 real-transposed > m230 inverted > m232 inverted > m233 inverted > m238 inverted
-- **Family 182:** m158 retrograde > m174 retrograde > m190 retrograde > m206 retrograde > m217 varied > m218 original > m221 fragmented > m238 retrograde > m262 real-transposed > m270 real-transposed > m274 real-transposed > m323 real-transposed
-- **Family 183:** m220 original > m244 real-transposed > m244 fragmented > m248 real-transposed > m248 fragmented > m263 fragmented > m271 fragmented > m291 fragmented > m298 fragmented > m308 varied > m324 fragmented
-- **Family 184:** m220 original > m223 varied > m227 varied > m244 real-transposed > m244 fragmented > m248 real-transposed > m248 fragmented > m293 fragmented > m294 fragmented > m298 fragmented > m307 fragmented > m308 fragmented > m308 fragmented > m328 varied
-- **Family 185:** m24 augmented > m52 augmented > m225 original > m252 tonal-transposed > m253 tonal-transposed > m333 inverted > m335 inverted
-- **Family 186:** m243 original > m247 exact
-- **Family 187:** m243 original > m247 exact
-- **Family 188:** m244 original > m248 exact
-- **Family 189:** m245 original > m249 tonal-transposed
-- **Family 190:** m153 inverted > m169 inverted > m233 inverted > m251 original > m329 tonal-transposed
-- **Family 191:** m252 original > m253 exact
+- **Family 110:** m92 original > m137 exact
+- **Family 111:** m92 original > m137 exact
+- **Family 112:** m92 original > m137 exact
+- **Family 113:** m95 original > m96 fragmented > m140 exact > m141 fragmented
+- **Family 114:** m96 original > m141 exact
+- **Family 115:** m96 original > m141 exact
+- **Family 116:** m97 original > m142 exact
+- **Family 117:** m24 fragmented > m52 fragmented > m97 original > m142 exact
+- **Family 118:** m15 fragmented > m17 fragmented > m43 fragmented > m45 fragmented > m88 fragmented > m90 fragmented > m98 original > m98 exact > m98 exact > m98 fragmented > m133 fragmented > m135 fragmented > m143 exact > m143 exact > m143 exact > m143 fragmented
+- **Family 119:** m15 fragmented > m17 fragmented > m43 fragmented > m45 fragmented > m88 fragmented > m90 fragmented > m98 original > m133 fragmented > m135 fragmented > m143 exact
+- **Family 120:** m149 original > m165 exact > m229 exact
+- **Family 121:** m149 original > m165 exact > m229 exact
+- **Family 122:** m150 original > m152 fragmented > m166 exact > m168 fragmented > m230 exact > m232 fragmented
+- **Family 123:** m150 original > m152 fragmented > m160 fragmented > m166 exact > m168 fragmented > m176 fragmented > m192 fragmented > m208 fragmented > m230 exact > m232 fragmented > m240 fragmented
+- **Family 124:** m150 original > m166 exact > m230 exact
+- **Family 125:** m150 original > m152 exact > m157 fragmented > m160 fragmented > m160 exact > m161 fragmented > m162 fragmented > m166 exact > m168 exact > m173 fragmented > m176 fragmented > m176 exact > m177 fragmented > m178 fragmented > m189 fragmented > m192 fragmented > m192 exact > m193 fragmented > m194 fragmented > m205 fragmented > m208 fragmented > m208 exact > m209 fragmented > m210 fragmented > m214 tonal-transposed > m224 real-transposed > m230 exact > m232 exact > m237 fragmented > m240 fragmented > m240 exact > m241 fragmented > m242 fragmented > m311 fragmented > m315 fragmented > m315 fragmented > m325 fragmented > m329 fragmented
+- **Family 126:** m151 original > m159 fragmented > m167 exact > m175 fragmented > m191 fragmented > m207 fragmented > m231 exact > m239 fragmented
+- **Family 127:** m151 original > m167 exact > m231 exact
+- **Family 128:** m152 original > m160 fragmented > m168 exact > m176 fragmented > m192 fragmented > m208 fragmented > m232 exact > m240 fragmented
+- **Family 129:** m152 original > m168 exact > m232 exact
+- **Family 130:** m152 original > m168 exact > m232 exact
+- **Family 131:** m153 original > m169 exact > m233 exact
+- **Family 132:** m153 original > m169 exact > m233 exact
+- **Family 133:** m153 original > m169 exact > m233 exact
+- **Family 134:** m154 original > m170 exact > m234 exact
+- **Family 135:** m154 original > m170 exact > m234 exact
+- **Family 136:** m154 original > m170 exact > m234 exact
+- **Family 137:** m26 fragmented > m27 fragmented > m54 fragmented > m55 fragmented > m57 fragmented > m58 fragmented > m61 fragmented > m62 fragmented > m99 fragmented > m100 fragmented > m102 fragmented > m103 fragmented > m106 fragmented > m107 fragmented > m144 fragmented > m145 fragmented > m154 original > m170 exact > m184 real-transposed > m200 real-transposed > m216 real-transposed > m234 exact
+- **Family 138:** m155 original > m155 fragmented > m159 fragmented > m171 exact > m171 fragmented > m175 fragmented > m191 fragmented > m207 fragmented > m235 exact > m239 fragmented > m243 fragmented > m247 fragmented
+- **Family 139:** m155 original > m171 exact > m235 fragmented
+- **Family 140:** m155 original > m283 augmented > m298 tonal-transposed > m309 tonal-transposed > m309 tonal-transposed > m310 tonal-transposed > m310 tonal-transposed
+- **Family 141:** m155 original > m171 exact
+- **Family 142:** m156 original > m172 exact > m236 exact
+- **Family 143:** m156 original > m172 exact > m236 exact
+- **Family 144:** m156 original > m172 exact > m189 fragmented > m205 fragmented > m236 exact
+- **Family 145:** m6 diminished > m6 diminished > m8 diminished > m34 diminished > m34 diminished > m36 diminished > m59 diminished > m65 diminished > m66 diminished > m69 diminished > m74 diminished > m76 diminished > m78 diminished > m104 diminished > m110 diminished > m111 diminished > m114 diminished > m119 diminished > m121 diminished > m123 diminished > m155 diminished > m156 original > m159 diminished > m171 diminished > m172 exact > m175 diminished > m181 diminished > m183 diminished > m185 diminished > m186 diminished > m191 diminished > m197 diminished > m199 diminished > m201 diminished > m202 diminished > m207 diminished > m213 diminished > m218 diminished > m221 diminished > m227 diminished > m235 diminished > m236 exact > m239 diminished > m245 diminished > m249 diminished > m251 tonal-transposed > m260 diminished > m268 diminished > m273 diminished > m276 diminished > m288 diminished > m321 diminished > m329 tonal-transposed > m334 diminished > m336 diminished
+- **Family 146:** m157 original > m173 exact > m189 exact > m205 exact > m237 exact
+- **Family 147:** m157 original > m173 exact > m189 exact > m205 exact > m237 exact
+- **Family 148:** m158 original > m174 exact > m190 exact > m206 exact > m238 exact
+- **Family 149:** m158 original > m174 exact > m190 exact > m206 exact > m238 exact > m275 varied
+- **Family 150:** m158 original > m174 exact > m190 exact > m206 exact > m238 exact
+- **Family 151:** m159 original > m175 exact > m191 exact > m207 exact > m227 varied > m239 exact
+- **Family 152:** m159 original > m175 exact > m191 exact > m207 exact > m239 exact
+- **Family 153:** m159 original > m175 exact > m191 exact > m207 exact > m239 exact
+- **Family 154:** m160 original > m161 fragmented > m176 exact > m177 fragmented > m192 exact > m193 fragmented > m208 exact > m209 fragmented > m240 exact > m241 fragmented
+- **Family 155:** m160 original > m176 exact > m192 exact > m208 exact > m240 exact
+- **Family 156:** m160 original > m176 exact > m192 exact > m208 exact > m240 exact
+- **Family 157:** m161 original > m177 exact > m193 exact > m209 exact > m241 exact
+- **Family 158:** m161 original > m177 exact > m193 exact > m209 exact > m241 exact
+- **Family 159:** m161 original > m177 exact > m193 exact > m209 exact > m241 exact
+- **Family 160:** m162 original > m178 exact > m194 exact > m210 exact > m242 exact
+- **Family 161:** m162 original > m178 exact > m194 exact > m210 exact > m242 exact
+- **Family 162:** m162 original > m178 exact > m194 exact > m210 exact > m242 exact
+- **Family 163:** m163 original > m179 exact > m195 exact > m211 exact > m243 exact
+- **Family 164:** m163 original > m179 exact > m187 fragmented > m195 exact > m203 fragmented > m211 exact > m219 real-transposed > m227 fragmented > m243 fragmented > m247 fragmented
+- **Family 165:** m163 original > m179 exact > m195 exact > m211 exact > m217 varied > m218 varied > m219 real-transposed > m227 fragmented > m243 exact > m247 exact > m279 varied
+- **Family 166:** m181 original > m183 tonal-transposed > m186 tonal-transposed > m197 exact > m199 tonal-transposed > m202 tonal-transposed > m215 varied
+- **Family 167:** m181 original > m197 exact
+- **Family 168:** m182 original > m198 exact
+- **Family 169:** m182 original > m198 exact
+- **Family 170:** m182 original > m198 exact
+- **Family 171:** m183 original > m199 exact
+- **Family 172:** m184 original > m200 exact
+- **Family 173:** m184 original > m200 exact
+- **Family 174:** m184 original > m200 exact
+- **Family 175:** m185 original > m201 exact > m213 varied
+- **Family 176:** m185 original > m201 exact
+- **Family 177:** m186 original > m202 exact > m327 fragmented > m331 fragmented
+- **Family 178:** m187 original > m203 exact
+- **Family 179:** m163 fragmented > m179 fragmented > m187 original > m195 fragmented > m203 exact > m211 fragmented > m219 fragmented
+- **Family 180:** m188 original > m204 exact > m308 fragmented
+- **Family 181:** m188 original > m204 exact
+- **Family 182:** m188 original > m204 exact
+- **Family 183:** m213 original > m215 fragmented > m221 real-transposed > m332 varied
+- **Family 184:** m213 original > m221 real-transposed > m235 varied > m245 varied > m249 varied > m251 varied > m332 varied
+- **Family 185:** m220 original > m244 real-transposed > m244 fragmented > m248 real-transposed > m248 fragmented > m263 fragmented > m271 fragmented > m291 fragmented > m298 fragmented > m324 fragmented
+- **Family 186:** m213 varied > m220 original > m223 varied > m227 varied > m244 real-transposed > m244 fragmented > m248 real-transposed > m248 fragmented > m298 fragmented > m328 varied
+- **Family 187:** m24 augmented > m52 augmented > m225 original > m252 tonal-transposed > m253 tonal-transposed
+- **Family 188:** m243 original > m247 exact
+- **Family 189:** m243 original > m247 exact
+- **Family 190:** m244 original > m248 exact
+- **Family 191:** m245 original > m249 tonal-transposed
 - **Family 192:** m252 original > m253 exact
-- **Family 193:** m247 fragmented > m252 original > m253 exact
-- **Family 194:** m258 original > m266 exact > m278 fragmented > m286 exact > m319 exact
-- **Family 195:** m259 original > m267 exact > m287 exact > m320 exact
+- **Family 193:** m252 original > m253 exact
+- **Family 194:** m15 fragmented > m17 fragmented > m43 fragmented > m45 fragmented > m60 fragmented > m61 fragmented > m62 fragmented > m64 fragmented > m68 fragmented > m105 fragmented > m106 fragmented > m107 fragmented > m109 fragmented > m113 fragmented > m247 fragmented > m252 original > m253 exact
+- **Family 195:** m258 original > m266 exact > m278 fragmented > m286 exact > m319 exact
 - **Family 196:** m259 original > m267 exact > m287 exact > m320 exact
-- **Family 197:** m218 fragmented > m262 original > m270 exact > m274 real-transposed > m323 exact
-- **Family 198:** m263 original > m271 exact > m275 fragmented > m291 varied > m324 exact
-- **Family 199:** m263 original > m271 exact > m291 exact > m324 exact
-- **Family 200:** m300 original > m302 exact
-- **Family 201:** m301 original > m303 exact
-- **Family 202:** m298 fragmented > m309 original > m310 real-transposed
-- **Family 203:** m312 original > m314 exact
-- **Family 204:** m311 fragmented > m312 original > m313 exact > m314 exact > m315 fragmented > m315 fragmented > m325 fragmented > m329 fragmented
-- **Family 205:** m312 original > m313 exact > m314 varied
-- **Family 206:** m325 original > m329 exact
-- **Family 207:** m326 original > m330 exact > m334 fragmented
-- **Family 208:** m220 varied > m326 original > m330 exact
-- **Family 209:** m326 original > m330 exact
-- **Family 210:** m327 original > m331 exact
-- **Family 211:** m327 original > m331 exact
-- **Family 212:** m333 original > m335 exact
-- **Family 213:** m302 fragmented > m333 original > m335 exact
-- **Family 214:** m334 original > m336 exact
+- **Family 197:** m259 original > m267 exact > m287 exact > m320 exact
+- **Family 198:** m262 original > m270 exact > m274 real-transposed > m290 exact > m323 exact
+- **Family 199:** m263 original > m271 exact > m275 fragmented > m291 exact > m324 exact
+- **Family 200:** m158 fragmented > m161 fragmented > m174 fragmented > m177 fragmented > m190 fragmented > m193 fragmented > m206 fragmented > m209 fragmented > m238 fragmented > m241 fragmented > m263 original > m271 exact > m275 fragmented > m291 exact > m293 fragmented > m294 fragmented > m307 fragmented > m308 fragmented > m308 fragmented > m324 exact
+- **Family 201:** m263 original > m271 exact > m291 exact > m324 exact
+- **Family 202:** m293 original > m294 exact > m307 real-transposed > m308 real-transposed > m308 tonal-transposed
+- **Family 203:** m296 original > m301 exact > m303 exact > m334 inverted > m336 inverted
+- **Family 204:** m155 fragmented > m171 fragmented > m187 fragmented > m203 fragmented > m213 varied > m235 fragmented > m297 fragmented > m298 original > m309 real-transposed > m310 exact
+- **Family 205:** m300 original > m302 exact
+- **Family 206:** m301 original > m303 exact
+- **Family 207:** m298 fragmented > m309 original > m310 real-transposed
+- **Family 208:** m311 original > m315 tonal-transposed > m315 tonal-transposed > m325 tonal-transposed > m329 tonal-transposed
+- **Family 209:** m312 original > m314 exact
+- **Family 210:** m312 original > m313 exact > m314 exact
+- **Family 211:** m312 original > m313 exact > m314 varied
+- **Family 212:** m325 original > m329 exact
+- **Family 213:** m326 original > m330 exact > m334 fragmented
+- **Family 214:** m217 varied > m220 varied > m326 original > m330 exact
+- **Family 215:** m326 original > m330 exact
+- **Family 216:** m327 original > m331 exact
+- **Family 217:** m327 original > m331 exact
+- **Family 218:** m333 original > m335 exact
+- **Family 219:** m333 original > m335 exact
+- **Family 220:** m334 original > m336 exact
 
 ## Progression patterns
 

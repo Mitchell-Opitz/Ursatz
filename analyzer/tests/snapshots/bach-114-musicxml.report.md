@@ -764,8 +764,8 @@ The library's melody adapter read the soprano of each phrase as a line of notes:
 
 | Phrase | Measures | Notes | Range | Climax | Up | Down | Same | Steps | Leaps |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | mm. 1 to 15 | 89 | F#4 to B5 (17) | B5, m. 13, beat 1, 2 notes | 42 | 33 | 13 | 43 | 32 |
-| 2 | mm. 16 to 24 | 60 | F#4 to B5 (17) | B5, m. 19, beat 1, 2 notes | 22 | 27 | 8 | 27 | 22 |
+| 1 | mm. 1 to 15 | 89 | F#4 to B5 (17) | B5, m. 13, beat 1, 2 notes | 42 | 33 | 13 | 44 | 31 |
+| 2 | mm. 16 to 24 | 60 | F#4 to B5 (17) | B5, m. 19, beat 1, 2 notes | 22 | 27 | 8 | 28 | 21 |
 
 ### Leaps
 
@@ -773,8 +773,8 @@ A leap is an interval of a third or larger. The library's rule asks a leap of a 
 
 | Phrase | Leaps | Recovered | Unrecovered | Not required | Not judged | Consecutive |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 32 | 7 | 14 | 11 | 0 | 0 |
-| 2 | 22 | 2 | 13 | 7 | 0 | 2 |
+| 1 | 31 | 7 | 13 | 11 | 0 | 0 |
+| 2 | 21 | 2 | 12 | 7 | 0 | 2 |
 
 ### Non-chord tones
 
@@ -782,8 +782,8 @@ Each melody note is set against the chord of the segment it starts in, as the li
 
 | Phrase | Notes | Chord tones | Non-chord tones | Unclassified | By type |
 | --- | --- | --- | --- | --- | --- |
-| 1 | 89 | 78 | 8 | 3 | passing 4, neighbor 4 |
-| 2 | 60 | 54 | 3 | 3 | neighbor 2, escape-tone 1 |
+| 1 | 89 | 78 | 9 | 2 | passing 2, neighbor 1, appoggiatura 2, escape-tone 4 |
+| 2 | 60 | 54 | 1 | 5 | neighbor 1 |
 
 ### Tendencies
 
@@ -791,8 +791,8 @@ The library's melodic tendencies are soft preferences a well-formed line usually
 
 | Phrase | Pitch proximity | Step declination | Step inertia | Melodic regression | Melodic arch | Seventh degree followed | Seventh degree broken |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | does not hold | does not hold | does not hold | holds | does not hold | 8 | 3 (m. 3, beat 2; m. 9, beat 2; m. 14, beat 1.5) |
-| 2 | does not hold | holds | does not hold | does not hold | holds | 8 | 1 (m. 20, beat 1.5) |
+| 1 | does not hold | does not hold | does not hold | holds | does not hold | 7 | 4 (m. 3, beat 2; m. 9, beat 2; m. 15, beat 1; m. 15, beat 2) |
+| 2 | does not hold | holds | does not hold | does not hold | holds | 5 | 2 (m. 21, beat 1; m. 21, beat 2) |
 
 ### Development
 
@@ -822,14 +822,17 @@ Each family's occurrences in time order, as the measure they start in and the ki
 - **Family 22:** m14 original > m17 fragmented > m20 exact > m23 fragmented
 - **Family 23:** m14 original > m20 exact
 - **Family 24:** m15 original > m21 exact
-- **Family 25:** m16 original > m22 exact
-- **Family 26:** m16 original > m22 exact
-- **Family 27:** m16 original > m22 exact
+- **Family 25:** m15 original > m21 exact
+- **Family 26:** m15 original > m21 exact
+- **Family 27:** m15 original > m21 exact
 - **Family 28:** m16 original > m22 exact
-- **Family 29:** m17 original > m23 exact
-- **Family 30:** m17 original > m23 exact
-- **Family 31:** m18 original > m24 exact
-- **Family 32:** m18 original > m24 exact
+- **Family 29:** m16 original > m22 exact
+- **Family 30:** m16 original > m22 exact
+- **Family 31:** m16 original > m22 exact
+- **Family 32:** m17 original > m23 exact
+- **Family 33:** m17 original > m23 exact
+- **Family 34:** m18 original > m24 exact
+- **Family 35:** m18 original > m24 exact
 
 ## Progression patterns
 

@@ -79203,7 +79203,7 @@
 				"non_chord_tones":	1,
 				"unclassified":	0,
 				"by_type":	[{
-						"type":	"suspension",
+						"type":	"passing",
 						"count":	1
 					}],
 				"items":	[{
@@ -79237,7 +79237,7 @@
 							}
 						},
 						"note_ids":	[15],
-						"label":	"suspension",
+						"label":	"passing",
 						"uncertainty":	0
 					}]
 			},
@@ -79596,10 +79596,46 @@
 			"consecutive_leaps":	[],
 			"non_chord_tones":	{
 				"chord_tones":	3,
-				"non_chord_tones":	0,
-				"unclassified":	1,
-				"by_type":	[],
-				"items":	[]
+				"non_chord_tones":	1,
+				"unclassified":	0,
+				"by_type":	[{
+						"type":	"appoggiatura",
+						"count":	1
+					}],
+				"items":	[{
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	749,
+								"den":	80
+							},
+							"end":	{
+								"num":	39,
+								"den":	4
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	7,
+								"beat":	1,
+								"subdivision":	{
+									"num":	29,
+									"den":	30
+								}
+							},
+							"end":	{
+								"measure":	7,
+								"beat":	3,
+								"subdivision":	{
+									"num":	0,
+									"den":	1
+								}
+							}
+						},
+						"note_ids":	[77],
+						"label":	"appoggiatura",
+						"uncertainty":	0
+					}]
 			},
 			"tendencies":	{
 				"line":	[{
@@ -79852,14 +79888,11 @@
 			"consecutive_leaps":	[],
 			"non_chord_tones":	{
 				"chord_tones":	11,
-				"non_chord_tones":	2,
-				"unclassified":	4,
+				"non_chord_tones":	3,
+				"unclassified":	3,
 				"by_type":	[{
-						"type":	"anticipation",
-						"count":	1
-					}, {
-						"type":	"escape-tone",
-						"count":	1
+						"type":	"passing",
+						"count":	3
 					}],
 				"items":	[{
 						"framework":	"standard-counterpoint-v1",
@@ -79892,40 +79925,73 @@
 							}
 						},
 						"note_ids":	[146],
-						"label":	"anticipation",
+						"label":	"passing",
 						"uncertainty":	0
 					}, {
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
-								"num":	679,
-								"den":	32
+								"num":	3961,
+								"den":	240
 							},
 							"end":	{
-								"num":	851,
-								"den":	40
+								"num":	8107,
+								"den":	480
 							}
 						},
 						"location":	{
 							"start":	{
-								"measure":	15,
+								"measure":	12,
 								"beat":	1,
 								"subdivision":	{
-									"num":	7,
-									"den":	12
+									"num":	1,
+									"den":	90
 								}
 							},
 							"end":	{
-								"measure":	15,
-								"beat":	1,
+								"measure":	12,
+								"beat":	2,
 								"subdivision":	{
-									"num":	11,
-									"den":	15
+									"num":	7,
+									"den":	180
 								}
 							}
 						},
-						"note_ids":	[199],
-						"label":	"escape-tone",
+						"note_ids":	[151],
+						"label":	"passing",
+						"uncertainty":	0
+					}, {
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	1501,
+								"den":	80
+							},
+							"end":	{
+								"num":	9073,
+								"den":	480
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	13,
+								"beat":	3,
+								"subdivision":	{
+									"num":	1,
+									"den":	30
+								}
+							},
+							"end":	{
+								"measure":	13,
+								"beat":	3,
+								"subdivision":	{
+									"num":	73,
+									"den":	180
+								}
+							}
+						},
+						"note_ids":	[173],
+						"label":	"passing",
 						"uncertainty":	0
 					}]
 			},
@@ -80116,7 +80182,7 @@
 				"up":	14,
 				"down":	16,
 				"same":	5,
-				"steps":	19,
+				"steps":	20,
 				"leaps":	9,
 				"net_direction":	"up",
 				"net_semitones":	4,
@@ -80321,44 +80387,6 @@
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
-								"num":	3587,
-								"den":	120
-							},
-							"end":	{
-								"num":	2481,
-								"den":	80
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	20,
-								"beat":	4,
-								"subdivision":	{
-									"num":	32,
-									"den":	45
-								}
-							},
-							"end":	{
-								"measure":	21,
-								"beat":	3,
-								"subdivision":	{
-									"num":	7,
-									"den":	10
-								}
-							}
-						},
-						"note_ids":	[303, 305],
-						"label":	"leap",
-						"uncertainty":	0,
-						"semitones":	2,
-						"direction":	"up",
-						"generic_size":	5,
-						"approximate":	false,
-						"status":	"unrecovered"
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
 								"num":	15227,
 								"den":	480
 							},
@@ -80469,52 +80497,126 @@
 						"generic_size":	4,
 						"approximate":	false,
 						"status":	"recovered"
+					}, {
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	18901,
+								"den":	480
+							},
+							"end":	{
+								"num":	19729,
+								"den":	480
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	27,
+								"beat":	2,
+								"subdivision":	{
+									"num":	1,
+									"den":	180
+								}
+							},
+							"end":	{
+								"measure":	28,
+								"beat":	2,
+								"subdivision":	{
+									"num":	109,
+									"den":	180
+								}
+							}
+						},
+						"note_ids":	[416, 428],
+						"label":	"leap",
+						"uncertainty":	0,
+						"semitones":	-5,
+						"direction":	"down",
+						"generic_size":	4,
+						"approximate":	false,
+						"status":	"unrecovered"
 					}]
 			},
 			"consecutive_leaps":	[],
 			"non_chord_tones":	{
 				"chord_tones":	26,
-				"non_chord_tones":	2,
-				"unclassified":	9,
+				"non_chord_tones":	3,
+				"unclassified":	8,
 				"by_type":	[{
+						"type":	"passing",
+						"count":	1
+					}, {
 						"type":	"neighbor",
 						"count":	1
 					}, {
-						"type":	"escape-tone",
+						"type":	"appoggiatura",
 						"count":	1
 					}],
 				"items":	[{
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
-								"num":	95,
-								"den":	4
+								"num":	4117,
+								"den":	160
 							},
 							"end":	{
-								"num":	1433,
+								"num":	12379,
+								"den":	480
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	18,
+								"beat":	1,
+								"subdivision":	{
+									"num":	37,
+									"den":	60
+								}
+							},
+							"end":	{
+								"measure":	18,
+								"beat":	1,
+								"subdivision":	{
+									"num":	139,
+									"den":	180
+								}
+							}
+						},
+						"note_ids":	[252],
+						"label":	"appoggiatura",
+						"uncertainty":	0
+					}, {
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	15839,
+								"den":	480
+							},
+							"end":	{
+								"num":	2003,
 								"den":	60
 							}
 						},
 						"location":	{
 							"start":	{
-								"measure":	16,
+								"measure":	22,
 								"beat":	4,
 								"subdivision":	{
-									"num":	1,
-									"den":	3
+									"num":	179,
+									"den":	180
 								}
 							},
 							"end":	{
-								"measure":	16,
-								"beat":	4,
+								"measure":	23,
+								"beat":	2,
 								"subdivision":	{
-									"num":	31,
+									"num":	1,
 									"den":	45
 								}
 							}
 						},
-						"note_ids":	[227],
-						"label":	"escape-tone",
+						"note_ids":	[337],
+						"label":	"neighbor",
 						"uncertainty":	0
 					}, {
 						"framework":	"standard-counterpoint-v1",
@@ -80547,7 +80649,7 @@
 							}
 						},
 						"note_ids":	[391],
-						"label":	"neighbor",
+						"label":	"passing",
 						"uncertainty":	0
 					}]
 			},
@@ -80571,8 +80673,74 @@
 				"seventh_degree":	{
 					"rule":	"leading-tone",
 					"followed":	0,
-					"broken":	0,
-					"breaks":	[]
+					"broken":	2,
+					"breaks":	[{
+							"framework":	"standard-counterpoint-v1",
+							"span":	{
+								"start":	{
+									"num":	3131,
+									"den":	96
+								},
+								"end":	{
+									"num":	2003,
+									"den":	60
+								}
+							},
+							"location":	{
+								"start":	{
+									"measure":	22,
+									"beat":	3,
+									"subdivision":	{
+										"num":	35,
+										"den":	36
+									}
+								},
+								"end":	{
+									"measure":	23,
+									"beat":	2,
+									"subdivision":	{
+										"num":	1,
+										"den":	45
+									}
+								}
+							},
+							"note_ids":	[333, 337],
+							"label":	"leading-tone",
+							"uncertainty":	0.719595488972351
+						}, {
+							"framework":	"standard-counterpoint-v1",
+							"span":	{
+								"start":	{
+									"num":	2711,
+									"den":	80
+								},
+								"end":	{
+									"num":	16387,
+									"den":	480
+								}
+							},
+							"location":	{
+								"start":	{
+									"measure":	23,
+									"beat":	3,
+									"subdivision":	{
+										"num":	11,
+										"den":	30
+									}
+								},
+								"end":	{
+									"measure":	23,
+									"beat":	4,
+									"subdivision":	{
+										"num":	7,
+										"den":	180
+									}
+								}
+							},
+							"note_ids":	[347, 348],
+							"label":	"leading-tone",
+							"uncertainty":	0.719595488972351
+						}]
 				}
 			}
 		}, {
@@ -80605,7 +80773,7 @@
 					}
 				}
 			},
-			"note_ids":	[484, 487, 490, 493, 498, 501, 515, 519, 523, 527, 530, 541, 550, 557, 567],
+			"note_ids":	[472, 484, 487, 490, 493, 498, 501, 515, 519, 523, 527, 530, 541, 550, 557, 567],
 			"label":	"melody",
 			"uncertainty":	0,
 			"index":	5,
@@ -80613,7 +80781,7 @@
 				"first":	31,
 				"last":	37
 			},
-			"note_count":	15,
+			"note_count":	16,
 			"range":	{
 				"lowest":	{
 					"pitch":	62,
@@ -80672,10 +80840,10 @@
 				"up":	6,
 				"down":	5,
 				"same":	3,
-				"steps":	5,
+				"steps":	6,
 				"leaps":	5,
 				"net_direction":	"up",
-				"net_semitones":	22,
+				"net_semitones":	8,
 				"directions":	["down", "same", "up", "down", "down", "down", "up", "up", "up", "down", "same", "up", "same", "up"]
 			},
 			"leaps":	{
@@ -80878,13 +81046,46 @@
 			"consecutive_leaps":	[],
 			"non_chord_tones":	{
 				"chord_tones":	13,
-				"non_chord_tones":	1,
+				"non_chord_tones":	2,
 				"unclassified":	1,
 				"by_type":	[{
 						"type":	"passing",
-						"count":	1
+						"count":	2
 					}],
 				"items":	[{
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	383,
+								"den":	8
+							},
+							"end":	{
+								"num":	23053,
+								"den":	480
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	32,
+								"beat":	4,
+								"subdivision":	{
+									"num":	2,
+									"den":	3
+								}
+							},
+							"end":	{
+								"measure":	33,
+								"beat":	1,
+								"subdivision":	{
+									"num":	13,
+									"den":	180
+								}
+							}
+						},
+						"note_ids":	[498],
+						"label":	"passing",
+						"uncertainty":	0
+					}, {
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
@@ -80938,9 +81139,75 @@
 					}],
 				"seventh_degree":	{
 					"rule":	"leading-tone",
-					"followed":	2,
-					"broken":	0,
-					"breaks":	[]
+					"followed":	1,
+					"broken":	2,
+					"breaks":	[{
+							"framework":	"standard-counterpoint-v1",
+							"span":	{
+								"start":	{
+									"num":	373,
+									"den":	8
+								},
+								"end":	{
+									"num":	22619,
+									"den":	480
+								}
+							},
+							"location":	{
+								"start":	{
+									"measure":	32,
+									"beat":	1,
+									"subdivision":	{
+										"num":	1,
+										"den":	3
+									}
+								},
+								"end":	{
+									"measure":	32,
+									"beat":	2,
+									"subdivision":	{
+										"num":	119,
+										"den":	180
+									}
+								}
+							},
+							"note_ids":	[487, 490],
+							"label":	"leading-tone",
+							"uncertainty":	0.719595488972351
+						}, {
+							"framework":	"standard-counterpoint-v1",
+							"span":	{
+								"start":	{
+									"num":	47,
+									"den":	1
+								},
+								"end":	{
+									"num":	22987,
+									"den":	480
+								}
+							},
+							"location":	{
+								"start":	{
+									"measure":	32,
+									"beat":	2,
+									"subdivision":	{
+										"num":	1,
+										"den":	3
+									}
+								},
+								"end":	{
+									"measure":	32,
+									"beat":	4,
+									"subdivision":	{
+										"num":	127,
+										"den":	180
+									}
+								}
+							},
+							"note_ids":	[490, 493],
+							"label":	"leading-tone",
+							"uncertainty":	0.719595488972351
+						}]
 				}
 			}
 		}, {
@@ -81652,77 +81919,77 @@
 				"non_chord_tones":	2,
 				"unclassified":	8,
 				"by_type":	[{
-						"type":	"neighbor",
+						"type":	"appoggiatura",
 						"count":	1
 					}, {
-						"type":	"anticipation",
+						"type":	"escape-tone",
 						"count":	1
 					}],
 				"items":	[{
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
-								"num":	715,
-								"den":	12
+								"num":	2289,
+								"den":	40
 							},
 							"end":	{
-								"num":	28619,
+								"num":	27497,
 								"den":	480
 							}
 						},
 						"location":	{
 							"start":	{
-								"measure":	40,
-								"beat":	3,
+								"measure":	39,
+								"beat":	1,
 								"subdivision":	{
-									"num":	8,
-									"den":	9
+									"num":	3,
+									"den":	5
 								}
 							},
 							"end":	{
-								"measure":	40,
-								"beat":	3,
+								"measure":	39,
+								"beat":	1,
 								"subdivision":	{
-									"num":	179,
+									"num":	137,
 									"den":	180
 								}
 							}
 						},
-						"note_ids":	[641],
-						"label":	"neighbor",
+						"note_ids":	[607],
+						"label":	"appoggiatura",
 						"uncertainty":	0
 					}, {
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
-								"num":	28799,
-								"den":	480
+								"num":	6299,
+								"den":	96
 							},
 							"end":	{
-								"num":	7217,
-								"den":	120
+								"num":	31651,
+								"den":	480
 							}
 						},
 						"location":	{
 							"start":	{
-								"measure":	40,
-								"beat":	4,
+								"measure":	44,
+								"beat":	3,
 								"subdivision":	{
-									"num":	179,
-									"den":	180
+									"num":	35,
+									"den":	36
 								}
 							},
 							"end":	{
-								"measure":	41,
-								"beat":	1,
+								"measure":	44,
+								"beat":	4,
 								"subdivision":	{
-									"num":	17,
-									"den":	45
+									"num":	151,
+									"den":	180
 								}
 							}
 						},
-						"note_ids":	[648],
-						"label":	"anticipation",
+						"note_ids":	[725],
+						"label":	"escape-tone",
 						"uncertainty":	0
 					}]
 			},
@@ -81779,7 +82046,7 @@
 							},
 							"note_ids":	[730, 734],
 							"label":	"leading-tone",
-							"uncertainty":	0.746766577849658
+							"uncertainty":	0.719595488972351
 						}]
 				}
 			}
@@ -82541,7 +82808,7 @@
 							},
 							"note_ids":	[793, 803],
 							"label":	"leading-tone",
-							"uncertainty":	0.746766577849658
+							"uncertainty":	0.719595488972351
 						}, {
 							"framework":	"standard-counterpoint-v1",
 							"span":	{
@@ -82574,7 +82841,7 @@
 							},
 							"note_ids":	[819, 829],
 							"label":	"leading-tone",
-							"uncertainty":	0.746766577849658
+							"uncertainty":	0.719595488972351
 						}]
 				}
 			}
@@ -83173,44 +83440,146 @@
 				}],
 			"non_chord_tones":	{
 				"chord_tones":	11,
-				"non_chord_tones":	1,
-				"unclassified":	7,
+				"non_chord_tones":	4,
+				"unclassified":	4,
 				"by_type":	[{
-						"type":	"escape-tone",
-						"count":	1
+						"type":	"passing",
+						"count":	2
+					}, {
+						"type":	"appoggiatura",
+						"count":	2
 					}],
 				"items":	[{
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
-								"num":	505,
-								"den":	6
+								"num":	12179,
+								"den":	160
 							},
 							"end":	{
-								"num":	3369,
-								"den":	40
+								"num":	2443,
+								"den":	32
 							}
 						},
 						"location":	{
 							"start":	{
-								"measure":	57,
+								"measure":	51,
+								"beat":	3,
+								"subdivision":	{
+									"num":	59,
+									"den":	60
+								}
+							},
+							"end":	{
+								"measure":	51,
+								"beat":	4,
+								"subdivision":	{
+									"num":	7,
+									"den":	12
+								}
+							}
+						},
+						"note_ids":	[861],
+						"label":	"appoggiatura",
+						"uncertainty":	0
+					}, {
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	12241,
+								"den":	160
+							},
+							"end":	{
+								"num":	36899,
+								"den":	480
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	52,
 								"beat":	1,
 								"subdivision":	{
-									"num":	4,
-									"den":	9
+									"num":	1,
+									"den":	60
+								}
+							},
+							"end":	{
+								"measure":	52,
+								"beat":	1,
+								"subdivision":	{
+									"num":	179,
+									"den":	180
+								}
+							}
+						},
+						"note_ids":	[867],
+						"label":	"passing",
+						"uncertainty":	0
+					}, {
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	12721,
+								"den":	160
+							},
+							"end":	{
+								"num":	12781,
+								"den":	160
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	54,
+								"beat":	1,
+								"subdivision":	{
+									"num":	1,
+									"den":	60
+								}
+							},
+							"end":	{
+								"measure":	54,
+								"beat":	2,
+								"subdivision":	{
+									"num":	1,
+									"den":	60
+								}
+							}
+						},
+						"note_ids":	[902],
+						"label":	"passing",
+						"uncertainty":	0
+					}, {
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	1343,
+								"den":	16
+							},
+							"end":	{
+								"num":	13443,
+								"den":	160
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	56,
+								"beat":	4,
+								"subdivision":	{
+									"num":	5,
+									"den":	6
 								}
 							},
 							"end":	{
 								"measure":	57,
 								"beat":	1,
 								"subdivision":	{
-									"num":	3,
-									"den":	5
+									"num":	1,
+									"den":	20
 								}
 							}
 						},
-						"note_ids":	[961],
-						"label":	"escape-tone",
+						"note_ids":	[957],
+						"label":	"appoggiatura",
 						"uncertainty":	0
 					}]
 			},
@@ -83267,7 +83636,7 @@
 							},
 							"note_ids":	[867, 870],
 							"label":	"leading-tone",
-							"uncertainty":	0.746766577849658
+							"uncertainty":	0.719595488972351
 						}, {
 							"framework":	"standard-counterpoint-v1",
 							"span":	{
@@ -83300,7 +83669,7 @@
 							},
 							"note_ids":	[933, 938],
 							"label":	"leading-tone",
-							"uncertainty":	0.746766577849658
+							"uncertainty":	0.719595488972351
 						}]
 				}
 			}
@@ -84235,20 +84604,14 @@
 				}],
 			"non_chord_tones":	{
 				"chord_tones":	21,
-				"non_chord_tones":	6,
-				"unclassified":	5,
+				"non_chord_tones":	5,
+				"unclassified":	6,
 				"by_type":	[{
 						"type":	"passing",
-						"count":	2
-					}, {
-						"type":	"suspension",
-						"count":	1
+						"count":	3
 					}, {
 						"type":	"appoggiatura",
 						"count":	2
-					}, {
-						"type":	"escape-tone",
-						"count":	1
 					}],
 				"items":	[{
 						"framework":	"standard-counterpoint-v1",
@@ -84287,6 +84650,39 @@
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
+								"num":	13981,
+								"den":	160
+							},
+							"end":	{
+								"num":	7003,
+								"den":	80
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	59,
+								"beat":	2,
+								"subdivision":	{
+									"num":	1,
+									"den":	60
+								}
+							},
+							"end":	{
+								"measure":	59,
+								"beat":	2,
+								"subdivision":	{
+									"num":	13,
+									"den":	30
+								}
+							}
+						},
+						"note_ids":	[997],
+						"label":	"passing",
+						"uncertainty":	0
+					}, {
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
 								"num":	8675,
 								"den":	96
 							},
@@ -84314,40 +84710,40 @@
 							}
 						},
 						"note_ids":	[1051],
-						"label":	"suspension",
+						"label":	"passing",
 						"uncertainty":	0
 					}, {
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
-								"num":	749,
-								"den":	8
+								"num":	2935,
+								"den":	32
 							},
 							"end":	{
-								"num":	7509,
+								"num":	7343,
 								"den":	80
 							}
 						},
 						"location":	{
 							"start":	{
-								"measure":	63,
-								"beat":	2,
+								"measure":	62,
+								"beat":	1,
 								"subdivision":	{
-									"num":	2,
-									"den":	3
+									"num":	7,
+									"den":	12
 								}
 							},
 							"end":	{
-								"measure":	63,
-								"beat":	3,
+								"measure":	62,
+								"beat":	1,
 								"subdivision":	{
-									"num":	3,
-									"den":	10
+									"num":	23,
+									"den":	30
 								}
 							}
 						},
-						"note_ids":	[1098],
-						"label":	"passing",
+						"note_ids":	[1072],
+						"label":	"appoggiatura",
 						"uncertainty":	0
 					}, {
 						"framework":	"standard-counterpoint-v1",
@@ -84381,72 +84777,6 @@
 						},
 						"note_ids":	[1109],
 						"label":	"passing",
-						"uncertainty":	0
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	9131,
-								"den":	96
-							},
-							"end":	{
-								"num":	15241,
-								"den":	160
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	64,
-								"beat":	2,
-								"subdivision":	{
-									"num":	23,
-									"den":	36
-								}
-							},
-							"end":	{
-								"measure":	64,
-								"beat":	3,
-								"subdivision":	{
-									"num":	1,
-									"den":	60
-								}
-							}
-						},
-						"note_ids":	[1119],
-						"label":	"appoggiatura",
-						"uncertainty":	0
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	765,
-								"den":	8
-							},
-							"end":	{
-								"num":	22981,
-								"den":	240
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	64,
-								"beat":	4,
-								"subdivision":	{
-									"num":	0,
-									"den":	1
-								}
-							},
-							"end":	{
-								"measure":	64,
-								"beat":	4,
-								"subdivision":	{
-									"num":	31,
-									"den":	90
-								}
-							}
-						},
-						"note_ids":	[1127],
-						"label":	"escape-tone",
 						"uncertainty":	0
 					}]
 			},
@@ -84503,7 +84833,7 @@
 							},
 							"note_ids":	[1145, 1154],
 							"label":	"leading-tone",
-							"uncertainty":	0.746766577849658
+							"uncertainty":	0.719595488972351
 						}]
 				}
 			}

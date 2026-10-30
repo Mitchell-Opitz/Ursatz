@@ -51441,15 +51441,15 @@
 				"up":	42,
 				"down":	33,
 				"same":	13,
-				"steps":	43,
-				"leaps":	32,
+				"steps":	44,
+				"leaps":	31,
 				"net_direction":	"same",
 				"net_semitones":	0,
 				"directions":	["down", "up", "down", "same", "up", "up", "up", "down", "up", "down", "same", "up", "down", "up", "up", "same", "down", "up", "down", "up", "down", "same", "up", "up", "up", "down", "up", "down", "same", "up", "down", "down", "up", "down", "same", "up", "down", "up", "down", "up", "up", "up", "down", "up", "down", "same", "up", "down", "up", "up", "same", "down", "up", "down", "up", "down", "same", "up", "up", "up", "down", "up", "down", "same", "up", "down", "down", "up", "down", "same", "up", "same", "down", "down", "up", "down", "up", "down", "same", "up", "up", "up", "down", "down", "up", "down", "up", "up"]
 			},
 			"leaps":	{
 				"recovered":	7,
-				"unrecovered":	14,
+				"unrecovered":	13,
 				"not_required":	11,
 				"not_judged":	0,
 				"items":	[{
@@ -52482,44 +52482,6 @@
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
-								"num":	207,
-								"den":	16
-							},
-							"end":	{
-								"num":	209,
-								"den":	16
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	13,
-								"beat":	4,
-								"subdivision":	{
-									"num":	3,
-									"den":	4
-								}
-							},
-							"end":	{
-								"measure":	14,
-								"beat":	1,
-								"subdivision":	{
-									"num":	1,
-									"den":	4
-								}
-							}
-						},
-						"note_ids":	[236, 237],
-						"label":	"leap",
-						"uncertainty":	0,
-						"semitones":	1,
-						"direction":	"up",
-						"generic_size":	5,
-						"approximate":	false,
-						"status":	"unrecovered"
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
 								"num":	13,
 								"den":	1
 							},
@@ -52673,16 +52635,55 @@
 			"consecutive_leaps":	[],
 			"non_chord_tones":	{
 				"chord_tones":	78,
-				"non_chord_tones":	8,
-				"unclassified":	3,
+				"non_chord_tones":	9,
+				"unclassified":	2,
 				"by_type":	[{
 						"type":	"passing",
-						"count":	4
+						"count":	2
 					}, {
 						"type":	"neighbor",
+						"count":	1
+					}, {
+						"type":	"appoggiatura",
+						"count":	2
+					}, {
+						"type":	"escape-tone",
 						"count":	4
 					}],
 				"items":	[{
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	47,
+								"den":	32
+							},
+							"end":	{
+								"num":	95,
+								"den":	64
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	2,
+								"beat":	2,
+								"subdivision":	{
+									"num":	7,
+									"den":	8
+								}
+							},
+							"end":	{
+								"measure":	2,
+								"beat":	2,
+								"subdivision":	{
+									"num":	15,
+									"den":	16
+								}
+							}
+						},
+						"note_ids":	[25],
+						"label":	"appoggiatura",
+						"uncertainty":	0
+					}, {
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
@@ -52713,40 +52714,7 @@
 							}
 						},
 						"note_ids":	[29],
-						"label":	"neighbor",
-						"uncertainty":	0
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	39,
-								"den":	16
-							},
-							"end":	{
-								"num":	5,
-								"den":	2
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	3,
-								"beat":	2,
-								"subdivision":	{
-									"num":	3,
-									"den":	4
-								}
-							},
-							"end":	{
-								"measure":	3,
-								"beat":	3,
-								"subdivision":	{
-									"num":	0,
-									"den":	1
-								}
-							}
-						},
-						"note_ids":	[43],
-						"label":	"passing",
+						"label":	"escape-tone",
 						"uncertainty":	0
 					}, {
 						"framework":	"standard-counterpoint-v1",
@@ -52812,7 +52780,40 @@
 							}
 						},
 						"note_ids":	[87],
-						"label":	"neighbor",
+						"label":	"escape-tone",
+						"uncertainty":	0
+					}, {
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	239,
+								"den":	32
+							},
+							"end":	{
+								"num":	479,
+								"den":	64
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	8,
+								"beat":	2,
+								"subdivision":	{
+									"num":	7,
+									"den":	8
+								}
+							},
+							"end":	{
+								"measure":	8,
+								"beat":	2,
+								"subdivision":	{
+									"num":	15,
+									"den":	16
+								}
+							}
+						},
+						"note_ids":	[135],
+						"label":	"appoggiatura",
 						"uncertainty":	0
 					}, {
 						"framework":	"standard-counterpoint-v1",
@@ -52845,40 +52846,7 @@
 							}
 						},
 						"note_ids":	[139],
-						"label":	"neighbor",
-						"uncertainty":	0
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	135,
-								"den":	16
-							},
-							"end":	{
-								"num":	17,
-								"den":	2
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	9,
-								"beat":	2,
-								"subdivision":	{
-									"num":	3,
-									"den":	4
-								}
-							},
-							"end":	{
-								"measure":	9,
-								"beat":	3,
-								"subdivision":	{
-									"num":	0,
-									"den":	1
-								}
-							}
-						},
-						"note_ids":	[153],
-						"label":	"passing",
+						"label":	"escape-tone",
 						"uncertainty":	0
 					}, {
 						"framework":	"standard-counterpoint-v1",
@@ -52944,6 +52912,39 @@
 							}
 						},
 						"note_ids":	[197],
+						"label":	"escape-tone",
+						"uncertainty":	0
+					}, {
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	207,
+								"den":	16
+							},
+							"end":	{
+								"num":	13,
+								"den":	1
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	13,
+								"beat":	4,
+								"subdivision":	{
+									"num":	3,
+									"den":	4
+								}
+							},
+							"end":	{
+								"measure":	14,
+								"beat":	1,
+								"subdivision":	{
+									"num":	0,
+									"den":	1
+								}
+							}
+						},
+						"note_ids":	[236],
 						"label":	"neighbor",
 						"uncertainty":	0
 					}]
@@ -52967,8 +52968,8 @@
 					}],
 				"seventh_degree":	{
 					"rule":	"leading-tone",
-					"followed":	8,
-					"broken":	3,
+					"followed":	7,
+					"broken":	4,
 					"breaks":	[{
 							"framework":	"standard-counterpoint-v1",
 							"span":	{
@@ -53039,35 +53040,68 @@
 							"framework":	"standard-counterpoint-v1",
 							"span":	{
 								"start":	{
-									"num":	105,
-									"den":	8
+									"num":	14,
+									"den":	1
 								},
 								"end":	{
-									"num":	107,
-									"den":	8
+									"num":	57,
+									"den":	4
 								}
 							},
 							"location":	{
 								"start":	{
-									"measure":	14,
+									"measure":	15,
 									"beat":	1,
 									"subdivision":	{
-										"num":	1,
-										"den":	2
+										"num":	0,
+										"den":	1
 									}
 								},
 								"end":	{
-									"measure":	14,
+									"measure":	15,
 									"beat":	2,
 									"subdivision":	{
-										"num":	1,
-										"den":	2
+										"num":	0,
+										"den":	1
 									}
 								}
 							},
-							"note_ids":	[240, 243],
+							"note_ids":	[255, 257],
 							"label":	"leading-tone",
-							"uncertainty":	1
+							"uncertainty":	0.65511113003663457
+						}, {
+							"framework":	"standard-counterpoint-v1",
+							"span":	{
+								"start":	{
+									"num":	57,
+									"den":	4
+								},
+								"end":	{
+									"num":	29,
+									"den":	2
+								}
+							},
+							"location":	{
+								"start":	{
+									"measure":	15,
+									"beat":	2,
+									"subdivision":	{
+										"num":	0,
+										"den":	1
+									}
+								},
+								"end":	{
+									"measure":	15,
+									"beat":	3,
+									"subdivision":	{
+										"num":	0,
+										"den":	1
+									}
+								}
+							},
+							"note_ids":	[259, 261],
+							"label":	"leading-tone",
+							"uncertainty":	0.65511113003663457
 						}]
 				}
 			}
@@ -53168,15 +53202,15 @@
 				"up":	22,
 				"down":	27,
 				"same":	8,
-				"steps":	27,
-				"leaps":	22,
+				"steps":	28,
+				"leaps":	21,
 				"net_direction":	"down",
 				"net_semitones":	-7,
 				"directions":	["down", "same", "up", "down", "same", "up", "down", "down", "down", "down", "up", "down", "up", "up", "same", "down", "up", "down", "down", "up", "same", "down", "down", "up", "down", "up", "down", "same", "up", "up", "up", "down", "down", "up", "down", "up", "up", "down", "same", "up", "down", "same", "up", "down", "down", "down", "down", "up", "down", "up", "up", "same", "down", "up", "down", "down", "up"]
 			},
 			"leaps":	{
 				"recovered":	2,
-				"unrecovered":	13,
+				"unrecovered":	12,
 				"not_required":	7,
 				"not_judged":	0,
 				"items":	[{
@@ -53521,44 +53555,6 @@
 						"generic_size":	3,
 						"approximate":	false,
 						"status":	"not-required"
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	303,
-								"den":	16
-							},
-							"end":	{
-								"num":	305,
-								"den":	16
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	19,
-								"beat":	4,
-								"subdivision":	{
-									"num":	3,
-									"den":	4
-								}
-							},
-							"end":	{
-								"measure":	20,
-								"beat":	1,
-								"subdivision":	{
-									"num":	1,
-									"den":	4
-								}
-							}
-						},
-						"note_ids":	[341, 342],
-						"label":	"leap",
-						"uncertainty":	0,
-						"semitones":	1,
-						"direction":	"up",
-						"generic_size":	5,
-						"approximate":	false,
-						"status":	"unrecovered"
 					}, {
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
@@ -54090,112 +54086,43 @@
 				}],
 			"non_chord_tones":	{
 				"chord_tones":	54,
-				"non_chord_tones":	3,
-				"unclassified":	3,
+				"non_chord_tones":	1,
+				"unclassified":	5,
 				"by_type":	[{
 						"type":	"neighbor",
-						"count":	2
-					}, {
-						"type":	"escape-tone",
 						"count":	1
 					}],
 				"items":	[{
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
-								"num":	545,
-								"den":	32
-							},
-							"end":	{
-								"num":	1091,
-								"den":	64
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	18,
-								"beat":	1,
-								"subdivision":	{
-									"num":	1,
-									"den":	8
-								}
-							},
-							"end":	{
-								"measure":	18,
-								"beat":	1,
-								"subdivision":	{
-									"num":	3,
-									"den":	16
-								}
-							}
-						},
-						"note_ids":	[308],
-						"label":	"neighbor",
-						"uncertainty":	0
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	183,
-								"den":	8
-							},
-							"end":	{
-								"num":	367,
+								"num":	303,
 								"den":	16
+							},
+							"end":	{
+								"num":	19,
+								"den":	1
 							}
 						},
 						"location":	{
 							"start":	{
-								"measure":	23,
-								"beat":	4,
-								"subdivision":	{
-									"num":	1,
-									"den":	2
-								}
-							},
-							"end":	{
-								"measure":	23,
+								"measure":	19,
 								"beat":	4,
 								"subdivision":	{
 									"num":	3,
 									"den":	4
 								}
-							}
-						},
-						"note_ids":	[408],
-						"label":	"escape-tone",
-						"uncertainty":	0
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	737,
-								"den":	32
 							},
 							"end":	{
-								"num":	1475,
-								"den":	64
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	24,
+								"measure":	20,
 								"beat":	1,
 								"subdivision":	{
-									"num":	1,
-									"den":	8
-								}
-							},
-							"end":	{
-								"measure":	24,
-								"beat":	1,
-								"subdivision":	{
-									"num":	3,
-									"den":	16
+									"num":	0,
+									"den":	1
 								}
 							}
 						},
-						"note_ids":	[413],
+						"note_ids":	[341],
 						"label":	"neighbor",
 						"uncertainty":	0
 					}]
@@ -54219,41 +54146,74 @@
 					}],
 				"seventh_degree":	{
 					"rule":	"leading-tone",
-					"followed":	8,
-					"broken":	1,
+					"followed":	5,
+					"broken":	2,
 					"breaks":	[{
 							"framework":	"standard-counterpoint-v1",
 							"span":	{
 								"start":	{
-									"num":	153,
-									"den":	8
+									"num":	20,
+									"den":	1
 								},
 								"end":	{
-									"num":	155,
-									"den":	8
+									"num":	81,
+									"den":	4
 								}
 							},
 							"location":	{
 								"start":	{
-									"measure":	20,
+									"measure":	21,
 									"beat":	1,
 									"subdivision":	{
-										"num":	1,
-										"den":	2
+										"num":	0,
+										"den":	1
 									}
 								},
 								"end":	{
-									"measure":	20,
+									"measure":	21,
 									"beat":	2,
 									"subdivision":	{
-										"num":	1,
-										"den":	2
+										"num":	0,
+										"den":	1
 									}
 								}
 							},
-							"note_ids":	[345, 348],
+							"note_ids":	[360, 362],
 							"label":	"leading-tone",
-							"uncertainty":	0.91336173328470749
+							"uncertainty":	0.65511113003663457
+						}, {
+							"framework":	"standard-counterpoint-v1",
+							"span":	{
+								"start":	{
+									"num":	81,
+									"den":	4
+								},
+								"end":	{
+									"num":	41,
+									"den":	2
+								}
+							},
+							"location":	{
+								"start":	{
+									"measure":	21,
+									"beat":	2,
+									"subdivision":	{
+										"num":	0,
+										"den":	1
+									}
+								},
+								"end":	{
+									"measure":	21,
+									"beat":	3,
+									"subdivision":	{
+										"num":	0,
+										"den":	1
+									}
+								}
+							},
+							"note_ids":	[364, 366],
+							"label":	"leading-tone",
+							"uncertainty":	0.65511113003663457
 						}]
 				}
 			}

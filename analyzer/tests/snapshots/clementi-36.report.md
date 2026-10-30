@@ -916,8 +916,8 @@ Each melody note is set against the chord of the segment it starts in, as the li
 | 2 | 7 | 7 | 0 | 0 | - |
 | 3 | 25 | 23 | 1 | 1 | appoggiatura 1 |
 | 4 | 21 | 21 | 0 | 0 | - |
-| 5 | 13 | 12 | 0 | 1 | - |
-| 6 | 19 | 13 | 1 | 5 | appoggiatura 1 |
+| 5 | 13 | 12 | 1 | 0 | retardation 1 |
+| 6 | 19 | 13 | 0 | 6 | - |
 | 7 | 1 | 1 | 0 | 0 | - |
 | 8 | 7 | 7 | 0 | 0 | - |
 | 9 | 25 | 24 | 1 | 0 | appoggiatura 1 |
@@ -932,9 +932,9 @@ The library's melodic tendencies are soft preferences a well-formed line usually
 | 1 | does not hold | holds | does not hold | holds | does not hold | 0 | 0 |
 | 2 | holds | holds | holds | does not hold | does not hold | 1 | 0 |
 | 3 | does not hold | does not hold | holds | does not hold | does not hold | 1 | 1 (m. 7, beat 3) |
-| 4 | holds | holds | holds | does not hold | holds | 1 | 2 (m. 13, beat 2.5; m. 13, beat 4) |
+| 4 | holds | holds | holds | does not hold | holds | 0 | 3 (m. 12, beat 2; m. 12, beat 3.5; m. 14, beat 2.5) |
 | 5 | does not hold | does not hold | does not hold | holds | holds | 0 | 1 (m. 16, beat 1) |
-| 6 | does not hold | holds | does not hold | does not hold | does not hold | 3 | 0 |
+| 6 | does not hold | holds | does not hold | does not hold | does not hold | 0 | 0 |
 | 7 | holds | holds | holds | holds | does not hold | 0 | 0 |
 | 8 | holds | holds | holds | does not hold | does not hold | 1 | 0 |
 | 9 | does not hold | does not hold | holds | does not hold | does not hold | 1 | 0 |

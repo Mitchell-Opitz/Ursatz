@@ -55107,23 +55107,89 @@
 					}],
 				"seventh_degree":	{
 					"rule":	"leading-tone",
-					"followed":	1,
-					"broken":	2,
+					"followed":	0,
+					"broken":	3,
 					"breaks":	[{
 							"framework":	"standard-counterpoint-v1",
 							"span":	{
 								"start":	{
-									"num":	99,
-									"den":	8
+									"num":	45,
+									"den":	4
 								},
 								"end":	{
-									"num":	1211,
+									"num":	1103,
 									"den":	96
 								}
 							},
 							"location":	{
 								"start":	{
-									"measure":	13,
+									"measure":	12,
+									"beat":	2,
+									"subdivision":	{
+										"num":	0,
+										"den":	1
+									}
+								},
+								"end":	{
+									"measure":	12,
+									"beat":	2,
+									"subdivision":	{
+										"num":	23,
+										"den":	24
+									}
+								}
+							},
+							"note_ids":	[103, 104],
+							"label":	"leading-tone",
+							"uncertainty":	0.79667033194761949
+						}, {
+							"framework":	"standard-counterpoint-v1",
+							"span":	{
+								"start":	{
+									"num":	93,
+									"den":	8
+								},
+								"end":	{
+									"num":	1139,
+									"den":	96
+								}
+							},
+							"location":	{
+								"start":	{
+									"measure":	12,
+									"beat":	3,
+									"subdivision":	{
+										"num":	1,
+										"den":	2
+									}
+								},
+								"end":	{
+									"measure":	12,
+									"beat":	4,
+									"subdivision":	{
+										"num":	11,
+										"den":	24
+									}
+								}
+							},
+							"note_ids":	[106, 107],
+							"label":	"leading-tone",
+							"uncertainty":	0.79667033194761949
+						}, {
+							"framework":	"standard-counterpoint-v1",
+							"span":	{
+								"start":	{
+									"num":	107,
+									"den":	8
+								},
+								"end":	{
+									"num":	1307,
+									"den":	96
+								}
+							},
+							"location":	{
+								"start":	{
+									"measure":	14,
 									"beat":	2,
 									"subdivision":	{
 										"num":	1,
@@ -55131,7 +55197,7 @@
 									}
 								},
 								"end":	{
-									"measure":	13,
+									"measure":	14,
 									"beat":	3,
 									"subdivision":	{
 										"num":	11,
@@ -55139,42 +55205,9 @@
 									}
 								}
 							},
-							"note_ids":	[113, 114],
+							"note_ids":	[123, 124],
 							"label":	"leading-tone",
-							"uncertainty":	0.89379255450865724
-						}, {
-							"framework":	"standard-counterpoint-v1",
-							"span":	{
-								"start":	{
-									"num":	51,
-									"den":	4
-								},
-								"end":	{
-									"num":	1247,
-									"den":	96
-								}
-							},
-							"location":	{
-								"start":	{
-									"measure":	13,
-									"beat":	4,
-									"subdivision":	{
-										"num":	0,
-										"den":	1
-									}
-								},
-								"end":	{
-									"measure":	13,
-									"beat":	4,
-									"subdivision":	{
-										"num":	23,
-										"den":	24
-									}
-								}
-							},
-							"note_ids":	[117, 118],
-							"label":	"leading-tone",
-							"uncertainty":	0.89379255450865724
+							"uncertainty":	0.79667033194761949
 						}]
 				}
 			}
@@ -55662,10 +55695,46 @@
 				}],
 			"non_chord_tones":	{
 				"chord_tones":	12,
-				"non_chord_tones":	0,
-				"unclassified":	1,
-				"by_type":	[],
-				"items":	[]
+				"non_chord_tones":	1,
+				"unclassified":	0,
+				"by_type":	[{
+						"type":	"retardation",
+						"count":	1
+					}],
+				"items":	[{
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	145,
+								"den":	8
+							},
+							"end":	{
+								"num":	1751,
+								"den":	96
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	19,
+								"beat":	1,
+								"subdivision":	{
+									"num":	1,
+									"den":	2
+								}
+							},
+							"end":	{
+								"measure":	19,
+								"beat":	1,
+								"subdivision":	{
+									"num":	23,
+									"den":	24
+								}
+							}
+						},
+						"note_ids":	[155],
+						"label":	"retardation",
+						"uncertainty":	0
+					}]
 			},
 			"tendencies":	{
 				"line":	[{
@@ -55720,7 +55789,7 @@
 							},
 							"note_ids":	[135, 137],
 							"label":	"leading-tone",
-							"uncertainty":	0.92176495585235019
+							"uncertainty":	0.79667033194761949
 						}]
 				}
 			}
@@ -56057,7 +56126,7 @@
 						"uncertainty":	0,
 						"semitones":	10,
 						"direction":	"up",
-						"generic_size":	4,
+						"generic_size":	7,
 						"approximate":	false,
 						"status":	"not-judged"
 					}]
@@ -56100,46 +56169,10 @@
 				}],
 			"non_chord_tones":	{
 				"chord_tones":	13,
-				"non_chord_tones":	1,
-				"unclassified":	5,
-				"by_type":	[{
-						"type":	"appoggiatura",
-						"count":	1
-					}],
-				"items":	[{
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	169,
-								"den":	8
-							},
-							"end":	{
-								"num":	2039,
-								"den":	96
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	22,
-								"beat":	1,
-								"subdivision":	{
-									"num":	1,
-									"den":	2
-								}
-							},
-							"end":	{
-								"measure":	22,
-								"beat":	1,
-								"subdivision":	{
-									"num":	23,
-									"den":	24
-								}
-							}
-						},
-						"note_ids":	[186],
-						"label":	"appoggiatura",
-						"uncertainty":	0
-					}]
+				"non_chord_tones":	0,
+				"unclassified":	6,
+				"by_type":	[],
+				"items":	[]
 			},
 			"tendencies":	{
 				"line":	[{
@@ -56160,7 +56193,7 @@
 					}],
 				"seventh_degree":	{
 					"rule":	"leading-tone",
-					"followed":	3,
+					"followed":	0,
 					"broken":	0,
 					"breaks":	[]
 				}
@@ -57844,7 +57877,7 @@
 							},
 							"note_ids":	[315, 316],
 							"label":	"leading-tone",
-							"uncertainty":	0.686714918255223
+							"uncertainty":	0.79667033194761949
 						}]
 				}
 			}
