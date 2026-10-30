@@ -13,6 +13,7 @@
 #include "pitch/pitch_numeric_value.h"
 #include "pitch/pitch_spelling.h"
 #include "pitch/tuning_system.h"
+#include "standard-tonality/tonal_key.h"
 #include "theory/style_model_build.h"
 #include "time/duration.h"
 #include "time/metrical_position.h"
@@ -222,10 +223,12 @@ static MeterMap *copy_meter_map(const MeterMap *map) {
 
 /* The key signature event at time 0 from a tonic and a mode, shaped as the MIDI scan gives them. */
 static bool add_key_signature(ImportedNotes *notes, int tonic, bool minor) {
-    int major_tonic = minor ? (tonic + 3) % 12 : tonic;
-    int fifths = (major_tonic * 7) % 12; /* C 0, G 1, ... F# 6, Db 1 more than F# ... */
-    if (fifths > 6) {
-        fifths -= 12;
+    PitchLetter letter;
+    int accidental;
+    int fifths;
+    if (!standard_tonality_key_tonic_of_pitch_class(tonic, minor, &letter, &accidental) ||
+        !standard_tonality_key_fifths(letter, accidental, minor, &fifths)) {
+        return false;
     }
     MidiKeySignatureEvent *event = calloc(1, sizeof *event);
     if (!event) {
