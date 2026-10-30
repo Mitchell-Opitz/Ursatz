@@ -404,7 +404,7 @@ static bool render_key(StringBuilder *sb, const cJSON *document, const cJSON *ke
     return ok && sb_append(sb, "\n");
 }
 
-static const char *INVERSION_NAMES[] = {"root position", "first", "second", "third"};
+static const char *const INVERSION_NAMES[] = {"root position", "first", "second", "third"};
 
 /* "m. 3, beat 1 to m. 9, beat 1" for a claim's location. */
 static bool append_location(StringBuilder *sb, const cJSON *claim) {
