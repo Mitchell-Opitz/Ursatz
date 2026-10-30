@@ -362,7 +362,7 @@ static bool order_development(AnalysisMotive *motive) {
 }
 
 /* A note's start and duration in whole notes, and its MIDI pitch. */
-static bool note_timing(const ImportedNotes *notes, size_t index, ExactRational *start, ExactRational *duration,
+static bool note_timing(const ImportedNotes *notes, size_t index, Rational *start, Rational *duration,
                         int *pitch) {
     if (index >= notes->count) {
         return false;
@@ -372,8 +372,8 @@ static bool note_timing(const ImportedNotes *notes, size_t index, ExactRational 
     if (musical_time_numerator(time) < 0 || duration_numerator(length) <= 0) {
         return false;
     }
-    *start = er_of_time(time);
-    *duration = er_of_duration(length);
+    *start = msk_make((unsigned long long)musical_time_numerator(time), musical_time_denominator(time));
+    *duration = msk_make((unsigned long long)duration_numerator(length), duration_denominator(length));
     *pitch = (int)pitch_numeric_value_position_numerator(notes->pitch_values[index]);
     return true;
 }
@@ -386,28 +386,28 @@ static bool collect_occurrence_degrees(const ImportedNotes *notes, const Analysi
         return false;
     }
     for (size_t k = 0; k < occurrence->note_id_count; k++) {
-        ExactRational start;
-        ExactRational duration;
+        Rational start;
+        Rational duration;
         int pitch = 0;
         if (!note_timing(notes, occurrence->note_ids[k], &start, &duration, &pitch)) {
             return false;
         }
-        const AnalysisKeyRegion *region = region_at(report, (long long)start.n, (long long)start.d);
+        const AnalysisKeyRegion *region = region_at(report, (long long)start.num, (long long)start.den);
         occurrence->degrees[k] = motive_features_degree_label(pitch % 12, region->tonic_pitch_class);
     }
     return true;
 }
 
-static ExactRational rational_of(StandardFormQ q) {
-    return er_make((unsigned long long)q.n, (unsigned long long)q.d);
+static Rational rational_of(StandardFormQ q) {
+    return msk_make((unsigned long long)q.n, (unsigned long long)q.d);
 }
 
 /* The bar and beat at the first note and its position in the bar. A pickup measure is short, so its bar and beat are
    the following region's. */
-static bool meter_at(const MeterMap *map, ExactRational start, ExactRational *bar, ExactRational *beat,
-                     ExactRational *position) {
+static bool meter_at(const MeterMap *map, Rational start, Rational *bar, Rational *beat,
+                     Rational *position) {
     MusicalTime *time = NULL;
-    if (musical_time_create((long)start.n, (unsigned long)start.d, &time) != MUSICAL_TIME_OK) {
+    if (musical_time_create((long)start.num, (unsigned long)start.den, &time) != MUSICAL_TIME_OK) {
         return false;
     }
     int measure = 0;
@@ -435,11 +435,11 @@ static bool meter_at(const MeterMap *map, ExactRational start, ExactRational *ba
         !standard_form_beat_length(map, reference, &beat_length)) {
         return false;
     }
-    *bar = er_of_duration(bar_duration);
+    *bar = msk_make((unsigned long long)duration_numerator(bar_duration), duration_denominator(bar_duration));
     duration_destroy(bar_duration);
     *beat = rational_of(beat_length);
     if (pickup) {
-        ExactRational remaining = msk_sub(rational_of(measure_end), start);
+        Rational remaining = msk_sub(rational_of(measure_end), start);
         *position = msk_ok(remaining) && msk_cmp(remaining, *bar) < 0 ? msk_sub(*bar, remaining) : msk_int(0);
     } else {
         *position = msk_sub(start, rational_of(measure_start));
@@ -450,11 +450,11 @@ static bool meter_at(const MeterMap *map, ExactRational start, ExactRational *ba
 /* The non-chord-tone type of the segment the note starts in: the library's type, "chord-tone" when the note is one of
    the chord there, NULL when the segment has no chord or the library left the tone unclassified. *failed is set on
    allocation failure. */
-static char *note_nct(const AnalysisReport *report, size_t note_id, ExactRational start, bool *failed) {
+static char *note_nct(const AnalysisReport *report, size_t note_id, Rational start, bool *failed) {
     for (size_t e = 0; e < report->entry_count; e++) {
         const AnalysisReportEntry *entry = &report->entries[e];
-        ExactRational from = er_make((unsigned long long)entry->time_numerator, entry->time_denominator);
-        ExactRational to = er_make((unsigned long long)entry->end_numerator, entry->end_denominator);
+        Rational from = msk_make((unsigned long long)entry->time_numerator, entry->time_denominator);
+        Rational to = msk_make((unsigned long long)entry->end_numerator, entry->end_denominator);
         if (msk_cmp(start, from) < 0 || msk_cmp(start, to) >= 0) {
             continue;
         }
@@ -498,31 +498,31 @@ static bool collect_features(const MotiveStage *stage, const ImportedNotes *note
         return false;
     }
     features->note_count = count;
-    ExactRational first_start = {0, 0};
+    Rational first_start = {0, 0};
     for (size_t k = 0; k < count; k++) {
-        ExactRational start;
-        ExactRational duration;
+        Rational start;
+        Rational duration;
         int pitch = 0;
         if (!note_timing(notes, prototype->note_ids[k], &start, &duration, &pitch)) {
             goto skip;
         }
         if (k == 0) {
             first_start = start;
-            const AnalysisKeyRegion *region = region_at(report, (long long)start.n, (long long)start.d);
+            const AnalysisKeyRegion *region = region_at(report, (long long)start.num, (long long)start.den);
             features->tonic_pc = region->tonic_pitch_class;
             features->minor = !region->is_major;
         }
-        ExactRational onset = msk_sub(start, first_start);
+        Rational onset = msk_sub(start, first_start);
         if (!msk_ok(onset)) {
             goto skip;
         }
         AnalysisMotiveNote *note = &features->notes[k];
         note->note_id = prototype->note_ids[k];
         note->pitch = pitch;
-        note->onset_numerator = onset.n;
-        note->onset_denominator = onset.d;
-        note->duration_numerator = duration.n;
-        note->duration_denominator = duration.d;
+        note->onset_numerator = onset.num;
+        note->onset_denominator = onset.den;
+        note->duration_numerator = duration.num;
+        note->duration_denominator = duration.den;
         features->degrees[k] = motive_features_degree_label(pitch % 12, features->tonic_pc);
         bool failed = false;
         features->ncts[k] = note_nct(report, prototype->note_ids[k], start, &failed);
@@ -533,18 +533,18 @@ static bool collect_features(const MotiveStage *stage, const ImportedNotes *note
             features->intervals[k - 1] = pitch - features->notes[k - 1].pitch;
         }
     }
-    ExactRational bar;
-    ExactRational beat;
-    ExactRational position;
+    Rational bar;
+    Rational beat;
+    Rational position;
     if (!meter_at(stage->form.input.map, first_start, &bar, &beat, &position)) {
         goto skip;
     }
-    features->bar_numerator = bar.n;
-    features->bar_denominator = bar.d;
-    features->beat_numerator = beat.n;
-    features->beat_denominator = beat.d;
-    features->pickup_numerator = position.n;
-    features->pickup_denominator = position.d;
+    features->bar_numerator = bar.num;
+    features->bar_denominator = bar.den;
+    features->beat_numerator = beat.num;
+    features->beat_denominator = beat.den;
+    features->pickup_numerator = position.num;
+    features->pickup_denominator = position.den;
     MotiveSketch sketch;
     if (!motive_features_sketch(features, &sketch)) {
         goto skip;

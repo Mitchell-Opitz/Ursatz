@@ -177,7 +177,7 @@ bool estimate_key_regions(const ImportedNotes *notes, const Segmentation *segmen
 typedef struct {
     long long num;
     unsigned long long den;
-} Rational;
+} RegionRational;
 
 static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
     while (b != 0) {
@@ -188,8 +188,8 @@ static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
     return a;
 }
 
-static Rational rational_sum(Rational a, Rational b) {
-    Rational sum = {a.num * (long long)b.den + b.num * (long long)a.den, a.den * b.den};
+static RegionRational rational_sum(RegionRational a, RegionRational b) {
+    RegionRational sum = {a.num * (long long)b.den + b.num * (long long)a.den, a.den * b.den};
     unsigned long long magnitude = sum.num < 0 ? (unsigned long long)(-sum.num) : (unsigned long long)sum.num;
     unsigned long long divisor = gcd_ull(magnitude, sum.den);
     if (divisor > 1) {
@@ -199,15 +199,15 @@ static Rational rational_sum(Rational a, Rational b) {
     return sum;
 }
 
-static bool rational_less(Rational a, Rational b) {
+static bool rational_less(RegionRational a, RegionRational b) {
     return a.num * (long long)b.den < b.num * (long long)a.den;
 }
 
-static Rational region_duration(const AnalysisKeyRegion *region) {
-    Rational length = {(long long)region->end_numerator * (long long)region->start_denominator -
+static RegionRational region_duration(const AnalysisKeyRegion *region) {
+    RegionRational length = {(long long)region->end_numerator * (long long)region->start_denominator -
                            (long long)region->start_numerator * (long long)region->end_denominator,
                        (unsigned long long)region->start_denominator * region->end_denominator};
-    return rational_sum(length, (Rational){0, 1});
+    return rational_sum(length, (RegionRational){0, 1});
 }
 
 static bool same_key(const AnalysisKeyRegion *a, const AnalysisKeyRegion *b) {
@@ -217,7 +217,7 @@ static bool same_key(const AnalysisKeyRegion *a, const AnalysisKeyRegion *b) {
 size_t home_key_region(const AnalysisKeyRegion *regions, size_t region_count, long *duration_numerator,
                        unsigned long *duration_denominator) {
     size_t home = 0;
-    Rational best = {0, 1};
+    RegionRational best = {0, 1};
     for (size_t i = 0; i < region_count; i++) {
         bool first_of_key = true;
         for (size_t earlier = 0; earlier < i && first_of_key; earlier++) {
@@ -226,7 +226,7 @@ size_t home_key_region(const AnalysisKeyRegion *regions, size_t region_count, lo
         if (!first_of_key) {
             continue;
         }
-        Rational total = {0, 1};
+        RegionRational total = {0, 1};
         for (size_t j = i; j < region_count; j++) {
             if (same_key(&regions[i], &regions[j])) {
                 total = rational_sum(total, region_duration(&regions[j]));

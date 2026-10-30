@@ -17,9 +17,8 @@ extern const char *const PITCH_CLASS_NAMES_FLAT[12];
    pitch class 0-11. */
 int pitch_class_of(long midi_note_number);
 
-/* Names pitch_class (0-11) from PITCH_CLASS_NAMES_FLAT when prefer_flats
-   is true, PITCH_CLASS_NAMES otherwise. */
-const char *pitch_class_name(int pitch_class, bool prefer_flats);
+/* pitch_class_name(pitch_class, prefer_flats) is the library's: the flat spelling when prefer_flats is true. */
+#include "pitch/pitch_arithmetic.h"
 
 /* Whether tonic_pitch_class (0-11) reads in flats under minimal-accidental spelling: true when its
    flat-side circle-of-fifths count is strictly lower than its sharp-side count (Eb, not D#). The one

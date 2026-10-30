@@ -31,7 +31,6 @@ typedef struct {
     size_t row_count;
     VoiceAssignment assignment;
     StandardCounterpointVoiceCell *cells; /* row_count * voice_count */
-    HarmonyVoiceCell *harmony_cells;      /* the same cells for standard-harmony (identical semantics) */
     size_t *note_of_cell;                 /* ImportedNotes index of each cell's note, NO_NOTE where the voice rests */
     char (*names)[32];                    /* the rows' segment ids */
     const char **ids;
@@ -47,7 +46,6 @@ static void grid_destroy(VoiceGrid *build) {
     }
     voice_assignment_destroy(&build->assignment);
     free(build->cells);
-    free(build->harmony_cells);
     free(build->note_of_cell);
     free(build->names);
     free(build->ids);
@@ -111,9 +109,6 @@ static bool place_note(const ImportedNotes *notes, const AnalysisReport *report,
             fraction_compare(entry->time_numerator, (long long)entry->time_denominator, on_n, on_d) == 0,
             confidence,
         };
-        const StandardCounterpointVoiceCell *cell = &build->cells[index];
-        build->harmony_cells[index] = (HarmonyVoiceCell){cell->present,    cell->pitch,    cell->spelling,
-                                                         cell->note_id,    cell->attacked, cell->confidence};
         build->note_of_cell[index] = note;
     }
     return true;
@@ -144,11 +139,10 @@ static bool grid_build(const ImportedNotes *notes, const AnalysisReport *report,
     }
     size_t cells = build->row_count * build->voice_count;
     build->cells = calloc(cells, sizeof(StandardCounterpointVoiceCell));
-    build->harmony_cells = calloc(cells, sizeof(HarmonyVoiceCell));
     build->note_of_cell = malloc(cells * sizeof(size_t));
     build->names = calloc(build->row_count, sizeof(build->names[0]));
     build->ids = calloc(build->row_count, sizeof(const char *));
-    if (!build->cells || !build->harmony_cells || !build->note_of_cell || !build->names || !build->ids) {
+    if (!build->cells || !build->note_of_cell || !build->names || !build->ids) {
         return false;
     }
     for (size_t i = 0; i < cells; i++) {
@@ -164,7 +158,7 @@ static bool grid_build(const ImportedNotes *notes, const AnalysisReport *report,
         }
     }
     build->grid = (StandardCounterpointVoiceGrid){build->row_count, build->voice_count, build->ids, build->cells};
-    build->harmony_grid = (HarmonyVoiceGrid){build->row_count, build->voice_count, build->harmony_cells};
+    build->harmony_grid = build->grid;
     StandardCounterpointGridStatus status = standard_counterpoint_grid_prepare(&build->grid, &build->prepared);
     if (status == STANDARD_COUNTERPOINT_GRID_ERR_ALLOC) {
         return false;
