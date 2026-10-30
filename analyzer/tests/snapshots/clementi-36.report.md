@@ -148,8 +148,8 @@ Positions are measure and beat. Numeral is the Roman numeral in the local key re
 | m. 16, beat 1 to m. 16, beat 2 | diminished | viio6/4 | dominant | - | B | diminished | F | second | 1 | 0.17 | - |
 | m. 16, beat 2 to m. 16, beat 3 | diminished | viio6/4 | dominant | - | B | diminished | F | second | 1 | 0.17 | - |
 | m. 16, beat 3 to m. 17, beat 1 | dominant7 | V4/2 | dominant | - | G | dominant7 | F | third | 2 | 0.50 | - |
-| m. 17, beat 1 to m. 17, beat 3 | minor | i6 | tonic | - | C | minor | D# | first | 2 | 0.45 | - |
-| m. 17, beat 3 to m. 18, beat 1 | major | III | predominant (weak) | - | D# | major | D# | root position | 2 | 0.72 | - |
+| m. 17, beat 1 to m. 17, beat 3 | minor | i6 | tonic | - | C | minor | Eb | first | 2 | 0.45 | - |
+| m. 17, beat 3 to m. 18, beat 1 | major | III | predominant (weak) | - | Eb | major | Eb | root position | 2 | 0.72 | - |
 | m. 18, beat 1 to m. 18, beat 2 | diminished | viio | dominant | - | B | diminished | B | root position | 1 | 0.65 | - |
 | m. 18, beat 2 to m. 18, beat 3 | diminished | viio | dominant | - | B | diminished | B | root position | 1 | 0.78 | - |
 | m. 18, beat 3 to m. 18, beat 4 | minor | i | tonic | - | C | minor | C | root position | 1 | 0.70 | - |
@@ -359,11 +359,11 @@ The highest (soprano) and lowest (bass) sounding note of each chord's span, with
 | m. 16, beat 1 to m. 16, beat 2 | C minor | B4 | #7 | F4 | 4 |
 | m. 16, beat 2 to m. 16, beat 3 | C minor | D5 | 2 | F4 | 4 |
 | m. 16, beat 3 to m. 17, beat 1 | C minor | G4 | 5 | F4 | 4 |
-| m. 17, beat 1 to m. 17, beat 3 | C minor | D#5 | 3 | D#4 | 3 |
-| m. 17, beat 3 to m. 18, beat 1 | C minor | G5 | 5 | D#4 | 3 |
+| m. 17, beat 1 to m. 17, beat 3 | C minor | Eb5 | 3 | Eb4 | 3 |
+| m. 17, beat 3 to m. 18, beat 1 | C minor | G5 | 5 | Eb4 | 3 |
 | m. 18, beat 1 to m. 18, beat 2 | C minor | F5 | 4 | B3 | #7 |
 | m. 18, beat 2 to m. 18, beat 3 | C minor | D5 | 2 | B3 | #7 |
-| m. 18, beat 3 to m. 18, beat 4 | C minor | D#5 | 3 | C4 | 1 |
+| m. 18, beat 3 to m. 18, beat 4 | C minor | Eb5 | 3 | C4 | 1 |
 | m. 18, beat 4 to m. 19, beat 1 | C minor | C5 | 1 | C4 | 1 |
 | m. 19, beat 1 to m. 19, beat 2 | C minor | C5 | 1 | G3 | 5 |
 | m. 19, beat 2 to m. 19, beat 3 | C minor | D5 | 2 | G3 | 5 |
@@ -933,7 +933,7 @@ The library's melodic tendencies are soft preferences a well-formed line usually
 | 2 | holds | holds | holds | does not hold | does not hold | 1 | 0 |
 | 3 | does not hold | does not hold | holds | does not hold | does not hold | 1 | 1 (m. 7, beat 3) |
 | 4 | holds | holds | holds | does not hold | holds | 1 | 2 (m. 13, beat 2.5; m. 13, beat 4) |
-| 5 | does not hold | holds | does not hold | holds | holds | 0 | 1 (m. 16, beat 1) |
+| 5 | does not hold | does not hold | does not hold | holds | holds | 0 | 1 (m. 16, beat 1) |
 | 6 | does not hold | holds | does not hold | does not hold | does not hold | 3 | 0 |
 | 7 | holds | holds | holds | holds | does not hold | 0 | 0 |
 | 8 | holds | holds | holds | does not hold | does not hold | 1 | 0 |

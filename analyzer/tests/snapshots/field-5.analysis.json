@@ -2374,7 +2374,7 @@
 			"key_label":	"D minor",
 			"root":	"D",
 			"quality":	"minor",
-			"bass":	"G#",
+			"bass":	"Ab",
 			"inversion":	null,
 			"duration":	{
 				"whole_notes":	{
@@ -2406,7 +2406,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	90,
-					"pitch":	"G#3",
+					"pitch":	"Ab3",
 					"degree":	"#4",
 					"uncertainty":	1
 				}
@@ -42013,7 +42013,7 @@
 				"key_label":	"D minor",
 				"note_id":	90,
 				"pitch":	{
-					"name":	"G#3",
+					"name":	"Ab3",
 					"midi":	56
 				},
 				"degree":	"#4",

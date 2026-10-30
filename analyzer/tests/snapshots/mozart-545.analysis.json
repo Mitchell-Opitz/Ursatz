@@ -27157,7 +27157,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"diminished",
-				"root":	"C#",
+				"root":	"Db",
 				"quality":	"diminished",
 				"score":	0.73170731707317049,
 				"uncertainty":	0.696864
@@ -27339,7 +27339,7 @@
 			"score":	0.80609756097561,
 			"runner_up":	{
 				"label":	"half-diminished7",
-				"root":	"C#",
+				"root":	"Db",
 				"quality":	"half-diminished7",
 				"score":	0.65609756097561,
 				"uncertainty":	0.813918
@@ -27349,7 +27349,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	1176,
-					"pitch":	"C#5",
+					"pitch":	"Db5",
 					"degree":	"#7",
 					"uncertainty":	0.66923360793959064
 				},
@@ -27620,7 +27620,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	1185,
-					"pitch":	"G#3",
+					"pitch":	"Ab3",
 					"degree":	"#4",
 					"uncertainty":	0.66923360793959064
 				}
@@ -27748,7 +27748,7 @@
 			"key_label":	"D minor",
 			"root":	"B",
 			"quality":	"half-diminished7",
-			"bass":	"G#",
+			"bass":	"Ab",
 			"inversion":	null,
 			"duration":	{
 				"whole_notes":	{
@@ -27780,7 +27780,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	1194,
-					"pitch":	"G#3",
+					"pitch":	"Ab3",
 					"degree":	"#4",
 					"uncertainty":	0.66923360793959064
 				}
@@ -39824,7 +39824,7 @@
 			"key_label":	"D minor",
 			"root":	"A",
 			"quality":	"minor",
-			"bass":	"F#",
+			"bass":	"Gb",
 			"inversion":	null,
 			"duration":	{
 				"whole_notes":	{
@@ -39856,7 +39856,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	1753,
-					"pitch":	"F#3",
+					"pitch":	"Gb3",
 					"degree":	"#3",
 					"uncertainty":	0.98551004325117175
 				}
@@ -39940,7 +39940,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	1756,
-					"pitch":	"F#3",
+					"pitch":	"Gb3",
 					"degree":	"#3",
 					"uncertainty":	0.98551004325117175
 				}
@@ -39991,7 +39991,7 @@
 			"key_label":	"D minor",
 			"root":	"A",
 			"quality":	"minor",
-			"bass":	"F#",
+			"bass":	"Gb",
 			"inversion":	null,
 			"duration":	{
 				"whole_notes":	{
@@ -40023,7 +40023,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	1761,
-					"pitch":	"F#3",
+					"pitch":	"Gb3",
 					"degree":	"#3",
 					"uncertainty":	0.98551004325117175
 				}
@@ -40107,7 +40107,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	1764,
-					"pitch":	"F#3",
+					"pitch":	"Gb3",
 					"degree":	"#3",
 					"uncertainty":	0.98551004325117175
 				}
@@ -40158,7 +40158,7 @@
 			"key_label":	"D minor",
 			"root":	"A",
 			"quality":	"minor",
-			"bass":	"F#",
+			"bass":	"Gb",
 			"inversion":	null,
 			"duration":	{
 				"whole_notes":	{
@@ -40190,7 +40190,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	1767,
-					"pitch":	"F#3",
+					"pitch":	"Gb3",
 					"degree":	"#3",
 					"uncertainty":	0.98551004325117175
 				}
@@ -42143,7 +42143,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"major",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"major",
 				"score":	0.1625,
 				"uncertainty":	0.154762
@@ -42233,7 +42233,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"major",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"major",
 				"score":	0.56219512195121957,
 				"uncertainty":	0.535424
@@ -42243,7 +42243,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	1920,
-					"pitch":	"A#4",
+					"pitch":	"Bb4",
 					"degree":	"3",
 					"uncertainty":	0.963664196912745
 				},
@@ -42323,7 +42323,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"major",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"major",
 				"score":	0.77319587628865982,
 				"uncertainty":	0.736377
@@ -42413,7 +42413,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"diminished",
-				"root":	"F#",
+				"root":	"Gb",
 				"quality":	"diminished",
 				"score":	0.73170731707317049,
 				"uncertainty":	0.696864
@@ -42595,7 +42595,7 @@
 			"score":	0.80609756097561,
 			"runner_up":	{
 				"label":	"half-diminished7",
-				"root":	"F#",
+				"root":	"Gb",
 				"quality":	"half-diminished7",
 				"score":	0.65609756097561,
 				"uncertainty":	0.813918
@@ -42695,7 +42695,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	1942,
-					"pitch":	"A#5",
+					"pitch":	"Bb5",
 					"degree":	"3",
 					"uncertainty":	0.963664196912745
 				},
@@ -42869,7 +42869,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	1948,
-					"pitch":	"C#5",
+					"pitch":	"Db5",
 					"degree":	"#4",
 					"uncertainty":	0.963664196912745
 				},
@@ -43132,7 +43132,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	1960,
-					"pitch":	"C#6",
+					"pitch":	"Db6",
 					"degree":	"#4",
 					"uncertainty":	0.963664196912745
 				},
@@ -43866,7 +43866,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"diminished",
-				"root":	"C#",
+				"root":	"Db",
 				"quality":	"diminished",
 				"score":	0.73170731707317049,
 				"uncertainty":	0.696864
@@ -44048,7 +44048,7 @@
 			"score":	0.80609756097561,
 			"runner_up":	{
 				"label":	"half-diminished7",
-				"root":	"C#",
+				"root":	"Db",
 				"quality":	"half-diminished7",
 				"score":	0.65609756097561,
 				"uncertainty":	0.813918
@@ -44058,7 +44058,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	2008,
-					"pitch":	"C#5",
+					"pitch":	"Db5",
 					"degree":	"#7",
 					"uncertainty":	0.66923360793959064
 				},
@@ -44329,7 +44329,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	2017,
-					"pitch":	"G#3",
+					"pitch":	"Ab3",
 					"degree":	"#4",
 					"uncertainty":	0.66923360793959064
 				}
@@ -44457,7 +44457,7 @@
 			"key_label":	"D minor",
 			"root":	"B",
 			"quality":	"half-diminished7",
-			"bass":	"G#",
+			"bass":	"Ab",
 			"inversion":	null,
 			"duration":	{
 				"whole_notes":	{
@@ -44489,7 +44489,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	2026,
-					"pitch":	"G#3",
+					"pitch":	"Ab3",
 					"degree":	"#4",
 					"uncertainty":	0.66923360793959064
 				}
@@ -56533,7 +56533,7 @@
 			"key_label":	"D minor",
 			"root":	"A",
 			"quality":	"minor",
-			"bass":	"F#",
+			"bass":	"Gb",
 			"inversion":	null,
 			"duration":	{
 				"whole_notes":	{
@@ -56565,7 +56565,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	2585,
-					"pitch":	"F#3",
+					"pitch":	"Gb3",
 					"degree":	"#3",
 					"uncertainty":	0.98551004325117175
 				}
@@ -56649,7 +56649,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	2588,
-					"pitch":	"F#3",
+					"pitch":	"Gb3",
 					"degree":	"#3",
 					"uncertainty":	0.98551004325117175
 				}
@@ -56700,7 +56700,7 @@
 			"key_label":	"D minor",
 			"root":	"A",
 			"quality":	"minor",
-			"bass":	"F#",
+			"bass":	"Gb",
 			"inversion":	null,
 			"duration":	{
 				"whole_notes":	{
@@ -56732,7 +56732,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	2593,
-					"pitch":	"F#3",
+					"pitch":	"Gb3",
 					"degree":	"#3",
 					"uncertainty":	0.98551004325117175
 				}
@@ -56816,7 +56816,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	2596,
-					"pitch":	"F#3",
+					"pitch":	"Gb3",
 					"degree":	"#3",
 					"uncertainty":	0.98551004325117175
 				}
@@ -56867,7 +56867,7 @@
 			"key_label":	"D minor",
 			"root":	"A",
 			"quality":	"minor",
-			"bass":	"F#",
+			"bass":	"Gb",
 			"inversion":	null,
 			"duration":	{
 				"whole_notes":	{
@@ -56899,7 +56899,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	2599,
-					"pitch":	"F#3",
+					"pitch":	"Gb3",
 					"degree":	"#3",
 					"uncertainty":	0.98551004325117175
 				}
@@ -73099,7 +73099,7 @@
 			"score":	0.88471074380165282,
 			"runner_up":	{
 				"label":	"diminished",
-				"root":	"F#",
+				"root":	"Gb",
 				"quality":	"diminished",
 				"score":	0.743801652892562,
 				"uncertainty":	0.840729
@@ -73189,7 +73189,7 @@
 			"score":	0.80609756097561,
 			"runner_up":	{
 				"label":	"diminished",
-				"root":	"F#",
+				"root":	"Gb",
 				"quality":	"diminished",
 				"score":	0.73170731707317083,
 				"uncertainty":	0.907716
@@ -73363,7 +73363,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"major",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"major",
 				"score":	0.82539682539682535,
 				"uncertainty":	0.786092
@@ -73373,7 +73373,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	3894,
-					"pitch":	"A#4",
+					"pitch":	"Bb4",
 					"degree":	"3",
 					"uncertainty":	0.85883640742359346
 				},
@@ -73453,7 +73453,7 @@
 			"score":	0.81744186046511635,
 			"runner_up":	{
 				"label":	"major7",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"major7",
 				"score":	0.75581395348837221,
 				"uncertainty":	0.924609
@@ -73543,7 +73543,7 @@
 			"score":	0.80609756097560981,
 			"runner_up":	{
 				"label":	"major7",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"major7",
 				"score":	0.68414634146341469,
 				"uncertainty":	0.848714
@@ -73553,7 +73553,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	3906,
-					"pitch":	"A#4",
+					"pitch":	"Bb4",
 					"degree":	"3",
 					"uncertainty":	0.85883640742359346
 				},
@@ -73633,7 +73633,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"major",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"major",
 				"score":	0.514705882352941,
 				"uncertainty":	0.490196
@@ -73708,7 +73708,7 @@
 			"key_label":	"G minor",
 			"root":	"D",
 			"quality":	"major",
-			"bass":	"F#",
+			"bass":	"Gb",
 			"inversion":	1,
 			"duration":	{
 				"whole_notes":	{
@@ -73723,7 +73723,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"diminished",
-				"root":	"F#",
+				"root":	"Gb",
 				"quality":	"diminished",
 				"score":	0.288095238095238,
 				"uncertainty":	0.274376
@@ -73740,7 +73740,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	3930,
-					"pitch":	"F#3",
+					"pitch":	"Gb3",
 					"degree":	"#7",
 					"uncertainty":	0.85883640742359346
 				}
@@ -73798,7 +73798,7 @@
 			"key_label":	"G minor",
 			"root":	"D",
 			"quality":	"major",
-			"bass":	"F#",
+			"bass":	"Gb",
 			"inversion":	1,
 			"duration":	{
 				"whole_notes":	{
@@ -73813,7 +73813,7 @@
 			"score":	0.81744186046511635,
 			"runner_up":	{
 				"label":	"major7",
-				"root":	"D#",
+				"root":	"Eb",
 				"quality":	"major7",
 				"score":	0.48953488372093024,
 				"uncertainty":	0.598862
@@ -73823,14 +73823,14 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	3937,
-					"pitch":	"D#5",
+					"pitch":	"Eb5",
 					"degree":	"6",
 					"uncertainty":	0.85883640742359346
 				},
 				"bass":	{
 					"status":	"present",
 					"note_id":	3934,
-					"pitch":	"F#3",
+					"pitch":	"Gb3",
 					"degree":	"#7",
 					"uncertainty":	0.85883640742359346
 				}
@@ -73903,7 +73903,7 @@
 			"score":	0.930952380952381,
 			"runner_up":	{
 				"label":	"augmented",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"augmented",
 				"score":	0.811904761904762,
 				"uncertainty":	0.872123
@@ -73994,7 +73994,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"major",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"major",
 				"score":	0.63736263736263721,
 				"uncertainty":	0.607012
@@ -74068,7 +74068,7 @@
 			"label":	"major",
 			"uncertainty":	0.464576,
 			"key_label":	"G minor",
-			"root":	"D#",
+			"root":	"Eb",
 			"quality":	"major",
 			"bass":	"G",
 			"inversion":	1,
@@ -75795,7 +75795,7 @@
 			"key_label":	"G minor",
 			"root":	"E",
 			"quality":	"diminished",
-			"bass":	"C#",
+			"bass":	"Db",
 			"inversion":	null,
 			"duration":	{
 				"whole_notes":	{
@@ -75827,7 +75827,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	4075,
-					"pitch":	"C#3",
+					"pitch":	"Db3",
 					"degree":	"#4",
 					"uncertainty":	0.65126706836200365
 				}
@@ -75900,7 +75900,7 @@
 			"score":	0.81744186046511647,
 			"runner_up":	{
 				"label":	"augmented",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"augmented",
 				"score":	0.52674418604651174,
 				"uncertainty":	0.644381
@@ -75973,9 +75973,9 @@
 			"label":	"major",
 			"uncertainty":	0.23136,
 			"key_label":	"G minor",
-			"root":	"D#",
+			"root":	"Eb",
 			"quality":	"major",
-			"bass":	"D#",
+			"bass":	"Eb",
 			"inversion":	0,
 			"duration":	{
 				"whole_notes":	{
@@ -76000,14 +76000,14 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	4090,
-					"pitch":	"A#5",
+					"pitch":	"Bb5",
 					"degree":	"3",
 					"uncertainty":	0.65126706836200365
 				},
 				"bass":	{
 					"status":	"present",
 					"note_id":	4087,
-					"pitch":	"D#3",
+					"pitch":	"Eb3",
 					"degree":	"6",
 					"uncertainty":	0.65126706836200365
 				}
@@ -76084,7 +76084,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	4094,
-					"pitch":	"C#5",
+					"pitch":	"Db5",
 					"degree":	"#4",
 					"uncertainty":	0.65126706836200365
 				},
@@ -76157,7 +76157,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"diminished",
-				"root":	"F#",
+				"root":	"Gb",
 				"quality":	"diminished",
 				"score":	0.47619047619047616,
 				"uncertainty":	0.453515
@@ -76230,7 +76230,7 @@
 			"label":	"diminished7",
 			"uncertainty":	0.141513,
 			"key_label":	"G minor",
-			"root":	"F#",
+			"root":	"Gb",
 			"quality":	"diminished7",
 			"bass":	"C",
 			"inversion":	2,
@@ -76257,7 +76257,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	4124,
-					"pitch":	"D#6",
+					"pitch":	"Eb6",
 					"degree":	"6",
 					"uncertainty":	0.65126706836200365
 				},
@@ -76322,7 +76322,7 @@
 			"key_label":	"G minor",
 			"root":	"G",
 			"quality":	"minor",
-			"bass":	"A#",
+			"bass":	"Bb",
 			"inversion":	1,
 			"duration":	{
 				"whole_notes":	{
@@ -76337,7 +76337,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"major",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"major",
 				"score":	0.923015873015873,
 				"uncertainty":	0.879063
@@ -76354,7 +76354,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	4129,
-					"pitch":	"A#2",
+					"pitch":	"Bb2",
 					"degree":	"3",
 					"uncertainty":	0.65126706836200365
 				}
@@ -76412,7 +76412,7 @@
 			"key_label":	"G minor",
 			"root":	"G",
 			"quality":	"minor",
-			"bass":	"A#",
+			"bass":	"Bb",
 			"inversion":	1,
 			"duration":	{
 				"whole_notes":	{
@@ -76427,7 +76427,7 @@
 			"score":	0.820114942528736,
 			"runner_up":	{
 				"label":	"augmented",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"augmented",
 				"score":	0.70517241379310369,
 				"uncertainty":	0.859846
@@ -76444,7 +76444,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	4133,
-					"pitch":	"A#2",
+					"pitch":	"Bb2",
 					"degree":	"3",
 					"uncertainty":	0.65126706836200365
 				}
@@ -76502,7 +76502,7 @@
 			"key_label":	"G minor",
 			"root":	"G",
 			"quality":	"minor",
-			"bass":	"A#",
+			"bass":	"Bb",
 			"inversion":	1,
 			"duration":	{
 				"whole_notes":	{
@@ -76517,7 +76517,7 @@
 			"score":	0.928048780487805,
 			"runner_up":	{
 				"label":	"major",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"major",
 				"score":	0.56219512195121968,
 				"uncertainty":	0.605782
@@ -76534,7 +76534,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	4141,
-					"pitch":	"A#2",
+					"pitch":	"Bb2",
 					"degree":	"3",
 					"uncertainty":	0.65126706836200365
 				}
@@ -76617,7 +76617,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	4154,
-					"pitch":	"D#5",
+					"pitch":	"Eb5",
 					"degree":	"6",
 					"uncertainty":	0.65126706836200365
 				},
@@ -76698,7 +76698,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"major",
-				"root":	"A#",
+				"root":	"Bb",
 				"quality":	"major",
 				"score":	0.43271604938271613,
 				"uncertainty":	0.412111
@@ -76791,7 +76791,7 @@
 			"score":	0.80308641975308659,
 			"runner_up":	{
 				"label":	"diminished",
-				"root":	"F#",
+				"root":	"Gb",
 				"quality":	"diminished",
 				"score":	0.617283950617284,
 				"uncertainty":	0.76864
@@ -76801,7 +76801,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	4162,
-					"pitch":	"A#4",
+					"pitch":	"Bb4",
 					"degree":	"3",
 					"uncertainty":	0.65126706836200365
 				},
@@ -178248,7 +178248,7 @@
 				"key_label":	"D minor",
 				"note_id":	1176,
 				"pitch":	{
-					"name":	"C#5",
+					"name":	"Db5",
 					"midi":	73
 				},
 				"degree":	"#7",
@@ -189220,7 +189220,7 @@
 				"key_label":	"G minor",
 				"note_id":	1920,
 				"pitch":	{
-					"name":	"A#4",
+					"name":	"Bb4",
 					"midi":	70
 				},
 				"degree":	"3",
@@ -189530,7 +189530,7 @@
 				"key_label":	"G minor",
 				"note_id":	1942,
 				"pitch":	{
-					"name":	"A#5",
+					"name":	"Bb5",
 					"midi":	82
 				},
 				"degree":	"3",
@@ -189664,7 +189664,7 @@
 				"key_label":	"G minor",
 				"note_id":	1948,
 				"pitch":	{
-					"name":	"C#5",
+					"name":	"Db5",
 					"midi":	73
 				},
 				"degree":	"#4",
@@ -189840,7 +189840,7 @@
 				"key_label":	"G minor",
 				"note_id":	1960,
 				"pitch":	{
-					"name":	"C#6",
+					"name":	"Db6",
 					"midi":	85
 				},
 				"degree":	"#4",
@@ -190510,7 +190510,7 @@
 				"key_label":	"D minor",
 				"note_id":	2008,
 				"pitch":	{
-					"name":	"C#5",
+					"name":	"Db5",
 					"midi":	73
 				},
 				"degree":	"#7",
@@ -212219,7 +212219,7 @@
 				"key_label":	"G minor",
 				"note_id":	3894,
 				"pitch":	{
-					"name":	"A#4",
+					"name":	"Bb4",
 					"midi":	70
 				},
 				"degree":	"3",
@@ -212353,7 +212353,7 @@
 				"key_label":	"G minor",
 				"note_id":	3906,
 				"pitch":	{
-					"name":	"A#4",
+					"name":	"Bb4",
 					"midi":	70
 				},
 				"degree":	"3",
@@ -212554,7 +212554,7 @@
 				"key_label":	"G minor",
 				"note_id":	3937,
 				"pitch":	{
-					"name":	"D#5",
+					"name":	"Eb5",
 					"midi":	75
 				},
 				"degree":	"6",
@@ -214112,7 +214112,7 @@
 				"key_label":	"G minor",
 				"note_id":	4090,
 				"pitch":	{
-					"name":	"A#5",
+					"name":	"Bb5",
 					"midi":	82
 				},
 				"degree":	"3",
@@ -214179,7 +214179,7 @@
 				"key_label":	"G minor",
 				"note_id":	4094,
 				"pitch":	{
-					"name":	"C#5",
+					"name":	"Db5",
 					"midi":	73
 				},
 				"degree":	"#4",
@@ -214313,7 +214313,7 @@
 				"key_label":	"G minor",
 				"note_id":	4124,
 				"pitch":	{
-					"name":	"D#6",
+					"name":	"Eb6",
 					"midi":	87
 				},
 				"degree":	"6",
@@ -214581,7 +214581,7 @@
 				"key_label":	"G minor",
 				"note_id":	4154,
 				"pitch":	{
-					"name":	"D#5",
+					"name":	"Eb5",
 					"midi":	75
 				},
 				"degree":	"6",
@@ -214715,7 +214715,7 @@
 				"key_label":	"G minor",
 				"note_id":	4162,
 				"pitch":	{
-					"name":	"A#4",
+					"name":	"Bb4",
 					"midi":	70
 				},
 				"degree":	"3",
@@ -250537,7 +250537,7 @@
 				"key_label":	"D minor",
 				"note_id":	1185,
 				"pitch":	{
-					"name":	"G#3",
+					"name":	"Ab3",
 					"midi":	56
 				},
 				"degree":	"#4",
@@ -250646,7 +250646,7 @@
 				"key_label":	"D minor",
 				"note_id":	1194,
 				"pitch":	{
-					"name":	"G#3",
+					"name":	"Ab3",
 					"midi":	56
 				},
 				"degree":	"#4",
@@ -259374,7 +259374,7 @@
 				"key_label":	"D minor",
 				"note_id":	1753,
 				"pitch":	{
-					"name":	"F#3",
+					"name":	"Gb3",
 					"midi":	54
 				},
 				"degree":	"#3",
@@ -259441,7 +259441,7 @@
 				"key_label":	"D minor",
 				"note_id":	1756,
 				"pitch":	{
-					"name":	"F#3",
+					"name":	"Gb3",
 					"midi":	54
 				},
 				"degree":	"#3",
@@ -259508,7 +259508,7 @@
 				"key_label":	"D minor",
 				"note_id":	1761,
 				"pitch":	{
-					"name":	"F#3",
+					"name":	"Gb3",
 					"midi":	54
 				},
 				"degree":	"#3",
@@ -259575,7 +259575,7 @@
 				"key_label":	"D minor",
 				"note_id":	1764,
 				"pitch":	{
-					"name":	"F#3",
+					"name":	"Gb3",
 					"midi":	54
 				},
 				"degree":	"#3",
@@ -259642,7 +259642,7 @@
 				"key_label":	"D minor",
 				"note_id":	1767,
 				"pitch":	{
-					"name":	"F#3",
+					"name":	"Gb3",
 					"midi":	54
 				},
 				"degree":	"#3",
@@ -262599,7 +262599,7 @@
 				"key_label":	"D minor",
 				"note_id":	2017,
 				"pitch":	{
-					"name":	"G#3",
+					"name":	"Ab3",
 					"midi":	56
 				},
 				"degree":	"#4",
@@ -262708,7 +262708,7 @@
 				"key_label":	"D minor",
 				"note_id":	2026,
 				"pitch":	{
-					"name":	"G#3",
+					"name":	"Ab3",
 					"midi":	56
 				},
 				"degree":	"#4",
@@ -271436,7 +271436,7 @@
 				"key_label":	"D minor",
 				"note_id":	2585,
 				"pitch":	{
-					"name":	"F#3",
+					"name":	"Gb3",
 					"midi":	54
 				},
 				"degree":	"#3",
@@ -271503,7 +271503,7 @@
 				"key_label":	"D minor",
 				"note_id":	2588,
 				"pitch":	{
-					"name":	"F#3",
+					"name":	"Gb3",
 					"midi":	54
 				},
 				"degree":	"#3",
@@ -271570,7 +271570,7 @@
 				"key_label":	"D minor",
 				"note_id":	2593,
 				"pitch":	{
-					"name":	"F#3",
+					"name":	"Gb3",
 					"midi":	54
 				},
 				"degree":	"#3",
@@ -271637,7 +271637,7 @@
 				"key_label":	"D minor",
 				"note_id":	2596,
 				"pitch":	{
-					"name":	"F#3",
+					"name":	"Gb3",
 					"midi":	54
 				},
 				"degree":	"#3",
@@ -271704,7 +271704,7 @@
 				"key_label":	"D minor",
 				"note_id":	2599,
 				"pitch":	{
-					"name":	"F#3",
+					"name":	"Gb3",
 					"midi":	54
 				},
 				"degree":	"#3",
@@ -284200,7 +284200,7 @@
 				"key_label":	"G minor",
 				"note_id":	3930,
 				"pitch":	{
-					"name":	"F#3",
+					"name":	"Gb3",
 					"midi":	54
 				},
 				"degree":	"#7",
@@ -284267,7 +284267,7 @@
 				"key_label":	"G minor",
 				"note_id":	3934,
 				"pitch":	{
-					"name":	"F#3",
+					"name":	"Gb3",
 					"midi":	54
 				},
 				"degree":	"#7",
@@ -285716,7 +285716,7 @@
 				"key_label":	"G minor",
 				"note_id":	4075,
 				"pitch":	{
-					"name":	"C#3",
+					"name":	"Db3",
 					"midi":	49
 				},
 				"degree":	"#4",
@@ -285850,7 +285850,7 @@
 				"key_label":	"G minor",
 				"note_id":	4087,
 				"pitch":	{
-					"name":	"D#3",
+					"name":	"Eb3",
 					"midi":	51
 				},
 				"degree":	"6",
@@ -286118,7 +286118,7 @@
 				"key_label":	"G minor",
 				"note_id":	4129,
 				"pitch":	{
-					"name":	"A#2",
+					"name":	"Bb2",
 					"midi":	46
 				},
 				"degree":	"3",
@@ -286185,7 +286185,7 @@
 				"key_label":	"G minor",
 				"note_id":	4133,
 				"pitch":	{
-					"name":	"A#2",
+					"name":	"Bb2",
 					"midi":	46
 				},
 				"degree":	"3",
@@ -286252,7 +286252,7 @@
 				"key_label":	"G minor",
 				"note_id":	4141,
 				"pitch":	{
-					"name":	"A#2",
+					"name":	"Bb2",
 					"midi":	46
 				},
 				"degree":	"3",
@@ -462623,7 +462623,7 @@
 				},
 				"highest":	{
 					"pitch":	87,
-					"name":	"D#6",
+					"name":	"Eb6",
 					"note_id":	4124
 				},
 				"semitones":	20

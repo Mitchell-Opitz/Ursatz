@@ -8474,7 +8474,7 @@
 			"key_label":	"C minor",
 			"root":	"C",
 			"quality":	"minor",
-			"bass":	"D#",
+			"bass":	"Eb",
 			"inversion":	1,
 			"duration":	{
 				"whole_notes":	{
@@ -8489,7 +8489,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"major",
-				"root":	"D#",
+				"root":	"Eb",
 				"quality":	"major",
 				"score":	0.57779868297271864,
 				"uncertainty":	0.550284
@@ -8499,14 +8499,14 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	143,
-					"pitch":	"D#5",
+					"pitch":	"Eb5",
 					"degree":	"3",
 					"uncertainty":	0.92176495585235019
 				},
 				"bass":	{
 					"status":	"present",
 					"note_id":	142,
-					"pitch":	"D#4",
+					"pitch":	"Eb4",
 					"degree":	"3",
 					"uncertainty":	0.92176495585235019
 				}
@@ -8562,9 +8562,9 @@
 			"label":	"major",
 			"uncertainty":	0.71503,
 			"key_label":	"C minor",
-			"root":	"D#",
+			"root":	"Eb",
 			"quality":	"major",
-			"bass":	"D#",
+			"bass":	"Eb",
 			"inversion":	0,
 			"duration":	{
 				"whole_notes":	{
@@ -8596,7 +8596,7 @@
 				"bass":	{
 					"status":	"present",
 					"note_id":	142,
-					"pitch":	"D#4",
+					"pitch":	"Eb4",
 					"degree":	"3",
 					"uncertainty":	0.92176495585235019
 				}
@@ -8849,7 +8849,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"major",
-				"root":	"D#",
+				"root":	"Eb",
 				"quality":	"major",
 				"score":	0.31558704453441289,
 				"uncertainty":	0.300559
@@ -8859,7 +8859,7 @@
 				"soprano":	{
 					"status":	"present",
 					"note_id":	150,
-					"pitch":	"D#5",
+					"pitch":	"Eb5",
 					"degree":	"3",
 					"uncertainty":	0.92176495585235019
 				},
@@ -8939,7 +8939,7 @@
 			"score":	1.05,
 			"runner_up":	{
 				"label":	"major",
-				"root":	"D#",
+				"root":	"Eb",
 				"quality":	"major",
 				"score":	0.31558704453441289,
 				"uncertainty":	0.300559
@@ -29507,7 +29507,7 @@
 				"key_label":	"C minor",
 				"note_id":	143,
 				"pitch":	{
-					"name":	"D#5",
+					"name":	"Eb5",
 					"midi":	75
 				},
 				"degree":	"3",
@@ -29775,7 +29775,7 @@
 				"key_label":	"C minor",
 				"note_id":	150,
 				"pitch":	{
-					"name":	"D#5",
+					"name":	"Eb5",
 					"midi":	75
 				},
 				"degree":	"3",
@@ -42443,7 +42443,7 @@
 				"key_label":	"C minor",
 				"note_id":	142,
 				"pitch":	{
-					"name":	"D#4",
+					"name":	"Eb4",
 					"midi":	63
 				},
 				"degree":	"3",
@@ -42510,7 +42510,7 @@
 				"key_label":	"C minor",
 				"note_id":	142,
 				"pitch":	{
-					"name":	"D#4",
+					"name":	"Eb4",
 					"midi":	63
 				},
 				"degree":	"3",
@@ -55670,7 +55670,7 @@
 						"holds":	false
 					}, {
 						"tendency":	"step-declination",
-						"holds":	true
+						"holds":	false
 					}, {
 						"tendency":	"step-inertia",
 						"holds":	false

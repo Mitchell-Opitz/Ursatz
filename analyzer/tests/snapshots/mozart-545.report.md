@@ -418,7 +418,7 @@ Positions are measure and beat. Numeral is the Roman numeral in the local key re
 | m. 63, beat 4 to m. 64, beat 1 | half-diminished7 | vi/o4/2 | predominant (weak) | - | B | half-diminished7 | A | third | 1 | 0.19 | - |
 | m. 64, beat 1 to m. 64, beat 2 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
 | m. 64, beat 2 to m. 64, beat 3 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
-| m. 64, beat 3 to m. 64, beat 4 | half-diminished7 | vi/o4/2 | predominant (weak) | - | B | half-diminished7 | G# | - | 1 | 1.00 | - |
+| m. 64, beat 3 to m. 64, beat 4 | half-diminished7 | vi/o4/2 | predominant (weak) | - | B | half-diminished7 | Ab | - | 1 | 1.00 | - |
 | m. 64, beat 4 to m. 65, beat 1 | minor | V4/2/V | dominant of 5 | - | D | minor | D | root position | 1 | 0.27 | - |
 | m. 65, beat 1 to m. 65, beat 2 | minor | v6 | dominant | - | A | minor | C | first | 1 | 0.07 | major (C major, score 0.91) |
 | m. 65, beat 2 to m. 65, beat 3 | minor7 | v4/2 | dominant | - | A | minor7 | G | third | 1 | 0.30 | - |
@@ -552,11 +552,11 @@ Positions are measure and beat. Numeral is the Roman numeral in the local key re
 | m. 95, beat 4 to m. 95, beat 4.5 | minor | i6 | tonic | - | D | minor | F | first | 0.5 | 0.20 | - |
 | m. 95, beat 4.5 to m. 96, beat 1 | minor | i6 | tonic | - | D | minor | F | first | 0.5 | 0.45 | - |
 | m. 96, beat 1 to m. 96, beat 1.5 | minor | i6/4 | tonic | - | D | minor | A | second | 0.5 | 0.45 | - |
-| m. 96, beat 1.5 to m. 96, beat 3 | minor | v6 | dominant | - | A | minor | F# | - | 1.5 | 0.91 | - |
+| m. 96, beat 1.5 to m. 96, beat 3 | minor | v6 | dominant | - | A | minor | Gb | - | 1.5 | 0.91 | - |
 | m. 96, beat 3 to m. 96, beat 3.5 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
-| m. 96, beat 3.5 to m. 96, beat 4 | minor | v6 | dominant | - | A | minor | F# | - | 0.5 | 0.91 | - |
+| m. 96, beat 3.5 to m. 96, beat 4 | minor | v6 | dominant | - | A | minor | Gb | - | 0.5 | 0.91 | - |
 | m. 96, beat 4 to m. 96, beat 4.5 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
-| m. 96, beat 4.5 to m. 97, beat 1 | minor | v6 | dominant | - | A | minor | F# | - | 0.5 | 0.91 | - |
+| m. 96, beat 4.5 to m. 97, beat 1 | minor | v6 | dominant | - | A | minor | Gb | - | 0.5 | 0.91 | - |
 | m. 97, beat 1 to m. 97, beat 2 | minor7 | v4/2 | dominant | - | A | minor7 | G | third | 1 | 0.08 | minor (E minor, score 0.90) |
 | m. 97, beat 2 to m. 97, beat 3 | major | VII6/4 | predominant (weak) | - | C | major | G | second | 1 | 0.00 | half-diminished7 (E half-diminished7, score 0.80) |
 | m. 97, beat 3 to m. 97, beat 4 | minor7 | v4/2 | dominant | - | A | minor7 | G | third | 1 | 0.11 | - |
@@ -604,7 +604,7 @@ Positions are measure and beat. Numeral is the Roman numeral in the local key re
 | m. 108, beat 4 to m. 109, beat 1 | half-diminished7 | vi/o4/2 | predominant (weak) | - | B | half-diminished7 | A | third | 1 | 0.19 | - |
 | m. 109, beat 1 to m. 109, beat 2 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
 | m. 109, beat 2 to m. 109, beat 3 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
-| m. 109, beat 3 to m. 109, beat 4 | half-diminished7 | vi/o4/2 | predominant (weak) | - | B | half-diminished7 | G# | - | 1 | 1.00 | - |
+| m. 109, beat 3 to m. 109, beat 4 | half-diminished7 | vi/o4/2 | predominant (weak) | - | B | half-diminished7 | Ab | - | 1 | 1.00 | - |
 | m. 109, beat 4 to m. 110, beat 1 | minor | V4/2/V | dominant of 5 | - | D | minor | D | root position | 1 | 0.27 | - |
 | m. 110, beat 1 to m. 110, beat 2 | minor | v6 | dominant | - | A | minor | C | first | 1 | 0.07 | major (C major, score 0.91) |
 | m. 110, beat 2 to m. 110, beat 3 | minor7 | v4/2 | dominant | - | A | minor7 | G | third | 1 | 0.30 | - |
@@ -738,11 +738,11 @@ Positions are measure and beat. Numeral is the Roman numeral in the local key re
 | m. 140, beat 4 to m. 140, beat 4.5 | minor | i6 | tonic | - | D | minor | F | first | 0.5 | 0.20 | - |
 | m. 140, beat 4.5 to m. 141, beat 1 | minor | i6 | tonic | - | D | minor | F | first | 0.5 | 0.45 | - |
 | m. 141, beat 1 to m. 141, beat 1.5 | minor | i6/4 | tonic | - | D | minor | A | second | 0.5 | 0.45 | - |
-| m. 141, beat 1.5 to m. 141, beat 3 | minor | v6 | dominant | - | A | minor | F# | - | 1.5 | 0.91 | - |
+| m. 141, beat 1.5 to m. 141, beat 3 | minor | v6 | dominant | - | A | minor | Gb | - | 1.5 | 0.91 | - |
 | m. 141, beat 3 to m. 141, beat 3.5 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
-| m. 141, beat 3.5 to m. 141, beat 4 | minor | v6 | dominant | - | A | minor | F# | - | 0.5 | 0.91 | - |
+| m. 141, beat 3.5 to m. 141, beat 4 | minor | v6 | dominant | - | A | minor | Gb | - | 0.5 | 0.91 | - |
 | m. 141, beat 4 to m. 141, beat 4.5 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
-| m. 141, beat 4.5 to m. 142, beat 1 | minor | v6 | dominant | - | A | minor | F# | - | 0.5 | 0.91 | - |
+| m. 141, beat 4.5 to m. 142, beat 1 | minor | v6 | dominant | - | A | minor | Gb | - | 0.5 | 0.91 | - |
 | m. 142, beat 1 to m. 142, beat 2 | minor7 | v4/2 | dominant | - | A | minor7 | G | third | 1 | 0.08 | minor (E minor, score 0.90) |
 | m. 142, beat 2 to m. 142, beat 3 | major | VII6/4 | predominant (weak) | - | C | major | G | second | 1 | 0.00 | half-diminished7 (E half-diminished7, score 0.80) |
 | m. 142, beat 3 to m. 142, beat 4 | minor7 | v4/2 | dominant | - | A | minor7 | G | third | 1 | 0.11 | - |
@@ -924,17 +924,17 @@ Positions are measure and beat. Numeral is the Roman numeral in the local key re
 | m. 211, beat 1 to m. 211, beat 2 | diminished | iio6 (in G minor) | predominant (strong) | - | A | diminished | C | first | 1 | 0.30 | - |
 | m. 211, beat 2 to m. 211, beat 3 | minor | i6/4 | dominant | cadential | G | minor | D | second | 1 | 0.95 | - |
 | m. 211, beat 3 to m. 212, beat 1 | dominant7 | V7 | dominant | - | D | dominant7 | D | root position | 1 | 0.16 | - |
-| m. 212, beat 1 to m. 212, beat 2 | half-diminished7 | ii/o4/2 | predominant (strong) | - | A | half-diminished7 | G | third | 1 | 0.09 | diminished (F# diminished, score 0.73) |
+| m. 212, beat 1 to m. 212, beat 2 | half-diminished7 | ii/o4/2 | predominant (strong) | - | A | half-diminished7 | G | third | 1 | 0.09 | diminished (Gb diminished, score 0.73) |
 | m. 212, beat 2 to m. 212, beat 3 | minor | i | tonic | - | G | minor | G | root position | 1 | 1.00 | - |
 | m. 213, beat 1 to m. 213, beat 2 | minor | i | tonic | - | G | minor | G | root position | 1 | 0.21 | - |
-| m. 213, beat 2 to m. 213, beat 3 | minor | i | tonic | - | G | minor | G | root position | 1 | 0.08 | major7 (A# major7, score 0.76) |
+| m. 213, beat 2 to m. 213, beat 3 | minor | i | tonic | - | G | minor | G | root position | 1 | 0.08 | major7 (Bb major7, score 0.76) |
 | m. 213, beat 3 to m. 214, beat 1 | dominant7 | V4/3 | dominant | - | D | dominant7 | A | second | 1 | 0.15 | - |
 | m. 214, beat 1 to m. 215, beat 1 | minor | i | tonic | - | G | minor | G | root position | 3 | 0.51 | - |
-| m. 215, beat 1 to m. 215, beat 2 | major | V6 | dominant | - | D | major | F# | first | 1 | 0.73 | - |
-| m. 215, beat 2 to m. 215, beat 3 | major | V6 | dominant | - | D | major | F# | first | 1 | 0.40 | - |
+| m. 215, beat 1 to m. 215, beat 2 | major | V6 | dominant | - | D | major | Gb | first | 1 | 0.73 | - |
+| m. 215, beat 2 to m. 215, beat 3 | major | V6 | dominant | - | D | major | Gb | first | 1 | 0.40 | - |
 | m. 215, beat 3 to m. 216, beat 1 | dominant7 | V7 | dominant | - | D | dominant7 | D | root position | 1 | 0.13 | - |
 | m. 216, beat 1 to m. 216, beat 3 | minor | i | tonic | - | G | minor | G | root position | 2 | 0.39 | - |
-| m. 216, beat 3 to m. 217, beat 1 | major | VI6 | predominant (weak) | - | D# | major | G | first | 1 | 0.46 | - |
+| m. 216, beat 3 to m. 217, beat 1 | major | VI6 | predominant (weak) | - | Eb | major | G | first | 1 | 0.46 | - |
 | m. 217, beat 1 to m. 217, beat 2 | V | V6 (in Bb major) | dominant | - | F | major | A | first | 1 | 0.73 | - |
 | m. 217, beat 2 to m. 217, beat 3 | V | V6 | dominant | - | F | major | A | first | 1 | 0.28 | - |
 | m. 217, beat 3 to m. 218, beat 1 | dominant7 | V6/5 | dominant | - | F | dominant7 | A | first | 1 | 0.26 | - |
@@ -953,15 +953,15 @@ Positions are measure and beat. Numeral is the Roman numeral in the local key re
 | m. 222, beat 1 to m. 222, beat 2 | ii | ii6 | predominant (strong) | - | C | minor | Eb | first | 1 | 0.63 | - |
 | m. 222, beat 2 to m. 222, beat 3 | minor7 | V4/3/ii | dominant of 2 | - | G | minor7 | D | second | 1 | 0.53 | - |
 | m. 222, beat 3 to m. 223, beat 1 | ii | ii | predominant (strong) | - | C | minor | C | root position | 1 | 0.92 | - |
-| m. 223, beat 1 to m. 223, beat 2 | diminished | vio (in G minor) | predominant (weak) | - | E | diminished | C# | - | 1 | 0.08 | minor (G minor, score 0.76) |
+| m. 223, beat 1 to m. 223, beat 2 | diminished | vio (in G minor) | predominant (weak) | - | E | diminished | Db | - | 1 | 0.08 | minor (G minor, score 0.76) |
 | m. 223, beat 2 to m. 223, beat 3 | minor | i6/4 | tonic | - | G | minor | D | second | 1 | 0.36 | - |
-| m. 223, beat 3 to m. 224, beat 1 | major | VI | predominant (weak) | - | D# | major | D# | root position | 1 | 0.23 | - |
+| m. 223, beat 3 to m. 224, beat 1 | major | VI | predominant (weak) | - | Eb | major | Eb | root position | 1 | 0.23 | - |
 | m. 224, beat 1 to m. 224, beat 2 | no match | unlabelled: the library identified no chord | - | - | - | - | - | - | - | - | - |
 | m. 224, beat 2 to m. 225, beat 1 | major | V | dominant | - | D | major | D | root position | 2 | 0.55 | - |
-| m. 225, beat 1 to m. 226, beat 1 | diminished7 | viio4/3 | dominant | - | F# | diminished7 | C | second | 3 | 0.14 | - |
-| m. 226, beat 1 to m. 226, beat 2 | minor | i6 | tonic | - | G | minor | A# | first | 1 | 0.12 | - |
-| m. 226, beat 2 to m. 226, beat 3 | minor | i6 | tonic | - | G | minor | A# | first | 1 | 0.14 | - |
-| m. 226, beat 3 to m. 227, beat 1 | minor | i6 | tonic | - | G | minor | A# | first | 1 | 0.39 | - |
+| m. 225, beat 1 to m. 226, beat 1 | diminished7 | viio4/3 | dominant | - | Gb | diminished7 | C | second | 3 | 0.14 | - |
+| m. 226, beat 1 to m. 226, beat 2 | minor | i6 | tonic | - | G | minor | Bb | first | 1 | 0.12 | - |
+| m. 226, beat 2 to m. 226, beat 3 | minor | i6 | tonic | - | G | minor | Bb | first | 1 | 0.14 | - |
+| m. 226, beat 3 to m. 227, beat 1 | minor | i6 | tonic | - | G | minor | Bb | first | 1 | 0.39 | - |
 | m. 227, beat 1 to m. 227, beat 2 | diminished | iio6 | predominant (strong) | - | A | diminished | C | first | 1 | 0.05 | minor7 (C minor7, score 0.79) |
 | m. 227, beat 2 to m. 227, beat 3 | minor | i6/4 | dominant | cadential | G | minor | D | second | 1 | 0.59 | - |
 | m. 227, beat 3 to m. 228, beat 1 | dominant7 | V7 | dominant | - | D | dominant7 | D | root position | 1 | 0.23 | - |
@@ -1538,12 +1538,12 @@ The highest (soprano) and lowest (bass) sounding note of each chord's span, with
 | m. 62, beat 3 to m. 62, beat 4 | D minor | A4 | 5 | D4 | 1 |
 | m. 62, beat 4 to m. 63, beat 1 | D minor | G4 | 4 | A2 | 5 |
 | m. 63, beat 1 to m. 63, beat 2 | D minor | F4 | 3 | D3 | 1 |
-| m. 63, beat 2 to m. 63, beat 3 | D minor | C#5 | #7 | rest (register guard) | - |
+| m. 63, beat 2 to m. 63, beat 3 | D minor | Db5 | #7 | rest (register guard) | - |
 | m. 63, beat 3 to m. 63, beat 4 | D minor | D5 | 1 | D4 | 1 |
 | m. 63, beat 4 to m. 64, beat 1 | D minor | D4 | 1 | A3 | 5 |
-| m. 64, beat 1 to m. 64, beat 2 | D minor | D5 | 1 | G#3 | #4 |
+| m. 64, beat 1 to m. 64, beat 2 | D minor | D5 | 1 | Ab3 | #4 |
 | m. 64, beat 2 to m. 64, beat 3 | D minor | A5 | 5 | rest (register guard) | - |
-| m. 64, beat 3 to m. 64, beat 4 | D minor | B5 | #6 | G#3 | #4 |
+| m. 64, beat 3 to m. 64, beat 4 | D minor | B5 | #6 | Ab3 | #4 |
 | m. 64, beat 4 to m. 65, beat 1 | D minor | rest (register guard) | - | D3 | 1 |
 | m. 65, beat 1 to m. 65, beat 2 | D minor | E6 | 2 | C3 | 7 |
 | m. 65, beat 2 to m. 65, beat 3 | D minor | C6 | 7 | rest (register guard) | - |
@@ -1677,11 +1677,11 @@ The highest (soprano) and lowest (bass) sounding note of each chord's span, with
 | m. 95, beat 4 to m. 95, beat 4.5 | D minor | D5 | 1 | F4 | 3 |
 | m. 95, beat 4.5 to m. 96, beat 1 | D minor | D5 | 1 | F4 | 3 |
 | m. 96, beat 1 to m. 96, beat 1.5 | D minor | A5 | 5 | rest (bridged) | - |
-| m. 96, beat 1.5 to m. 96, beat 3 | D minor | A5 | 5 | F#3 | #3 |
-| m. 96, beat 3 to m. 96, beat 3.5 | D minor | A5 | 5 | F#3 | #3 |
-| m. 96, beat 3.5 to m. 96, beat 4 | D minor | A5 | 5 | F#3 | #3 |
-| m. 96, beat 4 to m. 96, beat 4.5 | D minor | A5 | 5 | F#3 | #3 |
-| m. 96, beat 4.5 to m. 97, beat 1 | D minor | A5 | 5 | F#3 | #3 |
+| m. 96, beat 1.5 to m. 96, beat 3 | D minor | A5 | 5 | Gb3 | #3 |
+| m. 96, beat 3 to m. 96, beat 3.5 | D minor | A5 | 5 | Gb3 | #3 |
+| m. 96, beat 3.5 to m. 96, beat 4 | D minor | A5 | 5 | Gb3 | #3 |
+| m. 96, beat 4 to m. 96, beat 4.5 | D minor | A5 | 5 | Gb3 | #3 |
+| m. 96, beat 4.5 to m. 97, beat 1 | D minor | A5 | 5 | Gb3 | #3 |
 | m. 97, beat 1 to m. 97, beat 2 | D minor | B5 | #6 | G3 | 4 |
 | m. 97, beat 2 to m. 97, beat 3 | D minor | E6 | 2 | G3 | 4 |
 | m. 97, beat 3 to m. 97, beat 4 | D minor | C6 | 7 | G3 | 4 |
@@ -1704,17 +1704,17 @@ The highest (soprano) and lowest (bass) sounding note of each chord's span, with
 | m. 102, beat 3 to m. 102, beat 4 | C major | D6 | 2 | G5 | 5 |
 | m. 102, beat 4 to m. 103, beat 1 | C major | C6 | 1 | D4 | 2 |
 | m. 103, beat 1 to m. 103, beat 2 | G minor | G5 | 1 | G4 | 1 |
-| m. 103, beat 2 to m. 103, beat 3 | G minor | A#4 | 3 | D4 | 5 |
+| m. 103, beat 2 to m. 103, beat 3 | G minor | Bb4 | 3 | D4 | 5 |
 | m. 103, beat 3 to m. 103, beat 4 | G minor | D5 | 5 | G4 | 1 |
 | m. 103, beat 4 to m. 104, beat 1 | G minor | C5 | 4 | D3 | 5 |
 | m. 104, beat 1 to m. 104, beat 2 | G minor | G4 | 1 | G2 | 1 |
 | m. 104, beat 2 to m. 104, beat 3 | G minor | rest (register guard) | - | C3 | 4 |
-| m. 104, beat 3 to m. 104, beat 4 | G minor | A#5 | 3 | G3 | 1 |
+| m. 104, beat 3 to m. 104, beat 4 | G minor | Bb5 | 3 | G3 | 1 |
 | m. 104, beat 4 to m. 105, beat 1 | G minor | G5 | 1 | rest (register guard) | - |
-| m. 105, beat 1 to m. 105, beat 2 | G minor | C#5 | #4 | A2 | 2 |
+| m. 105, beat 1 to m. 105, beat 2 | G minor | Db5 | #4 | A2 | 2 |
 | m. 105, beat 2 to m. 105, beat 3 | G minor | rest (register guard) | - | D3 | 5 |
 | m. 105, beat 3 to m. 105, beat 4 | G minor | E6 | #6 | A3 | 2 |
-| m. 105, beat 4 to m. 106, beat 1 | G minor | C#6 | #4 | rest (register guard) | - |
+| m. 105, beat 4 to m. 106, beat 1 | G minor | Db6 | #4 | rest (register guard) | - |
 | m. 106, beat 1 to m. 106, beat 2 | G minor | F5 | 7 | D2 | 5 |
 | m. 106, beat 2 to m. 106, beat 3 | G minor | F5 | 7 | rest (register guard) | - |
 | m. 106, beat 3 to m. 106, beat 4 | G minor | A5 | 2 | D5 | 5 |
@@ -1724,12 +1724,12 @@ The highest (soprano) and lowest (bass) sounding note of each chord's span, with
 | m. 107, beat 3 to m. 107, beat 4 | D minor | A4 | 5 | D4 | 1 |
 | m. 107, beat 4 to m. 108, beat 1 | D minor | G4 | 4 | A2 | 5 |
 | m. 108, beat 1 to m. 108, beat 2 | D minor | F4 | 3 | D3 | 1 |
-| m. 108, beat 2 to m. 108, beat 3 | D minor | C#5 | #7 | rest (register guard) | - |
+| m. 108, beat 2 to m. 108, beat 3 | D minor | Db5 | #7 | rest (register guard) | - |
 | m. 108, beat 3 to m. 108, beat 4 | D minor | D5 | 1 | D4 | 1 |
 | m. 108, beat 4 to m. 109, beat 1 | D minor | D4 | 1 | A3 | 5 |
-| m. 109, beat 1 to m. 109, beat 2 | D minor | D5 | 1 | G#3 | #4 |
+| m. 109, beat 1 to m. 109, beat 2 | D minor | D5 | 1 | Ab3 | #4 |
 | m. 109, beat 2 to m. 109, beat 3 | D minor | A5 | 5 | rest (register guard) | - |
-| m. 109, beat 3 to m. 109, beat 4 | D minor | B5 | #6 | G#3 | #4 |
+| m. 109, beat 3 to m. 109, beat 4 | D minor | B5 | #6 | Ab3 | #4 |
 | m. 109, beat 4 to m. 110, beat 1 | D minor | rest (register guard) | - | D3 | 1 |
 | m. 110, beat 1 to m. 110, beat 2 | D minor | E6 | 2 | C3 | 7 |
 | m. 110, beat 2 to m. 110, beat 3 | D minor | C6 | 7 | rest (register guard) | - |
@@ -1863,11 +1863,11 @@ The highest (soprano) and lowest (bass) sounding note of each chord's span, with
 | m. 140, beat 4 to m. 140, beat 4.5 | D minor | D5 | 1 | F4 | 3 |
 | m. 140, beat 4.5 to m. 141, beat 1 | D minor | D5 | 1 | F4 | 3 |
 | m. 141, beat 1 to m. 141, beat 1.5 | D minor | A5 | 5 | rest (bridged) | - |
-| m. 141, beat 1.5 to m. 141, beat 3 | D minor | A5 | 5 | F#3 | #3 |
-| m. 141, beat 3 to m. 141, beat 3.5 | D minor | A5 | 5 | F#3 | #3 |
-| m. 141, beat 3.5 to m. 141, beat 4 | D minor | A5 | 5 | F#3 | #3 |
-| m. 141, beat 4 to m. 141, beat 4.5 | D minor | A5 | 5 | F#3 | #3 |
-| m. 141, beat 4.5 to m. 142, beat 1 | D minor | A5 | 5 | F#3 | #3 |
+| m. 141, beat 1.5 to m. 141, beat 3 | D minor | A5 | 5 | Gb3 | #3 |
+| m. 141, beat 3 to m. 141, beat 3.5 | D minor | A5 | 5 | Gb3 | #3 |
+| m. 141, beat 3.5 to m. 141, beat 4 | D minor | A5 | 5 | Gb3 | #3 |
+| m. 141, beat 4 to m. 141, beat 4.5 | D minor | A5 | 5 | Gb3 | #3 |
+| m. 141, beat 4.5 to m. 142, beat 1 | D minor | A5 | 5 | Gb3 | #3 |
 | m. 142, beat 1 to m. 142, beat 2 | D minor | B5 | #6 | G3 | 4 |
 | m. 142, beat 2 to m. 142, beat 3 | D minor | E6 | 2 | G3 | 4 |
 | m. 142, beat 3 to m. 142, beat 4 | D minor | C6 | 7 | G3 | 4 |
@@ -2051,12 +2051,12 @@ The highest (soprano) and lowest (bass) sounding note of each chord's span, with
 | m. 211, beat 3 to m. 212, beat 1 | G minor | B4 | #3 | D3 | 5 |
 | m. 212, beat 1 to m. 212, beat 2 | G minor | A4 | 2 | G3 | 1 |
 | m. 212, beat 2 to m. 212, beat 3 | G minor | G4 | 1 | G3 | 1 |
-| m. 213, beat 1 to m. 213, beat 2 | G minor | A#4 | 3 | G3 | 1 |
+| m. 213, beat 1 to m. 213, beat 2 | G minor | Bb4 | 3 | G3 | 1 |
 | m. 213, beat 2 to m. 213, beat 3 | G minor | C5 | 4 | G3 | 1 |
-| m. 213, beat 3 to m. 214, beat 1 | G minor | A#4 | 3 | A3 | 2 |
+| m. 213, beat 3 to m. 214, beat 1 | G minor | Bb4 | 3 | A3 | 2 |
 | m. 214, beat 1 to m. 215, beat 1 | G minor | D5 | 5 | G3 | 1 |
-| m. 215, beat 1 to m. 215, beat 2 | G minor | D5 | 5 | F#3 | #7 |
-| m. 215, beat 2 to m. 215, beat 3 | G minor | D#5 | 6 | F#3 | #7 |
+| m. 215, beat 1 to m. 215, beat 2 | G minor | D5 | 5 | Gb3 | #7 |
+| m. 215, beat 2 to m. 215, beat 3 | G minor | Eb5 | 6 | Gb3 | #7 |
 | m. 215, beat 3 to m. 216, beat 1 | G minor | D5 | 5 | D3 | 5 |
 | m. 216, beat 1 to m. 216, beat 3 | G minor | G5 | 1 | G3 | 1 |
 | m. 216, beat 3 to m. 217, beat 1 | G minor | rest (register guard) | - | G3 | 1 |
@@ -2078,18 +2078,18 @@ The highest (soprano) and lowest (bass) sounding note of each chord's span, with
 | m. 222, beat 1 to m. 222, beat 2 | Bb major | Eb5 | 4 | Eb3 | 4 |
 | m. 222, beat 2 to m. 222, beat 3 | Bb major | G5 | 6 | D3 | 3 |
 | m. 222, beat 3 to m. 223, beat 1 | Bb major | rest (register guard) | - | C3 | 2 |
-| m. 223, beat 1 to m. 223, beat 2 | G minor | G5 | 1 | C#3 | #4 |
+| m. 223, beat 1 to m. 223, beat 2 | G minor | G5 | 1 | Db3 | #4 |
 | m. 223, beat 2 to m. 223, beat 3 | G minor | A5 | 2 | D3 | 5 |
-| m. 223, beat 3 to m. 224, beat 1 | G minor | A#5 | 3 | D#3 | 6 |
-| m. 224, beat 1 to m. 224, beat 2 | G minor | C#5 | #4 | D3 | 5 |
+| m. 223, beat 3 to m. 224, beat 1 | G minor | Bb5 | 3 | Eb3 | 6 |
+| m. 224, beat 1 to m. 224, beat 2 | G minor | Db5 | #4 | D3 | 5 |
 | m. 224, beat 2 to m. 225, beat 1 | G minor | D5 | 5 | D3 | 5 |
-| m. 225, beat 1 to m. 226, beat 1 | G minor | D#6 | 6 | C3 | 4 |
-| m. 226, beat 1 to m. 226, beat 2 | G minor | D6 | 5 | A#2 | 3 |
-| m. 226, beat 2 to m. 226, beat 3 | G minor | D6 | 5 | A#2 | 3 |
-| m. 226, beat 3 to m. 227, beat 1 | G minor | G5 | 1 | A#2 | 3 |
-| m. 227, beat 1 to m. 227, beat 2 | G minor | D#5 | 6 | C3 | 4 |
+| m. 225, beat 1 to m. 226, beat 1 | G minor | Eb6 | 6 | C3 | 4 |
+| m. 226, beat 1 to m. 226, beat 2 | G minor | D6 | 5 | Bb2 | 3 |
+| m. 226, beat 2 to m. 226, beat 3 | G minor | D6 | 5 | Bb2 | 3 |
+| m. 226, beat 3 to m. 227, beat 1 | G minor | G5 | 1 | Bb2 | 3 |
+| m. 227, beat 1 to m. 227, beat 2 | G minor | Eb5 | 6 | C3 | 4 |
 | m. 227, beat 2 to m. 227, beat 3 | G minor | G4 | 1 | D3 | 5 |
-| m. 227, beat 3 to m. 228, beat 1 | G minor | A#4 | 3 | D3 | 5 |
+| m. 227, beat 3 to m. 228, beat 1 | G minor | Bb4 | 3 | D3 | 5 |
 | m. 228, beat 1 to m. 228, beat 2 | G major | A4 | 2 | G3 | 1 |
 | m. 228, beat 2 to m. 228, beat 3 | G major | G#4 | b2 | G3 | 1 |
 | m. 228, beat 3 to m. 229, beat 1 | G major | A#4 | b3 | rest (register guard) | - |
@@ -5715,7 +5715,7 @@ The library's melody adapter read the soprano of each phrase as a line of notes:
 | 27 | mm. 188 to 197 | 26 | G4 to B5 (16) | B5, m. 194, beat 3.25 | 13 | 11 | 1 | 10 | 14 |
 | 28 | mm. 198 to 203 | 17 | G4 to B5 (16) | B5, m. 201, beat 3 | 10 | 4 | 2 | 6 | 8 |
 | 29 | mm. 204 to 216 | 31 | G4 to B5 (16) | B5, m. 210, beat 3.25 | 15 | 13 | 2 | 13 | 15 |
-| 30 | mm. 217 to 227 | 28 | G4 to D#6 (20) | D#6, m. 225, beat 3.5 | 12 | 11 | 3 | 6 | 17 |
+| 30 | mm. 217 to 227 | 28 | G4 to Eb6 (20) | Eb6, m. 225, beat 3.5 | 12 | 11 | 3 | 6 | 17 |
 | 31 | mm. 228 to 242 | 37 | G#4 to B5 (15) | B5, m. 242, beat 3.25 | 18 | 16 | 1 | 14 | 17 |
 | 32 | mm. 243 to 252 | 30 | G4 to A5 (14) | A5, m. 245, beat 2.75, 2 notes | 17 | 10 | 2 | 10 | 16 |
 | 33 | m. 253 | 3 | B4 to D5 (3) | D5, m. 253, beat 2.75 | 1 | 0 | 1 | 0 | 1 |
