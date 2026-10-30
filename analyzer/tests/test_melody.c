@@ -14,6 +14,8 @@
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
 
+#include "test_support.h"
+
 /*
  * The melody of the report, for Bach 114 (Minuet in G, BWV Anh. 114).
  *
@@ -53,20 +55,6 @@ static int failures = 0;
         }                                                                                          \
     } while (0)
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    return cJSON_GetObjectItemCaseSensitive(object, key);
-}
-
-static double number(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
-    return cJSON_IsNumber(item) ? item->valuedouble : -1e9;
-}
-
-static const char *text(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
-    return cJSON_IsString(item) ? item->valuestring : "";
-}
-
 /* A note's onset in whole notes and its pitch as a MIDI note number. */
 static double onset_of(const ImportedNotes *notes, size_t index) {
     const MusicalTime *start = temporal_anchor_position(note_event_temporal_anchor(notes->events[index]));
@@ -89,8 +77,8 @@ static bool known_status(const char *status) {
 /* --- the structure of the report and the document --- */
 
 static void check_melody(const ImportedNotes *notes, const AnalysisReport *report, const cJSON *document) {
-    const cJSON *melody = member(document, "melody");
-    const cJSON *phrases = member(document, "phrases");
+    const cJSON *melody = test_json_member(document, "melody");
+    const cJSON *phrases = test_json_member(document, "phrases");
     CHECK(report->melody_count > 0);
     CHECK((size_t)cJSON_GetArraySize(melody) == report->melody_count);
     double previous_phrase = -1.0;
@@ -101,13 +89,13 @@ static void check_melody(const ImportedNotes *notes, const AnalysisReport *repor
         if (!claim) {
             continue;
         }
-        CHECK(strcmp(text(claim, "framework"), "standard-counterpoint-v1") == 0);
-        CHECK(strcmp(text(claim, "label"), "melody") == 0);
+        CHECK(strcmp(test_json_string(claim, "framework"), "standard-counterpoint-v1") == 0);
+        CHECK(strcmp(test_json_string(claim, "label"), "melody") == 0);
         CHECK((double)entry->phrase > previous_phrase && entry->phrase < report->phrase_count);
-        CHECK((int)number(claim, "index") == (int)entry->phrase);
+        CHECK((int)test_json_number(claim, "index") == (int)entry->phrase);
         CHECK(cJSON_GetArrayItem(phrases, (int)entry->phrase) != NULL);
         previous_phrase = (double)entry->phrase;
-        CHECK(entry->note_id_count > 0 && entry->note_id_count == (size_t)number(claim, "note_count"));
+        CHECK(entry->note_id_count > 0 && entry->note_id_count == (size_t)test_json_number(claim, "note_count"));
 
         /* the notes: in time order, inside the phrase's span, and the pitch range they span */
         const AnalysisPhrase *phrase = &report->phrases[entry->phrase];
@@ -163,18 +151,18 @@ static void check_melody(const ImportedNotes *notes, const AnalysisReport *repor
             CHECK(strcmp(leap->direction, leap->semitones > 0 ? "up" : "down") == 0);
             CHECK(leap->uncertainty >= 0.0 && leap->uncertainty <= 1.0);
         }
-        const cJSON *leaps = member(claim, "leaps");
-        CHECK(cJSON_GetArraySize(member(leaps, "items")) == (int)entry->leap_total);
-        CHECK((int)(number(leaps, "recovered") + number(leaps, "unrecovered") + number(leaps, "not_required") +
-                    number(leaps, "not_judged")) == (int)entry->leap_total);
-        CHECK(cJSON_GetArraySize(member(claim, "consecutive_leaps")) == (int)entry->consecutive_leap_count);
+        const cJSON *leaps = test_json_member(claim, "leaps");
+        CHECK(cJSON_GetArraySize(test_json_member(leaps, "items")) == (int)entry->leap_total);
+        CHECK((int)(test_json_number(leaps, "recovered") + test_json_number(leaps, "unrecovered") + test_json_number(leaps, "not_required") +
+                    test_json_number(leaps, "not_judged")) == (int)entry->leap_total);
+        CHECK(cJSON_GetArraySize(test_json_member(claim, "consecutive_leaps")) == (int)entry->consecutive_leap_count);
 
         /* the non-chord tones */
-        const cJSON *tones = member(claim, "non_chord_tones");
+        const cJSON *tones = test_json_member(claim, "non_chord_tones");
         CHECK(entry->chord_tone_count + entry->non_chord_tone_count + entry->unclassified_count ==
               (int)entry->note_id_count);
         CHECK(entry->nct_total == (size_t)entry->non_chord_tone_count);
-        CHECK(cJSON_GetArraySize(member(tones, "items")) == entry->non_chord_tone_count);
+        CHECK(cJSON_GetArraySize(test_json_member(tones, "items")) == entry->non_chord_tone_count);
         int by_type = 0;
         for (int t = 0; t < ANALYSIS_MELODY_NCT_TYPES; t++) {
             by_type += entry->nct_by_type[t];
@@ -182,16 +170,16 @@ static void check_melody(const ImportedNotes *notes, const AnalysisReport *repor
         CHECK(by_type == entry->non_chord_tone_count);
 
         /* the tendencies: the library's five, and the seventh degree judged by its rule */
-        const cJSON *tendencies = member(claim, "tendencies");
-        CHECK(cJSON_GetArraySize(member(tendencies, "line")) == ANALYSIS_MELODY_TENDENCIES);
-        const cJSON *seventh = member(tendencies, "seventh_degree");
+        const cJSON *tendencies = test_json_member(claim, "tendencies");
+        CHECK(cJSON_GetArraySize(test_json_member(tendencies, "line")) == ANALYSIS_MELODY_TENDENCIES);
+        const cJSON *seventh = test_json_member(tendencies, "seventh_degree");
         CHECK(cJSON_IsObject(seventh));
         CHECK(entry->seventh_followed >= 0 && entry->seventh_broken >= 0);
-        CHECK(cJSON_GetArraySize(member(seventh, "breaks")) == entry->seventh_broken);
+        CHECK(cJSON_GetArraySize(test_json_member(seventh, "breaks")) == entry->seventh_broken);
         printf("  phrase %zu: %zu notes, %s to %s, climax %ld x%d, %d leaps (%d unrecovered), %d non-chord tones, "
                "seventh degree followed %d broken %d\n",
                entry->phrase + 1, entry->note_id_count, entry->lowest_name, entry->highest_name, highest,
-               entry->climax_occurrences, entry->leap_count, (int)number(leaps, "unrecovered"),
+               entry->climax_occurrences, entry->leap_count, (int)test_json_number(leaps, "unrecovered"),
                entry->non_chord_tone_count, entry->seventh_followed, entry->seventh_broken);
     }
 }

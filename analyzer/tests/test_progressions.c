@@ -11,6 +11,8 @@
 #include "cJSON.h"
 #include "pipeline/progression_pipeline.h"
 
+#include "test_support.h"
+
 /*
  * Recurring progressions: the finder on hand-built chord lists, then the progressions section of two reference pieces
  * (Ursatz's framework-v1-corpus).
@@ -187,25 +189,21 @@ typedef struct {
 
 static const Piece PIECES[] = {{"Bach 114", "Bach 114.mid"}, {"Mozart 545", "Mozart 545.mid"}};
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    return cJSON_GetObjectItemCaseSensitive(object, key);
-}
-
 /* The occurrence's chords, held repeats merged, carry the pattern's base numerals in one key region. */
 static void check_occurrence_chords(const cJSON *document, const cJSON *progression, const cJSON *occurrence) {
-    const cJSON *chords = member(document, "chords");
-    const cJSON *pattern = member(progression, "pattern");
+    const cJSON *chords = test_json_member(document, "chords");
+    const cJSON *pattern = test_json_member(progression, "pattern");
     int next = 0;
     const char *previous = NULL;
     double previous_index = -1.0;
     const cJSON *index;
-    cJSON_ArrayForEach(index, member(occurrence, "chords")) {
+    cJSON_ArrayForEach(index, test_json_member(occurrence, "chords")) {
         CHECK(index->valuedouble == previous_index + 1.0 || previous_index < 0.0);
         previous_index = index->valuedouble;
-        const cJSON *roman = member(cJSON_GetArrayItem(chords, (int)index->valuedouble), "roman_numeral");
-        const char *base = member(roman, "base_numeral") ? member(roman, "base_numeral")->valuestring : NULL;
+        const cJSON *roman = test_json_member(cJSON_GetArrayItem(chords, (int)index->valuedouble), "roman_numeral");
+        const char *base = test_json_member(roman, "base_numeral") ? test_json_member(roman, "base_numeral")->valuestring : NULL;
         CHECK(base != NULL);
-        CHECK(member(roman, "key_region")->valuedouble == member(occurrence, "region")->valuedouble);
+        CHECK(test_json_member(roman, "key_region")->valuedouble == test_json_member(occurrence, "region")->valuedouble);
         if (base && (previous == NULL || strcmp(previous, base) != 0)) {
             const cJSON *expected = cJSON_GetArrayItem(pattern, next);
             CHECK(expected && strcmp(expected->valuestring, base) == 0);
@@ -217,17 +215,17 @@ static void check_occurrence_chords(const cJSON *document, const cJSON *progress
 }
 
 static void check_progressions(const cJSON *document, const AnalysisReport *report) {
-    const cJSON *progressions = member(document, "progressions");
+    const cJSON *progressions = test_json_member(document, "progressions");
     CHECK((size_t)cJSON_GetArraySize(progressions) == report->progression_count);
     CHECK(cJSON_GetArraySize(progressions) > 0);
     double previous_count = 1e9;
     double previous_length = 1e9;
     const cJSON *progression;
     cJSON_ArrayForEach(progression, progressions) {
-        const cJSON *pattern = member(progression, "pattern");
-        const cJSON *occurrences = member(progression, "occurrences");
-        double count = member(progression, "count")->valuedouble;
-        double length = member(progression, "length")->valuedouble;
+        const cJSON *pattern = test_json_member(progression, "pattern");
+        const cJSON *occurrences = test_json_member(progression, "occurrences");
+        double count = test_json_member(progression, "count")->valuedouble;
+        double length = test_json_member(progression, "length")->valuedouble;
         CHECK(length >= 2 && length <= 6 && (int)length == cJSON_GetArraySize(pattern));
         CHECK(count >= 2 && (int)count == cJSON_GetArraySize(occurrences));
         CHECK(count < previous_count || (count == previous_count && length <= previous_length));
@@ -240,19 +238,19 @@ static void check_progressions(const cJSON *document, const AnalysisReport *repo
             strcat(label, numeral == pattern->child ? "" : " > ");
             strcat(label, numeral->valuestring);
         }
-        CHECK(strcmp(member(progression, "label")->valuestring, label) == 0);
+        CHECK(strcmp(test_json_member(progression, "label")->valuestring, label) == 0);
 
         double previous_start = -1.0;
         const cJSON *occurrence;
         cJSON_ArrayForEach(occurrence, occurrences) {
-            CHECK(strcmp(member(occurrence, "framework")->valuestring,
-                         member(cJSON_GetArrayItem(member(document, "chords"), 0), "framework")->valuestring) == 0);
-            CHECK(strcmp(member(occurrence, "label")->valuestring, label) == 0);
-            CHECK(cJSON_IsObject(member(member(member(occurrence, "location"), "start"), "subdivision")));
-            CHECK(cJSON_GetArraySize(member(occurrence, "note_ids")) > 0);
-            const cJSON *uncertainty = member(occurrence, "uncertainty");
+            CHECK(strcmp(test_json_member(occurrence, "framework")->valuestring,
+                         test_json_member(cJSON_GetArrayItem(test_json_member(document, "chords"), 0), "framework")->valuestring) == 0);
+            CHECK(strcmp(test_json_member(occurrence, "label")->valuestring, label) == 0);
+            CHECK(cJSON_IsObject(test_json_member(test_json_member(test_json_member(occurrence, "location"), "start"), "subdivision")));
+            CHECK(cJSON_GetArraySize(test_json_member(occurrence, "note_ids")) > 0);
+            const cJSON *uncertainty = test_json_member(occurrence, "uncertainty");
             CHECK(cJSON_IsNumber(uncertainty) && uncertainty->valuedouble >= 0.0 && uncertainty->valuedouble <= 1.0);
-            double first_chord = cJSON_GetArrayItem(member(occurrence, "chords"), 0)->valuedouble;
+            double first_chord = cJSON_GetArrayItem(test_json_member(occurrence, "chords"), 0)->valuedouble;
             CHECK(first_chord > previous_start);
             previous_start = first_chord;
             check_occurrence_chords(document, progression, occurrence);
@@ -296,12 +294,12 @@ static void check_bach_top(void) {
     if (!document) {
         return;
     }
-    const cJSON *top = cJSON_GetArrayItem(member(document, "progressions"), 0);
-    const cJSON *pattern = member(top, "pattern");
+    const cJSON *top = cJSON_GetArrayItem(test_json_member(document, "progressions"), 0);
+    const cJSON *pattern = test_json_member(top, "pattern");
     CHECK(top != NULL);
     if (top) {
-        printf("Bach 114: top progression %s (%d)\n", member(top, "label")->valuestring,
-               (int)member(top, "count")->valuedouble);
+        printf("Bach 114: top progression %s (%d)\n", test_json_member(top, "label")->valuestring,
+               (int)test_json_member(top, "count")->valuedouble);
         CHECK(strcmp(cJSON_GetArrayItem(pattern, cJSON_GetArraySize(pattern) - 1)->valuestring, "I") == 0);
     }
     cJSON_Delete(document);

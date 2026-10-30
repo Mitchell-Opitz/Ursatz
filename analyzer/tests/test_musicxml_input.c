@@ -10,6 +10,8 @@
 
 #include "cJSON.h"
 
+#include "test_support.h"
+
 /*
  * MusicXML input: format choice, the notated metadata, a pickup, multi-part
  * scores, notated pitch spelling, and every error case. The scores are the
@@ -23,20 +25,14 @@ static const char *musicxml(const char *name) {
     return fixture_path;
 }
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-    assert(item != NULL);
-    return item;
-}
-
 static const char *string(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
+    const cJSON *item = test_json_require(object, key);
     assert(cJSON_IsString(item));
     return item->valuestring;
 }
 
 static long number(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
+    const cJSON *item = test_json_require(object, key);
     assert(cJSON_IsNumber(item));
     return (long)item->valuedouble;
 }
@@ -121,7 +117,7 @@ static void test_notated_metadata_and_pickup(void) {
     assert(notes.key_signature_events.count == 1);
     imported_notes_destroy(&notes);
 
-    const cJSON *input = member(member(document, "metadata"), "input");
+    const cJSON *input = test_json_require(test_json_require(document, "metadata"), "input");
     assert(number(document, "schema_version") == 9);
     assert(strcmp(string(input, "format"), "musicxml") == 0);
     assert(strcmp(string(input, "source_type"), "score") == 0);
@@ -129,15 +125,15 @@ static void test_notated_metadata_and_pickup(void) {
     assert(strcmp(string(input, "key"), "notated") == 0);
     assert(strcmp(string(input, "spelling"), "notated") == 0);
 
-    const cJSON *meter = member(document, "meter");
+    const cJSON *meter = test_json_require(document, "meter");
     assert(strcmp(string(meter, "source"), "notated") == 0);
-    assert(number(member(meter, "time_signature"), "numerator") == 4);
-    assert(number(member(meter, "time_signature"), "denominator") == 4);
+    assert(number(test_json_require(meter, "time_signature"), "numerator") == 4);
+    assert(number(test_json_require(meter, "time_signature"), "denominator") == 4);
     assert(number(meter, "measure_count") == 5); /* the pickup counts as measure 0 */
-    assert(cJSON_IsObject(member(meter, "pickup")));
+    assert(cJSON_IsObject(test_json_require(meter, "pickup")));
     assert(number(meter, "last_measure") == 4);
 
-    const cJSON *regions = member(member(document, "keys"), "regions");
+    const cJSON *regions = test_json_require(test_json_require(document, "keys"), "regions");
     assert(cJSON_GetArraySize(regions) >= 1);
     assert(strcmp(string(cJSON_GetArrayItem(regions, 0), "tonic"), "C") == 0);
     assert(strcmp(string(cJSON_GetArrayItem(regions, 0), "mode"), "major") == 0);
@@ -162,9 +158,9 @@ static void test_multi_part_score(void) {
     assert(strcmp(notes.source.parts[2].id, "P3") == 0 && strcmp(notes.source.parts[2].name, "Bass") == 0);
     imported_notes_destroy(&notes);
 
-    const cJSON *metadata = member(document, "metadata");
+    const cJSON *metadata = test_json_require(document, "metadata");
     assert(number(metadata, "note_count") == 12);
-    const cJSON *parts = member(member(metadata, "input"), "parts");
+    const cJSON *parts = test_json_require(test_json_require(metadata, "input"), "parts");
     assert(cJSON_GetArraySize(parts) == 3);
     long total = 0;
     for (int i = 0; i < 3; i++) {
@@ -174,10 +170,10 @@ static void test_multi_part_score(void) {
     assert(strcmp(string(cJSON_GetArrayItem(parts, 1), "name"), "Alto") == 0);
 
     /* The merged texture has the outer voices of all the parts: the first part's C5 over the third part's C3. */
-    const cJSON *first = cJSON_GetArrayItem(member(document, "chords"), 0);
-    const cJSON *outer = member(first, "outer");
-    assert(strcmp(string(member(outer, "soprano"), "pitch"), "C5") == 0);
-    assert(strcmp(string(member(outer, "bass"), "pitch"), "C3") == 0);
+    const cJSON *first = cJSON_GetArrayItem(test_json_require(document, "chords"), 0);
+    const cJSON *outer = test_json_require(first, "outer");
+    assert(strcmp(string(test_json_require(outer, "soprano"), "pitch"), "C5") == 0);
+    assert(strcmp(string(test_json_require(outer, "bass"), "pitch"), "C3") == 0);
     cJSON_Delete(document);
 }
 
@@ -186,21 +182,21 @@ static void test_enharmonic_spelling(void) {
     cJSON *flat = analyze(musicxml("spelling-flat.musicxml"), NULL);
     cJSON *sharp = analyze(musicxml("spelling-sharp.musicxml"), NULL);
 
-    const cJSON *flat_first = cJSON_GetArrayItem(member(flat, "chords"), 0);
-    const cJSON *sharp_first = cJSON_GetArrayItem(member(sharp, "chords"), 0);
+    const cJSON *flat_first = cJSON_GetArrayItem(test_json_require(flat, "chords"), 0);
+    const cJSON *sharp_first = cJSON_GetArrayItem(test_json_require(sharp, "chords"), 0);
     assert(strcmp(string(flat_first, "root"), "Db") == 0);
     assert(strcmp(string(flat_first, "bass"), "Db") == 0);
-    assert(strcmp(string(member(member(flat_first, "outer"), "bass"), "pitch"), "Db3") == 0);
+    assert(strcmp(string(test_json_require(test_json_require(flat_first, "outer"), "bass"), "pitch"), "Db3") == 0);
     assert(strcmp(string(sharp_first, "root"), "C#") == 0);
     assert(strcmp(string(sharp_first, "bass"), "C#") == 0);
-    assert(strcmp(string(member(member(sharp_first, "outer"), "bass"), "pitch"), "C#3") == 0);
+    assert(strcmp(string(test_json_require(test_json_require(sharp_first, "outer"), "bass"), "pitch"), "C#3") == 0);
 
     /* Chord quality, inversion and degrees do not depend on the spelling. */
     assert(strcmp(string(flat_first, "quality"), string(sharp_first, "quality")) == 0);
     assert(number(flat_first, "inversion") == number(sharp_first, "inversion"));
 
     /* The fifth chord's upper note, B#4 / C5, is spelled as written. */
-    const cJSON *sharp_third = cJSON_GetArrayItem(member(sharp, "chords"), 2);
+    const cJSON *sharp_third = cJSON_GetArrayItem(test_json_require(sharp, "chords"), 2);
     assert(strcmp(string(sharp_third, "root"), "G#") == 0);
     cJSON_Delete(flat);
     cJSON_Delete(sharp);
@@ -221,11 +217,11 @@ static void test_midi_keeps_rule_spelling(void) {
         assert(notes.streams[i] == 0 && notes.source.part_index[i] == 0);
     }
     imported_notes_destroy(&notes);
-    const cJSON *input = member(member(document, "metadata"), "input");
+    const cJSON *input = test_json_require(test_json_require(document, "metadata"), "input");
     assert(strcmp(string(input, "format"), "midi") == 0);
     assert(strcmp(string(input, "source_type"), "performance") == 0);
     assert(strcmp(string(input, "spelling"), "rule") == 0);
-    assert(cJSON_GetArraySize(member(input, "parts")) == 1);
+    assert(cJSON_GetArraySize(test_json_require(input, "parts")) == 1);
     cJSON_Delete(document);
 }
 

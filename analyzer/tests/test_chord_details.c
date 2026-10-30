@@ -11,6 +11,8 @@
 
 #include "cJSON.h"
 
+#include "test_support.h"
+
 /*
  * Targeted chord tests on small constructed files (division 96, 4/4, C major
  * from a key signature event, so the key is not in question): the chord's
@@ -144,26 +146,20 @@ static void analyzed_destroy(Analyzed *analyzed) {
     free(analyzed->markdown);
 }
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-    assert(item != NULL);
-    return item;
-}
-
 static const char *string(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
+    const cJSON *item = test_json_require(object, key);
     assert(cJSON_IsString(item));
     return item->valuestring;
 }
 
 static int number(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
+    const cJSON *item = test_json_require(object, key);
     assert(cJSON_IsNumber(item));
     return (int)item->valuedouble;
 }
 
 static const cJSON *chord_at(const Analyzed *analyzed, int index) {
-    const cJSON *chords = member(analyzed->document, "chords");
+    const cJSON *chords = test_json_require(analyzed->document, "chords");
     assert(index < cJSON_GetArraySize(chords));
     return cJSON_GetArrayItem(chords, index);
 }
@@ -174,14 +170,14 @@ static void test_inversion(void) {
     /* C-E-G with the E lowest, held for four beats: one C major chord in first inversion. */
     const Note first[] = {{0, 4 * BEAT, 52}, {0, 4 * BEAT, 55}, {0, 4 * BEAT, 60}};
     Analyzed analyzed = analyze("first_inversion", first, 3);
-    assert(cJSON_GetArraySize(member(analyzed.document, "chords")) == 1);
+    assert(cJSON_GetArraySize(test_json_require(analyzed.document, "chords")) == 1);
     const cJSON *chord = chord_at(&analyzed, 0);
     assert(strcmp(string(chord, "label"), "I") == 0);
     assert(strcmp(string(chord, "root"), "C") == 0);
     assert(strcmp(string(chord, "quality"), "major") == 0);
     assert(strcmp(string(chord, "bass"), "E") == 0);
     assert(number(chord, "inversion") == 1);
-    assert(number(member(member(chord, "duration"), "beats"), "num") == 4);
+    assert(number(test_json_require(test_json_require(chord, "duration"), "beats"), "num") == 4);
     assert(strstr(analyzed.markdown, "| I | I6 (in C major) | tonic | - | C | major | E | first | 4 |") != NULL);
     analyzed_destroy(&analyzed);
 
@@ -207,20 +203,20 @@ static void test_runner_up(void) {
     Analyzed analyzed = analyze("lone_note", lone, 1);
     const cJSON *chord = chord_at(&analyzed, 0);
     assert(strcmp(string(chord, "root"), "C") == 0);
-    assert(cJSON_IsNull(member(chord, "runner_up")));
+    assert(cJSON_IsNull(test_json_require(chord, "runner_up")));
     analyzed_destroy(&analyzed);
 
     /* C-E-G-A is a C major sixth and an A minor seventh: two roots, so the loser is the runner-up. */
     const Note ambiguous[] = {{0, 4 * BEAT, 48}, {0, 4 * BEAT, 52}, {0, 4 * BEAT, 55}, {0, 4 * BEAT, 57}};
     analyzed = analyze("ambiguous", ambiguous, 4);
     chord = chord_at(&analyzed, 0);
-    const cJSON *runner_up = member(chord, "runner_up");
+    const cJSON *runner_up = test_json_require(chord, "runner_up");
     assert(cJSON_IsObject(runner_up));
     assert(strcmp(string(runner_up, "root"), string(chord, "root")) != 0);
-    assert(cJSON_IsNumber(member(runner_up, "score")));
-    assert(member(runner_up, "score")->valuedouble <= member(chord, "score")->valuedouble + 1e-9);
+    assert(cJSON_IsNumber(test_json_require(runner_up, "score")));
+    assert(test_json_require(runner_up, "score")->valuedouble <= test_json_require(chord, "score")->valuedouble + 1e-9);
     /* The report shows the runner-up only when its score is within 0.10 of the best chord's. */
-    double margin = member(chord, "score")->valuedouble - member(runner_up, "score")->valuedouble;
+    double margin = test_json_require(chord, "score")->valuedouble - test_json_require(runner_up, "score")->valuedouble;
     assert((strstr(analyzed.markdown, ", score ") != NULL) == (margin < 0.10));
     analyzed_destroy(&analyzed);
 }
@@ -236,17 +232,17 @@ static size_t held_c_major(Note *notes) {
 
 /* The one non-chord tone of the fixture, checked against the library's name for it. */
 static void check_single_tone(const Analyzed *analyzed, const char *type, const char *chord_label) {
-    const cJSON *tones = member(analyzed->document, "non_chord_tones");
+    const cJSON *tones = test_json_require(analyzed->document, "non_chord_tones");
     assert(cJSON_GetArraySize(tones) == 1);
     const cJSON *tone = cJSON_GetArrayItem(tones, 0);
     assert(strcmp(string(tone, "type"), type) == 0);
     assert(strcmp(string(tone, "label"), type) == 0);
-    assert(cJSON_IsTrue(member(tone, "classified")));
+    assert(cJSON_IsTrue(test_json_require(tone, "classified")));
     assert(strcmp(string(tone, "chord_label"), chord_label) == 0);
-    assert(cJSON_GetArraySize(member(tone, "note_ids")) == 1);
+    assert(cJSON_GetArraySize(test_json_require(tone, "note_ids")) == 1);
     const cJSON *chord = chord_at(analyzed, number(tone, "chord_index"));
     assert(strcmp(string(chord, "label"), chord_label) == 0);
-    assert(number(member(member(tone, "location"), "start"), "beat") == number(member(member(chord, "location"), "start"), "beat"));
+    assert(number(test_json_require(test_json_require(tone, "location"), "start"), "beat") == number(test_json_require(test_json_require(chord, "location"), "start"), "beat"));
     char row[64];
     snprintf(row, sizeof(row), " | %s | %s |\n", type, chord_label);
     assert(strstr(analyzed->markdown, row) != NULL);
@@ -297,11 +293,11 @@ static void test_unclassified_tone_is_listed(void) {
                           {2 * BEAT, 2 * BEAT, 43}, {2 * BEAT, 2 * BEAT, 50}, {2 * BEAT, 2 * BEAT, 59},
                           {BEAT + BEAT / 2, BEAT / 2, 74}, {2 * BEAT, 2 * BEAT, 74}};
     Analyzed analyzed = analyze("unclassified", notes, 8);
-    const cJSON *tones = member(analyzed.document, "non_chord_tones");
+    const cJSON *tones = test_json_require(analyzed.document, "non_chord_tones");
     assert(cJSON_GetArraySize(tones) == 1);
     const cJSON *tone = cJSON_GetArrayItem(tones, 0);
-    assert(cJSON_IsNull(member(tone, "type")));
-    assert(cJSON_IsFalse(member(tone, "classified")));
+    assert(cJSON_IsNull(test_json_require(tone, "type")));
+    assert(cJSON_IsFalse(test_json_require(tone, "classified")));
     assert(strcmp(string(tone, "label"), "unclassified") == 0);
     assert(strstr(analyzed.markdown, " | unclassified | I |\n") != NULL);
     assert(strstr(analyzed.markdown, "1 the library left unclassified") != NULL);

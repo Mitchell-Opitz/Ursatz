@@ -9,6 +9,8 @@
 #include <ursatz_analyzer/analysis_pipeline.h>
 #include <ursatz_analyzer/input_pipeline.h>
 
+#include "test_support.h"
+
 /*
  * Golden snapshots of the analysis document of the five reference pieces
  * (Ursatz framework-v1 corpus, MIDI files). Each piece runs import ->
@@ -61,26 +63,6 @@ static char *render_piece(const char *fixture) {
     char *text = cJSON_Print(root);
     cJSON_Delete(root);
     return text;
-}
-
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    rewind(file);
-    char *data = malloc((size_t)size + 1);
-    if (data && fread(data, 1, (size_t)size, file) != (size_t)size) {
-        free(data);
-        data = NULL;
-    }
-    fclose(file);
-    if (data) {
-        data[size] = '\0';
-    }
-    return data;
 }
 
 static bool write_file(const char *path, const char *text) {
@@ -143,7 +125,7 @@ int main(void) {
             continue;
         }
 
-        char *expected = read_file(snapshot_path);
+        char *expected = test_read_file(snapshot_path);
         if (!expected) {
             fprintf(stderr, "%s: missing %s (run with UPDATE_SNAPSHOTS=1 to create it)\n", PIECES[i].slug,
                     snapshot_path);

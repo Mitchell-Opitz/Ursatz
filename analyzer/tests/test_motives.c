@@ -9,6 +9,8 @@
 
 #include "cJSON.h"
 
+#include "test_support.h"
+
 /*
  * The motive families of the report, for Mozart 545.
  *
@@ -52,22 +54,8 @@ static int failures = 0;
         }                                                                                          \
     } while (0)
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    return cJSON_GetObjectItemCaseSensitive(object, key);
-}
-
-static double number(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
-    return cJSON_IsNumber(item) ? item->valuedouble : -1e9;
-}
-
-static const char *text(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
-    return cJSON_IsString(item) ? item->valuestring : "";
-}
-
 static double time_of(const cJSON *rational) {
-    return number(rational, "num") / number(rational, "den");
+    return test_json_number(rational, "num") / test_json_number(rational, "den");
 }
 
 static double beats_of(double measure, double beat) {
@@ -126,41 +114,41 @@ static bool known_kind(const char *kind) {
 
 /* One family's structure: its occurrences, their order, links and development. */
 static void check_family(const cJSON *family, const cJSON *phrases, size_t note_count) {
-    CHECK(strcmp(text(family, "framework"), "standard-form-v1") == 0);
-    CHECK(strcmp(text(family, "label"), "motive") == 0);
-    const cJSON *occurrences = member(family, "occurrences");
-    const cJSON *development = member(family, "development");
+    CHECK(strcmp(test_json_string(family, "framework"), "standard-form-v1") == 0);
+    CHECK(strcmp(test_json_string(family, "label"), "motive") == 0);
+    const cJSON *occurrences = test_json_member(family, "occurrences");
+    const cJSON *development = test_json_member(family, "development");
     int count = cJSON_GetArraySize(occurrences);
     CHECK(count >= 2);
     CHECK(cJSON_GetArraySize(development) == count);
-    CHECK(number(family, "note_count") >= 3);
+    CHECK(test_json_number(family, "note_count") >= 3);
     int index = 0;
     const cJSON *occurrence;
     cJSON_ArrayForEach(occurrence, occurrences) {
-        CHECK((int)number(occurrence, "index") == index);
-        CHECK(known_kind(text(occurrence, "label")));
-        CHECK(index > 0 || strcmp(text(occurrence, "label"), "exact") == 0);
-        double score = number(occurrence, "score");
+        CHECK((int)test_json_number(occurrence, "index") == index);
+        CHECK(known_kind(test_json_string(occurrence, "label")));
+        CHECK(index > 0 || strcmp(test_json_string(occurrence, "label"), "exact") == 0);
+        double score = test_json_number(occurrence, "score");
         CHECK(score >= 0.0 && score <= 1.0);
-        double uncertainty = number(occurrence, "uncertainty");
+        double uncertainty = test_json_number(occurrence, "uncertainty");
         CHECK(uncertainty >= 0.0 && uncertainty <= 1.0 && distance(uncertainty, 1.0 - score) < 1e-9);
-        CHECK(cJSON_GetArraySize(member(occurrence, "note_ids")) == (int)number(family, "note_count") ||
-              strcmp(text(occurrence, "label"), "exact") != 0);
+        CHECK(cJSON_GetArraySize(test_json_member(occurrence, "note_ids")) == (int)test_json_number(family, "note_count") ||
+              strcmp(test_json_string(occurrence, "label"), "exact") != 0);
         const cJSON *id;
-        cJSON_ArrayForEach(id, member(occurrence, "note_ids")) {
+        cJSON_ArrayForEach(id, test_json_member(occurrence, "note_ids")) {
             CHECK(id->valuedouble >= 0 && id->valuedouble < (double)note_count);
         }
-        CHECK(number(member(occurrence, "measures"), "first") <= number(member(occurrence, "measures"), "last"));
-        CHECK(number(occurrence, "beat") >= 1.0);
-        const cJSON *phrase = member(occurrence, "phrase");
-        const cJSON *idea = member(occurrence, "idea");
+        CHECK(test_json_number(test_json_member(occurrence, "measures"), "first") <= test_json_number(test_json_member(occurrence, "measures"), "last"));
+        CHECK(test_json_number(occurrence, "beat") >= 1.0);
+        const cJSON *phrase = test_json_member(occurrence, "phrase");
+        const cJSON *idea = test_json_member(occurrence, "idea");
         CHECK(cJSON_IsNull(phrase) || cJSON_IsNumber(phrase));
         if (cJSON_IsNumber(phrase)) {
             const cJSON *claim = cJSON_GetArrayItem(phrases, (int)phrase->valuedouble);
             CHECK(claim != NULL);
             CHECK(!cJSON_IsNumber(idea) ||
-                  (claim && idea->valuedouble < cJSON_GetArraySize(member(claim, "ideas"))));
-            CHECK(!claim || number(member(occurrence, "measures"), "first") >= number(member(claim, "measures"), "first"));
+                  (claim && idea->valuedouble < cJSON_GetArraySize(test_json_member(claim, "ideas"))));
+            CHECK(!claim || test_json_number(test_json_member(occurrence, "measures"), "first") >= test_json_number(test_json_member(claim, "measures"), "first"));
         } else {
             CHECK(cJSON_IsNull(idea));
         }
@@ -172,21 +160,21 @@ static void check_family(const cJSON *family, const cJSON *phrases, size_t note_
     index = 0;
     const cJSON *step;
     cJSON_ArrayForEach(step, development) {
-        const cJSON *source = cJSON_GetArrayItem(occurrences, (int)number(step, "occurrence"));
+        const cJSON *source = cJSON_GetArrayItem(occurrences, (int)test_json_number(step, "occurrence"));
         CHECK(source != NULL);
         if (!source) {
             continue;
         }
-        double start = time_of(member(member(source, "span"), "start"));
+        double start = time_of(test_json_member(test_json_member(source, "span"), "start"));
         CHECK(start >= previous_time);
         previous_time = start;
-        CHECK((int)number(step, "measure") == (int)number(member(source, "measures"), "first"));
-        if (number(step, "occurrence") == 0) {
-            CHECK(cJSON_IsNull(member(step, "transformation")));
+        CHECK((int)test_json_number(step, "measure") == (int)test_json_number(test_json_member(source, "measures"), "first"));
+        if (test_json_number(step, "occurrence") == 0) {
+            CHECK(cJSON_IsNull(test_json_member(step, "transformation")));
         } else {
-            CHECK(strcmp(text(step, "transformation"), text(source, "label")) == 0);
+            CHECK(strcmp(test_json_string(step, "transformation"), test_json_string(source, "label")) == 0);
         }
-        CHECK(index == 0 ? cJSON_IsNull(member(step, "from")) : number(step, "from") >= 0);
+        CHECK(index == 0 ? cJSON_IsNull(test_json_member(step, "from")) : test_json_number(step, "from") >= 0);
         steps_seen++;
         index++;
     }
@@ -208,14 +196,14 @@ static void check_annotation(const cJSON *motives, const AnnotatedFamily *famili
             const cJSON *family;
             cJSON_ArrayForEach(family, motives) {
                 const cJSON *candidate;
-                cJSON_ArrayForEach(candidate, member(family, "occurrences")) {
-                    if (distance(beats_of(number(member(candidate, "measures"), "first"), number(candidate, "beat")), at) >
+                cJSON_ArrayForEach(candidate, test_json_member(family, "occurrences")) {
+                    if (distance(beats_of(test_json_number(test_json_member(candidate, "measures"), "first"), test_json_number(candidate, "beat")), at) >
                         1.0) {
                         continue;
                     }
-                    occurrence_right = occurrence_right || strcmp(text(candidate, "label"), want->occurrences[o].kind) == 0;
-                    found = found || (o == 0 && distance(beats_of(number(member(candidate, "measures"), "first"),
-                                                                  number(candidate, "beat")),
+                    occurrence_right = occurrence_right || strcmp(test_json_string(candidate, "label"), want->occurrences[o].kind) == 0;
+                    found = found || (o == 0 && distance(beats_of(test_json_number(test_json_member(candidate, "measures"), "first"),
+                                                                  test_json_number(candidate, "beat")),
                                                          first) <= 1.0);
                 }
             }
@@ -241,33 +229,33 @@ static void check_annotation(const cJSON *motives, const AnnotatedFamily *famili
 /* The features of a family: parallel arrays of the prototype's length, intervals and steps one shorter, intervals the
    pitch differences, rhythm the durations, a 16 digit fingerprint, and a degree for every note of every occurrence. */
 static void check_features(const cJSON *family) {
-    const cJSON *features = member(family, "features");
+    const cJSON *features = test_json_member(family, "features");
     CHECK(cJSON_IsObject(features));
     if (!cJSON_IsObject(features)) {
         return;
     }
-    const cJSON *notes = member(features, "notes");
+    const cJSON *notes = test_json_member(features, "notes");
     int count = cJSON_GetArraySize(notes);
-    CHECK(count == (int)number(family, "note_count"));
-    CHECK(cJSON_GetArraySize(member(features, "degrees")) == count);
-    CHECK(cJSON_GetArraySize(member(features, "rhythm")) == count);
-    CHECK(cJSON_GetArraySize(member(features, "ncts")) == count);
-    CHECK(cJSON_GetArraySize(member(features, "intervals")) == count - 1);
-    CHECK(cJSON_GetArraySize(member(features, "steps")) == count - 1);
-    CHECK(strcmp(text(cJSON_GetArrayItem(notes, 0), "onset"), "0/1") == 0);
+    CHECK(count == (int)test_json_number(family, "note_count"));
+    CHECK(cJSON_GetArraySize(test_json_member(features, "degrees")) == count);
+    CHECK(cJSON_GetArraySize(test_json_member(features, "rhythm")) == count);
+    CHECK(cJSON_GetArraySize(test_json_member(features, "ncts")) == count);
+    CHECK(cJSON_GetArraySize(test_json_member(features, "intervals")) == count - 1);
+    CHECK(cJSON_GetArraySize(test_json_member(features, "steps")) == count - 1);
+    CHECK(strcmp(test_json_string(cJSON_GetArrayItem(notes, 0), "onset"), "0/1") == 0);
     for (int k = 0; k + 1 < count; k++) {
-        double step = number(cJSON_GetArrayItem(notes, k + 1), "pitch") - number(cJSON_GetArrayItem(notes, k), "pitch");
-        CHECK(cJSON_GetArrayItem(member(features, "intervals"), k)->valuedouble == step);
+        double step = test_json_number(cJSON_GetArrayItem(notes, k + 1), "pitch") - test_json_number(cJSON_GetArrayItem(notes, k), "pitch");
+        CHECK(cJSON_GetArrayItem(test_json_member(features, "intervals"), k)->valuedouble == step);
     }
     for (int k = 0; k < count; k++) {
-        CHECK(strcmp(cJSON_GetArrayItem(member(features, "rhythm"), k)->valuestring,
-                     text(cJSON_GetArrayItem(notes, k), "duration")) == 0);
+        CHECK(strcmp(cJSON_GetArrayItem(test_json_member(features, "rhythm"), k)->valuestring,
+                     test_json_string(cJSON_GetArrayItem(notes, k), "duration")) == 0);
     }
-    const char *fingerprint = text(features, "fingerprint");
+    const char *fingerprint = test_json_string(features, "fingerprint");
     CHECK(strlen(fingerprint) == 16 && strspn(fingerprint, "0123456789abcdef") == 16);
     const cJSON *occurrence;
-    cJSON_ArrayForEach(occurrence, member(family, "occurrences")) {
-        CHECK(cJSON_GetArraySize(member(occurrence, "degrees")) == cJSON_GetArraySize(member(occurrence, "note_ids")));
+    cJSON_ArrayForEach(occurrence, test_json_member(family, "occurrences")) {
+        CHECK(cJSON_GetArraySize(test_json_member(occurrence, "degrees")) == cJSON_GetArraySize(test_json_member(occurrence, "note_ids")));
     }
 }
 
@@ -289,25 +277,25 @@ static char *joined(const cJSON *array, bool numbers) {
 /* The first family of Mozart 545 is the opening figure C5 E5 G5 B4 C5 D5 C5 A5, hand-read; some family in the minor
    reads b6; a non-chord tone on a motive note is typed; the fingerprints do not change between two runs. */
 static void check_mozart_features(const cJSON *motives, const AnalysisReport *report, const AnalysisReport *again) {
-    const cJSON *first = member(cJSON_GetArrayItem(motives, 0), "features");
-    CHECK(strcmp(joined(member(first, "degrees"), false), "1 3 5 7 1 2 1 6") == 0);
-    CHECK(strcmp(joined(member(first, "intervals"), true), "4 3 -8 1 2 -2 9") == 0);
-    CHECK(strcmp(cJSON_GetArrayItem(member(first, "rhythm"), 0)->valuestring, "1/2") == 0);
-    CHECK(number(first, "tonic_pc") == 0 && !cJSON_IsTrue(member(first, "minor")));
-    CHECK(strcmp(text(first, "bar"), "1/1") == 0 && strcmp(text(first, "beat"), "1/4") == 0 &&
-          strcmp(text(first, "pickup"), "0/1") == 0);
+    const cJSON *first = test_json_member(cJSON_GetArrayItem(motives, 0), "features");
+    CHECK(strcmp(joined(test_json_member(first, "degrees"), false), "1 3 5 7 1 2 1 6") == 0);
+    CHECK(strcmp(joined(test_json_member(first, "intervals"), true), "4 3 -8 1 2 -2 9") == 0);
+    CHECK(strcmp(cJSON_GetArrayItem(test_json_member(first, "rhythm"), 0)->valuestring, "1/2") == 0);
+    CHECK(test_json_number(first, "tonic_pc") == 0 && !cJSON_IsTrue(test_json_member(first, "minor")));
+    CHECK(strcmp(test_json_string(first, "bar"), "1/1") == 0 && strcmp(test_json_string(first, "beat"), "1/4") == 0 &&
+          strcmp(test_json_string(first, "pickup"), "0/1") == 0);
     bool minor_b6 = false;
     bool typed = false;
     const cJSON *family;
     cJSON_ArrayForEach(family, motives) {
-        const cJSON *features = member(family, "features");
+        const cJSON *features = test_json_member(family, "features");
         const cJSON *item;
-        if (cJSON_IsTrue(member(features, "minor"))) {
-            cJSON_ArrayForEach(item, member(features, "degrees")) {
+        if (cJSON_IsTrue(test_json_member(features, "minor"))) {
+            cJSON_ArrayForEach(item, test_json_member(features, "degrees")) {
                 minor_b6 = minor_b6 || strcmp(item->valuestring, "b6") == 0;
             }
         }
-        cJSON_ArrayForEach(item, member(features, "ncts")) {
+        cJSON_ArrayForEach(item, test_json_member(features, "ncts")) {
             typed = typed || (cJSON_IsString(item) && strcmp(item->valuestring, "chord-tone") != 0);
         }
     }
@@ -342,11 +330,11 @@ int main(void) {
     CHECK(document != NULL);
     CHECK(report.motive_count > 0);
     if (document) {
-        const cJSON *motives = member(document, "motives");
+        const cJSON *motives = test_json_member(document, "motives");
         CHECK((size_t)cJSON_GetArraySize(motives) == report.motive_count);
         const cJSON *family;
         cJSON_ArrayForEach(family, motives) {
-            check_family(family, member(document, "phrases"), notes.count);
+            check_family(family, test_json_member(document, "phrases"), notes.count);
             check_features(family);
         }
         check_mozart_features(motives, &report, &report_again);

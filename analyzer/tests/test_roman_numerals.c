@@ -11,6 +11,8 @@
 
 #include "cJSON.h"
 
+#include "test_support.h"
+
 /*
  * Roman numerals, applied chords and the chord vocabulary.
  *
@@ -158,27 +160,23 @@ static void release(Analyzed *analyzed) {
     imported_notes_destroy(&analyzed->notes);
 }
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    return cJSON_GetObjectItemCaseSensitive(object, key);
-}
-
 static const char *text(const cJSON *object, const char *key) {
-    const cJSON *item = member(object, key);
+    const cJSON *item = test_json_member(object, key);
     return cJSON_IsString(item) ? item->valuestring : NULL;
 }
 
 /* measure * 10 + beat of a location position. */
 static int position_key(const cJSON *position) {
-    return (int)member(position, "measure")->valuedouble * 10 + (int)member(position, "beat")->valuedouble;
+    return (int)test_json_member(position, "measure")->valuedouble * 10 + (int)test_json_member(position, "beat")->valuedouble;
 }
 
 /* The chord claim sounding at a measure and beat. */
 static const cJSON *chord_at(const Analyzed *analyzed, int measure, int beat) {
     int query = measure * 10 + beat;
     const cJSON *chord;
-    cJSON_ArrayForEach(chord, member(analyzed->document, "chords")) {
-        const cJSON *location = member(chord, "location");
-        if (position_key(member(location, "start")) <= query && query < position_key(member(location, "end"))) {
+    cJSON_ArrayForEach(chord, test_json_member(analyzed->document, "chords")) {
+        const cJSON *location = test_json_member(chord, "location");
+        if (position_key(test_json_member(location, "start")) <= query && query < position_key(test_json_member(location, "end"))) {
             return chord;
         }
     }
@@ -188,7 +186,7 @@ static const cJSON *chord_at(const Analyzed *analyzed, int measure, int beat) {
 /* The numeral the document reports at a measure and beat is exactly expected. */
 static void expect_numeral(const Analyzed *analyzed, const char *name, int measure, int beat, const char *expected) {
     const cJSON *chord = chord_at(analyzed, measure, beat);
-    const char *actual = chord ? text(member(chord, "roman_numeral"), "label") : NULL;
+    const char *actual = chord ? text(test_json_member(chord, "roman_numeral"), "label") : NULL;
     if (!actual || strcmp(actual, expected) != 0) {
         fprintf(stderr, "%s: m. %d beat %d: expected %s, got %s\n", name, measure, beat, expected,
                 actual ? actual : "(unlabelled)");
@@ -199,7 +197,7 @@ static void expect_numeral(const Analyzed *analyzed, const char *name, int measu
 /* The key the chord's numeral is relative to. */
 static void expect_key(const Analyzed *analyzed, const char *name, int measure, int beat, const char *key) {
     const cJSON *chord = chord_at(analyzed, measure, beat);
-    const char *actual = chord ? text(member(chord, "roman_numeral"), "key") : NULL;
+    const char *actual = chord ? text(test_json_member(chord, "roman_numeral"), "key") : NULL;
     if (!actual || strcmp(actual, key) != 0) {
         fprintf(stderr, "%s: m. %d beat %d: expected key %s, got %s\n", name, measure, beat, key,
                 actual ? actual : "(none)");
@@ -212,10 +210,10 @@ static void expect_key(const Analyzed *analyzed, const char *name, int measure, 
 static int labelled_chords(const cJSON *document, long region) {
     int total = 0;
     const cJSON *chord;
-    cJSON_ArrayForEach(chord, member(document, "chords")) {
-        const cJSON *roman = member(chord, "roman_numeral");
-        const cJSON *key_region = member(roman, "key_region");
-        if (cJSON_IsString(member(roman, "label")) && (region < 0 || (cJSON_IsNumber(key_region) &&
+    cJSON_ArrayForEach(chord, test_json_member(document, "chords")) {
+        const cJSON *roman = test_json_member(chord, "roman_numeral");
+        const cJSON *key_region = test_json_member(roman, "key_region");
+        if (cJSON_IsString(test_json_member(roman, "label")) && (region < 0 || (cJSON_IsNumber(key_region) &&
                                                                     (long)key_region->valuedouble == region))) {
             total++;
         }
@@ -231,27 +229,27 @@ static void check_vocabulary_scope(const cJSON *document, const char *name, long
     int entries_seen = 0;
     const cJSON *previous = NULL;
     const cJSON *entry;
-    cJSON_ArrayForEach(entry, member(document, "chord_vocabulary")) {
-        const cJSON *key_region = member(entry, "key_region");
+    cJSON_ArrayForEach(entry, test_json_member(document, "chord_vocabulary")) {
+        const cJSON *key_region = test_json_member(entry, "key_region");
         bool in_scope = region < 0 ? cJSON_IsNull(key_region)
                                    : (cJSON_IsNumber(key_region) && (long)key_region->valuedouble == region);
         if (!in_scope || strcmp(text(entry, "level"), level) != 0) {
             continue;
         }
         entries_seen++;
-        count_sum += (int)member(entry, "count")->valuedouble;
-        share_sum += member(entry, "share")->valuedouble;
-        CHECK(member(entry, "runs")->valuedouble <= member(entry, "count")->valuedouble);
-        CHECK(member(entry, "runs")->valuedouble >= 1);
+        count_sum += (int)test_json_member(entry, "count")->valuedouble;
+        share_sum += test_json_member(entry, "share")->valuedouble;
+        CHECK(test_json_member(entry, "runs")->valuedouble <= test_json_member(entry, "count")->valuedouble);
+        CHECK(test_json_member(entry, "runs")->valuedouble >= 1);
         if (previous && strcmp(text(previous, "group"), text(entry, "group")) == 0) {
-            double before = member(previous, "count")->valuedouble;
-            double now = member(entry, "count")->valuedouble;
+            double before = test_json_member(previous, "count")->valuedouble;
+            double now = test_json_member(entry, "count")->valuedouble;
             CHECK(before >= now);
             if (before == now) {
-                const cJSON *a = member(member(previous, "duration"), "whole_notes");
-                const cJSON *b = member(member(entry, "duration"), "whole_notes");
-                double left = member(a, "num")->valuedouble / member(a, "den")->valuedouble;
-                double right = member(b, "num")->valuedouble / member(b, "den")->valuedouble;
+                const cJSON *a = test_json_member(test_json_member(previous, "duration"), "whole_notes");
+                const cJSON *b = test_json_member(test_json_member(entry, "duration"), "whole_notes");
+                double left = test_json_member(a, "num")->valuedouble / test_json_member(a, "den")->valuedouble;
+                double right = test_json_member(b, "num")->valuedouble / test_json_member(b, "den")->valuedouble;
                 CHECK(left >= right);
             }
         }
@@ -272,7 +270,7 @@ static void check_vocabulary_scope(const cJSON *document, const char *name, long
 
 static void check_vocabulary(const Analyzed *analyzed, const char *name) {
     const cJSON *document = analyzed->document;
-    CHECK(cJSON_IsArray(member(document, "chord_vocabulary")));
+    CHECK(cJSON_IsArray(test_json_member(document, "chord_vocabulary")));
     for (int level = 0; level < 2; level++) {
         const char *level_name = level == 0 ? "numeral" : "base_numeral";
         check_vocabulary_scope(document, name, -1, level_name);
@@ -283,22 +281,22 @@ static void check_vocabulary(const Analyzed *analyzed, const char *name) {
     /* A chord is in one group: applied entries are exactly the applied chords. */
     int applied_chords = 0;
     const cJSON *chord;
-    cJSON_ArrayForEach(chord, member(document, "chords")) {
-        applied_chords += cJSON_IsObject(member(member(chord, "roman_numeral"), "applied")) ? 1 : 0;
+    cJSON_ArrayForEach(chord, test_json_member(document, "chords")) {
+        applied_chords += cJSON_IsObject(test_json_member(test_json_member(chord, "roman_numeral"), "applied")) ? 1 : 0;
     }
     int applied_count = 0;
     const cJSON *entry;
-    cJSON_ArrayForEach(entry, member(document, "chord_vocabulary")) {
-        if (cJSON_IsNull(member(entry, "key_region")) && strcmp(text(entry, "level"), "numeral") == 0 &&
+    cJSON_ArrayForEach(entry, test_json_member(document, "chord_vocabulary")) {
+        if (cJSON_IsNull(test_json_member(entry, "key_region")) && strcmp(text(entry, "level"), "numeral") == 0 &&
             strcmp(text(entry, "group"), "applied") == 0) {
-            applied_count += (int)member(entry, "count")->valuedouble;
+            applied_count += (int)test_json_member(entry, "count")->valuedouble;
         }
     }
     CHECK(applied_count == applied_chords);
     /* Every chord is either numbered or says why not. */
-    cJSON_ArrayForEach(chord, member(document, "chords")) {
-        const cJSON *roman = member(chord, "roman_numeral");
-        CHECK(cJSON_IsString(member(roman, "label")) != cJSON_IsString(member(roman, "unlabelled_reason")));
+    cJSON_ArrayForEach(chord, test_json_member(document, "chords")) {
+        const cJSON *roman = test_json_member(chord, "roman_numeral");
+        CHECK(cJSON_IsString(test_json_member(roman, "label")) != cJSON_IsString(test_json_member(roman, "unlabelled_reason")));
     }
 }
 
@@ -390,10 +388,10 @@ static void test_inversions(const char *path) {
     /* The base numeral puts the inversions of V7 together. */
     int v7_count = 0;
     const cJSON *entry;
-    cJSON_ArrayForEach(entry, member(analyzed.document, "chord_vocabulary")) {
-        if (cJSON_IsNull(member(entry, "key_region")) && strcmp(text(entry, "level"), "base_numeral") == 0 &&
+    cJSON_ArrayForEach(entry, test_json_member(analyzed.document, "chord_vocabulary")) {
+        if (cJSON_IsNull(test_json_member(entry, "key_region")) && strcmp(text(entry, "level"), "base_numeral") == 0 &&
             strcmp(text(entry, "numeral"), "V7") == 0) {
-            v7_count += (int)member(entry, "count")->valuedouble;
+            v7_count += (int)test_json_member(entry, "count")->valuedouble;
         }
     }
     CHECK(v7_count >= 6);
@@ -428,14 +426,14 @@ static void test_applied(const char *path) {
     Analyzed analyzed;
     analyze(path, &analyzed);
     const cJSON *chord = chord_at(&analyzed, 8, 3);
-    const cJSON *roman = chord ? member(chord, "roman_numeral") : NULL;
-    const cJSON *applied = roman ? member(roman, "applied") : NULL;
+    const cJSON *roman = chord ? test_json_member(chord, "roman_numeral") : NULL;
+    const cJSON *applied = roman ? test_json_member(roman, "applied") : NULL;
     CHECK(cJSON_IsObject(applied));
     if (cJSON_IsObject(applied)) {
         CHECK(strcmp(text(roman, "label"), "V7/V") == 0);
         CHECK(strcmp(text(applied, "numeral"), "V7") == 0);
         CHECK(strcmp(text(applied, "target_numeral"), "V") == 0);
-        CHECK(member(applied, "target_degree")->valuedouble == 5);
+        CHECK(test_json_member(applied, "target_degree")->valuedouble == 5);
         CHECK(strcmp(text(applied, "target_tonic"), "G") == 0);
         CHECK(strcmp(text(applied, "kind"), "secondary-dominant") == 0);
         CHECK(strcmp(text(roman, "base_numeral"), "V7/V") == 0);
@@ -444,16 +442,16 @@ static void test_applied(const char *path) {
         /* The cross-reference agrees exactly when a tonicization claim for G major touches the chord. */
         bool tonicization_of_g = false;
         const cJSON *tonicization;
-        cJSON_ArrayForEach(tonicization, member(analyzed.document, "tonicizations")) {
+        cJSON_ArrayForEach(tonicization, test_json_member(analyzed.document, "tonicizations")) {
             tonicization_of_g = tonicization_of_g || strcmp(text(tonicization, "to_key"), "G major") == 0;
         }
         if (agreement && strcmp(agreement, "agrees") == 0) {
             CHECK(tonicization_of_g);
             CHECK(strcmp(text(applied, "tonicization_key"), "G major") == 0);
-            CHECK(cJSON_IsNumber(member(applied, "tonicization_index")));
+            CHECK(cJSON_IsNumber(test_json_member(applied, "tonicization_index")));
         } else if (agreement && strcmp(agreement, "no_tonicization") == 0) {
-            CHECK(cJSON_IsNull(member(applied, "tonicization_index")));
-            CHECK(cJSON_IsNull(member(applied, "target_region")));
+            CHECK(cJSON_IsNull(test_json_member(applied, "tonicization_index")));
+            CHECK(cJSON_IsNull(test_json_member(applied, "target_region")));
         }
     }
     check_vocabulary(&analyzed, "applied");
@@ -475,13 +473,13 @@ static void test_borrowed(const char *path) {
     Analyzed analyzed;
     analyze(path, &analyzed);
     const cJSON *chord = chord_at(&analyzed, 5, 2);
-    const cJSON *roman = chord ? member(chord, "roman_numeral") : NULL;
+    const cJSON *roman = chord ? test_json_member(chord, "roman_numeral") : NULL;
     CHECK(roman != NULL);
     if (roman) {
         const char *label = text(roman, "label");
         /* Never the minor iv: the library has no numeral for a borrowed chord. */
         CHECK(label == NULL || strcmp(label, "iv") != 0);
-        CHECK(cJSON_IsNull(member(roman, "applied")));
+        CHECK(cJSON_IsNull(test_json_member(roman, "applied")));
         /* The weighted identification finds no chord to number: F Ab C is not one of its diatonic candidates. */
         CHECK(label == NULL);
         if (!label) {
@@ -491,7 +489,7 @@ static void test_borrowed(const char *path) {
     }
     int mixture = 0;
     const cJSON *entry;
-    cJSON_ArrayForEach(entry, member(analyzed.document, "chord_vocabulary")) {
+    cJSON_ArrayForEach(entry, test_json_member(analyzed.document, "chord_vocabulary")) {
         mixture += strcmp(text(entry, "group"), "mixture") == 0 ? 1 : 0;
     }
     CHECK(mixture == 0);
@@ -529,8 +527,8 @@ static void test_modulation(const char *path) {
     const cJSON *first = chord_at(&analyzed, 4, 3);
     const cJSON *last = chord_at(&analyzed, 14, 3);
     if (first && last) {
-        CHECK(member(member(first, "roman_numeral"), "key_region")->valuedouble !=
-              member(member(last, "roman_numeral"), "key_region")->valuedouble);
+        CHECK(test_json_member(test_json_member(first, "roman_numeral"), "key_region")->valuedouble !=
+              test_json_member(test_json_member(last, "roman_numeral"), "key_region")->valuedouble);
     }
     check_vocabulary(&analyzed, "modulation");
     release(&analyzed);

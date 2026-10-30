@@ -9,6 +9,8 @@
 
 #include "cJSON.h"
 
+#include "test_support.h"
+
 /*
  * Harmonic function, six-fours and prolongations on Bach 114 and Mozart 545 (Ursatz's framework-v1-corpus).
  *
@@ -36,10 +38,6 @@ typedef struct {
 
 static const Piece PIECES[] = {{"Bach 114", "Bach 114.mid"}, {"Mozart 545", "Mozart 545.mid"}};
 
-static const cJSON *member(const cJSON *object, const char *key) {
-    return cJSON_GetObjectItemCaseSensitive(object, key);
-}
-
 static bool in_list(const char *value, const char *const *list, size_t count) {
     for (size_t i = 0; i < count; i++) {
         if (strcmp(value, list[i]) == 0) {
@@ -52,39 +50,39 @@ static bool in_list(const char *value, const char *const *list, size_t count) {
 static void check_chords(const cJSON *document, size_t *cadential_six_fours) {
     static const char *const FUNCTIONS[] = {"tonic", "predominant", "dominant"};
     static const char *const SIX_FOURS[] = {"cadential", "passing", "neighbor", "arpeggiating"};
-    const cJSON *chords = member(document, "chords");
+    const cJSON *chords = test_json_member(document, "chords");
     size_t labelled = 0;
     const cJSON *chord;
     cJSON_ArrayForEach(chord, chords) {
-        const cJSON *roman = member(chord, "roman_numeral");
-        const cJSON *function = member(chord, "function");
-        const cJSON *six_four = member(chord, "six_four");
-        const char *base = cJSON_IsString(member(roman, "base_numeral")) ? member(roman, "base_numeral")->valuestring : NULL;
-        bool applied = cJSON_IsObject(member(roman, "applied"));
+        const cJSON *roman = test_json_member(chord, "roman_numeral");
+        const cJSON *function = test_json_member(chord, "function");
+        const cJSON *six_four = test_json_member(chord, "six_four");
+        const char *base = cJSON_IsString(test_json_member(roman, "base_numeral")) ? test_json_member(roman, "base_numeral")->valuestring : NULL;
+        bool applied = cJSON_IsObject(test_json_member(roman, "applied"));
         if (base) {
             labelled++;
             CHECK(cJSON_IsObject(function));
         }
         if (six_four) {
-            CHECK(in_list(member(six_four, "type")->valuestring, SIX_FOURS, 4));
-            *cadential_six_fours += strcmp(member(six_four, "type")->valuestring, "cadential") == 0 ? 1 : 0;
+            CHECK(in_list(test_json_member(six_four, "type")->valuestring, SIX_FOURS, 4));
+            *cadential_six_fours += strcmp(test_json_member(six_four, "type")->valuestring, "cadential") == 0 ? 1 : 0;
         }
         if (!function) {
             continue;
         }
-        const char *name = member(function, "name")->valuestring;
-        const cJSON *predominant = member(function, "predominant");
+        const char *name = test_json_member(function, "name")->valuestring;
+        const cJSON *predominant = test_json_member(function, "predominant");
         CHECK(in_list(name, FUNCTIONS, 3));
-        CHECK(strcmp(member(function, "framework")->valuestring, "standard-harmony-v1") == 0);
-        CHECK(member(function, "uncertainty")->valuedouble >= 0.0 && member(function, "uncertainty")->valuedouble <= 1.0);
+        CHECK(strcmp(test_json_member(function, "framework")->valuestring, "standard-harmony-v1") == 0);
+        CHECK(test_json_member(function, "uncertainty")->valuedouble >= 0.0 && test_json_member(function, "uncertainty")->valuedouble <= 1.0);
         if (applied) {
             CHECK(strcmp(name, "dominant") == 0);
-            CHECK(cJSON_IsNumber(member(function, "applied_to")));
-            CHECK(member(function, "applied_to")->valueint == member(member(roman, "applied"), "target_degree")->valueint);
+            CHECK(cJSON_IsNumber(test_json_member(function, "applied_to")));
+            CHECK(test_json_member(function, "applied_to")->valueint == test_json_member(test_json_member(roman, "applied"), "target_degree")->valueint);
             CHECK(cJSON_IsNull(predominant));
             continue;
         }
-        CHECK(cJSON_IsNull(member(function, "applied_to")));
+        CHECK(cJSON_IsNull(test_json_member(function, "applied_to")));
         CHECK(strcmp(name, "predominant") == 0 ? cJSON_IsString(predominant) : cJSON_IsNull(predominant));
         if (!base) {
             continue;
@@ -107,21 +105,21 @@ static void check_chords(const cJSON *document, size_t *cadential_six_fours) {
 static void check_prolongations(const cJSON *document, const AnalysisReport *report) {
     static const char *const REASONS[] = {"passing-six-four", "neighbor-six-four", "arpeggiating-six-four",
                                           "tonic-line", "applied"};
-    const cJSON *prolongations = member(document, "prolongations");
+    const cJSON *prolongations = test_json_member(document, "prolongations");
     CHECK(cJSON_IsArray(prolongations));
     CHECK((size_t)cJSON_GetArraySize(prolongations) == report->prolongation_count);
     double previous = -1.0;
     const cJSON *prolongation;
     cJSON_ArrayForEach(prolongation, prolongations) {
-        double first = member(prolongation, "first_chord")->valuedouble;
-        double last = member(prolongation, "last_chord")->valuedouble;
+        double first = test_json_member(prolongation, "first_chord")->valuedouble;
+        double last = test_json_member(prolongation, "last_chord")->valuedouble;
         CHECK(first > previous && last > first && last < (double)report->entry_count);
         previous = first;
-        const char *function = member(prolongation, "function")->valuestring;
+        const char *function = test_json_member(prolongation, "function")->valuestring;
         CHECK(strcmp(function, "tonic") == 0 || strcmp(function, "dominant") == 0);
-        CHECK(strcmp(member(prolongation, "framework")->valuestring, "standard-harmony-v1") == 0);
-        CHECK(cJSON_GetArraySize(member(prolongation, "note_ids")) > 0);
-        const cJSON *reasons = member(prolongation, "reasons");
+        CHECK(strcmp(test_json_member(prolongation, "framework")->valuestring, "standard-harmony-v1") == 0);
+        CHECK(cJSON_GetArraySize(test_json_member(prolongation, "note_ids")) > 0);
+        const cJSON *reasons = test_json_member(prolongation, "reasons");
         CHECK(cJSON_GetArraySize(reasons) > 0);
         const cJSON *reason;
         cJSON_ArrayForEach(reason, reasons) {

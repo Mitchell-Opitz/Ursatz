@@ -8,6 +8,8 @@
 #include <ursatz_analyzer/corpus.h>
 #include <ursatz_analyzer/similar_material.h>
 
+#include "test_support.h"
+
 /*
  * The similar material search over the "reference" corpus CMake builds in the build tree (the five framework-v1
  * pieces). The opening four soprano notes of Mozart 545 are the motive: they must come back first, at m. 1 with
@@ -28,35 +30,6 @@ static int failures = 0;
             failures++;                                                                                                \
         }                                                                                                              \
     } while (0)
-
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    rewind(file);
-    char *data = malloc((size_t)size + 1);
-    if (data && fread(data, 1, (size_t)size, file) != (size_t)size) {
-        free(data);
-        data = NULL;
-    }
-    fclose(file);
-    if (data) {
-        data[size] = '\0';
-    }
-    return data;
-}
-
-static bool write_file(const char *path, const char *data) {
-    FILE *file = fopen(path, "wb");
-    if (!file) {
-        return false;
-    }
-    bool ok = fputs(data, file) >= 0;
-    return fclose(file) == 0 && ok;
-}
 
 /* C5 E5 G5 B4, eighth notes at 480 ticks to the quarter: a MIDI file of one track. */
 static bool write_motive_midi(const char *path) {
@@ -110,7 +83,7 @@ static char *render(const SimilarResults *results) {
 static bool mozart_motive(SimilarQuery *query, int transpose) {
     char path[1100];
     snprintf(path, sizeof path, "%s/Mozart 545.mid.analysis.json", work_dir);
-    char *json = read_file(path);
+    char *json = test_read_file(path);
     cJSON *document = json ? cJSON_Parse(json) : NULL;
     free(json);
     SimilarNote *notes = calloc(4, sizeof *notes);
@@ -143,10 +116,10 @@ static void check_snapshot(const char *text) {
     snprintf(snapshot_path, sizeof snapshot_path, "%s/similar.reference.txt", URSATZ_SNAPSHOT_DIR);
     const char *update = getenv("UPDATE_SNAPSHOTS");
     if (update && strcmp(update, "1") == 0) {
-        CHECK(write_file(snapshot_path, text), "cannot write %s", snapshot_path);
+        CHECK(test_write_file(snapshot_path, text), "cannot write %s", snapshot_path);
         return;
     }
-    char *expected = read_file(snapshot_path);
+    char *expected = test_read_file(snapshot_path);
     CHECK(expected && strcmp(expected, text) == 0, "results differ from %s", snapshot_path);
     free(expected);
 }
@@ -284,7 +257,7 @@ static void test_queries(void) {
     snprintf(path, sizeof path, "%s/not-a-corpus", work_dir);
     mkdir(path, 0777);
     snprintf(path, sizeof path, "%s/not-a-corpus/corpus-index.json", work_dir);
-    CHECK(write_file(path, "{\"schema\": \"something-else\"}"), "cannot write the fake index");
+    CHECK(test_write_file(path, "{\"schema\": \"something-else\"}"), "cannot write the fake index");
     CHECK(similar_query_from_numerals("I V", &query) == SIMILAR_OK, "I V again");
     snprintf(path, sizeof path, "%s/not-a-corpus", work_dir);
     CHECK(similar_material_find(path, &query, NULL, &results) == SIMILAR_ERR_FORMAT, "a foreign index");
