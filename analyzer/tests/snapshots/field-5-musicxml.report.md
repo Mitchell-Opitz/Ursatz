@@ -940,35 +940,39 @@ By base numeral (inversions together):
 
 ## Cadences
 
-The library's standard-harmony analysis found 10 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
+The library's standard-harmony analysis found 12 cadences from the chords, the meter and the soprano. Position is where the arrival begins. Key is the key region of the arrival. Soprano is the soprano's scale degree at the arrival. Boundary marks a half cadence added before a section start.
 
 | Position | Type | Key | Soprano | Beat strength | Boundary |
 | --- | --- | --- | --- | --- | --- |
 | m. 8, beat 1 | half | Bb major | 5 | strong | no |
 | m. 19, beat 1 | half | Bb major | 4 | strong | no |
-| m. 20, beat 1 | imperfect-authentic | Bb major | 1 | strong | no |
+| m. 20, beat 1 | perfect-authentic | Bb major | 1 | strong | no |
 | m. 21, beat 1 | half | Bb major | 4 | strong | no |
 | m. 22, beat 1 | imperfect-authentic | Bb major | 3 | strong | no |
 | m. 34, beat 3 | half | Bb major | 1 | medium | no |
 | m. 39, beat 1 | half | Bb major | 4 | strong | no |
-| m. 40, beat 1 | imperfect-authentic | Bb major | 1 | strong | no |
+| m. 40, beat 1 | perfect-authentic | Bb major | 1 | strong | no |
 | m. 41, beat 1 | half | Bb major | 4 | strong | no |
 | m. 41, beat 3 | half | Bb major | 4 | medium | no |
+| m. 42, beat 3 | evaded | Bb major | 1 | medium | no |
+| m. 43, beat 1 | evaded | Bb major | 1 | strong | no |
 
 ### Cadence plan
 
 1. m. 8, beat 1: half in Bb major
 2. m. 19, beat 1: half in Bb major
-3. m. 20, beat 1: imperfect-authentic in Bb major
+3. m. 20, beat 1: perfect-authentic in Bb major
 4. m. 21, beat 1: half in Bb major
 5. m. 22, beat 1: imperfect-authentic in Bb major
 6. m. 34, beat 3: half in Bb major
 7. m. 39, beat 1: half in Bb major
-8. m. 40, beat 1: imperfect-authentic in Bb major
+8. m. 40, beat 1: perfect-authentic in Bb major
 9. m. 41, beat 1: half in Bb major
 10. m. 41, beat 3: half in Bb major
+11. m. 42, beat 3: evaded in Bb major
+12. m. 43, beat 1: evaded in Bb major
 
-**Counts:** half 7, imperfect-authentic 3.
+**Counts:** half 7, perfect-authentic 2, imperfect-authentic 1, evaded 2.
 
 ## Phrases
 
@@ -978,12 +982,12 @@ The library's standard-form analysis found 9 phrases from the soprano, the meter
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | mm. 1 to 8 | 8 | half (m. 8, beat 1) | cadence | beginning | - |
 | 2 | mm. 9 to 19 | 11 | half (m. 19, beat 1) | cadence | middle | internal +3 (mm. 13 to 19) |
-| 3 | m. 20 | 1 | imperfect-authentic (m. 20, beat 1) | cadence | middle | - |
+| 3 | m. 20 | 1 | perfect-authentic (m. 20, beat 1) | cadence | middle | - |
 | 4 | m. 21 | 1 | half (m. 21, beat 1) | cadence | middle | - |
 | 5 | m. 22 | 1 | imperfect-authentic (m. 22, beat 1) | cadence | middle | - |
 | 6 | mm. 23 to 34 | 12 | half (m. 34, beat 3) | cadence | middle | internal +4 (mm. 27 to 34) |
 | 7 | mm. 35 to 39 | 5 | half (m. 39, beat 1) | cadence | middle | - |
-| 8 | m. 40 | 1 | imperfect-authentic (m. 40, beat 1) | cadence | middle | contraction -4 (m. 40) |
+| 8 | m. 40 | 1 | perfect-authentic (m. 40, beat 1) | cadence | middle | contraction -4 (m. 40) |
 | 9 | m. 41 | 1 | half (m. 41, beat 1) | cadence | ending | external post-cadential-extension +2 (mm. 42 to 43) |
 
 - **Phrase 1:** ideas basic-idea (mm. 1 to 2), contrasting-idea (mm. 3 to 4), contrasting-idea (mm. 5 to 6), contrasting-idea (mm. 7 to 8); subphrases mm. 1 to 4, mm. 5 to 8; phrase model Tb (m. 1, beat 1), PD (m. 7, beat 3), D (m. 8, beat 1)
@@ -1005,7 +1009,7 @@ The library's standard-form analysis found 4 themes from the phrases, their idea
 | 1 | hybrid | slightly-less-common | mm. 1 to 8 | 8 | compound-basic-idea (mm. 1 to 4), continuation (mm. 5 to 8, half (m. 8, beat 1)) | - |
 | 2 | hybrid | slightly-less-common | mm. 9 to 19 | 11 | compound-basic-idea (mm. 9 to 12), continuation (mm. 13 to 19, half (m. 19, beat 1)) | - |
 | 3 | hybrid | slightly-less-common | mm. 23 to 34 | 12 | compound-basic-idea (mm. 23 to 26), continuation (mm. 27 to 34, half (m. 34, beat 3)) | - |
-| 4 | hybrid | slightly-less-common | mm. 35 to 40 | 6 | antecedent (mm. 35 to 39, half (m. 39, beat 1)), continuation (m. 40, imperfect-authentic (m. 40, beat 1)) | fragmentation |
+| 4 | hybrid | slightly-less-common | mm. 35 to 40 | 6 | antecedent (mm. 35 to 39, half (m. 39, beat 1)), continuation (m. 40, perfect-authentic (m. 40, beat 1)) | fragmentation |
 
 ## Form plan
 
@@ -1013,9 +1017,9 @@ The kernel's form structure detection grouped the phrases into 4 sections, closi
 
 | Section | Measures | Key | Phrases | Closing cadence | Returns |
 | --- | --- | --- | --- | --- | --- |
-| A | mm. 1 to 20 | Bb major | 1 to 3 | imperfect-authentic (m. 20, beat 1) | - |
+| A | mm. 1 to 20 | Bb major | 1 to 3 | perfect-authentic (m. 20, beat 1) | - |
 | B | mm. 21 to 22 | Bb major | 4 to 5 | imperfect-authentic (m. 22, beat 1) | - |
-| A' | mm. 23 to 40 | Bb major | 6 to 8 | imperfect-authentic (m. 40, beat 1) | returns A (similarity 0.83) |
+| A' | mm. 23 to 40 | Bb major | 6 to 8 | perfect-authentic (m. 40, beat 1) | returns A (similarity 0.83) |
 | C | mm. 41 to 43 | Bb major | 9 | half (m. 41, beat 1) | - |
 
 ### Thematic returns
@@ -1098,14 +1102,14 @@ The library's melody adapter read the soprano of each phrase as a line of notes:
 | Phrase | Measures | Notes | Range | Climax | Up | Down | Same | Steps | Leaps |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | mm. 1 to 8 | 21 | F4 to G5 (14) | G5, m. 1, beat 4 | 10 | 9 | 1 | 12 | 7 |
-| 2 | mm. 9 to 19 | 28 | F4 to G5 (14) | G5, m. 9, beat 4 | 13 | 11 | 3 | 12 | 12 |
-| 3 | m. 20 | 1 | F5 to F5 (0) | F5, m. 19, beat 4.67 | 0 | 0 | 0 | 0 | 0 |
-| 4 | m. 21 | 1 | D5 to D5 (0) | D5, m. 20, beat 4.67 | 0 | 0 | 0 | 0 | 0 |
-| 5 | m. 22 | 1 | F5 to F5 (0) | F5, m. 21, beat 4.67 | 0 | 0 | 0 | 0 | 0 |
-| 6 | mm. 23 to 34 | 38 | F4 to C6 (19) | C6, m. 24, beat 3.5 | 16 | 16 | 5 | 20 | 12 |
-| 7 | mm. 35 to 39 | 14 | G#4 to A#6 (26) | A#6, m. 36, beat 2.67 | 5 | 7 | 0 | 6 | 5 |
-| 8 | m. 40 | 1 | F5 to F5 (0) | F5, m. 39, beat 4.67 | 0 | 0 | 0 | 0 | 0 |
-| 9 | mm. 41 to 43 | 11 | A#4 to A#5 (12) | A#5, m. 42, beat 3 | 6 | 3 | 0 | 5 | 4 |
+| 2 | mm. 9 to 19 | 29 | F4 to G5 (14) | G5, m. 9, beat 4 | 14 | 11 | 3 | 13 | 12 |
+| 3 | m. 20 | 1 | A#4 to A#4 (0) | A#4, m. 20, beat 1 | 0 | 0 | 0 | 0 | 0 |
+| 4 | m. 21 | 1 | D#5 to D#5 (0) | D#5, m. 21, beat 1 | 0 | 0 | 0 | 0 | 0 |
+| 5 | m. 22 | 1 | D5 to D5 (0) | D5, m. 22, beat 2 | 0 | 0 | 0 | 0 | 0 |
+| 6 | mm. 23 to 34 | 37 | F4 to C6 (19) | C6, m. 24, beat 3.5 | 15 | 16 | 5 | 20 | 11 |
+| 7 | mm. 35 to 39 | 14 | G#4 to A#6 (26) | A#6, m. 36, beat 2.67 | 6 | 6 | 0 | 6 | 5 |
+| 8 | m. 40 | 1 | A#4 to A#4 (0) | A#4, m. 40, beat 1 | 0 | 0 | 0 | 0 | 0 |
+| 9 | mm. 41 to 43 | 11 | A#3 to A#5 (24) | A#5, m. 42, beat 3 | 5 | 3 | 0 | 4 | 4 |
 
 ### Leaps
 
@@ -1118,7 +1122,7 @@ A leap is an interval of a third or larger. The library's rule asks a leap of a 
 | 3 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 4 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 5 | 0 | 0 | 0 | 0 | 0 | 0 |
-| 6 | 12 | 2 | 6 | 4 | 0 | 0 |
+| 6 | 11 | 2 | 6 | 3 | 0 | 0 |
 | 7 | 5 | 2 | 1 | 2 | 0 | 1 |
 | 8 | 0 | 0 | 0 | 0 | 0 | 0 |
 | 9 | 4 | 0 | 3 | 1 | 0 | 2 |
@@ -1130,14 +1134,14 @@ Each melody note is set against the chord of the segment it starts in, as the li
 | Phrase | Notes | Chord tones | Non-chord tones | Unclassified | By type |
 | --- | --- | --- | --- | --- | --- |
 | 1 | 21 | 18 | 1 | 2 | appoggiatura 1 |
-| 2 | 28 | 17 | 3 | 8 | passing 1, anticipation 1, appoggiatura 1 |
+| 2 | 29 | 18 | 4 | 7 | passing 1, anticipation 1, appoggiatura 2 |
 | 3 | 1 | 1 | 0 | 0 | - |
-| 4 | 1 | 0 | 0 | 1 | - |
+| 4 | 1 | 1 | 0 | 0 | - |
 | 5 | 1 | 1 | 0 | 0 | - |
-| 6 | 38 | 23 | 6 | 9 | passing 4, neighbor 1, appoggiatura 1 |
-| 7 | 14 | 5 | 2 | 7 | passing 1, appoggiatura 1 |
+| 6 | 37 | 26 | 2 | 9 | anticipation 1, appoggiatura 1 |
+| 7 | 14 | 6 | 2 | 6 | passing 1, appoggiatura 1 |
 | 8 | 1 | 1 | 0 | 0 | - |
-| 9 | 11 | 8 | 2 | 1 | neighbor 2 |
+| 9 | 11 | 10 | 0 | 1 | - |
 
 ### Tendencies
 
@@ -1150,10 +1154,10 @@ The library's melodic tendencies are soft preferences a well-formed line usually
 | 3 | holds | holds | holds | holds | does not hold | 0 | 0 |
 | 4 | holds | holds | holds | holds | does not hold | 0 | 0 |
 | 5 | holds | holds | holds | holds | does not hold | 0 | 0 |
-| 6 | does not hold | does not hold | holds | holds | does not hold | 0 | 1 (m. 28, beat 3.75) |
+| 6 | holds | does not hold | holds | holds | does not hold | 0 | 1 (m. 28, beat 3.75) |
 | 7 | does not hold | holds | holds | does not hold | holds | 1 | 0 |
 | 8 | holds | holds | holds | holds | does not hold | 0 | 0 |
-| 9 | does not hold | holds | does not hold | does not hold | holds | 0 | 1 (m. 42, beat 2.67) |
+| 9 | does not hold | holds | holds | does not hold | holds | 0 | 1 (m. 42, beat 2.67) |
 
 ### Development
 
@@ -1223,10 +1227,12 @@ Changes per measure over the two measures before each cadence's arrival (Approac
 | 8 | m. 40 | 3.5 | 3.5 | no |
 | 9 | m. 41 | 4 | 3.5 | no |
 | 10 | m. 41 | 4 | 3.5 | no |
+| 11 | m. 42 | 3.5 | 3.5 | no |
+| 12 | m. 43 | 3.5 | 4.5 | yes |
 
 ## Rhythm and meter
 
-**Meter fit:** 12/8, scale 1, no pickup (fit 0.80); no better reading found
+**Meter fit:** 12/8, scale 1, no pickup (fit 0.79); no better reading found
 
 ### Density
 
