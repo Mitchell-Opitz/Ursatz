@@ -194,6 +194,21 @@ static void test_stage_inputs(TestPiece *piece) {
     const MeterMap *map = piece->import.meter_map;
     assert(count == segments->count && lines != NULL && chords != NULL && romans != NULL);
 
+    /* the segment lines: one entry per chord segment, the voice segment sounding at its start (here the chord segments merge: 4 over 14) */
+    const OuterVoiceLines *segment_lines = analysis_chain_segment_outer_voices(chain);
+    const ChainSegments *voice_segments = analysis_chain_voice_segments(chain);
+    assert(analysis_chain_segment_outer_voices(NULL) == NULL);
+    assert(segment_lines != NULL && segment_lines->count == count && lines->count == voice_segments->count && lines->count > count);
+    for (size_t i = 0; i < count; i++) {
+        size_t v = 0;
+        while (v + 1 < voice_segments->count && voice_segments->starts[v + 1] <= segments->starts[i] + 1e-12) {
+            v++;
+        }
+        assert(segment_lines->soprano[i].present == lines->soprano[v].present && segment_lines->bass[i].present == lines->bass[v].present);
+        assert(strcmp(entity_id_value(segment_lines->soprano[i].note_id), entity_id_value(lines->soprano[v].note_id)) == 0);
+        assert(strcmp(entity_id_value(segment_lines->bass[i].note_id), entity_id_value(lines->bass[v].note_id)) == 0);
+    }
+
     /* harmony and cadences */
     ChainHarmonyInputs harmony;
     memset(&harmony, 0, sizeof(harmony));
@@ -351,6 +366,69 @@ static void test_stage_inputs(TestPiece *piece) {
     musical_time_destroy(zero);
 }
 
+static void test_segment_lines(TestPiece *piece) {
+    /* the outer lines are read on the voice segments (one per change, not merged); the chord segments are merged: four, one per measure */
+    ChainSegments chord_segments;
+    ChainSegments voice_segments;
+    memset(&chord_segments, 0, sizeof(chord_segments));
+    memset(&voice_segments, 0, sizeof(voice_segments));
+    AdaptiveSegmentationConfig beats = adaptive_segmentation_config_default();
+    beats.merge_unchanged_harmony = false;
+    assert(chain_build_segments(&piece->set, NULL, &chord_segments) == CHAIN_INPUT_OK);
+    assert(chain_build_segments(&piece->set, &beats, &voice_segments) == CHAIN_INPUT_OK);
+    assert(chord_segments.count == 4 && voice_segments.count == 14);
+    ChainPitches pitches;
+    memset(&pitches, 0, sizeof(pitches));
+    assert(chain_build_pitches(&piece->set, &pitches) == CHAIN_INPUT_OK);
+    OuterVoiceLines lines = {0};
+    assert(outer_voice_extract(&voice_segments.sonorities, pitches.events, pitches.values, pitches.count, piece->set.map,
+                               standard_meter_segmentation_beat_grid, NULL, NULL, &lines) == OUTER_VOICE_OK);
+
+    OuterVoiceLines out = {0};
+    assert(chain_build_segment_lines(NULL, &lines, &chord_segments, 4, &out) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_build_segment_lines(&voice_segments, NULL, &chord_segments, 4, &out) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_build_segment_lines(&voice_segments, &lines, NULL, 4, &out) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_build_segment_lines(&voice_segments, &lines, &chord_segments, 4, NULL) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(chain_build_segment_lines(&voice_segments, &lines, &chord_segments, 5, &out) == CHAIN_INPUT_ERR_NULL_ARGUMENT);
+    assert(out.soprano == NULL && out.bass == NULL && out.count == 0);
+
+    /* each chord segment starts where a voice segment starts: its entry is that voice segment's */
+    assert(chain_build_segment_lines(&voice_segments, &lines, &chord_segments, 4, &out) == CHAIN_INPUT_OK);
+    assert(out.count == 4);
+    for (size_t i = 0; i < 4; i++) {
+        size_t v = 0;
+        while (v + 1 < voice_segments.count && voice_segments.starts[v + 1] <= chord_segments.starts[i] + 1e-12) {
+            v++;
+        }
+        assert(out.soprano[i].segment_index == i && out.bass[i].segment_index == i);
+        assert(out.soprano[i].present == lines.soprano[v].present && out.bass[i].present == lines.bass[v].present);
+        assert(out.soprano[i].present && out.bass[i].present);
+        assert(out.soprano[i].note_id != lines.soprano[v].note_id && out.soprano[i].pitch != lines.soprano[v].pitch); /* copies */
+        assert(strcmp(entity_id_value(out.soprano[i].note_id), entity_id_value(lines.soprano[v].note_id)) == 0);
+        assert(pitch_numeric_value_equals(out.soprano[i].pitch, lines.soprano[v].pitch));
+        assert(strcmp(entity_id_value(out.bass[i].note_id), entity_id_value(lines.bass[v].note_id)) == 0);
+    }
+    assert(pitch_numeric_value_position_numerator(out.soprano[0].pitch) == 76); /* E5 */
+    outer_voice_lines_destroy(&out);
+
+    /* chord segments that start inside a note: before the first voice segment the line is absent, and two segments over one held note share it */
+    double starts[4] = {-0.5, 0.1, 0.2, 1.0};
+    ChainSegments shifted = chord_segments;
+    shifted.starts = starts;
+    assert(chain_build_segment_lines(&voice_segments, &lines, &shifted, 4, &out) == CHAIN_INPUT_OK);
+    assert(!out.soprano[0].present && !out.bass[0].present && out.soprano[0].note_id == NULL && out.soprano[0].span != NULL);
+    assert(out.soprano[1].present && out.soprano[2].present);
+    assert(strcmp(entity_id_value(out.soprano[1].note_id), entity_id_value(out.soprano[2].note_id)) == 0);
+    assert(strcmp(entity_id_value(out.soprano[1].note_id), entity_id_value(lines.soprano[0].note_id)) == 0);
+    assert(strcmp(entity_id_value(out.bass[1].note_id), entity_id_value(out.bass[2].note_id)) == 0);
+    outer_voice_lines_destroy(&out);
+
+    outer_voice_lines_destroy(&lines);
+    chain_pitches_destroy(&pitches);
+    chain_segments_destroy(&voice_segments);
+    chain_segments_destroy(&chord_segments);
+}
+
 int main(void) {
     TestPiece piece;
     test_piece_init(&piece);
@@ -359,6 +437,7 @@ int main(void) {
     test_keys(&piece);
     test_pitches(&piece);
     test_stage_inputs(&piece);
+    test_segment_lines(&piece);
     test_piece_destroy(&piece);
     printf("test_chain_inputs: ok\n");
     return 0;
