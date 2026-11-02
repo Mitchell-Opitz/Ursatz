@@ -223,7 +223,7 @@ static bool collect_pass(AnalyzerPass *pass) {
         !collect_non_chord_tones(pass)) {
         return false;
     }
-    if (!harmony_stage_prepare(notes->meter.meter_map, pass->library, &pass->harmony) ||
+    if (!harmony_stage_prepare(pass->library, &pass->harmony) ||
         !harmony_stage_collect_cadences(&pass->harmony, report) ||
         !harmony_stage_collect_functions(&pass->harmony, report) ||
         !harmony_stage_collect_six_fours_and_prolongations(&pass->harmony, report) ||

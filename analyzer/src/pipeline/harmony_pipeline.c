@@ -9,25 +9,18 @@
 #include "standard-harmony/analysis/analysis_phrase.h"
 #include "standard-harmony/six_four_type.h"
 
-bool harmony_stage_prepare(const MeterMap *map, const AnalysisChain *library, HarmonyStage *out) {
+bool harmony_stage_prepare(const AnalysisChain *library, HarmonyStage *out) {
     *out = (HarmonyStage){0};
     size_t count = analysis_chain_segment_count(library);
     const ChainSegments *segments = analysis_chain_segments(library);
     const HarmonyCadences *cadences = analysis_chain_cadences(library);
-    if (count == 0 || !segments || !cadences || !analysis_chain_chord_inputs(library) ||
-        !analysis_chain_numerals(library) || !analysis_chain_outer_voices(library)) {
+    const ChainHarmonyInputs *inputs = analysis_chain_harmony_inputs(library);
+    const HarmonySegment *prepared = analysis_chain_prepared_harmony(library);
+    if (count == 0 || !segments || !cadences || !inputs || !inputs->inputs || !prepared) {
         return true;
     }
-    ChainInputStatus built =
-        chain_build_harmony_segments(segments, count, map, analysis_chain_chord_inputs(library),
-                                     analysis_chain_numerals(library), analysis_chain_outer_voices(library),
-                                     &out->inputs);
-    if (built == CHAIN_INPUT_ERR_ALLOC) {
-        return false;
-    }
-    if (built != CHAIN_INPUT_OK) {
-        return true; /* a segment off the meter: the library cannot prepare the piece, so it has no functions */
-    }
+    out->inputs = *inputs;
+    out->segments = prepared;
     out->count = count;
     out->cadences = *cadences;
     /* A half cadence with an alternative reading is the boundary step's result (R-038, C9): the dominant before a
@@ -38,13 +31,6 @@ bool harmony_stage_prepare(const MeterMap *map, const AnalysisChain *library, Ha
     }
     for (size_t i = 0; i < cadences->count; i++) {
         out->boundary[i] = cadences->items[i].alternative.present && cadences->items[i].type == CADENCE_TYPE_HALF;
-    }
-    HarmonyAnalysisStatus status = harmony_analysis_prepare(out->inputs.inputs, count, &out->segments);
-    if (status == HARMONY_ANALYSIS_ERR_ALLOC) {
-        return false;
-    }
-    if (status != HARMONY_ANALYSIS_OK) {
-        out->segments = NULL; /* the library declined the inputs: no functions */
     }
     return true;
 }
@@ -97,11 +83,10 @@ bool harmony_stage_collect_cadences(const HarmonyStage *stage, AnalysisReport *r
     return true;
 }
 
-bool harmony_stage_collect_functions(HarmonyStage *stage, AnalysisReport *report) {
+bool harmony_stage_collect_functions(const HarmonyStage *stage, AnalysisReport *report) {
     if (!stage->segments || stage->count == 0) {
         return true;
     }
-    harmony_analysis_mark_cadential(stage->segments, stage->count);
     HarmonyFunctionResult *results = NULL;
     if (harmony_analysis_assign_functions(stage->segments, stage->count, &results) != HARMONY_FUNCTION_OK) {
         return false;
@@ -126,7 +111,7 @@ bool harmony_stage_collect_functions(HarmonyStage *stage, AnalysisReport *report
     return true;
 }
 
-bool harmony_stage_collect_six_fours_and_prolongations(HarmonyStage *stage, AnalysisReport *report) {
+bool harmony_stage_collect_six_fours_and_prolongations(const HarmonyStage *stage, AnalysisReport *report) {
     if (!stage->segments || stage->count == 0) {
         return true;
     }
@@ -233,7 +218,5 @@ void harmony_stage_destroy(HarmonyStage *stage) {
         return;
     }
     free(stage->boundary);
-    harmony_analysis_destroy(stage->segments);
-    chain_harmony_inputs_destroy(&stage->inputs);
     *stage = (HarmonyStage){0};
 }
