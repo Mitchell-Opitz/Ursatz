@@ -28,29 +28,20 @@
 
 #define NO_NOTE SIZE_MAX
 
-/* The chain's voice grid again, for the notes in its cells and the spellings of its rows (the chain keeps its grid to
-   itself), and what keeps it alive. */
+/* The chain's voice grid (borrowed), for the notes in its cells and the spellings of its rows, and what the stage
+   builds on it. */
 typedef struct {
     size_t voice_count;
     size_t row_count;
-    ChainPitches pitches;
     ChainVoiceGrid grid;
     size_t *note_of_cell; /* ImportedNotes index of each cell's note, NO_NOTE where the voice rests */
     StandardCounterpointPreparedGrid prepared;
-    bool have_pitches;
-    bool have_grid;
     bool prepared_ok;
 } VoiceGrid;
 
 static void grid_destroy(VoiceGrid *build) {
     if (build->prepared_ok) {
         standard_counterpoint_grid_destroy(&build->prepared);
-    }
-    if (build->have_grid) {
-        chain_voice_grid_destroy(&build->grid);
-    }
-    if (build->have_pitches) {
-        chain_pitches_destroy(&build->pitches);
     }
     free(build->note_of_cell);
     memset(build, 0, sizeof(*build));
@@ -60,25 +51,17 @@ static const AnalysisVoiceCell *cell_of(const VoiceGrid *build, size_t row, size
     return &build->grid.grid.cells[row * build->voice_count + voice];
 }
 
-/* Builds the chain's grid again and the note of each cell. false only on allocation failure; *declined is set when the
+/* Takes the chain's grid and finds the note of each cell. false only on allocation failure; *declined is set when the
    library cannot take the piece. */
 static bool grid_build(const ImportedNotes *notes, const ChainInput *input, const AnalysisChain *library,
                        VoiceGrid *build, bool *declined) {
     *declined = false;
-    const ChainSegments *segments = analysis_chain_segments(library);
-    ChainInputStatus status = chain_build_pitches(&input->set, &build->pitches);
-    if (status != CHAIN_INPUT_OK) {
-        *declined = status != CHAIN_INPUT_ERR_ALLOC;
-        return *declined;
+    const ChainVoiceGrid *grid = analysis_chain_voice_grid(library);
+    if (!grid) {
+        *declined = true;
+        return true;
     }
-    build->have_pitches = true;
-    status = chain_build_voice_grid(&input->set, &build->pitches, segments, analysis_chain_segment_count(library),
-                                    &build->grid);
-    if (status != CHAIN_INPUT_OK) {
-        *declined = status != CHAIN_INPUT_ERR_ALLOC;
-        return *declined;
-    }
-    build->have_grid = true;
+    build->grid = *grid;
     build->voice_count = build->grid.grid.voice_count;
     build->row_count = build->grid.grid.segment_count;
     size_t cells = build->row_count * build->voice_count;

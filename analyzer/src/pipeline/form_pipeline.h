@@ -25,14 +25,13 @@
  * the outer-voice soprano, the chord segments, the meter and the cadences of the harmony stage. The analyzer adds no
  * music theory: every phrase, idea and subphrase is the library's.
  *
- * The chain keeps its form input to itself. A FormStage rebuilds it with the chain's own builder (chain_build_form_input)
- * from the same segments, lines and cadences, for what the results index into: the input's notes (the soprano as notes,
+ * A FormStage keeps the chain's form input (analysis_chain_form_input), borrowed, for what the results index into: the input's notes (the soprano as notes,
  * consecutive voice segments on one note being one note), its cadences (ids "chain-<index into the cadences>") and the
  * meter. The results are the chain's, borrowed: the chain, the chain input and the notes must outlive the stage.
  * A piece the library cannot read as phrases leaves the stage without phrases; that is not an error.
  */
 typedef struct {
-    ChainFormInput built;                  /* owned; the form input again, for the indices the results use */
+    ChainFormInput built;                  /* borrowed from the chain; the form input, for the indices the results use */
     bool have_input;                       /* built holds an input */
     size_t *note_indices;                  /* owned; per input note, the ImportedNotes index of its first constituent note */
     size_t note_index_count;
@@ -42,7 +41,7 @@ typedef struct {
     StandardFormExpansions expansions;     /* borrowed */
 } FormStage;
 
-/* Takes the chain's phrases, ideas, themes and expansions, and rebuilds the input they index. Returns false only on
+/* Takes the chain's phrases, ideas, themes and expansions, and the input they index. Returns false only on
    allocation failure. */
 bool form_stage_read(FormStage *stage, const ImportedNotes *notes, const ChainInput *input,
                      const AnalysisChain *library);

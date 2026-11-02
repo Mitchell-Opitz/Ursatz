@@ -19,9 +19,9 @@
  *
  * The chain's grid is the kernel's rule-based voice separation (analysis/voice_separation.h) over every note of the piece
  * as one stream (the texture stage separates per track or part; the voice leading reads the whole texture), with each
- * voice's note sounding at the start of each chord segment: one row per report entry, voice 0 the top. The chain keeps
- * its grid to itself; the stage builds it again with the chain's own builder (chain_build_voice_grid) for the note in each
- * cell and the spellings the doubling and spacing read. A voice beyond ANALYSIS_VOICE_LEADING_MAX_VOICES is left out of
+ * voice's note sounding at the start of each chord segment: one row per report entry, voice 0 the top. The stage reads
+ * it from the chain (analysis_chain_voice_grid) for the note in each cell and the spellings the doubling and spacing
+ * read. A voice beyond ANALYSIS_VOICE_LEADING_MAX_VOICES is left out of
  * the doubling and spacing.
  *
  * A piece the chain or the library has no voice leading for has none (present false), which is not an error.

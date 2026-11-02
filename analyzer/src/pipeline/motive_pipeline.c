@@ -37,22 +37,12 @@ static const AnalysisKeyRegion *region_at(const AnalysisReport *report, long lon
 bool motive_stage_read(MotiveStage *stage, const ChainInput *input, const AnalysisChain *library) {
     memset(stage, 0, sizeof(*stage));
     const StandardFormMotives *motives = analysis_chain_motives(library);
-    const ChainSegments *segments = analysis_chain_segments(library);
-    const HarmonyCadences *cadences = analysis_chain_cadences(library);
-    int home = analysis_chain_home_key(library);
-    if (!motives || !segments || !cadences || home < 0 || motives->family_count == 0) {
+    const ChainFormInput *built = analysis_chain_motive_input(library);
+    if (!motives || !built || motives->family_count == 0) {
         return true; /* the chain found no motive, or had no key to read the degrees in */
     }
-    /* The chain keeps the note-level input to itself; its builder gives it again, for the notes the occurrences index
-       and the meter. */
-    ChainInputStatus built =
-        chain_build_motive_input(&input->set, segments, 1, INT_MAX, common_practice_key_index_tonic(home),
-                                 common_practice_key_index_mode(home), cadences, &stage->built);
-    if (built != CHAIN_INPUT_OK) {
-        chain_form_input_destroy(&stage->built);
-        memset(&stage->built, 0, sizeof(stage->built));
-        return built != CHAIN_INPUT_ERR_ALLOC;
-    }
+    /* The chain's note-level input, borrowed, for the notes the occurrences index and the meter. */
+    stage->built = *built;
     stage->have_input = true;
     size_t count = stage->built.input.note_count;
     stage->note_indices = malloc(sizeof(size_t) * (count > 0 ? count : 1));
@@ -418,8 +408,5 @@ void motive_stage_destroy(MotiveStage *stage) {
         return;
     }
     free(stage->note_indices);
-    if (stage->have_input) {
-        chain_form_input_destroy(&stage->built);
-    }
     memset(stage, 0, sizeof(*stage));
 }

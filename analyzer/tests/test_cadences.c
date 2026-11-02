@@ -30,8 +30,8 @@
  *                and m. 21 beat 3.5 of its measures; the test names them by their time in whole notes, 117/8 and
  *                165/8.
  *   Clementi 36  hc 7, pac 3, iac 2, subverted 1, the P1 B6 result.
- *   Mozart 545   the chain finds no boundary cadence: it reads the outer lines of the voice segments by chord segment
- *                index (chain_build_harmony_segments), so the root-position V that a boundary needs is not found.
+ *   Mozart 545   the chain finds no boundary cadence. The cause is not the outer-line index (the chord and voice
+ *                segmentations are equal on this piece, P24 B7a Notes) and has not been found.
  *
  * Competing readings (R-090, R-091): every claim has a share in thousandths; a claim with an alternative has the two
  * shares summing to 1000. Clementi 36 m. 12 beat 1 and m. 35 beat 1 are V to I6 with 500 evaded and 500 prolongation;

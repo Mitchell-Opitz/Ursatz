@@ -2,11 +2,10 @@
 
 #include "semantics/voice_part.h"
 #include "theory/framework.h"
+#include "standard-voicing/framework.h"
 #include "standard-voicing/spacing_rules.h"
 #include "standard-voicing/voicing_chord.h"
 
-/* standard-voicing stages no framework.h; the symbol is in the linked library. */
-const Framework *standard_voicing_framework(void);
 
 int voicing_first_wide_spacing(const PitchSpelling *const voices[4]) {
     StandardVoicingChord chord;
