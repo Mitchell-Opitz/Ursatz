@@ -159,8 +159,10 @@ standard-form/analysis/analysis_time.h frameworks/standard-form/analysis/analysi
 standard-form/framework.h frameworks/standard-form/framework.h 
 standard-form/phrase_level_form.h frameworks/standard-form/phrase_level_form.h 
 standard-harmony/analysis/analysis_phrase.h frameworks/standard-harmony/analysis/analysis_phrase.h 
+standard-markings/framework.h frameworks/standard-markings/framework.h 
 standard-meter/framework.h frameworks/standard-meter/framework.h 
 standard-texture/framework.h frameworks/standard-texture/framework.h 
+standard-voicing/framework.h frameworks/standard-voicing/framework.h 
 structure/phrase_occurrence.h src/structure/phrase_occurrence.h 
 structure/structure.h src/structure/structure.h 
 tempo_rules.h frameworks/standard-markings/tempo_rules.h 

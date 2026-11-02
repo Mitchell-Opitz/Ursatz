@@ -54,8 +54,10 @@ struct AnalysisChain {
     size_t count; /* the segments inside the scope */
     ChainSegments voice_segs;
     bool have_voice_segs;
-    OuterVoiceLines lines;
+    OuterVoiceLines lines;        /* on the voice segments */
     bool have_lines;
+    OuterVoiceLines segment_lines; /* the same lines on the chord segments */
+    bool have_segment_lines;
     CommonPracticeKeySegment *key_segments;
     MusicalTime **boundaries; /* the second pass: the phrase ends of the first, owned copies */
     size_t boundary_count;
@@ -319,6 +321,9 @@ void analysis_chain_destroy(AnalysisChain *chain) {
     }
     free(chain->boundaries);
     chain_key_segments_destroy(chain->key_segments);
+    if (chain->have_segment_lines) {
+        outer_voice_lines_destroy(&chain->segment_lines);
+    }
     if (chain->have_lines) {
         outer_voice_lines_destroy(&chain->lines);
     }
@@ -428,7 +433,7 @@ static int resolved_home(const AnalysisChain *chain) {
 static AnalysisChainStatus cadence_stage(AnalysisChain *chain) {
     Pass *p = &chain->pass;
     size_t count = chain->count;
-    if (chain_build_harmony_segments(&chain->segs, count, chain->notes->map, p->tonal_inputs, p->romans, &chain->lines,
+    if (chain_build_harmony_segments(&chain->segs, count, chain->notes->map, p->tonal_inputs, p->romans, &chain->segment_lines,
                                      &p->harmony) != CHAIN_INPUT_OK) {
         return ANALYSIS_CHAIN_ERR_CADENCES;
     }
@@ -449,7 +454,7 @@ static AnalysisChainStatus cadence_stage(AnalysisChain *chain) {
 static AnalysisChainStatus form_stage(AnalysisChain *chain) {
     Pass *p = &chain->pass;
     int last = chain->config.last_measure > 0 ? chain->config.last_measure : INT_MAX;
-    if (chain_build_form_input(chain->notes, &chain->segs, &chain->lines, chain->config.first_measure, last, &p->cadences,
+    if (chain_build_form_input(chain->notes, &chain->segs, &chain->segment_lines, chain->config.first_measure, last, &p->cadences,
                                &p->form_input) != CHAIN_INPUT_OK) {
         return ANALYSIS_CHAIN_ERR_FORM;
     }
@@ -555,7 +560,7 @@ static AnalysisChainStatus meter_stage(AnalysisChain *chain) {
         labels[s] = p->chords[s].matched ? chord_label(p->chords[s].best_chord) : NULL;
     }
     int last = chain->config.last_measure > 0 ? chain->config.last_measure : INT_MAX;
-    ChainInputStatus built = chain_build_meter_input(chain->notes, &chain->lines, &chain->segs, labels, chain->config.first_measure,
+    ChainInputStatus built = chain_build_meter_input(chain->notes, &chain->segment_lines, &chain->segs, labels, chain->config.first_measure,
                                                      last, &p->form_input.input, &p->phrases, &p->expansions, &chain->meter_input);
     free(labels);
     if (built != CHAIN_INPUT_OK) {
@@ -626,7 +631,7 @@ static AnalysisChainStatus voice_leading_stage(AnalysisChain *chain) {
 static AnalysisChainStatus melody_stage(AnalysisChain *chain) {
     int home = chain->home;
     if (home < 0 ||
-        chain_build_melody_line(&chain->segs, chain->count, chain->lines.soprano, chain->pass.chords,
+        chain_build_melody_line(&chain->segs, chain->count, chain->segment_lines.soprano, chain->pass.chords,
                                 common_practice_key_index_tonic(home), common_practice_key_index_mode(home),
                                 &chain->melody.line) != CHAIN_INPUT_OK) {
         return ANALYSIS_CHAIN_ERR_MELODY;
@@ -671,7 +676,7 @@ static AnalysisChainStatus melody_stage(AnalysisChain *chain) {
 
 static AnalysisChainStatus schema_stage(AnalysisChain *chain) {
     if (chain->home < 0 ||
-        chain_build_galant_segments(&chain->segs, chain->count, chain->notes->map, &chain->lines, chain->home,
+        chain_build_galant_segments(&chain->segs, chain->count, chain->notes->map, &chain->segment_lines, chain->home,
                                     chain->pass.tonal_inputs, chain->pass.romans, &chain->galant) != CHAIN_INPUT_OK) {
         return ANALYSIS_CHAIN_ERR_SCHEMAS;
     }
@@ -739,6 +744,10 @@ static AnalysisChainStatus prepare(AnalysisChain *chain) {
             return ANALYSIS_CHAIN_ERR_OUTER_VOICES;
         }
         chain->have_lines = true;
+        if (chain_build_segment_lines(&chain->voice_segs, &chain->lines, &chain->segs, chain->segs.count, &chain->segment_lines) != CHAIN_INPUT_OK) {
+            return ANALYSIS_CHAIN_ERR_OUTER_VOICES;
+        }
+        chain->have_segment_lines = true;
     }
     if (wants(chain, ANALYSIS_CHAIN_STAGE_KEYS) &&
         chain_build_key_segments(&chain->segs, chain->count, &chain->config.weighting, &chain->key_segments) != CHAIN_INPUT_OK) {
@@ -893,6 +902,38 @@ const ChainSegments *analysis_chain_voice_segments(const AnalysisChain *chain) {
 
 const OuterVoiceLines *analysis_chain_outer_voices(const AnalysisChain *chain) {
     return chain != NULL && chain->have_lines ? &chain->lines : NULL;
+}
+
+const ChainPitches *analysis_chain_pitches(const AnalysisChain *chain) {
+    return chain != NULL && chain->have_pitches ? &chain->pitches : NULL;
+}
+
+const ChainHarmonyInputs *analysis_chain_harmony_inputs(const AnalysisChain *chain) {
+    return chain != NULL && chain->pass.have_harmony ? &chain->pass.harmony : NULL;
+}
+
+const HarmonySegment *analysis_chain_prepared_harmony(const AnalysisChain *chain) {
+    return chain != NULL ? chain->pass.prepared : NULL;
+}
+
+const ChainFormInput *analysis_chain_form_input(const AnalysisChain *chain) {
+    return chain != NULL && chain->pass.have_form_input ? &chain->pass.form_input : NULL;
+}
+
+const ChainFormInput *analysis_chain_motive_input(const AnalysisChain *chain) {
+    return chain != NULL && chain->have_motive_input ? &chain->motive_input : NULL;
+}
+
+const ChainVoiceGrid *analysis_chain_voice_grid(const AnalysisChain *chain) {
+    return chain != NULL && chain->have_grid ? &chain->grid : NULL;
+}
+
+const ChainGalantSegments *analysis_chain_galant_segments(const AnalysisChain *chain) {
+    return chain != NULL && chain->have_galant ? &chain->galant : NULL;
+}
+
+const OuterVoiceLines *analysis_chain_segment_outer_voices(const AnalysisChain *chain) {
+    return chain != NULL && chain->have_segment_lines ? &chain->segment_lines : NULL;
 }
 
 const HarmonyCadences *analysis_chain_cadences(const AnalysisChain *chain) {

@@ -12,6 +12,7 @@ ursatz_public_headers(standard_markings
     PREFIX standard-markings
     SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
     HEADERS
+        framework.h
         dynamics_rules.h
         tempo_rules.h
 )

@@ -607,6 +607,45 @@ static void check_subsets(const char *context, ChainInput *input, const Referenc
     analysis_chain_destroy(keys);
 }
 
+/* The outer lines on the chord segments: an entry per chord segment, the voice segment sounding at its start. */
+static void check_segment_lines(const char *context, const AnalysisChain *c) {
+    const OuterVoiceLines *lines = analysis_chain_segment_outer_voices(c);
+    const OuterVoiceLines *voice_lines = analysis_chain_outer_voices(c);
+    const ChainSegments *segments = analysis_chain_segments(c);
+    const ChainSegments *voice_segments = analysis_chain_voice_segments(c);
+    CHECK(lines != NULL && voice_lines != NULL && lines->count == segments->count && voice_lines->count == voice_segments->count);
+    for (size_t i = 0; i < lines->count; i++) {
+        size_t v = 0;
+        while (v + 1 < voice_segments->count && voice_segments->starts[v + 1] <= segments->starts[i] + 1e-12) {
+            v++;
+        }
+        bool has = voice_segments->starts[0] <= segments->starts[i] + 1e-12;
+        CHECK(lines->soprano[i].present == (has && voice_lines->soprano[v].present));
+        CHECK(lines->bass[i].present == (has && voice_lines->bass[v].present));
+        if (lines->soprano[i].present) {
+            CHECK(strcmp(entity_id_value(lines->soprano[i].note_id), entity_id_value(voice_lines->soprano[v].note_id)) == 0);
+        }
+        if (lines->bass[i].present) {
+            CHECK(strcmp(entity_id_value(lines->bass[i].note_id), entity_id_value(voice_lines->bass[v].note_id)) == 0);
+        }
+    }
+}
+
+/* The stage inputs the chain keeps: all there after a full run, none on a NULL chain, and the ones the stages read are the ones they built. */
+static void check_stage_inputs(const char *context, const AnalysisChain *c) {
+    CHECK(analysis_chain_pitches(NULL) == NULL && analysis_chain_harmony_inputs(NULL) == NULL && analysis_chain_prepared_harmony(NULL) == NULL);
+    CHECK(analysis_chain_form_input(NULL) == NULL && analysis_chain_motive_input(NULL) == NULL && analysis_chain_voice_grid(NULL) == NULL);
+    CHECK(analysis_chain_galant_segments(NULL) == NULL && analysis_chain_segment_outer_voices(NULL) == NULL);
+    CHECK(analysis_chain_pitches(c) != NULL && analysis_chain_harmony_inputs(c) != NULL && analysis_chain_prepared_harmony(c) != NULL);
+    CHECK(analysis_chain_form_input(c) != NULL && analysis_chain_motive_input(c) != NULL && analysis_chain_voice_grid(c) != NULL);
+    CHECK(analysis_chain_galant_segments(c) != NULL);
+    CHECK(analysis_chain_harmony_inputs(c)->count == analysis_chain_segment_count(c));
+    CHECK(analysis_chain_form_input(c)->input.finished && analysis_chain_motive_input(c)->input.finished);
+    CHECK(analysis_chain_form_input(c)->input.segment_count > 0 && analysis_chain_motive_input(c)->input.note_count > 0);
+    CHECK(analysis_chain_voice_grid(c)->grid.voice_count == analysis_chain_voice_leading(c)->voice_count);
+    CHECK(analysis_chain_galant_segments(c)->list.count > 0);
+}
+
 static void check_piece(const Reference *ref, bool dump) {
     ChainInput input;
     chain_input_init(&input, ref);
@@ -638,6 +677,8 @@ static void check_piece(const Reference *ref, bool dump) {
                 abort();
             }
         }
+        check_segment_lines(context, chain);
+        check_stage_inputs(context, chain);
         check_voice_leading(context, chain);
         check_subsets(context, &input, ref, chain);
         printf("  %s: %zu segments, %zu key regions, %zu cadences, %zu phrases; %d stages as expected\n", context, segments, key_regions,
