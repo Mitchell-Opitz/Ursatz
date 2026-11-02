@@ -280,8 +280,11 @@ which runs the analysis as one `AnalyzerPass` (`chain.h`). The Analyzer orchestr
 3. The stage files read the chain's accessors into the `AnalysisReport` and nothing more: `key_region_pipeline`,
    `chord_pipeline` (with the respelling of a notated score), `roman_numeral_pipeline`, `outer_voice_pipeline`,
    `harmony_pipeline` (cadences; the functions, six-fours, prolongations and phrase model, which the chain does not
-   run, are library calls over the chain's own inputs), `form_pipeline`, `motive_pipeline`, `melody_pipeline` (each
+   run, are library calls over the chain's prepared harmony segments), `form_pipeline`, `motive_pipeline`, `melody_pipeline` (each
    phrase's part of the chain's soprano line), `texture_pipeline`, `voice_leading_pipeline` and `schema_pipeline`.
+   The stages read the chain's stage inputs (`analysis_chain_harmony_inputs`, `_prepared_harmony`, `_form_input`,
+   `_motive_input`, `_voice_grid`, `_galant_segments`) and never call `chain_build_*`; `scripts/check-chain-builds.sh`
+   fails CI when `src/` or `include/` does.
 4. The Analyzer-only stages read the collected report and the chain's results: `progression_pipeline` and
    `harmonic_rhythm_pipeline`, `form_plan_pipeline` (sections, thematic returns), `meter_check_pipeline`,
    `rhythm_pipeline` (density, syncopation, hemiola, hypermeter, tuplets), `markings_pipeline`, `voicing_check` and
