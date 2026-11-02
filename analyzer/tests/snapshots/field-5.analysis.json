@@ -51944,9 +51944,9 @@
 				}
 			},
 			"note_ids":	[361, 362, 363, 364, 365, 366, 367, 368, 369, 370, 371, 372, 373, 374, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390, 391, 392, 393, 394, 395, 396, 397, 398, 399, 400, 401, 402, 403, 404],
-			"label":	"imperfect-authentic",
+			"label":	"perfect-authentic",
 			"uncertainty":	0.990456742884003,
-			"type":	"imperfect-authentic",
+			"type":	"perfect-authentic",
 			"arrival":	{
 				"span":	{
 					"start":	{
@@ -52349,9 +52349,9 @@
 				}
 			},
 			"note_ids":	[883, 884, 885, 886, 887, 888, 889, 890, 891, 892, 893, 894, 895, 896, 897, 898, 899, 900, 901, 902, 903, 904, 905, 906, 907, 908, 909, 910, 911, 912, 913, 914, 915, 916, 917, 918, 919, 920, 921, 922, 923, 924, 925, 926],
-			"label":	"imperfect-authentic",
+			"label":	"perfect-authentic",
 			"uncertainty":	0.98855074676017451,
-			"type":	"imperfect-authentic",
+			"type":	"perfect-authentic",
 			"arrival":	{
 				"span":	{
 					"start":	{
@@ -52558,6 +52558,168 @@
 			},
 			"soprano_degree":	"4",
 			"arrival_beat_strength":	"medium",
+			"boundary":	false,
+			"region":	4,
+			"share":	1000
+		}, {
+			"framework":	"standard-harmony-v1",
+			"span":	{
+				"start":	{
+					"num":	495,
+					"den":	8
+				},
+				"end":	{
+					"num":	499,
+					"den":	8
+				}
+			},
+			"location":	{
+				"start":	{
+					"measure":	42,
+					"beat":	2,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				},
+				"end":	{
+					"measure":	42,
+					"beat":	3,
+					"subdivision":	{
+						"num":	1,
+						"den":	3
+					}
+				}
+			},
+			"note_ids":	[1037, 1038, 1039, 1040, 1041, 1042, 1043, 1044, 1045, 1046, 1047, 1048],
+			"label":	"subverted",
+			"uncertainty":	0.99947253281520243,
+			"type":	"subverted",
+			"arrival":	{
+				"span":	{
+					"start":	{
+						"num":	249,
+						"den":	4
+					},
+					"end":	{
+						"num":	499,
+						"den":	8
+					}
+				},
+				"location":	{
+					"start":	{
+						"measure":	42,
+						"beat":	3,
+						"subdivision":	{
+							"num":	0,
+							"den":	1
+						}
+					},
+					"end":	{
+						"measure":	42,
+						"beat":	3,
+						"subdivision":	{
+							"num":	1,
+							"den":	3
+						}
+					}
+				}
+			},
+			"dominant":	{
+				"span":	{
+					"start":	{
+						"num":	495,
+						"den":	8
+					},
+					"end":	{
+						"num":	249,
+						"den":	4
+					}
+				}
+			},
+			"soprano_degree":	"1",
+			"arrival_beat_strength":	"medium",
+			"boundary":	false,
+			"region":	4,
+			"share":	1000
+		}, {
+			"framework":	"standard-harmony-v1",
+			"span":	{
+				"start":	{
+					"num":	501,
+					"den":	8
+				},
+				"end":	{
+					"num":	505,
+					"den":	8
+				}
+			},
+			"location":	{
+				"start":	{
+					"measure":	42,
+					"beat":	4,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				},
+				"end":	{
+					"measure":	43,
+					"beat":	1,
+					"subdivision":	{
+						"num":	1,
+						"den":	3
+					}
+				}
+			},
+			"note_ids":	[1050, 1051, 1052, 1053, 1054, 1055, 1056, 1057, 1058, 1059, 1060, 1061, 1062, 1063, 1064],
+			"label":	"subverted",
+			"uncertainty":	0.99970985477062657,
+			"type":	"subverted",
+			"arrival":	{
+				"span":	{
+					"start":	{
+						"num":	63,
+						"den":	1
+					},
+					"end":	{
+						"num":	505,
+						"den":	8
+					}
+				},
+				"location":	{
+					"start":	{
+						"measure":	43,
+						"beat":	1,
+						"subdivision":	{
+							"num":	0,
+							"den":	1
+						}
+					},
+					"end":	{
+						"measure":	43,
+						"beat":	1,
+						"subdivision":	{
+							"num":	1,
+							"den":	3
+						}
+					}
+				}
+			},
+			"dominant":	{
+				"span":	{
+					"start":	{
+						"num":	501,
+						"den":	8
+					},
+					"end":	{
+						"num":	63,
+						"den":	1
+					}
+				}
+			},
+			"soprano_degree":	"1",
+			"arrival_beat_strength":	"strong",
 			"boundary":	false,
 			"region":	4,
 			"share":	1000
@@ -52980,7 +53142,7 @@
 							}
 						}
 					},
-					"note_ids":	[190, 203, 205, 209, 219, 224, 231, 237, 241, 255, 262, 268, 271, 281, 296, 311, 326, 331, 356, 361],
+					"note_ids":	[190, 203, 205, 209, 219, 224, 231, 237, 241, 255, 262, 268, 271, 281, 296, 311, 326, 331, 356, 361, 386],
 					"label":	"subphrase",
 					"uncertainty":	0.9864496022527085,
 					"index":	1,
@@ -53182,7 +53344,7 @@
 							}
 						}
 					},
-					"note_ids":	[255, 262, 268, 271, 281, 296, 311, 326, 331, 356, 361],
+					"note_ids":	[255, 262, 268, 271, 281, 296, 311, 326, 331, 356, 361, 386],
 					"label":	"contrasting-idea",
 					"uncertainty":	0.9864496022527085,
 					"index":	4,
@@ -53223,7 +53385,7 @@
 							}
 						}
 					},
-					"note_ids":	[190, 203, 205, 209, 219, 224, 231, 237, 241, 255, 262, 268, 271, 281, 296, 311, 326],
+					"note_ids":	[190, 203, 205, 209, 219, 224, 231, 237, 241, 255, 262, 268, 271, 281, 296, 311, 326, 331],
 					"label":	"internal",
 					"uncertainty":	0.98306200281588563,
 					"index":	0,
@@ -53313,7 +53475,7 @@
 							}
 						}
 					},
-					"note_ids":	[386, 391, 415, 430],
+					"note_ids":	[391, 415, 430, 445],
 					"label":	"basic-idea",
 					"uncertainty":	0.9923653943072025,
 					"index":	0,
@@ -53402,7 +53564,7 @@
 							}
 						}
 					},
-					"note_ids":	[445, 450, 475, 480],
+					"note_ids":	[450, 475, 480, 505],
 					"label":	"basic-idea",
 					"uncertainty":	0.9864496022527085,
 					"index":	0,
@@ -53488,7 +53650,7 @@
 							}
 						}
 					},
-					"note_ids":	[505, 515],
+					"note_ids":	[515, 526],
 					"label":	"basic-idea",
 					"uncertainty":	0.9923653943072025,
 					"index":	0,
@@ -53579,7 +53741,7 @@
 							}
 						}
 					},
-					"note_ids":	[526, 527, 538, 542, 554, 556, 564, 565, 572, 580, 588, 590],
+					"note_ids":	[527, 538, 542, 554, 556, 564, 565, 572, 580, 588, 590, 595],
 					"label":	"subphrase",
 					"uncertainty":	0.91093039068788373,
 					"index":	0,
@@ -53620,7 +53782,7 @@
 							}
 						}
 					},
-					"note_ids":	[595, 598, 605, 613, 624, 626, 633, 634, 641, 645, 649, 654, 659, 664, 669, 676, 678, 679, 683, 691, 695, 699, 704, 711, 715, 719],
+					"note_ids":	[598, 605, 613, 624, 626, 633, 634, 641, 645, 649, 654, 659, 664, 669, 676, 678, 679, 683, 691, 695, 699, 704, 711, 715, 719, 731],
 					"label":	"subphrase",
 					"uncertainty":	0.91093039068788373,
 					"index":	1,
@@ -53662,7 +53824,7 @@
 							}
 						}
 					},
-					"note_ids":	[526, 527, 538, 542, 554],
+					"note_ids":	[527, 538, 542, 554, 556],
 					"label":	"basic-idea",
 					"uncertainty":	0.91093039068788373,
 					"index":	0,
@@ -53702,7 +53864,7 @@
 							}
 						}
 					},
-					"note_ids":	[556, 564, 565, 572, 580, 588, 590],
+					"note_ids":	[564, 565, 572, 580, 588, 590, 595],
 					"label":	"contrasting-idea",
 					"uncertainty":	0.91093039068788373,
 					"index":	1,
@@ -53742,16 +53904,16 @@
 							}
 						}
 					},
-					"note_ids":	[595, 598, 605, 613, 624],
+					"note_ids":	[598, 605, 613, 624, 626],
 					"label":	"contrasting-idea",
-					"uncertainty":	0.92577532557323639,
+					"uncertainty":	0.91093039068788373,
 					"index":	2,
 					"measures":	{
 						"first":	27,
 						"last":	28
 					},
 					"length":	2,
-					"similarity":	0.25
+					"similarity":	0
 				}, {
 					"framework":	"standard-form-v1",
 					"span":	{
@@ -53782,7 +53944,7 @@
 							}
 						}
 					},
-					"note_ids":	[626, 633, 634, 641, 645, 649, 654, 659],
+					"note_ids":	[633, 634, 641, 645, 649, 654, 659, 664],
 					"label":	"contrasting-idea",
 					"uncertainty":	0.91093039068788373,
 					"index":	3,
@@ -53822,7 +53984,7 @@
 							}
 						}
 					},
-					"note_ids":	[664, 669, 676, 678, 679, 683, 691, 695],
+					"note_ids":	[669, 676, 678, 679, 683, 691, 695, 699],
 					"label":	"contrasting-idea",
 					"uncertainty":	0.91093039068788373,
 					"index":	4,
@@ -53862,7 +54024,7 @@
 							}
 						}
 					},
-					"note_ids":	[699, 704, 711, 715, 719],
+					"note_ids":	[704, 711, 715, 719, 731],
 					"label":	"contrasting-idea",
 					"uncertainty":	0.91093039068788373,
 					"index":	5,
@@ -53903,7 +54065,7 @@
 							}
 						}
 					},
-					"note_ids":	[595, 598, 605, 613, 624, 626, 633, 634, 641, 645, 649, 654, 659, 664, 669, 676, 678, 679, 683, 691, 695, 699, 704, 711, 715, 719],
+					"note_ids":	[598, 605, 613, 624, 626, 633, 634, 641, 645, 649, 654, 659, 664, 669, 676, 678, 679, 683, 691, 695, 699, 704, 711, 715, 719],
 					"label":	"internal",
 					"uncertainty":	0.91093039068788373,
 					"index":	1,
@@ -53996,7 +54158,7 @@
 							}
 						}
 					},
-					"note_ids":	[731, 732, 733, 741, 754, 762, 764],
+					"note_ids":	[732, 733, 741, 754, 762, 764],
 					"label":	"basic-idea",
 					"uncertainty":	0.98374329294250662,
 					"index":	0,
@@ -54036,7 +54198,7 @@
 							}
 						}
 					},
-					"note_ids":	[777, 784, 790, 793, 818, 833, 848, 853, 878, 883],
+					"note_ids":	[777, 784, 790, 793, 818, 833, 848, 853, 878, 883, 908],
 					"label":	"contrasting-idea",
 					"uncertainty":	0.98374329294250662,
 					"index":	1,
@@ -54122,7 +54284,7 @@
 							}
 						}
 					},
-					"note_ids":	[908, 913, 937, 952],
+					"note_ids":	[913, 937, 952, 967],
 					"label":	"basic-idea",
 					"uncertainty":	0.99084059740813957,
 					"index":	0,
@@ -54163,7 +54325,7 @@
 							}
 						}
 					},
-					"note_ids":	[908],
+					"note_ids":	[913],
 					"label":	"contraction",
 					"uncertainty":	0.98855074676017451,
 					"index":	2,
@@ -54256,7 +54418,7 @@
 							}
 						}
 					},
-					"note_ids":	[967, 972, 997, 1002],
+					"note_ids":	[972, 997, 1002, 1027],
 					"label":	"basic-idea",
 					"uncertainty":	0.98374329294250662,
 					"index":	0,
@@ -54297,7 +54459,7 @@
 							}
 						}
 					},
-					"note_ids":	[1027, 1033, 1037, 1044, 1047, 1051, 1062],
+					"note_ids":	[1033, 1037, 1044, 1047, 1051, 1062, 1082],
 					"label":	"external",
 					"uncertainty":	0.9796791161781333,
 					"index":	3,
@@ -54415,7 +54577,7 @@
 					}
 				}
 			},
-			"note_ids":	[126, 139, 143, 152, 156, 159, 166, 170, 180, 182, 187, 190, 203, 205, 209, 219, 224, 231, 237, 241, 255, 262, 268, 271, 281, 296, 311, 326],
+			"note_ids":	[126, 139, 143, 152, 156, 159, 166, 170, 180, 182, 187, 190, 203, 205, 209, 219, 224, 231, 237, 241, 255, 262, 268, 271, 281, 296, 311, 326, 331],
 			"label":	"hybrid",
 			"uncertainty":	0.98306200281588563,
 			"index":	1,
@@ -54484,7 +54646,7 @@
 					}
 				}
 			},
-			"note_ids":	[526, 527, 538, 542, 554, 556, 564, 565, 572, 580, 588, 590, 595, 598, 605, 613, 624, 626, 633, 634, 641, 645, 649, 654, 659, 664, 669, 676, 678, 679, 683, 691, 695, 699, 704, 711, 715, 719],
+			"note_ids":	[527, 538, 542, 554, 556, 564, 565, 572, 580, 588, 590, 595, 598, 605, 613, 624, 626, 633, 634, 641, 645, 649, 654, 659, 664, 669, 676, 678, 679, 683, 691, 695, 699, 704, 711, 715, 719],
 			"label":	"hybrid",
 			"uncertainty":	0.91093039068788373,
 			"index":	2,
@@ -54553,7 +54715,7 @@
 					}
 				}
 			},
-			"note_ids":	[731, 732, 733, 741, 754, 762, 764, 777, 784, 790, 793, 818, 833, 848, 853, 878, 883, 908],
+			"note_ids":	[732, 733, 741, 754, 762, 764, 777, 784, 790, 793, 818, 833, 848, 853, 878, 883, 908, 913],
 			"label":	"hybrid",
 			"uncertainty":	0.98855074676017451,
 			"index":	3,
@@ -54573,7 +54735,7 @@
 			"part_of_compound":	false,
 			"traits":	["fragmentation"],
 			"archetypal":	false,
-			"cadences_usual":	false,
+			"cadences_usual":	true,
 			"lengths_usual":	false,
 			"parts":	[{
 					"name":	"antecedent",
@@ -55165,7 +55327,7 @@
 						}
 					}
 				},
-				"note_ids":	[126, 139, 143, 152, 156, 159, 166, 170, 180, 182, 187, 190, 203, 205, 209, 219, 224, 231, 237, 241, 255, 262, 268, 271, 281, 296, 311, 326],
+				"note_ids":	[126, 139, 143, 152, 156, 159, 166, 170, 180, 182, 187, 190, 203, 205, 209, 219, 224, 231, 237, 241, 255, 262, 268, 271, 281, 296, 311, 326, 331],
 				"label":	"thematic-return",
 				"uncertainty":	0,
 				"earlier_theme":	0,
@@ -55218,7 +55380,7 @@
 						}
 					}
 				},
-				"note_ids":	[526, 527, 538, 542, 554, 556, 564, 565, 572, 580, 588, 590, 595, 598, 605, 613, 624, 626, 633, 634, 641, 645, 649, 654, 659, 664, 669, 676, 678, 679, 683, 691, 695, 699, 704, 711, 715, 719],
+				"note_ids":	[527, 538, 542, 554, 556, 564, 565, 572, 580, 588, 590, 595, 598, 605, 613, 624, 626, 633, 634, 641, 645, 649, 654, 659, 664, 669, 676, 678, 679, 683, 691, 695, 699, 704, 711, 715, 719],
 				"label":	"thematic-return",
 				"uncertainty":	0.16666666666666663,
 				"earlier_theme":	0,
@@ -55239,7 +55401,7 @@
 					"rhythm":	0.83333333333333337,
 					"window":	6,
 					"earlier_offset":	5,
-					"later_offset":	7
+					"later_offset":	6
 				}
 			}, {
 				"framework":	"standard-form-v1",
@@ -55271,7 +55433,7 @@
 						}
 					}
 				},
-				"note_ids":	[526, 527, 538, 542, 554, 556, 564, 565, 572, 580, 588, 590, 595, 598, 605, 613, 624, 626, 633, 634, 641, 645, 649, 654, 659, 664, 669, 676, 678, 679, 683, 691, 695, 699, 704, 711, 715, 719],
+				"note_ids":	[527, 538, 542, 554, 556, 564, 565, 572, 580, 588, 590, 595, 598, 605, 613, 624, 626, 633, 634, 641, 645, 649, 654, 659, 664, 669, 676, 678, 679, 683, 691, 695, 699, 704, 711, 715, 719],
 				"label":	"thematic-return",
 				"uncertainty":	0.16666666666666663,
 				"earlier_theme":	1,
@@ -55292,7 +55454,7 @@
 					"rhythm":	0.83333333333333337,
 					"window":	6,
 					"earlier_offset":	5,
-					"later_offset":	7
+					"later_offset":	6
 				}
 			}, {
 				"framework":	"standard-form-v1",
@@ -55324,7 +55486,7 @@
 						}
 					}
 				},
-				"note_ids":	[731, 732, 733, 741, 754, 762, 764, 777, 784, 790, 793, 818, 833, 848, 853, 878, 883, 908],
+				"note_ids":	[732, 733, 741, 754, 762, 764, 777, 784, 790, 793, 818, 833, 848, 853, 878, 883, 908, 913],
 				"label":	"thematic-return",
 				"uncertainty":	0,
 				"earlier_theme":	1,
@@ -55345,7 +55507,7 @@
 					"rhythm":	1,
 					"window":	6,
 					"earlier_offset":	21,
-					"later_offset":	8
+					"later_offset":	7
 				}
 			}]
 	},
@@ -58857,7 +59019,7 @@
 					}
 				}
 			},
-			"note_ids":	[126, 139, 143, 152, 156, 159, 166, 170, 180, 182, 187, 190, 203, 205, 209, 219, 224, 231, 237, 241, 255, 262, 268, 271, 281, 296, 311, 326],
+			"note_ids":	[126, 139, 143, 152, 156, 159, 166, 170, 180, 182, 187, 190, 203, 205, 209, 219, 224, 231, 237, 241, 255, 262, 268, 271, 281, 296, 311, 326, 331],
 			"label":	"melody",
 			"uncertainty":	0,
 			"index":	1,
@@ -58865,7 +59027,7 @@
 				"first":	9,
 				"last":	19
 			},
-			"note_count":	28,
+			"note_count":	29,
 			"range":	{
 				"lowest":	{
 					"pitch":	65,
@@ -58915,20 +59077,20 @@
 				"pitch":	79,
 				"occurrences":	1,
 				"unique":	true,
-				"relative_position":	0.037037037037037035,
+				"relative_position":	0.035714285714285712,
 				"strength":	"weak",
 				"by_leap":	false,
 				"final_note":	false
 			},
 			"contour":	{
-				"up":	13,
+				"up":	14,
 				"down":	11,
 				"same":	3,
-				"steps":	12,
+				"steps":	13,
 				"leaps":	12,
 				"net_direction":	"down",
-				"net_semitones":	-3,
-				"directions":	["up", "down", "same", "down", "up", "up", "down", "up", "down", "down", "up", "same", "down", "down", "up", "up", "down", "same", "up", "up", "down", "up", "down", "down", "up", "up", "up"]
+				"net_semitones":	-2,
+				"directions":	["up", "down", "same", "down", "up", "up", "down", "up", "down", "down", "up", "same", "down", "down", "up", "up", "down", "same", "up", "up", "down", "up", "down", "down", "up", "up", "up", "up"]
 			},
 			"leaps":	{
 				"recovered":	1,
@@ -59465,9 +59627,9 @@
 					"three_in_a_row":	false
 				}],
 			"non_chord_tones":	{
-				"chord_tones":	17,
-				"non_chord_tones":	3,
-				"unclassified":	8,
+				"chord_tones":	18,
+				"non_chord_tones":	4,
+				"unclassified":	7,
 				"by_type":	[{
 						"type":	"passing",
 						"count":	1
@@ -59476,7 +59638,7 @@
 						"count":	1
 					}, {
 						"type":	"appoggiatura",
-						"count":	1
+						"count":	2
 					}],
 				"items":	[{
 						"framework":	"standard-counterpoint-v1",
@@ -59577,6 +59739,39 @@
 						"note_ids":	[231],
 						"label":	"anticipation",
 						"uncertainty":	0
+					}, {
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	197,
+								"den":	8
+							},
+							"end":	{
+								"num":	12673,
+								"den":	512
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	17,
+								"beat":	2,
+								"subdivision":	{
+									"num":	2,
+									"den":	3
+								}
+							},
+							"end":	{
+								"measure":	17,
+								"beat":	3,
+								"subdivision":	{
+									"num":	1,
+									"den":	192
+								}
+							}
+						},
+						"note_ids":	[262],
+						"label":	"appoggiatura",
+						"uncertainty":	0
 					}]
 			},
 			"tendencies":	{
@@ -59633,7 +59828,7 @@
 					}
 				}
 			},
-			"note_ids":	[386],
+			"note_ids":	[391],
 			"label":	"melody",
 			"uncertainty":	0,
 			"index":	2,
@@ -59644,14 +59839,14 @@
 			"note_count":	1,
 			"range":	{
 				"lowest":	{
-					"pitch":	77,
-					"name":	"F5",
-					"note_id":	386
+					"pitch":	70,
+					"name":	"Bb4",
+					"note_id":	391
 				},
 				"highest":	{
-					"pitch":	77,
-					"name":	"F5",
-					"note_id":	386
+					"pitch":	70,
+					"name":	"Bb4",
+					"note_id":	391
 				},
 				"semitones":	0
 			},
@@ -59659,40 +59854,40 @@
 				"framework":	"standard-counterpoint-v1",
 				"span":	{
 					"start":	{
-						"num":	227,
-						"den":	8
-					},
-					"end":	{
 						"num":	57,
 						"den":	2
+					},
+					"end":	{
+						"num":	229,
+						"den":	8
 					}
 				},
 				"location":	{
 					"start":	{
-						"measure":	19,
-						"beat":	4,
-						"subdivision":	{
-							"num":	2,
-							"den":	3
-						}
-					},
-					"end":	{
 						"measure":	20,
 						"beat":	1,
 						"subdivision":	{
 							"num":	0,
 							"den":	1
 						}
+					},
+					"end":	{
+						"measure":	20,
+						"beat":	1,
+						"subdivision":	{
+							"num":	1,
+							"den":	3
+						}
 					}
 				},
-				"note_ids":	[386],
+				"note_ids":	[391],
 				"label":	"climax",
 				"uncertainty":	0,
-				"pitch":	77,
+				"pitch":	70,
 				"occurrences":	1,
 				"unique":	true,
 				"relative_position":	0,
-				"strength":	null,
+				"strength":	"strong",
 				"by_leap":	false,
 				"final_note":	true
 			},
@@ -59775,7 +59970,7 @@
 					}
 				}
 			},
-			"note_ids":	[445],
+			"note_ids":	[450],
 			"label":	"melody",
 			"uncertainty":	0,
 			"index":	3,
@@ -59786,14 +59981,14 @@
 			"note_count":	1,
 			"range":	{
 				"lowest":	{
-					"pitch":	74,
-					"name":	"D5",
-					"note_id":	445
+					"pitch":	75,
+					"name":	"Eb5",
+					"note_id":	450
 				},
 				"highest":	{
-					"pitch":	74,
-					"name":	"D5",
-					"note_id":	445
+					"pitch":	75,
+					"name":	"Eb5",
+					"note_id":	450
 				},
 				"semitones":	0
 			},
@@ -59801,40 +59996,40 @@
 				"framework":	"standard-counterpoint-v1",
 				"span":	{
 					"start":	{
-						"num":	239,
-						"den":	8
-					},
-					"end":	{
 						"num":	30,
 						"den":	1
+					},
+					"end":	{
+						"num":	241,
+						"den":	8
 					}
 				},
 				"location":	{
 					"start":	{
-						"measure":	20,
-						"beat":	4,
-						"subdivision":	{
-							"num":	2,
-							"den":	3
-						}
-					},
-					"end":	{
 						"measure":	21,
 						"beat":	1,
 						"subdivision":	{
 							"num":	0,
 							"den":	1
 						}
+					},
+					"end":	{
+						"measure":	21,
+						"beat":	1,
+						"subdivision":	{
+							"num":	1,
+							"den":	3
+						}
 					}
 				},
-				"note_ids":	[445],
+				"note_ids":	[450],
 				"label":	"climax",
 				"uncertainty":	0,
-				"pitch":	74,
+				"pitch":	75,
 				"occurrences":	1,
 				"unique":	true,
 				"relative_position":	0,
-				"strength":	null,
+				"strength":	"strong",
 				"by_leap":	false,
 				"final_note":	true
 			},
@@ -59857,9 +60052,9 @@
 			},
 			"consecutive_leaps":	[],
 			"non_chord_tones":	{
-				"chord_tones":	0,
+				"chord_tones":	1,
 				"non_chord_tones":	0,
-				"unclassified":	1,
+				"unclassified":	0,
 				"by_type":	[],
 				"items":	[]
 			},
@@ -59917,7 +60112,7 @@
 					}
 				}
 			},
-			"note_ids":	[505],
+			"note_ids":	[515],
 			"label":	"melody",
 			"uncertainty":	0,
 			"index":	4,
@@ -59928,14 +60123,14 @@
 			"note_count":	1,
 			"range":	{
 				"lowest":	{
-					"pitch":	77,
-					"name":	"F5",
-					"note_id":	505
+					"pitch":	74,
+					"name":	"D5",
+					"note_id":	515
 				},
 				"highest":	{
-					"pitch":	77,
-					"name":	"F5",
-					"note_id":	505
+					"pitch":	74,
+					"name":	"D5",
+					"note_id":	515
 				},
 				"semitones":	0
 			},
@@ -59943,40 +60138,40 @@
 				"framework":	"standard-counterpoint-v1",
 				"span":	{
 					"start":	{
-						"num":	251,
+						"num":	255,
 						"den":	8
 					},
 					"end":	{
-						"num":	63,
-						"den":	2
+						"num":	32,
+						"den":	1
 					}
 				},
 				"location":	{
 					"start":	{
-						"measure":	21,
-						"beat":	4,
-						"subdivision":	{
-							"num":	2,
-							"den":	3
-						}
-					},
-					"end":	{
 						"measure":	22,
-						"beat":	1,
+						"beat":	2,
 						"subdivision":	{
 							"num":	0,
 							"den":	1
 						}
+					},
+					"end":	{
+						"measure":	22,
+						"beat":	2,
+						"subdivision":	{
+							"num":	1,
+							"den":	3
+						}
 					}
 				},
-				"note_ids":	[505],
+				"note_ids":	[515],
 				"label":	"climax",
 				"uncertainty":	0,
-				"pitch":	77,
+				"pitch":	74,
 				"occurrences":	1,
 				"unique":	true,
 				"relative_position":	0,
-				"strength":	null,
+				"strength":	"weak",
 				"by_leap":	false,
 				"final_note":	true
 			},
@@ -60059,7 +60254,7 @@
 					}
 				}
 			},
-			"note_ids":	[526, 527, 538, 542, 554, 556, 564, 565, 572, 580, 588, 590, 595, 598, 605, 613, 624, 626, 633, 634, 641, 645, 649, 654, 659, 664, 669, 676, 678, 679, 683, 691, 695, 699, 704, 711, 715, 719],
+			"note_ids":	[527, 538, 542, 554, 556, 564, 565, 572, 580, 588, 590, 595, 598, 605, 613, 624, 626, 633, 634, 641, 645, 649, 654, 659, 664, 669, 676, 678, 679, 683, 691, 695, 699, 704, 711, 715, 719],
 			"label":	"melody",
 			"uncertainty":	0,
 			"index":	5,
@@ -60067,7 +60262,7 @@
 				"first":	23,
 				"last":	34
 			},
-			"note_count":	38,
+			"note_count":	37,
 			"range":	{
 				"lowest":	{
 					"pitch":	65,
@@ -60117,65 +60312,27 @@
 				"pitch":	84,
 				"occurrences":	1,
 				"unique":	true,
-				"relative_position":	0.10810810810810811,
-				"strength":	null,
+				"relative_position":	0.083333333333333329,
+				"strength":	"weak",
 				"by_leap":	true,
 				"final_note":	false
 			},
 			"contour":	{
-				"up":	16,
+				"up":	15,
 				"down":	16,
 				"same":	5,
 				"steps":	20,
-				"leaps":	12,
+				"leaps":	11,
 				"net_direction":	"down",
-				"net_semitones":	-4,
-				"directions":	["up", "up", "down", "up", "down", "down", "down", "up", "down", "up", "down", "down", "up", "up", "up", "up", "down", "down", "down", "up", "up", "up", "same", "same", "same", "same", "up", "down", "down", "down", "same", "up", "up", "down", "down", "down", "up"]
+				"net_semitones":	-7,
+				"directions":	["up", "down", "up", "down", "down", "down", "up", "down", "up", "down", "down", "up", "up", "up", "up", "down", "down", "down", "up", "up", "up", "same", "same", "same", "same", "up", "down", "down", "down", "same", "up", "up", "down", "down", "down", "up"]
 			},
 			"leaps":	{
 				"recovered":	2,
 				"unrecovered":	6,
-				"not_required":	4,
+				"not_required":	3,
 				"not_judged":	0,
 				"items":	[{
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	263,
-								"den":	8
-							},
-							"end":	{
-								"num":	34575,
-								"den":	1024
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	22,
-								"beat":	4,
-								"subdivision":	{
-									"num":	2,
-									"den":	3
-								}
-							},
-							"end":	{
-								"measure":	23,
-								"beat":	3,
-								"subdivision":	{
-									"num":	5,
-									"den":	128
-								}
-							}
-						},
-						"note_ids":	[526, 527],
-						"label":	"leap",
-						"uncertainty":	0,
-						"semitones":	3,
-						"direction":	"up",
-						"generic_size":	3,
-						"approximate":	false,
-						"status":	"not-required"
-					}, {
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
@@ -60597,14 +60754,11 @@
 			},
 			"consecutive_leaps":	[],
 			"non_chord_tones":	{
-				"chord_tones":	23,
-				"non_chord_tones":	6,
+				"chord_tones":	26,
+				"non_chord_tones":	2,
 				"unclassified":	9,
 				"by_type":	[{
-						"type":	"passing",
-						"count":	4
-					}, {
-						"type":	"neighbor",
+						"type":	"anticipation",
 						"count":	1
 					}, {
 						"type":	"appoggiatura",
@@ -60647,166 +60801,34 @@
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
-								"num":	36,
-								"den":	1
-							},
-							"end":	{
-								"num":	37647,
-								"den":	1024
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	25,
-								"beat":	1,
-								"subdivision":	{
-									"num":	0,
-									"den":	1
-								}
-							},
-							"end":	{
-								"measure":	25,
-								"beat":	3,
-								"subdivision":	{
-									"num":	5,
-									"den":	128
-								}
-							}
-						},
-						"note_ids":	[565],
-						"label":	"neighbor",
-						"uncertainty":	0
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	159,
-								"den":	4
-							},
-							"end":	{
-								"num":	41095,
-								"den":	1024
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	27,
-								"beat":	3,
-								"subdivision":	{
-									"num":	0,
-									"den":	1
-								}
-							},
-							"end":	{
-								"measure":	27,
-								"beat":	4,
-								"subdivision":	{
-									"num":	7,
-									"den":	384
-								}
-							}
-						},
-						"note_ids":	[605],
-						"label":	"passing",
-						"uncertainty":	0
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	171,
-								"den":	4
-							},
-							"end":	{
-								"num":	44167,
-								"den":	1024
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	29,
-								"beat":	3,
-								"subdivision":	{
-									"num":	0,
-									"den":	1
-								}
-							},
-							"end":	{
-								"measure":	29,
-								"beat":	4,
-								"subdivision":	{
-									"num":	7,
-									"den":	384
-								}
-							}
-						},
-						"note_ids":	[641],
-						"label":	"passing",
-						"uncertainty":	0
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	345,
+								"num":	369,
 								"den":	8
 							},
 							"end":	{
-								"num":	11131,
-								"den":	256
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	29,
-								"beat":	4,
-								"subdivision":	{
-									"num":	0,
-									"den":	1
-								}
-							},
-							"end":	{
-								"measure":	29,
-								"beat":	4,
-								"subdivision":	{
-									"num":	91,
-									"den":	96
-								}
-							}
-						},
-						"note_ids":	[645],
-						"label":	"passing",
-						"uncertainty":	0
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	183,
-								"den":	4
-							},
-							"end":	{
-								"num":	47239,
+								"num":	47623,
 								"den":	1024
 							}
 						},
 						"location":	{
 							"start":	{
 								"measure":	31,
-								"beat":	3,
+								"beat":	4,
 								"subdivision":	{
 									"num":	0,
 									"den":	1
 								}
 							},
 							"end":	{
-								"measure":	31,
-								"beat":	4,
+								"measure":	32,
+								"beat":	1,
 								"subdivision":	{
 									"num":	7,
 									"den":	384
 								}
 							}
 						},
-						"note_ids":	[679],
-						"label":	"passing",
+						"note_ids":	[683],
+						"label":	"anticipation",
 						"uncertainty":	0
 					}]
 			},
@@ -60897,7 +60919,7 @@
 					}
 				}
 			},
-			"note_ids":	[731, 732, 733, 741, 754, 762, 764, 777, 784, 790, 793, 818, 833, 848],
+			"note_ids":	[732, 733, 741, 754, 762, 764, 777, 784, 790, 793, 818, 833, 848, 853],
 			"label":	"melody",
 			"uncertainty":	0,
 			"index":	6,
@@ -60955,20 +60977,20 @@
 				"pitch":	94,
 				"occurrences":	1,
 				"unique":	true,
-				"relative_position":	0.38461538461538464,
-				"strength":	null,
+				"relative_position":	0.30769230769230771,
+				"strength":	"weak",
 				"by_leap":	true,
 				"final_note":	false
 			},
 			"contour":	{
-				"up":	5,
-				"down":	7,
+				"up":	6,
+				"down":	6,
 				"same":	0,
 				"steps":	6,
 				"leaps":	5,
 				"net_direction":	"down",
-				"net_semitones":	-3,
-				"directions":	["down", "down", "down", "up", "up", "down", "down", "up", "down", "down", "up", "up"]
+				"net_semitones":	-1,
+				"directions":	["down", "down", "up", "up", "down", "down", "up", "down", "down", "up", "up", "up"]
 			},
 			"leaps":	{
 				"recovered":	2,
@@ -61204,9 +61226,9 @@
 					"three_in_a_row":	false
 				}],
 			"non_chord_tones":	{
-				"chord_tones":	5,
+				"chord_tones":	6,
 				"non_chord_tones":	2,
-				"unclassified":	7,
+				"unclassified":	6,
 				"by_type":	[{
 						"type":	"passing",
 						"count":	1
@@ -61215,39 +61237,6 @@
 						"count":	1
 					}],
 				"items":	[{
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	203,
-								"den":	4
-							},
-							"end":	{
-								"num":	26049,
-								"den":	512
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	34,
-								"beat":	4,
-								"subdivision":	{
-									"num":	1,
-									"den":	3
-								}
-							},
-							"end":	{
-								"measure":	34,
-								"beat":	4,
-								"subdivision":	{
-									"num":	43,
-									"den":	64
-								}
-							}
-						},
-						"note_ids":	[731],
-						"label":	"appoggiatura",
-						"uncertainty":	0
-					}, {
 						"framework":	"standard-counterpoint-v1",
 						"span":	{
 							"start":	{
@@ -61279,6 +61268,39 @@
 						},
 						"note_ids":	[732],
 						"label":	"passing",
+						"uncertainty":	0
+					}, {
+						"framework":	"standard-counterpoint-v1",
+						"span":	{
+							"start":	{
+								"num":	437,
+								"den":	8
+							},
+							"end":	{
+								"num":	28033,
+								"den":	512
+							}
+						},
+						"location":	{
+							"start":	{
+								"measure":	37,
+								"beat":	2,
+								"subdivision":	{
+									"num":	2,
+									"den":	3
+								}
+							},
+							"end":	{
+								"measure":	37,
+								"beat":	3,
+								"subdivision":	{
+									"num":	1,
+									"den":	192
+								}
+							}
+						},
+						"note_ids":	[784],
+						"label":	"appoggiatura",
 						"uncertainty":	0
 					}]
 			},
@@ -61336,7 +61358,7 @@
 					}
 				}
 			},
-			"note_ids":	[908],
+			"note_ids":	[913],
 			"label":	"melody",
 			"uncertainty":	0,
 			"index":	7,
@@ -61347,14 +61369,14 @@
 			"note_count":	1,
 			"range":	{
 				"lowest":	{
-					"pitch":	77,
-					"name":	"F5",
-					"note_id":	908
+					"pitch":	70,
+					"name":	"Bb4",
+					"note_id":	913
 				},
 				"highest":	{
-					"pitch":	77,
-					"name":	"F5",
-					"note_id":	908
+					"pitch":	70,
+					"name":	"Bb4",
+					"note_id":	913
 				},
 				"semitones":	0
 			},
@@ -61362,40 +61384,40 @@
 				"framework":	"standard-counterpoint-v1",
 				"span":	{
 					"start":	{
-						"num":	467,
-						"den":	8
-					},
-					"end":	{
 						"num":	117,
 						"den":	2
+					},
+					"end":	{
+						"num":	469,
+						"den":	8
 					}
 				},
 				"location":	{
 					"start":	{
-						"measure":	39,
-						"beat":	4,
-						"subdivision":	{
-							"num":	2,
-							"den":	3
-						}
-					},
-					"end":	{
 						"measure":	40,
 						"beat":	1,
 						"subdivision":	{
 							"num":	0,
 							"den":	1
 						}
+					},
+					"end":	{
+						"measure":	40,
+						"beat":	1,
+						"subdivision":	{
+							"num":	1,
+							"den":	3
+						}
 					}
 				},
-				"note_ids":	[908],
+				"note_ids":	[913],
 				"label":	"climax",
 				"uncertainty":	0,
-				"pitch":	77,
+				"pitch":	70,
 				"occurrences":	1,
 				"unique":	true,
 				"relative_position":	0,
-				"strength":	null,
+				"strength":	"strong",
 				"by_leap":	false,
 				"final_note":	true
 			},
@@ -61478,7 +61500,7 @@
 					}
 				}
 			},
-			"note_ids":	[967, 972, 997, 1002, 1027, 1033, 1037, 1044, 1047, 1051, 1062],
+			"note_ids":	[972, 997, 1002, 1027, 1033, 1037, 1044, 1047, 1051, 1062, 1082],
 			"label":	"melody",
 			"uncertainty":	0,
 			"index":	8,
@@ -61489,16 +61511,16 @@
 			"note_count":	11,
 			"range":	{
 				"lowest":	{
-					"pitch":	70,
-					"name":	"Bb4",
-					"note_id":	1033
+					"pitch":	58,
+					"name":	"Bb3",
+					"note_id":	1082
 				},
 				"highest":	{
 					"pitch":	82,
 					"name":	"Bb5",
 					"note_id":	1047
 				},
-				"semitones":	12
+				"semitones":	24
 			},
 			"climax":	{
 				"framework":	"standard-counterpoint-v1",
@@ -61536,20 +61558,20 @@
 				"pitch":	82,
 				"occurrences":	1,
 				"unique":	true,
-				"relative_position":	0.8,
-				"strength":	null,
+				"relative_position":	0.7,
+				"strength":	"medium",
 				"by_leap":	false,
 				"final_note":	false
 			},
 			"contour":	{
-				"up":	6,
+				"up":	5,
 				"down":	3,
 				"same":	0,
-				"steps":	5,
+				"steps":	4,
 				"leaps":	4,
 				"net_direction":	"down",
-				"net_semitones":	-4,
-				"directions":	["up", "down", "up", "up", "down", "up", "up", "up", "down"]
+				"net_semitones":	-17,
+				"directions":	["down", "up", "up", "down", "up", "up", "up", "down"]
 			},
 			"leaps":	{
 				"recovered":	0,
@@ -61782,91 +61804,22 @@
 					"three_in_a_row":	false
 				}],
 			"non_chord_tones":	{
-				"chord_tones":	8,
-				"non_chord_tones":	2,
+				"chord_tones":	10,
+				"non_chord_tones":	0,
 				"unclassified":	1,
-				"by_type":	[{
-						"type":	"neighbor",
-						"count":	2
-					}],
-				"items":	[{
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	60,
-								"den":	1
-							},
-							"end":	{
-								"num":	481,
-								"den":	8
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	41,
-								"beat":	1,
-								"subdivision":	{
-									"num":	0,
-									"den":	1
-								}
-							},
-							"end":	{
-								"measure":	41,
-								"beat":	1,
-								"subdivision":	{
-									"num":	1,
-									"den":	3
-								}
-							}
-						},
-						"note_ids":	[972],
-						"label":	"neighbor",
-						"uncertainty":	0
-					}, {
-						"framework":	"standard-counterpoint-v1",
-						"span":	{
-							"start":	{
-								"num":	485,
-								"den":	8
-							},
-							"end":	{
-								"num":	243,
-								"den":	4
-							}
-						},
-						"location":	{
-							"start":	{
-								"measure":	41,
-								"beat":	2,
-								"subdivision":	{
-									"num":	2,
-									"den":	3
-								}
-							},
-							"end":	{
-								"measure":	41,
-								"beat":	3,
-								"subdivision":	{
-									"num":	0,
-									"den":	1
-								}
-							}
-						},
-						"note_ids":	[997],
-						"label":	"neighbor",
-						"uncertainty":	0
-					}]
+				"by_type":	[],
+				"items":	[]
 			},
 			"tendencies":	{
 				"line":	[{
 						"tendency":	"pitch-proximity",
-						"holds":	true
+						"holds":	false
 					}, {
 						"tendency":	"step-declination",
 						"holds":	false
 					}, {
 						"tendency":	"step-inertia",
-						"holds":	false
+						"holds":	true
 					}, {
 						"tendency":	"melodic-regression",
 						"holds":	false
@@ -61914,7 +61867,7 @@
 			},
 			"note_ids":	[],
 			"label":	"meter-fit",
-			"uncertainty":	0.873442966781885,
+			"uncertainty":	0.86094296678188531,
 			"declared":	{
 				"meter":	{
 					"numerator":	12,
@@ -61928,7 +61881,7 @@
 					"num":	0,
 					"den":	1
 				},
-				"score":	0.80324661246612461
+				"score":	0.79074661246612477
 			},
 			"alternative":	null
 		}, {
@@ -77682,6 +77635,30 @@
 					"den":	2
 				},
 				"accelerates":	false
+			}, {
+				"cadence":	10,
+				"arrival_measure":	42,
+				"before":	{
+					"num":	7,
+					"den":	2
+				},
+				"approach":	{
+					"num":	7,
+					"den":	2
+				},
+				"accelerates":	false
+			}, {
+				"cadence":	11,
+				"arrival_measure":	43,
+				"before":	{
+					"num":	7,
+					"den":	2
+				},
+				"approach":	{
+					"num":	9,
+					"den":	2
+				},
+				"accelerates":	true
 			}]
 	},
 	"markings":	{
