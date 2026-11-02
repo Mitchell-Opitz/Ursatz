@@ -9,7 +9,7 @@ bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     report->home_duration_denominator = 1;
 
     AnalyzerPass pass;
-    if (!analyzer_pass_run(&pass, notes)) {
+    if (!analyzer_pass_run(&pass, notes, NULL)) {
         analyzer_pass_destroy(&pass);
         return false;
     }

@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include <ursatz_analyzer/analysis_report.h>
+#include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
 #include <ursatz_chain/analysis_chain.h>
@@ -31,6 +32,8 @@
  */
 typedef struct AnalyzerPass {
     const ImportedNotes *notes;
+    AnalyzerOptions options;         /* the stages and the cancel callback of this run */
+    bool cancelled;                  /* the callback asked to stop; the pass is then incomplete */
     ChainInput input;                /* the library chain's neutral notes and key events */
     AnalysisChain *library;          /* owned; NULL for a piece with no notes */
     AnalysisReport report;           /* the pass's results: entries, non-chord tones, key regions and changes */
@@ -47,8 +50,9 @@ typedef struct AnalyzerPass {
     MotiveStage motives;     /* the note-level soprano input, its phrases, ideas and themes, and the motive families */
 } AnalyzerPass;
 
-/* Runs the pass over notes. */
-bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes);
+/* Runs the pass over notes with the stages and the cancel callback of options (NULL: all stages, no callback). False
+   also when the callback asked to stop: pass->cancelled is then set. */
+bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes, const AnalyzerOptions *options);
 
 /* Releases the pass and the report it still holds. */
 void analyzer_pass_destroy(AnalyzerPass *pass);

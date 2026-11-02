@@ -194,6 +194,15 @@ static bool collect_non_chord_tones(AnalyzerPass *chain) {
     return true;
 }
 
+/* Asks the cancel callback; true (and pass->cancelled set) when it wants the run to stop. */
+static bool stop_requested(AnalyzerPass *pass) {
+    if (pass->options.cancel && pass->options.cancel(pass->options.cancel_context)) {
+        pass->cancelled = true;
+        return true;
+    }
+    return false;
+}
+
 /* The home key: the library's key with the longest total duration over its regions. */
 static bool collect_pass(AnalyzerPass *pass) {
     const Segmentation *segmentation = &pass->segmentation;
@@ -223,44 +232,72 @@ static bool collect_pass(AnalyzerPass *pass) {
         !collect_non_chord_tones(pass)) {
         return false;
     }
-    if (!harmony_stage_prepare(pass->library, &pass->harmony) ||
-        !harmony_stage_collect_cadences(&pass->harmony, report) ||
-        !harmony_stage_collect_functions(&pass->harmony, report) ||
-        !harmony_stage_collect_six_fours_and_prolongations(&pass->harmony, report) ||
-        !progression_stage_collect(report) || !harmonic_rhythm_stage_collect(notes, report) ||
-        !meter_check_stage_collect(notes, report) ||
-        !form_stage_read(&pass->form, notes, &pass->input, pass->library) ||
-        !form_stage_collect(&pass->form, report) || !harmony_stage_collect_phrase_model(&pass->harmony, report) ||
-        !form_plan_stage_collect(&pass->form, report) ||
-        !motive_stage_read(&pass->motives, &pass->input, pass->library) ||
-        !motive_stage_collect(&pass->motives, notes, report) ||
-        !melody_stage_collect(notes, &pass->input, pass->library, segmentation, report) ||
-        !rhythm_stage_collect(notes, &pass->lines, &pass->form, report) ||
-        !texture_stage_collect(notes, pass->library, report) || !markings_stage_collect(notes, report) ||
-        !voice_leading_stage_collect(notes, &pass->input, pass->library, &pass->harmony, report) ||
-        !schema_stage_collect(notes, pass->library, report)) {
-        return false;
-    }
+    /* The Analyzer-only stages are switched by their bits; the cancel callback is asked before each. */
+#define STAGE_ON(bit) ((pass->options.stages & (bit)) != 0)
+#define RUN(call) \
+    do {          \
+        if (!(call)) { \
+            return false; \
+        } \
+    } while (0)
+#define RUN_STAGE(bit, call)       \
+    do {                           \
+        if (STAGE_ON(bit)) {       \
+            if (stop_requested(pass)) { \
+                return false;      \
+            }                      \
+            RUN(call);             \
+        }                          \
+    } while (0)
+    RUN(harmony_stage_prepare(pass->library, &pass->harmony));
+    RUN(harmony_stage_collect_cadences(&pass->harmony, report));
+    RUN(harmony_stage_collect_functions(&pass->harmony, report));
+    RUN(harmony_stage_collect_six_fours_and_prolongations(&pass->harmony, report));
+    RUN_STAGE(ANALYZER_STAGE_PROGRESSIONS, progression_stage_collect(report));
+    RUN_STAGE(ANALYZER_STAGE_HARMONIC_RHYTHM, harmonic_rhythm_stage_collect(notes, report));
+    RUN_STAGE(ANALYZER_STAGE_METER_CHECK, meter_check_stage_collect(notes, report));
+    RUN(form_stage_read(&pass->form, notes, &pass->input, pass->library));
+    RUN(form_stage_collect(&pass->form, report));
+    RUN(harmony_stage_collect_phrase_model(&pass->harmony, report));
+    RUN_STAGE(ANALYZER_STAGE_FORM_PLAN, form_plan_stage_collect(&pass->form, report));
+    RUN(motive_stage_read(&pass->motives, &pass->input, pass->library));
+    RUN(motive_stage_collect(&pass->motives, notes, report));
+    RUN(melody_stage_collect(notes, &pass->input, pass->library, segmentation, report));
+    RUN_STAGE(ANALYZER_STAGE_RHYTHM, rhythm_stage_collect(notes, &pass->lines, &pass->form, report));
+    RUN(texture_stage_collect(notes, pass->library, report));
+    RUN_STAGE(ANALYZER_STAGE_MARKINGS, markings_stage_collect(notes, report));
+    RUN(voice_leading_stage_collect(notes, &pass->input, pass->library, &pass->harmony, report));
+    RUN(schema_stage_collect(notes, pass->library, report));
+#undef RUN_STAGE
+#undef RUN
+#undef STAGE_ON
     return true;
 }
 
-bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes) {
+bool analyzer_pass_run(AnalyzerPass *pass, const ImportedNotes *notes, const AnalyzerOptions *options) {
     memset(pass, 0, sizeof(*pass));
     pass->notes = notes;
+    pass->options = options ? *options : analyzer_options_default();
     pass->report.home_duration_denominator = 1;
     if (notes->count == 0) {
         return true;
+    }
+    if (stop_requested(pass)) {
+        return false;
     }
     if (!chain_input_build(notes, &pass->input)) {
         return false;
     }
     AnalysisChainConfig config = analysis_chain_config_default();
-    config.stages = ANALYSIS_CHAIN_STAGE_ALL;
+    config.stages = pass->options.stages & ANALYSIS_CHAIN_STAGE_ALL;
     config.refine_keys = true;
     config.inject_kernel_owners = true;
     if (analysis_chain_run(&pass->input.set, pass->input.key_events, pass->input.key_event_count, &config,
                            &pass->library) != ANALYSIS_CHAIN_OK) {
         return false;
+    }
+    if ((pass->options.stages & ANALYSIS_CHAIN_STAGE_ALL) != ANALYSIS_CHAIN_STAGE_ALL) {
+        return true; /* a partial chain: the results are the chain's, the report stays empty */
     }
     return segmentation_view(pass, analysis_chain_segments(pass->library), false, &pass->segmentation) &&
            segmentation_view(pass, analysis_chain_voice_segments(pass->library), true, &pass->voice_segmentation) &&
