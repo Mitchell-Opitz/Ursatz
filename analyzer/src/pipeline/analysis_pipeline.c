@@ -2,19 +2,19 @@
 
 #include <string.h>
 
-#include "pipeline/chain.h"
+#include <ursatz_analyzer/analysis_result.h>
+
+#include "pipeline/analysis_result_internal.h"
 
 bool run_analysis_pipeline(const ImportedNotes *notes, AnalysisReport *report) {
     memset(report, 0, sizeof(*report));
     report->home_duration_denominator = 1;
 
-    AnalyzerPass pass;
-    if (!analyzer_pass_run(&pass, notes, NULL)) {
-        analyzer_pass_destroy(&pass);
+    AnalyzerResult *result = NULL;
+    if (analyzer_analyze(notes, NULL, &result) != ANALYZER_OK) {
         return false;
     }
-    *report = pass.report;
-    memset(&pass.report, 0, sizeof(pass.report));
-    analyzer_pass_destroy(&pass);
+    analyzer_result_take_report(result, report);
+    analyzer_result_destroy(result);
     return true;
 }

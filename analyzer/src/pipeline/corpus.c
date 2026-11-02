@@ -255,9 +255,9 @@ static CorpusRunResult analyze_piece(const CorpusRunOptions *options, const char
     record->content_hash = fnv1a_file(input_path);
 
     ImportedNotes notes;
-    AnalysisReport report;
+    AnalyzerResult *result = NULL;
     InputPipelineResult imported = INPUT_PIPELINE_OK;
-    RunFileResult ran = analyzer_run_file(input_path, INPUT_FORMAT_AUTO, NULL, &notes, &report, &imported, NULL);
+    RunFileResult ran = analyzer_run_file(input_path, INPUT_FORMAT_AUTO, NULL, &notes, &result, &imported, NULL);
     if (ran == RUN_FILE_ERR_IMPORT) {
         record->error = import_error_text(imported);
         return CORPUS_RUN_OK;
@@ -266,7 +266,7 @@ static CorpusRunResult analyze_piece(const CorpusRunOptions *options, const char
         record->error = "out of memory";
         return CORPUS_RUN_OK;
     }
-    AnalysisDocument *document = analyzer_run_file_document(input_path, &notes, &report);
+    AnalysisDocument *document = analyzer_run_file_document(input_path, &notes, result);
     if (!document) {
         record->error = "out of memory";
         return CORPUS_RUN_OK;
