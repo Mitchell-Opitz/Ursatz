@@ -178,6 +178,21 @@ const StandardTonalityRomanResult *analysis_chain_numerals(const AnalysisChain *
 const ChainSegments *analysis_chain_voice_segments(const AnalysisChain *chain);
 const OuterVoiceLines *analysis_chain_outer_voices(const AnalysisChain *chain);
 const HarmonyCadences *analysis_chain_cadences(const AnalysisChain *chain);
+/* The stage inputs the chain builds and reads, kept until analysis_chain_destroy. NULL when the chain is NULL or the stage did not run. */
+/* The pitches of every note (outer voices, texture and voice leading). */
+const ChainPitches *analysis_chain_pitches(const AnalysisChain *chain);
+/* The harmony inputs of the final pass, one per chord segment. */
+const ChainHarmonyInputs *analysis_chain_harmony_inputs(const AnalysisChain *chain);
+/* The prepared harmony segments of the final pass: analysis_chain_segment_count entries. */
+const HarmonySegment *analysis_chain_prepared_harmony(const AnalysisChain *chain);
+/* The form input of the final pass: the phrases, ideas and themes were read from it. */
+const ChainFormInput *analysis_chain_form_input(const AnalysisChain *chain);
+/* The note-level soprano input the motive stage read, over the home key. */
+const ChainFormInput *analysis_chain_motive_input(const AnalysisChain *chain);
+/* The voice grid the voice-leading stage read. */
+const ChainVoiceGrid *analysis_chain_voice_grid(const AnalysisChain *chain);
+/* The segments of the schema and sequence adapters. */
+const ChainGalantSegments *analysis_chain_galant_segments(const AnalysisChain *chain);
 
 const StandardFormPhrases *analysis_chain_phrases(const AnalysisChain *chain);
 const StandardFormSegmentation *analysis_chain_ideas(const AnalysisChain *chain);

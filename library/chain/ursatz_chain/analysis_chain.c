@@ -895,6 +895,34 @@ const OuterVoiceLines *analysis_chain_outer_voices(const AnalysisChain *chain) {
     return chain != NULL && chain->have_lines ? &chain->lines : NULL;
 }
 
+const ChainPitches *analysis_chain_pitches(const AnalysisChain *chain) {
+    return chain != NULL && chain->have_pitches ? &chain->pitches : NULL;
+}
+
+const ChainHarmonyInputs *analysis_chain_harmony_inputs(const AnalysisChain *chain) {
+    return chain != NULL && chain->pass.have_harmony ? &chain->pass.harmony : NULL;
+}
+
+const HarmonySegment *analysis_chain_prepared_harmony(const AnalysisChain *chain) {
+    return chain != NULL ? chain->pass.prepared : NULL;
+}
+
+const ChainFormInput *analysis_chain_form_input(const AnalysisChain *chain) {
+    return chain != NULL && chain->pass.have_form_input ? &chain->pass.form_input : NULL;
+}
+
+const ChainFormInput *analysis_chain_motive_input(const AnalysisChain *chain) {
+    return chain != NULL && chain->have_motive_input ? &chain->motive_input : NULL;
+}
+
+const ChainVoiceGrid *analysis_chain_voice_grid(const AnalysisChain *chain) {
+    return chain != NULL && chain->have_grid ? &chain->grid : NULL;
+}
+
+const ChainGalantSegments *analysis_chain_galant_segments(const AnalysisChain *chain) {
+    return chain != NULL && chain->have_galant ? &chain->galant : NULL;
+}
+
 const HarmonyCadences *analysis_chain_cadences(const AnalysisChain *chain) {
     return chain != NULL && chain->pass.have_cadences ? &chain->pass.cadences : NULL;
 }
