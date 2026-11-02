@@ -3,10 +3,61 @@
 Library: `include/ursatz_analyzer/composer_api.h`, part of the `ursatz_analyzer` target. Calls are in process; there is
 no server and no file. The header includes only public Analyzer headers and Ursatz kernel headers.
 
-The Composer hands the Analyzer a fragment it generated and gets back the report, the analysis document, the rules the
-fragment breaks, and its distance from a style.
+The Composer hands the Analyzer a fragment it generated and gets back the analysis as an `AnalyzerResult`
+([analysis-result.md](analysis-result.md)), the rules the fragment breaks, and its distance from a style.
 
-## Analyze a fragment
+Two sets of entries exist until the Composer switches (P25). The hearing entry, the style reference and the distance
+from a result are the current API. `analyzer_analyze_fragment`, `analyzer_fragment_style_distance` and
+`analyzer_fragment_style_distance_without` are deprecated wrappers over them with equal output; `AnalyzerFragmentAnalysis`
+gains a `result` member and its `report` member is no longer filled (read the report through
+`analyzer_fragment_report`).
+
+## Hear events
+
+```c
+AnalyzerHearing hearing = {events, count, midi, meter, has_key, tonic_pitch_class, key_minor, streams};
+AnalyzerHearingOptions options = analyzer_hearing_options_default(); /* all stages, no document */
+AnalyzerResult *result = NULL;
+if (analyzer_hear(&hearing, &options, &result) == ANALYZER_OK) {
+    /* read the claims: analyzer_result_claim_count / analyzer_result_claim */
+    analyzer_result_destroy(result);
+}
+```
+
+Everything in the hearing is borrowed and must outlive the result: no `NoteEvent` is copied, and the result's chain
+notes point at the caller's events. Only arrays of the hearing's own are built (pointers to the events, a numeric pitch
+per event, the streams). `meter` `NULL` is 4/4; the key and `streams` are as for a fragment.
+
+`midi` holds one MIDI note number (0 to 127) per event. Ursatz has no call that reads a MIDI number from an event's
+pitch (a pitch identity is opaque), so `midi` is required when `count` is above 0; `NULL` gives `ANALYZER_ERR_ARGUMENT`.
+There is no 128-entry pitch table in this entry. The Composer already holds the number it generated each event from.
+
+`options.analysis` is the `AnalyzerOptions` of `analyzer_analyze`, including `cancel` (asked before the chain run and
+between Analyzer stages; `ANALYZER_ERR_CANCELLED`, nothing written). `options.render_document` renders the analysis
+document (input path `<fragment>`) once into the result; read it with `analyzer_result_document_json`, which is `NULL`
+when it was not asked for. A document needs every stage: `render_document` with fewer gives `ANALYZER_ERR_ARGUMENT`.
+
+## Style reference
+
+```c
+AnalyzerStyleReference *reference = NULL;
+analyzer_style_reference_create(model, without, without_count, &reference); /* once */
+StyleComparison comparison;
+analyzer_result_style_distance(result, reference, &comparison);             /* per result */
+style_comparison_destroy(&comparison);
+analyzer_style_reference_destroy(reference);
+```
+
+The reference copies the model's statistics, without the named categories (the list the model was read without), and
+keeps them prepared; it serves any number of results and does not need the model afterwards. The distance counts the
+result into a one-piece profile from the result's document view, with no JSON text rendered or parsed, and compares it
+as `analyzer_fragment_style_distance` does: categories the result has no data for stay out of the means and are listed
+with `in_a` false. A result that did not run every chain stage gives `ANALYZER_ERR_ARGUMENT`.
+
+## Analyze a fragment (deprecated)
+
+Deprecated: use `analyzer_hear`. This entry still copies the events into the `AnalyzerFragmentAnalysis`, so a caller may
+free them after it returns.
 
 ```c
 AnalyzerFragment fragment = {events, count, meter, has_key, tonic_pitch_class, key_minor, streams};
@@ -56,7 +107,9 @@ check does not say where a rule broke. `note_ids` index the fragment's events. F
 `analyzer_fragment_check_counterpoint(&analysis, species, cantus_upper)` runs the species check (1 to 5) on a fragment
 of two voices. It returns `ANALYZER_FRAGMENT_ERR_ARGUMENT` for any other fragment.
 
-## Style distance
+## Style distance (deprecated entries)
+
+Deprecated: use the style reference above.
 
 `analyzer_fragment_style_distance(&analysis, model, &comparison)` counts the fragment's document into a one-piece
 profile and compares it with the model ([style-profile.md](style-profile.md)). A fragment is short, so it has no data
@@ -86,3 +139,17 @@ document as the file; a four-voice fragment with a parallel fifth gives one `par
 Mozart 545 is closer to the `sonatinas` model than to the `chorales`; the distance without the four motive categories is the same against a full model as against the model read without them, and the plain call against the latter still lists them as missing; the caller's events are unchanged. The
 `test_composer_api_valgrind` run uses `tests/valgrind.supp`, which silences a few bytes that Ursatz's melody and motive
 code leaks on every analysis.
+
+`tests/test_hearing.c`: on the five reference pieces, a hearing without `render_document` has no document and with it
+has the document the fragment entry renders; the result's notes point at the caller's events; the claim counts equal
+those of `analyzer_analyze`; the profile of a result equals the profile of its rendered document
+(`style_profile_add_result`); the distance against a reference equals `analyzer_fragment_style_distance` on the same
+fragment and model; a cancel callback that refuses stops the hearing; bad arguments are refused. `test_hearing_smoke`
+runs Bach 114 only; `test_hearing_valgrind` runs the smoke test under valgrind.
+
+## Switching the Composer (P25)
+
+Replace `analyzer_analyze_fragment` with `analyzer_hear` (pass the MIDI numbers the Composer holds; keep the events alive
+for the result), `analyzer_fragment_report` with the claim accessors of `analysis_result.h`, and the two distance calls
+with one `AnalyzerStyleReference` per style and `analyzer_result_style_distance`. The deprecated entries stay until
+every consumer has switched.
