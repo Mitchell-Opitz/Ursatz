@@ -8,6 +8,7 @@
 #include "time/meter_map.h"
 
 #include <ursatz_analyzer/analysis_report.h>
+#include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/imported_notes.h>
 #include <ursatz_analyzer/style_profile.h>
 
@@ -53,6 +54,48 @@ typedef struct {
     char *document_json;
     bool valid;
 } AnalyzerFragmentAnalysis;
+
+/*
+ * The hearing entry (B-C-9): the Composer's way to have a fragment analyzed. The events are borrowed, never copied, and
+ * the result is an AnalyzerResult (analysis_result.h); the analysis document is rendered only when asked for.
+ *
+ * Everything the hearing points to is borrowed and must outlive the result; none of it is changed (Law 20). events has
+ * count entries; midi, when not NULL, has count parallel MIDI note numbers 0 to 127. The library has no call that reads
+ * a MIDI number from an event's pitch (a pitch identity is opaque by design), so midi is required for count > 0:
+ * ANALYZER_ERR_ARGUMENT when it is NULL. meter, has_key, key_tonic_pitch_class, key_minor and streams are as for
+ * AnalyzerFragment (a NULL meter is 4/4, a NULL streams puts every event in stream 0; streams is read, not kept).
+ */
+typedef struct {
+    const NoteEvent *const *events;
+    size_t count;
+    const int *midi;
+    const MeterMap *meter;
+    bool has_key;
+    int key_tonic_pitch_class;
+    bool key_minor;
+    const size_t *streams;
+} AnalyzerHearing;
+
+typedef struct {
+    AnalyzerOptions analysis;
+    bool render_document; /* render the analysis document into the result; needs every stage */
+} AnalyzerHearingOptions;
+
+/* All stages, no cancel callback, no document. */
+AnalyzerHearingOptions analyzer_hearing_options_default(void);
+
+/*
+ * Hears the events into *out, which the caller releases with analyzer_result_destroy. options may be NULL for the
+ * defaults. ANALYZER_ERR_ARGUMENT for a missing argument, a NULL event, a MIDI number outside 0 to 127, a key tonic
+ * outside 0 to 11, no midi for count > 0, or render_document without every stage; the other statuses are those of
+ * analyzer_analyze. *out is NULL on failure and nothing is kept.
+ */
+AnalyzerStatus analyzer_hear(const AnalyzerHearing *hearing, const AnalyzerHearingOptions *options,
+                             AnalyzerResult **out);
+
+/* The analysis document text of a result heard with render_document. Valid until the result is destroyed; NULL
+   otherwise. */
+const char *analyzer_result_document_json(const AnalyzerResult *result);
 
 /*
  * Analyzes the fragment into *out, which the caller releases with analyzer_fragment_analysis_destroy. *out is left

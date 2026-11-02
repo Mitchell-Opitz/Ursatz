@@ -26,10 +26,12 @@
 #include <ursatz_analyzer/style_profile.h>
 #include <ursatz_analyzer/version.h>
 
+#include "pipeline/analysis_result_internal.h"
 #include "pipeline/counterpoint_pipeline.h"
 #include "util/misc_util.h"
 
 #define MIDI_NOTE_COUNT 128
+#define FRAGMENT_INPUT_PATH "<fragment>"
 #define FRAGMENT_PROVENANCE_ID "composer-fragment-v1"
 
 /* How the MIDI importer spells a note: sharps only (io/midi_importer.c), the pitch class's place on the line of fifths
@@ -322,6 +324,128 @@ AnalyzerFragmentResult analyzer_analyze_fragment(const AnalyzerFragment *fragmen
     }
     out->valid = true;
     return ANALYZER_FRAGMENT_OK;
+}
+
+/* ---- the hearing entry ---- */
+
+/* What a hearing builds for the pass: an ImportedNotes whose events are the caller's. */
+typedef struct {
+    ImportedNotes notes;
+    bool owns_meter;
+} HearingNotes;
+
+static void hearing_notes_destroy(void *owner) {
+    HearingNotes *hearing = owner;
+    if (!hearing) {
+        return;
+    }
+    ImportedNotes *notes = &hearing->notes;
+    for (size_t i = 0; i < notes->count; i++) {
+        pitch_numeric_value_destroy(notes->pitch_values[i]); /* the events stay the caller's */
+    }
+    if (!hearing->owns_meter) {
+        notes->meter.meter_map = NULL;
+    }
+    notes->count = 0;
+    free(notes->events);
+    notes->events = NULL;
+    imported_notes_destroy(notes);
+    free(hearing);
+}
+
+static bool hearing_valid(const AnalyzerHearing *hearing) {
+    if (!hearing || (hearing->count > 0 && (!hearing->events || !hearing->midi)) ||
+        (hearing->has_key && (hearing->key_tonic_pitch_class < 0 || hearing->key_tonic_pitch_class > 11))) {
+        return false;
+    }
+    for (size_t i = 0; i < hearing->count; i++) {
+        if (!hearing->events[i] || hearing->midi[i] < 0 || hearing->midi[i] >= MIDI_NOTE_COUNT) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* The notes of a hearing: the arrays are the hearing's, the events the caller's. NULL on allocation failure. */
+static HearingNotes *hearing_notes_build(const AnalyzerHearing *hearing) {
+    HearingNotes *built = calloc(1, sizeof *built);
+    if (!built) {
+        return NULL;
+    }
+    ImportedNotes *notes = &built->notes;
+    notes->source = (ImportedSource){.format = INPUT_FORMAT_MIDI};
+    size_t slots = hearing->count > 0 ? hearing->count : 1;
+    notes->events = calloc(slots, sizeof *notes->events);
+    notes->pitch_values = calloc(slots, sizeof *notes->pitch_values);
+    notes->streams = calloc(slots, sizeof *notes->streams);
+    EntityID *tuning_id = NULL;
+    TuningSystem *tuning = NULL;
+    bool ok = notes->events && notes->pitch_values && notes->streams &&
+              entity_id_create("midi-note-number", &tuning_id) == ENTITY_ID_OK;
+    if (ok && tuning_system_create(tuning_id, "MIDI note number", &tuning) != TUNING_SYSTEM_OK) {
+        entity_id_destroy(tuning_id);
+        ok = false;
+    }
+    for (size_t i = 0; ok && i < hearing->count; i++) {
+        ok = pitch_numeric_value_create(tuning, hearing->midi[i], 1, &notes->pitch_values[i]) ==
+             PITCH_NUMERIC_VALUE_OK;
+        notes->events[i] = (NoteEvent *)hearing->events[i];
+        notes->streams[i] = hearing->streams ? hearing->streams[i] : 0;
+        notes->count = i + 1;
+    }
+    tuning_system_destroy(tuning);
+    if (ok) {
+        built->owns_meter = !hearing->meter || meter_map_is_defaulted(hearing->meter);
+        notes->meter.meter_map = built->owns_meter ? copy_meter_map(NULL) : (MeterMap *)hearing->meter;
+        notes->meter.end_time = notes_last_end(hearing->events, hearing->count);
+        ok = notes->meter.meter_map && notes->meter.end_time;
+    }
+    if (ok && hearing->has_key) {
+        ok = add_key_signature(notes, hearing->key_tonic_pitch_class, hearing->key_minor);
+    }
+    if (!ok) {
+        hearing_notes_destroy(built);
+        return NULL;
+    }
+    return built;
+}
+
+AnalyzerHearingOptions analyzer_hearing_options_default(void) {
+    AnalyzerHearingOptions options = {analyzer_options_default(), false};
+    return options;
+}
+
+AnalyzerStatus analyzer_hear(const AnalyzerHearing *hearing, const AnalyzerHearingOptions *options,
+                             AnalyzerResult **out) {
+    if (!out) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    *out = NULL;
+    AnalyzerHearingOptions used = options ? *options : analyzer_hearing_options_default();
+    if (!hearing_valid(hearing) || (used.render_document && used.analysis.stages != ANALYZER_STAGE_ALL)) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    HearingNotes *built = hearing_notes_build(hearing);
+    if (!built) {
+        return ANALYZER_ERR_ALLOC;
+    }
+    AnalyzerResult *result = NULL;
+    AnalyzerStatus status = analyzer_analyze(&built->notes, &used.analysis, &result);
+    if (status != ANALYZER_OK) {
+        hearing_notes_destroy(built);
+        return status;
+    }
+    analyzer_result_set_owner(result, built, hearing_notes_destroy);
+    if (used.render_document) {
+        char *json = analysis_document_render_result(FRAGMENT_INPUT_PATH, result);
+        if (!json) {
+            analyzer_result_destroy(result);
+            return ANALYZER_ERR_ALLOC;
+        }
+        analyzer_result_set_document(result, json);
+    }
+    *out = result;
+    return ANALYZER_OK;
 }
 
 void analyzer_fragment_analysis_destroy(AnalyzerFragmentAnalysis *analysis) {
