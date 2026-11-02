@@ -28,6 +28,7 @@
 
 #include "pipeline/analysis_result_internal.h"
 #include "pipeline/counterpoint_pipeline.h"
+#include "style/style_profile_internal.h"
 #include "util/misc_util.h"
 
 #define MIDI_NOTE_COUNT 128
@@ -719,4 +720,134 @@ done:
 AnalyzerFragmentResult analyzer_fragment_style_distance(const AnalyzerFragmentAnalysis *analysis,
                                                         const StyleModel *model, StyleComparison *out) {
     return analyzer_fragment_style_distance_without(analysis, model, NULL, 0, out);
+}
+
+/* ---- the style reference ---- */
+
+struct AnalyzerStyleReference {
+    StyleStatistic *statistics; /* the model's, without the dropped categories */
+    size_t count;
+    StyleModel *base; /* a model of the statistics */
+    char **without;   /* the dropped categories */
+    size_t without_count;
+};
+
+void analyzer_style_reference_destroy(AnalyzerStyleReference *reference) {
+    if (!reference) {
+        return;
+    }
+    style_model_destroy(reference->base);
+    style_statistics_free(reference->statistics, reference->count);
+    for (size_t i = 0; i < reference->without_count; i++) {
+        free(reference->without[i]);
+    }
+    free(reference->without);
+    free(reference);
+}
+
+AnalyzerStatus analyzer_style_reference_create(const StyleModel *model, const char *const *without,
+                                               size_t without_count, AnalyzerStyleReference **out) {
+    if (!out) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    *out = NULL;
+    if (!model || (without_count > 0 && !without)) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    for (size_t i = 0; i < without_count; i++) {
+        StyleDimension dimension;
+        if (!without[i] || !style_category_dimension(without[i], &dimension)) {
+            return ANALYZER_ERR_ARGUMENT;
+        }
+    }
+    AnalyzerStyleReference *reference = calloc(1, sizeof *reference);
+    if (!reference) {
+        return ANALYZER_ERR_ALLOC;
+    }
+    reference->without = calloc(without_count > 0 ? without_count : 1, sizeof *reference->without);
+    bool ok = reference->without != NULL;
+    for (size_t i = 0; ok && i < without_count; i++) {
+        reference->without[i] = strdup(without[i]);
+        ok = reference->without[i] != NULL;
+        reference->without_count = i + 1;
+    }
+    ok = ok && style_model_statistics(model, &reference->statistics, &reference->count) == STYLE_MODEL_FILE_OK;
+    if (ok) {
+        reference->count = keep_statistics(reference->statistics, reference->count,
+                                           (const char *const *)reference->without, reference->without_count);
+        reference->base = model_of("fragment-style-base", reference->statistics, reference->count);
+        ok = reference->base != NULL;
+    }
+    if (!ok) {
+        analyzer_style_reference_destroy(reference);
+        return ANALYZER_ERR_ALLOC;
+    }
+    *out = reference;
+    return ANALYZER_OK;
+}
+
+AnalyzerStatus analyzer_result_style_distance(const AnalyzerResult *result, const AnalyzerStyleReference *reference,
+                                              StyleComparison *out) {
+    if (!result || !reference || !out) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    memset(out, 0, sizeof *out);
+    AnalyzerStatus status = ANALYZER_ERR_ALLOC;
+    StyleProfile *profile = style_profile_create();
+    StyleStatistic *fragment_stats = NULL, *kept = NULL;
+    size_t fragment_count = 0, kept_count = 0;
+    StyleModel *fragment_model = NULL, *kept_model = NULL;
+    StyleComparison full = {0}, means = {0};
+    if (!profile) {
+        goto done;
+    }
+    StyleProfileResult added = style_profile_add_result(profile, result);
+    if (added != STYLE_PROFILE_OK) {
+        status = added == STYLE_PROFILE_ERR_ALLOC ? ANALYZER_ERR_ALLOC : ANALYZER_ERR_ARGUMENT;
+        goto done;
+    }
+    if (style_profile_statistics(profile, &fragment_stats, &fragment_count) != STYLE_PROFILE_OK) {
+        goto done;
+    }
+    fragment_count = keep_statistics(fragment_stats, fragment_count, (const char *const *)reference->without,
+                                     reference->without_count);
+    kept = calloc(reference->count > 0 ? reference->count : 1, sizeof *kept);
+    fragment_model = model_of("fragment-style", fragment_stats, fragment_count);
+    if (!kept || !fragment_model) {
+        goto done;
+    }
+    /* The means come from the reference cut down to the categories the result has. */
+    for (size_t i = 0; i < reference->count; i++) {
+        if (has_category(fragment_stats, fragment_count, reference->statistics[i].category)) {
+            kept[kept_count++] = reference->statistics[i];
+        }
+    }
+    kept_model = model_of("fragment-style-reference", kept, kept_count);
+    if (!kept_model) {
+        goto done;
+    }
+    if (style_profile_compare(fragment_model, reference->base, &full) != STYLE_COMPARE_OK ||
+        style_profile_compare(fragment_model, kept_model, &means) != STYLE_COMPARE_OK) {
+        status = ANALYZER_ERR_LIBRARY;
+        goto done;
+    }
+    /* The full comparison's categories (the missing ones too) with the means of the cut one. */
+    StyleCategoryDistance *category_list = means.categories;
+    size_t category_count = means.category_count;
+    *out = means;
+    out->categories = full.categories;
+    out->category_count = full.category_count;
+    full.categories = category_list;
+    full.category_count = category_count;
+    memset(&means, 0, sizeof means);
+    status = ANALYZER_OK;
+done:
+    style_comparison_destroy(&full);
+    style_comparison_destroy(&means);
+    style_model_destroy(kept_model);
+    style_model_destroy(fragment_model);
+    free(kept);
+    free(fragment_stats);
+    style_profile_destroy(profile);
+    return status;
 }

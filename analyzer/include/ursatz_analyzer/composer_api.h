@@ -98,6 +98,33 @@ AnalyzerStatus analyzer_hear(const AnalyzerHearing *hearing, const AnalyzerHeari
 const char *analyzer_result_document_json(const AnalyzerResult *result);
 
 /*
+ * A style the fragments are measured against, prepared once: the model's statistics with the named categories
+ * dropped. One reference serves any number of results.
+ */
+typedef struct AnalyzerStyleReference AnalyzerStyleReference;
+
+/*
+ * Prepares model for distances. without names the categories left out (the list the model was read without,
+ * style_model_file_read_without); they appear nowhere in a distance. ANALYZER_ERR_ARGUMENT for a NULL model or out, an
+ * unknown category name, or count > 0 with NULL without. *out is NULL on failure. The reference copies what it needs:
+ * model need not outlive it.
+ */
+AnalyzerStatus analyzer_style_reference_create(const StyleModel *model, const char *const *without,
+                                               size_t without_count, AnalyzerStyleReference **out);
+
+/* NULL is a no-op. */
+void analyzer_style_reference_destroy(AnalyzerStyleReference *reference);
+
+/*
+ * How far the result is from the reference: the one-piece profile of the result (read from the result, not from its
+ * document text) compared as analyzer_fragment_style_distance does, with the categories the result has no data for
+ * left out of the means and kept in out->categories. Release out with style_comparison_destroy.
+ * ANALYZER_ERR_ARGUMENT for a NULL argument or a result that did not run every chain stage.
+ */
+AnalyzerStatus analyzer_result_style_distance(const AnalyzerResult *result, const AnalyzerStyleReference *reference,
+                                              StyleComparison *out);
+
+/*
  * Analyzes the fragment into *out, which the caller releases with analyzer_fragment_analysis_destroy. *out is left
  * empty on failure. A fragment of no events is analyzed too (an empty report).
  */
