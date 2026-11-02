@@ -22,6 +22,8 @@ jobs:
         run: cmake --build build
       - name: Check library includes
         run: scripts/check-library-includes.sh build
+      - name: Check chain builds
+        run: scripts/check-chain-builds.sh
       - name: Check file scope state
         run: scripts/check-statics.sh
       - name: Test
