@@ -631,6 +631,21 @@ static void check_segment_lines(const char *context, const AnalysisChain *c) {
     }
 }
 
+/* The stage inputs the chain keeps: all there after a full run, none on a NULL chain, and the ones the stages read are the ones they built. */
+static void check_stage_inputs(const char *context, const AnalysisChain *c) {
+    CHECK(analysis_chain_pitches(NULL) == NULL && analysis_chain_harmony_inputs(NULL) == NULL && analysis_chain_prepared_harmony(NULL) == NULL);
+    CHECK(analysis_chain_form_input(NULL) == NULL && analysis_chain_motive_input(NULL) == NULL && analysis_chain_voice_grid(NULL) == NULL);
+    CHECK(analysis_chain_galant_segments(NULL) == NULL && analysis_chain_segment_outer_voices(NULL) == NULL);
+    CHECK(analysis_chain_pitches(c) != NULL && analysis_chain_harmony_inputs(c) != NULL && analysis_chain_prepared_harmony(c) != NULL);
+    CHECK(analysis_chain_form_input(c) != NULL && analysis_chain_motive_input(c) != NULL && analysis_chain_voice_grid(c) != NULL);
+    CHECK(analysis_chain_galant_segments(c) != NULL);
+    CHECK(analysis_chain_harmony_inputs(c)->count == analysis_chain_segment_count(c));
+    CHECK(analysis_chain_form_input(c)->input.finished && analysis_chain_motive_input(c)->input.finished);
+    CHECK(analysis_chain_form_input(c)->input.segment_count > 0 && analysis_chain_motive_input(c)->input.note_count > 0);
+    CHECK(analysis_chain_voice_grid(c)->grid.voice_count == analysis_chain_voice_leading(c)->voice_count);
+    CHECK(analysis_chain_galant_segments(c)->list.count > 0);
+}
+
 static void check_piece(const Reference *ref, bool dump) {
     ChainInput input;
     chain_input_init(&input, ref);
@@ -663,6 +678,7 @@ static void check_piece(const Reference *ref, bool dump) {
             }
         }
         check_segment_lines(context, chain);
+        check_stage_inputs(context, chain);
         check_voice_leading(context, chain);
         check_subsets(context, &input, ref, chain);
         printf("  %s: %zu segments, %zu key regions, %zu cadences, %zu phrases; %d stages as expected\n", context, segments, key_regions,
