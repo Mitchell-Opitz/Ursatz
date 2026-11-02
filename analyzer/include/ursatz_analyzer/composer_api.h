@@ -47,12 +47,15 @@ typedef enum {
 /*
  * What the analysis of one fragment holds. notes is the copy of the fragment's events; report is the pipeline's
  * report; document_json is the analysis document (input path "<fragment>"). Read them through the accessors.
+ *
+ * Deprecated: use analyzer_hear (below), which borrows the events and renders the document only on request.
  */
 typedef struct {
     ImportedNotes notes;
     AnalysisReport report;
     char *document_json;
     bool valid;
+    AnalyzerResult *result; /* the analysis the report is read from; report above is no longer filled */
 } AnalyzerFragmentAnalysis;
 
 /*
@@ -125,6 +128,9 @@ AnalyzerStatus analyzer_result_style_distance(const AnalyzerResult *result, cons
                                               StyleComparison *out);
 
 /*
+ * Deprecated: use analyzer_hear. Kept for the Composer until its switch (P25); the analysis is made by
+ * analyzer_analyze over the copy this entry keeps, so a caller may free the fragment's events after it returns.
+ *
  * Analyzes the fragment into *out, which the caller releases with analyzer_fragment_analysis_destroy. *out is left
  * empty on failure. A fragment of no events is analyzed too (an empty report).
  */
@@ -175,6 +181,8 @@ AnalyzerFragmentResult analyzer_fragment_violations(const AnalyzerFragmentAnalys
 void analyzer_violations_free(AnalyzerViolation *violations, size_t count);
 
 /*
+ * Deprecated: use analyzer_style_reference_create and analyzer_result_style_distance.
+ *
  * How far the fragment is from a style. A one-piece profile of the fragment (style_profile_add_document_json) is
  * compared with the model (style_profile_compare), except that the categories the fragment has no data for (a
  * fragment is short) are left out of the dimension and overall means. They stay in out->categories, with in_a false
@@ -185,6 +193,8 @@ AnalyzerFragmentResult analyzer_fragment_style_distance(const AnalyzerFragmentAn
                                                         const StyleModel *model, StyleComparison *out);
 
 /*
+ * Deprecated: use analyzer_style_reference_create (with the categories) and analyzer_result_style_distance.
+ *
  * The same distance with the named categories left out: they are dropped from the fragment's statistics and from the
  * model's before the comparisons, so they appear nowhere in *out (not in the means, not in out->categories). Pass the
  * list the model was read without (style_model_file_read_without); without it a category the fragment has and the

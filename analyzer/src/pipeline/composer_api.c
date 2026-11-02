@@ -311,14 +311,15 @@ AnalyzerFragmentResult analyzer_analyze_fragment(const AnalyzerFragment *fragmen
         *out = (AnalyzerFragmentAnalysis){0};
         return result;
     }
-    if (!run_analysis_pipeline(&out->notes, &out->report)) {
+    AnalyzerStatus status = analyzer_analyze(&out->notes, NULL, &out->result);
+    if (status != ANALYZER_OK) {
         imported_notes_destroy(&out->notes);
         *out = (AnalyzerFragmentAnalysis){0};
         return ANALYZER_FRAGMENT_ERR_ALLOC;
     }
-    out->document_json = analysis_document_render("<fragment>", &out->notes, &out->report);
+    out->document_json = analysis_document_render_result(FRAGMENT_INPUT_PATH, out->result);
     if (!out->document_json) {
-        analysis_report_destroy(&out->report);
+        analyzer_result_destroy(out->result);
         imported_notes_destroy(&out->notes);
         *out = (AnalyzerFragmentAnalysis){0};
         return ANALYZER_FRAGMENT_ERR_ALLOC;
@@ -454,13 +455,13 @@ void analyzer_fragment_analysis_destroy(AnalyzerFragmentAnalysis *analysis) {
         return;
     }
     free(analysis->document_json);
-    analysis_report_destroy(&analysis->report);
+    analyzer_result_destroy(analysis->result); /* before the notes it borrows */
     imported_notes_destroy(&analysis->notes);
     *analysis = (AnalyzerFragmentAnalysis){0};
 }
 
 const AnalysisReport *analyzer_fragment_report(const AnalyzerFragmentAnalysis *analysis) {
-    return analysis && analysis->valid ? &analysis->report : NULL;
+    return analysis && analysis->valid ? analyzer_result_report(analysis->result) : NULL;
 }
 
 const char *analyzer_fragment_document_json(const AnalyzerFragmentAnalysis *analysis) {
@@ -473,7 +474,8 @@ AnalyzerFragmentResult analyzer_fragment_check_counterpoint(AnalyzerFragmentAnal
         return ANALYZER_FRAGMENT_ERR_ARGUMENT;
     }
     CounterpointCheckResult checked =
-        counterpoint_check_collect(&analysis->notes, species, cantus_upper, &analysis->report);
+        counterpoint_check_collect(&analysis->notes, species, cantus_upper,
+                                   analyzer_result_report_mutable(analysis->result));
     if (checked == COUNTERPOINT_CHECK_ERR_ALLOC) {
         return ANALYZER_FRAGMENT_ERR_ALLOC;
     }
@@ -559,7 +561,7 @@ AnalyzerFragmentResult analyzer_fragment_violations(const AnalyzerFragmentAnalys
     }
     *out = NULL;
     *count = 0;
-    const AnalysisReport *report = &analysis->report;
+    const AnalysisReport *report = analyzer_result_report(analysis->result);
     const AnalysisVoiceLeading *leading = &report->voice_leading;
     AnalyzerViolation *list = NULL;
     size_t used = 0, capacity = 0;
@@ -643,83 +645,6 @@ static size_t keep_statistics(StyleStatistic *statistics, size_t count, const ch
         }
     }
     return used;
-}
-
-AnalyzerFragmentResult analyzer_fragment_style_distance_without(const AnalyzerFragmentAnalysis *analysis,
-                                                                const StyleModel *model,
-                                                                const char *const *categories, size_t count,
-                                                                StyleComparison *out) {
-    if (!analysis || !analysis->valid || !model || !out || (count > 0 && !categories)) {
-        return ANALYZER_FRAGMENT_ERR_ARGUMENT;
-    }
-    for (size_t i = 0; i < count; i++) {
-        StyleDimension dimension;
-        if (!categories[i] || !style_category_dimension(categories[i], &dimension)) {
-            return ANALYZER_FRAGMENT_ERR_ARGUMENT;
-        }
-    }
-    memset(out, 0, sizeof *out);
-    AnalyzerFragmentResult result = ANALYZER_FRAGMENT_ERR_ALLOC;
-    StyleProfile *profile = style_profile_create();
-    StyleStatistic *fragment_stats = NULL, *model_stats = NULL, *kept = NULL;
-    size_t fragment_count = 0, model_count = 0, kept_count = 0;
-    StyleModel *fragment_model = NULL, *base_model = NULL, *kept_model = NULL;
-    StyleComparison full = {0}, means = {0};
-    if (!profile || style_profile_add_document_json(profile, analysis->document_json) != STYLE_PROFILE_OK ||
-        style_profile_statistics(profile, &fragment_stats, &fragment_count) != STYLE_PROFILE_OK ||
-        style_model_statistics(model, &model_stats, &model_count) != STYLE_MODEL_FILE_OK) {
-        goto done;
-    }
-    /* The named categories leave both sides before anything is compared. */
-    fragment_count = keep_statistics(fragment_stats, fragment_count, categories, count);
-    model_count = keep_statistics(model_stats, model_count, categories, count);
-    kept = calloc(model_count > 0 ? model_count : 1, sizeof *kept);
-    fragment_model = model_of("fragment-style", fragment_stats, fragment_count);
-    base_model = model_of("fragment-style-base", model_stats, model_count);
-    if (!kept || !fragment_model || !base_model) {
-        goto done;
-    }
-    /* The means come from the model cut down to the categories the fragment has. */
-    for (size_t i = 0; i < model_count; i++) {
-        if (has_category(fragment_stats, fragment_count, model_stats[i].category)) {
-            kept[kept_count++] = model_stats[i];
-        }
-    }
-    kept_model = model_of("fragment-style-reference", kept, kept_count);
-    if (!kept_model) {
-        goto done;
-    }
-    if (style_profile_compare(fragment_model, base_model, &full) != STYLE_COMPARE_OK ||
-        style_profile_compare(fragment_model, kept_model, &means) != STYLE_COMPARE_OK) {
-        result = ANALYZER_FRAGMENT_ERR_ARGUMENT;
-        goto done;
-    }
-    /* The full comparison's categories (the missing ones too) with the means of the cut one. */
-    StyleCategoryDistance *category_list = means.categories;
-    size_t category_count = means.category_count;
-    *out = means;
-    out->categories = full.categories;
-    out->category_count = full.category_count;
-    full.categories = category_list;
-    full.category_count = category_count;
-    memset(&means, 0, sizeof means);
-    result = ANALYZER_FRAGMENT_OK;
-done:
-    style_comparison_destroy(&full);
-    style_comparison_destroy(&means);
-    style_model_destroy(kept_model);
-    style_model_destroy(base_model);
-    style_model_destroy(fragment_model);
-    free(kept);
-    style_statistics_free(model_stats, model_count);
-    free(fragment_stats);
-    style_profile_destroy(profile);
-    return result;
-}
-
-AnalyzerFragmentResult analyzer_fragment_style_distance(const AnalyzerFragmentAnalysis *analysis,
-                                                        const StyleModel *model, StyleComparison *out) {
-    return analyzer_fragment_style_distance_without(analysis, model, NULL, 0, out);
 }
 
 /* ---- the style reference ---- */
@@ -850,4 +775,30 @@ done:
     free(fragment_stats);
     style_profile_destroy(profile);
     return status;
+}
+
+/* ---- the fragment entries, over the hearing entries ---- */
+
+AnalyzerFragmentResult analyzer_fragment_style_distance_without(const AnalyzerFragmentAnalysis *analysis,
+                                                                const StyleModel *model,
+                                                                const char *const *categories, size_t count,
+                                                                StyleComparison *out) {
+    if (!analysis || !analysis->valid || !model || !out || (count > 0 && !categories)) {
+        return ANALYZER_FRAGMENT_ERR_ARGUMENT;
+    }
+    AnalyzerStyleReference *reference = NULL;
+    AnalyzerStatus status = analyzer_style_reference_create(model, categories, count, &reference);
+    if (status == ANALYZER_OK) {
+        status = analyzer_result_style_distance(analysis->result, reference, out);
+    }
+    analyzer_style_reference_destroy(reference);
+    if (status == ANALYZER_OK) {
+        return ANALYZER_FRAGMENT_OK;
+    }
+    return status == ANALYZER_ERR_ALLOC ? ANALYZER_FRAGMENT_ERR_ALLOC : ANALYZER_FRAGMENT_ERR_ARGUMENT;
+}
+
+AnalyzerFragmentResult analyzer_fragment_style_distance(const AnalyzerFragmentAnalysis *analysis,
+                                                        const StyleModel *model, StyleComparison *out) {
+    return analyzer_fragment_style_distance_without(analysis, model, NULL, 0, out);
 }
