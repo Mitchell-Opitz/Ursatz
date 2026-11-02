@@ -94,6 +94,16 @@ ChainInputStatus chain_estimate_key_regions(const CommonPracticeKeySegment *key_
                                             const CommonPracticeKeyRegionsConfig *config, CommonPracticeKeyRegions *out);
 
 /*
+ * The outer lines on the chord segments. The outer voices are read on the voice segments (one per melody note, not merged), the harmony,
+ * form, meter, galant and melody builders index them by chord segment, so this maps them: entry i of both lines is the entry of the voice
+ * segment that sounds at the start of chord segment i of the first `count` of `segments` (the last voice segment starting at or before it;
+ * absent, over the chord segment's window, when none does). `lines` are the lines of `voice_segments`. The entries are copies, with their own
+ * note id, pitch and span, and segment_index is the chord segment's; the result is freed with outer_voice_lines_destroy.
+ */
+ChainInputStatus chain_build_segment_lines(const ChainSegments *voice_segments, const OuterVoiceLines *lines, const ChainSegments *segments,
+                                           size_t count, OuterVoiceLines *out);
+
+/*
  * The inputs of standard-harmony's cadence adapter, one HarmonySegmentInput per segment, as the Roman numerals and the outer voices read them
  * (HarmonySegmentInput, analysis_input.h): the segment (through harmony_segment_input_set_segment), the numeral's degree, intervals,
  * inversion, applied target, mode and uncertainty, and the degrees of the outer lines' notes in the local key (0 for a chromatic or an
@@ -101,7 +111,7 @@ ChainInputStatus chain_estimate_key_regions(const CommonPracticeKeySegment *key_
  * every segment.
  *
  * `chords` and `romans` are the standard-tonality chord inputs and Roman results of the first `count` segments, `lines` the outer lines
- * of the same segmentation (count entries at least). The result borrows from them and from the segments and map.
+ * of the same segmentation (count entries at least): on the chord segments (chain_build_segment_lines), not the voice segments. The result borrows from them and from the segments and map.
  */
 typedef struct {
     HarmonySegmentInput *inputs;  /* owned; count entries */
@@ -159,8 +169,8 @@ typedef struct {
 /*
  * The form input over the measures [first_measure, last_measure] (MeterMap numbers): the soprano of the outer lines as notes (consecutive
  * segments on one note id are one note), every segment starting in the measures as a segment, and the cadences found (NULL for none),
- * each arriving over the windows of its first to last arrival segment, then finished. `lines` are the outer lines of the segmentation
- * `segments` (the notes' events are found in `notes` by id). Destroy with chain_form_input_destroy.
+ * each arriving over the windows of its first to last arrival segment, then finished. `lines` are the outer lines on the chord segments
+ * `segments` (chain_build_segment_lines; the notes' events are found in `notes` by id). Destroy with chain_form_input_destroy.
  */
 ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const ChainSegments *segments, const OuterVoiceLines *lines,
                                         int first_measure, int last_measure, const HarmonyCadences *cadences, ChainFormInput *out);
@@ -194,6 +204,7 @@ typedef struct {
     size_t time_capacity;
 } ChainMeterInput;
 
+/* The meter input over the measures [first_measure, last_measure]; `lines` are the outer lines on the chord segments (chain_build_segment_lines). */
 ChainInputStatus chain_build_meter_input(const AnalysisNoteSet *notes, const OuterVoiceLines *lines, const ChainSegments *segments,
                                          const char *const *chord_labels, int first_measure, int last_measure,
                                          const StandardFormInput *form, const StandardFormPhrases *phrases,
@@ -244,6 +255,7 @@ void chain_voice_grid_destroy(ChainVoiceGrid *grid);
  *   - nct: from the chord result of the note's FIRST segment (`results`, one per segment): no chord match gives UNCLASSIFIED; a note listed
  *     among the chord's leftover tones gives NON_CHORD_TONE with its NonChordTone (UNCLASSIFIED when it was left unclassified); a note not
  *     listed gives CHORD_TONE. nct_ref is "<segment id>/<note id>".
+ * `entries` are one outer line on the chord segments (chain_build_segment_lines), `count` entries.
  * `segment[i]` is the first segment of entry i. Destroy with chain_melody_line_destroy.
  */
 typedef struct {
@@ -262,7 +274,7 @@ void chain_melody_line_destroy(ChainMelodyLine *melody);
  * the tonic, with the alteration against the major scale: 0 1 2 3 4 5 6 7 8 9 10 11 -> 1  2- 2  3- 3  4  4+ 5  6- 6  7- 7. The key's own
  * tonic is a degree of the home key (`home_key_index`, 0..23) by the same table. Consecutive segments with the same key, outer-voice
  * degrees and numeral (a held chord) are ONE segment, with the uncertainty of the least certain. A segment's uncertainty is its numeral's
- * (0.5 with none). The root of an applied chord is the sounding root, from the tonicized degree and the chord's degree. Destroy with
+ * (0.5 with none). `lines` are on the chord segments (chain_build_segment_lines). The root of an applied chord is the sounding root, from the tonicized degree and the chord's degree. Destroy with
  * chain_galant_segments_destroy.
  */
 typedef struct {

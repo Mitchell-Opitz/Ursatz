@@ -177,6 +177,8 @@ const StandardTonalityRomanResult *analysis_chain_numerals(const AnalysisChain *
 /* The segmentation the outer lines are read on (one segment per melody note), and the lines (one entry per such segment). */
 const ChainSegments *analysis_chain_voice_segments(const AnalysisChain *chain);
 const OuterVoiceLines *analysis_chain_outer_voices(const AnalysisChain *chain);
+/* The same lines on the chord segments: one entry per segment of analysis_chain_segments, as the harmony, form, meter, galant and melody builders read them. */
+const OuterVoiceLines *analysis_chain_segment_outer_voices(const AnalysisChain *chain);
 const HarmonyCadences *analysis_chain_cadences(const AnalysisChain *chain);
 /* The stage inputs the chain builds and reads, kept until analysis_chain_destroy. NULL when the chain is NULL or the stage did not run. */
 /* The pitches of every note (outer voices, texture and voice leading). */
