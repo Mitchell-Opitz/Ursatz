@@ -74,6 +74,22 @@ target_compile_definitions(test_document_snapshots PRIVATE
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 add_test(NAME test_document_snapshots COMMAND test_document_snapshots)
 
+add_executable(test_analysis_result test_analysis_result.c)
+target_link_libraries(test_analysis_result PRIVATE ursatz_analyzer analyzer_test_support cjson)
+target_compile_definitions(test_analysis_result PRIVATE
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+add_test(NAME test_analysis_result_smoke COMMAND test_analysis_result smoke)
+add_test(NAME test_analysis_result COMMAND test_analysis_result)
+find_program(VALGRIND_PROGRAM valgrind)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_analysis_result_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
+                     $<TARGET_FILE:test_analysis_result> smoke)
+    set_tests_properties(test_analysis_result_valgrind PROPERTIES LABELS slow)
+endif()
+
 add_executable(test_measure_locations test_measure_locations.c)
 target_link_libraries(test_measure_locations PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_measure_locations PRIVATE

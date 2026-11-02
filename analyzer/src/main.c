@@ -14,6 +14,7 @@
 #include <ursatz_analyzer/similar_material.h>
 #include <ursatz_analyzer/style_profile.h>
 
+#include "pipeline/analysis_result_internal.h"
 #include "pipeline/counterpoint_pipeline.h"
 #include "pipeline/run_file.h"
 
@@ -720,10 +721,10 @@ int main(int argc, char *argv[]) {
     }
 
     ImportedNotes notes;
-    AnalysisReport report;
+    AnalyzerResult *result = NULL;
     InputPipelineResult import_status;
     NotationReadingResult reading_status = NOTATION_READING_OK;
-    switch (analyzer_run_file(path, input_format, reading_set ? &reading : NULL, &notes, &report, &import_status,
+    switch (analyzer_run_file(path, input_format, reading_set ? &reading : NULL, &notes, &result, &import_status,
                               &reading_status)) {
     case RUN_FILE_OK:
         break;
@@ -742,10 +743,10 @@ int main(int argc, char *argv[]) {
 
     int exit_code = 0;
     if (species != 0) {
-        CounterpointCheckResult checked = counterpoint_check_collect(&notes, species, cantus_upper, &report);
+        CounterpointCheckResult checked = counterpoint_check_collect(&notes, species, cantus_upper, analyzer_result_report_mutable(result));
         if (checked == COUNTERPOINT_CHECK_ERR_ALLOC) {
             fprintf(stderr, "Error: out of memory while checking counterpoint in '%s'\n", path);
-            analysis_report_destroy(&report);
+            analyzer_result_destroy(result);
             imported_notes_destroy(&notes);
             return 1;
         }
@@ -755,7 +756,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    AnalysisDocument *document = analyzer_run_file_document(path, &notes, &report);
+    AnalysisDocument *document = analyzer_run_file_document(path, &notes, result);
     if (!document) {
         fprintf(stderr, "Error: out of memory while building analysis document for '%s'\n", path);
         return 1;

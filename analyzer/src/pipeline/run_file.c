@@ -1,7 +1,7 @@
 #include "pipeline/run_file.h"
 
 RunFileResult analyzer_run_file(const char *path, InputFormat format, const NotationReading *reading,
-                                ImportedNotes *notes, AnalysisReport *report, InputPipelineResult *import_status,
+                                ImportedNotes *notes, AnalyzerResult **result, InputPipelineResult *import_status,
                                 NotationReadingResult *reading_status) {
     InputPipelineResult imported = input_pipeline_import_file(path, format, notes);
     if (import_status) {
@@ -20,16 +20,16 @@ RunFileResult analyzer_run_file(const char *path, InputFormat format, const Nota
             return RUN_FILE_ERR_READING;
         }
     }
-    if (!run_analysis_pipeline(notes, report)) {
+    if (analyzer_analyze(notes, NULL, result) != ANALYZER_OK) {
         imported_notes_destroy(notes);
         return RUN_FILE_ERR_ALLOC;
     }
     return RUN_FILE_OK;
 }
 
-AnalysisDocument *analyzer_run_file_document(const char *path, ImportedNotes *notes, AnalysisReport *report) {
-    AnalysisDocument *document = analysis_document_build(path, notes, report);
-    analysis_report_destroy(report);
+AnalysisDocument *analyzer_run_file_document(const char *path, ImportedNotes *notes, AnalyzerResult *result) {
+    AnalysisDocument *document = analysis_document_build_from_result(path, result);
+    analyzer_result_destroy(result);
     imported_notes_destroy(notes);
     return document;
 }

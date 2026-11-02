@@ -190,12 +190,12 @@ SimilarResult similar_query_from_file(const char *path, SimilarQuery *query) {
         return SIMILAR_ERR_ARGUMENT;
     }
     ImportedNotes imported;
-    AnalysisReport report;
-    RunFileResult ran = analyzer_run_file(path, INPUT_FORMAT_AUTO, NULL, &imported, &report, NULL, NULL);
+    AnalyzerResult *result = NULL;
+    RunFileResult ran = analyzer_run_file(path, INPUT_FORMAT_AUTO, NULL, &imported, &result, NULL, NULL);
     if (ran != RUN_FILE_OK) {
         return ran == RUN_FILE_ERR_IMPORT ? SIMILAR_ERR_IO : SIMILAR_ERR_ALLOC;
     }
-    AnalysisDocument *built = analyzer_run_file_document(path, &imported, &report);
+    AnalysisDocument *built = analyzer_run_file_document(path, &imported, result);
     char *json = built ? analysis_document_to_json(built) : NULL;
     analysis_document_destroy(built);
     if (!json) {

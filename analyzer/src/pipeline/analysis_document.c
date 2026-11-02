@@ -11,6 +11,7 @@
 #include "common-practice-minimal/framework.h"
 #include "core/rational.h"
 #include "pipeline/analysis_document_internal.h"
+#include "pipeline/analysis_result_internal.h"
 #include "pipeline/path_util.h"
 #include "pipeline/pitch_class_util.h"
 #include "pipeline/progression_pipeline.h"
@@ -4023,6 +4024,23 @@ AnalysisDocument *analysis_document_build(const char *input_path, const Imported
         return NULL;
     }
     return document;
+}
+
+AnalysisDocument *analysis_document_build_from_result(const char *input_path, const AnalyzerResult *result) {
+    if (!analyzer_result_report_complete(result)) {
+        return NULL;
+    }
+    return analysis_document_build(input_path, analyzer_result_notes(result), analyzer_result_report(result));
+}
+
+char *analysis_document_render_result(const char *input_path, const AnalyzerResult *result) {
+    AnalysisDocument *document = analysis_document_build_from_result(input_path, result);
+    if (!document) {
+        return NULL;
+    }
+    char *json = analysis_document_to_json(document);
+    analysis_document_destroy(document);
+    return json;
 }
 
 char *analysis_document_to_json(const AnalysisDocument *document) {

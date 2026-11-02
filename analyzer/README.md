@@ -35,6 +35,9 @@ ctest --test-dir build --output-on-failure
 Tests:
 
 - `test_analysis_pipeline`, `test_report_output`: end-to-end pipeline and report file.
+- `test_analysis_result`: the claims of each area on the five reference pieces, targets and confidences, cancel and
+  partial stages, and the document and report of the result against the snapshots (`smoke` runs Bach 114, also under
+  valgrind).
 - `test_corpus_key_estimation`: the home key of six reference pieces.
 - `test_key_regions_clementi_36`, `test_key_regions_mozart_545`: the key regions and principal
   modulations of Clementi Sonatina Op. 36 No. 1 and Mozart K. 545 against hand-read regions. Both are
@@ -226,10 +229,11 @@ Its public include directory is `include/`, and consumers include headers as
 | `imported_notes.h` | `ImportedNotes`, what every input produces (notes, meter, key signatures, and an `ImportedSource` saying what the input states); `imported_notes_destroy` frees it. |
 | `midi_pipeline.h` | The MIDI backend of the input interface. |
 | `musicxml_pipeline.h` | The MusicXML backend of the input interface. |
-| `analysis_pipeline.h` | `run_analysis_pipeline` turns `ImportedNotes` into an `AnalysisReport`. |
+| `analysis_result.h` | `analyzer_analyze` turns `ImportedNotes` into an `AnalyzerResult`: the library chain's results, the claims of every area as `Interpretation`s, and the report view the exports render from. See [docs/analysis-result.md](docs/analysis-result.md). |
+| `analysis_pipeline.h` | `run_analysis_pipeline`, a wrapper over `analyzer_analyze` that moves the report out as an `AnalysisReport`. |
 | `analysis_report.h` | `AnalysisReport` and its entries (segment span, chord readings, non-chord tones), key regions and key changes. |
-| `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalysisReport`, serializes it as JSON, and derives `<stem>.analysis.json`. |
-| `markdown_report.h` | Renders an `AnalysisDocument` as the Markdown report, section by section. |
+| `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalyzerResult` (or an `AnalysisReport`), serializes it as JSON, and derives `<stem>.analysis.json`. |
+| `markdown_report.h` | Renders an `AnalysisDocument`, or an `AnalyzerResult`, as the Markdown report, section by section. |
 | `report_writer.h` | Derives the `<stem>.report.md` path and writes the file. |
 | `corpus.h` | `corpus_run` analyzes every piece in a folder into documents and a corpus index, resumable. |
 | `style_labels.h` | The labels a style profile counts (numerals, progressions, intervals, durations) and the category names, shared with the Composer. |
@@ -261,7 +265,7 @@ Private helper modules, each the one home of what several files used to copy:
 | `src/util/file_util.h` | `file_read_all`, `file_write_atomic` (temporary name, then rename). |
 | `src/util/misc_util.h` | `text_copy`, `size_compare`, `fraction_compare`, `entity_id_copy`, `notes_last_end`, `fnv1a_bytes`. |
 | `src/pipeline/corpus_walk.h` | `corpus_walk_documents`: opens `corpus-index.json` and visits the document of every analyzed piece. |
-| `src/pipeline/run_file.h` | `analyzer_run_file` (import, optional reading, pipeline) and `analyzer_run_file_document`. |
+| `src/pipeline/run_file.h` | `analyzer_run_file` (import, optional reading, `analyzer_analyze`) and `analyzer_run_file_document`. |
 
 The tests share `tests/support/test_support.h` (the `analyzer_test_support` library): a MIDI builder, JSON accessors,
 file helpers and a document analyzer.
@@ -269,7 +273,7 @@ file helpers and a document analyzer.
 ## Pipeline
 
 `main.c` runs `input_pipeline` (MIDI or MusicXML import through Ursatz, both into `ImportedNotes`), then `analysis_pipeline`,
-which runs the analysis as one `AnalyzerPass` (`chain.h`). The Analyzer orchestrates the library's analysis chain
+which runs the analysis as one `AnalyzerPass` (`chain.h`) inside `analyzer_analyze` (`analysis_result.h`). The Analyzer orchestrates the library's analysis chain
 (`analysis_chain_run` of `ursatz_chain`, R-217, R-241) and collects its results; it adds no analysis of its own to them.
 
 1. `chain_input`: builds the chain's neutral input from the imported notes: one `AnalysisNote` per event, sorted, and the
@@ -290,9 +294,9 @@ which runs the analysis as one `AnalyzerPass` (`chain.h`). The Analyzer orchestr
    `rhythm_pipeline` (density, syncopation, hemiola, hypermeter, tuplets), `markings_pipeline`, `voicing_check` and
    `counterpoint_pipeline`. `identify_pivot_chords` also stays: the chain has no pivot reading.
 
-`analysis_document` then builds the analysis document once. It is the single source of truth:
-the JSON file is its serialization, and `markdown_report` renders the report from it, never from
-the pipeline directly. `report_writer` writes each file.
+`analysis_document` then builds the analysis document once, from the `AnalyzerResult`. The document is an export of the
+result: the JSON file is its serialization, and `markdown_report` renders the report from it, never from the pipeline
+directly. `report_writer` writes each file.
 
 ## Input formats
 
