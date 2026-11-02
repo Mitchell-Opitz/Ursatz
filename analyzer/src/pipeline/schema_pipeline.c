@@ -26,19 +26,15 @@
 #include "time/time_signature.h"
 #include "time/time_span.h"
 
-/* The segments of the library's input (the chain's galant segments, built again by its own builder) and the range of
-   chord entries each segment covers (parallel to list.items). */
+/* The segments of the library's input (the chain's galant segments, borrowed) and the range of chord entries each
+   segment covers (parallel to list.items). */
 typedef struct {
     ChainGalantSegments galant;
     size_t *first_entry;
     size_t *last_entry;
-    bool have_galant;
 } SchemaBuild;
 
 static void build_destroy(SchemaBuild *build) {
-    if (build->have_galant) {
-        chain_galant_segments_destroy(&build->galant);
-    }
     free(build->first_entry);
     free(build->last_entry);
     memset(build, 0, sizeof(*build));
@@ -208,24 +204,18 @@ bool schema_stage_collect(const ImportedNotes *notes, const AnalysisChain *libra
     size_t count = analysis_chain_segment_count(library);
     const GalantSchemaMatches *schemas = analysis_chain_schemas(library);
     const ScaleSequenceMatches *sequences = analysis_chain_sequences(library);
-    const ChainSegments *segments = analysis_chain_segments(library);
     if (count == 0 || report->entry_count != count || report->key_region_count == 0 || !notes->meter.meter_map ||
-        !schemas || !sequences || !segments || !analysis_chain_outer_voices(library) ||
-        !analysis_chain_chord_inputs(library) || !analysis_chain_numerals(library)) {
+        !schemas || !sequences) {
         return true;
     }
-    /* The matches name the chain's merged segments ("seg-<n>"); its builder gives them again, for their spans. */
+    const ChainGalantSegments *galant = analysis_chain_galant_segments(library);
+    if (!galant) {
+        return true;
+    }
+    /* The matches name the chain's merged segments ("seg-<n>"); the chain's galant segments give their spans. */
     SchemaBuild build;
     memset(&build, 0, sizeof(build));
-    ChainInputStatus built = chain_build_galant_segments(
-        segments, count, notes->meter.meter_map, analysis_chain_outer_voices(library),
-        analysis_chain_home_key(library), analysis_chain_chord_inputs(library), analysis_chain_numerals(library),
-        &build.galant);
-    if (built != CHAIN_INPUT_OK) {
-        chain_galant_segments_destroy(&build.galant);
-        return built != CHAIN_INPUT_ERR_ALLOC;
-    }
-    build.have_galant = true;
+    build.galant = *galant;
     bool ok = entry_ranges(report, &build);
     if (ok && schemas->count > 0) {
         report->schemas = calloc(schemas->count, sizeof(AnalysisSchema));
