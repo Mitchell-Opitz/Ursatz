@@ -15,6 +15,7 @@ ursatz_public_headers(standard_voicing
     PREFIX standard-voicing
     SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
     HEADERS
+        framework.h
         range_rules.h
         spacing_rules.h
         stem_rules.h
