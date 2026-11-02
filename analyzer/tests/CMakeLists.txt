@@ -437,6 +437,24 @@ if(VALGRIND_PROGRAM)
     set_tests_properties(test_composer_api_valgrind PROPERTIES LABELS slow)
 endif()
 
+add_executable(test_hearing test_hearing.c)
+target_link_libraries(test_hearing PRIVATE ursatz_analyzer cjson)
+target_include_directories(test_hearing PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_definitions(test_hearing PRIVATE
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    URSATZ_HEARING_WORK_DIR="${CMAKE_CURRENT_BINARY_DIR}/hearing_work")
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/hearing_work)
+add_test(NAME test_hearing_smoke COMMAND test_hearing smoke)
+add_test(NAME test_hearing COMMAND test_hearing)
+set_tests_properties(test_hearing PROPERTIES LABELS slow)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_hearing_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
+                     $<TARGET_FILE:test_hearing> smoke)
+    set_tests_properties(test_hearing_valgrind PROPERTIES LABELS slow)
+endif()
+
 add_executable(test_meter_check test_meter_check.c)
 target_link_libraries(test_meter_check PRIVATE ursatz_analyzer analyzer_test_support cjson m)
 target_compile_definitions(test_meter_check PRIVATE URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml")
