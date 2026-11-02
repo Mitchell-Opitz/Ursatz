@@ -27,21 +27,20 @@
  * are not the report's phrases, which come from the voice-segment soprano, but they tile the same cadences;
  * occurrences are linked to the report's phrases and ideas by span.
  *
- * The chain keeps the note-level input to itself. A MotiveStage rebuilds it with the chain's own builder
- * (chain_build_motive_input) for the notes the occurrences index and the meter. The bass is not read: the default
+ * A MotiveStage keeps the chain's note-level input (analysis_chain_motive_input), borrowed, for the notes the occurrences index and the meter. The bass is not read: the default
  * config has include_bass false and the report has no bass motives. The results are the chain's, borrowed: the chain,
  * the chain input and the notes must outlive the stage. A piece without a meter, a home key or a soprano leaves it
  * without motives; that is not an error.
  */
 typedef struct {
-    ChainFormInput built;       /* owned; the note-level input again, for the indices the occurrences use */
+    ChainFormInput built;       /* borrowed from the chain; the note-level input, for the indices the occurrences use */
     bool have_input;            /* built holds an input */
     size_t *note_indices;       /* owned; per input note, the ImportedNotes index of the note */
     size_t note_index_count;
     StandardFormMotives motives; /* borrowed from the chain */
 } MotiveStage;
 
-/* Takes the chain's motives and rebuilds the input they index. Returns false only on allocation failure. */
+/* Takes the chain's motives and the input they index. Returns false only on allocation failure. */
 bool motive_stage_read(MotiveStage *stage, const ChainInput *input, const AnalysisChain *library);
 
 /* Copies the stage's families and occurrences into the report, each family with its features (motive_features.h) read

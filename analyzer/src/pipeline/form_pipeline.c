@@ -29,22 +29,12 @@ bool form_stage_read(FormStage *stage, const ImportedNotes *notes, const ChainIn
     const StandardFormSegmentation *ideas = analysis_chain_ideas(library);
     const StandardFormThemes *themes = analysis_chain_themes(library);
     const StandardFormExpansions *expansions = analysis_chain_expansions(library);
-    const ChainSegments *segments = analysis_chain_segments(library);
-    const OuterVoiceLines *lines = analysis_chain_outer_voices(library);
-    const HarmonyCadences *cadences = analysis_chain_cadences(library);
-    if (!notes->meter.meter_map || !phrases || !ideas || !themes || !expansions || !segments || !lines || !cadences ||
-        phrases->count == 0) {
+    const ChainFormInput *built = analysis_chain_form_input(library);
+    if (!notes->meter.meter_map || !phrases || !ideas || !themes || !expansions || !built || phrases->count == 0) {
         return true; /* nothing to read phrases from */
     }
-    /* The chain keeps the form input to itself; its builder gives it again, for the notes the results index, the cadence
-       ids and the meter. */
-    ChainInputStatus built =
-        chain_build_form_input(&input->set, segments, lines, 1, INT_MAX, cadences, &stage->built);
-    if (built != CHAIN_INPUT_OK) {
-        chain_form_input_destroy(&stage->built);
-        memset(&stage->built, 0, sizeof(stage->built));
-        return built != CHAIN_INPUT_ERR_ALLOC;
-    }
+    /* The chain's form input, borrowed, for the notes the results index, the cadence ids and the meter. */
+    stage->built = *built;
     stage->have_input = true;
     size_t count = stage->built.input.note_count;
     stage->note_indices = malloc(sizeof(size_t) * (count > 0 ? count : 1));
@@ -472,8 +462,5 @@ void form_stage_destroy(FormStage *stage) {
         return;
     }
     free(stage->note_indices);
-    if (stage->have_input) {
-        chain_form_input_destroy(&stage->built);
-    }
     memset(stage, 0, sizeof(*stage));
 }
