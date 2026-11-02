@@ -2,6 +2,7 @@
 #define URSATZ_ANALYZER_ANALYSIS_DOCUMENT_H
 
 #include <ursatz_analyzer/analysis_report.h>
+#include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/midi_pipeline.h>
 
 /*
@@ -13,9 +14,8 @@
  */
 #define URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION 9
 
-/* An in-memory analysis document. It is the single source of truth for
-   every output: the JSON file and the Markdown report are both rendered
-   from it. */
+/* An in-memory analysis document: an export of an AnalyzerResult. The JSON file and
+   the Markdown report are both rendered from it. */
 typedef struct AnalysisDocument AnalysisDocument;
 
 /*
@@ -32,6 +32,13 @@ AnalysisDocument *analysis_document_build(const char *input_path, const Imported
                                           const AnalysisReport *report);
 
 /*
+ * Builds the document from an analysis result: the same content as analysis_document_build over the result's notes
+ * and report view (analysis_result.h). NULL for a NULL result, a result that did not run every chain stage (its
+ * report view is empty), or on allocation failure. The document does not reference the result after returning.
+ */
+AnalysisDocument *analysis_document_build_from_result(const char *input_path, const AnalyzerResult *result);
+
+/*
  * Serializes document as pretty-printed JSON with a 2-space indent and a
  * fixed key order, ending in a newline. Returns a heap string the caller
  * frees, or NULL on allocation failure.
@@ -43,6 +50,9 @@ void analysis_document_destroy(AnalysisDocument *document);
 /* Convenience: analysis_document_build, then analysis_document_to_json.
    Returns a heap string the caller frees, or NULL on allocation failure. */
 char *analysis_document_render(const char *input_path, const ImportedNotes *notes, const AnalysisReport *report);
+
+/* Convenience: analysis_document_build_from_result, then analysis_document_to_json. NULL as for the build. */
+char *analysis_document_render_result(const char *input_path, const AnalyzerResult *result);
 
 /*
  * The analysis document path for input_path: "<stem>.analysis.json"

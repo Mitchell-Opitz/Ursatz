@@ -924,7 +924,7 @@ static bool render_non_chord_tones(StringBuilder *sb, const cJSON *document, con
 #define CADENCE_TYPE_MAX 8
 
 /* The report's word for a cadence type: the library's "subverted" is "evaded" here (the JSON keeps the library's). */
-static const char *cadence_type_label(const char *type) {
+static const char *report_cadence_type_label(const char *type) {
     return type && strcmp(type, "subverted") == 0 ? "evaded" : type;
 }
 
@@ -944,7 +944,7 @@ static bool append_share(StringBuilder *sb, double share) {
 
 /* A cadence type as a sentence word: "perfect-authentic" is "perfect authentic cadence". */
 static bool append_cadence_phrase(StringBuilder *sb, const char *type) {
-    for (const char *c = cadence_type_label(type); c && *c; c++) {
+    for (const char *c = report_cadence_type_label(type); c && *c; c++) {
         if (!sb_appendf(sb, "%c", *c == '-' ? ' ' : *c)) {
             return false;
         }
@@ -1011,7 +1011,7 @@ static bool render_cadence_plan(StringBuilder *sb, const cJSON *document, const 
         }
         const cJSON *location = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cadence, "arrival"),
                                                                  "location");
-        const char *type = cadence_type_label(json_string_member(cadence, "type"));
+        const char *type = report_cadence_type_label(json_string_member(cadence, "type"));
         ok = sb_appendf(sb, "%d. ", number++) &&
              append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
              sb_appendf(sb, ": %s in %s\n", type, region_label(document, cJSON_GetObjectItemCaseSensitive(cadence, "region")));
@@ -1052,7 +1052,7 @@ static bool render_cadences(StringBuilder *sb, const cJSON *document, const cJSO
         const cJSON *location = cJSON_GetObjectItemCaseSensitive(arrival, "location");
         const char *soprano = json_string_member(cadence, "soprano_degree");
         ok = sb_append(sb, "| ") && append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) &&
-             sb_appendf(sb, " | %s | %s | %s | %s | %s |\n", cadence_type_label(json_string_member(cadence, "type")),
+             sb_appendf(sb, " | %s | %s | %s | %s | %s |\n", report_cadence_type_label(json_string_member(cadence, "type")),
                         region_label(document, cJSON_GetObjectItemCaseSensitive(cadence, "region")),
                         soprano ? soprano : "none", json_string_member(cadence, "arrival_beat_strength"),
                         cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(cadence, "boundary")) ? "yes" : "no");
@@ -1369,7 +1369,7 @@ static bool append_phrase_cadence(StringBuilder *sb, const cJSON *document, cons
     }
     const cJSON *location = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(cadence, "arrival"),
                                                              "location");
-    return sb_appendf(sb, "%s (", cadence_type_label(json_string_member(cadence, "type"))) &&
+    return sb_appendf(sb, "%s (", report_cadence_type_label(json_string_member(cadence, "type"))) &&
            append_position(sb, cJSON_GetObjectItemCaseSensitive(location, "start")) && sb_append(sb, ")");
 }
 
@@ -2618,4 +2618,14 @@ char *markdown_report_render(const AnalysisDocument *document) {
         sb.data[--sb.length] = '\0';
     }
     return sb.data;
+}
+
+char *markdown_report_render_result(const char *input_path, const AnalyzerResult *result) {
+    AnalysisDocument *document = analysis_document_build_from_result(input_path, result);
+    if (!document) {
+        return NULL;
+    }
+    char *markdown = markdown_report_render(document);
+    analysis_document_destroy(document);
+    return markdown;
 }

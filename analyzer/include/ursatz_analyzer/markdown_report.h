@@ -18,4 +18,8 @@
  */
 char *markdown_report_render(const AnalysisDocument *document);
 
+/* The report of an analysis result: analysis_document_build_from_result, then markdown_report_render. NULL for a
+   result the document cannot be built from, or on allocation failure. */
+char *markdown_report_render_result(const char *input_path, const AnalyzerResult *result);
+
 #endif
