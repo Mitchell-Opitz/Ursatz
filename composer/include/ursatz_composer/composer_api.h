@@ -117,7 +117,7 @@ ComposerStatus composer_api_variant_operations(ComposerResponse *out);
  * "continuation", "contrast", "cadential": keep the variants that suit any), "distance" ("close", "medium" or "far"),
  * "chain" ({"steps": [{"op", "params"}]}: the same chain for every variant), "each_op" (one variant for every operation
  * that applies to the motive's form; not with chain, count, distance or functions), "count" (1 to 16, default 6) and
- * "seed" (0 to 4294967235; default from the clock; variant i uses seed + i). Progress is reported once for each variant
+ * "seed" (0 to 4294967231; default from the clock; variant i uses seed + i). Progress is reported once for each variant
  * tried, stage "variants", and a cancel is honored there. json: {"seed", "source", "variants": [...]}, with "skipped" for
  * each_op and "notices" (strings) when a draw was skipped or fewer variants than asked for were found. "detail": true adds
  * to each variant "remoteness_fraction": [numerator, denominator] and "leaves_harmony".
