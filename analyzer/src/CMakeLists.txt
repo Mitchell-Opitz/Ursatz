@@ -34,6 +34,7 @@ add_library(ursatz_analyzer STATIC
     pipeline/chain.c
     pipeline/analysis_result.c
     pipeline/analysis_pipeline.c
+    pipeline/chord_sequence.c
     pipeline/markdown_report.c
     pipeline/report_writer.c
     pipeline/path_util.c
