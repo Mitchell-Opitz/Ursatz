@@ -536,6 +536,52 @@ RegenerateResult plan_regenerate(PiecePlan *plan, FillTarget target, const Compo
     return plan_regenerate_all(plan, &target, 1, config, outcome);
 }
 
+/* Whether a section is still to be written: not grown yet, or with a lane span still open. */
+static bool section_is_open(const PiecePlan *plan, NodeId section) {
+    if (plan_node_kind(plan, section) != PLAN_NODE_SECTION || plan_node_state(plan, section) == PLAN_STATE_GIVEN) {
+        return false;
+    }
+    if (plan_node_state(plan, section) == PLAN_STATE_CONSTRAINED) {
+        return true;
+    }
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        if (plan_has_lane_span(plan, id) && plan_lane_span_state(plan, id) == PLAN_STATE_CONSTRAINED &&
+            plan_section_of(plan, plan_lane_span_owner(plan, id)) == section) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * The sections the run hears and checks (R-261), each once: the ones that hold the reopened targets, and the ones that
+ * were still open before (the run writes them too, so they are heard, never reported kept). NULL when out of memory.
+ */
+static NodeId *scope_sections(const PiecePlan *plan, const FillTarget *scope, size_t count, size_t *section_count) {
+    size_t nodes = plan_node_count(plan);
+    bool *marked = calloc(nodes + 1, sizeof(bool));
+    NodeId *sections = calloc(nodes + 1, sizeof(NodeId));
+    *section_count = 0;
+    if (!marked || !sections) {
+        free(marked);
+        free(sections);
+        return NULL;
+    }
+    for (size_t i = 0; i < count; i++) {
+        NodeId section = plan_section_of(plan, owner_node(plan, scope[i]));
+        if (section != PLAN_NODE_NONE) {
+            marked[section] = true;
+        }
+    }
+    for (NodeId id = 1; id <= nodes; id++) {
+        if (marked[id] || (plan_has_node(plan, id) && section_is_open(plan, id))) {
+            sections[(*section_count)++] = id;
+        }
+    }
+    free(marked);
+    return sections;
+}
+
 RegenerateResult plan_regenerate_all(PiecePlan *plan, const FillTarget *targets, size_t target_count,
                                      const ComposeConfig *config, ComposeOutcome *outcome) {
     if (!plan || !config || !outcome) {
@@ -546,6 +592,12 @@ RegenerateResult plan_regenerate_all(PiecePlan *plan, const FillTarget *targets,
     RegenerateResult scoped = plan_regenerate_scope_all(plan, targets, target_count, &scope, &count);
     if (scoped != REGENERATE_OK) {
         return scoped;
+    }
+    ComposeConfig scoped_config = *config;
+    scoped_config.scope = scope_sections(plan, scope, count, &scoped_config.scope_count);
+    if (!scoped_config.scope) {
+        free(scope);
+        return REGENERATE_ERR_ALLOC;
     }
 
     /* Nothing is changed unless every part can be reopened. */
@@ -584,10 +636,12 @@ RegenerateResult plan_regenerate_all(PiecePlan *plan, const FillTarget *targets,
     free(spans);
     free(scope);
     if (result != REGENERATE_OK) {
+        free((NodeId *)scoped_config.scope);
         return result;
     }
 
-    PieceResult composed = compose_run(plan, config, outcome);
+    PieceResult composed = compose_run(plan, &scoped_config, outcome);
+    free((NodeId *)scoped_config.scope);
     switch (composed) {
     case PIECE_OK:
         return REGENERATE_OK;

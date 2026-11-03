@@ -45,6 +45,10 @@ int hearing_midi(const ComposerHearing *hearing, size_t event);
 /* The plan the hearing was made from. */
 const PiecePlan *hearing_plan(const ComposerHearing *hearing);
 
+/* Test only: how many spans, in all hearings of this process so far, were handed to analyzer_hear. A test reads it before
+   and after a run to see which sections the run heard. */
+size_t hearing_analyzer_calls(void);
+
 /* NULL is a no-op. */
 void hearing_destroy(ComposerHearing *hearing);
 

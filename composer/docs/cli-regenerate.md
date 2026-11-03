@@ -50,7 +50,8 @@ nodes and lane spans that became Given, and the path of the plan as given to `--
 
 The output is `fill`'s, with what was reopened first: the sections reopened whole, the lane spans reopened one by one, the
 seed, the form and cadences heard in each section written again, and the returns heard. With `--format json` the object has
-a `reopened` member (`sections` and `spans` by lane) after `seed` and `realized`.
+a `reopened` member (`sections` and `spans` by lane) after `seed` and `realized`. A section the run kept, outside the scope of
+the hearing ([regenerate.md](regenerate.md)), prints as `kept` (text) and as `"heard": null, "in_scope": false` (JSON).
 
 ```
 $ ursatz-composer regenerate piece-locked.json --section B --seed 5 --out piece-2.json

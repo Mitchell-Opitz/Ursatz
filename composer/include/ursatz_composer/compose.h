@@ -98,11 +98,19 @@ typedef struct {
     ComposerRatio tempo;            /* GrowConfig.tempo; a denominator of 0 (all-zero) is none */
     const struct GrowPoolForm *pool; /* GrowConfig.pool; NULL for none; must outlive compose_run */
     size_t pool_count;
+    /* The theme sections heard and checked after the run (R-261); NULL is every section. A section out of scope is
+       reported with ComposeHeard.in_scope false, adds nothing to the heard score and is not checked by the Analyzer. The
+       returns, seam and key checks read the whole piece either way. plan_regenerate_all sets it to the sections that
+       hold the targets it reopened. Must outlive compose_run. */
+    const NodeId *scope;
+    size_t scope_count;
 } ComposeConfig;
 
 /* What one theme section was heard as. The members are GrowOutcome's. */
 typedef struct {
     NodeId section;
+    /* false: the section was kept (outside ComposeConfig.scope): not heard, not checked, no heard form. */
+    bool in_scope;
     /* A section of a piece structure (piece_structure.h) names its id and its part; has_part is false for any other. */
     bool has_part;
     int part;                    /* a PiecePart */
