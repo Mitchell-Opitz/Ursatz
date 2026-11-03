@@ -277,4 +277,35 @@ ComposerStatus composer_api_progression(const char *request_json, const Composer
  */
 ComposerStatus composer_api_counterpoint(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
+/*
+ * Makes motives related to a motive, best first (docs/cli-develop.md). Request: the motive request of composer_api_motive
+ * ("input", "meter", "key", ...) with "op" (required: "restate", "invert", "retrograde", "interval", "fragment",
+ * "liquidate", "augment" or "diminish"), "seed" (0 to 4294967295, default 0), "suggest" (1 to 16, default 5) and the members
+ * the operation takes, each as the option of the command: "by", "degree", "tonal" (restate), "axis", "tonal" (invert),
+ * "interval", "amount", "keep_contour" (interval), "position", "length", "min" (fragment), "drop", "keep_rhythm", "min"
+ * (liquidate), "ratio" (augment, diminish); a member the operation does not take is refused. "midi", "musicxml", "tempo",
+ * "plain_midi": the files of the source and the best candidate (midi, musicxml, plan_json). json: {"source": <note list>,
+ * "operation", "seed", "candidates": [{"index", "label", "score_numerator", "score_denominator", "text"}]}. Nothing that
+ * can be developed as asked is COMPOSER_ERR_UNSATISFIABLE. Progress once ("develop"); a cancel is COMPOSER_ERR_CANCELLED.
+ */
+ComposerStatus composer_api_develop(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Grows a theme from a motive (docs/cli-grow.md): its structure, a harmony, a bass line and a melody, ending in the cadence
+ * asked for. Request: the motive request of composer_api_motive ("input", "harmony", "features", "role"; or, instead of
+ * "input", "corpus": a corpus directory with "like": a passage file, whose first bar of a similar passage becomes the motive,
+ * which the document reports as "source") and the brief of the command: "into" ("sentence", "period" or "hybrid"), "hybrid"
+ * ("<beginning>+<ending>"), "key", "mode" ("major", "minor" or "style"), "meter", "bars" (4 or 8), "cadence", "first_cadence",
+ * "accompaniment", "accompaniment_motive" (a motive request of its own, read in the meter, role accompaniment), "texture",
+ * "voicing" (true), "check", "style", "style_weight", "style_without" (up to 8 categories), "blend", "blend_weight",
+ * "blend_weights", "seed" (0 to 4294967295; default from the clock; if a seed gets stuck the next, up to 16, are tried),
+ * "suggest" (1 to 16 different themes), "tempo", and what to make besides the document: "midi", "musicxml" (the first theme's
+ * files, and each theme's MusicXML as "musicxml" in its entry), "plans" (each theme's plan in the document), "explain"
+ * ("text" or "json": each theme's explanation as "explanation"), "plain_midi". "into", "key" and "meter" are required.
+ * json: what `grow --format json` prints (without the files it wrote), and "notices" (strings) when a corpus document is
+ * stale or fewer themes than asked for were found. plan_json, midi and musicxml: the first theme's. Progress per compose stage
+ * and per seed tried ("grow"); a cancel is COMPOSER_ERR_CANCELLED with no partial plan.
+ */
+ComposerStatus composer_api_grow(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
 #endif

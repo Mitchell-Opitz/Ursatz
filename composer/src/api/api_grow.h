@@ -165,6 +165,20 @@ ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const ComposerRatio *
 ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError *error);
 void api_grow_run_destroy(GrowRun *run);
 
+/* The names of the style categories a style can be read without: adds name to names (at most capacity; a repeat is ignored). */
+ComposerStatus api_style_without_add(const char **names, size_t *count, size_t capacity, const char *name,
+                                     ComposerError *error);
+
+/* --- seeding from a corpus ---------------------------------------------------------------------------- */
+
+/* The motive of a corpus passage like the passage file like_path, in the meter and key. */
+ComposerStatus api_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const AnalysisKey *key,
+                               unsigned long seed, CorpusSeed *out, ComposerError *error);
+/* The seed as the plan records it. */
+ComposerStatus api_seed_source(const CorpusSeed *seed, PlanSource *out, ComposerError *error);
+/* "3 stale documents in '<dir>' (analyzed by another version; run the corpus again)", or "" when none is stale. */
+void api_seed_stale_notice(const CorpusSeed *seed, const char *corpus_dir, char *out, size_t size);
+
 /* The first node of the plan with the name, or PLAN_NODE_NONE. */
 NodeId api_find_node(const PiecePlan *plan, const char *name);
 
