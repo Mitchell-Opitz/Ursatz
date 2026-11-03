@@ -196,25 +196,25 @@ static int read_options(int argc, char **argv, Options *options) {
     if (!options->key_text || !options->meter_text || !options->bars_text || !options->cadence_text) {
         return cli_fail(EXIT_USAGE, "progression needs --key, --meter, --bars and --cadence (see --help)");
     }
-    if (!cli_parse_key(options->key_text, &options->key)) {
+    if (!request_parse_key(options->key_text, &options->key)) {
         return cli_fail(EXIT_USAGE,
                     "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                     "for example \"D minor\"",
                     options->key_text);
     }
-    if (!cli_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
+    if (!request_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
         return cli_fail(EXIT_USAGE, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8", options->meter_text);
     }
     unsigned long bars;
-    if (!cli_parse_whole_number(options->bars_text, MAX_BARS, &bars) || bars == 0) {
+    if (!request_parse_whole_number(options->bars_text, MAX_BARS, &bars) || bars == 0) {
         return cli_fail(EXIT_USAGE, "--bars must be a whole number from 1 to %d, not '%s'", MAX_BARS, options->bars_text);
     }
     options->bars = (long)bars;
-    if (!cli_parse_cadence(options->cadence_text, &options->cadence)) {
+    if (!request_parse_cadence(options->cadence_text, &options->cadence)) {
         return cli_fail(EXIT_USAGE, "unknown cadence '%s'; use PAC, IAC, HC, DC or PC", options->cadence_text);
     }
     if (options->seed_text) {
-        if (!cli_parse_whole_number(options->seed_text, 4294967295UL, &options->seed)) {
+        if (!request_parse_whole_number(options->seed_text, 4294967295UL, &options->seed)) {
             return cli_fail(EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'", options->seed_text);
         }
     } else {
@@ -225,7 +225,7 @@ static int read_options(int argc, char **argv, Options *options) {
         static const char *const LEVELS[4] = {"none", "low", "medium", "high"};
         bool found = false;
         for (int i = 0; i < 4; i++) {
-            if (cli_equals_ignore_case(options->embellish_text, LEVELS[i])) {
+            if (request_equals_ignore_case(options->embellish_text, LEVELS[i])) {
                 options->embellish = (EmbellishLevel)i;
                 found = true;
             }
@@ -241,9 +241,9 @@ static int read_options(int argc, char **argv, Options *options) {
         }
     }
     if (options->format_text) {
-        if (cli_equals_ignore_case(options->format_text, "json")) {
+        if (request_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
-        } else if (!cli_equals_ignore_case(options->format_text, "text")) {
+        } else if (!request_equals_ignore_case(options->format_text, "text")) {
             return cli_fail(EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
         }
     }
@@ -264,7 +264,7 @@ static int read_options(int argc, char **argv, Options *options) {
         options->has_sequence = true;
     }
     if (options->suggest_text &&
-        (!cli_parse_whole_number(options->suggest_text, MAX_SUGGESTIONS, &options->suggest) || options->suggest == 0)) {
+        (!request_parse_whole_number(options->suggest_text, MAX_SUGGESTIONS, &options->suggest) || options->suggest == 0)) {
         return cli_fail(EXIT_USAGE, "--suggest must be a whole number from 1 to %d, not '%s'", MAX_SUGGESTIONS,
                     options->suggest_text);
     }

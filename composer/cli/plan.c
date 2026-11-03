@@ -309,7 +309,7 @@ static int read_at(GivenOption *given, bool form_defaulted) {
     }
     snprintf(given->letter, sizeof(given->letter), "%.*s", (int)length, given->at_text);
     given->bar = 1;
-    if (colon && (!cli_parse_whole_number(colon + 1, 100000, &given->bar) || given->bar < 1)) {
+    if (colon && (!request_parse_whole_number(colon + 1, 100000, &given->bar) || given->bar < 1)) {
         return cli_fail(CLI_EXIT_USAGE, "--at '%s': the bar must be a whole number from 1", given->at_text);
     }
     return 0;
@@ -326,7 +326,7 @@ static int check_given(Options *options) {
             return cli_fail(CLI_EXIT_USAGE, "--cells goes with --given-progression, not '%s'", given->source);
         }
         given->cells = cells_in_bar(&options->meter);
-        if (given->cells_text && (!cli_parse_whole_number(given->cells_text, 64, &given->cells) || given->cells < 1)) {
+        if (given->cells_text && (!request_parse_whole_number(given->cells_text, 64, &given->cells) || given->cells < 1)) {
             return cli_fail(CLI_EXIT_USAGE, "--cells must be a whole number from 1, not '%s'", given->cells_text);
         }
         options->given_melodies += given->kind == GIVEN_MELODY;
@@ -359,25 +359,25 @@ static int check_options(Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "--key '%s' names a mode already; leave out --mode", options->key_text);
     }
     if (options->mode_text &&
-        !cli_equals_ignore_case(options->mode_text, "major") && !cli_equals_ignore_case(options->mode_text, "minor")) {
+        !request_equals_ignore_case(options->mode_text, "major") && !request_equals_ignore_case(options->mode_text, "minor")) {
         return cli_fail(CLI_EXIT_USAGE, "--mode must be major or minor, not '%s'", options->mode_text);
     }
     if (snprintf(key_text, sizeof(key_text), has_mode_in_key ? "%s" : "%s %s", options->key_text,
                  options->mode_text ? options->mode_text : "major") >= (int)sizeof(key_text) ||
-        !cli_parse_key(key_text, &options->key)) {
+        !request_parse_key(key_text, &options->key)) {
         return cli_fail(CLI_EXIT_USAGE,
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, for example \"D\" with "
                         "--mode minor, or \"D minor\"",
                         options->key_text);
     }
     cli_key_name(&options->key, options->key_name, sizeof(options->key_name));
-    if (!cli_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
+    if (!request_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
         return cli_fail(CLI_EXIT_USAGE, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8", options->meter_text);
     }
-    if (options->bars_text && !cli_parse_whole_number(options->bars_text, SIZE_SEARCH_MAX * 8, &options->bars)) {
+    if (options->bars_text && !request_parse_whole_number(options->bars_text, SIZE_SEARCH_MAX * 8, &options->bars)) {
         return cli_fail(CLI_EXIT_USAGE, "--bars must be a whole number, not '%s'", options->bars_text);
     }
-    if (options->count_text && !cli_parse_whole_number(options->count_text, 64, &options->count)) {
+    if (options->count_text && !request_parse_whole_number(options->count_text, 64, &options->count)) {
         return cli_fail(CLI_EXIT_USAGE, "--count must be a whole number, not '%s'", options->count_text);
     }
     FormTemplate layout;
@@ -420,7 +420,7 @@ static int check_options(Options *options) {
     if (options->without.count > 0 && !options->style_path) {
         return cli_fail(CLI_EXIT_USAGE, "--style-without needs --style");
     }
-    if (options->style_weight_text && !cli_parse_ratio(options->style_weight_text, &options->style_weight)) {
+    if (options->style_weight_text && !request_parse_ratio(options->style_weight_text, &options->style_weight)) {
         return cli_fail(CLI_EXIT_USAGE, "--style-weight must be a fraction like 1/2 or a whole number, not '%s'",
                         options->style_weight_text);
     }
@@ -436,7 +436,7 @@ static int check_options(Options *options) {
         return blend;
     }
     if (options->seed_text) {
-        if (!cli_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
+        if (!request_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
             return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'",
                             options->seed_text);
         }
@@ -444,9 +444,9 @@ static int check_options(Options *options) {
         options->seed = cli_default_seed();
     }
     if (options->format_text) {
-        if (cli_equals_ignore_case(options->format_text, "json")) {
+        if (request_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
-        } else if (!cli_equals_ignore_case(options->format_text, "text")) {
+        } else if (!request_equals_ignore_case(options->format_text, "text")) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
         }
     }
@@ -784,7 +784,7 @@ static NodeId section_named(const PiecePlan *plan, const char *letter, char *nam
     size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
     names[0] = '\0';
     for (size_t i = 0; i < count && i < CLI_MAX_SECTIONS; i++) {
-        if (cli_equals_ignore_case(sections[i].letter, letter)) {
+        if (request_equals_ignore_case(sections[i].letter, letter)) {
             return sections[i].node;
         }
         size_t used = strlen(names);

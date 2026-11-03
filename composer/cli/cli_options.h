@@ -15,6 +15,8 @@
 #include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/style.h>
 
+#include "util/request_parse.h"
+
 /* The exit statuses every command shares. */
 #define CLI_EXIT_USAGE 1
 #define CLI_EXIT_UNSATISFIABLE 2
@@ -27,20 +29,8 @@
 /* Prints "Error: <message>" to stderr and returns status. */
 int cli_fail(int status, const char *format, ...);
 
-bool cli_equals_ignore_case(const char *a, const char *b);
-
-/* A whole number from 0 to maximum, digits only. */
-bool cli_parse_whole_number(const char *text, unsigned long maximum, unsigned long *out);
-
-/* A tonic letter, an optional # or b, whitespace, then major or minor ("D minor", "F# major"); any case for the mode. */
-bool cli_parse_key(const char *text, AnalysisKey *key);
 const char *cli_key_name(const AnalysisKey *key, char *out, size_t size);
 
-/* "3/4", "6/8". The meters the harmony operators support are checked by the caller (harmony_meter_supported). */
-bool cli_parse_meter(const char *text, PlanMeter *meter);
-
-/* PAC, IAC, HC, DC or PC, any case. */
-bool cli_parse_cadence(const char *text, CadenceType *cadence);
 const char *cli_cadence_name(CadenceType cadence);
 
 /* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive", by PlanAccompanimentPattern. */
@@ -59,9 +49,6 @@ int cli_read_accompaniment(const char *pattern_text, const char *texture_text, c
  * section markers off. Returns 0, or the status of the usage error it printed.
  */
 int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportOptions *out);
-
-/* "3/2" or "3": a weight, both parts whole numbers up to 4294967295 and the denominator at least 1. */
-bool cli_parse_ratio(const char *text, ComposerRatio *out);
 
 /* --style-without values: at most CLI_STYLE_WITHOUT_MAX category names, each one the Analyzer defines. */
 #define CLI_STYLE_WITHOUT_MAX 8
@@ -163,9 +150,6 @@ typedef struct {
 
 /* Removes the temporary files of the first `count` pending files. */
 void cli_discard_pending(CliPendingFile *pending, size_t count);
-
-/* A pickup length ("1", "3/2") in beats of the unit as a time; false when it is not one. */
-bool cli_parse_pickup(const char *text, int beat_unit, Rational *out);
 
 /* The text of a motive in its own form (notes, rhythm or contour); malloc'd, the caller frees it. */
 char *cli_motive_text(const Motive *motive);

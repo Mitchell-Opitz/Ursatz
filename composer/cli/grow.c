@@ -193,7 +193,7 @@ static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
             pairing->beginning = (PlanThemeBeginning)i;
             beginning_found = true;
         }
-        if (cli_equals_ignore_case(plus + 1, ENDING_NAMES[i])) {
+        if (request_equals_ignore_case(plus + 1, ENDING_NAMES[i])) {
             pairing->ending = (PlanThemeEnding)i;
             ending_found = true;
         }
@@ -320,15 +320,15 @@ static int check_options(Options *options) {
     if (!options->into_text || !options->key_text || !options->meter_text) {
         return cli_fail(CLI_EXIT_USAGE, "grow needs --into, --key and --meter (see --help)");
     }
-    if (cli_equals_ignore_case(options->into_text, "sentence")) {
+    if (request_equals_ignore_case(options->into_text, "sentence")) {
         options->into = INTO_SENTENCE;
         options->pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
         options->pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
-    } else if (cli_equals_ignore_case(options->into_text, "period")) {
+    } else if (request_equals_ignore_case(options->into_text, "period")) {
         options->into = INTO_PERIOD;
         options->pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
         options->pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
-    } else if (cli_equals_ignore_case(options->into_text, "hybrid")) {
+    } else if (request_equals_ignore_case(options->into_text, "hybrid")) {
         options->into = INTO_HYBRID;
     } else {
         return cli_fail(CLI_EXIT_USAGE, "--into must be sentence, period or hybrid, not '%s'", options->into_text);
@@ -355,11 +355,11 @@ static int check_options(Options *options) {
     } else if (options->hybrid_text) {
         return cli_fail(CLI_EXIT_USAGE, "--hybrid applies only to --into hybrid");
     }
-    if (options->mode_text && !cli_equals_ignore_case(options->mode_text, "major") &&
-        !cli_equals_ignore_case(options->mode_text, "minor") && !cli_equals_ignore_case(options->mode_text, "style")) {
+    if (options->mode_text && !request_equals_ignore_case(options->mode_text, "major") &&
+        !request_equals_ignore_case(options->mode_text, "minor") && !request_equals_ignore_case(options->mode_text, "style")) {
         return cli_fail(CLI_EXIT_USAGE, "--mode must be major, minor or style, not '%s'", options->mode_text);
     }
-    if (options->mode_text && cli_equals_ignore_case(options->mode_text, "style") && !options->style_path) {
+    if (options->mode_text && request_equals_ignore_case(options->mode_text, "style") && !options->style_path) {
         return cli_fail(CLI_EXIT_USAGE, "--mode style needs --style");
     }
     /* With --mode the key may be a tonic alone: the mode is the one --mode gives. */
@@ -369,31 +369,31 @@ static int check_options(Options *options) {
         snprintf(tonic_key, sizeof(tonic_key), "%s major", key_text);
         key_text = tonic_key;
     }
-    if (!cli_parse_key(key_text, &options->key)) {
+    if (!request_parse_key(key_text, &options->key)) {
         return cli_fail(CLI_EXIT_USAGE,
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
                         "for example \"D minor\"",
                         options->key_text);
     }
-    if (options->mode_text && cli_equals_ignore_case(options->mode_text, "major")) {
+    if (options->mode_text && request_equals_ignore_case(options->mode_text, "major")) {
         options->key.mode = KEY_STRUCTURE_MODE_MAJOR;
-    } else if (options->mode_text && cli_equals_ignore_case(options->mode_text, "minor")) {
+    } else if (options->mode_text && request_equals_ignore_case(options->mode_text, "minor")) {
         options->key.mode = KEY_STRUCTURE_MODE_MINOR;
     }
-    if (!cli_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
+    if (!request_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
         return cli_fail(CLI_EXIT_USAGE, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8", options->meter_text);
     }
     options->bars = 8;
     if (options->bars_text) {
         unsigned long bars;
-        if (!cli_parse_whole_number(options->bars_text, 8, &bars) || (bars != 4 && bars != 8)) {
+        if (!request_parse_whole_number(options->bars_text, 8, &bars) || (bars != 4 && bars != 8)) {
             return cli_fail(CLI_EXIT_USAGE, "--bars must be 4 or 8, not '%s'", options->bars_text);
         }
         options->bars = bars;
     }
     options->cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     if (options->cadence_text &&
-        (!cli_parse_cadence(options->cadence_text, &options->cadence) || options->cadence == CADENCE_TYPE_DECEPTIVE ||
+        (!request_parse_cadence(options->cadence_text, &options->cadence) || options->cadence == CADENCE_TYPE_DECEPTIVE ||
          options->cadence == CADENCE_TYPE_PLAGAL)) {
         return cli_fail(CLI_EXIT_USAGE, "--cadence must be PAC, IAC or HC, not '%s'", options->cadence_text);
     }
@@ -403,7 +403,7 @@ static int check_options(Options *options) {
             return cli_fail(CLI_EXIT_USAGE, "--first-cadence applies only to a period or a hybrid that begins with an "
                                             "antecedent");
         }
-        if (!cli_parse_cadence(options->first_cadence_text, &options->first_cadence) ||
+        if (!request_parse_cadence(options->first_cadence_text, &options->first_cadence) ||
             (options->first_cadence != CADENCE_TYPE_HALF && options->first_cadence != CADENCE_TYPE_IMPERFECT_AUTHENTIC)) {
             return cli_fail(CLI_EXIT_USAGE, "--first-cadence must be HC or IAC, not '%s'", options->first_cadence_text);
         }
@@ -411,7 +411,7 @@ static int check_options(Options *options) {
     /* The theme command's accompaniment motive is not a file. */
     bool accompaniment_motive = options->accompaniment_motive_path || (options->ext && options->ext->accompaniment_motive_given);
     /* A chorale is four parts with the melody written too: a voicing, not an accompaniment. */
-    bool chorale = options->texture_text && cli_equals_ignore_case(options->texture_text, "chorale");
+    bool chorale = options->texture_text && request_equals_ignore_case(options->texture_text, "chorale");
     if (chorale || options->voicing_flag) {
         if (options->accompaniment_text || (options->texture_text && !chorale)) {
             return cli_fail(CLI_EXIT_USAGE, "--voicing and --texture chorale write the inner voices themselves; they cannot "
@@ -424,7 +424,7 @@ static int check_options(Options *options) {
         options->voicing.write_soprano = chorale;
     } else if (options->accompaniment_text || options->texture_text || accompaniment_motive) {
         /* The word "motive" names the accompaniment motive's pattern, which cli_read_accompaniment does not read. */
-        bool motive_word = options->accompaniment_text && cli_equals_ignore_case(options->accompaniment_text, "motive");
+        bool motive_word = options->accompaniment_text && request_equals_ignore_case(options->accompaniment_text, "motive");
         if (motive_word && !accompaniment_motive) {
             return cli_fail(CLI_EXIT_USAGE, "--accompaniment motive needs --accompaniment-motive <file>");
         }
@@ -454,7 +454,7 @@ static int check_options(Options *options) {
     if (options->without.count > 0 && !options->style_path) {
         return cli_fail(CLI_EXIT_USAGE, "--style-without needs --style");
     }
-    if (options->style_weight_text && !cli_parse_ratio(options->style_weight_text, &options->style_weight)) {
+    if (options->style_weight_text && !request_parse_ratio(options->style_weight_text, &options->style_weight)) {
         return cli_fail(CLI_EXIT_USAGE, "--style-weight must be a fraction like 1/2 or a whole number, not '%s'",
                         options->style_weight_text);
     }
@@ -465,12 +465,12 @@ static int check_options(Options *options) {
     }
     options->suggest = 1;
     if (options->suggest_text &&
-        (!cli_parse_whole_number(options->suggest_text, MAX_SUGGESTIONS, &options->suggest) || options->suggest == 0)) {
+        (!request_parse_whole_number(options->suggest_text, MAX_SUGGESTIONS, &options->suggest) || options->suggest == 0)) {
         return cli_fail(CLI_EXIT_USAGE, "--suggest must be a whole number from 1 to %d, not '%s'", MAX_SUGGESTIONS,
                         options->suggest_text);
     }
     if (options->seed_text) {
-        if (!cli_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
+        if (!request_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
             return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'",
                             options->seed_text);
         }
@@ -484,9 +484,9 @@ static int check_options(Options *options) {
         }
     }
     if (options->format_text) {
-        if (cli_equals_ignore_case(options->format_text, "json")) {
+        if (request_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
-        } else if (!cli_equals_ignore_case(options->format_text, "text")) {
+        } else if (!request_equals_ignore_case(options->format_text, "text")) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
         }
     }
@@ -1316,14 +1316,14 @@ int run_grow_ext(int argc, char **argv, GrowExt *ext) {
         options.export_options.tempo_denominator = options.tempo.denominator;
         options.tempo_from = "style";
     }
-    if (options.mode_text && cli_equals_ignore_case(options.mode_text, "style")) {
+    if (options.mode_text && request_equals_ignore_case(options.mode_text, "style")) {
         bool minor = false;
         if (!composer_style_mode(options.style, &minor)) {
             return cli_fail(CLI_EXIT_USAGE, "--mode style needs a --style with a mode category");
         }
         options.key.mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
     }
-    options.mode_from = options.mode_text && cli_equals_ignore_case(options.mode_text, "style") ? "style" : "request";
+    options.mode_from = options.mode_text && request_equals_ignore_case(options.mode_text, "style") ? "style" : "request";
 
     MotiveOptions motive_options;
     memset(&motive_options, 0, sizeof(motive_options));

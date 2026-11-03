@@ -546,13 +546,13 @@ static int make_each_op(const Options *options, unsigned long seed, const Motive
 /* The variants command proper: load the source, make --count variants, print them. */
 static int make_variants(const Options *options) {
     unsigned long count = VARIANTS_COUNT_DEFAULT;
-    if (options->count_text && (!cli_parse_whole_number(options->count_text, VARIANTS_COUNT_MAX, &count) || count < 1)) {
+    if (options->count_text && (!request_parse_whole_number(options->count_text, VARIANTS_COUNT_MAX, &count) || count < 1)) {
         return cli_fail(CLI_EXIT_USAGE, "--count must be a whole number from 1 to %d, not '%s'", VARIANTS_COUNT_MAX,
                         options->count_text);
     }
     unsigned long seed = cli_default_seed();
     unsigned long seed_max = CLI_SEED_MAX - VARIANTS_COUNT_MAX * VARIANTS_DRAWS_PER_COUNT;
-    if (options->seed_text && !cli_parse_whole_number(options->seed_text, seed_max, &seed)) {
+    if (options->seed_text && !request_parse_whole_number(options->seed_text, seed_max, &seed)) {
         return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to %lu, not '%s'", seed_max,
                         options->seed_text);
     }

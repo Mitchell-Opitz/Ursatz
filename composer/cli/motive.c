@@ -210,7 +210,7 @@ int run_motive(int argc, char **argv) {
            read after the first load. */
         if (options.pickup_text) {
             Rational pickup;
-            if (!cli_parse_pickup(options.pickup_text, motive_meter(&motive).beat_unit, &pickup)) {
+            if (!request_parse_pickup(options.pickup_text, motive_meter(&motive).beat_unit, &pickup)) {
                 return fail(EXIT_USAGE, "pickup '%s' is not a number of beats; write 0, 1 or 1/2", options.pickup_text);
             }
             motive_options.has_pickup = true;

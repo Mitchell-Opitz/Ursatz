@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_operator.h>
@@ -255,6 +256,9 @@ typedef struct {
      */
     const struct GrowPoolForm *pool;
     size_t pool_count;
+    /* NULL for none. Reported once at the start of the run ("grow", 0, 1: one candidate), then as ComposeConfig.job. A cancel
+       ends the run with GROW_ERR_STUCK and outcome->cancelled. */
+    const ComposerJob *job;
 } GrowConfig;
 
 typedef struct {
@@ -266,6 +270,7 @@ typedef struct {
     FillRecord *records[GROW_STAGE_COUNT]; /* owned; NULL for a stage that did not run */
     bool stuck;
     GrowStage stuck_stage;                 /* the stage that left a target open, when stuck */
+    bool cancelled;                        /* the job was cancelled (GrowConfig.job); stuck is false */
     FormHearResult heard_result;           /* FORM_HEAR_ERR_NOT_WRITTEN when the run did not complete */
     FormHeard heard;                       /* owned; the themes form_hear found over the theme section */
     int heard_form;                        /* PhraseLevelForm of the first theme heard, -1 for none */

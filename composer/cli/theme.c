@@ -87,24 +87,6 @@ bool request_member_pickup(const cJSON *object, char *text, size_t size, const c
     return false;
 }
 
-/* "0", "1", "1/2": beats of the beat unit, as whole notes. */
-bool request_parse_pickup(const char *text, int beat_unit, Rational *out) {
-    char *end = NULL;
-    long numerator = strtol(text, &end, 10);
-    long denominator = 1;
-    if (end == text || numerator < 0) {
-        return false;
-    }
-    if (*end == '/') {
-        const char *rest = end + 1;
-        denominator = strtol(rest, &end, 10);
-        if (end == rest || denominator < 1) {
-            return false;
-        }
-    }
-    return *end == '\0' && rational_make(numerator, (long long)(denominator * beat_unit), out) == RATIONAL_OK;
-}
-
 /*
  * Reads "tone_overrides" of a motive, {"<n>": "<role>"}: the 1-based note and its role as the motive command's --tone writes
  * it ("chord" or a non-chord tone). They go on the motive, which a plan keeps as its tones when it is attached.

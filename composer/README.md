@@ -283,6 +283,12 @@ as a plan file of its own (`variation-<i>.json`, with `--midi` and `--musicxml` 
 for the harmony of a section whose melody is given. `lock --format json` prints what it locked as JSON. See
 [docs/cli-variations.md](docs/cli-variations.md).
 
+## Composer API
+
+An application asks the Composer for everything through a versioned in-process C API, `include/ursatz_composer/composer_api.h`:
+JSON text requests, a `ComposerResponse` for every output, a `ComposerJob` for progress and cancel. See
+[docs/api.md](docs/api.md).
+
 ## Plan format
 
 A plan is written as JSON in the Composer's own format, version 2, described by

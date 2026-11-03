@@ -102,7 +102,7 @@ static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
             pairing->beginning = (PlanThemeBeginning)i;
             beginning_found = true;
         }
-        if (cli_equals_ignore_case(plus + 1, ENDINGS[i])) {
+        if (request_equals_ignore_case(plus + 1, ENDINGS[i])) {
             pairing->ending = (PlanThemeEnding)i;
             ending_found = true;
         }
@@ -171,11 +171,11 @@ static int read_fill(Request *request, size_t index, const cJSON *fill, const Pl
         }
         if (into) {
             section->has_into = true;
-            if (cli_equals_ignore_case(into, "sentence")) {
+            if (request_equals_ignore_case(into, "sentence")) {
                 section->into = PLAN_ARCHETYPE_SENTENCE;
-            } else if (cli_equals_ignore_case(into, "period")) {
+            } else if (request_equals_ignore_case(into, "period")) {
                 section->into = PLAN_ARCHETYPE_PERIOD;
-            } else if (cli_equals_ignore_case(into, "hybrid")) {
+            } else if (request_equals_ignore_case(into, "hybrid")) {
                 section->into = PLAN_ARCHETYPE_HYBRID;
             } else {
                 return cli_fail(CLI_EXIT_USAGE, "section '%s': \"into\" must be sentence, period or hybrid, not '%s'", id, into);
@@ -269,7 +269,7 @@ static int read_section(Request *request, size_t index, const cJSON *item, const
         return cli_fail(CLI_EXIT_USAGE, "section '%s': pickup '%s' is not a number of beats; write 0, 1 or 1/2", id, pickup);
     }
     if (cadence) {
-        if (!cli_parse_cadence(cadence, &section->cadence)) {
+        if (!request_parse_cadence(cadence, &section->cadence)) {
             return cli_fail(CLI_EXIT_USAGE, "section '%s': the cadence must be PAC, IAC, HC, DC or PC, not '%s'", id, cadence);
         }
         section->has_cadence = true;
@@ -292,11 +292,11 @@ static int read_brief(Request *request) {
     }
     PieceStructure *structure = &request->structure;
     const char *mode = request->mode_text;
-    if (!cli_equals_ignore_case(mode, "major") && !cli_equals_ignore_case(mode, "minor") &&
-        !cli_equals_ignore_case(mode, "style")) {
+    if (!request_equals_ignore_case(mode, "major") && !request_equals_ignore_case(mode, "minor") &&
+        !request_equals_ignore_case(mode, "style")) {
         return cli_fail(CLI_EXIT_USAGE, "\"mode\" must be major, minor or style, not '%s'", mode);
     }
-    if (cli_equals_ignore_case(mode, "style") && !request->style_path) {
+    if (request_equals_ignore_case(mode, "style") && !request->style_path) {
         return cli_fail(CLI_EXIT_USAGE, "\"mode\": \"style\" needs a \"style\"");
     }
     /* The key may be a tonic alone: the mode is the one "mode" gives. */
@@ -306,20 +306,20 @@ static int read_brief(Request *request) {
         snprintf(tonic_key, sizeof(tonic_key), "%s major", key_text);
         key_text = tonic_key;
     }
-    if (!cli_parse_key(key_text, &structure->key)) {
+    if (!request_parse_key(key_text, &structure->key)) {
         return cli_fail(CLI_EXIT_USAGE, "unknown key '%s'; write a tonic letter A-G with an optional # or b, for example \"D\"",
                         request->key_text);
     }
-    if (cli_equals_ignore_case(mode, "major")) {
+    if (request_equals_ignore_case(mode, "major")) {
         structure->key.mode = KEY_STRUCTURE_MODE_MAJOR;
-    } else if (cli_equals_ignore_case(mode, "minor")) {
+    } else if (request_equals_ignore_case(mode, "minor")) {
         structure->key.mode = KEY_STRUCTURE_MODE_MINOR;
     }
-    if (!cli_parse_meter(request->meter_text, &structure->meter) || !harmony_meter_supported(&structure->meter)) {
+    if (!request_parse_meter(request->meter_text, &structure->meter) || !harmony_meter_supported(&structure->meter)) {
         return cli_fail(CLI_EXIT_USAGE, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8", request->meter_text);
     }
     request->weight = (ComposerRatio){1, 1};
-    if (style_weight && !cli_parse_ratio(style_weight, &request->weight)) {
+    if (style_weight && !request_parse_ratio(style_weight, &request->weight)) {
         return cli_fail(CLI_EXIT_USAGE, "\"style_weight\" must be a fraction like 1/2 or a whole number, not '%s'", style_weight);
     }
     const cJSON *without = cJSON_GetObjectItemCaseSensitive(root, "without");
@@ -403,7 +403,7 @@ static int load_style(Request *request, bool plain_midi) {
         request->tempo_from = "style";
     }
     request->mode_from = "request";
-    if (cli_equals_ignore_case(request->mode_text, "style")) {
+    if (request_equals_ignore_case(request->mode_text, "style")) {
         bool minor = false;
         if (!composer_style_mode(request->style, &minor)) {
             return cli_fail(CLI_EXIT_USAGE, "\"mode\": \"style\" needs a style with a mode category");
@@ -1095,7 +1095,7 @@ typedef struct {
 
 static bool ends_with_json(const char *path) {
     size_t length = strlen(path);
-    return length >= 5 && cli_equals_ignore_case(path + length - 5, ".json");
+    return length >= 5 && request_equals_ignore_case(path + length - 5, ".json");
 }
 
 /* The explanation of both versions: text with a heading for each, or JSON {"loop": ..., "ending": ...}. */
@@ -1216,8 +1216,8 @@ static void print_result(const Options *options, const Request *request, const P
     bool has_loop = loop_region(piece->loop.plan, &start, &end);
     char key[32];
     GrowBrief brief = make_brief(request);
-    bool regenerated = options->from && !cli_equals_ignore_case(options->regenerate, "none");
-    bool whole = !options->lane || cli_equals_ignore_case(options->lane, "all");
+    bool regenerated = options->from && !request_equals_ignore_case(options->regenerate, "none");
+    bool whole = !options->lane || request_equals_ignore_case(options->lane, "all");
     cli_key_name(&request->structure.key, key, sizeof(key));
     if (json) {
         printf("{\"schema\":\"ursatz-piece\",\"seed\":%lu,\"key\":", piece->seed);
@@ -1416,7 +1416,7 @@ static int write_variations(const Options *options, const Request *request, Vari
  */
 static int make_variations(const Options *options, const Request *request, const Edit *edit, unsigned long seed, bool json) {
     unsigned long requested = 0;
-    if (!options->count || !cli_parse_whole_number(options->count, VARIATIONS_MAX, &requested) || requested < 1) {
+    if (!options->count || !request_parse_whole_number(options->count, VARIATIONS_MAX, &requested) || requested < 1) {
         return cli_fail(CLI_EXIT_USAGE, "--count must be a whole number from 1 to %d, not '%s'", VARIATIONS_MAX,
                         options->count ? options->count : "");
     }
@@ -1629,9 +1629,9 @@ static int check_edit_options(const Options *options) {
             return cli_fail(CLI_EXIT_USAGE, "--from needs --regenerate <section id>|none or --variations <section id>, not both\n%s",
                             PIECE_USAGE_LINE);
         }
-        if (options->lane && !cli_equals_ignore_case(options->lane, "all") && !cli_equals_ignore_case(options->lane, "harmony") &&
-            !cli_equals_ignore_case(options->lane, "bass") && !cli_equals_ignore_case(options->lane, "melody") &&
-            !cli_equals_ignore_case(options->lane, "inner")) {
+        if (options->lane && !request_equals_ignore_case(options->lane, "all") && !request_equals_ignore_case(options->lane, "harmony") &&
+            !request_equals_ignore_case(options->lane, "bass") && !request_equals_ignore_case(options->lane, "melody") &&
+            !request_equals_ignore_case(options->lane, "inner")) {
             return cli_fail(CLI_EXIT_USAGE, "--lane must be harmony, bass, melody, inner or all, not '%s'", options->lane);
         }
         if (options->variations) {
@@ -1672,13 +1672,13 @@ int run_piece(int argc, char **argv) {
         return status;
     }
     unsigned long seed = cli_default_seed();
-    if (options.seed && !cli_parse_whole_number(options.seed, CLI_SEED_MAX, &seed)) {
+    if (options.seed && !request_parse_whole_number(options.seed, CLI_SEED_MAX, &seed)) {
         return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'", options.seed);
     }
     bool json = false;
     if (options.format) {
-        json = cli_equals_ignore_case(options.format, "json");
-        if (!json && !cli_equals_ignore_case(options.format, "text")) {
+        json = request_equals_ignore_case(options.format, "json");
+        if (!json && !request_equals_ignore_case(options.format, "text")) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options.format);
         }
     }
@@ -1704,8 +1704,8 @@ int run_piece(int argc, char **argv) {
         }
         edit.text = plan_text;
         edit.section = options.variations ? options.variations
-                       : cli_equals_ignore_case(options.regenerate, "none") ? NULL : options.regenerate;
-        edit.lane = options.lane && !cli_equals_ignore_case(options.lane, "all") ? options.lane : NULL;
+                       : request_equals_ignore_case(options.regenerate, "none") ? NULL : options.regenerate;
+        edit.lane = options.lane && !request_equals_ignore_case(options.lane, "all") ? options.lane : NULL;
     }
 
     if (options.variations) {

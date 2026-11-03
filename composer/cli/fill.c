@@ -168,7 +168,7 @@ static int check_options(Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "fill needs a plan file\n%s", FILL_USAGE_LINE);
     }
     if (options->seed_text) {
-        if (!cli_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
+        if (!request_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
             return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'",
                             options->seed_text);
         }
@@ -176,13 +176,13 @@ static int check_options(Options *options) {
         options->seed = cli_default_seed();
     }
     if (options->candidates_text) {
-        if (!cli_parse_whole_number(options->candidates_text, MAX_CANDIDATES, &options->candidates) ||
+        if (!request_parse_whole_number(options->candidates_text, MAX_CANDIDATES, &options->candidates) ||
             options->candidates == 0) {
             return cli_fail(CLI_EXIT_USAGE, "--candidates must be a whole number from 1 to %d, not '%s'", MAX_CANDIDATES,
                             options->candidates_text);
         }
     }
-    if (options->style_weight_text && !cli_parse_ratio(options->style_weight_text, &options->style_weight)) {
+    if (options->style_weight_text && !request_parse_ratio(options->style_weight_text, &options->style_weight)) {
         return cli_fail(CLI_EXIT_USAGE, "--style-weight must be a fraction like 1/2 or a whole number, not '%s'",
                         options->style_weight_text);
     }
@@ -193,9 +193,9 @@ static int check_options(Options *options) {
         }
     }
     if (options->format_text) {
-        if (cli_equals_ignore_case(options->format_text, "json")) {
+        if (request_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
-        } else if (!cli_equals_ignore_case(options->format_text, "text")) {
+        } else if (!request_equals_ignore_case(options->format_text, "text")) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
         }
     }
