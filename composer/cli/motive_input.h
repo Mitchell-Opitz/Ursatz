@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include <cJSON.h>
 #include <ursatz_composer/motive.h>
 
 #include "motive_extras.h"
@@ -18,6 +19,23 @@ typedef struct {
     const char *pickup_text;
     MotiveExtras extras;
 } MotiveInput;
+
+/* The largest input file read, as for the library's file reader. */
+#define MOTIVE_INPUT_FILE_LIMIT (64L * 1024L * 1024L)
+
+/*
+ * Reads the input file into memory (*bytes, freed by the caller). Returns 0, or CLI_EXIT_UNSATISFIABLE with error set to
+ * the message ("cannot load '<path>' (io) at <path>: cannot open the file"); nothing is printed.
+ */
+int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size, char *error, size_t error_size);
+
+/*
+ * The composer API request for the input: "meter", "key", "pickup", the extras and, for a text input, "input" {"format",
+ * "form", "text"} with the bytes as the text. *midi is set when the bytes are read as a MIDI file (given as format midi, or
+ * detected and not given another form): the request then has no "input" and goes to the bytes entry. NULL when out of
+ * memory. bytes may be NULL for a file that could not be read; the text is then empty.
+ */
+cJSON *motive_input_request(const MotiveInput *input, const unsigned char *bytes, size_t size, bool *midi);
 
 /*
  * Loads the motive as the motive command does: the pickup and the chord onsets are in beats of the motive's meter, which a

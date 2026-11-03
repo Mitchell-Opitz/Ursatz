@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+#include <cJSON.h>
 #include <ursatz_composer/motive.h>
 
 /*
@@ -29,11 +30,14 @@ bool motive_extras_take(MotiveExtras *extras, int argc, char **argv, int *index,
 bool motive_extras_given(const MotiveExtras *extras);
 
 /*
- * Reads the texts into options (has_harmony, has_features, has_role and their values). meter is the motive's meter,
- * which the chord onsets are counted in; it may be NULL only when no --harmony was given. Returns 0, or the status of
- * the usage error printed.
+ * Reads the texts into options (has_harmony, has_features, has_role and their values) as the composer API reads the
+ * request members (api_read_motive_extras). meter is the motive's meter, which the chord onsets are counted in; it may
+ * be NULL only when no --harmony was given. Returns 0, or the status of the usage error printed.
  */
 int motive_extras_options(const MotiveExtras *extras, const PlanMeter *meter, MotiveOptions *options);
+
+/* Adds the options given to a request object as "harmony", "features" and "role". False when out of memory. */
+bool motive_extras_add_members(const MotiveExtras *extras, cJSON *object);
 
 /* The help lines of the options. */
 void motive_extras_print_help(FILE *out, bool role_only);

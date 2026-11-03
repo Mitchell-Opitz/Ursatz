@@ -2,6 +2,7 @@
 
 #include <string.h>
 
+#include "api/api_internal.h"
 #include "cli_options.h"
 
 bool motive_extras_take(MotiveExtras *extras, int argc, char **argv, int *index, bool role_only, int *status) {
@@ -38,38 +39,41 @@ bool motive_extras_given(const MotiveExtras *extras) {
 }
 
 int motive_extras_options(const MotiveExtras *extras, const PlanMeter *meter, MotiveOptions *options) {
+    if (!motive_extras_given(extras)) {
+        return 0;
+    }
+    cJSON *object = cJSON_CreateObject();
+    if (!object || !motive_extras_add_members(extras, object)) {
+        cJSON_Delete(object);
+        return cli_fail(CLI_EXIT_USAGE, "out of memory");
+    }
+    ComposerError error;
+    memset(&error, 0, sizeof error);
+    ComposerStatus status = api_read_motive_extras(object, "", meter, options, &error);
+    cJSON_Delete(object);
+    return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, NULL);
+}
+
+bool motive_extras_add_members(const MotiveExtras *extras, cJSON *object) {
+    bool ok = true;
     if (extras->harmony_text) {
-        MotiveError error;
-        if (!meter ||
-            motive_harmony_parse(extras->harmony_text, meter, options->harmony, &options->harmony_count, &error) !=
-                MOTIVE_OK) {
-            return cli_fail(CLI_EXIT_USAGE, "--harmony '%s' at %s: %s", extras->harmony_text,
-                            meter ? error.location : "the meter", meter ? error.message : "is not known");
-        }
-        options->has_harmony = true;
+        ok = cJSON_AddStringToObject(object, "harmony", extras->harmony_text) != NULL;
     }
-    if (extras->feature_count > 0) {
-        for (size_t i = 0; i < extras->feature_count; i++) {
-            MotiveError error;
-            if (motive_feature_parse(extras->feature_texts[i], &options->features[i], &error) != MOTIVE_OK) {
-                return cli_fail(CLI_EXIT_USAGE, "--feature '%s': %s", extras->feature_texts[i], error.message);
-            }
-            for (size_t j = 0; j < i; j++) {
-                if (strcmp(options->features[j].label, options->features[i].label) == 0) {
-                    return cli_fail(CLI_EXIT_USAGE, "--feature label '%s' is used twice", options->features[i].label);
-                }
+    if (ok && extras->feature_count > 0) {
+        cJSON *features = cJSON_AddArrayToObject(object, "features");
+        ok = features != NULL;
+        for (size_t i = 0; ok && i < extras->feature_count; i++) {
+            cJSON *item = cJSON_CreateString(extras->feature_texts[i]);
+            ok = item && cJSON_AddItemToArray(features, item);
+            if (!ok) {
+                cJSON_Delete(item);
             }
         }
-        options->feature_count = extras->feature_count;
-        options->has_features = true;
     }
-    if (extras->role_text) {
-        if (!motive_role_parse(extras->role_text, &options->accompaniment)) {
-            return cli_fail(CLI_EXIT_USAGE, "--role must be melodic or accompaniment, not '%s'", extras->role_text);
-        }
-        options->has_role = true;
+    if (ok && extras->role_text) {
+        ok = cJSON_AddStringToObject(object, "role", extras->role_text) != NULL;
     }
-    return 0;
+    return ok;
 }
 
 void motive_extras_print_help(FILE *out, bool role_only) {
