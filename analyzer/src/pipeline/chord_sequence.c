@@ -10,6 +10,7 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/style_labels.h>
 
+#include "pipeline/chord_sequence_internal.h"
 #include "util/json_util.h"
 
 /* ---- the join rule ---- */
@@ -173,13 +174,20 @@ AnalyzerStatus analyzer_chord_sequence_from_document(const char *document_json, 
         cJSON_Delete(document);
         return ANALYZER_ERR_ARGUMENT;
     }
+    AnalyzerStatus status = chord_sequence_from_tree(document, out, count);
+    cJSON_Delete(document);
+    return status;
+}
+
+AnalyzerStatus chord_sequence_from_tree(const cJSON *document, AnalyzerChord **out, size_t *count) {
+    *out = NULL;
+    *count = 0;
     const cJSON *entries = json_member(document, "chords");
     Joiner joiner;
     joiner_init(&joiner, cJSON_IsArray(entries) ? (size_t)cJSON_GetArraySize(entries) : 0);
     if (joiner.capacity > 0) {
         joiner.chords = malloc(joiner.capacity * sizeof *joiner.chords);
         if (!joiner.chords) {
-            cJSON_Delete(document);
             return ANALYZER_ERR_ALLOC;
         }
     }
@@ -199,17 +207,14 @@ AnalyzerStatus analyzer_chord_sequence_from_document(const char *document_json, 
         if (!fraction_member(json_member(entry, "span"), "start", &start) ||
             !fraction_member(json_member(entry, "span"), "end", &end)) {
             joiner_fail(&joiner);
-            cJSON_Delete(document);
             return ANALYZER_ERR_ARGUMENT;
         }
         if (joiner_add(&joiner, index, base->valuestring, root_name->valuestring, region, start, end) != JOIN_OK) {
             joiner_fail(&joiner);
-            cJSON_Delete(document);
             return ANALYZER_ERR_ALLOC;
         }
         index++;
     }
-    cJSON_Delete(document);
     joiner_finish(&joiner, out, count);
     return ANALYZER_OK;
 }

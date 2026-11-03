@@ -9,10 +9,12 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 #include <ursatz_analyzer/analysis_pipeline.h>
+#include <ursatz_analyzer/chord_sequence.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/style_labels.h>
 
 #include "core/rational.h"
+#include "pipeline/chord_sequence_internal.h"
 #include "pipeline/corpus_walk.h"
 #include "pipeline/run_file.h"
 #include "query/similarity_model.h"
@@ -274,8 +276,8 @@ SimilarResult similar_query_from_numerals(const char *text, SimilarQuery *query)
 
 /* ---- chords ---- */
 
-/* A chord of a document with a root-position numeral, at its absolute position. Entries of the document that are one
-   chord across several segments (the same numeral, key region and root, one after the other) are joined. */
+/* A chord of a document with a root-position numeral, at its absolute position, from the joined chord sequence
+   (chord_sequence.h). */
 typedef struct {
     char *numeral;
     int root;   /* pitch class */
@@ -293,92 +295,75 @@ static void chords_free(DocChord *chords, size_t count) {
     free(chords);
 }
 
-static bool root_pitch_class(const char *name, int *out) {
-    static const int letters[7] = {9, 11, 0, 2, 4, 5, 7}; /* A to G */
-    if (!name || name[0] < 'A' || name[0] > 'G') {
-        return false;
+/* The entry of the document's "chords" at an index, walking forward from a cursor (indices only grow). */
+static const cJSON *entry_at(const cJSON *entries, const cJSON **cursor, size_t *cursor_index, size_t index) {
+    if (!*cursor || index < *cursor_index) {
+        *cursor = entries ? entries->child : NULL;
+        *cursor_index = 0;
     }
-    int pc = letters[name[0] - 'A'];
-    for (const char *c = name + 1; *c; c++) {
-        if (*c != '#' && *c != 'b') {
-            return false;
-        }
-        pc += *c == '#' ? 1 : -1;
+    while (*cursor && *cursor_index < index) {
+        *cursor = (*cursor)->next;
+        (*cursor_index)++;
     }
-    *out = ((pc % 12) + 12) % 12;
-    return true;
+    return *cursor;
 }
 
-/* The chords in time order. A chord the document has no numeral or root for ends the run. *out is NULL when *count
-   is 0. false on allocation failure or an entry that cannot be read. */
+/* The chords in time order, from the joined chord sequence (chord_sequence.h), which is the one owner of the join rule.
+   *out is NULL when *count is 0. false on allocation failure or an entry that cannot be read. */
 static bool read_chords(const cJSON *document, DocChord **out, size_t *count) {
-    const cJSON *entries = json_member(document, "chords");
-    size_t capacity = cJSON_IsArray(entries) ? (size_t)cJSON_GetArraySize(entries) : 0;
+    AnalyzerChord *sequence = NULL;
+    size_t sequence_count = 0;
     *out = NULL;
     *count = 0;
-    if (capacity == 0) {
-        return true;
-    }
-    DocChord *chords = malloc(capacity * sizeof *chords);
-    if (!chords) {
+    if (chord_sequence_from_tree(document, &sequence, &sequence_count) != ANALYZER_OK) {
         return false;
     }
-    size_t n = 0;
-    long run = 0, previous_region = -1;
-    bool joined = false; /* the last chord can take the next entry */
-    const cJSON *entry;
-    cJSON_ArrayForEach(entry, entries) {
-        const cJSON *roman = json_member(entry, "roman_numeral");
-        const cJSON *base = json_member(roman, "base_numeral");
-        const cJSON *root_name = json_member(entry, "root");
-        const cJSON *key = json_member(entry, "key_label");
-        long region;
-        int root;
-        if (!cJSON_IsString(base) || !cJSON_IsString(root_name) || !root_pitch_class(root_name->valuestring, &root) ||
-            !json_number_member(roman, "key_region", &region)) {
-            run++;
-            joined = false;
-            continue;
-        }
-        char *numeral = style_label_numeral(base->valuestring);
-        if (!numeral) {
-            run++;
-            joined = false;
-            continue;
-        }
-        unsigned long start_n, start_d, end_n, end_d;
-        int start_measure, end_measure;
-        double start_beat, end_beat;
-        if (!fraction_member(json_member(entry, "span"), "start", &start_n, &start_d) ||
-            !fraction_member(json_member(entry, "span"), "end", &end_n, &end_d) ||
-            !location_member(entry, "start", &start_measure, &start_beat) ||
-            !location_member(entry, "end", &end_measure, &end_beat)) {
-            free(numeral);
-            chords_free(chords, n);
-            return false;
-        }
-        if (region != previous_region) {
-            run++;
-            joined = false;
-        }
-        previous_region = region;
-        if (joined && strcmp(chords[n - 1].numeral, numeral) == 0 && chords[n - 1].root == root) {
-            chords[n - 1].end_n = end_n;
-            chords[n - 1].end_d = end_d;
-            chords[n - 1].end_measure = end_measure;
-            chords[n - 1].end_beat = end_beat;
-            free(numeral);
-            continue;
-        }
-        size_t key_length = cJSON_IsString(key) ? strlen(key->valuestring) : 0;
-        chords[n++] = (DocChord){numeral, root, key_length >= 5 && strcmp(key->valuestring + key_length - 5, "minor") == 0,
-                                 run, start_n, start_d, end_n, end_d, start_measure, end_measure, start_beat, end_beat};
-        joined = true;
-    }
-    if (n == 0) {
-        free(chords);
+    if (sequence_count == 0) {
         return true;
     }
+    DocChord *chords = malloc(sequence_count * sizeof *chords);
+    if (!chords) {
+        analyzer_chord_sequence_free(sequence, sequence_count);
+        return false;
+    }
+    const cJSON *entries = json_member(document, "chords");
+    const cJSON *first_cursor = NULL, *last_cursor = NULL;
+    size_t first_index = 0, last_index = 0;
+    long run = 0;
+    size_t n = 0;
+    for (size_t i = 0; i < sequence_count; i++) {
+        const AnalyzerChord *chord = &sequence[i];
+        /* chords of one run follow each other, entry after entry, within one key region */
+        if (i == 0 || chord->key_region != sequence[i - 1].key_region || chord->first_entry != sequence[i - 1].last_entry + 1) {
+            run++;
+        }
+        const cJSON *first = entry_at(entries, &first_cursor, &first_index, chord->first_entry);
+        const cJSON *last = entry_at(entries, &last_cursor, &last_index, chord->last_entry);
+        const cJSON *key = json_member(first, "key_label");
+        int start_measure, end_measure;
+        double start_beat, end_beat;
+        if (!location_member(first, "start", &start_measure, &start_beat) ||
+            !location_member(last, "end", &end_measure, &end_beat)) {
+            chords_free(chords, n);
+            analyzer_chord_sequence_free(sequence, sequence_count);
+            return false;
+        }
+        size_t key_length = cJSON_IsString(key) ? strlen(key->valuestring) : 0;
+        chords[n++] = (DocChord){chord->numeral,
+                                 chord->root_pitch_class,
+                                 key_length >= 5 && strcmp(key->valuestring + key_length - 5, "minor") == 0,
+                                 run,
+                                 (unsigned long)chord->start.num,
+                                 (unsigned long)chord->start.den,
+                                 (unsigned long)chord->end.num,
+                                 (unsigned long)chord->end.den,
+                                 start_measure,
+                                 end_measure,
+                                 start_beat,
+                                 end_beat};
+        sequence[i].numeral = NULL; /* now owned by the chord */
+    }
+    free(sequence);
     *out = chords;
     *count = n;
     return true;
