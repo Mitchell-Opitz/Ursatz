@@ -7,6 +7,8 @@ ursatz-composer progression --key <key> --meter <n/m> --bars <n> --cadence <type
 Writes a chord progression for one phrase, with a bass line, ending in the cadence asked for.
 Output is printed on stdout and can also be written as plan JSON, MIDI or MusicXML.
 
+The command is a wrapper of the [composer API](api.md): it reads its arguments into a request, calls `composer_api_progression` (and `composer_api_export` for the MIDI file of an alternative after the first), writes the plan, MIDI and MusicXML files the response holds, all or none, and prints the progression from the response document alone. `--list-schemas` is the request `{"list_schemas": true}`.
+
 ## Required flags
 
 | Flag | Meaning |

@@ -8,6 +8,8 @@ Grows a theme from the motive in `<motive-input>`: its structure, a harmony, a b
 ending in the cadence asked for. It builds a request for `grow_build_plan` and runs `grow_run`
 (`<ursatz_composer/grow.h>`, see [grow.md](grow.md)); the result is the plan of the theme.
 
+The command is a wrapper of the [composer API](api.md): it reads its arguments, the motive file and the accompaniment motive file into a request (a MIDI file through `composer_api_motive_from_midi` first), calls `composer_api_grow` (and `composer_api_export` for the MIDI file of a theme after the first), writes the plan, MIDI, MusicXML and explanation files the response holds, all or none, and prints the theme from the response document alone. `--from-corpus` and `--like` are the members `corpus` and `like`.
+
 The input is loaded as for the [motive command](cli-motive.md): a MIDI file, a MusicXML file, a note
 list or a motive JSON file. `--key` and `--meter` are required and are given to the loader, so a file
 that declares another meter is an error. The motive must fit in one bar of the meter and have at

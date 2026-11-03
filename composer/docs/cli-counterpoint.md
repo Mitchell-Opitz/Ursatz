@@ -9,6 +9,8 @@ standard-counterpoint ([counterpoint.md](counterpoint.md)). The line is loaded a
 a MIDI file, a MusicXML file, a note list or a motive JSON file. It may be longer than a bar. `--key` and `--meter` are
 required and are given to the loader.
 
+The command is a wrapper of the [composer API](api.md): it reads its arguments and the line into a request (a MIDI file through `composer_api_motive_from_midi` first), calls `composer_api_counterpoint`, writes the plan, MIDI and MusicXML files the response holds, all or none, and prints the counter-melodies from the response document alone. `--above` is `"position": "above"`.
+
 ## Options
 
 | Option | Meaning |
