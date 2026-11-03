@@ -56,7 +56,7 @@ typedef struct {
     unsigned long magic;
     PlanReturnVariation variation;
     PlanSpan span;       /* the target section's span */
-    PlanKey key;         /* the key at its start */
+    AnalysisKey key;         /* the key at its start */
     PlanMeter meter;
     Rational from_start; /* where the returned section starts */
     int transpose;       /* the key difference, in semitones, the copy is moved by */

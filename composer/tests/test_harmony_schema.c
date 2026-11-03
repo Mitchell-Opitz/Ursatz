@@ -31,7 +31,7 @@
 typedef struct {
     int beats_per_bar;
     int beat_unit;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int tonic;
     int bars;        /* the phrase, in bars */
     int before_bars; /* bars at its start held by a Given tonic chord, so the target is not at the phrase start */
@@ -118,13 +118,12 @@ static Fixture build(const Scenario *scenario) {
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_METER, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = scenario->tonic;
-    payload.key.mode = scenario->mode;
+    payload.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     if (scenario->before_bars > 0) {
-        fixture.given_chord = add_harmony(fixture.plan, fixture.owner, before, scenario->mode == PLAN_MODE_MINOR ? "i" : "I",
+        fixture.given_chord = add_harmony(fixture.plan, fixture.owner, before, scenario->mode == KEY_STRUCTURE_MODE_MINOR ? "i" : "I",
                                           HARMONIC_FUNCTION_TONIC);
         assert(plan_lane_span_set_state(fixture.plan, fixture.given_chord, PLAN_STATE_GIVEN) == PLAN_OK);
     }
@@ -384,7 +383,7 @@ static int check_schemas(const Fixture *fixture, const Scenario *scenario, const
         Rational end = time_plus(last.start, last.length);
         assert(offset_in_bar(fixture, end).num == 0);
         PlanSpan whole = {first.start, time_sub(end, first.start)};
-        PlanKey key = {scenario->tonic, scenario->mode};
+        AnalysisKey key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
         const char *violation = "unread";
         assert(harmony_check_bass(fixture->plan, whole, key, bass, &violation));
         assert(violation == NULL);
@@ -401,7 +400,7 @@ static void check_given(const Fixture *fixture, const Scenario *scenario) {
         assert(plan_lane_span_state(fixture->plan, fixture->given_chord) == PLAN_STATE_GIVEN);
         assert(rational_cmp(span.length, bars_of(fixture, scenario->before_bars)) == 0);
         assert(strcmp(plan_lane_span_payload(fixture->plan, fixture->given_chord)->harmony.roman_numeral,
-                      scenario->mode == PLAN_MODE_MINOR ? "i" : "I") == 0);
+                      scenario->mode == KEY_STRUCTURE_MODE_MINOR ? "i" : "I") == 0);
     }
     PlanSpan span = plan_lane_span_span(fixture->plan, fixture->given_bass);
     assert(plan_lane_span_state(fixture->plan, fixture->given_bass) == PLAN_STATE_GIVEN);
@@ -460,7 +459,7 @@ static void test_schema_sweep(void) {
                 for (int t = 0; t < 4; t++) {
                     /* As an opening, as a continuation, and filling the end of a phrase exactly. */
                     for (int kind = 0; kind < 6; kind++) {
-                        Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
+                        Scenario scenario = {meters[m][0], meters[m][1], mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR,
                                              tonics[t], 8, kind == 0 ? 0 : 1, kind == 5 ? CADENCE_TYPE_DECEPTIVE : CADENCE_TYPE_PERFECT_AUTHENTIC,
                                              (unsigned long)(kind + t)};
                         if (kind >= 2) {
@@ -511,7 +510,7 @@ static void test_unfittable(void) {
     Operators operators = {&params, NULL, false, false};
 
     /* Four stages need two bars of 4/4; a target of one bar is too short. */
-    Scenario short_target = {4, 4, PLAN_MODE_MAJOR, 0, 2, 1, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
+    Scenario short_target = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 2, 1, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
     Fixture fixture = build(&short_target);
     FillOutcome outcome = run(&fixture, 0, &operators, NULL);
     assert(outcome.status == FILL_STATUS_STUCK);
@@ -521,7 +520,7 @@ static void test_unfittable(void) {
     plan_destroy(fixture.plan);
 
     /* 3/4 has one chord position a bar, all strong. */
-    Scenario waltz = {3, 4, PLAN_MODE_MAJOR, 0, 8, 0, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
+    Scenario waltz = {3, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, 0, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
     fixture = build(&waltz);
     outcome = run(&fixture, 0, &operators, NULL);
     assert(outcome.status == FILL_STATUS_STUCK);
@@ -530,14 +529,14 @@ static void test_unfittable(void) {
     plan_destroy(fixture.plan);
 
     /* An opening gambit is not offered after the start, and no schema when none is enabled. */
-    Scenario later = {4, 4, PLAN_MODE_MAJOR, 0, 8, 1, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
+    Scenario later = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, 1, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
     fixture = build(&later);
     outcome = run(&fixture, 0, &operators, NULL);
     assert(outcome.status == FILL_STATUS_STUCK && stuck_reason(&fixture, &outcome) == FILL_STUCK_ALL_REJECTED);
     fill_outcome_destroy(&outcome);
     plan_destroy(fixture.plan);
     params.schemas = 0;
-    Scenario opening = {4, 4, PLAN_MODE_MAJOR, 0, 8, 0, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
+    Scenario opening = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, 0, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
     fixture = build(&opening);
     outcome = run(&fixture, 0, &operators, NULL);
     assert(outcome.status == FILL_STATUS_STUCK && stuck_reason(&fixture, &outcome) == FILL_STUCK_ALL_REJECTED);
@@ -563,7 +562,7 @@ static void test_phrases_keep_their_cadence(void) {
             for (int c = 0; c < 4; c++) {
                 for (int before = 0; before < 2; before++) {
                     for (unsigned long seed = 0; seed < 3; seed++) {
-                        Scenario scenario = {4, 4, mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR, tonics[t], 8, before,
+                        Scenario scenario = {4, 4, mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR, tonics[t], 8, before,
                                              cadences[c], seed};
                         Fixture fixture = build(&scenario);
                         FillRecord *record = NULL;
@@ -646,7 +645,7 @@ static void check_sequence(const Fixture *fixture, const Scenario *scenario, con
     PlanSpan first = plan_lane_span_span(fixture->plan, ids[0]);
     PlanSpan last = plan_lane_span_span(fixture->plan, ids[count - 1]);
     PlanSpan whole = {first.start, time_sub(time_plus(last.start, last.length), first.start)};
-    PlanKey key = {scenario->tonic, scenario->mode};
+    AnalysisKey key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     const char *violation = "unread";
     assert(harmony_check_bass(fixture->plan, whole, key, &params->bass, &violation));
     assert(violation == NULL);
@@ -697,7 +696,7 @@ static void test_sequence_sweep(void) {
             for (int mode = 0; mode < 2; mode++) {
                 for (int t = 0; t < 2; t++) {
                     for (unsigned long seed = 0; seed < 4; seed++) {
-                        Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
+                        Scenario scenario = {meters[m][0], meters[m][1], mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR,
                                              tonics[t], 9, 1, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
                         FillConfig config;
                         memset(&config, 0, sizeof(config));

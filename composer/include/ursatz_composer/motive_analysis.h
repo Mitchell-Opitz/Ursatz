@@ -127,7 +127,7 @@ typedef struct {
     int range_semitones;
 
     bool key_known;
-    PlanKey key;
+    AnalysisKey key;
     MotiveKeySource key_source;
 
     bool degrees_known; /* the same as key_known */

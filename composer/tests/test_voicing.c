@@ -25,7 +25,7 @@
 
 typedef struct {
     const char *name;
-    PlanKey key;
+    AnalysisKey key;
     const char *numeral[CHORDS];
     int bass[CHORDS];
     int melody[CHORDS];
@@ -38,7 +38,7 @@ typedef struct {
 
 static const Progression PROGRESSIONS[] = {
     {"I IV V I in C major",
-     {0, PLAN_MODE_MAJOR},
+     {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR},
      {"I", "IV", "V", "I"},
      {48, 41, 43, 48},
      {76, 72, 71, 72},
@@ -47,7 +47,7 @@ static const Progression PROGRESSIONS[] = {
      {-1, -1, -1, -1},
      {-1, -1, 11, -1}},
     {"I ii6 V7 I in C major",
-     {0, PLAN_MODE_MAJOR},
+     {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR},
      {"I", "ii6", "V7", "I"},
      {48, 41, 43, 48},
      {76, 74, 71, 72},
@@ -56,7 +56,7 @@ static const Progression PROGRESSIONS[] = {
      {-1, -1, 5, -1},
      {-1, -1, 11, -1}},
     {"i iv6 V i in A minor",
-     {9, PLAN_MODE_MINOR},
+     {NULL, PITCH_LETTER_A, 0, KEY_STRUCTURE_MODE_MINOR},
      {"i", "iv6", "V", "i"},
      {45, 41, 52, 45},
      {72, 74, 68, 69},

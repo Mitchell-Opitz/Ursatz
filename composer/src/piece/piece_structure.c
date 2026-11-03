@@ -63,9 +63,9 @@ PieceResult piece_structure_check(const PieceStructure *structure) {
         return PIECE_ERR_NULL;
     }
     size_t cells;
-    if (!grow_cells_per_bar(&structure->meter, &cells) || structure->key.tonic_pitch_class < 0 ||
-        structure->key.tonic_pitch_class > 11 ||
-        (structure->key.mode != PLAN_MODE_MAJOR && structure->key.mode != PLAN_MODE_MINOR) ||
+    if (!grow_cells_per_bar(&structure->meter, &cells) || analysis_key_tonic_pitch_class(&structure->key) < 0 ||
+        analysis_key_tonic_pitch_class(&structure->key) > 11 ||
+        (structure->key.mode != KEY_STRUCTURE_MODE_MAJOR && structure->key.mode != KEY_STRUCTURE_MODE_MINOR) ||
         structure->meter.beats_per_bar <= 0 || structure->meter.beat_unit <= 0 ||
         structure->section_count > PIECE_STRUCTURE_MAX_SECTIONS ||
         (structure->has_accompaniment && structure->has_voicing)) {
@@ -211,7 +211,7 @@ static bool is_theme_section(const PieceStructure *structure, const PieceSection
 }
 
 /* The key over the start of a span, when one key span holds it. */
-static bool key_over(const PiecePlan *plan, PlanSpan span, PlanKey *out) {
+static bool key_over(const PiecePlan *plan, PlanSpan span, AnalysisKey *out) {
     LaneSpanId ids[2];
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, ids[0]), span)) {
@@ -231,7 +231,7 @@ static bool theme_motive(const PieceStructure *structure, const PieceSection *se
     NodeId source = theme_plan ? grow_find_source(theme_plan) : PLAN_NODE_NONE;
     PlanSpan span;
     PlanMeter meter;
-    PlanKey key;
+    AnalysisKey key;
     if (theme == PLAN_NODE_NONE || source == PLAN_NODE_NONE) {
         return false;
     }
@@ -240,7 +240,7 @@ static bool theme_motive(const PieceStructure *structure, const PieceSection *se
         key.mode != structure->key.mode || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
         return false;
     }
-    int shift = ((structure->key.tonic_pitch_class - key.tonic_pitch_class) % 12 + 12) % 12;
+    int shift = ((analysis_key_tonic_pitch_class(&structure->key) - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
     shift = shift > 6 ? shift - 12 : shift;
     for (size_t i = 0; i < out->note_count; i++) {
         out->notes[i].midi_pitch += shift;
@@ -303,13 +303,13 @@ static NodeId find_part_section(const PiecePlan *plan, const PieceSection *secti
 static bool loop_motive(const PieceStructure *structure, const PiecePlan *loop_plan, Motive *out) {
     NodeId source = grow_find_source(loop_plan);
     PlanMeter meter;
-    PlanKey key;
+    AnalysisKey key;
     if (source == PLAN_NODE_NONE) {
         return false;
     }
     PlanSpan span = plan_node_span(loop_plan, source);
     return return_meter_over(loop_plan, span, &meter) && key_over(loop_plan, span, &key) &&
-           key.mode == structure->key.mode && key.tonic_pitch_class == structure->key.tonic_pitch_class &&
+           key.mode == structure->key.mode && analysis_key_tonic_pitch_class(&key) == analysis_key_tonic_pitch_class(&structure->key) &&
            grow_read_motive(loop_plan, source, &meter, &key, out);
 }
 

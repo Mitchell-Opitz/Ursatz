@@ -77,15 +77,15 @@ static bool lane_open(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanS
 }
 
 /* The scale degree a pitch is spelled as in the key; the altered degrees share the degree of the natural one. */
-static int scale_degree(const PlanKey *key, int pitch) {
+static int scale_degree(const AnalysisKey *key, int pitch) {
     static const int MAJOR[12] = {1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7};
     static const int MINOR[12] = {1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7};
-    int offset = ((pitch - key->tonic_pitch_class) % 12 + 12) % 12;
-    return (key->mode == PLAN_MODE_MINOR ? MINOR : MAJOR)[offset];
+    int offset = ((pitch - analysis_key_tonic_pitch_class(key)) % 12 + 12) % 12;
+    return (key->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR : MAJOR)[offset];
 }
 
 /* The spelling of a pitch over a chord: as the tone of the chord it is, else as a degree of the key. */
-static PitchSpelling *spell_over(const PlanKey *key, const PhraseChord *chord, int pitch) {
+static PitchSpelling *spell_over(const AnalysisKey *key, const PhraseChord *chord, int pitch) {
     int pcs[4];
     size_t count;
     int root_degree;
@@ -157,7 +157,7 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
     LaneSpanId harmony[HARMONY_MAX_CHORDS];
     AccompLine lines[VOICES][ACCOMP_MAX_LINE];
     size_t line_count[VOICES];
-    PlanKey key;
+    AnalysisKey key;
     size_t count;
     Rational origin = span.start;
     Rational length = span.length;

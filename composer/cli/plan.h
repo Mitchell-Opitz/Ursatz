@@ -25,7 +25,7 @@ typedef struct {
     char letter[PLAN_SECTION_LETTER_MAX];
     size_t bars; /* 0 when the plan has no meter */
     bool has_key;
-    PlanKey key; /* the key the section ends in */
+    AnalysisKey key; /* the key the section ends in */
     CadenceType cadences[2];
     size_t cadence_count;
     bool has_pairing;

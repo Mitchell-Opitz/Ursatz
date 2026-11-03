@@ -281,8 +281,8 @@ static bool within_range(const Motive *motive) {
             return false;
         }
         if (motive->key_source != MOTIVE_KEY_UNSPECIFIED) {
-            int degree = ((pitch - motive->key.tonic_pitch_class) % 12 + 12) % 12;
-            if (!(motive->key.mode == PLAN_MODE_MINOR ? MINOR : MAJOR)[degree]) {
+            int degree = ((pitch - analysis_key_tonic_pitch_class(&motive->key)) % 12 + 12) % 12;
+            if (!(motive->key.mode == KEY_STRUCTURE_MODE_MINOR ? MINOR : MAJOR)[degree]) {
                 return false;
             }
         }
@@ -362,9 +362,9 @@ static bool cadence_tone_holds(const Request *request, const Motive *motive) {
     if (!request->has_cadence || motive->key_source == MOTIVE_KEY_UNSPECIFIED) {
         return true;
     }
-    int tonic = motive->key.tonic_pitch_class;
+    int tonic = analysis_key_tonic_pitch_class(&motive->key);
     int last = ((motive->notes[motive->note_count - 1].midi_pitch - tonic) % 12 + 12) % 12;
-    int third = motive->key.mode == PLAN_MODE_MINOR ? 3 : 4;
+    int third = motive->key.mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4;
     return !((request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC && last != 0) || (request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC && last != third));
 }
 

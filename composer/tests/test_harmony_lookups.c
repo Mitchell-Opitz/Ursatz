@@ -49,12 +49,12 @@ static void test_names(void) {
 
 /* The schemas whose data makes chords are available, the modulating ones and the inconsistent ones are not. */
 static void test_availability(void) {
-    assert(harmony_schema_available(GALANT_SCHEMA_ROMANESCA, PLAN_MODE_MAJOR));
-    assert(harmony_schema_available(GALANT_SCHEMA_DO_RE_MI, PLAN_MODE_MAJOR));
-    assert(harmony_schema_available(GALANT_SCHEMA_DO_RE_MI, PLAN_MODE_MINOR));
-    assert(!harmony_schema_available(GALANT_SCHEMA_MODULATING_PRINNER, PLAN_MODE_MAJOR));
-    assert(!harmony_schema_available(GALANT_SCHEMA_QUIESCENZA, PLAN_MODE_MAJOR));
-    assert(!harmony_schema_available(GALANT_SCHEMA_COUNT, PLAN_MODE_MAJOR));
+    assert(harmony_schema_available(GALANT_SCHEMA_ROMANESCA, KEY_STRUCTURE_MODE_MAJOR));
+    assert(harmony_schema_available(GALANT_SCHEMA_DO_RE_MI, KEY_STRUCTURE_MODE_MAJOR));
+    assert(harmony_schema_available(GALANT_SCHEMA_DO_RE_MI, KEY_STRUCTURE_MODE_MINOR));
+    assert(!harmony_schema_available(GALANT_SCHEMA_MODULATING_PRINNER, KEY_STRUCTURE_MODE_MAJOR));
+    assert(!harmony_schema_available(GALANT_SCHEMA_QUIESCENZA, KEY_STRUCTURE_MODE_MAJOR));
+    assert(!harmony_schema_available(GALANT_SCHEMA_COUNT, KEY_STRUCTURE_MODE_MAJOR));
 }
 
 int main(void) {

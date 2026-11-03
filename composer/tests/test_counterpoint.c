@@ -30,7 +30,7 @@
 
 typedef struct {
     const char *name;
-    PlanKey key;
+    AnalysisKey key;
     size_t bars;
     int above[MAX_BARS]; /* the cantus as a bass */
     int below[MAX_BARS]; /* the cantus as a melody */
@@ -38,12 +38,12 @@ typedef struct {
 
 static const Cantus CANTI[] = {
     {"Fux, D Dorian",
-     {2, PLAN_MODE_MINOR},
+     {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR},
      11,
      {62, 65, 64, 62, 67, 65, 69, 67, 65, 64, 62},
      {62, 65, 64, 62, 67, 65, 69, 67, 65, 64, 62}},
     {"C major",
-     {0, PLAN_MODE_MAJOR},
+     {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR},
      11,
      {60, 64, 62, 65, 64, 67, 69, 67, 64, 62, 60},
      {60, 64, 62, 65, 64, 67, 69, 67, 64, 62, 60}},
@@ -170,7 +170,7 @@ static void check_result(const Piece *piece, const Cantus *cantus, int species, 
     PitchSpelling *cantus_spelled[MAX_BARS];
     PitchSpelling *owned[MAX_BARS * 4] = {NULL};
     StandardCounterpointSlot slots[MAX_BARS * 4];
-    PitchSpelling *tonic = spell(cantus->key.tonic_pitch_class + 60);
+    PitchSpelling *tonic = spell(analysis_key_tonic_pitch_class(&cantus->key) + 60);
     StandardCounterpointLine line = {(const PitchSpelling *const *)cantus_spelled, cantus->bars};
     StandardCounterpointCantusPart part = above ? STANDARD_COUNTERPOINT_CANTUS_IN_LOWER : STANDARD_COUNTERPOINT_CANTUS_IN_UPPER;
     StandardCounterpointResult result;

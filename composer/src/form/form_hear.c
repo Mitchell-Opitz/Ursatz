@@ -146,13 +146,13 @@ static bool lane_open(const PiecePlan *plan, PlanLaneKind lane, PlanSpan range) 
  * degree above, but the raised fourth; in minor the degrees are the natural minor's, with the raised sixth and seventh
  * and the raised fourth, the lowered second.
  */
-static void degree_of(PlanKey key, int midi, int *degree, int *alteration) {
+static void degree_of(AnalysisKey key, int midi, int *degree, int *alteration) {
     static const int MAJOR[12][2] = {{1, 0}, {2, -1}, {2, 0}, {3, -1}, {3, 0}, {4, 0},
                                      {4, 1}, {5, 0},  {6, -1}, {6, 0}, {7, -1}, {7, 0}};
     static const int MINOR[12][2] = {{1, 0}, {2, -1}, {2, 0}, {3, 0}, {3, 1}, {4, 0},
                                      {4, 1}, {5, 0},  {6, 0},  {6, 1}, {7, 0}, {7, 1}};
-    int relative = ((midi - key.tonic_pitch_class) % 12 + 12) % 12;
-    const int(*table)[2] = key.mode == PLAN_MODE_MINOR ? MINOR : MAJOR;
+    int relative = ((midi - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
+    const int(*table)[2] = key.mode == KEY_STRUCTURE_MODE_MINOR ? MINOR : MAJOR;
     *degree = table[relative][0];
     *alteration = table[relative][1];
 }
@@ -173,7 +173,7 @@ static Rational time_of(const MusicalTime *time) {
 
 typedef struct {
     PlanSpan span[MAX_KEY_SPANS];
-    PlanKey key[MAX_KEY_SPANS];
+    AnalysisKey key[MAX_KEY_SPANS];
     size_t count;
 } KeyMap;
 
@@ -202,7 +202,7 @@ static bool key_map_read(const PiecePlan *plan, PlanSpan range, KeyMap *map) {
 }
 
 /* The key at a time of the range. */
-static PlanKey key_at(const KeyMap *map, Rational time) {
+static AnalysisKey key_at(const KeyMap *map, Rational time) {
     for (size_t i = 0; i < map->count; i++) {
         Rational end;
         if (plan_span_end(map->span[i], &end) == PLAN_OK && rational_cmp(time, end) < 0) {

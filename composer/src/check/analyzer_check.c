@@ -156,15 +156,15 @@ static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars,
     }
 }
 
-static void compare_key(const AnalysisReport *report, PlanKey key, Items *items) {
+static void compare_key(const AnalysisReport *report, AnalysisKey key, Items *items) {
     char planned[32];
     char heard[32] = "none";
     bool agreed = false;
-    util_key_name(key.tonic_pitch_class, key.mode == PLAN_MODE_MINOR, planned, sizeof(planned));
+    util_key_name(analysis_key_tonic_pitch_class(&key), key.mode == KEY_STRUCTURE_MODE_MINOR, planned, sizeof(planned));
     if (report->key_region_count > 0) {
         const AnalysisKeyRegion *region = &report->key_regions[0];
         util_key_name(region->tonic_pitch_class, !region->is_major, heard, sizeof(heard));
-        agreed = region->tonic_pitch_class == key.tonic_pitch_class && region->is_major == (key.mode == PLAN_MODE_MAJOR);
+        agreed = region->tonic_pitch_class == analysis_key_tonic_pitch_class(&key) && region->is_major == (key.mode == KEY_STRUCTURE_MODE_MAJOR);
     }
     add_item(items, ANALYZER_CHECK_KEY, 0, planned, heard, agreed);
 }
@@ -200,7 +200,7 @@ AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section
         return ANALYZER_CHECK_ERR_PLAN;
     }
     PlanMeter meter = plan_lane_span_payload(plan, meter_span)->meter;
-    PlanKey key = plan_lane_span_payload(plan, key_span)->key;
+    AnalysisKey key = plan_lane_span_payload(plan, key_span)->key;
     unsigned long bar_units = (unsigned long)meter.beats_per_bar;
     if (meter.beats_per_bar <= 0 || meter.beat_unit <= 0 || span.length.num <= 0 ||
         ((unsigned long)span.length.num * (unsigned long)meter.beat_unit) % (span.length.den * bar_units) != 0) {
@@ -223,8 +223,8 @@ AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section
     fragment.count = rendered.count;
     fragment.meter = rendered.meter_map;
     fragment.has_key = true;
-    fragment.key_tonic_pitch_class = key.tonic_pitch_class;
-    fragment.key_minor = key.mode == PLAN_MODE_MINOR;
+    fragment.key_tonic_pitch_class = analysis_key_tonic_pitch_class(&key);
+    fragment.key_minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
     fragment.streams = rendered.part_index;
 
     AnalyzerFragmentAnalysis analysis;
@@ -415,7 +415,7 @@ AnalyzerCheckResult analyzer_check_piece(const PiecePlan *plan, AnalyzerCheck *o
         return ANALYZER_CHECK_ERR_PLAN;
     }
     PlanMeter meter = plan_lane_span_payload(plan, meter_span)->meter;
-    PlanKey key = plan_lane_span_payload(plan, key_span)->key;
+    AnalysisKey key = plan_lane_span_payload(plan, key_span)->key;
     if (meter.beats_per_bar <= 0 || meter.beat_unit <= 0) {
         rendered_plan_destroy(&rendered);
         return ANALYZER_CHECK_ERR_PLAN;
@@ -426,8 +426,8 @@ AnalyzerCheckResult analyzer_check_piece(const PiecePlan *plan, AnalyzerCheck *o
     fragment.count = rendered.count;
     fragment.meter = rendered.meter_map;
     fragment.has_key = true;
-    fragment.key_tonic_pitch_class = key.tonic_pitch_class;
-    fragment.key_minor = key.mode == PLAN_MODE_MINOR;
+    fragment.key_tonic_pitch_class = analysis_key_tonic_pitch_class(&key);
+    fragment.key_minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
     fragment.streams = rendered.part_index;
 
     AnalyzerFragmentAnalysis analysis;

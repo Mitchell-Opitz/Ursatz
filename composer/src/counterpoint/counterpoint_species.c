@@ -55,7 +55,7 @@ typedef struct {
 } Gen;
 
 static bool on_tonic(const CounterpointContext *context, int pitch) {
-    return ((pitch - context->key.tonic_pitch_class) % 12 + 12) % 12 == 0;
+    return ((pitch - analysis_key_tonic_pitch_class(&context->key)) % 12 + 12) % 12 == 0;
 }
 
 /* A step a strict counterpoint allows between two notes of the line: no tritone, no seventh, no sixth but the rising minor one. */
@@ -376,7 +376,7 @@ static size_t assemble(const CounterpointContext *context, const State *state, u
         if (slots < 2 * context->count) {
             /* A leading tone goes up to the tonic, so the stand-in bar after it sounds the tonic. */
             int stand_in = pitch[slots - 1];
-            if (((stand_in + 1 - context->key.tonic_pitch_class) % 12 + 12) % 12 == 0) {
+            if (((stand_in + 1 - analysis_key_tonic_pitch_class(&context->key)) % 12 + 12) % 12 == 0) {
                 stand_in++;
             }
             kind[slots] = CP_SLOT_ATTACK;

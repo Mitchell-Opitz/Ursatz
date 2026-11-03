@@ -76,7 +76,7 @@ typedef struct {
     /* Read from the text above. */
     Into into;
     PlanThemePairing pairing;
-    PlanKey key;
+    AnalysisKey key;
     PlanMeter meter;
     size_t bars;
     CadenceType cadence;
@@ -376,9 +376,9 @@ static int check_options(Options *options) {
                         options->key_text);
     }
     if (options->mode_text && cli_equals_ignore_case(options->mode_text, "major")) {
-        options->key.mode = PLAN_MODE_MAJOR;
+        options->key.mode = KEY_STRUCTURE_MODE_MAJOR;
     } else if (options->mode_text && cli_equals_ignore_case(options->mode_text, "minor")) {
-        options->key.mode = PLAN_MODE_MINOR;
+        options->key.mode = KEY_STRUCTURE_MODE_MINOR;
     }
     if (!cli_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
         return cli_fail(CLI_EXIT_USAGE, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8", options->meter_text);
@@ -1084,7 +1084,7 @@ static void print_brief(const Options *options, bool json) {
     memset(&brief, 0, sizeof(brief));
     brief.tempo = options->tempo;
     brief.tempo_from = options->tempo_from;
-    brief.minor = options->key.mode == PLAN_MODE_MINOR;
+    brief.minor = options->key.mode == KEY_STRUCTURE_MODE_MINOR;
     brief.mode_from = options->mode_from;
     brief.has_density = composer_style_density(options->style, &brief.density);
     brief.without = options->without.names;
@@ -1312,7 +1312,7 @@ int run_grow_ext(int argc, char **argv, GrowExt *ext) {
         if (!composer_style_mode(options.style, &minor)) {
             return cli_fail(CLI_EXIT_USAGE, "--mode style needs a --style with a mode category");
         }
-        options.key.mode = minor ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR;
+        options.key.mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
     }
     options.mode_from = options.mode_text && cli_equals_ignore_case(options.mode_text, "style") ? "style" : "request";
 

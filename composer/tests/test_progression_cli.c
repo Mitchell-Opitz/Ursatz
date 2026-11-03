@@ -23,7 +23,7 @@
 typedef struct {
     const char *key;
     int tonic;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     const char *meter;
     int bars;
     const char *cadence;
@@ -31,14 +31,14 @@ typedef struct {
 } Combination;
 
 static const Combination COMBINATIONS[] = {
-    {"C major", 0, PLAN_MODE_MAJOR, "4/4", 8, "PAC", CADENCE_TYPE_PERFECT_AUTHENTIC},
-    {"D minor", 2, PLAN_MODE_MINOR, "4/4", 8, "PAC", CADENCE_TYPE_PERFECT_AUTHENTIC},
-    {"F# major", 6, PLAN_MODE_MAJOR, "3/4", 6, "IAC", CADENCE_TYPE_IMPERFECT_AUTHENTIC},
-    {"Bb minor", 10, PLAN_MODE_MINOR, "6/8", 4, "HC", CADENCE_TYPE_HALF},
-    {"a minor", 9, PLAN_MODE_MINOR, "2/4", 5, "dc", CADENCE_TYPE_DECEPTIVE},
-    {"Eb major", 3, PLAN_MODE_MAJOR, "4/4", 4, "PC", CADENCE_TYPE_PLAGAL},
-    {"G major", 7, PLAN_MODE_MAJOR, "6/8", 12, "pac", CADENCE_TYPE_PERFECT_AUTHENTIC},
-    {"C# minor", 1, PLAN_MODE_MINOR, "3/4", 8, "HC", CADENCE_TYPE_HALF},
+    {"C major", 0, KEY_STRUCTURE_MODE_MAJOR, "4/4", 8, "PAC", CADENCE_TYPE_PERFECT_AUTHENTIC},
+    {"D minor", 2, KEY_STRUCTURE_MODE_MINOR, "4/4", 8, "PAC", CADENCE_TYPE_PERFECT_AUTHENTIC},
+    {"F# major", 6, KEY_STRUCTURE_MODE_MAJOR, "3/4", 6, "IAC", CADENCE_TYPE_IMPERFECT_AUTHENTIC},
+    {"Bb minor", 10, KEY_STRUCTURE_MODE_MINOR, "6/8", 4, "HC", CADENCE_TYPE_HALF},
+    {"a minor", 9, KEY_STRUCTURE_MODE_MINOR, "2/4", 5, "dc", CADENCE_TYPE_DECEPTIVE},
+    {"Eb major", 3, KEY_STRUCTURE_MODE_MAJOR, "4/4", 4, "PC", CADENCE_TYPE_PLAGAL},
+    {"G major", 7, KEY_STRUCTURE_MODE_MAJOR, "6/8", 12, "pac", CADENCE_TYPE_PERFECT_AUTHENTIC},
+    {"C# minor", 1, KEY_STRUCTURE_MODE_MINOR, "3/4", 8, "HC", CADENCE_TYPE_HALF},
 };
 #define COMBINATION_COUNT (sizeof(COMBINATIONS) / sizeof(COMBINATIONS[0]))
 
@@ -119,7 +119,7 @@ static PiecePlan *check_plan(const char *path, const Combination *combination, b
     assert(harmony_check_lane(plan, phrase, combination->mode, combination->cadence_type, &violation));
     assert(violation == NULL);
     if (bass) {
-        PlanKey key = {combination->tonic, combination->mode};
+        AnalysisKey key = plan_key_of_pitch_class(combination->tonic, combination->mode);
         violation = "unread";
         assert(harmony_check_bass(plan, phrase, key, NULL, &violation));
         assert(violation == NULL);
@@ -389,7 +389,7 @@ static void test_list_schemas(void) {
 
     /* Every name listed is accepted. A schema is used or, when this phrase has no room for it, refused with status
        2; the result is a valid progression either way. */
-    Combination major = {"C major", 0, PLAN_MODE_MAJOR, "4/4", 8, "PAC", CADENCE_TYPE_PERFECT_AUTHENTIC};
+    Combination major = {"C major", 0, KEY_STRUCTURE_MODE_MAJOR, "4/4", 8, "PAC", CADENCE_TYPE_PERFECT_AUTHENTIC};
     int used = 0;
     for (size_t i = 0; i < schema_count; i++) {
         char arguments[256];
@@ -447,10 +447,10 @@ static void test_sequences(void) {
                 CadenceType heard;
                 bool at_end;
                 const char *violation = "unread";
-                assert(harmony_hear_cadence(plan, phrase, PLAN_MODE_MINOR, CADENCE_TYPE_PERFECT_AUTHENTIC, &heard, &at_end));
+                assert(harmony_hear_cadence(plan, phrase, KEY_STRUCTURE_MODE_MINOR, CADENCE_TYPE_PERFECT_AUTHENTIC, &heard, &at_end));
                 assert(at_end && heard == CADENCE_TYPE_PERFECT_AUTHENTIC);
-                assert(harmony_check_lane_without_cadence(plan, phrase, PLAN_MODE_MINOR, &violation) && violation == NULL);
-                PlanKey key = {2, PLAN_MODE_MINOR};
+                assert(harmony_check_lane_without_cadence(plan, phrase, KEY_STRUCTURE_MODE_MINOR, &violation) && violation == NULL);
+                AnalysisKey key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
                 violation = "unread";
                 assert(harmony_check_bass(plan, phrase, key, NULL, &violation) && violation == NULL);
                 plan_destroy(plan);

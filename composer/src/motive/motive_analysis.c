@@ -51,7 +51,7 @@ typedef struct {
     int semitones[8]; /* index 1 to 7: the semitones above the tonic of each degree */
 } Scale;
 
-static Scale scale_of(PlanKeyMode mode) {
+static Scale scale_of(KeyStructureMode mode) {
     Scale scale;
     scale.semitones[0] = -1;
     for (int degree = 1; degree <= 7; degree++) {
@@ -81,20 +81,20 @@ static MotiveDegree degree_of(const Scale *scale, int relative) {
 }
 
 /* The step of the key's scale a pitch is on: octaves of 7 from the tonic's pitch class, and the degree in the octave. */
-void motive_scale_position(const PlanKey *key, int pitch, long *position, int *alteration) {
+void motive_scale_position(const AnalysisKey *key, int pitch, long *position, int *alteration) {
     Scale scale = scale_of(key->mode);
-    int relative = pitch - key->tonic_pitch_class;
+    int relative = pitch - analysis_key_tonic_pitch_class(key);
     long octave = floor_div(relative, 12);
     MotiveDegree degree = degree_of(&scale, (int)(relative - octave * 12));
     *position = octave * 7 + (degree.degree - 1);
     *alteration = degree.alteration;
 }
 
-int motive_position_pitch(const PlanKey *key, long position, int alteration) {
+int motive_position_pitch(const AnalysisKey *key, long position, int alteration) {
     Scale scale = scale_of(key->mode);
     long octave = floor_div(position, 7);
     int degree = (int)(position - octave * 7) + 1;
-    return (int)(key->tonic_pitch_class + octave * 12 + scale.semitones[degree] + alteration);
+    return (int)(analysis_key_tonic_pitch_class(key) + octave * 12 + scale.semitones[degree] + alteration);
 }
 
 /* ---------------------------------------------------------------- contour */
@@ -179,10 +179,10 @@ typedef struct {
 } Scored;
 
 static bool score_chord(const Motive *motive, const MotiveAnalysis *analysis, const ChordSpec *spec, Scored *out) {
-    PlanKeyMode mode = motive->key.mode;
+    KeyStructureMode mode = motive->key.mode;
     PhraseChord chord;
     if (spec->leading_tone) {
-        if (mode != PLAN_MODE_MINOR || !harmony_make_leading_tone(mode, 0, 1, &chord)) {
+        if (mode != KEY_STRUCTURE_MODE_MINOR || !harmony_make_leading_tone(mode, 0, 1, &chord)) {
             return false;
         }
     } else if (!harmony_make_chord(mode, spec->degree, 0, spec->seventh, false, 1, &chord)) {
@@ -196,7 +196,7 @@ static bool score_chord(const Motive *motive, const MotiveAnalysis *analysis, co
     int root = spec->leading_tone ? 11 : harmony_applied_scale_semitone(harmony_mode_of(mode), spec->degree);
     bool member[12] = {false};
     for (size_t k = 0; k < interval_count; k++) {
-        member[(motive->key.tonic_pitch_class + root + intervals[k]) % 12] = true;
+        member[(analysis_key_tonic_pitch_class(&motive->key) + root + intervals[k]) % 12] = true;
     }
 
     double total = 0.0;
@@ -294,7 +294,7 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
     Scale scale = scale_of(motive->key.mode);
     for (size_t i = 0; i < motive->note_count; i++) {
         if (result.degrees_known) {
-            int pitch = motive->notes[i].midi_pitch - motive->key.tonic_pitch_class;
+            int pitch = motive->notes[i].midi_pitch - analysis_key_tonic_pitch_class(&motive->key);
             long octave = floor_div(pitch, 12);
             result.degrees[i] = degree_of(&scale, (int)(pitch - octave * 12));
             positions[i] = octave * 7 + (result.degrees[i].degree - 1);
@@ -343,11 +343,11 @@ static const char *direction_name(ContourDirection direction) {
     return direction == CONTOUR_DIRECTION_UP ? "up" : direction == CONTOUR_DIRECTION_DOWN ? "down" : "same";
 }
 
-static void key_text(const PlanKey *key, char *out, size_t size) {
+static void key_text(const AnalysisKey *key, char *out, size_t size) {
     static const char *const MAJOR[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
     static const char *const MINOR[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"};
-    snprintf(out, size, "%s %s", key->mode == PLAN_MODE_MINOR ? MINOR[key->tonic_pitch_class] : MAJOR[key->tonic_pitch_class],
-             key->mode == PLAN_MODE_MINOR ? "minor" : "major");
+    snprintf(out, size, "%s %s", key->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR[analysis_key_tonic_pitch_class(key)] : MAJOR[analysis_key_tonic_pitch_class(key)],
+             key->mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major");
 }
 
 static const char *key_source_name(MotiveKeySource source) {
@@ -722,8 +722,8 @@ static cJSON *key_json(const MotiveAnalysis *analysis) {
         return cJSON_CreateNull();
     }
     cJSON *object = cJSON_CreateObject();
-    bool ok = object && plan_json_add(object, "tonic_pitch_class", json_number(analysis->key.tonic_pitch_class)) &&
-              add_string(object, "mode", analysis->key.mode == PLAN_MODE_MINOR ? "minor" : "major") &&
+    bool ok = object && plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(&analysis->key))) &&
+              add_string(object, "mode", analysis->key.mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major") &&
               add_string(object, "source", key_source_name(analysis->key_source));
     if (!ok) {
         cJSON_Delete(object);

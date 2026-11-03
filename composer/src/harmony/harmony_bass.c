@@ -36,7 +36,7 @@ static unsigned chance_of(unsigned value) {
     return value > CHANCE_SCALE ? CHANCE_SCALE : value;
 }
 
-bool harmony_chord_bass_pc(const PlanKey *key, const PhraseChord *chord, int *pc) {
+bool harmony_chord_bass_pc(const AnalysisKey *key, const PhraseChord *chord, int *pc) {
     int intervals[4];
     size_t count;
     int root;
@@ -52,7 +52,7 @@ bool harmony_chord_bass_pc(const PlanKey *key, const PhraseChord *chord, int *pc
             return false;
         }
         /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
-        root = key->mode == PLAN_MODE_MINOR && chord->chord.leading_tone
+        root = key->mode == KEY_STRUCTURE_MODE_MINOR && chord->chord.leading_tone
                    ? 11
                    : harmony_applied_scale_semitone(harmony_mode_of(key->mode), chord->chord.degree);
         member = chord->chord.inversion;
@@ -60,7 +60,7 @@ bool harmony_chord_bass_pc(const PlanKey *key, const PhraseChord *chord, int *pc
     if (root < 0 || member < 0 || (size_t)member >= count) {
         return false;
     }
-    *pc = (key->tonic_pitch_class + root + intervals[member]) % 12;
+    *pc = (analysis_key_tonic_pitch_class(key) + root + intervals[member]) % 12;
     return true;
 }
 

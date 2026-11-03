@@ -22,13 +22,13 @@ typedef struct {
     int beats;
     int unit;
     int tonic;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 4, 4, 0, PLAN_MODE_MAJOR},
-    {"A minor 3/4", 3, 4, 9, PLAN_MODE_MINOR},
-    {"D major 6/8", 6, 8, 2, PLAN_MODE_MAJOR},
+    {"C major 4/4", 4, 4, 0, KEY_STRUCTURE_MODE_MAJOR},
+    {"A minor 3/4", 3, 4, 9, KEY_STRUCTURE_MODE_MINOR},
+    {"D major 6/8", 6, 8, 2, KEY_STRUCTURE_MODE_MAJOR},
 };
 
 #define SEEDS 20
@@ -69,8 +69,7 @@ static PiecePlan *build_plan(const Scenario *scenario, LaneSpanId *open) {
     assert(plan_add_lane_span(plan, form, PLAN_LANE_METER, 0, form_span, &payload, &lane) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = scenario->tonic;
-    payload.key.mode = scenario->mode;
+    payload.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &lane) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN) == PLAN_OK);
 
@@ -104,7 +103,7 @@ static PiecePlan *invent(const Scenario *scenario, unsigned long seed, LaneSpanI
 static int degree_of(const Scenario *scenario, int pitch) {
     static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
     static const int MINOR[7] = {0, 2, 3, 5, 7, 8, 10};
-    const int *scale = scenario->mode == PLAN_MODE_MINOR ? MINOR : MAJOR;
+    const int *scale = scenario->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR : MAJOR;
     int offset = ((pitch - scenario->tonic) % 12 + 12) % 12;
     for (int degree = 0; degree < 7; degree++) {
         if (scale[degree] == offset) {

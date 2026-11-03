@@ -60,7 +60,7 @@ typedef struct {
 } Claim;
 
 /* "Eb minor" -> tonic 3, minor. */
-static bool parse_key_label(const char *label, PlanKey *key) {
+static bool parse_key_label(const char *label, AnalysisKey *key) {
     const char *space = strrchr(label, ' ');
     if (!space) {
         return false;
@@ -68,9 +68,9 @@ static bool parse_key_label(const char *label, PlanKey *key) {
     size_t tonic_length = (size_t)(space - label);
     int mode = -1;
     if (strcmp(space + 1, "major") == 0) {
-        mode = PLAN_MODE_MAJOR;
+        mode = KEY_STRUCTURE_MODE_MAJOR;
     } else if (strcmp(space + 1, "minor") == 0) {
-        mode = PLAN_MODE_MINOR;
+        mode = KEY_STRUCTURE_MODE_MINOR;
     }
     if (mode < 0) {
         return false;
@@ -80,8 +80,7 @@ static bool parse_key_label(const char *label, PlanKey *key) {
         const char *sharp = pitch_class_name(pitch_class, false);
         if ((strlen(flat) == tonic_length && strncmp(label, flat, tonic_length) == 0) ||
             (strlen(sharp) == tonic_length && strncmp(label, sharp, tonic_length) == 0)) {
-            key->tonic_pitch_class = pitch_class;
-            key->mode = (PlanKeyMode)mode;
+            *key = plan_key_of_pitch_class(pitch_class, (KeyStructureMode)mode);
             return true;
         }
     }

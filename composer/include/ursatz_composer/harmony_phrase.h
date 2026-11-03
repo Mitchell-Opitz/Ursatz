@@ -105,7 +105,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
  * when the cadence arrives on the last chord. False when the lane cannot be
  * read, or the recognizer hears no cadence.
  */
-bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, CadenceType requested,
+bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, CadenceType requested,
                           CadenceType *heard, bool *at_end);
 
 /*
@@ -116,7 +116,7 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode
  * reason of its own to be there. True when the lane could be read, with *violation NULL if nothing
  * is broken and otherwise the rule that is.
  */
-bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, CadenceType requested,
+bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, CadenceType requested,
                         const char **violation);
 
 /*
@@ -124,7 +124,7 @@ bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, 
  * as the harmony found from a bass (harmony_octave.h): only the phrase model, the applied chords
  * resolving, and that every chord is readable are asked.
  */
-bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode,
+bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode,
                                         const char **violation);
 
 /*
@@ -137,22 +137,22 @@ bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, Pl
  */
 
 /* Formats a diatonic chord. False for an invalid chord, and for a half-diminished seventh. */
-bool harmony_roman_format(PlanKeyMode mode, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]);
+bool harmony_roman_format(KeyStructureMode mode, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]);
 /* Reads a numeral this operator writes, never cadential. False for any other text, and for an applied chord. */
-bool harmony_roman_parse(PlanKeyMode mode, const char *roman, HarmonyChord *out);
+bool harmony_roman_parse(KeyStructureMode mode, const char *roman, HarmonyChord *out);
 /* Formats and reads an applied chord. False for an invalid chord or other text. */
-bool harmony_roman_format_applied(PlanKeyMode mode, const HarmonyAppliedChord *applied,
+bool harmony_roman_format_applied(KeyStructureMode mode, const HarmonyAppliedChord *applied,
                                   char out[PLAN_ROMAN_NUMERAL_MAX]);
-bool harmony_roman_parse_applied(PlanKeyMode mode, const char *roman, HarmonyAppliedChord *out);
+bool harmony_roman_parse_applied(KeyStructureMode mode, const char *roman, HarmonyAppliedChord *out);
 /*
  * The same with an inversion, for the applied chords that standard-harmony's schemas use: a triad in
  * root position or first inversion (V/vi, V6/vi), a seventh chord in any inversion (V7/V, V6/5/V,
  * V4/3/V, V4/2/V). The figures sit between the chord and its target. The parser reads root position
  * too; the plain one above reads root position only.
  */
-bool harmony_roman_format_applied_inverted(PlanKeyMode mode, const HarmonyAppliedChord *applied, int inversion,
+bool harmony_roman_format_applied_inverted(KeyStructureMode mode, const HarmonyAppliedChord *applied, int inversion,
                                            char out[PLAN_ROMAN_NUMERAL_MAX]);
-bool harmony_roman_parse_applied_inverted(PlanKeyMode mode, const char *roman, HarmonyAppliedChord *out,
+bool harmony_roman_parse_applied_inverted(KeyStructureMode mode, const char *roman, HarmonyAppliedChord *out,
                                           int *inversion);
 
 #endif

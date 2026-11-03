@@ -63,7 +63,7 @@ typedef struct {
 /* A key signature from position on. sharps_flats is -7 to 7. */
 typedef struct {
     int sharps_flats;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     MusicalTime *position; /* owned */
 } RenderedKey;
 

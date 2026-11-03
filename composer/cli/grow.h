@@ -46,7 +46,7 @@ typedef struct GrowExt {
      * Fills basic, the slot motives, the idea motives, the accompaniment motive and the pool; returns 0 or the status of
      * the error printed. The pairing is the theme's, for the ideas it has.
      */
-    int (*load)(struct GrowExt *ext, const PlanMeter *meter, const PlanKey *key, const PlanThemePairing *pairing);
+    int (*load)(struct GrowExt *ext, const PlanMeter *meter, const AnalysisKey *key, const PlanThemePairing *pairing);
     /* Prints, after a theme's developments, the slots of the theme as text, or as the JSON member "slots":[...] when json. */
     void (*print_theme)(const struct GrowExt *ext, const PiecePlan *plan, const GrowOutcome *outcome, bool json);
     /* Prints the brief as text lines, or as the JSON member "brief":{...} (no leading comma) when json. */

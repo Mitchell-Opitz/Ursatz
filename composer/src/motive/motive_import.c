@@ -112,8 +112,8 @@ MotiveResult motive_read_midi(const unsigned char *data, size_t size, Motive *mo
             const MidiKeySignatureEvent *key = &imported.key_signatures.events[0];
             document->has_key = true;
             document->key = motive_key_from_signature(key->sharps_flats, key->mode_hint == MIDI_MODE_HINT_MINOR
-                                                                             ? PLAN_MODE_MINOR
-                                                                             : PLAN_MODE_MAJOR);
+                                                                             ? KEY_STRUCTURE_MODE_MINOR
+                                                                             : KEY_STRUCTURE_MODE_MAJOR);
         }
     }
     midi_import_destroy(&imported);
@@ -166,7 +166,7 @@ MotiveResult motive_read_musicxml(const char *data, size_t size, Motive *motive,
             }
             document->has_key = true;
             document->key = motive_key_from_signature(
-                key->sharps_flats, key->mode_hint == MUSICXML_MODE_HINT_MINOR ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR);
+                key->sharps_flats, key->mode_hint == MUSICXML_MODE_HINT_MINOR ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
             break;
         }
     }

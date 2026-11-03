@@ -28,7 +28,7 @@ NodeId seam_section_at(const PiecePlan *plan, Rational time) {
 }
 
 /* The function of a chord: the one given, else the numeral's in the mode. */
-static bool function_of(PlanKeyMode mode, bool has_given, HarmonicFunction given, const char *roman,
+static bool function_of(KeyStructureMode mode, bool has_given, HarmonicFunction given, const char *roman,
                         HarmonicFunction *out) {
     HarmonyChord chord;
     if (has_given) {
@@ -115,7 +115,7 @@ static bool leading_tone_holds(const SeamNotes *notes) {
     if (notes->melody_before < 0) {
         return true;
     }
-    int tonic = notes->key.tonic_pitch_class;
+    int tonic = analysis_key_tonic_pitch_class(&notes->key);
     bool seventh = ((notes->melody_before % 12) + 12) % 12 == (tonic + 11) % 12;
     if (!seventh) {
         return true;

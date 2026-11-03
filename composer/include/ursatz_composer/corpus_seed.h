@@ -57,7 +57,7 @@ const char *corpus_seed_result_name(CorpusSeedResult result);
  * out is untouched on any result but CORPUS_SEED_OK.
  */
 CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *passage_path, const PlanMeter *meter,
-                                    const PlanKey *key, unsigned long seed, CorpusSeed *out);
+                                    const AnalysisKey *key, unsigned long seed, CorpusSeed *out);
 
 /*
  * The chords of the passage of the corpus that best matches the numerals in text (separated by spaces or '-', as the
@@ -66,7 +66,7 @@ CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *p
  * is the best match (the best hundred are looked through) whose every chord the plan can place under a key of mode.
  * There is no seed: the best match is the first the Analyzer ranks. out->motive is not set.
  */
-CorpusSeedResult corpus_seed_progression(const char *corpus_output_dir, const char *numerals_text, PlanKeyMode mode,
+CorpusSeedResult corpus_seed_progression(const char *corpus_output_dir, const char *numerals_text, KeyStructureMode mode,
                                          CorpusSeed *out);
 
 /* "m.3 b.1.5 - m.4 b.2": the passage's span as the Analyzer's own output prints it, into out. */

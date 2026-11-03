@@ -36,7 +36,7 @@ typedef struct {
  * progression, which holds only with both chords.
  */
 typedef struct {
-    PlanKey key;
+    AnalysisKey key;
     bool has_chords;
     HarmonicFunction before_function;     /* of the last chord before the seam, when before_has_function */
     bool before_has_function;             /* false to read it from the numeral */

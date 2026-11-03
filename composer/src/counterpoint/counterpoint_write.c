@@ -37,16 +37,16 @@ size_t counterpoint_slot_note(const CounterpointContext *context, size_t slot) {
 }
 
 /* The scale degree of a pitch class above the tonic, 1 to 7, or 0 when the key's scale has no such note. */
-static int scale_degree(PlanKeyMode mode, int above_tonic) {
+static int scale_degree(KeyStructureMode mode, int above_tonic) {
     static const int MAJOR[12] = {1, 0, 2, 0, 3, 4, 0, 5, 0, 6, 0, 7};
     /* The minor scale as it is written in counterpoint: the natural minor, with the raised sixth and seventh. */
     static const int MINOR[12] = {1, 0, 2, 3, 0, 4, 0, 5, 6, 6, 7, 7};
-    return mode == PLAN_MODE_MINOR ? MINOR[above_tonic] : MAJOR[above_tonic];
+    return mode == KEY_STRUCTURE_MODE_MINOR ? MINOR[above_tonic] : MAJOR[above_tonic];
 }
 
-static bool read_spellings(const PlanKey *key, CounterpointContext *out) {
+static bool read_spellings(const AnalysisKey *key, CounterpointContext *out) {
     for (int pitch = 0; pitch < 128; pitch++) {
-        int degree = scale_degree(key->mode, ((pitch - key->tonic_pitch_class) % 12 + 12) % 12);
+        int degree = scale_degree(key->mode, ((pitch - analysis_key_tonic_pitch_class(key)) % 12 + 12) % 12);
         if (degree > 0) {
             out->spell[pitch] = harmony_spell_pitch(key, degree, pitch);
             if (!out->spell[pitch]) {

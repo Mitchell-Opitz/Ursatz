@@ -36,7 +36,7 @@ typedef struct {
     LaneSpanId target;
     NodeId owner;
     PlanSpan span;
-    PlanKey key;
+    AnalysisKey key;
     PhraseMetre metre;
     Rational length;
     Rational cell;
@@ -146,7 +146,7 @@ typedef struct {
 void melody_context_zero(MelodyContext *context);
 
 /* The pitch classes (bit pc of mask) of a chord in the key, and of its seventh (0 when it has none). */
-bool melody_chord_mask(const PlanKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);
+bool melody_chord_mask(const AnalysisKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);
 /* The index of the chord sounding at a position of the phrase. */
 size_t melody_chord_at(const MelodyContext *context, Rational position);
 
@@ -154,7 +154,7 @@ size_t melody_chord_at(const MelodyContext *context, Rational position);
  * Reads the harmony and bass under a phrase: the chord spans must tile the span exactly, none of them open, and
  * the bass spans must tile it. The target and the motive are not read. False when the phrase cannot be read.
  */
-bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, PlanKey key, MelodyContext *out);
+bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, AnalysisKey key, MelodyContext *out);
 
 /*
  * Reads the harmony, bass and motive under a Constrained melody span: the chord spans must tile the span exactly,

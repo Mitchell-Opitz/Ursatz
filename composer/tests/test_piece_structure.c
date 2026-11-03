@@ -31,8 +31,7 @@ typedef struct {
 
 static void fixture_init(Fixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->structure.key.tonic_pitch_class = 0;
-    fixture->structure.key.mode = PLAN_MODE_MAJOR;
+    fixture->structure.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     fixture->structure.meter.beats_per_bar = 4;
     fixture->structure.meter.beat_unit = 4;
     fixture->structure.sections = fixture->sections;

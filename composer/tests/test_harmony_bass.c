@@ -24,7 +24,7 @@
 typedef struct {
     int beats_per_bar;
     int beat_unit;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int tonic;
     int bars;
     CadenceType cadence;
@@ -95,8 +95,7 @@ static Fixture build(const Scenario *scenario, bool cadence) {
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = scenario->tonic;
-    payload.key.mode = scenario->mode;
+    payload.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, fixture.form_span, &payload, &id) ==
            PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
@@ -177,10 +176,10 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
 }
 
 /* The pitch class a chord's bass member has, worked out from standard-harmony's scale degrees. */
-static bool bass_matches(PlanKeyMode mode, int tonic, const char *roman, int bass_pc) {
+static bool bass_matches(KeyStructureMode mode, int tonic, const char *roman, int bass_pc) {
     HarmonyChord chord;
     HarmonyAppliedChord applied;
-    HarmonyMode harmony_mode = mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+    HarmonyMode harmony_mode = mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
     if (harmony_roman_parse_applied(mode, roman, &applied)) {
         return bass_pc == (tonic + harmony_applied_root_semitone(harmony_mode, &applied)) % 12;
     }
@@ -189,11 +188,11 @@ static bool bass_matches(PlanKeyMode mode, int tonic, const char *roman, int bas
     int scale = (tonic + harmony_applied_scale_semitone(harmony_mode, degree)) % 12;
     /* The leading tone of a minor key is raised wherever a dominant needs it. */
     int raised = (tonic + 11) % 12;
-    return bass_pc == scale || (mode == PLAN_MODE_MINOR && degree == 7 && bass_pc == raised);
+    return bass_pc == scale || (mode == KEY_STRUCTURE_MODE_MINOR && degree == 7 && bass_pc == raised);
 }
 
-static int scale_pc(PlanKeyMode mode, int tonic, int degree) {
-    return (tonic + harmony_applied_scale_semitone(mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR,
+static int scale_pc(KeyStructureMode mode, int tonic, int degree) {
+    return (tonic + harmony_applied_scale_semitone(mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR,
                                                    degree)) % 12;
 }
 
@@ -230,7 +229,7 @@ static void check_bass(const Fixture *fixture, const Scenario *scenario, const H
     }
 
     /* The bass passes standard-counterpoint's melodic rules, checked by the framework from the plan. */
-    PlanKey key = {scenario->tonic, scenario->mode};
+    AnalysisKey key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     const char *violation = "unread";
     assert(harmony_check_bass(fixture->plan, fixture->span, key, params, &violation));
     assert(violation == NULL);
@@ -329,7 +328,7 @@ static void test_sweep(void) {
                 for (int b = 0; b < 2; b++) {
                     for (int c = 0; c < 5; c++) {
                         for (unsigned long seed = 0; seed < 2; seed++) {
-                            Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
+                            Scenario scenario = {meters[m][0], meters[m][1], mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR,
                                                  tonics[t], bars[b], cadences[c], seed};
                             total++;
                             written += check_scenario(&scenario, seed ? &split : &plain);
@@ -354,7 +353,7 @@ static void test_subdivision_and_stepwise(void) {
     size_t plain_notes = 0;
     size_t split_notes = 0;
     for (unsigned long seed = 0; seed < 6; seed++) {
-        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
+        Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
         for (int which = 0; which < 2; which++) {
             Fixture fixture = build(&scenario, true);
             FillOutcome outcome = run(&fixture, seed, true, false, false, NULL, false);
@@ -385,7 +384,7 @@ static void test_subdivision_and_stepwise(void) {
 
 /* A range no octave of some chord's bass member fits leaves the span open: no valid candidate. */
 static void test_unsatisfiable_range(void) {
-    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
+    Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
     HarmonyBassParams narrow = harmony_bass_params_default();
     narrow.range_low = 40;
     narrow.range_high = 41;
@@ -409,7 +408,7 @@ static void test_random_octaves(void) {
     HarmonyBassParams loose = harmony_bass_params_default();
     loose.stepwise = 0;
     for (unsigned long seed = 0; seed < 10; seed++) {
-        Scenario scenario = {4, 4, PLAN_MODE_MINOR, 3, 8, CADENCE_TYPE_HALF, seed};
+        Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MINOR, 3, 8, CADENCE_TYPE_HALF, seed};
         Fixture fixture = build(&scenario, true);
         FillOutcome outcome = run(&fixture, seed, true, false, false, NULL, false);
         assert(outcome.status == FILL_STATUS_COMPLETE);
@@ -429,7 +428,7 @@ static void test_random_octaves(void) {
 /* --- a Given stepwise bass, harmonized ---------------------------------- */
 
 /* Builds a plan with a Given bass of one note a bar over an open harmony span, runs the operators. */
-static Fixture octave_fixture(PlanKeyMode mode, const int *pitches, int count, bool cadence_constraint) {
+static Fixture octave_fixture(KeyStructureMode mode, const int *pitches, int count, bool cadence_constraint) {
     Scenario scenario = {4, 4, mode, 0, count, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
     Fixture fixture = build(&scenario, cadence_constraint);
     /* The note after the phrase is not wanted here. */
@@ -441,7 +440,7 @@ static Fixture octave_fixture(PlanKeyMode mode, const int *pitches, int count, b
     return fixture;
 }
 
-static void check_octave(const Fixture *fixture, PlanKeyMode mode, const int *pitches, int count) {
+static void check_octave(const Fixture *fixture, KeyStructureMode mode, const int *pitches, int count) {
     LaneSpanId ids[MAX_CHORDS];
     size_t chords = plan_lane_find(fixture->plan, PLAN_LANE_HARMONY, 0, fixture->span, ids, MAX_CHORDS);
     assert(chords == (size_t)count);
@@ -458,7 +457,7 @@ static void check_octave(const Fixture *fixture, PlanKeyMode mode, const int *pi
                             pitches[i] % 12));
     }
     /* The first and last chords are the tonic in root position. */
-    const char *tonic = mode == PLAN_MODE_MINOR ? "i" : "I";
+    const char *tonic = mode == KEY_STRUCTURE_MODE_MINOR ? "i" : "I";
     assert(strcmp(plan_lane_span_payload(fixture->plan, ids[0])->harmony.roman_numeral, tonic) == 0);
     assert(strcmp(plan_lane_span_payload(fixture->plan, ids[count - 1])->harmony.roman_numeral, tonic) == 0);
 }
@@ -470,7 +469,7 @@ static void test_rule_of_the_octave(void) {
     static const int minor_down[8] = {60, 58, 56, 55, 53, 51, 50, 48};
     const int *lines[4] = {major_up, major_down, minor_up, minor_down};
     for (int line = 0; line < 4; line++) {
-        PlanKeyMode mode = line < 2 ? PLAN_MODE_MAJOR : PLAN_MODE_MINOR;
+        KeyStructureMode mode = line < 2 ? KEY_STRUCTURE_MODE_MAJOR : KEY_STRUCTURE_MODE_MINOR;
         for (unsigned long seed = 0; seed < 8; seed++) {
             /* With a cadence constraint on the span too: the phrase-model operator must leave it alone. */
             Fixture fixture = octave_fixture(mode, lines[line], 8, seed % 2 == 1);
@@ -489,7 +488,7 @@ static void test_octave_needs_a_scale(void) {
     static const int off_tonic[8] = {50, 52, 53, 55, 57, 59, 60, 62};
     const int *lines[2] = {leaping, off_tonic};
     for (int line = 0; line < 2; line++) {
-        Fixture fixture = octave_fixture(PLAN_MODE_MAJOR, lines[line], 8, false);
+        Fixture fixture = octave_fixture(KEY_STRUCTURE_MODE_MAJOR, lines[line], 8, false);
         FillOutcome outcome = run(&fixture, 1, false, false, false, NULL, true);
         assert(outcome.status == FILL_STATUS_STUCK);
         assert(outcome.stuck_count == 1 && outcome.stuck[0].reason == FILL_STUCK_NO_OPERATOR);

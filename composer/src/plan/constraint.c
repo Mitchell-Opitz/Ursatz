@@ -29,8 +29,8 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
                ref->ratio_num >= 0 && ref->ratio_den >= 0 && (ref->ratio_num == 0) == (ref->ratio_den == 0);
     }
     case PLAN_CONSTRAINT_KEY:
-        return constraint->params.key.tonic_pitch_class >= 0 && constraint->params.key.tonic_pitch_class <= 11 &&
-               (constraint->params.key.mode == PLAN_MODE_MAJOR || constraint->params.key.mode == PLAN_MODE_MINOR);
+        return analysis_key_tonic_pitch_class(&constraint->params.key) >= 0 && analysis_key_tonic_pitch_class(&constraint->params.key) <= 11 &&
+               (constraint->params.key.mode == KEY_STRUCTURE_MODE_MAJOR || constraint->params.key.mode == KEY_STRUCTURE_MODE_MINOR);
     case PLAN_CONSTRAINT_ARCHETYPE:
         return constraint->params.archetype >= PLAN_ARCHETYPE_SENTENCE &&
                constraint->params.archetype <= PLAN_ARCHETYPE_HYBRID;

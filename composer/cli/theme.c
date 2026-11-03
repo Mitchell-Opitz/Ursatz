@@ -152,7 +152,7 @@ static int read_tone_overrides(const char *what, const cJSON *object, Motive *mo
  * the role to force (NULL for the motive's own member). Returns 0 or the status of the error printed.
  */
 int request_read_motive(const char *what, const cJSON *object, const char *role, const PlanMeter *meter,
-                       const PlanKey *key, Motive *out) {
+                       const AnalysisKey *key, Motive *out) {
     const char *degrees;
     const char *harmony;
     const char *form;
@@ -389,7 +389,7 @@ static int read_motives(ThemeExt *ext, const cJSON *request) {
  * written into ext->base.chords as Given chords from the theme's start, each lasting to the next chord of its bar or the
  * end of the bar.
  */
-static int read_chords(ThemeExt *ext, const PlanMeter *meter, const PlanKey *key) {
+static int read_chords(ThemeExt *ext, const PlanMeter *meter, const AnalysisKey *key) {
     const cJSON *list = cJSON_GetObjectItemCaseSensitive(ext->root, "chords");
     if (!list || cJSON_IsNull(list)) {
         return 0;
@@ -488,7 +488,7 @@ static int read_chords(ThemeExt *ext, const PlanMeter *meter, const PlanKey *key
     return 0;
 }
 
-static int theme_load(GrowExt *base, const PlanMeter *meter, const PlanKey *key, const PlanThemePairing *pairing) {
+static int theme_load(GrowExt *base, const PlanMeter *meter, const AnalysisKey *key, const PlanThemePairing *pairing) {
     ThemeExt *ext = (ThemeExt *)base;
     char what[96];
     int status;

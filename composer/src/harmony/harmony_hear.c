@@ -20,7 +20,7 @@
  * triad on each degree, and the seventh chord built on it (the dominant seventh on V, a fully
  * diminished seventh on the leading tone).
  */
-bool harmony_diatonic_intervals(PlanKeyMode mode, const HarmonyChord *chord, int intervals[4], size_t *count) {
+bool harmony_diatonic_intervals(KeyStructureMode mode, const HarmonyChord *chord, int intervals[4], size_t *count) {
     static const int MAJOR_TRIAD[3] = {0, 4, 7};
     static const int MINOR_TRIAD[3] = {0, 3, 7};
     static const int DIMINISHED_TRIAD[3] = {0, 3, 6};
@@ -32,9 +32,9 @@ bool harmony_diatonic_intervals(PlanKeyMode mode, const HarmonyChord *chord, int
     /* Quality by degree: 0 major, 1 minor, 2 diminished, 3 dominant (a major triad with a minor seventh). */
     static const int MAJOR_QUALITY[8] = {0, 0, 1, 1, 0, 3, 1, 2};
     static const int MINOR_QUALITY[8] = {0, 1, 2, 0, 1, 3, 0, 3};
-    int quality = mode == PLAN_MODE_MINOR ? MINOR_QUALITY[chord->degree] : MAJOR_QUALITY[chord->degree];
+    int quality = mode == KEY_STRUCTURE_MODE_MINOR ? MINOR_QUALITY[chord->degree] : MAJOR_QUALITY[chord->degree];
     /* In a minor key the chord on the raised seventh degree is diminished; the subtonic is a dominant seventh. */
-    if (mode == PLAN_MODE_MINOR && chord->degree == 7 && chord->leading_tone) {
+    if (mode == KEY_STRUCTURE_MODE_MINOR && chord->degree == 7 && chord->leading_tone) {
         quality = 2;
     }
     memset(intervals, 0, 4 * sizeof(int));
@@ -97,7 +97,7 @@ bool harmony_applied_intervals(const HarmonyAppliedChord *applied, int intervals
 }
 
 /* The scale degree of the bass: the chord's root, or its third, fifth or seventh by inversion. */
-static int bass_degree_of(PlanKeyMode mode, const PhraseChord *chord) {
+static int bass_degree_of(KeyStructureMode mode, const PhraseChord *chord) {
     if (chord->applied) {
         return (harmony_applied_root_degree(harmony_mode_of(mode), &chord->applied_chord) - 1 +
                 2 * chord->applied_inversion) % 7 + 1;
@@ -200,7 +200,7 @@ static SegmentSet *segments_create(const HeardPhrase *phrase, const int *soprano
     for (size_t i = 0; i < phrase->count; i++) {
         const PhraseChord *chord = &phrase->chords[i];
         HarmonySegmentInput *input = &set->inputs[i];
-        PlanKeyMode mode = phrase->chord_modes ? phrase->chord_modes[i] : phrase->mode;
+        KeyStructureMode mode = phrase->chord_modes ? phrase->chord_modes[i] : phrase->mode;
         snprintf(set->ids[i], sizeof(set->ids[i]), "c%zu", i);
         snprintf(set->key_refs[i], sizeof(set->key_refs[i]), phrase->chord_keys ? "key%u" : HEARD_KEY_REF,
                  phrase->chord_keys ? phrase->chord_keys[i] : 0u);
@@ -281,7 +281,7 @@ bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at
 }
 
 /* The key of the key lane over a chord, when one span holds it. */
-static bool key_under(const PiecePlan *plan, PlanSpan chord_span, LaneSpanId *id, PlanKey *key) {
+static bool key_under(const PiecePlan *plan, PlanSpan chord_span, LaneSpanId *id, AnalysisKey *key) {
     LaneSpanId keys[2];
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, chord_span, keys, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, keys[0]), chord_span)) {
@@ -292,8 +292,8 @@ static bool key_under(const PiecePlan *plan, PlanSpan chord_span, LaneSpanId *id
     return true;
 }
 
-bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PhraseChord *chords, size_t *count,
-                            PhraseMetre *metre, PlanKeyMode *modes, unsigned *keys) {
+bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, PhraseChord *chords, size_t *count,
+                            PhraseMetre *metre, KeyStructureMode *modes, unsigned *keys) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     if (!plan || !chords || !count || !metre || !harmony_read_metre(plan, span, metre)) {
         return false;
@@ -306,9 +306,9 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, PlanKeyMode mo
     for (size_t i = 0; i < found; i++) {
         PlanSpan chord_span = plan_lane_span_span(plan, ids[i]);
         Rational end;
-        PlanKeyMode chord_mode = mode;
+        KeyStructureMode chord_mode = mode;
         LaneSpanId key_id = PLAN_LANE_SPAN_NONE;
-        PlanKey key;
+        AnalysisKey key;
         if (modes && key_under(plan, chord_span, &key_id, &key)) {
             chord_mode = key.mode;
         }
@@ -331,12 +331,12 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, PlanKeyMode mo
     return true;
 }
 
-bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PhraseChord *chords, size_t *count,
+bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, PhraseChord *chords, size_t *count,
                        PhraseMetre *metre) {
     return harmony_read_lane_keys(plan, span, mode, chords, count, metre, NULL, NULL);
 }
 
-bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, CadenceType requested,
+bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, CadenceType requested,
                           CadenceType *heard, bool *at_end) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
@@ -348,12 +348,12 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode
     return harmony_hear_phrase(&phrase, heard, at_end);
 }
 
-bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, const int *soprano,
+bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, const int *soprano,
                                 size_t count, const Rational *section_starts, size_t section_count,
                                 HarmonyCadences *out) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
-    PlanKeyMode modes[HARMONY_MAX_CHORDS];
+    KeyStructureMode modes[HARMONY_MAX_CHORDS];
     unsigned keys[HARMONY_MAX_CHORDS];
     size_t found;
     /* Each chord is read in the key under it, so a cadence is heard in the key of the chord it arrives on. */

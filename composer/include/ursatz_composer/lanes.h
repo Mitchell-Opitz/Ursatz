@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <semantics/analysis_key.h>
 #include <standard-harmony/harmonic_function.h>
 
 #include <ursatz_composer/piece_plan.h>
@@ -27,11 +28,6 @@ typedef enum {
     PLAN_LANE_INNER_VOICE
 } PlanLaneKind;
 
-typedef enum {
-    PLAN_MODE_MAJOR,
-    PLAN_MODE_MINOR
-} PlanKeyMode;
-
 /* beat_unit is the note value of one beat (4 for a quarter); bars_per_hyperbar is 0 when there is none. */
 typedef struct {
     int beats_per_bar;
@@ -39,11 +35,12 @@ typedef struct {
     int bars_per_hyperbar;
 } PlanMeter;
 
-/* tonic_pitch_class is 0 to 11, C = 0. */
-typedef struct {
-    int tonic_pitch_class;
-    PlanKeyMode mode;
-} PlanKey;
+/*
+ * A key on the plan's key lane is the library's AnalysisKey (R-242): a spelled tonic and a KeyStructureMode, id NULL.
+ * plan_key_of_pitch_class spells the tonic of a pitch class (0 to 11, C = 0, taken mod 12) with the fewest accidentals in
+ * its signature, sharps on a tie; analysis_key_tonic_pitch_class gives the pitch class back.
+ */
+AnalysisKey plan_key_of_pitch_class(int pitch_class, KeyStructureMode mode);
 
 #define PLAN_ROMAN_NUMERAL_MAX 16
 
@@ -69,7 +66,7 @@ typedef struct {
 /* Which member is used follows the lane: meter, key, harmony, or notes for bass, melody and inner voice. */
 typedef union {
     PlanMeter meter;
-    PlanKey key;
+    AnalysisKey key;
     PlanHarmony harmony;
     PlanNotes notes;
 } PlanLanePayload;

@@ -54,7 +54,7 @@ HarmonyBassParams harmony_bass_params_default(void);
  * soft rules are not asked. True when the lane could be read, with *violation NULL if nothing is broken
  * and otherwise the rule that is.
  */
-bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, PlanKey key, const HarmonyBassParams *params,
+bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, AnalysisKey key, const HarmonyBassParams *params,
                         const char **violation);
 
 /*

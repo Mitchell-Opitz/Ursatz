@@ -4,8 +4,8 @@
 
 #include <standard-tonality/roman_numeral_grammar.h>
 
-HarmonyMode harmony_mode_of(PlanKeyMode mode) {
-    return mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+HarmonyMode harmony_mode_of(KeyStructureMode mode) {
+    return mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
 }
 
 /*
@@ -14,14 +14,14 @@ HarmonyMode harmony_mode_of(PlanKeyMode mode) {
  * the diminished chord of a major key or on the second degree of a minor key is half-diminished, on the raised seventh
  * fully diminished).
  */
-static StandardTonalityNumeralText numeral_of(PlanKeyMode mode, const HarmonyChord *chord) {
+static StandardTonalityNumeralText numeral_of(KeyStructureMode mode, const HarmonyChord *chord) {
     static const bool MAJOR_MINOR_THIRD[8] = {false, false, true, true, false, false, true, false};
     static const bool MINOR_MINOR_THIRD[8] = {false, true, false, false, true, false, false, false};
     StandardTonalityNumeralText numeral;
     memset(&numeral, 0, sizeof(numeral));
     numeral.degree = chord->degree;
     numeral.inversion = chord->inversion;
-    bool minor_mode = mode == PLAN_MODE_MINOR;
+    bool minor_mode = mode == KEY_STRUCTURE_MODE_MINOR;
     bool diminished = minor_mode ? (chord->degree == 2 || chord->leading_tone) : chord->degree == 7;
     bool minor_third = minor_mode ? MINOR_MINOR_THIRD[chord->degree] : MAJOR_MINOR_THIRD[chord->degree];
     if (diminished) {
@@ -37,7 +37,7 @@ static StandardTonalityNumeralText numeral_of(PlanKeyMode mode, const HarmonyCho
     return numeral;
 }
 
-bool harmony_roman_format(PlanKeyMode mode, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]) {
+bool harmony_roman_format(KeyStructureMode mode, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]) {
     if (!chord || !out || !harmony_chord_valid(chord) || chord->half_diminished) {
         return false;
     }
@@ -56,7 +56,7 @@ static bool quality_is_diminished_seventh(StandardTonalityNumeralQuality quality
            quality == STANDARD_TONALITY_NUMERAL_FULLY_DIMINISHED_SEVENTH;
 }
 
-bool harmony_roman_parse(PlanKeyMode mode, const char *roman, HarmonyChord *out) {
+bool harmony_roman_parse(KeyStructureMode mode, const char *roman, HarmonyChord *out) {
     StandardTonalityNumeralText numeral;
     if (!roman || !out || !standard_tonality_numeral_parse(roman, &numeral) || numeral.alteration != 0 ||
         numeral.has_target) {
@@ -68,7 +68,7 @@ bool harmony_roman_parse(PlanKeyMode mode, const char *roman, HarmonyChord *out)
     chord.seventh = standard_tonality_numeral_quality_is_seventh(numeral.quality);
     chord.inversion = numeral.inversion;
     /* The diminished chord on 7 of a minor key is the one on the raised seventh degree. */
-    chord.leading_tone = mode == PLAN_MODE_MINOR && numeral.degree == 7 &&
+    chord.leading_tone = mode == KEY_STRUCTURE_MODE_MINOR && numeral.degree == 7 &&
                          (numeral.quality == STANDARD_TONALITY_NUMERAL_DIMINISHED ||
                           quality_is_diminished_seventh(numeral.quality));
     if (!harmony_chord_valid(&chord)) {
@@ -84,7 +84,7 @@ bool harmony_roman_parse(PlanKeyMode mode, const char *roman, HarmonyChord *out)
     return true;
 }
 
-bool harmony_roman_format_applied_inverted(PlanKeyMode mode, const HarmonyAppliedChord *applied, int inversion,
+bool harmony_roman_format_applied_inverted(KeyStructureMode mode, const HarmonyAppliedChord *applied, int inversion,
                                            char out[PLAN_ROMAN_NUMERAL_MAX]) {
     static const char *const SEVENTH_FIGURES[3] = {"6/5", "4/3", "4/2"};
     char label[PLAN_ROMAN_NUMERAL_MAX];
@@ -116,7 +116,7 @@ bool harmony_roman_format_applied_inverted(PlanKeyMode mode, const HarmonyApplie
     return true;
 }
 
-bool harmony_roman_parse_applied_inverted(PlanKeyMode mode, const char *roman, HarmonyAppliedChord *out,
+bool harmony_roman_parse_applied_inverted(KeyStructureMode mode, const char *roman, HarmonyAppliedChord *out,
                                           int *inversion) {
     if (!roman || !out || !inversion) {
         return false;
@@ -146,12 +146,12 @@ bool harmony_roman_parse_applied_inverted(PlanKeyMode mode, const char *roman, H
     return false;
 }
 
-bool harmony_roman_format_applied(PlanKeyMode mode, const HarmonyAppliedChord *applied,
+bool harmony_roman_format_applied(KeyStructureMode mode, const HarmonyAppliedChord *applied,
                                   char out[PLAN_ROMAN_NUMERAL_MAX]) {
     return harmony_roman_format_applied_inverted(mode, applied, 0, out);
 }
 
-bool harmony_roman_parse_applied(PlanKeyMode mode, const char *roman, HarmonyAppliedChord *out) {
+bool harmony_roman_parse_applied(KeyStructureMode mode, const char *roman, HarmonyAppliedChord *out) {
     int inversion;
     return harmony_roman_parse_applied_inverted(mode, roman, out, &inversion) && inversion == 0;
 }

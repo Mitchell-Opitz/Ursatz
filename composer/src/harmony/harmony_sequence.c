@@ -39,7 +39,7 @@ bool harmony_sequence_find(const char *name, ScalePatternId *id) {
 }
 
 /* The chord the upper voice's intervals make with the bass degree: a sixth or a third, a first inversion. */
-static bool stage_chord(PlanKeyMode mode, int bass, unsigned intervals, PhraseChord *out) {
+static bool stage_chord(KeyStructureMode mode, int bass, unsigned intervals, PhraseChord *out) {
     bool first_inversion = (intervals & ((1u << 6) | (1u << 3))) != 0;
     bool root_position = (intervals & (1u << 5)) != 0 && !first_inversion;
     if (!first_inversion && !root_position) {
@@ -51,7 +51,7 @@ static bool stage_chord(PlanKeyMode mode, int bass, unsigned intervals, PhraseCh
 }
 
 /* A diminished triad is not written in root position. */
-static bool bad_root_position(PlanKeyMode mode, const PhraseChord *chord) {
+static bool bad_root_position(KeyStructureMode mode, const PhraseChord *chord) {
     int intervals[4];
     size_t count;
     return chord->chord.inversion == 0 && harmony_diatonic_intervals(mode, &chord->chord, intervals, &count) &&
@@ -63,7 +63,7 @@ static bool bad_root_position(PlanKeyMode mode, const PhraseChord *chord) {
  * -1): at a stage where the bass moves it steps first, then the stage's chord sounds for a cell. A stage
  * that is the same bass and chord as the one before it (a suspension and its resolution) is one chord.
  */
-static bool build_chords(PlanKeyMode mode, const ScalePattern *pattern, int direction, int start, size_t repeats,
+static bool build_chords(KeyStructureMode mode, const ScalePattern *pattern, int direction, int start, size_t repeats,
                          PhraseChord *chords, size_t *count) {
     PhraseChord stages[MAX_STAGES];
     int basses[MAX_STAGES];
@@ -119,7 +119,7 @@ static bool offer(const SkeletonContext *read, const HarmonySequenceParams *para
     unsigned drawn = low + (unsigned)fill_rng_below(rng, high - low + 1);
     int start = 1 + (int)fill_rng_below(rng, 7);
     size_t cpb = read->metre.cells_per_bar;
-    PlanKeyMode mode = read->key.mode;
+    KeyStructureMode mode = read->key.mode;
     memset(skeleton, 0, sizeof(*skeleton));
     skeleton->schema = -1;
     skeleton->context = *read;

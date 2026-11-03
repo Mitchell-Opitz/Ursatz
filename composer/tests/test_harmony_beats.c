@@ -25,7 +25,7 @@
 typedef struct {
     int beats_per_bar;
     int beat_unit;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int tonic;
     int start;  /* the span's start, in beats from the start of the meter lane */
     int length; /* the span's length, in beats */
@@ -125,8 +125,7 @@ static Fixture build(const Scenario *scenario, bool with_bass) {
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = scenario->tonic;
-    payload.key.mode = scenario->mode;
+    payload.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
@@ -268,7 +267,7 @@ static void test_four_four(void) {
             for (int s = 0; s < 2; s++) {
                 for (int c = 0; c < 5; c++) {
                     for (unsigned long seed = 0; seed < 4; seed++) {
-                        Scenario scenario = {4, 4, mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR, mode ? 9 : 2,
+                        Scenario scenario = {4, 4, mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR, mode ? 9 : 2,
                                              starts[s], lengths[l], cadences[c], seed};
                         Cells cells = cells_of(&scenario);
                         produced += expect_progression(&scenario, &cells);
@@ -290,7 +289,7 @@ static void test_off_cell_starts(void) {
             for (int length = 2; length <= 3 * meters[m][0] + 1; length++) {
                 for (int c = 0; c < 3; c++) {
                     for (unsigned long seed = 0; seed < 2; seed++) {
-                        Scenario scenario = {meters[m][0], meters[m][1], PLAN_MODE_MAJOR, 7, start, length,
+                        Scenario scenario = {meters[m][0], meters[m][1], KEY_STRUCTURE_MODE_MAJOR, 7, start, length,
                                              cadences[c], seed};
                         check_scenario(&scenario);
                     }
@@ -302,7 +301,7 @@ static void test_off_cell_starts(void) {
 
 /* A span that ends where a bar does, started on beat 2: the lead is its first cell. */
 static void test_lead_and_tail(void) {
-    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 1, 11, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
+    Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 1, 11, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
     Fixture fixture = build(&scenario, false);
     Cells cells = cells_of(&scenario);
     /* Beats 2 to 12: a lead of one beat, then whole cells to the barline of beat 12, and no tail. */
@@ -319,7 +318,7 @@ static void test_lead_and_tail(void) {
     plan_destroy(fixture.plan);
 
     /* A tail: beats 1 to 8 end a beat into the second bar's second cell. */
-    Scenario tailed = {4, 4, PLAN_MODE_MAJOR, 0, 0, 7, CADENCE_TYPE_HALF, 2};
+    Scenario tailed = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 0, 7, CADENCE_TYPE_HALF, 2};
     fixture = build(&tailed, false);
     cells = cells_of(&tailed);
     assert(cells.cells == 4);
@@ -358,7 +357,7 @@ static void test_minimum_cells(void) {
         size_t minimum = harmony_phrase_min_cells(cadences[c], &four);
         for (int start = 0; start < 4; start++) {
             for (int length = 1; length <= 14; length++) {
-                Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, start, length, cadences[c], 0};
+                Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, start, length, cadences[c], 0};
                 Cells cells = cells_of(&scenario);
                 if (cells.cells < minimum) {
                     Fixture fixture = build(&scenario, false);
@@ -391,7 +390,7 @@ static void test_off_beat_is_not_a_target(void) {
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_METER, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.mode = PLAN_MODE_MAJOR;
+    payload.key.mode = KEY_STRUCTURE_MODE_MAJOR;
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, form, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
@@ -415,7 +414,7 @@ static void test_bass_under_beat_spans(void) {
     for (int s = 0; s < 3; s++) {
         for (int l = 0; l < 3; l++) {
             for (unsigned long seed = 0; seed < 4; seed++) {
-                Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 5, starts[s], lengths[l], CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
+                Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 5, starts[s], lengths[l], CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
                 Cells cells = cells_of(&scenario);
                 if (!expect_progression(&scenario, &cells)) {
                     continue;
@@ -475,7 +474,7 @@ static void test_embellish_part_cells(void) {
     size_t changed = 0;
     for (int w = 0; w < 5; w++) {
         for (unsigned long seed = 0; seed < 12; seed++) {
-            Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, spans[w][0], spans[w][1], CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
+            Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, spans[w][0], spans[w][1], CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
             Cells cells = cells_of(&scenario);
             if (!expect_progression(&scenario, &cells)) {
                 continue;
@@ -517,7 +516,7 @@ static void test_prolongation_part_cells(void) {
     for (int w = 0; w < 6; w++) {
         for (int e = 0; e < 2; e++) {
             for (unsigned long seed = 0; seed < 4; seed++) {
-                Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, spans[w][0], spans[w][1], CADENCE_TYPE_HALF, seed};
+                Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, spans[w][0], spans[w][1], CADENCE_TYPE_HALF, seed};
                 Cells cells = cells_of(&scenario);
                 Fixture fixture = build(&scenario, false);
                 /* The cadence is not asked for: a prolongation is the shape. */
@@ -554,7 +553,7 @@ static void test_prolongation_part_cells(void) {
 static void test_schemas_skip_part_cells(void) {
     static const int spans[4][2] = {{1, 11}, {0, 7}, {3, 10}, {2, 7}};
     for (int w = 0; w < 4; w++) {
-        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, spans[w][0], spans[w][1], CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
+        Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, spans[w][0], spans[w][1], CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
         Fixture fixture = build(&scenario, true);
         FillOperatorRegistry *registry = fill_registry_create();
         FillConfig config;
@@ -584,7 +583,7 @@ static void test_octave_on_beat_spans(void) {
     static const int PITCHES[3] = {48, 50, 48};
     for (size_t w = 0; w < sizeof(SPANS) / sizeof(SPANS[0]); w++) {
         for (unsigned long seed = 0; seed < 4; seed++) {
-            Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, SPANS[w].start, 7, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
+            Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, SPANS[w].start, 7, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
             Fixture fixture = build(&scenario, false);
             PlanNote notes[3];
             Rational position = fraction(0, 1);

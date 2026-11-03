@@ -78,7 +78,7 @@ static int numeral_degree(const char *numeral, size_t length) {
 }
 
 /* Whether the chord's bass member is what the framework's stage asks for, by the framework's own matching. */
-static bool bass_accepts(const PlanKey *key, const PhraseChord *chord, const GalantDegree *wanted) {
+static bool bass_accepts(const AnalysisKey *key, const PhraseChord *chord, const GalantDegree *wanted) {
     int pc;
     if (!harmony_chord_bass_pc(key, chord, &pc)) {
         return false;
@@ -93,8 +93,8 @@ static bool bass_accepts(const PlanKey *key, const PhraseChord *chord, const Gal
 }
 
 /* The chord of one stage, one cell long, or false when the data does not make one consistent chord. */
-static bool derive_stage(const PlanKey *key, const GalantStage *stage, PhraseChord *out) {
-    PlanKeyMode mode = key->mode;
+static bool derive_stage(const AnalysisKey *key, const GalantStage *stage, PhraseChord *out) {
+    KeyStructureMode mode = key->mode;
     bool seventh;
     int inversion;
     if (!read_figures(stage->figures, &seventh, &inversion)) {
@@ -136,7 +136,7 @@ static bool derive_stage(const PlanKey *key, const GalantStage *stage, PhraseCho
         return false;
     }
     /* A lower-case vii in a minor key is the diminished chord on the raised seventh degree. */
-    bool leading = mode == PLAN_MODE_MINOR && strcmp(stage->numeral, "vii") == 0;
+    bool leading = mode == KEY_STRUCTURE_MODE_MINOR && strcmp(stage->numeral, "vii") == 0;
     bool made = leading ? (!seventh && harmony_make_leading_tone(mode, inversion, 1, out))
                         : harmony_make_chord(mode, degree, inversion, seventh, false, 1, out);
     return made && bass_accepts(key, out, &stage->bass);
@@ -147,7 +147,7 @@ static bool modulates(GalantSchemaId id) {
     return id == GALANT_SCHEMA_MODULATING_PRINNER || id == GALANT_SCHEMA_MODULATING_PRINNER_WITH_DOMINANT;
 }
 
-static bool derive_schema(const PlanKey *key, const GalantPrototype *prototype, PhraseChord *chords) {
+static bool derive_schema(const AnalysisKey *key, const GalantPrototype *prototype, PhraseChord *chords) {
     if (modulates(prototype->id) || prototype->stage_count == 0 || prototype->stage_count > GALANT_MAX_STAGES) {
         return false;
     }
@@ -172,10 +172,10 @@ bool harmony_schema_find(const char *name, GalantSchemaId *id) {
     return false;
 }
 
-bool harmony_schema_available(GalantSchemaId id, PlanKeyMode mode) {
+bool harmony_schema_available(GalantSchemaId id, KeyStructureMode mode) {
     const GalantPrototype *prototype = galant_prototype(id);
     PhraseChord chords[GALANT_MAX_STAGES];
-    PlanKey key = {0, mode};
+    AnalysisKey key = plan_key_of_pitch_class(0, mode);
     return prototype && derive_schema(&key, prototype, chords);
 }
 

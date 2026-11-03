@@ -149,7 +149,7 @@ static bool read_lead_in(const PiecePlan *plan, VoicingContext *out, Rational ce
     PlanSpan before_span;
     Rational before_end;
     PhraseChord chord;
-    PlanKey key;
+    AnalysisKey key;
     int pitch[4];
     Rational origin;
     Rational length;
@@ -170,7 +170,7 @@ static bool read_lead_in(const PiecePlan *plan, VoicingContext *out, Rational ce
         plan_lane_span_state(plan, before) == PLAN_STATE_CONSTRAINED ||
         !harmony_read_chord(plan, before, out->key.mode, cell_length, &chord) ||
         (harmony_find_key(plan, PLAN_LANE_SPAN_NONE, PLAN_NODE_NONE, before_span, &key) &&
-         (key.tonic_pitch_class != out->key.tonic_pitch_class || key.mode != out->key.mode)) ||
+         (analysis_key_tonic_pitch_class(&key) != analysis_key_tonic_pitch_class(&out->key) || key.mode != out->key.mode)) ||
         !position_is_positive(before_span.length)) {
         return true;
     }
@@ -211,9 +211,9 @@ static void limit_cadence_soprano(const PiecePlan *plan, VoicingContext *out) {
             continue;
         }
         if (constraint->params.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC) {
-            out->soprano_mask[last] = 1u << out->key.tonic_pitch_class;
+            out->soprano_mask[last] = 1u << analysis_key_tonic_pitch_class(&out->key);
         } else if (constraint->params.cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
-            out->soprano_mask[last] = 1u << ((out->key.tonic_pitch_class + (out->key.mode == PLAN_MODE_MINOR ? 3 : 4)) % 12);
+            out->soprano_mask[last] = 1u << ((analysis_key_tonic_pitch_class(&out->key) + (out->key.mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4)) % 12);
         }
     }
 }
@@ -258,7 +258,7 @@ bool voicing_read(const PiecePlan *plan, LaneSpanId target, VoicingContext *out)
         limit_cadence_soprano(plan, out);
     }
     out->key_tonic = harmony_spell_tonic(&out->key, 4);
-    out->key_leading = harmony_spell_pitch(&out->key, 7, 60 + (out->key.tonic_pitch_class + 11) % 12);
+    out->key_leading = harmony_spell_pitch(&out->key, 7, 60 + (analysis_key_tonic_pitch_class(&out->key) + 11) % 12);
     if (!out->key_tonic || !out->key_leading) {
         return false;
     }

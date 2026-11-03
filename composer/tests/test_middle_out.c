@@ -98,8 +98,7 @@ static PieceRequest request_of(FormTemplateKind form, unsigned long seed) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = form;
-    request.key.tonic_pitch_class = 0;
-    request.key.mode = PLAN_MODE_MAJOR;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.seed = seed;
@@ -348,7 +347,7 @@ static bool cadence_as_planned(const PiecePlan *plan, const ComposeHeard *heard)
 /* The melody's notes that start a bar are tones of the chord there; the chords at the bass notes stand on them. */
 static void check_given_fits(const PiecePlan *plan, ScenarioKind kind) {
     PlanLaneKind lane = kind == SCENARIO_MELODY ? PLAN_LANE_MELODY : PLAN_LANE_BASS;
-    PlanKey key = {0, PLAN_MODE_MAJOR};
+    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
     Rational half = {1, 2}; /* a harmony cell of 4/4 */
     if (kind == SCENARIO_PROGRESSION) {
         return;

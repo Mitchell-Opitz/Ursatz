@@ -47,7 +47,7 @@ typedef struct {
     unsigned long magic;
     size_t bars;
     PlanMeter meter;
-    PlanKey key;
+    AnalysisKey key;
     CadenceType cadence;
     PlanThemePairing pairing;
     CadenceType first_cadence;         /* the weak cadence an antecedent ends in */
@@ -87,11 +87,11 @@ typedef struct {
     NodeId section;
     PlanSpan span;
     PlanMeter meter;
-    PlanKey key;                   /* the key the section starts in */
+    AnalysisKey key;                   /* the key the section starts in */
     bool has_start_change;         /* the key before the section is another, which the section opens */
-    PlanKey from_key;              /* that key; read only with has_start_change */
+    AnalysisKey from_key;              /* that key; read only with has_start_change */
     bool has_end_change;           /* the second half of the section is in another key, which it opens */
-    PlanKey end_key;               /* that key; read only with has_end_change */
+    AnalysisKey end_key;               /* that key; read only with has_end_change */
     CadenceType cadence;
     CadenceType first_cadence; /* meaningful when has_first */
     bool has_first;
@@ -235,7 +235,7 @@ Rational grow_bar_length(const PlanMeter *meter);
 /* The node named "m0" of the plan (its Given source motive), else PLAN_NODE_NONE. */
 NodeId grow_find_source(const PiecePlan *plan);
 /* Reads the motive on a motive node's Given or Realized melody lane span, with the meter and key given. */
-bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const PlanKey *key, Motive *out);
+bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const AnalysisKey *key, Motive *out);
 
 /* The development of m0 each idea after the basic idea is, as a spec the motive operators read. */
 void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, PlanMotiveRef *out);

@@ -72,8 +72,7 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
 
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key.tonic_pitch_class = 3;
-    key.key.mode = PLAN_MODE_MINOR;
+    key.key = plan_key_of_pitch_class(3, KEY_STRUCTURE_MODE_MINOR);
     add_lane(plan, section, PLAN_LANE_KEY, 0, bars(0, 8), &key);
 
     PlanLanePayload tonic = harmony("i", HARMONIC_FUNCTION_TONIC);
@@ -109,8 +108,7 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     motive_ref.params.motive.transform = PLAN_TRANSFORM_TRANSPOSED;
     motive_ref.params.motive.semitones = -2;
     PlanConstraint key_constraint = {PLAN_CONSTRAINT_KEY, {0}};
-    key_constraint.params.key.tonic_pitch_class = 7;
-    key_constraint.params.key.mode = PLAN_MODE_MAJOR;
+    key_constraint.params.key = plan_key_of_pitch_class(7, KEY_STRUCTURE_MODE_MAJOR);
     assert(plan_node_add_constraint(plan, phrase, &length) == PLAN_OK);
     assert(plan_node_add_constraint(plan, phrase, &cadence) == PLAN_OK);
     assert(plan_node_add_constraint(plan, phrase, &archetype) == PLAN_OK);
@@ -190,7 +188,7 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.motive.transform == b->params.motive.transform &&
                a->params.motive.semitones == b->params.motive.semitones;
     case PLAN_CONSTRAINT_KEY:
-        return a->params.key.tonic_pitch_class == b->params.key.tonic_pitch_class &&
+        return analysis_key_tonic_pitch_class(&a->params.key) == analysis_key_tonic_pitch_class(&b->params.key) &&
                a->params.key.mode == b->params.key.mode;
     case PLAN_CONSTRAINT_ARCHETYPE:
         return a->params.archetype == b->params.archetype;
@@ -267,7 +265,7 @@ static bool same_payload(PlanLaneKind lane, const PlanLanePayload *a, const Plan
         return a->meter.beats_per_bar == b->meter.beats_per_bar && a->meter.beat_unit == b->meter.beat_unit &&
                a->meter.bars_per_hyperbar == b->meter.bars_per_hyperbar;
     case PLAN_LANE_KEY:
-        return a->key.tonic_pitch_class == b->key.tonic_pitch_class && a->key.mode == b->key.mode;
+        return analysis_key_tonic_pitch_class(&a->key) == analysis_key_tonic_pitch_class(&b->key) && a->key.mode == b->key.mode;
     case PLAN_LANE_HARMONY:
         return strcmp(a->harmony.roman_numeral, b->harmony.roman_numeral) == 0 &&
                a->harmony.function == b->harmony.function;
@@ -715,7 +713,7 @@ static void test_load_analysis_document(void) {
     assert(plan_lane_span_count(plan) == 4);
     const PlanLanePayload *key = plan_lane_span_payload(plan, 1);
     assert(plan_lane_span_lane(plan, 1) == PLAN_LANE_KEY);
-    assert(key->key.tonic_pitch_class == 0 && key->key.mode == PLAN_MODE_MAJOR);
+    assert(analysis_key_tonic_pitch_class(&key->key) == 0 && key->key.mode == KEY_STRUCTURE_MODE_MAJOR);
     const PlanLanePayload *dominant = plan_lane_span_payload(plan, 3);
     assert(plan_lane_span_lane(plan, 3) == PLAN_LANE_HARMONY);
     assert(strcmp(dominant->harmony.roman_numeral, "V") == 0);

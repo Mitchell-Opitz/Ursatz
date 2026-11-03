@@ -51,7 +51,7 @@ size_t accomp_chord_at(const AccompContext *context, Rational position) {
 }
 
 /* The pitch classes of a chord in the key, root first. */
-bool accomp_chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4], size_t *count) {
+bool accomp_chord_tones(const AnalysisKey *key, const PhraseChord *chord, int pcs[4], size_t *count) {
     int intervals[4];
     int root;
     if (chord->applied) {
@@ -64,7 +64,7 @@ bool accomp_chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4]
             return false;
         }
         /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
-        root = key->mode == PLAN_MODE_MINOR && chord->chord.leading_tone
+        root = key->mode == KEY_STRUCTURE_MODE_MINOR && chord->chord.leading_tone
                    ? 11
                    : harmony_applied_scale_semitone(harmony_mode_of(key->mode), chord->chord.degree);
     }
@@ -72,7 +72,7 @@ bool accomp_chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4]
         return false;
     }
     for (size_t k = 0; k < *count; k++) {
-        pcs[k] = (key->tonic_pitch_class + root + intervals[k]) % 12;
+        pcs[k] = (analysis_key_tonic_pitch_class(key) + root + intervals[k]) % 12;
     }
     return true;
 }

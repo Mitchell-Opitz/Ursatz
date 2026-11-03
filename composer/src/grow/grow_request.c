@@ -310,7 +310,7 @@ static bool slot_motive_valid(const GrowRequest *request, GrowSlot slot, Rationa
         motive->meter.beats_per_bar != request->meter.beats_per_bar ||
         motive->meter.beat_unit != request->meter.beat_unit ||
         (motive->key_source != MOTIVE_KEY_UNSPECIFIED &&
-         (motive->key.tonic_pitch_class != request->key.tonic_pitch_class || motive->key.mode != request->key.mode))) {
+         (analysis_key_tonic_pitch_class(&motive->key) != analysis_key_tonic_pitch_class(&request->key) || motive->key.mode != request->key.mode))) {
         return false;
     }
     /* The first idea of the slot has units eighths of the theme; the longest is a bar. */
@@ -331,7 +331,7 @@ static bool idea_motive_valid(const GrowRequest *request, GrowIdea idea, Rationa
         motive->meter.beats_per_bar != request->meter.beats_per_bar ||
         motive->meter.beat_unit != request->meter.beat_unit ||
         (motive->key_source != MOTIVE_KEY_UNSPECIFIED &&
-         (motive->key.tonic_pitch_class != request->key.tonic_pitch_class || motive->key.mode != request->key.mode))) {
+         (analysis_key_tonic_pitch_class(&motive->key) != analysis_key_tonic_pitch_class(&request->key) || motive->key.mode != request->key.mode))) {
         return false;
     }
     size_t units = grow_place_units(&request->pairing, place);
@@ -364,7 +364,7 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         snprintf(accompaniment.motive_node, sizeof(accompaniment.motive_node), "%s", GROW_ACCOMPANIMENT_NAME);
     }
     if (!grow_theme_buildable(&request->meter, request->bars, &request->pairing, request->cadence, first) ||
-        request->motive->note_count < 2 || request->key.tonic_pitch_class < 0 || request->key.tonic_pitch_class > 11 ||
+        request->motive->note_count < 2 || analysis_key_tonic_pitch_class(&request->key) < 0 || analysis_key_tonic_pitch_class(&request->key) > 11 ||
         (has_accompaniment && !grow_accompaniment_valid(&request->meter, &accompaniment)) ||
         (has_accompaniment && request->has_voicing) ||
         (accompaniment_motive && (accompaniment_motive->role != MOTIVE_ROLE_ACCOMPANIMENT ||
@@ -573,7 +573,7 @@ NodeId grow_find_source(const PiecePlan *plan) {
     return PLAN_NODE_NONE;
 }
 
-bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const PlanKey *key, Motive *out) {
+bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const AnalysisKey *key, Motive *out) {
     LaneSpanId ids[16];
     size_t found = plan_node_lane_spans(plan, node, ids, 16);
     for (size_t i = 0; i < found && i < 16; i++) {

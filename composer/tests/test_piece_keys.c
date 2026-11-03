@@ -34,18 +34,17 @@
 typedef struct {
     const char *name;
     int tonic;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
 } Scenario;
 
-static const Scenario SCENARIOS[] = {{"C major", 0, PLAN_MODE_MAJOR}, {"A minor", 9, PLAN_MODE_MINOR}};
+static const Scenario SCENARIOS[] = {{"C major", 0, KEY_STRUCTURE_MODE_MAJOR}, {"A minor", 9, KEY_STRUCTURE_MODE_MINOR}};
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
 static PieceRequest request_of(const Scenario *scenario, FormTemplateKind kind, unsigned long seed) {
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = kind;
-    request.key.tonic_pitch_class = scenario->tonic;
-    request.key.mode = scenario->mode;
+    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.modulate = true;
@@ -53,14 +52,14 @@ static PieceRequest request_of(const Scenario *scenario, FormTemplateKind kind, 
     return request;
 }
 
-static HarmonyMode harmony_mode(PlanKeyMode mode) {
-    return mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+static HarmonyMode harmony_mode(KeyStructureMode mode) {
+    return mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
 }
 
 /* The closely related key of `home` that is `key`, from standard-harmony's own list. False when it is none. */
-static bool related(PlanKey home, PlanKey key, HarmonyRelatedKey *out) {
+static bool related(AnalysisKey home, AnalysisKey key, HarmonyRelatedKey *out) {
     HarmonyMode home_mode = harmony_mode(home.mode);
-    int semitone = ((key.tonic_pitch_class - home.tonic_pitch_class) % 12 + 12) % 12;
+    int semitone = ((analysis_key_tonic_pitch_class(&key) - analysis_key_tonic_pitch_class(&home)) % 12 + 12) % 12;
     for (int i = 0; i < harmony_related_key_count(home_mode); i++) {
         HarmonyRelatedKey candidate;
         assert(harmony_related_key_at(home_mode, i, &candidate));
@@ -72,13 +71,13 @@ static bool related(PlanKey home, PlanKey key, HarmonyRelatedKey *out) {
     return false;
 }
 
-static bool same_key(PlanKey a, PlanKey b) {
-    return a.tonic_pitch_class == b.tonic_pitch_class && a.mode == b.mode;
+static bool same_key(AnalysisKey a, AnalysisKey b) {
+    return analysis_key_tonic_pitch_class(&a) == analysis_key_tonic_pitch_class(&b) && a.mode == b.mode;
 }
 
 typedef struct {
     PlanSpan span[32];
-    PlanKey key[32];
+    AnalysisKey key[32];
     size_t count;
 } KeyLane;
 
@@ -109,7 +108,7 @@ static void check_lane_tiles(const PiecePlan *plan, const KeyLane *lane) {
     assert(rational_cmp(at, form_end) == 0);
 }
 
-static PlanKey key_at(const KeyLane *lane, Rational time) {
+static AnalysisKey key_at(const KeyLane *lane, Rational time) {
     for (size_t i = 0; i < lane->count; i++) {
         Rational end;
         assert(plan_span_end(lane->span[i], &end) == PLAN_OK);
@@ -148,7 +147,7 @@ static size_t sections_of(const PiecePlan *plan, NodeId *out) {
 static void check_plan(const PiecePlan *plan, const Scenario *scenario, FormTemplateKind kind) {
     KeyLane lane = read_lane(plan);
     check_lane_tiles(plan, &lane);
-    PlanKey home = {scenario->tonic, scenario->mode};
+    AnalysisKey home = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     assert(same_key(lane.key[0], home));
     for (size_t i = 0; i < lane.count; i++) {
         HarmonyRelatedKey unused;
@@ -208,7 +207,7 @@ static int test_plans(void) {
 /* ------------------------------------------------------------ the pieces */
 
 /* Whether the chord at the start of a key change is a pivot chord between the two keys, by standard-harmony. */
-static bool opens_with_pivot(const PiecePlan *plan, PlanKey from, PlanKey to, Rational at) {
+static bool opens_with_pivot(const PiecePlan *plan, AnalysisKey from, AnalysisKey to, Rational at) {
     PlanSpan around = {at, {1, 1000}};
     LaneSpanId chord;
     HarmonyRelatedKey key;

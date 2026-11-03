@@ -3,7 +3,7 @@
 #include <string.h>
 
 /* Reads the numeral of one span: a diatonic one, else an applied one. The cells are not counted. */
-static bool read_numeral(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, PhraseChord *out) {
+static bool read_numeral(const PiecePlan *plan, LaneSpanId id, KeyStructureMode mode, PhraseChord *out) {
     const PlanHarmony *harmony = &plan_lane_span_payload(plan, id)->harmony;
     memset(out, 0, sizeof(*out));
     memcpy(out->roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
@@ -19,13 +19,13 @@ static bool read_numeral(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode,
     return true;
 }
 
-bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, Rational cell_length,
+bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, KeyStructureMode mode, Rational cell_length,
                        PhraseChord *out) {
     return read_numeral(plan, id, mode, out) &&
            harmony_count_cells(cell_length, plan_lane_span_span(plan, id).length, &out->cells);
 }
 
-bool harmony_read_chord_in(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, const PhraseMetre *metre,
+bool harmony_read_chord_in(const PiecePlan *plan, LaneSpanId id, KeyStructureMode mode, const PhraseMetre *metre,
                            PhraseChord *out) {
     size_t first;
     return read_numeral(plan, id, mode, out) &&

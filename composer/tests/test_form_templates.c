@@ -29,16 +29,16 @@
 typedef struct {
     const char *name;
     int tonic;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int beats;
     bool given;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4, invented", 0, PLAN_MODE_MAJOR, 4, false},
-    {"A minor 3/4, invented", 9, PLAN_MODE_MINOR, 3, false},
-    {"C major 4/4, given", 0, PLAN_MODE_MAJOR, 4, true},
-    {"A minor 3/4, given", 9, PLAN_MODE_MINOR, 3, true},
+    {"C major 4/4, invented", 0, KEY_STRUCTURE_MODE_MAJOR, 4, false},
+    {"A minor 3/4, invented", 9, KEY_STRUCTURE_MODE_MINOR, 3, false},
+    {"C major 4/4, given", 0, KEY_STRUCTURE_MODE_MAJOR, 4, true},
+    {"A minor 3/4, given", 9, KEY_STRUCTURE_MODE_MINOR, 3, true},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -206,8 +206,7 @@ static Motive scenario_motive(const Scenario *scenario) {
     }
     motive.meter.beats_per_bar = scenario->beats;
     motive.meter.beat_unit = 4;
-    motive.key.tonic_pitch_class = scenario->tonic;
-    motive.key.mode = scenario->mode;
+    motive.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     if (scenario->beats == 3) {
         /* The half note at beat 3 ends on the barline as a quarter. */
         PlanNote *last = &motive.notes[motive.note_count - 1];
@@ -222,8 +221,7 @@ static PieceRequest scenario_request(const Scenario *scenario, FormTemplateKind 
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = kind;
-    request.key.tonic_pitch_class = scenario->tonic;
-    request.key.mode = scenario->mode;
+    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = 4;
     request.bars = size.bars;
@@ -283,7 +281,7 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, For
         const PlanConstraint *weak = find(plan, section, PLAN_CONSTRAINT_CADENCE, 1);
         assert((expected[i].beginning == AN) == (weak != NULL));
         assert(!weak || weak->params.cadence == CADENCE_TYPE_HALF);
-        assert(key && key->params.key.tonic_pitch_class == scenario->tonic && key->params.key.mode == scenario->mode);
+        assert(key && analysis_key_tonic_pitch_class(&key->params.key) == scenario->tonic && key->params.key.mode == scenario->mode);
         if (expected[i].returns == NONE) {
             assert(back == NULL);
         } else {

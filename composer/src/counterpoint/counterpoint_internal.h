@@ -26,7 +26,7 @@ typedef struct {
     LaneSpanId target;
     NodeId owner;
     PlanSpan span;
-    PlanKey key;
+    AnalysisKey key;
     int species;
     bool above;
     size_t count;            /* the notes of the given line */

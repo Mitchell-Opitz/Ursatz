@@ -311,9 +311,9 @@ static int read_brief(Request *request) {
                         request->key_text);
     }
     if (cli_equals_ignore_case(mode, "major")) {
-        structure->key.mode = PLAN_MODE_MAJOR;
+        structure->key.mode = KEY_STRUCTURE_MODE_MAJOR;
     } else if (cli_equals_ignore_case(mode, "minor")) {
-        structure->key.mode = PLAN_MODE_MINOR;
+        structure->key.mode = KEY_STRUCTURE_MODE_MINOR;
     }
     if (!cli_parse_meter(request->meter_text, &structure->meter) || !harmony_meter_supported(&structure->meter)) {
         return cli_fail(CLI_EXIT_USAGE, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8", request->meter_text);
@@ -408,7 +408,7 @@ static int load_style(Request *request, bool plain_midi) {
         if (!composer_style_mode(request->style, &minor)) {
             return cli_fail(CLI_EXIT_USAGE, "\"mode\": \"style\" needs a style with a mode category");
         }
-        request->structure.key.mode = minor ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR;
+        request->structure.key.mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
         request->mode_from = "style";
     }
     if (request->style) {
@@ -427,7 +427,7 @@ static int load_style(Request *request, bool plain_midi) {
 }
 
 /* A melodic motive of the request. */
-static int read_melodic(const char *what, const cJSON *json, const PlanMeter *meter, const PlanKey *key, Motive **out) {
+static int read_melodic(const char *what, const cJSON *json, const PlanMeter *meter, const AnalysisKey *key, Motive **out) {
     *out = calloc(1, sizeof(Motive));
     if (!*out) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
@@ -952,7 +952,7 @@ static GrowBrief make_brief(const Request *request) {
     memset(&brief, 0, sizeof(brief));
     brief.tempo = request->tempo;
     brief.tempo_from = request->tempo_from;
-    brief.minor = request->structure.key.mode == PLAN_MODE_MINOR;
+    brief.minor = request->structure.key.mode == KEY_STRUCTURE_MODE_MINOR;
     brief.mode_from = request->mode_from;
     brief.has_density = composer_style_density(request->style, &brief.density);
     brief.without = request->without.names;

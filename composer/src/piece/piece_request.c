@@ -231,9 +231,9 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
     PlanAccompaniment accompaniment;
     bool accompanied = piece_accompaniment(request, &accompaniment);
     size_t cells_per_bar;
-    if (!grow_cells_per_bar(&request->meter, &cells_per_bar) || request->key.tonic_pitch_class < 0 ||
-        request->key.tonic_pitch_class > 11 ||
-        (request->key.mode != PLAN_MODE_MAJOR && request->key.mode != PLAN_MODE_MINOR) ||
+    if (!grow_cells_per_bar(&request->meter, &cells_per_bar) || analysis_key_tonic_pitch_class(&request->key) < 0 ||
+        analysis_key_tonic_pitch_class(&request->key) > 11 ||
+        (request->key.mode != KEY_STRUCTURE_MODE_MAJOR && request->key.mode != KEY_STRUCTURE_MODE_MINOR) ||
         (request->motive && request->motive->note_count < 2) ||
         (accompanied && !grow_accompaniment_valid(&request->meter, &accompaniment)) ||
         !template_buildable(&layout, &request->meter)) {

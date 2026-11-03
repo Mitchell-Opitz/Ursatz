@@ -170,7 +170,7 @@ static bool forms(NonChordTone type, int before, int pitch, int after) {
  * on a beat. Steps (one chord tone) most often, a repeated pitch now and then, and a move of two or more chord tones is
  * followed by one chord tone back. The draw fails when a note leaves PITCH_LOW to PITCH_HIGH.
  */
-static bool draw_frame(const PlanKey *key, const Rhythm *rhythm, FillRng *rng, long *positions, Melody *melody) {
+static bool draw_frame(const AnalysisKey *key, const Rhythm *rhythm, FillRng *rng, long *positions, Melody *melody) {
     long rung = BASE_RUNG + (long)fill_rng_below(rng, TRIAD_SIZE);
     int step_back = 0;
     bool first = true;
@@ -211,7 +211,7 @@ static bool draw_frame(const PlanKey *key, const Rhythm *rhythm, FillRng *rng, l
  * Fills the notes between two frame notes: a type is drawn for each (or none), and a note takes a non-chord pitch near the
  * frame note before it that makes the figure with the frame notes either side, else a chord tone near it.
  */
-static bool draw_between(const PlanKey *key, const Rhythm *rhythm, FillRng *rng, long *positions, Melody *melody) {
+static bool draw_between(const AnalysisKey *key, const Rhythm *rhythm, FillRng *rng, long *positions, Melody *melody) {
     for (size_t i = 1; i + 1 < rhythm->count; i++) {
         if (rhythm->on_beat[i]) {
             continue;
@@ -251,7 +251,7 @@ static bool draw_between(const PlanKey *key, const Rhythm *rhythm, FillRng *rng,
 }
 
 /* The frame, the notes between, and a range of no more than a twelfth. */
-static bool draw_melody(const PlanKey *key, const Rhythm *rhythm, FillRng *rng, Melody *melody) {
+static bool draw_melody(const AnalysisKey *key, const Rhythm *rhythm, FillRng *rng, Melody *melody) {
     long positions[MAX_NOTES];
     memset(melody, 0, sizeof(*melody));
     if (!draw_frame(key, rhythm, rng, positions, melody) || !draw_between(key, rhythm, rng, positions, melody)) {
@@ -268,7 +268,7 @@ static bool draw_melody(const PlanKey *key, const Rhythm *rhythm, FillRng *rng, 
 
 /* -------------------------------------------------------------- candidate */
 
-static bool build_motive(const MotiveRandomOptions *options, const PlanKey *key, const Rhythm *rhythm,
+static bool build_motive(const MotiveRandomOptions *options, const AnalysisKey *key, const Rhythm *rhythm,
                          const Melody *melody, Motive *out) {
     unsigned long den = 2UL * (unsigned long)options->meter.beat_unit;
     memset(out, 0, sizeof(*out));
@@ -317,7 +317,7 @@ static bool tones_as_drawn(const Motive *motive, const Melody *melody) {
  * One full motive that passes the melodic rules. *found is false when the draw did not (try again); the result is false
  * only when the check itself could not run.
  */
-static bool draw_candidate(const MotiveRandomOptions *options, const PlanKey *key, FillRng *rng, Motive *out,
+static bool draw_candidate(const MotiveRandomOptions *options, const AnalysisKey *key, FillRng *rng, Motive *out,
                            bool *found) {
     Rhythm rhythm;
     Melody melody;
@@ -417,7 +417,7 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
         return MOTIVE_RANDOM_ERR_NULL;
     }
     *out_count = 0;
-    if ((options->mode != PLAN_MODE_MAJOR && options->mode != PLAN_MODE_MINOR) ||
+    if ((options->mode != KEY_STRUCTURE_MODE_MAJOR && options->mode != KEY_STRUCTURE_MODE_MINOR) ||
         (options->form != MOTIVE_FORM_FULL && options->form != MOTIVE_FORM_RHYTHM &&
          options->form != MOTIVE_FORM_CONTOUR) ||
         options->count < 1 || options->count > MOTIVE_RANDOM_MAX_COUNT) {
@@ -427,15 +427,14 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
         !valid_beat_unit(options->meter.beat_unit)) {
         return MOTIVE_RANDOM_ERR_METER;
     }
-    PlanKey key;
+    AnalysisKey key;
     if (options->has_key) {
         key = options->key;
-        if (key.mode != options->mode || key.tonic_pitch_class < 0 || key.tonic_pitch_class > 11) {
+        if (key.mode != options->mode || analysis_key_tonic_pitch_class(&key) < 0 || analysis_key_tonic_pitch_class(&key) > 11) {
             return MOTIVE_RANDOM_ERR_KEY;
         }
     } else {
-        key.tonic_pitch_class = options->mode == PLAN_MODE_MAJOR ? 0 : 9;
-        key.mode = options->mode;
+        key = plan_key_of_pitch_class(options->mode == KEY_STRUCTURE_MODE_MAJOR ? 0 : 9, options->mode);
     }
 
     FillRng rng;

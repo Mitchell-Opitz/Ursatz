@@ -249,7 +249,7 @@ int run_motive(int argc, char **argv) {
     bool render = options.render_key_text || options.midi_path || options.musicxml_path;
     Motive rendered = motive;
     if (options.render_key_text) {
-        PlanKey render_key;
+        AnalysisKey render_key;
         if (!motive_parse_key(options.render_key_text, &render_key)) {
             return fail(EXIT_USAGE,
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "

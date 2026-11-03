@@ -67,7 +67,7 @@ typedef struct {
 } PieceSection;
 
 typedef struct {
-    PlanKey key;
+    AnalysisKey key;
     PlanMeter meter;
     PieceSection *sections;      /* in time order, grouped by part: intro, body, turnaround, ending */
     size_t section_count;

@@ -103,8 +103,7 @@ static PiecePlan *filled_rounded_binary(void) {
     memset(&request, 0, sizeof(request));
     request.form = FORM_TEMPLATE_ROUNDED_BINARY;
     request.bars = 24;
-    request.key.tonic_pitch_class = 0;
-    request.key.mode = PLAN_MODE_MAJOR;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     ComposeConfig config;
@@ -236,8 +235,8 @@ static void test_plain(const RenderedPlan *rendered) {
     for (size_t i = 0; i < rendered->key_count; i++) {
         keys[i].position = rendered->keys[i].position;
         keys[i].sharps_flats = (int8_t)rendered->keys[i].sharps_flats;
-        keys[i].mode_byte = rendered->keys[i].mode == PLAN_MODE_MINOR ? 1 : 0;
-        keys[i].mode_hint = rendered->keys[i].mode == PLAN_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
+        keys[i].mode_byte = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? 1 : 0;
+        keys[i].mode_hint = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
     }
     unsigned char *old = NULL;
     size_t old_size = 0;

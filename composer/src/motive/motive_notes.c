@@ -87,9 +87,9 @@ static bool parse_pitch(const char *text, int *midi, char *message, size_t messa
 }
 
 /* The shape of one pitched token of a list: how its pitch text becomes a MIDI note number. */
-typedef bool (*PitchParser)(const char *text, const PlanKey *key, int *midi, char *message, size_t message_size);
+typedef bool (*PitchParser)(const char *text, const AnalysisKey *key, int *midi, char *message, size_t message_size);
 
-static bool parse_note_pitch(const char *text, const PlanKey *key, int *midi, char *message, size_t message_size) {
+static bool parse_note_pitch(const char *text, const AnalysisKey *key, int *midi, char *message, size_t message_size) {
     (void)key;
     return parse_pitch(text, midi, message, message_size);
 }
@@ -98,7 +98,7 @@ static bool parse_note_pitch(const char *text, const PlanKey *key, int *midi, ch
  * Parses "1", "b3", "#4", "5'", "1,," into a MIDI note number: an optional # or b, a degree 1 to 7 of the key's scale,
  * then octave marks (' up, , down). Octave 0 is the octave whose degree 1 is the tonic's pitch class in MIDI 60 to 71.
  */
-static bool parse_degree_pitch(const char *text, const PlanKey *key, int *midi, char *message, size_t message_size) {
+static bool parse_degree_pitch(const char *text, const AnalysisKey *key, int *midi, char *message, size_t message_size) {
     const char *cursor = text;
     int alteration = 0;
     if (*cursor == '#' || *cursor == 'b') {
@@ -129,7 +129,7 @@ static bool parse_degree_pitch(const char *text, const PlanKey *key, int *midi, 
 }
 
 /* A rhythm-only token's pitch is "x"; it sounds on degree 1 of the key (the tonic, in MIDI 60 to 71). */
-static bool parse_rhythm_pitch(const char *text, const PlanKey *key, int *midi, char *message, size_t message_size) {
+static bool parse_rhythm_pitch(const char *text, const AnalysisKey *key, int *midi, char *message, size_t message_size) {
     if (strcmp(text, "x") != 0 && strcmp(text, "X") != 0) {
         snprintf(message, message_size, "'%s' is not a note of a rhythm; write x for a note or r for a rest", text);
         return false;
@@ -186,7 +186,7 @@ static bool parse_duration(const char *text, Rational *out, char *message, size_
     return true;
 }
 
-static MotiveResult parse_list(const char *text, PitchParser parse_pitch_text, const PlanKey *key, const char *example,
+static MotiveResult parse_list(const char *text, PitchParser parse_pitch_text, const AnalysisKey *key, const char *example,
                                Motive *motive, MotiveError *error) {
     Rational cursor = motive_time(0, 1);
     size_t count = 0;
@@ -313,8 +313,7 @@ MotiveResult motive_parse_notes_text(const char *text, Motive *motive, MotiveDoc
 }
 
 MotiveResult motive_parse_degrees_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error) {
-    PlanKey key;
-    memset(&key, 0, sizeof(key));
+    AnalysisKey key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     if (document->has_key) {
         key = document->key;
     }
@@ -322,8 +321,7 @@ MotiveResult motive_parse_degrees_text(const char *text, Motive *motive, MotiveD
 }
 
 MotiveResult motive_parse_rhythm_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error) {
-    PlanKey key;
-    memset(&key, 0, sizeof(key));
+    AnalysisKey key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     if (document->has_key) {
         key = document->key;
     }
@@ -334,8 +332,7 @@ MotiveResult motive_parse_rhythm_text(const char *text, Motive *motive, MotiveDo
 
 /* A contour is ranks separated by white space, each a whole number; every note is a quarter, rank r on degree r + 1. */
 MotiveResult motive_parse_contour_text(const char *text, Motive *motive, MotiveDocument *document, MotiveError *error) {
-    PlanKey key;
-    memset(&key, 0, sizeof(key));
+    AnalysisKey key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     if (document->has_key) {
         key = document->key;
     }

@@ -31,7 +31,7 @@ bool request_member_pickup(const cJSON *object, char *text, size_t size, const c
 /* "0", "1", "1/2": beats of the beat unit, as whole notes. */
 bool request_parse_pickup(const char *text, int beat_unit, Rational *out);
 /* A motive of a request, a degree list in the key with its pickup, harmony, features and role (role forced when not NULL). */
-int request_read_motive(const char *what, const cJSON *object, const char *role, const PlanMeter *meter, const PlanKey *key,
+int request_read_motive(const char *what, const cJSON *object, const char *role, const PlanMeter *meter, const AnalysisKey *key,
                         Motive *out);
 /* The GROW_FUNCTION_* bits a form's "functions" list names. */
 bool request_read_functions(const char *what, const cJSON *functions, unsigned *out);

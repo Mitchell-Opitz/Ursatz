@@ -22,7 +22,7 @@
 typedef struct {
     int beats_per_bar;
     int beat_unit;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int tonic;
     int bars;
     CadenceType cadence;
@@ -72,8 +72,7 @@ static Fixture build(const Scenario *scenario) {
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = scenario->tonic;
-    payload.key.mode = scenario->mode;
+    payload.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, fixture.span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
@@ -203,7 +202,7 @@ static void check_embellished(const Fixture *fixture, const Scenario *scenario) 
     }
     size_t tail = scenario->cadence == CADENCE_TYPE_DECEPTIVE ? 1 : (scenario->cadence == CADENCE_TYPE_PLAGAL ? 2 : 0);
     assert(model_count > tail);
-    HarmonyPhrase phrase = {scenario->mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR, model,
+    HarmonyPhrase phrase = {scenario->mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR, model,
                             model_count - tail};
     unsigned hard = 0;
     unsigned soft = 0;
@@ -309,7 +308,7 @@ static void test_sweep(void) {
                 for (int b = 0; b < 2; b++) {
                     for (int c = 0; c < 5; c++) {
                         for (unsigned long seed = 0; seed < 3; seed++) {
-                            Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
+                            Scenario scenario = {meters[m][0], meters[m][1], mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR,
                                                  tonics[t], bars[b], cadences[c], seed};
                             check_scenario(&scenario, &params, seed == 1);
                         }
@@ -328,7 +327,7 @@ static void test_nothing_asked_changes_nothing(void) {
     none.density = 1000;
     none.families = 0;
     for (unsigned long seed = 0; seed < 8; seed++) {
-        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
+        Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
         char plain[SIGNATURE_SIZE];
         char result[SIGNATURE_SIZE];
         assert(!pipeline(&scenario, &off, false, plain, result).changed);
@@ -355,7 +354,7 @@ static void test_each_family_acts(void) {
             for (int mode = 0; mode < 2; mode++) {
                 for (int c = 0; c < 3; c++) {
                     for (unsigned long seed = 0; seed < 6; seed++) {
-                        Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR, 0,
+                        Scenario scenario = {meters[m][0], meters[m][1], mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR, 0,
                                              8, cadences[c], seed};
                         char plain[SIGNATURE_SIZE];
                         char result[SIGNATURE_SIZE];
@@ -375,7 +374,7 @@ static void test_each_family_acts(void) {
 
 /* Without the marks, the embellishment operator finds nothing to do; with NULL parameters it uses the defaults. */
 static void test_marks_and_defaults(void) {
-    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 6, CADENCE_TYPE_PERFECT_AUTHENTIC, 2};
+    Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 6, CADENCE_TYPE_PERFECT_AUTHENTIC, 2};
     Fixture fixture = build(&scenario);
     FillOutcome outcome = run(&fixture, 2, NULL, false);
     assert(outcome.status == FILL_STATUS_COMPLETE);

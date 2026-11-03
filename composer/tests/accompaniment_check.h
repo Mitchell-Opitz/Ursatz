@@ -54,7 +54,7 @@ static inline size_t check_notes(const PiecePlan *plan, PlanLaneKind lane, int v
 }
 
 /* Checks every inner voice over span against the rules above; returns how many notes it checked. */
-static inline size_t check_accompaniment(const PiecePlan *plan, PlanSpan span, PlanKey key, int low, int high) {
+static inline size_t check_accompaniment(const PiecePlan *plan, PlanSpan span, AnalysisKey key, int low, int high) {
     PhraseChord chords[HARMONY_MAX_CHORDS];
     PhraseMetre metre;
     LaneSpanId chord_ids[HARMONY_MAX_CHORDS];

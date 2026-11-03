@@ -321,7 +321,7 @@ void cli_print_style_distance_json(const StyleComparison *comparison) {
     printf("}");
 }
 
-bool cli_parse_key(const char *text, PlanKey *key) {
+bool cli_parse_key(const char *text, AnalysisKey *key) {
     static const int NATURAL[7] = {9, 11, 0, 2, 4, 5, 7}; /* A B C D E F G */
     while (isspace((unsigned char)*text)) {
         text++;
@@ -360,18 +360,18 @@ bool cli_parse_key(const char *text, PlanKey *key) {
         return false;
     }
     if (cli_equals_ignore_case(mode, "major")) {
-        key->mode = PLAN_MODE_MAJOR;
+        key->mode = KEY_STRUCTURE_MODE_MAJOR;
     } else if (cli_equals_ignore_case(mode, "minor")) {
-        key->mode = PLAN_MODE_MINOR;
+        key->mode = KEY_STRUCTURE_MODE_MINOR;
     } else {
         return false;
     }
-    key->tonic_pitch_class = (pc % 12 + 12) % 12;
+    *key = plan_key_of_pitch_class((pc % 12 + 12) % 12, key->mode);
     return true;
 }
 
-const char *cli_key_name(const PlanKey *key, char *out, size_t size) {
-    util_key_name(key->tonic_pitch_class, key->mode == PLAN_MODE_MINOR, out, size);
+const char *cli_key_name(const AnalysisKey *key, char *out, size_t size) {
+    util_key_name(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, out, size);
     return out;
 }
 
@@ -458,13 +458,13 @@ static int seed_failure(CorpusSeedResult result, const char *corpus_dir, const c
     }
 }
 
-int cli_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const PlanKey *key,
+int cli_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const AnalysisKey *key,
                     unsigned long seed, CorpusSeed *out) {
     CorpusSeedResult result = corpus_seed_motive(corpus_dir, like_path, meter, key, seed, out);
     return result == CORPUS_SEED_OK ? 0 : seed_failure(result, corpus_dir, like_path);
 }
 
-int cli_seed_progression(const char *corpus_dir, const char *numerals_text, PlanKeyMode mode, CorpusSeed *out) {
+int cli_seed_progression(const char *corpus_dir, const char *numerals_text, KeyStructureMode mode, CorpusSeed *out) {
     CorpusSeedResult result = corpus_seed_progression(corpus_dir, numerals_text, mode, out);
     return result == CORPUS_SEED_OK ? 0 : seed_failure(result, corpus_dir, numerals_text);
 }

@@ -181,18 +181,18 @@ static bool in_range(PlanSpan span, PlanLaneKind lane, const PlanSpan *range) {
 /* ----------------------------------------------------------------- keys */
 
 /* The tonic of a key as the library spells it: the fewest accidentals in the signature, sharps on a tie. */
-static bool key_tonic(const PlanKey *key, PitchLetter *letter, int *accidental) {
-    return standard_tonality_key_tonic_of_pitch_class(key->tonic_pitch_class, key->mode == PLAN_MODE_MINOR, letter,
+static bool key_tonic(const AnalysisKey *key, PitchLetter *letter, int *accidental) {
+    return standard_tonality_key_tonic_of_pitch_class(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, letter,
                                                       accidental);
 }
 
 /* The signature of a key as sharps (positive) or flats (negative); 0 for a tonic the library cannot spell. */
-static int key_sharps_flats(const PlanKey *key) {
+static int key_sharps_flats(const AnalysisKey *key) {
     PitchLetter letter;
     int accidental;
     int fifths = 0;
     if (!key_tonic(key, &letter, &accidental) ||
-        !standard_tonality_key_fifths(letter, accidental, key->mode == PLAN_MODE_MINOR, &fifths)) {
+        !standard_tonality_key_fifths(letter, accidental, key->mode == KEY_STRUCTURE_MODE_MINOR, &fifths)) {
         return 0;
     }
     return fifths;
@@ -201,7 +201,7 @@ static int key_sharps_flats(const PlanKey *key) {
 typedef struct {
     LaneSpanId span;
     PlanSpan plan_span;
-    PlanKey key;
+    AnalysisKey key;
 } KeySource;
 
 static bool starts_before(PlanSpan a, PlanSpan b) {
@@ -209,8 +209,8 @@ static bool starts_before(PlanSpan a, PlanSpan b) {
 }
 
 /* The last key that starts at or before onset, or NULL when none does. */
-static const PlanKey *key_in_force(const KeySource *keys, size_t count, Rational onset) {
-    const PlanKey *in_force = NULL;
+static const AnalysisKey *key_in_force(const KeySource *keys, size_t count, Rational onset) {
+    const AnalysisKey *in_force = NULL;
     for (size_t i = 0; i < count; i++) {
         if (rational_cmp(keys[i].plan_span.start, onset) <= 0) {
             in_force = &keys[i].key;
@@ -234,14 +234,14 @@ typedef struct {
  * A pitch as written in a key (none: C major). A note of the key's scale takes its signature spelling; any other is
  * placed on the line of fifths, its sharp spelling in a sharp key or none, its flat spelling in a flat key.
  */
-static Spelling spell(int midi_pitch, const PlanKey *key) {
+static Spelling spell(int midi_pitch, const AnalysisKey *key) {
     int pitch_class = ((midi_pitch % PITCH_SEMITONES_PER_OCTAVE) + PITCH_SEMITONES_PER_OCTAVE) % PITCH_SEMITONES_PER_OCTAVE;
     int sharps_flats = key ? key_sharps_flats(key) : 0;
     PitchLetter tonic_letter = PITCH_LETTER_C;
     int tonic_accidental = 0;
     KeySignature *signature = NULL;
     if (key && key_tonic(key, &tonic_letter, &tonic_accidental) &&
-        standard_tonality_key_signature_of(tonic_letter, tonic_accidental, key->mode == PLAN_MODE_MINOR, &signature)) {
+        standard_tonality_key_signature_of(tonic_letter, tonic_accidental, key->mode == KEY_STRUCTURE_MODE_MINOR, &signature)) {
         for (int step = 0; step < 7; step++) {
             PitchLetter letter = pitch_letter_offset(PITCH_LETTER_C, step);
             int accidental = 0;
@@ -325,7 +325,7 @@ static size_t find_part(const RenderedPart *parts, size_t count, PlanLaneKind la
 }
 
 /* Builds one NoteEvent and its pitch value. Everything is freed again on failure. */
-static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *part, const PlanKey *key,
+static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *part, const AnalysisKey *key,
                                    const TuningSystem *tuning, NoteEvent **out_event,
                                    PitchNumericValue **out_value) {
     EntityID *id = NULL;
@@ -549,7 +549,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
     for (size_t i = 0; result == PLAN_RENDER_OK && i < key_count; i++) {
         PlanSpan span = plan_lane_span_span(plan, key_spans[i]);
         Rational key_start = span_start_in_range(span, range);
-        const PlanKey *key = &plan_lane_span_payload(plan, key_spans[i])->key;
+        const AnalysisKey *key = &plan_lane_span_payload(plan, key_spans[i])->key;
         keys[i].span = key_spans[i];
         keys[i].plan_span = span;
         keys[i].key = *key;
@@ -629,7 +629,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
         }
     }
     for (size_t i = 0; result == PLAN_RENDER_OK && i < note_count; i++) {
-        const PlanKey *key = key_in_force(keys, key_count, notes[i].onset);
+        const AnalysisKey *key = key_in_force(keys, key_count, notes[i].onset);
         NoteSource placed = notes[i];
         placed.onset = from_range_start(placed.onset, range);
         result = build_note(&placed, &out->parts[notes[i].part], key, tuning, &out->events[i],

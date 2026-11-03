@@ -137,7 +137,7 @@ static bool equals_ignore_case(const char *a, const char *b) {
     return *a == *b;
 }
 
-bool motive_parse_key(const char *text, PlanKey *out) {
+bool motive_parse_key(const char *text, AnalysisKey *out) {
     static const int NATURAL[7] = {9, 11, 0, 2, 4, 5, 7}; /* A B C D E F G */
     if (!text || !out) {
         return false;
@@ -179,13 +179,13 @@ bool motive_parse_key(const char *text, PlanKey *out) {
         return false;
     }
     if (equals_ignore_case(mode, "major")) {
-        out->mode = PLAN_MODE_MAJOR;
+        out->mode = KEY_STRUCTURE_MODE_MAJOR;
     } else if (equals_ignore_case(mode, "minor")) {
-        out->mode = PLAN_MODE_MINOR;
+        out->mode = KEY_STRUCTURE_MODE_MINOR;
     } else {
         return false;
     }
-    out->tonic_pitch_class = (pc % 12 + 12) % 12;
+    *out = plan_key_of_pitch_class((pc % 12 + 12) % 12, out->mode);
     return true;
 }
 
@@ -217,12 +217,13 @@ bool motive_parse_meter(const char *text, PlanMeter *out) {
     return true;
 }
 
-PlanKey motive_key_from_signature(int sharps_flats, PlanKeyMode mode) {
+AnalysisKey motive_key_from_signature(int sharps_flats, KeyStructureMode mode) {
+    AnalysisKey key;
+    if (analysis_key_from_fifths(sharps_flats, mode, &key)) {
+        return key;
+    }
     int major_tonic = ((sharps_flats * 7) % 12 + 12) % 12;
-    PlanKey key;
-    key.tonic_pitch_class = mode == PLAN_MODE_MINOR ? (major_tonic + 9) % 12 : major_tonic;
-    key.mode = mode;
-    return key;
+    return plan_key_of_pitch_class(mode == KEY_STRUCTURE_MODE_MINOR ? (major_tonic + 9) % 12 : major_tonic, mode);
 }
 
 /* ------------------------------------------------------------------- time */
@@ -311,12 +312,12 @@ MotiveResult motive_check_notes(const Motive *motive, Rational *length, MotiveEr
  * unspecified; no key is guessed from fewer pitches. A scale and its relative share their seven pitch classes, so
  * two answers are settled by the last note and, failing that, left open.
  */
-static bool infer_key(const Motive *motive, PlanKey *out) {
+static bool infer_key(const Motive *motive, AnalysisKey *out) {
     bool present[12] = {false};
     for (size_t i = 0; i < motive->note_count; i++) {
         present[motive->notes[i].midi_pitch % 12] = true;
     }
-    PlanKey found[24];
+    AnalysisKey found[24];
     size_t found_count = 0;
     for (int tonic = 0; tonic < 12; tonic++) {
         int relative[12];
@@ -328,8 +329,7 @@ static bool infer_key(const Motive *motive, PlanKey *out) {
         }
         CommonPracticeKeyMode mode;
         if (common_practice_identify_key_mode(relative, count, &mode)) {
-            found[found_count].tonic_pitch_class = tonic;
-            found[found_count].mode = mode == COMMON_PRACTICE_KEY_MINOR ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR;
+            found[found_count] = plan_key_of_pitch_class(tonic, mode == COMMON_PRACTICE_KEY_MINOR ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
             found_count++;
         }
     }
@@ -340,7 +340,7 @@ static bool infer_key(const Motive *motive, PlanKey *out) {
     int last = motive->notes[motive->note_count - 1].midi_pitch % 12;
     size_t match = found_count;
     for (size_t i = 0; i < found_count; i++) {
-        if (found[i].tonic_pitch_class == last) {
+        if (analysis_key_tonic_pitch_class(&found[i]) == last) {
             if (match != found_count) {
                 return false;
             }
@@ -423,7 +423,7 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
     motive->pickup = pickup;
     motive->form = document->form;
 
-    PlanKey key;
+    AnalysisKey key;
     if (options && options->has_key) {
         key = options->key;
         motive->key_source = MOTIVE_KEY_GIVEN;
@@ -433,11 +433,11 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
     } else if (infer_key(motive, &key)) {
         motive->key_source = MOTIVE_KEY_INFERRED;
     } else {
-        memset(&key, 0, sizeof(key));
+        key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
         motive->key_source = MOTIVE_KEY_UNSPECIFIED;
     }
-    if (key.tonic_pitch_class < 0 || key.tonic_pitch_class > 11) {
-        motive_set_error(error, "key", "the tonic pitch class %d is not from 0 to 11", key.tonic_pitch_class);
+    if (analysis_key_tonic_pitch_class(&key) < 0 || analysis_key_tonic_pitch_class(&key) > 11) {
+        motive_set_error(error, "key", "the tonic pitch class %d is not from 0 to 11", analysis_key_tonic_pitch_class(&key));
         return MOTIVE_ERR_VALUE;
     }
     motive->key = key;
@@ -543,6 +543,8 @@ MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
 static void begin(Motive *motive, MotiveDocument *document, MotiveError *error) {
     memset(motive, 0, sizeof(*motive));
     memset(document, 0, sizeof(*document));
+    motive->key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    document->key = motive->key;
     motive->length = motive_time(0, 1);
     motive->pickup = motive_time(0, 1);
     if (error) {
@@ -728,7 +730,7 @@ bool motive_equal(const Motive *a, const Motive *b) {
         return false;
     }
     if (a->key_source != MOTIVE_KEY_UNSPECIFIED &&
-        (a->key.tonic_pitch_class != b->key.tonic_pitch_class || a->key.mode != b->key.mode)) {
+        (analysis_key_tonic_pitch_class(&a->key) != analysis_key_tonic_pitch_class(&b->key) || a->key.mode != b->key.mode)) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
@@ -771,10 +773,10 @@ static cJSON *meter_json(const PlanMeter *meter) {
     return object;
 }
 
-static cJSON *key_json(const PlanKey *key) {
+static cJSON *key_json(const AnalysisKey *key) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "tonic_pitch_class", json_number(key->tonic_pitch_class)) &&
-                    plan_json_add(object, "mode", cJSON_CreateString(key->mode == PLAN_MODE_MINOR ? "minor" : "major")))) {
+    if (object && !(plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(key))) &&
+                    plan_json_add(object, "mode", cJSON_CreateString(key->mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major")))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -936,8 +938,7 @@ static bool read_key(JsonReader *reader, const cJSON *item, MotiveDocument *docu
         return json_bad_format(reader, "key.mode", "expected \"major\" or \"minor\"");
     }
     document->has_key = true;
-    document->key.tonic_pitch_class = (int)tonic;
-    document->key.mode = strcmp(mode->valuestring, "minor") == 0 ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR;
+    document->key = plan_key_of_pitch_class((int)tonic, strcmp(mode->valuestring, "minor") == 0 ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
     return true;
 }
 
@@ -1157,7 +1158,7 @@ PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, Rational start,
     return attach(plan, parent, start, motive, name, source, out_node, out_span);
 }
 
-bool motive_in_key(const Motive *source, const PlanKey *key, Motive *out) {
+bool motive_in_key(const Motive *source, const AnalysisKey *key, Motive *out) {
     if (!source || !key || !out || source->key_source == MOTIVE_KEY_UNSPECIFIED) {
         return false;
     }

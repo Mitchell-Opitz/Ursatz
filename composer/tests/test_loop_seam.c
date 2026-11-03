@@ -96,8 +96,7 @@ static SeamHeard hear_case(const SeamCase *c) {
     assert(plan_add_lane_span(plan, form, PLAN_LANE_METER, 0, (PlanSpan){whole(0, 1), whole(3, 1)}, &payload, &id) ==
            PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = 0;
-    payload.key.mode = PLAN_MODE_MAJOR;
+    payload.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, (PlanSpan){whole(0, 1), whole(3, 1)}, &payload, &id) ==
            PLAN_OK);
     add_chord(plan, body, 0, c->before);
@@ -197,7 +196,7 @@ static void test_rules(void) {
     assert(plan_add_node(plan, form, PLAN_NODE_SECTION, (PlanSpan){whole(1, 1), whole(1, 1)}, "seam", &seam) == PLAN_OK);
     assert(plan_node_add_constraint(plan, seam, &mark) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.mode = PLAN_MODE_MAJOR;
+    payload.key.mode = KEY_STRUCTURE_MODE_MAJOR;
     assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, (PlanSpan){whole(0, 1), whole(2, 1)}, &payload, &id) ==
            PLAN_OK);
     assert(seam_hear(plan, seam, &heard) == SEAM_HEAR_ERR_NOT_WRITTEN);
@@ -228,8 +227,7 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
 /* The intro 2 bars, the body 8 bars motif sentence plus 6 beats empty, the turnaround 1 bar (all 4/4). */
 static void standard_structure(Fixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->structure.key.tonic_pitch_class = 0;
-    fixture->structure.key.mode = PLAN_MODE_MAJOR;
+    fixture->structure.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     fixture->structure.meter.beats_per_bar = 4;
     fixture->structure.meter.beat_unit = 4;
     fixture->structure.sections = fixture->sections;

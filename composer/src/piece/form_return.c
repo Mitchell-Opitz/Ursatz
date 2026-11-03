@@ -227,8 +227,8 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
         }
         for (size_t c = 0; c < node->constraint_count; c++) {
             if (node->constraints[c].kind == PLAN_CONSTRAINT_KEY) {
-                PlanKey *key = &node->constraints[c].params.key;
-                key->tonic_pitch_class = ((key->tonic_pitch_class + transpose) % 12 + 12) % 12;
+                AnalysisKey *key = &node->constraints[c].params.key;
+                *key = plan_key_of_pitch_class(((analysis_key_tonic_pitch_class(key) + transpose) % 12 + 12) % 12, key->mode);
             }
         }
     }
@@ -242,8 +242,8 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
         }
         for (size_t c = 0; c < span->constraint_count; c++) {
             if (span->constraints[c].kind == PLAN_CONSTRAINT_KEY) {
-                PlanKey *key = &span->constraints[c].params.key;
-                key->tonic_pitch_class = ((key->tonic_pitch_class + transpose) % 12 + 12) % 12;
+                AnalysisKey *key = &span->constraints[c].params.key;
+                *key = plan_key_of_pitch_class(((analysis_key_tonic_pitch_class(key) + transpose) % 12 + 12) % 12, key->mode);
             }
         }
     }
@@ -327,7 +327,7 @@ bool return_meter_over(const PiecePlan *plan, PlanSpan span, PlanMeter *out) {
 typedef struct {
     Rational from;
     Rational to;
-    PlanKey key;
+    AnalysisKey key;
 } KeyPiece;
 
 static bool key_pieces(const PiecePlan *plan, PlanSpan span, KeyPiece *out, size_t *count) {
@@ -368,7 +368,7 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
         return false;
     }
     for (size_t i = 0; i < na; i++) {
-        int step = ((b[i].key.tonic_pitch_class - a[i].key.tonic_pitch_class) % 12 + 12) % 12;
+        int step = ((analysis_key_tonic_pitch_class(&b[i].key) - analysis_key_tonic_pitch_class(&a[i].key)) % 12 + 12) % 12;
         if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
             a[i].key.mode != b[i].key.mode || (difference >= 0 && difference != step)) {
             return false;
@@ -475,7 +475,7 @@ bool form_return_melody_fits(const PiecePlan *plan, NodeId section) {
     if (piece_count > 1) {
         return true;
     }
-    PlanKey key = pieces[0].key;
+    AnalysisKey key = pieces[0].key;
     if (!harmony_read_lane(plan, span, key.mode, chords, &chord_count, &metre)) {
         return false;
     }

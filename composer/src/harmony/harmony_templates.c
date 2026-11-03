@@ -89,7 +89,7 @@ static void with_cells(const PhraseChord *chord, size_t cells, PhraseChord *out)
  */
 static void tonic_options(const PhraseContext *phrase, FillRng *rng, OptionList *list) {
     const PhraseChord *tonic = &phrase->chords[phrase->target];
-    PlanKeyMode mode = phrase->mode;
+    KeyStructureMode mode = phrase->mode;
     size_t n = tonic->cells;
     if (!is_plain(tonic, 1) || tonic->chord.seventh || phrase->target + 1 == phrase->count || n < 3) {
         return;
@@ -134,7 +134,7 @@ static void tonic_options(const PhraseContext *phrase, FillRng *rng, OptionList 
  */
 static void dominant_options(const PiecePlan *plan, const PhraseContext *phrase, FillRng *rng, OptionList *list) {
     const PhraseChord *dominant = &phrase->chords[phrase->target];
-    PlanKeyMode mode = phrase->mode;
+    KeyStructureMode mode = phrase->mode;
     size_t n = dominant->cells;
     size_t t = phrase->target;
     bool last = t + 1 == phrase->count;
@@ -216,13 +216,13 @@ static bool same_numeral(const PhraseChord *a, const PhraseChord *b) {
 void harmony_options_predominant(const PhraseContext *phrase, FillRng *rng, OptionList *list) {
     size_t t = phrase->target;
     const PhraseChord *chord = &phrase->chords[t];
-    PlanKeyMode mode = phrase->mode;
+    KeyStructureMode mode = phrase->mode;
     size_t n = chord->cells;
     if (chord->applied || chord->chord.seventh || chord->chord.inversion != 0 ||
         (chord->chord.degree != 4 && chord->chord.degree != 2) || t + 1 == phrase->count) {
         return;
     }
-    bool minor = mode == PLAN_MODE_MINOR;
+    bool minor = mode == KEY_STRUCTURE_MODE_MINOR;
     const Form *forms = minor ? MINOR_FORMS : MAJOR_FORMS;
     size_t form_count = minor ? sizeof(MINOR_FORMS) / sizeof(MINOR_FORMS[0]) : sizeof(MAJOR_FORMS) / sizeof(MAJOR_FORMS[0]);
     const PhraseChord *before = t > 0 ? &phrase->chords[t - 1] : NULL;
@@ -275,7 +275,7 @@ static const HarmonyAppliedQuality APPLIED_QUALITIES[] = {
 void harmony_options_applied(const PiecePlan *plan, const PhraseContext *phrase, OptionList *list) {
     size_t t = phrase->target;
     const PhraseChord *target = &phrase->chords[t];
-    PlanKeyMode mode = phrase->mode;
+    KeyStructureMode mode = phrase->mode;
     if (t == 0 || t + 1 == phrase->count || target->applied || target->chord.inversion != 0 ||
         target->chord.cadential || !harmony_applied_target_valid(harmony_mode_of(mode), target->chord.degree)) {
         return;

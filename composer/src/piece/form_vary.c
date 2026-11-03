@@ -49,11 +49,11 @@ static long cell_ticks(const PlanMeter *meter) {
     return bar_ticks / (long)cells;
 }
 
-static bool in_scale(PlanKey key, int pitch) {
+static bool in_scale(AnalysisKey key, int pitch) {
     static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
     static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, false};
-    int degree = ((pitch - key.tonic_pitch_class) % 12 + 12) % 12;
-    return key.mode == PLAN_MODE_MAJOR ? MAJOR[degree] : MINOR[degree];
+    int degree = ((pitch - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
+    return key.mode == KEY_STRUCTURE_MODE_MAJOR ? MAJOR[degree] : MINOR[degree];
 }
 
 /*
@@ -61,7 +61,7 @@ static bool in_scale(PlanKey key, int pitch) {
  * a tone between, a neighbor tone (upper or lower, drawn from rng) when the next note is the same. Approached and left
  * by step either way. False for any other pair.
  */
-static bool choose_tone(PlanKey key, int from, int to, FillRng *rng, int *out) {
+static bool choose_tone(AnalysisKey key, int from, int to, FillRng *rng, int *out) {
     int difference = to - from;
     if (difference == 0) {
         int up = 0;

@@ -42,8 +42,7 @@ static PiecePlan *new_plan(NodeId *section) {
     PiecePlan *plan = NULL;
     memset(&request, 0, sizeof(request));
     request.form = FORM_TEMPLATE_ROUNDED_BINARY;
-    request.key.tonic_pitch_class = 0;
-    request.key.mode = PLAN_MODE_MAJOR;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.seed = 1;

@@ -24,7 +24,7 @@ typedef struct {
     LaneSpanId target;
     NodeId owner;
     PlanSpan span;
-    PlanKey key;
+    AnalysisKey key;
     PhraseMetre metre;
     size_t count;
     BassRun runs[HARMONY_MAX_CHORDS];
@@ -43,11 +43,11 @@ static bool cells_of(const PhraseMetre *metre, Rational start, Rational length, 
 }
 
 /* The scale degree (1 to 7) of a pitch class in the key, 0 when it is not in the scale. */
-static int degree_of(const PlanKey *key, int pc) {
+static int degree_of(const AnalysisKey *key, int pc) {
     static const int MAJOR[12] = {1, 0, 2, 0, 3, 4, 0, 5, 0, 6, 0, 7};
     static const int MINOR[12] = {1, 0, 2, 3, 0, 4, 0, 5, 6, 0, 7, 7};
-    int relative = ((pc - key->tonic_pitch_class) % 12 + 12) % 12;
-    return key->mode == PLAN_MODE_MINOR ? MINOR[relative] : MAJOR[relative];
+    int relative = ((pc - analysis_key_tonic_pitch_class(key)) % 12 + 12) % 12;
+    return key->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR[relative] : MAJOR[relative];
 }
 
 static bool is_step(int a, int b) {
@@ -132,8 +132,8 @@ static bool octave_context_read(const PiecePlan *plan, LaneSpanId target, Octave
         return false;
     }
     /* The rule's scale starts and ends on the tonic. */
-    if (context.runs[0].pc != context.key.tonic_pitch_class ||
-        context.runs[context.count - 1].pc != context.key.tonic_pitch_class) {
+    if (context.runs[0].pc != analysis_key_tonic_pitch_class(&context.key) ||
+        context.runs[context.count - 1].pc != analysis_key_tonic_pitch_class(&context.key)) {
         return false;
     }
     *out = context;
@@ -145,7 +145,7 @@ static bool octave_context_read(const PiecePlan *plan, LaneSpanId target, Octave
  * (the diminished ones in first inversion only) and V7 in every inversion. The key says which pitch
  * class each has in the bass, so this is a search through standard-harmony's chords, not a table.
  */
-static size_t options_for(const PlanKey *key, int pc, PhraseChord *out) {
+static size_t options_for(const AnalysisKey *key, int pc, PhraseChord *out) {
     size_t count = 0;
     PhraseChord chord;
     for (int degree = 1; degree <= 7; degree++) {
@@ -153,11 +153,11 @@ static size_t options_for(const PlanKey *key, int pc, PhraseChord *out) {
             for (int variant = 0; variant < 2; variant++) {
                 int bass;
                 bool made = variant == 0 ? harmony_make_chord(key->mode, degree, inversion, false, false, 1, &chord)
-                                         : (key->mode == PLAN_MODE_MINOR && degree == 7 &&
+                                         : (key->mode == KEY_STRUCTURE_MODE_MINOR && degree == 7 &&
                                             harmony_make_leading_tone(key->mode, inversion, 1, &chord));
                 /* A diminished triad is not written in root position. */
-                bool diminished = made && ((key->mode == PLAN_MODE_MAJOR && degree == 7) ||
-                                           (key->mode == PLAN_MODE_MINOR && (degree == 2 || chord.chord.leading_tone)));
+                bool diminished = made && ((key->mode == KEY_STRUCTURE_MODE_MAJOR && degree == 7) ||
+                                           (key->mode == KEY_STRUCTURE_MODE_MINOR && (degree == 2 || chord.chord.leading_tone)));
                 if (made && !(diminished && inversion == 0) && harmony_chord_bass_pc(key, &chord, &bass) &&
                     bass == pc && count < MAX_OPTIONS_PER_PC) {
                     out[count++] = chord;

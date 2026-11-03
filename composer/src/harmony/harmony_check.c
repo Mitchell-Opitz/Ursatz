@@ -45,7 +45,7 @@ static unsigned cadence_soft_rules(void) {
  * classifier names, the inside of a prolongation, a strong predominant (IV, ii6, ii), a
  * predominant seventh, or V7.
  */
-static bool chord_is_explained(PlanKeyMode mode, const HarmonyChord *chord, bool classified_six_four,
+static bool chord_is_explained(KeyStructureMode mode, const HarmonyChord *chord, bool classified_six_four,
                                bool inside_prolongation) {
     HarmonyStrongPredominant strong;
     HarmonyPredominantSeventhKind seventh;
@@ -401,7 +401,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
     return fill_default_checker(plan, target, operator_, candidate, context, out);
 }
 
-bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode,
+bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode,
                                          const char **violation) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
@@ -427,7 +427,7 @@ static void mark_schema_chords(const PiecePlan *plan, PlanSpan span, size_t coun
     }
 }
 
-bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, CadenceType requested,
+bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, CadenceType requested,
                         const char **violation) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];

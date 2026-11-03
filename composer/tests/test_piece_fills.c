@@ -79,10 +79,9 @@ typedef struct {
     PieceStructure structure;
 } Fixture;
 
-static void fixture_init(Fixture *fixture, int tonic, PlanKeyMode mode) {
+static void fixture_init(Fixture *fixture, int tonic, KeyStructureMode mode) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->structure.key.tonic_pitch_class = tonic;
-    fixture->structure.key.mode = mode;
+    fixture->structure.key = plan_key_of_pitch_class(tonic, mode);
     fixture->structure.meter.beats_per_bar = 4;
     fixture->structure.meter.beat_unit = 4;
     fixture->structure.sections = fixture->sections;
@@ -186,7 +185,7 @@ static size_t motive_notes(const PiecePlan *plan, Sounded *out, size_t max) {
 
 /* A piece in E minor: the D minor theme as an 8-bar body section, then a 2-bar turnaround from the piece's motive. */
 static void theme_structure(Fixture *fixture, const PiecePlan *theme) {
-    fixture_init(fixture, 4, PLAN_MODE_MINOR);
+    fixture_init(fixture, 4, KEY_STRUCTURE_MODE_MINOR);
     PieceSection *body = add_section(fixture, "a", "A", PIECE_PART_BODY, 32, PIECE_FILL_THEME);
     body->theme_plan = theme;
     add_section(fixture, "t", "T", PIECE_PART_TURNAROUND, 8, PIECE_FILL_EMPTY);
@@ -267,7 +266,7 @@ static void test_theme(void) {
 }
 
 /* Builds the structure's plan with an empty body of this many beats, in this key. */
-static PiecePlan *empty_body(Fixture *fixture, int tonic, PlanKeyMode mode, size_t beats) {
+static PiecePlan *empty_body(Fixture *fixture, int tonic, KeyStructureMode mode, size_t beats) {
     PiecePlan *plan;
     fixture_init(fixture, tonic, mode);
     add_section(fixture, "a", "A", PIECE_PART_BODY, beats, PIECE_FILL_EMPTY);
@@ -282,7 +281,7 @@ static void test_refused(void) {
     NodeId sections[4];
 
     /* Another length: the theme is 8 bars, the section 4. */
-    PiecePlan *plan = empty_body(&fixture, 4, PLAN_MODE_MINOR, 16);
+    PiecePlan *plan = empty_body(&fixture, 4, KEY_STRUCTURE_MODE_MINOR, 16);
     assert(piece_sections(plan, sections, 4) == 1);
     assert(plan_give_section(plan, sections[0], theme, theme_node) == GIVEN_ERR_LENGTH);
     assert(plan_node_state(plan, sections[0]) == PLAN_STATE_CONSTRAINED);
@@ -294,16 +293,16 @@ static void test_refused(void) {
     assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_ERR_BAD_REQUEST);
 
     /* A plan whose section is not realized yet. */
-    PiecePlan *open = empty_body(&fixture, 2, PLAN_MODE_MINOR, 32);
+    PiecePlan *open = empty_body(&fixture, 2, KEY_STRUCTURE_MODE_MINOR, 32);
     NodeId open_node;
     assert(piece_sections(open, &open_node, 1) == 1);
-    plan = empty_body(&fixture, 4, PLAN_MODE_MINOR, 32);
+    plan = empty_body(&fixture, 4, KEY_STRUCTURE_MODE_MINOR, 32);
     assert(piece_sections(plan, sections, 4) == 1);
     assert(plan_give_section(plan, sections[0], open, open_node) == GIVEN_ERR_NOT_REALIZED);
     plan_destroy(open);
 
     /* Another mode: the key lanes differ in shape. */
-    PiecePlan *major = empty_body(&fixture, 4, PLAN_MODE_MAJOR, 32);
+    PiecePlan *major = empty_body(&fixture, 4, KEY_STRUCTURE_MODE_MAJOR, 32);
     NodeId major_node;
     assert(piece_sections(major, &major_node, 1) == 1);
     assert(plan_give_section(major, major_node, theme, theme_node) == GIVEN_ERR_KEY);
@@ -341,7 +340,7 @@ static void test_progression(void) {
         PiecePlan *plan;
         ComposeConfig config;
         ComposeOutcome outcome;
-        fixture_init(&fixture, 0, PLAN_MODE_MAJOR);
+        fixture_init(&fixture, 0, KEY_STRUCTURE_MODE_MAJOR);
         PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 16, PIECE_FILL_PROGRESSION);
         body->numerals = NUMERALS;
         body->numeral_count = 4;
@@ -417,7 +416,7 @@ static void test_partial(void) {
         PiecePlan *plan;
         ComposeConfig config;
         ComposeOutcome outcome;
-        fixture_init(&fixture, 0, PLAN_MODE_MAJOR);
+        fixture_init(&fixture, 0, KEY_STRUCTURE_MODE_MAJOR);
         PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 32, PIECE_FILL_PROGRESSION);
         body->numerals = CHORDS;
         body->numeral_count = 4;

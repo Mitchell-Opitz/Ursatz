@@ -32,17 +32,17 @@
 typedef struct {
     const char *name;
     int tonic;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int beats;
     int unit;
     const char *motive;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 0, PLAN_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
-    {"D minor 3/4", 2, PLAN_MODE_MINOR, 3, 4, "F4:q A4:e G4:e E4:q"},
-    {"G major 6/8", 7, PLAN_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"},
-    {"F major 2/4", 5, PLAN_MODE_MAJOR, 2, 4, "A4:q C5:e Bb4:e"},
+    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
+    {"D minor 3/4", 2, KEY_STRUCTURE_MODE_MINOR, 3, 4, "F4:q A4:e G4:e E4:q"},
+    {"G major 6/8", 7, KEY_STRUCTURE_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"},
+    {"F major 2/4", 5, KEY_STRUCTURE_MODE_MAJOR, 2, 4, "A4:q C5:e Bb4:e"},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -65,8 +65,7 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key.tonic_pitch_class = scenario->tonic;
-    request.key.mode = scenario->mode;
+    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = scenario->unit;
     request.bars = bars;

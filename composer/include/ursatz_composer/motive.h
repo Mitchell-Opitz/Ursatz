@@ -111,7 +111,7 @@ typedef enum {
 typedef struct {
     PlanMeter meter;
     /* Valid when key_source is not MOTIVE_KEY_UNSPECIFIED. */
-    PlanKey key;
+    AnalysisKey key;
     MotiveKeySource key_source;
     PlanNote notes[MOTIVE_MAX_NOTES];
     size_t note_count;
@@ -146,7 +146,7 @@ typedef struct {
     bool has_meter;
     PlanMeter meter;
     bool has_key;
-    PlanKey key;
+    AnalysisKey key;
     bool has_pickup;
     /* In whole notes; the CLI converts beats. */
     Rational pickup;
@@ -206,7 +206,7 @@ const char *motive_form_name(MotiveForm form);
 MotiveFormat motive_detect_format(const void *data, size_t size);
 
 /* "D minor", "Bb major", "F# major": a tonic letter A-G, an optional # or b, then major or minor. */
-bool motive_parse_key(const char *text, PlanKey *out);
+bool motive_parse_key(const char *text, AnalysisKey *out);
 /* "3/4", "6/8": beats per bar from 1 to 64 over a beat unit of 1, 2, 4, 8 or 16. */
 bool motive_parse_meter(const char *text, PlanMeter *out);
 
@@ -317,7 +317,7 @@ char *motive_to_contour_text(const Motive *motive);
  * False, with *out untouched, for a source with no key, a note that leaves MIDI 0 to 127, or NULL arguments.
  * out may be the source.
  */
-bool motive_in_key(const Motive *source, const PlanKey *key, Motive *out);
+bool motive_in_key(const Motive *source, const AnalysisKey *key, Motive *out);
 
 /*
  * Own harmony as text: chords separated by white space, each a Roman numeral and an optional onset.

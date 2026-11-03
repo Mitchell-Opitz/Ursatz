@@ -35,7 +35,7 @@ typedef struct {
     LaneSpanId melody_span; /* with write_soprano, the open melody span the soprano is written in, else none */
     NodeId owner;
     PlanSpan span;
-    PlanKey key;
+    AnalysisKey key;
     bool write_soprano;
     Rational length;
     /*

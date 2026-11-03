@@ -41,8 +41,8 @@ static Rational fraction(long num, unsigned long den) {
     return time;
 }
 
-static PlanKey c_major(void) {
-    PlanKey key = {0, PLAN_MODE_MAJOR};
+static AnalysisKey c_major(void) {
+    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
     return key;
 }
 
@@ -292,7 +292,7 @@ static void check_shape(const Piece *piece, PlanAccompanimentPattern pattern, bo
     }
 }
 
-static void run_pattern(const char *name, Piece (*make)(void), PlanKey key, PlanAccompanimentPattern pattern,
+static void run_pattern(const char *name, Piece (*make)(void), AnalysisKey key, PlanAccompanimentPattern pattern,
                         bool steady) {
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         Piece piece = make();

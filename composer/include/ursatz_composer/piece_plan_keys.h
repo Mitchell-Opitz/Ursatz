@@ -30,8 +30,8 @@
 
 /* The keys a section starts and ends in. */
 typedef struct {
-    PlanKey start;
-    PlanKey end;
+    AnalysisKey start;
+    AnalysisKey end;
 } PieceSectionKeys;
 
 typedef struct {

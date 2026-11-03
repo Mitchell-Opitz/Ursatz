@@ -77,8 +77,8 @@ bool motive_to_sketch(const Motive *motive, MotiveSketch *out) {
     }
     if (motive->key_source != MOTIVE_KEY_UNSPECIFIED && pitched) {
         sketch.has_scale = true;
-        sketch.tonic_pc = motive->key.tonic_pitch_class;
-        sketch.minor = motive->key.mode == PLAN_MODE_MINOR;
+        sketch.tonic_pc = analysis_key_tonic_pitch_class(&motive->key);
+        sketch.minor = motive->key.mode == KEY_STRUCTURE_MODE_MINOR;
     }
     sketch.beat = msk_make(1, (unsigned long long)motive->meter.beat_unit);
     sketch.bar = msk_make((unsigned long long)motive->meter.beats_per_bar, (unsigned long long)motive->meter.beat_unit);
@@ -185,10 +185,9 @@ bool motive_from_sketch(const MotiveSketch *sketch, const Motive *template_motiv
         return false;
     }
     if (sketch->has_scale &&
-        (motive.key_source == MOTIVE_KEY_UNSPECIFIED || sketch->tonic_pc != motive.key.tonic_pitch_class ||
-         sketch->minor != (motive.key.mode == PLAN_MODE_MINOR))) {
-        motive.key.tonic_pitch_class = sketch->tonic_pc;
-        motive.key.mode = sketch->minor ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR;
+        (motive.key_source == MOTIVE_KEY_UNSPECIFIED || sketch->tonic_pc != analysis_key_tonic_pitch_class(&motive.key) ||
+         sketch->minor != (motive.key.mode == KEY_STRUCTURE_MODE_MINOR))) {
+        motive.key = plan_key_of_pitch_class(sketch->tonic_pc, sketch->minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
         motive.key_source = MOTIVE_KEY_GIVEN;
     }
 

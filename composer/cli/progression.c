@@ -60,7 +60,7 @@ typedef struct {
     bool list_schemas;
     bool bass;
     /* Read from the text above. */
-    PlanKey key;
+    AnalysisKey key;
     PlanMeter meter;
     long bars;
     CadenceType cadence;
@@ -254,7 +254,7 @@ static int read_options(int argc, char **argv, Options *options) {
         options->has_schema = true;
         if (!harmony_schema_available(options->schema, options->key.mode)) {
             return cli_fail(EXIT_UNSATISFIABLE, "the schema '%s' cannot be written in a %s key", options->schema_text,
-                        options->key.mode == PLAN_MODE_MINOR ? "minor" : "major");
+                        options->key.mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major");
         }
     }
     if (options->sequence_text) {
@@ -339,7 +339,7 @@ static bool build_plan(const Options *options, Built *built) {
 
     /* The part of the phrase the operators fill: all of it, or what follows a tonic first bar. */
     PlanSpan region = built->span;
-    const char *tonic = options->key.mode == PLAN_MODE_MINOR ? "i" : "I";
+    const char *tonic = options->key.mode == KEY_STRUCTURE_MODE_MINOR ? "i" : "I";
     if (needs_lead(options)) {
         PlanSpan lead = {built->span.start, built->bar_length};
         region.start = built->bar_length;
@@ -357,7 +357,7 @@ static bool build_plan(const Options *options, Built *built) {
         for (int pitch = 40; pitch <= 60; pitch++) {
             int distance = pitch > 50 ? pitch - 50 : 50 - pitch;
             int best = tonic_note.midi_pitch > 50 ? tonic_note.midi_pitch - 50 : 50 - tonic_note.midi_pitch;
-            if (pitch % 12 == options->key.tonic_pitch_class && (tonic_note.midi_pitch % 12 != options->key.tonic_pitch_class || distance < best)) {
+            if (pitch % 12 == analysis_key_tonic_pitch_class(&options->key) && (tonic_note.midi_pitch % 12 != analysis_key_tonic_pitch_class(&options->key) || distance < best)) {
                 tonic_note.midi_pitch = pitch;
             }
         }
@@ -835,8 +835,8 @@ static int write_files(const Options *options, const Built *alternatives, size_t
 static void list_names(void) {
     printf("Schemas (--schema <name>), as Ursatz's galant-schemas framework names them:\n");
     for (int id = 0; id < GALANT_SCHEMA_COUNT; id++) {
-        bool major = harmony_schema_available((GalantSchemaId)id, PLAN_MODE_MAJOR);
-        bool minor = harmony_schema_available((GalantSchemaId)id, PLAN_MODE_MINOR);
+        bool major = harmony_schema_available((GalantSchemaId)id, KEY_STRUCTURE_MODE_MAJOR);
+        bool minor = harmony_schema_available((GalantSchemaId)id, KEY_STRUCTURE_MODE_MINOR);
         if (major || minor) {
             printf("  %-24s %-15s %s\n", galant_schema_name((GalantSchemaId)id),
                    schema_function_name(galant_prototype((GalantSchemaId)id)->function),

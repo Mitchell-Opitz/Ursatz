@@ -39,7 +39,7 @@ typedef struct {
     LaneSpanId target;
     NodeId owner;
     PlanSpan span;
-    PlanKey key;
+    AnalysisKey key;
     PlanMeter meter;
     PlanAccompanimentPattern pattern; /* as asked: ANY or one */
     int texture;                      /* a StandardTexture, or -1 */
@@ -100,7 +100,7 @@ typedef struct {
 bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out);
 
 /* The pitch classes of a chord in the key, root first (3 or 4 of them). */
-bool accomp_chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4], size_t *count);
+bool accomp_chord_tones(const AnalysisKey *key, const PhraseChord *chord, int pcs[4], size_t *count);
 /* The notes of a lane and voice over a span that sound inside it, from origin; false if any span there is open. */
 bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, Rational origin,
                       Rational length, AccompLine *out, size_t *count);

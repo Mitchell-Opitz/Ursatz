@@ -97,7 +97,7 @@ static bool figure_wanted(const Figure *figure, const PlanHarmonyShape *shape) {
            (shape->ends_on == PLAN_HARMONY_ANCHOR_DOMINANT) == (figure->ends == ANCHOR_DOMINANT);
 }
 
-static bool make_figure_chord(PlanKeyMode mode, const FigureChord *spec, size_t cells, PhraseChord *out) {
+static bool make_figure_chord(KeyStructureMode mode, const FigureChord *spec, size_t cells, PhraseChord *out) {
     if (spec->leading_tone) {
         return harmony_make_leading_tone(mode, spec->inversion, cells, out);
     }

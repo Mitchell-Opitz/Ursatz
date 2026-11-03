@@ -150,8 +150,8 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
     for (size_t i = 0; i < rendered->key_count; i++) {
         keys[i].position = rendered->keys[i].position;
         keys[i].sharps_flats = (int8_t)rendered->keys[i].sharps_flats;
-        keys[i].mode_byte = rendered->keys[i].mode == PLAN_MODE_MINOR ? 1 : 0;
-        keys[i].mode_hint = rendered->keys[i].mode == PLAN_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
+        keys[i].mode_byte = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? 1 : 0;
+        keys[i].mode_hint = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
     }
 
     /* Track names: the conductor track for the form, each part's track for its lane. */
@@ -281,7 +281,7 @@ PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, const
     }
     for (size_t i = 0; i < rendered->key_count; i++) {
         keys[i].sharps_flats = rendered->keys[i].sharps_flats;
-        keys[i].mode = rendered->keys[i].mode == PLAN_MODE_MINOR ? MUSICXML_EXPORT_MODE_MINOR
+        keys[i].mode = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? MUSICXML_EXPORT_MODE_MINOR
                                                                   : MUSICXML_EXPORT_MODE_MAJOR;
         keys[i].position = rendered->keys[i].position;
         keys[i].part_index = 0;

@@ -46,7 +46,7 @@ static MotiveDevelopContext invent_context(const void *context) {
 
 typedef struct {
     PlanMeter meter;
-    PlanKey key;
+    AnalysisKey key;
     Rational bar;
 } InventRequest;
 
@@ -78,8 +78,7 @@ static bool read_invent_request(const PiecePlan *plan, FillTarget target, const 
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, &lane, 1) > 0) {
         out->meter = plan_lane_span_payload(plan, lane)->meter;
     }
-    out->key.tonic_pitch_class = 0;
-    out->key.mode = PLAN_MODE_MAJOR;
+    out->key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &lane, 1) > 0) {
         out->key = plan_lane_span_payload(plan, lane)->key;
     } else if (context->has_key) {

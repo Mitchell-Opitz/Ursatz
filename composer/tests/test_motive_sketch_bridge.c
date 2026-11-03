@@ -15,14 +15,14 @@
 
 static const PlanMeter FOUR_FOUR = {4, 4, 0};
 static const PlanMeter SIX_EIGHT = {6, 8, 0};
-static const PlanKey C_MAJOR = {0, PLAN_MODE_MAJOR};
-static const PlanKey D_MINOR = {2, PLAN_MODE_MINOR};
+static const AnalysisKey C_MAJOR = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
+static const AnalysisKey D_MINOR = {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR};
 
 static bool er_is(Rational time, long long num, long long den) {
     return time.num == num && time.den == den;
 }
 
-static Motive load(MotiveFormat format, const char *text, const PlanMeter *meter, const PlanKey *key) {
+static Motive load(MotiveFormat format, const char *text, const PlanMeter *meter, const AnalysisKey *key) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.has_meter = true;

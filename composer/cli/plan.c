@@ -75,7 +75,7 @@ typedef struct {
     bool form_defaulted; /* no --form: given material makes it a ternary form of 24 bars */
     size_t given_melodies;
     FormTemplateKind form;
-    PlanKey key;
+    AnalysisKey key;
     char key_name[24];
     PlanMeter meter;
     unsigned long bars;

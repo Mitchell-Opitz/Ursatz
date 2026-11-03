@@ -11,7 +11,7 @@
 #include <ursatz_composer/render.h>
 
 /* The key span the plan starts in. */
-static bool starting_key(const PiecePlan *plan, PlanKey *out) {
+static bool starting_key(const PiecePlan *plan, AnalysisKey *out) {
     PlanSpan everything = {{0, 1}, {1000000, 1}};
     LaneSpanId first;
     size_t count = plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, &first, 1);
@@ -27,7 +27,7 @@ ComposerMeasureResult composer_style_measure(const PiecePlan *plan, const Compos
         return COMPOSER_MEASURE_ERR_ARGUMENT;
     }
     memset(out, 0, sizeof(*out));
-    PlanKey key;
+    AnalysisKey key;
     if (!starting_key(plan, &key)) {
         return COMPOSER_MEASURE_ERR_PLAN;
     }
@@ -46,8 +46,8 @@ ComposerMeasureResult composer_style_measure(const PiecePlan *plan, const Compos
     fragment.count = rendered.count;
     fragment.meter = rendered.meter_map;
     fragment.has_key = true;
-    fragment.key_tonic_pitch_class = key.tonic_pitch_class;
-    fragment.key_minor = key.mode == PLAN_MODE_MINOR;
+    fragment.key_tonic_pitch_class = analysis_key_tonic_pitch_class(&key);
+    fragment.key_minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
     fragment.streams = rendered.part_index;
 
     AnalyzerFragmentAnalysis analysis;

@@ -28,18 +28,18 @@ unsigned melody_scale_mask(const MelodyContext *context, size_t chord) {
     static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
     static const int MINOR[6] = {0, 2, 3, 5, 7, 8};
     unsigned mask = 0;
-    if (context->key.mode == PLAN_MODE_MAJOR) {
+    if (context->key.mode == KEY_STRUCTURE_MODE_MAJOR) {
         for (size_t i = 0; i < 7; i++) {
-            mask |= 1u << ((context->key.tonic_pitch_class + MAJOR[i]) % 12);
+            mask |= 1u << ((analysis_key_tonic_pitch_class(&context->key) + MAJOR[i]) % 12);
         }
         return mask;
     }
     for (size_t i = 0; i < 6; i++) {
-        mask |= 1u << ((context->key.tonic_pitch_class + MINOR[i]) % 12);
+        mask |= 1u << ((analysis_key_tonic_pitch_class(&context->key) + MINOR[i]) % 12);
     }
     /* The raised seventh when the chord has it, else the natural one. */
-    int raised = (context->key.tonic_pitch_class + 11) % 12;
-    int natural = (context->key.tonic_pitch_class + 10) % 12;
+    int raised = (analysis_key_tonic_pitch_class(&context->key) + 11) % 12;
+    int natural = (analysis_key_tonic_pitch_class(&context->key) + 10) % 12;
     return mask | (1u << (((context->chord_mask[chord] >> raised) & 1u) ? raised : natural));
 }
 

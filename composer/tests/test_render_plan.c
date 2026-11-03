@@ -72,8 +72,7 @@ static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
 
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key.tonic_pitch_class = 2;
-    key.key.mode = PLAN_MODE_MINOR;
+    key.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
     LaneSpanId key_span = PLAN_LANE_SPAN_NONE;
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, span, &key, &key_span) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, key_span, PLAN_STATE_GIVEN) == PLAN_OK);
@@ -141,7 +140,7 @@ static void test_render(void) {
     assert(rendered.meter_map != NULL);
     assert(rendered.key_count == 1);
     assert(rendered.keys[0].sharps_flats == -1);
-    assert(rendered.keys[0].mode == PLAN_MODE_MINOR);
+    assert(rendered.keys[0].mode == KEY_STRUCTURE_MODE_MINOR);
 
     /* In time order: the first two events sound together, melody before bass. */
     const MusicalTime *first = temporal_anchor_position(note_event_temporal_anchor(rendered.events[0]));

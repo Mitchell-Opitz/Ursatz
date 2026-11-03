@@ -150,8 +150,7 @@ static PieceRequest request_of(FormTemplateKind kind, size_t bars, size_t count,
     request.form = kind;
     request.bars = bars;
     request.count = count;
-    request.key.tonic_pitch_class = 0;
-    request.key.mode = PLAN_MODE_MAJOR;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     if (accompanied) {

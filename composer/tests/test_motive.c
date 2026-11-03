@@ -19,11 +19,11 @@
 
 static const PlanMeter FOUR_FOUR = {4, 4, 0};
 static const PlanMeter THREE_FOUR = {3, 4, 0};
-static const PlanKey D_MINOR = {2, PLAN_MODE_MINOR};
-static const PlanKey C_MAJOR = {0, PLAN_MODE_MAJOR};
-static const PlanKey G_MAJOR = {7, PLAN_MODE_MAJOR};
+static const AnalysisKey D_MINOR = {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR};
+static const AnalysisKey C_MAJOR = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
+static const AnalysisKey G_MAJOR = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR};
 
-static MotiveOptions options_with(const PlanMeter *meter, const PlanKey *key) {
+static MotiveOptions options_with(const PlanMeter *meter, const AnalysisKey *key) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     if (meter) {
@@ -48,7 +48,7 @@ static bool note_is(const Motive *motive, size_t index, int pitch, long offset_n
            time_is(note->duration, duration_num, duration_den);
 }
 
-static Motive load_notes(const char *text, const PlanMeter *meter, const PlanKey *key) {
+static Motive load_notes(const char *text, const PlanMeter *meter, const AnalysisKey *key) {
     Motive motive;
     MotiveOptions options = options_with(meter, key);
     MotiveError error;
@@ -122,7 +122,7 @@ static void test_same_motive_from_each_format(void) {
     assert(time_is(midi.length, 1, 1));
     assert(midi.meter.beats_per_bar == 4 && midi.meter.beat_unit == 4);
     assert(midi.key_source == MOTIVE_KEY_GIVEN);
-    assert(midi.key.tonic_pitch_class == 2 && midi.key.mode == PLAN_MODE_MINOR);
+    assert(analysis_key_tonic_pitch_class(&midi.key) == 2 && midi.key.mode == KEY_STRUCTURE_MODE_MINOR);
 
     assert(motive_equal(&midi, &musicxml));
     assert(motive_equal(&midi, &text));
@@ -159,7 +159,7 @@ static void test_options(void) {
     Motive motive;
     MotiveError error;
     assert(load_fixture(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_MIDI, &bossa, &motive, &error) == MOTIVE_OK);
-    assert(motive.key.tonic_pitch_class == 0 && motive.key.mode == PLAN_MODE_MAJOR);
+    assert(analysis_key_tonic_pitch_class(&motive.key) == 0 && motive.key.mode == KEY_STRUCTURE_MODE_MAJOR);
     assert(motive.key_source == MOTIVE_KEY_GIVEN);
 
     /* The same meter as the file's is fine; a different one changes the bars and is refused. */
@@ -181,9 +181,9 @@ static void test_options(void) {
     assert(motive_from_notes_text("D4:q", NULL, &motive, &error) == MOTIVE_ERR_METER);
     assert(strcmp(error.location, "meter") == 0);
 
-    PlanKey key;
-    assert(motive_parse_key("Bb minor", &key) && key.tonic_pitch_class == 10 && key.mode == PLAN_MODE_MINOR);
-    assert(motive_parse_key("F# major", &key) && key.tonic_pitch_class == 6 && key.mode == PLAN_MODE_MAJOR);
+    AnalysisKey key;
+    assert(motive_parse_key("Bb minor", &key) && analysis_key_tonic_pitch_class(&key) == 10 && key.mode == KEY_STRUCTURE_MODE_MINOR);
+    assert(motive_parse_key("F# major", &key) && analysis_key_tonic_pitch_class(&key) == 6 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
     assert(!motive_parse_key("H major", &key));
     assert(!motive_parse_key("D dorian", &key));
     PlanMeter meter;
@@ -386,17 +386,17 @@ static void test_analysis_without_a_key(void) {
 static void test_key_is_inferred_only_when_the_pitches_settle(void) {
     Motive scale = load_notes("D4:q E4:q F4:q G4:q A4:q Bb4:q C5:q D5:q", &FOUR_FOUR, NULL);
     assert(scale.key_source == MOTIVE_KEY_INFERRED);
-    assert(scale.key.tonic_pitch_class == 2 && scale.key.mode == PLAN_MODE_MINOR);
+    assert(analysis_key_tonic_pitch_class(&scale.key) == 2 && scale.key.mode == KEY_STRUCTURE_MODE_MINOR);
     Motive major = load_notes("F4:q G4:q A4:q Bb4:q C5:q D5:q E5:q F5:q", &FOUR_FOUR, NULL);
     assert(major.key_source == MOTIVE_KEY_INFERRED);
-    assert(major.key.tonic_pitch_class == 5 && major.key.mode == PLAN_MODE_MAJOR);
+    assert(analysis_key_tonic_pitch_class(&major.key) == 5 && major.key.mode == KEY_STRUCTURE_MODE_MAJOR);
     /* A given key is never replaced. */
     Motive given = load_notes("D4:q E4:q F4:q G4:q A4:q Bb4:q C5:q D5:q", &FOUR_FOUR, &C_MAJOR);
-    assert(given.key_source == MOTIVE_KEY_GIVEN && given.key.tonic_pitch_class == 0);
+    assert(given.key_source == MOTIVE_KEY_GIVEN && analysis_key_tonic_pitch_class(&given.key) == 0);
     /* Seven notes of a scale with no note to settle the relative keys stay open. */
     Motive open = load_notes("C4:q D4:q E4:q F4:q G4:q A4:q B4:q C5:q", &FOUR_FOUR, NULL);
-    assert(open.key_source == MOTIVE_KEY_INFERRED && open.key.tonic_pitch_class == 0 &&
-           open.key.mode == PLAN_MODE_MAJOR);
+    assert(open.key_source == MOTIVE_KEY_INFERRED && analysis_key_tonic_pitch_class(&open.key) == 0 &&
+           open.key.mode == KEY_STRUCTURE_MODE_MAJOR);
     Motive undecided = load_notes("C4:q D4:q E4:q F4:q G4:q A4:q B4:q", &FOUR_FOUR, NULL);
     assert(undecided.key_source == MOTIVE_KEY_UNSPECIFIED);
 }
@@ -697,7 +697,7 @@ static void test_attach_as_given(void) {
 
 typedef MotiveResult (*Reader)(const char *, const MotiveOptions *, Motive *, MotiveError *);
 
-static Motive load_with(Reader reader, const char *text, const PlanMeter *meter, const PlanKey *key) {
+static Motive load_with(Reader reader, const char *text, const PlanMeter *meter, const AnalysisKey *key) {
     Motive motive;
     MotiveOptions options = options_with(meter, key);
     MotiveError error;
@@ -709,7 +709,7 @@ static Motive load_with(Reader reader, const char *text, const PlanMeter *meter,
     return motive;
 }
 
-static void expect_read_error(Reader reader, const char *text, const PlanKey *key, MotiveResult code,
+static void expect_read_error(Reader reader, const char *text, const AnalysisKey *key, MotiveResult code,
                               const char *location, const char *message) {
     Motive motive;
     MotiveOptions options = options_with(&FOUR_FOUR, key);
@@ -740,7 +740,7 @@ static void test_degrees_reading(void) {
     assert(note_is(&motive, 1, 64, 1, 4, 1, 8));
     assert(note_is(&motive, 2, 69, 3, 8, 1, 8));
     assert(note_is(&motive, 3, 74, 1, 2, 1, 2));
-    assert(motive.key_source == MOTIVE_KEY_GIVEN && motive.key.mode == PLAN_MODE_MINOR);
+    assert(motive.key_source == MOTIVE_KEY_GIVEN && motive.key.mode == KEY_STRUCTURE_MODE_MINOR);
 
     /* Octave 0 puts the tonic in MIDI 60 to 71: G is 67. Marks are any number, up or down. */
     motive = load_with(motive_from_degrees_text, "1:q 1,:q 1':q 1'':q 1,,:q 1',:q", &FOUR_FOUR, &G_MAJOR);
@@ -983,10 +983,10 @@ static void test_analysis_by_form(void) {
 static void test_render_in_another_key(void) {
     /* D minor 1 b3 5 1' (D4 F4 A4 D5) in G minor: the same degrees, a fourth up. */
     Motive source = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
-    static const PlanKey G_MINOR = {7, PLAN_MODE_MINOR};
+    static const AnalysisKey G_MINOR = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MINOR};
     Motive moved;
     assert(motive_in_key(&source, &G_MINOR, &moved));
-    assert(moved.key_source == MOTIVE_KEY_GIVEN && moved.key.tonic_pitch_class == 7 && moved.key.mode == PLAN_MODE_MINOR);
+    assert(moved.key_source == MOTIVE_KEY_GIVEN && analysis_key_tonic_pitch_class(&moved.key) == 7 && moved.key.mode == KEY_STRUCTURE_MODE_MINOR);
     assert(moved.note_count == 4 && moved.notes[0].midi_pitch == 67 && moved.notes[1].midi_pitch == 70 &&
            moved.notes[2].midi_pitch == 74 && moved.notes[3].midi_pitch == 79);
     assert(moved.length.num == source.length.num && moved.length.den == source.length.den);

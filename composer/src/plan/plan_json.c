@@ -158,7 +158,7 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         ok = ok && motive_ref_options_json(object, &constraint->params.motive);
         break;
     case PLAN_CONSTRAINT_KEY:
-        ok = ok && plan_json_add(object, "tonic_pitch_class", json_number(constraint->params.key.tonic_pitch_class)) &&
+        ok = ok && plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(&constraint->params.key))) &&
              plan_json_add(object, "mode", cJSON_CreateString(MODE_NAMES[constraint->params.key.mode]));
         break;
     case PLAN_CONSTRAINT_ARCHETYPE:
@@ -383,8 +383,8 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
     return object;
 }
 
-static void key_label(const PlanKey *key, char *out, size_t size) {
-    snprintf(out, size, "%s %s", PITCH_CLASS_NAMES[key->tonic_pitch_class], MODE_NAMES[key->mode]);
+static void plan_key_label(const AnalysisKey *key, char *out, size_t size) {
+    snprintf(out, size, "%s %s", PITCH_CLASS_NAMES[analysis_key_tonic_pitch_class(key)], MODE_NAMES[key->mode]);
 }
 
 static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *out, size_t size) {
@@ -393,7 +393,7 @@ static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *
         snprintf(out, size, "%d/%d", payload->meter.beats_per_bar, payload->meter.beat_unit);
         return true;
     case PLAN_LANE_KEY:
-        key_label(&payload->key, out, size);
+        plan_key_label(&payload->key, out, size);
         return true;
     case PLAN_LANE_HARMONY:
         snprintf(out, size, "%s", payload->harmony.roman_numeral);
@@ -438,7 +438,7 @@ static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload) {
              plan_json_add(object, "bars_per_hyperbar", json_number(payload->meter.bars_per_hyperbar));
         break;
     case PLAN_LANE_KEY:
-        ok = plan_json_add(object, "tonic_pitch_class", json_number(payload->key.tonic_pitch_class)) &&
+        ok = plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(&payload->key))) &&
              plan_json_add(object, "mode", cJSON_CreateString(MODE_NAMES[payload->key.mode]));
         break;
     case PLAN_LANE_HARMONY:
@@ -459,10 +459,10 @@ static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload) {
 }
 
 /* The label of the key span that covers the start of span, or "no match". */
-static void enclosing_key_label(const PiecePlan *plan, PlanSpan span, char *out, size_t size) {
+static void enclosing_plan_key_label(const PiecePlan *plan, PlanSpan span, char *out, size_t size) {
     LaneSpanId found = PLAN_LANE_SPAN_NONE;
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &found, 1) > 0) {
-        key_label(&plan_lane_span_payload(plan, found)->key, out, size);
+        plan_key_label(&plan_lane_span_payload(plan, found)->key, out, size);
     } else {
         snprintf(out, size, "no match");
     }
@@ -493,7 +493,7 @@ static cJSON *lane_entry_json(const PiecePlan *plan, LaneSpanId id) {
         ok = plan_json_add(object, "method", cJSON_CreateString(COMPOSER_KEY_METHOD));
     }
     if (ok && lane == PLAN_LANE_HARMONY) {
-        enclosing_key_label(plan, span, context_key, sizeof(context_key));
+        enclosing_plan_key_label(plan, span, context_key, sizeof(context_key));
         ok = plan_json_add(object, "key_label", cJSON_CreateString(context_key));
     }
     if (ok) {
@@ -982,8 +982,7 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
             !read_enum_member(reader, item, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &value)) {
             return false;
         }
-        out->params.key.tonic_pitch_class = (int)number_value;
-        out->params.key.mode = (PlanKeyMode)value;
+        out->params.key = plan_key_of_pitch_class((int)number_value, (KeyStructureMode)value);
         return true;
     case PLAN_CONSTRAINT_ARCHETYPE:
         if (!read_enum_member(reader, item, path, "type", ARCHETYPE_NAMES, COUNT_OF(ARCHETYPE_NAMES), &value)) {
@@ -1597,8 +1596,7 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
             !read_enum_member(reader, object, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &value)) {
             return false;
         }
-        payload->key.tonic_pitch_class = (int)first;
-        payload->key.mode = (PlanKeyMode)value;
+        payload->key = plan_key_of_pitch_class((int)first, (KeyStructureMode)value);
         return true;
     case PLAN_LANE_HARMONY: {
         const cJSON *numeral = plan_json_member(reader, object, path, "roman_numeral", true);

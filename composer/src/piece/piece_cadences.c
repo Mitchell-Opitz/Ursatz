@@ -11,10 +11,6 @@
 
 #define MAX_CADENCES 2
 
-static bool same_key(PlanKey a, PlanKey b) {
-    return a.tonic_pitch_class == b.tonic_pitch_class && a.mode == b.mode;
-}
-
 /* The sections of the plan in order, and the material's id (not a section of the piece). */
 static size_t sections_of(const PiecePlan *plan, NodeId *sections) {
     size_t count = 0;
@@ -65,7 +61,7 @@ static size_t section_cadences(const PiecePlan *plan, NodeId section, CadenceTyp
 }
 
 /* The key the section ends in: its KEY constraint. False when it has none. */
-static bool section_key(const PiecePlan *plan, NodeId section, PlanKey *out) {
+static bool section_key(const PiecePlan *plan, NodeId section, AnalysisKey *out) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
         if (constraint->kind == PLAN_CONSTRAINT_KEY) {
@@ -113,7 +109,7 @@ PieceResult piece_plan_cadences(PiecePlan *plan, const PieceKeyPlan *keys) {
     if (!closing_form(kind)) {
         return PIECE_OK;
     }
-    PlanKey home = keys->sections[0].start;
+    AnalysisKey home = keys->sections[0].start;
     for (size_t i = 0; i < count; i++) {
         CadenceType cadences[MAX_CADENCES];
         size_t have = section_cadences(plan, sections[i], cadences);
@@ -121,7 +117,7 @@ PieceResult piece_plan_cadences(PiecePlan *plan, const PieceKeyPlan *keys) {
             return PIECE_ERR_BAD_REQUEST;
         }
         CadenceType wanted = cadences[0];
-        if (i + 1 == count || !same_key(keys->sections[i].end, home)) {
+        if (i + 1 == count || !analysis_key_equals(&keys->sections[i].end, &home)) {
             wanted = CADENCE_TYPE_PERFECT_AUTHENTIC;
         } else if (wanted == CADENCE_TYPE_PERFECT_AUTHENTIC && !closed_section(kind, i)) {
             wanted = CADENCE_TYPE_HALF;
@@ -162,15 +158,15 @@ bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out) {
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, plan_node_span(plan, sections[0]), &first_key, 1) == 0) {
         return false;
     }
-    PlanKey home = plan_lane_span_payload(plan, first_key)->key;
+    AnalysisKey home = plan_lane_span_payload(plan, first_key)->key;
     int last_strength = -1;
     for (size_t i = 0; i < count; i++) {
         CadenceType cadences[MAX_CADENCES];
-        PlanKey ends_in;
+        AnalysisKey ends_in;
         if (section_cadences(plan, sections[i], cadences) == 0 || !section_key(plan, sections[i], &ends_in)) {
             return false;
         }
-        bool away = !same_key(ends_in, home);
+        bool away = !analysis_key_equals(&ends_in, &home);
         if (away && cadences[0] != CADENCE_TYPE_PERFECT_AUTHENTIC && cadences[0] != CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
             fail(out, "a section ends in another key without an authentic cadence", i);
         } else if (!away && i + 1 < count && cadences[0] == CADENCE_TYPE_PERFECT_AUTHENTIC && !closed_section(kind, i)) {
@@ -183,11 +179,11 @@ bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out) {
     /* The last cadence is the strongest of the piece in the home key. */
     for (size_t i = 0; i + 1 < count; i++) {
         CadenceType cadences[MAX_CADENCES];
-        PlanKey ends_in;
+        AnalysisKey ends_in;
         if (section_cadences(plan, sections[i], cadences) == 0 || !section_key(plan, sections[i], &ends_in)) {
             return false;
         }
-        if (same_key(ends_in, home) &&
+        if (analysis_key_equals(&ends_in, &home) &&
             harmony_cadence_strength(cadences[0]) > last_strength) {
             fail(out, "a cadence in the home key is stronger than the last one", i);
         }

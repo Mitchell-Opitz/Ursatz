@@ -31,7 +31,7 @@
 
 typedef struct {
     FormTemplateKind form;
-    PlanKey key;
+    AnalysisKey key;
     PlanMeter meter;
     size_t bars;           /* the template's size; 0 for the size count gives, or the default */
     size_t count;          /* variations or layers; 0 for the size bars gives, or the default */

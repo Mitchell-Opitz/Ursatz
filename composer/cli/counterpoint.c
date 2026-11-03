@@ -41,7 +41,7 @@ typedef struct {
     const char *format_text;
     /* Read from the text above. */
     int species;
-    PlanKey key;
+    AnalysisKey key;
     PlanMeter meter;
     unsigned long seed;
     unsigned long suggest;
