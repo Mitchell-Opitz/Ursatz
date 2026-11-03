@@ -58,12 +58,15 @@ static ComposerStatus read_tones(const cJSON *request, size_t note_count, Motive
     return COMPOSER_OK;
 }
 
-static ComposerStatus analyze_request(const cJSON *request, const ComposerJob *job, ComposerResponse *out) {
+/* The motive's input: text in the request, or the bytes of a MIDI file when bytes is not NULL. */
+static ComposerStatus analyze_request(const cJSON *request, const unsigned char *bytes, size_t size,
+                                      const ComposerJob *job, ComposerResponse *out) {
     if (composer_job_step(job, "motive", 0, 1)) {
         return api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
     }
     Motive motive;
-    ComposerStatus status = api_read_motive(request, "", &motive, NULL, &out->error);
+    ComposerStatus status = bytes ? api_read_motive_bytes(request, "", bytes, size, &motive, NULL, &out->error)
+                                  : api_read_motive(request, "", &motive, NULL, &out->error);
     if (status != COMPOSER_OK) {
         return status;
     }
@@ -92,14 +95,15 @@ static ComposerStatus analyze_request(const cJSON *request, const ComposerJob *j
     return out->json ? COMPOSER_OK : api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
 }
 
-ComposerStatus composer_api_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+static ComposerStatus run_request(const char *request_json, const unsigned char *bytes, size_t size,
+                                  const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     cJSON *request = NULL;
     ComposerStatus status = api_parse_request(request_json, &request, &out->error);
     if (status != COMPOSER_OK) {
         return status;
     }
-    status = analyze_request(request, job, out);
+    status = analyze_request(request, bytes, size, job, out);
     cJSON_Delete(request);
     if (status != COMPOSER_OK) {
         ComposerError error = out->error;
@@ -107,4 +111,17 @@ ComposerStatus composer_api_motive(const char *request_json, const ComposerJob *
         out->error = error;
     }
     return status;
+}
+
+ComposerStatus composer_api_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+    return run_request(request_json, NULL, 0, job, out);
+}
+
+ComposerStatus composer_api_motive_from_midi(const uint8_t *bytes, size_t size, const char *request_json,
+                                             const ComposerJob *job, ComposerResponse *out) {
+    if (!bytes) {
+        memset(out, 0, sizeof *out);
+        return api_fail(&out->error, COMPOSER_ERR_REQUEST, "", "the MIDI bytes are missing");
+    }
+    return run_request(request_json, bytes, size, job, out);
 }

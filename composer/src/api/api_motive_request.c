@@ -277,3 +277,8 @@ ComposerStatus api_read_motive(const cJSON *request, const char *base, Motive *o
                                ComposerError *error) {
     return read_motive(request, base ? base : "", NULL, 0, out, options, error);
 }
+
+ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, const unsigned char *bytes, size_t size,
+                                     Motive *out, MotiveOptions *options, ComposerError *error) {
+    return read_motive(request, base ? base : "", bytes, size, out, options, error);
+}

@@ -51,6 +51,10 @@ bool api_member_pickup(const cJSON *object, const char *name, int beat_unit, Rat
 ComposerStatus api_read_motive(const cJSON *request, const char *base, Motive *out, MotiveOptions *options,
                                ComposerError *error);
 
+/* As api_read_motive for a motive that arrives as the bytes of a Standard MIDI File: the request has no "input". */
+ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, const unsigned char *bytes, size_t size,
+                                     Motive *out, MotiveOptions *options, ComposerError *error);
+
 /*
  * The motive's own harmony ("harmony"), labelled features ("features") and role ("role") of object, into options.
  * meter is the motive's meter, which the chord onsets are counted in; it may be NULL only when there is no harmony.

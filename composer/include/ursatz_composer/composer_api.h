@@ -84,4 +84,13 @@ ComposerStatus composer_api_export(const char *request_json, const ComposerJob *
  */
 ComposerStatus composer_api_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
+/*
+ * As composer_api_motive for a motive that arrives as the bytes of a Standard MIDI File (type 0 or 1), read in memory.
+ * The request has the same members without "input"; a file that declares a meter or a key conflicts with the request's
+ * the way it does for the command line. A buffer that is not a MIDI file, or holds more than one voice, is
+ * COMPOSER_ERR_UNSATISFIABLE.
+ */
+ComposerStatus composer_api_motive_from_midi(const uint8_t *bytes, size_t size, const char *request_json,
+                                             const ComposerJob *job, ComposerResponse *out);
+
 #endif
