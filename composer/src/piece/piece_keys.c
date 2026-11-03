@@ -17,24 +17,20 @@
 /* A key lane span before it is added: its key and where it lies. */
 typedef struct {
     PlanSpan span;
-    PlanKey key;
+    AnalysisKey key;
 } KeySegment;
 
 #define MAX_SEGMENTS (2 * FORM_TEMPLATE_MAX_SECTIONS + 1)
 
-static HarmonyMode mode_of(PlanKeyMode mode) {
-    return mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
-}
-
-static bool same_key(PlanKey a, PlanKey b) {
-    return a.tonic_pitch_class == b.tonic_pitch_class && a.mode == b.mode;
+static HarmonyMode mode_of(KeyStructureMode mode) {
+    return mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
 }
 
 /*
  * The closely related key of the home key on one of the degrees, drawn from the list. False when the draw is not a
  * key standard-harmony calls closely related.
  */
-static bool pick_away(PlanKey home, const int *degrees, size_t count, FillRng *rng, PlanKey *out) {
+static bool pick_away(AnalysisKey home, const int *degrees, size_t count, FillRng *rng, AnalysisKey *out) {
     HarmonyMode home_mode = mode_of(home.mode);
     HarmonyRelatedKey related;
     int semitone;
@@ -46,36 +42,35 @@ static bool pick_away(PlanKey home, const int *degrees, size_t count, FillRng *r
     if (semitone < 0) {
         return false;
     }
-    out->tonic_pitch_class = (home.tonic_pitch_class + semitone) % 12;
-    out->mode = related.mode == HARMONY_MODE_MINOR ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR;
+    *out = plan_key_of_pitch_class((analysis_key_tonic_pitch_class(&home) + semitone) % 12, related.mode == HARMONY_MODE_MINOR ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
     return true;
 }
 
 /* The key a binary or rounded binary A ends in: V in major, III in minor. */
-static bool pick_dominant_side(PlanKey home, FillRng *rng, PlanKey *out) {
+static bool pick_dominant_side(AnalysisKey home, FillRng *rng, AnalysisKey *out) {
     static const int MAJOR[] = {5};
     static const int MINOR[] = {3};
-    return home.mode == PLAN_MODE_MINOR ? pick_away(home, MINOR, 1, rng, out) : pick_away(home, MAJOR, 1, rng, out);
+    return home.mode == KEY_STRUCTURE_MODE_MINOR ? pick_away(home, MINOR, 1, rng, out) : pick_away(home, MAJOR, 1, rng, out);
 }
 
 /* The key a ternary B ends in: IV, vi or V in major; III, iv or VI in minor. */
-static bool pick_contrast(PlanKey home, FillRng *rng, PlanKey *out) {
+static bool pick_contrast(AnalysisKey home, FillRng *rng, AnalysisKey *out) {
     static const int MAJOR[] = {4, 6, 5};
     static const int MINOR[] = {3, 4, 6};
-    return home.mode == PLAN_MODE_MINOR ? pick_away(home, MINOR, 3, rng, out) : pick_away(home, MAJOR, 3, rng, out);
+    return home.mode == KEY_STRUCTURE_MODE_MINOR ? pick_away(home, MINOR, 3, rng, out) : pick_away(home, MAJOR, 3, rng, out);
 }
 
 /* The key of a variation in another key: the relative key, vi in major and III in minor. */
-static bool pick_relative(PlanKey home, FillRng *rng, PlanKey *out) {
+static bool pick_relative(AnalysisKey home, FillRng *rng, AnalysisKey *out) {
     static const int MAJOR[] = {6};
     static const int MINOR[] = {3};
-    return home.mode == PLAN_MODE_MINOR ? pick_away(home, MINOR, 1, rng, out) : pick_away(home, MAJOR, 1, rng, out);
+    return home.mode == KEY_STRUCTURE_MODE_MINOR ? pick_away(home, MINOR, 1, rng, out) : pick_away(home, MAJOR, 1, rng, out);
 }
 
 /* Draws the keys each section starts and ends in; every section is home when keys is left as set. */
-static bool draw_keys(FormTemplateKind kind, size_t count, PlanKey home, FillRng *rng, PieceSectionKeys *keys,
+static bool draw_keys(FormTemplateKind kind, size_t count, AnalysisKey home, FillRng *rng, PieceSectionKeys *keys,
                       bool *modulates) {
-    PlanKey away = home;
+    AnalysisKey away = home;
     *modulates = false;
     for (size_t i = 0; i < count; i++) {
         keys[i].start = home;
@@ -120,13 +115,13 @@ static bool draw_keys(FormTemplateKind kind, size_t count, PlanKey home, FillRng
 }
 
 /* Adds a segment, joined to the one before it when that is in the same key and ends where this one starts. */
-static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, PlanKey key) {
-    if (*count > 0 && same_key(segments[*count - 1].key, key)) {
-        PlanTime end;
+static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, AnalysisKey key) {
+    if (*count > 0 && analysis_key_equals(&segments[*count - 1].key, &key)) {
+        Rational end;
         PieceResult result = piece_result_of_plan(plan_span_end(segments[*count - 1].span, &end));
-        if (result == PIECE_OK && plan_time_compare(end, span.start) == 0) {
-            return piece_result_of_plan(plan_time_add(segments[*count - 1].span.length, span.length,
-                                           &segments[*count - 1].span.length));
+        if (result == PIECE_OK && rational_cmp(end, span.start) == 0) {
+            return piece_result_of_plan(plan_result_of_rational(rational_add(segments[*count - 1].span.length, span.length,
+                                           &segments[*count - 1].span.length)));
         }
         return PIECE_ERR_BAD_REQUEST;
     }
@@ -141,18 +136,18 @@ static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan sp
 
 /* A section whose key changes halfway has its first half in the key it starts in and its second in the key it ends in. */
 static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpan span, const PieceSectionKeys *keys) {
-    if (same_key(keys->start, keys->end)) {
+    if (analysis_key_equals(&keys->start, &keys->end)) {
         return push_segment(segments, count, span, keys->start);
     }
     PlanSpan first;
     PlanSpan second;
     first.start = span.start;
-    PieceResult result = piece_result_of_plan(plan_time_make(span.length.num, span.length.den * 2, &first.length));
+    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_div_int(span.length, 2, &first.length)));
     if (result != PIECE_OK) {
         return result;
     }
     second.length = first.length;
-    result = piece_result_of_plan(plan_time_add(span.start, first.length, &second.start));
+    result = piece_result_of_plan(plan_result_of_rational(rational_add(span.start, first.length, &second.start)));
     if (result == PIECE_OK) {
         result = push_segment(segments, count, first, keys->start);
     }
@@ -160,7 +155,7 @@ static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpa
 }
 
 /* The KEY constraint of the section, replaced by the key it ends in. */
-static PieceResult set_section_key(PiecePlan *plan, NodeId section, PlanKey key) {
+static PieceResult set_section_key(PiecePlan *plan, NodeId section, AnalysisKey key) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         if (plan_node_constraint_at(plan, section, i)->kind == PLAN_CONSTRAINT_KEY) {
             PlanConstraint constraint;
@@ -204,7 +199,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
     if (!home_key || material == PLAN_NODE_NONE) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    PlanKey home = home_key->params.key;
+    AnalysisKey home = home_key->params.key;
     out->count = count;
     if (!draw_keys(kind, count, home, rng, out->sections, &out->modulates)) {
         return PIECE_ERR_BAD_REQUEST;
@@ -228,7 +223,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN)) : result;
     }
     for (size_t i = 0; result == PIECE_OK && i < count; i++) {
-        if (!same_key(out->sections[i].end, home)) {
+        if (!analysis_key_equals(&out->sections[i].end, &home)) {
             result = set_section_key(plan, sections[i], out->sections[i].end);
         }
     }
@@ -242,7 +237,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
 /* The key lane over the whole plan, in order. */
 typedef struct {
     PlanSpan span[MAX_SEGMENTS];
-    PlanKey key[MAX_SEGMENTS];
+    AnalysisKey key[MAX_SEGMENTS];
     size_t count;
 } KeyLane;
 
@@ -261,13 +256,13 @@ static bool read_key_lane(const PiecePlan *plan, KeyLane *lane) {
 }
 
 /* Whether the key is the home key's or one of its closely related keys. */
-static bool related_to_home(PlanKey home, PlanKey key) {
+static bool related_to_home(AnalysisKey home, AnalysisKey key) {
     HarmonyMode home_mode = mode_of(home.mode);
     HarmonyMode mode = mode_of(key.mode);
-    if (same_key(home, key)) {
+    if (analysis_key_equals(&home, &key)) {
         return true;
     }
-    int semitone = ((key.tonic_pitch_class - home.tonic_pitch_class) % 12 + 12) % 12;
+    int semitone = ((analysis_key_tonic_pitch_class(&key) - analysis_key_tonic_pitch_class(&home)) % 12 + 12) % 12;
     for (int i = 0; i < harmony_related_key_count(home_mode); i++) {
         HarmonyRelatedKey related;
         if (harmony_related_key_at(home_mode, i, &related) && related.mode == mode &&
@@ -276,10 +271,6 @@ static bool related_to_home(PlanKey home, PlanKey key) {
         }
     }
     return false;
-}
-
-static double as_double(PlanTime time) {
-    return (double)time.num / (double)time.den;
 }
 
 /* The arrival of every authentic cadence heard in the sections, in whole notes. False when a section is not readable. */
@@ -295,7 +286,7 @@ static bool authentic_arrivals(const PiecePlan *plan, const NodeId *sections, si
             int type = heard.cadences[i].type;
             if (type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
                 type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED) {
-                arrivals[(*arrival_count)++] = as_double(heard.cadences[i].arrival);
+                arrivals[(*arrival_count)++] = rational_to_double(heard.cadences[i].arrival);
             }
         }
         form_heard_destroy(&heard);
@@ -303,7 +294,7 @@ static bool authentic_arrivals(const PiecePlan *plan, const NodeId *sections, si
     return true;
 }
 
-static bool constraint_key(const PiecePlan *plan, NodeId section, PlanKey *out) {
+static bool constraint_key(const PiecePlan *plan, NodeId section, AnalysisKey *out) {
     const PlanConstraint *constraint = plan_node_find_constraint(plan, section, PLAN_CONSTRAINT_KEY);
     if (constraint) {
         *out = constraint->params.key;
@@ -311,10 +302,10 @@ static bool constraint_key(const PiecePlan *plan, NodeId section, PlanKey *out) 
     return constraint != NULL;
 }
 
-static size_t chords_between(const PiecePlan *plan, PlanTime start, PlanTime end) {
+static size_t chords_between(const PiecePlan *plan, Rational start, Rational end) {
     PlanSpan range = {start, {0, 1}};
-    PlanTime negative = {-start.num, start.den};
-    if (plan_time_compare(end, start) <= 0 || plan_time_add(end, negative, &range.length) != PLAN_OK) {
+    Rational negative = {-start.num, start.den};
+    if (rational_cmp(end, start) <= 0 || rational_add(end, negative, &range.length) != RATIONAL_OK) {
         return 0;
     }
     return plan_lane_find(plan, PLAN_LANE_HARMONY, 0, range, NULL, 0);
@@ -329,7 +320,7 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
     NodeId form = plan_root(plan);
     NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
     size_t section_count = 0;
-    PlanTime piece_end = {0, 1};
+    Rational piece_end = {0, 1};
     for (size_t i = 0; form != PLAN_NODE_NONE && i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
         if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
@@ -347,7 +338,7 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
         !authentic_arrivals(plan, sections, section_count, arrivals, &arrival_count)) {
         return false;
     }
-    PlanKey home = lane.key[0];
+    AnalysisKey home = lane.key[0];
     for (size_t k = 0; k < lane.count; k++) {
         if (!related_to_home(home, lane.key[k]) && out->ok) {
             out->ok = false;
@@ -355,28 +346,28 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
         }
     }
     for (size_t k = 1; k < lane.count; k++) {
-        if (same_key(lane.key[k], lane.key[k - 1])) {
+        if (analysis_key_equals(&lane.key[k], &lane.key[k - 1])) {
             continue;
         }
         out->changes++;
-        PlanTime span_end;
-        PlanTime region_end = piece_end;
-        PlanTime cadence_end = {0, 1};
+        Rational span_end;
+        Rational region_end = piece_end;
+        Rational cadence_end = {0, 1};
         bool planned = false;
         if (plan_span_end(lane.span[k], &span_end) != PLAN_OK) {
             return false;
         }
-        region_end = plan_time_compare(span_end, piece_end) < 0 ? span_end : piece_end;
+        region_end = rational_cmp(span_end, piece_end) < 0 ? span_end : piece_end;
         /* A section planned to end in the new key, inside the span: the last of them is where the cadence is. */
         for (size_t s = 0; s < section_count; s++) {
-            PlanKey ends_in;
-            PlanTime end;
+            AnalysisKey ends_in;
+            Rational end;
             if (!constraint_key(plan, sections[s], &ends_in) ||
                 plan_span_end(plan_node_span(plan, sections[s]), &end) != PLAN_OK) {
                 return false;
             }
-            if (same_key(ends_in, lane.key[k]) && plan_time_compare(end, lane.span[k].start) > 0 &&
-                plan_time_compare(end, region_end) <= 0 && plan_time_compare(end, cadence_end) > 0) {
+            if (analysis_key_equals(&ends_in, &lane.key[k]) && rational_cmp(end, lane.span[k].start) > 0 &&
+                rational_cmp(end, region_end) <= 0 && rational_cmp(end, cadence_end) > 0) {
                 cadence_end = end;
                 planned = true;
             }
@@ -391,7 +382,7 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
         KeyChangeExtent length_extent;
         KeyChangeExtent extent;
         if (!harmony_key_change_classify(&change, &length_extent) ||
-            !harmony_key_change_confirm(length_extent, as_double(lane.span[k].start), as_double(region_end), arrivals,
+            !harmony_key_change_confirm(length_extent, rational_to_double(lane.span[k].start), rational_to_double(region_end), arrivals,
                                         arrival_count, &extent)) {
             return false;
         }
@@ -399,7 +390,7 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
             out->modulations++;
         } else if (out->ok) {
             out->ok = false;
-            snprintf(out->reason, sizeof(out->reason), "the key change at %ld/%lu is a %s, not a modulation",
+            snprintf(out->reason, sizeof(out->reason), "the key change at %lld/%lld is a %s, not a modulation",
                      lane.span[k].start.num, lane.span[k].start.den, key_change_extent_name(extent));
         }
     }

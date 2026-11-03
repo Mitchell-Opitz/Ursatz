@@ -321,7 +321,7 @@ void cli_print_style_distance_json(const StyleComparison *comparison) {
     printf("}");
 }
 
-bool cli_parse_key(const char *text, PlanKey *key) {
+bool cli_parse_key(const char *text, AnalysisKey *key) {
     static const int NATURAL[7] = {9, 11, 0, 2, 4, 5, 7}; /* A B C D E F G */
     while (isspace((unsigned char)*text)) {
         text++;
@@ -360,18 +360,18 @@ bool cli_parse_key(const char *text, PlanKey *key) {
         return false;
     }
     if (cli_equals_ignore_case(mode, "major")) {
-        key->mode = PLAN_MODE_MAJOR;
+        key->mode = KEY_STRUCTURE_MODE_MAJOR;
     } else if (cli_equals_ignore_case(mode, "minor")) {
-        key->mode = PLAN_MODE_MINOR;
+        key->mode = KEY_STRUCTURE_MODE_MINOR;
     } else {
         return false;
     }
-    key->tonic_pitch_class = (pc % 12 + 12) % 12;
+    *key = plan_key_of_pitch_class((pc % 12 + 12) % 12, key->mode);
     return true;
 }
 
-const char *cli_key_name(const PlanKey *key, char *out, size_t size) {
-    util_key_name(key->tonic_pitch_class, key->mode == PLAN_MODE_MINOR, out, size);
+const char *cli_key_name(const AnalysisKey *key, char *out, size_t size) {
+    util_key_name(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, out, size);
     return out;
 }
 
@@ -395,20 +395,18 @@ bool cli_parse_meter(const char *text, PlanMeter *meter) {
     return true;
 }
 
-static const char *const CADENCE_NAMES[5] = {"PAC", "IAC", "HC", "DC", "PC"};
-
-bool cli_parse_cadence(const char *text, PlanCadenceType *cadence) {
-    for (int i = 0; i < 5; i++) {
-        if (cli_equals_ignore_case(text, CADENCE_NAMES[i])) {
-            *cadence = (PlanCadenceType)i;
+bool cli_parse_cadence(const char *text, CadenceType *cadence) {
+    for (size_t i = 0; i < PLAN_CADENCE_COUNT; i++) {
+        if (cli_equals_ignore_case(text, plan_cadence_names[i])) {
+            *cadence = plan_cadence_types[i];
             return true;
         }
     }
     return false;
 }
 
-const char *cli_cadence_name(PlanCadenceType cadence) {
-    return CADENCE_NAMES[cadence];
+const char *cli_cadence_name(CadenceType cadence) {
+    return plan_cadence_name(cadence);
 }
 
 unsigned long cli_default_seed(void) {
@@ -460,13 +458,13 @@ static int seed_failure(CorpusSeedResult result, const char *corpus_dir, const c
     }
 }
 
-int cli_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const PlanKey *key,
+int cli_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const AnalysisKey *key,
                     unsigned long seed, CorpusSeed *out) {
     CorpusSeedResult result = corpus_seed_motive(corpus_dir, like_path, meter, key, seed, out);
     return result == CORPUS_SEED_OK ? 0 : seed_failure(result, corpus_dir, like_path);
 }
 
-int cli_seed_progression(const char *corpus_dir, const char *numerals_text, PlanKeyMode mode, CorpusSeed *out) {
+int cli_seed_progression(const char *corpus_dir, const char *numerals_text, KeyStructureMode mode, CorpusSeed *out) {
     CorpusSeedResult result = corpus_seed_progression(corpus_dir, numerals_text, mode, out);
     return result == CORPUS_SEED_OK ? 0 : seed_failure(result, corpus_dir, numerals_text);
 }
@@ -670,7 +668,7 @@ void cli_discard_pending(CliPendingFile *pending, size_t count) {
     }
 }
 
-bool cli_parse_pickup(const char *text, int beat_unit, PlanTime *out) {
+bool cli_parse_pickup(const char *text, int beat_unit, Rational *out) {
     char *end = NULL;
     long numerator = strtol(text, &end, 10);
     long denominator = 1;
@@ -684,7 +682,7 @@ bool cli_parse_pickup(const char *text, int beat_unit, PlanTime *out) {
             return false;
         }
     }
-    return *end == '\0' && plan_time_make(numerator, (unsigned long)(denominator * beat_unit), out) == PLAN_OK;
+    return *end == '\0' && rational_make(numerator, (long long)(denominator * beat_unit), out) == RATIONAL_OK;
 }
 
 char *cli_motive_text(const Motive *motive) {

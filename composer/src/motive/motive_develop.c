@@ -66,7 +66,7 @@ MotiveDevResult motive_develop(const Motive *source, const MotiveDevSpec *spec, 
     if (!source || !spec || !out) {
         return MOTIVE_DEV_ERR_NULL;
     }
-    PlanTime length;
+    Rational length;
     if (motive_check_notes(source, &length, NULL) != MOTIVE_OK) {
         return MOTIVE_DEV_ERR_INVALID;
     }

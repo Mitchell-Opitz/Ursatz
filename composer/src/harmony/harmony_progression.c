@@ -30,33 +30,21 @@ static const PredominantRun AFTER_IV[] = {{1, {2}}};
 /* The root-position ii in a minor key is a diminished chord that standard-harmony prefers in first inversion. */
 static const PredominantRun MINOR_PREDOMINANTS[] = {{1, {4}}};
 
-static PlanHarmonicFunction plan_function_of(HarmonicFunction function) {
-    switch (function) {
-    case HARMONIC_FUNCTION_TONIC:
-        return PLAN_FUNCTION_TONIC;
-    case HARMONIC_FUNCTION_PREDOMINANT:
-        return PLAN_FUNCTION_PREDOMINANT;
-    case HARMONIC_FUNCTION_DOMINANT:
-        return PLAN_FUNCTION_DOMINANT;
-    default:
-        return PLAN_FUNCTION_UNKNOWN;
-    }
-}
-
-static bool make_from(PlanKeyMode mode, HarmonyChord chord, size_t cells, PhraseChord *out) {
+static bool make_from(KeyStructureMode mode, HarmonyChord chord, size_t cells, PhraseChord *out) {
     HarmonicFunction function;
     memset(out, 0, sizeof(*out));
     if (!harmony_chord_valid(&chord) || !harmony_function_of(harmony_mode_of(mode), &chord, &function) ||
         !harmony_roman_format(mode, &chord, out->roman)) {
         return false;
     }
-    out->function = plan_function_of(function);
+    out->function = function;
+    out->has_function = true;
     out->chord = chord;
     out->cells = cells;
     return true;
 }
 
-bool harmony_make_chord(PlanKeyMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
+bool harmony_make_chord(KeyStructureMode mode, int degree, int inversion, bool seventh, bool cadential, size_t cells,
                         PhraseChord *out) {
     HarmonyChord chord;
     memset(&chord, 0, sizeof(chord));
@@ -67,16 +55,16 @@ bool harmony_make_chord(PlanKeyMode mode, int degree, int inversion, bool sevent
     return make_from(mode, chord, cells, out);
 }
 
-bool harmony_make_leading_tone(PlanKeyMode mode, int inversion, size_t cells, PhraseChord *out) {
+bool harmony_make_leading_tone(KeyStructureMode mode, int inversion, size_t cells, PhraseChord *out) {
     HarmonyChord chord;
     memset(&chord, 0, sizeof(chord));
     chord.degree = 7;
     chord.inversion = inversion;
-    chord.leading_tone = mode == PLAN_MODE_MINOR;
+    chord.leading_tone = mode == KEY_STRUCTURE_MODE_MINOR;
     return make_from(mode, chord, cells, out);
 }
 
-static bool make_chord(PlanKeyMode mode, ChordSpec spec, size_t cells, PhraseChord *out) {
+static bool make_chord(KeyStructureMode mode, ChordSpec spec, size_t cells, PhraseChord *out) {
     return harmony_make_chord(mode, spec.degree, 0, spec.seventh, false, cells, out);
 }
 
@@ -140,8 +128,8 @@ bool harmony_shape_keeps_in(const PlanHarmonyShape *shape, const size_t *cells, 
  * predominant (only ii may follow IV).
  */
 static bool deal_progression(const PhraseRequest *request, FillRng *rng, int pivot, PhraseProgression *out) {
-    bool half = request->cadence == PLAN_CADENCE_HC;
-    bool plagal = request->cadence == PLAN_CADENCE_PC;
+    bool half = request->cadence == CADENCE_TYPE_HALF;
+    bool plagal = request->cadence == CADENCE_TYPE_PLAGAL;
     /* A cadential progression has no opening tonic. */
     bool opening_tonic = !(request->has_shape && request->shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL);
     size_t cap = request->has_shape && request->shape.max_cells_per_chord > 0
@@ -158,13 +146,13 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
     ChordSpec opening = {pivot > 0 ? pivot : 1, false};
     PhraseChord probe;
     bool pivot_predominant = pivot > 0 && make_chord(request->mode, opening, 1, &probe) &&
-                             probe.function == PLAN_FUNCTION_PREDOMINANT;
-    const PredominantRun *runs = request->mode == PLAN_MODE_MINOR ? MINOR_PREDOMINANTS : MAJOR_PREDOMINANTS;
-    size_t run_count = request->mode == PLAN_MODE_MINOR ? sizeof(MINOR_PREDOMINANTS) / sizeof(MINOR_PREDOMINANTS[0])
+                             probe.has_function && probe.function == HARMONIC_FUNCTION_PREDOMINANT;
+    const PredominantRun *runs = request->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR_PREDOMINANTS : MAJOR_PREDOMINANTS;
+    size_t run_count = request->mode == KEY_STRUCTURE_MODE_MINOR ? sizeof(MINOR_PREDOMINANTS) / sizeof(MINOR_PREDOMINANTS[0])
                                                         : sizeof(MAJOR_PREDOMINANTS) / sizeof(MAJOR_PREDOMINANTS[0]);
     if (pivot_predominant) {
         runs = AFTER_IV;
-        run_count = pivot == 4 && request->mode == PLAN_MODE_MAJOR ? 1 : 0;
+        run_count = pivot == 4 && request->mode == KEY_STRUCTURE_MODE_MAJOR ? 1 : 0;
     }
     /* A phrase usually has a predominant; it goes only when there is no room for one. */
     size_t fitting[3];
@@ -192,7 +180,7 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         before[before_count++] = (ChordSpec){1, false};
         before[before_count++] = (ChordSpec){4, false};
     }
-    ChordSpec last = half ? (ChordSpec){5, seventh} : (ChordSpec){request->cadence == PLAN_CADENCE_DC ? 6 : 1, false};
+    ChordSpec last = half ? (ChordSpec){5, seventh} : (ChordSpec){request->cadence == CADENCE_TYPE_DECEPTIVE ? 6 : 1, false};
 
     size_t cells[MAX_BEFORE_FINAL];
     for (size_t i = 0; i < before_count; i++) {

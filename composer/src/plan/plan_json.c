@@ -28,7 +28,6 @@ static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant",
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
                                                   "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones"};
-static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
                                               "interval_changed", "liquidated"};
@@ -73,9 +72,10 @@ cJSON *json_number(long value) {
     return cJSON_CreateNumber((double)value);
 }
 
-static cJSON *rational_json(PlanTime time) {
+cJSON *rational_json(long long numerator, long long denominator) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "num", json_number(time.num)) && plan_json_add(object, "den", json_number((long)time.den)))) {
+    if (object && !(plan_json_add(object, "num", json_number((long)numerator)) &&
+                    plan_json_add(object, "den", json_number((long)denominator)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -83,12 +83,12 @@ static cJSON *rational_json(PlanTime time) {
 }
 
 static cJSON *span_json(PlanSpan span) {
-    PlanTime end;
+    Rational end;
     if (plan_span_end(span, &end) != PLAN_OK) {
         return NULL;
     }
     cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "start", rational_json(span.start)) && plan_json_add(object, "end", rational_json(end)))) {
+    if (object && !(plan_json_add(object, "start", rational_json(span.start.num, span.start.den)) && plan_json_add(object, "end", rational_json(end.num, end.den)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -145,9 +145,12 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     case PLAN_CONSTRAINT_LENGTH_BARS:
         ok = ok && plan_json_add(object, "bars", json_number(constraint->params.bars));
         break;
-    case PLAN_CONSTRAINT_CADENCE:
-        ok = ok && plan_json_add(object, "type", cJSON_CreateString(CADENCE_NAMES[constraint->params.cadence]));
+    case PLAN_CONSTRAINT_CADENCE: {
+        size_t cadence_index = 0;
+        ok = ok && plan_cadence_index(constraint->params.cadence, &cadence_index) &&
+             plan_json_add(object, "type", cJSON_CreateString(plan_cadence_file_names[cadence_index]));
         break;
+    }
     case PLAN_CONSTRAINT_MOTIVE_REF:
         ok = ok && plan_json_add(object, "motive", json_number((long)plan_node_rank(plan, constraint->params.motive.motive))) &&
              plan_json_add(object, "transform", cJSON_CreateString(TRANSFORM_NAMES[constraint->params.motive.transform])) &&
@@ -155,7 +158,7 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         ok = ok && motive_ref_options_json(object, &constraint->params.motive);
         break;
     case PLAN_CONSTRAINT_KEY:
-        ok = ok && plan_json_add(object, "tonic_pitch_class", json_number(constraint->params.key.tonic_pitch_class)) &&
+        ok = ok && plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(&constraint->params.key))) &&
              plan_json_add(object, "mode", cJSON_CreateString(MODE_NAMES[constraint->params.key.mode]));
         break;
     case PLAN_CONSTRAINT_ARCHETYPE:
@@ -287,7 +290,7 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     }
     case PLAN_CONSTRAINT_PICKUP: {
         char length[64];
-        snprintf(length, sizeof(length), "%ld/%lu", constraint->params.pickup.num, constraint->params.pickup.den);
+        snprintf(length, sizeof(length), "%lld/%lld", constraint->params.pickup.num, constraint->params.pickup.den);
         ok = ok && plan_json_add(object, "length", cJSON_CreateString(length));
         break;
     }
@@ -304,8 +307,8 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
             const PlanToneChord *chord = &tones->chords[i];
             char onset[64];
             char length[64];
-            snprintf(onset, sizeof(onset), "%ld/%lu", chord->onset.num, chord->onset.den);
-            snprintf(length, sizeof(length), "%ld/%lu", chord->length.num, chord->length.den);
+            snprintf(onset, sizeof(onset), "%lld/%lld", chord->onset.num, chord->onset.den);
+            snprintf(length, sizeof(length), "%lld/%lld", chord->length.num, chord->length.den);
             cJSON *item = cJSON_CreateObject();
             ok = plan_json_append(harmony, item) && plan_json_add(item, "numeral", cJSON_CreateString(chord->numeral)) &&
                  plan_json_add(item, "onset", cJSON_CreateString(onset)) &&
@@ -380,8 +383,8 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
     return object;
 }
 
-static void key_label(const PlanKey *key, char *out, size_t size) {
-    snprintf(out, size, "%s %s", PITCH_CLASS_NAMES[key->tonic_pitch_class], MODE_NAMES[key->mode]);
+static void plan_key_label(const AnalysisKey *key, char *out, size_t size) {
+    snprintf(out, size, "%s %s", PITCH_CLASS_NAMES[analysis_key_tonic_pitch_class(key)], MODE_NAMES[key->mode]);
 }
 
 static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *out, size_t size) {
@@ -390,7 +393,7 @@ static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *
         snprintf(out, size, "%d/%d", payload->meter.beats_per_bar, payload->meter.beat_unit);
         return true;
     case PLAN_LANE_KEY:
-        key_label(&payload->key, out, size);
+        plan_key_label(&payload->key, out, size);
         return true;
     case PLAN_LANE_HARMONY:
         snprintf(out, size, "%s", payload->harmony.roman_numeral);
@@ -409,9 +412,9 @@ static cJSON *notes_json(const PlanNotes *notes) {
     for (size_t i = 0; array && i < notes->note_count; i++) {
         const PlanNote *note = &notes->notes[i];
         cJSON *object = cJSON_CreateObject();
-        if (!(object && plan_json_add(object, "midi_pitch", json_number(note->midi_pitch)) &&
-              plan_json_add(object, "offset", rational_json(note->offset)) &&
-              plan_json_add(object, "duration", rational_json(note->duration)) && plan_json_append(array, object))) {
+        if (!(object && plan_json_add(object, "midi_pitch", json_number(note->midi)) &&
+              plan_json_add(object, "offset", rational_json(note->offset.num, note->offset.den)) &&
+              plan_json_add(object, "duration", rational_json(note->duration.num, note->duration.den)) && plan_json_append(array, object))) {
             if (object && !cJSON_GetObjectItem(object, "duration")) {
                 cJSON_Delete(object);
             }
@@ -435,12 +438,12 @@ static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload) {
              plan_json_add(object, "bars_per_hyperbar", json_number(payload->meter.bars_per_hyperbar));
         break;
     case PLAN_LANE_KEY:
-        ok = plan_json_add(object, "tonic_pitch_class", json_number(payload->key.tonic_pitch_class)) &&
+        ok = plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(&payload->key))) &&
              plan_json_add(object, "mode", cJSON_CreateString(MODE_NAMES[payload->key.mode]));
         break;
     case PLAN_LANE_HARMONY:
         ok = plan_json_add(object, "roman_numeral", cJSON_CreateString(payload->harmony.roman_numeral)) &&
-             plan_json_add(object, "function", cJSON_CreateString(FUNCTION_NAMES[payload->harmony.function]));
+             plan_json_add(object, "function", cJSON_CreateString(FUNCTION_NAMES[payload->harmony.has_function ? (int)payload->harmony.function : (int)HARMONIC_FUNCTION_COUNT]));
         break;
     case PLAN_LANE_BASS:
     case PLAN_LANE_MELODY:
@@ -456,10 +459,10 @@ static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload) {
 }
 
 /* The label of the key span that covers the start of span, or "no match". */
-static void enclosing_key_label(const PiecePlan *plan, PlanSpan span, char *out, size_t size) {
+static void enclosing_plan_key_label(const PiecePlan *plan, PlanSpan span, char *out, size_t size) {
     LaneSpanId found = PLAN_LANE_SPAN_NONE;
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &found, 1) > 0) {
-        key_label(&plan_lane_span_payload(plan, found)->key, out, size);
+        plan_key_label(&plan_lane_span_payload(plan, found)->key, out, size);
     } else {
         snprintf(out, size, "no match");
     }
@@ -490,7 +493,7 @@ static cJSON *lane_entry_json(const PiecePlan *plan, LaneSpanId id) {
         ok = plan_json_add(object, "method", cJSON_CreateString(COMPOSER_KEY_METHOD));
     }
     if (ok && lane == PLAN_LANE_HARMONY) {
-        enclosing_key_label(plan, span, context_key, sizeof(context_key));
+        enclosing_plan_key_label(plan, span, context_key, sizeof(context_key));
         ok = plan_json_add(object, "key_label", cJSON_CreateString(context_key));
     }
     if (ok) {
@@ -751,7 +754,7 @@ static bool read_enum_member(JsonReader *reader, const cJSON *object, const char
 
 #define TIME_LIMIT 1000000000L
 
-static bool json_read_rational(JsonReader *reader, const cJSON *item, const char *path, PlanTime *out) {
+static bool json_read_rational(JsonReader *reader, const cJSON *item, const char *path, Rational *out) {
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, path, "expected an object with num and den");
     }
@@ -761,11 +764,11 @@ static bool json_read_rational(JsonReader *reader, const cJSON *item, const char
         !json_read_int_member(reader, item, path, "den", 1, TIME_LIMIT, &den)) {
         return false;
     }
-    return plan_time_make(num, (unsigned long)den, out) == PLAN_OK;
+    return rational_make(num, (long long)den, out) == RATIONAL_OK;
 }
 
 static bool read_rational_member(JsonReader *reader, const cJSON *object, const char *path, const char *key,
-                                 PlanTime *out) {
+                                 Rational *out) {
     const cJSON *item = plan_json_member(reader, object, path, key, true);
     if (!item) {
         return false;
@@ -786,13 +789,13 @@ bool json_read_span(JsonReader *reader, const cJSON *object, const char *path, P
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, at, "expected an object with start and end");
     }
-    PlanTime end;
+    Rational end;
     if (!read_rational_member(reader, item, at, "start", &out->start) ||
         !read_rational_member(reader, item, at, "end", &end)) {
         return false;
     }
-    PlanTime negative_start = {-out->start.num, out->start.den};
-    if (plan_time_add(end, negative_start, &out->length) != PLAN_OK || out->length.num <= 0) {
+    Rational negative_start = {-out->start.num, out->start.den};
+    if (rational_add(end, negative_start, &out->length) != RATIONAL_OK || out->length.num <= 0) {
         return json_bad_format(reader, at, "end must be after start");
     }
     return true;
@@ -872,7 +875,7 @@ static bool read_motive_ref_options(JsonReader *reader, const cJSON *item, const
 
 /* A time like "1/4" in whole notes: the numerator not below `least`. */
 static bool read_tones_time(JsonReader *reader, const cJSON *item, const char *path, const char *name, long least,
-                            PlanTime *out) {
+                            Rational *out) {
     const cJSON *text = plan_json_member(reader, item, path, name, true);
     if (!text) {
         return false;
@@ -884,7 +887,7 @@ static bool read_tones_time(JsonReader *reader, const cJSON *item, const char *p
     char rest;
     if (!cJSON_IsString(text) || sscanf(text->valuestring, "%ld/%lu%c", &numerator, &denominator, &rest) != 2 ||
         denominator == 0 || numerator < least || numerator > TIME_LIMIT || denominator > (unsigned long)TIME_LIMIT ||
-        plan_time_make(numerator, denominator, out) != PLAN_OK) {
+        rational_make(numerator, denominator, out) != RATIONAL_OK) {
         return json_bad_format(reader, at, "expected a time in whole notes like \"1/4\"");
     }
     return true;
@@ -957,10 +960,10 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         out->params.bars = (int)number_value;
         return true;
     case PLAN_CONSTRAINT_CADENCE:
-        if (!read_enum_member(reader, item, path, "type", CADENCE_NAMES, COUNT_OF(CADENCE_NAMES), &value)) {
+        if (!read_enum_member(reader, item, path, "type", plan_cadence_file_names, PLAN_CADENCE_COUNT, &value)) {
             return false;
         }
-        out->params.cadence = (PlanCadenceType)value;
+        out->params.cadence = plan_cadence_types[value];
         return true;
     case PLAN_CONSTRAINT_MOTIVE_REF: {
         long semitones;
@@ -979,8 +982,7 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
             !read_enum_member(reader, item, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &value)) {
             return false;
         }
-        out->params.key.tonic_pitch_class = (int)number_value;
-        out->params.key.mode = (PlanKeyMode)value;
+        out->params.key = plan_key_of_pitch_class((int)number_value, (KeyStructureMode)value);
         return true;
     case PLAN_CONSTRAINT_ARCHETYPE:
         if (!read_enum_member(reader, item, path, "type", ARCHETYPE_NAMES, COUNT_OF(ARCHETYPE_NAMES), &value)) {
@@ -1277,7 +1279,7 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         json_child_path(at, path, "length");
         if (!cJSON_IsString(length) || sscanf(length->valuestring, "%ld/%lu%c", &numerator, &denominator, &rest) != 2 ||
             denominator == 0 || numerator <= 0 || numerator > TIME_LIMIT || denominator > (unsigned long)TIME_LIMIT ||
-            plan_time_make(numerator, denominator, &out->params.pickup) != PLAN_OK) {
+            rational_make(numerator, denominator, &out->params.pickup) != RATIONAL_OK) {
             return json_bad_format(reader, at, "expected a length in whole notes like \"1/4\"");
         }
         return true;
@@ -1594,8 +1596,7 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
             !read_enum_member(reader, object, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &value)) {
             return false;
         }
-        payload->key.tonic_pitch_class = (int)first;
-        payload->key.mode = (PlanKeyMode)value;
+        payload->key = plan_key_of_pitch_class((int)first, (KeyStructureMode)value);
         return true;
     case PLAN_LANE_HARMONY: {
         const cJSON *numeral = plan_json_member(reader, object, path, "roman_numeral", true);
@@ -1615,7 +1616,8 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
             return false;
         }
         snprintf(payload->harmony.roman_numeral, PLAN_ROMAN_NUMERAL_MAX, "%s", numeral->valuestring);
-        payload->harmony.function = (PlanHarmonicFunction)value;
+        payload->harmony.has_function = value < (int)HARMONIC_FUNCTION_COUNT;
+        payload->harmony.function = payload->harmony.has_function ? (HarmonicFunction)value : HARMONIC_FUNCTION_TONIC;
         return true;
     }
     case PLAN_LANE_BASS:
@@ -1651,7 +1653,8 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
                 !read_rational_member(reader, item, at, "duration", &notes[index].duration)) {
                 return false;
             }
-            notes[index].midi_pitch = (int)pitch;
+            notes[index].midi = (int)pitch;
+            notes[index].spelled = false;
             index++;
         }
         payload->notes.notes = notes;

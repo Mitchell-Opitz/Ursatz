@@ -103,8 +103,7 @@ static PiecePlan *filled_rounded_binary(void) {
     memset(&request, 0, sizeof(request));
     request.form = FORM_TEMPLATE_ROUNDED_BINARY;
     request.bars = 24;
-    request.key.tonic_pitch_class = 0;
-    request.key.mode = PLAN_MODE_MAJOR;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     ComposeConfig config;
@@ -206,7 +205,7 @@ static void test_midi(const RenderedPlan *rendered, const PiecePlan *plan) {
         if (plan_node_kind(plan, node) != PLAN_NODE_SECTION || material) {
             continue;
         }
-        PlanTime start = plan_node_span(plan, node).start;
+        Rational start = plan_node_span(plan, node).start;
         assert(found < 3);
         assert(strcmp(tracks[0].markers[found].text, LETTERS[found]) == 0);
         assert(tracks[0].markers[found].tick * start.den == (unsigned long long)start.num * 4 * DIVISION);
@@ -236,8 +235,8 @@ static void test_plain(const RenderedPlan *rendered) {
     for (size_t i = 0; i < rendered->key_count; i++) {
         keys[i].position = rendered->keys[i].position;
         keys[i].sharps_flats = (int8_t)rendered->keys[i].sharps_flats;
-        keys[i].mode_byte = rendered->keys[i].mode == PLAN_MODE_MINOR ? 1 : 0;
-        keys[i].mode_hint = rendered->keys[i].mode == PLAN_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
+        keys[i].mode_byte = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? 1 : 0;
+        keys[i].mode_hint = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
     }
     unsigned char *old = NULL;
     size_t old_size = 0;
@@ -290,8 +289,8 @@ static void test_loop_markers(const RenderedPlan *rendered) {
     TrackMeta tracks[8];
     assert(!options.loop_markers);
     options.loop_markers = true;
-    options.loop_start = (PlanTime){1, 1};
-    options.loop_end = (PlanTime){11, 2};
+    options.loop_start = (Rational){1, 1};
+    options.loop_end = (Rational){11, 2};
     assert(rendered_plan_midi_bytes(rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_OK);
     size_t count = scan_tracks(bytes, size, tracks, 8);
     assert(count >= 2);
@@ -322,7 +321,7 @@ static void test_loop_markers(const RenderedPlan *rendered) {
     assert(tracks[0].marker_count == 2);
     free(bytes);
     /* A time that is not a whole tick at any division is refused. */
-    options.loop_start = (PlanTime){1, 1000003};
+    options.loop_start = (Rational){1, 1000003};
     assert(rendered_plan_midi_bytes(rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
 }
 

@@ -9,25 +9,10 @@
 #include <time/duration.h>
 #include <time/metrical_position.h>
 #include <time/musical_time.h>
+#include <time/time_rational.h>
 #include <time/time_span.h>
 
 #define HEARD_KEY_REF "key"
-
-CadenceType harmony_cadence_type_of(PlanCadenceType type) {
-    switch (type) {
-    case PLAN_CADENCE_PAC:
-        return CADENCE_TYPE_PERFECT_AUTHENTIC;
-    case PLAN_CADENCE_IAC:
-        return CADENCE_TYPE_IMPERFECT_AUTHENTIC;
-    case PLAN_CADENCE_HC:
-        return CADENCE_TYPE_HALF;
-    case PLAN_CADENCE_DC:
-        return CADENCE_TYPE_DECEPTIVE;
-    case PLAN_CADENCE_PC:
-        return CADENCE_TYPE_PLAGAL;
-    }
-    return CADENCE_TYPE_UNKNOWN;
-}
 
 /*
  * The chord as the recognizer wants it, a set of intervals above the root. The recognizer reads
@@ -35,7 +20,7 @@ CadenceType harmony_cadence_type_of(PlanCadenceType type) {
  * triad on each degree, and the seventh chord built on it (the dominant seventh on V, a fully
  * diminished seventh on the leading tone).
  */
-bool harmony_diatonic_intervals(PlanKeyMode mode, const HarmonyChord *chord, int intervals[4], size_t *count) {
+bool harmony_diatonic_intervals(KeyStructureMode mode, const HarmonyChord *chord, int intervals[4], size_t *count) {
     static const int MAJOR_TRIAD[3] = {0, 4, 7};
     static const int MINOR_TRIAD[3] = {0, 3, 7};
     static const int DIMINISHED_TRIAD[3] = {0, 3, 6};
@@ -47,9 +32,9 @@ bool harmony_diatonic_intervals(PlanKeyMode mode, const HarmonyChord *chord, int
     /* Quality by degree: 0 major, 1 minor, 2 diminished, 3 dominant (a major triad with a minor seventh). */
     static const int MAJOR_QUALITY[8] = {0, 0, 1, 1, 0, 3, 1, 2};
     static const int MINOR_QUALITY[8] = {0, 1, 2, 0, 1, 3, 0, 3};
-    int quality = mode == PLAN_MODE_MINOR ? MINOR_QUALITY[chord->degree] : MAJOR_QUALITY[chord->degree];
+    int quality = mode == KEY_STRUCTURE_MODE_MINOR ? MINOR_QUALITY[chord->degree] : MAJOR_QUALITY[chord->degree];
     /* In a minor key the chord on the raised seventh degree is diminished; the subtonic is a dominant seventh. */
-    if (mode == PLAN_MODE_MINOR && chord->degree == 7 && chord->leading_tone) {
+    if (mode == KEY_STRUCTURE_MODE_MINOR && chord->degree == 7 && chord->leading_tone) {
         quality = 2;
     }
     memset(intervals, 0, 4 * sizeof(int));
@@ -112,7 +97,7 @@ bool harmony_applied_intervals(const HarmonyAppliedChord *applied, int intervals
 }
 
 /* The scale degree of the bass: the chord's root, or its third, fifth or seventh by inversion. */
-static int bass_degree_of(PlanKeyMode mode, const PhraseChord *chord) {
+static int bass_degree_of(KeyStructureMode mode, const PhraseChord *chord) {
     if (chord->applied) {
         return (harmony_applied_root_degree(harmony_mode_of(mode), &chord->applied_chord) - 1 +
                 2 * chord->applied_inversion) % 7 + 1;
@@ -124,11 +109,11 @@ static int bass_degree_of(PlanKeyMode mode, const PhraseChord *chord) {
 static int implied_soprano(const HeardPhrase *phrase, size_t i) {
     size_t last = phrase->count - 1;
     switch (phrase->requested) {
-    case PLAN_CADENCE_PAC:
+    case CADENCE_TYPE_PERFECT_AUTHENTIC:
         return i == last ? 1 : 0;
-    case PLAN_CADENCE_IAC:
+    case CADENCE_TYPE_IMPERFECT_AUTHENTIC:
         return i == last ? 3 : 0;
-    case PLAN_CADENCE_PC:
+    case CADENCE_TYPE_PLAGAL:
         return i == last || (last >= 2 && i == last - 2) ? 1 : 0;
     default:
         return 0;
@@ -170,31 +155,30 @@ void harmony_segments_destroy(SegmentSet *set) {
 }
 
 /* The times of the cells [first_cell, first_cell + cells) on the metre, and the bar and place in it where they start. */
-static bool metre_times(const PhraseMetre *metre, size_t first_cell, size_t cells, PlanTime *start, PlanTime *end,
-                        size_t *bar, PlanTime *offset) {
+static bool metre_times(const PhraseMetre *metre, size_t first_cell, size_t cells, Rational *start, Rational *end,
+                        size_t *bar, Rational *offset) {
     return harmony_metre_cell_offset(metre, first_cell, start) &&
            harmony_metre_cell_offset(metre, first_cell + cells, end) &&
            harmony_metre_cell_position(metre, first_cell, bar, offset);
 }
 
 static bool times_create(const HeardPhrase *phrase, size_t first_cell, size_t cells, SegmentTimes *times) {
-    PlanTime start;
-    PlanTime end;
-    PlanTime offset;
+    Rational start;
+    Rational end;
+    Rational offset;
     size_t bar = first_cell / phrase->cells_per_bar;
     if (phrase->metre) {
         if (!metre_times(phrase->metre, first_cell, cells, &start, &end, &bar, &offset)) {
             return false;
         }
-    } else if (plan_time_make(phrase->cell_length.num * (long)first_cell, phrase->cell_length.den, &start) != PLAN_OK ||
-        plan_time_make(phrase->cell_length.num * (long)(first_cell + cells), phrase->cell_length.den, &end) !=
-            PLAN_OK ||
-        plan_time_make(phrase->cell_length.num * (long)(first_cell % phrase->cells_per_bar),
-                       phrase->cell_length.den, &offset) != PLAN_OK) {
+    } else if (rational_mul_int(phrase->cell_length, (long long)first_cell, &start) != RATIONAL_OK ||
+        rational_mul_int(phrase->cell_length, (long long)(first_cell + cells), &end) !=
+            RATIONAL_OK ||
+        rational_mul_int(phrase->cell_length, (long long)(first_cell % phrase->cells_per_bar), &offset) != RATIONAL_OK) {
         return false;
     }
-    return musical_time_create(start.num, start.den, &times->start) == MUSICAL_TIME_OK &&
-           musical_time_create(end.num, end.den, &times->end) == MUSICAL_TIME_OK &&
+    return musical_time_from_rational(start, &times->start) == TIME_RATIONAL_OK &&
+           musical_time_from_rational(end, &times->end) == TIME_RATIONAL_OK &&
            time_span_create(times->start, times->end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &times->span) ==
                TIME_SPAN_OK &&
            duration_create(offset.num, offset.den, &times->offset) == DURATION_OK &&
@@ -215,7 +199,7 @@ static SegmentSet *segments_create(const HeardPhrase *phrase, const int *soprano
     for (size_t i = 0; i < phrase->count; i++) {
         const PhraseChord *chord = &phrase->chords[i];
         HarmonySegmentInput *input = &set->inputs[i];
-        PlanKeyMode mode = phrase->chord_modes ? phrase->chord_modes[i] : phrase->mode;
+        KeyStructureMode mode = phrase->chord_modes ? phrase->chord_modes[i] : phrase->mode;
         snprintf(set->ids[i], sizeof(set->ids[i]), "c%zu", i);
         snprintf(set->key_refs[i], sizeof(set->key_refs[i]), phrase->chord_keys ? "key%u" : HEARD_KEY_REF,
                  phrase->chord_keys ? phrase->chord_keys[i] : 0u);
@@ -296,7 +280,7 @@ bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at
 }
 
 /* The key of the key lane over a chord, when one span holds it. */
-static bool key_under(const PiecePlan *plan, PlanSpan chord_span, LaneSpanId *id, PlanKey *key) {
+static bool key_under(const PiecePlan *plan, PlanSpan chord_span, LaneSpanId *id, AnalysisKey *key) {
     LaneSpanId keys[2];
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, chord_span, keys, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, keys[0]), chord_span)) {
@@ -307,8 +291,8 @@ static bool key_under(const PiecePlan *plan, PlanSpan chord_span, LaneSpanId *id
     return true;
 }
 
-bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PhraseChord *chords, size_t *count,
-                            PhraseMetre *metre, PlanKeyMode *modes, unsigned *keys) {
+bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, PhraseChord *chords, size_t *count,
+                            PhraseMetre *metre, KeyStructureMode *modes, unsigned *keys) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     if (!plan || !chords || !count || !metre || !harmony_read_metre(plan, span, metre)) {
         return false;
@@ -317,18 +301,18 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, PlanKeyMode mo
     if (found == 0 || found > HARMONY_MAX_CHORDS) {
         return false;
     }
-    PlanTime position = span.start;
+    Rational position = span.start;
     for (size_t i = 0; i < found; i++) {
         PlanSpan chord_span = plan_lane_span_span(plan, ids[i]);
-        PlanTime end;
-        PlanKeyMode chord_mode = mode;
+        Rational end;
+        KeyStructureMode chord_mode = mode;
         LaneSpanId key_id = PLAN_LANE_SPAN_NONE;
-        PlanKey key;
+        AnalysisKey key;
         if (modes && key_under(plan, chord_span, &key_id, &key)) {
             chord_mode = key.mode;
         }
         /* Chords must start where the last ended, in whole cells. */
-        if (plan_time_compare(chord_span.start, position) != 0 || plan_span_end(chord_span, &end) != PLAN_OK ||
+        if (rational_cmp(chord_span.start, position) != 0 || plan_span_end(chord_span, &end) != PLAN_OK ||
             !harmony_read_chord_in(plan, ids[i], chord_mode, metre, &chords[i])) {
             return false;
         }
@@ -338,20 +322,20 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, PlanKeyMode mo
         }
         position = end;
     }
-    PlanTime span_end;
-    if (plan_span_end(span, &span_end) != PLAN_OK || plan_time_compare(position, span_end) != 0) {
+    Rational span_end;
+    if (plan_span_end(span, &span_end) != PLAN_OK || rational_cmp(position, span_end) != 0) {
         return false;
     }
     *count = found;
     return true;
 }
 
-bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PhraseChord *chords, size_t *count,
+bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, PhraseChord *chords, size_t *count,
                        PhraseMetre *metre) {
     return harmony_read_lane_keys(plan, span, mode, chords, count, metre, NULL, NULL);
 }
 
-bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
+bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, CadenceType requested,
                           CadenceType *heard, bool *at_end) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
@@ -363,12 +347,12 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode
     return harmony_hear_phrase(&phrase, heard, at_end);
 }
 
-bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, const int *soprano,
-                                size_t count, const PlanTime *section_starts, size_t section_count,
+bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, KeyStructureMode mode, const int *soprano,
+                                size_t count, const Rational *section_starts, size_t section_count,
                                 HarmonyCadences *out) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
-    PlanKeyMode modes[HARMONY_MAX_CHORDS];
+    KeyStructureMode modes[HARMONY_MAX_CHORDS];
     unsigned keys[HARMONY_MAX_CHORDS];
     size_t found;
     /* Each chord is read in the key under it, so a cadence is heard in the key of the chord it arrives on. */
@@ -376,7 +360,7 @@ bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMod
         found != count) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, modes, keys, false, &metre};
+    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, modes, keys, false, &metre};
     SegmentSet *set = segments_create(&phrase, soprano);
     if (!set) {
         return false;

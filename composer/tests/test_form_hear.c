@@ -34,8 +34,8 @@ static PiecePlan *load(const char *name) {
 
 static PlanSpan bars(long start, long length) {
     PlanSpan span;
-    assert(plan_time_make(start, 1, &span.start) == PLAN_OK);
-    assert(plan_time_make(length, 1, &span.length) == PLAN_OK);
+    assert(rational_make(start, 1, &span.start) == RATIONAL_OK);
+    assert(rational_make(length, 1, &span.length) == RATIONAL_OK);
     return span;
 }
 
@@ -63,8 +63,8 @@ static void test_period(void) {
     FormHeard heard;
     /* The consequent opens on i6 after the V, which Ursatz reads as an evaded cadence unless it is told a phrase
        starts there (R-090, R-091): the start of bar 5 is given, so the V is the half cadence of the antecedent. */
-    PlanTime consequent;
-    assert(plan_time_make(4, 1, &consequent) == PLAN_OK);
+    Rational consequent;
+    assert(rational_make(4, 1, &consequent) == RATIONAL_OK);
     assert(form_hear_with_sections(plan, bars(0, 8), &consequent, 1, &heard) == FORM_HEAR_OK);
     assert(heard.phrase_count == 2);
     assert(heard.count == 1);

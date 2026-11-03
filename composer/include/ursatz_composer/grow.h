@@ -113,16 +113,16 @@ bool grow_idea_in_pairing(const PlanThemePairing *pairing, GrowIdea idea);
 typedef struct {
     const Motive *motive;
     const PlanSource *source; /* NULL, or where a corpus gave the motive (corpus_seed.h): a SOURCE constraint on m0 */
-    PlanKey key;
+    AnalysisKey key;
     PlanMeter meter;
     size_t bars;              /* 4 or 8 */
     PlanThemePairing pairing; /* any of the nine beginning and ending pairings */
-    PlanCadenceType cadence;  /* PAC, IAC or HC: the cadence the theme ends in */
+    CadenceType cadence;  /* PAC, IAC or HC: the cadence the theme ends in */
     /*
      * The weak cadence an antecedent beginning ends in: HC or IAC, and weaker than `cadence`. Zero (PAC) means the
      * default, HC. Read only for an antecedent beginning.
      */
-    PlanCadenceType first_cadence;
+    CadenceType first_cadence;
     /*
      * An accompaniment under the melody and bass, in the inner voices (accompaniment.h). Read only with
      * has_accompaniment; a texture of -1 asks for none in particular, and one that is not homophonic is refused.

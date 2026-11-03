@@ -29,16 +29,16 @@
 typedef struct {
     const char *name;
     int tonic;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int beats;
     bool given;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4, invented", 0, PLAN_MODE_MAJOR, 4, false},
-    {"A minor 3/4, invented", 9, PLAN_MODE_MINOR, 3, false},
-    {"C major 4/4, given", 0, PLAN_MODE_MAJOR, 4, true},
-    {"A minor 3/4, given", 9, PLAN_MODE_MINOR, 3, true},
+    {"C major 4/4, invented", 0, KEY_STRUCTURE_MODE_MAJOR, 4, false},
+    {"A minor 3/4, invented", 9, KEY_STRUCTURE_MODE_MINOR, 3, false},
+    {"C major 4/4, given", 0, KEY_STRUCTURE_MODE_MAJOR, 4, true},
+    {"A minor 3/4, given", 9, KEY_STRUCTURE_MODE_MINOR, 3, true},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -61,7 +61,7 @@ typedef struct {
     size_t bars;
     PlanThemeBeginning beginning;
     PlanThemeEnding ending;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     size_t returns;
     unsigned layers;
 } Expected;
@@ -74,7 +74,7 @@ static const unsigned WITH_MELODY =
     PLAN_LAYER_BIT(PLAN_LANE_BASS) | PLAN_LAYER_BIT(PLAN_LANE_INNER_VOICE) | PLAN_LAYER_BIT(PLAN_LANE_MELODY);
 
 static void set(Expected *e, const char *letter, size_t bars, PlanThemeBeginning beginning, PlanThemeEnding ending,
-                PlanCadenceType cadence, size_t returns, unsigned layers) {
+                CadenceType cadence, size_t returns, unsigned layers) {
     e->letter = letter;
     e->bars = bars;
     e->beginning = beginning;
@@ -91,40 +91,40 @@ static size_t expected_sections(FormTemplateKind kind, Size size, Expected *out)
     switch (kind) {
     case FORM_TEMPLATE_BINARY: {
         size_t half = size.bars / 2;
-        set(&out[n++], "A", half, P, CONT, PLAN_CADENCE_PAC, NONE, 0);
-        set(&out[n++], "B", half, P, CONT, PLAN_CADENCE_PAC, NONE, 0);
+        set(&out[n++], "A", half, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n++], "B", half, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         break;
     }
     case FORM_TEMPLATE_ROUNDED_BINARY: {
         size_t second = size.bars == 16 ? 4 : 8;
-        set(&out[n++], "A", 8, P, CONT, PLAN_CADENCE_PAC, NONE, 0);
-        set(&out[n++], "B", second, CBI, CONT, PLAN_CADENCE_HC, NONE, 0);
-        set(&out[n++], "A'", second, P, CONT, PLAN_CADENCE_PAC, 0, 0);
+        set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n++], "B", second, CBI, CONT, CADENCE_TYPE_HALF, NONE, 0);
+        set(&out[n++], "A'", second, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
         break;
     }
     case FORM_TEMPLATE_TERNARY: {
         size_t third = size.bars / 3;
-        set(&out[n++], "A", third, AN, CONS, PLAN_CADENCE_PAC, NONE, 0);
-        set(&out[n++], "B", third, P, CONT, PLAN_CADENCE_PAC, NONE, 0);
-        set(&out[n++], "A", third, AN, CONS, PLAN_CADENCE_PAC, 0, 0);
+        set(&out[n++], "A", third, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n++], "B", third, P, CONT, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
+        set(&out[n++], "A", third, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
         break;
     }
     case FORM_TEMPLATE_VARIATIONS:
-        set(&out[n++], "T", 8, AN, CONS, PLAN_CADENCE_PAC, NONE, 0);
+        set(&out[n++], "T", 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, NONE, 0);
         for (size_t k = 1; k <= size.count; k++) {
             letters[n][0] = 'V';
             letters[n][1] = (char)('0' + k);
             letters[n][2] = '\0';
-            set(&out[n], letters[n], 8, AN, CONS, PLAN_CADENCE_PAC, 0, 0);
+            set(&out[n], letters[n], 8, AN, CONS, CADENCE_TYPE_PERFECT_AUTHENTIC, 0, 0);
             n++;
         }
         break;
     case FORM_TEMPLATE_LOOP:
         if (size.bars == 8) {
-            set(&out[n++], "A", 8, P, CONT, PLAN_CADENCE_HC, NONE, 0);
+            set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
         } else {
-            set(&out[n++], "A", 8, P, CONT, PLAN_CADENCE_IAC, NONE, 0);
-            set(&out[n++], "B", 8, P, CONT, PLAN_CADENCE_HC, NONE, 0);
+            set(&out[n++], "A", 8, P, CONT, CADENCE_TYPE_IMPERFECT_AUTHENTIC, NONE, 0);
+            set(&out[n++], "B", 8, P, CONT, CADENCE_TYPE_HALF, NONE, 0);
         }
         break;
     case FORM_TEMPLATE_LAYERED: {
@@ -134,7 +134,7 @@ static size_t expected_sections(FormTemplateKind kind, Size size, Expected *out)
             letters[n][1] = (char)('0' + k);
             letters[n][2] = '\0';
             unsigned layers = k == size.count ? PLAN_LAYERS_ALL : *BUILD_UP[k - 1];
-            set(&out[n], letters[n], 8, P, CONT, PLAN_CADENCE_HC, k == 1 ? NONE : 0, layers);
+            set(&out[n], letters[n], 8, P, CONT, CADENCE_TYPE_HALF, k == 1 ? NONE : 0, layers);
             n++;
         }
         break;
@@ -206,13 +206,12 @@ static Motive scenario_motive(const Scenario *scenario) {
     }
     motive.meter.beats_per_bar = scenario->beats;
     motive.meter.beat_unit = 4;
-    motive.key.tonic_pitch_class = scenario->tonic;
-    motive.key.mode = scenario->mode;
+    motive.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     if (scenario->beats == 3) {
         /* The half note at beat 3 ends on the barline as a quarter. */
         PlanNote *last = &motive.notes[motive.note_count - 1];
-        assert(plan_time_make(1, 4, &last->duration) == PLAN_OK);
-        assert(plan_time_make(3, 4, &motive.length) == PLAN_OK);
+        assert(rational_make(1, 4, &last->duration) == RATIONAL_OK);
+        assert(rational_make(3, 4, &motive.length) == RATIONAL_OK);
     }
     return motive;
 }
@@ -222,8 +221,7 @@ static PieceRequest scenario_request(const Scenario *scenario, FormTemplateKind 
     PieceRequest request;
     memset(&request, 0, sizeof(request));
     request.form = kind;
-    request.key.tonic_pitch_class = scenario->tonic;
-    request.key.mode = scenario->mode;
+    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = 4;
     request.bars = size.bars;
@@ -242,7 +240,7 @@ static const PlanConstraint *find(const PiecePlan *plan, NodeId id, PlanConstrai
     return NULL;
 }
 
-static long bars_of(PlanTime time, int beats) {
+static long bars_of(Rational time, int beats) {
     /* time is in whole notes; a bar is beats quarters. */
     long quarters_num = time.num * 4;
     assert(quarters_num % (long)time.den == 0);
@@ -282,8 +280,8 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, For
         /* An antecedent's weak cadence comes second. */
         const PlanConstraint *weak = find(plan, section, PLAN_CONSTRAINT_CADENCE, 1);
         assert((expected[i].beginning == AN) == (weak != NULL));
-        assert(!weak || weak->params.cadence == PLAN_CADENCE_HC);
-        assert(key && key->params.key.tonic_pitch_class == scenario->tonic && key->params.key.mode == scenario->mode);
+        assert(!weak || weak->params.cadence == CADENCE_TYPE_HALF);
+        assert(key && analysis_key_tonic_pitch_class(&key->params.key) == scenario->tonic && key->params.key.mode == scenario->mode);
         if (expected[i].returns == NONE) {
             assert(back == NULL);
         } else {

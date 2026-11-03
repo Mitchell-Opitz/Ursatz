@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <semantics/cadence_type.h>
+
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
 
@@ -42,14 +44,6 @@ typedef enum {
     PLAN_CONSTRAINT_SEAM,           /* no parameters: on a section node, the bar after the loop's end, a Given copy of the body's first bar (R-171) */
     PLAN_CONSTRAINT_MOTIVE_TONES    /* on a motive node: its base harmony and the tone role of each note (R-215) */
 } PlanConstraintKind;
-
-typedef enum {
-    PLAN_CADENCE_PAC,
-    PLAN_CADENCE_IAC,
-    PLAN_CADENCE_HC,
-    PLAN_CADENCE_DC,
-    PLAN_CADENCE_PC
-} PlanCadenceType;
 
 typedef enum {
     PLAN_TRANSFORM_NONE,
@@ -326,8 +320,8 @@ typedef struct {
 
 typedef struct {
     char numeral[PLAN_ROMAN_NUMERAL_MAX];
-    PlanTime onset;
-    PlanTime length;
+    Rational onset;
+    Rational length;
 } PlanToneChord;
 
 typedef struct {
@@ -342,9 +336,9 @@ typedef struct {
     PlanConstraintKind kind;
     union {
         int bars;
-        PlanCadenceType cadence;
+        CadenceType cadence;
         PlanMotiveRef motive;
-        PlanKey key;
+        AnalysisKey key;
         PlanArchetype archetype;
         PlanSchemaRef schema;
         PlanHarmonyShape harmony_shape;
@@ -357,7 +351,7 @@ typedef struct {
         char letter[PLAN_SECTION_LETTER_MAX];
         PlanStyle style;
         PlanSource source;
-        PlanTime pickup; /* the anacrusis: a multiple of 1/32 of a whole note, shorter than a bar */
+        Rational pickup; /* the anacrusis: a multiple of 1/32 of a whole note, shorter than a bar */
         PlanPiecePart piece_part;
         PlanMotiveTones motive_tones;
     } params;

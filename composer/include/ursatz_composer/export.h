@@ -63,8 +63,8 @@ typedef struct {
     bool track_names;                /* MIDI: name the conductor track and each part's track */
     bool section_markers;            /* MIDI: a marker at the start of each section that is not material */
     bool loop_markers;               /* MIDI: markers "loopStart" at loop_start and "loopEnd" at loop_end (R-172) */
-    PlanTime loop_start;             /* whole notes from the start of the piece; used with loop_markers */
-    PlanTime loop_end;
+    Rational loop_start;             /* whole notes from the start of the piece; used with loop_markers */
+    Rational loop_end;
 } PlanExportOptions;
 
 /* No tempo, no loop markers, track names and section markers on. A tempo that is not 0/0 needs both parts at least 1 and rounds to

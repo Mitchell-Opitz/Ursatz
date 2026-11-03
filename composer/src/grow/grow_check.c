@@ -21,7 +21,7 @@
 #define TICKS_PER_WHOLE 128L
 
 /* A length as a whole number of ticks, the unit the rules below are asked in; 0 when it is not a whole number. */
-static size_t ticks_of(PlanTime time) {
+static size_t ticks_of(Rational time) {
     long scaled = time.num * TICKS_PER_WHOLE;
     return time.den != 0 && scaled > 0 && scaled % (long)time.den == 0 ? (size_t)(scaled / (long)time.den) : 0;
 }
@@ -37,18 +37,14 @@ static void ask(Soft *soft, bool holds) {
     soft->total++;
 }
 
-static CadenceType cadence_of(PlanCadenceType cadence) {
-    return harmony_cadence_type_of(cadence);
-}
-
 /* The rules of a continuation: it fragments the basic idea, the fragments in their span and in their notes. */
 static const char *judge_continuation(const GrowThemeSpec *spec) {
-    PlanTime bar = grow_bar_length(&spec->meter);
-    PlanTime unit = {0, 1};
-    if (plan_time_make(bar.num * (long)spec->bars, bar.den * 8, &unit) != PLAN_OK) {
+    Rational bar = grow_bar_length(&spec->meter);
+    Rational unit = {0, 1};
+    if (rational_make(bar.num * (long)spec->bars, bar.den * 8, &unit) != RATIONAL_OK) {
         return "theme not measurable";
     }
-    PlanTime basic = {unit.num * 2, unit.den};
+    Rational basic = {unit.num * 2, unit.den};
     size_t basic_ticks = ticks_of(basic);
     size_t fragment_ticks = ticks_of(unit);
     if (basic_ticks == 0 || fragment_ticks == 0 || !standard_form_is_fragmentation(basic_ticks, fragment_ticks)) {
@@ -106,7 +102,7 @@ static bool motives_differ(const Motive *a, const Motive *b) {
         return true;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch) {
+        if (a->notes[i].midi != b->notes[i].midi) {
             return true;
         }
     }
@@ -121,11 +117,11 @@ static const char *judge_period(const GrowThemeSpec *spec, Soft *soft) {
     if (!standard_form_period_phrase_ideas_valid(IDEA_LABEL_BASIC_IDEA, IDEA_LABEL_CONTRASTING_IDEA)) {
         return "phrase ideas not a basic idea and a contrasting idea";
     }
-    if (!standard_form_period_cadences_valid(cadence_of(spec->first_cadence), cadence_of(spec->cadence))) {
+    if (!standard_form_period_cadences_valid(spec->first_cadence, spec->cadence)) {
         return "period cadences not valid";
     }
-    ask(soft, standard_form_antecedent_cadence_usual(cadence_of(spec->first_cadence)));
-    ask(soft, standard_form_consequent_cadence_usual(cadence_of(spec->cadence)));
+    ask(soft, standard_form_antecedent_cadence_usual(spec->first_cadence));
+    ask(soft, standard_form_consequent_cadence_usual(spec->cadence));
     ask(soft, standard_form_antecedent_length_usual(half));
     ask(soft, standard_form_consequent_length_usual(half, half));
     ask(soft, standard_form_consequent_contrast_usual(motives_differ(&spec->developed[GROW_PLACE_CONTRAST],
@@ -184,7 +180,7 @@ static const char *judge(const GrowThemeSpec *spec, Soft *soft) {
     }
     /* A theme with an antecedent ends in a cadence stronger than the antecedent's. */
     if (spec->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT &&
-        harmony_cadence_strength(cadence_of(spec->first_cadence)) >= harmony_cadence_strength(cadence_of(spec->cadence))) {
+        harmony_cadence_strength(spec->first_cadence) >= harmony_cadence_strength(spec->cadence)) {
         return "ending cadence not stronger than the antecedent's";
     }
     return form == PHRASE_LEVEL_FORM_PERIOD ? judge_period(spec, soft) : judge_hybrid(spec, soft);

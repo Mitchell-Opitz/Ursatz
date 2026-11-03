@@ -15,27 +15,23 @@
 #include "melody/melody_internal.h"
 #include "util/util.h"
 
-/*
- * The tonic spelled with the fewest accidentals, by pitch class: letter (0 C, 1 D, 2 E, 3 F, 4 G, 5 A,
- * 6 B) and accidental. The other degrees take their letters from the tonic's.
- */
-typedef struct {
-    int letter;
-    int accidental;
-} Tonic;
-
-static const Tonic MAJOR_TONICS[12] = {{0, 0},  {1, -1}, {1, 0}, {2, -1}, {2, 0}, {3, 0},
-                                       {3, 1},  {4, 0},  {5, -1}, {5, 0}, {6, -1}, {6, 0}};
-static const Tonic MINOR_TONICS[12] = {{0, 0}, {0, 1}, {1, 0}, {2, -1}, {2, 0}, {3, 0},
-                                       {3, 1}, {4, 0}, {4, 1}, {5, 0},  {6, -1}, {6, 0}};
-
 /* The pitch class of each letter's natural note, C D E F G A B. */
 static const int NATURAL_PC[7] = {0, 2, 4, 5, 7, 9, 11};
 static const PitchLetter LETTERS[7] = {PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LETTER_E, PITCH_LETTER_F,
                                        PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_B};
 
+/* The place of a letter in the order C D E F G A B. */
+static int letter_index(PitchLetter letter) {
+    for (int i = 0; i < 7; i++) {
+        if (LETTERS[i] == letter) {
+            return i;
+        }
+    }
+    return 0;
+}
+
 /* The scale degree of the bass member of the chord, which names the letter of its note. */
-int harmony_member_degree(PlanKeyMode mode, const PhraseChord *chord) {
+int harmony_member_degree(KeyStructureMode mode, const PhraseChord *chord) {
     if (chord->applied) {
         return (harmony_applied_root_degree(harmony_mode_of(mode), &chord->applied_chord) - 1 +
                 2 * chord->applied_inversion) % 7 + 1;
@@ -44,13 +40,11 @@ int harmony_member_degree(PlanKeyMode mode, const PhraseChord *chord) {
 }
 
 /* Spells a MIDI pitch as the given scale degree of the key; NULL when it cannot be spelled. */
-PitchSpelling *harmony_spell_pitch(const PlanKey *key, int degree, int pitch) {
+PitchSpelling *harmony_spell_pitch(const AnalysisKey *key, int degree, int pitch) {
     if (degree < 1 || degree > 7) {
         return NULL;
     }
-    const Tonic *tonic = key->mode == PLAN_MODE_MINOR ? &MINOR_TONICS[key->tonic_pitch_class]
-                                                      : &MAJOR_TONICS[key->tonic_pitch_class];
-    int letter = (tonic->letter + degree - 1) % 7;
+    int letter = (letter_index(key->tonic_letter) + degree - 1) % 7;
     int pc = ((pitch % 12) + 12) % 12;
     int accidental = ((pc - NATURAL_PC[letter] + 6) % 12 + 12) % 12 - 6;
     int octave = (pitch - accidental) / 12 - 1;
@@ -61,11 +55,9 @@ PitchSpelling *harmony_spell_pitch(const PlanKey *key, int degree, int pitch) {
     return spelling;
 }
 
-PitchSpelling *harmony_spell_tonic(const PlanKey *key, int octave) {
-    const Tonic *tonic = key->mode == PLAN_MODE_MINOR ? &MINOR_TONICS[key->tonic_pitch_class]
-                                                      : &MAJOR_TONICS[key->tonic_pitch_class];
+PitchSpelling *harmony_spell_tonic(const AnalysisKey *key, int octave) {
     PitchSpelling *spelling = NULL;
-    if (pitch_spelling_create(LETTERS[tonic->letter], tonic->accidental, octave, &spelling) != PITCH_SPELLING_OK) {
+    if (pitch_spelling_create(key->tonic_letter, key->tonic_accidental, octave, &spelling) != PITCH_SPELLING_OK) {
         return NULL;
     }
     return spelling;
@@ -149,7 +141,7 @@ bool harmony_bass_check(const void *payload, FillCheck *out) {
     return true;
 }
 
-bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, PlanKey key, const HarmonyBassParams *params,
+bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, AnalysisKey key, const HarmonyBassParams *params,
                         const char **violation) {
     BassCandidate *line = calloc(1, sizeof(*line));
     if (!line || !violation) {
@@ -166,7 +158,7 @@ bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, PlanKey key, const
     for (size_t i = 0; ok && i < context->count; i++) {
         PlanSpan chord_span;
         LaneSpanId found[2];
-        PlanTime offset = {0, 1};
+        Rational offset = {0, 1};
         size_t cells = 0;
         for (size_t k = 0; ok && k < i; k++) {
             cells += context->chords[k].cells;
@@ -176,26 +168,26 @@ bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, PlanKey key, const
         if (ok) {
             PlanSpan bass_span = plan_lane_span_span(plan, found[0]);
             const PlanNotes *notes = &plan_lane_span_payload(plan, found[0])->notes;
-            ok = plan_time_compare(bass_span.start, chord_span.start) == 0 &&
-                 plan_time_compare(bass_span.length, chord_span.length) == 0;
+            ok = rational_cmp(bass_span.start, chord_span.start) == 0 &&
+                 rational_cmp(bass_span.length, chord_span.length) == 0;
             for (size_t n = 0; ok && n < notes->note_count && line->note_count < BASS_MAX_NOTES; n++) {
                 size_t first_cell;
                 size_t length_cells;
                 PlanSpan note_span;
                 /* A note lasts a whole number of cells of the metre, from the cell it starts on. */
-                ok = plan_time_compare(notes->notes[n].offset, offset) == 0 &&
-                     plan_time_add(chord_span.start, offset, &note_span.start) == PLAN_OK;
+                ok = rational_cmp(notes->notes[n].offset, offset) == 0 &&
+                     rational_add(chord_span.start, offset, &note_span.start) == RATIONAL_OK;
                 note_span.length = notes->notes[n].duration;
                 ok = ok && harmony_metre_find_cells(&context->metre, note_span, &first_cell, &length_cells) &&
-                     plan_time_add(offset, notes->notes[n].duration, &offset) == PLAN_OK;
+                     rational_add(offset, notes->notes[n].duration, &offset) == RATIONAL_OK;
                 if (ok) {
-                    line->notes[line->note_count].pitch = notes->notes[n].midi_pitch;
+                    line->notes[line->note_count].pitch = notes->notes[n].midi;
                     line->notes[line->note_count].cells = length_cells;
                     line->notes[line->note_count].chord = i;
                     line->note_count++;
                 }
             }
-            ok = ok && plan_time_compare(offset, bass_span.length) == 0;
+            ok = ok && rational_cmp(offset, bass_span.length) == 0;
         }
     }
     PhraseVerdict verdict;

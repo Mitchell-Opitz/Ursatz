@@ -17,9 +17,9 @@
  *             unreadable numeral and a negative onset are refused, and a refused call adds nothing
  */
 
-static PlanTime time_of(long numerator, unsigned long denominator) {
-    PlanTime time;
-    assert(plan_time_make(numerator, denominator, &time) == PLAN_OK);
+static Rational time_of(long numerator, unsigned long denominator) {
+    Rational time;
+    assert(rational_make(numerator, denominator, &time) == RATIONAL_OK);
     return time;
 }
 
@@ -42,8 +42,7 @@ static PiecePlan *new_plan(NodeId *section) {
     PiecePlan *plan = NULL;
     memset(&request, 0, sizeof(request));
     request.form = FORM_TEMPLATE_ROUNDED_BINARY;
-    request.key.tonic_pitch_class = 0;
-    request.key.mode = PLAN_MODE_MAJOR;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.seed = 1;
@@ -57,10 +56,10 @@ static size_t harmony_spans(const PiecePlan *plan, NodeId section, LaneSpanId *i
     return plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, section), ids, capacity);
 }
 
-static void expect_span(const PiecePlan *plan, LaneSpanId id, PlanTime start, PlanTime length, const char *numeral) {
+static void expect_span(const PiecePlan *plan, LaneSpanId id, Rational start, Rational length, const char *numeral) {
     PlanSpan span = plan_lane_span_span(plan, id);
-    assert(plan_time_compare(span.start, start) == 0);
-    assert(plan_time_compare(span.length, length) == 0);
+    assert(rational_cmp(span.start, start) == 0);
+    assert(rational_cmp(span.length, length) == 0);
     assert(plan_lane_span_state(plan, id) == PLAN_STATE_GIVEN);
     assert(strcmp(plan_lane_span_payload(plan, id)->harmony.roman_numeral, numeral) == 0);
 }
@@ -68,7 +67,7 @@ static void expect_span(const PiecePlan *plan, LaneSpanId id, PlanTime start, Pl
 static void test_exact(void) {
     NodeId section;
     PiecePlan *plan = new_plan(&section);
-    PlanTime start = plan_node_span(plan, section).start;
+    Rational start = plan_node_span(plan, section).start;
     /* Bar 1 of 4/4: I for two beats, IV for a beat and a half, V on the "and" of beat 3 for the rest. */
     GivenChord chords[3] = {{"I", time_of(1, 1), time_of(1, 2)},
                             {"IV", time_of(3, 2), time_of(3, 8)},
@@ -76,12 +75,12 @@ static void test_exact(void) {
     LaneSpanId ids[8];
     assert(plan_give_chords(plan, section, chords, 3) == GIVEN_OK);
     assert(harmony_spans(plan, section, ids, 8) == 3);
-    PlanTime at;
-    assert(plan_time_add(start, chords[0].onset, &at) == PLAN_OK);
+    Rational at;
+    assert(rational_add(start, chords[0].onset, &at) == RATIONAL_OK);
     expect_span(plan, ids[0], at, chords[0].length, "I");
-    assert(plan_time_add(start, chords[1].onset, &at) == PLAN_OK);
+    assert(rational_add(start, chords[1].onset, &at) == RATIONAL_OK);
     expect_span(plan, ids[1], at, chords[1].length, "IV");
-    assert(plan_time_add(start, chords[2].onset, &at) == PLAN_OK);
+    assert(rational_add(start, chords[2].onset, &at) == RATIONAL_OK);
     expect_span(plan, ids[2], at, chords[2].length, "V");
     plan_destroy(plan);
 }

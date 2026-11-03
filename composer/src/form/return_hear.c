@@ -85,8 +85,8 @@ static void theme_destroy(Theme *theme) {
 }
 
 /* Every melody note that starts inside range, in order: its pitch and its duration. False on allocation failure. */
-static bool read_notes(const PiecePlan *plan, PlanSpan range, int **pitches, PlanTime **durations, size_t *count) {
-    PlanTime end;
+static bool read_notes(const PiecePlan *plan, PlanSpan range, int **pitches, Rational **durations, size_t *count) {
+    Rational end;
     size_t spans = plan_lane_find(plan, PLAN_LANE_MELODY, 0, range, NULL, 0);
     LaneSpanId *ids = spans ? calloc(spans, sizeof(LaneSpanId)) : NULL;
     size_t capacity = 0;
@@ -102,7 +102,7 @@ static bool read_notes(const PiecePlan *plan, PlanSpan range, int **pitches, Pla
         capacity += plan_lane_span_payload(plan, ids[s])->notes.note_count;
     }
     *pitches = capacity ? calloc(capacity, sizeof(int)) : NULL;
-    *durations = capacity ? calloc(capacity, sizeof(PlanTime)) : NULL;
+    *durations = capacity ? calloc(capacity, sizeof(Rational)) : NULL;
     if (capacity && (!*pitches || !*durations)) {
         free(ids);
         free(*pitches);
@@ -115,12 +115,12 @@ static bool read_notes(const PiecePlan *plan, PlanSpan range, int **pitches, Pla
         PlanSpan span = plan_lane_span_span(plan, ids[s]);
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[s])->notes;
         for (size_t n = 0; n < notes->note_count; n++) {
-            PlanTime onset;
-            if (plan_time_add(span.start, notes->notes[n].offset, &onset) != PLAN_OK) {
+            Rational onset;
+            if (rational_add(span.start, notes->notes[n].offset, &onset) != RATIONAL_OK) {
                 continue;
             }
-            if (plan_time_compare(onset, range.start) >= 0 && plan_time_compare(onset, end) < 0) {
-                (*pitches)[*count] = notes->notes[n].midi_pitch;
+            if (rational_cmp(onset, range.start) >= 0 && rational_cmp(onset, end) < 0) {
+                (*pitches)[*count] = notes->notes[n].midi;
                 (*durations)[*count] = notes->notes[n].duration;
                 (*count)++;
             }
@@ -131,7 +131,7 @@ static bool read_notes(const PiecePlan *plan, PlanSpan range, int **pitches, Pla
 }
 
 /* The Contour and RhythmicPattern of the notes into the theme, which then owns them. False when they cannot be made. */
-static bool make_window(Theme *theme, const int *pitches, const PlanTime *durations, size_t count) {
+static bool make_window(Theme *theme, const int *pitches, const Rational *durations, size_t count) {
     PitchIdentity **pitch_ids = calloc(count, sizeof(PitchIdentity *));
     ContourDirection *directions = calloc(count - 1, sizeof(ContourDirection));
     Duration **duration_objects = calloc(count, sizeof(Duration *));
@@ -192,20 +192,20 @@ static bool make_window(Theme *theme, const int *pitches, const PlanTime *durati
 }
 
 /* The bar of the meter under a section, in whole notes. */
-static bool bar_length(const PiecePlan *plan, PlanSpan span, PlanTime *bar) {
+static bool bar_length(const PiecePlan *plan, PlanSpan span, Rational *bar) {
     LaneSpanId id;
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, &id, 1) < 1) {
         return false;
     }
     const PlanMeter *meter = &plan_lane_span_payload(plan, id)->meter;
-    return meter->beat_unit > 0 && plan_time_make(meter->beats_per_bar, (unsigned long)meter->beat_unit, bar) == PLAN_OK;
+    return meter->beat_unit > 0 && rational_make(meter->beats_per_bar, (long long)meter->beat_unit, bar) == RATIONAL_OK;
 }
 
 /* Adds the themes heard in a section to themes; form_hear counts bars from the start of the plan. */
 static ReturnHearResult read_section(const PiecePlan *plan, NodeId section, Theme *themes, size_t *count) {
     FormHeard heard;
     PlanSpan span = plan_node_span(plan, section);
-    PlanTime bar;
+    Rational bar;
     FormHearResult result = form_hear(plan, span, &heard);
     if (result == FORM_HEAR_ERR_NOT_WRITTEN) {
         return RETURN_HEAR_ERR_NOT_WRITTEN;
@@ -221,10 +221,10 @@ static ReturnHearResult read_section(const PiecePlan *plan, NodeId section, Them
     for (size_t t = 0; status == RETURN_HEAR_OK && t < heard.count && *count < MAX_THEMES; t++) {
         PlanSpan range;
         int *pitches;
-        PlanTime *durations;
+        Rational *durations;
         size_t notes;
-        if (plan_time_make(bar.num * (long)heard.themes[t].first_bar, bar.den, &range.start) != PLAN_OK ||
-            plan_time_make(bar.num * (long)heard.themes[t].bars, bar.den, &range.length) != PLAN_OK) {
+        if (rational_make(bar.num * (long)heard.themes[t].first_bar, bar.den, &range.start) != RATIONAL_OK ||
+            rational_make(bar.num * (long)heard.themes[t].bars, bar.den, &range.length) != RATIONAL_OK) {
             status = RETURN_HEAR_ERR_ANALYSIS;
             break;
         }

@@ -40,7 +40,7 @@ static bool beats(const PiecePlan *plan, FillTarget candidate, FillTarget best) 
     if (candidate_constraints != best_constraints) {
         return candidate_constraints > best_constraints;
     }
-    int by_start = plan_time_compare(fill_target_span(plan, candidate).start, fill_target_span(plan, best).start);
+    int by_start = rational_cmp(fill_target_span(plan, candidate).start, fill_target_span(plan, best).start);
     if (by_start != 0) {
         return by_start < 0;
     }

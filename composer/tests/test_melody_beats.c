@@ -45,18 +45,18 @@ typedef struct {
     LaneSpanId target;
 } Piece;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
-static PlanTime beats(long count) {
+static Rational beats(long count) {
     return fraction(count, 4);
 }
 
-static PlanKey c_major(void) {
-    PlanKey key = {0, PLAN_MODE_MAJOR};
+static AnalysisKey c_major(void) {
+    AnalysisKey key = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
     return key;
 }
 
@@ -66,7 +66,8 @@ static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, in
     PlanLanePayload payload;
     LaneSpanId id;
     memset(&payload, 0, sizeof(payload));
-    note.midi_pitch = pitch;
+    note.midi = pitch;
+    note.spelled = false;
     note.offset = fraction(0, 1);
     note.duration = span.length;
     payload.notes.notes = &note;
@@ -102,7 +103,7 @@ static Piece build(const Chord *chords, size_t count, bool with_melody) {
         PlanSpan span = {beats(chords[i].start), beats(chords[i].length)};
         memset(&payload, 0, sizeof(payload));
         strcpy(payload.harmony.roman_numeral, chords[i].numeral);
-        payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+        payload.harmony.has_function = false;
         assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_HARMONY, 0, span, &payload, &id) == PLAN_OK);
         assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
         add_notes(piece.plan, piece.owner, PLAN_LANE_BASS, 0, span, chords[i].bass, PLAN_STATE_REALIZED);
@@ -154,7 +155,8 @@ static void add_accompaniment_motive(Piece *piece) {
     motive.key_source = MOTIVE_KEY_GIVEN;
     motive.role = MOTIVE_ROLE_ACCOMPANIMENT;
     for (size_t n = 0; n < 4; n++) {
-        motive.notes[n].midi_pitch = PITCHES[n];
+        motive.notes[n].midi = PITCHES[n];
+        motive.notes[n].spelled = false;
         motive.notes[n].offset = fraction((long)n, 8);
         motive.notes[n].duration = fraction(1, 8);
     }
@@ -172,7 +174,7 @@ static void add_accompaniment_motive(Piece *piece) {
 /* The melody span to fill, with its motive and, when pickup_32nds is not 0, a pickup of that many 32nds of a whole note. */
 static void add_melody_target(Piece *piece, PlanSpan span, NodeId motive, long pickup_32nds) {
     PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
-    PlanTime pickup = fraction(pickup_32nds, 32);
+    Rational pickup = fraction(pickup_32nds, 32);
     piece->span = span;
     piece->body = span;
     piece->target = add_notes(piece->plan, piece->owner, PLAN_LANE_MELODY, 0, span, 60, PLAN_STATE_CONSTRAINED);
@@ -185,9 +187,8 @@ static void add_melody_target(Piece *piece, PlanSpan span, NodeId motive, long p
         constraint.kind = PLAN_CONSTRAINT_PICKUP;
         constraint.params.pickup = pickup;
         assert(plan_lane_span_add_constraint(piece->plan, piece->target, &constraint) == PLAN_OK);
-        assert(plan_time_add(span.start, pickup, &piece->body.start) == PLAN_OK);
-        assert(plan_time_make(span.length.num * (long)pickup.den - pickup.num * (long)span.length.den,
-                              span.length.den * pickup.den, &piece->body.length) == PLAN_OK);
+        assert(rational_add(span.start, pickup, &piece->body.start) == RATIONAL_OK);
+        assert(rational_sub(span.length, pickup, &piece->body.length) == RATIONAL_OK);
     }
 }
 
@@ -310,10 +311,10 @@ static void test_strong_beats(void) {
         MelodyContext *context = malloc(sizeof(*context));
         add_melody_target(&piece, span, motive, 0);
         assert(context && melody_context_read(piece.plan, piece.target, context));
-        assert(melody_on_cell(context, 0) == (variant == 0));
+        assert(melody_on_cell(context, POSITION_ZERO) == (variant == 0));
         /* Beat 3 of the plan is strong either way. */
-        assert(melody_on_cell(context, (2 - (variant ? 1 : 2)) * TICKS_PER_BEAT));
-        assert(!melody_on_cell(context, (3 - (variant ? 1 : 2)) * TICKS_PER_BEAT));
+        assert(melody_on_cell(context, beats(2 - (variant ? 1 : 2))));
+        assert(!melody_on_cell(context, beats(3 - (variant ? 1 : 2))));
         free(context);
         plan_destroy(piece.plan);
     }

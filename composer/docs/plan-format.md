@@ -21,6 +21,14 @@ These are the Analyzer's.
 - **Claim** is a lane span written the way the Analyzer writes a claim: `framework`, `span`,
   `note_ids`, `label`, `uncertainty`.
 
+## In memory
+
+The file above does not change with the types behind it. In memory a time is a library `Rational` (`<core/rational.h>`) in
+whole notes, a span a `Rational` start and length, a cadence a `CadenceType` (the file names PAC, IAC, HC, DC and PC as
+`pac`, `iac`, `hc`, `dc`, `pc`), a harmonic function a `HarmonicFunction` with a `has_function` flag (the file writes
+`unknown` when it is false), a key an `AnalysisKey` (the file writes `tonic_pitch_class` and `mode`), and a note a MIDI
+number with an optional spelling. The file carries no spelling yet, so a note read from it is unspelled.
+
 ## Top level
 
 | Key | Content |

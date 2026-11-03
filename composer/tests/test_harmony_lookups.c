@@ -15,20 +15,20 @@ static void test_meters_and_minimum_bars(void) {
     for (int i = 0; i < 4; i++) {
         assert(harmony_meter_supported(&supported[i]));
         /* A cadence needs at least two bars, and a plagal cadence more than an authentic one. */
-        assert(harmony_phrase_min_bars(PLAN_CADENCE_HC, &supported[i]) >= 2);
-        assert(harmony_phrase_min_bars(PLAN_CADENCE_PC, &supported[i]) > harmony_phrase_min_bars(PLAN_CADENCE_PAC, &supported[i]));
-        assert(harmony_phrase_min_bars(PLAN_CADENCE_PAC, &supported[i]) >= harmony_phrase_min_bars(PLAN_CADENCE_HC, &supported[i]));
+        assert(harmony_phrase_min_bars(CADENCE_TYPE_HALF, &supported[i]) >= 2);
+        assert(harmony_phrase_min_bars(CADENCE_TYPE_PLAGAL, &supported[i]) > harmony_phrase_min_bars(CADENCE_TYPE_PERFECT_AUTHENTIC, &supported[i]));
+        assert(harmony_phrase_min_bars(CADENCE_TYPE_PERFECT_AUTHENTIC, &supported[i]) >= harmony_phrase_min_bars(CADENCE_TYPE_HALF, &supported[i]));
     }
     PlanMeter odd[3] = {meter(5, 4), meter(7, 8), meter(4, 8)};
     for (int i = 0; i < 3; i++) {
         assert(!harmony_meter_supported(&odd[i]));
-        assert(harmony_phrase_min_bars(PLAN_CADENCE_PAC, &odd[i]) == 0);
+        assert(harmony_phrase_min_bars(CADENCE_TYPE_PERFECT_AUTHENTIC, &odd[i]) == 0);
     }
     /* In 4/4 a PAC needs 2 bars (I V on one, I on the next) and a PC 3; in 3/4 a PAC needs 3 and a PC 5. */
-    assert(harmony_phrase_min_bars(PLAN_CADENCE_PAC, &supported[2]) == 2);
-    assert(harmony_phrase_min_bars(PLAN_CADENCE_PC, &supported[2]) == 3);
-    assert(harmony_phrase_min_bars(PLAN_CADENCE_PAC, &supported[1]) == 3);
-    assert(harmony_phrase_min_bars(PLAN_CADENCE_PC, &supported[1]) == 5);
+    assert(harmony_phrase_min_bars(CADENCE_TYPE_PERFECT_AUTHENTIC, &supported[2]) == 2);
+    assert(harmony_phrase_min_bars(CADENCE_TYPE_PLAGAL, &supported[2]) == 3);
+    assert(harmony_phrase_min_bars(CADENCE_TYPE_PERFECT_AUTHENTIC, &supported[1]) == 3);
+    assert(harmony_phrase_min_bars(CADENCE_TYPE_PLAGAL, &supported[1]) == 5);
 }
 
 static void test_names(void) {
@@ -49,12 +49,12 @@ static void test_names(void) {
 
 /* The schemas whose data makes chords are available, the modulating ones and the inconsistent ones are not. */
 static void test_availability(void) {
-    assert(harmony_schema_available(GALANT_SCHEMA_ROMANESCA, PLAN_MODE_MAJOR));
-    assert(harmony_schema_available(GALANT_SCHEMA_DO_RE_MI, PLAN_MODE_MAJOR));
-    assert(harmony_schema_available(GALANT_SCHEMA_DO_RE_MI, PLAN_MODE_MINOR));
-    assert(!harmony_schema_available(GALANT_SCHEMA_MODULATING_PRINNER, PLAN_MODE_MAJOR));
-    assert(!harmony_schema_available(GALANT_SCHEMA_QUIESCENZA, PLAN_MODE_MAJOR));
-    assert(!harmony_schema_available(GALANT_SCHEMA_COUNT, PLAN_MODE_MAJOR));
+    assert(harmony_schema_available(GALANT_SCHEMA_ROMANESCA, KEY_STRUCTURE_MODE_MAJOR));
+    assert(harmony_schema_available(GALANT_SCHEMA_DO_RE_MI, KEY_STRUCTURE_MODE_MAJOR));
+    assert(harmony_schema_available(GALANT_SCHEMA_DO_RE_MI, KEY_STRUCTURE_MODE_MINOR));
+    assert(!harmony_schema_available(GALANT_SCHEMA_MODULATING_PRINNER, KEY_STRUCTURE_MODE_MAJOR));
+    assert(!harmony_schema_available(GALANT_SCHEMA_QUIESCENZA, KEY_STRUCTURE_MODE_MAJOR));
+    assert(!harmony_schema_available(GALANT_SCHEMA_COUNT, KEY_STRUCTURE_MODE_MAJOR));
 }
 
 int main(void) {

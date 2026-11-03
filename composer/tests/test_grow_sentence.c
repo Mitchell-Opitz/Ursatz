@@ -25,17 +25,17 @@
 typedef struct {
     const char *name;
     int tonic;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int beats;
     int unit;
     const char *motive;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 0, PLAN_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
-    {"D minor 3/4", 2, PLAN_MODE_MINOR, 3, 4, "F4:q A4:e G4:e E4:q"},
-    {"G major 6/8", 7, PLAN_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"},
-    {"F major 2/4", 5, PLAN_MODE_MAJOR, 2, 4, "A4:q C5:e Bb4:e"},
+    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
+    {"D minor 3/4", 2, KEY_STRUCTURE_MODE_MINOR, 3, 4, "F4:q A4:e G4:e E4:q"},
+    {"G major 6/8", 7, KEY_STRUCTURE_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"},
+    {"F major 2/4", 5, KEY_STRUCTURE_MODE_MAJOR, 2, 4, "A4:q C5:e Bb4:e"},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -56,14 +56,13 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key.tonic_pitch_class = scenario->tonic;
-    request.key.mode = scenario->mode;
+    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = scenario->unit;
     request.bars = bars;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
-    request.cadence = PLAN_CADENCE_PAC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     return request;
 }
 
@@ -77,7 +76,7 @@ static NodeId find_node(const PiecePlan *plan, const char *name) {
     return PLAN_NODE_NONE;
 }
 
-static long ticks(PlanTime time) {
+static long ticks(Rational time) {
     assert((time.num * TICKS) % (long)time.den == 0);
     return time.num * TICKS / (long)time.den;
 }
@@ -98,8 +97,8 @@ static size_t tiling(const PiecePlan *plan, PlanLaneKind lane, PlanSpan theme, L
 }
 
 static void check_structure(const PiecePlan *plan, const Scenario *scenario, size_t bars) {
-    PlanTime bar;
-    assert(plan_time_make(scenario->beats, (unsigned long)scenario->unit, &bar) == PLAN_OK);
+    Rational bar;
+    assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     long bar_ticks = ticks(bar);
     NodeId theme = find_node(plan, "theme");
     assert(theme != PLAN_NODE_NONE && plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
@@ -159,8 +158,8 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     LaneSpanId ids[64];
     NodeId theme_node = find_node(plan, "theme");
     PlanSpan theme = plan_node_span(plan, theme_node);
-    PlanTime bar;
-    assert(plan_time_make(scenario->beats, (unsigned long)scenario->unit, &bar) == PLAN_OK);
+    Rational bar;
+    assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     long bar_ticks = ticks(bar);
     size_t cells_per_bar = scenario->unit == 8 || (scenario->beats == 4 && scenario->unit == 4) ? 2 : 1;
     long cell_ticks = bar_ticks / (long)cells_per_bar;
@@ -185,7 +184,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     const PlanConstraint *cadence = plan_lane_span_constraint_count(plan, ids[chords - 1]) > 0
                                         ? plan_lane_span_constraint_at(plan, ids[chords - 1], 0)
                                         : NULL;
-    assert(cadence && cadence->kind == PLAN_CONSTRAINT_CADENCE && cadence->params.cadence == PLAN_CADENCE_PAC);
+    assert(cadence && cadence->kind == PLAN_CONSTRAINT_CADENCE && cadence->params.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
 
     /* Bass: a span for each chord, written. */
     size_t basses = tiling(plan, PLAN_LANE_BASS, theme, ids, 64);
@@ -200,7 +199,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     }
     /* The cadence arrives on the tonic. */
     const PlanNotes *last = &plan_lane_span_payload(plan, ids[melodies - 1])->notes;
-    int tonic_pc = (last->notes[last->note_count - 1].midi_pitch % 12 + 12) % 12;
+    int tonic_pc = (last->notes[last->note_count - 1].midi % 12 + 12) % 12;
     assert(tonic_pc == scenario->tonic);
 
     /* One highest note in the theme's melody. */
@@ -209,11 +208,11 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     for (size_t i = 0; i < melodies; i++) {
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
         for (size_t n = 0; n < notes->note_count; n++) {
-            assert(notes->notes[n].midi_pitch >= 60 && notes->notes[n].midi_pitch <= 79);
-            if (notes->notes[n].midi_pitch > top) {
-                top = notes->notes[n].midi_pitch;
+            assert(notes->notes[n].midi >= 60 && notes->notes[n].midi <= 79);
+            if (notes->notes[n].midi > top) {
+                top = notes->notes[n].midi;
                 at_top = 1;
-            } else if (notes->notes[n].midi_pitch == top) {
+            } else if (notes->notes[n].midi == top) {
                 at_top++;
             }
         }
@@ -224,8 +223,8 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
 /* The material is not part of the piece: it is skipped, and the piece ends with the theme. */
 static void check_render(const PiecePlan *plan, size_t bars, const Scenario *scenario) {
     RenderedPlan rendered;
-    PlanTime bar;
-    assert(plan_time_make(scenario->beats, (unsigned long)scenario->unit, &bar) == PLAN_OK);
+    Rational bar;
+    assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     assert(rendered.count > 0);
     assert(ticks(rendered.piece_end) == (long)bars * ticks(bar));
@@ -351,12 +350,12 @@ static void test_bad_requests(void) {
     changed = request;
     changed.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
     changed.pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
-    changed.cadence = PLAN_CADENCE_HC;
+    changed.cadence = CADENCE_TYPE_HALF;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
     changed.pairing.beginning = (PlanThemeBeginning)7;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
     changed = request;
-    changed.cadence = PLAN_CADENCE_DC;
+    changed.cadence = CADENCE_TYPE_DECEPTIVE;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
 
     /* A motive that does not fit in a bar. */
@@ -432,8 +431,7 @@ static void test_built_plan(void) {
 /* The pitches and the length of the motive written on the motive node `name`. */
 static Motive written_motive(const PiecePlan *plan, const char *name, const Motive *template_motive) {
     Motive motive = *template_motive;
-    motive.key.tonic_pitch_class = SCENARIOS[0].tonic;
-    motive.key.mode = SCENARIOS[0].mode;
+    motive.key = plan_key_of_pitch_class(SCENARIOS[0].tonic, SCENARIOS[0].mode);
     motive.key_source = MOTIVE_KEY_GIVEN;
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
     assert(plan_node_lane_spans(plan, find_node(plan, name), &span, 1) == 1);
@@ -451,8 +449,8 @@ static bool same_notes(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch || plan_time_compare(a->notes[i].offset, b->notes[i].offset) != 0 ||
-            plan_time_compare(a->notes[i].duration, b->notes[i].duration) != 0) {
+        if (a->notes[i].midi != b->notes[i].midi || rational_cmp(a->notes[i].offset, b->notes[i].offset) != 0 ||
+            rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
             return false;
         }
     }
@@ -496,11 +494,11 @@ static void test_motive_forms(void) {
             /* A form below C#4 is taken up an octave. */
             int lowest = 127;
             for (size_t n = 0; n < expected.note_count; n++) {
-                lowest = expected.notes[n].midi_pitch < lowest ? expected.notes[n].midi_pitch : lowest;
+                lowest = expected.notes[n].midi < lowest ? expected.notes[n].midi : lowest;
             }
             if (lowest < 58) {
                 for (size_t n = 0; n < expected.note_count; n++) {
-                    expected.notes[n].midi_pitch += 12;
+                    expected.notes[n].midi += 12;
                 }
             }
             if (same_notes(&m1, &expected)) {

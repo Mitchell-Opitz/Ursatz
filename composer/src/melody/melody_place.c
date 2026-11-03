@@ -54,7 +54,7 @@ static bool pick(const Option *options, size_t count, int max_distance, FillRng 
     return true;
 }
 
-static MelodyNote *push(MelodyCandidate *out, long onset, long duration) {
+static MelodyNote *push(MelodyCandidate *out, Rational onset, Rational duration) {
     if (out->count >= MELODY_MAX_NOTES) {
         return NULL;
     }
@@ -71,12 +71,12 @@ static MelodyNote *push(MelodyCandidate *out, long onset, long duration) {
  * time from one onset of the motive to the next, the last as long as it is.
  */
 static bool layout(const MelodyContext *context, const MelodyFillParams *params, MelodyCandidate *out) {
-    long start = (long)params->start_cell * context->cell;
-    if (context->motive_count == 0 || start + context->motive_length > context->length) {
+    Rational start = position_mul(context->cell, (long long)params->start_cell);
+    if (context->motive_count == 0 || rational_cmp(position_add(start, context->motive_length), context->length) > 0) {
         return false;
     }
     for (size_t k = 0; k < context->motive_count; k++) {
-        MelodyNote *note = push(out, start + context->motive_onset[k], context->motive_duration[k]);
+        MelodyNote *note = push(out, position_add(start, context->motive_onset[k]), context->motive_duration[k]);
         if (!note) {
             return false;
         }
@@ -84,31 +84,33 @@ static bool layout(const MelodyContext *context, const MelodyFillParams *params,
     }
 
     /* A note that ends the phrase starts with the last chord, so the cadence arrives with it. */
-    long at = start + context->motive_length;
-    long last = context->chord_start[context->count - 1];
-    long bound = context->has_cadence && last > at ? last : context->length;
-    long step = params->density > 0 && context->cell % (long)params->density == 0
-                    ? context->cell / (long)params->density
-                    : context->cell;
+    Rational at = position_add(start, context->motive_length);
+    Rational last = context->chord_start[context->count - 1];
+    Rational bound = context->has_cadence && rational_cmp(last, at) > 0 ? last : context->length;
+    /* A density divides the cell only into notes no shorter than the shortest the operator writes. */
+    Rational shortest = rational_ratio(1, MELODY_FINEST_NOTE_DENOMINATOR);
+    Rational share = params->density > 0 ? position_div(context->cell, (long long)params->density) : context->cell;
+    Rational step = params->density > 0 && position_is_multiple(share, shortest) ? share : context->cell;
     size_t k = 0;
-    while (at < bound) {
-        long next;
+    while (rational_cmp(at, bound) < 0) {
+        Rational next;
         if (params->density == 0) {
             size_t m = k++ % context->motive_count;
-            next = at + (m + 1 < context->motive_count ? context->motive_onset[m + 1] - context->motive_onset[m]
-                                                      : context->motive_duration[m]);
+            next = position_add(at, m + 1 < context->motive_count
+                                        ? position_sub(context->motive_onset[m + 1], context->motive_onset[m])
+                                        : context->motive_duration[m]);
         } else {
-            next = (at / step + 1) * step;
+            next = position_mul(step, position_floor_units(at, step) + 1);
         }
-        if (next > bound) {
+        if (rational_cmp(next, bound) > 0) {
             next = bound;
         }
-        if (!push(out, at, next - at)) {
+        if (!push(out, at, position_sub(next, at))) {
             return false;
         }
         at = next;
     }
-    if (bound < context->length && !push(out, bound, context->length - bound)) {
+    if (rational_cmp(bound, context->length) < 0 && !push(out, bound, position_sub(context->length, bound))) {
         return false;
     }
     for (size_t i = 0; i < out->count; i++) {
@@ -167,13 +169,14 @@ bool melody_is_anchor(const MelodyContext *context, const MelodyFillParams *para
         return true;
     }
     return params->nct_types == 0 || i == 0 || i + 1 == melody->count || note->strong ||
-           note->duration >= context->cell || note->onset + note->duration > context->chord_start[note->chord + 1];
+           rational_cmp(note->duration, context->cell) >= 0 ||
+           rational_cmp(position_add(note->onset, note->duration), context->chord_start[note->chord + 1]) > 0;
 }
 
 /* Whether a pitch is a tone of every chord the note sounds through. */
 static bool chord_tone_of_all(const MelodyContext *context, const MelodyNote *note, int pitch) {
-    long end = note->onset + note->duration;
-    for (size_t c = note->chord; c < context->count && context->chord_start[c] < end; c++) {
+    Rational end = position_add(note->onset, note->duration);
+    for (size_t c = note->chord; c < context->count && rational_cmp(context->chord_start[c], end) < 0; c++) {
         if (!((context->chord_mask[c] >> util_pitch_class(pitch)) & 1u)) {
             return false;
         }
@@ -461,28 +464,29 @@ static int scale_step(unsigned scale, int from, int direction, int low, int high
  */
 static bool place_pickup(const MelodyContext *context, const MelodyFillParams *params, FillRng *rng,
                          MelodyCandidate *out) {
-    PlanTime beat_time;
-    long beat;
-    if (context->pickup == 0) {
+    Rational beat_time;
+    if (rational_is_zero(context->pickup)) {
         return true;
     }
-    if (plan_time_make(1, (unsigned long)context->metre.meter.beat_unit, &beat_time) != PLAN_OK ||
-        !melody_ticks(beat_time, &beat)) {
+    if (rational_make(1, (long long)context->metre.meter.beat_unit, &beat_time) != RATIONAL_OK) {
         return false;
     }
-    long unit = (long)rational_gcd(context->pickup, beat);
-    long count = context->pickup / unit;
+    Rational unit = position_gcd(context->pickup, beat_time);
+    long long count = position_floor_units(context->pickup, unit);
     count = count > MELODY_MAX_PICKUP ? MELODY_MAX_PICKUP : count;
-    long first_length = context->pickup - (count - 1) * unit;
-    long onset = -context->pickup;
-    for (long k = 0; k < count; k++) {
-        long length = k == 0 ? first_length : unit;
+    if (count < 1) {
+        return false;
+    }
+    Rational first_length = position_sub(context->pickup, position_mul(unit, count - 1));
+    Rational onset = position_sub(POSITION_ZERO, context->pickup);
+    for (long long k = 0; k < count; k++) {
+        Rational length = k == 0 ? first_length : unit;
         out->pickup_notes[k].onset = onset;
         out->pickup_notes[k].duration = length;
         out->pickup_notes[k].motive_index = -1;
         out->pickup_notes[k].chord = 0;
         out->pickup_notes[k].strong = false;
-        onset += length;
+        onset = position_add(onset, length);
     }
     out->pickup_count = (size_t)count;
 
@@ -513,7 +517,7 @@ static bool place_pickup(const MelodyContext *context, const MelodyFillParams *p
     int last = step ? options[fill_rng_below(rng, steps)] : chord_tones[fill_rng_below(rng, tones)];
     out->pickup_notes[count - 1].pitch = last;
     int direction = last < target ? 1 : -1;
-    for (long k = count - 2; k >= 0; k--) {
+    for (long long k = count - 2; k >= 0; k--) {
         /* Going back from the last note, away from the downbeat note: the line leans into it. */
         int pitch = scale_step(scale, out->pickup_notes[k + 1].pitch, -direction, params->range_low, params->range_high);
         if (pitch < 0) {

@@ -108,7 +108,7 @@ static VariantValue draw_param(FillRng *rng, const VariantParam *param, const Mo
         break;
     case VARIANT_PARAM_PITCH:
         /* An axis is one of the motive's own pitches. */
-        value.value = current->notes[fill_rng_below(rng, current->note_count)].midi_pitch;
+        value.value = current->notes[fill_rng_below(rng, current->note_count)].midi;
         break;
     case VARIANT_PARAM_RATIO: {
         /* A factor in lowest terms from min:max to max:min, above 1 or, when the parameter shrinks, below it. */
@@ -259,7 +259,7 @@ static bool normalize_contour(const Motive *source, Motive *result) {
 /* ------------------------------------------------------------ kept, changed */
 
 /* Whether a equals b times fnum/fden. */
-static bool scaled_equal(PlanTime a, PlanTime b, long long fnum, long long fden) {
+static bool scaled_equal(Rational a, Rational b, long long fnum, long long fden) {
     return (long long)a.num * (long long)b.den * fden == (long long)b.num * (long long)a.den * fnum;
 }
 
@@ -323,7 +323,7 @@ static bool own_harmony_kept(const Motive *a, const Motive *b) {
     for (size_t i = 0; i < a->harmony_count; i++) {
         if (a->harmony[i].degree != b->harmony[i].degree || a->harmony[i].alteration != b->harmony[i].alteration ||
             a->harmony[i].inversion != b->harmony[i].inversion || a->harmony[i].seventh != b->harmony[i].seventh ||
-            plan_time_compare(a->harmony[i].onset, b->harmony[i].onset) != 0) {
+            rational_cmp(a->harmony[i].onset, b->harmony[i].onset) != 0) {
             return false;
         }
     }

@@ -16,7 +16,7 @@
  *     metadata.source_file (the document has no form tree yet)
  *   - "keys" claims  -> key lane
  *   - "chords" claims -> harmony lane, Roman numeral from the label,
- *     function PLAN_FUNCTION_UNKNOWN (a claim carries none)
+ *     no function (has_function false: a claim carries none)
  *
  * Nothing is dropped silently. The report lists every element that was left
  * out or changed:

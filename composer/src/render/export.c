@@ -10,6 +10,7 @@
 #include <identity/entity_id.h>
 #include <io/midi_renderer.h>
 #include <time/musical_time.h>
+#include <time/time_rational.h>
 #include <time/tempo_map.h>
 
 #define PREFERRED_DIVISION 480u
@@ -149,8 +150,8 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
     for (size_t i = 0; i < rendered->key_count; i++) {
         keys[i].position = rendered->keys[i].position;
         keys[i].sharps_flats = (int8_t)rendered->keys[i].sharps_flats;
-        keys[i].mode_byte = rendered->keys[i].mode == PLAN_MODE_MINOR ? 1 : 0;
-        keys[i].mode_hint = rendered->keys[i].mode == PLAN_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
+        keys[i].mode_byte = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? 1 : 0;
+        keys[i].mode_hint = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? MIDI_MODE_HINT_MINOR : MIDI_MODE_HINT_MAJOR;
     }
 
     /* Track names: the conductor track for the form, each part's track for its lane. */
@@ -178,9 +179,8 @@ PlanExportResult rendered_plan_midi_bytes(const RenderedPlan *rendered, const Pl
     TempoMap *tempo_map = NULL;
     PlanExportResult tempo_result = build_tempo_map(&options, &tempo_map, error);
     bool loop_ok = !options.loop_markers ||
-                   (musical_time_create(options.loop_start.num, options.loop_start.den, &loop_positions[0]) ==
-                        MUSICAL_TIME_OK &&
-                    musical_time_create(options.loop_end.num, options.loop_end.den, &loop_positions[1]) == MUSICAL_TIME_OK);
+                   (musical_time_from_rational(options.loop_start, &loop_positions[0]) == TIME_RATIONAL_OK &&
+                    musical_time_from_rational(options.loop_end, &loop_positions[1]) == TIME_RATIONAL_OK);
     if ((marker_count && !markers) || !loop_ok || tempo_result != PLAN_EXPORT_OK) {
         musical_time_destroy(loop_positions[0]);
         musical_time_destroy(loop_positions[1]);
@@ -281,7 +281,7 @@ PlanExportResult rendered_plan_musicxml_text(const RenderedPlan *rendered, const
     }
     for (size_t i = 0; i < rendered->key_count; i++) {
         keys[i].sharps_flats = rendered->keys[i].sharps_flats;
-        keys[i].mode = rendered->keys[i].mode == PLAN_MODE_MINOR ? MUSICXML_EXPORT_MODE_MINOR
+        keys[i].mode = rendered->keys[i].mode == KEY_STRUCTURE_MODE_MINOR ? MUSICXML_EXPORT_MODE_MINOR
                                                                   : MUSICXML_EXPORT_MODE_MAJOR;
         keys[i].position = rendered->keys[i].position;
         keys[i].part_index = 0;

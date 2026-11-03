@@ -39,12 +39,12 @@ static inline bool texture_matches(int heard, int asked) {
 }
 
 static inline void heard_add(StandardTextureInput *input, TimeSpan ***spans, size_t *span_count, unsigned *next, size_t track,
-                             size_t voice, PlanTime start, PlanTime length, int pitch) {
+                             size_t voice, Rational start, Rational length, int pitch) {
     MusicalTime *from = NULL;
     MusicalTime *to = NULL;
     TimeSpan *span = NULL;
     char id[STANDARD_TEXTURE_ID_MAX];
-    PlanTime end;
+    Rational end;
     assert(plan_span_end((PlanSpan){start, length}, &end) == PLAN_OK);
     assert(musical_time_create(start.num, start.den, &from) == MUSICAL_TIME_OK);
     assert(musical_time_create(end.num, end.den, &to) == MUSICAL_TIME_OK);
@@ -92,10 +92,10 @@ static inline TextureHeard texture_heard(const PiecePlan *plan, PlanSpan span, P
             PlanSpan lane_span = plan_lane_span_span(plan, ids[i]);
             const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
             for (size_t n = 0; n < notes->note_count; n++) {
-                PlanTime start;
-                assert(plan_time_add(lane_span.start, notes->notes[n].offset, &start) == PLAN_OK);
+                Rational start;
+                assert(rational_add(lane_span.start, notes->notes[n].offset, &start) == RATIONAL_OK);
                 heard_add(&input, &spans, &span_count, &next, part < 2 ? (size_t)part : 2, part < 2 ? 0 : (size_t)voice - 1,
-                          start, notes->notes[n].duration, notes->notes[n].midi_pitch);
+                          start, notes->notes[n].duration, notes->notes[n].midi);
             }
         }
     }

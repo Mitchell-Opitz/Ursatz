@@ -450,8 +450,7 @@ static Motive notes_motive(const char *text) {
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
     options.has_key = true;
-    options.key.tonic_pitch_class = 2;
-    options.key.mode = PLAN_MODE_MINOR;
+    options.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
     assert(motive_from_notes_text(text, &options, &motive, NULL) == MOTIVE_OK);
     return motive;
 }
@@ -460,15 +459,14 @@ static GrowRequest library_request(const Motive *basic, PlanThemeBeginning begin
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = basic;
-    request.key.tonic_pitch_class = 2;
-    request.key.mode = PLAN_MODE_MINOR;
+    request.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
     request.meter.beats_per_bar = 4;
     request.meter.beat_unit = 4;
     request.bars = 8;
     request.pairing.beginning = beginning;
     request.pairing.ending = ending;
-    request.cadence = PLAN_CADENCE_PAC;
-    request.first_cadence = PLAN_CADENCE_HC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    request.first_cadence = CADENCE_TYPE_HALF;
     return request;
 }
 
@@ -495,7 +493,7 @@ static bool node_holds(const PiecePlan *plan, NodeId node, const Motive *motive)
             return false;
         }
         for (size_t k = 0; k < notes->note_count; k++) {
-            if (notes->notes[k].midi_pitch != motive->notes[k].midi_pitch) {
+            if (notes->notes[k].midi != motive->notes[k].midi) {
                 return false;
             }
         }
@@ -613,7 +611,7 @@ static void test_library_bad_slots(void) {
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
     other = fits;
-    other.key.tonic_pitch_class = 7;
+    other.key = plan_key_of_pitch_class(7, other.key.mode);
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
     other = fits;

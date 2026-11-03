@@ -60,8 +60,8 @@ static MotiveDevelopContext context_or_default(const void *context) {
 typedef struct {
     PlanMotiveRef ref;
     Motive source;
-    PlanTime start;
-    PlanTime room; /* the length of the target's span */
+    Rational start;
+    Rational room; /* the length of the target's span */
 } Request;
 
 /* The source motive: its notes, and the meter and key of the lanes over it, else the context's. */
@@ -166,7 +166,7 @@ static bool already_proposed(const Proposal *proposal, const Motive *result) {
 static bool try_spec(Proposal *proposal, const MotiveDevSpec *spec) {
     Motive result;
     if (motive_develop(&proposal->request->source, spec, &result) != MOTIVE_DEV_OK ||
-        plan_time_compare(result.length, proposal->request->room) > 0 || already_proposed(proposal, &result)) {
+        rational_cmp(result.length, proposal->request->room) > 0 || already_proposed(proposal, &result)) {
         return true;
     }
     Payload *payload = calloc(1, sizeof(*payload));
@@ -242,11 +242,11 @@ static bool propose_restatements(Proposal *proposal, FillRng *rng) {
         if (!try_spec(proposal, &spec)) {
             return false;
         }
-        int lowest = source->notes[0].midi_pitch;
+        int lowest = source->notes[0].midi;
         int highest = lowest;
         for (size_t i = 1; i < source->note_count; i++) {
-            lowest = source->notes[i].midi_pitch < lowest ? source->notes[i].midi_pitch : lowest;
-            highest = source->notes[i].midi_pitch > highest ? source->notes[i].midi_pitch : highest;
+            lowest = source->notes[i].midi < lowest ? source->notes[i].midi : lowest;
+            highest = source->notes[i].midi > highest ? source->notes[i].midi : highest;
         }
         size_t goal = proposal->added + wanted(proposal->context) - 1;
         for (size_t attempt = 0; proposal->added < goal && attempt < goal * ATTEMPTS_PER_CANDIDATE; attempt++) {

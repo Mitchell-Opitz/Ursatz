@@ -193,7 +193,7 @@ static size_t count_of(const char *text, const char *needle) {
 
 #define DUMP_SIZE 65536
 
-static double to_double(PlanTime time) {
+static double to_double(Rational time) {
     return (double)time.num / (double)time.den;
 }
 
@@ -207,7 +207,7 @@ static char *dump_lane(const PiecePlan *plan, PlanLaneKind lane, int voice, long
     assert(out && found <= 512);
     for (size_t i = 0; i < found; i++) {
         PlanSpan span = plan_lane_span_span(plan, ids[i]);
-        PlanTime end;
+        Rational end;
         const PlanLanePayload *payload = plan_lane_span_payload(plan, ids[i]);
         assert(plan_span_end(span, &end) == PLAN_OK);
         if (to_double(span.start) < (double)from || to_double(end) > (double)to) {
@@ -218,7 +218,7 @@ static char *dump_lane(const PiecePlan *plan, PlanLaneKind lane, int voice, long
             used += (size_t)snprintf(out + used, DUMP_SIZE - used, " %s", payload->harmony.roman_numeral);
         } else {
             for (size_t n = 0; n < payload->notes.note_count; n++) {
-                used += (size_t)snprintf(out + used, DUMP_SIZE - used, " %d@%.6f/%.6f", payload->notes.notes[n].midi_pitch,
+                used += (size_t)snprintf(out + used, DUMP_SIZE - used, " %d@%.6f/%.6f", payload->notes.notes[n].midi,
                                          to_double(payload->notes.notes[n].offset), to_double(payload->notes.notes[n].duration));
             }
         }
@@ -263,7 +263,7 @@ static char *dump_bar(const PiecePlan *plan, PlanLaneKind lane, long bar) {
             double onset = to_double(span.start) + to_double(payload->notes.notes[n].offset);
             if (onset >= (double)bar && onset < (double)bar + 1.0) {
                 used += (size_t)snprintf(out + used, DUMP_SIZE - used, "%.6f %d %.6f;", onset - (double)bar,
-                                         payload->notes.notes[n].midi_pitch, to_double(payload->notes.notes[n].duration));
+                                         payload->notes.notes[n].midi, to_double(payload->notes.notes[n].duration));
             }
         }
     }
@@ -381,10 +381,10 @@ static void test_progression_fill(void) {
     assert(found >= 4 && found <= 64);
     /* Two cells each, and a cell is half a bar in 4/4: a bar a chord, from the section's start. */
     for (size_t i = 0; i < 4; i++) {
-        PlanTime want = {2 + (long)i, 1};
+        Rational want = {2 + (long)i, 1};
         bool seen = false;
         for (size_t k = 0; k < found; k++) {
-            if (plan_time_compare(plan_lane_span_span(plan, ids[k]).start, want) == 0 &&
+            if (rational_cmp(plan_lane_span_span(plan, ids[k]).start, want) == 0 &&
                 strcmp(plan_lane_span_payload(plan, ids[k])->harmony.roman_numeral, CHORDS[i]) == 0) {
                 seen = true;
             }

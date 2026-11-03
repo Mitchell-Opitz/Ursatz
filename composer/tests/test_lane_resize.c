@@ -4,9 +4,9 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
@@ -20,7 +20,7 @@ static LaneSpanId add_harmony(PiecePlan *plan, NodeId owner, PlanSpan span, cons
     LaneSpanId id = PLAN_LANE_SPAN_NONE;
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, numeral);
-    payload.harmony.function = PLAN_FUNCTION_TONIC;
+    payload.harmony.function = HARMONIC_FUNCTION_TONIC;
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, span, &payload, &id) == PLAN_OK);
     return id;
 }
@@ -67,7 +67,7 @@ static void test_resize_checks_notes(void) {
     PiecePlan *plan = plan_create();
     NodeId form = PLAN_NODE_NONE;
     assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 4), NULL, &form) == PLAN_OK);
-    PlanNote note = {60, fraction(2, 1), fraction(1, 1)};
+    PlanNote note = plan_note(60, fraction(2, 1), fraction(1, 1));
     PlanLanePayload payload;
     LaneSpanId melody = PLAN_LANE_SPAN_NONE;
     memset(&payload, 0, sizeof(payload));

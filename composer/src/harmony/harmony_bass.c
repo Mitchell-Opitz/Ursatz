@@ -36,7 +36,7 @@ static unsigned chance_of(unsigned value) {
     return value > CHANCE_SCALE ? CHANCE_SCALE : value;
 }
 
-bool harmony_chord_bass_pc(const PlanKey *key, const PhraseChord *chord, int *pc) {
+bool harmony_chord_bass_pc(const AnalysisKey *key, const PhraseChord *chord, int *pc) {
     int intervals[4];
     size_t count;
     int root;
@@ -52,7 +52,7 @@ bool harmony_chord_bass_pc(const PlanKey *key, const PhraseChord *chord, int *pc
             return false;
         }
         /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
-        root = key->mode == PLAN_MODE_MINOR && chord->chord.leading_tone
+        root = key->mode == KEY_STRUCTURE_MODE_MINOR && chord->chord.leading_tone
                    ? 11
                    : harmony_applied_scale_semitone(harmony_mode_of(key->mode), chord->chord.degree);
         member = chord->chord.inversion;
@@ -60,7 +60,7 @@ bool harmony_chord_bass_pc(const PlanKey *key, const PhraseChord *chord, int *pc
     if (root < 0 || member < 0 || (size_t)member >= count) {
         return false;
     }
-    *pc = (key->tonic_pitch_class + root + intervals[member]) % 12;
+    *pc = (analysis_key_tonic_pitch_class(key) + root + intervals[member]) % 12;
     return true;
 }
 
@@ -285,7 +285,7 @@ PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, Pla
     for (size_t i = 0; i < chord && i < line->context.count; i++) {
         at += line->context.chords[i].cells;
     }
-    PlanTime chord_start;
+    Rational chord_start;
     if (!harmony_metre_cell_offset(metre, at, &chord_start)) {
         return PLAN_ERR_BAD_INDEX;
     }
@@ -295,16 +295,16 @@ PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, Pla
             continue;
         }
         /* A note's offset is from the chord's start. */
-        PlanTime note_start;
+        Rational note_start;
         PlanSpan span;
         PlanResult result = harmony_metre_cells_span(metre, at, line->notes[i].cells, &span);
         if (result != PLAN_OK || !harmony_metre_cell_offset(metre, at, &note_start) ||
-            plan_time_make(note_start.num * (long)chord_start.den - chord_start.num * (long)note_start.den,
-                           note_start.den * chord_start.den, &notes[used].offset) != PLAN_OK) {
+            rational_sub(note_start, chord_start, &notes[used].offset) != RATIONAL_OK) {
             return PLAN_ERR_BAD_INDEX;
         }
         notes[used].duration = span.length;
-        notes[used].midi_pitch = line->notes[i].pitch;
+        notes[used].midi = line->notes[i].pitch;
+        notes[used].spelled = false;
         at += line->notes[i].cells;
         used++;
     }

@@ -162,7 +162,7 @@ struct GrowPoolForm;
 typedef struct {
     PlanMeter meter;
     bool has_key;
-    PlanKey key;
+    AnalysisKey key;
     /* How many candidates an operator proposes when the constraint leaves the parameters open. */
     size_t candidates;
     /* The fewest notes a fragment or liquidation may have; 0 means MOTIVE_DEV_MIN_LENGTH. */

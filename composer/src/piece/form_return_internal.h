@@ -56,9 +56,9 @@ typedef struct {
     unsigned long magic;
     PlanReturnVariation variation;
     PlanSpan span;       /* the target section's span */
-    PlanKey key;         /* the key at its start */
+    AnalysisKey key;         /* the key at its start */
     PlanMeter meter;
-    PlanTime from_start; /* where the returned section starts */
+    Rational from_start; /* where the returned section starts */
     int transpose;       /* the key difference, in semitones, the copy is moved by */
     int octave;          /* REREGISTER: 12 or -12, else 0 */
     int range_low;       /* the melody range a re-registered melody keeps to */
@@ -72,7 +72,7 @@ bool return_copy_read(const PiecePlan *plan, NodeId section, ReturnCopy *out);
 bool return_copy_clone(const ReturnCopy *from, ReturnCopy *out);
 void return_copy_destroy(ReturnCopy *copy);
 /* Moves the copy from a section starting at from to one starting at to, its pitches by transpose semitones. */
-bool return_copy_move(ReturnCopy *copy, PlanTime from, PlanTime to, int transpose);
+bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpose);
 /* Adds the copy to the plan under section: its nodes, then its lane spans. */
 PlanResult return_copy_write(PiecePlan *plan, NodeId section, const ReturnCopy *copy);
 

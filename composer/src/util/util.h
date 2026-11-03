@@ -19,7 +19,7 @@ int util_sign(int value);
 int util_pitch_class(int pitch);
 
 /* A MIDI pitch as "C#4" ("Db4" when prefer_flats): the library's pitch class name and the octave of middle C = 4. */
-void util_pitch_name(int midi_pitch, bool prefer_flats, char *out, size_t size);
+void util_pitch_name(int midi, bool prefer_flats, char *out, size_t size);
 
 /*
  * A key as "Db major" or "C# minor": the tonic spelled with the fewest accidentals in the key signature, sharps on a

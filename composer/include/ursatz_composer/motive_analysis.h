@@ -75,13 +75,13 @@ typedef enum {
 } MotiveShape;
 
 typedef struct {
-    PlanTime onset;
-    PlanTime duration;
+    Rational onset;
+    Rational duration;
     int bar;
-    PlanTime beat;
+    Rational beat;
     bool on_beat;
     bool dotted;
-    PlanTime rest_before;
+    Rational rest_before;
 } MotiveRhythmNote;
 
 typedef struct {
@@ -91,7 +91,8 @@ typedef struct {
 
 typedef struct {
     char roman[PLAN_ROMAN_NUMERAL_MAX];
-    PlanHarmonicFunction function;
+    HarmonicFunction function;
+    bool has_function;
     /* The share of the motive that is chord tones, 0 to 1, to four places. */
     double fit;
     size_t chord_tones;     /* notes that are chord tones */
@@ -107,9 +108,9 @@ typedef struct {
     bool contour_known;
     bool rhythm_known;
     bool range_known;
-    PlanTime length;
+    Rational length;
     /* How many bars the motive is: its length over a bar. */
-    PlanTime bars;
+    Rational bars;
 
     MotiveInterval intervals[MOTIVE_MAX_NOTES];
     size_t interval_count; /* note_count - 1 */
@@ -126,7 +127,7 @@ typedef struct {
     int range_semitones;
 
     bool key_known;
-    PlanKey key;
+    AnalysisKey key;
     MotiveKeySource key_source;
 
     bool degrees_known; /* the same as key_known */
@@ -158,9 +159,9 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
 const char *motive_shape_name(MotiveShape shape);
 
 /* A duration the way a note list writes it ("q", "e.", "h..") when it is one, otherwise "3/16". */
-void motive_duration_name(PlanTime duration, char *out, size_t size);
+void motive_duration_name(Rational duration, char *out, size_t size);
 /* A pitch as a note list writes it, a black key with a sharp as the spelling is not known: "D4", "A#3". */
-void motive_pitch_name(int midi_pitch, char *out, size_t size);
+void motive_pitch_name(int midi, char *out, size_t size);
 
 /* A human-readable summary: the notes, the intervals, the contour, the rhythm, the range, the degrees and the harmony. */
 void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis, FILE *out);

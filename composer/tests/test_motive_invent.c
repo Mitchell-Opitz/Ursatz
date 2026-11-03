@@ -22,28 +22,28 @@ typedef struct {
     int beats;
     int unit;
     int tonic;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 4, 4, 0, PLAN_MODE_MAJOR},
-    {"A minor 3/4", 3, 4, 9, PLAN_MODE_MINOR},
-    {"D major 6/8", 6, 8, 2, PLAN_MODE_MAJOR},
+    {"C major 4/4", 4, 4, 0, KEY_STRUCTURE_MODE_MAJOR},
+    {"A minor 3/4", 3, 4, 9, KEY_STRUCTURE_MODE_MINOR},
+    {"D major 6/8", 6, 8, 2, KEY_STRUCTURE_MODE_MAJOR},
 };
 
 #define SEEDS 20
 
-static PlanTime time_of(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational time_of(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
 /* A form of one bar of piece and one of material, with m0's melody open and asking to be invented. */
 static PiecePlan *build_plan(const Scenario *scenario, LaneSpanId *open) {
-    PlanTime bar = time_of(scenario->beats, (unsigned long)scenario->unit);
-    PlanTime two;
-    assert(plan_time_add(bar, bar, &two) == PLAN_OK);
+    Rational bar = time_of(scenario->beats, (unsigned long)scenario->unit);
+    Rational two;
+    assert(rational_add(bar, bar, &two) == RATIONAL_OK);
     PlanSpan form_span = {time_of(0, 1), two};
     PlanSpan piece_span = {time_of(0, 1), bar};
     PlanSpan material_span = {bar, bar};
@@ -69,12 +69,11 @@ static PiecePlan *build_plan(const Scenario *scenario, LaneSpanId *open) {
     assert(plan_add_lane_span(plan, form, PLAN_LANE_METER, 0, form_span, &payload, &lane) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = scenario->tonic;
-    payload.key.mode = scenario->mode;
+    payload.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &lane) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN) == PLAN_OK);
 
-    PlanNote placeholder = {60, time_of(0, 1), bar};
+    PlanNote placeholder = plan_note(60, time_of(0, 1), bar);
     memset(&payload, 0, sizeof(payload));
     payload.notes.notes = &placeholder;
     payload.notes.note_count = 1;
@@ -104,7 +103,7 @@ static PiecePlan *invent(const Scenario *scenario, unsigned long seed, LaneSpanI
 static int degree_of(const Scenario *scenario, int pitch) {
     static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
     static const int MINOR[7] = {0, 2, 3, 5, 7, 8, 10};
-    const int *scale = scenario->mode == PLAN_MODE_MINOR ? MINOR : MAJOR;
+    const int *scale = scenario->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR : MAJOR;
     int offset = ((pitch - scenario->tonic) % 12 + 12) % 12;
     for (int degree = 0; degree < 7; degree++) {
         if (scale[degree] == offset) {
@@ -115,29 +114,29 @@ static int degree_of(const Scenario *scenario, int pitch) {
 }
 
 static void check_motive(const Scenario *scenario, const PiecePlan *plan, LaneSpanId open, const FillRecord *record) {
-    PlanTime bar = time_of(scenario->beats, (unsigned long)scenario->unit);
+    Rational bar = time_of(scenario->beats, (unsigned long)scenario->unit);
     assert(plan_lane_span_state(plan, open) == PLAN_STATE_REALIZED);
     assert(plan_node_state(plan, plan_lane_span_owner(plan, open)) == PLAN_STATE_REALIZED);
     const PlanNotes *notes = &plan_lane_span_payload(plan, open)->notes;
     assert(notes->note_count >= 3 && notes->note_count <= 6);
 
     /* The notes follow one another from the barline and end on the next one. */
-    PlanTime at = time_of(0, 1);
+    Rational at = time_of(0, 1);
     for (size_t i = 0; i < notes->note_count; i++) {
         const PlanNote *note = &notes->notes[i];
-        assert(plan_time_compare(note->offset, at) == 0);
+        assert(rational_cmp(note->offset, at) == 0);
         assert(note->duration.num > 0);
-        assert(plan_time_add(at, note->duration, &at) == PLAN_OK);
-        assert(note->midi_pitch >= 60 && note->midi_pitch <= 84);
-        assert(degree_of(scenario, note->midi_pitch) != 0);
+        assert(rational_add(at, note->duration, &at) == RATIONAL_OK);
+        assert(note->midi >= 60 && note->midi <= 84);
+        assert(degree_of(scenario, note->midi) != 0);
         if (i > 0) {
-            int leap = abs(note->midi_pitch - notes->notes[i - 1].midi_pitch);
+            int leap = abs(note->midi - notes->notes[i - 1].midi);
             /* At most a sixth; no tritone or seventh. */
             assert(leap <= 9 && leap != 6);
         }
     }
-    assert(plan_time_compare(at, bar) == 0);
-    int first = degree_of(scenario, notes->notes[0].midi_pitch);
+    assert(rational_cmp(at, bar) == 0);
+    int first = degree_of(scenario, notes->notes[0].midi);
     assert(first == 1 || first == 3 || first == 5);
 
     /* The chosen candidate passed the checker: the melodic rules hold. */
@@ -160,9 +159,9 @@ static bool same_notes(const PiecePlan *a, const PiecePlan *b, LaneSpanId id) {
         return false;
     }
     for (size_t i = 0; i < x->note_count; i++) {
-        if (x->notes[i].midi_pitch != y->notes[i].midi_pitch ||
-            plan_time_compare(x->notes[i].offset, y->notes[i].offset) != 0 ||
-            plan_time_compare(x->notes[i].duration, y->notes[i].duration) != 0) {
+        if (x->notes[i].midi != y->notes[i].midi ||
+            rational_cmp(x->notes[i].offset, y->notes[i].offset) != 0 ||
+            rational_cmp(x->notes[i].duration, y->notes[i].duration) != 0) {
             return false;
         }
     }

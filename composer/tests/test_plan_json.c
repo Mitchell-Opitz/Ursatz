@@ -21,8 +21,8 @@
 
 static PlanSpan bars(long start, long length) {
     PlanSpan span;
-    assert(plan_time_make(start, 1, &span.start) == PLAN_OK);
-    assert(plan_time_make(length, 1, &span.length) == PLAN_OK);
+    assert(rational_make(start, 1, &span.start) == RATIONAL_OK);
+    assert(rational_make(length, 1, &span.length) == RATIONAL_OK);
     return span;
 }
 
@@ -39,11 +39,12 @@ static LaneSpanId add_lane(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int
     return id;
 }
 
-static PlanLanePayload harmony(const char *roman, PlanHarmonicFunction function) {
+static PlanLanePayload harmony(const char *roman, int function) {
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
     strncpy(payload.harmony.roman_numeral, roman, PLAN_ROMAN_NUMERAL_MAX - 1);
-    payload.harmony.function = function;
+    payload.harmony.has_function = function >= 0;
+    payload.harmony.function = function >= 0 ? (HarmonicFunction)function : HARMONIC_FUNCTION_TONIC;
     return payload;
 }
 
@@ -71,23 +72,24 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
 
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key.tonic_pitch_class = 3;
-    key.key.mode = PLAN_MODE_MINOR;
+    key.key = plan_key_of_pitch_class(3, KEY_STRUCTURE_MODE_MINOR);
     add_lane(plan, section, PLAN_LANE_KEY, 0, bars(0, 8), &key);
 
-    PlanLanePayload tonic = harmony("i", PLAN_FUNCTION_TONIC);
-    PlanLanePayload dominant = harmony("V", PLAN_FUNCTION_DOMINANT);
+    PlanLanePayload tonic = harmony("i", HARMONIC_FUNCTION_TONIC);
+    PlanLanePayload dominant = harmony("V", HARMONIC_FUNCTION_DOMINANT);
     add_lane(plan, basic_idea, PLAN_LANE_HARMONY, 0, bars(0, 2), &tonic);
     LaneSpanId harmony_two = add_lane(plan, repetition, PLAN_LANE_HARMONY, 0, bars(2, 2), &dominant);
 
     PlanNote notes[2];
     memset(notes, 0, sizeof(notes));
-    notes[0].midi_pitch = 64;
-    assert(plan_time_make(0, 1, &notes[0].offset) == PLAN_OK);
-    assert(plan_time_make(1, 2, &notes[0].duration) == PLAN_OK);
-    notes[1].midi_pitch = 67;
-    assert(plan_time_make(1, 2, &notes[1].offset) == PLAN_OK);
-    assert(plan_time_make(1, 4, &notes[1].duration) == PLAN_OK);
+    notes[0].midi = 64;
+    notes[0].spelled = false;
+    assert(rational_make(0, 1, &notes[0].offset) == RATIONAL_OK);
+    assert(rational_make(1, 2, &notes[0].duration) == RATIONAL_OK);
+    notes[1].midi = 67;
+    notes[1].spelled = false;
+    assert(rational_make(1, 2, &notes[1].offset) == RATIONAL_OK);
+    assert(rational_make(1, 4, &notes[1].duration) == RATIONAL_OK);
     PlanLanePayload melody;
     memset(&melody, 0, sizeof(melody));
     melody.notes.notes = notes;
@@ -100,7 +102,7 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     PlanConstraint length = {PLAN_CONSTRAINT_LENGTH_BARS, {0}};
     length.params.bars = 8;
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
-    cadence.params.cadence = PLAN_CADENCE_PAC;
+    cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PlanConstraint archetype = {PLAN_CONSTRAINT_ARCHETYPE, {0}};
     archetype.params.archetype = PLAN_ARCHETYPE_SENTENCE;
     PlanConstraint motive_ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
@@ -108,8 +110,7 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     motive_ref.params.motive.transform = PLAN_TRANSFORM_TRANSPOSED;
     motive_ref.params.motive.semitones = -2;
     PlanConstraint key_constraint = {PLAN_CONSTRAINT_KEY, {0}};
-    key_constraint.params.key.tonic_pitch_class = 7;
-    key_constraint.params.key.mode = PLAN_MODE_MAJOR;
+    key_constraint.params.key = plan_key_of_pitch_class(7, KEY_STRUCTURE_MODE_MAJOR);
     assert(plan_node_add_constraint(plan, phrase, &length) == PLAN_OK);
     assert(plan_node_add_constraint(plan, phrase, &cadence) == PLAN_OK);
     assert(plan_node_add_constraint(plan, phrase, &archetype) == PLAN_OK);
@@ -150,9 +151,9 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
         tones.kind = PLAN_CONSTRAINT_MOTIVE_TONES;
         PlanMotiveTones *body = &tones.params.motive_tones;
         snprintf(body->chords[0].numeral, sizeof(body->chords[0].numeral), "i");
-        assert(plan_time_make(0, 1, &body->chords[0].onset) == PLAN_OK && plan_time_make(1, 2, &body->chords[0].length) == PLAN_OK);
+        assert(rational_make(0, 1, &body->chords[0].onset) == RATIONAL_OK && rational_make(1, 2, &body->chords[0].length) == RATIONAL_OK);
         snprintf(body->chords[1].numeral, sizeof(body->chords[1].numeral), "bVII65");
-        assert(plan_time_make(1, 2, &body->chords[1].onset) == PLAN_OK && plan_time_make(1, 2, &body->chords[1].length) == PLAN_OK);
+        assert(rational_make(1, 2, &body->chords[1].onset) == RATIONAL_OK && rational_make(1, 2, &body->chords[1].length) == RATIONAL_OK);
         body->chord_count = 2;
         for (size_t k = 0; k < tone_labels; k++) {
             snprintf(body->labels[k], sizeof(body->labels[k]), "%s", k == 1 ? "passing" : "chord");
@@ -172,7 +173,7 @@ static PiecePlan *build_sentence_plan(void) {
 }
 
 static bool same_span(PlanSpan a, PlanSpan b) {
-    return plan_time_compare(a.start, b.start) == 0 && plan_time_compare(a.length, b.length) == 0;
+    return rational_cmp(a.start, b.start) == 0 && rational_cmp(a.length, b.length) == 0;
 }
 
 static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
@@ -189,7 +190,7 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.motive.transform == b->params.motive.transform &&
                a->params.motive.semitones == b->params.motive.semitones;
     case PLAN_CONSTRAINT_KEY:
-        return a->params.key.tonic_pitch_class == b->params.key.tonic_pitch_class &&
+        return analysis_key_tonic_pitch_class(&a->params.key) == analysis_key_tonic_pitch_class(&b->params.key) &&
                a->params.key.mode == b->params.key.mode;
     case PLAN_CONSTRAINT_ARCHETYPE:
         return a->params.archetype == b->params.archetype;
@@ -238,8 +239,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         }
         for (size_t i = 0; i < x->chord_count; i++) {
             if (strcmp(x->chords[i].numeral, y->chords[i].numeral) != 0 ||
-                plan_time_compare(x->chords[i].onset, y->chords[i].onset) != 0 ||
-                plan_time_compare(x->chords[i].length, y->chords[i].length) != 0) {
+                rational_cmp(x->chords[i].onset, y->chords[i].onset) != 0 ||
+                rational_cmp(x->chords[i].length, y->chords[i].length) != 0) {
                 return false;
             }
         }
@@ -266,7 +267,7 @@ static bool same_payload(PlanLaneKind lane, const PlanLanePayload *a, const Plan
         return a->meter.beats_per_bar == b->meter.beats_per_bar && a->meter.beat_unit == b->meter.beat_unit &&
                a->meter.bars_per_hyperbar == b->meter.bars_per_hyperbar;
     case PLAN_LANE_KEY:
-        return a->key.tonic_pitch_class == b->key.tonic_pitch_class && a->key.mode == b->key.mode;
+        return analysis_key_tonic_pitch_class(&a->key) == analysis_key_tonic_pitch_class(&b->key) && a->key.mode == b->key.mode;
     case PLAN_LANE_HARMONY:
         return strcmp(a->harmony.roman_numeral, b->harmony.roman_numeral) == 0 &&
                a->harmony.function == b->harmony.function;
@@ -279,8 +280,8 @@ static bool same_payload(PlanLaneKind lane, const PlanLanePayload *a, const Plan
         for (size_t i = 0; i < a->notes.note_count; i++) {
             const PlanNote *x = &a->notes.notes[i];
             const PlanNote *y = &b->notes.notes[i];
-            if (x->midi_pitch != y->midi_pitch || plan_time_compare(x->offset, y->offset) != 0 ||
-                plan_time_compare(x->duration, y->duration) != 0) {
+            if (x->midi != y->midi || rational_cmp(x->offset, y->offset) != 0 ||
+                rational_cmp(x->duration, y->duration) != 0) {
                 return false;
             }
         }
@@ -443,7 +444,7 @@ static void test_section_constraints(void) {
     NodeId material_phrase = add(plan, material, PLAN_NODE_PHRASE, bars(12, 1), "material");
     NodeId material_idea = add(plan, material_phrase, PLAN_NODE_IDEA, bars(12, 1), "material");
     NodeId m0 = add(plan, material_idea, PLAN_NODE_MOTIVE, bars(12, 1), "m0");
-    PlanNote placeholder = {60, {0, 1}, {1, 1}};
+    PlanNote placeholder = plan_note(60, rational_ratio(0, 1), rational_ratio(1, 1));
     PlanLanePayload melody;
     memset(&melody, 0, sizeof(melody));
     melody.notes.notes = &placeholder;
@@ -705,27 +706,27 @@ static void test_load_analysis_document(void) {
     NodeId root = plan_root(plan);
     assert(plan_node_kind(plan, root) == PLAN_NODE_FORM);
     assert(strcmp(plan_node_name(plan, root), "small.mid") == 0);
-    PlanTime two;
-    assert(plan_time_make(2, 1, &two) == PLAN_OK);
-    assert(plan_time_compare(plan_node_span(plan, root).length, two) == 0);
+    Rational two;
+    assert(rational_make(2, 1, &two) == RATIONAL_OK);
+    assert(rational_cmp(plan_node_span(plan, root).length, two) == 0);
     assert(plan_node_state(plan, root) == PLAN_STATE_REALIZED);
 
     /* One key, and the three chords that map. */
     assert(plan_lane_span_count(plan) == 4);
     const PlanLanePayload *key = plan_lane_span_payload(plan, 1);
     assert(plan_lane_span_lane(plan, 1) == PLAN_LANE_KEY);
-    assert(key->key.tonic_pitch_class == 0 && key->key.mode == PLAN_MODE_MAJOR);
+    assert(analysis_key_tonic_pitch_class(&key->key) == 0 && key->key.mode == KEY_STRUCTURE_MODE_MAJOR);
     const PlanLanePayload *dominant = plan_lane_span_payload(plan, 3);
     assert(plan_lane_span_lane(plan, 3) == PLAN_LANE_HARMONY);
     assert(strcmp(dominant->harmony.roman_numeral, "V") == 0);
-    assert(dominant->harmony.function == PLAN_FUNCTION_UNKNOWN);
+    assert(!dominant->harmony.has_function);
 
     /* The V ran to bar 3/2 but the next chord starts at 1, so it is cut to 1/2..1. */
-    PlanTime one;
-    assert(plan_time_make(1, 1, &one) == PLAN_OK);
-    PlanTime dominant_end;
+    Rational one;
+    assert(rational_make(1, 1, &one) == RATIONAL_OK);
+    Rational dominant_end;
     assert(plan_span_end(plan_lane_span_span(plan, 3), &dominant_end) == PLAN_OK);
-    assert(plan_time_compare(dominant_end, one) == 0);
+    assert(rational_cmp(dominant_end, one) == 0);
 
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         assert(plan_lane_span_state(plan, id) == PLAN_STATE_REALIZED);
@@ -739,7 +740,7 @@ static void test_load_analysis_document(void) {
     assert(report_has(&report, "phrases", "not loaded"));
 
     /* Realized material can be regenerated: a write is accepted. */
-    PlanLanePayload tonic = harmony("I", PLAN_FUNCTION_TONIC);
+    PlanLanePayload tonic = harmony("I", HARMONIC_FUNCTION_TONIC);
     assert(plan_lane_span_write(plan, 2, &tonic) == PLAN_OK);
 
     /* The loaded plan survives a plan JSON round trip. */

@@ -39,14 +39,14 @@ typedef enum { SENTENCE, PERIOD, ROUNDED_BINARY } Shape;
 typedef struct {
     const char *name;
     int tonic;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int beats;
     const char *motive; /* grown shapes only */
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 0, PLAN_MODE_MAJOR, 4, "E4:q G4:e F4:e D4:q C4:q"},
-    {"A minor 3/4", 9, PLAN_MODE_MINOR, 3, "C5:q E5:e D5:e B4:q"},
+    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, "E4:q G4:e F4:e D4:q C4:q"},
+    {"A minor 3/4", 9, KEY_STRUCTURE_MODE_MINOR, 3, "C5:q E5:e D5:e B4:q"},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -73,7 +73,7 @@ static NodeId find_node(const PiecePlan *plan, const char *name) {
 static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_out) {
     PiecePlan *plan = NULL;
     PlanMeter meter = {scenario->beats, 4, 0};
-    PlanKey key = {scenario->tonic, scenario->mode};
+    AnalysisKey key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     if (shape == ROUNDED_BINARY) {
         PieceRequest request;
         memset(&request, 0, sizeof(request));
@@ -97,7 +97,7 @@ static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_
     request.bars = 8;
     request.pairing.beginning = shape == PERIOD ? PLAN_THEME_BEGINNING_ANTECEDENT : PLAN_THEME_BEGINNING_PRESENTATION;
     request.pairing.ending = shape == PERIOD ? PLAN_THEME_ENDING_CONSEQUENT : PLAN_THEME_ENDING_CONTINUATION;
-    request.cadence = PLAN_CADENCE_PAC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     assert(grow_build_plan(&request, &plan) == GROW_OK);
     return plan;
 }
@@ -154,7 +154,7 @@ static int test_contradiction(void) {
         PlanConstraint half;
         memset(&half, 0, sizeof(half));
         half.kind = PLAN_CONSTRAINT_CADENCE;
-        half.params.cadence = PLAN_CADENCE_HC;
+        half.params.cadence = CADENCE_TYPE_HALF;
         assert(plan_node_add_constraint(plan, theme, &half) == PLAN_OK);
         assert(analyzer_check_section(plan, theme, &check) == ANALYZER_CHECK_OK);
         item = cadence_item(&check);
@@ -347,15 +347,14 @@ static void piece_section(PieceFixture *fixture, const char *id, PiecePart part,
     snprintf(section->letter, sizeof(section->letter), "%c", id[0] - 32);
     section->part = part;
     section->beats = beats;
-    section->pickup = (PlanTime){0, 1};
+    section->pickup = (Rational){0, 1};
     section->fill = fill;
 }
 
 /* The intro 2 bars, a sentence of 8 bars, a free phrase of 4 and a turnaround of 2, D minor 4/4, and the ending a run adds. */
 static void piece_fixture(PieceFixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->structure.key.tonic_pitch_class = 2;
-    fixture->structure.key.mode = PLAN_MODE_MINOR;
+    fixture->structure.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
     fixture->structure.meter.beats_per_bar = 4;
     fixture->structure.meter.beat_unit = 4;
     fixture->structure.sections = fixture->sections;

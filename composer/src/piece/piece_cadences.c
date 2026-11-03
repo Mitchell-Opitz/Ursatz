@@ -11,10 +11,6 @@
 
 #define MAX_CADENCES 2
 
-static bool same_key(PlanKey a, PlanKey b) {
-    return a.tonic_pitch_class == b.tonic_pitch_class && a.mode == b.mode;
-}
-
 /* The sections of the plan in order, and the material's id (not a section of the piece). */
 static size_t sections_of(const PiecePlan *plan, NodeId *sections) {
     size_t count = 0;
@@ -53,7 +49,7 @@ static bool closed_section(FormTemplateKind kind, size_t index) {
 }
 
 /* The cadences of the section in order: the one it ends in, then an antecedent's weak one. Returns how many. */
-static size_t section_cadences(const PiecePlan *plan, NodeId section, PlanCadenceType *out) {
+static size_t section_cadences(const PiecePlan *plan, NodeId section, CadenceType *out) {
     size_t count = 0;
     for (size_t i = 0; i < plan_node_constraint_count(plan, section) && count < MAX_CADENCES; i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
@@ -65,7 +61,7 @@ static size_t section_cadences(const PiecePlan *plan, NodeId section, PlanCadenc
 }
 
 /* The key the section ends in: its KEY constraint. False when it has none. */
-static bool section_key(const PiecePlan *plan, NodeId section, PlanKey *out) {
+static bool section_key(const PiecePlan *plan, NodeId section, AnalysisKey *out) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
         if (constraint->kind == PLAN_CONSTRAINT_KEY) {
@@ -77,7 +73,7 @@ static bool section_key(const PiecePlan *plan, NodeId section, PlanKey *out) {
 }
 
 /* The CADENCE constraints of the section, replaced by these. */
-static PieceResult set_section_cadences(PiecePlan *plan, NodeId section, const PlanCadenceType *cadences, size_t count) {
+static PieceResult set_section_cadences(PiecePlan *plan, NodeId section, const CadenceType *cadences, size_t count) {
     for (size_t i = plan_node_constraint_count(plan, section); i > 0; i--) {
         if (plan_node_constraint_at(plan, section, i - 1)->kind == PLAN_CONSTRAINT_CADENCE) {
             PieceResult result = piece_result_of_plan(plan_node_remove_constraint(plan, section, i - 1));
@@ -113,18 +109,18 @@ PieceResult piece_plan_cadences(PiecePlan *plan, const PieceKeyPlan *keys) {
     if (!closing_form(kind)) {
         return PIECE_OK;
     }
-    PlanKey home = keys->sections[0].start;
+    AnalysisKey home = keys->sections[0].start;
     for (size_t i = 0; i < count; i++) {
-        PlanCadenceType cadences[MAX_CADENCES];
+        CadenceType cadences[MAX_CADENCES];
         size_t have = section_cadences(plan, sections[i], cadences);
         if (have == 0) {
             return PIECE_ERR_BAD_REQUEST;
         }
-        PlanCadenceType wanted = cadences[0];
-        if (i + 1 == count || !same_key(keys->sections[i].end, home)) {
-            wanted = PLAN_CADENCE_PAC;
-        } else if (wanted == PLAN_CADENCE_PAC && !closed_section(kind, i)) {
-            wanted = PLAN_CADENCE_HC;
+        CadenceType wanted = cadences[0];
+        if (i + 1 == count || !analysis_key_equals(&keys->sections[i].end, &home)) {
+            wanted = CADENCE_TYPE_PERFECT_AUTHENTIC;
+        } else if (wanted == CADENCE_TYPE_PERFECT_AUTHENTIC && !closed_section(kind, i)) {
+            wanted = CADENCE_TYPE_HALF;
         }
         if (wanted != cadences[0]) {
             cadences[0] = wanted;
@@ -162,41 +158,41 @@ bool piece_check_cadences(const PiecePlan *plan, PieceCadenceCheck *out) {
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, plan_node_span(plan, sections[0]), &first_key, 1) == 0) {
         return false;
     }
-    PlanKey home = plan_lane_span_payload(plan, first_key)->key;
+    AnalysisKey home = plan_lane_span_payload(plan, first_key)->key;
     int last_strength = -1;
     for (size_t i = 0; i < count; i++) {
-        PlanCadenceType cadences[MAX_CADENCES];
-        PlanKey ends_in;
+        CadenceType cadences[MAX_CADENCES];
+        AnalysisKey ends_in;
         if (section_cadences(plan, sections[i], cadences) == 0 || !section_key(plan, sections[i], &ends_in)) {
             return false;
         }
-        bool away = !same_key(ends_in, home);
-        if (away && cadences[0] != PLAN_CADENCE_PAC && cadences[0] != PLAN_CADENCE_IAC) {
+        bool away = !analysis_key_equals(&ends_in, &home);
+        if (away && cadences[0] != CADENCE_TYPE_PERFECT_AUTHENTIC && cadences[0] != CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
             fail(out, "a section ends in another key without an authentic cadence", i);
-        } else if (!away && i + 1 < count && cadences[0] == PLAN_CADENCE_PAC && !closed_section(kind, i)) {
+        } else if (!away && i + 1 < count && cadences[0] == CADENCE_TYPE_PERFECT_AUTHENTIC && !closed_section(kind, i)) {
             fail(out, "a section closes in the home key before the piece ends", i);
         }
         if (i + 1 == count) {
-            last_strength = harmony_cadence_strength(harmony_cadence_type_of(cadences[0]));
+            last_strength = harmony_cadence_strength(cadences[0]);
         }
     }
     /* The last cadence is the strongest of the piece in the home key. */
     for (size_t i = 0; i + 1 < count; i++) {
-        PlanCadenceType cadences[MAX_CADENCES];
-        PlanKey ends_in;
+        CadenceType cadences[MAX_CADENCES];
+        AnalysisKey ends_in;
         if (section_cadences(plan, sections[i], cadences) == 0 || !section_key(plan, sections[i], &ends_in)) {
             return false;
         }
-        if (same_key(ends_in, home) &&
-            harmony_cadence_strength(harmony_cadence_type_of(cadences[0])) > last_strength) {
+        if (analysis_key_equals(&ends_in, &home) &&
+            harmony_cadence_strength(cadences[0]) > last_strength) {
             fail(out, "a cadence in the home key is stronger than the last one", i);
         }
     }
-    PlanCadenceType last[MAX_CADENCES];
+    CadenceType last[MAX_CADENCES];
     if (section_cadences(plan, sections[count - 1], last) == 0) {
         return false;
     }
-    if (last[0] != PLAN_CADENCE_PAC) {
+    if (last[0] != CADENCE_TYPE_PERFECT_AUTHENTIC) {
         fail(out, "the last section does not end in a PAC", count - 1);
     }
     return true;

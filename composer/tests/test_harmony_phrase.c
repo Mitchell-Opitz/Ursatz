@@ -21,10 +21,10 @@
 typedef struct {
     int beats_per_bar;
     int beat_unit;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int tonic;
     int bars;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     unsigned long seed;
 } Scenario;
 
@@ -33,22 +33,22 @@ typedef struct {
     NodeId owner;
     LaneSpanId target;
     PlanSpan span;
-    PlanTime bar_length;
+    Rational bar_length;
 } Fixture;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
-static PlanTime time_sub(PlanTime a, PlanTime b) {
+static Rational time_sub(Rational a, Rational b) {
     return fraction(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den);
 }
 
-static PlanTime time_plus(PlanTime a, PlanTime b) {
-    PlanTime sum;
-    assert(plan_time_add(a, b, &sum) == PLAN_OK);
+static Rational time_plus(Rational a, Rational b) {
+    Rational sum;
+    assert(rational_add(a, b, &sum) == RATIONAL_OK);
     return sum;
 }
 
@@ -79,14 +79,13 @@ static Fixture build(const Scenario *scenario, CadencePlace place) {
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = scenario->tonic;
-    payload.key.mode = scenario->mode;
+    payload.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, fixture.span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, "I");
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    payload.harmony.has_function = false;
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_HARMONY, 0, fixture.span, &payload,
                               &fixture.target) == PLAN_OK);
     if (place == CADENCE_ON_SPAN) {
@@ -112,11 +111,11 @@ static FillOutcome run(const Fixture *fixture, unsigned long seed) {
 
 /* The fewest bars a cadence fits in, counting the chords it needs (see harmony_phrase.h): a tonic, a predominant
    is optional, then the cadence, whose last chord takes the last bar. */
-static int fewest_bars(PlanCadenceType cadence, size_t cells_per_bar) {
+static int fewest_bars(CadenceType cadence, size_t cells_per_bar) {
     size_t before_last = 2; /* Tb and D */
-    if (cadence == PLAN_CADENCE_HC) {
+    if (cadence == CADENCE_TYPE_HALF) {
         before_last = 1;
-    } else if (cadence == PLAN_CADENCE_PC) {
+    } else if (cadence == CADENCE_TYPE_PLAGAL) {
         before_last = 4; /* Tb, D, Te, IV */
     }
     return (int)((before_last + cells_per_bar + cells_per_bar - 1) / cells_per_bar);
@@ -124,22 +123,6 @@ static int fewest_bars(PlanCadenceType cadence, size_t cells_per_bar) {
 
 static size_t cells_per_bar(int beats_per_bar, int beat_unit) {
     return (beat_unit == 4 && beats_per_bar == 4) || beat_unit == 8 ? 2 : 1;
-}
-
-static CadenceType expected_type(PlanCadenceType cadence) {
-    switch (cadence) {
-    case PLAN_CADENCE_PAC:
-        return CADENCE_TYPE_PERFECT_AUTHENTIC;
-    case PLAN_CADENCE_IAC:
-        return CADENCE_TYPE_IMPERFECT_AUTHENTIC;
-    case PLAN_CADENCE_HC:
-        return CADENCE_TYPE_HALF;
-    case PLAN_CADENCE_DC:
-        return CADENCE_TYPE_DECEPTIVE;
-    case PLAN_CADENCE_PC:
-        return CADENCE_TYPE_PLAGAL;
-    }
-    return CADENCE_TYPE_UNKNOWN;
 }
 
 /* Writes the chords as text, one "numeral@start" each, so two runs can be compared. */
@@ -150,7 +133,7 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
     out[0] = '\0';
     for (size_t i = 0; i < count && i < MAX_CHORDS; i++) {
         PlanSpan span = plan_lane_span_span(fixture->plan, ids[i]);
-        int written = snprintf(out + used, size - used, "%s@%ld/%lu+%ld/%lu ",
+        int written = snprintf(out + used, size - used, "%s@%lld/%lld+%lld/%lld ",
                                plan_lane_span_payload(fixture->plan, ids[i])->harmony.roman_numeral, span.start.num,
                                span.start.den, span.length.num, span.length.den);
         assert(written > 0 && (size_t)written < size - used);
@@ -165,8 +148,8 @@ static void check_progression(const Fixture *fixture, const Scenario *scenario) 
     assert(count >= 2 && count <= MAX_CHORDS);
 
     /* The chords tile the phrase exactly, are Realized, and change only on strong beats. */
-    PlanTime position = fixture->span.start;
-    PlanTime strong_beats[2] = {fraction(0, 1), fraction(0, 1)};
+    Rational position = fixture->span.start;
+    Rational strong_beats[2] = {fraction(0, 1), fraction(0, 1)};
     size_t strong_count = 1;
     if (scenario->beats_per_bar == 4 && scenario->beat_unit == 4) {
         strong_beats[strong_count++] = fraction(1, 2);
@@ -177,29 +160,29 @@ static void check_progression(const Fixture *fixture, const Scenario *scenario) 
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_lane_span_span(fixture->plan, ids[i]);
         const PlanHarmony *harmony = &plan_lane_span_payload(fixture->plan, ids[i])->harmony;
-        assert(plan_time_compare(span.start, position) == 0);
+        assert(rational_cmp(span.start, position) == 0);
         assert(plan_lane_span_state(fixture->plan, ids[i]) == PLAN_STATE_REALIZED);
-        assert(harmony->function != PLAN_FUNCTION_UNKNOWN);
+        assert(harmony->has_function);
         assert(harmony_roman_parse(scenario->mode, harmony->roman_numeral, &chords[i]));
 
-        PlanTime bar_start = fixture->span.start;
-        PlanTime next_bar = time_plus(bar_start, fixture->bar_length);
-        while (plan_time_compare(next_bar, span.start) <= 0) {
+        Rational bar_start = fixture->span.start;
+        Rational next_bar = time_plus(bar_start, fixture->bar_length);
+        while (rational_cmp(next_bar, span.start) <= 0) {
             bar_start = next_bar;
             next_bar = time_plus(bar_start, fixture->bar_length);
         }
-        PlanTime offset = time_sub(span.start, bar_start);
+        Rational offset = time_sub(span.start, bar_start);
         bool strong = false;
         for (size_t b = 0; b < strong_count; b++) {
-            strong = strong || plan_time_compare(offset, strong_beats[b]) == 0;
+            strong = strong || rational_cmp(offset, strong_beats[b]) == 0;
         }
         assert(strong);
         if (i == count - 1) {
-            assert(plan_time_compare(offset, fraction(0, 1)) == 0); /* the last chord arrives on a downbeat */
+            assert(rational_cmp(offset, fraction(0, 1)) == 0); /* the last chord arrives on a downbeat */
         }
         position = time_plus(span.start, span.length);
     }
-    assert(plan_time_compare(position, time_plus(fixture->span.start, fixture->span.length)) == 0);
+    assert(rational_cmp(position, time_plus(fixture->span.start, fixture->span.length)) == 0);
 
     /* The cadence constraint moved to the final chord. */
     assert(plan_lane_span_constraint_count(fixture->plan, ids[count - 1]) == 1);
@@ -208,8 +191,8 @@ static void check_progression(const Fixture *fixture, const Scenario *scenario) 
     /* The phrase passes standard-harmony: no hard rule broken. A deceptive or plagal ending is read up to its
        dominant or authentic cadence, as the checker does. */
     size_t model = count;
-    model -= scenario->cadence == PLAN_CADENCE_DC ? 1 : (scenario->cadence == PLAN_CADENCE_PC ? 2 : 0);
-    HarmonyPhrase phrase = {scenario->mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR, chords,
+    model -= scenario->cadence == CADENCE_TYPE_DECEPTIVE ? 1 : (scenario->cadence == CADENCE_TYPE_PLAGAL ? 2 : 0);
+    HarmonyPhrase phrase = {scenario->mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR, chords,
                             model};
     unsigned hard = 0;
     unsigned soft = 0;
@@ -220,7 +203,7 @@ static void check_progression(const Fixture *fixture, const Scenario *scenario) 
     for (size_t i = 0; i < count; i++) {
         if (chords[i].degree == 5) {
             assert(plan_lane_span_payload(fixture->plan, ids[i])->harmony.roman_numeral[0] == 'V');
-            assert(plan_lane_span_payload(fixture->plan, ids[i])->harmony.function == PLAN_FUNCTION_DOMINANT);
+            assert(plan_lane_span_payload(fixture->plan, ids[i])->harmony.function == HARMONIC_FUNCTION_DOMINANT);
         }
     }
 
@@ -228,7 +211,7 @@ static void check_progression(const Fixture *fixture, const Scenario *scenario) 
     CadenceType heard;
     bool at_end;
     assert(harmony_hear_cadence(fixture->plan, fixture->span, scenario->mode, scenario->cadence, &heard, &at_end));
-    assert(heard == expected_type(scenario->cadence));
+    assert(heard == scenario->cadence);
     assert(at_end);
 }
 
@@ -267,15 +250,15 @@ static void check_scenario(const Scenario *scenario) {
 static void test_sweep(void) {
     static const int meters[4][2] = {{2, 4}, {3, 4}, {4, 4}, {6, 8}};
     static const int tonics[3] = {0, 6, 10};
-    static const PlanCadenceType cadences[5] = {PLAN_CADENCE_PAC, PLAN_CADENCE_IAC, PLAN_CADENCE_HC, PLAN_CADENCE_DC,
-                                                PLAN_CADENCE_PC};
+    static const CadenceType cadences[5] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE,
+                                                CADENCE_TYPE_PLAGAL};
     for (int m = 0; m < 4; m++) {
         for (int mode = 0; mode < 2; mode++) {
             for (int t = 0; t < 3; t++) {
                 for (int bars = 1; bars <= 10; bars++) {
                     for (int c = 0; c < 5; c++) {
                         for (unsigned long seed = 0; seed < 6; seed++) {
-                            Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
+                            Scenario scenario = {meters[m][0], meters[m][1], mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR,
                                                  tonics[t], bars, cadences[c], seed};
                             check_scenario(&scenario);
                         }
@@ -291,7 +274,7 @@ static void test_seeds_vary(void) {
     char seen[16][512];
     int distinct = 0;
     for (unsigned long seed = 0; seed < 16; seed++) {
-        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, PLAN_CADENCE_PAC, seed};
+        Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
         Fixture fixture = build(&scenario, CADENCE_ON_SPAN);
         FillOutcome outcome = run(&fixture, seed);
         assert(outcome.status == FILL_STATUS_COMPLETE);
@@ -312,7 +295,7 @@ static void test_seeds_vary(void) {
 
 /* A span with no cadence to ask for is not one the operator applies to. */
 static void test_no_cadence_is_not_applicable(void) {
-    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 4, PLAN_CADENCE_PAC, 0};
+    Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 4, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
     Fixture fixture = build(&scenario, CADENCE_NONE);
     FillOutcome outcome = run(&fixture, 0);
     assert(outcome.status == FILL_STATUS_STUCK);
@@ -323,13 +306,13 @@ static void test_no_cadence_is_not_applicable(void) {
 
 /* A cadence on the owner node does as well as one on the span. */
 static void test_cadence_on_owner(void) {
-    Scenario scenario = {3, 4, PLAN_MODE_MINOR, 9, 4, PLAN_CADENCE_HC, 3};
+    Scenario scenario = {3, 4, KEY_STRUCTURE_MODE_MINOR, 9, 4, CADENCE_TYPE_HALF, 3};
     Fixture fixture = build(&scenario, CADENCE_ON_OWNER);
     FillOutcome outcome = run(&fixture, 3);
     assert(outcome.status == FILL_STATUS_COMPLETE);
     CadenceType heard;
     bool at_end;
-    assert(harmony_hear_cadence(fixture.plan, fixture.span, PLAN_MODE_MINOR, PLAN_CADENCE_HC, &heard, &at_end));
+    assert(harmony_hear_cadence(fixture.plan, fixture.span, KEY_STRUCTURE_MODE_MINOR, CADENCE_TYPE_HALF, &heard, &at_end));
     assert(heard == CADENCE_TYPE_HALF && at_end);
     fill_outcome_destroy(&outcome);
     plan_destroy(fixture.plan);
@@ -346,12 +329,12 @@ static FillOutcome run_shaped(const Fixture *fixture, PlanHarmonyShape shape, un
 /* max_cells_per_chord caps every chord but the last, which takes the whole last bar; split_at_bars keeps chords off barlines. */
 static void test_phrase_model_shape(void) {
     static const int meters[3][2] = {{4, 4}, {6, 8}, {3, 4}};
-    static const PlanCadenceType cadences[3] = {PLAN_CADENCE_PAC, PLAN_CADENCE_HC, PLAN_CADENCE_IAC};
+    static const CadenceType cadences[3] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_IMPERFECT_AUTHENTIC};
     for (int m = 0; m < 3; m++) {
         for (int c = 0; c < 3; c++) {
             for (int cap = 1; cap <= 3; cap++) {
                 for (unsigned long seed = 0; seed < 8; seed++) {
-                    Scenario scenario = {meters[m][0], meters[m][1], PLAN_MODE_MAJOR, 0, 6, cadences[c], seed};
+                    Scenario scenario = {meters[m][0], meters[m][1], KEY_STRUCTURE_MODE_MAJOR, 0, 6, cadences[c], seed};
                     Fixture fixture = build(&scenario, CADENCE_ON_SPAN);
                     PlanHarmonyShape shape;
                     memset(&shape, 0, sizeof(shape));
@@ -364,7 +347,7 @@ static void test_phrase_model_shape(void) {
                         check_progression(&fixture, &scenario);
                         LaneSpanId ids[MAX_CHORDS];
                         size_t count = plan_lane_find(fixture.plan, PLAN_LANE_HARMONY, 0, fixture.span, ids, MAX_CHORDS);
-                        PlanTime cell = fraction(fixture.bar_length.num, fixture.bar_length.den * (unsigned long)per_bar);
+                        Rational cell = fraction(fixture.bar_length.num, fixture.bar_length.den * (unsigned long)per_bar);
                         for (size_t i = 0; i < count; i++) {
                             PlanSpan span = plan_lane_span_span(fixture.plan, ids[i]);
                             /* Length in cells, and the cell it starts on in its bar. */
@@ -394,7 +377,7 @@ static void test_cadential_shape(void) {
     for (int m = 0; m < 4; m++) {
         for (int bars = 2; bars <= 4; bars++) {
             for (unsigned long seed = 0; seed < 8; seed++) {
-                Scenario scenario = {meters[m][0], meters[m][1], PLAN_MODE_MAJOR, 0, bars, PLAN_CADENCE_PAC, seed};
+                Scenario scenario = {meters[m][0], meters[m][1], KEY_STRUCTURE_MODE_MAJOR, 0, bars, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
                 Fixture fixture = build(&scenario, CADENCE_ON_SPAN);
                 PlanHarmonyShape shape;
                 memset(&shape, 0, sizeof(shape));
@@ -404,10 +387,10 @@ static void test_cadential_shape(void) {
                 LaneSpanId ids[MAX_CHORDS];
                 size_t count = plan_lane_find(fixture.plan, PLAN_LANE_HARMONY, 0, fixture.span, ids, MAX_CHORDS);
                 assert(count >= 2);
-                assert(plan_lane_span_payload(fixture.plan, ids[0])->harmony.function != PLAN_FUNCTION_TONIC);
+                assert(plan_lane_span_payload(fixture.plan, ids[0])->harmony.function != HARMONIC_FUNCTION_TONIC);
                 CadenceType heard;
                 bool at_end;
-                assert(harmony_hear_cadence(fixture.plan, fixture.span, PLAN_MODE_MAJOR, PLAN_CADENCE_PAC, &heard,
+                assert(harmony_hear_cadence(fixture.plan, fixture.span, KEY_STRUCTURE_MODE_MAJOR, CADENCE_TYPE_PERFECT_AUTHENTIC, &heard,
                                             &at_end));
                 assert(heard == CADENCE_TYPE_PERFECT_AUTHENTIC && at_end);
                 fill_outcome_destroy(&outcome);

@@ -28,34 +28,34 @@
 
 /* ------------------------------------------------------------- time helpers */
 
-static PlanTime tmake(long num, unsigned long den) {
-    PlanTime time;
-    PlanResult result = plan_time_make(num, den, &time);
-    assert(result == PLAN_OK);
+static Rational tmake(long num, long long den) {
+    Rational time;
+    RationalResult result = rational_make(num, den, &time);
+    assert(result == RATIONAL_OK);
     return time;
 }
 
-static PlanTime tmul(PlanTime a, PlanTime b) {
+static Rational tmul(Rational a, Rational b) {
     return tmake(a.num * b.num, a.den * b.den);
 }
 
-static PlanTime tdiv(PlanTime a, PlanTime b) {
+static Rational tdiv(Rational a, Rational b) {
     return tmake(a.num * (long)b.den, a.den * (unsigned long)b.num);
 }
 
-static PlanTime tadd(PlanTime a, PlanTime b) {
+static Rational tadd(Rational a, Rational b) {
     return tmake(a.num * (long)b.den + b.num * (long)a.den, a.den * b.den);
 }
 
-static PlanTime tsub(PlanTime a, PlanTime b) {
+static Rational tsub(Rational a, Rational b) {
     return tmake(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den);
 }
 
-static bool teq(PlanTime a, PlanTime b) {
-    return plan_time_compare(a, b) == 0;
+static bool teq(Rational a, Rational b) {
+    return rational_cmp(a, b) == 0;
 }
 
-static bool is_time(PlanTime time, long num, unsigned long den) {
+static bool is_time(Rational time, long num, long long den) {
     return time.num == num && time.den == den;
 }
 
@@ -65,18 +65,18 @@ typedef struct {
     const char *name;
     const char *notes;
     PlanMeter meter;
-    PlanKey key;
+    AnalysisKey key;
 } Source;
 
 static const Source SOURCES[] = {
-    {"minor", "D4:q F4:e A4:e D5:h", {4, 4, 0}, {2, PLAN_MODE_MINOR}},
-    {"rest and dotted", "G4:q r:e A4:e C5:q. B4:e", {4, 4, 0}, {0, PLAN_MODE_MAJOR}},
-    {"dotted", "G4:q. A4:e B4:q D5:q", {4, 4, 0}, {7, PLAN_MODE_MAJOR}},
-    {"leading rest", "r:q E4:q G4:q C5:q", {4, 4, 0}, {0, PLAN_MODE_MAJOR}},
+    {"minor", "D4:q F4:e A4:e D5:h", {4, 4, 0}, {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR}},
+    {"rest and dotted", "G4:q r:e A4:e C5:q. B4:e", {4, 4, 0}, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR}},
+    {"dotted", "G4:q. A4:e B4:q D5:q", {4, 4, 0}, {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR}},
+    {"leading rest", "r:q E4:q G4:q C5:q", {4, 4, 0}, {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR}},
 };
 #define SOURCE_COUNT (sizeof(SOURCES) / sizeof(SOURCES[0]))
 
-static Motive load(const char *notes, const PlanMeter *meter, const PlanKey *key) {
+static Motive load(const char *notes, const PlanMeter *meter, const AnalysisKey *key) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.has_meter = true;
@@ -232,9 +232,9 @@ static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
 static const int MINOR_SCALE[7] = {0, 2, 3, 5, 7, 8, 10};
 
 /* The step of the key's scale a pitch is on, or LONG_MIN when it is not in the scale. */
-static long step_of(PlanKey key, int pitch) {
-    const int *scale = key.mode == PLAN_MODE_MINOR ? MINOR_SCALE : MAJOR_SCALE;
-    int relative = pitch - key.tonic_pitch_class;
+static long step_of(AnalysisKey key, int pitch) {
+    const int *scale = key.mode == KEY_STRUCTURE_MODE_MINOR ? MINOR_SCALE : MAJOR_SCALE;
+    int relative = pitch - analysis_key_tonic_pitch_class(&key);
     long octave = relative >= 0 ? relative / 12 : -((-relative + 11) / 12);
     int rest = (int)(relative - octave * 12);
     for (int i = 0; i < 7; i++) {
@@ -262,7 +262,7 @@ static bool same_notes(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch) {
+        if (a->notes[i].midi != b->notes[i].midi) {
             return false;
         }
     }
@@ -270,19 +270,19 @@ static bool same_notes(const Motive *a, const Motive *b) {
 }
 
 /* The rhythm is the source's and every pitch moved by one amount: in semitones, or in steps of the scale. */
-static bool is_transposition(const Motive *source, const Motive *result, PlanKey key) {
+static bool is_transposition(const Motive *source, const Motive *result, AnalysisKey key) {
     if (!same_rhythm(source, result)) {
         return false;
     }
     bool real = true;
     bool tonal = true;
-    int shift = result->notes[0].midi_pitch - source->notes[0].midi_pitch;
-    long first = step_of(key, source->notes[0].midi_pitch);
-    long first_result = step_of(key, result->notes[0].midi_pitch);
+    int shift = result->notes[0].midi - source->notes[0].midi;
+    long first = step_of(key, source->notes[0].midi);
+    long first_result = step_of(key, result->notes[0].midi);
     for (size_t i = 0; i < source->note_count; i++) {
-        real = real && result->notes[i].midi_pitch - source->notes[i].midi_pitch == shift;
-        long from = step_of(key, source->notes[i].midi_pitch);
-        long to = step_of(key, result->notes[i].midi_pitch);
+        real = real && result->notes[i].midi - source->notes[i].midi == shift;
+        long from = step_of(key, source->notes[i].midi);
+        long to = step_of(key, result->notes[i].midi);
         tonal = tonal && from != LONG_MIN && to != LONG_MIN && first != LONG_MIN && first_result != LONG_MIN &&
                 to - from == first_result - first;
     }
@@ -290,18 +290,18 @@ static bool is_transposition(const Motive *source, const Motive *result, PlanKey
 }
 
 /* The rhythm is the source's and every pitch mirrored about one pitch: in semitones, or in steps of the scale. */
-static bool is_inversion(const Motive *source, const Motive *result, PlanKey key) {
+static bool is_inversion(const Motive *source, const Motive *result, AnalysisKey key) {
     if (!same_rhythm(source, result)) {
         return false;
     }
     bool real = true;
     bool tonal = true;
-    int sum = source->notes[0].midi_pitch + result->notes[0].midi_pitch;
+    int sum = source->notes[0].midi + result->notes[0].midi;
     long step_sum = LONG_MIN;
     for (size_t i = 0; i < source->note_count; i++) {
-        real = real && source->notes[i].midi_pitch + result->notes[i].midi_pitch == sum;
-        long from = step_of(key, source->notes[i].midi_pitch);
-        long to = step_of(key, result->notes[i].midi_pitch);
+        real = real && source->notes[i].midi + result->notes[i].midi == sum;
+        long from = step_of(key, source->notes[i].midi);
+        long to = step_of(key, result->notes[i].midi);
         if (from == LONG_MIN || to == LONG_MIN) {
             tonal = false;
         } else if (step_sum == LONG_MIN) {
@@ -321,16 +321,16 @@ static bool is_retrograde(const Motive *source, const Motive *result) {
     }
     for (size_t i = 0; i < n; i++) {
         const PlanNote *from = &source->notes[n - 1 - i];
-        if (result->notes[i].midi_pitch != from->midi_pitch || !teq(result->notes[i].duration, from->duration)) {
+        if (result->notes[i].midi != from->midi || !teq(result->notes[i].duration, from->duration)) {
             return false;
         }
     }
     /* The rest between two neighbors, from the end of one to the start of the next. */
     for (size_t i = 0; i + 1 < n; i++) {
-        PlanTime gap_result = tsub(result->notes[i + 1].offset, tadd(result->notes[i].offset, result->notes[i].duration));
+        Rational gap_result = tsub(result->notes[i + 1].offset, tadd(result->notes[i].offset, result->notes[i].duration));
         const PlanNote *later = &source->notes[n - 1 - i];
         const PlanNote *earlier = &source->notes[n - 2 - i];
-        PlanTime gap_source = tsub(later->offset, tadd(earlier->offset, earlier->duration));
+        Rational gap_source = tsub(later->offset, tadd(earlier->offset, earlier->duration));
         if (!teq(gap_result, gap_source)) {
             return false;
         }
@@ -344,13 +344,13 @@ static int sign(int value) {
 
 /* The rhythm and the first pitch are the source's; some interval differs; a direction changes only if allowed. */
 static bool is_interval_change(const Motive *source, const Motive *result, bool keep_contour) {
-    if (!same_rhythm(source, result) || result->notes[0].midi_pitch != source->notes[0].midi_pitch) {
+    if (!same_rhythm(source, result) || result->notes[0].midi != source->notes[0].midi) {
         return false;
     }
     bool differs = false;
     for (size_t i = 0; i + 1 < source->note_count; i++) {
-        int before = source->notes[i + 1].midi_pitch - source->notes[i].midi_pitch;
-        int after = result->notes[i + 1].midi_pitch - result->notes[i].midi_pitch;
+        int before = source->notes[i + 1].midi - source->notes[i].midi;
+        int after = result->notes[i + 1].midi - result->notes[i].midi;
         differs = differs || before != after;
         if (keep_contour && sign(before) != sign(after)) {
             return false;
@@ -364,7 +364,7 @@ static bool is_interval_change(const Motive *source, const Motive *result, bool 
 }
 
 static bool note_matches(const PlanNote *a, const PlanNote *b) {
-    return a->midi_pitch == b->midi_pitch && teq(a->duration, b->duration);
+    return a->midi == b->midi && teq(a->duration, b->duration);
 }
 
 /* A run of neighboring notes of the source, with its rests, starting the result at 0. */
@@ -389,12 +389,12 @@ static bool is_fragment(const Motive *source, const Motive *result) {
 
 /* Kept rhythm: a kept note stays where it was and holds on through the time of the notes dropped after it. */
 static bool kept_note_matches(const PlanNote *source, const PlanNote *kept) {
-    return source->midi_pitch == kept->midi_pitch && tsub(kept->duration, source->duration).num >= 0;
+    return source->midi == kept->midi && tsub(kept->duration, source->duration).num >= 0;
 }
 
 /* Some of the source's notes, in order. Kept rhythm: where they were. Otherwise one after another from 0. */
 static bool matches_from(const Motive *source, const Motive *result, bool keep_rhythm, size_t from_source,
-                         size_t from_result, PlanTime at) {
+                         size_t from_result, Rational at) {
     if (from_result == result->note_count) {
         return true;
     }
@@ -404,10 +404,10 @@ static bool matches_from(const Motive *source, const Motive *result, bool keep_r
         }
         const PlanNote *candidate = &source->notes[i];
         const PlanNote *note = &result->notes[from_result];
-        PlanTime expected = keep_rhythm ? candidate->offset : at;
+        Rational expected = keep_rhythm ? candidate->offset : at;
         if ((keep_rhythm ? kept_note_matches(candidate, note) : note_matches(candidate, note)) &&
             teq(note->offset, expected)) {
-            PlanTime next = tmake(at.num * (long)candidate->duration.den + candidate->duration.num * (long)at.den,
+            Rational next = tmake(at.num * (long)candidate->duration.den + candidate->duration.num * (long)at.den,
                                   at.den * candidate->duration.den);
             if (matches_from(source, result, keep_rhythm, i + 1, from_result + 1, next)) {
                 return true;
@@ -427,12 +427,12 @@ static bool is_scaling(const Motive *source, const Motive *result, bool augment)
     if (source->note_count != result->note_count) {
         return false;
     }
-    PlanTime ratio = tdiv(result->notes[0].duration, source->notes[0].duration);
+    Rational ratio = tdiv(result->notes[0].duration, source->notes[0].duration);
     if (augment ? ratio.num <= (long)ratio.den : ratio.num >= (long)ratio.den) {
         return false;
     }
     for (size_t i = 0; i < source->note_count; i++) {
-        if (result->notes[i].midi_pitch != source->notes[i].midi_pitch ||
+        if (result->notes[i].midi != source->notes[i].midi ||
             !teq(result->notes[i].duration, tmul(source->notes[i].duration, ratio)) ||
             !teq(result->notes[i].offset, tmul(source->notes[i].offset, ratio))) {
             return false;
@@ -447,53 +447,53 @@ typedef struct {
     const char *name;
     PlanMotiveRef ref;
     /* The relation the development must have to the source. */
-    bool (*related)(const Motive *source, const Motive *result, const PlanMotiveRef *ref, PlanKey key);
+    bool (*related)(const Motive *source, const Motive *result, const PlanMotiveRef *ref, AnalysisKey key);
 } Family;
 
-static bool related_restated(const Motive *s, const Motive *r, const PlanMotiveRef *ref, PlanKey key) {
+static bool related_restated(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
     (void)ref;
     return same_notes(s, r) || is_transposition(s, r, key);
 }
 
-static bool related_transposed(const Motive *s, const Motive *r, const PlanMotiveRef *ref, PlanKey key) {
+static bool related_transposed(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
     (void)ref;
     return is_transposition(s, r, key) && !same_notes(s, r);
 }
 
-static bool related_inverted(const Motive *s, const Motive *r, const PlanMotiveRef *ref, PlanKey key) {
+static bool related_inverted(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
     (void)ref;
     return is_inversion(s, r, key);
 }
 
-static bool related_retrograde(const Motive *s, const Motive *r, const PlanMotiveRef *ref, PlanKey key) {
+static bool related_retrograde(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
     (void)ref;
     (void)key;
     return is_retrograde(s, r);
 }
 
-static bool related_interval(const Motive *s, const Motive *r, const PlanMotiveRef *ref, PlanKey key) {
+static bool related_interval(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
     (void)key;
     return is_interval_change(s, r, ref->keep_contour);
 }
 
-static bool related_fragment(const Motive *s, const Motive *r, const PlanMotiveRef *ref, PlanKey key) {
+static bool related_fragment(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
     (void)ref;
     (void)key;
     return is_fragment(s, r);
 }
 
-static bool related_liquidation(const Motive *s, const Motive *r, const PlanMotiveRef *ref, PlanKey key) {
+static bool related_liquidation(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
     (void)key;
     return is_liquidation(s, r, ref->keep_rhythm);
 }
 
-static bool related_augmented(const Motive *s, const Motive *r, const PlanMotiveRef *ref, PlanKey key) {
+static bool related_augmented(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
     (void)ref;
     (void)key;
     return is_scaling(s, r, true);
 }
 
-static bool related_diminished(const Motive *s, const Motive *r, const PlanMotiveRef *ref, PlanKey key) {
+static bool related_diminished(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
     (void)ref;
     (void)key;
     return is_scaling(s, r, false);
@@ -612,7 +612,7 @@ static bool pitches_are(const Motive *motive, size_t count, const int *pitches) 
         return false;
     }
     for (size_t i = 0; i < count; i++) {
-        if (motive->notes[i].midi_pitch != pitches[i]) {
+        if (motive->notes[i].midi != pitches[i]) {
             return false;
         }
     }
@@ -754,7 +754,7 @@ static void test_explicit_parameters(void) {
 
 static void test_degenerate_cases(void) {
     PlanMeter meter = {4, 4, 0};
-    PlanKey c_major = {0, PLAN_MODE_MAJOR};
+    AnalysisKey c_major = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
     Motive single = load("C4:q", &meter, &c_major);
     Motive four = load("D4:q F4:e A4:e D5:h", &meter, &c_major);
     Motive result;
@@ -790,7 +790,7 @@ static void test_degenerate_cases(void) {
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && motive_equal(&single, &result));
     spec.kind = MOTIVE_DEV_TRANSPOSE;
     spec.amount = 7;
-    assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && result.notes[0].midi_pitch == 67);
+    assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && result.notes[0].midi == 67);
     memset(&spec, 0, sizeof(spec));
     spec.kind = MOTIVE_DEV_AUGMENT;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && is_time(result.notes[0].duration, 1, 2));
@@ -899,7 +899,7 @@ static bool score_is(MotiveScore score, unsigned long num, unsigned long den) {
 /* The pickup scales with augmentation and diminution, and a tonal transposition or inversion spells F and B as degrees. */
 static void test_pickups_and_tonal_spelling(void) {
     const PlanMeter three_four = {3, 4, 0};
-    const PlanKey c_major = {0, PLAN_MODE_MAJOR};
+    const AnalysisKey c_major = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
     Motive source = load("C4:q E4:q G4:q E4:q", &three_four, &c_major);
     Motive result;
     MotiveDevSpec spec;
@@ -928,19 +928,19 @@ static void test_pickups_and_tonal_spelling(void) {
     spec.tonal = true;
     spec.amount = 1;
     assert(motive_develop(&line, &spec, &result) == MOTIVE_DEV_OK);
-    assert(result.notes[0].midi_pitch == 62 && result.notes[1].midi_pitch == 67 && result.notes[2].midi_pitch == 72 &&
-           result.notes[3].midi_pitch == 65);
+    assert(result.notes[0].midi == 62 && result.notes[1].midi == 67 && result.notes[2].midi == 72 &&
+           result.notes[3].midi == 65);
     memset(&spec, 0, sizeof(spec));
     spec.kind = MOTIVE_DEV_INVERT;
     spec.tonal = true;
     assert(motive_develop(&line, &spec, &result) == MOTIVE_DEV_OK);
-    assert(result.notes[0].midi_pitch == 60 && result.notes[1].midi_pitch == 55 && result.notes[2].midi_pitch == 50 &&
-           result.notes[3].midi_pitch == 57);
+    assert(result.notes[0].midi == 60 && result.notes[1].midi == 55 && result.notes[2].midi == 50 &&
+           result.notes[3].midi == 57);
 }
 
 static void test_recognizability(void) {
     PlanMeter meter = {4, 4, 0};
-    PlanKey d_minor = {2, PLAN_MODE_MINOR};
+    AnalysisKey d_minor = {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR};
     Motive source = load("D4:q F4:e A4:e D5:h", &meter, &d_minor);
     MotiveRecognizability r;
 

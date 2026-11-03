@@ -77,15 +77,15 @@ static bool lane_open(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanS
 }
 
 /* The scale degree a pitch is spelled as in the key; the altered degrees share the degree of the natural one. */
-static int scale_degree(const PlanKey *key, int pitch) {
+static int scale_degree(const AnalysisKey *key, int pitch) {
     static const int MAJOR[12] = {1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7};
     static const int MINOR[12] = {1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7};
-    int offset = ((pitch - key->tonic_pitch_class) % 12 + 12) % 12;
-    return (key->mode == PLAN_MODE_MINOR ? MINOR : MAJOR)[offset];
+    int offset = ((pitch - analysis_key_tonic_pitch_class(key)) % 12 + 12) % 12;
+    return (key->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR : MAJOR)[offset];
 }
 
 /* The spelling of a pitch over a chord: as the tone of the chord it is, else as a degree of the key. */
-static PitchSpelling *spell_over(const PlanKey *key, const PhraseChord *chord, int pitch) {
+static PitchSpelling *spell_over(const AnalysisKey *key, const PhraseChord *chord, int pitch) {
     int pcs[4];
     size_t count;
     int root_degree;
@@ -101,11 +101,11 @@ static PitchSpelling *spell_over(const PlanKey *key, const PhraseChord *chord, i
     return harmony_spell_pitch(key, scale_degree(key, pitch), pitch);
 }
 
-/* The pitch of the note sounding at a tick, or -1 for a rest. */
-static int sounding_at(const AccompLine *lines, size_t count, long tick, bool *attacked) {
+/* The pitch of the note sounding at a position, or -1 for a rest. */
+static int sounding_at(const AccompLine *lines, size_t count, Rational position, bool *attacked) {
     for (size_t i = 0; i < count; i++) {
-        if (lines[i].onset <= tick && tick < lines[i].end) {
-            *attacked = lines[i].onset == tick;
+        if (rational_cmp(lines[i].onset, position) <= 0 && rational_cmp(position, lines[i].end) < 0) {
+            *attacked = rational_cmp(lines[i].onset, position) == 0;
             return lines[i].pitch;
         }
     }
@@ -157,10 +157,10 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
     LaneSpanId harmony[HARMONY_MAX_CHORDS];
     AccompLine lines[VOICES][ACCOMP_MAX_LINE];
     size_t line_count[VOICES];
-    PlanKey key;
+    AnalysisKey key;
     size_t count;
-    long origin;
-    long length;
+    Rational origin = span.start;
+    Rational length = span.length;
     Grid *grid;
     EntityID *id = NULL;
     VoiceHearResult result = VOICE_HEAR_OK;
@@ -178,8 +178,7 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
     }
     if (!harmony_find_key(plan, PLAN_LANE_SPAN_NONE, PLAN_NODE_NONE, span, &key) ||
         !harmony_read_lane(plan, span, key.mode, chords, &count, &metre) || count == 0 ||
-        plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, harmony, HARMONY_MAX_CHORDS) != count ||
-        !melody_ticks(span.start, &origin) || !melody_ticks(span.length, &length)) {
+        plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, harmony, HARMONY_MAX_CHORDS) != count) {
         return VOICE_HEAR_ERR_UNREADABLE;
     }
     for (size_t voice = 0; voice < VOICES; voice++) {
@@ -199,16 +198,12 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
         return VOICE_HEAR_ERR_ALLOC;
     }
     for (size_t row = 0; result == VOICE_HEAR_OK && row < count; row++) {
-        long start;
+        Rational start;
         snprintf(grid->row_ids[row], sizeof(grid->row_ids[row]), "r%zu", row);
         grid->row_id_ptrs[row] = grid->row_ids[row];
         snprintf(grid->segment_ids[row], sizeof(grid->segment_ids[row]), "c%zu", row);
         grid->segment_id_ptrs[row] = grid->segment_ids[row];
-        if (!melody_ticks(plan_lane_span_span(plan, harmony[row]).start, &start)) {
-            result = VOICE_HEAR_ERR_UNREADABLE;
-            break;
-        }
-        start -= origin;
+        start = position_sub(plan_lane_span_span(plan, harmony[row]).start, origin);
         for (size_t voice = 0; voice < VOICES; voice++) {
             size_t cell = row * VOICES + voice;
             bool attacked = false;
@@ -232,7 +227,7 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
     if (result == VOICE_HEAR_OK) {
         StandardCounterpointVoiceGrid counterpoint = {count, VOICES, grid->row_id_ptrs, grid->counterpoint_cells};
         HarmonyVoiceGrid harmony_grid = {count, VOICES, grid->segment_id_ptrs, grid->harmony_cells};
-        HeardPhrase phrase = {chords, count, key.mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, false, NULL,
+        HeardPhrase phrase = {chords, count, key.mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, false, NULL,
                               false,  false, NULL, NULL, false, &metre};
         result = count_violations(&counterpoint, &harmony_grid, &phrase, out);
         out->rows = count;

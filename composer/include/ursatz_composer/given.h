@@ -60,8 +60,8 @@ GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, c
 /* One chord at an exact place: onset from the section's start, length to its end. */
 typedef struct {
     const char *numeral;
-    PlanTime onset;
-    PlanTime length;
+    Rational onset;
+    Rational length;
 } GivenChord;
 
 /*
@@ -77,7 +77,7 @@ GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *
  * bar in 2/4 and 3/4, half a bar in 4/4 and 6/8). False for a meter they do not support. plan_give_chords takes a chord
  * anywhere, but a theme can only be written around chords that start on this grid.
  */
-bool given_cell_length(const PlanMeter *meter, PlanTime *length);
+bool given_cell_length(const PlanMeter *meter, Rational *length);
 
 /* A bass span, as long as the notes need in whole bars, Given. */
 GivenResult plan_give_bass(PiecePlan *plan, NodeId section, size_t bar, const PlanNote *notes, size_t count);

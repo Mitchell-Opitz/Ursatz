@@ -22,10 +22,10 @@
 typedef struct {
     int beats_per_bar;
     int beat_unit;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int tonic;
     int bars;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     unsigned long seed;
 } Scenario;
 
@@ -34,22 +34,22 @@ typedef struct {
     NodeId owner;
     LaneSpanId target;
     PlanSpan span;
-    PlanTime bar_length;
+    Rational bar_length;
 } Fixture;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
-static PlanTime time_sub(PlanTime a, PlanTime b) {
+static Rational time_sub(Rational a, Rational b) {
     return fraction(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den);
 }
 
-static PlanTime time_plus(PlanTime a, PlanTime b) {
-    PlanTime sum;
-    assert(plan_time_add(a, b, &sum) == PLAN_OK);
+static Rational time_plus(Rational a, Rational b) {
+    Rational sum;
+    assert(rational_add(a, b, &sum) == RATIONAL_OK);
     return sum;
 }
 
@@ -72,14 +72,13 @@ static Fixture build(const Scenario *scenario) {
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = scenario->tonic;
-    payload.key.mode = scenario->mode;
+    payload.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, fixture.span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, "I");
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    payload.harmony.has_function = false;
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_HARMONY, 0, fixture.span, &payload,
                               &fixture.target) == PLAN_OK);
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
@@ -114,29 +113,13 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
     out[0] = '\0';
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_lane_span_span(fixture->plan, ids[i]);
-        int written = snprintf(out + used, size - used, "%s@%ld/%lu+%ld/%lu:%d ",
+        int written = snprintf(out + used, size - used, "%s@%lld/%lld+%lld/%lld:%d ",
                                plan_lane_span_payload(fixture->plan, ids[i])->harmony.roman_numeral, span.start.num,
                                span.start.den, span.length.num, span.length.den,
                                (int)plan_lane_span_state(fixture->plan, ids[i]));
         assert(written > 0 && (size_t)written < size - used);
         used += (size_t)written;
     }
-}
-
-static CadenceType expected_type(PlanCadenceType cadence) {
-    switch (cadence) {
-    case PLAN_CADENCE_PAC:
-        return CADENCE_TYPE_PERFECT_AUTHENTIC;
-    case PLAN_CADENCE_IAC:
-        return CADENCE_TYPE_IMPERFECT_AUTHENTIC;
-    case PLAN_CADENCE_HC:
-        return CADENCE_TYPE_HALF;
-    case PLAN_CADENCE_DC:
-        return CADENCE_TYPE_DECEPTIVE;
-    case PLAN_CADENCE_PC:
-        return CADENCE_TYPE_PLAGAL;
-    }
-    return CADENCE_TYPE_UNKNOWN;
 }
 
 /* An applied numeral has a slash before a letter (V7/V); a plain figure has none (I64). */
@@ -152,8 +135,8 @@ static void check_embellished(const Fixture *fixture, const Scenario *scenario) 
     assert(count >= 2 && count <= MAX_CHORDS);
 
     /* The chords tile the phrase exactly, are settled, and change only on strong beats. */
-    PlanTime position = fixture->span.start;
-    PlanTime strong_beats[2] = {fraction(0, 1), fraction(0, 1)};
+    Rational position = fixture->span.start;
+    Rational strong_beats[2] = {fraction(0, 1), fraction(0, 1)};
     size_t strong_count = 1;
     if (scenario->beats_per_bar == 4 && scenario->beat_unit == 4) {
         strong_beats[strong_count++] = fraction(1, 2);
@@ -166,7 +149,7 @@ static void check_embellished(const Fixture *fixture, const Scenario *scenario) 
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_lane_span_span(fixture->plan, ids[i]);
         const char *roman = plan_lane_span_payload(fixture->plan, ids[i])->harmony.roman_numeral;
-        assert(plan_time_compare(span.start, position) == 0);
+        assert(rational_cmp(span.start, position) == 0);
         assert(plan_lane_span_state(fixture->plan, ids[i]) != PLAN_STATE_CONSTRAINED);
         for (size_t k = 0; k < plan_lane_span_constraint_count(fixture->plan, ids[i]); k++) {
             const PlanConstraint *constraint = plan_lane_span_constraint_at(fixture->plan, ids[i], k);
@@ -181,21 +164,21 @@ static void check_embellished(const Fixture *fixture, const Scenario *scenario) 
             assert(harmony_roman_parse(scenario->mode, roman, &chords[i]));
         }
 
-        PlanTime bar_start = fixture->span.start;
-        PlanTime next_bar = time_plus(bar_start, fixture->bar_length);
-        while (plan_time_compare(next_bar, span.start) <= 0) {
+        Rational bar_start = fixture->span.start;
+        Rational next_bar = time_plus(bar_start, fixture->bar_length);
+        while (rational_cmp(next_bar, span.start) <= 0) {
             bar_start = next_bar;
             next_bar = time_plus(bar_start, fixture->bar_length);
         }
-        PlanTime offset = time_sub(span.start, bar_start);
+        Rational offset = time_sub(span.start, bar_start);
         bool strong = false;
         for (size_t b = 0; b < strong_count; b++) {
-            strong = strong || plan_time_compare(offset, strong_beats[b]) == 0;
+            strong = strong || rational_cmp(offset, strong_beats[b]) == 0;
         }
         assert(strong);
         position = time_plus(span.start, span.length);
     }
-    assert(plan_time_compare(position, time_plus(fixture->span.start, fixture->span.length)) == 0);
+    assert(rational_cmp(position, time_plus(fixture->span.start, fixture->span.length)) == 0);
     assert(plan_lane_span_constraint_count(fixture->plan, ids[count - 1]) == 1);
     assert(plan_lane_span_constraint_at(fixture->plan, ids[count - 1], 0)->params.cadence == scenario->cadence);
 
@@ -217,9 +200,9 @@ static void check_embellished(const Fixture *fixture, const Scenario *scenario) 
             model[model_count++] = chords[i];
         }
     }
-    size_t tail = scenario->cadence == PLAN_CADENCE_DC ? 1 : (scenario->cadence == PLAN_CADENCE_PC ? 2 : 0);
+    size_t tail = scenario->cadence == CADENCE_TYPE_DECEPTIVE ? 1 : (scenario->cadence == CADENCE_TYPE_PLAGAL ? 2 : 0);
     assert(model_count > tail);
-    HarmonyPhrase phrase = {scenario->mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR, model,
+    HarmonyPhrase phrase = {scenario->mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR, model,
                             model_count - tail};
     unsigned hard = 0;
     unsigned soft = 0;
@@ -233,7 +216,7 @@ static void check_embellished(const Fixture *fixture, const Scenario *scenario) 
     CadenceType heard;
     bool at_end;
     assert(harmony_hear_cadence(fixture->plan, fixture->span, scenario->mode, scenario->cadence, &heard, &at_end));
-    assert(heard == expected_type(scenario->cadence));
+    assert(heard == scenario->cadence);
     assert(at_end);
 }
 
@@ -277,8 +260,8 @@ static Result pipeline(const Scenario *scenario, const HarmonyEmbellishParams *p
 
     if (given_id != PLAN_LANE_SPAN_NONE) {
         PlanSpan now = plan_lane_span_span(fixture.plan, given_id);
-        assert(plan_time_compare(now.start, given_span.start) == 0);
-        assert(plan_time_compare(now.length, given_span.length) == 0);
+        assert(rational_cmp(now.start, given_span.start) == 0);
+        assert(rational_cmp(now.length, given_span.length) == 0);
         assert(plan_lane_span_state(fixture.plan, given_id) == PLAN_STATE_GIVEN);
         assert(strcmp(plan_lane_span_payload(fixture.plan, given_id)->harmony.roman_numeral, given_roman) == 0);
     }
@@ -315,8 +298,8 @@ static void test_sweep(void) {
     static const int meters[4][2] = {{2, 4}, {3, 4}, {4, 4}, {6, 8}};
     static const int tonics[2] = {0, 6};
     static const int bars[2] = {5, 8};
-    static const PlanCadenceType cadences[5] = {PLAN_CADENCE_PAC, PLAN_CADENCE_IAC, PLAN_CADENCE_HC, PLAN_CADENCE_DC,
-                                                PLAN_CADENCE_PC};
+    static const CadenceType cadences[5] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE,
+                                                CADENCE_TYPE_PLAGAL};
     HarmonyEmbellishParams params = harmony_embellish_params_default();
     params.density = 1000;
     for (int m = 0; m < 4; m++) {
@@ -325,7 +308,7 @@ static void test_sweep(void) {
                 for (int b = 0; b < 2; b++) {
                     for (int c = 0; c < 5; c++) {
                         for (unsigned long seed = 0; seed < 3; seed++) {
-                            Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
+                            Scenario scenario = {meters[m][0], meters[m][1], mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR,
                                                  tonics[t], bars[b], cadences[c], seed};
                             check_scenario(&scenario, &params, seed == 1);
                         }
@@ -344,7 +327,7 @@ static void test_nothing_asked_changes_nothing(void) {
     none.density = 1000;
     none.families = 0;
     for (unsigned long seed = 0; seed < 8; seed++) {
-        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, PLAN_CADENCE_PAC, seed};
+        Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
         char plain[SIGNATURE_SIZE];
         char result[SIGNATURE_SIZE];
         assert(!pipeline(&scenario, &off, false, plain, result).changed);
@@ -359,7 +342,7 @@ static void test_each_family_acts(void) {
     static const unsigned families[3] = {HARMONY_EMBELLISH_PROLONGATION, HARMONY_EMBELLISH_PREDOMINANT,
                                          HARMONY_EMBELLISH_APPLIED};
     static const int meters[3][2] = {{4, 4}, {6, 8}, {3, 4}};
-    static const PlanCadenceType cadences[3] = {PLAN_CADENCE_PAC, PLAN_CADENCE_HC, PLAN_CADENCE_DC};
+    static const CadenceType cadences[3] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE};
     for (int f = 0; f < 3; f++) {
         HarmonyEmbellishParams params = harmony_embellish_params_default();
         params.density = 1000;
@@ -371,7 +354,7 @@ static void test_each_family_acts(void) {
             for (int mode = 0; mode < 2; mode++) {
                 for (int c = 0; c < 3; c++) {
                     for (unsigned long seed = 0; seed < 6; seed++) {
-                        Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR, 0,
+                        Scenario scenario = {meters[m][0], meters[m][1], mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR, 0,
                                              8, cadences[c], seed};
                         char plain[SIGNATURE_SIZE];
                         char result[SIGNATURE_SIZE];
@@ -391,7 +374,7 @@ static void test_each_family_acts(void) {
 
 /* Without the marks, the embellishment operator finds nothing to do; with NULL parameters it uses the defaults. */
 static void test_marks_and_defaults(void) {
-    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 6, PLAN_CADENCE_PAC, 2};
+    Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 6, CADENCE_TYPE_PERFECT_AUTHENTIC, 2};
     Fixture fixture = build(&scenario);
     FillOutcome outcome = run(&fixture, 2, NULL, false);
     assert(outcome.status == FILL_STATUS_COMPLETE);

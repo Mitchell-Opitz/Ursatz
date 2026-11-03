@@ -103,8 +103,8 @@ static void test_files(void) {
     PlanSpan all;
     assert(strstr(text, "wrote cp_cli.json") && strstr(text, "wrote cp_cli.mid") && strstr(text, "wrote cp_cli.xml"));
     assert(plan_read_json_file("cp_cli.json", &plan, &error) == PLAN_OK);
-    plan_time_make(0, 1, &all.start);
-    plan_time_make(11, 1, &all.length);
+    rational_make(0, 1, &all.start);
+    rational_make(11, 1, &all.length);
     /* The line and the counter-melody are in the plan, the counter-melody written. */
     assert(plan_lane_find(plan, PLAN_LANE_MELODY, 0, all, ids, 4) == 1);
     assert(plan_lane_find(plan, PLAN_LANE_INNER_VOICE, 1, all, ids, 4) == 1);

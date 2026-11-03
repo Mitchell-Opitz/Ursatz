@@ -50,9 +50,9 @@ typedef struct {
     char letter[PLAN_SECTION_LETTER_MAX];
     PiecePart part;
     size_t beats;                /* the length, in beats of the meter; at least 1 */
-    PlanTime pickup;             /* the anacrusis before the section; 0 for none */
+    Rational pickup;             /* the anacrusis before the section; 0 for none */
     bool has_cadence;            /* false: piece_structure_default_cadences decides */
-    PlanCadenceType cadence;
+    CadenceType cadence;
     PieceFillKind fill;
     const Motive *motive;        /* motif: the section's own motive, else the piece's basic motive */
     bool has_into;               /* motif: a theme section's archetype */
@@ -67,7 +67,7 @@ typedef struct {
 } PieceSection;
 
 typedef struct {
-    PlanKey key;
+    AnalysisKey key;
     PlanMeter meter;
     PieceSection *sections;      /* in time order, grouped by part: intro, body, turnaround, ending */
     size_t section_count;

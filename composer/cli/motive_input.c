@@ -57,7 +57,7 @@ int motive_input_load(const MotiveInput *options, Motive *out) {
         /* The pickup and the chord onsets are in beats of the motive's meter, which a file may declare, so they are
            read after the first load. */
         if (options->pickup_text) {
-            PlanTime pickup;
+            Rational pickup;
             if (!cli_parse_pickup(options->pickup_text, out->meter.beat_unit, &pickup)) {
                 return cli_fail(CLI_EXIT_USAGE, "pickup '%s' is not a number of beats; write 0, 1 or 1/2",
                                 options->pickup_text);

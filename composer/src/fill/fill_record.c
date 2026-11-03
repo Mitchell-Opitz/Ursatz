@@ -99,16 +99,6 @@ static cJSON *decimal_string(unsigned long long value) {
     return cJSON_CreateString(text);
 }
 
-static cJSON *rational_json(unsigned long numerator, unsigned long denominator) {
-    cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "num", json_number((long)numerator)) &&
-                    plan_json_add(object, "den", json_number((long)denominator)))) {
-        cJSON_Delete(object);
-        return NULL;
-    }
-    return object;
-}
-
 static cJSON *considered_json(const FillConsidered *considered) {
     cJSON *object = cJSON_CreateObject();
     cJSON *operator_ = cJSON_CreateObject();
@@ -120,9 +110,9 @@ static cJSON *considered_json(const FillConsidered *considered) {
         operator_ = NULL;
     }
     ok = ok && plan_json_add(object, "label", cJSON_CreateString(considered->label)) &&
-         plan_json_add(object, "score", rational_json(considered->score_numerator, considered->score_denominator)) &&
+         plan_json_add(object, "score", rational_json((long long)considered->score_numerator, (long long)considered->score_denominator)) &&
          (!considered->styled ||
-          plan_json_add(object, "style", rational_json(considered->style_numerator, considered->style_denominator))) &&
+          plan_json_add(object, "style", rational_json((long long)considered->style_numerator, (long long)considered->style_denominator))) &&
          plan_json_add(object, "rejected", cJSON_CreateBool(considered->rejected)) &&
          plan_json_add(object, "reason", cJSON_CreateString(considered->reason));
     if (!ok) {

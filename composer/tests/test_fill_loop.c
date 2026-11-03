@@ -26,9 +26,9 @@
 
 /* ------------------------------------------------------------------- plans */
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
@@ -54,7 +54,7 @@ static void add_constraint(PiecePlan *plan, FillTarget target, int bars_value) {
 }
 
 static LaneSpanId add_melody(PiecePlan *plan, NodeId owner, PlanSpan span, int pitch) {
-    PlanNote note = {pitch, fraction(0, 1), span.length};
+    PlanNote note = plan_note(pitch, fraction(0, 1), span.length);
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
     payload.notes.notes = &note;
@@ -127,9 +127,9 @@ static PlanResult split_apply(PiecePlan *plan, FillTarget target, const FillCand
     PlanSpan span = plan_node_span(plan, parent);
     PlanNodeKind kind;
     next_kind(plan_node_kind(plan, parent), &kind);
-    PlanTime child_length;
-    PlanResult result = plan_time_make(span.length.num, span.length.den * (unsigned long)parts, &child_length);
-    PlanTime start = span.start;
+    Rational child_length;
+    PlanResult result = rational_div_int(span.length, parts, &child_length) == RATIONAL_OK ? PLAN_OK : PLAN_ERR_BAD_TIME;
+    Rational start = span.start;
     for (int i = 0; result == PLAN_OK && i < parts; i++) {
         PlanSpan child_span = {start, child_length};
         NodeId child = PLAN_NODE_NONE;
@@ -138,7 +138,7 @@ static PlanResult split_apply(PiecePlan *plan, FillTarget target, const FillCand
             add_melody(plan, child, child_span, 60);
         }
         if (result == PLAN_OK) {
-            result = plan_time_add(start, child_length, &start);
+            result = rational_add(start, child_length, &start) == RATIONAL_OK ? PLAN_OK : PLAN_ERR_BAD_TIME;
         }
     }
     return result;
@@ -216,7 +216,7 @@ static bool melody_generate(const PiecePlan *plan, FillTarget target, FillRng *r
 static PlanResult melody_apply(PiecePlan *plan, FillTarget target, const FillCandidate *candidate, void *context) {
     (void)context;
     LaneSpanId id = (LaneSpanId)target.id;
-    PlanNote note = {*(const int *)candidate->payload, fraction(0, 1), plan_lane_span_span(plan, id).length};
+    PlanNote note = plan_note(*(const int *)candidate->payload, fraction(0, 1), plan_lane_span_span(plan, id).length);
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
     payload.notes.notes = &note;
@@ -424,7 +424,7 @@ static void test_top_down_fill(void) {
     assert(outcome.steps == 31 + 32 + 32);
     assert(outcome.iterations >= outcome.steps);
     for (size_t id = 1; id <= plan_lane_span_count(plan); id++) {
-        int pitch = plan_lane_span_payload(plan, id)->notes.notes[0].midi_pitch;
+        int pitch = plan_lane_span_payload(plan, id)->notes.notes[0].midi;
         assert(pitch == 60 || pitch == 62); /* 64 is rejected */
     }
 
@@ -557,7 +557,7 @@ static void test_given_is_never_modified(void) {
     assert(plan_node_child_count(plan, given_section) == 0);
     assert(plan_node_constraint_count(plan, given_section) == 0);
     assert(plan_lane_span_state(plan, given_melody) == PLAN_STATE_GIVEN);
-    assert(plan_lane_span_payload(plan, given_melody)->notes.notes[0].midi_pitch == 72);
+    assert(plan_lane_span_payload(plan, given_melody)->notes.notes[0].midi == 72);
     assert(plan_lane_span_constraint_count(plan, given_melody) == 0);
     /* The open section was filled, and the form, which waited for it, was closed (bottom-up). */
     assert(plan_node_child_count(plan, open_section) == 2);
@@ -693,7 +693,7 @@ static void test_suggestions(void) {
     assert(strcmp(fill_suggestion_label(suggestions, 1), "pitch-62") == 0);
     assert(fill_apply_suggestion(melody_plan, suggestions, 1) == FILL_OK);
     assert(plan_lane_span_state(melody_plan, span) == PLAN_STATE_REALIZED);
-    assert(plan_lane_span_payload(melody_plan, span)->notes.notes[0].midi_pitch == 62);
+    assert(plan_lane_span_payload(melody_plan, span)->notes.notes[0].midi == 62);
     fill_suggestions_destroy(suggestions);
     plan_destroy(melody_plan);
 

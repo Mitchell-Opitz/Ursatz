@@ -76,11 +76,11 @@ typedef struct {
     /* Read from the text above. */
     Into into;
     PlanThemePairing pairing;
-    PlanKey key;
+    AnalysisKey key;
     PlanMeter meter;
     size_t bars;
-    PlanCadenceType cadence;
-    PlanCadenceType first_cadence;
+    CadenceType cadence;
+    CadenceType first_cadence;
     bool has_accompaniment;
     PlanAccompaniment accompaniment;
     bool has_voicing;
@@ -376,9 +376,9 @@ static int check_options(Options *options) {
                         options->key_text);
     }
     if (options->mode_text && cli_equals_ignore_case(options->mode_text, "major")) {
-        options->key.mode = PLAN_MODE_MAJOR;
+        options->key.mode = KEY_STRUCTURE_MODE_MAJOR;
     } else if (options->mode_text && cli_equals_ignore_case(options->mode_text, "minor")) {
-        options->key.mode = PLAN_MODE_MINOR;
+        options->key.mode = KEY_STRUCTURE_MODE_MINOR;
     }
     if (!cli_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
         return cli_fail(CLI_EXIT_USAGE, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8", options->meter_text);
@@ -391,20 +391,20 @@ static int check_options(Options *options) {
         }
         options->bars = bars;
     }
-    options->cadence = PLAN_CADENCE_PAC;
+    options->cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     if (options->cadence_text &&
-        (!cli_parse_cadence(options->cadence_text, &options->cadence) || options->cadence == PLAN_CADENCE_DC ||
-         options->cadence == PLAN_CADENCE_PC)) {
+        (!cli_parse_cadence(options->cadence_text, &options->cadence) || options->cadence == CADENCE_TYPE_DECEPTIVE ||
+         options->cadence == CADENCE_TYPE_PLAGAL)) {
         return cli_fail(CLI_EXIT_USAGE, "--cadence must be PAC, IAC or HC, not '%s'", options->cadence_text);
     }
-    options->first_cadence = PLAN_CADENCE_HC;
+    options->first_cadence = CADENCE_TYPE_HALF;
     if (options->first_cadence_text) {
         if (options->pairing.beginning != PLAN_THEME_BEGINNING_ANTECEDENT) {
             return cli_fail(CLI_EXIT_USAGE, "--first-cadence applies only to a period or a hybrid that begins with an "
                                             "antecedent");
         }
         if (!cli_parse_cadence(options->first_cadence_text, &options->first_cadence) ||
-            (options->first_cadence != PLAN_CADENCE_HC && options->first_cadence != PLAN_CADENCE_IAC)) {
+            (options->first_cadence != CADENCE_TYPE_HALF && options->first_cadence != CADENCE_TYPE_IMPERFECT_AUTHENTIC)) {
             return cli_fail(CLI_EXIT_USAGE, "--first-cadence must be HC or IAC, not '%s'", options->first_cadence_text);
         }
     }
@@ -513,7 +513,7 @@ typedef struct {
 } Passed;
 
 /* The bar (from 0) of a plan time in the theme. */
-static long bar_at(PlanTime time, PlanSpan theme, PlanTime bar) {
+static long bar_at(Rational time, PlanSpan theme, Rational bar) {
     long long num = ((long long)time.num * theme.start.den - (long long)theme.start.num * time.den) * bar.den;
     long long den = (long long)time.den * theme.start.den * bar.num;
     return den > 0 && num >= 0 ? (long)(num / den) : 0;
@@ -525,10 +525,10 @@ static long bar_at(PlanTime time, PlanSpan theme, PlanTime bar) {
  */
 static long open_bar_with_chords(const PiecePlan *plan, NodeId theme_node, const PlanMeter *meter, const GrowExt *ext,
                                  GrowStage stage) {
-    PlanTime bar;
+    Rational bar;
     PlanSpan theme;
     PlanSpan open = {{0, 1}, {0, 1}};
-    PlanTime open_end;
+    Rational open_end;
     bool any = false;
     /* Only the stages that write around the chords can be stopped by them. */
     PlanLaneKind lane = stage == GROW_STAGE_HARMONY ? PLAN_LANE_HARMONY
@@ -536,7 +536,7 @@ static long open_bar_with_chords(const PiecePlan *plan, NodeId theme_node, const
                                                     : PLAN_LANE_MELODY;
     if (ext->chord_count == 0 || theme_node == PLAN_NODE_NONE ||
         (stage != GROW_STAGE_HARMONY && stage != GROW_STAGE_BASS && stage != GROW_STAGE_MELODY) ||
-        plan_time_make(meter->beats_per_bar, (unsigned long)meter->beat_unit, &bar) != PLAN_OK) {
+        rational_make(meter->beats_per_bar, (long long)meter->beat_unit, &bar) != RATIONAL_OK) {
         return -1;
     }
     theme = plan_node_span(plan, theme_node);
@@ -545,7 +545,7 @@ static long open_bar_with_chords(const PiecePlan *plan, NodeId theme_node, const
     for (size_t i = 0; i < count && i < MAX_LANE_SPANS; i++) {
         PlanSpan span = plan_lane_span_span(plan, ids[i]);
         if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED &&
-            (!any || plan_time_compare(span.start, open.start) < 0)) {
+            (!any || rational_cmp(span.start, open.start) < 0)) {
             open = span;
             any = true;
         }
@@ -557,7 +557,7 @@ static long open_bar_with_chords(const PiecePlan *plan, NodeId theme_node, const
     long last = bar_at(open_end, theme, bar);
     for (long at = first > 0 ? first - 1 : 0; at <= last; at++) {
         for (size_t c = 0; c < ext->chord_count; c++) {
-            if (bar_at((PlanTime){ext->chords[c].onset.num, ext->chords[c].onset.den}, (PlanSpan){{0, 1}, {0, 1}}, bar) == at) {
+            if (bar_at((Rational){ext->chords[c].onset.num, ext->chords[c].onset.den}, (PlanSpan){{0, 1}, {0, 1}}, bar) == at) {
                 return at;
             }
         }
@@ -638,7 +638,7 @@ static char *signature_of(const PiecePlan *plan, NodeId theme_node) {
         for (size_t i = 0; i < count && i < MAX_LANE_SPANS; i++) {
             PlanSpan at = plan_lane_span_span(plan, ids[i]);
             const PlanLanePayload *payload = plan_lane_span_payload(plan, ids[i]);
-            if (!text_append(&text, "|%d@%ld/%lu+%ld/%lu:", lane, at.start.num, at.start.den, at.length.num,
+            if (!text_append(&text, "|%d@%lld/%lld+%lld/%lld:", lane, at.start.num, at.start.den, at.length.num,
                              at.length.den)) {
                 free(text.text);
                 return NULL;
@@ -652,7 +652,7 @@ static char *signature_of(const PiecePlan *plan, NodeId theme_node) {
             }
             for (size_t n = 0; n < payload->notes.note_count; n++) {
                 const PlanNote *note = &payload->notes.notes[n];
-                if (!text_append(&text, "%d@%ld/%lu+%ld/%lu,", note->midi_pitch, note->offset.num, note->offset.den,
+                if (!text_append(&text, "%d@%lld/%lld+%lld/%lld,", note->midi, note->offset.num, note->offset.den,
                                  note->duration.num, note->duration.den)) {
                     free(text.text);
                     return NULL;
@@ -752,21 +752,13 @@ static GrowResult grow_one(const Options *options, const Motive *motive, unsigne
 
 static const char *const KIND_NAMES[] = {"form", "section", "phrase", "subphrase", "idea", "motive"};
 
-static double in_bars(PlanTime time, PlanTime bar) {
+static double in_bars(Rational time, Rational bar) {
     return ((double)time.num / (double)time.den) / ((double)bar.num / (double)bar.den);
 }
 
-static const char *function_name(PlanHarmonicFunction function) {
-    switch (function) {
-    case PLAN_FUNCTION_TONIC:
-        return "tonic";
-    case PLAN_FUNCTION_PREDOMINANT:
-        return "predominant";
-    case PLAN_FUNCTION_DOMINANT:
-        return "dominant";
-    default:
-        return "unknown";
-    }
+static const char *function_name(const PlanHarmony *harmony) {
+    const char *name = harmony->has_function ? harmonic_function_name(harmony->function) : NULL;
+    return name ? name : "unknown";
 }
 
 static void pitch_name(int midi, char *out, size_t size) {
@@ -784,8 +776,8 @@ typedef struct {
 /* The chords of the theme, one row each, with the bass under them. */
 static size_t collect_rows(const Options *options, const PiecePlan *plan, NodeId theme, Row *rows) {
     PlanSpan span = plan_node_span(plan, theme);
-    PlanTime bar;
-    plan_time_make(options->meter.beats_per_bar, (unsigned long)options->meter.beat_unit, &bar);
+    Rational bar;
+    rational_make(options->meter.beats_per_bar, (long long)options->meter.beat_unit, &bar);
     LaneSpanId ids[MAX_CHORDS];
     size_t count = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, MAX_CHORDS);
     if (count > MAX_CHORDS) {
@@ -803,7 +795,7 @@ static size_t collect_rows(const Options *options, const PiecePlan *plan, NodeId
         rows[i].bar = (int)bars + 1;
         rows[i].beat = (int)(rest_num * options->meter.beat_unit / (long)rest_den) + 1;
         memcpy(rows[i].roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
-        rows[i].function = function_name(harmony->function);
+        rows[i].function = function_name(harmony);
         rows[i].bass[0] = '\0';
         LaneSpanId basses[2];
         if (plan_lane_find(plan, PLAN_LANE_BASS, 0, chord, basses, 2) == 1) {
@@ -811,7 +803,7 @@ static size_t collect_rows(const Options *options, const PiecePlan *plan, NodeId
             size_t used = 0;
             for (size_t n = 0; n < notes->note_count && used + 8 < sizeof(rows[i].bass); n++) {
                 char name[16];
-                pitch_name(notes->notes[n].midi_pitch, name, sizeof(name));
+                pitch_name(notes->notes[n].midi, name, sizeof(name));
                 used += (size_t)snprintf(rows[i].bass + used, sizeof(rows[i].bass) - used, n ? " %s" : "%s", name);
             }
         }
@@ -953,17 +945,17 @@ static void heard_text(const GrowOutcome *outcome, char *heard_form, size_t form
 }
 
 /* A time as bars from the start of the theme. */
-static double offset_in_bars(PlanTime time, PlanSpan theme, PlanTime bar) {
-    PlanTime offset;
+static double offset_in_bars(Rational time, PlanSpan theme, Rational bar) {
+    Rational offset;
     offset.num = time.num * (long)theme.start.den - theme.start.num * (long)time.den;
     offset.den = time.den * theme.start.den;
     return in_bars(offset, bar);
 }
 
-static void print_node(const PiecePlan *plan, NodeId node, PlanSpan theme, PlanTime bar, int depth) {
+static void print_node(const PiecePlan *plan, NodeId node, PlanSpan theme, Rational bar, int depth) {
     PlanSpan span = plan_node_span(plan, node);
-    PlanTime end;
-    plan_time_add(span.start, span.length, &end);
+    Rational end;
+    rational_add(span.start, span.length, &end);
     const char *name = plan_node_name(plan, node);
     printf("%*s%s (%s) bars %g-%g\n", 2 + 2 * depth, "", name ? name : "?", KIND_NAMES[plan_node_kind(plan, node)],
            offset_in_bars(span.start, theme, bar), offset_in_bars(end, theme, bar));
@@ -972,10 +964,10 @@ static void print_node(const PiecePlan *plan, NodeId node, PlanSpan theme, PlanT
     }
 }
 
-static void print_json_node(const PiecePlan *plan, NodeId node, PlanSpan theme, PlanTime bar, bool *first) {
+static void print_json_node(const PiecePlan *plan, NodeId node, PlanSpan theme, Rational bar, bool *first) {
     PlanSpan span = plan_node_span(plan, node);
-    PlanTime end;
-    plan_time_add(span.start, span.length, &end);
+    Rational end;
+    rational_add(span.start, span.length, &end);
     const char *name = plan_node_name(plan, node);
     printf("%s{\"name\":", *first ? "" : ",");
     cli_print_json_string(name ? name : "");
@@ -991,7 +983,7 @@ static unsigned long percent(const GrowScore *score) {
     return score->denominator ? (100UL * score->numerator + score->denominator / 2) / score->denominator : 0;
 }
 
-static void print_theme_text(const Options *options, const Theme *theme, PlanTime bar) {
+static void print_theme_text(const Options *options, const Theme *theme, Rational bar) {
     const PiecePlan *plan = theme->plan;
     NodeId node = find_node(plan, "theme");
     printf("seed %lu\n", theme->seed);
@@ -1028,7 +1020,7 @@ static void print_theme_text(const Options *options, const Theme *theme, PlanTim
     }
 }
 
-static void print_theme_json(const Options *options, const Theme *theme, PlanTime bar) {
+static void print_theme_json(const Options *options, const Theme *theme, Rational bar) {
     const PiecePlan *plan = theme->plan;
     NodeId node = find_node(plan, "theme");
     printf("{\"seed\":%lu,\"structure\":[", theme->seed);
@@ -1092,7 +1084,7 @@ static void print_brief(const Options *options, bool json) {
     memset(&brief, 0, sizeof(brief));
     brief.tempo = options->tempo;
     brief.tempo_from = options->tempo_from;
-    brief.minor = options->key.mode == PLAN_MODE_MINOR;
+    brief.minor = options->key.mode == KEY_STRUCTURE_MODE_MINOR;
     brief.mode_from = options->mode_from;
     brief.has_density = composer_style_density(options->style, &brief.density);
     brief.without = options->without.names;
@@ -1107,8 +1099,8 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
     char pairing[64];
     snprintf(pairing, sizeof(pairing), "%s + %s", BEGINNING_NAMES[options->pairing.beginning],
              ENDING_NAMES[options->pairing.ending]);
-    PlanTime bar;
-    plan_time_make(options->meter.beats_per_bar, (unsigned long)options->meter.beat_unit, &bar);
+    Rational bar;
+    rational_make(options->meter.beats_per_bar, (long long)options->meter.beat_unit, &bar);
     if (options->json) {
         printf("{\"key\":\"%s\",\"meter\":\"%d/%d\",\"bars\":%zu,\"into\":\"%s\",\"pairing\":\"%s\",\"cadence\":\"%s\"",
                key, options->meter.beats_per_bar, options->meter.beat_unit, options->bars, options->into_text, pairing,
@@ -1320,7 +1312,7 @@ int run_grow_ext(int argc, char **argv, GrowExt *ext) {
         if (!composer_style_mode(options.style, &minor)) {
             return cli_fail(CLI_EXIT_USAGE, "--mode style needs a --style with a mode category");
         }
-        options.key.mode = minor ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR;
+        options.key.mode = minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
     }
     options.mode_from = options.mode_text && cli_equals_ignore_case(options.mode_text, "style") ? "style" : "request";
 

@@ -25,8 +25,8 @@ typedef struct {
     char letter[PLAN_SECTION_LETTER_MAX];
     size_t bars; /* 0 when the plan has no meter */
     bool has_key;
-    PlanKey key; /* the key the section ends in */
-    PlanCadenceType cadences[2];
+    AnalysisKey key; /* the key the section ends in */
+    CadenceType cadences[2];
     size_t cadence_count;
     bool has_pairing;
     PlanThemePairing pairing;
@@ -39,7 +39,7 @@ typedef struct {
 size_t cli_piece_sections(const PiecePlan *plan, CliSection *out, size_t capacity);
 
 /* The bars in a length of the plan's meter, rounded; 0 when the plan has no meter. */
-size_t cli_bars_in(const PiecePlan *plan, PlanTime length);
+size_t cli_bars_in(const PiecePlan *plan, Rational length);
 /* "presentation + continuation", "antecedent + consequent". */
 void cli_pairing_name(const PlanThemePairing *pairing, char *out, size_t size);
 

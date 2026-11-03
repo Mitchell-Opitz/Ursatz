@@ -31,8 +31,7 @@ typedef struct {
 
 static void fixture_init(Fixture *fixture) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->structure.key.tonic_pitch_class = 0;
-    fixture->structure.key.mode = PLAN_MODE_MAJOR;
+    fixture->structure.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     fixture->structure.meter.beats_per_bar = 4;
     fixture->structure.meter.beat_unit = 4;
     fixture->structure.sections = fixture->sections;
@@ -46,7 +45,7 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
     snprintf(section->letter, sizeof(section->letter), "%s", letter);
     section->part = part;
     section->beats = beats;
-    section->pickup = (PlanTime){0, 1};
+    section->pickup = (Rational){0, 1};
     section->fill = fill;
     return section;
 }
@@ -115,11 +114,11 @@ static void test_checks(void) {
     /* Pickups: a quarter is fine, a bar is not, a triplet sixteenth is not a multiple of 1/32. */
     fixture_init(&fixture);
     PieceSection *section = add_section(&fixture, "a", "A", PIECE_PART_BODY, 16, PIECE_FILL_EMPTY);
-    assert(plan_time_make(1, 4, &section->pickup) == PLAN_OK);
+    assert(rational_make(1, 4, &section->pickup) == RATIONAL_OK);
     assert(piece_structure_check(&fixture.structure) == PIECE_OK);
-    assert(plan_time_make(1, 1, &section->pickup) == PLAN_OK);
+    assert(rational_make(1, 1, &section->pickup) == RATIONAL_OK);
     assert(piece_structure_check(&fixture.structure) == PIECE_ERR_BAD_REQUEST);
-    assert(plan_time_make(1, 12, &section->pickup) == PLAN_OK);
+    assert(rational_make(1, 12, &section->pickup) == RATIONAL_OK);
     assert(piece_structure_check(&fixture.structure) == PIECE_ERR_BAD_REQUEST);
 
     /* Too many sections, and too many bars. */
@@ -140,18 +139,18 @@ static void test_default_cadences(void) {
     standard_structure(&fixture);
     PieceSection *explicit_cadence = &fixture.sections[2];
     explicit_cadence->has_cadence = true;
-    explicit_cadence->cadence = PLAN_CADENCE_DC;
+    explicit_cadence->cadence = CADENCE_TYPE_DECEPTIVE;
     assert(piece_structure_default_ending(&fixture.structure, PIECE_STRUCTURE_MAX_SECTIONS + 2));
     assert(fixture.structure.section_count == 5);
     piece_structure_default_cadences(&fixture.structure);
     /* The intro leads into the body (HC), the middle of the body is open (IAC), the loop leads back (HC). */
-    assert(fixture.sections[0].cadence == PLAN_CADENCE_HC);
-    assert(fixture.sections[1].cadence == PLAN_CADENCE_IAC);
-    assert(fixture.sections[2].cadence == PLAN_CADENCE_DC); /* a cadence asked for is kept */
-    assert(fixture.sections[3].cadence == PLAN_CADENCE_HC);
+    assert(fixture.sections[0].cadence == CADENCE_TYPE_HALF);
+    assert(fixture.sections[1].cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
+    assert(fixture.sections[2].cadence == CADENCE_TYPE_DECEPTIVE); /* a cadence asked for is kept */
+    assert(fixture.sections[3].cadence == CADENCE_TYPE_HALF);
     /* The ending closes. */
     assert(fixture.sections[4].part == PIECE_PART_ENDING);
-    assert(fixture.sections[4].cadence == PLAN_CADENCE_PAC);
+    assert(fixture.sections[4].cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
     assert(fixture.sections[4].beats == 8);
     assert(strcmp(fixture.sections[4].id, "end") == 0);
     assert(strcmp(fixture.sections[4].letter, "E") == 0);
@@ -164,7 +163,7 @@ static void test_plan(void) {
     Fixture fixture;
     standard_structure(&fixture);
     PieceSection *pickup = &fixture.sections[2];
-    assert(plan_time_make(1, 4, &pickup->pickup) == PLAN_OK);
+    assert(rational_make(1, 4, &pickup->pickup) == RATIONAL_OK);
     PiecePlan *plan;
     assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
     NodeId sections[8];
@@ -173,16 +172,16 @@ static void test_plan(void) {
     static const size_t BEATS[4] = {8, 32, 6, 4};
     static const char *const IDS[4] = {"intro", "a", "b", "t"};
     static const int PARTS[4] = {PIECE_PART_INTRO, PIECE_PART_BODY, PIECE_PART_BODY, PIECE_PART_TURNAROUND};
-    static const PlanCadenceType CADENCES[4] = {PLAN_CADENCE_HC, PLAN_CADENCE_IAC, PLAN_CADENCE_IAC, PLAN_CADENCE_HC};
+    static const CadenceType CADENCES[4] = {CADENCE_TYPE_HALF, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_HALF};
     size_t start = 0;
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_node_span(plan, sections[i]);
-        PlanTime want_start;
-        PlanTime want_length;
-        assert(plan_time_make((long)start, 4, &want_start) == PLAN_OK);
-        assert(plan_time_make((long)BEATS[i], 4, &want_length) == PLAN_OK);
-        assert(plan_time_compare(span.start, want_start) == 0);
-        assert(plan_time_compare(span.length, want_length) == 0);
+        Rational want_start;
+        Rational want_length;
+        assert(rational_make((long)start, 4, &want_start) == RATIONAL_OK);
+        assert(rational_make((long)BEATS[i], 4, &want_length) == RATIONAL_OK);
+        assert(rational_cmp(span.start, want_start) == 0);
+        assert(rational_cmp(span.length, want_length) == 0);
         const PlanConstraint *part = node_constraint(plan, sections[i], PLAN_CONSTRAINT_PIECE_PART);
         assert(part && part->params.piece_part.part == PARTS[i] && strcmp(part->params.piece_part.id, IDS[i]) == 0);
         const PlanConstraint *cadence = node_constraint(plan, sections[i], PLAN_CONSTRAINT_CADENCE);
@@ -206,16 +205,16 @@ static void test_plan(void) {
     assert(node_constraint(plan, seam, PLAN_CONSTRAINT_SEAM));
     assert(!node_constraint(plan, seam, PLAN_CONSTRAINT_MATERIAL) && !node_constraint(plan, seam, PLAN_CONSTRAINT_HOLD));
     assert(plan_node_child_count(plan, seam) == 0 && plan_node_state(plan, seam) == PLAN_STATE_CONSTRAINED);
-    PlanTime end;
+    Rational end;
     assert(plan_span_end(plan_node_span(plan, sections[3]), &end) == PLAN_OK);
-    assert(plan_time_compare(plan_node_span(plan, seam).start, end) == 0);
-    assert(plan_time_compare(plan_node_span(plan, seam).length, (PlanTime){1, 1}) == 0);
+    assert(rational_cmp(plan_node_span(plan, seam).start, end) == 0);
+    assert(rational_cmp(plan_node_span(plan, seam).length, (Rational){1, 1}) == 0);
     /* The material starts on the first barline at or after the seam's end (54 beats: bar 14, beat 56). */
     NodeId material = plan_node_child_at(plan, form, count + 1);
     assert(node_constraint(plan, material, PLAN_CONSTRAINT_MATERIAL));
-    PlanTime barline;
-    assert(plan_time_make(56, 4, &barline) == PLAN_OK);
-    assert(plan_time_compare(plan_node_span(plan, material).start, barline) == 0);
+    Rational barline;
+    assert(rational_make(56, 4, &barline) == RATIONAL_OK);
+    assert(rational_cmp(plan_node_span(plan, material).start, barline) == 0);
     plan_destroy(plan);
 
     /* The ending is not laid out. */
@@ -223,22 +222,6 @@ static void test_plan(void) {
     assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
     assert(piece_sections(plan, sections, 8) == 4);
     plan_destroy(plan);
-}
-
-static CadenceType expected_type(PlanCadenceType cadence) {
-    switch (cadence) {
-    case PLAN_CADENCE_PAC:
-        return CADENCE_TYPE_PERFECT_AUTHENTIC;
-    case PLAN_CADENCE_IAC:
-        return CADENCE_TYPE_IMPERFECT_AUTHENTIC;
-    case PLAN_CADENCE_HC:
-        return CADENCE_TYPE_HALF;
-    case PLAN_CADENCE_DC:
-        return CADENCE_TYPE_DECEPTIVE;
-    case PLAN_CADENCE_PC:
-        return CADENCE_TYPE_PLAGAL;
-    }
-    return CADENCE_TYPE_UNKNOWN;
 }
 
 /* Whether the harmony, bass and melody lanes over the section are written (none left Constrained, each lane there). */
@@ -269,7 +252,7 @@ static bool cadence_heard(const PiecePlan *plan, NodeId section) {
     return cadence && key &&
            harmony_hear_cadence(plan, plan_node_span(plan, section), key->params.key.mode, cadence->params.cadence,
                                 &heard, &at_end) &&
-           at_end && heard == expected_type(cadence->params.cadence);
+           at_end && heard == cadence->params.cadence;
 }
 
 typedef struct {
@@ -331,7 +314,7 @@ static void test_pickup(void) {
     fixture_init(&fixture);
     add_section(&fixture, "a", "A", PIECE_PART_BODY, 8, PIECE_FILL_MOTIF);
     PieceSection *pickup = add_section(&fixture, "b", "B", PIECE_PART_BODY, 12, PIECE_FILL_EMPTY);
-    assert(plan_time_make(1, 4, &pickup->pickup) == PLAN_OK);
+    assert(rational_make(1, 4, &pickup->pickup) == RATIONAL_OK);
     add_section(&fixture, "t", "T", PIECE_PART_TURNAROUND, 6, PIECE_FILL_EMPTY);
     PiecePlan *plan;
     assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
@@ -392,13 +375,13 @@ static void free_phrase(size_t beats, size_t expected_ideas, const size_t *idea_
             PlanSpan spans[8];
             size_t count = section_ideas(plan, sections[1], spans, 8);
             assert(count == expected_ideas);
-            PlanTime position = plan_node_span(plan, sections[1]).start;
+            Rational position = plan_node_span(plan, sections[1]).start;
             for (size_t i = 0; i < count; i++) {
-                PlanTime want;
-                assert(plan_time_compare(spans[i].start, position) == 0);
-                assert(plan_time_make((long)idea_beats[i], 4, &want) == PLAN_OK);
-                assert(plan_time_compare(spans[i].length, want) == 0);
-                assert(plan_time_add(position, spans[i].length, &position) == PLAN_OK);
+                Rational want;
+                assert(rational_cmp(spans[i].start, position) == 0);
+                assert(rational_make((long)idea_beats[i], 4, &want) == RATIONAL_OK);
+                assert(rational_cmp(spans[i].length, want) == 0);
+                assert(rational_add(position, spans[i].length, &position) == RATIONAL_OK);
             }
             /* The section is written and ends in the cadence it was planned to. */
             assert(section_written(plan, sections[1]));

@@ -14,6 +14,7 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "util/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 
@@ -37,12 +38,12 @@ typedef GrowThemeRequest ThemeRequest;
  */
 bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request) {
     LaneSpanId spans[MAX_KEY_SPANS];
-    PlanTime end;
-    PlanTime half;
+    Rational end;
+    Rational half;
     PlanSpan up_to = {{0, 1}, {0, 1}};
-    if (plan_span_end(request->span, &end) != PLAN_OK || plan_time_make(end.num, end.den, &up_to.length) != PLAN_OK ||
-        plan_time_make(request->span.length.num, request->span.length.den * 2, &half) != PLAN_OK ||
-        plan_time_add(request->span.start, half, &half) != PLAN_OK) {
+    if (plan_span_end(request->span, &end) != PLAN_OK || rational_make(end.num, end.den, &up_to.length) != RATIONAL_OK ||
+        rational_div_int(request->span.length, 2, &half) != RATIONAL_OK ||
+        rational_add(request->span.start, half, &half) != RATIONAL_OK) {
         return false;
     }
     size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, up_to, spans, MAX_KEY_SPANS);
@@ -52,9 +53,9 @@ bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request) {
     size_t at = found;
     for (size_t i = 0; i < found; i++) {
         PlanSpan span = plan_lane_span_span(plan, spans[i]);
-        PlanTime span_end;
-        if (plan_span_end(span, &span_end) == PLAN_OK && plan_time_compare(span.start, request->span.start) <= 0 &&
-            plan_time_compare(request->span.start, span_end) < 0) {
+        Rational span_end;
+        if (plan_span_end(span, &span_end) == PLAN_OK && rational_cmp(span.start, request->span.start) <= 0 &&
+            rational_cmp(request->span.start, span_end) < 0) {
             at = i;
         }
     }
@@ -62,26 +63,26 @@ bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request) {
         return false;
     }
     PlanSpan first = plan_lane_span_span(plan, spans[at]);
-    PlanTime first_end;
+    Rational first_end;
     if (plan_span_end(first, &first_end) != PLAN_OK) {
         return false;
     }
     request->key = plan_lane_span_payload(plan, spans[at])->key;
-    if (at > 0 && plan_time_compare(first.start, request->span.start) == 0) {
+    if (at > 0 && rational_cmp(first.start, request->span.start) == 0) {
         request->has_start_change = true;
         request->from_key = plan_lane_span_payload(plan, spans[at - 1])->key;
     }
-    if (plan_time_compare(first_end, end) >= 0) {
-        return at + 1 == found || plan_time_compare(plan_lane_span_span(plan, spans[at + 1]).start, end) >= 0;
+    if (rational_cmp(first_end, end) >= 0) {
+        return at + 1 == found || rational_cmp(plan_lane_span_span(plan, spans[at + 1]).start, end) >= 0;
     }
     /* A second span starts at the half and holds the rest of the section. */
-    if (at + 1 >= found || plan_time_compare(first_end, half) != 0) {
+    if (at + 1 >= found || rational_cmp(first_end, half) != 0) {
         return false;
     }
     PlanSpan second = plan_lane_span_span(plan, spans[at + 1]);
-    PlanTime second_end;
-    if (plan_time_compare(second.start, half) != 0 || plan_span_end(second, &second_end) != PLAN_OK ||
-        plan_time_compare(second_end, end) < 0) {
+    Rational second_end;
+    if (rational_cmp(second.start, half) != 0 || plan_span_end(second, &second_end) != PLAN_OK ||
+        rational_cmp(second_end, end) < 0) {
         return false;
     }
     request->has_end_change = true;
@@ -164,15 +165,15 @@ static bool read_request(const PiecePlan *plan, FillTarget target, ThemeRequest 
         return false;
     }
     /* The theme is 4 or 8 whole bars. */
-    PlanTime bars = {0, 1};
+    Rational bars = {0, 1};
     size_t count = 0;
-    while (plan_time_compare(bars, request.span.length) < 0 && count <= 8) {
-        if (plan_time_add(bars, request.bar, &bars) != PLAN_OK) {
+    while (rational_cmp(bars, request.span.length) < 0 && count <= 8) {
+        if (rational_add(bars, request.bar, &bars) != RATIONAL_OK) {
             return false;
         }
         count++;
     }
-    if (plan_time_compare(bars, request.span.length) != 0 || (count != 4 && count != 8)) {
+    if (rational_cmp(bars, request.span.length) != 0 || (count != 4 && count != 8)) {
         return false;
     }
     request.bars = count;
@@ -188,18 +189,18 @@ static bool grow_applies(const PiecePlan *plan, FillTarget target, void *context
 
 /* ------------------------------------------------------------ the spec */
 
-PlanTime grow_scaled(PlanTime unit, size_t count) {
-    PlanTime out = {0, 1};
-    if (plan_time_make(unit.num * (long)count, unit.den, &out) != PLAN_OK) {
+Rational grow_scaled(Rational unit, size_t count) {
+    Rational out = {0, 1};
+    if (rational_mul_int(unit, (long long)count, &out) != RATIONAL_OK) {
         out.num = 0;
         out.den = 1;
     }
     return out;
 }
 
-PlanTime grow_unit(const GrowThemeRequest *request) {
-    PlanTime unit = {0, 1};
-    if (plan_time_make(request->bar.num * (long)request->bars, request->bar.den * 8, &unit) != PLAN_OK) {
+Rational grow_unit(const GrowThemeRequest *request) {
+    Rational unit = {0, 1};
+    if (rational_make(request->bar.num * (long)request->bars, request->bar.den * 8, &unit) != RATIONAL_OK) {
         unit.num = 0;
         unit.den = 1;
     }
@@ -215,8 +216,8 @@ bool grow_same_contour(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 1; i < a->note_count; i++) {
-        if (direction(a->notes[i].midi_pitch - a->notes[i - 1].midi_pitch) !=
-            direction(b->notes[i].midi_pitch - b->notes[i - 1].midi_pitch)) {
+        if (direction(a->notes[i].midi - a->notes[i - 1].midi) !=
+            direction(b->notes[i].midi - b->notes[i - 1].midi)) {
             return false;
         }
     }
@@ -394,10 +395,10 @@ bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out) {
            motive_develop(grow_idea_source(spec, idea), &dev, out) == MOTIVE_DEV_OK;
 }
 
-bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, PlanCadenceType cadence) {
+bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence) {
     /* A tonic, the predominants the mode has (two in a major key, one in a minor), a dominant unless the cadence is half. */
-    size_t chords = (shape == PLAN_HARMONY_SHAPE_CADENTIAL ? 0 : 1) + (request->key.mode == PLAN_MODE_MINOR ? 1 : 2) +
-                    (cadence == PLAN_CADENCE_HC ? 0 : 1);
+    size_t chords = (shape == PLAN_HARMONY_SHAPE_CADENTIAL ? 0 : 1) + (request->key.mode == KEY_STRUCTURE_MODE_MINOR ? 1 : 2) +
+                    (cadence == CADENCE_TYPE_HALF ? 0 : 1);
     size_t cells = request->bars / 2 * request->cells_per_bar;
     /* The last chord is the whole last bar. */
     return cells <= request->cells_per_bar || cells - request->cells_per_bar <= chords * request->cells_per_bar;
@@ -417,13 +418,13 @@ static bool same_kind(const MotiveDevSpec *a, const MotiveDevSpec *b) {
 
 /* Whether the last note of a development lands on the pitch class asked for (any when want is negative). */
 static bool lands_on(const Motive *result, int want) {
-    return want < 0 || ((result->notes[result->note_count - 1].midi_pitch % 12) + 12) % 12 == want;
+    return want < 0 || ((result->notes[result->note_count - 1].midi % 12) + 12) % 12 == want;
 }
 
 bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
                         const Motive *source, int want_pc, const MotiveDevSpec *avoid, MotiveDevSpec *out) {
     (void)spec;
-    PlanTime room = grow_scaled(grow_unit(request), 2);
+    Rational room = grow_scaled(grow_unit(request), 2);
     size_t intervals = source->note_count - 1;
     MotiveDevSpec fits[CONTRAST_MAX];
     MotiveDevSpec exact[CONTRAST_MAX];
@@ -433,7 +434,7 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
     for (int kind = 0; kind < 3; kind++) {
         /* Mirrored in the key's steps about a note near the first, so the contour turns over; every interval
            widened or narrowed; or the one interval changed. */
-        int first = source->notes[0].midi_pitch;
+        int first = source->notes[0].midi;
         int low = kind == 0 ? first - 2 : (kind == 1 ? -2 : 1);
         int high = kind == 0 ? first + 2 : (kind == 1 ? 2 : (int)intervals);
         for (int value = low; value <= high; value++) {
@@ -453,12 +454,12 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
                 }
                 if ((kind != 0 && dev.amount == 0) ||
                     motive_develop(source, &dev, &result) != MOTIVE_DEV_OK || grow_same_contour(source, &result) ||
-                    plan_time_compare(result.length, room) > 0 || (avoid && same_kind(avoid, &dev))) {
+                    rational_cmp(result.length, room) > 0 || (avoid && same_kind(avoid, &dev))) {
                     continue;
                 }
                 bool inside = true;
                 for (size_t k = 0; k < result.note_count; k++) {
-                    inside = inside && result.notes[k].midi_pitch >= CONTRAST_LOW && result.notes[k].midi_pitch <= CONTRAST_HIGH;
+                    inside = inside && result.notes[k].midi >= CONTRAST_LOW && result.notes[k].midi <= CONTRAST_HIGH;
                 }
                 if (!inside) {
                     continue;
@@ -550,7 +551,7 @@ static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const
             dev.kind = MOTIVE_DEV_INVERT;
             dev.tonal = asked->tonal;
             dev.has_axis = true;
-            dev.axis = asked->has_axis ? asked->axis : m0->notes[0].midi_pitch;
+            dev.axis = asked->has_axis ? asked->axis : m0->notes[0].midi;
             ref.has_axis = true;
             ref.axis = dev.axis;
             break;
@@ -592,7 +593,7 @@ static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const
             return false;
         }
         if (motive_develop(m0, &dev, &result) != MOTIVE_DEV_OK || result.note_count < 2 ||
-            plan_time_compare(result.length, request->bar) > 0) {
+            rational_cmp(result.length, request->bar) > 0) {
             continue;
         }
         spec->has_section_motive = true;
@@ -737,7 +738,7 @@ static bool grow_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
 PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, size_t start_unit, size_t units,
                          const char *name, NodeId *out) {
     PlanSpan span;
-    PlanResult result = plan_time_add(build->request->span.start, grow_scaled(build->unit, start_unit), &span.start);
+    PlanResult result = plan_result_of_rational(rational_add(build->request->span.start, grow_scaled(build->unit, start_unit), &span.start));
     span.length = grow_scaled(build->unit, units);
     if (result == PLAN_OK) {
         result = plan_add_node(build->plan, parent, kind, span, name, out);
@@ -753,8 +754,8 @@ PlanResult grow_add_motive(GrowBuild *build, size_t slot, const PlanMotiveRef *r
         return PLAN_OK;
     }
     PlanSpan span = {{0, 1}, build->request->bar};
-    PlanResult result = plan_time_add(build->material_span.start,
-                                      grow_scaled(build->request->bar, build->slot_base + slot - 1), &span.start);
+    PlanResult result = plan_result_of_rational(rational_add(build->material_span.start,
+                                      grow_scaled(build->request->bar, build->slot_base + slot - 1), &span.start));
     if (result == PLAN_OK) {
         result = plan_add_node(build->plan, build->material, PLAN_NODE_MOTIVE, span, MOTIVE_NAMES[slot], out);
     }
@@ -783,8 +784,9 @@ static PlanResult add_accompaniment_targets(GrowBuild *build, NodeId owner, Plan
         PlanNote note;
         LaneSpanId id;
         memset(&payload, 0, sizeof(payload));
-        note.midi_pitch = INNER_PLACEHOLDER;
-        note.offset = (PlanTime){0, 1};
+        note.midi = INNER_PLACEHOLDER;
+        note.spelled = false;
+        note.offset = (Rational){0, 1};
         note.duration = span.length;
         payload.notes.notes = &note;
         payload.notes.note_count = 1;
@@ -813,8 +815,9 @@ static PlanResult add_voicing_targets(GrowBuild *build, NodeId owner, PlanSpan s
         PlanNote note;
         LaneSpanId id;
         memset(&payload, 0, sizeof(payload));
-        note.midi_pitch = INNER_PLACEHOLDER;
-        note.offset = (PlanTime){0, 1};
+        note.midi = INNER_PLACEHOLDER;
+        note.spelled = false;
+        note.offset = (Rational){0, 1};
         note.duration = span.length;
         payload.notes.notes = &note;
         payload.notes.note_count = 1;
@@ -831,17 +834,18 @@ static PlanResult add_voicing_targets(GrowBuild *build, NodeId owner, PlanSpan s
         /* The melody the voicing writes is the span's gaps: a Given melody is not written over. */
         PlanSpan gaps[GROW_MAX_GAPS];
         size_t gap_count = given_gaps(build->plan, PLAN_LANE_MELODY, 0, span, gaps, GROW_MAX_GAPS);
-        PlanTime span_end;
+        Rational span_end;
         gap_count = gap_count > GROW_MAX_GAPS ? GROW_MAX_GAPS : gap_count;
         result = plan_span_end(span, &span_end);
         for (size_t g = 0; result == PLAN_OK && g < gap_count; g++) {
             PlanLanePayload payload;
             PlanNote note;
             LaneSpanId id;
-            PlanTime gap_end;
+            Rational gap_end;
             memset(&payload, 0, sizeof(payload));
-            note.midi_pitch = MELODY_PLACEHOLDER;
-            note.offset = (PlanTime){0, 1};
+            note.midi = MELODY_PLACEHOLDER;
+            note.spelled = false;
+            note.offset = (Rational){0, 1};
             note.duration = gaps[g].length;
             payload.notes.notes = &note;
             payload.notes.note_count = 1;
@@ -849,7 +853,7 @@ static PlanResult add_voicing_targets(GrowBuild *build, NodeId owner, PlanSpan s
             if (result == PLAN_OK) {
                 result = plan_add_lane_span(build->plan, owner, PLAN_LANE_MELODY, 0, gaps[g], &payload, &id);
             }
-            if (result == PLAN_OK && cadence && plan_time_compare(gap_end, span_end) == 0) {
+            if (result == PLAN_OK && cadence && rational_cmp(gap_end, span_end) == 0) {
                 result = plan_lane_span_add_constraint(build->plan, id, cadence);
             }
         }
@@ -882,7 +886,7 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
                                   const PlanConstraint *cadence) {
     PiecePlan *plan = build->plan;
     PlanSpan span = plan_node_span(plan, owner);
-    PlanTime span_end;
+    Rational span_end;
     PlanSpan gaps[GROW_MAX_GAPS];
     PlanResult result = plan_span_end(span, &span_end);
     /* Given harmony and Given bass are not written over: targets are opened for what is left. */
@@ -891,14 +895,14 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
     for (size_t g = 0; result == PLAN_OK && g < gap_count; g++) {
         PlanLanePayload payload;
         LaneSpanId harmony;
-        PlanTime gap_end;
+        Rational gap_end;
         PlanConstraint constraint;
         memset(&payload, 0, sizeof(payload));
         strcpy(payload.harmony.roman_numeral, "I");
-        payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+        payload.harmony.has_function = false;
         result = plan_span_end(gaps[g], &gap_end);
-        bool at_start = plan_time_compare(gaps[g].start, span.start) == 0;
-        bool at_end = result == PLAN_OK && plan_time_compare(gap_end, span_end) == 0;
+        bool at_start = rational_cmp(gaps[g].start, span.start) == 0;
+        bool at_end = result == PLAN_OK && rational_cmp(gap_end, span_end) == 0;
         if (result == PLAN_OK) {
             result = plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, gaps[g], &payload, &harmony);
         }
@@ -919,8 +923,9 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
         PlanNote note;
         LaneSpanId bass;
         memset(&payload, 0, sizeof(payload));
-        note.midi_pitch = BASS_PLACEHOLDER;
-        note.offset = (PlanTime){0, 1};
+        note.midi = BASS_PLACEHOLDER;
+        note.spelled = false;
+        note.offset = (Rational){0, 1};
         note.duration = gaps[g].length;
         payload.notes.notes = &note;
         payload.notes.note_count = 1;
@@ -937,10 +942,10 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
 
 /* The bars the material holds, counted. */
 static size_t material_bars(const GrowBuild *build) {
-    PlanTime length = {0, 1};
+    Rational length = {0, 1};
     size_t count = 0;
-    while (plan_time_compare(length, build->material_span.length) < 0 && count < 4096) {
-        if (plan_time_add(length, build->request->bar, &length) != PLAN_OK) {
+    while (rational_cmp(length, build->material_span.length) < 0 && count < 4096) {
+        if (rational_add(length, build->request->bar, &length) != RATIONAL_OK) {
             break;
         }
         count++;
@@ -982,38 +987,37 @@ static NodeId given_motive(GrowBuild *build, PlanSpan idea_span) {
     motive.meter = build->request->meter;
     for (size_t n = 0; n < notes->note_count && motive.note_count < MOTIVE_MAX_NOTES; n++) {
         PlanNote note = notes->notes[n];
-        PlanTime end;
-        if (plan_time_compare(note.offset, build->request->bar) >= 0) {
+        Rational end;
+        if (rational_cmp(note.offset, build->request->bar) >= 0) {
             break;
         }
-        if (plan_time_add(note.offset, note.duration, &end) != PLAN_OK) {
+        if (rational_add(note.offset, note.duration, &end) != RATIONAL_OK) {
             return PLAN_NODE_NONE;
         }
-        if (plan_time_compare(end, build->request->bar) > 0 &&
-            plan_time_make(build->request->bar.num * (long)note.offset.den - note.offset.num * (long)build->request->bar.den,
-                           build->request->bar.den * note.offset.den, &note.duration) != PLAN_OK) {
+        if (rational_cmp(end, build->request->bar) > 0 &&
+            rational_sub(build->request->bar, note.offset, &note.duration) != RATIONAL_OK) {
             return PLAN_NODE_NONE;
         }
         motive.notes[motive.note_count++] = note;
     }
     if (motive.note_count == 0 ||
-        plan_time_add(motive.notes[motive.note_count - 1].offset, motive.notes[motive.note_count - 1].duration,
-                      &motive.length) != PLAN_OK) {
+        rational_add(motive.notes[motive.note_count - 1].offset, motive.notes[motive.note_count - 1].duration,
+                      &motive.length) != RATIONAL_OK) {
         return PLAN_NODE_NONE;
     }
     /* The last bar of the material no node starts in. */
     size_t bars = material_bars(build);
     for (size_t bar = bars; bar > 0; bar--) {
-        PlanTime start;
+        Rational start;
         bool taken = false;
-        if (plan_time_add(build->material_span.start, grow_scaled(build->request->bar, bar - 1), &start) != PLAN_OK) {
+        if (rational_add(build->material_span.start, grow_scaled(build->request->bar, bar - 1), &start) != RATIONAL_OK) {
             return PLAN_NODE_NONE;
         }
         for (size_t i = 0; i < plan_node_child_count(plan, build->material); i++) {
             PlanSpan other = plan_node_span(plan, plan_node_child_at(plan, build->material, i));
-            PlanTime other_end;
-            taken = taken || (plan_span_end(other, &other_end) == PLAN_OK && plan_time_compare(other.start, start) <= 0 &&
-                              plan_time_compare(start, other_end) < 0);
+            Rational other_end;
+            taken = taken || (plan_span_end(other, &other_end) == PLAN_OK && rational_cmp(other.start, start) <= 0 &&
+                              rational_cmp(start, other_end) < 0);
         }
         NodeId node;
         if (!taken && plan_lane_find(plan, PLAN_LANE_MELODY, 0, (PlanSpan){start, motive.length}, NULL, 0) == 0) {
@@ -1031,7 +1035,7 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
         return PLAN_OK;
     }
     PlanSpan span = plan_node_span(plan, idea);
-    PlanTime span_end;
+    Rational span_end;
     PlanSpan gaps[GROW_MAX_GAPS];
     PlanResult result = plan_span_end(span, &span_end);
     size_t gap_count = given_gaps(plan, PLAN_LANE_MELODY, 0, span, gaps, GROW_MAX_GAPS);
@@ -1051,10 +1055,11 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
         PlanLanePayload payload;
         PlanNote note;
         LaneSpanId melody;
-        PlanTime gap_end;
+        Rational gap_end;
         memset(&payload, 0, sizeof(payload));
-        note.midi_pitch = MELODY_PLACEHOLDER;
-        note.offset = (PlanTime){0, 1};
+        note.midi = MELODY_PLACEHOLDER;
+        note.spelled = false;
+        note.offset = (Rational){0, 1};
         note.duration = gaps[g].length;
         payload.notes.notes = &note;
         payload.notes.note_count = 1;
@@ -1069,7 +1074,7 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
         if (result == PLAN_OK) {
             result = plan_lane_span_add_constraint(plan, melody, &constraint);
         }
-        if (result == PLAN_OK && cadence && plan_time_compare(gap_end, span_end) == 0) {
+        if (result == PLAN_OK && cadence && rational_cmp(gap_end, span_end) == 0) {
             result = plan_lane_span_add_constraint(plan, melody, cadence);
         }
     }
@@ -1082,12 +1087,12 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
  * where its motives were: the first gap of the bars wanted is taken, and when there is none, the bar after the last
  * motive, which is where the motives of a piece nothing was removed from always go.
  */
-size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, PlanTime bar,
+size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, Rational bar,
                           size_t wanted) {
     size_t free_bar = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, material); i++) {
         PlanSpan span = plan_node_span(plan, plan_node_child_at(plan, material, i));
-        PlanTime end;
+        Rational end;
         if (plan_span_end(span, &end) != PLAN_OK) {
             continue;
         }
@@ -1105,13 +1110,13 @@ size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan mate
     /* A gap below the last motive: a run of bars no node starts in, long enough. */
     size_t run = 0;
     for (size_t at = 0; at < free_bar; at++) {
-        PlanTime start;
-        bool taken = plan_time_add(material_span.start, grow_scaled(bar, at), &start) != PLAN_OK;
+        Rational start;
+        bool taken = rational_add(material_span.start, grow_scaled(bar, at), &start) != RATIONAL_OK;
         for (size_t i = 0; !taken && i < plan_node_child_count(plan, material); i++) {
             PlanSpan other = plan_node_span(plan, plan_node_child_at(plan, material, i));
-            PlanTime other_end;
-            taken = plan_span_end(other, &other_end) == PLAN_OK && plan_time_compare(other.start, start) <= 0 &&
-                    plan_time_compare(start, other_end) < 0;
+            Rational other_end;
+            taken = plan_span_end(other, &other_end) == PLAN_OK && rational_cmp(other.start, start) <= 0 &&
+                    rational_cmp(start, other_end) < 0;
         }
         run = taken ? 0 : run + 1;
         if (run == wanted && wanted > 0) {
@@ -1128,7 +1133,7 @@ static PlanResult add_section_motive(GrowBuild *build, size_t bar_index, NodeId 
     snprintf(name, sizeof(name), "%s motive", section ? section : "section");
     PlanSpan span = {{0, 1}, build->request->bar};
     PlanResult result =
-        plan_time_add(build->material_span.start, grow_scaled(build->request->bar, bar_index), &span.start);
+        plan_result_of_rational(rational_add(build->material_span.start, grow_scaled(build->request->bar, bar_index), &span.start));
     if (result == PLAN_OK) {
         result = plan_add_node(build->plan, build->material, PLAN_NODE_MOTIVE, span, name, out);
     }

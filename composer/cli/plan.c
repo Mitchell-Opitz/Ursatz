@@ -75,7 +75,7 @@ typedef struct {
     bool form_defaulted; /* no --form: given material makes it a ternary form of 24 bars */
     size_t given_melodies;
     FormTemplateKind form;
-    PlanKey key;
+    AnalysisKey key;
     char key_name[24];
     PlanMeter meter;
     unsigned long bars;
@@ -467,7 +467,7 @@ const char *cli_return_variation_name(PlanReturnVariation variation) {
 }
 
 /* The bars in a length; 0 when the plan has no meter. */
-size_t cli_bars_in(const PiecePlan *plan, PlanTime length) {
+size_t cli_bars_in(const PiecePlan *plan, Rational length) {
     LaneSpanId meters[1];
     PlanSpan whole = plan_node_span(plan, plan_root(plan));
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, whole, meters, 1) == 0) {

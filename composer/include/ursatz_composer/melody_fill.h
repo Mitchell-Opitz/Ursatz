@@ -95,7 +95,7 @@ bool melody_fill_checker(const PiecePlan *plan, FillTarget target, const FillOpe
  * be written, and tile the span), in key, with params (NULL for the defaults). The same rules the checker applies.
  * True when the lane could be read, with *violation NULL if nothing is broken and otherwise the rule that is.
  */
-bool melody_check_lane(const PiecePlan *plan, PlanSpan span, PlanKey key, const MelodyFillParams *params,
+bool melody_check_lane(const PiecePlan *plan, PlanSpan span, AnalysisKey key, const MelodyFillParams *params,
                        const char **violation);
 
 /*

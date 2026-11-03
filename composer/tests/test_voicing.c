@@ -25,7 +25,7 @@
 
 typedef struct {
     const char *name;
-    PlanKey key;
+    AnalysisKey key;
     const char *numeral[CHORDS];
     int bass[CHORDS];
     int melody[CHORDS];
@@ -38,7 +38,7 @@ typedef struct {
 
 static const Progression PROGRESSIONS[] = {
     {"I IV V I in C major",
-     {0, PLAN_MODE_MAJOR},
+     {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR},
      {"I", "IV", "V", "I"},
      {48, 41, 43, 48},
      {76, 72, 71, 72},
@@ -47,7 +47,7 @@ static const Progression PROGRESSIONS[] = {
      {-1, -1, -1, -1},
      {-1, -1, 11, -1}},
     {"I ii6 V7 I in C major",
-     {0, PLAN_MODE_MAJOR},
+     {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR},
      {"I", "ii6", "V7", "I"},
      {48, 41, 43, 48},
      {76, 74, 71, 72},
@@ -56,7 +56,7 @@ static const Progression PROGRESSIONS[] = {
      {-1, -1, 5, -1},
      {-1, -1, 11, -1}},
     {"i iv6 V i in A minor",
-     {9, PLAN_MODE_MINOR},
+     {NULL, PITCH_LETTER_A, 0, KEY_STRUCTURE_MODE_MINOR},
      {"i", "iv6", "V", "i"},
      {45, 41, 52, 45},
      {72, 74, 68, 69},
@@ -73,15 +73,15 @@ typedef struct {
     LaneSpanId alto;
 } Piece;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
 static Piece build(const Progression *progression, bool write_soprano, int melody_override) {
     Piece piece;
-    PlanTime bar = fraction(1, 1);
+    Rational bar = fraction(1, 1);
     PlanSpan all = {fraction(0, 1), fraction(CHORDS, 1)};
     PlanLanePayload payload;
     PlanNote notes[CHORDS];
@@ -103,11 +103,12 @@ static Piece build(const Progression *progression, bool write_soprano, int melod
         PlanSpan span = {fraction((long)b, 1), bar};
         memset(&payload, 0, sizeof(payload));
         strcpy(payload.harmony.roman_numeral, progression->numeral[b]);
-        payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+        payload.harmony.has_function = false;
         assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_HARMONY, 0, span, &payload, &id) == PLAN_OK);
         assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
         memset(&payload, 0, sizeof(payload));
-        notes[0].midi_pitch = progression->bass[b];
+        notes[0].midi = progression->bass[b];
+        notes[0].spelled = false;
         notes[0].offset = fraction(0, 1);
         notes[0].duration = bar;
         payload.notes.notes = notes;
@@ -115,7 +116,8 @@ static Piece build(const Progression *progression, bool write_soprano, int melod
         assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_BASS, 0, span, &payload, &id) == PLAN_OK);
         assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
         if (!write_soprano) {
-            notes[0].midi_pitch = b == 0 && melody_override ? melody_override : progression->melody[b];
+            notes[0].midi = b == 0 && melody_override ? melody_override : progression->melody[b];
+            notes[0].spelled = false;
             assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_MELODY, 0, span, &payload, &id) == PLAN_OK);
             assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
         }
@@ -124,14 +126,14 @@ static Piece build(const Progression *progression, bool write_soprano, int melod
 
     /* The open spans: the melody when the voicing writes it, the tenor, and the alto with the constraint. */
     if (write_soprano) {
-        PlanNote note = {60, fraction(0, 1), all.length};
+        PlanNote note = plan_note(60, fraction(0, 1), all.length);
         memset(&payload, 0, sizeof(payload));
         payload.notes.notes = &note;
         payload.notes.note_count = 1;
         assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_MELODY, 0, all, &payload, &id) == PLAN_OK);
     }
     for (int voice = 2; voice >= 1; voice--) {
-        PlanNote note = {55, fraction(0, 1), all.length};
+        PlanNote note = plan_note(55, fraction(0, 1), all.length);
         memset(&payload, 0, sizeof(payload));
         payload.notes.notes = &note;
         payload.notes.note_count = 1;

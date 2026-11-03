@@ -106,7 +106,7 @@ static bool first_meter(const PiecePlan *plan, PlanMeter *out) {
 /* The bars a span covers, 1-based from the start of the piece; 0 and 0 without a usable meter. */
 static void bars_of(bool have_meter, const PlanMeter *meter, PlanSpan span, size_t *first, size_t *last) {
     *first = *last = 0;
-    PlanTime end;
+    Rational end;
     if (!have_meter || span.start.num < 0 || span.length.num <= 0 || plan_span_end(span, &end) != PLAN_OK) {
         return;
     }
@@ -203,7 +203,7 @@ static bool add_step(const PiecePlan *plan, bool have_meter, const PlanMeter *me
             for (size_t c = 0; c < plan_lane_span_constraint_count(plan, span); c++) {
                 const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, span, c);
                 if (constraint->kind == PLAN_CONSTRAINT_PICKUP) {
-                    snprintf(target.pickup, sizeof(target.pickup), "%ld/%lu", constraint->params.pickup.num,
+                    snprintf(target.pickup, sizeof(target.pickup), "%lld/%lld", constraint->params.pickup.num,
                              constraint->params.pickup.den);
                 }
             }
@@ -211,7 +211,7 @@ static bool add_step(const PiecePlan *plan, bool have_meter, const PlanMeter *me
             for (size_t c = 0; !target.pickup[0] && c < plan_node_constraint_count(plan, owner); c++) {
                 const PlanConstraint *constraint = plan_node_constraint_at(plan, owner, c);
                 if (constraint->kind == PLAN_CONSTRAINT_PICKUP) {
-                    snprintf(target.pickup, sizeof(target.pickup), "%ld/%lu", constraint->params.pickup.num,
+                    snprintf(target.pickup, sizeof(target.pickup), "%lld/%lld", constraint->params.pickup.num,
                              constraint->params.pickup.den);
                 }
             }
@@ -640,24 +640,14 @@ char *explain_to_text(const Explanation *explanation) {
 
 /* ------------------------------------------------------------------- JSON */
 
-static cJSON *ratio_json(unsigned long numerator, unsigned long denominator) {
-    cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "num", json_number((long)numerator)) &&
-                    plan_json_add(object, "den", json_number((long)denominator)))) {
-        cJSON_Delete(object);
-        return NULL;
-    }
-    return object;
-}
-
 static cJSON *candidate_json(const ExplainCandidate *candidate, bool runner_up) {
     cJSON *object = cJSON_CreateObject();
     bool ok = object && plan_json_add(object, "operator", cJSON_CreateString(candidate->operator_name)) &&
               plan_json_add(object, "label", cJSON_CreateString(candidate->label)) &&
-              plan_json_add(object, "score", ratio_json(candidate->score_numerator, candidate->score_denominator));
+              plan_json_add(object, "score", rational_json((long long)candidate->score_numerator, (long long)candidate->score_denominator));
     ok = ok && (!candidate->styled ||
-                plan_json_add(object, "style", ratio_json(candidate->style_numerator, candidate->style_denominator)));
-    ok = ok && (!runner_up || plan_json_add(object, "behind", ratio_json(candidate->behind_numerator, candidate->behind_denominator)));
+                plan_json_add(object, "style", rational_json((long long)candidate->style_numerator, (long long)candidate->style_denominator)));
+    ok = ok && (!runner_up || plan_json_add(object, "behind", rational_json((long long)candidate->behind_numerator, (long long)candidate->behind_denominator)));
     ok = ok && (!candidate->rejected || plan_json_add(object, "reason", cJSON_CreateString(candidate->reason)));
     ok = ok && (!not_held_of(candidate) || plan_json_add(object, "not_held", cJSON_CreateString(not_held_of(candidate))));
     if (!ok) {

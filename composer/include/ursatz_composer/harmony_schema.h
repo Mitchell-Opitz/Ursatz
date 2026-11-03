@@ -75,7 +75,7 @@ bool harmony_schema_find(const char *name, GalantSchemaId *id);
  * Whether every stage of the schema makes one consistent chord in a key of this mode, so that it can be offered
  * at all (see the top of this header). It does not say whether the meter and the span can hold it.
  */
-bool harmony_schema_available(GalantSchemaId id, PlanKeyMode mode);
+bool harmony_schema_available(GalantSchemaId id, KeyStructureMode mode);
 
 /* The defaults: every schema, every role, preference 250, and the bass operator's defaults. */
 HarmonySchemaParams harmony_schema_params_default(void);

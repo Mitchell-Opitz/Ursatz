@@ -33,15 +33,15 @@ bool cli_equals_ignore_case(const char *a, const char *b);
 bool cli_parse_whole_number(const char *text, unsigned long maximum, unsigned long *out);
 
 /* A tonic letter, an optional # or b, whitespace, then major or minor ("D minor", "F# major"); any case for the mode. */
-bool cli_parse_key(const char *text, PlanKey *key);
-const char *cli_key_name(const PlanKey *key, char *out, size_t size);
+bool cli_parse_key(const char *text, AnalysisKey *key);
+const char *cli_key_name(const AnalysisKey *key, char *out, size_t size);
 
 /* "3/4", "6/8". The meters the harmony operators support are checked by the caller (harmony_meter_supported). */
 bool cli_parse_meter(const char *text, PlanMeter *meter);
 
 /* PAC, IAC, HC, DC or PC, any case. */
-bool cli_parse_cadence(const char *text, PlanCadenceType *cadence);
-const char *cli_cadence_name(PlanCadenceType cadence);
+bool cli_parse_cadence(const char *text, CadenceType *cadence);
+const char *cli_cadence_name(CadenceType cadence);
 
 /* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive", by PlanAccompanimentPattern. */
 const char *cli_accompaniment_name(PlanAccompanimentPattern pattern);
@@ -100,9 +100,9 @@ void cli_print_style_distance_json(const StyleComparison *comparison);
 
 /* Seeding from a corpus (corpus_seed.h). Each returns 0 or the status of the failure it printed: a passage or numerals
    that cannot be read is a usage error, a corpus with no match at 1/2 or more exits 2. */
-int cli_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const PlanKey *key,
+int cli_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const AnalysisKey *key,
                     unsigned long seed, CorpusSeed *out);
-int cli_seed_progression(const char *corpus_dir, const char *numerals_text, PlanKeyMode mode, CorpusSeed *out);
+int cli_seed_progression(const char *corpus_dir, const char *numerals_text, KeyStructureMode mode, CorpusSeed *out);
 /* The numerals of a progression seed in one string, separated by spaces. */
 void cli_seed_numerals_text(const CorpusSeed *seed, char *out, size_t size);
 /* "motive from <piece> m.1 b.1 - m.2 b.1, score 7/8", the line the text output carries. */
@@ -165,7 +165,7 @@ typedef struct {
 void cli_discard_pending(CliPendingFile *pending, size_t count);
 
 /* A pickup length ("1", "3/2") in beats of the unit as a time; false when it is not one. */
-bool cli_parse_pickup(const char *text, int beat_unit, PlanTime *out);
+bool cli_parse_pickup(const char *text, int beat_unit, Rational *out);
 
 /* The text of a motive in its own form (notes, rhythm or contour); malloc'd, the caller frees it. */
 char *cli_motive_text(const Motive *motive);

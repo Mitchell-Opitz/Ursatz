@@ -51,8 +51,8 @@ bool piece_fill_from_name(const char *name, PieceFillKind *out) {
 }
 
 /* Whether the pickup is a multiple of 1/32 of a whole note, not negative and shorter than a bar. */
-static bool pickup_valid(PlanTime pickup, PlanTime bar) {
-    if (pickup.den == 0 || pickup.num < 0 || plan_time_compare(pickup, bar) >= 0) {
+static bool pickup_valid(Rational pickup, Rational bar) {
+    if (pickup.den == 0 || pickup.num < 0 || rational_cmp(pickup, bar) >= 0) {
         return false;
     }
     return (pickup.num * (long)PIECE_PICKUP_GRID) % (long)pickup.den == 0;
@@ -63,15 +63,15 @@ PieceResult piece_structure_check(const PieceStructure *structure) {
         return PIECE_ERR_NULL;
     }
     size_t cells;
-    if (!grow_cells_per_bar(&structure->meter, &cells) || structure->key.tonic_pitch_class < 0 ||
-        structure->key.tonic_pitch_class > 11 ||
-        (structure->key.mode != PLAN_MODE_MAJOR && structure->key.mode != PLAN_MODE_MINOR) ||
+    if (!grow_cells_per_bar(&structure->meter, &cells) || analysis_key_tonic_pitch_class(&structure->key) < 0 ||
+        analysis_key_tonic_pitch_class(&structure->key) > 11 ||
+        (structure->key.mode != KEY_STRUCTURE_MODE_MAJOR && structure->key.mode != KEY_STRUCTURE_MODE_MINOR) ||
         structure->meter.beats_per_bar <= 0 || structure->meter.beat_unit <= 0 ||
         structure->section_count > PIECE_STRUCTURE_MAX_SECTIONS ||
         (structure->has_accompaniment && structure->has_voicing)) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    PlanTime bar = grow_bar_length(&structure->meter);
+    Rational bar = grow_bar_length(&structure->meter);
     size_t beats = 0;
     bool body = false;
     int last_part = PIECE_PART_INTRO;
@@ -125,11 +125,11 @@ void piece_structure_default_cadences(PieceStructure *structure) {
         }
         section->has_cadence = true;
         if (i == last_ending) {
-            section->cadence = PLAN_CADENCE_PAC;
+            section->cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
         } else if (i == last_loop || i == last_intro) {
-            section->cadence = PLAN_CADENCE_HC;
+            section->cadence = CADENCE_TYPE_HALF;
         } else {
-            section->cadence = PLAN_CADENCE_IAC;
+            section->cadence = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
         }
     }
 }
@@ -152,9 +152,9 @@ bool piece_structure_default_ending(PieceStructure *structure, size_t capacity) 
     strcpy(section->letter, "E");
     section->part = PIECE_PART_ENDING;
     section->beats = DEFAULT_ENDING_BARS * (size_t)structure->meter.beats_per_bar;
-    section->pickup = (PlanTime){0, 1};
+    section->pickup = (Rational){0, 1};
     section->has_cadence = true;
-    section->cadence = PLAN_CADENCE_PAC;
+    section->cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     section->fill = PIECE_FILL_EMPTY;
     return true;
 }
@@ -162,14 +162,14 @@ bool piece_structure_default_ending(PieceStructure *structure, size_t capacity) 
 /* ------------------------------------------------------------- the plan */
 
 /* The weak cadence an antecedent ends in. */
-#define ANTECEDENT_CADENCE PLAN_CADENCE_HC
+#define ANTECEDENT_CADENCE CADENCE_TYPE_HALF
 /* The bars of material a section holds beside the bars of its own: its motive and the four its ideas are made from. */
 #define MATERIAL_BARS_PER_SECTION 5
 
 /* A length of `count` beats of the meter. */
-static PlanTime beats_of(const PlanMeter *meter, size_t count) {
-    PlanTime out = {0, 1};
-    if (plan_time_make((long)count, (unsigned long)meter->beat_unit, &out) != PLAN_OK) {
+static Rational beats_of(const PlanMeter *meter, size_t count) {
+    Rational out = {0, 1};
+    if (rational_make((long)count, (long long)meter->beat_unit, &out) != RATIONAL_OK) {
         out.num = 0;
         out.den = 1;
     }
@@ -211,7 +211,7 @@ static bool is_theme_section(const PieceStructure *structure, const PieceSection
 }
 
 /* The key over the start of a span, when one key span holds it. */
-static bool key_over(const PiecePlan *plan, PlanSpan span, PlanKey *out) {
+static bool key_over(const PiecePlan *plan, PlanSpan span, AnalysisKey *out) {
     LaneSpanId ids[2];
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, ids[0]), span)) {
@@ -231,7 +231,7 @@ static bool theme_motive(const PieceStructure *structure, const PieceSection *se
     NodeId source = theme_plan ? grow_find_source(theme_plan) : PLAN_NODE_NONE;
     PlanSpan span;
     PlanMeter meter;
-    PlanKey key;
+    AnalysisKey key;
     if (theme == PLAN_NODE_NONE || source == PLAN_NODE_NONE) {
         return false;
     }
@@ -240,11 +240,11 @@ static bool theme_motive(const PieceStructure *structure, const PieceSection *se
         key.mode != structure->key.mode || !grow_read_motive(theme_plan, source, &meter, &key, out)) {
         return false;
     }
-    int shift = ((structure->key.tonic_pitch_class - key.tonic_pitch_class) % 12 + 12) % 12;
+    int shift = ((analysis_key_tonic_pitch_class(&structure->key) - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
     shift = shift > 6 ? shift - 12 : shift;
     for (size_t i = 0; i < out->note_count; i++) {
-        out->notes[i].midi_pitch += shift;
-        if (out->notes[i].midi_pitch < 0 || out->notes[i].midi_pitch > 127) {
+        out->notes[i].midi += shift;
+        if (out->notes[i].midi < 0 || out->notes[i].midi > 127) {
             return false;
         }
     }
@@ -303,13 +303,13 @@ static NodeId find_part_section(const PiecePlan *plan, const PieceSection *secti
 static bool loop_motive(const PieceStructure *structure, const PiecePlan *loop_plan, Motive *out) {
     NodeId source = grow_find_source(loop_plan);
     PlanMeter meter;
-    PlanKey key;
+    AnalysisKey key;
     if (source == PLAN_NODE_NONE) {
         return false;
     }
     PlanSpan span = plan_node_span(loop_plan, source);
     return return_meter_over(loop_plan, span, &meter) && key_over(loop_plan, span, &key) &&
-           key.mode == structure->key.mode && key.tonic_pitch_class == structure->key.tonic_pitch_class &&
+           key.mode == structure->key.mode && analysis_key_tonic_pitch_class(&key) == analysis_key_tonic_pitch_class(&structure->key) &&
            grow_read_motive(loop_plan, source, &meter, &key, out);
 }
 
@@ -444,7 +444,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
         return result;
     }
     size_t cells;
-    PlanTime bar = grow_bar_length(&structure->meter);
+    Rational bar = grow_bar_length(&structure->meter);
     Motive theme_storage;
     const Motive *motive = basic_motive(structure, &theme_storage);
     if (loop_plan) {
@@ -463,7 +463,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
         !grow_cells_per_bar(&structure->meter, &cells)) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    if (motive && plan_time_compare(motive->length, bar) > 0) {
+    if (motive && rational_cmp(motive->length, bar) > 0) {
         return PIECE_ERR_MOTIVE_TOO_LONG;
     }
     /* The sections laid out are the intro, the body and the turnaround; the ending version lays out the ending. */
@@ -491,7 +491,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
        motives are bars of the meter. The ending version has no seam. */
     beats += loop_plan ? 0 : per_bar;
     PlanSpan material = {{0, 1}, {0, 1}};
-    if (plan_time_make(bar.num * (long)((beats + per_bar - 1) / per_bar), bar.den, &material.start) != PLAN_OK) {
+    if (rational_mul_int(bar, (long long)((beats + per_bar - 1) / per_bar), &material.start) != RATIONAL_OK) {
         return PIECE_ERR_BAD_REQUEST;
     }
     PlanSpan form = {{0, 1}, {0, 1}};
@@ -499,13 +499,13 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
     NodeId source = PLAN_NODE_NONE;
     PlanLanePayload payload;
     LaneSpanId lane;
-    PlanTime bars_length = {0, 1};
-    if (plan_time_make(bar.num * (long)material_bars, bar.den, &bars_length) != PLAN_OK) {
+    Rational bars_length = {0, 1};
+    if (rational_mul_int(bar, (long long)material_bars, &bars_length) != RATIONAL_OK) {
         plan_destroy(plan);
         return PIECE_ERR_BAD_REQUEST;
     }
     material.length = bars_length;
-    result = piece_result_of_plan(plan_time_add(material.start, material.length, &form.length));
+    result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, material.length, &form.length)));
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form, "structure", &form_id));
     }
@@ -523,7 +523,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     /* The sections in time order, each from the end of the one before. */
-    PlanTime start = {0, 1};
+    Rational start = {0, 1};
     size_t start_beats = 0;
     for (size_t i = 0; result == PIECE_OK && i < laid; i++) {
         if (loop_plan && copy.sections[i].part == PIECE_PART_TURNAROUND) {
@@ -557,7 +557,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
             result = add_flag(plan, id, PLAN_CONSTRAINT_HOLD);
         }
         if (result == PIECE_OK) {
-            result = piece_result_of_plan(plan_time_add(start, span.length, &start));
+            result = piece_result_of_plan(plan_result_of_rational(rational_add(start, span.length, &start)));
         }
         start_beats += copy.sections[i].beats;
     }

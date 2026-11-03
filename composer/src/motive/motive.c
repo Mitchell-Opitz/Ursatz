@@ -137,7 +137,7 @@ static bool equals_ignore_case(const char *a, const char *b) {
     return *a == *b;
 }
 
-bool motive_parse_key(const char *text, PlanKey *out) {
+bool motive_parse_key(const char *text, AnalysisKey *out) {
     static const int NATURAL[7] = {9, 11, 0, 2, 4, 5, 7}; /* A B C D E F G */
     if (!text || !out) {
         return false;
@@ -179,13 +179,13 @@ bool motive_parse_key(const char *text, PlanKey *out) {
         return false;
     }
     if (equals_ignore_case(mode, "major")) {
-        out->mode = PLAN_MODE_MAJOR;
+        out->mode = KEY_STRUCTURE_MODE_MAJOR;
     } else if (equals_ignore_case(mode, "minor")) {
-        out->mode = PLAN_MODE_MINOR;
+        out->mode = KEY_STRUCTURE_MODE_MINOR;
     } else {
         return false;
     }
-    out->tonic_pitch_class = (pc % 12 + 12) % 12;
+    *out = plan_key_of_pitch_class((pc % 12 + 12) % 12, out->mode);
     return true;
 }
 
@@ -217,37 +217,40 @@ bool motive_parse_meter(const char *text, PlanMeter *out) {
     return true;
 }
 
-PlanKey motive_key_from_signature(int sharps_flats, PlanKeyMode mode) {
+AnalysisKey motive_key_from_signature(int sharps_flats, KeyStructureMode mode) {
+    AnalysisKey key;
+    if (analysis_key_from_fifths(sharps_flats, mode, &key)) {
+        return key;
+    }
     int major_tonic = ((sharps_flats * 7) % 12 + 12) % 12;
-    PlanKey key;
-    key.tonic_pitch_class = mode == PLAN_MODE_MINOR ? (major_tonic + 9) % 12 : major_tonic;
-    key.mode = mode;
-    return key;
+    return plan_key_of_pitch_class(mode == KEY_STRUCTURE_MODE_MINOR ? (major_tonic + 9) % 12 : major_tonic, mode);
 }
 
 /* ------------------------------------------------------------------- time */
 
-PlanTime motive_time(long num, unsigned long den) {
-    PlanTime time = {0, 1};
-    plan_time_make(num, den, &time);
+Rational motive_time(long num, unsigned long den) {
+    Rational time = {0, 1};
+    rational_make(num, den, &time);
     return time;
 }
 
-PlanTime motive_time_plus(PlanTime a, PlanTime b) {
-    PlanTime sum = {0, 1};
-    plan_time_add(a, b, &sum);
+Rational motive_time_plus(Rational a, Rational b) {
+    Rational sum = {0, 1};
+    rational_add(a, b, &sum);
     return sum;
 }
 
-PlanTime motive_time_minus(PlanTime a, PlanTime b) {
-    return motive_time(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den);
+Rational motive_time_minus(Rational a, Rational b) {
+    Rational difference = {0, 1};
+    rational_sub(a, b, &difference);
+    return difference;
 }
 
-PlanTime motive_pickup(const Motive *motive) {
+Rational motive_pickup(const Motive *motive) {
     return motive->pickup.den == 0 ? motive_time(0, 1) : motive->pickup;
 }
 
-PlanTime motive_note_end(const PlanNote *note) {
+Rational motive_note_end(const PlanNote *note) {
     return motive_time_plus(note->offset, note->duration);
 }
 
@@ -264,7 +267,7 @@ void motive_set_error(MotiveError *error, const char *location, const char *form
 
 /* ------------------------------------------------------------ validation */
 
-MotiveResult motive_check_notes(const Motive *motive, PlanTime *length, MotiveError *error) {
+MotiveResult motive_check_notes(const Motive *motive, Rational *length, MotiveError *error) {
     if (motive->note_count == 0) {
         motive_set_error(error, "", "the motive has no notes");
         return MOTIVE_ERR_EMPTY;
@@ -273,13 +276,13 @@ MotiveResult motive_check_notes(const Motive *motive, PlanTime *length, MotiveEr
         motive_set_error(error, "", "the motive has %zu notes; the most is %d", motive->note_count, MOTIVE_MAX_NOTES);
         return MOTIVE_ERR_TOO_MANY_NOTES;
     }
-    PlanTime end = motive_time(0, 1);
+    Rational end = motive_time(0, 1);
     for (size_t i = 0; i < motive->note_count; i++) {
         const PlanNote *note = &motive->notes[i];
         char location[MOTIVE_ERROR_LOCATION_MAX];
         snprintf(location, sizeof(location), "notes[%zu]", i);
-        if (note->midi_pitch < 0 || note->midi_pitch > 127) {
-            motive_set_error(error, location, "pitch %d is outside the MIDI range 0 to 127", note->midi_pitch);
+        if (note->midi < 0 || note->midi > 127) {
+            motive_set_error(error, location, "pitch %d is outside the MIDI range 0 to 127", note->midi);
             return MOTIVE_ERR_VALUE;
         }
         if (note->duration.num <= 0) {
@@ -290,7 +293,7 @@ MotiveResult motive_check_notes(const Motive *motive, PlanTime *length, MotiveEr
             motive_set_error(error, location, "the offset must not be before the start of the motive");
             return MOTIVE_ERR_VALUE;
         }
-        if (plan_time_compare(note->offset, end) < 0) {
+        if (rational_cmp(note->offset, end) < 0) {
             motive_set_error(error, location, "the note starts at %ld/%lu, before the note before it ends at %ld/%lu",
                              note->offset.num, note->offset.den, end.num, end.den);
             return MOTIVE_ERR_VALUE;
@@ -309,12 +312,12 @@ MotiveResult motive_check_notes(const Motive *motive, PlanTime *length, MotiveEr
  * unspecified; no key is guessed from fewer pitches. A scale and its relative share their seven pitch classes, so
  * two answers are settled by the last note and, failing that, left open.
  */
-static bool infer_key(const Motive *motive, PlanKey *out) {
+static bool infer_key(const Motive *motive, AnalysisKey *out) {
     bool present[12] = {false};
     for (size_t i = 0; i < motive->note_count; i++) {
-        present[motive->notes[i].midi_pitch % 12] = true;
+        present[motive->notes[i].midi % 12] = true;
     }
-    PlanKey found[24];
+    AnalysisKey found[24];
     size_t found_count = 0;
     for (int tonic = 0; tonic < 12; tonic++) {
         int relative[12];
@@ -326,8 +329,7 @@ static bool infer_key(const Motive *motive, PlanKey *out) {
         }
         CommonPracticeKeyMode mode;
         if (common_practice_identify_key_mode(relative, count, &mode)) {
-            found[found_count].tonic_pitch_class = tonic;
-            found[found_count].mode = mode == COMMON_PRACTICE_KEY_MINOR ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR;
+            found[found_count] = plan_key_of_pitch_class(tonic, mode == COMMON_PRACTICE_KEY_MINOR ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
             found_count++;
         }
     }
@@ -335,10 +337,10 @@ static bool infer_key(const Motive *motive, PlanKey *out) {
         *out = found[0];
         return true;
     }
-    int last = motive->notes[motive->note_count - 1].midi_pitch % 12;
+    int last = motive->notes[motive->note_count - 1].midi % 12;
     size_t match = found_count;
     for (size_t i = 0; i < found_count; i++) {
-        if (found[i].tonic_pitch_class == last) {
+        if (analysis_key_tonic_pitch_class(&found[i]) == last) {
             if (match != found_count) {
                 return false;
             }
@@ -356,7 +358,7 @@ static bool infer_key(const Motive *motive, PlanKey *out) {
 
 MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, const MotiveOptions *options,
                              MotiveError *error) {
-    PlanTime length;
+    Rational length;
     MotiveResult checked = motive_check_notes(motive, &length, error);
     if (checked != MOTIVE_OK) {
         return checked;
@@ -395,25 +397,25 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
 
     if (options && options->max_bars > 0) {
         /* The notes end at motive->length; the limit is that many whole bars of the meter. */
-        PlanTime bar;
-        PlanTime limit;
-        if (plan_time_make((long)motive->meter.beats_per_bar, (unsigned long)motive->meter.beat_unit, &bar) != PLAN_OK ||
-            plan_time_make((long)options->max_bars * bar.num, bar.den, &limit) != PLAN_OK ||
-            plan_time_compare(motive->length, limit) > 0) {
+        Rational bar;
+        Rational limit;
+        if (rational_make((long)motive->meter.beats_per_bar, (long long)motive->meter.beat_unit, &bar) != RATIONAL_OK ||
+            rational_make((long)options->max_bars * bar.num, bar.den, &limit) != RATIONAL_OK ||
+            rational_cmp(motive->length, limit) > 0) {
             motive_set_error(error, "", "the notes fill more than %zu bars of %d/%d", options->max_bars,
                              motive->meter.beats_per_bar, motive->meter.beat_unit);
             return MOTIVE_ERR_VALUE;
         }
     }
 
-    PlanTime pickup = options && options->has_pickup ? options->pickup
+    Rational pickup = options && options->has_pickup ? options->pickup
                       : document->has_pickup           ? document->pickup
                                                        : motive_time(0, 1);
-    PlanTime bar_length;
+    Rational bar_length;
     if (pickup.den == 0 || pickup.num < 0 ||
-        plan_time_make((long)motive->meter.beats_per_bar, (unsigned long)motive->meter.beat_unit, &bar_length) !=
-            PLAN_OK ||
-        plan_time_compare(pickup, bar_length) >= 0) {
+        rational_make((long)motive->meter.beats_per_bar, (long long)motive->meter.beat_unit, &bar_length) !=
+            RATIONAL_OK ||
+        rational_cmp(pickup, bar_length) >= 0) {
         motive_set_error(error, "pickup", "the pickup must be at least 0 and shorter than one bar of %d/%d",
                          motive->meter.beats_per_bar, motive->meter.beat_unit);
         return MOTIVE_ERR_VALUE;
@@ -421,7 +423,7 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
     motive->pickup = pickup;
     motive->form = document->form;
 
-    PlanKey key;
+    AnalysisKey key;
     if (options && options->has_key) {
         key = options->key;
         motive->key_source = MOTIVE_KEY_GIVEN;
@@ -431,11 +433,11 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
     } else if (infer_key(motive, &key)) {
         motive->key_source = MOTIVE_KEY_INFERRED;
     } else {
-        memset(&key, 0, sizeof(key));
+        key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
         motive->key_source = MOTIVE_KEY_UNSPECIFIED;
     }
-    if (key.tonic_pitch_class < 0 || key.tonic_pitch_class > 11) {
-        motive_set_error(error, "key", "the tonic pitch class %d is not from 0 to 11", key.tonic_pitch_class);
+    if (analysis_key_tonic_pitch_class(&key) < 0 || analysis_key_tonic_pitch_class(&key) > 11) {
+        motive_set_error(error, "key", "the tonic pitch class %d is not from 0 to 11", analysis_key_tonic_pitch_class(&key));
         return MOTIVE_ERR_VALUE;
     }
     motive->key = key;
@@ -495,12 +497,12 @@ MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
                              "a chord is degree 1 to 7, altered by -1 to 1, in inversion 0 to 2 (3 only on a seventh)");
             return MOTIVE_ERR_VALUE;
         }
-        if (chord->onset.den == 0 || chord->onset.num < 0 || plan_time_compare(chord->onset, motive->length) >= 0) {
+        if (chord->onset.den == 0 || chord->onset.num < 0 || rational_cmp(chord->onset, motive->length) >= 0) {
             motive_set_error(error, location, "the chord must start inside the motive, before %ld/%lu",
                              motive->length.num, motive->length.den);
             return MOTIVE_ERR_VALUE;
         }
-        if (i > 0 && plan_time_compare(chord->onset, motive->harmony[i - 1].onset) <= 0) {
+        if (i > 0 && rational_cmp(chord->onset, motive->harmony[i - 1].onset) <= 0) {
             motive_set_error(error, location, "the chord must come after the one before it");
             return MOTIVE_ERR_VALUE;
         }
@@ -541,6 +543,8 @@ MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
 static void begin(Motive *motive, MotiveDocument *document, MotiveError *error) {
     memset(motive, 0, sizeof(*motive));
     memset(document, 0, sizeof(*document));
+    motive->key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    document->key = motive->key;
     motive->length = motive_time(0, 1);
     motive->pickup = motive_time(0, 1);
     if (error) {
@@ -721,18 +725,18 @@ bool motive_equal(const Motive *a, const Motive *b) {
     }
     if (a->meter.beats_per_bar != b->meter.beats_per_bar || a->meter.beat_unit != b->meter.beat_unit ||
         a->meter.bars_per_hyperbar != b->meter.bars_per_hyperbar || a->key_source != b->key_source ||
-        a->note_count != b->note_count || plan_time_compare(a->length, b->length) != 0 || a->form != b->form ||
-        plan_time_compare(motive_pickup(a), motive_pickup(b)) != 0) {
+        a->note_count != b->note_count || rational_cmp(a->length, b->length) != 0 || a->form != b->form ||
+        rational_cmp(motive_pickup(a), motive_pickup(b)) != 0) {
         return false;
     }
     if (a->key_source != MOTIVE_KEY_UNSPECIFIED &&
-        (a->key.tonic_pitch_class != b->key.tonic_pitch_class || a->key.mode != b->key.mode)) {
+        (analysis_key_tonic_pitch_class(&a->key) != analysis_key_tonic_pitch_class(&b->key) || a->key.mode != b->key.mode)) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch ||
-            plan_time_compare(a->notes[i].offset, b->notes[i].offset) != 0 ||
-            plan_time_compare(a->notes[i].duration, b->notes[i].duration) != 0) {
+        if (a->notes[i].midi != b->notes[i].midi ||
+            rational_cmp(a->notes[i].offset, b->notes[i].offset) != 0 ||
+            rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
             return false;
         }
     }
@@ -742,7 +746,7 @@ bool motive_equal(const Motive *a, const Motive *b) {
     for (size_t i = 0; i < a->harmony_count; i++) {
         const MotiveChord *x = &a->harmony[i];
         const MotiveChord *y = &b->harmony[i];
-        if (plan_time_compare(x->onset, y->onset) != 0 || x->degree != y->degree || x->alteration != y->alteration ||
+        if (rational_cmp(x->onset, y->onset) != 0 || x->degree != y->degree || x->alteration != y->alteration ||
             x->inversion != y->inversion || x->seventh != y->seventh) {
             return false;
         }
@@ -758,16 +762,6 @@ bool motive_equal(const Motive *a, const Motive *b) {
 
 /* ------------------------------------------------------------------- JSON */
 
-cJSON *motive_time_json(PlanTime time) {
-    cJSON *object = cJSON_CreateObject();
-    if (object &&
-        !(plan_json_add(object, "num", json_number(time.num)) && plan_json_add(object, "den", json_number((long)time.den)))) {
-        cJSON_Delete(object);
-        return NULL;
-    }
-    return object;
-}
-
 static cJSON *meter_json(const PlanMeter *meter) {
     cJSON *object = cJSON_CreateObject();
     if (object && !(plan_json_add(object, "beats_per_bar", json_number(meter->beats_per_bar)) &&
@@ -779,10 +773,10 @@ static cJSON *meter_json(const PlanMeter *meter) {
     return object;
 }
 
-static cJSON *key_json(const PlanKey *key) {
+static cJSON *key_json(const AnalysisKey *key) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "tonic_pitch_class", json_number(key->tonic_pitch_class)) &&
-                    plan_json_add(object, "mode", cJSON_CreateString(key->mode == PLAN_MODE_MINOR ? "minor" : "major")))) {
+    if (object && !(plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(key))) &&
+                    plan_json_add(object, "mode", cJSON_CreateString(key->mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major")))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -794,9 +788,9 @@ static cJSON *notes_json(const Motive *motive) {
     for (size_t i = 0; array && i < motive->note_count; i++) {
         const PlanNote *note = &motive->notes[i];
         cJSON *object = cJSON_CreateObject();
-        bool ok = object && plan_json_add(object, "midi_pitch", json_number(note->midi_pitch)) &&
-                  plan_json_add(object, "offset", motive_time_json(note->offset)) &&
-                  plan_json_add(object, "duration", motive_time_json(note->duration));
+        bool ok = object && plan_json_add(object, "midi_pitch", json_number(note->midi)) &&
+                  plan_json_add(object, "offset", rational_json(note->offset.num, note->offset.den)) &&
+                  plan_json_add(object, "duration", rational_json(note->duration.num, note->duration.den));
         if (!ok) {
             cJSON_Delete(object);
             cJSON_Delete(array);
@@ -844,7 +838,7 @@ cJSON *motive_json_object(const Motive *motive) {
         ok = plan_json_add(document, "form", cJSON_CreateString(motive_form_name(motive->form)));
     }
     if (ok && motive_pickup(motive).num != 0) {
-        ok = plan_json_add(document, "pickup", motive_time_json(motive_pickup(motive)));
+        ok = plan_json_add(document, "pickup", rational_json(motive_pickup(motive).num, motive_pickup(motive).den));
     }
     if (ok && motive->harmony_count > 0) {
         char *harmony = motive_harmony_to_text(motive);
@@ -876,7 +870,7 @@ char *motive_to_json(const Motive *motive) {
     return motive ? motive_json_text(motive_json_object(motive)) : NULL;
 }
 
-static bool read_time(JsonReader *reader, const cJSON *item, const char *path, long min_num, PlanTime *out) {
+static bool read_time(JsonReader *reader, const cJSON *item, const char *path, long min_num, Rational *out) {
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, path, "expected an object with num and den");
     }
@@ -886,11 +880,11 @@ static bool read_time(JsonReader *reader, const cJSON *item, const char *path, l
         !json_read_int_member(reader, item, path, "den", 1, 1000000000L, &den)) {
         return false;
     }
-    return plan_time_make(num, (unsigned long)den, out) == PLAN_OK;
+    return rational_make(num, (long long)den, out) == RATIONAL_OK;
 }
 
 static bool read_time_member(JsonReader *reader, const cJSON *object, const char *path, const char *key, long min_num,
-                             PlanTime *out) {
+                             Rational *out) {
     const cJSON *item = plan_json_member(reader, object, path, key, true);
     if (!item) {
         return false;
@@ -944,8 +938,7 @@ static bool read_key(JsonReader *reader, const cJSON *item, MotiveDocument *docu
         return json_bad_format(reader, "key.mode", "expected \"major\" or \"minor\"");
     }
     document->has_key = true;
-    document->key.tonic_pitch_class = (int)tonic;
-    document->key.mode = strcmp(mode->valuestring, "minor") == 0 ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR;
+    document->key = plan_key_of_pitch_class((int)tonic, strcmp(mode->valuestring, "minor") == 0 ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
     return true;
 }
 
@@ -961,7 +954,7 @@ static bool read_notes(JsonReader *reader, const cJSON *array, Motive *motive) {
         return json_fail(reader, PLAN_ERR_FORMAT, "notes", "the motive has %d notes; the most is %d", count,
                          MOTIVE_MAX_NOTES);
     }
-    PlanTime end = motive_time(0, 1);
+    Rational end = motive_time(0, 1);
     for (int i = 0; i < count; i++) {
         const cJSON *item = cJSON_GetArrayItem(array, i);
         char path[PLAN_JSON_PATH_MAX];
@@ -976,8 +969,9 @@ static bool read_notes(JsonReader *reader, const cJSON *array, Motive *motive) {
             !read_time_member(reader, item, path, "duration", 1, &note.duration)) {
             return false;
         }
-        note.midi_pitch = (int)pitch;
-        if (plan_time_compare(note.offset, end) < 0) {
+        note.midi = (int)pitch;
+        note.spelled = false;
+        if (rational_cmp(note.offset, end) < 0) {
             char at[PLAN_JSON_PATH_MAX];
             json_child_path(at, path, "offset");
             return json_fail(reader, PLAN_ERR_FORMAT, at, "the note starts before the note before it ends");
@@ -1084,12 +1078,12 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
 
 /* ----------------------------------------------------------------- attach */
 
-static PlanResult attach(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
+static PlanResult attach(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                          const PlanSource *source, NodeId *out_node, LaneSpanId *out_span) {
     if (!plan || !motive) {
         return PLAN_ERR_NULL;
     }
-    PlanTime length;
+    Rational length;
     if (motive_check_notes(motive, &length, NULL) != MOTIVE_OK) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
@@ -1155,17 +1149,17 @@ static PlanResult attach(PiecePlan *plan, NodeId parent, PlanTime start, const M
     return PLAN_OK;
 }
 
-PlanResult motive_attach(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
+PlanResult motive_attach(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                          NodeId *out_node, LaneSpanId *out_span) {
     return attach(plan, parent, start, motive, name, NULL, out_node, out_span);
 }
 
-PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
+PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                                  const PlanSource *source, NodeId *out_node, LaneSpanId *out_span) {
     return attach(plan, parent, start, motive, name, source, out_node, out_span);
 }
 
-bool motive_in_key(const Motive *source, const PlanKey *key, Motive *out) {
+bool motive_in_key(const Motive *source, const AnalysisKey *key, Motive *out) {
     if (!source || !key || !out || source->key_source == MOTIVE_KEY_UNSPECIFIED) {
         return false;
     }
@@ -1173,12 +1167,13 @@ bool motive_in_key(const Motive *source, const PlanKey *key, Motive *out) {
     for (size_t i = 0; i < source->note_count; i++) {
         long position;
         int alteration;
-        motive_scale_position(&source->key, source->notes[i].midi_pitch - 60, &position, &alteration);
+        motive_scale_position(&source->key, source->notes[i].midi - 60, &position, &alteration);
         int pitch = 60 + motive_position_pitch(key, position, alteration);
         if (pitch < 0 || pitch > 127) {
             return false;
         }
-        moved.notes[i].midi_pitch = pitch;
+        moved.notes[i].midi = pitch;
+        moved.notes[i].spelled = false;
     }
     moved.key = *key;
     moved.key_source = MOTIVE_KEY_GIVEN;

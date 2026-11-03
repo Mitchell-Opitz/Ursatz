@@ -33,10 +33,10 @@ static int non_chord_tones_written;
 typedef struct {
     int beats_per_bar;
     int beat_unit;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int tonic;
     int bars;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     unsigned long seed;
 } Scenario;
 
@@ -48,19 +48,19 @@ typedef struct {
     LaneSpanId target;  /* the melody span to fill, once added */
     PlanSpan span;      /* the phrase */
     PlanSpan form_span;
-    PlanTime bar_length;
+    Rational bar_length;
     Motive motive;
 } Fixture;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
-static PlanTime time_plus(PlanTime a, PlanTime b) {
-    PlanTime sum;
-    assert(plan_time_add(a, b, &sum) == PLAN_OK);
+static Rational time_plus(Rational a, Rational b) {
+    Rational sum;
+    assert(rational_add(a, b, &sum) == RATIONAL_OK);
     return sum;
 }
 
@@ -69,7 +69,8 @@ static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, Pl
     PlanLanePayload payload;
     LaneSpanId id;
     memset(&payload, 0, sizeof(payload));
-    note.midi_pitch = pitch;
+    note.midi = pitch;
+    note.spelled = false;
     note.offset = fraction(0, 1);
     note.duration = span.length;
     payload.notes.notes = &note;
@@ -124,15 +125,14 @@ static Fixture build(const Scenario *scenario, bool with_development) {
            PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = scenario->tonic;
-    payload.key.mode = scenario->mode;
+    payload.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_KEY, 0, fixture.form_span, &payload, &id) ==
            PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, "I");
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    payload.harmony.has_function = false;
     LaneSpanId harmony;
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_HARMONY, 0, fixture.span, &payload, &harmony) ==
            PLAN_OK);
@@ -225,7 +225,7 @@ static void add_target(Fixture *fixture, NodeId motive, PlanMotiveTransform tran
 }
 
 /* The chord tones of a chord, worked out from its Roman numeral: the oracle the strong beats are held to. */
-static unsigned chord_pcs(PlanKeyMode mode, int tonic, const char *roman) {
+static unsigned chord_pcs(KeyStructureMode mode, int tonic, const char *roman) {
     static const int MAJOR_TRIAD[3] = {0, 4, 7};
     static const int MINOR_TRIAD[3] = {0, 3, 7};
     static const int DIMINISHED_TRIAD[3] = {0, 3, 6};
@@ -236,7 +236,7 @@ static unsigned chord_pcs(PlanKeyMode mode, int tonic, const char *roman) {
     static const int DIMINISHED_SEVENTH[4] = {0, 3, 6, 9};
     static const int MAJOR_QUALITY[8] = {0, 0, 1, 1, 0, 3, 1, 2};
     static const int MINOR_QUALITY[8] = {0, 1, 2, 0, 1, 3, 0, 3};
-    HarmonyMode harmony_mode = mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+    HarmonyMode harmony_mode = mode == KEY_STRUCTURE_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
     HarmonyAppliedChord applied;
     HarmonyChord chord;
     const int *intervals;
@@ -270,11 +270,11 @@ static unsigned chord_pcs(PlanKeyMode mode, int tonic, const char *roman) {
     } else {
         int quality;
         assert(harmony_roman_parse(mode, roman, &chord));
-        quality = mode == PLAN_MODE_MINOR ? MINOR_QUALITY[chord.degree] : MAJOR_QUALITY[chord.degree];
-        root = mode == PLAN_MODE_MINOR && chord.degree == 7 && chord.leading_tone
+        quality = mode == KEY_STRUCTURE_MODE_MINOR ? MINOR_QUALITY[chord.degree] : MAJOR_QUALITY[chord.degree];
+        root = mode == KEY_STRUCTURE_MODE_MINOR && chord.degree == 7 && chord.leading_tone
                    ? 11
                    : harmony_applied_scale_semitone(harmony_mode, chord.degree);
-        if (mode == PLAN_MODE_MINOR && chord.degree == 7 && chord.leading_tone) {
+        if (mode == KEY_STRUCTURE_MODE_MINOR && chord.degree == 7 && chord.leading_tone) {
             quality = 2;
         }
         if (!chord.seventh) {
@@ -295,8 +295,8 @@ static unsigned chord_pcs(PlanKeyMode mode, int tonic, const char *roman) {
 }
 
 typedef struct {
-    PlanTime start;
-    PlanTime end;
+    Rational start;
+    Rational end;
     int pitch;
 } Sounding;
 
@@ -313,16 +313,16 @@ static size_t read_melody(const Fixture *fixture, Sounding *out, size_t capacity
             assert(count < capacity);
             out[count].start = time_plus(span.start, notes->notes[n].offset);
             out[count].end = time_plus(out[count].start, notes->notes[n].duration);
-            out[count].pitch = notes->notes[n].midi_pitch;
+            out[count].pitch = notes->notes[n].midi;
             count++;
         }
     }
     return count;
 }
 
-static size_t sounding_at(const Sounding *notes, size_t count, PlanTime at) {
+static size_t sounding_at(const Sounding *notes, size_t count, Rational at) {
     for (size_t i = 0; i < count; i++) {
-        if (plan_time_compare(notes[i].start, at) <= 0 && plan_time_compare(at, notes[i].end) < 0) {
+        if (rational_cmp(notes[i].start, at) <= 0 && rational_cmp(at, notes[i].end) < 0) {
             return i;
         }
     }
@@ -336,7 +336,7 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
     size_t used = 0;
     out[0] = '\0';
     for (size_t i = 0; i < count; i++) {
-        used += (size_t)snprintf(out + used, size - used, "%ld/%lu+%ld/%lu:%d ", notes[i].start.num, notes[i].start.den,
+        used += (size_t)snprintf(out + used, size - used, "%lld/%lld+%lld/%lld:%d ", notes[i].start.num, notes[i].start.den,
                                  notes[i].end.num, notes[i].end.den, notes[i].pitch);
         assert(used + 128 < size);
     }
@@ -353,27 +353,27 @@ static void check_melody(const Fixture *fixture, const Scenario *scenario, const
 
     /* The melody passes the frameworks' rules: standard-counterpoint (melodic, and harmonic against the bass),
        the NonChordTone labeler and standard-harmony's resolution, read from the plan. */
-    PlanKey key = {scenario->tonic, scenario->mode};
+    AnalysisKey key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     const char *violation = "unread";
     assert(melody_check_lane(fixture->plan, fixture->span, key, params, &violation));
     assert(violation == NULL);
 
     /* The spans tile the phrase, are settled, and the notes follow one another from its start to its end. */
-    PlanTime at = fixture->span.start;
+    Rational at = fixture->span.start;
     LaneSpanId melody[MAX_CHORDS];
     assert(plan_lane_find(fixture->plan, PLAN_LANE_MELODY, 0, fixture->span, melody, MAX_CHORDS) == spans);
     for (size_t i = 0; i < spans; i++) {
         PlanSpan span = plan_lane_span_span(fixture->plan, melody[i]);
-        assert(plan_time_compare(span.start, at) == 0);
+        assert(rational_cmp(span.start, at) == 0);
         assert(plan_lane_span_state(fixture->plan, melody[i]) == PLAN_STATE_REALIZED);
         assert(plan_span_end(span, &at) == PLAN_OK);
     }
-    assert(plan_time_compare(at, time_plus(fixture->span.start, fixture->span.length)) == 0);
-    assert(plan_time_compare(notes[0].start, fixture->span.start) == 0);
+    assert(rational_cmp(at, time_plus(fixture->span.start, fixture->span.length)) == 0);
+    assert(rational_cmp(notes[0].start, fixture->span.start) == 0);
     for (size_t i = 1; i < count; i++) {
-        assert(plan_time_compare(notes[i - 1].end, notes[i].start) == 0);
+        assert(rational_cmp(notes[i - 1].end, notes[i].start) == 0);
     }
-    assert(plan_time_compare(notes[count - 1].end, at) == 0);
+    assert(rational_cmp(notes[count - 1].end, at) == 0);
     for (size_t i = 0; i < count; i++) {
         assert(notes[i].pitch >= params->range_low && notes[i].pitch <= params->range_high);
     }
@@ -386,10 +386,10 @@ static void check_melody(const Fixture *fixture, const Scenario *scenario, const
         bool downbeat = beat_num % beat_den == 0;
         for (size_t c = 0; c < chord_count; c++) {
             PlanSpan chord_span = plan_lane_span_span(fixture->plan, chords[c]);
-            PlanTime end;
+            Rational end;
             assert(plan_span_end(chord_span, &end) == PLAN_OK);
-            if (plan_time_compare(notes[n].start, chord_span.start) >= 0 && plan_time_compare(notes[n].start, end) < 0) {
-                bool chord_start = plan_time_compare(notes[n].start, chord_span.start) == 0;
+            if (rational_cmp(notes[n].start, chord_span.start) >= 0 && rational_cmp(notes[n].start, end) < 0) {
+                bool chord_start = rational_cmp(notes[n].start, chord_span.start) == 0;
                 unsigned tones = chord_pcs(scenario->mode, scenario->tonic,
                                            plan_lane_span_payload(fixture->plan, chords[c])->harmony.roman_numeral);
                 non_chord_tones_written += !(tones & (1u << (notes[n].pitch % 12)));
@@ -417,19 +417,19 @@ static void check_melody(const Fixture *fixture, const Scenario *scenario, const
 
     /* The cadence arrives on its stable tone, and the leading tone resolves to the tonic at an authentic one. */
     int last = notes[count - 1].pitch % 12;
-    if (scenario->cadence == PLAN_CADENCE_PAC) {
+    if (scenario->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC) {
         assert(last == scenario->tonic);
     }
-    if (scenario->cadence == PLAN_CADENCE_IAC) {
-        assert(last == (scenario->tonic + (scenario->mode == PLAN_MODE_MINOR ? 3 : 4)) % 12);
+    if (scenario->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
+        assert(last == (scenario->tonic + (scenario->mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4)) % 12);
     }
-    if (scenario->cadence == PLAN_CADENCE_PAC || scenario->cadence == PLAN_CADENCE_IAC) {
+    if (scenario->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || scenario->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
         PlanSpan final_chord = plan_lane_span_span(fixture->plan, chords[chord_count - 1]);
-        PlanTime before = final_chord.start;
+        Rational before = final_chord.start;
         size_t from = count;
         size_t to = sounding_at(notes, count, final_chord.start);
         for (size_t i = 0; i < count; i++) {
-            if (plan_time_compare(notes[i].end, before) <= 0) {
+            if (rational_cmp(notes[i].end, before) <= 0) {
                 from = i;
             }
         }
@@ -458,7 +458,7 @@ static bool pipeline(const Scenario *scenario, bool developed, const MelodyFillP
     LaneSpanId given_ids[4];
     assert(plan_node_lane_spans(fixture.plan, fixture.source, given_ids, 4) == 1);
     const PlanNotes *given = &plan_lane_span_payload(fixture.plan, given_ids[0])->notes;
-    int given_pitch = given->notes[0].midi_pitch;
+    int given_pitch = given->notes[0].midi;
     size_t given_count = given->note_count;
 
     FillRecord *record = NULL;
@@ -477,7 +477,7 @@ static bool pipeline(const Scenario *scenario, bool developed, const MelodyFillP
         }
         assert(found);
         assert(plan_lane_span_state(fixture.plan, fixture.target) == PLAN_STATE_CONSTRAINED);
-        assert(plan_time_compare(plan_lane_span_span(fixture.plan, fixture.target).length, fixture.span.length) == 0);
+        assert(rational_cmp(plan_lane_span_span(fixture.plan, fixture.target).length, fixture.span.length) == 0);
     }
     fill_outcome_destroy(&outcome);
     if (written) {
@@ -502,7 +502,7 @@ static bool pipeline(const Scenario *scenario, bool developed, const MelodyFillP
     /* The Given motive is untouched. */
     assert(plan_lane_span_state(fixture.plan, given_ids[0]) == PLAN_STATE_GIVEN);
     given = &plan_lane_span_payload(fixture.plan, given_ids[0])->notes;
-    assert(given->note_count == given_count && given->notes[0].midi_pitch == given_pitch);
+    assert(given->note_count == given_count && given->notes[0].midi == given_pitch);
     plan_destroy(fixture.plan);
     return written;
 }
@@ -524,8 +524,8 @@ static void test_sweep(void) {
     static const int meters[4][2] = {{2, 4}, {3, 4}, {4, 4}, {6, 8}};
     static const int tonics[3] = {0, 6, 10};
     static const int bars[2] = {5, 8};
-    static const PlanCadenceType cadences[5] = {PLAN_CADENCE_PAC, PLAN_CADENCE_IAC, PLAN_CADENCE_HC, PLAN_CADENCE_DC,
-                                                PLAN_CADENCE_PC};
+    static const CadenceType cadences[5] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE,
+                                                CADENCE_TYPE_PLAGAL};
     MelodyFillParams params = melody_fill_params_default();
     int total = 0;
     int written = 0;
@@ -535,7 +535,7 @@ static void test_sweep(void) {
                 for (int b = 0; b < 2; b++) {
                     for (int c = 0; c < 5; c++) {
                         for (unsigned long seed = 0; seed < 2; seed++) {
-                            Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
+                            Scenario scenario = {meters[m][0], meters[m][1], mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR,
                                                  tonics[t], bars[b], cadences[c], seed};
                             total++;
                             written += check_scenario(&scenario, seed == 1, &params);
@@ -557,7 +557,7 @@ static void test_chord_tones_only(void) {
     int written = 0;
     params.nct_types = 0;
     for (unsigned long seed = 0; seed < 12; seed++) {
-        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, PLAN_CADENCE_PAC, seed};
+        Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
         written += check_scenario(&scenario, false, &params);
     }
     assert(written > 0);
@@ -565,7 +565,7 @@ static void test_chord_tones_only(void) {
 
 /* A range no placement of the motive fits in leaves the span open: no valid candidate. */
 static void test_unplaceable_motive(void) {
-    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, PLAN_CADENCE_PAC, 1};
+    Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
     MelodyFillParams narrow = melody_fill_params_default();
     narrow.range_low = 60;
     narrow.range_high = 61;
@@ -581,7 +581,7 @@ static void test_unplaceable_motive(void) {
 
 /* The melody operator does not apply to a span whose harmony or bass is still open. */
 static void test_needs_harmony_and_bass(void) {
-    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, PLAN_CADENCE_PAC, 1};
+    Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
     Fixture fixture = build(&scenario, false);
     MelodyFillParams params = melody_fill_params_default();
     add_target(&fixture, fixture.source, PLAN_TRANSFORM_NONE);
@@ -622,7 +622,7 @@ typedef struct {
     PlanSpan span;
 } IdeaFixture;
 
-static IdeaFixture build_ideas(int beats, int unit, PlanKeyMode mode, int tonic) {
+static IdeaFixture build_ideas(int beats, int unit, KeyStructureMode mode, int tonic) {
     IdeaFixture fixture;
     PlanLanePayload payload;
     LaneSpanId id;
@@ -634,7 +634,7 @@ static IdeaFixture build_ideas(int beats, int unit, PlanKeyMode mode, int tonic)
     NodeId material_idea;
     MotiveOptions options;
     Motive motive;
-    PlanTime bar = fraction(beats, (unsigned long)unit);
+    Rational bar = fraction(beats, (unsigned long)unit);
     PlanSpan form_span = {fraction(0, 1), fraction(beats * 5L, (unsigned long)unit)};
     PlanSpan phrase_span = {fraction(0, 1), fraction(beats * 4L, (unsigned long)unit)};
     PlanSpan first_span = {fraction(0, 1), fraction(beats * 2L, (unsigned long)unit)};
@@ -670,18 +670,17 @@ static IdeaFixture build_ideas(int beats, int unit, PlanKeyMode mode, int tonic)
     assert(plan_add_lane_span(fixture.plan, form, PLAN_LANE_METER, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = tonic;
-    payload.key.mode = mode;
+    payload.key = plan_key_of_pitch_class(tonic, mode);
     assert(plan_add_lane_span(fixture.plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, "I");
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    payload.harmony.has_function = false;
     assert(plan_add_lane_span(fixture.plan, fixture.phrase, PLAN_LANE_HARMONY, 0, phrase_span, &payload, &id) ==
            PLAN_OK);
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
-    cadence.params.cadence = PLAN_CADENCE_PAC;
+    cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     assert(plan_lane_span_add_constraint(fixture.plan, id, &cadence) == PLAN_OK);
 
     PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
@@ -705,7 +704,7 @@ static size_t span_pitches(const IdeaFixture *fixture, LaneSpanId span, int *out
     const PlanNotes *notes = &plan_lane_span_payload(fixture->plan, span)->notes;
     assert(notes->note_count <= capacity);
     for (size_t i = 0; i < notes->note_count; i++) {
-        out[i] = notes->notes[i].midi_pitch;
+        out[i] = notes->notes[i].midi;
     }
     return notes->note_count;
 }
@@ -718,7 +717,7 @@ static void test_ideas_in_order(void) {
     for (int m = 0; m < 3; m++) {
         for (int mode = 0; mode < 2; mode++) {
             for (unsigned long seed = 1; seed <= 12; seed++) {
-                IdeaFixture fixture = build_ideas(meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
+                IdeaFixture fixture = build_ideas(meters[m][0], meters[m][1], mode ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR,
                                                   mode ? 9 : 0);
                 Fixture harmony_only;
                 FillRecord *record = NULL;
@@ -854,8 +853,7 @@ static ToneScene build_tone_scene(bool keyed) {
     options.meter.beat_unit = 4;
     if (keyed) {
         options.has_key = true;
-        options.key.tonic_pitch_class = 0;
-        options.key.mode = PLAN_MODE_MAJOR;
+        options.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     }
     assert(motive_from_notes_text(MOTIVE, &options, &motive, NULL) == MOTIVE_OK);
     assert(motive_attach(scene.plan, material_idea, extra.start, &motive, "m0", &scene.source, NULL) == PLAN_OK);
@@ -871,8 +869,7 @@ static ToneScene build_tone_scene(bool keyed) {
     assert(plan_add_lane_span(scene.plan, form, PLAN_LANE_METER, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = 0;
-    payload.key.mode = PLAN_MODE_MAJOR;
+    payload.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     assert(plan_add_lane_span(scene.plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     static const char *const CHORDS[2] = {"I", "IV"};
@@ -881,7 +878,7 @@ static ToneScene build_tone_scene(bool keyed) {
     for (int bar = 0; bar < 2; bar++) {
         memset(&payload, 0, sizeof(payload));
         strcpy(payload.harmony.roman_numeral, CHORDS[bar]);
-        payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+        payload.harmony.has_function = false;
         assert(plan_add_lane_span(scene.plan, phrase, PLAN_LANE_HARMONY, 0, bars[bar], &payload, &id) == PLAN_OK);
         assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
         id = add_notes(scene.plan, phrase, PLAN_LANE_BASS, bars[bar], BASS[bar]);
@@ -899,7 +896,7 @@ static ToneScene build_tone_scene(bool keyed) {
 
 /* Whether a pitch is a tone of the chord. */
 static bool tone_of(const char *roman, int pitch) {
-    return ((chord_pcs(PLAN_MODE_MAJOR, 0, roman) >> (((pitch % 12) + 12) % 12)) & 1u) != 0;
+    return ((chord_pcs(KEY_STRUCTURE_MODE_MAJOR, 0, roman) >> (((pitch % 12) + 12) % 12)) & 1u) != 0;
 }
 
 static int step_between(int a, int b) {
@@ -933,14 +930,14 @@ static void test_tone_roles(void) {
             const PlanNotes *notes = &plan_lane_span_payload(scene.plan, spans[idea])->notes;
             assert(notes->note_count >= 6);
             for (size_t k = 0; k < 6; k++) {
-                int pitch = notes->notes[k].midi_pitch;
+                int pitch = notes->notes[k].midi;
                 bool chord_tone = tone_of(chords[idea], pitch);
                 if (CHORD_NOTE[k]) {
                     assert(chord_tone);
                 } else if (!chord_tone) {
                     /* A figure that resolves: a step from the next note, which is a chord tone. */
-                    assert(step_between(pitch, notes->notes[k + 1].midi_pitch));
-                    assert(tone_of(chords[idea], notes->notes[k + 1].midi_pitch));
+                    assert(step_between(pitch, notes->notes[k + 1].midi));
+                    assert(tone_of(chords[idea], notes->notes[k + 1].midi));
                     kept[idea][k == 1 ? 0 : 1]++;
                 }
             }

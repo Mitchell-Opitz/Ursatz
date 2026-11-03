@@ -27,7 +27,7 @@ typedef struct {
     int pitch;
 } CheckNote;
 
-static inline long check_ticks(PlanTime time) {
+static inline long check_ticks(Rational time) {
     assert((time.num * CHECK_TICKS) % (long)time.den == 0);
     return time.num * CHECK_TICKS / (long)time.den;
 }
@@ -46,7 +46,7 @@ static inline size_t check_notes(const PiecePlan *plan, PlanLaneKind lane, int v
             assert(count < CHECK_MAX_NOTES);
             out[count].onset = base + check_ticks(notes->notes[n].offset);
             out[count].end = out[count].onset + check_ticks(notes->notes[n].duration);
-            out[count].pitch = notes->notes[n].midi_pitch;
+            out[count].pitch = notes->notes[n].midi;
             count++;
         }
     }
@@ -54,7 +54,7 @@ static inline size_t check_notes(const PiecePlan *plan, PlanLaneKind lane, int v
 }
 
 /* Checks every inner voice over span against the rules above; returns how many notes it checked. */
-static inline size_t check_accompaniment(const PiecePlan *plan, PlanSpan span, PlanKey key, int low, int high) {
+static inline size_t check_accompaniment(const PiecePlan *plan, PlanSpan span, AnalysisKey key, int low, int high) {
     PhraseChord chords[HARMONY_MAX_CHORDS];
     PhraseMetre metre;
     LaneSpanId chord_ids[HARMONY_MAX_CHORDS];

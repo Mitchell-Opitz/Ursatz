@@ -15,14 +15,14 @@
 
 static const PlanMeter FOUR_FOUR = {4, 4, 0};
 static const PlanMeter SIX_EIGHT = {6, 8, 0};
-static const PlanKey C_MAJOR = {0, PLAN_MODE_MAJOR};
-static const PlanKey D_MINOR = {2, PLAN_MODE_MINOR};
+static const AnalysisKey C_MAJOR = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
+static const AnalysisKey D_MINOR = {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR};
 
 static bool er_is(Rational time, long long num, long long den) {
     return time.num == num && time.den == den;
 }
 
-static Motive load(MotiveFormat format, const char *text, const PlanMeter *meter, const PlanKey *key) {
+static Motive load(MotiveFormat format, const char *text, const PlanMeter *meter, const AnalysisKey *key) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     options.has_meter = true;
@@ -120,13 +120,13 @@ static void test_rhythm_form(void) {
     assert(motive_from_sketch(&sketch, &rhythm, &back));
     assert(back.form == MOTIVE_FORM_RHYTHM && motive_equal(&rhythm, &back));
     for (size_t i = 0; i < back.note_count; i++) {
-        assert(back.notes[i].midi_pitch == rhythm.notes[0].midi_pitch);
+        assert(back.notes[i].midi == rhythm.notes[0].midi);
     }
 
     /* A contour keeps the pitches that sound it. */
     Motive contour = load(MOTIVE_FORMAT_CONTOUR, "0 2 1 3", &FOUR_FOUR, &C_MAJOR);
     assert(motive_to_sketch(&contour, &sketch));
-    assert(sketch.notes[1].pitch == contour.notes[1].midi_pitch && sketch.notes[1].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN);
+    assert(sketch.notes[1].pitch == contour.notes[1].midi && sketch.notes[1].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN);
 }
 
 static void test_round_trips(void) {
@@ -152,7 +152,7 @@ static void test_round_trips(void) {
     assert_round_trip(&one);
 
     Motive pickup = load(MOTIVE_FORMAT_NOTES, "G4:q C5:q. B4:e A4:q F4:h", &FOUR_FOUR, &C_MAJOR);
-    pickup.pickup = (PlanTime){1, 4};
+    pickup.pickup = (Rational){1, 4};
     assert_round_trip(&pickup);
 
     Motive minor = load(MOTIVE_FORMAT_NOTES, "D4:e F4:e A4:e D5:e E5:q", &SIX_EIGHT, &D_MINOR);

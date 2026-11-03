@@ -26,6 +26,9 @@ not apply to.
 | `texture` | A `standard-texture` name the written parts are to be heard as (`homophony`, `homorhythm`, `melody and accompaniment`), or none. |
 | `low`, `high` | The MIDI pitches the accompaniment keeps to; 48 and 67 when absent. |
 
+Times inside the operator are `Rational` positions in whole notes from the start of the target. The beat is the meter's
+(1 over the beat unit, 3/8 in a compound meter), so a meter whose beat unit does not divide 128 (the old whole note grid) is accepted.
+
 ## The patterns
 
 All sit on the meter's beat: a quarter in 2/4, 3/4 and 4/4, the dotted quarter in 6/8 (a compound meter), and the

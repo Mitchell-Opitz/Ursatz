@@ -36,11 +36,13 @@ typedef struct {
  * progression, which holds only with both chords.
  */
 typedef struct {
-    PlanKey key;
+    AnalysisKey key;
     bool has_chords;
-    PlanHarmonicFunction before_function; /* of the last chord before the seam; UNKNOWN to read it from the numeral */
+    HarmonicFunction before_function;     /* of the last chord before the seam, when before_has_function */
+    bool before_has_function;             /* false to read it from the numeral */
     char before_roman[PLAN_ROMAN_NUMERAL_MAX];
-    PlanHarmonicFunction after_function;  /* of the first chord after it */
+    HarmonicFunction after_function;      /* of the first chord after it, when after_has_function */
+    bool after_has_function;
     char after_roman[PLAN_ROMAN_NUMERAL_MAX];
     int bass_before; /* the last bass note before the seam, and the first after it */
     int bass_after;
@@ -67,6 +69,6 @@ typedef enum {
 SeamHearResult seam_hear(const PiecePlan *plan, NodeId seam, SeamHeard *out);
 
 /* The seam section that starts at the time, or PLAN_NODE_NONE. */
-NodeId seam_section_at(const PiecePlan *plan, PlanTime time);
+NodeId seam_section_at(const PiecePlan *plan, Rational time);
 
 #endif

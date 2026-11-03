@@ -28,18 +28,18 @@ unsigned melody_scale_mask(const MelodyContext *context, size_t chord) {
     static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
     static const int MINOR[6] = {0, 2, 3, 5, 7, 8};
     unsigned mask = 0;
-    if (context->key.mode == PLAN_MODE_MAJOR) {
+    if (context->key.mode == KEY_STRUCTURE_MODE_MAJOR) {
         for (size_t i = 0; i < 7; i++) {
-            mask |= 1u << ((context->key.tonic_pitch_class + MAJOR[i]) % 12);
+            mask |= 1u << ((analysis_key_tonic_pitch_class(&context->key) + MAJOR[i]) % 12);
         }
         return mask;
     }
     for (size_t i = 0; i < 6; i++) {
-        mask |= 1u << ((context->key.tonic_pitch_class + MINOR[i]) % 12);
+        mask |= 1u << ((analysis_key_tonic_pitch_class(&context->key) + MINOR[i]) % 12);
     }
     /* The raised seventh when the chord has it, else the natural one. */
-    int raised = (context->key.tonic_pitch_class + 11) % 12;
-    int natural = (context->key.tonic_pitch_class + 10) % 12;
+    int raised = (analysis_key_tonic_pitch_class(&context->key) + 11) % 12;
+    int natural = (analysis_key_tonic_pitch_class(&context->key) + 10) % 12;
     return mask | (1u << (((context->chord_mask[chord] >> raised) & 1u) ? raised : natural));
 }
 
@@ -48,15 +48,15 @@ bool melody_figure_ok(const MelodyContext *context, const MelodyFillParams *para
     const MelodyNote *note = &notes[i];
     unsigned types = params->nct_types;
     unsigned pitch_bit = 1u << util_pitch_class(note->pitch);
-    long end = note->onset + note->duration;
-    bool crossing = end > context->chord_start[note->chord + 1];
+    Rational end = position_add(note->onset, note->duration);
+    bool crossing = rational_cmp(end, context->chord_start[note->chord + 1]) > 0;
     bool has_next = i + 1 < count;
     int to_next = has_next ? notes[i + 1].pitch - note->pitch : 0;
     int from_prev = i > 0 ? note->pitch - notes[i - 1].pitch : 0;
 
     /* A chord tone of every chord it sounds through needs no figure. */
     bool tone_of_all = true;
-    for (size_t c = note->chord; c < context->count && context->chord_start[c] < end; c++) {
+    for (size_t c = note->chord; c < context->count && rational_cmp(context->chord_start[c], end) < 0; c++) {
         tone_of_all = tone_of_all && (context->chord_mask[c] & pitch_bit);
     }
     if (tone_of_all) {

@@ -60,10 +60,10 @@ typedef struct {
     bool list_schemas;
     bool bass;
     /* Read from the text above. */
-    PlanKey key;
+    AnalysisKey key;
     PlanMeter meter;
     long bars;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     unsigned long seed;
     EmbellishLevel embellish;
     bool json;
@@ -254,7 +254,7 @@ static int read_options(int argc, char **argv, Options *options) {
         options->has_schema = true;
         if (!harmony_schema_available(options->schema, options->key.mode)) {
             return cli_fail(EXIT_UNSATISFIABLE, "the schema '%s' cannot be written in a %s key", options->schema_text,
-                        options->key.mode == PLAN_MODE_MINOR ? "minor" : "major");
+                        options->key.mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major");
         }
     }
     if (options->sequence_text) {
@@ -289,23 +289,13 @@ static int read_options(int argc, char **argv, Options *options) {
 typedef struct {
     PiecePlan *plan;
     PlanSpan span;
-    PlanTime bar_length;
+    Rational bar_length;
 } Built;
 
-static PlanTime time_of(long num, unsigned long den) {
-    PlanTime time;
-    plan_time_make(num, den, &time);
+static Rational time_of(long num, unsigned long den) {
+    Rational time;
+    rational_make(num, den, &time);
     return time;
-}
-
-static PlanTime time_plus(PlanTime a, PlanTime b) {
-    PlanTime sum;
-    plan_time_add(a, b, &sum);
-    return sum;
-}
-
-static PlanTime time_minus(PlanTime a, PlanTime b) {
-    return time_of(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den);
 }
 
 /*
@@ -349,23 +339,27 @@ static bool build_plan(const Options *options, Built *built) {
 
     /* The part of the phrase the operators fill: all of it, or what follows a tonic first bar. */
     PlanSpan region = built->span;
-    const char *tonic = options->key.mode == PLAN_MODE_MINOR ? "i" : "I";
+    const char *tonic = options->key.mode == KEY_STRUCTURE_MODE_MINOR ? "i" : "I";
     if (needs_lead(options)) {
         PlanSpan lead = {built->span.start, built->bar_length};
         region.start = built->bar_length;
-        region.length = time_minus(built->span.length, built->bar_length);
+        if (rational_sub(built->span.length, built->bar_length, &region.length) != RATIONAL_OK) {
+            return false;
+        }
         memset(&payload, 0, sizeof(payload));
         strcpy(payload.harmony.roman_numeral, tonic);
-        payload.harmony.function = PLAN_FUNCTION_TONIC;
+        payload.harmony.function = HARMONIC_FUNCTION_TONIC;
+        payload.harmony.has_function = true;
         ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_HARMONY, 0, lead, &payload, &id) == PLAN_OK &&
              plan_lane_span_set_state(built->plan, id, PLAN_STATE_REALIZED) == PLAN_OK;
         /* Its bass is the tonic in the octave of the range nearest the middle of it. */
-        PlanNote tonic_note = {48, time_of(0, 1), lead.length};
+        PlanNote tonic_note = plan_note(48, time_of(0, 1), lead.length);
         for (int pitch = 40; pitch <= 60; pitch++) {
             int distance = pitch > 50 ? pitch - 50 : 50 - pitch;
-            int best = tonic_note.midi_pitch > 50 ? tonic_note.midi_pitch - 50 : 50 - tonic_note.midi_pitch;
-            if (pitch % 12 == options->key.tonic_pitch_class && (tonic_note.midi_pitch % 12 != options->key.tonic_pitch_class || distance < best)) {
-                tonic_note.midi_pitch = pitch;
+            int best = tonic_note.midi > 50 ? tonic_note.midi - 50 : 50 - tonic_note.midi;
+            if (pitch % 12 == analysis_key_tonic_pitch_class(&options->key) && (tonic_note.midi % 12 != analysis_key_tonic_pitch_class(&options->key) || distance < best)) {
+                tonic_note.midi = pitch;
+                tonic_note.spelled = false;
             }
         }
         memset(&payload, 0, sizeof(payload));
@@ -378,11 +372,11 @@ static bool build_plan(const Options *options, Built *built) {
     /* The open harmony span asks for the cadence; its placeholder chord is replaced by the operators. */
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, tonic);
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    payload.harmony.has_function = false;
     ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_HARMONY, 0, region, &payload, &id) == PLAN_OK &&
          plan_lane_span_add_constraint(built->plan, id, &cadence) == PLAN_OK;
     if (options->bass) {
-        PlanNote note = {40, time_of(0, 1), region.length};
+        PlanNote note = plan_note(40, time_of(0, 1), region.length);
         memset(&payload, 0, sizeof(payload));
         payload.notes.notes = &note;
         payload.notes.note_count = 1;
@@ -633,17 +627,9 @@ static size_t count_suggestions(const Options *options, const Parameters *parame
 
 /* --- showing the result --------------------------------------------------------- */
 
-static const char *function_name(PlanHarmonicFunction function) {
-    switch (function) {
-    case PLAN_FUNCTION_TONIC:
-        return "tonic";
-    case PLAN_FUNCTION_PREDOMINANT:
-        return "predominant";
-    case PLAN_FUNCTION_DOMINANT:
-        return "dominant";
-    default:
-        return "unknown";
-    }
+static const char *function_name(const PlanHarmony *harmony) {
+    const char *name = harmony->has_function ? harmonic_function_name(harmony->function) : NULL;
+    return name ? name : "unknown";
 }
 
 static void pitch_name(int midi, char *out, size_t size) {
@@ -668,19 +654,27 @@ static size_t collect_rows(const Options *options, const Built *built, Row *rows
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_lane_span_span(built->plan, ids[i]);
         const PlanHarmony *harmony = &plan_lane_span_payload(built->plan, ids[i])->harmony;
-        PlanTime bar_start = built->span.start;
-        PlanTime next = time_plus(bar_start, built->bar_length);
+        Rational bar_start = built->span.start;
+        Rational next;
+        Rational offset;
         int bar = 1;
-        while (plan_time_compare(next, span.start) <= 0) {
+        if (rational_add(bar_start, built->bar_length, &next) != RATIONAL_OK) {
+            return i;
+        }
+        while (rational_cmp(next, span.start) <= 0) {
             bar_start = next;
-            next = time_plus(bar_start, built->bar_length);
+            if (rational_add(bar_start, built->bar_length, &next) != RATIONAL_OK) {
+                return i;
+            }
             bar++;
         }
-        PlanTime offset = time_minus(span.start, bar_start);
+        if (rational_sub(span.start, bar_start, &offset) != RATIONAL_OK) {
+            return i;
+        }
         rows[i].bar = bar;
         rows[i].beat = (int)(offset.num * options->meter.beat_unit / (long)offset.den) + 1;
         memcpy(rows[i].roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
-        rows[i].function = function_name(harmony->function);
+        rows[i].function = function_name(harmony);
         rows[i].bass[0] = '\0';
 
         LaneSpanId basses[2];
@@ -689,7 +683,7 @@ static size_t collect_rows(const Options *options, const Built *built, Row *rows
             size_t used = 0;
             for (size_t n = 0; n < notes->note_count && used + 8 < sizeof(rows[i].bass); n++) {
                 char name[8];
-                pitch_name(notes->notes[n].midi_pitch, name, sizeof(name));
+                pitch_name(notes->notes[n].midi, name, sizeof(name));
                 used += (size_t)snprintf(rows[i].bass + used, sizeof(rows[i].bass) - used, n ? " %s" : "%s", name);
             }
         }
@@ -842,8 +836,8 @@ static int write_files(const Options *options, const Built *alternatives, size_t
 static void list_names(void) {
     printf("Schemas (--schema <name>), as Ursatz's galant-schemas framework names them:\n");
     for (int id = 0; id < GALANT_SCHEMA_COUNT; id++) {
-        bool major = harmony_schema_available((GalantSchemaId)id, PLAN_MODE_MAJOR);
-        bool minor = harmony_schema_available((GalantSchemaId)id, PLAN_MODE_MINOR);
+        bool major = harmony_schema_available((GalantSchemaId)id, KEY_STRUCTURE_MODE_MAJOR);
+        bool minor = harmony_schema_available((GalantSchemaId)id, KEY_STRUCTURE_MODE_MINOR);
         if (major || minor) {
             printf("  %-24s %-15s %s\n", galant_schema_name((GalantSchemaId)id),
                    schema_function_name(galant_prototype((GalantSchemaId)id)->function),

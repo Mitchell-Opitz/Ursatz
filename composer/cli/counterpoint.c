@@ -41,7 +41,7 @@ typedef struct {
     const char *format_text;
     /* Read from the text above. */
     int species;
-    PlanKey key;
+    AnalysisKey key;
     PlanMeter meter;
     unsigned long seed;
     unsigned long suggest;
@@ -212,9 +212,9 @@ static int check_options(Options *options) {
 
 /* --- the plan -------------------------------------------------------------------- */
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time = {0, 1};
-    plan_time_make(num, den, &time);
+static Rational fraction(long num, unsigned long den) {
+    Rational time = {0, 1};
+    rational_make(num, den, &time);
     return time;
 }
 
@@ -247,7 +247,8 @@ static PiecePlan *build_plan(const Options *options, const Motive *motive, LaneS
                    PLAN_OK &&
          plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
     ok = ok && plan_node_set_state(plan, owner, PLAN_STATE_GIVEN) == PLAN_OK;
-    placeholder.midi_pitch = 60;
+    placeholder.midi = 60;
+    placeholder.spelled = false;
     placeholder.offset = fraction(0, 1);
     placeholder.duration = motive->length;
     memset(&payload, 0, sizeof(payload));
@@ -277,7 +278,7 @@ static void sign(const PiecePlan *plan, LaneSpanId target, char *out, size_t siz
     size_t used = 0;
     out[0] = '\0';
     for (size_t i = 0; i < notes->note_count && used + 24 < size; i++) {
-        used += (size_t)snprintf(out + used, size - used, "%d@%ld/%lu,", notes->notes[i].midi_pitch,
+        used += (size_t)snprintf(out + used, size - used, "%d@%lld/%lld,", notes->notes[i].midi,
                                  notes->notes[i].offset.num, notes->notes[i].offset.den);
     }
 }
@@ -316,7 +317,7 @@ static void pitch_name(int pitch, char *out, size_t size) {
 }
 
 /* A length as w, h, q, e, s or t with up to two dots, else as a fraction of a whole note. */
-static void duration_name(PlanTime length, char *out, size_t size) {
+static void duration_name(Rational length, char *out, size_t size) {
     static const struct {
         long ticks;
         const char *name;
@@ -329,36 +330,36 @@ static void duration_name(PlanTime length, char *out, size_t size) {
             return;
         }
     }
-    snprintf(out, size, "%ld/%lu", length.num, length.den);
+    snprintf(out, size, "%lld/%lld", length.num, length.den);
 }
 
 /* The notes of a lane voice as a note list, gaps as rests, a bar line between bars. */
-static void print_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, PlanTime bar) {
+static void print_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, Rational bar) {
     LaneSpanId ids[MAX_NOTES];
     size_t found = plan_lane_find(plan, lane, voice, span, ids, MAX_NOTES);
-    PlanTime at = fraction(0, 1);
+    Rational at = fraction(0, 1);
     for (size_t i = 0; i < found; i++) {
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
-        PlanTime base = plan_lane_span_span(plan, ids[i]).start;
+        Rational base = plan_lane_span_span(plan, ids[i]).start;
         for (size_t n = 0; n < notes->note_count; n++) {
-            PlanTime start;
-            PlanTime gap;
+            Rational start;
+            Rational gap;
             char pitch[16];
             char length[24];
-            plan_time_add(base, notes->notes[n].offset, &start);
-            if (plan_time_compare(start, at) > 0) {
-                PlanTime negative = {-at.num, at.den};
-                plan_time_add(start, negative, &gap);
+            rational_add(base, notes->notes[n].offset, &start);
+            if (rational_cmp(start, at) > 0) {
+                Rational negative = {-at.num, at.den};
+                rational_add(start, negative, &gap);
                 duration_name(gap, length, sizeof(length));
                 printf(" r:%s", length);
             }
             if (bar.num > 0 && start.num * (long)bar.den % (bar.num * (long)start.den) == 0 && start.num > 0) {
                 printf(" |");
             }
-            pitch_name(notes->notes[n].midi_pitch, pitch, sizeof(pitch));
+            pitch_name(notes->notes[n].midi, pitch, sizeof(pitch));
             duration_name(notes->notes[n].duration, length, sizeof(length));
             printf(" %s:%s", pitch, length);
-            plan_time_add(start, notes->notes[n].duration, &at);
+            rational_add(start, notes->notes[n].duration, &at);
         }
     }
     printf("\n");
@@ -371,12 +372,12 @@ static void print_json_notes(const PiecePlan *plan, PlanLaneKind lane, int voice
     printf("[");
     for (size_t i = 0; i < found; i++) {
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
-        PlanTime base = plan_lane_span_span(plan, ids[i]).start;
+        Rational base = plan_lane_span_span(plan, ids[i]).start;
         for (size_t n = 0; n < notes->note_count; n++) {
-            PlanTime start;
-            plan_time_add(base, notes->notes[n].offset, &start);
-            printf("%s{\"midi_pitch\":%d,\"offset\":{\"num\":%ld,\"den\":%lu},\"duration\":{\"num\":%ld,\"den\":%lu}}",
-                   first ? "" : ",", notes->notes[n].midi_pitch, start.num, start.den, notes->notes[n].duration.num,
+            Rational start;
+            rational_add(base, notes->notes[n].offset, &start);
+            printf("%s{\"midi_pitch\":%d,\"offset\":{\"num\":%lld,\"den\":%lld},\"duration\":{\"num\":%lld,\"den\":%lld}}",
+                   first ? "" : ",", notes->notes[n].midi, start.num, start.den, notes->notes[n].duration.num,
                    notes->notes[n].duration.den);
             first = false;
         }
@@ -395,7 +396,7 @@ static void print_json_string(const char *text) {
     putchar('"');
 }
 
-static void print_result_text(const Options *options, const Result *result, PlanSpan span, PlanTime bar, size_t k,
+static void print_result_text(const Options *options, const Result *result, PlanSpan span, Rational bar, size_t k,
                               size_t count) {
     if (options->suggest > 1 || options->suggest_text) {
         printf("\ncounter-melody %zu of %zu, seed %lu\n", k + 1, count, result->seed);
@@ -413,7 +414,7 @@ static void print_result_text(const Options *options, const Result *result, Plan
     }
 }
 
-static void print_result(const Options *options, const Result *results, size_t count, PlanSpan span, PlanTime bar,
+static void print_result(const Options *options, const Result *results, size_t count, PlanSpan span, Rational bar,
                          const char *const *files, size_t file_count) {
     char key[24];
     cli_key_name(&options->key, key, sizeof(key));
@@ -594,7 +595,7 @@ int run_counterpoint(int argc, char **argv) {
         const char *files[MAX_FILES];
         size_t pending_count = 0;
         PlanSpan span = {fraction(0, 1), motive.length};
-        PlanTime bar = fraction(options.meter.beats_per_bar, (unsigned long)options.meter.beat_unit);
+        Rational bar = fraction(options.meter.beats_per_bar, (unsigned long)options.meter.beat_unit);
         status = write_files(&options, results, made, pending, &pending_count);
         if (status == 0) {
             for (size_t i = 0; i < pending_count; i++) {

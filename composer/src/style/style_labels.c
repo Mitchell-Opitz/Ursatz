@@ -207,14 +207,14 @@ bool composer_style_labels_add_motive(ComposerStyleLabels *labels, const Motive 
     const char *duration_parts[MOTIVE_MAX_NOTES];
     int steps[MOTIVE_MAX_NOTES];
     for (size_t i = 0; i < count; i++) {
-        int pitch_class = ((motive->notes[i].midi_pitch % 12) + 12) % 12;
+        int pitch_class = ((motive->notes[i].midi % 12) + 12) % 12;
         degrees[i] = style_label_degree(pitch_class, tonic_pc);
-        PlanTime length = motive->notes[i].duration;
+        Rational length = motive->notes[i].duration;
         style_label_duration((unsigned long)(length.num < 0 ? 0 : length.num), length.den, durations[i],
                              sizeof durations[i]);
         duration_parts[i] = durations[i];
         if (i > 0) {
-            steps[i - 1] = motive->notes[i].midi_pitch - motive->notes[i - 1].midi_pitch;
+            steps[i - 1] = motive->notes[i].midi - motive->notes[i - 1].midi;
         }
     }
     char *degree_text = style_label_join(degrees, count);

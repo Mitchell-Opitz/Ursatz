@@ -2,15 +2,11 @@
 
 #include <string.h>
 
+#include <standard-harmony/harmonic_function.h>
+
 #include <ursatz_composer/motive_sketch_bridge.h>
 
 #include "motive/motive_internal.h"
-
-typedef enum {
-    FUNCTION_TONIC,
-    FUNCTION_PREDOMINANT,
-    FUNCTION_DOMINANT
-} Function;
 
 /* A score from small constants or counts, which always fit. Values from a caller go through motive_score_make. */
 static MotiveScore fraction(unsigned long long numerator, unsigned long long denominator) {
@@ -52,16 +48,17 @@ static bool chord_of(const Motive *motive, bool last, int *degree, int *alterati
     return true;
 }
 
-static Function function_of(int degree) {
+/* The function of a scale degree's chord, ignoring its mode: the motive sketch carries no mode to ask the framework. */
+static HarmonicFunction degree_function(int degree) {
     switch (degree) {
     case 2:
     case 4:
-        return FUNCTION_PREDOMINANT;
+        return HARMONIC_FUNCTION_PREDOMINANT;
     case 5:
     case 7:
-        return FUNCTION_DOMINANT;
+        return HARMONIC_FUNCTION_DOMINANT;
     default:
-        return FUNCTION_TONIC;
+        return HARMONIC_FUNCTION_TONIC;
     }
 }
 
@@ -77,10 +74,10 @@ static MotiveScore coherence(const Motive *previous, const Motive *candidate) {
     if (from == to && from_alteration == to_alteration) {
         return fraction(1, 2);
     }
-    Function a = function_of(from);
-    Function b = function_of(to);
-    bool allowed = (a == FUNCTION_TONIC) || (a == FUNCTION_PREDOMINANT && b == FUNCTION_DOMINANT) ||
-                   (a == FUNCTION_DOMINANT && b == FUNCTION_TONIC);
+    HarmonicFunction a = degree_function(from);
+    HarmonicFunction b = degree_function(to);
+    bool allowed = (a == HARMONIC_FUNCTION_TONIC) || (a == HARMONIC_FUNCTION_PREDOMINANT && b == HARMONIC_FUNCTION_DOMINANT) ||
+                   (a == HARMONIC_FUNCTION_DOMINANT && b == HARMONIC_FUNCTION_TONIC);
     return allowed ? fraction(1, 1) : fraction(0, 1);
 }
 

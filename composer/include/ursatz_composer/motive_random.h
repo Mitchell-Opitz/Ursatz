@@ -39,10 +39,10 @@ typedef enum {
 } MotiveRandomResult;
 
 typedef struct {
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     PlanMeter meter;
     bool has_key;
-    PlanKey key;
+    AnalysisKey key;
     MotiveForm form;
     /* NULL for no style. Not owned. */
     const ComposerStyle *style;

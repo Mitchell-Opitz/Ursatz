@@ -46,8 +46,8 @@ static MotiveDevelopContext invent_context(const void *context) {
 
 typedef struct {
     PlanMeter meter;
-    PlanKey key;
-    PlanTime bar;
+    AnalysisKey key;
+    Rational bar;
 } InventRequest;
 
 static bool has_invent_constraint(const PiecePlan *plan, LaneSpanId id) {
@@ -78,16 +78,15 @@ static bool read_invent_request(const PiecePlan *plan, FillTarget target, const 
     if (plan_lane_find(plan, PLAN_LANE_METER, 0, span, &lane, 1) > 0) {
         out->meter = plan_lane_span_payload(plan, lane)->meter;
     }
-    out->key.tonic_pitch_class = 0;
-    out->key.mode = PLAN_MODE_MAJOR;
+    out->key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, &lane, 1) > 0) {
         out->key = plan_lane_span_payload(plan, lane)->key;
     } else if (context->has_key) {
         out->key = context->key;
     }
     if (out->meter.beats_per_bar <= 0 || out->meter.beat_unit <= 0 ||
-        plan_time_make(out->meter.beats_per_bar, (unsigned long)out->meter.beat_unit, &out->bar) != PLAN_OK ||
-        plan_time_compare(span.length, out->bar) != 0) {
+        rational_make(out->meter.beats_per_bar, (long long)out->meter.beat_unit, &out->bar) != RATIONAL_OK ||
+        rational_cmp(span.length, out->bar) != 0) {
         return false;
     }
     /* The span starts on a barline: its start is a whole number of bars. */
@@ -113,8 +112,8 @@ static bool add_duration(Rhythm *rhythm, long num, unsigned long den) {
     if (rhythm->count == MAX_NOTES) {
         return false;
     }
-    PlanTime time;
-    if (plan_time_make(num, den, &time) != PLAN_OK) {
+    Rational time;
+    if (rational_make(num, den, &time) != RATIONAL_OK) {
         return false;
     }
     rhythm->num[rhythm->count] = time.num;
@@ -190,7 +189,7 @@ static bool draw_motive(const InventRequest *request, FillRng *rng, Motive *out)
     out->meter = request->meter;
     out->key = request->key;
     out->key_source = MOTIVE_KEY_GIVEN;
-    PlanTime onset = {0, 1};
+    Rational onset = {0, 1};
     for (size_t i = 0; i < rhythm.count; i++) {
         if (i > 0) {
             position += draw_move(rng);
@@ -199,14 +198,15 @@ static bool draw_motive(const InventRequest *request, FillRng *rng, Motive *out)
         if (pitch < RANGE_LOW || pitch > RANGE_HIGH) {
             return false;
         }
-        PlanTime duration;
-        if (plan_time_make(rhythm.num[i], rhythm.den[i], &duration) != PLAN_OK) {
+        Rational duration;
+        if (rational_make(rhythm.num[i], rhythm.den[i], &duration) != RATIONAL_OK) {
             return false;
         }
-        out->notes[i].midi_pitch = pitch;
+        out->notes[i].midi = pitch;
+        out->notes[i].spelled = false;
         out->notes[i].offset = onset;
         out->notes[i].duration = duration;
-        if (plan_time_add(onset, duration, &onset) != PLAN_OK) {
+        if (rational_add(onset, duration, &onset) != RATIONAL_OK) {
             return false;
         }
     }
@@ -226,9 +226,9 @@ bool motive_melodic_fault(const Motive *motive, const char **fault) {
     for (size_t i = 0; i < motive->note_count; i++) {
         long position;
         int alteration;
-        motive_scale_position(&motive->key, motive->notes[i].midi_pitch, &position, &alteration);
+        motive_scale_position(&motive->key, motive->notes[i].midi, &position, &alteration);
         long degree = ((position % 7) + 7) % 7 + 1;
-        spellings[made] = harmony_spell_pitch(&motive->key, (int)degree, motive->notes[i].midi_pitch);
+        spellings[made] = harmony_spell_pitch(&motive->key, (int)degree, motive->notes[i].midi);
         if (!spellings[made]) {
             *fault = "a pitch cannot be spelled";
             break;
@@ -307,7 +307,7 @@ static bool invent_already(const FillCandidateList *list, const Motive *motive) 
 static void invent_label(const Motive *motive, char *label, size_t size) {
     int used = snprintf(label, size, "invented");
     for (size_t i = 0; used > 0 && (size_t)used + 1 < size && i < motive->note_count; i++) {
-        int written = snprintf(label + used, size - (size_t)used, " %d", motive->notes[i].midi_pitch);
+        int written = snprintf(label + used, size - (size_t)used, " %d", motive->notes[i].midi);
         if (written < 0) {
             break;
         }

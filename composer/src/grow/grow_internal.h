@@ -47,10 +47,10 @@ typedef struct {
     unsigned long magic;
     size_t bars;
     PlanMeter meter;
-    PlanKey key;
-    PlanCadenceType cadence;
+    AnalysisKey key;
+    CadenceType cadence;
     PlanThemePairing pairing;
-    PlanCadenceType first_cadence;         /* the weak cadence an antecedent ends in */
+    CadenceType first_cadence;         /* the weak cadence an antecedent ends in */
     PlanHarmonyShapeKind beginning_shape;  /* the shape of an antecedent's chords */
     bool beginning_split;                  /* no chord of the antecedent crosses a barline */
     PlanHarmonyAnchor compound_ends_on;    /* where a compound basic idea's prolongation ends */
@@ -87,19 +87,19 @@ typedef struct {
     NodeId section;
     PlanSpan span;
     PlanMeter meter;
-    PlanKey key;                   /* the key the section starts in */
+    AnalysisKey key;                   /* the key the section starts in */
     bool has_start_change;         /* the key before the section is another, which the section opens */
-    PlanKey from_key;              /* that key; read only with has_start_change */
+    AnalysisKey from_key;              /* that key; read only with has_start_change */
     bool has_end_change;           /* the second half of the section is in another key, which it opens */
-    PlanKey end_key;               /* that key; read only with has_end_change */
-    PlanCadenceType cadence;
-    PlanCadenceType first_cadence; /* meaningful when has_first */
+    AnalysisKey end_key;               /* that key; read only with has_end_change */
+    CadenceType cadence;
+    CadenceType first_cadence; /* meaningful when has_first */
     bool has_first;
     PlanThemePairing pairing;
     NodeId source;
     size_t bars;
     size_t cells_per_bar;
-    PlanTime bar;
+    Rational bar;
     bool has_accompaniment;
     PlanAccompaniment accompaniment;
     bool has_voicing;
@@ -115,7 +115,7 @@ typedef struct {
     PiecePlan *plan;
     const GrowThemeSpec *spec;
     const GrowThemeRequest *request;
-    PlanTime unit;           /* an eighth of the theme */
+    Rational unit;           /* an eighth of the theme */
     PlanConstraint cadence;  /* the theme's cadence */
     NodeId phrase;           /* the phrase the parts go in, made by the beginning */
     NodeId material;         /* the idea of the material section the motive nodes go in */
@@ -125,7 +125,7 @@ typedef struct {
 } GrowBuild;
 
 /* A length of count units. */
-PlanTime grow_scaled(PlanTime unit, size_t count);
+Rational grow_scaled(Rational unit, size_t count);
 /* A node of the theme, Realized, from start_unit units after the theme's start and units long. */
 PlanResult grow_add_node(GrowBuild *build, NodeId parent, PlanNodeKind kind, size_t start_unit, size_t units,
                          const char *name, NodeId *out);
@@ -141,7 +141,7 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
 /* The key lane over the section: see grow_theme.c. False when the lane does not tile the section. */
 bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request);
 /* The first bar of the material section a run of `wanted` motive bars can go in (see grow_theme.c). */
-size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, PlanTime bar, size_t wanted);
+size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, Rational bar, size_t wanted);
 /* The motive ref the development `dev` of the motive node `source` is. */
 void grow_dev_ref(const MotiveDevSpec *dev, NodeId source, PlanMotiveRef *out);
 
@@ -164,9 +164,9 @@ int grow_pairing_archetype(const PlanThemePairing *pairing);
  * Whether the chords of half of the theme can be kept from crossing a barline: a phrase model of this cadence has
  * only so many chords, and each may be no longer than a bar. False when they cannot cover the half's cells.
  */
-bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, PlanCadenceType cadence);
+bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence);
 /* An eighth of the theme. */
-PlanTime grow_unit(const GrowThemeRequest *request);
+Rational grow_unit(const GrowThemeRequest *request);
 /* standard-form's own beginning and ending for the plan's. */
 int grow_phrase_beginning(PlanThemeBeginning beginning);
 int grow_phrase_ending(PlanThemeEnding ending);
@@ -222,7 +222,7 @@ PlanResult grow_ending_build(GrowBuild *build);
  * first cadence (HC or IAC) that has room too.
  */
 bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
-                          PlanCadenceType cadence, PlanCadenceType first);
+                          CadenceType cadence, CadenceType first);
 /* Whether an accompaniment can be written in the meter, as a homophonic texture, Alberti only in a simple meter. */
 bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *accompaniment);
 
@@ -230,12 +230,12 @@ bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *a
 bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells);
 
 /* The length of a bar of the meter. */
-PlanTime grow_bar_length(const PlanMeter *meter);
+Rational grow_bar_length(const PlanMeter *meter);
 
 /* The node named "m0" of the plan (its Given source motive), else PLAN_NODE_NONE. */
 NodeId grow_find_source(const PiecePlan *plan);
 /* Reads the motive on a motive node's Given or Realized melody lane span, with the meter and key given. */
-bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const PlanKey *key, Motive *out);
+bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter, const AnalysisKey *key, Motive *out);
 
 /* The development of m0 each idea after the basic idea is, as a spec the motive operators read. */
 void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, PlanMotiveRef *out);

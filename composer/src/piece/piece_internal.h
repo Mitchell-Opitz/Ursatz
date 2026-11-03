@@ -16,7 +16,7 @@
  * (NULL for none). The m0 node is in *out. The material span is where the section goes; bar is the meter's bar.
  */
 PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const PlanSource *motive_source, NodeId form,
-                               PlanSpan material, PlanTime bar, NodeId *out);
+                               PlanSpan material, Rational bar, NodeId *out);
 
 /* Whether the plan is a piece structure plan: some section of it has a piece part (PLAN_CONSTRAINT_PIECE_PART). */
 bool piece_is_structure_plan(const PiecePlan *plan);
@@ -24,9 +24,9 @@ bool piece_is_structure_plan(const PiecePlan *plan);
 /* The seam section of a plan (R-171), or PLAN_NODE_NONE. */
 NodeId piece_seam_find(const PiecePlan *plan);
 /* The start of the first body section; false when no section is marked as a body. */
-bool piece_seam_body_start(const PiecePlan *plan, PlanTime *out);
+bool piece_seam_body_start(const PiecePlan *plan, Rational *out);
 /* Gives the seam a copy of the written lane spans of the bar that starts at body_start; plan_give_section's results. */
-GivenResult piece_seam_give(PiecePlan *plan, NodeId seam, PlanTime body_start);
+GivenResult piece_seam_give(PiecePlan *plan, NodeId seam, Rational body_start);
 
 /* Adds a constraint to a node of the plan being built. */
 static inline PieceResult piece_add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint) {

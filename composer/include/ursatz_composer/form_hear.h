@@ -43,7 +43,7 @@ typedef struct {
 
 /* A cadence heard over the range, as the recognizer found it, in the key of the chord it arrives on. */
 typedef struct {
-    PlanTime arrival; /* where the chord the cadence arrives on starts, in whole notes from the start of the plan */
+    Rational arrival; /* where the chord the cadence arrives on starts, in whole notes from the start of the plan */
     int type;         /* CadenceType */
 } FormHeardCadence;
 
@@ -77,7 +77,7 @@ FormHearResult form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out);
  * a V to I6 with no start there as an evaded cadence, so a period whose consequent opens on I6 is heard as a period
  * only when the start of the consequent is given. NULL and 0 is form_hear.
  */
-FormHearResult form_hear_with_sections(const PiecePlan *plan, PlanSpan span, const PlanTime *section_starts,
+FormHearResult form_hear_with_sections(const PiecePlan *plan, PlanSpan span, const Rational *section_starts,
                                        size_t section_count, FormHeard *out);
 
 /* standard-form's own name of a PhraseLevelForm ("sentence", "period", ...). */

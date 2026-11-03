@@ -7,6 +7,7 @@
 #include <standard-texture/texture_rules.h>
 
 #include "plan/plan_internal.h"
+#include "util/plan_util.h"
 
 void constraint_list_free(ConstraintList *list) {
     free(list->items);
@@ -18,7 +19,7 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     case PLAN_CONSTRAINT_LENGTH_BARS:
         return constraint->params.bars > 0;
     case PLAN_CONSTRAINT_CADENCE:
-        return constraint->params.cadence >= PLAN_CADENCE_PAC && constraint->params.cadence <= PLAN_CADENCE_PC;
+        return plan_cadence_index(constraint->params.cadence, NULL);
     case PLAN_CONSTRAINT_MOTIVE_REF: {
         const PlanMotiveRef *ref = &constraint->params.motive;
         return plan_has_node(plan, ref->motive) && plan_node_kind(plan, ref->motive) == PLAN_NODE_MOTIVE &&
@@ -28,8 +29,8 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
                ref->ratio_num >= 0 && ref->ratio_den >= 0 && (ref->ratio_num == 0) == (ref->ratio_den == 0);
     }
     case PLAN_CONSTRAINT_KEY:
-        return constraint->params.key.tonic_pitch_class >= 0 && constraint->params.key.tonic_pitch_class <= 11 &&
-               (constraint->params.key.mode == PLAN_MODE_MAJOR || constraint->params.key.mode == PLAN_MODE_MINOR);
+        return analysis_key_tonic_pitch_class(&constraint->params.key) >= 0 && analysis_key_tonic_pitch_class(&constraint->params.key) <= 11 &&
+               (constraint->params.key.mode == KEY_STRUCTURE_MODE_MAJOR || constraint->params.key.mode == KEY_STRUCTURE_MODE_MINOR);
     case PLAN_CONSTRAINT_ARCHETYPE:
         return constraint->params.archetype >= PLAN_ARCHETYPE_SENTENCE &&
                constraint->params.archetype <= PLAN_ARCHETYPE_HYBRID;
@@ -117,7 +118,7 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     }
     case PLAN_CONSTRAINT_PICKUP: {
         /* The bar it must be shorter than is the meter's, which the melody operator reads; no bar is as long as two wholes. */
-        PlanTime pickup = constraint->params.pickup;
+        Rational pickup = constraint->params.pickup;
         return pickup.den != 0 && pickup.num > 0 && (pickup.num * 32) % (long)pickup.den == 0 &&
                pickup.num < 2 * (long)pickup.den;
     }

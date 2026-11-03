@@ -32,17 +32,17 @@
 typedef struct {
     const char *name;
     int tonic;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int beats;
     int unit;
     const char *motive;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 0, PLAN_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
-    {"D minor 3/4", 2, PLAN_MODE_MINOR, 3, 4, "F4:q A4:e G4:e E4:q"},
-    {"G major 6/8", 7, PLAN_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"},
-    {"F major 2/4", 5, PLAN_MODE_MAJOR, 2, 4, "A4:q C5:e Bb4:e"},
+    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
+    {"D minor 3/4", 2, KEY_STRUCTURE_MODE_MINOR, 3, 4, "F4:q A4:e G4:e E4:q"},
+    {"G major 6/8", 7, KEY_STRUCTURE_MODE_MAJOR, 6, 8, "B4:q A4:e G4:e F#4:e D4:e"},
+    {"F major 2/4", 5, KEY_STRUCTURE_MODE_MAJOR, 2, 4, "A4:q C5:e Bb4:e"},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -65,14 +65,13 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key.tonic_pitch_class = scenario->tonic;
-    request.key.mode = scenario->mode;
+    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = scenario->unit;
     request.bars = bars;
     request.pairing.beginning = beginning;
     request.pairing.ending = ending;
-    request.cadence = PLAN_CADENCE_PAC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     return request;
 }
 
@@ -86,7 +85,7 @@ static NodeId find_node(const PiecePlan *plan, const char *name) {
     return PLAN_NODE_NONE;
 }
 
-static long ticks(PlanTime time) {
+static long ticks(Rational time) {
     assert((time.num * TICKS) % (long)time.den == 0);
     return time.num * TICKS / (long)time.den;
 }
@@ -196,7 +195,7 @@ static PlanThemePairing theme_pairing(const PiecePlan *plan, NodeId theme) {
     return pairing;
 }
 
-static bool node_cadence(const PiecePlan *plan, NodeId node, PlanCadenceType *out) {
+static bool node_cadence(const PiecePlan *plan, NodeId node, CadenceType *out) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, node, i);
         if (constraint->kind == PLAN_CONSTRAINT_CADENCE) {
@@ -216,8 +215,8 @@ static bool same_contour(const PlanNotes *a, const PlanNotes *b) {
         return false;
     }
     for (size_t i = 1; i < a->note_count; i++) {
-        if (direction(a->notes[i].midi_pitch - a->notes[i - 1].midi_pitch) !=
-            direction(b->notes[i].midi_pitch - b->notes[i - 1].midi_pitch)) {
+        if (direction(a->notes[i].midi - a->notes[i - 1].midi) !=
+            direction(b->notes[i].midi - b->notes[i - 1].midi)) {
             return false;
         }
     }
@@ -229,7 +228,7 @@ static bool same_pitches(const PlanNotes *a, const PlanNotes *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch) {
+        if (a->notes[i].midi != b->notes[i].midi) {
             return false;
         }
     }
@@ -256,8 +255,8 @@ static long motive_length(const PiecePlan *plan, const char *name) {
 
 static void check_structure(const PiecePlan *plan, const Scenario *scenario, size_t bars, PlanThemeBeginning beginning,
                             PlanThemeEnding ending) {
-    PlanTime bar;
-    assert(plan_time_make(scenario->beats, (unsigned long)scenario->unit, &bar) == PLAN_OK);
+    Rational bar;
+    assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     long bar_ticks = ticks(bar);
     NodeId theme = find_node(plan, "theme");
     assert(theme != PLAN_NODE_NONE && plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
@@ -342,12 +341,12 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
 
     /* The period's rules, on the cadences the two phrases carry. */
     if (form == PHRASE_LEVEL_FORM_PERIOD) {
-        PlanCadenceType weak;
-        PlanCadenceType strong;
+        CadenceType weak;
+        CadenceType strong;
         assert(node_cadence(plan, find_node(plan, "antecedent"), &weak));
         assert(node_cadence(plan, find_node(plan, "consequent"), &strong));
-        CadenceType first = harmony_cadence_type_of(weak);
-        CadenceType second = harmony_cadence_type_of(strong);
+        CadenceType first = weak;
+        CadenceType second = strong;
         assert(standard_form_phrase_roles_in_order(PHRASE_ROLE_ANTECEDENT, PHRASE_ROLE_CONSEQUENT));
         assert(standard_form_period_phrase_ideas_valid(IDEA_LABEL_BASIC_IDEA, IDEA_LABEL_CONTRASTING_IDEA));
         assert(standard_form_period_cadences_valid(first, second));
@@ -357,12 +356,12 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, siz
         assert(standard_form_consequent_length_usual(bars / 2, bars / 2));
     }
     if (beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
-        PlanCadenceType weak;
-        PlanCadenceType strong;
+        CadenceType weak;
+        CadenceType strong;
         NodeId second = find_node(plan, ending == PLAN_THEME_ENDING_CONSEQUENT ? "consequent" : "second phrase");
         assert(node_cadence(plan, find_node(plan, "antecedent"), &weak) && node_cadence(plan, second, &strong));
-        assert(harmony_cadence_strength(harmony_cadence_type_of(weak)) <
-               harmony_cadence_strength(harmony_cadence_type_of(strong)));
+        assert(harmony_cadence_strength(weak) <
+               harmony_cadence_strength(strong));
     }
 }
 
@@ -393,8 +392,8 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     LaneSpanId ids[96];
     NodeId theme_node = find_node(plan, "theme");
     PlanSpan theme = plan_node_span(plan, theme_node);
-    PlanTime bar;
-    assert(plan_time_make(scenario->beats, (unsigned long)scenario->unit, &bar) == PLAN_OK);
+    Rational bar;
+    assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     long bar_ticks = ticks(bar);
     size_t cells_per_bar = scenario->unit == 8 || (scenario->beats == 4 && scenario->unit == 4) ? 2 : 1;
     long cell_ticks = bar_ticks / (long)cells_per_bar;
@@ -410,29 +409,29 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
         assert(plan_lane_span_state(plan, ids[i]) == PLAN_STATE_REALIZED);
     }
     /* The cadence is on the last chord of the theme. */
-    PlanCadenceType final_cadence = PLAN_CADENCE_PAC;
+    CadenceType final_cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     assert(node_cadence(plan, find_node(plan, antecedent ? (ending == PLAN_THEME_ENDING_CONSEQUENT ? "consequent" : "second phrase") : "phrase"),
                         &final_cadence));
-    assert(final_cadence == PLAN_CADENCE_PAC);
+    assert(final_cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
     const PlanConstraint *cadence = plan_lane_span_constraint_count(plan, ids[chords - 1]) > 0
                                         ? plan_lane_span_constraint_at(plan, ids[chords - 1], 0)
                                         : NULL;
-    assert(cadence && cadence->kind == PLAN_CONSTRAINT_CADENCE && cadence->params.cadence == PLAN_CADENCE_PAC);
+    assert(cadence && cadence->kind == PLAN_CONSTRAINT_CADENCE && cadence->params.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
     assert(is_tonic(plan, ids[chords - 1]));
     if (antecedent) {
         /* The antecedent's last chord is its weak cadence's: a dominant for a half cadence. */
         PlanSpan first_half = {theme.start, {half, TICKS}};
-        PlanTime first_length;
-        assert(plan_time_make(half, TICKS, &first_length) == PLAN_OK);
+        Rational first_length;
+        assert(rational_make(half, TICKS, &first_length) == RATIONAL_OK);
         first_half.length = first_length;
         LaneSpanId last = last_in(ids, chords, plan, first_half);
-        PlanCadenceType weak = PLAN_CADENCE_HC;
+        CadenceType weak = CADENCE_TYPE_HALF;
         assert(node_cadence(plan, find_node(plan, "antecedent"), &weak));
-        assert(weak == PLAN_CADENCE_HC);
+        assert(weak == CADENCE_TYPE_HALF);
         assert(is_dominant(plan, last));
         assert(plan_lane_span_constraint_count(plan, last) > 0 &&
                plan_lane_span_constraint_at(plan, last, 0)->kind == PLAN_CONSTRAINT_CADENCE &&
-               plan_lane_span_constraint_at(plan, last, 0)->params.cadence == PLAN_CADENCE_HC);
+               plan_lane_span_constraint_at(plan, last, 0)->params.cadence == CADENCE_TYPE_HALF);
         /* No chord crosses the antecedent's end. */
         for (size_t i = 0; i < chords; i++) {
             PlanSpan span = plan_lane_span_span(plan, ids[i]);
@@ -461,7 +460,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     }
     /* The cadence arrives on the tonic. */
     const PlanNotes *last = &plan_lane_span_payload(plan, ids[melodies - 1])->notes;
-    int tonic_pc = (last->notes[last->note_count - 1].midi_pitch % 12 + 12) % 12;
+    int tonic_pc = (last->notes[last->note_count - 1].midi % 12 + 12) % 12;
     assert(tonic_pc == scenario->tonic);
 
     /* The range, and one highest note in each phrase of the theme's melody. */
@@ -479,11 +478,11 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
         for (size_t i = 0; i < found; i++) {
             const PlanNotes *notes = &plan_lane_span_payload(plan, inside[i])->notes;
             for (size_t n = 0; n < notes->note_count; n++) {
-                assert(notes->notes[n].midi_pitch >= 60 && notes->notes[n].midi_pitch <= 79);
-                if (notes->notes[n].midi_pitch > top) {
-                    top = notes->notes[n].midi_pitch;
+                assert(notes->notes[n].midi >= 60 && notes->notes[n].midi <= 79);
+                if (notes->notes[n].midi > top) {
+                    top = notes->notes[n].midi;
                     at_top = 1;
-                } else if (notes->notes[n].midi_pitch == top) {
+                } else if (notes->notes[n].midi == top) {
                     at_top++;
                 }
             }
@@ -495,8 +494,8 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
 /* The material is not part of the piece: it is skipped, and the piece ends with the theme. */
 static void check_render(const PiecePlan *plan, size_t bars, const Scenario *scenario) {
     RenderedPlan rendered;
-    PlanTime bar;
-    assert(plan_time_make(scenario->beats, (unsigned long)scenario->unit, &bar) == PLAN_OK);
+    Rational bar;
+    assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     assert(rendered.count > 0);
     assert(ticks(rendered.piece_end) == (long)bars * ticks(bar));
@@ -585,7 +584,7 @@ static void test_first_cadence(void) {
     Motive motive = make_motive(scenario);
     GrowRequest request = make_request(scenario, &motive, 8, PLAN_THEME_BEGINNING_ANTECEDENT,
                                        PLAN_THEME_ENDING_CONSEQUENT);
-    request.first_cadence = PLAN_CADENCE_IAC;
+    request.first_cadence = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
     for (unsigned long seed = 1; seed <= 3; seed++) {
         PiecePlan *plan = NULL;
         GrowOutcome outcome;
@@ -594,15 +593,15 @@ static void test_first_cadence(void) {
         config.seed = seed;
         assert(grow_build_plan(&request, &plan) == GROW_OK);
         assert(grow_run(plan, &config, &outcome) == GROW_OK);
-        PlanCadenceType weak = PLAN_CADENCE_HC;
-        assert(node_cadence(plan, find_node(plan, "antecedent"), &weak) && weak == PLAN_CADENCE_IAC);
+        CadenceType weak = CADENCE_TYPE_HALF;
+        assert(node_cadence(plan, find_node(plan, "antecedent"), &weak) && weak == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
         /* The antecedent's melody ends on the third of the key, the tone of an imperfect authentic cadence. */
         LaneSpanId melodies[8];
         PlanSpan antecedent = plan_node_span(plan, find_node(plan, "antecedent"));
         size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, antecedent, melodies, 8);
         assert(found == 2);
         const PlanNotes *notes = &plan_lane_span_payload(plan, melodies[1])->notes;
-        assert((notes->notes[notes->note_count - 1].midi_pitch % 12 + 12) % 12 == (scenario->tonic + 4) % 12);
+        assert((notes->notes[notes->note_count - 1].midi % 12 + 12) % 12 == (scenario->tonic + 4) % 12);
         /* Its harmony ends on the tonic, not the dominant. */
         LaneSpanId chords[64];
         size_t count = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, antecedent, chords, 64);
@@ -622,21 +621,21 @@ static void test_bad_requests(void) {
     assert(grow_build_plan(&period, &plan) == GROW_OK);
     plan_destroy(plan);
     /* Equal cadences are not a period, and nothing is weaker than a half cadence. */
-    changed.first_cadence = PLAN_CADENCE_IAC;
-    changed.cadence = PLAN_CADENCE_IAC;
+    changed.first_cadence = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
+    changed.cadence = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST && plan == NULL);
     changed = period;
-    changed.cadence = PLAN_CADENCE_HC;
+    changed.cadence = CADENCE_TYPE_HALF;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
     /* An antecedent ends in a half or an imperfect authentic cadence, and no other. */
     changed = period;
-    changed.first_cadence = PLAN_CADENCE_DC;
+    changed.first_cadence = CADENCE_TYPE_DECEPTIVE;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
-    changed.first_cadence = PLAN_CADENCE_PC;
+    changed.first_cadence = CADENCE_TYPE_PLAGAL;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
     /* The weak cadence is read only for an antecedent: a presentation ignores it. */
     changed = make_request(scenario, &motive, 8, PLAN_THEME_BEGINNING_PRESENTATION, PLAN_THEME_ENDING_CONSEQUENT);
-    changed.first_cadence = PLAN_CADENCE_DC;
+    changed.first_cadence = CADENCE_TYPE_DECEPTIVE;
     assert(grow_build_plan(&changed, &plan) == GROW_OK);
     plan_destroy(plan);
     /* A pairing that is none of the nine. */

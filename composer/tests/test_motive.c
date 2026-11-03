@@ -19,11 +19,11 @@
 
 static const PlanMeter FOUR_FOUR = {4, 4, 0};
 static const PlanMeter THREE_FOUR = {3, 4, 0};
-static const PlanKey D_MINOR = {2, PLAN_MODE_MINOR};
-static const PlanKey C_MAJOR = {0, PLAN_MODE_MAJOR};
-static const PlanKey G_MAJOR = {7, PLAN_MODE_MAJOR};
+static const AnalysisKey D_MINOR = {NULL, PITCH_LETTER_D, 0, KEY_STRUCTURE_MODE_MINOR};
+static const AnalysisKey C_MAJOR = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
+static const AnalysisKey G_MAJOR = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MAJOR};
 
-static MotiveOptions options_with(const PlanMeter *meter, const PlanKey *key) {
+static MotiveOptions options_with(const PlanMeter *meter, const AnalysisKey *key) {
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
     if (meter) {
@@ -37,18 +37,18 @@ static MotiveOptions options_with(const PlanMeter *meter, const PlanKey *key) {
     return options;
 }
 
-static bool time_is(PlanTime time, long num, unsigned long den) {
+static bool time_is(Rational time, long num, long long den) {
     return time.num == num && time.den == den;
 }
 
 static bool note_is(const Motive *motive, size_t index, int pitch, long offset_num, unsigned long offset_den,
                     long duration_num, unsigned long duration_den) {
     const PlanNote *note = &motive->notes[index];
-    return note->midi_pitch == pitch && time_is(note->offset, offset_num, offset_den) &&
+    return note->midi == pitch && time_is(note->offset, offset_num, offset_den) &&
            time_is(note->duration, duration_num, duration_den);
 }
 
-static Motive load_notes(const char *text, const PlanMeter *meter, const PlanKey *key) {
+static Motive load_notes(const char *text, const PlanMeter *meter, const AnalysisKey *key) {
     Motive motive;
     MotiveOptions options = options_with(meter, key);
     MotiveError error;
@@ -101,6 +101,20 @@ static MotiveResult load_fixture(const char *path, MotiveFormat format, const Mo
 
 /* ------------------------------------------------------- the four formats */
 
+/* A MusicXML note keeps the spelling it is written with (C sharp and D flat are one pitch); other formats write none. */
+static void test_musicxml_keeps_spelling(void) {
+    Motive motive;
+    Motive midi;
+    MotiveError error;
+    assert(load_fixture(FIXTURE("motive_spelled.musicxml"), MOTIVE_FORMAT_AUTO, NULL, &motive, &error) == MOTIVE_OK);
+    assert(motive.note_count == 3 && motive.notes[0].midi == 61 && motive.notes[1].midi == 61);
+    assert(motive.notes[0].spelled && motive.notes[0].letter == PITCH_LETTER_C && motive.notes[0].accidental == 1);
+    assert(motive.notes[1].spelled && motive.notes[1].letter == PITCH_LETTER_D && motive.notes[1].accidental == -1);
+    assert(motive.notes[2].spelled && motive.notes[2].letter == PITCH_LETTER_E && motive.notes[2].accidental == 0);
+    assert(load_fixture(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_AUTO, NULL, &midi, &error) == MOTIVE_OK);
+    assert(!midi.notes[0].spelled);
+}
+
 static void test_same_motive_from_each_format(void) {
     MotiveOptions for_text = options_with(&FOUR_FOUR, &D_MINOR);
     Motive midi;
@@ -122,7 +136,7 @@ static void test_same_motive_from_each_format(void) {
     assert(time_is(midi.length, 1, 1));
     assert(midi.meter.beats_per_bar == 4 && midi.meter.beat_unit == 4);
     assert(midi.key_source == MOTIVE_KEY_GIVEN);
-    assert(midi.key.tonic_pitch_class == 2 && midi.key.mode == PLAN_MODE_MINOR);
+    assert(analysis_key_tonic_pitch_class(&midi.key) == 2 && midi.key.mode == KEY_STRUCTURE_MODE_MINOR);
 
     assert(motive_equal(&midi, &musicxml));
     assert(motive_equal(&midi, &text));
@@ -159,7 +173,7 @@ static void test_options(void) {
     Motive motive;
     MotiveError error;
     assert(load_fixture(FIXTURE("motive_d_minor.mid"), MOTIVE_FORMAT_MIDI, &bossa, &motive, &error) == MOTIVE_OK);
-    assert(motive.key.tonic_pitch_class == 0 && motive.key.mode == PLAN_MODE_MAJOR);
+    assert(analysis_key_tonic_pitch_class(&motive.key) == 0 && motive.key.mode == KEY_STRUCTURE_MODE_MAJOR);
     assert(motive.key_source == MOTIVE_KEY_GIVEN);
 
     /* The same meter as the file's is fine; a different one changes the bars and is refused. */
@@ -181,9 +195,9 @@ static void test_options(void) {
     assert(motive_from_notes_text("D4:q", NULL, &motive, &error) == MOTIVE_ERR_METER);
     assert(strcmp(error.location, "meter") == 0);
 
-    PlanKey key;
-    assert(motive_parse_key("Bb minor", &key) && key.tonic_pitch_class == 10 && key.mode == PLAN_MODE_MINOR);
-    assert(motive_parse_key("F# major", &key) && key.tonic_pitch_class == 6 && key.mode == PLAN_MODE_MAJOR);
+    AnalysisKey key;
+    assert(motive_parse_key("Bb minor", &key) && analysis_key_tonic_pitch_class(&key) == 10 && key.mode == KEY_STRUCTURE_MODE_MINOR);
+    assert(motive_parse_key("F# major", &key) && analysis_key_tonic_pitch_class(&key) == 6 && key.mode == KEY_STRUCTURE_MODE_MAJOR);
     assert(!motive_parse_key("H major", &key));
     assert(!motive_parse_key("D dorian", &key));
     PlanMeter meter;
@@ -200,7 +214,7 @@ static bool near(double a, double b) {
 
 typedef struct {
     const char *roman;
-    PlanHarmonicFunction function;
+    HarmonicFunction function;
     double fit;
     size_t tones;
 } Expected;
@@ -212,7 +226,7 @@ static void expect_candidates(const MotiveAnalysis *a, const Expected *expected,
             fprintf(stderr, "candidate %zu: '%s', expected '%s'\n", i, a->candidates[i].roman, expected[i].roman);
         }
         assert(strcmp(a->candidates[i].roman, expected[i].roman) == 0);
-        assert(a->candidates[i].function == expected[i].function);
+        assert(a->candidates[i].has_function && a->candidates[i].function == expected[i].function);
         assert(near(a->candidates[i].fit, expected[i].fit));
         assert(a->candidates[i].chord_tones == expected[i].tones);
         assert(a->candidates[i].chord_tones + a->candidates[i].non_chord_tones == a->note_count);
@@ -255,12 +269,12 @@ static void test_analysis_ascending_arpeggio(void) {
      * all of it; VI (Bb D F) has D, F and D, 9/10; iv (G Bb D) has both Ds, 4/5; III (F A C) has F and A, 1/5; V and
      * V7 have only A, 1/10, and V comes first.
      */
-    static const Expected EXPECTED[] = {{"i", PLAN_FUNCTION_TONIC, 1.0, 4},
-                                        {"VI", PLAN_FUNCTION_PREDOMINANT, 0.9, 3},
-                                        {"iv", PLAN_FUNCTION_PREDOMINANT, 0.8, 2},
-                                        {"III", PLAN_FUNCTION_PREDOMINANT, 0.2, 2},
-                                        {"V", PLAN_FUNCTION_DOMINANT, 0.1, 1},
-                                        {"V7", PLAN_FUNCTION_DOMINANT, 0.1, 1}};
+    static const Expected EXPECTED[] = {{"i", HARMONIC_FUNCTION_TONIC, 1.0, 4},
+                                        {"VI", HARMONIC_FUNCTION_PREDOMINANT, 0.9, 3},
+                                        {"iv", HARMONIC_FUNCTION_PREDOMINANT, 0.8, 2},
+                                        {"III", HARMONIC_FUNCTION_PREDOMINANT, 0.2, 2},
+                                        {"V", HARMONIC_FUNCTION_DOMINANT, 0.1, 1},
+                                        {"V7", HARMONIC_FUNCTION_DOMINANT, 0.1, 1}};
     expect_candidates(&a, EXPECTED, 6);
 }
 
@@ -296,7 +310,7 @@ static void test_analysis_rest_and_dotted(void) {
     assert(strcmp(name, "q.") == 0);
     motive_duration_name(a.rhythm[0].rest_before, name, sizeof(name));
     assert(strcmp(name, "e") == 0);
-    PlanTime odd = {5, 16};
+    Rational odd = {5, 16};
     motive_duration_name(odd, name, sizeof(name));
     assert(strcmp(name, "5/16") == 0);
 
@@ -305,13 +319,13 @@ static void test_analysis_rest_and_dotted(void) {
      * vi (A C E) have C, 3/5; V (G B D), iii (E G B) and V7 have G and B, 2/5; vii (B D F) has B, 1/5. Equal fits
      * keep the order I, V, IV, vi, ii, iii, vii, V7.
      */
-    static const Expected EXPECTED[] = {{"I", PLAN_FUNCTION_TONIC, 0.8, 2},
-                                        {"IV", PLAN_FUNCTION_PREDOMINANT, 0.6, 1},
-                                        {"vi", PLAN_FUNCTION_PREDOMINANT, 0.6, 1},
-                                        {"V", PLAN_FUNCTION_DOMINANT, 0.4, 2},
-                                        {"iii", PLAN_FUNCTION_PREDOMINANT, 0.4, 2},
-                                        {"V7", PLAN_FUNCTION_DOMINANT, 0.4, 2},
-                                        {"viio", PLAN_FUNCTION_DOMINANT, 0.2, 1}};
+    static const Expected EXPECTED[] = {{"I", HARMONIC_FUNCTION_TONIC, 0.8, 2},
+                                        {"IV", HARMONIC_FUNCTION_PREDOMINANT, 0.6, 1},
+                                        {"vi", HARMONIC_FUNCTION_PREDOMINANT, 0.6, 1},
+                                        {"V", HARMONIC_FUNCTION_DOMINANT, 0.4, 2},
+                                        {"iii", HARMONIC_FUNCTION_PREDOMINANT, 0.4, 2},
+                                        {"V7", HARMONIC_FUNCTION_DOMINANT, 0.4, 2},
+                                        {"viio", HARMONIC_FUNCTION_DOMINANT, 0.2, 1}};
     expect_candidates(&a, EXPECTED, 7);
 }
 
@@ -343,14 +357,14 @@ static void test_analysis_tie(void) {
      * The notes weigh 1/2 (G on the downbeat counts twice), 3/8, 1/8 and 1/4: 5/4. I (G B D) and vi (E G B) have G, B
      * and G, 9/10; IV (C E G) has both Gs, 3/5; iii (B D F#) has B, 3/10; V, ii, vii and V7 have only A, 1/10.
      */
-    static const Expected EXPECTED[] = {{"I", PLAN_FUNCTION_TONIC, 0.9, 3},
-                                        {"vi", PLAN_FUNCTION_PREDOMINANT, 0.9, 3},
-                                        {"IV", PLAN_FUNCTION_PREDOMINANT, 0.6, 2},
-                                        {"iii", PLAN_FUNCTION_PREDOMINANT, 0.3, 1},
-                                        {"V", PLAN_FUNCTION_DOMINANT, 0.1, 1},
-                                        {"ii", PLAN_FUNCTION_PREDOMINANT, 0.1, 1},
-                                        {"viio", PLAN_FUNCTION_DOMINANT, 0.1, 1},
-                                        {"V7", PLAN_FUNCTION_DOMINANT, 0.1, 1}};
+    static const Expected EXPECTED[] = {{"I", HARMONIC_FUNCTION_TONIC, 0.9, 3},
+                                        {"vi", HARMONIC_FUNCTION_PREDOMINANT, 0.9, 3},
+                                        {"IV", HARMONIC_FUNCTION_PREDOMINANT, 0.6, 2},
+                                        {"iii", HARMONIC_FUNCTION_PREDOMINANT, 0.3, 1},
+                                        {"V", HARMONIC_FUNCTION_DOMINANT, 0.1, 1},
+                                        {"ii", HARMONIC_FUNCTION_PREDOMINANT, 0.1, 1},
+                                        {"viio", HARMONIC_FUNCTION_DOMINANT, 0.1, 1},
+                                        {"V7", HARMONIC_FUNCTION_DOMINANT, 0.1, 1}};
     expect_candidates(&a, EXPECTED, 8);
 }
 
@@ -386,17 +400,17 @@ static void test_analysis_without_a_key(void) {
 static void test_key_is_inferred_only_when_the_pitches_settle(void) {
     Motive scale = load_notes("D4:q E4:q F4:q G4:q A4:q Bb4:q C5:q D5:q", &FOUR_FOUR, NULL);
     assert(scale.key_source == MOTIVE_KEY_INFERRED);
-    assert(scale.key.tonic_pitch_class == 2 && scale.key.mode == PLAN_MODE_MINOR);
+    assert(analysis_key_tonic_pitch_class(&scale.key) == 2 && scale.key.mode == KEY_STRUCTURE_MODE_MINOR);
     Motive major = load_notes("F4:q G4:q A4:q Bb4:q C5:q D5:q E5:q F5:q", &FOUR_FOUR, NULL);
     assert(major.key_source == MOTIVE_KEY_INFERRED);
-    assert(major.key.tonic_pitch_class == 5 && major.key.mode == PLAN_MODE_MAJOR);
+    assert(analysis_key_tonic_pitch_class(&major.key) == 5 && major.key.mode == KEY_STRUCTURE_MODE_MAJOR);
     /* A given key is never replaced. */
     Motive given = load_notes("D4:q E4:q F4:q G4:q A4:q Bb4:q C5:q D5:q", &FOUR_FOUR, &C_MAJOR);
-    assert(given.key_source == MOTIVE_KEY_GIVEN && given.key.tonic_pitch_class == 0);
+    assert(given.key_source == MOTIVE_KEY_GIVEN && analysis_key_tonic_pitch_class(&given.key) == 0);
     /* Seven notes of a scale with no note to settle the relative keys stay open. */
     Motive open = load_notes("C4:q D4:q E4:q F4:q G4:q A4:q B4:q C5:q", &FOUR_FOUR, NULL);
-    assert(open.key_source == MOTIVE_KEY_INFERRED && open.key.tonic_pitch_class == 0 &&
-           open.key.mode == PLAN_MODE_MAJOR);
+    assert(open.key_source == MOTIVE_KEY_INFERRED && analysis_key_tonic_pitch_class(&open.key) == 0 &&
+           open.key.mode == KEY_STRUCTURE_MODE_MAJOR);
     Motive undecided = load_notes("C4:q D4:q E4:q F4:q G4:q A4:q B4:q", &FOUR_FOUR, NULL);
     assert(undecided.key_source == MOTIVE_KEY_UNSPECIFIED);
 }
@@ -596,10 +610,10 @@ static void test_file_errors(void) {
 
 /* ---------------------------------------------------------------- attach */
 
-static PlanTime whole(long num, unsigned long den) {
-    PlanTime time;
-    PlanResult result = plan_time_make(num, den, &time);
-    assert(result == PLAN_OK);
+static Rational whole(long num, long long den) {
+    Rational time;
+    RationalResult result = rational_make(num, den, &time);
+    assert(result == RATIONAL_OK);
     return time;
 }
 
@@ -650,15 +664,15 @@ static void test_attach_as_given(void) {
     const PlanLanePayload *payload = plan_lane_span_payload(plan, span);
     assert(payload->notes.note_count == 4);
     for (size_t i = 0; i < 4; i++) {
-        assert(payload->notes.notes[i].midi_pitch == motive.notes[i].midi_pitch);
-        assert(plan_time_compare(payload->notes.notes[i].offset, motive.notes[i].offset) == 0);
-        assert(plan_time_compare(payload->notes.notes[i].duration, motive.notes[i].duration) == 0);
+        assert(payload->notes.notes[i].midi == motive.notes[i].midi);
+        assert(rational_cmp(payload->notes.notes[i].offset, motive.notes[i].offset) == 0);
+        assert(rational_cmp(payload->notes.notes[i].duration, motive.notes[i].duration) == 0);
     }
 
     /* Nothing changes it later. */
     assert(plan_node_set_state(plan, node, PLAN_STATE_REALIZED) == PLAN_ERR_GIVEN_LOCKED);
     assert(plan_lane_span_set_state(plan, span, PLAN_STATE_CONSTRAINED) == PLAN_ERR_GIVEN_LOCKED);
-    PlanNote other = {60, whole(0, 1), whole(1, 4)};
+    PlanNote other = plan_note(60, whole(0, 1), whole(1, 4));
     PlanLanePayload rewrite;
     rewrite.notes.notes = &other;
     rewrite.notes.note_count = 1;
@@ -680,9 +694,9 @@ static void test_attach_as_given(void) {
     const PlanLanePayload *read = plan_lane_span_payload(copy, span);
     assert(read->notes.note_count == 4);
     for (size_t i = 0; i < 4; i++) {
-        assert(read->notes.notes[i].midi_pitch == motive.notes[i].midi_pitch);
-        assert(plan_time_compare(read->notes.notes[i].offset, motive.notes[i].offset) == 0);
-        assert(plan_time_compare(read->notes.notes[i].duration, motive.notes[i].duration) == 0);
+        assert(read->notes.notes[i].midi == motive.notes[i].midi);
+        assert(rational_cmp(read->notes.notes[i].offset, motive.notes[i].offset) == 0);
+        assert(rational_cmp(read->notes.notes[i].duration, motive.notes[i].duration) == 0);
     }
     assert(plan_node_set_state(copy, node, PLAN_STATE_REALIZED) == PLAN_ERR_GIVEN_LOCKED);
     char *again = plan_to_json(copy, &json_error);
@@ -697,7 +711,7 @@ static void test_attach_as_given(void) {
 
 typedef MotiveResult (*Reader)(const char *, const MotiveOptions *, Motive *, MotiveError *);
 
-static Motive load_with(Reader reader, const char *text, const PlanMeter *meter, const PlanKey *key) {
+static Motive load_with(Reader reader, const char *text, const PlanMeter *meter, const AnalysisKey *key) {
     Motive motive;
     MotiveOptions options = options_with(meter, key);
     MotiveError error;
@@ -709,7 +723,7 @@ static Motive load_with(Reader reader, const char *text, const PlanMeter *meter,
     return motive;
 }
 
-static void expect_read_error(Reader reader, const char *text, const PlanKey *key, MotiveResult code,
+static void expect_read_error(Reader reader, const char *text, const AnalysisKey *key, MotiveResult code,
                               const char *location, const char *message) {
     Motive motive;
     MotiveOptions options = options_with(&FOUR_FOUR, key);
@@ -740,17 +754,17 @@ static void test_degrees_reading(void) {
     assert(note_is(&motive, 1, 64, 1, 4, 1, 8));
     assert(note_is(&motive, 2, 69, 3, 8, 1, 8));
     assert(note_is(&motive, 3, 74, 1, 2, 1, 2));
-    assert(motive.key_source == MOTIVE_KEY_GIVEN && motive.key.mode == PLAN_MODE_MINOR);
+    assert(motive.key_source == MOTIVE_KEY_GIVEN && motive.key.mode == KEY_STRUCTURE_MODE_MINOR);
 
     /* Octave 0 puts the tonic in MIDI 60 to 71: G is 67. Marks are any number, up or down. */
     motive = load_with(motive_from_degrees_text, "1:q 1,:q 1':q 1'':q 1,,:q 1',:q", &FOUR_FOUR, &G_MAJOR);
-    assert(motive.notes[0].midi_pitch == 67 && motive.notes[1].midi_pitch == 55 && motive.notes[2].midi_pitch == 79);
-    assert(motive.notes[3].midi_pitch == 91 && motive.notes[4].midi_pitch == 43 && motive.notes[5].midi_pitch == 67);
+    assert(motive.notes[0].midi == 67 && motive.notes[1].midi == 55 && motive.notes[2].midi == 79);
+    assert(motive.notes[3].midi == 91 && motive.notes[4].midi == 43 && motive.notes[5].midi == 67);
 
     /* Degrees are counted in the natural minor scale; # and b alter them. */
     motive = load_with(motive_from_degrees_text, "3:q 6:q 7:q #4:q b7:q b2:q", &FOUR_FOUR, &D_MINOR);
-    assert(motive.notes[0].midi_pitch == 65 && motive.notes[1].midi_pitch == 70 && motive.notes[2].midi_pitch == 72);
-    assert(motive.notes[3].midi_pitch == 68 && motive.notes[4].midi_pitch == 71 && motive.notes[5].midi_pitch == 63);
+    assert(motive.notes[0].midi == 65 && motive.notes[1].midi == 70 && motive.notes[2].midi == 72);
+    assert(motive.notes[3].midi == 68 && motive.notes[4].midi == 71 && motive.notes[5].midi == 63);
 
     /* Rests, ties, dots and barlines are as in a note list. */
     motive = load_with(motive_from_degrees_text, "r:e 1:q.~ 1:s | 5:q", &FOUR_FOUR, &C_MAJOR);
@@ -758,7 +772,7 @@ static void test_degrees_reading(void) {
 
     /* With no key the pitches are C major's and the key is left as the pitches settle it. */
     motive = load_with(motive_from_degrees_text, "1:q 3:q 5:q", &FOUR_FOUR, NULL);
-    assert(motive.notes[0].midi_pitch == 60 && motive.notes[1].midi_pitch == 64 && motive.notes[2].midi_pitch == 67);
+    assert(motive.notes[0].midi == 60 && motive.notes[1].midi == 64 && motive.notes[2].midi == 67);
     assert(motive.key_source == MOTIVE_KEY_UNSPECIFIED);
 
     /* The degrees format is read by motive_load, and auto-detection never picks it. */
@@ -766,7 +780,7 @@ static void test_degrees_reading(void) {
     MotiveError error;
     Motive loaded;
     assert(motive_load("1:q 5:q", 7, MOTIVE_FORMAT_DEGREES, &options, &loaded, &error) == MOTIVE_OK);
-    assert(loaded.notes[1].midi_pitch == 67);
+    assert(loaded.notes[1].midi == 67);
     assert(motive_detect_format("1:q 5:q", 7) == MOTIVE_FORMAT_NOTES);
     MotiveFormat format;
     assert(motive_format_parse("degrees", &format) && format == MOTIVE_FORMAT_DEGREES);
@@ -811,8 +825,8 @@ static void test_rhythm_and_contour_reading(void) {
     assert(note_is(&motive, 0, 60, 0, 1, 1, 4) && note_is(&motive, 1, 64, 1, 4, 1, 4) &&
            note_is(&motive, 2, 62, 1, 2, 1, 4) && note_is(&motive, 3, 65, 3, 4, 1, 4));
     motive = load_with(motive_from_contour_text, "1 1 0 7", &FOUR_FOUR, &D_MINOR);
-    assert(motive.notes[0].midi_pitch == 64 && motive.notes[1].midi_pitch == 64 && motive.notes[2].midi_pitch == 62);
-    assert(motive.notes[3].midi_pitch == 74);
+    assert(motive.notes[0].midi == 64 && motive.notes[1].midi == 64 && motive.notes[2].midi == 62);
+    assert(motive.notes[3].midi == 74);
 
     MotiveOptions options = options_with(&FOUR_FOUR, NULL);
     MotiveError error;
@@ -933,7 +947,7 @@ static void test_pickup_and_form_in_json(void) {
     assert(json && !strstr(json, "\"form\"") && !strstr(json, "\"pickup\""));
     free(json);
     Motive shifted = plain;
-    shifted.pickup = (PlanTime){1, 4};
+    shifted.pickup = (Rational){1, 4};
     assert(!motive_equal(&plain, &shifted));
     shifted = plain;
     shifted.form = MOTIVE_FORM_CONTOUR;
@@ -983,12 +997,12 @@ static void test_analysis_by_form(void) {
 static void test_render_in_another_key(void) {
     /* D minor 1 b3 5 1' (D4 F4 A4 D5) in G minor: the same degrees, a fourth up. */
     Motive source = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
-    static const PlanKey G_MINOR = {7, PLAN_MODE_MINOR};
+    static const AnalysisKey G_MINOR = {NULL, PITCH_LETTER_G, 0, KEY_STRUCTURE_MODE_MINOR};
     Motive moved;
     assert(motive_in_key(&source, &G_MINOR, &moved));
-    assert(moved.key_source == MOTIVE_KEY_GIVEN && moved.key.tonic_pitch_class == 7 && moved.key.mode == PLAN_MODE_MINOR);
-    assert(moved.note_count == 4 && moved.notes[0].midi_pitch == 67 && moved.notes[1].midi_pitch == 70 &&
-           moved.notes[2].midi_pitch == 74 && moved.notes[3].midi_pitch == 79);
+    assert(moved.key_source == MOTIVE_KEY_GIVEN && analysis_key_tonic_pitch_class(&moved.key) == 7 && moved.key.mode == KEY_STRUCTURE_MODE_MINOR);
+    assert(moved.note_count == 4 && moved.notes[0].midi == 67 && moved.notes[1].midi == 70 &&
+           moved.notes[2].midi == 74 && moved.notes[3].midi == 79);
     assert(moved.length.num == source.length.num && moved.length.den == source.length.den);
     char *before = motive_to_degrees_text(&source);
     char *after = motive_to_degrees_text(&moved);
@@ -997,19 +1011,19 @@ static void test_render_in_another_key(void) {
     free(after);
 
     /* The rhythm is the source's, and the pickup too. */
-    source.pickup = (PlanTime){1, 4};
+    source.pickup = (Rational){1, 4};
     assert(motive_in_key(&source, &G_MINOR, &moved));
     assert(time_is(moved.pickup, 1, 4) && time_is(moved.notes[1].offset, 1, 4) && time_is(moved.notes[3].duration, 1, 2));
 
     /* A raised degree stays raised; the mode may change. */
     source = load_notes("D4:q F#4:q A4:q", &FOUR_FOUR, &D_MINOR);
     assert(motive_in_key(&source, &C_MAJOR, &moved));
-    assert(moved.notes[0].midi_pitch == 60 && moved.notes[1].midi_pitch == 65 && moved.notes[2].midi_pitch == 67);
+    assert(moved.notes[0].midi == 60 && moved.notes[1].midi == 65 && moved.notes[2].midi == 67);
 
     /* The motive moves to its own key unchanged, and may be moved in place. */
     source = load_notes("D4:q F4:e A4:e D5:h", &FOUR_FOUR, &D_MINOR);
     assert(motive_in_key(&source, &D_MINOR, &moved) && motive_equal(&source, &moved));
-    assert(motive_in_key(&source, &G_MINOR, &source) && source.notes[0].midi_pitch == 67);
+    assert(motive_in_key(&source, &G_MINOR, &source) && source.notes[0].midi == 67);
 
     /* No source key: refused, and out untouched. */
     Motive keyless = load_notes("D4:q F4:q", &FOUR_FOUR, NULL);
@@ -1235,7 +1249,7 @@ static void test_equal_compares_extras(void) {
     b.harmony[1].degree = 4;
     assert(!motive_equal(&a, &b));
     b = a;
-    b.harmony[2].onset = (PlanTime){7, 8};
+    b.harmony[2].onset = (Rational){7, 8};
     assert(!motive_equal(&a, &b));
     b = a;
     b.harmony_count = 2;
@@ -1291,7 +1305,7 @@ static void test_features_follow_the_notes(void) {
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
     assert(result.feature_count == 3);
     assert(feature_is(&result, 0, "a", 4, 5) && feature_is(&result, 1, "b", 2, 3) && feature_is(&result, 2, "c", 0, 1));
-    assert(result.notes[0].midi_pitch == 69);
+    assert(result.notes[0].midi == 69);
 
     /* A fragment keeps the features it holds whole, renumbered from its first note. */
     memset(&spec, 0, sizeof(spec));
@@ -1337,6 +1351,7 @@ static void test_features_follow_the_notes(void) {
 
 int main(void) {
     test_same_motive_from_each_format();
+    test_musicxml_keeps_spelling();
     test_options();
     test_analysis_ascending_arpeggio();
     test_analysis_rest_and_dotted();

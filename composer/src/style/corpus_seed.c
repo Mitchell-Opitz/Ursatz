@@ -188,7 +188,7 @@ static bool same_place(int measure_a, double beat_a, int measure_b, double beat_
 /* --- the key the source was heard in ------------------------------------------------ */
 
 /* The key of the last chord that starts at or before the passage, else of the first chord; false when no chord names one. */
-static bool source_key(const DocumentChord *chords, size_t count, int measure, double beat, PlanKey *out) {
+static bool source_key(const DocumentChord *chords, size_t count, int measure, double beat, AnalysisKey *out) {
     const DocumentChord *found = NULL;
     for (size_t i = 0; i < count; i++) {
         bool before = chords[i].measure < measure || same_place(chords[i].measure, chords[i].beat, measure, beat) ||
@@ -213,22 +213,22 @@ static const int MINOR_SCALE[7] = {0, 2, 3, 5, 7, 8, 10};
  * source key (a note off the scale keeps its distance above the degree below it), placed in the target key, with the
  * move from the pitch within a tritone either way so the melody stays where it was heard.
  */
-static int transposition(int pitch, const PlanKey *source, const PlanKey *target) {
-    const int *from = source->mode == PLAN_MODE_MINOR ? MINOR_SCALE : MAJOR_SCALE;
-    const int *to = target->mode == PLAN_MODE_MINOR ? MINOR_SCALE : MAJOR_SCALE;
-    int above = (((pitch - source->tonic_pitch_class) % 12) + 12) % 12;
+static int transposition(int pitch, const AnalysisKey *source, const AnalysisKey *target) {
+    const int *from = source->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR_SCALE : MAJOR_SCALE;
+    const int *to = target->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR_SCALE : MAJOR_SCALE;
+    int above = (((pitch - analysis_key_tonic_pitch_class(source)) % 12) + 12) % 12;
     int degree = 0;
     for (int d = 0; d < 7; d++) {
         if (from[d] <= above) {
             degree = d;
         }
     }
-    int landed = (target->tonic_pitch_class + to[degree] + (above - from[degree])) % 12;
+    int landed = (analysis_key_tonic_pitch_class(target) + to[degree] + (above - from[degree])) % 12;
     int shift = ((landed - (pitch % 12)) % 12 + 12) % 12;
     return shift > 6 ? shift - 12 : shift;
 }
 
-static bool plan_time_of(unsigned long long numerator, unsigned long long denominator, PlanTime *out) {
+static bool plan_time_of(unsigned long long numerator, unsigned long long denominator, Rational *out) {
     unsigned long long divisor = rational_gcd_unsigned(numerator, denominator);
     if (denominator == 0 || divisor == 0) {
         return false;
@@ -238,14 +238,14 @@ static bool plan_time_of(unsigned long long numerator, unsigned long long denomi
     if (numerator > 0x7fffffffUL || denominator > 0xffffffffUL) {
         return false;
     }
-    return plan_time_make((long)numerator, (unsigned long)denominator, out) == PLAN_OK;
+    return rational_make((long)numerator, (long long)denominator, out) == RATIONAL_OK;
 }
 
 /*
  * One bar of a matched melody as a motive: the notes that start in the first bar, the last shortened to the barline,
- * moved by shift semitones. false when fewer than two notes are left or one does not fit a PlanTime.
+ * moved by shift semitones. false when fewer than two notes are left or one does not fit a Rational.
  */
-static bool motive_from_passage(const SimilarMatch *match, const PlanMeter *meter, const PlanKey *key, int shift,
+static bool motive_from_passage(const SimilarMatch *match, const PlanMeter *meter, const AnalysisKey *key, int shift,
                                 Motive *out) {
     unsigned long long bar_n = (unsigned long long)meter->beats_per_bar;
     unsigned long long bar_d = (unsigned long long)meter->beat_unit;
@@ -274,14 +274,15 @@ static bool motive_from_passage(const SimilarMatch *match, const PlanMeter *mete
             !plan_time_of(length_n, length_d, &placed->duration)) {
             return false;
         }
-        placed->midi_pitch = pitch;
+        placed->midi = pitch;
+        placed->spelled = false;
         out->note_count++;
     }
     if (out->note_count < 2) {
         return false;
     }
     const PlanNote *last = &out->notes[out->note_count - 1];
-    return plan_time_add(last->offset, last->duration, &out->length) == PLAN_OK;
+    return rational_add(last->offset, last->duration, &out->length) == RATIONAL_OK;
 }
 
 /* Whether a score is within 1/10 of the best: 10 * score >= 10 * best - 1, in fractions. */
@@ -317,7 +318,7 @@ static CorpusSeedResult search(const char *corpus_output_dir, const SimilarQuery
 }
 
 CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *passage_path, const PlanMeter *meter,
-                                    const PlanKey *key, unsigned long seed, CorpusSeed *out) {
+                                    const AnalysisKey *key, unsigned long seed, CorpusSeed *out) {
     if (!corpus_output_dir || !passage_path || !meter || !key || !out || meter->beats_per_bar < 1 ||
         meter->beat_unit < 1) {
         return CORPUS_SEED_ERR_ARGUMENT;
@@ -360,7 +361,7 @@ CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *p
         if (document) {
             DocumentChord *chords = NULL;
             size_t chord_count = 0;
-            PlanKey from;
+            AnalysisKey from;
             if (read_chords(document, &chords, &chord_count) &&
                 source_key(chords, chord_count, match->start_measure, match->start_beat, &from)) {
                 shift = transposition(match->notes[0].pitch, &from, key);
@@ -381,7 +382,7 @@ CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *p
 }
 
 /* Whether the plan can place the numeral under a key of the mode (given.h reads them with these two). */
-static bool numeral_placeable(PlanKeyMode mode, const char *numeral) {
+static bool numeral_placeable(KeyStructureMode mode, const char *numeral) {
     HarmonyChord chord;
     HarmonyAppliedChord applied;
     int inversion;
@@ -393,7 +394,7 @@ static bool numeral_placeable(PlanKeyMode mode, const char *numeral) {
  * The numerals of the passage a match is, read from its document: the chords from the one that starts where the match
  * does. false when the document cannot be read, has no chord there, or a numeral cannot be placed under the mode.
  */
-static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *match, size_t wanted, PlanKeyMode mode,
+static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *match, size_t wanted, KeyStructureMode mode,
                            CorpusSeed *seeded) {
     bool ok = false;
     cJSON *document = read_document(corpus_output_dir, match->document);
@@ -423,7 +424,7 @@ static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *ma
     return ok;
 }
 
-CorpusSeedResult corpus_seed_progression(const char *corpus_output_dir, const char *numerals_text, PlanKeyMode mode,
+CorpusSeedResult corpus_seed_progression(const char *corpus_output_dir, const char *numerals_text, KeyStructureMode mode,
                                          CorpusSeed *out) {
     if (!corpus_output_dir || !numerals_text || !out) {
         return CORPUS_SEED_ERR_ARGUMENT;

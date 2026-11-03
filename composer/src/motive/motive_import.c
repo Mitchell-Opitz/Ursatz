@@ -6,7 +6,9 @@
 #include <io/midi_importer.h>
 #include <io/midi_key_signature.h>
 #include <io/musicxml_importer.h>
+#include <pitch/pitch_arithmetic.h>
 #include <pitch/pitch_numeric_value.h>
+#include <pitch/pitch_spelling.h>
 #include <time/duration.h>
 #include <time/meter_map.h>
 #include <time/musical_time.h>
@@ -32,7 +34,7 @@ static MotiveResult notes_from_events(NoteEvent *const *events, PitchNumericValu
         motive_set_error(error, "", "the file has %zu notes; the most is %d", count, MOTIVE_MAX_NOTES);
         return MOTIVE_ERR_TOO_MANY_NOTES;
     }
-    PlanTime end = motive_time(0, 1);
+    Rational end = motive_time(0, 1);
     for (size_t i = 0; i < count; i++) {
         char location[MOTIVE_ERROR_LOCATION_MAX];
         if (part_index && part_index[i] != part_index[0]) {
@@ -50,11 +52,21 @@ static MotiveResult notes_from_events(NoteEvent *const *events, PitchNumericValu
             return MOTIVE_ERR_VALUE;
         }
         PlanNote note;
-        note.midi_pitch = (int)pitch_numeric_value_position_numerator(values[i]);
+        note.midi = (int)pitch_numeric_value_position_numerator(values[i]);
+        note.spelled = false;
+        note.letter = PITCH_LETTER_C;
+        note.accidental = 0;
+        /* MusicXML writes the pitch (MIDI does not): keep the notated spelling when it names the sounding note. */
+        const PitchSpelling *written = part_index ? note_event_optional_pitch_spelling(events[i]) : NULL;
+        if (written && pitch_spelling_midi_number(written) == note.midi) {
+            note.spelled = true;
+            note.letter = pitch_spelling_letter(written);
+            note.accidental = pitch_spelling_accidental(written);
+        }
         note.offset = motive_time(musical_time_numerator(position), musical_time_denominator(position));
         note.duration = motive_time(duration_numerator(duration), duration_denominator(duration));
-        if (plan_time_compare(note.offset, end) < 0) {
-            snprintf(location, sizeof(location), "at %ld/%lu (note %zu)", note.offset.num, note.offset.den, i + 1);
+        if (rational_cmp(note.offset, end) < 0) {
+            snprintf(location, sizeof(location), "at %lld/%lld (note %zu)", note.offset.num, note.offset.den, i + 1);
             motive_set_error(error, location,
                              "the note sounds while the note before it still sounds; a motive is one voice");
             return MOTIVE_ERR_POLYPHONIC;
@@ -112,8 +124,8 @@ MotiveResult motive_read_midi(const unsigned char *data, size_t size, Motive *mo
             const MidiKeySignatureEvent *key = &imported.key_signatures.events[0];
             document->has_key = true;
             document->key = motive_key_from_signature(key->sharps_flats, key->mode_hint == MIDI_MODE_HINT_MINOR
-                                                                             ? PLAN_MODE_MINOR
-                                                                             : PLAN_MODE_MAJOR);
+                                                                             ? KEY_STRUCTURE_MODE_MINOR
+                                                                             : KEY_STRUCTURE_MODE_MAJOR);
         }
     }
     midi_import_destroy(&imported);
@@ -166,7 +178,7 @@ MotiveResult motive_read_musicxml(const char *data, size_t size, Motive *motive,
             }
             document->has_key = true;
             document->key = motive_key_from_signature(
-                key->sharps_flats, key->mode_hint == MUSICXML_MODE_HINT_MINOR ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR);
+                key->sharps_flats, key->mode_hint == MUSICXML_MODE_HINT_MINOR ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
             break;
         }
     }

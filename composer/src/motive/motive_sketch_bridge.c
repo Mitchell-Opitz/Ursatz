@@ -9,18 +9,18 @@
 /* Times in the sketch are unsigned and exact; the Composer's are signed longs over unsigned denominators. */
 #define TIME_LIMIT 1000000000L
 
-static Rational sketch_time(PlanTime time) {
+static Rational sketch_time(Rational time) {
     if (time.den == 0 || time.num < 0) {
         return msk_bad();
     }
     return msk_make((unsigned long long)time.num, time.den);
 }
 
-static bool plan_time(Rational time, PlanTime *out) {
+static bool plan_time(Rational time, Rational *out) {
     if (!msk_ok(time) || time.num > (long long)TIME_LIMIT || time.den > (long long)TIME_LIMIT) {
         return false;
     }
-    return plan_time_make((long)time.num, (unsigned long)time.den, out) == PLAN_OK;
+    return rational_make((long)time.num, (long long)time.den, out) == RATIONAL_OK;
 }
 
 static bool has_pitch_class(const int *pcs, size_t count, int pc) {
@@ -71,14 +71,14 @@ bool motive_to_sketch(const Motive *motive, MotiveSketch *out) {
     sketch.note_count = motive->note_count;
     for (size_t i = 0; i < motive->note_count; i++) {
         const PlanNote *note = &motive->notes[i];
-        sketch.notes[i].pitch = pitched ? note->midi_pitch : MOTIVE_SKETCH_PITCH_UNKNOWN;
+        sketch.notes[i].pitch = pitched ? note->midi : MOTIVE_SKETCH_PITCH_UNKNOWN;
         sketch.notes[i].onset = sketch_time(note->offset);
         sketch.notes[i].duration = sketch_time(note->duration);
     }
     if (motive->key_source != MOTIVE_KEY_UNSPECIFIED && pitched) {
         sketch.has_scale = true;
-        sketch.tonic_pc = motive->key.tonic_pitch_class;
-        sketch.minor = motive->key.mode == PLAN_MODE_MINOR;
+        sketch.tonic_pc = analysis_key_tonic_pitch_class(&motive->key);
+        sketch.minor = motive->key.mode == KEY_STRUCTURE_MODE_MINOR;
     }
     sketch.beat = msk_make(1, (unsigned long long)motive->meter.beat_unit);
     sketch.bar = msk_make((unsigned long long)motive->meter.beats_per_bar, (unsigned long long)motive->meter.beat_unit);
@@ -171,12 +171,13 @@ bool motive_from_sketch(const MotiveSketch *sketch, const Motive *template_motiv
         motive.meter.beats_per_bar = meter.beats_per_bar;
         motive.meter.beat_unit = meter.beat_unit;
     }
-    int unknown_pitch = template_motive->note_count > 0 ? template_motive->notes[0].midi_pitch : 60;
+    int unknown_pitch = template_motive->note_count > 0 ? template_motive->notes[0].midi : 60;
     motive.note_count = sketch->note_count;
     for (size_t i = 0; i < sketch->note_count; i++) {
         PlanNote *note = &motive.notes[i];
         memset(note, 0, sizeof(*note));
-        note->midi_pitch = sketch->notes[i].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN ? unknown_pitch : sketch->notes[i].pitch;
+        note->midi = sketch->notes[i].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN ? unknown_pitch : sketch->notes[i].pitch;
+        note->spelled = false;
         if (!plan_time(sketch->notes[i].onset, &note->offset) || !plan_time(sketch->notes[i].duration, &note->duration)) {
             return false;
         }
@@ -185,10 +186,9 @@ bool motive_from_sketch(const MotiveSketch *sketch, const Motive *template_motiv
         return false;
     }
     if (sketch->has_scale &&
-        (motive.key_source == MOTIVE_KEY_UNSPECIFIED || sketch->tonic_pc != motive.key.tonic_pitch_class ||
-         sketch->minor != (motive.key.mode == PLAN_MODE_MINOR))) {
-        motive.key.tonic_pitch_class = sketch->tonic_pc;
-        motive.key.mode = sketch->minor ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR;
+        (motive.key_source == MOTIVE_KEY_UNSPECIFIED || sketch->tonic_pc != analysis_key_tonic_pitch_class(&motive.key) ||
+         sketch->minor != (motive.key.mode == KEY_STRUCTURE_MODE_MINOR))) {
+        motive.key = plan_key_of_pitch_class(sketch->tonic_pc, sketch->minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
         motive.key_source = MOTIVE_KEY_GIVEN;
     }
 

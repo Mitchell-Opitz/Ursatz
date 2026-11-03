@@ -66,9 +66,9 @@ static void test_fixture(void) {
     NodeId theme = theme_section(plan);
     assert(theme != PLAN_NODE_NONE);
     assert(plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
-    PlanTime eight_bars;
-    assert(plan_time_make(8, 1, &eight_bars) == PLAN_OK);
-    assert(plan_time_compare(plan_node_span(plan, theme).length, eight_bars) == 0);
+    Rational eight_bars;
+    assert(rational_make(8, 1, &eight_bars) == RATIONAL_OK);
+    assert(rational_cmp(plan_node_span(plan, theme).length, eight_bars) == 0);
     plan_destroy(plan);
 }
 
@@ -79,10 +79,9 @@ typedef struct {
     PieceStructure structure;
 } Fixture;
 
-static void fixture_init(Fixture *fixture, int tonic, PlanKeyMode mode) {
+static void fixture_init(Fixture *fixture, int tonic, KeyStructureMode mode) {
     memset(fixture, 0, sizeof(*fixture));
-    fixture->structure.key.tonic_pitch_class = tonic;
-    fixture->structure.key.mode = mode;
+    fixture->structure.key = plan_key_of_pitch_class(tonic, mode);
     fixture->structure.meter.beats_per_bar = 4;
     fixture->structure.meter.beat_unit = 4;
     fixture->structure.sections = fixture->sections;
@@ -96,7 +95,7 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
     snprintf(section->letter, sizeof(section->letter), "%s", letter);
     section->part = part;
     section->beats = beats;
-    section->pickup = (PlanTime){0, 1};
+    section->pickup = (Rational){0, 1};
     section->fill = fill;
     return section;
 }
@@ -129,8 +128,8 @@ static size_t lane_spans(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span
 /* Every note of the lane inside the span, as pitch and absolute onset, in time order. */
 typedef struct {
     int pitch;
-    PlanTime onset;
-    PlanTime duration;
+    Rational onset;
+    Rational duration;
 } Sounded;
 
 static size_t sounded(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, Sounded *out, size_t max) {
@@ -142,9 +141,9 @@ static size_t sounded(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, S
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
         for (size_t n = 0; n < notes->note_count; n++) {
             assert(count < max);
-            out[count].pitch = notes->notes[n].midi_pitch;
+            out[count].pitch = notes->notes[n].midi;
             out[count].duration = notes->notes[n].duration;
-            assert(plan_time_add(owner.start, notes->notes[n].offset, &out[count].onset) == PLAN_OK);
+            assert(rational_add(owner.start, notes->notes[n].offset, &out[count].onset) == RATIONAL_OK);
             count++;
         }
     }
@@ -186,7 +185,7 @@ static size_t motive_notes(const PiecePlan *plan, Sounded *out, size_t max) {
 
 /* A piece in E minor: the D minor theme as an 8-bar body section, then a 2-bar turnaround from the piece's motive. */
 static void theme_structure(Fixture *fixture, const PiecePlan *theme) {
-    fixture_init(fixture, 4, PLAN_MODE_MINOR);
+    fixture_init(fixture, 4, KEY_STRUCTURE_MODE_MINOR);
     PieceSection *body = add_section(fixture, "a", "A", PIECE_PART_BODY, 32, PIECE_FILL_THEME);
     body->theme_plan = theme;
     add_section(fixture, "t", "T", PIECE_PART_TURNAROUND, 8, PIECE_FILL_EMPTY);
@@ -235,8 +234,8 @@ static void test_theme(void) {
         assert(sounded(plan, PLAN_LANE_MELODY, span, now, 512) == melody_count);
         for (size_t i = 0; i < melody_count; i++) {
             assert(now[i].pitch == was_melody[i].pitch + 2);
-            assert(plan_time_compare(now[i].onset, was_melody[i].onset) == 0);
-            assert(plan_time_compare(now[i].duration, was_melody[i].duration) == 0);
+            assert(rational_cmp(now[i].onset, was_melody[i].onset) == 0);
+            assert(rational_cmp(now[i].duration, was_melody[i].duration) == 0);
         }
         assert(sounded(plan, PLAN_LANE_BASS, span, now, 512) == bass_count);
         for (size_t i = 0; i < bass_count; i++) {
@@ -267,7 +266,7 @@ static void test_theme(void) {
 }
 
 /* Builds the structure's plan with an empty body of this many beats, in this key. */
-static PiecePlan *empty_body(Fixture *fixture, int tonic, PlanKeyMode mode, size_t beats) {
+static PiecePlan *empty_body(Fixture *fixture, int tonic, KeyStructureMode mode, size_t beats) {
     PiecePlan *plan;
     fixture_init(fixture, tonic, mode);
     add_section(fixture, "a", "A", PIECE_PART_BODY, beats, PIECE_FILL_EMPTY);
@@ -282,7 +281,7 @@ static void test_refused(void) {
     NodeId sections[4];
 
     /* Another length: the theme is 8 bars, the section 4. */
-    PiecePlan *plan = empty_body(&fixture, 4, PLAN_MODE_MINOR, 16);
+    PiecePlan *plan = empty_body(&fixture, 4, KEY_STRUCTURE_MODE_MINOR, 16);
     assert(piece_sections(plan, sections, 4) == 1);
     assert(plan_give_section(plan, sections[0], theme, theme_node) == GIVEN_ERR_LENGTH);
     assert(plan_node_state(plan, sections[0]) == PLAN_STATE_CONSTRAINED);
@@ -294,16 +293,16 @@ static void test_refused(void) {
     assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_ERR_BAD_REQUEST);
 
     /* A plan whose section is not realized yet. */
-    PiecePlan *open = empty_body(&fixture, 2, PLAN_MODE_MINOR, 32);
+    PiecePlan *open = empty_body(&fixture, 2, KEY_STRUCTURE_MODE_MINOR, 32);
     NodeId open_node;
     assert(piece_sections(open, &open_node, 1) == 1);
-    plan = empty_body(&fixture, 4, PLAN_MODE_MINOR, 32);
+    plan = empty_body(&fixture, 4, KEY_STRUCTURE_MODE_MINOR, 32);
     assert(piece_sections(plan, sections, 4) == 1);
     assert(plan_give_section(plan, sections[0], open, open_node) == GIVEN_ERR_NOT_REALIZED);
     plan_destroy(open);
 
     /* Another mode: the key lanes differ in shape. */
-    PiecePlan *major = empty_body(&fixture, 4, PLAN_MODE_MAJOR, 32);
+    PiecePlan *major = empty_body(&fixture, 4, KEY_STRUCTURE_MODE_MAJOR, 32);
     NodeId major_node;
     assert(piece_sections(major, &major_node, 1) == 1);
     assert(plan_give_section(major, major_node, theme, theme_node) == GIVEN_ERR_KEY);
@@ -341,7 +340,7 @@ static void test_progression(void) {
         PiecePlan *plan;
         ComposeConfig config;
         ComposeOutcome outcome;
-        fixture_init(&fixture, 0, PLAN_MODE_MAJOR);
+        fixture_init(&fixture, 0, KEY_STRUCTURE_MODE_MAJOR);
         PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 16, PIECE_FILL_PROGRESSION);
         body->numerals = NUMERALS;
         body->numeral_count = 4;
@@ -349,7 +348,7 @@ static void test_progression(void) {
         /* The progression ends on V, so the section ends in a half cadence: the default for a section that is not the
            loop's last would be an imperfect authentic cadence, which no melody can make over a final V. */
         body->has_cadence = true;
-        body->cadence = PLAN_CADENCE_HC;
+        body->cadence = CADENCE_TYPE_HALF;
         add_section(&fixture, "t", "T", PIECE_PART_TURNAROUND, 16, PIECE_FILL_EMPTY);
         assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
         NodeId sections[4];
@@ -389,9 +388,9 @@ static void test_progression(void) {
         bool tones = count > 0;
         for (size_t i = 0; i < count; i++) {
             for (size_t bar = 0; bar < 4; bar++) {
-                PlanTime downbeat;
-                assert(plan_time_make((long)bar, 1, &downbeat) == PLAN_OK);
-                if (plan_time_compare(notes[i].onset, downbeat) == 0) {
+                Rational downbeat;
+                assert(rational_make((long)bar, 1, &downbeat) == RATIONAL_OK);
+                if (rational_cmp(notes[i].onset, downbeat) == 0) {
                     int pc = ((notes[i].pitch % 12) + 12) % 12;
                     bool found = false;
                     for (size_t t = 0; t < 3; t++) {
@@ -417,7 +416,7 @@ static void test_partial(void) {
         PiecePlan *plan;
         ComposeConfig config;
         ComposeOutcome outcome;
-        fixture_init(&fixture, 0, PLAN_MODE_MAJOR);
+        fixture_init(&fixture, 0, KEY_STRUCTURE_MODE_MAJOR);
         PieceSection *body = add_section(&fixture, "p", "A", PIECE_PART_BODY, 32, PIECE_FILL_PROGRESSION);
         body->numerals = CHORDS;
         body->numeral_count = 4;

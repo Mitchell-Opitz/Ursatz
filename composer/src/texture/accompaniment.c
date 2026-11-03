@@ -19,10 +19,31 @@ AccompanimentParams accompaniment_params_default(void) {
 
 /* ------------------------------------------------------------ reading */
 
-size_t accomp_chord_at(const AccompContext *context, long tick) {
+void accomp_context_zero(AccompContext *context) {
+    memset(context, 0, sizeof(*context));
+    context->length = POSITION_ZERO;
+    context->beat = POSITION_ZERO;
+    context->cell = POSITION_ZERO;
+    context->bar = POSITION_ZERO;
+    context->phase = POSITION_ZERO;
+    context->motive_length = POSITION_ZERO;
+    context->liquidate_from = POSITION_ZERO;
+    for (size_t i = 0; i <= HARMONY_MAX_CHORDS; i++) {
+        context->chord_start[i] = POSITION_ZERO;
+    }
+    for (size_t i = 0; i < ACCOMP_MAX_LINE; i++) {
+        context->bass[i].onset = context->bass[i].end = POSITION_ZERO;
+        context->melody[i].onset = context->melody[i].end = POSITION_ZERO;
+    }
+    for (size_t i = 0; i < ACCOMP_MAX_MOTIVE; i++) {
+        context->motive[i].onset = context->motive[i].duration = POSITION_ZERO;
+    }
+}
+
+size_t accomp_chord_at(const AccompContext *context, Rational position) {
     size_t chord = 0;
     for (size_t i = 1; i < context->chord_count; i++) {
-        if (context->chord_start[i] <= tick) {
+        if (rational_cmp(context->chord_start[i], position) <= 0) {
             chord = i;
         }
     }
@@ -30,7 +51,7 @@ size_t accomp_chord_at(const AccompContext *context, long tick) {
 }
 
 /* The pitch classes of a chord in the key, root first. */
-bool accomp_chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4], size_t *count) {
+bool accomp_chord_tones(const AnalysisKey *key, const PhraseChord *chord, int pcs[4], size_t *count) {
     int intervals[4];
     int root;
     if (chord->applied) {
@@ -43,7 +64,7 @@ bool accomp_chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4]
             return false;
         }
         /* The chord on the leading tone of a minor key stands on the raised seventh degree. */
-        root = key->mode == PLAN_MODE_MINOR && chord->chord.leading_tone
+        root = key->mode == KEY_STRUCTURE_MODE_MINOR && chord->chord.leading_tone
                    ? 11
                    : harmony_applied_scale_semitone(harmony_mode_of(key->mode), chord->chord.degree);
     }
@@ -51,14 +72,14 @@ bool accomp_chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4]
         return false;
     }
     for (size_t k = 0; k < *count; k++) {
-        pcs[k] = (key->tonic_pitch_class + root + intervals[k]) % 12;
+        pcs[k] = (analysis_key_tonic_pitch_class(key) + root + intervals[k]) % 12;
     }
     return true;
 }
 
 /* The notes of a lane over the target that sound inside it, from its start. False if any span there is open. */
-bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, long origin, long length,
-                      AccompLine *out, size_t *count) {
+bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, Rational origin,
+                      Rational length, AccompLine *out, size_t *count) {
     LaneSpanId ids[ACCOMP_MAX_LINE];
     size_t found = plan_lane_find(plan, lane, voice, span, ids, ACCOMP_MAX_LINE);
     *count = 0;
@@ -66,31 +87,29 @@ bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanS
         return false;
     }
     for (size_t i = 0; i < found; i++) {
-        long base;
+        Rational base;
         const PlanNotes *notes;
-        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED ||
-            !melody_ticks(plan_lane_span_span(plan, ids[i]).start, &base)) {
+        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED) {
             return false;
         }
+        base = plan_lane_span_span(plan, ids[i]).start;
         notes = &plan_lane_span_payload(plan, ids[i])->notes;
         for (size_t n = 0; n < notes->note_count; n++) {
-            long offset;
-            long duration;
-            if (!melody_ticks(notes->notes[n].offset, &offset) || !melody_ticks(notes->notes[n].duration, &duration) ||
-                duration <= 0) {
+            Rational duration = notes->notes[n].duration;
+            if (!position_is_positive(duration)) {
                 return false;
             }
-            long onset = base - origin + offset;
-            long end = onset + duration;
-            if (end <= 0 || onset >= length) {
+            Rational onset = position_add(position_sub(base, origin), notes->notes[n].offset);
+            Rational end = position_add(onset, duration);
+            if (rational_cmp(end, POSITION_ZERO) <= 0 || rational_cmp(onset, length) >= 0) {
                 continue;
             }
             if (*count >= ACCOMP_MAX_LINE) {
                 return false;
             }
-            out[*count].onset = onset < 0 ? 0 : onset;
-            out[*count].end = end > length ? length : end;
-            out[*count].pitch = notes->notes[n].midi_pitch;
+            out[*count].onset = rational_cmp(onset, POSITION_ZERO) < 0 ? POSITION_ZERO : onset;
+            out[*count].end = rational_cmp(end, length) > 0 ? length : end;
+            out[*count].pitch = notes->notes[n].midi;
             (*count)++;
         }
     }
@@ -107,7 +126,7 @@ bool accomp_read_voice(const PiecePlan *plan, int voice, PlanSpan span, LaneSpan
     }
     PlanSpan other = plan_lane_span_span(plan, ids[0]);
     if (found != 1 || plan_lane_span_state(plan, ids[0]) != PLAN_STATE_CONSTRAINED ||
-        plan_time_compare(other.start, span.start) != 0 || plan_time_compare(other.length, span.length) != 0) {
+        rational_cmp(other.start, span.start) != 0 || rational_cmp(other.length, span.length) != 0) {
         return false;
     }
     *out = ids[0];
@@ -134,12 +153,13 @@ static bool read_motive(const PiecePlan *plan, const char *name, AccompContext *
             }
             for (size_t n = 0; n < notes->note_count; n++) {
                 AccompMotiveNote *note = &out->motive[n];
-                if (!melody_ticks(notes->notes[n].offset, &note->onset) ||
-                    !melody_ticks(notes->notes[n].duration, &note->duration) || note->duration <= 0) {
+                note->onset = notes->notes[n].offset;
+                note->duration = notes->notes[n].duration;
+                if (!position_is_positive(note->duration)) {
                     return false;
                 }
-                note->pitch = notes->notes[n].midi_pitch;
-                out->motive_length = note->onset + note->duration;
+                note->pitch = notes->notes[n].midi;
+                out->motive_length = position_add(note->onset, note->duration);
             }
             out->motive_count = notes->note_count;
             return true;
@@ -149,21 +169,20 @@ static bool read_motive(const PiecePlan *plan, const char *name, AccompContext *
 }
 
 /*
- * Where the last bar of the section the target is in begins, in ticks from the target's start; of the target itself
+ * Where the last bar of the section the target is in begins, from the target's start; of the target itself
  * when it is in no section.
  */
-static long liquidation_start(const PiecePlan *plan, const AccompContext *context, long origin) {
+static Rational liquidation_start(const PiecePlan *plan, const AccompContext *context, Rational origin) {
     NodeId section = plan_section_of(plan, context->owner);
     if (section == PLAN_NODE_NONE) {
-        return context->length - context->bar;
+        return position_sub(context->length, context->bar);
     }
     PlanSpan whole = plan_node_span(plan, section);
-    PlanTime end;
-    long end_ticks;
-    if (plan_time_add(whole.start, whole.length, &end) != PLAN_OK || !melody_ticks(end, &end_ticks)) {
+    Rational end;
+    if (rational_add(whole.start, whole.length, &end) != RATIONAL_OK) {
         return context->length;
     }
-    return end_ticks - origin - context->bar;
+    return position_sub(position_sub(end, origin), context->bar);
 }
 
 bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
@@ -173,14 +192,14 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
     LaneSpanId meters[2];
     PlanConstraint constraint;
     size_t count;
-    long origin;
-    long meter_start;
+    Rational origin;
+    Rational meter_start;
     if (!plan || !out || !plan_has_lane_span(plan, target) ||
         plan_lane_span_lane(plan, target) != PLAN_LANE_INNER_VOICE || plan_lane_span_voice(plan, target) != 1 ||
         plan_lane_span_state(plan, target) != PLAN_STATE_CONSTRAINED) {
         return false;
     }
-    memset(out, 0, sizeof(*out));
+    accomp_context_zero(out);
     out->target = target;
     out->owner = plan_lane_span_owner(plan, target);
     out->span = plan_lane_span_span(plan, target);
@@ -202,40 +221,40 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
     }
     out->meter = metre.meter;
     out->compound = out->meter.beat_unit == 8 && out->meter.beats_per_bar >= 6 && out->meter.beats_per_bar % 3 == 0;
-    long cell;
     size_t cells = 0;
-    if (!melody_ticks(out->span.length, &out->length) || !melody_ticks(out->span.start, &origin) ||
-        !melody_ticks(metre.cell_length, &cell) || !melody_ticks(metre.bar_length, &out->bar) || cell <= 0 ||
-        out->length <= 0 || out->bar <= 0 || out->meter.beat_unit <= 0 || MELODY_TICKS % out->meter.beat_unit != 0) {
+    out->length = out->span.length;
+    origin = out->span.start;
+    out->cell = metre.cell_length;
+    out->bar = metre.bar_length;
+    if (!position_is_positive(out->cell) || !position_is_positive(out->length) || !position_is_positive(out->bar) ||
+        out->meter.beat_unit <= 0) {
         return false;
     }
-    out->cell = cell;
-    out->beat = out->compound ? 3 * (MELODY_TICKS / 8) : MELODY_TICKS / out->meter.beat_unit;
-    if (plan_lane_find(plan, PLAN_LANE_METER, 0, out->span, meters, 2) != 1 ||
-        !melody_ticks(plan_lane_span_span(plan, meters[0]).start, &meter_start)) {
+    out->beat = out->compound ? rational_ratio(3, 8) : rational_ratio(1, out->meter.beat_unit);
+    if (plan_lane_find(plan, PLAN_LANE_METER, 0, out->span, meters, 2) != 1) {
         return false;
     }
-    out->phase = ((origin - meter_start) % out->bar + out->bar) % out->bar;
-    long at = 0;
+    meter_start = plan_lane_span_span(plan, meters[0]).start;
+    out->phase = position_remainder(position_sub(origin, meter_start), out->bar);
+    Rational at = POSITION_ZERO;
     for (size_t i = 0; i < count; i++) {
         unsigned seventh;
-        PlanTime chord_from;
-        PlanTime chord_length;
-        long chord_ticks;
+        Rational chord_from;
+        Rational chord_length;
         if (plan_lane_span_state(plan, harmony[i]) == PLAN_STATE_CONSTRAINED ||
             !accomp_chord_tones(&out->key, &chords[i], out->chord_pcs[i], &out->chord_pc_count[i]) ||
             !melody_chord_mask(&out->key, &chords[i], &out->chord_mask[i], &seventh) ||
             !harmony_cells_of_span(&metre, cells, chords[i].cells, &chord_from, &chord_length) ||
-            !melody_ticks(chord_length, &chord_ticks) || chord_ticks <= 0) {
+            !position_is_positive(chord_length)) {
             return false;
         }
         out->chord_start[i] = at;
-        at += chord_ticks;
+        at = position_add(at, chord_length);
         cells += chords[i].cells;
     }
     out->chord_count = count;
     out->chord_start[count] = at;
-    if (at != out->length) {
+    if (rational_cmp(at, out->length) != 0) {
         return false;
     }
 
@@ -260,23 +279,26 @@ void accomp_judge(const AccompContext *context, const AccompCandidate *candidate
     for (size_t voice = 0; voice < ACCOMP_VOICES && !verdict->hard; voice++) {
         for (size_t n = 0; n < candidate->note_count[voice] && !verdict->hard; n++) {
             const AccompNote *note = &candidate->notes[voice][n];
-            long end = note->onset + note->duration;
+            Rational end = position_add(note->onset, note->duration);
             if (note->pitch < context->low || note->pitch > context->high) {
                 verdict->hard = "a note outside the range";
-            } else if (note->onset < 0 || end > context->length || note->duration <= 0) {
+            } else if (rational_cmp(note->onset, POSITION_ZERO) < 0 || rational_cmp(end, context->length) > 0 ||
+                       !position_is_positive(note->duration)) {
                 verdict->hard = "a note outside the span";
             } else if (!(context->chord_mask[accomp_chord_at(context, note->onset)] & (1u << (note->pitch % 12)))) {
                 verdict->hard = "a note that is not a tone of its chord";
             }
             for (size_t i = 0; i < context->bass_count && !verdict->hard; i++) {
                 const AccompLine *line = &context->bass[i];
-                if (line->onset < end && line->end > note->onset && note->pitch <= line->pitch) {
+                if (rational_cmp(line->onset, end) < 0 && rational_cmp(line->end, note->onset) > 0 &&
+                    note->pitch <= line->pitch) {
                     verdict->hard = "a note not above the bass";
                 }
             }
             for (size_t i = 0; i < context->melody_count && !verdict->hard; i++) {
                 const AccompLine *line = &context->melody[i];
-                if (line->onset < end && line->end > note->onset && note->pitch >= line->pitch) {
+                if (rational_cmp(line->onset, end) < 0 && rational_cmp(line->end, note->onset) > 0 &&
+                    note->pitch >= line->pitch) {
                     verdict->hard = "a note not below the melody";
                 }
             }
@@ -345,7 +367,7 @@ static bool same_notes(const AccompCandidate *a, const AccompCandidate *b) {
         }
         for (size_t n = 0; n < a->note_count[voice]; n++) {
             if (a->notes[voice][n].pitch != b->notes[voice][n].pitch ||
-                a->notes[voice][n].onset != b->notes[voice][n].onset) {
+                rational_cmp(a->notes[voice][n].onset, b->notes[voice][n].onset) != 0) {
                 return false;
             }
         }
@@ -422,13 +444,12 @@ static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng 
 /* The notes of a voice as lane notes, from the start of the target. */
 static PlanResult voice_payload(const AccompCandidate *candidate, size_t voice, PlanNote *notes, PlanLanePayload *payload) {
     for (size_t n = 0; n < candidate->note_count[voice]; n++) {
-        notes[n].midi_pitch = candidate->notes[voice][n].pitch;
-        PlanResult result = melody_time(candidate->notes[voice][n].onset, &notes[n].offset);
-        if (result == PLAN_OK) {
-            result = melody_time(candidate->notes[voice][n].duration, &notes[n].duration);
-        }
-        if (result != PLAN_OK) {
-            return result;
+        notes[n].midi = candidate->notes[voice][n].pitch;
+        notes[n].spelled = false;
+        notes[n].offset = candidate->notes[voice][n].onset;
+        notes[n].duration = candidate->notes[voice][n].duration;
+        if (position_is_far(notes[n].offset) || position_is_far(notes[n].duration)) {
+            return PLAN_ERR_BAD_TIME;
         }
     }
     memset(payload, 0, sizeof(*payload));

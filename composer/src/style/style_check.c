@@ -33,13 +33,13 @@
  * The numeral of the chord written right before a span: a span of the harmony lane, not open, that ends where the
  * span starts. False when the span starts the plan or the chord before is still open.
  */
-static bool chord_before(const PiecePlan *plan, PlanSpan span, PlanTime bar, char out[PLAN_ROMAN_NUMERAL_MAX]) {
+static bool chord_before(const PiecePlan *plan, PlanSpan span, Rational bar, char out[PLAN_ROMAN_NUMERAL_MAX]) {
     if (span.start.num <= 0 || bar.num <= 0) {
         return false;
     }
-    PlanTime back = {-bar.num * BEFORE_BARS, bar.den};
-    PlanTime from;
-    if (plan_time_add(span.start, back, &from) != PLAN_OK) {
+    Rational back = {-bar.num * BEFORE_BARS, bar.den};
+    Rational from;
+    if (rational_add(span.start, back, &from) != RATIONAL_OK) {
         return false;
     }
     if (from.num < 0) {
@@ -47,8 +47,7 @@ static bool chord_before(const PiecePlan *plan, PlanSpan span, PlanTime bar, cha
         from.den = 1;
     }
     PlanSpan window = {from, {0, 1}};
-    if (plan_time_make(span.start.num * (long)from.den - from.num * (long)span.start.den, span.start.den * from.den,
-                       &window.length) != PLAN_OK ||
+    if (rational_sub(span.start, from, &window.length) != RATIONAL_OK ||
         window.length.num <= 0) {
         return false;
     }
@@ -58,8 +57,8 @@ static bool chord_before(const PiecePlan *plan, PlanSpan span, PlanTime bar, cha
         return false;
     }
     PlanSpan last = plan_lane_span_span(plan, ids[found - 1]);
-    PlanTime end;
-    if (plan_span_end(last, &end) != PLAN_OK || plan_time_compare(end, span.start) != 0 ||
+    Rational end;
+    if (plan_span_end(last, &end) != PLAN_OK || rational_cmp(end, span.start) != 0 ||
         plan_lane_span_state(plan, ids[found - 1]) == PLAN_STATE_CONSTRAINED) {
         return false;
     }
@@ -85,8 +84,8 @@ static bool harmony_labels(const PiecePlan *plan, const PhraseProgression *progr
 }
 
 /* The degree label of a pitch in the key. */
-static const char *degree_of(const PlanKey *key, int pitch) {
-    return style_label_degree(((pitch % 12) + 12) % 12, key->tonic_pitch_class);
+static const char *degree_of(const AnalysisKey *key, int pitch) {
+    return style_label_degree(((pitch % 12) + 12) % 12, analysis_key_tonic_pitch_class(key));
 }
 
 /* A `motive-nct-figure` label for every non-chord tone the melody writes: the degrees of the note and its neighbors. */
@@ -104,7 +103,7 @@ static bool nct_labels(const MelodyCandidate *melody, ComposerStyleLabels *label
         return false;
     }
     const MelodyContext *context = &melody->context;
-    const PlanKey *key = &context->key;
+    const AnalysisKey *key = &context->key;
     for (size_t i = 0; i < melody->count; i++) {
         const char *name = NULL;
         for (size_t t = 0; t < sizeof TYPES / sizeof *TYPES; t++) {
@@ -148,8 +147,8 @@ static bool melody_labels(const ComposerStyle *style, const MelodyCandidate *mel
     }
     for (size_t i = 0; i < melody->count; i++) {
         notes[i].pitch = melody->notes[i].pitch;
-        notes[i].duration_numerator = (unsigned long)melody->notes[i].duration;
-        notes[i].duration_denominator = (unsigned long)MELODY_TICKS;
+        notes[i].duration_numerator = (unsigned long)melody->notes[i].duration.num;
+        notes[i].duration_denominator = (unsigned long)melody->notes[i].duration.den;
     }
     const MelodyContext *context = &melody->context;
     int before = context->lead_in_count > 0 ? context->lead_in[context->lead_in_count - 1] : 0;
@@ -166,7 +165,7 @@ static int plan_tonic(const PiecePlan *plan) {
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, &first, 1) == 0) {
         return 0;
     }
-    return plan_lane_span_payload(plan, first)->key.tonic_pitch_class;
+    return analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, first)->key);
 }
 
 /* The motive labels of a motive-form or development candidate the motives stage offers. */
@@ -178,7 +177,7 @@ static bool motive_labels(const PiecePlan *plan, const FillCandidate *candidate,
     if (!motive) {
         return true;
     }
-    int tonic = motive->key_source != MOTIVE_KEY_UNSPECIFIED ? motive->key.tonic_pitch_class : plan_tonic(plan);
+    int tonic = motive->key_source != MOTIVE_KEY_UNSPECIFIED ? analysis_key_tonic_pitch_class(&motive->key) : plan_tonic(plan);
     return composer_style_labels_add_motive(labels, motive, tonic);
 }
 
@@ -289,10 +288,10 @@ static void style_term(ComposerRatio closeness, ComposerRatio weight, FillCheck 
  * How many times an accompaniment pattern sounds in a beat of the meter, times 2: block and oom-pah once, the
  * arpeggiated figure once an eighth and the Alberti figure twice a beat.
  */
-static unsigned long pattern_halves(PlanAccompanimentPattern pattern, long beat) {
+static unsigned long pattern_halves(PlanAccompanimentPattern pattern, Rational beat) {
     switch (pattern) {
     case PLAN_ACCOMPANIMENT_ARPEGGIATED:
-        return 2UL * (unsigned long)(beat / ACCOMP_EIGHTH);
+        return 2UL * (unsigned long)position_floor_units(beat, ACCOMP_EIGHTH);
     case PLAN_ACCOMPANIMENT_ALBERTI:
         return 4;
     case PLAN_ACCOMPANIMENT_ANY:

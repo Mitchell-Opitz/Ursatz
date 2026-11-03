@@ -36,20 +36,20 @@ bool harmony_meter_supported(const PlanMeter *meter) {
 }
 
 /* The chords a cadence needs before its last: a tonic, the dominant unless the phrase ends on it, and the plagal tonic and IV. */
-static size_t cells_before_last(PlanCadenceType cadence) {
-    return 1 + (cadence == PLAN_CADENCE_HC ? 0 : 1) + (cadence == PLAN_CADENCE_PC ? 2 : 0);
+static size_t cells_before_last(CadenceType cadence) {
+    return 1 + (cadence == CADENCE_TYPE_HALF ? 0 : 1) + (cadence == CADENCE_TYPE_PLAGAL ? 2 : 0);
 }
 
-size_t harmony_phrase_min_cells(PlanCadenceType cadence, const PlanMeter *meter) {
+size_t harmony_phrase_min_cells(CadenceType cadence, const PlanMeter *meter) {
     size_t cells_per_bar;
     return harmony_rhythm_cells_per_bar(meter, &cells_per_bar) ? cells_before_last(cadence) + 1 : 0;
 }
 
-size_t harmony_phrase_room_cells(PlanCadenceType cadence, size_t cells_per_bar) {
+size_t harmony_phrase_room_cells(CadenceType cadence, size_t cells_per_bar) {
     return cells_before_last(cadence) + cells_per_bar;
 }
 
-size_t harmony_phrase_min_bars(PlanCadenceType cadence, const PlanMeter *meter) {
+size_t harmony_phrase_min_bars(CadenceType cadence, const PlanMeter *meter) {
     size_t cells_per_bar;
     if (!harmony_rhythm_cells_per_bar(meter, &cells_per_bar)) {
         return 0;

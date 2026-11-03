@@ -71,20 +71,21 @@ static const char *const MOTIVE_CATEGORIES[4] = {"motive-degrees", "motive-inter
 
 static PlanSpan bars(long start, long length) {
     PlanSpan span;
-    assert(plan_time_make(start, 1, &span.start) == PLAN_OK);
-    assert(plan_time_make(length, 1, &span.length) == PLAN_OK);
+    assert(rational_make(start, 1, &span.start) == RATIONAL_OK);
+    assert(rational_make(length, 1, &span.length) == RATIONAL_OK);
     return span;
 }
 
-static PlanTime time_of(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational time_of(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
-static PlanNote note(int pitch, PlanTime offset, PlanTime duration) {
+static PlanNote note(int pitch, Rational offset, Rational duration) {
     PlanNote result;
-    result.midi_pitch = pitch;
+    result.midi = pitch;
+    result.spelled = false;
     result.offset = offset;
     result.duration = duration;
     return result;
@@ -111,8 +112,7 @@ static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key.tonic_pitch_class = 0;
-    key.key.mode = PLAN_MODE_MAJOR;
+    key.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, span, &key, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 }
@@ -144,14 +144,14 @@ static PiecePlan *block_plan(void) {
     static const PlanLaneKind LANES[4] = {PLAN_LANE_MELODY, PLAN_LANE_INNER_VOICE, PLAN_LANE_INNER_VOICE, PLAN_LANE_BASS};
     static const int VOICES[4] = {0, 1, 2, 0};
     static PlanNote notes[BLOCK_COUNT][4];
-    PlanTime start = time_of(0, 1);
+    Rational start = time_of(0, 1);
     for (size_t chord = 0; chord < BLOCK_COUNT; chord++) {
         PlanSpan span = {start, time_of(BLOCK[chord].length_num, BLOCK[chord].length_den)};
         for (int voice = 0; voice < 4; voice++) {
             notes[chord][voice] = note(BLOCK[chord].pitch[voice], time_of(0, 1), span.length);
             add_notes(plan, form, LANES[voice], VOICES[voice], span, &notes[chord][voice], 1);
         }
-        assert(plan_time_add(start, span.length, &start) == PLAN_OK);
+        assert(rational_add(start, span.length, &start) == RATIONAL_OK);
     }
     return plan;
 }
@@ -508,13 +508,12 @@ static PiecePlan *sentence_plan(Motive *motive) {
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key.tonic_pitch_class = 0;
-    request.key.mode = PLAN_MODE_MAJOR;
+    request.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     request.meter = options.meter;
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
-    request.cadence = PLAN_CADENCE_PAC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PiecePlan *plan = NULL;
     assert(grow_build_plan(&request, &plan) == GROW_OK);
     return plan;
@@ -720,7 +719,7 @@ static void repetition_degrees(unsigned long seed, const ComposerStyle *style, c
         }
         const PlanLanePayload *payload = plan_lane_span_payload(plan, spans[i]);
         for (size_t k = 0; k < payload->notes.note_count; k++) {
-            int pitch_class = ((payload->notes.notes[k].midi_pitch % 12) + 12) % 12;
+            int pitch_class = ((payload->notes.notes[k].midi % 12) + 12) % 12;
             strcat(out, k ? " " : "");
             strcat(out, DEGREES[pitch_class]);
         }

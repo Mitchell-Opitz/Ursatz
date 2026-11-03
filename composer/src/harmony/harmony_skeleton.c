@@ -26,7 +26,7 @@ bool harmony_skeleton_read(const PiecePlan *plan, LaneSpanId target, SkeletonCon
         !harmony_read_cells(plan, context.span, &context.metre)) {
         return false;
     }
-    context.at_start = plan_time_compare(context.span.start, owner_span.start) == 0;
+    context.at_start = rational_cmp(context.span.start, owner_span.start) == 0;
     PlanConstraint cadence;
     if (harmony_find_constraint(plan, target, context.owner, PLAN_CONSTRAINT_CADENCE, &cadence)) {
         context.has_cadence = true;
@@ -55,10 +55,10 @@ bool harmony_skeleton_read(const PiecePlan *plan, LaneSpanId target, SkeletonCon
     }
     size_t low = at;
     while (low > 0) {
-        PlanTime end;
+        Rational end;
         PlanSpan before = plan_lane_span_span(plan, same_owner[low - 1]);
         if (plan_span_end(before, &end) != PLAN_OK ||
-            plan_time_compare(end, plan_lane_span_span(plan, same_owner[low]).start) != 0 ||
+            rational_cmp(end, plan_lane_span_span(plan, same_owner[low]).start) != 0 ||
             plan_lane_span_state(plan, same_owner[low - 1]) == PLAN_STATE_CONSTRAINED) {
             break;
         }
@@ -74,7 +74,7 @@ bool harmony_skeleton_read(const PiecePlan *plan, LaneSpanId target, SkeletonCon
     /* A span that starts the owner has nothing before it; any other has the chords back to the owner's start. */
     if (context.at_start ? context.before_count != 0
                          : (context.before_count == 0 ||
-                            plan_time_compare(plan_lane_span_span(plan, same_owner[low]).start, owner_span.start) != 0)) {
+                            rational_cmp(plan_lane_span_span(plan, same_owner[low]).start, owner_span.start) != 0)) {
         return false;
     }
 
@@ -87,8 +87,8 @@ bool harmony_skeleton_read(const PiecePlan *plan, LaneSpanId target, SkeletonCon
     if (bass_count == 1) {
         PlanSpan bass_span = plan_lane_span_span(plan, basses[0]);
         if (plan_lane_span_state(plan, basses[0]) != PLAN_STATE_CONSTRAINED ||
-            plan_time_compare(bass_span.start, context.span.start) != 0 ||
-            plan_time_compare(bass_span.length, context.span.length) != 0) {
+            rational_cmp(bass_span.start, context.span.start) != 0 ||
+            rational_cmp(bass_span.length, context.span.length) != 0) {
             return false;
         }
         context.bass_placeholder = basses[0];
@@ -122,10 +122,9 @@ bool harmony_skeleton_bass(SkeletonCandidate *skeleton, const HarmonyBassParams 
     bass.metre.bars = cells / context->metre.cells_per_bar;
     /* A skeleton is written on whole cells, from a cell boundary of the bar. */
     bass.metre.start = context->span.start;
-    bass.metre.lead = (PlanTime){0, 1};
-    bass.metre.tail = (PlanTime){0, 1};
-    if (plan_time_make(context->metre.cell_length.num * (long)(context->metre.first_cell % context->metre.cells_per_bar),
-                       context->metre.cell_length.den, &bass.metre.offset) != PLAN_OK) {
+    bass.metre.lead = (Rational){0, 1};
+    bass.metre.tail = (Rational){0, 1};
+    if (rational_mul_int(context->metre.cell_length, (long long)(context->metre.first_cell % context->metre.cells_per_bar), &bass.metre.offset) != RATIONAL_OK) {
         return false;
     }
     return harmony_bass_build(&bass, params, rng, &skeleton->bass);
@@ -172,7 +171,7 @@ bool harmony_skeleton_judge(const SkeletonCandidate *skeleton, PhraseVerdict *ve
     }
 
     /* The cadence is heard only when the skeleton ends the span; otherwise the rest of the span will bring it. */
-    HeardPhrase phrase = {all, total, context->key.mode, context->has_cadence ? context->cadence : PLAN_CADENCE_PAC,
+    HeardPhrase phrase = {all, total, context->key.mode, context->has_cadence ? context->cadence : CADENCE_TYPE_PERFECT_AUTHENTIC,
                           context->metre.cells_per_bar, context->metre.cell_length, !ends, exempt, false, false, NULL, NULL, false, NULL};
     bool ok = harmony_judge(&phrase, &harmony);
     free(all);
@@ -241,7 +240,7 @@ static PlanResult add_schema_stage(PiecePlan *plan, LaneSpanId id, int schema, s
 
 /* Writes the harmony of the skeleton and the span left over; the first chord takes the target span. */
 static PlanResult write_harmony(PiecePlan *plan, const SkeletonCandidate *skeleton, const SkeletonContext *read) {
-    PlanTime cell = read->metre.cell_length;
+    Rational cell = read->metre.cell_length;
     LaneSpanId first = read->target;
     LaneSpanId last = first;
     PlanResult result = PLAN_OK;
@@ -278,7 +277,7 @@ static PlanResult write_harmony(PiecePlan *plan, const SkeletonCandidate *skelet
         result = harmony_cells_span(read->span.start, cell, offset, skeleton->remainder_cells, &span);
         memset(&placeholder, 0, sizeof(placeholder));
         strcpy(placeholder.harmony.roman_numeral, "I");
-        placeholder.harmony.function = PLAN_FUNCTION_UNKNOWN;
+        placeholder.harmony.has_function = false;
         if (result == PLAN_OK) {
             result = plan_add_lane_span(plan, read->owner, PLAN_LANE_HARMONY, 0, span, &placeholder, &rest);
         }
@@ -288,7 +287,7 @@ static PlanResult write_harmony(PiecePlan *plan, const SkeletonCandidate *skelet
 }
 
 static PlanResult write_bass(PiecePlan *plan, const SkeletonCandidate *skeleton, const SkeletonContext *read) {
-    PlanTime cell = read->metre.cell_length;
+    Rational cell = read->metre.cell_length;
     PlanResult result = PLAN_OK;
     size_t offset = 0;
     for (size_t i = 0; result == PLAN_OK && i < skeleton->count; i++) {
@@ -330,8 +329,9 @@ static PlanResult write_bass(PiecePlan *plan, const SkeletonCandidate *skeleton,
         PlanLanePayload payload;
         LaneSpanId rest;
         result = harmony_cells_span(read->span.start, cell, offset, skeleton->remainder_cells, &span);
-        note.midi_pitch = skeleton->bass.params.range_low;
-        note.offset = (PlanTime){0, 1};
+        note.midi = skeleton->bass.params.range_low;
+        note.spelled = false;
+        note.offset = (Rational){0, 1};
         note.duration = span.length;
         memset(&payload, 0, sizeof(payload));
         payload.notes.notes = &note;

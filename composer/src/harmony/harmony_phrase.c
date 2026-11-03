@@ -32,6 +32,7 @@ void harmony_chord_payload(const PhraseChord *chord, PlanLanePayload *payload) {
     memset(payload, 0, sizeof(*payload));
     memcpy(payload->harmony.roman_numeral, chord->roman, PLAN_ROMAN_NUMERAL_MAX);
     payload->harmony.function = chord->function;
+    payload->harmony.has_function = chord->has_function;
 }
 
 /* Moves the target's cadence constraint to the final chord's span, where the cadence arrives. */

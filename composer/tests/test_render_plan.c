@@ -25,14 +25,14 @@
 
 static PlanSpan bars(long start, long length) {
     PlanSpan span;
-    assert(plan_time_make(start, 1, &span.start) == PLAN_OK);
-    assert(plan_time_make(length, 1, &span.length) == PLAN_OK);
+    assert(rational_make(start, 1, &span.start) == RATIONAL_OK);
+    assert(rational_make(length, 1, &span.length) == RATIONAL_OK);
     return span;
 }
 
-static PlanTime time_of(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational time_of(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
@@ -42,12 +42,8 @@ static NodeId add(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan sp
     return id;
 }
 
-static PlanNote note(int pitch, PlanTime offset, PlanTime duration) {
-    PlanNote result;
-    result.midi_pitch = pitch;
-    result.offset = offset;
-    result.duration = duration;
-    return result;
+static PlanNote note(int pitch, Rational offset, Rational duration) {
+    return plan_note(pitch, offset, duration);
 }
 
 static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
@@ -72,8 +68,7 @@ static void add_meter_and_key(PiecePlan *plan, NodeId owner, PlanSpan span) {
 
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key.tonic_pitch_class = 2;
-    key.key.mode = PLAN_MODE_MINOR;
+    key.key = plan_key_of_pitch_class(2, KEY_STRUCTURE_MODE_MINOR);
     LaneSpanId key_span = PLAN_LANE_SPAN_NONE;
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, span, &key, &key_span) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, key_span, PLAN_STATE_GIVEN) == PLAN_OK);
@@ -94,7 +89,7 @@ static PiecePlan *build_sentence_plan(void) {
     add_meter_and_key(plan, form, bars(0, 8));
 
     /* Melody of the basic idea: seven notes, ending on a triplet eighth. */
-    PlanTime quarter = time_of(1, 4);
+    Rational quarter = time_of(1, 4);
     PlanNote idea_notes[] = {
         note(69, time_of(0, 1), quarter),   note(74, time_of(1, 4), quarter),   note(77, time_of(1, 2), quarter),
         note(74, time_of(3, 4), quarter),   note(72, time_of(1, 1), time_of(1, 2)),
@@ -141,7 +136,7 @@ static void test_render(void) {
     assert(rendered.meter_map != NULL);
     assert(rendered.key_count == 1);
     assert(rendered.keys[0].sharps_flats == -1);
-    assert(rendered.keys[0].mode == PLAN_MODE_MINOR);
+    assert(rendered.keys[0].mode == KEY_STRUCTURE_MODE_MINOR);
 
     /* In time order: the first two events sound together, melody before bass. */
     const MusicalTime *first = temporal_anchor_position(note_event_temporal_anchor(rendered.events[0]));
@@ -512,7 +507,7 @@ static void test_material_is_left_out(void) {
         assert(rendered.skipped[i].reason == RENDER_SKIP_MATERIAL);
     }
     assert(rendered.skipped[0].span == source && rendered.skipped[1].span == developed);
-    assert(plan_time_compare(rendered.piece_end, time_of(4, 1)) == 0);
+    assert(rational_cmp(rendered.piece_end, time_of(4, 1)) == 0);
 
     /* The score has the four bars of the theme and no more. */
     char *xml = NULL;
@@ -530,7 +525,7 @@ static void test_material_is_left_out(void) {
     assert(plan_node_remove_constraint(plan, material, 0) == PLAN_OK);
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     assert(rendered.count == 3);
-    assert(plan_time_compare(rendered.piece_end, time_of(8, 1)) == 0);
+    assert(rational_cmp(rendered.piece_end, time_of(8, 1)) == 0);
     rendered_plan_destroy(&rendered);
     plan_destroy(plan);
 }
@@ -573,12 +568,35 @@ static void test_layers_are_masked(void) {
            rendered.skipped[0].lane == PLAN_LANE_MELODY);
     assert(rendered.skipped[1].span == spans[0][2] && rendered.skipped[1].reason == RENDER_SKIP_LAYER &&
            rendered.skipped[1].lane == PLAN_LANE_INNER_VOICE);
-    assert(plan_time_compare(rendered.piece_end, time_of(12, 1)) == 0);
+    assert(rational_cmp(rendered.piece_end, time_of(12, 1)) == 0);
+    rendered_plan_destroy(&rendered);
+    plan_destroy(plan);
+}
+
+/* A note the plan spells is written as spelled; the same pitch unspelled takes the key's spelling (D minor: a flat). */
+static void test_spelled_notes(void) {
+    PiecePlan *plan = plan_create();
+    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 2), "form");
+    add_meter_and_key(plan, form, bars(0, 2));
+    PlanNote notes[2] = {note(61, time_of(0, 1), time_of(1, 1)), note(61, time_of(1, 1), time_of(1, 1))};
+    notes[0].spelled = true;
+    notes[0].letter = PITCH_LETTER_C;
+    notes[0].accidental = 1;
+    LaneSpanId melody = add_notes(plan, form, PLAN_LANE_MELODY, 0, bars(0, 2), notes, 2);
+    assert(plan_lane_span_set_state(plan, melody, PLAN_STATE_GIVEN) == PLAN_OK);
+    RenderedPlan rendered;
+    assert(plan_render(plan, &rendered) == PLAN_RENDER_OK && rendered.count == 2);
+    const PitchSpelling *written = note_event_optional_pitch_spelling(rendered.events[0]);
+    const PitchSpelling *unwritten = note_event_optional_pitch_spelling(rendered.events[1]);
+    assert(pitch_spelling_letter(written) == PITCH_LETTER_C && pitch_spelling_accidental(written) == 1);
+    assert(pitch_spelling_octave(written) == 4);
+    assert(pitch_spelling_letter(unwritten) == PITCH_LETTER_D && pitch_spelling_accidental(unwritten) == -1);
     rendered_plan_destroy(&rendered);
     plan_destroy(plan);
 }
 
 int main(void) {
+    test_spelled_notes();
     test_render();
     test_material_is_left_out();
     test_layers_are_masked();

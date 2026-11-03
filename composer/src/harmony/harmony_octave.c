@@ -24,7 +24,7 @@ typedef struct {
     LaneSpanId target;
     NodeId owner;
     PlanSpan span;
-    PlanKey key;
+    AnalysisKey key;
     PhraseMetre metre;
     size_t count;
     BassRun runs[HARMONY_MAX_CHORDS];
@@ -36,18 +36,18 @@ typedef struct {
 } OctaveCandidate;
 
 /* The cells of the metre a note covers exactly, from its start to its end; none is not allowed. */
-static bool cells_of(const PhraseMetre *metre, PlanTime start, PlanTime length, size_t *cells) {
+static bool cells_of(const PhraseMetre *metre, Rational start, Rational length, size_t *cells) {
     size_t first;
     PlanSpan note = {start, length};
     return length.num > 0 && harmony_metre_find_cells(metre, note, &first, cells);
 }
 
 /* The scale degree (1 to 7) of a pitch class in the key, 0 when it is not in the scale. */
-static int degree_of(const PlanKey *key, int pc) {
+static int degree_of(const AnalysisKey *key, int pc) {
     static const int MAJOR[12] = {1, 0, 2, 0, 3, 4, 0, 5, 0, 6, 0, 7};
     static const int MINOR[12] = {1, 0, 2, 3, 0, 4, 0, 5, 6, 0, 7, 7};
-    int relative = ((pc - key->tonic_pitch_class) % 12 + 12) % 12;
-    return key->mode == PLAN_MODE_MINOR ? MINOR[relative] : MAJOR[relative];
+    int relative = ((pc - analysis_key_tonic_pitch_class(key)) % 12 + 12) % 12;
+    return key->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR[relative] : MAJOR[relative];
 }
 
 static bool is_step(int a, int b) {
@@ -77,27 +77,27 @@ static bool octave_context_read(const PiecePlan *plan, LaneSpanId target, Octave
     if (found == 0 || found > HARMONY_MAX_CHORDS) {
         return false;
     }
-    PlanTime position = context.span.start;
+    Rational position = context.span.start;
     int previous_degree = 0;
     for (size_t i = 0; i < found; i++) {
         PlanSpan span = plan_lane_span_span(plan, ids[i]);
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
-        PlanTime end;
-        if (plan_lane_span_state(plan, ids[i]) != PLAN_STATE_GIVEN || plan_time_compare(span.start, position) != 0 ||
+        Rational end;
+        if (plan_lane_span_state(plan, ids[i]) != PLAN_STATE_GIVEN || rational_cmp(span.start, position) != 0 ||
             plan_span_end(span, &end) != PLAN_OK) {
             return false;
         }
-        PlanTime at = {0, 1};
+        Rational at = {0, 1};
         for (size_t n = 0; n < notes->note_count; n++) {
             const PlanNote *note = &notes->notes[n];
             size_t cells;
-            PlanTime note_start;
-            if (plan_time_compare(note->offset, at) != 0 || plan_time_add(span.start, at, &note_start) != PLAN_OK ||
+            Rational note_start;
+            if (rational_cmp(note->offset, at) != 0 || rational_add(span.start, at, &note_start) != RATIONAL_OK ||
                 !cells_of(&context.metre, note_start, note->duration, &cells) || cells == 0 ||
-                plan_time_add(at, note->duration, &at) != PLAN_OK) {
+                rational_add(at, note->duration, &at) != RATIONAL_OK) {
                 return false;
             }
-            int pc = ((note->midi_pitch % 12) + 12) % 12;
+            int pc = ((note->midi % 12) + 12) % 12;
             int degree = degree_of(&context.key, pc);
             if (degree == 0) {
                 return false;
@@ -117,23 +117,23 @@ static bool octave_context_read(const PiecePlan *plan, LaneSpanId target, Octave
             context.count++;
             previous_degree = degree;
         }
-        if (plan_time_compare(at, span.length) != 0) {
+        if (rational_cmp(at, span.length) != 0) {
             return false;
         }
         position = end;
     }
-    PlanTime span_end;
+    Rational span_end;
     size_t total = 0;
     for (size_t i = 0; i < context.count; i++) {
         total += context.runs[i].cells;
     }
-    if (plan_span_end(context.span, &span_end) != PLAN_OK || plan_time_compare(position, span_end) != 0 ||
+    if (plan_span_end(context.span, &span_end) != PLAN_OK || rational_cmp(position, span_end) != 0 ||
         total != context.metre.cells || context.count < 2) {
         return false;
     }
     /* The rule's scale starts and ends on the tonic. */
-    if (context.runs[0].pc != context.key.tonic_pitch_class ||
-        context.runs[context.count - 1].pc != context.key.tonic_pitch_class) {
+    if (context.runs[0].pc != analysis_key_tonic_pitch_class(&context.key) ||
+        context.runs[context.count - 1].pc != analysis_key_tonic_pitch_class(&context.key)) {
         return false;
     }
     *out = context;
@@ -145,7 +145,7 @@ static bool octave_context_read(const PiecePlan *plan, LaneSpanId target, Octave
  * (the diminished ones in first inversion only) and V7 in every inversion. The key says which pitch
  * class each has in the bass, so this is a search through standard-harmony's chords, not a table.
  */
-static size_t options_for(const PlanKey *key, int pc, PhraseChord *out) {
+static size_t options_for(const AnalysisKey *key, int pc, PhraseChord *out) {
     size_t count = 0;
     PhraseChord chord;
     for (int degree = 1; degree <= 7; degree++) {
@@ -153,11 +153,11 @@ static size_t options_for(const PlanKey *key, int pc, PhraseChord *out) {
             for (int variant = 0; variant < 2; variant++) {
                 int bass;
                 bool made = variant == 0 ? harmony_make_chord(key->mode, degree, inversion, false, false, 1, &chord)
-                                         : (key->mode == PLAN_MODE_MINOR && degree == 7 &&
+                                         : (key->mode == KEY_STRUCTURE_MODE_MINOR && degree == 7 &&
                                             harmony_make_leading_tone(key->mode, inversion, 1, &chord));
                 /* A diminished triad is not written in root position. */
-                bool diminished = made && ((key->mode == PLAN_MODE_MAJOR && degree == 7) ||
-                                           (key->mode == PLAN_MODE_MINOR && (degree == 2 || chord.chord.leading_tone)));
+                bool diminished = made && ((key->mode == KEY_STRUCTURE_MODE_MAJOR && degree == 7) ||
+                                           (key->mode == KEY_STRUCTURE_MODE_MINOR && (degree == 2 || chord.chord.leading_tone)));
                 if (made && !(diminished && inversion == 0) && harmony_chord_bass_pc(key, &chord, &bass) &&
                     bass == pc && count < MAX_OPTIONS_PER_PC) {
                     out[count++] = chord;
@@ -247,7 +247,7 @@ static bool octave_generate(const PiecePlan *plan, FillTarget target, FillRng *r
         for (size_t i = 0; i < kept_count; i++) {
             repeat = repeat || same_chords(kept[i], scratch);
         }
-        HeardPhrase heard = {scratch->chords, read.count, read.key.mode, PLAN_CADENCE_PAC,
+        HeardPhrase heard = {scratch->chords, read.count, read.key.mode, CADENCE_TYPE_PERFECT_AUTHENTIC,
                              read.metre.cells_per_bar, read.metre.cell_length, true, NULL, false, false, NULL, NULL, false,
                              &read.metre};
         PhraseVerdict verdict;
@@ -321,7 +321,7 @@ bool harmony_octave_check(const void *payload, FillCheck *out) {
     if (!line || !out) {
         return false;
     }
-    heard = (HeardPhrase){line->chords, line->context.count, line->context.key.mode, PLAN_CADENCE_PAC,
+    heard = (HeardPhrase){line->chords, line->context.count, line->context.key.mode, CADENCE_TYPE_PERFECT_AUTHENTIC,
                           line->context.metre.cells_per_bar, line->context.metre.cell_length, true, NULL, false, false, NULL, NULL, false,
                           &line->context.metre};
     memset(out, 0, sizeof(*out));

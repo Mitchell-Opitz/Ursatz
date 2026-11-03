@@ -11,6 +11,7 @@
 #include <time/musical_time.h>
 #include <time/note_value.h>
 #include <time/time_signature.h>
+#include <time/time_rational.h>
 #include <time/time_span.h>
 
 #include "texture/texture_internal.h"
@@ -67,9 +68,9 @@ static bool meter_map_of(const PlanMeter *meter, MeterMap **out) {
     return ok;
 }
 
-/* A note of a track and voice from onset to end ticks of the target, which starts phase ticks into a bar. */
-static bool add_note(Hearing *hearing, const AccompContext *context, size_t track, size_t voice, long onset, long end,
-                     int pitch) {
+/* A note of a track and voice from onset to end of the target, which starts phase into a bar. */
+static bool add_note(Hearing *hearing, const AccompContext *context, size_t track, size_t voice, Rational onset,
+                     Rational end, int pitch) {
     MusicalTime *start = NULL;
     MusicalTime *stop = NULL;
     TimeSpan *span = NULL;
@@ -84,8 +85,8 @@ static bool add_note(Hearing *hearing, const AccompContext *context, size_t trac
         hearing->spans = spans;
         hearing->span_capacity = capacity;
     }
-    if (musical_time_create(context->phase + onset, MELODY_TICKS, &start) == MUSICAL_TIME_OK &&
-        musical_time_create(context->phase + end, MELODY_TICKS, &stop) == MUSICAL_TIME_OK &&
+    if (musical_time_from_rational(position_add(context->phase, onset), &start) == TIME_RATIONAL_OK &&
+        musical_time_from_rational(position_add(context->phase, end), &stop) == TIME_RATIONAL_OK &&
         time_span_create(start, stop, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK) {
         snprintf(id, sizeof(id), "n%u", hearing->next_id++);
         hearing->spans[hearing->span_count++] = span;
@@ -124,7 +125,7 @@ bool accomp_hear(const AccompContext *context, const AccompCandidate *candidate,
     for (size_t voice = 0; ok && voice < ACCOMP_VOICES; voice++) {
         for (size_t n = 0; ok && n < candidate->note_count[voice]; n++) {
             const AccompNote *note = &candidate->notes[voice][n];
-            ok = add_note(&hearing, context, TRACK_ACCOMPANIMENT, voice, note->onset, note->onset + note->duration,
+            ok = add_note(&hearing, context, TRACK_ACCOMPANIMENT, voice, note->onset, position_add(note->onset, note->duration),
                           note->pitch);
         }
     }

@@ -11,7 +11,7 @@
 #define BEGINNING_UNITS 4
 
 /* The shape of the chords of the first half: a phrase model if it has room for its cadence, else the cadential one. */
-static PlanHarmonyShapeKind shape_for(const GrowThemeRequest *request, PlanCadenceType cadence) {
+static PlanHarmonyShapeKind shape_for(const GrowThemeRequest *request, CadenceType cadence) {
     size_t cells = request->bars / 2 * request->cells_per_bar;
     return cells >= harmony_phrase_room_cells(cadence, request->cells_per_bar) ? PLAN_HARMONY_SHAPE_PHRASE_MODEL
                                                                                : PLAN_HARMONY_SHAPE_CADENTIAL;
@@ -40,7 +40,7 @@ bool grow_beginning_draw(const GrowThemeRequest *request, FillRng *rng, GrowThem
         uint64_t response = fill_rng_below(rng, 2);
         spec->statement_response = can_respond && response == 1;
         if (!grow_idea_develop(spec, GROW_PLACE_REPETITION, &spec->developed[GROW_PLACE_REPETITION]) ||
-            plan_time_compare(spec->developed[GROW_PLACE_REPETITION].length,
+            rational_cmp(spec->developed[GROW_PLACE_REPETITION].length,
                               grow_scaled(grow_unit(request), SECOND_UNITS)) > 0) {
             return false;
         }

@@ -42,8 +42,8 @@ static bool same_melody(const MelodyCandidate *a, const MelodyCandidate *b) {
         }
     }
     for (size_t i = 0; i < a->count; i++) {
-        if (a->notes[i].pitch != b->notes[i].pitch || a->notes[i].onset != b->notes[i].onset ||
-            a->notes[i].duration != b->notes[i].duration) {
+        if (a->notes[i].pitch != b->notes[i].pitch || rational_cmp(a->notes[i].onset, b->notes[i].onset) != 0 ||
+            rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
             return false;
         }
     }
@@ -152,17 +152,20 @@ static PlanResult melody_apply(PiecePlan *plan, FillTarget target, const FillCan
     }
     /* The plan must still be what the melody was made for. */
     if (!melody_context_read(plan, (LaneSpanId)target.id, read) || read->count != melody->context.count ||
-        read->length != melody->context.length || read->pickup != melody->context.pickup) {
+        rational_cmp(read->length, melody->context.length) != 0 ||
+        rational_cmp(read->pickup, melody->context.pickup) != 0) {
         result = PLAN_ERR_BAD_PAYLOAD;
     }
     /* The span starts with the pickup: the notes are written from its start, the pickup's first. */
     for (size_t i = 0; result == PLAN_OK && i < melody->pickup_count + melody->count; i++) {
         const MelodyNote *note = i < melody->pickup_count ? &melody->pickup_notes[i]
                                                            : &melody->notes[i - melody->pickup_count];
-        notes[i].midi_pitch = note->pitch;
-        result = melody_time(note->onset + melody->context.pickup, &notes[i].offset);
-        if (result == PLAN_OK) {
-            result = melody_time(note->duration, &notes[i].duration);
+        notes[i].midi = note->pitch;
+        notes[i].spelled = false;
+        notes[i].offset = position_add(note->onset, melody->context.pickup);
+        notes[i].duration = note->duration;
+        if (position_is_far(notes[i].offset) || position_is_far(notes[i].duration)) {
+            result = PLAN_ERR_BAD_TIME;
         }
     }
     if (result == PLAN_OK) {

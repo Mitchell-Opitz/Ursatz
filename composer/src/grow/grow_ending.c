@@ -14,13 +14,13 @@ static const size_t IDEA_START[GROW_PLACE_COUNT] = {0, 2, 4, 5, 6};
 static const size_t IDEA_UNITS[GROW_PLACE_COUNT] = {2, 2, 1, 1, 2};
 
 /* The longest leading fragment of at most `wanted` notes that fits an idea of `room`; 0 when none does. */
-static size_t fitting_fragment(GrowThemeSpec *spec, size_t slot, size_t wanted, PlanTime room) {
+static size_t fitting_fragment(GrowThemeSpec *spec, size_t slot, size_t wanted, Rational room) {
     GrowPlace idea = slot == 0 ? GROW_PLACE_FRAGMENT_1 : GROW_PLACE_FRAGMENT_2;
     size_t most = grow_idea_source(spec, idea)->note_count - 1;
     for (size_t length = wanted < most ? wanted : most; length >= 1; length--) {
         Motive result;
         spec->fragment_notes[slot] = length;
-        if (grow_idea_develop(spec, idea, &result) && plan_time_compare(result.length, room) <= 0) {
+        if (grow_idea_develop(spec, idea, &result) && rational_cmp(result.length, room) <= 0) {
             return length;
         }
     }
@@ -28,16 +28,16 @@ static size_t fitting_fragment(GrowThemeSpec *spec, size_t slot, size_t wanted, 
 }
 
 /* Develops an idea of the ending from m0 and keeps it if it fits `units` eighths of the theme. */
-static bool keep_idea(GrowThemeSpec *spec, GrowPlace idea, PlanTime unit, size_t units) {
+static bool keep_idea(GrowThemeSpec *spec, GrowPlace idea, Rational unit, size_t units) {
     if (!grow_idea_develop(spec, idea, &spec->developed[idea]) ||
-        plan_time_compare(spec->developed[idea].length, grow_scaled(unit, units)) > 0) {
+        rational_cmp(spec->developed[idea].length, grow_scaled(unit, units)) > 0) {
         return false;
     }
     spec->has_developed[idea] = true;
     return true;
 }
 
-static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, PlanTime unit) {
+static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, Rational unit) {
     size_t first = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
     size_t second = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
     size_t count = grow_idea_source(spec, GROW_PLACE_CADENTIAL)->note_count;
@@ -73,13 +73,13 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
 }
 
 /* A consequent restates the basic idea and ends with a contrasting idea that is not the antecedent's. */
-static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, PlanTime unit) {
+static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, Rational unit) {
     const MotiveDevSpec *avoid = spec->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT ? &spec->contrast : NULL;
     /* It ends in the cadence's tone: the tonic for a perfect authentic cadence, the third for an imperfect one. */
-    PlanKey ends_in = request->has_end_change ? request->end_key : request->key;
-    int tonic = ends_in.tonic_pitch_class;
-    int want = request->cadence == PLAN_CADENCE_PAC ? tonic
-               : request->cadence == PLAN_CADENCE_IAC ? (tonic + (ends_in.mode == PLAN_MODE_MINOR ? 3 : 4)) % 12
+    AnalysisKey ends_in = request->has_end_change ? request->end_key : request->key;
+    int tonic = analysis_key_tonic_pitch_class(&ends_in);
+    int want = request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? tonic
+               : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + (ends_in.mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4)) % 12
                                                       : -1;
     /* A contrasting idea with a motive of its own is that motive as it is: nothing to draw. */
     bool own_contrast = grow_idea_own(spec, GROW_PLACE_CONSEQUENT_CONTRAST);
@@ -102,7 +102,7 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
 }
 
 /* A cadential ending is two ideas liquidated from m0, the second at least as much as the first. */
-static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, PlanTime unit) {
+static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, Rational unit) {
     size_t count = grow_idea_source(spec, GROW_PLACE_CADENTIAL_2)->note_count;
     size_t most = count - 1;
     size_t drop_most = count / 2 > 1 ? count / 2 : 1;
@@ -119,7 +119,7 @@ static bool draw_cadential(const GrowThemeRequest *request, FillRng *rng, GrowTh
 }
 
 bool grow_ending_draw(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec) {
-    PlanTime unit = grow_unit(request);
+    Rational unit = grow_unit(request);
     if (unit.num == 0) {
         return false;
     }

@@ -20,7 +20,7 @@
 typedef struct {
     int beats_per_bar;
     int beat_unit;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int bars;
     PlanHarmonyShape shape;
 } Scenario;
@@ -31,9 +31,9 @@ typedef struct {
     PlanSpan span;
 } Fixture;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
@@ -54,14 +54,13 @@ static Fixture build(const Scenario *scenario) {
     assert(plan_add_lane_span(fixture.plan, owner, PLAN_LANE_METER, 0, fixture.span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));
-    payload.key.tonic_pitch_class = 0;
-    payload.key.mode = scenario->mode;
+    payload.key = plan_key_of_pitch_class(0, scenario->mode);
     assert(plan_add_lane_span(fixture.plan, owner, PLAN_LANE_KEY, 0, fixture.span, &payload, &id) == PLAN_OK);
     assert(plan_lane_span_set_state(fixture.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
 
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, "I");
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    payload.harmony.has_function = false;
     assert(plan_add_lane_span(fixture.plan, owner, PLAN_LANE_HARMONY, 0, fixture.span, &payload, &fixture.target) ==
            PLAN_OK);
     PlanConstraint shape = {PLAN_CONSTRAINT_HARMONY_SHAPE, {0}};
@@ -121,7 +120,7 @@ static void check_filled(const Scenario *scenario, const Fixture *fixture) {
     /* A span that ends on a root-position V keeps it off the bar's first cell. */
     if (strcmp(last, "V") == 0) {
         PlanSpan span = plan_lane_span_span(fixture->plan, ids[count - 1]);
-        PlanTime offset = fraction(span.start.num * (long)(scenario->beat_unit), span.start.den);
+        Rational offset = fraction(span.start.num * (long)(scenario->beat_unit), span.start.den);
         assert(offset.num % scenario->beats_per_bar != 0 || offset.den != 1);
     }
     assert(harmony_read_lane(fixture->plan, fixture->span, scenario->mode, chords, &read, &metre));
@@ -186,7 +185,7 @@ static void test_every_meter_and_shape(void) {
                         memset(&scenario, 0, sizeof(scenario));
                         scenario.beats_per_bar = METERS[m][0];
                         scenario.beat_unit = METERS[m][1];
-                        scenario.mode = (PlanKeyMode)mode;
+                        scenario.mode = (KeyStructureMode)mode;
                         scenario.bars = bars;
                         scenario.shape.kind = PLAN_HARMONY_SHAPE_PROLONGATION;
                         scenario.shape.starts_on = ANCHORS[a][0];

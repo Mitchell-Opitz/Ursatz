@@ -33,8 +33,8 @@ typedef struct {
 
 static PlanSpan bars(long start, long length) {
     PlanSpan span;
-    assert(plan_time_make(start, 1, &span.start) == PLAN_OK);
-    assert(plan_time_make(length, 1, &span.length) == PLAN_OK);
+    assert(rational_make(start, 1, &span.start) == RATIONAL_OK);
+    assert(rational_make(length, 1, &span.length) == RATIONAL_OK);
     return span;
 }
 
@@ -71,11 +71,12 @@ static PlanLanePayload meter_payload(void) {
     return payload;
 }
 
-static PlanLanePayload harmony_payload(const char *roman, PlanHarmonicFunction function) {
+static PlanLanePayload harmony_payload(const char *roman, int function) {
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
     strncpy(payload.harmony.roman_numeral, roman, PLAN_ROMAN_NUMERAL_MAX - 1);
-    payload.harmony.function = function;
+    payload.harmony.has_function = function >= 0;
+    payload.harmony.function = function >= 0 ? (HarmonicFunction)function : HARMONIC_FUNCTION_TONIC;
     return payload;
 }
 
@@ -127,15 +128,15 @@ int main(void) {
     assert(plan_node_child_count(plan, phrase) == 2);
     PlanSpan first = plan_node_span(plan, plan_node_child_at(plan, phrase, 0));
     PlanSpan second = plan_node_span(plan, plan_node_child_at(plan, phrase, 1));
-    PlanTime first_end;
-    PlanTime second_end;
-    PlanTime phrase_end;
+    Rational first_end;
+    Rational second_end;
+    Rational phrase_end;
     assert(plan_span_end(first, &first_end) == PLAN_OK);
     assert(plan_span_end(second, &second_end) == PLAN_OK);
     assert(plan_span_end(plan_node_span(plan, phrase), &phrase_end) == PLAN_OK);
-    assert(plan_time_compare(first.start, plan_node_span(plan, phrase).start) == 0);
-    assert(plan_time_compare(first_end, second.start) == 0);
-    assert(plan_time_compare(second_end, phrase_end) == 0);
+    assert(rational_cmp(first.start, plan_node_span(plan, phrase).start) == 0);
+    assert(rational_cmp(first_end, second.start) == 0);
+    assert(rational_cmp(second_end, phrase_end) == 0);
 
     /* Structure rules refuse bad additions. */
     NodeId rejected = PLAN_NODE_NONE;
@@ -153,29 +154,30 @@ int main(void) {
 
     PlanLanePayload key;
     memset(&key, 0, sizeof(key));
-    key.key.tonic_pitch_class = 0;
-    key.key.mode = PLAN_MODE_MAJOR;
+    key.key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
     LaneSpanId key_span = add_lane(plan, section, PLAN_LANE_KEY, 0, bars(0, 8), &key);
 
-    PlanLanePayload tonic = harmony_payload("I", PLAN_FUNCTION_TONIC);
-    PlanLanePayload dominant = harmony_payload("V", PLAN_FUNCTION_DOMINANT);
-    PlanLanePayload predominant = harmony_payload("ii6", PLAN_FUNCTION_PREDOMINANT);
+    PlanLanePayload tonic = harmony_payload("I", HARMONIC_FUNCTION_TONIC);
+    PlanLanePayload dominant = harmony_payload("V", HARMONIC_FUNCTION_DOMINANT);
+    PlanLanePayload predominant = harmony_payload("ii6", HARMONIC_FUNCTION_PREDOMINANT);
     LaneSpanId harmony_one = add_lane(plan, basic_idea, PLAN_LANE_HARMONY, 0, bars(0, 2), &tonic);
     LaneSpanId harmony_two = add_lane(plan, repetition, PLAN_LANE_HARMONY, 0, bars(2, 2), &dominant);
     add_lane(plan, continuation, PLAN_LANE_HARMONY, 0, bars(4, 2), &predominant);
     add_lane(plan, continuation, PLAN_LANE_HARMONY, 0, bars(6, 1), &dominant);
     add_lane(plan, continuation, PLAN_LANE_HARMONY, 0, bars(7, 1), &tonic);
     assert(strcmp(plan_lane_span_payload(plan, harmony_two)->harmony.roman_numeral, "V") == 0);
-    assert(plan_lane_span_payload(plan, harmony_two)->harmony.function == PLAN_FUNCTION_DOMINANT);
+    assert(plan_lane_span_payload(plan, harmony_two)->harmony.function == HARMONIC_FUNCTION_DOMINANT);
 
     PlanNote melody_notes[2];
     memset(melody_notes, 0, sizeof(melody_notes));
-    melody_notes[0].midi_pitch = 64;
-    assert(plan_time_make(0, 1, &melody_notes[0].offset) == PLAN_OK);
-    assert(plan_time_make(1, 2, &melody_notes[0].duration) == PLAN_OK);
-    melody_notes[1].midi_pitch = 67;
-    assert(plan_time_make(1, 2, &melody_notes[1].offset) == PLAN_OK);
-    assert(plan_time_make(1, 2, &melody_notes[1].duration) == PLAN_OK);
+    melody_notes[0].midi = 64;
+    melody_notes[0].spelled = false;
+    assert(rational_make(0, 1, &melody_notes[0].offset) == RATIONAL_OK);
+    assert(rational_make(1, 2, &melody_notes[0].duration) == RATIONAL_OK);
+    melody_notes[1].midi = 67;
+    melody_notes[1].spelled = false;
+    assert(rational_make(1, 2, &melody_notes[1].offset) == RATIONAL_OK);
+    assert(rational_make(1, 2, &melody_notes[1].duration) == RATIONAL_OK);
     PlanLanePayload melody;
     memset(&melody, 0, sizeof(melody));
     melody.notes.notes = melody_notes;
@@ -183,7 +185,7 @@ int main(void) {
     LaneSpanId melody_span = add_lane(plan, m1, PLAN_LANE_MELODY, 0, bars(0, 1), &melody);
     assert(plan_lane_span_payload(plan, melody_span)->notes.note_count == 2);
     assert(plan_lane_span_payload(plan, melody_span)->notes.notes != melody_notes);
-    assert(plan_lane_span_payload(plan, melody_span)->notes.notes[1].midi_pitch == 67);
+    assert(plan_lane_span_payload(plan, melody_span)->notes.notes[1].midi == 67);
 
     LaneSpanId overlap = PLAN_LANE_SPAN_NONE;
     assert(plan_add_lane_span(plan, presentation, PLAN_LANE_HARMONY, 0, bars(1, 2), &tonic, &overlap) ==
@@ -202,7 +204,7 @@ int main(void) {
     PlanConstraint length = {PLAN_CONSTRAINT_LENGTH_BARS, {0}};
     length.params.bars = 8;
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
-    cadence.params.cadence = PLAN_CADENCE_PAC;
+    cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PlanConstraint motive_ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
     motive_ref.params.motive.motive = m1;
     motive_ref.params.motive.transform = PLAN_TRANSFORM_INVERTED;
@@ -210,7 +212,7 @@ int main(void) {
     assert(plan_node_add_constraint(plan, phrase, &cadence) == PLAN_OK);
     assert(plan_node_add_constraint(plan, fragment, &motive_ref) == PLAN_OK);
     assert(plan_node_constraint_count(plan, phrase) == 2);
-    assert(plan_node_constraint_at(plan, phrase, 1)->params.cadence == PLAN_CADENCE_PAC);
+    assert(plan_node_constraint_at(plan, phrase, 1)->params.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
     assert(plan_node_constraint_at(plan, fragment, 0)->params.motive.motive == m1);
     assert(plan_node_constraint_at(plan, phrase, 2) == NULL);
     assert(plan_lane_span_add_constraint(plan, harmony_two, &motive_ref) == PLAN_OK);
@@ -227,10 +229,11 @@ int main(void) {
     /* Everything starts Constrained and moves to Realized and back. */
     assert(plan_node_state(plan, phrase) == PLAN_STATE_CONSTRAINED);
     assert(plan_lane_span_state(plan, melody_span) == PLAN_STATE_CONSTRAINED);
-    melody_notes[1].midi_pitch = 69;
+    melody_notes[1].midi = 69;
+    melody_notes[1].spelled = false;
     assert(plan_lane_span_write(plan, melody_span, &melody) == PLAN_OK);
     assert(plan_lane_span_state(plan, melody_span) == PLAN_STATE_REALIZED);
-    assert(plan_lane_span_payload(plan, melody_span)->notes.notes[1].midi_pitch == 69);
+    assert(plan_lane_span_payload(plan, melody_span)->notes.notes[1].midi == 69);
     assert(plan_lane_span_set_state(plan, melody_span, PLAN_STATE_CONSTRAINED) == PLAN_OK);
     assert(plan_node_set_state(plan, phrase, PLAN_STATE_REALIZED) == PLAN_OK);
     assert(plan_node_set_state(plan, phrase, PLAN_STATE_CONSTRAINED) == PLAN_OK);
@@ -260,9 +263,9 @@ int main(void) {
     assert(plan_lane_span_set_state(plan, key_span, PLAN_STATE_GIVEN) == PLAN_OK);
     PlanLanePayload bad_key;
     memset(&bad_key, 0, sizeof(bad_key));
-    bad_key.key.tonic_pitch_class = 7;
+    bad_key.key = plan_key_of_pitch_class(7, bad_key.key.mode);
     assert(plan_lane_span_write(plan, key_span, &bad_key) == PLAN_ERR_GIVEN_LOCKED);
-    assert(plan_lane_span_payload(plan, key_span)->key.tonic_pitch_class == 0);
+    assert(analysis_key_tonic_pitch_class(&plan_lane_span_payload(plan, key_span)->key) == 0);
 
     plan_destroy(plan);
     return 0;

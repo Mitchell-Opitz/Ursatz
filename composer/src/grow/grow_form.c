@@ -59,11 +59,11 @@ typedef struct {
     Motive previous; /* the idea before this one, else basic */
     Motive taken[4]; /* the motives already written for other ideas of the theme (m1 to m4) */
     size_t taken_count;
-    PlanTime room;   /* the longest a form may be: the motive node's bar, or the idea if it is shorter */
+    Rational room;   /* the longest a form may be: the motive node's bar, or the idea if it is shorter */
     PlanSpan idea;
     bool answers_in_dominant; /* the idea's chords start on the dominant: a response to the basic idea */
     bool has_cadence; /* the idea's melody ends in a cadence */
-    PlanCadenceType cadence;
+    CadenceType cadence;
     MotiveScore limit; /* the remoteness over which a form's connection is halved; denominator 0 is 3/4 */
 } Request;
 
@@ -117,7 +117,7 @@ unsigned grow_slot_function_bit(GrowSlot slot) {
 
 /* The motive_ref of the idea's melody span (voice 0), and that span's. False when the idea has none. */
 static bool idea_melody(const PiecePlan *plan, NodeId idea, PlanMotiveRef *ref, PlanSpan *span,
-                        const PlanCadenceType **cadence) {
+                        const CadenceType **cadence) {
     LaneSpanId ids[FORM_IDEAS];
     size_t found = plan_node_lane_spans(plan, idea, ids, FORM_IDEAS);
     for (size_t i = 0; i < found && i < FORM_IDEAS; i++) {
@@ -149,9 +149,9 @@ static void with_extras(const PiecePlan *plan, NodeId node, const MotiveDevelopC
         return;
     }
     for (size_t i = 0; i < motive->note_count; i++) {
-        if (basic->notes[i].midi_pitch != motive->notes[i].midi_pitch ||
-            plan_time_compare(basic->notes[i].offset, motive->notes[i].offset) != 0 ||
-            plan_time_compare(basic->notes[i].duration, motive->notes[i].duration) != 0) {
+        if (basic->notes[i].midi != motive->notes[i].midi ||
+            rational_cmp(basic->notes[i].offset, motive->notes[i].offset) != 0 ||
+            rational_cmp(basic->notes[i].duration, motive->notes[i].duration) != 0) {
             return;
         }
     }
@@ -202,12 +202,12 @@ static bool read_request(const PiecePlan *plan, FillTarget target, const MotiveD
     PlanSpan idea_span = {{0, 1}, {0, 1}};
     for (NodeId id = 1; id <= plan_node_count(plan) && idea == PLAN_NODE_NONE; id++) {
         PlanMotiveRef ref;
-        const PlanCadenceType *cadence = NULL;
+        const CadenceType *cadence = NULL;
         if (plan_node_kind(plan, id) == PLAN_NODE_IDEA && idea_melody(plan, id, &ref, &idea_span, &cadence) &&
             ref.motive == target.id) {
             idea = id;
             request.has_cadence = cadence != NULL;
-            request.cadence = cadence ? *cadence : PLAN_CADENCE_PAC;
+            request.cadence = cadence ? *cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
         }
     }
     if (idea == PLAN_NODE_NONE) {
@@ -237,15 +237,15 @@ static bool read_request(const PiecePlan *plan, FillTarget target, const MotiveD
             }
         }
     }
-    request.room = plan_time_compare(request.idea.length, node_span.length) < 0 ? request.idea.length : node_span.length;
+    request.room = rational_cmp(request.idea.length, node_span.length) < 0 ? request.idea.length : node_span.length;
     request.previous = request.basic;
     request.limit = context->remoteness_limit;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         PlanMotiveRef ref;
         PlanSpan span;
-        PlanTime end;
+        Rational end;
         if (id != idea && plan_node_kind(plan, id) == PLAN_NODE_IDEA && idea_melody(plan, id, &ref, &span, NULL) &&
-            plan_span_end(span, &end) == PLAN_OK && plan_time_compare(end, request.idea.start) == 0 &&
+            plan_span_end(span, &end) == PLAN_OK && rational_cmp(end, request.idea.start) == 0 &&
             ref.motive != request.ref.motive) {
             Motive before;
             if (read_node(plan, ref.motive, context, &before)) {
@@ -276,13 +276,13 @@ static bool within_range(const Motive *motive) {
     static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
     static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
     for (size_t i = 0; i < motive->note_count; i++) {
-        int pitch = motive->notes[i].midi_pitch;
+        int pitch = motive->notes[i].midi;
         if (pitch < FORM_LOW || pitch > FORM_HIGH) {
             return false;
         }
         if (motive->key_source != MOTIVE_KEY_UNSPECIFIED) {
-            int degree = ((pitch - motive->key.tonic_pitch_class) % 12 + 12) % 12;
-            if (!(motive->key.mode == PLAN_MODE_MINOR ? MINOR : MAJOR)[degree]) {
+            int degree = ((pitch - analysis_key_tonic_pitch_class(&motive->key)) % 12 + 12) % 12;
+            if (!(motive->key.mode == KEY_STRUCTURE_MODE_MINOR ? MINOR : MAJOR)[degree]) {
                 return false;
             }
         }
@@ -293,7 +293,7 @@ static bool within_range(const Motive *motive) {
 static int widest_leap(const Motive *motive) {
     int widest = 0;
     for (size_t i = 1; i < motive->note_count; i++) {
-        int leap = motive->notes[i].midi_pitch - motive->notes[i - 1].midi_pitch;
+        int leap = motive->notes[i].midi - motive->notes[i - 1].midi;
         widest = (leap < 0 ? -leap : leap) > widest ? (leap < 0 ? -leap : leap) : widest;
     }
     return widest;
@@ -304,7 +304,7 @@ static bool same_pitches(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch) {
+        if (a->notes[i].midi != b->notes[i].midi) {
             return false;
         }
     }
@@ -354,7 +354,7 @@ static void label_of(const Payload *payload, char *out, size_t size) {
 static bool form_fits(const Request *request, const Motive *motive) {
     int allowed = widest_leap(&request->basic) > FORM_LEAP ? widest_leap(&request->basic) : FORM_LEAP;
     return motive->form == MOTIVE_FORM_FULL && within_range(motive) && widest_leap(motive) <= allowed &&
-           plan_time_compare(motive->length, request->room) <= 0;
+           rational_cmp(motive->length, request->room) <= 0;
 }
 
 /* An idea that ends in a cadence ends on its tone: the tonic for a PAC, the third for an IAC. */
@@ -362,10 +362,10 @@ static bool cadence_tone_holds(const Request *request, const Motive *motive) {
     if (!request->has_cadence || motive->key_source == MOTIVE_KEY_UNSPECIFIED) {
         return true;
     }
-    int tonic = motive->key.tonic_pitch_class;
-    int last = ((motive->notes[motive->note_count - 1].midi_pitch - tonic) % 12 + 12) % 12;
-    int third = motive->key.mode == PLAN_MODE_MINOR ? 3 : 4;
-    return !((request->cadence == PLAN_CADENCE_PAC && last != 0) || (request->cadence == PLAN_CADENCE_IAC && last != third));
+    int tonic = analysis_key_tonic_pitch_class(&motive->key);
+    int last = ((motive->notes[motive->note_count - 1].midi - tonic) % 12 + 12) % 12;
+    int third = motive->key.mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4;
+    return !((request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC && last != 0) || (request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC && last != third));
 }
 
 /*
@@ -387,12 +387,12 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
     int lowest = 127;
     int highest = 0;
     for (size_t i = 0; i < result.note_count; i++) {
-        lowest = result.notes[i].midi_pitch < lowest ? result.notes[i].midi_pitch : lowest;
-        highest = result.notes[i].midi_pitch > highest ? result.notes[i].midi_pitch : highest;
+        lowest = result.notes[i].midi < lowest ? result.notes[i].midi : lowest;
+        highest = result.notes[i].midi > highest ? result.notes[i].midi : highest;
     }
     if (lowest < FORM_LOW && highest + 12 <= FORM_HIGH) {
         for (size_t i = 0; i < result.note_count; i++) {
-            result.notes[i].midi_pitch += 12;
+            result.notes[i].midi += 12;
         }
     }
     if (!form_fits(request, &result) || (!fragment && result.note_count != request->basic.note_count) ||

@@ -102,9 +102,9 @@ static int read_request(const Options *options, MotiveRandomOptions *out) {
         return cli_fail(CLI_EXIT_USAGE, "random-motive needs --mode and --meter\n%s", RANDOM_MOTIVE_USAGE_LINE);
     }
     if (cli_equals_ignore_case(options->mode_text, "major")) {
-        out->mode = PLAN_MODE_MAJOR;
+        out->mode = KEY_STRUCTURE_MODE_MAJOR;
     } else if (cli_equals_ignore_case(options->mode_text, "minor")) {
-        out->mode = PLAN_MODE_MINOR;
+        out->mode = KEY_STRUCTURE_MODE_MINOR;
     } else {
         return cli_fail(CLI_EXIT_USAGE, "--mode must be major or minor, not '%s'", options->mode_text);
     }

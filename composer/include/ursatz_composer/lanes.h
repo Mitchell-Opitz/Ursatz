@@ -1,7 +1,11 @@
 #ifndef URSATZ_COMPOSER_LANES_H
 #define URSATZ_COMPOSER_LANES_H
 
+#include <stdbool.h>
 #include <stddef.h>
+
+#include <semantics/analysis_key.h>
+#include <standard-harmony/harmonic_function.h>
 
 #include <ursatz_composer/piece_plan.h>
 
@@ -24,19 +28,6 @@ typedef enum {
     PLAN_LANE_INNER_VOICE
 } PlanLaneKind;
 
-typedef enum {
-    PLAN_MODE_MAJOR,
-    PLAN_MODE_MINOR
-} PlanKeyMode;
-
-typedef enum {
-    PLAN_FUNCTION_TONIC,
-    PLAN_FUNCTION_PREDOMINANT,
-    PLAN_FUNCTION_DOMINANT,
-    /* For chords read from an analysis, which records no function. */
-    PLAN_FUNCTION_UNKNOWN
-} PlanHarmonicFunction;
-
 /* beat_unit is the note value of one beat (4 for a quarter); bars_per_hyperbar is 0 when there is none. */
 typedef struct {
     int beats_per_bar;
@@ -44,25 +35,40 @@ typedef struct {
     int bars_per_hyperbar;
 } PlanMeter;
 
-/* tonic_pitch_class is 0 to 11, C = 0. */
-typedef struct {
-    int tonic_pitch_class;
-    PlanKeyMode mode;
-} PlanKey;
+/*
+ * A key on the plan's key lane is the library's AnalysisKey (R-242): a spelled tonic and a KeyStructureMode, id NULL.
+ * plan_key_of_pitch_class spells the tonic of a pitch class (0 to 11, C = 0, taken mod 12) with the fewest accidentals in
+ * its signature, sharps on a tie; analysis_key_tonic_pitch_class gives the pitch class back.
+ */
+AnalysisKey plan_key_of_pitch_class(int pitch_class, KeyStructureMode mode);
 
 #define PLAN_ROMAN_NUMERAL_MAX 16
 
 typedef struct {
     char roman_numeral[PLAN_ROMAN_NUMERAL_MAX];
-    PlanHarmonicFunction function;
+    HarmonicFunction function; /* meaningful only when has_function */
+    bool has_function;         /* false for chords read from an analysis, which records no function */
 } PlanHarmony;
 
-/* offset is measured from the start of the owning lane span. */
+/*
+ * A note is a MIDI number and an optional spelling (R-242): the letter and accidental the note was written with. Only
+ * notes read from MusicXML are spelled; the operators write unspelled notes, and render spells those in the key under
+ * them. offset is measured from the start of the owning lane span.
+ */
 typedef struct {
-    int midi_pitch;
-    PlanTime offset;
-    PlanTime duration;
+    int midi;
+    Rational offset;
+    Rational duration;
+    bool spelled;
+    PitchLetter letter;  /* meaningful only when spelled */
+    int accidental;      /* meaningful only when spelled */
 } PlanNote;
+
+/* A note the operators write: a MIDI number, unspelled. */
+static inline PlanNote plan_note(int midi, Rational offset, Rational duration) {
+    PlanNote note = {midi, offset, duration, false, PITCH_LETTER_C, 0};
+    return note;
+}
 
 /* Notes are copied in; a pointer read back stays valid until the plan is destroyed. */
 typedef struct {
@@ -73,7 +79,7 @@ typedef struct {
 /* Which member is used follows the lane: meter, key, harmony, or notes for bass, melody and inner voice. */
 typedef union {
     PlanMeter meter;
-    PlanKey key;
+    AnalysisKey key;
     PlanHarmony harmony;
     PlanNotes notes;
 } PlanLanePayload;
@@ -96,7 +102,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
  * for a Given span, PLAN_ERR_BAD_SPAN for any other length, and
  * PLAN_ERR_BAD_PAYLOAD when the payload no longer fits (notes past the new end).
  */
-PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, PlanTime new_length);
+PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, Rational new_length);
 
 bool plan_has_lane_span(const PiecePlan *plan, LaneSpanId id);
 /* The last id given out: ids run 1 to this count, and an id removed with its node (plan_remove_subtree) is not a span. */

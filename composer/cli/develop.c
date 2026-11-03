@@ -216,7 +216,7 @@ static bool parse_pitch(const char *text, int *out) {
     if (motive_from_notes_text(note, &options, &motive, NULL) != MOTIVE_OK || motive.note_count != 1) {
         return false;
     }
-    *out = motive.notes[0].midi_pitch;
+    *out = motive.notes[0].midi;
     return true;
 }
 
@@ -243,14 +243,14 @@ static const LengthValue VALUES[] = {{1, 1, "w"},  {3, 4, "h."},  {1, 2, "h"},  
                                {3, 16, "e."}, {1, 8, "e"}, {3, 32, "s."}, {1, 16, "s"}, {1, 32, "t"}};
 
 /* A length as one or more tokens: "q", or "q~ q" for a note (tie true) when no one value is the length. */
-static void append_length(char *out, size_t size, size_t *used, const char *pitch, PlanTime length, bool tie) {
+static void append_length(char *out, size_t size, size_t *used, const char *pitch, Rational length, bool tie) {
     bool first = true;
     while (length.num > 0) {
         const LengthValue *piece = NULL;
         for (size_t i = 0; i < sizeof(VALUES) / sizeof(VALUES[0]) && !piece; i++) {
-            PlanTime value;
-            plan_time_make(VALUES[i].num, VALUES[i].den, &value);
-            if (plan_time_compare(value, length) <= 0) {
+            Rational value;
+            rational_make(VALUES[i].num, VALUES[i].den, &value);
+            if (rational_cmp(value, length) <= 0) {
                 piece = &VALUES[i];
             }
         }
@@ -258,10 +258,10 @@ static void append_length(char *out, size_t size, size_t *used, const char *pitc
             append(out, size, used, "%s%s:%ld/%lu", first ? "" : "~ ", pitch, length.num, length.den);
             return;
         }
-        PlanTime value;
-        plan_time_make(piece->num, piece->den, &value);
-        PlanTime rest;
-        plan_time_make(length.num * (long)value.den - value.num * (long)length.den, length.den * value.den, &rest);
+        Rational value;
+        rational_make(piece->num, piece->den, &value);
+        Rational rest;
+        rational_sub(length, value, &rest);
         append(out, size, used, "%s%s:%s", first ? "" : " ", pitch, piece->name);
         if (rest.num > 0 && tie) {
             append(out, size, used, "~");
@@ -273,15 +273,14 @@ static void append_length(char *out, size_t size, size_t *used, const char *pitc
 
 static void motive_text(const Motive *motive, char *out, size_t size) {
     size_t used = 0;
-    PlanTime cursor = {0, 1};
+    Rational cursor = {0, 1};
     out[0] = '\0';
     for (size_t i = 0; i < motive->note_count; i++) {
         const PlanNote *note = &motive->notes[i];
-        PlanTime gap;
-        plan_time_make(note->offset.num * (long)cursor.den - cursor.num * (long)note->offset.den,
-                       note->offset.den * cursor.den, &gap);
+        Rational gap;
+        rational_sub(note->offset, cursor, &gap);
         char pitch[16];
-        motive_pitch_name(note->midi_pitch, pitch, sizeof(pitch));
+        motive_pitch_name(note->midi, pitch, sizeof(pitch));
         if (i > 0) {
             append(out, size, &used, " ");
         }
@@ -290,7 +289,7 @@ static void motive_text(const Motive *motive, char *out, size_t size) {
             append(out, size, &used, " ");
         }
         append_length(out, size, &used, pitch, note->duration, true);
-        plan_time_add(note->offset, note->duration, &cursor);
+        rational_add(note->offset, note->duration, &cursor);
     }
 }
 
@@ -310,16 +309,16 @@ static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *s
         return false;
     }
     /* The development begins on the barline after the source, and has room for a long augmentation. */
-    PlanTime bar;
-    plan_time_make(source->meter.beats_per_bar, (unsigned long)source->meter.beat_unit, &bar);
+    Rational bar;
+    rational_make(source->meter.beats_per_bar, (long long)source->meter.beat_unit, &bar);
     long bars = (source->length.num * (long)bar.den + (long)source->length.den * bar.num - 1) /
                 ((long)source->length.den * bar.num);
-    PlanTime start;
-    plan_time_make(bars * bar.num, bar.den, &start);
-    PlanTime room;
-    plan_time_make(source->length.num * MAX_FACTOR, source->length.den, &room);
-    PlanTime total;
-    plan_time_add(start, room, &total);
+    Rational start;
+    rational_make(bars * bar.num, bar.den, &start);
+    Rational room;
+    rational_mul_int(source->length, (long long)MAX_FACTOR, &room);
+    Rational total;
+    rational_add(start, room, &total);
     PlanSpan all = {{0, 1}, total};
     PlanSpan target_span = {start, room};
     NodeId form;
@@ -330,7 +329,7 @@ static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *s
               plan_add_given_node(scene->plan, form, PLAN_NODE_SECTION, all, &section) &&
               plan_add_given_node(scene->plan, section, PLAN_NODE_PHRASE, all, &phrase) &&
               plan_add_given_node(scene->plan, phrase, PLAN_NODE_IDEA, all, &idea) &&
-              motive_attach(scene->plan, idea, (PlanTime){0, 1}, source, "source", &scene->source, NULL) == PLAN_OK &&
+              motive_attach(scene->plan, idea, (Rational){0, 1}, source, "source", &scene->source, NULL) == PLAN_OK &&
               plan_add_node(scene->plan, idea, PLAN_NODE_MOTIVE, target_span, "development", &scene->target) == PLAN_OK;
     /* The meter and the key, so that a file written from the plan has them. */
     PlanLanePayload payload;

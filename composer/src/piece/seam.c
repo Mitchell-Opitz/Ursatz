@@ -37,7 +37,7 @@ NodeId piece_seam_find(const PiecePlan *plan) {
     return PLAN_NODE_NONE;
 }
 
-bool piece_seam_body_start(const PiecePlan *plan, PlanTime *out) {
+bool piece_seam_body_start(const PiecePlan *plan, Rational *out) {
     bool found = false;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
@@ -45,9 +45,9 @@ bool piece_seam_body_start(const PiecePlan *plan, PlanTime *out) {
         }
         for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
             const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-            PlanTime start = plan_node_span(plan, id).start;
+            Rational start = plan_node_span(plan, id).start;
             if (constraint->kind == PLAN_CONSTRAINT_PIECE_PART && constraint->params.piece_part.part == 1 &&
-                (!found || plan_time_compare(start, *out) < 0)) {
+                (!found || rational_cmp(start, *out) < 0)) {
                 *out = start;
                 found = true;
             }
@@ -56,50 +56,46 @@ bool piece_seam_body_start(const PiecePlan *plan, PlanTime *out) {
     return found;
 }
 
-static bool time_sub(PlanTime a, PlanTime b, PlanTime *out) {
-    return plan_time_make(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den, out) == PLAN_OK;
+static Rational later(Rational a, Rational b) {
+    return rational_cmp(a, b) >= 0 ? a : b;
 }
 
-static PlanTime later(PlanTime a, PlanTime b) {
-    return plan_time_compare(a, b) >= 0 ? a : b;
-}
-
-static PlanTime earlier(PlanTime a, PlanTime b) {
-    return plan_time_compare(a, b) <= 0 ? a : b;
+static Rational earlier(Rational a, Rational b) {
+    return rational_cmp(a, b) <= 0 ? a : b;
 }
 
 /* The part of a lane span inside the bar; false when none of it is. */
 static bool clip_span(PlanSpan span, PlanSpan bar, PlanSpan *out) {
-    PlanTime span_end;
-    PlanTime bar_end;
-    PlanTime end;
+    Rational span_end;
+    Rational bar_end;
+    Rational end;
     if (plan_span_end(span, &span_end) != PLAN_OK || plan_span_end(bar, &bar_end) != PLAN_OK) {
         return false;
     }
     out->start = later(span.start, bar.start);
     end = earlier(span_end, bar_end);
-    return plan_time_compare(out->start, end) < 0 && time_sub(end, out->start, &out->length);
+    return rational_cmp(out->start, end) < 0 && rational_sub(end, out->start, &out->length) == RATIONAL_OK;
 }
 
 /* The notes of a span that sound inside the clipped span, cut to it and measured from its start. */
 static size_t clip_notes(const PlanNotes *notes, PlanSpan from, PlanSpan to, PlanNote *out) {
-    PlanTime to_end;
+    Rational to_end;
     size_t count = 0;
     if (plan_span_end(to, &to_end) != PLAN_OK) {
         return 0;
     }
     for (size_t i = 0; i < notes->note_count; i++) {
-        PlanTime onset;
-        PlanTime end;
-        PlanTime start;
+        Rational onset;
+        Rational end;
+        Rational start;
         PlanNote note = notes->notes[i];
-        if (plan_time_add(from.start, note.offset, &onset) != PLAN_OK || plan_time_add(onset, note.duration, &end) != PLAN_OK ||
-            plan_time_compare(end, to.start) <= 0 || plan_time_compare(onset, to_end) >= 0) {
+        if (rational_add(from.start, note.offset, &onset) != RATIONAL_OK || rational_add(onset, note.duration, &end) != RATIONAL_OK ||
+            rational_cmp(end, to.start) <= 0 || rational_cmp(onset, to_end) >= 0) {
             continue;
         }
         start = later(onset, to.start);
         end = earlier(end, to_end);
-        if (!time_sub(start, to.start, &note.offset) || !time_sub(end, start, &note.duration)) {
+        if (rational_sub(start, to.start, &note.offset) != RATIONAL_OK || rational_sub(end, start, &note.duration) != RATIONAL_OK) {
             continue;
         }
         out[count++] = note;
@@ -158,11 +154,11 @@ static PiecePlan *make_slice(const PiecePlan *plan, PlanSpan bar, NodeId *sectio
     LaneSpanId keys[4];
     LaneSpanId meters[2];
     PlanLanePayload payload;
-    PlanTime bar_end;
+    Rational bar_end;
     if (!slice) {
         return NULL;
     }
-    bool ok = plan_span_end(bar, &bar_end) == PLAN_OK && time_sub(bar_end, whole.start, &whole.length) &&
+    bool ok = plan_span_end(bar, &bar_end) == PLAN_OK && rational_sub(bar_end, whole.start, &whole.length) == RATIONAL_OK &&
               plan_add_node(slice, PLAN_NODE_NONE, PLAN_NODE_FORM, whole, "slice", &form) == PLAN_OK &&
               plan_add_node(slice, form, PLAN_NODE_SECTION, bar, "slice", section) == PLAN_OK;
     size_t meter_count = plan_lane_find(plan, PLAN_LANE_METER, 0, bar, meters, 2);
@@ -195,7 +191,7 @@ static PiecePlan *make_slice(const PiecePlan *plan, PlanSpan bar, NodeId *sectio
     return slice;
 }
 
-GivenResult piece_seam_give(PiecePlan *plan, NodeId seam, PlanTime body_start) {
+GivenResult piece_seam_give(PiecePlan *plan, NodeId seam, Rational body_start) {
     PlanSpan bar = {body_start, plan_node_span(plan, seam).length};
     NodeId section;
     PiecePlan *slice = make_slice(plan, bar, &section);

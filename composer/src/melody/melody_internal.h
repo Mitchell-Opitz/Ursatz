@@ -8,12 +8,13 @@
 #include <ursatz_composer/motive.h>
 
 #include "harmony/harmony_internal.h"
+#include "util/position.h"
 
 /*
- * Inside the melody operator, time is a whole number of ticks from the start of the phrase, MELODY_TICKS to a
- * whole note. A time the plan holds that is not a whole number of ticks is not one the operator places on.
+ * Inside the melody operator, a time is a Rational position in whole notes from the start of the target (util/position.h).
+ * The shortest note the operator writes is a 128th: a density that would divide a cell into shorter ones keeps the cell.
  */
-#define MELODY_TICKS 128L
+#define MELODY_FINEST_NOTE_DENOMINATOR 128L
 #define MELODY_MAX_NOTES 256
 #define MELODY_MAX_BASS 256
 /* The most notes of a pickup (R-168). */
@@ -24,8 +25,8 @@
 
 /* One note of the bass lane: when it sounds, its pitch, and the chord it sounds under. */
 typedef struct {
-    long onset;
-    long end;
+    Rational onset;
+    Rational end;
     int pitch;
     size_t chord;
 } MelodyBass;
@@ -35,35 +36,35 @@ typedef struct {
     LaneSpanId target;
     NodeId owner;
     PlanSpan span;
-    PlanKey key;
+    AnalysisKey key;
     PhraseMetre metre;
-    long length;
-    long cell;
+    Rational length;
+    Rational cell;
     /*
-     * The anacrusis before the target (PLAN_CONSTRAINT_PICKUP): its ticks, 0 for none. The target's span is what follows
+     * The anacrusis before the target (PLAN_CONSTRAINT_PICKUP): its length, 0 for none. The target's span is what follows
      * it, so the notes of the pickup have onsets from -pickup, and the melody span the notes are written to starts
-     * `pickup` ticks before the target. The pitch classes of the chord sounding under the pickup (the harmony span
+     * `pickup` before the target. The pitch classes of the chord sounding under the pickup (the harmony span
      * before the target) are `pickup_mask`, 0 when there is none, as at the start of a plan.
      */
-    long pickup;
+    Rational pickup;
     unsigned pickup_mask;
     size_t count;
     PhraseChord chords[HARMONY_MAX_CHORDS];
-    long chord_start[HARMONY_MAX_CHORDS + 1]; /* the last entry is the phrase's length */
+    Rational chord_start[HARMONY_MAX_CHORDS + 1]; /* the last entry is the phrase's length */
     unsigned chord_mask[HARMONY_MAX_CHORDS];  /* the pitch classes of each chord, bit pc */
     unsigned chord_seventh[HARMONY_MAX_CHORDS]; /* the pitch class of its seventh, or 0 */
     MelodyBass bass[MELODY_MAX_BASS];
     size_t bass_count;
     bool has_cadence;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     bool motive_given; /* the motive is the original, not a development */
     PlanMotiveTransform transform;
     NodeId motive_node;
     size_t motive_count;
     int motive_pitch[MOTIVE_MAX_NOTES];
-    long motive_onset[MOTIVE_MAX_NOTES];
-    long motive_duration[MOTIVE_MAX_NOTES];
-    long motive_length;
+    Rational motive_onset[MOTIVE_MAX_NOTES];
+    Rational motive_duration[MOTIVE_MAX_NOTES];
+    Rational motive_length;
     /*
      * The tone roles of the motive's notes (R-215), from the motive_tones constraint of its node (motive_tones in the plan,
      * read through the motive_ref chain of a developed motive). motive_tone[k] is MELODY_TONE_CHORD, MELODY_TONE_NONE (no
@@ -76,13 +77,13 @@ typedef struct {
 
     /*
      * A target that stands for an idea or a subphrase of a phrase (not the whole phrase) reads the phrase it is in,
-     * and the melody written before it. Times are ticks from the start of the target, so the phrase starts at or
+     * and the melody written before it. Times are positions from the start of the target, so the phrase starts at or
      * before 0. The chord and bass lists are those under the target, the first and last clipped to it.
      */
     bool idea;
-    long phase;         /* ticks from the cell line at or before the target's start to the start (0 when it starts on one) */
-    long phrase_start;  /* ticks, at most 0 */
-    long phrase_length;
+    Rational phase;         /* from the cell line at or before the target's start to the start (0 when it starts on one) */
+    Rational phrase_start;  /* at most 0 */
+    Rational phrase_length;
     bool phrase_has_top; /* a melody note of the phrase is written before the target */
     int phrase_top;      /* the highest pitch of those */
     size_t phrase_before_notes; /* how many melody notes of the phrase are written before the target */
@@ -101,9 +102,9 @@ typedef struct {
 #define MELODY_TONE_CHORD (-1)
 #define MELODY_TONE_NONE (-2)
 
-/* Whether a tick of the target is the start of a cell of the meter (a strong beat). */
-static inline bool melody_on_cell(const MelodyContext *context, long tick) {
-    return (tick + context->phase) % context->cell == 0;
+/* Whether a position of the target is the start of a cell of the meter (a strong beat). */
+static inline bool melody_on_cell(const MelodyContext *context, Rational position) {
+    return position_is_multiple(position_add(position, context->phase), context->cell);
 }
 
 /* Where a target sits in its phrase's arch (see melody_role). A target that is the whole phrase is MELODY_ROLE_WHOLE. */
@@ -114,14 +115,14 @@ typedef enum {
     MELODY_ROLE_AFTER   /* the climax is written: every note is below it */
 } MelodyRole;
 
-/* The tick of the target at which the phrase's climax falls, which may lie before 0 or past the end. */
-long melody_climax_tick(const MelodyContext *context, const MelodyFillParams *params);
+/* The position of the target at which the phrase's climax falls, which may lie before 0 or past the end. */
+Rational melody_climax_position(const MelodyContext *context, const MelodyFillParams *params);
 MelodyRole melody_role(const MelodyContext *context, const MelodyFillParams *params);
 
 /* One note of a candidate. motive_index is the motive note it carries, or -1 for a note that fills the phrase. */
 typedef struct {
-    long onset;
-    long duration;
+    Rational onset;
+    Rational duration;
     int pitch;
     int motive_index;
     bool strong; /* it starts on a cell */
@@ -141,21 +142,19 @@ typedef struct {
     size_t pickup_count;
 } MelodyCandidate;
 
-/* A time in the plan as ticks from the start of the plan; false when it is not a whole number of them. */
-bool melody_ticks(PlanTime time, long *out);
-/* Ticks as a time in the plan. */
-PlanResult melody_time(long ticks, PlanTime *out);
+/* Sets every position of a context to 0, so a context that is not read still holds valid Rationals. */
+void melody_context_zero(MelodyContext *context);
 
 /* The pitch classes (bit pc of mask) of a chord in the key, and of its seventh (0 when it has none). */
-bool melody_chord_mask(const PlanKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);
-/* The index of the chord sounding at a tick of the phrase. */
-size_t melody_chord_at(const MelodyContext *context, long tick);
+bool melody_chord_mask(const AnalysisKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);
+/* The index of the chord sounding at a position of the phrase. */
+size_t melody_chord_at(const MelodyContext *context, Rational position);
 
 /*
  * Reads the harmony and bass under a phrase: the chord spans must tile the span exactly, none of them open, and
  * the bass spans must tile it. The target and the motive are not read. False when the phrase cannot be read.
  */
-bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, PlanKey key, MelodyContext *out);
+bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, AnalysisKey key, MelodyContext *out);
 
 /*
  * Reads the harmony, bass and motive under a Constrained melody span: the chord spans must tile the span exactly,

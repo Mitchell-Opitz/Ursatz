@@ -20,16 +20,16 @@
 typedef struct {
     const char *name;
     int tonic;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int beats;
     int unit;
     const char *motive;
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", 0, PLAN_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
-    {"G major 3/4", 7, PLAN_MODE_MAJOR, 3, 4, "B4:q D5:e C5:e A4:q"},
-    {"D minor 4/4", 2, PLAN_MODE_MINOR, 4, 4, "D4:q F4:e A4:e D5:h"},
+    {"C major 4/4", 0, KEY_STRUCTURE_MODE_MAJOR, 4, 4, "E4:q G4:e F4:e D4:q C4:q"},
+    {"G major 3/4", 7, KEY_STRUCTURE_MODE_MAJOR, 3, 4, "B4:q D5:e C5:e A4:q"},
+    {"D minor 4/4", 2, KEY_STRUCTURE_MODE_MINOR, 4, 4, "D4:q F4:e A4:e D5:h"},
 };
 #define SCENARIO_COUNT (sizeof(SCENARIOS) / sizeof(SCENARIOS[0]))
 
@@ -48,14 +48,13 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     GrowRequest request;
     memset(&request, 0, sizeof(request));
     request.motive = motive;
-    request.key.tonic_pitch_class = scenario->tonic;
-    request.key.mode = scenario->mode;
+    request.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     request.meter.beats_per_bar = scenario->beats;
     request.meter.beat_unit = scenario->unit;
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
-    request.cadence = PLAN_CADENCE_PAC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     request.has_voicing = true;
     request.voicing.write_soprano = write_soprano;
     return request;

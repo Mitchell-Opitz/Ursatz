@@ -17,7 +17,7 @@
 
 typedef struct {
     const char *name;
-    PlanKeyMode mode;
+    KeyStructureMode mode;
     int beats;
     int unit;
     bool has_key;
@@ -25,11 +25,11 @@ typedef struct {
 } Scenario;
 
 static const Scenario SCENARIOS[] = {
-    {"C major 4/4", PLAN_MODE_MAJOR, 4, 4, false, 0},
-    {"D minor 4/4", PLAN_MODE_MINOR, 4, 4, true, 2},
-    {"A minor 3/4", PLAN_MODE_MINOR, 3, 4, false, 0},
-    {"D major 6/8", PLAN_MODE_MAJOR, 6, 8, true, 2},
-    {"G major 2/4", PLAN_MODE_MAJOR, 2, 4, true, 7},
+    {"C major 4/4", KEY_STRUCTURE_MODE_MAJOR, 4, 4, false, 0},
+    {"D minor 4/4", KEY_STRUCTURE_MODE_MINOR, 4, 4, true, 2},
+    {"A minor 3/4", KEY_STRUCTURE_MODE_MINOR, 3, 4, false, 0},
+    {"D major 6/8", KEY_STRUCTURE_MODE_MAJOR, 6, 8, true, 2},
+    {"G major 2/4", KEY_STRUCTURE_MODE_MAJOR, 2, 4, true, 7},
 };
 
 #define SEEDS 20
@@ -42,17 +42,16 @@ static MotiveRandomOptions options_of(const Scenario *scenario, unsigned long se
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
     options.has_key = scenario->has_key;
-    options.key.tonic_pitch_class = scenario->tonic;
-    options.key.mode = scenario->mode;
+    options.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
     options.form = MOTIVE_FORM_FULL;
     options.count = COUNT;
     options.seed = seed;
     return options;
 }
 
-static PlanTime time_of(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational time_of(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
@@ -61,33 +60,33 @@ static void check_motive(const Scenario *scenario, const Motive *motive) {
     assert(motive->meter.beats_per_bar == scenario->beats && motive->meter.beat_unit == scenario->unit);
     assert(motive->key_source == MOTIVE_KEY_GIVEN);
     assert(motive->key.mode == scenario->mode);
-    int tonic = scenario->has_key ? scenario->tonic : (scenario->mode == PLAN_MODE_MAJOR ? 0 : 9);
-    assert(motive->key.tonic_pitch_class == tonic);
+    int tonic = scenario->has_key ? scenario->tonic : (scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? 0 : 9);
+    assert(analysis_key_tonic_pitch_class(&motive->key) == tonic);
     assert(motive->form == MOTIVE_FORM_FULL);
     assert(motive->note_count >= 2 && motive->note_count <= 12);
 
     int low = 127;
     int high = 0;
-    PlanTime onset = time_of(0, 1);
+    Rational onset = time_of(0, 1);
     for (size_t i = 0; i < motive->note_count; i++) {
         const PlanNote *note = &motive->notes[i];
-        assert(plan_time_compare(note->offset, onset) == 0);
-        assert(plan_time_add(onset, note->duration, &onset) == PLAN_OK);
-        low = note->midi_pitch < low ? note->midi_pitch : low;
-        high = note->midi_pitch > high ? note->midi_pitch : high;
+        assert(rational_cmp(note->offset, onset) == 0);
+        assert(rational_add(onset, note->duration, &onset) == RATIONAL_OK);
+        low = note->midi < low ? note->midi : low;
+        high = note->midi > high ? note->midi : high;
     }
-    assert(plan_time_compare(motive->length, onset) == 0);
+    assert(rational_cmp(motive->length, onset) == 0);
     assert(high - low <= 19);
 
     /* One or two bars, after a pickup of a beat or less. */
-    PlanTime bar = time_of(scenario->beats, (unsigned long)scenario->unit);
-    PlanTime beat = time_of(1, (unsigned long)scenario->unit);
-    PlanTime pickup = motive_pickup(motive);
-    assert(plan_time_compare(pickup, beat) <= 0);
-    PlanTime bars = motive_time_minus(motive->length, pickup);
-    PlanTime two;
-    assert(plan_time_add(bar, bar, &two) == PLAN_OK);
-    assert(plan_time_compare(bars, bar) == 0 || plan_time_compare(bars, two) == 0);
+    Rational bar = time_of(scenario->beats, (unsigned long)scenario->unit);
+    Rational beat = time_of(1, (unsigned long)scenario->unit);
+    Rational pickup = motive_pickup(motive);
+    assert(rational_cmp(pickup, beat) <= 0);
+    Rational bars = motive_time_minus(motive->length, pickup);
+    Rational two;
+    assert(rational_add(bar, bar, &two) == RATIONAL_OK);
+    assert(rational_cmp(bars, bar) == 0 || rational_cmp(bars, two) == 0);
 
     const char *fault = "unchecked";
     assert(motive_melodic_fault(motive, &fault));
@@ -130,11 +129,11 @@ static void test_minor_three_four_lengths(void) {
         size_t made = 0;
         assert(motive_random(&options, motives, &made) == MOTIVE_RANDOM_OK);
         for (size_t i = 0; i < made; i++) {
-            PlanTime pickup = motive_pickup(&motives[i]);
-            PlanTime bars = motive_time_minus(motives[i].length, pickup);
+            Rational pickup = motive_pickup(&motives[i]);
+            Rational bars = motive_time_minus(motives[i].length, pickup);
             with_pickup += pickup.num != 0;
-            one_bar += plan_time_compare(bars, time_of(3, 4)) == 0;
-            two_bars += plan_time_compare(bars, time_of(3, 2)) == 0;
+            one_bar += rational_cmp(bars, time_of(3, 4)) == 0;
+            two_bars += rational_cmp(bars, time_of(3, 2)) == 0;
         }
     }
     assert(with_pickup > 0 && with_pickup < SEEDS * COUNT);
@@ -226,7 +225,7 @@ static void test_forms(void) {
         for (size_t i = 0; i < made; i++) {
             assert(motives[i].form == MOTIVE_FORM_RHYTHM && motives[i].key_source == MOTIVE_KEY_GIVEN);
             for (size_t n = 1; n < motives[i].note_count; n++) {
-                assert(motives[i].notes[n].midi_pitch == motives[i].notes[0].midi_pitch);
+                assert(motives[i].notes[n].midi == motives[i].notes[0].midi);
             }
         }
         options.form = MOTIVE_FORM_CONTOUR;
@@ -234,7 +233,7 @@ static void test_forms(void) {
         for (size_t i = 0; i < made; i++) {
             assert(motives[i].form == MOTIVE_FORM_CONTOUR && motive_pickup(&motives[i]).num == 0);
             for (size_t n = 0; n < motives[i].note_count; n++) {
-                assert(plan_time_compare(motives[i].notes[n].duration, time_of(1, 4)) == 0);
+                assert(rational_cmp(motives[i].notes[n].duration, time_of(1, 4)) == 0);
             }
         }
     }
@@ -271,7 +270,7 @@ static void test_refusals(void) {
     Motive motives[COUNT];
     size_t made = 99;
     MotiveRandomOptions options = options_of(&SCENARIOS[0], 1);
-    options.key.mode = PLAN_MODE_MINOR;
+    options.key.mode = KEY_STRUCTURE_MODE_MINOR;
     options.has_key = true;
     assert(motive_random(&options, motives, &made) == MOTIVE_RANDOM_ERR_KEY && made == 0);
     options = options_of(&SCENARIOS[0], 1);

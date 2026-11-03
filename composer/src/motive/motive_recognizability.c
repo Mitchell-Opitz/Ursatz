@@ -13,7 +13,7 @@
 typedef struct {
     int direction[MOTIVE_MAX_NOTES]; /* -1, 0 or 1 */
     int interval_class[MOTIVE_MAX_NOTES];
-    PlanTime ratio[MOTIVE_MAX_NOTES];
+    Rational ratio[MOTIVE_MAX_NOTES];
     size_t intervals; /* note_count - 1 */
     size_t ratios;    /* the same */
 } Features;
@@ -31,13 +31,13 @@ static void features_of(const Motive *motive, Features *out) {
     out->intervals = count - 1;
     out->ratios = count - 1;
     for (size_t i = 0; i + 1 < count; i++) {
-        int semitones = motive->notes[i + 1].midi_pitch - motive->notes[i].midi_pitch;
+        int semitones = motive->notes[i + 1].midi - motive->notes[i].midi;
         int size = (semitones < 0 ? -semitones : semitones) % 12;
         out->direction[i] = semitones > 0 ? 1 : (semitones < 0 ? -1 : 0);
         out->interval_class[i] = size > 6 ? 12 - size : size;
     }
     /* The inter-onset interval of each note; the last note lasts as long as it sounds. */
-    PlanTime ioi[MOTIVE_MAX_NOTES];
+    Rational ioi[MOTIVE_MAX_NOTES];
     for (size_t i = 0; i < count; i++) {
         ioi[i] = i + 1 < count ? motive_time_minus(motive->notes[i + 1].offset, motive->notes[i].offset)
                                : motive->notes[i].duration;
@@ -82,7 +82,7 @@ static bool same_direction(const Features *a, size_t i, const Features *b, size_
 }
 
 static bool same_ratio(const Features *a, size_t i, const Features *b, size_t j) {
-    return plan_time_compare(a->ratio[i], b->ratio[j]) == 0;
+    return rational_cmp(a->ratio[i], b->ratio[j]) == 0;
 }
 
 static MotiveScore contour_part(const Features *a, const Features *b) {

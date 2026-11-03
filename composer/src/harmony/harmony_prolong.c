@@ -97,7 +97,7 @@ static bool figure_wanted(const Figure *figure, const PlanHarmonyShape *shape) {
            (shape->ends_on == PLAN_HARMONY_ANCHOR_DOMINANT) == (figure->ends == ANCHOR_DOMINANT);
 }
 
-static bool make_figure_chord(PlanKeyMode mode, const FigureChord *spec, size_t cells, PhraseChord *out) {
+static bool make_figure_chord(KeyStructureMode mode, const FigureChord *spec, size_t cells, PhraseChord *out) {
     if (spec->leading_tone) {
         return harmony_make_leading_tone(mode, spec->inversion, cells, out);
     }
@@ -170,14 +170,12 @@ static bool same_shape(const PlanHarmonyShape *a, const PlanHarmonyShape *b) {
  */
 static bool previous_chords(const PiecePlan *plan, const PhraseRequest *request, PhraseChord *chords, size_t *count) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
-    PlanTime before;
+    Rational before;
     /* The cells of a span with part cells are not those of the span before it. */
     if (request->lead.num > 0 || request->tail.num > 0) {
         return false;
     }
-    if (plan_time_make(request->span.start.num * (long)request->span.length.den -
-                           request->span.length.num * (long)request->span.start.den,
-                       request->span.start.den * request->span.length.den, &before) != PLAN_OK ||
+    if (rational_sub(request->span.start, request->span.length, &before) != RATIONAL_OK ||
         before.num < 0) {
         return false;
     }
@@ -186,12 +184,12 @@ static bool previous_chords(const PiecePlan *plan, const PhraseRequest *request,
     if (found == 0 || found > HARMONY_MAX_CHORDS) {
         return false;
     }
-    PlanTime position = before;
+    Rational position = before;
     size_t cells = 0;
     for (size_t i = 0; i < found; i++) {
         PlanSpan span = plan_lane_span_span(plan, ids[i]);
-        PlanTime end;
-        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED || plan_time_compare(span.start, position) != 0 ||
+        Rational end;
+        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED || rational_cmp(span.start, position) != 0 ||
             plan_span_end(span, &end) != PLAN_OK ||
             !harmony_read_chord(plan, ids[i], request->mode, request->cell_length, &chords[i])) {
             return false;
@@ -333,7 +331,7 @@ bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const Fil
     }
     /* The recognizer is told no soprano (a half cadence requested implies none), so any cadence it hears is
        heard from the harmony and the beats alone. */
-    HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode, PLAN_CADENCE_HC,
+    HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode, CADENCE_TYPE_HALF,
                           progression->request.cells_per_bar, progression->request.cell_length, true, NULL, true,
                           true, NULL, NULL, false, &progression->request.metre};
     PhraseVerdict verdict;
