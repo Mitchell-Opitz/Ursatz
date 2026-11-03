@@ -106,6 +106,42 @@ if(VALGRIND_PROGRAM)
     set_tests_properties(test_chord_sequence_valgrind PROPERTIES LABELS slow)
 endif()
 
+add_executable(test_playback test_playback.c)
+target_link_libraries(test_playback PRIVATE ursatz_analyzer analyzer_test_support cjson)
+target_compile_definitions(test_playback PRIVATE
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
+    URSATZ_ANALYZER_TMP_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+add_test(NAME test_playback COMMAND test_playback)
+add_test(NAME test_playback_smoke COMMAND test_playback smoke)
+find_program(VALGRIND_PROGRAM valgrind)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_playback_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
+                     $<TARGET_FILE:test_playback> smoke)
+    set_tests_properties(test_playback_valgrind PROPERTIES LABELS slow)
+endif()
+
+add_executable(test_score_export test_score_export.c)
+target_link_libraries(test_score_export PRIVATE ursatz_analyzer analyzer_test_support cjson)
+target_compile_definitions(test_score_export PRIVATE
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+    URSATZ_MUSICXML_DIR="${CMAKE_CURRENT_SOURCE_DIR}/musicxml"
+    URSATZ_ANALYZER_TMP_DIR="${CMAKE_CURRENT_BINARY_DIR}"
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+add_test(NAME test_score_export COMMAND test_score_export)
+add_test(NAME test_score_export_smoke COMMAND test_score_export smoke)
+find_program(VALGRIND_PROGRAM valgrind)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_score_export_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
+                     $<TARGET_FILE:test_score_export> smoke)
+    set_tests_properties(test_score_export_valgrind PROPERTIES LABELS slow)
+endif()
+
 add_executable(test_measure_locations test_measure_locations.c)
 target_link_libraries(test_measure_locations PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_measure_locations PRIVATE
