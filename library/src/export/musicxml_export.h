@@ -1,6 +1,7 @@
 #ifndef MUSIC_EXPORT_MUSICXML_EXPORT_H
 #define MUSIC_EXPORT_MUSICXML_EXPORT_H
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "events/dynamics.h"
@@ -183,5 +184,18 @@ MusicXmlExportResult musicxml_export_write(PersistenceHandle *handle, char **out
  * as an extra <voice>, numbered after the voices the part already uses, on the same staff.
  */
 MusicXmlExportResult musicxml_export_write_score(const MusicXmlExportScore *score, char **out_xml);
+
+/*
+ * The base xml:id the export writes on the <note> of a NoteEvent, from the value of its EntityID (entity_id_value):
+ * a leading 'n' unless the value starts with a letter or '_', and every character outside [A-Za-z0-9_.-] replaced by
+ * '_'. Written to out with its terminating NUL. Returns false, and writes nothing usable, when an argument is NULL or
+ * out_size is too small for the whole id (the id is never truncated silently).
+ *
+ * The export applies one more rule on top of this base id: a note that is tied (split at a barline or into
+ * notatable values) writes one <note> per segment, and each segment's xml:id is the base id followed by '_' and a
+ * fragment suffix, 'a' to 'z' for the first 26 segments and then the decimal segment number (_26, _27, ...). A note
+ * that is not tied keeps the base id alone. A chord member is a note like any other and has its own base id.
+ */
+bool musicxml_export_note_xml_id(const char *entity_value, char *out, size_t out_size);
 
 #endif

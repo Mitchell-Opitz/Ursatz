@@ -1378,21 +1378,41 @@ static MusicXmlExportResult build_segments(const Prep *prep, SegmentList **out) 
 
 static const char *const PITCH_STEP_NAMES[7] = {"A", "B", "C", "D", "E", "F", "G"};
 
-/* A valid XML ID from an EntityID value: a leading 'n' if it does not start with a letter or underscore, and '_' for
-   anything outside [A-Za-z0-9_.-]. */
-static void xml_id_from_entity(const char *raw, char *out, size_t out_size) {
-    size_t pos = 0;
-    bool needs_prefix = !((raw[0] >= 'A' && raw[0] <= 'Z') || (raw[0] >= 'a' && raw[0] <= 'z') || raw[0] == '_');
-    if (needs_prefix && pos + 1 < out_size) {
-        out[pos++] = 'n';
+/* The one id formatter. With cut set an id longer than out is cut to fit (what the export writes), otherwise it fails. */
+static bool format_note_xml_id(const char *entity_value, char *out, size_t out_size, bool cut) {
+    if (entity_value == NULL || out == NULL || out_size == 0) {
+        return false;
     }
-    for (size_t i = 0; raw[i] != '\0' && pos + 1 < out_size; i++) {
-        char c = raw[i];
+    bool needs_prefix = !((entity_value[0] >= 'A' && entity_value[0] <= 'Z') ||
+                          (entity_value[0] >= 'a' && entity_value[0] <= 'z') || entity_value[0] == '_');
+    size_t pos = 0;
+    if (needs_prefix) {
+        if (pos + 1 >= out_size && !cut) {
+            return false;
+        }
+        if (pos + 1 < out_size) {
+            out[pos++] = 'n';
+        }
+    }
+    for (size_t i = 0; entity_value[i] != '\0'; i++) {
+        if (pos + 1 >= out_size) {
+            if (cut) {
+                break;
+            }
+            return false;
+        }
+        char c = entity_value[i];
         bool ok = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_' ||
                   c == '.' || c == '-';
         out[pos++] = ok ? c : '_';
     }
     out[pos] = '\0';
+    return true;
+}
+
+/* See musicxml_export.h. */
+bool musicxml_export_note_xml_id(const char *entity_value, char *out, size_t out_size) {
+    return format_note_xml_id(entity_value, out, out_size, false);
 }
 
 /*
@@ -1531,7 +1551,7 @@ static void write_segment(const Prep *prep, XmlBuf *buf, const Segment *segment,
     } else {
         char base[64];
         const char *chord = segment->chord ? "        <chord/>\n" : "";
-        xml_id_from_entity(entity_id_value(note_event_id(event)), base, sizeof(base));
+        format_note_xml_id(entity_id_value(note_event_id(event)), base, sizeof(base), true);
         if (segment->tie_start || segment->tie_stop) {
             char id[96];
             if (segment->fragment < 26) {
