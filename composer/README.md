@@ -319,3 +319,17 @@ stages fill around it ([docs/middle-out.md](docs/middle-out.md)).
 
 `form_hear` hears the phrase-level form of a written plan with standard-form's analysis adapter. See
 [docs/form-hear.md](docs/form-hear.md).
+
+## Version 0.2.0 (phase P25)
+
+The Composer holds plan structure and composing decisions only, on library values, and hears only through the Analyzer.
+The public types and the plan format changed:
+
+- Plans use the library's meter, key, harmony, motive and time values; motives are `MotiveSketch` values with relation steps
+  (`step` in plan files; old `transform` names still read). Plan format version 2 is the Composer's own, with its own schema.
+- Chord numerals, key names and note spelling follow the library (`viio`, `D#` minor).
+- Melodic and harmonic rules, harmonic rhythm cells and the seam rules come from the library's framework checks.
+- What a listener finds in the written music is the Analyzer's: one `analyzer_hear` per section span over one render per run.
+- The corpus seed reads chords through the Analyzer's chord sequence reader.
+- `plan_regenerate_all` hears and checks only the sections it reopened (`ComposeConfig.scope`, `ComposeHeard.in_scope`);
+  a section outside the scope prints as `kept` in the output of `regenerate` and `piece --regenerate`.

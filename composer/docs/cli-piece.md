@@ -40,7 +40,9 @@ JSON: `{"schema": "ursatz-piece", "seed", "key", "meter", "brief", "loop": {"sta
 - `plan`: the path written with `--out` / `--ending-out`, else `null`;
 - `sections`: `{"id", "part", "letter", "start", "beats", "cadence", "heard", "fill", "source"}`; `cadence` is the planned type,
   `heard` the cadence the Analyzer heard at the section's end (`null` without `--check`), `source` where the material came
-  from (`basic motive`, `own motive`, the theme plan's path, the numerals);
+  from (`basic motive`, `own motive`, the theme plan's path, the numerals); a section that `--regenerate` kept (outside the
+  scope of the hearing, see [regenerate.md](regenerate.md)) also has `"in_scope": false`, and the text line ends `(kept)`
+  where it would show the cadence heard;
 - `score`: `{"numerator", "denominator"}`; `seam`: the four rules and how many held, for the loop, else `null`;
 - `analyzer_check`: `{"planned", "agreed", "contradicts", "items"}` or `null`; `style_distance`: or `null`.
 

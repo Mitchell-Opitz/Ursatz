@@ -62,6 +62,16 @@ are Given.
 
 The same plan, target and seed give the same plan and the same records.
 
+
+### Scope of the hearing
+
+`ComposeConfig.scope` and `scope_count` name the sections `compose_run` hears and checks with the Analyzer; `NULL` is every
+section it writes, as in a full run. `plan_regenerate_all` sets it to the sections that hold the targets it reopened, and to
+the sections that were still open before (the run writes them too, so they are heard). A section out of scope is reported
+with `ComposeHeard.in_scope` false, no heard form (`heard_result` `FORM_HEAR_ERR_NOT_WRITTEN`, `heard_form` -1), and adds
+nothing to the numerator or denominator of the heard score. The returns, seam and key checks read the whole piece from the
+run's one hearing either way. A scope changes what is heard and checked, never what is written.
+
 ## Variations
 
 `plan_variations` (`<ursatz_composer/variations.h>`) regenerates the same targets for several seeds and keeps the results
