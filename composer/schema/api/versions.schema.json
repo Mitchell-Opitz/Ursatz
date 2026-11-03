@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/versions.schema.json",
+  "title": "composer_api_versions response",
+  "description": "The versions the Composer was built with; a host compares them with the ones it saved (docs/api.md).",
+  "type": "object",
+  "required": ["composer_version", "api_version", "analyzer_version", "ursatz_commit", "plan_format_version"],
+  "additionalProperties": false,
+  "properties": {
+    "composer_version": { "type": "string", "minLength": 1 },
+    "api_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "analyzer_version": { "type": "string", "minLength": 1 },
+    "ursatz_commit": { "type": "string", "minLength": 1 },
+    "plan_format_version": { "type": "integer", "minimum": 1 }
+  }
+}
