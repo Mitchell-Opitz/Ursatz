@@ -142,8 +142,6 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
 bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request);
 /* The first bar of the material section a run of `wanted` motive bars can go in (see grow_theme.c). */
 size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, Rational bar, size_t wanted);
-/* The motive ref the development `dev` of the motive node `source` is. */
-void grow_dev_ref(const MotiveRelationStep *dev, NodeId source, PlanMotiveRef *out);
 
 /*
  * Free phrases (R-170): a section with a FREE_PHRASE constraint is a phrase of any length in beats, laid out as one

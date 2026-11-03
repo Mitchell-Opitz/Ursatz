@@ -29,6 +29,11 @@
 /* The shortest result, in notes, that a fragment or a liquidation may have when the step does not say. */
 #define MOTIVE_DEV_MIN_LENGTH 2
 
+/* The values of a fragment step's position parameter (motive_relation_param_info: 1 leading, 2 trailing, 3 middle). */
+#define MOTIVE_FRAGMENT_LEADING 1
+#define MOTIVE_FRAGMENT_TRAILING 2
+#define MOTIVE_FRAGMENT_MIDDLE 3
+
 typedef enum {
     MOTIVE_DEV_OK = 0,
     MOTIVE_DEV_ERR_NULL,

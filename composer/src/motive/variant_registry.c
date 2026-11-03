@@ -175,7 +175,7 @@ static const VariantParam FRAGMENT_PARAMS[] = {
 static MotiveDevResult apply_fragment(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveRelationStep step;
     step_init(&step, MOTIVE_RELATION_FRAGMENT);
-    step.value[0] = value_or(&values[FRAGMENT_POSITION], PLAN_FRAGMENT_LEADING);
+    step.value[0] = value_or(&values[FRAGMENT_POSITION], MOTIVE_FRAGMENT_LEADING);
     step.value[1] = value_or(&values[FRAGMENT_LENGTH], 0);
     step.value[2] = value_or(&values[FRAGMENT_MIN], 0);
     return motive_develop(source, &step, out);

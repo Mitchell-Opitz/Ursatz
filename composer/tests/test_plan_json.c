@@ -107,8 +107,8 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     archetype.params.archetype = PLAN_ARCHETYPE_SENTENCE;
     PlanConstraint motive_ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
     motive_ref.params.motive.motive = m1;
-    motive_ref.params.motive.transform = PLAN_TRANSFORM_TRANSPOSED;
-    motive_ref.params.motive.semitones = -2;
+    motive_ref.params.motive.has_step = true;
+    motive_ref.params.motive.step = (MotiveRelationStep){.kind = MOTIVE_RELATION_TRANSPOSE, .value = {0, -2}};
     PlanConstraint key_constraint = {PLAN_CONSTRAINT_KEY, {0}};
     key_constraint.params.key = plan_key_of_pitch_class(7, KEY_STRUCTURE_MODE_MAJOR);
     assert(plan_node_add_constraint(plan, phrase, &length) == PLAN_OK);
@@ -187,8 +187,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         return a->params.cadence == b->params.cadence;
     case PLAN_CONSTRAINT_MOTIVE_REF:
         return a->params.motive.motive == b->params.motive.motive &&
-               a->params.motive.transform == b->params.motive.transform &&
-               a->params.motive.semitones == b->params.motive.semitones;
+               a->params.motive.has_step == b->params.motive.has_step &&
+               memcmp(&a->params.motive.step, &b->params.motive.step, sizeof(a->params.motive.step)) == 0;
     case PLAN_CONSTRAINT_KEY:
         return analysis_key_tonic_pitch_class(&a->params.key) == analysis_key_tonic_pitch_class(&b->params.key) &&
                a->params.key.mode == b->params.key.mode;

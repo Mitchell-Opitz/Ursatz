@@ -301,7 +301,7 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
             dev->value[2] = 1;
         } else {
             dev->kind = MOTIVE_RELATION_FRAGMENT;
-            dev->value[0] = PLAN_FRAGMENT_LEADING;
+            dev->value[0] = MOTIVE_FRAGMENT_LEADING;
             dev->value[1] = (long)spec->fragment_notes[second];
             dev->value[2] = 1;
         }
@@ -320,56 +320,16 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep
     }
 }
 
-void grow_dev_ref(const MotiveRelationStep *dev, NodeId source, PlanMotiveRef *out) {
-    memset(out, 0, sizeof(*out));
-    out->motive = source;
-    switch (dev->kind) {
-    case MOTIVE_RELATION_EXACT:
-        out->transform = PLAN_TRANSFORM_RESTATED;
-        break;
-    case MOTIVE_RELATION_TRANSPOSE:
-        out->transform = PLAN_TRANSFORM_TRANSPOSED;
-        out->tonal = dev->value[0] != 0;
-        out->steps = out->tonal ? (int)dev->value[1] : 0;
-        out->semitones = out->tonal ? 0 : (int)dev->value[1];
-        break;
-    case MOTIVE_RELATION_INVERT:
-        out->transform = PLAN_TRANSFORM_INVERTED;
-        out->tonal = dev->value[1] != 0;
-        out->has_axis = dev->value[0] >= 0;
-        out->axis = dev->value[0] >= 0 ? (int)dev->value[0] : 0;
-        break;
-    case MOTIVE_RELATION_INTERVAL_CHANGE:
-        out->transform = PLAN_TRANSFORM_INTERVAL_CHANGED;
-        out->interval = (int)dev->value[0];
-        out->amount = (int)dev->value[1];
-        out->keep_contour = dev->value[2] != 0;
-        break;
-    case MOTIVE_RELATION_FRAGMENT:
-        out->transform = PLAN_TRANSFORM_FRAGMENTED;
-        out->position = (PlanFragmentPosition)dev->value[0];
-        out->length = (int)dev->value[1];
-        break;
-    case MOTIVE_RELATION_LIQUIDATE:
-        out->transform = PLAN_TRANSFORM_LIQUIDATED;
-        out->drop = (int)dev->value[0];
-        out->keep_rhythm = dev->value[1] != 0;
-        break;
-    default:
-        out->transform = PLAN_TRANSFORM_NONE;
-        break;
-    }
-}
-
 void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, PlanMotiveRef *out) {
     MotiveRelationStep dev;
-    if (!grow_idea_dev(spec, idea, &dev)) {
-        memset(out, 0, sizeof(*out));
-        out->motive = source;
-        out->transform = PLAN_TRANSFORM_NONE;
-        return;
+    memset(out, 0, sizeof(*out));
+    out->motive = source;
+    if (grow_idea_dev(spec, idea, &dev)) {
+        out->has_step = true;
+        out->step = dev;
+        /* The plan names the relation and its parameters; the shortest result is the operators' (motive_develop.h). */
+        out->step.value[2] = dev.kind == MOTIVE_RELATION_FRAGMENT || dev.kind == MOTIVE_RELATION_LIQUIDATE ? 0 : dev.value[2];
     }
-    grow_dev_ref(&dev, source, out);
 }
 
 const Motive *grow_idea_source(const GrowThemeSpec *spec, GrowPlace idea) {
@@ -514,73 +474,72 @@ static bool rhythm_writable(const Motive *m0, bool augment) {
 static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const Motive *m0, GrowThemeSpec *spec) {
     PlanMotiveRef rhythm_fallback;
     const PlanMotiveRef *asked = &request->motive_ref;
-    if ((asked->transform == PLAN_TRANSFORM_AUGMENTED || asked->transform == PLAN_TRANSFORM_DIMINISHED) &&
-        asked->ratio_num == 0 && !rhythm_writable(m0, asked->transform == PLAN_TRANSFORM_AUGMENTED)) {
+    if (asked->has_step && (asked->step.kind == MOTIVE_RELATION_AUGMENT || asked->step.kind == MOTIVE_RELATION_DIMINISH) &&
+        asked->step.value[0] == 0 && !rhythm_writable(m0, asked->step.kind == MOTIVE_RELATION_AUGMENT)) {
         /* No usual ratio can be written in the meter (a whole bar of 3/4 has no diminution without triplets): the
            section still sounds unlike m0, with an interval changed. */
         rhythm_fallback = *asked;
-        rhythm_fallback.transform = PLAN_TRANSFORM_INTERVAL_CHANGED;
+        memset(&rhythm_fallback.step, 0, sizeof(rhythm_fallback.step));
+        rhythm_fallback.step.kind = MOTIVE_RELATION_INTERVAL_CHANGE;
         asked = &rhythm_fallback;
+    }
+    MotiveRelationStep given;
+    memset(&given, 0, sizeof(given));
+    if (asked->has_step) {
+        given = asked->step;
     }
     for (size_t draw = 0; draw < SECTION_MOTIVE_DRAWS; draw++) {
         PlanMotiveRef ref = *asked;
         MotiveRelationStep dev;
         Motive result;
         memset(&dev, 0, sizeof(dev));
-        switch (asked->transform) {
-        case PLAN_TRANSFORM_NONE:
-        case PLAN_TRANSFORM_RESTATED:
-            ref.transform = PLAN_TRANSFORM_RESTATED;
+        ref.has_step = true;
+        switch (given.kind) {
+        case MOTIVE_RELATION_EXACT:
             dev.kind = MOTIVE_RELATION_EXACT;
             break;
-        case PLAN_TRANSFORM_TRANSPOSED:
+        case MOTIVE_RELATION_TRANSPOSE: {
             dev.kind = MOTIVE_RELATION_TRANSPOSE;
-            ref.tonal = asked->tonal || asked->semitones == 0;
-            dev.value[0] = ref.tonal ? 1 : 0;
-            if (ref.tonal) {
+            bool tonal = given.value[0] != 0 || given.value[1] == 0;
+            dev.value[0] = tonal ? 1 : 0;
+            if (tonal) {
                 int steps = (int)fill_rng_below(rng, 3) + 1;
-                ref.steps = asked->steps != 0 ? asked->steps : (fill_rng_below(rng, 2) == 0 ? steps : -steps);
-                dev.value[1] = ref.steps;
+                dev.value[1] = given.value[1] != 0 ? given.value[1] : (fill_rng_below(rng, 2) == 0 ? steps : -steps);
             } else {
-                dev.value[1] = asked->semitones;
+                dev.value[1] = given.value[1];
             }
             break;
-        case PLAN_TRANSFORM_INVERTED:
+        }
+        case MOTIVE_RELATION_INVERT:
             dev.kind = MOTIVE_RELATION_INVERT;
-            dev.value[1] = asked->tonal ? 1 : 0;
-            dev.value[0] = asked->has_axis ? asked->axis : motive_pitch(m0, 0);
-            ref.has_axis = true;
-            ref.axis = (int)dev.value[0];
+            dev.value[1] = given.value[1];
+            dev.value[0] = given.value[0] >= 0 ? given.value[0] : motive_pitch(m0, 0);
             break;
-        case PLAN_TRANSFORM_RETROGRADE:
+        case MOTIVE_RELATION_RETROGRADE:
             dev.kind = MOTIVE_RELATION_RETROGRADE;
             break;
-        case PLAN_TRANSFORM_INTERVAL_CHANGED:
+        case MOTIVE_RELATION_INTERVAL_CHANGE:
             dev.kind = MOTIVE_RELATION_INTERVAL_CHANGE;
-            dev.value[2] = asked->keep_contour ? 1 : 0;
-            if (asked->amount != 0) {
-                dev.value[0] = asked->interval;
-                dev.value[1] = asked->amount;
+            dev.value[2] = given.value[2];
+            if (given.value[1] != 0) {
+                dev.value[0] = given.value[0];
+                dev.value[1] = given.value[1];
             } else {
                 int amount = (int)fill_rng_below(rng, 2) + 1;
                 dev.value[0] = (long)fill_rng_below(rng, m0->note_count - 1) + 1;
                 dev.value[1] = fill_rng_below(rng, 2) == 0 ? amount : -amount;
             }
-            ref.interval = (int)dev.value[0];
-            ref.amount = (int)dev.value[1];
             break;
-        case PLAN_TRANSFORM_AUGMENTED:
-        case PLAN_TRANSFORM_DIMINISHED: {
+        case MOTIVE_RELATION_AUGMENT:
+        case MOTIVE_RELATION_DIMINISH: {
             /* The ratio asked for, else the first of the usual ones the meter can write. */
-            bool augment = asked->transform == PLAN_TRANSFORM_AUGMENTED;
+            bool augment = given.kind == MOTIVE_RELATION_AUGMENT;
             const int(*ratios)[2] = augment ? AUGMENT_RATIOS : DIMINISH_RATIOS;
-            dev.kind = augment ? MOTIVE_RELATION_AUGMENT : MOTIVE_RELATION_DIMINISH;
+            dev.kind = given.kind;
             for (size_t r = 0; r < RHYTHM_RATIOS; r++) {
-                ref.ratio_num = asked->ratio_num > 0 ? asked->ratio_num : ratios[r][0];
-                ref.ratio_den = asked->ratio_den > 0 ? asked->ratio_den : ratios[r][1];
-                dev.value[0] = ref.ratio_num;
-                dev.den[0] = ref.ratio_den;
-                if (asked->ratio_num > 0 || motive_develop(m0, &dev, &result) == MOTIVE_DEV_OK) {
+                dev.value[0] = given.value[0] > 0 ? given.value[0] : ratios[r][0];
+                dev.den[0] = given.den[0] > 0 ? given.den[0] : ratios[r][1];
+                if (given.value[0] > 0 || motive_develop(m0, &dev, &result) == MOTIVE_DEV_OK) {
                     break;
                 }
             }
@@ -589,6 +548,7 @@ static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const
         default:
             return false;
         }
+        ref.step = dev;
         if (motive_develop(m0, &dev, &result) != MOTIVE_DEV_OK || result.note_count < 2 ||
             rational_cmp(result.length, request->bar) > 0) {
             continue;
@@ -1047,7 +1007,6 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
         if (motive != PLAN_NODE_NONE) {
             memset(&asked, 0, sizeof(asked));
             asked.motive = motive;
-            asked.transform = PLAN_TRANSFORM_NONE;
         }
     }
     for (size_t g = 0; result == PLAN_OK && g < gap_count; g++) {

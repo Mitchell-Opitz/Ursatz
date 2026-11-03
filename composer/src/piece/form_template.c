@@ -53,22 +53,24 @@ static FormTemplateSection *add_section(FormTemplate *out, const char *letter, c
     section->cadence = cadence;
     section->returns = FORM_TEMPLATE_NO_RETURN;
     section->variation = PLAN_RETURN_EXACT;
-    section->motive = PLAN_TRANSFORM_NONE;
     return section;
 }
 
 /* A B section: its motive is m0 inverted in the key's steps, so it sounds unlike A. */
 static void contrast_motive(FormTemplateSection *section) {
-    section->motive = PLAN_TRANSFORM_INVERTED;
-    section->motive_tonal = true;
+    section->has_motive = true;
+    memset(&section->motive, 0, sizeof(section->motive));
+    section->motive.kind = MOTIVE_RELATION_INVERT;
+    section->motive.value[0] = -1;
+    section->motive.value[1] = 1;
 }
 
 /* A section that returns an earlier one takes the earlier one's motive. */
 static void returns_to(FormTemplate *out, FormTemplateSection *section, size_t source, PlanReturnVariation variation) {
     section->returns = source;
     section->variation = variation;
+    section->has_motive = out->sections[source].has_motive;
     section->motive = out->sections[source].motive;
-    section->motive_tonal = out->sections[source].motive_tonal;
 }
 
 static bool binary(size_t bars, FormTemplate *out) {
@@ -132,8 +134,9 @@ static bool variations(size_t bars, size_t count, FormTemplate *out) {
         FormTemplateSection *section = add_section(out, letter, name, 8, PERIOD, CADENCE_TYPE_PERFECT_AUTHENTIC);
         bool odd = k % 2 == 1;
         returns_to(out, section, 0, odd ? PLAN_RETURN_ORNAMENT : PLAN_RETURN_REHARMONIZE);
-        section->motive = odd ? PLAN_TRANSFORM_DIMINISHED : PLAN_TRANSFORM_INTERVAL_CHANGED;
-        section->motive_tonal = false;
+        section->has_motive = true;
+        memset(&section->motive, 0, sizeof(section->motive));
+        section->motive.kind = odd ? MOTIVE_RELATION_DIMINISH : MOTIVE_RELATION_INTERVAL_CHANGE;
     }
     return true;
 }

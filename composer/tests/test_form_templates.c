@@ -301,12 +301,14 @@ static void check_structure(const PiecePlan *plan, const Scenario *scenario, For
             assert(name && strcmp(name, "m0") == 0);
         }
         if (strcmp(expected[i].letter, "B") == 0) {
-            assert(motive && motive->params.motive.transform == PLAN_TRANSFORM_INVERTED && motive->params.motive.tonal);
+            assert(motive && motive->params.motive.has_step && motive->params.motive.step.kind == MOTIVE_RELATION_INVERT &&
+                   motive->params.motive.step.value[1] != 0);
         }
         if (expected[i].letter[0] == 'V') {
             int k = atoi(expected[i].letter + 1);
-            assert(motive && motive->params.motive.transform ==
-                                 (k % 2 == 1 ? PLAN_TRANSFORM_DIMINISHED : PLAN_TRANSFORM_INTERVAL_CHANGED));
+            assert(motive && motive->params.motive.has_step &&
+                   motive->params.motive.step.kind ==
+                       (k % 2 == 1 ? MOTIVE_RELATION_DIMINISH : MOTIVE_RELATION_INTERVAL_CHANGE));
         }
     }
     /* The material, after the sections: m0 Given, or open with a motive to invent. */

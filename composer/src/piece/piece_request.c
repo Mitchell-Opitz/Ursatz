@@ -133,14 +133,14 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
 /* A section whose motive is not m0 itself asks for it as a MOTIVE_REF to m0. */
 static PieceResult add_section_motive(PiecePlan *plan, const FormTemplateSection *section, NodeId id, NodeId source) {
     PlanConstraint constraint;
-    if (section->motive == PLAN_TRANSFORM_NONE) {
+    if (!section->has_motive) {
         return PIECE_OK;
     }
     memset(&constraint, 0, sizeof(constraint));
     constraint.kind = PLAN_CONSTRAINT_MOTIVE_REF;
     constraint.params.motive.motive = source;
-    constraint.params.motive.transform = section->motive;
-    constraint.params.motive.tonal = section->motive_tonal;
+    constraint.params.motive.has_step = true;
+    constraint.params.motive.step = section->motive;
     return piece_add_constraint(plan, id, &constraint);
 }
 

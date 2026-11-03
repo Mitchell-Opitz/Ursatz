@@ -34,7 +34,7 @@ extern const char *const plan_lane_names[PLAN_LANE_NAME_COUNT];
 /* The name of a lane; "" for a value that is not one. */
 const char *plan_lane_name(PlanLaneKind lane);
 
-/* The fragment position names ("any", "leading", "trailing", "middle"), in PlanFragmentPosition order. */
+/* The fragment position names ("any", "leading", "trailing", "middle"), indexed by the fragment step's position (0 for none). */
 #define PLAN_FRAGMENT_POSITION_NAME_COUNT 4
 extern const char *const plan_fragment_position_names[PLAN_FRAGMENT_POSITION_NAME_COUNT];
 /* The name of a fragment position; "any" for a value that is not one. */

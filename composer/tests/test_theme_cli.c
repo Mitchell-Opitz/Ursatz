@@ -155,7 +155,7 @@ static void test_same_motive(void) {
 
 /* The melody pitches of the idea named, from the plan; the name of the motive node its melody asks for and how. */
 static size_t idea_melody(const PiecePlan *plan, const char *idea, int *pitches, size_t size, char *node, size_t node_size,
-                          PlanMotiveTransform *transform) {
+                          bool *restated) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         const char *name = plan_node_name(plan, id);
         if (plan_node_kind(plan, id) != PLAN_NODE_IDEA || !name || strcmp(name, idea) != 0) {
@@ -172,7 +172,7 @@ static size_t idea_melody(const PiecePlan *plan, const char *idea, int *pitches,
                 if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF) {
                     const char *motive = plan_node_name(plan, constraint->params.motive.motive);
                     snprintf(node, node_size, "%s", motive ? motive : "");
-                    *transform = constraint->params.motive.transform;
+                    *restated = plan_motive_ref_restates(&constraint->params.motive);
                 }
             }
             const PlanNotes *notes = &plan_lane_span_payload(plan, lanes[i])->notes;
@@ -212,10 +212,10 @@ static void test_idea_motives(void) {
         int basic[64];
         int repetition[64];
         char node[32];
-        PlanMotiveTransform transform = PLAN_TRANSFORM_NONE;
-        size_t basic_count = idea_melody(plan, "basic idea", basic, 64, node, sizeof(node), &transform);
-        size_t count = idea_melody(plan, "repetition", repetition, 64, node, sizeof(node), &transform);
-        assert(strcmp(node, "i1") == 0 && transform == PLAN_TRANSFORM_RESTATED);
+        bool restated = false;
+        size_t basic_count = idea_melody(plan, "basic idea", basic, 64, node, sizeof(node), &restated);
+        size_t count = idea_melody(plan, "repetition", repetition, 64, node, sizeof(node), &restated);
+        assert(strcmp(node, "i1") == 0 && restated);
         assert(count != basic_count || memcmp(basic, repetition, count * sizeof(int)) != 0);
         plan_destroy(plan);
 
@@ -228,8 +228,8 @@ static void test_idea_motives(void) {
         assert(strstr(line, "contrasting slot, motive B,") != NULL);
         free(out);
         plan = read_plan("theme_idea.json");
-        idea_melody(plan, "consequent basic idea", basic, 64, node, sizeof(node), &transform);
-        assert(strcmp(node, "i3") == 0 && transform == PLAN_TRANSFORM_RESTATED);
+        idea_melody(plan, "consequent basic idea", basic, 64, node, sizeof(node), &restated);
+        assert(strcmp(node, "i3") == 0 && restated);
         plan_destroy(plan);
     }
     /* The JSON names the source of the idea. */
@@ -504,9 +504,9 @@ static void test_tone_roles(void) {
         int basic[64];
         int repetition[64];
         char node[32];
-        PlanMotiveTransform transform = PLAN_TRANSFORM_NONE;
-        size_t basic_count = idea_melody(plan, "basic idea", basic, 64, node, sizeof(node), &transform);
-        size_t count = idea_melody(plan, "repetition", repetition, 64, node, sizeof(node), &transform);
+        bool restated = false;
+        size_t basic_count = idea_melody(plan, "basic idea", basic, 64, node, sizeof(node), &restated);
+        size_t count = idea_melody(plan, "repetition", repetition, 64, node, sizeof(node), &restated);
         assert(basic_count >= 4 && count >= 4);
         /* The four notes of the motive are chord tones of the chord under them. */
         for (int k = 0; k < 4; k++) {

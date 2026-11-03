@@ -225,7 +225,7 @@ static bool draw_continuation(const Motive *source, Rational room, FillRng *rng,
             size_t most = source->note_count - 1;
             size_t wanted = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
             dev->kind = MOTIVE_RELATION_FRAGMENT;
-            dev->value[0] = PLAN_FRAGMENT_LEADING;
+            dev->value[0] = MOTIVE_FRAGMENT_LEADING;
             dev->value[1] = (long)(wanted < most ? wanted : most);
             dev->value[2] = 1;
             break;
@@ -446,13 +446,19 @@ PlanResult grow_free_apply(PiecePlan *plan, FillTarget target, const GrowFreeSpe
         if (i == 0) {
             memset(&ref, 0, sizeof(ref));
             ref.motive = build.source;
-            ref.transform = PLAN_TRANSFORM_NONE;
         } else {
             NodeId motive;
             PlanSpan bar = {{0, 1}, request.theme.bar};
             char name[16];
             PlanConstraint constraint;
-            grow_dev_ref(&spec->dev[i], build.source, &ref);
+            memset(&ref, 0, sizeof(ref));
+            ref.motive = build.source;
+            ref.has_step = true;
+            ref.step = spec->dev[i];
+            /* The plan names the relation and its parameters; the shortest result is the operators' (motive_develop.h). */
+            if (ref.step.kind == MOTIVE_RELATION_FRAGMENT || ref.step.kind == MOTIVE_RELATION_LIQUIDATE) {
+                ref.step.value[2] = 0;
+            }
             snprintf(name, sizeof(name), "m%zu", i);
             result = plan_result_of_rational(rational_add(build.material_span.start, grow_scaled(request.theme.bar, build.slot_base + i - 1),
                                    &bar.start));

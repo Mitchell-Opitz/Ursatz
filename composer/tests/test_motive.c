@@ -1307,7 +1307,7 @@ static void test_features_follow_the_notes(void) {
     /* A fragment keeps the features it holds whole, renumbered from its first note. */
     memset(&spec, 0, sizeof(spec));
     spec.kind = MOTIVE_RELATION_FRAGMENT;
-    spec.value[0] = PLAN_FRAGMENT_TRAILING;
+    spec.value[0] = MOTIVE_FRAGMENT_TRAILING;
     spec.value[1] = 4;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
     assert(result.note_count == 4 && result.feature_count == 2);
@@ -1319,7 +1319,7 @@ static void test_features_follow_the_notes(void) {
     /* A fragment through the middle of a feature drops it. */
     memset(&spec, 0, sizeof(spec));
     spec.kind = MOTIVE_RELATION_FRAGMENT;
-    spec.value[0] = PLAN_FRAGMENT_LEADING;
+    spec.value[0] = MOTIVE_FRAGMENT_LEADING;
     spec.value[1] = 3;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
     assert(result.feature_count == 1 && feature_is(&result, 0, "a", 0, 1));

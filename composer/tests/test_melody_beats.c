@@ -176,7 +176,6 @@ static void add_melody_target(Piece *piece, PlanSpan span, NodeId motive, long p
     piece->body = span;
     piece->target = add_notes(piece->plan, piece->owner, PLAN_LANE_MELODY, 0, span, 60, PLAN_STATE_CONSTRAINED);
     ref.params.motive.motive = motive;
-    ref.params.motive.transform = PLAN_TRANSFORM_NONE;
     assert(plan_lane_span_add_constraint(piece->plan, piece->target, &ref) == PLAN_OK);
     if (pickup_32nds > 0) {
         PlanConstraint constraint;

@@ -207,7 +207,8 @@ int main(void) {
     cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PlanConstraint motive_ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
     motive_ref.params.motive.motive = m1;
-    motive_ref.params.motive.transform = PLAN_TRANSFORM_INVERTED;
+    motive_ref.params.motive.has_step = true;
+    motive_ref.params.motive.step = (MotiveRelationStep){.kind = MOTIVE_RELATION_INVERT, .value = {-1, 0}};
     assert(plan_node_add_constraint(plan, phrase, &length) == PLAN_OK);
     assert(plan_node_add_constraint(plan, phrase, &cadence) == PLAN_OK);
     assert(plan_node_add_constraint(plan, fragment, &motive_ref) == PLAN_OK);

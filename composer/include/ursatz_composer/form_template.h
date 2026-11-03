@@ -63,8 +63,8 @@ typedef struct {
     CadenceType cadence;              /* the cadence it ends in */
     size_t returns;                       /* the index of the section it returns, or FORM_TEMPLATE_NO_RETURN */
     PlanReturnVariation variation;        /* how it varies the section it returns; read only when it returns one */
-    PlanMotiveTransform motive;           /* how its motive is made from m0; PLAN_TRANSFORM_NONE for m0 itself */
-    bool motive_tonal;                    /* the transform in the key's steps (an inversion) */
+    bool has_motive;                      /* its motive is made from m0 by `motive`; false for m0 itself */
+    MotiveRelationStep motive;            /* how its motive is made from m0 (open parameters are drawn) */
     unsigned layers;                      /* the LAYERS mask (PlanLayers) in a layered form; 0 for none */
 } FormTemplateSection;
 
