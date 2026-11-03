@@ -98,13 +98,27 @@ lanes of the plan (R-019) hold library values:
 ### CLI snapshots
 
 `test_cli_snapshots` (`tests/cli_snapshots.cmake`) runs the seeded commands on the fixtures and compares each output with
-`tests/snapshots/<case>.<ext>`. The values of `analyzer_version`, `composer_version` and `ursatz_commit` are ignored; MIDI
-and MusicXML are compared byte for byte. After a change that is meant to move output, recapture and review the diff:
+`tests/snapshots/<case>.<ext>`. The values of `analyzer_version`, `composer_version` and `ursatz_commit` are ignored; files
+ending `.json` are compared as JSON values (member order and indentation do not matter, `test_cli_snapshot_compare` proves
+it); MIDI, MusicXML and text are compared byte for byte. After a change that is meant to move output, recapture and review
+the diff:
 
 ```sh
 cmake -DCOMPOSER=build/cli/ursatz-composer -DWORK=build/tests/cli_snapshots -DSNAPSHOTS=tests/snapshots \
       -DFIXTURES=tests/fixtures -DUPDATE=1 -P tests/cli_snapshots.cmake
 ```
+
+The GUI runs the CLI per request, so the cases below lock every shape it uses (fixtures in `tests/fixtures/gui/`). They must
+not move while the CLI is moved onto the composer API:
+
+| GUI shape | Cases |
+| --- | --- |
+| version | `version` |
+| motive analyze (notes, rhythm form), degrees to notes, MIDI to motive, render | `motive-notes`, `motive-form-rhythm`, `motive-degrees`, `motive-midi`, `motive-render` |
+| operation list, variants, recognize, random motive | `variants-list-ops`, `variants-basic`, `recognize`, `random-motive-style` |
+| theme (JSON, plan, MIDI, MusicXML) | `theme-one-motive`, `theme-period-contrast`, `theme-chords`, `theme-fast-minor` |
+| piece compose, regenerate, regenerate one lane, variations | `piece-theme-fill`, `piece-loop-and-ending`, `piece-progression-fill`, `piece-regenerate`, `piece-regenerate-lane`, `piece-variations` |
+| refusals (stderr and exit status) | `error-motive-meter` (1), `error-theme-key` (1), `error-piece-type` (1), `error-theme-unsatisfiable` (2), `error-theme-write` (3) |
 
 ### File scope state
 
