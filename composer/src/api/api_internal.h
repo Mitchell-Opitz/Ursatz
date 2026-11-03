@@ -122,4 +122,11 @@ ComposerStatus api_lane_targets(const PiecePlan *plan, NodeId node, bool has_lan
 /* Why a regenerate result refused the target (what names it: "section B"): COMPOSER_ERR_UNSATISFIABLE with the message. */
 ComposerStatus api_refused(RegenerateResult result, const char *what, ComposerError *error);
 
+/* --- reading a request without running it (composer_api_validate) --------------------------------------- */
+
+/* Reads the request as its entry does and stops before composing: COMPOSER_OK, or the status the entry would give. */
+ComposerStatus api_theme_validate(const cJSON *request, ComposerError *error);
+/* As api_theme_validate for a random motive request; filled (a copy of request) gets the seed and the drawn mode and meter. */
+ComposerStatus api_random_validate(const cJSON *request, cJSON *filled, ComposerError *error);
+
 #endif

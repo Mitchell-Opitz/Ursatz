@@ -11,6 +11,7 @@
 #include "api_grow.h"
 #include "api_internal.h"
 #include "api_piece.h"
+#include "util/plan_util.h"
 #include "util/request_parse.h"
 
 /*
@@ -619,4 +620,47 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, con
         snprintf(request->source[given], sizeof(request->source[0]), "basic motive");
     }
     return COMPOSER_OK;
+}
+
+ComposerStatus api_piece_validate(const cJSON *root, cJSON *filled, ComposerError *error) {
+    PieceSpec *request = calloc(1, sizeof(*request));
+    if (!request) {
+        return fail_alloc(error);
+    }
+    ComposerStatus status = api_piece_read_request(request, root, "", NULL, false, NULL, error);
+    cJSON *sections = cJSON_GetObjectItemCaseSensitive(filled, "sections");
+    size_t given = (size_t)cJSON_GetArraySize(sections);
+    if (status == COMPOSER_OK) {
+        piece_structure_default_cadences(&request->structure);
+    }
+    for (size_t i = 0; status == COMPOSER_OK && i < request->structure.section_count; i++) {
+        const PieceSection *section = &request->structure.sections[i];
+        cJSON *item = i < given ? cJSON_GetArrayItem(sections, (int)i) : NULL;
+        if (!item) {
+            item = cJSON_CreateObject();
+            if (!item || !cJSON_AddStringToObject(item, "id", section->id) ||
+                !cJSON_AddStringToObject(item, "part", piece_part_name(section->part)) ||
+                !cJSON_AddStringToObject(item, "letter", section->letter) ||
+                !cJSON_AddNumberToObject(item, "beats", (double)section->beats) || !cJSON_AddItemToArray(sections, item)) {
+                cJSON_Delete(item);
+                status = fail_alloc(error);
+                break;
+            }
+            cJSON *fill = cJSON_AddObjectToObject(item, "fill");
+            if (!fill || !cJSON_AddStringToObject(fill, "kind", piece_fill_name(section->fill))) {
+                status = fail_alloc(error);
+                break;
+            }
+        }
+        const cJSON *cadence = cJSON_GetObjectItemCaseSensitive(item, "cadence");
+        if (!cadence || cJSON_IsNull(cadence)) {
+            cJSON_DeleteItemFromObjectCaseSensitive(item, "cadence");
+            if (!cJSON_AddStringToObject(item, "cadence", plan_cadence_name(section->cadence))) {
+                status = fail_alloc(error);
+            }
+        }
+    }
+    api_piece_request_destroy(request);
+    free(request);
+    return status;
 }

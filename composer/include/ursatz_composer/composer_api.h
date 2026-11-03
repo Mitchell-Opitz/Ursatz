@@ -320,4 +320,16 @@ ComposerStatus composer_api_grow(const char *request_json, const ComposerJob *jo
  */
 ComposerStatus composer_api_vocabulary(ComposerResponse *out);
 
+/*
+ * Reads a request as its entry does and composes nothing. kind: "motive" (the request of composer_api_motive), "theme" (of
+ * composer_api_theme), "piece" (the piece request object, docs/piece-request.md, not the wrapper of composer_api_piece) or
+ * "random_motive" (of composer_api_random_motive). json: {"request": <the request with the Composer's defaults filled>}: a
+ * motive gets its "meter", "role", "input" "format" and "form" when it has none and its "harmony" as [{"numeral", "onset"}]
+ * (the onset in beats of the meter, as "3/2"); a piece gets the "cadence" of every section that has none and the default
+ * ending section; a random motive gets its "seed" and the "mode" and "meter" a "random" drew; a theme comes back as it is.
+ * A request that an entry would refuse is refused the same way, with its message and path. An unknown kind is
+ * COMPOSER_ERR_REQUEST with path /kind.
+ */
+ComposerStatus composer_api_validate(const char *kind, const char *request_json, ComposerResponse *out);
+
 #endif

@@ -218,6 +218,35 @@ static ComposerStatus make_random(const cJSON *request, const ComposerJob *job, 
     return api_respond_json(out, document);
 }
 
+ComposerStatus api_random_validate(const cJSON *request, cJSON *filled, ComposerError *error) {
+    MotiveRandomOptions options;
+    bool accompaniment = false;
+    bool has_role = false;
+    const char *drawn_mode = NULL;
+    const char *drawn_meter = NULL;
+    ComposerStatus status = read_options(request, &options, &accompaniment, &has_role, &drawn_mode, &drawn_meter, error);
+    ComposerStyle *style = NULL;
+    if (status == COMPOSER_OK) {
+        status = read_style(request, &style, error);
+        composer_style_destroy(style);
+    }
+    if (status != COMPOSER_OK) {
+        return status;
+    }
+    /* The seed the draws were made from is the request's own, or the one read from the clock. */
+    cJSON_DeleteItemFromObjectCaseSensitive(filled, "seed");
+    bool ok = cJSON_AddNumberToObject(filled, "seed", (double)options.seed) != NULL;
+    if (drawn_mode) {
+        cJSON_DeleteItemFromObjectCaseSensitive(filled, "mode");
+        ok = ok && cJSON_AddStringToObject(filled, "mode", drawn_mode);
+    }
+    if (drawn_meter) {
+        cJSON_DeleteItemFromObjectCaseSensitive(filled, "meter");
+        ok = ok && cJSON_AddStringToObject(filled, "meter", drawn_meter);
+    }
+    return ok ? COMPOSER_OK : api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
+}
+
 ComposerStatus composer_api_random_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     cJSON *request = NULL;

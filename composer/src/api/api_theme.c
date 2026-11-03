@@ -770,3 +770,16 @@ ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *j
     }
     return status;
 }
+
+ComposerStatus api_theme_validate(const cJSON *request, ComposerError *error) {
+    ThemeState state;
+    memset(&state, 0, sizeof(state));
+    ThemeOutputs outputs;
+    memset(&outputs, 0, sizeof(outputs));
+    state.request = cJSON_Duplicate(request, true);
+    ComposerStatus status = state.request ? theme_prepare(&state, NULL, &outputs, error) : fail_alloc(error);
+    free(state.material);
+    composer_style_destroy(state.style);
+    cJSON_Delete(state.request);
+    return status;
+}
