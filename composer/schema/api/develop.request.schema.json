@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/develop.request.schema.json",
+  "title": "composer_api_develop request",
+  "description": "Motives related to one motive: the motive request with an operation and the members it takes.",
+  "type": "object",
+  "required": [
+    "input",
+    "op"
+  ],
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "input": {
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "form": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "pickup": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "harmony": {
+      "type": "string"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "role": {
+      "enum": [
+        "melodic",
+        "accompaniment"
+      ]
+    },
+    "tones": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "meter": {
+      "type": "string"
+    },
+    "key": {
+      "type": "string"
+    },
+    "op": {
+      "enum": [
+        "restate",
+        "invert",
+        "retrograde",
+        "interval",
+        "fragment",
+        "liquidate",
+        "augment",
+        "diminish"
+      ]
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "suggest": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "by": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "degree": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "axis": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "interval": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "amount": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "position": {
+      "type": "string"
+    },
+    "length": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "min": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "drop": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "ratio": {
+      "type": "string"
+    },
+    "tonal": {
+      "type": "boolean"
+    },
+    "keep_contour": {
+      "type": "boolean"
+    },
+    "keep_rhythm": {
+      "type": "boolean"
+    },
+    "midi": {
+      "type": "boolean"
+    },
+    "musicxml": {
+      "type": "boolean"
+    },
+    "plain_midi": {
+      "type": "boolean"
+    },
+    "tempo": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

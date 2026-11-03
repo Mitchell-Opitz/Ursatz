@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/grow.response.schema.json",
+  "title": "composer_api_grow response",
+  "description": "What `grow --format json` prints, without the files.",
+  "type": "object",
+  "required": [
+    "key",
+    "meter",
+    "bars",
+    "into",
+    "pairing",
+    "cadence",
+    "tempo",
+    "themes"
+  ],
+  "properties": {
+    "key": {
+      "type": "string"
+    },
+    "meter": {
+      "type": "string"
+    },
+    "bars": {
+      "type": "integer"
+    },
+    "into": {
+      "type": "string"
+    },
+    "pairing": {
+      "type": "string"
+    },
+    "cadence": {
+      "type": "string"
+    },
+    "first_cadence": {
+      "type": "string"
+    },
+    "accompaniment": {
+      "type": "string"
+    },
+    "texture": {
+      "type": "string"
+    },
+    "voicing": {
+      "type": "string"
+    },
+    "tempo": {
+      "type": "object"
+    },
+    "brief": {
+      "type": "object"
+    },
+    "source": {
+      "type": "object"
+    },
+    "themes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "seed",
+          "structure",
+          "chords",
+          "developments",
+          "score",
+          "requested",
+          "heard",
+          "heard_as_requested",
+          "heard_text"
+        ],
+        "properties": {
+          "seed": {
+            "type": "integer"
+          },
+          "structure": {
+            "type": "array"
+          },
+          "chords": {
+            "type": "array"
+          },
+          "developments": {
+            "type": "array"
+          },
+          "slots": {
+            "type": "array"
+          },
+          "score": {
+            "type": "object"
+          },
+          "requested": {
+            "type": "string"
+          },
+          "heard": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "heard_as_requested": {
+            "type": "boolean"
+          },
+          "heard_text": {
+            "type": "string"
+          },
+          "style_distance": {
+            "type": "object"
+          },
+          "plan": {
+            "type": "object"
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "musicxml": {
+            "type": "string"
+          },
+          "analyzer": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "notices": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}
