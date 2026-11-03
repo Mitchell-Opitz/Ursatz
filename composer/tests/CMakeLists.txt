@@ -18,6 +18,13 @@ target_link_libraries(test_plan_json PRIVATE ursatz_composer)
 target_compile_options(test_plan_json PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_plan_json PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_plan_json COMMAND test_plan_json)
+find_program(VALGRIND_PROGRAM valgrind)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_plan_json_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     $<TARGET_FILE:test_plan_json>)
+    set_tests_properties(test_plan_json_valgrind PROPERTIES LABELS slow)
+endif()
 
 add_executable(test_render_plan test_render_plan.c)
 target_link_libraries(test_render_plan PRIVATE ursatz_composer)
