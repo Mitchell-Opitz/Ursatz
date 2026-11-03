@@ -776,7 +776,7 @@
           "implied_harmony": {
             "key_known": true,
             "candidates": [{
-                "roman_numeral": "ii°",
+                "roman_numeral": "iio",
                 "function": "predominant",
                 "fit": 0.9,
                 "chord_tones": 3,
@@ -788,7 +788,7 @@
                 "chord_tones": 3,
                 "non_chord_tones": 1
               }, {
-                "roman_numeral": "vii°",
+                "roman_numeral": "viio",
                 "function": "dominant",
                 "fit": 0.9,
                 "chord_tones": 3,
@@ -1675,13 +1675,13 @@
                 "chord_tones": 2,
                 "non_chord_tones": 2
               }, {
-                "roman_numeral": "ii°",
+                "roman_numeral": "iio",
                 "function": "predominant",
                 "fit": 0.1,
                 "chord_tones": 1,
                 "non_chord_tones": 3
               }, {
-                "roman_numeral": "vii°",
+                "roman_numeral": "viio",
                 "function": "dominant",
                 "fit": 0.1,
                 "chord_tones": 1,
@@ -4116,7 +4116,7 @@
                 "chord_tones": 1,
                 "non_chord_tones": 5
               }, {
-                "roman_numeral": "ii°",
+                "roman_numeral": "iio",
                 "function": "predominant",
                 "fit": 0.0833,
                 "chord_tones": 1,
@@ -4764,7 +4764,7 @@
                 "chord_tones": 2,
                 "non_chord_tones": 3
               }, {
-                "roman_numeral": "ii°",
+                "roman_numeral": "iio",
                 "function": "predominant",
                 "fit": 0.05,
                 "chord_tones": 1,
@@ -4776,7 +4776,7 @@
                 "chord_tones": 1,
                 "non_chord_tones": 4
               }, {
-                "roman_numeral": "vii°",
+                "roman_numeral": "viio",
                 "function": "dominant",
                 "fit": 0.05,
                 "chord_tones": 1,
@@ -5349,7 +5349,7 @@
                 "chord_tones": 2,
                 "non_chord_tones": 3
               }, {
-                "roman_numeral": "ii°",
+                "roman_numeral": "iio",
                 "function": "predominant",
                 "fit": 0.1111,
                 "chord_tones": 1,
@@ -5361,7 +5361,7 @@
                 "chord_tones": 1,
                 "non_chord_tones": 4
               }, {
-                "roman_numeral": "vii°",
+                "roman_numeral": "viio",
                 "function": "dominant",
                 "fit": 0.1111,
                 "chord_tones": 1,
@@ -6245,7 +6245,7 @@
                 "chord_tones": 1,
                 "non_chord_tones": 3
               }, {
-                "roman_numeral": "vii°",
+                "roman_numeral": "viio",
                 "function": "dominant",
                 "fit": 0.4,
                 "chord_tones": 1,
@@ -6544,7 +6544,7 @@
                 "chord_tones": 1,
                 "non_chord_tones": 3
               }, {
-                "roman_numeral": "vii°",
+                "roman_numeral": "viio",
                 "function": "dominant",
                 "fit": 0.4,
                 "chord_tones": 1,
@@ -6813,7 +6813,7 @@
           "implied_harmony": {
             "key_known": true,
             "candidates": [{
-                "roman_numeral": "ii°",
+                "roman_numeral": "iio",
                 "function": "predominant",
                 "fit": 1,
                 "chord_tones": 4,
@@ -6825,7 +6825,7 @@
                 "chord_tones": 3,
                 "non_chord_tones": 1
               }, {
-                "roman_numeral": "vii°",
+                "roman_numeral": "viio",
                 "function": "dominant",
                 "fit": 0.9,
                 "chord_tones": 3,
@@ -7134,13 +7134,13 @@
                 "chord_tones": 2,
                 "non_chord_tones": 2
               }, {
-                "roman_numeral": "vii°",
+                "roman_numeral": "viio",
                 "function": "dominant",
                 "fit": 0.2,
                 "chord_tones": 2,
                 "non_chord_tones": 2
               }, {
-                "roman_numeral": "ii°",
+                "roman_numeral": "iio",
                 "function": "predominant",
                 "fit": 0.1,
                 "chord_tones": 1,
@@ -7716,7 +7716,7 @@
                 "chord_tones": 2,
                 "non_chord_tones": 3
               }, {
-                "roman_numeral": "ii°",
+                "roman_numeral": "iio",
                 "function": "predominant",
                 "fit": 0.05,
                 "chord_tones": 1,
@@ -7728,7 +7728,7 @@
                 "chord_tones": 1,
                 "non_chord_tones": 4
               }, {
-                "roman_numeral": "vii°",
+                "roman_numeral": "viio",
                 "function": "dominant",
                 "fit": 0.05,
                 "chord_tones": 1,
@@ -8016,7 +8016,7 @@
                 "chord_tones": 3,
                 "non_chord_tones": 1
               }, {
-                "roman_numeral": "ii°",
+                "roman_numeral": "iio",
                 "function": "predominant",
                 "fit": 0.1,
                 "chord_tones": 1,

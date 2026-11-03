@@ -409,7 +409,7 @@
               "chord_tones": 1,
               "non_chord_tones": 8
             }, {
-              "roman_numeral": "ii°",
+              "roman_numeral": "iio",
               "function": "predominant",
               "fit": 0.0714,
               "chord_tones": 1,
@@ -421,7 +421,7 @@
               "chord_tones": 1,
               "non_chord_tones": 8
             }, {
-              "roman_numeral": "vii°",
+              "roman_numeral": "viio",
               "function": "dominant",
               "fit": 0.0714,
               "chord_tones": 1,

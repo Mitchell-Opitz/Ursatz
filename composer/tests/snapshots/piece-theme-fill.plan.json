@@ -144,7 +144,7 @@
         }
       },
       "note_ids": [],
-      "label": "V6/5",
+      "label": "V65",
       "uncertainty": null,
       "key_label": "D minor",
       "composer": {
@@ -162,7 +162,7 @@
             "split_at_bars": false
           }],
         "payload": {
-          "roman_numeral": "V6/5",
+          "roman_numeral": "V65",
           "function": "dominant"
         }
       }

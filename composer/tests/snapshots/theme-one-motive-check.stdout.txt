@@ -16,10 +16,10 @@ structure (bars from the start of the theme)
 
 bar  beat chord      function     bass
 1    1    i          tonic        D3
-1    3    vii°6     dominant     E3
+1    3    viio6      dominant     E3
 2    1    i6         tonic        F3 F2
 3    1    i          tonic        D3
-3    3    vii°6     dominant     E3
+3    3    viio6      dominant     E3
 4    1    i6         tonic        F3 F2
 5    1    i          tonic        D3
 6    1    iv         predominant  G3
