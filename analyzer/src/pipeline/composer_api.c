@@ -608,47 +608,11 @@ AnalyzerFragmentResult analyzer_fragment_violations(const AnalyzerFragmentAnalys
     if (!analysis || !analysis->valid || !out || !count) {
         return ANALYZER_FRAGMENT_ERR_ARGUMENT;
     }
-    *out = NULL;
-    *count = 0;
-    const AnalysisReport *report = analyzer_result_report(analysis->result);
-    const AnalysisVoiceLeading *leading = &report->voice_leading;
-    AnalyzerViolation *list = NULL;
-    size_t used = 0, capacity = 0;
-    bool ok = true;
-    for (size_t i = 0; ok && leading->present && i < leading->violation_count; i++) {
-        const AnalysisVoiceViolation *fault = &leading->violations[i];
-        const AnalysisReportEntry *arrival = &report->entries[fault->entry_to];
-        bool parallel = fault->rule[0] == 'p';
-        ok = add_violation(analysis->notes.meter.meter_map, &list, &used, &capacity, voice_rule_id(fault), parallel, arrival->time_numerator,
-                           arrival->time_denominator, fault->note_ids, 4);
+    AnalyzerStatus status = analyzer_result_violations(analysis->result, out, count);
+    if (status == ANALYZER_OK) {
+        return ANALYZER_FRAGMENT_OK;
     }
-    for (int pass = 0; ok && pass < 2; pass++) {
-        const char *wanted = pass == 0 ? "seventh-resolves-down" : "leading-tone-resolves";
-        for (size_t i = 0; ok && leading->present && i < leading->resolution_count; i++) {
-            const AnalysisVoiceResolution *fault = &leading->resolutions[i];
-            if (strcmp(fault->rule, wanted) != 0) {
-                continue;
-            }
-            const AnalysisReportEntry *arrival = &report->entries[fault->entry_to];
-            ok = add_violation(analysis->notes.meter.meter_map, &list, &used, &capacity,
-                               pass == 0 ? "unresolved-seventh" : "unresolved-leading-tone", false,
-                               arrival->time_numerator, arrival->time_denominator, fault->note_ids, 2);
-        }
-    }
-    const AnalysisCounterpointCheck *check = &report->counterpoint_check;
-    for (size_t i = 0; ok && check->present && i < check->violation_count; i++) {
-        char rule[96];
-        snprintf(rule, sizeof rule, "counterpoint:%s", check->violations[i].group);
-        ok = add_violation(analysis->notes.meter.meter_map, &list, &used, &capacity, rule, check->violations[i].hard, check->start_numerator,
-                           check->start_denominator, check->note_ids, check->note_id_count);
-    }
-    if (!ok) {
-        analyzer_violations_free(list, used);
-        return ANALYZER_FRAGMENT_ERR_ALLOC;
-    }
-    *out = list;
-    *count = used;
-    return ANALYZER_FRAGMENT_OK;
+    return status == ANALYZER_ERR_ALLOC ? ANALYZER_FRAGMENT_ERR_ALLOC : ANALYZER_FRAGMENT_ERR_ARGUMENT;
 }
 
 /* A style model of the statistics. The caller destroys it. */

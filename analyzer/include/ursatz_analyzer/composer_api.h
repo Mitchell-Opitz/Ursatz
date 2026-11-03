@@ -180,6 +180,8 @@ typedef struct {
 AnalyzerStatus analyzer_result_violations(const AnalyzerResult *result, AnalyzerViolation **out, size_t *count);
 
 /*
+ * Deprecated: use analyzer_result_violations.
+ *
  * Every voice-leading fault the report holds (parallels, directs, unresolved sevenths and leading tones, in that
  * order) and, when the counterpoint check ran, every counterpoint violation. *out is a new array the caller releases
  * with analyzer_violations_free; it is NULL when *count is 0.
