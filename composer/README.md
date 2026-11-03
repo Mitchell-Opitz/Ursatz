@@ -69,7 +69,7 @@ lanes of the plan (R-019) hold library values:
 | A motive | `<analysis/motive_sketch.h>`: `MotiveSketch`, which the Composer names `Motive` (`typedef MotiveSketch Motive`, `include/ursatz_composer/motive.h`). Its notes are `pitch` (`MOTIVE_SKETCH_PITCH_UNKNOWN` in a rhythm motive), `onset` and `duration`; its meter is the sketch's `bar` and `beat` and its key the sketch's scale and tonic spelling, read and set only through `motive_meter_of`, `motive_set_meter`, `motive_key_of` and `motive_set_key`. A motive keeps no per-note spelling and no hyperbar. |
 | How a motive is made from another | `<analysis/motive_relation.h>`: `MotiveRelationStep`, a relation kind and up to 4 parameter values. It is the only transform spec: `motive_develop` takes it, a `PlanMotiveRef` holds it (`step`, or none for a plain reference to the source) and the plan file writes its text (`"step": "transpose tonal=1 by=2"`). The variant registry rows name their relation and describe their parameters through `motive_relation_param_info`; `docs/plan-format.md#motive-relation-steps` has the table. |
 | Cadence type | `<semantics/cadence_type.h>`: `CadenceType`. The plan file and the command line name the five a plan holds PAC, IAC, HC, DC and PC (`plan_cadence_names` in `src/util/plan_util.c`). |
-| Harmonic function | `<standard-harmony/harmonic_function.h>`: `HarmonicFunction`, with `PlanHarmony.has_function` false for chords read from an analysis. |
+| Harmonic function | `<standard-harmony/harmonic_function.h>`: `HarmonicFunction`, with `PlanHarmony.has_function` false for chords loaded from an Analyzer result and for a plan file chord with no `function`. |
 | Key | `<semantics/analysis_key.h>`: `AnalysisKey`, a spelled tonic and a `KeyStructureMode`. `plan_key_of_pitch_class` spells a pitch class with the library; `analysis_key_tonic_pitch_class` reads it back. |
 | Pitch | A `PlanNote` is a MIDI number and an optional spelling (`spelled`, `letter`, `accidental`). MusicXML notes keep their notated spelling; the operators write unspelled notes and the renderer spells them in the key under them. |
 | MIDI import | `<io/midi_importer.h>`: `midi_importer_import_complete` (notes, meter and key signatures in one parse). |
@@ -93,6 +93,7 @@ lanes of the plan (R-019) hold library values:
 | `src/util/` | Private helpers the sources and the CLI share: `util.h` (numbers, strings, reading a file) and `plan_util.h` (spans, lanes, subtrees, name tables). Not installed. |
 | `cli/` | The `ursatz-composer` command. |
 | `tests/` | Tests and their fixtures. `tests/support/` is the `composer_test_support` library the tests share; `tests/snapshots/` holds the CLI snapshots. |
+| `schema/` | `plan.v2.schema.json`, the JSON Schema of the plan file; `test_plan_schema` validates the snapshots' plan files and every fixture written back when python3 with `jsonschema` is installed. |
 
 ### CLI snapshots
 
@@ -270,7 +271,9 @@ for the harmony of a section whose melody is given. `lock --format json` prints 
 
 ## Plan format
 
-A plan is written and read as JSON in the shape of an Ursatz-Analyzer analysis document. See
+A plan is written as JSON in the Composer's own format, version 2, described by
+[schema/plan.v2.schema.json](schema/plan.v2.schema.json); plans saved before it (version 1) still open. A piece analyzed
+by the Ursatz Analyzer loads as a plan from its `AnalyzerResult` (`plan_from_analyzer_result`). See
 [docs/plan-format.md](docs/plan-format.md).
 
 ## Fill loop

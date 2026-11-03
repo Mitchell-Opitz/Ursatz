@@ -1,49 +1,51 @@
 # Plan format
 
 A piece plan is written as JSON by `plan_to_json` / `plan_write_json_file` and read by
-`plan_from_json` / `plan_read_json_file` (`<ursatz_composer/plan_json.h>`). The document has the
-shape of an [Ursatz-Analyzer analysis document](https://github.com/Mitchell-Opitz/Ursatz-Analyzer/blob/main/docs/analysis-document.md)
-(`schema_version` 1), so the Analyzer's schema accepts it and the Composer and the Analyzer share
-one vocabulary. Anything the Analyzer has no field for sits in a `composer` object on the node or
-claim it belongs to.
+`plan_from_json` / `plan_read_json_file` (`<ursatz_composer/plan_json.h>`). The file is the Composer's own: it has a
+name, a version and a JSON Schema ([`schema/plan.v2.schema.json`](../schema/plan.v2.schema.json), JSON Schema 2020-12),
+and it is written on library values: a key's tonic is a spelled note name, a chord's function is the library's function
+name, a note may carry its spelling. Writing always gives format version 2 (`URSATZ_COMPOSER_PLAN_FORMAT_VERSION`).
+Reading takes version 2 and version 1, the format of every plan saved before it ([Format versions](#format-versions)).
 
 The output is pretty-printed with a 2-space indent, in the key order shown below, and ends with a
 newline. The same plan always gives the same bytes.
 
 ## Conventions
 
-These are the Analyzer's.
+These are the library's.
 
 - **Time** is an exact rational position in whole notes from the start of the piece:
   `{"num": 3, "den": 2}`, in lowest terms. `den` is at least 1.
 - **Span** is `{"start": <time>, "end": <time>}`. In memory a span is a start and a length; `end`
   is start plus length, and a span must be longer than zero.
-- **Claim** is a lane span written the way the Analyzer writes a claim: `framework`, `span`,
-  `note_ids`, `label`, `uncertainty`.
+- **Claim** is a lane span written as an entry of its lane's section: `framework`, `span`, `note_ids`, `label`,
+  `uncertainty`, and the `composer` object that holds the plan's own data.
+- **Tonic** is a note name without an octave as the library spells it (`pitch_spelling_name`): a letter and `bb`, `b`,
+  nothing, `#` or `x` (`C`, `F#`, `Bb`, `Cx`). A key with a tonic outside these is not written.
 
 ## In memory
 
-The file above does not change with the types behind it. In memory a time is a library `Rational` (`<core/rational.h>`) in
+The file does not change with the types behind it. In memory a time is a library `Rational` (`<core/rational.h>`) in
 whole notes, a span a `Rational` start and length, a cadence a `CadenceType` (the file names PAC, IAC, HC, DC and PC as
-`pac`, `iac`, `hc`, `dc`, `pc`), a harmonic function a `HarmonicFunction` with a `has_function` flag (the file writes
-`unknown` when it is false), a key an `AnalysisKey` (the file writes `tonic_pitch_class` and `mode`), and a note a MIDI
-number with an optional spelling. The file carries no spelling yet, so a note read from it is unspelled.
+`pac`, `iac`, `hc`, `dc`, `pc`), a harmonic function a `HarmonicFunction` with a `has_function` flag (the file leaves
+`function` out when it is false), a key an `AnalysisKey` (the file writes `tonic`, spelled, and `mode`), and a note a MIDI
+number with an optional spelling (the file writes `spelling` for a spelled note and nothing for an unspelled one).
 
 ## Top level
 
 | Key | Content |
 | --- | --- |
-| `schema_version` | Always `1`. |
-| `metadata` | `source_file` `""`, `analyzer_version` (the Composer version), `ursatz_commit` `"unknown"`, `note_count` 0, `ticks_per_quarter` `null`, `key_found` (true when the plan has a key span). |
+| `format` | Always `"ursatz-composer-plan"`. |
+| `format_version` | Always `2`. |
+| `metadata` | `composer_version` (the Composer that wrote the file), `ursatz_commit` (the Ursatz commit the Analyzer was configured against, `ursatz_analyzer_ursatz_commit()`; `scripts/check-pins.sh` keeps it the commit the Composer pins) and, only for a plan loaded from an Analyzer result, `analyzer_version` (`ursatz_analyzer_version()`). |
 | `meter` | `null`, or `{"spans": [<claim>, ...]}` for meter spans. |
 | `keys` | Key lane claims. |
 | `chords` | Harmony lane claims. |
 | `form` | The node tree, or `null` for an empty plan. |
 | `melody` | Melody lane claims. |
 | `texture` | Bass and inner voice lane claims. |
-| `cadences`, `phrases`, `motives`, `rhythm`, `voice_leading`, `schemas` | Always `[]`. The plan keeps its own versions of these in the tree and the constraints. |
 
-Reading needs `schema_version` and `form`. A lane section that is absent counts as empty.
+Reading needs `format` and `format_version` (or `schema_version` for version 1) and `form`. A lane section that is absent counts as empty.
 
 ## Nodes
 
@@ -106,9 +108,9 @@ Spans in the same lane and voice do not overlap; a span may start where another 
 | Lane | Payload |
 | --- | --- |
 | `meter` | `beats_per_bar`, `beat_unit` (4 is a quarter), `bars_per_hyperbar` (0 for none). |
-| `key` | `tonic_pitch_class` (0 to 11, C is 0), `mode` (`major` or `minor`). |
-| `harmony` | `roman_numeral` (1 to 15 characters), `function` (`tonic`, `predominant`, `dominant` or `unknown`). |
-| `bass`, `melody`, `inner_voice` | `notes`: a non-empty array of `{"midi_pitch": 0 to 127, "offset": <time>, "duration": <time>}`. `offset` is measured from the start of the span, and a note ends inside the span. An `inner_voice` span may have an empty array: the voice is silent over the span. |
+| `key` | `tonic` (spelled), `mode` (`major` or `minor`). |
+| `harmony` | `roman_numeral` (1 to 15 characters), `function` (`tonic`, `predominant` or `dominant`; left out when the chord has none). |
+| `bass`, `melody`, `inner_voice` | `notes`: a non-empty array of `{"midi_pitch": 0 to 127, "spelling": <tonic>, "offset": <time>, "duration": <time>}`; `spelling` is only there for a spelled note (read from MusicXML). `offset` is measured from the start of the span, and a note ends inside the span. An `inner_voice` span may have an empty array: the voice is silent over the span. |
 
 ## State
 
@@ -135,7 +137,7 @@ nothing checks them.
 | `length_bars` | `bars`: integer, 1 or more. |
 | `cadence` | `type`: `pac`, `iac`, `hc`, `dc` or `pc`. |
 | `motive_ref` | `motive`: the id of a motive node; `step` (optional): the relation that makes the node's motive from it, as the text of a library relation step ([Motive relation steps](#motive-relation-steps)). Without `step` the node's melody is that motive itself. Files saved before `step` write `transform` and its members instead, which are still read. |
-| `key` | `tonic_pitch_class` (0 to 11), `mode` (`major` or `minor`). |
+| `key` | `tonic` (spelled), `mode` (`major` or `minor`). |
 | `archetype` | `type`: `sentence`, `period` or `hybrid`. |
 | `embellish` | No fields. Marks a harmony lane span reopened for the embellishment pass. |
 | `schema` | `schema`: the name of a galant schema as Ursatz's galant-schemas framework names it (`romanesca`, `do-re-mi`, `fonte` and so on); `stage`: the index of the schema's stage the span sounds, from 0. The span's other voices are read from the framework's prototype. |
@@ -193,7 +195,7 @@ members the transform uses (`tonal`, `steps`, `axis`, `interval`, `amount`, `kee
 `drop`, `keep_rhythm`, `ratio_num`, `ratio_den`). They are read, by one function in `src/plan/plan_json.c`, into the
 step of the same relation (`none` into no step, `restated` into `exact`; `semitones` or `steps` into `by`; an absent
 `axis` into -1) and are written back as `step`; nothing writes the old names. A `transform` the table does not
-have fails the read with its name in the message. The schema version stays 1.
+have fails the read with its name in the message. The format version stays 2.
 
 ## Reading
 
@@ -203,30 +205,53 @@ have fails the read with its name in the message. The schema version stays 1.
   not a valid plan, `PLAN_ERR_IO` for a file that cannot be read, or `PLAN_ERR_ALLOC`. The
   `PlanJsonError` gives a `path` such as `form.children[1].span.end.den`, a `message`, and the byte
   `offset` for a syntax error.
-- A lane claim without a `composer` object is an error. An analysis document is loaded with
-  `plan_from_analysis_document`, below.
+- A lane claim without a `composer` object is an error. An analyzed piece is loaded with
+  `plan_from_analyzer_result`, below.
 
-## Loading an analysis document
+## Format versions
 
-`plan_from_analysis_document` (`<ursatz_composer/analysis_load.h>`) reads an Analyzer analysis
-document and builds a plan in which every node and lane span is `realized`.
+`format_version` 2 is the format this document describes. `schema_version` 1 is the format the Composer wrote before it,
+in the shape of an Ursatz-Analyzer analysis document; `plan_from_json` still reads it (a file with `format` is version 2,
+a file with `schema_version` is version 1) and nothing writes it. What version 1 had that version 2 does not:
 
-| Analysis document | Plan |
+| Version 1 | Read as |
 | --- | --- |
-| The piece | A form root over the extent of the key and chord claims, named for `metadata.source_file`. The document has no form tree yet. |
-| `keys` claim | A key span: `C major` or `Eb minor` gives the tonic and mode. |
-| `chords` claim | A harmony span: the label is the Roman numeral and the function is `unknown`. |
+| `schema_version` 1 | `format_version` 2 once written. |
+| `metadata`: `source_file`, `analyzer_version`, `ursatz_commit` `"unknown"`, `note_count`, `ticks_per_quarter`, `key_found` | Ignored. `analyzer_version` was the Composer's own version, not an Analyzer's (B-A-10), so the plan has no Analyzer version after reading it. |
+| `cadences`, `phrases`, `motives`, `rhythm`, `voice_leading`, `schemas`, always `[]` | Ignored; version 2 does not write them. |
+| A key's `tonic_pitch_class` (0 to 11) | The tonic the library spells for that pitch class and mode (`standard_tonality_key_tonic_of_pitch_class`: fewest accidentals in the signature, sharps on a tie): 3 minor is `D#`, 6 major is `F#`. |
+| A chord's `function` of `unknown` | No function (the member is left out in version 2). |
+| A motive ref's `transform` and its members | The relation step ([Motive relation steps](#motive-relation-steps)). |
+
+Writing the plan again gives version 2: `plan_from_json` then `plan_to_json` turns any version 1 plan into its version 2
+file, and the two render the same MIDI.
+
+## Loading an analyzed piece
+
+`plan_from_analyzer_result` (`<ursatz_composer/analysis_load.h>`) builds a plan from an `AnalyzerResult` and the
+`ImportedNotes` it was made from, in which every node and lane span is `realized`. It reads the Analyzer's results, not
+its analysis document, and records `ursatz_analyzer_version()` as the plan's `metadata.analyzer_version`.
+
+| Analyzer result | Plan |
+| --- | --- |
+| The piece | A form root from time 0 to the end of the last note or chord. |
+| The imported meter map | The meter lane: one span for each run of regions with one signature. A pickup measure joins the span of the measure after it. |
+| The chain's key regions | The key lane: a span for each region, the tonic as the library spells it. |
+| `analyzer_chord_sequence` | The harmony lane: a span for each joined chord, the root-position numeral, no function. |
+| The chain's phrases | A section over the piece with a phrase under it for each phrase. |
+| The chain's soprano and bass lines | The melody lane and the bass lane: one span over the piece with a note for each run of segments one note sounds in. |
 
 Nothing is dropped silently. The report lists:
 
-- a key or chord label that cannot be read, including `"no match"` (skipped)
-- a claim that runs past the start of the next in the same section (cut off at that start, or
-  skipped when both start together)
-- a section with content the plan has no place for yet: `meter`, `cadences`, `phrases`, `form`,
-  `motives`, `melody`, `rhythm`, `texture`, `voice_leading`, `schemas`
+- a pickup measure (joined to the next measure's meter)
+- a phrase that overlaps the one before it or does not fit the piece (skipped)
+- a key region or chord that cannot be placed on the timeline (skipped)
+- a line with no notes (no lane written)
+- an area of the result with claims the plan has no place for yet: `cadences`, `themes`, `motives`, `texture`,
+  `voice_leading`, `schemas`
 
-A document with no key or chord claim that can be read is an error, since there is no timeline to
-build on.
+A result with no notes, or with no key region and no chord, is an error (`PLAN_ERR_FORMAT`), since there is no timeline
+to build on. An analysis document is not read: `fill` refuses one and names `plan_from_analyzer_result`.
 
 ## Motive documents
 
@@ -298,13 +323,6 @@ and `+5` semitones, `+2`, `+2` and `+3` steps. The best implied chord is `i`, wi
 
 The analysis is deterministic: the same motive gives the same document, byte for byte.
 
-## Analyzer compatibility
-
-Version 1 of the Analyzer's schema lists three values for a key claim's `method`. A plan's key
-claims use `"composer_plan"`, which is not among them, so a strict schema check rejects a plan until
-the Analyzer adds the value. The Analyzer's versioning rule treats a new `method` value as an
-additive change.
-
 ## Example
 
 A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the exact output of
@@ -312,14 +330,11 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
 
 ```json
 {
-  "schema_version": 1,
+  "format": "ursatz-composer-plan",
+  "format_version": 2,
   "metadata": {
-    "source_file": "",
-    "analyzer_version": "0.1.0",
-    "ursatz_commit": "unknown",
-    "note_count": 0,
-    "ticks_per_quarter": null,
-    "key_found": true
+    "composer_version": "0.1.0",
+    "ursatz_commit": "36cb9f306b5fdf07f7e907cb2836b2e39fee70ed"
   },
   "meter": {
     "spans": [{
@@ -376,7 +391,7 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
         "state": "realized",
         "constraints": [],
         "payload": {
-          "tonic_pitch_class": 0,
+          "tonic": "C",
           "mode": "major"
         }
       }
@@ -413,8 +428,6 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
         }
       }
     }],
-  "cadences": [],
-  "phrases": [],
   "form": {
     "kind": "form",
     "label": "example",
@@ -457,11 +470,7 @@ A two-bar plan: a form in 4/4 and C major, one section, one chord. This is the e
       "constraints": []
     }
   },
-  "motives": [],
   "melody": [],
-  "rhythm": [],
-  "texture": [],
-  "voice_leading": [],
-  "schemas": []
+  "texture": []
 }
 ```
