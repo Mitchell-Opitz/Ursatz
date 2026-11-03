@@ -421,7 +421,7 @@ static void mark_schema_chords(const PiecePlan *plan, PlanSpan span, size_t coun
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     size_t found = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, HARMONY_MAX_CHORDS);
     for (size_t i = 0; i < count; i++) {
-        exempt[i] = i < found && harmony_span_has_constraint(plan, ids[i], PLAN_CONSTRAINT_SCHEMA);
+        exempt[i] = i < found && plan_lane_span_find_constraint(plan, ids[i], PLAN_CONSTRAINT_SCHEMA) != NULL;
     }
 }
 

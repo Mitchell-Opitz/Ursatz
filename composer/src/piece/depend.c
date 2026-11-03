@@ -50,16 +50,6 @@ NodeId plan_section_of(const PiecePlan *plan, NodeId node) {
     return node;
 }
 
-/* A lane span's names, for the rules below. */
-static bool has_constraint(const PiecePlan *plan, LaneSpanId id, PlanConstraintKind kind) {
-    for (size_t i = 0; i < plan_lane_span_constraint_count(plan, id); i++) {
-        if (plan_lane_span_constraint_at(plan, id, i)->kind == kind) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static bool names_motive(const PiecePlan *plan, LaneSpanId id, NodeId motive) {
     for (size_t i = 0; i < plan_lane_span_constraint_count(plan, id); i++) {
         const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, id, i);
@@ -139,8 +129,8 @@ static void add_over(DependentList *list, const PiecePlan *plan, PlanLaneKind la
             !plan_spans_overlap(plan_lane_span_span(plan, id), span)) {
             continue;
         }
-        if (only_texture && !has_constraint(plan, id, PLAN_CONSTRAINT_VOICING) &&
-            !has_constraint(plan, id, PLAN_CONSTRAINT_COUNTERPOINT)) {
+        if (only_texture && plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_VOICING) == NULL &&
+            plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_COUNTERPOINT) == NULL) {
             continue;
         }
         FillTarget target = {FILL_TARGET_LANE_SPAN, id};

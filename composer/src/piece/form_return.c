@@ -7,6 +7,7 @@
 #include "melody/melody_internal.h"
 #include "piece/form_return_internal.h"
 #include "util/util.h"
+#include <ursatz_composer/constraint.h>
 
 /* The most key spans a section is read across: a section holds at most two keys, with a few to spare. */
 #define MAX_KEY_PIECES 8
@@ -305,15 +306,6 @@ void return_payload_destroy(void *payload) {
 
 /* ------------------------------------------------------------- the target */
 
-static bool has_constraint(const PiecePlan *plan, NodeId section, PlanConstraintKind kind) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        if (plan_node_constraint_at(plan, section, i)->kind == kind) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static bool find_return(const PiecePlan *plan, NodeId section, PlanReturn *out) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
@@ -404,13 +396,13 @@ bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, P
     int shift;
     if (!plan_has_node(plan, section) || plan_node_kind(plan, section) != PLAN_NODE_SECTION ||
         plan_node_state(plan, section) != PLAN_STATE_CONSTRAINED || plan_node_child_count(plan, section) != 0 ||
-        !has_constraint(plan, section, PLAN_CONSTRAINT_ARCHETYPE) ||
-        !has_constraint(plan, section, PLAN_CONSTRAINT_THEME_PAIRING) || !find_return(plan, section, &ret)) {
+        !plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_ARCHETYPE) ||
+        !plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_THEME_PAIRING) || !find_return(plan, section, &ret)) {
         return false;
     }
     if (ret.section == section || !plan_has_node(plan, ret.section) ||
         plan_node_kind(plan, ret.section) != PLAN_NODE_SECTION ||
-        has_constraint(plan, ret.section, PLAN_CONSTRAINT_MATERIAL) || !variation_offered(ret.variation)) {
+        plan_node_has_constraint(plan, ret.section, PLAN_CONSTRAINT_MATERIAL) || !variation_offered(ret.variation)) {
         return false;
     }
     PlanSpan from = plan_node_span(plan, ret.section);

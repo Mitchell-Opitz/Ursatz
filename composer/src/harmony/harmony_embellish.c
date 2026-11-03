@@ -36,7 +36,7 @@ PlanResult harmony_embellish_open(PiecePlan *plan, PlanSpan range) {
     for (size_t i = 0; result == PLAN_OK && i < count; i++) {
         if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_REALIZED) {
             result = plan_lane_span_set_state(plan, ids[i], PLAN_STATE_CONSTRAINED);
-            if (result == PLAN_OK && !harmony_span_has_constraint(plan, ids[i], PLAN_CONSTRAINT_EMBELLISH)) {
+            if (result == PLAN_OK && plan_lane_span_find_constraint(plan, ids[i], PLAN_CONSTRAINT_EMBELLISH) == NULL) {
                 result = plan_lane_span_add_constraint(plan, ids[i], &marker);
             }
         }

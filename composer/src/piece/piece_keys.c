@@ -30,16 +30,6 @@ static bool same_key(PlanKey a, PlanKey b) {
     return a.tonic_pitch_class == b.tonic_pitch_class && a.mode == b.mode;
 }
 
-static const PlanConstraint *find_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-        if (constraint->kind == kind) {
-            return constraint;
-        }
-    }
-    return NULL;
-}
-
 /*
  * The closely related key of the home key on one of the degrees, drawn from the list. False when the draw is not a
  * key standard-harmony calls closely related.
@@ -200,9 +190,9 @@ PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
     size_t count = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        if (find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
             material = child;
-        } else if (find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
+        } else if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
             continue; /* the seam is not a section of the piece */
         } else if (count < FORM_TEMPLATE_MAX_SECTIONS) {
             sections[count++] = child;
@@ -210,7 +200,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
             return PIECE_ERR_BAD_REQUEST;
         }
     }
-    const PlanConstraint *home_key = count > 0 ? find_constraint(plan, sections[0], PLAN_CONSTRAINT_KEY) : NULL;
+    const PlanConstraint *home_key = count > 0 ? plan_node_find_constraint(plan, sections[0], PLAN_CONSTRAINT_KEY) : NULL;
     if (!home_key || material == PLAN_NODE_NONE) {
         return PIECE_ERR_BAD_REQUEST;
     }
@@ -314,7 +304,7 @@ static bool authentic_arrivals(const PiecePlan *plan, const NodeId *sections, si
 }
 
 static bool constraint_key(const PiecePlan *plan, NodeId section, PlanKey *out) {
-    const PlanConstraint *constraint = find_constraint(plan, section, PLAN_CONSTRAINT_KEY);
+    const PlanConstraint *constraint = plan_node_find_constraint(plan, section, PLAN_CONSTRAINT_KEY);
     if (constraint) {
         *out = constraint->params.key;
     }
@@ -342,9 +332,9 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
     PlanTime piece_end = {0, 1};
     for (size_t i = 0; form != PLAN_NODE_NONE && i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        if (find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
             piece_end = plan_node_span(plan, child).start;
-        } else if (find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
+        } else if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
             continue;
         } else if (section_count < FORM_TEMPLATE_MAX_SECTIONS) {
             sections[section_count++] = child;

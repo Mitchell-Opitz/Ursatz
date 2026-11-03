@@ -259,11 +259,26 @@ PlanResult plan_lane_span_remove_constraint(PiecePlan *plan, LaneSpanId id, size
     return list_remove(&entry->constraints, index);
 }
 
-bool plan_node_has_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
+const PlanConstraint *plan_node_find_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-        if (plan_node_constraint_at(plan, id, i)->kind == kind) {
-            return true;
+        const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
+        if (constraint->kind == kind) {
+            return constraint;
         }
     }
-    return false;
+    return NULL;
+}
+
+const PlanConstraint *plan_lane_span_find_constraint(const PiecePlan *plan, LaneSpanId id, PlanConstraintKind kind) {
+    for (size_t i = 0; i < plan_lane_span_constraint_count(plan, id); i++) {
+        const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, id, i);
+        if (constraint->kind == kind) {
+            return constraint;
+        }
+    }
+    return NULL;
+}
+
+bool plan_node_has_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
+    return plan_node_find_constraint(plan, id, kind) != NULL;
 }

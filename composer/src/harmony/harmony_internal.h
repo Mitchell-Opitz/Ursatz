@@ -218,7 +218,6 @@ BeatStrength harmony_rhythm_cell_strength(size_t cell_in_bar);
 /* A constraint of this kind on the span, else on its owner. */
 bool harmony_find_constraint(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanConstraintKind kind,
                              PlanConstraint *out);
-bool harmony_span_has_constraint(const PiecePlan *plan, LaneSpanId id, PlanConstraintKind kind);
 /* The mode of the key lane over the span, else of a key constraint on the span or its owner. */
 bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, PlanKeyMode *out);
 /* The key of the key lane over the span, else of a key constraint on the span or its owner. */

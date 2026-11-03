@@ -16,38 +16,16 @@ static PlanResult time_scaled(PlanTime time, size_t count, PlanTime *out) {
     return plan_time_make(time.num * (long)count, time.den, out);
 }
 
-static bool span_constraint(const PiecePlan *plan, LaneSpanId id, PlanConstraintKind kind, PlanConstraint *out) {
-    size_t count = plan_lane_span_constraint_count(plan, id);
-    for (size_t i = 0; i < count; i++) {
-        const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, id, i);
-        if (constraint->kind == kind) {
-            *out = *constraint;
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool node_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind, PlanConstraint *out) {
-    size_t count = plan_node_constraint_count(plan, id);
-    for (size_t i = 0; i < count; i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-        if (constraint->kind == kind) {
-            *out = *constraint;
-            return true;
-        }
-    }
-    return false;
-}
-
 bool harmony_find_constraint(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanConstraintKind kind,
                              PlanConstraint *out) {
-    return span_constraint(plan, id, kind, out) || node_constraint(plan, owner, kind, out);
-}
-
-bool harmony_span_has_constraint(const PiecePlan *plan, LaneSpanId id, PlanConstraintKind kind) {
-    PlanConstraint unused;
-    return span_constraint(plan, id, kind, &unused);
+    const PlanConstraint *found = plan_lane_span_find_constraint(plan, id, kind);
+    if (!found) {
+        found = plan_node_find_constraint(plan, owner, kind);
+    }
+    if (found) {
+        *out = *found;
+    }
+    return found != NULL;
 }
 
 bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, PlanKey *out) {
@@ -410,7 +388,7 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolonga
     request.target = target;
     request.owner = plan_lane_span_owner(plan, target);
     request.span = plan_lane_span_span(plan, target);
-    if (!harmony_read_metre(plan, request.span, &metre) || harmony_span_has_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH)) {
+    if (!harmony_read_metre(plan, request.span, &metre) || plan_lane_span_find_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH) != NULL) {
         return false;
     }
     request.meter = metre.meter;

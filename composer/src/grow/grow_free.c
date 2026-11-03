@@ -8,6 +8,7 @@
 
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
+#include <ursatz_composer/constraint.h>
 
 /*
  * A free phrase (R-170): a section of any length in beats, one that is not a theme of 4 or 8 whole bars. grow-theme lays
@@ -54,15 +55,6 @@ typedef struct {
     PlanHarmonyShapeKind shape;
     int cap;
 } FreeRequest;
-
-static bool has_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-        if (plan_node_constraint_at(plan, id, i)->kind == kind) {
-            return true;
-        }
-    }
-    return false;
-}
 
 /*
  * The ideas over the section: one for each bar, cut at the barlines inside it; the part bar at the start joins the idea
@@ -134,10 +126,10 @@ static bool read_free(const PiecePlan *plan, FillTarget target, FreeRequest *out
     if (target.kind != FILL_TARGET_NODE || !plan_has_node(plan, target.id) ||
         plan_node_kind(plan, target.id) != PLAN_NODE_SECTION ||
         plan_node_state(plan, target.id) != PLAN_STATE_CONSTRAINED || plan_node_child_count(plan, target.id) != 0 ||
-        !has_constraint(plan, target.id, PLAN_CONSTRAINT_FREE_PHRASE) ||
-        has_constraint(plan, target.id, PLAN_CONSTRAINT_ARCHETYPE) ||
-        has_constraint(plan, target.id, PLAN_CONSTRAINT_THEME_PAIRING) || form_return_handles(plan, target.id) ||
-        has_constraint(plan, target.id, PLAN_CONSTRAINT_HOLD)) {
+        !plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_FREE_PHRASE) ||
+        plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_ARCHETYPE) ||
+        plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_THEME_PAIRING) || form_return_handles(plan, target.id) ||
+        plan_node_has_constraint(plan, target.id, PLAN_CONSTRAINT_HOLD)) {
         return false;
     }
     theme->section = target.id;

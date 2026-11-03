@@ -66,10 +66,6 @@ static bool piece_accompaniment(const PieceRequest *request, PlanAccompaniment *
     return false;
 }
 
-static PieceResult add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint) {
-    return piece_result_of_plan(plan_node_add_constraint(plan, id, constraint));
-}
-
 /* One section as grow-theme builds it, with its letter, its return and its layers; its motive comes after m0. */
 static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, const FormTemplateSection *section,
                                PlanSpan span, NodeId form, const NodeId *sections,
@@ -80,56 +76,56 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_ARCHETYPE;
         constraint.params.archetype = (PlanArchetype)grow_pairing_archetype(&section->pairing);
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_THEME_PAIRING;
         constraint.params.theme_pairing = section->pairing;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CADENCE;
         constraint.params.cadence = section->cadence;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && section->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CADENCE;
         constraint.params.cadence = ANTECEDENT_CADENCE;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_KEY;
         constraint.params.key = request->key;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && accompaniment) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_ACCOMPANIMENT;
         constraint.params.accompaniment = *accompaniment;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_SECTION_LETTER;
         memcpy(constraint.params.letter, section->letter, sizeof(constraint.params.letter));
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && section->returns != FORM_TEMPLATE_NO_RETURN) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_RETURN;
         constraint.params.section_return.section = sections[section->returns];
         constraint.params.section_return.variation = section->variation;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && section->layers != 0) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_LAYERS;
         constraint.params.layers.lanes = section->layers;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     return result;
 }
@@ -145,7 +141,7 @@ static PieceResult add_section_motive(PiecePlan *plan, const FormTemplateSection
     constraint.params.motive.motive = source;
     constraint.params.motive.transform = section->motive;
     constraint.params.motive.tonal = section->motive_tonal;
-    return add_constraint(plan, id, &constraint);
+    return piece_add_constraint(plan, id, &constraint);
 }
 
 /* m0 with no motive given: a Constrained one-bar motive node whose melody span motive-invent writes. */
@@ -184,7 +180,7 @@ PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const Plan
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_MATERIAL;
-        result = add_constraint(plan, section, &constraint);
+        result = piece_add_constraint(plan, section, &constraint);
     }
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_add_node(plan, section, PLAN_NODE_PHRASE, material, GROW_MATERIAL_NAME, &phrase));

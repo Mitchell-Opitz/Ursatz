@@ -62,34 +62,16 @@ static void scope_add(Scope *scope, FillTarget target) {
     scope->queue[scope->tail++] = target;
 }
 
-static bool has_node_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-        if (plan_node_constraint_at(plan, id, i)->kind == kind) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool has_span_constraint(const PiecePlan *plan, LaneSpanId id, PlanConstraintKind kind) {
-    for (size_t i = 0; i < plan_lane_span_constraint_count(plan, id); i++) {
-        if (plan_lane_span_constraint_at(plan, id, i)->kind == kind) {
-            return true;
-        }
-    }
-    return false;
-}
-
 /* A section the theme operators grow: an archetype and a theme pairing. */
 static bool is_theme_section(const PiecePlan *plan, NodeId id) {
-    return plan_node_kind(plan, id) == PLAN_NODE_SECTION && has_node_constraint(plan, id, PLAN_CONSTRAINT_ARCHETYPE) &&
-           has_node_constraint(plan, id, PLAN_CONSTRAINT_THEME_PAIRING);
+    return plan_node_kind(plan, id) == PLAN_NODE_SECTION && plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_ARCHETYPE) &&
+           plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_THEME_PAIRING);
 }
 
 /* Whether the node is the material section or under it. */
 static bool in_material(const PiecePlan *plan, NodeId id) {
     for (; id != PLAN_NODE_NONE; id = plan_node_parent(plan, id)) {
-        if (has_node_constraint(plan, id, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_MATERIAL)) {
             return true;
         }
     }
@@ -105,9 +87,9 @@ static bool span_is_reopened(const PiecePlan *plan, LaneSpanId id) {
     case PLAN_LANE_MELODY:
         return true;
     case PLAN_LANE_INNER_VOICE:
-        return has_span_constraint(plan, id, PLAN_CONSTRAINT_ACCOMPANIMENT) ||
-               has_span_constraint(plan, id, PLAN_CONSTRAINT_VOICING) ||
-               has_span_constraint(plan, id, PLAN_CONSTRAINT_COUNTERPOINT);
+        return plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_ACCOMPANIMENT) != NULL ||
+               plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_VOICING) != NULL ||
+               plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_COUNTERPOINT) != NULL;
     case PLAN_LANE_METER:
     case PLAN_LANE_KEY:
         break;
@@ -185,7 +167,7 @@ static NodeId owner_node(const PiecePlan *plan, FillTarget target) {
 /* The section a section that returns another is reopened as: a return is made from its source. */
 static NodeId return_section_of(const PiecePlan *plan, FillTarget target) {
     NodeId section = plan_section_of(plan, owner_node(plan, target));
-    if (section != PLAN_NODE_NONE && has_node_constraint(plan, section, PLAN_CONSTRAINT_RETURN) &&
+    if (section != PLAN_NODE_NONE && plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_RETURN) &&
         plan_node_state(plan, section) != PLAN_STATE_GIVEN) {
         return section;
     }
@@ -573,11 +555,11 @@ RegenerateResult plan_regenerate_all(PiecePlan *plan, const FillTarget *targets,
         } else if (plan_lane_span_lane(plan, (LaneSpanId)scope[i].id) == PLAN_LANE_HARMONY) {
             /* A harmony span is built again from the shape grow gave it. */
             LaneSpanId id = (LaneSpanId)scope[i].id;
-            bool shaped = has_span_constraint(plan, id, PLAN_CONSTRAINT_HARMONY_SHAPE);
+            bool shaped = plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_HARMONY_SHAPE) != NULL;
             for (size_t j = 0; !shaped && j < count; j++) {
                 shaped = scope[j].kind == FILL_TARGET_LANE_SPAN && plan_lane_span_lane(plan, (LaneSpanId)scope[j].id) == PLAN_LANE_HARMONY &&
                          plan_lane_span_owner(plan, (LaneSpanId)scope[j].id) == plan_lane_span_owner(plan, id) &&
-                         has_span_constraint(plan, (LaneSpanId)scope[j].id, PLAN_CONSTRAINT_HARMONY_SHAPE);
+                         plan_lane_span_find_constraint(plan, (LaneSpanId)scope[j].id, PLAN_CONSTRAINT_HARMONY_SHAPE) != NULL;
             }
             result = shaped ? REGENERATE_OK : REGENERATE_ERR_BAD_TARGET;
         }

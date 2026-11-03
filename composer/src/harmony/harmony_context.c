@@ -34,7 +34,7 @@ bool harmony_read_chord_in(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mod
 bool harmony_context_read(const PiecePlan *plan, LaneSpanId target, PhraseContext *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY ||
         plan_lane_span_voice(plan, target) != 0 ||
-        !harmony_span_has_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH)) {
+        plan_lane_span_find_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH) == NULL) {
         return false;
     }
     NodeId owner = plan_lane_span_owner(plan, target);
@@ -105,7 +105,7 @@ bool harmony_context_read(const PiecePlan *plan, LaneSpanId target, PhraseContex
         LaneSpanId id = same_owner[low + i];
         PlanState state = plan_lane_span_state(plan, id);
         /* Every chord is settled, or is marked and so will be settled by this operator in its turn. */
-        if (state == PLAN_STATE_CONSTRAINED && !harmony_span_has_constraint(plan, id, PLAN_CONSTRAINT_EMBELLISH)) {
+        if (state == PLAN_STATE_CONSTRAINED && plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_EMBELLISH) == NULL) {
             return false;
         }
         context.ids[i] = id;
