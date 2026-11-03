@@ -1,5 +1,7 @@
 add_library(ursatz_composer STATIC
     composer.c
+    api/api_internal.c
+    api/api_versions.c
     util/util.c
     util/plan_util.c
     style/style.c
