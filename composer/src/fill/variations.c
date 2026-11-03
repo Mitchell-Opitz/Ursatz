@@ -1,5 +1,6 @@
 #include <ursatz_composer/variations.h>
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -42,12 +43,10 @@ static uint64_t hash_fraction(uint64_t hash, long numerator, unsigned long denom
 
 typedef struct {
     PlanSpan span;
-    LaneSpanId id;
+    char numeral[PLAN_ROMAN_NUMERAL_MAX];
 } HarmonySpan;
 
 /* By start, then length, then numeral: the same chords in the same places sort the same whatever their ids. */
-static const PiecePlan *sort_plan;
-
 static int compare_harmony(const void *left, const void *right) {
     const HarmonySpan *a = left;
     const HarmonySpan *b = right;
@@ -56,8 +55,7 @@ static int compare_harmony(const void *left, const void *right) {
         order = plan_time_compare(a->span.length, b->span.length);
     }
     return order != 0 ? order
-                      : strcmp(plan_lane_span_payload(sort_plan, a->id)->harmony.roman_numeral,
-                               plan_lane_span_payload(sort_plan, b->id)->harmony.roman_numeral);
+                      : strcmp(a->numeral, b->numeral);
 }
 
 /* The harmony lane of the plan in time order: where each span is and its numeral. */
@@ -69,15 +67,16 @@ static uint64_t hash_harmony(uint64_t hash, const PiecePlan *plan) {
     }
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         if (plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == PLAN_LANE_HARMONY) {
-            spans[count++] = (HarmonySpan){plan_lane_span_span(plan, id), id};
+            spans[count].span = plan_lane_span_span(plan, id);
+            snprintf(spans[count].numeral, sizeof(spans[count].numeral), "%s", plan_lane_span_payload(plan, id)->harmony.roman_numeral);
+            count++;
         }
     }
-    sort_plan = plan;
     qsort(spans, count, sizeof(HarmonySpan), compare_harmony);
     for (size_t i = 0; i < count; i++) {
         hash = hash_fraction(hash, spans[i].span.start.num, spans[i].span.start.den);
         hash = hash_fraction(hash, spans[i].span.length.num, spans[i].span.length.den);
-        for (const char *c = plan_lane_span_payload(plan, spans[i].id)->harmony.roman_numeral; *c; c++) {
+        for (const char *c = spans[i].numeral; *c; c++) {
             hash = hash_value(hash, (unsigned char)*c);
         }
     }
