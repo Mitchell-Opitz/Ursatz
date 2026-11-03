@@ -1,0 +1,411 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/theme.response.schema.json",
+  "title": "composer_api_theme response",
+  "description": "What `theme --format json` prints (without the files it wrote), and the plan and the explanation of each theme when asked.",
+  "type": "object",
+  "required": [
+    "key",
+    "meter",
+    "bars",
+    "into",
+    "pairing",
+    "cadence",
+    "tempo",
+    "brief",
+    "chords",
+    "themes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "key": {
+      "type": "string"
+    },
+    "meter": {
+      "type": "string"
+    },
+    "bars": {
+      "enum": [
+        4,
+        8
+      ]
+    },
+    "into": {
+      "type": "string"
+    },
+    "pairing": {
+      "type": "string"
+    },
+    "cadence": {
+      "type": "string"
+    },
+    "first_cadence": {
+      "type": "string"
+    },
+    "accompaniment": {
+      "type": "string"
+    },
+    "texture": {
+      "type": "string"
+    },
+    "voicing": {
+      "enum": [
+        "satb",
+        "chorale"
+      ]
+    },
+    "tempo": {
+      "type": "object",
+      "required": [
+        "qpm",
+        "from"
+      ],
+      "properties": {
+        "qpm": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "from": {
+          "enum": [
+            "option",
+            "style",
+            "none"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "brief": {
+      "type": "object",
+      "required": [
+        "tempo",
+        "mode",
+        "density",
+        "without"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tempo": {
+          "type": "object",
+          "required": [
+            "qpm",
+            "from"
+          ],
+          "properties": {
+            "qpm": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "from": {
+              "enum": [
+                "option",
+                "style",
+                "none"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "mode": {
+          "type": "object",
+          "required": [
+            "mode",
+            "from"
+          ],
+          "properties": {
+            "mode": {
+              "enum": [
+                "major",
+                "minor"
+              ]
+            },
+            "from": {
+              "enum": [
+                "request",
+                "style"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "density": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "without": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "chords": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "bar",
+          "text"
+        ],
+        "properties": {
+          "bar": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "themes": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "$ref": "#/$defs/theme"
+      }
+    }
+  },
+  "$defs": {
+    "theme": {
+      "type": "object",
+      "required": [
+        "seed",
+        "structure",
+        "chords",
+        "developments",
+        "slots",
+        "score",
+        "requested",
+        "heard",
+        "heard_as_requested",
+        "heard_text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "structure": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "kind",
+              "start",
+              "end"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "form",
+                  "section",
+                  "phrase",
+                  "subphrase",
+                  "idea",
+                  "motive"
+                ]
+              },
+              "start": {
+                "type": "number"
+              },
+              "end": {
+                "type": "number"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "chords": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "bar",
+              "beat",
+              "chord",
+              "function",
+              "bass"
+            ],
+            "properties": {
+              "bar": {
+                "type": "integer"
+              },
+              "beat": {
+                "type": "integer"
+              },
+              "chord": {
+                "type": "string"
+              },
+              "function": {
+                "type": "string"
+              },
+              "bass": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "developments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "motive",
+              "idea",
+              "development"
+            ],
+            "properties": {
+              "motive": {
+                "type": "string"
+              },
+              "idea": {
+                "type": "string"
+              },
+              "development": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "slots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "idea",
+              "slot",
+              "motive",
+              "source",
+              "item",
+              "chain",
+              "connection"
+            ],
+            "properties": {
+              "idea": {
+                "type": "string"
+              },
+              "slot": {
+                "enum": [
+                  "basic",
+                  "contrasting",
+                  "continuation",
+                  "cadential"
+                ]
+              },
+              "motive": {
+                "type": "string"
+              },
+              "source": {
+                "enum": [
+                  "motive",
+                  "idea",
+                  "registry",
+                  "operator"
+                ]
+              },
+              "item": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "chain": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "connection": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "score": {
+          "type": "object",
+          "required": [
+            "numerator",
+            "denominator"
+          ],
+          "properties": {
+            "numerator": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "denominator": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "additionalProperties": false
+        },
+        "requested": {
+          "type": "string"
+        },
+        "heard": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "heard_as_requested": {
+          "type": "boolean"
+        },
+        "heard_text": {
+          "type": "string"
+        },
+        "style_distance": {
+          "type": "object",
+          "properties": {
+            "harmony": {
+              "type": "number"
+            },
+            "rhythm": {
+              "type": "number"
+            },
+            "melody": {
+              "type": "number"
+            },
+            "form": {
+              "type": "number"
+            },
+            "overall": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        },
+        "plan": {
+          "type": "object",
+          "description": "The plan of the theme, with plans: true."
+        },
+        "explanation": {
+          "type": "string",
+          "description": "The explanation of the theme, text or JSON text, with explain."
+        }
+      }
+    }
+  }
+}
