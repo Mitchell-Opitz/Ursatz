@@ -13,6 +13,7 @@ add_library(ursatz_composer STATIC
     api/api_target.c
     api/api_piece_request.c
     api/api_piece.c
+    api/api_piece_variations.c
     util/util.c
     util/plan_util.c
     style/style.c

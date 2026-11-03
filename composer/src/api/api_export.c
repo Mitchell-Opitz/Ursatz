@@ -8,6 +8,7 @@
 #include <ursatz_composer/render.h>
 
 #include "api_internal.h"
+#include "util/request_parse.h"
 #include "util/plan_util.h"
 
 static const char *skip_reason_text(RenderSkipReason reason) {
@@ -27,6 +28,35 @@ static ComposerStatus export_failure(ComposerError *error, PlanExportResult resu
                                 : COMPOSER_ERR_INTERNAL;
     return api_fail(error, status, status == COMPOSER_ERR_REQUEST ? "/plan" : "", "%s%s%s", what,
                     detail && detail->message[0] ? ": " : "", detail ? detail->message : "");
+}
+
+/* "loop": {"start": "2/1", "end": "14/1"} (whole notes from the start of the plan): the loopStart and loopEnd markers. */
+static ComposerStatus read_loop(const cJSON *request, PlanExportOptions *options, ComposerError *error) {
+    const cJSON *loop = cJSON_GetObjectItemCaseSensitive(request, "loop");
+    if (!loop || cJSON_IsNull(loop)) {
+        return COMPOSER_OK;
+    }
+    if (!cJSON_IsObject(loop)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/loop", "loop must be {\"start\": \"2/1\", \"end\": \"14/1\"}");
+    }
+    static const char *const NAMES[2] = {"start", "end"};
+    ComposerRatio values[2];
+    for (int i = 0; i < 2; i++) {
+        const cJSON *item = cJSON_GetObjectItemCaseSensitive(loop, NAMES[i]);
+        char path[24];
+        snprintf(path, sizeof path, "/loop/%s", NAMES[i]);
+        if (!cJSON_IsString(item) || !request_parse_ratio(item->valuestring, &values[i])) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "loop %s must be a time in whole notes, like \"2/1\" or \"3/2\"",
+                            NAMES[i]);
+        }
+    }
+    if (values[1].numerator * values[0].denominator <= values[0].numerator * values[1].denominator) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/loop", "loop end must come after loop start");
+    }
+    options->loop_markers = true;
+    options->loop_start = (Rational){(long long)values[0].numerator, (long long)values[0].denominator};
+    options->loop_end = (Rational){(long long)values[1].numerator, (long long)values[1].denominator};
+    return COMPOSER_OK;
 }
 
 ComposerStatus composer_api_export(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
@@ -64,6 +94,11 @@ ComposerStatus composer_api_export(const char *request_json, const ComposerJob *
     if (cJSON_IsTrue(plain_member)) {
         options.track_names = false;
         options.section_markers = false;
+    }
+    status = read_loop(request, &options, &out->error);
+    if (status != COMPOSER_OK) {
+        cJSON_Delete(request);
+        return status;
     }
     bool want_midi = cJSON_IsTrue(midi_member);
     bool want_musicxml = cJSON_IsTrue(musicxml_member);
