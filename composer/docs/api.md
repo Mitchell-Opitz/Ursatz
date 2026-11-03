@@ -5,7 +5,7 @@ Everything an application asks of the Composer is a versioned in-process C API (
 cJSON type and no file path (except style models and corpus directories) crosses it. The CLI is a client of the same
 functions: it reads its arguments into a request, calls the API and prints the response (R-267).
 
-This page covers the core, export, the motive entries, variants, recognize and random motives. Each later branch of phase P26 adds its entries here and its JSON Schemas
+This page covers the core, export, the motive entries, variants, recognize, random motives and themes. Each later branch of phase P26 adds its entries here and its JSON Schemas
 under `schema/api/` (draft 2020-12).
 
 ## Versioning
@@ -222,10 +222,44 @@ was drawn.
 were drawn, when something was. The same request and seed give the same motives. Schemas:
 `random_motive.request.schema.json`, `random_motive.response.schema.json`.
 
+### `composer_api_theme(request_json, job, out)`
+
+Grows a theme from the theme request v2 of [theme-request.md](theme-request.md) (`"schema": "ursatz-theme-request"`,
+`"schema_version": 2`). Its motives are inline: each motive object carries its content in `degrees`, a motive with a `path`
+or a `file` member is refused with `COMPOSER_ERR_REQUEST` and the path `/motives/<n>/path` (the caller reads files). A
+member of the brief that is not valid is refused with its path (`/into`, `/key`, `/slots/basic`, `/chords/<n>`, `/style`).
+The options the `theme` command takes are members of the same object:
+
+| Member | Value |
+|---|---|
+| `seed` | 0 to 4294967295 (a number or a string of digits), default from the clock; the seeds after it are tried when one gets stuck |
+| `suggest` | 1 to 16 different themes, default 1 |
+| `check` | `true`: the Analyzer analyzes each theme, and a theme whose analysis contradicts the plan is passed over |
+| `style`, `without`, `style_weight` | as in the request; `style` is a style model file path (R-267) |
+| `blend`, `blend_weight`, `blend_weights` | a second style model file path blended with `style` (`"1/2"`, `"harmony=1/2,form=0"`) |
+| `tempo` | quarter notes per minute, a whole number or `"195/2"`, 20 to 400; wins over the style's |
+| `midi`, `musicxml` | `true`: the first theme's MIDI file (`midi`, `midi_size`) and MusicXML (`musicxml`), rendered once from the same `RenderedPlan` |
+| `plain_midi` | `true`: no track names and no section markers in the MIDI file |
+| `plans` | `true`: each theme's plan as an object, `themes[k].plan` (the CLI writes the plans, MIDI files and MusicXML of the themes after the first from it, through `composer_api_export`) |
+| `explain` | `"text"` or `"json"`: why each candidate was chosen or rejected, as a string, `themes[k].explanation` |
+
+The request has no `corpus` member: a theme is grown from its motives only.
+
+`json`: what `theme --format json` prints, without the `files` it wrote: `{"key", "meter", "bars", "into", "pairing",
+"cadence", "first_cadence", "accompaniment", "texture", "voicing", "tempo": {"qpm", "from"}, "brief": {"tempo", "mode",
+"density", "without"}, "chords": [{"bar", "text"}], "themes": [{"seed", "structure", "chords", "developments", "slots",
+"score", "requested", "heard", "heard_as_requested", "heard_text", "style_distance"}]}`. `plan_json`: the plan of the first
+theme. Progress is reported once for each seed tried (`"grow"`) and for each compose stage of the run; a cancel is
+`COMPOSER_ERR_CANCELLED` with no document and no plan. A request no seed can write is `COMPOSER_ERR_UNSATISFIABLE`
+(`the given chords in bar <n> do not allow the PAC`, `no theme could be grown for ...`). The same request and seed give the
+same theme on any thread; the entry keeps no state, so requests may run at the same time. Schemas:
+`theme.request.schema.json`, `theme.response.schema.json`.
+
 ## Tests
 
 `tests/test_api_core.c`, `tests/test_api_motive.c` (each GUI motive shape from a request, the response equal to the CLI
 snapshot), `tests/test_api_variants.c` (the operation list, variants, recognize and random motives against their
 snapshots, the random draws for seeds 0, 1, 2 and 4294967295, refusals with their paths, cancel) and
+`tests/test_api_theme.c` (every `theme-*` snapshot case from its request, with the document, the plan, the MIDI file and the MusicXML equal to the snapshots; cancel; two threads running two cases each; refusals with their paths) and
 `tests/test_job_cancel.c`; `tests/validate_api_schema.cmake` validates every response the
 tests write against its schema when python3 with `jsonschema` is present.
