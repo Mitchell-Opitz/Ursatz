@@ -8,7 +8,6 @@
 #include <ursatz_composer/fill_rng.h>
 
 #include <ursatz_composer/motive_analysis.h>
-#include <ursatz_composer/motive_sketch_bridge.h>
 
 #include <analysis/motive_relation.h>
 
@@ -89,7 +88,7 @@ static long param_max(const VariantParam *param, const Motive *current) {
         max = (long)current->feature_count - 1;
     }
     if (param->chords_limit) {
-        long chords = current->harmony_count > 0 ? (long)current->harmony_count : 1;
+        long chords = current->chord_count > 0 ? (long)current->chord_count : 1;
         max = chords - 1 < max ? chords - 1 : max;
     }
     return max;
@@ -102,13 +101,13 @@ static VariantValue draw_param(FillRng *rng, const VariantParam *param, const Mo
     case VARIANT_PARAM_BOOL:
         value.value = (long)fill_rng_below(rng, 2);
         /* A tonal step needs a key; without one the draw is spent and the step is not tonal. */
-        if (strcmp(param->name, "tonal") == 0 && current->key_source == MOTIVE_KEY_UNSPECIFIED) {
+        if (strcmp(param->name, "tonal") == 0 && current->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
             value.value = 0;
         }
         break;
     case VARIANT_PARAM_PITCH:
         /* An axis is one of the motive's own pitches. */
-        value.value = current->notes[fill_rng_below(rng, current->note_count)].midi;
+        value.value = motive_pitch(current, fill_rng_below(rng, current->note_count));
         break;
     case VARIANT_PARAM_RATIO: {
         /* A factor in lowest terms from min:max to max:min, above 1 or, when the parameter shrinks, below it. */
@@ -210,8 +209,7 @@ static bool draw_accepted(FillRng *rng, const VariantOperation *operation, Varia
     size_t accepted_count = 0;
     size_t moving[COMBINATIONS_MAX];
     size_t moving_count = 0;
-    MotiveSketch sketch;
-    bool prefer_moves = changes_chords(operation) && motive_to_sketch(current, &sketch);
+    bool prefer_moves = changes_chords(operation) && motive_sketch_validate(current);
     for (size_t combination = 0; combination < total; combination++) {
         VariantValue values[VARIANT_PARAM_MAX];
         memcpy(values, resolved->values, sizeof(values));
@@ -223,7 +221,7 @@ static bool draw_accepted(FillRng *rng, const VariantOperation *operation, Varia
         Motive result;
         if (operation->apply(current, values, &result) == MOTIVE_DEV_OK) {
             accepted[accepted_count++] = combination;
-            if (prefer_moves && moves_notes(&sketch, operation, values)) {
+            if (prefer_moves && moves_notes(current, operation, values)) {
                 moving[moving_count++] = combination;
             }
         }
@@ -249,11 +247,15 @@ static bool draw_accepted(FillRng *rng, const VariantOperation *operation, Varia
  */
 static bool normalize_contour(const Motive *source, Motive *result) {
     MotiveSketch sketch;
-    if (!motive_to_sketch(result, &sketch) || !motive_sketch_contour_normalize(&sketch, &sketch)) {
+    if (!motive_sketch_validate(result)) {
+        return false;
+    }
+    sketch = *result;
+    if (!motive_sketch_contour_normalize(&sketch, &sketch)) {
         return false;
     }
     /* Harmony, features and role are the sketch's; the meter, the key and the form are the source's. */
-    return motive_from_sketch(&sketch, source, result);
+    return motive_overlay_sketch(&sketch, source, result);
 }
 
 /* ------------------------------------------------------------ kept, changed */
@@ -273,7 +275,7 @@ static bool rhythm_kept(const Motive *source, const Motive *result, bool *scaled
     long long fden = (long long)result->notes[0].duration.den * (long long)source->notes[0].duration.num;
     for (size_t i = 0; i < source->note_count; i++) {
         if (!scaled_equal(result->notes[i].duration, source->notes[i].duration, fnum, fden) ||
-            !scaled_equal(result->notes[i].offset, source->notes[i].offset, fnum, fden)) {
+            !scaled_equal(result->notes[i].onset, source->notes[i].onset, fnum, fden)) {
             return false;
         }
     }
@@ -317,13 +319,13 @@ static bool harmony_kept(const MotiveAnalysis *a, const MotiveAnalysis *b) {
 
 /* Own harmony, when either motive has it: kept when every chord's degree, alteration, inversion, seventh and onset match. */
 static bool own_harmony_kept(const Motive *a, const Motive *b) {
-    if (a->harmony_count != b->harmony_count) {
+    if (a->chord_count != b->chord_count) {
         return false;
     }
-    for (size_t i = 0; i < a->harmony_count; i++) {
-        if (a->harmony[i].degree != b->harmony[i].degree || a->harmony[i].alteration != b->harmony[i].alteration ||
-            a->harmony[i].inversion != b->harmony[i].inversion || a->harmony[i].seventh != b->harmony[i].seventh ||
-            rational_cmp(a->harmony[i].onset, b->harmony[i].onset) != 0) {
+    for (size_t i = 0; i < a->chord_count; i++) {
+        if (a->chords[i].degree != b->chords[i].degree || a->chords[i].alteration != b->chords[i].alteration ||
+            a->chords[i].inversion != b->chords[i].inversion || a->chords[i].seventh != b->chords[i].seventh ||
+            rational_cmp(a->chords[i].onset, b->chords[i].onset) != 0) {
             return false;
         }
     }
@@ -354,7 +356,7 @@ void variant_record_difference(const Motive *source, const Motive *result, Varia
         if (before.contour_known) {
             note_dimension(record, "contour", contour_kept(&before, &after));
         }
-        if (source->harmony_count > 0 || result->harmony_count > 0) {
+        if (source->chord_count > 0 || result->chord_count > 0) {
             note_dimension(record, "harmony", own_harmony_kept(source, result));
         } else if (before.harmony_known && after.harmony_known) {
             note_dimension(record, "harmony", harmony_kept(&before, &after));
@@ -524,7 +526,7 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
                 }
             }
             status = operation->apply(&current, resolved->values, &next);
-            if (status == MOTIVE_DEV_OK && source->form == MOTIVE_FORM_CONTOUR && !normalize_contour(source, &next)) {
+            if (status == MOTIVE_DEV_OK && source->form == MOTIVE_SKETCH_FORM_CONTOUR && !normalize_contour(source, &next)) {
                 status = MOTIVE_DEV_ERR_INVALID;
             }
             if (status == MOTIVE_DEV_OK) {
@@ -547,7 +549,7 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
 
     variant_record_difference(source, &current, log);
     log->leaves_harmony = variant_leaves_harmony(source, &current);
-    if (current.harmony_count > 0) {
+    if (current.chord_count > 0) {
         char *harmony = motive_harmony_to_text(&current);
         if (harmony) {
             snprintf(log->harmony, sizeof(log->harmony), "%s", harmony);
@@ -616,8 +618,8 @@ bool variant_random_chain_of(const Motive *source, unsigned long seed, size_t mi
         if (operation->category != VARIANT_CATEGORY_EXACT && strcmp(operation->name, "change-meter") != 0 &&
             (operation->forms & VARIANT_FORM_BIT(source->form)) != 0 &&
             (source->feature_count > 0 || !takes_feature(operation)) &&
-            (source->role == MOTIVE_ROLE_ACCOMPANIMENT || !needs_accompaniment(operation)) &&
-            (source->harmony_count >= 2 || !needs_two_chords(operation)) && (figure || !needs_figure(operation))) {
+            (source->accompaniment || !needs_accompaniment(operation)) &&
+            (source->chord_count >= 2 || !needs_two_chords(operation)) && (figure || !needs_figure(operation))) {
             candidates[count++] = operation;
         }
     }

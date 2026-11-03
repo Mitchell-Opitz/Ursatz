@@ -31,7 +31,7 @@ static void features_of(const Motive *motive, Features *out) {
     out->intervals = count - 1;
     out->ratios = count - 1;
     for (size_t i = 0; i + 1 < count; i++) {
-        int semitones = motive->notes[i + 1].midi - motive->notes[i].midi;
+        int semitones = motive->notes[i + 1].pitch - motive->notes[i].pitch;
         int size = (semitones < 0 ? -semitones : semitones) % 12;
         out->direction[i] = semitones > 0 ? 1 : (semitones < 0 ? -1 : 0);
         out->interval_class[i] = size > 6 ? 12 - size : size;
@@ -39,7 +39,7 @@ static void features_of(const Motive *motive, Features *out) {
     /* The inter-onset interval of each note; the last note lasts as long as it sounds. */
     Rational ioi[MOTIVE_MAX_NOTES];
     for (size_t i = 0; i < count; i++) {
-        ioi[i] = i + 1 < count ? motive_time_minus(motive->notes[i + 1].offset, motive->notes[i].offset)
+        ioi[i] = i + 1 < count ? motive_time_minus(motive->notes[i + 1].onset, motive->notes[i].onset)
                                : motive->notes[i].duration;
     }
     for (size_t i = 0; i + 1 < count; i++) {

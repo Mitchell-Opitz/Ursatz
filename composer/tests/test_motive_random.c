@@ -43,7 +43,7 @@ static MotiveRandomOptions options_of(const Scenario *scenario, unsigned long se
     options.meter.beat_unit = scenario->unit;
     options.has_key = scenario->has_key;
     options.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
-    options.form = MOTIVE_FORM_FULL;
+    options.form = MOTIVE_SKETCH_FORM_FULL;
     options.count = COUNT;
     options.seed = seed;
     return options;
@@ -57,23 +57,23 @@ static Rational time_of(long num, unsigned long den) {
 
 /* What every full motive must be, whatever the options. */
 static void check_motive(const Scenario *scenario, const Motive *motive) {
-    assert(motive->meter.beats_per_bar == scenario->beats && motive->meter.beat_unit == scenario->unit);
-    assert(motive->key_source == MOTIVE_KEY_GIVEN);
-    assert(motive->key.mode == scenario->mode);
+    assert(motive_meter(motive).beats_per_bar == scenario->beats && motive_meter(motive).beat_unit == scenario->unit);
+    assert(motive->key_source == MOTIVE_SKETCH_KEY_GIVEN);
+    assert(motive->minor == (scenario->mode == KEY_STRUCTURE_MODE_MINOR));
     int tonic = scenario->has_key ? scenario->tonic : (scenario->mode == KEY_STRUCTURE_MODE_MAJOR ? 0 : 9);
-    assert(analysis_key_tonic_pitch_class(&motive->key) == tonic);
-    assert(motive->form == MOTIVE_FORM_FULL);
+    assert(motive->tonic_pc == tonic);
+    assert(motive->form == MOTIVE_SKETCH_FORM_FULL);
     assert(motive->note_count >= 2 && motive->note_count <= 12);
 
     int low = 127;
     int high = 0;
     Rational onset = time_of(0, 1);
     for (size_t i = 0; i < motive->note_count; i++) {
-        const PlanNote *note = &motive->notes[i];
-        assert(rational_cmp(note->offset, onset) == 0);
+        const MotiveSketchNote *note = &motive->notes[i];
+        assert(rational_cmp(note->onset, onset) == 0);
         assert(rational_add(onset, note->duration, &onset) == RATIONAL_OK);
-        low = note->midi < low ? note->midi : low;
-        high = note->midi > high ? note->midi : high;
+        low = note->pitch < low ? note->pitch : low;
+        high = note->pitch > high ? note->pitch : high;
     }
     assert(rational_cmp(motive->length, onset) == 0);
     assert(high - low <= 19);
@@ -220,18 +220,18 @@ static void test_forms(void) {
         Motive motives[COUNT];
         size_t made = 0;
         MotiveRandomOptions options = options_of(&SCENARIOS[1], seed);
-        options.form = MOTIVE_FORM_RHYTHM;
+        options.form = MOTIVE_SKETCH_FORM_RHYTHM;
         assert(motive_random(&options, motives, &made) == MOTIVE_RANDOM_OK && made == COUNT);
         for (size_t i = 0; i < made; i++) {
-            assert(motives[i].form == MOTIVE_FORM_RHYTHM && motives[i].key_source == MOTIVE_KEY_GIVEN);
+            assert(motives[i].form == MOTIVE_SKETCH_FORM_RHYTHM && motives[i].key_source == MOTIVE_SKETCH_KEY_GIVEN);
             for (size_t n = 1; n < motives[i].note_count; n++) {
-                assert(motives[i].notes[n].midi == motives[i].notes[0].midi);
+                assert(motives[i].notes[n].pitch == motives[i].notes[0].pitch);
             }
         }
-        options.form = MOTIVE_FORM_CONTOUR;
+        options.form = MOTIVE_SKETCH_FORM_CONTOUR;
         assert(motive_random(&options, motives, &made) == MOTIVE_RANDOM_OK && made == COUNT);
         for (size_t i = 0; i < made; i++) {
-            assert(motives[i].form == MOTIVE_FORM_CONTOUR && motive_pickup(&motives[i]).num == 0);
+            assert(motives[i].form == MOTIVE_SKETCH_FORM_CONTOUR && motive_pickup(&motives[i]).num == 0);
             for (size_t n = 0; n < motives[i].note_count; n++) {
                 assert(rational_cmp(motives[i].notes[n].duration, time_of(1, 4)) == 0);
             }

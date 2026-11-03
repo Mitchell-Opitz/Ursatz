@@ -111,7 +111,7 @@ static void test_no_chord_no_harmony(void) {
     options.has_meter = motive_parse_meter("4/4", &options.meter);
     Motive rhythm;
     assert(motive_from_rhythm_text("x:q x:q x:q x:q", &options, &rhythm, NULL) == MOTIVE_OK);
-    rhythm.key_source = MOTIVE_KEY_UNSPECIFIED;
+    rhythm.key_source = MOTIVE_SKETCH_KEY_UNSPECIFIED;
     Motive basic = load("C4:q E4:q G4:q C5:q", NULL);
     MotiveConnection connection;
     assert(motive_connection(&basic, &basic, &rhythm, &(MotiveScore){1, 3}, &connection));

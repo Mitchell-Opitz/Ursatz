@@ -10,13 +10,12 @@
 
 /*
  * The bar, the offset in the bar and the beat of a time, from the library's motive sketch (motive_sketch_bar_of,
- * motive_sketch_offset_in_bar, motive_sketch_on_beat), against the helpers motive_tones.c had before B6a (kept here
- * as old_bar_of, old_offset_in_bar and old_is_strong) and against the results those helpers gave, recorded in EXPECTED.
- * Run with --print to write EXPECTED again.
+ * motive_sketch_offset_in_bar, motive_sketch_on_beat), against the results the helpers motive_tones.c had before B6a gave
+ * (recorded in EXPECTED when those helpers were compared with the library, with no difference; they are deleted).
  *
- * Declared difference: the old offset of a time before the first barline in a sketch with no pickup is a bar plus the
+ * Declared difference: the old offset of a time before the first barline in a sketch with no pickup was a bar plus the
  * time; the library says bad. No motive has that time (a motive without a pickup starts on its barline), so the table
- * records "bad" and the comparison skips it.
+ * records "bad".
  */
 
 #define FIXTURES 8
@@ -50,42 +49,11 @@ static MotiveSketch make_sketch(const Fixture *fixture) {
     return sketch;
 }
 
-static long old_bar_of(Rational time, Rational pickup, Rational bar) {
-    if (msk_cmp(time, pickup) < 0) {
-        return -1;
-    }
-    return (long)msk_floor_div(msk_sub(time, pickup), bar);
-}
-
-static Rational old_offset_in_bar(const MotiveSketch *sketch, long bar, Rational onset) {
-    if (bar < 0) {
-        return msk_sub(msk_add(onset, sketch->bar), sketch->pickup);
-    }
-    return msk_sub(msk_sub(onset, sketch->pickup), msk_mul(msk_int((unsigned long long)bar), sketch->bar));
-}
-
-static bool old_is_strong(const MotiveSketch *sketch, long bar, Rational onset) {
-    Rational beats = msk_div(old_offset_in_bar(sketch, bar, onset), sketch->beat);
-    return msk_ok(beats) && beats.den == 1;
-}
-
 /* "bar:offset:B" for the library, B when the time is on a beat, b when not; offset is "bad" when bad. */
-static void describe(const MotiveSketch *sketch, Rational time, bool library, char *out, size_t size) {
-    long bar;
-    Rational offset;
-    bool on_beat;
-    if (library) {
-        bar = motive_sketch_bar_of(sketch, time);
-        offset = motive_sketch_offset_in_bar(sketch, bar, time);
-        on_beat = motive_sketch_on_beat(sketch, time);
-    } else {
-        bar = old_bar_of(time, sketch->pickup, sketch->bar);
-        offset = old_offset_in_bar(sketch, bar, time);
-        on_beat = old_is_strong(sketch, bar, time);
-        if (bar < 0 && msk_is_zero(sketch->pickup)) {
-            offset = msk_bad();
-        }
-    }
+static void describe(const MotiveSketch *sketch, Rational time, char *out, size_t size) {
+    long bar = motive_sketch_bar_of(sketch, time);
+    Rational offset = motive_sketch_offset_in_bar(sketch, bar, time);
+    bool on_beat = motive_sketch_on_beat(sketch, time);
     if (msk_ok(offset)) {
         snprintf(out, size, "%ld:%llu/%llu:%c", bar, (unsigned long long)offset.num, (unsigned long long)offset.den,
                  on_beat ? 'B' : 'b');
@@ -105,12 +73,12 @@ static const char *const EXPECTED[FIXTURES] = {
     "-1:17/16:b -1:9/8:b -1:19/16:b 0:0/1:B 0:1/16:b 0:1/8:b 0:3/16:b 0:1/4:B 0:5/16:b 0:3/8:b 0:7/16:b 0:1/2:B 0:9/16:b 0:5/8:b 0:11/16:b 0:3/4:B 0:13/16:b 0:7/8:b 0:15/16:b 0:1/1:B 0:17/16:b 0:9/8:b 0:19/16:b 1:0/1:B 1:1/16:b 1:1/8:b 1:3/16:b 1:1/4:B 1:5/16:b 1:3/8:b 1:7/16:b 1:1/2:B 1:9/16:b",
 };
 
-static void row(const Fixture *fixture, bool library, char *out, size_t size) {
+static void row(const Fixture *fixture, char *out, size_t size) {
     MotiveSketch sketch = make_sketch(fixture);
     out[0] = '\0';
     for (int k = 0; k < TIMES; k++) {
         char cell[64];
-        describe(&sketch, msk_make((unsigned long long)k, 16), library, cell, sizeof(cell));
+        describe(&sketch, msk_make((unsigned long long)k, 16), cell, sizeof(cell));
         if (k > 0) {
             strncat(out, " ", size - strlen(out) - 1);
         }
@@ -118,27 +86,14 @@ static void row(const Fixture *fixture, bool library, char *out, size_t size) {
     }
 }
 
-int main(int argc, char **argv) {
-    char old_row[4096];
+int main(void) {
     char library_row[4096];
-    if (argc > 1 && strcmp(argv[1], "--print") == 0) {
-        for (int i = 0; i < FIXTURES; i++) {
-            row(&FIXTURE[i], false, old_row, sizeof(old_row));
-            printf("    \"%s\",\n", old_row);
-        }
-        return 0;
-    }
     for (int i = 0; i < FIXTURES; i++) {
         MotiveSketch sketch = make_sketch(&FIXTURE[i]);
         PlanMeter meter;
         assert(motive_meter_of(&sketch, &meter));
         assert(meter.beats_per_bar == FIXTURE[i].meter.beats_per_bar && meter.beat_unit == FIXTURE[i].meter.beat_unit);
-        row(&FIXTURE[i], false, old_row, sizeof(old_row));
-        row(&FIXTURE[i], true, library_row, sizeof(library_row));
-        if (strcmp(old_row, library_row) != 0) {
-            fprintf(stderr, "%s: old helpers\n  %s\nlibrary\n  %s\n", FIXTURE[i].name, old_row, library_row);
-        }
-        assert(strcmp(old_row, library_row) == 0);
+        row(&FIXTURE[i], library_row, sizeof(library_row));
         if (strcmp(EXPECTED[i], library_row) != 0) {
             fprintf(stderr, "%s: recorded\n  %s\nlibrary\n  %s\n", FIXTURE[i].name, EXPECTED[i], library_row);
         }

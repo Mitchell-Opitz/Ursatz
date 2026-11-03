@@ -17,6 +17,7 @@
 #include "util/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
+#include "motive/motive_internal.h"
 
 /* How many candidates are drawn for each one asked for before the search is given up. */
 #define DRAWS_PER_CANDIDATE 6
@@ -216,8 +217,8 @@ bool grow_same_contour(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 1; i < a->note_count; i++) {
-        if (direction(a->notes[i].midi - a->notes[i - 1].midi) !=
-            direction(b->notes[i].midi - b->notes[i - 1].midi)) {
+        if (direction(motive_pitch(a, i) - motive_pitch(a, i - 1)) !=
+            direction(motive_pitch(b, i) - motive_pitch(b, i - 1))) {
             return false;
         }
     }
@@ -418,7 +419,7 @@ static bool same_kind(const MotiveDevSpec *a, const MotiveDevSpec *b) {
 
 /* Whether the last note of a development lands on the pitch class asked for (any when want is negative). */
 static bool lands_on(const Motive *result, int want) {
-    return want < 0 || ((result->notes[result->note_count - 1].midi % 12) + 12) % 12 == want;
+    return want < 0 || ((motive_pitch(result, result->note_count - 1) % 12) + 12) % 12 == want;
 }
 
 bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
@@ -434,7 +435,7 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
     for (int kind = 0; kind < 3; kind++) {
         /* Mirrored in the key's steps about a note near the first, so the contour turns over; every interval
            widened or narrowed; or the one interval changed. */
-        int first = source->notes[0].midi;
+        int first = motive_pitch(source, 0);
         int low = kind == 0 ? first - 2 : (kind == 1 ? -2 : 1);
         int high = kind == 0 ? first + 2 : (kind == 1 ? 2 : (int)intervals);
         for (int value = low; value <= high; value++) {
@@ -459,7 +460,7 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
                 }
                 bool inside = true;
                 for (size_t k = 0; k < result.note_count; k++) {
-                    inside = inside && result.notes[k].midi >= CONTRAST_LOW && result.notes[k].midi <= CONTRAST_HIGH;
+                    inside = inside && motive_pitch(&result, k) >= CONTRAST_LOW && motive_pitch(&result, k) <= CONTRAST_HIGH;
                 }
                 if (!inside) {
                     continue;
@@ -551,7 +552,7 @@ static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const
             dev.kind = MOTIVE_DEV_INVERT;
             dev.tonal = asked->tonal;
             dev.has_axis = true;
-            dev.axis = asked->has_axis ? asked->axis : m0->notes[0].midi;
+            dev.axis = asked->has_axis ? asked->axis : motive_pitch(m0, 0);
             ref.has_axis = true;
             ref.axis = dev.axis;
             break;
@@ -983,8 +984,7 @@ static NodeId given_motive(GrowBuild *build, PlanSpan idea_span) {
     /* The first bar of the Given span, clipped to the bar. */
     Motive motive;
     const PlanNotes *notes = &plan_lane_span_payload(plan, given)->notes;
-    memset(&motive, 0, sizeof(motive));
-    motive.meter = build->request->meter;
+    motive_init(&motive, build->request->meter);
     for (size_t n = 0; n < notes->note_count && motive.note_count < MOTIVE_MAX_NOTES; n++) {
         PlanNote note = notes->notes[n];
         Rational end;
@@ -998,10 +998,13 @@ static NodeId given_motive(GrowBuild *build, PlanSpan idea_span) {
             rational_sub(build->request->bar, note.offset, &note.duration) != RATIONAL_OK) {
             return PLAN_NODE_NONE;
         }
-        motive.notes[motive.note_count++] = note;
+        motive.notes[motive.note_count].pitch = note.midi;
+        motive.notes[motive.note_count].onset = note.offset;
+        motive.notes[motive.note_count].duration = note.duration;
+        motive.note_count++;
     }
     if (motive.note_count == 0 ||
-        rational_add(motive.notes[motive.note_count - 1].offset, motive.notes[motive.note_count - 1].duration,
+        rational_add(motive.notes[motive.note_count - 1].onset, motive.notes[motive.note_count - 1].duration,
                       &motive.length) != RATIONAL_OK) {
         return PLAN_NODE_NONE;
     }

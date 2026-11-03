@@ -6,8 +6,8 @@
 #include <analysis/motive_relation.h>
 #include <analysis/motive_variant_recognition.h>
 
-#include <ursatz_composer/motive_sketch_bridge.h>
 
+#include "motive/motive_internal.h"
 #include "motive/variant_internal.h"
 
 /* The registry row of a relation, NULL when none maps to it. */
@@ -39,7 +39,7 @@ static bool step_from_relation(const MotiveRelationStep *relation, const Motive 
             if (motive->note_count == 0) {
                 return false;
             }
-            value = motive->notes[0].midi;
+            value = motive_pitch(motive, 0);
         }
         if (variant_step_set(step, param->name, value, relation->den[p])) {
             continue;
@@ -99,30 +99,23 @@ VariantResult variant_recognize_depth(const Motive *source, const Motive *target
     if (depth < 1 || depth > VARIANT_CHAIN_MAX) {
         return VARIANT_ERR_PARAM;
     }
-    MotiveSketch from;
-    MotiveSketch to;
-    if (!motive_to_sketch(source, &from) || !motive_to_sketch(target, &to)) {
+    /* A motive without chords of its own is compared without any: a variant keeps no chord it did not get from a harmony
+       row, and a harmony relation adds the implied chord to a source without chords itself. */
+    if (!motive_sketch_validate(source) || !motive_sketch_validate(target)) {
         return VARIANT_ERR_PARAM;
     }
-    /* motive_to_sketch gives a motive without chords of its own the best implied chord. A variant keeps no chord it did not
-       get from a harmony row, so the implied chords would stop a transposition from matching a target that implies
-       another chord; a harmony relation adds the implied chord to a source without chords itself. */
-    if (source->harmony_count == 0) {
-        from.chord_count = 0;
-    }
-    if (target->harmony_count == 0) {
-        to.chord_count = 0;
-    }
+    const MotiveSketch *from = source;
+    const MotiveSketch *to = target;
     MotiveRecognizeOptions options;
     motive_recognize_options_default(&options);
     options.max_depth = depth;
     /* A contour form compares by rank (R-148): the Composer normalizes a contour after every step, so exact pitches would not
        reach it. */
-    options.contour = source->form == MOTIVE_FORM_CONTOUR;
+    options.contour = source->form == MOTIVE_SKETCH_FORM_CONTOUR;
     options.admit = admit_step;
     options.admit_context = source;
     MotiveRecognition recognition;
-    MotiveRecognizeResult searched = motive_variant_recognize(&from, &to, &options, &recognition);
+    MotiveRecognizeResult searched = motive_variant_recognize(from, to, &options, &recognition);
     if (searched == MOTIVE_RECOGNIZE_NO_MEMORY) {
         return VARIANT_ERR_MEMORY;
     }

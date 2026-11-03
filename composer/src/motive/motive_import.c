@@ -51,27 +51,17 @@ static MotiveResult notes_from_events(NoteEvent *const *events, PitchNumericValu
             motive_set_error(error, location, "the pitch is not a whole MIDI note number");
             return MOTIVE_ERR_VALUE;
         }
-        PlanNote note;
-        note.midi = (int)pitch_numeric_value_position_numerator(values[i]);
-        note.spelled = false;
-        note.letter = PITCH_LETTER_C;
-        note.accidental = 0;
-        /* MusicXML writes the pitch (MIDI does not): keep the notated spelling when it names the sounding note. */
-        const PitchSpelling *written = part_index ? note_event_optional_pitch_spelling(events[i]) : NULL;
-        if (written && pitch_spelling_midi_number(written) == note.midi) {
-            note.spelled = true;
-            note.letter = pitch_spelling_letter(written);
-            note.accidental = pitch_spelling_accidental(written);
-        }
-        note.offset = motive_time(musical_time_numerator(position), musical_time_denominator(position));
+        MotiveSketchNote note;
+        note.pitch = (int)pitch_numeric_value_position_numerator(values[i]);
+        note.onset = motive_time(musical_time_numerator(position), musical_time_denominator(position));
         note.duration = motive_time(duration_numerator(duration), duration_denominator(duration));
-        if (rational_cmp(note.offset, end) < 0) {
-            snprintf(location, sizeof(location), "at %lld/%lld (note %zu)", note.offset.num, note.offset.den, i + 1);
+        if (rational_cmp(note.onset, end) < 0) {
+            snprintf(location, sizeof(location), "at %lld/%lld (note %zu)", note.onset.num, note.onset.den, i + 1);
             motive_set_error(error, location,
                              "the note sounds while the note before it still sounds; a motive is one voice");
             return MOTIVE_ERR_POLYPHONIC;
         }
-        end = motive_note_end(&note);
+        end = motive_event_end(&note);
         motive->notes[i] = note;
     }
     motive->note_count = count;

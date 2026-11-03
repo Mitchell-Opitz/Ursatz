@@ -148,16 +148,13 @@ static void add_accompaniment_motive(Piece *piece) {
     NodeId idea;
     PlanSpan material = {beats(40), beats(4)};
     static const int PITCHES[4] = {60, 67, 64, 67};
-    memset(&motive, 0, sizeof(motive));
-    motive.meter.beats_per_bar = 4;
-    motive.meter.beat_unit = 4;
-    motive.key = c_major();
-    motive.key_source = MOTIVE_KEY_GIVEN;
-    motive.role = MOTIVE_ROLE_ACCOMPANIMENT;
+    motive_init(&motive, (PlanMeter){4, 4, 0});
+    AnalysisKey motive_key_value = c_major();
+    motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
+    motive.accompaniment = true;
     for (size_t n = 0; n < 4; n++) {
-        motive.notes[n].midi = PITCHES[n];
-        motive.notes[n].spelled = false;
-        motive.notes[n].offset = fraction((long)n, 8);
+        motive.notes[n].pitch = PITCHES[n];
+        motive.notes[n].onset = fraction((long)n, 8);
         motive.notes[n].duration = fraction(1, 8);
     }
     motive.note_count = 4;

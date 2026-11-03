@@ -4,7 +4,6 @@
 
 #include <standard-harmony/harmonic_function.h>
 
-#include <ursatz_composer/motive_sketch_bridge.h>
 
 #include "motive/motive_internal.h"
 
@@ -33,18 +32,18 @@ bool motive_chain_distance(const VariantChain *chain, MotiveScore *out) {
 
 /* The first or last chord of the motive: its own harmony, else its best implied chord. False when it has none. */
 static bool chord_of(const Motive *motive, bool last, int *degree, int *alteration) {
-    if (motive->harmony_count > 0) {
-        const MotiveChord *chord = &motive->harmony[last ? motive->harmony_count - 1 : 0];
+    if (motive->chord_count > 0) {
+        const MotiveSketchChord *chord = &motive->chords[last ? motive->chord_count - 1 : 0];
         *degree = chord->degree;
         *alteration = chord->alteration;
         return true;
     }
-    MotiveSketch sketch;
-    if (!motive_to_sketch(motive, &sketch) || sketch.chord_count == 0) {
+    MotiveSketchChord implied;
+    if (!motive_implied_chord(motive, &implied)) {
         return false;
     }
-    *degree = sketch.chords[0].degree;
-    *alteration = sketch.chords[0].alteration;
+    *degree = implied.degree;
+    *alteration = implied.alteration;
     return true;
 }
 

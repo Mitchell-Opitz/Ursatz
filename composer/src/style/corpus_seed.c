@@ -14,6 +14,7 @@
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include "util/util.h"
+#include "motive/motive_internal.h"
 
 /* How many matches a progression search looks through for one the plan can place. */
 #define PROGRESSION_CANDIDATES 100
@@ -249,10 +250,8 @@ static bool motive_from_passage(const SimilarMatch *match, const PlanMeter *mete
                                 Motive *out) {
     unsigned long long bar_n = (unsigned long long)meter->beats_per_bar;
     unsigned long long bar_d = (unsigned long long)meter->beat_unit;
-    memset(out, 0, sizeof(*out));
-    out->meter = *meter;
-    out->key = *key;
-    out->key_source = MOTIVE_KEY_GIVEN;
+    motive_init(out, *meter);
+    motive_set_key(out, key, MOTIVE_SKETCH_KEY_GIVEN);
     for (size_t i = 0; i < match->note_count && out->note_count < MOTIVE_MAX_NOTES; i++) {
         const SimilarNote *note = &match->notes[i];
         unsigned long long on_n = note->onset_numerator, on_d = note->onset_denominator;
@@ -268,21 +267,20 @@ static bool motive_from_passage(const SimilarMatch *match, const PlanMeter *mete
             length_n = bar_n * on_d - on_n * bar_d;
             length_d = bar_d * on_d;
         }
-        PlanNote *placed = &out->notes[out->note_count];
+        MotiveSketchNote *placed = &out->notes[out->note_count];
         int pitch = note->pitch + shift;
-        if (pitch < 0 || pitch > 127 || !plan_time_of(on_n, on_d, &placed->offset) ||
+        if (pitch < 0 || pitch > 127 || !plan_time_of(on_n, on_d, &placed->onset) ||
             !plan_time_of(length_n, length_d, &placed->duration)) {
             return false;
         }
-        placed->midi = pitch;
-        placed->spelled = false;
+        placed->pitch = pitch;
         out->note_count++;
     }
     if (out->note_count < 2) {
         return false;
     }
-    const PlanNote *last = &out->notes[out->note_count - 1];
-    return rational_add(last->offset, last->duration, &out->length) == RATIONAL_OK;
+    const MotiveSketchNote *last = &out->notes[out->note_count - 1];
+    return rational_add(last->onset, last->duration, &out->length) == RATIONAL_OK;
 }
 
 /* Whether a score is within 1/10 of the best: 10 * score >= 10 * best - 1, in fractions. */

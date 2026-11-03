@@ -178,7 +178,7 @@ static bool motive_labels(const PiecePlan *plan, const FillCandidate *candidate,
     if (!motive) {
         return true;
     }
-    int tonic = motive->key_source != MOTIVE_KEY_UNSPECIFIED ? analysis_key_tonic_pitch_class(&motive->key) : plan_tonic(plan);
+    int tonic = motive->has_scale ? motive->tonic_pc : plan_tonic(plan);
     return composer_style_labels_add_motive(labels, motive, tonic);
 }
 

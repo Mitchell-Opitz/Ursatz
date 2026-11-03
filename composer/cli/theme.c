@@ -201,7 +201,7 @@ int request_read_motive(const char *what, const cJSON *object, const char *role,
                 !cJSON_IsNumber(last) || first->valuedouble < 0 || last->valuedouble < first->valuedouble) {
                 return cli_fail(CLI_EXIT_USAGE, "%s: a feature is {\"label\", \"first\", \"last\"} with 0 <= first <= last", what);
             }
-            MotiveFeature *feature = &options.features[options.feature_count++];
+            MotiveSketchFeature *feature = &options.features[options.feature_count++];
             snprintf(feature->label, sizeof(feature->label), "%s", label->valuestring);
             feature->first = (size_t)first->valuedouble;
             feature->last = (size_t)last->valuedouble;
@@ -210,7 +210,7 @@ int request_read_motive(const char *what, const cJSON *object, const char *role,
     }
     const char *wanted_role = role ? role : role_text;
     if (wanted_role) {
-        if (!motive_role_parse(wanted_role, &options.role)) {
+        if (!motive_role_parse(wanted_role, &options.accompaniment)) {
             return cli_fail(CLI_EXIT_USAGE, "%s: role must be melodic or accompaniment, not '%s'", what, wanted_role);
         }
         options.has_role = true;
@@ -419,7 +419,7 @@ static int read_chords(ThemeExt *ext, const PlanMeter *meter, const AnalysisKey 
             return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: given twice", bar);
         }
         seen[bar] = true;
-        MotiveChord parsed[MOTIVE_MAX_CHORDS];
+        MotiveSketchChord parsed[MOTIVE_MAX_CHORDS];
         size_t count = 0;
         MotiveError error;
         if (motive_harmony_parse(text, meter, parsed, &count, &error) != MOTIVE_OK) {
@@ -436,7 +436,7 @@ static int read_chords(ThemeExt *ext, const PlanMeter *meter, const AnalysisKey 
             return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: the bar is out of range", bar);
         }
         for (size_t c = 0; c < count; c++) {
-            const MotiveChord *chord = &parsed[c];
+            const MotiveSketchChord *chord = &parsed[c];
             Rational half_beats;
             Rational end = bar_length;
             /* An onset is a multiple of half a beat of the beat unit, inside the bar. */
@@ -502,7 +502,7 @@ static int theme_load(GrowExt *base, const PlanMeter *meter, const AnalysisKey *
         if (status != 0) {
             return status;
         }
-        if (target->role != MOTIVE_ROLE_MELODIC) {
+        if (target->accompaniment) {
             return cli_fail(CLI_EXIT_USAGE, "%s is of the accompaniment role; a slot takes a melodic motive", what);
         }
         ext->base.has_slot[s] = s != GROW_SLOT_BASIC;
@@ -520,7 +520,7 @@ static int theme_load(GrowExt *base, const PlanMeter *meter, const AnalysisKey *
         if (status != 0) {
             return status;
         }
-        if (ext->base.idea_motives[idea].role != MOTIVE_ROLE_MELODIC) {
+        if (ext->base.idea_motives[idea].accompaniment) {
             return cli_fail(CLI_EXIT_USAGE, "%s is of the accompaniment role; an idea takes a melodic motive", what);
         }
         ext->base.has_idea[idea] = true;

@@ -64,7 +64,7 @@ int motive_extras_options(const MotiveExtras *extras, const PlanMeter *meter, Mo
         options->has_features = true;
     }
     if (extras->role_text) {
-        if (!motive_role_parse(extras->role_text, &options->role)) {
+        if (!motive_role_parse(extras->role_text, &options->accompaniment)) {
             return cli_fail(CLI_EXIT_USAGE, "--role must be melodic or accompaniment, not '%s'", extras->role_text);
         }
         options->has_role = true;

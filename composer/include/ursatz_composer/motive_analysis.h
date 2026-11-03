@@ -103,7 +103,7 @@ typedef struct {
     size_t note_count;
     /* What the motive holds. A rhythm has only the rhythm below; a contour only the contour (its pitches are made up
        to sound it, so no intervals, range, degrees or harmony); a full motive has all of it. */
-    MotiveForm form;
+    MotiveSketchForm form;
     bool intervals_known;
     bool contour_known;
     bool rhythm_known;
@@ -128,7 +128,7 @@ typedef struct {
 
     bool key_known;
     AnalysisKey key;
-    MotiveKeySource key_source;
+    MotiveSketchKeySource key_source;
 
     bool degrees_known; /* the same as key_known */
     MotiveDegree degrees[MOTIVE_MAX_NOTES];

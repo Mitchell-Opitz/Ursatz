@@ -18,6 +18,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include "util/plan_util.h"
+#include "motive/motive_internal.h"
 
 #define EXIT_USAGE CLI_EXIT_USAGE
 #define EXIT_NOTHING CLI_EXIT_UNSATISFIABLE
@@ -216,7 +217,7 @@ static bool parse_pitch(const char *text, int *out) {
     if (motive_from_notes_text(note, &options, &motive, NULL) != MOTIVE_OK || motive.note_count != 1) {
         return false;
     }
-    *out = motive.notes[0].midi;
+    *out = motive_pitch(&motive, 0);
     return true;
 }
 
@@ -276,11 +277,11 @@ static void motive_text(const Motive *motive, char *out, size_t size) {
     Rational cursor = {0, 1};
     out[0] = '\0';
     for (size_t i = 0; i < motive->note_count; i++) {
-        const PlanNote *note = &motive->notes[i];
+        const MotiveSketchNote *note = &motive->notes[i];
         Rational gap;
-        rational_sub(note->offset, cursor, &gap);
+        rational_sub(note->onset, cursor, &gap);
         char pitch[16];
-        motive_pitch_name(note->midi, pitch, sizeof(pitch));
+        motive_pitch_name(motive_pitch(motive, i), pitch, sizeof(pitch));
         if (i > 0) {
             append(out, size, &used, " ");
         }
@@ -289,7 +290,7 @@ static void motive_text(const Motive *motive, char *out, size_t size) {
             append(out, size, &used, " ");
         }
         append_length(out, size, &used, pitch, note->duration, true);
-        rational_add(note->offset, note->duration, &cursor);
+        rational_add(note->onset, note->duration, &cursor);
     }
 }
 
@@ -310,7 +311,7 @@ static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *s
     }
     /* The development begins on the barline after the source, and has room for a long augmentation. */
     Rational bar;
-    rational_make(source->meter.beats_per_bar, (long long)source->meter.beat_unit, &bar);
+    rational_make(motive_meter(source).beats_per_bar, (long long)motive_meter(source).beat_unit, &bar);
     long bars = (source->length.num * (long)bar.den + (long)source->length.den * bar.num - 1) /
                 ((long)source->length.den * bar.num);
     Rational start;
@@ -334,12 +335,12 @@ static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *s
     /* The meter and the key, so that a file written from the plan has them. */
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
-    payload.meter = source->meter;
+    payload.meter = motive_meter(source);
     LaneSpanId lane;
     ok = ok && plan_add_lane_span(scene->plan, idea, PLAN_LANE_METER, 0, all, &payload, &lane) == PLAN_OK &&
          plan_lane_span_set_state(scene->plan, lane, PLAN_STATE_GIVEN) == PLAN_OK;
-    if (ok && source->key_source != MOTIVE_KEY_UNSPECIFIED) {
-        payload.key = source->key;
+    if (ok && source->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
+        payload.key = motive_key(source);
         ok = plan_add_lane_span(scene->plan, idea, PLAN_LANE_KEY, 0, all, &payload, &lane) == PLAN_OK &&
              plan_lane_span_set_state(scene->plan, lane, PLAN_STATE_GIVEN) == PLAN_OK;
     }
@@ -395,7 +396,7 @@ static bool build_ref(const Options *options, Op op, const Motive *source, size_
             snprintf(buffer, size, "--by and --degree both say how far to move; give one");
             return false;
         }
-        if (source->key_source == MOTIVE_KEY_UNSPECIFIED || !motive_analyze(source, &analysis)) {
+        if (source->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED || !motive_analyze(source, &analysis)) {
             snprintf(buffer, size, "--degree needs a key; give --key");
             return false;
         }
@@ -409,7 +410,7 @@ static bool build_ref(const Options *options, Op op, const Motive *source, size_
             return false;
         }
     }
-    if (ref->tonal && source->key_source == MOTIVE_KEY_UNSPECIFIED) {
+    if (ref->tonal && source->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         snprintf(buffer, size, "--tonal needs a key; give --key");
         return false;
     }
@@ -534,8 +535,7 @@ static bool suggestion_motive(const Scene *scene, const FillSuggestions *suggest
         const PlanLanePayload *payload = plan_lane_span_payload(copy, ids[0]);
         memset(out, 0, sizeof(*out));
         *out = *source;
-        out->note_count = payload->notes.note_count;
-        memcpy(out->notes, payload->notes.notes, out->note_count * sizeof(PlanNote));
+        motive_set_lane_notes(out, payload->notes.notes, payload->notes.note_count);
         out->length = plan_lane_span_span(copy, ids[0]).length;
     } else {
         ok = false;
@@ -621,9 +621,9 @@ int run_develop(int argc, char **argv) {
 
     MotiveDevelopContext context;
     motive_develop_context_default(&context);
-    context.meter = source.meter;
-    context.has_key = source.key_source != MOTIVE_KEY_UNSPECIFIED;
-    context.key = source.key;
+    context.meter = motive_meter(&source);
+    context.has_key = source.key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED;
+    context.key = motive_key(&source);
     context.candidates = (size_t)suggest * 3 > 12 ? (size_t)suggest * 3 : 12;
     PlanMotiveRef ref;
     char problem_text[160];

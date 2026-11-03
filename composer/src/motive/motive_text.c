@@ -116,7 +116,8 @@ static bool add_head(const Motive *motive, ListKind kind, int pitch, char *head,
         /* The reader puts octave 0 at MIDI 60 to 71 for the tonic's pitch class, so shift 60 down first. */
         long position;
         int alteration;
-        motive_scale_position(&motive->key, pitch - 60, &position, &alteration);
+        AnalysisKey key = motive_key(motive);
+        motive_scale_position(&key, pitch - 60, &position, &alteration);
         long octave = position / 7;
         long degree = position % 7;
         if (degree < 0) {
@@ -142,25 +143,25 @@ static char *write_list(const Motive *motive, ListKind kind) {
     if (!motive || motive->note_count == 0) {
         return NULL;
     }
-    if (kind == WRITE_DEGREES && motive->key_source == MOTIVE_KEY_UNSPECIFIED) {
+    if (kind == WRITE_DEGREES && motive->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         return NULL;
     }
     Text text = {NULL, 0, 0, false};
     Rational cursor = motive_time(0, 1);
     for (size_t i = 0; i < motive->note_count; i++) {
-        const PlanNote *note = &motive->notes[i];
-        if (rational_cmp(note->offset, cursor) > 0 &&
-            !add_pieces(&text, "r", motive_time_minus(note->offset, cursor), false)) {
+        const MotiveSketchNote *note = &motive->notes[i];
+        if (rational_cmp(note->onset, cursor) > 0 &&
+            !add_pieces(&text, "r", motive_time_minus(note->onset, cursor), false)) {
             free(text.data);
             return NULL;
         }
         char head[24];
-        if (!add_head(motive, kind, note->midi, head, sizeof(head)) ||
+        if (!add_head(motive, kind, motive_pitch(motive, i), head, sizeof(head)) ||
             !add_pieces(&text, head, note->duration, true)) {
             free(text.data);
             return NULL;
         }
-        cursor = motive_note_end(note);
+        cursor = motive_event_end(note);
     }
     trim_end(&text);
     return text_finish(&text);
@@ -187,12 +188,12 @@ char *motive_to_contour_text(const Motive *motive) {
         /* The rank is how many distinct lower pitches the motive has. */
         size_t rank = 0;
         for (size_t j = 0; j < motive->note_count; j++) {
-            if (motive->notes[j].midi >= motive->notes[i].midi) {
+            if (motive->notes[j].pitch >= motive->notes[i].pitch) {
                 continue;
             }
             bool seen = false;
             for (size_t k = 0; k < j && !seen; k++) {
-                seen = motive->notes[k].midi == motive->notes[j].midi;
+                seen = motive->notes[k].pitch == motive->notes[j].pitch;
             }
             rank += seen ? 0 : 1;
         }
@@ -253,7 +254,7 @@ static bool read_beats(const char *text, int beat_unit, Rational *out) {
            rational_make(numerator, (long long)(denominator * beat_unit), out) == RATIONAL_OK;
 }
 
-MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, MotiveChord *out, size_t *count,
+MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, MotiveSketchChord *out, size_t *count,
                                   MotiveError *error) {
     if (!text || !meter || !out || !count) {
         motive_set_error(error, "", "text, meter or output is NULL");
@@ -287,7 +288,7 @@ MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, Moti
             return MOTIVE_ERR_VALUE;
         }
 
-        MotiveChord chord;
+        MotiveSketchChord chord;
         memset(&chord, 0, sizeof(chord));
         chord.onset = motive_time(0, 1);
         char *at = strchr(token, '@');
@@ -338,7 +339,7 @@ MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, Moti
     return MOTIVE_OK;
 }
 
-bool motive_chord_numeral(const MotiveChord *chord, char *out, size_t size) {
+bool motive_chord_numeral(const MotiveSketchChord *chord, char *out, size_t size) {
     const char *figure = chord ? chord_figure(chord->inversion, chord->seventh) : NULL;
     size_t numeral = chord && chord->degree >= 1 && chord->degree <= 7 ? (size_t)(7 - chord->degree) : 7;
     if (!figure || numeral == 7 || chord->alteration < -1 || chord->alteration > 1 || !out) {
@@ -354,8 +355,8 @@ char *motive_harmony_to_text(const Motive *motive) {
         return NULL;
     }
     Text text = {NULL, 0, 0, false};
-    for (size_t i = 0; i < motive->harmony_count; i++) {
-        const MotiveChord *chord = &motive->harmony[i];
+    for (size_t i = 0; i < motive->chord_count; i++) {
+        const MotiveSketchChord *chord = &motive->chords[i];
         char numeral[MOTIVE_CHORD_NUMERAL_MAX];
         if (!motive_chord_numeral(chord, numeral, sizeof(numeral))) {
             free(text.data);
@@ -364,7 +365,7 @@ char *motive_harmony_to_text(const Motive *motive) {
         text_add(&text, "%s", numeral);
         /* The beats are the onset over the beat length, in lowest terms. */
         Rational beats;
-        if (rational_make((long long)chord->onset.num * (long long)motive->meter.beat_unit, (long long)chord->onset.den,
+        if (rational_make((long long)chord->onset.num * (long long)motive_meter(motive).beat_unit, (long long)chord->onset.den,
                           &beats) != RATIONAL_OK) {
             free(text.data);
             return NULL;
@@ -386,7 +387,7 @@ char *motive_harmony_to_text(const Motive *motive) {
 
 /* --------------------------------------------------------------- features */
 
-MotiveResult motive_feature_parse(const char *text, MotiveFeature *out, MotiveError *error) {
+MotiveResult motive_feature_parse(const char *text, MotiveSketchFeature *out, MotiveError *error) {
     if (!text || !out) {
         motive_set_error(error, "", "text or output is NULL");
         return MOTIVE_ERR_NULL;
@@ -438,21 +439,21 @@ MotiveResult motive_feature_parse(const char *text, MotiveFeature *out, MotiveEr
 
 /* ------------------------------------------------------------------- role */
 
-bool motive_role_parse(const char *name, MotiveRole *out) {
-    if (!name || !out) {
+bool motive_role_parse(const char *name, bool *accompaniment) {
+    if (!name || !accompaniment) {
         return false;
     }
     if (strcmp(name, "melodic") == 0) {
-        *out = MOTIVE_ROLE_MELODIC;
+        *accompaniment = false;
         return true;
     }
     if (strcmp(name, "accompaniment") == 0) {
-        *out = MOTIVE_ROLE_ACCOMPANIMENT;
+        *accompaniment = true;
         return true;
     }
     return false;
 }
 
-const char *motive_role_name(MotiveRole role) {
-    return role == MOTIVE_ROLE_ACCOMPANIMENT ? "accompaniment" : "melodic";
+const char *motive_role_name(bool accompaniment) {
+    return accompaniment ? "accompaniment" : "melodic";
 }

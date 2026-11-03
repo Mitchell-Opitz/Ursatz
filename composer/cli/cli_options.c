@@ -686,7 +686,7 @@ bool cli_parse_pickup(const char *text, int beat_unit, Rational *out) {
 }
 
 char *cli_motive_text(const Motive *motive) {
-    return motive->form == MOTIVE_FORM_RHYTHM    ? motive_to_rhythm_text(motive)
-           : motive->form == MOTIVE_FORM_CONTOUR ? motive_to_contour_text(motive)
+    return motive->form == MOTIVE_SKETCH_FORM_RHYTHM    ? motive_to_rhythm_text(motive)
+           : motive->form == MOTIVE_SKETCH_FORM_CONTOUR ? motive_to_contour_text(motive)
                                                  : motive_to_notes_text(motive);
 }

@@ -433,7 +433,7 @@ static int read_melodic(const char *what, const cJSON *json, const PlanMeter *me
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
     int status = request_read_motive(what, json, NULL, meter, key, *out);
-    if (status == 0 && (*out)->role != MOTIVE_ROLE_MELODIC) {
+    if (status == 0 && (*out)->accompaniment) {
         return cli_fail(CLI_EXIT_USAGE, "%s is of the accompaniment role; a piece takes a melodic motive", what);
     }
     return status;

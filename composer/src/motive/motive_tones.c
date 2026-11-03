@@ -5,35 +5,12 @@
 
 #include <analysis/motive_sketch.h>
 
-#include <ursatz_composer/motive_sketch_bridge.h>
 
 #include "motive/motive_internal.h"
 #include "util/util.h"
 
 /* The order of the proposed triads, which breaks ties (I first). */
 static const int TRIAD_ORDER[7] = {1, 5, 4, 6, 2, 3, 7};
-
-/* The bar a time is in: bars are counted from the first barline, which is at the pickup, so a time before it is bar -1. */
-static long bar_of(Rational time, Rational pickup, Rational bar) {
-    if (msk_cmp(time, pickup) < 0) {
-        return -1;
-    }
-    return (long)msk_floor_div(msk_sub(time, pickup), bar);
-}
-
-/* The time inside a bar, in whole notes: the bar before the first barline ends at the pickup. */
-static Rational offset_in_bar(const MotiveSketch *sketch, long bar, Rational onset) {
-    if (bar < 0) {
-        return msk_sub(msk_add(onset, sketch->bar), sketch->pickup);
-    }
-    return msk_sub(msk_sub(onset, sketch->pickup), msk_mul(msk_int((unsigned long long)bar), sketch->bar));
-}
-
-/* A note is on a strong beat when it starts on a beat of its bar. */
-static bool is_strong(const MotiveSketch *sketch, long bar, Rational onset) {
-    Rational beats = msk_div(offset_in_bar(sketch, bar, onset), sketch->beat);
-    return msk_ok(beats) && beats.den == 1;
-}
 
 static bool is_chord_tone(const MotiveSketch *sketch, const MotiveSketchChord *chord, int pitch) {
     int pcs[4];
@@ -44,6 +21,49 @@ static bool is_chord_tone(const MotiveSketch *sketch, const MotiveSketchChord *c
         }
     }
     return false;
+}
+
+static bool has_pitch_class(const int *pcs, size_t count, int pc) {
+    for (size_t i = 0; i < count; i++) {
+        if (pcs[i] == pc) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/*
+ * The chord whose triad holds the most notes, then the most time, the first of I V IV vi ii iii vii on a tie. The
+ * library's harmony relations make the same choice for a sketch without chords (motive_relation.c, not exported).
+ */
+bool motive_implied_chord(const Motive *motive, MotiveSketchChord *out) {
+    static const int ORDER[7] = {1, 5, 4, 6, 2, 3, 7};
+    if (!motive || !out || !motive->has_scale || motive->form != MOTIVE_SKETCH_FORM_FULL || !motive_sketch_validate(motive)) {
+        return false;
+    }
+    size_t best_hits = 0;
+    Rational best_time = msk_int(0);
+    bool found = false;
+    for (int k = 0; k < 7; k++) {
+        MotiveSketchChord chord = {msk_int(0), ORDER[k], 0, 0, false};
+        int pcs[4];
+        size_t count = motive_sketch_chord_tones(motive, &chord, pcs);
+        size_t hits = 0;
+        Rational time = msk_int(0);
+        for (size_t i = 0; i < motive->note_count; i++) {
+            if (has_pitch_class(pcs, count, util_pitch_class(motive->notes[i].pitch))) {
+                hits++;
+                time = msk_add(time, motive->notes[i].duration);
+            }
+        }
+        if (hits > best_hits || (hits == best_hits && hits > 0 && msk_cmp(time, best_time) > 0)) {
+            best_hits = hits;
+            best_time = time;
+            *out = chord;
+            found = true;
+        }
+    }
+    return found;
 }
 
 static MotiveSketchChord triad(int degree, Rational onset) {
@@ -72,7 +92,7 @@ static size_t strong_chord_tones(const MotiveSketch *sketch, const StrongNotes *
 
 static bool append_chord(MotiveBaseHarmony *out, const MotiveSketchChord *chord) {
     if (out->count > 0) {
-        const MotiveChord *last = &out->chords[out->count - 1];
+        const MotiveSketchChord *last = &out->chords[out->count - 1];
         if (last->degree == chord->degree && last->alteration == chord->alteration && last->inversion == chord->inversion &&
             last->seventh == chord->seventh) {
             return true;
@@ -81,7 +101,7 @@ static bool append_chord(MotiveBaseHarmony *out, const MotiveSketchChord *chord)
     if (out->count == MOTIVE_MAX_CHORDS) {
         return false;
     }
-    MotiveChord *slot = &out->chords[out->count++];
+    MotiveSketchChord *slot = &out->chords[out->count++];
     memset(slot, 0, sizeof(*slot));
     slot->onset = motive_time((long)chord->onset.num, (unsigned long)chord->onset.den);
     slot->degree = chord->degree;
@@ -94,8 +114,8 @@ static bool append_chord(MotiveBaseHarmony *out, const MotiveSketchChord *chord)
 static void propose(const MotiveSketch *sketch, MotiveBaseHarmony *out) {
     out->count = 0;
     out->given = false;
-    long first_bar = bar_of(sketch->notes[0].onset, sketch->pickup, sketch->bar);
-    long last_bar = bar_of(sketch->notes[sketch->note_count - 1].onset, sketch->pickup, sketch->bar);
+    long first_bar = motive_sketch_bar_of(sketch, sketch->notes[0].onset);
+    long last_bar = motive_sketch_bar_of(sketch, sketch->notes[sketch->note_count - 1].onset);
     MotiveSketchChord previous = triad(1, msk_int(0));
     bool have_previous = false;
     for (long bar = first_bar; bar <= last_bar; bar++) {
@@ -103,11 +123,11 @@ static void propose(const MotiveSketch *sketch, MotiveBaseHarmony *out) {
         strong.count = 0;
         size_t in_bar = 0;
         for (size_t i = 0; i < sketch->note_count; i++) {
-            if (bar_of(sketch->notes[i].onset, sketch->pickup, sketch->bar) != bar) {
+            if (motive_sketch_bar_of(sketch, sketch->notes[i].onset) != bar) {
                 continue;
             }
             in_bar++;
-            if (is_strong(sketch, bar, sketch->notes[i].onset)) {
+            if (motive_sketch_on_beat(sketch, sketch->notes[i].onset)) {
                 strong.notes[strong.count++] = i;
             }
         }
@@ -163,23 +183,22 @@ static void propose(const MotiveSketch *sketch, MotiveBaseHarmony *out) {
 }
 
 bool motive_base_harmony(const Motive *motive, MotiveBaseHarmony *out) {
-    if (!motive || !out || motive->form != MOTIVE_FORM_FULL || motive->key_source == MOTIVE_KEY_UNSPECIFIED) {
+    if (!motive || !out || motive->form != MOTIVE_SKETCH_FORM_FULL || motive->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         return false;
     }
     MotiveBaseHarmony result;
     memset(&result, 0, sizeof(result));
-    if (motive->harmony_count > 0) {
-        memcpy(result.chords, motive->harmony, motive->harmony_count * sizeof(motive->harmony[0]));
-        result.count = motive->harmony_count;
+    if (motive->chord_count > 0) {
+        memcpy(result.chords, motive->chords, motive->chord_count * sizeof(motive->chords[0]));
+        result.count = motive->chord_count;
         result.given = true;
         *out = result;
         return true;
     }
-    MotiveSketch sketch;
-    if (!motive_to_sketch(motive, &sketch) || !sketch.has_scale) {
+    if (!motive_sketch_validate(motive) || !motive->has_scale) {
         return false;
     }
-    propose(&sketch, &result);
+    propose(motive, &result);
     if (result.count == 0) {
         return false;
     }
@@ -188,20 +207,14 @@ bool motive_base_harmony(const Motive *motive, MotiveBaseHarmony *out) {
 }
 
 bool motive_harmony_bar_limit_ok(const Motive *motive) {
-    if (!motive || motive->harmony_count == 0) {
+    if (!motive || motive->chord_count == 0) {
         return true;
     }
-    MotiveSketch sketch;
-    memset(&sketch, 0, sizeof(sketch));
-    sketch.pickup = msk_make((unsigned long long)motive_pickup(motive).num, motive_pickup(motive).den);
-    sketch.bar = msk_make((unsigned long long)motive->meter.beats_per_bar, (unsigned long long)motive->meter.beat_unit);
-    for (size_t i = 0; i < motive->harmony_count; i++) {
-        long bar_i = bar_of(msk_make((unsigned long long)motive->harmony[i].onset.num, motive->harmony[i].onset.den),
-                            sketch.pickup, sketch.bar);
+    for (size_t i = 0; i < motive->chord_count; i++) {
+        long bar_i = motive_sketch_bar_of(motive, motive->chords[i].onset);
         size_t in_bar = 0;
-        for (size_t j = 0; j < motive->harmony_count; j++) {
-            if (bar_of(msk_make((unsigned long long)motive->harmony[j].onset.num, motive->harmony[j].onset.den),
-                       sketch.pickup, sketch.bar) == bar_i) {
+        for (size_t j = 0; j < motive->chord_count; j++) {
+            if (motive_sketch_bar_of(motive, motive->chords[j].onset) == bar_i) {
                 in_bar++;
             }
         }
@@ -210,6 +223,20 @@ bool motive_harmony_bar_limit_ok(const Motive *motive) {
         }
     }
     return true;
+}
+
+MotiveToneStatus motive_tone_labels(const Motive *motive, const MotiveSketchChord *chords, size_t chord_count,
+                                    const MotiveToneOverride *overrides, size_t override_count, MotiveToneLabel *out) {
+    if (!motive || (chord_count > 0 && !chords) || chord_count > MOTIVE_SKETCH_MAX_CHORDS) {
+        return MOTIVE_TONE_INVALID;
+    }
+    MotiveSketch sketch = *motive;
+    memcpy(sketch.chords, chords, chord_count * sizeof(chords[0]));
+    sketch.chord_count = chord_count;
+    if (!motive_sketch_validate(&sketch)) {
+        return MOTIVE_TONE_INVALID;
+    }
+    return motive_tone_roles(&sketch, overrides, override_count, out);
 }
 
 const char *motive_tone_type_name(NonChordTone type) {

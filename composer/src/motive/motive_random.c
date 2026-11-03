@@ -271,15 +271,12 @@ static bool draw_melody(const AnalysisKey *key, const Rhythm *rhythm, FillRng *r
 static bool build_motive(const MotiveRandomOptions *options, const AnalysisKey *key, const Rhythm *rhythm,
                          const Melody *melody, Motive *out) {
     unsigned long den = 2UL * (unsigned long)options->meter.beat_unit;
-    memset(out, 0, sizeof(*out));
-    out->meter = options->meter;
-    out->key = *key;
-    out->key_source = MOTIVE_KEY_GIVEN;
+    motive_init(out, options->meter);
+    motive_set_key(out, key, MOTIVE_SKETCH_KEY_GIVEN);
     long onset = 0;
     for (size_t i = 0; i < rhythm->count; i++) {
-        out->notes[i].midi = melody->pitches[i];
-        out->notes[i].spelled = false;
-        if (rational_make(onset, den, &out->notes[i].offset) != RATIONAL_OK ||
+        out->notes[i].pitch = melody->pitches[i];
+        if (rational_make(onset, den, &out->notes[i].onset) != RATIONAL_OK ||
             rational_make(rhythm->ticks[i], den, &out->notes[i].duration) != RATIONAL_OK) {
             return false;
         }
@@ -337,17 +334,17 @@ static bool draw_candidate(const MotiveRandomOptions *options, const AnalysisKey
 
 /* The form of a full motive, read back by the reader of that form. */
 static bool apply_form(const MotiveRandomOptions *options, const Motive *full, Motive *out) {
-    if (options->form == MOTIVE_FORM_FULL) {
+    if (options->form == MOTIVE_SKETCH_FORM_FULL) {
         *out = *full;
         return true;
     }
     MotiveOptions read;
     memset(&read, 0, sizeof(read));
     read.has_meter = true;
-    read.meter = full->meter;
+    read.meter = motive_meter(full);
     read.has_key = true;
-    read.key = full->key;
-    bool rhythm = options->form == MOTIVE_FORM_RHYTHM;
+    read.key = motive_key(full);
+    bool rhythm = options->form == MOTIVE_SKETCH_FORM_RHYTHM;
     if (rhythm && motive_pickup(full).num != 0) {
         read.has_pickup = true;
         read.pickup = full->pickup;
@@ -377,13 +374,13 @@ static bool already_made(const Motive *made, size_t count, const Motive *motive)
 static bool candidate_closeness(const MotiveRandomOptions *options, const Motive *full, ComposerRatio *out) {
     ComposerStyleNote notes[MAX_NOTES];
     for (size_t i = 0; i < full->note_count; i++) {
-        notes[i].pitch = full->notes[i].midi;
+        notes[i].pitch = full->notes[i].pitch;
         notes[i].duration_numerator = (unsigned long)full->notes[i].duration.num;
         notes[i].duration_denominator = full->notes[i].duration.den;
     }
     ComposerStyleLabels *all = composer_style_labels_create();
-    ComposerStyleLabels *kept = options->form == MOTIVE_FORM_FULL ? all : composer_style_labels_create();
-    const char *category_kept = options->form == MOTIVE_FORM_RHYTHM ? "duration" : "contour";
+    ComposerStyleLabels *kept = options->form == MOTIVE_SKETCH_FORM_FULL ? all : composer_style_labels_create();
+    const char *category_kept = options->form == MOTIVE_SKETCH_FORM_RHYTHM ? "duration" : "contour";
     bool ok = all && kept && composer_style_labels_add_melody(all, NULL, notes, full->note_count);
     for (size_t i = 0; ok && kept != all && i < composer_style_labels_count(all); i++) {
         const char *category;
@@ -419,8 +416,8 @@ MotiveRandomResult motive_random(const MotiveRandomOptions *options, Motive *out
     }
     *out_count = 0;
     if ((options->mode != KEY_STRUCTURE_MODE_MAJOR && options->mode != KEY_STRUCTURE_MODE_MINOR) ||
-        (options->form != MOTIVE_FORM_FULL && options->form != MOTIVE_FORM_RHYTHM &&
-         options->form != MOTIVE_FORM_CONTOUR) ||
+        (options->form != MOTIVE_SKETCH_FORM_FULL && options->form != MOTIVE_SKETCH_FORM_RHYTHM &&
+         options->form != MOTIVE_SKETCH_FORM_CONTOUR) ||
         options->count < 1 || options->count > MOTIVE_RANDOM_MAX_COUNT) {
         return MOTIVE_RANDOM_ERR_ARGUMENT;
     }

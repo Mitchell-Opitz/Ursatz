@@ -6,6 +6,7 @@
 #include <ursatz_composer/motive.h>
 
 #include "cli_options.h"
+#include "motive/motive_internal.h"
 
 int motive_input_load(const MotiveInput *options, Motive *out) {
     MotiveOptions motive_options;
@@ -33,20 +34,20 @@ int motive_input_load(const MotiveInput *options, Motive *out) {
                         options->format_text);
     }
     if (options->form_text) {
-        MotiveForm form;
+        MotiveSketchForm form;
         if (!motive_form_parse(options->form_text, &form)) {
             return cli_fail(CLI_EXIT_USAGE, "--form must be full, rhythm or contour, not '%s'", options->form_text);
         }
-        MotiveFormat wanted = form == MOTIVE_FORM_RHYTHM ? MOTIVE_FORMAT_RHYTHM : MOTIVE_FORMAT_CONTOUR;
-        if (form != MOTIVE_FORM_FULL && format != MOTIVE_FORMAT_AUTO && format != wanted) {
+        MotiveFormat wanted = form == MOTIVE_SKETCH_FORM_RHYTHM ? MOTIVE_FORMAT_RHYTHM : MOTIVE_FORMAT_CONTOUR;
+        if (form != MOTIVE_SKETCH_FORM_FULL && format != MOTIVE_FORMAT_AUTO && format != wanted) {
             return cli_fail(CLI_EXIT_USAGE, "--form %s reads a %s, which --format %s does not", options->form_text,
                             options->form_text, options->format_text);
         }
-        if (form == MOTIVE_FORM_FULL && (format == MOTIVE_FORMAT_RHYTHM || format == MOTIVE_FORMAT_CONTOUR)) {
+        if (form == MOTIVE_SKETCH_FORM_FULL && (format == MOTIVE_FORMAT_RHYTHM || format == MOTIVE_FORMAT_CONTOUR)) {
             return cli_fail(CLI_EXIT_USAGE, "--form full does not read a %s; use --form %s or another --format",
                             options->format_text, options->format_text);
         }
-        if (form != MOTIVE_FORM_FULL) {
+        if (form != MOTIVE_SKETCH_FORM_FULL) {
             format = wanted;
         }
     }
@@ -58,14 +59,14 @@ int motive_input_load(const MotiveInput *options, Motive *out) {
            read after the first load. */
         if (options->pickup_text) {
             Rational pickup;
-            if (!cli_parse_pickup(options->pickup_text, out->meter.beat_unit, &pickup)) {
+            if (!cli_parse_pickup(options->pickup_text, motive_meter(out).beat_unit, &pickup)) {
                 return cli_fail(CLI_EXIT_USAGE, "pickup '%s' is not a number of beats; write 0, 1 or 1/2",
                                 options->pickup_text);
             }
             motive_options.has_pickup = true;
             motive_options.pickup = pickup;
         }
-        int status = motive_extras_options(&options->extras, &out->meter, &motive_options);
+        int status = motive_extras_options(&options->extras, &(PlanMeter){motive_meter(out).beats_per_bar, motive_meter(out).beat_unit, 0}, &motive_options);
         if (status != 0) {
             return status;
         }

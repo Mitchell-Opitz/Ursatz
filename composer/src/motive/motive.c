@@ -80,20 +80,20 @@ const char *motive_format_name(MotiveFormat format) {
 
 static const char *const FORM_NAMES[] = {"full", "rhythm", "contour"};
 
-bool motive_form_parse(const char *name, MotiveForm *out) {
+bool motive_form_parse(const char *name, MotiveSketchForm *out) {
     if (!name || !out) {
         return false;
     }
     for (size_t i = 0; i < sizeof(FORM_NAMES) / sizeof(FORM_NAMES[0]); i++) {
         if (strcmp(name, FORM_NAMES[i]) == 0) {
-            *out = (MotiveForm)i;
+            *out = (MotiveSketchForm)i;
             return true;
         }
     }
     return false;
 }
 
-const char *motive_form_name(MotiveForm form) {
+const char *motive_form_name(MotiveSketchForm form) {
     return (size_t)form < sizeof(FORM_NAMES) / sizeof(FORM_NAMES[0]) ? FORM_NAMES[form] : "unknown";
 }
 
@@ -288,6 +288,17 @@ void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKe
     if (!sketch || !key) {
         return;
     }
+    if (source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
+        /* No key: no scale, so the relations that need one refuse the motive (motive_key reads C major). */
+        sketch->has_scale = false;
+        sketch->tonic_pc = 0;
+        sketch->minor = false;
+        sketch->key_source = MOTIVE_SKETCH_KEY_UNSPECIFIED;
+        sketch->has_tonic_spelling = false;
+        sketch->tonic_letter = 0;
+        sketch->tonic_accidental = 0;
+        return;
+    }
     sketch->has_scale = true;
     sketch->tonic_pc = analysis_key_tonic_pitch_class(key);
     sketch->minor = key->mode == KEY_STRUCTURE_MODE_MINOR;
@@ -303,6 +314,56 @@ Rational motive_pickup(const Motive *motive) {
 
 Rational motive_note_end(const PlanNote *note) {
     return motive_time_plus(note->offset, note->duration);
+}
+
+Rational motive_event_end(const MotiveSketchNote *note) {
+    return motive_time_plus(note->onset, note->duration);
+}
+
+void motive_init(Motive *motive, PlanMeter meter) {
+    memset(motive, 0, sizeof(*motive));
+    motive_set_meter(motive, meter);
+    motive->pickup = motive_time(0, 1);
+    motive->length = motive_time(0, 1);
+}
+
+void motive_lane_notes(const Motive *motive, PlanNote *out) {
+    for (size_t i = 0; i < motive->note_count; i++) {
+        out[i] = plan_note(motive_pitch(motive, i), motive->notes[i].onset, motive->notes[i].duration);
+    }
+}
+
+void motive_set_lane_notes(Motive *motive, const PlanNote *notes, size_t count) {
+    motive->note_count = count < MOTIVE_MAX_NOTES ? count : MOTIVE_MAX_NOTES;
+    for (size_t i = 0; i < motive->note_count; i++) {
+        motive->notes[i].pitch = notes[i].midi;
+        motive->notes[i].onset = notes[i].offset;
+        motive->notes[i].duration = notes[i].duration;
+    }
+}
+
+int motive_pitch(const Motive *motive, size_t index) {
+    if (motive->notes[index].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN) {
+        return motive->notes[index].pitch;
+    }
+    return 60 + (motive->has_scale ? motive->tonic_pc : 0);
+}
+
+AnalysisKey motive_key(const Motive *motive) {
+    AnalysisKey key;
+    if (!motive_key_of(motive, &key)) {
+        key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    }
+    return key;
+}
+
+PlanMeter motive_meter(const Motive *motive) {
+    PlanMeter meter = {4, 4, 0};
+    if (!motive_meter_of(motive, &meter)) {
+        meter.beats_per_bar = 4;
+        meter.beat_unit = 4;
+    }
+    return meter;
 }
 
 void motive_set_error(MotiveError *error, const char *location, const char *format, ...) {
@@ -329,27 +390,27 @@ MotiveResult motive_check_notes(const Motive *motive, Rational *length, MotiveEr
     }
     Rational end = motive_time(0, 1);
     for (size_t i = 0; i < motive->note_count; i++) {
-        const PlanNote *note = &motive->notes[i];
+        const MotiveSketchNote *note = &motive->notes[i];
         char location[MOTIVE_ERROR_LOCATION_MAX];
         snprintf(location, sizeof(location), "notes[%zu]", i);
-        if (note->midi < 0 || note->midi > 127) {
-            motive_set_error(error, location, "pitch %d is outside the MIDI range 0 to 127", note->midi);
+        if (note->pitch != MOTIVE_SKETCH_PITCH_UNKNOWN && (note->pitch < 0 || note->pitch > 127)) {
+            motive_set_error(error, location, "pitch %d is outside the MIDI range 0 to 127", note->pitch);
             return MOTIVE_ERR_VALUE;
         }
         if (note->duration.num <= 0) {
             motive_set_error(error, location, "the duration must be longer than zero");
             return MOTIVE_ERR_VALUE;
         }
-        if (note->offset.num < 0) {
+        if (note->onset.num < 0) {
             motive_set_error(error, location, "the offset must not be before the start of the motive");
             return MOTIVE_ERR_VALUE;
         }
-        if (rational_cmp(note->offset, end) < 0) {
+        if (rational_cmp(note->onset, end) < 0) {
             motive_set_error(error, location, "the note starts at %ld/%lu, before the note before it ends at %ld/%lu",
-                             note->offset.num, note->offset.den, end.num, end.den);
+                             (long)note->onset.num, (unsigned long)note->onset.den, (long)end.num, (unsigned long)end.den);
             return MOTIVE_ERR_VALUE;
         }
-        end = motive_note_end(note);
+        end = motive_event_end(note);
     }
     *length = end;
     return MOTIVE_OK;
@@ -366,7 +427,9 @@ MotiveResult motive_check_notes(const Motive *motive, Rational *length, MotiveEr
 static bool infer_key(const Motive *motive, AnalysisKey *out) {
     bool present[12] = {false};
     for (size_t i = 0; i < motive->note_count; i++) {
-        present[motive->notes[i].midi % 12] = true;
+        if (motive->notes[i].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN) {
+            present[motive->notes[i].pitch % 12] = true;
+        }
     }
     AnalysisKey found[24];
     size_t found_count = 0;
@@ -388,7 +451,7 @@ static bool infer_key(const Motive *motive, AnalysisKey *out) {
         *out = found[0];
         return true;
     }
-    int last = motive->notes[motive->note_count - 1].midi % 12;
+    int last = motive->notes[motive->note_count - 1].pitch % 12;
     size_t match = found_count;
     for (size_t i = 0; i < found_count; i++) {
         if (analysis_key_tonic_pitch_class(&found[i]) == last) {
@@ -417,6 +480,7 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
     motive->length = length;
 
     bool asked_meter = options && options->has_meter;
+    PlanMeter meter = {4, 4, 0};
     if (asked_meter && !meter_valid(&options->meter)) {
         motive_set_error(error, "meter", "%d/%d is not a meter; use 1 to 64 beats over a beat unit of 1, 2, 4, 8 or 16",
                          options->meter.beats_per_bar, options->meter.beat_unit);
@@ -430,31 +494,29 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
                              document->meter.beat_unit);
             return MOTIVE_ERR_METER;
         }
-        motive->meter = document->meter;
+        meter = document->meter;
     } else if (asked_meter) {
-        motive->meter = options->meter;
-        motive->meter.bars_per_hyperbar = 0;
+        meter = options->meter;
     } else if (document->has_meter) {
-        motive->meter = document->meter;
+        meter = document->meter;
     } else {
         motive_set_error(error, "meter", "the input has no meter; give one");
         return MOTIVE_ERR_METER;
     }
-    if (!meter_valid(&motive->meter)) {
+    if (!meter_valid(&meter) || !motive_set_meter(motive, meter)) {
         motive_set_error(error, "meter", "%d/%d is not a meter; use 1 to 64 beats over a beat unit of 1, 2, 4, 8 or 16",
-                         motive->meter.beats_per_bar, motive->meter.beat_unit);
+                         meter.beats_per_bar, meter.beat_unit);
         return MOTIVE_ERR_VALUE;
     }
 
     if (options && options->max_bars > 0) {
         /* The notes end at motive->length; the limit is that many whole bars of the meter. */
-        Rational bar;
+        Rational bar = motive->bar;
         Rational limit;
-        if (rational_make((long)motive->meter.beats_per_bar, (long long)motive->meter.beat_unit, &bar) != RATIONAL_OK ||
-            rational_make((long)options->max_bars * bar.num, bar.den, &limit) != RATIONAL_OK ||
+        if (rational_make((long)options->max_bars * (long)bar.num, bar.den, &limit) != RATIONAL_OK ||
             rational_cmp(motive->length, limit) > 0) {
             motive_set_error(error, "", "the notes fill more than %zu bars of %d/%d", options->max_bars,
-                             motive->meter.beats_per_bar, motive->meter.beat_unit);
+                             meter.beats_per_bar, meter.beat_unit);
             return MOTIVE_ERR_VALUE;
         }
     }
@@ -462,53 +524,57 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
     Rational pickup = options && options->has_pickup ? options->pickup
                       : document->has_pickup           ? document->pickup
                                                        : motive_time(0, 1);
-    Rational bar_length;
-    if (pickup.den == 0 || pickup.num < 0 ||
-        rational_make((long)motive->meter.beats_per_bar, (long long)motive->meter.beat_unit, &bar_length) !=
-            RATIONAL_OK ||
-        rational_cmp(pickup, bar_length) >= 0) {
+    if (pickup.den == 0 || pickup.num < 0 || rational_cmp(pickup, motive->bar) >= 0) {
         motive_set_error(error, "pickup", "the pickup must be at least 0 and shorter than one bar of %d/%d",
-                         motive->meter.beats_per_bar, motive->meter.beat_unit);
+                         meter.beats_per_bar, meter.beat_unit);
         return MOTIVE_ERR_VALUE;
     }
     motive->pickup = pickup;
     motive->form = document->form;
 
     AnalysisKey key;
+    MotiveSketchKeySource source;
     if (options && options->has_key) {
         key = options->key;
-        motive->key_source = MOTIVE_KEY_GIVEN;
+        source = MOTIVE_SKETCH_KEY_GIVEN;
     } else if (document->has_key) {
         key = document->key;
-        motive->key_source = MOTIVE_KEY_GIVEN;
+        source = MOTIVE_SKETCH_KEY_GIVEN;
     } else if (infer_key(motive, &key)) {
-        motive->key_source = MOTIVE_KEY_INFERRED;
+        source = MOTIVE_SKETCH_KEY_INFERRED;
     } else {
         key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
-        motive->key_source = MOTIVE_KEY_UNSPECIFIED;
+        source = MOTIVE_SKETCH_KEY_UNSPECIFIED;
     }
     if (analysis_key_tonic_pitch_class(&key) < 0 || analysis_key_tonic_pitch_class(&key) > 11) {
         motive_set_error(error, "key", "the tonic pitch class %d is not from 0 to 11", analysis_key_tonic_pitch_class(&key));
         return MOTIVE_ERR_VALUE;
     }
-    motive->key = key;
+    /* A motive with no key has no scale: its key reads as C major (motive_key). */
+    motive_set_key(motive, &key, source);
+    if (motive->form == MOTIVE_SKETCH_FORM_RHYTHM) {
+        /* A rhythm has no pitches (the library's rhythm sketch); motive_pitch sounds them on degree 1 of the key. */
+        for (size_t i = 0; i < motive->note_count; i++) {
+            motive->notes[i].pitch = MOTIVE_SKETCH_PITCH_UNKNOWN;
+        }
+    }
 
     /* Own harmony, features and role: the caller's replace the input's. The chords' onsets are in beats, so they are
        read here, once the meter is settled. */
-    motive->harmony_count = 0;
+    motive->chord_count = 0;
     motive->feature_count = 0;
-    motive->role = MOTIVE_ROLE_MELODIC;
+    motive->accompaniment = false;
     if (options && options->has_harmony) {
         if (options->harmony_count > MOTIVE_MAX_CHORDS) {
             motive_set_error(error, "harmony", "a motive has at most %d chords", MOTIVE_MAX_CHORDS);
             return MOTIVE_ERR_VALUE;
         }
-        memcpy(motive->harmony, options->harmony, options->harmony_count * sizeof(MotiveChord));
-        motive->harmony_count = options->harmony_count;
+        memcpy(motive->chords, options->harmony, options->harmony_count * sizeof(MotiveSketchChord));
+        motive->chord_count = options->harmony_count;
     } else if (document->has_harmony_text) {
         MotiveError parsed;
-        MotiveResult read = motive_harmony_parse(document->harmony_text, &motive->meter, motive->harmony,
-                                                 &motive->harmony_count, &parsed);
+        MotiveResult read = motive_harmony_parse(document->harmony_text, &meter, motive->chords, &motive->chord_count,
+                                                 &parsed);
         if (read != MOTIVE_OK) {
             motive_set_error(error, "harmony", "%s: %s", parsed.location, parsed.message);
             return read;
@@ -519,27 +585,27 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
             motive_set_error(error, "features", "a motive has at most %d features", MOTIVE_MAX_FEATURES);
             return MOTIVE_ERR_VALUE;
         }
-        memcpy(motive->features, options->features, options->feature_count * sizeof(MotiveFeature));
+        memcpy(motive->features, options->features, options->feature_count * sizeof(MotiveSketchFeature));
         motive->feature_count = options->feature_count;
     } else if (document->has_features) {
-        memcpy(motive->features, document->features, document->feature_count * sizeof(MotiveFeature));
+        memcpy(motive->features, document->features, document->feature_count * sizeof(MotiveSketchFeature));
         motive->feature_count = document->feature_count;
     }
     if (options && options->has_role) {
-        motive->role = options->role;
+        motive->accompaniment = options->accompaniment;
     } else if (document->has_role) {
-        motive->role = document->role;
+        motive->accompaniment = document->accompaniment;
     }
     return motive_check_extras(motive, error);
 }
 
 MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
-    if (motive->harmony_count > MOTIVE_MAX_CHORDS) {
+    if (motive->chord_count > MOTIVE_MAX_CHORDS) {
         motive_set_error(error, "harmony", "a motive has at most %d chords", MOTIVE_MAX_CHORDS);
         return MOTIVE_ERR_VALUE;
     }
-    for (size_t i = 0; i < motive->harmony_count; i++) {
-        const MotiveChord *chord = &motive->harmony[i];
+    for (size_t i = 0; i < motive->chord_count; i++) {
+        const MotiveSketchChord *chord = &motive->chords[i];
         char location[MOTIVE_ERROR_LOCATION_MAX];
         snprintf(location, sizeof(location), "harmony[%zu]", i);
         if (chord->degree < 1 || chord->degree > 7 || chord->alteration < -1 || chord->alteration > 1 ||
@@ -553,7 +619,7 @@ MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
                              motive->length.num, motive->length.den);
             return MOTIVE_ERR_VALUE;
         }
-        if (i > 0 && rational_cmp(chord->onset, motive->harmony[i - 1].onset) <= 0) {
+        if (i > 0 && rational_cmp(chord->onset, motive->chords[i - 1].onset) <= 0) {
             motive_set_error(error, location, "the chord must come after the one before it");
             return MOTIVE_ERR_VALUE;
         }
@@ -563,7 +629,7 @@ MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
         return MOTIVE_ERR_VALUE;
     }
     for (size_t i = 0; i < motive->feature_count; i++) {
-        const MotiveFeature *feature = &motive->features[i];
+        const MotiveSketchFeature *feature = &motive->features[i];
         char location[MOTIVE_ERROR_LOCATION_MAX];
         snprintf(location, sizeof(location), "features[%zu]", i);
         size_t label_size = 0;
@@ -594,8 +660,8 @@ MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
 static void begin(Motive *motive, MotiveDocument *document, MotiveError *error) {
     memset(motive, 0, sizeof(*motive));
     memset(document, 0, sizeof(*document));
-    motive->key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
-    document->key = motive->key;
+    document->key = plan_key_of_pitch_class(0, KEY_STRUCTURE_MODE_MAJOR);
+    motive_set_meter(motive, (PlanMeter){4, 4, 0});
     motive->length = motive_time(0, 1);
     motive->pickup = motive_time(0, 1);
     if (error) {
@@ -774,29 +840,28 @@ bool motive_equal(const Motive *a, const Motive *b) {
     if (!a || !b) {
         return a == b;
     }
-    if (a->meter.beats_per_bar != b->meter.beats_per_bar || a->meter.beat_unit != b->meter.beat_unit ||
-        a->meter.bars_per_hyperbar != b->meter.bars_per_hyperbar || a->key_source != b->key_source ||
+    if (rational_cmp(a->bar, b->bar) != 0 || rational_cmp(a->beat, b->beat) != 0 || a->key_source != b->key_source ||
         a->note_count != b->note_count || rational_cmp(a->length, b->length) != 0 || a->form != b->form ||
         rational_cmp(motive_pickup(a), motive_pickup(b)) != 0) {
         return false;
     }
-    if (a->key_source != MOTIVE_KEY_UNSPECIFIED &&
-        (analysis_key_tonic_pitch_class(&a->key) != analysis_key_tonic_pitch_class(&b->key) || a->key.mode != b->key.mode)) {
+    if (a->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
+        (a->has_scale != b->has_scale || (a->has_scale && (a->tonic_pc != b->tonic_pc || a->minor != b->minor)))) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi != b->notes[i].midi ||
-            rational_cmp(a->notes[i].offset, b->notes[i].offset) != 0 ||
+        if (a->notes[i].pitch != b->notes[i].pitch ||
+            rational_cmp(a->notes[i].onset, b->notes[i].onset) != 0 ||
             rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
             return false;
         }
     }
-    if (a->harmony_count != b->harmony_count || a->feature_count != b->feature_count || a->role != b->role) {
+    if (a->chord_count != b->chord_count || a->feature_count != b->feature_count || a->accompaniment != b->accompaniment) {
         return false;
     }
-    for (size_t i = 0; i < a->harmony_count; i++) {
-        const MotiveChord *x = &a->harmony[i];
-        const MotiveChord *y = &b->harmony[i];
+    for (size_t i = 0; i < a->chord_count; i++) {
+        const MotiveSketchChord *x = &a->chords[i];
+        const MotiveSketchChord *y = &b->chords[i];
         if (rational_cmp(x->onset, y->onset) != 0 || x->degree != y->degree || x->alteration != y->alteration ||
             x->inversion != y->inversion || x->seventh != y->seventh) {
             return false;
@@ -837,10 +902,10 @@ static cJSON *key_json(const AnalysisKey *key) {
 static cJSON *notes_json(const Motive *motive) {
     cJSON *array = cJSON_CreateArray();
     for (size_t i = 0; array && i < motive->note_count; i++) {
-        const PlanNote *note = &motive->notes[i];
+        const MotiveSketchNote *note = &motive->notes[i];
         cJSON *object = cJSON_CreateObject();
-        bool ok = object && plan_json_add(object, "midi_pitch", json_number(note->midi)) &&
-                  plan_json_add(object, "offset", rational_json(note->offset.num, note->offset.den)) &&
+        bool ok = object && plan_json_add(object, "midi_pitch", json_number(motive_pitch(motive, i))) &&
+                  plan_json_add(object, "offset", rational_json(note->onset.num, note->onset.den)) &&
                   plan_json_add(object, "duration", rational_json(note->duration.num, note->duration.den));
         if (!ok) {
             cJSON_Delete(object);
@@ -859,7 +924,7 @@ static cJSON *notes_json(const Motive *motive) {
 static cJSON *features_json(const Motive *motive) {
     cJSON *array = cJSON_CreateArray();
     for (size_t i = 0; array && i < motive->feature_count; i++) {
-        const MotiveFeature *feature = &motive->features[i];
+        const MotiveSketchFeature *feature = &motive->features[i];
         cJSON *object = cJSON_CreateObject();
         bool ok = object && plan_json_add(object, "label", cJSON_CreateString(feature->label)) &&
                   plan_json_add(object, "first", json_number((long)feature->first)) &&
@@ -879,19 +944,21 @@ static cJSON *features_json(const Motive *motive) {
 
 cJSON *motive_json_object(const Motive *motive) {
     cJSON *document = cJSON_CreateObject();
-    bool ok = document && plan_json_add(document, "meter", meter_json(&motive->meter));
+    PlanMeter meter = motive_meter(motive);
+    bool ok = document && plan_json_add(document, "meter", meter_json(&meter));
     /* An inferred key is worked out again on reading, so only a stated one is written. */
-    if (ok && motive->key_source == MOTIVE_KEY_GIVEN) {
-        ok = plan_json_add(document, "key", key_json(&motive->key));
+    if (ok && motive->key_source == MOTIVE_SKETCH_KEY_GIVEN) {
+        AnalysisKey key = motive_key(motive);
+        ok = plan_json_add(document, "key", key_json(&key));
     }
     ok = ok && plan_json_add(document, "notes", notes_json(motive));
-    if (ok && motive->form != MOTIVE_FORM_FULL) {
+    if (ok && motive->form != MOTIVE_SKETCH_FORM_FULL) {
         ok = plan_json_add(document, "form", cJSON_CreateString(motive_form_name(motive->form)));
     }
     if (ok && motive_pickup(motive).num != 0) {
         ok = plan_json_add(document, "pickup", rational_json(motive_pickup(motive).num, motive_pickup(motive).den));
     }
-    if (ok && motive->harmony_count > 0) {
+    if (ok && motive->chord_count > 0) {
         char *harmony = motive_harmony_to_text(motive);
         ok = harmony && plan_json_add(document, "harmony", cJSON_CreateString(harmony));
         free(harmony);
@@ -899,8 +966,8 @@ cJSON *motive_json_object(const Motive *motive) {
     if (ok && motive->feature_count > 0) {
         ok = plan_json_add(document, "features", features_json(motive));
     }
-    if (ok && motive->role != MOTIVE_ROLE_MELODIC) {
-        ok = plan_json_add(document, "role", cJSON_CreateString(motive_role_name(motive->role)));
+    if (ok && motive->accompaniment) {
+        ok = plan_json_add(document, "role", cJSON_CreateString(motive_role_name(motive->accompaniment)));
     }
     if (!ok) {
         cJSON_Delete(document);
@@ -1014,20 +1081,19 @@ static bool read_notes(JsonReader *reader, const cJSON *array, Motive *motive) {
             return json_bad_format(reader, path, "expected an object");
         }
         long pitch;
-        PlanNote note;
+        MotiveSketchNote note;
         if (!json_read_int_member(reader, item, path, "midi_pitch", 0, 127, &pitch) ||
-            !read_time_member(reader, item, path, "offset", 0, &note.offset) ||
+            !read_time_member(reader, item, path, "offset", 0, &note.onset) ||
             !read_time_member(reader, item, path, "duration", 1, &note.duration)) {
             return false;
         }
-        note.midi = (int)pitch;
-        note.spelled = false;
-        if (rational_cmp(note.offset, end) < 0) {
+        note.pitch = (int)pitch;
+        if (rational_cmp(note.onset, end) < 0) {
             char at[PLAN_JSON_PATH_MAX];
             json_child_path(at, path, "offset");
             return json_fail(reader, PLAN_ERR_FORMAT, at, "the note starts before the note before it ends");
         }
-        end = motive_note_end(&note);
+        end = motive_event_end(&note);
         motive->notes[i] = note;
     }
     motive->note_count = (size_t)count;
@@ -1063,7 +1129,7 @@ static bool read_features(JsonReader *reader, const cJSON *array, MotiveDocument
             json_child_path(at, path, "label");
             return json_bad_format(reader, at, "expected text of 1 to 8 characters");
         }
-        MotiveFeature *feature = &document->features[i];
+        MotiveSketchFeature *feature = &document->features[i];
         memset(feature, 0, sizeof(*feature));
         memcpy(feature->label, label->valuestring, label_size);
         feature->first = (size_t)first;
@@ -1114,7 +1180,7 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
     }
     ok = ok && (!features || cJSON_IsNull(features) || read_features(&reader, features, document));
     if (ok && role && !cJSON_IsNull(role)) {
-        ok = (cJSON_IsString(role) && motive_role_parse(role->valuestring, &document->role)) ||
+        ok = (cJSON_IsString(role) && motive_role_parse(role->valuestring, &document->accompaniment)) ||
              json_bad_format(&reader, "role", "expected \"melodic\" or \"accompaniment\"");
         document->has_role = ok;
     }
@@ -1170,14 +1236,16 @@ static PlanResult attach(PiecePlan *plan, NodeId parent, Rational start, const M
     }
     /* An accompaniment motive is not placed on chords by the melody operator, so it carries no tones. */
     PlanConstraint tones;
-    if (motive->role == MOTIVE_ROLE_MELODIC && motive_tones_constraint(motive, &tones)) {
+    if (!motive->accompaniment && motive_tones_constraint(motive, &tones)) {
         result = plan_node_add_constraint(plan, node, &tones);
         if (result != PLAN_OK) {
             return result;
         }
     }
+    PlanNote lane_notes[MOTIVE_MAX_NOTES];
+    motive_lane_notes(motive, lane_notes);
     PlanLanePayload payload;
-    payload.notes.notes = motive->notes;
+    payload.notes.notes = lane_notes;
     payload.notes.note_count = motive->note_count;
     LaneSpanId lane_span;
     result = plan_add_lane_span(plan, node, PLAN_LANE_MELODY, 0, span, &payload, &lane_span);
@@ -1211,23 +1279,25 @@ PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, Rational start,
 }
 
 bool motive_in_key(const Motive *source, const AnalysisKey *key, Motive *out) {
-    if (!source || !key || !out || source->key_source == MOTIVE_KEY_UNSPECIFIED) {
+    if (!source || !key || !out || source->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         return false;
     }
     Motive moved = *source;
+    AnalysisKey source_key = motive_key(source);
     for (size_t i = 0; i < source->note_count; i++) {
+        if (source->notes[i].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN) {
+            continue;
+        }
         long position;
         int alteration;
-        motive_scale_position(&source->key, source->notes[i].midi - 60, &position, &alteration);
+        motive_scale_position(&source_key, source->notes[i].pitch - 60, &position, &alteration);
         int pitch = 60 + motive_position_pitch(key, position, alteration);
         if (pitch < 0 || pitch > 127) {
             return false;
         }
-        moved.notes[i].midi = pitch;
-        moved.notes[i].spelled = false;
+        moved.notes[i].pitch = pitch;
     }
-    moved.key = *key;
-    moved.key_source = MOTIVE_KEY_GIVEN;
+    motive_set_key(&moved, key, MOTIVE_SKETCH_KEY_GIVEN);
     *out = moved;
     return true;
 }

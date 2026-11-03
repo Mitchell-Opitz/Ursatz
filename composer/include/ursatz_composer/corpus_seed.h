@@ -37,7 +37,7 @@ typedef struct {
     int end_measure;
     double end_beat;
     unsigned long score_numerator, score_denominator; /* the Analyzer's similarity, 1 is identical */
-    /* A motive seed: one bar of the matched melody, in the requested key (key_source is MOTIVE_KEY_GIVEN). */
+    /* A motive seed: one bar of the matched melody, in the requested key (key_source is MOTIVE_SKETCH_KEY_GIVEN). */
     Motive motive;
     /* A progression seed: the matched passage's chords, as the Analyzer prints numerals. */
     char numerals[CORPUS_SEED_MAX_NUMERALS][CORPUS_SEED_NUMERAL_MAX];

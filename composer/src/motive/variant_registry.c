@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include <ursatz_composer/motive_analysis.h>
-#include <ursatz_composer/motive_sketch_bridge.h>
 #include <ursatz_composer/motive_tones.h>
 
 #include <analysis/motive_relation.h>
@@ -71,7 +70,7 @@ static MotiveDevResult apply_transpose(const Motive *source, const VariantValue 
     spec.amount = (int)value_or(&values[TRANSPOSE_BY], 0);
     if (values[TRANSPOSE_DEGREE].set) {
         MotiveAnalysis analysis;
-        if (source->key_source == MOTIVE_KEY_UNSPECIFIED || !motive_analyze(source, &analysis) ||
+        if (source->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED || !motive_analyze(source, &analysis) ||
             !analysis.degrees_known) {
             return MOTIVE_DEV_ERR_NO_KEY;
         }
@@ -272,11 +271,6 @@ static bool changes_harmony(MotiveRelationKind kind) {
  */
 static MotiveDevResult relation_apply(MotiveRelationKind kind, const Motive *source, const VariantValue *values,
                                       Motive *out) {
-    MotiveSketch sketch;
-    MotiveSketch result;
-    if (!motive_to_sketch(source, &sketch)) {
-        return MOTIVE_DEV_ERR_INVALID;
-    }
     MotiveRelationStep step;
     memset(&step, 0, sizeof(step));
     step.kind = kind;
@@ -287,23 +281,12 @@ static MotiveDevResult relation_apply(MotiveRelationKind kind, const Motive *sou
             step.den[i] = values[i].den;
         }
     }
-    MotiveRelationResult applied = motive_relation_apply(&sketch, &step, &result);
+    MotiveRelationResult applied;
+    MotiveDevResult status = motive_relation_develop(source, &step, changes_harmony(kind), out, &applied);
     if (applied == MOTIVE_RELATION_NO_FEATURE && source->feature_count == 0) {
         return MOTIVE_DEV_ERR_NO_FEATURE;
     }
-    MotiveDevResult status = motive_sketch_result(applied);
-    if (status != MOTIVE_DEV_OK) {
-        return status;
-    }
-    /* A harmony row's chords are the variant's own, even a single one that the new melody also implies, which the
-       bridge would leave out of a template without harmony (a template that has some keeps every chord). */
-    Motive template_motive = *source;
-    if (changes_harmony(kind) && template_motive.harmony_count == 0) {
-        memset(&template_motive.harmony[0], 0, sizeof(template_motive.harmony[0]));
-        template_motive.harmony[0].degree = 1;
-        template_motive.harmony_count = 1;
-    }
-    return motive_from_sketch(&result, &template_motive, out) ? MOTIVE_DEV_OK : MOTIVE_DEV_ERR_NOT_EXPRESSIBLE;
+    return status;
 }
 
 static const char *const ORDINALS[] = {"first", "second", "third",   "fourth", "fifth",
@@ -647,7 +630,7 @@ static void describe_passing_harmony(const VariantValue *values, char *out, size
 }
 
 static MotiveDevResult apply_counter_line(const Motive *source, const VariantValue *values, Motive *out) {
-    if (source->role != MOTIVE_ROLE_ACCOMPANIMENT) {
+    if (!source->accompaniment) {
         return MOTIVE_DEV_ERR_NO_ACCOMPANIMENT;
     }
     return relation_apply(MOTIVE_RELATION_COUNTER_LINE, source, values, out);
@@ -781,10 +764,10 @@ static void describe_reharmonize_frame(const VariantValue *values, char *out, si
 
 /* ----------------------------------------------------------------- table */
 
-#define FORMS_ALL (VARIANT_FORM_BIT(MOTIVE_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM) | VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR))
-#define FORMS_FULL VARIANT_FORM_BIT(MOTIVE_FORM_FULL)
-#define FORMS_FULL_RHYTHM (VARIANT_FORM_BIT(MOTIVE_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM))
-#define FORMS_FULL_CONTOUR (VARIANT_FORM_BIT(MOTIVE_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR))
+#define FORMS_ALL (VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_RHYTHM) | VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_CONTOUR))
+#define FORMS_FULL VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_FULL)
+#define FORMS_FULL_RHYTHM (VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_RHYTHM))
+#define FORMS_FULL_CONTOUR (VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_CONTOUR))
 
 #define PARAMS(array) array, sizeof(array) / sizeof((array)[0])
 
@@ -937,9 +920,9 @@ static cJSON *operation_json(const VariantOperation *operation) {
     for (size_t i = 0; ok && i < operation->param_count; i++) {
         ok = plan_json_append(params, param_json(&operation->params[i]));
     }
-    for (int form = MOTIVE_FORM_FULL; ok && form <= MOTIVE_FORM_CONTOUR; form++) {
+    for (int form = MOTIVE_SKETCH_FORM_FULL; ok && form <= MOTIVE_SKETCH_FORM_CONTOUR; form++) {
         if ((operation->forms & VARIANT_FORM_BIT(form)) != 0) {
-            ok = plan_json_append(forms, cJSON_CreateString(motive_form_name((MotiveForm)form)));
+            ok = plan_json_append(forms, cJSON_CreateString(motive_form_name((MotiveSketchForm)form)));
         }
     }
     if (!ok) {

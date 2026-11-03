@@ -185,10 +185,8 @@ static bool draw_motive(const InventRequest *request, FillRng *rng, Motive *out)
        so MIDI octave 5 holds C4). A pitch outside C4 to C6 rejects the draw. */
     long octave = 5 + (long)fill_rng_below(rng, 2);
     long position = octave * 7 + OPENINGS[fill_rng_below(rng, 3)];
-    memset(out, 0, sizeof(*out));
-    out->meter = request->meter;
-    out->key = request->key;
-    out->key_source = MOTIVE_KEY_GIVEN;
+    motive_init(out, request->meter);
+    motive_set_key(out, &request->key, MOTIVE_SKETCH_KEY_GIVEN);
     Rational onset = {0, 1};
     for (size_t i = 0; i < rhythm.count; i++) {
         if (i > 0) {
@@ -202,9 +200,8 @@ static bool draw_motive(const InventRequest *request, FillRng *rng, Motive *out)
         if (rational_make(rhythm.num[i], rhythm.den[i], &duration) != RATIONAL_OK) {
             return false;
         }
-        out->notes[i].midi = pitch;
-        out->notes[i].spelled = false;
-        out->notes[i].offset = onset;
+        out->notes[i].pitch = pitch;
+        out->notes[i].onset = onset;
         out->notes[i].duration = duration;
         if (rational_add(onset, duration, &onset) != RATIONAL_OK) {
             return false;
@@ -226,9 +223,11 @@ bool motive_melodic_fault(const Motive *motive, const char **fault) {
     for (size_t i = 0; i < motive->note_count; i++) {
         long position;
         int alteration;
-        motive_scale_position(&motive->key, motive->notes[i].midi, &position, &alteration);
+        AnalysisKey key = motive_key(motive);
+        int midi = motive_pitch(motive, i);
+        motive_scale_position(&key, midi, &position, &alteration);
         long degree = ((position % 7) + 7) % 7 + 1;
-        spellings[made] = harmony_spell_pitch(&motive->key, (int)degree, motive->notes[i].midi);
+        spellings[made] = harmony_spell_pitch(&key, (int)degree, midi);
         if (!spellings[made]) {
             *fault = "a pitch cannot be spelled";
             break;
@@ -307,7 +306,7 @@ static bool invent_already(const FillCandidateList *list, const Motive *motive) 
 static void invent_label(const Motive *motive, char *label, size_t size) {
     int used = snprintf(label, size, "invented");
     for (size_t i = 0; used > 0 && (size_t)used + 1 < size && i < motive->note_count; i++) {
-        int written = snprintf(label + used, size - (size_t)used, " %d", motive->notes[i].midi);
+        int written = snprintf(label + used, size - (size_t)used, " %d", motive_pitch(motive, i));
         if (written < 0) {
             break;
         }
@@ -367,7 +366,9 @@ static PlanResult invent_apply(PiecePlan *plan, FillTarget target, const FillCan
     }
     PlanLanePayload notes;
     memset(&notes, 0, sizeof(notes));
-    notes.notes.notes = payload->motive.notes;
+    PlanNote lane_notes[MOTIVE_MAX_NOTES];
+    motive_lane_notes(&payload->motive, lane_notes);
+    notes.notes.notes = lane_notes;
     notes.notes.note_count = payload->motive.note_count;
     PlanResult result = plan_lane_span_write(plan, (LaneSpanId)target.id, &notes);
     if (result == PLAN_OK) {

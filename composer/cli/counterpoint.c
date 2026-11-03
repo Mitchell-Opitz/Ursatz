@@ -15,6 +15,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
+#include "motive/motive_internal.h"
 
 #define MAX_SUGGESTIONS 16
 #define MAX_FILES (3 * MAX_SUGGESTIONS)
@@ -241,7 +242,9 @@ static PiecePlan *build_plan(const Options *options, const Motive *motive, LaneS
     ok = ok && plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, all, &payload, &id) == PLAN_OK &&
          plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
     memset(&payload, 0, sizeof(payload));
-    payload.notes.notes = motive->notes;
+    PlanNote lane_notes[MOTIVE_MAX_NOTES];
+    motive_lane_notes(motive, lane_notes);
+    payload.notes.notes = lane_notes;
     payload.notes.note_count = motive->note_count;
     ok = ok && plan_add_lane_span(plan, owner, options->above ? PLAN_LANE_BASS : PLAN_LANE_MELODY, 0, all, &payload, &id) ==
                    PLAN_OK &&

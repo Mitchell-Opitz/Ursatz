@@ -73,7 +73,7 @@ static void test_registry_entries(void) {
         assert(operation->category == ENTRIES[i].category);
         assert(strcmp(operation->citation, ENTRIES[i].citation) == 0);
         assert(operation->label && operation->apply && operation->describe);
-        assert((operation->forms & VARIANT_FORM_BIT(MOTIVE_FORM_FULL)) != 0);
+        assert((operation->forms & VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_FULL)) != 0);
         assert(operation->param_count <= VARIANT_PARAM_MAX);
     }
     assert(variant_registry_at(33) == NULL);
@@ -94,15 +94,15 @@ static void test_registry_forms(void) {
     size_t contour = 0;
     for (size_t i = 0; i < variant_registry_count(); i++) {
         const VariantOperation *operation = variant_registry_at(i);
-        rhythm += (operation->forms & VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM)) != 0;
-        contour += (operation->forms & VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR)) != 0;
+        rhythm += (operation->forms & VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_RHYTHM)) != 0;
+        contour += (operation->forms & VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_CONTOUR)) != 0;
     }
     assert(rhythm == 12 && contour == 7);
     for (size_t i = 0; i < 12; i++) {
-        assert((variant_registry_find(RHYTHM[i])->forms & VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM)) != 0);
+        assert((variant_registry_find(RHYTHM[i])->forms & VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_RHYTHM)) != 0);
     }
     for (size_t i = 0; i < 7; i++) {
-        assert((variant_registry_find(CONTOUR[i])->forms & VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR)) != 0);
+        assert((variant_registry_find(CONTOUR[i])->forms & VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_CONTOUR)) != 0);
     }
 }
 
@@ -180,7 +180,7 @@ static void test_open_parameters_recorded(void) {
     int axis = (int)record.steps[0].values[0].value;
     bool is_pitch = false;
     for (size_t i = 0; i < source.note_count; i++) {
-        is_pitch = is_pitch || source.notes[i].midi == axis;
+        is_pitch = is_pitch || source.notes[i].pitch == axis;
     }
     assert(is_pitch);
     assert(!record.steps[0].open[1] && record.steps[0].values[1].set && record.steps[0].values[1].value == 1);
@@ -209,8 +209,8 @@ static void test_fixed_chain_result(void) {
     Motive out;
     VariantRecord record;
     assert(variant_apply_chain(&source, &chain, 0, &out, &record) == VARIANT_OK);
-    assert(out.note_count == 4 && out.notes[0].midi == 74 && out.notes[3].midi == 62);
-    assert(source.notes[0].midi == 62);
+    assert(out.note_count == 4 && out.notes[0].pitch == 74 && out.notes[3].pitch == 62);
+    assert(source.notes[0].pitch == 62);
 }
 
 static void test_refused_steps(void) {
@@ -277,7 +277,7 @@ static void test_transpose_tonal_is_exact(void) {
     Motive out;
     VariantRecord record;
     assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
-    assert(out.notes[0].midi == 74);
+    assert(out.notes[0].pitch == 74);
     assert(record.kind == VARIANT_KIND_EXACT && record.changed_count == 0);
     assert(kept(&record, "rhythm") && kept(&record, "intervals") && kept(&record, "contour") && kept(&record, "harmony"));
     assert(!record.rhythm_scaled);
@@ -302,7 +302,7 @@ static void test_invert_changes_contour(void) {
 static void test_own_harmony_in_kept_and_changed(void) {
     Motive source = source_motive();
     MotiveError error;
-    assert(motive_harmony_parse("I V@2", &source.meter, source.harmony, &source.harmony_count, &error) == MOTIVE_OK);
+    assert(motive_harmony_parse("I V@2", &(PlanMeter){motive_meter(&source).beats_per_bar, motive_meter(&source).beat_unit, 0}, source.chords, &source.chord_count, &error) == MOTIVE_OK);
     Motive out;
     VariantRecord record;
 
@@ -310,14 +310,14 @@ static void test_own_harmony_in_kept_and_changed(void) {
     VariantStep step = step_of("transpose");
     assert(variant_step_set(&step, "by", 2, 0));
     assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
-    assert(out.harmony_count == 2 && out.harmony[1].degree == 5);
+    assert(out.chord_count == 2 && out.chords[1].degree == 5);
     assert(kept(&record, "harmony") && !changed(&record, "harmony"));
 
     /* Scaled in time the chords move with the notes, and their onsets are no longer the source's. */
     step = step_of("augment");
     assert(variant_step_set(&step, "ratio", 2, 1));
     assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
-    assert(out.harmony_count == 2 && out.harmony[1].onset.num == 1 && out.harmony[1].onset.den == 1);
+    assert(out.chord_count == 2 && out.chords[1].onset.num == 1 && out.chords[1].onset.den == 1);
     assert(changed(&record, "harmony") && !kept(&record, "harmony"));
 
     /* A cut that loses a chord changes the harmony. */
@@ -325,7 +325,7 @@ static void test_own_harmony_in_kept_and_changed(void) {
     assert(variant_step_set(&step, "position", 1, 0));
     assert(variant_step_set(&step, "length", 2, 0));
     assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
-    assert(out.harmony_count == 1 && changed(&record, "harmony"));
+    assert(out.chord_count == 1 && changed(&record, "harmony"));
 }
 
 static void test_augment_keeps_rhythm_proportions(void) {
@@ -356,13 +356,13 @@ static void test_forms_have_only_their_dimensions(void) {
     VariantRecord record;
     assert(run_one(&rhythm, step, 0, &out, &record) == VARIANT_OK);
     assert(record.kept_count == 1 && kept(&record, "rhythm") && record.changed_count == 0 && record.rhythm_scaled);
-    assert(out.form == MOTIVE_FORM_RHYTHM);
+    assert(out.form == MOTIVE_SKETCH_FORM_RHYTHM);
 
     Motive contour = load("0 2 1 3", "4/4", NULL, MOTIVE_FORMAT_CONTOUR);
     assert(run_one(&contour, step_of("invert"), 2, &out, &record) == VARIANT_OK);
     assert(record.kept_count + record.changed_count == 1);
     assert(changed(&record, "contour") || kept(&record, "contour"));
-    assert(out.form == MOTIVE_FORM_CONTOUR);
+    assert(out.form == MOTIVE_SKETCH_FORM_CONTOUR);
 }
 
 static void test_derivation_sentence(void) {
@@ -622,19 +622,19 @@ static void test_row_forms(void) {
     static const char *const CONTOUR_NO[] = {"note-repeat", "rhythm-repeat", "rhythm-shift", "add-upbeat",
                                              "change-meter", "ancillary-fill", "condense", "shift-feature"};
     for (size_t i = 0; i < sizeof(RHYTHM_OK) / sizeof(RHYTHM_OK[0]); i++) {
-        assert((variant_registry_find(RHYTHM_OK[i])->forms & VARIANT_FORM_BIT(MOTIVE_FORM_RHYTHM)) != 0);
+        assert((variant_registry_find(RHYTHM_OK[i])->forms & VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_RHYTHM)) != 0);
     }
     for (size_t i = 0; i < sizeof(RHYTHM_NO) / sizeof(RHYTHM_NO[0]); i++) {
         assert(run_one(&rhythm, step_of(RHYTHM_NO[i]), 1, &out, &record) == VARIANT_ERR_FORM);
     }
     for (size_t i = 0; i < sizeof(CONTOUR_OK) / sizeof(CONTOUR_OK[0]); i++) {
-        assert((variant_registry_find(CONTOUR_OK[i])->forms & VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR)) != 0);
+        assert((variant_registry_find(CONTOUR_OK[i])->forms & VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_CONTOUR)) != 0);
     }
     for (size_t i = 0; i < sizeof(CONTOUR_NO) / sizeof(CONTOUR_NO[0]); i++) {
         assert(run_one(&contour, step_of(CONTOUR_NO[i]), 1, &out, &record) == VARIANT_ERR_FORM);
     }
     for (size_t i = 0; i < ROW_COUNT; i++) {
-        assert((variant_registry_find(ROWS[i].op)->forms & VARIANT_FORM_BIT(MOTIVE_FORM_FULL)) != 0);
+        assert((variant_registry_find(ROWS[i].op)->forms & VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_FULL)) != 0);
     }
 
     VariantStep repeat = step_of("note-repeat");
@@ -680,7 +680,7 @@ static void test_row_phrases(void) {
 static Motive harmonized_source(void) {
     Motive source = load("C4:q E4:q G4:q E4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
     MotiveError error;
-    assert(motive_harmony_parse("I V@2", &source.meter, source.harmony, &source.harmony_count, &error) == MOTIVE_OK);
+    assert(motive_harmony_parse("I V@2", &(PlanMeter){motive_meter(&source).beats_per_bar, motive_meter(&source).beat_unit, 0}, source.chords, &source.chord_count, &error) == MOTIVE_OK);
     return source;
 }
 
@@ -714,7 +714,7 @@ static void test_harmony_rows(void) {
         const VariantOperation *operation = variant_registry_find(row->op);
         assert(operation && operation->category == row->category);
         assert(strcmp(operation->citation, row->citation) == 0);
-        assert(operation->forms == VARIANT_FORM_BIT(MOTIVE_FORM_FULL));
+        assert(operation->forms == VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_FULL));
         VariantStep step = step_of(row->op);
         for (size_t k = 0; k < row->setting_count; k++) {
             assert(variant_step_set(&step, row->settings[k].name, row->settings[k].value, row->settings[k].den));
@@ -724,7 +724,7 @@ static void test_harmony_rows(void) {
         assert(run_one(&source, step, 1, &out, &record) == VARIANT_OK);
         assert(motive_equal(&source, &before) && !motive_equal(&source, &out));
         /* The chords the row made are the variant's own, and the record writes them as text. */
-        assert(out.harmony_count > 0);
+        assert(out.chord_count > 0);
         assert(strcmp(record.harmony, row->harmony) == 0);
         assert(changed(&record, "harmony"));
         assert(out.note_count == source.note_count);
@@ -756,7 +756,7 @@ static void test_frame_rows_are_registered(void) {
         assert(operation && operation->category == VARIANT_CATEGORY_MELODY_ADAPTATION);
         assert(strcmp(operation->citation, FRAME_ROWS[i].citation) == 0);
         assert(operation->param_count == FRAME_ROWS[i].params);
-        assert(operation->forms == VARIANT_FORM_BIT(MOTIVE_FORM_FULL));
+        assert(operation->forms == VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_FULL));
     }
     /* The ranges: a note is 0 to 16, a type 0 to 9, a degree 1 to 7. */
     VariantStep step = step_of("add-non-chord-tone");
@@ -773,12 +773,12 @@ static void test_frame_rows_apply(void) {
     VariantRecord record;
 
     assert(run_one(&passing, step_of("reduce-to-frame"), 1, &out, &record) == VARIANT_OK);
-    assert(out.note_count == 2 && out.notes[0].midi == 60 && out.notes[1].midi == 64);
+    assert(out.note_count == 2 && out.notes[0].pitch == 60 && out.notes[1].pitch == 64);
 
     VariantStep step = step_of("add-non-chord-tone");
     assert(variant_step_set(&step, "after", 0, 0) && variant_step_set(&step, "type", 0, 0));
     assert(run_one(&frame, step, 1, &out, &record) == VARIANT_OK);
-    assert(out.note_count == 4 && out.notes[1].midi == 62);
+    assert(out.note_count == 4 && out.notes[1].pitch == 62);
 
     step = step_of("remove-non-chord-tone");
     assert(variant_step_set(&step, "note", 1, 0));
@@ -789,13 +789,13 @@ static void test_frame_rows_apply(void) {
     step = step_of("change-non-chord-tone");
     assert(variant_step_set(&step, "note", 1, 0) && variant_step_set(&step, "type", 6, 0));
     assert(run_one(&passing, step, 1, &out, &record) == VARIANT_OK);
-    assert(out.note_count == 3 && out.notes[1].midi != 62);
+    assert(out.note_count == 3 && out.notes[1].pitch != 62);
     assert(strstr(record.derivation, "appoggiatura") != NULL);
 
     step = step_of("reharmonize-frame");
     assert(variant_step_set(&step, "degree", 5, 0) && variant_step_set(&step, "seventh", 0, 0));
     assert(run_one(&frame, step, 1, &out, &record) == VARIANT_OK);
-    assert(out.harmony_count == 1 && out.harmony[0].degree == 5);
+    assert(out.chord_count == 1 && out.chords[0].degree == 5);
     assert(strcmp(record.harmony, "V") == 0);
 }
 
@@ -821,7 +821,7 @@ static void test_variant_marks(void) {
     assert(!variant_leaves_harmony(&source, &source));
     Motive away = load("D4:q F4:q A4:q B4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);
     MotiveError error;
-    assert(motive_harmony_parse("I V@2", &away.meter, away.harmony, &away.harmony_count, &error) == MOTIVE_OK);
+    assert(motive_harmony_parse("I V@2", &(PlanMeter){motive_meter(&away).beats_per_bar, motive_meter(&away).beat_unit, 0}, away.chords, &away.chord_count, &error) == MOTIVE_OK);
     assert(variant_leaves_harmony(&source, &away));
     /* A chain's record carries the mark, and a variant is kept either way. */
     VariantStep step = step_of("interval-change");
@@ -845,7 +845,7 @@ static void test_harmony_draws_move_notes(void) {
             assert(run_one(&source, step_of(ROWS_THAT_MOVE[r]), seed, &out, &record) == VARIANT_OK);
             bool moved = false;
             for (size_t n = 0; n < source.note_count && n < out.note_count; n++) {
-                moved = moved || out.notes[n].midi != source.notes[n].midi;
+                moved = moved || out.notes[n].pitch != source.notes[n].pitch;
             }
             if (!moved) {
                 fprintf(stderr, "%s seed %lu left every pitch\n", ROWS_THAT_MOVE[r], seed);
@@ -860,11 +860,11 @@ static void test_dominant_form_answers_i_v(void) {
     Motive out;
     VariantRecord record;
     assert(run_one(&source, step_of("dominant-form"), 1, &out, &record) == VARIANT_OK);
-    assert(out.harmony_count == 2 && out.harmony[0].degree == 5 && out.harmony[1].degree == 1);
-    assert(rational_cmp(out.harmony[1].onset, source.harmony[1].onset) == 0);
+    assert(out.chord_count == 2 && out.chords[0].degree == 5 && out.chords[1].degree == 1);
+    assert(rational_cmp(out.chords[1].onset, source.chords[1].onset) == 0);
     /* The melody moves with the harmony, and the rhythm and the contour stay. */
     assert(kept(&record, "rhythm") && kept(&record, "contour") && changed(&record, "intervals"));
-    assert(out.notes[0].midi != source.notes[0].midi);
+    assert(out.notes[0].pitch != source.notes[0].pitch);
 }
 
 static void test_harmony_rows_need_a_key(void) {
@@ -888,7 +888,7 @@ static void test_harmony_rows_without_own_harmony(void) {
     Motive out;
     VariantRecord record;
     assert(run_one(&source, step_of("dominant-form"), 1, &out, &record) == VARIANT_OK);
-    assert(out.harmony_count == 1 && out.harmony[0].degree == 5 && strcmp(record.harmony, "V") == 0);
+    assert(out.chord_count == 1 && out.chords[0].degree == 5 && strcmp(record.harmony, "V") == 0);
     /* A variant made without a harmony row has no chords of its own to write. */
     VariantStep step = step_of("transpose");
     assert(variant_step_set(&step, "by", 2, 0));
@@ -903,9 +903,9 @@ static void test_counter_line_needs_an_accompaniment(void) {
     assert(record.failed_step == 0 && strcmp(record.error, "counter-line needs an accompaniment motive") == 0);
 
     Motive accompaniment = melody;
-    accompaniment.role = MOTIVE_ROLE_ACCOMPANIMENT;
+    accompaniment.accompaniment = true;
     assert(run_one(&accompaniment, step_of("counter-line"), 1, &out, &record) == VARIANT_OK);
-    assert(out.role == MOTIVE_ROLE_ACCOMPANIMENT && out.note_count == 4 && kept(&record, "rhythm"));
+    assert(out.accompaniment && out.note_count == 4 && kept(&record, "rhythm"));
     assert(!motive_equal(&accompaniment, &out));
 
     /* A random chain draws counter-line for an accompaniment only. */
@@ -1100,19 +1100,19 @@ static void test_liquidate_features_row(void) {
     assert(operation && operation->category == VARIANT_CATEGORY_INTERVALS);
     assert(strcmp(operation->citation, "ch. VIII, Ex. 52") == 0 && operation->param_count == 2);
     assert(operation->relation == MOTIVE_RELATION_LIQUIDATE_FEATURES);
-    assert((operation->forms & VARIANT_FORM_BIT(MOTIVE_FORM_FULL)) != 0);
+    assert((operation->forms & VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_FULL)) != 0);
 
     VariantStep step = step_of("liquidate-features");
     assert(variant_step_set(&step, "steps", 1, 0) && variant_step_set(&step, "shorten", 0, 0));
     Motive out;
     VariantRecord record;
     assert(run_one(&source, step, 1, &out, &record) == VARIANT_OK);
-    assert(out.note_count == 5 && out.notes[0].midi == 60);
+    assert(out.note_count == 5 && out.notes[0].pitch == 60);
     assert(rational_cmp(out.notes[0].duration, (Rational){1, 4}) == 0);
     assert(out.feature_count == 1 && strcmp(out.features[0].label, "b") == 0 && out.features[0].first == 1 &&
            out.features[0].last == 2);
     /* The chord the source implied stays under the thinned melody as its own harmony. */
-    assert(out.harmony_count == 1 && out.harmony[0].degree == 1);
+    assert(out.chord_count == 1 && out.chords[0].degree == 1);
     assert(changed(&record, "rhythm") && changed(&record, "intervals"));
 
     /* Shortened, the unit halves (ch. VIII): the result is half as long. */

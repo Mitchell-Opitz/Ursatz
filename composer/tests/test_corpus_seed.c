@@ -78,7 +78,7 @@ static int test_motive(void) {
 
     /* The bar of Mozart 545, a whole tone higher: D5 half, F#5 quarter, A5 quarter. */
     Motive expected = bar_in(&meter, &d_major, "D5:h F#5:q A5:q");
-    expected.key_source = MOTIVE_KEY_GIVEN;
+    expected.key_source = MOTIVE_SKETCH_KEY_GIVEN;
     if (!motive_equal(&seed.motive, &expected)) {
         char *got = motive_to_json(&seed.motive);
         fprintf(stderr, "the seeded motive is not the bar in D major:\n%s\n", got ? got : "(null)");
@@ -95,17 +95,17 @@ static int test_motive(void) {
     AnalysisKey c_major = key_of(0, KEY_STRUCTURE_MODE_MAJOR);
     assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &c_major, 1, &seed) == CORPUS_SEED_OK);
     expected = bar_in(&meter, &c_major, "C5:h E5:q G5:q");
-    expected.key_source = MOTIVE_KEY_GIVEN;
+    expected.key_source = MOTIVE_SKETCH_KEY_GIVEN;
     assert(motive_equal(&seed.motive, &expected));
 
     /* In A minor the first note keeps its degree (the tonic, A) and the intervals are the bar's. */
     AnalysisKey a_minor = key_of(9, KEY_STRUCTURE_MODE_MINOR);
     assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &a_minor, 1, &seed) == CORPUS_SEED_OK);
     assert(seed.motive.note_count == 3);
-    assert(seed.motive.notes[0].midi % 12 == 9);
-    assert(seed.motive.notes[1].midi - seed.motive.notes[0].midi == 4);
-    assert(seed.motive.notes[2].midi - seed.motive.notes[1].midi == 3);
-    assert(analysis_key_tonic_pitch_class(&seed.motive.key) == 9 && seed.motive.key.mode == KEY_STRUCTURE_MODE_MINOR);
+    assert(seed.motive.notes[0].pitch % 12 == 9);
+    assert(seed.motive.notes[1].pitch - seed.motive.notes[0].pitch == 4);
+    assert(seed.motive.notes[2].pitch - seed.motive.notes[1].pitch == 3);
+    assert(seed.motive.tonic_pc == 9 && seed.motive.minor);
 
     /* Cut at the barline: a 6/8 bar (three quarters) takes the half note and the quarter, which ends on the barline;
        a 5/8 bar takes the half note and a quarter shortened to the eighth that is left. */
@@ -119,7 +119,7 @@ static int test_motive(void) {
     assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &five_eight, &c_major, 1, &seed) == CORPUS_SEED_OK);
     assert(seed.motive.note_count == 2);
     assert(rational_cmp(seed.motive.length, (Rational){5, 8}) == 0);
-    assert(rational_cmp(seed.motive.notes[1].offset, (Rational){1, 2}) == 0);
+    assert(rational_cmp(seed.motive.notes[1].onset, (Rational){1, 2}) == 0);
     assert(rational_cmp(seed.motive.notes[1].duration, (Rational){1, 8}) == 0);
 
     assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, "no-such-file.mid", &meter, &d_major, 1, &seed) ==

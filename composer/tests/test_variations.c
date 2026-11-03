@@ -235,7 +235,9 @@ static PiecePlan *with_given_melody(unsigned long seed) {
     options.meter.beat_unit = 4;
     assert(motive_from_notes_text(MELODY, &options, &melody, &error) == MOTIVE_OK);
     assert(piece_build_plan(&asked, &plan) == PIECE_OK);
-    assert(plan_give_melody(plan, section(plan, 1), 0, melody.notes, melody.note_count) == GIVEN_OK);
+    PlanNote melody_lane[MOTIVE_MAX_NOTES];
+    motive_lane_notes(&melody, melody_lane);
+    assert(plan_give_melody(plan, section(plan, 1), 0, melody_lane, melody.note_count) == GIVEN_OK);
     ComposeConfig config = config_of(seed);
     ComposeOutcome outcome;
     assert(compose_run(plan, &config, &outcome) == PIECE_OK);
