@@ -41,6 +41,11 @@ cJSON 1.7.18 is vendored at `external/cjson` and added before the submodules, so
 fails when a pin is not on its remote's `main` or when one repository is pinned at two commits; CI runs it after the
 submodule checkout.
 
+Theory comes from the frameworks (R-217): the Composer holds plan structure and composing decisions and asks
+standard-meter for the accented beats, standard-counterpoint for the melodic moves, standard-tonality for the scales and
+degrees, and standard-harmony for the phrase model and the resolutions. What has no framework owner (the harmonic rhythm
+cells per beat, the answer to a leap, a chord's member degree) stays in the Composer and is listed in the phase notes.
+
 Library headers are included by their staged public paths only: kernel headers as `<time/meter_map.h>`, framework headers
 with their folder (`<standard-harmony/harmony_cadence_rules.h>`), Analyzer headers as `<ursatz_analyzer/...>`; Composer
 headers keep their own paths. `scripts/check-library-includes.sh` (run after the build, CI runs it) fails on an Ursatz
