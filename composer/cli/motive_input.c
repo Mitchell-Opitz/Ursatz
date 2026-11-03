@@ -95,31 +95,6 @@ cJSON *motive_input_request(const MotiveInput *options, const unsigned char *byt
     return request;
 }
 
-int motive_input_load(const MotiveInput *options, Motive *out) {
-    unsigned char *bytes = NULL;
-    size_t size = 0;
-    char read_error[512];
-    int read_status = motive_input_read_file(options->path, &bytes, &size, read_error, sizeof read_error);
-    bool midi = false;
-    cJSON *request = motive_input_request(options, bytes, size, &midi);
-    if (!request) {
-        free(bytes);
-        return cli_fail(CLI_EXIT_USAGE, "out of memory");
-    }
-    ComposerError error;
-    memset(&error, 0, sizeof error);
-    /* A file that cannot be read is still checked against the options first, with no text: a bad option is reported
-       before a missing file, as it always was. */
-    ComposerStatus status = midi ? api_read_motive_bytes(request, "", bytes, size, out, NULL, &error)
-                                 : api_read_motive(request, "", out, NULL, &error);
-    cJSON_Delete(request);
-    free(bytes);
-    if (read_status != 0 && status != COMPOSER_ERR_REQUEST) {
-        return cli_fail(read_status, "%s", read_error);
-    }
-    return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, options->path);
-}
-
 bool motive_input_take_basic(BasicInput *basic, int argc, char **argv, int *index, int *status) {
     const char *argument = argv[*index];
     const char **slot = strcmp(argument, "--basic") == 0           ? &basic->path

@@ -39,13 +39,6 @@ int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size
 cJSON *motive_input_request(const MotiveInput *input, const unsigned char *bytes, size_t size, bool *midi);
 
 /*
- * Loads the motive as the motive command does: the pickup and the chord onsets are in beats of the motive's meter, which a
- * file may declare, so they are read after a first load. Returns 0, or the status of the error it printed (a usage error
- * for an option, 2 for a file that cannot be loaded).
- */
-int motive_input_load(const MotiveInput *input, Motive *out);
-
-/*
  * The basic motive of a family of forms, the tree root, which remoteness is measured from (R-142): --basic <file>, with
  * --basic-format, --basic-pickup and --basic-harmony. It is read in the source's meter, key, form and role.
  */

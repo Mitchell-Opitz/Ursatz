@@ -42,17 +42,6 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
 /* Prints the document with 2-space indent and one space after each colon, as the commands write JSON. */
 void cli_print_json(const cJSON *document);
 
-const char *cli_key_name(const AnalysisKey *key, char *out, size_t size);
-
-const char *cli_cadence_name(CadenceType cadence);
-
-/*
- * The export options of --tempo (tempo_text, NULL when not given) and --plain-midi: the tempo is a whole number or a
- * fraction like "195/2" of quarter notes per minute, from 20 to 400; --plain-midi turns the MIDI track names and
- * section markers off. Returns 0, or the status of the usage error it printed.
- */
-int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportOptions *out);
-
 /* --style-without values: at most CLI_STYLE_WITHOUT_MAX category names, each one the Analyzer defines. */
 #define CLI_STYLE_WITHOUT_MAX 8
 typedef struct {
@@ -91,8 +80,5 @@ int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *
  */
 int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml, const cJSON *loop,
                     ComposerResponse *out);
-
-/* The text of a motive in its own form (notes, rhythm or contour); malloc'd, the caller frees it. */
-char *cli_motive_text(const Motive *motive);
 
 #endif

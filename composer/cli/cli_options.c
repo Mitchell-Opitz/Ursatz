@@ -126,28 +126,6 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
     return cli_fail(status == COMPOSER_ERR_UNSATISFIABLE ? CLI_EXIT_UNSATISFIABLE : CLI_EXIT_USAGE, "%s", message);
 }
 
-int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportOptions *out) {
-    *out = plan_export_options_default();
-    if (plain_midi) {
-        out->track_names = false;
-        out->section_markers = false;
-    }
-    if (!tempo_text) {
-        return 0;
-    }
-    ComposerRatio tempo;
-    if (!request_parse_ratio(tempo_text, &tempo) || tempo.denominator == 0 || tempo.numerator < 20UL * tempo.denominator ||
-        tempo.numerator > 400UL * tempo.denominator) {
-        return cli_fail(CLI_EXIT_USAGE,
-                        "--tempo must be from 20 to 400 quarter notes per minute, a whole number or a fraction like "
-                        "195/2, not '%s'",
-                        tempo_text);
-    }
-    out->tempo_numerator = tempo.numerator;
-    out->tempo_denominator = tempo.denominator;
-    return 0;
-}
-
 int cli_style_without_add(CliStyleWithout *list, const char *name) {
     ComposerError error;
     memset(&error, 0, sizeof error);
@@ -177,15 +155,6 @@ void cli_print_json(const cJSON *document) {
     }
     putchar('\n');
     cJSON_free(printed);
-}
-
-const char *cli_key_name(const AnalysisKey *key, char *out, size_t size) {
-    util_key_name(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, out, size);
-    return out;
-}
-
-const char *cli_cadence_name(CadenceType cadence) {
-    return plan_cadence_name(cadence);
 }
 
 bool cli_alternative_path(const char *path, size_t k, bool several, char *out, size_t size) {

@@ -38,22 +38,6 @@ bool motive_extras_given(const MotiveExtras *extras) {
     return extras->harmony_text || extras->feature_count > 0 || extras->role_text;
 }
 
-int motive_extras_options(const MotiveExtras *extras, const PlanMeter *meter, MotiveOptions *options) {
-    if (!motive_extras_given(extras)) {
-        return 0;
-    }
-    cJSON *object = cJSON_CreateObject();
-    if (!object || !motive_extras_add_members(extras, object)) {
-        cJSON_Delete(object);
-        return cli_fail(CLI_EXIT_USAGE, "out of memory");
-    }
-    ComposerError error;
-    memset(&error, 0, sizeof error);
-    ComposerStatus status = api_read_motive_extras(object, "", meter, options, &error);
-    cJSON_Delete(object);
-    return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, NULL);
-}
-
 bool motive_extras_add_members(const MotiveExtras *extras, cJSON *object) {
     bool ok = true;
     if (extras->harmony_text) {

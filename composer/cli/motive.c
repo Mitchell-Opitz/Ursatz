@@ -274,9 +274,7 @@ int run_motive(int argc, char **argv) {
         return status;
     }
 
-    PlanExportOptions export_options;
-    status = options.tempo_text && !render ? cli_read_export_options(options.tempo_text, false, &export_options) : 0;
-    if (status == 0 && options.midi_path) {
+    if (options.midi_path) {
         status = write_output(options.midi_path, response.midi, response.midi_size);
     }
     if (status == 0 && options.musicxml_path) {
