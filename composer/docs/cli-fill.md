@@ -16,8 +16,10 @@ from the plan as it is. The output then says `nothing to fill: the plan is alrea
 holds an empty array.
 
 An Ursatz-Analyzer analysis document is not a plan. It describes a piece that is already written, so it is refused,
-with a message that names `plan_read_analysis_document_file` (`<ursatz_composer/analysis_load.h>`), which loads it as a
-plan for the library to use.
+with a message that names `plan_from_analyzer_result` (`<ursatz_composer/analysis_load.h>`), which builds a plan from an
+Analyzer result for the library to use. The document is recognized by the Analyzer (`analyzer_document_status` is not
+`ANALYZER_DOCUMENT_UNREADABLE`); the Composer never reads its content. A plan file of format version 1 or 2 opens
+([plan-format.md](plan-format.md#format-versions)); `--out` writes version 2.
 
 ## Options
 

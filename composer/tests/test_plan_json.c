@@ -3,10 +3,14 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ursatz_analyzer/analysis_result.h>
+#include <ursatz_analyzer/midi_pipeline.h>
+#include <ursatz_analyzer/version.h>
 #include <ursatz_composer/analysis_load.h>
 #include <galant-schemas/galant_prototypes.h>
 
 #include <ursatz_composer/constraint.h>
+#include <ursatz_composer/export.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/plan_json.h>
@@ -190,8 +194,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
                a->params.motive.has_step == b->params.motive.has_step &&
                memcmp(&a->params.motive.step, &b->params.motive.step, sizeof(a->params.motive.step)) == 0;
     case PLAN_CONSTRAINT_KEY:
-        return analysis_key_tonic_pitch_class(&a->params.key) == analysis_key_tonic_pitch_class(&b->params.key) &&
-               a->params.key.mode == b->params.key.mode;
+        return a->params.key.tonic_letter == b->params.key.tonic_letter &&
+               a->params.key.tonic_accidental == b->params.key.tonic_accidental && a->params.key.mode == b->params.key.mode;
     case PLAN_CONSTRAINT_ARCHETYPE:
         return a->params.archetype == b->params.archetype;
     case PLAN_CONSTRAINT_EMBELLISH:
@@ -251,6 +255,35 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         }
         return true;
     }
+    case PLAN_CONSTRAINT_STYLE: {
+        const PlanStyle *x = &a->params.style;
+        const PlanStyle *y = &b->params.style;
+        if (strcmp(x->path, y->path) != 0 || x->weight_numerator != y->weight_numerator ||
+            x->weight_denominator != y->weight_denominator || x->without_count != y->without_count ||
+            strcmp(x->blend_path, y->blend_path) != 0) {
+            return false;
+        }
+        for (size_t i = 0; i < x->without_count; i++) {
+            if (strcmp(x->without[i], y->without[i]) != 0) {
+                return false;
+            }
+        }
+        for (int d = 0; d < 4; d++) {
+            if (x->blend_numerator[d] != y->blend_numerator[d] || x->blend_denominator[d] != y->blend_denominator[d]) {
+                return false;
+            }
+        }
+        return true;
+    }
+    case PLAN_CONSTRAINT_SOURCE: {
+        const PlanSource *x = &a->params.source;
+        const PlanSource *y = &b->params.source;
+        return strcmp(x->piece, y->piece) == 0 && x->start_measure == y->start_measure &&
+               x->start_beat == y->start_beat && x->end_measure == y->end_measure && x->end_beat == y->end_beat &&
+               x->score_numerator == y->score_numerator && x->score_denominator == y->score_denominator;
+    }
+    case PLAN_CONSTRAINT_PICKUP:
+        return a->params.pickup.num == b->params.pickup.num && a->params.pickup.den == b->params.pickup.den;
     case PLAN_CONSTRAINT_FREE_PHRASE:
     case PLAN_CONSTRAINT_HOLD:
     case PLAN_CONSTRAINT_SEAM:
@@ -267,10 +300,12 @@ static bool same_payload(PlanLaneKind lane, const PlanLanePayload *a, const Plan
         return a->meter.beats_per_bar == b->meter.beats_per_bar && a->meter.beat_unit == b->meter.beat_unit &&
                a->meter.bars_per_hyperbar == b->meter.bars_per_hyperbar;
     case PLAN_LANE_KEY:
-        return analysis_key_tonic_pitch_class(&a->key) == analysis_key_tonic_pitch_class(&b->key) && a->key.mode == b->key.mode;
+        return a->key.tonic_letter == b->key.tonic_letter && a->key.tonic_accidental == b->key.tonic_accidental &&
+               a->key.mode == b->key.mode;
     case PLAN_LANE_HARMONY:
         return strcmp(a->harmony.roman_numeral, b->harmony.roman_numeral) == 0 &&
-               a->harmony.function == b->harmony.function;
+               a->harmony.has_function == b->harmony.has_function &&
+               (!a->harmony.has_function || a->harmony.function == b->harmony.function);
     case PLAN_LANE_BASS:
     case PLAN_LANE_MELODY:
     case PLAN_LANE_INNER_VOICE:
@@ -281,7 +316,8 @@ static bool same_payload(PlanLaneKind lane, const PlanLanePayload *a, const Plan
             const PlanNote *x = &a->notes.notes[i];
             const PlanNote *y = &b->notes.notes[i];
             if (x->midi != y->midi || rational_cmp(x->offset, y->offset) != 0 ||
-                rational_cmp(x->duration, y->duration) != 0) {
+                rational_cmp(x->duration, y->duration) != 0 || x->spelled != y->spelled ||
+                (x->spelled && (x->letter != y->letter || x->accidental != y->accidental))) {
                 return false;
             }
         }
@@ -291,7 +327,8 @@ static bool same_payload(PlanLaneKind lane, const PlanLanePayload *a, const Plan
 }
 
 static bool plans_equal(const PiecePlan *a, const PiecePlan *b) {
-    if (plan_node_count(a) != plan_node_count(b) || plan_lane_span_count(a) != plan_lane_span_count(b)) {
+    if (plan_node_count(a) != plan_node_count(b) || plan_lane_span_count(a) != plan_lane_span_count(b) ||
+        strcmp(plan_analyzer_version(a), plan_analyzer_version(b)) != 0) {
         return false;
     }
     for (NodeId id = 1; id <= plan_node_count(a); id++) {
@@ -348,7 +385,7 @@ static void test_round_trip(void) {
     char *text = plan_to_json(plan, &error);
     assert(text != NULL);
     assert(text[strlen(text) - 1] == '\n');
-    assert(strstr(text, "\"schema_version\": 1") != NULL);
+    assert(strstr(text, "\"format_version\": 2") != NULL);
 
     PiecePlan *parsed = NULL;
     expect_ok(plan_from_json(text, &parsed, &error), &error);
@@ -804,6 +841,226 @@ static void test_malformed_input(void) {
     assert(parsed == NULL);
 }
 
+/* ------------------------------------------------------------ format versions 1 and 2 */
+
+static char *read_all(const char *path) {
+    FILE *file = fopen(path, "rb");
+    assert(file != NULL);
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    char *text = malloc((size_t)size + 1);
+    assert(text != NULL && fread(text, 1, (size_t)size, file) == (size_t)size);
+    text[size] = '\0';
+    fclose(file);
+    return text;
+}
+
+/* The MIDI file of the plan, or NULL when it cannot be rendered (a plan with unwritten lanes). */
+static unsigned char *midi_of(const PiecePlan *plan, size_t *size) {
+    RenderedPlan rendered;
+    unsigned char *data = NULL;
+    if (plan_export_render(plan, &rendered, NULL) != PLAN_EXPORT_OK) {
+        return NULL;
+    }
+    PlanExportOptions options = plan_export_options_default();
+    PlanExportResult exported = rendered_plan_midi_bytes(&rendered, &options, &data, size, NULL);
+    rendered_plan_destroy(&rendered);
+    assert(exported == PLAN_EXPORT_OK);
+    return data;
+}
+
+static void write_text(const char *path, const char *text) {
+    FILE *file = fopen(path, "wb");
+    assert(file != NULL && fputs(text, file) >= 0 && fclose(file) == 0);
+}
+
+/*
+ * A plan file of either version reads, writes as version 2, reads back equal and renders the same MIDI. The version 2 text
+ * is kept as plan_written_<name> for the schema test.
+ */
+static void check_plan_file(const char *path, const char *name) {
+    char *text = read_all(path);
+    PiecePlan *first = NULL;
+    PiecePlan *second = NULL;
+    PlanJsonError error;
+    assert(plan_from_json(text, &first, &error) == PLAN_OK);
+    char *written = plan_to_json(first, &error);
+    assert(written != NULL);
+    assert(strstr(written, "\"format\": \"ursatz-composer-plan\"") != NULL);
+    assert(strstr(written, "\"format_version\": 2") != NULL);
+    assert(strstr(written, "schema_version") == NULL && strstr(written, "tonic_pitch_class") == NULL);
+    assert(strstr(written, "\"ticks_per_quarter\"") == NULL && strstr(written, "\"voice_leading\"") == NULL);
+    assert(plan_from_json(written, &second, &error) == PLAN_OK);
+    assert(plans_equal(first, second));
+    char *again = plan_to_json(second, &error);
+    assert(again != NULL && strcmp(written, again) == 0);
+
+    size_t size_first = 0;
+    size_t size_second = 0;
+    unsigned char *midi_first = midi_of(first, &size_first);
+    unsigned char *midi_second = midi_of(second, &size_second);
+    assert((midi_first == NULL) == (midi_second == NULL));
+    if (midi_first) {
+        assert(size_first == size_second && memcmp(midi_first, midi_second, size_first) == 0);
+    }
+    char file_name[256];
+    snprintf(file_name, sizeof(file_name), "plan_written_%s", name);
+    write_text(file_name, written);
+
+    free(midi_first);
+    free(midi_second);
+    free(again);
+    free(written);
+    free(text);
+    plan_destroy(first);
+    plan_destroy(second);
+}
+
+static void test_plan_files(void) {
+    /* The plans saved before version 2. */
+    static const char *const FIXTURES[] = {"sentence_c_major.json", "sentence_c_to_g.json", "period_a_minor.json"};
+    for (size_t i = 0; i < sizeof(FIXTURES) / sizeof(FIXTURES[0]); i++) {
+        char path[512];
+        snprintf(path, sizeof(path), COMPOSER_FIXTURE_DIR "/%s", FIXTURES[i]);
+        check_plan_file(path, FIXTURES[i]);
+    }
+    /* The plans the command line writes (the snapshots), whatever version they are in. */
+    static const char *const SNAPSHOTS[] = {"grow-period", "grow-sentence", "piece-loop-and-ending",
+                                            "piece-progression-fill", "piece-regenerate", "piece-theme-fill",
+                                            "theme-chords", "theme-fast-minor", "theme-one-motive",
+                                            "theme-period-contrast"};
+    for (size_t i = 0; i < sizeof(SNAPSHOTS) / sizeof(SNAPSHOTS[0]); i++) {
+        char path[512];
+        char name[128];
+        snprintf(path, sizeof(path), COMPOSER_SNAPSHOT_DIR "/%s.plan.json", SNAPSHOTS[i]);
+        snprintf(name, sizeof(name), "%s.plan.json", SNAPSHOTS[i]);
+        check_plan_file(path, name);
+    }
+}
+
+/* A version 2 text turned into the version 1 text the same plan had, member by member. */
+static char *as_version_one(const char *v2) {
+    char *step = replace_all(v2, "\"format\": \"ursatz-composer-plan\"", "\"schema_version\": 1");
+    char *next = replace_all(step, "\"format_version\": 2", "\"ticks\": null");
+    free(step);
+    step = replace_all(next, "\"tonic\": \"D#\"", "\"tonic_pitch_class\": 3");
+    free(next);
+    next = replace_all(step, "\"tonic\": \"G\"", "\"tonic_pitch_class\": 7");
+    free(step);
+    return next;
+}
+
+static void test_version_one_values(void) {
+    PiecePlan *plan = build_sentence_plan();
+    PlanJsonError error;
+    char *v2 = plan_to_json(plan, &error);
+    assert(v2 != NULL);
+    assert(strstr(v2, "\"tonic\": \"D#\"") != NULL && strstr(v2, "\"tonic\": \"G\"") != NULL);
+    assert(strstr(v2, "\"composer_version\"") != NULL && strstr(v2, "\"analyzer_version\"") == NULL);
+
+    /* Version 1: tonic pitch classes are spelled as the library spells their keys; a version 1 analyzer_version was the
+       Composer's own version and is ignored. */
+    char *v1 = as_version_one(v2);
+    char *with_analyzer = replace_all(v1, "\"composer_version\"", "\"analyzer_version\"");
+    PiecePlan *old = NULL;
+    assert(plan_from_json(with_analyzer, &old, &error) == PLAN_OK);
+    assert(plans_equal(plan, old));
+    assert(strcmp(plan_analyzer_version(old), "") == 0);
+    plan_destroy(old);
+
+    /* Version 1 wrote a chord with no function as "unknown", and always wrote the member. */
+    char *unknown = replace_all(v1, "\"function\": \"tonic\"", "\"function\": \"unknown\"");
+    assert(plan_from_json(unknown, &old, &error) == PLAN_OK);
+    plan_destroy(old);
+    free(unknown);
+    char *no_function = replace_all(v1, "\"function\": \"tonic\"", "\"fn\": \"tonic\"");
+    assert(plan_from_json(no_function, &old, &error) == PLAN_ERR_FORMAT && strstr(error.path, "function") != NULL);
+    free(no_function);
+
+    /* Version 2: the function is absent for none, a tonic keeps its spelling, an Analyzer version is kept. */
+    char *flat = replace_all(v2, "\"tonic\": \"G\"", "\"tonic\": \"Bb\"");
+    assert(plan_from_json(flat, &old, &error) == PLAN_OK);
+    assert(!plans_equal(plan, old));
+    plan_destroy(old);
+    free(flat);
+    char *analyzed = replace_all(v2, "\"composer_version\"", "\"analyzer_version\": \"9.8.7\", \"composer_version\"");
+    assert(plan_from_json(analyzed, &old, &error) == PLAN_OK);
+    assert(strcmp(plan_analyzer_version(old), "9.8.7") == 0);
+    char *kept = plan_to_json(old, &error);
+    assert(kept != NULL && strstr(kept, "\"analyzer_version\": \"9.8.7\"") != NULL);
+    free(kept);
+    plan_destroy(old);
+    free(analyzed);
+
+    free(with_analyzer);
+    free(v1);
+    free(v2);
+    plan_destroy(plan);
+}
+
+static void test_spelling_round_trip(void) {
+    PiecePlan *plan = plan_create();
+    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 1), "form");
+    PlanLanePayload key;
+    memset(&key, 0, sizeof(key));
+    key.key.tonic_letter = PITCH_LETTER_F;
+    key.key.tonic_accidental = 1;
+    key.key.mode = KEY_STRUCTURE_MODE_MAJOR;
+    add_lane(plan, form, PLAN_LANE_KEY, 0, bars(0, 1), &key);
+    Rational quarter;
+    assert(rational_make(1, 4, &quarter) == RATIONAL_OK);
+    PlanNote notes[2] = {plan_note(66, (Rational){0, 1}, quarter), plan_note(65, quarter, quarter)};
+    notes[1].spelled = true;
+    notes[1].letter = PITCH_LETTER_E;
+    notes[1].accidental = 1;
+    PlanLanePayload melody;
+    memset(&melody, 0, sizeof(melody));
+    melody.notes.notes = notes;
+    melody.notes.note_count = 2;
+    add_lane(plan, form, PLAN_LANE_MELODY, 0, bars(0, 1), &melody);
+
+    PlanJsonError error;
+    char *text = plan_to_json(plan, &error);
+    assert(text != NULL);
+    assert(strstr(text, "\"tonic\": \"F#\"") != NULL && strstr(text, "\"spelling\": \"E#\"") != NULL);
+    PiecePlan *parsed = NULL;
+    assert(plan_from_json(text, &parsed, &error) == PLAN_OK);
+    const PlanLanePayload *read_key = plan_lane_span_payload(parsed, 1);
+    assert(read_key->key.tonic_letter == PITCH_LETTER_F && read_key->key.tonic_accidental == 1);
+    const PlanLanePayload *read_melody = plan_lane_span_payload(parsed, 2);
+    assert(!read_melody->notes.notes[0].spelled && read_melody->notes.notes[1].spelled);
+    assert(read_melody->notes.notes[1].letter == PITCH_LETTER_E && read_melody->notes.notes[1].accidental == 1);
+    assert(plans_equal(plan, parsed));
+    plan_destroy(parsed);
+
+    char *bad_tonic = replace_all(text, "\"tonic\": \"F#\"", "\"tonic\": \"H\"");
+    assert(plan_from_json(bad_tonic, &parsed, &error) == PLAN_ERR_FORMAT && strstr(error.path, "tonic") != NULL);
+    free(bad_tonic);
+    char *bad_spelling = replace_all(text, "\"spelling\": \"E#\"", "\"spelling\": \"E#4\"");
+    assert(plan_from_json(bad_spelling, &parsed, &error) == PLAN_ERR_FORMAT && strstr(error.path, "spelling") != NULL);
+    free(bad_spelling);
+    free(text);
+    plan_destroy(plan);
+}
+
+static void test_format_errors(void) {
+    PiecePlan *plan = NULL;
+    PlanJsonError error;
+    assert(plan_from_json("{\"format\":\"other\",\"format_version\":2,\"form\":null}", &plan, &error) == PLAN_ERR_FORMAT);
+    assert(strcmp(error.path, "format") == 0);
+    assert(plan_from_json("{\"format\":\"ursatz-composer-plan\",\"form\":null}", &plan, &error) == PLAN_ERR_FORMAT);
+    assert(strcmp(error.path, "format_version") == 0);
+    assert(plan_from_json("{\"format\":\"ursatz-composer-plan\",\"format_version\":3,\"form\":null}", &plan, &error) ==
+           PLAN_ERR_FORMAT);
+    assert(strcmp(error.path, "format_version") == 0);
+    assert(plan_from_json("{\"format\":\"ursatz-composer-plan\",\"format_version\":2,\"form\":null}", &plan, &error) == PLAN_OK);
+    plan_destroy(plan);
+    assert(plan_from_json("{\"format\":\"ursatz-composer-plan\",\"format_version\":2,\"metadata\":{\"analyzer_version\":4},"
+                          "\"form\":null}", &plan, &error) == PLAN_ERR_FORMAT);
+    assert(strcmp(error.path, "metadata.analyzer_version") == 0);
+}
+
 static bool report_has(const AnalysisLoadReport *report, const char *path_prefix, const char *message_part) {
     for (size_t i = 0; i < report->count; i++) {
         if (strncmp(report->notes[i].path, path_prefix, strlen(path_prefix)) == 0 &&
@@ -814,82 +1071,91 @@ static bool report_has(const AnalysisLoadReport *report, const char *path_prefix
     return false;
 }
 
-static void test_load_analysis_document(void) {
+static size_t lane_count(const PiecePlan *plan, PlanLaneKind lane) {
+    size_t count = 0;
+    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
+        count += plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == lane;
+    }
+    return count;
+}
+
+/* A piece analyzed by the Analyzer loads as a plan: no document is read. */
+static void test_load_analyzer_result(void) {
+    ImportedNotes notes;
+    memset(&notes, 0, sizeof(notes));
+    assert(midi_pipeline_import_file(COMPOSER_FIXTURE_DIR "/mozart545-bar1.mid", &notes) == MIDI_PIPELINE_OK);
+    AnalyzerResult *result = NULL;
+    assert(analyzer_analyze(&notes, NULL, &result) == ANALYZER_OK);
+
     PiecePlan *plan = NULL;
     AnalysisLoadReport report = {NULL, 0};
     PlanJsonError error;
-    assert(plan_read_analysis_document_file(COMPOSER_FIXTURE_DIR "/analysis_small.json", &plan, &report, &error) ==
-           PLAN_OK);
+    assert(plan_from_analyzer_result(result, &notes, &plan, &report) == PLAN_OK);
 
-    /* A Form root over the piece, two bars long, named for the source file. */
-    assert(plan_node_count(plan) == 1);
+    /* A Form root, Realized, over the piece from the start; the plan records the Analyzer that heard it. */
     NodeId root = plan_root(plan);
-    assert(plan_node_kind(plan, root) == PLAN_NODE_FORM);
-    assert(strcmp(plan_node_name(plan, root), "small.mid") == 0);
-    Rational two;
-    assert(rational_make(2, 1, &two) == RATIONAL_OK);
-    assert(rational_cmp(plan_node_span(plan, root).length, two) == 0);
-    assert(plan_node_state(plan, root) == PLAN_STATE_REALIZED);
+    assert(plan_node_kind(plan, root) == PLAN_NODE_FORM && plan_node_state(plan, root) == PLAN_STATE_REALIZED);
+    assert(plan_node_span(plan, root).start.num == 0);
+    assert(strcmp(plan_analyzer_version(plan), ursatz_analyzer_version()) == 0);
 
-    /* One key, and the three chords that map. */
-    assert(plan_lane_span_count(plan) == 4);
-    const PlanLanePayload *key = plan_lane_span_payload(plan, 1);
-    assert(plan_lane_span_lane(plan, 1) == PLAN_LANE_KEY);
-    assert(analysis_key_tonic_pitch_class(&key->key) == 0 && key->key.mode == KEY_STRUCTURE_MODE_MAJOR);
-    const PlanLanePayload *dominant = plan_lane_span_payload(plan, 3);
-    assert(plan_lane_span_lane(plan, 3) == PLAN_LANE_HARMONY);
-    assert(strcmp(dominant->harmony.roman_numeral, "V") == 0);
-    assert(!dominant->harmony.has_function);
+    /* The phrases the Analyzer heard are Phrase nodes under one Section. */
+    assert(plan_node_count(plan) >= 1);
+    for (NodeId id = 2; id <= plan_node_count(plan); id++) {
+        assert(plan_node_state(plan, id) == PLAN_STATE_REALIZED);
+        assert(plan_node_kind(plan, id) == PLAN_NODE_SECTION || plan_node_kind(plan, id) == PLAN_NODE_PHRASE);
+    }
 
-    /* The V ran to bar 3/2 but the next chord starts at 1, so it is cut to 1/2..1. */
-    Rational one;
-    assert(rational_make(1, 1, &one) == RATIONAL_OK);
-    Rational dominant_end;
-    assert(plan_span_end(plan_lane_span_span(plan, 3), &dominant_end) == PLAN_OK);
-    assert(rational_cmp(dominant_end, one) == 0);
-
+    /* The meter, key and chords, and both outer voices. */
+    assert(lane_count(plan, PLAN_LANE_METER) >= 1);
+    assert(lane_count(plan, PLAN_LANE_KEY) >= 1);
+    assert(lane_count(plan, PLAN_LANE_HARMONY) >= 1);
+    assert(lane_count(plan, PLAN_LANE_MELODY) == 1);
+    assert(lane_count(plan, PLAN_LANE_BASS) == 1);
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         assert(plan_lane_span_state(plan, id) == PLAN_STATE_REALIZED);
         assert(plan_lane_span_owner(plan, id) == root);
+        const PlanLanePayload *payload = plan_lane_span_payload(plan, id);
+        if (plan_lane_span_lane(plan, id) == PLAN_LANE_HARMONY) {
+            assert(payload->harmony.roman_numeral[0] != '\0' && !payload->harmony.has_function);
+        }
+        if (plan_lane_span_lane(plan, id) == PLAN_LANE_MELODY) {
+            assert(payload->notes.note_count > 0);
+        }
     }
-
-    /* Nothing is dropped silently. */
-    assert(report.count == 3);
-    assert(report_has(&report, "chords[3]", "skipped"));
-    assert(report_has(&report, "chords[1]", "trimmed"));
-    assert(report_has(&report, "phrases", "not loaded"));
+    /* Nothing is dropped silently: an area the plan has no place for is listed. */
+    assert(report_has(&report, "", ""));
 
     /* Realized material can be regenerated: a write is accepted. */
+    LaneSpanId first_chord = PLAN_LANE_SPAN_NONE;
+    assert(plan_lane_find(plan, PLAN_LANE_HARMONY, 0, plan_node_span(plan, root), &first_chord, 1) >= 1);
     PlanLanePayload tonic = harmony("I", HARMONIC_FUNCTION_TONIC);
-    assert(plan_lane_span_write(plan, 2, &tonic) == PLAN_OK);
+    assert(plan_lane_span_write(plan, first_chord, &tonic) == PLAN_OK);
 
     /* The loaded plan survives a plan JSON round trip. */
     char *text = plan_to_json(plan, &error);
     PiecePlan *again = NULL;
     assert(text != NULL);
+    assert(strstr(text, "\"composer_version\"") != NULL && strstr(text, "\"analyzer_version\"") != NULL);
     assert(plan_from_json(text, &again, &error) == PLAN_OK);
     assert(plans_equal(plan, again));
+    assert(strcmp(plan_analyzer_version(again), ursatz_analyzer_version()) == 0);
     free(text);
     plan_destroy(again);
 
     analysis_load_report_destroy(&report);
     plan_destroy(plan);
+    analyzer_result_destroy(result);
+    imported_notes_destroy(&notes);
 }
 
-static void test_analysis_document_errors(void) {
+static void test_load_analyzer_result_errors(void) {
     PiecePlan *plan = NULL;
     AnalysisLoadReport report = {NULL, 0};
-    PlanJsonError error;
-    assert(plan_from_analysis_document("nope", &plan, &report, &error) == PLAN_ERR_PARSE);
-    assert(plan == NULL);
-    assert(plan_from_analysis_document("{\"schema_version\":1,\"keys\":[],\"chords\":[]}", &plan, &report, &error) ==
-           PLAN_ERR_FORMAT);
+    ImportedNotes notes;
+    memset(&notes, 0, sizeof(notes));
+    assert(plan_from_analyzer_result(NULL, &notes, &plan, &report) == PLAN_ERR_NULL);
     assert(plan == NULL && report.count == 0);
-    assert(plan_from_analysis_document("{\"schema_version\":9}", &plan, NULL, &error) == PLAN_ERR_FORMAT);
-    assert(strcmp(error.path, "schema_version") == 0);
-    assert(plan_from_analysis_document("{\"schema_version\":1,\"keys\":[{\"label\":\"C major\"}]}", &plan, NULL,
-                                       &error) == PLAN_ERR_FORMAT);
-    assert(strcmp(error.path, "keys[0].span") == 0);
+    assert(plan_from_analyzer_result(NULL, NULL, NULL, NULL) == PLAN_ERR_NULL);
 }
 
 int main(void) {
@@ -899,7 +1165,11 @@ int main(void) {
     test_section_constraints();
     test_empty_plan();
     test_malformed_input();
-    test_load_analysis_document();
-    test_analysis_document_errors();
+    test_plan_files();
+    test_version_one_values();
+    test_spelling_round_trip();
+    test_format_errors();
+    test_load_analyzer_result();
+    test_load_analyzer_result_errors();
     return 0;
 }

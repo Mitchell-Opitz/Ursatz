@@ -1151,7 +1151,7 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
     }
     PlanJsonError detail;
     memset(&detail, 0, sizeof(detail));
-    JsonReader reader = {&detail, PLAN_OK};
+    JsonReader reader = {&detail, PLAN_OK, 0};
     bool ok = cJSON_IsObject(root) || json_bad_format(&reader, "", "expected an object");
     const cJSON *meter = ok ? cJSON_GetObjectItemCaseSensitive(root, "meter") : NULL;
     const cJSON *key = ok ? cJSON_GetObjectItemCaseSensitive(root, "key") : NULL;

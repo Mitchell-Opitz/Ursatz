@@ -6,6 +6,10 @@
 #include <string.h>
 
 #include <cJSON.h>
+#include <pitch/pitch_arithmetic.h>
+#include <standard-harmony/harmonic_function.h>
+#include <standard-tonality/tonal_key.h>
+#include <ursatz_analyzer/version.h>
 #include <ursatz_composer/composer.h>
 #include <galant-schemas/galant_prototypes.h>
 #include <standard-texture/texture_rules.h>
@@ -19,12 +23,14 @@
 #include "util/plan_util.h"
 
 #define COMPOSER_FRAMEWORK "ursatz-composer"
+#define PLAN_FORMAT_NAME "ursatz-composer-plan"
 #define COMPOSER_KEY_METHOD "composer_plan"
 
 static const char *const NODE_KINDS[] = {"form", "section", "phrase", "subphrase", "idea", "motive"};
 static const char *const STATE_NAMES[] = {"constrained", "given", "realized"};
 static const char *const MODE_NAMES[] = {"major", "minor"};
-static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
+/* A version 1 file wrote a chord with no function as "unknown". */
+#define LEGACY_FUNCTION_NONE "unknown"
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
                                                   "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones"};
@@ -37,7 +43,6 @@ static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "com
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
 static const char *const ACCOMPANIMENT_NAMES[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
 static const char *const RETURN_VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister"};
-static const char *const PITCH_CLASS_NAMES[] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
 #define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
 
@@ -95,6 +100,14 @@ static cJSON *span_json(PlanSpan span) {
 /* A motive ref's relation step as its text (motive_relation_step_text); a ref with no step has no member. */
 #define STEP_TEXT_MAX 160
 
+/* A key's "tonic", spelled as the library spells it (F#, Bb), and its "mode". */
+static bool key_members_json(cJSON *object, const AnalysisKey *key) {
+    char tonic[8];
+    return pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic)) &&
+           plan_json_add(object, "tonic", cJSON_CreateString(tonic)) &&
+           plan_json_add(object, "mode", cJSON_CreateString(MODE_NAMES[key->mode]));
+}
+
 static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *constraint) {
     cJSON *object = cJSON_CreateObject();
     if (!object) {
@@ -120,8 +133,7 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         }
         break;
     case PLAN_CONSTRAINT_KEY:
-        ok = ok && plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(&constraint->params.key))) &&
-             plan_json_add(object, "mode", cJSON_CreateString(MODE_NAMES[constraint->params.key.mode]));
+        ok = ok && key_members_json(object, &constraint->params.key);
         break;
     case PLAN_CONSTRAINT_ARCHETYPE:
         ok = ok && plan_json_add(object, "type", cJSON_CreateString(ARCHETYPE_NAMES[constraint->params.archetype]));
@@ -346,7 +358,9 @@ static cJSON *node_json(const PiecePlan *plan, NodeId id) {
 }
 
 static void plan_key_label(const AnalysisKey *key, char *out, size_t size) {
-    snprintf(out, size, "%s %s", PITCH_CLASS_NAMES[analysis_key_tonic_pitch_class(key)], MODE_NAMES[key->mode]);
+    char tonic[8] = "?";
+    pitch_spelling_name(key->tonic_letter, key->tonic_accidental, tonic, sizeof(tonic));
+    snprintf(out, size, "%s %s", tonic, MODE_NAMES[key->mode]);
 }
 
 static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *out, size_t size) {
@@ -374,7 +388,10 @@ static cJSON *notes_json(const PlanNotes *notes) {
     for (size_t i = 0; array && i < notes->note_count; i++) {
         const PlanNote *note = &notes->notes[i];
         cJSON *object = cJSON_CreateObject();
-        if (!(object && plan_json_add(object, "midi_pitch", json_number(note->midi)) &&
+        char spelling[8];
+        bool spelt = !note->spelled || pitch_spelling_name(note->letter, note->accidental, spelling, sizeof(spelling));
+        if (!(object && spelt && plan_json_add(object, "midi_pitch", json_number(note->midi)) &&
+              (!note->spelled || plan_json_add(object, "spelling", cJSON_CreateString(spelling))) &&
               plan_json_add(object, "offset", rational_json(note->offset.num, note->offset.den)) &&
               plan_json_add(object, "duration", rational_json(note->duration.num, note->duration.den)) && plan_json_append(array, object))) {
             if (object && !cJSON_GetObjectItem(object, "duration")) {
@@ -400,12 +417,14 @@ static cJSON *payload_json(PlanLaneKind lane, const PlanLanePayload *payload) {
              plan_json_add(object, "bars_per_hyperbar", json_number(payload->meter.bars_per_hyperbar));
         break;
     case PLAN_LANE_KEY:
-        ok = plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(&payload->key))) &&
-             plan_json_add(object, "mode", cJSON_CreateString(MODE_NAMES[payload->key.mode]));
+        ok = key_members_json(object, &payload->key);
         break;
     case PLAN_LANE_HARMONY:
-        ok = plan_json_add(object, "roman_numeral", cJSON_CreateString(payload->harmony.roman_numeral)) &&
-             plan_json_add(object, "function", cJSON_CreateString(FUNCTION_NAMES[payload->harmony.has_function ? (int)payload->harmony.function : (int)HARMONIC_FUNCTION_COUNT]));
+        ok = plan_json_add(object, "roman_numeral", cJSON_CreateString(payload->harmony.roman_numeral));
+        if (ok && payload->harmony.has_function) {
+            const char *name = harmonic_function_name(payload->harmony.function);
+            ok = name && plan_json_add(object, "function", cJSON_CreateString(name));
+        }
         break;
     case PLAN_LANE_BASS:
     case PLAN_LANE_MELODY:
@@ -502,25 +521,17 @@ static cJSON *meter_json(const PiecePlan *plan) {
     return object;
 }
 
+/* The Composer that wrote the file, the Ursatz commit it was built on and, for a plan loaded from an analysis, the Analyzer. */
 static cJSON *metadata_json(const PiecePlan *plan) {
     cJSON *object = cJSON_CreateObject();
-    bool has_key = false;
-    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
-        has_key = has_key || plan_lane_span_lane(plan, id) == PLAN_LANE_KEY;
-    }
-    if (object && !(plan_json_add(object, "source_file", cJSON_CreateString("")) &&
-                    plan_json_add(object, "analyzer_version", cJSON_CreateString(composer_version())) &&
-                    plan_json_add(object, "ursatz_commit", cJSON_CreateString("unknown")) &&
-                    plan_json_add(object, "note_count", json_number(0)) && plan_json_add(object, "ticks_per_quarter", cJSON_CreateNull()) &&
-                    plan_json_add(object, "key_found", cJSON_CreateBool(has_key)))) {
+    const char *analyzer = plan_analyzer_version(plan);
+    if (object && !(plan_json_add(object, "composer_version", cJSON_CreateString(composer_version())) &&
+                    plan_json_add(object, "ursatz_commit", cJSON_CreateString(ursatz_analyzer_ursatz_commit())) &&
+                    (analyzer[0] == '\0' || plan_json_add(object, "analyzer_version", cJSON_CreateString(analyzer))))) {
         cJSON_Delete(object);
         return NULL;
     }
     return object;
-}
-
-static cJSON *empty_array(void) {
-    return cJSON_CreateArray();
 }
 
 static cJSON *document_json(const PiecePlan *plan) {
@@ -528,17 +539,14 @@ static cJSON *document_json(const PiecePlan *plan) {
     if (!document) {
         return NULL;
     }
-    bool ok = plan_json_add(document, "schema_version", json_number(PLAN_JSON_SCHEMA_VERSION)) &&
+    bool ok = plan_json_add(document, "format", cJSON_CreateString(PLAN_FORMAT_NAME)) &&
+              plan_json_add(document, "format_version", json_number(URSATZ_COMPOSER_PLAN_FORMAT_VERSION)) &&
               plan_json_add(document, "metadata", metadata_json(plan)) && plan_json_add(document, "meter", meter_json(plan)) &&
               plan_json_add(document, "keys", lane_array_json(plan, 1u << PLAN_LANE_KEY)) &&
               plan_json_add(document, "chords", lane_array_json(plan, 1u << PLAN_LANE_HARMONY)) &&
-              plan_json_add(document, "cadences", empty_array()) && plan_json_add(document, "phrases", empty_array()) &&
               plan_json_add(document, "form", plan_node_count(plan) > 0 ? node_json(plan, plan_root(plan)) : cJSON_CreateNull()) &&
-              plan_json_add(document, "motives", empty_array()) &&
               plan_json_add(document, "melody", lane_array_json(plan, 1u << PLAN_LANE_MELODY)) &&
-              plan_json_add(document, "rhythm", empty_array()) &&
-              plan_json_add(document, "texture", lane_array_json(plan, (1u << PLAN_LANE_BASS) | (1u << PLAN_LANE_INNER_VOICE))) &&
-              plan_json_add(document, "voice_leading", empty_array()) && plan_json_add(document, "schemas", empty_array());
+              plan_json_add(document, "texture", lane_array_json(plan, (1u << PLAN_LANE_BASS) | (1u << PLAN_LANE_INNER_VOICE)));
     if (!ok) {
         cJSON_Delete(document);
         return NULL;
@@ -1019,6 +1027,81 @@ static bool read_motive_tones(JsonReader *reader, const cJSON *item, const char 
     return true;
 }
 
+/*
+ * Version 1 files (R-260): a key is "tonic_pitch_class" and "mode", with no spelling. The tonic is spelled as the library
+ * spells the key on that pitch class (standard_tonality_key_tonic_of_pitch_class: the fewest accidentals in its
+ * signature, sharps on a tie), which is how every plan of version 1 was written.
+ */
+static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *path, KeyStructureMode mode,
+                        AnalysisKey *out) {
+    long pitch_class;
+    PitchLetter letter;
+    int accidental;
+    if (!json_read_int_member(reader, object, path, "tonic_pitch_class", 0, 11, &pitch_class)) {
+        return false;
+    }
+    if (!standard_tonality_key_tonic_of_pitch_class((int)pitch_class, mode == KEY_STRUCTURE_MODE_MINOR, &letter,
+                                                    &accidental)) {
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "tonic_pitch_class");
+        return json_bad_format(reader, at, "no key on this pitch class");
+    }
+    AnalysisKey key = {NULL, letter, accidental, mode};
+    *out = key;
+    return true;
+}
+
+/* A key's members: "tonic" (a spelled name) in version 2; see read_key_v1 for version 1. */
+static bool read_key_members(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
+    int mode;
+    if (!read_enum_member(reader, object, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &mode)) {
+        return false;
+    }
+    if (reader->version == 1) {
+        return read_key_v1(reader, object, path, (KeyStructureMode)mode, out);
+    }
+    const cJSON *tonic = plan_json_member(reader, object, path, "tonic", true);
+    if (!tonic) {
+        return false;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, path, "tonic");
+    PitchLetter letter;
+    int accidental;
+    if (!cJSON_IsString(tonic) || !pitch_spelling_parse_name(tonic->valuestring, &letter, &accidental, NULL)) {
+        return json_bad_format(reader, at, "expected a tonic like \"C\", \"F#\" or \"Bb\"");
+    }
+    AnalysisKey key = {NULL, letter, accidental, (KeyStructureMode)mode};
+    *out = key;
+    return true;
+}
+
+/* A chord's "function": a harmonic_function_name, absent for none. Version 1 always wrote it, "unknown" for none. */
+static bool read_function(JsonReader *reader, const cJSON *object, const char *path, PlanHarmony *harmony) {
+    harmony->has_function = false;
+    harmony->function = HARMONIC_FUNCTION_TONIC;
+    const cJSON *item = plan_json_member(reader, object, path, "function", reader->version == 1);
+    if (!item) {
+        return reader->result == PLAN_OK;
+    }
+    char at[PLAN_JSON_PATH_MAX];
+    json_child_path(at, path, "function");
+    if (!cJSON_IsString(item)) {
+        return json_bad_format(reader, at, "expected a string");
+    }
+    if (reader->version == 1 && strcmp(item->valuestring, LEGACY_FUNCTION_NONE) == 0) {
+        return true;
+    }
+    for (int function = 0; function < (int)HARMONIC_FUNCTION_COUNT; function++) {
+        if (strcmp(item->valuestring, harmonic_function_name((HarmonicFunction)function)) == 0) {
+            harmony->has_function = true;
+            harmony->function = (HarmonicFunction)function;
+            return true;
+        }
+    }
+    return json_fail(reader, PLAN_ERR_FORMAT, at, "unknown value '%.40s'", item->valuestring);
+}
+
 static bool read_constraint(JsonReader *reader, const cJSON *item, const char *path, PlanConstraint *out) {
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, path, "expected an object");
@@ -1047,12 +1130,7 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
     case PLAN_CONSTRAINT_MOTIVE_REF:
         return read_motive_ref(reader, item, path, &out->params.motive);
     case PLAN_CONSTRAINT_KEY:
-        if (!json_read_int_member(reader, item, path, "tonic_pitch_class", 0, 11, &number_value) ||
-            !read_enum_member(reader, item, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &value)) {
-            return false;
-        }
-        out->params.key = plan_key_of_pitch_class((int)number_value, (KeyStructureMode)value);
-        return true;
+        return read_key_members(reader, item, path, &out->params.key);
     case PLAN_CONSTRAINT_ARCHETYPE:
         if (!read_enum_member(reader, item, path, "type", ARCHETYPE_NAMES, COUNT_OF(ARCHETYPE_NAMES), &value)) {
             return false;
@@ -1647,7 +1725,6 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
     long first;
     long second;
     long third;
-    int value;
     memset(payload, 0, sizeof(*payload));
     switch (lane) {
     case PLAN_LANE_METER:
@@ -1661,12 +1738,7 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
         payload->meter.bars_per_hyperbar = (int)third;
         return true;
     case PLAN_LANE_KEY:
-        if (!json_read_int_member(reader, object, path, "tonic_pitch_class", 0, 11, &first) ||
-            !read_enum_member(reader, object, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &value)) {
-            return false;
-        }
-        payload->key = plan_key_of_pitch_class((int)first, (KeyStructureMode)value);
-        return true;
+        return read_key_members(reader, object, path, &payload->key);
     case PLAN_LANE_HARMONY: {
         const cJSON *numeral = plan_json_member(reader, object, path, "roman_numeral", true);
         if (!numeral) {
@@ -1681,13 +1753,8 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
             return json_fail(reader, PLAN_ERR_FORMAT, numeral_path, "expected 1 to %d characters",
                         PLAN_ROMAN_NUMERAL_MAX - 1);
         }
-        if (!read_enum_member(reader, object, path, "function", FUNCTION_NAMES, COUNT_OF(FUNCTION_NAMES), &value)) {
-            return false;
-        }
         snprintf(payload->harmony.roman_numeral, PLAN_ROMAN_NUMERAL_MAX, "%s", numeral->valuestring);
-        payload->harmony.has_function = value < (int)HARMONIC_FUNCTION_COUNT;
-        payload->harmony.function = payload->harmony.has_function ? (HarmonicFunction)value : HARMONIC_FUNCTION_TONIC;
-        return true;
+        return read_function(reader, object, path, &payload->harmony);
     }
     case PLAN_LANE_BASS:
     case PLAN_LANE_MELODY:
@@ -1724,6 +1791,17 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
             }
             notes[index].midi = (int)pitch;
             notes[index].spelled = false;
+            const cJSON *spelling = cJSON_GetObjectItemCaseSensitive(item, "spelling");
+            if (spelling) {
+                char spelling_path[PLAN_JSON_PATH_MAX];
+                json_child_path(spelling_path, at, "spelling");
+                if (!cJSON_IsString(spelling) ||
+                    !pitch_spelling_parse_name(spelling->valuestring, &notes[index].letter, &notes[index].accidental,
+                                               NULL)) {
+                    return json_bad_format(reader, spelling_path, "expected a note name like \"F#\" or \"Bb\"");
+                }
+                notes[index].spelled = true;
+            }
             index++;
         }
         payload->notes.notes = notes;
@@ -1868,14 +1946,53 @@ static bool apply_states(JsonReader *reader, PiecePlan *plan, const cJSON *docum
     return true;
 }
 
+/*
+ * Version 2 records metadata.analyzer_version only for a plan loaded from an Analyzer result. A version 1 file wrote the
+ * Composer's own version under that key (B-A-10), so it says nothing about an analysis and is ignored.
+ */
+static bool read_metadata(JsonReader *reader, const cJSON *document, PiecePlan *plan) {
+    const cJSON *metadata = cJSON_GetObjectItemCaseSensitive(document, "metadata");
+    if (reader->version == 1 || !metadata) {
+        return true;
+    }
+    if (!cJSON_IsObject(metadata)) {
+        return json_bad_format(reader, "metadata", "expected an object");
+    }
+    const cJSON *analyzer = cJSON_GetObjectItemCaseSensitive(metadata, "analyzer_version");
+    if (!analyzer) {
+        return true;
+    }
+    if (!cJSON_IsString(analyzer)) {
+        return json_bad_format(reader, "metadata.analyzer_version", "expected a string");
+    }
+    if (plan_set_analyzer_version(plan, analyzer->valuestring) != PLAN_OK) {
+        return json_bad_format(reader, "metadata.analyzer_version", "expected a version of fewer than 32 characters");
+    }
+    return true;
+}
+
 static PlanResult read_document(const cJSON *document, PiecePlan *plan, PlanJsonError *error) {
-    JsonReader reader = {error, PLAN_OK};
+    JsonReader reader = {error, PLAN_OK, 0};
     if (!cJSON_IsObject(document)) {
         json_bad_format(&reader, "", "expected a JSON object");
         return reader.result;
     }
     long version;
-    if (!json_read_int_member(&reader, document, "", "schema_version", 1, PLAN_JSON_SCHEMA_VERSION, &version)) {
+    if (cJSON_GetObjectItemCaseSensitive(document, "format")) {
+        const cJSON *format = cJSON_GetObjectItemCaseSensitive(document, "format");
+        if (!cJSON_IsString(format) || strcmp(format->valuestring, PLAN_FORMAT_NAME) != 0) {
+            json_bad_format(&reader, "format", "expected \"" PLAN_FORMAT_NAME "\"");
+            return reader.result;
+        }
+        if (!json_read_int_member(&reader, document, "", "format_version", 2, URSATZ_COMPOSER_PLAN_FORMAT_VERSION,
+                                  &version)) {
+            return reader.result;
+        }
+    } else if (!json_read_int_member(&reader, document, "", "schema_version", 1, PLAN_JSON_SCHEMA_VERSION, &version)) {
+        return reader.result;
+    }
+    reader.version = (int)version;
+    if (!read_metadata(&reader, document, plan)) {
         return reader.result;
     }
     const cJSON *form = plan_json_member(&reader, document, "", "form", true);

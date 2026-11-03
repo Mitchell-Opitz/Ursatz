@@ -10,7 +10,8 @@
 #include "cli_options.h"
 #include "plan.h"
 
-#include <ursatz_composer/analysis_load.h>
+#include <ursatz_analyzer/staleness.h>
+#include "util/util.h"
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/export.h>
@@ -209,19 +210,18 @@ int cli_load_plan_text(const char *path, char **text) {
     PlanJsonError error;
     PlanResult read = plan_read_json_file(path, &plan, &error);
     if (read != PLAN_OK) {
-        /* A document of the Analyzer is not a plan: say where it is loaded. */
-        PiecePlan *analysis = NULL;
-        AnalysisLoadReport report = {0};
-        PlanJsonError ignored;
-        if (read == PLAN_ERR_FORMAT && plan_read_analysis_document_file(path, &analysis, &report, &ignored) == PLAN_OK) {
-            plan_destroy(analysis);
-            analysis_load_report_destroy(&report);
-            return cli_fail(CLI_EXIT_UNSATISFIABLE,
-                            "'%s' is an Ursatz-Analyzer analysis document, not a plan; it describes a piece that is already "
-                            "written (load it with plan_read_analysis_document_file)",
-                            path);
+        /* A document of the Analyzer is not a plan: say where an analysis is loaded. */
+        char *document = NULL;
+        if (read == PLAN_ERR_FORMAT && util_read_file(path, &document, NULL)) {
+            bool analysis = analyzer_document_status(document) != ANALYZER_DOCUMENT_UNREADABLE;
+            free(document);
+            if (analysis) {
+                return cli_fail(CLI_EXIT_UNSATISFIABLE,
+                                "'%s' is an Ursatz-Analyzer analysis document, not a plan; it describes a piece that is "
+                                "already written (load an analysis with plan_from_analyzer_result)",
+                                path);
+            }
         }
-        analysis_load_report_destroy(&report);
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read plan '%s': %s%s%s", path, error.message,
                         error.path[0] ? " at " : "", error.path);
     }

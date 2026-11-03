@@ -1,0 +1,216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/plan.v2.schema.json",
+  "title": "Ursatz Composer plan, format version 2",
+  "type": "object",
+  "required": ["format", "format_version", "metadata", "form"],
+  "properties": {
+    "format": { "const": "ursatz-composer-plan" },
+    "format_version": { "const": 2 },
+    "metadata": {
+      "type": "object",
+      "required": ["composer_version", "ursatz_commit"],
+      "properties": {
+        "composer_version": { "type": "string" },
+        "ursatz_commit": { "type": "string" },
+        "analyzer_version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "meter": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["spans"],
+          "properties": { "spans": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } } }
+        }
+      ]
+    },
+    "keys": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } },
+    "chords": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } },
+    "form": { "oneOf": [{ "type": "null" }, { "$ref": "#/$defs/node" }] },
+    "melody": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } },
+    "texture": { "type": "array", "items": { "$ref": "#/$defs/laneSpan" } }
+  },
+  "$defs": {
+    "rational": {
+      "type": "object",
+      "required": ["num", "den"],
+      "properties": {
+        "num": { "type": "integer" },
+        "den": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "span": {
+      "type": "object",
+      "required": ["start", "end"],
+      "properties": {
+        "start": { "$ref": "#/$defs/rational" },
+        "end": { "$ref": "#/$defs/rational" }
+      }
+    },
+    "state": { "enum": ["constrained", "given", "realized"] },
+    "tonic": { "type": "string", "pattern": "^[A-G](bb|b|#|x)?$" },
+    "mode": { "enum": ["major", "minor"] },
+    "time": { "type": "string", "pattern": "^-?[0-9]+/[0-9]+$" },
+    "node": {
+      "type": "object",
+      "required": ["kind", "label", "span", "children", "composer"],
+      "properties": {
+        "kind": { "enum": ["form", "section", "phrase", "subphrase", "idea", "motive"] },
+        "label": { "type": ["string", "null"] },
+        "span": { "$ref": "#/$defs/span" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+        "composer": {
+          "type": "object",
+          "required": ["id", "state", "constraints"],
+          "properties": {
+            "id": { "type": "integer", "minimum": 1 },
+            "state": { "$ref": "#/$defs/state" },
+            "constraints": { "type": "array", "items": { "$ref": "#/$defs/constraint" } }
+          }
+        }
+      }
+    },
+    "laneSpan": {
+      "type": "object",
+      "required": ["span", "composer"],
+      "properties": {
+        "span": { "$ref": "#/$defs/span" },
+        "label": { "type": "string" },
+        "composer": {
+          "type": "object",
+          "required": ["id", "owner", "lane", "voice", "state", "constraints", "payload"],
+          "properties": {
+            "id": { "type": "integer", "minimum": 1 },
+            "owner": { "type": "integer", "minimum": 1 },
+            "lane": { "enum": ["meter", "key", "harmony", "bass", "melody", "inner-voice"] },
+            "voice": { "type": "integer", "minimum": 0 },
+            "state": { "$ref": "#/$defs/state" },
+            "constraints": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
+            "payload": { "type": "object" }
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "lane": { "const": "meter" } } },
+              "then": {
+                "properties": {
+                  "payload": {
+                    "required": ["beats_per_bar", "beat_unit", "bars_per_hyperbar"],
+                    "properties": {
+                      "beats_per_bar": { "type": "integer", "minimum": 1 },
+                      "beat_unit": { "type": "integer", "minimum": 1 },
+                      "bars_per_hyperbar": { "type": "integer", "minimum": 0 }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "if": { "properties": { "lane": { "const": "key" } } },
+              "then": {
+                "properties": {
+                  "payload": {
+                    "required": ["tonic", "mode"],
+                    "properties": { "tonic": { "$ref": "#/$defs/tonic" }, "mode": { "$ref": "#/$defs/mode" } },
+                    "additionalProperties": false
+                  }
+                }
+              }
+            },
+            {
+              "if": { "properties": { "lane": { "const": "harmony" } } },
+              "then": {
+                "properties": {
+                  "payload": {
+                    "required": ["roman_numeral"],
+                    "properties": {
+                      "roman_numeral": { "type": "string", "minLength": 1, "maxLength": 15 },
+                      "function": { "enum": ["tonic", "predominant", "dominant"] }
+                    },
+                    "additionalProperties": false
+                  }
+                }
+              }
+            },
+            {
+              "if": { "properties": { "lane": { "enum": ["bass", "melody", "inner-voice"] } } },
+              "then": {
+                "properties": {
+                  "payload": {
+                    "required": ["notes"],
+                    "properties": { "notes": { "type": "array", "items": { "$ref": "#/$defs/note" } } },
+                    "additionalProperties": false
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "note": {
+      "type": "object",
+      "required": ["midi_pitch", "offset", "duration"],
+      "properties": {
+        "midi_pitch": { "type": "integer", "minimum": 0, "maximum": 127 },
+        "spelling": { "$ref": "#/$defs/tonic" },
+        "offset": { "$ref": "#/$defs/rational" },
+        "duration": { "$ref": "#/$defs/rational" }
+      },
+      "additionalProperties": false
+    },
+    "constraint": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": {
+          "enum": ["length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema", "material",
+                   "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint", "return", "layers",
+                   "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold",
+                   "seam", "motive_tones"]
+        }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "key" } } },
+          "then": {
+            "required": ["tonic", "mode"],
+            "properties": { "tonic": { "$ref": "#/$defs/tonic" }, "mode": { "$ref": "#/$defs/mode" } }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "cadence" } } },
+          "then": { "required": ["type"], "properties": { "type": { "enum": ["pac", "iac", "hc", "dc", "pc"] } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "motive_ref" } } },
+          "then": {
+            "required": ["motive"],
+            "properties": {
+              "motive": { "type": "integer", "minimum": 1 },
+              "step": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "length_bars" } } },
+          "then": { "required": ["bars"], "properties": { "bars": { "type": "integer", "minimum": 1 } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "archetype" } } },
+          "then": { "required": ["type"], "properties": { "type": { "enum": ["sentence", "period", "hybrid"] } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "pickup" } } },
+          "then": { "required": ["length"], "properties": { "length": { "$ref": "#/$defs/time" } } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "section_letter" } } },
+          "then": { "required": ["letter"], "properties": { "letter": { "type": "string" } } }
+        }
+      ]
+    }
+  }
+}

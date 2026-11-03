@@ -563,7 +563,10 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
     if (run.complete) {
         char *json = plan_to_json(plan, NULL);
         assert(json);
-        run.hash = fnv(json);
+        /* The metadata holds the versions the plan was written by; the hash is of the plan, from its meter on. */
+        const char *plan_text = strstr(json, "\n  \"meter\"");
+        assert(plan_text);
+        run.hash = fnv(plan_text);
         free(json);
         run.measured = outcome.style_measured;
         if (run.measured) {
@@ -584,11 +587,11 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
  * changed the candidates chosen (seeds 1, 3, 4 and 5), then again after the harmony relations moved to tone roles
  * (P18b B2), which changed the variations chosen (seeds 2 and 5), then again after the harmony rows began to draw values that
  * move a note (P18b B7), which changed the variations chosen (seeds 2 to 5), then again when the numerals were written in the
- * library grammar (P25 B3: viio, 65 for 6/5), which changed the numerals in the plan's JSON (seeds 1, 2, 4 and 5), then again when the melodic moves were judged by standard-counterpoint, which refuses the tritone (P25 B5, all seeds), then again when a motive ref was written as its relation step (P25 B6b: "step" in place of "transform" and its members in the plan's JSON, all seeds; the notes are the same). A run without a
+ * library grammar (P25 B3: viio, 65 for 6/5), which changed the numerals in the plan's JSON (seeds 1, 2, 4 and 5), then again when the melodic moves were judged by standard-counterpoint, which refuses the tritone (P25 B5, all seeds), then again when a motive ref was written as its relation step (P25 B6b: "step" in place of "transform" and its members in the plan's JSON, all seeds; the notes are the same). then again when the plan file got its own format (P25 B9: version 2, the hash is of the plan text from "meter" on so the versions in the metadata do not move it; the notes are the same). A run without a
  * style is byte for byte the same.
  */
-static const unsigned long long MAIN_HASH[5] = {0xaf94694577f3bc4fULL, 0xbbf2bbfe71fce97bULL, 0x107a5be3d64c7241ULL,
-                                                0xdd5dc2a267432e58ULL, 0x0fbfd43d7bd96a3fULL};
+static const unsigned long long MAIN_HASH[5] = {0xc14af5af88371da3ULL, 0x9c4e58507b8c6699ULL, 0xb49bd7dbac4e51f9ULL,
+                                                0x9a5bd5872404e71eULL, 0xb2d8cd3b3cc905abULL};
 
 static int test_same(void) {
     ComposerStyle *style = NULL;

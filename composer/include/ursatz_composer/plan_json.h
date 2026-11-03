@@ -4,16 +4,18 @@
 #include <ursatz_composer/piece_plan.h>
 
 /*
- * A plan as JSON. The document has the shape of an Ursatz-Analyzer analysis
- * document (schema_version 1): the node tree goes under "form", lane spans go
- * under "meter", "keys", "chords", "melody" and "texture" as claims, and
- * everything the Analyzer has no field for sits in a "composer" object on
- * each node and claim. See docs/plan-format.md.
+ * A plan as JSON, in the Composer's own format (R-260), described by schema/plan.v2.schema.json: "format"
+ * "ursatz-composer-plan", "format_version", "metadata", the node tree under "form", and the lane spans under "meter",
+ * "keys", "chords", "melody" and "texture". Keys carry a spelled "tonic" and a "mode". Writing always gives version
+ * URSATZ_COMPOSER_PLAN_FORMAT_VERSION; reading also takes version 1 (every plan saved before it: "schema_version" 1,
+ * tonic pitch classes, motive "transform" names). See docs/plan-format.md.
  *
  * Reading ignores fields it does not know, but rejects unknown values in the
  * fields it owns (kind, state, lane, constraint kind) and anything malformed.
  */
 
+#define URSATZ_COMPOSER_PLAN_FORMAT_VERSION 2
+/* The "schema_version" of a version 1 file, which is only read. */
 #define PLAN_JSON_SCHEMA_VERSION 1
 #define PLAN_JSON_PATH_MAX 128
 #define PLAN_JSON_MESSAGE_MAX 160

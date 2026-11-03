@@ -22,6 +22,7 @@ char *json_indent_with_spaces(const char *printed);
 typedef struct {
     PlanJsonError *error;
     PlanResult result;
+    int version; /* the plan file's format version being read: 1 or 2; 0 where no plan file is read */
 } JsonReader;
 
 void json_set_error(PlanJsonError *error, long offset, const char *path, const char *format, ...);

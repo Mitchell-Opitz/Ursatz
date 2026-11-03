@@ -1,12 +1,9 @@
 {
-  "schema_version": 1,
+  "format": "ursatz-composer-plan",
+  "format_version": 2,
   "metadata": {
-    "source_file": "",
-    "analyzer_version": "",
-    "ursatz_commit": "",
-    "note_count": 0,
-    "ticks_per_quarter": null,
-    "key_found": true
+    "composer_version": "",
+    "ursatz_commit": ""
   },
   "meter": {
     "spans": [{
@@ -63,7 +60,7 @@
         "state": "given",
         "constraints": [],
         "payload": {
-          "tonic_pitch_class": 2,
+          "tonic": "D",
           "mode": "minor"
         }
       }
@@ -317,8 +314,6 @@
         }
       }
     }],
-  "cadences": [],
-  "phrases": [],
   "form": {
     "kind": "form",
     "label": "form",
@@ -516,7 +511,7 @@
               "type": "pac"
             }, {
               "kind": "key",
-              "tonic_pitch_class": 2,
+              "tonic": "D",
               "mode": "minor"
             }]
         }
@@ -705,7 +700,6 @@
       "constraints": []
     }
   },
-  "motives": [],
   "melody": [{
       "framework": "ursatz-composer",
       "span": {
@@ -1459,7 +1453,6 @@
         }
       }
     }],
-  "rhythm": [],
   "texture": [{
       "framework": "ursatz-composer",
       "span": {
@@ -1758,7 +1751,5 @@
             }]
         }
       }
-    }],
-  "voice_leading": [],
-  "schemas": []
+    }]
 }

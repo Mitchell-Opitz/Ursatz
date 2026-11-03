@@ -53,6 +53,15 @@ typedef enum {
     PLAN_NODE_MOTIVE
 } PlanNodeKind;
 
+/*
+ * The Analyzer version of the result a plan was loaded from (plan_from_analyzer_result), "" for any other plan. The plan
+ * file records it as metadata.analyzer_version. plan_set_analyzer_version fails with PLAN_ERR_BAD_PAYLOAD for a version
+ * of PLAN_ANALYZER_VERSION_MAX or more characters.
+ */
+#define PLAN_ANALYZER_VERSION_MAX 32
+const char *plan_analyzer_version(const PiecePlan *plan);
+PlanResult plan_set_analyzer_version(PiecePlan *plan, const char *version);
+
 /* The span's end time: start plus length. */
 PlanResult plan_span_end(PlanSpan span, Rational *out);
 /* True when inner lies entirely inside outer. */
