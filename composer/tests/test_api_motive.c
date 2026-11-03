@@ -69,7 +69,7 @@ static void test_gui_shapes(void) {
     ComposerResponse response;
     char *request = request_with_input(COMPOSER_FIXTURE_DIR "/gui/motive-notes.txt", "notes", NULL,
                                        "{\"meter\":\"4/4\",\"key\":\"D minor\",\"pickup\":\"0\",\"harmony\":\"I V@3\","
-                                       "\"features\":[\"a:0-2\"],\"role\":\"melodic\",\"tones\":[\"2=passing\"],\"api_version\":0}");
+                                       "\"features\":[\"a:0-2\"],\"role\":\"melodic\",\"tones\":[\"2=passing\"],\"api_version\":1}");
     assert(composer_api_motive(request, NULL, &response) == COMPOSER_OK);
     assert(response.json && !response.midi && !response.musicxml && !response.plan_json);
     expect_snapshot(&response, "motive-notes.stdout.json");
