@@ -1193,22 +1193,11 @@ static void print_result(const Options *options, const Theme *themes, size_t cou
 
 /* --- writing the files ---------------------------------------------------------- */
 
-typedef struct {
-    char final_path[1024];
-    char temporary[1032];
-} Pending;
-
-static void discard(Pending *pending, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        remove(pending[i].temporary);
-    }
-}
-
 /*
  * Writes every output to a temporary file next to its final name, and renames them all only when every one was
  * written, so that an error leaves no output file behind.
  */
-static int write_files(const Options *options, const Theme *themes, size_t count, const Passed *passed, Pending *pending,
+static int write_files(const Options *options, const Theme *themes, size_t count, const Passed *passed, CliPendingFile *pending,
                        size_t *pending_count) {
     const char *paths[4] = {options->out_path, options->midi_path, options->musicxml_path, options->explain_path};
     int status = 0;
@@ -1220,7 +1209,7 @@ static int write_files(const Options *options, const Theme *themes, size_t count
             if (!paths[kind]) {
                 continue;
             }
-            Pending *entry = &pending[*pending_count];
+            CliPendingFile *entry = &pending[*pending_count];
             if (!cli_alternative_path(paths[kind], k + 1, count > 1, entry->final_path, sizeof(entry->final_path)) ||
                 snprintf(entry->temporary, sizeof(entry->temporary), "%s.tmp", entry->final_path) >=
                     (int)sizeof(entry->temporary)) {
@@ -1269,7 +1258,7 @@ static int write_files(const Options *options, const Theme *themes, size_t count
         }
     }
     if (status != 0) {
-        discard(pending, *pending_count);
+        cli_discard_pending(pending, *pending_count);
         return status;
     }
     for (size_t i = 0; i < *pending_count; i++) {
@@ -1279,7 +1268,7 @@ static int write_files(const Options *options, const Theme *themes, size_t count
         }
     }
     if (status != 0) {
-        discard(pending, *pending_count);
+        cli_discard_pending(pending, *pending_count);
     }
     return status;
 }
@@ -1448,7 +1437,7 @@ int run_grow_ext(int argc, char **argv, GrowExt *ext) {
     }
 
     if (status == 0) {
-        Pending pending[MAX_FILES];
+        CliPendingFile pending[MAX_FILES];
         const char *files[MAX_FILES];
         size_t pending_count = 0;
         status = write_files(&options, themes, made, &passed, pending, &pending_count);

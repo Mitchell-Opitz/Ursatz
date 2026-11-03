@@ -10,6 +10,7 @@
 #include <ursatz_composer/explain.h>
 #include <ursatz_composer/fill_target.h>
 #include <ursatz_composer/lanes.h>
+#include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/style.h>
@@ -153,5 +154,20 @@ int cli_find_targets(const PiecePlan *plan, const CliTargetOptions *target, Fill
 void cli_describe_target(const PiecePlan *plan, const CliTargetOptions *target, char *out, size_t size);
 /* Prints why a regenerate result refused the target and returns the exit status. */
 int cli_report_refused(RegenerateResult result, const char *what);
+
+/* A file written beside its final name and renamed into place once every file of the command is written. */
+typedef struct {
+    char final_path[1024];
+    char temporary[1032];
+} CliPendingFile;
+
+/* Removes the temporary files of the first `count` pending files. */
+void cli_discard_pending(CliPendingFile *pending, size_t count);
+
+/* A pickup length ("1", "3/2") in beats of the unit as a time; false when it is not one. */
+bool cli_parse_pickup(const char *text, int beat_unit, PlanTime *out);
+
+/* The text of a motive in its own form (notes, rhythm or contour); malloc'd, the caller frees it. */
+char *cli_motive_text(const Motive *motive);
 
 #endif

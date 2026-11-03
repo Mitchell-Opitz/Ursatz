@@ -667,3 +667,31 @@ int cli_report_refused(RegenerateResult result, const char *what) {
     }
 }
 
+void cli_discard_pending(CliPendingFile *pending, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        remove(pending[i].temporary);
+    }
+}
+
+bool cli_parse_pickup(const char *text, int beat_unit, PlanTime *out) {
+    char *end = NULL;
+    long numerator = strtol(text, &end, 10);
+    long denominator = 1;
+    if (end == text || numerator < 0) {
+        return false;
+    }
+    if (*end == '/') {
+        const char *rest = end + 1;
+        denominator = strtol(rest, &end, 10);
+        if (end == rest || denominator < 1) {
+            return false;
+        }
+    }
+    return *end == '\0' && plan_time_make(numerator, (unsigned long)(denominator * beat_unit), out) == PLAN_OK;
+}
+
+char *cli_motive_text(const Motive *motive) {
+    return motive->form == MOTIVE_FORM_RHYTHM    ? motive_to_rhythm_text(motive)
+           : motive->form == MOTIVE_FORM_CONTOUR ? motive_to_contour_text(motive)
+                                                 : motive_to_notes_text(motive);
+}

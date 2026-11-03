@@ -534,17 +534,6 @@ void cli_report_stuck(const PiecePlan *plan, const ComposeOutcome *outcome, unsi
 
 /* --- writing the files ---------------------------------------------------------- */
 
-typedef struct {
-    const char *final_path;
-    char temporary[1032];
-} Pending;
-
-static void discard(Pending *pending, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        remove(pending[i].temporary);
-    }
-}
-
 static int write_record(const ComposeOutcome *outcome, const char *path) {
     FILE *file = fopen(path, "wb");
     if (!file) {
@@ -574,7 +563,7 @@ static int write_record(const ComposeOutcome *outcome, const char *path) {
  * Writes every output to a temporary file next to its final name, and renames them all only when every one was
  * written, so that an error leaves no output file behind.
  */
-static int write_files(const CliOutputPaths *output, const PiecePlan *plan, const ComposeOutcome *outcome, Pending *pending,
+static int write_files(const CliOutputPaths *output, const PiecePlan *plan, const ComposeOutcome *outcome, CliPendingFile *pending,
                        size_t *pending_count) {
     const char *paths[MAX_OUTPUTS] = {output->plan, output->midi, output->musicxml, output->record, output->explain};
     int status = 0;
@@ -585,9 +574,9 @@ static int write_files(const CliOutputPaths *output, const PiecePlan *plan, cons
         if (!paths[kind]) {
             continue;
         }
-        Pending *entry = &pending[*pending_count];
-        entry->final_path = paths[kind];
-        if (snprintf(entry->temporary, sizeof(entry->temporary), "%s.tmp", paths[kind]) >= (int)sizeof(entry->temporary)) {
+        CliPendingFile *entry = &pending[*pending_count];
+        if (snprintf(entry->final_path, sizeof(entry->final_path), "%s", paths[kind]) >= (int)sizeof(entry->final_path) ||
+            snprintf(entry->temporary, sizeof(entry->temporary), "%s.tmp", paths[kind]) >= (int)sizeof(entry->temporary)) {
             status = cli_fail(CLI_EXIT_WRITE, "file name '%s' is too long", paths[kind]);
             break;
         }
@@ -630,7 +619,7 @@ static int write_files(const CliOutputPaths *output, const PiecePlan *plan, cons
         rendered_plan_destroy(&rendered);
     }
     if (status != 0) {
-        discard(pending, *pending_count);
+        cli_discard_pending(pending, *pending_count);
         return status;
     }
     for (size_t i = 0; i < *pending_count; i++) {
@@ -640,7 +629,7 @@ static int write_files(const CliOutputPaths *output, const PiecePlan *plan, cons
         }
     }
     if (status != 0) {
-        discard(pending, *pending_count);
+        cli_discard_pending(pending, *pending_count);
     }
     return status;
 }
@@ -649,11 +638,16 @@ static int write_files(const CliOutputPaths *output, const PiecePlan *plan, cons
 
 int cli_write_outputs(const CliOutputPaths *paths, const PiecePlan *plan, const ComposeOutcome *outcome,
                       const char **files, size_t *file_count) {
-    Pending pending[MAX_OUTPUTS];
+    CliPendingFile pending[MAX_OUTPUTS];
     size_t count = 0;
     int status = write_files(paths, plan, outcome, pending, &count);
-    for (size_t i = 0; status == 0 && i < count; i++) {
-        files[i] = pending[i].final_path;
+    /* The paths are the caller's, in the order the files were written. */
+    const char *given[MAX_OUTPUTS] = {paths->plan, paths->midi, paths->musicxml, paths->record, paths->explain};
+    size_t next = 0;
+    for (size_t kind = 0; status == 0 && kind < MAX_OUTPUTS; kind++) {
+        if (given[kind]) {
+            files[next++] = given[kind];
+        }
     }
     *file_count = status == 0 ? count : 0;
     return status;
@@ -895,15 +889,19 @@ int run_fill(int argc, char **argv) {
     }
     given_snapshot_destroy(snapshot);
     if (status == 0) {
-        Pending pending[MAX_OUTPUTS];
+        CliPendingFile pending[MAX_OUTPUTS];
         const char *files[MAX_OUTPUTS];
         size_t pending_count = 0;
         CliOutputPaths output = {options.out_path,     options.midi_path,    options.musicxml_path,
                                  options.record_path,  options.explain_path, &options.export_options};
         status = write_files(&output, plan, &outcome, pending, &pending_count);
         if (status == 0) {
-            for (size_t i = 0; i < pending_count; i++) {
-                files[i] = pending[i].final_path;
+            const char *written[MAX_OUTPUTS] = {output.plan, output.midi, output.musicxml, output.record, output.explain};
+            size_t next = 0;
+            for (size_t kind = 0; kind < MAX_OUTPUTS; kind++) {
+                if (written[kind]) {
+                    files[next++] = written[kind];
+                }
             }
             if (options.json) {
                 char extra[CANDIDATE_JSON_SIZE];

@@ -38,3 +38,20 @@ bool plan_melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out) {
 PieceResult piece_result_of_plan(PlanResult result) {
     return result == PLAN_OK ? PIECE_OK : (result == PLAN_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_BAD_REQUEST);
 }
+
+bool plan_add_given_node(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, NodeId *out) {
+    return plan_add_node(plan, parent, kind, span, NULL, out) == PLAN_OK &&
+           plan_node_set_state(plan, *out, PLAN_STATE_GIVEN) == PLAN_OK;
+}
+
+const char *const plan_lane_names[PLAN_LANE_NAME_COUNT] = {"meter", "key", "harmony", "bass", "melody", "inner_voice"};
+
+const char *plan_lane_name(PlanLaneKind lane) {
+    return (int)lane >= 0 && (int)lane < PLAN_LANE_NAME_COUNT ? plan_lane_names[lane] : "";
+}
+
+const char *const plan_fragment_position_names[PLAN_FRAGMENT_POSITION_NAME_COUNT] = {"any", "leading", "trailing", "middle"};
+
+const char *plan_fragment_position_name(long position) {
+    return position >= 0 && position < PLAN_FRAGMENT_POSITION_NAME_COUNT ? plan_fragment_position_names[position] : "any";
+}

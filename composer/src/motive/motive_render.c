@@ -6,11 +6,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 #include "motive/motive_internal.h"
-
-static bool add_node(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, NodeId *out) {
-    return plan_add_node(plan, parent, kind, span, NULL, out) == PLAN_OK &&
-           plan_node_set_state(plan, *out, PLAN_STATE_GIVEN) == PLAN_OK;
-}
+#include "util/plan_util.h"
 
 static bool add_given_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload) {
     LaneSpanId id;
@@ -31,10 +27,10 @@ PiecePlan *motive_render_plan(const Motive *motive) {
     NodeId section;
     NodeId phrase;
     NodeId idea;
-    bool ok = add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, all, &form) &&
-              add_node(plan, form, PLAN_NODE_SECTION, all, &section) &&
-              add_node(plan, section, PLAN_NODE_PHRASE, all, &phrase) &&
-              add_node(plan, phrase, PLAN_NODE_IDEA, all, &idea) &&
+    bool ok = plan_add_given_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, all, &form) &&
+              plan_add_given_node(plan, form, PLAN_NODE_SECTION, all, &section) &&
+              plan_add_given_node(plan, section, PLAN_NODE_PHRASE, all, &phrase) &&
+              plan_add_given_node(plan, phrase, PLAN_NODE_IDEA, all, &idea) &&
               motive_attach(plan, idea, (PlanTime){0, 1}, motive, "motive", NULL, NULL) == PLAN_OK;
 
     PlanLanePayload payload;

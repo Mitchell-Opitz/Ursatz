@@ -19,10 +19,8 @@
 #include <ursatz_composer/plan_state.h>
 #include "util/plan_util.h"
 
-static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner_voice"};
-
 const char *rendered_part_lane_name(const RenderedPart *part) {
-    return LANE_NAMES[part->lane];
+    return plan_lane_name(part->lane);
 }
 
 void rendered_part_name(const RenderedPart *part, char *out, size_t size) {

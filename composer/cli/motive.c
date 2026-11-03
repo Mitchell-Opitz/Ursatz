@@ -63,24 +63,6 @@ static void print_help(FILE *out) {
     fprintf(out, "  ursatz-composer motive theme.txt --meter 4/4 --key \"D minor\"\n");
 }
 
-/* "0", "1", "1/2": beats of the beat unit, as whole notes. */
-static bool parse_pickup(const char *text, int beat_unit, PlanTime *out) {
-    char *end = NULL;
-    long numerator = strtol(text, &end, 10);
-    long denominator = 1;
-    if (end == text || numerator < 0) {
-        return false;
-    }
-    if (*end == '/') {
-        const char *rest = end + 1;
-        denominator = strtol(rest, &end, 10);
-        if (end == rest || denominator < 1) {
-            return false;
-        }
-    }
-    return *end == '\0' && plan_time_make(numerator, (unsigned long)(denominator * beat_unit), out) == PLAN_OK;
-}
-
 static int fail(int status, const char *format, ...) {
     va_list args;
     va_start(args, format);
@@ -227,7 +209,7 @@ int run_motive(int argc, char **argv) {
            read after the first load. */
         if (options.pickup_text) {
             PlanTime pickup;
-            if (!parse_pickup(options.pickup_text, motive.meter.beat_unit, &pickup)) {
+            if (!cli_parse_pickup(options.pickup_text, motive.meter.beat_unit, &pickup)) {
                 return fail(EXIT_USAGE, "pickup '%s' is not a number of beats; write 0, 1 or 1/2", options.pickup_text);
             }
             motive_options.has_pickup = true;

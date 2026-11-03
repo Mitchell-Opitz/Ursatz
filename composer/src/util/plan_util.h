@@ -25,4 +25,19 @@ bool plan_melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out);
 /* The piece result of a plan result: OK, an allocation failure, else a bad request. */
 PieceResult piece_result_of_plan(PlanResult result);
 
+/* Adds a node under parent and sets it Given. */
+bool plan_add_given_node(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, NodeId *out);
+
+/* The lane names the plan file and the command lines use, in PlanLaneKind order. */
+#define PLAN_LANE_NAME_COUNT 6
+extern const char *const plan_lane_names[PLAN_LANE_NAME_COUNT];
+/* The name of a lane; "" for a value that is not one. */
+const char *plan_lane_name(PlanLaneKind lane);
+
+/* The fragment position names ("any", "leading", "trailing", "middle"), in PlanFragmentPosition order. */
+#define PLAN_FRAGMENT_POSITION_NAME_COUNT 4
+extern const char *const plan_fragment_position_names[PLAN_FRAGMENT_POSITION_NAME_COUNT];
+/* The name of a fragment position; "any" for a value that is not one. */
+const char *plan_fragment_position_name(long position);
+
 #endif

@@ -7,6 +7,7 @@
 #include <ursatz_composer/motive_sketch_bridge.h>
 
 #include "motive/motive_internal.h"
+#include "util/plan_util.h"
 
 /*
  * The developments of a motive. Each of the kinds applies the library relation of the same name
@@ -125,8 +126,7 @@ void motive_dev_label(const MotiveDevSpec *spec, char *out, size_t size) {
         snprintf(out, size, "retrograde");
         break;
     case MOTIVE_DEV_FRAGMENT: {
-        static const char *const WHERE[] = {"any", "leading", "trailing", "middle"};
-        snprintf(out, size, "fragment %s %zu notes", WHERE[spec->position], spec->length);
+        snprintf(out, size, "fragment %s %zu notes", plan_fragment_position_name(spec->position), spec->length);
         break;
     }
     case MOTIVE_DEV_AUGMENT:

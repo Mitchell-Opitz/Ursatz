@@ -7,24 +7,6 @@
 
 #include "cli_options.h"
 
-/* "0", "1", "1/2": beats of the beat unit, as whole notes. */
-static bool parse_pickup(const char *text, int beat_unit, PlanTime *out) {
-    char *end = NULL;
-    long numerator = strtol(text, &end, 10);
-    long denominator = 1;
-    if (end == text || numerator < 0) {
-        return false;
-    }
-    if (*end == '/') {
-        const char *rest = end + 1;
-        denominator = strtol(rest, &end, 10);
-        if (end == rest || denominator < 1) {
-            return false;
-        }
-    }
-    return *end == '\0' && plan_time_make(numerator, (unsigned long)(denominator * beat_unit), out) == PLAN_OK;
-}
-
 int motive_input_load(const MotiveInput *options, Motive *out) {
     MotiveOptions motive_options;
     memset(&motive_options, 0, sizeof(motive_options));
@@ -76,7 +58,7 @@ int motive_input_load(const MotiveInput *options, Motive *out) {
            read after the first load. */
         if (options->pickup_text) {
             PlanTime pickup;
-            if (!parse_pickup(options->pickup_text, out->meter.beat_unit, &pickup)) {
+            if (!cli_parse_pickup(options->pickup_text, out->meter.beat_unit, &pickup)) {
                 return cli_fail(CLI_EXIT_USAGE, "pickup '%s' is not a number of beats; write 0, 1 or 1/2",
                                 options->pickup_text);
             }

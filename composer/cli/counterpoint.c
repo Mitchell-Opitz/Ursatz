@@ -453,19 +453,8 @@ static void print_result(const Options *options, const Result *results, size_t c
 
 /* --- writing the files ---------------------------------------------------------- */
 
-typedef struct {
-    char final_path[1024];
-    char temporary[1032];
-} Pending;
-
-static void discard(Pending *pending, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        remove(pending[i].temporary);
-    }
-}
-
 /* Every output goes to a temporary file first and is renamed only when every one was written. */
-static int write_files(const Options *options, const Result *results, size_t count, Pending *pending,
+static int write_files(const Options *options, const Result *results, size_t count, CliPendingFile *pending,
                        size_t *pending_count) {
     const char *paths[3] = {options->out_path, options->midi_path, options->musicxml_path};
     int status = 0;
@@ -474,7 +463,7 @@ static int write_files(const Options *options, const Result *results, size_t cou
         RenderedPlan rendered;
         bool have_rendering = false;
         for (int kind = 0; kind < 3 && status == 0; kind++) {
-            Pending *entry = &pending[*pending_count];
+            CliPendingFile *entry = &pending[*pending_count];
             if (!paths[kind]) {
                 continue;
             }
@@ -519,7 +508,7 @@ static int write_files(const Options *options, const Result *results, size_t cou
         }
     }
     if (status != 0) {
-        discard(pending, *pending_count);
+        cli_discard_pending(pending, *pending_count);
     }
     return status;
 }
@@ -601,7 +590,7 @@ int run_counterpoint(int argc, char **argv) {
         fprintf(stderr, "Note: only %zu different counter-melod%s found for this request\n", made, made == 1 ? "y" : "ies");
     }
     if (status == 0) {
-        Pending pending[MAX_FILES];
+        CliPendingFile pending[MAX_FILES];
         const char *files[MAX_FILES];
         size_t pending_count = 0;
         PlanSpan span = {fraction(0, 1), motive.length};

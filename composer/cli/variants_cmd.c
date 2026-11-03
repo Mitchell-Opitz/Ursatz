@@ -325,13 +325,6 @@ typedef struct {
     VariantRecord record;
 } Variant;
 
-/* The motive as text in its own form: a note list, a rhythm or a contour. Caller frees. */
-static char *motive_text(const Motive *motive) {
-    return motive->form == MOTIVE_FORM_RHYTHM    ? motive_to_rhythm_text(motive)
-           : motive->form == MOTIVE_FORM_CONTOUR ? motive_to_contour_text(motive)
-                                                 : motive_to_notes_text(motive);
-}
-
 /* An operation --each-op could not apply to the motive, and why. */
 typedef struct {
     const char *op;
@@ -340,7 +333,7 @@ typedef struct {
 
 static void print_text(unsigned long seed, const Motive *source, const Variant *variants, size_t count,
                        const Skipped *skipped, size_t skipped_count) {
-    char *source_text = motive_text(source);
+    char *source_text = cli_motive_text(source);
     printf("Source: %s\n", source_text ? source_text : "");
     printf("Seed: %lu\n", seed);
     free(source_text);
@@ -350,7 +343,7 @@ static void print_text(unsigned long seed, const Motive *source, const Variant *
         for (size_t s = 0; s < variant->record.step_count; s++) {
             printf("%s %s", s ? "," : "", variant->record.steps[s].op);
         }
-        char *text = motive_text(&variant->motive);
+        char *text = cli_motive_text(&variant->motive);
         printf("\n  %s\n  %s\n", text ? text : "", variant->record.derivation);
         if (variant->record.leaves_harmony) {
             printf("  Warning: %s\n", VARIANT_WARNING_LEAVES_HARMONY);

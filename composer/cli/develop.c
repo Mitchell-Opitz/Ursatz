@@ -17,6 +17,7 @@
 #include <ursatz_composer/motive_develop.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
+#include "util/plan_util.h"
 
 #define EXIT_USAGE CLI_EXIT_USAGE
 #define EXIT_NOTHING CLI_EXIT_UNSATISFIABLE
@@ -302,11 +303,6 @@ typedef struct {
     NodeId target;
 } Scene;
 
-static bool add_node(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan span, NodeId *out) {
-    return plan_add_node(plan, parent, kind, span, NULL, out) == PLAN_OK &&
-           plan_node_set_state(plan, *out, PLAN_STATE_GIVEN) == PLAN_OK;
-}
-
 static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *scene) {
     memset(scene, 0, sizeof(*scene));
     scene->plan = plan_create();
@@ -330,10 +326,10 @@ static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *s
     NodeId section;
     NodeId phrase;
     NodeId idea;
-    bool ok = add_node(scene->plan, PLAN_NODE_NONE, PLAN_NODE_FORM, all, &form) &&
-              add_node(scene->plan, form, PLAN_NODE_SECTION, all, &section) &&
-              add_node(scene->plan, section, PLAN_NODE_PHRASE, all, &phrase) &&
-              add_node(scene->plan, phrase, PLAN_NODE_IDEA, all, &idea) &&
+    bool ok = plan_add_given_node(scene->plan, PLAN_NODE_NONE, PLAN_NODE_FORM, all, &form) &&
+              plan_add_given_node(scene->plan, form, PLAN_NODE_SECTION, all, &section) &&
+              plan_add_given_node(scene->plan, section, PLAN_NODE_PHRASE, all, &phrase) &&
+              plan_add_given_node(scene->plan, phrase, PLAN_NODE_IDEA, all, &idea) &&
               motive_attach(scene->plan, idea, (PlanTime){0, 1}, source, "source", &scene->source, NULL) == PLAN_OK &&
               plan_add_node(scene->plan, idea, PLAN_NODE_MOTIVE, target_span, "development", &scene->target) == PLAN_OK;
     /* The meter and the key, so that a file written from the plan has them. */
@@ -442,10 +438,9 @@ static bool build_ref(const Options *options, Op op, const Motive *source, size_
         ref->amount = (int)value;
     }
     if (options->position_text) {
-        static const char *const NAMES[] = {"any", "leading", "trailing", "middle"};
         int found = 0;
         for (int i = 1; i < 4; i++) {
-            if (strcmp(options->position_text, NAMES[i]) == 0) {
+            if (strcmp(options->position_text, plan_fragment_position_names[i]) == 0) {
                 found = i;
             }
         }

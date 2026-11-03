@@ -144,17 +144,10 @@ static int read_request(const Options *options, MotiveRandomOptions *out) {
     return 0;
 }
 
-/* The motive as text in its own form: a note list, a rhythm or a contour. Caller frees. */
-static char *motive_text(const Motive *motive) {
-    return motive->form == MOTIVE_FORM_RHYTHM    ? motive_to_rhythm_text(motive)
-           : motive->form == MOTIVE_FORM_CONTOUR ? motive_to_contour_text(motive)
-                                                 : motive_to_notes_text(motive);
-}
-
 static void print_text(unsigned long seed, const Motive *motives, size_t count) {
     printf("Seed: %lu\n", seed);
     for (size_t i = 0; i < count; i++) {
-        char *text = motive_text(&motives[i]);
+        char *text = cli_motive_text(&motives[i]);
         printf("\nMotive %zu: %s\n", i + 1, text ? text : "");
         free(text);
         if (motives[i].form == MOTIVE_FORM_FULL) {

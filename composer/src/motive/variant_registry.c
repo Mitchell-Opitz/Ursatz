@@ -11,6 +11,7 @@
 
 #include "motive/motive_internal.h"
 #include "plan/plan_json_internal.h"
+#include "util/plan_util.h"
 
 /*
  * The registry table. Parameters are in the order the operation's apply and describe functions read them; the
@@ -37,11 +38,6 @@ static long value_or(const VariantValue *value, long fallback) {
 static void spec_init(MotiveDevSpec *spec, MotiveDevKind kind) {
     memset(spec, 0, sizeof(*spec));
     spec->kind = kind;
-}
-
-static const char *position_name(long position) {
-    static const char *const NAMES[] = {"any", "leading", "trailing", "middle"};
-    return position >= 0 && position <= 3 ? NAMES[position] : "any";
 }
 
 /* ----------------------------------------------------------------- exact */
@@ -189,7 +185,7 @@ static MotiveDevResult apply_fragment(const Motive *source, const VariantValue *
 
 static void describe_fragment(const VariantValue *values, char *out, size_t size) {
     long length = value_or(&values[FRAGMENT_LENGTH], 0);
-    snprintf(out, size, "cut to the %s %ld note%s", position_name(value_or(&values[FRAGMENT_POSITION], 0)), length,
+    snprintf(out, size, "cut to the %s %ld note%s", plan_fragment_position_name(value_or(&values[FRAGMENT_POSITION], 0)), length,
              length == 1 ? "" : "s");
 }
 
