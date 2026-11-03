@@ -159,4 +159,21 @@ ComposerStatus composer_api_random_motive(const char *request_json, const Compos
  */
 ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
+/*
+ * Composes a piece (docs/piece-request.md): the loop version and the ending version built from it, or the loop plan of an
+ * earlier piece with one section written again. Request: {"request": <the piece request: schema "ursatz-piece-request"
+ * version 1, a theme fill carrying "plan": <plan object> and, for the display, "source": <a name> instead of a path>,
+ * "from": <the loop plan object of an earlier piece, or absent>, "regenerate": {"section": <section id>|null, "lanes":
+ * ["harmony"|"bass"|"melody"|"inner", ...] (none or "all": the whole section)} (null section: only the ending version is
+ * built again; needs "from"), "seed" (0 to 4294967295; default from the clock), "check", "style" (a style model path that
+ * replaces the request's), "midi", "musicxml" (the loop version's files), "ending_musicxml" (the ending version's MusicXML as
+ * "ending_musicxml" in the document; the ending version's MIDI file is composer_api_export of "plans"."ending"), "plain_midi", "explain" ("text" or "json": the
+ * explanation of both versions in the document)}. json: what `piece --format json` prints (without the files it wrote), with
+ * "plans": {"loop": <plan object>, "ending": <plan object>}, the "plan" of each version null, and "explanation" when asked; a
+ * section a regenerate left as it was has "in_scope": false. plan_json: the loop plan. midi and musicxml: the loop version's
+ * files, when asked (the MIDI file has the loopStart and loopEnd markers). Progress per seed ("seed") and per compose stage; a
+ * cancel is COMPOSER_ERR_CANCELLED with no partial plan. A theme fill with a path in "plan" is refused with its path.
+ */
+ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
 #endif

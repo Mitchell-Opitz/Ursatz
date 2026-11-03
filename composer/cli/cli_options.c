@@ -402,22 +402,12 @@ int cli_check_target(CliTargetOptions *options, const char *command, const char 
     options->has_lane = false;
     if (options->lane_text) {
         options->has_lane = true;
-        if (request_equals_ignore_case(options->lane_text, "harmony")) {
-            options->lane = PLAN_LANE_HARMONY;
-        } else if (request_equals_ignore_case(options->lane_text, "bass")) {
-            options->lane = PLAN_LANE_BASS;
-        } else if (request_equals_ignore_case(options->lane_text, "melody")) {
-            options->lane = PLAN_LANE_MELODY;
-        } else if (request_equals_ignore_case(options->lane_text, "inner")) {
-            options->lane = PLAN_LANE_INNER_VOICE;
-        } else {
+        if (!api_lane_from_name(options->lane_text, &options->lane)) {
             return cli_fail(CLI_EXIT_USAGE, "--lane must be harmony, bass, melody or inner, not '%s'", options->lane_text);
         }
     }
     return 0;
 }
-
-static const char *const TARGET_LANE_LABELS[] = {"meter", "key", "harmony", "bass", "melody", "inner voice"};
 
 /* The node the options name, or the exit status of the error it printed. */
 int cli_find_target_node(const PiecePlan *plan, const CliTargetOptions *options, bool quiet, NodeId *out) {
@@ -452,27 +442,10 @@ int cli_find_targets(const PiecePlan *plan, const CliTargetOptions *options, Fil
     if (status != 0) {
         return status;
     }
-    *out = calloc(plan_lane_span_count(plan) + 1, sizeof(FillTarget));
-    *count = 0;
-    if (!*out) {
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
-    }
-    if (!options->has_lane) {
-        (*out)[(*count)++] = (FillTarget){FILL_TARGET_NODE, node};
-        return 0;
-    }
-    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
-        if (plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == options->lane &&
-            plan_in_subtree(plan, plan_lane_span_owner(plan, id), node)) {
-            (*out)[(*count)++] = (FillTarget){FILL_TARGET_LANE_SPAN, id};
-        }
-    }
-    if (*count == 0) {
-        free(*out);
-        *out = NULL;
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "node %zu has no %s spans", (size_t)node, TARGET_LANE_LABELS[options->lane]);
-    }
-    return 0;
+    ComposerError error;
+    memset(&error, 0, sizeof error);
+    ComposerStatus found = api_lane_targets(plan, node, options->has_lane, options->lane, out, count, &error);
+    return found == COMPOSER_OK ? 0 : cli_fail_api(found, &error, NULL);
 }
 
 /* The name of the target in words: "section B", "node 12", "the harmony of section B". */
@@ -493,29 +466,16 @@ void cli_describe_target(const PiecePlan *plan, const CliTargetOptions *options,
         }
     }
     if (options->has_lane) {
-        snprintf(out, size, "the %s of %s", TARGET_LANE_LABELS[options->lane], what);
+        snprintf(out, size, "the %s of %s", api_lane_label(options->lane), what);
     } else {
         snprintf(out, size, "%s", what);
     }
 }
 
 int cli_report_refused(RegenerateResult result, const char *what) {
-    switch (result) {
-    case REGENERATE_ERR_LOCKED:
-        return cli_fail(CLI_EXIT_UNSATISFIABLE,
-                        "%s is Given (locked) or has Given material among its phrases; locking is for good in a plan, to unlock go "
-                        "back to an earlier plan file",
-                        what);
-    case REGENERATE_ERR_BAD_TARGET:
-        return cli_fail(CLI_EXIT_UNSATISFIABLE,
-                        "%s cannot be regenerated: a motive, the material, the meter and key, and spans the Composer did not "
-                        "open have nothing to write again",
-                        what);
-    case REGENERATE_ERR_NOT_FOUND:
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "%s is not in the plan", what);
-    default:
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot regenerate %s: %s", what, regenerate_result_name(result));
-    }
+    ComposerError error;
+    memset(&error, 0, sizeof error);
+    return cli_fail_api(api_refused(result, what, &error), &error, NULL);
 }
 
 void cli_discard_pending(CliPendingFile *pending, size_t count) {
