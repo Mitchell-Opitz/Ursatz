@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "cli_options.h"
+#include "util/util.h"
 
 #include <ursatz_composer/counterpoint.h>
 #include <ursatz_composer/export.h>
@@ -311,8 +312,7 @@ static bool write_one(const Options *options, const Motive *motive, unsigned lon
 /* --- printing ----------------------------------------------------------------------- */
 
 static void pitch_name(int pitch, char *out, size_t size) {
-    static const char *const NAMES[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
-    snprintf(out, size, "%s%d", NAMES[((pitch % 12) + 12) % 12], pitch / 12 - 1);
+    util_pitch_name(pitch, false, out, size);
 }
 
 /* A length as w, h, q, e, s or t with up to two dots, else as a fraction of a whole note. */

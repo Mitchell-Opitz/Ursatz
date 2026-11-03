@@ -1,6 +1,7 @@
 #include "progression.h"
 
 #include "cli_options.h"
+#include "util/util.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -646,8 +647,7 @@ static const char *function_name(PlanHarmonicFunction function) {
 }
 
 static void pitch_name(int midi, char *out, size_t size) {
-    static const char *const NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    snprintf(out, size, "%s%d", NAMES[((midi % 12) + 12) % 12], midi / 12 - 1);
+    util_pitch_name(midi, false, out, size);
 }
 
 typedef struct {

@@ -38,15 +38,11 @@
 static const char MELODY_VOICE[] = "melody";
 static const char BASS_VOICE[] = "bass";
 
-static int pitch_class(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
-
 /* The scale degree a pitch is spelled as in the key; the altered degrees share the degree of the natural one. */
 static int pitch_degree(const PlanKey *key, int pitch) {
     static const int MAJOR[12] = {1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7};
     static const int MINOR[12] = {1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7};
-    int offset = pitch_class(pitch - key->tonic_pitch_class);
+    int offset = util_pitch_class(pitch - key->tonic_pitch_class);
     return (key->mode == PLAN_MODE_MINOR ? MINOR : MAJOR)[offset];
 }
 
@@ -116,7 +112,7 @@ static void check_basics(const MelodyCandidate *melody, PhraseVerdict *verdict) 
         const MelodyNote *note = &melody->notes[i];
         if (note->pitch < melody->params.range_low || note->pitch > melody->params.range_high) {
             verdict->hard = "outside the melody range";
-        } else if (melody_on_cell(context, note->onset) && !(context->chord_mask[note->chord] & (1u << pitch_class(note->pitch))) &&
+        } else if (melody_on_cell(context, note->onset) && !(context->chord_mask[note->chord] & (1u << util_pitch_class(note->pitch))) &&
                    !(melody->params.nct_types & strong_figures)) {
             verdict->hard = "strong beat without a chord tone";
         }
@@ -331,7 +327,7 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
             samples++;
             break;
         }
-        unsigned pitch_bit = 1u << pitch_class(melody->notes[m].pitch);
+        unsigned pitch_bit = 1u << util_pitch_class(melody->notes[m].pitch);
         size_t sounding = context->bass[b].chord;
         if (!standard_counterpoint_pitches_consonant(lower[samples], upper[samples]) &&
             (context->chord_mask[sounding] & pitch_bit) && !(context->chord_seventh[sounding] & pitch_bit)) {
@@ -611,7 +607,7 @@ bool melody_judge(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     }
     /* The cadence arrives on its stable tone: the tonic for a PAC, the third for an IAC. */
     if (ok && !verdict->hard &&
-        !(melody_cadence_mask(&melody->context) & (1u << pitch_class(melody->notes[melody->count - 1].pitch)))) {
+        !(melody_cadence_mask(&melody->context) & (1u << util_pitch_class(melody->notes[melody->count - 1].pitch)))) {
         verdict->hard = "cadence without its stable tone";
     }
     if (ok && !verdict->hard) {

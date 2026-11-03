@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <pitch/pitch_arithmetic.h>
+#include <standard-tonality/tonal_key.h>
+
 int util_absolute(int value) {
     return value < 0 ? -value : value;
 }
@@ -18,6 +21,26 @@ unsigned util_bits_set(unsigned bits) {
 
 int util_sign(int value) {
     return value > 0 ? 1 : (value < 0 ? -1 : 0);
+}
+
+int util_pitch_class(int pitch) {
+    return ((pitch % PITCH_SEMITONES_PER_OCTAVE) + PITCH_SEMITONES_PER_OCTAVE) % PITCH_SEMITONES_PER_OCTAVE;
+}
+
+void util_pitch_name(int midi_pitch, bool prefer_flats, char *out, size_t size) {
+    snprintf(out, size, "%s%d", pitch_class_name(util_pitch_class(midi_pitch), prefer_flats),
+             midi_pitch / PITCH_SEMITONES_PER_OCTAVE - 1);
+}
+
+void util_key_name(int tonic_pitch_class, bool minor, char *out, size_t size) {
+    PitchLetter letter;
+    int accidental;
+    char tonic[8];
+    if (!standard_tonality_key_tonic_of_pitch_class(util_pitch_class(tonic_pitch_class), minor, &letter, &accidental) ||
+        !pitch_spelling_name(letter, accidental, tonic, sizeof(tonic))) {
+        snprintf(tonic, sizeof(tonic), "?");
+    }
+    snprintf(out, size, "%s %s", tonic, minor ? "minor" : "major");
 }
 
 char *util_copy_string(const char *text) {

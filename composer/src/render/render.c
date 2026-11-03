@@ -7,9 +7,12 @@
 #include <core/provenance_reference.h>
 #include <core/voice_reference.h>
 #include <identity/entity_id.h>
+#include <pitch/key_signature.h>
+#include <pitch/pitch_arithmetic.h>
 #include <pitch/pitch_identity.h>
 #include <pitch/pitch_spelling.h>
 #include <pitch/tuning_system.h>
+#include <standard-tonality/tonal_key.h>
 #include <time/duration.h>
 #include <time/note_value.h>
 #include <time/temporal_anchor.h>
@@ -176,12 +179,22 @@ static bool in_range(PlanSpan span, PlanLaneKind lane, const PlanSpan *range) {
 
 /* ----------------------------------------------------------------- keys */
 
-/* The signature of each major key by tonic pitch class; ties between sharps and flats (F# or Gb) go to sharps. */
-static const int MAJOR_SHARPS_FLATS[12] = {0, -5, 2, -3, 4, -1, 6, 1, -4, 3, -2, 5};
+/* The tonic of a key as the library spells it: the fewest accidentals in the signature, sharps on a tie. */
+static bool key_tonic(const PlanKey *key, PitchLetter *letter, int *accidental) {
+    return standard_tonality_key_tonic_of_pitch_class(key->tonic_pitch_class, key->mode == PLAN_MODE_MINOR, letter,
+                                                      accidental);
+}
 
+/* The signature of a key as sharps (positive) or flats (negative); 0 for a tonic the library cannot spell. */
 static int key_sharps_flats(const PlanKey *key) {
-    int tonic = key->mode == PLAN_MODE_MINOR ? (key->tonic_pitch_class + 3) % 12 : key->tonic_pitch_class;
-    return MAJOR_SHARPS_FLATS[tonic];
+    PitchLetter letter;
+    int accidental;
+    int fifths = 0;
+    if (!key_tonic(key, &letter, &accidental) ||
+        !standard_tonality_key_fifths(letter, accidental, key->mode == PLAN_MODE_MINOR, &fifths)) {
+        return 0;
+    }
+    return fifths;
 }
 
 typedef struct {
@@ -194,15 +207,15 @@ static bool starts_before(PlanSpan a, PlanSpan b) {
     return plan_time_compare(a.start, b.start) < 0;
 }
 
-/* The sharps_flats of the last key that starts at or before onset, or 0 when none does. */
-static int key_in_force(const KeySource *keys, size_t count, PlanTime onset) {
-    int sharps_flats = 0;
+/* The last key that starts at or before onset, or NULL when none does. */
+static const PlanKey *key_in_force(const KeySource *keys, size_t count, PlanTime onset) {
+    const PlanKey *in_force = NULL;
     for (size_t i = 0; i < count; i++) {
         if (plan_time_compare(keys[i].plan_span.start, onset) <= 0) {
-            sharps_flats = key_sharps_flats(&keys[i].key);
+            in_force = &keys[i].key;
         }
     }
-    return sharps_flats;
+    return in_force;
 }
 
 /* --------------------------------------------------------------- spelling */
@@ -212,18 +225,53 @@ typedef struct {
     int accidental;
 } Spelling;
 
-static Spelling spell(int midi_pitch, int sharps_flats) {
-    static const Spelling SHARPS[12] = {
-        {PITCH_LETTER_C, 0}, {PITCH_LETTER_C, 1}, {PITCH_LETTER_D, 0}, {PITCH_LETTER_D, 1},
-        {PITCH_LETTER_E, 0}, {PITCH_LETTER_F, 0}, {PITCH_LETTER_F, 1}, {PITCH_LETTER_G, 0},
-        {PITCH_LETTER_G, 1}, {PITCH_LETTER_A, 0}, {PITCH_LETTER_A, 1}, {PITCH_LETTER_B, 0},
-    };
-    static const Spelling FLATS[12] = {
-        {PITCH_LETTER_C, 0}, {PITCH_LETTER_D, -1}, {PITCH_LETTER_D, 0}, {PITCH_LETTER_E, -1},
-        {PITCH_LETTER_E, 0}, {PITCH_LETTER_F, 0},  {PITCH_LETTER_G, -1}, {PITCH_LETTER_G, 0},
-        {PITCH_LETTER_A, -1}, {PITCH_LETTER_A, 0}, {PITCH_LETTER_B, -1}, {PITCH_LETTER_B, 0},
-    };
-    return (sharps_flats < 0 ? FLATS : SHARPS)[midi_pitch % 12];
+/* The line of fifths a chromatic note is spelled on: sharps in a sharp key or none, flats in a flat key. */
+#define SHARPS_LOWEST_FIFTHS (-1)
+#define FLATS_LOWEST_FIFTHS (-6)
+
+/*
+ * A pitch as written in a key (none: C major). A note of the key's scale takes its signature spelling; any other is
+ * placed on the line of fifths, its sharp spelling in a sharp key or none, its flat spelling in a flat key.
+ */
+static Spelling spell(int midi_pitch, const PlanKey *key) {
+    int pitch_class = ((midi_pitch % PITCH_SEMITONES_PER_OCTAVE) + PITCH_SEMITONES_PER_OCTAVE) % PITCH_SEMITONES_PER_OCTAVE;
+    int sharps_flats = key ? key_sharps_flats(key) : 0;
+    PitchLetter tonic_letter = PITCH_LETTER_C;
+    int tonic_accidental = 0;
+    KeySignature *signature = NULL;
+    if (key && key_tonic(key, &tonic_letter, &tonic_accidental) &&
+        standard_tonality_key_signature_of(tonic_letter, tonic_accidental, key->mode == PLAN_MODE_MINOR, &signature)) {
+        for (int step = 0; step < 7; step++) {
+            PitchLetter letter = pitch_letter_offset(PITCH_LETTER_C, step);
+            int accidental = 0;
+            for (size_t i = 0; i < key_signature_entry_count(signature); i++) {
+                if (key_signature_letter_at(signature, i) == letter) {
+                    accidental = key_signature_accidental_at(signature, i);
+                }
+            }
+            if (pitch_class_of_letter(letter, accidental) == pitch_class) {
+                key_signature_destroy(signature);
+                Spelling written = {letter, accidental};
+                return written;
+            }
+        }
+        key_signature_destroy(signature);
+    }
+    int lowest = sharps_flats < 0 ? FLATS_LOWEST_FIFTHS : SHARPS_LOWEST_FIFTHS;
+    int fifths = lowest;
+    while (((fifths * 7) % PITCH_SEMITONES_PER_OCTAVE + PITCH_SEMITONES_PER_OCTAVE) % PITCH_SEMITONES_PER_OCTAVE !=
+           pitch_class) {
+        fifths++;
+    }
+    Spelling written;
+    pitch_spelling_from_fifths(fifths, &written.letter, &written.accidental);
+    return written;
+}
+
+/* The octave that makes the spelling sound at midi_pitch (octave 4 C is 60), as pitch_spelling_midi_number counts. */
+static int spelling_octave(int midi_pitch, Spelling written) {
+    int semitones = pitch_letter_semitone(written.letter) + written.accidental;
+    return (midi_pitch - semitones) / PITCH_SEMITONES_PER_OCTAVE - 1;
 }
 
 /* ------------------------------------------------------------------ notes */
@@ -276,7 +324,7 @@ static size_t find_part(const RenderedPart *parts, size_t count, PlanLaneKind la
 }
 
 /* Builds one NoteEvent and its pitch value. Everything is freed again on failure. */
-static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *part, int sharps_flats,
+static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *part, const PlanKey *key,
                                    const TuningSystem *tuning, NoteEvent **out_event,
                                    PitchNumericValue **out_value) {
     EntityID *id = NULL;
@@ -292,7 +340,7 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
     char text[96];
 
     snprintf(text, sizeof(text), "composer-span-%zu-note-%zu", note->span, note->index);
-    Spelling written = spell(note->midi_pitch, sharps_flats);
+    Spelling written = spell(note->midi_pitch, key);
     bool ok = entity_id_create(text, &id) == ENTITY_ID_OK &&
               musical_time_create(note->onset.num, note->onset.den, &position) == MUSICAL_TIME_OK &&
               temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK;
@@ -302,7 +350,7 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
     ok = ok && duration_create(note->duration.num, note->duration.den, &duration) == DURATION_OK &&
          pitch_numeric_value_create(tuning, note->midi_pitch, 1, &value) == PITCH_NUMERIC_VALUE_OK &&
          pitch_numeric_value_to_identity(value, &identity) == PITCH_NUMERIC_VALUE_TO_IDENTITY_OK &&
-         pitch_spelling_create(written.letter, written.accidental, note->midi_pitch / 12 - 1, &spelling) ==
+         pitch_spelling_create(written.letter, written.accidental, spelling_octave(note->midi_pitch, written), &spelling) ==
              PITCH_SPELLING_OK;
     rendered_part_voice_id(part, text, sizeof(text));
     ok = ok && entity_id_create(text, &voice_id) == ENTITY_ID_OK &&
@@ -580,10 +628,10 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
         }
     }
     for (size_t i = 0; result == PLAN_RENDER_OK && i < note_count; i++) {
-        int sharps_flats = key_in_force(keys, key_count, notes[i].onset);
+        const PlanKey *key = key_in_force(keys, key_count, notes[i].onset);
         NoteSource placed = notes[i];
         placed.onset = from_range_start(placed.onset, range);
-        result = build_note(&placed, &out->parts[notes[i].part], sharps_flats, tuning, &out->events[i],
+        result = build_note(&placed, &out->parts[notes[i].part], key, tuning, &out->events[i],
                             &out->pitch_values[i]);
         if (result == PLAN_RENDER_OK) {
             out->part_index[i] = notes[i].part;

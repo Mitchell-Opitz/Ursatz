@@ -9,6 +9,7 @@
 #include "motive/motive_internal.h"
 #include <ursatz_composer/motive_sketch_bridge.h>
 #include "plan/plan_json_internal.h"
+#include "util/util.h"
 
 static long floor_div(long a, long b) {
     long quotient = a / b;
@@ -41,8 +42,7 @@ void motive_duration_name(PlanTime duration, char *out, size_t size) {
 }
 
 void motive_pitch_name(int midi_pitch, char *out, size_t size) {
-    static const char *const NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
-    snprintf(out, size, "%s%d", NAMES[((midi_pitch % 12) + 12) % 12], midi_pitch / 12 - 1);
+    util_pitch_name(midi_pitch, false, out, size);
 }
 
 /* ---------------------------------------------------------------- degrees */

@@ -17,10 +17,6 @@ typedef struct {
     int distance;
 } Option;
 
-static int pitch_class(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
-
 /* The leaps standard-counterpoint allows: up to a fifth, the ascending minor sixth, and the octave. */
 static bool leap_allowed(int distance) {
     int size = util_absolute(distance);
@@ -31,7 +27,7 @@ static bool leap_allowed(int distance) {
 static size_t options_for(unsigned mask, int low, int high, int ideal, Option *out) {
     size_t count = 0;
     for (int pitch = low; pitch <= high && count < MAX_OPTIONS; pitch++) {
-        if ((mask >> pitch_class(pitch)) & 1u) {
+        if ((mask >> util_pitch_class(pitch)) & 1u) {
             Option option = {pitch, util_absolute(pitch - ideal)};
             size_t at = count++;
             while (at > 0 && (out[at - 1].distance > option.distance)) {
@@ -178,7 +174,7 @@ bool melody_is_anchor(const MelodyContext *context, const MelodyFillParams *para
 static bool chord_tone_of_all(const MelodyContext *context, const MelodyNote *note, int pitch) {
     long end = note->onset + note->duration;
     for (size_t c = note->chord; c < context->count && context->chord_start[c] < end; c++) {
-        if (!((context->chord_mask[c] >> pitch_class(pitch)) & 1u)) {
+        if (!((context->chord_mask[c] >> util_pitch_class(pitch)) & 1u)) {
             return false;
         }
     }
@@ -224,7 +220,7 @@ static bool figure_pitch(const MelodyContext *context, const MelodyFillParams *p
             int try_pitch = candidates[c];
             bool tone = chord_tone_of_all(context, note, try_pitch);
             if ((pass == 0) == tone || try_pitch < params->range_low || try_pitch > params->range_high ||
-                (type != NON_CHORD_TONE_ANTICIPATION && !((scale >> pitch_class(try_pitch)) & 1u)) ||
+                (type != NON_CHORD_TONE_ANTICIPATION && !((scale >> util_pitch_class(try_pitch)) & 1u)) ||
                 !leap_allowed(try_pitch - before) || !leap_allowed(after - try_pitch)) {
                 continue;
             }
@@ -450,7 +446,7 @@ static MelodyFillParams arch_params(const MelodyContext *context, const MelodyFi
 static int scale_step(unsigned scale, int from, int direction, int low, int high) {
     for (int distance = 1; distance <= 2; distance++) {
         int pitch = from + direction * distance;
-        if (pitch >= low && pitch <= high && ((scale >> pitch_class(pitch)) & 1u)) {
+        if (pitch >= low && pitch <= high && ((scale >> util_pitch_class(pitch)) & 1u)) {
             return pitch;
         }
     }
@@ -498,14 +494,14 @@ static bool place_pickup(const MelodyContext *context, const MelodyFillParams *p
     size_t tones = 0;
     for (int pitch = target - 2; pitch <= target + 2; pitch++) {
         if (pitch != target && pitch >= params->range_low && pitch <= params->range_high &&
-            ((scale >> pitch_class(pitch)) & 1u)) {
+            ((scale >> util_pitch_class(pitch)) & 1u)) {
             options[steps++] = pitch;
         }
     }
     int chord_tones[16];
     for (int pitch = target - 5; context->pickup_mask != 0 && pitch <= target + 5; pitch++) {
         if (pitch != target && util_absolute(pitch - target) > 2 && pitch >= params->range_low &&
-            pitch <= params->range_high && ((context->pickup_mask >> pitch_class(pitch)) & 1u)) {
+            pitch <= params->range_high && ((context->pickup_mask >> util_pitch_class(pitch)) & 1u)) {
             chord_tones[tones++] = pitch;
         }
     }
