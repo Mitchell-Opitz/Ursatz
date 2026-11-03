@@ -88,6 +88,25 @@ static void test_export(void) {
     assert(response.midi && response.midi_size < midi_size);
     composer_response_destroy(&response);
 
+    /* The plan file text is the plan as the library writes plan files; with no format asked for, nothing is rendered. */
+    request = export_request(plan_text, "\"plan_file\":true");
+    assert(composer_api_export(request, NULL, &response) == COMPOSER_OK);
+    free(request);
+    assert(response.plan_json && strstr(response.plan_json, "\"format\": \"ursatz-composer-plan\""));
+    assert(!response.midi && !response.musicxml);
+    /* The text is a plan file: it exports to the same MIDI. */
+    request = export_request(response.plan_json, "\"midi\":true");
+    composer_response_destroy(&response);
+    assert(composer_api_export(request, NULL, &response) == COMPOSER_OK);
+    free(request);
+    assert(response.midi && response.midi_size == midi_size && memcmp(response.midi, midi, midi_size) == 0);
+    composer_response_destroy(&response);
+    request = export_request(plan_text, "\"plan_file\":true,\"midi\":true");
+    assert(composer_api_export(request, NULL, &response) == COMPOSER_OK);
+    free(request);
+    assert(response.plan_json && response.midi && response.midi_size == midi_size);
+    composer_response_destroy(&response);
+
     free(plan_text);
     free(midi);
 }
@@ -112,6 +131,9 @@ static void test_refusals(void) {
     free(request);
     request = export_request(plan_text, "\"midi\":\"yes\"");
     expect_refused(request, COMPOSER_ERR_REQUEST, "/midi");
+    free(request);
+    request = export_request(plan_text, "\"plan_file\":\"yes\"");
+    expect_refused(request, COMPOSER_ERR_REQUEST, "/plan_file");
     free(request);
     free(plan_text);
 
