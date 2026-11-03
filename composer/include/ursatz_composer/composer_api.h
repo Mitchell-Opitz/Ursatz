@@ -15,7 +15,7 @@
  */
 
 #define COMPOSER_API_VERSION_MAJOR 0
-#define COMPOSER_API_VERSION_MINOR 7
+#define COMPOSER_API_VERSION_MINOR 8
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -307,5 +307,29 @@ ComposerStatus composer_api_develop(const char *request_json, const ComposerJob 
  * and per seed tried ("grow"); a cancel is COMPOSER_ERR_CANCELLED with no partial plan.
  */
 ComposerStatus composer_api_grow(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * The words an application offers and the requests accept, in the order an application shows them (R-270: the Composer's
+ * lists win). json: {"meters": [{"value", "label", "beats", "chord_onset_step", "second_chord_beat" (only for a meter whose
+ * bar takes a second chord)}], "modes", "piece_modes" (modes and "style"), "keys" (the 24 keys spelled by the Composer),
+ * "pitch_class_names": [{"value": 0 to 11, "major", "minor"}], "cadences" and "theme_cadences", "pickups" ({"<meter>":
+ * ["0", "1/2", ...]} in beats), "motive_forms", "roles", "functions", "distances", "theme_slots", "theme_ideas" (each with
+ * its "slot"), "theme_motive_categories", "theme_pools", "accompaniment_patterns", "piece_parts", "piece_intos",
+ * "fill_kinds", "tone_labels" (each with an "abbreviation"), "variant_operations" (what composer_api_variant_operations
+ * gives)}. Every list but those noted is [{"value", "label"}]; a request accepts every value.
+ */
+ComposerStatus composer_api_vocabulary(ComposerResponse *out);
+
+/*
+ * Reads a request as its entry does and composes nothing. kind: "motive" (the request of composer_api_motive), "theme" (of
+ * composer_api_theme), "piece" (the piece request object, docs/piece-request.md, not the wrapper of composer_api_piece) or
+ * "random_motive" (of composer_api_random_motive). json: {"request": <the request with the Composer's defaults filled>}: a
+ * motive gets its "meter", "role", "input" "format" and "form" when it has none and its "harmony" as [{"numeral", "onset"}]
+ * (the onset in beats of the meter, as "3/2"); a piece gets the "cadence" of every section that has none and the default
+ * ending section; a random motive gets its "seed" and the "mode" and "meter" a "random" drew; a theme comes back as it is.
+ * A request that an entry would refuse is refused the same way, with its message and path. An unknown kind is
+ * COMPOSER_ERR_REQUEST with path /kind.
+ */
+ComposerStatus composer_api_validate(const char *kind, const char *request_json, ComposerResponse *out);
 
 #endif

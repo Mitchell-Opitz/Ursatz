@@ -17,6 +17,7 @@
 
 #include "api_grow.h"
 #include "api_internal.h"
+#include "api_vocabulary.h"
 #include "util/request_parse.h"
 
 /*
@@ -46,7 +47,6 @@ typedef struct {
     const cJSON *accompaniment_motive; /* the "motive" member of an accompaniment of pattern "motive" */
 } ThemeRequest;
 
-static const char *const SLOT_KEYS[GROW_SLOT_COUNT] = {"basic", "contrasting", "continuation", "cadential"};
 
 /* The path of a request motive: "/motives/<index>". */
 static void motive_path(char *out, size_t size, size_t index) {
@@ -62,7 +62,7 @@ static ComposerStatus read_slots(ThemeRequest *theme, const cJSON *request, Comp
     for (const cJSON *entry = slots->child; entry; entry = entry->next) {
         bool known = false;
         for (int s = 0; s < GROW_SLOT_COUNT; s++) {
-            known = known || strcmp(entry->string, SLOT_KEYS[s]) == 0;
+            known = known || strcmp(entry->string, API_THEME_SLOTS[s].value) == 0;
         }
         if (!known) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/slots",
@@ -70,9 +70,9 @@ static ComposerStatus read_slots(ThemeRequest *theme, const cJSON *request, Comp
         }
     }
     for (int s = 0; s < GROW_SLOT_COUNT; s++) {
-        const cJSON *named = cJSON_GetObjectItemCaseSensitive(slots, SLOT_KEYS[s]);
+        const cJSON *named = cJSON_GetObjectItemCaseSensitive(slots, API_THEME_SLOTS[s].value);
         char path[64];
-        snprintf(path, sizeof path, "/slots/%s", SLOT_KEYS[s]);
+        snprintf(path, sizeof path, "/slots/%s", API_THEME_SLOTS[s].value);
         if (!named || cJSON_IsNull(named)) {
             if (s == GROW_SLOT_BASIC) {
                 return api_fail(error, COMPOSER_ERR_REQUEST, "/slots/basic", "the request needs a basic slot");
@@ -80,7 +80,7 @@ static ComposerStatus read_slots(ThemeRequest *theme, const cJSON *request, Comp
             continue;
         }
         if (!cJSON_IsString(named)) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, path, "slot '%s' must name a motive by its id", SLOT_KEYS[s]);
+            return api_fail(error, COMPOSER_ERR_REQUEST, path, "slot '%s' must name a motive by its id", API_THEME_SLOTS[s].value);
         }
         const RequestMotive *found = NULL;
         for (size_t m = 0; m < theme->motive_count; m++) {
@@ -90,7 +90,7 @@ static ComposerStatus read_slots(ThemeRequest *theme, const cJSON *request, Comp
         }
         if (!found) {
             return api_fail(error, COMPOSER_ERR_REQUEST, path, "slot '%s' names the motive '%s', which the request does not have",
-                            SLOT_KEYS[s], named->valuestring);
+                            API_THEME_SLOTS[s].value, named->valuestring);
         }
         theme->slot_motive[s] = found->json;
         theme->slot_motive_id[s] = found->id;
@@ -768,5 +768,18 @@ ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *j
         composer_response_destroy(out);
         out->error = error;
     }
+    return status;
+}
+
+ComposerStatus api_theme_validate(const cJSON *request, ComposerError *error) {
+    ThemeState state;
+    memset(&state, 0, sizeof(state));
+    ThemeOutputs outputs;
+    memset(&outputs, 0, sizeof(outputs));
+    state.request = cJSON_Duplicate(request, true);
+    ComposerStatus status = state.request ? theme_prepare(&state, NULL, &outputs, error) : fail_alloc(error);
+    free(state.material);
+    composer_style_destroy(state.style);
+    cJSON_Delete(state.request);
     return status;
 }

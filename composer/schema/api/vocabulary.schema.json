@@ -1,0 +1,303 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/vocabulary.schema.json",
+  "title": "composer_api_vocabulary response",
+  "description": "The words an application offers and the requests accept (docs/api.md, \"Vocabularies\").",
+  "type": "object",
+  "required": [
+    "meters",
+    "modes",
+    "piece_modes",
+    "keys",
+    "cadences",
+    "theme_cadences",
+    "motive_forms",
+    "roles",
+    "functions",
+    "distances",
+    "theme_slots",
+    "theme_motive_categories",
+    "theme_pools",
+    "accompaniment_patterns",
+    "piece_parts",
+    "piece_intos",
+    "fill_kinds",
+    "pitch_class_names",
+    "pickups",
+    "theme_ideas",
+    "tone_labels",
+    "variant_operations"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "meters": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/meter"
+      }
+    },
+    "modes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "piece_modes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "keys": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "cadences": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "theme_cadences": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "motive_forms": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "roles": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "functions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "distances": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "theme_slots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "theme_motive_categories": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "theme_pools": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "accompaniment_patterns": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "piece_parts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "piece_intos": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "fill_kinds": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "pitch_class_names": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "required": [
+          "value",
+          "major",
+          "minor"
+        ],
+        "properties": {
+          "value": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 11
+          },
+          "major": {
+            "type": "string"
+          },
+          "minor": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "pickups": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "string",
+          "pattern": "^[0-9]+(/[0-9]+)?$"
+        }
+      }
+    },
+    "theme_ideas": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/idea"
+      }
+    },
+    "tone_labels": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/tone"
+      }
+    },
+    "variant_operations": {
+      "type": "object",
+      "required": [
+        "operations"
+      ]
+    }
+  },
+  "$defs": {
+    "choice": {
+      "type": "object",
+      "required": [
+        "value",
+        "label"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "meter": {
+      "type": "object",
+      "required": [
+        "value",
+        "label",
+        "beats",
+        "chord_onset_step"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "pattern": "^[0-9]+/[0-9]+$"
+        },
+        "label": {
+          "type": "string"
+        },
+        "beats": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "chord_onset_step": {
+          "type": "string"
+        },
+        "second_chord_beat": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "idea": {
+      "type": "object",
+      "required": [
+        "value",
+        "label",
+        "slot"
+      ],
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "slot": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tone": {
+      "type": "object",
+      "required": [
+        "value",
+        "label",
+        "abbreviation"
+      ],
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "abbreviation": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

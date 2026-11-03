@@ -17,6 +17,7 @@
 #include <ursatz_composer/render.h>
 
 #include "api_piece.h"
+#include "api_vocabulary.h"
 #include "api_workflow.h"
 #include "util/plan_util.h"
 #include "util/request_parse.h"
@@ -101,8 +102,7 @@ static ComposerStatus read_request(const cJSON *request, Options *options, ApiOu
                         options->key_text);
     }
     if (!request_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8",
-                        options->meter_text);
+        return api_fail_meter(error, "/meter", options->meter_text);
     }
     unsigned long bars = 0;
     if (!api_member_whole(request, "bars", 1, MAX_BARS, &bars, &found, error)) {

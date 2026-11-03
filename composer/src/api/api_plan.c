@@ -14,6 +14,7 @@
 #include <ursatz_composer/plan_json.h>
 
 #include "api_grow.h"
+#include "api_vocabulary.h"
 #include "api_workflow.h"
 #include "motive/motive_internal.h"
 #include "util/request_parse.h"
@@ -389,9 +390,10 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
     if (has_mode_in_key && state->mode_text) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "key '%s' names a mode already; leave out mode", state->key_text);
     }
-    if (state->mode_text &&
-        !request_equals_ignore_case(state->mode_text, "major") && !request_equals_ignore_case(state->mode_text, "minor")) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be major or minor, not '%s'", state->mode_text);
+    if (state->mode_text && api_choice_find_ignore_case(API_MODES, state->mode_text) < 0) {
+        char modes[64];
+        api_choice_list(API_MODES, modes, sizeof modes);
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be %s, not '%s'", modes, state->mode_text);
     }
     if (snprintf(state->key_request, sizeof(state->key_request), has_mode_in_key ? "%s" : "%s %s", state->key_text,
                  state->mode_text ? state->mode_text : "major") >= (int)sizeof(state->key_request) ||
@@ -403,8 +405,7 @@ static ComposerStatus check_request(PlanBuild *state, ComposerError *error) {
     }
     api_key_name(&state->key, state->key_name, sizeof(state->key_name));
     if (!request_parse_meter(state->meter_text, &state->meter) || !harmony_meter_supported(&state->meter)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8",
-                        state->meter_text);
+        return api_fail_meter(error, "/meter", state->meter_text);
     }
     if (!read_number(state->root, "bars", SIZE_SEARCH_MAX * 8, &state->bars, error) ||
         !read_number(state->root, "count", 64, &state->count, error)) {

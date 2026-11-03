@@ -10,7 +10,9 @@
 
 #include "api_grow.h"
 #include "api_internal.h"
+#include "api_vocabulary.h"
 #include "api_piece.h"
+#include "util/plan_util.h"
 #include "util/request_parse.h"
 
 /*
@@ -139,8 +141,10 @@ static ComposerStatus read_fill(PieceSpec *request, size_t index, const cJSON *f
             } else if (request_equals_ignore_case(into, "hybrid")) {
                 section->into = PLAN_ARCHETYPE_HYBRID;
             } else {
-                return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': \"into\" must be sentence, period or hybrid, not '%s'",
-                                id, into);
+                char intos[64];
+                api_choice_list(API_PIECE_INTOS, intos, sizeof intos);
+                return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': \"into\" must be %s, not '%s'", id, intos,
+                                into);
             }
         }
         if (section->has_into && section->into == PLAN_ARCHETYPE_HYBRID) {
@@ -291,9 +295,10 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
     PieceStructure *structure = &request->structure;
     const char *mode = request->mode_text;
     snprintf(path, sizeof path, "%s/mode", base);
-    if (!request_equals_ignore_case(mode, "major") && !request_equals_ignore_case(mode, "minor") &&
-        !request_equals_ignore_case(mode, "style")) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"mode\" must be major, minor or style, not '%s'", mode);
+    if (api_choice_find_ignore_case(API_PIECE_MODES, mode) < 0) {
+        char modes[64];
+        api_choice_list(API_PIECE_MODES, modes, sizeof modes);
+        return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"mode\" must be %s, not '%s'", modes, mode);
     }
     if (request_equals_ignore_case(mode, "style") && !request->style_path) {
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "\"mode\": \"style\" needs a \"style\"");
@@ -317,8 +322,7 @@ static ComposerStatus read_brief(PieceSpec *request, const cJSON *root, const ch
     }
     if (!request_parse_meter(request->meter_text, &structure->meter) || !harmony_meter_supported(&structure->meter)) {
         snprintf(path, sizeof path, "%s/meter", base);
-        return api_fail(error, COMPOSER_ERR_REQUEST, path, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8",
-                        request->meter_text);
+        return api_fail_meter(error, path, request->meter_text);
     }
     request->weight = (ComposerRatio){1, 1};
     if (style_weight && !request_parse_ratio(style_weight, &request->weight)) {
@@ -619,4 +623,47 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, con
         snprintf(request->source[given], sizeof(request->source[0]), "basic motive");
     }
     return COMPOSER_OK;
+}
+
+ComposerStatus api_piece_validate(const cJSON *root, cJSON *filled, ComposerError *error) {
+    PieceSpec *request = calloc(1, sizeof(*request));
+    if (!request) {
+        return fail_alloc(error);
+    }
+    ComposerStatus status = api_piece_read_request(request, root, "", NULL, false, NULL, error);
+    cJSON *sections = cJSON_GetObjectItemCaseSensitive(filled, "sections");
+    size_t given = (size_t)cJSON_GetArraySize(sections);
+    if (status == COMPOSER_OK) {
+        piece_structure_default_cadences(&request->structure);
+    }
+    for (size_t i = 0; status == COMPOSER_OK && i < request->structure.section_count; i++) {
+        const PieceSection *section = &request->structure.sections[i];
+        cJSON *item = i < given ? cJSON_GetArrayItem(sections, (int)i) : NULL;
+        if (!item) {
+            item = cJSON_CreateObject();
+            if (!item || !cJSON_AddStringToObject(item, "id", section->id) ||
+                !cJSON_AddStringToObject(item, "part", piece_part_name(section->part)) ||
+                !cJSON_AddStringToObject(item, "letter", section->letter) ||
+                !cJSON_AddNumberToObject(item, "beats", (double)section->beats) || !cJSON_AddItemToArray(sections, item)) {
+                cJSON_Delete(item);
+                status = fail_alloc(error);
+                break;
+            }
+            cJSON *fill = cJSON_AddObjectToObject(item, "fill");
+            if (!fill || !cJSON_AddStringToObject(fill, "kind", piece_fill_name(section->fill))) {
+                status = fail_alloc(error);
+                break;
+            }
+        }
+        const cJSON *cadence = cJSON_GetObjectItemCaseSensitive(item, "cadence");
+        if (!cadence || cJSON_IsNull(cadence)) {
+            cJSON_DeleteItemFromObjectCaseSensitive(item, "cadence");
+            if (!cJSON_AddStringToObject(item, "cadence", plan_cadence_name(section->cadence))) {
+                status = fail_alloc(error);
+            }
+        }
+    }
+    api_piece_request_destroy(request);
+    free(request);
+    return status;
 }

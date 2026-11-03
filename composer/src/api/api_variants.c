@@ -11,6 +11,7 @@
 #include <ursatz_composer/variant_registry.h>
 
 #include "api_internal.h"
+#include "api_vocabulary.h"
 #include "util/request_parse.h"
 
 /* Variants and recognize (docs/api.md): the requests of the `variants` and `recognize` commands, and their documents. */
@@ -499,10 +500,10 @@ static ComposerStatus read_variants_request(const cJSON *request, VariantsReques
             char path[48];
             snprintf(path, sizeof path, "/functions/%d", i);
             const char *name = cJSON_IsString(item) ? item->valuestring : "";
-            if (strcmp(name, "beginning") != 0 && strcmp(name, "continuation") != 0 && strcmp(name, "contrast") != 0 &&
-                strcmp(name, "cadential") != 0) {
-                return api_fail(error, COMPOSER_ERR_REQUEST, path,
-                                "function must be beginning, continuation, contrast or cadential, not '%s'", name);
+            if (api_choice_find(API_FUNCTIONS, name) < 0) {
+                char functions[96];
+                api_choice_list(API_FUNCTIONS, functions, sizeof functions);
+                return api_fail(error, COMPOSER_ERR_REQUEST, path, "function must be %s, not '%s'", functions, name);
             }
             read->filter.functions[read->filter.function_count++] = name;
         }
@@ -516,14 +517,14 @@ static ComposerStatus read_variants_request(const cJSON *request, VariantsReques
         if (read->has_chain) {
             return api_fail(error, COMPOSER_ERR_REQUEST, "/distance", "a distance takes random chains, not a chain");
         }
-        read->distance = strcmp(distance_text, "close") == 0    ? &DISTANCE_CLOSE
-                         : strcmp(distance_text, "medium") == 0 ? &DISTANCE_MEDIUM
-                         : strcmp(distance_text, "far") == 0    ? &DISTANCE_FAR
-                                                                : NULL;
-        if (!read->distance) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/distance", "distance must be close, medium or far, not '%s'",
-                            distance_text);
+        static const Distance *const DISTANCES[] = {&DISTANCE_CLOSE, &DISTANCE_MEDIUM, &DISTANCE_FAR};
+        int distance = api_choice_find(API_DISTANCES, distance_text);
+        if (distance < 0) {
+            char names[64];
+            api_choice_list(API_DISTANCES, names, sizeof names);
+            return api_fail(error, COMPOSER_ERR_REQUEST, "/distance", "distance must be %s, not '%s'", names, distance_text);
         }
+        read->distance = DISTANCES[distance];
     }
     if (read->has_chain) {
         if (!cJSON_IsObject(chain)) {

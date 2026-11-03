@@ -23,6 +23,8 @@ add_library(ursatz_composer STATIC
     api/api_counterpoint.c
     api/api_develop.c
     api/api_grow_request.c
+    api/api_vocabulary.c
+    api/api_validate.c
     util/util.c
     util/plan_util.c
     style/style.c

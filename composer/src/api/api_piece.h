@@ -77,6 +77,13 @@ ComposerStatus api_piece_read_request(PieceSpec *request, const cJSON *root, con
                                       bool plain_midi, const ComposerJob *job, ComposerError *error);
 void api_piece_request_destroy(PieceSpec *request);
 
+/*
+ * Reads the piece request root without composing and writes the defaults into filled (a copy of root): the cadence of every
+ * section that has none (piece_structure_default_cadences) and the default ending section when there is none
+ * (piece_structure_default_ending).
+ */
+ComposerStatus api_piece_validate(const cJSON *root, cJSON *filled, ComposerError *error);
+
 /* A version of the piece: its plan and what composing it reported. */
 typedef struct {
     PiecePlan *plan;
