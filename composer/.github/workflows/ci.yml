@@ -22,5 +22,7 @@ jobs:
         run: cmake -S . -B build
       - name: Build
         run: cmake --build build
+      - name: Check file scope state
+        run: scripts/check-statics.sh
       - name: Test (the fast set; the slow sweeps run before a push, see README)
         run: ctest --test-dir build --output-on-failure -LE slow
