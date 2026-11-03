@@ -1,0 +1,547 @@
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <cJSON.h>
+
+#include <ursatz_composer/composer_api.h>
+
+#include "support/test_support.h"
+
+#ifndef COMPOSER_FIXTURE_DIR
+#error "COMPOSER_FIXTURE_DIR is not defined"
+#endif
+
+/*
+ * The vocabulary and validation entries (docs/api.md): every list is not empty and each value is accepted by the reader
+ * that reads it (a request built from the value validates), a piece request without cadences gets the defaults of
+ * pieces-model.js defaultCadence, a motive's harmony comes back parsed, and a bad request is refused with its path. The
+ * responses are written beside the test, for the schema test.
+ */
+
+static cJSON *vocabulary;
+
+static void write_response(const char *name, const ComposerResponse *response) {
+    char path[128];
+    snprintf(path, sizeof path, "api_%s_response_vocabulary.json", name);
+    test_write_file(path, response->json);
+}
+
+static char *print(cJSON *value) {
+    char *text = cJSON_PrintUnformatted(value);
+    assert(text);
+    return text;
+}
+
+static const cJSON *list(const char *name) {
+    const cJSON *items = cJSON_GetObjectItemCaseSensitive(vocabulary, name);
+    assert(cJSON_IsArray(items));
+    assert(cJSON_GetArraySize(items) > 0);
+    return items;
+}
+
+static const char *value_of(const cJSON *entry) {
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(entry, "value");
+    assert(cJSON_IsString(value));
+    return value->valuestring;
+}
+
+/* The response of validate: its "request" object. The caller frees the response. */
+static cJSON *validated(const char *kind, const char *request, ComposerStatus expected, ComposerResponse *response) {
+    ComposerStatus status = composer_api_validate(kind, request, response);
+    if (status != expected) {
+        fprintf(stderr, "%s: status %d (%s) for %s\n", kind, status, response->error.message, request);
+    }
+    assert(status == expected);
+    if (status != COMPOSER_OK) {
+        assert(!response->json);
+        return NULL;
+    }
+    cJSON *document = cJSON_Parse(response->json);
+    assert(document);
+    return document;
+}
+
+static void accepted(const char *kind, cJSON *request) {
+    char *text = print(request);
+    ComposerResponse response;
+    cJSON *document = validated(kind, text, COMPOSER_OK, &response);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(text);
+}
+
+static void refused(const char *kind, const char *request, const char *path) {
+    ComposerResponse response;
+    ComposerStatus status = composer_api_validate(kind, request, &response);
+    assert(status == COMPOSER_ERR_REQUEST || status == COMPOSER_ERR_UNSATISFIABLE);
+    assert(strcmp(response.error.path, path) == 0);
+    assert(response.error.message[0]);
+    composer_response_destroy(&response);
+}
+
+static cJSON *random_request(const char *mode, const char *meter) {
+    cJSON *request = cJSON_CreateObject();
+    assert(cJSON_AddStringToObject(request, "mode", mode) && cJSON_AddStringToObject(request, "meter", meter));
+    assert(cJSON_AddNumberToObject(request, "seed", 3));
+    return request;
+}
+
+static cJSON *read_json(const char *path) {
+    char *text = test_read_file(path, NULL);
+    cJSON *value = cJSON_Parse(text);
+    assert(value);
+    free(text);
+    return value;
+}
+
+/* A piece request of sections [{id, part, beats}] with no cadences, in D major, 4/4. */
+static cJSON *piece_request(const char *const *parts, size_t count) {
+    cJSON *request = cJSON_CreateObject();
+    assert(cJSON_AddStringToObject(request, "schema", "ursatz-piece-request") &&
+           cJSON_AddNumberToObject(request, "schema_version", 1) && cJSON_AddStringToObject(request, "key", "D") &&
+           cJSON_AddStringToObject(request, "mode", "major") && cJSON_AddStringToObject(request, "meter", "4/4"));
+    cJSON *sections = cJSON_AddArrayToObject(request, "sections");
+    assert(sections);
+    for (size_t i = 0; i < count; i++) {
+        char id[32];
+        snprintf(id, sizeof id, "s%u", (unsigned)i);
+        cJSON *section = cJSON_CreateObject();
+        assert(section && cJSON_AddStringToObject(section, "id", id) && cJSON_AddStringToObject(section, "part", parts[i]) &&
+               cJSON_AddNumberToObject(section, "beats", 16) && cJSON_AddItemToArray(sections, section));
+    }
+    return request;
+}
+
+/* --- the lists ---------------------------------------------------------------------------------------- */
+
+static void test_lists(void) {
+    ComposerResponse response;
+    assert(composer_api_vocabulary(&response) == COMPOSER_OK);
+    assert(response.json && !response.plan_json && !response.midi && !response.musicxml);
+    write_response("vocabulary", &response);
+    vocabulary = cJSON_Parse(response.json);
+    assert(vocabulary);
+    composer_response_destroy(&response);
+    composer_response_destroy(&response);
+
+    static const char *const NAMES[] = {"meters",         "modes",          "piece_modes",   "keys",
+                                        "pitch_class_names", "cadences",    "theme_cadences", "motive_forms",
+                                        "roles",          "functions",      "distances",     "theme_slots",
+                                        "theme_ideas",    "theme_motive_categories", "theme_pools", "accompaniment_patterns",
+                                        "piece_parts",    "piece_intos",    "fill_kinds",    "tone_labels"};
+    for (size_t i = 0; i < sizeof NAMES / sizeof NAMES[0]; i++) {
+        list(NAMES[i]);
+    }
+    assert(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(vocabulary, "pickups")));
+    assert(cJSON_GetObjectItemCaseSensitive(vocabulary, "variant_operations"));
+
+    /* The orders and the notes of the GUI tables it replaces. */
+    const cJSON *meters = list("meters");
+    assert(cJSON_GetArraySize(meters) == 4);
+    assert(strcmp(value_of(cJSON_GetArrayItem(meters, 0)), "2/4") == 0);
+    assert(strcmp(value_of(cJSON_GetArrayItem(meters, 3)), "6/8") == 0);
+    for (int i = 0; i < 4; i++) {
+        const cJSON *meter = cJSON_GetArrayItem(meters, i);
+        const cJSON *beats = cJSON_GetObjectItemCaseSensitive(meter, "beats");
+        const cJSON *second = cJSON_GetObjectItemCaseSensitive(meter, "second_chord_beat");
+        const char *value = value_of(meter);
+        assert(cJSON_IsNumber(beats) && beats->valueint == (value[0] == '6' ? 6 : value[0] - '0'));
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(meter, "chord_onset_step")->valuestring, "1/2") == 0);
+        if (strcmp(value, "4/4") == 0) {
+            assert(second && second->valueint == 2);
+        } else if (strcmp(value, "6/8") == 0) {
+            assert(second && second->valueint == 3);
+        } else {
+            assert(!second);
+        }
+    }
+    assert(cJSON_GetArraySize(list("keys")) == 24);
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("keys"), 1)), "Db major") == 0);
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("keys"), 13)), "C# minor") == 0);
+    assert(cJSON_GetArraySize(list("pitch_class_names")) == 12);
+    assert(cJSON_GetArraySize(list("cadences")) == 5);
+    assert(cJSON_GetArraySize(list("theme_cadences")) == 3);
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("cadences"), 0)), "PAC") == 0);
+    assert(cJSON_GetArraySize(list("piece_modes")) == 3 && cJSON_GetArraySize(list("modes")) == 2);
+    const cJSON *pickups = cJSON_GetObjectItemCaseSensitive(vocabulary, "pickups");
+    for (int i = 0; i < 4; i++) {
+        const cJSON *offered = cJSON_GetObjectItemCaseSensitive(pickups, value_of(cJSON_GetArrayItem(meters, i)));
+        assert(cJSON_IsArray(offered) && cJSON_GetArraySize(offered) > 0);
+        assert(strcmp(cJSON_GetArrayItem(offered, 0)->valuestring, "0") == 0);
+    }
+}
+
+/* --- each value is read -------------------------------------------------------------------------------- */
+
+static void test_round_trip(void) {
+    const cJSON *entry = NULL;
+
+    /* Meters, modes, keys, forms and roles: a random motive request. */
+    cJSON_ArrayForEach(entry, list("meters")) {
+        cJSON *request = random_request("major", value_of(entry));
+        accepted("random_motive", request);
+        cJSON_Delete(request);
+    }
+    cJSON_ArrayForEach(entry, list("modes")) {
+        cJSON *request = random_request(value_of(entry), "4/4");
+        accepted("random_motive", request);
+        cJSON_Delete(request);
+    }
+    cJSON_ArrayForEach(entry, list("keys")) {
+        char key[32];
+        snprintf(key, sizeof key, "%s", value_of(entry));
+        char *space = strchr(key, ' ');
+        assert(space);
+        *space = '\0';
+        cJSON *request = random_request(space + 1, "4/4");
+        assert(cJSON_AddStringToObject(request, "key", value_of(entry)));
+        accepted("random_motive", request);
+        cJSON_Delete(request);
+    }
+    cJSON_ArrayForEach(entry, list("motive_forms")) {
+        cJSON *request = random_request("major", "4/4");
+        assert(cJSON_AddStringToObject(request, "form", value_of(entry)));
+        accepted("random_motive", request);
+        cJSON_Delete(request);
+    }
+    cJSON_ArrayForEach(entry, list("roles")) {
+        cJSON *request = random_request("minor", "3/4");
+        assert(cJSON_AddStringToObject(request, "role", value_of(entry)));
+        accepted("random_motive", request);
+        cJSON_Delete(request);
+    }
+
+    /* Style categories a theme can read without (a style is needed to read them without). */
+    cJSON_ArrayForEach(entry, list("theme_motive_categories")) {
+        cJSON *request = random_request("major", "4/4");
+        cJSON *without = cJSON_AddArrayToObject(request, "style_without");
+        assert(without && cJSON_AddItemToArray(without, cJSON_CreateString(value_of(entry))));
+        assert(cJSON_AddStringToObject(request, "style", COMPOSER_FIXTURE_DIR "/styles/chorales.style.json"));
+        accepted("random_motive", request);
+        cJSON_Delete(request);
+    }
+
+    /* Parts, fills, cadences, intos and pickups: a piece request. */
+    cJSON_ArrayForEach(entry, list("piece_parts")) {
+        const char *parts[] = {"body", value_of(entry)};
+        size_t count = strcmp(value_of(entry), "body") == 0 ? 1 : 2;
+        if (strcmp(value_of(entry), "intro") == 0) {
+            parts[0] = "intro";
+            parts[1] = "body";
+        }
+        cJSON *request = piece_request(parts, count);
+        accepted("piece", request);
+        cJSON_Delete(request);
+    }
+    cJSON_ArrayForEach(entry, list("cadences")) {
+        const char *parts[] = {"body"};
+        cJSON *request = piece_request(parts, 1);
+        cJSON *section = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(request, "sections"), 0);
+        assert(cJSON_AddStringToObject(section, "cadence", value_of(entry)));
+        accepted("piece", request);
+        cJSON_Delete(request);
+    }
+    cJSON_ArrayForEach(entry, list("piece_modes")) {
+        if (strcmp(value_of(entry), "style") == 0) {
+            continue; /* the mode "style" reads the key and mode from a style model file */
+        }
+        const char *parts[] = {"body"};
+        cJSON *request = piece_request(parts, 1);
+        cJSON_ReplaceItemInObjectCaseSensitive(request, "mode", cJSON_CreateString(value_of(entry)));
+        accepted("piece", request);
+        cJSON_Delete(request);
+    }
+    cJSON_ArrayForEach(entry, list("fill_kinds")) {
+        if (strcmp(value_of(entry), "empty") != 0 && strcmp(value_of(entry), "motif") != 0) {
+            continue; /* a theme fill carries a plan and a progression fill its numerals: the piece tests have both */
+        }
+        const char *parts[] = {"body"};
+        cJSON *request = piece_request(parts, 1);
+        cJSON *section = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(request, "sections"), 0);
+        cJSON *fill = cJSON_AddObjectToObject(section, "fill");
+        assert(fill && cJSON_AddStringToObject(fill, "kind", value_of(entry)));
+        accepted("piece", request);
+        cJSON_Delete(request);
+    }
+    cJSON_ArrayForEach(entry, list("piece_intos")) {
+        const char *parts[] = {"body"};
+        cJSON *request = piece_request(parts, 1);
+        cJSON *section = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(request, "sections"), 0);
+        cJSON_ReplaceItemInObjectCaseSensitive(section, "beats", cJSON_CreateNumber(32));
+        cJSON *fill = cJSON_AddObjectToObject(section, "fill");
+        assert(fill && cJSON_AddStringToObject(fill, "kind", "motif") && cJSON_AddStringToObject(fill, "into", value_of(entry)));
+        if (strcmp(value_of(entry), "hybrid") == 0) {
+            assert(cJSON_AddStringToObject(fill, "hybrid", "antecedent+continuation"));
+        }
+        accepted("piece", request);
+        cJSON_Delete(request);
+    }
+    const cJSON *pickups = cJSON_GetObjectItemCaseSensitive(vocabulary, "pickups");
+    cJSON_ArrayForEach(entry, list("meters")) {
+        const cJSON *offered = cJSON_GetObjectItemCaseSensitive(pickups, value_of(entry));
+        const cJSON *pickup = NULL;
+        cJSON_ArrayForEach(pickup, offered) {
+            const char *parts[] = {"body"};
+            cJSON *request = piece_request(parts, 1);
+            cJSON_ReplaceItemInObjectCaseSensitive(request, "meter", cJSON_CreateString(value_of(entry)));
+            cJSON *section = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(request, "sections"), 0);
+            assert(cJSON_AddStringToObject(section, "pickup", pickup->valuestring));
+            accepted("piece", request);
+            cJSON_Delete(request);
+        }
+    }
+
+    /* Slots, ideas, theme cadences and accompaniment patterns: a theme request. */
+    cJSON_ArrayForEach(entry, list("theme_cadences")) {
+        cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/one-motive.json");
+        cJSON_ReplaceItemInObjectCaseSensitive(request, "cadence", cJSON_CreateString(value_of(entry)));
+        accepted("theme", request);
+        cJSON_Delete(request);
+    }
+    cJSON_ArrayForEach(entry, list("theme_slots")) {
+        cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/one-motive.json");
+        cJSON *slots = cJSON_GetObjectItemCaseSensitive(request, "slots");
+        cJSON_ReplaceItemInObjectCaseSensitive(slots, value_of(entry), cJSON_CreateString("A"));
+        accepted("theme", request);
+        cJSON_Delete(request);
+    }
+    cJSON_ArrayForEach(entry, list("theme_ideas")) {
+        /* The reader knows the idea: it is not refused as an unknown one (a form that lacks the idea is another matter). */
+        cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/idea-repetition.json");
+        cJSON *ideas = cJSON_CreateObject();
+        assert(ideas && cJSON_AddStringToObject(ideas, value_of(entry), "R"));
+        cJSON_ReplaceItemInObjectCaseSensitive(request, "ideas", ideas);
+        char *text = print(request);
+        ComposerResponse response;
+        ComposerStatus status = composer_api_validate("theme", text, &response);
+        assert(status == COMPOSER_OK || strstr(response.error.message, "unknown idea") == NULL);
+        composer_response_destroy(&response);
+        free(text);
+        cJSON_Delete(request);
+    }
+    cJSON_ArrayForEach(entry, list("accompaniment_patterns")) {
+        if (strcmp(value_of(entry), "motive") == 0) {
+            continue; /* a pattern from a motive carries the motive */
+        }
+        cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/one-motive.json");
+        cJSON *accompaniment = cJSON_CreateObject();
+        assert(accompaniment && cJSON_AddStringToObject(accompaniment, "pattern", value_of(entry)));
+        cJSON_ReplaceItemInObjectCaseSensitive(request, "accompaniment", accompaniment);
+        accepted("theme", request);
+        cJSON_Delete(request);
+    }
+}
+
+/* The variants entry reads functions and distance before it makes anything. */
+static void test_variants_words(void) {
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, list("distances")) {
+        char request[512];
+        snprintf(request, sizeof request,
+                 "{\"input\":{\"format\":\"notes\",\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D minor\",\"meter\":\"4/4\","
+                 "\"distance\":\"%s\",\"count\":1,\"seed\":1}",
+                 value_of(entry));
+        ComposerResponse response;
+        ComposerStatus status = composer_api_variants(request, NULL, &response);
+        assert(status != COMPOSER_ERR_REQUEST);
+        composer_response_destroy(&response);
+    }
+    cJSON_ArrayForEach(entry, list("functions")) {
+        char request[512];
+        snprintf(request, sizeof request,
+                 "{\"input\":{\"format\":\"notes\",\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D minor\",\"meter\":\"4/4\","
+                 "\"functions\":[\"%s\"],\"count\":1,\"seed\":1}",
+                 value_of(entry));
+        ComposerResponse response;
+        ComposerStatus status = composer_api_variants(request, NULL, &response);
+        assert(status != COMPOSER_ERR_REQUEST);
+        composer_response_destroy(&response);
+    }
+    /* Every operation of the registry is the one composer_api_variant_operations lists. */
+    ComposerResponse operations;
+    assert(composer_api_variant_operations(&operations) == COMPOSER_OK);
+    cJSON *registry = cJSON_Parse(operations.json);
+    assert(registry && cJSON_Compare(registry, cJSON_GetObjectItemCaseSensitive(vocabulary, "variant_operations"), true));
+    cJSON_Delete(registry);
+    composer_response_destroy(&operations);
+}
+
+/* The tone labels are the roles a tone override takes. */
+static void test_tone_labels(void) {
+    const cJSON *entry = NULL;
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("tone_labels"), 0)), "chord") == 0);
+    assert(cJSON_GetArraySize(list("tone_labels")) == 11);
+    cJSON_ArrayForEach(entry, list("tone_labels")) {
+        assert(cJSON_IsString(cJSON_GetObjectItemCaseSensitive(entry, "abbreviation")));
+        char request[512];
+        snprintf(request, sizeof request,
+                 "{\"input\":{\"format\":\"notes\",\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D minor\",\"meter\":\"4/4\","
+                 "\"tones\":[\"2=%s\"]}",
+                 value_of(entry));
+        ComposerResponse response;
+        ComposerStatus status = composer_api_motive(request, NULL, &response);
+        assert(status == COMPOSER_OK);
+        composer_response_destroy(&response);
+    }
+}
+
+/* --- the defaults --------------------------------------------------------------------------------------- */
+
+static void expect_cadences(const char *const *parts, size_t count, const char *const *cadences, size_t total) {
+    cJSON *request = piece_request(parts, count);
+    char *text = print(request);
+    ComposerResponse response;
+    cJSON *document = validated("piece", text, COMPOSER_OK, &response);
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "request"), "sections");
+    assert(cJSON_GetArraySize(sections) == (int)total);
+    for (size_t i = 0; i < total; i++) {
+        const cJSON *section = cJSON_GetArrayItem(sections, (int)i);
+        const cJSON *cadence = cJSON_GetObjectItemCaseSensitive(section, "cadence");
+        assert(cJSON_IsString(cadence) && strcmp(cadence->valuestring, cadences[i]) == 0);
+    }
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(sections, (int)total - 1), "part")->valuestring,
+                  "ending") == 0);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(text);
+    cJSON_Delete(request);
+}
+
+static void test_defaults(void) {
+    /* A loop body alone: the default ending joins it (PAC), the body leads back (HC). */
+    const char *const body[] = {"body"};
+    const char *const body_cadences[] = {"HC", "PAC"};
+    expect_cadences(body, 1, body_cadences, 2);
+
+    /* Intro, two bodies, a turnaround: the last of the intro and of the loop are HC; the default ending is PAC. */
+    const char *const loop[] = {"intro", "intro", "body", "body", "turnaround"};
+    const char *const loop_cadences[] = {"IAC", "HC", "IAC", "IAC", "HC", "PAC"};
+    expect_cadences(loop, 5, loop_cadences, 6);
+
+    /* Two endings: only the last of them is PAC. */
+    const char *const ending[] = {"intro", "body", "turnaround", "ending", "ending"};
+    const char *const ending_cadences[] = {"HC", "IAC", "HC", "IAC", "PAC"};
+    expect_cadences(ending, 5, ending_cadences, 5);
+
+    /* A cadence the request names is kept, and the sections are given back in order. */
+    const char *const kept[] = {"body", "body"};
+    cJSON *request = piece_request(kept, 2);
+    cJSON *first = cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(request, "sections"), 0);
+    assert(cJSON_AddStringToObject(first, "cadence", "DC"));
+    char *text = print(request);
+    ComposerResponse response;
+    cJSON *document = validated("piece", text, COMPOSER_OK, &response);
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "request"), "sections");
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(sections, 0), "cadence")->valuestring, "DC") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(cJSON_GetArrayItem(sections, 1), "cadence")->valuestring, "HC") == 0);
+    write_response("validate", &response);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(text);
+    cJSON_Delete(request);
+
+    /* A random motive: the seed and what it drew. */
+    request = random_request("random", "random");
+    text = print(request);
+    document = validated("random_motive", text, COMPOSER_OK, &response);
+    const cJSON *filled = cJSON_GetObjectItemCaseSensitive(document, "request");
+    const cJSON *mode = cJSON_GetObjectItemCaseSensitive(filled, "mode");
+    const cJSON *meter = cJSON_GetObjectItemCaseSensitive(filled, "meter");
+    assert(cJSON_IsString(mode) && (strcmp(mode->valuestring, "major") == 0 || strcmp(mode->valuestring, "minor") == 0));
+    assert(cJSON_IsString(meter) && strcmp(meter->valuestring, "random") != 0);
+    assert(cJSON_GetObjectItemCaseSensitive(filled, "seed")->valueint == 3);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(text);
+    cJSON_Delete(request);
+
+    /* The same seed draws what composer_api_random_motive reports as drawn. */
+    ComposerResponse drawn;
+    assert(composer_api_random_motive("{\"mode\":\"random\",\"meter\":\"random\",\"seed\":3}", NULL, &drawn) == COMPOSER_OK);
+    cJSON *made = cJSON_Parse(drawn.json);
+    const cJSON *drawn_object = cJSON_GetObjectItemCaseSensitive(made, "drawn");
+    assert(drawn_object);
+    cJSON_Delete(made);
+    composer_response_destroy(&drawn);
+}
+
+static void test_harmony(void) {
+    const char *request =
+        "{\"input\":{\"format\":\"notes\",\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D major\",\"meter\":\"4/4\","
+        "\"harmony\":\"I V@3/2 V7@3\"}";
+    ComposerResponse response;
+    cJSON *document = validated("motive", request, COMPOSER_OK, &response);
+    const cJSON *filled = cJSON_GetObjectItemCaseSensitive(document, "request");
+    const cJSON *harmony = cJSON_GetObjectItemCaseSensitive(filled, "harmony");
+    assert(cJSON_IsArray(harmony) && cJSON_GetArraySize(harmony) == 3);
+    static const char *const NUMERALS[] = {"I", "V", "V7"};
+    static const char *const ONSETS[] = {"0", "3/2", "3"};
+    for (int i = 0; i < 3; i++) {
+        const cJSON *chord = cJSON_GetArrayItem(harmony, i);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(chord, "numeral")->valuestring, NUMERALS[i]) == 0);
+        assert(strcmp(cJSON_GetObjectItemCaseSensitive(chord, "onset")->valuestring, ONSETS[i]) == 0);
+    }
+    /* The defaults of a motive request. */
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(filled, "role")->valuestring, "melodic") == 0);
+    const cJSON *input = cJSON_GetObjectItemCaseSensitive(filled, "input");
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(input, "format")->valuestring, "notes") == 0);
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(input, "form")->valuestring, "full") == 0);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+
+    /* A request without harmony has none added, and a meter the file declares is filled in. */
+    cJSON *file = cJSON_CreateObject();
+    cJSON *file_input = cJSON_AddObjectToObject(file, "input");
+    char *musicxml = test_read_file(COMPOSER_FIXTURE_DIR "/motive_d_minor.musicxml", NULL);
+    assert(file_input && cJSON_AddStringToObject(file_input, "format", "musicxml") && cJSON_AddStringToObject(file_input, "text", musicxml));
+    free(musicxml);
+    char *text = print(file);
+    document = validated("motive", text, COMPOSER_OK, &response);
+    filled = cJSON_GetObjectItemCaseSensitive(document, "request");
+    assert(!cJSON_GetObjectItemCaseSensitive(filled, "harmony"));
+    assert(strcmp(cJSON_GetObjectItemCaseSensitive(filled, "meter")->valuestring, "4/4") == 0);
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    free(text);
+    cJSON_Delete(file);
+}
+
+static void test_refusals(void) {
+    /* The harmony grammar takes upper case numerals; a bad chord is refused at /harmony. */
+    refused("motive",
+            "{\"input\":{\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D major\",\"meter\":\"4/4\",\"harmony\":\"i V@3/2\"}",
+            "/harmony");
+    refused("motive",
+            "{\"input\":{\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D major\",\"meter\":\"4/4\",\"harmony\":\"I V7/V@3\"}",
+            "/harmony");
+    refused("motive", "{\"input\":{\"text\":\"D4:q F4:e A4:e D5:h\"},\"key\":\"D major\",\"meter\":\"5/7\"}", "/meter");
+    refused("random_motive", "{\"mode\":\"dorian\",\"meter\":\"4/4\"}", "/mode");
+    refused("random_motive", "{\"mode\":\"major\",\"meter\":\"random\",\"key\":\"D minor\"}", "/key");
+    refused("piece", "{\"schema\":\"ursatz-piece-request\",\"schema_version\":1}", "/key");
+    refused("piece", "{\"schema\":\"other\",\"schema_version\":1,\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\"}", "");
+    refused("theme", "{\"schema\":\"ursatz-theme-request\",\"schema_version\":2}", "/motives");
+    refused("theme", "[]", "");
+    refused("piece", "{\"api_version\":9}", "/api_version");
+    refused("variants", "{}", "/kind");
+    refused(NULL, "{}", "/kind");
+
+    ComposerResponse response;
+    assert(composer_api_validate("motive", NULL, &response) == COMPOSER_ERR_REQUEST);
+    composer_response_destroy(&response);
+}
+
+int main(void) {
+    assert(strcmp(composer_api_version(), "0.8") == 0);
+    test_lists();
+    test_round_trip();
+    test_variants_words();
+    test_tone_labels();
+    test_defaults();
+    test_harmony();
+    test_refusals();
+    cJSON_Delete(vocabulary);
+    printf("test_api_vocabulary: ok\n");
+    return 0;
+}
