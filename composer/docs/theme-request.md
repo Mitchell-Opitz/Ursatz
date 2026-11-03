@@ -97,3 +97,13 @@ A bad `bar`, text, onset or count exits 1 naming the bar (`chords bar 2: ...`). 
 cannot write (a last bar `V` under a perfect cadence, a gap between two Given chords nothing connects) exit 2 with `the given
 chords in bar <n> do not allow the <cadence>`, `<n>` counted from 0 as `bar` is. The JSON output has a `chords` member, the
 list as read.
+
+## In the API
+
+[`composer_api_theme`](api.md#composer_api_themerequest_json-job-out) reads this request as a JSON text. The motives are inline:
+each motive object carries its content in `degrees`, and a motive that names a file (`path`, `file`) is refused with the path
+`/motives/<n>/path`. The `theme` command reads the same request from a file; the file holds the motives inline too, so a
+request file is the request text of the API. The options of the command (`--seed`, `--suggest`, `--check`, `--out`, `--midi`,
+`--musicxml`, `--plain-midi`, `--explain`) are members of the API request (`seed`, `suggest`, `check`, `midi`, `musicxml`,
+`plain_midi`, `explain`), and the command writes the files from the response. `blend`, `blend_weight` and `blend_weights`
+take the second style model of `grow`'s `--blend`.

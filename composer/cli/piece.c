@@ -15,7 +15,7 @@
 #include "cli_options.h"
 #include "fill.h"
 #include "grow.h"
-#include "theme.h"
+#include "request_read.h"
 
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/compose.h>
@@ -1223,7 +1223,7 @@ static void print_result(const Options *options, const Request *request, const P
         printf("{\"schema\":\"ursatz-piece\",\"seed\":%lu,\"key\":", piece->seed);
         cli_print_json_string(key);
         printf(",\"meter\":\"%d/%d\",", request->structure.meter.beats_per_bar, request->structure.meter.beat_unit);
-        theme_print_brief(NULL, &brief, true);
+        cli_print_brief(&brief, true);
         printf(",\"loop\":");
         if (has_loop) {
             printf("{\"start\":");
@@ -1258,7 +1258,7 @@ static void print_result(const Options *options, const Request *request, const P
     }
     printf("piece in %s, meter %d/%d, seed %lu\n", key, request->structure.meter.beats_per_bar,
            request->structure.meter.beat_unit, piece->seed);
-    theme_print_brief(NULL, &brief, false);
+    cli_print_brief(&brief, false);
     if (regenerated) {
         printf("regenerated %s of section %s\n", whole ? "all lanes" : options->lane, options->regenerate);
     } else if (options->from) {

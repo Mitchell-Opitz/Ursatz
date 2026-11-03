@@ -87,4 +87,22 @@ ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, con
 ComposerStatus api_read_motive_extras(const cJSON *object, const char *base, const PlanMeter *meter,
                                       MotiveOptions *options, ComposerError *error);
 
+/*
+ * The motives of a theme or piece request (docs/theme-request.md): a motive object {"degrees", "pickup", "harmony",
+ * "features", "role", "form", "tone_overrides"} read in the key and meter. what names the motive in the messages ("motive
+ * 'A'"), base is the JSON Pointer of the object. role forces the role when not NULL. Returns COMPOSER_OK, or
+ * COMPOSER_ERR_REQUEST naming the member.
+ */
+ComposerStatus api_read_degrees_motive(const char *what, const char *base, const cJSON *object, const char *role,
+                                       const PlanMeter *meter, const AnalysisKey *key, Motive *out, ComposerError *error);
+/* The GROW_FUNCTION_* bits a form's "functions" list names. */
+ComposerStatus api_read_functions(const char *what, const char *base, const cJSON *functions, unsigned *out,
+                                  ComposerError *error);
+/* A string member of a request object (null or absent: *out is NULL, an error when required), as the theme request reads it. */
+bool api_request_string(const cJSON *object, const char *base, const char *name, bool required, const char **out,
+                        ComposerError *error);
+/* The "pickup" member as text: a string, or a number of beats formatted into text. NULL for none. */
+bool api_request_pickup(const cJSON *object, const char *base, char *text, size_t size, const char **out,
+                        ComposerError *error);
+
 #endif
