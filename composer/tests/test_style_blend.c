@@ -336,8 +336,11 @@ static ComposerStyle *blend_with(const ComposerStyle *a, const ComposerStyle *b,
  * Re-measured at P25 B2, after the Analyzer bump (0.4.0, P24: the style distance is counted per result): 0.7224, 0.7247,
  * 0.7156 to chorales and 0.6813, 0.6823, 0.6707 to sonatinas. The distance to sonatinas at weight 1/2 is no longer below
  * the weight 0 one, so the test requires the full weight to be at or below weight 0 and not a steady fall.
+ *
+ * Re-measured at P25 B5, after the melodic moves were judged by standard-counterpoint (the tritone is refused): 0.7168,
+ * 0.7197, 0.7029 to chorales and 0.6754, 0.6770, 0.6656 to sonatinas.
  */
-static const int HARMONY_BASELINE[3][2] = {{7224, 6813}, {7247, 6823}, {7156, 6707}};
+static const int HARMONY_BASELINE[3][2] = {{7168, 6754}, {7197, 6770}, {7029, 6656}};
 #define MELODY_ONLY_REACH 200
 
 static int ten_thousandths(double value) {
