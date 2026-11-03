@@ -10,6 +10,7 @@
 
 #include <standard-texture/texture_rules.h>
 
+#include "api/api_grow.h"
 #include "api/api_internal.h"
 #include "plan.h"
 
@@ -17,46 +18,16 @@
 #include "util/plan_util.h"
 #include "util/util.h"
 
-static const char *const ACCOMPANIMENT_WORDS[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
-
 const char *cli_accompaniment_name(PlanAccompanimentPattern pattern) {
-    return ACCOMPANIMENT_WORDS[pattern];
+    return api_accompaniment_name(pattern);
 }
 
 int cli_read_accompaniment(const char *pattern_text, const char *texture_text, const char *meter_text, const PlanMeter *meter,
                            PlanAccompaniment *out) {
-    out->pattern = PLAN_ACCOMPANIMENT_ANY;
-    out->texture = -1;
-    if (pattern_text) {
-        bool found = false;
-        for (int p = 0; p < 5 && !found; p++) {
-            found = request_equals_ignore_case(pattern_text, ACCOMPANIMENT_WORDS[p]);
-            out->pattern = found ? (PlanAccompanimentPattern)p : out->pattern;
-        }
-        if (!found) {
-            return cli_fail(CLI_EXIT_USAGE, "--accompaniment must be block, arpeggiated, alberti, oom-pah or any, not '%s'",
-                            pattern_text);
-        }
-    }
-    if (texture_text) {
-        bool found = false;
-        for (int t = 0; t < (int)STANDARD_TEXTURE_COUNT && !found; t++) {
-            found = request_equals_ignore_case(texture_text, standard_texture_name((StandardTexture)t));
-            out->texture = found ? t : out->texture;
-        }
-        if (!found) {
-            return cli_fail(CLI_EXIT_USAGE, "--texture must be a texture name of standard-texture, for example "
-                                            "\"melody and accompaniment\", not '%s'", texture_text);
-        }
-        if (!standard_texture_is_homophonic((StandardTexture)out->texture)) {
-            return cli_fail(CLI_EXIT_USAGE, "--texture '%s' is not one an accompaniment can have; use homophony, "
-                                            "homorhythm or \"melody and accompaniment\"", texture_text);
-        }
-    }
-    if (out->pattern == PLAN_ACCOMPANIMENT_ALBERTI && meter->beat_unit == 8) {
-        return cli_fail(CLI_EXIT_USAGE, "--accompaniment alberti needs a simple meter, not %s", meter_text);
-    }
-    return 0;
+    ComposerError error;
+    memset(&error, 0, sizeof error);
+    ComposerStatus status = api_read_accompaniment(pattern_text, texture_text, meter_text, meter, out, &error);
+    return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, NULL);
 }
 
 void cli_print_json_string(const char *text) {
@@ -95,7 +66,7 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
     bool about_form = strncmp(source, "form ", 5) == 0;
     for (size_t i = 0; i < sizeof OPTIONS / sizeof OPTIONS[0]; i++) {
         size_t length = strlen(OPTIONS[i]);
-        if (strncmp(source, OPTIONS[i], length) == 0 && source[length] == ' ') {
+        if (strncmp(source, OPTIONS[i], length) == 0 && (source[length] == ' ' || source[length] == ':')) {
             used += (size_t)snprintf(message + used, sizeof message - used, "--");
             for (size_t c = 0; c < length; c++) {
                 message[used++] = source[c] == '_' ? '-' : source[c];
@@ -139,7 +110,7 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
          "and --texture chorale write the inner voices themselves; they cannot be combined with --accompaniment or another "
          "--texture"},
         {"melody, voicing keeps the grown one", "melody, --voicing keeps the grown one"},
-        {"needs an accompaniment motive", "needs --accompaniment-motive <file>"},
+        {"accompaniment motive needs an accompaniment motive", "accompaniment motive needs --accompaniment-motive <file>"},
         {"the accompaniment motive is the accompaniment pattern; it cannot be combined with accompaniment ",
          "--accompaniment-motive is the accompaniment pattern; it cannot be combined with --accompaniment "},
         {"an accompaniment motive cannot be combined with voicing or texture chorale",
@@ -224,93 +195,18 @@ int cli_load_style(const char *path, const char *const *without, size_t without_
 
 int cli_read_blend(bool has_style, const char *blend_path, const char *all_text, const char *list_text,
                    ComposerStyleWeights *out) {
-    if (!blend_path) {
-        if (all_text || list_text) {
-            return cli_fail(CLI_EXIT_USAGE, "%s needs --blend", all_text ? "--blend-weight" : "--blend-weights");
-        }
-        return 0;
-    }
-    if (!has_style) {
-        return cli_fail(CLI_EXIT_USAGE, "--blend needs --style");
-    }
-    ComposerRatio all = {1, 2};
-    if (all_text) {
-        if (!request_parse_ratio(all_text, &all)) {
-            return cli_fail(CLI_EXIT_USAGE, "--blend-weight must be a fraction like 1/2, not '%s'", all_text);
-        }
-        if (all.numerator > all.denominator) {
-            return cli_fail(CLI_EXIT_USAGE, "--blend-weight must be from 0 to 1, not '%s'", all_text);
-        }
-    }
-    *out = composer_style_weights_all(all);
-    if (!list_text) {
-        return 0;
-    }
-    bool seen[STYLE_DIMENSION_COUNT] = {false};
-    const char *at = list_text;
-    while (*at) {
-        const char *end = strchr(at, ',');
-        size_t length = end ? (size_t)(end - at) : strlen(at);
-        char item[64];
-        if (length == 0 || length >= sizeof item) {
-            return cli_fail(CLI_EXIT_USAGE, "--blend-weights must be like harmony=1/2,form=0, not '%s'", list_text);
-        }
-        memcpy(item, at, length);
-        item[length] = '\0';
-        char *equals = strchr(item, '=');
-        StyleDimension dimension;
-        if (!equals) {
-            return cli_fail(CLI_EXIT_USAGE, "--blend-weights must be like harmony=1/2,form=0, not '%s'", list_text);
-        }
-        *equals = '\0';
-        if (!style_dimension_from_name(item, &dimension)) {
-            return cli_fail(CLI_EXIT_USAGE, "--blend-weights: '%s' is not a dimension (harmony, rhythm, melody, form)",
-                            item);
-        }
-        if (seen[dimension]) {
-            return cli_fail(CLI_EXIT_USAGE, "--blend-weights names %s twice", item);
-        }
-        seen[dimension] = true;
-        ComposerRatio weight;
-        if (!request_parse_ratio(equals + 1, &weight)) {
-            return cli_fail(CLI_EXIT_USAGE, "--blend-weights: %s must be a fraction like 1/2, not '%s'", item,
-                            equals + 1);
-        }
-        if (weight.numerator > weight.denominator) {
-            return cli_fail(CLI_EXIT_USAGE, "--blend-weights: %s must be from 0 to 1, not '%s'", item, equals + 1);
-        }
-        out->numerator[dimension] = weight.numerator;
-        out->denominator[dimension] = weight.denominator;
-        at += length;
-        if (*at == ',') {
-            at++;
-            if (*at == '\0') {
-                return cli_fail(CLI_EXIT_USAGE, "--blend-weights must be like harmony=1/2,form=0, not '%s'", list_text);
-            }
-        }
-    }
-    return 0;
+    ComposerError error;
+    memset(&error, 0, sizeof error);
+    ComposerStatus status = api_read_blend(has_style, blend_path, all_text, list_text, out, &error);
+    return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, NULL);
 }
 
 int cli_load_blend(const char *style_path, const char *blend_path, const ComposerStyleWeights *weights,
                    const char *const *without, size_t without_count, ComposerStyle **out) {
-    ComposerStyle *first = NULL;
-    ComposerStyle *second = NULL;
-    int status = cli_load_style(style_path, without, without_count, &first);
-    if (status == 0) {
-        status = cli_load_style(blend_path, without, without_count, &second);
-    }
-    if (status == 0) {
-        ComposerStyleResult blended = composer_style_blend(first, second, weights, out);
-        if (blended != COMPOSER_STYLE_OK) {
-            status = cli_fail(blended == COMPOSER_STYLE_ERR_ARGUMENT ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE,
-                              "cannot blend '%s' with '%s': %s", style_path, blend_path,
-                              composer_style_result_name(blended));
-        }
-    }
-    composer_style_destroy(first);
-    composer_style_destroy(second);
-    return status;
+    ComposerError error;
+    memset(&error, 0, sizeof error);
+    ComposerStatus status = api_load_blend(style_path, blend_path, weights, without, without_count, out, &error);
+    return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, NULL);
 }
 
 static const char *const STYLE_DIMENSION_LABELS[STYLE_DIMENSION_COUNT] = {"harmony", "rhythm", "melody", "form"};
@@ -328,18 +224,11 @@ void cli_print_style_distance(const StyleComparison *comparison) {
 }
 
 void cli_print_style_distance_json(const StyleComparison *comparison) {
-    printf("\"style_distance\":{");
-    const char *separator = "";
-    for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
-        if (comparison->dimension_present[d]) {
-            printf("%s\"%s\":%.4f", separator, STYLE_DIMENSION_LABELS[d], style_rational_value(comparison->dimension[d]));
-            separator = ",";
-        }
-    }
-    if (comparison->overall_present) {
-        printf("%s\"overall\":%.4f", separator, style_rational_value(comparison->overall));
-    }
-    printf("}");
+    cJSON *document = api_style_distance_json(comparison);
+    char *text = document ? cJSON_PrintUnformatted(document) : NULL;
+    printf("\"style_distance\":%s", text ? text : "{}");
+    cJSON_free(text);
+    cJSON_Delete(document);
 }
 
 void cli_print_json(const cJSON *document) {
@@ -462,11 +351,11 @@ void cli_print_seed_line(const char *what, const CorpusSeed *seed) {
 }
 
 void cli_print_seed_json(const CorpusSeed *seed) {
-    printf("{\"piece\":");
-    cli_print_json_string(seed->piece);
-    printf(",\"start\":{\"measure\":%d,\"beat\":%g},\"end\":{\"measure\":%d,\"beat\":%g},\"score\":\"%lu/%lu\"}",
-           seed->start_measure, seed->start_beat, seed->end_measure, seed->end_beat, seed->score_numerator,
-           seed->score_denominator);
+    cJSON *document = api_seed_json(seed);
+    char *text = document ? cJSON_PrintUnformatted(document) : NULL;
+    printf("%s", text ? text : "{}");
+    cJSON_free(text);
+    cJSON_Delete(document);
 }
 
 int cli_seed_source(const CorpusSeed *seed, PlanSource *out) {
@@ -498,13 +387,7 @@ int cli_add_source(PiecePlan *plan, NodeId node, const CorpusSeed *seed) {
 }
 
 NodeId cli_find_node(const PiecePlan *plan, const char *name) {
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        const char *found = plan_node_name(plan, id);
-        if (found && strcmp(found, name) == 0) {
-            return id;
-        }
-    }
-    return PLAN_NODE_NONE;
+    return api_find_node(plan, name);
 }
 
 /* --- the node a command works on ------------------------------------------------ */

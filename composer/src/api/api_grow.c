@@ -1146,8 +1146,6 @@ static cJSON *slots_json(const GrowThemeInfo *info, const PiecePlan *plan, const
 
 /* --- the result -------------------------------------------------------------------------------------- */
 
-static const StyleDimension STYLE_DIMENSIONS[STYLE_DIMENSION_COUNT] = {STYLE_DIMENSION_HARMONY, STYLE_DIMENSION_RHYTHM,
-                                                                      STYLE_DIMENSION_MELODY, STYLE_DIMENSION_FORM};
 static const char *const STYLE_DIMENSION_LABELS[STYLE_DIMENSION_COUNT] = {"harmony", "rhythm", "melody", "form"};
 
 static cJSON *four_places(double value) {
@@ -1157,7 +1155,6 @@ static cJSON *four_places(double value) {
 }
 
 cJSON *api_style_distance_json(const StyleComparison *comparison) {
-    (void)STYLE_DIMENSIONS;
     cJSON *object = cJSON_CreateObject();
     for (int d = 0; object && d < STYLE_DIMENSION_COUNT; d++) {
         if (comparison->dimension_present[d] &&
