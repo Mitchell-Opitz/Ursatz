@@ -6,7 +6,6 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/motive.h>
 
 #include "motive_extras.h"
 

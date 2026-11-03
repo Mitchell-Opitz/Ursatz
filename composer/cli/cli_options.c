@@ -8,13 +8,7 @@
 #include <string.h>
 #include <time.h>
 
-#include "api/api_grow.h"
-#include "api/api_internal.h"
 
-#include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_json.h>
-#include "util/plan_util.h"
-#include "util/util.h"
 
 bool cli_read_file(const char *path, char **text, size_t *size) {
     *text = NULL;
@@ -196,11 +190,11 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
 }
 
 int cli_style_without_add(CliStyleWithout *list, const char *name) {
-    ComposerError error;
-    memset(&error, 0, sizeof error);
-    ComposerStatus status =
-        api_style_without_add(list->names, &list->count, CLI_STYLE_WITHOUT_MAX, name, &error);
-    return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, NULL);
+    if (list->count >= CLI_LIST_CAPACITY) {
+        return cli_fail(CLI_EXIT_USAGE, "--style-without is given at most %d times", CLI_LIST_CAPACITY);
+    }
+    list->names[list->count++] = name;
+    return 0;
 }
 
 void cli_print_json(const cJSON *document) {

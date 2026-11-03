@@ -4,9 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/motive.h>
 
-#include "api/api_internal.h"
 #include "cli_options.h"
 
 int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size, char *error, size_t error_size) {
@@ -14,7 +12,7 @@ int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size
     *size = 0;
     const char *why = NULL;
     char limit[64];
-    MotiveResult result = MOTIVE_ERR_IO;
+    const char *result = "io";
     FILE *file = fopen(path, "rb");
     if (!file) {
         why = "cannot open the file";
@@ -23,7 +21,7 @@ int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size
         long length = ftell(file);
         fseek(file, 0, SEEK_SET);
         if (length == 0) {
-            result = MOTIVE_ERR_EMPTY;
+            result = "empty";
             why = "the file is empty";
         } else if (length < 0 || length > MOTIVE_INPUT_FILE_LIMIT) {
             snprintf(limit, sizeof limit, "the file is empty or larger than %ld bytes", MOTIVE_INPUT_FILE_LIMIT);
@@ -35,14 +33,14 @@ int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size
                 *size = (size_t)length;
             } else {
                 free(data);
-                result = data ? MOTIVE_ERR_IO : MOTIVE_ERR_ALLOC;
+                result = data ? "io" : "alloc";
                 why = data ? "cannot read the file" : "out of memory";
             }
         }
         fclose(file);
     }
     if (why) {
-        snprintf(error, error_size, "cannot load '%s' (%s) at %s: %s", path, motive_result_name(result), path, why);
+        snprintf(error, error_size, "cannot load '%s' (%s) at %s: %s", path, result, path, why);
     }
     return why ? CLI_EXIT_UNSATISFIABLE : 0;
 }
@@ -53,7 +51,7 @@ static bool reads_as_midi(const MotiveInput *options, const unsigned char *bytes
         return false;
     }
     if (!options->format_text || strcmp(options->format_text, "auto") == 0) {
-        return bytes && motive_detect_format(bytes, size) == MOTIVE_FORMAT_MIDI;
+        return bytes && size >= 4 && memcmp(bytes, "MThd", 4) == 0;
     }
     return bytes && strcmp(options->format_text, "midi") == 0;
 }

@@ -10,7 +10,6 @@
 #include <cJSON.h>
 
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/plan_json.h>
 
 #include "cli_options.h"
 #include "workflow.h"
@@ -212,17 +211,17 @@ static int read_request_file(const char *path, cJSON **out) {
             continue;
         }
         const cJSON *id = cJSON_GetObjectItemCaseSensitive(section, "id");
-        PiecePlan *plan = NULL;
-        PlanJsonError error;
-        if (plan_read_json_file(plan_path->valuestring, &plan, &error) != PLAN_OK) {
+        /* The API checks that the plan reads; the file must be there and be JSON. */
+        char *plan_text = NULL;
+        cJSON *object = cli_read_file(plan_path->valuestring, &plan_text, NULL) ? cJSON_Parse(plan_text) : NULL;
+        if (!object) {
             int status = cli_fail(CLI_EXIT_USAGE, "section '%s': cannot read the theme plan '%s': %s",
-                                  cJSON_IsString(id) ? id->valuestring : "", plan_path->valuestring, error.message);
+                                  cJSON_IsString(id) ? id->valuestring : "", plan_path->valuestring,
+                                  plan_text ? "not valid JSON" : "could not open the file");
+            free(plan_text);
             cJSON_Delete(request);
             return status;
         }
-        char *plan_text = plan_to_json(plan, &error);
-        plan_destroy(plan);
-        cJSON *object = plan_text ? cJSON_Parse(plan_text) : NULL;
         free(plan_text);
         char *label = strdup(plan_path->valuestring);
         if (!object || !label || !cJSON_ReplaceItemInObject(fill, "plan", object) ||

@@ -12,7 +12,6 @@
 #include "workflow.h"
 
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/grow.h>
 
 #define GROW_MAX_SEED_TRIES 16
 #define GROW_MAX_SUGGESTIONS 16

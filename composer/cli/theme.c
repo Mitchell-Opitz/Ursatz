@@ -8,7 +8,6 @@
 #include <cJSON.h>
 
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/plan_json.h>
 
 #include "cli_options.h"
 #include "grow_text.h"

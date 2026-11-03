@@ -6,16 +6,6 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/export.h>
-#include <ursatz_composer/corpus_seed.h>
-#include <ursatz_composer/explain.h>
-#include <ursatz_composer/fill_target.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece_plan.h>
-#include <ursatz_composer/regenerate.h>
-#include <ursatz_composer/style.h>
 
 
 /* The exit statuses every command shares. */
@@ -59,14 +49,13 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
 /* Prints the document with 2-space indent and one space after each colon, as the commands write JSON. */
 void cli_print_json(const cJSON *document);
 
-/* --style-without values: at most CLI_STYLE_WITHOUT_MAX category names, each one the Analyzer defines. */
-#define CLI_STYLE_WITHOUT_MAX 8
+/* The --style-without values as given; the API checks that each is a style category and how many there are. */
 typedef struct {
-    const char *names[CLI_STYLE_WITHOUT_MAX];
+    const char *names[CLI_LIST_CAPACITY];
     size_t count;
 } CliStyleWithout;
 
-/* Adds one --style-without value. Returns 0, or the status of the usage error it printed (more than 8, or not a category). */
+/* Adds one --style-without value. Returns 0, or the status of the usage error it printed (more than the CLI has room for). */
 int cli_style_without_add(CliStyleWithout *list, const char *name);
 
 /* The name of alternative k (from 1) of a file: before the extension, "-k". With one result the name as given. */

@@ -6,7 +6,6 @@
 
 #include <cJSON.h>
 
-#include <ursatz_composer/corpus_seed.h>
 
 /*
  * Prints the text output of `grow` and `theme` from the result document (docs/api.md, the theme entry): the brief line, the

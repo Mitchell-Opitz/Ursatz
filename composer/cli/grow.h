@@ -4,14 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <ursatz_composer/given.h>
-#include <ursatz_composer/grow.h>
-#include <ursatz_composer/grow_form.h>
-#include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece_plan.h>
-#include <ursatz_composer/style.h>
 
-#include "api/api_grow.h"
 
 /*
  * The `grow` subcommand: argv[1] is "grow". Returns the process exit status:
