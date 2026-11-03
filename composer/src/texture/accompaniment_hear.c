@@ -1,9 +1,7 @@
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <standard-texture/analysis/texture_analysis_classify.h>
-#include <standard-texture/analysis/texture_analysis_input.h>
 #include <standard-texture/texture_rules.h>
 
 #include <identity/entity_id.h>
@@ -12,32 +10,20 @@
 #include <time/note_value.h>
 #include <time/time_signature.h>
 #include <time/time_rational.h>
-#include <time/time_span.h>
 
+#include <ursatz_analyzer/analysis_result.h>
+#include <ursatz_analyzer/composer_api.h>
+#include <ursatz_chain/analysis_chain.h>
+
+#include "render/render_notes.h"
 #include "texture/texture_internal.h"
+#include "util/position.h"
 
-/* The tracks of the input: one for each of the parts, as they would be separated from a score. */
-#define TRACK_MELODY 0
-#define TRACK_BASS 1
-#define TRACK_ACCOMPANIMENT 2
-
-typedef struct {
-    MeterMap *map;
-    StandardTextureInput input;
-    TimeSpan **spans;
-    size_t span_count;
-    size_t span_capacity;
-    unsigned next_id;
-} Hearing;
-
-static void hearing_destroy(Hearing *hearing) {
-    standard_texture_input_destroy(&hearing->input);
-    for (size_t i = 0; i < hearing->span_count; i++) {
-        time_span_destroy(hearing->spans[i]);
-    }
-    free(hearing->spans);
-    meter_map_destroy(hearing->map);
-}
+/*
+ * The notes of the melody, the bass and the candidate are heard by the Analyzer's texture stage (analysis_chain_texture),
+ * as three streams: the melody the first, the bass the second, the accompaniment the third, whose voices the library
+ * separates itself. Only the texture stage runs: it reads the notes alone.
+ */
 
 /* The meter map of one signature from time 0. */
 static bool meter_map_of(const PlanMeter *meter, MeterMap **out) {
@@ -68,36 +54,6 @@ static bool meter_map_of(const PlanMeter *meter, MeterMap **out) {
     return ok;
 }
 
-/* A note of a track and voice from onset to end of the target, which starts phase into a bar. */
-static bool add_note(Hearing *hearing, const AccompContext *context, size_t track, size_t voice, Rational onset,
-                     Rational end, int pitch) {
-    MusicalTime *start = NULL;
-    MusicalTime *stop = NULL;
-    TimeSpan *span = NULL;
-    char id[STANDARD_TEXTURE_ID_MAX];
-    bool ok = false;
-    if (hearing->span_count == hearing->span_capacity) {
-        size_t capacity = hearing->span_capacity ? hearing->span_capacity * 2 : 64;
-        TimeSpan **spans = realloc(hearing->spans, capacity * sizeof(*spans));
-        if (!spans) {
-            return false;
-        }
-        hearing->spans = spans;
-        hearing->span_capacity = capacity;
-    }
-    if (musical_time_from_rational(position_add(context->phase, onset), &start) == TIME_RATIONAL_OK &&
-        musical_time_from_rational(position_add(context->phase, end), &stop) == TIME_RATIONAL_OK &&
-        time_span_create(start, stop, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK) {
-        snprintf(id, sizeof(id), "n%u", hearing->next_id++);
-        hearing->spans[hearing->span_count++] = span;
-        ok = standard_texture_input_add_note(&hearing->input, id, span, pitch, track, voice, 1.0) ==
-             STANDARD_TEXTURE_ANALYSIS_OK;
-    }
-    musical_time_destroy(start);
-    musical_time_destroy(stop);
-    return ok;
-}
-
 /* The texture the target asks for, or its category, is the texture a window was heard as. */
 static bool window_is(int heard, int asked) {
     StandardTexture category;
@@ -105,38 +61,80 @@ static bool window_is(int heard, int asked) {
                                               (int)category == asked));
 }
 
+/* Adds a note of a lane, from onset to end of the target, which starts phase into a bar. */
+static bool add_note(RenderNote *notes, size_t *count, const AccompContext *context, PlanLaneKind lane, int voice,
+                     Rational onset, Rational end, int pitch) {
+    RenderNote *note = &notes[(*count)++];
+    note->onset = position_add(context->phase, onset);
+    note->duration = position_sub(end, onset);
+    note->midi = pitch;
+    note->lane = lane;
+    note->voice = voice;
+    return rational_cmp(note->duration, (Rational){0, 1}) > 0;
+}
+
 bool accomp_hear(const AccompContext *context, const AccompCandidate *candidate, bool *heard) {
-    Hearing hearing;
-    StandardTextureAnalysis analysis;
     bool ok = context->texture >= 0 && context->texture < (int)STANDARD_TEXTURE_COUNT;
-    memset(&hearing, 0, sizeof(hearing));
-    memset(&analysis, 0, sizeof(analysis));
-    if (!ok || !meter_map_of(&context->meter, &hearing.map)) {
+    if (!ok) {
         return false;
     }
-    ok = standard_texture_input_init(&hearing.input, hearing.map) == STANDARD_TEXTURE_ANALYSIS_OK;
+    size_t capacity = context->melody_count + context->bass_count;
+    for (size_t voice = 0; voice < ACCOMP_VOICES; voice++) {
+        capacity += candidate->note_count[voice];
+    }
+    RenderNote *notes = calloc(capacity ? capacity : 1, sizeof(*notes));
+    MeterMap *map = NULL;
+    RenderedPlan rendered;
+    AnalyzerResult *result = NULL;
+    int *midi = NULL;
+    size_t count = 0;
+    memset(&rendered, 0, sizeof(rendered));
+    ok = notes && meter_map_of(&context->meter, &map);
     for (size_t i = 0; ok && i < context->melody_count; i++) {
-        ok = add_note(&hearing, context, TRACK_MELODY, 0, context->melody[i].onset, context->melody[i].end,
+        ok = add_note(notes, &count, context, PLAN_LANE_MELODY, 0, context->melody[i].onset, context->melody[i].end,
                       context->melody[i].pitch);
     }
     for (size_t i = 0; ok && i < context->bass_count; i++) {
-        ok = add_note(&hearing, context, TRACK_BASS, 0, context->bass[i].onset, context->bass[i].end, context->bass[i].pitch);
+        ok = add_note(notes, &count, context, PLAN_LANE_BASS, 0, context->bass[i].onset, context->bass[i].end,
+                      context->bass[i].pitch);
     }
     for (size_t voice = 0; ok && voice < ACCOMP_VOICES; voice++) {
         for (size_t n = 0; ok && n < candidate->note_count[voice]; n++) {
             const AccompNote *note = &candidate->notes[voice][n];
-            ok = add_note(&hearing, context, TRACK_ACCOMPANIMENT, voice, note->onset, position_add(note->onset, note->duration),
-                          note->pitch);
+            ok = add_note(notes, &count, context, PLAN_LANE_INNER_VOICE, 2, note->onset,
+                          position_add(note->onset, note->duration), note->pitch);
         }
     }
-    ok = ok && standard_texture_analyze(&hearing.input, NULL, &analysis) == STANDARD_TEXTURE_ANALYSIS_OK;
+    ok = ok && count > 0 && render_notes(notes, count, &context->key, &rendered) == PLAN_RENDER_OK;
+    midi = ok ? calloc(rendered.count, sizeof(*midi)) : NULL;
+    ok = ok && midi;
+    for (size_t i = 0; ok && i < rendered.count; i++) {
+        midi[i] = (int)pitch_numeric_value_position_numerator(rendered.pitch_values[i]);
+    }
     if (ok) {
-        *heard = analysis.windows.count > 0;
-        for (size_t w = 0; w < analysis.windows.count; w++) {
-            *heard = *heard && window_is(analysis.window_texture[w], context->texture);
+        AnalyzerHearing input;
+        memset(&input, 0, sizeof(input));
+        input.events = (const NoteEvent *const *)rendered.events;
+        input.count = rendered.count;
+        input.midi = midi;
+        input.meter = map;
+        input.streams = rendered.part_index;
+        AnalyzerHearingOptions options = analyzer_hearing_options_default();
+        options.analysis.stages = ANALYSIS_CHAIN_STAGE_TEXTURE;
+        ok = analyzer_hear(&input, &options, &result) == ANALYZER_OK;
+    }
+    const StandardTextureAnalysis *analysis = ok ? analysis_chain_texture(analyzer_result_chain(result)) : NULL;
+    ok = ok && analysis;
+    if (ok) {
+        *heard = analysis->windows.count > 0;
+        for (size_t w = 0; w < analysis->windows.count; w++) {
+            *heard = *heard && window_is(analysis->window_texture[w], context->texture);
         }
     }
-    standard_texture_analysis_destroy(&analysis);
-    hearing_destroy(&hearing);
+    analyzer_result_destroy(result);
+    free(midi);
+    rendered_plan_destroy(&rendered);
+    meter_map_destroy(map);
+    free(notes);
     return ok;
 }
