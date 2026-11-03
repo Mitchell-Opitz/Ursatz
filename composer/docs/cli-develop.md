@@ -9,6 +9,8 @@ with its recognizability score. The best one can also be written, after the sour
 MusicXML. The command runs the motivic development operators (`<ursatz_composer/motive_develop.h>`)
 on a small plan: the source is Given, and an open motive node after it asks for the development.
 
+The command is a wrapper of the [composer API](api.md): it reads its arguments and the input file into a request (a MIDI file through `composer_api_motive_from_midi` first), calls `composer_api_develop`, prints the candidates from the response document and writes the MIDI file and the MusicXML the response holds.
+
 The input is loaded as for the [motive command](cli-motive.md): a MIDI file, a MusicXML file, a note
 list or a motive JSON file, with `--meter`, `--key` and `--format` meaning the same.
 

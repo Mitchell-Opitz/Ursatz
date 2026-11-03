@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/progression.request.schema.json",
+  "title": "composer_api_progression request",
+  "description": "A chord progression for one phrase, or (list_schemas) the names of the schemas and sequences.",
+  "type": "object",
+  "additionalProperties": false,
+  "anyOf": [
+    {
+      "required": [
+        "list_schemas"
+      ]
+    },
+    {
+      "required": [
+        "key",
+        "meter",
+        "bars",
+        "cadence"
+      ]
+    }
+  ],
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "list_schemas": {
+      "type": "boolean"
+    },
+    "key": {
+      "type": "string"
+    },
+    "meter": {
+      "type": "string"
+    },
+    "bars": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "cadence": {
+      "enum": [
+        "PAC",
+        "IAC",
+        "HC",
+        "DC",
+        "PC",
+        "pac",
+        "iac",
+        "hc",
+        "dc",
+        "pc"
+      ]
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "embellish": {
+      "enum": [
+        "none",
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "bass": {
+      "type": "boolean"
+    },
+    "schema": {
+      "type": "string"
+    },
+    "sequence": {
+      "type": "string"
+    },
+    "suggest": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "midi": {
+      "type": "boolean"
+    },
+    "musicxml": {
+      "type": "boolean"
+    },
+    "plain_midi": {
+      "type": "boolean"
+    },
+    "tempo": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "plans": {
+      "type": "boolean"
+    }
+  }
+}

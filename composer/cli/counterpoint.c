@@ -5,22 +5,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cli_options.h"
-#include "util/util.h"
+#include <ursatz_composer/composer_api.h>
 
-#include <ursatz_composer/counterpoint.h>
-#include <ursatz_composer/export.h>
-#include <ursatz_composer/fill_loop.h>
-#include <ursatz_composer/motive.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
-#include <ursatz_composer/render.h>
-#include "motive/motive_internal.h"
+#include "cli_options.h"
+#include "motive_input.h"
+#include "util/util.h"
+#include "workflow.h"
 
 #define MAX_SUGGESTIONS 16
-#define MAX_FILES (3 * MAX_SUGGESTIONS)
-#define MAX_NOTES 512
-#define SIGNATURE_MAX 4096
 
 typedef struct {
     bool help;
@@ -38,25 +30,9 @@ typedef struct {
     const char *musicxml_path;
     const char *tempo_text;
     bool plain_midi;
-    PlanExportOptions export_options;
     const char *format_text;
-    /* Read from the text above. */
-    int species;
-    AnalysisKey key;
-    PlanMeter meter;
-    unsigned long seed;
-    unsigned long suggest;
     bool json;
 } Options;
-
-/* One counter-melody written: its plan, the target and the verdict of the library. */
-typedef struct {
-    PiecePlan *plan;
-    LaneSpanId target;
-    unsigned long seed;
-    CounterpointReport report;
-    char signature[SIGNATURE_MAX];
-} Result;
 
 static void print_help(FILE *out) {
     fprintf(out, "Usage:\n%s\n\n", COUNTERPOINT_USAGE_LINE + 7);
@@ -149,60 +125,16 @@ static int read_options(int argc, char **argv, Options *options) {
     return 0;
 }
 
+/* The checks of the command line itself; the values are checked by the composer API. */
 static int check_options(Options *options) {
-    unsigned long number;
     if (!options->input) {
         return cli_fail(CLI_EXIT_USAGE, "counterpoint needs a line\n%s", COUNTERPOINT_USAGE_LINE);
     }
     if (!options->species_text || !options->key_text || !options->meter_text) {
         return cli_fail(CLI_EXIT_USAGE, "counterpoint needs --species, --key and --meter (see --help)");
     }
-    if (!request_parse_whole_number(options->species_text, 4, &number) || number < 1) {
-        return cli_fail(CLI_EXIT_USAGE, "--species must be 1, 2, 3 or 4, not '%s' (fifth species is not written)",
-                        options->species_text);
-    }
-    options->species = (int)number;
     if (options->above && options->below) {
         return cli_fail(CLI_EXIT_USAGE, "--above and --below cannot both be given");
-    }
-    if (options->mode_text) {
-        char text[64];
-        if (!request_equals_ignore_case(options->mode_text, "major") && !request_equals_ignore_case(options->mode_text, "minor")) {
-            return cli_fail(CLI_EXIT_USAGE, "--mode must be major or minor, not '%s'", options->mode_text);
-        }
-        if (strchr(options->key_text, ' ')) {
-            return cli_fail(CLI_EXIT_USAGE, "--key already names a mode; give a tonic alone with --mode");
-        }
-        snprintf(text, sizeof(text), "%s %s", options->key_text, options->mode_text);
-        if (!request_parse_key(text, &options->key)) {
-            return cli_fail(CLI_EXIT_USAGE, "unknown key '%s'", options->key_text);
-        }
-    } else if (!request_parse_key(options->key_text, &options->key)) {
-        return cli_fail(CLI_EXIT_USAGE,
-                        "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, for "
-                        "example \"D minor\"",
-                        options->key_text);
-    }
-    if (!request_parse_meter(options->meter_text, &options->meter)) {
-        return cli_fail(CLI_EXIT_USAGE, "meter '%s' is not a meter; write beats over a beat unit, for example 4/4",
-                        options->meter_text);
-    }
-    options->seed = cli_default_seed();
-    if (options->seed_text && !request_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
-        return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to %lu, not '%s'", CLI_SEED_MAX,
-                        options->seed_text);
-    }
-    options->suggest = 1;
-    if (options->suggest_text &&
-        (!request_parse_whole_number(options->suggest_text, MAX_SUGGESTIONS, &options->suggest) || options->suggest == 0)) {
-        return cli_fail(CLI_EXIT_USAGE, "--suggest must be a whole number from 1 to %d, not '%s'", MAX_SUGGESTIONS,
-                        options->suggest_text);
-    }
-    {
-        int export_status = cli_read_export_options(options->tempo_text, options->plain_midi, &options->export_options);
-        if (export_status != 0) {
-            return export_status;
-        }
     }
     if (options->format_text && strcmp(options->format_text, "text") != 0 && strcmp(options->format_text, "json") != 0) {
         return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
@@ -211,313 +143,131 @@ static int check_options(Options *options) {
     return 0;
 }
 
-/* --- the plan -------------------------------------------------------------------- */
-
-static Rational fraction(long num, unsigned long den) {
-    Rational time = {0, 1};
-    rational_make(num, den, &time);
-    return time;
-}
-
-/*
- * The plan the operator works on: a form over the length of the line, the meter and the key given, the line as the melody
- * (below) or the bass (above), and an open inner voice span over the same time with the counterpoint constraint.
- */
-static PiecePlan *build_plan(const Options *options, const Motive *motive, LaneSpanId *target) {
-    PiecePlan *plan = plan_create();
-    PlanSpan all = {fraction(0, 1), motive->length};
-    PlanLanePayload payload;
-    PlanConstraint constraint;
-    PlanNote placeholder;
-    NodeId owner;
-    LaneSpanId id;
-    bool ok = plan != NULL;
-    ok = ok && plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, all, "counterpoint", &owner) == PLAN_OK;
-    memset(&payload, 0, sizeof(payload));
-    payload.meter = options->meter;
-    ok = ok && plan_add_lane_span(plan, owner, PLAN_LANE_METER, 0, all, &payload, &id) == PLAN_OK &&
-         plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
-    memset(&payload, 0, sizeof(payload));
-    payload.key = options->key;
-    ok = ok && plan_add_lane_span(plan, owner, PLAN_LANE_KEY, 0, all, &payload, &id) == PLAN_OK &&
-         plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
-    memset(&payload, 0, sizeof(payload));
-    PlanNote lane_notes[MOTIVE_MAX_NOTES];
-    motive_lane_notes(motive, lane_notes);
-    payload.notes.notes = lane_notes;
-    payload.notes.note_count = motive->note_count;
-    ok = ok && plan_add_lane_span(plan, owner, options->above ? PLAN_LANE_BASS : PLAN_LANE_MELODY, 0, all, &payload, &id) ==
-                   PLAN_OK &&
-         plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
-    ok = ok && plan_node_set_state(plan, owner, PLAN_STATE_GIVEN) == PLAN_OK;
-    placeholder.midi = 60;
-    placeholder.spelled = false;
-    placeholder.offset = fraction(0, 1);
-    placeholder.duration = motive->length;
-    memset(&payload, 0, sizeof(payload));
-    payload.notes.notes = &placeholder;
-    payload.notes.note_count = 1;
-    memset(&constraint, 0, sizeof(constraint));
-    constraint.kind = PLAN_CONSTRAINT_COUNTERPOINT;
-    constraint.params.counterpoint.species = options->species;
-    constraint.params.counterpoint.above = options->above;
-    ok = ok && plan_add_lane_span(plan, owner, PLAN_LANE_INNER_VOICE, 1, all, &payload, target) == PLAN_OK &&
-         plan_lane_span_add_constraint(plan, *target, &constraint) == PLAN_OK;
+/* The request: the line as a motive, and the options of the command as members. */
+static cJSON *build_request(const Options *options, cJSON *line) {
+    cJSON_DeleteItemFromObjectCaseSensitive(line, "key");
+    bool ok = cJSON_AddStringToObject(line, "key", options->key_text) &&
+              cJSON_AddStringToObject(line, "species", options->species_text) &&
+              (!options->above || cJSON_AddStringToObject(line, "position", "above")) &&
+              (!options->mode_text || cJSON_AddStringToObject(line, "mode", options->mode_text)) &&
+              (!options->seed_text || cJSON_AddStringToObject(line, "seed", options->seed_text)) &&
+              (!options->suggest_text || cJSON_AddStringToObject(line, "suggest", options->suggest_text)) &&
+              (!(options->out_path || options->midi_path) || cJSON_AddTrueToObject(line, "plans")) &&
+              (!options->midi_path || cJSON_AddTrueToObject(line, "midi")) &&
+              (!options->musicxml_path || cJSON_AddTrueToObject(line, "musicxml")) &&
+              (!options->tempo_text || cJSON_AddStringToObject(line, "tempo", options->tempo_text)) &&
+              (!options->plain_midi || cJSON_AddTrueToObject(line, "plain_midi"));
     if (!ok) {
-        plan_destroy(plan);
+        cJSON_Delete(line);
         return NULL;
     }
-    return plan;
+    return line;
 }
 
-static void result_destroy(Result *result) {
-    plan_destroy(result->plan);
-    result->plan = NULL;
-}
-
-/* The notes of the counter-melody as text, to tell two results apart. */
-static void sign(const PiecePlan *plan, LaneSpanId target, char *out, size_t size) {
-    const PlanNotes *notes = &plan_lane_span_payload(plan, target)->notes;
-    size_t used = 0;
-    out[0] = '\0';
-    for (size_t i = 0; i < notes->note_count && used + 24 < size; i++) {
-        used += (size_t)snprintf(out + used, size - used, "%d@%lld/%lld,", notes->notes[i].midi,
-                                 notes->notes[i].offset.num, notes->notes[i].offset.den);
-    }
-}
-
-/* One run from one seed; true when the counter-melody was written. */
-static bool write_one(const Options *options, const Motive *motive, unsigned long seed, Result *result) {
-    FillOperatorRegistry *registry = fill_registry_create();
-    CounterpointParams params = counterpoint_params_default();
-    FillConfig config;
-    FillOutcome outcome;
-    bool ok = false;
-    memset(result, 0, sizeof(*result));
-    memset(&config, 0, sizeof(config));
-    config.seed = seed;
-    config.checker = counterpoint_checker;
-    result->seed = seed;
-    result->plan = build_plan(options, motive, &result->target);
-    if (registry && result->plan && counterpoint_register(registry, &params) == FILL_OK &&
-        fill_run(result->plan, registry, &config, &outcome, NULL) == FILL_OK) {
-        ok = outcome.status == FILL_STATUS_COMPLETE && counterpoint_report(result->plan, result->target, &result->report);
-        fill_outcome_destroy(&outcome);
-    }
-    fill_registry_destroy(registry);
-    if (ok) {
-        sign(result->plan, result->target, result->signature, sizeof(result->signature));
-    } else {
-        result_destroy(result);
-    }
-    return ok;
-}
-
-/* --- printing ----------------------------------------------------------------------- */
-
-static void pitch_name(int pitch, char *out, size_t size) {
-    util_pitch_name(pitch, false, out, size);
-}
+/* --- printing ----------------------------------------------------------------------------------- */
 
 /* A length as w, h, q, e, s or t with up to two dots, else as a fraction of a whole note. */
-static void duration_name(Rational length, char *out, size_t size) {
+static void duration_name(long long num, long long den, char *out, size_t size) {
     static const struct {
         long ticks;
         const char *name;
     } NAMES[] = {{128, "w"}, {192, "w."}, {64, "h"}, {96, "h."}, {112, "h.."}, {32, "q"}, {48, "q."}, {56, "q.."},
                  {16, "e"},  {24, "e."},  {28, "e.."}, {8, "s"}, {12, "s."}, {4, "t"}};
-    long ticks = (length.num * 128) % (long)length.den == 0 ? length.num * 128 / (long)length.den : -1;
+    long long ticks = (num * 128) % den == 0 ? num * 128 / den : -1;
     for (size_t i = 0; i < sizeof(NAMES) / sizeof(NAMES[0]); i++) {
         if (NAMES[i].ticks == ticks) {
             snprintf(out, size, "%s", NAMES[i].name);
             return;
         }
     }
-    snprintf(out, size, "%lld/%lld", length.num, length.den);
+    snprintf(out, size, "%lld/%lld", num, den);
 }
 
-/* The notes of a lane voice as a note list, gaps as rests, a bar line between bars. */
-static void print_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, Rational bar) {
-    LaneSpanId ids[MAX_NOTES];
-    size_t found = plan_lane_find(plan, lane, voice, span, ids, MAX_NOTES);
-    Rational at = fraction(0, 1);
-    for (size_t i = 0; i < found; i++) {
-        const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
-        Rational base = plan_lane_span_span(plan, ids[i]).start;
-        for (size_t n = 0; n < notes->note_count; n++) {
-            Rational start;
-            Rational gap;
-            char pitch[16];
-            char length[24];
-            rational_add(base, notes->notes[n].offset, &start);
-            if (rational_cmp(start, at) > 0) {
-                Rational negative = {-at.num, at.den};
-                rational_add(start, negative, &gap);
-                duration_name(gap, length, sizeof(length));
-                printf(" r:%s", length);
-            }
-            if (bar.num > 0 && start.num * (long)bar.den % (bar.num * (long)start.den) == 0 && start.num > 0) {
-                printf(" |");
-            }
-            pitch_name(notes->notes[n].midi, pitch, sizeof(pitch));
-            duration_name(notes->notes[n].duration, length, sizeof(length));
-            printf(" %s:%s", pitch, length);
-            rational_add(start, notes->notes[n].duration, &at);
+static void pitch_name(int pitch, char *out, size_t size) {
+    util_pitch_name(pitch, false, out, size);
+}
+
+static long long greatest_common_divisor(long long a, long long b) {
+    while (b != 0) {
+        long long rest = a % b;
+        a = b;
+        b = rest;
+    }
+    return a < 0 ? -a : a;
+}
+
+/* The notes of a line as a note list, gaps as rests, a bar line between bars. bar is the length of a bar. */
+static void print_line(const cJSON *notes, long long bar_num, long long bar_den) {
+    long long at_num = 0;
+    long long at_den = 1;
+    const cJSON *note = NULL;
+    cJSON_ArrayForEach(note, notes) {
+        const cJSON *offset = cJSON_GetObjectItemCaseSensitive(note, "offset");
+        const cJSON *duration = cJSON_GetObjectItemCaseSensitive(note, "duration");
+        long long start_num = (long long)cli_json_number(offset, "num");
+        long long start_den = (long long)cli_json_number(offset, "den");
+        long long length_num = (long long)cli_json_number(duration, "num");
+        long long length_den = (long long)cli_json_number(duration, "den");
+        char pitch[16];
+        char length[24];
+        if (start_num * at_den > at_num * start_den) {
+            long long gap_num = start_num * at_den - at_num * start_den;
+            long long gap_den = start_den * at_den;
+            long long divisor = greatest_common_divisor(gap_num, gap_den);
+            gap_num /= divisor;
+            gap_den /= divisor;
+            duration_name(gap_num, gap_den, length, sizeof(length));
+            printf(" r:%s", length);
         }
+        if (bar_num > 0 && start_num * bar_den % (bar_num * start_den) == 0 && start_num > 0) {
+            printf(" |");
+        }
+        pitch_name((int)cli_json_number(note, "midi_pitch"), pitch, sizeof(pitch));
+        duration_name(length_num, length_den, length, sizeof(length));
+        printf(" %s:%s", pitch, length);
+        at_num = start_num * length_den + length_num * start_den;
+        at_den = start_den * length_den;
     }
     printf("\n");
 }
 
-static void print_json_notes(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span) {
-    LaneSpanId ids[MAX_NOTES];
-    size_t found = plan_lane_find(plan, lane, voice, span, ids, MAX_NOTES);
-    bool first = true;
-    printf("[");
-    for (size_t i = 0; i < found; i++) {
-        const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
-        Rational base = plan_lane_span_span(plan, ids[i]).start;
-        for (size_t n = 0; n < notes->note_count; n++) {
-            Rational start;
-            rational_add(base, notes->notes[n].offset, &start);
-            printf("%s{\"midi_pitch\":%d,\"offset\":{\"num\":%lld,\"den\":%lld},\"duration\":{\"num\":%lld,\"den\":%lld}}",
-                   first ? "" : ",", notes->notes[n].midi, start.num, start.den, notes->notes[n].duration.num,
-                   notes->notes[n].duration.den);
-            first = false;
+static void print_result_text(const Options *options, const cJSON *document, const CliWrittenFiles *written) {
+    const cJSON *results = cJSON_GetObjectItemCaseSensitive(document, "results");
+    size_t count = (size_t)cJSON_GetArraySize(results);
+    int species = (int)cli_json_number(document, "species");
+    long beats = 0;
+    long unit = 1;
+    sscanf(cli_json_string(document, "meter"), "%ld/%ld", &beats, &unit);
+    printf("species %d counterpoint %s the line, key %s, meter %s\n", species, cli_json_string(document, "position"),
+           cli_json_string(document, "key"), cli_json_string(document, "meter"));
+    size_t k = 0;
+    const cJSON *result = NULL;
+    cJSON_ArrayForEach(result, results) {
+        if (options->suggest_text) {
+            printf("\ncounter-melody %zu of %zu, seed %.0f\n", k + 1, count, cli_json_number(result, "seed"));
+        } else {
+            printf("\nseed %.0f\n", cli_json_number(result, "seed"));
         }
-    }
-    printf("]");
-}
-
-static void print_json_string(const char *text) {
-    putchar('"');
-    for (; *text; text++) {
-        if (*text == '"' || *text == '\\') {
-            putchar('\\');
+        printf("line:          ");
+        print_line(cJSON_GetObjectItemCaseSensitive(result, "line"), beats, unit);
+        printf("counter-melody:");
+        print_line(cJSON_GetObjectItemCaseSensitive(result, "counter_melody"), beats, unit);
+        printf("rules (standard-counterpoint, species %d):\n", species);
+        const cJSON *group = NULL;
+        cJSON_ArrayForEach(group, cJSON_GetObjectItemCaseSensitive(result, "groups")) {
+            bool hard = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(group, "hard_held"));
+            bool soft = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(group, "soft_held"));
+            printf("  %-18s %s%s\n", cli_json_string(group, "name"), hard ? "held" : "BROKEN",
+                   hard && !soft ? " (some advice not followed)" : "");
         }
-        putchar(*text);
+        k++;
     }
-    putchar('"');
-}
-
-static void print_result_text(const Options *options, const Result *result, PlanSpan span, Rational bar, size_t k,
-                              size_t count) {
-    if (options->suggest > 1 || options->suggest_text) {
-        printf("\ncounter-melody %zu of %zu, seed %lu\n", k + 1, count, result->seed);
-    } else {
-        printf("\nseed %lu\n", result->seed);
-    }
-    printf("line:          ");
-    print_line(result->plan, options->above ? PLAN_LANE_BASS : PLAN_LANE_MELODY, 0, span, bar);
-    printf("counter-melody:");
-    print_line(result->plan, PLAN_LANE_INNER_VOICE, 1, span, bar);
-    printf("rules (standard-counterpoint, species %d):\n", result->report.species);
-    for (size_t g = 0; g < result->report.count; g++) {
-        printf("  %-18s %s%s\n", result->report.name[g], result->report.hard_ok[g] ? "held" : "BROKEN",
-               result->report.hard_ok[g] && !result->report.soft_ok[g] ? " (some advice not followed)" : "");
+    for (size_t i = 0; i < written->count; i++) {
+        printf("wrote %s\n", written->paths[i]);
     }
 }
 
-static void print_result(const Options *options, const Result *results, size_t count, PlanSpan span, Rational bar,
-                         const char *const *files, size_t file_count) {
-    char key[24];
-    cli_key_name(&options->key, key, sizeof(key));
-    if (options->json) {
-        printf("{\"species\":%d,\"position\":\"%s\",\"key\":\"%s\",\"meter\":\"%d/%d\",\"results\":[", options->species,
-               options->above ? "above" : "below", key, options->meter.beats_per_bar, options->meter.beat_unit);
-        for (size_t k = 0; k < count; k++) {
-            const Result *result = &results[k];
-            printf("%s{\"seed\":%lu,\"line\":", k ? "," : "", result->seed);
-            print_json_notes(result->plan, options->above ? PLAN_LANE_BASS : PLAN_LANE_MELODY, 0, span);
-            printf(",\"counter_melody\":");
-            print_json_notes(result->plan, PLAN_LANE_INNER_VOICE, 1, span);
-            printf(",\"groups\":[");
-            for (size_t g = 0; g < result->report.count; g++) {
-                printf("%s{\"name\":\"%s\",\"hard_held\":%s,\"soft_held\":%s}", g ? "," : "", result->report.name[g],
-                       result->report.hard_ok[g] ? "true" : "false", result->report.soft_ok[g] ? "true" : "false");
-            }
-            printf("]}");
-        }
-        printf("],\"files\":[");
-        for (size_t i = 0; i < file_count; i++) {
-            printf("%s", i ? "," : "");
-            print_json_string(files[i]);
-        }
-        printf("]}\n");
-        return;
-    }
-    printf("species %d counterpoint %s the line, key %s, meter %d/%d\n", options->species,
-           options->above ? "above" : "below", key, options->meter.beats_per_bar, options->meter.beat_unit);
-    for (size_t k = 0; k < count; k++) {
-        print_result_text(options, &results[k], span, bar, k, count);
-    }
-    for (size_t i = 0; i < file_count; i++) {
-        printf("wrote %s\n", files[i]);
-    }
-}
-
-/* --- writing the files ---------------------------------------------------------- */
-
-/* Every output goes to a temporary file first and is renamed only when every one was written. */
-static int write_files(const Options *options, const Result *results, size_t count, CliPendingFile *pending,
-                       size_t *pending_count) {
-    const char *paths[3] = {options->out_path, options->midi_path, options->musicxml_path};
-    int status = 0;
-    *pending_count = 0;
-    for (size_t k = 0; k < count && status == 0; k++) {
-        RenderedPlan rendered;
-        bool have_rendering = false;
-        for (int kind = 0; kind < 3 && status == 0; kind++) {
-            CliPendingFile *entry = &pending[*pending_count];
-            if (!paths[kind]) {
-                continue;
-            }
-            if (!cli_alternative_path(paths[kind], k + 1, count > 1, entry->final_path, sizeof(entry->final_path)) ||
-                snprintf(entry->temporary, sizeof(entry->temporary), "%s.tmp", entry->final_path) >=
-                    (int)sizeof(entry->temporary)) {
-                status = cli_fail(CLI_EXIT_WRITE, "file name '%s' is too long", paths[kind]);
-                break;
-            }
-            (*pending_count)++;
-            if (kind == 0) {
-                PlanJsonError error;
-                if (plan_write_json_file(results[k].plan, entry->temporary, &error) != PLAN_OK) {
-                    status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", entry->final_path, error.message);
-                }
-                continue;
-            }
-            PlanExportError error;
-            if (!have_rendering) {
-                if (plan_export_render(results[k].plan, &rendered, NULL) != PLAN_EXPORT_OK) {
-                    status = cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
-                    break;
-                }
-                have_rendering = true;
-            }
-            PlanExportResult written = kind == 1 ? rendered_plan_export_midi(&rendered, &options->export_options, entry->temporary, &error)
-                                                 : rendered_plan_export_musicxml(&rendered, &options->export_options, entry->temporary, &error);
-            if (written != PLAN_EXPORT_OK) {
-                status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", entry->final_path, error.message);
-            }
-        }
-        if (have_rendering) {
-            rendered_plan_destroy(&rendered);
-        }
-    }
-    if (status == 0) {
-        for (size_t i = 0; i < *pending_count; i++) {
-            if (rename(pending[i].temporary, pending[i].final_path) != 0) {
-                status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", pending[i].final_path);
-                break;
-            }
-        }
-    }
-    if (status != 0) {
-        cli_discard_pending(pending, *pending_count);
-    }
-    return status;
-}
-
-/* --- the command ---------------------------------------------------------------- */
+/* --- the command ---------------------------------------------------------------------------------- */
 
 int run_counterpoint(int argc, char **argv) {
     Options options;
@@ -534,81 +284,71 @@ int run_counterpoint(int argc, char **argv) {
         return status;
     }
 
-    MotiveOptions motive_options;
-    Motive motive;
-    MotiveError motive_error;
-    memset(&motive_options, 0, sizeof(motive_options));
-    motive_options.has_meter = true;
-    motive_options.meter = options.meter;
-    motive_options.has_key = true;
-    motive_options.key = options.key;
-    /* A line of any length is read here: the one-bar limit belongs to a motive, not to a line to write against. */
-    motive_options.max_bars = 0;
-    MotiveResult loaded = motive_load_file(options.input, MOTIVE_FORMAT_AUTO, &motive_options, &motive, &motive_error);
-    if (loaded != MOTIVE_OK) {
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot load '%s' (%s)%s%s: %s", options.input,
-                        motive_result_name(loaded), motive_error.location[0] ? " at " : "", motive_error.location,
-                        motive_error.message);
+    /* The line, read in the key and meter; a tonic alone is completed with the mode for a MIDI file. */
+    char key_with_mode[96];
+    MotiveInput input;
+    memset(&input, 0, sizeof(input));
+    input.path = options.input;
+    input.meter_text = options.meter_text;
+    input.key_text = options.key_text;
+    if (options.mode_text && !strchr(options.key_text, ' ') &&
+        snprintf(key_with_mode, sizeof key_with_mode, "%s %s", options.key_text, options.mode_text) < (int)sizeof key_with_mode) {
+        input.key_text = key_with_mode;
     }
+    cJSON *line = NULL;
+    MotiveFile file;
+    memset(&file, 0, sizeof file);
+    status = motive_input_text_request(&input, &line, &file);
+    if (status != 0) {
+        return status;
+    }
+    cJSON *request = build_request(&options, line);
+    if (!request) {
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    ComposerResponse response;
+    ComposerStatus called = cli_call(composer_api_counterpoint, request, &response);
+    if (called != COMPOSER_OK) {
+        MotiveInputNames names = {options.input, NULL, NULL, NULL};
+        status = motive_input_fail(&file, called, &response.error, &names);
+        composer_response_destroy(&response);
+        return status;
+    }
+    cJSON *document = cJSON_Parse(response.json);
+    if (!document) {
+        composer_response_destroy(&response);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    const cJSON *notice = NULL;
+    cJSON_ArrayForEach(notice, cJSON_GetObjectItemCaseSensitive(document, "notices")) {
+        fprintf(stderr, "Note: %s\n", notice->valuestring);
+    }
+    cJSON_DeleteItemFromObjectCaseSensitive(document, "notices");
 
-    /* Whether the line is one the species can be written against, before any seed is tried. */
-    {
-        LaneSpanId target;
-        PiecePlan *plan = build_plan(&options, &motive, &target);
-        const char *why = plan ? counterpoint_why_not(plan, target) : "the plan could not be built";
-        if (why) {
-            status = cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot be written as asked: %s", why);
-        }
-        plan_destroy(plan);
-        if (status != 0) {
-            return status;
+    const cJSON *entries[MAX_SUGGESTIONS];
+    size_t count = 0;
+    const cJSON *result = NULL;
+    cJSON_ArrayForEach(result, cJSON_GetObjectItemCaseSensitive(document, "results")) {
+        if (count < MAX_SUGGESTIONS) {
+            entries[count++] = result;
         }
     }
-
-    Result results[MAX_SUGGESTIONS];
-    size_t made = 0;
-    unsigned long tries = (unsigned long)CLI_MAX_SEED_TRIES * options.suggest;
-    unsigned long last_seed = options.seed;
-    memset(results, 0, sizeof(results));
-    for (unsigned long attempt = 0; attempt < tries && made < options.suggest; attempt++) {
-        Result result;
-        last_seed = (options.seed + attempt) & CLI_SEED_MAX;
-        if (write_one(&options, &motive, last_seed, &result)) {
-            bool repeated = false;
-            for (size_t k = 0; k < made; k++) {
-                repeated = repeated || strcmp(results[k].signature, result.signature) == 0;
-            }
-            if (repeated) {
-                result_destroy(&result);
-            } else {
-                results[made++] = result;
-            }
-        }
-    }
-    if (made == 0) {
-        status = cli_fail(CLI_EXIT_UNSATISFIABLE,
-                          "cannot be written as asked: no species %d counter-melody %s the line holds the rules in %s, "
-                          "from seeds %lu to %lu",
-                          options.species, options.above ? "above" : "below", options.key_text, options.seed, last_seed);
-    } else if (made < options.suggest && options.suggest_text) {
-        fprintf(stderr, "Note: only %zu different counter-melod%s found for this request\n", made, made == 1 ? "y" : "ies");
-    }
+    CliAlternativePaths paths = {options.out_path, options.midi_path, options.musicxml_path, NULL};
+    CliWrittenFiles written;
+    memset(&written, 0, sizeof written);
+    status = cli_write_alternatives(&paths, entries, count, &response, options.tempo_text, options.plain_midi, &written);
     if (status == 0) {
-        CliPendingFile pending[MAX_FILES];
-        const char *files[MAX_FILES];
-        size_t pending_count = 0;
-        PlanSpan span = {fraction(0, 1), motive.length};
-        Rational bar = fraction(options.meter.beats_per_bar, (unsigned long)options.meter.beat_unit);
-        status = write_files(&options, results, made, pending, &pending_count);
-        if (status == 0) {
-            for (size_t i = 0; i < pending_count; i++) {
-                files[i] = pending[i].final_path;
+        if (options.json) {
+            cJSON_ArrayForEach(result, cJSON_GetObjectItemCaseSensitive(document, "results")) {
+                cli_strip_entry_files((cJSON *)result);
             }
-            print_result(&options, results, made, span, bar, files, pending_count);
+            cli_print_document_with_files(document, &written);
+        } else {
+            print_result_text(&options, document, &written);
         }
+        cli_written_free(&written);
     }
-    for (size_t k = 0; k < made; k++) {
-        result_destroy(&results[k]);
-    }
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
     return status;
 }

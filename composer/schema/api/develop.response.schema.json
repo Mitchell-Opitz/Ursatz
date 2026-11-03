@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/develop.response.schema.json",
+  "title": "composer_api_develop response",
+  "description": "The source and the candidates, best first.",
+  "type": "object",
+  "required": [
+    "source",
+    "operation",
+    "seed",
+    "candidates"
+  ],
+  "properties": {
+    "source": {
+      "type": "string"
+    },
+    "operation": {
+      "type": "string"
+    },
+    "seed": {
+      "type": "integer"
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "index",
+          "label",
+          "score_numerator",
+          "score_denominator",
+          "text"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          },
+          "score_numerator": {
+            "type": "integer"
+          },
+          "score_denominator": {
+            "type": "integer"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

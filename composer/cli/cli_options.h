@@ -46,16 +46,6 @@ const char *cli_key_name(const AnalysisKey *key, char *out, size_t size);
 
 const char *cli_cadence_name(CadenceType cadence);
 
-/* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive", by PlanAccompanimentPattern. */
-const char *cli_accompaniment_name(PlanAccompanimentPattern pattern);
-
-/*
- * Reads --accompaniment (pattern_text) and --texture (texture_text), either of which may be NULL, into *out. Returns 0, or
- * the status of the usage error it printed. meter_text is the --meter argument, for the message about alberti.
- */
-int cli_read_accompaniment(const char *pattern_text, const char *texture_text, const char *meter_text, const PlanMeter *meter,
-                           PlanAccompaniment *out);
-
 /*
  * The export options of --tempo (tempo_text, NULL when not given) and --plain-midi: the tempo is a whole number or a
  * fraction like "195/2" of quarter notes per minute, from 20 to 400; --plain-midi turns the MIDI track names and
@@ -72,52 +62,6 @@ typedef struct {
 
 /* Adds one --style-without value. Returns 0, or the status of the usage error it printed (more than 8, or not a category). */
 int cli_style_without_add(CliStyleWithout *list, const char *name);
-
-/*
- * Reads the style model file at path into *out, without the named categories (none when count is 0). Returns 0, or the
- * status of the usage error it printed.
- */
-int cli_load_style(const char *path, const char *const *without, size_t without_count, ComposerStyle **out);
-
-/*
- * The blend options of grow, plan and fill: --blend <file> (blend_path), --blend-weight <n/d> (all_text) and
- * --blend-weights harmony=<n/d>,rhythm=<n/d>,melody=<n/d>,form=<n/d> (list_text); any may be NULL. Usage errors, as
- * 0 or the status of the one printed: --blend without a style (has_style false), a weight option without --blend, a
- * weight that is not a fraction from 0 to 1, a dimension that is not one or is named twice.
- */
-int cli_read_blend(bool has_style, const char *blend_path, const char *all_text, const char *list_text,
-                   ComposerStyleWeights *out);
-
-/* Loads the two style model files and blends them, weights as cli_read_blend read them. Returns 0 or the status. */
-int cli_load_blend(const char *style_path, const char *blend_path, const ComposerStyleWeights *weights,
-                   const char *const *without, size_t without_count,
-                   ComposerStyle **out);
-
-/* Seeding from a corpus (corpus_seed.h). Each returns 0 or the status of the failure it printed: a passage or numerals
-   that cannot be read is a usage error, a corpus with no match at 1/2 or more exits 2. */
-int cli_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const AnalysisKey *key,
-                    unsigned long seed, CorpusSeed *out);
-int cli_seed_progression(const char *corpus_dir, const char *numerals_text, KeyStructureMode mode, CorpusSeed *out);
-/* The numerals of a progression seed in one string, separated by spaces. */
-void cli_seed_numerals_text(const CorpusSeed *seed, char *out, size_t size);
-/* "motive from <piece> m.1 b.1 - m.2 b.1, score 7/8", the line the text output carries. */
-void cli_print_seed_line(const char *what, const CorpusSeed *seed);
-/* The seed as the plan records it. Returns 0 or the status of the failure it printed. */
-int cli_seed_source(const CorpusSeed *seed, PlanSource *out);
-/* The first node of the plan with the name, or PLAN_NODE_NONE. */
-NodeId cli_find_node(const PiecePlan *plan, const char *name);
-
-/* Prints text as a JSON string to stdout: quotes and backslashes escaped, control characters dropped. */
-void cli_print_json_string(const char *text);
-
-/* A seed from the clock, for a command given none. */
-unsigned long cli_default_seed(void);
-
-/*
- * Writes the explanation (explain.h) to write_path, as JSON when final_path ends in ".json" (any case), else as text.
- * Returns 0, or -1 when the file cannot be written.
- */
-int cli_write_explanation(const char *final_path, const char *write_path, const Explanation *explanation);
 
 /* The name of alternative k (from 1) of a file: before the extension, "-k". With one result the name as given. */
 bool cli_alternative_path(const char *path, size_t k, bool several, char *out, size_t size);

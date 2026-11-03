@@ -78,6 +78,38 @@ typedef struct {
 /* Writes every file beside its final name and renames them all only when every one was written. Returns 0 or 3. */
 int cli_write_files(const CliFile *files, size_t count);
 
+/*
+ * The files of the alternatives a command made (progression, counterpoint, grow): one set for each entry of the response
+ * document, the plan, MIDI, MusicXML and explanation files in that order, each named as cli_alternative_path names the
+ * alternative k of count. An entry holds the plan object ("plan") and, when asked, "musicxml" and "explanation"; the MIDI
+ * file of the first is first->midi, of the others composer_api_export of the plan with the tempo and plain_midi. A path
+ * that is NULL makes no file.
+ */
+typedef struct {
+    const char *plan;
+    const char *midi;
+    const char *musicxml;
+    const char *explanation;
+} CliAlternativePaths;
+
+#define CLI_WRITTEN_PATH_SIZE 1024
+
+typedef struct {
+    char (*paths)[CLI_WRITTEN_PATH_SIZE];
+    size_t count;
+} CliWrittenFiles;
+
+/* Writes all or none. Returns 0 (written->paths lists the final paths, freed by cli_written_free) or the exit status. */
+int cli_write_alternatives(const CliAlternativePaths *paths, const cJSON *const *entries, size_t entry_count,
+                           const ComposerResponse *first, const char *tempo_text, bool plain_midi, CliWrittenFiles *written);
+void cli_written_free(CliWrittenFiles *written);
+/* The final paths as the array of strings the commands print. */
+const char *const *cli_written_list(CliWrittenFiles *written, const char **storage, size_t capacity);
+/* Removes "plan", "musicxml" and "explanation" from the entry: the members only the files use. */
+void cli_strip_entry_files(cJSON *entry);
+/* Adds "files": [paths] to the document and prints it on one line. */
+void cli_print_document_with_files(cJSON *document, const CliWrittenFiles *written);
+
 /* The MIDI file of a plan object through composer_api_export; the caller destroys *out. Returns 0 or the exit status. */
 int cli_export_midi(const cJSON *plan, const char *tempo_text, bool plain_midi, ComposerResponse *out);
 

@@ -1,43 +1,20 @@
 #include "progression.h"
 
-#include "cli_options.h"
-#include "util/util.h"
-
-#include <ctype.h>
-#include <errno.h>
-#include <stdarg.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/export.h>
-#include <ursatz_composer/fill_loop.h>
-#include <ursatz_composer/fill_record.h>
-#include <ursatz_composer/fill_suggest.h>
-#include <ursatz_composer/harmony_bass.h>
-#include <ursatz_composer/harmony_embellish.h>
-#include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/harmony_schema.h>
-#include <ursatz_composer/harmony_sequence.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
-#include <ursatz_composer/render.h>
+#include <ursatz_composer/composer_api.h>
+
+#include "cli_options.h"
+#include "workflow.h"
 
 #define EXIT_USAGE CLI_EXIT_USAGE
-#define EXIT_UNSATISFIABLE CLI_EXIT_UNSATISFIABLE
-#define EXIT_WRITE CLI_EXIT_WRITE
 
 #define MAX_BARS 64
-#define MAX_SEED_TRIES CLI_MAX_SEED_TRIES
-#define MAX_CHORDS 64
 #define MAX_SUGGESTIONS 8
 #define MAX_FILES (3 * MAX_SUGGESTIONS)
-
-typedef enum { EMBELLISH_NONE, EMBELLISH_LOW, EMBELLISH_MEDIUM, EMBELLISH_HIGH } EmbellishLevel;
 
 typedef struct {
     bool help;
@@ -53,25 +30,12 @@ typedef struct {
     const char *musicxml_path;
     const char *tempo_text;
     bool plain_midi;
-    PlanExportOptions export_options;
     const char *schema_text;
     const char *sequence_text;
     const char *suggest_text;
     bool list_schemas;
     bool bass;
-    /* Read from the text above. */
-    AnalysisKey key;
-    PlanMeter meter;
-    long bars;
-    CadenceType cadence;
-    unsigned long seed;
-    EmbellishLevel embellish;
     bool json;
-    GalantSchemaId schema;
-    bool has_schema;
-    ScalePatternId sequence;
-    bool has_sequence;
-    unsigned long suggest; /* 0 for none */
 } Options;
 
 static void print_help(FILE *out) {
@@ -122,17 +86,7 @@ static void print_help(FILE *out) {
 
 /* --- reading the options -------------------------------------------------- */
 
-/*
- * A sequence continues something, and so do the schemas that are not opening gambits: for those the first bar
- * is a tonic chord, written before the operators run, and the skeleton follows it.
- */
-static bool needs_lead(const Options *options) {
-    return options->has_sequence ||
-           (options->has_schema &&
-            galant_prototype(options->schema)->function != SCHEMA_FUNCTION_OPENING_GAMBIT);
-}
-
-/* Splits argv into options and checks each value; returns 0, or the exit status. */
+/* Splits argv into options; returns 0, or the exit status. The values are checked by the composer API. */
 static int read_options(int argc, char **argv, Options *options) {
     memset(options, 0, sizeof(*options));
     options->bass = true;
@@ -196,50 +150,6 @@ static int read_options(int argc, char **argv, Options *options) {
     if (!options->key_text || !options->meter_text || !options->bars_text || !options->cadence_text) {
         return cli_fail(EXIT_USAGE, "progression needs --key, --meter, --bars and --cadence (see --help)");
     }
-    if (!request_parse_key(options->key_text, &options->key)) {
-        return cli_fail(EXIT_USAGE,
-                    "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
-                    "for example \"D minor\"",
-                    options->key_text);
-    }
-    if (!request_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
-        return cli_fail(EXIT_USAGE, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8", options->meter_text);
-    }
-    unsigned long bars;
-    if (!request_parse_whole_number(options->bars_text, MAX_BARS, &bars) || bars == 0) {
-        return cli_fail(EXIT_USAGE, "--bars must be a whole number from 1 to %d, not '%s'", MAX_BARS, options->bars_text);
-    }
-    options->bars = (long)bars;
-    if (!request_parse_cadence(options->cadence_text, &options->cadence)) {
-        return cli_fail(EXIT_USAGE, "unknown cadence '%s'; use PAC, IAC, HC, DC or PC", options->cadence_text);
-    }
-    if (options->seed_text) {
-        if (!request_parse_whole_number(options->seed_text, 4294967295UL, &options->seed)) {
-            return cli_fail(EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'", options->seed_text);
-        }
-    } else {
-        options->seed = cli_default_seed();
-    }
-    options->embellish = EMBELLISH_NONE;
-    if (options->embellish_text) {
-        static const char *const LEVELS[4] = {"none", "low", "medium", "high"};
-        bool found = false;
-        for (int i = 0; i < 4; i++) {
-            if (request_equals_ignore_case(options->embellish_text, LEVELS[i])) {
-                options->embellish = (EmbellishLevel)i;
-                found = true;
-            }
-        }
-        if (!found) {
-            return cli_fail(EXIT_USAGE, "--embellish must be none, low, medium or high, not '%s'", options->embellish_text);
-        }
-    }
-    {
-        int export_status = cli_read_export_options(options->tempo_text, options->plain_midi, &options->export_options);
-        if (export_status != 0) {
-            return export_status;
-        }
-    }
     if (options->format_text) {
         if (request_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
@@ -247,609 +157,89 @@ static int read_options(int argc, char **argv, Options *options) {
             return cli_fail(EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
         }
     }
-    if (options->schema_text) {
-        if (!harmony_schema_find(options->schema_text, &options->schema)) {
-            return cli_fail(EXIT_USAGE, "unknown schema '%s' (see --list-schemas)", options->schema_text);
-        }
-        options->has_schema = true;
-        if (!harmony_schema_available(options->schema, options->key.mode)) {
-            return cli_fail(EXIT_UNSATISFIABLE, "the schema '%s' cannot be written in a %s key", options->schema_text,
-                        options->key.mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major");
-        }
-    }
-    if (options->sequence_text) {
-        if (!harmony_sequence_find(options->sequence_text, &options->sequence)) {
-            return cli_fail(EXIT_USAGE, "unknown sequence '%s' (see --list-schemas)", options->sequence_text);
-        }
-        options->has_sequence = true;
-    }
-    if (options->suggest_text &&
-        (!request_parse_whole_number(options->suggest_text, MAX_SUGGESTIONS, &options->suggest) || options->suggest == 0)) {
-        return cli_fail(EXIT_USAGE, "--suggest must be a whole number from 1 to %d, not '%s'", MAX_SUGGESTIONS,
-                    options->suggest_text);
-    }
-    if (!options->bass && (options->has_schema || options->has_sequence)) {
-        return cli_fail(EXIT_USAGE, "--schema and --sequence write their own bass, so they cannot be used with --no-bass");
-    }
-    if (!options->bass && (options->midi_path || options->musicxml_path)) {
-        return cli_fail(EXIT_USAGE, "--midi and --musicxml write the bass line (harmony makes no sound yet), "
-                                "so they cannot be used with --no-bass");
-    }
-    size_t minimum = harmony_phrase_min_bars(options->cadence, &options->meter) + (needs_lead(options) ? 1 : 0);
-    if ((size_t)options->bars < minimum) {
-        return cli_fail(EXIT_UNSATISFIABLE, "%ld bar%s is too short for a %s in %s; at least %zu bars are needed",
-                    options->bars, options->bars == 1 ? "" : "s", cli_cadence_name(options->cadence), options->meter_text,
-                    minimum);
-    }
     return 0;
 }
 
-/* --- building the plan ------------------------------------------------------ */
-
-typedef struct {
-    PiecePlan *plan;
-    PlanSpan span;
-    Rational bar_length;
-} Built;
-
-static Rational time_of(long num, unsigned long den) {
-    Rational time;
-    rational_make(num, den, &time);
-    return time;
-}
-
-/*
- * A form, a section and a phrase of the length asked for, with the meter and the key Given and the harmony
- * (and the bass, if wanted) left open for the operators. The nodes and the lanes the user has fixed are Given.
- */
-static bool build_plan(const Options *options, Built *built) {
-    memset(built, 0, sizeof(*built));
-    built->plan = plan_create();
-    if (!built->plan) {
-        return false;
-    }
-    built->bar_length = time_of(options->meter.beats_per_bar, (unsigned long)options->meter.beat_unit);
-    built->span.start = time_of(0, 1);
-    built->span.length = time_of(options->bars * (long)built->bar_length.num, built->bar_length.den);
-
-    NodeId form;
-    NodeId section;
-    NodeId phrase;
-    PlanLanePayload payload;
-    LaneSpanId id;
-    bool ok = plan_add_node(built->plan, PLAN_NODE_NONE, PLAN_NODE_FORM, built->span, "form", &form) == PLAN_OK &&
-              plan_add_node(built->plan, form, PLAN_NODE_SECTION, built->span, "section", &section) == PLAN_OK &&
-              plan_add_node(built->plan, section, PLAN_NODE_PHRASE, built->span, "phrase", &phrase) == PLAN_OK;
-    PlanConstraint length = {PLAN_CONSTRAINT_LENGTH_BARS, {0}};
-    PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
-    length.params.bars = (int)options->bars;
-    cadence.params.cadence = options->cadence;
-    ok = ok && plan_node_add_constraint(built->plan, phrase, &length) == PLAN_OK &&
-         plan_node_add_constraint(built->plan, phrase, &cadence) == PLAN_OK;
-
-    memset(&payload, 0, sizeof(payload));
-    payload.meter.beats_per_bar = options->meter.beats_per_bar;
-    payload.meter.beat_unit = options->meter.beat_unit;
-    ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_METER, 0, built->span, &payload, &id) == PLAN_OK &&
-         plan_lane_span_set_state(built->plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
-    memset(&payload, 0, sizeof(payload));
-    payload.key = options->key;
-    ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_KEY, 0, built->span, &payload, &id) == PLAN_OK &&
-         plan_lane_span_set_state(built->plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
-
-    /* The part of the phrase the operators fill: all of it, or what follows a tonic first bar. */
-    PlanSpan region = built->span;
-    const char *tonic = options->key.mode == KEY_STRUCTURE_MODE_MINOR ? "i" : "I";
-    if (needs_lead(options)) {
-        PlanSpan lead = {built->span.start, built->bar_length};
-        region.start = built->bar_length;
-        if (rational_sub(built->span.length, built->bar_length, &region.length) != RATIONAL_OK) {
-            return false;
-        }
-        memset(&payload, 0, sizeof(payload));
-        strcpy(payload.harmony.roman_numeral, tonic);
-        payload.harmony.function = HARMONIC_FUNCTION_TONIC;
-        payload.harmony.has_function = true;
-        ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_HARMONY, 0, lead, &payload, &id) == PLAN_OK &&
-             plan_lane_span_set_state(built->plan, id, PLAN_STATE_REALIZED) == PLAN_OK;
-        /* Its bass is the tonic in the octave of the range nearest the middle of it. */
-        PlanNote tonic_note = plan_note(48, time_of(0, 1), lead.length);
-        for (int pitch = 40; pitch <= 60; pitch++) {
-            int distance = pitch > 50 ? pitch - 50 : 50 - pitch;
-            int best = tonic_note.midi > 50 ? tonic_note.midi - 50 : 50 - tonic_note.midi;
-            if (pitch % 12 == analysis_key_tonic_pitch_class(&options->key) && (tonic_note.midi % 12 != analysis_key_tonic_pitch_class(&options->key) || distance < best)) {
-                tonic_note.midi = pitch;
-                tonic_note.spelled = false;
-            }
-        }
-        memset(&payload, 0, sizeof(payload));
-        payload.notes.notes = &tonic_note;
-        payload.notes.note_count = 1;
-        ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_BASS, 0, lead, &payload, &id) == PLAN_OK &&
-             plan_lane_span_set_state(built->plan, id, PLAN_STATE_REALIZED) == PLAN_OK;
-    }
-
-    /* The open harmony span asks for the cadence; its placeholder chord is replaced by the operators. */
-    memset(&payload, 0, sizeof(payload));
-    strcpy(payload.harmony.roman_numeral, tonic);
-    payload.harmony.has_function = false;
-    ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_HARMONY, 0, region, &payload, &id) == PLAN_OK &&
-         plan_lane_span_add_constraint(built->plan, id, &cadence) == PLAN_OK;
-    if (options->bass) {
-        PlanNote note = plan_note(40, time_of(0, 1), region.length);
-        memset(&payload, 0, sizeof(payload));
-        payload.notes.notes = &note;
-        payload.notes.note_count = 1;
-        ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_BASS, 0, region, &payload, &id) == PLAN_OK;
-    }
-    ok = ok && plan_node_set_state(built->plan, form, PLAN_STATE_GIVEN) == PLAN_OK &&
-         plan_node_set_state(built->plan, section, PLAN_STATE_GIVEN) == PLAN_OK &&
-         plan_node_set_state(built->plan, phrase, PLAN_STATE_GIVEN) == PLAN_OK;
+/* The request: the members of the composer API for the options. */
+static cJSON *build_request(const Options *options) {
+    cJSON *request = cJSON_CreateObject();
+    bool ok = request && cJSON_AddStringToObject(request, "key", options->key_text) &&
+              cJSON_AddStringToObject(request, "meter", options->meter_text) &&
+              cJSON_AddStringToObject(request, "bars", options->bars_text) &&
+              cJSON_AddStringToObject(request, "cadence", options->cadence_text) &&
+              (!options->seed_text || cJSON_AddStringToObject(request, "seed", options->seed_text)) &&
+              (!options->embellish_text || cJSON_AddStringToObject(request, "embellish", options->embellish_text)) &&
+              (options->bass || cJSON_AddFalseToObject(request, "bass")) &&
+              (!options->schema_text || cJSON_AddStringToObject(request, "schema", options->schema_text)) &&
+              (!options->sequence_text || cJSON_AddStringToObject(request, "sequence", options->sequence_text)) &&
+              (!options->suggest_text || cJSON_AddStringToObject(request, "suggest", options->suggest_text)) &&
+              (!(options->out_path || options->midi_path) || cJSON_AddTrueToObject(request, "plans")) &&
+              (!options->midi_path || cJSON_AddTrueToObject(request, "midi")) &&
+              (!options->musicxml_path || cJSON_AddTrueToObject(request, "musicxml")) &&
+              (!options->tempo_text || cJSON_AddStringToObject(request, "tempo", options->tempo_text)) &&
+              (!options->plain_midi || cJSON_AddTrueToObject(request, "plain_midi"));
     if (!ok) {
-        plan_destroy(built->plan);
-        built->plan = NULL;
-    }
-    return ok;
-}
-
-/* --- running the operators ---------------------------------------------------- */
-
-typedef struct {
-    HarmonyEmbellishParams embellish;
-    HarmonyBassParams bass;
-    HarmonySchemaParams schema;
-    HarmonySequenceParams sequence;
-} Parameters;
-
-static void parameters_for(const Options *options, Parameters *parameters) {
-    parameters->embellish = harmony_embellish_params_default();
-    switch (options->embellish) {
-    case EMBELLISH_LOW:
-        parameters->embellish.density = 250;
-        parameters->embellish.families = HARMONY_EMBELLISH_PROLONGATION;
-        break;
-    case EMBELLISH_MEDIUM:
-        parameters->embellish.density = 500;
-        parameters->embellish.families = HARMONY_EMBELLISH_PROLONGATION | HARMONY_EMBELLISH_PREDOMINANT;
-        break;
-    case EMBELLISH_HIGH:
-        parameters->embellish.density = 750;
-        parameters->embellish.families = HARMONY_EMBELLISH_ALL;
-        break;
-    default:
-        parameters->embellish.density = 0;
-        break;
-    }
-    parameters->bass = harmony_bass_params_default();
-    /* A schema or sequence that was asked for by name is the only one offered, and is preferred to the plain
-       operators' candidates by a whole point. */
-    parameters->schema = harmony_schema_params_default();
-    parameters->schema.schemas = options->has_schema ? HARMONY_SCHEMA_BIT(options->schema) : 0;
-    parameters->schema.preference = 1000;
-    parameters->sequence = harmony_sequence_params_default();
-    parameters->sequence.patterns = options->has_sequence ? HARMONY_SEQUENCE_BIT(options->sequence) : 0;
-    parameters->sequence.preference = 1000;
-}
-
-typedef enum { STAGE_HARMONY, STAGE_EMBELLISH, STAGE_BASS } Stage;
-
-static FillOperatorRegistry *registry_for(const Options *options, const Parameters *parameters, Stage stage) {
-    FillOperatorRegistry *registry = fill_registry_create();
-    FillResult registered = FILL_OK;
-    if (!registry) {
+        cJSON_Delete(request);
         return NULL;
     }
-    switch (stage) {
-    case STAGE_HARMONY:
-        if (options->has_schema) {
-            registered = harmony_schema_register(registry, &parameters->schema);
-        }
-        if (registered == FILL_OK && options->has_sequence) {
-            registered = harmony_sequence_register(registry, &parameters->sequence);
-        }
-        if (registered == FILL_OK) {
-            registered = harmony_phrase_register(registry);
-        }
-        break;
-    case STAGE_EMBELLISH:
-        registered = harmony_embellish_register(registry, &parameters->embellish);
-        break;
-    case STAGE_BASS:
-        registered = harmony_bass_register(registry, &parameters->bass);
-        break;
-    }
-    if (registered != FILL_OK) {
-        fill_registry_destroy(registry);
-        return NULL;
-    }
-    return registry;
+    return request;
 }
 
-static FillConfig config_for(unsigned long seed) {
-    FillConfig config;
-    memset(&config, 0, sizeof(config));
-    config.seed = seed;
-    config.checker = harmony_phrase_checker;
-    return config;
-}
+/* --- showing the result --------------------------------------------------------------------------- */
 
-/* One run of the fill loop with the operators of a stage. False only if the loop itself fails. */
-static bool run_stage(PiecePlan *plan, const Options *options, unsigned long seed, Stage stage,
-                      const Parameters *parameters, FillRecord **record) {
-    FillOperatorRegistry *registry = registry_for(options, parameters, stage);
-    FillConfig config = config_for(seed);
-    FillOutcome outcome;
-    if (!registry) {
-        return false;
-    }
-    bool ok = fill_run(plan, registry, &config, &outcome, record) == FILL_OK;
-    if (ok) {
-        fill_outcome_destroy(&outcome);
-    }
-    fill_registry_destroy(registry);
-    return ok;
-}
-
-/* Whether the loop chose a candidate with this label (or, with a prefix, one that begins with it). */
-static bool chose(const FillRecord *record, const char *label_prefix) {
-    for (size_t s = 0; record && s < record->step_count; s++) {
-        const FillStep *step = &record->steps[s];
-        if (step->outcome == FILL_STEP_APPLIED && step->chosen >= 0 &&
-            strncmp(step->considered[step->chosen].label, label_prefix, strlen(label_prefix)) == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
-static bool any_open(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span) {
-    LaneSpanId ids[MAX_CHORDS];
-    size_t count = plan_lane_find(plan, lane, 0, span, ids, MAX_CHORDS);
-    for (size_t i = 0; i < count && i < MAX_CHORDS; i++) {
-        if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_CONSTRAINED) {
-            return true;
-        }
-    }
-    return count == 0;
-}
-
-/* Reopens, for embellishment, the chords that have no bass written under them. */
-static bool open_for_embellishment(PiecePlan *plan, PlanSpan span) {
-    LaneSpanId ids[MAX_CHORDS];
-    size_t count = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, MAX_CHORDS);
-    for (size_t i = 0; i < count && i < MAX_CHORDS; i++) {
-        PlanSpan chord = plan_lane_span_span(plan, ids[i]);
-        LaneSpanId basses[MAX_CHORDS];
-        size_t bass_count = plan_lane_find(plan, PLAN_LANE_BASS, 0, chord, basses, MAX_CHORDS);
-        bool written = false;
-        for (size_t b = 0; b < bass_count && b < MAX_CHORDS; b++) {
-            written = written || plan_lane_span_state(plan, basses[b]) != PLAN_STATE_CONSTRAINED;
-        }
-        if (!written && harmony_embellish_open(plan, chord) != PLAN_OK) {
-            return false;
-        }
-    }
-    return true;
-}
-
-typedef enum { MADE, FAILED, SKELETON_UNUSED } Made;
-
-/*
- * Builds the plan and runs the stages for one seed. With suggestion >= 0 the harmony stage starts from that one of
- * the candidates it proposes first. FAILED if the seed gives no progression or no bass for it; SKELETON_UNUSED if
- * the progression was made without the schema or sequence that was asked for by name.
- */
-static Made make_progression(const Options *options, const Parameters *parameters, unsigned long seed,
-                             long suggestion, Built *built) {
-    FillRecord *record = NULL;
-    if (!build_plan(options, built)) {
-        return FAILED;
-    }
-    bool ok = true;
-    if (suggestion >= 0) {
-        FillOperatorRegistry *registry = registry_for(options, parameters, STAGE_HARMONY);
-        FillConfig config = config_for(seed);
-        FillSuggestions *suggestions = NULL;
-        LaneSpanId target = PLAN_LANE_SPAN_NONE;
-        LaneSpanId found[2];
-        if (plan_lane_find(built->plan, PLAN_LANE_HARMONY, 0, built->span, found, 2) == 1) {
-            target = found[0];
-        }
-        FillTarget fill_target = {FILL_TARGET_LANE_SPAN, target};
-        ok = registry && target != PLAN_LANE_SPAN_NONE &&
-             fill_suggest(built->plan, registry, &config, fill_target, MAX_SUGGESTIONS, &suggestions) == FILL_OK &&
-             (size_t)suggestion < fill_suggestions_count(suggestions) &&
-             fill_apply_suggestion(built->plan, suggestions, (size_t)suggestion) == FILL_OK;
-        fill_suggestions_destroy(suggestions);
-        if (registry) {
-            fill_registry_destroy(registry);
-        }
-    }
-    ok = ok && run_stage(built->plan, options, seed, STAGE_HARMONY, parameters, &record) &&
-         !any_open(built->plan, PLAN_LANE_HARMONY, built->span);
-    bool unused = false;
-    if (ok && suggestion < 0) {
-        char label[FILL_LABEL_MAX];
-        if (options->has_schema) {
-            snprintf(label, sizeof(label), "schema:%s", options->schema_text);
-            unused = unused || !chose(record, label);
-        }
-        if (options->has_sequence) {
-            snprintf(label, sizeof(label), "sequence:%s", options->sequence_text);
-            unused = unused || !chose(record, label);
-        }
-    }
-    fill_record_destroy(record);
-    if (ok && !unused && options->embellish != EMBELLISH_NONE) {
-        ok = open_for_embellishment(built->plan, built->span) &&
-             run_stage(built->plan, options, seed, STAGE_EMBELLISH, parameters, NULL) &&
-             !any_open(built->plan, PLAN_LANE_HARMONY, built->span);
-    }
-    if (ok && !unused && options->bass) {
-        /* The bass is built in pieces (before and after a skeleton, say), so the whole line is checked once more
-           against the melodic rules; a seed whose line breaks one is not used. */
-        const char *violation = "unread";
-        ok = run_stage(built->plan, options, seed, STAGE_BASS, parameters, NULL) &&
-             !any_open(built->plan, PLAN_LANE_BASS, built->span) &&
-             harmony_check_bass(built->plan, built->span, options->key, &parameters->bass, &violation) && !violation;
-    }
-    if (!ok || unused) {
-        plan_destroy(built->plan);
-        built->plan = NULL;
-    }
-    return !ok ? FAILED : (unused ? SKELETON_UNUSED : MADE);
-}
-
-/* How many candidates the harmony stage proposes for the phrase, at most MAX_SUGGESTIONS. */
-static size_t count_suggestions(const Options *options, const Parameters *parameters, unsigned long seed) {
-    Built built;
-    size_t count = 0;
-    if (!build_plan(options, &built)) {
-        return 0;
-    }
-    FillOperatorRegistry *registry = registry_for(options, parameters, STAGE_HARMONY);
-    FillConfig config = config_for(seed);
-    FillSuggestions *suggestions = NULL;
-    LaneSpanId found[2];
-    if (registry && plan_lane_find(built.plan, PLAN_LANE_HARMONY, 0, built.span, found, 2) == 1) {
-        FillTarget target = {FILL_TARGET_LANE_SPAN, found[0]};
-        if (fill_suggest(built.plan, registry, &config, target, MAX_SUGGESTIONS, &suggestions) == FILL_OK) {
-            count = fill_suggestions_count(suggestions);
-        }
-    }
-    fill_suggestions_destroy(suggestions);
-    if (registry) {
-        fill_registry_destroy(registry);
-    }
-    plan_destroy(built.plan);
-    return count;
-}
-
-/* --- showing the result --------------------------------------------------------- */
-
-static const char *function_name(const PlanHarmony *harmony) {
-    const char *name = harmony->has_function ? harmonic_function_name(harmony->function) : NULL;
-    return name ? name : "unknown";
-}
-
-static void pitch_name(int midi, char *out, size_t size) {
-    util_pitch_name(midi, false, out, size);
-}
-
-typedef struct {
-    int bar;
-    int beat;
-    char roman[PLAN_ROMAN_NUMERAL_MAX];
-    const char *function;
-    char bass[48];
-} Row;
-
-/* The chords of the phrase, one row each, with the bass under them. */
-static size_t collect_rows(const Options *options, const Built *built, Row *rows) {
-    LaneSpanId ids[MAX_CHORDS];
-    size_t count = plan_lane_find(built->plan, PLAN_LANE_HARMONY, 0, built->span, ids, MAX_CHORDS);
-    if (count > MAX_CHORDS) {
-        count = MAX_CHORDS;
-    }
-    for (size_t i = 0; i < count; i++) {
-        PlanSpan span = plan_lane_span_span(built->plan, ids[i]);
-        const PlanHarmony *harmony = &plan_lane_span_payload(built->plan, ids[i])->harmony;
-        Rational bar_start = built->span.start;
-        Rational next;
-        Rational offset;
-        int bar = 1;
-        if (rational_add(bar_start, built->bar_length, &next) != RATIONAL_OK) {
-            return i;
-        }
-        while (rational_cmp(next, span.start) <= 0) {
-            bar_start = next;
-            if (rational_add(bar_start, built->bar_length, &next) != RATIONAL_OK) {
-                return i;
-            }
-            bar++;
-        }
-        if (rational_sub(span.start, bar_start, &offset) != RATIONAL_OK) {
-            return i;
-        }
-        rows[i].bar = bar;
-        rows[i].beat = (int)(offset.num * options->meter.beat_unit / (long)offset.den) + 1;
-        memcpy(rows[i].roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
-        rows[i].function = function_name(harmony);
-        rows[i].bass[0] = '\0';
-
-        LaneSpanId basses[2];
-        if (options->bass && plan_lane_find(built->plan, PLAN_LANE_BASS, 0, span, basses, 2) == 1) {
-            const PlanNotes *notes = &plan_lane_span_payload(built->plan, basses[0])->notes;
-            size_t used = 0;
-            for (size_t n = 0; n < notes->note_count && used + 8 < sizeof(rows[i].bass); n++) {
-                char name[8];
-                pitch_name(notes->notes[n].midi, name, sizeof(name));
-                used += (size_t)snprintf(rows[i].bass + used, sizeof(rows[i].bass) - used, n ? " %s" : "%s", name);
-            }
-        }
-    }
-    return count;
-}
-
-static const char *heard_name(const Options *options, const Built *built) {
-    CadenceType heard;
-    bool at_end;
-    if (harmony_hear_cadence(built->plan, built->span, options->key.mode, options->cadence, &heard, &at_end) && at_end) {
-        return cadence_type_name(heard);
-    }
-    return "none";
-}
-
-static void print_table(const Options *options, const Built *built) {
-    Row rows[MAX_CHORDS];
-    size_t count = collect_rows(options, built, rows);
+static void print_table(const Options *options, const cJSON *entry, const char *cadence) {
     printf("%-4s %-4s %-10s %-12s %s\n", "bar", "beat", "chord", "function", options->bass ? "bass" : "");
-    for (size_t i = 0; i < count; i++) {
-        printf("%-4d %-4d %-10s %-12s %s\n", rows[i].bar, rows[i].beat, rows[i].roman, rows[i].function, rows[i].bass);
+    const cJSON *row = NULL;
+    cJSON_ArrayForEach(row, cJSON_GetObjectItemCaseSensitive(entry, "chords")) {
+        printf("%-4.0f %-4.0f %-10s %-12s %s\n", cli_json_number(row, "bar"), cli_json_number(row, "beat"),
+               cli_json_string(row, "chord"), cli_json_string(row, "function"), cli_json_string(row, "bass"));
     }
-    printf("\ncadence %s (heard: %s)\n", cli_cadence_name(options->cadence), heard_name(options, built));
+    printf("\ncadence %s (heard: %s)\n", cadence, cli_json_string(entry, "heard"));
 }
 
-static void print_json_chords(const Options *options, const Built *built) {
-    Row rows[MAX_CHORDS];
-    size_t count = collect_rows(options, built, rows);
-    printf("\"heard\":\"%s\",\"chords\":[", heard_name(options, built));
-    for (size_t i = 0; i < count; i++) {
-        printf("%s{\"bar\":%d,\"beat\":%d,\"chord\":\"%s\",\"function\":\"%s\",\"bass\":\"%s\"}", i ? "," : "",
-               rows[i].bar, rows[i].beat, rows[i].roman, rows[i].function, rows[i].bass);
-    }
-    printf("]");
-}
-
-static void print_result(const Options *options, const Built *alternatives, size_t count, unsigned long seed,
-                         const char *const *files, size_t file_count) {
-    char key[24];
-    cli_key_name(&options->key, key, sizeof(key));
-    if (options->json) {
-        printf("{\"key\":\"%s\",\"meter\":\"%d/%d\",\"bars\":%ld,\"cadence\":\"%s\",\"seed\":%lu,", key,
-               options->meter.beats_per_bar, options->meter.beat_unit, options->bars, cli_cadence_name(options->cadence),
-               seed);
-        if (options->suggest > 0) {
-            printf("\"alternatives\":[");
-            for (size_t k = 0; k < count; k++) {
-                printf("%s{", k ? "," : "");
-                print_json_chords(options, &alternatives[k]);
-                printf("}");
-            }
-            printf("],");
-        } else {
-            print_json_chords(options, &alternatives[0]);
-            printf(",");
-        }
-        printf("\"files\":[");
-        for (size_t i = 0; i < file_count; i++) {
-            printf("%s\"%s\"", i ? "," : "", files[i]);
-        }
-        printf("]}\n");
-        return;
-    }
-    printf("key %s, meter %d/%d, %ld bars, cadence %s\n", key, options->meter.beats_per_bar, options->meter.beat_unit,
-           options->bars, cli_cadence_name(options->cadence));
-    printf("seed %lu\n", seed);
+static void print_text(const Options *options, const cJSON *document, const cJSON *const *entries, size_t count,
+                       const CliWrittenFiles *written) {
+    const char *cadence = cli_json_string(document, "cadence");
+    printf("key %s, meter %s, %.0f bars, cadence %s\n", cli_json_string(document, "key"), cli_json_string(document, "meter"),
+           cli_json_number(document, "bars"), cadence);
+    printf("seed %.0f\n", cli_json_number(document, "seed"));
     for (size_t k = 0; k < count; k++) {
-        if (options->suggest > 0) {
+        if (options->suggest_text) {
             printf("\nalternative %zu of %zu\n", k + 1, count);
         } else {
             printf("\n");
         }
-        print_table(options, &alternatives[k]);
+        print_table(options, entries[k], cadence);
     }
-    for (size_t i = 0; i < file_count; i++) {
-        printf("wrote %s\n", files[i]);
+    for (size_t i = 0; i < written->count; i++) {
+        printf("wrote %s\n", written->paths[i]);
     }
 }
 
-/* --- writing the files ---------------------------------------------------------- */
-
-/*
- * Writes every output to a temporary file next to its final name, and renames them all only when every one was
- * written, so that an error leaves no output file behind.
- */
-static int write_files(const Options *options, const Built *alternatives, size_t count, CliPendingFile *pending,
-                       size_t *pending_count) {
-    const char *paths[3] = {options->out_path, options->midi_path, options->musicxml_path};
-    int status = 0;
-    *pending_count = 0;
-    for (size_t k = 0; k < count && status == 0; k++) {
-        RenderedPlan rendered;
-        bool have_rendering = false;
-        for (int kind = 0; kind < 3 && status == 0; kind++) {
-            if (!paths[kind]) {
-                continue;
-            }
-            CliPendingFile *entry = &pending[*pending_count];
-            if (!cli_alternative_path(paths[kind], k + 1, count > 1, entry->final_path, sizeof(entry->final_path)) ||
-                snprintf(entry->temporary, sizeof(entry->temporary), "%s.tmp", entry->final_path) >=
-                    (int)sizeof(entry->temporary)) {
-                status = cli_fail(EXIT_WRITE, "file name '%s' is too long", paths[kind]);
-                break;
-            }
-            (*pending_count)++;
-            if (kind == 0) {
-                PlanJsonError error;
-                if (plan_write_json_file(alternatives[k].plan, entry->temporary, &error) != PLAN_OK) {
-                    status = cli_fail(EXIT_WRITE, "cannot write '%s': %s", entry->final_path, error.message);
-                }
-                continue;
-            }
-            PlanExportError error;
-            if (!have_rendering) {
-                if (plan_export_render(alternatives[k].plan, &rendered, NULL) != PLAN_EXPORT_OK) {
-                    status = cli_fail(EXIT_WRITE, "cannot render the plan");
-                    break;
-                }
-                have_rendering = true;
-            }
-            PlanExportResult result = kind == 1 ? rendered_plan_export_midi(&rendered, &options->export_options, entry->temporary, &error)
-                                                : rendered_plan_export_musicxml(&rendered, &options->export_options, entry->temporary, &error);
-            if (result != PLAN_EXPORT_OK) {
-                status = cli_fail(EXIT_WRITE, "cannot write '%s': %s", entry->final_path, error.message);
-            }
-        }
-        if (have_rendering) {
-            rendered_plan_destroy(&rendered);
-        }
-    }
-    if (status != 0) {
-        cli_discard_pending(pending, *pending_count);
-        return status;
-    }
-    for (size_t i = 0; i < *pending_count; i++) {
-        if (rename(pending[i].temporary, pending[i].final_path) != 0) {
-            status = cli_fail(EXIT_WRITE, "cannot write '%s'", pending[i].final_path);
-            break;
-        }
-    }
-    if (status != 0) {
-        cli_discard_pending(pending, *pending_count);
-    }
-    return status;
-}
-
-/* --- the command ---------------------------------------------------------------- */
-
-static void list_names(void) {
+/* The schema and sequence names, from the document of the list. */
+static void print_names(const cJSON *document) {
     printf("Schemas (--schema <name>), as Ursatz's galant-schemas framework names them:\n");
-    for (int id = 0; id < GALANT_SCHEMA_COUNT; id++) {
-        bool major = harmony_schema_available((GalantSchemaId)id, KEY_STRUCTURE_MODE_MAJOR);
-        bool minor = harmony_schema_available((GalantSchemaId)id, KEY_STRUCTURE_MODE_MINOR);
-        if (major || minor) {
-            printf("  %-24s %-15s %s\n", galant_schema_name((GalantSchemaId)id),
-                   schema_function_name(galant_prototype((GalantSchemaId)id)->function),
-                   major && minor ? "major, minor" : (major ? "major" : "minor"));
+    const cJSON *schema = NULL;
+    cJSON_ArrayForEach(schema, cJSON_GetObjectItemCaseSensitive(document, "schemas")) {
+        bool major = false;
+        bool minor = false;
+        const cJSON *mode = NULL;
+        cJSON_ArrayForEach(mode, cJSON_GetObjectItemCaseSensitive(schema, "modes")) {
+            major = major || strcmp(mode->valuestring, "major") == 0;
+            minor = minor || strcmp(mode->valuestring, "minor") == 0;
         }
+        printf("  %-24s %-15s %s\n", cli_json_string(schema, "name"), cli_json_string(schema, "function"),
+               major && minor ? "major, minor" : (major ? "major" : "minor"));
     }
     printf("\nSequences (--sequence <name>), as scale-harmonization names them:\n");
-    for (int id = 0; id < SCALE_PATTERN_COUNT; id++) {
-        printf("  %s\n", scale_pattern_name((ScalePatternId)id));
+    const cJSON *sequence = NULL;
+    cJSON_ArrayForEach(sequence, cJSON_GetObjectItemCaseSensitive(document, "sequences")) {
+        printf("  %s\n", sequence->valuestring);
     }
     printf("\nSchemas with weak stages need 4/4 or 6/8; sequences work in every meter.\n");
 }
+
+/* --- the command ---------------------------------------------------------------------------------- */
 
 int run_progression(int argc, char **argv) {
     Options options;
@@ -861,62 +251,81 @@ int run_progression(int argc, char **argv) {
         print_help(stdout);
         return 0;
     }
+    ComposerResponse response;
     if (options.list_schemas) {
-        list_names();
-        return 0;
+        cJSON *request = cJSON_CreateObject();
+        if (!request || !cJSON_AddTrueToObject(request, "list_schemas")) {
+            cJSON_Delete(request);
+            return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+        }
+        ComposerStatus listed = cli_call(composer_api_progression, request, &response);
+        if (listed != COMPOSER_OK) {
+            status = cli_fail_api(listed, &response.error, NULL);
+        } else {
+            cJSON *names = cJSON_Parse(response.json);
+            print_names(names);
+            cJSON_Delete(names);
+        }
+        composer_response_destroy(&response);
+        return status;
     }
 
-    Parameters parameters;
-    Built built[MAX_SUGGESTIONS];
-    size_t made = 0;
-    unsigned long seed = options.seed;
-    bool skeleton_unused = false;
-    parameters_for(&options, &parameters);
-    memset(built, 0, sizeof(built));
+    cJSON *request = build_request(&options);
+    if (!request) {
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    ComposerStatus called = cli_call(composer_api_progression, request, &response);
+    if (called != COMPOSER_OK) {
+        status = cli_fail_api(called, &response.error, NULL);
+        composer_response_destroy(&response);
+        return status;
+    }
+    cJSON *document = cJSON_Parse(response.json);
+    if (!document) {
+        composer_response_destroy(&response);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+    }
+    const cJSON *notice = NULL;
+    cJSON_ArrayForEach(notice, cJSON_GetObjectItemCaseSensitive(document, "notices")) {
+        fprintf(stderr, "Note: %s\n", notice->valuestring);
+    }
+    cJSON_DeleteItemFromObjectCaseSensitive(document, "notices");
 
-    if (options.suggest > 0) {
-        /* The alternatives are the candidates the harmony stage proposes, each taken through the other stages. */
-        size_t proposed = count_suggestions(&options, &parameters, seed);
-        for (size_t i = 0; i < proposed && made < options.suggest; i++) {
-            if (make_progression(&options, &parameters, seed, (long)i, &built[made]) == MADE) {
-                made++;
+    /* The alternatives, or the one progression the document is. */
+    const cJSON *entries[MAX_SUGGESTIONS];
+    size_t count = 0;
+    const cJSON *alternatives = cJSON_GetObjectItemCaseSensitive(document, "alternatives");
+    if (alternatives) {
+        const cJSON *entry = NULL;
+        cJSON_ArrayForEach(entry, alternatives) {
+            if (count < MAX_SUGGESTIONS) {
+                entries[count++] = entry;
             }
         }
-        if (made < options.suggest && made > 0) {
-            fprintf(stderr, "Note: only %zu alternative%s found for this request\n", made, made == 1 ? "" : "s");
-        }
     } else {
-        for (int attempt = 0; attempt < MAX_SEED_TRIES && made == 0; attempt++) {
-            seed = (options.seed + (unsigned long)attempt) & 0xFFFFFFFFUL;
-            Made result = make_progression(&options, &parameters, seed, -1, &built[0]);
-            skeleton_unused = skeleton_unused || result == SKELETON_UNUSED;
-            made += result == MADE;
-        }
+        entries[count++] = document;
     }
-    if (made == 0) {
-        if (skeleton_unused) {
-            return cli_fail(EXIT_UNSATISFIABLE, "%s could not be used for %s, %s, %ld bars, %s from seeds %lu to %lu",
-                        options.has_schema ? "the schema" : "the sequence", options.key_text, options.meter_text,
-                        options.bars, cli_cadence_name(options.cadence), options.seed,
-                        (options.seed + MAX_SEED_TRIES - 1) & 0xFFFFFFFFUL);
-        }
-        return cli_fail(EXIT_UNSATISFIABLE, "no valid progression for %s, %s, %ld bars, %s from seeds %lu to %lu",
-                    options.key_text, options.meter_text, options.bars, cli_cadence_name(options.cadence), options.seed,
-                    (options.seed + MAX_SEED_TRIES - 1) & 0xFFFFFFFFUL);
-    }
-
-    CliPendingFile pending[MAX_FILES];
-    const char *files[MAX_FILES];
-    size_t pending_count = 0;
-    status = write_files(&options, built, made, pending, &pending_count);
+    CliAlternativePaths paths = {options.out_path, options.midi_path, options.musicxml_path, NULL};
+    CliWrittenFiles written;
+    memset(&written, 0, sizeof written);
+    status = cli_write_alternatives(&paths, entries, count, &response, options.tempo_text, options.plain_midi, &written);
     if (status == 0) {
-        for (size_t i = 0; i < pending_count; i++) {
-            files[i] = pending[i].final_path;
+        if (options.json) {
+            if (alternatives) {
+                cJSON *entry = NULL;
+                cJSON_ArrayForEach(entry, alternatives) {
+                    cli_strip_entry_files(entry);
+                }
+            } else {
+                cli_strip_entry_files(document);
+            }
+            cli_print_document_with_files(document, &written);
+        } else {
+            print_text(&options, document, entries, count, &written);
         }
-        print_result(&options, built, made, seed, files, pending_count);
+        cli_written_free(&written);
     }
-    for (size_t i = 0; i < made; i++) {
-        plan_destroy(built[i].plan);
-    }
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
     return status;
 }

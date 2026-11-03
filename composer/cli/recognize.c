@@ -243,7 +243,7 @@ int run_recognize(int argc, char **argv) {
     ComposerStatus api_status = composer_api_recognize(text, NULL, &response);
     free(text);
     if (api_status != COMPOSER_OK) {
-        MotiveInputNames names = {options.source.path, options.target.path, options.basic.path};
+        MotiveInputNames names = {options.source.path, options.target.path, options.basic.path, NULL};
         motive_input_fail(&file, api_status, &response.error, &names);
         composer_response_destroy(&response);
         return CLI_EXIT_USAGE;

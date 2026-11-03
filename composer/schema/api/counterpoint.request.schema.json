@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/counterpoint.request.schema.json",
+  "title": "composer_api_counterpoint request",
+  "description": "A counter-melody against a line: the line is a motive request of any length.",
+  "type": "object",
+  "required": [
+    "input",
+    "species",
+    "key",
+    "meter"
+  ],
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "input": {
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "type": "string"
+        },
+        "form": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        }
+      }
+    },
+    "pickup": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "harmony": {
+      "type": "string"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "role": {
+      "enum": [
+        "melodic",
+        "accompaniment"
+      ]
+    },
+    "tones": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "midi": {
+      "type": "boolean"
+    },
+    "musicxml": {
+      "type": "boolean"
+    },
+    "plain_midi": {
+      "type": "boolean"
+    },
+    "tempo": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "plans": {
+      "type": "boolean"
+    },
+    "meter": {
+      "type": "string"
+    },
+    "key": {
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "major",
+        "minor"
+      ]
+    },
+    "species": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "position": {
+      "enum": [
+        "above",
+        "below"
+      ]
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "suggest": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

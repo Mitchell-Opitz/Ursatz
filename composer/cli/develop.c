@@ -1,65 +1,21 @@
 #include "develop.h"
 
-#include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "cli_options.h"
-#include <generation/candidate.h>
+#include <ursatz_composer/composer_api.h>
 
-#include <ursatz_composer/export.h>
-#include <ursatz_composer/fill_loop.h>
-#include <ursatz_composer/fill_suggest.h>
-#include <ursatz_composer/motive.h>
-#include <ursatz_composer/motive_analysis.h>
-#include <ursatz_composer/motive_develop.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
-#include "util/plan_util.h"
-#include "motive/motive_internal.h"
+#include "cli_options.h"
+#include "motive_input.h"
+#include "workflow.h"
 
 #define EXIT_USAGE CLI_EXIT_USAGE
-#define EXIT_NOTHING CLI_EXIT_UNSATISFIABLE
 #define EXIT_WRITE CLI_EXIT_WRITE
 
 #define DEFAULT_SUGGEST 5
 #define MAX_SUGGEST 16
-#define MAX_FACTOR 16
-
-typedef enum { OP_RESTATE, OP_INVERT, OP_RETROGRADE, OP_INTERVAL, OP_FRAGMENT, OP_LIQUIDATE, OP_AUGMENT, OP_DIMINISH } Op;
-
-static const char *const OP_NAMES[] = {"restate",  "invert",   "retrograde", "interval",
-                                       "fragment", "liquidate", "augment",    "diminish"};
-
-/* The flags that say how an operation is done, as bits; each operation takes some of them. */
-enum {
-    F_BY = 1 << 0,
-    F_DEGREE = 1 << 1,
-    F_TONAL = 1 << 2,
-    F_AXIS = 1 << 3,
-    F_INTERVAL = 1 << 4,
-    F_AMOUNT = 1 << 5,
-    F_KEEP_CONTOUR = 1 << 6,
-    F_POSITION = 1 << 7,
-    F_LENGTH = 1 << 8,
-    F_MIN = 1 << 9,
-    F_DROP = 1 << 10,
-    F_KEEP_RHYTHM = 1 << 11,
-    F_RATIO = 1 << 12
-};
-
-static const unsigned OP_FLAGS[] = {
-    F_BY | F_DEGREE | F_TONAL,         /* restate */
-    F_TONAL | F_AXIS,                  /* invert */
-    0,                                 /* retrograde */
-    F_INTERVAL | F_AMOUNT | F_KEEP_CONTOUR, /* interval */
-    F_POSITION | F_LENGTH | F_MIN,     /* fragment */
-    F_DROP | F_KEEP_RHYTHM | F_MIN,    /* liquidate */
-    F_RATIO,                           /* augment */
-    F_RATIO,                           /* diminish */
-};
 
 typedef struct {
     const char *input;
@@ -82,8 +38,10 @@ typedef struct {
     const char *drop_text;
     const char *ratio_text;
     const char *tempo_text;
-    PlanExportOptions export_options;
-    unsigned given; /* the F_ flags that were on the command line */
+    bool tonal;
+    bool keep_contour;
+    bool keep_rhythm;
+    bool plain_midi;
     bool help;
 } Options;
 
@@ -120,40 +78,35 @@ static void print_help(FILE *out) {
 typedef struct {
     const char *flag;
     const char **slot; /* NULL for a flag with no value */
-    unsigned bit;      /* the F_ flag it is, or 0 for one every operation takes */
     bool *toggle;      /* set by a flag with no value */
 } FlagSpec;
 
 static int read_options(int argc, char **argv, Options *options) {
-    bool tonal = false;
-    bool keep_contour = false;
-    bool keep_rhythm = false;
-    bool plain_midi = false;
     memset(options, 0, sizeof(*options));
     const FlagSpec specs[] = {
-        {"--op", &options->op_text, 0, NULL},
-        {"--seed", &options->seed_text, 0, NULL},
-        {"--suggest", &options->suggest_text, 0, NULL},
-        {"--meter", &options->meter_text, 0, NULL},
-        {"--key", &options->key_text, 0, NULL},
-        {"--format", &options->format_text, 0, NULL},
-        {"--midi", &options->midi_path, 0, NULL},
-        {"--musicxml", &options->musicxml_path, 0, NULL},
-        {"--tempo", &options->tempo_text, 0, NULL},
-        {"--plain-midi", NULL, 0, &plain_midi},
-        {"--by", &options->by_text, F_BY, NULL},
-        {"--degree", &options->degree_text, F_DEGREE, NULL},
-        {"--axis", &options->axis_text, F_AXIS, NULL},
-        {"--interval", &options->interval_text, F_INTERVAL, NULL},
-        {"--amount", &options->amount_text, F_AMOUNT, NULL},
-        {"--position", &options->position_text, F_POSITION, NULL},
-        {"--length", &options->length_text, F_LENGTH, NULL},
-        {"--min", &options->min_text, F_MIN, NULL},
-        {"--drop", &options->drop_text, F_DROP, NULL},
-        {"--ratio", &options->ratio_text, F_RATIO, NULL},
-        {"--tonal", NULL, F_TONAL, &tonal},
-        {"--keep-contour", NULL, F_KEEP_CONTOUR, &keep_contour},
-        {"--keep-rhythm", NULL, F_KEEP_RHYTHM, &keep_rhythm},
+        {"--op", &options->op_text, NULL},
+        {"--seed", &options->seed_text, NULL},
+        {"--suggest", &options->suggest_text, NULL},
+        {"--meter", &options->meter_text, NULL},
+        {"--key", &options->key_text, NULL},
+        {"--format", &options->format_text, NULL},
+        {"--midi", &options->midi_path, NULL},
+        {"--musicxml", &options->musicxml_path, NULL},
+        {"--tempo", &options->tempo_text, NULL},
+        {"--plain-midi", NULL, &options->plain_midi},
+        {"--by", &options->by_text, NULL},
+        {"--degree", &options->degree_text, NULL},
+        {"--axis", &options->axis_text, NULL},
+        {"--interval", &options->interval_text, NULL},
+        {"--amount", &options->amount_text, NULL},
+        {"--position", &options->position_text, NULL},
+        {"--length", &options->length_text, NULL},
+        {"--min", &options->min_text, NULL},
+        {"--drop", &options->drop_text, NULL},
+        {"--ratio", &options->ratio_text, NULL},
+        {"--tonal", NULL, &options->tonal},
+        {"--keep-contour", NULL, &options->keep_contour},
+        {"--keep-rhythm", NULL, &options->keep_rhythm},
     };
     for (int i = 2; i < argc; i++) {
         const char *argument = argv[i];
@@ -168,7 +121,6 @@ static int read_options(int argc, char **argv, Options *options) {
             }
         }
         if (spec) {
-            options->given |= spec->bit;
             if (!spec->slot) {
                 *spec->toggle = true;
             } else if (i + 1 >= argc) {
@@ -186,401 +138,45 @@ static int read_options(int argc, char **argv, Options *options) {
             return cli_fail(EXIT_USAGE, "unexpected argument '%s'; the input is one file", argument);
         }
     }
-    return cli_read_export_options(options->tempo_text, plain_midi, &options->export_options);
-}
-
-static bool parse_number(const char *text, long minimum, long maximum, long *out) {
-    char *end = NULL;
-    long value = strtol(text, &end, 10);
-    if (end == text || *end != '\0' || value < minimum || value > maximum) {
-        return false;
-    }
-    *out = value;
-    return true;
-}
-
-/* A pitch as a note list writes it ("D4", "Bb3") or a MIDI note number. */
-static bool parse_pitch(const char *text, int *out) {
-    long number;
-    if (parse_number(text, 0, 127, &number)) {
-        *out = (int)number;
-        return true;
-    }
-    char note[64];
-    snprintf(note, sizeof(note), "%s:q", text);
-    MotiveOptions options;
-    memset(&options, 0, sizeof(options));
-    options.has_meter = true;
-    options.meter.beats_per_bar = 4;
-    options.meter.beat_unit = 4;
-    Motive motive;
-    if (motive_from_notes_text(note, &options, &motive, NULL) != MOTIVE_OK || motive.note_count != 1) {
-        return false;
-    }
-    *out = motive_pitch(&motive, 0);
-    return true;
-}
-
-/* --- a motive as text ---------------------------------------------------- */
-
-static void append(char *out, size_t size, size_t *used, const char *format, ...) {
-    va_list args;
-    va_start(args, format);
-    if (*used < size) {
-        int written = vsnprintf(out + *used, size - *used, format, args);
-        *used += written > 0 ? (size_t)written : 0;
-    }
-    va_end(args);
-}
-
-typedef struct {
-    long num;
-    unsigned long den;
-    const char *name;
-} LengthValue;
-
-/* The plain and single-dotted values a note list writes, longest first. */
-static const LengthValue VALUES[] = {{1, 1, "w"},  {3, 4, "h."},  {1, 2, "h"},  {3, 8, "q."}, {1, 4, "q"},
-                               {3, 16, "e."}, {1, 8, "e"}, {3, 32, "s."}, {1, 16, "s"}, {1, 32, "t"}};
-
-/* A length as one or more tokens: "q", or "q~ q" for a note (tie true) when no one value is the length. */
-static void append_length(char *out, size_t size, size_t *used, const char *pitch, Rational length, bool tie) {
-    bool first = true;
-    while (length.num > 0) {
-        const LengthValue *piece = NULL;
-        for (size_t i = 0; i < sizeof(VALUES) / sizeof(VALUES[0]) && !piece; i++) {
-            Rational value;
-            rational_make(VALUES[i].num, VALUES[i].den, &value);
-            if (rational_cmp(value, length) <= 0) {
-                piece = &VALUES[i];
-            }
-        }
-        if (!piece) {
-            append(out, size, used, "%s%s:%ld/%lu", first ? "" : "~ ", pitch, length.num, length.den);
-            return;
-        }
-        Rational value;
-        rational_make(piece->num, piece->den, &value);
-        Rational rest;
-        rational_sub(length, value, &rest);
-        append(out, size, used, "%s%s:%s", first ? "" : " ", pitch, piece->name);
-        if (rest.num > 0 && tie) {
-            append(out, size, used, "~");
-        }
-        length = rest;
-        first = false;
-    }
-}
-
-static void motive_text(const Motive *motive, char *out, size_t size) {
-    size_t used = 0;
-    Rational cursor = {0, 1};
-    out[0] = '\0';
-    for (size_t i = 0; i < motive->note_count; i++) {
-        const MotiveSketchNote *note = &motive->notes[i];
-        Rational gap;
-        rational_sub(note->onset, cursor, &gap);
-        char pitch[16];
-        motive_pitch_name(motive_pitch(motive, i), pitch, sizeof(pitch));
-        if (i > 0) {
-            append(out, size, &used, " ");
-        }
-        if (gap.num > 0) {
-            append_length(out, size, &used, "r", gap, false);
-            append(out, size, &used, " ");
-        }
-        append_length(out, size, &used, pitch, note->duration, true);
-        rational_add(note->onset, note->duration, &cursor);
-    }
-}
-
-/* --- the scene ------------------------------------------------------------ */
-
-/* A plan that holds the source Given, then an open motive node after it that asks for the development. */
-typedef struct {
-    PiecePlan *plan;
-    NodeId source;
-    NodeId target;
-} Scene;
-
-static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *scene) {
-    memset(scene, 0, sizeof(*scene));
-    scene->plan = plan_create();
-    if (!scene->plan) {
-        return false;
-    }
-    /* The development begins on the barline after the source, and has room for a long augmentation. */
-    Rational bar;
-    rational_make(motive_meter(source).beats_per_bar, (long long)motive_meter(source).beat_unit, &bar);
-    long bars = (source->length.num * (long)bar.den + (long)source->length.den * bar.num - 1) /
-                ((long)source->length.den * bar.num);
-    Rational start;
-    rational_make(bars * bar.num, bar.den, &start);
-    Rational room;
-    rational_mul_int(source->length, (long long)MAX_FACTOR, &room);
-    Rational total;
-    rational_add(start, room, &total);
-    PlanSpan all = {{0, 1}, total};
-    PlanSpan target_span = {start, room};
-    NodeId form;
-    NodeId section;
-    NodeId phrase;
-    NodeId idea;
-    bool ok = plan_add_given_node(scene->plan, PLAN_NODE_NONE, PLAN_NODE_FORM, all, &form) &&
-              plan_add_given_node(scene->plan, form, PLAN_NODE_SECTION, all, &section) &&
-              plan_add_given_node(scene->plan, section, PLAN_NODE_PHRASE, all, &phrase) &&
-              plan_add_given_node(scene->plan, phrase, PLAN_NODE_IDEA, all, &idea) &&
-              motive_attach(scene->plan, idea, (Rational){0, 1}, source, "source", &scene->source, NULL) == PLAN_OK &&
-              plan_add_node(scene->plan, idea, PLAN_NODE_MOTIVE, target_span, "development", &scene->target) == PLAN_OK;
-    /* The meter and the key, so that a file written from the plan has them. */
-    PlanLanePayload payload;
-    memset(&payload, 0, sizeof(payload));
-    payload.meter = motive_meter(source);
-    LaneSpanId lane;
-    ok = ok && plan_add_lane_span(scene->plan, idea, PLAN_LANE_METER, 0, all, &payload, &lane) == PLAN_OK &&
-         plan_lane_span_set_state(scene->plan, lane, PLAN_STATE_GIVEN) == PLAN_OK;
-    if (ok && source->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
-        payload.key = motive_key(source);
-        ok = plan_add_lane_span(scene->plan, idea, PLAN_LANE_KEY, 0, all, &payload, &lane) == PLAN_OK &&
-             plan_lane_span_set_state(scene->plan, lane, PLAN_STATE_GIVEN) == PLAN_OK;
-    }
-    PlanConstraint constraint;
-    memset(&constraint, 0, sizeof(constraint));
-    constraint.kind = PLAN_CONSTRAINT_MOTIVE_REF;
-    constraint.params.motive = *ref;
-    constraint.params.motive.motive = scene->source;
-    ok = ok && plan_node_add_constraint(scene->plan, scene->target, &constraint) == PLAN_OK;
-    if (!ok) {
-        plan_destroy(scene->plan);
-        scene->plan = NULL;
-    }
-    return ok;
-}
-
-/* --- what the options ask for ---------------------------------------------- */
-
-/* The motive_ref constraint the operation and its options describe, or a message in *problem. */
-static bool build_ref(const Options *options, Op op, const Motive *source, size_t *min_length, PlanMotiveRef *ref,
-                      const char **problem, char *buffer, size_t size) {
-    static const MotiveRelationKind KINDS[] = {MOTIVE_RELATION_EXACT,           MOTIVE_RELATION_INVERT,
-                                               MOTIVE_RELATION_RETROGRADE,      MOTIVE_RELATION_INTERVAL_CHANGE,
-                                               MOTIVE_RELATION_FRAGMENT,        MOTIVE_RELATION_LIQUIDATE,
-                                               MOTIVE_RELATION_AUGMENT,         MOTIVE_RELATION_DIMINISH};
-    long value;
-    /* Every option is read whatever the operation; the step takes the ones its relation has. */
-    MotiveRelationKind kind = KINDS[op];
-    bool tonal = (options->given & F_TONAL) != 0;
-    bool keep_contour = (options->given & F_KEEP_CONTOUR) != 0;
-    bool keep_rhythm = (options->given & F_KEEP_RHYTHM) != 0;
-    long by = 0;
-    long axis = -1;
-    long interval = 0;
-    long amount = 0;
-    long position = 0;
-    long length = 0;
-    long drop = 0;
-    long ratio_num = 0;
-    long ratio_den = 0;
-    memset(ref, 0, sizeof(*ref));
-    ref->has_step = true;
-    *problem = buffer;
-
-    if (options->by_text) {
-        if (!parse_number(options->by_text, -127, 127, &value) || value == 0) {
-            snprintf(buffer, size, "--by must be a whole number from -127 to 127, not 0 or '%s'", options->by_text);
-            return false;
-        }
-        kind = MOTIVE_RELATION_TRANSPOSE;
-        by = value;
-    }
-    if (options->degree_text) {
-        MotiveAnalysis analysis;
-        if (!parse_number(options->degree_text, 1, 7, &value)) {
-            snprintf(buffer, size, "--degree must be a scale degree from 1 to 7, not '%s'", options->degree_text);
-            return false;
-        }
-        if (options->by_text) {
-            snprintf(buffer, size, "--by and --degree both say how far to move; give one");
-            return false;
-        }
-        if (source->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED || !motive_analyze(source, &analysis)) {
-            snprintf(buffer, size, "--degree needs a key; give --key");
-            return false;
-        }
-        /* The nearest way to the degree, up to three steps either way. */
-        int steps = (int)((value - analysis.degrees[0].degree + 7) % 7);
-        kind = MOTIVE_RELATION_TRANSPOSE;
-        tonal = true;
-        by = steps > 3 ? steps - 7 : steps;
-        if (by == 0) {
-            snprintf(buffer, size, "the first note is already on degree %ld", value);
-            return false;
-        }
-    }
-    if (tonal && source->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
-        snprintf(buffer, size, "--tonal needs a key; give --key");
-        return false;
-    }
-    if (options->axis_text) {
-        int pitch;
-        if (!parse_pitch(options->axis_text, &pitch)) {
-            snprintf(buffer, size, "--axis must be a pitch such as D4 or a MIDI number, not '%s'", options->axis_text);
-            return false;
-        }
-        axis = pitch;
-    }
-    if (options->interval_text) {
-        if (!parse_number(options->interval_text, 1, 127, &value)) {
-            snprintf(buffer, size, "--interval must be a whole number from 1, not '%s'", options->interval_text);
-            return false;
-        }
-        interval = value;
-    }
-    if (options->amount_text) {
-        if (!parse_number(options->amount_text, -127, 127, &value) || value == 0) {
-            snprintf(buffer, size, "--amount must be a whole number of semitones, not 0 or '%s'", options->amount_text);
-            return false;
-        }
-        amount = value;
-    }
-    if (options->position_text) {
-        int found = 0;
-        for (int i = 1; i < 4; i++) {
-            if (strcmp(options->position_text, plan_fragment_position_names[i]) == 0) {
-                found = i;
-            }
-        }
-        if (found == 0) {
-            snprintf(buffer, size, "--position must be leading, trailing or middle, not '%s'", options->position_text);
-            return false;
-        }
-        position = found;
-    }
-    if (options->length_text) {
-        if (!parse_number(options->length_text, 1, MOTIVE_MAX_NOTES, &value)) {
-            snprintf(buffer, size, "--length must be a number of notes, not '%s'", options->length_text);
-            return false;
-        }
-        length = value;
-    }
-    if (options->drop_text) {
-        if (!parse_number(options->drop_text, 1, MOTIVE_MAX_NOTES, &value)) {
-            snprintf(buffer, size, "--drop must be a number of notes, not '%s'", options->drop_text);
-            return false;
-        }
-        drop = value;
-    }
-    if (options->min_text) {
-        if (!parse_number(options->min_text, 1, MOTIVE_MAX_NOTES, &value)) {
-            snprintf(buffer, size, "--min must be a number of notes, not '%s'", options->min_text);
-            return false;
-        }
-        *min_length = (size_t)value;
-    }
-    if (options->ratio_text) {
-        long num;
-        long den;
-        char *colon = NULL;
-        num = strtol(options->ratio_text, &colon, 10);
-        if (colon == options->ratio_text || *colon != ':' || !parse_number(colon + 1, 1, MAX_FACTOR, &den) || num < 1 ||
-            num > MAX_FACTOR) {
-            snprintf(buffer, size, "--ratio must be n:m with each from 1 to %d, as in 3:2, not '%s'", MAX_FACTOR,
-                     options->ratio_text);
-            return false;
-        }
-        ratio_num = num;
-        ratio_den = den;
-    }
-    MotiveRelationStep *step = &ref->step;
-    step->kind = kind;
-    switch (kind) {
-    case MOTIVE_RELATION_TRANSPOSE:
-        step->value[0] = tonal ? 1 : 0;
-        step->value[1] = by;
-        break;
-    case MOTIVE_RELATION_INVERT:
-        step->value[0] = axis;
-        step->value[1] = tonal ? 1 : 0;
-        break;
-    case MOTIVE_RELATION_INTERVAL_CHANGE:
-        step->value[0] = interval;
-        step->value[1] = amount;
-        step->value[2] = keep_contour ? 1 : 0;
-        break;
-    case MOTIVE_RELATION_FRAGMENT:
-        step->value[0] = position;
-        step->value[1] = length;
-        break;
-    case MOTIVE_RELATION_LIQUIDATE:
-        step->value[0] = drop;
-        step->value[1] = keep_rhythm ? 1 : 0;
-        break;
-    case MOTIVE_RELATION_AUGMENT:
-    case MOTIVE_RELATION_DIMINISH:
-        step->value[0] = ratio_num;
-        step->den[0] = ratio_den;
-        break;
-    default:
-        break;
-    }
-    return true;
-}
-
-/* --- running ---------------------------------------------------------------- */
-
-static bool parse_op(const char *text, Op *out) {
-    for (int i = 0; i < 8; i++) {
-        if (strcmp(text, OP_NAMES[i]) == 0) {
-            *out = (Op)i;
-            return true;
-        }
-    }
-    return false;
-}
-
-static int write_files(const Options *options, Scene *scene, const FillSuggestions *suggestions) {
-    if (!options->midi_path && !options->musicxml_path) {
-        return 0;
-    }
-    FillResult applied = fill_apply_suggestion(scene->plan, suggestions, 0);
-    if (applied != FILL_OK) {
-        return cli_fail(EXIT_WRITE, "cannot build the plan to write (fill result %d)", (int)applied);
-    }
-    PlanExportError error;
-    if (options->midi_path) {
-        if (plan_export_midi(scene->plan, &options->export_options, options->midi_path, &error) != PLAN_EXPORT_OK) {
-            return cli_fail(EXIT_WRITE, "MIDI export failed: %s", error.message);
-        }
-        printf("MIDI written to %s\n", options->midi_path);
-    }
-    if (options->musicxml_path) {
-        if (plan_export_musicxml(scene->plan, &options->export_options, options->musicxml_path, &error) != PLAN_EXPORT_OK) {
-            return cli_fail(EXIT_WRITE, "MusicXML export failed: %s", error.message);
-        }
-        printf("MusicXML written to %s\n", options->musicxml_path);
-    }
     return 0;
 }
 
-/* The notes written on the target once suggestion index is applied to a copy of the plan. */
-static bool suggestion_motive(const Scene *scene, const FillSuggestions *suggestions, size_t index,
-                              const Motive *source, Motive *out) {
-    char *json = plan_to_json(scene->plan, NULL);
-    PiecePlan *copy = NULL;
-    bool ok = json && plan_from_json(json, &copy, NULL) == PLAN_OK && fill_apply_suggestion(copy, suggestions, index) == FILL_OK;
-    LaneSpanId ids[4];
-    if (ok && plan_node_lane_spans(copy, scene->target, ids, 4) == 1) {
-        const PlanLanePayload *payload = plan_lane_span_payload(copy, ids[0]);
-        memset(out, 0, sizeof(*out));
-        *out = *source;
-        motive_set_lane_notes(out, payload->notes.notes, payload->notes.note_count);
-        out->length = plan_lane_span_span(copy, ids[0]).length;
-    } else {
-        ok = false;
+/* The request: the motive and the members of the operation. */
+static cJSON *build_request(const Options *options, cJSON *request) {
+    bool ok = cJSON_AddStringToObject(request, "op", options->op_text) &&
+              (!options->seed_text || cJSON_AddStringToObject(request, "seed", options->seed_text)) &&
+              (!options->suggest_text || cJSON_AddStringToObject(request, "suggest", options->suggest_text)) &&
+              (!options->by_text || cJSON_AddStringToObject(request, "by", options->by_text)) &&
+              (!options->degree_text || cJSON_AddStringToObject(request, "degree", options->degree_text)) &&
+              (!options->axis_text || cJSON_AddStringToObject(request, "axis", options->axis_text)) &&
+              (!options->interval_text || cJSON_AddStringToObject(request, "interval", options->interval_text)) &&
+              (!options->amount_text || cJSON_AddStringToObject(request, "amount", options->amount_text)) &&
+              (!options->position_text || cJSON_AddStringToObject(request, "position", options->position_text)) &&
+              (!options->length_text || cJSON_AddStringToObject(request, "length", options->length_text)) &&
+              (!options->min_text || cJSON_AddStringToObject(request, "min", options->min_text)) &&
+              (!options->drop_text || cJSON_AddStringToObject(request, "drop", options->drop_text)) &&
+              (!options->ratio_text || cJSON_AddStringToObject(request, "ratio", options->ratio_text)) &&
+              (!options->tonal || cJSON_AddTrueToObject(request, "tonal")) &&
+              (!options->keep_contour || cJSON_AddTrueToObject(request, "keep_contour")) &&
+              (!options->keep_rhythm || cJSON_AddTrueToObject(request, "keep_rhythm")) &&
+              (!options->midi_path || cJSON_AddTrueToObject(request, "midi")) &&
+              (!options->musicxml_path || cJSON_AddTrueToObject(request, "musicxml")) &&
+              (!options->tempo_text || cJSON_AddStringToObject(request, "tempo", options->tempo_text)) &&
+              (!options->plain_midi || cJSON_AddTrueToObject(request, "plain_midi"));
+    if (!ok) {
+        cJSON_Delete(request);
+        return NULL;
     }
-    free(json);
-    plan_destroy(copy);
-    return ok;
+    return request;
+}
+
+/* Writes one file of the command; the failure is "<what> export failed". */
+static int write_file(const char *what, const char *path, const void *data, size_t size) {
+    if (!cli_write_bytes(path, data, size)) {
+        return cli_fail(EXIT_WRITE, "%s export failed: cannot write '%s'", what, path);
+    }
+    printf("%s written to %s\n", what, path);
+    return 0;
 }
 
 int run_develop(int argc, char **argv) {
@@ -600,124 +196,53 @@ int run_develop(int argc, char **argv) {
         return cli_fail(EXIT_USAGE, "develop needs --op: restate, invert, retrograde, interval, fragment, liquidate, "
                                 "augment or diminish");
     }
-    Op op;
-    if (!parse_op(options.op_text, &op)) {
-        return cli_fail(EXIT_USAGE, "unknown operation '%s'; use restate, invert, retrograde, interval, fragment, "
-                                "liquidate, augment or diminish", options.op_text);
-    }
-    unsigned stray = options.given & ~OP_FLAGS[op];
-    if (stray) {
-        static const char *const FLAGS[] = {"--by", "--degree", "--tonal", "--axis", "--interval", "--amount",
-                                            "--keep-contour", "--position", "--length", "--min", "--drop",
-                                            "--keep-rhythm", "--ratio"};
-        for (int bit = 0; bit < 13; bit++) {
-            if (stray & (1u << bit)) {
-                return cli_fail(EXIT_USAGE, "%s does not apply to %s", FLAGS[bit], OP_NAMES[op]);
-            }
-        }
-    }
 
-    long seed = 0;
-    long suggest = DEFAULT_SUGGEST;
-    if (options.seed_text && !parse_number(options.seed_text, 0, 4294967295L, &seed)) {
-        return cli_fail(EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'", options.seed_text);
+    MotiveInput input;
+    memset(&input, 0, sizeof(input));
+    input.path = options.input;
+    input.meter_text = options.meter_text;
+    input.key_text = options.key_text;
+    input.format_text = options.format_text;
+    cJSON *motive = NULL;
+    MotiveFile file;
+    memset(&file, 0, sizeof file);
+    status = motive_input_text_request(&input, &motive, &file);
+    if (status != 0) {
+        return status;
     }
-    if (options.suggest_text && !parse_number(options.suggest_text, 1, MAX_SUGGEST, &suggest)) {
-        return cli_fail(EXIT_USAGE, "--suggest must be a whole number from 1 to %d, not '%s'", MAX_SUGGEST,
-                    options.suggest_text);
+    cJSON *request = build_request(&options, motive);
+    if (!request) {
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    MotiveOptions motive_options;
-    memset(&motive_options, 0, sizeof(motive_options));
-    if (options.meter_text) {
-        if (!motive_parse_meter(options.meter_text, &motive_options.meter)) {
-            return cli_fail(EXIT_USAGE, "meter '%s' is not a meter; write beats over a beat unit, as in 4/4 or 6/8",
-                        options.meter_text);
-        }
-        motive_options.has_meter = true;
+    ComposerResponse response;
+    ComposerStatus called = cli_call(composer_api_develop, request, &response);
+    if (called != COMPOSER_OK) {
+        MotiveInputNames names = {options.input, NULL, NULL, NULL};
+        status = motive_input_fail(&file, called, &response.error, &names);
+        composer_response_destroy(&response);
+        return status;
     }
-    if (options.key_text) {
-        if (!motive_parse_key(options.key_text, &motive_options.key)) {
-            return cli_fail(EXIT_USAGE,
-                        "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
-                        "for example \"D minor\"",
-                        options.key_text);
-        }
-        motive_options.has_key = true;
+    cJSON *document = cJSON_Parse(response.json);
+    if (!document) {
+        composer_response_destroy(&response);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    MotiveFormat format = MOTIVE_FORMAT_AUTO;
-    if (options.format_text && !motive_format_parse(options.format_text, &format)) {
-        return cli_fail(EXIT_USAGE, "--format must be auto, midi, musicxml, notes or json, not '%s'", options.format_text);
+    printf("Source: %s\n", cli_json_string(document, "source"));
+    printf("Operation: %s (seed %.0f)\n", cli_json_string(document, "operation"), cli_json_number(document, "seed"));
+    const cJSON *candidate = NULL;
+    cJSON_ArrayForEach(candidate, cJSON_GetObjectItemCaseSensitive(document, "candidates")) {
+        double num = cli_json_number(candidate, "score_numerator");
+        double den = cli_json_number(candidate, "score_denominator");
+        printf("%.0f. %s  score %.0f/%.0f (%.0f%%)\n   %s\n", cli_json_number(candidate, "index"),
+               cli_json_string(candidate, "label"), num, den, 100.0 * num / den, cli_json_string(candidate, "text"));
     }
-
-    Motive source;
-    MotiveError error;
-    MotiveResult loaded = motive_load_file(options.input, format, &motive_options, &source, &error);
-    if (loaded != MOTIVE_OK) {
-        return cli_fail(EXIT_NOTHING, "cannot load '%s' (%s)%s%s: %s", options.input, motive_result_name(loaded),
-                    error.location[0] ? " at " : "", error.location, error.message);
+    if (options.midi_path) {
+        status = write_file("MIDI", options.midi_path, response.midi, response.midi_size);
     }
-
-    MotiveDevelopContext context;
-    motive_develop_context_default(&context);
-    context.meter = motive_meter(&source);
-    context.has_key = source.key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED;
-    context.key = motive_key(&source);
-    context.candidates = (size_t)suggest * 3 > 12 ? (size_t)suggest * 3 : 12;
-    PlanMotiveRef ref;
-    char problem_text[160];
-    const char *problem = NULL;
-    if (!build_ref(&options, op, &source, &context.min_length, &ref, &problem, problem_text, sizeof(problem_text))) {
-        return cli_fail(EXIT_USAGE, "%s", problem);
+    if (status == 0 && options.musicxml_path) {
+        status = write_file("MusicXML", options.musicxml_path, response.musicxml, response.musicxml ? strlen(response.musicxml) : 0);
     }
-
-    Scene scene;
-    FillOperatorRegistry *registry = fill_registry_create();
-    if (!registry || motive_develop_register(registry, &context) != FILL_OK || !build_scene(&source, &ref, &scene)) {
-        fill_registry_destroy(registry);
-        return cli_fail(EXIT_NOTHING, "out of memory");
-    }
-    FillConfig config;
-    memset(&config, 0, sizeof(config));
-    config.seed = (unsigned long)seed;
-    config.checker = motive_develop_checker;
-    config.checker_context = &context;
-    FillTarget target = {FILL_TARGET_NODE, scene.target};
-    FillSuggestions *suggestions = NULL;
-    if (fill_suggest(scene.plan, registry, &config, target, (size_t)suggest, &suggestions) != FILL_OK) {
-        fill_registry_destroy(registry);
-        plan_destroy(scene.plan);
-        return cli_fail(EXIT_NOTHING, "the development could not be run");
-    }
-
-    size_t count = fill_suggestions_count(suggestions);
-    char text[2048];
-    motive_text(&source, text, sizeof(text));
-    int exit_status = 0;
-    if (count == 0) {
-        exit_status = cli_fail(EXIT_NOTHING, "no %s development can be made from %s as asked", OP_NAMES[op], text);
-    } else {
-        printf("Source: %s\n", text);
-        printf("Operation: %s (seed %ld)\n", OP_NAMES[op], seed);
-        const CandidateSet *set = fill_suggestions_set(suggestions);
-        for (size_t i = 0; i < count; i++) {
-            const Candidate *candidate = candidate_set_candidate_at(set, i);
-            Motive development;
-            if (!suggestion_motive(&scene, suggestions, i, &source, &development)) {
-                exit_status = cli_fail(EXIT_NOTHING, "cannot read candidate %zu", i + 1);
-                break;
-            }
-            motive_text(&development, text, sizeof(text));
-            unsigned long num = candidate_score_numerator(candidate);
-            unsigned long den = candidate_score_denominator(candidate);
-            printf("%zu. %s  score %lu/%lu (%.0f%%)\n   %s\n", i + 1, fill_suggestion_label(suggestions, i), num, den,
-                   100.0 * (double)num / (double)den, text);
-        }
-        if (exit_status == 0) {
-            exit_status = write_files(&options, &scene, suggestions);
-        }
-    }
-    fill_suggestions_destroy(suggestions);
-    fill_registry_destroy(registry);
-    plan_destroy(scene.plan);
-    return exit_status;
+    cJSON_Delete(document);
+    composer_response_destroy(&response);
+    return status;
 }
