@@ -17,6 +17,11 @@
     "schema": { "const": "ursatz-corpus-index" },
     "schema_version": { "const": 1 },
     "analyzer_version": { "type": "string", "minLength": 1 },
+    "ursatz_commit": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The Ursatz commit the run was analyzed against. Absent from indexes written before P24; such an index is stale."
+    },
     "document_schema_version": { "type": "integer", "minimum": 1 },
     "input_dir": { "type": "string" },
     "pieces": {

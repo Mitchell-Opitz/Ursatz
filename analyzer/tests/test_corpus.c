@@ -111,7 +111,7 @@ static cJSON *read_index(const char *output) {
     return root;
 }
 
-/* The index text with the input directory and every content hash masked, so it compares across machines. */
+/* The index text with the input directory, the Ursatz commit and every content hash masked, so it compares across machines. */
 static char *masked_index(const char *output) {
     char path[1200];
     snprintf(path, sizeof(path), "%s/corpus-index.json", output);
@@ -132,6 +132,9 @@ static char *masked_index(const char *output) {
         if (strncmp(line, "  \"input_dir\": ", 15) == 0) {
             key = "  \"input_dir\": ";
             replacement = "\"<input_dir>\",";
+        } else if (strncmp(line, "  \"ursatz_commit\": ", 18) == 0) {
+            key = "  \"ursatz_commit\": ";
+            replacement = "\"<ursatz_commit>\",";
         } else if (strncmp(line, "      \"content_hash\": ", 22) == 0) {
             key = "      \"content_hash\": ";
             replacement = "\"<hash>\",";
