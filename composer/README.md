@@ -286,8 +286,9 @@ for the harmony of a section whose melody is given. `lock --format json` prints 
 ## Composer API
 
 An application asks the Composer for everything through a versioned in-process C API, `include/ursatz_composer/composer_api.h`:
-JSON text requests, a `ComposerResponse` for every output, a `ComposerJob` for progress and cancel. See
-[docs/api.md](docs/api.md).
+JSON text requests, a `ComposerResponse` for every output, a `ComposerJob` for progress and cancel. It also serves the
+vocabularies an application offers (`composer_api_vocabulary`) and reads a request without composing it
+(`composer_api_validate`). See [docs/api.md](docs/api.md).
 
 ## Plan format
 
