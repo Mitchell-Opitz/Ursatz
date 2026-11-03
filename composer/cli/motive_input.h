@@ -6,7 +6,6 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/motive.h>
 
 #include "motive_extras.h"
 
@@ -37,13 +36,6 @@ int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size
  * memory. bytes may be NULL for a file that could not be read; the text is then empty.
  */
 cJSON *motive_input_request(const MotiveInput *input, const unsigned char *bytes, size_t size, bool *midi);
-
-/*
- * Loads the motive as the motive command does: the pickup and the chord onsets are in beats of the motive's meter, which a
- * file may declare, so they are read after a first load. Returns 0, or the status of the error it printed (a usage error
- * for an option, 2 for a file that cannot be loaded).
- */
-int motive_input_load(const MotiveInput *input, Motive *out);
 
 /*
  * The basic motive of a family of forms, the tree root, which remoteness is measured from (R-142): --basic <file>, with

@@ -165,6 +165,9 @@ ComposerStatus api_grow_set_tempo_and_mode(GrowSetup *out, const ComposerRatio *
 ComposerStatus api_grow_run(const GrowSetup *setup, GrowRun *run, ComposerError *error);
 void api_grow_run_destroy(GrowRun *run);
 
+/* COMPOSER_OK when name is a style category a style can be read without, else a request error at /style_without. */
+ComposerStatus api_style_category_check(const char *name, ComposerError *error);
+
 /* The names of the style categories a style can be read without: adds name to names (at most capacity; a repeat is ignored). */
 ComposerStatus api_style_without_add(const char **names, size_t *count, size_t capacity, const char *name,
                                      ComposerError *error);

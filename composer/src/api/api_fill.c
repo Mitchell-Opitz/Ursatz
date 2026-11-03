@@ -50,6 +50,10 @@ static ComposerStatus read_style_members(const cJSON *request, FillStyle *out, C
             if (!cJSON_IsString(name)) {
                 return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without must be a list of style categories");
             }
+            ComposerStatus known = api_style_category_check(name->valuestring, error);
+            if (known != COMPOSER_OK) {
+                return known;
+            }
             if (out->without_count == PLAN_STYLE_WITHOUT_MAX) {
                 return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without", "style_without names at most %d style categories",
                                 PLAN_STYLE_WITHOUT_MAX);

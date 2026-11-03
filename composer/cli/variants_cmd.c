@@ -8,12 +8,10 @@
 #include <cJSON.h>
 
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/variant_registry.h>
 
 #include "cli_options.h"
 #include "motive_extras.h"
 #include "motive_input.h"
-#include "util/util.h"
 
 #define VARIANTS_COUNT_MAX 16
 #define VARIANTS_COUNT_DEFAULT 6
@@ -27,7 +25,7 @@ typedef struct {
     const char *count_text;
     const char *seed_text;
     const char *distance_text;
-    const char *function_texts[VARIANT_FUNCTIONS];
+    const char *function_texts[CLI_LIST_CAPACITY];
     size_t function_count;
     bool list_ops;
     bool each_op;
@@ -38,7 +36,7 @@ typedef struct {
 static void print_help(FILE *out) {
     fprintf(out, "Usage:\n%s\n\n", VARIANTS_USAGE_LINE + 7);
     fprintf(out, "Lists the variant operations of the registry, or makes variants of a motive: each variant applies a chain\n");
-    fprintf(out, "of up to %d operations. A parameter the chain leaves open is drawn from the seed, so the same motive,\n", VARIANT_CHAIN_MAX);
+    fprintf(out, "of up to %ld operations. A parameter the chain leaves open is drawn from the seed, so the same motive,\n", cli_limit("variant_chain"));
     fprintf(out, "chain and seed give the same variant, and another seed is a reroll.\n\n");
     fprintf(out, "  --list-ops           print every operation: name, label, category, citation, parameters and the\n");
     fprintf(out, "                       forms it applies to\n");
@@ -97,8 +95,8 @@ static int read_options(int argc, char **argv, Options *options) {
                 return cli_fail(CLI_EXIT_USAGE, "--function needs a value");
             }
             const char *name = argv[++i];
-            if (options->function_count == VARIANT_FUNCTIONS) {
-                return cli_fail(CLI_EXIT_USAGE, "--function is given at most %d times", VARIANT_FUNCTIONS);
+            if (cli_list_full(options->function_count, "variant_functions")) {
+                return cli_fail(CLI_EXIT_USAGE, "--function is given at most %ld times", cli_limit("variant_functions"));
             }
             options->function_texts[options->function_count++] = name;
         } else if (strcmp(argument, "--meter") == 0 || strcmp(argument, "--key") == 0 ||
@@ -170,7 +168,7 @@ static void print_operations(const cJSON *document) {
 /* Reads the chain file into *chain (a JSON value the request carries). Returns 0 or the status of the error it printed. */
 static int read_chain(const char *path, cJSON **chain) {
     char *text;
-    if (!util_read_file(path, &text, NULL)) {
+    if (!cli_read_file(path, &text, NULL)) {
         return cli_fail(CLI_EXIT_USAGE, "cannot read chain file '%s'", path);
     }
     *chain = cJSON_Parse(text);
@@ -210,7 +208,10 @@ static void print_text(const cJSON *response) {
         }
         printf("\n  %s\n  %s\n", document_text(member(variant, "motive")), string_of(variant, "derivation"));
         if (cJSON_IsTrue(member(variant, "leaves_harmony"))) {
-            printf("  Warning: %s\n", VARIANT_WARNING_LEAVES_HARMONY);
+            /* The warning joins the analysis's own, last. */
+            const cJSON *warnings = member(member(member(variant, "motive"), "analysis"), "warnings");
+            const cJSON *warning = cJSON_GetArrayItem(warnings, cJSON_GetArraySize(warnings) - 1);
+            printf("  Warning: %s\n", cJSON_IsString(warning) ? warning->valuestring : "");
         }
         print_fraction("Remoteness", member(variant, "remoteness_fraction"));
         printf("  Functions:");

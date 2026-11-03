@@ -10,7 +10,6 @@
 #include <stdint.h>
 
 #include "cli_options.h"
-#include "util/util.h"
 #include "workflow.h"
 
 #define MAX_GIVEN 8
@@ -225,9 +224,9 @@ static int check_options(Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "plan needs --form, --key, --meter and --out (see --help)\n%s", PLAN_USAGE_LINE);
     }
     if (options->format_text) {
-        if (request_equals_ignore_case(options->format_text, "json")) {
+        if (cli_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
-        } else if (!request_equals_ignore_case(options->format_text, "text")) {
+        } else if (!cli_equals_ignore_case(options->format_text, "text")) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
         }
     }
@@ -254,7 +253,7 @@ static bool is_midi(const char *bytes, size_t size) {
 static cJSON *motive_request(const Options *options, const char *path, Held *held) {
     char *bytes = NULL;
     size_t size = 0;
-    if (!util_read_file(path, &bytes, &size)) {
+    if (!cli_read_file(path, &bytes, &size)) {
         held->failed = true;
         held->status = CLI_EXIT_UNSATISFIABLE;
         snprintf(held->message, sizeof held->message, "cannot load '%s' (io) at %s: cannot open the file", path, path);

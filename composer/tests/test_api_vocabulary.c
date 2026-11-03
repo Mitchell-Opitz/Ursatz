@@ -6,6 +6,9 @@
 #include <cJSON.h>
 
 #include <ursatz_composer/composer_api.h>
+#include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_random.h>
+#include <ursatz_composer/variant_registry.h>
 
 #include "support/test_support.h"
 
@@ -136,6 +139,16 @@ static void test_lists(void) {
     }
     assert(cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(vocabulary, "pickups")));
     assert(cJSON_GetObjectItemCaseSensitive(vocabulary, "variant_operations"));
+
+    /* The limits the command line shows are the library's. */
+    const cJSON *limits = cJSON_GetObjectItemCaseSensitive(vocabulary, "limits");
+    assert(cJSON_IsObject(limits));
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "motive_notes")->valuedouble == MOTIVE_MAX_NOTES);
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "motive_chords")->valuedouble == MOTIVE_MAX_CHORDS);
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "motive_features")->valuedouble == MOTIVE_MAX_FEATURES);
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "variant_chain")->valuedouble == VARIANT_CHAIN_MAX);
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "variant_functions")->valuedouble == VARIANT_FUNCTIONS);
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "random_motive_count")->valuedouble == MOTIVE_RANDOM_MAX_COUNT);
 
     /* The orders and the notes of the GUI tables it replaces. */
     const cJSON *meters = list("meters");
@@ -533,7 +546,7 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "0.8") == 0);
+    assert(strcmp(composer_api_version(), "1.0") == 0);
     test_lists();
     test_round_trip();
     test_variants_words();

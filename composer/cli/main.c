@@ -20,7 +20,6 @@
 #include "variants_cmd.h"
 #include "cli_options.h"
 
-#include <ursatz_composer/composer.h>
 #include <ursatz_composer/composer_api.h>
 
 static void print_usage(FILE *out) {
@@ -274,7 +273,13 @@ int main(int argc, char **argv) {
         return run_harmonize(argc, argv);
     }
     if (argc == 2 && strcmp(argv[1], "--version") == 0) {
-        printf("ursatz-composer %s\n", composer_version());
+        ComposerResponse response;
+        memset(&response, 0, sizeof response);
+        cJSON *versions = composer_api_versions(&response) == COMPOSER_OK ? cJSON_Parse(response.json) : NULL;
+        const cJSON *version = cJSON_GetObjectItemCaseSensitive(versions, "composer_version");
+        printf("ursatz-composer %s\n", cJSON_IsString(version) ? version->valuestring : "");
+        cJSON_Delete(versions);
+        composer_response_destroy(&response);
         return 0;
     }
     if (argc == 2 && strcmp(argv[1], "--help") == 0) {

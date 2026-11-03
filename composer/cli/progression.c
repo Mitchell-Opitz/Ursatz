@@ -151,9 +151,9 @@ static int read_options(int argc, char **argv, Options *options) {
         return cli_fail(EXIT_USAGE, "progression needs --key, --meter, --bars and --cadence (see --help)");
     }
     if (options->format_text) {
-        if (request_equals_ignore_case(options->format_text, "json")) {
+        if (cli_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
-        } else if (!request_equals_ignore_case(options->format_text, "text")) {
+        } else if (!cli_equals_ignore_case(options->format_text, "text")) {
             return cli_fail(EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
         }
     }

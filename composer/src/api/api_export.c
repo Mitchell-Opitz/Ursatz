@@ -75,14 +75,16 @@ ComposerStatus composer_api_export(const char *request_json, const ComposerJob *
     const cJSON *midi_member = cJSON_GetObjectItemCaseSensitive(request, "midi");
     const cJSON *musicxml_member = cJSON_GetObjectItemCaseSensitive(request, "musicxml");
     const cJSON *plain_member = cJSON_GetObjectItemCaseSensitive(request, "plain_midi");
+    const cJSON *file_member = cJSON_GetObjectItemCaseSensitive(request, "plan_file");
     PlanExportOptions options = plan_export_options_default();
     if (!cJSON_IsObject(plan_member)) {
         status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/plan", "plan must be a plan object");
     } else if ((midi_member && !cJSON_IsBool(midi_member)) || (musicxml_member && !cJSON_IsBool(musicxml_member)) ||
-               (plain_member && !cJSON_IsBool(plain_member))) {
+               (plain_member && !cJSON_IsBool(plain_member)) || (file_member && !cJSON_IsBool(file_member))) {
         const char *path = midi_member && !cJSON_IsBool(midi_member)       ? "/midi"
                            : musicxml_member && !cJSON_IsBool(musicxml_member) ? "/musicxml"
-                                                                               : "/plain_midi";
+                           : plain_member && !cJSON_IsBool(plain_member)       ? "/plain_midi"
+                                                                               : "/plan_file";
         status = api_fail(&out->error, COMPOSER_ERR_REQUEST, path, "%s must be true or false", path + 1);
     } else {
         status = api_read_tempo(request, &options, &out->error);
@@ -102,6 +104,7 @@ ComposerStatus composer_api_export(const char *request_json, const ComposerJob *
     }
     bool want_midi = cJSON_IsTrue(midi_member);
     bool want_musicxml = cJSON_IsTrue(musicxml_member);
+    bool want_plan_file = cJSON_IsTrue(file_member);
 
     char *plan_text = cJSON_PrintUnformatted(plan_member);
     cJSON_Delete(request);
@@ -128,6 +131,26 @@ ComposerStatus composer_api_export(const char *request_json, const ComposerJob *
         pointer[length] = '\0';
         return api_fail(&out->error, COMPOSER_ERR_REQUEST, pointer, "cannot read plan: %s%s%s", load_error.message,
                         load_error.path[0] ? " at " : "", load_error.path);
+    }
+
+    if (want_plan_file) {
+        /* The plan as the library writes a plan file; with nothing else asked for, nothing is rendered. */
+        PlanJsonError write_error;
+        out->plan_json = plan_to_json(plan, &write_error);
+        if (!out->plan_json) {
+            plan_destroy(plan);
+            return api_fail(&out->error, COMPOSER_ERR_INTERNAL, "/plan", "cannot write plan: %s", write_error.message);
+        }
+        if (!want_midi && !want_musicxml) {
+            plan_destroy(plan);
+            cJSON *only = cJSON_CreateObject();
+            if (!only || !cJSON_AddArrayToObject(only, "skipped")) {
+                cJSON_Delete(only);
+                composer_response_destroy(out);
+                return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
+            }
+            return api_respond_json(out, only);
+        }
     }
 
     RenderedPlan rendered;

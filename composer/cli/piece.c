@@ -10,13 +10,10 @@
 #include <cJSON.h>
 
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/plan_json.h>
 
 #include "cli_options.h"
 #include "workflow.h"
 #include "piece_text.h"
-#include "util/request_parse.h"
-#include "util/util.h"
 
 #define SCHEMA_NAME "ursatz-piece-request"
 #define OUTPUT_MAX 8
@@ -160,9 +157,9 @@ static int check_edit_options(const Options *options) {
             return cli_fail(CLI_EXIT_USAGE, "--from needs --regenerate <section id>|none or --variations <section id>, not both\n%s",
                             PIECE_USAGE_LINE);
         }
-        if (options->lane && !request_equals_ignore_case(options->lane, "all") && !request_equals_ignore_case(options->lane, "harmony") &&
-            !request_equals_ignore_case(options->lane, "bass") && !request_equals_ignore_case(options->lane, "melody") &&
-            !request_equals_ignore_case(options->lane, "inner")) {
+        if (options->lane && !cli_equals_ignore_case(options->lane, "all") && !cli_equals_ignore_case(options->lane, "harmony") &&
+            !cli_equals_ignore_case(options->lane, "bass") && !cli_equals_ignore_case(options->lane, "melody") &&
+            !cli_equals_ignore_case(options->lane, "inner")) {
             return cli_fail(CLI_EXIT_USAGE, "--lane must be harmony, bass, melody, inner or all, not '%s'", options->lane);
         }
         if (options->variations) {
@@ -195,7 +192,7 @@ static int check_edit_options(const Options *options) {
 static int read_request_file(const char *path, cJSON **out) {
     char *text;
     *out = NULL;
-    if (!util_read_file(path, &text, NULL)) {
+    if (!cli_read_file(path, &text, NULL)) {
         return cli_fail(CLI_EXIT_USAGE, "cannot read the request '%s'", path);
     }
     cJSON *request = cJSON_Parse(text);
@@ -209,22 +206,22 @@ static int read_request_file(const char *path, cJSON **out) {
         cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
         const cJSON *kind = cJSON_GetObjectItemCaseSensitive(fill, "kind");
         const cJSON *plan_path = cJSON_GetObjectItemCaseSensitive(fill, "plan");
-        if (!cJSON_IsObject(fill) || !cJSON_IsString(kind) || !request_equals_ignore_case(kind->valuestring, "theme") ||
+        if (!cJSON_IsObject(fill) || !cJSON_IsString(kind) || !cli_equals_ignore_case(kind->valuestring, "theme") ||
             !cJSON_IsString(plan_path)) {
             continue;
         }
         const cJSON *id = cJSON_GetObjectItemCaseSensitive(section, "id");
-        PiecePlan *plan = NULL;
-        PlanJsonError error;
-        if (plan_read_json_file(plan_path->valuestring, &plan, &error) != PLAN_OK) {
+        /* The API checks that the plan reads; the file must be there and be JSON. */
+        char *plan_text = NULL;
+        cJSON *object = cli_read_file(plan_path->valuestring, &plan_text, NULL) ? cJSON_Parse(plan_text) : NULL;
+        if (!object) {
             int status = cli_fail(CLI_EXIT_USAGE, "section '%s': cannot read the theme plan '%s': %s",
-                                  cJSON_IsString(id) ? id->valuestring : "", plan_path->valuestring, error.message);
+                                  cJSON_IsString(id) ? id->valuestring : "", plan_path->valuestring,
+                                  plan_text ? "not valid JSON" : "could not open the file");
+            free(plan_text);
             cJSON_Delete(request);
             return status;
         }
-        char *plan_text = plan_to_json(plan, &error);
-        plan_destroy(plan);
-        cJSON *object = plan_text ? cJSON_Parse(plan_text) : NULL;
         free(plan_text);
         char *label = strdup(plan_path->valuestring);
         if (!object || !label || !cJSON_ReplaceItemInObject(fill, "plan", object) ||
@@ -249,7 +246,7 @@ static int add_edit(const Options *options, cJSON *request) {
     }
     cJSON *edit = cJSON_CreateObject();
     cJSON *lanes = cJSON_CreateArray();
-    bool whole = !options->lane || request_equals_ignore_case(options->lane, "all");
+    bool whole = !options->lane || cli_equals_ignore_case(options->lane, "all");
     bool ok = plan && edit && lanes && cJSON_AddItemToObject(request, "from", plan) &&
               (whole || cJSON_AddItemToArray(lanes, cJSON_CreateString(options->lane))) &&
               cJSON_AddItemToObject(edit, "lanes", lanes);
@@ -257,7 +254,7 @@ static int add_edit(const Options *options, cJSON *request) {
         ok = cJSON_AddStringToObject(edit, "section", options->variations) &&
              cJSON_AddStringToObject(edit, "count", options->count) && cJSON_AddItemToObject(request, "variations", edit);
     } else if (ok) {
-        ok = (request_equals_ignore_case(options->regenerate, "none") ? cJSON_AddNullToObject(edit, "section")
+        ok = (cli_equals_ignore_case(options->regenerate, "none") ? cJSON_AddNullToObject(edit, "section")
                                                                       : cJSON_AddStringToObject(edit, "section", options->regenerate)) &&
              cJSON_AddItemToObject(request, "regenerate", edit);
     }
@@ -289,7 +286,7 @@ static int build_request(const Options *options, cJSON *piece, char **out) {
              cJSON_AddBoolToObject(request, "ending_musicxml", options->ending_musicxml != NULL);
         if (ok && options->explain) {
             size_t length = strlen(options->explain);
-            bool json = length >= 5 && request_equals_ignore_case(options->explain + length - 5, ".json");
+            bool json = length >= 5 && cli_equals_ignore_case(options->explain + length - 5, ".json");
             ok = cJSON_AddStringToObject(request, "explain", json ? "json" : "text");
         }
     }
@@ -582,8 +579,8 @@ int run_piece(int argc, char **argv) {
     }
     bool json = false;
     if (options.format) {
-        json = request_equals_ignore_case(options.format, "json");
-        if (!json && !request_equals_ignore_case(options.format, "text")) {
+        json = cli_equals_ignore_case(options.format, "json");
+        if (!json && !cli_equals_ignore_case(options.format, "text")) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options.format);
         }
     }

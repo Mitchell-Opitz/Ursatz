@@ -4,9 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/motive.h>
 
-#include "api/api_internal.h"
 #include "cli_options.h"
 
 int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size, char *error, size_t error_size) {
@@ -14,7 +12,7 @@ int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size
     *size = 0;
     const char *why = NULL;
     char limit[64];
-    MotiveResult result = MOTIVE_ERR_IO;
+    const char *result = "io";
     FILE *file = fopen(path, "rb");
     if (!file) {
         why = "cannot open the file";
@@ -23,7 +21,7 @@ int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size
         long length = ftell(file);
         fseek(file, 0, SEEK_SET);
         if (length == 0) {
-            result = MOTIVE_ERR_EMPTY;
+            result = "empty";
             why = "the file is empty";
         } else if (length < 0 || length > MOTIVE_INPUT_FILE_LIMIT) {
             snprintf(limit, sizeof limit, "the file is empty or larger than %ld bytes", MOTIVE_INPUT_FILE_LIMIT);
@@ -35,14 +33,14 @@ int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size
                 *size = (size_t)length;
             } else {
                 free(data);
-                result = data ? MOTIVE_ERR_IO : MOTIVE_ERR_ALLOC;
+                result = data ? "io" : "alloc";
                 why = data ? "cannot read the file" : "out of memory";
             }
         }
         fclose(file);
     }
     if (why) {
-        snprintf(error, error_size, "cannot load '%s' (%s) at %s: %s", path, motive_result_name(result), path, why);
+        snprintf(error, error_size, "cannot load '%s' (%s) at %s: %s", path, result, path, why);
     }
     return why ? CLI_EXIT_UNSATISFIABLE : 0;
 }
@@ -53,7 +51,7 @@ static bool reads_as_midi(const MotiveInput *options, const unsigned char *bytes
         return false;
     }
     if (!options->format_text || strcmp(options->format_text, "auto") == 0) {
-        return bytes && motive_detect_format(bytes, size) == MOTIVE_FORMAT_MIDI;
+        return bytes && size >= 4 && memcmp(bytes, "MThd", 4) == 0;
     }
     return bytes && strcmp(options->format_text, "midi") == 0;
 }
@@ -93,31 +91,6 @@ cJSON *motive_input_request(const MotiveInput *options, const unsigned char *byt
         return NULL;
     }
     return request;
-}
-
-int motive_input_load(const MotiveInput *options, Motive *out) {
-    unsigned char *bytes = NULL;
-    size_t size = 0;
-    char read_error[512];
-    int read_status = motive_input_read_file(options->path, &bytes, &size, read_error, sizeof read_error);
-    bool midi = false;
-    cJSON *request = motive_input_request(options, bytes, size, &midi);
-    if (!request) {
-        free(bytes);
-        return cli_fail(CLI_EXIT_USAGE, "out of memory");
-    }
-    ComposerError error;
-    memset(&error, 0, sizeof error);
-    /* A file that cannot be read is still checked against the options first, with no text: a bad option is reported
-       before a missing file, as it always was. */
-    ComposerStatus status = midi ? api_read_motive_bytes(request, "", bytes, size, out, NULL, &error)
-                                 : api_read_motive(request, "", out, NULL, &error);
-    cJSON_Delete(request);
-    free(bytes);
-    if (read_status != 0 && status != COMPOSER_ERR_REQUEST) {
-        return cli_fail(read_status, "%s", read_error);
-    }
-    return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, options->path);
 }
 
 bool motive_input_take_basic(BasicInput *basic, int argc, char **argv, int *index, int *status) {

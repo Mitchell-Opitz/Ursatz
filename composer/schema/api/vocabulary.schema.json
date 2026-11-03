@@ -26,7 +26,8 @@
     "pickups",
     "theme_ideas",
     "tone_labels",
-    "variant_operations"
+    "variant_operations",
+    "limits"
   ],
   "additionalProperties": false,
   "properties": {
@@ -207,6 +208,21 @@
       "required": [
         "operations"
       ]
+    },
+    "limits": {
+      "type": "object",
+      "required": [
+        "motive_notes",
+        "motive_chords",
+        "motive_features",
+        "variant_chain",
+        "variant_functions",
+        "random_motive_count"
+      ],
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1
+      }
     }
   },
   "$defs": {

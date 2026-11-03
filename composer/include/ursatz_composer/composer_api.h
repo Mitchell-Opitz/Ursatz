@@ -10,12 +10,13 @@
  * JSON text request and fill a ComposerResponse. No Composer type, no cJSON type and no file path (except style models
  * and corpus directories) crosses it. See docs/api.md.
  *
- * Versioning: a request may carry "api_version": <major>; a different major is refused. Each entry added raises the
- * minor version; 1.0 is the first stable API.
+ * Versioning: a request may carry "api_version": <major>; a different major is refused. The major version changes on any
+ * removed or changed member or entry; the minor version on an addition (an entry, a request member, a response member).
+ * 1.0 is the first stable API.
  */
 
-#define COMPOSER_API_VERSION_MAJOR 0
-#define COMPOSER_API_VERSION_MINOR 8
+#define COMPOSER_API_VERSION_MAJOR 1
+#define COMPOSER_API_VERSION_MINOR 0
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);

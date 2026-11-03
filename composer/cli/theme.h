@@ -6,8 +6,6 @@
 
 #include <cJSON.h>
 
-#include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece_plan.h>
 
 #include "grow.h"
 

@@ -6,18 +6,7 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/constraint.h>
-#include <ursatz_composer/export.h>
-#include <ursatz_composer/corpus_seed.h>
-#include <ursatz_composer/explain.h>
-#include <ursatz_composer/fill_target.h>
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece_plan.h>
-#include <ursatz_composer/regenerate.h>
-#include <ursatz_composer/style.h>
 
-#include "util/request_parse.h"
 
 /* The exit statuses every command shares. */
 #define CLI_EXIT_USAGE 1
@@ -27,6 +16,24 @@
 /* The largest seed, and how many seeds a command tries, one after another from the one given, before it gives up. */
 #define CLI_SEED_MAX 4294967295UL
 #define CLI_MAX_SEED_TRIES 16
+
+/* Reads a whole file into a NUL-terminated buffer (*size is its length, may be NULL; the caller frees *text). False when it cannot be read. */
+bool cli_read_file(const char *path, char **text, size_t *size);
+
+/* Parses a whole number (digits only) not above maximum. */
+bool cli_whole_number(const char *text, unsigned long maximum, unsigned long *out);
+
+/* Whether two ASCII texts are equal ignoring case. */
+bool cli_equals_ignore_case(const char *a, const char *b);
+
+/* A size the API limits requests to (composer_api_vocabulary "limits": motive_notes, motive_chords, motive_features, variant_chain, variant_functions, random_motive_count); 0 when unknown. */
+long cli_limit(const char *name);
+
+/* Room for the repeatable options that the limits cap (--tone, --feature, --function): the API refuses more than its limit. */
+#define CLI_LIST_CAPACITY 64
+
+/* Whether a repeatable option already holds as many values as the limit allows (or as the CLI has room for). */
+bool cli_list_full(size_t count, const char *limit_name);
 
 /* Prints "Error: <message>" to stderr and returns status. */
 int cli_fail(int status, const char *format, ...);
@@ -42,25 +49,13 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
 /* Prints the document with 2-space indent and one space after each colon, as the commands write JSON. */
 void cli_print_json(const cJSON *document);
 
-const char *cli_key_name(const AnalysisKey *key, char *out, size_t size);
-
-const char *cli_cadence_name(CadenceType cadence);
-
-/*
- * The export options of --tempo (tempo_text, NULL when not given) and --plain-midi: the tempo is a whole number or a
- * fraction like "195/2" of quarter notes per minute, from 20 to 400; --plain-midi turns the MIDI track names and
- * section markers off. Returns 0, or the status of the usage error it printed.
- */
-int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportOptions *out);
-
-/* --style-without values: at most CLI_STYLE_WITHOUT_MAX category names, each one the Analyzer defines. */
-#define CLI_STYLE_WITHOUT_MAX 8
+/* The --style-without values as given; the API checks that each is a style category and how many there are. */
 typedef struct {
-    const char *names[CLI_STYLE_WITHOUT_MAX];
+    const char *names[CLI_LIST_CAPACITY];
     size_t count;
 } CliStyleWithout;
 
-/* Adds one --style-without value. Returns 0, or the status of the usage error it printed (more than 8, or not a category). */
+/* Adds one --style-without value. Returns 0, or the status of the usage error it printed (more than the CLI has room for). */
 int cli_style_without_add(CliStyleWithout *list, const char *name);
 
 /* The name of alternative k (from 1) of a file: before the extension, "-k". With one result the name as given. */
@@ -91,8 +86,5 @@ int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *
  */
 int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml, const cJSON *loop,
                     ComposerResponse *out);
-
-/* The text of a motive in its own form (notes, rhythm or contour); malloc'd, the caller frees it. */
-char *cli_motive_text(const Motive *motive);
 
 #endif

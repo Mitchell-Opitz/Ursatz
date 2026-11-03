@@ -8,7 +8,6 @@
 #include <cJSON.h>
 
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/variant_registry.h>
 
 #include "cli_options.h"
 #include "motive_input.h"
@@ -43,7 +42,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --target-feature <l:a-b>     a labelled run of the target's notes; repeatable. The target has the source's\n");
     fprintf(out, "                       --role\n");
     motive_input_print_basic_help(out);
-    fprintf(out, "  --depth <n>          the most operations in the chain, 1 to %d (default %d)\n", VARIANT_CHAIN_MAX, VARIANT_CHAIN_MAX);
+    fprintf(out, "  --depth <n>          the most operations in the chain, 1 to %ld (default %ld)\n", cli_limit("variant_chain"), cli_limit("variant_chain"));
     fprintf(out, "  --json               print {found, chain, distance, remoteness, kept, changed, derivation}\n");
     fprintf(out, "  --help               this text\n\n");
     fprintf(out, "Exit status: 0 the search ran, found or not; 1 usage, an invalid argument or an input that cannot be loaded.\n\n");
@@ -70,8 +69,8 @@ static int read_options(int argc, char **argv, Options *options) {
             if (i + 1 >= argc) {
                 return cli_fail(CLI_EXIT_USAGE, "--target-feature needs a value");
             }
-            if (options->target.extras.feature_count == MOTIVE_MAX_FEATURES) {
-                return cli_fail(CLI_EXIT_USAGE, "a motive has at most %d features", MOTIVE_MAX_FEATURES);
+            if (cli_list_full(options->target.extras.feature_count, "motive_features")) {
+                return cli_fail(CLI_EXIT_USAGE, "a motive has at most %ld features", cli_limit("motive_features"));
             }
             options->target.extras.feature_texts[options->target.extras.feature_count++] = argv[++i];
         } else if (strcmp(argument, "--json") == 0) {

@@ -2,7 +2,6 @@
 
 #include <string.h>
 
-#include "api/api_internal.h"
 #include "cli_options.h"
 
 bool motive_extras_take(MotiveExtras *extras, int argc, char **argv, int *index, bool role_only, int *status) {
@@ -21,8 +20,8 @@ bool motive_extras_take(MotiveExtras *extras, int argc, char **argv, int *index,
     const char *value = argv[++*index];
     const char **slot = harmony ? &extras->harmony_text : &extras->role_text;
     if (feature) {
-        if (extras->feature_count == MOTIVE_MAX_FEATURES) {
-            *status = cli_fail(CLI_EXIT_USAGE, "a motive has at most %d features", MOTIVE_MAX_FEATURES);
+        if (cli_list_full(extras->feature_count, "motive_features")) {
+            *status = cli_fail(CLI_EXIT_USAGE, "a motive has at most %ld features", cli_limit("motive_features"));
             return true;
         }
         extras->feature_texts[extras->feature_count++] = value;
@@ -36,22 +35,6 @@ bool motive_extras_take(MotiveExtras *extras, int argc, char **argv, int *index,
 
 bool motive_extras_given(const MotiveExtras *extras) {
     return extras->harmony_text || extras->feature_count > 0 || extras->role_text;
-}
-
-int motive_extras_options(const MotiveExtras *extras, const PlanMeter *meter, MotiveOptions *options) {
-    if (!motive_extras_given(extras)) {
-        return 0;
-    }
-    cJSON *object = cJSON_CreateObject();
-    if (!object || !motive_extras_add_members(extras, object)) {
-        cJSON_Delete(object);
-        return cli_fail(CLI_EXIT_USAGE, "out of memory");
-    }
-    ComposerError error;
-    memset(&error, 0, sizeof error);
-    ComposerStatus status = api_read_motive_extras(object, "", meter, options, &error);
-    cJSON_Delete(object);
-    return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, NULL);
 }
 
 bool motive_extras_add_members(const MotiveExtras *extras, cJSON *object) {
@@ -79,9 +62,9 @@ bool motive_extras_add_members(const MotiveExtras *extras, cJSON *object) {
 void motive_extras_print_help(FILE *out, bool role_only) {
     if (!role_only) {
         fprintf(out, "  --harmony \"<text>\"   the motive's own chords as Roman numerals with onsets in beats after @, as\n");
-        fprintf(out, "                       \"I V6@2 I@3\" (the first needs no onset); up to %d chords\n", MOTIVE_MAX_CHORDS);
-        fprintf(out, "  --feature <l:a-b>    a labelled run of notes by 0-based index, as a:0-2; repeatable, up to %d\n",
-                MOTIVE_MAX_FEATURES);
+        fprintf(out, "                       \"I V6@2 I@3\" (the first needs no onset); up to %ld chords\n", cli_limit("motive_chords"));
+        fprintf(out, "  --feature <l:a-b>    a labelled run of notes by 0-based index, as a:0-2; repeatable, up to %ld\n",
+                cli_limit("motive_features"));
     }
     fprintf(out, "  --role <role>        melodic (default) or accompaniment\n");
 }

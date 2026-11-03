@@ -8,15 +8,78 @@
 #include <string.h>
 #include <time.h>
 
-#include <standard-texture/texture_rules.h>
 
-#include "api/api_grow.h"
-#include "api/api_internal.h"
 
-#include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/plan_json.h>
-#include "util/plan_util.h"
-#include "util/util.h"
+bool cli_read_file(const char *path, char **text, size_t *size) {
+    *text = NULL;
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        return false;
+    }
+    long length = -1;
+    if (fseek(file, 0, SEEK_END) == 0) {
+        length = ftell(file);
+        if (length < 0 || fseek(file, 0, SEEK_SET) != 0) {
+            length = -1;
+        }
+    }
+    char *buffer = length >= 0 ? malloc((size_t)length + 1) : NULL;
+    bool read = buffer && fread(buffer, 1, (size_t)length, file) == (size_t)length;
+    fclose(file);
+    if (!read) {
+        free(buffer);
+        return false;
+    }
+    buffer[length] = '\0';
+    *text = buffer;
+    if (size) {
+        *size = (size_t)length;
+    }
+    return true;
+}
+
+bool cli_whole_number(const char *text, unsigned long maximum, unsigned long *out) {
+    if (!text || !isdigit((unsigned char)text[0])) {
+        return false;
+    }
+    char *end = NULL;
+    errno = 0;
+    unsigned long value = strtoul(text, &end, 10);
+    if (errno != 0 || *end != '\0' || value > maximum) {
+        return false;
+    }
+    *out = value;
+    return true;
+}
+
+bool cli_equals_ignore_case(const char *a, const char *b) {
+    if (!a || !b) {
+        return false;
+    }
+    for (; *a && *b; a++, b++) {
+        if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) {
+            return false;
+        }
+    }
+    return *a == *b;
+}
+
+long cli_limit(const char *name) {
+    ComposerResponse response;
+    long value = 0;
+    if (composer_api_vocabulary(&response) == COMPOSER_OK) {
+        cJSON *document = cJSON_Parse(response.json);
+        const cJSON *item = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "limits"), name);
+        value = cJSON_IsNumber(item) ? (long)item->valuedouble : 0;
+        cJSON_Delete(document);
+    }
+    composer_response_destroy(&response);
+    return value;
+}
+
+bool cli_list_full(size_t count, const char *limit_name) {
+    return count >= CLI_LIST_CAPACITY || (long)count >= cli_limit(limit_name);
+}
 
 int cli_fail(int status, const char *format, ...) {
     va_list args;
@@ -126,34 +189,12 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
     return cli_fail(status == COMPOSER_ERR_UNSATISFIABLE ? CLI_EXIT_UNSATISFIABLE : CLI_EXIT_USAGE, "%s", message);
 }
 
-int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportOptions *out) {
-    *out = plan_export_options_default();
-    if (plain_midi) {
-        out->track_names = false;
-        out->section_markers = false;
-    }
-    if (!tempo_text) {
-        return 0;
-    }
-    ComposerRatio tempo;
-    if (!request_parse_ratio(tempo_text, &tempo) || tempo.denominator == 0 || tempo.numerator < 20UL * tempo.denominator ||
-        tempo.numerator > 400UL * tempo.denominator) {
-        return cli_fail(CLI_EXIT_USAGE,
-                        "--tempo must be from 20 to 400 quarter notes per minute, a whole number or a fraction like "
-                        "195/2, not '%s'",
-                        tempo_text);
-    }
-    out->tempo_numerator = tempo.numerator;
-    out->tempo_denominator = tempo.denominator;
-    return 0;
-}
-
 int cli_style_without_add(CliStyleWithout *list, const char *name) {
-    ComposerError error;
-    memset(&error, 0, sizeof error);
-    ComposerStatus status =
-        api_style_without_add(list->names, &list->count, CLI_STYLE_WITHOUT_MAX, name, &error);
-    return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, NULL);
+    if (list->count >= CLI_LIST_CAPACITY) {
+        return cli_fail(CLI_EXIT_USAGE, "--style-without is given at most %d times", CLI_LIST_CAPACITY);
+    }
+    list->names[list->count++] = name;
+    return 0;
 }
 
 void cli_print_json(const cJSON *document) {
@@ -179,15 +220,6 @@ void cli_print_json(const cJSON *document) {
     cJSON_free(printed);
 }
 
-const char *cli_key_name(const AnalysisKey *key, char *out, size_t size) {
-    util_key_name(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, out, size);
-    return out;
-}
-
-const char *cli_cadence_name(CadenceType cadence) {
-    return plan_cadence_name(cadence);
-}
-
 bool cli_alternative_path(const char *path, size_t k, bool several, char *out, size_t size) {
     if (!several) {
         return snprintf(out, size, "%s", path) < (int)size;
@@ -211,17 +243,22 @@ bool cli_write_bytes(const char *path, const void *data, size_t size) {
 }
 
 int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *final_path) {
-    char *text = cJSON_PrintUnformatted(plan);
-    PiecePlan *loaded = NULL;
-    PlanJsonError error;
-    memset(&error, 0, sizeof error);
-    bool ok = text && plan_from_json(text, &loaded, &error) == PLAN_OK;
-    cJSON_free(text);
-    if (ok && plan_write_json_file(loaded, temporary, &error) != PLAN_OK) {
-        ok = false;
-    }
-    plan_destroy(loaded);
-    return ok ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", final_path, error.message[0] ? error.message : "the plan");
+    /* The API gives the plan as the library writes plan files. */
+    cJSON *request = cJSON_CreateObject();
+    bool ok = request && cJSON_AddItemToObject(request, "plan", cJSON_Duplicate(plan, true)) &&
+              cJSON_AddBoolToObject(request, "plan_file", true);
+    char *printed = ok ? cJSON_PrintUnformatted(request) : NULL;
+    cJSON_Delete(request);
+    ComposerResponse response;
+    memset(&response, 0, sizeof response);
+    ComposerStatus status = printed ? composer_api_export(printed, NULL, &response) : COMPOSER_ERR_ALLOC;
+    cJSON_free(printed);
+    ok = status == COMPOSER_OK && response.plan_json &&
+         cli_write_bytes(temporary, response.plan_json, strlen(response.plan_json));
+    const char *why = response.error.message[0] ? response.error.message : "the plan";
+    int result = ok ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", final_path, why);
+    composer_response_destroy(&response);
+    return result;
 }
 
 int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml, const cJSON *loop,

@@ -5,7 +5,8 @@
 #include <stdio.h>
 
 #include <cJSON.h>
-#include <ursatz_composer/motive.h>
+
+#include "cli_options.h"
 
 /*
  * The options that put a motive's own harmony, labelled features and role on it: --harmony "<text>", --feature
@@ -14,7 +15,7 @@
  */
 typedef struct {
     const char *harmony_text;
-    const char *feature_texts[MOTIVE_MAX_FEATURES];
+    const char *feature_texts[CLI_LIST_CAPACITY];
     size_t feature_count;
     const char *role_text;
 } MotiveExtras;
@@ -22,19 +23,12 @@ typedef struct {
 /*
  * If argv[*index] is --harmony, --feature or --role (only --role when role_only), takes it and its value into extras,
  * moves *index to the value, and returns true. *status is then 0, or the status of the usage error printed (a missing
- * value, an option given twice, more than MOTIVE_MAX_FEATURES features). Returns false for any other argument.
+ * value, an option given twice, more than the API allows features). Returns false for any other argument.
  */
 bool motive_extras_take(MotiveExtras *extras, int argc, char **argv, int *index, bool role_only, int *status);
 
 /* Whether any of the options was given. */
 bool motive_extras_given(const MotiveExtras *extras);
-
-/*
- * Reads the texts into options (has_harmony, has_features, has_role and their values) as the composer API reads the
- * request members (api_read_motive_extras). meter is the motive's meter, which the chord onsets are counted in; it may
- * be NULL only when no --harmony was given. Returns 0, or the status of the usage error printed.
- */
-int motive_extras_options(const MotiveExtras *extras, const PlanMeter *meter, MotiveOptions *options);
 
 /* Adds the options given to a request object as "harmony", "features" and "role". False when out of memory. */
 bool motive_extras_add_members(const MotiveExtras *extras, cJSON *object);

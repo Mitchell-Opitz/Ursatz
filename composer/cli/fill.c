@@ -151,9 +151,9 @@ static int check_options(Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "fill needs a plan file\n%s", FILL_USAGE_LINE);
     }
     if (options->format_text) {
-        if (request_equals_ignore_case(options->format_text, "json")) {
+        if (cli_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
-        } else if (!request_equals_ignore_case(options->format_text, "text")) {
+        } else if (!cli_equals_ignore_case(options->format_text, "text")) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
         }
     }
@@ -181,7 +181,7 @@ static cJSON *build_request(const Options *options, cJSON *plan) {
          (!options->record_path || cJSON_AddTrueToObject(request, "record"));
     if (ok && options->explain_path) {
         size_t length = strlen(options->explain_path);
-        bool json = length >= 5 && request_equals_ignore_case(options->explain_path + length - 5, ".json");
+        bool json = length >= 5 && cli_equals_ignore_case(options->explain_path + length - 5, ".json");
         ok = cJSON_AddStringToObject(request, "explain", json ? "json" : "text") != NULL;
     }
     for (size_t i = 0; ok && i < options->without.count; i++) {
