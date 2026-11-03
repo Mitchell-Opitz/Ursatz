@@ -222,4 +222,26 @@ ComposerStatus composer_api_fill(const char *request_json, const ComposerJob *jo
  */
 ComposerStatus composer_api_lock(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
+/*
+ * Writes one node of a plan again (docs/cli-regenerate.md). Request: {"plan", "node" or "section", "lane", "seed",
+ * "midi", "musicxml", "plain_midi", "tempo", "record", "explain"}. json: what `regenerate --format json` prints, without
+ * "files": as fill's, with "reopened": {"sections", "spans"}. plan_json, midi and musicxml are filled. A refused target is
+ * COMPOSER_ERR_UNSATISFIABLE.
+ */
+ComposerStatus composer_api_regenerate(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Several distinct versions of one node of a plan (docs/cli-variations.md). Request: {"plan", "node" or "section", "lane",
+ * "count" (1 to 16), "seed", "musicxml", "plain_midi", "tempo"}. json: {"variations": [{"index", "seed", "plan": <the plan
+ * object>, "musicxml" (when asked), "sections": [...]}], "kept", "requested", "seeds_tried"}; the MIDI file of a
+ * variation is composer_api_export of its plan. COMPOSER_ERR_UNSATISFIABLE when none differs from the plan.
+ */
+ComposerStatus composer_api_variations(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * As composer_api_variations for the harmony of a section whose melody is given (docs/cli-variations.md, harmonize).
+ * Request: {"plan", "section", "count", "seed", "musicxml", "plain_midi", "tempo"}.
+ */
+ComposerStatus composer_api_harmonize(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
 #endif
