@@ -24,6 +24,8 @@ jobs:
         run: cmake --build build
       - name: Check library includes
         run: scripts/check-library-includes.sh
+      - name: Check that the CLI includes only the composer API
+        run: scripts/check-cli-api.sh
       - name: Check file scope state
         run: scripts/check-statics.sh
       - name: Check that music is heard through the Analyzer
