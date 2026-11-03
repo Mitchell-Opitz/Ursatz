@@ -88,7 +88,8 @@ file's document, except that `ticks_per_quarter` is `null` (a fragment has no SM
 
 ## Violations
 
-`analyzer_fragment_violations` gives one entry per fault, in this order: voice-leading faults of the report (parallels,
+`analyzer_result_violations(result, &list, &count)` gives one entry per fault of a result from `analyzer_hear`, in this
+order: voice-leading faults of the report (parallels,
 then directs), unresolved sevenths, unresolved leading tones, then counterpoint violations when the check ran.
 
 | `rule` | `hard` | Source |
@@ -101,8 +102,9 @@ then directs), unresolved sevenths, unresolved leading tones, then counterpoint 
 
 `measure` and `beat` place the fault where it arrives (the second chord of the move); a beat is 1 for the first beat and
 a fraction between beats. A counterpoint violation is placed at the start of the exercise, because the library's species
-check does not say where a rule broke. `note_ids` index the fragment's events. Free the array with
-`analyzer_violations_free`.
+check does not say where a rule broke. `note_ids` index the events the result was heard from. Free the array with
+`analyzer_violations_free`. It returns `ANALYZER_ERR_ARGUMENT` for a NULL argument. `analyzer_fragment_violations` is
+the deprecated entry over a fragment analysis and gives the same list.
 
 `analyzer_fragment_check_counterpoint(&analysis, species, cantus_upper)` runs the species check (1 to 5) on a fragment
 of two voices. It returns `ANALYZER_FRAGMENT_ERR_ARGUMENT` for any other fragment.
