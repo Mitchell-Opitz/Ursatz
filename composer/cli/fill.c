@@ -600,7 +600,7 @@ static int write_files(const CliOutputPaths *output, const PiecePlan *plan, cons
             }
         } else {
             if (!have_rendering) {
-                if (plan_render(plan, &rendered) != PLAN_RENDER_OK) {
+                if (plan_export_render(plan, &rendered, NULL) != PLAN_EXPORT_OK) {
                     status = cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
                     break;
                 }

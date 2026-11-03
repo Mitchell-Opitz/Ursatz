@@ -1155,7 +1155,7 @@ static int write_files(const Options *options, const Request *request, const Pie
         } else {
             PlanExportError error;
             if (!have[is_ending]) {
-                if (plan_render(versions[is_ending]->plan, &rendered[is_ending]) != PLAN_RENDER_OK) {
+                if (plan_export_render(versions[is_ending]->plan, &rendered[is_ending], NULL) != PLAN_EXPORT_OK) {
                     status = cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
                     break;
                 }

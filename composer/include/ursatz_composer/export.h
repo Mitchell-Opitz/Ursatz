@@ -83,6 +83,12 @@ PlanExportResult rendered_plan_export_midi(const RenderedPlan *rendered, const P
 PlanExportResult rendered_plan_export_musicxml(const RenderedPlan *rendered, const PlanExportOptions *options,
                                                const char *path, PlanExportError *error);
 
+/*
+ * Renders plan for an export into *rendered, which the caller destroys with rendered_plan_destroy: the one place a
+ * command renders a plan to write files, then writes any number of them with the rendered_plan_ functions. error may be NULL.
+ */
+PlanExportResult plan_export_render(const PiecePlan *plan, RenderedPlan *rendered, PlanExportError *error);
+
 /* Renders the plan, then writes the file. Use the rendered_plan_ functions to render once and write both. */
 PlanExportResult plan_export_midi(const PiecePlan *plan, const PlanExportOptions *options, const char *path,
                                   PlanExportError *error);

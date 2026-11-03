@@ -487,7 +487,7 @@ static int write_files(const Options *options, const Result *results, size_t cou
             }
             PlanExportError error;
             if (!have_rendering) {
-                if (plan_render(results[k].plan, &rendered) != PLAN_RENDER_OK) {
+                if (plan_export_render(results[k].plan, &rendered, NULL) != PLAN_EXPORT_OK) {
                     status = cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
                     break;
                 }

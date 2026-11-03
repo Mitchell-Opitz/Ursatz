@@ -383,7 +383,7 @@ PlanExportResult rendered_plan_export_musicxml(const RenderedPlan *rendered, con
     return result;
 }
 
-static PlanExportResult render_for_export(const PiecePlan *plan, RenderedPlan *rendered, PlanExportError *error) {
+PlanExportResult plan_export_render(const PiecePlan *plan, RenderedPlan *rendered, PlanExportError *error) {
     switch (plan_render(plan, rendered)) {
     case PLAN_RENDER_OK:
         return PLAN_EXPORT_OK;
@@ -403,7 +403,7 @@ static PlanExportResult render_for_export(const PiecePlan *plan, RenderedPlan *r
 PlanExportResult plan_export_midi(const PiecePlan *plan, const PlanExportOptions *options, const char *path,
                                   PlanExportError *error) {
     RenderedPlan rendered;
-    PlanExportResult result = render_for_export(plan, &rendered, error);
+    PlanExportResult result = plan_export_render(plan, &rendered, error);
     if (result != PLAN_EXPORT_OK) {
         return result;
     }
@@ -415,7 +415,7 @@ PlanExportResult plan_export_midi(const PiecePlan *plan, const PlanExportOptions
 PlanExportResult plan_export_musicxml(const PiecePlan *plan, const PlanExportOptions *options, const char *path,
                                       PlanExportError *error) {
     RenderedPlan rendered;
-    PlanExportResult result = render_for_export(plan, &rendered, error);
+    PlanExportResult result = plan_export_render(plan, &rendered, error);
     if (result != PLAN_EXPORT_OK) {
         return result;
     }
