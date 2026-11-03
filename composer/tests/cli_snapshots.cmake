@@ -2,8 +2,11 @@
 # Run with: cmake -DCOMPOSER=<ursatz-composer> -DWORK=<empty working directory> -DSNAPSHOTS=<tests/snapshots>
 #                 -DFIXTURES=<tests/fixtures> [-DUPDATE=1] -P cli_snapshots.cmake
 # The values of the analyzer_version, composer_version and ursatz_commit keys are removed and the working and fixture
-# directories are replaced by <WORK> and <FIXTURES> before comparing text; MIDI and MusicXML are compared byte for byte.
+# directories are replaced by <WORK> and <FIXTURES> before comparing text; files ending .json are then compared as JSON
+# values (member order and whitespace do not matter), MIDI, MusicXML and other text byte for byte.
 # UPDATE=1 rewrites the snapshot files instead of comparing.
+
+include("${CMAKE_CURRENT_LIST_DIR}/snapshot_json.cmake")
 
 file(REMOVE_RECURSE "${WORK}")
 file(MAKE_DIRECTORY "${WORK}/normal")
@@ -43,8 +46,17 @@ function(snapshot name produced)
         message(SEND_ERROR "missing snapshot ${name} (run with -DUPDATE=1 to create it)")
         return()
     endif()
-    execute_process(COMMAND "${CMAKE_COMMAND}" -E compare_files "${actual}" "${SNAPSHOTS}/${name}" RESULT_VARIABLE same)
-    if(NOT same EQUAL 0)
+    if(name MATCHES "\\.json$")
+        snapshot_json_equal("${actual}" "${SNAPSHOTS}/${name}" same)
+    else()
+        execute_process(COMMAND "${CMAKE_COMMAND}" -E compare_files "${actual}" "${SNAPSHOTS}/${name}" RESULT_VARIABLE status)
+        if(status EQUAL 0)
+            set(same TRUE)
+        else()
+            set(same FALSE)
+        endif()
+    endif()
+    if(NOT same)
         message(SEND_ERROR "snapshot ${name} differs from the output of its command")
     endif()
 endfunction()
