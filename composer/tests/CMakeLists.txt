@@ -434,11 +434,11 @@ endforeach()
 add_test(NAME test_style_blend_harmony COMMAND test_style_blend harmony)
 set_tests_properties(test_style_blend_harmony PROPERTIES LABELS slow)
 
-# Seeding from a corpus (docs/style.md). "sonatinas" is Clementi 36 and Mozart 545 from Ursatz's reference corpus,
+# Seeding from a corpus (docs/style.md). "sonatinas" is Clementi 36 and Mozart 545 from Ursatz's reference corpus (kept in fixtures/corpus-sonatinas),
 # copied into the build tree at configure time and analyzed by the Analyzer CLI at build time; "empty" holds one file
 # the Analyzer cannot import, so nothing in its output is analyzed.
 set(SEED_CORPORA_DIR ${CMAKE_CURRENT_BINARY_DIR}/corpora)
-set(SEED_REFERENCE ${PROJECT_SOURCE_DIR}/external/ursatz/tests/fixtures/framework-v1-corpus)
+set(SEED_REFERENCE ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/corpus-sonatinas)
 file(COPY "${SEED_REFERENCE}/Clementi 36.mid" "${SEED_REFERENCE}/Mozart 545.mid" DESTINATION ${SEED_CORPORA_DIR}/sonatinas)
 file(WRITE ${SEED_CORPORA_DIR}/empty/broken.mid "not a midi file")
 add_custom_command(
