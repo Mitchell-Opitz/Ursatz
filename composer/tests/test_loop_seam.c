@@ -156,7 +156,8 @@ static void test_rules(void) {
     SeamCase still = {"I", "I", 48, 48, OCTAVE_BEFORE, 1, OCTAVE_BEFORE, 1};
     assert(hear_case(&still).no_parallels);
 
-    /* A leap of a ninth is too far; a fourth is not; a sixth is held when a step the other way follows. */
+    /* A leap of a ninth is too far; a fourth is not; the ascending minor sixth is held when a step the other way follows,
+       the major sixth is refused (standard-counterpoint). */
     static const int NINTH_BEFORE[] = {60};
     static const int NINTH_AFTER[] = {74};
     SeamCase ninth = {"I", "IV", 48, 53, NINTH_BEFORE, 1, NINTH_AFTER, 1};
@@ -164,10 +165,13 @@ static void test_rules(void) {
     static const int FOURTH_AFTER[] = {65};
     SeamCase fourth = {"I", "IV", 48, 53, NINTH_BEFORE, 1, FOURTH_AFTER, 1};
     assert(hear_case(&fourth).step);
-    static const int SIXTH_AFTER_STEPPED[] = {69, 67};
+    static const int SIXTH_AFTER_STEPPED[] = {68, 67};
     SeamCase sixth = {"I", "IV", 48, 53, NINTH_BEFORE, 1, SIXTH_AFTER_STEPPED, 2};
     assert(hear_case(&sixth).step);
-    static const int SIXTH_AFTER_LEAP[] = {69, 72};
+    static const int MAJOR_SIXTH_AFTER[] = {69, 67};
+    SeamCase major_sixth = {"I", "IV", 48, 53, NINTH_BEFORE, 1, MAJOR_SIXTH_AFTER, 2};
+    assert(!hear_case(&major_sixth).step);
+    static const int SIXTH_AFTER_LEAP[] = {68, 72};
     SeamCase unanswered = {"I", "IV", 48, 53, NINTH_BEFORE, 1, SIXTH_AFTER_LEAP, 2};
     assert(!hear_case(&unanswered).step);
 
