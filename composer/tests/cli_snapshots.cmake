@@ -139,4 +139,24 @@ run_case(motive json motive "${FIXTURES}/motive_d_minor.json" --json)
 run_case(variants-each-op json variants "${FIXTURES}/motive_d_minor.json" --each-op --seed 1 --json)
 run_case(random-motive json random-motive --mode minor --meter 3/4 --count 3 --seed 1 --json)
 
+# --- GUI shapes ----------------------------------------------------------------------
+# The calls the GUI backend makes (Ursatz-GUI routes/materials.c, service/theme_service.c, service/piece_service.c), with the
+# arguments it builds and fixtures under tests/fixtures/gui written as the GUI writes its temp files. P26 moves the CLI onto the
+# composer API; these snapshots must not move.
+
+set(gui "${FIXTURES}/gui")
+
+# Motive analysis of notes: meter, key, pickup, own harmony, a feature, a role and one tone override.
+run_case(motive-notes json motive "${gui}/motive-notes.txt" --format notes --meter 4/4 --key "D minor" --pickup 0
+         --harmony "I V@3" --feature a:0-2 --role melodic --tone 2=passing --json)
+# Motive analysis of a rhythm.
+run_case(motive-form-rhythm json motive "${gui}/motive-rhythm.txt" --form rhythm --meter 3/4 --pickup 1/4 --json)
+# Degrees to notes.
+run_case(motive-degrees json motive "${gui}/motive-degrees.txt" --format degrees --key "C minor" --meter 6/8 --pickup 0 --json)
+# MIDI to motive.
+run_case(motive-midi json motive "${FIXTURES}/motive_d_minor.mid" --format midi --meter 4/4 --key "C major" --json)
+# Motive render in another key, with the MusicXML.
+run_case(motive-render json motive "${gui}/motive-degrees.txt" --format degrees --form full --meter 4/4 --key "C major" --pickup 0
+         --render-key "Eb major" --musicxml motive-render.musicxml --tempo 96 --json)
+
 file(REMOVE_RECURSE "${WORK}/normal")
