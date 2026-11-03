@@ -15,7 +15,7 @@
  */
 
 #define COMPOSER_API_VERSION_MAJOR 0
-#define COMPOSER_API_VERSION_MINOR 5
+#define COMPOSER_API_VERSION_MINOR 6
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -191,5 +191,35 @@ ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *j
  * COMPOSER_ERR_UNSATISFIABLE when no version differs from the plan.
  */
 ComposerStatus composer_api_piece_variations(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Plans a whole short piece from a form template (docs/cli-plan.md); nothing is composed. Request: {"form": a form name
+ * (absent with "given": the ternary form of 24 bars, the material in section B), "key": "D" or "D minor", "mode":
+ * "major"|"minor" (not with a mode in "key"), "meter": "4/4", "bars", "count", "modulate", "motive": {"input": {"format",
+ * "text"}, "source": <a name to show>} (a motive request, read in the meter and key), "corpus": <a corpus directory> with
+ * "like": <a passage file> or a "like_progression" given, "accompaniment", "texture", "seed" (0 to 4294967295; default
+ * from the clock), "style" (a style model path), "style_weight", "style_without", "blend", "blend_weight", "blend_weights",
+ * "given": [{"kind": "melody"|"bass" with "motive" as above, or "progression" with "numerals", or "like_progression" with
+ * "numerals", "at": "B:3" (the section's letter and the bar), "cells", "source": <a name to show>}]}. json: what `plan
+ * --format json` prints, without "file"; plan_json: the plan. "notices" lists stale corpus documents.
+ */
+ComposerStatus composer_api_plan(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Realizes a plan (docs/cli-fill.md). Request: {"plan": <plan object>, "seed", "check", "candidates" (1 to 32), "style",
+ * "style_weight", "style_without", "blend", "blend_weight", "blend_weights" (as for composer_api_plan; they replace the
+ * plan's own), "midi", "musicxml", "plain_midi", "tempo", "record": true (the text of the stage records in "record" of the
+ * document), "explain" ("text" or "json": "explanation")}. json: what `fill --format json` prints, without "files".
+ * plan_json, midi and musicxml are filled. When no seed completes the plan the status is COMPOSER_ERR_UNSATISFIABLE and
+ * json is {"stuck": {"first", "last", "stage", "key_rejected", "open": [{"what", "reason"}], "more"}}. Progress per seed
+ * ("seed") and per compose stage; a cancel is COMPOSER_ERR_CANCELLED.
+ */
+ComposerStatus composer_api_fill(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Locks a node of a plan, or one lane of it, as Given (docs/cli-fill.md). Request: {"plan", "node" (an id) or "section" (a
+ * letter), "lane"}. json: {"locked": {"nodes", "spans"}, "what": "section B"}; plan_json: the plan.
+ */
+ComposerStatus composer_api_lock(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
 #endif

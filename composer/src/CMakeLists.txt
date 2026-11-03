@@ -11,6 +11,9 @@ add_library(ursatz_composer STATIC
     api/api_grow.c
     api/api_theme.c
     api/api_target.c
+    api/api_workflow.c
+    api/api_plan.c
+    api/api_fill.c
     api/api_piece_request.c
     api/api_piece.c
     api/api_piece_variations.c
