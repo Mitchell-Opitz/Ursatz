@@ -134,10 +134,6 @@ target_compile_definitions(test_persistence_full_analysis PRIVATE
     URSATZ_DEVIATIONS_FILE="${PROJECT_SOURCE_DIR}/tests/fixtures/framework-v1-corpus/expected_deviations.md")
 add_test(NAME persistence_full_analysis COMMAND test_persistence_full_analysis)
 
-# Not run under valgrind: standard_form_find_motives (frameworks/standard-form/analysis/analysis_motive.c, make_kernel_window)
-# leaks 66 KB on this piece, which is the analysis' own and not the persistence code's -- valgrind reports no frame in
-# persistence/. The persistence repositories are leak-checked by their own tests in tests/persistence.
-
 # Eight threads make the first call of every framework accessor and one rule accessor per framework together (core/once.h).
 # Under helgrind where valgrind is installed (memcheck as well), else plain.
 add_executable(test_concurrent_first_use test_concurrent_first_use.c)
@@ -148,6 +144,12 @@ target_link_libraries(test_concurrent_first_use PRIVATE baroque_ground_bass comm
 add_test(NAME concurrent_first_use COMMAND test_concurrent_first_use)
 find_program(URSATZ_INTEGRATION_VALGRIND valgrind)
 if(URSATZ_INTEGRATION_VALGRIND)
+  add_test(NAME motive_mozart545_valgrind
+           COMMAND ${URSATZ_INTEGRATION_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_motive_mozart545>)
+  add_test(NAME persistence_full_analysis_valgrind
+           COMMAND ${URSATZ_INTEGRATION_VALGRIND} --leak-check=full --error-exitcode=1
+                   $<TARGET_FILE:test_persistence_full_analysis>)
   add_test(NAME concurrent_first_use_valgrind
            COMMAND ${URSATZ_INTEGRATION_VALGRIND} --leak-check=full --error-exitcode=1
                    $<TARGET_FILE:test_concurrent_first_use>)
