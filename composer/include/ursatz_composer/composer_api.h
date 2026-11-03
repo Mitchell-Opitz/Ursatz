@@ -137,7 +137,10 @@ ComposerStatus composer_api_recognize(const char *request_json, const ComposerJo
  * (its mode must be "mode"; default C major or A minor), "form": "full"|"rhythm"|"contour", "role": "melodic"|
  * "accompaniment", "style": <a style model file path>, "style_without": [<style categories read without>, at most 8;
  * needs "style"], "count": 1 to 16 (default 1), "seed": 0 to 4294967295 (default from the clock)}. "mode" and "meter" are
- * required. The same request and seed give the same motives. json: {"seed", "motives": [<the motive entry's document>]}.
+ * required; either may be "random", drawn from the seed by the rule the GUI used (R-269): with m = ((seed + 1) * 2654435761)
+ * mod 2^32, the mode is major when (m >> 8) is even and minor when it is odd, and the meter is "4/4", "3/4", "2/4" or
+ * "6/8" by (m >> 16) mod 4. The same request and seed give the same motives. json: {"seed", "motives": [<the motive entry's document>]},
+ * and "drawn": {"mode", "meter"} (only the members that were drawn) when something was.
  * A style that cannot be read is COMPOSER_ERR_UNSATISFIABLE with path /style.
  */
 ComposerStatus composer_api_random_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out);
