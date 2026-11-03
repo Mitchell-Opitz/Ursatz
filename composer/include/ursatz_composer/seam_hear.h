@@ -38,9 +38,11 @@ typedef struct {
 typedef struct {
     PlanKey key;
     bool has_chords;
-    PlanHarmonicFunction before_function; /* of the last chord before the seam; UNKNOWN to read it from the numeral */
+    HarmonicFunction before_function;     /* of the last chord before the seam, when before_has_function */
+    bool before_has_function;             /* false to read it from the numeral */
     char before_roman[PLAN_ROMAN_NUMERAL_MAX];
-    PlanHarmonicFunction after_function;  /* of the first chord after it */
+    HarmonicFunction after_function;      /* of the first chord after it, when after_has_function */
+    bool after_has_function;
     char after_roman[PLAN_ROMAN_NUMERAL_MAX];
     int bass_before; /* the last bass note before the seam, and the first after it */
     int bass_after;

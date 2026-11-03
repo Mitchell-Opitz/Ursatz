@@ -83,12 +83,13 @@ static LaneSpanId add_bass(PiecePlan *plan, NodeId owner, PlanSpan span, int pit
 }
 
 static LaneSpanId add_harmony(PiecePlan *plan, NodeId owner, PlanSpan span, const char *roman,
-                              PlanHarmonicFunction function) {
+                              int function) {
     PlanLanePayload payload;
     LaneSpanId id;
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, roman);
-    payload.harmony.function = function;
+    payload.harmony.has_function = function >= 0;
+    payload.harmony.function = function >= 0 ? (HarmonicFunction)function : HARMONIC_FUNCTION_TONIC;
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, span, &payload, &id) == PLAN_OK);
     return id;
 }
@@ -124,10 +125,10 @@ static Fixture build(const Scenario *scenario) {
 
     if (scenario->before_bars > 0) {
         fixture.given_chord = add_harmony(fixture.plan, fixture.owner, before, scenario->mode == PLAN_MODE_MINOR ? "i" : "I",
-                                          PLAN_FUNCTION_TONIC);
+                                          HARMONIC_FUNCTION_TONIC);
         assert(plan_lane_span_set_state(fixture.plan, fixture.given_chord, PLAN_STATE_GIVEN) == PLAN_OK);
     }
-    fixture.target = add_harmony(fixture.plan, fixture.owner, fixture.region, "I", PLAN_FUNCTION_UNKNOWN);
+    fixture.target = add_harmony(fixture.plan, fixture.owner, fixture.region, "I", -1);
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
     cadence.params.cadence = scenario->cadence;
     assert(plan_lane_span_add_constraint(fixture.plan, fixture.target, &cadence) == PLAN_OK);

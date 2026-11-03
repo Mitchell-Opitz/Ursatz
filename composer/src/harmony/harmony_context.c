@@ -9,6 +9,7 @@ static bool read_numeral(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode,
     memcpy(out->roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
     out->roman[PLAN_ROMAN_NUMERAL_MAX - 1] = '\0';
     out->function = harmony->function;
+    out->has_function = harmony->has_function;
     if (!harmony_roman_parse(mode, out->roman, &out->chord)) {
         out->applied = true;
         if (!harmony_roman_parse_applied_inverted(mode, out->roman, &out->applied_chord, &out->applied_inversion)) {

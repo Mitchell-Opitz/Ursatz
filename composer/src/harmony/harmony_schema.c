@@ -126,7 +126,8 @@ static bool derive_stage(const PlanKey *key, const GalantStage *stage, PhraseCho
         out->applied = true;
         out->applied_chord = applied;
         out->applied_inversion = inversion;
-        out->function = PLAN_FUNCTION_DOMINANT;
+        out->function = HARMONIC_FUNCTION_DOMINANT;
+        out->has_function = true;
         out->cells = 1;
         return bass_accepts(key, out, &stage->bass);
     }
@@ -193,7 +194,7 @@ static bool layout_schema(const SkeletonContext *context, const GalantPrototype 
     size_t lead = 0;
     bool strong_first = prototype->stages[0].strength == BEAT_STRENGTH_STRONG;
     if (start != (strong_first ? 0 : cpb - 1)) {
-        if (strong_first || start != 0 || chords[0].function != PLAN_FUNCTION_TONIC) {
+        if (strong_first || start != 0 || !chords[0].has_function || chords[0].function != HARMONIC_FUNCTION_TONIC) {
             return false;
         }
         lead = cpb - 1;

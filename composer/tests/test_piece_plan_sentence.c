@@ -71,11 +71,12 @@ static PlanLanePayload meter_payload(void) {
     return payload;
 }
 
-static PlanLanePayload harmony_payload(const char *roman, PlanHarmonicFunction function) {
+static PlanLanePayload harmony_payload(const char *roman, int function) {
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
     strncpy(payload.harmony.roman_numeral, roman, PLAN_ROMAN_NUMERAL_MAX - 1);
-    payload.harmony.function = function;
+    payload.harmony.has_function = function >= 0;
+    payload.harmony.function = function >= 0 ? (HarmonicFunction)function : HARMONIC_FUNCTION_TONIC;
     return payload;
 }
 
@@ -157,16 +158,16 @@ int main(void) {
     key.key.mode = PLAN_MODE_MAJOR;
     LaneSpanId key_span = add_lane(plan, section, PLAN_LANE_KEY, 0, bars(0, 8), &key);
 
-    PlanLanePayload tonic = harmony_payload("I", PLAN_FUNCTION_TONIC);
-    PlanLanePayload dominant = harmony_payload("V", PLAN_FUNCTION_DOMINANT);
-    PlanLanePayload predominant = harmony_payload("ii6", PLAN_FUNCTION_PREDOMINANT);
+    PlanLanePayload tonic = harmony_payload("I", HARMONIC_FUNCTION_TONIC);
+    PlanLanePayload dominant = harmony_payload("V", HARMONIC_FUNCTION_DOMINANT);
+    PlanLanePayload predominant = harmony_payload("ii6", HARMONIC_FUNCTION_PREDOMINANT);
     LaneSpanId harmony_one = add_lane(plan, basic_idea, PLAN_LANE_HARMONY, 0, bars(0, 2), &tonic);
     LaneSpanId harmony_two = add_lane(plan, repetition, PLAN_LANE_HARMONY, 0, bars(2, 2), &dominant);
     add_lane(plan, continuation, PLAN_LANE_HARMONY, 0, bars(4, 2), &predominant);
     add_lane(plan, continuation, PLAN_LANE_HARMONY, 0, bars(6, 1), &dominant);
     add_lane(plan, continuation, PLAN_LANE_HARMONY, 0, bars(7, 1), &tonic);
     assert(strcmp(plan_lane_span_payload(plan, harmony_two)->harmony.roman_numeral, "V") == 0);
-    assert(plan_lane_span_payload(plan, harmony_two)->harmony.function == PLAN_FUNCTION_DOMINANT);
+    assert(plan_lane_span_payload(plan, harmony_two)->harmony.function == HARMONIC_FUNCTION_DOMINANT);
 
     PlanNote melody_notes[2];
     memset(melody_notes, 0, sizeof(melody_notes));

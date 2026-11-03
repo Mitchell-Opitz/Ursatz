@@ -348,7 +348,8 @@ static bool build_plan(const Options *options, Built *built) {
         }
         memset(&payload, 0, sizeof(payload));
         strcpy(payload.harmony.roman_numeral, tonic);
-        payload.harmony.function = PLAN_FUNCTION_TONIC;
+        payload.harmony.function = HARMONIC_FUNCTION_TONIC;
+        payload.harmony.has_function = true;
         ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_HARMONY, 0, lead, &payload, &id) == PLAN_OK &&
              plan_lane_span_set_state(built->plan, id, PLAN_STATE_REALIZED) == PLAN_OK;
         /* Its bass is the tonic in the octave of the range nearest the middle of it. */
@@ -370,7 +371,7 @@ static bool build_plan(const Options *options, Built *built) {
     /* The open harmony span asks for the cadence; its placeholder chord is replaced by the operators. */
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, tonic);
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    payload.harmony.has_function = false;
     ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_HARMONY, 0, region, &payload, &id) == PLAN_OK &&
          plan_lane_span_add_constraint(built->plan, id, &cadence) == PLAN_OK;
     if (options->bass) {
@@ -625,17 +626,9 @@ static size_t count_suggestions(const Options *options, const Parameters *parame
 
 /* --- showing the result --------------------------------------------------------- */
 
-static const char *function_name(PlanHarmonicFunction function) {
-    switch (function) {
-    case PLAN_FUNCTION_TONIC:
-        return "tonic";
-    case PLAN_FUNCTION_PREDOMINANT:
-        return "predominant";
-    case PLAN_FUNCTION_DOMINANT:
-        return "dominant";
-    default:
-        return "unknown";
-    }
+static const char *function_name(const PlanHarmony *harmony) {
+    const char *name = harmony->has_function ? harmonic_function_name(harmony->function) : NULL;
+    return name ? name : "unknown";
 }
 
 static void pitch_name(int midi, char *out, size_t size) {
@@ -680,7 +673,7 @@ static size_t collect_rows(const Options *options, const Built *built, Row *rows
         rows[i].bar = bar;
         rows[i].beat = (int)(offset.num * options->meter.beat_unit / (long)offset.den) + 1;
         memcpy(rows[i].roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
-        rows[i].function = function_name(harmony->function);
+        rows[i].function = function_name(harmony);
         rows[i].bass[0] = '\0';
 
         LaneSpanId basses[2];

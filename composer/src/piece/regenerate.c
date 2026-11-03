@@ -403,7 +403,7 @@ static void placeholder(PlanLaneKind lane, PlanSpan span, PlanNote *note, PlanLa
     memset(payload, 0, sizeof(*payload));
     if (lane == PLAN_LANE_HARMONY) {
         strcpy(payload->harmony.roman_numeral, "I");
-        payload->harmony.function = PLAN_FUNCTION_UNKNOWN;
+        payload->harmony.has_function = false;
         return;
     }
     note->midi_pitch = lane == PLAN_LANE_BASS ? BASS_PLACEHOLDER : lane == PLAN_LANE_MELODY ? MELODY_PLACEHOLDER : INNER_PLACEHOLDER;

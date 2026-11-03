@@ -57,7 +57,7 @@ static void add_chord(PiecePlan *plan, NodeId owner, long bar, const char *roman
     LaneSpanId id;
     memset(&payload, 0, sizeof(payload));
     snprintf(payload.harmony.roman_numeral, sizeof(payload.harmony.roman_numeral), "%s", roman);
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    payload.harmony.has_function = false;
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, (PlanSpan){whole(bar, 1), whole(1, 1)}, &payload, &id) ==
            PLAN_OK);
     assert(plan_lane_span_set_state(plan, id, PLAN_STATE_REALIZED) == PLAN_OK);

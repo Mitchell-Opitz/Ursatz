@@ -253,10 +253,10 @@ static void test_placing(void) {
         const PlanLanePayload *payload = plan_lane_span_payload(plan, harmony[i]);
         assert(plan_lane_span_state(plan, harmony[i]) == PLAN_STATE_GIVEN);
         assert(strcmp(payload->harmony.roman_numeral, chords[i]) == 0);
-        assert(payload->harmony.function != PLAN_FUNCTION_UNKNOWN);
+        assert(payload->harmony.has_function);
     }
-    assert(plan_lane_span_payload(plan, harmony[0])->harmony.function == PLAN_FUNCTION_TONIC);
-    assert(plan_lane_span_payload(plan, harmony[1])->harmony.function == PLAN_FUNCTION_DOMINANT);
+    assert(plan_lane_span_payload(plan, harmony[0])->harmony.function == HARMONIC_FUNCTION_TONIC);
+    assert(plan_lane_span_payload(plan, harmony[1])->harmony.function == HARMONIC_FUNCTION_DOMINANT);
 
     /* The snapshot: a plan with the same material, and the plan without it. */
     GivenSnapshot *snapshot = given_snapshot(plan);

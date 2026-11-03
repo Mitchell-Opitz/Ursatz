@@ -756,17 +756,9 @@ static double in_bars(Rational time, Rational bar) {
     return ((double)time.num / (double)time.den) / ((double)bar.num / (double)bar.den);
 }
 
-static const char *function_name(PlanHarmonicFunction function) {
-    switch (function) {
-    case PLAN_FUNCTION_TONIC:
-        return "tonic";
-    case PLAN_FUNCTION_PREDOMINANT:
-        return "predominant";
-    case PLAN_FUNCTION_DOMINANT:
-        return "dominant";
-    default:
-        return "unknown";
-    }
+static const char *function_name(const PlanHarmony *harmony) {
+    const char *name = harmony->has_function ? harmonic_function_name(harmony->function) : NULL;
+    return name ? name : "unknown";
 }
 
 static void pitch_name(int midi, char *out, size_t size) {
@@ -803,7 +795,7 @@ static size_t collect_rows(const Options *options, const PiecePlan *plan, NodeId
         rows[i].bar = (int)bars + 1;
         rows[i].beat = (int)(rest_num * options->meter.beat_unit / (long)rest_den) + 1;
         memcpy(rows[i].roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
-        rows[i].function = function_name(harmony->function);
+        rows[i].function = function_name(harmony);
         rows[i].bass[0] = '\0';
         LaneSpanId basses[2];
         if (plan_lane_find(plan, PLAN_LANE_BASS, 0, chord, basses, 2) == 1) {

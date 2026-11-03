@@ -20,7 +20,7 @@ static LaneSpanId add_harmony(PiecePlan *plan, NodeId owner, PlanSpan span, cons
     LaneSpanId id = PLAN_LANE_SPAN_NONE;
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, numeral);
-    payload.harmony.function = PLAN_FUNCTION_TONIC;
+    payload.harmony.function = HARMONIC_FUNCTION_TONIC;
     assert(plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, span, &payload, &id) == PLAN_OK);
     return id;
 }

@@ -132,7 +132,7 @@ static Fixture build(const Scenario *scenario, bool with_development) {
 
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, "I");
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    payload.harmony.has_function = false;
     LaneSpanId harmony;
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_HARMONY, 0, fixture.span, &payload, &harmony) ==
            PLAN_OK);
@@ -677,7 +677,7 @@ static IdeaFixture build_ideas(int beats, int unit, PlanKeyMode mode, int tonic)
 
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, "I");
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    payload.harmony.has_function = false;
     assert(plan_add_lane_span(fixture.plan, fixture.phrase, PLAN_LANE_HARMONY, 0, phrase_span, &payload, &id) ==
            PLAN_OK);
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
@@ -881,7 +881,7 @@ static ToneScene build_tone_scene(bool keyed) {
     for (int bar = 0; bar < 2; bar++) {
         memset(&payload, 0, sizeof(payload));
         strcpy(payload.harmony.roman_numeral, CHORDS[bar]);
-        payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+        payload.harmony.has_function = false;
         assert(plan_add_lane_span(scene.plan, phrase, PLAN_LANE_HARMONY, 0, bars[bar], &payload, &id) == PLAN_OK);
         assert(plan_lane_span_set_state(scene.plan, id, PLAN_STATE_GIVEN) == PLAN_OK);
         id = add_notes(scene.plan, phrase, PLAN_LANE_BASS, bars[bar], BASS[bar]);

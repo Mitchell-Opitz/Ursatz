@@ -39,11 +39,12 @@ static LaneSpanId add_lane(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int
     return id;
 }
 
-static PlanLanePayload harmony(const char *roman, PlanHarmonicFunction function) {
+static PlanLanePayload harmony(const char *roman, int function) {
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
     strncpy(payload.harmony.roman_numeral, roman, PLAN_ROMAN_NUMERAL_MAX - 1);
-    payload.harmony.function = function;
+    payload.harmony.has_function = function >= 0;
+    payload.harmony.function = function >= 0 ? (HarmonicFunction)function : HARMONIC_FUNCTION_TONIC;
     return payload;
 }
 
@@ -75,8 +76,8 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     key.key.mode = PLAN_MODE_MINOR;
     add_lane(plan, section, PLAN_LANE_KEY, 0, bars(0, 8), &key);
 
-    PlanLanePayload tonic = harmony("i", PLAN_FUNCTION_TONIC);
-    PlanLanePayload dominant = harmony("V", PLAN_FUNCTION_DOMINANT);
+    PlanLanePayload tonic = harmony("i", HARMONIC_FUNCTION_TONIC);
+    PlanLanePayload dominant = harmony("V", HARMONIC_FUNCTION_DOMINANT);
     add_lane(plan, basic_idea, PLAN_LANE_HARMONY, 0, bars(0, 2), &tonic);
     LaneSpanId harmony_two = add_lane(plan, repetition, PLAN_LANE_HARMONY, 0, bars(2, 2), &dominant);
 
@@ -718,7 +719,7 @@ static void test_load_analysis_document(void) {
     const PlanLanePayload *dominant = plan_lane_span_payload(plan, 3);
     assert(plan_lane_span_lane(plan, 3) == PLAN_LANE_HARMONY);
     assert(strcmp(dominant->harmony.roman_numeral, "V") == 0);
-    assert(dominant->harmony.function == PLAN_FUNCTION_UNKNOWN);
+    assert(!dominant->harmony.has_function);
 
     /* The V ran to bar 3/2 but the next chord starts at 1, so it is cut to 1/2..1. */
     Rational one;
@@ -739,7 +740,7 @@ static void test_load_analysis_document(void) {
     assert(report_has(&report, "phrases", "not loaded"));
 
     /* Realized material can be regenerated: a write is accepted. */
-    PlanLanePayload tonic = harmony("I", PLAN_FUNCTION_TONIC);
+    PlanLanePayload tonic = harmony("I", HARMONIC_FUNCTION_TONIC);
     assert(plan_lane_span_write(plan, 2, &tonic) == PLAN_OK);
 
     /* The loaded plan survives a plan JSON round trip. */

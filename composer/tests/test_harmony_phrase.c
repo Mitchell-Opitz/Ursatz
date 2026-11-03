@@ -86,7 +86,7 @@ static Fixture build(const Scenario *scenario, CadencePlace place) {
 
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, "I");
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    payload.harmony.has_function = false;
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_HARMONY, 0, fixture.span, &payload,
                               &fixture.target) == PLAN_OK);
     if (place == CADENCE_ON_SPAN) {
@@ -163,7 +163,7 @@ static void check_progression(const Fixture *fixture, const Scenario *scenario) 
         const PlanHarmony *harmony = &plan_lane_span_payload(fixture->plan, ids[i])->harmony;
         assert(rational_cmp(span.start, position) == 0);
         assert(plan_lane_span_state(fixture->plan, ids[i]) == PLAN_STATE_REALIZED);
-        assert(harmony->function != PLAN_FUNCTION_UNKNOWN);
+        assert(harmony->has_function);
         assert(harmony_roman_parse(scenario->mode, harmony->roman_numeral, &chords[i]));
 
         Rational bar_start = fixture->span.start;
@@ -204,7 +204,7 @@ static void check_progression(const Fixture *fixture, const Scenario *scenario) 
     for (size_t i = 0; i < count; i++) {
         if (chords[i].degree == 5) {
             assert(plan_lane_span_payload(fixture->plan, ids[i])->harmony.roman_numeral[0] == 'V');
-            assert(plan_lane_span_payload(fixture->plan, ids[i])->harmony.function == PLAN_FUNCTION_DOMINANT);
+            assert(plan_lane_span_payload(fixture->plan, ids[i])->harmony.function == HARMONIC_FUNCTION_DOMINANT);
         }
     }
 
@@ -388,7 +388,7 @@ static void test_cadential_shape(void) {
                 LaneSpanId ids[MAX_CHORDS];
                 size_t count = plan_lane_find(fixture.plan, PLAN_LANE_HARMONY, 0, fixture.span, ids, MAX_CHORDS);
                 assert(count >= 2);
-                assert(plan_lane_span_payload(fixture.plan, ids[0])->harmony.function != PLAN_FUNCTION_TONIC);
+                assert(plan_lane_span_payload(fixture.plan, ids[0])->harmony.function != HARMONIC_FUNCTION_TONIC);
                 CadenceType heard;
                 bool at_end;
                 assert(harmony_hear_cadence(fixture.plan, fixture.span, PLAN_MODE_MAJOR, CADENCE_TYPE_PERFECT_AUTHENTIC, &heard,

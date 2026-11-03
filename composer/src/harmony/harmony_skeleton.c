@@ -278,7 +278,7 @@ static PlanResult write_harmony(PiecePlan *plan, const SkeletonCandidate *skelet
         result = harmony_cells_span(read->span.start, cell, offset, skeleton->remainder_cells, &span);
         memset(&placeholder, 0, sizeof(placeholder));
         strcpy(placeholder.harmony.roman_numeral, "I");
-        placeholder.harmony.function = PLAN_FUNCTION_UNKNOWN;
+        placeholder.harmony.has_function = false;
         if (result == PLAN_OK) {
             result = plan_add_lane_span(plan, read->owner, PLAN_LANE_HARMONY, 0, span, &placeholder, &rest);
         }

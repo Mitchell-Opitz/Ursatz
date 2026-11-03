@@ -314,7 +314,7 @@ static bool reharmonize(ReturnPayload *payload) {
             out->state = PLAN_STATE_CONSTRAINED;
             memset(&out->harmony, 0, sizeof(out->harmony));
             strcpy(out->harmony.roman_numeral, "I");
-            out->harmony.function = PLAN_FUNCTION_UNKNOWN;
+            out->harmony.has_function = false;
             out->constraint_count = 0;
             out->constraints = calloc(span->constraint_count + 2, sizeof(PlanConstraint));
             ok = out->constraints != NULL;

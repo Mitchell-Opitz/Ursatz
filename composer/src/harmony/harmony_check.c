@@ -268,7 +268,9 @@ void harmony_seam_score(const PhraseProgression *progression, FillCheck *out) {
     notes.key.mode = progression->request.mode;
     notes.has_chords = true;
     notes.before_function = last->function;
+    notes.before_has_function = last->has_function;
     notes.after_function = first->function;
+    notes.after_has_function = first->has_function;
     snprintf(notes.before_roman, sizeof(notes.before_roman), "%s", last->roman);
     snprintf(notes.after_roman, sizeof(notes.after_roman), "%s", first->roman);
     notes.bass_before = notes.bass_after = notes.melody_previous = notes.melody_before = notes.melody_after =

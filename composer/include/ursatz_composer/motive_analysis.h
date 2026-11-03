@@ -91,7 +91,8 @@ typedef struct {
 
 typedef struct {
     char roman[PLAN_ROMAN_NUMERAL_MAX];
-    PlanHarmonicFunction function;
+    HarmonicFunction function;
+    bool has_function;
     /* The share of the motive that is chord tones, 0 to 1, to four places. */
     double fit;
     size_t chord_tones;     /* notes that are chord tones */

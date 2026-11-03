@@ -21,7 +21,8 @@
 /* One chord of a progression. A chord starts where the one before it ends. */
 typedef struct {
     char roman[PLAN_ROMAN_NUMERAL_MAX];
-    PlanHarmonicFunction function;
+    HarmonicFunction function;
+    bool has_function;
     HarmonyChord chord;          /* the chord, when it is not applied */
     bool applied;
     HarmonyAppliedChord applied_chord; /* the chord, when it is applied */

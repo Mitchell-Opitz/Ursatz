@@ -147,7 +147,7 @@ static bool read_claims(JsonReader *reader, Notes *notes, const cJSON *document,
                 continue;
             }
             memcpy(claim->payload.harmony.roman_numeral, label->valuestring, length + 1);
-            claim->payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+            claim->payload.harmony.has_function = false;
         }
         claim->span = span;
         claim->keep = true;

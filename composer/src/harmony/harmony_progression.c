@@ -30,19 +30,6 @@ static const PredominantRun AFTER_IV[] = {{1, {2}}};
 /* The root-position ii in a minor key is a diminished chord that standard-harmony prefers in first inversion. */
 static const PredominantRun MINOR_PREDOMINANTS[] = {{1, {4}}};
 
-static PlanHarmonicFunction plan_function_of(HarmonicFunction function) {
-    switch (function) {
-    case HARMONIC_FUNCTION_TONIC:
-        return PLAN_FUNCTION_TONIC;
-    case HARMONIC_FUNCTION_PREDOMINANT:
-        return PLAN_FUNCTION_PREDOMINANT;
-    case HARMONIC_FUNCTION_DOMINANT:
-        return PLAN_FUNCTION_DOMINANT;
-    default:
-        return PLAN_FUNCTION_UNKNOWN;
-    }
-}
-
 static bool make_from(PlanKeyMode mode, HarmonyChord chord, size_t cells, PhraseChord *out) {
     HarmonicFunction function;
     memset(out, 0, sizeof(*out));
@@ -50,7 +37,8 @@ static bool make_from(PlanKeyMode mode, HarmonyChord chord, size_t cells, Phrase
         !harmony_roman_format(mode, &chord, out->roman)) {
         return false;
     }
-    out->function = plan_function_of(function);
+    out->function = function;
+    out->has_function = true;
     out->chord = chord;
     out->cells = cells;
     return true;
@@ -158,7 +146,7 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
     ChordSpec opening = {pivot > 0 ? pivot : 1, false};
     PhraseChord probe;
     bool pivot_predominant = pivot > 0 && make_chord(request->mode, opening, 1, &probe) &&
-                             probe.function == PLAN_FUNCTION_PREDOMINANT;
+                             probe.has_function && probe.function == HARMONIC_FUNCTION_PREDOMINANT;
     const PredominantRun *runs = request->mode == PLAN_MODE_MINOR ? MINOR_PREDOMINANTS : MAJOR_PREDOMINANTS;
     size_t run_count = request->mode == PLAN_MODE_MINOR ? sizeof(MINOR_PREDOMINANTS) / sizeof(MINOR_PREDOMINANTS[0])
                                                         : sizeof(MAJOR_PREDOMINANTS) / sizeof(MAJOR_PREDOMINANTS[0]);

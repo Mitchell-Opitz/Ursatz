@@ -200,7 +200,7 @@ static bool near(double a, double b) {
 
 typedef struct {
     const char *roman;
-    PlanHarmonicFunction function;
+    HarmonicFunction function;
     double fit;
     size_t tones;
 } Expected;
@@ -212,7 +212,7 @@ static void expect_candidates(const MotiveAnalysis *a, const Expected *expected,
             fprintf(stderr, "candidate %zu: '%s', expected '%s'\n", i, a->candidates[i].roman, expected[i].roman);
         }
         assert(strcmp(a->candidates[i].roman, expected[i].roman) == 0);
-        assert(a->candidates[i].function == expected[i].function);
+        assert(a->candidates[i].has_function && a->candidates[i].function == expected[i].function);
         assert(near(a->candidates[i].fit, expected[i].fit));
         assert(a->candidates[i].chord_tones == expected[i].tones);
         assert(a->candidates[i].chord_tones + a->candidates[i].non_chord_tones == a->note_count);
@@ -255,12 +255,12 @@ static void test_analysis_ascending_arpeggio(void) {
      * all of it; VI (Bb D F) has D, F and D, 9/10; iv (G Bb D) has both Ds, 4/5; III (F A C) has F and A, 1/5; V and
      * V7 have only A, 1/10, and V comes first.
      */
-    static const Expected EXPECTED[] = {{"i", PLAN_FUNCTION_TONIC, 1.0, 4},
-                                        {"VI", PLAN_FUNCTION_PREDOMINANT, 0.9, 3},
-                                        {"iv", PLAN_FUNCTION_PREDOMINANT, 0.8, 2},
-                                        {"III", PLAN_FUNCTION_PREDOMINANT, 0.2, 2},
-                                        {"V", PLAN_FUNCTION_DOMINANT, 0.1, 1},
-                                        {"V7", PLAN_FUNCTION_DOMINANT, 0.1, 1}};
+    static const Expected EXPECTED[] = {{"i", HARMONIC_FUNCTION_TONIC, 1.0, 4},
+                                        {"VI", HARMONIC_FUNCTION_PREDOMINANT, 0.9, 3},
+                                        {"iv", HARMONIC_FUNCTION_PREDOMINANT, 0.8, 2},
+                                        {"III", HARMONIC_FUNCTION_PREDOMINANT, 0.2, 2},
+                                        {"V", HARMONIC_FUNCTION_DOMINANT, 0.1, 1},
+                                        {"V7", HARMONIC_FUNCTION_DOMINANT, 0.1, 1}};
     expect_candidates(&a, EXPECTED, 6);
 }
 
@@ -305,13 +305,13 @@ static void test_analysis_rest_and_dotted(void) {
      * vi (A C E) have C, 3/5; V (G B D), iii (E G B) and V7 have G and B, 2/5; vii (B D F) has B, 1/5. Equal fits
      * keep the order I, V, IV, vi, ii, iii, vii, V7.
      */
-    static const Expected EXPECTED[] = {{"I", PLAN_FUNCTION_TONIC, 0.8, 2},
-                                        {"IV", PLAN_FUNCTION_PREDOMINANT, 0.6, 1},
-                                        {"vi", PLAN_FUNCTION_PREDOMINANT, 0.6, 1},
-                                        {"V", PLAN_FUNCTION_DOMINANT, 0.4, 2},
-                                        {"iii", PLAN_FUNCTION_PREDOMINANT, 0.4, 2},
-                                        {"V7", PLAN_FUNCTION_DOMINANT, 0.4, 2},
-                                        {"viio", PLAN_FUNCTION_DOMINANT, 0.2, 1}};
+    static const Expected EXPECTED[] = {{"I", HARMONIC_FUNCTION_TONIC, 0.8, 2},
+                                        {"IV", HARMONIC_FUNCTION_PREDOMINANT, 0.6, 1},
+                                        {"vi", HARMONIC_FUNCTION_PREDOMINANT, 0.6, 1},
+                                        {"V", HARMONIC_FUNCTION_DOMINANT, 0.4, 2},
+                                        {"iii", HARMONIC_FUNCTION_PREDOMINANT, 0.4, 2},
+                                        {"V7", HARMONIC_FUNCTION_DOMINANT, 0.4, 2},
+                                        {"viio", HARMONIC_FUNCTION_DOMINANT, 0.2, 1}};
     expect_candidates(&a, EXPECTED, 7);
 }
 
@@ -343,14 +343,14 @@ static void test_analysis_tie(void) {
      * The notes weigh 1/2 (G on the downbeat counts twice), 3/8, 1/8 and 1/4: 5/4. I (G B D) and vi (E G B) have G, B
      * and G, 9/10; IV (C E G) has both Gs, 3/5; iii (B D F#) has B, 3/10; V, ii, vii and V7 have only A, 1/10.
      */
-    static const Expected EXPECTED[] = {{"I", PLAN_FUNCTION_TONIC, 0.9, 3},
-                                        {"vi", PLAN_FUNCTION_PREDOMINANT, 0.9, 3},
-                                        {"IV", PLAN_FUNCTION_PREDOMINANT, 0.6, 2},
-                                        {"iii", PLAN_FUNCTION_PREDOMINANT, 0.3, 1},
-                                        {"V", PLAN_FUNCTION_DOMINANT, 0.1, 1},
-                                        {"ii", PLAN_FUNCTION_PREDOMINANT, 0.1, 1},
-                                        {"viio", PLAN_FUNCTION_DOMINANT, 0.1, 1},
-                                        {"V7", PLAN_FUNCTION_DOMINANT, 0.1, 1}};
+    static const Expected EXPECTED[] = {{"I", HARMONIC_FUNCTION_TONIC, 0.9, 3},
+                                        {"vi", HARMONIC_FUNCTION_PREDOMINANT, 0.9, 3},
+                                        {"IV", HARMONIC_FUNCTION_PREDOMINANT, 0.6, 2},
+                                        {"iii", HARMONIC_FUNCTION_PREDOMINANT, 0.3, 1},
+                                        {"V", HARMONIC_FUNCTION_DOMINANT, 0.1, 1},
+                                        {"ii", HARMONIC_FUNCTION_PREDOMINANT, 0.1, 1},
+                                        {"viio", HARMONIC_FUNCTION_DOMINANT, 0.1, 1},
+                                        {"V7", HARMONIC_FUNCTION_DOMINANT, 0.1, 1}};
     expect_candidates(&a, EXPECTED, 8);
 }
 

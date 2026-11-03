@@ -896,7 +896,7 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
         PlanConstraint constraint;
         memset(&payload, 0, sizeof(payload));
         strcpy(payload.harmony.roman_numeral, "I");
-        payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+        payload.harmony.has_function = false;
         result = plan_span_end(gaps[g], &gap_end);
         bool at_start = rational_cmp(gaps[g].start, span.start) == 0;
         bool at_end = result == PLAN_OK && rational_cmp(gap_end, span_end) == 0;

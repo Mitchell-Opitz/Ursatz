@@ -1,7 +1,10 @@
 #ifndef URSATZ_COMPOSER_LANES_H
 #define URSATZ_COMPOSER_LANES_H
 
+#include <stdbool.h>
 #include <stddef.h>
+
+#include <standard-harmony/harmonic_function.h>
 
 #include <ursatz_composer/piece_plan.h>
 
@@ -29,14 +32,6 @@ typedef enum {
     PLAN_MODE_MINOR
 } PlanKeyMode;
 
-typedef enum {
-    PLAN_FUNCTION_TONIC,
-    PLAN_FUNCTION_PREDOMINANT,
-    PLAN_FUNCTION_DOMINANT,
-    /* For chords read from an analysis, which records no function. */
-    PLAN_FUNCTION_UNKNOWN
-} PlanHarmonicFunction;
-
 /* beat_unit is the note value of one beat (4 for a quarter); bars_per_hyperbar is 0 when there is none. */
 typedef struct {
     int beats_per_bar;
@@ -54,7 +49,8 @@ typedef struct {
 
 typedef struct {
     char roman_numeral[PLAN_ROMAN_NUMERAL_MAX];
-    PlanHarmonicFunction function;
+    HarmonicFunction function; /* meaningful only when has_function */
+    bool has_function;         /* false for chords read from an analysis, which records no function */
 } PlanHarmony;
 
 /* offset is measured from the start of the owning lane span. */

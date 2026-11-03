@@ -157,6 +157,11 @@ static void degree_of(PlanKey key, int midi, int *degree, int *alteration) {
     *alteration = table[relative][1];
 }
 
+/* The function the form analysis reads for a chord: HARMONIC_FUNCTION_COUNT when the plan records none. */
+static int function_value(const PlanHarmony *harmony) {
+    return harmony->has_function ? (int)harmony->function : (int)HARMONIC_FUNCTION_COUNT;
+}
+
 static Rational time_of(const MusicalTime *time) {
     Rational out = {0, 1};
     rational_of_musical_time(time, &out);
@@ -327,7 +332,7 @@ static FormHearResult add_harmony(HearRun *run, const PiecePlan *plan, const Lan
         char id[32];
         snprintf(id, sizeof(id), "chord-%zu", i);
         StandardFormAnalysisStatus status = standard_form_input_add_segment(
-            &run->input, id, span, (int)plan_lane_span_payload(plan, chords[i])->harmony.function, 0);
+            &run->input, id, span, function_value(&plan_lane_span_payload(plan, chords[i])->harmony), 0);
         if (status != STANDARD_FORM_ANALYSIS_OK) {
             return result_of(status);
         }

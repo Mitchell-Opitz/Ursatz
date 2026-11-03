@@ -134,7 +134,7 @@ static Piece built_piece_with(int beats, int unit, bool steady, long extra_bars)
         PlanNote notes[8];
         memset(&payload, 0, sizeof(payload));
         strcpy(payload.harmony.roman_numeral, NUMERALS[b]);
-        payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+        payload.harmony.has_function = false;
         assert(plan_add_lane_span(piece.plan, form, PLAN_LANE_HARMONY, 0, span, &payload, &id) == PLAN_OK);
         assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
 

@@ -301,7 +301,8 @@ void harmony_options_applied(const PiecePlan *plan, const PhraseContext *phrase,
         }
         lead->applied = true;
         lead->applied_chord = applied;
-        lead->function = PLAN_FUNCTION_DOMINANT;
+        lead->function = HARMONIC_FUNCTION_DOMINANT;
+        lead->has_function = true;
         lead->cells = 1;
         edit.steal_cells = 1;
         edit.lead_count = 1;

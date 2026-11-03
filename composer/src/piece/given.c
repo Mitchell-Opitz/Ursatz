@@ -198,19 +198,6 @@ GivenResult plan_give_bass(PiecePlan *plan, NodeId section, size_t bar, const Pl
 
 /* ------------------------------------------------------------- a progression */
 
-static PlanHarmonicFunction plan_function_of(HarmonicFunction function) {
-    switch (function) {
-    case HARMONIC_FUNCTION_TONIC:
-        return PLAN_FUNCTION_TONIC;
-    case HARMONIC_FUNCTION_PREDOMINANT:
-        return PLAN_FUNCTION_PREDOMINANT;
-    case HARMONIC_FUNCTION_DOMINANT:
-        return PLAN_FUNCTION_DOMINANT;
-    default:
-        return PLAN_FUNCTION_UNKNOWN;
-    }
-}
-
 /* The payload of a numeral in a mode: a diatonic chord with its function, else an applied chord. False when unreadable. */
 static bool numeral_payload(PlanKeyMode mode, const char *numeral, PlanHarmony *out) {
     HarmonyChord chord;
@@ -222,13 +209,12 @@ static bool numeral_payload(PlanKeyMode mode, const char *numeral, PlanHarmony *
     }
     strcpy(out->roman_numeral, numeral);
     if (harmony_roman_parse(mode, numeral, &chord)) {
-        HarmonicFunction function;
-        out->function = harmony_function_of(harmony_mode_of(mode), &chord, &function) ? plan_function_of(function)
-                                                                                    : PLAN_FUNCTION_UNKNOWN;
+        out->has_function = harmony_function_of(harmony_mode_of(mode), &chord, &out->function);
         return true;
     }
     if (harmony_roman_parse_applied_inverted(mode, numeral, &applied, &inversion)) {
-        out->function = PLAN_FUNCTION_DOMINANT;
+        out->function = HARMONIC_FUNCTION_DOMINANT;
+        out->has_function = true;
         return true;
     }
     return false;
@@ -608,7 +594,8 @@ static bool entry_unchanged(const SnapshotEntry *entry, const PiecePlan *plan) {
         }
         if (entry->lane == PLAN_LANE_HARMONY) {
             return strcmp(payload->harmony.roman_numeral, entry->harmony.roman_numeral) == 0 &&
-                   payload->harmony.function == entry->harmony.function;
+                   payload->harmony.has_function == entry->harmony.has_function &&
+                   (!payload->harmony.has_function || payload->harmony.function == entry->harmony.function);
         }
         if (payload->notes.note_count != entry->note_count) {
             return false;

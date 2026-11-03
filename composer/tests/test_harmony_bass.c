@@ -103,7 +103,7 @@ static Fixture build(const Scenario *scenario, bool cadence) {
 
     memset(&payload, 0, sizeof(payload));
     strcpy(payload.harmony.roman_numeral, "I");
-    payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+    payload.harmony.has_function = false;
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_HARMONY, 0, fixture.span, &payload,
                               &fixture.target) == PLAN_OK);
     if (cadence) {

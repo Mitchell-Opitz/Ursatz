@@ -28,42 +28,36 @@ NodeId seam_section_at(const PiecePlan *plan, Rational time) {
 }
 
 /* The function of a chord: the one given, else the numeral's in the mode. */
-static PlanHarmonicFunction function_of(PlanKeyMode mode, PlanHarmonicFunction given, const char *roman) {
+static bool function_of(PlanKeyMode mode, bool has_given, HarmonicFunction given, const char *roman,
+                        HarmonicFunction *out) {
     HarmonyChord chord;
-    HarmonicFunction function;
-    if (given != PLAN_FUNCTION_UNKNOWN) {
-        return given;
+    if (has_given) {
+        *out = given;
+        return true;
     }
-    if (harmony_roman_parse(mode, roman, &chord) && harmony_function_of(harmony_mode_of(mode), &chord, &function)) {
-        switch (function) {
-        case HARMONIC_FUNCTION_TONIC:
-            return PLAN_FUNCTION_TONIC;
-        case HARMONIC_FUNCTION_PREDOMINANT:
-            return PLAN_FUNCTION_PREDOMINANT;
-        case HARMONIC_FUNCTION_DOMINANT:
-            return PLAN_FUNCTION_DOMINANT;
-        default:
-            break;
-        }
-    }
-    return PLAN_FUNCTION_UNKNOWN;
+    return harmony_roman_parse(mode, roman, &chord) && harmony_function_of(harmony_mode_of(mode), &chord, out);
 }
 
 static bool progression_holds(const SeamNotes *notes) {
     if (!notes->has_chords) {
         return false;
     }
-    PlanHarmonicFunction before = function_of(notes->key.mode, notes->before_function, notes->before_roman);
-    PlanHarmonicFunction after = function_of(notes->key.mode, notes->after_function, notes->after_roman);
+    HarmonicFunction before;
+    HarmonicFunction after;
+    if (!function_of(notes->key.mode, notes->before_has_function, notes->before_function, notes->before_roman, &before) ||
+        !function_of(notes->key.mode, notes->after_has_function, notes->after_function, notes->after_roman, &after)) {
+        return false;
+    }
     switch (before) {
-    case PLAN_FUNCTION_TONIC:
+    case HARMONIC_FUNCTION_TONIC:
         /* A tonic goes to a predominant, a dominant or a tonic (a repeated tonic included). */
-        return after == PLAN_FUNCTION_PREDOMINANT || after == PLAN_FUNCTION_DOMINANT || after == PLAN_FUNCTION_TONIC;
-    case PLAN_FUNCTION_PREDOMINANT:
-        return after == PLAN_FUNCTION_DOMINANT;
-    case PLAN_FUNCTION_DOMINANT:
-        return after == PLAN_FUNCTION_TONIC;
-    case PLAN_FUNCTION_UNKNOWN:
+        return after == HARMONIC_FUNCTION_PREDOMINANT || after == HARMONIC_FUNCTION_DOMINANT ||
+               after == HARMONIC_FUNCTION_TONIC;
+    case HARMONIC_FUNCTION_PREDOMINANT:
+        return after == HARMONIC_FUNCTION_DOMINANT;
+    case HARMONIC_FUNCTION_DOMINANT:
+        return after == HARMONIC_FUNCTION_TONIC;
+    default:
         break;
     }
     return false;
@@ -164,13 +158,15 @@ static LaneSpanId span_at(const PiecePlan *plan, PlanLaneKind lane, int voice, R
     return PLAN_LANE_SPAN_NONE;
 }
 
-static bool copy_roman(const PiecePlan *plan, LaneSpanId id, char *roman, PlanHarmonicFunction *function) {
+static bool copy_roman(const PiecePlan *plan, LaneSpanId id, char *roman, HarmonicFunction *function,
+                       bool *has_function) {
     if (id == PLAN_LANE_SPAN_NONE) {
         return false;
     }
     const PlanHarmony *harmony = &plan_lane_span_payload(plan, id)->harmony;
     memcpy(roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);
     *function = harmony->function;
+    *has_function = harmony->has_function;
     return true;
 }
 
@@ -194,8 +190,10 @@ SeamHearResult seam_hear(const PiecePlan *plan, NodeId seam, SeamHeard *out) {
     }
     notes.key = plan_lane_span_payload(plan, keys[0])->key;
     notes.has_chords =
-        copy_roman(plan, span_at(plan, PLAN_LANE_HARMONY, 0, before), notes.before_roman, &notes.before_function) &&
-        copy_roman(plan, span_at(plan, PLAN_LANE_HARMONY, 0, start), notes.after_roman, &notes.after_function);
+        copy_roman(plan, span_at(plan, PLAN_LANE_HARMONY, 0, before), notes.before_roman, &notes.before_function,
+                   &notes.before_has_function) &&
+        copy_roman(plan, span_at(plan, PLAN_LANE_HARMONY, 0, start), notes.after_roman, &notes.after_function,
+                   &notes.after_has_function);
     if (!notes.has_chords) {
         return SEAM_HEAR_ERR_NOT_WRITTEN;
     }

@@ -102,7 +102,7 @@ static Piece build(const Chord *chords, size_t count, bool with_melody) {
         PlanSpan span = {beats(chords[i].start), beats(chords[i].length)};
         memset(&payload, 0, sizeof(payload));
         strcpy(payload.harmony.roman_numeral, chords[i].numeral);
-        payload.harmony.function = PLAN_FUNCTION_UNKNOWN;
+        payload.harmony.has_function = false;
         assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_HARMONY, 0, span, &payload, &id) == PLAN_OK);
         assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
         add_notes(piece.plan, piece.owner, PLAN_LANE_BASS, 0, span, chords[i].bass, PLAN_STATE_REALIZED);
