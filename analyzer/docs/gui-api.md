@@ -57,6 +57,17 @@ name is the MusicXML part name, empty for a MIDI file.
 part 0, times quantized to notated values. Tempo markings, dynamics, the title and the composer are not written; the
 GUI keeps the last two with the piece. `ANALYZER_ERR_LIBRARY` when the library cannot write the score.
 
+### Note ids and defaulted meter
+
+`analyzer_score_note_xml_ids(&notes, &ids, &count)` gives the base `xml:id` of each note in `ImportedNotes` order, as
+the Ursatz library formats it (`musicxml_export_note_xml_id`, cut to 63 characters as the export cuts it). Free with
+`analyzer_score_note_xml_ids_destroy(ids, count)`. A tied note's segments carry the base id plus a fragment suffix
+(`_a` to `_z`, then `_26` and on), so a caller matches a note as the base id or the base id and a suffix. The id rule
+lives in the library; the GUI keeps no copy of it.
+
+`analyzer_imported_meter_defaulted(&notes)` is true when the import's meter was not read from the source (a MIDI file
+with no time signature); the GUI shows the meter as inferred then.
+
 ## Tests
 
 `test_playback` and `test_score_export` compare the five reference pieces (MIDI) and `tests/musicxml/pickup.musicxml`
