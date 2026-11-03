@@ -25,7 +25,8 @@
  *   - a callback that refuses stops the hearing with ANALYZER_ERR_CANCELLED and nothing written,
  *   - bad arguments are refused,
  *   - style_profile_add_result gives the statistics of style_profile_add_document_json on the rendered document,
- *   - the distance against a style reference equals analyzer_fragment_style_distance on the same fragment and model.
+ *   - the distance against a style reference equals analyzer_fragment_style_distance on the same fragment and model,
+ *   - the violations of a result equal those of analyzer_fragment_violations on the same fragment.
  *
  *   test_hearing          the five pieces
  *   test_hearing smoke    Bach 114 only (the valgrind run)
@@ -140,6 +141,44 @@ static void check_arguments(const AnalyzerHearing *hearing) {
     CHECK(analyzer_result_document_json(NULL) == NULL, "document of NULL");
 }
 
+static bool same_violations(const AnalyzerViolation *a, const AnalyzerViolation *b, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        if (strcmp(a[i].rule, b[i].rule) != 0 || a[i].hard != b[i].hard || a[i].measure != b[i].measure ||
+            a[i].beat != b[i].beat || a[i].note_id_count != b[i].note_id_count ||
+            memcmp(a[i].note_ids, b[i].note_ids, a[i].note_id_count * sizeof *a[i].note_ids) != 0) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* The violations of a heard result equal those of the fragment entry over the same events, and bad arguments are
+   refused. */
+static void check_violations(const char *fixture, const AnalyzerResult *heard, const AnalyzerFragmentAnalysis *analysis) {
+    AnalyzerViolation *from_result = NULL, *from_fragment = NULL;
+    size_t result_count = 99, fragment_count = 99;
+    CHECK(analyzer_result_violations(heard, &from_result, &result_count) == ANALYZER_OK, "%s: result violations",
+          fixture);
+    CHECK(analyzer_fragment_violations(analysis, &from_fragment, &fragment_count) == ANALYZER_FRAGMENT_OK,
+          "%s: fragment violations", fixture);
+    CHECK(result_count == fragment_count, "%s: %zu result violations, %zu fragment violations", fixture, result_count,
+          fragment_count);
+    CHECK((result_count == 0) == (from_result == NULL), "%s: array and count disagree", fixture);
+    if (result_count == fragment_count) {
+        CHECK(same_violations(from_result, from_fragment, result_count), "%s: the violations differ", fixture);
+    }
+    analyzer_violations_free(from_result, result_count);
+    analyzer_violations_free(from_fragment, fragment_count);
+
+    AnalyzerViolation *none = (AnalyzerViolation *)1;
+    size_t count = 7;
+    CHECK(analyzer_result_violations(NULL, &none, &count) == ANALYZER_ERR_ARGUMENT, "%s: violations of NULL", fixture);
+    CHECK(analyzer_result_violations(heard, NULL, &count) == ANALYZER_ERR_ARGUMENT, "%s: violations without out",
+          fixture);
+    CHECK(analyzer_result_violations(heard, &none, NULL) == ANALYZER_ERR_ARGUMENT, "%s: violations without count",
+          fixture);
+}
+
 static void check_piece(const char *fixture, const StyleModel *reference_model) {
     char path[1024];
     snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
@@ -219,6 +258,7 @@ static void check_piece(const char *fixture, const StyleModel *reference_model) 
     const char *const bad_name[] = {"no-such-category"};
     CHECK(analyzer_style_reference_create(reference_model, bad_name, 1, &unknown) == ANALYZER_ERR_ARGUMENT && !unknown,
           "%s: unknown category", fixture);
+    check_violations(fixture, heard, &analysis);
     style_comparison_destroy(&old_distance);
     style_comparison_destroy(&new_distance);
     analyzer_style_reference_destroy(reference);
