@@ -111,7 +111,7 @@ ComposerStatus composer_api_export(const char *request_json, const ComposerJob *
     PlanExportResult result = plan_export_render(plan, &rendered, &detail);
     plan_destroy(plan);
     if (result != PLAN_EXPORT_OK) {
-        return export_failure(&out->error, result, "cannot render plan", &detail);
+        return export_failure(&out->error, result, "cannot render plan", NULL);
     }
 
     if (want_midi) {
