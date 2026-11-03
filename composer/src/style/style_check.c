@@ -218,16 +218,6 @@ static bool form_labels(const GrowThemeSpec *spec, ComposerStyleLabels *labels) 
 
 /* ---------------------------------------------------------------- score */
 
-__extension__ typedef unsigned __int128 Wide;
-
-static Wide wide_gcd(Wide a, Wide b) {
-    while (b) {
-        Wide rest = a % b;
-        a = b;
-        b = rest;
-    }
-    return a;
-}
 
 #define SCORE_LIMIT ((Wide)1 << 32)
 

@@ -7,6 +7,21 @@
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/style.h>
 
+/*
+ * The 128-bit unsigned integer the style share ratios compare in (StyleRational, R-251): products of two 64-bit parts
+ * cannot overflow it. One definition for the style and check sources.
+ */
+__extension__ typedef unsigned __int128 Wide;
+
+static inline Wide wide_gcd(Wide a, Wide b) {
+    while (b) {
+        Wide rest = a % b;
+        a = b;
+        b = rest;
+    }
+    return a;
+}
+
 /* Adds categories to a style's without list (copied, repeats skipped), for a blend that keeps both lists. */
 ComposerStyleResult composer_style_add_without(ComposerStyle *style, const char *const *categories, size_t count);
 

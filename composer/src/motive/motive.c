@@ -1,6 +1,7 @@
 #include <ursatz_composer/motive.h>
 
 #include <ctype.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,6 +17,38 @@
 #include "plan/plan_json_internal.h"
 
 #define FILE_SIZE_LIMIT (64L * 1024L * 1024L)
+
+/* ----------------------------------------------------------------- scores */
+
+bool motive_score_from_rational(Rational value, MotiveScore *out) {
+    if (value.num < 0 || value.den <= 0) {
+        return false;
+    }
+    out->numerator = (unsigned long)value.num;
+    out->denominator = (unsigned long)value.den;
+    return true;
+}
+
+bool motive_score_make(unsigned long long numerator, unsigned long long denominator, MotiveScore *out) {
+    if (denominator == 0) {
+        if (numerator != 0) {
+            return false;
+        }
+        out->numerator = 0;
+        out->denominator = 0;
+        return true;
+    }
+    Rational value;
+    if (numerator > (unsigned long long)LLONG_MAX || denominator > (unsigned long long)LLONG_MAX ||
+        rational_make((long long)numerator, (long long)denominator, &value) != RATIONAL_OK) {
+        return false;
+    }
+    return motive_score_from_rational(value, out);
+}
+
+Rational motive_score_rational(MotiveScore score) {
+    return rational_ratio((long long)score.numerator, (long long)score.denominator);
+}
 
 /* ------------------------------------------------------------------ names */
 

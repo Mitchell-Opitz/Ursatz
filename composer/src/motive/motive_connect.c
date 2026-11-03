@@ -4,29 +4,18 @@
 
 #include <ursatz_composer/motive_sketch_bridge.h>
 
+#include "motive/motive_internal.h"
+
 typedef enum {
     FUNCTION_TONIC,
     FUNCTION_PREDOMINANT,
     FUNCTION_DOMINANT
 } Function;
 
-static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
-    while (b != 0) {
-        unsigned long long remainder = a % b;
-        a = b;
-        b = remainder;
-    }
-    return a;
-}
-
+/* A score from small constants or counts, which always fit. Values from a caller go through motive_score_make. */
 static MotiveScore fraction(unsigned long long numerator, unsigned long long denominator) {
-    MotiveScore score;
-    unsigned long long divisor = gcd_ull(numerator, denominator);
-    if (divisor == 0) {
-        divisor = 1;
-    }
-    score.numerator = (unsigned long)(numerator / divisor);
-    score.denominator = (unsigned long)(denominator / divisor);
+    MotiveScore score = {0, 1};
+    motive_score_make(numerator, denominator, &score);
     return score;
 }
 
@@ -110,14 +99,20 @@ bool motive_connection_limited(const Motive *basic, const Motive *previous, cons
     }
     MotiveScore remote;
     if (distance) {
-        remote = distance->denominator == 0 ? fraction(1, 1) : fraction(distance->numerator, distance->denominator);
+        if (distance->denominator == 0) {
+            remote = fraction(1, 1);
+        } else if (!motive_score_make(distance->numerator, distance->denominator, &remote)) {
+            return false;
+        }
     } else {
         VariantRecord record;
         memset(&record, 0, sizeof(record));
         if (variant_set_remoteness(basic, candidate, VARIANT_CHAIN_MAX, &record) != VARIANT_OK) {
             return false;
         }
-        remote = fraction(record.remoteness_num, record.remoteness_den);
+        if (!motive_score_make(record.remoteness_num, record.remoteness_den, &remote)) {
+            return false;
+        }
     }
     MotiveRecognizability recognizability;
     if (!motive_recognizability(previous, candidate, NULL, &recognizability)) {
@@ -126,26 +121,28 @@ bool motive_connection_limited(const Motive *basic, const Motive *previous, cons
     MotiveConnection connection;
     memset(&connection, 0, sizeof(connection));
     connection.remoteness = remote;
-    connection.limit = limit && limit->denominator > 0 ? fraction(limit->numerator, limit->denominator) : fraction(3, 4);
-    connection.common = fraction(remote.denominator - remote.numerator, remote.denominator);
+    connection.limit = fraction(3, 4);
+    if (limit && limit->denominator > 0 && !motive_score_make(limit->numerator, limit->denominator, &connection.limit)) {
+        return false;
+    }
+    if (remote.numerator > remote.denominator ||
+        !motive_score_make(remote.denominator - remote.numerator, remote.denominator, &connection.common)) {
+        return false;
+    }
     connection.rhythm = recognizability.rhythm;
     connection.harmony = coherence(previous, candidate);
 
-    /* (2c + r + h) / 4 over the common denominator of the three parts. */
-    unsigned long long den = (unsigned long long)connection.common.denominator * connection.rhythm.denominator /
-                             gcd_ull(connection.common.denominator, connection.rhythm.denominator);
-    den = den * connection.harmony.denominator / gcd_ull(den, connection.harmony.denominator);
-    unsigned long long num = 2ULL * connection.common.numerator * (den / connection.common.denominator) +
-                             (unsigned long long)connection.rhythm.numerator * (den / connection.rhythm.denominator) +
-                             (unsigned long long)connection.harmony.numerator * (den / connection.harmony.denominator);
-    den *= 4;
-    /* Remoteness over the limit halves the score. */
-    connection.halved = (unsigned long long)remote.numerator * connection.limit.denominator >
-                        (unsigned long long)remote.denominator * connection.limit.numerator;
-    if (connection.halved) {
-        den *= 2;
+    /* (2c + r + h) / 4, exact; halved when the remoteness is over the limit. */
+    connection.halved = rational_cmp(motive_score_rational(remote), motive_score_rational(connection.limit)) > 0;
+    Rational sum;
+    Rational total;
+    if (rational_mul_int(motive_score_rational(connection.common), 2, &sum) != RATIONAL_OK ||
+        rational_add(sum, motive_score_rational(connection.rhythm), &sum) != RATIONAL_OK ||
+        rational_add(sum, motive_score_rational(connection.harmony), &sum) != RATIONAL_OK ||
+        rational_div_int(sum, connection.halved ? 8 : 4, &total) != RATIONAL_OK ||
+        !motive_score_from_rational(total, &connection.total)) {
+        return false;
     }
-    connection.total = fraction(num, den);
     *out = connection;
     return true;
 }

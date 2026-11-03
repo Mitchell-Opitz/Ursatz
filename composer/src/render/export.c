@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <core/rational.h>
 #include <export/musicxml_export.h>
 #include <identity/entity_id.h>
 #include <io/midi_renderer.h>
@@ -72,23 +73,14 @@ static PlanExportResult build_tempo_map(const PlanExportOptions *options, TempoM
     return PLAN_EXPORT_OK;
 }
 
-static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
-    while (b != 0) {
-        unsigned long long remainder = a % b;
-        a = b;
-        b = remainder;
-    }
-    return a;
-}
-
 /* ---------------------------------------------------------------- MIDI */
 
 /* Folds the denominator of one time into the lcm of ticks-per-quarter it needs. False on overflow. */
 static bool need_division_for(unsigned long denominator, unsigned long long *lcm) {
-    unsigned long long factor = denominator / gcd_ull(denominator, 4);
-    unsigned long long divisor = gcd_ull(*lcm, factor);
-    unsigned long long grown = *lcm / divisor * factor;
-    if (grown > MIDI_RENDER_MAX_DIVISION) {
+    unsigned long long factor = denominator / rational_gcd_unsigned(denominator, 4);
+    unsigned long long divisor = rational_gcd_unsigned(*lcm, factor);
+    unsigned long long grown;
+    if (!rational_checked_mul_unsigned(*lcm / divisor, factor, &grown) || grown > MIDI_RENDER_MAX_DIVISION) {
         return false;
     }
     *lcm = grown;

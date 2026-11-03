@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <core/rational.h>
 #include <time/duration.h>
 #include <time/musical_time.h>
 #include <time/temporal_anchor.h>
@@ -24,19 +25,13 @@ static uint64_t hash_value(uint64_t hash, uint64_t value) {
     return hash;
 }
 
-static unsigned long gcd(unsigned long a, unsigned long b) {
-    while (b) {
-        unsigned long t = a % b;
-        a = b;
-        b = t;
-    }
-    return a ? a : 1;
-}
-
 /* A fraction as its reduced numerator and denominator, into the hash. */
 static uint64_t hash_fraction(uint64_t hash, long numerator, unsigned long denominator) {
     unsigned long magnitude = numerator < 0 ? 0UL - (unsigned long)numerator : (unsigned long)numerator;
-    unsigned long divisor = gcd(magnitude, denominator);
+    unsigned long divisor = (unsigned long)rational_gcd_unsigned(magnitude, denominator);
+    if (divisor == 0) {
+        divisor = 1;
+    }
     hash = hash_value(hash, (uint64_t)(numerator / (long)divisor));
     return hash_value(hash, denominator / divisor);
 }

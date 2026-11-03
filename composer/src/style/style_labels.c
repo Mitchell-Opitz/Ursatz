@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "style/style_internal.h"
+
 typedef struct {
     char *category;
     char *label;
@@ -147,16 +149,6 @@ bool composer_style_labels_add_melody(ComposerStyleLabels *labels, const int *be
 
 /* ----------------------------------------------------------- closeness */
 
-__extension__ typedef unsigned __int128 Wide;
-
-static Wide wide_gcd(Wide a, Wide b) {
-    while (b) {
-        Wide rest = a % b;
-        a = b;
-        b = rest;
-    }
-    return a;
-}
 
 /* Reduces a fraction of 128-bit parts into 64-bit parts, rounding to 30 bits when it does not fit. */
 static ComposerRatio narrow(Wide numerator, Wide denominator) {

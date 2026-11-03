@@ -338,15 +338,6 @@ MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, Moti
     return MOTIVE_OK;
 }
 
-static unsigned long gcd(unsigned long a, unsigned long b) {
-    while (b != 0) {
-        unsigned long rest = a % b;
-        a = b;
-        b = rest;
-    }
-    return a;
-}
-
 bool motive_chord_numeral(const MotiveChord *chord, char *out, size_t size) {
     const char *figure = chord ? chord_figure(chord->inversion, chord->seventh) : NULL;
     size_t numeral = chord && chord->degree >= 1 && chord->degree <= 7 ? (size_t)(7 - chord->degree) : 7;
@@ -372,17 +363,16 @@ char *motive_harmony_to_text(const Motive *motive) {
         }
         text_add(&text, "%s", numeral);
         /* The beats are the onset over the beat length, in lowest terms. */
-        long beats = chord->onset.num * (long)motive->meter.beat_unit;
-        unsigned long den = chord->onset.den;
-        unsigned long divisor = gcd((unsigned long)(beats < 0 ? -beats : beats), den);
-        if (divisor > 1) {
-            beats /= (long)divisor;
-            den /= divisor;
+        Rational beats;
+        if (rational_make((long long)chord->onset.num * (long long)motive->meter.beat_unit, (long long)chord->onset.den,
+                          &beats) != RATIONAL_OK) {
+            free(text.data);
+            return NULL;
         }
-        if (beats != 0 && den == 1) {
-            text_add(&text, "@%ld", beats);
-        } else if (beats != 0) {
-            text_add(&text, "@%ld/%lu", beats, den);
+        if (beats.num != 0 && beats.den == 1) {
+            text_add(&text, "@%lld", beats.num);
+        } else if (beats.num != 0) {
+            text_add(&text, "@%lld/%lld", beats.num, beats.den);
         }
         text_add(&text, " ");
     }

@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <core/rational.h>
 #include "util/util.h"
 
 #define MAX_OPTIONS 128
@@ -445,15 +446,6 @@ static MelodyFillParams arch_params(const MelodyContext *context, const MelodyFi
     return adjusted;
 }
 
-static long gcd(long a, long b) {
-    while (b != 0) {
-        long rest = a % b;
-        a = b;
-        b = rest;
-    }
-    return a;
-}
-
 /* The pitch a step (a semitone or a tone, within the scale) from `from` in a direction, in range; -1 when none. */
 static int scale_step(unsigned scale, int from, int direction, int low, int high) {
     for (int distance = 1; distance <= 2; distance++) {
@@ -482,7 +474,7 @@ static bool place_pickup(const MelodyContext *context, const MelodyFillParams *p
         !melody_ticks(beat_time, &beat)) {
         return false;
     }
-    long unit = gcd(context->pickup, beat);
+    long unit = (long)rational_gcd(context->pickup, beat);
     long count = context->pickup / unit;
     count = count > MELODY_MAX_PICKUP ? MELODY_MAX_PICKUP : count;
     long first_length = context->pickup - (count - 1) * unit;
