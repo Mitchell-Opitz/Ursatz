@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <texture_rules.h>
+#include <standard-texture/texture_rules.h>
 
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/plan_json.h>

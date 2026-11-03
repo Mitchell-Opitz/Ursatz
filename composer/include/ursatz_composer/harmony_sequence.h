@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include <scale_patterns.h>
+#include <scale-harmonization/scale_patterns.h>
 
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/harmony_bass.h>

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "generation/candidate.h"
+#include <generation/candidate.h>
 
 #include <ursatz_composer/fill_loop.h>
 #include <ursatz_composer/fill_record.h>

@@ -9,8 +9,8 @@
 /* Writing helpers shared by plan_json.c and fill_record.c. */
 
 /* Adds item under key, taking ownership; false (item freed) on failure or when item is NULL. */
-bool json_add(cJSON *object, const char *key, cJSON *item);
-bool json_append(cJSON *array, cJSON *item);
+bool plan_json_add(cJSON *object, const char *key, cJSON *item);
+bool plan_json_append(cJSON *array, cJSON *item);
 cJSON *json_number(long value);
 /* cJSON's tab-indented print as 2-space indent, "key": value, and a trailing newline. Caller frees. */
 char *json_indent_with_spaces(const char *printed);
@@ -32,7 +32,7 @@ void json_child_path(char *out, const char *parent, const char *key);
 void json_index_path(char *out, const char *parent, size_t index);
 
 /* The member of object named key. NULL when absent, after reporting it if required. */
-const cJSON *json_member(JsonReader *reader, const cJSON *object, const char *path, const char *key, bool required);
+const cJSON *plan_json_member(JsonReader *reader, const cJSON *object, const char *path, const char *key, bool required);
 bool json_read_long(JsonReader *reader, const cJSON *item, const char *path, long min, long max, long *out);
 bool json_read_int_member(JsonReader *reader, const cJSON *object, const char *path, const char *key, long min,
                           long max, long *out);

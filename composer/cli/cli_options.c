@@ -8,7 +8,7 @@
 #include <string.h>
 #include <time.h>
 
-#include <texture_rules.h>
+#include <standard-texture/texture_rules.h>
 
 #include "plan.h"
 

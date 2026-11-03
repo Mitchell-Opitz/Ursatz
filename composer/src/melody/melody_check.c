@@ -4,13 +4,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <non_chord_tones.h>
-#include <consonance_rules.h>
-#include <counterpoint_limits.h>
-#include <counterpoint_line.h>
-#include <harmonic_rules.h>
-#include <harmony_resolution_rules.h>
-#include <melodic_rules.h>
+#include <common-practice-minimal/non_chord_tones.h>
+#include <standard-counterpoint/consonance_rules.h>
+#include <standard-counterpoint/counterpoint_limits.h>
+#include <standard-counterpoint/counterpoint_line.h>
+#include <standard-counterpoint/harmonic_rules.h>
+#include <standard-harmony/harmony_resolution_rules.h>
+#include <standard-counterpoint/melodic_rules.h>
 #include <pitch/pitch_spelling.h>
 #include <semantics/non_chord_tone.h>
 

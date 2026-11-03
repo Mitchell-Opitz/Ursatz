@@ -5,11 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "export/musicxml_export.h"
-#include "identity/entity_id.h"
-#include "io/midi_renderer.h"
-#include "time/musical_time.h"
-#include "time/tempo_map.h"
+#include <export/musicxml_export.h>
+#include <identity/entity_id.h>
+#include <io/midi_renderer.h>
+#include <time/musical_time.h>
+#include <time/tempo_map.h>
 
 #define PREFERRED_DIVISION 480u
 #define MIDI_NAME_TEXT_MAX 48

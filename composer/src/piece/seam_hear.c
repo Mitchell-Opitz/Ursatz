@@ -2,8 +2,8 @@
 
 #include <string.h>
 
-#include <harmonic_function.h>
-#include <harmony_functions.h>
+#include <standard-harmony/harmonic_function.h>
+#include <standard-harmony/harmony_functions.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/harmony_phrase.h>

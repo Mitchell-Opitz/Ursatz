@@ -4,9 +4,9 @@
 #include <string.h>
 #include <sys/wait.h>
 
-#include "io/midi_importer.h"
-#include "io/musicxml_importer.h"
-#include "pitch/pitch_numeric_value.h"
+#include <io/midi_importer.h>
+#include <io/musicxml_importer.h>
+#include <pitch/pitch_numeric_value.h>
 #include "support/test_support.h"
 
 /*

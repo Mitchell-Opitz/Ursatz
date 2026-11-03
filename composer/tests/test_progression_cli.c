@@ -4,11 +4,11 @@
 #include <string.h>
 #include <sys/wait.h>
 
-#include "io/midi_importer.h"
-#include "io/musicxml_importer.h"
-#include "pitch/pitch_numeric_value.h"
+#include <io/midi_importer.h>
+#include <io/musicxml_importer.h>
+#include <pitch/pitch_numeric_value.h>
 
-#include <galant_prototypes.h>
+#include <galant-schemas/galant_prototypes.h>
 
 #include <ursatz_composer/harmony_bass.h>
 #include <ursatz_composer/harmony_phrase.h>

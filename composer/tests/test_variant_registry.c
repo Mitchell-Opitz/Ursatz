@@ -6,7 +6,7 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/variant_registry.h>
 
-#include "analysis/motive_relation.h"
+#include <analysis/motive_relation.h>
 
 /*
  * The variant registry and chains: the 9 development operations with their categories and citations, chains applied

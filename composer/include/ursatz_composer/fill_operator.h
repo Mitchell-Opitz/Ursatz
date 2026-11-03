@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "generation/generator.h"
+#include <generation/generator.h>
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/fill_target.h>

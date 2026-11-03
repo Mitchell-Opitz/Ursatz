@@ -4,9 +4,9 @@
 
 #include <stdio.h>
 
-#include <harmony_chord.h>
-#include <harmony_key_change.h>
-#include <harmony_related_key.h>
+#include <standard-harmony/harmony_chord.h>
+#include <standard-harmony/harmony_key_change.h>
+#include <standard-harmony/harmony_related_key.h>
 #include <semantics/cadence_type.h>
 
 #include <ursatz_composer/constraint.h>

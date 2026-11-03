@@ -3,9 +3,9 @@
 
 #include <stdbool.h>
 
-#include "analysis/motive_relation.h"
-#include "analysis/motive_sketch.h"
-#include "analysis/motive_tone_roles.h"
+#include <analysis/motive_relation.h>
+#include <analysis/motive_sketch.h>
+#include <analysis/motive_tone_roles.h>
 
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>

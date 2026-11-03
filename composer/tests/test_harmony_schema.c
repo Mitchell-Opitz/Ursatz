@@ -3,10 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <galant_degree.h>
-#include <galant_prototypes.h>
-#include <harmony_applied.h>
-#include <scale_patterns.h>
+#include <galant-schemas/galant_degree.h>
+#include <galant-schemas/galant_prototypes.h>
+#include <standard-harmony/harmony_applied.h>
+#include <scale-harmonization/scale_patterns.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/fill_loop.h>

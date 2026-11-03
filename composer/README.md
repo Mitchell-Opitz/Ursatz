@@ -34,12 +34,19 @@ If you cloned without `--recurse-submodules`, run `git submodule update --init -
 
 | Path | Pinned at |
 | --- | --- |
-| `external/ursatz` | Ursatz `main` at PR #161 (`1ed8aa1`). |
-| `external/ursatz-analyzer` | Ursatz-Analyzer `main` at PR #46 (`b356fb7`), version 0.3.0. |
+| `external/ursatz` | Ursatz `main` at PR #182 (`c69f326`). |
+| `external/ursatz-analyzer` | Ursatz-Analyzer `main` at PR #58 (`58323dc`), version 0.4.0. |
 
 cJSON 1.7.18 is vendored at `external/cjson` and added before the submodules, so the Analyzer reuses it. `scripts/check-pins.sh`
 fails when a pin is not on its remote's `main` or when one repository is pinned at two commits; CI runs it after the
 submodule checkout.
+
+Library headers are included by their staged public paths only: kernel headers as `<time/meter_map.h>`, framework headers
+with their folder (`<standard-harmony/harmony_cadence_rules.h>`), Analyzer headers as `<ursatz_analyzer/...>`; Composer
+headers keep their own paths. `scripts/check-library-includes.sh` (run after the build, CI runs it) fails on an Ursatz
+header outside the staged public roots in `build/external/ursatz/public/manifest.txt`, an Analyzer header outside
+`external/ursatz-analyzer/include/ursatz_analyzer/`, any `*_internal.h` of either, or a CMake file that reads the
+`SOURCE_DIR` of an Ursatz or Analyzer target or a path under `external/ursatz/tests` or `external/ursatz-analyzer/src`.
 
 ## Structure
 

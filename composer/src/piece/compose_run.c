@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <phrase_level_form.h>
+#include <standard-form/phrase_level_form.h>
 
 #include <ursatz_composer/accompaniment.h>
 #include <ursatz_composer/analyzer_check.h>

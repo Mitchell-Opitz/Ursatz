@@ -8,18 +8,18 @@
 /* Times in the sketch are unsigned and exact; the Composer's are signed longs over unsigned denominators. */
 #define TIME_LIMIT 1000000000L
 
-static ExactRational sketch_time(PlanTime time) {
+static Rational sketch_time(PlanTime time) {
     if (time.den == 0 || time.num < 0) {
         return msk_bad();
     }
     return msk_make((unsigned long long)time.num, time.den);
 }
 
-static bool plan_time(ExactRational time, PlanTime *out) {
-    if (!msk_ok(time) || time.n > (unsigned long long)TIME_LIMIT || time.d > (unsigned long long)TIME_LIMIT) {
+static bool plan_time(Rational time, PlanTime *out) {
+    if (!msk_ok(time) || time.num > (long long)TIME_LIMIT || time.den > (long long)TIME_LIMIT) {
         return false;
     }
-    return plan_time_make((long)time.n, (unsigned long)time.d, out) == PLAN_OK;
+    return plan_time_make((long)time.num, (unsigned long)time.den, out) == PLAN_OK;
 }
 
 static int pitch_class(int pitch) {
@@ -39,14 +39,14 @@ static bool has_pitch_class(const int *pcs, size_t count, int pc) {
 static bool implied_chord(const MotiveSketch *sketch, MotiveSketchChord *out) {
     static const int ORDER[7] = {1, 5, 4, 6, 2, 3, 7};
     size_t best_hits = 0;
-    ExactRational best_time = msk_int(0);
+    Rational best_time = msk_int(0);
     bool found = false;
     for (int k = 0; k < 7; k++) {
         MotiveSketchChord chord = {msk_int(0), ORDER[k], 0, 0, false};
         int pcs[4];
         size_t count = motive_sketch_chord_tones(sketch, &chord, pcs);
         size_t hits = 0;
-        ExactRational time = msk_int(0);
+        Rational time = msk_int(0);
         for (size_t i = 0; i < sketch->note_count; i++) {
             if (has_pitch_class(pcs, count, pitch_class(sketch->notes[i].pitch))) {
                 hits++;
@@ -148,16 +148,16 @@ MotiveToneStatus motive_tone_labels(const Motive *motive, const MotiveChord *cho
 }
 
 /* The meter of a bar and a beat: beats_per_bar over a beat unit of 1, 2, 4, 8 or 16. */
-static bool meter_of(ExactRational bar, ExactRational beat, PlanMeter *meter) {
-    if (!msk_ok(bar) || !msk_ok(beat) || beat.n != 1 || (beat.d != 1 && beat.d != 2 && beat.d != 4 && beat.d != 8 && beat.d != 16)) {
+static bool meter_of(Rational bar, Rational beat, PlanMeter *meter) {
+    if (!msk_ok(bar) || !msk_ok(beat) || beat.num != 1 || (beat.den != 1 && beat.den != 2 && beat.den != 4 && beat.den != 8 && beat.den != 16)) {
         return false;
     }
-    ExactRational beats = msk_div(bar, beat);
-    if (!msk_ok(beats) || beats.d != 1 || beats.n < 1 || beats.n > 64) {
+    Rational beats = msk_div(bar, beat);
+    if (!msk_ok(beats) || beats.den != 1 || beats.num < 1 || beats.num > 64) {
         return false;
     }
-    meter->beats_per_bar = (int)beats.n;
-    meter->beat_unit = (int)beat.d;
+    meter->beats_per_bar = (int)beats.num;
+    meter->beat_unit = (int)beat.den;
     return true;
 }
 

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <phrase_level_form.h>
+#include <standard-form/phrase_level_form.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
@@ -652,8 +652,8 @@ char *explain_to_text(const Explanation *explanation) {
 
 static cJSON *ratio_json(unsigned long numerator, unsigned long denominator) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "num", json_number((long)numerator)) &&
-                    json_add(object, "den", json_number((long)denominator)))) {
+    if (object && !(plan_json_add(object, "num", json_number((long)numerator)) &&
+                    plan_json_add(object, "den", json_number((long)denominator)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -662,14 +662,14 @@ static cJSON *ratio_json(unsigned long numerator, unsigned long denominator) {
 
 static cJSON *candidate_json(const ExplainCandidate *candidate, bool runner_up) {
     cJSON *object = cJSON_CreateObject();
-    bool ok = object && json_add(object, "operator", cJSON_CreateString(candidate->operator_name)) &&
-              json_add(object, "label", cJSON_CreateString(candidate->label)) &&
-              json_add(object, "score", ratio_json(candidate->score_numerator, candidate->score_denominator));
+    bool ok = object && plan_json_add(object, "operator", cJSON_CreateString(candidate->operator_name)) &&
+              plan_json_add(object, "label", cJSON_CreateString(candidate->label)) &&
+              plan_json_add(object, "score", ratio_json(candidate->score_numerator, candidate->score_denominator));
     ok = ok && (!candidate->styled ||
-                json_add(object, "style", ratio_json(candidate->style_numerator, candidate->style_denominator)));
-    ok = ok && (!runner_up || json_add(object, "behind", ratio_json(candidate->behind_numerator, candidate->behind_denominator)));
-    ok = ok && (!candidate->rejected || json_add(object, "reason", cJSON_CreateString(candidate->reason)));
-    ok = ok && (!not_held_of(candidate) || json_add(object, "not_held", cJSON_CreateString(not_held_of(candidate))));
+                plan_json_add(object, "style", ratio_json(candidate->style_numerator, candidate->style_denominator)));
+    ok = ok && (!runner_up || plan_json_add(object, "behind", ratio_json(candidate->behind_numerator, candidate->behind_denominator)));
+    ok = ok && (!candidate->rejected || plan_json_add(object, "reason", cJSON_CreateString(candidate->reason)));
+    ok = ok && (!not_held_of(candidate) || plan_json_add(object, "not_held", cJSON_CreateString(not_held_of(candidate))));
     if (!ok) {
         cJSON_Delete(object);
         return NULL;
@@ -682,42 +682,42 @@ static cJSON *target_json(const ExplainTarget *target) {
     cJSON *place = cJSON_CreateObject();
     cJSON *runners = cJSON_CreateArray();
     cJSON *rejected = cJSON_CreateArray();
-    bool ok = object && place && runners && rejected && json_add(object, "step", json_number((long)target->step)) &&
-              json_add(place, "kind", cJSON_CreateString(target->kind == FILL_TARGET_NODE ? "node" : "lane_span")) &&
-              json_add(place, "id", json_number((long)target->id)) &&
-              json_add(place, "name", cJSON_CreateString(target->name)) &&
-              json_add(place, "section", target->letter[0] ? cJSON_CreateString(target->letter) : cJSON_CreateNull());
+    bool ok = object && place && runners && rejected && plan_json_add(object, "step", json_number((long)target->step)) &&
+              plan_json_add(place, "kind", cJSON_CreateString(target->kind == FILL_TARGET_NODE ? "node" : "lane_span")) &&
+              plan_json_add(place, "id", json_number((long)target->id)) &&
+              plan_json_add(place, "name", cJSON_CreateString(target->name)) &&
+              plan_json_add(place, "section", target->letter[0] ? cJSON_CreateString(target->letter) : cJSON_CreateNull());
     if (ok && target->kind == FILL_TARGET_LANE_SPAN) {
-        ok = json_add(place, "lane", cJSON_CreateString(target->lane)) &&
-             json_add(place, "voice", json_number(target->voice));
+        ok = plan_json_add(place, "lane", cJSON_CreateString(target->lane)) &&
+             plan_json_add(place, "voice", json_number(target->voice));
     }
     if (ok && target->first_bar > 0) {
         cJSON *bars = cJSON_CreateObject();
-        ok = bars && json_add(bars, "first", json_number((long)target->first_bar)) &&
-             json_add(bars, "last", json_number((long)target->last_bar)) && json_add(place, "bars", bars);
+        ok = bars && plan_json_add(bars, "first", json_number((long)target->first_bar)) &&
+             plan_json_add(bars, "last", json_number((long)target->last_bar)) && plan_json_add(place, "bars", bars);
         if (!ok) {
             cJSON_Delete(bars);
         }
     }
     if (ok) {
-        ok = json_add(object, "target", place);
+        ok = plan_json_add(object, "target", place);
         place = NULL;
     }
-    ok = ok && json_add(object, "outcome", cJSON_CreateString(OUTCOME_NAMES[target->outcome])) &&
-         json_add(object, "considered", json_number((long)target->considered)) &&
-         json_add(object, "chosen", target->has_chosen ? candidate_json(&target->chosen, false) : cJSON_CreateNull());
+    ok = ok && plan_json_add(object, "outcome", cJSON_CreateString(OUTCOME_NAMES[target->outcome])) &&
+         plan_json_add(object, "considered", json_number((long)target->considered)) &&
+         plan_json_add(object, "chosen", target->has_chosen ? candidate_json(&target->chosen, false) : cJSON_CreateNull());
     for (size_t i = 0; ok && i < target->runner_up_count; i++) {
-        ok = json_append(runners, candidate_json(&target->runners_up[i], true));
+        ok = plan_json_append(runners, candidate_json(&target->runners_up[i], true));
     }
     for (size_t i = 0; ok && i < target->rejected_count; i++) {
-        ok = json_append(rejected, candidate_json(&target->rejected[i], false));
+        ok = plan_json_append(rejected, candidate_json(&target->rejected[i], false));
     }
     if (ok) {
-        ok = json_add(object, "runners_up", runners);
+        ok = plan_json_add(object, "runners_up", runners);
         runners = NULL;
     }
     if (ok) {
-        ok = json_add(object, "rejected", rejected);
+        ok = plan_json_add(object, "rejected", rejected);
         rejected = NULL;
     }
     if (!ok) {
@@ -732,11 +732,11 @@ static cJSON *target_json(const ExplainTarget *target) {
 
 static cJSON *item_json(const AnalyzerCheckItem *item) {
     cJSON *object = cJSON_CreateObject();
-    bool ok = object && json_add(object, "kind", cJSON_CreateString(KIND_NAMES[item->kind])) &&
-              json_add(object, "bar", json_number((long)item->bar + 1)) &&
-              json_add(object, "planned", cJSON_CreateString(item->planned)) &&
-              json_add(object, "heard", cJSON_CreateString(item->heard)) &&
-              json_add(object, "agreed", cJSON_CreateBool(item->agreed));
+    bool ok = object && plan_json_add(object, "kind", cJSON_CreateString(KIND_NAMES[item->kind])) &&
+              plan_json_add(object, "bar", json_number((long)item->bar + 1)) &&
+              plan_json_add(object, "planned", cJSON_CreateString(item->planned)) &&
+              plan_json_add(object, "heard", cJSON_CreateString(item->heard)) &&
+              plan_json_add(object, "agreed", cJSON_CreateBool(item->agreed));
     if (!ok) {
         cJSON_Delete(object);
         return NULL;
@@ -748,34 +748,34 @@ static cJSON *section_json(const ExplainSection *section) {
     cJSON *object = cJSON_CreateObject();
     cJSON *heard = cJSON_CreateObject();
     cJSON *items = cJSON_CreateArray();
-    bool ok = object && heard && items && json_add(object, "name", cJSON_CreateString(section->name)) &&
-              json_add(object, "letter", section->letter[0] ? cJSON_CreateString(section->letter) : cJSON_CreateNull()) &&
-              json_add(heard, "heard", cJSON_CreateBool(section->heard)) &&
-              json_add(heard, "form", cJSON_CreateString(section->heard_form)) &&
-              json_add(heard, "requested", cJSON_CreateString(section->requested_form)) &&
-              json_add(heard, "as_requested", cJSON_CreateBool(section->heard_as_requested));
+    bool ok = object && heard && items && plan_json_add(object, "name", cJSON_CreateString(section->name)) &&
+              plan_json_add(object, "letter", section->letter[0] ? cJSON_CreateString(section->letter) : cJSON_CreateNull()) &&
+              plan_json_add(heard, "heard", cJSON_CreateBool(section->heard)) &&
+              plan_json_add(heard, "form", cJSON_CreateString(section->heard_form)) &&
+              plan_json_add(heard, "requested", cJSON_CreateString(section->requested_form)) &&
+              plan_json_add(heard, "as_requested", cJSON_CreateBool(section->heard_as_requested));
     if (ok) {
-        ok = json_add(object, "form", heard);
+        ok = plan_json_add(object, "form", heard);
         heard = NULL;
     }
     if (ok && section->checked) {
         cJSON *check = cJSON_CreateObject();
-        ok = check && json_add(check, "contradicts", cJSON_CreateBool(section->check.contradicts)) &&
-             json_add(check, "planned", json_number((long)section->check.planned)) &&
-             json_add(check, "agreed", json_number((long)section->check.agreed));
+        ok = check && plan_json_add(check, "contradicts", cJSON_CreateBool(section->check.contradicts)) &&
+             plan_json_add(check, "planned", json_number((long)section->check.planned)) &&
+             plan_json_add(check, "agreed", json_number((long)section->check.agreed));
         for (size_t i = 0; ok && i < section->check.item_count; i++) {
-            ok = json_append(items, item_json(&section->check.items[i]));
+            ok = plan_json_append(items, item_json(&section->check.items[i]));
         }
         if (ok) {
-            ok = json_add(check, "items", items);
+            ok = plan_json_add(check, "items", items);
             items = NULL;
         }
-        ok = ok && json_add(object, "check", check);
+        ok = ok && plan_json_add(object, "check", check);
         if (!ok) {
             cJSON_Delete(check);
         }
     } else if (ok) {
-        ok = json_add(object, "check", cJSON_CreateNull());
+        ok = plan_json_add(object, "check", cJSON_CreateNull());
     }
     if (!ok) {
         cJSON_Delete(object);
@@ -791,17 +791,17 @@ static cJSON *rejection_json(const ComposeRejection *rejection) {
     cJSON *items = cJSON_CreateArray();
     char seed[32];
     snprintf(seed, sizeof(seed), "%lu", rejection->seed);
-    bool ok = object && items && json_add(object, "round", json_number((long)rejection->round)) &&
-              json_add(object, "seed", cJSON_CreateString(seed)) &&
-              json_add(object, "stage", cJSON_CreateString(rejection->stage)) &&
-              json_add(object, "reason", cJSON_CreateString(rejection->reason)) &&
-              json_add(object, "detail", cJSON_CreateString(rejection->detail));
+    bool ok = object && items && plan_json_add(object, "round", json_number((long)rejection->round)) &&
+              plan_json_add(object, "seed", cJSON_CreateString(seed)) &&
+              plan_json_add(object, "stage", cJSON_CreateString(rejection->stage)) &&
+              plan_json_add(object, "reason", cJSON_CreateString(rejection->reason)) &&
+              plan_json_add(object, "detail", cJSON_CreateString(rejection->detail));
     for (size_t i = 0; ok && i < rejection->item_count; i++) {
         cJSON *item = item_json(&rejection->items[i].item);
-        ok = item && json_add(item, "section", cJSON_CreateString(rejection->items[i].section)) && json_append(items, item);
+        ok = item && plan_json_add(item, "section", cJSON_CreateString(rejection->items[i].section)) && plan_json_append(items, item);
     }
     if (ok) {
-        ok = json_add(object, "items", items);
+        ok = plan_json_add(object, "items", items);
         items = NULL;
     }
     if (!ok) {
@@ -820,8 +820,8 @@ char *explain_to_json(const Explanation *explanation) {
     cJSON *stages = cJSON_CreateArray();
     cJSON *sections = cJSON_CreateArray();
     cJSON *rejections = cJSON_CreateArray();
-    bool ok = document && stages && sections && rejections && json_add(document, "schema", cJSON_CreateString("explanation")) &&
-              json_add(document, "version", json_number(1));
+    bool ok = document && stages && sections && rejections && plan_json_add(document, "schema", cJSON_CreateString("explanation")) &&
+              plan_json_add(document, "version", json_number(1));
     cJSON *stage = NULL;
     cJSON *targets = NULL;
     for (size_t t = 0; ok && t < explanation->target_count; t++) {
@@ -830,11 +830,11 @@ char *explain_to_json(const Explanation *explanation) {
         if (!stage || strcmp(target->stage, explanation->targets[t - 1].stage) != 0) {
             stage = cJSON_CreateObject();
             targets = cJSON_CreateArray();
-            ok = stage && targets && json_add(stage, "stage", cJSON_CreateString(target->stage));
+            ok = stage && targets && plan_json_add(stage, "stage", cJSON_CreateString(target->stage));
             if (ok) {
-                ok = json_add(stage, "targets", targets);
+                ok = plan_json_add(stage, "targets", targets);
                 if (ok) {
-                    ok = json_append(stages, stage);
+                    ok = plan_json_append(stages, stage);
                 }
             } else {
                 cJSON_Delete(stage);
@@ -846,24 +846,24 @@ char *explain_to_json(const Explanation *explanation) {
                 break;
             }
         }
-        ok = json_append(targets, target_json(target));
+        ok = plan_json_append(targets, target_json(target));
     }
     if (ok) {
-        ok = json_add(document, "stages", stages);
+        ok = plan_json_add(document, "stages", stages);
         stages = NULL;
     }
     for (size_t s = 0; ok && s < explanation->section_count; s++) {
-        ok = json_append(sections, section_json(&explanation->sections[s]));
+        ok = plan_json_append(sections, section_json(&explanation->sections[s]));
     }
     if (ok) {
-        ok = json_add(document, "sections", sections);
+        ok = plan_json_add(document, "sections", sections);
         sections = NULL;
     }
     for (size_t r = 0; ok && r < explanation->rejection_count; r++) {
-        ok = json_append(rejections, rejection_json(&explanation->rejections[r]));
+        ok = plan_json_append(rejections, rejection_json(&explanation->rejections[r]));
     }
     if (ok) {
-        ok = json_add(document, "rejections", rejections);
+        ok = plan_json_add(document, "rejections", rejections);
         rejections = NULL;
     }
     char *printed = ok ? cJSON_Print(document) : NULL;

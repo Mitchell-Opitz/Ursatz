@@ -10,7 +10,7 @@
 #include <ursatz_composer/motive_analysis.h>
 #include <ursatz_composer/motive_sketch_bridge.h>
 
-#include "analysis/motive_relation.h"
+#include <analysis/motive_relation.h>
 
 #include "motive/motive_internal.h"
 #include "motive/variant_internal.h"
@@ -666,17 +666,17 @@ static cJSON *value_json(const VariantParam *param, const VariantValue *value) {
 static cJSON *step_json(const VariantStepRecord *step) {
     const VariantOperation *operation = variant_registry_find(step->op);
     cJSON *object = cJSON_CreateObject();
-    bool ok = object && operation && json_add(object, "op", cJSON_CreateString(step->op));
+    bool ok = object && operation && plan_json_add(object, "op", cJSON_CreateString(step->op));
     cJSON *params = ok ? cJSON_CreateObject() : NULL;
-    ok = ok && json_add(object, "params", params);
+    ok = ok && plan_json_add(object, "params", params);
     cJSON *open = ok ? cJSON_CreateArray() : NULL;
-    ok = ok && json_add(object, "open", open);
+    ok = ok && plan_json_add(object, "open", open);
     for (size_t p = 0; ok && p < step->param_count; p++) {
         if (step->values[p].set) {
-            ok = json_add(params, operation->params[p].name, value_json(&operation->params[p], &step->values[p]));
+            ok = plan_json_add(params, operation->params[p].name, value_json(&operation->params[p], &step->values[p]));
         }
         if (ok && step->open[p]) {
-            ok = json_append(open, cJSON_CreateString(operation->params[p].name));
+            ok = plan_json_append(open, cJSON_CreateString(operation->params[p].name));
         }
     }
     if (!ok) {
@@ -688,11 +688,11 @@ static cJSON *step_json(const VariantStepRecord *step) {
 
 static bool names_json(cJSON *object, const char *key, const char *const *names, size_t count) {
     cJSON *array = cJSON_CreateArray();
-    if (!json_add(object, key, array)) {
+    if (!plan_json_add(object, key, array)) {
         return false;
     }
     for (size_t i = 0; i < count; i++) {
-        if (!json_append(array, cJSON_CreateString(names[i]))) {
+        if (!plan_json_append(array, cJSON_CreateString(names[i]))) {
             return false;
         }
     }
@@ -705,24 +705,24 @@ char *variant_record_to_json(const VariantRecord *record) {
     }
     cJSON *document = cJSON_CreateObject();
     cJSON *chain = document ? cJSON_CreateObject() : NULL;
-    bool ok = document && json_add(document, "seed", json_number((long)record->seed)) && json_add(document, "chain", chain);
+    bool ok = document && plan_json_add(document, "seed", json_number((long)record->seed)) && plan_json_add(document, "chain", chain);
     cJSON *steps = ok ? cJSON_CreateArray() : NULL;
-    ok = ok && json_add(chain, "steps", steps);
+    ok = ok && plan_json_add(chain, "steps", steps);
     for (size_t s = 0; ok && s < record->step_count; s++) {
-        ok = json_append(steps, step_json(&record->steps[s]));
+        ok = plan_json_append(steps, step_json(&record->steps[s]));
     }
     double score = record->recognizability.denominator == 0
                        ? 0.0
                        : (double)record->recognizability.numerator / (double)record->recognizability.denominator;
-    ok = ok && json_add(document, "kind", cJSON_CreateString(variant_kind_name(record->kind))) &&
+    ok = ok && plan_json_add(document, "kind", cJSON_CreateString(variant_kind_name(record->kind))) &&
          names_json(document, "kept", record->kept, record->kept_count) &&
          names_json(document, "changed", record->changed, record->changed_count) &&
-         (record->harmony[0] == '\0' || json_add(document, "harmony", cJSON_CreateString(record->harmony))) &&
+         (record->harmony[0] == '\0' || plan_json_add(document, "harmony", cJSON_CreateString(record->harmony))) &&
          names_json(document, "functions", record->functions, record->function_count) &&
-         json_add(document, "derivation", cJSON_CreateString(record->derivation)) &&
-         json_add(document, "recognizability", cJSON_CreateNumber((double)(long)(score * 10000.0 + 0.5) / 10000.0)) &&
+         plan_json_add(document, "derivation", cJSON_CreateString(record->derivation)) &&
+         plan_json_add(document, "recognizability", cJSON_CreateNumber((double)(long)(score * 10000.0 + 0.5) / 10000.0)) &&
          (record->remoteness_den == 0 ||
-          json_add(document, "remoteness",
+          plan_json_add(document, "remoteness",
                    cJSON_CreateNumber((double)(long)((double)record->remoteness_num / (double)record->remoteness_den *
                                                          10000.0 + 0.5) / 10000.0)));
     if (!ok) {

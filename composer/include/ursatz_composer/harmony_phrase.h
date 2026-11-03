@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 
-#include <harmony_applied.h>
-#include <harmony_chord.h>
+#include <standard-harmony/harmony_applied.h>
+#include <standard-harmony/harmony_chord.h>
 #include <semantics/cadence_type.h>
 
 #include <ursatz_composer/fill_loop.h>

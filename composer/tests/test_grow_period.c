@@ -3,15 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <harmony_cadence_rules.h>
-#include <hybrid_rules.h>
-#include <idea_label.h>
-#include <period_rules.h>
-#include <phrase_beginning.h>
-#include <phrase_ending.h>
-#include <phrase_level_form.h>
-#include <phrase_role.h>
-#include <sentence_rules.h>
+#include <standard-harmony/harmony_cadence_rules.h>
+#include <standard-form/hybrid_rules.h>
+#include <standard-form/idea_label.h>
+#include <standard-form/period_rules.h>
+#include <standard-form/phrase_beginning.h>
+#include <standard-form/phrase_ending.h>
+#include <standard-form/phrase_level_form.h>
+#include <standard-form/phrase_role.h>
+#include <standard-form/sentence_rules.h>
 
 #include <ursatz_composer/grow.h>
 #include <ursatz_composer/harmony_phrase.h>

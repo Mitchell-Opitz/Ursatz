@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "analysis/motive_tone_roles.h"
+#include <analysis/motive_tone_roles.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>

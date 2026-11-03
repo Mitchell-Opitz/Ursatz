@@ -2,9 +2,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <phrase_beginning.h>
-#include <phrase_ending.h>
-#include <phrase_level_form.h>
+#include <standard-form/phrase_beginning.h>
+#include <standard-form/phrase_ending.h>
+#include <standard-form/phrase_level_form.h>
 #include <semantics/cadence_type.h>
 
 #include <ursatz_composer/form_hear.h>

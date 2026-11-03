@@ -95,7 +95,7 @@ static bool read_claims(JsonReader *reader, Notes *notes, const cJSON *document,
                         PlanLaneKind lane, Claim **out, size_t *out_count) {
     *out = NULL;
     *out_count = 0;
-    const cJSON *array = json_member(reader, document, "", section, false);
+    const cJSON *array = plan_json_member(reader, document, "", section, false);
     if (!array) {
         return true;
     }
@@ -119,7 +119,7 @@ static bool read_claims(JsonReader *reader, Notes *notes, const cJSON *document,
             free(claims);
             return json_bad_format(reader, at, "expected an object");
         }
-        const cJSON *label = json_member(reader, item, at, "label", true);
+        const cJSON *label = plan_json_member(reader, item, at, "label", true);
         PlanSpan span;
         if (!label || !json_read_span(reader, item, at, &span)) {
             free(claims);

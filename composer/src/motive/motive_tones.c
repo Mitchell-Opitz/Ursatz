@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "analysis/motive_sketch.h"
+#include <analysis/motive_sketch.h>
 
 #include <ursatz_composer/motive_sketch_bridge.h>
 
@@ -17,7 +17,7 @@ static int pitch_class(int pitch) {
 }
 
 /* The bar a time is in: bars are counted from the first barline, which is at the pickup, so a time before it is bar -1. */
-static long bar_of(ExactRational time, ExactRational pickup, ExactRational bar) {
+static long bar_of(Rational time, Rational pickup, Rational bar) {
     if (msk_cmp(time, pickup) < 0) {
         return -1;
     }
@@ -25,7 +25,7 @@ static long bar_of(ExactRational time, ExactRational pickup, ExactRational bar) 
 }
 
 /* The time inside a bar, in whole notes: the bar before the first barline ends at the pickup. */
-static ExactRational offset_in_bar(const MotiveSketch *sketch, long bar, ExactRational onset) {
+static Rational offset_in_bar(const MotiveSketch *sketch, long bar, Rational onset) {
     if (bar < 0) {
         return msk_sub(msk_add(onset, sketch->bar), sketch->pickup);
     }
@@ -33,9 +33,9 @@ static ExactRational offset_in_bar(const MotiveSketch *sketch, long bar, ExactRa
 }
 
 /* A note is on a strong beat when it starts on a beat of its bar. */
-static bool is_strong(const MotiveSketch *sketch, long bar, ExactRational onset) {
-    ExactRational beats = msk_div(offset_in_bar(sketch, bar, onset), sketch->beat);
-    return msk_ok(beats) && beats.d == 1;
+static bool is_strong(const MotiveSketch *sketch, long bar, Rational onset) {
+    Rational beats = msk_div(offset_in_bar(sketch, bar, onset), sketch->beat);
+    return msk_ok(beats) && beats.den == 1;
 }
 
 static bool is_chord_tone(const MotiveSketch *sketch, const MotiveSketchChord *chord, int pitch) {
@@ -49,7 +49,7 @@ static bool is_chord_tone(const MotiveSketch *sketch, const MotiveSketchChord *c
     return false;
 }
 
-static MotiveSketchChord triad(int degree, ExactRational onset) {
+static MotiveSketchChord triad(int degree, Rational onset) {
     MotiveSketchChord chord = {onset, degree, 0, 0, false};
     return chord;
 }
@@ -61,7 +61,7 @@ typedef struct {
 
 /* How many of the strong notes are chord tones when the notes from split on take second and the rest first. */
 static size_t strong_chord_tones(const MotiveSketch *sketch, const StrongNotes *strong, const MotiveSketchChord *first,
-                                 const MotiveSketchChord *second, ExactRational split) {
+                                 const MotiveSketchChord *second, Rational split) {
     size_t tones = 0;
     for (size_t i = 0; i < strong->count; i++) {
         const MotiveSketchNote *note = &sketch->notes[strong->notes[i]];
@@ -86,7 +86,7 @@ static bool append_chord(MotiveBaseHarmony *out, const MotiveSketchChord *chord)
     }
     MotiveChord *slot = &out->chords[out->count++];
     memset(slot, 0, sizeof(*slot));
-    slot->onset = motive_time((long)chord->onset.n, (unsigned long)chord->onset.d);
+    slot->onset = motive_time((long)chord->onset.num, (unsigned long)chord->onset.den);
     slot->degree = chord->degree;
     slot->alteration = chord->alteration;
     slot->inversion = chord->inversion;
@@ -118,9 +118,9 @@ static void propose(const MotiveSketch *sketch, MotiveBaseHarmony *out) {
             continue; /* the chord before it goes on */
         }
         /* The first chord is at 0, the others at the start of their bar. */
-        ExactRational start = bar < 0 ? msk_int(0)
+        Rational start = bar < 0 ? msk_int(0)
                                       : msk_add(sketch->pickup, msk_mul(msk_int((unsigned long long)bar), sketch->bar));
-        ExactRational at = have_previous ? start : msk_int(0);
+        Rational at = have_previous ? start : msk_int(0);
         MotiveSketchChord best = triad(1, at);
         size_t best_tones = 0;
         for (int k = 0; k < 7; k++) {
@@ -142,8 +142,8 @@ static void propose(const MotiveSketch *sketch, MotiveBaseHarmony *out) {
         }
         size_t best_gain = 1;
         MotiveSketchChord second = triad(1, msk_int(0));
-        ExactRational bar_end = msk_add(start, sketch->bar);
-        for (ExactRational split = msk_add(start, sketch->beat); msk_ok(split) && msk_cmp(split, bar_end) < 0;
+        Rational bar_end = msk_add(start, sketch->bar);
+        for (Rational split = msk_add(start, sketch->beat); msk_ok(split) && msk_cmp(split, bar_end) < 0;
              split = msk_add(split, sketch->beat)) {
             for (int k = 0; k < 7; k++) {
                 MotiveSketchChord candidate = triad(TRIAD_ORDER[k], split);

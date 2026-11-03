@@ -4,11 +4,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <harmonic_rules.h>
-#include <harmony_resolution_rules.h>
-#include <range_rules.h>
-#include <voicing_pitch.h>
-#include <voicing_rules.h>
+#include <standard-counterpoint/harmonic_rules.h>
+#include <standard-harmony/harmony_resolution_rules.h>
+#include <standard-voicing/range_rules.h>
+#include <standard-voicing/voicing_pitch.h>
+#include <standard-voicing/voicing_rules.h>
 
 #include "texture/voicing_internal.h"
 

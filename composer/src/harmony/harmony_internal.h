@@ -4,10 +4,10 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <analysis_cadence.h>
-#include <analysis_input.h>
-#include <harmony_chord.h>
-#include <harmony_pivot.h>
+#include <standard-harmony/analysis/analysis_cadence.h>
+#include <standard-harmony/analysis/analysis_input.h>
+#include <standard-harmony/harmony_chord.h>
+#include <standard-harmony/harmony_pivot.h>
 #include <pitch/pitch_spelling.h>
 #include <semantics/beat_strength.h>
 #include <semantics/cadence_type.h>

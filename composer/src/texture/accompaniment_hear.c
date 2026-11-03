@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <texture_analysis_classify.h>
-#include <texture_analysis_input.h>
-#include <texture_rules.h>
+#include <standard-texture/analysis/texture_analysis_classify.h>
+#include <standard-texture/analysis/texture_analysis_input.h>
+#include <standard-texture/texture_rules.h>
 
 #include <identity/entity_id.h>
 #include <time/meter_map.h>

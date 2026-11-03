@@ -6,10 +6,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <phrase_beginning.h>
-#include <phrase_ending.h>
-#include <phrase_level_form.h>
-#include <texture_rules.h>
+#include <standard-form/phrase_beginning.h>
+#include <standard-form/phrase_ending.h>
+#include <standard-form/phrase_level_form.h>
+#include <standard-texture/texture_rules.h>
 
 #include "cli_options.h"
 #include "motive_extras.h"

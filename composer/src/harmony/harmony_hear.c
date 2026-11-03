@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <analysis_cadence.h>
-#include <analysis_input.h>
+#include <standard-harmony/analysis/analysis_cadence.h>
+#include <standard-harmony/analysis/analysis_input.h>
 #include <time/duration.h>
 #include <time/metrical_position.h>
 #include <time/musical_time.h>

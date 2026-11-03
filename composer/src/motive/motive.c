@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include <cJSON.h>
-#include <key_identification.h>
+#include <common-practice-minimal/key_identification.h>
 
 #include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/plan_state.h>
@@ -728,7 +728,7 @@ bool motive_equal(const Motive *a, const Motive *b) {
 cJSON *motive_time_json(PlanTime time) {
     cJSON *object = cJSON_CreateObject();
     if (object &&
-        !(json_add(object, "num", json_number(time.num)) && json_add(object, "den", json_number((long)time.den)))) {
+        !(plan_json_add(object, "num", json_number(time.num)) && plan_json_add(object, "den", json_number((long)time.den)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -737,9 +737,9 @@ cJSON *motive_time_json(PlanTime time) {
 
 static cJSON *meter_json(const PlanMeter *meter) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "beats_per_bar", json_number(meter->beats_per_bar)) &&
-                    json_add(object, "beat_unit", json_number(meter->beat_unit)) &&
-                    json_add(object, "bars_per_hyperbar", json_number(meter->bars_per_hyperbar)))) {
+    if (object && !(plan_json_add(object, "beats_per_bar", json_number(meter->beats_per_bar)) &&
+                    plan_json_add(object, "beat_unit", json_number(meter->beat_unit)) &&
+                    plan_json_add(object, "bars_per_hyperbar", json_number(meter->bars_per_hyperbar)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -748,8 +748,8 @@ static cJSON *meter_json(const PlanMeter *meter) {
 
 static cJSON *key_json(const PlanKey *key) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "tonic_pitch_class", json_number(key->tonic_pitch_class)) &&
-                    json_add(object, "mode", cJSON_CreateString(key->mode == PLAN_MODE_MINOR ? "minor" : "major")))) {
+    if (object && !(plan_json_add(object, "tonic_pitch_class", json_number(key->tonic_pitch_class)) &&
+                    plan_json_add(object, "mode", cJSON_CreateString(key->mode == PLAN_MODE_MINOR ? "minor" : "major")))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -761,16 +761,16 @@ static cJSON *notes_json(const Motive *motive) {
     for (size_t i = 0; array && i < motive->note_count; i++) {
         const PlanNote *note = &motive->notes[i];
         cJSON *object = cJSON_CreateObject();
-        bool ok = object && json_add(object, "midi_pitch", json_number(note->midi_pitch)) &&
-                  json_add(object, "offset", motive_time_json(note->offset)) &&
-                  json_add(object, "duration", motive_time_json(note->duration));
+        bool ok = object && plan_json_add(object, "midi_pitch", json_number(note->midi_pitch)) &&
+                  plan_json_add(object, "offset", motive_time_json(note->offset)) &&
+                  plan_json_add(object, "duration", motive_time_json(note->duration));
         if (!ok) {
             cJSON_Delete(object);
             cJSON_Delete(array);
             return NULL;
         }
-        /* json_append frees the object itself when it fails. */
-        if (!json_append(array, object)) {
+        /* plan_json_append frees the object itself when it fails. */
+        if (!plan_json_append(array, object)) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -783,15 +783,15 @@ static cJSON *features_json(const Motive *motive) {
     for (size_t i = 0; array && i < motive->feature_count; i++) {
         const MotiveFeature *feature = &motive->features[i];
         cJSON *object = cJSON_CreateObject();
-        bool ok = object && json_add(object, "label", cJSON_CreateString(feature->label)) &&
-                  json_add(object, "first", json_number((long)feature->first)) &&
-                  json_add(object, "last", json_number((long)feature->last));
+        bool ok = object && plan_json_add(object, "label", cJSON_CreateString(feature->label)) &&
+                  plan_json_add(object, "first", json_number((long)feature->first)) &&
+                  plan_json_add(object, "last", json_number((long)feature->last));
         if (!ok) {
             cJSON_Delete(object);
             cJSON_Delete(array);
             return NULL;
         }
-        if (!json_append(array, object)) {
+        if (!plan_json_append(array, object)) {
             cJSON_Delete(array);
             return NULL;
         }
@@ -801,28 +801,28 @@ static cJSON *features_json(const Motive *motive) {
 
 cJSON *motive_json_object(const Motive *motive) {
     cJSON *document = cJSON_CreateObject();
-    bool ok = document && json_add(document, "meter", meter_json(&motive->meter));
+    bool ok = document && plan_json_add(document, "meter", meter_json(&motive->meter));
     /* An inferred key is worked out again on reading, so only a stated one is written. */
     if (ok && motive->key_source == MOTIVE_KEY_GIVEN) {
-        ok = json_add(document, "key", key_json(&motive->key));
+        ok = plan_json_add(document, "key", key_json(&motive->key));
     }
-    ok = ok && json_add(document, "notes", notes_json(motive));
+    ok = ok && plan_json_add(document, "notes", notes_json(motive));
     if (ok && motive->form != MOTIVE_FORM_FULL) {
-        ok = json_add(document, "form", cJSON_CreateString(motive_form_name(motive->form)));
+        ok = plan_json_add(document, "form", cJSON_CreateString(motive_form_name(motive->form)));
     }
     if (ok && motive_pickup(motive).num != 0) {
-        ok = json_add(document, "pickup", motive_time_json(motive_pickup(motive)));
+        ok = plan_json_add(document, "pickup", motive_time_json(motive_pickup(motive)));
     }
     if (ok && motive->harmony_count > 0) {
         char *harmony = motive_harmony_to_text(motive);
-        ok = harmony && json_add(document, "harmony", cJSON_CreateString(harmony));
+        ok = harmony && plan_json_add(document, "harmony", cJSON_CreateString(harmony));
         free(harmony);
     }
     if (ok && motive->feature_count > 0) {
-        ok = json_add(document, "features", features_json(motive));
+        ok = plan_json_add(document, "features", features_json(motive));
     }
     if (ok && motive->role != MOTIVE_ROLE_MELODIC) {
-        ok = json_add(document, "role", cJSON_CreateString(motive_role_name(motive->role)));
+        ok = plan_json_add(document, "role", cJSON_CreateString(motive_role_name(motive->role)));
     }
     if (!ok) {
         cJSON_Delete(document);
@@ -858,7 +858,7 @@ static bool read_time(JsonReader *reader, const cJSON *item, const char *path, l
 
 static bool read_time_member(JsonReader *reader, const cJSON *object, const char *path, const char *key, long min_num,
                              PlanTime *out) {
-    const cJSON *item = json_member(reader, object, path, key, true);
+    const cJSON *item = plan_json_member(reader, object, path, key, true);
     if (!item) {
         return false;
     }
@@ -903,7 +903,7 @@ static bool read_key(JsonReader *reader, const cJSON *item, MotiveDocument *docu
     if (!json_read_int_member(reader, item, "key", "tonic_pitch_class", 0, 11, &tonic)) {
         return false;
     }
-    const cJSON *mode = json_member(reader, item, "key", "mode", true);
+    const cJSON *mode = plan_json_member(reader, item, "key", "mode", true);
     if (!mode) {
         return false;
     }
@@ -972,7 +972,7 @@ static bool read_features(JsonReader *reader, const cJSON *array, MotiveDocument
         if (!cJSON_IsObject(item)) {
             return json_bad_format(reader, path, "expected an object");
         }
-        const cJSON *label = json_member(reader, item, path, "label", true);
+        const cJSON *label = plan_json_member(reader, item, path, "label", true);
         long first;
         long last;
         if (!label || !json_read_int_member(reader, item, path, "first", 0, 1000000L, &first) ||
@@ -1040,7 +1040,7 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
              json_bad_format(&reader, "role", "expected \"melodic\" or \"accompaniment\"");
         document->has_role = ok;
     }
-    ok = ok && read_notes(&reader, json_member(&reader, root, "", "notes", true), motive);
+    ok = ok && read_notes(&reader, plan_json_member(&reader, root, "", "notes", true), motive);
     cJSON_Delete(root);
     if (!ok) {
         motive_set_error(error, detail.path, "%s", detail.message);

@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <harmony_cadence_rules.h>
-#include <texture_rules.h>
+#include <standard-harmony/harmony_cadence_rules.h>
+#include <standard-texture/texture_rules.h>
 
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
