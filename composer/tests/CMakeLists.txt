@@ -92,6 +92,19 @@ target_link_libraries(test_motive_sketch_bridge PRIVATE ursatz_composer)
 target_compile_options(test_motive_sketch_bridge PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_motive_sketch_bridge COMMAND test_motive_sketch_bridge)
 
+add_executable(test_motive_meter test_motive_meter.c)
+target_link_libraries(test_motive_meter PRIVATE ursatz_composer cjson)
+target_include_directories(test_motive_meter PRIVATE ${PROJECT_SOURCE_DIR}/src)
+target_compile_options(test_motive_meter PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME test_motive_meter COMMAND test_motive_meter)
+find_program(VALGRIND_PROGRAM valgrind)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_motive_meter_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     $<TARGET_FILE:test_motive_meter>)
+    set_tests_properties(test_motive_meter_valgrind PROPERTIES LABELS slow)
+endif()
+
 add_executable(test_motive_develop test_motive_develop.c)
 target_link_libraries(test_motive_develop PRIVATE ursatz_composer)
 target_compile_options(test_motive_develop PRIVATE -Wall -Wextra -Wpedantic)
