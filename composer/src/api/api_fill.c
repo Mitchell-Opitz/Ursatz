@@ -303,7 +303,8 @@ ComposerStatus composer_api_fill(const char *request_json, const ComposerJob *jo
         cJSON *extra = NULL;
         if (candidates.count > 0) {
             extra = cJSON_CreateObject();
-            if (!extra || !cJSON_AddItemToObject(extra, "candidates", candidates_json(&candidates, used))) {
+            if (!extra || !cJSON_AddItemToObject(extra, "candidates", candidates_json(&candidates, used)) ||
+                !cJSON_AddNumberToObject(extra, "candidates_tried", (double)candidates.tried)) {
                 cJSON_Delete(extra);
                 extra = NULL;
                 status = fail_alloc(&out->error);
