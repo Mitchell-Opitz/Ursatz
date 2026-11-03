@@ -13,6 +13,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_support.h"
 
 /*
  * The `grow` command, run as a process: each form and a hybrid from the D minor motive fixture, the files it writes
@@ -32,36 +33,21 @@ static int run(const char *arguments, const char *out_file, const char *err_file
     return WEXITSTATUS(status);
 }
 
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    assert(file);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)length + 1);
-    assert(text);
-    size_t read = fread(text, 1, (size_t)length, file);
-    assert(read == (size_t)length);
-    text[length] = '\0';
-    fclose(file);
-    return text;
-}
-
 /* The standard output of a command that must succeed. */
 static char *output_of(const char *arguments) {
     int status = run(arguments, "grow_cli_out.txt", "grow_cli_err.txt");
     if (status != 0) {
-        char *err = read_file("grow_cli_err.txt");
+        char *err = test_read_file("grow_cli_err.txt", NULL);
         fprintf(stderr, "'%s' exited %d: %s\n", arguments, status, err);
         free(err);
     }
     assert(status == 0);
-    return read_file("grow_cli_out.txt");
+    return test_read_file("grow_cli_out.txt", NULL);
 }
 
 static void expect_failure(const char *arguments, int status, const char *message) {
     int got = run(arguments, "grow_cli_out.txt", "grow_cli_err.txt");
-    char *err = read_file("grow_cli_err.txt");
+    char *err = test_read_file("grow_cli_err.txt", NULL);
     if (got != status || strstr(err, message) == NULL) {
         fprintf(stderr, "'%s': expected status %d with '%s', got %d: %s\n", arguments, status, message, got, err);
     }
@@ -225,7 +211,7 @@ static void test_files(void) {
     plan_destroy(plan);
 
     /* The melody and the bass, eight bars of them: nothing of the source material. */
-    char *midi_bytes = read_file("grow_cli.mid");
+    char *midi_bytes = test_read_file("grow_cli.mid", NULL);
     FILE *file = fopen("grow_cli.mid", "rb");
     assert(file);
     fseek(file, 0, SEEK_END);
@@ -278,9 +264,9 @@ static void test_suggest(void) {
         PlanJsonError error;
         assert(plan_read_json_file(path, &plan, &error) == PLAN_OK);
         plan_destroy(plan);
-        plans[k - 1] = read_file(path);
+        plans[k - 1] = test_read_file(path, NULL);
         snprintf(path, sizeof(path), "grow_cli_s-%d.mid", k);
-        free(read_file(path));
+        free(test_read_file(path, NULL));
     }
     assert(strcmp(plans[0], plans[1]) != 0 && strcmp(plans[1], plans[2]) != 0 && strcmp(plans[0], plans[2]) != 0);
     for (int k = 0; k < 3; k++) {
@@ -447,7 +433,7 @@ static void test_mode(void) {
 
 static void test_help(void) {
     assert(run("--help", "grow_cli_out.txt", "grow_cli_err.txt") == 0);
-    char *out = read_file("grow_cli_out.txt");
+    char *out = test_read_file("grow_cli_out.txt", NULL);
     assert(strstr(out, "--into") != NULL && strstr(out, "--hybrid") != NULL && strstr(out, "--suggest") != NULL &&
            strstr(out, "--first-cadence") != NULL && strstr(out, "--accompaniment") != NULL &&
            strstr(out, "--texture") != NULL);

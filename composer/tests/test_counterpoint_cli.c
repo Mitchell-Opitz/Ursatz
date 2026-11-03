@@ -6,6 +6,7 @@
 
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
+#include "support/test_support.h"
 
 /*
  * The `counterpoint` command, run as a process on Fux's D Dorian cantus firmus: the text and the JSON it prints, the same
@@ -24,38 +25,20 @@ static int run(const char *arguments, const char *out_file, const char *err_file
     return WEXITSTATUS(status);
 }
 
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    long length;
-    char *text;
-    size_t read;
-    assert(file);
-    fseek(file, 0, SEEK_END);
-    length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    text = malloc((size_t)length + 1);
-    assert(text);
-    read = fread(text, 1, (size_t)length, file);
-    assert(read == (size_t)length);
-    text[length] = '\0';
-    fclose(file);
-    return text;
-}
-
 static char *output_of(const char *arguments) {
     int status = run(arguments, "cp_cli_out.txt", "cp_cli_err.txt");
     if (status != 0) {
-        char *err = read_file("cp_cli_err.txt");
+        char *err = test_read_file("cp_cli_err.txt", NULL);
         fprintf(stderr, "'%s' exited %d: %s\n", arguments, status, err);
         free(err);
     }
     assert(status == 0);
-    return read_file("cp_cli_out.txt");
+    return test_read_file("cp_cli_out.txt", NULL);
 }
 
 static void expect_failure(const char *arguments, int status, const char *message) {
     int got = run(arguments, "cp_cli_out.txt", "cp_cli_err.txt");
-    char *err = read_file("cp_cli_err.txt");
+    char *err = test_read_file("cp_cli_err.txt", NULL);
     if (got != status || strstr(err, message) == NULL) {
         fprintf(stderr, "'%s': expected status %d with '%s', got %d: %s\n", arguments, status, message, got, err);
     }
@@ -129,7 +112,7 @@ static void test_files(void) {
     assert(plan_lane_span_payload(plan, ids[0])->notes.note_count >= 11);
     plan_destroy(plan);
     /* The MIDI file holds the line and the counter-melody: two tracks of notes besides any of its own. */
-    midi = read_file("cp_cli.mid");
+    midi = test_read_file("cp_cli.mid", NULL);
     assert(strncmp(midi, "MThd", 4) == 0);
     {
         int tracks = ((unsigned char)midi[10] << 8) | (unsigned char)midi[11];

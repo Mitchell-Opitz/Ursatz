@@ -18,6 +18,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_tones.h>
+#include "util/util.h"
 
 /* At most this many motives in a request, and arguments for grow. */
 #define THEME_MOTIVES 16
@@ -46,28 +47,6 @@ typedef struct {
 static const char *const SLOT_KEYS[GROW_SLOT_COUNT] = {"basic", "contrasting", "continuation", "cadential"};
 
 /* --- the request --------------------------------------------------------------- */
-
-char *request_read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    char *text = NULL;
-    if (fseek(file, 0, SEEK_END) == 0) {
-        long length = ftell(file);
-        if (length >= 0 && fseek(file, 0, SEEK_SET) == 0) {
-            text = malloc((size_t)length + 1);
-            if (text && fread(text, 1, (size_t)length, file) == (size_t)length) {
-                text[length] = '\0';
-            } else {
-                free(text);
-                text = NULL;
-            }
-        }
-    }
-    fclose(file);
-    return text;
-}
 
 /* A member that is a string (or null / absent when optional). Returns false, with the error printed, for any other type. */
 bool request_member_string(const cJSON *object, const char *name, bool required, const char **out) {
@@ -1099,8 +1078,8 @@ int run_theme(int argc, char **argv) {
     if (!options.input) {
         return cli_fail(CLI_EXIT_USAGE, "theme needs a request file\n%s", THEME_USAGE_LINE);
     }
-    char *text = request_read_file(options.input);
-    if (!text) {
+    char *text;
+    if (!util_read_file(options.input, &text, NULL)) {
         return cli_fail(CLI_EXIT_USAGE, "cannot read the request '%s'", options.input);
     }
     ThemeExt ext;

@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
+#include "support/test_support.h"
 
 /*
  * The `random-motive` command, run as a process: that the same seed gives the same output and another seed does not,
@@ -23,33 +24,18 @@ static int run(const char *arguments, const char *out_file, const char *err_file
     return WEXITSTATUS(status);
 }
 
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    assert(file);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)length + 1);
-    assert(text);
-    size_t read = fread(text, 1, (size_t)length, file);
-    assert(read == (size_t)length);
-    text[length] = '\0';
-    fclose(file);
-    return text;
-}
-
 /* The standard output of a command that must succeed. */
 static char *output_of(const char *arguments) {
     assert(run(arguments, "random_motive_cli_out.txt", "random_motive_cli_err.txt") == 0);
-    char *err = read_file("random_motive_cli_err.txt");
+    char *err = test_read_file("random_motive_cli_err.txt", NULL);
     assert(err[0] == '\0');
     free(err);
-    return read_file("random_motive_cli_out.txt");
+    return test_read_file("random_motive_cli_out.txt", NULL);
 }
 
 static void expect_failure(const char *arguments, int status, const char *message) {
     assert(run(arguments, "random_motive_cli_out.txt", "random_motive_cli_err.txt") == status);
-    char *err = read_file("random_motive_cli_err.txt");
+    char *err = test_read_file("random_motive_cli_err.txt", NULL);
     if (strstr(err, message) == NULL) {
         fprintf(stderr, "'%s': expected '%s' in: %s\n", arguments, message, err);
     }

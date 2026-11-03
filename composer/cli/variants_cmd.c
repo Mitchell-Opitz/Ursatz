@@ -14,6 +14,7 @@
 #include "cli_options.h"
 #include "motive_extras.h"
 #include "motive_input.h"
+#include "util/util.h"
 
 #define VARIANTS_COUNT_MAX 16
 #define VARIANTS_COUNT_DEFAULT 6
@@ -168,28 +169,6 @@ static void print_operations(void) {
 
 /* --- the chain file ------------------------------------------------------ */
 
-static char *read_whole_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    char *text = NULL;
-    if (fseek(file, 0, SEEK_END) == 0) {
-        long length = ftell(file);
-        if (length >= 0 && fseek(file, 0, SEEK_SET) == 0) {
-            text = malloc((size_t)length + 1);
-            if (text && fread(text, 1, (size_t)length, file) == (size_t)length) {
-                text[length] = '\0';
-            } else {
-                free(text);
-                text = NULL;
-            }
-        }
-    }
-    fclose(file);
-    return text;
-}
-
 static bool whole_number(const cJSON *item, long *out) {
     if (!cJSON_IsNumber(item) || item->valuedouble != (double)(long)item->valuedouble) {
         return false;
@@ -264,8 +243,8 @@ static int set_param(VariantStep *step, size_t number, const char *path, const c
 
 /* Reads {"steps": [{"op", "params"}]} into *chain. Returns 0 or the status of the error it printed. */
 static int read_chain(const char *path, VariantChain *chain) {
-    char *text = read_whole_file(path);
-    if (!text) {
+    char *text;
+    if (!util_read_file(path, &text, NULL)) {
         return cli_fail(CLI_EXIT_USAGE, "cannot read chain file '%s'", path);
     }
     cJSON *root = cJSON_Parse(text);

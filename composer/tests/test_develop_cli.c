@@ -7,6 +7,7 @@
 #include "io/midi_importer.h"
 #include "io/musicxml_importer.h"
 #include "pitch/pitch_numeric_value.h"
+#include "support/test_support.h"
 
 /*
  * The `develop` command, run as a process: what it prints for each operation, that it is reproducible from the seed,
@@ -25,33 +26,18 @@ static int run(const char *arguments, const char *out_file, const char *err_file
     return WEXITSTATUS(status);
 }
 
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    assert(file);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)length + 1);
-    assert(text);
-    size_t read = fread(text, 1, (size_t)length, file);
-    assert(read == (size_t)length);
-    text[length] = '\0';
-    fclose(file);
-    return text;
-}
-
 /* The standard output of a command that must succeed. */
 static char *output_of(const char *arguments) {
     assert(run(arguments, "develop_cli_out.txt", "develop_cli_err.txt") == 0);
-    char *err = read_file("develop_cli_err.txt");
+    char *err = test_read_file("develop_cli_err.txt", NULL);
     assert(err[0] == '\0');
     free(err);
-    return read_file("develop_cli_out.txt");
+    return test_read_file("develop_cli_out.txt", NULL);
 }
 
 static void expect_failure(const char *arguments, int status, const char *message) {
     assert(run(arguments, "develop_cli_out.txt", "develop_cli_err.txt") == status);
-    char *err = read_file("develop_cli_err.txt");
+    char *err = test_read_file("develop_cli_err.txt", NULL);
     if (strstr(err, message) == NULL) {
         fprintf(stderr, "'%s': expected '%s' in: %s\n", arguments, message, err);
     }
@@ -159,7 +145,7 @@ static void test_files(void) {
 
     /* The source, then its retrograde. */
     static const long EXPECTED[8] = {62, 65, 69, 74, 74, 69, 65, 62};
-    char *midi_bytes = read_file("develop_cli.mid");
+    char *midi_bytes = test_read_file("develop_cli.mid", NULL);
     FILE *file = fopen("develop_cli.mid", "rb");
     assert(file);
     fseek(file, 0, SEEK_END);
@@ -247,7 +233,7 @@ static void test_nothing_to_develop(void) {
 
 static void test_help(void) {
     assert(run("--help", "develop_cli_out.txt", "develop_cli_err.txt") == 0);
-    char *out = read_file("develop_cli_out.txt");
+    char *out = test_read_file("develop_cli_out.txt", NULL);
     assert(strstr(out, "--op") != NULL && strstr(out, "--suggest") != NULL && strstr(out, "--keep-rhythm") != NULL);
     free(out);
 }

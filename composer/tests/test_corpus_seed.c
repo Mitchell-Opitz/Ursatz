@@ -10,6 +10,7 @@
 #include <ursatz_composer/corpus_seed.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/plan_json.h>
+#include "support/test_support.h"
 
 /*
  * Seeding from a corpus (corpus_seed.h, docs/style.md). The corpus is the output directory of `ursatz-analyzer --corpus`
@@ -164,27 +165,15 @@ static bool exists(const char *path) {
     return access(path, F_OK) == 0;
 }
 
-static char *slurp(const char *path) {
-    FILE *file = fopen(path, "rb");
-    assert(file);
-    fseek(file, 0, SEEK_END);
-    long size = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = calloc((size_t)size + 1, 1);
-    assert(text && fread(text, 1, (size_t)size, file) == (size_t)size);
-    fclose(file);
-    return text;
-}
-
 static bool output_contains(const char *needle) {
-    char *text = slurp("seed_test_out.txt");
+    char *text = test_read_file("seed_test_out.txt", NULL);
     bool found = strstr(text, needle) != NULL;
     free(text);
     return found;
 }
 
 static bool error_contains(const char *needle) {
-    char *text = slurp("seed_test_err.txt");
+    char *text = test_read_file("seed_test_err.txt", NULL);
     bool found = strstr(text, needle) != NULL;
     free(text);
     return found;
@@ -274,7 +263,7 @@ static int test_progression(void) {
         snprintf(arguments, sizeof(arguments), "fill seed_progression.json --seed %d --out seed_filled.json", seed_number);
         remove("seed_filled.json");
         if (run(arguments) != 0) {
-            fprintf(stderr, "fill seed %d failed:\n%s\n", seed_number, slurp("seed_test_err.txt"));
+            fprintf(stderr, "fill seed %d failed:\n%s\n", seed_number, test_read_file("seed_test_err.txt", NULL));
             return 1;
         }
         assert(exists("seed_filled.json"));
