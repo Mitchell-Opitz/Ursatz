@@ -13,7 +13,7 @@
 #include <ursatz_composer/plan_json.h>
 
 #include "cli_options.h"
-#include "fill.h"
+#include "workflow.h"
 #include "piece_text.h"
 #include "util/request_parse.h"
 #include "util/util.h"
@@ -242,13 +242,11 @@ static int read_request_file(const char *path, cJSON **out) {
 
 /* The loop plan file to work on, the section and the lane, as members of the API request. */
 static int add_edit(const Options *options, cJSON *request) {
-    char *text = NULL;
-    int status = cli_load_plan_text(options->from, &text);
+    cJSON *plan = NULL;
+    int status = cli_read_plan_file(options->from, &plan);
     if (status != 0) {
         return status;
     }
-    cJSON *plan = cJSON_Parse(text);
-    free(text);
     cJSON *edit = cJSON_CreateObject();
     cJSON *lanes = cJSON_CreateArray();
     bool whole = !options->lane || request_equals_ignore_case(options->lane, "all");

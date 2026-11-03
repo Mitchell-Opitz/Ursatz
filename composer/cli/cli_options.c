@@ -12,7 +12,6 @@
 
 #include "api/api_grow.h"
 #include "api/api_internal.h"
-#include "plan.h"
 
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_json.h>
@@ -58,7 +57,7 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
     static const char *const OPTIONS[] = {"format", "form", "harmony", "feature", "role", "tone", "tempo",
                                           "count", "seed", "distance", "function", "depth", "mode", "suggest",
                                           "into", "hybrid", "bars", "cadence", "first_cadence", "accompaniment", "texture",
-                                          "voicing", "style_weight", "blend_weight", "blend_weights", "blend"};
+                                          "voicing", "style_weight", "blend_weight", "blend_weights", "blend", "key", "candidates", "style", "at", "cells", "like", "like_progression", "style_without"};
     char message[sizeof error->message + 256];
     const char *source = error->message;
     size_t used = 0;
@@ -111,6 +110,18 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
          "texture",
          "and --texture chorale write the inner voices themselves; they cannot be combined with --accompaniment or another "
          "--texture"},
+        {"leave out mode", "leave out --mode"},
+        {"no size of count ", "no size of --count "},
+        {" with count ", " with --count "},
+        {"(or count ", "(or --count "},
+        {"with mode \"minor\"", "with --mode minor"},
+        {"needs a style: give style or", "needs a style: give --style or"},
+        {"needs an at:", "needs an --at:"},
+        {"needs corpus <dir>", "needs --from-corpus <dir>"},
+        {"goes with a progression", "goes with --given-progression"},
+        {"plan it with a given melody", "plan it with --given-melody"},
+        {"corpus needs like <file> or a like_progression", "--from-corpus needs --like <file> or --like-progression"},
+        {" and motive both give", " and --motive both give"},
         {"melody, voicing keeps the grown one", "melody, --voicing keeps the grown one"},
         {"accompaniment motive needs an accompaniment motive", "accompaniment motive needs --accompaniment-motive <file>"},
         {"the accompaniment motive is the accompaniment pattern; it cannot be combined with accompaniment ",
@@ -209,28 +220,6 @@ int cli_load_blend(const char *style_path, const char *blend_path, const Compose
     memset(&error, 0, sizeof error);
     ComposerStatus status = api_load_blend(style_path, blend_path, weights, without, without_count, out, &error);
     return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, NULL);
-}
-
-static const char *const STYLE_DIMENSION_LABELS[STYLE_DIMENSION_COUNT] = {"harmony", "rhythm", "melody", "form"};
-
-void cli_print_style_distance(const StyleComparison *comparison) {
-    printf("\nstyle distance (the Analyzer's, 0 is the style, 1 is nothing alike)\n");
-    for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
-        if (comparison->dimension_present[d]) {
-            printf("  %-8s %.4f\n", STYLE_DIMENSION_LABELS[d], style_rational_value(comparison->dimension[d]));
-        }
-    }
-    if (comparison->overall_present) {
-        printf("  %-8s %.4f\n", "overall", style_rational_value(comparison->overall));
-    }
-}
-
-void cli_print_style_distance_json(const StyleComparison *comparison) {
-    cJSON *document = api_style_distance_json(comparison);
-    char *text = document ? cJSON_PrintUnformatted(document) : NULL;
-    printf("\"style_distance\":%s", text ? text : "{}");
-    cJSON_free(text);
-    cJSON_Delete(document);
 }
 
 void cli_print_json(const cJSON *document) {
@@ -352,14 +341,6 @@ void cli_print_seed_line(const char *what, const CorpusSeed *seed) {
     printf("%s from %s %s, score %lu/%lu\n", what, seed->piece, span, seed->score_numerator, seed->score_denominator);
 }
 
-void cli_print_seed_json(const CorpusSeed *seed) {
-    cJSON *document = api_seed_json(seed);
-    char *text = document ? cJSON_PrintUnformatted(document) : NULL;
-    printf("%s", text ? text : "{}");
-    cJSON_free(text);
-    cJSON_Delete(document);
-}
-
 int cli_seed_source(const CorpusSeed *seed, PlanSource *out) {
     memset(out, 0, sizeof(*out));
     if (snprintf(out->piece, PLAN_SOURCE_PIECE_MAX, "%s", seed->piece) >= PLAN_SOURCE_PIECE_MAX) {
@@ -374,110 +355,8 @@ int cli_seed_source(const CorpusSeed *seed, PlanSource *out) {
     return 0;
 }
 
-int cli_add_source(PiecePlan *plan, NodeId node, const CorpusSeed *seed) {
-    PlanConstraint constraint;
-    memset(&constraint, 0, sizeof(constraint));
-    constraint.kind = PLAN_CONSTRAINT_SOURCE;
-    int status = cli_seed_source(seed, &constraint.params.source);
-    if (status != 0) {
-        return status;
-    }
-    if (node == PLAN_NODE_NONE || plan_node_add_constraint(plan, node, &constraint) != PLAN_OK) {
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot record the source of the seeded material in the plan");
-    }
-    return 0;
-}
-
 NodeId cli_find_node(const PiecePlan *plan, const char *name) {
     return api_find_node(plan, name);
-}
-
-/* --- the node a command works on ------------------------------------------------ */
-
-int cli_check_target(CliTargetOptions *options, const char *command, const char *usage) {
-    if (!options->node_text == !options->section_text) {
-        return cli_fail(CLI_EXIT_USAGE, "%s needs a node: give --node <id> or --section <letter>, not both\n%s", command, usage);
-    }
-    if (options->node_text && !request_parse_whole_number(options->node_text, 1000000UL, &options->node)) {
-        return cli_fail(CLI_EXIT_USAGE, "--node must be a whole number (the id in the plan file), not '%s'", options->node_text);
-    }
-    options->has_lane = false;
-    if (options->lane_text) {
-        options->has_lane = true;
-        if (!api_lane_from_name(options->lane_text, &options->lane)) {
-            return cli_fail(CLI_EXIT_USAGE, "--lane must be harmony, bass, melody or inner, not '%s'", options->lane_text);
-        }
-    }
-    return 0;
-}
-
-/* The node the options name, or the exit status of the error it printed. */
-int cli_find_target_node(const PiecePlan *plan, const CliTargetOptions *options, bool quiet, NodeId *out) {
-    if (options->node_text) {
-        if (!plan_has_node(plan, (NodeId)options->node)) {
-            return quiet ? CLI_EXIT_UNSATISFIABLE : cli_fail(CLI_EXIT_UNSATISFIABLE, "the plan has no node %lu (ids run from 1 to %zu)", options->node,
-                            plan_node_count(plan));
-        }
-        *out = (NodeId)options->node;
-        return 0;
-    }
-    CliSection sections[CLI_MAX_SECTIONS];
-    size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
-    count = count > CLI_MAX_SECTIONS ? CLI_MAX_SECTIONS : count;
-    for (size_t i = 0; i < count; i++) {
-        if (strcmp(sections[i].letter, options->section_text) == 0 ||
-            (options->section_text[1] == '\0' && request_equals_ignore_case(sections[i].letter, options->section_text))) {
-            *out = sections[i].node;
-            return 0;
-        }
-    }
-    return quiet ? CLI_EXIT_UNSATISFIABLE : cli_fail(CLI_EXIT_UNSATISFIABLE, "the plan has no section '%s'", options->section_text);
-}
-
-/*
- * The targets: the node, or with a lane every span of it under the node (all the voices for inner). Into a new array;
- * the exit status of the error printed otherwise.
- */
-int cli_find_targets(const PiecePlan *plan, const CliTargetOptions *options, FillTarget **out, size_t *count) {
-    NodeId node;
-    int status = cli_find_target_node(plan, options, false, &node);
-    if (status != 0) {
-        return status;
-    }
-    ComposerError error;
-    memset(&error, 0, sizeof error);
-    ComposerStatus found = api_lane_targets(plan, node, options->has_lane, options->lane, out, count, &error);
-    return found == COMPOSER_OK ? 0 : cli_fail_api(found, &error, NULL);
-}
-
-/* The name of the target in words: "section B", "node 12", "the harmony of section B". */
-void cli_describe_target(const PiecePlan *plan, const CliTargetOptions *options, char *out, size_t size) {
-    NodeId node;
-    char what[64];
-    if (cli_find_target_node(plan, options, true, &node) != 0) {
-        snprintf(out, size, "the node");
-        return;
-    }
-    CliSection sections[CLI_MAX_SECTIONS];
-    size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
-    count = count > CLI_MAX_SECTIONS ? CLI_MAX_SECTIONS : count;
-    snprintf(what, sizeof(what), "node %zu", (size_t)node);
-    for (size_t i = 0; i < count; i++) {
-        if (sections[i].node == node) {
-            snprintf(what, sizeof(what), "section %s", sections[i].letter);
-        }
-    }
-    if (options->has_lane) {
-        snprintf(out, size, "the %s of %s", api_lane_label(options->lane), what);
-    } else {
-        snprintf(out, size, "%s", what);
-    }
-}
-
-int cli_report_refused(RegenerateResult result, const char *what) {
-    ComposerError error;
-    memset(&error, 0, sizeof error);
-    return cli_fail_api(api_refused(result, what, &error), &error, NULL);
 }
 
 bool cli_write_bytes(const char *path, const void *data, size_t size) {
