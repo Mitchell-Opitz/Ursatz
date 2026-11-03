@@ -34,8 +34,7 @@ static const char *const STYLE_CATEGORIES[] = {
     STYLE_CATEGORY_THEME_FORM,        STYLE_CATEGORY_PHRASE_LENGTH,       STYLE_CATEGORY_SECTION_LETTERS,
     STYLE_CATEGORY_MODE,              STYLE_CATEGORY_TEMPO,               STYLE_CATEGORY_NOTE_DENSITY};
 
-ComposerStatus api_style_without_add(const char **names, size_t *count, size_t capacity, const char *name,
-                                     ComposerError *error) {
+ComposerStatus api_style_category_check(const char *name, ComposerError *error) {
     bool known = false;
     for (size_t i = 0; i < sizeof STYLE_CATEGORIES / sizeof *STYLE_CATEGORIES; i++) {
         known = known || strcmp(name, STYLE_CATEGORIES[i]) == 0;
@@ -50,6 +49,15 @@ ComposerStatus api_style_without_add(const char **names, size_t *count, size_t c
         }
         return api_fail(error, COMPOSER_ERR_REQUEST, "/style_without",
                         "style_without: '%s' is not a style category (the categories are %s)", name, list);
+    }
+    return COMPOSER_OK;
+}
+
+ComposerStatus api_style_without_add(const char **names, size_t *count, size_t capacity, const char *name,
+                                     ComposerError *error) {
+    ComposerStatus checked = api_style_category_check(name, error);
+    if (checked != COMPOSER_OK) {
+        return checked;
     }
     for (size_t i = 0; i < *count; i++) {
         if (strcmp(names[i], name) == 0) {
