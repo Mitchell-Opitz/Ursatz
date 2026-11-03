@@ -6,13 +6,15 @@
 
 /*
  * The harmonic rhythm of the meters this operator knows. A chord changes only
- * on an accented beat, and the cells of a bar are the accented beats the
- * standard meter names (standard_meter_accent_beats; a cell is the time from
- * one to the next):
+ * on a beat the Composer chooses to change on (a composing decision): one cell
+ * per beat of the meter, the beat being the dotted note of a compound meter,
+ * and in a quadruple meter the beats the standard meter accents
+ * (standard_meter_accent_beats). A cell is the time from one to the next:
  *   2/4  beat 1                  one cell
  *   3/4  beat 1                  one cell
  *   4/4  beats 1 and 3           two cells; beat 1 is strong, beat 3 medium
- *   6/8  beat 1                  one cell
+ *   6/8  beats 1 and 4 (the two  two cells; beat 1 is strong, beat 4 medium
+ *        dotted quarters)
  */
 
 #define RHYTHM_MAX_CELLS 4u
@@ -30,31 +32,28 @@ static bool meter_signature(const PlanMeter *meter, TimeSignature **out) {
     return result == TIME_SIGNATURE_OK;
 }
 
-static bool meter_accents(const PlanMeter *meter, BeatStrength *strengths, size_t *count) {
+bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells) {
     TimeSignature *signature = NULL;
     unsigned beats[RHYTHM_MAX_CELLS];
-    if (!meter_signature(meter, &signature)) {
+    size_t count = 0;
+    if (!cells || !meter_signature(meter, &signature)) {
         return false;
     }
-    bool ok = standard_meter_accent_beats(signature, beats, strengths, RHYTHM_MAX_CELLS, count);
+    bool ok = standard_meter_accent_beats(signature, beats, NULL, RHYTHM_MAX_CELLS, &count);
     time_signature_destroy(signature);
-    return ok;
-}
-
-bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells) {
-    BeatStrength strengths[RHYTHM_MAX_CELLS];
-    size_t count = 0;
-    if (!cells || !meter_accents(meter, strengths, &count) || count == 0) {
+    if (!ok || count == 0) {
         return false;
     }
     /* The meters this operator writes: simple duple, triple and quadruple over quarters, and 6/8. */
-    bool known = (meter->beat_unit == 4 && meter->beats_per_bar >= 2 && meter->beats_per_bar <= 4) ||
-                 (meter->beat_unit == 8 && meter->beats_per_bar == 6);
-    if (!known) {
-        return false;
+    if (meter->beat_unit == 8 && meter->beats_per_bar == 6) {
+        *cells = (size_t)meter->beats_per_bar / 3; /* the two dotted-quarter beats */
+        return true;
     }
-    *cells = count;
-    return true;
+    if (meter->beat_unit == 4 && meter->beats_per_bar >= 2 && meter->beats_per_bar <= 4) {
+        *cells = count;
+        return true;
+    }
+    return false;
 }
 
 bool harmony_meter_supported(const PlanMeter *meter) {
