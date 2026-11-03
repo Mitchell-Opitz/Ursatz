@@ -103,4 +103,10 @@ ComposerStatus composer_api_motive_from_midi(const uint8_t *bytes, size_t size, 
  */
 ComposerStatus composer_api_motive_render(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
+/*
+ * The variant operations of the registry: name, label, category, citation, parameters and the forms each applies to. json:
+ * what `variants --list-ops --json` prints.
+ */
+ComposerStatus composer_api_variant_operations(ComposerResponse *out);
+
 #endif
