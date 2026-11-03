@@ -12,6 +12,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "harmony/harmony_internal.h"
+#include "util/util.h"
 
 /*
  * The tonic spelled with the fewest accidentals, by pitch class: letter (0 C, 1 D, 2 E, 3 F, 4 G, 5 A,
@@ -69,14 +70,6 @@ PitchSpelling *harmony_spell_tonic(const PlanKey *key, int octave) {
     return spelling;
 }
 
-static unsigned bits_set(unsigned bits) {
-    unsigned count = 0;
-    for (; bits; bits >>= 1) {
-        count += bits & 1u;
-    }
-    return count;
-}
-
 static unsigned melodic_soft_rules(void) {
     unsigned count = 0;
     for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
@@ -132,7 +125,7 @@ bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict) {
                     break;
                 }
             }
-            verdict->soft_held = verdict->soft_total - bits_set(soft);
+            verdict->soft_held = verdict->soft_total - util_bits_set(soft);
         }
     }
     for (size_t i = 0; i < made; i++) {

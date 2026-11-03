@@ -5,6 +5,7 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
+#include "util/plan_util.h"
 
 /* The dependents found so far, without repeats. */
 typedef struct {
@@ -40,15 +41,6 @@ static bool list_add(DependentList *list, const PiecePlan *plan, FillTarget targ
     }
     list->items[list->count++] = target;
     return true;
-}
-
-static bool spans_overlap(PlanSpan a, PlanSpan b) {
-    PlanTime a_end;
-    PlanTime b_end;
-    if (plan_span_end(a, &a_end) != PLAN_OK || plan_span_end(b, &b_end) != PLAN_OK) {
-        return false;
-    }
-    return plan_time_compare(a.start, b_end) < 0 && plan_time_compare(b.start, a_end) < 0;
 }
 
 NodeId plan_section_of(const PiecePlan *plan, NodeId node) {
@@ -144,7 +136,7 @@ static void node_dependents(DependentList *list, const PiecePlan *plan, NodeId i
 static void add_over(DependentList *list, const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, bool only_texture) {
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         if (!plan_has_lane_span(plan, id) || plan_lane_span_lane(plan, id) != lane ||
-            !spans_overlap(plan_lane_span_span(plan, id), span)) {
+            !plan_spans_overlap(plan_lane_span_span(plan, id), span)) {
             continue;
         }
         if (only_texture && !has_constraint(plan, id, PLAN_CONSTRAINT_VOICING) &&

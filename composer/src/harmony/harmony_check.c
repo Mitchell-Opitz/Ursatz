@@ -21,14 +21,7 @@
 
 #include "check/shaping.h"
 #include "harmony/harmony_internal.h"
-
-static unsigned bits_set(unsigned bits) {
-    unsigned count = 0;
-    for (; bits; bits >>= 1) {
-        count += bits & 1u;
-    }
-    return count;
-}
+#include "util/util.h"
 
 /* How many of the phrase rules are soft. */
 static unsigned phrase_soft_rules(void) {
@@ -187,7 +180,7 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
         if (!checked || phrase_hard) {
             hard = "phrase model broken";
         }
-        soft_broken += bits_set(phrase_soft);
+        soft_broken += util_bits_set(phrase_soft);
     }
 
     /* The ending's own progression. */
@@ -213,7 +206,7 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
                 hard = "not a cadential progression";
             }
             soft_rules += cadence_soft_rules();
-            soft_broken += bits_set(cadence_soft);
+            soft_broken += util_bits_set(cadence_soft);
         }
     }
 

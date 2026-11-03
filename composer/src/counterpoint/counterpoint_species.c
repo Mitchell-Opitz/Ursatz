@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "counterpoint/counterpoint_internal.h"
+#include "util/util.h"
 
 /*
  * The beam search of the counterpoint operator. A state is the counter-melody written so far, in slots (counterpoint_
@@ -53,17 +54,13 @@ typedef struct {
     const State *state;
 } Gen;
 
-static int absolute(int value) {
-    return value < 0 ? -value : value;
-}
-
 static bool on_tonic(const CounterpointContext *context, int pitch) {
     return ((pitch - context->key.tonic_pitch_class) % 12 + 12) % 12 == 0;
 }
 
 /* A step a strict counterpoint allows between two notes of the line: no tritone, no seventh, no sixth but the rising minor one. */
 static bool move_ok(int from, int to) {
-    int size = absolute(to - from);
+    int size = util_absolute(to - from);
     return size <= 12 && size != 6 && size != 9 && size != 10 && size != 11 && !(size == 8 && to < from);
 }
 
@@ -73,7 +70,7 @@ static bool ordered(const CounterpointContext *context, size_t note, int pitch) 
 
 /* The semitones of a leap over 2, the cost of the line's shape. */
 static long leap_cost(int from, int to) {
-    int size = absolute(to - from);
+    int size = util_absolute(to - from);
     return size > 2 ? size - 2 : 0;
 }
 
@@ -84,7 +81,7 @@ static long parallel_cost(const CounterpointContext *context, size_t note, const
         return 0;
     }
     for (size_t k = 0; k < 3; k++) {
-        size[k] = absolute(downbeat[k] - context->line[note - 2 + k]) % 12;
+        size[k] = util_absolute(downbeat[k] - context->line[note - 2 + k]) % 12;
     }
     return size[0] == size[1] && size[1] == size[2] && (size[0] == 3 || size[0] == 4 || size[0] == 8 || size[0] == 9)
                ? PARALLEL_COST
@@ -170,26 +167,26 @@ static bool downbeat_ok(const Bar *bar, size_t slot, size_t note, int pitch) {
     size_t per_bar = context->per_bar;
     int earlier = pitch_of(bar, slot - per_bar);
     int last = pitch_of(bar, slot - 1);
-    int now = absolute(pitch - context->line[note]) % 12;
-    int size = absolute(pitch - earlier);
+    int now = util_absolute(pitch - context->line[note]) % 12;
+    int size = util_absolute(pitch - earlier);
     bool perfect = now == 0 || now == 7;
     if (size == 6 || size == 10 || size == 11) {
         return false;
     }
     if (context->species == 2) {
-        int was = absolute(earlier - context->line[note - 1]) % 12;
-        int weak = absolute(last - context->line[note - 1]) % 12;
+        int was = util_absolute(earlier - context->line[note - 1]) % 12;
+        int weak = util_absolute(last - context->line[note - 1]) % 12;
         return !(perfect && (was == now || weak == now));
     }
     if (perfect) {
-        int before = absolute(last - context->line[note - 1]) % 12;
+        int before = util_absolute(last - context->line[note - 1]) % 12;
         bool similar = (pitch - last > 0 && context->line[note] - context->line[note - 1] > 0) ||
                        (pitch - last < 0 && context->line[note] - context->line[note - 1] < 0);
         if (before == now || similar) {
             return false;
         }
         for (size_t beat = 1; beat < per_bar; beat++) {
-            int heard = absolute(pitch_of(bar, slot - per_bar + beat) - context->line[note - 1]) % 12;
+            int heard = util_absolute(pitch_of(bar, slot - per_bar + beat) - context->line[note - 1]) % 12;
             if ((now == 7 && beat >= 2 && heard == 7) || (now == 0 && heard == 0)) {
                 return false;
             }
@@ -216,7 +213,7 @@ static void descend_bar(Bar *bar, size_t at, int prev, long cost) {
             continue;
         }
         /* No note is more than a twelfth from the given line. */
-        if (absolute(pitch - context->line[note]) > 19) {
+        if (util_absolute(pitch - context->line[note]) > 19) {
             continue;
         }
         if (strong) {
@@ -228,7 +225,7 @@ static void descend_bar(Bar *bar, size_t at, int prev, long cost) {
             }
         } else if (!context->consonant[note][pitch]) {
             /* A dissonance on a weak slot is reached by step, and not by crossing the given line. */
-            if (!ordered(context, note, pitch) || absolute(pitch - prev) > 2 || pitch == prev) {
+            if (!ordered(context, note, pitch) || util_absolute(pitch - prev) > 2 || pitch == prev) {
                 continue;
             }
             extra += DISSONANT_COST;
@@ -240,7 +237,7 @@ static void descend_bar(Bar *bar, size_t at, int prev, long cost) {
             }
             /* A note that leaves a dissonance does so by a step or a third. */
             if (slot > 0 && !context->consonant[(slot - 1) / per_bar][from] && (slot - 1) % per_bar != 0 &&
-                absolute(pitch - from) > 4) {
+                util_absolute(pitch - from) > 4) {
                 continue;
             }
             extra += leap_cost(from, pitch) + (pitch == from ? REPEAT_COST : 0);

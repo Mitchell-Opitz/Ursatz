@@ -1,5 +1,7 @@
 add_library(ursatz_composer STATIC
     composer.c
+    util/util.c
+    util/plan_util.c
     style/style.c
     style/style_blend.c
     style/style_labels.c

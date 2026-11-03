@@ -6,20 +6,12 @@
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
 #include "piece/form_return_internal.h"
+#include "util/util.h"
 
 /* The most key spans a section is read across: a section holds at most two keys, with a few to spare. */
 #define MAX_KEY_PIECES 8
 
 /* ------------------------------------------------------------- the copy */
-
-static char *copy_string(const char *text) {
-    size_t size = text ? strlen(text) + 1 : 1;
-    char *out = malloc(size);
-    if (out) {
-        memcpy(out, text ? text : "", size);
-    }
-    return out;
-}
 
 static PlanConstraint *copy_constraints(size_t count, const PlanConstraint *(*at)(const PiecePlan *, size_t, size_t),
                                         const PiecePlan *plan, size_t id) {
@@ -74,7 +66,7 @@ static bool collect_nodes(const PiecePlan *plan, NodeId id, size_t parent, Retur
         node->kind = plan_node_kind(plan, child);
         node->parent = parent;
         node->span = plan_node_span(plan, child);
-        node->name = copy_string(plan_node_name(plan, child));
+        node->name = util_copy_string(plan_node_name(plan, child));
         node->state = plan_node_state(plan, child);
         node->constraint_count = plan_node_constraint_count(plan, child);
         node->constraints = copy_constraints(node->constraint_count, node_constraint_at, plan, child);
@@ -178,7 +170,7 @@ bool return_copy_clone(const ReturnCopy *from, ReturnCopy *out) {
         ReturnNode *node = &out->nodes[i];
         *node = from->nodes[i];
         out->node_count = i + 1;
-        node->name = copy_string(from->nodes[i].name);
+        node->name = util_copy_string(from->nodes[i].name);
         node->constraints = from->nodes[i].constraint_count ? calloc(node->constraint_count, sizeof(PlanConstraint)) : NULL;
         ok = node->name && (node->constraint_count == 0 || node->constraints);
         if (ok && node->constraint_count) {

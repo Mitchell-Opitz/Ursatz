@@ -10,6 +10,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
+#include "util/plan_util.h"
 
 #define FNV_OFFSET 14695981039346656037ULL
 #define FNV_PRIME 1099511628211ULL
@@ -216,15 +217,6 @@ RegenerateResult plan_variations(const PiecePlan *plan, const FillTarget *target
     return vary(plan, targets, target_count, config, count, false, out);
 }
 
-static bool in_subtree(const PiecePlan *plan, NodeId node, NodeId root) {
-    for (; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
-        if (node == root) {
-            return true;
-        }
-    }
-    return false;
-}
-
 RegenerateResult plan_harmonizations(const PiecePlan *plan, NodeId section, const ComposeConfig *config, size_t count,
                                      PlanVariations *out) {
     if (!plan || !config || !out) {
@@ -242,7 +234,7 @@ RegenerateResult plan_harmonizations(const PiecePlan *plan, NodeId section, cons
     size_t melody_count = 0;
     bool melody_given = true;
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
-        if (!plan_has_lane_span(plan, id) || !in_subtree(plan, plan_lane_span_owner(plan, id), section)) {
+        if (!plan_has_lane_span(plan, id) || !plan_in_subtree(plan, plan_lane_span_owner(plan, id), section)) {
             continue;
         }
         PlanLaneKind lane = plan_lane_span_lane(plan, id);

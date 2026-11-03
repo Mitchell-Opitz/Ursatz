@@ -12,6 +12,7 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/plan_state.h>
+#include "util/plan_util.h"
 
 /* A key lane span before it is added: its key and where it lies. */
 typedef struct {
@@ -20,10 +21,6 @@ typedef struct {
 } KeySegment;
 
 #define MAX_SEGMENTS (2 * FORM_TEMPLATE_MAX_SECTIONS + 1)
-
-static PieceResult from_plan(PlanResult result) {
-    return result == PLAN_OK ? PIECE_OK : (result == PLAN_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_BAD_REQUEST);
-}
 
 static HarmonyMode mode_of(PlanKeyMode mode) {
     return mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
@@ -136,9 +133,9 @@ static bool draw_keys(FormTemplateKind kind, size_t count, PlanKey home, FillRng
 static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, PlanKey key) {
     if (*count > 0 && same_key(segments[*count - 1].key, key)) {
         PlanTime end;
-        PieceResult result = from_plan(plan_span_end(segments[*count - 1].span, &end));
+        PieceResult result = piece_result_of_plan(plan_span_end(segments[*count - 1].span, &end));
         if (result == PIECE_OK && plan_time_compare(end, span.start) == 0) {
-            return from_plan(plan_time_add(segments[*count - 1].span.length, span.length,
+            return piece_result_of_plan(plan_time_add(segments[*count - 1].span.length, span.length,
                                            &segments[*count - 1].span.length));
         }
         return PIECE_ERR_BAD_REQUEST;
@@ -160,12 +157,12 @@ static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpa
     PlanSpan first;
     PlanSpan second;
     first.start = span.start;
-    PieceResult result = from_plan(plan_time_make(span.length.num, span.length.den * 2, &first.length));
+    PieceResult result = piece_result_of_plan(plan_time_make(span.length.num, span.length.den * 2, &first.length));
     if (result != PIECE_OK) {
         return result;
     }
     second.length = first.length;
-    result = from_plan(plan_time_add(span.start, first.length, &second.start));
+    result = piece_result_of_plan(plan_time_add(span.start, first.length, &second.start));
     if (result == PIECE_OK) {
         result = push_segment(segments, count, first, keys->start);
     }
@@ -180,8 +177,8 @@ static PieceResult set_section_key(PiecePlan *plan, NodeId section, PlanKey key)
             memset(&constraint, 0, sizeof(constraint));
             constraint.kind = PLAN_CONSTRAINT_KEY;
             constraint.params.key = key;
-            PieceResult result = from_plan(plan_node_remove_constraint(plan, section, i));
-            return result == PIECE_OK ? from_plan(plan_node_add_constraint(plan, section, &constraint)) : result;
+            PieceResult result = piece_result_of_plan(plan_node_remove_constraint(plan, section, i));
+            return result == PIECE_OK ? piece_result_of_plan(plan_node_add_constraint(plan, section, &constraint)) : result;
         }
     }
     return PIECE_ERR_BAD_REQUEST;
@@ -237,8 +234,8 @@ PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
         LaneSpanId id;
         memset(&payload, 0, sizeof(payload));
         payload.key = segments[i].key;
-        result = from_plan(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, segments[i].span, &payload, &id));
-        result = result == PIECE_OK ? from_plan(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN)) : result;
+        result = piece_result_of_plan(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, segments[i].span, &payload, &id));
+        result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN)) : result;
     }
     for (size_t i = 0; result == PIECE_OK && i < count; i++) {
         if (!same_key(out->sections[i].end, home)) {

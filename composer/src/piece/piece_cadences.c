@@ -7,12 +7,9 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/harmony_phrase.h>
+#include "util/plan_util.h"
 
 #define MAX_CADENCES 2
-
-static PieceResult from_plan(PlanResult result) {
-    return result == PLAN_OK ? PIECE_OK : (result == PLAN_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_BAD_REQUEST);
-}
 
 static bool same_key(PlanKey a, PlanKey b) {
     return a.tonic_pitch_class == b.tonic_pitch_class && a.mode == b.mode;
@@ -83,7 +80,7 @@ static bool section_key(const PiecePlan *plan, NodeId section, PlanKey *out) {
 static PieceResult set_section_cadences(PiecePlan *plan, NodeId section, const PlanCadenceType *cadences, size_t count) {
     for (size_t i = plan_node_constraint_count(plan, section); i > 0; i--) {
         if (plan_node_constraint_at(plan, section, i - 1)->kind == PLAN_CONSTRAINT_CADENCE) {
-            PieceResult result = from_plan(plan_node_remove_constraint(plan, section, i - 1));
+            PieceResult result = piece_result_of_plan(plan_node_remove_constraint(plan, section, i - 1));
             if (result != PIECE_OK) {
                 return result;
             }
@@ -94,7 +91,7 @@ static PieceResult set_section_cadences(PiecePlan *plan, NodeId section, const P
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CADENCE;
         constraint.params.cadence = cadences[i];
-        PieceResult result = from_plan(plan_node_add_constraint(plan, section, &constraint));
+        PieceResult result = piece_result_of_plan(plan_node_add_constraint(plan, section, &constraint));
         if (result != PIECE_OK) {
             return result;
         }

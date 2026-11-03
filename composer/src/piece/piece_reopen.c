@@ -8,6 +8,7 @@
 
 #include "piece/piece_internal.h"
 #include "plan/plan_internal.h"
+#include "util/plan_util.h"
 
 #define PIECE_REOPEN_RUNS_MAX 64
 
@@ -68,15 +69,6 @@ PieceResult piece_seam_reset(PiecePlan *plan) {
     return PIECE_OK;
 }
 
-static bool in_subtree(const PiecePlan *plan, NodeId node, NodeId root) {
-    for (; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
-        if (node == root) {
-            return true;
-        }
-    }
-    return false;
-}
-
 /* Whether the span lies inside the node's. */
 static bool span_inside(PlanSpan span, PlanSpan outer) {
     PlanTime span_end;
@@ -94,7 +86,7 @@ static bool span_inside(PlanSpan span, PlanSpan outer) {
 static NodeId finest_owner(const PiecePlan *plan, NodeId section, PlanSpan span) {
     NodeId best = section;
     for (NodeId node = 1; node <= plan_node_count(plan); node++) {
-        if (node == section || !plan_has_node(plan, node) || !in_subtree(plan, node, section)) {
+        if (node == section || !plan_has_node(plan, node) || !plan_in_subtree(plan, node, section)) {
             continue;
         }
         PlanSpan inner = plan_node_span(plan, node);
@@ -171,7 +163,7 @@ size_t piece_reopen_lane(PiecePlan *plan, NodeId section, PlanLaneKind lane) {
     size_t reopened = 0;
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         LaneSpan *span = plan_lane_span_at(plan, id);
-        if (!span || span->lane != lane || span->state != PLAN_STATE_GIVEN || !in_subtree(plan, span->owner, section)) {
+        if (!span || span->lane != lane || span->state != PLAN_STATE_GIVEN || !plan_in_subtree(plan, span->owner, section)) {
             continue;
         }
         span->state = PLAN_STATE_REALIZED;

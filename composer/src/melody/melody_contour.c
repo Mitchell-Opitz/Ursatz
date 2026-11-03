@@ -1,6 +1,7 @@
 #include "melody/melody_internal.h"
 
 #include <string.h>
+#include "util/util.h"
 
 /* The most the climax is placed above the top of the motive, past the pitch above it, in semitones. */
 #define CLIMAX_RISE 4
@@ -10,10 +11,6 @@
 /* A climax within this many thousandths of the place asked for is at that place. */
 #define POSITION_SLACK 150
 #define SOFT_RULES 4
-
-static int absolute(int value) {
-    return value < 0 ? -value : value;
-}
 
 static long absolute_long(long value) {
     return value < 0 ? -value : value;
@@ -119,7 +116,7 @@ bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *p
                 continue;
             }
             if (((mask >> (((pitch % 12) + 12) % 12)) & 1u) &&
-                (found < 0 || absolute(pitch - peak) < absolute(found - peak))) {
+                (found < 0 || util_absolute(pitch - peak) < util_absolute(found - peak))) {
                 found = pitch;
             }
         }
@@ -193,7 +190,7 @@ void melody_contour_score(const MelodyCandidate *melody, unsigned *held, unsigne
     for (size_t i = 1; i + 1 < melody->count; i++) {
         int leap = melody->notes[i].pitch - melody->notes[i - 1].pitch;
         int next = melody->notes[i + 1].pitch - melody->notes[i].pitch;
-        if (absolute(leap) >= MELODY_RECOVER_FROM && !(absolute(next) >= 1 && absolute(next) <= 2 && (leap > 0) != (next > 0))) {
+        if (util_absolute(leap) >= MELODY_RECOVER_FROM && !(util_absolute(next) >= 1 && util_absolute(next) <= 2 && (leap > 0) != (next > 0))) {
             recovered = false;
         }
     }

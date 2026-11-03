@@ -8,6 +8,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "motive/motive_internal.h"
+#include "util/plan_util.h"
 
 /*
  * The motivic development operators: Grow operators for a Constrained motive node that carries a motive_ref
@@ -63,24 +64,10 @@ typedef struct {
     PlanTime room; /* the length of the target's span */
 } Request;
 
-/* The first melody lane span (voice 0) of node that is Given or Realized. */
-static bool melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out) {
-    LaneSpanId ids[16];
-    size_t found = plan_node_lane_spans(plan, node, ids, 16);
-    for (size_t i = 0; i < found && i < 16; i++) {
-        if (plan_lane_span_lane(plan, ids[i]) == PLAN_LANE_MELODY && plan_lane_span_voice(plan, ids[i]) == 0 &&
-            plan_lane_span_state(plan, ids[i]) != PLAN_STATE_CONSTRAINED) {
-            *out = ids[i];
-            return true;
-        }
-    }
-    return false;
-}
-
 /* The source motive: its notes, and the meter and key of the lanes over it, else the context's. */
 bool motive_develop_read_node(const PiecePlan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out) {
     LaneSpanId span;
-    if (!melody_span_of(plan, node, &span)) {
+    if (!plan_melody_span_of(plan, node, &span)) {
         return false;
     }
     const PlanLanePayload *payload = plan_lane_span_payload(plan, span);

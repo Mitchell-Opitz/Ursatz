@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "util/util.h"
 
 #define MAX_OPTIONS 128
 /* The motive's first note and the notes after the motive pick the nearest pitch this often in three; else the next. */
@@ -19,13 +20,9 @@ static int pitch_class(int pitch) {
     return ((pitch % 12) + 12) % 12;
 }
 
-static int absolute(int value) {
-    return value < 0 ? -value : value;
-}
-
 /* The leaps standard-counterpoint allows: up to a fifth, the ascending minor sixth, and the octave. */
 static bool leap_allowed(int distance) {
-    int size = absolute(distance);
+    int size = util_absolute(distance);
     return size <= 7 || size == 12 || distance == 8;
 }
 
@@ -34,7 +31,7 @@ static size_t options_for(unsigned mask, int low, int high, int ideal, Option *o
     size_t count = 0;
     for (int pitch = low; pitch <= high && count < MAX_OPTIONS; pitch++) {
         if ((mask >> pitch_class(pitch)) & 1u) {
-            Option option = {pitch, absolute(pitch - ideal)};
+            Option option = {pitch, util_absolute(pitch - ideal)};
             size_t at = count++;
             while (at > 0 && (out[at - 1].distance > option.distance)) {
                 out[at] = out[at - 1];
@@ -176,10 +173,6 @@ bool melody_is_anchor(const MelodyContext *context, const MelodyFillParams *para
            note->duration >= context->cell || note->onset + note->duration > context->chord_start[note->chord + 1];
 }
 
-static int sign_of(int value) {
-    return value > 0 ? 1 : (value < 0 ? -1 : 0);
-}
-
 /* Whether a pitch is a tone of every chord the note sounds through. */
 static bool chord_tone_of_all(const MelodyContext *context, const MelodyNote *note, int pitch) {
     long end = note->onset + note->duration;
@@ -206,7 +199,7 @@ static bool figure_pitch(const MelodyContext *context, const MelodyFillParams *p
     int type = context->motive_tone[k];
     int before = notes[j - 1].pitch;
     int after = notes[j + 1].pitch;
-    int side = sign_of(context->motive_pitch[k] - context->motive_pitch[k + 1]);
+    int side = util_sign(context->motive_pitch[k] - context->motive_pitch[k + 1]);
     unsigned scale = melody_scale_mask(context, note->chord);
     MelodyFillParams only = *params;
     int candidates[4];
@@ -215,7 +208,7 @@ static bool figure_pitch(const MelodyContext *context, const MelodyFillParams *p
     if (type == NON_CHORD_TONE_ANTICIPATION) {
         candidates[found++] = after;
     } else if (type == NON_CHORD_TONE_PASSING) {
-        int way = sign_of(after - before);
+        int way = util_sign(after - before);
         for (int step = 1; way != 0 && step <= 2; step++) {
             candidates[found++] = before + way * step;
         }
@@ -519,7 +512,7 @@ static bool place_pickup(const MelodyContext *context, const MelodyFillParams *p
     }
     int chord_tones[16];
     for (int pitch = target - 5; context->pickup_mask != 0 && pitch <= target + 5; pitch++) {
-        if (pitch != target && absolute(pitch - target) > 2 && pitch >= params->range_low &&
+        if (pitch != target && util_absolute(pitch - target) > 2 && pitch >= params->range_low &&
             pitch <= params->range_high && ((context->pickup_mask >> pitch_class(pitch)) & 1u)) {
             chord_tones[tones++] = pitch;
         }

@@ -17,6 +17,7 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/plan_state.h>
+#include "util/plan_util.h"
 
 static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner_voice"};
 
@@ -267,10 +268,6 @@ static int compare_parts(const void *left, const void *right) {
     return (a->voice > b->voice) - (a->voice < b->voice);
 }
 
-static bool is_note_lane(PlanLaneKind lane) {
-    return lane == PLAN_LANE_BASS || lane == PLAN_LANE_MELODY || lane == PLAN_LANE_INNER_VOICE;
-}
-
 static size_t find_part(const RenderedPart *parts, size_t count, PlanLaneKind lane, int voice) {
     for (size_t i = 0; i < count; i++) {
         if (parts[i].lane == lane && parts[i].voice == voice) {
@@ -487,7 +484,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
             meter_spans[meter_count++] = id;
         } else if (lane == PLAN_LANE_KEY) {
             key_spans[key_count++] = id;
-        } else if (is_note_lane(lane)) {
+        } else if (plan_is_note_lane(lane)) {
             note_spans[note_span_count++] = id;
             note_count += plan_lane_span_payload(plan, id)->notes.note_count;
         }

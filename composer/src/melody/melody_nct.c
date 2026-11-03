@@ -1,6 +1,7 @@
 #include "melody/melody_internal.h"
 
 #include <string.h>
+#include "util/util.h"
 
 /* The most pitches tried for one note, and the most notes visited in one search. */
 #define TRIES_PER_NOTE 5
@@ -12,26 +13,18 @@ static int pitch_class(int pitch) {
     return ((pitch % 12) + 12) % 12;
 }
 
-static int absolute(int value) {
-    return value < 0 ? -value : value;
-}
-
-static int sign_of(int value) {
-    return value > 0 ? 1 : (value < 0 ? -1 : 0);
-}
-
 /* A step is a second, a half or whole tone; a leap is anything larger. */
 static bool is_step(int move) {
-    return absolute(move) >= 1 && absolute(move) <= 2;
+    return util_absolute(move) >= 1 && util_absolute(move) <= 2;
 }
 
 static bool is_leap(int move) {
-    return absolute(move) > 2;
+    return util_absolute(move) > 2;
 }
 
 /* The leaps standard-counterpoint allows: up to a fifth, the ascending minor sixth, and the octave. */
 static bool leap_allowed(int move) {
-    int size = absolute(move);
+    int size = util_absolute(move);
     return size <= 7 || size == 12 || move == 8;
 }
 
@@ -86,11 +79,11 @@ bool melody_figure_ok(const MelodyContext *context, const MelodyFillParams *para
     }
     if (!note->strong) {
         if ((types & MELODY_NCT_PASSING) && is_step(from_prev) && is_step(to_next) &&
-            sign_of(from_prev) == sign_of(to_next)) {
+            util_sign(from_prev) == util_sign(to_next)) {
             return true;
         }
         if ((types & MELODY_NCT_NEIGHBOR) && is_step(from_prev) && is_step(to_next) &&
-            sign_of(from_prev) == -sign_of(to_next) && notes[i + 1].pitch == notes[i - 1].pitch) {
+            util_sign(from_prev) == -util_sign(to_next) && notes[i + 1].pitch == notes[i - 1].pitch) {
             return true;
         }
         if ((types & MELODY_NCT_ANTICIPATION) && to_next == 0 && notes[i + 1].chord != note->chord &&
@@ -99,7 +92,7 @@ bool melody_figure_ok(const MelodyContext *context, const MelodyFillParams *para
         }
     }
     return (types & MELODY_NCT_APPOGGIATURA) && is_leap(from_prev) && is_step(to_next) &&
-           sign_of(to_next) == -sign_of(from_prev);
+           util_sign(to_next) == -util_sign(from_prev);
 }
 
 typedef struct {
@@ -134,7 +127,7 @@ static bool search(const MelodyContext *context, const MelodyFillParams *params,
         if (!((allowed >> pitch_class(pitch)) & 1u) || !leap_allowed(pitch - notes[j - 1].pitch)) {
             continue;
         }
-        Try candidate = {pitch, absolute(pitch - ideal[j]) * JITTER + (int)fill_rng_below(rng, JITTER)};
+        Try candidate = {pitch, util_absolute(pitch - ideal[j]) * JITTER + (int)fill_rng_below(rng, JITTER)};
         if (kept == TRIES_PER_NOTE && tries[kept - 1].key <= candidate.key) {
             continue;
         }

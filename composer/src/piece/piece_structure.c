@@ -10,6 +10,7 @@
 #include "grow/grow_internal.h"
 #include "piece/form_return_internal.h"
 #include "piece/piece_internal.h"
+#include "util/plan_util.h"
 
 static const char *const PART_NAMES[PIECE_PART_COUNT] = {"intro", "body", "turnaround", "ending"};
 static const char *const FILL_NAMES[] = {"empty", "motif", "theme", "progression"};
@@ -165,12 +166,8 @@ bool piece_structure_default_ending(PieceStructure *structure, size_t capacity) 
 /* The bars of material a section holds beside the bars of its own: its motive and the four its ideas are made from. */
 #define MATERIAL_BARS_PER_SECTION 5
 
-static PieceResult from_plan(PlanResult result) {
-    return result == PLAN_OK ? PIECE_OK : (result == PLAN_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_BAD_REQUEST);
-}
-
 static PieceResult add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint) {
-    return from_plan(plan_node_add_constraint(plan, id, constraint));
+    return piece_result_of_plan(plan_node_add_constraint(plan, id, constraint));
 }
 
 /* A length of `count` beats of the meter. */
@@ -357,7 +354,7 @@ static PieceResult add_section(PiecePlan *plan, const PieceStructure *structure,
         return PIECE_ERR_BAD_REQUEST;
     }
     bool theme = given == PLAN_NODE_NONE && is_theme_section(structure, section, start_beats, &pairing);
-    PieceResult result = from_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->id, out));
+    PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->id, out));
     if (result == PIECE_OK && given != PLAN_NODE_NONE) {
         result = add_theme_constraints(plan, *out, theme_plan, given);
     } else if (result == PIECE_OK && theme) {
@@ -512,22 +509,22 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
         return PIECE_ERR_BAD_REQUEST;
     }
     material.length = bars_length;
-    result = from_plan(plan_time_add(material.start, material.length, &form.length));
+    result = piece_result_of_plan(plan_time_add(material.start, material.length, &form.length));
     if (result == PIECE_OK) {
-        result = from_plan(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form, "structure", &form_id));
+        result = piece_result_of_plan(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form, "structure", &form_id));
     }
     /* The meter and the key are Given over the sections and the material: the piece is in its home key throughout. */
     if (result == PIECE_OK) {
         memset(&payload, 0, sizeof(payload));
         payload.meter = structure->meter;
-        result = from_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_METER, 0, form, &payload, &lane));
-        result = result == PIECE_OK ? from_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
+        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_METER, 0, form, &payload, &lane));
+        result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     if (result == PIECE_OK) {
         memset(&payload, 0, sizeof(payload));
         payload.key = structure->key;
-        result = from_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, form, &payload, &lane));
-        result = result == PIECE_OK ? from_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
+        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, form, &payload, &lane));
+        result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     /* The sections in time order, each from the end of the one before. */
     PlanTime start = {0, 1};
@@ -564,7 +561,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
             result = add_flag(plan, id, PLAN_CONSTRAINT_HOLD);
         }
         if (result == PIECE_OK) {
-            result = from_plan(plan_time_add(start, span.length, &start));
+            result = piece_result_of_plan(plan_time_add(start, span.length, &start));
         }
         start_beats += copy.sections[i].beats;
     }
@@ -572,7 +569,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
     if (result == PIECE_OK && !loop_plan) {
         NodeId seam;
         PlanSpan span = {start, bar};
-        result = from_plan(plan_add_node(plan, form_id, PLAN_NODE_SECTION, span, "seam", &seam));
+        result = piece_result_of_plan(plan_add_node(plan, form_id, PLAN_NODE_SECTION, span, "seam", &seam));
         result = result == PIECE_OK ? add_flag(plan, seam, PLAN_CONSTRAINT_SEAM) : result;
         if (result == PIECE_OK) {
             PlanConstraint key;
@@ -593,7 +590,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
         result = add_constraint(plan, form_id, &style);
     }
     if (result == PIECE_OK) {
-        result = from_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));
+        result = piece_result_of_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));
     }
     if (result != PIECE_OK) {
         plan_destroy(plan);

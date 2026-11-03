@@ -9,6 +9,7 @@
 
 #include "grow/grow_internal.h"
 #include "piece/piece_internal.h"
+#include "util/plan_util.h"
 
 /* Each section's own motive and the four motives grow-theme makes for its ideas. */
 #define MATERIAL_BARS_PER_SECTION 5
@@ -41,10 +42,6 @@ size_t piece_material_bars(size_t section_count) {
     return 1 + MATERIAL_BARS_PER_SECTION * section_count;
 }
 
-static PieceResult from_plan(PlanResult result) {
-    return result == PLAN_OK ? PIECE_OK : (result == PLAN_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_BAD_REQUEST);
-}
-
 static PlanTime bars_of(PlanTime bar, size_t count) {
     PlanTime out = {0, 1};
     if (plan_time_make(bar.num * (long)count, bar.den, &out) != PLAN_OK) {
@@ -70,7 +67,7 @@ static bool piece_accompaniment(const PieceRequest *request, PlanAccompaniment *
 }
 
 static PieceResult add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint) {
-    return from_plan(plan_node_add_constraint(plan, id, constraint));
+    return piece_result_of_plan(plan_node_add_constraint(plan, id, constraint));
 }
 
 /* One section as grow-theme builds it, with its letter, its return and its layers; its motive comes after m0. */
@@ -78,7 +75,7 @@ static PieceResult add_section(PiecePlan *plan, const PieceRequest *request, con
                                PlanSpan span, NodeId form, const NodeId *sections,
                                const PlanAccompaniment *accompaniment, NodeId *out) {
     PlanConstraint constraint;
-    PieceResult result = from_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->name, out));
+    PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->name, out));
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_ARCHETYPE;
@@ -158,7 +155,7 @@ static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) 
     PlanLanePayload payload;
     PlanNote note;
     PlanConstraint constraint;
-    PieceResult result = from_plan(plan_add_node(plan, idea, PLAN_NODE_MOTIVE, span, GROW_SOURCE_NAME, &node));
+    PieceResult result = piece_result_of_plan(plan_add_node(plan, idea, PLAN_NODE_MOTIVE, span, GROW_SOURCE_NAME, &node));
     memset(&payload, 0, sizeof(payload));
     note.midi_pitch = INVENT_PLACEHOLDER;
     note.offset = (PlanTime){0, 1};
@@ -166,12 +163,12 @@ static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) 
     payload.notes.notes = &note;
     payload.notes.note_count = 1;
     if (result == PIECE_OK) {
-        result = from_plan(plan_add_lane_span(plan, node, PLAN_LANE_MELODY, 0, span, &payload, &melody));
+        result = piece_result_of_plan(plan_add_lane_span(plan, node, PLAN_LANE_MELODY, 0, span, &payload, &melody));
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_INVENT_MOTIVE;
-        result = from_plan(plan_lane_span_add_constraint(plan, melody, &constraint));
+        result = piece_result_of_plan(plan_lane_span_add_constraint(plan, melody, &constraint));
     }
     return result;
 }
@@ -183,20 +180,20 @@ PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const Plan
     NodeId phrase;
     NodeId idea;
     PlanConstraint constraint;
-    PieceResult result = from_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, material, GROW_MATERIAL_NAME, &section));
+    PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, material, GROW_MATERIAL_NAME, &section));
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_MATERIAL;
         result = add_constraint(plan, section, &constraint);
     }
     if (result == PIECE_OK) {
-        result = from_plan(plan_add_node(plan, section, PLAN_NODE_PHRASE, material, GROW_MATERIAL_NAME, &phrase));
+        result = piece_result_of_plan(plan_add_node(plan, section, PLAN_NODE_PHRASE, material, GROW_MATERIAL_NAME, &phrase));
     }
     if (result == PIECE_OK) {
-        result = from_plan(plan_add_node(plan, phrase, PLAN_NODE_IDEA, material, GROW_MATERIAL_NAME, &idea));
+        result = piece_result_of_plan(plan_add_node(plan, phrase, PLAN_NODE_IDEA, material, GROW_MATERIAL_NAME, &idea));
     }
     if (result == PIECE_OK && motive) {
-        result = from_plan(motive_attach_sourced(plan, idea, material.start, motive, GROW_SOURCE_NAME, motive_source,
+        result = piece_result_of_plan(motive_attach_sourced(plan, idea, material.start, motive, GROW_SOURCE_NAME, motive_source,
                                                  out, NULL));
     } else if (result == PIECE_OK) {
         PlanSpan span = {material.start, bar};
@@ -204,13 +201,13 @@ PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const Plan
         *out = result == PIECE_OK ? grow_find_source(plan) : PLAN_NODE_NONE;
     }
     if (result == PIECE_OK) {
-        result = from_plan(plan_node_set_state(plan, section, PLAN_STATE_REALIZED));
+        result = piece_result_of_plan(plan_node_set_state(plan, section, PLAN_STATE_REALIZED));
     }
     if (result == PIECE_OK) {
-        result = from_plan(plan_node_set_state(plan, phrase, PLAN_STATE_REALIZED));
+        result = piece_result_of_plan(plan_node_set_state(plan, phrase, PLAN_STATE_REALIZED));
     }
     if (result == PIECE_OK) {
-        result = from_plan(plan_node_set_state(plan, idea, PLAN_STATE_REALIZED));
+        result = piece_result_of_plan(plan_node_set_state(plan, idea, PLAN_STATE_REALIZED));
     }
     return result;
 }
@@ -258,7 +255,7 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
     PlanSpan piece = {{0, 1}, bars_of(bar, layout.bars)};
     PlanSpan material = {piece.length, bars_of(bar, piece_material_bars(layout.section_count) + request->given_melodies)};
     PlanSpan form = {{0, 1}, {0, 1}};
-    PieceResult result = from_plan(plan_time_add(piece.length, material.length, &form.length));
+    PieceResult result = piece_result_of_plan(plan_time_add(piece.length, material.length, &form.length));
     NodeId form_id = PLAN_NODE_NONE;
     NodeId source = PLAN_NODE_NONE;
     NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
@@ -266,15 +263,15 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
     LaneSpanId lane;
 
     if (result == PIECE_OK) {
-        result = from_plan(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form, form_template_name(layout.kind),
+        result = piece_result_of_plan(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form, form_template_name(layout.kind),
                                          &form_id));
     }
     /* The meter is Given over the piece and the material; the key lane comes with the sections (piece_plan_keys). */
     if (result == PIECE_OK) {
         memset(&payload, 0, sizeof(payload));
         payload.meter = request->meter;
-        result = from_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_METER, 0, form, &payload, &lane));
-        result = result == PIECE_OK ? from_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
+        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_METER, 0, form, &payload, &lane));
+        result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     /* The sections in order, then the material; the sections' motive references name m0, so they come last. */
     PlanTime start = {0, 1};
@@ -283,7 +280,7 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
         result = add_section(plan, request, &layout.sections[i], span, form_id, sections,
                              accompanied ? &accompaniment : NULL, &sections[i]);
         if (result == PIECE_OK) {
-            result = from_plan(plan_time_add(start, span.length, &start));
+            result = piece_result_of_plan(plan_time_add(start, span.length, &start));
         }
     }
     if (result == PIECE_OK) {
@@ -297,7 +294,7 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
         memset(&style, 0, sizeof(style));
         style.kind = PLAN_CONSTRAINT_STYLE;
         style.params.style = request->style;
-        result = from_plan(plan_node_add_constraint(plan, form_id, &style));
+        result = piece_result_of_plan(plan_node_add_constraint(plan, form_id, &style));
     }
     /* The keys and the cadences across them are planned from the request's seed, home only unless it asks to modulate;
    then the form is Given. */
@@ -309,7 +306,7 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
         result = result == PIECE_OK && request->modulate ? piece_plan_cadences(plan, &keys) : result;
     }
     if (result == PIECE_OK) {
-        result = from_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));
+        result = piece_result_of_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));
     }
     if (result != PIECE_OK) {
         plan_destroy(plan);
