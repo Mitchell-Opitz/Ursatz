@@ -569,8 +569,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 7,
-                          "transform": "restated",
-                          "semitones": 0
+                          "step": "exact"
                         }]
                     }
                   }, {
@@ -593,8 +592,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "transform": "restated",
-                          "semitones": 0
+                          "step": "exact"
                         }]
                     }
                   }, {
@@ -617,10 +615,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 7,
-                          "transform": "interval_changed",
-                          "semitones": 0,
-                          "interval": 2,
-                          "amount": -2
+                          "step": "interval-change interval=2 amount=-2"
                         }]
                     }
                   }],
@@ -816,9 +811,7 @@
         "state": "realized",
         "constraints": [{
             "kind": "motive_ref",
-            "motive": 6,
-            "transform": "none",
-            "semitones": 0
+            "motive": 6
           }],
         "payload": {
           "notes": [{
@@ -928,8 +921,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 11,
-            "transform": "restated",
-            "semitones": 0
+            "step": "exact"
           }, {
             "kind": "cadence",
             "type": "hc"
@@ -1062,8 +1054,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 15,
-            "transform": "restated",
-            "semitones": 0
+            "step": "exact"
           }],
         "payload": {
           "notes": [{
@@ -1173,10 +1164,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 16,
-            "transform": "interval_changed",
-            "semitones": 0,
-            "interval": 2,
-            "amount": -2
+            "step": "interval-change interval=2 amount=-2"
           }, {
             "kind": "cadence",
             "type": "pac"

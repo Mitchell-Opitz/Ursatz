@@ -33,7 +33,11 @@ static bool step_from_relation(const MotiveRelationStep *relation, const Motive 
         return false;
     }
     for (size_t p = 0; p < operation->param_count; p++) {
-        const VariantParam *param = &operation->params[p];
+        VariantParam described;
+        if (!variant_operation_param(operation, p, &described)) {
+            return false;
+        }
+        const VariantParam *param = &described;
         long value = relation->value[p];
         if (relation->kind == MOTIVE_RELATION_INVERT && p == 0 && value == -1) {
             if (motive->note_count == 0) {

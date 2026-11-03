@@ -362,16 +362,27 @@ static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *s
 /* The motive_ref constraint the operation and its options describe, or a message in *problem. */
 static bool build_ref(const Options *options, Op op, const Motive *source, size_t *min_length, PlanMotiveRef *ref,
                       const char **problem, char *buffer, size_t size) {
-    static const PlanMotiveTransform TRANSFORMS[] = {PLAN_TRANSFORM_RESTATED,   PLAN_TRANSFORM_INVERTED,
-                                                     PLAN_TRANSFORM_RETROGRADE, PLAN_TRANSFORM_INTERVAL_CHANGED,
-                                                     PLAN_TRANSFORM_FRAGMENTED, PLAN_TRANSFORM_LIQUIDATED,
-                                                     PLAN_TRANSFORM_AUGMENTED,  PLAN_TRANSFORM_DIMINISHED};
+    static const MotiveRelationKind KINDS[] = {MOTIVE_RELATION_EXACT,           MOTIVE_RELATION_INVERT,
+                                               MOTIVE_RELATION_RETROGRADE,      MOTIVE_RELATION_INTERVAL_CHANGE,
+                                               MOTIVE_RELATION_FRAGMENT,        MOTIVE_RELATION_LIQUIDATE,
+                                               MOTIVE_RELATION_AUGMENT,         MOTIVE_RELATION_DIMINISH};
     long value;
+    /* Every option is read whatever the operation; the step takes the ones its relation has. */
+    MotiveRelationKind kind = KINDS[op];
+    bool tonal = (options->given & F_TONAL) != 0;
+    bool keep_contour = (options->given & F_KEEP_CONTOUR) != 0;
+    bool keep_rhythm = (options->given & F_KEEP_RHYTHM) != 0;
+    long by = 0;
+    long axis = -1;
+    long interval = 0;
+    long amount = 0;
+    long position = 0;
+    long length = 0;
+    long drop = 0;
+    long ratio_num = 0;
+    long ratio_den = 0;
     memset(ref, 0, sizeof(*ref));
-    ref->transform = TRANSFORMS[op];
-    ref->tonal = (options->given & F_TONAL) != 0;
-    ref->keep_contour = (options->given & F_KEEP_CONTOUR) != 0;
-    ref->keep_rhythm = (options->given & F_KEEP_RHYTHM) != 0;
+    ref->has_step = true;
     *problem = buffer;
 
     if (options->by_text) {
@@ -379,12 +390,8 @@ static bool build_ref(const Options *options, Op op, const Motive *source, size_
             snprintf(buffer, size, "--by must be a whole number from -127 to 127, not 0 or '%s'", options->by_text);
             return false;
         }
-        ref->transform = PLAN_TRANSFORM_TRANSPOSED;
-        if (ref->tonal) {
-            ref->steps = (int)value;
-        } else {
-            ref->semitones = (int)value;
-        }
+        kind = MOTIVE_RELATION_TRANSPOSE;
+        by = value;
     }
     if (options->degree_text) {
         MotiveAnalysis analysis;
@@ -402,40 +409,39 @@ static bool build_ref(const Options *options, Op op, const Motive *source, size_
         }
         /* The nearest way to the degree, up to three steps either way. */
         int steps = (int)((value - analysis.degrees[0].degree + 7) % 7);
-        ref->transform = PLAN_TRANSFORM_TRANSPOSED;
-        ref->tonal = true;
-        ref->steps = steps > 3 ? steps - 7 : steps;
-        if (ref->steps == 0) {
+        kind = MOTIVE_RELATION_TRANSPOSE;
+        tonal = true;
+        by = steps > 3 ? steps - 7 : steps;
+        if (by == 0) {
             snprintf(buffer, size, "the first note is already on degree %ld", value);
             return false;
         }
     }
-    if (ref->tonal && source->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
+    if (tonal && source->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         snprintf(buffer, size, "--tonal needs a key; give --key");
         return false;
     }
     if (options->axis_text) {
-        int axis;
-        if (!parse_pitch(options->axis_text, &axis)) {
+        int pitch;
+        if (!parse_pitch(options->axis_text, &pitch)) {
             snprintf(buffer, size, "--axis must be a pitch such as D4 or a MIDI number, not '%s'", options->axis_text);
             return false;
         }
-        ref->has_axis = true;
-        ref->axis = axis;
+        axis = pitch;
     }
     if (options->interval_text) {
         if (!parse_number(options->interval_text, 1, 127, &value)) {
             snprintf(buffer, size, "--interval must be a whole number from 1, not '%s'", options->interval_text);
             return false;
         }
-        ref->interval = (int)value;
+        interval = value;
     }
     if (options->amount_text) {
         if (!parse_number(options->amount_text, -127, 127, &value) || value == 0) {
             snprintf(buffer, size, "--amount must be a whole number of semitones, not 0 or '%s'", options->amount_text);
             return false;
         }
-        ref->amount = (int)value;
+        amount = value;
     }
     if (options->position_text) {
         int found = 0;
@@ -448,21 +454,21 @@ static bool build_ref(const Options *options, Op op, const Motive *source, size_
             snprintf(buffer, size, "--position must be leading, trailing or middle, not '%s'", options->position_text);
             return false;
         }
-        ref->position = (PlanFragmentPosition)found;
+        position = found;
     }
     if (options->length_text) {
         if (!parse_number(options->length_text, 1, MOTIVE_MAX_NOTES, &value)) {
             snprintf(buffer, size, "--length must be a number of notes, not '%s'", options->length_text);
             return false;
         }
-        ref->length = (int)value;
+        length = value;
     }
     if (options->drop_text) {
         if (!parse_number(options->drop_text, 1, MOTIVE_MAX_NOTES, &value)) {
             snprintf(buffer, size, "--drop must be a number of notes, not '%s'", options->drop_text);
             return false;
         }
-        ref->drop = (int)value;
+        drop = value;
     }
     if (options->min_text) {
         if (!parse_number(options->min_text, 1, MOTIVE_MAX_NOTES, &value)) {
@@ -482,8 +488,40 @@ static bool build_ref(const Options *options, Op op, const Motive *source, size_
                      options->ratio_text);
             return false;
         }
-        ref->ratio_num = (int)num;
-        ref->ratio_den = (int)den;
+        ratio_num = num;
+        ratio_den = den;
+    }
+    MotiveRelationStep *step = &ref->step;
+    step->kind = kind;
+    switch (kind) {
+    case MOTIVE_RELATION_TRANSPOSE:
+        step->value[0] = tonal ? 1 : 0;
+        step->value[1] = by;
+        break;
+    case MOTIVE_RELATION_INVERT:
+        step->value[0] = axis;
+        step->value[1] = tonal ? 1 : 0;
+        break;
+    case MOTIVE_RELATION_INTERVAL_CHANGE:
+        step->value[0] = interval;
+        step->value[1] = amount;
+        step->value[2] = keep_contour ? 1 : 0;
+        break;
+    case MOTIVE_RELATION_FRAGMENT:
+        step->value[0] = position;
+        step->value[1] = length;
+        break;
+    case MOTIVE_RELATION_LIQUIDATE:
+        step->value[0] = drop;
+        step->value[1] = keep_rhythm ? 1 : 0;
+        break;
+    case MOTIVE_RELATION_AUGMENT:
+    case MOTIVE_RELATION_DIMINISH:
+        step->value[0] = ratio_num;
+        step->den[0] = ratio_den;
+        break;
+    default:
+        break;
     }
     return true;
 }

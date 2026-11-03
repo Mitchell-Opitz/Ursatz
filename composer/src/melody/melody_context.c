@@ -171,20 +171,21 @@ static void read_tones(const PiecePlan *plan, NodeId node, MelodyContext *contex
         if (!source || !plan_has_node(plan, source->motive)) {
             return;
         }
-        switch (source->transform) {
-        case PLAN_TRANSFORM_NONE:
-        case PLAN_TRANSFORM_TRANSPOSED:
-        case PLAN_TRANSFORM_INVERTED:
-        case PLAN_TRANSFORM_AUGMENTED:
-        case PLAN_TRANSFORM_DIMINISHED:
-        case PLAN_TRANSFORM_RESTATED:
-        case PLAN_TRANSFORM_INTERVAL_CHANGED:
-            break;
-        case PLAN_TRANSFORM_RETROGRADE:
-            reversed = !reversed;
-            break;
-        default:
-            return;
+        if (source->has_step) {
+            switch (source->step.kind) {
+            case MOTIVE_RELATION_TRANSPOSE:
+            case MOTIVE_RELATION_INVERT:
+            case MOTIVE_RELATION_AUGMENT:
+            case MOTIVE_RELATION_DIMINISH:
+            case MOTIVE_RELATION_EXACT:
+            case MOTIVE_RELATION_INTERVAL_CHANGE:
+                break;
+            case MOTIVE_RELATION_RETROGRADE:
+                reversed = !reversed;
+                break;
+            default:
+                return;
+            }
         }
         node = source->motive;
     }
@@ -204,7 +205,7 @@ static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
         return false;
     }
     context->motive_node = constraint.params.motive.motive;
-    context->transform = constraint.params.motive.transform;
+    context->restated = plan_motive_ref_restates(&constraint.params.motive);
     context->motive_given = plan_lane_span_state(plan, span) == PLAN_STATE_GIVEN;
     context->motive_count = notes->note_count;
     context->motive_length = POSITION_ZERO;
@@ -501,7 +502,7 @@ static bool restated_span(const PiecePlan *plan, const MelodyContext *context, L
              k++) {
             const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, id, k);
             if (constraint->kind == PLAN_CONSTRAINT_MOTIVE_REF && constraint->params.motive.motive == source &&
-                constraint->params.motive.transform == PLAN_TRANSFORM_NONE) {
+                !constraint->params.motive.has_step) {
                 *out = id;
                 return true;
             }
@@ -526,7 +527,7 @@ static bool restated_span(const PiecePlan *plan, const MelodyContext *context, L
  */
 static void restate_previous(const PiecePlan *plan, MelodyContext *context) {
     LaneSpanId before;
-    if (context->transform != PLAN_TRANSFORM_RESTATED || !restated_span(plan, context, &before)) {
+    if (!context->restated || !restated_span(plan, context, &before)) {
         return;
     }
     const PlanNotes *notes = &plan_lane_span_payload(plan, before)->notes;

@@ -54,7 +54,7 @@ The harmony rows, `reharmonize-frame` and the dominant form take a full motive w
 
 ### Parameters
 
-The parameters are the `develop` command's options without the dashes.
+The parameters are the `develop` command's options without the dashes. A row names its library relation, and its parameters are the relation's, in the relation's order: the name, the kind and the description of each come from `motive_relation_param_info` (`analysis/motive_relation.h`) when `variant_operation_param` is asked for it, so the list of an operation can not drift from the relation. The row keeps only what the relation does not say, one `VariantDrawn` for each parameter: the range a chain draws open values from and a value is checked against, and how the draw treats it (a count of the notes, a feature or chord index, a ratio drawn below 1, a MIDI pitch, a fragment position, never drawn). The ranges are the registry's composing choices, not the relation's bounds: `by` is drawn from -12 to 12 where the relation accepts any value that stays in MIDI range, and "never drawn" is the registry's `optional`, where the library's `optional` means that the default is accepted as it stands. The descriptions below are the Composer's; `--list-ops` prints the library's.
 
 | Parameter | Kind | Range drawn | Meaning |
 | --- | --- | --- | --- |

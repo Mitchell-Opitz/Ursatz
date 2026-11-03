@@ -107,8 +107,8 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     archetype.params.archetype = PLAN_ARCHETYPE_SENTENCE;
     PlanConstraint motive_ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
     motive_ref.params.motive.motive = m1;
-    motive_ref.params.motive.transform = PLAN_TRANSFORM_TRANSPOSED;
-    motive_ref.params.motive.semitones = -2;
+    motive_ref.params.motive.has_step = true;
+    motive_ref.params.motive.step = (MotiveRelationStep){.kind = MOTIVE_RELATION_TRANSPOSE, .value = {0, -2}};
     PlanConstraint key_constraint = {PLAN_CONSTRAINT_KEY, {0}};
     key_constraint.params.key = plan_key_of_pitch_class(7, KEY_STRUCTURE_MODE_MAJOR);
     assert(plan_node_add_constraint(plan, phrase, &length) == PLAN_OK);
@@ -187,8 +187,8 @@ static bool same_constraint(const PlanConstraint *a, const PlanConstraint *b) {
         return a->params.cadence == b->params.cadence;
     case PLAN_CONSTRAINT_MOTIVE_REF:
         return a->params.motive.motive == b->params.motive.motive &&
-               a->params.motive.transform == b->params.motive.transform &&
-               a->params.motive.semitones == b->params.motive.semitones;
+               a->params.motive.has_step == b->params.motive.has_step &&
+               memcmp(&a->params.motive.step, &b->params.motive.step, sizeof(a->params.motive.step)) == 0;
     case PLAN_CONSTRAINT_KEY:
         return analysis_key_tonic_pitch_class(&a->params.key) == analysis_key_tonic_pitch_class(&b->params.key) &&
                a->params.key.mode == b->params.key.mode;
@@ -536,6 +536,126 @@ static void test_section_constraints(void) {
     plan_destroy(plan);
 }
 
+/*
+ * Plan files saved before relation steps write a motive ref as "transform" and the members it uses (docs/plan-format.md).
+ * Each old name reads to the step of the table in docs/modules/motive-relations.md, and is written as "step"; an
+ * unknown transform or an unparsable step fails the read with its text in the message.
+ */
+typedef struct {
+    const char *members;       /* what the old file had, in place of the step */
+    bool has_step;
+    MotiveRelationKind kind;
+    long value[3];
+    long den0;
+    const char *text;          /* the step as written now */
+} LegacyCase;
+
+static char *replace_all(const char *text, const char *from, const char *to) {
+    size_t from_length = strlen(from);
+    size_t count = 0;
+    for (const char *at = text; (at = strstr(at, from)) != NULL; at += from_length) {
+        count++;
+    }
+    assert(count > 0);
+    char *out = malloc(strlen(text) + count * (strlen(to) + 1) + 1);
+    assert(out);
+    char *write = out;
+    const char *at = text;
+    for (const char *found; (found = strstr(at, from)) != NULL; at = found + from_length) {
+        memcpy(write, at, (size_t)(found - at));
+        write += found - at;
+        memcpy(write, to, strlen(to));
+        write += strlen(to);
+    }
+    strcpy(write, at);
+    return out;
+}
+
+static void test_old_transforms(void) {
+    static const LegacyCase CASES[] = {
+        {"\"transform\": \"none\", \"semitones\": 0", false, MOTIVE_RELATION_EXACT, {0, 0, 0}, 0, NULL},
+        {"\"transform\": \"restated\", \"semitones\": 0", true, MOTIVE_RELATION_EXACT, {0, 0, 0}, 0, "exact"},
+        {"\"transform\": \"transposed\", \"semitones\": 3", true, MOTIVE_RELATION_TRANSPOSE, {0, 3, 0}, 0, "transpose by=3"},
+        {"\"transform\": \"transposed\", \"semitones\": 0, \"tonal\": true, \"steps\": -2", true, MOTIVE_RELATION_TRANSPOSE,
+         {1, -2, 0}, 0, "transpose tonal=1 by=-2"},
+        {"\"transform\": \"transposed\", \"semitones\": 0", true, MOTIVE_RELATION_TRANSPOSE, {0, 0, 0}, 0, "transpose"},
+        {"\"transform\": \"inverted\", \"semitones\": 0", true, MOTIVE_RELATION_INVERT, {-1, 0, 0}, 0, "invert"},
+        {"\"transform\": \"inverted\", \"semitones\": 0, \"tonal\": true, \"axis\": 62", true, MOTIVE_RELATION_INVERT,
+         {62, 1, 0}, 0, "invert axis=62 tonal=1"},
+        {"\"transform\": \"retrograde\", \"semitones\": 0", true, MOTIVE_RELATION_RETROGRADE, {0, 0, 0}, 0, "retrograde"},
+        {"\"transform\": \"augmented\", \"semitones\": 0, \"ratio_num\": 3, \"ratio_den\": 2", true, MOTIVE_RELATION_AUGMENT,
+         {3, 0, 0}, 2, "augment ratio=3:2"},
+        {"\"transform\": \"diminished\", \"semitones\": 0, \"ratio_num\": 1, \"ratio_den\": 2", true,
+         MOTIVE_RELATION_DIMINISH, {1, 0, 0}, 2, "diminish ratio=1:2"},
+        {"\"transform\": \"fragmented\", \"semitones\": 0, \"position\": \"trailing\", \"length\": 3", true,
+         MOTIVE_RELATION_FRAGMENT, {2, 3, 0}, 0, "fragment position=2 length=3"},
+        {"\"transform\": \"interval_changed\", \"semitones\": 0, \"interval\": 2, \"amount\": -1, \"keep_contour\": true", true,
+         MOTIVE_RELATION_INTERVAL_CHANGE, {2, -1, 1}, 0, "interval-change interval=2 amount=-1 keep-contour=1"},
+        {"\"transform\": \"liquidated\", \"semitones\": 0, \"drop\": 2, \"keep_rhythm\": true", true,
+         MOTIVE_RELATION_LIQUIDATE, {2, 1, 0}, 0, "liquidate drop=2 keep-rhythm=1"}};
+    PiecePlan *plan = build_sentence_plan();
+    PlanJsonError error;
+    char *base = plan_to_json(plan, &error);
+    assert(base && strstr(base, "\"step\": \"transpose by=-2\"") != NULL);
+    assert(strstr(base, "\"transform\"") == NULL);
+
+    for (size_t i = 0; i < sizeof(CASES) / sizeof(CASES[0]); i++) {
+        const LegacyCase *c = &CASES[i];
+        char *old = replace_all(base, "\"step\": \"transpose by=-2\"", c->members);
+        PiecePlan *read = NULL;
+        expect_ok(plan_from_json(old, &read, &error), &error);
+        size_t found = 0;
+        for (NodeId id = 1; id <= plan_node_count(read); id++) {
+            for (size_t k = 0; k < plan_node_constraint_count(read, id); k++) {
+                const PlanConstraint *constraint = plan_node_constraint_at(read, id, k);
+                if (constraint->kind != PLAN_CONSTRAINT_MOTIVE_REF) {
+                    continue;
+                }
+                const PlanMotiveRef *ref = &constraint->params.motive;
+                assert(ref->has_step == c->has_step);
+                if (c->has_step) {
+                    assert(ref->step.kind == c->kind && ref->step.value[0] == c->value[0] &&
+                           ref->step.value[1] == c->value[1] && ref->step.value[2] == c->value[2] &&
+                           ref->step.value[3] == 0 && ref->step.den[0] == c->den0);
+                }
+                found++;
+            }
+        }
+        assert(found > 0);
+
+        /* Written as a step (or not at all), and read back equal. */
+        char *written = plan_to_json(read, &error);
+        assert(written && strstr(written, "\"transform\"") == NULL);
+        if (c->has_step) {
+            char expected[200];
+            snprintf(expected, sizeof(expected), "\"step\": \"%s\"", c->text);
+            assert(strstr(written, expected) != NULL);
+        } else {
+            assert(strstr(written, "\"step\"") == NULL);
+        }
+        PiecePlan *again = NULL;
+        expect_ok(plan_from_json(written, &again, &error), &error);
+        assert(plans_equal(read, again));
+        free(old);
+        free(written);
+        plan_destroy(read);
+        plan_destroy(again);
+    }
+
+    /* A name that is not a transform, and a step that is not a relation step, are refused with their text. */
+    char *unknown = replace_all(base, "\"step\": \"transpose by=-2\"", "\"transform\": \"sideways\"");
+    PiecePlan *refused = NULL;
+    assert(plan_from_json(unknown, &refused, &error) == PLAN_ERR_FORMAT);
+    assert(refused == NULL && strstr(error.message, "sideways") != NULL);
+    free(unknown);
+    char *bad_step = replace_all(base, "\"step\": \"transpose by=-2\"", "\"step\": \"transpose sideways=1\"");
+    assert(plan_from_json(bad_step, &refused, &error) == PLAN_ERR_FORMAT);
+    assert(refused == NULL && strstr(error.message, "transpose sideways=1") != NULL);
+    free(bad_step);
+    free(base);
+    plan_destroy(plan);
+}
+
 static void test_empty_plan(void) {
     PiecePlan *plan = plan_create();
     PlanJsonError error;
@@ -774,6 +894,7 @@ static void test_analysis_document_errors(void) {
 
 int main(void) {
     test_round_trip();
+    test_old_transforms();
     test_motive_tones();
     test_section_constraints();
     test_empty_plan();

@@ -136,10 +136,14 @@ static Scene make_scene(const Motive *source, PlanMotiveRef ref) {
     return scene;
 }
 
-static PlanMotiveRef ref_of(PlanMotiveTransform transform) {
+static PlanMotiveRef ref_of(MotiveRelationKind kind) {
     PlanMotiveRef ref;
     memset(&ref, 0, sizeof(ref));
-    ref.transform = transform;
+    ref.has_step = true;
+    ref.step.kind = kind;
+    if (kind == MOTIVE_RELATION_INVERT) {
+        ref.step.value[0] = -1; /* the first note */
+    }
     return ref;
 }
 
@@ -470,7 +474,7 @@ static bool related_retrograde(const Motive *s, const Motive *r, const PlanMotiv
 
 static bool related_interval(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
     (void)key;
-    return is_interval_change(s, r, ref->keep_contour);
+    return is_interval_change(s, r, ref->step.value[2] != 0);
 }
 
 static bool related_fragment(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
@@ -481,7 +485,7 @@ static bool related_fragment(const Motive *s, const Motive *r, const PlanMotiveR
 
 static bool related_liquidation(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
     (void)key;
-    return is_liquidation(s, r, ref->keep_rhythm);
+    return is_liquidation(s, r, ref->step.value[1] != 0);
 }
 
 static bool related_augmented(const Motive *s, const Motive *r, const PlanMotiveRef *ref, AnalysisKey key) {
@@ -496,30 +500,36 @@ static bool related_diminished(const Motive *s, const Motive *r, const PlanMotiv
     return is_scaling(s, r, false);
 }
 
-static PlanMotiveRef with(PlanMotiveTransform transform, bool tonal, bool keep_contour, bool keep_rhythm) {
-    PlanMotiveRef ref = ref_of(transform);
-    ref.tonal = tonal;
-    ref.keep_contour = keep_contour;
-    ref.keep_rhythm = keep_rhythm;
+static PlanMotiveRef with(MotiveRelationKind kind, bool tonal, bool keep_contour, bool keep_rhythm) {
+    PlanMotiveRef ref = ref_of(kind);
+    if (kind == MOTIVE_RELATION_TRANSPOSE) {
+        ref.step.value[0] = tonal;
+    } else if (kind == MOTIVE_RELATION_INVERT) {
+        ref.step.value[1] = tonal;
+    } else if (kind == MOTIVE_RELATION_INTERVAL_CHANGE) {
+        ref.step.value[2] = keep_contour;
+    } else if (kind == MOTIVE_RELATION_LIQUIDATE) {
+        ref.step.value[1] = keep_rhythm;
+    }
     return ref;
 }
 
 static void test_every_development_is_a_relative(void) {
     const Family families[] = {
-        {"restated", with(PLAN_TRANSFORM_RESTATED, false, false, false), related_restated},
-        {"transposed", with(PLAN_TRANSFORM_TRANSPOSED, false, false, false), related_transposed},
-        {"transposed (tonal)", with(PLAN_TRANSFORM_TRANSPOSED, true, false, false), related_transposed},
-        {"inverted", with(PLAN_TRANSFORM_INVERTED, false, false, false), related_inverted},
-        {"inverted (tonal)", with(PLAN_TRANSFORM_INVERTED, true, false, false), related_inverted},
-        {"retrograde", with(PLAN_TRANSFORM_RETROGRADE, false, false, false), related_retrograde},
-        {"interval changed", with(PLAN_TRANSFORM_INTERVAL_CHANGED, false, false, false), related_interval},
-        {"interval changed (keep contour)", with(PLAN_TRANSFORM_INTERVAL_CHANGED, false, true, false),
+        {"restated", with(MOTIVE_RELATION_EXACT, false, false, false), related_restated},
+        {"transposed", with(MOTIVE_RELATION_TRANSPOSE, false, false, false), related_transposed},
+        {"transposed (tonal)", with(MOTIVE_RELATION_TRANSPOSE, true, false, false), related_transposed},
+        {"inverted", with(MOTIVE_RELATION_INVERT, false, false, false), related_inverted},
+        {"inverted (tonal)", with(MOTIVE_RELATION_INVERT, true, false, false), related_inverted},
+        {"retrograde", with(MOTIVE_RELATION_RETROGRADE, false, false, false), related_retrograde},
+        {"interval changed", with(MOTIVE_RELATION_INTERVAL_CHANGE, false, false, false), related_interval},
+        {"interval changed (keep contour)", with(MOTIVE_RELATION_INTERVAL_CHANGE, false, true, false),
          related_interval},
-        {"fragmented", with(PLAN_TRANSFORM_FRAGMENTED, false, false, false), related_fragment},
-        {"liquidated", with(PLAN_TRANSFORM_LIQUIDATED, false, false, false), related_liquidation},
-        {"liquidated (keep rhythm)", with(PLAN_TRANSFORM_LIQUIDATED, false, false, true), related_liquidation},
-        {"augmented", with(PLAN_TRANSFORM_AUGMENTED, false, false, false), related_augmented},
-        {"diminished", with(PLAN_TRANSFORM_DIMINISHED, false, false, false), related_diminished},
+        {"fragmented", with(MOTIVE_RELATION_FRAGMENT, false, false, false), related_fragment},
+        {"liquidated", with(MOTIVE_RELATION_LIQUIDATE, false, false, false), related_liquidation},
+        {"liquidated (keep rhythm)", with(MOTIVE_RELATION_LIQUIDATE, false, false, true), related_liquidation},
+        {"augmented", with(MOTIVE_RELATION_AUGMENT, false, false, false), related_augmented},
+        {"diminished", with(MOTIVE_RELATION_DIMINISH, false, false, false), related_diminished},
     };
     size_t runs = 0;
 
@@ -622,35 +632,34 @@ static void test_explicit_parameters(void) {
     Motive result;
     PlanMotiveRef ref;
 
-    ref = ref_of(PLAN_TRANSFORM_TRANSPOSED);
-    ref.semitones = 3;
+    ref = ref_of(MOTIVE_RELATION_TRANSPOSE);
+    ref.step.value[1] = 3;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 4, (int[]){65, 68, 72, 77}));
     free(run.record_json);
 
     /* Two steps up the scale of D minor: D F A D becomes F A C F. */
-    ref = ref_of(PLAN_TRANSFORM_TRANSPOSED);
-    ref.tonal = true;
-    ref.steps = 2;
+    ref = ref_of(MOTIVE_RELATION_TRANSPOSE);
+    ref.step.value[0] = true;
+    ref.step.value[1] = 2;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 4, (int[]){65, 69, 72, 77}));
     free(run.record_json);
 
-    ref = ref_of(PLAN_TRANSFORM_INVERTED);
+    ref = ref_of(MOTIVE_RELATION_INVERT);
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed);
     free(run.record_json);
-    ref.has_axis = true;
-    ref.axis = 62;
+    ref.step.value[0] = 62;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 4, (int[]){62, 59, 55, 50}));
     free(run.record_json);
-    ref.tonal = true;
+    ref.step.value[1] = true;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 4, (int[]){62, 58, 55, 50}));
     free(run.record_json);
 
-    ref = ref_of(PLAN_TRANSFORM_RETROGRADE);
+    ref = ref_of(MOTIVE_RELATION_RETROGRADE);
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 4, (int[]){74, 69, 65, 62}));
     assert(is_time(result.notes[0].onset, 0, 1) && is_time(result.notes[0].duration, 1, 2));
@@ -659,86 +668,86 @@ static void test_explicit_parameters(void) {
     free(run.record_json);
 
     /* The second interval, F to A, widened by a semitone; the note after it moves with it. */
-    ref = ref_of(PLAN_TRANSFORM_INTERVAL_CHANGED);
-    ref.interval = 2;
-    ref.amount = 1;
+    ref = ref_of(MOTIVE_RELATION_INTERVAL_CHANGE);
+    ref.step.value[0] = 2;
+    ref.step.value[1] = 1;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 4, (int[]){62, 65, 70, 75}));
     free(run.record_json);
-    ref.interval = 0;
-    ref.amount = -1;
+    ref.step.value[0] = 0;
+    ref.step.value[1] = -1;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 4, (int[]){62, 64, 67, 71}));
     free(run.record_json);
     /* Narrowing the first interval past zero turns it round: allowed, unless the contour is to be kept. */
-    ref.interval = 1;
-    ref.amount = -5;
+    ref.step.value[0] = 1;
+    ref.step.value[1] = -5;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 4, (int[]){62, 60, 64, 69}));
     free(run.record_json);
-    ref.keep_contour = true;
+    ref.step.value[2] = true;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(!run.completed && run.stuck == FILL_STUCK_ALL_REJECTED);
     free(run.record_json);
 
     /* Fragments. */
-    ref = ref_of(PLAN_TRANSFORM_FRAGMENTED);
-    ref.position = PLAN_FRAGMENT_LEADING;
-    ref.length = 3;
+    ref = ref_of(MOTIVE_RELATION_FRAGMENT);
+    ref.step.value[0] = MOTIVE_FRAGMENT_LEADING;
+    ref.step.value[1] = 3;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 3, (int[]){62, 65, 69}));
     assert(is_time(result.notes[1].onset, 1, 4) && is_time(result.notes[2].onset, 3, 8));
     assert(is_time(result.length, 1, 2));
     free(run.record_json);
-    ref.position = PLAN_FRAGMENT_TRAILING;
+    ref.step.value[0] = MOTIVE_FRAGMENT_TRAILING;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 3, (int[]){65, 69, 74}));
     assert(is_time(result.notes[0].onset, 0, 1) && is_time(result.notes[1].onset, 1, 8) &&
            is_time(result.notes[2].onset, 1, 4) && is_time(result.length, 3, 4));
     free(run.record_json);
-    ref.position = PLAN_FRAGMENT_MIDDLE;
-    ref.length = 2;
+    ref.step.value[0] = MOTIVE_FRAGMENT_MIDDLE;
+    ref.step.value[1] = 2;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 2, (int[]){65, 69}));
     free(run.record_json);
 
     /* Liquidation drops the weakest note first: A4, off the beat; then the later of F4 and D5. */
-    ref = ref_of(PLAN_TRANSFORM_LIQUIDATED);
-    ref.drop = 1;
+    ref = ref_of(MOTIVE_RELATION_LIQUIDATE);
+    ref.step.value[0] = 1;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 3, (int[]){62, 65, 74}));
     assert(is_time(result.notes[1].onset, 1, 4) && is_time(result.notes[2].onset, 3, 8));
     free(run.record_json);
-    ref.keep_rhythm = true;
+    ref.step.value[1] = true;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 3, (int[]){62, 65, 74}));
     assert(is_time(result.notes[2].onset, 1, 2) && is_time(result.length, 1, 1));
     free(run.record_json);
-    ref.drop = 2;
-    ref.keep_rhythm = false;
+    ref.step.value[0] = 2;
+    ref.step.value[1] = false;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 2, (int[]){62, 65}));
     free(run.record_json);
 
     /* Rhythm. */
-    ref = ref_of(PLAN_TRANSFORM_AUGMENTED);
-    ref.ratio_num = 2;
-    ref.ratio_den = 1;
+    ref = ref_of(MOTIVE_RELATION_AUGMENT);
+    ref.step.value[0] = 2;
+    ref.step.den[0] = 1;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 4, (int[]){62, 65, 69, 74}));
     assert(is_time(result.notes[1].onset, 1, 2) && is_time(result.notes[1].duration, 1, 4) &&
            is_time(result.notes[3].onset, 1, 1) && is_time(result.notes[3].duration, 1, 1) &&
            is_time(result.length, 2, 1));
     free(run.record_json);
-    ref.ratio_num = 3;
-    ref.ratio_den = 2;
+    ref.step.value[0] = 3;
+    ref.step.den[0] = 2;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && is_time(result.notes[0].duration, 3, 8) && is_time(result.notes[3].onset, 3, 4) &&
            is_time(result.length, 3, 2));
     free(run.record_json);
-    ref = ref_of(PLAN_TRANSFORM_DIMINISHED);
-    ref.ratio_num = 1;
-    ref.ratio_den = 2;
+    ref = ref_of(MOTIVE_RELATION_DIMINISH);
+    ref.step.value[0] = 1;
+    ref.step.den[0] = 2;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && is_time(result.notes[0].duration, 1, 8) && is_time(result.notes[1].onset, 1, 8) &&
            is_time(result.notes[2].onset, 3, 16) && is_time(result.notes[3].duration, 1, 4) &&
@@ -754,91 +763,92 @@ static void test_degenerate_cases(void) {
     Motive single = load("C4:q", &meter, &c_major);
     Motive four = load("D4:q F4:e A4:e D5:h", &meter, &c_major);
     Motive result;
-    MotiveDevSpec spec;
+    MotiveRelationStep spec;
 
     /* One note has no intervals to change, no run to fragment or notes to drop; retrograde and a mirror about
        itself give the note again. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_INTERVAL_CHANGE;
-    spec.amount = 1;
+    spec.kind = MOTIVE_RELATION_INTERVAL_CHANGE;
+    spec.value[1] = 1;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_ERR_NOT_APPLICABLE);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_FRAGMENT;
-    spec.position = PLAN_FRAGMENT_LEADING;
-    spec.length = 1;
+    spec.kind = MOTIVE_RELATION_FRAGMENT;
+    spec.value[0] = MOTIVE_FRAGMENT_LEADING;
+    spec.value[1] = 1;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_ERR_TOO_SHORT);
-    spec.length = 2;
+    spec.value[1] = 2;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_ERR_NOT_APPLICABLE);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_LIQUIDATE;
-    spec.drop = 1;
+    spec.kind = MOTIVE_RELATION_LIQUIDATE;
+    spec.value[0] = 1;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_ERR_TOO_SHORT);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_RETROGRADE;
+    spec.kind = MOTIVE_RELATION_RETROGRADE;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_ERR_UNCHANGED);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_INVERT;
+    spec.kind = MOTIVE_RELATION_INVERT;
+    spec.value[0] = -1;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_ERR_UNCHANGED);
 
     /* What one note can do: be repeated, moved, and made longer or shorter. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_EXACT;
+    spec.kind = MOTIVE_RELATION_EXACT;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && motive_equal(&single, &result));
-    spec.kind = MOTIVE_DEV_TRANSPOSE;
-    spec.amount = 7;
+    spec.kind = MOTIVE_RELATION_TRANSPOSE;
+    spec.value[1] = 7;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && result.notes[0].pitch == 67);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_AUGMENT;
+    spec.kind = MOTIVE_RELATION_AUGMENT;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && is_time(result.notes[0].duration, 1, 2));
 
     /* Fragments and liquidations stay recognizable: the minimum length is 2 notes, or what the spec says. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_FRAGMENT;
-    spec.position = PLAN_FRAGMENT_LEADING;
-    spec.length = 1;
+    spec.kind = MOTIVE_RELATION_FRAGMENT;
+    spec.value[0] = MOTIVE_FRAGMENT_LEADING;
+    spec.value[1] = 1;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_TOO_SHORT);
-    spec.length = 4;
+    spec.value[1] = 4;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_NOT_APPLICABLE);
-    spec.length = 2;
-    spec.min_length = 3;
+    spec.value[1] = 2;
+    spec.value[2] = 3;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_TOO_SHORT);
-    spec.min_length = 1;
-    spec.length = 1;
+    spec.value[2] = 1;
+    spec.value[1] = 1;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_OK && result.note_count == 1);
-    spec.position = PLAN_FRAGMENT_ANY;
-    spec.length = 2;
-    spec.min_length = 0;
+    spec.value[0] = 0;
+    spec.value[1] = 2;
+    spec.value[2] = 0;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_INVALID);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_LIQUIDATE;
-    spec.drop = 3;
+    spec.kind = MOTIVE_RELATION_LIQUIDATE;
+    spec.value[0] = 3;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_TOO_SHORT);
-    spec.drop = 0;
+    spec.value[0] = 0;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_INVALID);
 
     /* A rhythm that cannot be written in the meter is refused rather than bent: sixths are not notatable. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_DIMINISH;
-    spec.ratio_num = 2;
-    spec.ratio_den = 3;
+    spec.kind = MOTIVE_RELATION_DIMINISH;
+    spec.value[0] = 2;
+    spec.den[0] = 3;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_NOT_EXPRESSIBLE);
-    spec.kind = MOTIVE_DEV_AUGMENT;
+    spec.kind = MOTIVE_RELATION_AUGMENT;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_INVALID);
-    spec.ratio_num = 1;
-    spec.ratio_den = 1;
+    spec.value[0] = 1;
+    spec.den[0] = 1;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_INVALID);
 
     /* A tonal transformation needs a key; a pitch off the end of MIDI is refused. */
     Motive unkeyed = load("D4:q F4:e A4:e D5:h", &meter, NULL);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_TRANSPOSE;
-    spec.tonal = true;
-    spec.amount = 2;
+    spec.kind = MOTIVE_RELATION_TRANSPOSE;
+    spec.value[0] = true;
+    spec.value[1] = 2;
     assert(motive_develop(&unkeyed, &spec, &result) == MOTIVE_DEV_ERR_NO_KEY);
-    spec.tonal = false;
-    spec.amount = 60;
+    spec.value[0] = false;
+    spec.value[1] = 60;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_RANGE);
-    spec.amount = 0;
+    spec.value[1] = 0;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_UNCHANGED);
 
     /* Through the loop: with nothing a transformation can do, the target is left open and the run says why. */
@@ -846,8 +856,8 @@ static void test_degenerate_cases(void) {
     motive_develop_context_default(&context);
     context.has_key = true;
     context.key = c_major;
-    const PlanMotiveTransform none_for_one_note[] = {PLAN_TRANSFORM_INTERVAL_CHANGED, PLAN_TRANSFORM_FRAGMENTED,
-                                                     PLAN_TRANSFORM_LIQUIDATED, PLAN_TRANSFORM_RETROGRADE};
+    const MotiveRelationKind none_for_one_note[] = {MOTIVE_RELATION_INTERVAL_CHANGE, MOTIVE_RELATION_FRAGMENT,
+                                                     MOTIVE_RELATION_LIQUIDATE, MOTIVE_RELATION_RETROGRADE};
     for (size_t i = 0; i < 4; i++) {
         Scene scene = make_scene(&single, ref_of(none_for_one_note[i]));
         Run run = run_loop(&scene, &context, 1);
@@ -873,10 +883,10 @@ static void test_degenerate_cases(void) {
     PlanConstraint constraint;
     memset(&constraint, 0, sizeof(constraint));
     constraint.kind = PLAN_CONSTRAINT_MOTIVE_REF;
-    constraint.params.motive = ref_of(PLAN_TRANSFORM_AUGMENTED);
+    constraint.params.motive = ref_of(MOTIVE_RELATION_AUGMENT);
     constraint.params.motive.motive = source_node;
-    constraint.params.motive.ratio_num = 4;
-    constraint.params.motive.ratio_den = 1;
+    constraint.params.motive.step.value[0] = 4;
+    constraint.params.motive.step.den[0] = 1;
     assert(plan_node_add_constraint(plan, target_node, &constraint) == PLAN_OK);
     Scene tight_scene = {plan, source_node, target_node};
     context.meter = meter;
@@ -898,37 +908,38 @@ static void test_pickups_and_tonal_spelling(void) {
     const AnalysisKey c_major = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
     Motive source = load("C4:q E4:q G4:q E4:q", &three_four, &c_major);
     Motive result;
-    MotiveDevSpec spec;
+    MotiveRelationStep spec;
 
     source.pickup = tmake(1, 8);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_AUGMENT;
+    spec.kind = MOTIVE_RELATION_AUGMENT;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
     assert(is_time(result.pickup, 1, 4) && is_time(result.notes[1].onset, 1, 2));
-    spec.kind = MOTIVE_DEV_DIMINISH;
+    spec.kind = MOTIVE_RELATION_DIMINISH;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
     assert(is_time(result.pickup, 1, 16) && is_time(result.notes[1].onset, 1, 8));
 
     /* A pickup that reaches the bar, or leaves the thirty-second grid, is refused. */
     source.pickup = tmake(3, 8);
-    spec.kind = MOTIVE_DEV_AUGMENT;
+    spec.kind = MOTIVE_RELATION_AUGMENT;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_ERR_NOT_EXPRESSIBLE);
     source.pickup = tmake(1, 32);
-    spec.kind = MOTIVE_DEV_DIMINISH;
+    spec.kind = MOTIVE_RELATION_DIMINISH;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_ERR_NOT_EXPRESSIBLE);
 
     /* F and B are natural degrees of C major: a step moves them to natural degrees, never to F sharp or C sharp. */
     Motive line = load("C4:q F4:q B4:q E4:q", &(PlanMeter){4, 4, 0}, &c_major);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_TRANSPOSE;
-    spec.tonal = true;
-    spec.amount = 1;
+    spec.kind = MOTIVE_RELATION_TRANSPOSE;
+    spec.value[0] = true;
+    spec.value[1] = 1;
     assert(motive_develop(&line, &spec, &result) == MOTIVE_DEV_OK);
     assert(result.notes[0].pitch == 62 && result.notes[1].pitch == 67 && result.notes[2].pitch == 72 &&
            result.notes[3].pitch == 65);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_INVERT;
-    spec.tonal = true;
+    spec.kind = MOTIVE_RELATION_INVERT;
+    spec.value[0] = -1;
+    spec.value[1] = true;
     assert(motive_develop(&line, &spec, &result) == MOTIVE_DEV_OK);
     assert(result.notes[0].pitch == 60 && result.notes[1].pitch == 55 && result.notes[2].pitch == 50 &&
            result.notes[3].pitch == 57);
@@ -995,7 +1006,7 @@ static void test_scores_in_the_loop(void) {
     MotiveDevelopContext context = context_for(minor);
 
     /* Suggestions come best first, each with its score. */
-    Scene scene = make_scene(&source, ref_of(PLAN_TRANSFORM_FRAGMENTED));
+    Scene scene = make_scene(&source, ref_of(MOTIVE_RELATION_FRAGMENT));
     FillOperatorRegistry *registry = fill_registry_create();
     assert(motive_develop_register(registry, &context) == FILL_OK);
     FillConfig config;
@@ -1028,7 +1039,7 @@ static void test_scores_in_the_loop(void) {
     /* A floor above what any fragment scores leaves the target open. */
     context.floor.numerator = 19;
     context.floor.denominator = 20;
-    scene = make_scene(&source, ref_of(PLAN_TRANSFORM_FRAGMENTED));
+    scene = make_scene(&source, ref_of(MOTIVE_RELATION_FRAGMENT));
     Run run = run_loop(&scene, &context, 1);
     assert(!run.completed && run.stuck == FILL_STUCK_ALL_REJECTED);
     free(run.record_json);
@@ -1048,44 +1059,32 @@ static bool has_numeric_length(const char *json) {
 }
 
 static void test_constraint_json(void) {
-    PlanMotiveRef plain = ref_of(PLAN_TRANSFORM_INVERTED);
+    PlanMotiveRef plain = ref_of(MOTIVE_RELATION_INVERT);
     Motive source = load_source(&SOURCES[0]);
     Scene scene = make_scene(&source, plain);
     char *json = plan_to_json(scene.plan, NULL);
-    assert(json && strstr(json, "\"transform\": \"inverted\"") != NULL);
-    /* A plain constraint writes what it always did. */
-    assert(strstr(json, "\"tonal\"") == NULL && strstr(json, "\"axis\"") == NULL && !has_numeric_length(json));
+    assert(json && strstr(json, "\"step\": \"invert\"") != NULL);
+    /* A motive ref writes its step and nothing of the old transform. */
+    assert(strstr(json, "\"transform\"") == NULL && strstr(json, "\"tonal\"") == NULL &&
+           strstr(json, "\"axis\"") == NULL && !has_numeric_length(json));
     free(json);
     plan_destroy(scene.plan);
 
     /* The parameters survive the plan's JSON. */
-    PlanMotiveRef full = ref_of(PLAN_TRANSFORM_INTERVAL_CHANGED);
-    full.tonal = true;
-    full.steps = -2;
-    full.has_axis = true;
-    full.axis = 62;
-    full.interval = 2;
-    full.amount = -1;
-    full.keep_contour = true;
-    full.position = PLAN_FRAGMENT_MIDDLE;
-    full.length = 3;
-    full.drop = 2;
-    full.keep_rhythm = true;
-    full.ratio_num = 3;
-    full.ratio_den = 2;
+    PlanMotiveRef full = ref_of(MOTIVE_RELATION_INTERVAL_CHANGE);
+    full.step.value[0] = 2;
+    full.step.value[1] = -1;
+    full.step.value[2] = 1;
     scene = make_scene(&source, full);
     json = plan_to_json(scene.plan, NULL);
-    assert(json);
+    assert(json && strstr(json, "\"step\": \"interval-change interval=2 amount=-1 keep-contour=1\"") != NULL);
     PiecePlan *copy = NULL;
     PlanJsonError error;
     assert(plan_from_json(json, &copy, &error) == PLAN_OK);
     const PlanConstraint *read = plan_node_constraint_at(copy, scene.target, 0);
     assert(read && read->kind == PLAN_CONSTRAINT_MOTIVE_REF);
     const PlanMotiveRef *ref = &read->params.motive;
-    assert(ref->transform == PLAN_TRANSFORM_INTERVAL_CHANGED && ref->motive == scene.source && ref->tonal &&
-           ref->steps == -2 && ref->has_axis && ref->axis == 62 && ref->interval == 2 && ref->amount == -1 &&
-           ref->keep_contour && ref->position == PLAN_FRAGMENT_MIDDLE && ref->length == 3 && ref->drop == 2 &&
-           ref->keep_rhythm && ref->ratio_num == 3 && ref->ratio_den == 2);
+    assert(ref->has_step && ref->motive == scene.source && memcmp(&ref->step, &full.step, sizeof(full.step)) == 0);
     char *again = plan_to_json(copy, NULL);
     assert(again && strcmp(json, again) == 0);
     free(json);
@@ -1093,10 +1092,10 @@ static void test_constraint_json(void) {
     plan_destroy(copy);
     plan_destroy(scene.plan);
 
-    /* The new transforms are named in the plan format. */
-    scene = make_scene(&source, ref_of(PLAN_TRANSFORM_LIQUIDATED));
+    /* Every relation the operators answer to is named by its relation name. */
+    scene = make_scene(&source, ref_of(MOTIVE_RELATION_LIQUIDATE));
     json = plan_to_json(scene.plan, NULL);
-    assert(json && strstr(json, "\"transform\": \"liquidated\"") != NULL);
+    assert(json && strstr(json, "\"step\": \"liquidate\"") != NULL);
     free(json);
     plan_destroy(scene.plan);
 }

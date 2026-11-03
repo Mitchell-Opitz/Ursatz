@@ -160,9 +160,8 @@ static Fixture build(const Scenario *scenario, bool with_development) {
         assert(plan_add_node(fixture.plan, idea, PLAN_NODE_MOTIVE, second, "developed", &fixture.developed) ==
                PLAN_OK);
         develop.params.motive.motive = fixture.source;
-        develop.params.motive.transform = PLAN_TRANSFORM_TRANSPOSED;
-        develop.params.motive.tonal = true;
-        develop.params.motive.steps = 2;
+        develop.params.motive.has_step = true;
+        develop.params.motive.step = (MotiveRelationStep){.kind = MOTIVE_RELATION_TRANSPOSE, .value = {1, 2}};
         assert(plan_node_add_constraint(fixture.plan, fixture.developed, &develop) == PLAN_OK);
     }
     return fixture;
@@ -216,11 +215,12 @@ static NodeId motive_for(const Fixture *fixture, bool developed, bool *is_develo
     return fixture->source;
 }
 
-static void add_target(Fixture *fixture, NodeId motive, PlanMotiveTransform transform) {
+static void add_target(Fixture *fixture, NodeId motive, bool transposed) {
     fixture->target = add_notes(fixture->plan, fixture->owner, PLAN_LANE_MELODY, fixture->span, 60);
     PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
     ref.params.motive.motive = motive;
-    ref.params.motive.transform = transform;
+    ref.params.motive.has_step = transposed;
+    ref.params.motive.step.kind = MOTIVE_RELATION_TRANSPOSE;
     assert(plan_lane_span_add_constraint(fixture->plan, fixture->target, &ref) == PLAN_OK);
 }
 
@@ -453,7 +453,7 @@ static bool pipeline(const Scenario *scenario, bool developed, const MelodyFillP
     }
     bool is_developed;
     NodeId motive = motive_for(&fixture, developed, &is_developed);
-    add_target(&fixture, motive, is_developed ? PLAN_TRANSFORM_TRANSPOSED : PLAN_TRANSFORM_NONE);
+    add_target(&fixture, motive, is_developed);
 
     LaneSpanId given_ids[4];
     assert(plan_node_lane_spans(fixture.plan, fixture.source, given_ids, 4) == 1);
@@ -584,7 +584,7 @@ static void test_needs_harmony_and_bass(void) {
     Scenario scenario = {4, 4, KEY_STRUCTURE_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
     Fixture fixture = build(&scenario, false);
     MelodyFillParams params = melody_fill_params_default();
-    add_target(&fixture, fixture.source, PLAN_TRANSFORM_NONE);
+    add_target(&fixture, fixture.source, false);
     FillOutcome outcome = run(&fixture, 1, false, false, false, &params, NULL);
     assert(outcome.status == FILL_STATUS_STUCK);
     assert(outcome.stuck_count >= 1);
@@ -685,7 +685,6 @@ static IdeaFixture build_ideas(int beats, int unit, KeyStructureMode mode, int t
 
     PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
     ref.params.motive.motive = fixture.source;
-    ref.params.motive.transform = PLAN_TRANSFORM_NONE;
     fixture.first = add_notes(fixture.plan, first_idea, PLAN_LANE_MELODY, first_span, 60);
     fixture.second = add_notes(fixture.plan, second_idea, PLAN_LANE_MELODY, second_span, 60);
     assert(plan_lane_span_add_constraint(fixture.plan, fixture.first, &ref) == PLAN_OK);
@@ -886,7 +885,6 @@ static ToneScene build_tone_scene(bool keyed) {
     }
     PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
     ref.params.motive.motive = scene.source;
-    ref.params.motive.transform = PLAN_TRANSFORM_NONE;
     scene.first = add_notes(scene.plan, idea_one, PLAN_LANE_MELODY, bar_zero, 60);
     scene.second = add_notes(scene.plan, idea_two, PLAN_LANE_MELODY, bar_one, 60);
     assert(plan_lane_span_add_constraint(scene.plan, scene.first, &ref) == PLAN_OK);

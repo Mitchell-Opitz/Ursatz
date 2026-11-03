@@ -811,25 +811,28 @@ static size_t collect_rows(const Options *options, const PiecePlan *plan, NodeId
     return count;
 }
 
-static const char *transform_name(PlanMotiveTransform transform) {
-    switch (transform) {
-    case PLAN_TRANSFORM_TRANSPOSED:
+static const char *relation_word(const PlanMotiveRef *ref) {
+    if (!ref->has_step) {
+        return "none";
+    }
+    switch (ref->step.kind) {
+    case MOTIVE_RELATION_TRANSPOSE:
         return "transposed";
-    case PLAN_TRANSFORM_INVERTED:
+    case MOTIVE_RELATION_INVERT:
         return "inverted";
-    case PLAN_TRANSFORM_RETROGRADE:
+    case MOTIVE_RELATION_RETROGRADE:
         return "retrograde";
-    case PLAN_TRANSFORM_AUGMENTED:
+    case MOTIVE_RELATION_AUGMENT:
         return "augmented";
-    case PLAN_TRANSFORM_DIMINISHED:
+    case MOTIVE_RELATION_DIMINISH:
         return "diminished";
-    case PLAN_TRANSFORM_FRAGMENTED:
+    case MOTIVE_RELATION_FRAGMENT:
         return "fragmented";
-    case PLAN_TRANSFORM_RESTATED:
+    case MOTIVE_RELATION_EXACT:
         return "restated";
-    case PLAN_TRANSFORM_INTERVAL_CHANGED:
+    case MOTIVE_RELATION_INTERVAL_CHANGE:
         return "interval changed";
-    case PLAN_TRANSFORM_LIQUIDATED:
+    case MOTIVE_RELATION_LIQUIDATE:
         return "liquidated";
     default:
         return "none";
@@ -839,35 +842,41 @@ static const char *transform_name(PlanMotiveTransform transform) {
 /* "restated, exact", "restated, 1 step up (tonal)", "fragmented, leading, 3 notes": the development the ref asks for. */
 static void describe_ref(const PlanMotiveRef *ref, char *out, size_t size) {
     static const char *const POSITIONS[] = {"", ", leading", ", trailing", ", middle"};
-    size_t used = (size_t)snprintf(out, size, "%s", transform_name(ref->transform));
+    const long *v = ref->step.value;
+    MotiveRelationKind kind = ref->step.kind;
+    bool has = ref->has_step;
+    bool tonal = has && ((kind == MOTIVE_RELATION_TRANSPOSE && v[0] != 0) || (kind == MOTIVE_RELATION_INVERT && v[1] != 0));
+    int steps = has && kind == MOTIVE_RELATION_TRANSPOSE && v[0] != 0 ? (int)v[1] : 0;
+    int semitones = has && kind == MOTIVE_RELATION_TRANSPOSE && v[0] == 0 ? (int)v[1] : 0;
+    size_t used = (size_t)snprintf(out, size, "%s", relation_word(ref));
     char *end = out + size;
     bool moved = false;
-    if (ref->steps != 0 && used < size) {
-        used += (size_t)snprintf(out + used, (size_t)(end - out) - used, ", %d step%s %s%s", ref->steps > 0 ? ref->steps : -ref->steps,
-                                 ref->steps == 1 || ref->steps == -1 ? "" : "s", ref->steps > 0 ? "up" : "down",
-                                 ref->tonal ? " (tonal)" : "");
+    if (steps != 0 && used < size) {
+        used += (size_t)snprintf(out + used, (size_t)(end - out) - used, ", %d step%s %s%s", steps > 0 ? steps : -steps,
+                                 steps == 1 || steps == -1 ? "" : "s", steps > 0 ? "up" : "down",
+                                 tonal ? " (tonal)" : "");
         moved = true;
-    } else if (ref->semitones != 0 && used < size) {
-        used += (size_t)snprintf(out + used, (size_t)(end - out) - used, ", %+d semitones", ref->semitones);
+    } else if (semitones != 0 && used < size) {
+        used += (size_t)snprintf(out + used, (size_t)(end - out) - used, ", %+d semitones", semitones);
         moved = true;
     }
-    if (ref->transform == PLAN_TRANSFORM_RESTATED && !moved && used < size) {
+    if (has && kind == MOTIVE_RELATION_EXACT && !moved && used < size) {
         used += (size_t)snprintf(out + used, (size_t)(end - out) - used, ", exact");
     }
-    if (ref->tonal && !moved && used < size) {
+    if (tonal && !moved && used < size) {
         used += (size_t)snprintf(out + used, (size_t)(end - out) - used, ", tonal");
     }
-    if (ref->transform == PLAN_TRANSFORM_FRAGMENTED && used < size) {
-        used += (size_t)snprintf(out + used, (size_t)(end - out) - used, "%s", POSITIONS[ref->position]);
-        if (ref->length > 0 && used < size) {
-            used += (size_t)snprintf(out + used, (size_t)(end - out) - used, ", %d notes", ref->length);
+    if (has && kind == MOTIVE_RELATION_FRAGMENT && used < size) {
+        used += (size_t)snprintf(out + used, (size_t)(end - out) - used, "%s", POSITIONS[v[0] >= 0 && v[0] < 4 ? v[0] : 0]);
+        if (v[1] > 0 && used < size) {
+            used += (size_t)snprintf(out + used, (size_t)(end - out) - used, ", %d notes", (int)v[1]);
         }
     }
-    if (ref->drop > 0 && used < size) {
-        used += (size_t)snprintf(out + used, (size_t)(end - out) - used, ", drop %d", ref->drop);
+    if (has && kind == MOTIVE_RELATION_LIQUIDATE && v[0] > 0 && used < size) {
+        used += (size_t)snprintf(out + used, (size_t)(end - out) - used, ", drop %d", (int)v[0]);
     }
-    if (ref->amount != 0 && used < size) {
-        snprintf(out + used, (size_t)(end - out) - used, ", %+d semitones on interval %d", ref->amount, ref->interval);
+    if (has && kind == MOTIVE_RELATION_INTERVAL_CHANGE && v[1] != 0 && used < size) {
+        snprintf(out + used, (size_t)(end - out) - used, ", %+d semitones on interval %d", (int)v[1], (int)v[0]);
     }
 }
 

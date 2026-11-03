@@ -58,7 +58,7 @@ typedef struct {
     bool has_cadence;
     CadenceType cadence;
     bool motive_given; /* the motive is the original, not a development */
-    PlanMotiveTransform transform;
+    bool restated; /* the motive_ref is an exact restatement of its source */
     NodeId motive_node;
     size_t motive_count;
     int motive_pitch[MOTIVE_MAX_NOTES];

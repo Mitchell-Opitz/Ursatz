@@ -261,19 +261,14 @@ bool motive_melodic_fault(const Motive *motive, const char **fault) {
  * inversion, a diminution, an interval change). A development that cannot be made scores 0.
  */
 static bool invent_score(const Motive *motive, const MotiveScoreWeights *weights, MotiveScore *out) {
-    MotiveDevSpec specs[3];
-    memset(specs, 0, sizeof(specs));
-    specs[0].kind = MOTIVE_DEV_INVERT;
-    specs[0].tonal = true;
-    specs[1].kind = MOTIVE_DEV_DIMINISH;
-    specs[2].kind = MOTIVE_DEV_INTERVAL_CHANGE;
-    specs[2].amount = 1;
-    specs[2].interval = 1;
+    MotiveRelationStep steps[3] = {{.kind = MOTIVE_RELATION_INVERT, .value = {-1, 1}},
+                                   {.kind = MOTIVE_RELATION_DIMINISH},
+                                   {.kind = MOTIVE_RELATION_INTERVAL_CHANGE, .value = {1, 1}}};
     Rational sum = rational_ratio(0, 1);
     for (size_t i = 0; i < 3; i++) {
         Motive development;
         MotiveRecognizability score;
-        if (motive_develop(motive, &specs[i], &development) != MOTIVE_DEV_OK ||
+        if (motive_develop(motive, &steps[i], &development) != MOTIVE_DEV_OK ||
             !motive_recognizability(motive, &development, weights, &score)) {
             continue;
         }

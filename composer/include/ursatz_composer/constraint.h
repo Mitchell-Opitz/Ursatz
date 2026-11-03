@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <analysis/motive_relation.h>
 #include <semantics/cadence_type.h>
 
 #include <ursatz_composer/lanes.h>
@@ -46,70 +47,29 @@ typedef enum {
 } PlanConstraintKind;
 
 typedef enum {
-    PLAN_TRANSFORM_NONE,
-    PLAN_TRANSFORM_TRANSPOSED,
-    PLAN_TRANSFORM_INVERTED,
-    PLAN_TRANSFORM_RETROGRADE,
-    PLAN_TRANSFORM_AUGMENTED,
-    PLAN_TRANSFORM_DIMINISHED,
-    PLAN_TRANSFORM_FRAGMENTED,
-    /* The transforms below were added after the first six; they keep the order of the plan format. */
-    PLAN_TRANSFORM_RESTATED,       /* exact repetition, or a transposition of it */
-    PLAN_TRANSFORM_INTERVAL_CHANGED,
-    PLAN_TRANSFORM_LIQUIDATED
-} PlanMotiveTransform;
-
-/* Where a fragment is taken from. PLAN_FRAGMENT_ANY leaves it to the operator. */
-typedef enum {
-    PLAN_FRAGMENT_ANY,
-    PLAN_FRAGMENT_LEADING,
-    PLAN_FRAGMENT_TRAILING,
-    PLAN_FRAGMENT_MIDDLE
-} PlanFragmentPosition;
-
-typedef enum {
     PLAN_ARCHETYPE_SENTENCE,
     PLAN_ARCHETYPE_PERIOD,
     PLAN_ARCHETYPE_HYBRID
 } PlanArchetype;
 
 /*
- * motive is a motive node in the same plan. The constraint says how the node's motive is to be made from it.
- *
- * semitones is used only by PLAN_TRANSFORM_TRANSPOSED (a real transposition). The members after it are optional
- * parameters for the motivic development operators (motive_develop.h); all-zero asks the operator to choose, so a
- * constraint written without them reads as it always did:
- *   tonal          transposed or inverted in the steps of the key's scale instead of in semitones
- *   steps          transposed, tonal: diatonic steps up (negative: down)
- *   has_axis, axis inverted: the MIDI pitch the motive is mirrored about (the first note by default)
- *   interval, amount, keep_contour
- *                  interval_changed: the 1-based interval to widen (negative amount: narrow) by amount semitones,
- *                  or every interval when interval is 0; keep_contour refuses a result that changes a direction
- *   position, length
- *                  fragmented: leading, trailing or middle, and how many notes
- *   drop, keep_rhythm
- *                  liquidated: how many notes to drop; keep_rhythm leaves the dropped notes' time as rests
- *   ratio_num, ratio_den
- *                  augmented or diminished: the factor the durations are multiplied by (2:1 and 1:2 by default)
+ * motive is a motive node in the same plan. The constraint says how the node's motive is made from it: by the
+ * library relation step (analysis/motive_relation.h), or, with has_step false, not at all (the node's melody is the
+ * source motive itself, as the first idea of a theme is). Parameters of the step left at their default are open: the
+ * motivic development operators (motive_develop.h) choose them, so an all-default step asks the operator to choose.
+ * An open parameter is a transpose with by 0, an invert with axis -1, an interval-change with amount 0, a fragment
+ * with position 0 or length 0, a liquidate with drop 0, an augment or diminish with ratio 0:0 (2:1 and 1:2).
  */
 typedef struct {
     NodeId motive;
-    PlanMotiveTransform transform;
-    int semitones;
-    bool tonal;
-    int steps;
-    bool has_axis;
-    int axis;
-    int interval;
-    int amount;
-    bool keep_contour;
-    PlanFragmentPosition position;
-    int length;
-    int drop;
-    bool keep_rhythm;
-    int ratio_num;
-    int ratio_den;
+    bool has_step;
+    MotiveRelationStep step;
 } PlanMotiveRef;
+
+/* Whether the ref restates its source exactly (an exact step; a transposition of it may be drawn, see motive_develop.h). */
+static inline bool plan_motive_ref_restates(const PlanMotiveRef *ref) {
+    return ref->has_step && ref->step.kind == MOTIVE_RELATION_EXACT;
+}
 
 /*
  * The schema a span was made from: schema is the id of a galant-schemas prototype (GalantSchemaId in

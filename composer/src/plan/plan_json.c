@@ -28,9 +28,6 @@ static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant",
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
                                                   "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones"};
-static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
-                                              "augmented",  "diminished",      "fragmented", "restated",
-                                              "interval_changed", "liquidated"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
 /* The parts of a piece structure, in PiecePart order (piece_structure.h). */
 static const char *const PIECE_PART_NAMES[] = {"intro", "body", "turnaround", "ending"};
@@ -95,45 +92,8 @@ static cJSON *span_json(PlanSpan span) {
     return object;
 }
 
-/* The development parameters of a motive_ref (see constraint.h), written only when set, so a plain one is unchanged. */
-static bool motive_ref_options_json(cJSON *object, const PlanMotiveRef *ref) {
-    bool ok = true;
-    if (ref->tonal) {
-        ok = ok && plan_json_add(object, "tonal", cJSON_CreateBool(true));
-    }
-    if (ref->steps != 0) {
-        ok = ok && plan_json_add(object, "steps", json_number(ref->steps));
-    }
-    if (ref->has_axis) {
-        ok = ok && plan_json_add(object, "axis", json_number(ref->axis));
-    }
-    if (ref->interval != 0) {
-        ok = ok && plan_json_add(object, "interval", json_number(ref->interval));
-    }
-    if (ref->amount != 0) {
-        ok = ok && plan_json_add(object, "amount", json_number(ref->amount));
-    }
-    if (ref->keep_contour) {
-        ok = ok && plan_json_add(object, "keep_contour", cJSON_CreateBool(true));
-    }
-    if (ref->position != PLAN_FRAGMENT_ANY) {
-        ok = ok && plan_json_add(object, "position", cJSON_CreateString(plan_fragment_position_names[ref->position]));
-    }
-    if (ref->length != 0) {
-        ok = ok && plan_json_add(object, "length", json_number(ref->length));
-    }
-    if (ref->drop != 0) {
-        ok = ok && plan_json_add(object, "drop", json_number(ref->drop));
-    }
-    if (ref->keep_rhythm) {
-        ok = ok && plan_json_add(object, "keep_rhythm", cJSON_CreateBool(true));
-    }
-    if (ref->ratio_num != 0) {
-        ok = ok && plan_json_add(object, "ratio_num", json_number(ref->ratio_num)) &&
-             plan_json_add(object, "ratio_den", json_number(ref->ratio_den));
-    }
-    return ok;
-}
+/* A motive ref's relation step as its text (motive_relation_step_text); a ref with no step has no member. */
+#define STEP_TEXT_MAX 160
 
 static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *constraint) {
     cJSON *object = cJSON_CreateObject();
@@ -152,10 +112,12 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
         break;
     }
     case PLAN_CONSTRAINT_MOTIVE_REF:
-        ok = ok && plan_json_add(object, "motive", json_number((long)plan_node_rank(plan, constraint->params.motive.motive))) &&
-             plan_json_add(object, "transform", cJSON_CreateString(TRANSFORM_NAMES[constraint->params.motive.transform])) &&
-             plan_json_add(object, "semitones", json_number(constraint->params.motive.semitones));
-        ok = ok && motive_ref_options_json(object, &constraint->params.motive);
+        ok = ok && plan_json_add(object, "motive", json_number((long)plan_node_rank(plan, constraint->params.motive.motive)));
+        if (ok && constraint->params.motive.has_step) {
+            char text[STEP_TEXT_MAX];
+            ok = motive_relation_step_text(&constraint->params.motive.step, text, sizeof(text)) &&
+                 plan_json_add(object, "step", cJSON_CreateString(text));
+        }
         break;
     case PLAN_CONSTRAINT_KEY:
         ok = ok && plan_json_add(object, "tonic_pitch_class", json_number(analysis_key_tonic_pitch_class(&constraint->params.key))) &&
@@ -835,40 +797,157 @@ static bool read_optional_int(JsonReader *reader, const cJSON *object, const cha
     return true;
 }
 
-/* The development parameters of a motive_ref, all optional (see constraint.h). */
-static bool read_motive_ref_options(JsonReader *reader, const cJSON *item, const char *path, PlanMotiveRef *ref) {
-    int position = PLAN_FRAGMENT_ANY;
+/*
+ * Plan files saved before relation steps write a motive ref as "transform" and the members it uses. This is the only
+ * mapping of those names: it is read-only, and nothing writes them. The table (docs/modules/motive-relations.md, Composer
+ * fields to relation parameters):
+ *   none             no step
+ *   restated         exact
+ *   transposed       transpose: tonal, by = steps when tonal, else semitones
+ *   inverted         invert: axis (-1 without one), tonal
+ *   retrograde       retrograde
+ *   augmented        augment: ratio_num:ratio_den
+ *   diminished       diminish: ratio_num:ratio_den
+ *   fragmented       fragment: position, length
+ *   interval_changed interval-change: interval, amount, keep_contour
+ *   liquidated       liquidate: drop, keep_rhythm
+ */
+enum {
+    LEGACY_NONE,
+    LEGACY_TRANSPOSED,
+    LEGACY_INVERTED,
+    LEGACY_RETROGRADE,
+    LEGACY_AUGMENTED,
+    LEGACY_DIMINISHED,
+    LEGACY_FRAGMENTED,
+    LEGACY_RESTATED,
+    LEGACY_INTERVAL_CHANGED,
+    LEGACY_LIQUIDATED
+};
+static const char *const LEGACY_TRANSFORM_NAMES[] = {"none",       "transposed",       "inverted",   "retrograde",
+                                                     "augmented",  "diminished",       "fragmented", "restated",
+                                                     "interval_changed", "liquidated"};
+static const char *const LEGACY_POSITION_NAMES[] = {"any", "leading", "trailing", "middle"};
+
+static bool plan_motive_ref_from_transform(JsonReader *reader, const cJSON *item, const char *path, const char *name,
+                                           PlanMotiveRef *ref) {
+    int transform = -1;
+    for (size_t i = 0; i < COUNT_OF(LEGACY_TRANSFORM_NAMES); i++) {
+        if (strcmp(name, LEGACY_TRANSFORM_NAMES[i]) == 0) {
+            transform = (int)i;
+        }
+    }
+    if (transform < 0) {
+        char message[PLAN_JSON_PATH_MAX + 64];
+        snprintf(message, sizeof(message), "unknown motive transform \"%.64s\"", name);
+        return json_bad_format(reader, path, message);
+    }
+    int semitones, steps, axis, interval, amount, length, drop, ratio_num, ratio_den;
+    bool tonal, keep_contour, keep_rhythm;
+    int position = 0;
     const cJSON *position_item = cJSON_GetObjectItemCaseSensitive(item, "position");
     if (position_item) {
         char at[PLAN_JSON_PATH_MAX];
         json_child_path(at, path, "position");
-        if (!read_enum(reader, position_item, at, plan_fragment_position_names, PLAN_FRAGMENT_POSITION_NAME_COUNT,
-                       &position)) {
+        if (!read_enum(reader, position_item, at, LEGACY_POSITION_NAMES, COUNT_OF(LEGACY_POSITION_NAMES), &position)) {
             return false;
         }
     }
-    ref->position = (PlanFragmentPosition)position;
-    const cJSON *axis_item = cJSON_GetObjectItemCaseSensitive(item, "axis");
-    if (axis_item) {
-        ref->has_axis = true;
-        if (!read_optional_int(reader, item, path, "axis", 0, 127, &ref->axis)) {
-            return false;
-        }
-    }
-    if (!read_optional_bool(reader, item, path, "tonal", &ref->tonal) ||
-        !read_optional_bool(reader, item, path, "keep_contour", &ref->keep_contour) ||
-        !read_optional_bool(reader, item, path, "keep_rhythm", &ref->keep_rhythm) ||
-        !read_optional_int(reader, item, path, "steps", -127, 127, &ref->steps) ||
-        !read_optional_int(reader, item, path, "interval", 0, 127, &ref->interval) ||
-        !read_optional_int(reader, item, path, "amount", -127, 127, &ref->amount) ||
-        !read_optional_int(reader, item, path, "length", 0, 127, &ref->length) ||
-        !read_optional_int(reader, item, path, "drop", 0, 127, &ref->drop) ||
-        !read_optional_int(reader, item, path, "ratio_num", 0, 64, &ref->ratio_num) ||
-        !read_optional_int(reader, item, path, "ratio_den", 0, 64, &ref->ratio_den)) {
+    bool has_axis = cJSON_GetObjectItemCaseSensitive(item, "axis") != NULL;
+    if (!read_optional_int(reader, item, path, "semitones", -127, 127, &semitones) ||
+        !read_optional_int(reader, item, path, "axis", 0, 127, &axis) ||
+        !read_optional_bool(reader, item, path, "tonal", &tonal) ||
+        !read_optional_bool(reader, item, path, "keep_contour", &keep_contour) ||
+        !read_optional_bool(reader, item, path, "keep_rhythm", &keep_rhythm) ||
+        !read_optional_int(reader, item, path, "steps", -127, 127, &steps) ||
+        !read_optional_int(reader, item, path, "interval", 0, 127, &interval) ||
+        !read_optional_int(reader, item, path, "amount", -127, 127, &amount) ||
+        !read_optional_int(reader, item, path, "length", 0, 127, &length) ||
+        !read_optional_int(reader, item, path, "drop", 0, 127, &drop) ||
+        !read_optional_int(reader, item, path, "ratio_num", 0, 64, &ratio_num) ||
+        !read_optional_int(reader, item, path, "ratio_den", 0, 64, &ratio_den)) {
         return false;
     }
-    if ((ref->ratio_num == 0) != (ref->ratio_den == 0)) {
+    if ((ratio_num == 0) != (ratio_den == 0)) {
         return json_bad_format(reader, path, "ratio_num and ratio_den go together");
+    }
+    MotiveRelationStep *step = &ref->step;
+    memset(step, 0, sizeof(*step));
+    ref->has_step = transform != LEGACY_NONE;
+    switch (transform) {
+    case LEGACY_RESTATED:
+        step->kind = MOTIVE_RELATION_EXACT;
+        break;
+    case LEGACY_TRANSPOSED:
+        step->kind = MOTIVE_RELATION_TRANSPOSE;
+        step->value[0] = tonal ? 1 : 0;
+        step->value[1] = tonal ? steps : semitones;
+        break;
+    case LEGACY_INVERTED:
+        step->kind = MOTIVE_RELATION_INVERT;
+        step->value[0] = has_axis ? axis : -1;
+        step->value[1] = tonal ? 1 : 0;
+        break;
+    case LEGACY_RETROGRADE:
+        step->kind = MOTIVE_RELATION_RETROGRADE;
+        break;
+    case LEGACY_AUGMENTED:
+    case LEGACY_DIMINISHED:
+        step->kind = transform == LEGACY_AUGMENTED ? MOTIVE_RELATION_AUGMENT : MOTIVE_RELATION_DIMINISH;
+        step->value[0] = ratio_num;
+        step->den[0] = ratio_den;
+        break;
+    case LEGACY_FRAGMENTED:
+        step->kind = MOTIVE_RELATION_FRAGMENT;
+        step->value[0] = position;
+        step->value[1] = length;
+        break;
+    case LEGACY_INTERVAL_CHANGED:
+        step->kind = MOTIVE_RELATION_INTERVAL_CHANGE;
+        step->value[0] = interval;
+        step->value[1] = amount;
+        step->value[2] = keep_contour ? 1 : 0;
+        break;
+    case LEGACY_LIQUIDATED:
+        step->kind = MOTIVE_RELATION_LIQUIDATE;
+        step->value[0] = drop;
+        step->value[1] = keep_rhythm ? 1 : 0;
+        break;
+    default:
+        break;
+    }
+    return true;
+}
+
+/* A motive ref: "step" through motive_relation_step_parse, else a "transform" of an older file, else no step. */
+static bool read_motive_ref(JsonReader *reader, const cJSON *item, const char *path, PlanMotiveRef *ref) {
+    long number_value;
+    if (!json_read_int_member(reader, item, path, "motive", 1, TIME_LIMIT, &number_value)) {
+        return false;
+    }
+    ref->motive = (NodeId)number_value;
+    const cJSON *step = cJSON_GetObjectItemCaseSensitive(item, "step");
+    const cJSON *transform = cJSON_GetObjectItemCaseSensitive(item, "transform");
+    char at[PLAN_JSON_PATH_MAX];
+    if (step) {
+        json_child_path(at, path, "step");
+        if (!cJSON_IsString(step)) {
+            return json_bad_format(reader, at, "expected a relation step like \"transpose tonal=1 by=2\"");
+        }
+        if (!motive_relation_step_parse(step->valuestring, &ref->step)) {
+            char message[PLAN_JSON_PATH_MAX + 64];
+            snprintf(message, sizeof(message), "not a relation step \"%.64s\"", step->valuestring);
+            return json_bad_format(reader, at, message);
+        }
+        ref->has_step = true;
+        return true;
+    }
+    if (transform) {
+        json_child_path(at, path, "transform");
+        if (!cJSON_IsString(transform)) {
+            return json_bad_format(reader, at, "expected a string");
+        }
+        return plan_motive_ref_from_transform(reader, item, path, transform->valuestring, ref);
     }
     return true;
 }
@@ -965,18 +1044,8 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         }
         out->params.cadence = plan_cadence_types[value];
         return true;
-    case PLAN_CONSTRAINT_MOTIVE_REF: {
-        long semitones;
-        if (!json_read_int_member(reader, item, path, "motive", 1, TIME_LIMIT, &number_value) ||
-            !read_enum_member(reader, item, path, "transform", TRANSFORM_NAMES, COUNT_OF(TRANSFORM_NAMES), &value) ||
-            !json_read_int_member(reader, item, path, "semitones", -127, 127, &semitones)) {
-            return false;
-        }
-        out->params.motive.motive = (NodeId)number_value;
-        out->params.motive.transform = (PlanMotiveTransform)value;
-        out->params.motive.semitones = (int)semitones;
-        return read_motive_ref_options(reader, item, path, &out->params.motive);
-    }
+    case PLAN_CONSTRAINT_MOTIVE_REF:
+        return read_motive_ref(reader, item, path, &out->params.motive);
     case PLAN_CONSTRAINT_KEY:
         if (!json_read_int_member(reader, item, path, "tonic_pitch_class", 0, 11, &number_value) ||
             !read_enum_member(reader, item, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &value)) {

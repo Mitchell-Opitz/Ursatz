@@ -410,7 +410,7 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
         return true;
     }
     /* A cadential idea is a liquidation: fewer notes than the basic idea, as the P13 operators make it. */
-    if (request->slot == SLOT_CADENTIAL && request->ref.transform != PLAN_TRANSFORM_RESTATED &&
+    if (request->slot == SLOT_CADENTIAL && !plan_motive_ref_restates(&request->ref) &&
         result.note_count >= request->basic.note_count) {
         return true;
     }
@@ -605,7 +605,7 @@ static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
     case SLOT_REPETITION:
         /* A restated repetition (the melody restates the basic idea) stays exact. A response is the dominant form when
            the basic idea opens on the tonic and the chords answer on the dominant; else a transposition. */
-        if (request.ref.transform == PLAN_TRANSFORM_RESTATED) {
+        if (plan_motive_ref_restates(&request.ref)) {
             return offer_exact(&proposal);
         }
         if (request.answers_in_dominant && opens_on_tonic(&request.basic) && !offer_dominant_form(&proposal)) {
@@ -614,17 +614,17 @@ static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng
         return out->count > 0 ? true : offer_transpositions(&proposal);
     case SLOT_CONTRAST:
         /* The first idea of a slot with its own motive restates it (grow_idea_dev). */
-        return request.ref.transform == PLAN_TRANSFORM_RESTATED ? offer_exact(&proposal)
+        return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal)
                                                                 : offer_operations(&proposal, "contrast", true);
     case SLOT_CADENTIAL:
-        return request.ref.transform == PLAN_TRANSFORM_RESTATED ? offer_exact(&proposal)
+        return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal)
                                                                 : offer_operations(&proposal, "cadential", false);
     case SLOT_FRAGMENT_1:
-        return request.ref.transform == PLAN_TRANSFORM_RESTATED ? offer_exact(&proposal) : offer_liquidation(&proposal, 1);
+        return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal) : offer_liquidation(&proposal, 1);
     case SLOT_FRAGMENT_2:
         return offer_liquidation(&proposal, 2);
     case SLOT_CADENTIAL_ENDING:
-        return request.ref.transform == PLAN_TRANSFORM_RESTATED ? offer_exact(&proposal) : true;
+        return plan_motive_ref_restates(&request.ref) ? offer_exact(&proposal) : true;
     case SLOT_NONE:
         break;
     }

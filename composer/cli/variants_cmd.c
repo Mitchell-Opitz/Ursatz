@@ -158,7 +158,11 @@ static void print_operations(void) {
         printf("%s  %s  (%s; %s)\n", operation->name, operation->label, variant_category_name(operation->category),
                operation->citation);
         for (size_t p = 0; p < operation->param_count; p++) {
-            const VariantParam *param = &operation->params[p];
+            VariantParam described;
+            const VariantParam *param = &described;
+            if (!variant_operation_param(operation, p, &described)) {
+                continue;
+            }
             printf("  --%s  %s  %s\n", param->name, variant_param_kind_name(param->kind), param->description);
         }
         printf("  forms: ");
@@ -196,7 +200,11 @@ static int set_param(VariantStep *step, size_t number, const char *path, const c
     if (index < 0) {
         return cli_fail(CLI_EXIT_USAGE, "%s: step %zu: %s has no parameter '%s'", path, number, step->op, item->string);
     }
-    const VariantParam *param = &operation->params[index];
+    VariantParam described;
+    if (!variant_operation_param(operation, (size_t)index, &described)) {
+        return cli_fail(CLI_EXIT_USAGE, "%s: step %zu: %s has no parameter '%s'", path, number, step->op, item->string);
+    }
+    const VariantParam *param = &described;
     long value = 0;
     long den = 0;
     bool ok = false;

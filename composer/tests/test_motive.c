@@ -1286,19 +1286,19 @@ static bool feature_is(const Motive *motive, size_t index, const char *label, si
 static void test_features_follow_the_notes(void) {
     Motive source = six_notes();
     Motive result;
-    MotiveDevSpec spec;
+    MotiveRelationStep spec;
 
     /* Moving the pitches leaves every feature where it was, and the role stays. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_TRANSPOSE;
-    spec.amount = 2;
+    spec.kind = MOTIVE_RELATION_TRANSPOSE;
+    spec.value[1] = 2;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
     assert(result.feature_count == 3 && feature_is(&result, 1, "b", 2, 3));
     assert(result.accompaniment && result.chord_count == 3);
 
     /* A retrograde turns them round. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_RETROGRADE;
+    spec.kind = MOTIVE_RELATION_RETROGRADE;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
     assert(result.feature_count == 3);
     assert(feature_is(&result, 0, "a", 4, 5) && feature_is(&result, 1, "b", 2, 3) && feature_is(&result, 2, "c", 0, 1));
@@ -1306,9 +1306,9 @@ static void test_features_follow_the_notes(void) {
 
     /* A fragment keeps the features it holds whole, renumbered from its first note. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_FRAGMENT;
-    spec.position = PLAN_FRAGMENT_TRAILING;
-    spec.length = 4;
+    spec.kind = MOTIVE_RELATION_FRAGMENT;
+    spec.value[0] = MOTIVE_FRAGMENT_TRAILING;
+    spec.value[1] = 4;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
     assert(result.note_count == 4 && result.feature_count == 2);
     assert(feature_is(&result, 0, "b", 0, 1) && feature_is(&result, 1, "c", 2, 3));
@@ -1318,27 +1318,27 @@ static void test_features_follow_the_notes(void) {
 
     /* A fragment through the middle of a feature drops it. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_FRAGMENT;
-    spec.position = PLAN_FRAGMENT_LEADING;
-    spec.length = 3;
+    spec.kind = MOTIVE_RELATION_FRAGMENT;
+    spec.value[0] = MOTIVE_FRAGMENT_LEADING;
+    spec.value[1] = 3;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
     assert(result.feature_count == 1 && feature_is(&result, 0, "a", 0, 1));
     assert(result.chord_count == 2 && result.chords[1].degree == 5);
 
     /* Dropping a note takes its feature with it and renumbers the ones after. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_LIQUIDATE;
-    spec.drop = 1;
-    spec.min_length = 2;
-    spec.keep_rhythm = true;
+    spec.kind = MOTIVE_RELATION_LIQUIDATE;
+    spec.value[0] = 1;
+    spec.value[2] = 2;
+    spec.value[1] = true;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
     assert(result.note_count == 5 && result.feature_count == 2);
 
     /* Augmentation moves the chords with the notes. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_AUGMENT;
-    spec.ratio_num = 2;
-    spec.ratio_den = 1;
+    spec.kind = MOTIVE_RELATION_AUGMENT;
+    spec.value[0] = 2;
+    spec.den[0] = 1;
     Motive shorter = load_notes("C4:e D4:e E4:e F4:e", &FOUR_FOUR, &C_MAJOR);
     MotiveError error;
     assert(motive_harmony_parse("I V@1", &(PlanMeter){motive_meter(&shorter).beats_per_bar, motive_meter(&shorter).beat_unit, 0}, shorter.chords, &shorter.chord_count, &error) == MOTIVE_OK);

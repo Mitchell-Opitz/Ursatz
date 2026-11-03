@@ -689,8 +689,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "transform": "restated",
-                          "semitones": 0
+                          "step": "exact"
                         }]
                     }
                   }, {
@@ -713,10 +712,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "transform": "fragmented",
-                          "semitones": 0,
-                          "position": "leading",
-                          "length": 2
+                          "step": "fragment position=1 length=2"
                         }]
                     }
                   }, {
@@ -739,10 +735,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "transform": "fragmented",
-                          "semitones": 0,
-                          "position": "leading",
-                          "length": 2
+                          "step": "fragment position=1 length=2"
                         }]
                     }
                   }, {
@@ -765,8 +758,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 7,
-                          "transform": "restated",
-                          "semitones": 0
+                          "step": "exact"
                         }]
                     }
                   }],
@@ -1032,9 +1024,7 @@
         "state": "realized",
         "constraints": [{
             "kind": "motive_ref",
-            "motive": 6,
-            "transform": "none",
-            "semitones": 0
+            "motive": 6
           }],
         "payload": {
           "notes": [{
@@ -1184,8 +1174,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 12,
-            "transform": "restated",
-            "semitones": 0
+            "step": "exact"
           }],
         "payload": {
           "notes": [{
@@ -1335,10 +1324,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 17,
-            "transform": "fragmented",
-            "semitones": 0,
-            "position": "leading",
-            "length": 2
+            "step": "fragment position=1 length=2"
           }],
         "payload": {
           "notes": [{
@@ -1458,10 +1444,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 18,
-            "transform": "fragmented",
-            "semitones": 0,
-            "position": "leading",
-            "length": 2
+            "step": "fragment position=1 length=2"
           }],
         "payload": {
           "notes": [{
@@ -1571,8 +1554,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 19,
-            "transform": "restated",
-            "semitones": 0
+            "step": "exact"
           }, {
             "kind": "cadence",
             "type": "pac"

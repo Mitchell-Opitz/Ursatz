@@ -52,15 +52,28 @@ static bool value_in_range(const VariantParam *param, long value, long den) {
     }
 }
 
+/* The parameter at index of the operation (all zero for one it does not have). */
+static VariantParam param_at(const VariantOperation *operation, size_t index) {
+    VariantParam param;
+    if (!variant_operation_param(operation, index, &param)) {
+        memset(&param, 0, sizeof(param));
+    }
+    return param;
+}
+
 bool variant_step_set(VariantStep *step, const char *param, long value, long den) {
     const VariantOperation *operation = step ? variant_registry_find(step->op) : NULL;
     int index = variant_operation_param_index(operation, param);
-    if (index < 0 || !value_in_range(&operation->params[index], value, den)) {
+    if (index < 0) {
+        return false;
+    }
+    VariantParam described = param_at(operation, (size_t)index);
+    if (!value_in_range(&described, value, den)) {
         return false;
     }
     step->values[index].set = true;
     step->values[index].value = value;
-    step->values[index].den = operation->params[index].kind == VARIANT_PARAM_RATIO ? den : 0;
+    step->values[index].den = described.kind == VARIANT_PARAM_RATIO ? den : 0;
     return true;
 }
 
@@ -189,10 +202,11 @@ static bool draw_accepted(FillRng *rng, const VariantOperation *operation, Varia
     size_t open_count = 0;
     size_t total = 1;
     for (size_t p = 0; p < operation->param_count; p++) {
-        if (resolved->values[p].set || operation->params[p].optional) {
+        VariantParam described = param_at(operation, p);
+        if (resolved->values[p].set || described.optional) {
             continue;
         }
-        const VariantParam *param = &operation->params[p];
+        const VariantParam *param = &described;
         if (param->kind != VARIANT_PARAM_INT && param->kind != VARIANT_PARAM_BOOL) {
             return false;
         }
@@ -215,7 +229,7 @@ static bool draw_accepted(FillRng *rng, const VariantOperation *operation, Varia
         memcpy(values, resolved->values, sizeof(values));
         size_t rest = combination;
         for (size_t k = 0; k < open_count; k++) {
-            values[open[k]] = (VariantValue){true, operation->params[open[k]].min + (long)(rest % (size_t)span[k]), 0};
+            values[open[k]] = (VariantValue){true, param_at(operation, open[k]).min + (long)(rest % (size_t)span[k]), 0};
             rest /= (size_t)span[k];
         }
         Motive result;
@@ -232,7 +246,7 @@ static bool draw_accepted(FillRng *rng, const VariantOperation *operation, Varia
     size_t rest = moving_count > 0 ? moving[fill_rng_below(rng, moving_count)] : accepted[fill_rng_below(rng, accepted_count)];
     for (size_t k = 0; k < open_count; k++) {
         resolved->values[open[k]] =
-            (VariantValue){true, operation->params[open[k]].min + (long)(rest % (size_t)span[k]), 0};
+            (VariantValue){true, param_at(operation, open[k]).min + (long)(rest % (size_t)span[k]), 0};
         resolved->open[open[k]] = true;
         rest /= (size_t)span[k];
     }
@@ -492,16 +506,17 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
             return VARIANT_ERR_FORM;
         }
         for (size_t p = 0; p < operation->param_count; p++) {
-            if (step->values[p].set && !value_in_range(&operation->params[p], step->values[p].value, step->values[p].den)) {
-                record_error(log, s, "%s: %s is outside %ld to %ld", operation->name, operation->params[p].name,
-                             operation->params[p].min, operation->params[p].max);
+            VariantParam described = param_at(operation, p);
+            if (step->values[p].set && !value_in_range(&described, step->values[p].value, step->values[p].den)) {
+                record_error(log, s, "%s: %s is outside %ld to %ld", operation->name, described.name, described.min,
+                             described.max);
                 return VARIANT_ERR_PARAM;
             }
         }
 
         bool drawn = false;
         for (size_t p = 0; p < operation->param_count; p++) {
-            drawn = drawn || (!step->values[p].set && !operation->params[p].optional);
+            drawn = drawn || (!step->values[p].set && !param_at(operation, p).optional);
         }
         size_t draws = drawn ? VARIANT_DRAWS : 1;
 
@@ -520,8 +535,9 @@ VariantResult variant_apply_chain(const Motive *source, const VariantChain *chai
             bool chosen = attempt == 0 && drawn && (names_figure(operation) || changes_chords(operation)) &&
                           draw_accepted(&rng, operation, resolved, &current);
             for (size_t p = 0; p < operation->param_count; p++) {
-                if (!chosen && !step->values[p].set && !operation->params[p].optional) {
-                    resolved->values[p] = draw_param(&rng, &operation->params[p], &current);
+                VariantParam described = param_at(operation, p);
+                if (!chosen && !step->values[p].set && !described.optional) {
+                    resolved->values[p] = draw_param(&rng, &described, &current);
                     resolved->open[p] = true;
                 }
             }
@@ -574,7 +590,7 @@ static bool needs_accompaniment(const VariantOperation *operation) {
 /* Whether the operation works on one of the motive's labelled features. */
 static bool takes_feature(const VariantOperation *operation) {
     for (size_t p = 0; p < operation->param_count; p++) {
-        if (operation->params[p].features_limit) {
+        if (param_at(operation, p).features_limit) {
             return true;
         }
     }
@@ -675,10 +691,11 @@ static cJSON *step_json(const VariantStepRecord *step) {
     ok = ok && plan_json_add(object, "open", open);
     for (size_t p = 0; ok && p < step->param_count; p++) {
         if (step->values[p].set) {
-            ok = plan_json_add(params, operation->params[p].name, value_json(&operation->params[p], &step->values[p]));
+            VariantParam described = param_at(operation, p);
+            ok = plan_json_add(params, described.name, value_json(&described, &step->values[p]));
         }
         if (ok && step->open[p]) {
-            ok = plan_json_append(open, cJSON_CreateString(operation->params[p].name));
+            ok = plan_json_append(open, cJSON_CreateString(param_at(operation, p).name));
         }
     }
     if (!ok) {
