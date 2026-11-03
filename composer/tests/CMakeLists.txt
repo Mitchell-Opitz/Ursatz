@@ -368,6 +368,12 @@ add_test(NAME test_export_cli
          COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/export_cli
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_export.cmake)
 
+# Seeded CLI output against tests/snapshots; recapture with -DUPDATE=1 (README.md).
+add_test(NAME test_cli_snapshots
+         COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshots
+                 -DSNAPSHOTS=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_snapshots.cmake)
+
 add_executable(test_analyzer_check test_analyzer_check.c)
 target_link_libraries(test_analyzer_check PRIVATE ursatz_composer)
 target_compile_options(test_analyzer_check PRIVATE -Wall -Wextra -Wpedantic)
