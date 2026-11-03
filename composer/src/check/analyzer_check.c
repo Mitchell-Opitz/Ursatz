@@ -6,14 +6,14 @@
 
 #include <standard-harmony/harmony_cadence_rules.h>
 
+#include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/composer_api.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
-#include <ursatz_composer/render.h>
 
-#include "check/hearing.h"
+#include "check/hearing_result.h"
 #include "util/util.h"
 
 #define MAX_CADENCES 2
@@ -122,7 +122,18 @@ static size_t bar_of(long numerator, unsigned long denominator, const PlanMeter 
                     (denominator * (unsigned long)meter->beats_per_bar));
 }
 
-static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars, const PlanMeter *meter,
+/* The bar (0-based from the section's start) the chord of a report entry starts in; SIZE_MAX before the section. */
+static size_t entry_bar(const AnalysisReportEntry *entry, Rational origin, const PlanMeter *meter) {
+    Rational at;
+    Rational from_origin;
+    if (rational_make(entry->time_numerator, entry->time_denominator, &at) != RATIONAL_OK ||
+        rational_sub(at, origin, &from_origin) != RATIONAL_OK || rational_is_negative(from_origin)) {
+        return (size_t)-1;
+    }
+    return bar_of(from_origin.num, from_origin.den, meter);
+}
+
+static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars, Rational origin, const PlanMeter *meter,
                              const AnalysisReport *report, Items *items) {
     CadenceType planned[MAX_CADENCES];
     size_t count = 0;
@@ -143,7 +154,7 @@ static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars,
                 continue;
             }
             const AnalysisReportEntry *entry = &report->entries[cadence->arrival_first];
-            if (bar_of(entry->time_numerator, entry->time_denominator, meter) != bar) {
+            if (entry_bar(entry, origin, meter) != bar) {
                 continue;
             }
             bool matches = cadence_agrees(planned[i], cadence->type);
@@ -170,24 +181,75 @@ static void compare_key(const AnalysisReport *report, AnalysisKey key, Items *it
     add_item(items, ANALYZER_CHECK_KEY, 0, planned, heard, agreed);
 }
 
-/* Whether a hard fault involves a note the plan wrote: a note in a span that is not Given. */
-static bool writes_note(const PiecePlan *plan, const RenderedPlan *rendered, const AnalyzerViolation *violation) {
-    for (size_t n = 0; n < violation->note_id_count; n++) {
-        size_t id = violation->note_ids[n];
-        if (id < rendered->count && plan_lane_span_state(plan, rendered->spans[id]) != PLAN_STATE_GIVEN) {
-            return true;
-        }
+/* ------------------------------------------------------------- the check */
+
+static AnalyzerCheckResult result_of(HearingResult status) {
+    switch (status) {
+    case HEARING_OK:
+        return ANALYZER_CHECK_OK;
+    case HEARING_ERR_NULL:
+        return ANALYZER_CHECK_ERR_NULL;
+    case HEARING_ERR_ALLOC:
+        return ANALYZER_CHECK_ERR_ALLOC;
+    case HEARING_ERR_NOT_WRITTEN:
+        return ANALYZER_CHECK_ERR_NOT_WRITTEN;
+    case HEARING_ERR_PLAN:
+        return ANALYZER_CHECK_ERR_PLAN;
+    default:
+        return ANALYZER_CHECK_ERR_ANALYSIS;
     }
-    return false;
 }
 
-/* ------------------------------------------------------------- the check */
+/* The hard faults the plan's own notes take part in, added to the items; first_bar is the heard span's first bar. */
+static bool add_violations(ComposerHearing *hearing, const AnalyzerResult *result, size_t first_bar, Items *items,
+                           bool *contradicts) {
+    const PiecePlan *plan = hearing_plan(hearing);
+    const RenderedPlan *rendered = hearing_rendered(hearing);
+    AnalyzerViolation *violations = NULL;
+    size_t violation_count = 0;
+    if (analyzer_result_violations(result, &violations, &violation_count) != ANALYZER_OK) {
+        return false;
+    }
+    for (size_t i = 0; i < violation_count; i++) {
+        bool writes = false;
+        for (size_t n = 0; n < violations[i].note_id_count && !writes; n++) {
+            size_t event = hearing_source_event(hearing, result, violations[i].note_ids[n]);
+            writes = event < rendered->count && plan_lane_span_state(plan, rendered->spans[event]) != PLAN_STATE_GIVEN;
+        }
+        if (violations[i].hard && writes) {
+            size_t bar = violations[i].measure > 0 ? (size_t)violations[i].measure - 1 : 0;
+            add_item(items, ANALYZER_CHECK_VIOLATION, bar >= first_bar ? bar - first_bar : 0, "none", violations[i].rule,
+                     false);
+            *contradicts = true;
+        }
+    }
+    analyzer_violations_free(violations, violation_count);
+    return true;
+}
 
 AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section, AnalyzerCheck *out) {
     if (!out) {
         return ANALYZER_CHECK_ERR_NULL;
     }
     memset(out, 0, sizeof(*out));
+    ComposerHearing *hearing = NULL;
+    if (!plan) {
+        return ANALYZER_CHECK_ERR_NULL;
+    }
+    AnalyzerCheckResult made = result_of(hearing_create(plan, &hearing));
+    if (made == ANALYZER_CHECK_OK) {
+        made = analyzer_check_section_in(hearing, section, out);
+    }
+    hearing_destroy(hearing);
+    return made;
+}
+
+AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId section, AnalyzerCheck *out) {
+    if (!out) {
+        return ANALYZER_CHECK_ERR_NULL;
+    }
+    memset(out, 0, sizeof(*out));
+    const PiecePlan *plan = hearing_plan(hearing);
     if (!plan || !plan_has_node(plan, section)) {
         return ANALYZER_CHECK_ERR_NULL;
     }
@@ -209,57 +271,26 @@ AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section
     }
     size_t bars = bar_of(span.length.num, span.length.den, &meter);
 
-    RenderedPlan rendered;
-    PlanRenderResult drawn = plan_render_range(plan, span, &rendered);
-    if (drawn != PLAN_RENDER_OK) {
-        return drawn == PLAN_RENDER_ERR_ALLOC ? ANALYZER_CHECK_ERR_ALLOC : ANALYZER_CHECK_ERR_PLAN;
+    const AnalyzerResult *heard = NULL;
+    AnalyzerCheckResult hear_status = result_of(hearing_section(hearing, span, &heard));
+    if (hear_status != ANALYZER_CHECK_OK) {
+        return hear_status;
     }
-    if (rendered.count == 0) {
-        rendered_plan_destroy(&rendered);
-        return ANALYZER_CHECK_ERR_NOT_WRITTEN;
-    }
-    AnalyzerFragment fragment;
-    memset(&fragment, 0, sizeof(fragment));
-    fragment.events = (const NoteEvent *const *)rendered.events;
-    fragment.count = rendered.count;
-    fragment.meter = rendered.meter_map;
-    fragment.has_key = true;
-    fragment.key_tonic_pitch_class = analysis_key_tonic_pitch_class(&key);
-    fragment.key_minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
-    fragment.streams = rendered.part_index;
-
-    AnalyzerFragmentAnalysis analysis;
-    AnalyzerFragmentResult analyzed = analyzer_analyze_fragment(&fragment, &analysis);
-    if (analyzed != ANALYZER_FRAGMENT_OK) {
-        rendered_plan_destroy(&rendered);
-        return analyzed == ANALYZER_FRAGMENT_ERR_ALLOC ? ANALYZER_CHECK_ERR_ALLOC : ANALYZER_CHECK_ERR_ANALYSIS;
-    }
-    const AnalysisReport *report = analyzer_fragment_report(&analysis);
+    const AnalysisReport *report = analyzer_result_report(heard);
     Items items;
     memset(&items, 0, sizeof(items));
-    compare_cadences(plan, section, bars, &meter, report, &items);
+    compare_cadences(plan, section, bars, span.start, &meter, report, &items);
     compare_key(report, key, &items);
     out->planned = items.count;
     for (size_t i = 0; i < items.count; i++) {
         out->agreed += items.items[i].agreed;
     }
     out->contradicts = out->agreed != out->planned;
-
-    AnalyzerViolation *violations = NULL;
-    size_t violation_count = 0;
-    if (analyzer_fragment_violations(&analysis, &violations, &violation_count) != ANALYZER_FRAGMENT_OK) {
+    bool contradicts = false;
+    if (!add_violations(hearing, heard, bar_of(span.start.num, span.start.den, &meter), &items, &contradicts)) {
         items.failed = true;
     }
-    for (size_t i = 0; i < violation_count; i++) {
-        if (violations[i].hard && writes_note(plan, &rendered, &violations[i])) {
-            add_item(&items, ANALYZER_CHECK_VIOLATION, violations[i].measure > 0 ? (size_t)violations[i].measure - 1 : 0, "none",
-                     violations[i].rule, false);
-            out->contradicts = true;
-        }
-    }
-    analyzer_violations_free(violations, violation_count);
-    analyzer_fragment_analysis_destroy(&analysis);
-    rendered_plan_destroy(&rendered);
+    out->contradicts = out->contradicts || contradicts;
     if (items.failed) {
         free(items.items);
         memset(out, 0, sizeof(*out));
@@ -396,72 +427,61 @@ AnalyzerCheckResult analyzer_check_piece(const PiecePlan *plan, AnalyzerCheck *o
         return ANALYZER_CHECK_ERR_NULL;
     }
     memset(out, 0, sizeof(*out));
+    ComposerHearing *hearing = NULL;
     if (!plan) {
         return ANALYZER_CHECK_ERR_NULL;
     }
-    RenderedPlan rendered;
-    PlanRenderResult drawn = plan_render(plan, &rendered);
-    if (drawn != PLAN_RENDER_OK) {
-        return drawn == PLAN_RENDER_ERR_ALLOC ? ANALYZER_CHECK_ERR_ALLOC : ANALYZER_CHECK_ERR_PLAN;
+    AnalyzerCheckResult made = result_of(hearing_create(plan, &hearing));
+    if (made == ANALYZER_CHECK_OK) {
+        made = analyzer_check_piece_in(hearing, out);
     }
-    PlanSpan whole = {{0, 1}, rendered.piece_end};
-    if (rendered.count == 0 || section_open(plan, whole)) {
-        rendered_plan_destroy(&rendered);
+    hearing_destroy(hearing);
+    return made;
+}
+
+AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCheck *out) {
+    if (!out) {
+        return ANALYZER_CHECK_ERR_NULL;
+    }
+    memset(out, 0, sizeof(*out));
+    const PiecePlan *plan = hearing_plan(hearing);
+    if (!plan) {
+        return ANALYZER_CHECK_ERR_NULL;
+    }
+    const RenderedPlan *rendered = hearing_rendered(hearing);
+    PlanSpan whole = {{0, 1}, rendered->piece_end};
+    if (rendered->count == 0 || section_open(plan, whole)) {
         return ANALYZER_CHECK_ERR_NOT_WRITTEN;
     }
     LaneSpanId meter_span;
     LaneSpanId key_span;
     if (!lane_at_start(plan, PLAN_LANE_METER, whole, &meter_span) || !lane_at_start(plan, PLAN_LANE_KEY, whole, &key_span)) {
-        rendered_plan_destroy(&rendered);
         return ANALYZER_CHECK_ERR_PLAN;
     }
     PlanMeter meter = plan_lane_span_payload(plan, meter_span)->meter;
     AnalysisKey key = plan_lane_span_payload(plan, key_span)->key;
     if (meter.beats_per_bar <= 0 || meter.beat_unit <= 0) {
-        rendered_plan_destroy(&rendered);
         return ANALYZER_CHECK_ERR_PLAN;
     }
-    AnalyzerFragment fragment;
-    memset(&fragment, 0, sizeof(fragment));
-    fragment.events = (const NoteEvent *const *)rendered.events;
-    fragment.count = rendered.count;
-    fragment.meter = rendered.meter_map;
-    fragment.has_key = true;
-    fragment.key_tonic_pitch_class = analysis_key_tonic_pitch_class(&key);
-    fragment.key_minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
-    fragment.streams = rendered.part_index;
-
-    AnalyzerFragmentAnalysis analysis;
-    AnalyzerFragmentResult analyzed = analyzer_analyze_fragment(&fragment, &analysis);
-    if (analyzed != ANALYZER_FRAGMENT_OK) {
-        rendered_plan_destroy(&rendered);
-        return analyzed == ANALYZER_FRAGMENT_ERR_ALLOC ? ANALYZER_CHECK_ERR_ALLOC : ANALYZER_CHECK_ERR_ANALYSIS;
+    const AnalyzerResult *heard = NULL;
+    AnalyzerCheckResult hear_status = result_of(hearing_piece(hearing, &heard));
+    if (hear_status != ANALYZER_CHECK_OK) {
+        return hear_status;
     }
-    const AnalysisReport *report = analyzer_fragment_report(&analysis);
+    const AnalysisReport *report = analyzer_result_report(heard);
     Items items;
     memset(&items, 0, sizeof(items));
-    compare_piece_cadences(plan, &meter, report, rendered.piece_end, &items);
+    compare_piece_cadences(plan, &meter, report, rendered->piece_end, &items);
     compare_key(report, key, &items);
     out->planned = items.count;
     for (size_t i = 0; i < items.count; i++) {
         out->agreed += items.items[i].agreed;
     }
     out->contradicts = out->agreed != out->planned;
-
-    AnalyzerViolation *violations = NULL;
-    size_t violation_count = 0;
-    if (analyzer_fragment_violations(&analysis, &violations, &violation_count) != ANALYZER_FRAGMENT_OK) {
+    bool contradicts = false;
+    if (!add_violations(hearing, heard, 0, &items, &contradicts)) {
         items.failed = true;
     }
-    for (size_t i = 0; i < violation_count; i++) {
-        if (violations[i].hard && writes_note(plan, &rendered, &violations[i])) {
-            add_item(&items, ANALYZER_CHECK_VIOLATION, violations[i].measure > 0 ? (size_t)violations[i].measure - 1 : 0, "none",
-                     violations[i].rule, false);
-        }
-    }
-    analyzer_violations_free(violations, violation_count);
-    analyzer_fragment_analysis_destroy(&analysis);
-    rendered_plan_destroy(&rendered);
     if (items.failed) {
         free(items.items);
         memset(out, 0, sizeof(*out));
@@ -470,14 +490,4 @@ AnalyzerCheckResult analyzer_check_piece(const PiecePlan *plan, AnalyzerCheck *o
     out->items = items.items;
     out->item_count = items.count;
     return ANALYZER_CHECK_OK;
-}
-
-/* ------------------------------------------------------------- over a hearing */
-
-AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId section, AnalyzerCheck *out) {
-    return analyzer_check_section(hearing_plan(hearing), section, out);
-}
-
-AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCheck *out) {
-    return analyzer_check_piece(hearing_plan(hearing), out);
 }

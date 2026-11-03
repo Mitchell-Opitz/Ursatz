@@ -19,4 +19,16 @@
  */
 HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const AnalyzerResult **out);
 
+/*
+ * The result over the whole piece: from the plan's start to where its last section that is not material ends (the whole
+ * plan when it has no section). It is one span of hearing_section, so the checks of the piece share one analysis.
+ */
+HearingResult hearing_piece(ComposerHearing *hearing, const AnalyzerResult **out);
+
+/*
+ * The index among hearing_rendered's events of event index of the notes a result was heard from (the ids a violation
+ * names are indices into those notes). (size_t)-1 for a result the hearing did not make or an index it does not have.
+ */
+size_t hearing_source_event(const ComposerHearing *hearing, const AnalyzerResult *result, size_t index);
+
 #endif

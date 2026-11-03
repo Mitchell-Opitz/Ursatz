@@ -19,6 +19,8 @@ typedef struct {
     const NoteEvent **events;
     int *midi;
     size_t *streams;
+    size_t count;
+    size_t *source; /* each heard event's index among the rendered events */
     AnalyzerResult *result;
 } HeardSpan;
 
@@ -37,6 +39,7 @@ static void heard_span_release(HeardSpan *heard) {
     free(heard->events);
     free(heard->midi);
     free(heard->streams);
+    free(heard->source);
     memset(heard, 0, sizeof(*heard));
 }
 
@@ -122,6 +125,29 @@ static HeardSpan *find_heard(ComposerHearing *hearing, PlanSpan span) {
     return NULL;
 }
 
+HearingResult hearing_piece(ComposerHearing *hearing, const AnalyzerResult **out) {
+    if (!hearing) {
+        if (out) {
+            *out = NULL;
+        }
+        return HEARING_ERR_NULL;
+    }
+    PlanSpan whole = {{0, 1}, hearing->rendered.piece_end};
+    if (whole.length.num <= 0) {
+        whole.length = (Rational){1000000, 1};
+    }
+    return hearing_section(hearing, whole, out);
+}
+
+size_t hearing_source_event(const ComposerHearing *hearing, const AnalyzerResult *result, size_t index) {
+    for (size_t i = 0; hearing && i < hearing->span_count; i++) {
+        if (hearing->spans[i].result == result && index < hearing->spans[i].count) {
+            return hearing->spans[i].source[index];
+        }
+    }
+    return (size_t)-1;
+}
+
 HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const AnalyzerResult **out) {
     if (!out) {
         return HEARING_ERR_NULL;
@@ -149,7 +175,8 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
     heard.events = calloc(room, sizeof(*heard.events));
     heard.midi = calloc(room, sizeof(*heard.midi));
     heard.streams = calloc(room, sizeof(*heard.streams));
-    if (!heard.events || !heard.midi || !heard.streams) {
+    heard.source = calloc(room, sizeof(*heard.source));
+    if (!heard.events || !heard.midi || !heard.streams || !heard.source) {
         heard_span_release(&heard);
         return HEARING_ERR_ALLOC;
     }
@@ -161,12 +188,14 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
         heard.events[count] = rendered->events[i];
         heard.midi[count] = hearing->midi[i];
         heard.streams[count] = rendered->part_index[i];
+        heard.source[count] = i;
         count++;
     }
     if (count == 0) {
         heard_span_release(&heard);
         return HEARING_ERR_NOT_WRITTEN;
     }
+    heard.count = count;
     AnalyzerHearing input;
     memset(&input, 0, sizeof(input));
     input.events = (const NoteEvent *const *)heard.events;
