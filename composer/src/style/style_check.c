@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include <standard-form/hybrid_rules.h>
+#include <standard-tonality/tonal_key.h>
 #include <standard-form/phrase_beginning.h>
 #include <standard-form/phrase_ending.h>
 #include <standard-form/phrase_level_form.h>
@@ -85,7 +86,7 @@ static bool harmony_labels(const PiecePlan *plan, const PhraseProgression *progr
 
 /* The degree label of a pitch in the key. */
 static const char *degree_of(const AnalysisKey *key, int pitch) {
-    return style_label_degree(((pitch % 12) + 12) % 12, analysis_key_tonic_pitch_class(key));
+    return standard_tonality_chromatic_degree_label(pitch - analysis_key_tonic_pitch_class(key));
 }
 
 /* A `motive-nct-figure` label for every non-chord tone the melody writes: the degrees of the note and its neighbors. */

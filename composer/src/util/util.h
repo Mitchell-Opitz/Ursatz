@@ -27,6 +27,18 @@ void util_pitch_name(int midi, bool prefer_flats, char *out, size_t size);
  */
 void util_key_name(int tonic_pitch_class, bool minor, char *out, size_t size);
 
+/*
+ * The major scale (or the natural minor) on a tonic, read by standard-tonality: a 12-bit mask over pitch classes, and
+ * the degree (1 to 7) a pitch is read as with its alteration from that degree (0 for a note of the scale). The pitch
+ * and the tonic are taken mod 12.
+ */
+unsigned util_scale_mask(int tonic_pitch_class, bool minor);
+unsigned util_scale_mask_melodic(int tonic_pitch_class, bool minor);
+bool util_scale_degree(int tonic_pitch_class, bool minor, int pitch, int *degree, int *alteration);
+
+/* The semitones above the tonic of a degree (1 to 7) in the major scale or the natural minor. */
+int util_scale_semitone(bool minor, int degree);
+
 /* A malloc'd copy of the text ("" for NULL), or NULL when out of memory. The caller frees it. */
 char *util_copy_string(const char *text);
 

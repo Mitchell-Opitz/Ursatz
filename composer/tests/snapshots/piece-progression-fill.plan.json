@@ -1148,7 +1148,7 @@
           }],
         "payload": {
           "notes": [{
-              "midi_pitch": 69,
+              "midi_pitch": 74,
               "offset": {
                 "num": 0,
                 "den": 1
@@ -1158,7 +1158,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 62,
+              "midi_pitch": 69,
               "offset": {
                 "num": 1,
                 "den": 4
@@ -1229,7 +1229,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 67,
+              "midi_pitch": 62,
               "offset": {
                 "num": 1,
                 "den": 2
@@ -1822,7 +1822,7 @@
         "constraints": [],
         "payload": {
           "notes": [{
-              "midi_pitch": 69,
+              "midi_pitch": 74,
               "offset": {
                 "num": 0,
                 "den": 1
@@ -1832,7 +1832,7 @@
                 "den": 4
               }
             }, {
-              "midi_pitch": 62,
+              "midi_pitch": 69,
               "offset": {
                 "num": 1,
                 "den": 4

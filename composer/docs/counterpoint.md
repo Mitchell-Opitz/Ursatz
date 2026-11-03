@@ -37,9 +37,9 @@ The search is a beam over the slots of the counter-melody (`counterpoint_species
 
 1. Children of a state are written note by note with rules that need no library: the pitches of the key, a consonance on a
    strong slot, a dissonance on a weak slot reached by step and left by a step or a third, no leap a strict counterpoint
-   forbids, no pitch more than a twelfth from the line, and for the downbeats the look-back rules of the species.
+   forbids (`standard_counterpoint_melodic_semitones_allowed`: the tritone is refused), no pitch more than a twelfth from the line, and for the downbeats the look-back rules of the species.
 2. The children are ordered by cost, ties by the run's rng. The cost is the semitones the leaps span over 2, a repeated
-   note, a broken bar in species 4, and a run of three parallel imperfect consonances.
+   note, a broken bar in species 4, and a run of three parallel imperfect consonances (`standard_counterpoint_imperfect_run`).
 3. The cheapest are asked of the library (`counterpoint_eval`) until the beam is full. A line that is not finished is asked
    the rules that hold for a prefix: the last bar stands for a whole note, and the rules of the ending and the final step
    are asked of the finished line. The first pass keeps at most a share of the beam for each last note, so that the notes

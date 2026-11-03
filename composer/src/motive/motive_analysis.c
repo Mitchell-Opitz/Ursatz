@@ -55,37 +55,23 @@ static Scale scale_of(KeyStructureMode mode) {
     Scale scale;
     scale.semitones[0] = -1;
     for (int degree = 1; degree <= 7; degree++) {
-        scale.semitones[degree] = harmony_applied_scale_semitone(harmony_mode_of(mode), degree);
+        scale.semitones[degree] = util_scale_semitone(mode == KEY_STRUCTURE_MODE_MINOR, degree);
     }
     return scale;
 }
 
 /* The degree below a pitch outside the scale, raised by a half step. */
-static MotiveDegree degree_of(const Scale *scale, int relative) {
+static MotiveDegree degree_of(bool minor, int relative) {
     MotiveDegree found = {1, 0};
-    for (int degree = 1; degree <= 7; degree++) {
-        if (scale->semitones[degree] == relative) {
-            found.degree = degree;
-            found.alteration = 0;
-            return found;
-        }
-    }
-    for (int degree = 1; degree <= 7; degree++) {
-        if (scale->semitones[degree] == relative - 1) {
-            found.degree = degree;
-            found.alteration = 1;
-            return found;
-        }
-    }
+    util_scale_degree(0, minor, relative, &found.degree, &found.alteration);
     return found;
 }
 
 /* The step of the key's scale a pitch is on: octaves of 7 from the tonic's pitch class, and the degree in the octave. */
 void motive_scale_position(const AnalysisKey *key, int pitch, long *position, int *alteration) {
-    Scale scale = scale_of(key->mode);
     int relative = pitch - analysis_key_tonic_pitch_class(key);
     long octave = floor_div(relative, 12);
-    MotiveDegree degree = degree_of(&scale, (int)(relative - octave * 12));
+    MotiveDegree degree = degree_of(key->mode == KEY_STRUCTURE_MODE_MINOR, (int)(relative - octave * 12));
     *position = octave * 7 + (degree.degree - 1);
     *alteration = degree.alteration;
 }
@@ -291,12 +277,11 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
     result.range_semitones = result.highest - result.lowest;
 
     long positions[MOTIVE_MAX_NOTES] = {0};
-    Scale scale = scale_of(motive->key.mode);
     for (size_t i = 0; i < motive->note_count; i++) {
         if (result.degrees_known) {
             int pitch = motive->notes[i].midi - analysis_key_tonic_pitch_class(&motive->key);
             long octave = floor_div(pitch, 12);
-            result.degrees[i] = degree_of(&scale, (int)(pitch - octave * 12));
+            result.degrees[i] = degree_of(motive->key.mode == KEY_STRUCTURE_MODE_MINOR, (int)(pitch - octave * 12));
             positions[i] = octave * 7 + (result.degrees[i].degree - 1);
         }
     }

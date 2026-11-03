@@ -41,7 +41,9 @@ whole of it. The enclosing phrase node's span is the phrase. A phrase is then wr
 - **Joins.** The last notes of the written melody span right before the target are read with the target's
   notes as one line by standard-counterpoint's melodic rules: no forbidden leap or outline across the join,
   and the first note is a leap the rules allow from the last. A leap into the target is answered by a step
-  the other way, where the chord allows.
+  the other way, where the chord allows. The moves the Composer draws are judged by
+  `standard_counterpoint_melodic_semitones_allowed` and `standard_counterpoint_is_step`: the tritone is refused, as is a
+  seventh, and a sixth is allowed only as the ascending minor one.
 - **Climax.** The climax position (`climax_position`, thousandths of the phrase) falls in one target. That
   target writes the phrase's single highest note, higher than every melody note before it in the phrase
   (a hard rule); a target before it keeps every note at or below `range_high - 3`, and stays in the lower half

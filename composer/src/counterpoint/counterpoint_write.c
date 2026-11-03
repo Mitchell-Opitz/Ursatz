@@ -13,6 +13,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "counterpoint/counterpoint_internal.h"
+#include "util/util.h"
 
 CounterpointParams counterpoint_params_default(void) {
     CounterpointParams params = {COUNTERPOINT_DEFAULT_CANDIDATES, COUNTERPOINT_DEFAULT_BEAM};
@@ -37,16 +38,22 @@ size_t counterpoint_slot_note(const CounterpointContext *context, size_t slot) {
 }
 
 /* The scale degree of a pitch class above the tonic, 1 to 7, or 0 when the key's scale has no such note. */
-static int scale_degree(KeyStructureMode mode, int above_tonic) {
-    static const int MAJOR[12] = {1, 0, 2, 0, 3, 4, 0, 5, 0, 6, 0, 7};
+static int scale_degree(const AnalysisKey *key, int pitch) {
+    int tonic = analysis_key_tonic_pitch_class(key);
+    bool minor = key->mode == KEY_STRUCTURE_MODE_MINOR;
+    int degree;
+    int alteration;
     /* The minor scale as it is written in counterpoint: the natural minor, with the raised sixth and seventh. */
-    static const int MINOR[12] = {1, 0, 2, 3, 0, 4, 0, 5, 6, 6, 7, 7};
-    return mode == KEY_STRUCTURE_MODE_MINOR ? MINOR[above_tonic] : MAJOR[above_tonic];
+    if (!((util_scale_mask_melodic(tonic, minor) >> util_pitch_class(pitch)) & 1u) ||
+        !util_scale_degree(tonic, minor, pitch, &degree, &alteration)) {
+        return 0;
+    }
+    return degree;
 }
 
 static bool read_spellings(const AnalysisKey *key, CounterpointContext *out) {
     for (int pitch = 0; pitch < 128; pitch++) {
-        int degree = scale_degree(key->mode, ((pitch - analysis_key_tonic_pitch_class(key)) % 12 + 12) % 12);
+        int degree = scale_degree(key, pitch);
         if (degree > 0) {
             out->spell[pitch] = harmony_spell_pitch(key, degree, pitch);
             if (!out->spell[pitch]) {

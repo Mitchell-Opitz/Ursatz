@@ -52,12 +52,12 @@ twelve rounds. The rejection says `seam`.
 `seam_hear` reads the plan; `seam_hear_notes` judges the notes the checkers and the plan reader both give it. `SeamHeard`
 has one flag for each rule and `held`, how many hold.
 
-| Rule | Holds when |
-| --- | --- |
-| `progression` | the last chord before the seam and the first after it are a phrase-model pair: a tonic to a predominant, a dominant or a tonic (so a repeated tonic); a predominant to a dominant; a dominant to a tonic. IV to I, and a dominant to a dominant, are not |
-| `no_parallels` | bass and melody do not move the same way from one perfect interval (a unison, an octave or a fifth) to the same one across the seam |
-| `step` | the melody moves at most an octave across the seam, and a leap over 7 semitones, into the seam or across it, is followed by a step the other way |
-| `leading_tone` | a melody degree 7 before the seam goes to degree 1 (true when the melody there is not degree 7) |
+| Rule | Holds when | Owner |
+| --- | --- | --- |
+| `progression` | the two chords keep the phrase model's order: no predominant after a dominant, no tonic after a predominant (staying on one function is not backward). IV to I is not held | standard-harmony `harmony_phrase_rules.h` (`NO_BACKWARD_MOTION`) |
+| `no_parallels` | bass and melody make no parallel fifths or octaves across the seam | standard-counterpoint `harmonic_rules.h` |
+| `step` | the melody move is one standard-counterpoint allows (no tritone, no seventh, a sixth only as the ascending minor one, at most an octave), and a leap over 7 semitones, into the seam or across it, is followed by a step the other way | standard-counterpoint `melodic_rules.h`; the answer to a leap has no framework function and stays in `seam_hear.c` |
+| `leading_tone` | the melody on the leading tone of the chord before the seam goes up to the tonic when the chord after is a tonic (true when the rule does not apply) | standard-harmony `harmony_resolution_rules.h` |
 
 A rule whose notes are missing holds, except the progression, which needs both chords.
 

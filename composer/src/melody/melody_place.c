@@ -5,6 +5,8 @@
 #include <core/rational.h>
 #include "util/util.h"
 
+#include <standard-counterpoint/melodic_rules.h>
+
 #define MAX_OPTIONS 128
 /* The motive's first note and the notes after the motive pick the nearest pitch this often in three; else the next. */
 #define NEAREST_IN 2
@@ -17,10 +19,9 @@ typedef struct {
     int distance;
 } Option;
 
-/* The leaps standard-counterpoint allows: up to a fifth, the ascending minor sixth, and the octave. */
+/* The moves standard-counterpoint allows: no tritone, no seventh, the sixth only as the ascending minor one. */
 static bool leap_allowed(int distance) {
-    int size = util_absolute(distance);
-    return size <= 7 || size == 12 || distance == 8;
+    return standard_counterpoint_melodic_semitones_allowed(distance);
 }
 
 /* The pitches in range whose pitch class is in mask, nearest to ideal first. */

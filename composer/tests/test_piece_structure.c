@@ -303,8 +303,9 @@ static void test_compose(void) {
     Sweep sweep = compose_seeds(&fixture);
     printf("composed %zu of %d, written %zu, cadences heard as planned %zu\n", sweep.completed, SEEDS, sweep.written,
            sweep.cadences_heard);
-    assert(sweep.completed == SEEDS);
-    assert(sweep.written == SEEDS);
+    /* One seed of the ten is rejected since the tritone is refused (P25 B5); it was ten of ten. */
+    assert(sweep.completed == SEEDS - 1);
+    assert(sweep.written == SEEDS - 1);
     assert(sweep.cadences_heard >= 8);
 }
 

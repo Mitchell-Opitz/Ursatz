@@ -2,8 +2,11 @@
 
 #include <string.h>
 
+#include <standard-counterpoint/harmonic_rules.h>
+#include <standard-counterpoint/melodic_rules.h>
 #include <standard-harmony/harmonic_function.h>
-#include <standard-harmony/harmony_functions.h>
+#include <standard-harmony/harmony_phrase_rules.h>
+#include <standard-harmony/harmony_resolution_rules.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/harmony_phrase.h>
@@ -11,10 +14,8 @@
 #include "harmony/harmony_internal.h"
 #include "util/util.h"
 
-/* The largest melodic move across the seam, in semitones, and the leap a step the other way must follow. */
-#define SEAM_MAX_MOVE 12
+/* The leap, in semitones, that a step the other way must follow. */
 #define SEAM_LEAP 7
-#define SEAM_STEP 2
 
 NodeId seam_section_at(const PiecePlan *plan, Rational time) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
@@ -27,100 +28,148 @@ NodeId seam_section_at(const PiecePlan *plan, Rational time) {
     return PLAN_NODE_NONE;
 }
 
-/* The function of a chord: the one given, else the numeral's in the mode. */
-static bool function_of(KeyStructureMode mode, bool has_given, HarmonicFunction given, const char *roman,
-                        HarmonicFunction *out) {
-    HarmonyChord chord;
-    if (has_given) {
-        *out = given;
+/*
+ * The chord of a numeral in the mode. A numeral that does not parse (an applied chord) stands for the representative
+ * chord of the function the plan gives it: I, IV or V.
+ */
+static bool chord_of(KeyStructureMode mode, bool has_given, HarmonicFunction given, const char *roman,
+                     HarmonyChord *out) {
+    if (harmony_roman_parse(mode, roman, out)) {
         return true;
     }
-    return harmony_roman_parse(mode, roman, &chord) && harmony_function_of(harmony_mode_of(mode), &chord, out);
+    if (!has_given) {
+        return false;
+    }
+    memset(out, 0, sizeof(*out));
+    switch (given) {
+    case HARMONIC_FUNCTION_TONIC:
+        out->degree = 1;
+        return true;
+    case HARMONIC_FUNCTION_PREDOMINANT:
+        out->degree = 4;
+        return true;
+    case HARMONIC_FUNCTION_DOMINANT:
+        out->degree = 5;
+        return true;
+    default:
+        return false;
+    }
 }
 
+static bool seam_chords(const SeamNotes *notes, HarmonyChord chords[2]) {
+    return notes->has_chords &&
+           chord_of(notes->key.mode, notes->before_has_function, notes->before_function, notes->before_roman,
+                    &chords[0]) &&
+           chord_of(notes->key.mode, notes->after_has_function, notes->after_function, notes->after_roman, &chords[1]);
+}
+
+/* The progression keeps the phrase model's order (standard-harmony): no predominant after a dominant, no tonic after a predominant. */
 static bool progression_holds(const SeamNotes *notes) {
-    if (!notes->has_chords) {
+    HarmonyChord chords[2];
+    if (!seam_chords(notes, chords)) {
         return false;
     }
-    HarmonicFunction before;
-    HarmonicFunction after;
-    if (!function_of(notes->key.mode, notes->before_has_function, notes->before_function, notes->before_roman, &before) ||
-        !function_of(notes->key.mode, notes->after_has_function, notes->after_function, notes->after_roman, &after)) {
-        return false;
-    }
-    switch (before) {
-    case HARMONIC_FUNCTION_TONIC:
-        /* A tonic goes to a predominant, a dominant or a tonic (a repeated tonic included). */
-        return after == HARMONIC_FUNCTION_PREDOMINANT || after == HARMONIC_FUNCTION_DOMINANT ||
-               after == HARMONIC_FUNCTION_TONIC;
-    case HARMONIC_FUNCTION_PREDOMINANT:
-        return after == HARMONIC_FUNCTION_DOMINANT;
-    case HARMONIC_FUNCTION_DOMINANT:
-        return after == HARMONIC_FUNCTION_TONIC;
-    default:
-        break;
-    }
-    return false;
+    HarmonyPhrase phrase = {harmony_mode_of(notes->key.mode), chords, 2};
+    return harmony_phrase_rule_holds(HARMONY_PHRASE_NO_BACKWARD_MOTION, &phrase);
 }
 
 static int sign(int value) {
     return value > 0 ? 1 : (value < 0 ? -1 : 0);
 }
 
-/* Whether the interval class between bass and melody is a perfect one (a unison, an octave or a fifth). */
-static bool perfect(int bass, int melody) {
-    int interval = ((melody - bass) % 12 + 12) % 12;
-    return interval == 0 || interval == 7;
+/* A pitch spelled as a degree of the key, as the counterpoint rules read intervals; NULL when it cannot be. */
+static PitchSpelling *spell(const AnalysisKey *key, int pitch) {
+    int degree;
+    int alteration;
+    if (!util_scale_degree(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, pitch, &degree,
+                           &alteration)) {
+        return NULL;
+    }
+    return harmony_spell_pitch(key, degree, pitch);
 }
 
+/* No parallel fifths or octaves between bass and melody across the seam (standard-counterpoint). */
 static bool no_parallels_hold(const SeamNotes *notes) {
     if (notes->bass_before < 0 || notes->bass_after < 0 || notes->melody_before < 0 || notes->melody_after < 0) {
         return true;
     }
-    int bass_move = notes->bass_after - notes->bass_before;
-    int melody_move = notes->melody_after - notes->melody_before;
-    int before = ((notes->melody_before - notes->bass_before) % 12 + 12) % 12;
-    int after = ((notes->melody_after - notes->bass_after) % 12 + 12) % 12;
-    /* Parallel: both voices move the same way and stay on the same perfect interval. */
-    return !(perfect(notes->bass_before, notes->melody_before) && before == after && bass_move != 0 &&
-             melody_move != 0 && sign(bass_move) == sign(melody_move));
+    const int pitches[4] = {notes->melody_before, notes->melody_after, notes->bass_before, notes->bass_after};
+    PitchSpelling *spelled[4] = {NULL, NULL, NULL, NULL};
+    bool ok = true;
+    for (int i = 0; i < 4; i++) {
+        spelled[i] = spell(&notes->key, pitches[i]);
+        ok = ok && spelled[i] != NULL;
+    }
+    bool holds = true;
+    if (ok) {
+        StandardCounterpointLine upper = {(const PitchSpelling *const *)&spelled[0], 2};
+        StandardCounterpointLine lower = {(const PitchSpelling *const *)&spelled[2], 2};
+        StandardCounterpointPair pair = {&upper, &lower};
+        holds = !standard_counterpoint_pair_valid(&pair) ||
+                (standard_counterpoint_harmonic_rule_holds(STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_FIFTHS, &pair) &&
+                 standard_counterpoint_harmonic_rule_holds(STANDARD_COUNTERPOINT_HARMONIC_RULE_PARALLEL_OCTAVES, &pair));
+    }
+    for (int i = 0; i < 4; i++) {
+        pitch_spelling_destroy(spelled[i]);
+    }
+    return holds;
 }
 
+/*
+ * The move across the seam is one standard-counterpoint allows, and a leap larger than a fifth into or across it is
+ * answered by a step the other way. The answer to a leap has no framework rule: it stays here.
+ */
 static bool step_holds(const SeamNotes *notes) {
     if (notes->melody_before < 0 || notes->melody_after < 0) {
         return true;
     }
     int move = notes->melody_after - notes->melody_before;
-    if (util_absolute(move) > SEAM_MAX_MOVE) {
+    if (!standard_counterpoint_melodic_semitones_allowed(move)) {
         return false;
     }
-    /* A leap into the seam is answered by a step the other way across it. */
     if (notes->melody_previous >= 0) {
         int into = notes->melody_before - notes->melody_previous;
-        if (util_absolute(into) > SEAM_LEAP && !(util_absolute(move) <= SEAM_STEP && sign(move) == -sign(into))) {
+        if (util_absolute(into) > SEAM_LEAP &&
+            !(standard_counterpoint_is_step(move) && sign(move) == -sign(into))) {
             return false;
         }
     }
-    /* A leap across it is answered by a step the other way after it. */
     if (util_absolute(move) > SEAM_LEAP && notes->melody_next >= 0) {
         int out = notes->melody_next - notes->melody_after;
-        if (!(util_absolute(out) <= SEAM_STEP && out != 0 && sign(out) == -sign(move))) {
+        if (!(standard_counterpoint_is_step(out) && sign(out) == -sign(move))) {
             return false;
         }
     }
     return true;
 }
 
+/* The diatonic step of a pitch from the key's tonic: 0 is do, 7 the octave above. */
+static int diatonic_step(const AnalysisKey *key, int pitch) {
+    int tonic = analysis_key_tonic_pitch_class(key);
+    int relative = pitch - tonic;
+    int octave = relative >= 0 ? relative / 12 : -((-relative + 11) / 12);
+    int degree = 1;
+    int alteration;
+    util_scale_degree(tonic, key->mode == KEY_STRUCTURE_MODE_MINOR, pitch, &degree, &alteration);
+    return octave * 7 + degree - 1;
+}
+
+/* The leading tone of the chord before the seam goes up to the tonic when the chord after is one (standard-harmony). */
 static bool leading_tone_holds(const SeamNotes *notes) {
-    if (notes->melody_before < 0) {
+    HarmonyChord chords[2];
+    if (notes->melody_before < 0 || notes->melody_after < 0 || !seam_chords(notes, chords)) {
         return true;
     }
-    int tonic = analysis_key_tonic_pitch_class(&notes->key);
-    bool seventh = ((notes->melody_before % 12) + 12) % 12 == (tonic + 11) % 12;
-    if (!seventh) {
-        return true;
-    }
-    return notes->melody_after < 0 || ((notes->melody_after % 12) + 12) % 12 == tonic;
+    HarmonyVoiceResolution resolution;
+    memset(&resolution, 0, sizeof(resolution));
+    resolution.mode = harmony_mode_of(notes->key.mode);
+    resolution.from = chords[0];
+    resolution.to = chords[1];
+    resolution.from_step = diatonic_step(&notes->key, notes->melody_before);
+    resolution.to_step = diatonic_step(&notes->key, notes->melody_after);
+    resolution.outer = true;
+    return !harmony_resolution_rule_applies(HARMONY_RESOLUTION_LEADING_TONE_RESOLVES, &resolution) ||
+           harmony_resolution_rule_holds(HARMONY_RESOLUTION_LEADING_TONE_RESOLVES, &resolution);
 }
 
 void seam_hear_notes(const SeamNotes *notes, SeamHeard *out) {

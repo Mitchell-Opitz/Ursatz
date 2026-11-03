@@ -1,9 +1,15 @@
 #include "harmony/harmony_internal.h"
 
+#include <standard-meter/metric_position_rules.h>
+#include <time/note_value.h>
+#include <time/time_signature.h>
+
 /*
  * The harmonic rhythm of the meters this operator knows. A chord changes only
- * on a strong beat, and a bar has these (a cell is the time from one to the
- * next):
+ * on a beat the Composer chooses to change on (a composing decision): one cell
+ * per beat of the meter, the beat being the dotted note of a compound meter,
+ * and in a quadruple meter the beats the standard meter accents
+ * (standard_meter_accent_beats). A cell is the time from one to the next:
  *   2/4  beat 1                  one cell
  *   3/4  beat 1                  one cell
  *   4/4  beats 1 and 3           two cells; beat 1 is strong, beat 3 medium
@@ -11,20 +17,40 @@
  *        dotted quarters)
  */
 
-bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells) {
-    if (!meter || !cells) {
+#define RHYTHM_MAX_CELLS 4u
+
+static bool meter_signature(const PlanMeter *meter, TimeSignature **out) {
+    NoteValue *unit = NULL;
+    if (!meter || meter->beats_per_bar < 1 || (meter->beat_unit != 4 && meter->beat_unit != 8)) {
         return false;
     }
-    if (meter->beat_unit == 4 && (meter->beats_per_bar == 2 || meter->beats_per_bar == 3)) {
-        *cells = 1;
-        return true;
+    if (note_value_create(meter->beat_unit == 4 ? 2 : 3, &unit) != NOTE_VALUE_OK) {
+        return false;
     }
-    if (meter->beat_unit == 4 && meter->beats_per_bar == 4) {
-        *cells = 2;
-        return true;
+    TimeSignatureResult result = time_signature_create((unsigned)meter->beats_per_bar, unit, out);
+    note_value_destroy(unit);
+    return result == TIME_SIGNATURE_OK;
+}
+
+bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells) {
+    TimeSignature *signature = NULL;
+    unsigned beats[RHYTHM_MAX_CELLS];
+    size_t count = 0;
+    if (!cells || !meter_signature(meter, &signature)) {
+        return false;
     }
+    bool ok = standard_meter_accent_beats(signature, beats, NULL, RHYTHM_MAX_CELLS, &count);
+    time_signature_destroy(signature);
+    if (!ok || count == 0) {
+        return false;
+    }
+    /* The meters this operator writes: simple duple, triple and quadruple over quarters, and 6/8. */
     if (meter->beat_unit == 8 && meter->beats_per_bar == 6) {
-        *cells = 2;
+        *cells = (size_t)meter->beats_per_bar / 3; /* the two dotted-quarter beats */
+        return true;
+    }
+    if (meter->beat_unit == 4 && meter->beats_per_bar >= 2 && meter->beats_per_bar <= 4) {
+        *cells = count;
         return true;
     }
     return false;

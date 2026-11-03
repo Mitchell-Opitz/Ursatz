@@ -264,8 +264,8 @@ foreach(template ${FORM_TEMPLATES})
 endforeach()
 # Every completed run passes every check; the share of runs that complete is below 100% for all but variations
 # (docs/piece.md has the measured shares and why), so those fail until the stuck runs are fixed. Rounded binary was at
-# 100% until the motive-forms (P14 B8) left one run stuck.
-set_tests_properties(test_piece_keys_binary test_piece_keys_rounded-binary test_piece_keys_ternary test_piece_keys_loop
+# 100% until the motive-forms (P14 B8) left one run stuck, and is at 100% again since the tritone is refused (P25 B5).
+set_tests_properties(test_piece_keys_binary test_piece_keys_ternary test_piece_keys_loop
                      test_piece_keys_layered PROPERTIES WILL_FAIL TRUE)
 
 add_executable(test_piece_structure test_piece_structure.c)
