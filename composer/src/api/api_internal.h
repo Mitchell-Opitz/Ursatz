@@ -43,6 +43,16 @@ bool api_member_pickup(const cJSON *object, const char *name, int beat_unit, Rat
                        ComposerError *error);
 
 /*
+ * A whole number from minimum to maximum, given as a JSON number or as a string of digits ("3"). A value that is not one
+ * is refused with the message "<name> must be a whole number from <minimum> to <maximum>, not '<value>'".
+ */
+bool api_member_whole(const cJSON *object, const char *name, unsigned long minimum, unsigned long maximum,
+                      unsigned long *out, bool *present, ComposerError *error);
+
+/* A seed from the clock, for a request that gives none. */
+unsigned long api_default_seed(void);
+
+/*
  * The "tempo" member of the request (quarter notes per minute, 20 to 400, a whole number, a fraction string like
  * "195/2", or null) into options->tempo_numerator and tempo_denominator; absent or null leaves them as they are.
  */

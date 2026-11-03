@@ -109,4 +109,26 @@ ComposerStatus composer_api_motive_render(const char *request_json, const Compos
  */
 ComposerStatus composer_api_variant_operations(ComposerResponse *out);
 
+/*
+ * Variants of a motive: each applies a chain of up to 4 registry operations, and a parameter the chain leaves open is
+ * drawn from the seed. Request: the motive request of composer_api_motive (input, meter, key, pickup, harmony, features,
+ * role) plus "basic" (a motive request with its own input, pickup and harmony, read in the source's meter, key, form and
+ * role: the basic motive remoteness is measured from; the source when absent), "functions" (up to 4 of "beginning",
+ * "continuation", "contrast", "cadential": keep the variants that suit any), "distance" ("close", "medium" or "far"),
+ * "chain" ({"steps": [{"op", "params"}]}: the same chain for every variant), "each_op" (one variant for every operation
+ * that applies to the motive's form; not with chain, count, distance or functions), "count" (1 to 16, default 6) and
+ * "seed" (0 to 4294967235; default from the clock; variant i uses seed + i). Progress is reported once for each variant
+ * tried, stage "variants", and a cancel is honored there. json: {"seed", "source", "variants": [...]}, with "skipped" for
+ * each_op and "notices" (strings) when a draw was skipped or fewer variants than asked for were found.
+ */
+ComposerStatus composer_api_variants(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Names the chain of registry operations that turns a source motive into a target. Request: {"source": <motive request:
+ * input, harmony, features>, "target": <the same>, "meter", "key", "pickup" (the source's), "target_pickup", "role", "basic"
+ * (as for variants), "depth" (1 to 4, default 4)}; both motives are read in the meter, key and role of the request, and
+ * the form of the source's input. json: {"found", "chain", "distance", "remoteness", "kept", "changed", "derivation"}.
+ */
+ComposerStatus composer_api_recognize(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
 #endif

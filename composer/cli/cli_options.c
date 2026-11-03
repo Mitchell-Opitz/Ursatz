@@ -10,6 +10,7 @@
 
 #include <standard-texture/texture_rules.h>
 
+#include "api/api_internal.h"
 #include "plan.h"
 
 #include <ursatz_composer/harmony_phrase.h>
@@ -316,7 +317,7 @@ const char *cli_cadence_name(CadenceType cadence) {
 }
 
 unsigned long cli_default_seed(void) {
-    return ((unsigned long)time(NULL) * 2654435761UL + (unsigned long)clock()) & CLI_SEED_MAX;
+    return api_default_seed();
 }
 
 bool cli_alternative_path(const char *path, size_t k, bool several, char *out, size_t size) {
