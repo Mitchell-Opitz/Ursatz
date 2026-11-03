@@ -61,21 +61,34 @@ static void test_sentence(void) {
 static void test_period(void) {
     PiecePlan *plan = load("period_a_minor.json");
     FormHeard heard;
-    /* The consequent opens on i6 after the V, which Ursatz reads as an evaded cadence unless it is told a phrase
-       starts there (R-090, R-091): the start of bar 5 is given, so the V is the half cadence of the antecedent. */
+    /* The Analyzer takes no section starts (form_hear_with_sections is form_hear), and finds the phrases itself, from the
+       chords it identifies in the notes: the V to i6 that opens bar 5 is an evaded (subverted) cadence, as Ursatz reads
+       it with no start given, and no phrase is cut there; the PAC of bar 8 closes the one phrase. One phrase, then, a hybrid: a compound basic idea and a consequent (it was a period
+       when the planned chords were read and the start of the consequent given). */
     Rational consequent;
     assert(rational_make(4, 1, &consequent) == RATIONAL_OK);
     assert(form_hear_with_sections(plan, bars(0, 8), &consequent, 1, &heard) == FORM_HEAR_OK);
-    assert(heard.phrase_count == 2);
+    assert(heard.phrase_count == 1);
     assert(heard.count == 1);
     const FormHeardTheme *theme = &heard.themes[0];
-    assert(theme->form == PHRASE_LEVEL_FORM_PERIOD);
-    assert(theme->beginning == PHRASE_BEGINNING_ANTECEDENT);
+    assert(theme->form == PHRASE_LEVEL_FORM_HYBRID);
+    assert(theme->beginning == PHRASE_BEGINNING_COMPOUND_BASIC_IDEA);
     assert(theme->ending == PHRASE_ENDING_CONSEQUENT);
     assert(theme->first_bar == 0 && theme->bars == 8);
-    assert(theme->phrase_count == 2);
-    assert(theme->first_cadence == CADENCE_TYPE_HALF);
+    assert(theme->phrase_count == 1);
+    assert(theme->first_cadence == -1);
     assert(theme->second_cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
+    assert(heard.cadence_count == 2);
+    assert(heard.cadences[0].type == CADENCE_TYPE_SUBVERTED && heard.cadences[0].arrival.num == 4 &&
+           heard.cadences[0].arrival.den == 1);
+    assert(heard.cadences[1].type == CADENCE_TYPE_PERFECT_AUTHENTIC && heard.cadences[1].arrival.num == 7 &&
+           heard.cadences[1].arrival.den == 1);
+    /* Given or not, the starts change nothing. */
+    FormHeard plain;
+    assert(form_hear(plan, bars(0, 8), &plain) == FORM_HEAR_OK);
+    assert(plain.phrase_count == heard.phrase_count && plain.count == heard.count &&
+           plain.cadence_count == heard.cadence_count && plain.themes[0].form == theme->form);
+    form_heard_destroy(&plain);
     form_heard_destroy(&heard);
     plan_destroy(plan);
 }
