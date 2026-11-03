@@ -11,6 +11,8 @@ versions that sound different. `harmonize` writes the harmony of a section again
 file is never changed; every version is a plan file of its own. See [regenerate.md](regenerate.md) for how the versions
 are chosen.
 
+`variations` and `harmonize` read the plan file into a request for `composer_api_variations` and `composer_api_harmonize` ([api.md](api.md)). The command writes each version's plan, its MIDI file (`composer_api_export` over the plan) and its MusicXML from the response.
+
 ## Options
 
 `--node`, `--section` and `--lane` address the target exactly as `regenerate` does ([cli-regenerate.md](cli-regenerate.md)).

@@ -93,11 +93,6 @@ int cli_load_blend(const char *style_path, const char *blend_path, const Compose
                    const char *const *without, size_t without_count,
                    ComposerStyle **out);
 
-/* The Analyzer's distance from the style, per dimension and overall (0 is the same, 1 is nothing alike): text lines. */
-void cli_print_style_distance(const StyleComparison *comparison);
-/* The same as the JSON member "style_distance":{...}, with no leading comma. */
-void cli_print_style_distance_json(const StyleComparison *comparison);
-
 /* Seeding from a corpus (corpus_seed.h). Each returns 0 or the status of the failure it printed: a passage or numerals
    that cannot be read is a usage error, a corpus with no match at 1/2 or more exits 2. */
 int cli_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const AnalysisKey *key,
@@ -107,12 +102,8 @@ int cli_seed_progression(const char *corpus_dir, const char *numerals_text, KeyS
 void cli_seed_numerals_text(const CorpusSeed *seed, char *out, size_t size);
 /* "motive from <piece> m.1 b.1 - m.2 b.1, score 7/8", the line the text output carries. */
 void cli_print_seed_line(const char *what, const CorpusSeed *seed);
-/* The same as the JSON object {"piece":..,"start":..,"end":..,"score":..}, with no leading comma. */
-void cli_print_seed_json(const CorpusSeed *seed);
 /* The seed as the plan records it. Returns 0 or the status of the failure it printed. */
 int cli_seed_source(const CorpusSeed *seed, PlanSource *out);
-/* Records the seed in a SOURCE constraint on the node, which must not be Given. Returns 0 or the status of the failure it printed. */
-int cli_add_source(PiecePlan *plan, NodeId node, const CorpusSeed *seed);
 /* The first node of the plan with the name, or PLAN_NODE_NONE. */
 NodeId cli_find_node(const PiecePlan *plan, const char *name);
 
@@ -130,30 +121,6 @@ int cli_write_explanation(const char *final_path, const char *write_path, const 
 
 /* The name of alternative k (from 1) of a file: before the extension, "-k". With one result the name as given. */
 bool cli_alternative_path(const char *path, size_t k, bool several, char *out, size_t size);
-
-/*
- * The node (or lane) a command works on: --node <id> or --section <letter>, and --lane. The commands that lock,
- * regenerate and vary share it.
- */
-typedef struct {
-    const char *node_text;
-    const char *section_text;
-    const char *lane_text;
-    unsigned long node;
-    bool has_lane;
-    PlanLaneKind lane;
-} CliTargetOptions;
-
-/* Checks the three texts of target (exactly one of node and section, a lane word). Returns 0 or the usage status printed. */
-int cli_check_target(CliTargetOptions *target, const char *command, const char *usage);
-/* The node the options name, or the exit status of the error it printed (none printed when quiet). */
-int cli_find_target_node(const PiecePlan *plan, const CliTargetOptions *target, bool quiet, NodeId *out);
-/* The targets: the node, or with a lane every span of it under the node. Into a new array the caller frees. */
-int cli_find_targets(const PiecePlan *plan, const CliTargetOptions *target, FillTarget **out, size_t *count);
-/* The target in words: "section B", "node 12", "the harmony of section B". */
-void cli_describe_target(const PiecePlan *plan, const CliTargetOptions *target, char *out, size_t size);
-/* Prints why a regenerate result refused the target and returns the exit status. */
-int cli_report_refused(RegenerateResult result, const char *what);
 
 /* A file written beside its final name and renamed into place once every file of the command is written. */
 typedef struct {

@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/regenerate.response.schema.json",
+  "title": "composer_api_regenerate response",
+  "description": "What `regenerate --format json` prints, without the files.",
+  "type": "object",
+  "required": [
+    "seed",
+    "realized",
+    "reopened",
+    "sections",
+    "returns"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "seed": {
+      "type": "integer"
+    },
+    "realized": {
+      "type": "boolean"
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "letter",
+          "heard",
+          "heard_as_requested",
+          "cadences"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "letter": {
+            "type": "string"
+          },
+          "heard": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "in_scope": {
+            "const": false
+          },
+          "heard_as_requested": {
+            "type": "boolean"
+          },
+          "cadences": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "analyzer": {
+      "type": "object",
+      "required": [
+        "planned",
+        "agreed"
+      ],
+      "properties": {
+        "planned": {
+          "type": "integer"
+        },
+        "agreed": {
+          "type": "integer"
+        }
+      }
+    },
+    "style_distance": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "returns": {
+      "type": "object",
+      "required": [
+        "planned",
+        "heard",
+        "pairs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "planned": {
+          "type": "integer"
+        },
+        "heard": {
+          "type": "integer"
+        },
+        "pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "later",
+              "earlier",
+              "similarity"
+            ],
+            "properties": {
+              "later": {
+                "type": "string"
+              },
+              "earlier": {
+                "type": "string"
+              },
+              "similarity": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "given": {
+      "type": "object",
+      "required": [
+        "unchanged",
+        "runs"
+      ],
+      "properties": {
+        "unchanged": {
+          "type": "boolean"
+        },
+        "runs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "section",
+              "bar",
+              "unchanged"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "section": {
+                "type": "string"
+              },
+              "bar": {
+                "type": "integer"
+              },
+              "chords": {
+                "type": "integer"
+              },
+              "bars": {
+                "type": "integer"
+              },
+              "unchanged": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "reopened": {
+      "type": "object",
+      "required": [
+        "sections",
+        "spans"
+      ],
+      "properties": {
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "spans": {
+          "type": "object",
+          "required": [
+            "harmony",
+            "bass",
+            "melody",
+            "inner_voice"
+          ],
+          "properties": {
+            "harmony": {
+              "type": "integer"
+            },
+            "bass": {
+              "type": "integer"
+            },
+            "melody": {
+              "type": "integer"
+            },
+            "inner_voice": {
+              "type": "integer"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/fill.response.schema.json",
+  "title": "composer_api_fill response",
+  "description": "What `fill --format json` prints, without the files; the realized plan, MIDI and MusicXML are separate members of the response.",
+  "type": "object",
+  "required": [
+    "seed",
+    "realized",
+    "sections",
+    "returns"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "seed": {
+      "type": "integer"
+    },
+    "realized": {
+      "type": "boolean"
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "letter",
+          "heard",
+          "heard_as_requested",
+          "cadences"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "letter": {
+            "type": "string"
+          },
+          "heard": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "in_scope": {
+            "const": false
+          },
+          "heard_as_requested": {
+            "type": "boolean"
+          },
+          "cadences": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "analyzer": {
+      "type": "object",
+      "required": [
+        "planned",
+        "agreed"
+      ],
+      "properties": {
+        "planned": {
+          "type": "integer"
+        },
+        "agreed": {
+          "type": "integer"
+        }
+      }
+    },
+    "style_distance": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "number"
+      }
+    },
+    "returns": {
+      "type": "object",
+      "required": [
+        "planned",
+        "heard",
+        "pairs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "planned": {
+          "type": "integer"
+        },
+        "heard": {
+          "type": "integer"
+        },
+        "pairs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "later",
+              "earlier",
+              "similarity"
+            ],
+            "properties": {
+              "later": {
+                "type": "string"
+              },
+              "earlier": {
+                "type": "string"
+              },
+              "similarity": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    },
+    "given": {
+      "type": "object",
+      "required": [
+        "unchanged",
+        "runs"
+      ],
+      "properties": {
+        "unchanged": {
+          "type": "boolean"
+        },
+        "runs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "section",
+              "bar",
+              "unchanged"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "section": {
+                "type": "string"
+              },
+              "bar": {
+                "type": "integer"
+              },
+              "chords": {
+                "type": "integer"
+              },
+              "bars": {
+                "type": "integer"
+              },
+              "unchanged": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "seed",
+          "agreed",
+          "planned",
+          "score",
+          "written"
+        ],
+        "properties": {
+          "seed": {
+            "type": "integer"
+          },
+          "agreed": {
+            "type": "integer"
+          },
+          "planned": {
+            "type": "integer"
+          },
+          "score": {
+            "type": "string"
+          },
+          "written": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "candidates_tried": {
+      "type": "integer"
+    },
+    "record": {
+      "type": "string"
+    },
+    "explanation": {
+      "type": "string"
+    }
+  }
+}

@@ -7,11 +7,13 @@
 #include <string.h>
 #include <sys/stat.h>
 
-#include "cli_options.h"
-#include "fill.h"
+#include <ursatz_composer/composer_api.h>
 
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/variations.h>
+#include "cli_options.h"
+#include "workflow.h"
+
+/* The most versions one command keeps (VARIATIONS_MAX). */
+#define VARIATIONS_MAX 16
 
 typedef struct {
     bool help;
@@ -25,10 +27,7 @@ typedef struct {
     bool musicxml;
     const char *tempo_text;
     bool plain_midi;
-    PlanExportOptions export_options;
     bool json;
-    unsigned long count;
-    unsigned long seed;
 } Options;
 
 static void print_harmonize_help(FILE *out) {
@@ -40,7 +39,7 @@ static void print_harmonize_help(FILE *out) {
     fprintf(out, "from the plan and from the versions kept before. Every melody note is kept. The plan file is not changed.\n\n");
     fprintf(out, "Options:\n");
     fprintf(out, "  --section <letter>   the section with that form letter (\"A\", \"B\", \"A'\") whose melody is given\n");
-    fprintf(out, "  --count <n>          how many versions to keep, 1 to %d\n", PLAN_VARIATIONS_MAX);
+    fprintf(out, "  --count <n>          how many versions to keep, 1 to %d\n", VARIATIONS_MAX);
     fprintf(out, "  --seed <n>           whole number from 0 for the first seed tried. Default: from the clock\n");
     fprintf(out, "  --out-dir <dir>      where variation-<i>.json (the plan) is written, i from 1; the directory is created\n");
     fprintf(out, "  --midi               also write variation-<i>.mid\n");
@@ -67,7 +66,7 @@ static void print_help(FILE *out) {
     fprintf(out, "  --node <id>          the node's id in the plan file (composer.id)\n");
     fprintf(out, "  --section <letter>   the section with that form letter (\"A\", \"B\", \"A'\") instead of --node\n");
     fprintf(out, "  --lane <lane>        harmony, bass, melody or inner: only that lane of the node and of what is under it\n");
-    fprintf(out, "  --count <n>          how many versions to keep, 1 to %d\n", PLAN_VARIATIONS_MAX);
+    fprintf(out, "  --count <n>          how many versions to keep, 1 to %d\n", VARIATIONS_MAX);
     fprintf(out, "  --seed <n>           whole number from 0 for the first seed tried. Default: from the clock. The seed of\n");
     fprintf(out, "                       every version is printed\n");
     fprintf(out, "  --out-dir <dir>      where variation-<i>.json (the plan) is written, i from 1; the directory is created\n");
@@ -153,26 +152,8 @@ static int check_options(Options *options, bool harmonize) {
     if (!options->count_text) {
         return cli_fail(CLI_EXIT_USAGE, "%s needs --count <n>\n%s", command, usage);
     }
-    if (!request_parse_whole_number(options->count_text, PLAN_VARIATIONS_MAX, &options->count) || options->count < 1) {
-        return cli_fail(CLI_EXIT_USAGE, "--count must be a whole number from 1 to %d, not '%s'", PLAN_VARIATIONS_MAX,
-                        options->count_text);
-    }
     if (!options->out_dir) {
         return cli_fail(CLI_EXIT_USAGE, "%s needs --out-dir <dir>\n%s", command, usage);
-    }
-    if (options->seed_text) {
-        if (!request_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
-            return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'",
-                            options->seed_text);
-        }
-    } else {
-        options->seed = cli_default_seed();
-    }
-    {
-        int export_status = cli_read_export_options(options->tempo_text, options->plain_midi, &options->export_options);
-        if (export_status != 0) {
-            return export_status;
-        }
     }
     if (options->format_text) {
         if (request_equals_ignore_case(options->format_text, "json")) {
@@ -184,15 +165,25 @@ static int check_options(Options *options, bool harmonize) {
     return 0;
 }
 
+/* The request: the plan, the node and the options of the command as members. */
+static cJSON *build_request(const Options *options, cJSON *plan) {
+    cJSON *request = cJSON_CreateObject();
+    bool ok = request && (!plan || cJSON_AddItemToObject(request, "plan", plan)) && cli_add_target(request, &options->target) &&
+              cJSON_AddStringToObject(request, "count", options->count_text) &&
+              (!options->seed_text || cJSON_AddStringToObject(request, "seed", options->seed_text)) &&
+              (!options->musicxml || cJSON_AddTrueToObject(request, "musicxml")) &&
+              (!options->tempo_text || cJSON_AddStringToObject(request, "tempo", options->tempo_text)) &&
+              (!options->plain_midi || cJSON_AddTrueToObject(request, "plain_midi"));
+    if (!ok) {
+        cJSON_Delete(request);
+        return NULL;
+    }
+    return request;
+}
+
 /* --- the files and the result --------------------------------------------------- */
 
 #define PATH_SIZE 1024
-
-typedef struct {
-    char plan[PATH_SIZE];
-    char midi[PATH_SIZE];
-    char musicxml[PATH_SIZE];
-} VariationPaths;
 
 static int make_directory(const char *path) {
     if (mkdir(path, 0755) != 0 && errno != EEXIST) {
@@ -201,82 +192,81 @@ static int make_directory(const char *path) {
     return 0;
 }
 
-/* Writes variation-<i>.json and, when asked, .mid and .musicxml; fills paths. */
-static int write_variations(const Options *options, const PlanVariations *variations, VariationPaths *paths) {
+/* Writes variation-<i>.json and, when asked, .mid and .musicxml; paths[i] are the three paths of variation i. */
+static int write_variations(const Options *options, const cJSON *variations, char (*paths)[3][PATH_SIZE]) {
     int status = make_directory(options->out_dir);
-    for (size_t i = 0; status == 0 && i < variations->count; i++) {
-        const PlanVariation *variation = &variations->items[i];
-        VariationPaths *entry = &paths[i];
-        memset(entry, 0, sizeof(*entry));
-        if (snprintf(entry->plan, PATH_SIZE, "%s/variation-%zu.json", options->out_dir, i + 1) >= PATH_SIZE) {
+    size_t index = 0;
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, variations) {
+        if (status != 0) {
+            break;
+        }
+        char (*entry_paths)[PATH_SIZE] = paths[index];
+        if (snprintf(entry_paths[0], PATH_SIZE, "%s/variation-%zu.json", options->out_dir, index + 1) >= PATH_SIZE) {
             return cli_fail(CLI_EXIT_WRITE, "file name in '%s' is too long", options->out_dir);
         }
+        snprintf(entry_paths[1], PATH_SIZE, "%s/variation-%zu.mid", options->out_dir, index + 1);
+        snprintf(entry_paths[2], PATH_SIZE, "%s/variation-%zu.musicxml", options->out_dir, index + 1);
+        const cJSON *plan = cJSON_GetObjectItemCaseSensitive(entry, "plan");
+        const char *musicxml = cli_json_string(entry, "musicxml");
+        ComposerResponse midi;
+        memset(&midi, 0, sizeof midi);
+        CliFile files[3];
+        size_t count = 0;
+        files[count++] = (CliFile){entry_paths[0], CLI_FILE_PLAN, plan, NULL, 0, false};
         if (options->midi) {
-            snprintf(entry->midi, PATH_SIZE, "%s/variation-%zu.mid", options->out_dir, i + 1);
+            status = cli_export_midi(plan, options->tempo_text, options->plain_midi, &midi);
+            files[count++] = (CliFile){entry_paths[1], CLI_FILE_BYTES, NULL, midi.midi, midi.midi_size, true};
         }
-        if (options->musicxml) {
-            snprintf(entry->musicxml, PATH_SIZE, "%s/variation-%zu.musicxml", options->out_dir, i + 1);
+        if (status == 0 && options->musicxml) {
+            files[count++] = (CliFile){entry_paths[2], CLI_FILE_BYTES, NULL, musicxml, strlen(musicxml), true};
         }
-        CliOutputPaths outputs = {entry->plan, options->midi ? entry->midi : NULL, options->musicxml ? entry->musicxml : NULL,
-                                  NULL, NULL, &options->export_options};
-        const char *files[CLI_MAX_OUTPUTS];
-        size_t file_count = 0;
-        status = cli_write_outputs(&outputs, variation->plan, &variation->outcome, files, &file_count);
+        if (status == 0) {
+            status = cli_write_files(files, count);
+        }
+        composer_response_destroy(&midi);
+        index++;
     }
     return status;
 }
 
-static void print_result(const Options *options, const PlanVariations *variations, const VariationPaths *paths) {
+static void print_result(const Options *options, cJSON *document, const char (*paths)[3][PATH_SIZE]) {
+    cJSON *variations = cJSON_GetObjectItemCaseSensitive(document, "variations");
     if (options->json) {
-        printf("{\"variations\":[");
-        for (size_t i = 0; i < variations->count; i++) {
-            const PlanVariation *variation = &variations->items[i];
-            printf("%s{\"index\":%zu,\"seed\":%lu,\"plan\":", i ? "," : "", i + 1, variation->seed);
-            cli_print_json_string(paths[i].plan);
-            printf(",\"midi\":");
+        /* The entries carry the files written, not the plan and the MusicXML. */
+        size_t index = 0;
+        cJSON *entry = NULL;
+        cJSON_ArrayForEach(entry, variations) {
+            cJSON *sections = cJSON_DetachItemFromObjectCaseSensitive(entry, "sections");
+            cJSON_DeleteItemFromObjectCaseSensitive(entry, "plan");
+            cJSON_DeleteItemFromObjectCaseSensitive(entry, "musicxml");
+            cJSON_AddStringToObject(entry, "plan", paths[index][0]);
             if (options->midi) {
-                cli_print_json_string(paths[i].midi);
+                cJSON_AddStringToObject(entry, "midi", paths[index][1]);
             } else {
-                printf("null");
+                cJSON_AddNullToObject(entry, "midi");
             }
-            printf(",\"musicxml\":");
             if (options->musicxml) {
-                cli_print_json_string(paths[i].musicxml);
+                cJSON_AddStringToObject(entry, "musicxml", paths[index][2]);
             } else {
-                printf("null");
+                cJSON_AddNullToObject(entry, "musicxml");
             }
-            printf(",\"sections\":");
-            cli_print_heard_json(variation->plan, &variation->outcome);
-            printf("}");
+            cJSON_AddItemToObject(entry, "sections", sections);
+            index++;
         }
-        printf("],\"kept\":%zu,\"requested\":%lu,\"seeds_tried\":%zu}\n", variations->count, options->count,
-               variations->seeds_tried);
+        char *text = cJSON_PrintUnformatted(document);
+        printf("%s\n", text ? text : "{}");
+        cJSON_free(text);
         return;
     }
-    for (size_t i = 0; i < variations->count; i++) {
-        printf("variation %zu  seed %lu  ", i + 1, variations->items[i].seed);
-        cli_print_heard_text(variations->items[i].plan, &variations->items[i].outcome);
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, variations) {
+        printf("variation %.0f  seed %.0f  ", cli_json_number(entry, "index"), cli_json_number(entry, "seed"));
+        cli_print_heard_line(cJSON_GetObjectItemCaseSensitive(entry, "sections"));
         printf("\n");
     }
-    printf("kept %zu of %lu, %zu seeds tried\n", variations->count, options->count, variations->seeds_tried);
-}
-
-/* Writes and prints what plan_variations gave. Returns the exit status. */
-static int finish(const Options *options, PlanVariations *variations, const char *what) {
-    if (variations->count == 0) {
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "no version of %s that differs from the plan was found in %zu seeds from %lu", what,
-                        variations->seeds_tried, options->seed);
-    }
-    VariationPaths *paths = calloc(variations->count, sizeof(VariationPaths));
-    if (!paths) {
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
-    }
-    int status = write_variations(options, variations, paths);
-    if (status == 0) {
-        print_result(options, variations, paths);
-    }
-    free(paths);
-    return status;
+    printf("kept %.0f of %.0f, %.0f seeds tried\n", cli_json_number(document, "kept"), cli_json_number(document, "requested"),
+           cli_json_number(document, "seeds_tried"));
 }
 
 /* The shared body of the two commands. */
@@ -294,46 +284,31 @@ static int run_command(int argc, char **argv, bool harmonize) {
     if (status != 0) {
         return status;
     }
-    PiecePlan *plan = NULL;
-    PlanJsonError error;
-    if (plan_read_json_file(options.input, &plan, &error) != PLAN_OK) {
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read plan '%s': %s%s%s", options.input, error.message,
-                        error.path[0] ? " at " : "", error.path);
+    cJSON *plan = NULL;
+    CliHeldFailure held;
+    cli_read_plan_held(options.input, &plan, &held);
+    cJSON *request = build_request(&options, plan);
+    if (!request) {
+        cJSON_Delete(plan);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    char what[96];
-    cli_describe_target(plan, &options.target, what, sizeof(what));
-    ComposeConfig config;
-    memset(&config, 0, sizeof(config));
-    config.seed = options.seed;
-    PlanVariations variations;
-    RegenerateResult ran;
-    FillTarget *targets = NULL;
-    size_t target_count = 0;
-    if (harmonize) {
-        NodeId section;
-        status = cli_find_target_node(plan, &options.target, false, &section);
-        ran = status == 0 ? plan_harmonizations(plan, section, &config, options.count, &variations) : REGENERATE_ERR_NULL;
-        if (status == 0 && ran == REGENERATE_ERR_BAD_TARGET) {
-            status = cli_fail(CLI_EXIT_UNSATISFIABLE,
-                              "%s has no given melody over all its bars to harmonize (plan it with --given-melody and fill it)",
-                              what);
-        } else if (status == 0 && ran != REGENERATE_OK) {
-            status = cli_report_refused(ran, what);
-        }
+    ComposerResponse response;
+    ComposerStatus called = cli_call(harmonize ? composer_api_harmonize : composer_api_variations, request, &response);
+    if (called != COMPOSER_OK) {
+        status = cli_fail_plan_api(called, &response.error, options.input, &held);
     } else {
-        status = cli_find_targets(plan, &options.target, &targets, &target_count);
-        ran = status == 0 ? plan_variations(plan, targets, target_count, &config, options.count, &variations)
-                          : REGENERATE_ERR_NULL;
-        if (status == 0 && ran != REGENERATE_OK) {
-            status = cli_report_refused(ran, what);
+        cJSON *document = cJSON_Parse(response.json);
+        size_t kept = (size_t)cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(document, "variations"));
+        char (*paths)[3][PATH_SIZE] = calloc(kept ? kept : 1, sizeof(*paths));
+        status = document && paths ? write_variations(&options, cJSON_GetObjectItemCaseSensitive(document, "variations"), paths)
+                                   : cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+        if (status == 0) {
+            print_result(&options, document, (const char (*)[3][PATH_SIZE])paths);
         }
+        free(paths);
+        cJSON_Delete(document);
     }
-    if (status == 0) {
-        status = finish(&options, &variations, what);
-        plan_variations_destroy(&variations);
-    }
-    free(targets);
-    plan_destroy(plan);
+    composer_response_destroy(&response);
     return status;
 }
 

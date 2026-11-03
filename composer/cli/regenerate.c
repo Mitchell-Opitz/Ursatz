@@ -5,14 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "cli_options.h"
-#include "fill.h"
-#include "plan.h"
+#include <ursatz_composer/composer_api.h>
 
-#include <ursatz_composer/compose.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/plan_state.h>
-#include <ursatz_composer/regenerate.h>
+#include "cli_options.h"
+#include "workflow.h"
 
 typedef struct {
     bool help;
@@ -24,9 +20,7 @@ typedef struct {
     const char *musicxml_path;
     const char *tempo_text;
     bool plain_midi;
-    PlanExportOptions export_options;
     const char *format_text;
-    unsigned long seed;
     bool json;
 } Options;
 
@@ -140,20 +134,6 @@ static int check_options(Options *options, bool regenerate) {
     if (!options->out_path) {
         return cli_fail(CLI_EXIT_USAGE, "%s needs --out <plan.json>\n%s", command, usage);
     }
-    if (options->seed_text) {
-        if (!request_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
-            return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'",
-                            options->seed_text);
-        }
-    } else {
-        options->seed = cli_default_seed();
-    }
-    {
-        int export_status = cli_read_export_options(options->tempo_text, options->plain_midi, &options->export_options);
-        if (export_status != 0) {
-            return export_status;
-        }
-    }
     if (options->format_text) {
         if (request_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
@@ -164,23 +144,23 @@ static int check_options(Options *options, bool regenerate) {
     return 0;
 }
 
-/* --- the targets ---------------------------------------------------------------- */
-
-static const char *const LANE_LABELS[] = {"meter", "key", "harmony", "bass", "melody", "inner voice"};
+/* The request: the plan, the node and the options of the command as members. */
+static cJSON *build_request(const Options *options, cJSON *plan) {
+    cJSON *request = cJSON_CreateObject();
+    bool ok = request && (!plan || cJSON_AddItemToObject(request, "plan", plan)) && cli_add_target(request, &options->target) &&
+              (!options->seed_text || cJSON_AddStringToObject(request, "seed", options->seed_text)) &&
+              (!options->midi_path || cJSON_AddTrueToObject(request, "midi")) &&
+              (!options->musicxml_path || cJSON_AddTrueToObject(request, "musicxml")) &&
+              (!options->tempo_text || cJSON_AddStringToObject(request, "tempo", options->tempo_text)) &&
+              (!options->plain_midi || cJSON_AddTrueToObject(request, "plain_midi"));
+    if (!ok) {
+        cJSON_Delete(request);
+        return NULL;
+    }
+    return request;
+}
 
 /* --- lock ------------------------------------------------------------------------ */
-
-static size_t count_given(const PiecePlan *plan, size_t *nodes) {
-    size_t spans = 0;
-    *nodes = 0;
-    for (NodeId id = 1; id <= plan_node_count(plan); id++) {
-        *nodes += plan_has_node(plan, id) && plan_node_state(plan, id) == PLAN_STATE_GIVEN;
-    }
-    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
-        spans += plan_has_lane_span(plan, id) && plan_lane_span_state(plan, id) == PLAN_STATE_GIVEN;
-    }
-    return spans;
-}
 
 int run_lock(int argc, char **argv) {
     Options options;
@@ -196,107 +176,74 @@ int run_lock(int argc, char **argv) {
     if (status != 0) {
         return status;
     }
-    PiecePlan *plan = NULL;
-    PlanJsonError error;
-    if (plan_read_json_file(options.input, &plan, &error) != PLAN_OK) {
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read plan '%s': %s%s%s", options.input, error.message,
-                        error.path[0] ? " at " : "", error.path);
+    cJSON *plan = NULL;
+    CliHeldFailure held;
+    cli_read_plan_held(options.input, &plan, &held);
+    cJSON *request = build_request(&options, plan);
+    if (!request) {
+        cJSON_Delete(plan);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    FillTarget *targets = NULL;
-    size_t target_count = 0;
-    status = cli_find_targets(plan, &options.target, &targets, &target_count);
-    char what[96];
-    cli_describe_target(plan, &options.target, what, sizeof(what));
-    size_t nodes_before;
-    size_t spans_before = count_given(plan, &nodes_before);
-    for (size_t t = 0; status == 0 && t < target_count; t++) {
-        PlanResult locked = plan_lock(plan, targets[t]);
-        if (locked == PLAN_ERR_BAD_PAYLOAD) {
-            status = cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot lock %s: some of it is not written yet (run fill first)", what);
-        } else if (locked != PLAN_OK) {
-            status = cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot lock %s", what);
-        }
-    }
-    free(targets);
-    if (status == 0) {
-        PlanJsonError write_error;
-        if (plan_write_json_file(plan, options.out_path, &write_error) != PLAN_OK) {
-            status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", options.out_path, write_error.message);
-        } else {
-            size_t nodes_after;
-            size_t spans_after = count_given(plan, &nodes_after);
+    ComposerResponse response;
+    ComposerStatus called = cli_call(composer_api_lock, request, &response);
+    if (called != COMPOSER_OK) {
+        status = cli_fail_plan_api(called, &response.error, options.input, &held);
+    } else {
+        cJSON *document = cJSON_Parse(response.json);
+        cJSON *locked_plan = cJSON_Parse(response.plan_json);
+        status = document && locked_plan ? cli_write_plan_object(locked_plan, options.out_path, options.out_path)
+                                         : cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+        if (status == 0) {
+            const cJSON *locked = cJSON_GetObjectItemCaseSensitive(document, "locked");
+            double nodes = cli_json_number(locked, "nodes");
+            double spans = cli_json_number(locked, "spans");
             if (options.json) {
-                printf("{\"locked\":{\"nodes\":%zu,\"spans\":%zu},\"plan\":", nodes_after - nodes_before,
-                       spans_after - spans_before);
-                cli_print_json_string(options.out_path);
-                printf("}\n");
+                cJSON_DeleteItemFromObjectCaseSensitive(document, "what");
+                cJSON_AddStringToObject(document, "plan", options.out_path);
+                char *text = cJSON_PrintUnformatted(document);
+                printf("%s\n", text ? text : "{}");
+                cJSON_free(text);
             } else {
-                printf("locked %s: %zu %s and %zu lane %s now Given\n", what, nodes_after - nodes_before,
-                       nodes_after - nodes_before == 1 ? "node" : "nodes", spans_after - spans_before,
-                       spans_after - spans_before == 1 ? "span" : "spans");
+                printf("locked %s: %.0f %s and %.0f lane %s now Given\n", cli_json_string(document, "what"), nodes,
+                       nodes == 1 ? "node" : "nodes", spans, spans == 1 ? "span" : "spans");
                 printf("wrote %s\n", options.out_path);
             }
         }
+        cJSON_Delete(document);
+        cJSON_Delete(locked_plan);
     }
-    plan_destroy(plan);
+    composer_response_destroy(&response);
     return status;
 }
 
 /* --- regenerate -------------------------------------------------------------------- */
 
-typedef struct {
-    size_t sections;
-    char letters[CLI_MAX_SECTIONS][PLAN_SECTION_LETTER_MAX];
-    size_t spans[PLAN_LANE_INNER_VOICE + 1];
-} Reopened;
-
-static void read_reopened(const PiecePlan *plan, const FillTarget *scope, size_t count, Reopened *out) {
-    CliSection sections[CLI_MAX_SECTIONS];
-    size_t section_count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
-    section_count = section_count > CLI_MAX_SECTIONS ? CLI_MAX_SECTIONS : section_count;
-    memset(out, 0, sizeof(*out));
-    for (size_t i = 0; i < count; i++) {
-        if (scope[i].kind == FILL_TARGET_LANE_SPAN) {
-            out->spans[plan_lane_span_lane(plan, (LaneSpanId)scope[i].id)]++;
-            continue;
-        }
-        for (size_t s = 0; s < section_count && out->sections < CLI_MAX_SECTIONS; s++) {
-            if (sections[s].node == (NodeId)scope[i].id) {
-                snprintf(out->letters[out->sections++], PLAN_SECTION_LETTER_MAX, "%s", sections[s].letter);
-            }
-        }
-    }
-}
-
-static void print_reopened_text(const Reopened *reopened) {
-    if (reopened->sections > 0) {
+/* What was reopened, from the "reopened" member of the result. */
+static void print_reopened_text(const cJSON *reopened) {
+    const cJSON *sections = cJSON_GetObjectItemCaseSensitive(reopened, "sections");
+    if (cJSON_GetArraySize(sections) > 0) {
         printf("reopened sections");
-        for (size_t i = 0; i < reopened->sections; i++) {
-            printf(i ? ", %s" : " %s", reopened->letters[i]);
+        size_t at = 0;
+        const cJSON *letter = NULL;
+        cJSON_ArrayForEach(letter, sections) {
+            printf(at++ ? ", %s" : " %s", letter->valuestring);
         }
         printf("\n");
     }
+    static const char *const LANES[] = {"harmony", "bass", "melody", "inner_voice"};
+    static const char *const LABELS[] = {"harmony", "bass", "melody", "inner voice"};
+    const cJSON *spans = cJSON_GetObjectItemCaseSensitive(reopened, "spans");
     bool any = false;
-    for (int lane = PLAN_LANE_HARMONY; lane <= PLAN_LANE_INNER_VOICE; lane++) {
-        if (reopened->spans[lane] > 0) {
-            printf("%s %s %zu", any ? "," : "reopened lane spans:", LANE_LABELS[lane], reopened->spans[lane]);
+    for (int lane = 0; lane < 4; lane++) {
+        double count = cli_json_number(spans, LANES[lane]);
+        if (count > 0) {
+            printf("%s %s %.0f", any ? "," : "reopened lane spans:", LABELS[lane], count);
             any = true;
         }
     }
     if (any) {
         printf("\n");
     }
-}
-
-/* The JSON members "reopened":{...}, into out. */
-static void reopened_json(const Reopened *reopened, char *out, size_t size) {
-    size_t used = (size_t)snprintf(out, size, "\"reopened\":{\"sections\":[");
-    for (size_t i = 0; i < reopened->sections && used < size; i++) {
-        used += (size_t)snprintf(out + used, size - used, "%s\"%s\"", i ? "," : "", reopened->letters[i]);
-    }
-    used += (size_t)snprintf(out + used, size - used, "],\"spans\":{\"harmony\":%zu,\"bass\":%zu,\"melody\":%zu,\"inner_voice\":%zu}}",
-                             reopened->spans[PLAN_LANE_HARMONY], reopened->spans[PLAN_LANE_BASS],
-                             reopened->spans[PLAN_LANE_MELODY], reopened->spans[PLAN_LANE_INNER_VOICE]);
 }
 
 int run_regenerate(int argc, char **argv) {
@@ -313,107 +260,52 @@ int run_regenerate(int argc, char **argv) {
     if (status != 0) {
         return status;
     }
-    char *text = NULL;
-    status = cli_load_plan_text(options.input, &text);
-    if (status != 0) {
-        return status;
+    cJSON *plan = NULL;
+    CliHeldFailure held;
+    cli_read_plan_held(options.input, &plan, &held);
+    cJSON *request = build_request(&options, plan);
+    if (!request) {
+        cJSON_Delete(plan);
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-
-    /* What will be reopened, read from the plan as it is now. */
-    PiecePlan *before = NULL;
-    PlanJsonError error;
-    Reopened reopened;
-    char what[96];
-    if (plan_from_json(text, &before, &error) != PLAN_OK) {
-        free(text);
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read plan '%s': %s", options.input, error.message);
-    }
-    FillTarget *targets = NULL;
-    size_t target_count = 0;
-    status = cli_find_targets(before, &options.target, &targets, &target_count);
-    cli_describe_target(before, &options.target, what, sizeof(what));
-    if (status == 0) {
-        FillTarget *scope = NULL;
-        size_t scope_count = 0;
-        RegenerateResult scoped = plan_regenerate_scope_all(before, targets, target_count, &scope, &scope_count);
-        if (scoped != REGENERATE_OK) {
-            status = cli_report_refused(scoped, what);
-        } else {
-            read_reopened(before, scope, scope_count, &reopened);
+    ComposerResponse response;
+    ComposerStatus called = cli_call(composer_api_regenerate, request, &response);
+    if (called == COMPOSER_ERR_UNSATISFIABLE && response.json && !response.error.path[0]) {
+        status = cli_report_stuck(&response.error, &response);
+    } else if (called != COMPOSER_OK) {
+        status = cli_fail_plan_api(called, &response.error, options.input, &held);
+    } else {
+        cJSON *document = cJSON_Parse(response.json);
+        cJSON *written = cJSON_Parse(response.plan_json);
+        CliFile list[3];
+        size_t count = 0;
+        const char *files[3];
+        status = document && written ? 0 : cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+        if (status == 0) {
+            list[count++] = (CliFile){options.out_path, CLI_FILE_PLAN, written, NULL, 0, false};
+            if (options.midi_path) {
+                list[count++] = (CliFile){options.midi_path, CLI_FILE_BYTES, NULL, response.midi, response.midi_size, true};
+            }
+            if (options.musicxml_path) {
+                list[count++] = (CliFile){options.musicxml_path, CLI_FILE_BYTES, NULL, response.musicxml,
+                                          response.musicxml ? strlen(response.musicxml) : 0, true};
+            }
+            status = cli_write_files(list, count);
         }
-        free(scope);
-    }
-    free(targets);
-    plan_destroy(before);
-    if (status != 0) {
-        free(text);
-        return status;
-    }
-
-    /* The seeds are tried one after another, each from a new copy of the plan; only a stuck run can be mended by the next. */
-    PiecePlan *plan = NULL;
-    ComposeOutcome outcome;
-    memset(&outcome, 0, sizeof(outcome));
-    bool done = false;
-    unsigned long used = options.seed;
-    for (unsigned long attempt = 0; attempt < CLI_MAX_SEED_TRIES && !done && status == 0; attempt++) {
-        PiecePlan *fresh = NULL;
-        if (plan_from_json(text, &fresh, &error) != PLAN_OK) {
-            status = cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot read plan '%s': %s", options.input, error.message);
-            break;
+        for (size_t i = 0; status == 0 && i < count; i++) {
+            files[i] = list[i].path;
         }
-        FillTarget *again = NULL;
-        size_t again_count = 0;
-        status = cli_find_targets(fresh, &options.target, &again, &again_count);
-        if (status != 0) {
-            plan_destroy(fresh);
-            break;
-        }
-        ComposeOutcome result;
-        memset(&result, 0, sizeof(result));
-        ComposeConfig config;
-        memset(&config, 0, sizeof(config));
-        config.seed = (options.seed + attempt) & CLI_SEED_MAX;
-        RegenerateResult ran = plan_regenerate_all(fresh, again, again_count, &config, &result);
-        free(again);
-        if (plan) {
-            plan_destroy(plan);
-            compose_outcome_destroy(&outcome);
-        }
-        plan = fresh;
-        outcome = result;
-        used = config.seed;
-        if (ran == REGENERATE_OK) {
-            done = true;
-        } else if (ran != REGENERATE_ERR_STUCK) {
-            status = cli_report_refused(ran, what);
-        }
-    }
-    free(text);
-    if (status == 0 && !done) {
-        cli_report_stuck(plan, &outcome, options.seed, used);
-        status = CLI_EXIT_UNSATISFIABLE;
-    }
-    if (status == 0) {
-        CliOutputPaths paths = {options.out_path, options.midi_path, options.musicxml_path, NULL, NULL,
-                                &options.export_options};
-        const char *files[CLI_MAX_OUTPUTS];
-        size_t file_count = 0;
-        status = cli_write_outputs(&paths, plan, &outcome, files, &file_count);
         if (status == 0) {
             if (options.json) {
-                char extra[512];
-                reopened_json(&reopened, extra, sizeof(extra));
-                cli_print_composed(true, used, plan, &outcome, extra, files, file_count);
+                cli_print_composed_json(document, files, count);
             } else {
-                print_reopened_text(&reopened);
-                cli_print_composed(false, used, plan, &outcome, NULL, files, file_count);
+                print_reopened_text(cJSON_GetObjectItemCaseSensitive(document, "reopened"));
+                cli_print_composed_text(document, files, count);
             }
         }
+        cJSON_Delete(document);
+        cJSON_Delete(written);
     }
-    if (plan) {
-        plan_destroy(plan);
-        compose_outcome_destroy(&outcome);
-    }
+    composer_response_destroy(&response);
     return status;
 }

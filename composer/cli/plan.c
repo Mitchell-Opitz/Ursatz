@@ -5,26 +5,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <standard-texture/texture_rules.h>
+#include <ursatz_composer/composer_api.h>
+
+#include <stdint.h>
 
 #include "cli_options.h"
+#include "util/util.h"
+#include "workflow.h"
 
-#include <ursatz_composer/form_template.h>
-#include <ursatz_composer/given.h>
-#include <ursatz_composer/harmony_phrase.h>
-#include <ursatz_composer/motive.h>
-#include <ursatz_composer/piece.h>
-#include <ursatz_composer/plan_json.h>
-#include <ursatz_composer/constraint.h>
-#include "motive/motive_internal.h"
-
-#define SIZE_SEARCH_MAX 96
-/* The most given phrases, progressions and bass lines one plan takes, and the numerals in one progression. */
 #define MAX_GIVEN 8
-#define MAX_NUMERALS 64
-/* The form a plan with given material and no --form is made as, and the section the material goes in. */
-#define DEFAULT_GIVEN_BARS 24
-#define DEFAULT_GIVEN_SECTION "B"
 
 typedef enum {
     GIVEN_MELODY,
@@ -36,15 +25,9 @@ typedef enum {
 typedef struct {
     GivenKind kind;
     const char *source; /* a file, or the numerals of a progression */
-    bool from_corpus;   /* --like-progression: source is looked for in the corpus and replaced by the passage's numerals */
-    char found_numerals[1024];
-    CorpusSeed found;
+    bool from_corpus;   /* --like-progression */
     const char *at_text;
     const char *cells_text;
-    /* Read from the text above. */
-    char letter[PLAN_SECTION_LETTER_MAX];
-    unsigned long bar; /* from 1 */
-    unsigned long cells;
 } GivenOption;
 
 typedef struct {
@@ -72,23 +55,6 @@ typedef struct {
     const char *format_text;
     GivenOption given[MAX_GIVEN];
     size_t given_count;
-    /* Read from the text above. */
-    bool form_defaulted; /* no --form: given material makes it a ternary form of 24 bars */
-    size_t given_melodies;
-    FormTemplateKind form;
-    AnalysisKey key;
-    char key_name[24];
-    PlanMeter meter;
-    unsigned long bars;
-    unsigned long count;
-    bool has_accompaniment;
-    PlanAccompaniment accompaniment;
-    unsigned long seed;
-    ComposerRatio style_weight; /* 0/0 when --style-weight was not given (a weight of 1/1 at fill) */
-    ComposerStyleWeights blend_weights; /* read with --blend */
-    bool seeded; /* the motive is a passage of the corpus, kept in seed */
-    CorpusSeed seed_found;
-    PlanSource source; /* seed_found as the plan records it */
     bool json;
 } Options;
 
@@ -254,194 +220,9 @@ static int read_options(int argc, char **argv, Options *options) {
     return 0;
 }
 
-static void append_number(char *out, size_t size, unsigned long value, bool first) {
-    size_t used = strlen(out);
-    snprintf(out + used, size - used, first ? "%lu" : ", %lu", value);
-}
-
-/* The sizes the form has, for the message about one it has not. */
-static void describe_sizes(FormTemplateKind kind, char *out, size_t size) {
-    FormTemplate layout;
-    out[0] = '\0';
-    bool first = true;
-    for (unsigned long bars = 1; bars <= SIZE_SEARCH_MAX; bars++) {
-        if (form_template_layout(kind, bars, 0, &layout)) {
-            append_number(out, size, bars, first);
-            first = false;
-        }
-    }
-    size_t used = strlen(out);
-    snprintf(out + used, size - used, " bars");
-    bool counted = false;
-    for (unsigned long count = 1; count <= FORM_TEMPLATE_MAX_SECTIONS; count++) {
-        if (form_template_layout(kind, 0, count, &layout)) {
-            used = strlen(out);
-            snprintf(out + used, size - used, counted ? ", %lu" : " (or --count %lu", count);
-            counted = true;
-        }
-    }
-    if (counted) {
-        used = strlen(out);
-        snprintf(out + used, size - used, ")");
-    }
-}
-
-/* The cells of a bar of the meter, which the harmony operators place chords on (harmony_rhythm.c). */
-static unsigned long cells_in_bar(const PlanMeter *meter) {
-    return (meter->beat_unit == 4 && meter->beats_per_bar == 4) || meter->beat_unit == 8 ? 2 : 1;
-}
-
-/* "B", "B:3", "A'" and "A':5": the section's letter and the bar (from 1) of it. */
-static int read_at(GivenOption *given, bool form_defaulted) {
-    if (!given->at_text) {
-        if (!form_defaulted) {
-            return cli_fail(CLI_EXIT_USAGE, "'%s' needs an --at: the section it goes in, \"B\" or \"B:3\"", given->source);
-        }
-        snprintf(given->letter, sizeof(given->letter), "%s", DEFAULT_GIVEN_SECTION);
-        given->bar = 1;
-        return 0;
-    }
-    const char *colon = strchr(given->at_text, ':');
-    size_t length = colon ? (size_t)(colon - given->at_text) : strlen(given->at_text);
-    if (length == 0 || length >= sizeof(given->letter)) {
-        return cli_fail(CLI_EXIT_USAGE, "--at '%s' must be a section's letter, then optionally a colon and a bar from 1",
-                        given->at_text);
-    }
-    snprintf(given->letter, sizeof(given->letter), "%.*s", (int)length, given->at_text);
-    given->bar = 1;
-    if (colon && (!request_parse_whole_number(colon + 1, 100000, &given->bar) || given->bar < 1)) {
-        return cli_fail(CLI_EXIT_USAGE, "--at '%s': the bar must be a whole number from 1", given->at_text);
-    }
-    return 0;
-}
-
-static int check_given(Options *options) {
-    for (size_t i = 0; i < options->given_count; i++) {
-        GivenOption *given = &options->given[i];
-        int status = read_at(given, options->form_defaulted);
-        if (status != 0) {
-            return status;
-        }
-        if (given->cells_text && given->kind != GIVEN_PROGRESSION) {
-            return cli_fail(CLI_EXIT_USAGE, "--cells goes with --given-progression, not '%s'", given->source);
-        }
-        given->cells = cells_in_bar(&options->meter);
-        if (given->cells_text && (!request_parse_whole_number(given->cells_text, 64, &given->cells) || given->cells < 1)) {
-            return cli_fail(CLI_EXIT_USAGE, "--cells must be a whole number from 1, not '%s'", given->cells_text);
-        }
-        options->given_melodies += given->kind == GIVEN_MELODY;
-    }
-    return 0;
-}
-
 static int check_options(Options *options) {
-    if (!options->form_text && options->given_count > 0) {
-        /* Given material with no form to put it in: the middle of a ternary form, B. */
-        options->form_text = "ternary";
-        options->form_defaulted = true;
-        options->bars = DEFAULT_GIVEN_BARS;
-    }
-    if (!options->form_text || !options->key_text || !options->meter_text || !options->out_path) {
+    if ((!options->form_text && options->given_count == 0) || !options->key_text || !options->meter_text || !options->out_path) {
         return cli_fail(CLI_EXIT_USAGE, "plan needs --form, --key, --meter and --out (see --help)\n%s", PLAN_USAGE_LINE);
-    }
-    if (!form_template_from_name(options->form_text, &options->form)) {
-        char names[160] = "";
-        for (int kind = 0; kind < FORM_TEMPLATE_KIND_COUNT; kind++) {
-            size_t used = strlen(names);
-            snprintf(names + used, sizeof(names) - used, kind ? ", %s" : "%s", form_template_name((FormTemplateKind)kind));
-        }
-        return cli_fail(CLI_EXIT_USAGE, "unknown form '%s'; the forms are %s", options->form_text, names);
-    }
-    /* The key is a tonic, with the mode from --mode (major by default), or tonic and mode together. */
-    char key_text[64];
-    bool has_mode_in_key = strchr(options->key_text, ' ') != NULL;
-    if (has_mode_in_key && options->mode_text) {
-        return cli_fail(CLI_EXIT_USAGE, "--key '%s' names a mode already; leave out --mode", options->key_text);
-    }
-    if (options->mode_text &&
-        !request_equals_ignore_case(options->mode_text, "major") && !request_equals_ignore_case(options->mode_text, "minor")) {
-        return cli_fail(CLI_EXIT_USAGE, "--mode must be major or minor, not '%s'", options->mode_text);
-    }
-    if (snprintf(key_text, sizeof(key_text), has_mode_in_key ? "%s" : "%s %s", options->key_text,
-                 options->mode_text ? options->mode_text : "major") >= (int)sizeof(key_text) ||
-        !request_parse_key(key_text, &options->key)) {
-        return cli_fail(CLI_EXIT_USAGE,
-                        "unknown key '%s'; write a tonic letter A-G with an optional # or b, for example \"D\" with "
-                        "--mode minor, or \"D minor\"",
-                        options->key_text);
-    }
-    cli_key_name(&options->key, options->key_name, sizeof(options->key_name));
-    if (!request_parse_meter(options->meter_text, &options->meter) || !harmony_meter_supported(&options->meter)) {
-        return cli_fail(CLI_EXIT_USAGE, "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8", options->meter_text);
-    }
-    if (options->bars_text && !request_parse_whole_number(options->bars_text, SIZE_SEARCH_MAX * 8, &options->bars)) {
-        return cli_fail(CLI_EXIT_USAGE, "--bars must be a whole number, not '%s'", options->bars_text);
-    }
-    if (options->count_text && !request_parse_whole_number(options->count_text, 64, &options->count)) {
-        return cli_fail(CLI_EXIT_USAGE, "--count must be a whole number, not '%s'", options->count_text);
-    }
-    FormTemplate layout;
-    if (!form_template_layout(options->form, options->bars, options->count, &layout)) {
-        char sizes[160];
-        describe_sizes(options->form, sizes, sizeof(sizes));
-        return cli_fail(CLI_EXIT_USAGE, "%s has no size of %s%s%s%s%s; it has %s", form_template_name(options->form),
-                        options->bars_text ? options->bars_text : "", options->bars_text ? " bars" : "",
-                        options->bars_text && options->count_text ? " with " : "",
-                        options->count_text ? "--count " : "", options->count_text ? options->count_text : "", sizes);
-    }
-    int given_status = check_given(options);
-    if (given_status != 0) {
-        return given_status;
-    }
-    bool likes_progression = false;
-    for (size_t i = 0; i < options->given_count; i++) {
-        likes_progression = likes_progression || options->given[i].from_corpus;
-    }
-    if ((options->like_path || likes_progression) && !options->from_corpus) {
-        return cli_fail(CLI_EXIT_USAGE, "%s needs --from-corpus <dir>", options->like_path ? "--like" : "--like-progression");
-    }
-    if (options->from_corpus && !options->like_path && !likes_progression) {
-        return cli_fail(CLI_EXIT_USAGE, "--from-corpus needs --like <file> or --like-progression \"<numerals>\"");
-    }
-    if (options->like_path && options->motive_path) {
-        return cli_fail(CLI_EXIT_USAGE, "--like and --motive both give the motive; use one");
-    }
-    if (options->accompaniment_text || options->texture_text) {
-        options->has_accompaniment = true;
-        int read = cli_read_accompaniment(options->accompaniment_text, options->texture_text, options->meter_text,
-                                          &options->meter, &options->accompaniment);
-        if (read != 0) {
-            return read;
-        }
-    }
-    if (options->style_weight_text && !options->style_path) {
-        return cli_fail(CLI_EXIT_USAGE, "--style-weight needs --style");
-    }
-    if (options->without.count > 0 && !options->style_path) {
-        return cli_fail(CLI_EXIT_USAGE, "--style-without needs --style");
-    }
-    if (options->style_weight_text && !request_parse_ratio(options->style_weight_text, &options->style_weight)) {
-        return cli_fail(CLI_EXIT_USAGE, "--style-weight must be a fraction like 1/2 or a whole number, not '%s'",
-                        options->style_weight_text);
-    }
-    if (options->style_path && strlen(options->style_path) >= PLAN_STYLE_PATH_MAX) {
-        return cli_fail(CLI_EXIT_USAGE, "--style path is longer than %d characters", PLAN_STYLE_PATH_MAX - 1);
-    }
-    if (options->blend_path && strlen(options->blend_path) >= PLAN_STYLE_PATH_MAX) {
-        return cli_fail(CLI_EXIT_USAGE, "--blend path is longer than %d characters", PLAN_STYLE_PATH_MAX - 1);
-    }
-    int blend = cli_read_blend(options->style_path != NULL, options->blend_path, options->blend_weight_text,
-                               options->blend_weights_text, &options->blend_weights);
-    if (blend != 0) {
-        return blend;
-    }
-    if (options->seed_text) {
-        if (!request_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
-            return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'",
-                            options->seed_text);
-        }
-    } else {
-        options->seed = cli_default_seed();
     }
     if (options->format_text) {
         if (request_equals_ignore_case(options->format_text, "json")) {
@@ -453,411 +234,243 @@ static int check_options(Options *options) {
     return 0;
 }
 
-/* --- reading the plan ------------------------------------------------------- */
+/* --- the request ------------------------------------------------------------------ */
 
-static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound basic idea"};
-static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
-static const char *const VARIATION_NAMES[] = {"exact", "ornament", "reharmonize", "reregister"};
+/* Why a file could not be turned into a motive request: the options are checked first, so it is held back. */
+typedef struct {
+    bool failed;
+    int status;
+    char message[1100];
+} Held;
 
-void cli_pairing_name(const PlanThemePairing *pairing, char *out, size_t size) {
-    snprintf(out, size, "%s + %s", BEGINNING_NAMES[pairing->beginning], ENDING_NAMES[pairing->ending]);
+static bool is_midi(const char *bytes, size_t size) {
+    return size >= 4 && memcmp(bytes, "MThd", 4) == 0;
 }
 
-const char *cli_return_variation_name(PlanReturnVariation variation) {
-    return VARIATION_NAMES[variation];
-}
-
-/* The bars in a length; 0 when the plan has no meter. */
-size_t cli_bars_in(const PiecePlan *plan, Rational length) {
-    LaneSpanId meters[1];
-    PlanSpan whole = plan_node_span(plan, plan_root(plan));
-    if (plan_lane_find(plan, PLAN_LANE_METER, 0, whole, meters, 1) == 0) {
-        return 0;
+/*
+ * The motive request of a file: {"input": {"format", "text"}, "source": <the file>}. A MIDI file is read through
+ * composer_api_motive_from_midi and arrives as the motive it made. *held says why a file could not be read.
+ */
+static cJSON *motive_request(const Options *options, const char *path, Held *held) {
+    char *bytes = NULL;
+    size_t size = 0;
+    if (!util_read_file(path, &bytes, &size)) {
+        held->failed = true;
+        held->status = CLI_EXIT_UNSATISFIABLE;
+        snprintf(held->message, sizeof held->message, "cannot load '%s' (io) at %s: cannot open the file", path, path);
+        bytes = NULL;
+        size = 0;
     }
-    const PlanMeter *meter = &plan_lane_span_payload(plan, meters[0])->meter;
-    long numerator = length.num * (long)meter->beat_unit;
-    long denominator = (long)length.den * meter->beats_per_bar;
-    return denominator > 0 ? (size_t)((numerator + denominator / 2) / denominator) : 0;
-}
-
-size_t cli_piece_sections(const PiecePlan *plan, CliSection *out, size_t capacity) {
-    size_t count = 0;
-    NodeId root = plan_root(plan);
-    for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
-        NodeId node = plan_node_child_at(plan, root, i);
-        if (plan_node_kind(plan, node) != PLAN_NODE_SECTION || plan_node_has_constraint(plan, node, PLAN_CONSTRAINT_MATERIAL)) {
-            continue;
+    const char *text = bytes ? bytes : "";
+    char *motive_text = NULL;
+    if (bytes && is_midi(bytes, size)) {
+        cJSON *midi_request = cJSON_CreateObject();
+        char key[96];
+        bool minor_key = strchr(options->key_text, ' ') != NULL;
+        snprintf(key, sizeof key, minor_key ? "%s" : "%s %s", options->key_text, options->mode_text ? options->mode_text : "major");
+        bool ok = midi_request && cJSON_AddStringToObject(midi_request, "meter", options->meter_text) &&
+                  cJSON_AddStringToObject(midi_request, "key", key);
+        char *printed = ok ? cJSON_PrintUnformatted(midi_request) : NULL;
+        cJSON_Delete(midi_request);
+        ComposerResponse response;
+        ComposerStatus status = printed ? composer_api_motive_from_midi((const uint8_t *)bytes, size, printed, NULL, &response)
+                                        : COMPOSER_ERR_ALLOC;
+        cJSON_free(printed);
+        if (status != COMPOSER_OK) {
+            held->failed = true;
+            held->status = status == COMPOSER_ERR_REQUEST ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE;
+            snprintf(held->message, sizeof held->message, "cannot load '%s': %s", path, response.error.message);
+            composer_response_destroy(&response);
+            text = "";
+        } else {
+            cJSON *document = cJSON_Parse(response.json);
+            motive_text = document ? cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(document, "motive")) : NULL;
+            cJSON_Delete(document);
+            composer_response_destroy(&response);
+            text = motive_text;
         }
-        if (count < capacity) {
-            CliSection *section = &out[count];
-            memset(section, 0, sizeof(*section));
-            section->node = node;
-            const char *name = plan_node_name(plan, node);
-            snprintf(section->name, sizeof(section->name), "%s", name ? name : "");
-            snprintf(section->letter, sizeof(section->letter), "%.*s", (int)sizeof(section->letter) - 1, section->name);
-            section->bars = cli_bars_in(plan, plan_node_span(plan, node).length);
-            for (size_t c = 0; c < plan_node_constraint_count(plan, node); c++) {
-                const PlanConstraint *constraint = plan_node_constraint_at(plan, node, c);
-                switch (constraint->kind) {
-                case PLAN_CONSTRAINT_SECTION_LETTER:
-                    memcpy(section->letter, constraint->params.letter, sizeof(section->letter));
-                    break;
-                case PLAN_CONSTRAINT_KEY:
-                    section->has_key = true;
-                    section->key = constraint->params.key;
-                    break;
-                case PLAN_CONSTRAINT_CADENCE:
-                    if (section->cadence_count < 2) {
-                        section->cadences[section->cadence_count++] = constraint->params.cadence;
-                    }
-                    break;
-                case PLAN_CONSTRAINT_THEME_PAIRING:
-                    section->has_pairing = true;
-                    section->pairing = constraint->params.theme_pairing;
-                    break;
-                case PLAN_CONSTRAINT_RETURN: {
-                    section->returns = true;
-                    section->variation = constraint->params.section_return.variation;
-                    const char *source = plan_node_name(plan, constraint->params.section_return.section);
-                    snprintf(section->returns_letter, sizeof(section->returns_letter), "%.*s", (int)sizeof(section->returns_letter) - 1, source ? source : "");
-                    for (size_t c2 = 0; c2 < plan_node_constraint_count(plan, constraint->params.section_return.section);
-                         c2++) {
-                        const PlanConstraint *letter =
-                            plan_node_constraint_at(plan, constraint->params.section_return.section, c2);
-                        if (letter->kind == PLAN_CONSTRAINT_SECTION_LETTER) {
-                            memcpy(section->returns_letter, letter->params.letter, sizeof(section->returns_letter));
-                        }
-                    }
-                    break;
-                }
-                default:
-                    break;
-                }
-            }
-        }
-        count++;
     }
-    return count;
+    cJSON *request = cJSON_CreateObject();
+    cJSON *input = cJSON_CreateObject();
+    bool ok = request && input && text && cJSON_AddStringToObject(input, "format", motive_text ? "json" : "auto") &&
+              cJSON_AddStringToObject(input, "text", text) && cJSON_AddItemToObject(request, "input", input) &&
+              cJSON_AddStringToObject(request, "source", path);
+    free(bytes);
+    cJSON_free(motive_text);
+    if (!ok) {
+        cJSON_Delete(input && !cJSON_GetObjectItem(request, "input") ? input : NULL);
+        cJSON_Delete(request);
+        held->failed = true;
+        held->status = CLI_EXIT_UNSATISFIABLE;
+        snprintf(held->message, sizeof held->message, "out of memory");
+        return NULL;
+    }
+    return request;
 }
 
-/* --- showing the plan --------------------------------------------------------- */
+static bool add_text(cJSON *request, const char *name, const char *text) {
+    return !text || cJSON_AddStringToObject(request, name, text);
+}
 
-static void print_section_text(const CliSection *section) {
-    char key[24] = "";
-    if (section->has_key) {
-        cli_key_name(&section->key, key, sizeof(key));
+static cJSON *build_request(const Options *options, Held *held) {
+    cJSON *request = cJSON_CreateObject();
+    cJSON *given = cJSON_CreateArray();
+    cJSON *without = cJSON_CreateArray();
+    bool ok = request && given && without && add_text(request, "form", options->form_text) &&
+              add_text(request, "key", options->key_text) && add_text(request, "mode", options->mode_text) &&
+              add_text(request, "meter", options->meter_text) && add_text(request, "bars", options->bars_text) &&
+              add_text(request, "count", options->count_text) && (!options->modulate || cJSON_AddTrueToObject(request, "modulate")) &&
+              add_text(request, "corpus", options->from_corpus) && add_text(request, "like", options->like_path) &&
+              add_text(request, "accompaniment", options->accompaniment_text) && add_text(request, "texture", options->texture_text) &&
+              add_text(request, "seed", options->seed_text) && add_text(request, "style", options->style_path) &&
+              add_text(request, "style_weight", options->style_weight_text) && add_text(request, "blend", options->blend_path) &&
+              add_text(request, "blend_weight", options->blend_weight_text) &&
+              add_text(request, "blend_weights", options->blend_weights_text);
+    for (size_t i = 0; ok && i < options->without.count; i++) {
+        ok = cJSON_AddItemToArray(without, cJSON_CreateString(options->without.names[i]));
     }
-    printf("  %-3s %2zu bars, key %s, cadence", section->letter, section->bars, section->has_key ? key : "-");
-    printf(" %s", section->cadence_count ? cli_cadence_name(section->cadences[0]) : "-");
-    if (section->cadence_count > 1) {
+    if (ok && options->without.count > 0) {
+        ok = cJSON_AddItemToObject(request, "style_without", without);
+        without = ok ? NULL : without;
+    }
+    if (ok && options->motive_path) {
+        cJSON *motive = motive_request(options, options->motive_path, held);
+        ok = motive && cJSON_AddItemToObject(request, "motive", motive);
+    }
+    for (size_t i = 0; ok && i < options->given_count; i++) {
+        const GivenOption *option = &options->given[i];
+        static const char *const KINDS[] = {"melody", "progression", "bass"};
+        cJSON *item = cJSON_CreateObject();
+        ok = item && cJSON_AddStringToObject(item, "kind", option->from_corpus ? "like_progression" : KINDS[option->kind]) &&
+             add_text(item, "at", option->at_text) && add_text(item, "cells", option->cells_text);
+        if (ok && option->kind == GIVEN_PROGRESSION) {
+            ok = cJSON_AddStringToObject(item, "numerals", option->source) != NULL;
+        } else if (ok) {
+            cJSON *motive = motive_request(options, option->source, held);
+            ok = motive && cJSON_AddItemToObject(item, "motive", motive);
+        }
+        ok = ok && cJSON_AddItemToArray(given, item);
+        if (!ok) {
+            cJSON_Delete(item);
+        }
+    }
+    if (ok && options->given_count > 0) {
+        ok = cJSON_AddItemToObject(request, "given", given);
+        given = ok ? NULL : given;
+    }
+    cJSON_Delete(given);
+    cJSON_Delete(without);
+    if (!ok) {
+        cJSON_Delete(request);
+        return NULL;
+    }
+    return request;
+}
+
+/* --- the result ------------------------------------------------------------------- */
+
+static void print_seed_line(const char *what, const cJSON *seed) {
+    const cJSON *start = cJSON_GetObjectItemCaseSensitive(seed, "start");
+    const cJSON *end = cJSON_GetObjectItemCaseSensitive(seed, "end");
+    printf("%s from %s m.%.0f b.%g - m.%.0f b.%g, score %s\n", what, cli_json_string(seed, "piece"),
+           cli_json_number(start, "measure"), cli_json_number(start, "beat"), cli_json_number(end, "measure"),
+           cli_json_number(end, "beat"), cli_json_string(seed, "score"));
+}
+
+static void print_section_text(const cJSON *section) {
+    const cJSON *key = cJSON_GetObjectItemCaseSensitive(section, "key");
+    const cJSON *cadences = cJSON_GetObjectItemCaseSensitive(section, "cadences");
+    printf("  %-3s %2.0f bars, key %s, cadence", cli_json_string(section, "letter"), cli_json_number(section, "bars"),
+           cJSON_IsString(key) ? key->valuestring : "-");
+    printf(" %s", cJSON_GetArraySize(cadences) > 0 ? cJSON_GetArrayItem(cadences, 0)->valuestring : "-");
+    if (cJSON_GetArraySize(cadences) > 1) {
         /* An antecedent's weak cadence comes second in the plan, first in the music. */
-        printf(" (antecedent %s)", cli_cadence_name(section->cadences[1]));
+        printf(" (antecedent %s)", cJSON_GetArrayItem(cadences, 1)->valuestring);
     }
-    if (section->has_pairing) {
-        char pairing[64];
-        cli_pairing_name(&section->pairing, pairing, sizeof(pairing));
-        printf(", %s", pairing);
+    const cJSON *pairing = cJSON_GetObjectItemCaseSensitive(section, "pairing");
+    if (cJSON_IsString(pairing)) {
+        printf(", %s", pairing->valuestring);
     }
-    if (section->returns) {
-        printf(", returns %s (%s)", section->returns_letter, cli_return_variation_name(section->variation));
+    const cJSON *returns = cJSON_GetObjectItemCaseSensitive(section, "returns");
+    if (cJSON_IsObject(returns)) {
+        printf(", returns %s (%s)", cli_json_string(returns, "section"), cli_json_string(returns, "variation"));
     }
     printf("\n");
 }
 
-static void print_section_json(const CliSection *section) {
-    char key[24] = "";
-    printf("{\"letter\":");
-    cli_print_json_string(section->letter);
-    printf(",\"bars\":%zu,\"key\":", section->bars);
-    if (section->has_key) {
-        cli_key_name(&section->key, key, sizeof(key));
-        cli_print_json_string(key);
-    } else {
-        printf("null");
+static void print_given_text(const cJSON *document) {
+    if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(document, "defaulted_form"))) {
+        printf("no --form: a ternary form of %.0f bars, the given material in B\n", cli_json_number(document, "bars"));
     }
-    printf(",\"cadences\":[");
-    for (size_t c = 0; c < section->cadence_count; c++) {
-        printf("%s\"%s\"", c ? "," : "", cli_cadence_name(section->cadences[c]));
-    }
-    printf("],\"pairing\":");
-    if (section->has_pairing) {
-        char pairing[64];
-        cli_pairing_name(&section->pairing, pairing, sizeof(pairing));
-        cli_print_json_string(pairing);
-    } else {
-        printf("null");
-    }
-    printf(",\"returns\":");
-    if (section->returns) {
-        printf("{\"section\":");
-        cli_print_json_string(section->returns_letter);
-        printf(",\"variation\":\"%s\"}", cli_return_variation_name(section->variation));
-    } else {
-        printf("null");
-    }
-    printf("}");
-}
-
-static const char *const GIVEN_KIND_NAMES[] = {"melody", "progression", "bass"};
-
-static void print_given_json(const Options *options) {
-    printf(",\"given\":[");
-    for (size_t i = 0; i < options->given_count; i++) {
-        const GivenOption *given = &options->given[i];
-        printf("%s{\"kind\":\"%s\",\"source\":", i ? "," : "", GIVEN_KIND_NAMES[given->kind]);
-        cli_print_json_string(given->source);
-        printf(",\"section\":");
-        cli_print_json_string(given->letter);
-        printf(",\"bar\":%lu", given->bar);
-        if (given->kind == GIVEN_PROGRESSION) {
-            printf(",\"cells\":%lu", given->cells);
-        }
-        if (given->from_corpus) {
-            printf(",\"from\":");
-            cli_print_seed_json(&given->found);
-        }
-        printf("}");
-    }
-    printf("]");
-}
-
-static void print_given_text(const Options *options) {
-    if (options->form_defaulted) {
-        printf("no --form: a ternary form of %lu bars, the given material in %s\n", options->bars, DEFAULT_GIVEN_SECTION);
-    }
-    for (size_t i = 0; i < options->given_count; i++) {
-        const GivenOption *given = &options->given[i];
-        printf("given %s %s%s%s at %s:%lu", GIVEN_KIND_NAMES[given->kind], given->kind == GIVEN_PROGRESSION ? "\"" : "",
-               given->source, given->kind == GIVEN_PROGRESSION ? "\"" : "", given->letter, given->bar);
-        if (given->kind == GIVEN_PROGRESSION) {
-            printf(", %lu %s a chord", given->cells, given->cells == 1 ? "cell" : "cells");
+    const cJSON *given = NULL;
+    cJSON_ArrayForEach(given, cJSON_GetObjectItemCaseSensitive(document, "given")) {
+        bool progression = strcmp(cli_json_string(given, "kind"), "progression") == 0;
+        printf("given %s %s%s%s at %s:%.0f", cli_json_string(given, "kind"), progression ? "\"" : "", cli_json_string(given, "source"),
+               progression ? "\"" : "", cli_json_string(given, "section"), cli_json_number(given, "bar"));
+        if (progression) {
+            double cells = cli_json_number(given, "cells");
+            printf(", %.0f %s a chord", cells, cells == 1 ? "cell" : "cells");
         }
         printf("\n");
-        if (given->from_corpus) {
-            cli_print_seed_line("progression", &given->found);
+        const cJSON *from = cJSON_GetObjectItemCaseSensitive(given, "from");
+        if (from) {
+            print_seed_line("progression", from);
         }
     }
 }
 
-static void print_result(const Options *options, const PiecePlan *plan) {
-    CliSection sections[CLI_MAX_SECTIONS];
-    size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
-    if (count > CLI_MAX_SECTIONS) {
-        count = CLI_MAX_SECTIONS;
-    }
-    size_t bars = 0;
-    for (size_t i = 0; i < count; i++) {
-        bars += sections[i].bars;
-    }
-    char accompaniment[96] = "";
-    if (options->has_accompaniment) {
-        snprintf(accompaniment, sizeof(accompaniment), "%s", cli_accompaniment_name(options->accompaniment.pattern));
-    }
-    if (options->json) {
-        printf("{\"form\":\"%s\",\"bars\":%zu,\"key\":\"%s\",\"meter\":\"%d/%d\",\"seed\":%lu,\"modulate\":%s,\"motive\":",
-               form_template_name(options->form), bars, options->key_name, options->meter.beats_per_bar,
-               options->meter.beat_unit, options->seed, options->modulate ? "true" : "false");
-        if (options->motive_path) {
-            cli_print_json_string(options->motive_path);
-        } else {
-            printf("null");
-        }
-        if (options->seeded) {
-            printf(",\"motive_source\":");
-            cli_print_seed_json(&options->seed_found);
-        }
-        printf(",\"accompaniment\":");
-        if (options->has_accompaniment) {
-            cli_print_json_string(accompaniment);
-        } else {
-            printf("null");
-        }
-        printf(",\"sections\":[");
-        for (size_t i = 0; i < count; i++) {
-            printf("%s", i ? "," : "");
-            print_section_json(&sections[i]);
-        }
-        printf("]");
-        if (options->given_count > 0) {
-            print_given_json(options);
-        }
-        if (options->style_path) {
-            printf(",\"style\":{\"file\":");
-            cli_print_json_string(options->style_path);
-            printf(",\"weight\":\"%lu/%lu\"}", options->style_weight.denominator ? options->style_weight.numerator : 1UL,
-                   options->style_weight.denominator ? options->style_weight.denominator : 1UL);
-            if (options->blend_path) {
-                printf(",\"blend\":{\"file\":");
-                cli_print_json_string(options->blend_path);
-                printf(",\"weights\":{");
-                for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
-                    printf("%s\"%s\":\"%lu/%lu\"", d ? "," : "", style_dimension_name((StyleDimension)d),
-                           options->blend_weights.numerator[d], options->blend_weights.denominator[d]);
-                }
-                printf("}}");
-            }
-        }
-        printf(",\"file\":");
-        cli_print_json_string(options->out_path);
-        printf("}\n");
-        return;
-    }
-    printf("%s, %zu bars, key %s, meter %d/%d, seed %lu%s\n", form_template_name(options->form), bars, options->key_name,
-           options->meter.beats_per_bar, options->meter.beat_unit, options->seed,
-           options->modulate ? ", keys and cadences planned" : "");
-    if (options->seeded) {
-        cli_print_seed_line("motive", &options->seed_found);
-    } else if (options->motive_path) {
-        printf("motive %s\n", options->motive_path);
+static void print_result_text(const cJSON *document, const char *out_path) {
+    printf("%s, %.0f bars, key %s, meter %s, seed %.0f%s\n", cli_json_string(document, "form"), cli_json_number(document, "bars"),
+           cli_json_string(document, "key"), cli_json_string(document, "meter"), cli_json_number(document, "seed"),
+           cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(document, "modulate")) ? ", keys and cadences planned" : "");
+    const cJSON *source = cJSON_GetObjectItemCaseSensitive(document, "motive_source");
+    const cJSON *motive = cJSON_GetObjectItemCaseSensitive(document, "motive");
+    if (source) {
+        print_seed_line("motive", source);
+    } else if (cJSON_IsString(motive)) {
+        printf("motive %s\n", motive->valuestring);
     } else {
         printf("motive invented at fill\n");
     }
-    if (options->has_accompaniment) {
-        printf("accompaniment %s", accompaniment);
-        if (options->accompaniment.texture >= 0) {
-            printf(" (%s)", standard_texture_name((StandardTexture)options->accompaniment.texture));
+    const cJSON *accompaniment = cJSON_GetObjectItemCaseSensitive(document, "accompaniment");
+    if (cJSON_IsString(accompaniment)) {
+        printf("accompaniment %s", accompaniment->valuestring);
+        const cJSON *texture = cJSON_GetObjectItemCaseSensitive(document, "accompaniment_texture");
+        if (cJSON_IsString(texture)) {
+            printf(" (%s)", texture->valuestring);
         }
         printf("\n");
     }
-    if (options->style_path) {
-        printf("style %s, weight %lu/%lu\n", options->style_path,
-               options->style_weight.denominator ? options->style_weight.numerator : 1UL,
-               options->style_weight.denominator ? options->style_weight.denominator : 1UL);
-        if (options->blend_path) {
-            printf("blend %s, second style's share", options->blend_path);
-            for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
-                printf("%s %s %lu/%lu", d ? "," : "", style_dimension_name((StyleDimension)d),
-                       options->blend_weights.numerator[d], options->blend_weights.denominator[d]);
+    const cJSON *style = cJSON_GetObjectItemCaseSensitive(document, "style");
+    if (style) {
+        printf("style %s, weight %s\n", cli_json_string(style, "file"), cli_json_string(style, "weight"));
+        const cJSON *blend = cJSON_GetObjectItemCaseSensitive(document, "blend");
+        if (blend) {
+            printf("blend %s, second style's share", cli_json_string(blend, "file"));
+            size_t at = 0;
+            const cJSON *weight = NULL;
+            cJSON_ArrayForEach(weight, cJSON_GetObjectItemCaseSensitive(blend, "weights")) {
+                printf("%s %s %s", at++ ? "," : "", weight->string, weight->valuestring);
             }
             printf("\n");
         }
     }
-    print_given_text(options);
+    print_given_text(document);
     printf("sections\n");
-    for (size_t i = 0; i < count; i++) {
-        print_section_text(&sections[i]);
+    const cJSON *section = NULL;
+    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(document, "sections")) {
+        print_section_text(section);
     }
-    printf("wrote %s\n", options->out_path);
+    printf("wrote %s\n", out_path);
 }
 
-/* --- the command ---------------------------------------------------------------- */
-
-static int write_plan(const Options *options, const PiecePlan *plan) {
-    char temporary[1032];
-    if (snprintf(temporary, sizeof(temporary), "%s.tmp", options->out_path) >= (int)sizeof(temporary)) {
-        return cli_fail(CLI_EXIT_WRITE, "file name '%s' is too long", options->out_path);
+/* The file an error about an input is about: a given material's, else the motive's. */
+static const char *input_name(const Options *options, const char *path) {
+    if (strncmp(path, "/given/", 7) == 0) {
+        unsigned long index = strtoul(path + 7, NULL, 10);
+        return index < options->given_count ? options->given[index].source : options->motive_path;
     }
-    PlanJsonError error;
-    if (plan_write_json_file(plan, temporary, &error) != PLAN_OK) {
-        remove(temporary);
-        return cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", options->out_path, error.message);
-    }
-    if (rename(temporary, options->out_path) != 0) {
-        remove(temporary);
-        return cli_fail(CLI_EXIT_WRITE, "cannot write '%s'", options->out_path);
-    }
-    return 0;
-}
-
-/* --- the given material ------------------------------------------------------- */
-
-/* Reads the file of a given melody or bass line, any length (a motive reader with no bar limit). */
-static int load_given(const Options *options, const GivenOption *given, Motive *out) {
-    MotiveOptions motive_options;
-    MotiveError error;
-    memset(&motive_options, 0, sizeof(motive_options));
-    motive_options.has_meter = true;
-    motive_options.meter = options->meter;
-    motive_options.has_key = true;
-    motive_options.key = options->key;
-    MotiveResult loaded = motive_load_file(given->source, MOTIVE_FORMAT_AUTO, &motive_options, out, &error);
-    if (loaded != MOTIVE_OK) {
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot load '%s' (%s)%s%s: %s", given->source, motive_result_name(loaded),
-                        error.location[0] ? " at " : "", error.location, error.message);
-    }
-    return 0;
-}
-
-/* The node of the section with the letter, or PLAN_NODE_NONE; the letters are listed into names when it has none. */
-static NodeId section_named(const PiecePlan *plan, const char *letter, char *names, size_t size) {
-    CliSection sections[CLI_MAX_SECTIONS];
-    size_t count = cli_piece_sections(plan, sections, CLI_MAX_SECTIONS);
-    names[0] = '\0';
-    for (size_t i = 0; i < count && i < CLI_MAX_SECTIONS; i++) {
-        if (request_equals_ignore_case(sections[i].letter, letter)) {
-            return sections[i].node;
-        }
-        size_t used = strlen(names);
-        snprintf(names + used, size - used, i ? ", %s" : "%s", sections[i].letter);
-    }
-    return PLAN_NODE_NONE;
-}
-
-/* Places the given material in the plan; the status of the failure it printed, else 0. */
-static int place_given(const Options *options, PiecePlan *plan) {
-    for (size_t i = 0; i < options->given_count; i++) {
-        const GivenOption *given = &options->given[i];
-        char names[128];
-        NodeId section = section_named(plan, given->letter, names, sizeof(names));
-        if (section == PLAN_NODE_NONE) {
-            return cli_fail(CLI_EXIT_USAGE, "--at '%s': the piece has no section '%s'; its sections are %s",
-                            given->at_text ? given->at_text : given->letter, given->letter, names);
-        }
-        GivenResult placed;
-        if (given->kind == GIVEN_PROGRESSION) {
-            char text[1024];
-            char *numerals[MAX_NUMERALS];
-            size_t count = 0;
-            if (snprintf(text, sizeof(text), "%s", given->source) >= (int)sizeof(text)) {
-                return cli_fail(CLI_EXIT_USAGE, "the progression is too long");
-            }
-            for (char *token = strtok(text, " \t,|"); token; token = strtok(NULL, " \t,|")) {
-                if (count == MAX_NUMERALS) {
-                    return cli_fail(CLI_EXIT_USAGE, "a progression has %d chords at most", MAX_NUMERALS);
-                }
-                numerals[count++] = token;
-            }
-            placed = plan_give_progression(plan, section, given->bar - 1, (const char *const *)numerals, count,
-                                           given->cells);
-        } else {
-            Motive *line = malloc(sizeof(*line));
-            if (!line) {
-                return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
-            }
-            int status = load_given(options, given, line);
-            if (status != 0) {
-                free(line);
-                return status;
-            }
-            PlanNote lane_notes[MOTIVE_MAX_NOTES];
-            motive_lane_notes(line, lane_notes);
-            placed = given->kind == GIVEN_MELODY ? plan_give_melody(plan, section, given->bar - 1, lane_notes, line->note_count)
-                                                 : plan_give_bass(plan, section, given->bar - 1, lane_notes, line->note_count);
-            free(line);
-        }
-        if (placed != GIVEN_OK) {
-            return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot place the given %s '%s' at %s:%lu: %s",
-                            GIVEN_KIND_NAMES[given->kind], given->source, given->letter, given->bar,
-                            given_result_name(placed));
-        }
-        if (given->from_corpus) {
-            int recorded = cli_add_source(plan, section, &given->found);
-            if (recorded != 0) {
-                return recorded;
-            }
-        }
-    }
-    return 0;
-}
-
-/* Checks the style file (and the blend, if any) reads; the plan keeps its path and weight on the form node for fill (PieceRequest.style). */
-static int check_style(const Options *options) {
-    ComposerStyle *style = NULL;
-    int status = options->blend_path
-                     ? cli_load_blend(options->style_path, options->blend_path, &options->blend_weights, options->without.names, options->without.count, &style)
-                     : cli_load_style(options->style_path, options->without.names, options->without.count, &style);
-    composer_style_destroy(style);
-    return status;
+    return options->motive_path;
 }
 
 int run_plan(int argc, char **argv) {
@@ -874,113 +487,40 @@ int run_plan(int argc, char **argv) {
     if (status != 0) {
         return status;
     }
-
-    Motive motive;
-    bool has_motive = false;
-    if (options.like_path) {
-        status = cli_seed_motive(options.from_corpus, options.like_path, &options.meter, &options.key, options.seed,
-                                 &options.seed_found);
-        if (status != 0) {
-            return status;
-        }
-        status = cli_seed_source(&options.seed_found, &options.source);
-        if (status != 0) {
-            return status;
-        }
-        options.seeded = true;
-        motive = options.seed_found.motive;
-        has_motive = true;
+    Held held;
+    memset(&held, 0, sizeof held);
+    cJSON *request = build_request(&options, &held);
+    if (!request) {
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
-    for (size_t i = 0; i < options.given_count; i++) {
-        GivenOption *given = &options.given[i];
-        if (!given->from_corpus) {
-            continue;
-        }
-        status = cli_seed_progression(options.from_corpus, given->source, options.key.mode, &given->found);
-        if (status != 0) {
-            return status;
-        }
-        cli_seed_numerals_text(&given->found, given->found_numerals, sizeof(given->found_numerals));
-        given->source = given->found_numerals;
-    }
-    if (options.motive_path) {
-        MotiveOptions motive_options;
-        memset(&motive_options, 0, sizeof(motive_options));
-        motive_options.has_meter = true;
-        motive_options.meter = options.meter;
-        motive_options.has_key = true;
-        motive_options.key = options.key;
-        MotiveError motive_error;
-        MotiveResult loaded =
-            motive_load_file(options.motive_path, MOTIVE_FORMAT_AUTO, &motive_options, &motive, &motive_error);
-        if (loaded != MOTIVE_OK) {
-            return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot load '%s' (%s)%s%s: %s", options.motive_path,
-                            motive_result_name(loaded), motive_error.location[0] ? " at " : "", motive_error.location,
-                            motive_error.message);
-        }
-        has_motive = true;
-    }
-
-    if (options.style_path) {
-        status = check_style(&options);
-        if (status != 0) {
-            return status;
-        }
-    }
-
-    PieceRequest request;
-    memset(&request, 0, sizeof(request));
-    request.form = options.form;
-    request.key = options.key;
-    request.meter = options.meter;
-    request.bars = options.bars;
-    request.count = options.count;
-    request.motive = has_motive ? &motive : NULL;
-    request.source = options.seeded ? &options.source : NULL;
-    request.has_accompaniment = options.has_accompaniment;
-    request.accompaniment = options.accompaniment;
-    request.modulate = options.modulate;
-    request.seed = options.seed;
-    request.given_melodies = options.given_melodies;
-    if (options.style_path) {
-        request.has_style = true;
-        snprintf(request.style.path, PLAN_STYLE_PATH_MAX, "%s", options.style_path);
-        request.style.weight_numerator = options.style_weight.numerator;
-        request.style.weight_denominator = options.style_weight.denominator;
-        for (size_t i = 0; i < options.without.count; i++) {
-            snprintf(request.style.without[i], PLAN_STYLE_WITHOUT_NAME_MAX, "%s", options.without.names[i]);
-        }
-        request.style.without_count = options.without.count;
-        if (options.blend_path) {
-            snprintf(request.style.blend_path, PLAN_STYLE_PATH_MAX, "%s", options.blend_path);
-            for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
-                request.style.blend_numerator[d] = options.blend_weights.numerator[d];
-                request.style.blend_denominator[d] = options.blend_weights.denominator[d];
+    ComposerResponse response;
+    ComposerStatus called = cli_call(composer_api_plan, request, &response);
+    bool load_failure = called != COMPOSER_OK && strncmp(response.error.message, "cannot load the input", 21) == 0;
+    if (called != COMPOSER_OK && !(held.failed && load_failure)) {
+        status = cli_fail_api(called, &response.error, input_name(&options, response.error.path));
+    } else if (held.failed) {
+        status = cli_fail(held.status, "%s", held.message);
+    } else {
+        cJSON *document = cJSON_Parse(response.json);
+        cJSON *plan = cJSON_Parse(response.plan_json);
+        CliFile file = {options.out_path, CLI_FILE_PLAN, plan, NULL, 0, false};
+        status = document && plan ? cli_write_files(&file, 1) : cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
+        if (status == 0) {
+            cli_print_notices(document);
+            if (options.json) {
+                cJSON_DeleteItemFromObjectCaseSensitive(document, "accompaniment_texture");
+                cJSON_DeleteItemFromObjectCaseSensitive(document, "defaulted_form");
+                cJSON_AddStringToObject(document, "file", options.out_path);
+                char *text = cJSON_PrintUnformatted(document);
+                printf("%s\n", text ? text : "{}");
+                cJSON_free(text);
+            } else {
+                print_result_text(document, options.out_path);
             }
         }
+        cJSON_Delete(document);
+        cJSON_Delete(plan);
     }
-
-    PiecePlan *plan = NULL;
-    PieceResult built = piece_build_plan(&request, &plan);
-    if (built != PIECE_OK) {
-        return built == PIECE_ERR_MOTIVE_TOO_LONG
-                   ? cli_fail(CLI_EXIT_UNSATISFIABLE, "the motive does not fit in one bar of %s", options.meter_text)
-               : built == PIECE_ERR_BAD_SIZE
-                   ? cli_fail(CLI_EXIT_USAGE, "%s has no such size", form_template_name(options.form))
-               : built == PIECE_ERR_BAD_REQUEST
-                   ? cli_fail(CLI_EXIT_UNSATISFIABLE,
-                              "this piece cannot be planned as asked: the motive needs at least two notes, and each "
-                              "section must be one the harmony operators can write in %s",
-                              options.meter_text)
-                   : cli_fail(CLI_EXIT_UNSATISFIABLE, "%s", piece_result_name(built));
-    }
-    status = place_given(&options, plan);
-    if (status == 0) {
-        status = write_plan(&options, plan);
-    }
-    if (status == 0) {
-        print_result(&options, plan);
-    }
-    plan_destroy(plan);
+    composer_response_destroy(&response);
     return status;
 }

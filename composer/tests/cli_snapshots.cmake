@@ -115,6 +115,29 @@ run_case(piece-progression-fill json piece "${FIXTURES}/piece/progression-fill.j
 run_case(piece-regenerate json piece --from "${WORK}/piece-theme-fill.plan.json" --request "${WORK}/theme-fill.request.json"
          --regenerate intro --seed 2 --format json --out piece-regenerate.plan.json)
 
+# --- plan, fill, lock, regenerate, variations and harmonize ---------------------------
+
+run_case(plan-binary json plan --form binary --key C --meter 4/4 --seed 1 --format json --out plan-binary.plan.json)
+run_case(plan-given json plan --key C --meter 4/4 --given-melody "${FIXTURES}/melody_c_major_8_bars.txt" --seed 1
+         --format json --out plan-given.plan.json)
+# The plans of the cases below are the plans above filled: seed 5, with the files and a tempo.
+run_case(fill json fill plan-binary.plan.json --seed 5 --format json --out fill.plan.json --midi fill.mid
+         --musicxml fill.musicxml --tempo 100)
+run_case(fill-given json fill plan-given.plan.json --seed 5 --format json --out fill-given.plan.json)
+run_case(lock json lock fill.plan.json --section A --format json --out lock.plan.json)
+run_case(regenerate json regenerate fill.plan.json --section B --seed 3 --format json --out regenerate.plan.json
+         --midi regenerate.mid --musicxml regenerate.musicxml)
+run_case(variations json variations fill.plan.json --section B --count 2 --seed 3 --out-dir variations --format json --midi
+         --musicxml)
+run_case(harmonize json harmonize fill-given.plan.json --section B --count 2 --seed 3 --out-dir harmonizations --format json
+         --midi --musicxml)
+foreach(index 1 2)
+    foreach(ext json mid musicxml)
+        snapshot(variations.variation-${index}.${ext} variations/variation-${index}.${ext})
+        snapshot(harmonize.variation-${index}.${ext} harmonizations/variation-${index}.${ext})
+    endforeach()
+endforeach()
+
 # --- grow ----------------------------------------------------------------------------
 
 foreach(into sentence period)
@@ -219,5 +242,9 @@ run_error_case(error-piece-type 1 piece "${gui}/piece-wrong-type.json" --seed 1)
 run_error_case(error-theme-unsatisfiable 2 theme "${gui}/theme-unsatisfiable.json" --seed 1)
 # An --out the Composer cannot write.
 run_error_case(error-theme-write 3 theme "${theme_one-motive}" --seed 1 --out no-such-directory/theme.plan.json)
+
+# A section that is not in the plan, and a plan that is not realized.
+run_error_case(error-lock-section 2 lock fill.plan.json --section Q --out lock-refused.plan.json)
+run_error_case(error-lock-open 2 lock plan-binary.plan.json --section A --out lock-refused.plan.json)
 
 file(REMOVE_RECURSE "${WORK}/normal")

@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/plan.response.schema.json",
+  "title": "composer_api_plan response",
+  "description": "What `plan --format json` prints, without the file, with the members the text output reads.",
+  "type": "object",
+  "required": [
+    "form",
+    "bars",
+    "key",
+    "meter",
+    "seed",
+    "modulate",
+    "motive",
+    "accompaniment",
+    "sections"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "form": {
+      "type": "string"
+    },
+    "bars": {
+      "type": "integer"
+    },
+    "key": {
+      "type": "string"
+    },
+    "meter": {
+      "type": "string"
+    },
+    "seed": {
+      "type": "integer"
+    },
+    "modulate": {
+      "type": "boolean"
+    },
+    "motive": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "motive_source": {
+      "type": "object",
+      "required": [
+        "piece",
+        "start",
+        "end",
+        "score"
+      ],
+      "properties": {
+        "piece": {
+          "type": "string"
+        },
+        "start": {
+          "type": "object"
+        },
+        "end": {
+          "type": "object"
+        },
+        "score": {
+          "type": "string"
+        }
+      }
+    },
+    "accompaniment": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "accompaniment_texture": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "letter",
+          "bars",
+          "key",
+          "cadences",
+          "pairing",
+          "returns"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "letter": {
+            "type": "string"
+          },
+          "bars": {
+            "type": "integer"
+          },
+          "key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cadences": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "pairing": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "returns": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "given": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "kind",
+          "source",
+          "section",
+          "bar"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "section": {
+            "type": "string"
+          },
+          "bar": {
+            "type": "integer"
+          },
+          "cells": {
+            "type": "integer"
+          },
+          "from": {
+            "type": "object",
+            "required": [
+              "piece",
+              "start",
+              "end",
+              "score"
+            ],
+            "properties": {
+              "piece": {
+                "type": "string"
+              },
+              "start": {
+                "type": "object"
+              },
+              "end": {
+                "type": "object"
+              },
+              "score": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "style": {
+      "type": "object",
+      "required": [
+        "file",
+        "weight"
+      ],
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "weight": {
+          "type": "string"
+        }
+      }
+    },
+    "blend": {
+      "type": "object",
+      "required": [
+        "file",
+        "weights"
+      ],
+      "properties": {
+        "file": {
+          "type": "string"
+        },
+        "weights": {
+          "type": "object"
+        }
+      }
+    },
+    "defaulted_form": {
+      "const": true
+    },
+    "notices": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

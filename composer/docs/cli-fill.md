@@ -8,6 +8,8 @@ Realizes a plan: it runs `compose_run` (`<ursatz_composer/compose.h>`, see [piec
 fills every open theme section in stages (invent, structure, motives, harmony, bass, melody, texture and the returns),
 and writes the piece.
 
+The command reads the plan file into a request for `composer_api_fill` ([api.md](api.md)) and writes the plan, MIDI, MusicXML, records and explanation the response holds, all or none. The text it prints is made from the response document alone; a plan no seed completes is the response `stuck` report, printed as the lines below.
+
 ## Input
 
 Any plan file: one from [`plan`](cli-plan.md), or one `grow --out` wrote. A plan with no open theme section (the

@@ -9,6 +9,8 @@ sections, their keys and cadences, the sections that return an earlier one and t
 section open for [`fill`](cli-fill.md) to realize. It builds a request for `piece_build_plan`
 (`<ursatz_composer/piece.h>`, see [piece.md](piece.md)).
 
+The command reads the options into a request for `composer_api_plan` ([api.md](api.md)), reads the motive and the given files into it, writes the plan the response holds and prints it. The motive and the given phrases arrive as text (a MIDI file through `composer_api_motive_from_midi` first), so the name shown for each is the file the command was given.
+
 `--form`, `--key`, `--meter` and `--out` are required; `--form` may be left out when there is given material.
 
 ## Options

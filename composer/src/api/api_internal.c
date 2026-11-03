@@ -235,8 +235,16 @@ ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, 
     }
     if (has_tempo && (tempo.denominator == 0 || tempo.numerator < 20UL * tempo.denominator ||
                       tempo.numerator > 400UL * tempo.denominator)) {
+        const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, "tempo");
+        char text[48] = "";
+        if (cJSON_IsString(item)) {
+            snprintf(text, sizeof text, "%s", item->valuestring);
+        } else if (cJSON_IsNumber(item)) {
+            snprintf(text, sizeof text, "%g", item->valuedouble);
+        }
         return api_fail(error, COMPOSER_ERR_REQUEST, "/tempo",
-                        "tempo must be from 20 to 400 quarter notes per minute, a whole number or a fraction like 195/2");
+                        "tempo must be from 20 to 400 quarter notes per minute, a whole number or a fraction like 195/2, not '%s'",
+                        text);
     }
     if (has_tempo) {
         options->tempo_numerator = tempo.numerator;
