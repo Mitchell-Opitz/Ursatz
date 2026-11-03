@@ -514,7 +514,7 @@ static ComposerStatus read_variants_request(const cJSON *request, VariantsReques
     }
     if (has_distance) {
         if (read->has_chain) {
-            return api_fail(error, COMPOSER_ERR_REQUEST, "/distance", "distance takes random chains, not a chain");
+            return api_fail(error, COMPOSER_ERR_REQUEST, "/distance", "a distance takes random chains, not a chain");
         }
         read->distance = strcmp(distance_text, "close") == 0    ? &DISTANCE_CLOSE
                          : strcmp(distance_text, "medium") == 0 ? &DISTANCE_MEDIUM

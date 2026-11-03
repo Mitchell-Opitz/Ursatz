@@ -83,7 +83,8 @@ int cli_fail(int status, const char *format, ...) {
 }
 
 int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *input_name) {
-    static const char *const OPTIONS[] = {"format", "form", "harmony", "feature", "role", "tone", "tempo"};
+    static const char *const OPTIONS[] = {"format", "form", "harmony", "feature", "role", "tone", "tempo",
+                                          "count", "seed", "distance", "function", "depth", "mode"};
     char message[sizeof error->message + 256];
     const char *source = error->message;
     size_t used = 0;
@@ -116,6 +117,21 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
         }
     }
     message[used] = '\0';
+    /* Phrases about members that name several options, or a request the command line has no word for. */
+    static const char *const PHRASES[][2] = {
+        {"each_op takes no chain, count, distance or functions", "--each-op takes no --chain, --count, --distance or --function"},
+        {"a distance takes random chains, not a chain", "--distance takes random chains, not --chain"},
+        {"composer_api_variant_operations lists them", "--list-ops shows them"},
+        {"style_without needs style", "--style-without needs --style"},
+    };
+    for (size_t i = 0; i < sizeof PHRASES / sizeof PHRASES[0]; i++) {
+        char *at = strstr(message, PHRASES[i][0]);
+        if (at) {
+            char tail[sizeof message];
+            snprintf(tail, sizeof tail, "%s", at + strlen(PHRASES[i][0]));
+            snprintf(at, sizeof message - (size_t)(at - message), "%s%s", PHRASES[i][1], tail);
+        }
+    }
     return cli_fail(status == COMPOSER_ERR_UNSATISFIABLE ? CLI_EXIT_UNSATISFIABLE : CLI_EXIT_USAGE, "%s", message);
 }
 
@@ -179,12 +195,10 @@ int cli_style_without_add(CliStyleWithout *list, const char *name) {
 }
 
 int cli_load_style(const char *path, const char *const *without, size_t without_count, ComposerStyle **out) {
-    ComposerStyleResult loaded = composer_style_load_without(path, without, without_count, out);
-    if (loaded != COMPOSER_STYLE_OK) {
-        return cli_fail(loaded == COMPOSER_STYLE_ERR_ARGUMENT ? CLI_EXIT_USAGE : CLI_EXIT_UNSATISFIABLE,
-                        "cannot read style '%s': %s", path, composer_style_result_name(loaded));
-    }
-    return 0;
+    ComposerError error;
+    memset(&error, 0, sizeof error);
+    ComposerStatus status = api_load_style(path, without, without_count, "/style", "/style_without", out, &error);
+    return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, NULL);
 }
 
 int cli_read_blend(bool has_style, const char *blend_path, const char *all_text, const char *list_text,
@@ -305,6 +319,29 @@ void cli_print_style_distance_json(const StyleComparison *comparison) {
         printf("%s\"overall\":%.4f", separator, style_rational_value(comparison->overall));
     }
     printf("}");
+}
+
+void cli_print_json(const cJSON *document) {
+    char *printed = cJSON_Print(document);
+    if (!printed) {
+        return;
+    }
+    /* cJSON indents with tabs and puts one after each colon; the commands write 2 spaces and one space. */
+    for (const char *c = printed; *c; c++) {
+        if (*c == '\n') {
+            putchar('\n');
+            size_t tabs = 0;
+            while (c[1] == '\t') {
+                tabs++;
+                c++;
+            }
+            printf("%*s", (int)(tabs * 2), "");
+        } else {
+            putchar(*c == '\t' ? ' ' : *c);
+        }
+    }
+    putchar('\n');
+    cJSON_free(printed);
 }
 
 const char *cli_key_name(const AnalysisKey *key, char *out, size_t size) {
