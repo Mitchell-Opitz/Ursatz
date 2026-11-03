@@ -6,6 +6,7 @@
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/motive_random.h>
 #include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/piece_structure.h>
 #include <ursatz_composer/variant_registry.h>
@@ -334,6 +335,17 @@ static bool add_operations(cJSON *root) {
     return true;
 }
 
+/* The sizes the requests are limited to, for the help of a client that shows them. */
+static bool add_limits(cJSON *root) {
+    cJSON *limits = cJSON_AddObjectToObject(root, "limits");
+    return limits && cJSON_AddNumberToObject(limits, "motive_notes", MOTIVE_MAX_NOTES) &&
+           cJSON_AddNumberToObject(limits, "motive_chords", MOTIVE_MAX_CHORDS) &&
+           cJSON_AddNumberToObject(limits, "motive_features", MOTIVE_MAX_FEATURES) &&
+           cJSON_AddNumberToObject(limits, "variant_chain", VARIANT_CHAIN_MAX) &&
+           cJSON_AddNumberToObject(limits, "variant_functions", VARIANT_FUNCTIONS) &&
+           cJSON_AddNumberToObject(limits, "random_motive_count", MOTIVE_RANDOM_MAX_COUNT);
+}
+
 bool api_vocabulary_build(cJSON *root) {
     return add_meters(root) && add_choices(root, "modes", API_MODES) && add_choices(root, "piece_modes", API_PIECE_MODES) &&
            add_keys(root) && add_cadences(root) && add_pickups(root) && add_library_lists(root) &&
@@ -341,7 +353,8 @@ bool api_vocabulary_build(cJSON *root) {
            add_choices(root, "theme_slots", API_THEME_SLOTS) && add_theme_lists(root) &&
            add_choices(root, "theme_pools", API_THEME_POOLS) &&
            add_choices(root, "accompaniment_patterns", API_ACCOMPANIMENT_PATTERNS) &&
-           add_choices(root, "piece_intos", API_PIECE_INTOS) && add_tone_labels(root) && add_operations(root);
+           add_choices(root, "piece_intos", API_PIECE_INTOS) && add_tone_labels(root) && add_operations(root) &&
+           add_limits(root);
 }
 
 ComposerStatus composer_api_vocabulary(ComposerResponse *out) {
