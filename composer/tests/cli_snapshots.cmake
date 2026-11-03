@@ -159,4 +159,17 @@ run_case(motive-midi json motive "${FIXTURES}/motive_d_minor.mid" --format midi 
 run_case(motive-render json motive "${gui}/motive-degrees.txt" --format degrees --form full --meter 4/4 --key "C major" --pickup 0
          --render-key "Eb major" --musicxml motive-render.musicxml --tempo 96 --json)
 
+# The operation list.
+run_case(variants-list-ops json variants --list-ops --json)
+# Variants of a degree list against a basic motive, two functions, a distance, a count and a seed.
+run_case(variants-basic json variants "${gui}/variants-source.txt" --format degrees --meter 4/4 --key "C major" --pickup 0
+         --basic "${gui}/variants-basic.txt" --basic-format degrees --function beginning --function continuation
+         --distance medium --count 4 --seed 3 --json)
+# Recognize: the target is the source moved up one step of the scale.
+run_case(recognize json recognize "${gui}/recognize-source.txt" "${gui}/recognize-target.txt" --format degrees
+         --target-format degrees --meter 4/4 --key "C major" --pickup 0 --json)
+# Random motives with a role (the style variant is covered by the API tests).
+run_case(random-motive-style json random-motive --mode major --meter 4/4 --key "C major" --form full --role accompaniment
+         --count 2 --seed 5 --json)
+
 file(REMOVE_RECURSE "${WORK}/normal")

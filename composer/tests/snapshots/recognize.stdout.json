@@ -1,0 +1,17 @@
+{
+  "found": true,
+  "chain": {
+    "steps": [{
+        "op": "transpose",
+        "params": {
+          "tonal": true,
+          "by": 1
+        }
+      }]
+  },
+  "distance": 0.2,
+  "remoteness": 0.2,
+  "kept": ["rhythm", "intervals", "contour"],
+  "changed": ["harmony"],
+  "derivation": "Transposed +1 step of the key's scale. Kept the rhythm, the intervals and the contour; changed the harmony."
+}
