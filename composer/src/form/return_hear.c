@@ -17,6 +17,8 @@
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/lanes.h>
 
+#include "form/form_internal.h"
+
 /* The most themes read across a plan: nine sections, each with a few themes. */
 #define MAX_THEMES 64
 #define ID_SIZE 32
@@ -202,11 +204,11 @@ static bool bar_length(const PiecePlan *plan, PlanSpan span, Rational *bar) {
 }
 
 /* Adds the themes heard in a section to themes; form_hear counts bars from the start of the plan. */
-static ReturnHearResult read_section(const PiecePlan *plan, NodeId section, Theme *themes, size_t *count) {
+static ReturnHearResult read_section(ComposerHearing *hearing, const PiecePlan *plan, NodeId section, Theme *themes, size_t *count) {
     FormHeard heard;
     PlanSpan span = plan_node_span(plan, section);
     Rational bar;
-    FormHearResult result = form_hear(plan, span, &heard);
+    FormHearResult result = form_hear_in(hearing, plan, span, &heard);
     if (result == FORM_HEAR_ERR_NOT_WRITTEN) {
         return RETURN_HEAR_ERR_NOT_WRITTEN;
     }
@@ -285,7 +287,22 @@ static bool add_pair(ReturnHeard *out, size_t *capacity, const ReturnHeardPair *
 }
 
 ReturnHearResult return_hear(const PiecePlan *plan, ReturnHeard *out) {
+    ComposerHearing *hearing = NULL;
     if (!plan || !out) {
+        return RETURN_HEAR_ERR_NULL;
+    }
+    HearingResult made = hearing_create(plan, &hearing);
+    if (made != HEARING_OK) {
+        memset(out, 0, sizeof(*out));
+        return made == HEARING_ERR_ALLOC ? RETURN_HEAR_ERR_ALLOC : RETURN_HEAR_ERR_ANALYSIS;
+    }
+    ReturnHearResult status = return_hear_in(hearing, plan, out);
+    hearing_destroy(hearing);
+    return status;
+}
+
+ReturnHearResult return_hear_in(ComposerHearing *hearing, const PiecePlan *plan, ReturnHeard *out) {
+    if (!hearing || !plan || !out) {
         return RETURN_HEAR_ERR_NULL;
     }
     memset(out, 0, sizeof(*out));
@@ -301,7 +318,7 @@ ReturnHearResult return_hear(const PiecePlan *plan, ReturnHeard *out) {
     for (NodeId id = 1; status == RETURN_HEAR_OK && id <= plan_node_count(plan); id++) {
         if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && !plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_MATERIAL) &&
             !plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM)) {
-            status = read_section(plan, id, themes, &theme_count);
+            status = read_section(hearing, plan, id, themes, &theme_count);
         }
     }
     for (size_t t = 0; status == RETURN_HEAR_OK && t < theme_count; t++) {

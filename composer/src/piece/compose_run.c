@@ -21,6 +21,8 @@
 #include <ursatz_composer/texture_check.h>
 #include <ursatz_composer/voicing.h>
 
+#include "check/hearing.h"
+#include "form/form_internal.h"
 #include "grow/grow_internal.h"
 #include "piece/piece_internal.h"
 #include "plan/plan_internal.h"
@@ -400,7 +402,7 @@ static void read_part(const PiecePlan *plan, NodeId section, ComposeHeard *out) 
     }
 }
 
-static void hear_section(const PiecePlan *plan, NodeId section, const FillRecord *structure, ComposeHeard *out) {
+static void hear_section(ComposerHearing *hearing, const PiecePlan *plan, NodeId section, const FillRecord *structure, ComposeHeard *out) {
     PlanSpan span = plan_node_span(plan, section);
     out->section = section;
     read_part(plan, section, out);
@@ -417,7 +419,7 @@ static void hear_section(const PiecePlan *plan, NodeId section, const FillRecord
             out->requested_ending = grow_phrase_ending(constraint->params.theme_pairing.ending);
         }
     }
-    out->heard_result = form_hear(plan, span, &out->heard);
+    out->heard_result = form_hear_in(hearing, plan, span, &out->heard);
     if (out->heard_result == FORM_HEAR_OK && out->heard.count > 0) {
         out->heard_form = out->heard.themes[0].form;
     }
@@ -444,13 +446,13 @@ static NodeId returned_section(const PiecePlan *plan, NodeId section) {
 }
 
 /* Hears the returns the plan asks for. A return that cannot be heard counts as not heard. */
-static void hear_returns(const PiecePlan *plan, const NodeId *themes, size_t theme_count, ComposeOutcome *outcome) {
+static void hear_returns(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *themes, size_t theme_count, ComposeOutcome *outcome) {
     bool heard_ok = false;
     for (size_t t = 0; t < theme_count; t++) {
         outcome->returns_planned += returned_section(plan, themes[t]) != PLAN_NODE_NONE;
     }
     if (outcome->returns_planned > 0) {
-        heard_ok = return_hear(plan, &outcome->returns) == RETURN_HEAR_OK;
+        heard_ok = return_hear_in(hearing, plan, &outcome->returns) == RETURN_HEAR_OK;
     }
     for (size_t t = 0; heard_ok && t < theme_count; t++) {
         NodeId source = returned_section(plan, themes[t]);
@@ -470,18 +472,18 @@ static void hear_seam(const PiecePlan *plan, ComposeOutcome *outcome) {
     }
 }
 
-static void hear(const PiecePlan *plan, const NodeId *themes, size_t theme_count, ComposeOutcome *outcome) {
+static void hear(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *themes, size_t theme_count, ComposeOutcome *outcome) {
     unsigned long numerator = 0;
     unsigned long denominator = 0;
     for (size_t t = 0; t < theme_count; t++) {
         ComposeHeard *heard = &outcome->sections[t];
-        hear_section(plan, themes[t], outcome->records[COMPOSE_STAGE_STRUCTURE], heard);
+        hear_section(hearing, plan, themes[t], outcome->records[COMPOSE_STAGE_STRUCTURE], heard);
         outcome->heard_as_requested += heard->heard_as_requested;
         numerator += heard->structure.numerator + (heard->heard_as_requested ? 1 : 0);
         /* A free phrase asks for no form to be heard as: only its structure's score counts. */
         denominator += heard->structure.denominator + (heard->requested_form >= 0 ? 1 : 0);
     }
-    hear_returns(plan, themes, theme_count, outcome);
+    hear_returns(hearing, plan, themes, theme_count, outcome);
     numerator += outcome->returns_heard;
     denominator += outcome->returns_planned;
     outcome->score.numerator = numerator;
@@ -819,9 +821,10 @@ static PieceResult run_seam(Run *run) {
     return result;
 }
 
-/* One run of the stages. offset is added to every seed. */
+/* One run of the stages. offset is added to every seed. A run that ends OK leaves *hearing, the one hearing of the
+   finished plan that every check of the run reads; the caller destroys it. */
 static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsigned long offset,
-                            ComposeOutcome *outcome) {
+                            ComposeOutcome *outcome, ComposerHearing **hearing) {
     NodeId *themes;
     size_t theme_count;
     outcome_reset(outcome);
@@ -891,8 +894,13 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
         result = run_seam(&run);
     }
     if (result == PIECE_OK) {
-        hear(plan, themes, theme_count, outcome);
-        hear_seam(plan, outcome);
+        /* The plan is written: it is rendered once, and the form, the returns and every later check hear that render. */
+        HearingResult made = hearing_create(plan, hearing);
+        result = made == HEARING_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_OK;
+        if (result == PIECE_OK) {
+            hear(*hearing, plan, themes, theme_count, outcome);
+            hear_seam(plan, outcome);
+        }
     }
     free(themes);
     return result;
@@ -905,8 +913,8 @@ static bool has_key_changes(const PiecePlan *plan) {
 }
 
 /* The checks of a plan with several keys; PIECE_ERR_STUCK, marked in the outcome, when it fails them. */
-static PieceResult check_keys(const PiecePlan *plan, ComposeOutcome *outcome) {
-    bool read = piece_check_keys(plan, &outcome->key_check) && piece_check_cadences(plan, &outcome->cadence_check);
+static PieceResult check_keys(ComposerHearing *hearing, const PiecePlan *plan, ComposeOutcome *outcome) {
+    bool read = piece_check_keys_in(hearing, plan, &outcome->key_check) && piece_check_cadences(plan, &outcome->cadence_check);
     if (read && outcome->key_check.ok && outcome->cadence_check.ok) {
         return PIECE_OK;
     }
@@ -924,13 +932,13 @@ static PieceResult check_keys(const PiecePlan *plan, ComposeOutcome *outcome) {
  * The Analyzer's check of a piece structure plan (R-172): the whole of it in one check, analyzer_check_piece, kept as
  * the only member of outcome->analyzer_checks. A plan it cannot read is left out, as a section is.
  */
-static PieceResult check_analyzer_piece(const PiecePlan *plan, ComposeOutcome *outcome) {
+static PieceResult check_analyzer_piece(ComposerHearing *hearing, ComposeOutcome *outcome) {
     outcome->analyzer_checks = calloc(1, sizeof(AnalyzerCheck));
     if (!outcome->analyzer_checks) {
         return PIECE_ERR_ALLOC;
     }
     outcome->analyzer_check_count = 1;
-    AnalyzerCheckResult result = analyzer_check_piece(plan, &outcome->analyzer_checks[0]);
+    AnalyzerCheckResult result = analyzer_check_piece_in(hearing, &outcome->analyzer_checks[0]);
     if (result == ANALYZER_CHECK_ERR_ALLOC) {
         return PIECE_ERR_ALLOC;
     }
@@ -955,9 +963,9 @@ static PieceResult check_analyzer_piece(const PiecePlan *plan, ComposeOutcome *o
  * analysis contradicts the plan; the score takes in what was planned and what was heard. A section the check cannot read
  * is left out of it.
  */
-static PieceResult check_analyzer(const PiecePlan *plan, ComposeOutcome *outcome) {
+static PieceResult check_analyzer(ComposerHearing *hearing, const PiecePlan *plan, ComposeOutcome *outcome) {
     if (piece_is_structure_plan(plan)) {
-        return check_analyzer_piece(plan, outcome);
+        return check_analyzer_piece(hearing, outcome);
     }
     outcome->analyzer_checks = calloc(outcome->section_count ? outcome->section_count : 1, sizeof(AnalyzerCheck));
     if (!outcome->analyzer_checks) {
@@ -967,7 +975,7 @@ static PieceResult check_analyzer(const PiecePlan *plan, ComposeOutcome *outcome
     bool contradicts = false;
     for (size_t i = 0; i < outcome->section_count; i++) {
         AnalyzerCheck *check = &outcome->analyzer_checks[i];
-        AnalyzerCheckResult result = analyzer_check_section(plan, outcome->sections[i].section, check);
+        AnalyzerCheckResult result = analyzer_check_section_in(hearing, outcome->sections[i].section, check);
         if (result == ANALYZER_CHECK_ERR_ALLOC) {
             return PIECE_ERR_ALLOC;
         }
@@ -993,8 +1001,8 @@ static PieceResult check_analyzer(const PiecePlan *plan, ComposeOutcome *outcome
  * The Analyzer's measure of how far the finished plan is from the style. A plan the Analyzer cannot read is left
  * unmeasured: the measure is a report, it never rejects a run.
  */
-static PieceResult measure_style(const PiecePlan *plan, const ComposeConfig *config, ComposeOutcome *outcome) {
-    ComposerMeasureResult measured = composer_style_measure(plan, config->style, &outcome->style_distance);
+static PieceResult measure_style(ComposerHearing *hearing, const ComposeConfig *config, ComposeOutcome *outcome) {
+    ComposerMeasureResult measured = composer_style_measure_in(hearing, config->style, &outcome->style_distance);
     if (measured == COMPOSER_MEASURE_ERR_ALLOC) {
         return PIECE_ERR_ALLOC;
     }
@@ -1074,16 +1082,18 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
             }
             plan_replace_contents(plan, fresh);
         }
-        result = run_once(plan, config, COMPOSE_ROUND_STRIDE * (unsigned long)round, outcome);
+        ComposerHearing *hearing = NULL;
+        result = run_once(plan, config, COMPOSE_ROUND_STRIDE * (unsigned long)round, outcome, &hearing);
         if (result == PIECE_OK && has_key_changes(plan)) {
-            result = check_keys(plan, outcome);
+            result = check_keys(hearing, plan, outcome);
         }
         if (result == PIECE_OK && config->analyzer_check) {
-            result = check_analyzer(plan, outcome);
+            result = check_analyzer(hearing, plan, outcome);
         }
         if (result == PIECE_OK && config->style) {
-            result = measure_style(plan, config, outcome);
+            result = measure_style(hearing, config, outcome);
         }
+        hearing_destroy(hearing);
         if (result != PIECE_ERR_STUCK) {
             break;
         }

@@ -12,6 +12,8 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/plan_state.h>
+#include "check/hearing.h"
+#include "form/form_internal.h"
 #include "util/plan_util.h"
 
 /* A key lane span before it is added: its key and where it lies. */
@@ -274,12 +276,12 @@ static bool related_to_home(AnalysisKey home, AnalysisKey key) {
 }
 
 /* The arrival of every authentic cadence heard in the sections, in whole notes. False when a section is not readable. */
-static bool authentic_arrivals(const PiecePlan *plan, const NodeId *sections, size_t count, double *arrivals,
+static bool authentic_arrivals(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *sections, size_t count, double *arrivals,
                                size_t *arrival_count) {
     *arrival_count = 0;
     for (size_t s = 0; s < count; s++) {
         FormHeard heard;
-        if (form_hear(plan, plan_node_span(plan, sections[s]), &heard) != FORM_HEAR_OK) {
+        if (form_hear_in(hearing, plan, plan_node_span(plan, sections[s]), &heard) != FORM_HEAR_OK) {
             return false;
         }
         for (size_t i = 0; i < heard.cadence_count && *arrival_count < MAX_ARRIVALS; i++) {
@@ -312,7 +314,17 @@ static size_t chords_between(const PiecePlan *plan, Rational start, Rational end
 }
 
 bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
-    if (!plan || !out) {
+    ComposerHearing *hearing = NULL;
+    if (!plan || !out || hearing_create(plan, &hearing) != HEARING_OK) {
+        return false;
+    }
+    bool read = piece_check_keys_in(hearing, plan, out);
+    hearing_destroy(hearing);
+    return read;
+}
+
+bool piece_check_keys_in(ComposerHearing *hearing, const PiecePlan *plan, PieceKeyCheck *out) {
+    if (!hearing || !plan || !out) {
         return false;
     }
     memset(out, 0, sizeof(*out));
@@ -335,7 +347,7 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
     double arrivals[MAX_ARRIVALS + 1];
     size_t arrival_count;
     if (section_count == 0 || piece_end.num == 0 || !read_key_lane(plan, &lane) ||
-        !authentic_arrivals(plan, sections, section_count, arrivals, &arrival_count)) {
+        !authentic_arrivals(hearing, plan, sections, section_count, arrivals, &arrival_count)) {
         return false;
     }
     AnalysisKey home = lane.key[0];

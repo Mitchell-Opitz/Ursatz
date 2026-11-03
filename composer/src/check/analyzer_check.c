@@ -13,6 +13,7 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 
+#include "check/hearing.h"
 #include "util/util.h"
 
 #define MAX_CADENCES 2
@@ -469,4 +470,14 @@ AnalyzerCheckResult analyzer_check_piece(const PiecePlan *plan, AnalyzerCheck *o
     out->items = items.items;
     out->item_count = items.count;
     return ANALYZER_CHECK_OK;
+}
+
+/* ------------------------------------------------------------- over a hearing */
+
+AnalyzerCheckResult analyzer_check_section_in(ComposerHearing *hearing, NodeId section, AnalyzerCheck *out) {
+    return analyzer_check_section(hearing_plan(hearing), section, out);
+}
+
+AnalyzerCheckResult analyzer_check_piece_in(ComposerHearing *hearing, AnalyzerCheck *out) {
+    return analyzer_check_piece(hearing_plan(hearing), out);
 }

@@ -2,6 +2,8 @@
 
 #include "style_internal.h"
 
+#include "check/hearing.h"
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -74,4 +76,9 @@ ComposerMeasureResult composer_style_measure(const PiecePlan *plan, const Compos
     }
     rendered_plan_destroy(&rendered);
     return result;
+}
+
+ComposerMeasureResult composer_style_measure_in(ComposerHearing *hearing, const ComposerStyle *style,
+                                                StyleComparison *out) {
+    return composer_style_measure(hearing_plan(hearing), style, out);
 }

@@ -1,4 +1,4 @@
-#include "check/hearing.h"
+#include "check/hearing_result.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -8,6 +8,7 @@
 #include <time/temporal_anchor.h>
 #include <time/time_rational.h>
 
+#include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/composer_api.h>
 
 #include <ursatz_composer/lanes.h>
@@ -86,6 +87,10 @@ HearingResult hearing_create(const PiecePlan *plan, ComposerHearing **out) {
     }
     *out = hearing;
     return HEARING_OK;
+}
+
+const PiecePlan *hearing_plan(const ComposerHearing *hearing) {
+    return hearing ? hearing->plan : NULL;
 }
 
 const RenderedPlan *hearing_rendered(const ComposerHearing *hearing) {
