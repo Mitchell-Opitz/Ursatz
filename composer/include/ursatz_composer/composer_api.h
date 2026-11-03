@@ -15,7 +15,7 @@
  */
 
 #define COMPOSER_API_VERSION_MAJOR 0
-#define COMPOSER_API_VERSION_MINOR 6
+#define COMPOSER_API_VERSION_MINOR 7
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -243,5 +243,38 @@ ComposerStatus composer_api_variations(const char *request_json, const ComposerJ
  * Request: {"plan", "section", "count", "seed", "musicxml", "plain_midi", "tempo"}.
  */
 ComposerStatus composer_api_harmonize(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Writes a chord progression for one phrase, with a bass line, ending in the cadence asked for (docs/cli-progression.md).
+ * Request: {"key": "D minor", "meter": "4/4" (2/4, 3/4, 4/4 or 6/8), "bars": 1 to 64, "cadence": "PAC"|"IAC"|"HC"|"DC"|"PC"
+ * (all four required), "seed" (0 to 4294967295; default from the clock; if no bass line suits the progression the next
+ * seeds are tried, up to 16, and the one that worked is the "seed" of the document), "embellish" ("none", "low", "medium"
+ * or "high"), "bass" (default true; false writes only the chords), "schema" and "sequence" (names: the start of the phrase
+ * on a galant schema, a continuation on a harmonic sequence), "suggest" (1 to 8: that many alternatives instead of one),
+ * "plans" (each progression's plan object in the document), "midi", "musicxml" (the first progression's files, which need
+ * the bass), "tempo", "plain_midi"}. {"list_schemas": true} alone lists the names: {"schemas": [{"name", "function",
+ * "modes": ["major", "minor"]}], "sequences": [name]}. json: {"key", "meter", "bars", "cadence", "seed", "heard",
+ * "chords": [{"bar", "beat", "chord", "function", "bass"}]} (with "suggest": "alternatives": [{"heard", "chords"}] in
+ * place of the last two; each entry adds "plan" with "plans" and "musicxml" with "musicxml"), and "notices" (strings) when
+ * fewer alternatives than asked for were found. plan_json, midi and musicxml: the first progression's. Progress per seed
+ * tried ("progression") and per fill stage; a cancel is COMPOSER_ERR_CANCELLED. No seed that works is
+ * COMPOSER_ERR_UNSATISFIABLE, as is a schema that cannot be written in the key or a phrase too short for the cadence.
+ */
+ComposerStatus composer_api_progression(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Writes a counter-melody against a line in the first, second, third or fourth species of strict counterpoint
+ * (docs/cli-counterpoint.md). Request: the motive request of composer_api_motive for the line ("input": {"format", "form",
+ * "text"}, "pickup", "harmony"...; any length) with "species" (1 to 4), "key" (a tonic alone with "mode": "major"|"minor"),
+ * "meter" (all three required), "position" ("below": the line is the melody, the default; "above": the line is the bass),
+ * "seed" (0 to 4294967295; default from the clock), "suggest" (1 to 16 different counter-melodies), "plans", "midi",
+ * "musicxml" (the first counter-melody's files), "tempo", "plain_midi". json: {"species", "position", "key", "meter",
+ * "results": [{"seed", "line": [{"midi_pitch", "offset": {"num", "den"}, "duration": {"num", "den"}}], "counter_melody":
+ * [...], "groups": [{"name", "hard_held", "soft_held"}]}]} (each result adds "plan" with "plans" and "musicxml" with
+ * "musicxml"), and "notices" when fewer than "suggest" were found. A line the species cannot be written against, or no
+ * counter-melody that holds the rules from the seeds tried (16 for each one asked for), is COMPOSER_ERR_UNSATISFIABLE.
+ * Progress per seed ("counterpoint"); a cancel is COMPOSER_ERR_CANCELLED.
+ */
+ComposerStatus composer_api_counterpoint(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
 #endif
