@@ -491,11 +491,9 @@ void analyzer_violations_free(AnalyzerViolation *violations, size_t count) {
 }
 
 /* The measure and beat of a time in whole notes on the fragment's meter; 0 and 0.0 when it cannot be placed. */
-static void place(const AnalyzerFragmentAnalysis *analysis, long numerator, unsigned long denominator, int *measure,
-                  double *beat) {
+static void place(const MeterMap *map, long numerator, unsigned long denominator, int *measure, double *beat) {
     *measure = 0;
     *beat = 0.0;
-    const MeterMap *map = analysis->notes.meter.meter_map;
     MusicalTime *time = NULL;
     MetricalPosition *position = NULL;
     const TimeSignature *signature = NULL;
@@ -518,8 +516,7 @@ static void place(const AnalyzerFragmentAnalysis *analysis, long numerator, unsi
 }
 
 /* Appends one violation; the rule and the note ids are copied. false on allocation failure. */
-static bool add_violation(const AnalyzerFragmentAnalysis *analysis, AnalyzerViolation **list, size_t *count,
-                          size_t *capacity, const char *rule, bool hard, long numerator, unsigned long denominator,
+static bool add_violation(const MeterMap *map, AnalyzerViolation **list, size_t *count, size_t *capacity, const char *rule, bool hard, long numerator, unsigned long denominator,
                           const size_t *note_ids, size_t note_id_count) {
     if (*count == *capacity) {
         size_t grown = *capacity ? *capacity * 2 : 8;
@@ -542,7 +539,7 @@ static bool add_violation(const AnalyzerFragmentAnalysis *analysis, AnalyzerViol
     memcpy(violation->note_ids, note_ids, note_id_count * sizeof *note_ids);
     violation->note_id_count = note_id_count;
     violation->hard = hard;
-    place(analysis, numerator, denominator, &violation->measure, &violation->beat);
+    place(map, numerator, denominator, &violation->measure, &violation->beat);
     (*count)++;
     return true;
 }
@@ -552,6 +549,58 @@ static const char *voice_rule_id(const AnalysisVoiceViolation *fault) {
         return fault->rule;
     }
     return fault->arrival_interval == 5 ? "direct-fifths" : "direct-octaves";
+}
+
+AnalyzerStatus analyzer_result_violations(const AnalyzerResult *result, AnalyzerViolation **out, size_t *count) {
+    if (!result || !out || !count) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    *out = NULL;
+    *count = 0;
+    const AnalysisReport *report = analyzer_result_report(result);
+    const ImportedNotes *notes = analyzer_result_notes(result);
+    if (!report || !notes) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    const MeterMap *map = notes->meter.meter_map;
+    const AnalysisVoiceLeading *leading = &report->voice_leading;
+    AnalyzerViolation *list = NULL;
+    size_t used = 0, capacity = 0;
+    bool ok = true;
+    for (size_t i = 0; ok && leading->present && i < leading->violation_count; i++) {
+        const AnalysisVoiceViolation *fault = &leading->violations[i];
+        const AnalysisReportEntry *arrival = &report->entries[fault->entry_to];
+        bool parallel = fault->rule[0] == 'p';
+        ok = add_violation(map, &list, &used, &capacity, voice_rule_id(fault), parallel, arrival->time_numerator,
+                           arrival->time_denominator, fault->note_ids, 4);
+    }
+    for (int pass = 0; ok && pass < 2; pass++) {
+        const char *wanted = pass == 0 ? "seventh-resolves-down" : "leading-tone-resolves";
+        for (size_t i = 0; ok && leading->present && i < leading->resolution_count; i++) {
+            const AnalysisVoiceResolution *fault = &leading->resolutions[i];
+            if (strcmp(fault->rule, wanted) != 0) {
+                continue;
+            }
+            const AnalysisReportEntry *arrival = &report->entries[fault->entry_to];
+            ok = add_violation(map, &list, &used, &capacity,
+                               pass == 0 ? "unresolved-seventh" : "unresolved-leading-tone", false,
+                               arrival->time_numerator, arrival->time_denominator, fault->note_ids, 2);
+        }
+    }
+    const AnalysisCounterpointCheck *check = &report->counterpoint_check;
+    for (size_t i = 0; ok && check->present && i < check->violation_count; i++) {
+        char rule[96];
+        snprintf(rule, sizeof rule, "counterpoint:%s", check->violations[i].group);
+        ok = add_violation(map, &list, &used, &capacity, rule, check->violations[i].hard, check->start_numerator,
+                           check->start_denominator, check->note_ids, check->note_id_count);
+    }
+    if (!ok) {
+        analyzer_violations_free(list, used);
+        return ANALYZER_ERR_ALLOC;
+    }
+    *out = list;
+    *count = used;
+    return ANALYZER_OK;
 }
 
 AnalyzerFragmentResult analyzer_fragment_violations(const AnalyzerFragmentAnalysis *analysis, AnalyzerViolation **out,
@@ -570,7 +619,7 @@ AnalyzerFragmentResult analyzer_fragment_violations(const AnalyzerFragmentAnalys
         const AnalysisVoiceViolation *fault = &leading->violations[i];
         const AnalysisReportEntry *arrival = &report->entries[fault->entry_to];
         bool parallel = fault->rule[0] == 'p';
-        ok = add_violation(analysis, &list, &used, &capacity, voice_rule_id(fault), parallel, arrival->time_numerator,
+        ok = add_violation(analysis->notes.meter.meter_map, &list, &used, &capacity, voice_rule_id(fault), parallel, arrival->time_numerator,
                            arrival->time_denominator, fault->note_ids, 4);
     }
     for (int pass = 0; ok && pass < 2; pass++) {
@@ -581,7 +630,7 @@ AnalyzerFragmentResult analyzer_fragment_violations(const AnalyzerFragmentAnalys
                 continue;
             }
             const AnalysisReportEntry *arrival = &report->entries[fault->entry_to];
-            ok = add_violation(analysis, &list, &used, &capacity,
+            ok = add_violation(analysis->notes.meter.meter_map, &list, &used, &capacity,
                                pass == 0 ? "unresolved-seventh" : "unresolved-leading-tone", false,
                                arrival->time_numerator, arrival->time_denominator, fault->note_ids, 2);
         }
@@ -590,7 +639,7 @@ AnalyzerFragmentResult analyzer_fragment_violations(const AnalyzerFragmentAnalys
     for (size_t i = 0; ok && check->present && i < check->violation_count; i++) {
         char rule[96];
         snprintf(rule, sizeof rule, "counterpoint:%s", check->violations[i].group);
-        ok = add_violation(analysis, &list, &used, &capacity, rule, check->violations[i].hard, check->start_numerator,
+        ok = add_violation(analysis->notes.meter.meter_map, &list, &used, &capacity, rule, check->violations[i].hard, check->start_numerator,
                            check->start_denominator, check->note_ids, check->note_id_count);
     }
     if (!ok) {

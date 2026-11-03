@@ -171,6 +171,15 @@ typedef struct {
 } AnalyzerViolation;
 
 /*
+ * Every voice-leading fault the result's report holds (parallels, directs, unresolved sevenths and leading tones, in
+ * that order) and, when the counterpoint check ran on the result, every counterpoint violation. The rules, places and
+ * hardness are those of AnalyzerViolation; note_ids are indices into the events the result was heard from. *out is a
+ * new array the caller releases with analyzer_violations_free; it is NULL when *count is 0. ANALYZER_ERR_ARGUMENT for
+ * a NULL argument, ANALYZER_ERR_ALLOC when the list cannot be built (*out NULL, *count 0).
+ */
+AnalyzerStatus analyzer_result_violations(const AnalyzerResult *result, AnalyzerViolation **out, size_t *count);
+
+/*
  * Every voice-leading fault the report holds (parallels, directs, unresolved sevenths and leading tones, in that
  * order) and, when the counterpoint check ran, every counterpoint violation. *out is a new array the caller releases
  * with analyzer_violations_free; it is NULL when *count is 0.
