@@ -131,4 +131,15 @@ ComposerStatus composer_api_variants(const char *request_json, const ComposerJob
  */
 ComposerStatus composer_api_recognize(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
+/*
+ * Random motives that keep the hard melodic rules of standard counterpoint; their length, pickup, number of notes, rhythm
+ * and range are drawn from defaults in the Composer. Request: {"mode": "major"|"minor", "meter": "4/4", "key": "D minor"
+ * (its mode must be "mode"; default C major or A minor), "form": "full"|"rhythm"|"contour", "role": "melodic"|
+ * "accompaniment", "style": <a style model file path>, "style_without": [<style categories read without>, at most 8;
+ * needs "style"], "count": 1 to 16 (default 1), "seed": 0 to 4294967295 (default from the clock)}. "mode" and "meter" are
+ * required. The same request and seed give the same motives. json: {"seed", "motives": [<the motive entry's document>]}.
+ * A style that cannot be read is COMPOSER_ERR_UNSATISFIABLE with path /style.
+ */
+ComposerStatus composer_api_random_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
 #endif

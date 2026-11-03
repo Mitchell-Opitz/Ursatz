@@ -244,3 +244,16 @@ ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, 
     }
     return COMPOSER_OK;
 }
+
+ComposerStatus api_load_style(const char *path, const char *const *without, size_t without_count, const char *path_file,
+                              const char *path_without, ComposerStyle **out, ComposerError *error) {
+    ComposerStyleResult loaded = composer_style_load_without(path, without, without_count, out);
+    if (loaded == COMPOSER_STYLE_OK) {
+        return COMPOSER_OK;
+    }
+    bool argument = loaded == COMPOSER_STYLE_ERR_ARGUMENT;
+    return api_fail(error, argument ? COMPOSER_ERR_REQUEST : loaded == COMPOSER_STYLE_ERR_ALLOC ? COMPOSER_ERR_ALLOC
+                                                                                                  : COMPOSER_ERR_UNSATISFIABLE,
+                    argument ? path_without : path_file, "cannot read style '%s': %s", path,
+                    composer_style_result_name(loaded));
+}

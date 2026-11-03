@@ -49,6 +49,14 @@ bool api_member_pickup(const cJSON *object, const char *name, int beat_unit, Rat
 bool api_member_whole(const cJSON *object, const char *name, unsigned long minimum, unsigned long maximum,
                       unsigned long *out, bool *present, ComposerError *error);
 
+/*
+ * Loads the style model file at path into *out, without the named categories (none when count is 0); the caller destroys
+ * it. A category that is not one the Analyzer defines is COMPOSER_ERR_REQUEST with path_without, a file that cannot be
+ * read is COMPOSER_ERR_UNSATISFIABLE with path_file; both messages say "cannot read style '<path>': <reason>".
+ */
+ComposerStatus api_load_style(const char *path, const char *const *without, size_t without_count, const char *path_file,
+                              const char *path_without, ComposerStyle **out, ComposerError *error);
+
 /* A seed from the clock, for a request that gives none. */
 unsigned long api_default_seed(void);
 
