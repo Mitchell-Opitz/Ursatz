@@ -101,8 +101,8 @@ static cJSON *decimal_string(unsigned long long value) {
 
 static cJSON *rational_json(unsigned long numerator, unsigned long denominator) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(json_add(object, "num", json_number((long)numerator)) &&
-                    json_add(object, "den", json_number((long)denominator)))) {
+    if (object && !(plan_json_add(object, "num", json_number((long)numerator)) &&
+                    plan_json_add(object, "den", json_number((long)denominator)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -112,19 +112,19 @@ static cJSON *rational_json(unsigned long numerator, unsigned long denominator) 
 static cJSON *considered_json(const FillConsidered *considered) {
     cJSON *object = cJSON_CreateObject();
     cJSON *operator_ = cJSON_CreateObject();
-    bool ok = object && operator_ && json_add(operator_, "name", cJSON_CreateString(considered->operator_name)) &&
-              json_add(operator_, "version", cJSON_CreateString(considered->operator_version)) &&
-              json_add(operator_, "kind", cJSON_CreateString(OPERATOR_KINDS[considered->kind]));
+    bool ok = object && operator_ && plan_json_add(operator_, "name", cJSON_CreateString(considered->operator_name)) &&
+              plan_json_add(operator_, "version", cJSON_CreateString(considered->operator_version)) &&
+              plan_json_add(operator_, "kind", cJSON_CreateString(OPERATOR_KINDS[considered->kind]));
     if (ok) {
-        ok = json_add(object, "operator", operator_);
+        ok = plan_json_add(object, "operator", operator_);
         operator_ = NULL;
     }
-    ok = ok && json_add(object, "label", cJSON_CreateString(considered->label)) &&
-         json_add(object, "score", rational_json(considered->score_numerator, considered->score_denominator)) &&
+    ok = ok && plan_json_add(object, "label", cJSON_CreateString(considered->label)) &&
+         plan_json_add(object, "score", rational_json(considered->score_numerator, considered->score_denominator)) &&
          (!considered->styled ||
-          json_add(object, "style", rational_json(considered->style_numerator, considered->style_denominator))) &&
-         json_add(object, "rejected", cJSON_CreateBool(considered->rejected)) &&
-         json_add(object, "reason", cJSON_CreateString(considered->reason));
+          plan_json_add(object, "style", rational_json(considered->style_numerator, considered->style_denominator))) &&
+         plan_json_add(object, "rejected", cJSON_CreateBool(considered->rejected)) &&
+         plan_json_add(object, "reason", cJSON_CreateString(considered->reason));
     if (!ok) {
         cJSON_Delete(object);
         cJSON_Delete(operator_);
@@ -138,23 +138,23 @@ static cJSON *step_json(const FillStep *step) {
     cJSON *target = cJSON_CreateObject();
     cJSON *considered = cJSON_CreateArray();
     bool ok = object && target && considered &&
-              json_add(target, "kind", cJSON_CreateString(step->target.kind == FILL_TARGET_NODE ? "node" : "lane_span")) &&
-              json_add(target, "id", json_number((long)step->target.id));
+              plan_json_add(target, "kind", cJSON_CreateString(step->target.kind == FILL_TARGET_NODE ? "node" : "lane_span")) &&
+              plan_json_add(target, "id", json_number((long)step->target.id));
     if (ok) {
-        ok = json_add(object, "target", target);
+        ok = plan_json_add(object, "target", target);
         target = NULL;
     }
-    ok = ok && json_add(object, "outcome", cJSON_CreateString(STEP_OUTCOMES[step->outcome])) &&
-         json_add(object, "rng_state_before", decimal_string(step->rng_state_before)) &&
-         json_add(object, "rng_state_after", decimal_string(step->rng_state_after));
+    ok = ok && plan_json_add(object, "outcome", cJSON_CreateString(STEP_OUTCOMES[step->outcome])) &&
+         plan_json_add(object, "rng_state_before", decimal_string(step->rng_state_before)) &&
+         plan_json_add(object, "rng_state_after", decimal_string(step->rng_state_after));
     for (size_t i = 0; ok && i < step->considered_count; i++) {
-        ok = json_append(considered, considered_json(&step->considered[i]));
+        ok = plan_json_append(considered, considered_json(&step->considered[i]));
     }
     if (ok) {
-        ok = json_add(object, "considered", considered);
+        ok = plan_json_add(object, "considered", considered);
         considered = NULL;
     }
-    ok = ok && json_add(object, "chosen", step->chosen >= 0 ? json_number(step->chosen) : cJSON_CreateNull());
+    ok = ok && plan_json_add(object, "chosen", step->chosen >= 0 ? json_number(step->chosen) : cJSON_CreateNull());
     if (!ok) {
         cJSON_Delete(object);
         cJSON_Delete(target);
@@ -171,18 +171,18 @@ char *fill_record_to_json(const FillRecord *record) {
     cJSON *document = cJSON_CreateObject();
     cJSON *steps = cJSON_CreateArray();
     bool ok = document && steps;
-    ok = ok && json_add(document, "schema_version", json_number(1)) &&
-         json_add(document, "record_id", cJSON_CreateString(entity_id_value(generation_record_id(record->generation)))) &&
-         json_add(document, "random_seed", decimal_string(generation_record_random_seed(record->generation))) &&
-         json_add(document, "generator_version", cJSON_CreateString(generation_record_generator_version(record->generation))) &&
-         json_add(document, "framework_version", cJSON_CreateNull()) &&
-         json_add(document, "status", cJSON_CreateString(STATUS_NAMES[record->status])) &&
-         json_add(document, "iterations", json_number((long)record->iterations));
+    ok = ok && plan_json_add(document, "schema_version", json_number(1)) &&
+         plan_json_add(document, "record_id", cJSON_CreateString(entity_id_value(generation_record_id(record->generation)))) &&
+         plan_json_add(document, "random_seed", decimal_string(generation_record_random_seed(record->generation))) &&
+         plan_json_add(document, "generator_version", cJSON_CreateString(generation_record_generator_version(record->generation))) &&
+         plan_json_add(document, "framework_version", cJSON_CreateNull()) &&
+         plan_json_add(document, "status", cJSON_CreateString(STATUS_NAMES[record->status])) &&
+         plan_json_add(document, "iterations", json_number((long)record->iterations));
     for (size_t i = 0; ok && i < record->step_count; i++) {
-        ok = json_append(steps, step_json(&record->steps[i]));
+        ok = plan_json_append(steps, step_json(&record->steps[i]));
     }
     if (ok) {
-        ok = json_add(document, "steps", steps);
+        ok = plan_json_add(document, "steps", steps);
         steps = NULL;
     }
     char *printed = ok ? cJSON_Print(document) : NULL;

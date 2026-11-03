@@ -20,6 +20,8 @@ set(URSATZ_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(URSATZ_ANALYZER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 # The Composer vendors cJSON; it comes first so the Analyzer reuses this target instead of adding its own.
 add_subdirectory(external/cjson)
+# Legacy library include directories stay on until the include commit of P25 B2 switches every include to its public path.
+set(URSATZ_LEGACY_INCLUDE_DIRS ON CACHE BOOL "" FORCE)
 add_subdirectory(external/ursatz)
 add_subdirectory(external/ursatz-analyzer)
 # Submodule headers are not ours to warn about.

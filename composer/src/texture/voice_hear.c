@@ -30,6 +30,8 @@ typedef struct {
     PitchSpelling *spellings[HARMONY_MAX_CHORDS * VOICES];
     char row_ids[HARMONY_MAX_CHORDS][12];
     const char *row_id_ptrs[HARMONY_MAX_CHORDS];
+    char segment_ids[HARMONY_MAX_CHORDS][12];
+    const char *segment_id_ptrs[HARMONY_MAX_CHORDS];
     char note_ids[HARMONY_MAX_CHORDS * VOICES][16];
     StandardCounterpointVoiceCell counterpoint_cells[HARMONY_MAX_CHORDS * VOICES];
     HarmonyVoiceCell harmony_cells[HARMONY_MAX_CHORDS * VOICES];
@@ -200,6 +202,8 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
         long start;
         snprintf(grid->row_ids[row], sizeof(grid->row_ids[row]), "r%zu", row);
         grid->row_id_ptrs[row] = grid->row_ids[row];
+        snprintf(grid->segment_ids[row], sizeof(grid->segment_ids[row]), "c%zu", row);
+        grid->segment_id_ptrs[row] = grid->segment_ids[row];
         if (!melody_ticks(plan_lane_span_span(plan, harmony[row]).start, &start)) {
             result = VOICE_HEAR_ERR_UNREADABLE;
             break;
@@ -227,7 +231,7 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
     }
     if (result == VOICE_HEAR_OK) {
         StandardCounterpointVoiceGrid counterpoint = {count, VOICES, grid->row_id_ptrs, grid->counterpoint_cells};
-        HarmonyVoiceGrid harmony_grid = {count, VOICES, grid->harmony_cells};
+        HarmonyVoiceGrid harmony_grid = {count, VOICES, grid->segment_id_ptrs, grid->harmony_cells};
         HeardPhrase phrase = {chords, count, key.mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, false, NULL,
                               false,  false, NULL, NULL, false, &metre};
         result = count_violations(&counterpoint, &harmony_grid, &phrase, out);

@@ -18,8 +18,8 @@ static const PlanMeter SIX_EIGHT = {6, 8, 0};
 static const PlanKey C_MAJOR = {0, PLAN_MODE_MAJOR};
 static const PlanKey D_MINOR = {2, PLAN_MODE_MINOR};
 
-static bool er_is(ExactRational time, unsigned long long num, unsigned long long den) {
-    return time.n == num && time.d == den;
+static bool er_is(Rational time, long long num, long long den) {
+    return time.num == num && time.den == den;
 }
 
 static Motive load(MotiveFormat format, const char *text, const PlanMeter *meter, const PlanKey *key) {

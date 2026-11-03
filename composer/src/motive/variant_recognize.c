@@ -150,8 +150,8 @@ VariantResult variant_recognize_depth(const Motive *source, const Motive *target
 
     if (replayed) {
         out->found = true;
-        out->distance_num = recognition.distance.n;
-        out->distance_den = recognition.distance.d;
+        out->distance_num = recognition.distance.num;
+        out->distance_den = recognition.distance.den;
     } else {
         /* Nothing found, or a chain that does not replay: the target against the source, with no steps. */
         memset(&record, 0, sizeof(record));
