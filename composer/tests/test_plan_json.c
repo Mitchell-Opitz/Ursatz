@@ -881,8 +881,10 @@ static void test_load_analyzer_result(void) {
     char *text = plan_to_json(plan, &error);
     PiecePlan *again = NULL;
     assert(text != NULL);
+    assert(strstr(text, "\"composer_version\"") != NULL && strstr(text, "\"analyzer_version\"") != NULL);
     assert(plan_from_json(text, &again, &error) == PLAN_OK);
     assert(plans_equal(plan, again));
+    assert(strcmp(plan_analyzer_version(again), ursatz_analyzer_version()) == 0);
     free(text);
     plan_destroy(again);
 

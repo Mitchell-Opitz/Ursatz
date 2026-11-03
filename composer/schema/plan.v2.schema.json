@@ -9,12 +9,13 @@
     "format_version": { "const": 2 },
     "metadata": {
       "type": "object",
-      "required": ["ursatz_commit"],
+      "required": ["composer_version", "ursatz_commit"],
       "properties": {
         "composer_version": { "type": "string" },
         "ursatz_commit": { "type": "string" },
         "analyzer_version": { "type": "string" }
-      }
+      },
+      "additionalProperties": false
     },
     "meter": {
       "oneOf": [

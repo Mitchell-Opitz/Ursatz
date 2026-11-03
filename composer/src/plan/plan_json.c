@@ -521,10 +521,13 @@ static cJSON *meter_json(const PiecePlan *plan) {
     return object;
 }
 
-static cJSON *metadata_json(void) {
+/* The Composer that wrote the file, the Ursatz commit it was built on and, for a plan loaded from an analysis, the Analyzer. */
+static cJSON *metadata_json(const PiecePlan *plan) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "analyzer_version", cJSON_CreateString(composer_version())) &&
-                    plan_json_add(object, "ursatz_commit", cJSON_CreateString(ursatz_analyzer_ursatz_commit())))) {
+    const char *analyzer = plan_analyzer_version(plan);
+    if (object && !(plan_json_add(object, "composer_version", cJSON_CreateString(composer_version())) &&
+                    plan_json_add(object, "ursatz_commit", cJSON_CreateString(ursatz_analyzer_ursatz_commit())) &&
+                    (analyzer[0] == '\0' || plan_json_add(object, "analyzer_version", cJSON_CreateString(analyzer))))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -538,7 +541,7 @@ static cJSON *document_json(const PiecePlan *plan) {
     }
     bool ok = plan_json_add(document, "format", cJSON_CreateString(PLAN_FORMAT_NAME)) &&
               plan_json_add(document, "format_version", json_number(URSATZ_COMPOSER_PLAN_FORMAT_VERSION)) &&
-              plan_json_add(document, "metadata", metadata_json()) && plan_json_add(document, "meter", meter_json(plan)) &&
+              plan_json_add(document, "metadata", metadata_json(plan)) && plan_json_add(document, "meter", meter_json(plan)) &&
               plan_json_add(document, "keys", lane_array_json(plan, 1u << PLAN_LANE_KEY)) &&
               plan_json_add(document, "chords", lane_array_json(plan, 1u << PLAN_LANE_HARMONY)) &&
               plan_json_add(document, "form", plan_node_count(plan) > 0 ? node_json(plan, plan_root(plan)) : cJSON_CreateNull()) &&
@@ -1927,6 +1930,31 @@ static bool apply_states(JsonReader *reader, PiecePlan *plan, const cJSON *docum
     return true;
 }
 
+/*
+ * Version 2 records metadata.analyzer_version only for a plan loaded from an Analyzer result. A version 1 file wrote the
+ * Composer's own version under that key (B-A-10), so it says nothing about an analysis and is ignored.
+ */
+static bool read_metadata(JsonReader *reader, const cJSON *document, PiecePlan *plan) {
+    const cJSON *metadata = cJSON_GetObjectItemCaseSensitive(document, "metadata");
+    if (reader->version == 1 || !metadata) {
+        return true;
+    }
+    if (!cJSON_IsObject(metadata)) {
+        return json_bad_format(reader, "metadata", "expected an object");
+    }
+    const cJSON *analyzer = cJSON_GetObjectItemCaseSensitive(metadata, "analyzer_version");
+    if (!analyzer) {
+        return true;
+    }
+    if (!cJSON_IsString(analyzer)) {
+        return json_bad_format(reader, "metadata.analyzer_version", "expected a string");
+    }
+    if (plan_set_analyzer_version(plan, analyzer->valuestring) != PLAN_OK) {
+        return json_bad_format(reader, "metadata.analyzer_version", "expected a version of fewer than 32 characters");
+    }
+    return true;
+}
+
 static PlanResult read_document(const cJSON *document, PiecePlan *plan, PlanJsonError *error) {
     JsonReader reader = {error, PLAN_OK, 0};
     if (!cJSON_IsObject(document)) {
@@ -1948,6 +1976,9 @@ static PlanResult read_document(const cJSON *document, PiecePlan *plan, PlanJson
         return reader.result;
     }
     reader.version = (int)version;
+    if (!read_metadata(&reader, document, plan)) {
+        return reader.result;
+    }
     const cJSON *form = plan_json_member(&reader, document, "", "form", true);
     if (!form) {
         return reader.result;
