@@ -15,6 +15,7 @@
 #include <ursatz_analyzer/style_profile.h>
 
 #include "pipeline/analysis_result_internal.h"
+#include "pipeline/corpus_walk.h"
 #include "pipeline/counterpoint_pipeline.h"
 #include "pipeline/run_file.h"
 
@@ -79,6 +80,21 @@ static int run_corpus(const char *input_dir, const char *output_dir, bool resume
     }
     printf("%zu analyzed, %zu skipped, %zu failed\n", summary.analyzed, summary.skipped, summary.failed);
     return 0;
+}
+
+/* Tells on stderr how many documents of a corpus output were not written by this build; the commands that read the
+   corpus use them as they are. */
+static void report_stale_documents(const char *corpus_output_dir) {
+    char *index_path = malloc(strlen(corpus_output_dir) + 24);
+    size_t stale = 0;
+    if (index_path) {
+        sprintf(index_path, "%s/corpus-index.json", corpus_output_dir);
+        if (corpus_walk_stale_count(index_path, &stale) == CORPUS_WALK_OK && stale > 0) {
+            fprintf(stderr, "Warning: %zu stale documents in '%s' (analyzed by another version; run the corpus again)\n",
+                    stale, corpus_output_dir);
+        }
+    }
+    free(index_path);
 }
 
 static void print_json_string(const char *text) {
@@ -235,6 +251,7 @@ static int run_style_profile(const char *corpus_output_dir, const char *name, co
         fprintf(stderr, "Error: out of memory\n");
         return 2;
     }
+    report_stale_documents(corpus_output_dir);
     StyleProfileResult added = style_profile_add_corpus(profile, corpus_output_dir);
     if (added != STYLE_PROFILE_OK) {
         fprintf(stderr, "Error: cannot read the corpus in '%s'\n", corpus_output_dir);
@@ -363,6 +380,7 @@ static int run_similar(const char *corpus_output_dir, const char *motive_file, c
         return 2;
     }
     SimilarResults results = {0};
+    report_stale_documents(corpus_output_dir);
     SimilarResult found = similar_material_find(corpus_output_dir, &query, options, &results);
     int exit_code = 0;
     if (found == SIMILAR_ERR_QUERY) {
@@ -421,6 +439,7 @@ static int run_link_motives(const char *corpus_output_dir, const char *cache_fil
         fprintf(stderr, "Error: out of memory while linking motives\n");
         return 2;
     }
+    report_stale_documents(corpus_output_dir);
     MotiveLinksResult added = motive_link_scope_add_corpus(scope, corpus_output_dir);
     if (added != MOTIVE_LINKS_OK) {
         const char *piece = motive_link_scope_failed_piece(scope);

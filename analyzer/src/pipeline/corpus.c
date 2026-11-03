@@ -13,6 +13,7 @@
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/markdown_report.h>
 #include <ursatz_analyzer/report_writer.h>
+#include <ursatz_analyzer/staleness.h>
 #include <ursatz_analyzer/version.h>
 
 #include "cJSON.h"
@@ -347,7 +348,8 @@ static char *render_index(const char *input_dir, const char *const *paths, const
     char number[64];
     bool ok = append_text(&out, &length, &capacity,
                           "{\n  \"schema\": \"ursatz-corpus-index\",\n  \"schema_version\": 1,\n"
-                          "  \"analyzer_version\": \"" URSATZ_ANALYZER_VERSION "\",\n") &&
+                          "  \"analyzer_version\": \"" URSATZ_ANALYZER_VERSION "\",\n"
+                          "  \"ursatz_commit\": \"" URSATZ_ANALYZER_URSATZ_COMMIT "\",\n") &&
               (snprintf(number, sizeof(number), "  \"document_schema_version\": %d,\n",
                         URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION),
                append_text(&out, &length, &capacity, number)) &&
@@ -392,7 +394,7 @@ static char *render_index(const char *input_dir, const char *const *paths, const
 /* ---- Resume ---- */
 
 /* Reads the index left by an earlier run. *out is NULL when there is no index, or when it was written by another
-   analyzer or document schema version (nothing in it can be reused). An index that exists but cannot be read is
+   analyzer, document schema version or Ursatz commit (nothing in it can be reused). An index that exists but cannot be read is
    CORPUS_RUN_ERR_INDEX. */
 static CorpusRunResult load_previous_index(const char *output_dir, cJSON **out) {
     *out = NULL;
@@ -419,10 +421,11 @@ static CorpusRunResult load_previous_index(const char *output_dir, cJSON **out) 
     free(path);
 
     const cJSON *analyzer_version = cJSON_GetObjectItemCaseSensitive(root, "analyzer_version");
+    const cJSON *ursatz_commit = cJSON_GetObjectItemCaseSensitive(root, "ursatz_commit");
     const cJSON *document_schema = cJSON_GetObjectItemCaseSensitive(root, "document_schema_version");
-    if (!cJSON_IsString(analyzer_version) || strcmp(analyzer_version->valuestring, URSATZ_ANALYZER_VERSION) != 0 ||
-        !cJSON_IsNumber(document_schema) ||
-        (int)document_schema->valuedouble != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
+    if (!cJSON_IsString(analyzer_version) || !cJSON_IsString(ursatz_commit) || !cJSON_IsNumber(document_schema) ||
+        analyzer_document_status_of((int)document_schema->valuedouble, analyzer_version->valuestring,
+                                    ursatz_commit->valuestring) != ANALYZER_DOCUMENT_CURRENT) {
         cJSON_Delete(root);
         return CORPUS_RUN_OK;
     }

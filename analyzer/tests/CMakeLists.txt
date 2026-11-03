@@ -537,6 +537,18 @@ add_test(NAME test_cli_link_motives
                  -DWORK_DIR=${CMAKE_CURRENT_BINARY_DIR}/cli_link_motives
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_link_motives.cmake)
 
+add_executable(test_staleness test_staleness.c)
+target_link_libraries(test_staleness PRIVATE ursatz_analyzer cjson)
+target_compile_definitions(test_staleness PRIVATE
+    URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
+add_test(NAME test_staleness COMMAND test_staleness)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_staleness_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
+                     $<TARGET_FILE:test_staleness>)
+endif()
+
 add_executable(test_version test_version.c)
 target_link_libraries(test_version PRIVATE ursatz_analyzer)
 add_test(NAME test_version COMMAND test_version)

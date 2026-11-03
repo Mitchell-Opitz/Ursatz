@@ -76,7 +76,7 @@ by the semitones above the tonic), `style_label_join` (the `motive-degrees` and 
   "schema_version": 1,
   "style_name": "sonatinas",
   "training_corpus": "<the corpus run's input folder>",
-  "model_version": "0.3.0",
+  "model_version": "0.4.0",
   "pieces": 2,
   "statistics": [
     { "dimension": "harmony", "category": "cadence-type", "label": "half", "count": 34, "total": 92 }

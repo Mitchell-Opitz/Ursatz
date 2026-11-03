@@ -111,7 +111,7 @@ static cJSON *read_index(const char *output) {
     return root;
 }
 
-/* The index text with the input directory and every content hash masked, so it compares across machines. */
+/* The index text with the input directory, the Ursatz commit and every content hash masked, so it compares across machines. */
 static char *masked_index(const char *output) {
     char path[1200];
     snprintf(path, sizeof(path), "%s/corpus-index.json", output);
@@ -132,6 +132,9 @@ static char *masked_index(const char *output) {
         if (strncmp(line, "  \"input_dir\": ", 15) == 0) {
             key = "  \"input_dir\": ";
             replacement = "\"<input_dir>\",";
+        } else if (strncmp(line, "  \"ursatz_commit\": ", 18) == 0) {
+            key = "  \"ursatz_commit\": ";
+            replacement = "\"<ursatz_commit>\",";
         } else if (strncmp(line, "      \"content_hash\": ", 22) == 0) {
             key = "      \"content_hash\": ";
             replacement = "\"<hash>\",";
@@ -329,6 +332,22 @@ static void test_resume_changes(const char *work) {
         CHECK(write_file(path, text, strlen(text), "wb"), "cannot rewrite the index");
         summary = run(input, output, true, false, &result);
         CHECK(summary.analyzed == 1 && summary.skipped == 0, "resume across versions: %zu analyzed, %zu skipped",
+              summary.analyzed, summary.skipped);
+    }
+    free(text);
+
+    /* An index from another Ursatz commit reuses nothing either. */
+    text = read_file(path, NULL);
+    at = text ? strstr(text, "\"ursatz_commit\": \"") : NULL;
+    CHECK(at != NULL, "no ursatz_commit in the index");
+    if (at) {
+        at[18] = at[18] == 'X' ? 'Y' : 'X';
+        CHECK(write_file(path, text, strlen(text), "wb"), "cannot rewrite the index");
+        summary = run(input, output, true, false, &result);
+        CHECK(summary.analyzed == 1 && summary.skipped == 0, "resume across commits: %zu analyzed, %zu skipped",
+              summary.analyzed, summary.skipped);
+        summary = run(input, output, true, false, &result);
+        CHECK(summary.analyzed == 0 && summary.skipped == 1, "resume under the same commit: %zu analyzed, %zu skipped",
               summary.analyzed, summary.skipped);
     }
     free(text);

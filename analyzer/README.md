@@ -110,6 +110,8 @@ Tests:
   compares only its pairs, another analyzer version or other options empty it) and the scope's refusals, also under
   valgrind. `test_cli_link_motives` checks the flags, the text and JSON output, the cache and the exit codes, and
   validates both JSON files against their schemas (see below).
+- `test_staleness`: each `AnalyzerDocumentStatus`, from keys and from snapshot documents with one key changed, also under
+  valgrind. `test_corpus` also resumes across a changed Ursatz commit.
 - `test_version`: the public version header returns the macros, the version of `project()` and a non-empty Ursatz
   commit.
 - `test_analysis_document_schema`: validates the documents for the corpus pieces against the
@@ -151,6 +153,9 @@ call them and render the result:
 `<ursatz_analyzer/version.h>` is generated at configure time. It defines `URSATZ_ANALYZER_VERSION` and
 `URSATZ_ANALYZER_URSATZ_COMMIT` and declares `ursatz_analyzer_version()` and `ursatz_analyzer_ursatz_commit()`, so a
 consumer reads the version from the library instead of parsing `CMakeLists.txt`.
+
+The version is 0.4.0 (new public APIs in P24: `AnalyzerResult`, `analyzer_hear`, the joined chord sequence, playback and
+score export, and `staleness.h`). Every analysis stored by an earlier version is stale by version.
 
 `scripts/check-pins.sh` fails when a submodule pin is not on its remote's `main`, or when one repository is pinned at
 two different commits anywhere in the tree. CI runs it right after the submodule checkout.
@@ -240,6 +245,7 @@ Its public include directory is `include/`, and consumers include headers as
 | `corpus.h` | `corpus_run` analyzes every piece in a folder into documents and a corpus index, resumable. |
 | `style_labels.h` | The labels a style profile counts (numerals, progressions, intervals, durations) and the category names, shared with the Composer. |
 | `style_profile.h` | `StyleProfile` (counts over documents or a corpus), the style model file reader and writer, and `style_profile_compare`. |
+| `staleness.h` | `analyzer_document_status` tells whether a stored analysis document is current (schema version, analyzer version and Ursatz commit all match this build) or stale; `analyzer_document_status_of` compares keys already read. See [docs/corpus.md](docs/corpus.md). |
 | `chord_sequence.h` | `analyzer_chord_sequence` and `analyzer_chord_sequence_from_document` give the joined chord sequence (consecutive entries with one numeral, key region and root are one chord) of a result or of a stored document; `analyzer_chord_sequence_free` releases it. |
 | `playback.h` | `analyzer_playback_build` gives the tempo regions and notes of an import as a player needs them; `analyzer_playback_to_json` writes the GUI's playback JSON; `analyzer_playback_destroy` releases it. See [docs/gui-api.md](docs/gui-api.md). |
 | `score_export.h` | `analyzer_score_export_musicxml` writes the imported notes as a MusicXML score. See [docs/gui-api.md](docs/gui-api.md). |
@@ -269,7 +275,7 @@ Private helper modules, each the one home of what several files used to copy:
 | `src/util/json_util.h` | `json_member`, `json_string_member`, `json_number_member`, `json_add`, `json_append`. |
 | `src/util/file_util.h` | `file_read_all`, `file_write_atomic` (temporary name, then rename). |
 | `src/util/misc_util.h` | `text_copy`, `size_compare`, `fraction_compare`, `entity_id_copy`, `notes_last_end`, `fnv1a_bytes`. |
-| `src/pipeline/corpus_walk.h` | `corpus_walk_documents`: opens `corpus-index.json` and visits the document of every analyzed piece. |
+| `src/pipeline/corpus_walk.h` | `corpus_walk_documents`: opens `corpus-index.json` and visits the document of every analyzed piece with its `AnalyzerDocumentStatus`; `corpus_walk_stale_count`. |
 | `src/pipeline/run_file.h` | `analyzer_run_file` (import, optional reading, `analyzer_analyze`) and `analyzer_run_file_document`. |
 
 The tests share `tests/support/test_support.h` (the `analyzer_test_support` library): a MIDI builder, JSON accessors,

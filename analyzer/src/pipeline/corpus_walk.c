@@ -58,7 +58,7 @@ CorpusWalkResult corpus_walk_documents(const char *index_path, CorpusDocumentVis
             result = CORPUS_WALK_ERR_IO;
             break;
         }
-        bool keep_going = visit(path, document, json, context);
+        bool keep_going = visit(path, document, json, analyzer_document_status(json), context);
         free(json);
         if (!keep_going) {
             result = CORPUS_WALK_ERR_VISIT;
@@ -73,4 +73,20 @@ CorpusWalkResult corpus_walk_documents(const char *index_path, CorpusDocumentVis
     }
     cJSON_Delete(index);
     return result;
+}
+
+static bool count_stale_document(const char *piece_path, const char *document, const char *document_json,
+                                 AnalyzerDocumentStatus status, void *context) {
+    (void)piece_path;
+    (void)document;
+    (void)document_json;
+    if (status != ANALYZER_DOCUMENT_CURRENT) {
+        ++*(size_t *)context;
+    }
+    return true;
+}
+
+CorpusWalkResult corpus_walk_stale_count(const char *index_path, size_t *stale) {
+    *stale = 0;
+    return corpus_walk_documents(index_path, count_stale_document, stale, NULL);
 }
