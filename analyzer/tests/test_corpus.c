@@ -336,6 +336,22 @@ static void test_resume_changes(const char *work) {
     }
     free(text);
 
+    /* An index from another Ursatz commit reuses nothing either. */
+    text = read_file(path, NULL);
+    at = text ? strstr(text, "\"ursatz_commit\": \"") : NULL;
+    CHECK(at != NULL, "no ursatz_commit in the index");
+    if (at) {
+        at[18] = at[18] == 'X' ? 'Y' : 'X';
+        CHECK(write_file(path, text, strlen(text), "wb"), "cannot rewrite the index");
+        summary = run(input, output, true, false, &result);
+        CHECK(summary.analyzed == 1 && summary.skipped == 0, "resume across commits: %zu analyzed, %zu skipped",
+              summary.analyzed, summary.skipped);
+        summary = run(input, output, true, false, &result);
+        CHECK(summary.analyzed == 0 && summary.skipped == 1, "resume under the same commit: %zu analyzed, %zu skipped",
+              summary.analyzed, summary.skipped);
+    }
+    free(text);
+
     /* An index that cannot be read is a run error, not a silent restart. */
     CHECK(write_file(path, "{", 1, "wb"), "cannot corrupt the index");
     summary = run(input, output, true, false, &result);
