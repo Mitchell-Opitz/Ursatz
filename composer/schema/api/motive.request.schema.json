@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/motive.request.schema.json",
+  "title": "composer_api_motive, composer_api_motive_from_midi and composer_api_motive_render request",
+  "description": "A motive and how to read it. composer_api_motive_from_midi takes the same members without input (the MIDI bytes are its argument); composer_api_motive_render adds render_key, tempo, midi and musicxml.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "api_version": { "type": "integer" },
+    "input": {
+      "type": "object",
+      "required": ["text"],
+      "additionalProperties": false,
+      "properties": {
+        "format": { "enum": ["auto", "notes", "degrees", "json", "musicxml", "rhythm", "contour", "midi"] },
+        "form": { "enum": ["full", "rhythm", "contour"] },
+        "text": { "type": "string" }
+      }
+    },
+    "meter": { "type": "string", "pattern": "^[0-9]+/[0-9]+$" },
+    "key": { "type": "string" },
+    "pickup": { "oneOf": [{ "type": "number", "minimum": 0 }, { "type": "string" }] },
+    "harmony": { "type": "string" },
+    "features": { "type": "array", "maxItems": 8, "items": { "type": "string" } },
+    "role": { "enum": ["melodic", "accompaniment"] },
+    "tones": { "type": "array", "items": { "type": "string", "pattern": "^[0-9]+=" } },
+    "render_key": { "type": "string" },
+    "tempo": { "oneOf": [{ "type": "number", "minimum": 20, "maximum": 400 }, { "type": "string" }, { "type": "null" }] },
+    "midi": { "type": "boolean" },
+    "musicxml": { "type": "boolean" }
+  }
+}
