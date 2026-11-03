@@ -26,5 +26,7 @@ jobs:
         run: scripts/check-library-includes.sh
       - name: Check file scope state
         run: scripts/check-statics.sh
+      - name: Check that music is heard through the Analyzer
+        run: scripts/check-hearing.sh
       - name: Test (the fast set; the slow sweeps run before a push, see README)
         run: ctest --test-dir build --output-on-failure -LE slow
