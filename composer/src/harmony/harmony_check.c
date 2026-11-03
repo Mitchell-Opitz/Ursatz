@@ -1,3 +1,8 @@
+/*
+ * A framework rule check on the plan's own planned material (boundary rule 7, R-257): the phrase, cadence and prolongation rules over the chords the plan holds. Its framework
+ * inputs are built from the plan, not from a render, so it stays a framework call. What a listener finds in the
+ * written music is heard through the Analyzer once per run (check/hearing.h).
+ */
 #include <ursatz_composer/harmony_phrase.h>
 
 #include <stdio.h>

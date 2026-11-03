@@ -8,6 +8,9 @@
  * Recognizability. The formula, the parts and the default weights are described with motive_recognizability in
  * motive_develop.h; this is the arithmetic. All of it is exact: counts are small whole numbers, ratios of durations are
  * kept as fractions, and the score is a fraction in lowest terms.
+ *
+ * A framework rule check on the plan's own planned material (boundary rule 7, R-257, R-122): it scores the motive the
+ * plan holds, from the motive, not from a render, and stays a framework call.
  */
 
 typedef struct {

@@ -1,3 +1,8 @@
+/*
+ * A framework rule check on the plan's own planned material (boundary rule 7, R-257): what the Given chords, bass and melody ask of a harmony target. Its framework
+ * inputs are built from the plan, not from a render, so it stays a framework call. What a listener finds in the
+ * written music is heard through the Analyzer once per run (check/hearing.h).
+ */
 #include <stdlib.h>
 #include <string.h>
 
