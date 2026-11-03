@@ -96,8 +96,9 @@ static void print_chain(const char *label, const VariantChain *chain) {
         const char *separator = "(";
         const VariantOperation *operation = variant_registry_find(chain->steps[s].op);
         for (size_t p = 0; operation && p < operation->param_count; p++) {
-            if (chain->steps[s].values[p].set) {
-                fprintf(stderr, "%s%s=%ld", separator, operation->params[p].name, chain->steps[s].values[p].value);
+            VariantParam described;
+            if (chain->steps[s].values[p].set && variant_operation_param(operation, p, &described)) {
+                fprintf(stderr, "%s%s=%ld", separator, described.name, chain->steps[s].values[p].value);
                 if (chain->steps[s].values[p].den) {
                     fprintf(stderr, ":%ld", chain->steps[s].values[p].den);
                 }

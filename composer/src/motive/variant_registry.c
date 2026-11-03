@@ -13,9 +13,11 @@
 #include "util/plan_util.h"
 
 /*
- * The registry table. Parameters are in the order the operation's apply and describe functions read them; the
- * constants below name the indexes. The ranges are what a chain draws open parameters from (variant_chain.c) and what
- * a value is checked against.
+ * The registry table. A row names its library relation (analysis/motive_relation.h); its parameters are the relation's,
+ * in its order, and their name, kind and description are the library's (motive_relation_param_info). The row keeps only
+ * what the relation does not say, one VariantDrawn for each parameter: the range a chain draws open values from and a
+ * value is checked against (a composing choice: the relation accepts more), and how the draw treats the parameter. The
+ * constants below name the indexes.
  */
 
 const char *variant_category_name(VariantCategory category) {
@@ -57,11 +59,10 @@ static void describe_exact(const VariantValue *values, char *out, size_t size) {
 
 enum { TRANSPOSE_TONAL, TRANSPOSE_BY, TRANSPOSE_DEGREE };
 
-static const VariantParam TRANSPOSE_PARAMS[] = {
-    {"tonal", VARIANT_PARAM_BOOL, 0, 1, "move in steps of the key's scale instead of semitones", false, false, false, false, false},
-    {"by", VARIANT_PARAM_INT, -12, 12, "how far to move: semitones, or steps when tonal; not 0", false, false, false, false, false},
-    {"degree", VARIANT_PARAM_INT, 1, 7, "move the first note to this scale degree instead of using by; tonal", true,
-     false, false, false, false}};
+static const VariantDrawn TRANSPOSE_DRAWN[] = {
+    {.min = 0, .max = 1},
+    {.min = -12, .max = 12},
+    {.min = 1, .max = 7, .never_drawn = true}};
 
 static MotiveDevResult apply_transpose(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveRelationStep step;
@@ -97,9 +98,9 @@ static void describe_transpose(const VariantValue *values, char *out, size_t siz
 
 enum { INVERT_AXIS, INVERT_TONAL };
 
-static const VariantParam INVERT_PARAMS[] = {
-    {"axis", VARIANT_PARAM_PITCH, 0, 127, "the pitch mirrored about; the first note when not set", false, false, false, false, false},
-    {"tonal", VARIANT_PARAM_BOOL, 0, 1, "mirror in steps of the key's scale instead of semitones", false, false, false, false, false}};
+static const VariantDrawn INVERT_DRAWN[] = {
+    {.min = 0, .max = 127, .pitch = true},
+    {.min = 0, .max = 1}};
 
 static MotiveDevResult apply_invert(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveRelationStep step;
@@ -136,10 +137,10 @@ static void describe_retrograde(const VariantValue *values, char *out, size_t si
 
 enum { INTERVAL_WHICH, INTERVAL_AMOUNT, INTERVAL_KEEP_CONTOUR };
 
-static const VariantParam INTERVAL_PARAMS[] = {
-    {"interval", VARIANT_PARAM_INT, 0, 16, "the 1-based interval changed; 0 for every one", false, true, false, false, false},
-    {"amount", VARIANT_PARAM_INT, -6, 6, "semitones to widen by, negative to narrow; not 0", false, false, false, false, false},
-    {"keep-contour", VARIANT_PARAM_BOOL, 0, 1, "refuse a result that changes a direction", false, false, false, false, false}};
+static const VariantDrawn INTERVAL_DRAWN[] = {
+    {.min = 0, .max = 16, .notes_limit = true},
+    {.min = -6, .max = 6},
+    {.min = 0, .max = 1}};
 
 static MotiveDevResult apply_interval_change(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveRelationStep step;
@@ -166,11 +167,10 @@ static void describe_interval_change(const VariantValue *values, char *out, size
 
 enum { FRAGMENT_POSITION, FRAGMENT_LENGTH, FRAGMENT_MIN };
 
-static const VariantParam FRAGMENT_PARAMS[] = {
-    {"position", VARIANT_PARAM_POSITION, 1, 3, "where the fragment is taken from: leading, trailing or middle", false,
-     false, false, false, false},
-    {"length", VARIANT_PARAM_INT, 1, 16, "how many notes the fragment has", false, true, false, false, false},
-    {"min", VARIANT_PARAM_INT, 1, 16, "the fewest notes the result may have; 2 when not set", true, false, false, false, false}};
+static const VariantDrawn FRAGMENT_DRAWN[] = {
+    {.min = 1, .max = 3, .position = true},
+    {.min = 1, .max = 16, .notes_limit = true},
+    {.min = 1, .max = 16, .never_drawn = true}};
 
 static MotiveDevResult apply_fragment(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveRelationStep step;
@@ -191,10 +191,10 @@ static void describe_fragment(const VariantValue *values, char *out, size_t size
 
 enum { LIQUIDATE_DROP, LIQUIDATE_KEEP_RHYTHM, LIQUIDATE_MIN };
 
-static const VariantParam LIQUIDATE_PARAMS[] = {
-    {"drop", VARIANT_PARAM_INT, 1, 16, "how many notes to drop, the weakest first", false, true, false, false, false},
-    {"keep-rhythm", VARIANT_PARAM_BOOL, 0, 1, "leave a dropped note's time as a rest", false, false, false, false, false},
-    {"min", VARIANT_PARAM_INT, 1, 16, "the fewest notes the result may have; 2 when not set", true, false, false, false, false}};
+static const VariantDrawn LIQUIDATE_DRAWN[] = {
+    {.min = 1, .max = 16, .notes_limit = true},
+    {.min = 0, .max = 1},
+    {.min = 1, .max = 16, .never_drawn = true}};
 
 static MotiveDevResult apply_liquidate(const Motive *source, const VariantValue *values, Motive *out) {
     MotiveRelationStep step;
@@ -213,13 +213,11 @@ static void describe_liquidate(const VariantValue *values, char *out, size_t siz
 
 /* -------------------------------------------------------- augment, diminish */
 
-static const VariantParam AUGMENT_PARAMS[] = {
-    {"ratio", VARIANT_PARAM_RATIO, 1, 3, "the factor durations are multiplied by, n:m above 1; 2:1 when not set", false,
-     false, false, false, false}};
+static const VariantDrawn AUGMENT_DRAWN[] = {
+    {.min = 1, .max = 3}};
 
-static const VariantParam DIMINISH_PARAMS[] = {
-    {"ratio", VARIANT_PARAM_RATIO, 1, 3, "the factor durations are multiplied by, n:m below 1; 1:2 when not set", false,
-     false, true, false, false}};
+static const VariantDrawn DIMINISH_DRAWN[] = {
+    {.min = 1, .max = 3, .shrinks = true}};
 
 static MotiveDevResult apply_ratio(MotiveRelationKind kind, const Motive *source, const VariantValue *values,
                                    Motive *out) {
@@ -324,9 +322,9 @@ static void whole_note_part(const VariantValue *value, char *out, size_t size) {
 
 enum { NOTE_REPEAT_NOTE, NOTE_REPEAT_COUNT };
 
-static const VariantParam NOTE_REPEAT_PARAMS[] = {
-    {"note", VARIANT_PARAM_INT, 0, 16, "the 0-based note split into repeated notes", false, true, false, false, false},
-    {"count", VARIANT_PARAM_INT, 2, 4, "how many equal notes it becomes", false, false, false, false, false}};
+static const VariantDrawn NOTE_REPEAT_DRAWN[] = {
+    {.min = 0, .max = 16, .notes_limit = true},
+    {.min = 2, .max = 4}};
 
 static MotiveDevResult apply_note_repeat(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_NOTE_REPEAT, source, values, out);
@@ -345,10 +343,10 @@ static void describe_note_repeat(const VariantValue *values, char *out, size_t s
 
 enum { RHYTHM_REPEAT_FIRST, RHYTHM_REPEAT_LENGTH, RHYTHM_REPEAT_TARGET };
 
-static const VariantParam RHYTHM_REPEAT_PARAMS[] = {
-    {"first", VARIANT_PARAM_INT, 0, 16, "the 0-based first note whose durations are copied", false, true, false, false, false},
-    {"length", VARIANT_PARAM_INT, 1, 16, "how many notes' durations are copied", false, true, false, false, false},
-    {"target", VARIANT_PARAM_INT, 0, 16, "the 0-based note the copied durations start on", false, true, false, false, false}};
+static const VariantDrawn RHYTHM_REPEAT_DRAWN[] = {
+    {.min = 0, .max = 16, .notes_limit = true},
+    {.min = 1, .max = 16, .notes_limit = true},
+    {.min = 0, .max = 16, .notes_limit = true}};
 
 static MotiveDevResult apply_rhythm_repeat(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_RHYTHM_REPEAT, source, values, out);
@@ -365,9 +363,8 @@ static void describe_rhythm_repeat(const VariantValue *values, char *out, size_t
     }
 }
 
-static const VariantParam RHYTHM_SHIFT_PARAMS[] = {
-    {"offset", VARIANT_PARAM_RATIO, 1, 4, "how far later in the bar the motive starts, in whole notes, n:m below 1",
-     false, false, true, false, false}};
+static const VariantDrawn RHYTHM_SHIFT_DRAWN[] = {
+    {.min = 1, .max = 4, .shrinks = true}};
 
 static MotiveDevResult apply_rhythm_shift(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_RHYTHM_SHIFT, source, values, out);
@@ -382,10 +379,9 @@ static void describe_rhythm_shift(const VariantValue *values, char *out, size_t 
 
 enum { UPBEAT_COUNT, UPBEAT_APPROACH };
 
-static const VariantParam ADD_UPBEAT_PARAMS[] = {
-    {"count", VARIANT_PARAM_INT, 1, 3, "how many half-beat notes lead into the first note", false, false, false, false, false},
-    {"approach", VARIANT_PARAM_INT, -1, 1, "1 stepping up from below the first note, -1 down from above", false, false,
-     false, false, false}};
+static const VariantDrawn ADD_UPBEAT_DRAWN[] = {
+    {.min = 1, .max = 3},
+    {.min = -1, .max = 1}};
 
 static MotiveDevResult apply_add_upbeat(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_ADD_UPBEAT, source, values, out);
@@ -399,9 +395,9 @@ static void describe_add_upbeat(const VariantValue *values, char *out, size_t si
 
 enum { CHANGE_METER_NUM, CHANGE_METER_DEN };
 
-static const VariantParam CHANGE_METER_PARAMS[] = {
-    {"num", VARIANT_PARAM_INT, 1, 16, "the new meter's beats per bar", false, false, false, false, false},
-    {"den", VARIANT_PARAM_INT, 1, 16, "the new meter's beat unit: 1, 2, 4, 8 or 16", false, false, false, false, false}};
+static const VariantDrawn CHANGE_METER_DRAWN[] = {
+    {.min = 1, .max = 16},
+    {.min = 1, .max = 16}};
 
 static MotiveDevResult apply_change_meter(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_CHANGE_METER, source, values, out);
@@ -415,9 +411,9 @@ static void describe_change_meter(const VariantValue *values, char *out, size_t 
 
 enum { ADD_INTERVAL_WHICH, ADD_INTERVAL_STEPS };
 
-static const VariantParam ADD_INTERVAL_PARAMS[] = {
-    {"interval", VARIANT_PARAM_INT, 1, 16, "the 1-based interval a note is added in", false, true, false, false, false},
-    {"steps", VARIANT_PARAM_INT, -7, 7, "scale steps from the note before the interval; not 0", false, false, false, false, false}};
+static const VariantDrawn ADD_INTERVAL_DRAWN[] = {
+    {.min = 1, .max = 16, .notes_limit = true},
+    {.min = -7, .max = 7}};
 
 static MotiveDevResult apply_add_interval(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_ADD_INTERVAL, source, values, out);
@@ -430,8 +426,8 @@ static void describe_add_interval(const VariantValue *values, char *out, size_t 
              steps < 0 ? "down" : "up", value_or(&values[ADD_INTERVAL_WHICH], 1));
 }
 
-static const VariantParam OMIT_INTERVAL_PARAMS[] = {
-    {"interval", VARIANT_PARAM_INT, 1, 16, "the 1-based interval whose second note goes", false, true, false, false, false}};
+static const VariantDrawn OMIT_INTERVAL_DRAWN[] = {
+    {.min = 1, .max = 16, .notes_limit = true}};
 
 static MotiveDevResult apply_omit_interval(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_OMIT_INTERVAL, source, values, out);
@@ -443,9 +439,9 @@ static void describe_omit_interval(const VariantValue *values, char *out, size_t
 
 enum { FILL_WHICH, FILL_KIND };
 
-static const VariantParam ANCILLARY_FILL_PARAMS[] = {
-    {"interval", VARIANT_PARAM_INT, 1, 16, "the 1-based interval that is filled", false, true, false, false, false},
-    {"kind", VARIANT_PARAM_INT, 0, 1, "0 for passing notes, 1 for a neighbor note", false, false, false, false, false}};
+static const VariantDrawn ANCILLARY_FILL_DRAWN[] = {
+    {.min = 1, .max = 16, .notes_limit = true},
+    {.min = 0, .max = 1}};
 
 static MotiveDevResult apply_ancillary_fill(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_ANCILLARY_FILL, source, values, out);
@@ -462,10 +458,10 @@ static void describe_ancillary_fill(const VariantValue *values, char *out, size_
 
 enum { CONDENSE_FIRST, CONDENSE_LAST, CONDENSE_RATIO };
 
-static const VariantParam CONDENSE_PARAMS[] = {
-    {"first", VARIANT_PARAM_INT, 0, 16, "the 0-based first note compressed", false, true, false, false, false},
-    {"last", VARIANT_PARAM_INT, 0, 16, "the 0-based last note compressed", false, true, false, false, false},
-    {"ratio", VARIANT_PARAM_RATIO, 1, 3, "the factor their time is multiplied by, n:m below 1", false, false, true, false, false}};
+static const VariantDrawn CONDENSE_DRAWN[] = {
+    {.min = 0, .max = 16, .notes_limit = true},
+    {.min = 0, .max = 16, .notes_limit = true},
+    {.min = 1, .max = 3, .shrinks = true}};
 
 static MotiveDevResult apply_condense(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_CONDENSE, source, values, out);
@@ -481,10 +477,10 @@ static void describe_condense(const VariantValue *values, char *out, size_t size
 
 enum { REPEAT_FEATURE_WHICH, REPEAT_FEATURE_TIMES, REPEAT_FEATURE_STEPS };
 
-static const VariantParam REPEAT_FEATURE_PARAMS[] = {
-    {"feature", VARIANT_PARAM_INT, 0, 7, "the 0-based labelled feature repeated", false, false, false, true, false},
-    {"times", VARIANT_PARAM_INT, 1, 2, "how many times it is repeated after itself", false, false, false, false, false},
-    {"steps", VARIANT_PARAM_INT, -7, 7, "scale steps each repeat is moved by", false, false, false, false, false}};
+static const VariantDrawn REPEAT_FEATURE_DRAWN[] = {
+    {.min = 0, .max = 7, .features_limit = true},
+    {.min = 1, .max = 2},
+    {.min = -7, .max = 7}};
 
 static MotiveDevResult apply_repeat_feature(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_REPEAT_FEATURE, source, values, out);
@@ -504,9 +500,9 @@ static void describe_repeat_feature(const VariantValue *values, char *out, size_
 
 enum { SHIFT_FEATURE_WHICH, SHIFT_FEATURE_OFFSET };
 
-static const VariantParam SHIFT_FEATURE_PARAMS[] = {
-    {"feature", VARIANT_PARAM_INT, 0, 7, "the 0-based labelled feature moved later", false, false, false, true, false},
-    {"offset", VARIANT_PARAM_RATIO, 1, 4, "how far later, in whole notes, n:m below 1", false, false, true, false, false}};
+static const VariantDrawn SHIFT_FEATURE_DRAWN[] = {
+    {.min = 0, .max = 7, .features_limit = true},
+    {.min = 1, .max = 4, .shrinks = true}};
 
 static MotiveDevResult apply_shift_feature(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_SHIFT_FEATURE, source, values, out);
@@ -539,10 +535,9 @@ static void chord_name(long index, char *out, size_t size) {
 
 enum { HARMONY_INVERSION_CHORD, HARMONY_INVERSION_INVERSION };
 
-static const VariantParam HARMONY_INVERSION_PARAMS[] = {
-    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord that is inverted", false, false, false, false, true},
-    {"inversion", VARIANT_PARAM_INT, 0, 3, "0 root position, 1 first, 2 second, 3 third (a seventh chord)", false, false,
-     false, false, false}};
+static const VariantDrawn HARMONY_INVERSION_DRAWN[] = {
+    {.min = 0, .max = 7, .chords_limit = true},
+    {.min = 0, .max = 3}};
 
 static MotiveDevResult apply_harmony_inversion(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_HARMONY_INVERSION, source, values, out);
@@ -558,9 +553,9 @@ static void describe_harmony_inversion(const VariantValue *values, char *out, si
 
 enum { HARMONY_APPEND_DEGREE, HARMONY_APPEND_SEVENTH };
 
-static const VariantParam HARMONY_APPEND_PARAMS[] = {
-    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the chord added at the end", false, false, false, false, false},
-    {"seventh", VARIANT_PARAM_BOOL, 0, 1, "make the added chord a seventh chord", false, false, false, false, false}};
+static const VariantDrawn HARMONY_APPEND_DRAWN[] = {
+    {.min = 1, .max = 7},
+    {.min = 0, .max = 1}};
 
 static MotiveDevResult apply_harmony_append(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_HARMONY_APPEND, source, values, out);
@@ -573,10 +568,9 @@ static void describe_harmony_append(const VariantValue *values, char *out, size_
 
 enum { HARMONY_INSERT_CHORD, HARMONY_INSERT_DEGREE };
 
-static const VariantParam HARMONY_INSERT_PARAMS[] = {
-    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord the new one is inserted after", false, false, false, false,
-     true},
-    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the inserted chord", false, false, false, false, false}};
+static const VariantDrawn HARMONY_INSERT_DRAWN[] = {
+    {.min = 0, .max = 7, .chords_limit = true},
+    {.min = 1, .max = 7}};
 
 static MotiveDevResult apply_harmony_insert(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_HARMONY_INSERT, source, values, out);
@@ -590,11 +584,10 @@ static void describe_harmony_insert(const VariantValue *values, char *out, size_
 
 enum { HARMONY_SUBSTITUTE_CHORD, HARMONY_SUBSTITUTE_DEGREE, HARMONY_SUBSTITUTE_THEN };
 
-static const VariantParam HARMONY_SUBSTITUTE_PARAMS[] = {
-    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord that is replaced", false, false, false, false, true},
-    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the chord put in its place", false, false, false, false, false},
-    {"then", VARIANT_PARAM_INT, 1, 7, "a second degree that follows it in the same time; not set for none", true, false,
-     false, false, false}};
+static const VariantDrawn HARMONY_SUBSTITUTE_DRAWN[] = {
+    {.min = 0, .max = 7, .chords_limit = true},
+    {.min = 1, .max = 7},
+    {.min = 1, .max = 7, .never_drawn = true}};
 
 static MotiveDevResult apply_harmony_substitute(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_HARMONY_SUBSTITUTE, source, values, out);
@@ -615,9 +608,8 @@ static void describe_harmony_substitute(const VariantValue *values, char *out, s
 
 enum { PASSING_HARMONY_CHORD };
 
-static const VariantParam PASSING_HARMONY_PARAMS[] = {
-    {"chord", VARIANT_PARAM_INT, 0, 7, "the 0-based chord whose change into the next gets a passing chord", false, false,
-     false, false, true}};
+static const VariantDrawn PASSING_HARMONY_DRAWN[] = {
+    {.min = 0, .max = 7, .chords_limit = true}};
 
 static MotiveDevResult apply_passing_harmony(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_PASSING_HARMONY, source, values, out);
@@ -656,11 +648,9 @@ static void describe_dominant_form(const VariantValue *values, char *out, size_t
 
 enum { LIQUIDATE_FEATURES_STEPS, LIQUIDATE_FEATURES_SHORTEN };
 
-static const VariantParam LIQUIDATE_FEATURES_PARAMS[] = {
-    {"steps", VARIANT_PARAM_INT, 1, 3, "how many features are liquidated, the characteristic ones first", false, false,
-     false, false, false},
-    {"shorten", VARIANT_PARAM_BOOL, 0, 1, "also diminish the result 1:2, the unit halving as in ch. VIII", false, false,
-     false, false, false}};
+static const VariantDrawn LIQUIDATE_FEATURES_DRAWN[] = {
+    {.min = 1, .max = 3},
+    {.min = 0, .max = 1}};
 
 /* A full motive with a key only: the features give way to the chord tone nearest the first note, which a rhythm has not. */
 static MotiveDevResult apply_liquidate_features(const Motive *source, const VariantValue *values, Motive *out) {
@@ -692,13 +682,9 @@ static void describe_reduce_to_frame(const VariantValue *values, char *out, size
 
 enum { ADD_TONE_AFTER, ADD_TONE_TYPE };
 
-static const VariantParam ADD_TONE_PARAMS[] = {
-    {"after", VARIANT_PARAM_INT, 0, 16, "the 0-based chord tone the figure follows; it must have a note after it", false, true,
-     false, false, false},
-    {"type", VARIANT_PARAM_INT, 0, 9,
-     "the figure: 0 passing, 1 neighbor, 2 double neighbor, 3 changing tone, 4 suspension, 5 anticipation, 6 appoggiatura, 7 "
-     "escape tone, 8 retardation, 9 pedal",
-     false, false, false, false, false}};
+static const VariantDrawn ADD_TONE_DRAWN[] = {
+    {.min = 0, .max = 16, .notes_limit = true},
+    {.min = 0, .max = 9}};
 
 static MotiveDevResult apply_add_tone(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_ADD_NON_CHORD_TONE, source, values, out);
@@ -712,9 +698,8 @@ static void describe_add_tone(const VariantValue *values, char *out, size_t size
 
 enum { REMOVE_TONE_NOTE };
 
-static const VariantParam REMOVE_TONE_PARAMS[] = {
-    {"note", VARIANT_PARAM_INT, 0, 16, "the 0-based note that is not a chord tone and is taken out", false, true, false,
-     false, false}};
+static const VariantDrawn REMOVE_TONE_DRAWN[] = {
+    {.min = 0, .max = 16, .notes_limit = true}};
 
 static MotiveDevResult apply_remove_tone(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_REMOVE_NON_CHORD_TONE, source, values, out);
@@ -728,13 +713,9 @@ static void describe_remove_tone(const VariantValue *values, char *out, size_t s
 
 enum { CHANGE_TONE_NOTE, CHANGE_TONE_TYPE };
 
-static const VariantParam CHANGE_TONE_PARAMS[] = {
-    {"note", VARIANT_PARAM_INT, 0, 16, "the 0-based note that is not a chord tone and changes its figure", false, true, false,
-     false, false},
-    {"type", VARIANT_PARAM_INT, 0, 9,
-     "the figure: 0 passing, 1 neighbor, 2 double neighbor, 3 changing tone, 4 suspension, 5 anticipation, 6 appoggiatura, 7 "
-     "escape tone, 8 retardation, 9 pedal",
-     false, false, false, false, false}};
+static const VariantDrawn CHANGE_TONE_DRAWN[] = {
+    {.min = 0, .max = 16, .notes_limit = true},
+    {.min = 0, .max = 9}};
 
 static MotiveDevResult apply_change_tone(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_CHANGE_NON_CHORD_TONE, source, values, out);
@@ -748,10 +729,9 @@ static void describe_change_tone(const VariantValue *values, char *out, size_t s
 
 enum { REHARMONIZE_DEGREE, REHARMONIZE_SEVENTH };
 
-static const VariantParam REHARMONIZE_PARAMS[] = {
-    {"degree", VARIANT_PARAM_INT, 1, 7, "the scale degree of the one chord that replaces them all", false, false, false,
-     false, false},
-    {"seventh", VARIANT_PARAM_BOOL, 0, 1, "make that chord a seventh chord", false, false, false, false, false}};
+static const VariantDrawn REHARMONIZE_DRAWN[] = {
+    {.min = 1, .max = 7},
+    {.min = 0, .max = 1}};
 
 static MotiveDevResult apply_reharmonize_frame(const Motive *source, const VariantValue *values, Motive *out) {
     return relation_apply(MOTIVE_RELATION_REHARMONIZE_FRAME, source, values, out);
@@ -769,7 +749,7 @@ static void describe_reharmonize_frame(const VariantValue *values, char *out, si
 #define FORMS_FULL_RHYTHM (VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_RHYTHM))
 #define FORMS_FULL_CONTOUR (VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_FULL) | VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_CONTOUR))
 
-#define PARAMS(array) array, sizeof(array) / sizeof((array)[0])
+#define DRAWN(array) array, sizeof(array) / sizeof((array)[0])
 
 /*
  * One row per operation. The citations are the ones decided for the phase (R-133). A rhythm motive takes exact,
@@ -779,78 +759,78 @@ static void describe_reharmonize_frame(const VariantValue *values, char *out, si
 static const VariantOperation OPERATIONS[] = {
     {"exact", "Exact", VARIANT_CATEGORY_EXACT, "Schoenberg ch. III, Ex. 14", NULL, 0, FORMS_ALL, apply_exact,
      describe_exact, MOTIVE_RELATION_EXACT},
-    {"transpose", "Transpose", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. III, Exs. 14, 28", PARAMS(TRANSPOSE_PARAMS),
+    {"transpose", "Transpose", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. III, Exs. 14, 28", DRAWN(TRANSPOSE_DRAWN),
      FORMS_FULL, apply_transpose, describe_transpose, MOTIVE_RELATION_TRANSPOSE},
-    {"invert", "Invert", VARIANT_CATEGORY_INTERVALS, "ch. III, Exs. 14, 19", PARAMS(INVERT_PARAMS), FORMS_FULL_CONTOUR,
+    {"invert", "Invert", VARIANT_CATEGORY_INTERVALS, "ch. III, Exs. 14, 19", DRAWN(INVERT_DRAWN), FORMS_FULL_CONTOUR,
      apply_invert, describe_invert, MOTIVE_RELATION_INVERT},
     {"retrograde", "Retrograde", VARIANT_CATEGORY_INTERVALS, "ch. III, Exs. 14, 19", NULL, 0, FORMS_ALL,
      apply_retrograde, describe_retrograde, MOTIVE_RELATION_RETROGRADE},
-    {"interval-change", "Interval change", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 21", PARAMS(INTERVAL_PARAMS),
+    {"interval-change", "Interval change", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 21", DRAWN(INTERVAL_DRAWN),
      FORMS_FULL, apply_interval_change, describe_interval_change, MOTIVE_RELATION_INTERVAL_CHANGE},
-    {"fragment", "Fragment", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 21; ch. VIII, Ex. 52", PARAMS(FRAGMENT_PARAMS),
+    {"fragment", "Fragment", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 21; ch. VIII, Ex. 52", DRAWN(FRAGMENT_DRAWN),
      FORMS_ALL, apply_fragment, describe_fragment, MOTIVE_RELATION_FRAGMENT},
-    {"liquidate", "Liquidate", VARIANT_CATEGORY_INTERVALS, "ch. VIII, Ex. 52", PARAMS(LIQUIDATE_PARAMS),
+    {"liquidate", "Liquidate", VARIANT_CATEGORY_INTERVALS, "ch. VIII, Ex. 52", DRAWN(LIQUIDATE_DRAWN),
      FORMS_FULL_RHYTHM, apply_liquidate, describe_liquidate, MOTIVE_RELATION_LIQUIDATE},
-    {"augment", "Augment", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17", PARAMS(AUGMENT_PARAMS), FORMS_FULL_RHYTHM,
+    {"augment", "Augment", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17", DRAWN(AUGMENT_DRAWN), FORMS_FULL_RHYTHM,
      apply_augment, describe_augment, MOTIVE_RELATION_AUGMENT},
-    {"diminish", "Diminish", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17", PARAMS(DIMINISH_PARAMS), FORMS_FULL_RHYTHM,
+    {"diminish", "Diminish", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 14, 17", DRAWN(DIMINISH_DRAWN), FORMS_FULL_RHYTHM,
      apply_diminish, describe_diminish, MOTIVE_RELATION_DIMINISH},
-    {"note-repeat", "Note repeat", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 17h, i, k, l, n", PARAMS(NOTE_REPEAT_PARAMS),
+    {"note-repeat", "Note repeat", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 17h, i, k, l, n", DRAWN(NOTE_REPEAT_DRAWN),
      FORMS_FULL_RHYTHM, apply_note_repeat, describe_note_repeat, MOTIVE_RELATION_NOTE_REPEAT},
-    {"rhythm-repeat", "Rhythm repeat", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 17l, m, 18e", PARAMS(RHYTHM_REPEAT_PARAMS),
+    {"rhythm-repeat", "Rhythm repeat", VARIANT_CATEGORY_RHYTHM, "ch. III, Exs. 17l, m, 18e", DRAWN(RHYTHM_REPEAT_DRAWN),
      FORMS_FULL_RHYTHM, apply_rhythm_repeat, describe_rhythm_repeat, MOTIVE_RELATION_RHYTHM_REPEAT},
-    {"rhythm-shift", "Rhythm shift", VARIANT_CATEGORY_RHYTHM, "ch. III, Ex. 23", PARAMS(RHYTHM_SHIFT_PARAMS),
+    {"rhythm-shift", "Rhythm shift", VARIANT_CATEGORY_RHYTHM, "ch. III, Ex. 23", DRAWN(RHYTHM_SHIFT_DRAWN),
      FORMS_FULL_RHYTHM, apply_rhythm_shift, describe_rhythm_shift, MOTIVE_RELATION_RHYTHM_SHIFT},
-    {"add-upbeat", "Add upbeat", VARIANT_CATEGORY_RHYTHM, "ch. III, Ex. 22", PARAMS(ADD_UPBEAT_PARAMS),
+    {"add-upbeat", "Add upbeat", VARIANT_CATEGORY_RHYTHM, "ch. III, Ex. 22", DRAWN(ADD_UPBEAT_DRAWN),
      FORMS_FULL_RHYTHM, apply_add_upbeat, describe_add_upbeat, MOTIVE_RELATION_ADD_UPBEAT},
-    {"change-meter", "Change meter", VARIANT_CATEGORY_RHYTHM, "ch. III, Ex. 24", PARAMS(CHANGE_METER_PARAMS),
+    {"change-meter", "Change meter", VARIANT_CATEGORY_RHYTHM, "ch. III, Ex. 24", DRAWN(CHANGE_METER_DRAWN),
      FORMS_FULL_RHYTHM, apply_change_meter, describe_change_meter, MOTIVE_RELATION_CHANGE_METER},
-    {"add-interval", "Add interval", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 21", PARAMS(ADD_INTERVAL_PARAMS),
+    {"add-interval", "Add interval", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 21", DRAWN(ADD_INTERVAL_DRAWN),
      FORMS_FULL_CONTOUR, apply_add_interval, describe_add_interval, MOTIVE_RELATION_ADD_INTERVAL},
-    {"omit-interval", "Omit interval", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 21", PARAMS(OMIT_INTERVAL_PARAMS),
+    {"omit-interval", "Omit interval", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 21", DRAWN(OMIT_INTERVAL_DRAWN),
      FORMS_FULL_CONTOUR, apply_omit_interval, describe_omit_interval, MOTIVE_RELATION_OMIT_INTERVAL},
-    {"ancillary-fill", "Ancillary fill", VARIANT_CATEGORY_INTERVALS, "ch. III, Exs. 18, 20", PARAMS(ANCILLARY_FILL_PARAMS),
+    {"ancillary-fill", "Ancillary fill", VARIANT_CATEGORY_INTERVALS, "ch. III, Exs. 18, 20", DRAWN(ANCILLARY_FILL_DRAWN),
      FORMS_FULL, apply_ancillary_fill, describe_ancillary_fill, MOTIVE_RELATION_ANCILLARY_FILL},
-    {"condense", "Condense", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 21; ch. VIII, Ex. 52", PARAMS(CONDENSE_PARAMS),
+    {"condense", "Condense", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 21; ch. VIII, Ex. 52", DRAWN(CONDENSE_DRAWN),
      FORMS_FULL_RHYTHM, apply_condense, describe_condense, MOTIVE_RELATION_CONDENSE},
     {"repeat-feature", "Repeat feature", VARIANT_CATEGORY_INTERVALS, "ch. III, Exs. 20h, 22a, b, d",
-     PARAMS(REPEAT_FEATURE_PARAMS), FORMS_FULL_CONTOUR, apply_repeat_feature, describe_repeat_feature,
+     DRAWN(REPEAT_FEATURE_DRAWN), FORMS_FULL_CONTOUR, apply_repeat_feature, describe_repeat_feature,
      MOTIVE_RELATION_REPEAT_FEATURE},
-    {"shift-feature", "Shift feature", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 23", PARAMS(SHIFT_FEATURE_PARAMS),
+    {"shift-feature", "Shift feature", VARIANT_CATEGORY_INTERVALS, "ch. III, Ex. 23", DRAWN(SHIFT_FEATURE_DRAWN),
      FORMS_FULL, apply_shift_feature, describe_shift_feature, MOTIVE_RELATION_SHIFT_FEATURE},
     {"harmony-inversion", "Harmony inversion", VARIANT_CATEGORY_HARMONY, "ch. III, Exs. 25a, b",
-     PARAMS(HARMONY_INVERSION_PARAMS), FORMS_FULL, apply_harmony_inversion, describe_harmony_inversion,
+     DRAWN(HARMONY_INVERSION_DRAWN), FORMS_FULL, apply_harmony_inversion, describe_harmony_inversion,
      MOTIVE_RELATION_HARMONY_INVERSION},
     {"harmony-append", "Harmony append", VARIANT_CATEGORY_HARMONY, "ch. III, Exs. 25c to i",
-     PARAMS(HARMONY_APPEND_PARAMS), FORMS_FULL, apply_harmony_append, describe_harmony_append,
+     DRAWN(HARMONY_APPEND_DRAWN), FORMS_FULL, apply_harmony_append, describe_harmony_append,
      MOTIVE_RELATION_HARMONY_APPEND},
-    {"harmony-insert", "Harmony insert", VARIANT_CATEGORY_HARMONY, "ch. III, Ex. 26", PARAMS(HARMONY_INSERT_PARAMS),
+    {"harmony-insert", "Harmony insert", VARIANT_CATEGORY_HARMONY, "ch. III, Ex. 26", DRAWN(HARMONY_INSERT_DRAWN),
      FORMS_FULL, apply_harmony_insert, describe_harmony_insert, MOTIVE_RELATION_HARMONY_INSERT},
     {"harmony-substitute", "Harmony substitute", VARIANT_CATEGORY_HARMONY, "ch. III, Exs. 27a to i",
-     PARAMS(HARMONY_SUBSTITUTE_PARAMS), FORMS_FULL, apply_harmony_substitute, describe_harmony_substitute,
+     DRAWN(HARMONY_SUBSTITUTE_DRAWN), FORMS_FULL, apply_harmony_substitute, describe_harmony_substitute,
      MOTIVE_RELATION_HARMONY_SUBSTITUTE},
     {"passing-harmony", "Passing harmony", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. III, Ex. 29",
-     PARAMS(PASSING_HARMONY_PARAMS), FORMS_FULL, apply_passing_harmony, describe_passing_harmony,
+     DRAWN(PASSING_HARMONY_DRAWN), FORMS_FULL, apply_passing_harmony, describe_passing_harmony,
      MOTIVE_RELATION_PASSING_HARMONY},
     {"counter-line", "Counter line", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. III, Ex. 29", NULL, 0, FORMS_FULL,
      apply_counter_line, describe_counter_line, MOTIVE_RELATION_COUNTER_LINE},
     {"dominant-form", "Dominant form", VARIANT_CATEGORY_HARMONY, "ch. V, the dominant form", NULL, 0, FORMS_FULL,
      apply_dominant_form, describe_dominant_form, MOTIVE_RELATION_DOMINANT_FORM},
     {"liquidate-features", "Liquidate features", VARIANT_CATEGORY_INTERVALS, "ch. VIII, Ex. 52",
-     PARAMS(LIQUIDATE_FEATURES_PARAMS), FORMS_FULL, apply_liquidate_features, describe_liquidate_features,
+     DRAWN(LIQUIDATE_FEATURES_DRAWN), FORMS_FULL, apply_liquidate_features, describe_liquidate_features,
      MOTIVE_RELATION_LIQUIDATE_FEATURES},
     {"reduce-to-frame", "Reduce to frame", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. II and III", NULL, 0, FORMS_FULL,
      apply_reduce_to_frame, describe_reduce_to_frame, MOTIVE_RELATION_REDUCE_TO_FRAME},
     {"add-non-chord-tone", "Add non-chord tone", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. II and III",
-     PARAMS(ADD_TONE_PARAMS), FORMS_FULL, apply_add_tone, describe_add_tone, MOTIVE_RELATION_ADD_NON_CHORD_TONE},
+     DRAWN(ADD_TONE_DRAWN), FORMS_FULL, apply_add_tone, describe_add_tone, MOTIVE_RELATION_ADD_NON_CHORD_TONE},
     {"remove-non-chord-tone", "Remove non-chord tone", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. II and III",
-     PARAMS(REMOVE_TONE_PARAMS), FORMS_FULL, apply_remove_tone, describe_remove_tone,
+     DRAWN(REMOVE_TONE_DRAWN), FORMS_FULL, apply_remove_tone, describe_remove_tone,
      MOTIVE_RELATION_REMOVE_NON_CHORD_TONE},
     {"change-non-chord-tone", "Change non-chord tone", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. II and III",
-     PARAMS(CHANGE_TONE_PARAMS), FORMS_FULL, apply_change_tone, describe_change_tone,
+     DRAWN(CHANGE_TONE_DRAWN), FORMS_FULL, apply_change_tone, describe_change_tone,
      MOTIVE_RELATION_CHANGE_NON_CHORD_TONE},
     {"reharmonize-frame", "Reharmonize frame", VARIANT_CATEGORY_MELODY_ADAPTATION, "ch. II and III",
-     PARAMS(REHARMONIZE_PARAMS), FORMS_FULL, apply_reharmonize_frame, describe_reharmonize_frame,
+     DRAWN(REHARMONIZE_DRAWN), FORMS_FULL, apply_reharmonize_frame, describe_reharmonize_frame,
      MOTIVE_RELATION_REHARMONIZE_FRAME}};
 
 size_t variant_registry_count(void) {
@@ -873,12 +853,39 @@ const VariantOperation *variant_registry_find(const char *name) {
     return NULL;
 }
 
+static VariantParamKind param_kind(const MotiveRelationParamInfo *info, const VariantDrawn *drawn) {
+    switch (info->kind) {
+    case MOTIVE_RELATION_PARAM_BOOL:
+        return VARIANT_PARAM_BOOL;
+    case MOTIVE_RELATION_PARAM_RATIO:
+        return VARIANT_PARAM_RATIO;
+    case MOTIVE_RELATION_PARAM_CHOICE:
+        return drawn->position ? VARIANT_PARAM_POSITION : VARIANT_PARAM_INT;
+    default:
+        return drawn->pitch ? VARIANT_PARAM_PITCH : VARIANT_PARAM_INT;
+    }
+}
+
+bool variant_operation_param(const VariantOperation *operation, size_t index, VariantParam *out) {
+    MotiveRelationParamInfo info;
+    if (!operation || !out || index >= operation->param_count ||
+        !motive_relation_param_info((MotiveRelationKind)operation->relation, index, &info)) {
+        return false;
+    }
+    const VariantDrawn *drawn = &operation->drawn[index];
+    *out = (VariantParam){info.name,          param_kind(&info, drawn), drawn->min,         drawn->max,
+                          info.description,   drawn->never_drawn,       drawn->notes_limit, drawn->shrinks,
+                          drawn->features_limit, drawn->chords_limit};
+    return true;
+}
+
 int variant_operation_param_index(const VariantOperation *operation, const char *name) {
     if (!operation || !name) {
         return -1;
     }
     for (size_t i = 0; i < operation->param_count; i++) {
-        if (strcmp(operation->params[i].name, name) == 0) {
+        VariantParam param;
+        if (variant_operation_param(operation, i, &param) && strcmp(param.name, name) == 0) {
             return (int)i;
         }
     }
@@ -918,7 +925,8 @@ static cJSON *operation_json(const VariantOperation *operation) {
     cJSON *forms = ok ? add_array(object, "forms") : NULL;
     ok = ok && params && forms;
     for (size_t i = 0; ok && i < operation->param_count; i++) {
-        ok = plan_json_append(params, param_json(&operation->params[i]));
+        VariantParam param;
+        ok = variant_operation_param(operation, i, &param) && plan_json_append(params, param_json(&param));
     }
     for (int form = MOTIVE_SKETCH_FORM_FULL; ok && form <= MOTIVE_SKETCH_FORM_CONTOUR; form++) {
         if ((operation->forms & VARIANT_FORM_BIT(form)) != 0) {

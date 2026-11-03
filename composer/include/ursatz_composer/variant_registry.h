@@ -37,12 +37,17 @@ typedef enum {
     VARIANT_PARAM_BOOL,     /* 0 or 1 */
     VARIANT_PARAM_RATIO,    /* num:den, each from min to max */
     VARIANT_PARAM_PITCH,    /* a MIDI note number */
-    VARIANT_PARAM_POSITION  /* a PlanFragmentPosition: 1 leading, 2 trailing, 3 middle */
+    VARIANT_PARAM_POSITION  /* a fragment position: 1 leading, 2 trailing, 3 middle */
 } VariantParamKind;
 
 /* "int", "bool", "ratio", "pitch" or "position". */
 const char *variant_param_kind_name(VariantParamKind kind);
 
+/*
+ * A parameter of an operation, as variant_operation_param gives it: the name, kind and description are the library
+ * relation's (motive_relation_param_info); min, max and the flags are the registry's own (VariantDrawn), what a chain draws
+ * from and checks a value against.
+ */
 typedef struct {
     const char *name; /* as the develop command's option without the dashes: "tonal", "keep-contour" */
     VariantParamKind kind;
@@ -61,6 +66,25 @@ typedef struct {
        chords of its own has one, the best implied chord. */
     bool chords_limit;
 } VariantParam;
+
+/*
+ * What a row says of a relation parameter that the relation does not, one for each parameter in the relation's order: the
+ * range a chain draws open values from and a value is checked against (a composing choice: the relation accepts more), and
+ * how the draw treats the parameter. The relation's own metadata is read where it is needed, not copied.
+ */
+typedef struct {
+    long min;
+    long max;
+    /* Never drawn: an open parameter stays unset and the operation does without it (not the relation's optional). */
+    bool never_drawn;
+    bool notes_limit;
+    bool shrinks;
+    bool features_limit;
+    bool chords_limit;
+    /* The integer is a MIDI note number, and the choice is a fragment position (the library says int and choice). */
+    bool pitch;
+    bool position;
+} VariantDrawn;
 
 /*
  * A parameter's value. set is false for an open parameter. For a ratio, value is the numerator and den the
@@ -88,8 +112,8 @@ struct VariantOperation {
     const char *label;    /* "Invert", "Interval change" */
     VariantCategory category;
     const char *citation; /* "Schoenberg ch. III, Ex. 14" */
-    const VariantParam *params;
-    size_t param_count;
+    const VariantDrawn *drawn; /* the registry's part of each parameter, param_count of them */
+    size_t param_count;        /* the relation's parameter count (motive_relation_param_count) */
     unsigned forms; /* a bit mask of 1u << MotiveSketchForm: the forms the operation applies to */
     VariantApplyFn apply;
     VariantDescribeFn describe;
@@ -115,6 +139,9 @@ const VariantOperation *variant_registry_find(const char *name);
  *                    "forms": ["full", "rhythm", "contour"]}]}
  */
 char *variant_registry_to_json(void);
+
+/* Fills *out for the parameter at index (below param_count). False, out untouched, otherwise. */
+bool variant_operation_param(const VariantOperation *operation, size_t index, VariantParam *out);
 
 /* The index of a parameter of the operation by name, or -1. */
 int variant_operation_param_index(const VariantOperation *operation, const char *name);
