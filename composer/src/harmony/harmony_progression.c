@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <harmonic_function.h>
-#include <harmony_functions.h>
+#include <standard-harmony/harmonic_function.h>
+#include <standard-harmony/harmony_functions.h>
 
 /* Candidates tried per call; ones that repeat an earlier one are dropped. */
 #define CANDIDATE_ATTEMPTS 8

@@ -1,8 +1,8 @@
 #include <string.h>
 
-#include <harmonic_function.h>
-#include <harmony_functions.h>
-#include <harmony_related_key.h>
+#include <standard-harmony/harmonic_function.h>
+#include <standard-harmony/harmony_functions.h>
+#include <standard-harmony/harmony_related_key.h>
 
 #include <ursatz_composer/plan_state.h>
 

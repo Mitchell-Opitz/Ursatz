@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "time/duration.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
+#include <time/duration.h>
+#include <time/musical_time.h>
+#include <time/temporal_anchor.h>
 
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>

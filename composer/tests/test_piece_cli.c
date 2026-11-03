@@ -6,8 +6,8 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "pitch/pitch_spelling.h"
-#include "time/musical_time.h"
+#include <pitch/pitch_spelling.h>
+#include <time/musical_time.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>

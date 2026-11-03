@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <harmony_phrase_rules.h>
+#include <standard-harmony/harmony_phrase_rules.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/fill_loop.h>

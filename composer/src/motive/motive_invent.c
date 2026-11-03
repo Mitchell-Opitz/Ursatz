@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <melodic_rules.h>
+#include <standard-counterpoint/melodic_rules.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/plan_state.h>

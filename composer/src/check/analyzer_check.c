@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <harmony_cadence_rules.h>
+#include <standard-harmony/harmony_cadence_rules.h>
 
 #include <ursatz_analyzer/composer_api.h>
 

@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <range_rules.h>
-#include <voicing_pitch.h>
+#include <standard-voicing/range_rules.h>
+#include <standard-voicing/voicing_pitch.h>
 #include <semantics/voice_part.h>
 
 #include <ursatz_composer/plan_state.h>

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-#include "semantics/contour.h"
+#include <semantics/contour.h>
 
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_tones.h>

@@ -5,8 +5,8 @@
 #include <string.h>
 #include <sys/wait.h>
 
-#include "io/midi_importer.h"
-#include "time/tempo_map.h"
+#include <io/midi_importer.h>
+#include <time/tempo_map.h>
 
 #include <ursatz_analyzer/composer_api.h>
 #include <ursatz_analyzer/style_profile.h>

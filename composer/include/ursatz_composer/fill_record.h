@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "generation/generation_record.h"
+#include <generation/generation_record.h>
 
 #include <ursatz_composer/fill_loop.h>
 

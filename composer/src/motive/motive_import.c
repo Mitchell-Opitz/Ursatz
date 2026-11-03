@@ -3,15 +3,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "io/midi_importer.h"
-#include "io/midi_key_signature.h"
-#include "io/musicxml_importer.h"
-#include "pitch/pitch_numeric_value.h"
-#include "time/duration.h"
-#include "time/meter_map.h"
-#include "time/musical_time.h"
-#include "time/temporal_anchor.h"
-#include "time/time_signature.h"
+#include <io/midi_importer.h>
+#include <io/midi_key_signature.h>
+#include <io/musicxml_importer.h>
+#include <pitch/pitch_numeric_value.h>
+#include <time/duration.h>
+#include <time/meter_map.h>
+#include <time/musical_time.h>
+#include <time/temporal_anchor.h>
+#include <time/time_signature.h>
 
 #include "motive/motive_internal.h"
 

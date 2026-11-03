@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include <cJSON.h>
-#include <key_identification.h>
+#include <common-practice-minimal/key_identification.h>
 
 #include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/plan_state.h>

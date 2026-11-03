@@ -4,7 +4,7 @@
 #include <string.h>
 
 #include <ursatz_composer/analysis_load.h>
-#include <galant_prototypes.h>
+#include <galant-schemas/galant_prototypes.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>

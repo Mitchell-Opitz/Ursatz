@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "analysis/motive_relation.h"
+#include <analysis/motive_relation.h>
 
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>

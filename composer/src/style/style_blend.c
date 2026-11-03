@@ -7,9 +7,9 @@
 
 #include "style/style_internal.h"
 
-#include "identity/entity_id.h"
-#include "theory/style_model_blend.h"
-#include "theory/style_model_build.h"
+#include <identity/entity_id.h>
+#include <theory/style_model_blend.h>
+#include <theory/style_model_build.h>
 
 __extension__ typedef unsigned __int128 Wide;
 

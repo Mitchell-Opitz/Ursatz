@@ -10,7 +10,7 @@
 #include "cli_options.h"
 #include "grow.h"
 
-#include <harmony_chord.h>
+#include <standard-harmony/harmony_chord.h>
 
 #include <ursatz_composer/fill_record.h>
 #include <ursatz_composer/grow.h>

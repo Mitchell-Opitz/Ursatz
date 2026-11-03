@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "analysis/motive_relation.h"
-#include "analysis/motive_variant_recognition.h"
+#include <analysis/motive_relation.h>
+#include <analysis/motive_variant_recognition.h>
 
 #include <ursatz_composer/motive_sketch_bridge.h>
 

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <harmony_cadence_rules.h>
+#include <standard-harmony/harmony_cadence_rules.h>
 
 #include <ursatz_composer/compose.h>
 #include <ursatz_composer/harmony_phrase.h>

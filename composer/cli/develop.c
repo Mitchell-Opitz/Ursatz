@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "cli_options.h"
-#include "generation/candidate.h"
+#include <generation/candidate.h>
 
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/fill_loop.h>

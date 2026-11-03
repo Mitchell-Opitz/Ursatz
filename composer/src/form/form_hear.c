@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <harmony_cadence_rules.h>
+#include <standard-harmony/harmony_cadence_rules.h>
 #include <identity/entity_id.h>
 #include <standard-form/analysis/analysis_theme.h>
 #include <standard-form/phrase_level_form.h>

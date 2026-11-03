@@ -7,8 +7,8 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/composer.h>
-#include <galant_prototypes.h>
-#include <texture_rules.h>
+#include <galant-schemas/galant_prototypes.h>
+#include <standard-texture/texture_rules.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>

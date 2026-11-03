@@ -4,16 +4,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "core/provenance_reference.h"
-#include "core/voice_reference.h"
-#include "identity/entity_id.h"
-#include "pitch/pitch_identity.h"
-#include "pitch/pitch_spelling.h"
-#include "pitch/tuning_system.h"
-#include "time/duration.h"
-#include "time/note_value.h"
-#include "time/temporal_anchor.h"
-#include "time/time_signature.h"
+#include <core/provenance_reference.h>
+#include <core/voice_reference.h>
+#include <identity/entity_id.h>
+#include <pitch/pitch_identity.h>
+#include <pitch/pitch_spelling.h>
+#include <pitch/tuning_system.h>
+#include <time/duration.h>
+#include <time/note_value.h>
+#include <time/temporal_anchor.h>
+#include <time/time_signature.h>
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/plan_state.h>
