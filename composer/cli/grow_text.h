@@ -1,0 +1,19 @@
+#ifndef URSATZ_COMPOSER_CLI_GROW_TEXT_H
+#define URSATZ_COMPOSER_CLI_GROW_TEXT_H
+
+#include <stdbool.h>
+#include <stddef.h>
+
+#include <cJSON.h>
+
+#include <ursatz_composer/corpus_seed.h>
+
+/*
+ * Prints the text output of `grow` and `theme` from the result document (docs/api.md, the theme entry): the brief line, the
+ * brief and the chords of a theme request, the corpus passage the motive came from (seed, or NULL), each theme (numbered
+ * when numbered), and the files written.
+ */
+void cli_print_grow_text(const cJSON *document, bool numbered, const CorpusSeed *seed, const char *const *files,
+                         size_t file_count);
+
+#endif

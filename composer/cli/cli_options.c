@@ -129,6 +129,21 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
         {"a distance takes random chains, not a chain", "--distance takes random chains, not --chain"},
         {"composer_api_variant_operations lists them", "--list-ops shows them"},
         {"style_without needs style", "--style-without needs --style"},
+        {"needs style", "needs --style"},
+        {"needs blend", "needs --blend"},
+        {"needs hybrid <beginning>", "needs --hybrid <beginning>"},
+        {"applies only to into hybrid", "applies only to --into hybrid"},
+        {"use into ", "use --into "},
+        {"and texture chorale write the inner voices themselves; they cannot be combined with accompaniment or another "
+         "texture",
+         "and --texture chorale write the inner voices themselves; they cannot be combined with --accompaniment or another "
+         "--texture"},
+        {"melody, voicing keeps the grown one", "melody, --voicing keeps the grown one"},
+        {"needs an accompaniment motive", "needs --accompaniment-motive <file>"},
+        {"the accompaniment motive is the accompaniment pattern; it cannot be combined with accompaniment ",
+         "--accompaniment-motive is the accompaniment pattern; it cannot be combined with --accompaniment "},
+        {"an accompaniment motive cannot be combined with voicing or texture chorale",
+         "--accompaniment-motive cannot be combined with --voicing or --texture chorale"},
     };
     for (size_t i = 0; i < sizeof PHRASES / sizeof PHRASES[0]; i++) {
         char *at = strstr(message, PHRASES[i][0]);
