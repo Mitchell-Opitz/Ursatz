@@ -281,7 +281,7 @@ static void check_piece(const PiecePlan *plan, FormTemplateKind kind) {
         int strongest = -1;
         for (size_t s = 0; s < count; s++) {
             const PlanConstraint *cadence = find(plan, sections[s], PLAN_CONSTRAINT_CADENCE);
-            int strength = harmony_cadence_strength(harmony_cadence_type_of(cadence->params.cadence));
+            int strength = harmony_cadence_strength(cadence->params.cadence);
             strongest = strength > strongest ? strength : strongest;
             last = strength;
         }

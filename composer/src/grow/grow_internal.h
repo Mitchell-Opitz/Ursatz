@@ -48,9 +48,9 @@ typedef struct {
     size_t bars;
     PlanMeter meter;
     PlanKey key;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     PlanThemePairing pairing;
-    PlanCadenceType first_cadence;         /* the weak cadence an antecedent ends in */
+    CadenceType first_cadence;         /* the weak cadence an antecedent ends in */
     PlanHarmonyShapeKind beginning_shape;  /* the shape of an antecedent's chords */
     bool beginning_split;                  /* no chord of the antecedent crosses a barline */
     PlanHarmonyAnchor compound_ends_on;    /* where a compound basic idea's prolongation ends */
@@ -92,8 +92,8 @@ typedef struct {
     PlanKey from_key;              /* that key; read only with has_start_change */
     bool has_end_change;           /* the second half of the section is in another key, which it opens */
     PlanKey end_key;               /* that key; read only with has_end_change */
-    PlanCadenceType cadence;
-    PlanCadenceType first_cadence; /* meaningful when has_first */
+    CadenceType cadence;
+    CadenceType first_cadence; /* meaningful when has_first */
     bool has_first;
     PlanThemePairing pairing;
     NodeId source;
@@ -164,7 +164,7 @@ int grow_pairing_archetype(const PlanThemePairing *pairing);
  * Whether the chords of half of the theme can be kept from crossing a barline: a phrase model of this cadence has
  * only so many chords, and each may be no longer than a bar. False when they cannot cover the half's cells.
  */
-bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, PlanCadenceType cadence);
+bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind shape, CadenceType cadence);
 /* An eighth of the theme. */
 Rational grow_unit(const GrowThemeRequest *request);
 /* standard-form's own beginning and ending for the plan's. */
@@ -222,7 +222,7 @@ PlanResult grow_ending_build(GrowBuild *build);
  * first cadence (HC or IAC) that has room too.
  */
 bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
-                          PlanCadenceType cadence, PlanCadenceType first);
+                          CadenceType cadence, CadenceType first);
 /* Whether an accompaniment can be written in the meter, as a homophonic texture, Alberti only in a simple meter. */
 bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *accompaniment);
 

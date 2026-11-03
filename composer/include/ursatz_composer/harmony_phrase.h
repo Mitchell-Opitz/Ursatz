@@ -56,14 +56,14 @@ bool harmony_meter_supported(const PlanMeter *meter);
  * A cell is a place in a bar where a chord may start, and a part cell at either end of a span that starts or ends
  * between two of them counts as one.
  */
-size_t harmony_phrase_min_cells(PlanCadenceType cadence, const PlanMeter *meter);
+size_t harmony_phrase_min_cells(CadenceType cadence, const PlanMeter *meter);
 
 /*
  * The fewest bars a phrase of whole bars can have and still end in the cadence, in a meter the operators support;
  * 0 for any other meter. A phrase of fewer bars gets no candidates from the phrase-model operator. Its last chord is
  * the whole last bar, so this is the cells before it, plus that bar, rounded up to bars.
  */
-size_t harmony_phrase_min_bars(PlanCadenceType cadence, const PlanMeter *meter);
+size_t harmony_phrase_min_bars(CadenceType cadence, const PlanMeter *meter);
 
 /* Registers the operator. FILL_OK, or the registry's error. */
 FillResult harmony_phrase_register(FillOperatorRegistry *registry);
@@ -105,7 +105,7 @@ bool harmony_phrase_checker(const PiecePlan *plan, FillTarget target, const Fill
  * when the cadence arrives on the last chord. False when the lane cannot be
  * read, or the recognizer hears no cadence.
  */
-bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
+bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, CadenceType requested,
                           CadenceType *heard, bool *at_end);
 
 /*
@@ -116,7 +116,7 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode
  * reason of its own to be there. True when the lane could be read, with *violation NULL if nothing
  * is broken and otherwise the rule that is.
  */
-bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
+bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, CadenceType requested,
                         const char **violation);
 
 /*
@@ -126,9 +126,6 @@ bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, 
  */
 bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode,
                                         const char **violation);
-
-/* The recognizer's name for a cadence type of the plan. */
-CadenceType harmony_cadence_type_of(PlanCadenceType type);
 
 /*
  * Roman numerals as this operator writes them: upper case for major chords

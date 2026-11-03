@@ -63,7 +63,7 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     request.bars = bars;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
-    request.cadence = PLAN_CADENCE_PAC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     return request;
 }
 
@@ -185,7 +185,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     const PlanConstraint *cadence = plan_lane_span_constraint_count(plan, ids[chords - 1]) > 0
                                         ? plan_lane_span_constraint_at(plan, ids[chords - 1], 0)
                                         : NULL;
-    assert(cadence && cadence->kind == PLAN_CONSTRAINT_CADENCE && cadence->params.cadence == PLAN_CADENCE_PAC);
+    assert(cadence && cadence->kind == PLAN_CONSTRAINT_CADENCE && cadence->params.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
 
     /* Bass: a span for each chord, written. */
     size_t basses = tiling(plan, PLAN_LANE_BASS, theme, ids, 64);
@@ -351,12 +351,12 @@ static void test_bad_requests(void) {
     changed = request;
     changed.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
     changed.pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
-    changed.cadence = PLAN_CADENCE_HC;
+    changed.cadence = CADENCE_TYPE_HALF;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
     changed.pairing.beginning = (PlanThemeBeginning)7;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
     changed = request;
-    changed.cadence = PLAN_CADENCE_DC;
+    changed.cadence = CADENCE_TYPE_DECEPTIVE;
     assert(grow_build_plan(&changed, &plan) == GROW_ERR_BAD_REQUEST);
 
     /* A motive that does not fit in a bar. */

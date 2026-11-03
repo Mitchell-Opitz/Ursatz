@@ -29,7 +29,7 @@ typedef struct {
     int tonic;
     int start;  /* the span's start, in beats from the start of the meter lane */
     int length; /* the span's length, in beats */
-    PlanCadenceType cadence;
+    CadenceType cadence;
     unsigned long seed;
 } Scenario;
 
@@ -101,7 +101,7 @@ static bool expect_progression(const Scenario *scenario, const Cells *cells) {
     while (room < cells->cells && cells->starts[room] < last) {
         room++;
     }
-    size_t fixed = 1 + (scenario->cadence == PLAN_CADENCE_HC ? 0 : 1) + (scenario->cadence == PLAN_CADENCE_PC ? 2 : 0);
+    size_t fixed = 1 + (scenario->cadence == CADENCE_TYPE_HALF ? 0 : 1) + (scenario->cadence == CADENCE_TYPE_PLAGAL ? 2 : 0);
     return room >= fixed;
 }
 
@@ -170,22 +170,6 @@ static FillOutcome run(const Fixture *fixture, unsigned long seed, bool with_bas
     return outcome;
 }
 
-static CadenceType expected_type(PlanCadenceType cadence) {
-    switch (cadence) {
-    case PLAN_CADENCE_PAC:
-        return CADENCE_TYPE_PERFECT_AUTHENTIC;
-    case PLAN_CADENCE_IAC:
-        return CADENCE_TYPE_IMPERFECT_AUTHENTIC;
-    case PLAN_CADENCE_HC:
-        return CADENCE_TYPE_HALF;
-    case PLAN_CADENCE_DC:
-        return CADENCE_TYPE_DECEPTIVE;
-    case PLAN_CADENCE_PC:
-        return CADENCE_TYPE_PLAGAL;
-    }
-    return CADENCE_TYPE_UNKNOWN;
-}
-
 /* Chord spans of a lane tile the span, each starting on a place a chord may start; the last starts where it should. */
 static size_t check_lane_tiles(const Fixture *fixture, const Scenario *scenario, const Cells *cells, PlanLaneKind lane,
                                LaneSpanId *ids) {
@@ -223,7 +207,7 @@ static void check_harmony(const Fixture *fixture, const Scenario *scenario, cons
     CadenceType heard;
     bool at_end;
     assert(harmony_hear_cadence(fixture->plan, fixture->span, scenario->mode, scenario->cadence, &heard, &at_end));
-    assert(heard == expected_type(scenario->cadence));
+    assert(heard == scenario->cadence);
     assert(at_end);
     const char *violation = "unread";
     assert(harmony_check_lane(fixture->plan, fixture->span, scenario->mode, scenario->cadence, &violation));
@@ -276,8 +260,8 @@ static void check_scenario(const Scenario *scenario) {
 static void test_four_four(void) {
     static const int lengths[3] = {6, 7, 10};
     static const int starts[2] = {0, 2};
-    static const PlanCadenceType cadences[5] = {PLAN_CADENCE_PAC, PLAN_CADENCE_IAC, PLAN_CADENCE_HC, PLAN_CADENCE_DC,
-                                                PLAN_CADENCE_PC};
+    static const CadenceType cadences[5] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE,
+                                                CADENCE_TYPE_PLAGAL};
     size_t produced = 0;
     for (int mode = 0; mode < 2; mode++) {
         for (int l = 0; l < 3; l++) {
@@ -300,7 +284,7 @@ static void test_four_four(void) {
 /* Spans starting on beat 2, in 3/4 and in 6/8, and in 4/4 and 2/4 as well, with lengths that end between cells. */
 static void test_off_cell_starts(void) {
     static const int meters[4][2] = {{2, 4}, {3, 4}, {4, 4}, {6, 8}};
-    static const PlanCadenceType cadences[3] = {PLAN_CADENCE_PAC, PLAN_CADENCE_HC, PLAN_CADENCE_DC};
+    static const CadenceType cadences[3] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE};
     for (int m = 0; m < 4; m++) {
         for (int start = 1; start < meters[m][0]; start++) {
             for (int length = 2; length <= 3 * meters[m][0] + 1; length++) {
@@ -318,7 +302,7 @@ static void test_off_cell_starts(void) {
 
 /* A span that ends where a bar does, started on beat 2: the lead is its first cell. */
 static void test_lead_and_tail(void) {
-    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 1, 11, PLAN_CADENCE_PAC, 1};
+    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 1, 11, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
     Fixture fixture = build(&scenario, false);
     Cells cells = cells_of(&scenario);
     /* Beats 2 to 12: a lead of one beat, then whole cells to the barline of beat 12, and no tail. */
@@ -335,7 +319,7 @@ static void test_lead_and_tail(void) {
     plan_destroy(fixture.plan);
 
     /* A tail: beats 1 to 8 end a beat into the second bar's second cell. */
-    Scenario tailed = {4, 4, PLAN_MODE_MAJOR, 0, 0, 7, PLAN_CADENCE_HC, 2};
+    Scenario tailed = {4, 4, PLAN_MODE_MAJOR, 0, 0, 7, CADENCE_TYPE_HALF, 2};
     fixture = build(&tailed, false);
     cells = cells_of(&tailed);
     assert(cells.cells == 4);
@@ -360,16 +344,16 @@ static void test_minimum_cells(void) {
     six_eight.beat_unit = 8;
     odd.beats_per_bar = 5;
     odd.beat_unit = 4;
-    assert(harmony_phrase_min_cells(PLAN_CADENCE_PAC, &four) == 3);
-    assert(harmony_phrase_min_cells(PLAN_CADENCE_HC, &four) == 2);
-    assert(harmony_phrase_min_cells(PLAN_CADENCE_PC, &six_eight) == 5);
-    assert(harmony_phrase_min_cells(PLAN_CADENCE_PAC, &odd) == 0);
+    assert(harmony_phrase_min_cells(CADENCE_TYPE_PERFECT_AUTHENTIC, &four) == 3);
+    assert(harmony_phrase_min_cells(CADENCE_TYPE_HALF, &four) == 2);
+    assert(harmony_phrase_min_cells(CADENCE_TYPE_PLAGAL, &six_eight) == 5);
+    assert(harmony_phrase_min_cells(CADENCE_TYPE_PERFECT_AUTHENTIC, &odd) == 0);
     /* A phrase of whole bars still ends in a whole bar. */
-    assert(harmony_phrase_min_bars(PLAN_CADENCE_PAC, &four) == 2);
-    assert(harmony_phrase_min_bars(PLAN_CADENCE_PC, &four) == 3);
+    assert(harmony_phrase_min_bars(CADENCE_TYPE_PERFECT_AUTHENTIC, &four) == 2);
+    assert(harmony_phrase_min_bars(CADENCE_TYPE_PLAGAL, &four) == 3);
 
-    static const PlanCadenceType cadences[5] = {PLAN_CADENCE_PAC, PLAN_CADENCE_IAC, PLAN_CADENCE_HC, PLAN_CADENCE_DC,
-                                                PLAN_CADENCE_PC};
+    static const CadenceType cadences[5] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE,
+                                                CADENCE_TYPE_PLAGAL};
     for (int c = 0; c < 5; c++) {
         size_t minimum = harmony_phrase_min_cells(cadences[c], &four);
         for (int start = 0; start < 4; start++) {
@@ -415,7 +399,7 @@ static void test_off_beat_is_not_a_target(void) {
     assert(plan_add_lane_span(fixture.plan, fixture.owner, PLAN_LANE_HARMONY, 0, off_start, &payload,
                               &fixture.target) == PLAN_OK);
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
-    cadence.params.cadence = PLAN_CADENCE_PAC;
+    cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     assert(plan_lane_span_add_constraint(fixture.plan, fixture.target, &cadence) == PLAN_OK);
     FillOutcome outcome = run(&fixture, 0, false);
     assert(outcome.status == FILL_STATUS_STUCK);
@@ -431,7 +415,7 @@ static void test_bass_under_beat_spans(void) {
     for (int s = 0; s < 3; s++) {
         for (int l = 0; l < 3; l++) {
             for (unsigned long seed = 0; seed < 4; seed++) {
-                Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 5, starts[s], lengths[l], PLAN_CADENCE_PAC, seed};
+                Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 5, starts[s], lengths[l], CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
                 Cells cells = cells_of(&scenario);
                 if (!expect_progression(&scenario, &cells)) {
                     continue;
@@ -478,7 +462,7 @@ static void check_lane_valid(const Fixture *fixture, const Scenario *scenario, c
     CadenceType heard;
     bool at_end;
     assert(harmony_hear_cadence(fixture->plan, fixture->span, scenario->mode, scenario->cadence, &heard, &at_end));
-    assert(heard == expected_type(scenario->cadence));
+    assert(heard == scenario->cadence);
     assert(at_end);
     const char *violation = "unread";
     assert(harmony_check_lane(fixture->plan, fixture->span, scenario->mode, scenario->cadence, &violation));
@@ -491,7 +475,7 @@ static void test_embellish_part_cells(void) {
     size_t changed = 0;
     for (int w = 0; w < 5; w++) {
         for (unsigned long seed = 0; seed < 12; seed++) {
-            Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, spans[w][0], spans[w][1], PLAN_CADENCE_PAC, seed};
+            Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, spans[w][0], spans[w][1], CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
             Cells cells = cells_of(&scenario);
             if (!expect_progression(&scenario, &cells)) {
                 continue;
@@ -533,7 +517,7 @@ static void test_prolongation_part_cells(void) {
     for (int w = 0; w < 6; w++) {
         for (int e = 0; e < 2; e++) {
             for (unsigned long seed = 0; seed < 4; seed++) {
-                Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, spans[w][0], spans[w][1], PLAN_CADENCE_HC, seed};
+                Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, spans[w][0], spans[w][1], CADENCE_TYPE_HALF, seed};
                 Cells cells = cells_of(&scenario);
                 Fixture fixture = build(&scenario, false);
                 /* The cadence is not asked for: a prolongation is the shape. */
@@ -570,7 +554,7 @@ static void test_prolongation_part_cells(void) {
 static void test_schemas_skip_part_cells(void) {
     static const int spans[4][2] = {{1, 11}, {0, 7}, {3, 10}, {2, 7}};
     for (int w = 0; w < 4; w++) {
-        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, spans[w][0], spans[w][1], PLAN_CADENCE_PAC, 0};
+        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, spans[w][0], spans[w][1], CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
         Fixture fixture = build(&scenario, true);
         FillOperatorRegistry *registry = fill_registry_create();
         FillConfig config;
@@ -600,7 +584,7 @@ static void test_octave_on_beat_spans(void) {
     static const int PITCHES[3] = {48, 50, 48};
     for (size_t w = 0; w < sizeof(SPANS) / sizeof(SPANS[0]); w++) {
         for (unsigned long seed = 0; seed < 4; seed++) {
-            Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, SPANS[w].start, 7, PLAN_CADENCE_PAC, seed};
+            Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, SPANS[w].start, 7, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
             Fixture fixture = build(&scenario, false);
             PlanNote notes[3];
             Rational position = fraction(0, 1);

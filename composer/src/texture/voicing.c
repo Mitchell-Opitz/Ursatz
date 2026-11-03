@@ -210,9 +210,9 @@ static void limit_cadence_soprano(const PiecePlan *plan, VoicingContext *out) {
         if (constraint->kind != PLAN_CONSTRAINT_CADENCE) {
             continue;
         }
-        if (constraint->params.cadence == PLAN_CADENCE_PAC) {
+        if (constraint->params.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC) {
             out->soprano_mask[last] = 1u << out->key.tonic_pitch_class;
-        } else if (constraint->params.cadence == PLAN_CADENCE_IAC) {
+        } else if (constraint->params.cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
             out->soprano_mask[last] = 1u << ((out->key.tonic_pitch_class + (out->key.mode == PLAN_MODE_MINOR ? 3 : 4)) % 12);
         }
     }

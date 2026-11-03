@@ -264,17 +264,17 @@ static GrowResult from_plan(PlanResult result) {
 }
 
 /* Whether half of the theme has room for a cadence at all. */
-static bool half_fits(size_t bars, size_t cells_per_bar, PlanCadenceType cadence) {
+static bool half_fits(size_t bars, size_t cells_per_bar, CadenceType cadence) {
     size_t cells = bars / 2 * cells_per_bar;
     /* A cadential progression has no opening tonic, so it needs one cell fewer than the phrase model. */
     return cells + 1 >= harmony_phrase_room_cells(cadence, cells_per_bar);
 }
 
 /* Whether an antecedent can end in `first` below a theme that ends in `last`: weak, and weaker. */
-static bool cadences_ordered(PlanCadenceType first, PlanCadenceType last) {
-    return (first == PLAN_CADENCE_HC || first == PLAN_CADENCE_IAC) &&
-           harmony_cadence_strength(harmony_cadence_type_of(first)) <
-               harmony_cadence_strength(harmony_cadence_type_of(last));
+static bool cadences_ordered(CadenceType first, CadenceType last) {
+    return (first == CADENCE_TYPE_HALF || first == CADENCE_TYPE_IMPERFECT_AUTHENTIC) &&
+           harmony_cadence_strength(first) <
+               harmony_cadence_strength(last);
 }
 
 bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *accompaniment) {
@@ -290,12 +290,12 @@ bool grow_accompaniment_valid(const PlanMeter *meter, const PlanAccompaniment *a
 }
 
 bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePairing *pairing,
-                          PlanCadenceType cadence, PlanCadenceType first) {
+                          CadenceType cadence, CadenceType first) {
     size_t cells_per_bar;
     bool antecedent = pairing->beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
     return grow_cells_per_bar(meter, &cells_per_bar) && (bars == 4 || bars == 8) &&
            grow_pairing_archetype(pairing) >= 0 &&
-           (cadence == PLAN_CADENCE_PAC || cadence == PLAN_CADENCE_IAC || cadence == PLAN_CADENCE_HC) &&
+           (cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC || cadence == CADENCE_TYPE_HALF) &&
            half_fits(bars, cells_per_bar, cadence) &&
            (!antecedent || (cadences_ordered(first, cadence) && half_fits(bars, cells_per_bar, first)));
 }
@@ -349,7 +349,7 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     *out = NULL;
     /* An antecedent ends in a weak cadence, HC unless the request says IAC, and the theme in a stronger one. */
     bool antecedent = request->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT;
-    PlanCadenceType first = request->first_cadence == PLAN_CADENCE_PAC ? PLAN_CADENCE_HC : request->first_cadence;
+    CadenceType first = request->first_cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? CADENCE_TYPE_HALF : request->first_cadence;
     int archetype = grow_pairing_archetype(&request->pairing);
     /* An accompaniment motive makes the accompaniment: pattern MOTIVE, naming the node "acc". */
     const Motive *accompaniment_motive = request->accompaniment_motive;

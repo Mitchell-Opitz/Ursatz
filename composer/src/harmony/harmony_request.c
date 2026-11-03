@@ -421,7 +421,7 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool prolonga
         return false;
     }
     if (prolongation) {
-        request.cadence = PLAN_CADENCE_HC;
+        request.cadence = CADENCE_TYPE_HALF;
     } else {
         if (!harmony_find_constraint(plan, target, request.owner, PLAN_CONSTRAINT_CADENCE, &constraint)) {
             return false;

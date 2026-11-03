@@ -27,7 +27,7 @@ typedef struct {
     PlanKeyMode mode;
     int tonic;
     int bars;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     unsigned long seed;
 } Scenario;
 
@@ -239,19 +239,21 @@ static void check_bass(const Fixture *fixture, const Scenario *scenario, const H
     int tonic = scale_pc(scenario->mode, scenario->tonic, 1);
     int dominant = scale_pc(scenario->mode, scenario->tonic, 5);
     switch (scenario->cadence) {
-    case PLAN_CADENCE_PAC:
-    case PLAN_CADENCE_IAC:
+    case CADENCE_TYPE_PERFECT_AUTHENTIC:
+    case CADENCE_TYPE_IMPERFECT_AUTHENTIC:
         assert(last_pc[count - 2] == dominant && last_pc[count - 1] == tonic);
         break;
-    case PLAN_CADENCE_HC:
+    case CADENCE_TYPE_HALF:
         assert(last_pc[count - 1] == dominant);
         break;
-    case PLAN_CADENCE_DC:
+    case CADENCE_TYPE_DECEPTIVE:
         assert(last_pc[count - 2] == dominant && last_pc[count - 1] == scale_pc(scenario->mode, scenario->tonic, 6));
         break;
-    case PLAN_CADENCE_PC:
+    case CADENCE_TYPE_PLAGAL:
         assert(last_pc[count - 2] == scale_pc(scenario->mode, scenario->tonic, 4) && last_pc[count - 1] == tonic);
         break;
+    default:
+        assert(false);
     }
 }
 
@@ -313,8 +315,8 @@ static void test_sweep(void) {
     static const int meters[4][2] = {{2, 4}, {3, 4}, {4, 4}, {6, 8}};
     static const int tonics[4] = {0, 1, 6, 10};
     static const int bars[2] = {5, 8};
-    static const PlanCadenceType cadences[5] = {PLAN_CADENCE_PAC, PLAN_CADENCE_IAC, PLAN_CADENCE_HC, PLAN_CADENCE_DC,
-                                                PLAN_CADENCE_PC};
+    static const CadenceType cadences[5] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE,
+                                                CADENCE_TYPE_PLAGAL};
     HarmonyBassParams plain = harmony_bass_params_default();
     HarmonyBassParams split = harmony_bass_params_default();
     plain.subdivision = 0;
@@ -352,7 +354,7 @@ static void test_subdivision_and_stepwise(void) {
     size_t plain_notes = 0;
     size_t split_notes = 0;
     for (unsigned long seed = 0; seed < 6; seed++) {
-        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, PLAN_CADENCE_PAC, seed};
+        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
         for (int which = 0; which < 2; which++) {
             Fixture fixture = build(&scenario, true);
             FillOutcome outcome = run(&fixture, seed, true, false, false, NULL, false);
@@ -383,7 +385,7 @@ static void test_subdivision_and_stepwise(void) {
 
 /* A range no octave of some chord's bass member fits leaves the span open: no valid candidate. */
 static void test_unsatisfiable_range(void) {
-    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, PLAN_CADENCE_PAC, 1};
+    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
     HarmonyBassParams narrow = harmony_bass_params_default();
     narrow.range_low = 40;
     narrow.range_high = 41;
@@ -407,7 +409,7 @@ static void test_random_octaves(void) {
     HarmonyBassParams loose = harmony_bass_params_default();
     loose.stepwise = 0;
     for (unsigned long seed = 0; seed < 10; seed++) {
-        Scenario scenario = {4, 4, PLAN_MODE_MINOR, 3, 8, PLAN_CADENCE_HC, seed};
+        Scenario scenario = {4, 4, PLAN_MODE_MINOR, 3, 8, CADENCE_TYPE_HALF, seed};
         Fixture fixture = build(&scenario, true);
         FillOutcome outcome = run(&fixture, seed, true, false, false, NULL, false);
         assert(outcome.status == FILL_STATUS_COMPLETE);
@@ -428,7 +430,7 @@ static void test_random_octaves(void) {
 
 /* Builds a plan with a Given bass of one note a bar over an open harmony span, runs the operators. */
 static Fixture octave_fixture(PlanKeyMode mode, const int *pitches, int count, bool cadence_constraint) {
-    Scenario scenario = {4, 4, mode, 0, count, PLAN_CADENCE_PAC, 0};
+    Scenario scenario = {4, 4, mode, 0, count, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
     Fixture fixture = build(&scenario, cadence_constraint);
     /* The note after the phrase is not wanted here. */
     for (int i = 0; i < count; i++) {

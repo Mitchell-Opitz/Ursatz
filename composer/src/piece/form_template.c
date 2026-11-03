@@ -43,7 +43,7 @@ static const PlanThemePairing HYBRID_CBI = {PLAN_THEME_BEGINNING_COMPOUND_BASIC_
 
 /* Adds a section made from m0 itself that returns none. */
 static FormTemplateSection *add_section(FormTemplate *out, const char *letter, const char *name, size_t bars,
-                                        PlanThemePairing pairing, PlanCadenceType cadence) {
+                                        PlanThemePairing pairing, CadenceType cadence) {
     FormTemplateSection *section = &out->sections[out->section_count++];
     memset(section, 0, sizeof(*section));
     snprintf(section->letter, sizeof(section->letter), "%s", letter);
@@ -76,8 +76,8 @@ static bool binary(size_t bars, FormTemplate *out) {
         return false;
     }
     size_t half = bars / 2;
-    add_section(out, "A", "A", half, SENTENCE, PLAN_CADENCE_PAC);
-    contrast_motive(add_section(out, "B", "B", half, SENTENCE, PLAN_CADENCE_PAC));
+    add_section(out, "A", "A", half, SENTENCE, CADENCE_TYPE_PERFECT_AUTHENTIC);
+    contrast_motive(add_section(out, "B", "B", half, SENTENCE, CADENCE_TYPE_PERFECT_AUTHENTIC));
     return true;
 }
 
@@ -86,9 +86,9 @@ static bool rounded_binary(size_t bars, FormTemplate *out) {
         return false;
     }
     size_t short_bars = bars == 16 ? 4 : 8;
-    add_section(out, "A", "A", 8, SENTENCE, PLAN_CADENCE_PAC);
-    contrast_motive(add_section(out, "B", "B", short_bars, HYBRID_CBI, PLAN_CADENCE_HC));
-    returns_to(out, add_section(out, "A'", "A'", short_bars, SENTENCE, PLAN_CADENCE_PAC), 0, PLAN_RETURN_EXACT);
+    add_section(out, "A", "A", 8, SENTENCE, CADENCE_TYPE_PERFECT_AUTHENTIC);
+    contrast_motive(add_section(out, "B", "B", short_bars, HYBRID_CBI, CADENCE_TYPE_HALF));
+    returns_to(out, add_section(out, "A'", "A'", short_bars, SENTENCE, CADENCE_TYPE_PERFECT_AUTHENTIC), 0, PLAN_RETURN_EXACT);
     return true;
 }
 
@@ -97,9 +97,9 @@ static bool ternary(size_t bars, FormTemplate *out) {
         return false;
     }
     size_t third = bars / 3;
-    add_section(out, "A", "A", third, PERIOD, PLAN_CADENCE_PAC);
-    contrast_motive(add_section(out, "B", "B", third, SENTENCE, PLAN_CADENCE_PAC));
-    returns_to(out, add_section(out, "A", "A return", third, PERIOD, PLAN_CADENCE_PAC), 0, PLAN_RETURN_EXACT);
+    add_section(out, "A", "A", third, PERIOD, CADENCE_TYPE_PERFECT_AUTHENTIC);
+    contrast_motive(add_section(out, "B", "B", third, SENTENCE, CADENCE_TYPE_PERFECT_AUTHENTIC));
+    returns_to(out, add_section(out, "A", "A return", third, PERIOD, CADENCE_TYPE_PERFECT_AUTHENTIC), 0, PLAN_RETURN_EXACT);
     return true;
 }
 
@@ -123,13 +123,13 @@ static bool variations(size_t bars, size_t count, FormTemplate *out) {
     if (count < 1 || count > VARIATIONS_MAX || (bars != 0 && bars != 8 * (1 + count))) {
         return false;
     }
-    add_section(out, "T", "theme", 8, PERIOD, PLAN_CADENCE_PAC);
+    add_section(out, "T", "theme", 8, PERIOD, CADENCE_TYPE_PERFECT_AUTHENTIC);
     for (size_t k = 1; k <= count; k++) {
         char letter[PLAN_SECTION_LETTER_MAX];
         char name[FORM_TEMPLATE_NAME_MAX];
         snprintf(letter, sizeof(letter), "V%zu", k);
         snprintf(name, sizeof(name), "variation %zu", k);
-        FormTemplateSection *section = add_section(out, letter, name, 8, PERIOD, PLAN_CADENCE_PAC);
+        FormTemplateSection *section = add_section(out, letter, name, 8, PERIOD, CADENCE_TYPE_PERFECT_AUTHENTIC);
         bool odd = k % 2 == 1;
         returns_to(out, section, 0, odd ? PLAN_RETURN_ORNAMENT : PLAN_RETURN_REHARMONIZE);
         section->motive = odd ? PLAN_TRANSFORM_DIMINISHED : PLAN_TRANSFORM_INTERVAL_CHANGED;
@@ -144,12 +144,12 @@ static bool variations(size_t bars, size_t count, FormTemplate *out) {
  */
 static bool loop(size_t bars, FormTemplate *out) {
     if (bars == 8) {
-        add_section(out, "A", "loop", 8, SENTENCE, PLAN_CADENCE_HC);
+        add_section(out, "A", "loop", 8, SENTENCE, CADENCE_TYPE_HALF);
         return true;
     }
     if (bars == 16) {
-        add_section(out, "A", "A", 8, SENTENCE, PLAN_CADENCE_IAC);
-        contrast_motive(add_section(out, "B", "B", 8, SENTENCE, PLAN_CADENCE_HC));
+        add_section(out, "A", "A", 8, SENTENCE, CADENCE_TYPE_IMPERFECT_AUTHENTIC);
+        contrast_motive(add_section(out, "B", "B", 8, SENTENCE, CADENCE_TYPE_HALF));
         return true;
     }
     return false;
@@ -185,7 +185,7 @@ static bool layered(size_t bars, size_t count, FormTemplate *out) {
         char name[FORM_TEMPLATE_NAME_MAX];
         snprintf(letter, sizeof(letter), "L%zu", k);
         snprintf(name, sizeof(name), "layer %zu", k);
-        FormTemplateSection *section = add_section(out, letter, name, 8, SENTENCE, PLAN_CADENCE_HC);
+        FormTemplateSection *section = add_section(out, letter, name, 8, SENTENCE, CADENCE_TYPE_HALF);
         if (k > 1) {
             returns_to(out, section, 0, PLAN_RETURN_EXACT);
         }

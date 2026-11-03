@@ -202,7 +202,7 @@ int main(void) {
     PlanConstraint length = {PLAN_CONSTRAINT_LENGTH_BARS, {0}};
     length.params.bars = 8;
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
-    cadence.params.cadence = PLAN_CADENCE_PAC;
+    cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PlanConstraint motive_ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
     motive_ref.params.motive.motive = m1;
     motive_ref.params.motive.transform = PLAN_TRANSFORM_INVERTED;
@@ -210,7 +210,7 @@ int main(void) {
     assert(plan_node_add_constraint(plan, phrase, &cadence) == PLAN_OK);
     assert(plan_node_add_constraint(plan, fragment, &motive_ref) == PLAN_OK);
     assert(plan_node_constraint_count(plan, phrase) == 2);
-    assert(plan_node_constraint_at(plan, phrase, 1)->params.cadence == PLAN_CADENCE_PAC);
+    assert(plan_node_constraint_at(plan, phrase, 1)->params.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
     assert(plan_node_constraint_at(plan, fragment, 0)->params.motive.motive == m1);
     assert(plan_node_constraint_at(plan, phrase, 2) == NULL);
     assert(plan_lane_span_add_constraint(plan, harmony_two, &motive_ref) == PLAN_OK);

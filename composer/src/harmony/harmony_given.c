@@ -297,7 +297,7 @@ bool harmony_given_join(const PhraseRequest *request, const PhraseChord *chords,
         joined.start = start;
         joined.offset = (Rational){0, 1};
     }
-    HeardPhrase phrase = {sequence, total, request->mode, PLAN_CADENCE_HC, request->cells_per_bar, request->cell_length,
+    HeardPhrase phrase = {sequence, total, request->mode, CADENCE_TYPE_HALF, request->cells_per_bar, request->cell_length,
                           true, NULL, true, false, NULL, NULL, false, &joined};
     SegmentSet *set = harmony_segments_create(&phrase);
     bool ok = set != NULL;

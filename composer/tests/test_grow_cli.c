@@ -467,8 +467,8 @@ static GrowRequest library_request(const Motive *basic, PlanThemeBeginning begin
     request.bars = 8;
     request.pairing.beginning = beginning;
     request.pairing.ending = ending;
-    request.cadence = PLAN_CADENCE_PAC;
-    request.first_cadence = PLAN_CADENCE_HC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
+    request.first_cadence = CADENCE_TYPE_HALF;
     return request;
 }
 

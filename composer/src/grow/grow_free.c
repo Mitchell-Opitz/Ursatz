@@ -39,7 +39,7 @@ struct GrowFreeSpec {
     PlanSpan span[MAX_IDEAS];           /* where each lies */
     MotiveDevSpec dev[MAX_IDEAS];       /* its development of the motive; [0] is unused: the first idea is exact */
     Motive developed[MAX_IDEAS];        /* what the development makes, to be judged */
-    PlanCadenceType cadence;
+    CadenceType cadence;
     PlanHarmonyShapeKind shape;
     int cap;                            /* max_cells_per_chord of the harmony; 0 for none */
     Motive source;
@@ -151,7 +151,7 @@ static bool read_free(const PiecePlan *plan, FillTarget target, FreeRequest *out
     }
     LaneSpanId lane[2];
     if (!cadence ||
-        (theme->cadence != PLAN_CADENCE_PAC && theme->cadence != PLAN_CADENCE_IAC && theme->cadence != PLAN_CADENCE_HC) ||
+        (theme->cadence != CADENCE_TYPE_PERFECT_AUTHENTIC && theme->cadence != CADENCE_TYPE_IMPERFECT_AUTHENTIC && theme->cadence != CADENCE_TYPE_HALF) ||
         plan_lane_find(plan, PLAN_LANE_METER, 0, theme->span, lane, 2) != 1 ||
         !plan_span_contains(plan_lane_span_span(plan, lane[0]), theme->span)) {
         return false;

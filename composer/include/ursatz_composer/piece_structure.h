@@ -52,7 +52,7 @@ typedef struct {
     size_t beats;                /* the length, in beats of the meter; at least 1 */
     Rational pickup;             /* the anacrusis before the section; 0 for none */
     bool has_cadence;            /* false: piece_structure_default_cadences decides */
-    PlanCadenceType cadence;
+    CadenceType cadence;
     PieceFillKind fill;
     const Motive *motive;        /* motif: the section's own motive, else the piece's basic motive */
     bool has_into;               /* motif: a theme section's archetype */

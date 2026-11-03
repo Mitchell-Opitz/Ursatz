@@ -35,7 +35,7 @@ typedef struct {
     int tonic;
     int bars;        /* the phrase, in bars */
     int before_bars; /* bars at its start held by a Given tonic chord, so the target is not at the phrase start */
-    PlanCadenceType cadence;
+    CadenceType cadence;
     unsigned long seed;
 } Scenario;
 
@@ -460,7 +460,7 @@ static void test_schema_sweep(void) {
                     /* As an opening, as a continuation, and filling the end of a phrase exactly. */
                     for (int kind = 0; kind < 6; kind++) {
                         Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
-                                             tonics[t], 8, kind == 0 ? 0 : 1, kind == 5 ? PLAN_CADENCE_DC : PLAN_CADENCE_PAC,
+                                             tonics[t], 8, kind == 0 ? 0 : 1, kind == 5 ? CADENCE_TYPE_DECEPTIVE : CADENCE_TYPE_PERFECT_AUTHENTIC,
                                              (unsigned long)(kind + t)};
                         if (kind >= 2) {
                             scenario.bars = 1 + kind - 1; /* a target of 1 to 4 bars */
@@ -510,7 +510,7 @@ static void test_unfittable(void) {
     Operators operators = {&params, NULL, false, false};
 
     /* Four stages need two bars of 4/4; a target of one bar is too short. */
-    Scenario short_target = {4, 4, PLAN_MODE_MAJOR, 0, 2, 1, PLAN_CADENCE_PAC, 0};
+    Scenario short_target = {4, 4, PLAN_MODE_MAJOR, 0, 2, 1, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
     Fixture fixture = build(&short_target);
     FillOutcome outcome = run(&fixture, 0, &operators, NULL);
     assert(outcome.status == FILL_STATUS_STUCK);
@@ -520,7 +520,7 @@ static void test_unfittable(void) {
     plan_destroy(fixture.plan);
 
     /* 3/4 has one chord position a bar, all strong. */
-    Scenario waltz = {3, 4, PLAN_MODE_MAJOR, 0, 8, 0, PLAN_CADENCE_PAC, 0};
+    Scenario waltz = {3, 4, PLAN_MODE_MAJOR, 0, 8, 0, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
     fixture = build(&waltz);
     outcome = run(&fixture, 0, &operators, NULL);
     assert(outcome.status == FILL_STATUS_STUCK);
@@ -529,14 +529,14 @@ static void test_unfittable(void) {
     plan_destroy(fixture.plan);
 
     /* An opening gambit is not offered after the start, and no schema when none is enabled. */
-    Scenario later = {4, 4, PLAN_MODE_MAJOR, 0, 8, 1, PLAN_CADENCE_PAC, 0};
+    Scenario later = {4, 4, PLAN_MODE_MAJOR, 0, 8, 1, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
     fixture = build(&later);
     outcome = run(&fixture, 0, &operators, NULL);
     assert(outcome.status == FILL_STATUS_STUCK && stuck_reason(&fixture, &outcome) == FILL_STUCK_ALL_REJECTED);
     fill_outcome_destroy(&outcome);
     plan_destroy(fixture.plan);
     params.schemas = 0;
-    Scenario opening = {4, 4, PLAN_MODE_MAJOR, 0, 8, 0, PLAN_CADENCE_PAC, 0};
+    Scenario opening = {4, 4, PLAN_MODE_MAJOR, 0, 8, 0, CADENCE_TYPE_PERFECT_AUTHENTIC, 0};
     fixture = build(&opening);
     outcome = run(&fixture, 0, &operators, NULL);
     assert(outcome.status == FILL_STATUS_STUCK && stuck_reason(&fixture, &outcome) == FILL_STUCK_ALL_REJECTED);
@@ -550,7 +550,7 @@ static int schemas_seen;
 static int sequences_seen;
 
 static void test_phrases_keep_their_cadence(void) {
-    static const PlanCadenceType cadences[4] = {PLAN_CADENCE_PAC, PLAN_CADENCE_IAC, PLAN_CADENCE_HC, PLAN_CADENCE_DC};
+    static const CadenceType cadences[4] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE};
     static const int tonics[2] = {0, 6};
     HarmonySchemaParams schema = harmony_schema_params_default();
     HarmonySequenceParams sequence = harmony_sequence_params_default();
@@ -592,10 +592,10 @@ static void test_phrases_keep_their_cadence(void) {
                         assert(harmony_hear_cadence(fixture.plan, fixture.phrase, scenario.mode, scenario.cadence,
                                                     &heard, &at_end));
                         assert(at_end);
-                        assert((scenario.cadence == PLAN_CADENCE_PAC && heard == CADENCE_TYPE_PERFECT_AUTHENTIC) ||
-                               (scenario.cadence == PLAN_CADENCE_IAC && heard == CADENCE_TYPE_IMPERFECT_AUTHENTIC) ||
-                               (scenario.cadence == PLAN_CADENCE_HC && heard == CADENCE_TYPE_HALF) ||
-                               (scenario.cadence == PLAN_CADENCE_DC && heard == CADENCE_TYPE_DECEPTIVE));
+                        assert((scenario.cadence == CADENCE_TYPE_PERFECT_AUTHENTIC && heard == CADENCE_TYPE_PERFECT_AUTHENTIC) ||
+                               (scenario.cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC && heard == CADENCE_TYPE_IMPERFECT_AUTHENTIC) ||
+                               (scenario.cadence == CADENCE_TYPE_HALF && heard == CADENCE_TYPE_HALF) ||
+                               (scenario.cadence == CADENCE_TYPE_DECEPTIVE && heard == CADENCE_TYPE_DECEPTIVE));
                         /* Standard-harmony passes it: strictly when every inverted chord has its reason (a schema's
                            has), and for the phrase model alone when a sequence made some. */
                         if (used_sequence) {
@@ -697,7 +697,7 @@ static void test_sequence_sweep(void) {
                 for (int t = 0; t < 2; t++) {
                     for (unsigned long seed = 0; seed < 4; seed++) {
                         Scenario scenario = {meters[m][0], meters[m][1], mode ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR,
-                                             tonics[t], 9, 1, PLAN_CADENCE_PAC, seed};
+                                             tonics[t], 9, 1, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
                         FillConfig config;
                         memset(&config, 0, sizeof(config));
                         config.seed = seed;

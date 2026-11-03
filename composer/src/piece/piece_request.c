@@ -16,7 +16,7 @@
 /* The placeholder note an open melody span holds until motive-invent writes it. */
 #define INVENT_PLACEHOLDER 60
 /* The weak cadence an antecedent ends in. */
-#define ANTECEDENT_CADENCE PLAN_CADENCE_HC
+#define ANTECEDENT_CADENCE CADENCE_TYPE_HALF
 
 const char *piece_result_name(PieceResult result) {
     switch (result) {

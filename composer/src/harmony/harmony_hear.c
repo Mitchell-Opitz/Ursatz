@@ -14,22 +14,6 @@
 
 #define HEARD_KEY_REF "key"
 
-CadenceType harmony_cadence_type_of(PlanCadenceType type) {
-    switch (type) {
-    case PLAN_CADENCE_PAC:
-        return CADENCE_TYPE_PERFECT_AUTHENTIC;
-    case PLAN_CADENCE_IAC:
-        return CADENCE_TYPE_IMPERFECT_AUTHENTIC;
-    case PLAN_CADENCE_HC:
-        return CADENCE_TYPE_HALF;
-    case PLAN_CADENCE_DC:
-        return CADENCE_TYPE_DECEPTIVE;
-    case PLAN_CADENCE_PC:
-        return CADENCE_TYPE_PLAGAL;
-    }
-    return CADENCE_TYPE_UNKNOWN;
-}
-
 /*
  * The chord as the recognizer wants it, a set of intervals above the root. The recognizer reads
  * the quality from the intervals, so each chord of a key gets the quality it has there: the
@@ -125,11 +109,11 @@ static int bass_degree_of(PlanKeyMode mode, const PhraseChord *chord) {
 static int implied_soprano(const HeardPhrase *phrase, size_t i) {
     size_t last = phrase->count - 1;
     switch (phrase->requested) {
-    case PLAN_CADENCE_PAC:
+    case CADENCE_TYPE_PERFECT_AUTHENTIC:
         return i == last ? 1 : 0;
-    case PLAN_CADENCE_IAC:
+    case CADENCE_TYPE_IMPERFECT_AUTHENTIC:
         return i == last ? 3 : 0;
-    case PLAN_CADENCE_PC:
+    case CADENCE_TYPE_PLAGAL:
         return i == last || (last >= 2 && i == last - 2) ? 1 : 0;
     default:
         return 0;
@@ -352,7 +336,7 @@ bool harmony_read_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, P
     return harmony_read_lane_keys(plan, span, mode, chords, count, metre, NULL, NULL);
 }
 
-bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
+bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, CadenceType requested,
                           CadenceType *heard, bool *at_end) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];
@@ -377,7 +361,7 @@ bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMod
         found != count) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, modes, keys, false, &metre};
+    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, modes, keys, false, &metre};
     SegmentSet *set = segments_create(&phrase, soprano);
     if (!set) {
         return false;

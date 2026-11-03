@@ -331,7 +331,7 @@ bool harmony_prolong_checker(const PiecePlan *plan, FillTarget target, const Fil
     }
     /* The recognizer is told no soprano (a half cadence requested implies none), so any cadence it hears is
        heard from the harmony and the beats alone. */
-    HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode, PLAN_CADENCE_HC,
+    HeardPhrase phrase = {progression->chords, progression->count, progression->request.mode, CADENCE_TYPE_HALF,
                           progression->request.cells_per_bar, progression->request.cell_length, true, NULL, true,
                           true, NULL, NULL, false, &progression->request.metre};
     PhraseVerdict verdict;

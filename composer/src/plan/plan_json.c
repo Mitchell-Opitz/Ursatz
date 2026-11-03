@@ -28,7 +28,6 @@ static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant",
 static const char *const CONSTRAINT_KINDS[] = {"length_bars", "cadence", "motive_ref", "key", "archetype", "embellish", "schema",
                                                   "material", "harmony_shape", "theme_pairing", "accompaniment", "voicing", "counterpoint",
                                                   "return", "layers", "section_letter", "invent_motive", "style", "source", "pickup", "piece_part", "free_phrase", "hold", "seam", "motive_tones"};
-static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
                                               "interval_changed", "liquidated"};
@@ -146,9 +145,12 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     case PLAN_CONSTRAINT_LENGTH_BARS:
         ok = ok && plan_json_add(object, "bars", json_number(constraint->params.bars));
         break;
-    case PLAN_CONSTRAINT_CADENCE:
-        ok = ok && plan_json_add(object, "type", cJSON_CreateString(CADENCE_NAMES[constraint->params.cadence]));
+    case PLAN_CONSTRAINT_CADENCE: {
+        size_t cadence_index = 0;
+        ok = ok && plan_cadence_index(constraint->params.cadence, &cadence_index) &&
+             plan_json_add(object, "type", cJSON_CreateString(plan_cadence_file_names[cadence_index]));
         break;
+    }
     case PLAN_CONSTRAINT_MOTIVE_REF:
         ok = ok && plan_json_add(object, "motive", json_number((long)plan_node_rank(plan, constraint->params.motive.motive))) &&
              plan_json_add(object, "transform", cJSON_CreateString(TRANSFORM_NAMES[constraint->params.motive.transform])) &&
@@ -958,10 +960,10 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         out->params.bars = (int)number_value;
         return true;
     case PLAN_CONSTRAINT_CADENCE:
-        if (!read_enum_member(reader, item, path, "type", CADENCE_NAMES, COUNT_OF(CADENCE_NAMES), &value)) {
+        if (!read_enum_member(reader, item, path, "type", plan_cadence_file_names, PLAN_CADENCE_COUNT, &value)) {
             return false;
         }
-        out->params.cadence = (PlanCadenceType)value;
+        out->params.cadence = plan_cadence_types[value];
         return true;
     case PLAN_CONSTRAINT_MOTIVE_REF: {
         long semitones;

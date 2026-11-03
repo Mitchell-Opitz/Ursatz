@@ -59,10 +59,10 @@ unsigned melody_cadence_mask(const MelodyContext *context) {
     unsigned tonic = 1u << context->key.tonic_pitch_class;
     unsigned third = 1u << ((context->key.tonic_pitch_class + (context->key.mode == PLAN_MODE_MINOR ? 3 : 4)) % 12);
     switch (context->cadence) {
-    case PLAN_CADENCE_PAC:
-    case PLAN_CADENCE_PC:
+    case CADENCE_TYPE_PERFECT_AUTHENTIC:
+    case CADENCE_TYPE_PLAGAL:
         return tonic;
-    case PLAN_CADENCE_IAC:
+    case CADENCE_TYPE_IMPERFECT_AUTHENTIC:
         return third;
     default:
         return 0xFFFu;

@@ -1,5 +1,28 @@
 #include "util/plan_util.h"
 
+const CadenceType plan_cadence_types[PLAN_CADENCE_COUNT] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC,
+                                                            CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE,
+                                                            CADENCE_TYPE_PLAGAL};
+const char *const plan_cadence_names[PLAN_CADENCE_COUNT] = {"PAC", "IAC", "HC", "DC", "PC"};
+const char *const plan_cadence_file_names[PLAN_CADENCE_COUNT] = {"pac", "iac", "hc", "dc", "pc"};
+
+bool plan_cadence_index(CadenceType type, size_t *index) {
+    for (size_t i = 0; i < PLAN_CADENCE_COUNT; i++) {
+        if (plan_cadence_types[i] == type) {
+            if (index) {
+                *index = i;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+const char *plan_cadence_name(CadenceType type) {
+    size_t index;
+    return plan_cadence_index(type, &index) ? plan_cadence_names[index] : "";
+}
+
 PlanResult plan_result_of_rational(RationalResult result) {
     if (result == RATIONAL_OK) {
         return PLAN_OK;

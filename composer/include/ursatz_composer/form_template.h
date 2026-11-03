@@ -60,7 +60,7 @@ typedef struct {
     char name[FORM_TEMPLATE_NAME_MAX];    /* the section node's name: "A", "theme", "variation 1", "layer 1" */
     size_t bars;                          /* 4 or 8 */
     PlanThemePairing pairing;
-    PlanCadenceType cadence;              /* the cadence it ends in */
+    CadenceType cadence;              /* the cadence it ends in */
     size_t returns;                       /* the index of the section it returns, or FORM_TEMPLATE_NO_RETURN */
     PlanReturnVariation variation;        /* how it varies the section it returns; read only when it returns one */
     PlanMotiveTransform motive;           /* how its motive is made from m0; PLAN_TRANSFORM_NONE for m0 itself */

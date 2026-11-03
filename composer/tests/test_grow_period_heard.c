@@ -107,7 +107,7 @@ static void hear_one(const Scenario *scenario, size_t bars, unsigned long seed, 
     request.bars = bars;
     request.pairing.beginning = beginning;
     request.pairing.ending = ending;
-    request.cadence = PLAN_CADENCE_PAC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     memset(&config, 0, sizeof(config));
     config.seed = seed;
     assert(grow_build_plan(&request, &plan) == GROW_OK);

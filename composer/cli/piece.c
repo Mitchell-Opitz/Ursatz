@@ -880,7 +880,7 @@ typedef struct {
     const char *source;
     Rational start;
     bool has_cadence;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     const char *heard; /* the cadence the Analyzer heard, NULL without --check */
 } Row;
 
@@ -918,7 +918,7 @@ static size_t collect_rows(const Request *request, const Version *version, Row *
         }
         row->start = plan_node_span(plan, id).start;
         row->has_cadence = cadence != NULL;
-        row->cadence = cadence ? cadence->params.cadence : PLAN_CADENCE_PAC;
+        row->cadence = cadence ? cadence->params.cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
         if (cadence && check) {
             size_t seen = 0;
             for (size_t i = 0; i < check->item_count; i++) {

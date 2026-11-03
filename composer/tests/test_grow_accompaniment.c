@@ -65,7 +65,7 @@ static GrowRequest make_request(const Scenario *scenario, const Motive *motive, 
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
-    request.cadence = PLAN_CADENCE_PAC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     request.has_accompaniment = true;
     request.accompaniment = accompaniment;
     return request;

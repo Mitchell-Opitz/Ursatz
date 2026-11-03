@@ -36,7 +36,7 @@ typedef struct {
     PlanKeyMode mode;
     int tonic;
     int bars;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     unsigned long seed;
 } Scenario;
 
@@ -417,13 +417,13 @@ static void check_melody(const Fixture *fixture, const Scenario *scenario, const
 
     /* The cadence arrives on its stable tone, and the leading tone resolves to the tonic at an authentic one. */
     int last = notes[count - 1].pitch % 12;
-    if (scenario->cadence == PLAN_CADENCE_PAC) {
+    if (scenario->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC) {
         assert(last == scenario->tonic);
     }
-    if (scenario->cadence == PLAN_CADENCE_IAC) {
+    if (scenario->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
         assert(last == (scenario->tonic + (scenario->mode == PLAN_MODE_MINOR ? 3 : 4)) % 12);
     }
-    if (scenario->cadence == PLAN_CADENCE_PAC || scenario->cadence == PLAN_CADENCE_IAC) {
+    if (scenario->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC || scenario->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
         PlanSpan final_chord = plan_lane_span_span(fixture->plan, chords[chord_count - 1]);
         Rational before = final_chord.start;
         size_t from = count;
@@ -524,8 +524,8 @@ static void test_sweep(void) {
     static const int meters[4][2] = {{2, 4}, {3, 4}, {4, 4}, {6, 8}};
     static const int tonics[3] = {0, 6, 10};
     static const int bars[2] = {5, 8};
-    static const PlanCadenceType cadences[5] = {PLAN_CADENCE_PAC, PLAN_CADENCE_IAC, PLAN_CADENCE_HC, PLAN_CADENCE_DC,
-                                                PLAN_CADENCE_PC};
+    static const CadenceType cadences[5] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE,
+                                                CADENCE_TYPE_PLAGAL};
     MelodyFillParams params = melody_fill_params_default();
     int total = 0;
     int written = 0;
@@ -557,7 +557,7 @@ static void test_chord_tones_only(void) {
     int written = 0;
     params.nct_types = 0;
     for (unsigned long seed = 0; seed < 12; seed++) {
-        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, PLAN_CADENCE_PAC, seed};
+        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
         written += check_scenario(&scenario, false, &params);
     }
     assert(written > 0);
@@ -565,7 +565,7 @@ static void test_chord_tones_only(void) {
 
 /* A range no placement of the motive fits in leaves the span open: no valid candidate. */
 static void test_unplaceable_motive(void) {
-    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, PLAN_CADENCE_PAC, 1};
+    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
     MelodyFillParams narrow = melody_fill_params_default();
     narrow.range_low = 60;
     narrow.range_high = 61;
@@ -581,7 +581,7 @@ static void test_unplaceable_motive(void) {
 
 /* The melody operator does not apply to a span whose harmony or bass is still open. */
 static void test_needs_harmony_and_bass(void) {
-    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, PLAN_CADENCE_PAC, 1};
+    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, 1};
     Fixture fixture = build(&scenario, false);
     MelodyFillParams params = melody_fill_params_default();
     add_target(&fixture, fixture.source, PLAN_TRANSFORM_NONE);
@@ -681,7 +681,7 @@ static IdeaFixture build_ideas(int beats, int unit, PlanKeyMode mode, int tonic)
     assert(plan_add_lane_span(fixture.plan, fixture.phrase, PLAN_LANE_HARMONY, 0, phrase_span, &payload, &id) ==
            PLAN_OK);
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
-    cadence.params.cadence = PLAN_CADENCE_PAC;
+    cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     assert(plan_lane_span_add_constraint(fixture.plan, id, &cadence) == PLAN_OK);
 
     PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};

@@ -79,8 +79,8 @@ typedef struct {
     PlanKey key;
     PlanMeter meter;
     size_t bars;
-    PlanCadenceType cadence;
-    PlanCadenceType first_cadence;
+    CadenceType cadence;
+    CadenceType first_cadence;
     bool has_accompaniment;
     PlanAccompaniment accompaniment;
     bool has_voicing;
@@ -391,20 +391,20 @@ static int check_options(Options *options) {
         }
         options->bars = bars;
     }
-    options->cadence = PLAN_CADENCE_PAC;
+    options->cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     if (options->cadence_text &&
-        (!cli_parse_cadence(options->cadence_text, &options->cadence) || options->cadence == PLAN_CADENCE_DC ||
-         options->cadence == PLAN_CADENCE_PC)) {
+        (!cli_parse_cadence(options->cadence_text, &options->cadence) || options->cadence == CADENCE_TYPE_DECEPTIVE ||
+         options->cadence == CADENCE_TYPE_PLAGAL)) {
         return cli_fail(CLI_EXIT_USAGE, "--cadence must be PAC, IAC or HC, not '%s'", options->cadence_text);
     }
-    options->first_cadence = PLAN_CADENCE_HC;
+    options->first_cadence = CADENCE_TYPE_HALF;
     if (options->first_cadence_text) {
         if (options->pairing.beginning != PLAN_THEME_BEGINNING_ANTECEDENT) {
             return cli_fail(CLI_EXIT_USAGE, "--first-cadence applies only to a period or a hybrid that begins with an "
                                             "antecedent");
         }
         if (!cli_parse_cadence(options->first_cadence_text, &options->first_cadence) ||
-            (options->first_cadence != PLAN_CADENCE_HC && options->first_cadence != PLAN_CADENCE_IAC)) {
+            (options->first_cadence != CADENCE_TYPE_HALF && options->first_cadence != CADENCE_TYPE_IMPERFECT_AUTHENTIC)) {
             return cli_fail(CLI_EXIT_USAGE, "--first-cadence must be HC or IAC, not '%s'", options->first_cadence_text);
         }
     }

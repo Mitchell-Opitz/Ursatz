@@ -236,7 +236,7 @@ static PiecePlan *sentence_plan(Motive *motive) {
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_PRESENTATION;
     request.pairing.ending = PLAN_THEME_ENDING_CONTINUATION;
-    request.cadence = PLAN_CADENCE_PAC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PiecePlan *plan = NULL;
     assert(grow_build_plan(&request, &plan) == GROW_OK);
     return plan;

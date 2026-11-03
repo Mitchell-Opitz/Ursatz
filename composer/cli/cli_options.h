@@ -40,8 +40,8 @@ const char *cli_key_name(const PlanKey *key, char *out, size_t size);
 bool cli_parse_meter(const char *text, PlanMeter *meter);
 
 /* PAC, IAC, HC, DC or PC, any case. */
-bool cli_parse_cadence(const char *text, PlanCadenceType *cadence);
-const char *cli_cadence_name(PlanCadenceType cadence);
+bool cli_parse_cadence(const char *text, CadenceType *cadence);
+const char *cli_cadence_name(CadenceType cadence);
 
 /* "any", "block", "arpeggiated", "alberti", "oom-pah", "motive", by PlanAccompanimentPattern. */
 const char *cli_accompaniment_name(PlanAccompanimentPattern pattern);

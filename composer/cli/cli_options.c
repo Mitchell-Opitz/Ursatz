@@ -395,20 +395,18 @@ bool cli_parse_meter(const char *text, PlanMeter *meter) {
     return true;
 }
 
-static const char *const CADENCE_NAMES[5] = {"PAC", "IAC", "HC", "DC", "PC"};
-
-bool cli_parse_cadence(const char *text, PlanCadenceType *cadence) {
-    for (int i = 0; i < 5; i++) {
-        if (cli_equals_ignore_case(text, CADENCE_NAMES[i])) {
-            *cadence = (PlanCadenceType)i;
+bool cli_parse_cadence(const char *text, CadenceType *cadence) {
+    for (size_t i = 0; i < PLAN_CADENCE_COUNT; i++) {
+        if (cli_equals_ignore_case(text, plan_cadence_names[i])) {
+            *cadence = plan_cadence_types[i];
             return true;
         }
     }
     return false;
 }
 
-const char *cli_cadence_name(PlanCadenceType cadence) {
-    return CADENCE_NAMES[cadence];
+const char *cli_cadence_name(CadenceType cadence) {
+    return plan_cadence_name(cadence);
 }
 
 unsigned long cli_default_seed(void) {

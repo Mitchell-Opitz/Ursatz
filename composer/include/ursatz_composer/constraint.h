@@ -4,6 +4,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <semantics/cadence_type.h>
+
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/piece_plan.h>
 
@@ -42,14 +44,6 @@ typedef enum {
     PLAN_CONSTRAINT_SEAM,           /* no parameters: on a section node, the bar after the loop's end, a Given copy of the body's first bar (R-171) */
     PLAN_CONSTRAINT_MOTIVE_TONES    /* on a motive node: its base harmony and the tone role of each note (R-215) */
 } PlanConstraintKind;
-
-typedef enum {
-    PLAN_CADENCE_PAC,
-    PLAN_CADENCE_IAC,
-    PLAN_CADENCE_HC,
-    PLAN_CADENCE_DC,
-    PLAN_CADENCE_PC
-} PlanCadenceType;
 
 typedef enum {
     PLAN_TRANSFORM_NONE,
@@ -342,7 +336,7 @@ typedef struct {
     PlanConstraintKind kind;
     union {
         int bars;
-        PlanCadenceType cadence;
+        CadenceType cadence;
         PlanMotiveRef motive;
         PlanKey key;
         PlanArchetype archetype;

@@ -78,8 +78,8 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
     /* It ends in the cadence's tone: the tonic for a perfect authentic cadence, the third for an imperfect one. */
     PlanKey ends_in = request->has_end_change ? request->end_key : request->key;
     int tonic = ends_in.tonic_pitch_class;
-    int want = request->cadence == PLAN_CADENCE_PAC ? tonic
-               : request->cadence == PLAN_CADENCE_IAC ? (tonic + (ends_in.mode == PLAN_MODE_MINOR ? 3 : 4)) % 12
+    int want = request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC ? tonic
+               : request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC ? (tonic + (ends_in.mode == PLAN_MODE_MINOR ? 3 : 4)) % 12
                                                       : -1;
     /* A contrasting idea with a motive of its own is that motive as it is: nothing to draw. */
     bool own_contrast = grow_idea_own(spec, GROW_PLACE_CONSEQUENT_CONTRAST);

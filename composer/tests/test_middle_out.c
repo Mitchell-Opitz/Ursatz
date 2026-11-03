@@ -323,7 +323,7 @@ static void test_give(void) {
 
 /* Whether the last cadence heard in a section is the one planned for it and arrives in its last bar. */
 static bool cadence_as_planned(const PiecePlan *plan, const ComposeHeard *heard) {
-    PlanCadenceType planned = PLAN_CADENCE_PAC;
+    CadenceType planned = CADENCE_TYPE_PERFECT_AUTHENTIC;
     bool has_planned = false;
     for (size_t c = 0; c < plan_node_constraint_count(plan, heard->section) && !has_planned; c++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, heard->section, c);
@@ -341,7 +341,7 @@ static bool cadence_as_planned(const PiecePlan *plan, const ComposeHeard *heard)
     Rational last_bar;
     assert(plan_span_end(section, &end) == PLAN_OK);
     assert(rational_make(end.num - (long)end.den, end.den, &last_bar) == RATIONAL_OK); /* a bar of 4/4 before the end */
-    return (CadenceType)last->type == harmony_cadence_type_of(planned) && rational_cmp(last->arrival, last_bar) >= 0 &&
+    return (CadenceType)last->type == planned && rational_cmp(last->arrival, last_bar) >= 0 &&
            rational_cmp(last->arrival, end) < 0;
 }
 

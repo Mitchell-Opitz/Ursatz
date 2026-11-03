@@ -63,7 +63,7 @@ typedef struct {
     PlanKey key;
     PlanMeter meter;
     long bars;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     unsigned long seed;
     EmbellishLevel embellish;
     bool json;

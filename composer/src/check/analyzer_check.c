@@ -104,9 +104,9 @@ static bool authentic_name(const char *name) {
 }
 
 /* Whether the cadence the Analyzer heard is the one planned: any authentic one for a planned PAC or IAC. */
-static bool cadence_agrees(PlanCadenceType planned, const char *heard) {
-    const char *name = cadence_type_name(harmony_cadence_type_of(planned));
-    if (planned == PLAN_CADENCE_PAC || planned == PLAN_CADENCE_IAC) {
+static bool cadence_agrees(CadenceType planned, const char *heard) {
+    const char *name = cadence_type_name(planned);
+    if (planned == CADENCE_TYPE_PERFECT_AUTHENTIC || planned == CADENCE_TYPE_IMPERFECT_AUTHENTIC) {
         return authentic_name(heard);
     }
     return strcmp(name, heard) == 0;
@@ -123,7 +123,7 @@ static size_t bar_of(long numerator, unsigned long denominator, const PlanMeter 
 
 static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars, const PlanMeter *meter,
                              const AnalysisReport *report, Items *items) {
-    PlanCadenceType planned[MAX_CADENCES];
+    CadenceType planned[MAX_CADENCES];
     size_t count = 0;
     for (size_t i = 0; i < plan_node_constraint_count(plan, section) && count < MAX_CADENCES; i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
@@ -151,7 +151,7 @@ static void compare_cadences(const PiecePlan *plan, NodeId section, size_t bars,
                 agreed = matches;
             }
         }
-        add_item(items, ANALYZER_CHECK_CADENCE, bar, cadence_type_name(harmony_cadence_type_of(planned[i])), heard,
+        add_item(items, ANALYZER_CHECK_CADENCE, bar, cadence_type_name(planned[i]), heard,
                  agreed);
     }
 }
@@ -369,7 +369,7 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
             heard = "none (the piece ends)";
             agreed = true;
         }
-        if (planned->params.cadence == PLAN_CADENCE_HC && !agreed) {
+        if (planned->params.cadence == CADENCE_TYPE_HALF && !agreed) {
             bool last = at_end;
             bool resolved = false;
             for (size_t c = 0; c < report->cadence_count && !resolved; c++) {
@@ -385,7 +385,7 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
                 agreed = true;
             }
         }
-        add_item(items, ANALYZER_CHECK_CADENCE, bar, cadence_type_name(harmony_cadence_type_of(planned->params.cadence)), heard,
+        add_item(items, ANALYZER_CHECK_CADENCE, bar, cadence_type_name(planned->params.cadence), heard,
                  agreed);
     }
 }

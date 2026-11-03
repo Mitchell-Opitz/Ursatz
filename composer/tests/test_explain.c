@@ -77,7 +77,7 @@ static PiecePlan *period_a_minor(Motive *motive) {
     request.bars = 8;
     request.pairing.beginning = PLAN_THEME_BEGINNING_ANTECEDENT;
     request.pairing.ending = PLAN_THEME_ENDING_CONSEQUENT;
-    request.cadence = PLAN_CADENCE_PAC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     assert(grow_build_plan(&request, &plan) == GROW_OK);
     return plan;
 }

@@ -37,10 +37,6 @@ static void ask(Soft *soft, bool holds) {
     soft->total++;
 }
 
-static CadenceType cadence_of(PlanCadenceType cadence) {
-    return harmony_cadence_type_of(cadence);
-}
-
 /* The rules of a continuation: it fragments the basic idea, the fragments in their span and in their notes. */
 static const char *judge_continuation(const GrowThemeSpec *spec) {
     Rational bar = grow_bar_length(&spec->meter);
@@ -121,11 +117,11 @@ static const char *judge_period(const GrowThemeSpec *spec, Soft *soft) {
     if (!standard_form_period_phrase_ideas_valid(IDEA_LABEL_BASIC_IDEA, IDEA_LABEL_CONTRASTING_IDEA)) {
         return "phrase ideas not a basic idea and a contrasting idea";
     }
-    if (!standard_form_period_cadences_valid(cadence_of(spec->first_cadence), cadence_of(spec->cadence))) {
+    if (!standard_form_period_cadences_valid(spec->first_cadence, spec->cadence)) {
         return "period cadences not valid";
     }
-    ask(soft, standard_form_antecedent_cadence_usual(cadence_of(spec->first_cadence)));
-    ask(soft, standard_form_consequent_cadence_usual(cadence_of(spec->cadence)));
+    ask(soft, standard_form_antecedent_cadence_usual(spec->first_cadence));
+    ask(soft, standard_form_consequent_cadence_usual(spec->cadence));
     ask(soft, standard_form_antecedent_length_usual(half));
     ask(soft, standard_form_consequent_length_usual(half, half));
     ask(soft, standard_form_consequent_contrast_usual(motives_differ(&spec->developed[GROW_PLACE_CONTRAST],
@@ -184,7 +180,7 @@ static const char *judge(const GrowThemeSpec *spec, Soft *soft) {
     }
     /* A theme with an antecedent ends in a cadence stronger than the antecedent's. */
     if (spec->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT &&
-        harmony_cadence_strength(cadence_of(spec->first_cadence)) >= harmony_cadence_strength(cadence_of(spec->cadence))) {
+        harmony_cadence_strength(spec->first_cadence) >= harmony_cadence_strength(spec->cadence)) {
         return "ending cadence not stronger than the antecedent's";
     }
     return form == PHRASE_LEVEL_FORM_PERIOD ? judge_period(spec, soft) : judge_hybrid(spec, soft);

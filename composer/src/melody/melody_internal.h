@@ -56,7 +56,7 @@ typedef struct {
     MelodyBass bass[MELODY_MAX_BASS];
     size_t bass_count;
     bool has_cadence;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     bool motive_given; /* the motive is the original, not a development */
     PlanMotiveTransform transform;
     NodeId motive_node;

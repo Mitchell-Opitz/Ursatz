@@ -100,7 +100,7 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
     PlanConstraint length = {PLAN_CONSTRAINT_LENGTH_BARS, {0}};
     length.params.bars = 8;
     PlanConstraint cadence = {PLAN_CONSTRAINT_CADENCE, {0}};
-    cadence.params.cadence = PLAN_CADENCE_PAC;
+    cadence.params.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     PlanConstraint archetype = {PLAN_CONSTRAINT_ARCHETYPE, {0}};
     archetype.params.archetype = PLAN_ARCHETYPE_SENTENCE;
     PlanConstraint motive_ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};

@@ -40,6 +40,19 @@ extern const char *const plan_fragment_position_names[PLAN_FRAGMENT_POSITION_NAM
 /* The name of a fragment position; "any" for a value that is not one. */
 const char *plan_fragment_position_name(long position);
 
+/*
+ * The cadence types a plan holds are the library's CadenceType: PAC, IAC, HC, DC and PC (perfect and imperfect authentic,
+ * half, deceptive and plagal). The plan file and the command line name them with these tables, in this order.
+ */
+#define PLAN_CADENCE_COUNT 5
+extern const CadenceType plan_cadence_types[PLAN_CADENCE_COUNT];
+extern const char *const plan_cadence_names[PLAN_CADENCE_COUNT];      /* "PAC", as the command line writes it */
+extern const char *const plan_cadence_file_names[PLAN_CADENCE_COUNT]; /* "pac", as the plan file writes it */
+/* The place of a type in the tables; false for a type the plan does not hold (subverted, unspecified, unknown). */
+bool plan_cadence_index(CadenceType type, size_t *index);
+/* The command line name of a type the plan holds, else "". */
+const char *plan_cadence_name(CadenceType type);
+
 /* PLAN_OK for RATIONAL_OK, PLAN_ERR_NULL for a NULL result, else PLAN_ERR_BAD_TIME (a zero denominator or overflow). */
 PlanResult plan_result_of_rational(RationalResult result);
 

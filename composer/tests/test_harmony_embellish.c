@@ -25,7 +25,7 @@ typedef struct {
     PlanKeyMode mode;
     int tonic;
     int bars;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     unsigned long seed;
 } Scenario;
 
@@ -123,22 +123,6 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
     }
 }
 
-static CadenceType expected_type(PlanCadenceType cadence) {
-    switch (cadence) {
-    case PLAN_CADENCE_PAC:
-        return CADENCE_TYPE_PERFECT_AUTHENTIC;
-    case PLAN_CADENCE_IAC:
-        return CADENCE_TYPE_IMPERFECT_AUTHENTIC;
-    case PLAN_CADENCE_HC:
-        return CADENCE_TYPE_HALF;
-    case PLAN_CADENCE_DC:
-        return CADENCE_TYPE_DECEPTIVE;
-    case PLAN_CADENCE_PC:
-        return CADENCE_TYPE_PLAGAL;
-    }
-    return CADENCE_TYPE_UNKNOWN;
-}
-
 /* An applied numeral has a slash before a letter (V7/V); a plain figure has none (I64). */
 static bool is_applied(const char *roman) {
     const char *slash = strrchr(roman, '/');
@@ -217,7 +201,7 @@ static void check_embellished(const Fixture *fixture, const Scenario *scenario) 
             model[model_count++] = chords[i];
         }
     }
-    size_t tail = scenario->cadence == PLAN_CADENCE_DC ? 1 : (scenario->cadence == PLAN_CADENCE_PC ? 2 : 0);
+    size_t tail = scenario->cadence == CADENCE_TYPE_DECEPTIVE ? 1 : (scenario->cadence == CADENCE_TYPE_PLAGAL ? 2 : 0);
     assert(model_count > tail);
     HarmonyPhrase phrase = {scenario->mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR, model,
                             model_count - tail};
@@ -233,7 +217,7 @@ static void check_embellished(const Fixture *fixture, const Scenario *scenario) 
     CadenceType heard;
     bool at_end;
     assert(harmony_hear_cadence(fixture->plan, fixture->span, scenario->mode, scenario->cadence, &heard, &at_end));
-    assert(heard == expected_type(scenario->cadence));
+    assert(heard == scenario->cadence);
     assert(at_end);
 }
 
@@ -315,8 +299,8 @@ static void test_sweep(void) {
     static const int meters[4][2] = {{2, 4}, {3, 4}, {4, 4}, {6, 8}};
     static const int tonics[2] = {0, 6};
     static const int bars[2] = {5, 8};
-    static const PlanCadenceType cadences[5] = {PLAN_CADENCE_PAC, PLAN_CADENCE_IAC, PLAN_CADENCE_HC, PLAN_CADENCE_DC,
-                                                PLAN_CADENCE_PC};
+    static const CadenceType cadences[5] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE,
+                                                CADENCE_TYPE_PLAGAL};
     HarmonyEmbellishParams params = harmony_embellish_params_default();
     params.density = 1000;
     for (int m = 0; m < 4; m++) {
@@ -344,7 +328,7 @@ static void test_nothing_asked_changes_nothing(void) {
     none.density = 1000;
     none.families = 0;
     for (unsigned long seed = 0; seed < 8; seed++) {
-        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, PLAN_CADENCE_PAC, seed};
+        Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 8, CADENCE_TYPE_PERFECT_AUTHENTIC, seed};
         char plain[SIGNATURE_SIZE];
         char result[SIGNATURE_SIZE];
         assert(!pipeline(&scenario, &off, false, plain, result).changed);
@@ -359,7 +343,7 @@ static void test_each_family_acts(void) {
     static const unsigned families[3] = {HARMONY_EMBELLISH_PROLONGATION, HARMONY_EMBELLISH_PREDOMINANT,
                                          HARMONY_EMBELLISH_APPLIED};
     static const int meters[3][2] = {{4, 4}, {6, 8}, {3, 4}};
-    static const PlanCadenceType cadences[3] = {PLAN_CADENCE_PAC, PLAN_CADENCE_HC, PLAN_CADENCE_DC};
+    static const CadenceType cadences[3] = {CADENCE_TYPE_PERFECT_AUTHENTIC, CADENCE_TYPE_HALF, CADENCE_TYPE_DECEPTIVE};
     for (int f = 0; f < 3; f++) {
         HarmonyEmbellishParams params = harmony_embellish_params_default();
         params.density = 1000;
@@ -391,7 +375,7 @@ static void test_each_family_acts(void) {
 
 /* Without the marks, the embellishment operator finds nothing to do; with NULL parameters it uses the defaults. */
 static void test_marks_and_defaults(void) {
-    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 6, PLAN_CADENCE_PAC, 2};
+    Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, 6, CADENCE_TYPE_PERFECT_AUTHENTIC, 2};
     Fixture fixture = build(&scenario);
     FillOutcome outcome = run(&fixture, 2, NULL, false);
     assert(outcome.status == FILL_STATUS_COMPLETE);

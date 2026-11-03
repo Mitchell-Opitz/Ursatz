@@ -140,8 +140,8 @@ bool harmony_shape_keeps_in(const PlanHarmonyShape *shape, const size_t *cells, 
  * predominant (only ii may follow IV).
  */
 static bool deal_progression(const PhraseRequest *request, FillRng *rng, int pivot, PhraseProgression *out) {
-    bool half = request->cadence == PLAN_CADENCE_HC;
-    bool plagal = request->cadence == PLAN_CADENCE_PC;
+    bool half = request->cadence == CADENCE_TYPE_HALF;
+    bool plagal = request->cadence == CADENCE_TYPE_PLAGAL;
     /* A cadential progression has no opening tonic. */
     bool opening_tonic = !(request->has_shape && request->shape.kind == PLAN_HARMONY_SHAPE_CADENTIAL);
     size_t cap = request->has_shape && request->shape.max_cells_per_chord > 0
@@ -192,7 +192,7 @@ static bool deal_progression(const PhraseRequest *request, FillRng *rng, int piv
         before[before_count++] = (ChordSpec){1, false};
         before[before_count++] = (ChordSpec){4, false};
     }
-    ChordSpec last = half ? (ChordSpec){5, seventh} : (ChordSpec){request->cadence == PLAN_CADENCE_DC ? 6 : 1, false};
+    ChordSpec last = half ? (ChordSpec){5, seventh} : (ChordSpec){request->cadence == CADENCE_TYPE_DECEPTIVE ? 6 : 1, false};
 
     size_t cells[MAX_BEFORE_FINAL];
     for (size_t i = 0; i < before_count; i++) {

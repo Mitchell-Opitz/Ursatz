@@ -63,7 +63,7 @@ typedef struct {
     PlanSpan idea;
     bool answers_in_dominant; /* the idea's chords start on the dominant: a response to the basic idea */
     bool has_cadence; /* the idea's melody ends in a cadence */
-    PlanCadenceType cadence;
+    CadenceType cadence;
     MotiveScore limit; /* the remoteness over which a form's connection is halved; denominator 0 is 3/4 */
 } Request;
 
@@ -117,7 +117,7 @@ unsigned grow_slot_function_bit(GrowSlot slot) {
 
 /* The motive_ref of the idea's melody span (voice 0), and that span's. False when the idea has none. */
 static bool idea_melody(const PiecePlan *plan, NodeId idea, PlanMotiveRef *ref, PlanSpan *span,
-                        const PlanCadenceType **cadence) {
+                        const CadenceType **cadence) {
     LaneSpanId ids[FORM_IDEAS];
     size_t found = plan_node_lane_spans(plan, idea, ids, FORM_IDEAS);
     for (size_t i = 0; i < found && i < FORM_IDEAS; i++) {
@@ -202,12 +202,12 @@ static bool read_request(const PiecePlan *plan, FillTarget target, const MotiveD
     PlanSpan idea_span = {{0, 1}, {0, 1}};
     for (NodeId id = 1; id <= plan_node_count(plan) && idea == PLAN_NODE_NONE; id++) {
         PlanMotiveRef ref;
-        const PlanCadenceType *cadence = NULL;
+        const CadenceType *cadence = NULL;
         if (plan_node_kind(plan, id) == PLAN_NODE_IDEA && idea_melody(plan, id, &ref, &idea_span, &cadence) &&
             ref.motive == target.id) {
             idea = id;
             request.has_cadence = cadence != NULL;
-            request.cadence = cadence ? *cadence : PLAN_CADENCE_PAC;
+            request.cadence = cadence ? *cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
         }
     }
     if (idea == PLAN_NODE_NONE) {
@@ -365,7 +365,7 @@ static bool cadence_tone_holds(const Request *request, const Motive *motive) {
     int tonic = motive->key.tonic_pitch_class;
     int last = ((motive->notes[motive->note_count - 1].midi_pitch - tonic) % 12 + 12) % 12;
     int third = motive->key.mode == PLAN_MODE_MINOR ? 3 : 4;
-    return !((request->cadence == PLAN_CADENCE_PAC && last != 0) || (request->cadence == PLAN_CADENCE_IAC && last != third));
+    return !((request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC && last != 0) || (request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC && last != third));
 }
 
 /*

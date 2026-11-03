@@ -125,11 +125,11 @@ void piece_structure_default_cadences(PieceStructure *structure) {
         }
         section->has_cadence = true;
         if (i == last_ending) {
-            section->cadence = PLAN_CADENCE_PAC;
+            section->cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
         } else if (i == last_loop || i == last_intro) {
-            section->cadence = PLAN_CADENCE_HC;
+            section->cadence = CADENCE_TYPE_HALF;
         } else {
-            section->cadence = PLAN_CADENCE_IAC;
+            section->cadence = CADENCE_TYPE_IMPERFECT_AUTHENTIC;
         }
     }
 }
@@ -154,7 +154,7 @@ bool piece_structure_default_ending(PieceStructure *structure, size_t capacity) 
     section->beats = DEFAULT_ENDING_BARS * (size_t)structure->meter.beats_per_bar;
     section->pickup = (Rational){0, 1};
     section->has_cadence = true;
-    section->cadence = PLAN_CADENCE_PAC;
+    section->cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     section->fill = PIECE_FILL_EMPTY;
     return true;
 }
@@ -162,7 +162,7 @@ bool piece_structure_default_ending(PieceStructure *structure, size_t capacity) 
 /* ------------------------------------------------------------- the plan */
 
 /* The weak cadence an antecedent ends in. */
-#define ANTECEDENT_CADENCE PLAN_CADENCE_HC
+#define ANTECEDENT_CADENCE CADENCE_TYPE_HALF
 /* The bars of material a section holds beside the bars of its own: its motive and the four its ideas are made from. */
 #define MATERIAL_BARS_PER_SECTION 5
 

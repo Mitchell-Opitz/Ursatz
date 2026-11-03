@@ -97,7 +97,7 @@ static PiecePlan *plan_of(Shape shape, const Scenario *scenario, Motive *motive_
     request.bars = 8;
     request.pairing.beginning = shape == PERIOD ? PLAN_THEME_BEGINNING_ANTECEDENT : PLAN_THEME_BEGINNING_PRESENTATION;
     request.pairing.ending = shape == PERIOD ? PLAN_THEME_ENDING_CONSEQUENT : PLAN_THEME_ENDING_CONTINUATION;
-    request.cadence = PLAN_CADENCE_PAC;
+    request.cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     assert(grow_build_plan(&request, &plan) == GROW_OK);
     return plan;
 }
@@ -154,7 +154,7 @@ static int test_contradiction(void) {
         PlanConstraint half;
         memset(&half, 0, sizeof(half));
         half.kind = PLAN_CONSTRAINT_CADENCE;
-        half.params.cadence = PLAN_CADENCE_HC;
+        half.params.cadence = CADENCE_TYPE_HALF;
         assert(plan_node_add_constraint(plan, theme, &half) == PLAN_OK);
         assert(analyzer_check_section(plan, theme, &check) == ANALYZER_CHECK_OK);
         item = cadence_item(&check);

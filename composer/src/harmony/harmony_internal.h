@@ -62,7 +62,7 @@ typedef struct {
     NodeId owner;
     PlanSpan span;
     PlanKeyMode mode;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     PlanMeter meter;
     Rational bar_length;
     size_t bars;
@@ -127,7 +127,7 @@ typedef struct {
     NodeId owner;
     PlanSpan span;
     PlanKeyMode mode;
-    PlanCadenceType cadence; /* the cadence constraint on the last chord */
+    CadenceType cadence; /* the cadence constraint on the last chord */
     PhraseMetre metre;
     size_t count;
     LaneSpanId ids[HARMONY_MAX_CHORDS];
@@ -154,7 +154,7 @@ typedef struct {
     const PhraseChord *chords;
     size_t count;
     PlanKeyMode mode;
-    PlanCadenceType requested;
+    CadenceType requested;
     size_t cells_per_bar;
     Rational cell_length;
     /* A phrase that need not end in a cadence, nor explain every inverted chord: a harmonization of a given bass. */
@@ -399,7 +399,7 @@ typedef struct {
     Edit edit;
     size_t target_cells; /* the marked chord's cells when the candidate was made */
     PlanKeyMode mode;
-    PlanCadenceType cadence;
+    CadenceType cadence;
     size_t cells_per_bar;
     Rational cell_length;
     PhraseMetre metre; /* the cells the phrase sits on */
@@ -452,7 +452,7 @@ void harmony_progression_destroy(void *payload);
  * The cells a phrase needs before its last bar, plus that bar, to end in the cadence: the room a phrase of whole bars
  * (or what is left of a span after a skeleton) must have.
  */
-size_t harmony_phrase_room_cells(PlanCadenceType cadence, size_t cells_per_bar);
+size_t harmony_phrase_room_cells(CadenceType cadence, size_t cells_per_bar);
 
 /* The verdict of the harmony-from-bass operator's checker on a candidate payload. */
 bool harmony_octave_check(const void *payload, FillCheck *out);
@@ -537,7 +537,7 @@ typedef struct {
     CellMetre metre;
     bool at_start;      /* the span starts the owner node */
     bool has_cadence;   /* the span, or its owner, asks for a cadence */
-    PlanCadenceType cadence;
+    CadenceType cadence;
     size_t before_count; /* the written chords that lead up to the span, from the start of the owner node */
     PhraseChord before[HARMONY_MAX_CHORDS];
     LaneSpanId bass_placeholder; /* the Constrained bass span equal to the target, or PLAN_LANE_SPAN_NONE for none */

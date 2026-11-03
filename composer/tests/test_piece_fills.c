@@ -349,7 +349,7 @@ static void test_progression(void) {
         /* The progression ends on V, so the section ends in a half cadence: the default for a section that is not the
            loop's last would be an imperfect authentic cadence, which no melody can make over a final V. */
         body->has_cadence = true;
-        body->cadence = PLAN_CADENCE_HC;
+        body->cadence = CADENCE_TYPE_HALF;
         add_section(&fixture, "t", "T", PIECE_PART_TURNAROUND, 16, PIECE_FILL_EMPTY);
         assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
         NodeId sections[4];

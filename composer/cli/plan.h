@@ -26,7 +26,7 @@ typedef struct {
     size_t bars; /* 0 when the plan has no meter */
     bool has_key;
     PlanKey key; /* the key the section ends in */
-    PlanCadenceType cadences[2];
+    CadenceType cadences[2];
     size_t cadence_count;
     bool has_pairing;
     PlanThemePairing pairing;

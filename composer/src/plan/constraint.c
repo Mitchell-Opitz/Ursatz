@@ -7,6 +7,7 @@
 #include <standard-texture/texture_rules.h>
 
 #include "plan/plan_internal.h"
+#include "util/plan_util.h"
 
 void constraint_list_free(ConstraintList *list) {
     free(list->items);
@@ -18,7 +19,7 @@ static bool constraint_is_valid(const PiecePlan *plan, const PlanConstraint *con
     case PLAN_CONSTRAINT_LENGTH_BARS:
         return constraint->params.bars > 0;
     case PLAN_CONSTRAINT_CADENCE:
-        return constraint->params.cadence >= PLAN_CADENCE_PAC && constraint->params.cadence <= PLAN_CADENCE_PC;
+        return plan_cadence_index(constraint->params.cadence, NULL);
     case PLAN_CONSTRAINT_MOTIVE_REF: {
         const PlanMotiveRef *ref = &constraint->params.motive;
         return plan_has_node(plan, ref->motive) && plan_node_kind(plan, ref->motive) == PLAN_NODE_MOTIVE &&

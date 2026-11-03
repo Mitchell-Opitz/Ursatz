@@ -130,14 +130,14 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
         return false;
     }
 
-    PlanCadenceType cadence = phrase->requested;
+    CadenceType cadence = phrase->requested;
     HarmonyChord model[HARMONY_MAX_CHORDS];
     size_t model_count = 0;
     /* A deceptive or plagal ending is not a cadential progression, so the phrase rules read the chords up
        to the dominant (deceptive) or to the authentic cadence's tonic (plagal). */
     size_t model_end = phrase->open_ended
                            ? count
-                           : count - (cadence == PLAN_CADENCE_DC ? 1 : (cadence == PLAN_CADENCE_PC ? 2 : 0));
+                           : count - (cadence == CADENCE_TYPE_DECEPTIVE ? 1 : (cadence == CADENCE_TYPE_PLAGAL ? 2 : 0));
 
     const char *hard = NULL;
     if (unexplained_six_four && !phrase->open_ended) {
@@ -189,12 +189,12 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
     }
     if (!hard && !phrase->open_ended) {
         const HarmonyChord ending[2] = {segments[count - 2].chord, segments[count - 1].chord};
-        if (cadence == PLAN_CADENCE_DC) {
+        if (cadence == CADENCE_TYPE_DECEPTIVE) {
             HarmonyDeceptiveKind kind;
             if (!harmony_deceptive_of(ending, &kind)) {
                 hard = "not deceptive motion";
             }
-        } else if (cadence == PLAN_CADENCE_PC) {
+        } else if (cadence == CADENCE_TYPE_PLAGAL) {
             if (!harmony_plagal_progression_is(ending, HARMONY_PLAGAL_AFTER_CADENCE)) {
                 hard = "not plagal motion";
             }
@@ -220,7 +220,7 @@ bool harmony_judge(const HeardPhrase *phrase, PhraseVerdict *verdict) {
             hard = "no cadence heard";
         } else {
             heard = found.items[found.count - 1].type;
-            if (found.items[found.count - 1].arrival_last != count - 1 || heard != harmony_cadence_type_of(cadence)) {
+            if (found.items[found.count - 1].arrival_last != count - 1 || heard != cadence) {
                 hard = "other cadence heard";
             }
         }
@@ -408,7 +408,7 @@ bool harmony_check_lane_without_cadence(const PiecePlan *plan, PlanSpan span, Pl
     if (!violation || !harmony_read_lane(plan, span, mode, chords, &count, &metre)) {
         return false;
     }
-    HeardPhrase phrase = {chords, count, mode, PLAN_CADENCE_PAC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, NULL, NULL, false, &metre};
+    HeardPhrase phrase = {chords, count, mode, CADENCE_TYPE_PERFECT_AUTHENTIC, metre.cells_per_bar, metre.cell_length, true, NULL, false, false, NULL, NULL, false, &metre};
     if (!harmony_judge(&phrase, &verdict)) {
         return false;
     }
@@ -425,7 +425,7 @@ static void mark_schema_chords(const PiecePlan *plan, PlanSpan span, size_t coun
     }
 }
 
-bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, PlanCadenceType requested,
+bool harmony_check_lane(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, CadenceType requested,
                         const char **violation) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];

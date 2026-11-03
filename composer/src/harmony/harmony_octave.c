@@ -247,7 +247,7 @@ static bool octave_generate(const PiecePlan *plan, FillTarget target, FillRng *r
         for (size_t i = 0; i < kept_count; i++) {
             repeat = repeat || same_chords(kept[i], scratch);
         }
-        HeardPhrase heard = {scratch->chords, read.count, read.key.mode, PLAN_CADENCE_PAC,
+        HeardPhrase heard = {scratch->chords, read.count, read.key.mode, CADENCE_TYPE_PERFECT_AUTHENTIC,
                              read.metre.cells_per_bar, read.metre.cell_length, true, NULL, false, false, NULL, NULL, false,
                              &read.metre};
         PhraseVerdict verdict;
@@ -321,7 +321,7 @@ bool harmony_octave_check(const void *payload, FillCheck *out) {
     if (!line || !out) {
         return false;
     }
-    heard = (HeardPhrase){line->chords, line->context.count, line->context.key.mode, PLAN_CADENCE_PAC,
+    heard = (HeardPhrase){line->chords, line->context.count, line->context.key.mode, CADENCE_TYPE_PERFECT_AUTHENTIC,
                           line->context.metre.cells_per_bar, line->context.metre.cell_length, true, NULL, false, false, NULL, NULL, false,
                           &line->context.metre};
     memset(out, 0, sizeof(*out));

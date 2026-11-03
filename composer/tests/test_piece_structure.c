@@ -140,18 +140,18 @@ static void test_default_cadences(void) {
     standard_structure(&fixture);
     PieceSection *explicit_cadence = &fixture.sections[2];
     explicit_cadence->has_cadence = true;
-    explicit_cadence->cadence = PLAN_CADENCE_DC;
+    explicit_cadence->cadence = CADENCE_TYPE_DECEPTIVE;
     assert(piece_structure_default_ending(&fixture.structure, PIECE_STRUCTURE_MAX_SECTIONS + 2));
     assert(fixture.structure.section_count == 5);
     piece_structure_default_cadences(&fixture.structure);
     /* The intro leads into the body (HC), the middle of the body is open (IAC), the loop leads back (HC). */
-    assert(fixture.sections[0].cadence == PLAN_CADENCE_HC);
-    assert(fixture.sections[1].cadence == PLAN_CADENCE_IAC);
-    assert(fixture.sections[2].cadence == PLAN_CADENCE_DC); /* a cadence asked for is kept */
-    assert(fixture.sections[3].cadence == PLAN_CADENCE_HC);
+    assert(fixture.sections[0].cadence == CADENCE_TYPE_HALF);
+    assert(fixture.sections[1].cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC);
+    assert(fixture.sections[2].cadence == CADENCE_TYPE_DECEPTIVE); /* a cadence asked for is kept */
+    assert(fixture.sections[3].cadence == CADENCE_TYPE_HALF);
     /* The ending closes. */
     assert(fixture.sections[4].part == PIECE_PART_ENDING);
-    assert(fixture.sections[4].cadence == PLAN_CADENCE_PAC);
+    assert(fixture.sections[4].cadence == CADENCE_TYPE_PERFECT_AUTHENTIC);
     assert(fixture.sections[4].beats == 8);
     assert(strcmp(fixture.sections[4].id, "end") == 0);
     assert(strcmp(fixture.sections[4].letter, "E") == 0);
@@ -173,7 +173,7 @@ static void test_plan(void) {
     static const size_t BEATS[4] = {8, 32, 6, 4};
     static const char *const IDS[4] = {"intro", "a", "b", "t"};
     static const int PARTS[4] = {PIECE_PART_INTRO, PIECE_PART_BODY, PIECE_PART_BODY, PIECE_PART_TURNAROUND};
-    static const PlanCadenceType CADENCES[4] = {PLAN_CADENCE_HC, PLAN_CADENCE_IAC, PLAN_CADENCE_IAC, PLAN_CADENCE_HC};
+    static const CadenceType CADENCES[4] = {CADENCE_TYPE_HALF, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_IMPERFECT_AUTHENTIC, CADENCE_TYPE_HALF};
     size_t start = 0;
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_node_span(plan, sections[i]);
@@ -225,22 +225,6 @@ static void test_plan(void) {
     plan_destroy(plan);
 }
 
-static CadenceType expected_type(PlanCadenceType cadence) {
-    switch (cadence) {
-    case PLAN_CADENCE_PAC:
-        return CADENCE_TYPE_PERFECT_AUTHENTIC;
-    case PLAN_CADENCE_IAC:
-        return CADENCE_TYPE_IMPERFECT_AUTHENTIC;
-    case PLAN_CADENCE_HC:
-        return CADENCE_TYPE_HALF;
-    case PLAN_CADENCE_DC:
-        return CADENCE_TYPE_DECEPTIVE;
-    case PLAN_CADENCE_PC:
-        return CADENCE_TYPE_PLAGAL;
-    }
-    return CADENCE_TYPE_UNKNOWN;
-}
-
 /* Whether the harmony, bass and melody lanes over the section are written (none left Constrained, each lane there). */
 static bool section_written(const PiecePlan *plan, NodeId section) {
     PlanSpan span = plan_node_span(plan, section);
@@ -269,7 +253,7 @@ static bool cadence_heard(const PiecePlan *plan, NodeId section) {
     return cadence && key &&
            harmony_hear_cadence(plan, plan_node_span(plan, section), key->params.key.mode, cadence->params.cadence,
                                 &heard, &at_end) &&
-           at_end && heard == expected_type(cadence->params.cadence);
+           at_end && heard == cadence->params.cadence;
 }
 
 typedef struct {
