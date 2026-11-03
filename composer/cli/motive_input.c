@@ -145,21 +145,83 @@ bool motive_input_basic_given(const BasicInput *basic) {
     return basic->path || basic->format_text || basic->pickup_text || basic->harmony_text;
 }
 
-int motive_input_load_basic(const BasicInput *basic, const MotiveInput *source, Motive *out) {
+int motive_input_basic_input(const BasicInput *basic, const MotiveInput *source, MotiveInput *out) {
     if (!basic->path) {
         return cli_fail(CLI_EXIT_USAGE, "--basic-format, --basic-pickup and --basic-harmony need --basic <file>");
     }
-    MotiveInput input;
-    memset(&input, 0, sizeof(input));
-    input.path = basic->path;
-    input.meter_text = source->meter_text;
-    input.key_text = source->key_text;
-    input.form_text = source->form_text;
-    input.format_text = basic->format_text;
-    input.pickup_text = basic->pickup_text;
-    input.extras.harmony_text = basic->harmony_text;
-    input.extras.role_text = source->extras.role_text;
-    return motive_input_load(&input, out);
+    memset(out, 0, sizeof(*out));
+    out->path = basic->path;
+    out->meter_text = source->meter_text;
+    out->key_text = source->key_text;
+    out->form_text = source->form_text;
+    out->format_text = basic->format_text;
+    out->pickup_text = basic->pickup_text;
+    out->extras.harmony_text = basic->harmony_text;
+    out->extras.role_text = source->extras.role_text;
+    return 0;
+}
+
+int motive_input_text_request(const MotiveInput *input, cJSON **out, MotiveFile *file) {
+    unsigned char *bytes = NULL;
+    size_t size = 0;
+    char read_error[512];
+    int read_status = motive_input_read_file(input->path, &bytes, &size, read_error, sizeof read_error);
+    if (read_status != 0 && file->read_status == 0) {
+        file->read_status = read_status;
+        snprintf(file->read_error, sizeof file->read_error, "%s", read_error);
+    }
+    bool midi = false;
+    cJSON *request = motive_input_request(input, bytes, size, &midi);
+    if (!request) {
+        free(bytes);
+        return cli_fail(CLI_EXIT_USAGE, "out of memory");
+    }
+    if (midi) {
+        /* Read once with the input's options; the motive that came out is the input, which the entry reads as text. */
+        char *text = cJSON_PrintUnformatted(request);
+        ComposerResponse response;
+        memset(&response, 0, sizeof response);
+        ComposerStatus status = text ? composer_api_motive_from_midi(bytes, size, text, NULL, &response) : COMPOSER_ERR_ALLOC;
+        free(text);
+        free(bytes);
+        cJSON_Delete(request);
+        if (status != COMPOSER_OK) {
+            int failed = cli_fail_api(status, &response.error, input->path);
+            composer_response_destroy(&response);
+            return failed;
+        }
+        cJSON *document = cJSON_Parse(response.json);
+        const cJSON *motive = document ? cJSON_GetObjectItemCaseSensitive(document, "motive") : NULL;
+        char *motive_text = motive ? cJSON_PrintUnformatted(motive) : NULL;
+        request = cJSON_CreateObject();
+        cJSON *part = request ? cJSON_AddObjectToObject(request, "input") : NULL;
+        bool ok = part && motive_text && cJSON_AddStringToObject(part, "format", "json") &&
+                  cJSON_AddStringToObject(part, "text", motive_text) &&
+                  (!input->extras.role_text || cJSON_AddStringToObject(request, "role", input->extras.role_text));
+        free(motive_text);
+        cJSON_Delete(document);
+        composer_response_destroy(&response);
+        if (!ok) {
+            cJSON_Delete(request);
+            return cli_fail(CLI_EXIT_USAGE, "out of memory");
+        }
+    } else {
+        free(bytes);
+    }
+    *out = request;
+    return 0;
+}
+
+int motive_input_fail(const MotiveFile *file, ComposerStatus status, const ComposerError *error,
+                      const MotiveInputNames *names) {
+    /* A bad option is reported before a file that cannot be read, as it always was. */
+    if (file->read_status != 0 && status != COMPOSER_ERR_REQUEST) {
+        return cli_fail(file->read_status, "%s", file->read_error);
+    }
+    const char *name = strncmp(error->path, "/basic", 6) == 0 ? names->basic
+                       : strncmp(error->path, "/target", 7) == 0 ? names->target
+                                                                 : names->source;
+    return cli_fail_api(status, error, name);
 }
 
 void motive_input_print_basic_help(FILE *out) {

@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <cJSON.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/export.h>
@@ -37,6 +38,9 @@ int cli_fail(int status, const char *format, ...);
  * tempo) starts with the option "--format" and so on, and "the input" becomes the quoted input_name when it is not NULL.
  */
 int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *input_name);
+
+/* Prints the document with 2-space indent and one space after each colon, as the commands write JSON. */
+void cli_print_json(const cJSON *document);
 
 const char *cli_key_name(const AnalysisKey *key, char *out, size_t size);
 

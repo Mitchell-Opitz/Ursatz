@@ -15,7 +15,7 @@
  */
 
 #define COMPOSER_API_VERSION_MAJOR 0
-#define COMPOSER_API_VERSION_MINOR 2
+#define COMPOSER_API_VERSION_MINOR 3
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -102,5 +102,49 @@ ComposerStatus composer_api_motive_from_midi(const uint8_t *bytes, size_t size, 
  * that cannot be made, is COMPOSER_ERR_UNSATISFIABLE with path /render_key, /midi or /musicxml.
  */
 ComposerStatus composer_api_motive_render(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * The variant operations of the registry: name, label, category, citation, parameters and the forms each applies to. json:
+ * what `variants --list-ops --json` prints.
+ */
+ComposerStatus composer_api_variant_operations(ComposerResponse *out);
+
+/*
+ * Variants of a motive: each applies a chain of up to 4 registry operations, and a parameter the chain leaves open is
+ * drawn from the seed. Request: the motive request of composer_api_motive (input, meter, key, pickup, harmony, features,
+ * role) plus "basic" (a motive request with its own input, pickup and harmony, read in the source's meter, key, form and
+ * role: the basic motive remoteness is measured from; the source when absent), "functions" (up to 4 of "beginning",
+ * "continuation", "contrast", "cadential": keep the variants that suit any), "distance" ("close", "medium" or "far"),
+ * "chain" ({"steps": [{"op", "params"}]}: the same chain for every variant), "each_op" (one variant for every operation
+ * that applies to the motive's form; not with chain, count, distance or functions), "count" (1 to 16, default 6) and
+ * "seed" (0 to 4294967231; default from the clock; variant i uses seed + i). Progress is reported once for each variant
+ * tried, stage "variants", and a cancel is honored there. json: {"seed", "source", "variants": [...]}, with "skipped" for
+ * each_op and "notices" (strings) when a draw was skipped or fewer variants than asked for were found. "detail": true adds
+ * to each variant "remoteness_fraction": [numerator, denominator] and "leaves_harmony".
+ */
+ComposerStatus composer_api_variants(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Names the chain of registry operations that turns a source motive into a target. Request: {"source": <motive request:
+ * input, harmony, features>, "target": <the same>, "meter", "key", "pickup" (the source's), "target_pickup", "role", "basic"
+ * (as for variants), "depth" (1 to 4, default 4)}; both motives are read in the meter, key and role of the request, and
+ * the form of the source's input. json: {"found", "chain", "distance", "remoteness", "kept", "changed", "derivation"};
+ * "detail": true adds "distance_fraction" and "remoteness_fraction", each [numerator, denominator].
+ */
+ComposerStatus composer_api_recognize(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Random motives that keep the hard melodic rules of standard counterpoint; their length, pickup, number of notes, rhythm
+ * and range are drawn from defaults in the Composer. Request: {"mode": "major"|"minor", "meter": "4/4", "key": "D minor"
+ * (its mode must be "mode"; default C major or A minor), "form": "full"|"rhythm"|"contour", "role": "melodic"|
+ * "accompaniment", "style": <a style model file path>, "style_without": [<style categories read without>, at most 8;
+ * needs "style"], "count": 1 to 16 (default 1), "seed": 0 to 4294967295 (default from the clock)}. "mode" and "meter" are
+ * required; either may be "random", drawn from the seed by the rule the GUI used (R-269): with m = ((seed + 1) * 2654435761)
+ * mod 2^32, the mode is major when (m >> 8) is even and minor when it is odd, and the meter is "4/4", "3/4", "2/4" or
+ * "6/8" by (m >> 16) mod 4. The same request and seed give the same motives. json: {"seed", "motives": [<the motive entry's document>]},
+ * and "drawn": {"mode", "meter"} (only the members that were drawn) when something was.
+ * A style that cannot be read is COMPOSER_ERR_UNSATISFIABLE with path /style.
+ */
+ComposerStatus composer_api_random_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
 #endif

@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/recognize.response.schema.json",
+  "title": "composer_api_recognize response",
+  "description": "What `recognize --json` prints.",
+  "type": "object",
+  "required": [
+    "found",
+    "chain",
+    "distance",
+    "remoteness",
+    "kept",
+    "changed",
+    "derivation"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "found": {
+      "type": "boolean"
+    },
+    "chain": {
+      "type": "object",
+      "required": [
+        "steps"
+      ],
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "op"
+            ]
+          }
+        }
+      }
+    },
+    "distance": {
+      "type": "number"
+    },
+    "remoteness": {
+      "type": "number"
+    },
+    "kept": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "changed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "derivation": {
+      "type": "string"
+    },
+    "distance_fraction": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    },
+    "remoteness_fraction": {
+      "type": "array",
+      "items": {
+        "type": "integer"
+      }
+    }
+  }
+}

@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include <cJSON.h>
+#include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/motive.h>
 
 #include "motive_extras.h"
@@ -65,8 +66,39 @@ bool motive_input_take_basic(BasicInput *basic, int argc, char **argv, int *inde
 /* Whether any of the basic options was given. */
 bool motive_input_basic_given(const BasicInput *basic);
 
-/* Loads the basic motive as the source is read (motive_input_load). Returns 0 or the status of the error printed. */
-int motive_input_load_basic(const BasicInput *basic, const MotiveInput *source, Motive *out);
+/* The basic motive's input: its file and options, read in the source's meter, key, form and role. Returns 0, or the usage
+   status printed when basic options were given with no --basic file. */
+int motive_input_basic_input(const BasicInput *basic, const MotiveInput *source, MotiveInput *out);
+
+/*
+ * The input a file read failed on, and what to say: the first file that could not be read. A bad option is reported before a
+ * missing file, so the message is used only when the API has no complaint of its own about the request.
+ */
+typedef struct {
+    int read_status;
+    char read_error[512];
+} MotiveFile;
+
+/*
+ * As motive_input_request for the entries that take text only (variants, recognize): the file is read into *file, and a MIDI
+ * file is read by composer_api_motive_from_midi, its motive document becoming the input (format json). Returns 0 with
+ * *request set, or the status of the error printed.
+ */
+int motive_input_text_request(const MotiveInput *input, cJSON **request, MotiveFile *file);
+
+/* The names of the input files an API error path points at: "" or "/source" the first, "/target", "/basic". */
+typedef struct {
+    const char *source;
+    const char *target;
+    const char *basic;
+} MotiveInputNames;
+
+/*
+ * The status and message of a failed entry that read files: the file's own read error unless the request itself was at
+ * fault, else the API error with the name of the file its path points at. Returns the exit status.
+ */
+int motive_input_fail(const MotiveFile *file, ComposerStatus status, const ComposerError *error,
+                      const MotiveInputNames *names);
 
 /* The help lines of the basic options. */
 void motive_input_print_basic_help(FILE *out);

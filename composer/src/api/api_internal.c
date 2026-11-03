@@ -2,6 +2,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <time.h>
 #include <string.h>
 
 #include "util/request_parse.h"
@@ -116,6 +117,40 @@ bool api_member_int(const cJSON *object, const char *name, long minimum, long ma
     return true;
 }
 
+bool api_member_whole(const cJSON *object, const char *name, unsigned long minimum, unsigned long maximum,
+                      unsigned long *out, bool *present, ComposerError *error) {
+    const cJSON *item = member(object, name, present);
+    if (!item) {
+        return true;
+    }
+    char text[32];
+    const char *source = NULL;
+    unsigned long value = 0;
+    if (cJSON_IsString(item)) {
+        source = item->valuestring;
+    } else if (cJSON_IsNumber(item) && item->valuedouble >= 0 && item->valuedouble <= 4294967295.0 &&
+               item->valuedouble == (double)(unsigned long)item->valuedouble) {
+        snprintf(text, sizeof text, "%lu", (unsigned long)item->valuedouble);
+        source = text;
+    } else if (cJSON_IsNumber(item)) {
+        snprintf(text, sizeof text, "%g", item->valuedouble);
+        source = text;
+    }
+    if (!source || !request_parse_whole_number(source, maximum, &value) || value < minimum) {
+        char path[sizeof error->path];
+        snprintf(path, sizeof path, "/%s", name);
+        api_fail(error, COMPOSER_ERR_REQUEST, path, "%s must be a whole number from %lu to %lu, not '%s'", name, minimum,
+                 maximum, source ? source : "?");
+        return false;
+    }
+    *out = value;
+    return true;
+}
+
+unsigned long api_default_seed(void) {
+    return ((unsigned long)time(NULL) * 2654435761UL + (unsigned long)clock()) & 4294967295UL;
+}
+
 bool api_member_rational(const cJSON *object, const char *name, ComposerRatio *out, bool *present, ComposerError *error) {
     const cJSON *item = member(object, name, present);
     if (!item) {
@@ -208,4 +243,17 @@ ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, 
         options->tempo_denominator = tempo.denominator;
     }
     return COMPOSER_OK;
+}
+
+ComposerStatus api_load_style(const char *path, const char *const *without, size_t without_count, const char *path_file,
+                              const char *path_without, ComposerStyle **out, ComposerError *error) {
+    ComposerStyleResult loaded = composer_style_load_without(path, without, without_count, out);
+    if (loaded == COMPOSER_STYLE_OK) {
+        return COMPOSER_OK;
+    }
+    bool argument = loaded == COMPOSER_STYLE_ERR_ARGUMENT;
+    return api_fail(error, argument ? COMPOSER_ERR_REQUEST : loaded == COMPOSER_STYLE_ERR_ALLOC ? COMPOSER_ERR_ALLOC
+                                                                                                  : COMPOSER_ERR_UNSATISFIABLE,
+                    argument ? path_without : path_file, "cannot read style '%s': %s", path,
+                    composer_style_result_name(loaded));
 }

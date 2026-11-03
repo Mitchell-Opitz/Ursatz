@@ -6,6 +6,8 @@ add_library(ursatz_composer STATIC
     api/api_export.c
     api/api_motive_request.c
     api/api_motive.c
+    api/api_variants.c
+    api/api_random.c
     util/util.c
     util/plan_util.c
     style/style.c

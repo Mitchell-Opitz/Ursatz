@@ -19,12 +19,21 @@ The length, pickup, number of notes, rhythm and range are not options. They are 
 
 The motive is heard in I throughout, so suspension, retardation and anticipation (they need a chord change), double neighbor and changing tone (they need two non-chord notes side by side) and pedal are never drawn. A motive is kept only when its tone labels (see `analysis` below) read as it was drawn: the beats are chord tones, and each decorated note has the type drawn and resolves.
 
+The command is a wrapper of the [composer API](api.md): it reads its arguments into a request, calls
+`composer_api_random_motive` and prints the response JSON, or the text lines made from it. The request members have the
+options' names and values (`mode`, `meter`, `key`, `form`, `role`, `style`, `style_without`, `count`, `seed`).
+
+**Random mode and meter.** With `--mode random` or `--meter random` the seed draws the value, by the rule the GUI used
+before the Composer drew: `m = ((seed + 1) * 2654435761) mod 2^32`; the mode is major when `(m >> 8)` is even and minor when
+it is odd; the meter is `4/4`, `3/4`, `2/4` or `6/8` for `(m >> 16) mod 4` of 0, 1, 2 and 3. The JSON output then has
+`"drawn": {"mode", "meter"}` (only what was drawn) and the text output a `Drawn:` line.
+
 ## Options
 
 | Option | Meaning |
 | --- | --- |
-| `--mode <mode>` | `major` or `minor`. Required. Church modes are not planned. |
-| `--meter <n/m>` | Beats over a beat unit, as in `4/4` or `6/8`. Required. |
+| `--mode <mode>` | `major`, `minor` or `random`. Required. `random` is drawn from the seed (below). Church modes are not planned. |
+| `--meter <n/m>` | Beats over a beat unit, as in `4/4` or `6/8`, or `random`. Required. `random` is drawn from the seed (below). |
 | `--key <key>` | For example `"D minor"`. Its mode must be `--mode`. Without it the motive is made in C major or A minor and carries that key, so it can be stored. |
 | `--form <form>` | `full` (pitches and rhythm, the default), `rhythm` (the rhythm of a full motive) or `contour` (its contour, in quarter notes with no pickup). These are read as the [motive command](cli-motive.md) reads them. |
 | `--role <role>` | `melodic` (the default) or `accompaniment`: the role every motive of the run is given. |

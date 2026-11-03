@@ -1,0 +1,148 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/variants.response.schema.json",
+  "title": "composer_api_variants response",
+  "description": "What `variants --json` prints, with notices when a draw was skipped or fewer variants than asked for were found.",
+  "type": "object",
+  "required": [
+    "seed",
+    "source",
+    "variants"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "seed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "motive",
+        "analysis"
+      ],
+      "properties": {
+        "motive": {
+          "type": "object"
+        },
+        "analysis": {
+          "type": "object"
+        }
+      }
+    },
+    "variants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "seed",
+          "chain",
+          "kind",
+          "kept",
+          "changed",
+          "functions",
+          "derivation",
+          "recognizability",
+          "remoteness",
+          "motive"
+        ],
+        "properties": {
+          "seed": {
+            "type": "integer"
+          },
+          "chain": {
+            "type": "object",
+            "required": [
+              "steps"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "kept": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "changed": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "harmony": {
+            "type": "string"
+          },
+          "functions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "derivation": {
+            "type": "string"
+          },
+          "recognizability": {
+            "type": "number"
+          },
+          "remoteness": {
+            "type": "number"
+          },
+          "motive": {
+            "type": "object",
+            "required": [
+              "motive",
+              "analysis"
+            ],
+            "properties": {
+              "motive": {
+                "type": "object"
+              },
+              "analysis": {
+                "type": "object"
+              }
+            }
+          },
+          "remoteness_fraction": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "leaves_harmony": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "skipped": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "op",
+          "reason"
+        ],
+        "properties": {
+          "op": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "notices": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

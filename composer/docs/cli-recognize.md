@@ -8,6 +8,10 @@ Says how one motive derives from another: the chain of [variant registry](varian
 
 Both motives are loaded as for the [motive command](cli-motive.md). The source options (`--format`, `--form`, `--pickup`, `--harmony`, `--feature`, `--role`) describe the source; the target is read with `--target-format`, `--target-pickup`, `--target-harmony` and `--target-feature`, and shares `--meter`, `--key` and the form. `--basic` names the basic motive, the tree root, read in the source's form, meter, key and role (with `--basic-format`, `--basic-pickup` and `--basic-harmony`); the target's remoteness is measured from it. `--depth` is the longest chain to look for, 1 to 4, 4 by default.
 
+The command is a wrapper of the [composer API](api.md): it reads its arguments and the input files into a request, calls
+`composer_api_recognize` and prints the response JSON, or the text lines made from it. The request members have the options'
+names and values (`source`, `target`, `meter`, `key`, `role`, `pickup`, `target_pickup`, `basic`, `depth`).
+
 ## Result
 
 Text output names the chain, the distance (cost over cost plus 4, exact, 1 when no chain is found), the remoteness and a derivation sentence. Remoteness is the target's distance from the basic motive (R-142), not from the source: without `--basic` the source is the basic motive and the two are equal; with it, the target one step from the source can be two from the basic motive. `--json`:

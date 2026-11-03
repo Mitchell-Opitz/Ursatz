@@ -7,7 +7,7 @@
 
 #include <cJSON.h>
 
-#include <ursatz_composer/motive.h>
+#include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "cli_options.h"
@@ -112,116 +112,103 @@ static int read_options(int argc, char **argv, Options *options) {
     return 0;
 }
 
-/* The chain as the variants JSON writes it: {"steps": [{"op", "params"}]}, from a replay of the chain. NULL on failure. */
-static cJSON *chain_object(const Motive *source, const VariantChain *chain) {
-    Motive replay;
-    VariantRecord record;
-    if (variant_apply_chain(source, chain, 0, &replay, &record) != VARIANT_OK) {
-        return NULL;
-    }
-    char *text = variant_record_to_json(&record);
-    cJSON *document = text ? cJSON_Parse(text) : NULL;
-    free(text);
-    cJSON *steps = document ? cJSON_DetachItemFromObjectCaseSensitive(
-                                  cJSON_GetObjectItemCaseSensitive(document, "chain"), "steps")
-                            : NULL;
-    cJSON_Delete(document);
-    if (!steps) {
-        return NULL;
-    }
-    cJSON *step = NULL;
-    cJSON_ArrayForEach(step, steps) {
-        cJSON_DeleteItemFromObjectCaseSensitive(step, "open");
-    }
-    cJSON *chain_json = cJSON_CreateObject();
-    if (!chain_json) {
-        cJSON_Delete(steps);
-        return NULL;
-    }
-    cJSON_AddItemToObject(chain_json, "steps", steps);
-    return chain_json;
+static const cJSON *member(const cJSON *object, const char *name) {
+    return cJSON_GetObjectItemCaseSensitive(object, name);
 }
 
-static double distance_value(const VariantRecognition *recognition) {
-    return (double)recognition->distance_num / (double)recognition->distance_den;
+static void print_fraction(const char *label, const cJSON *item) {
+    printf("%s: %.0f/%.0f\n", label, cJSON_GetArrayItem(item, 0)->valuedouble, cJSON_GetArrayItem(item, 1)->valuedouble);
 }
 
-static cJSON *names_array(const char *const *names, size_t count) {
-    cJSON *array = cJSON_CreateArray();
-    for (size_t i = 0; array && i < count; i++) {
-        cJSON_AddItemToArray(array, cJSON_CreateString(names[i]));
-    }
-    return array;
-}
-
-/* Prints cJSON's output with 2-space indent and one space after each colon, as the other commands do. */
-static void print_pretty(const char *printed) {
-    for (const char *c = printed; *c; c++) {
-        if (*c == '\n') {
-            putchar('\n');
-            size_t tabs = 0;
-            while (c[1] == '\t') {
-                tabs++;
-                c++;
-            }
-            printf("%*s", (int)(tabs * 2), "");
-        } else {
-            putchar(*c == '\t' ? ' ' : *c);
-        }
-    }
-    putchar('\n');
-}
-
-static double fraction_value(unsigned long long numerator, unsigned long long denominator) {
-    return (double)numerator / (double)denominator;
-}
-
-static bool print_json(const Motive *source, const VariantChain *chain, const VariantRecognition *recognition,
-                       const VariantRecord *remoteness) {
-    cJSON *document = cJSON_CreateObject();
-    if (!document) {
-        return false;
-    }
-    cJSON *chain_json = recognition->found ? chain_object(source, chain) : NULL;
-    if (!chain_json) {
-        chain_json = cJSON_CreateObject();
-        if (chain_json) {
-            cJSON_AddItemToObject(chain_json, "steps", cJSON_CreateArray());
-        }
-    }
-    cJSON_AddBoolToObject(document, "found", recognition->found);
-    cJSON_AddItemToObject(document, "chain", chain_json);
-    /* Four decimals, as the record's recognizability. */
-    cJSON_AddNumberToObject(document, "distance", (double)(long)(distance_value(recognition) * 10000.0 + 0.5) / 10000.0);
-    cJSON_AddNumberToObject(document, "remoteness",
-                            (double)(long)(fraction_value(remoteness->remoteness_num, remoteness->remoteness_den) * 10000.0 +
-                                           0.5) / 10000.0);
-    cJSON_AddItemToObject(document, "kept", names_array(recognition->kept, recognition->kept_count));
-    cJSON_AddItemToObject(document, "changed", names_array(recognition->changed, recognition->changed_count));
-    cJSON_AddStringToObject(document, "derivation", recognition->derivation);
-    char *printed = cJSON_Print(document);
-    cJSON_Delete(document);
-    if (!printed) {
-        return false;
-    }
-    print_pretty(printed);
-    cJSON_free(printed);
-    return true;
-}
-
-static void print_text(const VariantChain *chain, const VariantRecognition *recognition, const VariantRecord *remoteness) {
-    if (recognition->found) {
+static void print_text(const cJSON *document) {
+    if (cJSON_IsTrue(member(document, "found"))) {
         printf("Chain:");
-        for (size_t s = 0; s < chain->step_count; s++) {
-            printf("%s %s", s ? "," : "", chain->steps[s].op);
+        const cJSON *step = NULL;
+        const char *separator = "";
+        cJSON_ArrayForEach(step, member(member(document, "chain"), "steps")) {
+            const cJSON *op = member(step, "op");
+            printf("%s %s", separator, cJSON_IsString(op) ? op->valuestring : "");
+            separator = ",";
         }
         printf("\n");
     } else {
         printf("No chain found\n");
     }
-    printf("Distance: %llu/%llu\n", recognition->distance_num, recognition->distance_den);
-    printf("Remoteness: %llu/%llu\n", remoteness->remoteness_num, remoteness->remoteness_den);
-    printf("%s\n", recognition->derivation);
+    print_fraction("Distance", member(document, "distance_fraction"));
+    print_fraction("Remoteness", member(document, "remoteness_fraction"));
+    const cJSON *derivation = member(document, "derivation");
+    printf("%s\n", cJSON_IsString(derivation) ? derivation->valuestring : "");
+}
+
+/* A part of the request: the motive's own input, harmony and features. The meter, key, role and pickups are the request's. */
+static void keep_part_members(cJSON *part) {
+    static const char *const SHARED[] = {"meter", "key", "role", "pickup"};
+    for (size_t i = 0; i < sizeof SHARED / sizeof SHARED[0]; i++) {
+        cJSON_DeleteItemFromObjectCaseSensitive(part, SHARED[i]);
+    }
+}
+
+static bool add_text(cJSON *request, const char *name, const char *text) {
+    return !text || cJSON_AddStringToObject(request, name, text) != NULL;
+}
+
+/* Builds the request of the options. Returns 0 or the status of the error printed. */
+static int build_request(const Options *options, cJSON **out, MotiveFile *file) {
+    cJSON *request = cJSON_CreateObject();
+    cJSON *source = NULL;
+    cJSON *target = NULL;
+    cJSON *basic = NULL;
+    int status = request ? 0 : cli_fail(CLI_EXIT_USAGE, "out of memory");
+    /* The target is read as the source is: its form, meter, key and role; its own format, pickup and chords. */
+    MotiveInput target_input = options->target;
+    target_input.meter_text = options->source.meter_text;
+    target_input.key_text = options->source.key_text;
+    target_input.form_text = options->source.form_text;
+    target_input.format_text = options->target_format_text;
+    target_input.pickup_text = options->target_pickup_text;
+    target_input.extras.harmony_text = options->target_harmony_text;
+    target_input.extras.role_text = options->source.extras.role_text;
+    if (status == 0) {
+        status = motive_input_text_request(&options->source, &source, file);
+    }
+    if (status == 0) {
+        status = motive_input_text_request(&target_input, &target, file);
+    }
+    if (status == 0 && motive_input_basic_given(&options->basic)) {
+        MotiveInput basic_input;
+        status = motive_input_basic_input(&options->basic, &options->source, &basic_input);
+        if (status == 0) {
+            status = motive_input_text_request(&basic_input, &basic, file);
+        }
+    }
+    if (status == 0) {
+        keep_part_members(source);
+        keep_part_members(target);
+        bool ok = add_text(request, "meter", options->source.meter_text) && add_text(request, "key", options->source.key_text) &&
+                  add_text(request, "role", options->source.extras.role_text) &&
+                  add_text(request, "pickup", options->source.pickup_text) &&
+                  add_text(request, "target_pickup", options->target_pickup_text) &&
+                  add_text(request, "depth", options->depth_text) && cJSON_AddItemToObject(request, "source", source);
+        source = ok ? NULL : source;
+        ok = ok && cJSON_AddItemToObject(request, "target", target);
+        target = ok ? NULL : target;
+        if (ok && basic) {
+            ok = cJSON_AddItemToObject(request, "basic", basic);
+            basic = ok ? NULL : basic;
+        }
+        /* The text output prints the exact fractions. */
+        ok = ok && (options->json || cJSON_AddTrueToObject(request, "detail") != NULL);
+        status = ok ? 0 : cli_fail(CLI_EXIT_USAGE, "out of memory");
+    }
+    cJSON_Delete(source);
+    cJSON_Delete(target);
+    cJSON_Delete(basic);
+    if (status != 0) {
+        cJSON_Delete(request);
+        return status;
+    }
+    *out = request;
+    return 0;
 }
 
 int run_recognize(int argc, char **argv) {
@@ -240,55 +227,37 @@ int run_recognize(int argc, char **argv) {
     if (!options.source.meter_text) {
         return cli_fail(CLI_EXIT_USAGE, "recognize needs --meter, which both motives are read in");
     }
-    unsigned long depth = VARIANT_CHAIN_MAX;
-    if (options.depth_text &&
-        (!request_parse_whole_number(options.depth_text, VARIANT_CHAIN_MAX, &depth) || depth < 1)) {
-        return cli_fail(CLI_EXIT_USAGE, "--depth must be a whole number from 1 to %d, not '%s'", VARIANT_CHAIN_MAX,
-                        options.depth_text);
-    }
-
-    /* The target is read as the source is: its form, meter, key and role; its own format, pickup and chords. */
-    options.target.meter_text = options.source.meter_text;
-    options.target.key_text = options.source.key_text;
-    options.target.form_text = options.source.form_text;
-    options.target.format_text = options.target_format_text;
-    options.target.pickup_text = options.target_pickup_text;
-    options.target.extras.harmony_text = options.target_harmony_text;
-    options.target.extras.role_text = options.source.extras.role_text;
-
-    Motive source;
-    Motive target;
-    if (motive_input_load(&options.source, &source) != 0 || motive_input_load(&options.target, &target) != 0) {
+    MotiveFile file;
+    memset(&file, 0, sizeof file);
+    cJSON *request = NULL;
+    status = build_request(&options, &request, &file);
+    if (status != 0) {
         return CLI_EXIT_USAGE;
     }
-    VariantChain chain;
-    VariantRecognition recognition;
-    VariantResult result = variant_recognize_depth(&source, &target, depth, &chain, &recognition);
-    if (result != VARIANT_OK) {
-        return cli_fail(CLI_EXIT_USAGE, "cannot recognize: %s", variant_result_name(result));
+    char *text = cJSON_PrintUnformatted(request);
+    cJSON_Delete(request);
+    if (!text) {
+        return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
-    /* Remoteness is the distance from the basic motive; with no --basic the source is the basic motive. */
-    VariantRecord remoteness;
-    memset(&remoteness, 0, sizeof(remoteness));
-    if (motive_input_basic_given(&options.basic)) {
-        Motive basic;
-        if (motive_input_load_basic(&options.basic, &options.source, &basic) != 0) {
-            return CLI_EXIT_USAGE;
-        }
-        result = variant_set_remoteness(&basic, &target, depth, &remoteness);
-        if (result != VARIANT_OK) {
-            return cli_fail(CLI_EXIT_USAGE, "cannot recognize: %s", variant_result_name(result));
-        }
-    } else {
-        remoteness.remoteness_num = recognition.distance_num;
-        remoteness.remoteness_den = recognition.distance_den;
+    ComposerResponse response;
+    ComposerStatus api_status = composer_api_recognize(text, NULL, &response);
+    free(text);
+    if (api_status != COMPOSER_OK) {
+        MotiveInputNames names = {options.source.path, options.target.path, options.basic.path};
+        motive_input_fail(&file, api_status, &response.error, &names);
+        composer_response_destroy(&response);
+        return CLI_EXIT_USAGE;
+    }
+    cJSON *document = cJSON_Parse(response.json);
+    composer_response_destroy(&response);
+    if (!document) {
+        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
     }
     if (options.json) {
-        if (!print_json(&source, &chain, &recognition, &remoteness)) {
-            return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
-        }
+        cli_print_json(document);
     } else {
-        print_text(&chain, &recognition, &remoteness);
+        print_text(document);
     }
+    cJSON_Delete(document);
     return 0;
 }
