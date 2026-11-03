@@ -48,6 +48,19 @@ header outside the staged public roots in `build/external/ursatz/public/manifest
 `external/ursatz-analyzer/include/ursatz_analyzer/`, any `*_internal.h` of either, or a CMake file that reads the
 `SOURCE_DIR` of an Ursatz or Analyzer target or a path under `external/ursatz/tests` or `external/ursatz-analyzer/src`.
 
+### Library primitives
+
+The Composer keeps no copy of what the library owns outside plan time (`PlanTime`) and the style share ratios
+(`StyleRational`, one `wide_gcd` in `src/style/style_internal.h`):
+
+| Need | Library owner |
+| --- | --- |
+| Exact fractions and their gcd (motive scores, MIDI divisions, hashing, text) | `<core/rational.h>`: `Rational`, checked, an overflow fails the caller. |
+| Pitch class names, spelling, octaves | `<pitch/pitch_arithmetic.h>`: `pitch_class_name`, `pitch_spelling_from_fifths`, `pitch_spelling_midi_number`. |
+| Key names and signatures | `<standard-tonality/tonal_key.h>`: `standard_tonality_key_tonic_of_pitch_class`, `standard_tonality_key_fifths`, `standard_tonality_key_signature_of`. |
+| Roman numerals of plain chords | `<standard-tonality/roman_numeral_grammar.h>`: parse reads every form, format writes the canonical one (`viio`, `viiø7`, `65`, `43`, `42`). Applied chords keep `harmony_applied_label`. |
+| MIDI import | `<io/midi_importer.h>`: `midi_importer_import_complete` (notes, meter and key signatures in one parse). |
+
 ## Structure
 
 | Directory | Holds |
