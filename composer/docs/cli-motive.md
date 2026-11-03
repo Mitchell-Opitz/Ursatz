@@ -10,6 +10,12 @@ can be attached to a plan as Given material with `motive_attach` (`<ursatz_compo
 command reads and reports, and with `--render-key`, `--midi` or `--musicxml` it also renders the motive
 (below).
 
+The command is a wrapper of the [composer API](api.md): it reads its arguments and the input file into a request, calls
+`composer_api_motive` (or `composer_api_motive_from_midi` for a MIDI file, and `composer_api_motive_render` with
+`--render-key`, `--midi` or `--musicxml`), writes the MIDI and MusicXML the response holds to the paths given and prints the
+response JSON, or the text lines made from it. The request members have the options' names and values (`meter`, `key`,
+`pickup`, `harmony`, `features`, `role`, `tones`, `render_key`, `tempo`).
+
 ## Input
 
 `<input>` is a file. `--format` says what it is; `auto` (the default) looks at the bytes: `MThd` is

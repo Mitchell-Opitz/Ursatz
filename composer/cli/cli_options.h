@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/corpus_seed.h>
@@ -28,6 +29,14 @@
 
 /* Prints "Error: <message>" to stderr and returns status. */
 int cli_fail(int status, const char *format, ...);
+
+/*
+ * Prints the error of a composer API entry as "Error: <message>" and returns the exit status of its status (REQUEST 1,
+ * UNSATISFIABLE 2, any other 1). The API names request members where the command line names options, so the message is
+ * put back in the command's words: a message that starts with a member (format, form, harmony, feature, role, tone,
+ * tempo) starts with the option "--format" and so on, and "the input" becomes the quoted input_name when it is not NULL.
+ */
+int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *input_name);
 
 const char *cli_key_name(const AnalysisKey *key, char *out, size_t size);
 

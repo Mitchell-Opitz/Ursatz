@@ -1,0 +1,199 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/motive.response.schema.json",
+  "title": "composer_api_motive, composer_api_motive_from_midi and composer_api_motive_render response",
+  "description": "What `ursatz-composer motive --json` prints: the motive, its analysis, and for composer_api_motive_render the motive as it sounds. The MIDI and MusicXML are in the ComposerResponse, not in the JSON.",
+  "type": "object",
+  "required": ["motive", "analysis"],
+  "additionalProperties": false,
+  "properties": {
+    "motive": {
+      "type": "object",
+      "required": ["meter", "notes"],
+      "properties": {
+        "meter": {
+          "type": "object",
+          "required": ["beats_per_bar", "beat_unit"],
+          "properties": {
+            "beats_per_bar": { "type": "integer", "minimum": 1 },
+            "beat_unit": { "type": "integer", "minimum": 1 },
+            "bars_per_hyperbar": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "key": {
+          "type": "object",
+          "required": ["tonic_pitch_class", "mode"],
+          "properties": {
+            "tonic_pitch_class": { "type": "integer", "minimum": 0, "maximum": 11 },
+            "mode": { "enum": ["major", "minor"] }
+          }
+        },
+        "form": { "enum": ["full", "rhythm", "contour"] },
+        "pickup": { "$ref": "#/$defs/rational" },
+        "notes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/note" } },
+        "harmony": { "type": "string" },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["label", "first", "last"],
+            "properties": {
+              "label": { "type": "string" },
+              "first": { "type": "integer", "minimum": 0 },
+              "last": { "type": "integer", "minimum": 0 }
+            }
+          }
+        },
+        "role": { "enum": ["melodic", "accompaniment"] }
+      }
+    },
+    "analysis": {
+      "type": "object",
+      "required": ["form", "pickup", "notes_text", "degrees_text", "note_count", "length", "bars", "key", "intervals", "contour",
+                   "rhythm", "range", "scale_degrees", "implied_harmony", "base_harmony", "tones", "warnings"],
+      "properties": {
+        "form": { "enum": ["full", "rhythm", "contour"] },
+        "pickup": { "type": "string" },
+        "notes_text": { "type": ["string", "null"] },
+        "degrees_text": { "type": ["string", "null"] },
+        "rhythm_text": { "type": "string" },
+        "contour_text": { "type": "string" },
+        "harmony_text": { "type": "string" },
+        "note_count": { "type": "integer", "minimum": 1 },
+        "length": { "$ref": "#/$defs/rational" },
+        "bars": { "$ref": "#/$defs/rational" },
+        "key": {
+          "type": ["object", "null"],
+          "required": ["tonic_pitch_class", "mode", "source"],
+          "properties": {
+            "tonic_pitch_class": { "type": "integer", "minimum": 0, "maximum": 11 },
+            "mode": { "enum": ["major", "minor"] },
+            "source": { "enum": ["given", "inferred", "unspecified"] }
+          }
+        },
+        "intervals": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "required": ["semitones", "steps"],
+            "properties": { "semitones": { "type": "integer" }, "steps": { "type": ["integer", "null"] } }
+          }
+        },
+        "contour": {
+          "type": ["object", "null"],
+          "required": ["shape", "directions"],
+          "properties": {
+            "shape": { "type": "string" },
+            "directions": { "type": "array", "items": { "enum": ["up", "down", "same"] } }
+          }
+        },
+        "rhythm": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "object",
+            "required": ["onset", "duration", "bar", "beat", "on_beat", "dotted", "rest_before"],
+            "properties": {
+              "onset": { "$ref": "#/$defs/rational" },
+              "duration": { "$ref": "#/$defs/rational" },
+              "bar": { "type": "integer" },
+              "beat": { "$ref": "#/$defs/rational" },
+              "on_beat": { "type": "boolean" },
+              "dotted": { "type": "boolean" },
+              "rest_before": { "$ref": "#/$defs/rational" }
+            }
+          }
+        },
+        "range": {
+          "type": ["object", "null"],
+          "required": ["lowest", "highest", "semitones"],
+          "properties": {
+            "lowest": { "type": "integer" },
+            "highest": { "type": "integer" },
+            "semitones": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "scale_degrees": {
+          "type": ["object", "null"],
+          "required": ["start", "end", "all"],
+          "properties": {
+            "start": { "$ref": "#/$defs/degree" },
+            "end": { "$ref": "#/$defs/degree" },
+            "all": { "type": "array", "items": { "$ref": "#/$defs/degree" } }
+          }
+        },
+        "implied_harmony": {
+          "type": "object",
+          "required": ["key_known", "candidates"],
+          "properties": {
+            "key_known": { "type": "boolean" },
+            "candidates": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["roman_numeral", "function", "fit", "chord_tones", "non_chord_tones"],
+                "properties": {
+                  "roman_numeral": { "type": "string" },
+                  "function": { "type": "string" },
+                  "fit": { "type": "number", "minimum": 0, "maximum": 1 },
+                  "chord_tones": { "type": "integer", "minimum": 0 },
+                  "non_chord_tones": { "type": "integer", "minimum": 0 }
+                }
+              }
+            }
+          }
+        },
+        "base_harmony": {
+          "type": ["object", "null"],
+          "required": ["text", "given"],
+          "properties": { "text": { "type": "string" }, "given": { "type": "boolean" } }
+        },
+        "tones": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["note", "role", "type", "resolves_to", "unresolved", "overridden"],
+            "properties": {
+              "note": { "type": "integer", "minimum": 1 },
+              "role": { "enum": ["chord", "non-chord", "unclassified"] },
+              "type": { "type": ["string", "null"] },
+              "resolves_to": { "type": ["integer", "null"] },
+              "unresolved": { "type": "boolean" },
+              "overridden": { "type": "boolean" }
+            }
+          }
+        },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "rendered": {
+      "type": "object",
+      "required": ["key", "notes"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "type": ["string", "null"] },
+        "notes": { "type": "array", "items": { "$ref": "#/$defs/note" } }
+      }
+    }
+  },
+  "$defs": {
+    "rational": {
+      "type": "object",
+      "required": ["num", "den"],
+      "properties": { "num": { "type": "integer" }, "den": { "type": "integer", "minimum": 1 } }
+    },
+    "degree": {
+      "type": "object",
+      "required": ["degree", "alteration"],
+      "properties": { "degree": { "type": "integer", "minimum": 1, "maximum": 7 }, "alteration": { "type": "integer" } }
+    },
+    "note": {
+      "type": "object",
+      "required": ["midi_pitch", "offset", "duration"],
+      "properties": {
+        "midi_pitch": { "type": "integer", "minimum": 0, "maximum": 127 },
+        "offset": { "$ref": "#/$defs/rational" },
+        "duration": { "$ref": "#/$defs/rational" }
+      }
+    }
+  }
+}

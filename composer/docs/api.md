@@ -5,7 +5,7 @@ Everything an application asks of the Composer is a versioned in-process C API (
 cJSON type and no file path (except style models and corpus directories) crosses it. The CLI is a client of the same
 functions: it reads its arguments into a request, calls the API and prints the response (R-267).
 
-This page covers the core and the first entries. Each later branch of phase P26 adds its entries here and its JSON Schemas
+This page covers the core, export and the motive entries. Each later branch of phase P26 adds its entries here and its JSON Schemas
 under `schema/api/` (draft 2020-12).
 
 ## Versioning
@@ -93,7 +93,60 @@ stderr (`"not Given or Realized"`, `"source material"`, `"not in the layer"`, `"
 A plan that does not read is `COMPOSER_ERR_REQUEST` with the path of the member (`/plan/format`); a plan with no Given or
 Realized note is `COMPOSER_ERR_REQUEST` with `/plan`. Schema: `schema/api/export.schema.json`.
 
+### Motive requests
+
+The three motive entries read the same request. Only `input` (with its `text`) is required; `composer_api_motive_from_midi`
+takes the bytes of a MIDI file instead of `input`.
+
+| Member | Value |
+|---|---|
+| `input.text` | the motive as text: a note list, a degree list, a rhythm, a contour, a motive document (JSON) or a MusicXML document |
+| `input.format` | `"auto"` (default; the text is detected as the CLI detects a file), `"notes"`, `"degrees"`, `"rhythm"`, `"contour"`, `"json"` or `"musicxml"` |
+| `input.form` | `"full"` (default), `"rhythm"` or `"contour"`: a rhythm or a contour is read by its own reader; a `format` that says otherwise is refused |
+| `meter` | `"4/4"`: the meter, for input that has none (a note list); an input that declares another meter is `COMPOSER_ERR_UNSATISFIABLE` |
+| `key` | `"D minor"`: replaces a key the input states |
+| `pickup` | the beats before the first barline, counted in beats of the motive's meter: a number or a string (`1`, `"1/2"`); default 0 |
+| `harmony` | the motive's own chords as Roman numerals with onsets in beats after `@` (`"I V6@2 I@3"`); `""` clears the harmony the input has |
+| `features` | up to 8 labelled runs of notes by 0-based index: `["a:0-2", "b:3-4"]`; a label is used once |
+| `role` | `"melodic"` (default) or `"accompaniment"` |
+| `tones` | tone labels by 1-based note: `["3=passing", "2=chord"]`; the roles are `chord`, `passing`, `neighbor`, `appoggiatura`, `suspension`, `retardation`, `escape`, `anticipation`, `double-neighbor`, `changing-tone` and `pedal`; needs a motive with a key and pitches |
+
+A member that is not valid is `COMPOSER_ERR_REQUEST` with its path (`/meter`, `/harmony`, `/features/1`, `/tones/0`,
+`/input/format`). Text that is not a motive of the kind asked for, or a pickup, chord or feature the motive cannot hold,
+is `COMPOSER_ERR_UNSATISFIABLE` with the path `/input/text` (`""` for MIDI bytes) and the library's message and location.
+Schema: `schema/api/motive.request.schema.json`.
+
+### `composer_api_motive(request_json, job, out)`
+
+Analyzes a motive, as `ursatz-composer motive <input> --json` does. `json`: the document that command prints,
+`{"motive", "analysis"}`: the motive in the motive-document format and its analysis (intervals, contour, rhythm, range,
+scale degrees, implied harmony, base harmony and the tone labels with their warnings). Schema:
+`schema/api/motive.response.schema.json`.
+
+### `composer_api_motive_from_midi(bytes, size, request_json, job, out)`
+
+The same for a motive that is a Standard MIDI File (type 0 or 1), read in memory. The request has the members above
+without `input`. A buffer that is not a MIDI file, or holds notes sounding together, is `COMPOSER_ERR_UNSATISFIABLE`.
+
+### `composer_api_motive_render(request_json, job, out)`
+
+The motive request, and the motive is rendered.
+
+| Member | Value |
+|---|---|
+| `render_key` | `"G minor"`: hear the motive in this key, the same degrees; default its own key. A motive with no key, or a note that leaves the MIDI range, is `COMPOSER_ERR_UNSATISFIABLE` with `/render_key` |
+| `tempo` | quarter notes per minute from 20 to 400, a whole number or a string like `"195/2"` |
+| `musicxml` | `true` to fill `musicxml` (a pickup is an implicit first measure); default `false` |
+| `midi` | `true` to fill `midi` and `midi_size`; default `false` |
+
+`json` is the analysis document with the top-level `rendered` object, `{"key", "notes": [{"midi_pitch", "offset",
+"duration"}]}`, the motive as it sounds with offsets from its first note. A file that cannot be made is
+`COMPOSER_ERR_UNSATISFIABLE` with the path `/midi` or `/musicxml`. The render entry takes text input only; the CLI, which
+may read a MIDI file and render it, reads the file with `composer_api_motive_from_midi` and passes the motive document it
+answers with as the `json` input of the render request.
+
 ## Tests
 
-`tests/test_api_core.c` and `tests/test_job_cancel.c`; `tests/validate_api_schema.cmake` validates every response the
+`tests/test_api_core.c`, `tests/test_api_motive.c` (each GUI motive shape from a request, the response equal to the CLI
+snapshot) and `tests/test_job_cancel.c`; `tests/validate_api_schema.cmake` validates every response the
 tests write against its schema when python3 with `jsonschema` is present.

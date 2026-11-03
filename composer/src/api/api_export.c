@@ -55,18 +55,7 @@ ComposerStatus composer_api_export(const char *request_json, const ComposerJob *
                                                                                : "/plain_midi";
         status = api_fail(&out->error, COMPOSER_ERR_REQUEST, path, "%s must be true or false", path + 1);
     } else {
-        ComposerRatio tempo;
-        bool has_tempo = false;
-        if (!api_member_rational(request, "tempo", &tempo, &has_tempo, &out->error)) {
-            status = COMPOSER_ERR_REQUEST;
-        } else if (has_tempo && (tempo.denominator == 0 || tempo.numerator < 20UL * tempo.denominator ||
-                                 tempo.numerator > 400UL * tempo.denominator)) {
-            status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/tempo",
-                              "tempo must be from 20 to 400 quarter notes per minute, a whole number or a fraction like 195/2");
-        } else if (has_tempo) {
-            options.tempo_numerator = tempo.numerator;
-            options.tempo_denominator = tempo.denominator;
-        }
+        status = api_read_tempo(request, &options, &out->error);
     }
     if (status != COMPOSER_OK) {
         cJSON_Delete(request);

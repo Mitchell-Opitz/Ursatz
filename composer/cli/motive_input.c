@@ -1,82 +1,123 @@
 #include "motive_input.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <ursatz_composer/motive.h>
 
+#include "api/api_internal.h"
 #include "cli_options.h"
-#include "motive/motive_internal.h"
+
+int motive_input_read_file(const char *path, unsigned char **bytes, size_t *size, char *error, size_t error_size) {
+    *bytes = NULL;
+    *size = 0;
+    const char *why = NULL;
+    char limit[64];
+    MotiveResult result = MOTIVE_ERR_IO;
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        why = "cannot open the file";
+    } else {
+        fseek(file, 0, SEEK_END);
+        long length = ftell(file);
+        fseek(file, 0, SEEK_SET);
+        if (length == 0) {
+            result = MOTIVE_ERR_EMPTY;
+            why = "the file is empty";
+        } else if (length < 0 || length > MOTIVE_INPUT_FILE_LIMIT) {
+            snprintf(limit, sizeof limit, "the file is empty or larger than %ld bytes", MOTIVE_INPUT_FILE_LIMIT);
+            why = limit;
+        } else {
+            unsigned char *data = malloc((size_t)length);
+            if (data && fread(data, 1, (size_t)length, file) == (size_t)length) {
+                *bytes = data;
+                *size = (size_t)length;
+            } else {
+                free(data);
+                result = data ? MOTIVE_ERR_IO : MOTIVE_ERR_ALLOC;
+                why = data ? "cannot read the file" : "out of memory";
+            }
+        }
+        fclose(file);
+    }
+    if (why) {
+        snprintf(error, error_size, "cannot load '%s' (%s) at %s: %s", path, motive_result_name(result), path, why);
+    }
+    return why ? CLI_EXIT_UNSATISFIABLE : 0;
+}
+
+/* Whether the bytes are read by the MIDI entry: asked for as midi, or detected, and not given a form the file cannot have. */
+static bool reads_as_midi(const MotiveInput *options, const unsigned char *bytes, size_t size) {
+    if (options->form_text && strcmp(options->form_text, "full") != 0) {
+        return false;
+    }
+    if (!options->format_text || strcmp(options->format_text, "auto") == 0) {
+        return bytes && motive_detect_format(bytes, size) == MOTIVE_FORMAT_MIDI;
+    }
+    return bytes && strcmp(options->format_text, "midi") == 0;
+}
+
+cJSON *motive_input_request(const MotiveInput *options, const unsigned char *bytes, size_t size, bool *midi) {
+    cJSON *request = cJSON_CreateObject();
+    bool ok = request != NULL;
+    if (ok && options->meter_text) {
+        ok = cJSON_AddStringToObject(request, "meter", options->meter_text) != NULL;
+    }
+    if (ok && options->key_text) {
+        ok = cJSON_AddStringToObject(request, "key", options->key_text) != NULL;
+    }
+    if (ok && options->pickup_text) {
+        ok = cJSON_AddStringToObject(request, "pickup", options->pickup_text) != NULL;
+    }
+    ok = ok && motive_extras_add_members(&options->extras, request);
+    *midi = ok && reads_as_midi(options, bytes, size);
+    if (ok && !*midi) {
+        cJSON *input = cJSON_AddObjectToObject(request, "input");
+        char *text = bytes ? malloc(size + 1) : NULL;
+        if (text) {
+            memcpy(text, bytes, size);
+            text[size] = '\0';
+        }
+        ok = input && (!bytes || text) && cJSON_AddStringToObject(input, "text", text ? text : "") != NULL;
+        free(text);
+        if (ok && options->format_text) {
+            ok = cJSON_AddStringToObject(input, "format", options->format_text) != NULL;
+        }
+        if (ok && options->form_text) {
+            ok = cJSON_AddStringToObject(input, "form", options->form_text) != NULL;
+        }
+    }
+    if (!ok) {
+        cJSON_Delete(request);
+        return NULL;
+    }
+    return request;
+}
 
 int motive_input_load(const MotiveInput *options, Motive *out) {
-    MotiveOptions motive_options;
-    memset(&motive_options, 0, sizeof(motive_options));
-    if (options->meter_text) {
-        if (!motive_parse_meter(options->meter_text, &motive_options.meter)) {
-            return cli_fail(CLI_EXIT_USAGE, "meter '%s' is not a meter; write beats over a beat unit, as in 4/4 or 6/8",
-                            options->meter_text);
-        }
-        motive_options.has_meter = true;
+    unsigned char *bytes = NULL;
+    size_t size = 0;
+    char read_error[512];
+    int read_status = motive_input_read_file(options->path, &bytes, &size, read_error, sizeof read_error);
+    bool midi = false;
+    cJSON *request = motive_input_request(options, bytes, size, &midi);
+    if (!request) {
+        free(bytes);
+        return cli_fail(CLI_EXIT_USAGE, "out of memory");
     }
-    if (options->key_text) {
-        if (!motive_parse_key(options->key_text, &motive_options.key)) {
-            return cli_fail(CLI_EXIT_USAGE,
-                            "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
-                            "for example \"D minor\"",
-                            options->key_text);
-        }
-        motive_options.has_key = true;
+    ComposerError error;
+    memset(&error, 0, sizeof error);
+    /* A file that cannot be read is still checked against the options first, with no text: a bad option is reported
+       before a missing file, as it always was. */
+    ComposerStatus status = midi ? api_read_motive_bytes(request, "", bytes, size, out, NULL, &error)
+                                 : api_read_motive(request, "", out, NULL, &error);
+    cJSON_Delete(request);
+    free(bytes);
+    if (read_status != 0 && status != COMPOSER_ERR_REQUEST) {
+        return cli_fail(read_status, "%s", read_error);
     }
-    MotiveFormat format = MOTIVE_FORMAT_AUTO;
-    if (options->format_text && !motive_format_parse(options->format_text, &format)) {
-        return cli_fail(CLI_EXIT_USAGE,
-                        "--format must be auto, midi, musicxml, notes, degrees, rhythm, contour or json, not '%s'",
-                        options->format_text);
-    }
-    if (options->form_text) {
-        MotiveSketchForm form;
-        if (!motive_form_parse(options->form_text, &form)) {
-            return cli_fail(CLI_EXIT_USAGE, "--form must be full, rhythm or contour, not '%s'", options->form_text);
-        }
-        MotiveFormat wanted = form == MOTIVE_SKETCH_FORM_RHYTHM ? MOTIVE_FORMAT_RHYTHM : MOTIVE_FORMAT_CONTOUR;
-        if (form != MOTIVE_SKETCH_FORM_FULL && format != MOTIVE_FORMAT_AUTO && format != wanted) {
-            return cli_fail(CLI_EXIT_USAGE, "--form %s reads a %s, which --format %s does not", options->form_text,
-                            options->form_text, options->format_text);
-        }
-        if (form == MOTIVE_SKETCH_FORM_FULL && (format == MOTIVE_FORMAT_RHYTHM || format == MOTIVE_FORMAT_CONTOUR)) {
-            return cli_fail(CLI_EXIT_USAGE, "--form full does not read a %s; use --form %s or another --format",
-                            options->format_text, options->format_text);
-        }
-        if (form != MOTIVE_SKETCH_FORM_FULL) {
-            format = wanted;
-        }
-    }
-
-    MotiveError error;
-    MotiveResult result = motive_load_file(options->path, format, &motive_options, out, &error);
-    if (result == MOTIVE_OK && (options->pickup_text || motive_extras_given(&options->extras))) {
-        /* The pickup and the chord onsets are in beats of the motive's meter, which a file may declare, so they are
-           read after the first load. */
-        if (options->pickup_text) {
-            Rational pickup;
-            if (!request_parse_pickup(options->pickup_text, motive_meter(out).beat_unit, &pickup)) {
-                return cli_fail(CLI_EXIT_USAGE, "pickup '%s' is not a number of beats; write 0, 1 or 1/2",
-                                options->pickup_text);
-            }
-            motive_options.has_pickup = true;
-            motive_options.pickup = pickup;
-        }
-        int status = motive_extras_options(&options->extras, &(PlanMeter){motive_meter(out).beats_per_bar, motive_meter(out).beat_unit, 0}, &motive_options);
-        if (status != 0) {
-            return status;
-        }
-        result = motive_load_file(options->path, format, &motive_options, out, &error);
-    }
-    if (result != MOTIVE_OK) {
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot load '%s' (%s)%s%s: %s", options->path,
-                        motive_result_name(result), error.location[0] ? " at " : "", error.location, error.message);
-    }
-    return 0;
+    return status == COMPOSER_OK ? 0 : cli_fail_api(status, &error, options->path);
 }
 
 bool motive_input_take_basic(BasicInput *basic, int argc, char **argv, int *index, int *status) {

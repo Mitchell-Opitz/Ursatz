@@ -81,6 +81,43 @@ int cli_fail(int status, const char *format, ...) {
     return status;
 }
 
+int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *input_name) {
+    static const char *const OPTIONS[] = {"format", "form", "harmony", "feature", "role", "tone", "tempo"};
+    char message[sizeof error->message + 256];
+    const char *source = error->message;
+    size_t used = 0;
+    /* A message about a member starts with its name. */
+    size_t lead = 0;
+    for (size_t i = 0; i < sizeof OPTIONS / sizeof OPTIONS[0]; i++) {
+        size_t length = strlen(OPTIONS[i]);
+        if (strncmp(source, OPTIONS[i], length) == 0 && source[length] == ' ') {
+            used += (size_t)snprintf(message + used, sizeof message - used, "--");
+            lead = length;
+            break;
+        }
+    }
+    bool about_form = strncmp(source, "form ", 5) == 0;
+    while (*source && used + 8 < sizeof message) {
+        if (input_name && strncmp(source, "the input", 9) == 0) {
+            used += (size_t)snprintf(message + used, sizeof message - used, "'%s'", input_name);
+            source += 9;
+        } else if (about_form && source > error->message + lead && (strncmp(source, "form", 4) == 0 || strncmp(source, "format", 6) == 0) &&
+                   source[-1] == ' ') {
+            size_t length = strncmp(source, "format", 6) == 0 ? 6 : 4;
+            if (source[length] == ' ' || source[length] == '\0') {
+                used += (size_t)snprintf(message + used, sizeof message - used, "--%.*s", (int)length, source);
+                source += length;
+            } else {
+                message[used++] = *source++;
+            }
+        } else {
+            message[used++] = *source++;
+        }
+    }
+    message[used] = '\0';
+    return cli_fail(status == COMPOSER_ERR_UNSATISFIABLE ? CLI_EXIT_UNSATISFIABLE : CLI_EXIT_USAGE, "%s", message);
+}
+
 int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportOptions *out) {
     *out = plan_export_options_default();
     if (plain_midi) {

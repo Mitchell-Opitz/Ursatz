@@ -5,7 +5,9 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/composer_api.h>
+#include <ursatz_composer/export.h>
 #include <ursatz_composer/lanes.h>
+#include <ursatz_composer/motive.h>
 #include <ursatz_composer/style.h>
 
 /* Parses the request text into *out (the caller deletes it). Checks "api_version" when present. On failure sets error and returns the status. */
@@ -39,5 +41,32 @@ bool api_member_cadence(const cJSON *object, const char *name, CadenceType *out,
 /* A number of beats of beat_unit, or a string "0", "1/2" (request_parse_pickup). */
 bool api_member_pickup(const cJSON *object, const char *name, int beat_unit, Rational *out, bool *present,
                        ComposerError *error);
+
+/*
+ * The "tempo" member of the request (quarter notes per minute, 20 to 400, a whole number, a fraction string like
+ * "195/2", or null) into options->tempo_numerator and tempo_denominator; absent or null leaves them as they are.
+ */
+ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, ComposerError *error);
+
+/*
+ * Reads a motive from the request object (docs/api.md, "Motive requests"): "input" {"format", "form", "text"}, "meter",
+ * "key", "pickup", and the extras of api_read_motive_extras. base is the JSON Pointer of the object in the request ("" for
+ * the request itself), which the error paths start with. Returns COMPOSER_OK; COMPOSER_ERR_REQUEST for a member that is
+ * not valid (error path set); COMPOSER_ERR_UNSATISFIABLE for text that is not a motive of the kind asked for. options
+ * (may be NULL) gets the options the motive was read with.
+ */
+ComposerStatus api_read_motive(const cJSON *request, const char *base, Motive *out, MotiveOptions *options,
+                               ComposerError *error);
+
+/* As api_read_motive for a motive that arrives as the bytes of a Standard MIDI File: the request has no "input". */
+ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, const unsigned char *bytes, size_t size,
+                                     Motive *out, MotiveOptions *options, ComposerError *error);
+
+/*
+ * The motive's own harmony ("harmony"), labelled features ("features") and role ("role") of object, into options.
+ * meter is the motive's meter, which the chord onsets are counted in; it may be NULL only when there is no harmony.
+ */
+ComposerStatus api_read_motive_extras(const cJSON *object, const char *base, const PlanMeter *meter,
+                                      MotiveOptions *options, ComposerError *error);
 
 #endif
