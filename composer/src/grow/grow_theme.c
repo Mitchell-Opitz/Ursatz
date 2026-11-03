@@ -267,11 +267,11 @@ int grow_pairing_archetype(const PlanThemePairing *pairing) {
     }
 }
 
-bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveDevSpec *dev) {
+bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep *dev) {
     memset(dev, 0, sizeof(*dev));
     if (grow_idea_own(spec, idea)) {
         /* The idea's own motive, or the slot's own motive beginning the slot, is the idea as it is. */
-        dev->kind = MOTIVE_DEV_EXACT;
+        dev->kind = MOTIVE_RELATION_EXACT;
         return true;
     }
     switch (idea) {
@@ -279,11 +279,11 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveDevSpec *dev
         if (spec->pairing.beginning != PLAN_THEME_BEGINNING_PRESENTATION) {
             *dev = spec->contrast;
         } else if (spec->statement_response) {
-            dev->kind = MOTIVE_DEV_TRANSPOSE;
-            dev->tonal = true;
-            dev->amount = 1;
+            dev->kind = MOTIVE_RELATION_TRANSPOSE;
+            dev->value[0] = 1;
+            dev->value[1] = 1;
         } else {
-            dev->kind = MOTIVE_DEV_EXACT;
+            dev->kind = MOTIVE_RELATION_EXACT;
         }
         return true;
     case GROW_PLACE_FRAGMENT_1:
@@ -293,17 +293,17 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveDevSpec *dev
             if (second) {
                 *dev = spec->consequent_contrast;
             } else {
-                dev->kind = MOTIVE_DEV_EXACT;
+                dev->kind = MOTIVE_RELATION_EXACT;
             }
         } else if (spec->pairing.ending == PLAN_THEME_ENDING_CADENTIAL) {
-            dev->kind = MOTIVE_DEV_LIQUIDATE;
-            dev->drop = spec->cadential_drop[second];
-            dev->min_length = 1;
+            dev->kind = MOTIVE_RELATION_LIQUIDATE;
+            dev->value[0] = (long)spec->cadential_drop[second];
+            dev->value[2] = 1;
         } else {
-            dev->kind = MOTIVE_DEV_FRAGMENT;
-            dev->position = PLAN_FRAGMENT_LEADING;
-            dev->length = spec->fragment_notes[second];
-            dev->min_length = 1;
+            dev->kind = MOTIVE_RELATION_FRAGMENT;
+            dev->value[0] = PLAN_FRAGMENT_LEADING;
+            dev->value[1] = (long)spec->fragment_notes[second];
+            dev->value[2] = 1;
         }
         return true;
     }
@@ -311,50 +311,49 @@ bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveDevSpec *dev
         if (spec->pairing.ending != PLAN_THEME_ENDING_CONTINUATION) {
             return false;
         }
-        dev->kind = MOTIVE_DEV_LIQUIDATE;
-        dev->drop = spec->liquidate_drop;
-        dev->min_length = 1;
+        dev->kind = MOTIVE_RELATION_LIQUIDATE;
+        dev->value[0] = (long)spec->liquidate_drop;
+        dev->value[2] = 1;
         return true;
     default:
         return false;
     }
 }
 
-void grow_dev_ref(const MotiveDevSpec *dev_spec, NodeId source, PlanMotiveRef *out) {
-    const MotiveDevSpec *dev = dev_spec;
+void grow_dev_ref(const MotiveRelationStep *dev, NodeId source, PlanMotiveRef *out) {
     memset(out, 0, sizeof(*out));
     out->motive = source;
     switch (dev->kind) {
-    case MOTIVE_DEV_EXACT:
+    case MOTIVE_RELATION_EXACT:
         out->transform = PLAN_TRANSFORM_RESTATED;
         break;
-    case MOTIVE_DEV_TRANSPOSE:
+    case MOTIVE_RELATION_TRANSPOSE:
         out->transform = PLAN_TRANSFORM_TRANSPOSED;
-        out->tonal = dev->tonal;
-        out->steps = dev->tonal ? dev->amount : 0;
-        out->semitones = dev->tonal ? 0 : dev->amount;
+        out->tonal = dev->value[0] != 0;
+        out->steps = out->tonal ? (int)dev->value[1] : 0;
+        out->semitones = out->tonal ? 0 : (int)dev->value[1];
         break;
-    case MOTIVE_DEV_INVERT:
+    case MOTIVE_RELATION_INVERT:
         out->transform = PLAN_TRANSFORM_INVERTED;
-        out->tonal = dev->tonal;
-        out->has_axis = dev->has_axis;
-        out->axis = dev->axis;
+        out->tonal = dev->value[1] != 0;
+        out->has_axis = dev->value[0] >= 0;
+        out->axis = dev->value[0] >= 0 ? (int)dev->value[0] : 0;
         break;
-    case MOTIVE_DEV_INTERVAL_CHANGE:
+    case MOTIVE_RELATION_INTERVAL_CHANGE:
         out->transform = PLAN_TRANSFORM_INTERVAL_CHANGED;
-        out->interval = dev->interval;
-        out->amount = dev->amount;
-        out->keep_contour = dev->keep_contour;
+        out->interval = (int)dev->value[0];
+        out->amount = (int)dev->value[1];
+        out->keep_contour = dev->value[2] != 0;
         break;
-    case MOTIVE_DEV_FRAGMENT:
+    case MOTIVE_RELATION_FRAGMENT:
         out->transform = PLAN_TRANSFORM_FRAGMENTED;
-        out->position = dev->position;
-        out->length = (int)dev->length;
+        out->position = (PlanFragmentPosition)dev->value[0];
+        out->length = (int)dev->value[1];
         break;
-    case MOTIVE_DEV_LIQUIDATE:
+    case MOTIVE_RELATION_LIQUIDATE:
         out->transform = PLAN_TRANSFORM_LIQUIDATED;
-        out->drop = (int)dev->drop;
-        out->keep_rhythm = dev->keep_rhythm;
+        out->drop = (int)dev->value[0];
+        out->keep_rhythm = dev->value[1] != 0;
         break;
     default:
         out->transform = PLAN_TRANSFORM_NONE;
@@ -363,7 +362,7 @@ void grow_dev_ref(const MotiveDevSpec *dev_spec, NodeId source, PlanMotiveRef *o
 }
 
 void grow_idea_ref(const GrowThemeSpec *spec, GrowPlace idea, NodeId source, PlanMotiveRef *out) {
-    MotiveDevSpec dev;
+    MotiveRelationStep dev;
     if (!grow_idea_dev(spec, idea, &dev)) {
         memset(out, 0, sizeof(*out));
         out->motive = source;
@@ -391,7 +390,7 @@ NodeId grow_idea_node(const GrowBuild *build, GrowPlace idea) {
 }
 
 bool grow_idea_develop(const GrowThemeSpec *spec, GrowPlace idea, Motive *out) {
-    MotiveDevSpec dev;
+    MotiveRelationStep dev;
     return grow_idea_dev(spec, idea, &dev) &&
            motive_develop(grow_idea_source(spec, idea), &dev, out) == MOTIVE_DEV_OK;
 }
@@ -406,9 +405,8 @@ bool grow_split_possible(const GrowThemeRequest *request, PlanHarmonyShapeKind s
 }
 
 /* Whether two developments are the same kind of change by the same amount. */
-static bool same_kind(const MotiveDevSpec *a, const MotiveDevSpec *b) {
-    return a->kind == b->kind && a->amount == b->amount && a->interval == b->interval &&
-           (a->kind != MOTIVE_DEV_INVERT || a->axis == b->axis);
+static bool same_kind(const MotiveRelationStep *a, const MotiveRelationStep *b) {
+    return a->kind == b->kind && a->value[0] == b->value[0] && a->value[1] == b->value[1];
 }
 
 /* The most developments of m0 one contrasting idea is chosen among: inversions, interval changes everywhere and one. */
@@ -423,12 +421,12 @@ static bool lands_on(const Motive *result, int want) {
 }
 
 bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
-                        const Motive *source, int want_pc, const MotiveDevSpec *avoid, MotiveDevSpec *out) {
+                        const Motive *source, int want_pc, const MotiveRelationStep *avoid, MotiveRelationStep *out) {
     (void)spec;
     Rational room = grow_scaled(grow_unit(request), 2);
     size_t intervals = source->note_count - 1;
-    MotiveDevSpec fits[CONTRAST_MAX];
-    MotiveDevSpec exact[CONTRAST_MAX];
+    MotiveRelationStep fits[CONTRAST_MAX];
+    MotiveRelationStep exact[CONTRAST_MAX];
     size_t fit_count = 0;
     size_t exact_count = 0;
 
@@ -440,20 +438,19 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
         int high = kind == 0 ? first + 2 : (kind == 1 ? 2 : (int)intervals);
         for (int value = low; value <= high; value++) {
             for (int amount = (kind == 2 ? -4 : 0); amount <= (kind == 2 ? 4 : 0); amount++) {
-                MotiveDevSpec dev;
+                MotiveRelationStep dev;
                 Motive result;
                 memset(&dev, 0, sizeof(dev));
                 if (kind == 0) {
-                    dev.kind = MOTIVE_DEV_INVERT;
-                    dev.tonal = true;
-                    dev.has_axis = true;
-                    dev.axis = value;
+                    dev.kind = MOTIVE_RELATION_INVERT;
+                    dev.value[0] = value;
+                    dev.value[1] = 1;
                 } else {
-                    dev.kind = MOTIVE_DEV_INTERVAL_CHANGE;
-                    dev.interval = kind == 1 ? 0 : value;
-                    dev.amount = kind == 1 ? value : amount;
+                    dev.kind = MOTIVE_RELATION_INTERVAL_CHANGE;
+                    dev.value[0] = kind == 1 ? 0 : value;
+                    dev.value[1] = kind == 1 ? value : amount;
                 }
-                if ((kind != 0 && dev.amount == 0) ||
+                if ((kind != 0 && dev.value[1] == 0) ||
                     motive_develop(source, &dev, &result) != MOTIVE_DEV_OK || grow_same_contour(source, &result) ||
                     rational_cmp(result.length, room) > 0 || (avoid && same_kind(avoid, &dev))) {
                     continue;
@@ -475,7 +472,7 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
         }
     }
     /* One that lands where the cadence needs it, if there is one. */
-    const MotiveDevSpec *pool = exact_count > 0 ? exact : fits;
+    const MotiveRelationStep *pool = exact_count > 0 ? exact : fits;
     size_t count = exact_count > 0 ? exact_count : fit_count;
     if (count == 0) {
         return false;
@@ -500,13 +497,13 @@ static const int DIMINISH_RATIOS[][2] = {{1, 2}, {2, 3}, {3, 4}};
 
 /* Whether any usual ratio augments or diminishes the motive into a rhythm the meter can write. */
 static bool rhythm_writable(const Motive *m0, bool augment) {
-    MotiveDevSpec dev;
+    MotiveRelationStep dev;
     Motive result;
     memset(&dev, 0, sizeof(dev));
-    dev.kind = augment ? MOTIVE_DEV_AUGMENT : MOTIVE_DEV_DIMINISH;
+    dev.kind = augment ? MOTIVE_RELATION_AUGMENT : MOTIVE_RELATION_DIMINISH;
     for (size_t r = 0; r < RHYTHM_RATIOS; r++) {
-        dev.ratio_num = (unsigned long)(augment ? AUGMENT_RATIOS : DIMINISH_RATIOS)[r][0];
-        dev.ratio_den = (unsigned long)(augment ? AUGMENT_RATIOS : DIMINISH_RATIOS)[r][1];
+        dev.value[0] = (augment ? AUGMENT_RATIOS : DIMINISH_RATIOS)[r][0];
+        dev.den[0] = (augment ? AUGMENT_RATIOS : DIMINISH_RATIOS)[r][1];
         if (motive_develop(m0, &dev, &result) == MOTIVE_DEV_OK) {
             return true;
         }
@@ -527,63 +524,62 @@ static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const
     }
     for (size_t draw = 0; draw < SECTION_MOTIVE_DRAWS; draw++) {
         PlanMotiveRef ref = *asked;
-        MotiveDevSpec dev;
+        MotiveRelationStep dev;
         Motive result;
         memset(&dev, 0, sizeof(dev));
         switch (asked->transform) {
         case PLAN_TRANSFORM_NONE:
         case PLAN_TRANSFORM_RESTATED:
             ref.transform = PLAN_TRANSFORM_RESTATED;
-            dev.kind = MOTIVE_DEV_EXACT;
+            dev.kind = MOTIVE_RELATION_EXACT;
             break;
         case PLAN_TRANSFORM_TRANSPOSED:
-            dev.kind = MOTIVE_DEV_TRANSPOSE;
-            dev.tonal = asked->tonal || asked->semitones == 0;
-            ref.tonal = dev.tonal;
-            if (dev.tonal) {
+            dev.kind = MOTIVE_RELATION_TRANSPOSE;
+            ref.tonal = asked->tonal || asked->semitones == 0;
+            dev.value[0] = ref.tonal ? 1 : 0;
+            if (ref.tonal) {
                 int steps = (int)fill_rng_below(rng, 3) + 1;
                 ref.steps = asked->steps != 0 ? asked->steps : (fill_rng_below(rng, 2) == 0 ? steps : -steps);
-                dev.amount = ref.steps;
+                dev.value[1] = ref.steps;
             } else {
-                dev.amount = asked->semitones;
+                dev.value[1] = asked->semitones;
             }
             break;
         case PLAN_TRANSFORM_INVERTED:
-            dev.kind = MOTIVE_DEV_INVERT;
-            dev.tonal = asked->tonal;
-            dev.has_axis = true;
-            dev.axis = asked->has_axis ? asked->axis : motive_pitch(m0, 0);
+            dev.kind = MOTIVE_RELATION_INVERT;
+            dev.value[1] = asked->tonal ? 1 : 0;
+            dev.value[0] = asked->has_axis ? asked->axis : motive_pitch(m0, 0);
             ref.has_axis = true;
-            ref.axis = dev.axis;
+            ref.axis = (int)dev.value[0];
             break;
         case PLAN_TRANSFORM_RETROGRADE:
-            dev.kind = MOTIVE_DEV_RETROGRADE;
+            dev.kind = MOTIVE_RELATION_RETROGRADE;
             break;
         case PLAN_TRANSFORM_INTERVAL_CHANGED:
-            dev.kind = MOTIVE_DEV_INTERVAL_CHANGE;
-            dev.keep_contour = asked->keep_contour;
+            dev.kind = MOTIVE_RELATION_INTERVAL_CHANGE;
+            dev.value[2] = asked->keep_contour ? 1 : 0;
             if (asked->amount != 0) {
-                dev.interval = asked->interval;
-                dev.amount = asked->amount;
+                dev.value[0] = asked->interval;
+                dev.value[1] = asked->amount;
             } else {
                 int amount = (int)fill_rng_below(rng, 2) + 1;
-                dev.interval = (int)fill_rng_below(rng, m0->note_count - 1) + 1;
-                dev.amount = fill_rng_below(rng, 2) == 0 ? amount : -amount;
+                dev.value[0] = (long)fill_rng_below(rng, m0->note_count - 1) + 1;
+                dev.value[1] = fill_rng_below(rng, 2) == 0 ? amount : -amount;
             }
-            ref.interval = dev.interval;
-            ref.amount = dev.amount;
+            ref.interval = (int)dev.value[0];
+            ref.amount = (int)dev.value[1];
             break;
         case PLAN_TRANSFORM_AUGMENTED:
         case PLAN_TRANSFORM_DIMINISHED: {
             /* The ratio asked for, else the first of the usual ones the meter can write. */
             bool augment = asked->transform == PLAN_TRANSFORM_AUGMENTED;
             const int(*ratios)[2] = augment ? AUGMENT_RATIOS : DIMINISH_RATIOS;
-            dev.kind = augment ? MOTIVE_DEV_AUGMENT : MOTIVE_DEV_DIMINISH;
+            dev.kind = augment ? MOTIVE_RELATION_AUGMENT : MOTIVE_RELATION_DIMINISH;
             for (size_t r = 0; r < RHYTHM_RATIOS; r++) {
                 ref.ratio_num = asked->ratio_num > 0 ? asked->ratio_num : ratios[r][0];
                 ref.ratio_den = asked->ratio_den > 0 ? asked->ratio_den : ratios[r][1];
-                dev.ratio_num = (unsigned long)ref.ratio_num;
-                dev.ratio_den = (unsigned long)ref.ratio_den;
+                dev.value[0] = ref.ratio_num;
+                dev.den[0] = ref.ratio_den;
                 if (asked->ratio_num > 0 || motive_develop(m0, &dev, &result) == MOTIVE_DEV_OK) {
                     break;
                 }
@@ -663,8 +659,8 @@ static bool same_spec(const GrowThemeSpec *a, const GrowThemeSpec *b) {
            a->cadential_drop[0] == b->cadential_drop[0] && a->cadential_drop[1] == b->cadential_drop[1];
 }
 
-static const char *dev_name(const MotiveDevSpec *dev) {
-    return dev->kind == MOTIVE_DEV_INVERT ? "inverted" : "intervals changed";
+static const char *dev_name(const MotiveRelationStep *dev) {
+    return dev->kind == MOTIVE_RELATION_INVERT ? "inverted" : "intervals changed";
 }
 
 static void spec_label(const GrowThemeSpec *spec, char *label, size_t size) {

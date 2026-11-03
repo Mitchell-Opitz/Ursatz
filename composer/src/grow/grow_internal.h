@@ -54,8 +54,8 @@ typedef struct {
     PlanHarmonyShapeKind beginning_shape;  /* the shape of an antecedent's chords */
     bool beginning_split;                  /* no chord of the antecedent crosses a barline */
     PlanHarmonyAnchor compound_ends_on;    /* where a compound basic idea's prolongation ends */
-    MotiveDevSpec contrast;                /* the contrasting idea of an antecedent or a compound basic idea */
-    MotiveDevSpec consequent_contrast;     /* the contrasting idea of a consequent */
+    MotiveRelationStep contrast;                /* the contrasting idea of an antecedent or a compound basic idea */
+    MotiveRelationStep consequent_contrast;     /* the contrasting idea of a consequent */
     size_t cadential_drop[2];              /* notes the two ideas of a cadential ending drop of m0 */
     size_t basic_cells;                    /* the cells of the basic idea, to size the harmonic rhythm after it */
     bool statement_response;               /* the repetition is a step up, the harmony goes tonic to dominant and back */
@@ -143,7 +143,7 @@ bool grow_read_keys(const PiecePlan *plan, GrowThemeRequest *request);
 /* The first bar of the material section a run of `wanted` motive bars can go in (see grow_theme.c). */
 size_t grow_first_free_bar(const PiecePlan *plan, NodeId material, PlanSpan material_span, Rational bar, size_t wanted);
 /* The motive ref the development `dev` of the motive node `source` is. */
-void grow_dev_ref(const MotiveDevSpec *dev, NodeId source, PlanMotiveRef *out);
+void grow_dev_ref(const MotiveRelationStep *dev, NodeId source, PlanMotiveRef *out);
 
 /*
  * Free phrases (R-170): a section with a FREE_PHRASE constraint is a phrase of any length in beats, laid out as one
@@ -176,10 +176,10 @@ bool grow_same_contour(const Motive *a, const Motive *b);
    fits two units. want_pc is the pitch class its last note should land on (negative for any); avoid, if given, is a
    development it may not repeat. False when there is none. */
 bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
-                        const Motive *source, int want_pc, const MotiveDevSpec *avoid, MotiveDevSpec *out);
+                        const Motive *source, int want_pc, const MotiveRelationStep *avoid, MotiveRelationStep *out);
 /* The development of m0 an idea is made as, and whether the idea is made from m0 at all. The first idea of a slot with
    a motive of its own is that motive exact. */
-bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveDevSpec *out);
+bool grow_idea_dev(const GrowThemeSpec *spec, GrowPlace idea, MotiveRelationStep *out);
 
 /*
  * The slot an idea belongs to under the pairing, and whether it is the slot's first idea (the one that takes the slot's

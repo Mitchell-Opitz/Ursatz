@@ -74,7 +74,7 @@ static bool draw_continuation(const GrowThemeRequest *request, FillRng *rng, Gro
 
 /* A consequent restates the basic idea and ends with a contrasting idea that is not the antecedent's. */
 static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowThemeSpec *spec, Rational unit) {
-    const MotiveDevSpec *avoid = spec->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT ? &spec->contrast : NULL;
+    const MotiveRelationStep *avoid = spec->pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT ? &spec->contrast : NULL;
     /* It ends in the cadence's tone: the tonic for a perfect authentic cadence, the third for an imperfect one. */
     AnalysisKey ends_in = request->has_end_change ? request->end_key : request->key;
     int tonic = analysis_key_tonic_pitch_class(&ends_in);
@@ -84,7 +84,7 @@ static bool draw_consequent(const GrowThemeRequest *request, FillRng *rng, GrowT
     /* A contrasting idea with a motive of its own is that motive as it is: nothing to draw. */
     bool own_contrast = grow_idea_own(spec, GROW_PLACE_CONSEQUENT_CONTRAST);
     if (own_contrast) {
-        spec->consequent_contrast.kind = MOTIVE_DEV_EXACT;
+        spec->consequent_contrast.kind = MOTIVE_RELATION_EXACT;
     }
     if (!keep_idea(spec, GROW_PLACE_RESTATED, unit, 2) ||
         (!own_contrast &&

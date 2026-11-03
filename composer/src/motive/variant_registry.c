@@ -34,18 +34,18 @@ static long value_or(const VariantValue *value, long fallback) {
     return value->set ? value->value : fallback;
 }
 
-static void spec_init(MotiveDevSpec *spec, MotiveDevKind kind) {
-    memset(spec, 0, sizeof(*spec));
-    spec->kind = kind;
+static void step_init(MotiveRelationStep *step, MotiveRelationKind kind) {
+    memset(step, 0, sizeof(*step));
+    step->kind = kind;
 }
 
 /* ----------------------------------------------------------------- exact */
 
 static MotiveDevResult apply_exact(const Motive *source, const VariantValue *values, Motive *out) {
     (void)values;
-    MotiveDevSpec spec;
-    spec_init(&spec, MOTIVE_DEV_EXACT);
-    return motive_develop(source, &spec, out);
+    MotiveRelationStep step;
+    step_init(&step, MOTIVE_RELATION_EXACT);
+    return motive_develop(source, &step, out);
 }
 
 static void describe_exact(const VariantValue *values, char *out, size_t size) {
@@ -64,10 +64,10 @@ static const VariantParam TRANSPOSE_PARAMS[] = {
      false, false, false, false}};
 
 static MotiveDevResult apply_transpose(const Motive *source, const VariantValue *values, Motive *out) {
-    MotiveDevSpec spec;
-    spec_init(&spec, MOTIVE_DEV_TRANSPOSE);
-    spec.tonal = value_or(&values[TRANSPOSE_TONAL], 0) != 0;
-    spec.amount = (int)value_or(&values[TRANSPOSE_BY], 0);
+    MotiveRelationStep step;
+    step_init(&step, MOTIVE_RELATION_TRANSPOSE);
+    step.value[0] = value_or(&values[TRANSPOSE_TONAL], 0) != 0 ? 1 : 0;
+    step.value[1] = value_or(&values[TRANSPOSE_BY], 0);
     if (values[TRANSPOSE_DEGREE].set) {
         MotiveAnalysis analysis;
         if (source->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED || !motive_analyze(source, &analysis) ||
@@ -76,10 +76,10 @@ static MotiveDevResult apply_transpose(const Motive *source, const VariantValue 
         }
         /* The nearest way to the degree, up to three steps either way. */
         int steps = (int)((values[TRANSPOSE_DEGREE].value - analysis.degrees[0].degree + 7) % 7);
-        spec.tonal = true;
-        spec.amount = steps > 3 ? steps - 7 : steps;
+        step.value[0] = 1;
+        step.value[1] = steps > 3 ? steps - 7 : steps;
     }
-    return motive_develop(source, &spec, out);
+    return motive_develop(source, &step, out);
 }
 
 static void describe_transpose(const VariantValue *values, char *out, size_t size) {
@@ -102,12 +102,11 @@ static const VariantParam INVERT_PARAMS[] = {
     {"tonal", VARIANT_PARAM_BOOL, 0, 1, "mirror in steps of the key's scale instead of semitones", false, false, false, false, false}};
 
 static MotiveDevResult apply_invert(const Motive *source, const VariantValue *values, Motive *out) {
-    MotiveDevSpec spec;
-    spec_init(&spec, MOTIVE_DEV_INVERT);
-    spec.tonal = value_or(&values[INVERT_TONAL], 0) != 0;
-    spec.has_axis = values[INVERT_AXIS].set;
-    spec.axis = (int)values[INVERT_AXIS].value;
-    return motive_develop(source, &spec, out);
+    MotiveRelationStep step;
+    step_init(&step, MOTIVE_RELATION_INVERT);
+    step.value[0] = values[INVERT_AXIS].set ? values[INVERT_AXIS].value : -1;
+    step.value[1] = value_or(&values[INVERT_TONAL], 0) != 0 ? 1 : 0;
+    return motive_develop(source, &step, out);
 }
 
 static void describe_invert(const VariantValue *values, char *out, size_t size) {
@@ -123,9 +122,9 @@ static void describe_invert(const VariantValue *values, char *out, size_t size) 
 
 static MotiveDevResult apply_retrograde(const Motive *source, const VariantValue *values, Motive *out) {
     (void)values;
-    MotiveDevSpec spec;
-    spec_init(&spec, MOTIVE_DEV_RETROGRADE);
-    return motive_develop(source, &spec, out);
+    MotiveRelationStep step;
+    step_init(&step, MOTIVE_RELATION_RETROGRADE);
+    return motive_develop(source, &step, out);
 }
 
 static void describe_retrograde(const VariantValue *values, char *out, size_t size) {
@@ -143,12 +142,12 @@ static const VariantParam INTERVAL_PARAMS[] = {
     {"keep-contour", VARIANT_PARAM_BOOL, 0, 1, "refuse a result that changes a direction", false, false, false, false, false}};
 
 static MotiveDevResult apply_interval_change(const Motive *source, const VariantValue *values, Motive *out) {
-    MotiveDevSpec spec;
-    spec_init(&spec, MOTIVE_DEV_INTERVAL_CHANGE);
-    spec.interval = (int)value_or(&values[INTERVAL_WHICH], 0);
-    spec.amount = (int)value_or(&values[INTERVAL_AMOUNT], 0);
-    spec.keep_contour = value_or(&values[INTERVAL_KEEP_CONTOUR], 0) != 0;
-    return motive_develop(source, &spec, out);
+    MotiveRelationStep step;
+    step_init(&step, MOTIVE_RELATION_INTERVAL_CHANGE);
+    step.value[0] = value_or(&values[INTERVAL_WHICH], 0);
+    step.value[1] = value_or(&values[INTERVAL_AMOUNT], 0);
+    step.value[2] = value_or(&values[INTERVAL_KEEP_CONTOUR], 0) != 0 ? 1 : 0;
+    return motive_develop(source, &step, out);
 }
 
 static void describe_interval_change(const VariantValue *values, char *out, size_t size) {
@@ -174,12 +173,12 @@ static const VariantParam FRAGMENT_PARAMS[] = {
     {"min", VARIANT_PARAM_INT, 1, 16, "the fewest notes the result may have; 2 when not set", true, false, false, false, false}};
 
 static MotiveDevResult apply_fragment(const Motive *source, const VariantValue *values, Motive *out) {
-    MotiveDevSpec spec;
-    spec_init(&spec, MOTIVE_DEV_FRAGMENT);
-    spec.position = (PlanFragmentPosition)value_or(&values[FRAGMENT_POSITION], PLAN_FRAGMENT_LEADING);
-    spec.length = (size_t)value_or(&values[FRAGMENT_LENGTH], 0);
-    spec.min_length = (size_t)value_or(&values[FRAGMENT_MIN], 0);
-    return motive_develop(source, &spec, out);
+    MotiveRelationStep step;
+    step_init(&step, MOTIVE_RELATION_FRAGMENT);
+    step.value[0] = value_or(&values[FRAGMENT_POSITION], PLAN_FRAGMENT_LEADING);
+    step.value[1] = value_or(&values[FRAGMENT_LENGTH], 0);
+    step.value[2] = value_or(&values[FRAGMENT_MIN], 0);
+    return motive_develop(source, &step, out);
 }
 
 static void describe_fragment(const VariantValue *values, char *out, size_t size) {
@@ -198,12 +197,12 @@ static const VariantParam LIQUIDATE_PARAMS[] = {
     {"min", VARIANT_PARAM_INT, 1, 16, "the fewest notes the result may have; 2 when not set", true, false, false, false, false}};
 
 static MotiveDevResult apply_liquidate(const Motive *source, const VariantValue *values, Motive *out) {
-    MotiveDevSpec spec;
-    spec_init(&spec, MOTIVE_DEV_LIQUIDATE);
-    spec.drop = (size_t)value_or(&values[LIQUIDATE_DROP], 0);
-    spec.keep_rhythm = value_or(&values[LIQUIDATE_KEEP_RHYTHM], 0) != 0;
-    spec.min_length = (size_t)value_or(&values[LIQUIDATE_MIN], 0);
-    return motive_develop(source, &spec, out);
+    MotiveRelationStep step;
+    step_init(&step, MOTIVE_RELATION_LIQUIDATE);
+    step.value[0] = value_or(&values[LIQUIDATE_DROP], 0);
+    step.value[1] = value_or(&values[LIQUIDATE_KEEP_RHYTHM], 0) != 0 ? 1 : 0;
+    step.value[2] = value_or(&values[LIQUIDATE_MIN], 0);
+    return motive_develop(source, &step, out);
 }
 
 static void describe_liquidate(const VariantValue *values, char *out, size_t size) {
@@ -222,22 +221,23 @@ static const VariantParam DIMINISH_PARAMS[] = {
     {"ratio", VARIANT_PARAM_RATIO, 1, 3, "the factor durations are multiplied by, n:m below 1; 1:2 when not set", false,
      false, true, false, false}};
 
-static MotiveDevResult apply_ratio(MotiveDevKind kind, const Motive *source, const VariantValue *values, Motive *out) {
-    MotiveDevSpec spec;
-    spec_init(&spec, kind);
+static MotiveDevResult apply_ratio(MotiveRelationKind kind, const Motive *source, const VariantValue *values,
+                                   Motive *out) {
+    MotiveRelationStep step;
+    step_init(&step, kind);
     if (values[0].set) {
-        spec.ratio_num = (unsigned long)values[0].value;
-        spec.ratio_den = (unsigned long)values[0].den;
+        step.value[0] = values[0].value;
+        step.den[0] = values[0].den;
     }
-    return motive_develop(source, &spec, out);
+    return motive_develop(source, &step, out);
 }
 
 static MotiveDevResult apply_augment(const Motive *source, const VariantValue *values, Motive *out) {
-    return apply_ratio(MOTIVE_DEV_AUGMENT, source, values, out);
+    return apply_ratio(MOTIVE_RELATION_AUGMENT, source, values, out);
 }
 
 static MotiveDevResult apply_diminish(const Motive *source, const VariantValue *values, Motive *out) {
-    return apply_ratio(MOTIVE_DEV_DIMINISH, source, values, out);
+    return apply_ratio(MOTIVE_RELATION_DIMINISH, source, values, out);
 }
 
 static void describe_ratio(const char *verb, long default_num, long default_den, const VariantValue *values, char *out,

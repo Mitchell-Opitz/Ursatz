@@ -38,7 +38,7 @@ struct GrowFreeSpec {
     unsigned long magic;
     size_t count;                       /* the ideas */
     PlanSpan span[MAX_IDEAS];           /* where each lies */
-    MotiveDevSpec dev[MAX_IDEAS];       /* its development of the motive; [0] is unused: the first idea is exact */
+    MotiveRelationStep dev[MAX_IDEAS];   /* its development of the motive; [0] is unused: the first idea is exact */
     Motive developed[MAX_IDEAS];        /* what the development makes, to be judged */
     CadenceType cadence;
     PlanHarmonyShapeKind shape;
@@ -217,37 +217,36 @@ static bool in_range(const Motive *motive) {
  * The development of m0 a middle idea is: a leading fragment, a transposition in the key's steps (a sequence), an
  * inversion or an interval changed, drawn from rng. It has to fit the idea and the range. False when no draw does.
  */
-static bool draw_continuation(const Motive *source, Rational room, FillRng *rng, MotiveDevSpec *dev, Motive *result) {
+static bool draw_continuation(const Motive *source, Rational room, FillRng *rng, MotiveRelationStep *dev, Motive *result) {
     for (size_t draw = 0; draw < IDEA_DRAWS; draw++) {
         memset(dev, 0, sizeof(*dev));
         switch (fill_rng_below(rng, 4)) {
         case 0: {
             size_t most = source->note_count - 1;
             size_t wanted = 2 + (size_t)fill_rng_below(rng, GROW_FRAGMENT_MAX - 1);
-            dev->kind = MOTIVE_DEV_FRAGMENT;
-            dev->position = PLAN_FRAGMENT_LEADING;
-            dev->length = wanted < most ? wanted : most;
-            dev->min_length = 1;
+            dev->kind = MOTIVE_RELATION_FRAGMENT;
+            dev->value[0] = PLAN_FRAGMENT_LEADING;
+            dev->value[1] = (long)(wanted < most ? wanted : most);
+            dev->value[2] = 1;
             break;
         }
         case 1: {
             int steps = (int)fill_rng_below(rng, 2) + 1;
-            dev->kind = MOTIVE_DEV_TRANSPOSE;
-            dev->tonal = true;
-            dev->amount = fill_rng_below(rng, 2) == 0 ? steps : -steps;
+            dev->kind = MOTIVE_RELATION_TRANSPOSE;
+            dev->value[0] = 1;
+            dev->value[1] = fill_rng_below(rng, 2) == 0 ? steps : -steps;
             break;
         }
         case 2:
-            dev->kind = MOTIVE_DEV_INVERT;
-            dev->tonal = true;
-            dev->has_axis = true;
-            dev->axis = motive_pitch(source, 0);
+            dev->kind = MOTIVE_RELATION_INVERT;
+            dev->value[0] = motive_pitch(source, 0);
+            dev->value[1] = 1;
             break;
         default: {
             int amount = (int)fill_rng_below(rng, 2) + 1;
-            dev->kind = MOTIVE_DEV_INTERVAL_CHANGE;
-            dev->interval = (int)fill_rng_below(rng, source->note_count - 1) + 1;
-            dev->amount = fill_rng_below(rng, 2) == 0 ? amount : -amount;
+            dev->kind = MOTIVE_RELATION_INTERVAL_CHANGE;
+            dev->value[0] = (long)fill_rng_below(rng, source->note_count - 1) + 1;
+            dev->value[1] = fill_rng_below(rng, 2) == 0 ? amount : -amount;
             break;
         }
         }
@@ -260,18 +259,18 @@ static bool draw_continuation(const Motive *source, Rational room, FillRng *rng,
 }
 
 /* The development of m0 the last idea is: m0 liquidated, as a theme's cadential idea is. */
-static bool draw_cadential(const Motive *source, Rational room, FillRng *rng, MotiveDevSpec *dev, Motive *result) {
+static bool draw_cadential(const Motive *source, Rational room, FillRng *rng, MotiveRelationStep *dev, Motive *result) {
     size_t count = source->note_count;
     size_t drop_most = count / 2 > 1 ? count / 2 : 1;
     memset(dev, 0, sizeof(*dev));
-    dev->kind = MOTIVE_DEV_LIQUIDATE;
-    dev->drop = 1 + (size_t)fill_rng_below(rng, drop_most);
-    if (dev->drop >= count) {
-        dev->drop = count - 1;
+    dev->kind = MOTIVE_RELATION_LIQUIDATE;
+    size_t drop = 1 + (size_t)fill_rng_below(rng, drop_most);
+    if (drop >= count) {
+        drop = count - 1;
     }
-    dev->min_length = 1;
-    return dev->drop >= 1 && motive_develop(source, dev, result) == MOTIVE_DEV_OK &&
-           rational_cmp(result->length, room) <= 0;
+    dev->value[0] = (long)drop;
+    dev->value[2] = 1;
+    return drop >= 1 && motive_develop(source, dev, result) == MOTIVE_DEV_OK && rational_cmp(result->length, room) <= 0;
 }
 
 static bool draw_free(const PiecePlan *plan, const FreeRequest *request, FillRng *rng, GrowFreeSpec *spec) {

@@ -754,91 +754,92 @@ static void test_degenerate_cases(void) {
     Motive single = load("C4:q", &meter, &c_major);
     Motive four = load("D4:q F4:e A4:e D5:h", &meter, &c_major);
     Motive result;
-    MotiveDevSpec spec;
+    MotiveRelationStep spec;
 
     /* One note has no intervals to change, no run to fragment or notes to drop; retrograde and a mirror about
        itself give the note again. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_INTERVAL_CHANGE;
-    spec.amount = 1;
+    spec.kind = MOTIVE_RELATION_INTERVAL_CHANGE;
+    spec.value[1] = 1;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_ERR_NOT_APPLICABLE);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_FRAGMENT;
-    spec.position = PLAN_FRAGMENT_LEADING;
-    spec.length = 1;
+    spec.kind = MOTIVE_RELATION_FRAGMENT;
+    spec.value[0] = PLAN_FRAGMENT_LEADING;
+    spec.value[1] = 1;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_ERR_TOO_SHORT);
-    spec.length = 2;
+    spec.value[1] = 2;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_ERR_NOT_APPLICABLE);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_LIQUIDATE;
-    spec.drop = 1;
+    spec.kind = MOTIVE_RELATION_LIQUIDATE;
+    spec.value[0] = 1;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_ERR_TOO_SHORT);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_RETROGRADE;
+    spec.kind = MOTIVE_RELATION_RETROGRADE;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_ERR_UNCHANGED);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_INVERT;
+    spec.kind = MOTIVE_RELATION_INVERT;
+    spec.value[0] = -1;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_ERR_UNCHANGED);
 
     /* What one note can do: be repeated, moved, and made longer or shorter. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_EXACT;
+    spec.kind = MOTIVE_RELATION_EXACT;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && motive_equal(&single, &result));
-    spec.kind = MOTIVE_DEV_TRANSPOSE;
-    spec.amount = 7;
+    spec.kind = MOTIVE_RELATION_TRANSPOSE;
+    spec.value[1] = 7;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && result.notes[0].pitch == 67);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_AUGMENT;
+    spec.kind = MOTIVE_RELATION_AUGMENT;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && is_time(result.notes[0].duration, 1, 2));
 
     /* Fragments and liquidations stay recognizable: the minimum length is 2 notes, or what the spec says. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_FRAGMENT;
-    spec.position = PLAN_FRAGMENT_LEADING;
-    spec.length = 1;
+    spec.kind = MOTIVE_RELATION_FRAGMENT;
+    spec.value[0] = PLAN_FRAGMENT_LEADING;
+    spec.value[1] = 1;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_TOO_SHORT);
-    spec.length = 4;
+    spec.value[1] = 4;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_NOT_APPLICABLE);
-    spec.length = 2;
-    spec.min_length = 3;
+    spec.value[1] = 2;
+    spec.value[2] = 3;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_TOO_SHORT);
-    spec.min_length = 1;
-    spec.length = 1;
+    spec.value[2] = 1;
+    spec.value[1] = 1;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_OK && result.note_count == 1);
-    spec.position = PLAN_FRAGMENT_ANY;
-    spec.length = 2;
-    spec.min_length = 0;
+    spec.value[0] = PLAN_FRAGMENT_ANY;
+    spec.value[1] = 2;
+    spec.value[2] = 0;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_INVALID);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_LIQUIDATE;
-    spec.drop = 3;
+    spec.kind = MOTIVE_RELATION_LIQUIDATE;
+    spec.value[0] = 3;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_TOO_SHORT);
-    spec.drop = 0;
+    spec.value[0] = 0;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_INVALID);
 
     /* A rhythm that cannot be written in the meter is refused rather than bent: sixths are not notatable. */
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_DIMINISH;
-    spec.ratio_num = 2;
-    spec.ratio_den = 3;
+    spec.kind = MOTIVE_RELATION_DIMINISH;
+    spec.value[0] = 2;
+    spec.den[0] = 3;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_NOT_EXPRESSIBLE);
-    spec.kind = MOTIVE_DEV_AUGMENT;
+    spec.kind = MOTIVE_RELATION_AUGMENT;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_INVALID);
-    spec.ratio_num = 1;
-    spec.ratio_den = 1;
+    spec.value[0] = 1;
+    spec.den[0] = 1;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_INVALID);
 
     /* A tonal transformation needs a key; a pitch off the end of MIDI is refused. */
     Motive unkeyed = load("D4:q F4:e A4:e D5:h", &meter, NULL);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_TRANSPOSE;
-    spec.tonal = true;
-    spec.amount = 2;
+    spec.kind = MOTIVE_RELATION_TRANSPOSE;
+    spec.value[0] = true;
+    spec.value[1] = 2;
     assert(motive_develop(&unkeyed, &spec, &result) == MOTIVE_DEV_ERR_NO_KEY);
-    spec.tonal = false;
-    spec.amount = 60;
+    spec.value[0] = false;
+    spec.value[1] = 60;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_RANGE);
-    spec.amount = 0;
+    spec.value[1] = 0;
     assert(motive_develop(&four, &spec, &result) == MOTIVE_DEV_ERR_UNCHANGED);
 
     /* Through the loop: with nothing a transformation can do, the target is left open and the run says why. */
@@ -898,37 +899,38 @@ static void test_pickups_and_tonal_spelling(void) {
     const AnalysisKey c_major = {NULL, PITCH_LETTER_C, 0, KEY_STRUCTURE_MODE_MAJOR};
     Motive source = load("C4:q E4:q G4:q E4:q", &three_four, &c_major);
     Motive result;
-    MotiveDevSpec spec;
+    MotiveRelationStep spec;
 
     source.pickup = tmake(1, 8);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_AUGMENT;
+    spec.kind = MOTIVE_RELATION_AUGMENT;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
     assert(is_time(result.pickup, 1, 4) && is_time(result.notes[1].onset, 1, 2));
-    spec.kind = MOTIVE_DEV_DIMINISH;
+    spec.kind = MOTIVE_RELATION_DIMINISH;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
     assert(is_time(result.pickup, 1, 16) && is_time(result.notes[1].onset, 1, 8));
 
     /* A pickup that reaches the bar, or leaves the thirty-second grid, is refused. */
     source.pickup = tmake(3, 8);
-    spec.kind = MOTIVE_DEV_AUGMENT;
+    spec.kind = MOTIVE_RELATION_AUGMENT;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_ERR_NOT_EXPRESSIBLE);
     source.pickup = tmake(1, 32);
-    spec.kind = MOTIVE_DEV_DIMINISH;
+    spec.kind = MOTIVE_RELATION_DIMINISH;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_ERR_NOT_EXPRESSIBLE);
 
     /* F and B are natural degrees of C major: a step moves them to natural degrees, never to F sharp or C sharp. */
     Motive line = load("C4:q F4:q B4:q E4:q", &(PlanMeter){4, 4, 0}, &c_major);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_TRANSPOSE;
-    spec.tonal = true;
-    spec.amount = 1;
+    spec.kind = MOTIVE_RELATION_TRANSPOSE;
+    spec.value[0] = true;
+    spec.value[1] = 1;
     assert(motive_develop(&line, &spec, &result) == MOTIVE_DEV_OK);
     assert(result.notes[0].pitch == 62 && result.notes[1].pitch == 67 && result.notes[2].pitch == 72 &&
            result.notes[3].pitch == 65);
     memset(&spec, 0, sizeof(spec));
-    spec.kind = MOTIVE_DEV_INVERT;
-    spec.tonal = true;
+    spec.kind = MOTIVE_RELATION_INVERT;
+    spec.value[0] = -1;
+    spec.value[1] = true;
     assert(motive_develop(&line, &spec, &result) == MOTIVE_DEV_OK);
     assert(result.notes[0].pitch == 60 && result.notes[1].pitch == 55 && result.notes[2].pitch == 50 &&
            result.notes[3].pitch == 57);

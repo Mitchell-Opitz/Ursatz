@@ -33,7 +33,7 @@
 
 typedef struct {
     unsigned long magic;
-    MotiveDevSpec spec;
+    MotiveRelationStep step;
     Motive result;
 } Payload;
 
@@ -164,9 +164,9 @@ static bool already_proposed(const Proposal *proposal, const Motive *result) {
  * would change), that does not fit the target's span, or that an earlier candidate already is, is dropped without
  * comment. False only when out of memory.
  */
-static bool try_spec(Proposal *proposal, const MotiveDevSpec *spec) {
+static bool try_step(Proposal *proposal, const MotiveRelationStep *step) {
     Motive result;
-    if (motive_develop(&proposal->request->source, spec, &result) != MOTIVE_DEV_OK ||
+    if (motive_develop(&proposal->request->source, step, &result) != MOTIVE_DEV_OK ||
         rational_cmp(result.length, proposal->request->room) > 0 || already_proposed(proposal, &result)) {
         return true;
     }
@@ -175,10 +175,10 @@ static bool try_spec(Proposal *proposal, const MotiveDevSpec *spec) {
         return false;
     }
     payload->magic = PAYLOAD_MAGIC;
-    payload->spec = *spec;
+    payload->step = *step;
     payload->result = result;
     char label[FILL_LABEL_MAX];
-    motive_dev_label(spec, label, sizeof(label));
+    motive_dev_label(step, label, sizeof(label));
     if (!fill_candidates_add(proposal->out, label, payload, motive_payload_destroy)) {
         return false;
     }
@@ -201,12 +201,11 @@ static bool propose_transpositions(Proposal *proposal, FillRng *rng, bool tonal,
     size_t goal = proposal->added + wanted(proposal->context);
     bool key = proposal->request->source.key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED;
     for (size_t attempt = 0; proposal->added < goal && attempt < goal * ATTEMPTS_PER_CANDIDATE; attempt++) {
-        MotiveDevSpec spec;
-        memset(&spec, 0, sizeof(spec));
-        spec.kind = MOTIVE_DEV_TRANSPOSE;
-        spec.tonal = tonal || (alternate && key && attempt % 2 == 1);
-        spec.amount = draw_nonzero(rng, spec.tonal ? 7 : 12);
-        if (!try_spec(proposal, &spec)) {
+        MotiveRelationStep step = {.kind = MOTIVE_RELATION_TRANSPOSE};
+        bool steps = tonal || (alternate && key && attempt % 2 == 1);
+        step.value[0] = steps ? 1 : 0;
+        step.value[1] = draw_nonzero(rng, steps ? 7 : 12);
+        if (!try_step(proposal, &step)) {
             return false;
         }
     }
@@ -216,31 +215,31 @@ static bool propose_transpositions(Proposal *proposal, FillRng *rng, bool tonal,
 static bool propose_restatements(Proposal *proposal, FillRng *rng) {
     const PlanMotiveRef *ref = &proposal->request->ref;
     const Motive *source = &proposal->request->source;
-    MotiveDevSpec spec;
-    memset(&spec, 0, sizeof(spec));
+    MotiveRelationStep step;
+    memset(&step, 0, sizeof(step));
 
     switch (ref->transform) {
     case PLAN_TRANSFORM_RESTATED:
-        spec.kind = MOTIVE_DEV_EXACT;
-        return try_spec(proposal, &spec) && propose_transpositions(proposal, rng, false, true);
+        step.kind = MOTIVE_RELATION_EXACT;
+        return try_step(proposal, &step) && propose_transpositions(proposal, rng, false, true);
     case PLAN_TRANSFORM_TRANSPOSED:
-        spec.kind = MOTIVE_DEV_TRANSPOSE;
-        spec.tonal = ref->tonal;
-        spec.amount = ref->tonal ? ref->steps : ref->semitones;
-        if (spec.amount != 0) {
-            return try_spec(proposal, &spec);
+        step.kind = MOTIVE_RELATION_TRANSPOSE;
+        step.value[0] = ref->tonal ? 1 : 0;
+        step.value[1] = ref->tonal ? ref->steps : ref->semitones;
+        if (step.value[1] != 0) {
+            return try_step(proposal, &step);
         }
         return propose_transpositions(proposal, rng, ref->tonal, false);
     case PLAN_TRANSFORM_INVERTED: {
-        spec.kind = MOTIVE_DEV_INVERT;
-        spec.tonal = ref->tonal;
+        step.kind = MOTIVE_RELATION_INVERT;
+        step.value[0] = -1;
+        step.value[1] = ref->tonal ? 1 : 0;
         if (ref->has_axis) {
-            spec.has_axis = true;
-            spec.axis = ref->axis;
-            return try_spec(proposal, &spec);
+            step.value[0] = ref->axis;
+            return try_step(proposal, &step);
         }
         /* The first note, then axes inside the motive's range. */
-        if (!try_spec(proposal, &spec)) {
+        if (!try_step(proposal, &step)) {
             return false;
         }
         int lowest = motive_pitch(source, 0);
@@ -251,30 +250,29 @@ static bool propose_restatements(Proposal *proposal, FillRng *rng) {
         }
         size_t goal = proposal->added + wanted(proposal->context) - 1;
         for (size_t attempt = 0; proposal->added < goal && attempt < goal * ATTEMPTS_PER_CANDIDATE; attempt++) {
-            spec.has_axis = true;
-            spec.axis = lowest + (int)fill_rng_below(rng, (uint64_t)(highest - lowest + 1));
-            if (!try_spec(proposal, &spec)) {
+            step.value[0] = lowest + (int)fill_rng_below(rng, (uint64_t)(highest - lowest + 1));
+            if (!try_step(proposal, &step)) {
                 return false;
             }
         }
         return true;
     }
     case PLAN_TRANSFORM_RETROGRADE:
-        spec.kind = MOTIVE_DEV_RETROGRADE;
-        return try_spec(proposal, &spec);
+        step.kind = MOTIVE_RELATION_RETROGRADE;
+        return try_step(proposal, &step);
     case PLAN_TRANSFORM_INTERVAL_CHANGED: {
-        spec.kind = MOTIVE_DEV_INTERVAL_CHANGE;
-        spec.keep_contour = ref->keep_contour;
+        step.kind = MOTIVE_RELATION_INTERVAL_CHANGE;
+        step.value[2] = ref->keep_contour ? 1 : 0;
         if (ref->amount != 0) {
-            spec.interval = ref->interval;
-            spec.amount = ref->amount;
-            return try_spec(proposal, &spec);
+            step.value[0] = ref->interval;
+            step.value[1] = ref->amount;
+            return try_step(proposal, &step);
         }
         size_t goal = proposal->added + wanted(proposal->context);
         for (size_t attempt = 0; proposal->added < goal && attempt < goal * ATTEMPTS_PER_CANDIDATE; attempt++) {
-            spec.interval = (int)fill_rng_below(rng, (uint64_t)source->note_count);
-            spec.amount = draw_nonzero(rng, 2);
-            if (!try_spec(proposal, &spec)) {
+            step.value[0] = (int)fill_rng_below(rng, (uint64_t)source->note_count);
+            step.value[1] = draw_nonzero(rng, 2);
+            if (!try_step(proposal, &step)) {
                 return false;
             }
         }
@@ -294,43 +292,44 @@ static bool propose_fragments(Proposal *proposal, FillRng *rng) {
     const PlanMotiveRef *ref = &proposal->request->ref;
     size_t total = proposal->request->source.note_count;
     size_t minimum = proposal->context->min_length > 0 ? proposal->context->min_length : MOTIVE_DEV_MIN_LENGTH;
-    MotiveDevSpec spec;
-    memset(&spec, 0, sizeof(spec));
-    spec.min_length = proposal->context->min_length;
+    MotiveRelationStep step;
+    memset(&step, 0, sizeof(step));
+    long min_length = (long)proposal->context->min_length;
 
     if (ref->transform == PLAN_TRANSFORM_LIQUIDATED) {
-        spec.kind = MOTIVE_DEV_LIQUIDATE;
-        spec.keep_rhythm = ref->keep_rhythm;
+        step.kind = MOTIVE_RELATION_LIQUIDATE;
+        step.value[1] = ref->keep_rhythm ? 1 : 0;
+        step.value[2] = min_length;
         if (ref->drop > 0) {
-            spec.drop = (size_t)ref->drop;
-            return try_spec(proposal, &spec);
+            step.value[0] = ref->drop;
+            return try_step(proposal, &step);
         }
         for (size_t drop = 1; total > drop && total - drop >= minimum; drop++) {
-            spec.drop = drop;
-            if (!try_spec(proposal, &spec)) {
+            step.value[0] = (long)drop;
+            if (!try_step(proposal, &step)) {
                 return false;
             }
         }
         return true;
     }
 
-    spec.kind = MOTIVE_DEV_FRAGMENT;
+    step.kind = MOTIVE_RELATION_FRAGMENT;
+    step.value[2] = min_length;
     if (ref->position != PLAN_FRAGMENT_ANY && ref->length > 0) {
-        spec.position = ref->position;
-        spec.length = (size_t)ref->length;
-        return try_spec(proposal, &spec);
+        step.value[0] = ref->position;
+        step.value[1] = ref->length;
+        return try_step(proposal, &step);
     }
     if (total <= minimum) {
         return true; /* no fragment is shorter than the source and long enough */
     }
     size_t goal = proposal->added + wanted(proposal->context);
     for (size_t attempt = 0; proposal->added < goal && attempt < goal * ATTEMPTS_PER_CANDIDATE; attempt++) {
-        spec.position = ref->position != PLAN_FRAGMENT_ANY
-                            ? ref->position
-                            : (PlanFragmentPosition)(PLAN_FRAGMENT_LEADING + fill_rng_below(rng, 3));
-        spec.length = ref->length > 0 ? (size_t)ref->length
-                                      : minimum + (size_t)fill_rng_below(rng, (uint64_t)(total - minimum));
-        if (!try_spec(proposal, &spec)) {
+        step.value[0] = ref->position != PLAN_FRAGMENT_ANY ? (long)ref->position
+                                                           : (long)(PLAN_FRAGMENT_LEADING + fill_rng_below(rng, 3));
+        step.value[1] = ref->length > 0 ? (long)ref->length
+                                        : (long)(minimum + (size_t)fill_rng_below(rng, (uint64_t)(total - minimum)));
+        if (!try_step(proposal, &step)) {
             return false;
         }
     }
@@ -339,22 +338,22 @@ static bool propose_fragments(Proposal *proposal, FillRng *rng) {
 
 /* Augmentation and diminution: the ratio of the constraint, else each of a few usual ones. */
 static bool propose_rhythms(Proposal *proposal) {
-    static const unsigned long AUGMENTS[][2] = {{2, 1}, {3, 2}, {4, 1}};
-    static const unsigned long DIMINISHES[][2] = {{1, 2}, {2, 3}, {1, 4}};
+    static const long AUGMENTS[][2] = {{2, 1}, {3, 2}, {4, 1}};
+    static const long DIMINISHES[][2] = {{1, 2}, {2, 3}, {1, 4}};
     const PlanMotiveRef *ref = &proposal->request->ref;
     bool augment = ref->transform == PLAN_TRANSFORM_AUGMENTED;
-    MotiveDevSpec spec;
-    memset(&spec, 0, sizeof(spec));
-    spec.kind = augment ? MOTIVE_DEV_AUGMENT : MOTIVE_DEV_DIMINISH;
+    MotiveRelationStep step;
+    memset(&step, 0, sizeof(step));
+    step.kind = augment ? MOTIVE_RELATION_AUGMENT : MOTIVE_RELATION_DIMINISH;
     if (ref->ratio_num > 0) {
-        spec.ratio_num = (unsigned long)ref->ratio_num;
-        spec.ratio_den = (unsigned long)ref->ratio_den;
-        return try_spec(proposal, &spec);
+        step.value[0] = ref->ratio_num;
+        step.den[0] = ref->ratio_den;
+        return try_step(proposal, &step);
     }
     for (size_t i = 0; i < 3; i++) {
-        spec.ratio_num = augment ? AUGMENTS[i][0] : DIMINISHES[i][0];
-        spec.ratio_den = augment ? AUGMENTS[i][1] : DIMINISHES[i][1];
-        if (!try_spec(proposal, &spec)) {
+        step.value[0] = augment ? AUGMENTS[i][0] : DIMINISHES[i][0];
+        step.den[0] = augment ? AUGMENTS[i][1] : DIMINISHES[i][1];
+        if (!try_step(proposal, &step)) {
             return false;
         }
     }
@@ -519,7 +518,7 @@ const Motive *motive_develop_candidate_motive(const FillCandidate *candidate) {
     return payload && payload->magic == PAYLOAD_MAGIC ? &payload->result : NULL;
 }
 
-const MotiveDevSpec *motive_develop_candidate_spec(const FillCandidate *candidate) {
+const MotiveRelationStep *motive_develop_candidate_step(const FillCandidate *candidate) {
     const Payload *payload = candidate ? candidate->payload : NULL;
-    return payload && payload->magic == PAYLOAD_MAGIC ? &payload->spec : NULL;
+    return payload && payload->magic == PAYLOAD_MAGIC ? &payload->step : NULL;
 }

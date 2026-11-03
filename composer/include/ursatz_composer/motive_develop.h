@@ -9,6 +9,8 @@
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/motive.h>
 
+#include <analysis/motive_relation.h>
+
 /*
  * Motivic development: related motives made from a source motive.
  *
@@ -24,58 +26,8 @@
  * which is meant to be.
  */
 
-typedef enum {
-    MOTIVE_DEV_EXACT,         /* the source again */
-    MOTIVE_DEV_TRANSPOSE,     /* every pitch moved by amount: semitones, or steps of the key's scale when tonal */
-    MOTIVE_DEV_INVERT,        /* mirrored about a pitch: real (in semitones) or tonal (in scale steps) */
-    MOTIVE_DEV_RETROGRADE,    /* the notes in reverse order, each keeping its duration */
-    MOTIVE_DEV_INTERVAL_CHANGE, /* an interval, or every one, widened or narrowed by amount semitones */
-    MOTIVE_DEV_FRAGMENT,      /* a run of the notes: the first, the last or the middle ones */
-    MOTIVE_DEV_LIQUIDATE,     /* the notes with the least important ones dropped */
-    MOTIVE_DEV_AUGMENT,       /* every onset and duration longer by a ratio: 2:1 by default */
-    MOTIVE_DEV_DIMINISH       /* every onset and duration shorter by a ratio: 1:2 by default */
-} MotiveDevKind;
-
-/* The shortest result, in notes, that a fragment or a liquidation may have when the spec does not say. */
+/* The shortest result, in notes, that a fragment or a liquidation may have when the step does not say. */
 #define MOTIVE_DEV_MIN_LENGTH 2
-
-typedef struct {
-    MotiveDevKind kind;
-    /* TRANSPOSE, INVERT: in steps of the key's scale. Needs a key. */
-    bool tonal;
-    /* TRANSPOSE: semitones, or steps when tonal. INTERVAL_CHANGE: semitones to widen, or to narrow when negative. */
-    int amount;
-    /* INVERT: the pitch mirrored about, a MIDI note number; the source's first note when has_axis is false. */
-    bool has_axis;
-    int axis;
-    /* INTERVAL_CHANGE: the 1-based interval changed, or every one when 0; and whether a direction may not change. */
-    int interval;
-    bool keep_contour;
-    /*
-     * FRAGMENT: the position (not PLAN_FRAGMENT_ANY) and how many notes. The fragment starts at 0, so it opens on
-     * its first note.
-     */
-    PlanFragmentPosition position;
-    size_t length;
-    /*
-     * LIQUIDATE: how many notes to drop. The weakest go first: notes off the beat, then notes on a beat that is not
-     * the downbeat, then downbeats, the later of two equals first. With keep_rhythm the notes left keep their onsets
-     * and a dropped note is a rest (or a leading rest, if it was first); without it they follow one another from 0.
-     */
-    size_t drop;
-    bool keep_rhythm;
-    /* FRAGMENT, LIQUIDATE: the fewest notes the result may have; 0 means MOTIVE_DEV_MIN_LENGTH. */
-    size_t min_length;
-    /*
-     * AUGMENT, DIMINISH: the factor times and durations are multiplied by, ratio_num:ratio_den. Augmentation needs
-     * it above 1 and diminution below 1; 0:0 means 2:1 and 1:2. The pitches and their order are not touched. The
-     * result must be expressible in the meter: every duration a plain or dotted value (w h q e s t with up to two
-     * dots, as a note list writes them), every onset a multiple of a thirty-second, and, when the source is a whole
-     * number of beats long, the result too. Otherwise MOTIVE_DEV_ERR_NOT_EXPRESSIBLE.
-     */
-    unsigned long ratio_num;
-    unsigned long ratio_den;
-} MotiveDevSpec;
 
 typedef enum {
     MOTIVE_DEV_OK = 0,
@@ -86,17 +38,17 @@ typedef enum {
     MOTIVE_DEV_ERR_UNCHANGED,      /* the result is the source */
     MOTIVE_DEV_ERR_NOT_APPLICABLE, /* nothing to do: one note has no intervals, the contour would change */
     MOTIVE_DEV_ERR_TOO_SHORT,      /* a fragment or liquidation with fewer notes than the minimum */
-    MOTIVE_DEV_ERR_NOT_EXPRESSIBLE, /* the rhythm cannot be written in the meter, see MotiveDevSpec */
-    MOTIVE_DEV_ERR_INVALID,        /* the spec asks for something that is not a parameter */
+    MOTIVE_DEV_ERR_NOT_EXPRESSIBLE, /* the rhythm cannot be written in the meter, see augment and diminish in analysis/motive_relation.h */
+    MOTIVE_DEV_ERR_INVALID,        /* the step asks for something that is not a parameter */
     MOTIVE_DEV_ERR_NO_FEATURE,     /* a feature operation on a motive with no labelled feature */
     MOTIVE_DEV_ERR_NO_ACCOMPANIMENT /* an accompaniment operation on a motive whose role is melodic */
 } MotiveDevResult;
 
-/* Applies spec to source. *out is written only on MOTIVE_DEV_OK; its meter and key are the source's. */
-MotiveDevResult motive_develop(const Motive *source, const MotiveDevSpec *spec, Motive *out);
+/* Applies step to source. *out is written only on MOTIVE_DEV_OK; its meter and key are the source's. */
+MotiveDevResult motive_develop(const Motive *source, const MotiveRelationStep *step, Motive *out);
 
 /* Short text naming the transformation and its parameters: "transpose +3 steps (tonal)". */
-void motive_dev_label(const MotiveDevSpec *spec, char *out, size_t size);
+void motive_dev_label(const MotiveRelationStep *step, char *out, size_t size);
 
 /* "ok", "no key" and so on. */
 const char *motive_dev_result_name(MotiveDevResult result);
@@ -220,9 +172,9 @@ FillResult motive_develop_register(FillOperatorRegistry *registry, const MotiveD
 bool motive_develop_checker(const PiecePlan *plan, FillTarget target, const FillOperator *operator_,
                             const FillCandidate *candidate, void *context, FillCheck *out);
 
-/* The motive and the spec of a candidate one of these operators proposed. NULL for any other candidate. */
+/* The motive and the step of a candidate one of these operators proposed. NULL for any other candidate. */
 const Motive *motive_develop_candidate_motive(const FillCandidate *candidate);
-const MotiveDevSpec *motive_develop_candidate_spec(const FillCandidate *candidate);
+const MotiveRelationStep *motive_develop_candidate_step(const FillCandidate *candidate);
 
 /* --- invention ---------------------------------------------------------- */
 
