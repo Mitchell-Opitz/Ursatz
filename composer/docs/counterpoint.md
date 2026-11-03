@@ -5,6 +5,10 @@ given line in the first, second, third or fourth species of strict counterpoint.
 `counterpoint-species`, and `counterpoint_checker` holds its candidates to the rules of Ursatz's standard-counterpoint
 framework. The composing logic is the Composer's; every rule it is held to is the framework's.
 
+Times inside the operator are `Rational` positions in whole notes from the start of the target. A bar is the meter's
+beats over its beat unit, so a meter whose beat unit does not divide 128 (the old whole note grid) is accepted, and a bar is no
+longer refused for not dividing into the slots of the species.
+
 ## The target
 
 A target is a Constrained inner voice span, voice 1, with a `counterpoint` constraint on the span or its owner

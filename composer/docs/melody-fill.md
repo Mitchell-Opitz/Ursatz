@@ -7,6 +7,10 @@ command for it.
 
 Header: `<ursatz_composer/melody_fill.h>`.
 
+Times inside the operator are `Rational` positions in whole notes from the start of the target, not ticks, so the
+operator reads a span whose times are not a multiple of any grid. The shortest note it writes is a 128th: a `density`
+that would divide a cell into shorter notes keeps the cell.
+
 ## The target
 
 A Constrained melody lane span (voice 0) that stands for the phrase, holding one placeholder note. It

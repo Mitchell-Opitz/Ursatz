@@ -50,8 +50,9 @@ header outside the staged public roots in `build/external/ursatz/public/manifest
 
 ### Library primitives
 
-The Composer keeps no copy of what the library owns outside plan time (`PlanTime`) and the style share ratios
-(`StyleRational`, one `wide_gcd` in `src/style/style_internal.h`):
+The Composer keeps no copy of what the library owns outside the style share ratios (`StyleRational`, one `wide_gcd`
+in `src/style/style_internal.h`). There is no tick grid: every time is a library `Rational` in whole notes, and the
+lanes of the plan (R-019) hold library values:
 
 | Need | Library owner |
 | --- | --- |
@@ -59,6 +60,11 @@ The Composer keeps no copy of what the library owns outside plan time (`PlanTime
 | Pitch class names, spelling, octaves | `<pitch/pitch_arithmetic.h>`: `pitch_class_name`, `pitch_spelling_from_fifths`, `pitch_spelling_midi_number`. |
 | Key names and signatures | `<standard-tonality/tonal_key.h>`: `standard_tonality_key_tonic_of_pitch_class`, `standard_tonality_key_fifths`, `standard_tonality_key_signature_of`. |
 | Roman numerals of plain chords | `<standard-tonality/roman_numeral_grammar.h>`: parse reads every form, format writes the canonical one (`viio`, `viiø7`, `65`, `43`, `42`). Applied chords keep `harmony_applied_label`. |
+| Plan time, spans and the positions inside an operator | `<core/rational.h>`: a `PlanSpan` is a `Rational` start and length; the operators work on `Rational` positions from the start of their target (`src/util/position.h` wraps the checked arithmetic), and `<time/time_rational.h>` bridges to `MusicalTime`. No meter is refused for a grid. |
+| Cadence type | `<semantics/cadence_type.h>`: `CadenceType`. The plan file and the command line name the five a plan holds PAC, IAC, HC, DC and PC (`plan_cadence_names` in `src/util/plan_util.c`). |
+| Harmonic function | `<standard-harmony/harmonic_function.h>`: `HarmonicFunction`, with `PlanHarmony.has_function` false for chords read from an analysis. |
+| Key | `<semantics/analysis_key.h>`: `AnalysisKey`, a spelled tonic and a `KeyStructureMode`. `plan_key_of_pitch_class` spells a pitch class with the library; `analysis_key_tonic_pitch_class` reads it back. |
+| Pitch | A `PlanNote` is a MIDI number and an optional spelling (`spelled`, `letter`, `accidental`). MusicXML notes keep their notated spelling; the operators write unspelled notes and the renderer spells them in the key under them. |
 | MIDI import | `<io/midi_importer.h>`: `midi_importer_import_complete` (notes, meter and key signatures in one parse). |
 
 ## Structure
