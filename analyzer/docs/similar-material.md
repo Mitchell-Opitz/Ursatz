@@ -43,7 +43,8 @@ a raised seventh). An applied chord with more than one target (`V/V/V`) is not a
 window come from the documents' chord roots.
 
 A window of a progression lies inside one run of labelled chords of one key region. Chords that follow each other with
-the same numeral, key region and root are one chord. The number of chords of the window that carry exactly the
+the same numeral, key region and root are one chord: the joined chord sequence (`chord_sequence.h`), which the Composer
+reads too, so the indices of a match and the public ones are the same by construction. The number of chords of the window that carry exactly the
 query's numeral at their place is reported as `numeral_matches` and is not part of the score.
 
 ## Results
