@@ -9,6 +9,11 @@ Lists the operations of the [variant registry](variant-registry.md), or makes va
 
 The input is loaded as for the [motive command](cli-motive.md): a MIDI file, a MusicXML file, a note list or a motive JSON file, with `--format`, `--form`, `--meter`, `--key`, `--pickup`, `--harmony`, `--feature` and `--role` meaning the same (see [Harmony, features and role](cli-motive.md#harmony-features-and-role)). A rhythm (`x:q x:e`) or a contour (`0 2 1 3`) is read with `--form rhythm` or `--form contour`, and only the operations that apply to that form can be used on it.
 
+The command is a wrapper of the [composer API](api.md): it reads its arguments and the input files into a request, calls
+`composer_api_variants` (or `composer_api_variant_operations` for `--list-ops`), prints the response JSON, or the text lines
+made from it, and prints the response's `notices` on stderr. The request members have the options' names and values
+(`basic`, `functions`, `distance`, `each_op`, `chain` as the chain file's content, `count`, `seed`).
+
 ## Options
 
 | Option | Meaning |

@@ -5,7 +5,7 @@ Everything an application asks of the Composer is a versioned in-process C API (
 cJSON type and no file path (except style models and corpus directories) crosses it. The CLI is a client of the same
 functions: it reads its arguments into a request, calls the API and prints the response (R-267).
 
-This page covers the core, export and the motive entries. Each later branch of phase P26 adds its entries here and its JSON Schemas
+This page covers the core, export, the motive entries, variants, recognize and random motives. Each later branch of phase P26 adds its entries here and its JSON Schemas
 under `schema/api/` (draft 2020-12).
 
 ## Versioning
@@ -145,8 +145,87 @@ The motive request, and the motive is rendered.
 may read a MIDI file and render it, reads the file with `composer_api_motive_from_midi` and passes the motive document it
 answers with as the `json` input of the render request.
 
+### `composer_api_variant_operations(out)`
+
+The variant operations of the registry, as `ursatz-composer variants --list-ops --json` prints them: for each its `name`,
+`label`, `category`, `citation`, `relation`, `params` (`name`, `kind`, `min`, `max`, `description`, `optional`) and `forms`.
+Schema: `schema/api/variant_operations.schema.json`.
+
+### `composer_api_variants(request_json, job, out)`
+
+Variants of a motive: each applies a chain of up to 4 operations, and a parameter the chain leaves open is drawn from the
+seed. The request is the motive request (above, without `tones`) with these members:
+
+| Member | Value |
+|---|---|
+| `basic` | a motive request with its own `input`, `pickup` and `harmony`, read in the source's `meter`, `key`, `role` and input `form`: the basic motive remoteness is measured from. Default: the source. A basic that does not read is refused with a path under `/basic` |
+| `functions` | up to 4 of `"beginning"`, `"continuation"`, `"contrast"`, `"cadential"`: keep the variants that suit any of them. Up to 4 times `count` chains are drawn, so fewer may come back |
+| `distance` | `"close"` (1 step, remoteness at most 1/3), `"medium"` (2 steps, over 1/3 up to 2/3) or `"far"` (3 or 4 steps, over 2/3). Combines with `functions`; not with `chain` |
+| `chain` | `{"steps": [{"op", "params"}]}`: the same chain for every variant (the CLI's chain file, as a value). A step that is not valid is refused with its path, `/chain/steps/<i>/params/<name>` for a parameter |
+| `each_op` | `true`: one variant for every operation that takes the motive's form, in registry order, each a one-step chain; an operation the motive refuses is listed in `skipped`. Not with `chain`, `count`, `distance` or `functions` (`/each_op`) |
+| `count` | 1 to 16, default 6. Variant i uses seed + i |
+| `seed` | 0 to 4294967231, default from the clock. A whole number or a string of digits |
+| `detail` | `true` adds to each variant `remoteness_fraction` `[numerator, denominator]` and `leaves_harmony`, the exact figures the CLI prints as text |
+
+`json`: `{"seed", "source", "variants": [...]}`: each variant has its `seed`, `chain`, `kind`, `kept`, `changed`,
+`harmony`, `functions`, `derivation`, `recognizability`, `remoteness` and `motive` (the motive document of the motive
+entry). `skipped` (`[{"op", "reason"}]`) for `each_op`. `notices` (strings, only when there are any) say which seeds were
+skipped because a chain did not apply, and that fewer variants than asked for suit the functions and distance; the CLI
+prints them on stderr. Nothing is made: `COMPOSER_ERR_UNSATISFIABLE`, as is a chain with a step the motive refuses
+(`step 2 of the chain: ...`).
+
+Progress is reported once for each variant tried, stage `"variants"` (`done` of `total` draws, or registry rows for
+`each_op`), and a cancel is honored there with `COMPOSER_ERR_CANCELLED`. Schemas: `schema/api/variants.request.schema.json`,
+`variants.response.schema.json`.
+
+### `composer_api_recognize(request_json, job, out)`
+
+Names the chain of operations that turns a source motive into a target.
+
+| Member | Value |
+|---|---|
+| `source`, `target` | motive requests with their own `input`, `harmony` and `features`; both are read in the request's `meter`, `key` and `role` |
+| `meter` | required: both motives are read in it (`/meter`) |
+| `key`, `role` | as for a motive request, for both motives |
+| `pickup`, `target_pickup` | the source's and the target's pickup in beats; each is named at its own path when it is not valid |
+| `basic` | as for variants: remoteness is measured from it; default the source |
+| `depth` | the most operations in the chain, 1 to 4 (default 4) |
+| `detail` | `true` adds `distance_fraction` and `remoteness_fraction`, each `[numerator, denominator]` |
+
+`json`: `{"found", "chain", "distance", "remoteness", "kept", "changed", "derivation"}`. A search that finds no chain is a
+response with `found` false. Schemas: `recognize.request.schema.json`, `recognize.response.schema.json`.
+
+### `composer_api_random_motive(request_json, job, out)`
+
+Random motives that keep the hard melodic rules of standard counterpoint; their length, pickup, number of notes, rhythm and
+range are drawn from defaults in the Composer.
+
+| Member | Value |
+|---|---|
+| `mode` | `"major"`, `"minor"` or `"random"`. Required |
+| `meter` | `"4/4"`, `"3/4"`, `"2/4"`, `"6/8"` or any meter, or `"random"`. Required |
+| `key` | `"D minor"`; its mode must be the mode (`/key`). Default C major or A minor |
+| `form` | `"full"` (default), `"rhythm"` or `"contour"` |
+| `role` | `"melodic"` or `"accompaniment"` |
+| `style` | a style model file: 8 candidates are drawn for each motive and the closest to it kept. A file that cannot be read is `COMPOSER_ERR_UNSATISFIABLE` with `/style` |
+| `style_without` | up to 8 style categories read without; needs `style` |
+| `count` | 1 to 16, default 1 |
+| `seed` | 0 to 4294967295, default from the clock |
+
+**Random mode and meter (R-269).** `"random"` is drawn from the seed by the rule the GUI used before the Composer drew, so a
+GUI seed draws what it drew: `m = ((seed + 1) * 2654435761) mod 2^32`; the mode is major when `(m >> 8)` is even and
+minor when it is odd; the meter is `"4/4"`, `"3/4"`, `"2/4"` or `"6/8"` for `(m >> 16) mod 4` of 0, 1, 2 and 3. Seed 0 draws
+minor 6/8, seed 1 and seed 2 minor 2/4, and seed 4294967295 (where `seed + 1` wraps to 0) major 4/4. The response says what
+was drawn.
+
+`json`: `{"seed", "motives": [<the motive entry's document>]}` and `"drawn": {"mode", "meter"}`, with only the members that
+were drawn, when something was. The same request and seed give the same motives. Schemas:
+`random_motive.request.schema.json`, `random_motive.response.schema.json`.
+
 ## Tests
 
 `tests/test_api_core.c`, `tests/test_api_motive.c` (each GUI motive shape from a request, the response equal to the CLI
-snapshot) and `tests/test_job_cancel.c`; `tests/validate_api_schema.cmake` validates every response the
+snapshot), `tests/test_api_variants.c` (the operation list, variants, recognize and random motives against their
+snapshots, the random draws for seeds 0, 1, 2 and 4294967295, refusals with their paths, cancel) and
+`tests/test_job_cancel.c`; `tests/validate_api_schema.cmake` validates every response the
 tests write against its schema when python3 with `jsonschema` is present.
