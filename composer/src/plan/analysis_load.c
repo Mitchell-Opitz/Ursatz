@@ -228,7 +228,7 @@ static void note_unmapped_sections(Notes *notes, const cJSON *document) {
 }
 
 static PlanResult build_plan(const cJSON *document, PiecePlan *plan, Notes *notes, PlanJsonError *error) {
-    JsonReader reader = {error, PLAN_OK};
+    JsonReader reader = {error, PLAN_OK, 0};
     if (!cJSON_IsObject(document)) {
         json_bad_format(&reader, "", "expected a JSON object");
         return reader.result;

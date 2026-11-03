@@ -348,7 +348,7 @@ static void test_round_trip(void) {
     char *text = plan_to_json(plan, &error);
     assert(text != NULL);
     assert(text[strlen(text) - 1] == '\n');
-    assert(strstr(text, "\"schema_version\": 1") != NULL);
+    assert(strstr(text, "\"format_version\": 2") != NULL);
 
     PiecePlan *parsed = NULL;
     expect_ok(plan_from_json(text, &parsed, &error), &error);
