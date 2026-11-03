@@ -142,59 +142,6 @@ static int build_request(const Options *options, char **out) {
 
 /* --- the files ----------------------------------------------------------------------------------------- */
 
-/* Writes data to the temporary file; false when it cannot be. */
-static bool write_temporary(const char *path, const void *data, size_t size) {
-    FILE *file = fopen(path, "wb");
-    bool wrote = file && fwrite(data, 1, size, file) == size;
-    bool closed = file && fclose(file) == 0;
-    if (!wrote || !closed) {
-        remove(path);
-    }
-    return wrote && closed;
-}
-
-/* The plan object of a theme as the library writes plan files. */
-static int write_plan(const cJSON *plan, const char *temporary, const char *final_path) {
-    char *text = cJSON_PrintUnformatted(plan);
-    PiecePlan *loaded = NULL;
-    PlanJsonError error;
-    memset(&error, 0, sizeof error);
-    bool ok = text && plan_from_json(text, &loaded, &error) == PLAN_OK;
-    cJSON_free(text);
-    if (ok && plan_write_json_file(loaded, temporary, &error) != PLAN_OK) {
-        ok = false;
-    }
-    plan_destroy(loaded);
-    return ok ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", final_path, error.message[0] ? error.message : "the plan");
-}
-
-/* The MIDI file or MusicXML of the plan of theme k (k from 1), through the export entry. */
-static int export_theme(const cJSON *plan, double qpm, bool plain_midi, bool midi, ComposerResponse *out) {
-    cJSON *request = cJSON_CreateObject();
-    bool ok = request && cJSON_AddItemToObject(request, "plan", cJSON_Duplicate(plan, true)) &&
-              cJSON_AddBoolToObject(request, "midi", midi) && cJSON_AddBoolToObject(request, "musicxml", !midi) &&
-              cJSON_AddBoolToObject(request, "plain_midi", plain_midi);
-    if (ok && qpm > 0) {
-        /* A tempo is a whole number or half-steps like 195/2: the document wrote it with %g. */
-        char text[48] = "";
-        for (long den = 1; den <= 16 && !text[0]; den++) {
-            double scaled = qpm * (double)den;
-            if (scaled - (double)(long)(scaled + 0.5) < 1e-6 && (double)(long)(scaled + 0.5) - scaled < 1e-6) {
-                snprintf(text, sizeof text, den == 1 ? "%ld" : "%ld/%ld", (long)(scaled + 0.5), den);
-            }
-        }
-        ok = text[0] && cJSON_AddStringToObject(request, "tempo", text);
-    }
-    char *printed = ok ? cJSON_PrintUnformatted(request) : NULL;
-    cJSON_Delete(request);
-    if (!printed) {
-        return cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
-    }
-    ComposerStatus status = composer_api_export(printed, NULL, out);
-    cJSON_free(printed);
-    return status == COMPOSER_OK ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
-}
-
 /*
  * Writes every output to a temporary file next to its final name, and renames them all only when every one was written, so
  * that an error leaves no output file behind.
@@ -231,7 +178,7 @@ static int write_files(const Options *options, const ComposerResponse *response,
                 data = response->plan_json;
                 size = strlen(response->plan_json);
             } else if (kind == 0) {
-                status = write_plan(plan, entry->temporary, entry->final_path);
+                status = cli_write_plan_object(plan, entry->temporary, entry->final_path);
                 continue;
             } else if (kind == 3) {
                 const cJSON *explanation = cJSON_GetObjectItemCaseSensitive(theme, "explanation");
@@ -241,14 +188,14 @@ static int write_files(const Options *options, const ComposerResponse *response,
                 data = kind == 1 ? (const void *)response->midi : (const void *)response->musicxml;
                 size = kind == 1 ? response->midi_size : strlen(response->musicxml);
             } else {
-                status = export_theme(plan, qpm, options->plain_midi, kind == 1, &exported);
+                status = cli_export_plan(plan, qpm, options->plain_midi, kind == 1, kind != 1, NULL, &exported);
                 if (status != 0) {
                     break;
                 }
                 data = kind == 1 ? (const void *)exported.midi : (const void *)exported.musicxml;
                 size = kind == 1 ? exported.midi_size : strlen(exported.musicxml);
             }
-            if (!write_temporary(entry->temporary, data, size)) {
+            if (!cli_write_bytes(entry->temporary, data, size)) {
                 status = cli_fail(CLI_EXIT_WRITE, "cannot write '%s': could not write '%s'", entry->final_path,
                                   entry->temporary);
             }

@@ -16,4 +16,7 @@
 void cli_print_grow_text(const cJSON *document, bool numbered, const CorpusSeed *seed, const char *const *files,
                          size_t file_count);
 
+/* The brief line of a result document's "brief" member: "brief: mode minor (request), tempo 96 (option), ...". */
+void cli_print_brief_json(const cJSON *brief);
+
 #endif

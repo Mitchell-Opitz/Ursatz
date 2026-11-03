@@ -164,6 +164,23 @@ typedef struct {
 /* Removes the temporary files of the first `count` pending files. */
 void cli_discard_pending(CliPendingFile *pending, size_t count);
 
+/* Writes data to path; false when it cannot be (a partly written file is removed). */
+bool cli_write_bytes(const char *path, const void *data, size_t size);
+
+/*
+ * The plan object (a plan of the composer API) as the library writes plan files, into the temporary file. Returns 0, or
+ * CLI_EXIT_WRITE after printing "cannot write '<final_path>'".
+ */
+int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *final_path);
+
+/*
+ * The MIDI file and the MusicXML of a plan object through composer_api_export, for the files of a command. qpm is the tempo
+ * (0 for the plan's own), loop the {"start", "end"} object of the loop markers or NULL. Returns 0, or CLI_EXIT_WRITE after
+ * printing "cannot render the plan". The caller destroys *out.
+ */
+int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml, const cJSON *loop,
+                    ComposerResponse *out);
+
 /* The text of a motive in its own form (notes, rhythm or contour); malloc'd, the caller frees it. */
 char *cli_motive_text(const Motive *motive);
 

@@ -99,7 +99,7 @@ static void print_theme_text(const cJSON *theme) {
 }
 
 /* The brief as theme prints it: grow's brief lines. */
-static void print_brief(const cJSON *brief) {
+void cli_print_brief_json(const cJSON *brief) {
     const cJSON *mode = cJSON_GetObjectItemCaseSensitive(brief, "mode");
     printf("brief: mode %s (%s)", string_of(mode, "mode"), string_of(mode, "from"));
     const cJSON *brief_tempo = cJSON_GetObjectItemCaseSensitive(brief, "tempo");
@@ -151,7 +151,7 @@ void cli_print_grow_text(const cJSON *document, bool numbered, const CorpusSeed 
     }
     const cJSON *brief = cJSON_GetObjectItemCaseSensitive(document, "brief");
     if (brief) {
-        print_brief(brief);
+        cli_print_brief_json(brief);
     }
     const cJSON *entry = NULL;
     cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(document, "chords")) {

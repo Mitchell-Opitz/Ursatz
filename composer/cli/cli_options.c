@@ -15,6 +15,7 @@
 #include "plan.h"
 
 #include <ursatz_composer/harmony_phrase.h>
+#include <ursatz_composer/plan_json.h>
 #include "util/plan_util.h"
 #include "util/util.h"
 
@@ -105,6 +106,7 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
         {"needs hybrid <beginning>", "needs --hybrid <beginning>"},
         {"applies only to into hybrid", "applies only to --into hybrid"},
         {"use into ", "use --into "},
+        {"regenerate it with lanes harmony", "regenerate it with --lane harmony"},
         {"and texture chorale write the inner voices themselves; they cannot be combined with accompaniment or another "
          "texture",
          "and --texture chorale write the inner voices themselves; they cannot be combined with --accompaniment or another "
@@ -476,6 +478,60 @@ int cli_report_refused(RegenerateResult result, const char *what) {
     ComposerError error;
     memset(&error, 0, sizeof error);
     return cli_fail_api(api_refused(result, what, &error), &error, NULL);
+}
+
+bool cli_write_bytes(const char *path, const void *data, size_t size) {
+    FILE *file = fopen(path, "wb");
+    bool wrote = file && fwrite(data, 1, size, file) == size;
+    bool closed = file && fclose(file) == 0;
+    if (!wrote || !closed) {
+        remove(path);
+    }
+    return wrote && closed;
+}
+
+int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *final_path) {
+    char *text = cJSON_PrintUnformatted(plan);
+    PiecePlan *loaded = NULL;
+    PlanJsonError error;
+    memset(&error, 0, sizeof error);
+    bool ok = text && plan_from_json(text, &loaded, &error) == PLAN_OK;
+    cJSON_free(text);
+    if (ok && plan_write_json_file(loaded, temporary, &error) != PLAN_OK) {
+        ok = false;
+    }
+    plan_destroy(loaded);
+    return ok ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", final_path, error.message[0] ? error.message : "the plan");
+}
+
+int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml, const cJSON *loop,
+                    ComposerResponse *out) {
+    cJSON *request = cJSON_CreateObject();
+    bool ok = request && cJSON_AddItemToObject(request, "plan", cJSON_Duplicate(plan, true)) &&
+              cJSON_AddBoolToObject(request, "midi", midi) && cJSON_AddBoolToObject(request, "musicxml", musicxml) &&
+              cJSON_AddBoolToObject(request, "plain_midi", plain_midi);
+    if (ok && loop) {
+        ok = cJSON_AddItemToObject(request, "loop", cJSON_Duplicate(loop, true));
+    }
+    if (ok && qpm > 0) {
+        /* A tempo is a whole number or half-steps like 195/2: the document wrote it with %g. */
+        char text[48] = "";
+        for (long den = 1; den <= 16 && !text[0]; den++) {
+            double scaled = qpm * (double)den;
+            if (scaled - (double)(long)(scaled + 0.5) < 1e-6 && (double)(long)(scaled + 0.5) - scaled < 1e-6) {
+                snprintf(text, sizeof text, den == 1 ? "%ld" : "%ld/%ld", (long)(scaled + 0.5), den);
+            }
+        }
+        ok = text[0] && cJSON_AddStringToObject(request, "tempo", text);
+    }
+    char *printed = ok ? cJSON_PrintUnformatted(request) : NULL;
+    cJSON_Delete(request);
+    if (!printed) {
+        return cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
+    }
+    ComposerStatus status = composer_api_export(printed, NULL, out);
+    cJSON_free(printed);
+    return status == COMPOSER_OK ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
 }
 
 void cli_discard_pending(CliPendingFile *pending, size_t count) {
