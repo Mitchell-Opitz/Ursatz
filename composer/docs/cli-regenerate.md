@@ -9,6 +9,8 @@ Take a filled plan (from [`fill`](cli-fill.md)) apart. `lock` keeps material: it
 it. `regenerate` writes one node again with a seed, and only what depends on it. See [regenerate.md](regenerate.md) for
 what that means. [`variations` and `harmonize`](cli-variations.md) write several versions of a node at once.
 
+`lock` and `regenerate` read the plan file into a request for `composer_api_lock` and `composer_api_regenerate` ([api.md](api.md)); the node is found, refused and described by the entry, and the files are written from the response.
+
 ## Addressing a node
 
 `--node <id>` is the node's `composer.id` in the plan file. `--section <letter>` is the section with that form letter
