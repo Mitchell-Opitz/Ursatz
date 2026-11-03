@@ -91,6 +91,7 @@ typedef struct {
     const char *source;
     const char *target;
     const char *basic;
+    const char *accompaniment; /* "/accompaniment_motive"; NULL: the source */
 } MotiveInputNames;
 
 /*

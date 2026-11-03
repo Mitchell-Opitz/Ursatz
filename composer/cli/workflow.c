@@ -141,6 +141,98 @@ int cli_export_midi(const cJSON *plan, const char *tempo_text, bool plain_midi, 
     return status == COMPOSER_OK ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
 }
 
+int cli_write_alternatives(const CliAlternativePaths *paths, const cJSON *const *entries, size_t entry_count,
+                           const ComposerResponse *first, const char *tempo_text, bool plain_midi, CliWrittenFiles *written) {
+    const char *requested[4] = {paths->plan, paths->midi, paths->musicxml, paths->explanation};
+    size_t capacity = 4 * (entry_count ? entry_count : 1);
+    CliFile *files = calloc(capacity, sizeof *files);
+    ComposerResponse *midis = calloc(entry_count ? entry_count : 1, sizeof *midis);
+    written->paths = calloc(capacity, CLI_WRITTEN_PATH_SIZE);
+    written->count = 0;
+    int status = files && midis && written->paths ? 0 : cli_fail(CLI_EXIT_WRITE, "out of memory");
+    size_t count = 0;
+    for (size_t k = 0; status == 0 && k < entry_count; k++) {
+        const cJSON *plan = cJSON_GetObjectItemCaseSensitive(entries[k], "plan");
+        for (int kind = 0; kind < 4 && status == 0; kind++) {
+            if (!requested[kind]) {
+                continue;
+            }
+            char *final_path = written->paths[count];
+            if (!cli_alternative_path(requested[kind], k + 1, entry_count > 1, final_path, CLI_WRITTEN_PATH_SIZE)) {
+                status = cli_fail(CLI_EXIT_WRITE, "file name '%s' is too long", requested[kind]);
+                break;
+            }
+            CliFile *file = &files[count];
+            memset(file, 0, sizeof *file);
+            file->path = final_path;
+            if (kind == 0) {
+                file->kind = CLI_FILE_PLAN;
+                file->plan = plan;
+            } else if (kind == 1) {
+                file->kind = CLI_FILE_BYTES;
+                file->detailed = true;
+                if (k == 0 && first) {
+                    file->data = first->midi;
+                    file->size = first->midi_size;
+                } else {
+                    status = cli_export_midi(plan, tempo_text, plain_midi, &midis[k]);
+                    file->data = midis[k].midi;
+                    file->size = midis[k].midi_size;
+                }
+            } else {
+                const char *text = cli_json_string(entries[k], kind == 2 ? "musicxml" : "explanation");
+                file->kind = CLI_FILE_TEXT;
+                file->detailed = kind == 2;
+                file->data = text;
+                file->size = strlen(text);
+            }
+            count++;
+            written->count = count;
+        }
+    }
+    if (status == 0) {
+        status = cli_write_files(files, count);
+    }
+    for (size_t k = 0; midis && k < entry_count; k++) {
+        composer_response_destroy(&midis[k]);
+    }
+    free(midis);
+    free(files);
+    if (status != 0) {
+        cli_written_free(written);
+    }
+    return status;
+}
+
+void cli_written_free(CliWrittenFiles *written) {
+    free(written->paths);
+    written->paths = NULL;
+    written->count = 0;
+}
+
+const char *const *cli_written_list(CliWrittenFiles *written, const char **storage, size_t capacity) {
+    for (size_t i = 0; i < written->count && i < capacity; i++) {
+        storage[i] = written->paths[i];
+    }
+    return storage;
+}
+
+void cli_strip_entry_files(cJSON *entry) {
+    cJSON_DeleteItemFromObjectCaseSensitive(entry, "plan");
+    cJSON_DeleteItemFromObjectCaseSensitive(entry, "musicxml");
+    cJSON_DeleteItemFromObjectCaseSensitive(entry, "explanation");
+}
+
+void cli_print_document_with_files(cJSON *document, const CliWrittenFiles *written) {
+    cJSON *list = cJSON_AddArrayToObject(document, "files");
+    for (size_t i = 0; list && i < written->count; i++) {
+        cJSON_AddItemToArray(list, cJSON_CreateString(written->paths[i]));
+    }
+    char *text = cJSON_PrintUnformatted(document);
+    printf("%s\n", text ? text : "{}");
+    cJSON_free(text);
+}
+
 /* --- printing -------------------------------------------------------------------------------------- */
 
 const char *cli_json_string(const cJSON *object, const char *name) {

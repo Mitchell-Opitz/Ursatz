@@ -294,7 +294,7 @@ int run_theme(int argc, char **argv) {
             for (size_t i = 0; i < pending_count; i++) {
                 files[i] = pending[i].final_path;
             }
-            cli_print_grow_text(document, options.suggest != NULL, NULL, files, pending_count);
+            cli_print_grow_text(document, options.suggest != NULL, files, pending_count);
         }
     }
     cJSON_Delete(document);

@@ -125,8 +125,7 @@ void cli_print_brief_json(const cJSON *brief) {
     printf("\n");
 }
 
-void cli_print_grow_text(const cJSON *document, bool numbered, const CorpusSeed *seed, const char *const *files,
-                         size_t file_count) {
+void cli_print_grow_text(const cJSON *document, bool numbered, const char *const *files, size_t file_count) {
     printf("%s (%s), key %s, meter %s, %.0f bars, cadence %s", string_of(document, "into"), string_of(document, "pairing"),
            string_of(document, "key"), string_of(document, "meter"), number_of(document, "bars"), string_of(document, "cadence"));
     if (cJSON_GetObjectItemCaseSensitive(document, "first_cadence")) {
@@ -157,8 +156,12 @@ void cli_print_grow_text(const cJSON *document, bool numbered, const CorpusSeed 
     cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(document, "chords")) {
         printf("chords bar %.0f: %s\n", number_of(entry, "bar"), string_of(entry, "text"));
     }
-    if (seed) {
-        cli_print_seed_line("motive", seed);
+    const cJSON *source = cJSON_GetObjectItemCaseSensitive(document, "source");
+    if (source) {
+        const cJSON *start = cJSON_GetObjectItemCaseSensitive(source, "start");
+        const cJSON *end = cJSON_GetObjectItemCaseSensitive(source, "end");
+        printf("motive from %s m.%.0f b.%g - m.%.0f b.%g, score %s\n", string_of(source, "piece"), number_of(start, "measure"),
+               number_of(start, "beat"), number_of(end, "measure"), number_of(end, "beat"), string_of(source, "score"));
     }
     const cJSON *themes = cJSON_GetObjectItemCaseSensitive(document, "themes");
     size_t count = (size_t)cJSON_GetArraySize(themes);

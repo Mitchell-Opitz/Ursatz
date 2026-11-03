@@ -218,7 +218,8 @@ int motive_input_fail(const MotiveFile *file, ComposerStatus status, const Compo
     if (file->read_status != 0 && status != COMPOSER_ERR_REQUEST) {
         return cli_fail(file->read_status, "%s", file->read_error);
     }
-    const char *name = strncmp(error->path, "/basic", 6) == 0 ? names->basic
+    const char *name = strncmp(error->path, "/accompaniment_motive", 21) == 0 && names->accompaniment ? names->accompaniment
+                       : strncmp(error->path, "/basic", 6) == 0 ? names->basic
                        : strncmp(error->path, "/target", 7) == 0 ? names->target
                                                                  : names->source;
     return cli_fail_api(status, error, name);

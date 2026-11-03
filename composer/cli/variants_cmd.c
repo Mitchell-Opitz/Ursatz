@@ -281,7 +281,7 @@ static int make_variants(const Options *options) {
         cJSON_Delete(chain);
         return status;
     }
-    MotiveInputNames names = {options->in.path, NULL, options->basic.path};
+    MotiveInputNames names = {options->in.path, NULL, options->basic.path, NULL};
     if (motive_input_basic_given(&options->basic)) {
         MotiveInput basic_input;
         cJSON *basic = NULL;
