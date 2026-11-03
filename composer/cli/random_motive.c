@@ -8,7 +8,6 @@
 #include <cJSON.h>
 
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/motive_random.h>
 
 #include "cli_options.h"
 #include "motive_extras.h"
@@ -41,7 +40,7 @@ static void print_help(FILE *out) {
     motive_extras_print_help(out, true);
     fprintf(out, "  --style <file>       a style model file: draw 8 candidates for each motive and keep the closest to it\n");
     fprintf(out, "  --style-without <c>  read the style without the category c (repeatable, at most 8; needs --style)\n");
-    fprintf(out, "  --count <n>          how many motives, 1 to %d (default %d)\n", MOTIVE_RANDOM_MAX_COUNT, RANDOM_MOTIVE_COUNT_DEFAULT);
+    fprintf(out, "  --count <n>          how many motives, 1 to %ld (default %d)\n", cli_limit("random_motive_count"), RANDOM_MOTIVE_COUNT_DEFAULT);
     fprintf(out, "  --seed <n>           whole number from 0. Default: from the clock. The seed is printed\n");
     fprintf(out, "  --json               print {\"seed\", \"motives\"}, each motive as the motive command's --json document\n");
     fprintf(out, "  --help               this text\n\n");

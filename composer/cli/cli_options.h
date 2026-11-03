@@ -36,6 +36,15 @@ bool cli_whole_number(const char *text, unsigned long maximum, unsigned long *ou
 /* Whether two ASCII texts are equal ignoring case. */
 bool cli_equals_ignore_case(const char *a, const char *b);
 
+/* A size the API limits requests to (composer_api_vocabulary "limits": motive_notes, motive_chords, motive_features, variant_chain, variant_functions, random_motive_count); 0 when unknown. */
+long cli_limit(const char *name);
+
+/* Room for the repeatable options that the limits cap (--tone, --feature, --function): the API refuses more than its limit. */
+#define CLI_LIST_CAPACITY 64
+
+/* Whether a repeatable option already holds as many values as the limit allows (or as the CLI has room for). */
+bool cli_list_full(size_t count, const char *limit_name);
+
 /* Prints "Error: <message>" to stderr and returns status. */
 int cli_fail(int status, const char *format, ...);
 

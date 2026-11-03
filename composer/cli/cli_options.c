@@ -70,6 +70,23 @@ bool cli_equals_ignore_case(const char *a, const char *b) {
     return *a == *b;
 }
 
+long cli_limit(const char *name) {
+    ComposerResponse response;
+    long value = 0;
+    if (composer_api_vocabulary(&response) == COMPOSER_OK) {
+        cJSON *document = cJSON_Parse(response.json);
+        const cJSON *item = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "limits"), name);
+        value = cJSON_IsNumber(item) ? (long)item->valuedouble : 0;
+        cJSON_Delete(document);
+    }
+    composer_response_destroy(&response);
+    return value;
+}
+
+bool cli_list_full(size_t count, const char *limit_name) {
+    return count >= CLI_LIST_CAPACITY || (long)count >= cli_limit(limit_name);
+}
+
 int cli_fail(int status, const char *format, ...) {
     va_list args;
     va_start(args, format);
@@ -232,17 +249,22 @@ bool cli_write_bytes(const char *path, const void *data, size_t size) {
 }
 
 int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *final_path) {
-    char *text = cJSON_PrintUnformatted(plan);
-    PiecePlan *loaded = NULL;
-    PlanJsonError error;
-    memset(&error, 0, sizeof error);
-    bool ok = text && plan_from_json(text, &loaded, &error) == PLAN_OK;
-    cJSON_free(text);
-    if (ok && plan_write_json_file(loaded, temporary, &error) != PLAN_OK) {
-        ok = false;
-    }
-    plan_destroy(loaded);
-    return ok ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", final_path, error.message[0] ? error.message : "the plan");
+    /* The API gives the plan as the library writes plan files. */
+    cJSON *request = cJSON_CreateObject();
+    bool ok = request && cJSON_AddItemToObject(request, "plan", cJSON_Duplicate(plan, true)) &&
+              cJSON_AddBoolToObject(request, "plan_file", true);
+    char *printed = ok ? cJSON_PrintUnformatted(request) : NULL;
+    cJSON_Delete(request);
+    ComposerResponse response;
+    memset(&response, 0, sizeof response);
+    ComposerStatus status = printed ? composer_api_export(printed, NULL, &response) : COMPOSER_ERR_ALLOC;
+    cJSON_free(printed);
+    ok = status == COMPOSER_OK && response.plan_json &&
+         cli_write_bytes(temporary, response.plan_json, strlen(response.plan_json));
+    const char *why = response.error.message[0] ? response.error.message : "the plan";
+    int result = ok ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", final_path, why);
+    composer_response_destroy(&response);
+    return result;
 }
 
 int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml, const cJSON *loop,

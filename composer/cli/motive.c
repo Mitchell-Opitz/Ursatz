@@ -8,7 +8,6 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/composer_api.h>
-#include <ursatz_composer/motive.h>
 
 #include "cli_options.h"
 #include "motive_extras.h"
@@ -31,7 +30,7 @@ typedef struct {
     const char *musicxml_path;
     const char *tempo_text;
     MotiveExtras extras;
-    const char *tone_texts[MOTIVE_MAX_NOTES];
+    const char *tone_texts[CLI_LIST_CAPACITY];
     size_t tone_count;
     bool json;
     bool help;
@@ -87,8 +86,8 @@ static int read_options(int argc, char **argv, Options *options) {
             if (i + 1 >= argc) {
                 return fail(EXIT_USAGE, "--tone needs a value");
             }
-            if (options->tone_count == MOTIVE_MAX_NOTES) {
-                return fail(EXIT_USAGE, "at most %d --tone options", MOTIVE_MAX_NOTES);
+            if (cli_list_full(options->tone_count, "motive_notes")) {
+                return fail(EXIT_USAGE, "at most %ld --tone options", cli_limit("motive_notes"));
             }
             options->tone_texts[options->tone_count++] = argv[++i];
         } else if (motive_extras_take(&options->extras, argc, argv, &i, false, &extras_status)) {
