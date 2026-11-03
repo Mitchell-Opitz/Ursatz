@@ -659,25 +659,27 @@ static bool make_kernel_window(const StandardFormMotiveLine *line, size_t first,
                                             : (shape->steps[k] < 0 ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME);
         ok = duration_create((long)shape->ioi[k].n, (unsigned long)shape->ioi[k].d, &durations[k]) == DURATION_OK;
     }
+    /* On success the contour and the pattern take the elements and copy the arrays; the arrays stay ours. */
+    bool pitches_taken = false;
+    bool durations_taken = false;
     if (ok && contour_create(pitches, n, directions, shape->intervals, &out->contour) == CONTOUR_OK) {
-        pitches = NULL; /* owned by the contour */
-        directions = NULL;
+        pitches_taken = true;
     } else {
         ok = false;
     }
     if (ok && rhythmic_pattern_create(durations, shape->intervals, &out->rhythm) == RHYTHMIC_PATTERN_OK) {
-        durations = NULL;
+        durations_taken = true;
     } else {
         ok = false;
     }
-    if (pitches != NULL) {
+    if (pitches != NULL && !pitches_taken) {
         for (size_t k = 0; k < n; k++) {
             pitch_identity_destroy(pitches[k]);
         }
     }
     free(pitches);
     free(directions);
-    if (durations != NULL) {
+    if (durations != NULL && !durations_taken) {
         for (size_t k = 0; k < shape->intervals; k++) {
             duration_destroy(durations[k]);
         }

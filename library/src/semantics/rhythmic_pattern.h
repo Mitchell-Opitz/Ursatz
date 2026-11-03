@@ -27,8 +27,9 @@ typedef enum {
 } RhythmicPatternResult;
 
 /*
- * Takes ownership of durations (and each Duration it points to) on
- * success -- all destroyed by rhythmic_pattern_destroy. durations must
+ * On success takes ownership of each Duration durations points to
+ * (destroyed by rhythmic_pattern_destroy) and copies the durations array,
+ * which stays the caller's to free. On failure nothing is taken. durations must
  * be non-NULL with duration_count > 0; no entry may be NULL.
  */
 RhythmicPatternResult rhythmic_pattern_create(Duration **durations, size_t duration_count,

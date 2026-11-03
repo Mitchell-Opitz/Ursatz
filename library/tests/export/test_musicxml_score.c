@@ -421,6 +421,46 @@ static void test_marking_inside_a_note_cuts_it(void) {
     bag_free(&bag);
 }
 
+static void test_note_xml_id_format(void) {
+    char out[32];
+    assert(musicxml_export_note_xml_id("12", out, sizeof(out)) && strcmp(out, "n12") == 0);
+    assert(musicxml_export_note_xml_id("a:b", out, sizeof(out)) && strcmp(out, "a_b") == 0);
+    assert(musicxml_export_note_xml_id("_x", out, sizeof(out)) && strcmp(out, "_x") == 0);
+    assert(musicxml_export_note_xml_id("Ab.c-9", out, sizeof(out)) && strcmp(out, "Ab.c-9") == 0);
+    assert(musicxml_export_note_xml_id("", out, sizeof(out)) && strcmp(out, "n") == 0);
+    /* exactly full is fine, one short is refused, and nothing is cut silently */
+    assert(musicxml_export_note_xml_id("12", out, 4) && strcmp(out, "n12") == 0);
+    assert(!musicxml_export_note_xml_id("12", out, 3));
+    assert(!musicxml_export_note_xml_id("abc", out, 3));
+    assert(!musicxml_export_note_xml_id("abc", out, 0));
+    assert(!musicxml_export_note_xml_id(NULL, out, sizeof(out)));
+    assert(!musicxml_export_note_xml_id("abc", NULL, sizeof(out)));
+}
+
+static void test_every_note_id_is_written(void) {
+    TestBag bag;
+    memset(&bag, 0, sizeof(bag));
+    /* a plain note, ids that need the prefix and the replacement, and a note tied across the barline */
+    bag_add_note(&bag, "n0", 0, 4, 1, 4, PITCH_LETTER_C, NULL);
+    bag_add_note(&bag, "12", 1, 4, 1, 4, PITCH_LETTER_D, NULL);
+    bag_add_note(&bag, "a:b", 2, 4, 1, 4, PITCH_LETTER_E, NULL);
+    bag_add_note(&bag, "tied", 7, 8, 1, 2, PITCH_LETTER_G, NULL);
+    char *xml = write_bag(&bag, NULL, NULL, 0, false);
+    for (size_t i = 0; i < bag.count; i++) {
+        char base[64];
+        char exact[96];
+        char fragment[96];
+        assert(musicxml_export_note_xml_id(entity_id_value(note_event_id(bag.events[i])), base, sizeof(base)));
+        snprintf(exact, sizeof(exact), "xml:id=\"%s\"", base);
+        snprintf(fragment, sizeof(fragment), "xml:id=\"%s_", base);
+        assert(TU_HAS(xml, exact) || TU_HAS(xml, fragment));
+    }
+    assert(TU_HAS(xml, "xml:id=\"n12\"") && TU_HAS(xml, "xml:id=\"a_b\""));
+    assert(TU_HAS(xml, "xml:id=\"tied_a\"") && TU_HAS(xml, "xml:id=\"tied_b\""));
+    free(xml);
+    bag_free(&bag);
+}
+
 int main(void) {
     test_minimal_document_exact();
     test_three_four_measures();
@@ -439,6 +479,8 @@ int main(void) {
     test_zero_notes();
     test_key_tempo_marking_and_dynamics();
     test_marking_inside_a_note_cuts_it();
+    test_note_xml_id_format();
+    test_every_note_id_is_written();
     printf("test_musicxml_score: all tests passed\n");
     return 0;
 }

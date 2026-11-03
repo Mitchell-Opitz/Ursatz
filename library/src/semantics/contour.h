@@ -49,8 +49,9 @@ typedef enum {
 } ContourResult;
 
 /*
- * Takes ownership of pitch_ids (and each PitchIdentity it points to)
- * and of directions on success -- all destroyed by contour_destroy.
+ * On success takes ownership of each PitchIdentity pitch_ids points to
+ * (destroyed by contour_destroy) and copies the pitch_ids and directions
+ * arrays: both arrays stay the caller's to free. On failure nothing is taken.
  * pitch_ids must be non-NULL with pitch_id_count >= 2; no entry may be
  * NULL. directions must be non-NULL with direction_count ==
  * pitch_id_count - 1.
