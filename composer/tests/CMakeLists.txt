@@ -16,8 +16,31 @@ add_test(NAME test_piece_plan_sentence COMMAND test_piece_plan_sentence)
 add_executable(test_plan_json test_plan_json.c)
 target_link_libraries(test_plan_json PRIVATE ursatz_composer)
 target_compile_options(test_plan_json PRIVATE -Wall -Wextra -Wpedantic)
-target_compile_definitions(test_plan_json PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+target_compile_definitions(test_plan_json PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
+                                                  COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
 add_test(NAME test_plan_json COMMAND test_plan_json)
+set_tests_properties(test_plan_json PROPERTIES FIXTURES_SETUP plan_files_written)
+
+# Optional: schema validation needs python3 with the jsonschema module.
+find_package(Python3 COMPONENTS Interpreter QUIET)
+set(HAVE_JSONSCHEMA FALSE)
+if(Python3_Interpreter_FOUND)
+    execute_process(COMMAND ${Python3_EXECUTABLE} -c "import jsonschema"
+                    RESULT_VARIABLE jsonschema_result OUTPUT_QUIET ERROR_QUIET)
+    if(jsonschema_result EQUAL 0)
+        set(HAVE_JSONSCHEMA TRUE)
+    endif()
+endif()
+if(NOT HAVE_JSONSCHEMA)
+    message(STATUS "python3 with jsonschema not found: test_plan_schema will be skipped")
+endif()
+add_test(NAME test_plan_schema
+         COMMAND ${CMAKE_COMMAND} -DPYTHON=${Python3_EXECUTABLE} -DHAVE_JSONSCHEMA=${HAVE_JSONSCHEMA}
+                 -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
+                 -DSCHEMA=${PROJECT_SOURCE_DIR}/schema/plan.v2.schema.json
+                 -DSNAPSHOT_DIR=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_plan_schema.cmake)
+set_tests_properties(test_plan_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED" FIXTURES_REQUIRED plan_files_written)
 find_program(VALGRIND_PROGRAM valgrind)
 if(VALGRIND_PROGRAM)
     add_test(NAME test_plan_json_valgrind
