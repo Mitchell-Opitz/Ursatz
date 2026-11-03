@@ -43,7 +43,7 @@
  * FNV-1a 64, taken after the motive-forms (P14 B8) changed the ideas' motives, and again after the shaping preferences
  * (P16 B4) changed the candidates chosen, and again when the numerals were written in the library grammar (P25 B3).
  */
-#define MAIN_RECORD_HASH 0x5568e226f6a2a16bULL
+#define MAIN_RECORD_HASH 0xd9cb1e8edb1c68d1ULL
 
 static PiecePlan *rounded_binary(void) {
     PiecePlan *plan = NULL;
@@ -348,11 +348,23 @@ static int run(const char *arguments) {
     return WEXITSTATUS(status);
 }
 
-static uint64_t fnv1a(const char *text) {
+/* The record's hash without its generator_version lines, so a version bump never moves it. */
+static uint64_t fnv1a_record(const char *text) {
     uint64_t hash = 1469598103934665603ULL;
-    for (; *text; text++) {
-        hash ^= (unsigned char)*text;
-        hash *= 1099511628211ULL;
+    while (*text) {
+        const char *end = strchr(text, '\n');
+        size_t length = end ? (size_t)(end - text) + 1 : strlen(text);
+        bool version = false;
+        for (size_t i = 0; i + 19 <= length && !version; i++) {
+            version = strncmp(text + i, "\"generator_version\"", 19) == 0;
+        }
+        if (!version) {
+            for (size_t i = 0; i < length; i++) {
+                hash ^= (unsigned char)text[i];
+                hash *= 1099511628211ULL;
+            }
+        }
+        text += length;
     }
     return hash;
 }
@@ -365,7 +377,7 @@ static int test_cli(void) {
     assert(run("fill explain_test_plan.json --seed 3 --record explain_test_record.json") == 0);
     char *record = test_read_file("explain_test_record.json", NULL);
     assert(strstr(record, "\"style\"") == NULL);
-    assert(fnv1a(record) == MAIN_RECORD_HASH);
+    assert(fnv1a_record(record) == MAIN_RECORD_HASH);
     free(record);
 
     /* --explain: JSON for a name ending in .json, text otherwise; neither changes the record. */
