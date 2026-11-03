@@ -135,6 +135,7 @@ static AnalyzerStatus build_notes(const ImportedNotes *imported, AnalyzerPlaybac
     if (!out->notes) {
         return ANALYZER_ERR_ALLOC;
     }
+    out->note_count = imported->count;
     for (size_t i = 0; i < imported->count; i++) {
         const NoteEvent *event = imported->events[i];
         const MusicalTime *position = event ? temporal_anchor_position(note_event_temporal_anchor(event)) : NULL;
