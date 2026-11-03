@@ -15,7 +15,7 @@
  */
 
 #define COMPOSER_API_VERSION_MAJOR 0
-#define COMPOSER_API_VERSION_MINOR 1
+#define COMPOSER_API_VERSION_MINOR 2
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -72,5 +72,16 @@ ComposerStatus composer_api_versions(ComposerResponse *out);
  * the lane spans the render left out.
  */
 ComposerStatus composer_api_export(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Analyzes a motive: its intervals, contour, rhythm, range, scale degrees, implied harmony, base harmony and tones.
+ * Request: {"input": {"format": "auto"|"notes"|"degrees"|"json"|"musicxml"|"rhythm"|"contour", "form": "full"|
+ * "rhythm"|"contour", "text": "<the motive, as text>"}, "meter": "4/4", "key": "D minor", "pickup": 1 or "1/2" (beats
+ * of the motive's meter), "harmony": "I V6@2" (the motive's own chords; "" clears them), "features": ["a:0-2", ...],
+ * "role": "melodic"|"accompaniment", "tones": ["3=passing", ...] (note, 1-based, and a role)}. Only "input" with its
+ * "text" is required; "format" defaults to auto, "form" to full. MusicXML arrives as text; MIDI as bytes through
+ * composer_api_motive_from_midi. json: the analysis document the "motive" command prints with --json.
+ */
+ComposerStatus composer_api_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
 #endif
