@@ -104,6 +104,10 @@ typedef struct {
        hold the targets it reopened. Must outlive compose_run. */
     const NodeId *scope;
     size_t scope_count;
+    /* NULL for none. Reported once per stage (compose_stage_name, stage index, COMPOSE_STAGE_COUNT) and handed to every fill
+       loop (FillConfig.job). A cancel ends the run with PIECE_ERR_STUCK and outcome->cancelled; the plan is then partly
+       filled and no further round or candidate is tried. */
+    const ComposerJob *job;
 } ComposeConfig;
 
 /* What one theme section was heard as. The members are GrowOutcome's. */
@@ -129,6 +133,7 @@ typedef struct {
     FillRecord *records[COMPOSE_STAGE_COUNT]; /* owned; NULL for a stage that did not run */
     bool stuck;
     ComposeStage stuck_stage;
+    bool cancelled;                           /* the job was cancelled (ComposeConfig.job); stuck is false */
     ComposeHeard *sections;                   /* owned; one per theme section, in plan order */
     size_t section_count;
     size_t heard_as_requested;                /* how many sections were */

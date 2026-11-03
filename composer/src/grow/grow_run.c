@@ -4,6 +4,7 @@
 
 #include <ursatz_composer/compose.h>
 
+#include "api/api_internal.h"
 #include "grow/grow_internal.h"
 
 void grow_outcome_destroy(GrowOutcome *outcome) {
@@ -68,6 +69,10 @@ GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outc
     if (grow_find_theme(plan, true) == PLAN_NODE_NONE) {
         return GROW_ERR_BAD_REQUEST;
     }
+    if (composer_job_step(config->job, "grow", 0, 1)) {
+        outcome->cancelled = true;
+        return GROW_ERR_STUCK;
+    }
     ComposeConfig compose;
     ComposeOutcome composed;
     memset(&compose, 0, sizeof(compose));
@@ -81,6 +86,7 @@ GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outc
     compose.tempo = config->tempo;
     compose.pool = config->pool;
     compose.pool_count = config->pool_count;
+    compose.job = config->job;
     GrowResult result = from_piece(compose_run(plan, &compose, &composed));
 
     for (int stage = 0; stage < GROW_STAGE_COUNT; stage++) {
@@ -92,6 +98,7 @@ GrowResult grow_run(PiecePlan *plan, const GrowConfig *config, GrowOutcome *outc
     outcome->rejection_count = composed.rejection_count;
     composed.rejections = NULL;
     composed.rejection_count = 0;
+    outcome->cancelled = composed.cancelled;
     outcome->stuck = composed.stuck;
     outcome->stuck_stage = composed.stuck ? (GrowStage)(composed.stuck_stage - COMPOSE_STAGE_STRUCTURE) : 0;
     if (result == GROW_OK && composed.section_count > 0) {

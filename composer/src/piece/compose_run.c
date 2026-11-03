@@ -6,6 +6,8 @@
 
 #include <standard-form/phrase_level_form.h>
 
+#include "api/api_internal.h"
+
 #include <ursatz_composer/accompaniment.h>
 #include <ursatz_composer/analyzer_check.h>
 #include <ursatz_composer/form_return.h>
@@ -608,6 +610,10 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
     /* The melody is written idea by idea and a later idea can find the ones before it leave it no way to the
        climax, so a melody that gets stuck is written again, from the next seed, a few times. */
     size_t attempts = stage == COMPOSE_STAGE_MELODY ? COMPOSE_MELODY_ATTEMPTS : 1;
+    if (composer_job_step(config->job, compose_stage_name(stage), (unsigned)stage, (unsigned)COMPOSE_STAGE_COUNT)) {
+        outcome->cancelled = true;
+        return PIECE_ERR_STUCK;
+    }
     size_t open_count = 0;
     LaneSpanId *open_at_start = stage == COMPOSE_STAGE_MELODY ? open_melody_spans(plan, &open_count) : NULL;
     for (size_t attempt = 0; attempt < attempts; attempt++) {
@@ -622,6 +628,7 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         fill.seed = config->seed + run->offset + stage_seed(stage, again, run->seam) + COMPOSE_ATTEMPT_STRIDE * (unsigned long)attempt +
                     COMPOSE_RETURN_STRIDE * (unsigned long)run->attempt;
         fill.max_iterations = config->max_iterations;
+        fill.job = config->job;
         fill.checker = checker_of(stage);
         fill.checker_context =
             stage == COMPOSE_STAGE_MOTIVES || stage == COMPOSE_STAGE_INVENT ? (void *)&run->motives : NULL;
@@ -672,6 +679,7 @@ static PieceResult run_stage(Run *run, ComposeStage stage, bool again) {
         }
         if (ran != FILL_OK) {
             free(open_at_start);
+            outcome->cancelled = registered == FILL_OK && fill_outcome.cancelled;
             return ran == FILL_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_STUCK;
         }
         fill_outcome_destroy(&fill_outcome);
@@ -759,7 +767,7 @@ static PieceResult run_returns(Run *run) {
             run->outcome->stuck_stage = COMPOSE_STAGE_RETURNS;
             result = PIECE_ERR_STUCK;
         }
-        if (result == PIECE_OK || result == PIECE_ERR_ALLOC) {
+        if (result == PIECE_OK || result == PIECE_ERR_ALLOC || run->outcome->cancelled) {
             break;
         }
         if (attempt + 1 < attempts) {
@@ -820,7 +828,7 @@ static PieceResult run_seam(Run *run) {
     for (size_t s = 0; run->seam && result == PIECE_OK && s < sizeof(STAGES) / sizeof(STAGES[0]); s++) {
         result = run_stage(run, STAGES[s], false);
     }
-    if (result == PIECE_ERR_STUCK) {
+    if (result == PIECE_ERR_STUCK && !run->outcome->cancelled) {
         run->outcome->stuck = true;
         run->outcome->stuck_stage = COMPOSE_STAGE_SEAM;
     }
@@ -1114,7 +1122,7 @@ PieceResult compose_run(PiecePlan *plan, const ComposeConfig *config, ComposeOut
             result = measure_style(hearing, config, outcome);
         }
         hearing_destroy(hearing);
-        if (result != PIECE_ERR_STUCK) {
+        if (result != PIECE_ERR_STUCK || outcome->cancelled) {
             break;
         }
         add_rejection(&rejections, &rejection_count, plan, outcome, round,

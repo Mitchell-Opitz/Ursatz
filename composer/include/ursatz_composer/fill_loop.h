@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/fill_operator.h>
 #include <ursatz_composer/fill_target.h>
 #include <ursatz_composer/piece_plan.h>
@@ -71,6 +72,7 @@ typedef struct {
     size_t max_iterations;  /* attempts, including failed ones; 0 means FILL_DEFAULT_MAX_ITERATIONS */
     FillCheckerFn checker;  /* NULL means fill_default_checker */
     void *checker_context;
+    const ComposerJob *job; /* NULL for none: progress ("fill", attempts so far, max_iterations) and cancel, once per target */
 } FillConfig;
 
 typedef enum {
@@ -96,6 +98,7 @@ typedef struct {
     size_t steps;      /* attempts that changed the plan */
     FillStuck *stuck;  /* owned; the targets still unfilled when the run ended */
     size_t stuck_count;
+    bool cancelled;    /* the job was cancelled: status is FILL_STATUS_ERROR and fill_run returned FILL_ERR_OPERATOR_FAILED */
 } FillOutcome;
 
 void fill_outcome_destroy(FillOutcome *outcome);

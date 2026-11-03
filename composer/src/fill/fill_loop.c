@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "api/api_internal.h"
 #include "fill/fill_internal.h"
 
 /* ------------------------------------------------------------- relatives */
@@ -344,6 +345,11 @@ FillResult fill_run(PiecePlan *plan, const FillOperatorRegistry *registry, const
         FillTarget target;
         if (!fill_pick_open_target(plan, excluded, stuck.count, &target)) {
             outcome->status = stuck.count ? FILL_STATUS_STUCK : FILL_STATUS_COMPLETE;
+            break;
+        }
+        if (config && composer_job_step(config->job, "fill", (unsigned)outcome->iterations, (unsigned)max_iterations)) {
+            outcome->cancelled = true;
+            result = FILL_ERR_OPERATOR_FAILED;
             break;
         }
         outcome->iterations++;

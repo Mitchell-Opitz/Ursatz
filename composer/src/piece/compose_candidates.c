@@ -64,6 +64,7 @@ PieceResult compose_candidates(const PiecePlan *plan, const ComposeConfig *confi
             break;
         }
         PieceResult ran = compose_run(candidate->plan, &run, &candidate->outcome);
+        bool cancelled = candidate->outcome.cancelled;
         candidates->tried++;
         if (ran == PIECE_OK) {
             candidate->agreed = candidate->outcome.analyzer_agreed;
@@ -76,6 +77,8 @@ PieceResult compose_candidates(const PiecePlan *plan, const ComposeConfig *confi
             memset(candidate, 0, sizeof(*candidate));
             if (ran != PIECE_ERR_STUCK) {
                 status = ran;
+            } else if (cancelled) {
+                status = PIECE_ERR_STUCK; /* no further candidate is tried */
             }
         }
     }
