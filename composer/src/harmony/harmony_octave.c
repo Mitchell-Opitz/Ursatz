@@ -58,7 +58,7 @@ static bool is_step(int a, int b) {
 static bool octave_context_read(const PiecePlan *plan, LaneSpanId target, OctaveContext *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY ||
         plan_lane_span_voice(plan, target) != 0 ||
-        harmony_span_has_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH)) {
+        plan_lane_span_find_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH) != NULL) {
         return false;
     }
     OctaveContext context;

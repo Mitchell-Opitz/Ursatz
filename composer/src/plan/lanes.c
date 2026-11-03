@@ -4,15 +4,12 @@
 #include <string.h>
 
 #include "plan/plan_internal.h"
-
-static bool is_note_lane(PlanLaneKind lane) {
-    return lane == PLAN_LANE_BASS || lane == PLAN_LANE_MELODY || lane == PLAN_LANE_INNER_VOICE;
-}
+#include "util/plan_util.h"
 
 void plan_lanes_free(PiecePlan *plan) {
     for (size_t i = 0; i < plan->lane_span_count; i++) {
         constraint_list_free(&plan->lane_spans[i].constraints);
-        if (!plan->lane_spans[i].removed && is_note_lane(plan->lane_spans[i].lane)) {
+        if (!plan->lane_spans[i].removed && plan_is_note_lane(plan->lane_spans[i].lane)) {
             free((void *)plan->lane_spans[i].payload.notes.notes);
         }
     }
@@ -42,7 +39,7 @@ LaneSpanId plan_lane_span_rank(const PiecePlan *plan, LaneSpanId id) {
 }
 
 static void remove_entry(PiecePlan *plan, LaneSpan *entry) {
-    if (is_note_lane(entry->lane)) {
+    if (plan_is_note_lane(entry->lane)) {
         free((void *)entry->payload.notes.notes);
     }
     constraint_list_free(&entry->constraints);
@@ -70,15 +67,6 @@ PlanResult plan_lane_span_remove(PiecePlan *plan, LaneSpanId id) {
     }
     remove_entry(plan, entry);
     return PLAN_OK;
-}
-
-static bool spans_overlap(PlanSpan a, PlanSpan b) {
-    PlanTime a_end;
-    PlanTime b_end;
-    if (plan_span_end(a, &a_end) != PLAN_OK || plan_span_end(b, &b_end) != PLAN_OK) {
-        return false;
-    }
-    return plan_time_compare(a.start, b_end) < 0 && plan_time_compare(b.start, a_end) < 0;
 }
 
 static bool note_fits(const PlanNote *note, PlanTime span_length) {
@@ -146,13 +134,13 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
     }
     for (size_t i = 0; i < plan->lane_span_count; i++) {
         const LaneSpan *existing = &plan->lane_spans[i];
-        if (!existing->removed && existing->lane == lane && existing->voice == voice && spans_overlap(existing->span, span)) {
+        if (!existing->removed && existing->lane == lane && existing->voice == voice && plan_spans_overlap(existing->span, span)) {
             return PLAN_ERR_LANE_OVERLAP;
         }
     }
 
     PlanLanePayload stored = *payload;
-    if (is_note_lane(lane)) {
+    if (plan_is_note_lane(lane)) {
         size_t bytes = payload->notes.note_count * sizeof(PlanNote);
         PlanNote *copy = bytes ? malloc(bytes) : NULL;
         if (bytes && !copy) {
@@ -168,7 +156,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
         size_t capacity = plan->lane_span_capacity ? plan->lane_span_capacity * 2 : 16;
         LaneSpan *spans = realloc(plan->lane_spans, capacity * sizeof(LaneSpan));
         if (!spans) {
-            if (is_note_lane(lane)) {
+            if (plan_is_note_lane(lane)) {
                 free((void *)stored.notes.notes);
             }
             return PLAN_ERR_ALLOC;
@@ -244,7 +232,7 @@ const PlanLanePayload *plan_lane_span_payload(const PiecePlan *plan, LaneSpanId 
 }
 
 static bool matches_lane(const LaneSpan *entry, PlanLaneKind lane, int voice, PlanSpan range) {
-    return !entry->removed && entry->lane == lane && entry->voice == voice && spans_overlap(entry->span, range);
+    return !entry->removed && entry->lane == lane && entry->voice == voice && plan_spans_overlap(entry->span, range);
 }
 
 /* Orders spans by start, then by id. */

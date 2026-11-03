@@ -14,6 +14,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
+#include "support/test_support.h"
 
 /*
  * The `piece` command, run as a process (docs/cli-piece.md, docs/piece-request.md): the loop version and the ending version
@@ -49,35 +50,9 @@ static int run(const char *command, const char *arguments, const char *out_file,
     return WEXITSTATUS(status);
 }
 
-static char *read_file(const char *path, size_t *size) {
-    FILE *file = fopen(path, "rb");
-    assert(file);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)length + 1);
-    assert(text);
-    size_t read = fread(text, 1, (size_t)length, file);
-    assert(read == (size_t)length);
-    text[length] = '\0';
-    fclose(file);
-    if (size) {
-        *size = read;
-    }
-    return text;
-}
-
-static bool exists(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (file) {
-        fclose(file);
-    }
-    return file != NULL;
-}
-
 /* The request with the name in it replaced by the value, written to a file of its own. */
 static void write_request(const char *fixture, const char *path, const char *name, const char *value) {
-    char *text = read_file(fixture, NULL);
+    char *text = test_read_file(fixture, NULL);
     FILE *file = fopen(path, "wb");
     char *at = strstr(text, name);
     assert(file && at);
@@ -99,17 +74,17 @@ static void write_text(const char *path, const char *text) {
 static char *piece_output(const char *arguments) {
     int status = run("piece", arguments, "piece_out.txt", "piece_err.txt");
     if (status != 0) {
-        char *err = read_file("piece_err.txt", NULL);
+        char *err = test_read_file("piece_err.txt", NULL);
         fprintf(stderr, "'piece %s' exited %d: %s\n", arguments, status, err);
         free(err);
     }
     assert(status == 0);
-    return read_file("piece_out.txt", NULL);
+    return test_read_file("piece_out.txt", NULL);
 }
 
 static void expect_failure(const char *arguments, int status, const char *message) {
     int got = run("piece", arguments, "piece_out.txt", "piece_err.txt");
-    char *err = read_file("piece_err.txt", NULL);
+    char *err = test_read_file("piece_err.txt", NULL);
     if (got != status || strstr(err, message) == NULL) {
         fprintf(stderr, "'piece %s': expected status %d with '%s', got %d: %s\n", arguments, status, message, got, err);
     }
@@ -132,7 +107,7 @@ static unsigned long read_vlq(const unsigned char *data, size_t *at) {
 /* The tick of the first marker of the text in the conductor track, or -1 when there is none. */
 static long marker_tick(const char *path, const char *text) {
     size_t size;
-    unsigned char *data = (unsigned char *)read_file(path, &size);
+    unsigned char *data = (unsigned char *)test_read_file(path, &size);
     assert(size >= 22 && memcmp(data, "MThd", 4) == 0 && memcmp(data + 14, "MTrk", 4) == 0);
     size_t at = 22;
     size_t end = at + (((size_t)data[18] << 24) | ((size_t)data[19] << 16) | ((size_t)data[20] << 8) | data[21]);
@@ -313,8 +288,8 @@ static void test_done_when(void) {
     char *shown = piece_output("request.json --seed 1 --check --format json --out loop.json --ending-out ending.json "
                                "--midi loop.mid --ending-midi ending.mid --musicxml loop.musicxml --ending-musicxml "
                                "ending.musicxml --explain explain.json");
-    assert(exists("loop.json") && exists("ending.json") && exists("loop.mid") && exists("ending.mid") &&
-           exists("loop.musicxml") && exists("ending.musicxml") && exists("explain.json"));
+    assert(test_exists("loop.json") && test_exists("ending.json") && test_exists("loop.mid") && test_exists("ending.mid") &&
+           test_exists("loop.musicxml") && test_exists("ending.musicxml") && test_exists("explain.json"));
 
     /* Intro 2 bars, then the body 12 bars and the turnaround 2: the loop is whole notes 2 to 16. */
     assert(strstr(shown, "\"loop\":{\"start\":\"2/1\",\"end\":\"16/1\"}"));
@@ -351,9 +326,9 @@ static void test_done_when(void) {
     /* The same seed gives the same plan. */
     size_t first_size;
     size_t second_size;
-    char *first = read_file("loop.json", &first_size);
+    char *first = test_read_file("loop.json", &first_size);
     free(piece_output("request.json --seed 1 --check --out loop_again.json"));
-    char *second = read_file("loop_again.json", &second_size);
+    char *second = test_read_file("loop_again.json", &second_size);
     assert(first_size == second_size && memcmp(first, second, first_size) == 0);
     free(first);
     free(second);
@@ -545,7 +520,7 @@ static void test_regenerate(void) {
     expect_region(before, after, 0, 17, true);
     plan_destroy(before);
     plan_destroy(after);
-    assert(exists("same_ending.json"));
+    assert(test_exists("same_ending.json"));
 }
 
 static void test_variations(void) {
@@ -558,16 +533,16 @@ static void test_variations(void) {
     }
     assert(seeds[0] != seeds[1] && seeds[1] != seeds[2] && seeds[0] != seeds[2]);
     free(shown);
-    assert(exists("variations/result.json"));
+    assert(test_exists("variations/result.json"));
     PiecePlan *original = load_plan("loop.json");
     char *old_melody = dump_lane(original, PLAN_LANE_MELODY, 0, 2, 10);
     char *melodies[3]; /* the whole piece of each */
     for (size_t i = 0; i < 3; i++) {
         char path[128];
         snprintf(path, sizeof(path), "variations/variation-%zu.json", i + 1);
-        assert(exists(path));
+        assert(test_exists(path));
         snprintf(path, sizeof(path), "variations/variation-%zu.musicxml", i + 1);
-        assert(exists(path));
+        assert(test_exists(path));
         snprintf(path, sizeof(path), "variations/variation-%zu.mid", i + 1);
         assert(marker_tick(path, "loopStart") == (long)(2 * WHOLE_TICKS) && marker_tick(path, "loopEnd") == (long)(16 * WHOLE_TICKS));
         snprintf(path, sizeof(path), "variations/variation-%zu.json", i + 1);
@@ -662,7 +637,7 @@ static void test_errors(void) {
     expect_failure(PIECE("structure-only.json") " --seed x", 1, "--seed must be a whole number");
     /* A file that cannot be written is exit 3 and leaves nothing behind. */
     expect_failure(PIECE("structure-only.json") " --seed 1 --out no_such_dir/plan.json", 3, "cannot write");
-    assert(!exists("no_such_dir/plan.json"));
+    assert(!test_exists("no_such_dir/plan.json"));
 }
 
 int main(void) {

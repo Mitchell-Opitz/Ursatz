@@ -36,7 +36,7 @@ PlanResult harmony_embellish_open(PiecePlan *plan, PlanSpan range) {
     for (size_t i = 0; result == PLAN_OK && i < count; i++) {
         if (plan_lane_span_state(plan, ids[i]) == PLAN_STATE_REALIZED) {
             result = plan_lane_span_set_state(plan, ids[i], PLAN_STATE_CONSTRAINED);
-            if (result == PLAN_OK && !harmony_span_has_constraint(plan, ids[i], PLAN_CONSTRAINT_EMBELLISH)) {
+            if (result == PLAN_OK && plan_lane_span_find_constraint(plan, ids[i], PLAN_CONSTRAINT_EMBELLISH) == NULL) {
                 result = plan_lane_span_add_constraint(plan, ids[i], &marker);
             }
         }
@@ -168,13 +168,6 @@ static PlanResult clear_marker(PiecePlan *plan, LaneSpanId id) {
     return PLAN_OK;
 }
 
-static PlanResult add_chord(PiecePlan *plan, NodeId owner, const PhraseChord *chord, PlanSpan span, LaneSpanId *id) {
-    PlanLanePayload payload;
-    harmony_chord_payload(chord, &payload);
-    PlanResult result = plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, span, &payload, id);
-    return result == PLAN_OK ? plan_lane_span_set_state(plan, *id, PLAN_STATE_REALIZED) : result;
-}
-
 /* Applies an edit: the lead chords go into the end of the chord before, the pieces replace the marked chord. */
 static PlanResult apply_edit(PiecePlan *plan, const PhraseContext *phrase, const EmbellishCandidate *candidate) {
     const Edit *edit = &candidate->edit;
@@ -213,7 +206,7 @@ static PlanResult apply_edit(PiecePlan *plan, const PhraseContext *phrase, const
             LaneSpanId id;
             result = harmony_metre_cells_span(&phrase->metre, at, edit->lead[i].cells, &span);
             if (result == PLAN_OK) {
-                result = add_chord(plan, phrase->owner, &edit->lead[i], span, &id);
+                result = harmony_add_chord(plan, phrase->owner, &edit->lead[i], span, &id);
             }
             at += edit->lead[i].cells;
         }
@@ -236,7 +229,7 @@ static PlanResult apply_edit(PiecePlan *plan, const PhraseContext *phrase, const
     for (size_t i = 1; result == PLAN_OK && i < edit->piece_count; i++) {
         result = harmony_metre_cells_span(&phrase->metre, at, edit->pieces[i].cells, &span);
         if (result == PLAN_OK) {
-            result = add_chord(plan, phrase->owner, &edit->pieces[i], span, &last);
+            result = harmony_add_chord(plan, phrase->owner, &edit->pieces[i], span, &last);
         }
         at += edit->pieces[i].cells;
     }

@@ -16,12 +16,12 @@
 
 #include "plan/plan_internal.h"
 #include "plan/plan_json_internal.h"
+#include "util/plan_util.h"
 
 #define COMPOSER_FRAMEWORK "ursatz-composer"
 #define COMPOSER_KEY_METHOD "composer_plan"
 
 static const char *const NODE_KINDS[] = {"form", "section", "phrase", "subphrase", "idea", "motive"};
-static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner_voice"};
 static const char *const STATE_NAMES[] = {"constrained", "given", "realized"};
 static const char *const MODE_NAMES[] = {"major", "minor"};
 static const char *const FUNCTION_NAMES[] = {"tonic", "predominant", "dominant", "unknown"};
@@ -32,7 +32,6 @@ static const char *const CADENCE_NAMES[] = {"pac", "iac", "hc", "dc", "pc"};
 static const char *const TRANSFORM_NAMES[] = {"none",       "transposed",      "inverted",  "retrograde",
                                               "augmented",  "diminished",      "fragmented", "restated",
                                               "interval_changed", "liquidated"};
-static const char *const FRAGMENT_POSITION_NAMES[] = {"any", "leading", "trailing", "middle"};
 static const char *const ARCHETYPE_NAMES[] = {"sentence", "period", "hybrid"};
 /* The parts of a piece structure, in PiecePart order (piece_structure.h). */
 static const char *const PIECE_PART_NAMES[] = {"intro", "body", "turnaround", "ending"};
@@ -118,7 +117,7 @@ static bool motive_ref_options_json(cJSON *object, const PlanMotiveRef *ref) {
         ok = ok && json_add(object, "keep_contour", cJSON_CreateBool(true));
     }
     if (ref->position != PLAN_FRAGMENT_ANY) {
-        ok = ok && json_add(object, "position", cJSON_CreateString(FRAGMENT_POSITION_NAMES[ref->position]));
+        ok = ok && json_add(object, "position", cJSON_CreateString(plan_fragment_position_names[ref->position]));
     }
     if (ref->length != 0) {
         ok = ok && json_add(object, "length", json_number(ref->length));
@@ -218,9 +217,9 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     case PLAN_CONSTRAINT_LAYERS: {
         cJSON *lanes = cJSON_CreateArray();
         ok = ok && json_add(object, "lanes", lanes);
-        for (size_t lane = 0; ok && lane < COUNT_OF(LANE_NAMES); lane++) {
+        for (size_t lane = 0; ok && lane < PLAN_LANE_NAME_COUNT; lane++) {
             if (constraint->params.layers.lanes & PLAN_LAYER_BIT(lane)) {
-                ok = json_append(lanes, cJSON_CreateString(LANE_NAMES[lane]));
+                ok = json_append(lanes, cJSON_CreateString(plan_lane_names[lane]));
             }
         }
         break;
@@ -399,7 +398,7 @@ static bool lane_label(const PlanLanePayload *payload, PlanLaneKind lane, char *
     case PLAN_LANE_BASS:
     case PLAN_LANE_MELODY:
     case PLAN_LANE_INNER_VOICE:
-        snprintf(out, size, "%s", LANE_NAMES[lane]);
+        snprintf(out, size, "%s", plan_lane_names[lane]);
         return true;
     }
     return false;
@@ -479,7 +478,7 @@ static cJSON *lane_entry_json(const PiecePlan *plan, LaneSpanId id) {
     bool ok = object && composer;
     ok = ok && json_add(composer, "id", json_number((long)plan_lane_span_rank(plan, id))) &&
          json_add(composer, "owner", json_number((long)plan_node_rank(plan, plan_lane_span_owner(plan, id)))) &&
-         json_add(composer, "lane", cJSON_CreateString(LANE_NAMES[lane])) &&
+         json_add(composer, "lane", cJSON_CreateString(plan_lane_names[lane])) &&
          json_add(composer, "voice", json_number(plan_lane_span_voice(plan, id))) &&
          json_add(composer, "state", cJSON_CreateString(STATE_NAMES[plan_lane_span_state(plan, id)])) &&
          json_add(composer, "constraints", span_constraints_json(plan, id)) &&
@@ -840,7 +839,7 @@ static bool read_motive_ref_options(JsonReader *reader, const cJSON *item, const
     if (position_item) {
         char at[PLAN_JSON_PATH_MAX];
         json_child_path(at, path, "position");
-        if (!read_enum(reader, position_item, at, FRAGMENT_POSITION_NAMES, COUNT_OF(FRAGMENT_POSITION_NAMES),
+        if (!read_enum(reader, position_item, at, plan_fragment_position_names, PLAN_FRAGMENT_POSITION_NAME_COUNT,
                        &position)) {
             return false;
         }
@@ -1125,7 +1124,7 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         cJSON_ArrayForEach(lane, lanes) {
             char at[PLAN_JSON_PATH_MAX];
             json_index_path(at, lanes_path, index++);
-            if (!read_enum(reader, lane, at, LANE_NAMES, COUNT_OF(LANE_NAMES), &value)) {
+            if (!read_enum(reader, lane, at, plan_lane_names, PLAN_LANE_NAME_COUNT, &value)) {
                 return false;
             }
             out->params.layers.lanes |= PLAN_LAYER_BIT(value);
@@ -1672,7 +1671,7 @@ static bool build_lane_span(JsonReader *reader, PiecePlan *plan, const ParsedLan
     long owner;
     long voice;
     PlanSpan span;
-    if (!read_enum_member(reader, composer, composer_path, "lane", LANE_NAMES, COUNT_OF(LANE_NAMES), &lane) ||
+    if (!read_enum_member(reader, composer, composer_path, "lane", plan_lane_names, PLAN_LANE_NAME_COUNT, &lane) ||
         !json_read_int_member(reader, composer, composer_path, "owner", 1, TIME_LIMIT, &owner) ||
         !json_read_int_member(reader, composer, composer_path, "voice", 0, 1000, &voice) ||
         !json_read_span(reader, parsed->json, parsed->path, &span)) {

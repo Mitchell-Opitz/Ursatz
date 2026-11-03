@@ -57,8 +57,25 @@ submodule checkout.
 | `src/texture/` | The accompaniment and four-part voicing operators, and hearing the voice leading. |
 | `src/piece/` | Form templates, the piece plan and the compose run over its sections. |
 | `src/grow/` | Growing a theme from a motive: the plan, the structure operator, its checks and the stages. |
+| `src/util/` | Private helpers the sources and the CLI share: `util.h` (numbers, strings, reading a file) and `plan_util.h` (spans, lanes, subtrees, name tables). Not installed. |
 | `cli/` | The `ursatz-composer` command. |
-| `tests/` | Tests and their fixtures. |
+| `tests/` | Tests and their fixtures. `tests/support/` is the `composer_test_support` library the tests share; `tests/snapshots/` holds the CLI snapshots. |
+
+### CLI snapshots
+
+`test_cli_snapshots` (`tests/cli_snapshots.cmake`) runs the seeded commands on the fixtures and compares each output with
+`tests/snapshots/<case>.<ext>`. The values of `analyzer_version`, `composer_version` and `ursatz_commit` are ignored; MIDI
+and MusicXML are compared byte for byte. After a change that is meant to move output, recapture and review the diff:
+
+```sh
+cmake -DCOMPOSER=build/cli/ursatz-composer -DWORK=build/tests/cli_snapshots -DSNAPSHOTS=tests/snapshots \
+      -DFIXTURES=tests/fixtures -DUPDATE=1 -P tests/cli_snapshots.cmake
+```
+
+### File scope state
+
+`scripts/check-statics.sh` fails when a file in `src/` declares a file-scope static variable that is not `const`, so the
+library is safe to link in process. Pass state through the caller's context. CI runs it after the build.
 
 ## Usage
 

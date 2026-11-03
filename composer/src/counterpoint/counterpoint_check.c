@@ -28,18 +28,11 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "counterpoint/counterpoint_internal.h"
+#include "util/util.h"
 
 /* The cantus firmus group is the first of every aggregate check: the given line is not the operator's to judge. */
 #define CANTUS_GROUP_BIT 1u
 #define FINAL_STEP_BIT 2u
-
-static unsigned bits_set(unsigned bits) {
-    unsigned count = 0;
-    for (; bits; bits >>= 1) {
-        count += bits & 1u;
-    }
-    return count;
-}
 
 static const char *first_group_name(unsigned bits, const char *(*name)(unsigned)) {
     for (unsigned group = 0; group < 16; group++) {
@@ -149,7 +142,7 @@ static bool eval_first(const CounterpointContext *context, const StandardCounter
         verdict->soft_groups = soft;
         verdict->group_name = first_species_name;
         verdict->total = STANDARD_COUNTERPOINT_FIRST_SPECIES_GROUP_COUNT - 1;
-        verdict->held = verdict->total - bits_set(soft);
+        verdict->held = verdict->total - util_bits_set(soft);
         return true;
     }
     /* A line that is not finished: the rules that look at the end are asked later. */
@@ -224,7 +217,7 @@ static bool eval_slots(const CounterpointContext *context, const StandardCounter
         verdict->soft_groups = result.soft_violations & ~CANTUS_GROUP_BIT;
         verdict->group_name = species->group_name;
         verdict->total = species->groups - 1;
-        verdict->held = verdict->total - bits_set(result.soft_violations & ~CANTUS_GROUP_BIT);
+        verdict->held = verdict->total - util_bits_set(result.soft_violations & ~CANTUS_GROUP_BIT);
         return true;
     }
     /* A line that is not finished is judged group by group, but for the ends and the line, which are judged by rule. */

@@ -84,15 +84,6 @@ static void theme_destroy(Theme *theme) {
     memset(theme, 0, sizeof(*theme));
 }
 
-static bool has_constraint(const PiecePlan *plan, NodeId node, PlanConstraintKind kind) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
-        if (plan_node_constraint_at(plan, node, i)->kind == kind) {
-            return true;
-        }
-    }
-    return false;
-}
-
 /* Every melody note that starts inside range, in order: its pitch and its duration. False on allocation failure. */
 static bool read_notes(const PiecePlan *plan, PlanSpan range, int **pitches, PlanTime **durations, size_t *count) {
     PlanTime end;
@@ -308,8 +299,8 @@ ReturnHearResult return_hear(const PiecePlan *plan, ReturnHeard *out) {
     ReturnHearResult status = themes && entries && entry_theme ? RETURN_HEAR_OK : RETURN_HEAR_ERR_ALLOC;
 
     for (NodeId id = 1; status == RETURN_HEAR_OK && id <= plan_node_count(plan); id++) {
-        if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && !has_constraint(plan, id, PLAN_CONSTRAINT_MATERIAL) &&
-            !has_constraint(plan, id, PLAN_CONSTRAINT_SEAM)) {
+        if (plan_node_kind(plan, id) == PLAN_NODE_SECTION && !plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_MATERIAL) &&
+            !plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM)) {
             status = read_section(plan, id, themes, &theme_count);
         }
     }

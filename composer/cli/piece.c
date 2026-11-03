@@ -30,6 +30,7 @@
 #include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/render.h>
 #include <ursatz_composer/variations.h>
+#include "util/util.h"
 
 #define SCHEMA_NAME "ursatz-piece-request"
 #define NUMERALS_MAX 32
@@ -511,8 +512,8 @@ static int load_motives(Request *request) {
 
 /* The request, whole: the structure of sections as PieceStructure, with every motive read. */
 static int read_request(Request *request, const char *path, bool plain_midi) {
-    char *text = request_read_file(path);
-    if (!text) {
+    char *text;
+    if (!util_read_file(path, &text, NULL)) {
         return cli_fail(CLI_EXIT_USAGE, "cannot read the request '%s'", path);
     }
     request->root = cJSON_Parse(text);

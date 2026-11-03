@@ -2,6 +2,7 @@
 #define URSATZ_COMPOSER_MOTIVE_INTERNAL_H
 
 #include <stdbool.h>
+#include <stdlib.h>
 
 #include <cJSON.h>
 #include <ursatz_composer/motive.h>
@@ -108,5 +109,10 @@ MotiveResult motive_read_musicxml(const char *data, size_t size, Motive *motive,
  * broken, or NULL when none is.
  */
 bool motive_melodic_fault(const Motive *motive, const char **fault);
+
+/* Frees a candidate payload that is one allocation. */
+static inline void motive_payload_destroy(void *payload) {
+    free(payload);
+}
 
 #endif

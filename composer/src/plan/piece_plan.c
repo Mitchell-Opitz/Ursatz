@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "plan/plan_internal.h"
+#include "util/util.h"
 
 static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
     while (b != 0) {
@@ -54,15 +55,6 @@ bool plan_span_contains(PlanSpan outer, PlanSpan inner) {
         return false;
     }
     return plan_time_compare(inner.start, outer.start) >= 0 && plan_time_compare(inner_end, outer_end) <= 0;
-}
-
-static char *copy_string(const char *s) {
-    size_t size = strlen(s) + 1;
-    char *copy = malloc(size);
-    if (copy) {
-        memcpy(copy, s, size);
-    }
-    return copy;
 }
 
 PiecePlan *plan_create(void) {
@@ -169,7 +161,7 @@ PlanResult plan_add_node(PiecePlan *plan, NodeId parent, PlanNodeKind kind, Plan
 
     char *name_copy = NULL;
     if (name) {
-        name_copy = copy_string(name);
+        name_copy = util_copy_string(name);
         if (!name_copy) {
             return PLAN_ERR_ALLOC;
         }

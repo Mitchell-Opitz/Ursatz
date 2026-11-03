@@ -5,6 +5,7 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
+#include "util/plan_util.h"
 
 /* The dependents found so far, without repeats. */
 typedef struct {
@@ -42,30 +43,11 @@ static bool list_add(DependentList *list, const PiecePlan *plan, FillTarget targ
     return true;
 }
 
-static bool spans_overlap(PlanSpan a, PlanSpan b) {
-    PlanTime a_end;
-    PlanTime b_end;
-    if (plan_span_end(a, &a_end) != PLAN_OK || plan_span_end(b, &b_end) != PLAN_OK) {
-        return false;
-    }
-    return plan_time_compare(a.start, b_end) < 0 && plan_time_compare(b.start, a_end) < 0;
-}
-
 NodeId plan_section_of(const PiecePlan *plan, NodeId node) {
     while (node != PLAN_NODE_NONE && plan_node_kind(plan, node) != PLAN_NODE_SECTION) {
         node = plan_node_parent(plan, node);
     }
     return node;
-}
-
-/* A lane span's names, for the rules below. */
-static bool has_constraint(const PiecePlan *plan, LaneSpanId id, PlanConstraintKind kind) {
-    for (size_t i = 0; i < plan_lane_span_constraint_count(plan, id); i++) {
-        if (plan_lane_span_constraint_at(plan, id, i)->kind == kind) {
-            return true;
-        }
-    }
-    return false;
 }
 
 static bool names_motive(const PiecePlan *plan, LaneSpanId id, NodeId motive) {
@@ -144,11 +126,11 @@ static void node_dependents(DependentList *list, const PiecePlan *plan, NodeId i
 static void add_over(DependentList *list, const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, bool only_texture) {
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         if (!plan_has_lane_span(plan, id) || plan_lane_span_lane(plan, id) != lane ||
-            !spans_overlap(plan_lane_span_span(plan, id), span)) {
+            !plan_spans_overlap(plan_lane_span_span(plan, id), span)) {
             continue;
         }
-        if (only_texture && !has_constraint(plan, id, PLAN_CONSTRAINT_VOICING) &&
-            !has_constraint(plan, id, PLAN_CONSTRAINT_COUNTERPOINT)) {
+        if (only_texture && plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_VOICING) == NULL &&
+            plan_lane_span_find_constraint(plan, id, PLAN_CONSTRAINT_COUNTERPOINT) == NULL) {
             continue;
         }
         FillTarget target = {FILL_TARGET_LANE_SPAN, id};

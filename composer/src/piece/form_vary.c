@@ -3,6 +3,7 @@
 
 #include "grow/grow_internal.h"
 #include "piece/form_return_internal.h"
+#include "util/util.h"
 
 /*
  * The variations of a returning section (R-070), made on the copy form-return moved onto the target: ORNAMENT adds
@@ -34,16 +35,8 @@ static bool time_sub(PlanTime a, PlanTime b, PlanTime *out) {
     return plan_time_make(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den, out) == PLAN_OK;
 }
 
-static int absolute(int value) {
-    return value < 0 ? -value : value;
-}
-
-static int sign_of(int value) {
-    return value > 0 ? 1 : (value < 0 ? -1 : 0);
-}
-
 static bool is_step(int move) {
-    return absolute(move) >= 1 && absolute(move) <= 2;
+    return util_absolute(move) >= 1 && util_absolute(move) <= 2;
 }
 
 /* ------------------------------------------------------------- ornament */
@@ -87,11 +80,11 @@ static bool choose_tone(PlanKey key, int from, int to, FillRng *rng, int *out) {
         *out = up == 0 ? down : (down == 0 ? up : (fill_rng_below(rng, 2) == 0 ? up : down));
         return true;
     }
-    if (absolute(difference) == 3 || absolute(difference) == 4) {
-        int direction = sign_of(difference);
+    if (util_absolute(difference) == 3 || util_absolute(difference) == 4) {
+        int direction = util_sign(difference);
         for (int step = 1; step <= 2; step++) {
             int pitch = from + direction * step;
-            if (in_scale(key, pitch) && is_step(to - pitch) && sign_of(to - pitch) == direction) {
+            if (in_scale(key, pitch) && is_step(to - pitch) && util_sign(to - pitch) == direction) {
                 *out = pitch;
                 return true;
             }
@@ -520,8 +513,8 @@ static void check_ornament(const ReturnPayload *payload, FillCheck *out) {
             }
             int from = n > 0 ? span->notes[n].midi_pitch - span->notes[n - 1].midi_pitch : 0;
             int to = n + 1 < span->note_count ? span->notes[n + 1].midi_pitch - span->notes[n].midi_pitch : 0;
-            bool passing = is_step(from) && is_step(to) && sign_of(from) == sign_of(to);
-            bool neighbor = is_step(from) && is_step(to) && sign_of(from) == -sign_of(to) &&
+            bool passing = is_step(from) && is_step(to) && util_sign(from) == util_sign(to);
+            bool neighbor = is_step(from) && is_step(to) && util_sign(from) == -util_sign(to) &&
                             n > 0 && n + 1 < span->note_count && span->notes[n + 1].midi_pitch == span->notes[n - 1].midi_pitch;
             if (!passing && !neighbor) {
                 reject(out, "ornament adds a note that is neither passing nor neighbor");

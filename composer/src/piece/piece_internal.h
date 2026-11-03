@@ -3,9 +3,12 @@
 
 #include <stdbool.h>
 
+#include <ursatz_composer/constraint.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
+
+#include "util/plan_util.h"
 
 /*
  * The material section, its phrase and its idea, Realized, with m0 in it: the motive as a Given melody lane span, or,
@@ -24,5 +27,10 @@ NodeId piece_seam_find(const PiecePlan *plan);
 bool piece_seam_body_start(const PiecePlan *plan, PlanTime *out);
 /* Gives the seam a copy of the written lane spans of the bar that starts at body_start; plan_give_section's results. */
 GivenResult piece_seam_give(PiecePlan *plan, NodeId seam, PlanTime body_start);
+
+/* Adds a constraint to a node of the plan being built. */
+static inline PieceResult piece_add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint) {
+    return piece_result_of_plan(plan_node_add_constraint(plan, id, constraint));
+}
 
 #endif

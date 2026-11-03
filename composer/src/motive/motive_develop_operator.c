@@ -8,6 +8,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "motive/motive_internal.h"
+#include "util/plan_util.h"
 
 /*
  * The motivic development operators: Grow operators for a Constrained motive node that carries a motive_ref
@@ -44,17 +45,13 @@ void motive_develop_context_default(MotiveDevelopContext *context) {
     context->weights = motive_score_default_weights();
 }
 
-static const MotiveDevelopContext *context_or_default(const void *context) {
-    static MotiveDevelopContext defaults;
-    static bool ready = false;
+static MotiveDevelopContext context_or_default(const void *context) {
     if (context) {
-        return context;
+        return *(const MotiveDevelopContext *)context;
     }
-    if (!ready) {
-        motive_develop_context_default(&defaults);
-        ready = true;
-    }
-    return &defaults;
+    MotiveDevelopContext defaults;
+    motive_develop_context_default(&defaults);
+    return defaults;
 }
 
 /* --------------------------------------------------------------- request */
@@ -67,24 +64,10 @@ typedef struct {
     PlanTime room; /* the length of the target's span */
 } Request;
 
-/* The first melody lane span (voice 0) of node that is Given or Realized. */
-static bool melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out) {
-    LaneSpanId ids[16];
-    size_t found = plan_node_lane_spans(plan, node, ids, 16);
-    for (size_t i = 0; i < found && i < 16; i++) {
-        if (plan_lane_span_lane(plan, ids[i]) == PLAN_LANE_MELODY && plan_lane_span_voice(plan, ids[i]) == 0 &&
-            plan_lane_span_state(plan, ids[i]) != PLAN_STATE_CONSTRAINED) {
-            *out = ids[i];
-            return true;
-        }
-    }
-    return false;
-}
-
 /* The source motive: its notes, and the meter and key of the lanes over it, else the context's. */
 bool motive_develop_read_node(const PiecePlan *plan, NodeId node, const MotiveDevelopContext *context, Motive *out) {
     LaneSpanId span;
-    if (!melody_span_of(plan, node, &span)) {
+    if (!plan_melody_span_of(plan, node, &span)) {
         return false;
     }
     const PlanLanePayload *payload = plan_lane_span_payload(plan, span);
@@ -165,10 +148,6 @@ typedef struct {
     size_t added;
 } Proposal;
 
-static void payload_destroy(void *payload) {
-    free(payload);
-}
-
 static bool already_proposed(const Proposal *proposal, const Motive *result) {
     for (size_t i = 0; i < proposal->out->count; i++) {
         const Payload *held = proposal->out->items[i].payload;
@@ -199,7 +178,7 @@ static bool try_spec(Proposal *proposal, const MotiveDevSpec *spec) {
     payload->result = result;
     char label[FILL_LABEL_MAX];
     motive_dev_label(spec, label, sizeof(label));
-    if (!fill_candidates_add(proposal->out, label, payload, payload_destroy)) {
+    if (!fill_candidates_add(proposal->out, label, payload, motive_payload_destroy)) {
         return false;
     }
     proposal->added++;
@@ -385,12 +364,14 @@ static bool propose_rhythms(Proposal *proposal) {
 
 static bool restate_applies(const PiecePlan *plan, FillTarget target, void *context) {
     Request request;
-    return read_request(plan, target, context_or_default(context), FAMILY_RESTATE, &request);
+    MotiveDevelopContext shared = context_or_default(context);
+    return read_request(plan, target, &shared, FAMILY_RESTATE, &request);
 }
 
 static bool restate_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                              FillCandidateList *out) {
-    const MotiveDevelopContext *shared = context_or_default(context);
+    MotiveDevelopContext shared_value = context_or_default(context);
+    const MotiveDevelopContext *shared = &shared_value;
     Request request;
     if (!read_request(plan, target, shared, FAMILY_RESTATE, &request)) {
         return true;
@@ -401,12 +382,14 @@ static bool restate_generate(const PiecePlan *plan, FillTarget target, FillRng *
 
 static bool fragment_applies(const PiecePlan *plan, FillTarget target, void *context) {
     Request request;
-    return read_request(plan, target, context_or_default(context), FAMILY_FRAGMENT, &request);
+    MotiveDevelopContext shared = context_or_default(context);
+    return read_request(plan, target, &shared, FAMILY_FRAGMENT, &request);
 }
 
 static bool fragment_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
-    const MotiveDevelopContext *shared = context_or_default(context);
+    MotiveDevelopContext shared_value = context_or_default(context);
+    const MotiveDevelopContext *shared = &shared_value;
     Request request;
     if (!read_request(plan, target, shared, FAMILY_FRAGMENT, &request)) {
         return true;
@@ -417,13 +400,15 @@ static bool fragment_generate(const PiecePlan *plan, FillTarget target, FillRng 
 
 static bool rhythm_applies(const PiecePlan *plan, FillTarget target, void *context) {
     Request request;
-    return read_request(plan, target, context_or_default(context), FAMILY_RHYTHM, &request);
+    MotiveDevelopContext shared = context_or_default(context);
+    return read_request(plan, target, &shared, FAMILY_RHYTHM, &request);
 }
 
 static bool rhythm_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     (void)rng;
-    const MotiveDevelopContext *shared = context_or_default(context);
+    MotiveDevelopContext shared_value = context_or_default(context);
+    const MotiveDevelopContext *shared = &shared_value;
     Request request;
     if (!read_request(plan, target, shared, FAMILY_RHYTHM, &request)) {
         return true;
@@ -499,7 +484,8 @@ bool motive_develop_checker(const PiecePlan *plan, FillTarget target, const Fill
     if (!payload || payload->magic != PAYLOAD_MAGIC) {
         return true;
     }
-    const MotiveDevelopContext *shared = context_or_default(context);
+    MotiveDevelopContext shared_value = context_or_default(context);
+    const MotiveDevelopContext *shared = &shared_value;
     Request request;
     MotiveScoreWeights weights = shared->weights;
     if (weights.contour + weights.intervals + weights.rhythm + weights.length == 0) {

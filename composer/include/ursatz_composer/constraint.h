@@ -368,6 +368,8 @@ PlanResult plan_node_add_constraint(PiecePlan *plan, NodeId id, const PlanConstr
 size_t plan_node_constraint_count(const PiecePlan *plan, NodeId id);
 /* Whether the node has a constraint of the kind. */
 bool plan_node_has_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind);
+/* The first constraint of the kind on the node, or NULL. The pointer is valid until the list changes. */
+const PlanConstraint *plan_node_find_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind);
 /* NULL for an unknown id or an index past the end. The pointer is valid until the list changes. */
 const PlanConstraint *plan_node_constraint_at(const PiecePlan *plan, NodeId id, size_t index);
 /* Later constraints shift down one. PLAN_ERR_BAD_INDEX for an index past the end. */
@@ -376,6 +378,8 @@ PlanResult plan_node_remove_constraint(PiecePlan *plan, NodeId id, size_t index)
 PlanResult plan_lane_span_add_constraint(PiecePlan *plan, LaneSpanId id, const PlanConstraint *constraint);
 size_t plan_lane_span_constraint_count(const PiecePlan *plan, LaneSpanId id);
 const PlanConstraint *plan_lane_span_constraint_at(const PiecePlan *plan, LaneSpanId id, size_t index);
+/* The first constraint of the kind on the lane span, or NULL. The pointer is valid until the list changes. */
+const PlanConstraint *plan_lane_span_find_constraint(const PiecePlan *plan, LaneSpanId id, PlanConstraintKind kind);
 PlanResult plan_lane_span_remove_constraint(PiecePlan *plan, LaneSpanId id, size_t index);
 
 #endif

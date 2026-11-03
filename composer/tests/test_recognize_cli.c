@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
+#include "support/test_support.h"
 
 /*
  * The `recognize` command, run as a process: a pair that is found (a transposition), a pair that is not found within the
@@ -23,40 +24,18 @@ static int run(const char *arguments, const char *out_file, const char *err_file
     return WEXITSTATUS(status);
 }
 
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    assert(file);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)length + 1);
-    assert(text);
-    size_t read = fread(text, 1, (size_t)length, file);
-    assert(read == (size_t)length);
-    text[length] = '\0';
-    fclose(file);
-    return text;
-}
-
-static void write_file(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    assert(file);
-    fputs(text, file);
-    fclose(file);
-}
-
 /* The standard output of a command that must succeed. */
 static char *output_of(const char *arguments) {
     assert(run(arguments, "recognize_cli_out.txt", "recognize_cli_err.txt") == 0);
-    char *err = read_file("recognize_cli_err.txt");
+    char *err = test_read_file("recognize_cli_err.txt", NULL);
     assert(err[0] == '\0');
     free(err);
-    return read_file("recognize_cli_out.txt");
+    return test_read_file("recognize_cli_out.txt", NULL);
 }
 
 static void expect_failure(const char *arguments, int status, const char *message) {
     assert(run(arguments, "recognize_cli_out.txt", "recognize_cli_err.txt") == status);
-    char *err = read_file("recognize_cli_err.txt");
+    char *err = test_read_file("recognize_cli_err.txt", NULL);
     if (strstr(err, message) == NULL) {
         fprintf(stderr, "'%s': expected '%s' in: %s\n", arguments, message, err);
     }
@@ -72,8 +51,8 @@ static void expect_contains(const char *text, const char *needle) {
 }
 
 static void test_found(void) {
-    write_file(SOURCE, "C4:q E4:e G4:e F4:q E4:q");
-    write_file(TARGET, "D4:q F#4:e A4:e G4:q F#4:q");
+    test_write_file(SOURCE, "C4:q E4:e G4:e F4:q E4:q");
+    test_write_file(TARGET, "D4:q F#4:e A4:e G4:q F#4:q");
     char *text = output_of(SOURCE " " TARGET MAJOR);
     expect_contains(text, "Chain: transpose");
     expect_contains(text, "Transposed +2 semitones");
@@ -87,8 +66,8 @@ static void test_found(void) {
 }
 
 static void test_not_found(void) {
-    write_file(SOURCE, "C4:q E4:e G4:e F4:q E4:q");
-    write_file(TARGET, "G2:q B6:e");
+    test_write_file(SOURCE, "C4:q E4:e G4:e F4:q E4:q");
+    test_write_file(TARGET, "G2:q B6:e");
     /* Not found is not an error: exit 0 and a derivation that says so. */
     char *text = output_of(SOURCE " " TARGET MAJOR " --depth 1");
     expect_contains(text, "No chain of up to 1 steps");
@@ -96,7 +75,7 @@ static void test_not_found(void) {
 }
 
 static void test_bad_input(void) {
-    write_file(SOURCE, "C4:q E4:e G4:e F4:q E4:q");
+    test_write_file(SOURCE, "C4:q E4:e G4:e F4:q E4:q");
     expect_failure(SOURCE " no_such_recognize_target.txt" MAJOR, 1, "cannot load 'no_such_recognize_target.txt'");
     expect_failure(SOURCE, 1, "recognize needs a source and a target motive");
     expect_failure(SOURCE " " SOURCE MAJOR " --depth 9", 1, "--depth must be a whole number from 1 to 4");
@@ -104,8 +83,8 @@ static void test_bad_input(void) {
 }
 
 static void test_json(void) {
-    write_file(SOURCE, "C4:q E4:e G4:e F4:q E4:q");
-    write_file(TARGET, "D4:q F#4:e A4:e G4:q F#4:q");
+    test_write_file(SOURCE, "C4:q E4:e G4:e F4:q E4:q");
+    test_write_file(TARGET, "D4:q F#4:e A4:e G4:q F#4:q");
     char *text = output_of(SOURCE " " TARGET MAJOR " --json");
     expect_contains(text, "\"found\": true");
     expect_contains(text, "\"chain\": {");
@@ -119,7 +98,7 @@ static void test_json(void) {
     expect_contains(text, "\"derivation\": \"Transposed +2 semitones.");
     free(text);
 
-    write_file(TARGET, "G2:q B6:e");
+    test_write_file(TARGET, "G2:q B6:e");
     text = output_of(SOURCE " " TARGET MAJOR " --depth 1 --json");
     expect_contains(text, "\"found\": false");
     expect_contains(text, "\"steps\": []");
@@ -129,9 +108,9 @@ static void test_json(void) {
 
 /* Remoteness is from the basic motive, not the source: here one step from the source, two from the basic motive. */
 static void test_remoteness(void) {
-    write_file("recognize_cli_basic.txt", "C4:q E4:e G4:e F4:q E4:q");
-    write_file(SOURCE, "D4:q F#4:e A4:e G4:q F#4:q");
-    write_file(TARGET, "D4:h F#4:q A4:q G4:h F#4:h");
+    test_write_file("recognize_cli_basic.txt", "C4:q E4:e G4:e F4:q E4:q");
+    test_write_file(SOURCE, "D4:q F#4:e A4:e G4:q F#4:q");
+    test_write_file(TARGET, "D4:h F#4:q A4:q G4:h F#4:h");
     char *text = output_of(SOURCE " " TARGET MAJOR " --json");
     expect_contains(text, "\"distance\": 0.2");
     expect_contains(text, "\"remoteness\": 0.2");
@@ -147,8 +126,8 @@ static void test_remoteness(void) {
 }
 
 static void test_contour(void) {
-    write_file(SOURCE, "0 2 1 3 2");
-    write_file(TARGET, "0 2 1 2");
+    test_write_file(SOURCE, "0 2 1 3 2");
+    test_write_file(TARGET, "0 2 1 2");
     char *text = output_of(SOURCE " " TARGET " --format contour --target-format contour --meter 4/4 --json");
     expect_contains(text, "\"found\": true");
     expect_contains(text, "\"op\": \"omit-interval\"");

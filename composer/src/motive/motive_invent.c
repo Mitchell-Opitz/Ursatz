@@ -33,17 +33,13 @@ typedef struct {
     Motive motive;
 } InventPayload;
 
-static const MotiveDevelopContext *invent_context(const void *context) {
-    static MotiveDevelopContext defaults;
-    static bool ready = false;
+static MotiveDevelopContext invent_context(const void *context) {
     if (context) {
-        return context;
+        return *(const MotiveDevelopContext *)context;
     }
-    if (!ready) {
-        motive_develop_context_default(&defaults);
-        ready = true;
-    }
-    return &defaults;
+    MotiveDevelopContext defaults;
+    motive_develop_context_default(&defaults);
+    return defaults;
 }
 
 /* --------------------------------------------------------------- request */
@@ -312,7 +308,8 @@ static bool invent_score(const Motive *motive, const MotiveScoreWeights *weights
 
 static bool invent_applies(const PiecePlan *plan, FillTarget target, void *context) {
     InventRequest request;
-    return read_invent_request(plan, target, invent_context(context), &request);
+    MotiveDevelopContext shared = invent_context(context);
+    return read_invent_request(plan, target, &shared, &request);
 }
 
 static bool invent_already(const FillCandidateList *list, const Motive *motive) {
@@ -338,7 +335,8 @@ static void invent_label(const Motive *motive, char *label, size_t size) {
 
 static bool invent_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
-    const MotiveDevelopContext *shared = invent_context(context);
+    MotiveDevelopContext shared_value = invent_context(context);
+    const MotiveDevelopContext *shared = &shared_value;
     InventRequest request;
     if (!read_invent_request(plan, target, shared, &request)) {
         return true;
@@ -381,7 +379,8 @@ static PlanResult invent_apply(PiecePlan *plan, FillTarget target, const FillCan
     if (!payload || payload->magic != INVENT_PAYLOAD_MAGIC) {
         return PLAN_ERR_NULL;
     }
-    if (!read_invent_request(plan, target, invent_context(context), &request)) {
+    MotiveDevelopContext request_context = invent_context(context);
+    if (!read_invent_request(plan, target, &request_context, &request)) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
     PlanLanePayload notes;
@@ -436,7 +435,8 @@ bool motive_invent_checker(const PiecePlan *plan, FillTarget target, const FillO
         snprintf(out->reason, sizeof(out->reason), "%s", fault);
         return true;
     }
-    const MotiveDevelopContext *shared = invent_context(context);
+    MotiveDevelopContext shared_value = invent_context(context);
+    const MotiveDevelopContext *shared = &shared_value;
     MotiveScoreWeights weights = shared->weights;
     if (weights.contour + weights.intervals + weights.rhythm + weights.length == 0) {
         weights = motive_score_default_weights();

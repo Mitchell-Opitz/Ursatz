@@ -20,6 +20,7 @@
 
 #include "check/shaping.h"
 #include "melody/melody_internal.h"
+#include "util/util.h"
 
 /*
  * The checker for the melody operator. The rules are the frameworks', called here and not written again:
@@ -71,14 +72,6 @@ unsigned melody_cadence_mask(const MelodyContext *context) {
     default:
         return 0xFFFu;
     }
-}
-
-static unsigned bits_set(unsigned bits) {
-    unsigned count = 0;
-    for (; bits; bits >>= 1) {
-        count += bits & 1u;
-    }
-    return count;
 }
 
 /* The note of the melody sounding at a tick, or the count when none is. */
@@ -219,7 +212,7 @@ static PitchSpelling *spell_melody(const PlanKey *key, int pitch) {
     return harmony_spell_pitch(key, pitch_degree(key, pitch), pitch);
 }
 
-static unsigned melodic_soft_rules(void) {
+unsigned melody_melodic_soft_rules(void) {
     unsigned count = 0;
     for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
         count += standard_counterpoint_melodic_preference((StandardCounterpointMelodicRule)rule) != NULL;
@@ -261,7 +254,7 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
         StandardCounterpointLimits limits = standard_counterpoint_default_limits();
         unsigned hard = 0;
         unsigned soft = 0;
-        verdict->soft_total += melodic_soft_rules();
+        verdict->soft_total += melody_melodic_soft_rules();
         if (!standard_counterpoint_melodic_check(&line, &limits, &hard, &soft)) {
             ok = false;
         } else {
@@ -273,7 +266,7 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
                     break;
                 }
             }
-            verdict->soft_held += melodic_soft_rules() - bits_set(soft);
+            verdict->soft_held += melody_melodic_soft_rules() - util_bits_set(soft);
         }
     }
     for (size_t i = 0; spellings && i < total; i++) {
@@ -370,7 +363,7 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
                     break;
                 }
             }
-            verdict->soft_held += harmonic_soft_rules() - bits_set(soft);
+            verdict->soft_held += harmonic_soft_rules() - util_bits_set(soft);
             /* Imperfect consonances (thirds and sixths) on at least half of the strong beats. */
             unsigned on_strong = 0;
             unsigned imperfect = 0;
@@ -545,7 +538,7 @@ static void check_shaping(const MelodyCandidate *melody, PhraseVerdict *verdict)
     }
     unsigned broken = melody_shaping_broken(melody);
     verdict->soft_total += 4;
-    verdict->soft_held += 4 - bits_set(broken);
+    verdict->soft_held += 4 - util_bits_set(broken);
     verdict->shaping_broken |= broken;
 }
 

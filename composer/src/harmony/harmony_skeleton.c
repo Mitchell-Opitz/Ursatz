@@ -11,7 +11,7 @@
 bool harmony_skeleton_read(const PiecePlan *plan, LaneSpanId target, SkeletonContext *out) {
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_HARMONY ||
         plan_lane_span_voice(plan, target) != 0 ||
-        harmony_span_has_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH)) {
+        plan_lane_span_find_constraint(plan, target, PLAN_CONSTRAINT_EMBELLISH) != NULL) {
         return false;
     }
     SkeletonContext context;
@@ -225,7 +225,7 @@ bool harmony_skeleton_check(const void *payload, FillCheck *out) {
     return true;
 }
 
-static PlanResult add_chord(PiecePlan *plan, NodeId owner, const PhraseChord *chord, PlanSpan span, LaneSpanId *id) {
+PlanResult harmony_add_chord(PiecePlan *plan, NodeId owner, const PhraseChord *chord, PlanSpan span, LaneSpanId *id) {
     PlanLanePayload payload;
     harmony_chord_payload(chord, &payload);
     PlanResult result = plan_add_lane_span(plan, owner, PLAN_LANE_HARMONY, 0, span, &payload, id);
@@ -260,7 +260,7 @@ static PlanResult write_harmony(PiecePlan *plan, const SkeletonCandidate *skelet
                 result = plan_lane_span_write(plan, first, &payload);
             }
         } else {
-            result = add_chord(plan, read->owner, &skeleton->chords[i], span, &last);
+            result = harmony_add_chord(plan, read->owner, &skeleton->chords[i], span, &last);
         }
         if (result == PLAN_OK && skeleton->schema >= 0) {
             result = add_schema_stage(plan, i == 0 ? first : last, skeleton->schema, i);

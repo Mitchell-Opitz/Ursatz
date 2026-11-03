@@ -215,10 +215,20 @@ bool harmony_rhythm_cells_per_bar(const PlanMeter *meter, size_t *cells);
 /* The strength of the cell with this index in its bar: the first is strong, any other medium. */
 BeatStrength harmony_rhythm_cell_strength(size_t cell_in_bar);
 
+/* Whether two progressions have the same chords for the same number of cells. */
+bool harmony_same_progression(const PhraseProgression *a, const PhraseProgression *b);
+/* The chords of a progression as text ("I IV V I"), cut at the last whole chord that fits. */
+void harmony_progression_label(const PhraseProgression *progression, char *label, size_t size);
+/* Whether the fill target is a lane span, which the harmony operators work on. */
+static inline bool harmony_is_target(FillTarget target) {
+    return target.kind == FILL_TARGET_LANE_SPAN;
+}
+/* Adds a chord as a Realized harmony lane span over the span. */
+PlanResult harmony_add_chord(PiecePlan *plan, NodeId owner, const PhraseChord *chord, PlanSpan span, LaneSpanId *id);
+
 /* A constraint of this kind on the span, else on its owner. */
 bool harmony_find_constraint(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanConstraintKind kind,
                              PlanConstraint *out);
-bool harmony_span_has_constraint(const PiecePlan *plan, LaneSpanId id, PlanConstraintKind kind);
 /* The mode of the key lane over the span, else of a key constraint on the span or its owner. */
 bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, PlanKeyMode *out);
 /* The key of the key lane over the span, else of a key constraint on the span or its owner. */

@@ -67,17 +67,13 @@ typedef struct {
     MotiveScore limit; /* the remoteness over which a form's connection is halved; denominator 0 is 3/4 */
 } Request;
 
-static const MotiveDevelopContext *context_or_default(const void *context) {
-    static MotiveDevelopContext defaults;
-    static bool ready = false;
+static MotiveDevelopContext context_or_default(const void *context) {
     if (context) {
-        return context;
+        return *(const MotiveDevelopContext *)context;
     }
-    if (!ready) {
-        motive_develop_context_default(&defaults);
-        ready = true;
-    }
-    return &defaults;
+    MotiveDevelopContext defaults;
+    motive_develop_context_default(&defaults);
+    return defaults;
 }
 
 static Slot slot_of(const char *name, GrowSlot *function_slot) {
@@ -275,10 +271,6 @@ typedef struct {
     FillCandidateList *out;
 } Proposal;
 
-static void payload_destroy(void *payload) {
-    free(payload);
-}
-
 /* Every pitch within the range, and in the key's scale (a minor key also has the raised seventh). */
 static bool within_range(const Motive *motive) {
     static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
@@ -457,7 +449,7 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
     }
     char label[FILL_LABEL_MAX];
     label_of(payload, label, sizeof(label));
-    return fill_candidates_add(proposal->out, label, payload, payload_destroy);
+    return fill_candidates_add(proposal->out, label, payload, motive_payload_destroy);
 }
 
 /*
@@ -498,7 +490,7 @@ static bool offer_pool(Proposal *proposal, const GrowPoolForm *pool, size_t pool
             }
             char label[FILL_LABEL_MAX];
             label_of(payload, label, sizeof(label));
-            if (!fill_candidates_add(proposal->out, label, payload, payload_destroy)) {
+            if (!fill_candidates_add(proposal->out, label, payload, motive_payload_destroy)) {
                 return false;
             }
         }
@@ -590,18 +582,20 @@ static bool offer_transpositions(Proposal *proposal) {
 
 static bool form_applies(const PiecePlan *plan, FillTarget target, void *context) {
     Request request;
-    return read_request(plan, target, context_or_default(context), &request);
+    MotiveDevelopContext shared = context_or_default(context);
+    return read_request(plan, target, &shared, &request);
 }
 
 static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                           FillCandidateList *out) {
     (void)rng;
     Request request;
-    if (!read_request(plan, target, context_or_default(context), &request)) {
+    MotiveDevelopContext shared_value = context_or_default(context);
+    const MotiveDevelopContext *shared = &shared_value;
+    if (!read_request(plan, target, shared, &request)) {
         return true;
     }
     Proposal proposal = {&request, out};
-    const MotiveDevelopContext *shared = context_or_default(context);
     if (shared->pool_count > 0 && !offer_pool(&proposal, shared->pool, shared->pool_count)) {
         return false;
     }

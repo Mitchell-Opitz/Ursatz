@@ -6,20 +6,13 @@
 #include "harmony/harmony_internal.h"
 #include "melody/melody_internal.h"
 #include "piece/form_return_internal.h"
+#include "util/util.h"
+#include <ursatz_composer/constraint.h>
 
 /* The most key spans a section is read across: a section holds at most two keys, with a few to spare. */
 #define MAX_KEY_PIECES 8
 
 /* ------------------------------------------------------------- the copy */
-
-static char *copy_string(const char *text) {
-    size_t size = text ? strlen(text) + 1 : 1;
-    char *out = malloc(size);
-    if (out) {
-        memcpy(out, text ? text : "", size);
-    }
-    return out;
-}
 
 static PlanConstraint *copy_constraints(size_t count, const PlanConstraint *(*at)(const PiecePlan *, size_t, size_t),
                                         const PiecePlan *plan, size_t id) {
@@ -74,7 +67,7 @@ static bool collect_nodes(const PiecePlan *plan, NodeId id, size_t parent, Retur
         node->kind = plan_node_kind(plan, child);
         node->parent = parent;
         node->span = plan_node_span(plan, child);
-        node->name = copy_string(plan_node_name(plan, child));
+        node->name = util_copy_string(plan_node_name(plan, child));
         node->state = plan_node_state(plan, child);
         node->constraint_count = plan_node_constraint_count(plan, child);
         node->constraints = copy_constraints(node->constraint_count, node_constraint_at, plan, child);
@@ -178,7 +171,7 @@ bool return_copy_clone(const ReturnCopy *from, ReturnCopy *out) {
         ReturnNode *node = &out->nodes[i];
         *node = from->nodes[i];
         out->node_count = i + 1;
-        node->name = copy_string(from->nodes[i].name);
+        node->name = util_copy_string(from->nodes[i].name);
         node->constraints = from->nodes[i].constraint_count ? calloc(node->constraint_count, sizeof(PlanConstraint)) : NULL;
         ok = node->name && (node->constraint_count == 0 || node->constraints);
         if (ok && node->constraint_count) {
@@ -313,15 +306,6 @@ void return_payload_destroy(void *payload) {
 
 /* ------------------------------------------------------------- the target */
 
-static bool has_constraint(const PiecePlan *plan, NodeId section, PlanConstraintKind kind) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
-        if (plan_node_constraint_at(plan, section, i)->kind == kind) {
-            return true;
-        }
-    }
-    return false;
-}
-
 static bool find_return(const PiecePlan *plan, NodeId section, PlanReturn *out) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
@@ -412,13 +396,13 @@ bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, P
     int shift;
     if (!plan_has_node(plan, section) || plan_node_kind(plan, section) != PLAN_NODE_SECTION ||
         plan_node_state(plan, section) != PLAN_STATE_CONSTRAINED || plan_node_child_count(plan, section) != 0 ||
-        !has_constraint(plan, section, PLAN_CONSTRAINT_ARCHETYPE) ||
-        !has_constraint(plan, section, PLAN_CONSTRAINT_THEME_PAIRING) || !find_return(plan, section, &ret)) {
+        !plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_ARCHETYPE) ||
+        !plan_node_has_constraint(plan, section, PLAN_CONSTRAINT_THEME_PAIRING) || !find_return(plan, section, &ret)) {
         return false;
     }
     if (ret.section == section || !plan_has_node(plan, ret.section) ||
         plan_node_kind(plan, ret.section) != PLAN_NODE_SECTION ||
-        has_constraint(plan, ret.section, PLAN_CONSTRAINT_MATERIAL) || !variation_offered(ret.variation)) {
+        plan_node_has_constraint(plan, ret.section, PLAN_CONSTRAINT_MATERIAL) || !variation_offered(ret.variation)) {
         return false;
     }
     PlanSpan from = plan_node_span(plan, ret.section);

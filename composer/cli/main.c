@@ -21,6 +21,7 @@
 #include <ursatz_composer/export.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/render.h>
+#include "util/plan_util.h"
 
 static void print_usage(FILE *out) {
     fprintf(out, "Usage: ursatz-composer [--version] [--help]\n");
@@ -43,12 +44,10 @@ static void print_usage(FILE *out) {
     fprintf(out, "%s\n", HARMONIZE_USAGE_LINE);
 }
 
-static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner_voice"};
-
 static void report_skipped(const RenderedPlan *rendered) {
     for (size_t i = 0; i < rendered->skipped_count; i++) {
         const RenderSkip *skip = &rendered->skipped[i];
-        fprintf(stderr, "Skipped lane span %zu (%s): %s\n", skip->span, LANE_NAMES[skip->lane],
+        fprintf(stderr, "Skipped lane span %zu (%s): %s\n", skip->span, plan_lane_name(skip->lane),
                 skip->reason == RENDER_SKIP_NOT_REALIZED ? "not Given or Realized"
                 : skip->reason == RENDER_SKIP_MATERIAL ? "source material"
                 : skip->reason == RENDER_SKIP_LAYER    ? "not in the layer"

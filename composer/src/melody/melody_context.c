@@ -6,6 +6,7 @@
 #include <ursatz_composer/motive_tones.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/seam_hear.h>
+#include "util/plan_util.h"
 
 bool melody_ticks(PlanTime time, long *out) {
     long scaled = time.num * MELODY_TICKS;
@@ -74,20 +75,6 @@ unsigned melody_need_mask(const MelodyContext *context, const MelodyFillParams *
         mask &= context->chord_mask[c];
     }
     return mask & 0xFFFu;
-}
-
-/* The first melody lane span (voice 0) of node that is Given or Realized. */
-static bool melody_span_of(const PiecePlan *plan, NodeId node, LaneSpanId *out) {
-    LaneSpanId ids[16];
-    size_t found = plan_node_lane_spans(plan, node, ids, 16);
-    for (size_t i = 0; i < found && i < 16; i++) {
-        if (plan_lane_span_lane(plan, ids[i]) == PLAN_LANE_MELODY && plan_lane_span_voice(plan, ids[i]) == 0 &&
-            plan_lane_span_state(plan, ids[i]) != PLAN_STATE_CONSTRAINED) {
-            *out = ids[i];
-            return true;
-        }
-    }
-    return false;
 }
 
 /* The bass lane over the phrase: every note, from the start of the phrase, tiling it. */
@@ -199,7 +186,7 @@ static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
     LaneSpanId span;
     if (!harmony_find_constraint(plan, context->target, context->owner, PLAN_CONSTRAINT_MOTIVE_REF, &constraint) ||
         !plan_has_node(plan, constraint.params.motive.motive) ||
-        !melody_span_of(plan, constraint.params.motive.motive, &span)) {
+        !plan_melody_span_of(plan, constraint.params.motive.motive, &span)) {
         return false;
     }
     const PlanNotes *notes = &plan_lane_span_payload(plan, span)->notes;

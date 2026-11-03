@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
+#include "support/test_support.h"
 
 /*
  * The `motive` command, run as a process: what it prints for each input format, and the exit status and message
@@ -20,31 +21,16 @@ static int run(const char *arguments, const char *out_file, const char *err_file
     return WEXITSTATUS(status);
 }
 
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    assert(file);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)length + 1);
-    assert(text);
-    size_t read = fread(text, 1, (size_t)length, file);
-    assert(read == (size_t)length);
-    text[length] = '\0';
-    fclose(file);
-    return text;
-}
-
 static void expect_failure(const char *arguments, int status, const char *message) {
     assert(run(arguments, "motive_cli_out.txt", "motive_cli_err.txt") == status);
-    char *err = read_file("motive_cli_err.txt");
+    char *err = test_read_file("motive_cli_err.txt", NULL);
     if (strstr(err, message) == NULL) {
         fprintf(stderr, "'%s': expected '%s' in: %s\n", arguments, message, err);
     }
     assert(strstr(err, message) != NULL);
     assert(strncmp(err, "Error: ", 7) == 0);
     free(err);
-    char *out = read_file("motive_cli_out.txt");
+    char *out = test_read_file("motive_cli_out.txt", NULL);
     assert(out[0] == '\0');
     free(out);
 }
@@ -52,27 +38,27 @@ static void expect_failure(const char *arguments, int status, const char *messag
 static void test_text_output(void) {
     assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\"", "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
-    char *out = read_file("motive_cli_out.txt");
+    char *out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "Notes: D4 F4 A4 D5") != NULL);
     assert(strstr(out, "Meter: 4/4") != NULL);
     assert(strstr(out, "Key: D minor (given)") != NULL);
     assert(strstr(out, "Contour: ascending (up, up, up)") != NULL);
     assert(strstr(out, "starts on 1, ends on 1") != NULL);
     assert(strstr(out, "1. i (tonic) fits 100%") != NULL);
-    char *err = read_file("motive_cli_err.txt");
+    char *err = test_read_file("motive_cli_err.txt", NULL);
     assert(err[0] == '\0');
     free(err);
 
     /* The files carry the meter and the key themselves, and read as the same motive. */
     assert(run(FIXTURE("motive_d_minor.mid"), "motive_cli_mid.txt", "motive_cli_err.txt") == 0);
-    char *from_midi = read_file("motive_cli_mid.txt");
+    char *from_midi = test_read_file("motive_cli_mid.txt", NULL);
     assert(strcmp(from_midi, out) == 0);
     free(from_midi);
     free(out);
 
     /* Without a key the output says so and gives semitones only. */
     assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4", "motive_cli_out.txt", "motive_cli_err.txt") == 0);
-    out = read_file("motive_cli_out.txt");
+    out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "Key: unspecified") != NULL);
     assert(strstr(out, "Implied harmony: unknown (no key)") != NULL);
     free(out);
@@ -80,7 +66,7 @@ static void test_text_output(void) {
 
 static void test_json_output(void) {
     assert(run(FIXTURE("motive_d_minor.json") " --json", "motive_cli_json.txt", "motive_cli_err.txt") == 0);
-    char *json = read_file("motive_cli_json.txt");
+    char *json = test_read_file("motive_cli_json.txt", NULL);
     assert(strstr(json, "\"analysis\"") != NULL && strstr(json, "\"shape\": \"ascending\"") != NULL);
     assert(strstr(json, "\"roman_numeral\": \"i\"") != NULL);
     assert(json[strlen(json) - 1] == '\n');
@@ -91,7 +77,7 @@ static void test_json_output(void) {
                             FIXTURE("motive_d_minor.mid") " --format midi --json"};
     for (size_t i = 0; i < sizeof(others) / sizeof(others[0]); i++) {
         assert(run(others[i], "motive_cli_other.txt", "motive_cli_err.txt") == 0);
-        char *other = read_file("motive_cli_other.txt");
+        char *other = test_read_file("motive_cli_other.txt", NULL);
         assert(strcmp(other, json) == 0);
         free(other);
     }
@@ -128,14 +114,14 @@ static void write_input(const char *text) {
 
 static char *run_json(const char *arguments) {
     assert(run(arguments, "motive_cli_out.txt", "motive_cli_err.txt") == 0);
-    return read_file("motive_cli_out.txt");
+    return test_read_file("motive_cli_out.txt", NULL);
 }
 
 static void test_forms_and_pickup(void) {
     /* Text output names the form and the pickup. */
     assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\"", "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
-    char *out = read_file("motive_cli_out.txt");
+    char *out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "Form: full") != NULL && strstr(out, "Pickup: none") != NULL);
     free(out);
 
@@ -161,7 +147,7 @@ static void test_forms_and_pickup(void) {
     assert(strstr(out, "\"bar\": -1"));
     free(out);
     assert(run("motive_cli_in.txt --form rhythm --meter 3/4 --pickup 1", "motive_cli_out.txt", "motive_cli_err.txt") == 0);
-    out = read_file("motive_cli_out.txt");
+    out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "Form: rhythm") && strstr(out, "Pickup: 1") && strstr(out, "bar 0 beat 3"));
     free(out);
 
@@ -213,7 +199,7 @@ static void test_render(void) {
     assert(strstr(out, "\"rendered\"") && strstr(out, "\"key\": \"D minor\""));
     assert(strstr(out, "\"midi_pitch\": 62") && strstr(out, "\"midi_pitch\": 65"));
     free(out);
-    char *xml = read_file("motive_cli_out.xml");
+    char *xml = test_read_file("motive_cli_out.xml", NULL);
     char *zero = strstr(xml, "<measure number=\"0\" implicit=\"yes\">");
     char *one = strstr(xml, "<measure number=\"1\">");
     assert(zero && one && zero < one && !strstr(xml, "<measure number=\"2\">"));
@@ -234,7 +220,7 @@ static void test_render(void) {
     out = run_json("motive_cli_in.txt --format degrees --meter 3/4 --key \"D minor\" --musicxml motive_cli_out.xml --json");
     assert(strstr(out, "\"rendered\""));
     free(out);
-    xml = read_file("motive_cli_out.xml");
+    xml = test_read_file("motive_cli_out.xml", NULL);
     assert(!strstr(xml, "implicit") && strstr(xml, "<measure number=\"1\">"));
     free(xml);
 
@@ -261,7 +247,7 @@ static void test_render(void) {
 
 static void test_help(void) {
     assert(run("--help", "motive_cli_out.txt", "motive_cli_err.txt") == 0);
-    char *out = read_file("motive_cli_out.txt");
+    char *out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "--meter") != NULL && strstr(out, "--format") != NULL && strstr(out, "--json") != NULL);
     assert(strstr(out, "--form") != NULL && strstr(out, "--pickup") != NULL);
     assert(strstr(out, "--render-key") != NULL && strstr(out, "--midi") != NULL && strstr(out, "--musicxml") != NULL);
@@ -282,7 +268,7 @@ static int run_sub(const char *subcommand, const char *arguments) {
 
 static void expect_sub_failure(const char *subcommand, const char *arguments, int status, const char *message) {
     assert(run_sub(subcommand, arguments) == status);
-    char *err = read_file("motive_cli_err.txt");
+    char *err = test_read_file("motive_cli_err.txt", NULL);
     if (strstr(err, message) == NULL) {
         fprintf(stderr, "%s '%s': expected '%s' in: %s\n", subcommand, arguments, message, err);
     }
@@ -296,7 +282,7 @@ static void expect_sub_failure(const char *subcommand, const char *arguments, in
 static void test_extras_in_motive(void) {
     assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\"" EXTRAS, "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
-    char *out = read_file("motive_cli_out.txt");
+    char *out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "Own harmony: I V6@2") != NULL);
     assert(strstr(out, "  a: notes 0 to 1") != NULL && strstr(out, "  b: notes 2 to 3") != NULL);
     assert(strstr(out, "Role: accompaniment") != NULL);
@@ -304,7 +290,7 @@ static void test_extras_in_motive(void) {
 
     assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --json" EXTRAS, "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
-    out = read_file("motive_cli_out.txt");
+    out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "\"harmony\": \"I V6@2\"") != NULL && strstr(out, "\"harmony_text\": \"I V6@2\"") != NULL);
     assert(strstr(out, "\"label\": \"b\"") != NULL && strstr(out, "\"role\": \"accompaniment\"") != NULL);
     free(out);
@@ -312,21 +298,21 @@ static void test_extras_in_motive(void) {
     /* Nothing asked, nothing printed. */
     assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --json", "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
-    out = read_file("motive_cli_out.txt");
+    out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "harmony_text") == NULL && strstr(out, "\"role\": \"accompaniment\"") == NULL && strstr(out, "\"features\"") == NULL);
     free(out);
 
     /* The onsets are in beats of the file's own meter; a pickup given at the same time still applies. */
     assert(run(FIXTURE("motive_d_minor.mid") " --harmony \"I V@2\" --pickup 1/2", "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
-    out = read_file("motive_cli_out.txt");
+    out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "Own harmony: I V@2") != NULL && strstr(out, "Pickup: 1/2") != NULL);
     free(out);
 
     /* An empty text clears the harmony. */
     assert(run(FIXTURE("motive_d_minor.txt") " --meter 4/4 --key \"D minor\" --harmony \"\"", "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
-    out = read_file("motive_cli_out.txt");
+    out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "Own harmony") == NULL);
     free(out);
 }
@@ -376,7 +362,7 @@ static void test_extras_in_variants(void) {
     write_chain("{\"steps\": [{\"op\": \"fragment\", \"params\": {\"position\": \"trailing\", \"length\": 2}}]}");
     snprintf(arguments, sizeof(arguments), "%s --chain motive_cli_chain.json --count 1 --seed 3 --json", input);
     assert(run_sub("variants", arguments) == 0);
-    char *out = read_file("motive_cli_out.txt");
+    char *out = test_read_file("motive_cli_out.txt", NULL);
     /* The source keeps all of it. The fragment keeps the feature it holds whole, the chords that land on its notes (the
        one sounding at its start at 0), and the role. */
     assert(strstr(out, "\"harmony\": \"I V6@2\"") != NULL);
@@ -406,12 +392,12 @@ static void test_extras_in_grow_and_random_motive(void) {
     expect_sub_failure("grow", arguments, 2, "features[0]");
 
     assert(run_sub("random-motive", "--mode major --meter 4/4 --seed 5 --count 2 --role accompaniment --json") == 0);
-    char *out = read_file("motive_cli_out.txt");
+    char *out = test_read_file("motive_cli_out.txt", NULL);
     const char *first = strstr(out, "\"role\": \"accompaniment\"");
     assert(first != NULL && strstr(first + 1, "\"role\": \"accompaniment\"") != NULL);
     free(out);
     assert(run_sub("random-motive", "--mode major --meter 4/4 --seed 5 --role melodic --json") == 0);
-    out = read_file("motive_cli_out.txt");
+    out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "\"role\": \"accompaniment\"") == NULL);
     free(out);
     expect_sub_failure("random-motive", "--mode major --meter 4/4 --role bass", 1, "--role must be");
@@ -423,35 +409,28 @@ static void test_extras_help(void) {
     const char *commands[] = {"motive", "variants", "grow"};
     for (size_t c = 0; c < sizeof(commands) / sizeof(commands[0]); c++) {
         assert(run_sub(commands[c], "--help") == 0);
-        char *out = read_file("motive_cli_out.txt");
+        char *out = test_read_file("motive_cli_out.txt", NULL);
         assert(strstr(out, "--harmony") != NULL && strstr(out, "--feature") != NULL && strstr(out, "--role") != NULL);
         free(out);
     }
     assert(run_sub("random-motive", "--help") == 0);
-    char *out = read_file("motive_cli_out.txt");
+    char *out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "--role") != NULL && strstr(out, "--harmony") == NULL);
     free(out);
 }
 
 /* ------------------------------------------- base harmony and tone labels */
 
-static void write_file(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    assert(file);
-    fputs(text, file);
-    fclose(file);
-}
-
 #define HOLLOW_KNIGHT "motive_cli_hollow_knight.txt"
 #define HOLLOW_ARGS HOLLOW_KNIGHT " --meter 4/4 --key \"C major\""
 
 static char *run_and_read(const char *arguments) {
     assert(run(arguments, "motive_cli_out.txt", "motive_cli_err.txt") == 0);
-    return read_file("motive_cli_out.txt");
+    return test_read_file("motive_cli_out.txt", NULL);
 }
 
 static void test_base_harmony_and_tones(void) {
-    write_file(HOLLOW_KNIGHT, "A5:q A5:q B5:e C6:e B5:h\n");
+    test_write_file(HOLLOW_KNIGHT, "A5:q A5:q B5:e C6:e B5:h\n");
 
     /* Proposed: V holds B and B on the beats, as IV and vi hold A and A; the tie goes to the earlier. */
     char *out = run_and_read(HOLLOW_ARGS);
@@ -479,7 +458,7 @@ static void test_base_harmony_and_tones(void) {
     free(out);
 
     /* A second chord inside the bar when it makes two beat notes chord tones. */
-    write_file("motive_cli_two_chords.txt", "C5:q E5:q D5:q B4:q\n");
+    test_write_file("motive_cli_two_chords.txt", "C5:q E5:q D5:q B4:q\n");
     out = run_and_read("motive_cli_two_chords.txt --meter 4/4 --key \"C major\"");
     assert(strstr(out, "Base harmony: I V@2 (proposed)") != NULL);
     assert(strstr(out, "Tones: 1 C5 chord, 2 E5 chord, 3 D5 chord, 4 B4 chord") != NULL);
@@ -487,13 +466,13 @@ static void test_base_harmony_and_tones(void) {
     free(out);
 
     /* A second bar gets its own chord, at its downbeat. */
-    write_file("motive_cli_two_bars.txt", "C5:q E5:q G5:h F5:q A5:q C6:h\n");
+    test_write_file("motive_cli_two_bars.txt", "C5:q E5:q G5:h F5:q A5:q C6:h\n");
     out = run_and_read("motive_cli_two_bars.txt --meter 4/4 --key \"C major\"");
     assert(strstr(out, "Base harmony: I IV@4 (proposed)") != NULL);
     free(out);
 
     /* No pitches, no base harmony. */
-    write_file("motive_cli_rhythm.txt", "x:q x:e x:e x:h\n");
+    test_write_file("motive_cli_rhythm.txt", "x:q x:e x:e x:h\n");
     out = run_and_read("motive_cli_rhythm.txt --meter 4/4 --form rhythm");
     assert(strstr(out, "Base harmony: none") != NULL && strstr(out, "Tones: none") != NULL);
     free(out);
@@ -503,11 +482,11 @@ static void test_base_harmony_and_tones(void) {
 }
 
 static void test_too_many_harmonies_in_a_bar(void) {
-    write_file(HOLLOW_KNIGHT, "A5:q A5:q B5:e C6:e B5:h\n");
+    test_write_file(HOLLOW_KNIGHT, "A5:q A5:q B5:e C6:e B5:h\n");
     expect_failure(HOLLOW_ARGS " --harmony \"I V@1 I@2\"", 1, "at most 2 harmonies per bar");
     /* Two to a bar are fine, in two bars as well. */
     assert(run(HOLLOW_ARGS " --harmony \"I V@2\"", "motive_cli_out.txt", "motive_cli_err.txt") == 0);
-    write_file("motive_cli_two_bars.txt", "C5:q E5:q G5:h F5:q A5:q C6:h\n");
+    test_write_file("motive_cli_two_bars.txt", "C5:q E5:q G5:h F5:q A5:q C6:h\n");
     assert(run("motive_cli_two_bars.txt --meter 4/4 --key \"C major\" --harmony \"I V@2 IV@4 I@6\"", "motive_cli_out.txt",
                "motive_cli_err.txt") == 0);
     expect_failure("motive_cli_two_bars.txt --meter 4/4 --key \"C major\" --harmony \"I V@2 IV@3 I@4\"", 1,
@@ -515,7 +494,7 @@ static void test_too_many_harmonies_in_a_bar(void) {
 }
 
 static void test_tone_overrides(void) {
-    write_file(HOLLOW_KNIGHT, "A5:q A5:q B5:e C6:e B5:h\n");
+    test_write_file(HOLLOW_KNIGHT, "A5:q A5:q B5:e C6:e B5:h\n");
     char *out = run_and_read(HOLLOW_ARGS " --harmony VI --tone 3=chord --tone 5=pedal");
     assert(strstr(out, "Tones: 1 A5 chord, 2 A5 chord, 3 B5 chord, 4 C6 chord, 5 B5 pedal") != NULL);
     free(out);
@@ -534,10 +513,10 @@ static void test_tone_overrides(void) {
     expect_failure(HOLLOW_ARGS " --tone 3=bogus", 1, "not 'bogus'");
     expect_failure(HOLLOW_ARGS " --tone", 1, "--tone needs a value");
     /* Nothing to label a rhythm against. */
-    write_file("motive_cli_rhythm.txt", "x:q x:e x:e x:h\n");
+    test_write_file("motive_cli_rhythm.txt", "x:q x:e x:e x:h\n");
     expect_failure("motive_cli_rhythm.txt --meter 4/4 --form rhythm --tone 1=chord", 1, "--tone needs a motive with a key");
     assert(run_sub("motive", "--help") == 0);
-    out = read_file("motive_cli_out.txt");
+    out = test_read_file("motive_cli_out.txt", NULL);
     assert(strstr(out, "--tone") != NULL);
     free(out);
 }

@@ -6,6 +6,7 @@
 #include <sys/wait.h>
 
 #include <ursatz_composer/variant_registry.h>
+#include "support/test_support.h"
 
 /*
  * The `variants` command, run as a process: the operation list, variants from a chain file, that the same seed gives
@@ -24,46 +25,24 @@ static int run(const char *arguments, const char *out_file, const char *err_file
     return WEXITSTATUS(status);
 }
 
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    assert(file);
-    fseek(file, 0, SEEK_END);
-    long length = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    char *text = malloc((size_t)length + 1);
-    assert(text);
-    size_t read = fread(text, 1, (size_t)length, file);
-    assert(read == (size_t)length);
-    text[length] = '\0';
-    fclose(file);
-    return text;
-}
-
-static void write_file(const char *path, const char *text) {
-    FILE *file = fopen(path, "wb");
-    assert(file);
-    fputs(text, file);
-    fclose(file);
-}
-
 /* The standard output of a command that must succeed. */
 static char *output_of(const char *arguments) {
     assert(run(arguments, "variants_cli_out.txt", "variants_cli_err.txt") == 0);
-    char *err = read_file("variants_cli_err.txt");
+    char *err = test_read_file("variants_cli_err.txt", NULL);
     assert(err[0] == '\0');
     free(err);
-    return read_file("variants_cli_out.txt");
+    return test_read_file("variants_cli_out.txt", NULL);
 }
 
 /* The standard output of a command that must succeed; stderr may hold notes on skipped draws. */
 static char *output_with_notes(const char *arguments) {
     assert(run(arguments, "variants_cli_out.txt", "variants_cli_err.txt") == 0);
-    return read_file("variants_cli_out.txt");
+    return test_read_file("variants_cli_out.txt", NULL);
 }
 
 static void expect_failure(const char *arguments, int status, const char *message) {
     assert(run(arguments, "variants_cli_out.txt", "variants_cli_err.txt") == status);
-    char *err = read_file("variants_cli_err.txt");
+    char *err = test_read_file("variants_cli_err.txt", NULL);
     if (strstr(err, message) == NULL) {
         fprintf(stderr, "'%s': expected '%s' in: %s\n", arguments, message, err);
     }
@@ -100,7 +79,7 @@ static void test_list_ops(void) {
 }
 
 static void test_chain_file(void) {
-    write_file("variants_cli_chain.json",
+    test_write_file("variants_cli_chain.json",
                "{\"steps\": [{\"op\": \"invert\", \"params\": {\"tonal\": true}}, "
                "{\"op\": \"augment\", \"params\": {\"ratio\": \"2:1\"}}]}");
     char *out = output_of(THEME " --chain variants_cli_chain.json --count 2 --seed 1");
@@ -161,29 +140,29 @@ static void test_bad_arguments(void) {
     expect_failure("", 1, "variants needs --list-ops or a motive input");
     expect_failure(FIXTURE("motive_missing.txt") " --meter 4/4", 2, "cannot load");
 
-    write_file("variants_cli_bad.json", "{\"steps\": [{\"op\": \"spin\"}]}");
+    test_write_file("variants_cli_bad.json", "{\"steps\": [{\"op\": \"spin\"}]}");
     expect_failure(THEME " --chain variants_cli_bad.json", 1, "step 1: unknown operation 'spin'");
-    write_file("variants_cli_bad.json", "{\"steps\": [{\"op\": \"invert\", \"params\": {\"by\": 2}}]}");
+    test_write_file("variants_cli_bad.json", "{\"steps\": [{\"op\": \"invert\", \"params\": {\"by\": 2}}]}");
     expect_failure(THEME " --chain variants_cli_bad.json", 1, "invert has no parameter 'by'");
-    write_file("variants_cli_bad.json", "{\"steps\": [{\"op\": \"augment\", \"params\": {\"ratio\": 2}}]}");
+    test_write_file("variants_cli_bad.json", "{\"steps\": [{\"op\": \"augment\", \"params\": {\"ratio\": 2}}]}");
     expect_failure(THEME " --chain variants_cli_bad.json", 1, "'ratio' of augment must be a ratio text");
 }
 
 /* A step an operation does not apply to says which step and why. */
 static void test_refused_step(void) {
-    write_file("variants_cli_refused.json",
+    test_write_file("variants_cli_refused.json",
                "{\"steps\": [{\"op\": \"retrograde\"}, {\"op\": \"interval-change\"}]}");
-    write_file("variants_cli_contour.txt", "0 2 1 3\n");
+    test_write_file("variants_cli_contour.txt", "0 2 1 3\n");
     expect_failure("variants_cli_contour.txt --form contour --meter 4/4 --chain variants_cli_refused.json", 2,
                    "step 2 of the chain: interval-change does not apply to a contour motive");
-    char *out = read_file("variants_cli_out.txt");
+    char *out = test_read_file("variants_cli_out.txt", NULL);
     assert(out[0] == '\0');
     free(out);
 }
 
 /* A harmony row writes the variant's own harmony in the record and in its motive; a variant without some has neither. */
 static void test_harmony_json(void) {
-    write_file("variants_cli_harmony.json",
+    test_write_file("variants_cli_harmony.json",
                "{\"steps\": [{\"op\": \"harmony-substitute\", \"params\": {\"chord\": 1, \"degree\": 4}}]}");
     char *out = output_of(THEME " --harmony \"I V@2\" --chain variants_cli_harmony.json --count 1 --seed 1 --json");
     /* The source's harmony, then the record's, then the variant's motive. */
@@ -198,7 +177,7 @@ static void test_harmony_json(void) {
     assert(strstr(out, "Substituted IV for the second chord, melody adapted.") != NULL);
     free(out);
 
-    write_file("variants_cli_transpose.json", "{\"steps\": [{\"op\": \"transpose\", \"params\": {\"by\": 2}}]}");
+    test_write_file("variants_cli_transpose.json", "{\"steps\": [{\"op\": \"transpose\", \"params\": {\"by\": 2}}]}");
     out = output_of(THEME " --chain variants_cli_transpose.json --count 1 --seed 1 --json");
     assert(count_of(out, "\"harmony\": \"") == 0);
     free(out);
@@ -206,8 +185,8 @@ static void test_harmony_json(void) {
 
 /* Counter-line is refused for a melodic motive and works on an accompaniment. */
 static void test_counter_line(void) {
-    write_file("variants_cli_counter.json", "{\"steps\": [{\"op\": \"counter-line\"}]}");
-    write_file("variants_cli_repeated.txt", "C4:q C4:q C4:q C4:q\n");
+    test_write_file("variants_cli_counter.json", "{\"steps\": [{\"op\": \"counter-line\"}]}");
+    test_write_file("variants_cli_repeated.txt", "C4:q C4:q C4:q C4:q\n");
     expect_failure("variants_cli_repeated.txt --meter 4/4 --key \"C major\" --chain variants_cli_counter.json", 2,
                    "step 1 of the chain: counter-line needs an accompaniment motive");
     char *out = output_of("variants_cli_repeated.txt --meter 4/4 --key \"C major\" --role accompaniment "
@@ -293,7 +272,7 @@ static void test_distance(void) {
 
     /* Fewer than asked is a note on stderr, not a failure. */
     out = output_with_notes(THEME " --count 16 --seed 1 --distance far --function cadential");
-    char *err = read_file("variants_cli_err.txt");
+    char *err = test_read_file("variants_cli_err.txt", NULL);
     assert(count_of(out, "\nVariant ") < 16 && strstr(err, "suit the function and distance") != NULL);
     free(err);
     free(out);
@@ -301,7 +280,7 @@ static void test_distance(void) {
     expect_failure(THEME " --distance near", 1, "--distance must be close, medium or far, not 'near'");
     expect_failure(THEME " --distance", 1, "--distance needs a value");
     expect_failure(THEME " --distance far --distance far", 1, "--distance given twice");
-    write_file("variants_cli_chain.json", "{\"steps\": [{\"op\": \"retrograde\"}]}");
+    test_write_file("variants_cli_chain.json", "{\"steps\": [{\"op\": \"retrograde\"}]}");
     expect_failure(THEME " --distance far --chain variants_cli_chain.json", 1,
                    "--distance takes random chains, not --chain");
 }
@@ -387,7 +366,7 @@ static void test_each_op(void) {
         contour_rows += (variant_registry_at(i)->forms & VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR)) != 0;
     }
     assert(contour_rows < rows);
-    write_file("variants_cli_contour.txt", "0 2 1 3\n");
+    test_write_file("variants_cli_contour.txt", "0 2 1 3\n");
     out = output_of("variants_cli_contour.txt --form contour --meter 4/4 --each-op --seed 2");
     assert(count_of(out, "\nVariant ") + count_of(out, "Skipped ") == contour_rows);
     assert(strstr(out, "Skipped interval-change") == NULL);
@@ -396,13 +375,13 @@ static void test_each_op(void) {
     expect_failure(THEME " --each-op --count 2", 1, "--each-op takes no --chain, --count, --distance or --function");
     expect_failure(THEME " --each-op --distance far", 1, "--each-op takes no --chain");
     expect_failure(THEME " --each-op --function contrast", 1, "--each-op takes no --chain");
-    write_file("variants_cli_chain.json", "{\"steps\": [{\"op\": \"retrograde\"}]}");
+    test_write_file("variants_cli_chain.json", "{\"steps\": [{\"op\": \"retrograde\"}]}");
     expect_failure(THEME " --each-op --chain variants_cli_chain.json", 1, "--each-op takes no --chain");
 }
 
 /* Liquidation by features, from a chain file, and remoteness from a basic motive. */
 static void test_liquidate_features_and_basic(void) {
-    write_file("variants_cli_liquidate.json",
+    test_write_file("variants_cli_liquidate.json",
                "{\"steps\": [{\"op\": \"liquidate-features\", \"params\": {\"steps\": 1, \"shorten\": false}}]}");
     char *out = output_of(THEME " --chain variants_cli_liquidate.json --count 1 --seed 1");
     assert(strstr(out, "Variant 1 (seed 1): liquidate-features") != NULL && strstr(out, "Liquidated 1 characteristic") != NULL);

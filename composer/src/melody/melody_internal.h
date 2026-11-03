@@ -249,4 +249,7 @@ bool melody_check(const void *payload, FillCheck *out);
  */
 bool melody_build(const MelodyContext *context, const MelodyFillParams *params, FillRng *rng, MelodyCandidate *out);
 
+/* How many of the standard counterpoint melodic rules have a soft preference. */
+unsigned melody_melodic_soft_rules(void);
+
 #endif

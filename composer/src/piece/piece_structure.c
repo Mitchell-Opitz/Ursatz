@@ -10,6 +10,7 @@
 #include "grow/grow_internal.h"
 #include "piece/form_return_internal.h"
 #include "piece/piece_internal.h"
+#include "util/plan_util.h"
 
 static const char *const PART_NAMES[PIECE_PART_COUNT] = {"intro", "body", "turnaround", "ending"};
 static const char *const FILL_NAMES[] = {"empty", "motif", "theme", "progression"};
@@ -165,14 +166,6 @@ bool piece_structure_default_ending(PieceStructure *structure, size_t capacity) 
 /* The bars of material a section holds beside the bars of its own: its motive and the four its ideas are made from. */
 #define MATERIAL_BARS_PER_SECTION 5
 
-static PieceResult from_plan(PlanResult result) {
-    return result == PLAN_OK ? PIECE_OK : (result == PLAN_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_BAD_REQUEST);
-}
-
-static PieceResult add_constraint(PiecePlan *plan, NodeId id, const PlanConstraint *constraint) {
-    return from_plan(plan_node_add_constraint(plan, id, constraint));
-}
-
 /* A length of `count` beats of the meter. */
 static PlanTime beats_of(const PlanMeter *meter, size_t count) {
     PlanTime out = {0, 1};
@@ -283,7 +276,7 @@ static PieceResult add_theme_constraints(PiecePlan *plan, NodeId id, const Piece
         const PlanConstraint *constraint = plan_node_constraint_at(theme_plan, theme, i);
         if (constraint->kind == PLAN_CONSTRAINT_ARCHETYPE || constraint->kind == PLAN_CONSTRAINT_THEME_PAIRING ||
             constraint->kind == PLAN_CONSTRAINT_CADENCE) {
-            result = add_constraint(plan, id, constraint);
+            result = piece_add_constraint(plan, id, constraint);
         }
     }
     return result;
@@ -357,74 +350,74 @@ static PieceResult add_section(PiecePlan *plan, const PieceStructure *structure,
         return PIECE_ERR_BAD_REQUEST;
     }
     bool theme = given == PLAN_NODE_NONE && is_theme_section(structure, section, start_beats, &pairing);
-    PieceResult result = from_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->id, out));
+    PieceResult result = piece_result_of_plan(plan_add_node(plan, form, PLAN_NODE_SECTION, span, section->id, out));
     if (result == PIECE_OK && given != PLAN_NODE_NONE) {
         result = add_theme_constraints(plan, *out, theme_plan, given);
     } else if (result == PIECE_OK && theme) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_ARCHETYPE;
         constraint.params.archetype = (PlanArchetype)grow_pairing_archetype(&pairing);
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
         if (result == PIECE_OK) {
             memset(&constraint, 0, sizeof(constraint));
             constraint.kind = PLAN_CONSTRAINT_THEME_PAIRING;
             constraint.params.theme_pairing = pairing;
-            result = add_constraint(plan, *out, &constraint);
+            result = piece_add_constraint(plan, *out, &constraint);
         }
     } else if (result == PIECE_OK) {
         /* Any other length is a free phrase, which grow-theme lays out in ideas of a bar (grow_free.c). */
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_FREE_PHRASE;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && given == PLAN_NODE_NONE) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CADENCE;
         constraint.params.cadence = section->cadence;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && theme && pairing.beginning == PLAN_THEME_BEGINNING_ANTECEDENT) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_CADENCE;
         constraint.params.cadence = ANTECEDENT_CADENCE;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_KEY;
         constraint.params.key = structure->key;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && structure->has_accompaniment) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_ACCOMPANIMENT;
         constraint.params.accompaniment = structure->accompaniment;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && structure->has_voicing) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_VOICING;
         constraint.params.voicing = structure->voicing;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_SECTION_LETTER;
         snprintf(constraint.params.letter, sizeof(constraint.params.letter), "%s", section->letter);
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_PIECE_PART;
         constraint.params.piece_part.part = (int)section->part;
         snprintf(constraint.params.piece_part.id, sizeof(constraint.params.piece_part.id), "%s", section->id);
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     if (result == PIECE_OK && section->pickup.num != 0) {
         memset(&constraint, 0, sizeof(constraint));
         constraint.kind = PLAN_CONSTRAINT_PICKUP;
         constraint.params.pickup = section->pickup;
-        result = add_constraint(plan, *out, &constraint);
+        result = piece_add_constraint(plan, *out, &constraint);
     }
     return result;
 }
@@ -434,7 +427,7 @@ static PieceResult add_flag(PiecePlan *plan, NodeId id, PlanConstraintKind kind)
     PlanConstraint constraint;
     memset(&constraint, 0, sizeof(constraint));
     constraint.kind = kind;
-    return add_constraint(plan, id, &constraint);
+    return piece_add_constraint(plan, id, &constraint);
 }
 
 /*
@@ -512,22 +505,22 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
         return PIECE_ERR_BAD_REQUEST;
     }
     material.length = bars_length;
-    result = from_plan(plan_time_add(material.start, material.length, &form.length));
+    result = piece_result_of_plan(plan_time_add(material.start, material.length, &form.length));
     if (result == PIECE_OK) {
-        result = from_plan(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form, "structure", &form_id));
+        result = piece_result_of_plan(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form, "structure", &form_id));
     }
     /* The meter and the key are Given over the sections and the material: the piece is in its home key throughout. */
     if (result == PIECE_OK) {
         memset(&payload, 0, sizeof(payload));
         payload.meter = structure->meter;
-        result = from_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_METER, 0, form, &payload, &lane));
-        result = result == PIECE_OK ? from_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
+        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_METER, 0, form, &payload, &lane));
+        result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     if (result == PIECE_OK) {
         memset(&payload, 0, sizeof(payload));
         payload.key = structure->key;
-        result = from_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, form, &payload, &lane));
-        result = result == PIECE_OK ? from_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
+        result = piece_result_of_plan(plan_add_lane_span(plan, form_id, PLAN_LANE_KEY, 0, form, &payload, &lane));
+        result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     /* The sections in time order, each from the end of the one before. */
     PlanTime start = {0, 1};
@@ -564,7 +557,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
             result = add_flag(plan, id, PLAN_CONSTRAINT_HOLD);
         }
         if (result == PIECE_OK) {
-            result = from_plan(plan_time_add(start, span.length, &start));
+            result = piece_result_of_plan(plan_time_add(start, span.length, &start));
         }
         start_beats += copy.sections[i].beats;
     }
@@ -572,14 +565,14 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
     if (result == PIECE_OK && !loop_plan) {
         NodeId seam;
         PlanSpan span = {start, bar};
-        result = from_plan(plan_add_node(plan, form_id, PLAN_NODE_SECTION, span, "seam", &seam));
+        result = piece_result_of_plan(plan_add_node(plan, form_id, PLAN_NODE_SECTION, span, "seam", &seam));
         result = result == PIECE_OK ? add_flag(plan, seam, PLAN_CONSTRAINT_SEAM) : result;
         if (result == PIECE_OK) {
             PlanConstraint key;
             memset(&key, 0, sizeof(key));
             key.kind = PLAN_CONSTRAINT_KEY;
             key.params.key = structure->key;
-            result = add_constraint(plan, seam, &key);
+            result = piece_add_constraint(plan, seam, &key);
         }
     }
     if (result == PIECE_OK) {
@@ -590,10 +583,10 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
         memset(&style, 0, sizeof(style));
         style.kind = PLAN_CONSTRAINT_STYLE;
         style.params.style = structure->style;
-        result = add_constraint(plan, form_id, &style);
+        result = piece_add_constraint(plan, form_id, &style);
     }
     if (result == PIECE_OK) {
-        result = from_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));
+        result = piece_result_of_plan(plan_node_set_state(plan, form_id, PLAN_STATE_GIVEN));
     }
     if (result != PIECE_OK) {
         plan_destroy(plan);

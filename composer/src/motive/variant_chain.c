@@ -15,6 +15,7 @@
 #include "motive/motive_internal.h"
 #include "motive/variant_internal.h"
 #include "plan/plan_json_internal.h"
+#include "util/plan_util.h"
 
 /* How many draws of its open parameters a refused step gets. */
 #define VARIANT_DRAWS 16
@@ -650,8 +651,7 @@ static cJSON *value_json(const VariantParam *param, const VariantValue *value) {
     case VARIANT_PARAM_BOOL:
         return cJSON_CreateBool(value->value != 0);
     case VARIANT_PARAM_POSITION: {
-        static const char *const NAMES[] = {"any", "leading", "trailing", "middle"};
-        return cJSON_CreateString(value->value >= 0 && value->value <= 3 ? NAMES[value->value] : "any");
+        return cJSON_CreateString(plan_fragment_position_name(value->value));
     }
     case VARIANT_PARAM_RATIO: {
         char text[32];

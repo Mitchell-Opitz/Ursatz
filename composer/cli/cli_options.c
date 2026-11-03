@@ -13,6 +13,7 @@
 #include "plan.h"
 
 #include <ursatz_composer/harmony_phrase.h>
+#include "util/plan_util.h"
 
 static const char *const ACCOMPANIMENT_WORDS[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
 
@@ -567,15 +568,6 @@ int cli_check_target(CliTargetOptions *options, const char *command, const char 
 
 static const char *const TARGET_LANE_LABELS[] = {"meter", "key", "harmony", "bass", "melody", "inner voice"};
 
-static bool in_subtree(const PiecePlan *plan, NodeId node, NodeId root) {
-    for (; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
-        if (node == root) {
-            return true;
-        }
-    }
-    return false;
-}
-
 /* The node the options name, or the exit status of the error it printed. */
 int cli_find_target_node(const PiecePlan *plan, const CliTargetOptions *options, bool quiet, NodeId *out) {
     if (options->node_text) {
@@ -620,7 +612,7 @@ int cli_find_targets(const PiecePlan *plan, const CliTargetOptions *options, Fil
     }
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         if (plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == options->lane &&
-            in_subtree(plan, plan_lane_span_owner(plan, id), node)) {
+            plan_in_subtree(plan, plan_lane_span_owner(plan, id), node)) {
             (*out)[(*count)++] = (FillTarget){FILL_TARGET_LANE_SPAN, id};
         }
     }
@@ -675,3 +667,31 @@ int cli_report_refused(RegenerateResult result, const char *what) {
     }
 }
 
+void cli_discard_pending(CliPendingFile *pending, size_t count) {
+    for (size_t i = 0; i < count; i++) {
+        remove(pending[i].temporary);
+    }
+}
+
+bool cli_parse_pickup(const char *text, int beat_unit, PlanTime *out) {
+    char *end = NULL;
+    long numerator = strtol(text, &end, 10);
+    long denominator = 1;
+    if (end == text || numerator < 0) {
+        return false;
+    }
+    if (*end == '/') {
+        const char *rest = end + 1;
+        denominator = strtol(rest, &end, 10);
+        if (end == rest || denominator < 1) {
+            return false;
+        }
+    }
+    return *end == '\0' && plan_time_make(numerator, (unsigned long)(denominator * beat_unit), out) == PLAN_OK;
+}
+
+char *cli_motive_text(const Motive *motive) {
+    return motive->form == MOTIVE_FORM_RHYTHM    ? motive_to_rhythm_text(motive)
+           : motive->form == MOTIVE_FORM_CONTOUR ? motive_to_contour_text(motive)
+                                                 : motive_to_notes_text(motive);
+}

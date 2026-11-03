@@ -1,3 +1,8 @@
+# Helpers the tests share (tests/support).
+add_library(composer_test_support STATIC support/test_support.c)
+target_include_directories(composer_test_support PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_options(composer_test_support PRIVATE -Wall -Wextra -Wpedantic)
+
 add_executable(test_smoke test_smoke.c)
 target_link_libraries(test_smoke PRIVATE ursatz_composer)
 add_test(NAME test_smoke COMMAND test_smoke)
@@ -62,7 +67,7 @@ target_compile_options(test_harmony_lookups PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_harmony_lookups COMMAND test_harmony_lookups)
 
 add_executable(test_progression_cli test_progression_cli.c)
-target_link_libraries(test_progression_cli PRIVATE ursatz_composer)
+target_link_libraries(test_progression_cli PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_progression_cli PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_progression_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
 add_dependencies(test_progression_cli ursatz-composer)
@@ -75,7 +80,7 @@ target_compile_definitions(test_motive PRIVATE COMPOSER_FIXTURE_DIR="${CMAKE_CUR
 add_test(NAME test_motive COMMAND test_motive)
 
 add_executable(test_motive_cli test_motive_cli.c)
-target_link_libraries(test_motive_cli PRIVATE ursatz_composer)
+target_link_libraries(test_motive_cli PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_motive_cli PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_motive_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
                                                    COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -94,7 +99,7 @@ target_compile_options(test_motive_develop PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_motive_develop COMMAND test_motive_develop)
 
 add_executable(test_develop_cli test_develop_cli.c)
-target_link_libraries(test_develop_cli PRIVATE ursatz_composer)
+target_link_libraries(test_develop_cli PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_develop_cli PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_develop_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
                                                     COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -166,7 +171,7 @@ foreach(beginning RANGE 2)
 endforeach()
 
 add_executable(test_grow_cli test_grow_cli.c)
-target_link_libraries(test_grow_cli PRIVATE ursatz_composer)
+target_link_libraries(test_grow_cli PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_grow_cli PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_grow_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
                                                  COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -217,7 +222,7 @@ endforeach()
 add_test(NAME test_counterpoint_not_applicable COMMAND test_counterpoint na)
 
 add_executable(test_counterpoint_cli test_counterpoint_cli.c)
-target_link_libraries(test_counterpoint_cli PRIVATE ursatz_composer)
+target_link_libraries(test_counterpoint_cli PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_counterpoint_cli PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_counterpoint_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
                                                          COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -309,7 +314,7 @@ add_test(NAME test_return_heard_smoke COMMAND test_return_heard smoke)
 add_test(NAME test_return_heard_heard COMMAND test_return_heard heard)
 
 add_executable(test_plan_cli test_plan_cli.c)
-target_link_libraries(test_plan_cli PRIVATE ursatz_composer)
+target_link_libraries(test_plan_cli PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_plan_cli PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_plan_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
                                                  COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -338,7 +343,7 @@ endforeach()
 # Locking and regenerating (docs/regenerate.md). Each mode is one ctest entry; the cli mode runs the commands as
 # processes.
 add_executable(test_regenerate test_regenerate.c)
-target_link_libraries(test_regenerate PRIVATE ursatz_composer)
+target_link_libraries(test_regenerate PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_regenerate PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_regenerate PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
 add_dependencies(test_regenerate ursatz-composer)
@@ -368,6 +373,12 @@ add_test(NAME test_export_cli
          COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/export_cli
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_export.cmake)
 
+# Seeded CLI output against tests/snapshots; recapture with -DUPDATE=1 (README.md).
+add_test(NAME test_cli_snapshots
+         COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshots
+                 -DSNAPSHOTS=${CMAKE_CURRENT_SOURCE_DIR}/snapshots -DFIXTURES=${CMAKE_CURRENT_SOURCE_DIR}/fixtures
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_snapshots.cmake)
+
 add_executable(test_analyzer_check test_analyzer_check.c)
 target_link_libraries(test_analyzer_check PRIVATE ursatz_composer)
 target_compile_options(test_analyzer_check PRIVATE -Wall -Wextra -Wpedantic)
@@ -380,7 +391,7 @@ add_test(NAME test_analyzer_check_planned COMMAND test_analyzer_check planned)
 set_tests_properties(test_analyzer_check_planned PROPERTIES LABELS slow)
 
 add_executable(test_explain test_explain.c)
-target_link_libraries(test_explain PRIVATE ursatz_composer)
+target_link_libraries(test_explain PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_explain PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_explain PRIVATE
     COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
@@ -392,7 +403,7 @@ foreach(mode choices rejections same cli)
 endforeach()
 
 add_executable(test_style test_style.c)
-target_link_libraries(test_style PRIVATE ursatz_composer)
+target_link_libraries(test_style PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_style PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_style PRIVATE
     COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
@@ -410,7 +421,7 @@ add_test(NAME test_style_distance COMMAND test_style distance)
 set_tests_properties(test_style_distance PROPERTIES LABELS slow)
 
 add_executable(test_style_blend test_style_blend.c)
-target_link_libraries(test_style_blend PRIVATE ursatz_composer)
+target_link_libraries(test_style_blend PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_style_blend PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_style_blend PRIVATE
     COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
@@ -441,7 +452,7 @@ add_custom_command(
 add_custom_target(seed_corpora DEPENDS ${SEED_CORPORA_DIR}/sonatinas-analyzed/corpus-index.json)
 
 add_executable(test_corpus_seed test_corpus_seed.c)
-target_link_libraries(test_corpus_seed PRIVATE ursatz_composer)
+target_link_libraries(test_corpus_seed PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_corpus_seed PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_corpus_seed PRIVATE
     COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
@@ -463,7 +474,7 @@ target_compile_options(test_variant_registry PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME test_variant_registry COMMAND test_variant_registry)
 
 add_executable(test_variants_cli test_variants_cli.c)
-target_link_libraries(test_variants_cli PRIVATE ursatz_composer)
+target_link_libraries(test_variants_cli PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_variants_cli PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_variants_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
                                                      COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -478,7 +489,7 @@ target_compile_definitions(test_motive_random PRIVATE COMPOSER_FIXTURE_DIR="${CM
 add_test(NAME test_motive_random COMMAND test_motive_random)
 
 add_executable(test_random_motive_cli test_random_motive_cli.c)
-target_link_libraries(test_random_motive_cli PRIVATE ursatz_composer)
+target_link_libraries(test_random_motive_cli PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_random_motive_cli PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_random_motive_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
                                                           COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -496,7 +507,7 @@ add_test(NAME test_variant_recognize_smoke COMMAND test_variant_recognize --smok
 set_tests_properties(test_variant_recognize PROPERTIES LABELS slow)
 
 add_executable(test_recognize_cli test_recognize_cli.c)
-target_link_libraries(test_recognize_cli PRIVATE ursatz_composer)
+target_link_libraries(test_recognize_cli PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_recognize_cli PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_recognize_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
                                                       COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -518,7 +529,7 @@ add_test(NAME test_shaping COMMAND test_shaping)
 # The theme command (docs/cli-theme.md): slot motives, a pool of saved forms and a brief, run as a process. It writes its files
 # in a directory of its own, so it can run beside the other command tests.
 add_executable(test_theme_cli test_theme_cli.c)
-target_link_libraries(test_theme_cli PRIVATE ursatz_composer)
+target_link_libraries(test_theme_cli PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_theme_cli PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_theme_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
                                                   COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
@@ -529,7 +540,7 @@ add_test(NAME test_theme_cli COMMAND test_theme_cli WORKING_DIRECTORY ${CMAKE_CU
 # The piece command (docs/cli-piece.md): the loop and the ending version of a looping game track, run as a process. It writes
 # its files in a directory of its own, so it can run beside the other command tests.
 add_executable(test_piece_cli test_piece_cli.c)
-target_link_libraries(test_piece_cli PRIVATE ursatz_composer)
+target_link_libraries(test_piece_cli PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_piece_cli PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_piece_cli PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>"
                                                   COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")

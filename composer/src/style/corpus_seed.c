@@ -12,6 +12,7 @@
 
 #include <ursatz_composer/fill_rng.h>
 #include <ursatz_composer/harmony_phrase.h>
+#include "util/util.h"
 
 /* How many matches a progression search looks through for one the plan can place. */
 #define PROGRESSION_CANDIDATES 100
@@ -44,35 +45,13 @@ void corpus_seed_describe(const CorpusSeed *seed, char *out, size_t size) {
 
 /* --- reading an analysis document ------------------------------------------------- */
 
-static char *read_text(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    char *text = NULL;
-    if (fseek(file, 0, SEEK_END) == 0) {
-        long size = ftell(file);
-        if (size >= 0 && fseek(file, 0, SEEK_SET) == 0) {
-            text = malloc((size_t)size + 1);
-            if (text && fread(text, 1, (size_t)size, file) != (size_t)size) {
-                free(text);
-                text = NULL;
-            } else if (text) {
-                text[size] = '\0';
-            }
-        }
-    }
-    fclose(file);
-    return text;
-}
-
 static cJSON *read_document(const char *corpus_output_dir, const char *document) {
     char path[2048];
     if (snprintf(path, sizeof(path), "%s/%s", corpus_output_dir, document) >= (int)sizeof(path)) {
         return NULL;
     }
-    char *text = read_text(path);
-    if (!text) {
+    char *text;
+    if (!util_read_file(path, &text, NULL)) {
         return NULL;
     }
     cJSON *parsed = cJSON_Parse(text);

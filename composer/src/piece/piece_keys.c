@@ -12,6 +12,7 @@
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/form_hear.h>
 #include <ursatz_composer/plan_state.h>
+#include "util/plan_util.h"
 
 /* A key lane span before it is added: its key and where it lies. */
 typedef struct {
@@ -21,26 +22,12 @@ typedef struct {
 
 #define MAX_SEGMENTS (2 * FORM_TEMPLATE_MAX_SECTIONS + 1)
 
-static PieceResult from_plan(PlanResult result) {
-    return result == PLAN_OK ? PIECE_OK : (result == PLAN_ERR_ALLOC ? PIECE_ERR_ALLOC : PIECE_ERR_BAD_REQUEST);
-}
-
 static HarmonyMode mode_of(PlanKeyMode mode) {
     return mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
 }
 
 static bool same_key(PlanKey a, PlanKey b) {
     return a.tonic_pitch_class == b.tonic_pitch_class && a.mode == b.mode;
-}
-
-static const PlanConstraint *find_constraint(const PiecePlan *plan, NodeId id, PlanConstraintKind kind) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, id); i++) {
-        const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
-        if (constraint->kind == kind) {
-            return constraint;
-        }
-    }
-    return NULL;
 }
 
 /*
@@ -136,9 +123,9 @@ static bool draw_keys(FormTemplateKind kind, size_t count, PlanKey home, FillRng
 static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, PlanKey key) {
     if (*count > 0 && same_key(segments[*count - 1].key, key)) {
         PlanTime end;
-        PieceResult result = from_plan(plan_span_end(segments[*count - 1].span, &end));
+        PieceResult result = piece_result_of_plan(plan_span_end(segments[*count - 1].span, &end));
         if (result == PIECE_OK && plan_time_compare(end, span.start) == 0) {
-            return from_plan(plan_time_add(segments[*count - 1].span.length, span.length,
+            return piece_result_of_plan(plan_time_add(segments[*count - 1].span.length, span.length,
                                            &segments[*count - 1].span.length));
         }
         return PIECE_ERR_BAD_REQUEST;
@@ -160,12 +147,12 @@ static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpa
     PlanSpan first;
     PlanSpan second;
     first.start = span.start;
-    PieceResult result = from_plan(plan_time_make(span.length.num, span.length.den * 2, &first.length));
+    PieceResult result = piece_result_of_plan(plan_time_make(span.length.num, span.length.den * 2, &first.length));
     if (result != PIECE_OK) {
         return result;
     }
     second.length = first.length;
-    result = from_plan(plan_time_add(span.start, first.length, &second.start));
+    result = piece_result_of_plan(plan_time_add(span.start, first.length, &second.start));
     if (result == PIECE_OK) {
         result = push_segment(segments, count, first, keys->start);
     }
@@ -180,8 +167,8 @@ static PieceResult set_section_key(PiecePlan *plan, NodeId section, PlanKey key)
             memset(&constraint, 0, sizeof(constraint));
             constraint.kind = PLAN_CONSTRAINT_KEY;
             constraint.params.key = key;
-            PieceResult result = from_plan(plan_node_remove_constraint(plan, section, i));
-            return result == PIECE_OK ? from_plan(plan_node_add_constraint(plan, section, &constraint)) : result;
+            PieceResult result = piece_result_of_plan(plan_node_remove_constraint(plan, section, i));
+            return result == PIECE_OK ? piece_result_of_plan(plan_node_add_constraint(plan, section, &constraint)) : result;
         }
     }
     return PIECE_ERR_BAD_REQUEST;
@@ -203,9 +190,9 @@ PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
     size_t count = 0;
     for (size_t i = 0; i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        if (find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
             material = child;
-        } else if (find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
+        } else if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
             continue; /* the seam is not a section of the piece */
         } else if (count < FORM_TEMPLATE_MAX_SECTIONS) {
             sections[count++] = child;
@@ -213,7 +200,7 @@ PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
             return PIECE_ERR_BAD_REQUEST;
         }
     }
-    const PlanConstraint *home_key = count > 0 ? find_constraint(plan, sections[0], PLAN_CONSTRAINT_KEY) : NULL;
+    const PlanConstraint *home_key = count > 0 ? plan_node_find_constraint(plan, sections[0], PLAN_CONSTRAINT_KEY) : NULL;
     if (!home_key || material == PLAN_NODE_NONE) {
         return PIECE_ERR_BAD_REQUEST;
     }
@@ -237,8 +224,8 @@ PieceResult piece_plan_keys(PiecePlan *plan, FillRng *rng, PieceKeyPlan *out) {
         LaneSpanId id;
         memset(&payload, 0, sizeof(payload));
         payload.key = segments[i].key;
-        result = from_plan(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, segments[i].span, &payload, &id));
-        result = result == PIECE_OK ? from_plan(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN)) : result;
+        result = piece_result_of_plan(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, segments[i].span, &payload, &id));
+        result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN)) : result;
     }
     for (size_t i = 0; result == PIECE_OK && i < count; i++) {
         if (!same_key(out->sections[i].end, home)) {
@@ -317,7 +304,7 @@ static bool authentic_arrivals(const PiecePlan *plan, const NodeId *sections, si
 }
 
 static bool constraint_key(const PiecePlan *plan, NodeId section, PlanKey *out) {
-    const PlanConstraint *constraint = find_constraint(plan, section, PLAN_CONSTRAINT_KEY);
+    const PlanConstraint *constraint = plan_node_find_constraint(plan, section, PLAN_CONSTRAINT_KEY);
     if (constraint) {
         *out = constraint->params.key;
     }
@@ -345,9 +332,9 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
     PlanTime piece_end = {0, 1};
     for (size_t i = 0; form != PLAN_NODE_NONE && i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
-        if (find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
             piece_end = plan_node_span(plan, child).start;
-        } else if (find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
+        } else if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_SEAM)) {
             continue;
         } else if (section_count < FORM_TEMPLATE_MAX_SECTIONS) {
             sections[section_count++] = child;

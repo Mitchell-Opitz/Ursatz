@@ -24,8 +24,6 @@ int run_theme(int argc, char **argv);
  * The request readers the `piece` command shares with `theme` (R-173). Each prints the usage error it found and fails
  * with false or a non-zero status (CLI_EXIT_USAGE).
  */
-/* The whole file as a heap string the caller frees; NULL when it cannot be read. */
-char *request_read_file(const char *path);
 /* A member that is a string (null or absent when not required, then *out is NULL). */
 bool request_member_string(const cJSON *object, const char *name, bool required, const char **out);
 /* The "pickup" member as text: a string, or a number of beats formatted into text. NULL for none. */

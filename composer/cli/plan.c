@@ -15,6 +15,7 @@
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_json.h>
+#include <ursatz_composer/constraint.h>
 
 #define SIZE_SEARCH_MAX 96
 /* The most given phrases, progressions and bass lines one plan takes, and the numerals in one progression. */
@@ -465,15 +466,6 @@ const char *cli_return_variation_name(PlanReturnVariation variation) {
     return VARIATION_NAMES[variation];
 }
 
-static bool has_constraint(const PiecePlan *plan, NodeId node, PlanConstraintKind kind) {
-    for (size_t i = 0; i < plan_node_constraint_count(plan, node); i++) {
-        if (plan_node_constraint_at(plan, node, i)->kind == kind) {
-            return true;
-        }
-    }
-    return false;
-}
-
 /* The bars in a length; 0 when the plan has no meter. */
 size_t cli_bars_in(const PiecePlan *plan, PlanTime length) {
     LaneSpanId meters[1];
@@ -492,7 +484,7 @@ size_t cli_piece_sections(const PiecePlan *plan, CliSection *out, size_t capacit
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId node = plan_node_child_at(plan, root, i);
-        if (plan_node_kind(plan, node) != PLAN_NODE_SECTION || has_constraint(plan, node, PLAN_CONSTRAINT_MATERIAL)) {
+        if (plan_node_kind(plan, node) != PLAN_NODE_SECTION || plan_node_has_constraint(plan, node, PLAN_CONSTRAINT_MATERIAL)) {
             continue;
         }
         if (count < capacity) {

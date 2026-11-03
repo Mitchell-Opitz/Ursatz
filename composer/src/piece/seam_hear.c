@@ -9,6 +9,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 
 #include "harmony/harmony_internal.h"
+#include "util/util.h"
 
 /* The largest melodic move across the seam, in semitones, and the leap a step the other way must follow. */
 #define SEAM_MAX_MOVE 12
@@ -68,10 +69,6 @@ static bool progression_holds(const SeamNotes *notes) {
     return false;
 }
 
-static int absolute(int value) {
-    return value < 0 ? -value : value;
-}
-
 static int sign(int value) {
     return value > 0 ? 1 : (value < 0 ? -1 : 0);
 }
@@ -100,20 +97,20 @@ static bool step_holds(const SeamNotes *notes) {
         return true;
     }
     int move = notes->melody_after - notes->melody_before;
-    if (absolute(move) > SEAM_MAX_MOVE) {
+    if (util_absolute(move) > SEAM_MAX_MOVE) {
         return false;
     }
     /* A leap into the seam is answered by a step the other way across it. */
     if (notes->melody_previous >= 0) {
         int into = notes->melody_before - notes->melody_previous;
-        if (absolute(into) > SEAM_LEAP && !(absolute(move) <= SEAM_STEP && sign(move) == -sign(into))) {
+        if (util_absolute(into) > SEAM_LEAP && !(util_absolute(move) <= SEAM_STEP && sign(move) == -sign(into))) {
             return false;
         }
     }
     /* A leap across it is answered by a step the other way after it. */
-    if (absolute(move) > SEAM_LEAP && notes->melody_next >= 0) {
+    if (util_absolute(move) > SEAM_LEAP && notes->melody_next >= 0) {
         int out = notes->melody_next - notes->melody_after;
-        if (!(absolute(out) <= SEAM_STEP && out != 0 && sign(out) == -sign(move))) {
+        if (!(util_absolute(out) <= SEAM_STEP && out != 0 && sign(out) == -sign(move))) {
             return false;
         }
     }

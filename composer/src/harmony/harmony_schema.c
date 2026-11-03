@@ -21,14 +21,8 @@ HarmonySchemaParams harmony_schema_params_default(void) {
     return params;
 }
 
-static const HarmonySchemaParams *params_of(void *context) {
-    static HarmonySchemaParams defaults;
-    static bool made = false;
-    if (!made) {
-        defaults = harmony_schema_params_default();
-        made = true;
-    }
-    return context ? context : &defaults;
+static HarmonySchemaParams params_of(void *context) {
+    return context ? *(const HarmonySchemaParams *)context : harmony_schema_params_default();
 }
 
 /* --- from the framework's stages to chords ------------------------------ */
@@ -261,7 +255,8 @@ static bool role_fits(unsigned role, const SkeletonContext *context, size_t rema
 
 static bool schema_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
-    const HarmonySchemaParams *params = params_of(context);
+    HarmonySchemaParams params_value = params_of(context);
+    const HarmonySchemaParams *params = &params_value;
     SkeletonContext read;
     if (target.kind != FILL_TARGET_LANE_SPAN || !harmony_skeleton_read(plan, (LaneSpanId)target.id, &read)) {
         return false;
