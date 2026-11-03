@@ -420,6 +420,11 @@ add_test(NAME test_export_cli
          COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/export_cli
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_export.cmake)
 
+# The JSON snapshot comparison ignores member order and indentation and fails on a changed value.
+add_test(NAME test_cli_snapshot_compare
+         COMMAND ${CMAKE_COMMAND} -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshot_compare
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/cli_snapshot_compare.cmake)
+
 # Seeded CLI output against tests/snapshots; recapture with -DUPDATE=1 (README.md).
 add_test(NAME test_cli_snapshots
          COMMAND ${CMAKE_COMMAND} -DCOMPOSER=$<TARGET_FILE:ursatz-composer> -DWORK=${CMAKE_CURRENT_BINARY_DIR}/cli_snapshots

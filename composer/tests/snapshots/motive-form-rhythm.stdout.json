@@ -1,0 +1,164 @@
+{
+  "motive": {
+    "meter": {
+      "beats_per_bar": 3,
+      "beat_unit": 4,
+      "bars_per_hyperbar": 0
+    },
+    "notes": [{
+        "midi_pitch": 60,
+        "offset": {
+          "num": 0,
+          "den": 1
+        },
+        "duration": {
+          "num": 1,
+          "den": 4
+        }
+      }, {
+        "midi_pitch": 60,
+        "offset": {
+          "num": 1,
+          "den": 4
+        },
+        "duration": {
+          "num": 1,
+          "den": 8
+        }
+      }, {
+        "midi_pitch": 60,
+        "offset": {
+          "num": 3,
+          "den": 8
+        },
+        "duration": {
+          "num": 1,
+          "den": 8
+        }
+      }, {
+        "midi_pitch": 60,
+        "offset": {
+          "num": 1,
+          "den": 2
+        },
+        "duration": {
+          "num": 1,
+          "den": 2
+        }
+      }],
+    "form": "rhythm",
+    "pickup": {
+      "num": 1,
+      "den": 16
+    }
+  },
+  "analysis": {
+    "form": "rhythm",
+    "pickup": "1/4",
+    "notes_text": "C4:q C4:e C4:e C4:h",
+    "degrees_text": null,
+    "rhythm_text": "x:q x:e x:e x:h",
+    "note_count": 4,
+    "length": {
+      "num": 1,
+      "den": 1
+    },
+    "bars": {
+      "num": 4,
+      "den": 3
+    },
+    "key": null,
+    "intervals": null,
+    "contour": null,
+    "rhythm": [{
+        "onset": {
+          "num": 0,
+          "den": 1
+        },
+        "duration": {
+          "num": 1,
+          "den": 4
+        },
+        "bar": -1,
+        "beat": {
+          "num": 11,
+          "den": 4
+        },
+        "on_beat": false,
+        "dotted": false,
+        "rest_before": {
+          "num": 0,
+          "den": 1
+        }
+      }, {
+        "onset": {
+          "num": 1,
+          "den": 4
+        },
+        "duration": {
+          "num": 1,
+          "den": 8
+        },
+        "bar": 0,
+        "beat": {
+          "num": 3,
+          "den": 4
+        },
+        "on_beat": false,
+        "dotted": false,
+        "rest_before": {
+          "num": 0,
+          "den": 1
+        }
+      }, {
+        "onset": {
+          "num": 3,
+          "den": 8
+        },
+        "duration": {
+          "num": 1,
+          "den": 8
+        },
+        "bar": 0,
+        "beat": {
+          "num": 5,
+          "den": 4
+        },
+        "on_beat": false,
+        "dotted": false,
+        "rest_before": {
+          "num": 0,
+          "den": 1
+        }
+      }, {
+        "onset": {
+          "num": 1,
+          "den": 2
+        },
+        "duration": {
+          "num": 1,
+          "den": 2
+        },
+        "bar": 0,
+        "beat": {
+          "num": 7,
+          "den": 4
+        },
+        "on_beat": false,
+        "dotted": false,
+        "rest_before": {
+          "num": 0,
+          "den": 1
+        }
+      }],
+    "range": null,
+    "scale_degrees": null,
+    "implied_harmony": {
+      "key_known": false,
+      "candidates": []
+    },
+    "base_harmony": null,
+    "tones": [],
+    "warnings": []
+  }
+}

@@ -1,0 +1,1230 @@
+{
+  "seed": 3,
+  "source": {
+    "motive": {
+      "meter": {
+        "beats_per_bar": 4,
+        "beat_unit": 4,
+        "bars_per_hyperbar": 0
+      },
+      "key": {
+        "tonic_pitch_class": 0,
+        "mode": "major"
+      },
+      "notes": [{
+          "midi_pitch": 60,
+          "offset": {
+            "num": 0,
+            "den": 1
+          },
+          "duration": {
+            "num": 1,
+            "den": 4
+          }
+        }, {
+          "midi_pitch": 64,
+          "offset": {
+            "num": 1,
+            "den": 4
+          },
+          "duration": {
+            "num": 1,
+            "den": 8
+          }
+        }, {
+          "midi_pitch": 67,
+          "offset": {
+            "num": 3,
+            "den": 8
+          },
+          "duration": {
+            "num": 1,
+            "den": 8
+          }
+        }, {
+          "midi_pitch": 72,
+          "offset": {
+            "num": 1,
+            "den": 2
+          },
+          "duration": {
+            "num": 1,
+            "den": 2
+          }
+        }]
+    },
+    "analysis": {
+      "form": "full",
+      "pickup": "0",
+      "notes_text": "C4:q E4:e G4:e C5:h",
+      "degrees_text": "1:q 3:e 5:e 1':h",
+      "note_count": 4,
+      "length": {
+        "num": 1,
+        "den": 1
+      },
+      "bars": {
+        "num": 1,
+        "den": 1
+      },
+      "key": {
+        "tonic_pitch_class": 0,
+        "mode": "major",
+        "source": "given"
+      },
+      "intervals": [{
+          "semitones": 4,
+          "steps": 2
+        }, {
+          "semitones": 3,
+          "steps": 2
+        }, {
+          "semitones": 5,
+          "steps": 3
+        }],
+      "contour": {
+        "shape": "ascending",
+        "directions": ["up", "up", "up"]
+      },
+      "rhythm": [{
+          "onset": {
+            "num": 0,
+            "den": 1
+          },
+          "duration": {
+            "num": 1,
+            "den": 4
+          },
+          "bar": 0,
+          "beat": {
+            "num": 0,
+            "den": 1
+          },
+          "on_beat": true,
+          "dotted": false,
+          "rest_before": {
+            "num": 0,
+            "den": 1
+          }
+        }, {
+          "onset": {
+            "num": 1,
+            "den": 4
+          },
+          "duration": {
+            "num": 1,
+            "den": 8
+          },
+          "bar": 0,
+          "beat": {
+            "num": 1,
+            "den": 1
+          },
+          "on_beat": true,
+          "dotted": false,
+          "rest_before": {
+            "num": 0,
+            "den": 1
+          }
+        }, {
+          "onset": {
+            "num": 3,
+            "den": 8
+          },
+          "duration": {
+            "num": 1,
+            "den": 8
+          },
+          "bar": 0,
+          "beat": {
+            "num": 3,
+            "den": 2
+          },
+          "on_beat": false,
+          "dotted": false,
+          "rest_before": {
+            "num": 0,
+            "den": 1
+          }
+        }, {
+          "onset": {
+            "num": 1,
+            "den": 2
+          },
+          "duration": {
+            "num": 1,
+            "den": 2
+          },
+          "bar": 0,
+          "beat": {
+            "num": 2,
+            "den": 1
+          },
+          "on_beat": true,
+          "dotted": false,
+          "rest_before": {
+            "num": 0,
+            "den": 1
+          }
+        }],
+      "range": {
+        "lowest": 60,
+        "highest": 72,
+        "semitones": 12
+      },
+      "scale_degrees": {
+        "start": {
+          "degree": 1,
+          "alteration": 0
+        },
+        "end": {
+          "degree": 1,
+          "alteration": 0
+        },
+        "all": [{
+            "degree": 1,
+            "alteration": 0
+          }, {
+            "degree": 3,
+            "alteration": 0
+          }, {
+            "degree": 5,
+            "alteration": 0
+          }, {
+            "degree": 1,
+            "alteration": 0
+          }]
+      },
+      "implied_harmony": {
+        "key_known": true,
+        "candidates": [{
+            "roman_numeral": "I",
+            "function": "tonic",
+            "fit": 1,
+            "chord_tones": 4,
+            "non_chord_tones": 0
+          }, {
+            "roman_numeral": "vi",
+            "function": "predominant",
+            "fit": 0.9,
+            "chord_tones": 3,
+            "non_chord_tones": 1
+          }, {
+            "roman_numeral": "IV",
+            "function": "predominant",
+            "fit": 0.8,
+            "chord_tones": 2,
+            "non_chord_tones": 2
+          }, {
+            "roman_numeral": "iii",
+            "function": "predominant",
+            "fit": 0.2,
+            "chord_tones": 2,
+            "non_chord_tones": 2
+          }, {
+            "roman_numeral": "V",
+            "function": "dominant",
+            "fit": 0.1,
+            "chord_tones": 1,
+            "non_chord_tones": 3
+          }, {
+            "roman_numeral": "V7",
+            "function": "dominant",
+            "fit": 0.1,
+            "chord_tones": 1,
+            "non_chord_tones": 3
+          }]
+      },
+      "base_harmony": {
+        "text": "I",
+        "given": false
+      },
+      "tones": [{
+          "note": 1,
+          "role": "chord",
+          "type": null,
+          "resolves_to": null,
+          "unresolved": false,
+          "overridden": false
+        }, {
+          "note": 2,
+          "role": "chord",
+          "type": null,
+          "resolves_to": null,
+          "unresolved": false,
+          "overridden": false
+        }, {
+          "note": 3,
+          "role": "chord",
+          "type": null,
+          "resolves_to": null,
+          "unresolved": false,
+          "overridden": false
+        }, {
+          "note": 4,
+          "role": "chord",
+          "type": null,
+          "resolves_to": null,
+          "unresolved": false,
+          "overridden": false
+        }],
+      "warnings": []
+    }
+  },
+  "variants": [{
+      "seed": 3,
+      "chain": {
+        "steps": [{
+            "op": "liquidate-features",
+            "params": {
+              "steps": 1,
+              "shorten": true
+            },
+            "open": ["steps", "shorten"]
+          }, {
+            "op": "dominant-form",
+            "params": {
+            },
+            "open": []
+          }]
+      },
+      "kind": "motive-form",
+      "kept": [],
+      "changed": ["rhythm", "intervals", "contour", "harmony"],
+      "harmony": "V",
+      "functions": ["continuation", "contrast", "cadential"],
+      "derivation": "Liquidated 1 characteristic feature, each reduced to one chord tone and shortened by half, then put in the dominant form, harmony and melody moved to the dominant. Kept nothing; changed the rhythm, the intervals, the contour and the harmony.",
+      "recognizability": 0.5104,
+      "remoteness": 0.5556,
+      "motive": {
+        "motive": {
+          "meter": {
+            "beats_per_bar": 4,
+            "beat_unit": 4,
+            "bars_per_hyperbar": 0
+          },
+          "key": {
+            "tonic_pitch_class": 0,
+            "mode": "major"
+          },
+          "notes": [{
+              "midi_pitch": 55,
+              "offset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 59,
+              "offset": {
+                "num": 1,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 67,
+              "offset": {
+                "num": 1,
+                "den": 4
+              },
+              "duration": {
+                "num": 1,
+                "den": 4
+              }
+            }],
+          "harmony": "V"
+        },
+        "analysis": {
+          "form": "full",
+          "pickup": "0",
+          "notes_text": "G3:e B3:e G4:q",
+          "degrees_text": "5,:e 7,:e 5:q",
+          "harmony_text": "V",
+          "note_count": 3,
+          "length": {
+            "num": 1,
+            "den": 2
+          },
+          "bars": {
+            "num": 1,
+            "den": 2
+          },
+          "key": {
+            "tonic_pitch_class": 0,
+            "mode": "major",
+            "source": "given"
+          },
+          "intervals": [{
+              "semitones": 4,
+              "steps": 2
+            }, {
+              "semitones": 8,
+              "steps": 5
+            }],
+          "contour": {
+            "shape": "ascending",
+            "directions": ["up", "up"]
+          },
+          "rhythm": [{
+              "onset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              },
+              "bar": 0,
+              "beat": {
+                "num": 0,
+                "den": 1
+              },
+              "on_beat": true,
+              "dotted": false,
+              "rest_before": {
+                "num": 0,
+                "den": 1
+              }
+            }, {
+              "onset": {
+                "num": 1,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              },
+              "bar": 0,
+              "beat": {
+                "num": 1,
+                "den": 2
+              },
+              "on_beat": false,
+              "dotted": false,
+              "rest_before": {
+                "num": 0,
+                "den": 1
+              }
+            }, {
+              "onset": {
+                "num": 1,
+                "den": 4
+              },
+              "duration": {
+                "num": 1,
+                "den": 4
+              },
+              "bar": 0,
+              "beat": {
+                "num": 1,
+                "den": 1
+              },
+              "on_beat": true,
+              "dotted": false,
+              "rest_before": {
+                "num": 0,
+                "den": 1
+              }
+            }],
+          "range": {
+            "lowest": 55,
+            "highest": 67,
+            "semitones": 12
+          },
+          "scale_degrees": {
+            "start": {
+              "degree": 5,
+              "alteration": 0
+            },
+            "end": {
+              "degree": 5,
+              "alteration": 0
+            },
+            "all": [{
+                "degree": 5,
+                "alteration": 0
+              }, {
+                "degree": 7,
+                "alteration": 0
+              }, {
+                "degree": 5,
+                "alteration": 0
+              }]
+          },
+          "implied_harmony": {
+            "key_known": true,
+            "candidates": [{
+                "roman_numeral": "V",
+                "function": "dominant",
+                "fit": 1,
+                "chord_tones": 3,
+                "non_chord_tones": 0
+              }, {
+                "roman_numeral": "iii",
+                "function": "predominant",
+                "fit": 1,
+                "chord_tones": 3,
+                "non_chord_tones": 0
+              }, {
+                "roman_numeral": "V7",
+                "function": "dominant",
+                "fit": 1,
+                "chord_tones": 3,
+                "non_chord_tones": 0
+              }, {
+                "roman_numeral": "I",
+                "function": "tonic",
+                "fit": 0.8,
+                "chord_tones": 2,
+                "non_chord_tones": 1
+              }, {
+                "roman_numeral": "viio",
+                "function": "dominant",
+                "fit": 0.2,
+                "chord_tones": 1,
+                "non_chord_tones": 2
+              }]
+          },
+          "base_harmony": {
+            "text": "V",
+            "given": true
+          },
+          "tones": [{
+              "note": 1,
+              "role": "chord",
+              "type": null,
+              "resolves_to": null,
+              "unresolved": false,
+              "overridden": false
+            }, {
+              "note": 2,
+              "role": "chord",
+              "type": null,
+              "resolves_to": null,
+              "unresolved": false,
+              "overridden": false
+            }, {
+              "note": 3,
+              "role": "chord",
+              "type": null,
+              "resolves_to": null,
+              "unresolved": false,
+              "overridden": false
+            }],
+          "warnings": []
+        }
+      }
+    }, {
+      "seed": 8,
+      "chain": {
+        "steps": [{
+            "op": "add-non-chord-tone",
+            "params": {
+              "after": 1,
+              "type": 7
+            },
+            "open": ["after", "type"]
+          }, {
+            "op": "omit-interval",
+            "params": {
+              "interval": 2
+            },
+            "open": ["interval"]
+          }]
+      },
+      "kind": "exact",
+      "kept": ["rhythm", "intervals", "contour", "harmony"],
+      "changed": [],
+      "functions": ["beginning", "cadential"],
+      "derivation": "Added a escape after the second note, then left out the note after interval 2. Kept the rhythm, the intervals, the contour and the harmony; changed nothing.",
+      "recognizability": 1,
+      "remoteness": 0.5,
+      "motive": {
+        "motive": {
+          "meter": {
+            "beats_per_bar": 4,
+            "beat_unit": 4,
+            "bars_per_hyperbar": 0
+          },
+          "key": {
+            "tonic_pitch_class": 0,
+            "mode": "major"
+          },
+          "notes": [{
+              "midi_pitch": 60,
+              "offset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 4
+              }
+            }, {
+              "midi_pitch": 64,
+              "offset": {
+                "num": 1,
+                "den": 4
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 67,
+              "offset": {
+                "num": 3,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 72,
+              "offset": {
+                "num": 1,
+                "den": 2
+              },
+              "duration": {
+                "num": 1,
+                "den": 2
+              }
+            }]
+        },
+        "analysis": {
+          "form": "full",
+          "pickup": "0",
+          "notes_text": "C4:q E4:e G4:e C5:h",
+          "degrees_text": "1:q 3:e 5:e 1':h",
+          "note_count": 4,
+          "length": {
+            "num": 1,
+            "den": 1
+          },
+          "bars": {
+            "num": 1,
+            "den": 1
+          },
+          "key": {
+            "tonic_pitch_class": 0,
+            "mode": "major",
+            "source": "given"
+          },
+          "intervals": [{
+              "semitones": 4,
+              "steps": 2
+            }, {
+              "semitones": 3,
+              "steps": 2
+            }, {
+              "semitones": 5,
+              "steps": 3
+            }],
+          "contour": {
+            "shape": "ascending",
+            "directions": ["up", "up", "up"]
+          },
+          "rhythm": [{
+              "onset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 4
+              },
+              "bar": 0,
+              "beat": {
+                "num": 0,
+                "den": 1
+              },
+              "on_beat": true,
+              "dotted": false,
+              "rest_before": {
+                "num": 0,
+                "den": 1
+              }
+            }, {
+              "onset": {
+                "num": 1,
+                "den": 4
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              },
+              "bar": 0,
+              "beat": {
+                "num": 1,
+                "den": 1
+              },
+              "on_beat": true,
+              "dotted": false,
+              "rest_before": {
+                "num": 0,
+                "den": 1
+              }
+            }, {
+              "onset": {
+                "num": 3,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              },
+              "bar": 0,
+              "beat": {
+                "num": 3,
+                "den": 2
+              },
+              "on_beat": false,
+              "dotted": false,
+              "rest_before": {
+                "num": 0,
+                "den": 1
+              }
+            }, {
+              "onset": {
+                "num": 1,
+                "den": 2
+              },
+              "duration": {
+                "num": 1,
+                "den": 2
+              },
+              "bar": 0,
+              "beat": {
+                "num": 2,
+                "den": 1
+              },
+              "on_beat": true,
+              "dotted": false,
+              "rest_before": {
+                "num": 0,
+                "den": 1
+              }
+            }],
+          "range": {
+            "lowest": 60,
+            "highest": 72,
+            "semitones": 12
+          },
+          "scale_degrees": {
+            "start": {
+              "degree": 1,
+              "alteration": 0
+            },
+            "end": {
+              "degree": 1,
+              "alteration": 0
+            },
+            "all": [{
+                "degree": 1,
+                "alteration": 0
+              }, {
+                "degree": 3,
+                "alteration": 0
+              }, {
+                "degree": 5,
+                "alteration": 0
+              }, {
+                "degree": 1,
+                "alteration": 0
+              }]
+          },
+          "implied_harmony": {
+            "key_known": true,
+            "candidates": [{
+                "roman_numeral": "I",
+                "function": "tonic",
+                "fit": 1,
+                "chord_tones": 4,
+                "non_chord_tones": 0
+              }, {
+                "roman_numeral": "vi",
+                "function": "predominant",
+                "fit": 0.9,
+                "chord_tones": 3,
+                "non_chord_tones": 1
+              }, {
+                "roman_numeral": "IV",
+                "function": "predominant",
+                "fit": 0.8,
+                "chord_tones": 2,
+                "non_chord_tones": 2
+              }, {
+                "roman_numeral": "iii",
+                "function": "predominant",
+                "fit": 0.2,
+                "chord_tones": 2,
+                "non_chord_tones": 2
+              }, {
+                "roman_numeral": "V",
+                "function": "dominant",
+                "fit": 0.1,
+                "chord_tones": 1,
+                "non_chord_tones": 3
+              }, {
+                "roman_numeral": "V7",
+                "function": "dominant",
+                "fit": 0.1,
+                "chord_tones": 1,
+                "non_chord_tones": 3
+              }]
+          },
+          "base_harmony": {
+            "text": "I",
+            "given": false
+          },
+          "tones": [{
+              "note": 1,
+              "role": "chord",
+              "type": null,
+              "resolves_to": null,
+              "unresolved": false,
+              "overridden": false
+            }, {
+              "note": 2,
+              "role": "chord",
+              "type": null,
+              "resolves_to": null,
+              "unresolved": false,
+              "overridden": false
+            }, {
+              "note": 3,
+              "role": "chord",
+              "type": null,
+              "resolves_to": null,
+              "unresolved": false,
+              "overridden": false
+            }, {
+              "note": 4,
+              "role": "chord",
+              "type": null,
+              "resolves_to": null,
+              "unresolved": false,
+              "overridden": false
+            }],
+          "warnings": []
+        }
+      }
+    }, {
+      "seed": 9,
+      "chain": {
+        "steps": [{
+            "op": "fragment",
+            "params": {
+              "position": "trailing",
+              "length": 2
+            },
+            "open": ["position", "length"]
+          }, {
+            "op": "harmony-insert",
+            "params": {
+              "chord": 0,
+              "degree": 5
+            },
+            "open": ["chord", "degree"]
+          }]
+      },
+      "kind": "motive-form",
+      "kept": [],
+      "changed": ["rhythm", "intervals", "contour", "harmony"],
+      "harmony": "I V@1/2",
+      "functions": ["continuation", "contrast"],
+      "derivation": "Cut to the trailing 2 notes, then inserted V after the first chord, melody adapted. Kept nothing; changed the rhythm, the intervals, the contour and the harmony.",
+      "recognizability": 0.3542,
+      "remoteness": 0.5556,
+      "motive": {
+        "motive": {
+          "meter": {
+            "beats_per_bar": 4,
+            "beat_unit": 4,
+            "bars_per_hyperbar": 0
+          },
+          "key": {
+            "tonic_pitch_class": 0,
+            "mode": "major"
+          },
+          "notes": [{
+              "midi_pitch": 67,
+              "offset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 71,
+              "offset": {
+                "num": 1,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 2
+              }
+            }],
+          "harmony": "I V@1/2"
+        },
+        "analysis": {
+          "form": "full",
+          "pickup": "0",
+          "notes_text": "G4:e B4:h",
+          "degrees_text": "5:e 7:h",
+          "harmony_text": "I V@1/2",
+          "note_count": 2,
+          "length": {
+            "num": 5,
+            "den": 8
+          },
+          "bars": {
+            "num": 5,
+            "den": 8
+          },
+          "key": {
+            "tonic_pitch_class": 0,
+            "mode": "major",
+            "source": "given"
+          },
+          "intervals": [{
+              "semitones": 4,
+              "steps": 2
+            }],
+          "contour": {
+            "shape": "ascending",
+            "directions": ["up"]
+          },
+          "rhythm": [{
+              "onset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              },
+              "bar": 0,
+              "beat": {
+                "num": 0,
+                "den": 1
+              },
+              "on_beat": true,
+              "dotted": false,
+              "rest_before": {
+                "num": 0,
+                "den": 1
+              }
+            }, {
+              "onset": {
+                "num": 1,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 2
+              },
+              "bar": 0,
+              "beat": {
+                "num": 1,
+                "den": 2
+              },
+              "on_beat": false,
+              "dotted": false,
+              "rest_before": {
+                "num": 0,
+                "den": 1
+              }
+            }],
+          "range": {
+            "lowest": 67,
+            "highest": 71,
+            "semitones": 4
+          },
+          "scale_degrees": {
+            "start": {
+              "degree": 5,
+              "alteration": 0
+            },
+            "end": {
+              "degree": 7,
+              "alteration": 0
+            },
+            "all": [{
+                "degree": 5,
+                "alteration": 0
+              }, {
+                "degree": 7,
+                "alteration": 0
+              }]
+          },
+          "implied_harmony": {
+            "key_known": true,
+            "candidates": [{
+                "roman_numeral": "V",
+                "function": "dominant",
+                "fit": 1,
+                "chord_tones": 2,
+                "non_chord_tones": 0
+              }, {
+                "roman_numeral": "iii",
+                "function": "predominant",
+                "fit": 1,
+                "chord_tones": 2,
+                "non_chord_tones": 0
+              }, {
+                "roman_numeral": "V7",
+                "function": "dominant",
+                "fit": 1,
+                "chord_tones": 2,
+                "non_chord_tones": 0
+              }, {
+                "roman_numeral": "viio",
+                "function": "dominant",
+                "fit": 0.6667,
+                "chord_tones": 1,
+                "non_chord_tones": 1
+              }, {
+                "roman_numeral": "I",
+                "function": "tonic",
+                "fit": 0.3333,
+                "chord_tones": 1,
+                "non_chord_tones": 1
+              }]
+          },
+          "base_harmony": {
+            "text": "I V@1/2",
+            "given": true
+          },
+          "tones": [{
+              "note": 1,
+              "role": "chord",
+              "type": null,
+              "resolves_to": null,
+              "unresolved": false,
+              "overridden": false
+            }, {
+              "note": 2,
+              "role": "chord",
+              "type": null,
+              "resolves_to": null,
+              "unresolved": false,
+              "overridden": false
+            }],
+          "warnings": []
+        }
+      }
+    }, {
+      "seed": 11,
+      "chain": {
+        "steps": [{
+            "op": "liquidate-features",
+            "params": {
+              "steps": 1,
+              "shorten": true
+            },
+            "open": ["steps", "shorten"]
+          }, {
+            "op": "fragment",
+            "params": {
+              "position": "trailing",
+              "length": 2
+            },
+            "open": ["position", "length"]
+          }]
+      },
+      "kind": "motive-form",
+      "kept": [],
+      "changed": ["rhythm", "intervals", "contour", "harmony"],
+      "harmony": "I",
+      "functions": ["continuation", "contrast", "cadential"],
+      "derivation": "Liquidated 1 characteristic feature, each reduced to one chord tone and shortened by half, then cut to the trailing 2 notes. Kept nothing; changed the rhythm, the intervals, the contour and the harmony.",
+      "recognizability": 0.2708,
+      "remoteness": 0.6,
+      "motive": {
+        "motive": {
+          "meter": {
+            "beats_per_bar": 4,
+            "beat_unit": 4,
+            "bars_per_hyperbar": 0
+          },
+          "key": {
+            "tonic_pitch_class": 0,
+            "mode": "major"
+          },
+          "notes": [{
+              "midi_pitch": 64,
+              "offset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              }
+            }, {
+              "midi_pitch": 72,
+              "offset": {
+                "num": 1,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 4
+              }
+            }],
+          "harmony": "I"
+        },
+        "analysis": {
+          "form": "full",
+          "pickup": "0",
+          "notes_text": "E4:e C5:q",
+          "degrees_text": "3:e 1':q",
+          "harmony_text": "I",
+          "note_count": 2,
+          "length": {
+            "num": 3,
+            "den": 8
+          },
+          "bars": {
+            "num": 3,
+            "den": 8
+          },
+          "key": {
+            "tonic_pitch_class": 0,
+            "mode": "major",
+            "source": "given"
+          },
+          "intervals": [{
+              "semitones": 8,
+              "steps": 5
+            }],
+          "contour": {
+            "shape": "ascending",
+            "directions": ["up"]
+          },
+          "rhythm": [{
+              "onset": {
+                "num": 0,
+                "den": 1
+              },
+              "duration": {
+                "num": 1,
+                "den": 8
+              },
+              "bar": 0,
+              "beat": {
+                "num": 0,
+                "den": 1
+              },
+              "on_beat": true,
+              "dotted": false,
+              "rest_before": {
+                "num": 0,
+                "den": 1
+              }
+            }, {
+              "onset": {
+                "num": 1,
+                "den": 8
+              },
+              "duration": {
+                "num": 1,
+                "den": 4
+              },
+              "bar": 0,
+              "beat": {
+                "num": 1,
+                "den": 2
+              },
+              "on_beat": false,
+              "dotted": false,
+              "rest_before": {
+                "num": 0,
+                "den": 1
+              }
+            }],
+          "range": {
+            "lowest": 64,
+            "highest": 72,
+            "semitones": 8
+          },
+          "scale_degrees": {
+            "start": {
+              "degree": 3,
+              "alteration": 0
+            },
+            "end": {
+              "degree": 1,
+              "alteration": 0
+            },
+            "all": [{
+                "degree": 3,
+                "alteration": 0
+              }, {
+                "degree": 1,
+                "alteration": 0
+              }]
+          },
+          "implied_harmony": {
+            "key_known": true,
+            "candidates": [{
+                "roman_numeral": "I",
+                "function": "tonic",
+                "fit": 1,
+                "chord_tones": 2,
+                "non_chord_tones": 0
+              }, {
+                "roman_numeral": "vi",
+                "function": "predominant",
+                "fit": 1,
+                "chord_tones": 2,
+                "non_chord_tones": 0
+              }, {
+                "roman_numeral": "IV",
+                "function": "predominant",
+                "fit": 0.5,
+                "chord_tones": 1,
+                "non_chord_tones": 1
+              }, {
+                "roman_numeral": "iii",
+                "function": "predominant",
+                "fit": 0.5,
+                "chord_tones": 1,
+                "non_chord_tones": 1
+              }]
+          },
+          "base_harmony": {
+            "text": "I",
+            "given": true
+          },
+          "tones": [{
+              "note": 1,
+              "role": "chord",
+              "type": null,
+              "resolves_to": null,
+              "unresolved": false,
+              "overridden": false
+            }, {
+              "note": 2,
+              "role": "chord",
+              "type": null,
+              "resolves_to": null,
+              "unresolved": false,
+              "overridden": false
+            }],
+          "warnings": []
+        }
+      }
+    }]
+}

@@ -2,8 +2,11 @@
 # Run with: cmake -DCOMPOSER=<ursatz-composer> -DWORK=<empty working directory> -DSNAPSHOTS=<tests/snapshots>
 #                 -DFIXTURES=<tests/fixtures> [-DUPDATE=1] -P cli_snapshots.cmake
 # The values of the analyzer_version, composer_version and ursatz_commit keys are removed and the working and fixture
-# directories are replaced by <WORK> and <FIXTURES> before comparing text; MIDI and MusicXML are compared byte for byte.
+# directories are replaced by <WORK> and <FIXTURES> before comparing text; files ending .json are then compared as JSON
+# values (member order and whitespace do not matter), MIDI, MusicXML and other text byte for byte.
 # UPDATE=1 rewrites the snapshot files instead of comparing.
+
+include("${CMAKE_CURRENT_LIST_DIR}/snapshot_json.cmake")
 
 file(REMOVE_RECURSE "${WORK}")
 file(MAKE_DIRECTORY "${WORK}/normal")
@@ -43,8 +46,17 @@ function(snapshot name produced)
         message(SEND_ERROR "missing snapshot ${name} (run with -DUPDATE=1 to create it)")
         return()
     endif()
-    execute_process(COMMAND "${CMAKE_COMMAND}" -E compare_files "${actual}" "${SNAPSHOTS}/${name}" RESULT_VARIABLE same)
-    if(NOT same EQUAL 0)
+    if(name MATCHES "\\.json$")
+        snapshot_json_equal("${actual}" "${SNAPSHOTS}/${name}" same)
+    else()
+        execute_process(COMMAND "${CMAKE_COMMAND}" -E compare_files "${actual}" "${SNAPSHOTS}/${name}" RESULT_VARIABLE status)
+        if(status EQUAL 0)
+            set(same TRUE)
+        else()
+            set(same FALSE)
+        endif()
+    endif()
+    if(NOT same)
         message(SEND_ERROR "snapshot ${name} differs from the output of its command")
     endif()
 endfunction()
@@ -126,5 +138,86 @@ endforeach()
 run_case(motive json motive "${FIXTURES}/motive_d_minor.json" --json)
 run_case(variants-each-op json variants "${FIXTURES}/motive_d_minor.json" --each-op --seed 1 --json)
 run_case(random-motive json random-motive --mode minor --meter 3/4 --count 3 --seed 1 --json)
+
+# --- GUI shapes ----------------------------------------------------------------------
+# The calls the GUI backend makes (Ursatz-GUI routes/materials.c, service/theme_service.c, service/piece_service.c), with the
+# arguments it builds and fixtures under tests/fixtures/gui written as the GUI writes its temp files. P26 moves the CLI onto the
+# composer API; these snapshots must not move.
+
+set(gui "${FIXTURES}/gui")
+
+# Motive analysis of notes: meter, key, pickup, own harmony, a feature, a role and one tone override.
+run_case(motive-notes json motive "${gui}/motive-notes.txt" --format notes --meter 4/4 --key "D minor" --pickup 0
+         --harmony "I V@3" --feature a:0-2 --role melodic --tone 2=passing --json)
+# Motive analysis of a rhythm.
+run_case(motive-form-rhythm json motive "${gui}/motive-rhythm.txt" --form rhythm --meter 3/4 --pickup 1/4 --json)
+# Degrees to notes.
+run_case(motive-degrees json motive "${gui}/motive-degrees.txt" --format degrees --key "C minor" --meter 6/8 --pickup 0 --json)
+# MIDI to motive.
+run_case(motive-midi json motive "${FIXTURES}/motive_d_minor.mid" --format midi --meter 4/4 --key "C major" --json)
+# Motive render in another key, with the MusicXML.
+run_case(motive-render json motive "${gui}/motive-degrees.txt" --format degrees --form full --meter 4/4 --key "C major" --pickup 0
+         --render-key "Eb major" --musicxml motive-render.musicxml --tempo 96 --json)
+
+# The operation list.
+run_case(variants-list-ops json variants --list-ops --json)
+# Variants of a degree list against a basic motive, two functions, a distance, a count and a seed.
+run_case(variants-basic json variants "${gui}/variants-source.txt" --format degrees --meter 4/4 --key "C major" --pickup 0
+         --basic "${gui}/variants-basic.txt" --basic-format degrees --function beginning --function continuation
+         --distance medium --count 4 --seed 3 --json)
+# Recognize: the target is the source moved up one step of the scale.
+run_case(recognize json recognize "${gui}/recognize-source.txt" "${gui}/recognize-target.txt" --format degrees
+         --target-format degrees --meter 4/4 --key "C major" --pickup 0 --json)
+# Random motives with a role (the style variant is covered by the API tests).
+run_case(random-motive-style json random-motive --mode major --meter 4/4 --key "C major" --form full --role accompaniment
+         --count 2 --seed 5 --json)
+
+# The theme case the GUI runs (--format json --out --midi --musicxml) is the theme-* cases above, which write all three files.
+
+# Piece regenerate of the theme-filled section, one lane (the plan from piece-theme-fill above).
+run_case(piece-regenerate-lane json piece --from "${WORK}/piece-theme-fill.plan.json" --request "${WORK}/theme-fill.request.json"
+         --regenerate a --lane bass --seed 2 --format json --out piece-regenerate-lane.plan.json)
+# Piece variations of the same section: the printed result, result.json and each variation's plan, MIDI and MusicXML.
+run_case(piece-variations json piece --from "${WORK}/piece-theme-fill.plan.json" --request "${WORK}/theme-fill.request.json"
+         --variations a --lane harmony --count 2 --seed 2 --out-dir piece-variations --format json)
+snapshot(piece-variations.result.json piece-variations/result.json)
+foreach(index 1 2)
+    foreach(ext json mid musicxml)
+        snapshot(piece-variations.variation-${index}.${ext} piece-variations/variation-${index}.${ext})
+    endforeach()
+endforeach()
+
+# --version: the version text is normalized to <VERSION> for this case only.
+composer(--version)
+file(READ "${WORK}/stdout.txt" version_text)
+string(REGEX REPLACE "^ursatz-composer [^\n]*" "ursatz-composer <VERSION>" version_text "${version_text}")
+file(WRITE "${WORK}/version.stdout.txt" "${version_text}")
+snapshot(version.stdout.txt version.stdout.txt)
+
+# --- refusals and exit statuses ------------------------------------------------------
+# What the GUI reads back when a request fails: the message on stderr and the exit status (1 usage, 2 unsatisfiable, 3 write).
+
+# Runs the composer, requires exit status <expected_status>, and snapshots stderr as <name>.stderr.txt and the status as <name>.status.txt.
+function(run_error_case name expected_status)
+    execute_process(COMMAND "${COMPOSER}" ${ARGN} WORKING_DIRECTORY "${WORK}"
+                    OUTPUT_VARIABLE out ERROR_FILE "${WORK}/${name}.stderr.txt" RESULT_VARIABLE status)
+    if(NOT status EQUAL expected_status)
+        message(FATAL_ERROR "case ${name}: ursatz-composer ${ARGN}: exit ${status}, expected ${expected_status}")
+    endif()
+    file(WRITE "${WORK}/${name}.status.txt" "${status}\n")
+    snapshot("${name}.stderr.txt" "${name}.stderr.txt")
+    snapshot("${name}.status.txt" "${name}.status.txt")
+endfunction()
+
+# A bad meter to motive.
+run_error_case(error-motive-meter 1 motive "${gui}/motive-notes.txt" --format notes --meter 5/3 --json)
+# An unknown key in a theme request.
+run_error_case(error-theme-key 1 theme "${gui}/theme-unknown-key.json" --seed 1)
+# A request member of the wrong type in a piece request (beats as text).
+run_error_case(error-piece-type 1 piece "${gui}/piece-wrong-type.json" --seed 1)
+# A theme the Composer refuses: a last bar V under a perfect cadence.
+run_error_case(error-theme-unsatisfiable 2 theme "${gui}/theme-unsatisfiable.json" --seed 1)
+# An --out the Composer cannot write.
+run_error_case(error-theme-write 3 theme "${theme_one-motive}" --seed 1 --out no-such-directory/theme.plan.json)
 
 file(REMOVE_RECURSE "${WORK}/normal")

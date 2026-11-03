@@ -1,0 +1,1 @@
+Error: the given chords in bar 3 do not allow the PAC
