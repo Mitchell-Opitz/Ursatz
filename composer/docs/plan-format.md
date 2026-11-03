@@ -134,7 +134,7 @@ nothing checks them.
 | --- | --- |
 | `length_bars` | `bars`: integer, 1 or more. |
 | `cadence` | `type`: `pac`, `iac`, `hc`, `dc` or `pc`. |
-| `motive_ref` | `motive`: the id of a motive node; `transform`: `none`, `transposed`, `inverted`, `retrograde`, `augmented`, `diminished`, `fragmented`, `restated`, `interval_changed` or `liquidated`; `semitones`: used by `transposed`. Optional development parameters follow. |
+| `motive_ref` | `motive`: the id of a motive node; `step` (optional): the relation that makes the node's motive from it, as the text of a library relation step ([Motive relation steps](#motive-relation-steps)). Without `step` the node's melody is that motive itself. Files saved before `step` write `transform` and its members instead, which are still read. |
 | `key` | `tonic_pitch_class` (0 to 11), `mode` (`major` or `minor`). |
 | `archetype` | `type`: `sentence`, `period` or `hybrid`. |
 | `embellish` | No fields. Marks a harmony lane span reopened for the embellishment pass. |
@@ -158,25 +158,42 @@ nothing checks them.
 | `seam` | No fields. On a section node: the bar after the loop's end, a Given copy of the body's first bar; it is not part of the piece. See [loop-seam.md](loop-seam.md). |
 | `motive_tones` | On a motive node (`m0`, the slot and idea motives, a piece's motive nodes): the tones of its motive, which the melody operator places it by ([melody-fill.md](melody-fill.md#tone-roles)). `harmony`: the base harmony the notes were labelled against, a list of 1 to 8 `{"numeral", "onset", "length"}` (the numeral as a motive's own harmony writes it: `"I"`, `"V65"`, `"bVII7"`; the onset from the start of the motive and the length, both as a fraction of a whole note as text). `tones`: one label for each note of the node's melody span, in note order: `chord`, `unclassified` or a non-chord tone (`passing`, `neighbor`, `appoggiatura`, `suspension`, `retardation`, `escape`, `anticipation`, `double-neighbor`, `changing-tone`, `pedal`). A label count that is not the note count is refused when the plan is read (`motive_tones on <node>: <n> labels for <m> notes`). A motive with no tones (a rhythm, a contour, one with no key) and an accompaniment motive have none; a plan without the constraint reads as before and the schema version is the same. A Given node takes no more constraints, so it is added when the node is made. |
 
-### Motive development parameters
+### Motive relation steps
 
 A `motive_ref` on a motive node says how the node's motive is made from another motive node: the
 motivic development operators (`<ursatz_composer/motive_develop.h>`) read it and write the node's
-melody. Every member below is optional and is written only when set; a constraint without them leaves
-the choice to the operator, which draws it from the run's seed.
+melody. `step` is the text of a `MotiveRelationStep` of the Ursatz library (`analysis/motive_relation.h`,
+`motive_relation_step_text` writes it and `motive_relation_step_parse` reads it): the relation name, then
+`name=value` for each parameter that is not at its default, a ratio as `n:d`. The relations the operators
+answer to, with their parameters:
 
-| Member | Used by | Meaning |
+| Step | Parameters | Left out |
 | --- | --- | --- |
-| `tonal` | `transposed`, `inverted` | `true`: move in steps of the key's scale instead of semitones. Needs a key. |
-| `steps` | `transposed`, tonal | Diatonic steps up; negative is down. |
-| `axis` | `inverted` | The MIDI pitch mirrored about; the source's first note when absent. |
-| `interval`, `amount`, `keep_contour` | `interval_changed` | The 1-based interval to widen by `amount` semitones (negative narrows); every interval when `interval` is absent. `keep_contour` refuses a result that changes a direction. |
-| `position`, `length` | `fragmented` | `leading`, `trailing` or `middle`; and how many notes. |
-| `drop`, `keep_rhythm` | `liquidated` | How many notes to drop, the weakest first. With `keep_rhythm` the notes left keep their onsets. |
-| `ratio_num`, `ratio_den` | `augmented`, `diminished` | The factor durations and onsets are multiplied by; both or neither. 2:1 and 1:2 when absent. |
+| `exact` | none | The exact repetition, or a transposition of it (the operator draws one). |
+| `transpose` | `tonal` (0 or 1), `by` (semitones, or steps of the key's scale when tonal) | `by` 0: the operator draws it. |
+| `invert` | `axis` (a MIDI pitch), `tonal` | `axis` absent: the source's first note, then axes inside its range. |
+| `retrograde` | none | |
+| `interval-change` | `interval` (1-based, 0 every one), `amount` (semitones), `keep-contour` | `amount` 0: the operator draws interval and amount. |
+| `fragment` | `position` (1 leading, 2 trailing, 3 middle), `length`, `min` | `position` or `length` 0: drawn. |
+| `liquidate` | `drop`, `keep-rhythm`, `min` | `drop` 0: every number of notes that leaves the minimum. |
+| `augment`, `diminish` | `ratio` (`n:d`) | `ratio` absent: the usual ones (2:1, 3:2, 4:1; 1:2, 2:3, 1:4). |
 
-`restated` asks for the exact repetition or a transposition of it. The operators write only the
-Realized melody lane span of the node, and only when the result fits the node's span.
+`min` is the fewest notes a fragment or liquidation may have; 0 (absent) is the context's, else 2. An open
+parameter is drawn from the run's seed. The operators write only the Realized melody lane span of the
+node, and only when the result fits the node's span. A ref with no `step` is a plain reference: the node's
+melody is the source motive itself.
+
+Other relations of the library are valid in a `step` and are read and written, but no operator develops a
+node from them yet. A `step` that is not a relation step fails the read, with the text in the message
+(`not a relation step "transpose sideways=1"`).
+
+Plan files saved before relation steps write `transform` (`none`, `transposed`, `inverted`, `retrograde`,
+`augmented`, `diminished`, `fragmented`, `restated`, `interval_changed` or `liquidated`), `semitones` and the
+members the transform uses (`tonal`, `steps`, `axis`, `interval`, `amount`, `keep_contour`, `position`, `length`,
+`drop`, `keep_rhythm`, `ratio_num`, `ratio_den`). They are read, by one function in `src/plan/plan_json.c`, into the
+step of the same relation (`none` into no step, `restated` into `exact`; `semitones` or `steps` into `by`; an absent
+`axis` into -1) and are written back as `step`; nothing writes the old names. A `transform` the table does not
+have fails the read with its name in the message. The schema version stays 1.
 
 ## Reading
 
