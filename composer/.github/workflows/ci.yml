@@ -22,6 +22,8 @@ jobs:
         run: cmake -S . -B build
       - name: Build
         run: cmake --build build
+      - name: Check library includes
+        run: scripts/check-library-includes.sh
       - name: Check file scope state
         run: scripts/check-statics.sh
       - name: Test (the fast set; the slow sweeps run before a push, see README)
