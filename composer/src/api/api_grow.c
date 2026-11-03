@@ -18,6 +18,7 @@
 #include <ursatz_composer/rejection.h>
 
 #include "api_internal.h"
+#include "api_vocabulary.h"
 #include "util/plan_util.h"
 #include "util/request_parse.h"
 #include "util/util.h"
@@ -30,7 +31,6 @@
 static const char *const BEGINNING_WORDS[] = {"presentation", "antecedent", "cbi"};
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound basic idea"};
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
-static const char *const ACCOMPANIMENT_WORDS[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
 
 NodeId api_find_node(const PiecePlan *plan, const char *name) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
@@ -45,7 +45,7 @@ NodeId api_find_node(const PiecePlan *plan, const char *name) {
 /* --- reading the brief ------------------------------------------------------------------------------ */
 
 const char *api_accompaniment_name(PlanAccompanimentPattern pattern) {
-    return ACCOMPANIMENT_WORDS[pattern];
+    return API_ACCOMPANIMENT_PATTERNS[pattern].value;
 }
 
 ComposerStatus api_read_accompaniment(const char *pattern_text, const char *texture_text, const char *meter_text,
@@ -55,7 +55,7 @@ ComposerStatus api_read_accompaniment(const char *pattern_text, const char *text
     if (pattern_text) {
         bool found = false;
         for (int p = 0; p < 5 && !found; p++) {
-            found = request_equals_ignore_case(pattern_text, ACCOMPANIMENT_WORDS[p]);
+            found = request_equals_ignore_case(pattern_text, API_ACCOMPANIMENT_PATTERNS[p].value);
             out->pattern = found ? (PlanAccompanimentPattern)p : out->pattern;
         }
         if (!found) {
@@ -127,8 +127,9 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
     } else if (request_equals_ignore_case(text->into, "hybrid")) {
         out->into = GROW_INTO_HYBRID;
     } else {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/into", "into must be sentence, period or hybrid, not '%s'",
-                        text->into);
+        char intos[64];
+        api_choice_list(API_PIECE_INTOS, intos, sizeof intos);
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/into", "into must be %s, not '%s'", intos, text->into);
     }
     if (out->into == GROW_INTO_HYBRID) {
         if (!text->hybrid) {
@@ -152,9 +153,10 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
     } else if (text->hybrid) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/hybrid", "hybrid applies only to into hybrid");
     }
-    if (text->mode && !request_equals_ignore_case(text->mode, "major") && !request_equals_ignore_case(text->mode, "minor") &&
-        !request_equals_ignore_case(text->mode, "style")) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be major, minor or style, not '%s'", text->mode);
+    if (text->mode && api_choice_find_ignore_case(API_PIECE_MODES, text->mode) < 0) {
+        char modes[64];
+        api_choice_list(API_PIECE_MODES, modes, sizeof modes);
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode must be %s, not '%s'", modes, text->mode);
     }
     if (text->mode && request_equals_ignore_case(text->mode, "style") && !text->has_style) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/mode", "mode style needs style");
@@ -178,8 +180,7 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
         out->key.mode = KEY_STRUCTURE_MODE_MINOR;
     }
     if (!request_parse_meter(text->meter, &out->meter) || !harmony_meter_supported(&out->meter)) {
-        return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "meter '%s' is not supported; use 2/4, 3/4, 4/4 or 6/8",
-                        text->meter);
+        return api_fail_meter(error, "/meter", text->meter);
     }
     out->bars = 8;
     if (text->bars) {
@@ -191,8 +192,7 @@ ComposerStatus api_grow_read_brief(const GrowBriefText *text, GrowSetup *out, Co
     }
     out->cadence = CADENCE_TYPE_PERFECT_AUTHENTIC;
     if (text->cadence &&
-        (!request_parse_cadence(text->cadence, &out->cadence) || out->cadence == CADENCE_TYPE_DECEPTIVE ||
-         out->cadence == CADENCE_TYPE_PLAGAL)) {
+        (!request_parse_cadence(text->cadence, &out->cadence) || !api_theme_cadence_ok(out->cadence))) {
         return api_fail(error, COMPOSER_ERR_REQUEST, "/cadence", "cadence must be PAC, IAC or HC, not '%s'", text->cadence);
     }
     out->first_cadence = CADENCE_TYPE_HALF;
@@ -964,22 +964,9 @@ static void heard_text(const GrowOutcome *outcome, char *heard_form, size_t form
 
 /* The slot an idea has the function of, by the idea's name (grow_form.c has the same table). */
 static GrowSlot idea_slot(const char *name) {
-    static const struct {
-        const char *name;
-        GrowSlot slot;
-    } NAMES[] = {{"basic idea", GROW_SLOT_BASIC},
-                 {"repetition", GROW_SLOT_BASIC},
-                 {"consequent basic idea", GROW_SLOT_BASIC},
-                 {"contrasting idea", GROW_SLOT_CONTRASTING},
-                 {"consequent contrasting idea", GROW_SLOT_CONTRASTING},
-                 {"fragment 1", GROW_SLOT_CONTINUATION},
-                 {"fragment 2", GROW_SLOT_CONTINUATION},
-                 {"cadential", GROW_SLOT_CADENTIAL},
-                 {"cadential 1", GROW_SLOT_CADENTIAL},
-                 {"cadential 2", GROW_SLOT_CADENTIAL}};
-    for (size_t i = 0; name && i < sizeof(NAMES) / sizeof(NAMES[0]); i++) {
-        if (strcmp(name, NAMES[i].name) == 0) {
-            return NAMES[i].slot;
+    for (int idea = 0; name && idea < GROW_IDEA_COUNT; idea++) {
+        if (strcmp(name, grow_idea_name((GrowIdea)idea)) == 0) {
+            return (GrowSlot)API_THEME_IDEA_SLOTS[idea];
         }
     }
     return GROW_SLOT_BASIC;

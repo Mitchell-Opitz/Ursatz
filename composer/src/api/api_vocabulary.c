@@ -46,17 +46,9 @@ const ApiChoice API_PIECE_INTOS[] = {{"sentence", "Sentence"}, {"period", "Perio
 const ApiChoice API_PICKUPS[] = {{"0", "0"},   {"1/4", "1/4"}, {"1/2", "1/2"}, {"1", "1"},
                                  {"3/2", "3/2"}, {"2", "2"},   {"3", "3"},     {NULL, NULL}};
 
-const ApiThemeIdea API_THEME_IDEAS[] = {{"basic idea", 0},
-                                        {"repetition", 0},
-                                        {"contrasting idea", 1},
-                                        {"consequent basic idea", 0},
-                                        {"consequent contrasting idea", 1},
-                                        {"fragment 1", 2},
-                                        {"fragment 2", 2},
-                                        {"cadential", 3},
-                                        {"cadential 1", 3},
-                                        {"cadential 2", 3},
-                                        {NULL, 0}};
+/* basic idea, repetition, contrasting idea, consequent basic idea, consequent contrasting idea, fragment 1, fragment 2,
+   cadential, cadential 1, cadential 2: the slots basic, contrasting, continuation and cadential are 0 to 3. */
+const int API_THEME_IDEA_SLOTS[GROW_IDEA_COUNT] = {0, 0, 1, 0, 1, 2, 2, 3, 3, 3};
 
 bool api_theme_cadence_ok(int cadence_type) {
     return cadence_type == CADENCE_TYPE_PERFECT_AUTHENTIC || cadence_type == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
@@ -80,6 +72,19 @@ int api_choice_find(const ApiChoice *table, const char *text) {
     return -1;
 }
 
+int api_choice_find_ignore_case(const ApiChoice *table, const char *text) {
+    for (size_t i = 0; text && table[i].value; i++) {
+        if (request_equals_ignore_case(text, table[i].value)) {
+            return (int)i;
+        }
+    }
+    return -1;
+}
+
+void api_choice_list(const ApiChoice *table, char *out, size_t size) {
+    api_choice_join(table, ", ", " or ", out, size);
+}
+
 void api_choice_join(const ApiChoice *table, const char *separator, const char *last_separator, char *out, size_t size) {
     size_t count = api_choice_count(table);
     size_t used = 0;
@@ -89,6 +94,12 @@ void api_choice_join(const ApiChoice *table, const char *separator, const char *
         int written = snprintf(out + used, size - used, "%s%s", between, table[i].value);
         used += written > 0 ? (size_t)written : 0;
     }
+}
+
+ComposerStatus api_fail_meter(ComposerError *error, const char *path, const char *text) {
+    char list[64];
+    api_choice_list(API_METERS, list, sizeof list);
+    return api_fail(error, COMPOSER_ERR_REQUEST, path, "meter '%s' is not supported; use %s", text, list);
 }
 
 /* --- labels of the lists the library holds ----------------------------------------------------------------- */
@@ -294,9 +305,10 @@ static bool add_tone_labels(cJSON *root) {
 static bool add_theme_lists(cJSON *root) {
     cJSON *ideas = add_list(root, "theme_ideas");
     cJSON *categories = add_list(root, "theme_motive_categories");
-    for (size_t i = 0; ideas && API_THEME_IDEAS[i].name; i++) {
-        cJSON *entry = add_choice(ideas, API_THEME_IDEAS[i].name, API_THEME_IDEAS[i].name);
-        if (!entry || !cJSON_AddStringToObject(entry, "slot", API_THEME_SLOTS[API_THEME_IDEAS[i].slot].value)) {
+    for (int idea = 0; ideas && idea < GROW_IDEA_COUNT; idea++) {
+        const char *name = grow_idea_name((GrowIdea)idea);
+        cJSON *entry = add_choice(ideas, name, name);
+        if (!entry || !cJSON_AddStringToObject(entry, "slot", API_THEME_SLOTS[API_THEME_IDEA_SLOTS[idea]].value)) {
             return false;
         }
     }

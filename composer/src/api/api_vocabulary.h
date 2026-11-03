@@ -6,6 +6,9 @@
 
 #include <cJSON.h>
 
+#include <ursatz_composer/composer_api.h>
+#include <ursatz_composer/grow.h>
+
 /*
  * The named tables of the words a request is written in (R-267, R-270). Each table ends with an entry whose value is NULL.
  * The request readers and composer_api_vocabulary use these tables, so a list is written once. Private: not installed.
@@ -20,6 +23,10 @@ typedef struct {
 size_t api_choice_count(const ApiChoice *table);
 /* The index of the entry whose value is text (exactly), or -1. */
 int api_choice_find(const ApiChoice *table, const char *text);
+/* As api_choice_find, ignoring the case of text (how the readers compare a mode, an archetype, a pattern). */
+int api_choice_find_ignore_case(const ApiChoice *table, const char *text);
+/* The values as a message lists them: "a, b or c". */
+void api_choice_list(const ApiChoice *table, char *out, size_t size);
 /* The values joined for a message: separator between entries, last_separator before the last ("a, b or c"). */
 void api_choice_join(const ApiChoice *table, const char *separator, const char *last_separator, char *out, size_t size);
 
@@ -34,12 +41,11 @@ extern const ApiChoice API_ACCOMPANIMENT_PATTERNS[];
 extern const ApiChoice API_PIECE_INTOS[];      /* sentence, period, hybrid */
 extern const ApiChoice API_PICKUPS[];          /* the pickups an application offers, in beats */
 
-/* The ideas a theme form has: the name, and the index in API_THEME_SLOTS of the slot whose motive the idea is made from. */
-typedef struct {
-    const char *name;
-    int slot;
-} ApiThemeIdea;
-extern const ApiThemeIdea API_THEME_IDEAS[]; /* ends with a NULL name */
+/* The slot of API_THEME_SLOTS whose motive an idea (grow_idea_name, in GrowIdea order) is made from. */
+extern const int API_THEME_IDEA_SLOTS[GROW_IDEA_COUNT];
+
+/* COMPOSER_ERR_REQUEST at path: the meter is not one of API_METERS ("meter '3/8' is not supported; use 2/4, 3/4, 4/4 or 6/8"). */
+ComposerStatus api_fail_meter(ComposerError *error, const char *path, const char *text);
 
 /* True for a cadence type a theme can end in (PAC, IAC or HC). */
 bool api_theme_cadence_ok(int cadence_type);
