@@ -169,8 +169,9 @@ static void test_options(void) {
     assert(strstr(out, "motive " FIXTURE("motive_d_minor.txt")) != NULL);
     assert(strstr(out, "accompaniment alberti") != NULL);
     free(out);
+    /* Seed 2 is rejected (the tritone is refused, P25 B5), so the fill reports the next seed it kept. */
     out = output_of("fill", "plan_cli_motive.json --seed 2");
-    assert(strstr(out, "seed 2") == out);
+    assert(strstr(out, "seed 3") == out);
     free(out);
 
     /* The keys and cadences planned across the sections, and the sizes. */
