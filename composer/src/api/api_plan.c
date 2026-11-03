@@ -210,6 +210,10 @@ static ComposerStatus read_given(PlanBuild *state, ComposerError *error) {
             }
             if (!given->source) {
                 given->source = "";
+                if (!api_member_string(given->motive, "source", &given->source, &present, error)) {
+                    return COMPOSER_ERR_REQUEST;
+                }
+                given->source = given->source ? given->source : "";
             }
         }
         const cJSON *cells = cJSON_GetObjectItemCaseSensitive(item, "cells");
