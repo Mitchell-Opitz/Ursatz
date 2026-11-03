@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/random_motive.response.schema.json",
+  "title": "composer_api_random_motive response",
+  "description": "What `random-motive --json` prints, and `drawn` when the mode or the meter was drawn from the seed.",
+  "type": "object",
+  "required": [
+    "seed",
+    "motives"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "seed": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "motives": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "required": [
+          "motive",
+          "analysis"
+        ],
+        "properties": {
+          "motive": {
+            "type": "object"
+          },
+          "analysis": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "drawn": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "major",
+            "minor"
+          ]
+        },
+        "meter": {
+          "enum": [
+            "4/4",
+            "3/4",
+            "2/4",
+            "6/8"
+          ]
+        }
+      }
+    }
+  }
+}

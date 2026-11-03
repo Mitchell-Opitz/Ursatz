@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/variants.request.schema.json",
+  "title": "composer_api_variants request",
+  "description": "A motive request (docs/api.md, Motive requests) with the variant options. Only input is required.",
+  "type": "object",
+  "required": [
+    "input"
+  ],
+  "properties": {
+    "input": {
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "auto",
+            "notes",
+            "degrees",
+            "rhythm",
+            "contour",
+            "json",
+            "musicxml"
+          ]
+        },
+        "form": {
+          "enum": [
+            "full",
+            "rhythm",
+            "contour"
+          ]
+        }
+      }
+    },
+    "pickup": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "harmony": {
+      "type": "string"
+    },
+    "features": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 8
+    },
+    "role": {
+      "enum": [
+        "melodic",
+        "accompaniment"
+      ]
+    },
+    "api_version": {
+      "type": "integer"
+    },
+    "meter": {
+      "type": "string"
+    },
+    "key": {
+      "type": "string"
+    },
+    "basic": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "object",
+          "required": [
+            "text"
+          ],
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "format": {
+              "enum": [
+                "auto",
+                "notes",
+                "degrees",
+                "rhythm",
+                "contour",
+                "json",
+                "musicxml"
+              ]
+            },
+            "form": {
+              "enum": [
+                "full",
+                "rhythm",
+                "contour"
+              ]
+            }
+          }
+        },
+        "pickup": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "harmony": {
+          "type": "string"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8
+        },
+        "role": {
+          "enum": [
+            "melodic",
+            "accompaniment"
+          ]
+        }
+      }
+    },
+    "functions": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "enum": [
+          "beginning",
+          "continuation",
+          "contrast",
+          "cadential"
+        ]
+      }
+    },
+    "distance": {
+      "enum": [
+        "close",
+        "medium",
+        "far"
+      ]
+    },
+    "each_op": {
+      "type": "boolean"
+    },
+    "detail": {
+      "type": "boolean"
+    },
+    "count": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "chain": {
+      "type": "object",
+      "required": [
+        "steps"
+      ],
+      "properties": {
+        "steps": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "required": [
+              "op"
+            ],
+            "properties": {
+              "op": {
+                "type": "string"
+              },
+              "params": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

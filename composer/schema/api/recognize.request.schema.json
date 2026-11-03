@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/recognize.request.schema.json",
+  "title": "composer_api_recognize request",
+  "description": "The source and the target motive, read in the request's meter, key and role.",
+  "type": "object",
+  "required": [
+    "source",
+    "target",
+    "meter"
+  ],
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "object",
+          "required": [
+            "text"
+          ],
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "format": {
+              "enum": [
+                "auto",
+                "notes",
+                "degrees",
+                "rhythm",
+                "contour",
+                "json",
+                "musicxml"
+              ]
+            },
+            "form": {
+              "enum": [
+                "full",
+                "rhythm",
+                "contour"
+              ]
+            }
+          }
+        },
+        "pickup": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "harmony": {
+          "type": "string"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8
+        },
+        "role": {
+          "enum": [
+            "melodic",
+            "accompaniment"
+          ]
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "object",
+          "required": [
+            "text"
+          ],
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "format": {
+              "enum": [
+                "auto",
+                "notes",
+                "degrees",
+                "rhythm",
+                "contour",
+                "json",
+                "musicxml"
+              ]
+            },
+            "form": {
+              "enum": [
+                "full",
+                "rhythm",
+                "contour"
+              ]
+            }
+          }
+        },
+        "pickup": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "harmony": {
+          "type": "string"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8
+        },
+        "role": {
+          "enum": [
+            "melodic",
+            "accompaniment"
+          ]
+        }
+      }
+    },
+    "basic": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "object",
+          "required": [
+            "text"
+          ],
+          "properties": {
+            "text": {
+              "type": "string"
+            },
+            "format": {
+              "enum": [
+                "auto",
+                "notes",
+                "degrees",
+                "rhythm",
+                "contour",
+                "json",
+                "musicxml"
+              ]
+            },
+            "form": {
+              "enum": [
+                "full",
+                "rhythm",
+                "contour"
+              ]
+            }
+          }
+        },
+        "pickup": {
+          "type": [
+            "number",
+            "string"
+          ]
+        },
+        "harmony": {
+          "type": "string"
+        },
+        "features": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8
+        },
+        "role": {
+          "enum": [
+            "melodic",
+            "accompaniment"
+          ]
+        }
+      }
+    },
+    "meter": {
+      "type": "string"
+    },
+    "key": {
+      "type": "string"
+    },
+    "role": {
+      "enum": [
+        "melodic",
+        "accompaniment"
+      ]
+    },
+    "pickup": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "target_pickup": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "depth": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "detail": {
+      "type": "boolean"
+    }
+  }
+}

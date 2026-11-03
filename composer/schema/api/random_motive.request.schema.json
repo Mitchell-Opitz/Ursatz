@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/random_motive.request.schema.json",
+  "title": "composer_api_random_motive request",
+  "description": "Random motives: mode and meter are required and may be \"random\", drawn from the seed.",
+  "type": "object",
+  "required": [
+    "mode",
+    "meter"
+  ],
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "mode": {
+      "enum": [
+        "major",
+        "minor",
+        "random"
+      ]
+    },
+    "meter": {
+      "type": "string"
+    },
+    "key": {
+      "type": "string"
+    },
+    "form": {
+      "enum": [
+        "full",
+        "rhythm",
+        "contour"
+      ]
+    },
+    "role": {
+      "enum": [
+        "melodic",
+        "accompaniment"
+      ]
+    },
+    "style": {
+      "type": "string"
+    },
+    "style_without": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "string"
+      }
+    },
+    "count": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    }
+  }
+}
