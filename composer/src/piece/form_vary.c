@@ -5,6 +5,8 @@
 #include "piece/form_return_internal.h"
 #include "util/util.h"
 
+#include <standard-counterpoint/melodic_rules.h>
+
 /*
  * The variations of a returning section (R-070), made on the copy form-return moved onto the target: ORNAMENT adds
  * passing and neighbor tones between the notes of the melody, REHARMONIZE reopens the chords (and what is written over
@@ -32,7 +34,7 @@ static bool from_ticks(long ticks, Rational *out) {
 }
 
 static bool is_step(int move) {
-    return util_absolute(move) >= 1 && util_absolute(move) <= 2;
+    return standard_counterpoint_is_step(move);
 }
 
 /* ------------------------------------------------------------- ornament */

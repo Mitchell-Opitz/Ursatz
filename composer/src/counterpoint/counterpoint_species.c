@@ -5,6 +5,9 @@
 #include "counterpoint/counterpoint_internal.h"
 #include "util/util.h"
 
+#include <standard-counterpoint/harmonic_rules.h>
+#include <standard-counterpoint/melodic_rules.h>
+
 /*
  * The beam search of the counterpoint operator. A state is the counter-melody written so far, in slots (counterpoint_
  * internal.h); a step adds a bar of them, or in species 1 a note. A step is made note by note with the rules that need
@@ -60,8 +63,7 @@ static bool on_tonic(const CounterpointContext *context, int pitch) {
 
 /* A step a strict counterpoint allows between two notes of the line: no tritone, no seventh, no sixth but the rising minor one. */
 static bool move_ok(int from, int to) {
-    int size = util_absolute(to - from);
-    return size <= 12 && size != 6 && size != 9 && size != 10 && size != 11 && !(size == 8 && to < from);
+    return standard_counterpoint_melodic_semitones_allowed(to - from);
 }
 
 static bool ordered(const CounterpointContext *context, size_t note, int pitch) {
@@ -76,16 +78,17 @@ static long leap_cost(int from, int to) {
 
 /* Three downbeats in a row making the same imperfect consonance with the given line are parallel in all but name. */
 static long parallel_cost(const CounterpointContext *context, size_t note, const int *downbeat) {
-    int size[3];
+    int upper[3];
+    int lower[3];
     if (note < 2) {
         return 0;
     }
     for (size_t k = 0; k < 3; k++) {
-        size[k] = util_absolute(downbeat[k] - context->line[note - 2 + k]) % 12;
+        int line = context->line[note - 2 + k];
+        upper[k] = downbeat[k] > line ? downbeat[k] : line;
+        lower[k] = downbeat[k] > line ? line : downbeat[k];
     }
-    return size[0] == size[1] && size[1] == size[2] && (size[0] == 3 || size[0] == 4 || size[0] == 8 || size[0] == 9)
-               ? PARALLEL_COST
-               : 0;
+    return standard_counterpoint_imperfect_run(upper, lower, 3, 3) ? PARALLEL_COST : 0;
 }
 
 static bool push(Gen *gen, const unsigned char *kind, const int *pitch, size_t add, long cost) {

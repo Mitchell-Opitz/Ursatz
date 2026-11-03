@@ -3,6 +3,8 @@
 #include <string.h>
 #include "util/util.h"
 
+#include <standard-counterpoint/melodic_rules.h>
+
 /* The most pitches tried for one note, and the most notes visited in one search. */
 #define TRIES_PER_NOTE 5
 #define SEARCH_BUDGET 4000
@@ -11,17 +13,16 @@
 
 /* A step is a second, a half or whole tone; a leap is anything larger. */
 static bool is_step(int move) {
-    return util_absolute(move) >= 1 && util_absolute(move) <= 2;
+    return standard_counterpoint_is_step(move);
 }
 
 static bool is_leap(int move) {
-    return util_absolute(move) > 2;
+    return move != 0 && !standard_counterpoint_is_step(move);
 }
 
-/* The leaps standard-counterpoint allows: up to a fifth, the ascending minor sixth, and the octave. */
+/* The moves standard-counterpoint allows: no tritone, no seventh, the sixth only as the ascending minor one. */
 static bool leap_allowed(int move) {
-    int size = util_absolute(move);
-    return size <= 7 || size == 12 || move == 8;
+    return standard_counterpoint_melodic_semitones_allowed(move);
 }
 
 unsigned melody_scale_mask(const MelodyContext *context, size_t chord) {
