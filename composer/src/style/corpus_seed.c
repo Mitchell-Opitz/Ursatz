@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include <cJSON.h>
+#include <core/rational.h>
 
 #include <ursatz_analyzer/similar_material.h>
 #include <ursatz_analyzer/style_labels.h>
@@ -227,17 +228,8 @@ static int transposition(int pitch, const PlanKey *source, const PlanKey *target
     return shift > 6 ? shift - 12 : shift;
 }
 
-static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
-    while (b) {
-        unsigned long long t = a % b;
-        a = b;
-        b = t;
-    }
-    return a;
-}
-
 static bool plan_time_of(unsigned long long numerator, unsigned long long denominator, PlanTime *out) {
-    unsigned long long divisor = gcd_ull(numerator, denominator);
+    unsigned long long divisor = rational_gcd_unsigned(numerator, denominator);
     if (denominator == 0 || divisor == 0) {
         return false;
     }

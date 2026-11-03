@@ -14,6 +14,7 @@
 
 #include <ursatz_composer/harmony_phrase.h>
 #include "util/plan_util.h"
+#include "util/util.h"
 
 static const char *const ACCOMPANIMENT_WORDS[] = {"any", "block", "arpeggiated", "alberti", "oom-pah", "motive"};
 
@@ -370,11 +371,7 @@ bool cli_parse_key(const char *text, PlanKey *key) {
 }
 
 const char *cli_key_name(const PlanKey *key, char *out, size_t size) {
-    static const char *const MAJOR[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
-    static const char *const MINOR[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "G#", "A", "Bb", "B"};
-    int pc = key->tonic_pitch_class;
-    snprintf(out, size, "%s %s", key->mode == PLAN_MODE_MINOR ? MINOR[pc] : MAJOR[pc],
-             key->mode == PLAN_MODE_MINOR ? "minor" : "major");
+    util_key_name(key->tonic_pitch_class, key->mode == PLAN_MODE_MINOR, out, size);
     return out;
 }
 

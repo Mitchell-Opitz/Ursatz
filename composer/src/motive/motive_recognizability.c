@@ -18,23 +18,10 @@ typedef struct {
     size_t ratios;    /* the same */
 } Features;
 
-static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
-    while (b != 0) {
-        unsigned long long remainder = a % b;
-        a = b;
-        b = remainder;
-    }
-    return a;
-}
-
+/* Counts are at most MOTIVE_MAX_NOTES, so the score always fits; the 0/1 is unreachable. */
 static MotiveScore make_score(unsigned long long numerator, unsigned long long denominator) {
-    MotiveScore score;
-    unsigned long long divisor = gcd_ull(numerator, denominator);
-    if (divisor == 0) {
-        divisor = 1;
-    }
-    score.numerator = (unsigned long)(numerator / divisor);
-    score.denominator = (unsigned long)(denominator / divisor);
+    MotiveScore score = {0, 1};
+    motive_score_make(numerator, denominator, &score);
     return score;
 }
 
@@ -160,19 +147,22 @@ bool motive_recognizability(const Motive *source, const Motive *development, con
     size_t shorter = source->note_count < development->note_count ? source->note_count : development->note_count;
     result.length = make_score(shorter, longer(source->note_count, development->note_count));
 
-    /* The weighted sum of the four parts, as one fraction over a common denominator. */
+    /* The weighted sum of the four parts over the total weight, exact; false when it does not fit a Rational. */
     const MotiveScore *parts[4] = {&result.contour, &result.intervals, &result.rhythm, &result.length};
-    const unsigned long long weight[4] = {used.contour, used.intervals, used.rhythm, used.length};
-    unsigned long long numerator = 0;
-    unsigned long long denominator = 1;
+    const unsigned long weight[4] = {used.contour, used.intervals, used.rhythm, used.length};
+    Rational sum = rational_ratio(0, 1);
     for (int i = 0; i < 4; i++) {
-        numerator = numerator * parts[i]->denominator + weight[i] * parts[i]->numerator * denominator;
-        denominator *= parts[i]->denominator;
-        MotiveScore reduced = make_score(numerator, denominator);
-        numerator = reduced.numerator;
-        denominator = reduced.denominator;
+        Rational weighted;
+        if (rational_mul_int(motive_score_rational(*parts[i]), (long long)weight[i], &weighted) != RATIONAL_OK ||
+            rational_add(sum, weighted, &sum) != RATIONAL_OK) {
+            return false;
+        }
     }
-    result.total = make_score(numerator, denominator * total_weight);
+    Rational total;
+    if (rational_div_int(sum, (long long)total_weight, &total) != RATIONAL_OK ||
+        !motive_score_from_rational(total, &result.total)) {
+        return false;
+    }
     *out = result;
     return true;
 }

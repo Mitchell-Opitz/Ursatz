@@ -273,7 +273,7 @@
         }
       },
       "note_ids": [],
-      "label": "vii°6",
+      "label": "viio6",
       "uncertainty": null,
       "key_label": "D minor",
       "composer": {
@@ -284,7 +284,7 @@
         "state": "realized",
         "constraints": [],
         "payload": {
-          "roman_numeral": "vii°6",
+          "roman_numeral": "viio6",
           "function": "dominant"
         }
       }
@@ -329,7 +329,7 @@
         }
       },
       "note_ids": [],
-      "label": "vii°6",
+      "label": "viio6",
       "uncertainty": null,
       "key_label": "D minor",
       "composer": {
@@ -340,7 +340,7 @@
         "state": "realized",
         "constraints": [],
         "payload": {
-          "roman_numeral": "vii°6",
+          "roman_numeral": "viio6",
           "function": "dominant"
         }
       }

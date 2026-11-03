@@ -257,15 +257,6 @@ bool motive_melodic_fault(const Motive *motive, const char **fault) {
     return ok;
 }
 
-static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
-    while (b != 0) {
-        unsigned long long remainder = a % b;
-        a = b;
-        b = remainder;
-    }
-    return a;
-}
-
 /*
  * The soft score: the mean recognizability of the developments the form templates make of the motive (a tonal
  * inversion, a diminution, an interval change). A development that cannot be made scores 0.
@@ -279,8 +270,7 @@ static bool invent_score(const Motive *motive, const MotiveScoreWeights *weights
     specs[2].kind = MOTIVE_DEV_INTERVAL_CHANGE;
     specs[2].amount = 1;
     specs[2].interval = 1;
-    unsigned long long numerator = 0;
-    unsigned long long denominator = 1;
+    Rational sum = rational_ratio(0, 1);
     for (size_t i = 0; i < 3; i++) {
         Motive development;
         MotiveRecognizability score;
@@ -288,20 +278,12 @@ static bool invent_score(const Motive *motive, const MotiveScoreWeights *weights
             !motive_recognizability(motive, &development, weights, &score)) {
             continue;
         }
-        /* numerator/denominator + score */
-        numerator = numerator * score.total.denominator + (unsigned long long)score.total.numerator * denominator;
-        denominator *= score.total.denominator;
-        unsigned long long divisor = gcd_ull(numerator, denominator);
-        numerator /= divisor;
-        denominator /= divisor;
+        if (rational_add(sum, motive_score_rational(score.total), &sum) != RATIONAL_OK) {
+            return false;
+        }
     }
-    denominator *= 3;
-    unsigned long long divisor = gcd_ull(numerator, denominator);
-    numerator /= divisor;
-    denominator /= divisor;
-    out->numerator = (unsigned long)numerator;
-    out->denominator = (unsigned long)denominator;
-    return true;
+    Rational mean;
+    return rational_div_int(sum, 3, &mean) == RATIONAL_OK && motive_score_from_rational(mean, out);
 }
 
 /* -------------------------------------------------------------- operator */

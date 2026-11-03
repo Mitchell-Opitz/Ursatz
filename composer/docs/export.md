@@ -5,6 +5,11 @@ meter and key signatures to Ursatz's MIDI renderer (`midi_renderer_render_with_o
 (`musicxml_export_write_score`). Every command that writes `--midi` or `--musicxml` (`grow`, `fill`, `regenerate`,
 `variations`, `harmonize`, `progression`, `counterpoint`, `develop`, `export`) shares these options.
 
+Notes are spelled in the key in force at their onset: a note of the key's scale takes its signature spelling
+(`standard_tonality_key_signature_of`), any other is placed on the line of fifths, sharp in a sharp key or none, flat in a
+flat key (`pitch_spelling_from_fifths`), and its octave is the one `pitch_spelling_midi_number` reads back as the MIDI
+pitch. The key's signature count is `standard_tonality_key_fifths` of its tonic.
+
 ## Options
 
 | Option | Effect |

@@ -9,10 +9,6 @@
 /* Distance counts this much against a draw below it, so a draw only orders pitches equally far from the ideal. */
 #define JITTER 4
 
-static int pitch_class(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
-
 /* A step is a second, a half or whole tone; a leap is anything larger. */
 static bool is_step(int move) {
     return util_absolute(move) >= 1 && util_absolute(move) <= 2;
@@ -51,7 +47,7 @@ bool melody_figure_ok(const MelodyContext *context, const MelodyFillParams *para
                       size_t count, size_t i) {
     const MelodyNote *note = &notes[i];
     unsigned types = params->nct_types;
-    unsigned pitch_bit = 1u << pitch_class(note->pitch);
+    unsigned pitch_bit = 1u << util_pitch_class(note->pitch);
     long end = note->onset + note->duration;
     bool crossing = end > context->chord_start[note->chord + 1];
     bool has_next = i + 1 < count;
@@ -70,7 +66,7 @@ bool melody_figure_ok(const MelodyContext *context, const MelodyFillParams *para
         /* Held into a chord it is not a tone of, and left by a step down to a tone of the chord it is held in. */
         return (types & MELODY_NCT_SUSPENSION) && (context->chord_mask[note->chord] & pitch_bit) && has_next &&
                is_step(to_next) && to_next < 0 &&
-               (context->chord_mask[notes[i + 1].chord] & (1u << pitch_class(notes[i + 1].pitch)));
+               (context->chord_mask[notes[i + 1].chord] & (1u << util_pitch_class(notes[i + 1].pitch)));
     }
 
     /* Dissonant against its own chord: approached and left as a figure the parameters allow. */
@@ -124,7 +120,7 @@ static bool search(const MelodyContext *context, const MelodyFillParams *params,
         high = params->range_low - 1;
     }
     for (int pitch = params->range_low; pitch <= high; pitch++) {
-        if (!((allowed >> pitch_class(pitch)) & 1u) || !leap_allowed(pitch - notes[j - 1].pitch)) {
+        if (!((allowed >> util_pitch_class(pitch)) & 1u) || !leap_allowed(pitch - notes[j - 1].pitch)) {
             continue;
         }
         Try candidate = {pitch, util_absolute(pitch - ideal[j]) * JITTER + (int)fill_rng_below(rng, JITTER)};

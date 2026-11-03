@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include <cJSON.h>
+#include <core/rational.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
 
@@ -40,6 +41,14 @@ bool motive_develop_read_node(const PiecePlan *plan, NodeId node, const MotiveDe
 
 /* Records the first problem only. error may be NULL. */
 void motive_set_error(MotiveError *error, const char *location, const char *format, ...);
+
+/*
+ * A MotiveScore from num/den in lowest terms (Rational). 0/0 stays 0/0, a score with nothing to compare. False when a
+ * part does not fit a Rational or the denominator is 0 under a non-zero numerator; *out is then untouched.
+ */
+bool motive_score_make(unsigned long long numerator, unsigned long long denominator, MotiveScore *out);
+bool motive_score_from_rational(Rational value, MotiveScore *out);
+Rational motive_score_rational(MotiveScore score);
 
 PlanTime motive_time(long num, unsigned long den);
 PlanTime motive_time_plus(PlanTime a, PlanTime b);

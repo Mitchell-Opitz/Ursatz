@@ -311,7 +311,7 @@ static void test_analysis_rest_and_dotted(void) {
                                         {"V", PLAN_FUNCTION_DOMINANT, 0.4, 2},
                                         {"iii", PLAN_FUNCTION_PREDOMINANT, 0.4, 2},
                                         {"V7", PLAN_FUNCTION_DOMINANT, 0.4, 2},
-                                        {"vii\xC2\xB0", PLAN_FUNCTION_DOMINANT, 0.2, 1}};
+                                        {"viio", PLAN_FUNCTION_DOMINANT, 0.2, 1}};
     expect_candidates(&a, EXPECTED, 7);
 }
 
@@ -349,7 +349,7 @@ static void test_analysis_tie(void) {
                                         {"iii", PLAN_FUNCTION_PREDOMINANT, 0.3, 1},
                                         {"V", PLAN_FUNCTION_DOMINANT, 0.1, 1},
                                         {"ii", PLAN_FUNCTION_PREDOMINANT, 0.1, 1},
-                                        {"vii\xC2\xB0", PLAN_FUNCTION_DOMINANT, 0.1, 1},
+                                        {"viio", PLAN_FUNCTION_DOMINANT, 0.1, 1},
                                         {"V7", PLAN_FUNCTION_DOMINANT, 0.1, 1}};
     expect_candidates(&a, EXPECTED, 8);
 }

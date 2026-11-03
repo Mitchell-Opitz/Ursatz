@@ -11,7 +11,6 @@
 #include <theory/style_model_blend.h>
 #include <theory/style_model_build.h>
 
-__extension__ typedef unsigned __int128 Wide;
 
 /* A category's statistics are brought to one total: the least common multiple of its labels' totals when that is below
    this, else this. */
@@ -25,15 +24,6 @@ ComposerStyleWeights composer_style_weights_all(ComposerRatio weight) {
         weights.denominator[d] = weight.denominator;
     }
     return weights;
-}
-
-static Wide gcd_wide(Wide a, Wide b) {
-    while (b) {
-        Wide rest = a % b;
-        a = b;
-        b = rest;
-    }
-    return a;
 }
 
 static ComposerStyleResult from_blend(StyleBlendResult result) {
@@ -114,7 +104,7 @@ static bool normalize_category(const StyleStatistic *items, size_t start, size_t
     Wide common = 1;
     for (size_t i = start; i < end; i++) {
         Wide total = items[i].total;
-        common = common / gcd_wide(common, total) * total;
+        common = common / wide_gcd(common, total) * total;
         if (common > COMMON_TOTAL_LIMIT) {
             common = COMMON_TOTAL_ROUNDED;
             break;

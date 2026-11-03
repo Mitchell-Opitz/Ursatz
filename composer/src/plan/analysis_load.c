@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <pitch/pitch_arithmetic.h>
+
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 
@@ -12,8 +14,6 @@
 
 #define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
 
-static const char *const FLAT_NAMES[] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
-static const char *const SHARP_NAMES[] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
 
 void analysis_load_report_destroy(AnalysisLoadReport *report) {
     if (!report) {
@@ -76,9 +76,10 @@ static bool parse_key_label(const char *label, PlanKey *key) {
         return false;
     }
     for (int pitch_class = 0; pitch_class < 12; pitch_class++) {
-        if ((strlen(FLAT_NAMES[pitch_class]) == tonic_length && strncmp(label, FLAT_NAMES[pitch_class], tonic_length) == 0) ||
-            (strlen(SHARP_NAMES[pitch_class]) == tonic_length &&
-             strncmp(label, SHARP_NAMES[pitch_class], tonic_length) == 0)) {
+        const char *flat = pitch_class_name(pitch_class, true);
+        const char *sharp = pitch_class_name(pitch_class, false);
+        if ((strlen(flat) == tonic_length && strncmp(label, flat, tonic_length) == 0) ||
+            (strlen(sharp) == tonic_length && strncmp(label, sharp, tonic_length) == 0)) {
             key->tonic_pitch_class = pitch_class;
             key->mode = (PlanKeyMode)mode;
             return true;

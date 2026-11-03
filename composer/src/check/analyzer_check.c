@@ -13,6 +13,8 @@
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/render.h>
 
+#include "util/util.h"
+
 #define MAX_CADENCES 2
 
 const char *analyzer_check_result_name(AnalyzerCheckResult result) {
@@ -63,11 +65,6 @@ static bool lane_at_start(const PiecePlan *plan, PlanLaneKind lane, PlanSpan sec
     *out = ids[0];
     free(ids);
     return found;
-}
-
-static void key_name(char *out, size_t size, int tonic_pitch_class, bool minor) {
-    static const char *const NAMES[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
-    snprintf(out, size, "%s %s", NAMES[tonic_pitch_class % 12], minor ? "minor" : "major");
 }
 
 /* ----------------------------------------------------------- the items */
@@ -163,10 +160,10 @@ static void compare_key(const AnalysisReport *report, PlanKey key, Items *items)
     char planned[32];
     char heard[32] = "none";
     bool agreed = false;
-    key_name(planned, sizeof(planned), key.tonic_pitch_class, key.mode == PLAN_MODE_MINOR);
+    util_key_name(key.tonic_pitch_class, key.mode == PLAN_MODE_MINOR, planned, sizeof(planned));
     if (report->key_region_count > 0) {
         const AnalysisKeyRegion *region = &report->key_regions[0];
-        key_name(heard, sizeof(heard), region->tonic_pitch_class, !region->is_major);
+        util_key_name(region->tonic_pitch_class, !region->is_major, heard, sizeof(heard));
         agreed = region->tonic_pitch_class == key.tonic_pitch_class && region->is_major == (key.mode == PLAN_MODE_MAJOR);
     }
     add_item(items, ANALYZER_CHECK_KEY, 0, planned, heard, agreed);

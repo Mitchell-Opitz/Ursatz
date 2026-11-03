@@ -8,13 +8,10 @@
 #include <ursatz_composer/motive_sketch_bridge.h>
 
 #include "motive/motive_internal.h"
+#include "util/util.h"
 
 /* The order of the proposed triads, which breaks ties (I first). */
 static const int TRIAD_ORDER[7] = {1, 5, 4, 6, 2, 3, 7};
-
-static int pitch_class(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
 
 /* The bar a time is in: bars are counted from the first barline, which is at the pickup, so a time before it is bar -1. */
 static long bar_of(Rational time, Rational pickup, Rational bar) {
@@ -42,7 +39,7 @@ static bool is_chord_tone(const MotiveSketch *sketch, const MotiveSketchChord *c
     int pcs[4];
     size_t count = motive_sketch_chord_tones(sketch, chord, pcs);
     for (size_t i = 0; i < count; i++) {
-        if (pcs[i] == pitch_class(pitch)) {
+        if (pcs[i] == util_pitch_class(pitch)) {
             return true;
         }
     }

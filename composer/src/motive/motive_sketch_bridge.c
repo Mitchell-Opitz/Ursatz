@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "motive/motive_internal.h"
+#include "util/util.h"
 
 /* Times in the sketch are unsigned and exact; the Composer's are signed longs over unsigned denominators. */
 #define TIME_LIMIT 1000000000L
@@ -20,10 +21,6 @@ static bool plan_time(Rational time, PlanTime *out) {
         return false;
     }
     return plan_time_make((long)time.num, (unsigned long)time.den, out) == PLAN_OK;
-}
-
-static int pitch_class(int pitch) {
-    return ((pitch % 12) + 12) % 12;
 }
 
 static bool has_pitch_class(const int *pcs, size_t count, int pc) {
@@ -48,7 +45,7 @@ static bool implied_chord(const MotiveSketch *sketch, MotiveSketchChord *out) {
         size_t hits = 0;
         Rational time = msk_int(0);
         for (size_t i = 0; i < sketch->note_count; i++) {
-            if (has_pitch_class(pcs, count, pitch_class(sketch->notes[i].pitch))) {
+            if (has_pitch_class(pcs, count, util_pitch_class(sketch->notes[i].pitch))) {
                 hits++;
                 time = msk_add(time, sketch->notes[i].duration);
             }

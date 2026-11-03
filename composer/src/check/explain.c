@@ -13,12 +13,11 @@
 
 #include "check/shaping.h"
 #include "plan/plan_json_internal.h"
+#include "style/style_internal.h"
 
 static const char *const LANE_NAMES[] = {"meter", "key", "harmony", "bass", "melody", "inner-voice"};
 static const char *const OUTCOME_NAMES[] = {"applied", "no-operator", "all-rejected"};
 static const char *const KIND_NAMES[] = {"cadence", "key", "violation"};
-
-__extension__ typedef unsigned __int128 Wide;
 
 /* ------------------------------------------------------------- freeing */
 
@@ -47,15 +46,6 @@ void explain_destroy(Explanation *explanation) {
 }
 
 /* ------------------------------------------------------------- the pieces */
-
-static Wide wide_gcd(Wide a, Wide b) {
-    while (b) {
-        Wide rest = a % b;
-        a = b;
-        b = rest;
-    }
-    return a;
-}
 
 /* a - b for rationals, never below 0, in lowest terms; parts that would not fit 64 bits are shifted down together. */
 static void ratio_behind(unsigned long an, unsigned long ad, unsigned long bn, unsigned long bd, unsigned long *num,
