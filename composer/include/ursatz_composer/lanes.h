@@ -50,12 +50,25 @@ typedef struct {
     bool has_function;         /* false for chords read from an analysis, which records no function */
 } PlanHarmony;
 
-/* offset is measured from the start of the owning lane span. */
+/*
+ * A note is a MIDI number and an optional spelling (R-242): the letter and accidental the note was written with. Only
+ * notes read from MusicXML are spelled; the operators write unspelled notes, and render spells those in the key under
+ * them. offset is measured from the start of the owning lane span.
+ */
 typedef struct {
-    int midi_pitch;
+    int midi;
     Rational offset;
     Rational duration;
+    bool spelled;
+    PitchLetter letter;  /* meaningful only when spelled */
+    int accidental;      /* meaningful only when spelled */
 } PlanNote;
+
+/* A note the operators write: a MIDI number, unspelled. */
+static inline PlanNote plan_note(int midi, Rational offset, Rational duration) {
+    PlanNote note = {midi, offset, duration, false, PITCH_LETTER_C, 0};
+    return note;
+}
 
 /* Notes are copied in; a pointer read back stays valid until the plan is destroyed. */
 typedef struct {

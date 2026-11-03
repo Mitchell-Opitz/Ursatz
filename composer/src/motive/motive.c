@@ -281,8 +281,8 @@ MotiveResult motive_check_notes(const Motive *motive, Rational *length, MotiveEr
         const PlanNote *note = &motive->notes[i];
         char location[MOTIVE_ERROR_LOCATION_MAX];
         snprintf(location, sizeof(location), "notes[%zu]", i);
-        if (note->midi_pitch < 0 || note->midi_pitch > 127) {
-            motive_set_error(error, location, "pitch %d is outside the MIDI range 0 to 127", note->midi_pitch);
+        if (note->midi < 0 || note->midi > 127) {
+            motive_set_error(error, location, "pitch %d is outside the MIDI range 0 to 127", note->midi);
             return MOTIVE_ERR_VALUE;
         }
         if (note->duration.num <= 0) {
@@ -315,7 +315,7 @@ MotiveResult motive_check_notes(const Motive *motive, Rational *length, MotiveEr
 static bool infer_key(const Motive *motive, AnalysisKey *out) {
     bool present[12] = {false};
     for (size_t i = 0; i < motive->note_count; i++) {
-        present[motive->notes[i].midi_pitch % 12] = true;
+        present[motive->notes[i].midi % 12] = true;
     }
     AnalysisKey found[24];
     size_t found_count = 0;
@@ -337,7 +337,7 @@ static bool infer_key(const Motive *motive, AnalysisKey *out) {
         *out = found[0];
         return true;
     }
-    int last = motive->notes[motive->note_count - 1].midi_pitch % 12;
+    int last = motive->notes[motive->note_count - 1].midi % 12;
     size_t match = found_count;
     for (size_t i = 0; i < found_count; i++) {
         if (analysis_key_tonic_pitch_class(&found[i]) == last) {
@@ -734,7 +734,7 @@ bool motive_equal(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch ||
+        if (a->notes[i].midi != b->notes[i].midi ||
             rational_cmp(a->notes[i].offset, b->notes[i].offset) != 0 ||
             rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
             return false;
@@ -788,7 +788,7 @@ static cJSON *notes_json(const Motive *motive) {
     for (size_t i = 0; array && i < motive->note_count; i++) {
         const PlanNote *note = &motive->notes[i];
         cJSON *object = cJSON_CreateObject();
-        bool ok = object && plan_json_add(object, "midi_pitch", json_number(note->midi_pitch)) &&
+        bool ok = object && plan_json_add(object, "midi_pitch", json_number(note->midi)) &&
                   plan_json_add(object, "offset", rational_json(note->offset.num, note->offset.den)) &&
                   plan_json_add(object, "duration", rational_json(note->duration.num, note->duration.den));
         if (!ok) {
@@ -969,7 +969,8 @@ static bool read_notes(JsonReader *reader, const cJSON *array, Motive *motive) {
             !read_time_member(reader, item, path, "duration", 1, &note.duration)) {
             return false;
         }
-        note.midi_pitch = (int)pitch;
+        note.midi = (int)pitch;
+        note.spelled = false;
         if (rational_cmp(note.offset, end) < 0) {
             char at[PLAN_JSON_PATH_MAX];
             json_child_path(at, path, "offset");
@@ -1166,12 +1167,13 @@ bool motive_in_key(const Motive *source, const AnalysisKey *key, Motive *out) {
     for (size_t i = 0; i < source->note_count; i++) {
         long position;
         int alteration;
-        motive_scale_position(&source->key, source->notes[i].midi_pitch - 60, &position, &alteration);
+        motive_scale_position(&source->key, source->notes[i].midi - 60, &position, &alteration);
         int pitch = 60 + motive_position_pitch(key, position, alteration);
         if (pitch < 0 || pitch > 127) {
             return false;
         }
-        moved.notes[i].midi_pitch = pitch;
+        moved.notes[i].midi = pitch;
+        moved.notes[i].spelled = false;
     }
     moved.key = *key;
     moved.key_source = MOTIVE_KEY_GIVEN;

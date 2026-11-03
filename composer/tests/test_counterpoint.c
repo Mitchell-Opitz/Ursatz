@@ -86,7 +86,7 @@ static Piece build(const Cantus *cantus, int species, bool above) {
     for (size_t b = 0; b < cantus->bars; b++) {
         PlanSpan span = {fraction((long)b, 1), fraction(1, 1)};
         int pitch = above ? cantus->above[b] : cantus->below[b];
-        PlanNote note[2] = {{pitch, fraction(0, 1), fraction(1, 1)}, {pitch, fraction(1, 2), fraction(1, 2)}};
+        PlanNote note[2] = {plan_note(pitch, fraction(0, 1), fraction(1, 1)), plan_note(pitch, fraction(1, 2), fraction(1, 2))};
         memset(&payload, 0, sizeof(payload));
         payload.notes.notes = note;
         payload.notes.note_count = 1;
@@ -100,7 +100,7 @@ static Piece build(const Cantus *cantus, int species, bool above) {
     }
     assert(plan_node_set_state(piece.plan, owner, PLAN_STATE_GIVEN) == PLAN_OK);
     {
-        PlanNote note = {60, fraction(0, 1), all.length};
+        PlanNote note = plan_note(60, fraction(0, 1), all.length);
         PlanConstraint constraint;
         memset(&payload, 0, sizeof(payload));
         payload.notes.notes = &note;

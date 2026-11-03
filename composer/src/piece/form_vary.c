@@ -156,7 +156,7 @@ static bool ornament_melody(ReturnPayload *payload, FillRng *rng) {
             }
             long first = split_at(onset, duration, cell);
             if (first == 0 ||
-                !choose_tone(payload->key, span->notes[n].midi_pitch, span->notes[n + 1].midi_pitch, rng, &pitch)) {
+                !choose_tone(payload->key, span->notes[n].midi, span->notes[n + 1].midi, rng, &pitch)) {
                 continue;
             }
             found[count++] = (Ornament){s, n, first, pitch};
@@ -204,7 +204,8 @@ static bool ornament_melody(ReturnPayload *payload, FillRng *rng) {
                      rational_add(span->notes[n].offset, first, &offset) == RATIONAL_OK;
                 notes[used].duration = first;
                 used++;
-                notes[used].midi_pitch = ornament->pitch;
+                notes[used].midi = ornament->pitch;
+                notes[used].spelled = false;
                 notes[used].offset = offset;
                 notes[used].duration = second;
             }
@@ -231,7 +232,8 @@ static bool open_notes(ReturnSpan *span, int pitch) {
         return false;
     }
     free(span->notes);
-    note->midi_pitch = pitch;
+    note->midi = pitch;
+    note->spelled = false;
     note->offset = (Rational){0, 1};
     note->duration = span->span.length;
     span->notes = note;
@@ -402,12 +404,13 @@ static bool reregister(ReturnPayload *payload) {
             continue;
         }
         for (size_t n = 0; n < span->note_count; n++) {
-            int pitch = span->notes[n].midi_pitch + payload->octave;
+            int pitch = span->notes[n].midi + payload->octave;
             if (pitch < 0 || pitch > 127 ||
                 (span->lane == PLAN_LANE_MELODY && (pitch < payload->range_low || pitch > payload->range_high))) {
                 return false;
             }
-            span->notes[n].midi_pitch = pitch;
+            span->notes[n].midi = pitch;
+            span->notes[n].spelled = false;
         }
     }
     return true;
@@ -443,7 +446,7 @@ bool return_same_melody(const ReturnPayload *a, const ReturnPayload *b) {
             return false;
         }
         for (size_t n = 0; n < x->note_count; n++) {
-            if (x->notes[n].midi_pitch != y->notes[n].midi_pitch ||
+            if (x->notes[n].midi != y->notes[n].midi ||
                 rational_cmp(x->notes[n].offset, y->notes[n].offset) != 0) {
                 return false;
             }
@@ -487,7 +490,7 @@ static void check_ornament(const ReturnPayload *payload, FillCheck *out) {
         /* The returned section's notes sit at the offsets they had in their own span: only the pitches move. */
         for (size_t n = 0; n < kept->note_count; n++) {
             long at = find_onset(span, kept->notes[n].offset);
-            if (at < 0 || span->notes[at].midi_pitch != kept->notes[n].midi_pitch + payload->transpose) {
+            if (at < 0 || span->notes[at].midi != kept->notes[n].midi + payload->transpose) {
                 reject(out, "ornament drops a note of the melody");
                 return;
             }
@@ -507,11 +510,11 @@ static void check_ornament(const ReturnPayload *payload, FillCheck *out) {
                 reject(out, "ornament adds a note on a strong beat");
                 return;
             }
-            int from = n > 0 ? span->notes[n].midi_pitch - span->notes[n - 1].midi_pitch : 0;
-            int to = n + 1 < span->note_count ? span->notes[n + 1].midi_pitch - span->notes[n].midi_pitch : 0;
+            int from = n > 0 ? span->notes[n].midi - span->notes[n - 1].midi : 0;
+            int to = n + 1 < span->note_count ? span->notes[n + 1].midi - span->notes[n].midi : 0;
             bool passing = is_step(from) && is_step(to) && util_sign(from) == util_sign(to);
             bool neighbor = is_step(from) && is_step(to) && util_sign(from) == -util_sign(to) &&
-                            n > 0 && n + 1 < span->note_count && span->notes[n + 1].midi_pitch == span->notes[n - 1].midi_pitch;
+                            n > 0 && n + 1 < span->note_count && span->notes[n + 1].midi == span->notes[n - 1].midi;
             if (!passing && !neighbor) {
                 reject(out, "ornament adds a note that is neither passing nor neighbor");
                 return;
@@ -534,7 +537,7 @@ static bool same_notes(const ReturnSpan *a, const ReturnSpan *b, int shift) {
         return false;
     }
     for (size_t n = 0; n < a->note_count; n++) {
-        if (a->notes[n].midi_pitch + shift != b->notes[n].midi_pitch ||
+        if (a->notes[n].midi + shift != b->notes[n].midi ||
             rational_cmp(a->notes[n].offset, b->notes[n].offset) != 0 ||
             rational_cmp(a->notes[n].duration, b->notes[n].duration) != 0) {
             return false;
@@ -605,7 +608,7 @@ static void check_reregister(const ReturnPayload *payload, FillCheck *out) {
     for (size_t i = 0; i < payload->result.span_count; i++) {
         const ReturnSpan *span = &payload->result.spans[i];
         for (size_t n = 0; span->lane == PLAN_LANE_MELODY && n < span->note_count; n++) {
-            if (span->notes[n].midi_pitch < payload->range_low || span->notes[n].midi_pitch > payload->range_high) {
+            if (span->notes[n].midi < payload->range_low || span->notes[n].midi > payload->range_high) {
                 reject(out, "re-registered melody leaves the range");
                 return;
             }

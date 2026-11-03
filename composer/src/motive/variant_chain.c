@@ -108,7 +108,7 @@ static VariantValue draw_param(FillRng *rng, const VariantParam *param, const Mo
         break;
     case VARIANT_PARAM_PITCH:
         /* An axis is one of the motive's own pitches. */
-        value.value = current->notes[fill_rng_below(rng, current->note_count)].midi_pitch;
+        value.value = current->notes[fill_rng_below(rng, current->note_count)].midi;
         break;
     case VARIANT_PARAM_RATIO: {
         /* A factor in lowest terms from min:max to max:min, above 1 or, when the parameter shrinks, below it. */

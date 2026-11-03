@@ -46,7 +46,7 @@ static inline size_t check_notes(const PiecePlan *plan, PlanLaneKind lane, int v
             assert(count < CHECK_MAX_NOTES);
             out[count].onset = base + check_ticks(notes->notes[n].offset);
             out[count].end = out[count].onset + check_ticks(notes->notes[n].duration);
-            out[count].pitch = notes->notes[n].midi_pitch;
+            out[count].pitch = notes->notes[n].midi;
             count++;
         }
     }

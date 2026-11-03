@@ -216,8 +216,8 @@ bool grow_same_contour(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 1; i < a->note_count; i++) {
-        if (direction(a->notes[i].midi_pitch - a->notes[i - 1].midi_pitch) !=
-            direction(b->notes[i].midi_pitch - b->notes[i - 1].midi_pitch)) {
+        if (direction(a->notes[i].midi - a->notes[i - 1].midi) !=
+            direction(b->notes[i].midi - b->notes[i - 1].midi)) {
             return false;
         }
     }
@@ -418,7 +418,7 @@ static bool same_kind(const MotiveDevSpec *a, const MotiveDevSpec *b) {
 
 /* Whether the last note of a development lands on the pitch class asked for (any when want is negative). */
 static bool lands_on(const Motive *result, int want) {
-    return want < 0 || ((result->notes[result->note_count - 1].midi_pitch % 12) + 12) % 12 == want;
+    return want < 0 || ((result->notes[result->note_count - 1].midi % 12) + 12) % 12 == want;
 }
 
 bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const GrowThemeSpec *spec,
@@ -434,7 +434,7 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
     for (int kind = 0; kind < 3; kind++) {
         /* Mirrored in the key's steps about a note near the first, so the contour turns over; every interval
            widened or narrowed; or the one interval changed. */
-        int first = source->notes[0].midi_pitch;
+        int first = source->notes[0].midi;
         int low = kind == 0 ? first - 2 : (kind == 1 ? -2 : 1);
         int high = kind == 0 ? first + 2 : (kind == 1 ? 2 : (int)intervals);
         for (int value = low; value <= high; value++) {
@@ -459,7 +459,7 @@ bool grow_draw_contrast(const GrowThemeRequest *request, FillRng *rng, const Gro
                 }
                 bool inside = true;
                 for (size_t k = 0; k < result.note_count; k++) {
-                    inside = inside && result.notes[k].midi_pitch >= CONTRAST_LOW && result.notes[k].midi_pitch <= CONTRAST_HIGH;
+                    inside = inside && result.notes[k].midi >= CONTRAST_LOW && result.notes[k].midi <= CONTRAST_HIGH;
                 }
                 if (!inside) {
                     continue;
@@ -551,7 +551,7 @@ static bool draw_section_motive(const ThemeRequest *request, FillRng *rng, const
             dev.kind = MOTIVE_DEV_INVERT;
             dev.tonal = asked->tonal;
             dev.has_axis = true;
-            dev.axis = asked->has_axis ? asked->axis : m0->notes[0].midi_pitch;
+            dev.axis = asked->has_axis ? asked->axis : m0->notes[0].midi;
             ref.has_axis = true;
             ref.axis = dev.axis;
             break;
@@ -784,7 +784,8 @@ static PlanResult add_accompaniment_targets(GrowBuild *build, NodeId owner, Plan
         PlanNote note;
         LaneSpanId id;
         memset(&payload, 0, sizeof(payload));
-        note.midi_pitch = INNER_PLACEHOLDER;
+        note.midi = INNER_PLACEHOLDER;
+        note.spelled = false;
         note.offset = (Rational){0, 1};
         note.duration = span.length;
         payload.notes.notes = &note;
@@ -814,7 +815,8 @@ static PlanResult add_voicing_targets(GrowBuild *build, NodeId owner, PlanSpan s
         PlanNote note;
         LaneSpanId id;
         memset(&payload, 0, sizeof(payload));
-        note.midi_pitch = INNER_PLACEHOLDER;
+        note.midi = INNER_PLACEHOLDER;
+        note.spelled = false;
         note.offset = (Rational){0, 1};
         note.duration = span.length;
         payload.notes.notes = &note;
@@ -841,7 +843,8 @@ static PlanResult add_voicing_targets(GrowBuild *build, NodeId owner, PlanSpan s
             LaneSpanId id;
             Rational gap_end;
             memset(&payload, 0, sizeof(payload));
-            note.midi_pitch = MELODY_PLACEHOLDER;
+            note.midi = MELODY_PLACEHOLDER;
+            note.spelled = false;
             note.offset = (Rational){0, 1};
             note.duration = gaps[g].length;
             payload.notes.notes = &note;
@@ -920,7 +923,8 @@ PlanResult grow_add_chord_targets(GrowBuild *build, NodeId owner, const PlanHarm
         PlanNote note;
         LaneSpanId bass;
         memset(&payload, 0, sizeof(payload));
-        note.midi_pitch = BASS_PLACEHOLDER;
+        note.midi = BASS_PLACEHOLDER;
+        note.spelled = false;
         note.offset = (Rational){0, 1};
         note.duration = gaps[g].length;
         payload.notes.notes = &note;
@@ -1053,7 +1057,8 @@ PlanResult grow_add_melody_target(GrowBuild *build, NodeId idea, const PlanMotiv
         LaneSpanId melody;
         Rational gap_end;
         memset(&payload, 0, sizeof(payload));
-        note.midi_pitch = MELODY_PLACEHOLDER;
+        note.midi = MELODY_PLACEHOLDER;
+        note.spelled = false;
         note.offset = (Rational){0, 1};
         note.duration = gaps[g].length;
         payload.notes.notes = &note;

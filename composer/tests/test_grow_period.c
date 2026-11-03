@@ -215,8 +215,8 @@ static bool same_contour(const PlanNotes *a, const PlanNotes *b) {
         return false;
     }
     for (size_t i = 1; i < a->note_count; i++) {
-        if (direction(a->notes[i].midi_pitch - a->notes[i - 1].midi_pitch) !=
-            direction(b->notes[i].midi_pitch - b->notes[i - 1].midi_pitch)) {
+        if (direction(a->notes[i].midi - a->notes[i - 1].midi) !=
+            direction(b->notes[i].midi - b->notes[i - 1].midi)) {
             return false;
         }
     }
@@ -228,7 +228,7 @@ static bool same_pitches(const PlanNotes *a, const PlanNotes *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch) {
+        if (a->notes[i].midi != b->notes[i].midi) {
             return false;
         }
     }
@@ -460,7 +460,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     }
     /* The cadence arrives on the tonic. */
     const PlanNotes *last = &plan_lane_span_payload(plan, ids[melodies - 1])->notes;
-    int tonic_pc = (last->notes[last->note_count - 1].midi_pitch % 12 + 12) % 12;
+    int tonic_pc = (last->notes[last->note_count - 1].midi % 12 + 12) % 12;
     assert(tonic_pc == scenario->tonic);
 
     /* The range, and one highest note in each phrase of the theme's melody. */
@@ -478,11 +478,11 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
         for (size_t i = 0; i < found; i++) {
             const PlanNotes *notes = &plan_lane_span_payload(plan, inside[i])->notes;
             for (size_t n = 0; n < notes->note_count; n++) {
-                assert(notes->notes[n].midi_pitch >= 60 && notes->notes[n].midi_pitch <= 79);
-                if (notes->notes[n].midi_pitch > top) {
-                    top = notes->notes[n].midi_pitch;
+                assert(notes->notes[n].midi >= 60 && notes->notes[n].midi <= 79);
+                if (notes->notes[n].midi > top) {
+                    top = notes->notes[n].midi;
                     at_top = 1;
-                } else if (notes->notes[n].midi_pitch == top) {
+                } else if (notes->notes[n].midi == top) {
                     at_top++;
                 }
             }
@@ -601,7 +601,7 @@ static void test_first_cadence(void) {
         size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, antecedent, melodies, 8);
         assert(found == 2);
         const PlanNotes *notes = &plan_lane_span_payload(plan, melodies[1])->notes;
-        assert((notes->notes[notes->note_count - 1].midi_pitch % 12 + 12) % 12 == (scenario->tonic + 4) % 12);
+        assert((notes->notes[notes->note_count - 1].midi % 12 + 12) % 12 == (scenario->tonic + 4) % 12);
         /* Its harmony ends on the tonic, not the dominant. */
         LaneSpanId chords[64];
         size_t count = plan_lane_find(plan, PLAN_LANE_HARMONY, 0, antecedent, chords, 64);

@@ -31,7 +31,7 @@ static void features_of(const Motive *motive, Features *out) {
     out->intervals = count - 1;
     out->ratios = count - 1;
     for (size_t i = 0; i + 1 < count; i++) {
-        int semitones = motive->notes[i + 1].midi_pitch - motive->notes[i].midi_pitch;
+        int semitones = motive->notes[i + 1].midi - motive->notes[i].midi;
         int size = (semitones < 0 ? -semitones : semitones) % 12;
         out->direction[i] = semitones > 0 ? 1 : (semitones < 0 ? -1 : 0);
         out->interval_class[i] = size > 6 ? 12 - size : size;

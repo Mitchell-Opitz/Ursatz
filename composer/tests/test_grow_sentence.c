@@ -199,7 +199,7 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     }
     /* The cadence arrives on the tonic. */
     const PlanNotes *last = &plan_lane_span_payload(plan, ids[melodies - 1])->notes;
-    int tonic_pc = (last->notes[last->note_count - 1].midi_pitch % 12 + 12) % 12;
+    int tonic_pc = (last->notes[last->note_count - 1].midi % 12 + 12) % 12;
     assert(tonic_pc == scenario->tonic);
 
     /* One highest note in the theme's melody. */
@@ -208,11 +208,11 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     for (size_t i = 0; i < melodies; i++) {
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
         for (size_t n = 0; n < notes->note_count; n++) {
-            assert(notes->notes[n].midi_pitch >= 60 && notes->notes[n].midi_pitch <= 79);
-            if (notes->notes[n].midi_pitch > top) {
-                top = notes->notes[n].midi_pitch;
+            assert(notes->notes[n].midi >= 60 && notes->notes[n].midi <= 79);
+            if (notes->notes[n].midi > top) {
+                top = notes->notes[n].midi;
                 at_top = 1;
-            } else if (notes->notes[n].midi_pitch == top) {
+            } else if (notes->notes[n].midi == top) {
                 at_top++;
             }
         }
@@ -449,7 +449,7 @@ static bool same_notes(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch || rational_cmp(a->notes[i].offset, b->notes[i].offset) != 0 ||
+        if (a->notes[i].midi != b->notes[i].midi || rational_cmp(a->notes[i].offset, b->notes[i].offset) != 0 ||
             rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
             return false;
         }
@@ -494,11 +494,11 @@ static void test_motive_forms(void) {
             /* A form below C#4 is taken up an octave. */
             int lowest = 127;
             for (size_t n = 0; n < expected.note_count; n++) {
-                lowest = expected.notes[n].midi_pitch < lowest ? expected.notes[n].midi_pitch : lowest;
+                lowest = expected.notes[n].midi < lowest ? expected.notes[n].midi : lowest;
             }
             if (lowest < 58) {
                 for (size_t n = 0; n < expected.note_count; n++) {
-                    expected.notes[n].midi_pitch += 12;
+                    expected.notes[n].midi += 12;
                 }
             }
             if (same_notes(&m1, &expected)) {

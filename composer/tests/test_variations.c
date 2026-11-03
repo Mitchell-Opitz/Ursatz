@@ -102,7 +102,7 @@ static char *lane_text(const PiecePlan *plan, NodeId node, PlanLaneKind lane) {
                 used += (size_t)snprintf(text + used, capacity - used, "%s;", payload->harmony.roman_numeral);
             }
             for (size_t n = 0; lane != PLAN_LANE_HARMONY && n < payload->notes.note_count; n++) {
-                used += (size_t)snprintf(text + used, capacity - used, "%d@%lld/%lld,", payload->notes.notes[n].midi_pitch,
+                used += (size_t)snprintf(text + used, capacity - used, "%d@%lld/%lld,", payload->notes.notes[n].midi,
                                          payload->notes.notes[n].offset.num, payload->notes.notes[n].offset.den);
             }
             assert(used < capacity - 256);

@@ -82,10 +82,12 @@ static PiecePlan *build_sentence_plan_with_tones(size_t tone_labels) {
 
     PlanNote notes[2];
     memset(notes, 0, sizeof(notes));
-    notes[0].midi_pitch = 64;
+    notes[0].midi = 64;
+    notes[0].spelled = false;
     assert(rational_make(0, 1, &notes[0].offset) == RATIONAL_OK);
     assert(rational_make(1, 2, &notes[0].duration) == RATIONAL_OK);
-    notes[1].midi_pitch = 67;
+    notes[1].midi = 67;
+    notes[1].spelled = false;
     assert(rational_make(1, 2, &notes[1].offset) == RATIONAL_OK);
     assert(rational_make(1, 4, &notes[1].duration) == RATIONAL_OK);
     PlanLanePayload melody;
@@ -278,7 +280,7 @@ static bool same_payload(PlanLaneKind lane, const PlanLanePayload *a, const Plan
         for (size_t i = 0; i < a->notes.note_count; i++) {
             const PlanNote *x = &a->notes.notes[i];
             const PlanNote *y = &b->notes.notes[i];
-            if (x->midi_pitch != y->midi_pitch || rational_cmp(x->offset, y->offset) != 0 ||
+            if (x->midi != y->midi || rational_cmp(x->offset, y->offset) != 0 ||
                 rational_cmp(x->duration, y->duration) != 0) {
                 return false;
             }
@@ -442,7 +444,7 @@ static void test_section_constraints(void) {
     NodeId material_phrase = add(plan, material, PLAN_NODE_PHRASE, bars(12, 1), "material");
     NodeId material_idea = add(plan, material_phrase, PLAN_NODE_IDEA, bars(12, 1), "material");
     NodeId m0 = add(plan, material_idea, PLAN_NODE_MOTIVE, bars(12, 1), "m0");
-    PlanNote placeholder = {60, {0, 1}, {1, 1}};
+    PlanNote placeholder = plan_note(60, rational_ratio(0, 1), rational_ratio(1, 1));
     PlanLanePayload melody;
     memset(&melody, 0, sizeof(melody));
     melody.notes.notes = &placeholder;

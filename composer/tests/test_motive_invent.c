@@ -73,7 +73,7 @@ static PiecePlan *build_plan(const Scenario *scenario, LaneSpanId *open) {
     assert(plan_add_lane_span(plan, form, PLAN_LANE_KEY, 0, form_span, &payload, &lane) == PLAN_OK);
     assert(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN) == PLAN_OK);
 
-    PlanNote placeholder = {60, time_of(0, 1), bar};
+    PlanNote placeholder = plan_note(60, time_of(0, 1), bar);
     memset(&payload, 0, sizeof(payload));
     payload.notes.notes = &placeholder;
     payload.notes.note_count = 1;
@@ -127,16 +127,16 @@ static void check_motive(const Scenario *scenario, const PiecePlan *plan, LaneSp
         assert(rational_cmp(note->offset, at) == 0);
         assert(note->duration.num > 0);
         assert(rational_add(at, note->duration, &at) == RATIONAL_OK);
-        assert(note->midi_pitch >= 60 && note->midi_pitch <= 84);
-        assert(degree_of(scenario, note->midi_pitch) != 0);
+        assert(note->midi >= 60 && note->midi <= 84);
+        assert(degree_of(scenario, note->midi) != 0);
         if (i > 0) {
-            int leap = abs(note->midi_pitch - notes->notes[i - 1].midi_pitch);
+            int leap = abs(note->midi - notes->notes[i - 1].midi);
             /* At most a sixth; no tritone or seventh. */
             assert(leap <= 9 && leap != 6);
         }
     }
     assert(rational_cmp(at, bar) == 0);
-    int first = degree_of(scenario, notes->notes[0].midi_pitch);
+    int first = degree_of(scenario, notes->notes[0].midi);
     assert(first == 1 || first == 3 || first == 5);
 
     /* The chosen candidate passed the checker: the melodic rules hold. */
@@ -159,7 +159,7 @@ static bool same_notes(const PiecePlan *a, const PiecePlan *b, LaneSpanId id) {
         return false;
     }
     for (size_t i = 0; i < x->note_count; i++) {
-        if (x->notes[i].midi_pitch != y->notes[i].midi_pitch ||
+        if (x->notes[i].midi != y->notes[i].midi ||
             rational_cmp(x->notes[i].offset, y->notes[i].offset) != 0 ||
             rational_cmp(x->notes[i].duration, y->notes[i].duration) != 0) {
             return false;

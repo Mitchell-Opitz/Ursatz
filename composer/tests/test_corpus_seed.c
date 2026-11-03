@@ -102,9 +102,9 @@ static int test_motive(void) {
     AnalysisKey a_minor = key_of(9, KEY_STRUCTURE_MODE_MINOR);
     assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &meter, &a_minor, 1, &seed) == CORPUS_SEED_OK);
     assert(seed.motive.note_count == 3);
-    assert(seed.motive.notes[0].midi_pitch % 12 == 9);
-    assert(seed.motive.notes[1].midi_pitch - seed.motive.notes[0].midi_pitch == 4);
-    assert(seed.motive.notes[2].midi_pitch - seed.motive.notes[1].midi_pitch == 3);
+    assert(seed.motive.notes[0].midi % 12 == 9);
+    assert(seed.motive.notes[1].midi - seed.motive.notes[0].midi == 4);
+    assert(seed.motive.notes[2].midi - seed.motive.notes[1].midi == 3);
     assert(analysis_key_tonic_pitch_class(&seed.motive.key) == 9 && seed.motive.key.mode == KEY_STRUCTURE_MODE_MINOR);
 
     /* Cut at the barline: a 6/8 bar (three quarters) takes the half note and the quarter, which ends on the barline;

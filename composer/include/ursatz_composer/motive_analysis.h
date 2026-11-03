@@ -161,7 +161,7 @@ const char *motive_shape_name(MotiveShape shape);
 /* A duration the way a note list writes it ("q", "e.", "h..") when it is one, otherwise "3/16". */
 void motive_duration_name(Rational duration, char *out, size_t size);
 /* A pitch as a note list writes it, a black key with a sharp as the spelling is not known: "D4", "A#3". */
-void motive_pitch_name(int midi_pitch, char *out, size_t size);
+void motive_pitch_name(int midi, char *out, size_t size);
 
 /* A human-readable summary: the notes, the intervals, the contour, the rhythm, the range, the degrees and the harmony. */
 void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis, FILE *out);

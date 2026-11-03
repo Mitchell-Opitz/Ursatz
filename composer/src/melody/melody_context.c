@@ -114,7 +114,7 @@ static bool read_bass(const PiecePlan *plan, MelodyContext *context) {
             }
             context->bass[context->bass_count].onset = at;
             context->bass[context->bass_count].end = position_add(at, duration);
-            context->bass[context->bass_count].pitch = notes->notes[n].midi_pitch;
+            context->bass[context->bass_count].pitch = notes->notes[n].midi;
             context->bass[context->bass_count].chord = melody_chord_at(context, at);
             context->bass_count++;
             at = position_add(at, duration);
@@ -211,11 +211,11 @@ static bool read_motive(const PiecePlan *plan, MelodyContext *context) {
     for (size_t i = 0; i < notes->note_count; i++) {
         context->motive_onset[i] = notes->notes[i].offset;
         context->motive_duration[i] = notes->notes[i].duration;
-        if (!position_is_positive(context->motive_duration[i]) || notes->notes[i].midi_pitch < 0 ||
-            notes->notes[i].midi_pitch > 127) {
+        if (!position_is_positive(context->motive_duration[i]) || notes->notes[i].midi < 0 ||
+            notes->notes[i].midi > 127) {
             return false;
         }
-        context->motive_pitch[i] = notes->notes[i].midi_pitch;
+        context->motive_pitch[i] = notes->notes[i].midi;
         if (i > 0 && rational_cmp(context->motive_onset[i],
                                   position_add(context->motive_onset[i - 1], context->motive_duration[i - 1])) < 0) {
             return false;
@@ -320,7 +320,7 @@ static bool read_idea_bass(const PiecePlan *plan, MelodyContext *context) {
             }
             context->bass[context->bass_count].onset = onset;
             context->bass[context->bass_count].end = end;
-            context->bass[context->bass_count].pitch = notes->notes[n].midi_pitch;
+            context->bass[context->bass_count].pitch = notes->notes[n].midi;
             context->bass[context->bass_count].chord = melody_chord_at(context, onset);
             context->bass_count++;
             at = end;
@@ -384,7 +384,7 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
             const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
             context->phrase_before_notes += notes->note_count;
             for (size_t n = 0; n < notes->note_count; n++) {
-                int pitch = notes->notes[n].midi_pitch;
+                int pitch = notes->notes[n].midi;
                 context->phrase_top = !context->phrase_has_top || pitch > context->phrase_top ? pitch : context->phrase_top;
                 context->phrase_has_top = true;
             }
@@ -405,7 +405,7 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
             /* A Given line is the user's: only the note the target joins is asked of, not the line's own rules. */
             take = plan_lane_span_state(plan, ids[0]) == PLAN_STATE_GIVEN && take > 1 ? 1 : take;
             for (size_t k = 0; k < take; k++) {
-                context->lead_in[k] = notes->notes[notes->note_count - take + k].midi_pitch;
+                context->lead_in[k] = notes->notes[notes->note_count - take + k].midi;
             }
             context->lead_in_count = take;
         }
@@ -424,9 +424,9 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
             plan_node_kind(plan, plan_lane_span_owner(plan, ids[0])) != PLAN_NODE_MOTIVE) {
             const PlanNotes *notes = &plan_lane_span_payload(plan, ids[0])->notes;
             if (notes->note_count > 0 && notes->notes[0].offset.num == 0) {
-                context->lead_out = notes->notes[0].midi_pitch;
+                context->lead_out = notes->notes[0].midi;
                 context->has_lead_out = true;
-                context->seam_next = notes->note_count > 1 ? notes->notes[1].midi_pitch : -1;
+                context->seam_next = notes->note_count > 1 ? notes->notes[1].midi : -1;
             }
         }
         context->at_seam = context->has_lead_out && seam_section_at(plan, end) != PLAN_NODE_NONE;
@@ -434,7 +434,7 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
             LaneSpanId bass[2];
             if (plan_lane_find(plan, PLAN_LANE_BASS, 0, first_tick, bass, 2) >= 1 &&
                 plan_lane_span_payload(plan, bass[0])->notes.note_count > 0) {
-                context->seam_bass = plan_lane_span_payload(plan, bass[0])->notes.notes[0].midi_pitch;
+                context->seam_bass = plan_lane_span_payload(plan, bass[0])->notes.notes[0].midi;
             }
         }
     }
@@ -544,7 +544,7 @@ static void restate_previous(const PiecePlan *plan, MelodyContext *context) {
         }
     }
     for (size_t i = 0; i < notes->note_count; i++) {
-        context->motive_pitch[i] = notes->notes[i].midi_pitch;
+        context->motive_pitch[i] = notes->notes[i].midi;
         context->motive_onset[i] = onset[i];
         context->motive_duration[i] = duration[i];
     }

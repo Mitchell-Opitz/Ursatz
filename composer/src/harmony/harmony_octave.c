@@ -97,7 +97,7 @@ static bool octave_context_read(const PiecePlan *plan, LaneSpanId target, Octave
                 rational_add(at, note->duration, &at) != RATIONAL_OK) {
                 return false;
             }
-            int pc = ((note->midi_pitch % 12) + 12) % 12;
+            int pc = ((note->midi % 12) + 12) % 12;
             int degree = degree_of(&context.key, pc);
             if (degree == 0) {
                 return false;

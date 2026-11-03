@@ -120,7 +120,7 @@ static bool read_notes(const PiecePlan *plan, PlanSpan range, int **pitches, Rat
                 continue;
             }
             if (rational_cmp(onset, range.start) >= 0 && rational_cmp(onset, end) < 0) {
-                (*pitches)[*count] = notes->notes[n].midi_pitch;
+                (*pitches)[*count] = notes->notes[n].midi;
                 (*durations)[*count] = notes->notes[n].duration;
                 (*count)++;
             }

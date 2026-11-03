@@ -71,7 +71,7 @@ bool motive_to_sketch(const Motive *motive, MotiveSketch *out) {
     sketch.note_count = motive->note_count;
     for (size_t i = 0; i < motive->note_count; i++) {
         const PlanNote *note = &motive->notes[i];
-        sketch.notes[i].pitch = pitched ? note->midi_pitch : MOTIVE_SKETCH_PITCH_UNKNOWN;
+        sketch.notes[i].pitch = pitched ? note->midi : MOTIVE_SKETCH_PITCH_UNKNOWN;
         sketch.notes[i].onset = sketch_time(note->offset);
         sketch.notes[i].duration = sketch_time(note->duration);
     }
@@ -171,12 +171,13 @@ bool motive_from_sketch(const MotiveSketch *sketch, const Motive *template_motiv
         motive.meter.beats_per_bar = meter.beats_per_bar;
         motive.meter.beat_unit = meter.beat_unit;
     }
-    int unknown_pitch = template_motive->note_count > 0 ? template_motive->notes[0].midi_pitch : 60;
+    int unknown_pitch = template_motive->note_count > 0 ? template_motive->notes[0].midi : 60;
     motive.note_count = sketch->note_count;
     for (size_t i = 0; i < sketch->note_count; i++) {
         PlanNote *note = &motive.notes[i];
         memset(note, 0, sizeof(*note));
-        note->midi_pitch = sketch->notes[i].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN ? unknown_pitch : sketch->notes[i].pitch;
+        note->midi = sketch->notes[i].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN ? unknown_pitch : sketch->notes[i].pitch;
+        note->spelled = false;
         if (!plan_time(sketch->notes[i].onset, &note->offset) || !plan_time(sketch->notes[i].duration, &note->duration)) {
             return false;
         }

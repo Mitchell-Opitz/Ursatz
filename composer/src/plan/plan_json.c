@@ -412,7 +412,7 @@ static cJSON *notes_json(const PlanNotes *notes) {
     for (size_t i = 0; array && i < notes->note_count; i++) {
         const PlanNote *note = &notes->notes[i];
         cJSON *object = cJSON_CreateObject();
-        if (!(object && plan_json_add(object, "midi_pitch", json_number(note->midi_pitch)) &&
+        if (!(object && plan_json_add(object, "midi_pitch", json_number(note->midi)) &&
               plan_json_add(object, "offset", rational_json(note->offset.num, note->offset.den)) &&
               plan_json_add(object, "duration", rational_json(note->duration.num, note->duration.den)) && plan_json_append(array, object))) {
             if (object && !cJSON_GetObjectItem(object, "duration")) {
@@ -1653,7 +1653,8 @@ static bool read_payload(JsonReader *reader, const cJSON *composer, const char *
                 !read_rational_member(reader, item, at, "duration", &notes[index].duration)) {
                 return false;
             }
-            notes[index].midi_pitch = (int)pitch;
+            notes[index].midi = (int)pitch;
+            notes[index].spelled = false;
             index++;
         }
         payload->notes.notes = notes;

@@ -180,10 +180,11 @@ static bool in_range(PlanSpan span, PlanLaneKind lane, const PlanSpan *range) {
 
 /* ----------------------------------------------------------------- keys */
 
-/* The tonic of a key as the library spells it: the fewest accidentals in the signature, sharps on a tie. */
+/* The tonic of a key as the key spells it. */
 static bool key_tonic(const AnalysisKey *key, PitchLetter *letter, int *accidental) {
-    return standard_tonality_key_tonic_of_pitch_class(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, letter,
-                                                      accidental);
+    *letter = key->tonic_letter;
+    *accidental = key->tonic_accidental;
+    return true;
 }
 
 /* The signature of a key as sharps (positive) or flats (negative); 0 for a tonic the library cannot spell. */
@@ -234,8 +235,8 @@ typedef struct {
  * A pitch as written in a key (none: C major). A note of the key's scale takes its signature spelling; any other is
  * placed on the line of fifths, its sharp spelling in a sharp key or none, its flat spelling in a flat key.
  */
-static Spelling spell(int midi_pitch, const AnalysisKey *key) {
-    int pitch_class = ((midi_pitch % PITCH_SEMITONES_PER_OCTAVE) + PITCH_SEMITONES_PER_OCTAVE) % PITCH_SEMITONES_PER_OCTAVE;
+static Spelling spell(int midi, const AnalysisKey *key) {
+    int pitch_class = ((midi % PITCH_SEMITONES_PER_OCTAVE) + PITCH_SEMITONES_PER_OCTAVE) % PITCH_SEMITONES_PER_OCTAVE;
     int sharps_flats = key ? key_sharps_flats(key) : 0;
     PitchLetter tonic_letter = PITCH_LETTER_C;
     int tonic_accidental = 0;
@@ -269,10 +270,10 @@ static Spelling spell(int midi_pitch, const AnalysisKey *key) {
     return written;
 }
 
-/* The octave that makes the spelling sound at midi_pitch (octave 4 C is 60), as pitch_spelling_midi_number counts. */
-static int spelling_octave(int midi_pitch, Spelling written) {
+/* The octave that makes the spelling sound at midi (octave 4 C is 60), as pitch_spelling_midi_number counts. */
+static int spelling_octave(int midi, Spelling written) {
     int semitones = pitch_letter_semitone(written.letter) + written.accidental;
-    return (midi_pitch - semitones) / PITCH_SEMITONES_PER_OCTAVE - 1;
+    return (midi - semitones) / PITCH_SEMITONES_PER_OCTAVE - 1;
 }
 
 /* ------------------------------------------------------------------ notes */
@@ -280,7 +281,10 @@ static int spelling_octave(int midi_pitch, Spelling written) {
 typedef struct {
     Rational onset;
     Rational duration;
-    int midi_pitch;
+    int midi;
+    bool spelled;
+    PitchLetter letter;
+    int accidental;
     size_t part;
     LaneSpanId span;
     size_t index;
@@ -341,7 +345,8 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
     char text[96];
 
     snprintf(text, sizeof(text), "composer-span-%zu-note-%zu", note->span, note->index);
-    Spelling written = spell(note->midi_pitch, key);
+    /* A note the plan spells is written as spelled; any other is spelled in the key under it. */
+    Spelling written = note->spelled ? (Spelling){note->letter, note->accidental} : spell(note->midi, key);
     bool ok = entity_id_create(text, &id) == ENTITY_ID_OK &&
               musical_time_from_rational(note->onset, &position) == TIME_RATIONAL_OK &&
               temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK;
@@ -349,9 +354,9 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
         position = NULL;
     }
     ok = ok && duration_create(note->duration.num, note->duration.den, &duration) == DURATION_OK &&
-         pitch_numeric_value_create(tuning, note->midi_pitch, 1, &value) == PITCH_NUMERIC_VALUE_OK &&
+         pitch_numeric_value_create(tuning, note->midi, 1, &value) == PITCH_NUMERIC_VALUE_OK &&
          pitch_numeric_value_to_identity(value, &identity) == PITCH_NUMERIC_VALUE_TO_IDENTITY_OK &&
-         pitch_spelling_create(written.letter, written.accidental, spelling_octave(note->midi_pitch, written), &spelling) ==
+         pitch_spelling_create(written.letter, written.accidental, spelling_octave(note->midi, written), &spelling) ==
              PITCH_SPELLING_OK;
     rendered_part_voice_id(part, text, sizeof(text));
     ok = ok && entity_id_create(text, &voice_id) == ENTITY_ID_OK &&
@@ -601,7 +606,13 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
                 result = PLAN_RENDER_ERR_NOT_REPRESENTABLE;
             }
             source->duration = note->duration;
-            source->midi_pitch = note->midi_pitch;
+            source->midi = note->midi;
+            /* A spelling that no longer names the pitch (the pitch was moved) is not kept. */
+            source->spelled = note->spelled && pitch_class_of_letter(note->letter, note->accidental) ==
+                                                   ((note->midi % PITCH_SEMITONES_PER_OCTAVE) + PITCH_SEMITONES_PER_OCTAVE) %
+                                                       PITCH_SEMITONES_PER_OCTAVE;
+            source->letter = note->letter;
+            source->accidental = note->accidental;
             source->part = part;
             source->span = id;
             source->index = n;

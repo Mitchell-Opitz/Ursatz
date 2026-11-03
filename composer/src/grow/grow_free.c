@@ -205,7 +205,7 @@ bool grow_free_applies(const PiecePlan *plan, FillTarget target) {
 /* Every pitch within the range a form may have, so the melody has room to place it. */
 static bool in_range(const Motive *motive) {
     for (size_t i = 0; i < motive->note_count; i++) {
-        if (motive->notes[i].midi_pitch < FORM_LOW || motive->notes[i].midi_pitch > FORM_HIGH) {
+        if (motive->notes[i].midi < FORM_LOW || motive->notes[i].midi > FORM_HIGH) {
             return false;
         }
     }
@@ -240,7 +240,7 @@ static bool draw_continuation(const Motive *source, Rational room, FillRng *rng,
             dev->kind = MOTIVE_DEV_INVERT;
             dev->tonal = true;
             dev->has_axis = true;
-            dev->axis = source->notes[0].midi_pitch;
+            dev->axis = source->notes[0].midi;
             break;
         default: {
             int amount = (int)fill_rng_below(rng, 2) + 1;

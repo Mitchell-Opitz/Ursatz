@@ -39,7 +39,7 @@ static bool step_from_relation(const MotiveRelationStep *relation, const Motive 
             if (motive->note_count == 0) {
                 return false;
             }
-            value = motive->notes[0].midi_pitch;
+            value = motive->notes[0].midi;
         }
         if (variant_step_set(step, param->name, value, relation->den[p])) {
             continue;

@@ -242,11 +242,11 @@ static bool propose_restatements(Proposal *proposal, FillRng *rng) {
         if (!try_spec(proposal, &spec)) {
             return false;
         }
-        int lowest = source->notes[0].midi_pitch;
+        int lowest = source->notes[0].midi;
         int highest = lowest;
         for (size_t i = 1; i < source->note_count; i++) {
-            lowest = source->notes[i].midi_pitch < lowest ? source->notes[i].midi_pitch : lowest;
-            highest = source->notes[i].midi_pitch > highest ? source->notes[i].midi_pitch : highest;
+            lowest = source->notes[i].midi < lowest ? source->notes[i].midi : lowest;
+            highest = source->notes[i].midi > highest ? source->notes[i].midi : highest;
         }
         size_t goal = proposal->added + wanted(proposal->context) - 1;
         for (size_t attempt = 0; proposal->added < goal && attempt < goal * ATTEMPTS_PER_CANDIDATE; attempt++) {

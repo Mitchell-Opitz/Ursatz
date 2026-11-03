@@ -200,17 +200,17 @@ SeamHearResult seam_hear(const PiecePlan *plan, NodeId seam, SeamHeard *out) {
     LaneSpanId id = span_at(plan, PLAN_LANE_BASS, 0, before);
     if (id != PLAN_LANE_SPAN_NONE && plan_lane_span_payload(plan, id)->notes.note_count > 0) {
         const PlanNotes *bass = &plan_lane_span_payload(plan, id)->notes;
-        notes.bass_before = bass->notes[bass->note_count - 1].midi_pitch;
+        notes.bass_before = bass->notes[bass->note_count - 1].midi;
     }
     id = span_at(plan, PLAN_LANE_BASS, 0, start);
     if (id != PLAN_LANE_SPAN_NONE && plan_lane_span_payload(plan, id)->notes.note_count > 0) {
-        notes.bass_after = plan_lane_span_payload(plan, id)->notes.notes[0].midi_pitch;
+        notes.bass_after = plan_lane_span_payload(plan, id)->notes.notes[0].midi;
     }
     id = span_at(plan, PLAN_LANE_MELODY, 0, before);
     if (id != PLAN_LANE_SPAN_NONE && plan_lane_span_payload(plan, id)->notes.note_count > 0) {
         const PlanNotes *melody = &plan_lane_span_payload(plan, id)->notes;
-        notes.melody_before = melody->notes[melody->note_count - 1].midi_pitch;
-        notes.melody_previous = melody->note_count > 1 ? melody->notes[melody->note_count - 2].midi_pitch : -1;
+        notes.melody_before = melody->notes[melody->note_count - 1].midi;
+        notes.melody_previous = melody->note_count > 1 ? melody->notes[melody->note_count - 2].midi : -1;
     }
     id = span_at(plan, PLAN_LANE_MELODY, 0, start);
     if (id == PLAN_LANE_SPAN_NONE) {
@@ -222,8 +222,8 @@ SeamHearResult seam_hear(const PiecePlan *plan, NodeId seam, SeamHeard *out) {
     }
     if (id != PLAN_LANE_SPAN_NONE && plan_lane_span_payload(plan, id)->notes.note_count > 0) {
         const PlanNotes *melody = &plan_lane_span_payload(plan, id)->notes;
-        notes.melody_after = melody->notes[0].midi_pitch;
-        notes.melody_next = melody->note_count > 1 ? melody->notes[1].midi_pitch : -1;
+        notes.melody_after = melody->notes[0].midi;
+        notes.melody_next = melody->note_count > 1 ? melody->notes[1].midi : -1;
     }
     seam_hear_notes(&notes, out);
     return SEAM_HEAR_OK;

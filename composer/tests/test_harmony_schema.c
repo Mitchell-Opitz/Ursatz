@@ -72,7 +72,7 @@ static Rational bars_of(const Fixture *fixture, long bars) {
 }
 
 static LaneSpanId add_bass(PiecePlan *plan, NodeId owner, PlanSpan span, int pitch) {
-    PlanNote note = {pitch, fraction(0, 1), span.length};
+    PlanNote note = plan_note(pitch, fraction(0, 1), span.length);
     PlanLanePayload payload;
     LaneSpanId id;
     memset(&payload, 0, sizeof(payload));
@@ -201,7 +201,7 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
                 used += (size_t)snprintf(out + used, size - used, " %s", payload->harmony.roman_numeral);
             } else {
                 for (size_t n = 0; n < payload->notes.note_count; n++) {
-                    used += (size_t)snprintf(out + used, size - used, " %d", payload->notes.notes[n].midi_pitch);
+                    used += (size_t)snprintf(out + used, size - used, " %d", payload->notes.notes[n].midi);
                 }
             }
             used += (size_t)snprintf(out + used, size - used, "\n");
@@ -281,9 +281,9 @@ static int bass_pc_under(const Fixture *fixture, LaneSpanId chord) {
     assert(rational_cmp(bass.start, span.start) == 0 && rational_cmp(bass.length, span.length) == 0);
     assert(plan_lane_span_state(fixture->plan, found[0]) == PLAN_STATE_REALIZED);
     const PlanNotes *notes = &plan_lane_span_payload(fixture->plan, found[0])->notes;
-    int pc = notes->notes[0].midi_pitch % 12;
+    int pc = notes->notes[0].midi % 12;
     for (size_t n = 0; n < notes->note_count; n++) {
-        assert(notes->notes[n].midi_pitch % 12 == pc);
+        assert(notes->notes[n].midi % 12 == pc);
     }
     return pc;
 }
@@ -405,7 +405,7 @@ static void check_given(const Fixture *fixture, const Scenario *scenario) {
     PlanSpan span = plan_lane_span_span(fixture->plan, fixture->given_bass);
     assert(plan_lane_span_state(fixture->plan, fixture->given_bass) == PLAN_STATE_GIVEN);
     assert(rational_cmp(span.length, fixture->bar_length) == 0);
-    assert(plan_lane_span_payload(fixture->plan, fixture->given_bass)->notes.notes[0].midi_pitch == 43);
+    assert(plan_lane_span_payload(fixture->plan, fixture->given_bass)->notes.notes[0].midi == 43);
 }
 
 /* --- the schemas --------------------------------------------------------- */

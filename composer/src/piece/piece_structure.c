@@ -243,8 +243,8 @@ static bool theme_motive(const PieceStructure *structure, const PieceSection *se
     int shift = ((analysis_key_tonic_pitch_class(&structure->key) - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
     shift = shift > 6 ? shift - 12 : shift;
     for (size_t i = 0; i < out->note_count; i++) {
-        out->notes[i].midi_pitch += shift;
-        if (out->notes[i].midi_pitch < 0 || out->notes[i].midi_pitch > 127) {
+        out->notes[i].midi += shift;
+        if (out->notes[i].midi < 0 || out->notes[i].midi > 127) {
             return false;
         }
     }

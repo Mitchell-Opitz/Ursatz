@@ -277,7 +277,8 @@ static bool build_motive(const MotiveRandomOptions *options, const AnalysisKey *
     out->key_source = MOTIVE_KEY_GIVEN;
     long onset = 0;
     for (size_t i = 0; i < rhythm->count; i++) {
-        out->notes[i].midi_pitch = melody->pitches[i];
+        out->notes[i].midi = melody->pitches[i];
+        out->notes[i].spelled = false;
         if (rational_make(onset, den, &out->notes[i].offset) != RATIONAL_OK ||
             rational_make(rhythm->ticks[i], den, &out->notes[i].duration) != RATIONAL_OK) {
             return false;
@@ -376,7 +377,7 @@ static bool already_made(const Motive *made, size_t count, const Motive *motive)
 static bool candidate_closeness(const MotiveRandomOptions *options, const Motive *full, ComposerRatio *out) {
     ComposerStyleNote notes[MAX_NOTES];
     for (size_t i = 0; i < full->note_count; i++) {
-        notes[i].pitch = full->notes[i].midi_pitch;
+        notes[i].pitch = full->notes[i].midi;
         notes[i].duration_numerator = (unsigned long)full->notes[i].duration.num;
         notes[i].duration_denominator = full->notes[i].duration.den;
     }

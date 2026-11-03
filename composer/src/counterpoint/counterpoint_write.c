@@ -244,7 +244,7 @@ bool counterpoint_read_written(const PiecePlan *plan, LaneSpanId target, Counter
             Rational duration = notes->notes[n].duration;
             if (rational_cmp(onset, at) <= 0 && rational_cmp(at, position_add(onset, duration)) < 0) {
                 line->kind[slot] = rational_cmp(onset, at) == 0 ? CP_SLOT_ATTACK : CP_SLOT_TIE;
-                line->pitch[slot] = notes->notes[n].midi_pitch;
+                line->pitch[slot] = notes->notes[n].midi;
             }
         }
     }
@@ -321,7 +321,8 @@ static PlanResult slot_notes(const CounterpointContext *context, const Counterpo
         bool done = i == candidate->slots || candidate->kind[i] != CP_SLOT_TIE;
         if (open && done) {
             PlanNote *note = &notes[(*count)++];
-            note->midi_pitch = pitch;
+            note->midi = pitch;
+            note->spelled = false;
             note->offset = start;
             note->duration = position_sub(end, start);
             if (position_is_far(note->offset) || position_is_far(note->duration)) {

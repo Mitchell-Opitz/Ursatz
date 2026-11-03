@@ -160,7 +160,8 @@ static PlanResult melody_apply(PiecePlan *plan, FillTarget target, const FillCan
     for (size_t i = 0; result == PLAN_OK && i < melody->pickup_count + melody->count; i++) {
         const MelodyNote *note = i < melody->pickup_count ? &melody->pickup_notes[i]
                                                            : &melody->notes[i - melody->pickup_count];
-        notes[i].midi_pitch = note->pitch;
+        notes[i].midi = note->pitch;
+        notes[i].spelled = false;
         notes[i].offset = position_add(note->onset, melody->context.pickup);
         notes[i].duration = note->duration;
         if (position_is_far(notes[i].offset) || position_is_far(notes[i].duration)) {

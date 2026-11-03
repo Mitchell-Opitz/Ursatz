@@ -141,7 +141,7 @@ static size_t sounded(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, S
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
         for (size_t n = 0; n < notes->note_count; n++) {
             assert(count < max);
-            out[count].pitch = notes->notes[n].midi_pitch;
+            out[count].pitch = notes->notes[n].midi;
             out[count].duration = notes->notes[n].duration;
             assert(rational_add(owner.start, notes->notes[n].offset, &out[count].onset) == RATIONAL_OK);
             count++;

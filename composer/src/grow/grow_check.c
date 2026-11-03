@@ -102,7 +102,7 @@ static bool motives_differ(const Motive *a, const Motive *b) {
         return true;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch) {
+        if (a->notes[i].midi != b->notes[i].midi) {
             return true;
         }
     }

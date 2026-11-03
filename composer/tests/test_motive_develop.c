@@ -262,7 +262,7 @@ static bool same_notes(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch) {
+        if (a->notes[i].midi != b->notes[i].midi) {
             return false;
         }
     }
@@ -276,13 +276,13 @@ static bool is_transposition(const Motive *source, const Motive *result, Analysi
     }
     bool real = true;
     bool tonal = true;
-    int shift = result->notes[0].midi_pitch - source->notes[0].midi_pitch;
-    long first = step_of(key, source->notes[0].midi_pitch);
-    long first_result = step_of(key, result->notes[0].midi_pitch);
+    int shift = result->notes[0].midi - source->notes[0].midi;
+    long first = step_of(key, source->notes[0].midi);
+    long first_result = step_of(key, result->notes[0].midi);
     for (size_t i = 0; i < source->note_count; i++) {
-        real = real && result->notes[i].midi_pitch - source->notes[i].midi_pitch == shift;
-        long from = step_of(key, source->notes[i].midi_pitch);
-        long to = step_of(key, result->notes[i].midi_pitch);
+        real = real && result->notes[i].midi - source->notes[i].midi == shift;
+        long from = step_of(key, source->notes[i].midi);
+        long to = step_of(key, result->notes[i].midi);
         tonal = tonal && from != LONG_MIN && to != LONG_MIN && first != LONG_MIN && first_result != LONG_MIN &&
                 to - from == first_result - first;
     }
@@ -296,12 +296,12 @@ static bool is_inversion(const Motive *source, const Motive *result, AnalysisKey
     }
     bool real = true;
     bool tonal = true;
-    int sum = source->notes[0].midi_pitch + result->notes[0].midi_pitch;
+    int sum = source->notes[0].midi + result->notes[0].midi;
     long step_sum = LONG_MIN;
     for (size_t i = 0; i < source->note_count; i++) {
-        real = real && source->notes[i].midi_pitch + result->notes[i].midi_pitch == sum;
-        long from = step_of(key, source->notes[i].midi_pitch);
-        long to = step_of(key, result->notes[i].midi_pitch);
+        real = real && source->notes[i].midi + result->notes[i].midi == sum;
+        long from = step_of(key, source->notes[i].midi);
+        long to = step_of(key, result->notes[i].midi);
         if (from == LONG_MIN || to == LONG_MIN) {
             tonal = false;
         } else if (step_sum == LONG_MIN) {
@@ -321,7 +321,7 @@ static bool is_retrograde(const Motive *source, const Motive *result) {
     }
     for (size_t i = 0; i < n; i++) {
         const PlanNote *from = &source->notes[n - 1 - i];
-        if (result->notes[i].midi_pitch != from->midi_pitch || !teq(result->notes[i].duration, from->duration)) {
+        if (result->notes[i].midi != from->midi || !teq(result->notes[i].duration, from->duration)) {
             return false;
         }
     }
@@ -344,13 +344,13 @@ static int sign(int value) {
 
 /* The rhythm and the first pitch are the source's; some interval differs; a direction changes only if allowed. */
 static bool is_interval_change(const Motive *source, const Motive *result, bool keep_contour) {
-    if (!same_rhythm(source, result) || result->notes[0].midi_pitch != source->notes[0].midi_pitch) {
+    if (!same_rhythm(source, result) || result->notes[0].midi != source->notes[0].midi) {
         return false;
     }
     bool differs = false;
     for (size_t i = 0; i + 1 < source->note_count; i++) {
-        int before = source->notes[i + 1].midi_pitch - source->notes[i].midi_pitch;
-        int after = result->notes[i + 1].midi_pitch - result->notes[i].midi_pitch;
+        int before = source->notes[i + 1].midi - source->notes[i].midi;
+        int after = result->notes[i + 1].midi - result->notes[i].midi;
         differs = differs || before != after;
         if (keep_contour && sign(before) != sign(after)) {
             return false;
@@ -364,7 +364,7 @@ static bool is_interval_change(const Motive *source, const Motive *result, bool 
 }
 
 static bool note_matches(const PlanNote *a, const PlanNote *b) {
-    return a->midi_pitch == b->midi_pitch && teq(a->duration, b->duration);
+    return a->midi == b->midi && teq(a->duration, b->duration);
 }
 
 /* A run of neighboring notes of the source, with its rests, starting the result at 0. */
@@ -389,7 +389,7 @@ static bool is_fragment(const Motive *source, const Motive *result) {
 
 /* Kept rhythm: a kept note stays where it was and holds on through the time of the notes dropped after it. */
 static bool kept_note_matches(const PlanNote *source, const PlanNote *kept) {
-    return source->midi_pitch == kept->midi_pitch && tsub(kept->duration, source->duration).num >= 0;
+    return source->midi == kept->midi && tsub(kept->duration, source->duration).num >= 0;
 }
 
 /* Some of the source's notes, in order. Kept rhythm: where they were. Otherwise one after another from 0. */
@@ -432,7 +432,7 @@ static bool is_scaling(const Motive *source, const Motive *result, bool augment)
         return false;
     }
     for (size_t i = 0; i < source->note_count; i++) {
-        if (result->notes[i].midi_pitch != source->notes[i].midi_pitch ||
+        if (result->notes[i].midi != source->notes[i].midi ||
             !teq(result->notes[i].duration, tmul(source->notes[i].duration, ratio)) ||
             !teq(result->notes[i].offset, tmul(source->notes[i].offset, ratio))) {
             return false;
@@ -612,7 +612,7 @@ static bool pitches_are(const Motive *motive, size_t count, const int *pitches) 
         return false;
     }
     for (size_t i = 0; i < count; i++) {
-        if (motive->notes[i].midi_pitch != pitches[i]) {
+        if (motive->notes[i].midi != pitches[i]) {
             return false;
         }
     }
@@ -790,7 +790,7 @@ static void test_degenerate_cases(void) {
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && motive_equal(&single, &result));
     spec.kind = MOTIVE_DEV_TRANSPOSE;
     spec.amount = 7;
-    assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && result.notes[0].midi_pitch == 67);
+    assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && result.notes[0].midi == 67);
     memset(&spec, 0, sizeof(spec));
     spec.kind = MOTIVE_DEV_AUGMENT;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && is_time(result.notes[0].duration, 1, 2));
@@ -928,14 +928,14 @@ static void test_pickups_and_tonal_spelling(void) {
     spec.tonal = true;
     spec.amount = 1;
     assert(motive_develop(&line, &spec, &result) == MOTIVE_DEV_OK);
-    assert(result.notes[0].midi_pitch == 62 && result.notes[1].midi_pitch == 67 && result.notes[2].midi_pitch == 72 &&
-           result.notes[3].midi_pitch == 65);
+    assert(result.notes[0].midi == 62 && result.notes[1].midi == 67 && result.notes[2].midi == 72 &&
+           result.notes[3].midi == 65);
     memset(&spec, 0, sizeof(spec));
     spec.kind = MOTIVE_DEV_INVERT;
     spec.tonal = true;
     assert(motive_develop(&line, &spec, &result) == MOTIVE_DEV_OK);
-    assert(result.notes[0].midi_pitch == 60 && result.notes[1].midi_pitch == 55 && result.notes[2].midi_pitch == 50 &&
-           result.notes[3].midi_pitch == 57);
+    assert(result.notes[0].midi == 60 && result.notes[1].midi == 55 && result.notes[2].midi == 50 &&
+           result.notes[3].midi == 57);
 }
 
 static void test_recognizability(void) {

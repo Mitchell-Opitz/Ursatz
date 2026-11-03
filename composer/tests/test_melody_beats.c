@@ -66,7 +66,8 @@ static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, in
     PlanLanePayload payload;
     LaneSpanId id;
     memset(&payload, 0, sizeof(payload));
-    note.midi_pitch = pitch;
+    note.midi = pitch;
+    note.spelled = false;
     note.offset = fraction(0, 1);
     note.duration = span.length;
     payload.notes.notes = &note;
@@ -154,7 +155,8 @@ static void add_accompaniment_motive(Piece *piece) {
     motive.key_source = MOTIVE_KEY_GIVEN;
     motive.role = MOTIVE_ROLE_ACCOMPANIMENT;
     for (size_t n = 0; n < 4; n++) {
-        motive.notes[n].midi_pitch = PITCHES[n];
+        motive.notes[n].midi = PITCHES[n];
+        motive.notes[n].spelled = false;
         motive.notes[n].offset = fraction((long)n, 8);
         motive.notes[n].duration = fraction(1, 8);
     }

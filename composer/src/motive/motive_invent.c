@@ -202,7 +202,8 @@ static bool draw_motive(const InventRequest *request, FillRng *rng, Motive *out)
         if (rational_make(rhythm.num[i], rhythm.den[i], &duration) != RATIONAL_OK) {
             return false;
         }
-        out->notes[i].midi_pitch = pitch;
+        out->notes[i].midi = pitch;
+        out->notes[i].spelled = false;
         out->notes[i].offset = onset;
         out->notes[i].duration = duration;
         if (rational_add(onset, duration, &onset) != RATIONAL_OK) {
@@ -225,9 +226,9 @@ bool motive_melodic_fault(const Motive *motive, const char **fault) {
     for (size_t i = 0; i < motive->note_count; i++) {
         long position;
         int alteration;
-        motive_scale_position(&motive->key, motive->notes[i].midi_pitch, &position, &alteration);
+        motive_scale_position(&motive->key, motive->notes[i].midi, &position, &alteration);
         long degree = ((position % 7) + 7) % 7 + 1;
-        spellings[made] = harmony_spell_pitch(&motive->key, (int)degree, motive->notes[i].midi_pitch);
+        spellings[made] = harmony_spell_pitch(&motive->key, (int)degree, motive->notes[i].midi);
         if (!spellings[made]) {
             *fault = "a pitch cannot be spelled";
             break;
@@ -306,7 +307,7 @@ static bool invent_already(const FillCandidateList *list, const Motive *motive) 
 static void invent_label(const Motive *motive, char *label, size_t size) {
     int used = snprintf(label, size, "invented");
     for (size_t i = 0; used > 0 && (size_t)used + 1 < size && i < motive->note_count; i++) {
-        int written = snprintf(label + used, size - (size_t)used, " %d", motive->notes[i].midi_pitch);
+        int written = snprintf(label + used, size - (size_t)used, " %d", motive->notes[i].midi);
         if (written < 0) {
             break;
         }

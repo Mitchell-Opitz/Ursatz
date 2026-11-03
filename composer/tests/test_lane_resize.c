@@ -67,7 +67,7 @@ static void test_resize_checks_notes(void) {
     PiecePlan *plan = plan_create();
     NodeId form = PLAN_NODE_NONE;
     assert(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 4), NULL, &form) == PLAN_OK);
-    PlanNote note = {60, fraction(2, 1), fraction(1, 1)};
+    PlanNote note = plan_note(60, fraction(2, 1), fraction(1, 1));
     PlanLanePayload payload;
     LaneSpanId melody = PLAN_LANE_SPAN_NONE;
     memset(&payload, 0, sizeof(payload));

@@ -43,11 +43,7 @@ static NodeId add(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan sp
 }
 
 static PlanNote note(int pitch, Rational offset, Rational duration) {
-    PlanNote result;
-    result.midi_pitch = pitch;
-    result.offset = offset;
-    result.duration = duration;
-    return result;
+    return plan_note(pitch, offset, duration);
 }
 
 static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, int voice, PlanSpan span,
@@ -577,7 +573,30 @@ static void test_layers_are_masked(void) {
     plan_destroy(plan);
 }
 
+/* A note the plan spells is written as spelled; the same pitch unspelled takes the key's spelling (D minor: a flat). */
+static void test_spelled_notes(void) {
+    PiecePlan *plan = plan_create();
+    NodeId form = add(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, bars(0, 2), "form");
+    add_meter_and_key(plan, form, bars(0, 2));
+    PlanNote notes[2] = {note(61, time_of(0, 1), time_of(1, 1)), note(61, time_of(1, 1), time_of(1, 1))};
+    notes[0].spelled = true;
+    notes[0].letter = PITCH_LETTER_C;
+    notes[0].accidental = 1;
+    LaneSpanId melody = add_notes(plan, form, PLAN_LANE_MELODY, 0, bars(0, 2), notes, 2);
+    assert(plan_lane_span_set_state(plan, melody, PLAN_STATE_GIVEN) == PLAN_OK);
+    RenderedPlan rendered;
+    assert(plan_render(plan, &rendered) == PLAN_RENDER_OK && rendered.count == 2);
+    const PitchSpelling *written = note_event_optional_pitch_spelling(rendered.events[0]);
+    const PitchSpelling *unwritten = note_event_optional_pitch_spelling(rendered.events[1]);
+    assert(pitch_spelling_letter(written) == PITCH_LETTER_C && pitch_spelling_accidental(written) == 1);
+    assert(pitch_spelling_octave(written) == 4);
+    assert(pitch_spelling_letter(unwritten) == PITCH_LETTER_D && pitch_spelling_accidental(unwritten) == -1);
+    rendered_plan_destroy(&rendered);
+    plan_destroy(plan);
+}
+
 int main(void) {
+    test_spelled_notes();
     test_render();
     test_material_is_left_out();
     test_layers_are_masked();

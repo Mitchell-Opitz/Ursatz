@@ -178,7 +178,8 @@ static void test_refusals(void) {
     assert(plan_give_melody(plan, b, 0, melody.notes, 0) == GIVEN_ERR_BAD_NOTES);
     assert(plan_give_melody(plan, b, 0, NULL, 4) == GIVEN_ERR_BAD_NOTES);
     PlanNote bad[2] = {melody.notes[0], melody.notes[1]};
-    bad[0].midi_pitch = 200;
+    bad[0].midi = 200;
+    bad[0].spelled = false;
     assert(plan_give_melody(plan, b, 0, bad, 2) == GIVEN_ERR_BAD_NOTES);
     bad[0] = melody.notes[0];
     bad[1].offset = bad[0].offset; /* overlaps the first */
@@ -375,11 +376,11 @@ static void check_given_fits(const PiecePlan *plan, ScenarioKind kind) {
                 unsigned mask;
                 unsigned seventh;
                 assert(melody_chord_mask(&key, &chord, &mask, &seventh));
-                assert((mask >> (notes->notes[n].midi_pitch % 12)) & 1u);
+                assert((mask >> (notes->notes[n].midi % 12)) & 1u);
             } else if (rational_cmp(plan_lane_span_span(plan, chords[0]).start, onset) == 0) {
                 int pc;
                 assert(harmony_chord_bass_pc(&key, &chord, &pc));
-                assert(pc == notes->notes[n].midi_pitch % 12);
+                assert(pc == notes->notes[n].midi % 12);
             }
         }
     }

@@ -72,8 +72,8 @@ static void check_motive(const Scenario *scenario, const Motive *motive) {
         const PlanNote *note = &motive->notes[i];
         assert(rational_cmp(note->offset, onset) == 0);
         assert(rational_add(onset, note->duration, &onset) == RATIONAL_OK);
-        low = note->midi_pitch < low ? note->midi_pitch : low;
-        high = note->midi_pitch > high ? note->midi_pitch : high;
+        low = note->midi < low ? note->midi : low;
+        high = note->midi > high ? note->midi : high;
     }
     assert(rational_cmp(motive->length, onset) == 0);
     assert(high - low <= 19);
@@ -225,7 +225,7 @@ static void test_forms(void) {
         for (size_t i = 0; i < made; i++) {
             assert(motives[i].form == MOTIVE_FORM_RHYTHM && motives[i].key_source == MOTIVE_KEY_GIVEN);
             for (size_t n = 1; n < motives[i].note_count; n++) {
-                assert(motives[i].notes[n].midi_pitch == motives[i].notes[0].midi_pitch);
+                assert(motives[i].notes[n].midi == motives[i].notes[0].midi);
             }
         }
         options.form = MOTIVE_FORM_CONTOUR;

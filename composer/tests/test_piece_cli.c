@@ -218,7 +218,7 @@ static char *dump_lane(const PiecePlan *plan, PlanLaneKind lane, int voice, long
             used += (size_t)snprintf(out + used, DUMP_SIZE - used, " %s", payload->harmony.roman_numeral);
         } else {
             for (size_t n = 0; n < payload->notes.note_count; n++) {
-                used += (size_t)snprintf(out + used, DUMP_SIZE - used, " %d@%.6f/%.6f", payload->notes.notes[n].midi_pitch,
+                used += (size_t)snprintf(out + used, DUMP_SIZE - used, " %d@%.6f/%.6f", payload->notes.notes[n].midi,
                                          to_double(payload->notes.notes[n].offset), to_double(payload->notes.notes[n].duration));
             }
         }
@@ -263,7 +263,7 @@ static char *dump_bar(const PiecePlan *plan, PlanLaneKind lane, long bar) {
             double onset = to_double(span.start) + to_double(payload->notes.notes[n].offset);
             if (onset >= (double)bar && onset < (double)bar + 1.0) {
                 used += (size_t)snprintf(out + used, DUMP_SIZE - used, "%.6f %d %.6f;", onset - (double)bar,
-                                         payload->notes.notes[n].midi_pitch, to_double(payload->notes.notes[n].duration));
+                                         payload->notes.notes[n].midi, to_double(payload->notes.notes[n].duration));
             }
         }
     }

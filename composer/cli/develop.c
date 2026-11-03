@@ -216,7 +216,7 @@ static bool parse_pitch(const char *text, int *out) {
     if (motive_from_notes_text(note, &options, &motive, NULL) != MOTIVE_OK || motive.note_count != 1) {
         return false;
     }
-    *out = motive.notes[0].midi_pitch;
+    *out = motive.notes[0].midi;
     return true;
 }
 
@@ -280,7 +280,7 @@ static void motive_text(const Motive *motive, char *out, size_t size) {
         Rational gap;
         rational_sub(note->offset, cursor, &gap);
         char pitch[16];
-        motive_pitch_name(note->midi_pitch, pitch, sizeof(pitch));
+        motive_pitch_name(note->midi, pitch, sizeof(pitch));
         if (i > 0) {
             append(out, size, &used, " ");
         }

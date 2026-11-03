@@ -420,7 +420,8 @@ static PlanResult part_payload(const VoicingContext *context, const VoicingCandi
                                PlanNote *notes, PlanLanePayload *payload) {
     for (size_t i = context->first; i < candidate->chord_count; i++) {
         PlanNote *note = &notes[i - context->first];
-        note->midi_pitch = candidate->pitch[i][part];
+        note->midi = candidate->pitch[i][part];
+        note->spelled = false;
         note->offset = context->chord_start[i];
         note->duration = position_sub(context->chord_start[i + 1], context->chord_start[i]);
         if (position_is_far(note->offset) || position_is_far(note->duration)) {

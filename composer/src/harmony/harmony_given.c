@@ -44,7 +44,7 @@ static int given_pitch_class(const PiecePlan *plan, PlanLaneKind lane, PlanSpan 
             }
             int from_start = rational_cmp(onset, at);
             if (start_only ? from_start == 0 : (from_start <= 0 && rational_cmp(at, end) < 0)) {
-                return ((notes->notes[n].midi_pitch % 12) + 12) % 12;
+                return ((notes->notes[n].midi % 12) + 12) % 12;
             }
         }
     }

@@ -712,12 +712,12 @@ bool melody_check_lane(const PiecePlan *plan, PlanSpan span, AnalysisKey key, co
                 ok = melody->pickup_count < MELODY_MAX_PICKUP;
                 pickup->onset = onset;
                 pickup->duration = note->duration;
-                pickup->pitch = notes->notes[n].midi_pitch;
+                pickup->pitch = notes->notes[n].midi;
                 pickup->motive_index = -1;
                 melody->pickup_count += ok;
             } else if (ok) {
                 note->onset = onset;
-                note->pitch = notes->notes[n].midi_pitch;
+                note->pitch = notes->notes[n].midi;
                 note->motive_index = -1;
                 note->strong = melody_on_cell(&melody->context, note->onset);
                 note->chord = melody_chord_at(&melody->context, note->onset);

@@ -181,7 +181,7 @@ bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, AnalysisKey key, c
                 ok = ok && harmony_metre_find_cells(&context->metre, note_span, &first_cell, &length_cells) &&
                      rational_add(offset, notes->notes[n].duration, &offset) == RATIONAL_OK;
                 if (ok) {
-                    line->notes[line->note_count].pitch = notes->notes[n].midi_pitch;
+                    line->notes[line->note_count].pitch = notes->notes[n].midi;
                     line->notes[line->note_count].cells = length_cells;
                     line->notes[line->note_count].chord = i;
                     line->note_count++;

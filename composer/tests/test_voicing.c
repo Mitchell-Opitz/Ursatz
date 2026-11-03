@@ -107,7 +107,8 @@ static Piece build(const Progression *progression, bool write_soprano, int melod
         assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_HARMONY, 0, span, &payload, &id) == PLAN_OK);
         assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
         memset(&payload, 0, sizeof(payload));
-        notes[0].midi_pitch = progression->bass[b];
+        notes[0].midi = progression->bass[b];
+        notes[0].spelled = false;
         notes[0].offset = fraction(0, 1);
         notes[0].duration = bar;
         payload.notes.notes = notes;
@@ -115,7 +116,8 @@ static Piece build(const Progression *progression, bool write_soprano, int melod
         assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_BASS, 0, span, &payload, &id) == PLAN_OK);
         assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
         if (!write_soprano) {
-            notes[0].midi_pitch = b == 0 && melody_override ? melody_override : progression->melody[b];
+            notes[0].midi = b == 0 && melody_override ? melody_override : progression->melody[b];
+            notes[0].spelled = false;
             assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_MELODY, 0, span, &payload, &id) == PLAN_OK);
             assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
         }
@@ -124,14 +126,14 @@ static Piece build(const Progression *progression, bool write_soprano, int melod
 
     /* The open spans: the melody when the voicing writes it, the tenor, and the alto with the constraint. */
     if (write_soprano) {
-        PlanNote note = {60, fraction(0, 1), all.length};
+        PlanNote note = plan_note(60, fraction(0, 1), all.length);
         memset(&payload, 0, sizeof(payload));
         payload.notes.notes = &note;
         payload.notes.note_count = 1;
         assert(plan_add_lane_span(piece.plan, piece.owner, PLAN_LANE_MELODY, 0, all, &payload, &id) == PLAN_OK);
     }
     for (int voice = 2; voice >= 1; voice--) {
-        PlanNote note = {55, fraction(0, 1), all.length};
+        PlanNote note = plan_note(55, fraction(0, 1), all.length);
         memset(&payload, 0, sizeof(payload));
         payload.notes.notes = &note;
         payload.notes.note_count = 1;

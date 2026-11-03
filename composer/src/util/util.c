@@ -27,9 +27,9 @@ int util_pitch_class(int pitch) {
     return ((pitch % PITCH_SEMITONES_PER_OCTAVE) + PITCH_SEMITONES_PER_OCTAVE) % PITCH_SEMITONES_PER_OCTAVE;
 }
 
-void util_pitch_name(int midi_pitch, bool prefer_flats, char *out, size_t size) {
-    snprintf(out, size, "%s%d", pitch_class_name(util_pitch_class(midi_pitch), prefer_flats),
-             midi_pitch / PITCH_SEMITONES_PER_OCTAVE - 1);
+void util_pitch_name(int midi, bool prefer_flats, char *out, size_t size) {
+    snprintf(out, size, "%s%d", pitch_class_name(util_pitch_class(midi), prefer_flats),
+             midi / PITCH_SEMITONES_PER_OCTAVE - 1);
 }
 
 void util_key_name(int tonic_pitch_class, bool minor, char *out, size_t size) {

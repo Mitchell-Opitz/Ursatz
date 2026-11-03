@@ -170,10 +170,12 @@ int main(void) {
 
     PlanNote melody_notes[2];
     memset(melody_notes, 0, sizeof(melody_notes));
-    melody_notes[0].midi_pitch = 64;
+    melody_notes[0].midi = 64;
+    melody_notes[0].spelled = false;
     assert(rational_make(0, 1, &melody_notes[0].offset) == RATIONAL_OK);
     assert(rational_make(1, 2, &melody_notes[0].duration) == RATIONAL_OK);
-    melody_notes[1].midi_pitch = 67;
+    melody_notes[1].midi = 67;
+    melody_notes[1].spelled = false;
     assert(rational_make(1, 2, &melody_notes[1].offset) == RATIONAL_OK);
     assert(rational_make(1, 2, &melody_notes[1].duration) == RATIONAL_OK);
     PlanLanePayload melody;
@@ -183,7 +185,7 @@ int main(void) {
     LaneSpanId melody_span = add_lane(plan, m1, PLAN_LANE_MELODY, 0, bars(0, 1), &melody);
     assert(plan_lane_span_payload(plan, melody_span)->notes.note_count == 2);
     assert(plan_lane_span_payload(plan, melody_span)->notes.notes != melody_notes);
-    assert(plan_lane_span_payload(plan, melody_span)->notes.notes[1].midi_pitch == 67);
+    assert(plan_lane_span_payload(plan, melody_span)->notes.notes[1].midi == 67);
 
     LaneSpanId overlap = PLAN_LANE_SPAN_NONE;
     assert(plan_add_lane_span(plan, presentation, PLAN_LANE_HARMONY, 0, bars(1, 2), &tonic, &overlap) ==
@@ -227,10 +229,11 @@ int main(void) {
     /* Everything starts Constrained and moves to Realized and back. */
     assert(plan_node_state(plan, phrase) == PLAN_STATE_CONSTRAINED);
     assert(plan_lane_span_state(plan, melody_span) == PLAN_STATE_CONSTRAINED);
-    melody_notes[1].midi_pitch = 69;
+    melody_notes[1].midi = 69;
+    melody_notes[1].spelled = false;
     assert(plan_lane_span_write(plan, melody_span, &melody) == PLAN_OK);
     assert(plan_lane_span_state(plan, melody_span) == PLAN_STATE_REALIZED);
-    assert(plan_lane_span_payload(plan, melody_span)->notes.notes[1].midi_pitch == 69);
+    assert(plan_lane_span_payload(plan, melody_span)->notes.notes[1].midi == 69);
     assert(plan_lane_span_set_state(plan, melody_span, PLAN_STATE_CONSTRAINED) == PLAN_OK);
     assert(plan_node_set_state(plan, phrase, PLAN_STATE_REALIZED) == PLAN_OK);
     assert(plan_node_set_state(plan, phrase, PLAN_STATE_CONSTRAINED) == PLAN_OK);

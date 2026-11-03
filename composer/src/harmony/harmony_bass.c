@@ -303,7 +303,8 @@ PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, Pla
             return PLAN_ERR_BAD_INDEX;
         }
         notes[used].duration = span.length;
-        notes[used].midi_pitch = line->notes[i].pitch;
+        notes[used].midi = line->notes[i].pitch;
+        notes[used].spelled = false;
         at += line->notes[i].cells;
         used++;
     }

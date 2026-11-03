@@ -178,7 +178,7 @@ static size_t idea_melody(const PiecePlan *plan, const char *idea, int *pitches,
             const PlanNotes *notes = &plan_lane_span_payload(plan, lanes[i])->notes;
             assert(notes->note_count > 0 && notes->note_count <= size);
             for (size_t n = 0; n < notes->note_count; n++) {
-                pitches[n] = notes->notes[n].midi_pitch;
+                pitches[n] = notes->notes[n].midi;
             }
             return notes->note_count;
         }

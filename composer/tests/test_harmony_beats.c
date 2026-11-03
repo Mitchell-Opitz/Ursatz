@@ -140,7 +140,8 @@ static Fixture build(const Scenario *scenario, bool with_bass) {
 
     if (with_bass) {
         PlanNote note;
-        note.midi_pitch = 60;
+        note.midi = 60;
+        note.spelled = false;
         note.offset = fraction(0, 1);
         note.duration = fixture.span.length;
         memset(&payload, 0, sizeof(payload));
@@ -588,7 +589,8 @@ static void test_octave_on_beat_spans(void) {
             PlanNote notes[3];
             Rational position = fraction(0, 1);
             for (int n = 0; n < 3; n++) {
-                notes[n].midi_pitch = PITCHES[n];
+                notes[n].midi = PITCHES[n];
+                notes[n].spelled = false;
                 notes[n].offset = position;
                 notes[n].duration = beats(&scenario, SPANS[w].lengths[n]);
                 assert(rational_add(position, notes[n].duration, &position) == RATIONAL_OK);

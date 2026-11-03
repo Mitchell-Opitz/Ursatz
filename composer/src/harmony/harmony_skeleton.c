@@ -330,7 +330,8 @@ static PlanResult write_bass(PiecePlan *plan, const SkeletonCandidate *skeleton,
         PlanLanePayload payload;
         LaneSpanId rest;
         result = harmony_cells_span(read->span.start, cell, offset, skeleton->remainder_cells, &span);
-        note.midi_pitch = skeleton->bass.params.range_low;
+        note.midi = skeleton->bass.params.range_low;
+        note.spelled = false;
         note.offset = (Rational){0, 1};
         note.duration = span.length;
         memset(&payload, 0, sizeof(payload));

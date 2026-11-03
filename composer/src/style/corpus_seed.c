@@ -274,7 +274,8 @@ static bool motive_from_passage(const SimilarMatch *match, const PlanMeter *mete
             !plan_time_of(length_n, length_d, &placed->duration)) {
             return false;
         }
-        placed->midi_pitch = pitch;
+        placed->midi = pitch;
+        placed->spelled = false;
         out->note_count++;
     }
     if (out->note_count < 2) {

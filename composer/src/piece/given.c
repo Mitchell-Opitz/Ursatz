@@ -137,7 +137,7 @@ static GivenResult note_span(const Placement *placement, const PlanNote *notes, 
     }
     for (size_t i = 0; i < count; i++) {
         Rational note_end;
-        if (notes[i].midi_pitch < 0 || notes[i].midi_pitch > 127 || notes[i].offset.num < 0 ||
+        if (notes[i].midi < 0 || notes[i].midi > 127 || notes[i].offset.num < 0 ||
             notes[i].duration.num <= 0 || notes[i].offset.den == 0 || notes[i].duration.den == 0 ||
             rational_cmp(notes[i].offset, end) < 0 || rational_add(notes[i].offset, notes[i].duration, &note_end) != RATIONAL_OK ||
             (tiled && rational_cmp(notes[i].offset, end) != 0)) {
@@ -370,7 +370,7 @@ static GivenResult copy_fits(const PiecePlan *plan, NodeId section, const Return
             return GIVEN_ERR_LENGTH;
         }
         for (size_t n = 0; n < given->note_count; n++) {
-            if (given->notes[n].midi_pitch < 0 || given->notes[n].midi_pitch > 127) {
+            if (given->notes[n].midi < 0 || given->notes[n].midi > 127) {
                 return GIVEN_ERR_BAD_NOTES;
             }
         }
@@ -603,7 +603,7 @@ static bool entry_unchanged(const SnapshotEntry *entry, const PiecePlan *plan) {
         for (size_t n = 0; n < entry->note_count; n++) {
             const PlanNote *was = &entry->notes[n];
             const PlanNote *now = &payload->notes.notes[n];
-            if (was->midi_pitch != now->midi_pitch || !same_time(was->offset, now->offset) ||
+            if (was->midi != now->midi || !same_time(was->offset, now->offset) ||
                 !same_time(was->duration, now->duration)) {
                 return false;
             }

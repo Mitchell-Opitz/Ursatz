@@ -155,7 +155,7 @@ static char *write_list(const Motive *motive, ListKind kind) {
             return NULL;
         }
         char head[24];
-        if (!add_head(motive, kind, note->midi_pitch, head, sizeof(head)) ||
+        if (!add_head(motive, kind, note->midi, head, sizeof(head)) ||
             !add_pieces(&text, head, note->duration, true)) {
             free(text.data);
             return NULL;
@@ -187,12 +187,12 @@ char *motive_to_contour_text(const Motive *motive) {
         /* The rank is how many distinct lower pitches the motive has. */
         size_t rank = 0;
         for (size_t j = 0; j < motive->note_count; j++) {
-            if (motive->notes[j].midi_pitch >= motive->notes[i].midi_pitch) {
+            if (motive->notes[j].midi >= motive->notes[i].midi) {
                 continue;
             }
             bool seen = false;
             for (size_t k = 0; k < j && !seen; k++) {
-                seen = motive->notes[k].midi_pitch == motive->notes[j].midi_pitch;
+                seen = motive->notes[k].midi == motive->notes[j].midi;
             }
             rank += seen ? 0 : 1;
         }

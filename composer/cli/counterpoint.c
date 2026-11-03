@@ -247,7 +247,8 @@ static PiecePlan *build_plan(const Options *options, const Motive *motive, LaneS
                    PLAN_OK &&
          plan_lane_span_set_state(plan, id, PLAN_STATE_GIVEN) == PLAN_OK;
     ok = ok && plan_node_set_state(plan, owner, PLAN_STATE_GIVEN) == PLAN_OK;
-    placeholder.midi_pitch = 60;
+    placeholder.midi = 60;
+    placeholder.spelled = false;
     placeholder.offset = fraction(0, 1);
     placeholder.duration = motive->length;
     memset(&payload, 0, sizeof(payload));
@@ -277,7 +278,7 @@ static void sign(const PiecePlan *plan, LaneSpanId target, char *out, size_t siz
     size_t used = 0;
     out[0] = '\0';
     for (size_t i = 0; i < notes->note_count && used + 24 < size; i++) {
-        used += (size_t)snprintf(out + used, size - used, "%d@%lld/%lld,", notes->notes[i].midi_pitch,
+        used += (size_t)snprintf(out + used, size - used, "%d@%lld/%lld,", notes->notes[i].midi,
                                  notes->notes[i].offset.num, notes->notes[i].offset.den);
     }
 }
@@ -355,7 +356,7 @@ static void print_line(const PiecePlan *plan, PlanLaneKind lane, int voice, Plan
             if (bar.num > 0 && start.num * (long)bar.den % (bar.num * (long)start.den) == 0 && start.num > 0) {
                 printf(" |");
             }
-            pitch_name(notes->notes[n].midi_pitch, pitch, sizeof(pitch));
+            pitch_name(notes->notes[n].midi, pitch, sizeof(pitch));
             duration_name(notes->notes[n].duration, length, sizeof(length));
             printf(" %s:%s", pitch, length);
             rational_add(start, notes->notes[n].duration, &at);
@@ -376,7 +377,7 @@ static void print_json_notes(const PiecePlan *plan, PlanLaneKind lane, int voice
             Rational start;
             rational_add(base, notes->notes[n].offset, &start);
             printf("%s{\"midi_pitch\":%d,\"offset\":{\"num\":%lld,\"den\":%lld},\"duration\":{\"num\":%lld,\"den\":%lld}}",
-                   first ? "" : ",", notes->notes[n].midi_pitch, start.num, start.den, notes->notes[n].duration.num,
+                   first ? "" : ",", notes->notes[n].midi, start.num, start.den, notes->notes[n].duration.num,
                    notes->notes[n].duration.den);
             first = false;
         }

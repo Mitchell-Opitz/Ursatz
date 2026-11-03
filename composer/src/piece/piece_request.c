@@ -153,7 +153,8 @@ static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) 
     PlanConstraint constraint;
     PieceResult result = piece_result_of_plan(plan_add_node(plan, idea, PLAN_NODE_MOTIVE, span, GROW_SOURCE_NAME, &node));
     memset(&payload, 0, sizeof(payload));
-    note.midi_pitch = INVENT_PLACEHOLDER;
+    note.midi = INVENT_PLACEHOLDER;
+    note.spelled = false;
     note.offset = (Rational){0, 1};
     note.duration = span.length;
     payload.notes.notes = &note;

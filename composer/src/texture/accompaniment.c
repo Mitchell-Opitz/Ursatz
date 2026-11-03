@@ -109,7 +109,7 @@ bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanS
             }
             out[*count].onset = rational_cmp(onset, POSITION_ZERO) < 0 ? POSITION_ZERO : onset;
             out[*count].end = rational_cmp(end, length) > 0 ? length : end;
-            out[*count].pitch = notes->notes[n].midi_pitch;
+            out[*count].pitch = notes->notes[n].midi;
             (*count)++;
         }
     }
@@ -158,7 +158,7 @@ static bool read_motive(const PiecePlan *plan, const char *name, AccompContext *
                 if (!position_is_positive(note->duration)) {
                     return false;
                 }
-                note->pitch = notes->notes[n].midi_pitch;
+                note->pitch = notes->notes[n].midi;
                 out->motive_length = position_add(note->onset, note->duration);
             }
             out->motive_count = notes->note_count;
@@ -444,7 +444,8 @@ static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng 
 /* The notes of a voice as lane notes, from the start of the target. */
 static PlanResult voice_payload(const AccompCandidate *candidate, size_t voice, PlanNote *notes, PlanLanePayload *payload) {
     for (size_t n = 0; n < candidate->note_count[voice]; n++) {
-        notes[n].midi_pitch = candidate->notes[voice][n].pitch;
+        notes[n].midi = candidate->notes[voice][n].pitch;
+        notes[n].spelled = false;
         notes[n].offset = candidate->notes[voice][n].onset;
         notes[n].duration = candidate->notes[voice][n].duration;
         if (position_is_far(notes[n].offset) || position_is_far(notes[n].duration)) {

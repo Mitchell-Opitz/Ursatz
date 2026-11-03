@@ -95,7 +95,7 @@ static inline TextureHeard texture_heard(const PiecePlan *plan, PlanSpan span, P
                 Rational start;
                 assert(rational_add(lane_span.start, notes->notes[n].offset, &start) == RATIONAL_OK);
                 heard_add(&input, &spans, &span_count, &next, part < 2 ? (size_t)part : 2, part < 2 ? 0 : (size_t)voice - 1,
-                          start, notes->notes[n].duration, notes->notes[n].midi_pitch);
+                          start, notes->notes[n].duration, notes->notes[n].midi);
             }
         }
     }

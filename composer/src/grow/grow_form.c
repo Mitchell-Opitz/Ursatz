@@ -149,7 +149,7 @@ static void with_extras(const PiecePlan *plan, NodeId node, const MotiveDevelopC
         return;
     }
     for (size_t i = 0; i < motive->note_count; i++) {
-        if (basic->notes[i].midi_pitch != motive->notes[i].midi_pitch ||
+        if (basic->notes[i].midi != motive->notes[i].midi ||
             rational_cmp(basic->notes[i].offset, motive->notes[i].offset) != 0 ||
             rational_cmp(basic->notes[i].duration, motive->notes[i].duration) != 0) {
             return;
@@ -276,7 +276,7 @@ static bool within_range(const Motive *motive) {
     static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
     static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
     for (size_t i = 0; i < motive->note_count; i++) {
-        int pitch = motive->notes[i].midi_pitch;
+        int pitch = motive->notes[i].midi;
         if (pitch < FORM_LOW || pitch > FORM_HIGH) {
             return false;
         }
@@ -293,7 +293,7 @@ static bool within_range(const Motive *motive) {
 static int widest_leap(const Motive *motive) {
     int widest = 0;
     for (size_t i = 1; i < motive->note_count; i++) {
-        int leap = motive->notes[i].midi_pitch - motive->notes[i - 1].midi_pitch;
+        int leap = motive->notes[i].midi - motive->notes[i - 1].midi;
         widest = (leap < 0 ? -leap : leap) > widest ? (leap < 0 ? -leap : leap) : widest;
     }
     return widest;
@@ -304,7 +304,7 @@ static bool same_pitches(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch) {
+        if (a->notes[i].midi != b->notes[i].midi) {
             return false;
         }
     }
@@ -363,7 +363,7 @@ static bool cadence_tone_holds(const Request *request, const Motive *motive) {
         return true;
     }
     int tonic = analysis_key_tonic_pitch_class(&motive->key);
-    int last = ((motive->notes[motive->note_count - 1].midi_pitch - tonic) % 12 + 12) % 12;
+    int last = ((motive->notes[motive->note_count - 1].midi - tonic) % 12 + 12) % 12;
     int third = motive->key.mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4;
     return !((request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC && last != 0) || (request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC && last != third));
 }
@@ -387,12 +387,12 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
     int lowest = 127;
     int highest = 0;
     for (size_t i = 0; i < result.note_count; i++) {
-        lowest = result.notes[i].midi_pitch < lowest ? result.notes[i].midi_pitch : lowest;
-        highest = result.notes[i].midi_pitch > highest ? result.notes[i].midi_pitch : highest;
+        lowest = result.notes[i].midi < lowest ? result.notes[i].midi : lowest;
+        highest = result.notes[i].midi > highest ? result.notes[i].midi : highest;
     }
     if (lowest < FORM_LOW && highest + 12 <= FORM_HIGH) {
         for (size_t i = 0; i < result.note_count; i++) {
-            result.notes[i].midi_pitch += 12;
+            result.notes[i].midi += 12;
         }
     }
     if (!form_fits(request, &result) || (!fragment && result.note_count != request->basic.note_count) ||

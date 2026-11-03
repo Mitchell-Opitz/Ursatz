@@ -406,7 +406,8 @@ static void placeholder(PlanLaneKind lane, PlanSpan span, PlanNote *note, PlanLa
         payload->harmony.has_function = false;
         return;
     }
-    note->midi_pitch = lane == PLAN_LANE_BASS ? BASS_PLACEHOLDER : lane == PLAN_LANE_MELODY ? MELODY_PLACEHOLDER : INNER_PLACEHOLDER;
+    note->midi = lane == PLAN_LANE_BASS ? BASS_PLACEHOLDER : lane == PLAN_LANE_MELODY ? MELODY_PLACEHOLDER : INNER_PLACEHOLDER;
+    note->spelled = false;
     note->offset = (Rational){0, 1};
     note->duration = span.length;
     payload->notes.notes = note;

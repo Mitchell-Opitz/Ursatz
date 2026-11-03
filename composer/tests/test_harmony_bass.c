@@ -60,7 +60,8 @@ static LaneSpanId add_bass(PiecePlan *plan, NodeId owner, PlanSpan span, const i
     Rational length = fraction(span.length.num, span.length.den * (unsigned long)count);
     memset(&payload, 0, sizeof(payload));
     for (int i = 0; i < count; i++) {
-        notes[i].midi_pitch = pitches[i];
+        notes[i].midi = pitches[i];
+        notes[i].spelled = false;
         notes[i].offset = fraction(length.num * i, length.den);
         notes[i].duration = length;
     }
@@ -167,7 +168,7 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
         used += (size_t)snprintf(out + used, size - used, "@%lld/%lld+%lld/%lld:%d", span.start.num, span.start.den,
                                  span.length.num, span.length.den, (int)plan_lane_span_state(fixture->plan, ids[i]));
         for (size_t n = 0; n < notes->note_count; n++) {
-            used += (size_t)snprintf(out + used, size - used, " %d/%lld/%lld", notes->notes[n].midi_pitch,
+            used += (size_t)snprintf(out + used, size - used, " %d/%lld/%lld", notes->notes[n].midi,
                                      notes->notes[n].duration.num, notes->notes[n].duration.den);
         }
         used += (size_t)snprintf(out + used, size - used, "\n");
@@ -219,9 +220,9 @@ static void check_bass(const Fixture *fixture, const Scenario *scenario, const H
         for (size_t n = 0; n < notes->note_count; n++) {
             assert(rational_cmp(notes->notes[n].offset, at) == 0);
             at = time_plus(at, notes->notes[n].duration);
-            assert(notes->notes[n].midi_pitch >= params->range_low && notes->notes[n].midi_pitch <= params->range_high);
+            assert(notes->notes[n].midi >= params->range_low && notes->notes[n].midi <= params->range_high);
             /* Every note is the chord's root or inversion. */
-            int pc = notes->notes[n].midi_pitch % 12;
+            int pc = notes->notes[n].midi % 12;
             assert(bass_matches(scenario->mode, scenario->tonic, roman, pc));
             last_pc[i] = pc;
         }
@@ -295,7 +296,7 @@ static bool pipeline(const Scenario *scenario, const HarmonyBassParams *params, 
     PlanSpan now = plan_lane_span_span(fixture.plan, fixture.given_bass);
     assert(rational_cmp(now.start, given_span.start) == 0 && rational_cmp(now.length, given_span.length) == 0);
     assert(plan_lane_span_state(fixture.plan, fixture.given_bass) == PLAN_STATE_GIVEN);
-    assert(plan_lane_span_payload(fixture.plan, fixture.given_bass)->notes.notes[0].midi_pitch == 43);
+    assert(plan_lane_span_payload(fixture.plan, fixture.given_bass)->notes.notes[0].midi == 43);
     plan_destroy(fixture.plan);
     return written;
 }

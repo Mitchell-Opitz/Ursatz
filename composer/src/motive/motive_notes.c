@@ -254,7 +254,7 @@ static MotiveResult parse_list(const char *text, PitchParser parse_pitch_text, c
 
         if (tied) {
             PlanNote *previous = &motive->notes[count - 1];
-            if (rest || previous->midi_pitch != midi) {
+            if (rest || previous->midi != midi) {
                 motive_set_error(error, location, "token %zu is tied to a note of a different pitch; a tie joins "
                                                   "two notes of one pitch",
                                  tie_number);
@@ -278,7 +278,8 @@ static MotiveResult parse_list(const char *text, PitchParser parse_pitch_text, c
             return MOTIVE_ERR_TOO_MANY_NOTES;
         }
         PlanNote *note = &motive->notes[count++];
-        note->midi_pitch = midi;
+        note->midi = midi;
+        note->spelled = false;
         note->offset = cursor;
         note->duration = duration;
         cursor = motive_time_plus(cursor, duration);
@@ -384,7 +385,8 @@ MotiveResult motive_parse_contour_text(const char *text, Motive *motive, MotiveD
             return MOTIVE_ERR_TOO_MANY_NOTES;
         }
         PlanNote *note = &motive->notes[count];
-        note->midi_pitch = (int)pitch;
+        note->midi = (int)pitch;
+        note->spelled = false;
         note->offset = motive_time((long)count, 4);
         note->duration = motive_time(1, 4);
         count++;

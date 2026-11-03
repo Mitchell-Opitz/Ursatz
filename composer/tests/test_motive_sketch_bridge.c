@@ -120,13 +120,13 @@ static void test_rhythm_form(void) {
     assert(motive_from_sketch(&sketch, &rhythm, &back));
     assert(back.form == MOTIVE_FORM_RHYTHM && motive_equal(&rhythm, &back));
     for (size_t i = 0; i < back.note_count; i++) {
-        assert(back.notes[i].midi_pitch == rhythm.notes[0].midi_pitch);
+        assert(back.notes[i].midi == rhythm.notes[0].midi);
     }
 
     /* A contour keeps the pitches that sound it. */
     Motive contour = load(MOTIVE_FORMAT_CONTOUR, "0 2 1 3", &FOUR_FOUR, &C_MAJOR);
     assert(motive_to_sketch(&contour, &sketch));
-    assert(sketch.notes[1].pitch == contour.notes[1].midi_pitch && sketch.notes[1].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN);
+    assert(sketch.notes[1].pitch == contour.notes[1].midi && sketch.notes[1].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN);
 }
 
 static void test_round_trips(void) {

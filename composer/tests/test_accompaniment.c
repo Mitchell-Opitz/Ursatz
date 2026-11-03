@@ -88,7 +88,8 @@ static void add_motive_node(PiecePlan *plan, NodeId form) {
     motive.role = MOTIVE_ROLE_ACCOMPANIMENT;
     static const int PITCHES[4] = {60, 67, 64, 67};
     for (size_t n = 0; n < 4; n++) {
-        motive.notes[n].midi_pitch = PITCHES[n];
+        motive.notes[n].midi = PITCHES[n];
+        motive.notes[n].spelled = false;
         motive.notes[n].offset = fraction((long)n, 8);
         motive.notes[n].duration = fraction(1, 8);
     }
@@ -139,7 +140,8 @@ static Piece built_piece_with(int beats, int unit, bool steady, long extra_bars)
         assert(plan_lane_span_set_state(piece.plan, id, PLAN_STATE_REALIZED) == PLAN_OK);
 
         memset(&payload, 0, sizeof(payload));
-        notes[0].midi_pitch = BASS[b];
+        notes[0].midi = BASS[b];
+        notes[0].spelled = false;
         notes[0].offset = fraction(0, 1);
         notes[0].duration = bar;
         payload.notes.notes = notes;
@@ -149,7 +151,8 @@ static Piece built_piece_with(int beats, int unit, bool steady, long extra_bars)
 
         size_t count = steady ? 1 : (size_t)beats_in_bar;
         for (size_t n = 0; n < count; n++) {
-            notes[n].midi_pitch = steady ? 72 : MELODY[(b + n) % 4];
+            notes[n].midi = steady ? 72 : MELODY[(b + n) % 4];
+            notes[n].spelled = false;
             notes[n].offset = steady ? fraction(0, 1) : fraction(beat_num * (long)n, beat_den);
             notes[n].duration = steady ? bar : fraction(beat_num, beat_den);
         }
@@ -177,7 +180,8 @@ static LaneSpanId open_voices(Piece *piece, PlanAccompaniment accompaniment, int
         PlanNote note;
         LaneSpanId id;
         memset(&payload, 0, sizeof(payload));
-        note.midi_pitch = 55;
+        note.midi = 55;
+        note.spelled = false;
         note.offset = fraction(0, 1);
         note.duration = piece->span.length;
         payload.notes.notes = &note;

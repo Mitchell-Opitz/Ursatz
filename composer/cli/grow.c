@@ -652,7 +652,7 @@ static char *signature_of(const PiecePlan *plan, NodeId theme_node) {
             }
             for (size_t n = 0; n < payload->notes.note_count; n++) {
                 const PlanNote *note = &payload->notes.notes[n];
-                if (!text_append(&text, "%d@%lld/%lld+%lld/%lld,", note->midi_pitch, note->offset.num, note->offset.den,
+                if (!text_append(&text, "%d@%lld/%lld+%lld/%lld,", note->midi, note->offset.num, note->offset.den,
                                  note->duration.num, note->duration.den)) {
                     free(text.text);
                     return NULL;
@@ -803,7 +803,7 @@ static size_t collect_rows(const Options *options, const PiecePlan *plan, NodeId
             size_t used = 0;
             for (size_t n = 0; n < notes->note_count && used + 8 < sizeof(rows[i].bass); n++) {
                 char name[16];
-                pitch_name(notes->notes[n].midi_pitch, name, sizeof(name));
+                pitch_name(notes->notes[n].midi, name, sizeof(name));
                 used += (size_t)snprintf(rows[i].bass + used, sizeof(rows[i].bass) - used, n ? " %s" : "%s", name);
             }
         }

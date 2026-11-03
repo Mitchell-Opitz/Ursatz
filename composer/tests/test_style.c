@@ -84,7 +84,8 @@ static Rational time_of(long num, unsigned long den) {
 
 static PlanNote note(int pitch, Rational offset, Rational duration) {
     PlanNote result;
-    result.midi_pitch = pitch;
+    result.midi = pitch;
+    result.spelled = false;
     result.offset = offset;
     result.duration = duration;
     return result;
@@ -718,7 +719,7 @@ static void repetition_degrees(unsigned long seed, const ComposerStyle *style, c
         }
         const PlanLanePayload *payload = plan_lane_span_payload(plan, spans[i]);
         for (size_t k = 0; k < payload->notes.note_count; k++) {
-            int pitch_class = ((payload->notes.notes[k].midi_pitch % 12) + 12) % 12;
+            int pitch_class = ((payload->notes.notes[k].midi % 12) + 12) % 12;
             strcat(out, k ? " " : "");
             strcat(out, DEGREES[pitch_class]);
         }

@@ -353,12 +353,13 @@ static bool build_plan(const Options *options, Built *built) {
         ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_HARMONY, 0, lead, &payload, &id) == PLAN_OK &&
              plan_lane_span_set_state(built->plan, id, PLAN_STATE_REALIZED) == PLAN_OK;
         /* Its bass is the tonic in the octave of the range nearest the middle of it. */
-        PlanNote tonic_note = {48, time_of(0, 1), lead.length};
+        PlanNote tonic_note = plan_note(48, time_of(0, 1), lead.length);
         for (int pitch = 40; pitch <= 60; pitch++) {
             int distance = pitch > 50 ? pitch - 50 : 50 - pitch;
-            int best = tonic_note.midi_pitch > 50 ? tonic_note.midi_pitch - 50 : 50 - tonic_note.midi_pitch;
-            if (pitch % 12 == analysis_key_tonic_pitch_class(&options->key) && (tonic_note.midi_pitch % 12 != analysis_key_tonic_pitch_class(&options->key) || distance < best)) {
-                tonic_note.midi_pitch = pitch;
+            int best = tonic_note.midi > 50 ? tonic_note.midi - 50 : 50 - tonic_note.midi;
+            if (pitch % 12 == analysis_key_tonic_pitch_class(&options->key) && (tonic_note.midi % 12 != analysis_key_tonic_pitch_class(&options->key) || distance < best)) {
+                tonic_note.midi = pitch;
+                tonic_note.spelled = false;
             }
         }
         memset(&payload, 0, sizeof(payload));
@@ -375,7 +376,7 @@ static bool build_plan(const Options *options, Built *built) {
     ok = ok && plan_add_lane_span(built->plan, phrase, PLAN_LANE_HARMONY, 0, region, &payload, &id) == PLAN_OK &&
          plan_lane_span_add_constraint(built->plan, id, &cadence) == PLAN_OK;
     if (options->bass) {
-        PlanNote note = {40, time_of(0, 1), region.length};
+        PlanNote note = plan_note(40, time_of(0, 1), region.length);
         memset(&payload, 0, sizeof(payload));
         payload.notes.notes = &note;
         payload.notes.note_count = 1;
@@ -682,7 +683,7 @@ static size_t collect_rows(const Options *options, const Built *built, Row *rows
             size_t used = 0;
             for (size_t n = 0; n < notes->note_count && used + 8 < sizeof(rows[i].bass); n++) {
                 char name[8];
-                pitch_name(notes->notes[n].midi_pitch, name, sizeof(name));
+                pitch_name(notes->notes[n].midi, name, sizeof(name));
                 used += (size_t)snprintf(rows[i].bass + used, sizeof(rows[i].bass) - used, n ? " %s" : "%s", name);
             }
         }

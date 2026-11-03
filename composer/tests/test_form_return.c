@@ -81,7 +81,7 @@ static size_t events(const PiecePlan *plan, NodeId section, PlanLaneKind lane, i
             memset(&out[count], 0, sizeof(Event));
             out[count].at = plus(from, payload->notes.notes[n].offset);
             out[count].length = payload->notes.notes[n].duration;
-            out[count].pitch = payload->notes.notes[n].midi_pitch;
+            out[count].pitch = payload->notes.notes[n].midi;
             count++;
         }
     }

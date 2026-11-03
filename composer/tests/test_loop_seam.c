@@ -41,7 +41,8 @@ static void add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, long bar
     LaneSpanId id;
     assert(count > 0 && count <= 8);
     for (size_t i = 0; i < count; i++) {
-        notes[i].midi_pitch = pitches[i];
+        notes[i].midi = pitches[i];
+        notes[i].spelled = false;
         notes[i].offset = whole((long)i, (unsigned long)count);
         notes[i].duration = whole(1, (unsigned long)count);
     }
@@ -307,7 +308,7 @@ static size_t sounds(const PiecePlan *plan, PlanLaneKind lane, PlanSpan window, 
             }
             assert(count < MAX_SOUNDS);
             out[count].onset = minus(onset, window.start);
-            out[count++].pitch = payload->notes.notes[n].midi_pitch;
+            out[count++].pitch = payload->notes.notes[n].midi;
         }
     }
     return count;

@@ -493,7 +493,7 @@ static bool node_holds(const PiecePlan *plan, NodeId node, const Motive *motive)
             return false;
         }
         for (size_t k = 0; k < notes->note_count; k++) {
-            if (notes->notes[k].midi_pitch != motive->notes[k].midi_pitch) {
+            if (notes->notes[k].midi != motive->notes[k].midi) {
                 return false;
             }
         }

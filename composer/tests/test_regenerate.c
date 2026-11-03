@@ -145,7 +145,7 @@ static char *lane_text_before(const PiecePlan *plan, NodeId section, PlanLaneKin
                 used += (size_t)snprintf(text + used, capacity - used, "%s;", payload->harmony.roman_numeral);
             }
             for (size_t n = 0; lane != PLAN_LANE_HARMONY && n < payload->notes.note_count; n++) {
-                used += (size_t)snprintf(text + used, capacity - used, "%d@%lld/%lld,", payload->notes.notes[n].midi_pitch,
+                used += (size_t)snprintf(text + used, capacity - used, "%d@%lld/%lld,", payload->notes.notes[n].midi,
                                          payload->notes.notes[n].offset.num, payload->notes.notes[n].offset.den);
             }
             assert(used < capacity - 256);
@@ -831,7 +831,7 @@ static int test_locked(void) {
         const PlanNotes *kept = &plan_lane_span_payload(plan, bass)->notes;
         assert(kept->note_count == note_count);
         for (size_t n = 0; n < note_count; n++) {
-            assert(kept->notes[n].midi_pitch == notes[n].midi_pitch);
+            assert(kept->notes[n].midi == notes[n].midi);
             assert(rational_cmp(kept->notes[n].offset, notes[n].offset) == 0);
             assert(rational_cmp(kept->notes[n].duration, notes[n].duration) == 0);
         }

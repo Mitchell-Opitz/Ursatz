@@ -6,7 +6,9 @@
 #include <io/midi_importer.h>
 #include <io/midi_key_signature.h>
 #include <io/musicxml_importer.h>
+#include <pitch/pitch_arithmetic.h>
 #include <pitch/pitch_numeric_value.h>
+#include <pitch/pitch_spelling.h>
 #include <time/duration.h>
 #include <time/meter_map.h>
 #include <time/musical_time.h>
@@ -50,7 +52,17 @@ static MotiveResult notes_from_events(NoteEvent *const *events, PitchNumericValu
             return MOTIVE_ERR_VALUE;
         }
         PlanNote note;
-        note.midi_pitch = (int)pitch_numeric_value_position_numerator(values[i]);
+        note.midi = (int)pitch_numeric_value_position_numerator(values[i]);
+        note.spelled = false;
+        note.letter = PITCH_LETTER_C;
+        note.accidental = 0;
+        /* MusicXML writes the pitch (MIDI does not): keep the notated spelling when it names the sounding note. */
+        const PitchSpelling *written = part_index ? note_event_optional_pitch_spelling(events[i]) : NULL;
+        if (written && pitch_spelling_midi_number(written) == note.midi) {
+            note.spelled = true;
+            note.letter = pitch_spelling_letter(written);
+            note.accidental = pitch_spelling_accidental(written);
+        }
         note.offset = motive_time(musical_time_numerator(position), musical_time_denominator(position));
         note.duration = motive_time(duration_numerator(duration), duration_denominator(duration));
         if (rational_cmp(note.offset, end) < 0) {

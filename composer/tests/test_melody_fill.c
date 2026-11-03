@@ -69,7 +69,8 @@ static LaneSpanId add_notes(PiecePlan *plan, NodeId owner, PlanLaneKind lane, Pl
     PlanLanePayload payload;
     LaneSpanId id;
     memset(&payload, 0, sizeof(payload));
-    note.midi_pitch = pitch;
+    note.midi = pitch;
+    note.spelled = false;
     note.offset = fraction(0, 1);
     note.duration = span.length;
     payload.notes.notes = &note;
@@ -312,7 +313,7 @@ static size_t read_melody(const Fixture *fixture, Sounding *out, size_t capacity
             assert(count < capacity);
             out[count].start = time_plus(span.start, notes->notes[n].offset);
             out[count].end = time_plus(out[count].start, notes->notes[n].duration);
-            out[count].pitch = notes->notes[n].midi_pitch;
+            out[count].pitch = notes->notes[n].midi;
             count++;
         }
     }
@@ -457,7 +458,7 @@ static bool pipeline(const Scenario *scenario, bool developed, const MelodyFillP
     LaneSpanId given_ids[4];
     assert(plan_node_lane_spans(fixture.plan, fixture.source, given_ids, 4) == 1);
     const PlanNotes *given = &plan_lane_span_payload(fixture.plan, given_ids[0])->notes;
-    int given_pitch = given->notes[0].midi_pitch;
+    int given_pitch = given->notes[0].midi;
     size_t given_count = given->note_count;
 
     FillRecord *record = NULL;
@@ -501,7 +502,7 @@ static bool pipeline(const Scenario *scenario, bool developed, const MelodyFillP
     /* The Given motive is untouched. */
     assert(plan_lane_span_state(fixture.plan, given_ids[0]) == PLAN_STATE_GIVEN);
     given = &plan_lane_span_payload(fixture.plan, given_ids[0])->notes;
-    assert(given->note_count == given_count && given->notes[0].midi_pitch == given_pitch);
+    assert(given->note_count == given_count && given->notes[0].midi == given_pitch);
     plan_destroy(fixture.plan);
     return written;
 }
@@ -703,7 +704,7 @@ static size_t span_pitches(const IdeaFixture *fixture, LaneSpanId span, int *out
     const PlanNotes *notes = &plan_lane_span_payload(fixture->plan, span)->notes;
     assert(notes->note_count <= capacity);
     for (size_t i = 0; i < notes->note_count; i++) {
-        out[i] = notes->notes[i].midi_pitch;
+        out[i] = notes->notes[i].midi;
     }
     return notes->note_count;
 }
@@ -929,14 +930,14 @@ static void test_tone_roles(void) {
             const PlanNotes *notes = &plan_lane_span_payload(scene.plan, spans[idea])->notes;
             assert(notes->note_count >= 6);
             for (size_t k = 0; k < 6; k++) {
-                int pitch = notes->notes[k].midi_pitch;
+                int pitch = notes->notes[k].midi;
                 bool chord_tone = tone_of(chords[idea], pitch);
                 if (CHORD_NOTE[k]) {
                     assert(chord_tone);
                 } else if (!chord_tone) {
                     /* A figure that resolves: a step from the next note, which is a chord tone. */
-                    assert(step_between(pitch, notes->notes[k + 1].midi_pitch));
-                    assert(tone_of(chords[idea], notes->notes[k + 1].midi_pitch));
+                    assert(step_between(pitch, notes->notes[k + 1].midi));
+                    assert(tone_of(chords[idea], notes->notes[k + 1].midi));
                     kept[idea][k == 1 ? 0 : 1]++;
                 }
             }

@@ -180,7 +180,7 @@ static void test_open_parameters_recorded(void) {
     int axis = (int)record.steps[0].values[0].value;
     bool is_pitch = false;
     for (size_t i = 0; i < source.note_count; i++) {
-        is_pitch = is_pitch || source.notes[i].midi_pitch == axis;
+        is_pitch = is_pitch || source.notes[i].midi == axis;
     }
     assert(is_pitch);
     assert(!record.steps[0].open[1] && record.steps[0].values[1].set && record.steps[0].values[1].value == 1);
@@ -209,8 +209,8 @@ static void test_fixed_chain_result(void) {
     Motive out;
     VariantRecord record;
     assert(variant_apply_chain(&source, &chain, 0, &out, &record) == VARIANT_OK);
-    assert(out.note_count == 4 && out.notes[0].midi_pitch == 74 && out.notes[3].midi_pitch == 62);
-    assert(source.notes[0].midi_pitch == 62);
+    assert(out.note_count == 4 && out.notes[0].midi == 74 && out.notes[3].midi == 62);
+    assert(source.notes[0].midi == 62);
 }
 
 static void test_refused_steps(void) {
@@ -277,7 +277,7 @@ static void test_transpose_tonal_is_exact(void) {
     Motive out;
     VariantRecord record;
     assert(run_one(&source, step, 0, &out, &record) == VARIANT_OK);
-    assert(out.notes[0].midi_pitch == 74);
+    assert(out.notes[0].midi == 74);
     assert(record.kind == VARIANT_KIND_EXACT && record.changed_count == 0);
     assert(kept(&record, "rhythm") && kept(&record, "intervals") && kept(&record, "contour") && kept(&record, "harmony"));
     assert(!record.rhythm_scaled);
@@ -773,12 +773,12 @@ static void test_frame_rows_apply(void) {
     VariantRecord record;
 
     assert(run_one(&passing, step_of("reduce-to-frame"), 1, &out, &record) == VARIANT_OK);
-    assert(out.note_count == 2 && out.notes[0].midi_pitch == 60 && out.notes[1].midi_pitch == 64);
+    assert(out.note_count == 2 && out.notes[0].midi == 60 && out.notes[1].midi == 64);
 
     VariantStep step = step_of("add-non-chord-tone");
     assert(variant_step_set(&step, "after", 0, 0) && variant_step_set(&step, "type", 0, 0));
     assert(run_one(&frame, step, 1, &out, &record) == VARIANT_OK);
-    assert(out.note_count == 4 && out.notes[1].midi_pitch == 62);
+    assert(out.note_count == 4 && out.notes[1].midi == 62);
 
     step = step_of("remove-non-chord-tone");
     assert(variant_step_set(&step, "note", 1, 0));
@@ -789,7 +789,7 @@ static void test_frame_rows_apply(void) {
     step = step_of("change-non-chord-tone");
     assert(variant_step_set(&step, "note", 1, 0) && variant_step_set(&step, "type", 6, 0));
     assert(run_one(&passing, step, 1, &out, &record) == VARIANT_OK);
-    assert(out.note_count == 3 && out.notes[1].midi_pitch != 62);
+    assert(out.note_count == 3 && out.notes[1].midi != 62);
     assert(strstr(record.derivation, "appoggiatura") != NULL);
 
     step = step_of("reharmonize-frame");
@@ -845,7 +845,7 @@ static void test_harmony_draws_move_notes(void) {
             assert(run_one(&source, step_of(ROWS_THAT_MOVE[r]), seed, &out, &record) == VARIANT_OK);
             bool moved = false;
             for (size_t n = 0; n < source.note_count && n < out.note_count; n++) {
-                moved = moved || out.notes[n].midi_pitch != source.notes[n].midi_pitch;
+                moved = moved || out.notes[n].midi != source.notes[n].midi;
             }
             if (!moved) {
                 fprintf(stderr, "%s seed %lu left every pitch\n", ROWS_THAT_MOVE[r], seed);
@@ -864,7 +864,7 @@ static void test_dominant_form_answers_i_v(void) {
     assert(rational_cmp(out.harmony[1].onset, source.harmony[1].onset) == 0);
     /* The melody moves with the harmony, and the rhythm and the contour stay. */
     assert(kept(&record, "rhythm") && kept(&record, "contour") && changed(&record, "intervals"));
-    assert(out.notes[0].midi_pitch != source.notes[0].midi_pitch);
+    assert(out.notes[0].midi != source.notes[0].midi);
 }
 
 static void test_harmony_rows_need_a_key(void) {
@@ -1107,7 +1107,7 @@ static void test_liquidate_features_row(void) {
     Motive out;
     VariantRecord record;
     assert(run_one(&source, step, 1, &out, &record) == VARIANT_OK);
-    assert(out.note_count == 5 && out.notes[0].midi_pitch == 60);
+    assert(out.note_count == 5 && out.notes[0].midi == 60);
     assert(rational_cmp(out.notes[0].duration, (Rational){1, 4}) == 0);
     assert(out.feature_count == 1 && strcmp(out.features[0].label, "b") == 0 && out.features[0].first == 1 &&
            out.features[0].last == 2);

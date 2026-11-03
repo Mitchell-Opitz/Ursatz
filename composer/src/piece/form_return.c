@@ -238,7 +238,7 @@ bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpos
             return false;
         }
         for (size_t n = 0; n < span->note_count; n++) {
-            span->notes[n].midi_pitch += transpose;
+            span->notes[n].midi += transpose;
         }
         for (size_t c = 0; c < span->constraint_count; c++) {
             if (span->constraints[c].kind == PLAN_CONSTRAINT_KEY) {
@@ -509,7 +509,7 @@ bool form_return_melody_fits(const PiecePlan *plan, NodeId section) {
                 }
                 unsigned mask;
                 unsigned seventh;
-                int pitch_class = ((notes->notes[n].midi_pitch % 12) + 12) % 12;
+                int pitch_class = ((notes->notes[n].midi % 12) + 12) % 12;
                 fits = cell < starts[chord_count] && melody_chord_mask(&key, &chords[c], &mask, &seventh) &&
                        ((mask >> pitch_class) & 1u);
             }
@@ -731,7 +731,7 @@ static bool same_notes(const ReturnSpan *a, const ReturnSpan *b, int shift) {
         return false;
     }
     for (size_t n = 0; n < a->note_count; n++) {
-        if (a->notes[n].midi_pitch + shift != b->notes[n].midi_pitch ||
+        if (a->notes[n].midi + shift != b->notes[n].midi ||
             !same_times(a->notes[n].offset, b->notes[n].offset) ||
             !same_times(a->notes[n].duration, b->notes[n].duration)) {
             return false;
