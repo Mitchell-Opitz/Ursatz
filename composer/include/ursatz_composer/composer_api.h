@@ -119,7 +119,8 @@ ComposerStatus composer_api_variant_operations(ComposerResponse *out);
  * that applies to the motive's form; not with chain, count, distance or functions), "count" (1 to 16, default 6) and
  * "seed" (0 to 4294967235; default from the clock; variant i uses seed + i). Progress is reported once for each variant
  * tried, stage "variants", and a cancel is honored there. json: {"seed", "source", "variants": [...]}, with "skipped" for
- * each_op and "notices" (strings) when a draw was skipped or fewer variants than asked for were found.
+ * each_op and "notices" (strings) when a draw was skipped or fewer variants than asked for were found. "detail": true adds
+ * to each variant "remoteness_fraction": [numerator, denominator] and "leaves_harmony".
  */
 ComposerStatus composer_api_variants(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
@@ -127,7 +128,8 @@ ComposerStatus composer_api_variants(const char *request_json, const ComposerJob
  * Names the chain of registry operations that turns a source motive into a target. Request: {"source": <motive request:
  * input, harmony, features>, "target": <the same>, "meter", "key", "pickup" (the source's), "target_pickup", "role", "basic"
  * (as for variants), "depth" (1 to 4, default 4)}; both motives are read in the meter, key and role of the request, and
- * the form of the source's input. json: {"found", "chain", "distance", "remoteness", "kept", "changed", "derivation"}.
+ * the form of the source's input. json: {"found", "chain", "distance", "remoteness", "kept", "changed", "derivation"};
+ * "detail": true adds "distance_fraction" and "remoteness_fraction", each [numerator, denominator].
  */
 ComposerStatus composer_api_recognize(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 

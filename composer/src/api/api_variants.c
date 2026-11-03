@@ -291,7 +291,7 @@ static cJSON *motive_document(const Motive *motive) {
 }
 
 /* A variant: its record as variant_record_to_json writes it, then "motive". NULL on failure. */
-static cJSON *variant_object(const Variant *variant) {
+static cJSON *variant_object(const Variant *variant, bool detail) {
     char *text = variant_record_to_json(&variant->record);
     cJSON *object = text ? cJSON_Parse(text) : NULL;
     free(text);
@@ -311,12 +311,22 @@ static cJSON *variant_object(const Variant *variant) {
         return NULL;
     }
     cJSON_AddItemToObject(object, "motive", motive);
+    /* The exact figures the decimals of the record come from, for a client that prints them (the command line). */
+    if (detail) {
+        cJSON *fraction = cJSON_AddArrayToObject(object, "remoteness_fraction");
+        if (!fraction || !cJSON_AddItemToArray(fraction, cJSON_CreateNumber((double)variant->record.remoteness_num)) ||
+            !cJSON_AddItemToArray(fraction, cJSON_CreateNumber((double)variant->record.remoteness_den)) ||
+            !cJSON_AddBoolToObject(object, "leaves_harmony", variant->record.leaves_harmony)) {
+            cJSON_Delete(object);
+            return NULL;
+        }
+    }
     return object;
 }
 
 /* {"seed", "source", "variants"}, "skipped" for each_op and "notices" when there are any. NULL on failure. */
 static cJSON *variants_document(unsigned long seed, const Motive *source, const Variant *variants, size_t count,
-                                const Skipped *skipped, size_t skipped_count, bool each_op, cJSON *notices) {
+                                const Skipped *skipped, size_t skipped_count, bool each_op, bool detail, cJSON *notices) {
     cJSON *document = cJSON_CreateObject();
     cJSON *source_document = document ? motive_document(source) : NULL;
     cJSON *array = source_document ? cJSON_CreateArray() : NULL;
@@ -329,7 +339,7 @@ static cJSON *variants_document(unsigned long seed, const Motive *source, const 
     cJSON_AddItemToObject(document, "source", source_document);
     cJSON_AddItemToObject(document, "variants", array);
     for (size_t i = 0; i < count; i++) {
-        cJSON *object = variant_object(&variants[i]);
+        cJSON *object = variant_object(&variants[i], detail);
         if (!object) {
             cJSON_Delete(document);
             return NULL;
@@ -364,8 +374,8 @@ static cJSON *variants_document(unsigned long seed, const Motive *source, const 
 
 static ComposerStatus respond_variants(ComposerResponse *out, unsigned long seed, const Motive *source,
                                        const Variant *variants, size_t count, const Skipped *skipped,
-                                       size_t skipped_count, bool each_op, cJSON *notices) {
-    cJSON *document = variants_document(seed, source, variants, count, skipped, skipped_count, each_op, notices);
+                                       size_t skipped_count, bool each_op, bool detail, cJSON *notices) {
+    cJSON *document = variants_document(seed, source, variants, count, skipped, skipped_count, each_op, detail, notices);
     if (!document) {
         return api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }
@@ -377,7 +387,7 @@ static ComposerStatus cancelled(ComposerError *error) {
 }
 
 /* each_op: one one-step variant for each operation that takes the motive's form. */
-static ComposerStatus make_each_op(const Filter *filter, unsigned long seed, const Motive *source, const Motive *basic,
+static ComposerStatus make_each_op(const Filter *filter, bool detail, unsigned long seed, const Motive *source, const Motive *basic,
                                    const ComposerJob *job, ComposerResponse *out) {
     size_t rows = variant_registry_count();
     Variant *variants = calloc(rows, sizeof(*variants));
@@ -423,7 +433,7 @@ static ComposerStatus make_each_op(const Filter *filter, unsigned long seed, con
     if (status == COMPOSER_OK && made == 0) {
         status = api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "no operation could be applied to this motive");
     } else if (status == COMPOSER_OK) {
-        status = respond_variants(out, seed, source, variants, made, skipped, skipped_count, true, NULL);
+        status = respond_variants(out, seed, source, variants, made, skipped, skipped_count, true, detail, NULL);
     }
     free(variants);
     free(skipped);
@@ -450,6 +460,7 @@ typedef struct {
     unsigned long count;
     unsigned long seed;
     bool each_op;
+    bool detail;
     const Distance *distance;
     bool has_chain;
     VariantChain chain;
@@ -468,6 +479,7 @@ static ComposerStatus read_variants_request(const cJSON *request, VariantsReques
     if (!api_member_whole(request, "count", 1, VARIANTS_COUNT_MAX, &read->count, &has_count, error) ||
         !api_member_whole(request, "seed", 0, SEED_MAX, &seed, &has_seed, error) ||
         !api_member_bool(request, "each_op", &read->each_op, NULL, error) ||
+        !api_member_bool(request, "detail", &read->detail, NULL, error) ||
         !api_member_string(request, "distance", &distance_text, &has_distance, error)) {
         return COMPOSER_ERR_REQUEST;
     }
@@ -541,7 +553,7 @@ static ComposerStatus make_variants(const cJSON *request, const ComposerJob *job
         return status;
     }
     if (read.each_op) {
-        return make_each_op(&read.filter, read.seed, &source, &basic, job, out);
+        return make_each_op(&read.filter, read.detail, read.seed, &source, &basic, job, out);
     }
 
     unsigned long count = read.count;
@@ -603,7 +615,7 @@ static ComposerStatus make_variants(const cJSON *request, const ComposerJob *job
                             draws);
     }
     if (status == COMPOSER_OK) {
-        status = respond_variants(out, read.seed, &source, variants, made, NULL, 0, false, notices);
+        status = respond_variants(out, read.seed, &source, variants, made, NULL, 0, false, read.detail, notices);
     } else {
         cJSON_Delete(notices);
     }
@@ -657,7 +669,7 @@ static double four_decimals(unsigned long long numerator, unsigned long long den
 }
 
 static cJSON *recognize_document(const Motive *source, const VariantChain *chain, const VariantRecognition *recognition,
-                                 const VariantRecord *remoteness) {
+                                 const VariantRecord *remoteness, bool detail) {
     cJSON *document = cJSON_CreateObject();
     if (!document) {
         return NULL;
@@ -676,6 +688,17 @@ static cJSON *recognize_document(const Motive *source, const VariantChain *chain
     cJSON_AddItemToObject(document, "kept", names_array(recognition->kept, recognition->kept_count));
     cJSON_AddItemToObject(document, "changed", names_array(recognition->changed, recognition->changed_count));
     cJSON_AddStringToObject(document, "derivation", recognition->derivation);
+    if (detail) {
+        cJSON *distance = cJSON_AddArrayToObject(document, "distance_fraction");
+        cJSON *remote = distance ? cJSON_AddArrayToObject(document, "remoteness_fraction") : NULL;
+        if (!remote || !cJSON_AddItemToArray(distance, cJSON_CreateNumber((double)recognition->distance_num)) ||
+            !cJSON_AddItemToArray(distance, cJSON_CreateNumber((double)recognition->distance_den)) ||
+            !cJSON_AddItemToArray(remote, cJSON_CreateNumber((double)remoteness->remoteness_num)) ||
+            !cJSON_AddItemToArray(remote, cJSON_CreateNumber((double)remoteness->remoteness_den))) {
+            cJSON_Delete(document);
+            return NULL;
+        }
+    }
     return document;
 }
 
@@ -734,7 +757,9 @@ static ComposerStatus recognize_request(const cJSON *request, const ComposerJob 
         return api_fail(error, COMPOSER_ERR_REQUEST, "/meter", "meter is required: both motives are read in it");
     }
     unsigned long depth = VARIANT_CHAIN_MAX;
-    if (!api_member_whole(request, "depth", 1, VARIANT_CHAIN_MAX, &depth, NULL, error)) {
+    bool detail = false;
+    if (!api_member_whole(request, "depth", 1, VARIANT_CHAIN_MAX, &depth, NULL, error) ||
+        !api_member_bool(request, "detail", &detail, NULL, error)) {
         return COMPOSER_ERR_REQUEST;
     }
     Motive source;
@@ -770,7 +795,7 @@ static ComposerStatus recognize_request(const cJSON *request, const ComposerJob 
         remoteness.remoteness_num = recognition.distance_num;
         remoteness.remoteness_den = recognition.distance_den;
     }
-    cJSON *document = recognize_document(&source, &chain, &recognition, &remoteness);
+    cJSON *document = recognize_document(&source, &chain, &recognition, &remoteness, detail);
     if (!document) {
         return api_fail(error, COMPOSER_ERR_ALLOC, "", "out of memory");
     }
