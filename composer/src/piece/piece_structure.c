@@ -491,7 +491,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
        motives are bars of the meter. The ending version has no seam. */
     beats += loop_plan ? 0 : per_bar;
     PlanSpan material = {{0, 1}, {0, 1}};
-    if (rational_make(bar.num * (long)((beats + per_bar - 1) / per_bar), bar.den, &material.start) != RATIONAL_OK) {
+    if (rational_mul_int(bar, (long long)((beats + per_bar - 1) / per_bar), &material.start) != RATIONAL_OK) {
         return PIECE_ERR_BAD_REQUEST;
     }
     PlanSpan form = {{0, 1}, {0, 1}};
@@ -500,7 +500,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
     PlanLanePayload payload;
     LaneSpanId lane;
     Rational bars_length = {0, 1};
-    if (rational_make(bar.num * (long)material_bars, bar.den, &bars_length) != RATIONAL_OK) {
+    if (rational_mul_int(bar, (long long)material_bars, &bars_length) != RATIONAL_OK) {
         plan_destroy(plan);
         return PIECE_ERR_BAD_REQUEST;
     }

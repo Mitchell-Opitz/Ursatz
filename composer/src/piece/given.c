@@ -65,7 +65,7 @@ static bool is_material(const PiecePlan *plan, NodeId section) {
 
 static Rational times(Rational unit, size_t count) {
     Rational out = {0, 1};
-    if (rational_make(unit.num * (long)count, unit.den, &out) != RATIONAL_OK) {
+    if (rational_mul_int(unit, (long long)count, &out) != RATIONAL_OK) {
         out.num = 0;
         out.den = 1;
     }

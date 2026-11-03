@@ -124,8 +124,7 @@ bool harmony_skeleton_bass(SkeletonCandidate *skeleton, const HarmonyBassParams 
     bass.metre.start = context->span.start;
     bass.metre.lead = (Rational){0, 1};
     bass.metre.tail = (Rational){0, 1};
-    if (rational_make(context->metre.cell_length.num * (long)(context->metre.first_cell % context->metre.cells_per_bar),
-                       context->metre.cell_length.den, &bass.metre.offset) != RATIONAL_OK) {
+    if (rational_mul_int(context->metre.cell_length, (long long)(context->metre.first_cell % context->metre.cells_per_bar), &bass.metre.offset) != RATIONAL_OK) {
         return false;
     }
     return harmony_bass_build(&bass, params, rng, &skeleton->bass);

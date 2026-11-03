@@ -252,7 +252,7 @@ Rational grow_bar_length(const PlanMeter *meter) {
 
 static Rational times(Rational time, size_t count) {
     Rational out = {0, 1};
-    if (rational_make(time.num * (long)count, time.den, &out) != RATIONAL_OK) {
+    if (rational_mul_int(time, (long long)count, &out) != RATIONAL_OK) {
         out.num = 0;
         out.den = 1;
     }

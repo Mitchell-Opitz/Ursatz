@@ -14,7 +14,7 @@
 #define MAX_BARLINES 1000000
 
 static PlanResult time_scaled(Rational time, size_t count, Rational *out) {
-    return plan_result_of_rational(rational_make(time.num * (long)count, time.den, out));
+    return plan_result_of_rational(rational_mul_int(time, (long long)count, out));
 }
 
 bool harmony_find_constraint(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanConstraintKind kind,
@@ -222,7 +222,7 @@ bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out) 
     Rational whole_cells;
     Rational remaining = span.length;
     size_t cells_before = times_in(offset, metre.cell_length);
-    if (rational_make(metre.cell_length.num * (long)cells_before, metre.cell_length.den, &whole_cells) != RATIONAL_OK ||
+    if (rational_mul_int(metre.cell_length, (long long)cells_before, &whole_cells) != RATIONAL_OK ||
         !time_since(offset, whole_cells, &into_cell)) {
         return false;
     }
@@ -240,7 +240,7 @@ bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out) 
     size_t whole = times_in(remaining, metre.cell_length);
     Rational whole_length;
     metre.tail = (Rational){0, 1};
-    if (rational_make(metre.cell_length.num * (long)whole, metre.cell_length.den, &whole_length) != RATIONAL_OK ||
+    if (rational_mul_int(metre.cell_length, (long long)whole, &whole_length) != RATIONAL_OK ||
         !time_since(remaining, whole_length, &metre.tail)) {
         return false;
     }
@@ -268,7 +268,7 @@ bool harmony_metre_cell_offset(const PhraseMetre *metre, size_t cell, Rational *
     size_t whole = cell == metre->cells && tail_cells ? cell - 1 - lead_cells : cell - lead_cells;
     Rational run;
     Rational sum;
-    if (rational_make(metre->cell_length.num * (long)whole, metre->cell_length.den, &run) != RATIONAL_OK ||
+    if (rational_mul_int(metre->cell_length, (long long)whole, &run) != RATIONAL_OK ||
         rational_add(metre->lead, run, &sum) != RATIONAL_OK) {
         return false;
     }
@@ -304,7 +304,7 @@ bool harmony_metre_cell_position(const PhraseMetre *metre, size_t cell, size_t *
         return false;
     }
     size_t bars = times_in(from_barline, metre->bar_length);
-    if (rational_make(metre->bar_length.num * (long)bars, metre->bar_length.den, &whole_bars) != RATIONAL_OK ||
+    if (rational_mul_int(metre->bar_length, (long long)bars, &whole_bars) != RATIONAL_OK ||
         !time_since(from_barline, whole_bars, in_bar)) {
         return false;
     }

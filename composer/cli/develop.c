@@ -316,7 +316,7 @@ static bool build_scene(const Motive *source, const PlanMotiveRef *ref, Scene *s
     Rational start;
     rational_make(bars * bar.num, bar.den, &start);
     Rational room;
-    rational_make(source->length.num * MAX_FACTOR, source->length.den, &room);
+    rational_mul_int(source->length, (long long)MAX_FACTOR, &room);
     Rational total;
     rational_add(start, room, &total);
     PlanSpan all = {{0, 1}, total};

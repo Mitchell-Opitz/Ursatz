@@ -230,7 +230,7 @@ static bool chain_metre(const PhraseRequest *request, size_t cells, PhraseMetre 
             before_cells += request->before[i].cells;
         }
         Rational before_length;
-        if (rational_make(-request->cell_length.num * (long)before_cells, request->cell_length.den, &before_length) !=
+        if (rational_mul_int(request->cell_length, -(long long)before_cells, &before_length) !=
                 RATIONAL_OK ||
             rational_add(request->span.start, before_length, &out->start) != RATIONAL_OK) {
             return false;
@@ -288,7 +288,7 @@ bool harmony_given_join(const PhraseRequest *request, const PhraseChord *chords,
         }
         Rational before_length;
         Rational start;
-        if (rational_make(-request->cell_length.num * (long)before_cells, request->cell_length.den, &before_length) !=
+        if (rational_mul_int(request->cell_length, -(long long)before_cells, &before_length) !=
                 RATIONAL_OK ||
             rational_add(request->span.start, before_length, &start) != RATIONAL_OK) {
             free(sequence);

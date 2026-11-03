@@ -44,7 +44,7 @@ size_t piece_material_bars(size_t section_count) {
 
 static Rational bars_of(Rational bar, size_t count) {
     Rational out = {0, 1};
-    if (rational_make(bar.num * (long)count, bar.den, &out) != RATIONAL_OK) {
+    if (rational_mul_int(bar, (long long)count, &out) != RATIONAL_OK) {
         out.num = 0;
         out.den = 1;
     }

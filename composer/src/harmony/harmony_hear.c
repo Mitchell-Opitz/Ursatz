@@ -171,11 +171,10 @@ static bool times_create(const HeardPhrase *phrase, size_t first_cell, size_t ce
         if (!metre_times(phrase->metre, first_cell, cells, &start, &end, &bar, &offset)) {
             return false;
         }
-    } else if (rational_make(phrase->cell_length.num * (long)first_cell, phrase->cell_length.den, &start) != RATIONAL_OK ||
-        rational_make(phrase->cell_length.num * (long)(first_cell + cells), phrase->cell_length.den, &end) !=
+    } else if (rational_mul_int(phrase->cell_length, (long long)first_cell, &start) != RATIONAL_OK ||
+        rational_mul_int(phrase->cell_length, (long long)(first_cell + cells), &end) !=
             RATIONAL_OK ||
-        rational_make(phrase->cell_length.num * (long)(first_cell % phrase->cells_per_bar),
-                       phrase->cell_length.den, &offset) != RATIONAL_OK) {
+        rational_mul_int(phrase->cell_length, (long long)(first_cell % phrase->cells_per_bar), &offset) != RATIONAL_OK) {
         return false;
     }
     return musical_time_from_rational(start, &times->start) == TIME_RATIONAL_OK &&

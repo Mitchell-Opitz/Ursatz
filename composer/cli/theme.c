@@ -432,7 +432,7 @@ static int read_chords(ThemeExt *ext, const PlanMeter *meter, const AnalysisKey 
             return cli_fail(CLI_EXIT_USAGE, "chords: too many chords");
         }
         Rational bar_start;
-        if (rational_make(bar_length.num * bar, bar_length.den, &bar_start) != RATIONAL_OK) {
+        if (rational_mul_int(bar_length, (long long)bar, &bar_start) != RATIONAL_OK) {
             return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: the bar is out of range", bar);
         }
         for (size_t c = 0; c < count; c++) {
