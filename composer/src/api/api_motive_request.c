@@ -282,3 +282,206 @@ ComposerStatus api_read_motive_bytes(const cJSON *request, const char *base, con
                                      Motive *out, MotiveOptions *options, ComposerError *error) {
     return read_motive(request, base ? base : "", bytes, size, out, options, error);
 }
+
+/* --- the motives of a theme or piece request ------------------------------------------------------------ */
+
+#include <stdlib.h>
+
+#include <ursatz_composer/grow_form.h>
+#include <ursatz_composer/harmony_phrase.h>
+#include <ursatz_composer/motive_tones.h>
+
+/* A string member of a request, "the request needs" it when required; *out is NULL for a null or absent member. */
+bool api_request_string(const cJSON *object, const char *base, const char *name, bool required, const char **out,
+                        ComposerError *error) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
+    *out = NULL;
+    if (!item || cJSON_IsNull(item)) {
+        if (required) {
+            fail_at(error, COMPOSER_ERR_REQUEST, base, "/", "the request needs \"%s\"", name);
+            if (error) {
+                snprintf(error->path, sizeof error->path, "%s/%s", base ? base : "", name);
+            }
+            return false;
+        }
+        return true;
+    }
+    if (!cJSON_IsString(item)) {
+        fail_at(error, COMPOSER_ERR_REQUEST, base, "/", "\"%s\" in the request must be a string", name);
+        if (error) {
+            snprintf(error->path, sizeof error->path, "%s/%s", base ? base : "", name);
+        }
+        return false;
+    }
+    *out = item->valuestring;
+    return true;
+}
+
+/* A pickup written as a string ("0", "1/2") or a number of beats; formats a number into text. */
+bool api_request_pickup(const cJSON *object, const char *base, char *text, size_t size, const char **out,
+                        ComposerError *error) {
+    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, "pickup");
+    *out = NULL;
+    if (!item || cJSON_IsNull(item)) {
+        return true;
+    }
+    if (cJSON_IsString(item)) {
+        *out = item->valuestring;
+        return true;
+    }
+    if (cJSON_IsNumber(item)) {
+        snprintf(text, size, "%g", item->valuedouble);
+        *out = text;
+        return true;
+    }
+    fail_at(error, COMPOSER_ERR_REQUEST, base, "/pickup", "\"pickup\" in the request must be a string or a number of beats");
+    return false;
+}
+
+/*
+ * Reads "tone_overrides" of a motive, {"<n>": "<role>"}: the 1-based note and its role as the motive command's --tone writes
+ * it ("chord" or a non-chord tone). They go on the motive, which a plan keeps as its tones when it is attached.
+ */
+static ComposerStatus read_tone_overrides(const char *what, const char *base, const cJSON *object, Motive *motive,
+                                          ComposerError *error) {
+    const cJSON *overrides = cJSON_GetObjectItemCaseSensitive(object, "tone_overrides");
+    if (!overrides || cJSON_IsNull(overrides)) {
+        return COMPOSER_OK;
+    }
+    if (!cJSON_IsObject(overrides)) {
+        return fail_at(error, COMPOSER_ERR_REQUEST, base, "/tone_overrides", "%s: tone_overrides must be {\"<note>\": \"<role>\"}",
+                       what);
+    }
+    for (const cJSON *entry = overrides->child; entry; entry = entry->next) {
+        char *end = NULL;
+        long note = strtol(entry->string, &end, 10);
+        if (motive->tone_override_count == MOTIVE_MAX_NOTES) {
+            return fail_at(error, COMPOSER_ERR_REQUEST, base, "/tone_overrides", "%s: tone_overrides names a note twice", what);
+        }
+        MotiveToneOverride *slot = &motive->tone_overrides[motive->tone_override_count];
+        if (end == entry->string || *end != '\0' || note < 1 || (unsigned long)note > motive->note_count) {
+            return fail_at(error, COMPOSER_ERR_REQUEST, base, "/tone_overrides",
+                           "%s: tone_overrides \"%s\": the note is a number from 1 to %zu", what, entry->string,
+                           motive->note_count);
+        }
+        if (!cJSON_IsString(entry) || !motive_tone_role_parse(entry->valuestring, &slot->role, &slot->type)) {
+            return fail_at(error, COMPOSER_ERR_REQUEST, base, "/tone_overrides",
+                           "%s: tone_overrides \"%s\": the role is chord, passing, neighbor, appoggiatura, suspension, "
+                           "retardation, escape, anticipation, double-neighbor, changing-tone or pedal",
+                           what, entry->string);
+        }
+        slot->note = (size_t)note - 1;
+        motive->tone_override_count++;
+    }
+    if (motive->tone_override_count > 0) {
+        PlanConstraint tones;
+        if (!motive_tones_constraint(motive, &tones)) {
+            return fail_at(error, COMPOSER_ERR_REQUEST, base, "/tone_overrides",
+                           "%s: tone_overrides need a motive with a key and pitches to label", what);
+        }
+    }
+    return COMPOSER_OK;
+}
+
+ComposerStatus api_read_degrees_motive(const char *what, const char *base, const cJSON *object, const char *role,
+                                       const PlanMeter *meter, const AnalysisKey *key, Motive *out, ComposerError *error) {
+    const char *degrees;
+    const char *harmony;
+    const char *form;
+    const char *role_text;
+    const char *pickup;
+    char pickup_text[32];
+    if (!api_request_string(object, base, "degrees", true, &degrees, error) ||
+        !api_request_string(object, base, "harmony", false, &harmony, error) ||
+        !api_request_string(object, base, "form", false, &form, error) ||
+        !api_request_string(object, base, "role", false, &role_text, error) ||
+        !api_request_pickup(object, base, pickup_text, sizeof(pickup_text), &pickup, error)) {
+        return COMPOSER_ERR_REQUEST;
+    }
+    if (form && strcmp(form, "full") != 0) {
+        return fail_at(error, COMPOSER_ERR_REQUEST, base, "/form", "%s: form must be \"full\", not \"%s\"", what, form);
+    }
+    MotiveOptions options;
+    memset(&options, 0, sizeof(options));
+    options.has_meter = true;
+    options.meter = *meter;
+    options.has_key = true;
+    options.key = *key;
+    if (pickup) {
+        if (!request_parse_pickup(pickup, meter->beat_unit, &options.pickup)) {
+            return fail_at(error, COMPOSER_ERR_REQUEST, base, "/pickup", "%s: pickup '%s' is not a number of beats; write 0, 1 or 1/2",
+                           what, pickup);
+        }
+        options.has_pickup = true;
+    }
+    MotiveError motive_error;
+    if (harmony && harmony[0]) {
+        if (motive_harmony_parse(harmony, meter, options.harmony, &options.harmony_count, &motive_error) != MOTIVE_OK) {
+            return fail_at(error, COMPOSER_ERR_REQUEST, base, "/harmony", "%s: harmony '%s' at %s: %s", what, harmony,
+                           motive_error.location, motive_error.message);
+        }
+        options.has_harmony = true;
+    }
+    const cJSON *features = cJSON_GetObjectItemCaseSensitive(object, "features");
+    if (features && !cJSON_IsNull(features)) {
+        if (!cJSON_IsArray(features) || cJSON_GetArraySize(features) > MOTIVE_MAX_FEATURES) {
+            return fail_at(error, COMPOSER_ERR_REQUEST, base, "/features", "%s: \"features\" must be a list of at most %d features",
+                           what, MOTIVE_MAX_FEATURES);
+        }
+        const cJSON *item = NULL;
+        cJSON_ArrayForEach(item, features) {
+            const cJSON *label = cJSON_GetObjectItemCaseSensitive(item, "label");
+            const cJSON *first = cJSON_GetObjectItemCaseSensitive(item, "first");
+            const cJSON *last = cJSON_GetObjectItemCaseSensitive(item, "last");
+            if (!cJSON_IsString(label) || strlen(label->valuestring) > MOTIVE_FEATURE_LABEL_MAX || !cJSON_IsNumber(first) ||
+                !cJSON_IsNumber(last) || first->valuedouble < 0 || last->valuedouble < first->valuedouble) {
+                return fail_at(error, COMPOSER_ERR_REQUEST, base, "/features",
+                               "%s: a feature is {\"label\", \"first\", \"last\"} with 0 <= first <= last", what);
+            }
+            MotiveSketchFeature *feature = &options.features[options.feature_count++];
+            snprintf(feature->label, sizeof(feature->label), "%s", label->valuestring);
+            feature->first = (size_t)first->valuedouble;
+            feature->last = (size_t)last->valuedouble;
+        }
+        options.has_features = options.feature_count > 0;
+    }
+    const char *wanted_role = role ? role : role_text;
+    if (wanted_role) {
+        if (!motive_role_parse(wanted_role, &options.accompaniment)) {
+            return fail_at(error, COMPOSER_ERR_REQUEST, base, "/role", "%s: role must be melodic or accompaniment, not '%s'", what,
+                           wanted_role);
+        }
+        options.has_role = true;
+    }
+    if (motive_from_degrees_text(degrees, &options, out, &motive_error) != MOTIVE_OK) {
+        return fail_at(error, COMPOSER_ERR_REQUEST, base, "/degrees", "%s: cannot read the degrees '%s'%s%s: %s", what, degrees,
+                       motive_error.location[0] ? " at " : "", motive_error.location, motive_error.message);
+    }
+    return read_tone_overrides(what, base, object, out, error);
+}
+
+ComposerStatus api_read_functions(const char *what, const char *base, const cJSON *functions, unsigned *out,
+                                  ComposerError *error) {
+    *out = 0;
+    if (!functions || cJSON_IsNull(functions)) {
+        return COMPOSER_OK;
+    }
+    if (!cJSON_IsArray(functions)) {
+        return fail_at(error, COMPOSER_ERR_REQUEST, base, "/functions", "%s: \"functions\" must be a list", what);
+    }
+    const cJSON *item = NULL;
+    cJSON_ArrayForEach(item, functions) {
+        const char *name = cJSON_IsString(item) ? item->valuestring : "";
+        unsigned bit = strcmp(name, "beginning") == 0      ? GROW_FUNCTION_BEGINNING
+                       : strcmp(name, "continuation") == 0 ? GROW_FUNCTION_CONTINUATION
+                       : strcmp(name, "contrast") == 0     ? GROW_FUNCTION_CONTRAST
+                       : strcmp(name, "cadential") == 0    ? GROW_FUNCTION_CADENTIAL
+                                                           : 0;
+        if (bit == 0) {
+            return fail_at(error, COMPOSER_ERR_REQUEST, base, "/functions",
+                           "%s: function must be beginning, continuation, contrast or cadential, not '%s'", what, name);
+        }
+        *out |= bit;
+    }
+    return COMPOSER_OK;
+}

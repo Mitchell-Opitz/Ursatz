@@ -15,7 +15,7 @@
  */
 
 #define COMPOSER_API_VERSION_MAJOR 0
-#define COMPOSER_API_VERSION_MINOR 3
+#define COMPOSER_API_VERSION_MINOR 4
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -146,5 +146,17 @@ ComposerStatus composer_api_recognize(const char *request_json, const ComposerJo
  * A style that cannot be read is COMPOSER_ERR_UNSATISFIABLE with path /style.
  */
 ComposerStatus composer_api_random_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Grows a theme from the theme request (docs/theme-request.md, schema "ursatz-theme-request" version 2) with its motives
+ * inline ("degrees" text; a motive with a "path" or "file" is refused with its path) and the options the command takes:
+ * "seed", "suggest" (1 to 16 themes), "check", "style" (a style model path), "blend", "blend_weight", "blend_weights",
+ * "tempo", "plain_midi", and what to make besides the document: "midi", "musicxml" (the first theme's files), "plans"
+ * (each theme's plan in the document), "explain" ("text" or "json": each theme's explanation in the document).
+ * json: what `theme --format json` prints (without the files it wrote). plan_json: the first theme's plan. midi and
+ * musicxml: the first theme's files, when asked. Progress per compose stage and per seed tried ("grow"); a cancel is
+ * COMPOSER_ERR_CANCELLED with no partial plan.
+ */
+ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
 #endif
