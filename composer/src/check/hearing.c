@@ -1,5 +1,6 @@
 #include "check/hearing_result.h"
 
+#include <stdatomic.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -12,6 +13,14 @@
 #include <ursatz_analyzer/composer_api.h>
 
 #include <ursatz_composer/lanes.h>
+
+/* Test only (hearing.h): how many spans were handed to the Analyzer. Not static, so it is not the file-scope state
+   scripts/check-statics.sh refuses; nothing in src reads it. */
+atomic_size_t hearing_analyzer_calls_made;
+
+size_t hearing_analyzer_calls(void) {
+    return atomic_load(&hearing_analyzer_calls_made);
+}
 
 /* One span heard: the result and the arrays it borrows, kept together. */
 typedef struct {
@@ -207,6 +216,7 @@ HearingResult hearing_section(ComposerHearing *hearing, PlanSpan span, const Ana
     input.key_minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
     input.streams = heard.streams;
     AnalyzerHearingOptions options = analyzer_hearing_options_default();
+    atomic_fetch_add(&hearing_analyzer_calls_made, 1);
     AnalyzerStatus status = analyzer_hear(&input, &options, &heard.result);
     if (status != ANALYZER_OK) {
         heard_span_release(&heard);

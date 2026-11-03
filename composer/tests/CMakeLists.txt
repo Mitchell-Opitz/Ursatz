@@ -383,10 +383,20 @@ add_executable(test_regenerate test_regenerate.c)
 target_link_libraries(test_regenerate PRIVATE ursatz_composer composer_test_support)
 target_compile_options(test_regenerate PRIVATE -Wall -Wextra -Wpedantic)
 target_compile_definitions(test_regenerate PRIVATE COMPOSER_CLI_PATH="$<TARGET_FILE:ursatz-composer>")
+target_include_directories(test_regenerate PRIVATE ${PROJECT_SOURCE_DIR}/src)
 add_dependencies(test_regenerate ursatz-composer)
-foreach(mode remove lock dependents section returns lanes locked determinism cli)
+foreach(mode remove lock dependents section scope scope-config returns lanes locked determinism cli)
     add_test(NAME test_regenerate_${mode} COMMAND test_regenerate ${mode})
 endforeach()
+# Memory errors only: every analyzer_hear leaks in the Analyzer's make_kernel_window (analysis_motive.c), not here.
+find_program(VALGRIND_PROGRAM valgrind)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_regenerate_scope_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=no $<TARGET_FILE:test_regenerate> scope)
+    add_test(NAME test_regenerate_scope_config_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=no $<TARGET_FILE:test_regenerate> scope-config)
+    set_tests_properties(test_regenerate_scope_valgrind test_regenerate_scope_config_valgrind PROPERTIES LABELS slow)
+endif()
 
 # Variations and harmonizations (docs/regenerate.md). Each mode is one ctest entry; the sweep is slow and CI leaves it
 # out (ctest -LE slow), its smoke test is the sweep on seeds 1 and 2. The cli test runs the commands as processes.

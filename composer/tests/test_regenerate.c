@@ -13,6 +13,7 @@
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/plan_state.h>
 #include <ursatz_composer/regenerate.h>
+#include "check/hearing.h"
 #include "support/test_support.h"
 
 /*
@@ -31,6 +32,10 @@
  *                nothing of B that comes before the target is written again, B is written again
  *   locked       Given material, a locked section or span, a section with Given in it, and the targets that cannot be
  *                regenerated are refused and change nothing; a Given span a regenerated span depends on is untouched
+ *   scope        regenerate B: only B is heard and handed to the Analyzer (A and A' are not open, so not in the outcome, their
+ *                notes byte-equal); a full compose_run hands the Analyzer more spans
+ *   scope-config ComposeConfig.scope = B on a fresh plan: A and A' are reported out of scope, add nothing to the heard
+ *                score, and the plan written is the unscoped run's
  *   determinism  the same plan, target and seed give the same plan and the same records
  *   cli          the lock and regenerate commands, run as processes, with their exit codes
  */
@@ -628,6 +633,125 @@ static int test_section(void) {
     return 0;
 }
 
+/* ------------------------------------------------------------ scope */
+
+static int test_scope(void) {
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        size_t calls = hearing_analyzer_calls();
+        Piece piece = fill(seed);
+        size_t full_calls = hearing_analyzer_calls() - calls;
+        assert(full_calls > 0);
+
+        /* Regenerating B hears B only (A and A' are not open, so they are not in the outcome) and leaves their notes
+           byte-equal. */
+        char *a_before = section_text(piece.plan, piece.a);
+        char *return_before = section_text(piece.plan, piece.a_return);
+        ComposeOutcome outcome;
+        unsigned long used;
+        memset(&outcome, 0, sizeof(outcome));
+        calls = hearing_analyzer_calls();
+        assert(regenerate_retry(&piece, TARGET_B, seed + 100, &outcome, &used) == REGENERATE_OK);
+        size_t regenerate_calls = hearing_analyzer_calls() - calls;
+        char *a_after = section_text(piece.plan, piece.a);
+        char *return_after = section_text(piece.plan, piece.a_return);
+        assert(strcmp(a_before, a_after) == 0);
+        assert(strcmp(return_before, return_after) == 0);
+        assert(outcome.section_count == 1);
+        assert(outcome.sections[0].section == piece.b && outcome.sections[0].in_scope);
+        assert(outcome.sections[0].heard_result == FORM_HEAR_OK);
+        printf("seed %lu: Analyzer spans, full run %zu, regenerating B %zu\n", seed, full_calls, regenerate_calls);
+        assert(regenerate_calls < full_calls);
+        free(a_before);
+        free(a_after);
+        free(return_before);
+        free(return_after);
+        compose_outcome_destroy(&outcome);
+        plan_destroy(piece.plan);
+    }
+    printf("scope regenerate ok\n");
+    return 0;
+}
+
+/* A scope given to compose_run: only B is heard, the sections out of scope are reported so and add nothing to the heard
+   score, and the written music is the one an unscoped run writes. */
+static int test_scope_config(void) {
+    unsigned checks_made = 0;
+    for (unsigned long seed = 1; seed <= SEEDS; seed++) {
+        PieceRequest asked = request();
+        ComposeConfig config = config_of(seed);
+        ComposeOutcome all;
+        ComposeOutcome scoped;
+        Piece unscoped;
+        Piece only_b;
+        memset(&unscoped, 0, sizeof(unscoped));
+        memset(&only_b, 0, sizeof(only_b));
+        assert(piece_build_plan(&asked, &unscoped.plan) == PIECE_OK);
+        assert(piece_build_plan(&asked, &only_b.plan) == PIECE_OK);
+        bind(&unscoped);
+        bind(&only_b);
+        assert(compose_run(unscoped.plan, &config, &all) == PIECE_OK);
+
+        NodeId scope[1] = {only_b.b};
+        config.scope = scope;
+        config.scope_count = 1;
+        assert(compose_run(only_b.plan, &config, &scoped) == PIECE_OK);
+
+        assert(scoped.section_count == 3 && all.section_count == 3);
+        unsigned long expected = 0;
+        for (size_t i = 0; i < 3; i++) {
+            assert(all.sections[i].in_scope && all.sections[i].heard_result == FORM_HEAR_OK);
+            assert(scoped.sections[i].section == all.sections[i].section);
+            if (scoped.sections[i].section == only_b.b) {
+                assert(scoped.sections[i].in_scope && scoped.sections[i].heard_result == FORM_HEAR_OK);
+                expected = scoped.sections[i].structure.denominator + (scoped.sections[i].requested_form >= 0 ? 1 : 0);
+            } else {
+                assert(!scoped.sections[i].in_scope);
+                assert(scoped.sections[i].heard_result == FORM_HEAR_ERR_NOT_WRITTEN && scoped.sections[i].heard_form < 0);
+                assert(!scoped.sections[i].heard_as_requested);
+            }
+        }
+        /* The returns are read from the whole piece either way. */
+        assert(scoped.returns_planned == all.returns_planned);
+        assert(scoped.score.denominator == expected + scoped.returns_planned);
+
+        /* Hearing less writes nothing else. */
+        char *unscoped_json = json_of(unscoped.plan);
+        char *scoped_json = json_of(only_b.plan);
+        assert(strcmp(unscoped_json, scoped_json) == 0);
+        free(unscoped_json);
+        free(scoped_json);
+        compose_outcome_destroy(&all);
+        compose_outcome_destroy(&scoped);
+        plan_destroy(unscoped.plan);
+        plan_destroy(only_b.plan);
+
+        /* With the Analyzer check, the sections out of scope are not checked. */
+        Piece checked;
+        ComposeOutcome checked_outcome;
+        memset(&checked, 0, sizeof(checked));
+        memset(&checked_outcome, 0, sizeof(checked_outcome));
+        assert(piece_build_plan(&asked, &checked.plan) == PIECE_OK);
+        bind(&checked);
+        scope[0] = checked.b;
+        config.analyzer_check = true;
+        if (compose_run(checked.plan, &config, &checked_outcome) == PIECE_OK) {
+            checks_made++;
+            assert(checked_outcome.analyzer_check_count == 3);
+            for (size_t i = 0; i < 3; i++) {
+                if (checked_outcome.sections[i].section != checked.b) {
+                    assert(checked_outcome.analyzer_checks[i].planned == 0 && checked_outcome.analyzer_checks[i].item_count == 0);
+                }
+            }
+        }
+        compose_outcome_destroy(&checked_outcome);
+        plan_destroy(checked.plan);
+    }
+    printf("analyzer checks with a scope: %u of %d seeds\n", checks_made, SEEDS);
+    assert(checks_made >= 1);
+    printf("scope config ok\n");
+    return 0;
+}
+
 /* ------------------------------------------------------------ returns */
 
 static int test_returns(void) {
@@ -1040,6 +1164,12 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "section") == 0) {
         return test_section();
     }
+    if (strcmp(mode, "scope") == 0) {
+        return test_scope();
+    }
+    if (strcmp(mode, "scope-config") == 0) {
+        return test_scope_config();
+    }
     if (strcmp(mode, "returns") == 0) {
         return test_returns();
     }
@@ -1055,6 +1185,6 @@ int main(int argc, char **argv) {
     if (strcmp(mode, "cli") == 0) {
         return test_cli();
     }
-    fprintf(stderr, "usage: test_regenerate remove|lock|dependents|section|returns|lanes|locked|determinism|cli\n");
+    fprintf(stderr, "usage: test_regenerate remove|lock|dependents|section|scope|scope-config|returns|lanes|locked|determinism|cli\n");
     return 1;
 }
