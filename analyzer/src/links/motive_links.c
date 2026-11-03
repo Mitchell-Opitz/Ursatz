@@ -343,8 +343,10 @@ typedef struct {
     MotiveLinksResult result;
 } ScopeAdd;
 
-static bool add_scope_document(const char *piece_path, const char *document, const char *json, void *context) {
+static bool add_scope_document(const char *piece_path, const char *document, const char *json,
+                               AnalyzerDocumentStatus status, void *context) {
     (void)document;
+    (void)status;
     ScopeAdd *add = context;
     add->result = motive_link_scope_add_document(add->scope, piece_path, json);
     return add->result == MOTIVE_LINKS_OK;

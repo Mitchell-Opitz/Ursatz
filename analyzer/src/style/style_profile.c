@@ -601,9 +601,11 @@ typedef struct {
     StyleProfileResult result;
 } CorpusAdd;
 
-static bool add_corpus_document(const char *piece_path, const char *document, const char *json, void *context) {
+static bool add_corpus_document(const char *piece_path, const char *document, const char *json,
+                                AnalyzerDocumentStatus status, void *context) {
     (void)piece_path;
     (void)document;
+    (void)status;
     CorpusAdd *add = context;
     add->result = style_profile_add_document_json(add->profile, json);
     return add->result == STYLE_PROFILE_OK;

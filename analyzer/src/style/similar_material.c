@@ -732,7 +732,9 @@ typedef struct {
     SimilarResult result;
 } SearchWalk;
 
-static bool search_walk_document(const char *piece_path, const char *document, const char *json, void *context) {
+static bool search_walk_document(const char *piece_path, const char *document, const char *json,
+                                 AnalyzerDocumentStatus status, void *context) {
+    (void)status;
     SearchWalk *walk = context;
     cJSON *parsed = cJSON_Parse(json);
     long version;
