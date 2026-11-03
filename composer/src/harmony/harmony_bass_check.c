@@ -12,6 +12,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "harmony/harmony_internal.h"
+#include "melody/melody_internal.h"
 #include "util/util.h"
 
 /*
@@ -70,17 +71,9 @@ PitchSpelling *harmony_spell_tonic(const PlanKey *key, int octave) {
     return spelling;
 }
 
-static unsigned melodic_soft_rules(void) {
-    unsigned count = 0;
-    for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
-        count += standard_counterpoint_melodic_preference((StandardCounterpointMelodicRule)rule) != NULL;
-    }
-    return count;
-}
-
 bool harmony_bass_judge(const BassCandidate *line, PhraseVerdict *verdict) {
     memset(verdict, 0, sizeof(*verdict));
-    verdict->soft_total = melodic_soft_rules();
+    verdict->soft_total = melody_melodic_soft_rules();
     if (line->note_count == 0 || line->note_count > BASS_MAX_NOTES) {
         verdict->hard = "no bass notes";
         return true;

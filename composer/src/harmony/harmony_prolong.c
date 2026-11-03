@@ -75,10 +75,6 @@ static const Figure FIGURES[] = {
 
 #define FIGURE_COUNT (sizeof(FIGURES) / sizeof(FIGURES[0]))
 
-static bool is_target(FillTarget target) {
-    return target.kind == FILL_TARGET_LANE_SPAN;
-}
-
 /* The operator's context is non-NULL when it works around Given material (harmony_prolong_register_given). */
 static const char AROUND_GIVEN = 1;
 
@@ -89,7 +85,7 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool around_g
 
 static bool prolong_applies(const PiecePlan *plan, FillTarget target, void *context) {
     PhraseRequest request;
-    return is_target(target) && read_request(plan, (LaneSpanId)target.id, context != NULL, &request);
+    return harmony_is_target(target) && read_request(plan, (LaneSpanId)target.id, context != NULL, &request);
 }
 
 static bool figure_wanted(const Figure *figure, const PlanHarmonyShape *shape) {
@@ -213,39 +209,10 @@ static bool previous_chords(const PiecePlan *plan, const PhraseRequest *request,
     return true;
 }
 
-static bool same_progression(const PhraseProgression *a, const PhraseProgression *b) {
-    if (a->count != b->count) {
-        return false;
-    }
-    for (size_t i = 0; i < a->count; i++) {
-        if (a->chords[i].cells != b->chords[i].cells || strcmp(a->chords[i].roman, b->chords[i].roman) != 0) {
-            return false;
-        }
-    }
-    return true;
-}
-
-static void progression_label(const PhraseProgression *progression, char *label, size_t size) {
-    size_t used = 0;
-    label[0] = '\0';
-    for (size_t i = 0; i < progression->count && used + 1 < size; i++) {
-        size_t length = strlen(progression->chords[i].roman);
-        if (used + length + 2 >= size) {
-            break;
-        }
-        if (i) {
-            label[used++] = ' ';
-        }
-        memcpy(label + used, progression->chords[i].roman, length);
-        used += length;
-        label[used] = '\0';
-    }
-}
-
 static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                              FillCandidateList *out) {
     PhraseRequest request;
-    if (!is_target(target) || !read_request(plan, (LaneSpanId)target.id, context != NULL, &request)) {
+    if (!harmony_is_target(target) || !read_request(plan, (LaneSpanId)target.id, context != NULL, &request)) {
         return false;
     }
     size_t wanted[FIGURE_COUNT];
@@ -279,7 +246,7 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
         payload->repeatable = true;
         payload->repeats = true;
         char label[FILL_LABEL_MAX];
-        progression_label(payload, label, sizeof(label));
+        harmony_progression_label(payload, label, sizeof(label));
         if (!fill_candidates_add(out, label, payload, harmony_progression_destroy)) {
             return false;
         }
@@ -297,7 +264,7 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
         }
         bool repeat = false;
         for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || same_progression(kept[i], &progression);
+            repeat = repeat || harmony_same_progression(kept[i], &progression);
         }
         if (repeat) {
             free(progression.chords);
@@ -312,7 +279,7 @@ static bool prolong_generate(const PiecePlan *plan, FillTarget target, FillRng *
         payload->repeatable = repeat_fits;
         payload->repeats = false;
         char label[FILL_LABEL_MAX];
-        progression_label(payload, label, sizeof(label));
+        harmony_progression_label(payload, label, sizeof(label));
         if (!fill_candidates_add(out, label, payload, harmony_progression_destroy)) {
             return false;
         }

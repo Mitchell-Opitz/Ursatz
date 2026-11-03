@@ -212,7 +212,7 @@ static PitchSpelling *spell_melody(const PlanKey *key, int pitch) {
     return harmony_spell_pitch(key, pitch_degree(key, pitch), pitch);
 }
 
-static unsigned melodic_soft_rules(void) {
+unsigned melody_melodic_soft_rules(void) {
     unsigned count = 0;
     for (int rule = 0; rule < STANDARD_COUNTERPOINT_MELODIC_RULE_COUNT; rule++) {
         count += standard_counterpoint_melodic_preference((StandardCounterpointMelodicRule)rule) != NULL;
@@ -254,7 +254,7 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
         StandardCounterpointLimits limits = standard_counterpoint_default_limits();
         unsigned hard = 0;
         unsigned soft = 0;
-        verdict->soft_total += melodic_soft_rules();
+        verdict->soft_total += melody_melodic_soft_rules();
         if (!standard_counterpoint_melodic_check(&line, &limits, &hard, &soft)) {
             ok = false;
         } else {
@@ -266,7 +266,7 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
                     break;
                 }
             }
-            verdict->soft_held += melodic_soft_rules() - util_bits_set(soft);
+            verdict->soft_held += melody_melodic_soft_rules() - util_bits_set(soft);
         }
     }
     for (size_t i = 0; spellings && i < total; i++) {

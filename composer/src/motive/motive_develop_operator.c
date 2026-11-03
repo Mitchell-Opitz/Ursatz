@@ -148,10 +148,6 @@ typedef struct {
     size_t added;
 } Proposal;
 
-static void payload_destroy(void *payload) {
-    free(payload);
-}
-
 static bool already_proposed(const Proposal *proposal, const Motive *result) {
     for (size_t i = 0; i < proposal->out->count; i++) {
         const Payload *held = proposal->out->items[i].payload;
@@ -182,7 +178,7 @@ static bool try_spec(Proposal *proposal, const MotiveDevSpec *spec) {
     payload->result = result;
     char label[FILL_LABEL_MAX];
     motive_dev_label(spec, label, sizeof(label));
-    if (!fill_candidates_add(proposal->out, label, payload, payload_destroy)) {
+    if (!fill_candidates_add(proposal->out, label, payload, motive_payload_destroy)) {
         return false;
     }
     proposal->added++;

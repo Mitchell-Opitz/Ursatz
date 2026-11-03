@@ -269,7 +269,7 @@ static bool build_progression(const PhraseRequest *request, FillRng *rng, int pi
     return false;
 }
 
-static bool same_progression(const PhraseProgression *a, const PhraseProgression *b) {
+bool harmony_same_progression(const PhraseProgression *a, const PhraseProgression *b) {
     if (a->count != b->count) {
         return false;
     }
@@ -281,15 +281,20 @@ static bool same_progression(const PhraseProgression *a, const PhraseProgression
     return true;
 }
 
-static void progression_label(const PhraseProgression *progression, char *label, size_t size) {
+void harmony_progression_label(const PhraseProgression *progression, char *label, size_t size) {
     size_t used = 0;
     label[0] = '\0';
     for (size_t i = 0; i < progression->count && used + 1 < size; i++) {
-        int written = snprintf(label + used, size - used, i ? " %s" : "%s", progression->chords[i].roman);
-        if (written < 0) {
+        size_t length = strlen(progression->chords[i].roman);
+        if (used + length + 2 >= size) {
             break;
         }
-        used += (size_t)written;
+        if (i) {
+            label[used++] = ' ';
+        }
+        memcpy(label + used, progression->chords[i].roman, length);
+        used += length;
+        label[used] = '\0';
     }
 }
 
@@ -309,7 +314,7 @@ bool harmony_phrase_propose(const PhraseRequest *request, FillRng *rng, FillCand
         }
         bool repeat = false;
         for (size_t i = 0; i < kept_count; i++) {
-            repeat = repeat || same_progression(kept[i], &progression);
+            repeat = repeat || harmony_same_progression(kept[i], &progression);
         }
         if (repeat) {
             free(progression.chords);
@@ -322,7 +327,7 @@ bool harmony_phrase_propose(const PhraseRequest *request, FillRng *rng, FillCand
         }
         *payload = progression;
         char label[FILL_LABEL_MAX];
-        progression_label(payload, label, sizeof(label));
+        harmony_progression_label(payload, label, sizeof(label));
         if (!fill_candidates_add(out, label, payload, harmony_progression_destroy)) {
             /* fill_candidates_add destroyed the payload. */
             return false;

@@ -6,10 +6,6 @@
 
 #include "harmony/harmony_internal.h"
 
-static bool is_target(FillTarget target) {
-    return target.kind == FILL_TARGET_LANE_SPAN;
-}
-
 /* The operator's context is non-NULL when it works around Given material (harmony_phrase_register_given). */
 static const char AROUND_GIVEN = 1;
 
@@ -20,13 +16,13 @@ static bool read_request(const PiecePlan *plan, LaneSpanId target, bool around_g
 
 static bool phrase_applies(const PiecePlan *plan, FillTarget target, void *context) {
     PhraseRequest request;
-    return is_target(target) && read_request(plan, (LaneSpanId)target.id, context != NULL, &request);
+    return harmony_is_target(target) && read_request(plan, (LaneSpanId)target.id, context != NULL, &request);
 }
 
 static bool phrase_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     PhraseRequest request;
-    if (!is_target(target) || !read_request(plan, (LaneSpanId)target.id, context != NULL, &request)) {
+    if (!harmony_is_target(target) || !read_request(plan, (LaneSpanId)target.id, context != NULL, &request)) {
         return false;
     }
     return harmony_phrase_propose(&request, rng, out);
@@ -60,7 +56,7 @@ PlanResult harmony_progression_apply(PiecePlan *plan, FillTarget target, const F
                                      ReadRequestFn read_request) {
     const PhraseProgression *progression = candidate ? candidate->payload : NULL;
     PhraseRequest request;
-    if (!is_target(target) || !progression || progression->count == 0) {
+    if (!harmony_is_target(target) || !progression || progression->count == 0) {
         return PLAN_ERR_NULL;
     }
     LaneSpanId first = (LaneSpanId)target.id;

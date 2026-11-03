@@ -271,10 +271,6 @@ typedef struct {
     FillCandidateList *out;
 } Proposal;
 
-static void payload_destroy(void *payload) {
-    free(payload);
-}
-
 /* Every pitch within the range, and in the key's scale (a minor key also has the raised seventh). */
 static bool within_range(const Motive *motive) {
     static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
@@ -453,7 +449,7 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
     }
     char label[FILL_LABEL_MAX];
     label_of(payload, label, sizeof(label));
-    return fill_candidates_add(proposal->out, label, payload, payload_destroy);
+    return fill_candidates_add(proposal->out, label, payload, motive_payload_destroy);
 }
 
 /*
@@ -494,7 +490,7 @@ static bool offer_pool(Proposal *proposal, const GrowPoolForm *pool, size_t pool
             }
             char label[FILL_LABEL_MAX];
             label_of(payload, label, sizeof(label));
-            if (!fill_candidates_add(proposal->out, label, payload, payload_destroy)) {
+            if (!fill_candidates_add(proposal->out, label, payload, motive_payload_destroy)) {
                 return false;
             }
         }
