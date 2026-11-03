@@ -12,36 +12,37 @@
 #define POSITION_SLACK 150
 #define SOFT_RULES 4
 
-static long absolute_long(long value) {
-    return value < 0 ? -value : value;
-}
-
-long melody_climax_tick(const MelodyContext *context, const MelodyFillParams *params) {
+Rational melody_climax_position(const MelodyContext *context, const MelodyFillParams *params) {
     unsigned position = params->climax_position > CLIMAX_SCALE ? CLIMAX_SCALE : params->climax_position;
     if (!context->idea) {
-        return context->length * (long)position / CLIMAX_SCALE;
+        return position_div(position_mul(context->length, (long long)position), CLIMAX_SCALE);
     }
-    return context->phrase_start + context->phrase_length * (long)position / CLIMAX_SCALE;
+    return position_add(context->phrase_start,
+                        position_div(position_mul(context->phrase_length, (long long)position), CLIMAX_SCALE));
 }
 
 MelodyRole melody_role(const MelodyContext *context, const MelodyFillParams *params) {
     if (!context->idea) {
         return MELODY_ROLE_WHOLE;
     }
-    long tick = melody_climax_tick(context, params);
-    /* The phrase's last tick belongs to the last target. */
-    bool at_phrase_end = context->phrase_start + context->phrase_length == context->length;
-    if (tick < 0) {
+    Rational at = melody_climax_position(context, params);
+    /* The phrase's end belongs to the last target. */
+    bool at_phrase_end =
+        rational_cmp(position_add(context->phrase_start, context->phrase_length), context->length) == 0;
+    if (rational_cmp(at, POSITION_ZERO) < 0) {
         return MELODY_ROLE_AFTER;
     }
-    return tick < context->length || (at_phrase_end && tick == context->length) ? MELODY_ROLE_CLIMAX
-                                                                                  : MELODY_ROLE_BEFORE;
+    return rational_cmp(at, context->length) < 0 || (at_phrase_end && rational_cmp(at, context->length) == 0)
+               ? MELODY_ROLE_CLIMAX
+               : MELODY_ROLE_BEFORE;
 }
 
 bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *params, const MelodyCandidate *melody,
                          size_t first, FillRng *rng, MelodyContour *out) {
-    long wanted = melody_climax_tick(context, params);
-    wanted = wanted < 0 ? 0 : (wanted > context->length ? context->length : wanted);
+    Rational wanted = melody_climax_position(context, params);
+    wanted = rational_cmp(wanted, POSITION_ZERO) < 0
+                 ? POSITION_ZERO
+                 : (rational_cmp(wanted, context->length) > 0 ? context->length : wanted);
     int top = 0;
     memset(out, 0, sizeof(*out));
     out->made = true;
@@ -75,9 +76,10 @@ bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *p
     /* Nearest the wanted place first; the sort is stable, so earlier notes win a tie. */
     for (size_t a = 1; a < candidates; a++) {
         size_t moving = order[a];
-        long moving_distance = absolute_long(melody->notes[moving].onset - wanted);
+        Rational moving_distance = position_abs(position_sub(melody->notes[moving].onset, wanted));
         size_t at = a;
-        while (at > 0 && absolute_long(melody->notes[order[at - 1]].onset - wanted) > moving_distance) {
+        while (at > 0 &&
+               rational_cmp(position_abs(position_sub(melody->notes[order[at - 1]].onset, wanted)), moving_distance) > 0) {
             order[at] = order[at - 1];
             at--;
         }
@@ -97,7 +99,7 @@ bool melody_contour_plan(const MelodyContext *context, const MelodyFillParams *p
      * fifth above the last anchor of the motive cannot be reached by notes that leap as the rules allow: the climax is
      * left in the motive then, as it is when no pitch is free.
      */
-    bool beat_span = context->pickup > 0 || context->metre.offset.num != 0 || context->metre.lead.num != 0 ||
+    bool beat_span = position_is_positive(context->pickup) || context->metre.offset.num != 0 || context->metre.lead.num != 0 ||
                      context->metre.tail.num != 0;
     bool has_reach = false;
     int reach_from = 0;
@@ -141,15 +143,19 @@ int melody_contour_ideal(const MelodyContext *context, const MelodyContour *cont
     const MelodyNote *climax = &melody->notes[contour->climax];
     if (i < contour->climax) {
         /* Rising: part of the way from the note before to the climax, by time. */
-        long span = climax->onset - prev->onset;
-        return span > 0 ? prev->pitch + (int)((long)(contour->climax_pitch - prev->pitch) * (note->onset - prev->onset) / span)
-                        : prev->pitch;
+        Rational span = position_sub(climax->onset, prev->onset);
+        return position_is_positive(span)
+                   ? prev->pitch + (int)position_scale(contour->climax_pitch - prev->pitch,
+                                                      position_sub(note->onset, prev->onset), span)
+                   : prev->pitch;
     }
     /* Falling: from the climax back toward where the motive began, by time. */
-    long span = context->length - climax->onset;
+    Rational span = position_sub(context->length, climax->onset);
     int target = melody->notes[0].pitch;
-    return span > 0 ? contour->climax_pitch + (int)((long)(target - contour->climax_pitch) * (note->onset - climax->onset) / span)
-                    : prev->pitch;
+    return position_is_positive(span)
+               ? contour->climax_pitch + (int)position_scale(target - contour->climax_pitch,
+                                                            position_sub(note->onset, climax->onset), span)
+               : prev->pitch;
 }
 
 bool melody_contour_unique(const MelodyCandidate *melody) {
@@ -180,8 +186,8 @@ void melody_contour_score(const MelodyCandidate *melody, unsigned *held, unsigne
     /* The climax falls where it was asked to, within the slack. A target that is one idea of a phrase is not asked. */
     if (melody->context.idea) {
         score += 1;
-    } else if (melody->count > 0 && melody->context.length > 0) {
-        long position = melody->notes[top].onset * CLIMAX_SCALE / melody->context.length;
+    } else if (melody->count > 0 && position_is_positive(melody->context.length)) {
+        long position = (long)position_scale(CLIMAX_SCALE, melody->notes[top].onset, melody->context.length);
         long asked = melody->params.climax_position > CLIMAX_SCALE ? CLIMAX_SCALE : melody->params.climax_position;
         score += (position > asked ? position - asked : asked - position) <= POSITION_SLACK;
     }

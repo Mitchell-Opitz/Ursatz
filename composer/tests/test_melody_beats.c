@@ -309,10 +309,10 @@ static void test_strong_beats(void) {
         MelodyContext *context = malloc(sizeof(*context));
         add_melody_target(&piece, span, motive, 0);
         assert(context && melody_context_read(piece.plan, piece.target, context));
-        assert(melody_on_cell(context, 0) == (variant == 0));
+        assert(melody_on_cell(context, POSITION_ZERO) == (variant == 0));
         /* Beat 3 of the plan is strong either way. */
-        assert(melody_on_cell(context, (2 - (variant ? 1 : 2)) * TICKS_PER_BEAT));
-        assert(!melody_on_cell(context, (3 - (variant ? 1 : 2)) * TICKS_PER_BEAT));
+        assert(melody_on_cell(context, beats(2 - (variant ? 1 : 2))));
+        assert(!melody_on_cell(context, beats(3 - (variant ? 1 : 2))));
         free(context);
         plan_destroy(piece.plan);
     }

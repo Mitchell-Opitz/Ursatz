@@ -147,8 +147,8 @@ static bool melody_labels(const ComposerStyle *style, const MelodyCandidate *mel
     }
     for (size_t i = 0; i < melody->count; i++) {
         notes[i].pitch = melody->notes[i].pitch;
-        notes[i].duration_numerator = (unsigned long)melody->notes[i].duration;
-        notes[i].duration_denominator = (unsigned long)MELODY_TICKS;
+        notes[i].duration_numerator = (unsigned long)melody->notes[i].duration.num;
+        notes[i].duration_denominator = (unsigned long)melody->notes[i].duration.den;
     }
     const MelodyContext *context = &melody->context;
     int before = context->lead_in_count > 0 ? context->lead_in[context->lead_in_count - 1] : 0;

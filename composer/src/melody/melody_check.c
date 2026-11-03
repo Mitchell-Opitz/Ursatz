@@ -31,7 +31,6 @@
  * and the stable tone the cadence asks for. Hard rules reject; soft rules score.
  */
 
-#define TICKS_PER_WHOLE ((double)MELODY_TICKS)
 #define ID_SIZE 24
 
 /* The voices of the labeler's members, told apart by address. */
@@ -70,10 +69,22 @@ unsigned melody_cadence_mask(const MelodyContext *context) {
     }
 }
 
-/* The note of the melody sounding at a tick, or the count when none is. */
-static size_t note_at(const MelodyCandidate *melody, long tick) {
+/* The note of the melody sounding at a position, or the count when none is. */
+static size_t note_at(const MelodyCandidate *melody, Rational position) {
     for (size_t i = 0; i < melody->count; i++) {
-        if (melody->notes[i].onset <= tick && tick < melody->notes[i].onset + melody->notes[i].duration) {
+        if (rational_cmp(melody->notes[i].onset, position) <= 0 &&
+            rational_cmp(position, position_add(melody->notes[i].onset, melody->notes[i].duration)) < 0) {
+            return i;
+        }
+    }
+    return melody->count;
+}
+
+/* The note of the melody sounding just before a position (it starts before it and ends at or after it), or the count. */
+static size_t note_before(const MelodyCandidate *melody, Rational position) {
+    for (size_t i = 0; i < melody->count; i++) {
+        if (rational_cmp(melody->notes[i].onset, position) < 0 &&
+            rational_cmp(position, position_add(melody->notes[i].onset, melody->notes[i].duration)) <= 0) {
             return i;
         }
     }
@@ -125,13 +136,14 @@ static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict, u
     size_t total = 0;
     size_t used = 0;
     for (size_t s = 0; s < context->count; s++) {
-        long from = context->chord_start[s];
-        long to = context->chord_start[s + 1];
+        Rational from = context->chord_start[s];
+        Rational to = context->chord_start[s + 1];
         for (size_t i = 0; i < melody->count; i++) {
-            total += melody->notes[i].onset < to && melody->notes[i].onset + melody->notes[i].duration > from;
+            total += rational_cmp(melody->notes[i].onset, to) < 0 &&
+                     rational_cmp(position_add(melody->notes[i].onset, melody->notes[i].duration), from) > 0;
         }
         for (size_t b = 0; b < context->bass_count; b++) {
-            total += context->bass[b].onset < to && context->bass[b].end > from;
+            total += rational_cmp(context->bass[b].onset, to) < 0 && rational_cmp(context->bass[b].end, from) > 0;
         }
     }
     CommonPracticeMember *members = malloc((total ? total : 1) * sizeof(*members));
@@ -147,27 +159,29 @@ static bool check_tones(const MelodyCandidate *melody, PhraseVerdict *verdict, u
         }
     }
     for (size_t s = 0; ok && s < context->count; s++) {
-        long from = context->chord_start[s];
-        long to = context->chord_start[s + 1];
+        Rational from = context->chord_start[s];
+        Rational to = context->chord_start[s + 1];
         segments[s].members = &members[used];
         segments[s].member_count = 0;
         segments[s].id = "segment";
         masks[s] = context->chord_mask[s];
         for (size_t i = 0; i < melody->count + context->bass_count; i++) {
             bool bass = i >= melody->count;
-            long onset = bass ? context->bass[i - melody->count].onset : melody->notes[i].onset;
-            long end = bass ? context->bass[i - melody->count].end : melody->notes[i].onset + melody->notes[i].duration;
-            if (onset >= to || end <= from) {
+            Rational onset = bass ? context->bass[i - melody->count].onset : melody->notes[i].onset;
+            Rational end = bass ? context->bass[i - melody->count].end
+                                : position_add(melody->notes[i].onset, melody->notes[i].duration);
+            if (rational_cmp(onset, to) >= 0 || rational_cmp(end, from) <= 0) {
                 continue;
             }
             CommonPracticeMember *member = &members[used++];
             member->note_id = ids[i];
             member->pitch = bass ? context->bass[i - melody->count].pitch : melody->notes[i].pitch;
-            member->held = onset < from;
-            member->duration = (double)((end < to ? end : to) - (onset > from ? onset : from)) / TICKS_PER_WHOLE;
+            member->held = rational_cmp(onset, from) < 0;
+            member->duration = rational_to_double(position_sub(rational_cmp(end, to) < 0 ? end : to,
+                                                              rational_cmp(onset, from) > 0 ? onset : from));
             member->strength = melody_on_cell(context, onset) ? BEAT_STRENGTH_STRONG : BEAT_STRENGTH_WEAK;
             member->voice_id = bass ? BASS_VOICE : MELODY_VOICE;
-            member->onset = (double)onset / TICKS_PER_WHOLE;
+            member->onset = rational_to_double(onset);
             segments[s].member_count++;
         }
     }
@@ -283,7 +297,7 @@ static bool check_melodic(const MelodyCandidate *melody, PhraseVerdict *verdict)
 static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     const MelodyContext *context = &melody->context;
     size_t capacity = melody->count + context->bass_count;
-    long *times = malloc(capacity * sizeof(*times));
+    Rational *times = malloc(capacity * sizeof(*times));
     PitchSpelling **upper = calloc(capacity, sizeof(*upper));
     PitchSpelling **lower = calloc(capacity, sizeof(*lower));
     bool *strong = calloc(capacity, sizeof(*strong));
@@ -291,16 +305,16 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
     size_t count = 0;
     size_t samples = 0;
     for (size_t i = 0; ok && i < capacity; i++) {
-        long at = i < melody->count ? melody->notes[i].onset : context->bass[i - melody->count].onset;
+        Rational at = i < melody->count ? melody->notes[i].onset : context->bass[i - melody->count].onset;
         size_t place = count;
         bool seen = false;
         for (size_t k = 0; k < count; k++) {
-            seen = seen || times[k] == at;
+            seen = seen || rational_cmp(times[k], at) == 0;
         }
         if (seen) {
             continue;
         }
-        while (place > 0 && times[place - 1] > at) {
+        while (place > 0 && rational_cmp(times[place - 1], at) > 0) {
             times[place] = times[place - 1];
             place--;
         }
@@ -311,7 +325,7 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
         size_t m = note_at(melody, times[t]);
         size_t b = context->bass_count;
         for (size_t k = 0; k < context->bass_count; k++) {
-            if (context->bass[k].onset <= times[t] && times[t] < context->bass[k].end) {
+            if (rational_cmp(context->bass[k].onset, times[t]) <= 0 && rational_cmp(times[t], context->bass[k].end) < 0) {
                 b = k;
             }
         }
@@ -393,8 +407,8 @@ static bool check_against_bass(const MelodyCandidate *melody, PhraseVerdict *ver
 static void check_tendency(const MelodyCandidate *melody, PhraseVerdict *verdict) {
     const MelodyContext *context = &melody->context;
     for (size_t i = 0; !verdict->hard && i + 1 < context->count; i++) {
-        long boundary = context->chord_start[i + 1];
-        size_t from = note_at(melody, boundary - 1);
+        Rational boundary = context->chord_start[i + 1];
+        size_t from = note_before(melody, boundary);
         size_t to = note_at(melody, boundary);
         if (context->chords[i].applied || context->chords[i + 1].applied || from == melody->count ||
             to == melody->count) {
@@ -429,15 +443,17 @@ static bool ending_reduction_holds(const MelodyCandidate *melody) {
         return true;
     }
     for (size_t i = 0; i + 1 < melody->count; i++) {
-        if (melody->notes[i].duration > melody->notes[melody->count - 1].duration) {
+        if (rational_cmp(melody->notes[i].duration, melody->notes[melody->count - 1].duration) > 0) {
             return false;
         }
     }
-    if (context->phrase_start >= 0 || context->phrase_before_notes == 0 || context->length <= 0) {
+    if (rational_cmp(context->phrase_start, POSITION_ZERO) >= 0 || context->phrase_before_notes == 0 ||
+        !position_is_positive(context->length)) {
         return true;
     }
-    /* Attacks per beat of the idea against the mean of the phrase before it, both over ticks: cross-multiplied. */
-    return (long)melody->count * -context->phrase_start <= (long)context->phrase_before_notes * context->length;
+    /* Attacks per beat of the idea against the mean of the phrase before it, both over time: cross-multiplied. */
+    return rational_cmp(position_mul(position_sub(POSITION_ZERO, context->phrase_start), (long long)melody->count),
+                        position_mul(context->length, (long long)context->phrase_before_notes)) <= 0;
 }
 
 /* Waves (ch. XI): a phrase of 8 or more notes has at least 2 local high points (repeated notes read as one) at or before its climax. */
@@ -480,17 +496,17 @@ static bool central_range_holds(const MelodyCandidate *melody) {
     return near * 4 >= melody->count * 3;
 }
 
-/* Whether the notes starting in bar a and bar b (windows of `bar` ticks from the start) have one rhythm and one set of intervals. */
-static bool bars_alike(const MelodyCandidate *melody, long bar, size_t a, size_t b) {
+/* Whether the notes starting in bar a and bar b (windows of `bar` from the start) have one rhythm and one set of intervals. */
+static bool bars_alike(const MelodyCandidate *melody, Rational bar, size_t a, size_t b) {
     size_t from_a = melody->count;
     size_t from_b = melody->count;
     size_t count_a = 0;
     size_t count_b = 0;
     for (size_t i = 0; i < melody->count; i++) {
-        long bar_of = melody->notes[i].onset / bar;
-        if (bar_of == (long)a) {
+        long long bar_of = position_floor_units(melody->notes[i].onset, bar);
+        if (bar_of == (long long)a) {
             from_a = count_a++ == 0 ? i : from_a;
-        } else if (bar_of == (long)b) {
+        } else if (bar_of == (long long)b) {
             from_b = count_b++ == 0 ? i : from_b;
         }
     }
@@ -500,7 +516,9 @@ static bool bars_alike(const MelodyCandidate *melody, long bar, size_t a, size_t
     for (size_t k = 0; k < count_a; k++) {
         const MelodyNote *x = &melody->notes[from_a + k];
         const MelodyNote *y = &melody->notes[from_b + k];
-        if (x->onset - (long)a * bar != y->onset - (long)b * bar || x->duration != y->duration ||
+        if (rational_cmp(position_sub(x->onset, position_mul(bar, (long long)a)),
+                         position_sub(y->onset, position_mul(bar, (long long)b))) != 0 ||
+            rational_cmp(x->duration, y->duration) != 0 ||
             (k > 0 && x->pitch - x[-1].pitch != y->pitch - y[-1].pitch)) {
             return false;
         }
@@ -510,11 +528,11 @@ static bool bars_alike(const MelodyCandidate *melody, long bar, size_t a, size_t
 
 /* Monotony (ch. XII): no three consecutive bars of two or more notes with the same rhythm and the same intervals. */
 static bool monotony_holds(const MelodyCandidate *melody) {
-    long bar;
-    if (!melody_ticks(melody->context.metre.bar_length, &bar) || bar <= 0) {
+    Rational bar = melody->context.metre.bar_length;
+    if (!position_is_positive(bar)) {
         return true;
     }
-    for (size_t first = 0; (long)(first + 3) * bar <= melody->context.length; first++) {
+    for (size_t first = 0; rational_cmp(position_mul(bar, (long long)(first + 3)), melody->context.length) <= 0; first++) {
         if (bars_alike(melody, bar, first, first + 1) && bars_alike(melody, bar, first + 1, first + 2)) {
             return false;
         }
@@ -661,11 +679,11 @@ bool melody_check_lane(const PiecePlan *plan, PlanSpan span, PlanKey key, const 
     MelodyCandidate *melody = calloc(1, sizeof(*melody));
     bool ok = melody && violation;
     size_t found = 0;
-    long origin = 0;
+    Rational origin = span.start;
     Rational phrase_end;
     if (ok) {
         found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, HARMONY_MAX_CHORDS);
-        ok = found > 0 && found <= HARMONY_MAX_CHORDS && melody_ticks(span.start, &origin) &&
+        ok = found > 0 && found <= HARMONY_MAX_CHORDS &&
              plan_span_end(span, &phrase_end) == PLAN_OK &&
              melody_phrase_read(plan, plan_lane_span_owner(plan, ids[0]), span, key, &melody->context);
     }
@@ -675,31 +693,30 @@ bool melody_check_lane(const PiecePlan *plan, PlanSpan span, PlanKey key, const 
     }
     /* Every note of the melody lane over the phrase, from the start of the phrase. */
     for (size_t i = 0; ok && i < found; i++) {
-        long base;
+        Rational base = plan_lane_span_span(plan, ids[i]).start;
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
         Rational lane_end;
         PlanSpan lane_span = plan_lane_span_span(plan, ids[i]);
         /* A melody span may start before the phrase, with a pickup (PLAN_CONSTRAINT_PICKUP), and end where it ends. */
         ok = plan_span_end(lane_span, &lane_end) == PLAN_OK &&
              (plan_span_contains(span, lane_span) ||
-              (rational_cmp(lane_span.start, span.start) < 0 && rational_cmp(lane_end, phrase_end) == 0)) &&
-             melody_ticks(lane_span.start, &base);
+              (rational_cmp(lane_span.start, span.start) < 0 && rational_cmp(lane_end, phrase_end) == 0));
         for (size_t n = 0; ok && n < notes->note_count; n++) {
             MelodyNote *note = &melody->notes[melody->count];
-            long onset;
-            ok = melody->count < MELODY_MAX_NOTES && melody_ticks(notes->notes[n].offset, &onset) &&
-                 melody_ticks(notes->notes[n].duration, &note->duration);
-            if (ok && base - origin + onset < 0) {
+            Rational onset = position_add(position_sub(base, origin), notes->notes[n].offset);
+            ok = melody->count < MELODY_MAX_NOTES;
+            note->duration = notes->notes[n].duration;
+            if (ok && rational_cmp(onset, POSITION_ZERO) < 0) {
                 /* A note before the phrase is the pickup. */
                 MelodyNote *pickup = &melody->pickup_notes[melody->pickup_count];
                 ok = melody->pickup_count < MELODY_MAX_PICKUP;
-                pickup->onset = base - origin + onset;
+                pickup->onset = onset;
                 pickup->duration = note->duration;
                 pickup->pitch = notes->notes[n].midi_pitch;
                 pickup->motive_index = -1;
                 melody->pickup_count += ok;
             } else if (ok) {
-                note->onset = base - origin + onset;
+                note->onset = onset;
                 note->pitch = notes->notes[n].midi_pitch;
                 note->motive_index = -1;
                 note->strong = melody_on_cell(&melody->context, note->onset);

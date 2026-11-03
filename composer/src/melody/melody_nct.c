@@ -48,15 +48,15 @@ bool melody_figure_ok(const MelodyContext *context, const MelodyFillParams *para
     const MelodyNote *note = &notes[i];
     unsigned types = params->nct_types;
     unsigned pitch_bit = 1u << util_pitch_class(note->pitch);
-    long end = note->onset + note->duration;
-    bool crossing = end > context->chord_start[note->chord + 1];
+    Rational end = position_add(note->onset, note->duration);
+    bool crossing = rational_cmp(end, context->chord_start[note->chord + 1]) > 0;
     bool has_next = i + 1 < count;
     int to_next = has_next ? notes[i + 1].pitch - note->pitch : 0;
     int from_prev = i > 0 ? note->pitch - notes[i - 1].pitch : 0;
 
     /* A chord tone of every chord it sounds through needs no figure. */
     bool tone_of_all = true;
-    for (size_t c = note->chord; c < context->count && context->chord_start[c] < end; c++) {
+    for (size_t c = note->chord; c < context->count && rational_cmp(context->chord_start[c], end) < 0; c++) {
         tone_of_all = tone_of_all && (context->chord_mask[c] & pitch_bit);
     }
     if (tone_of_all) {

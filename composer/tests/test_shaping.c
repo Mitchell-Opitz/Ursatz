@@ -11,10 +11,14 @@
 
 /*
  * The shaping preferences (R-164), each on hand-written melodies and progressions that hold and that fail. The melody
- * is one bar of C major over a C chord and a C bass unless a case builds its own; MELODY_TICKS to a whole note.
+ * is one bar of C major over a C chord and a C bass unless a case builds its own. Times are counted in quarter notes.
  */
 
-#define QUARTER 32L
+#define QUARTER 1L
+
+static Rational quarters_of(long count) {
+    return rational_ratio(count, 4);
+}
 
 static MelodyCandidate *candidate(long length) {
     MelodyCandidate *melody = calloc(1, sizeof(*melody));
@@ -23,18 +27,20 @@ static MelodyCandidate *candidate(long length) {
     Rational quarter;
     assert(rational_make(1, 1, &whole) == RATIONAL_OK && rational_make(1, 4, &quarter) == RATIONAL_OK);
     MelodyContext *context = &melody->context;
+    melody_context_zero(context);
     context->key.tonic_pitch_class = 0;
     context->key.mode = PLAN_MODE_MAJOR;
     context->metre.bar_length = whole;
     context->metre.cell_length = quarter;
     context->metre.cells_per_bar = 4;
-    context->length = length;
-    context->cell = QUARTER;
+    context->length = quarters_of(length);
+    context->cell = quarters_of(QUARTER);
     context->count = 1;
     context->chords[0].chord.degree = 1;
     context->chord_mask[0] = (1u << 0) | (1u << 4) | (1u << 7);
-    context->chord_start[1] = length;
-    context->bass[0].end = length;
+    context->chord_start[1] = quarters_of(length);
+    context->bass[0].onset = POSITION_ZERO;
+    context->bass[0].end = quarters_of(length);
     context->bass[0].pitch = 48;
     context->bass_count = 1;
     melody->params = melody_fill_params_default();
@@ -44,8 +50,8 @@ static MelodyCandidate *candidate(long length) {
 
 static void add(MelodyCandidate *melody, long onset, long duration, int pitch) {
     MelodyNote *note = &melody->notes[melody->count++];
-    note->onset = onset;
-    note->duration = duration;
+    note->onset = quarters_of(onset);
+    note->duration = quarters_of(duration);
     note->pitch = pitch;
     note->motive_index = -1;
     note->strong = onset % QUARTER == 0;
@@ -69,8 +75,8 @@ static MelodyCandidate *ending(void) {
     MelodyCandidate *melody = candidate(4 * QUARTER);
     melody->context.idea = true;
     melody->context.has_cadence = true;
-    melody->context.phrase_start = -8 * QUARTER;
-    melody->context.phrase_length = 12 * QUARTER;
+    melody->context.phrase_start = quarters_of(-8 * QUARTER);
+    melody->context.phrase_length = quarters_of(12 * QUARTER);
     melody->context.phrase_before_notes = 4;
     return melody;
 }
