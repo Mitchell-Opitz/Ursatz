@@ -154,8 +154,8 @@ call them and render the result:
 `URSATZ_ANALYZER_URSATZ_COMMIT` and declares `ursatz_analyzer_version()` and `ursatz_analyzer_ursatz_commit()`, so a
 consumer reads the version from the library instead of parsing `CMakeLists.txt`.
 
-The version is 0.4.0 (new public APIs in P24: `AnalyzerResult`, `analyzer_hear`, the joined chord sequence, playback and
-score export, and `staleness.h`). Every analysis stored by an earlier version is stale by version.
+The version is 0.5.0 (new public APIs in P24: `AnalyzerResult`, `analyzer_hear`, the joined chord sequence, playback and
+score export, and `staleness.h`; in P27 the score note ids and defaulted meter of an import). Every analysis stored by an earlier version is stale by version.
 
 `scripts/check-pins.sh` fails when a submodule pin is not on its remote's `main`, or when one repository is pinned at
 two different commits anywhere in the tree. CI runs it right after the submodule checkout.
@@ -248,7 +248,7 @@ Its public include directory is `include/`, and consumers include headers as
 | `staleness.h` | `analyzer_document_status` tells whether a stored analysis document is current (schema version, analyzer version and Ursatz commit all match this build) or stale; `analyzer_document_status_of` compares keys already read. See [docs/corpus.md](docs/corpus.md). |
 | `chord_sequence.h` | `analyzer_chord_sequence` and `analyzer_chord_sequence_from_document` give the joined chord sequence (consecutive entries with one numeral, key region and root are one chord) of a result or of a stored document; `analyzer_chord_sequence_free` releases it. |
 | `playback.h` | `analyzer_playback_build` gives the tempo regions and notes of an import as a player needs them; `analyzer_playback_to_json` writes the GUI's playback JSON; `analyzer_playback_destroy` releases it. See [docs/gui-api.md](docs/gui-api.md). |
-| `score_export.h` | `analyzer_score_export_musicxml` writes the imported notes as a MusicXML score. See [docs/gui-api.md](docs/gui-api.md). |
+| `score_export.h` | `analyzer_score_export_musicxml` writes the imported notes as a MusicXML score; `analyzer_score_note_xml_ids` gives each note's base `xml:id` and `analyzer_imported_meter_defaulted` says whether the meter was inferred. See [docs/gui-api.md](docs/gui-api.md). |
 | `similar_material.h` | `similar_material_find` scores the passages of a corpus against a motive or a progression query. |
 | `motive_links.h` | `MotiveLinkScope` (analysis documents), `motive_links_run` links the motive families of its pieces, `MotiveLinkCache` keeps the pairs compared, `motive_links_render` writes the links as JSON. |
 | `composer_api.h` | `analyzer_hear` hears borrowed events into an `AnalyzerResult`; `AnalyzerStyleReference` and `analyzer_result_style_distance` measure style distance. `analyzer_analyze_fragment` and the fragment distances are deprecated wrappers; violations for the Composer. |

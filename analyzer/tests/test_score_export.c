@@ -14,6 +14,9 @@
  *     tests/snapshots/gui/<stem>.musicxml byte for byte; with UPDATE_SNAPSHOTS=1 (or URSATZ_UPDATE_SNAPSHOTS=1) the
  *     files are rewritten,
  *   - the export imports again with the same number of notes,
+ *   - each note's base xml:id (analyzer_score_note_xml_ids) appears in the export, as the id or, for a tied note, the id
+ *     and a fragment suffix; the count is the note count and the ids differ,
+ *   - the meter of a file that declares one is not defaulted; a MIDI file with no time signature is,
  *   - the argument errors.
  *
  *   test_score_export          the six files and the cases
@@ -88,6 +91,77 @@ static void check_reimport(size_t i, const ImportedNotes *notes, const char *xml
     remove(path);
 }
 
+static bool id_in_export(const char *xml, const char *id) {
+    char exact[128];
+    char suffixed[128];
+    snprintf(exact, sizeof(exact), "xml:id=\"%s\"", id);
+    snprintf(suffixed, sizeof(suffixed), "xml:id=\"%s_", id);
+    return strstr(xml, exact) != NULL || strstr(xml, suffixed) != NULL;
+}
+
+static void check_note_ids(size_t i, const ImportedNotes *notes, const char *xml) {
+    char **ids = NULL;
+    size_t count = 99;
+    AnalyzerStatus status = analyzer_score_note_xml_ids(notes, &ids, &count);
+    CHECK(status == ANALYZER_OK, "%s: note ids status %d", FILES[i].stem, (int)status);
+    if (status != ANALYZER_OK) {
+        return;
+    }
+    CHECK(count == notes->count, "%s: %zu ids for %zu notes", FILES[i].stem, count, notes->count);
+    size_t missing = 0;
+    size_t repeated = 0;
+    for (size_t n = 0; n < count; n++) {
+        if (!id_in_export(xml, ids[n])) {
+            missing++;
+        }
+        if (n > 0 && strcmp(ids[n], ids[n - 1]) == 0) {
+            repeated++;
+        }
+    }
+    CHECK(missing == 0, "%s: %zu note ids are not in the export", FILES[i].stem, missing);
+    CHECK(repeated == 0, "%s: %zu note ids repeat the one before", FILES[i].stem, repeated);
+    analyzer_score_note_xml_ids_destroy(ids, count);
+}
+
+static void check_meter_defaulted(void) {
+    for (size_t i = 0; i < sizeof(FILES) / sizeof(FILES[0]); i++) {
+        ImportedNotes notes;
+        if (!import_file(i, &notes)) {
+            CHECK(false, "%s: cannot import", FILES[i].file);
+            continue;
+        }
+        CHECK(!analyzer_imported_meter_defaulted(&notes), "%s: the declared meter reads as defaulted", FILES[i].stem);
+        imported_notes_destroy(&notes);
+    }
+
+    /* Five quarter notes at division 96 and no time signature event. */
+    unsigned char track[] = {0x00, 0x90, 0x3C, 0x64, 0x60, 0x80, 0x3C, 0x40, 0x00, 0x90, 0x3E, 0x64, 0x60, 0x80, 0x3E, 0x40,
+                             0x00, 0x90, 0x40, 0x64, 0x60, 0x80, 0x40, 0x40, 0x00, 0x90, 0x41, 0x64, 0x60, 0x80, 0x41, 0x40,
+                             0x00, 0x90, 0x43, 0x64, 0x60, 0x80, 0x43, 0x40, 0x00, 0xFF, 0x2F, 0x00};
+    unsigned char buf[256];
+    size_t size = test_smf_type0(buf, 96, track, sizeof(track));
+    char path[512];
+    snprintf(path, sizeof(path), "%s/no-meter.mid", URSATZ_ANALYZER_TMP_DIR);
+    FILE *file = fopen(path, "wb");
+    if (!file || fwrite(buf, 1, size, file) != size) {
+        CHECK(false, "cannot write %s", path);
+        if (file) {
+            fclose(file);
+        }
+        return;
+    }
+    fclose(file);
+    ImportedNotes notes;
+    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
+        CHECK(false, "cannot import %s", path);
+    } else {
+        CHECK(analyzer_imported_meter_defaulted(&notes), "a MIDI file with no time signature does not read as defaulted");
+        imported_notes_destroy(&notes);
+    }
+    remove(path);
+    CHECK(!analyzer_imported_meter_defaulted(NULL), "NULL notes read as defaulted");
+}
+
 static void check_arguments(void) {
     ImportedNotes notes;
     char *xml = (char *)1;
@@ -97,10 +171,20 @@ static void check_arguments(void) {
         return;
     }
     CHECK(analyzer_score_export_musicxml(&notes, NULL) == ANALYZER_ERR_ARGUMENT, "NULL out");
+    char **ids = (char **)1;
+    size_t id_count = 7;
+    CHECK(analyzer_score_note_xml_ids(NULL, &ids, &id_count) == ANALYZER_ERR_ARGUMENT && ids == NULL && id_count == 0,
+          "ids: NULL notes");
+    CHECK(analyzer_score_note_xml_ids(&notes, NULL, &id_count) == ANALYZER_ERR_ARGUMENT, "ids: NULL out");
+    CHECK(analyzer_score_note_xml_ids(&notes, &ids, NULL) == ANALYZER_ERR_ARGUMENT, "ids: NULL count");
+    analyzer_score_note_xml_ids_destroy(NULL, 0);
     NoteEvent **events = notes.events;
     notes.events = NULL;
     xml = (char *)1;
     CHECK(analyzer_score_export_musicxml(&notes, &xml) == ANALYZER_ERR_ARGUMENT && xml == NULL, "notes with no events");
+    ids = (char **)1;
+    CHECK(analyzer_score_note_xml_ids(&notes, &ids, &id_count) == ANALYZER_ERR_ARGUMENT && ids == NULL,
+          "ids: notes with no events");
     notes.events = events;
     imported_notes_destroy(&notes);
 }
@@ -129,11 +213,13 @@ int main(int argc, char **argv) {
             CHECK(strncmp(xml, "<?xml", 5) == 0, "%s: not an XML document", FILES[i].stem);
             check_snapshot(i, xml, update);
             check_reimport(i, &notes, xml);
+            check_note_ids(i, &notes, xml);
             printf("%s: %zu bytes\n", FILES[i].stem, strlen(xml));
         }
         free(xml);
         imported_notes_destroy(&notes);
     }
+    check_meter_defaulted();
     check_arguments();
     if (failures > 0) {
         fprintf(stderr, "%d failure(s)\n", failures);

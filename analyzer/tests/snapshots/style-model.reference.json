@@ -3,7 +3,7 @@
 	"schema_version":	1,
 	"style_name":	"reference",
 	"training_corpus":	"reference",
-	"model_version":	"0.4.0",
+	"model_version":	"0.5.0",
 	"pieces":	5,
 	"statistics":	[{
 			"dimension":	"harmony",
