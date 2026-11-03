@@ -90,7 +90,7 @@ struct VariantOperation {
     const char *citation; /* "Schoenberg ch. III, Ex. 14" */
     const VariantParam *params;
     size_t param_count;
-    unsigned forms; /* a bit mask of 1u << MotiveForm: the forms the operation applies to */
+    unsigned forms; /* a bit mask of 1u << MotiveSketchForm: the forms the operation applies to */
     VariantApplyFn apply;
     VariantDescribeFn describe;
     /*

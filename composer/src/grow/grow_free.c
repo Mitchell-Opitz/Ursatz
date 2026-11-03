@@ -10,6 +10,7 @@
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include <ursatz_composer/constraint.h>
+#include "motive/motive_internal.h"
 
 /*
  * A free phrase (R-170): a section of any length in beats, one that is not a theme of 4 or 8 whole bars. grow-theme lays
@@ -205,7 +206,7 @@ bool grow_free_applies(const PiecePlan *plan, FillTarget target) {
 /* Every pitch within the range a form may have, so the melody has room to place it. */
 static bool in_range(const Motive *motive) {
     for (size_t i = 0; i < motive->note_count; i++) {
-        if (motive->notes[i].midi < FORM_LOW || motive->notes[i].midi > FORM_HIGH) {
+        if (motive_pitch(motive, i) < FORM_LOW || motive_pitch(motive, i) > FORM_HIGH) {
             return false;
         }
     }
@@ -240,7 +241,7 @@ static bool draw_continuation(const Motive *source, Rational room, FillRng *rng,
             dev->kind = MOTIVE_DEV_INVERT;
             dev->tonal = true;
             dev->has_axis = true;
-            dev->axis = source->notes[0].midi;
+            dev->axis = motive_pitch(source, 0);
             break;
         default: {
             int amount = (int)fill_rng_below(rng, 2) + 1;

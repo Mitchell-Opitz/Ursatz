@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "style/style_internal.h"
+#include "motive/motive_internal.h"
 
 typedef struct {
     char *category;
@@ -198,7 +199,7 @@ bool composer_style_labels_add_motive(ComposerStyleLabels *labels, const Motive 
     if (!labels || !motive) {
         return false;
     }
-    if (motive->form != MOTIVE_FORM_FULL || motive->note_count == 0) {
+    if (motive->form != MOTIVE_SKETCH_FORM_FULL || motive->note_count == 0) {
         return true;
     }
     size_t count = motive->note_count;
@@ -207,14 +208,14 @@ bool composer_style_labels_add_motive(ComposerStyleLabels *labels, const Motive 
     const char *duration_parts[MOTIVE_MAX_NOTES];
     int steps[MOTIVE_MAX_NOTES];
     for (size_t i = 0; i < count; i++) {
-        int pitch_class = ((motive->notes[i].midi % 12) + 12) % 12;
+        int pitch_class = ((motive_pitch(motive, i) % 12) + 12) % 12;
         degrees[i] = style_label_degree(pitch_class, tonic_pc);
         Rational length = motive->notes[i].duration;
         style_label_duration((unsigned long)(length.num < 0 ? 0 : length.num), length.den, durations[i],
                              sizeof durations[i]);
         duration_parts[i] = durations[i];
         if (i > 0) {
-            steps[i - 1] = motive->notes[i].midi - motive->notes[i - 1].midi;
+            steps[i - 1] = motive_pitch(motive, i) - motive_pitch(motive, i - 1);
         }
     }
     char *degree_text = style_label_join(degrees, count);

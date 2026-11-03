@@ -160,12 +160,9 @@ static bool read_target(const Scene *scene, const Source *source, Motive *out) {
     }
     const PlanLanePayload *payload = plan_lane_span_payload(scene->plan, ids[0]);
     Motive motive;
-    memset(&motive, 0, sizeof(motive));
-    motive.meter = source->meter;
-    motive.key = source->key;
-    motive.key_source = MOTIVE_KEY_GIVEN;
-    motive.note_count = payload->notes.note_count;
-    memcpy(motive.notes, payload->notes.notes, motive.note_count * sizeof(PlanNote));
+    motive_init(&motive, source->meter);
+    motive_set_key(&motive, &source->key, MOTIVE_SKETCH_KEY_GIVEN);
+    motive_set_lane_notes(&motive, payload->notes.notes, payload->notes.note_count);
     PlanSpan span = plan_lane_span_span(scene->plan, ids[0]);
     motive.length = span.length;
     assert(plan_lane_span_state(scene->plan, ids[0]) == PLAN_STATE_REALIZED);
@@ -250,7 +247,7 @@ static bool same_rhythm(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (!teq(a->notes[i].offset, b->notes[i].offset) || !teq(a->notes[i].duration, b->notes[i].duration)) {
+        if (!teq(a->notes[i].onset, b->notes[i].onset) || !teq(a->notes[i].duration, b->notes[i].duration)) {
             return false;
         }
     }
@@ -262,7 +259,7 @@ static bool same_notes(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi != b->notes[i].midi) {
+        if (a->notes[i].pitch != b->notes[i].pitch) {
             return false;
         }
     }
@@ -276,13 +273,13 @@ static bool is_transposition(const Motive *source, const Motive *result, Analysi
     }
     bool real = true;
     bool tonal = true;
-    int shift = result->notes[0].midi - source->notes[0].midi;
-    long first = step_of(key, source->notes[0].midi);
-    long first_result = step_of(key, result->notes[0].midi);
+    int shift = result->notes[0].pitch - source->notes[0].pitch;
+    long first = step_of(key, source->notes[0].pitch);
+    long first_result = step_of(key, result->notes[0].pitch);
     for (size_t i = 0; i < source->note_count; i++) {
-        real = real && result->notes[i].midi - source->notes[i].midi == shift;
-        long from = step_of(key, source->notes[i].midi);
-        long to = step_of(key, result->notes[i].midi);
+        real = real && result->notes[i].pitch - source->notes[i].pitch == shift;
+        long from = step_of(key, source->notes[i].pitch);
+        long to = step_of(key, result->notes[i].pitch);
         tonal = tonal && from != LONG_MIN && to != LONG_MIN && first != LONG_MIN && first_result != LONG_MIN &&
                 to - from == first_result - first;
     }
@@ -296,12 +293,12 @@ static bool is_inversion(const Motive *source, const Motive *result, AnalysisKey
     }
     bool real = true;
     bool tonal = true;
-    int sum = source->notes[0].midi + result->notes[0].midi;
+    int sum = source->notes[0].pitch + result->notes[0].pitch;
     long step_sum = LONG_MIN;
     for (size_t i = 0; i < source->note_count; i++) {
-        real = real && source->notes[i].midi + result->notes[i].midi == sum;
-        long from = step_of(key, source->notes[i].midi);
-        long to = step_of(key, result->notes[i].midi);
+        real = real && source->notes[i].pitch + result->notes[i].pitch == sum;
+        long from = step_of(key, source->notes[i].pitch);
+        long to = step_of(key, result->notes[i].pitch);
         if (from == LONG_MIN || to == LONG_MIN) {
             tonal = false;
         } else if (step_sum == LONG_MIN) {
@@ -320,17 +317,17 @@ static bool is_retrograde(const Motive *source, const Motive *result) {
         return false;
     }
     for (size_t i = 0; i < n; i++) {
-        const PlanNote *from = &source->notes[n - 1 - i];
-        if (result->notes[i].midi != from->midi || !teq(result->notes[i].duration, from->duration)) {
+        const MotiveSketchNote *from = &source->notes[n - 1 - i];
+        if (result->notes[i].pitch != from->pitch || !teq(result->notes[i].duration, from->duration)) {
             return false;
         }
     }
     /* The rest between two neighbors, from the end of one to the start of the next. */
     for (size_t i = 0; i + 1 < n; i++) {
-        Rational gap_result = tsub(result->notes[i + 1].offset, tadd(result->notes[i].offset, result->notes[i].duration));
-        const PlanNote *later = &source->notes[n - 1 - i];
-        const PlanNote *earlier = &source->notes[n - 2 - i];
-        Rational gap_source = tsub(later->offset, tadd(earlier->offset, earlier->duration));
+        Rational gap_result = tsub(result->notes[i + 1].onset, tadd(result->notes[i].onset, result->notes[i].duration));
+        const MotiveSketchNote *later = &source->notes[n - 1 - i];
+        const MotiveSketchNote *earlier = &source->notes[n - 2 - i];
+        Rational gap_source = tsub(later->onset, tadd(earlier->onset, earlier->duration));
         if (!teq(gap_result, gap_source)) {
             return false;
         }
@@ -344,13 +341,13 @@ static int sign(int value) {
 
 /* The rhythm and the first pitch are the source's; some interval differs; a direction changes only if allowed. */
 static bool is_interval_change(const Motive *source, const Motive *result, bool keep_contour) {
-    if (!same_rhythm(source, result) || result->notes[0].midi != source->notes[0].midi) {
+    if (!same_rhythm(source, result) || result->notes[0].pitch != source->notes[0].pitch) {
         return false;
     }
     bool differs = false;
     for (size_t i = 0; i + 1 < source->note_count; i++) {
-        int before = source->notes[i + 1].midi - source->notes[i].midi;
-        int after = result->notes[i + 1].midi - result->notes[i].midi;
+        int before = source->notes[i + 1].pitch - source->notes[i].pitch;
+        int after = result->notes[i + 1].pitch - result->notes[i].pitch;
         differs = differs || before != after;
         if (keep_contour && sign(before) != sign(after)) {
             return false;
@@ -363,22 +360,22 @@ static bool is_interval_change(const Motive *source, const Motive *result, bool 
     return differs;
 }
 
-static bool note_matches(const PlanNote *a, const PlanNote *b) {
-    return a->midi == b->midi && teq(a->duration, b->duration);
+static bool note_matches(const MotiveSketchNote *a, const MotiveSketchNote *b) {
+    return a->pitch == b->pitch && teq(a->duration, b->duration);
 }
 
 /* A run of neighboring notes of the source, with its rests, starting the result at 0. */
 static bool is_fragment(const Motive *source, const Motive *result) {
     size_t n = source->note_count;
     size_t m = result->note_count;
-    if (m < 2 || m >= n || !is_time(result->notes[0].offset, 0, 1)) {
+    if (m < 2 || m >= n || !is_time(result->notes[0].onset, 0, 1)) {
         return false;
     }
     for (size_t start = 0; start + m <= n; start++) {
         bool ok = true;
         for (size_t i = 0; ok && i < m; i++) {
             ok = note_matches(&source->notes[start + i], &result->notes[i]) &&
-                 teq(result->notes[i].offset, tsub(source->notes[start + i].offset, source->notes[start].offset));
+                 teq(result->notes[i].onset, tsub(source->notes[start + i].onset, source->notes[start].onset));
         }
         if (ok) {
             return true;
@@ -388,8 +385,8 @@ static bool is_fragment(const Motive *source, const Motive *result) {
 }
 
 /* Kept rhythm: a kept note stays where it was and holds on through the time of the notes dropped after it. */
-static bool kept_note_matches(const PlanNote *source, const PlanNote *kept) {
-    return source->midi == kept->midi && tsub(kept->duration, source->duration).num >= 0;
+static bool kept_note_matches(const MotiveSketchNote *source, const MotiveSketchNote *kept) {
+    return source->pitch == kept->pitch && tsub(kept->duration, source->duration).num >= 0;
 }
 
 /* Some of the source's notes, in order. Kept rhythm: where they were. Otherwise one after another from 0. */
@@ -402,11 +399,11 @@ static bool matches_from(const Motive *source, const Motive *result, bool keep_r
         if (source->note_count - i < result->note_count - from_result) {
             return false;
         }
-        const PlanNote *candidate = &source->notes[i];
-        const PlanNote *note = &result->notes[from_result];
-        Rational expected = keep_rhythm ? candidate->offset : at;
+        const MotiveSketchNote *candidate = &source->notes[i];
+        const MotiveSketchNote *note = &result->notes[from_result];
+        Rational expected = keep_rhythm ? candidate->onset : at;
         if ((keep_rhythm ? kept_note_matches(candidate, note) : note_matches(candidate, note)) &&
-            teq(note->offset, expected)) {
+            teq(note->onset, expected)) {
             Rational next = tmake(at.num * (long)candidate->duration.den + candidate->duration.num * (long)at.den,
                                   at.den * candidate->duration.den);
             if (matches_from(source, result, keep_rhythm, i + 1, from_result + 1, next)) {
@@ -432,9 +429,9 @@ static bool is_scaling(const Motive *source, const Motive *result, bool augment)
         return false;
     }
     for (size_t i = 0; i < source->note_count; i++) {
-        if (result->notes[i].midi != source->notes[i].midi ||
+        if (result->notes[i].pitch != source->notes[i].pitch ||
             !teq(result->notes[i].duration, tmul(source->notes[i].duration, ratio)) ||
-            !teq(result->notes[i].offset, tmul(source->notes[i].offset, ratio))) {
+            !teq(result->notes[i].onset, tmul(source->notes[i].onset, ratio))) {
             return false;
         }
     }
@@ -555,9 +552,8 @@ static void test_every_development_is_a_relative(void) {
                 assert(plan_node_lane_spans(scene.plan, scene.source, ids, 2) == 1);
                 assert(plan_lane_span_state(scene.plan, ids[0]) == PLAN_STATE_GIVEN);
                 const PlanLanePayload *payload = plan_lane_span_payload(scene.plan, ids[0]);
-                memset(&after, 0, sizeof(after));
-                after.note_count = payload->notes.note_count;
-                memcpy(after.notes, payload->notes.notes, after.note_count * sizeof(PlanNote));
+                motive_init(&after, motive_meter(&source));
+                motive_set_lane_notes(&after, payload->notes.notes, payload->notes.note_count);
                 after.length = source.length;
                 assert(same_notes(&source, &after));
                 assert(plan_node_state(scene.plan, scene.target) == PLAN_STATE_REALIZED);
@@ -612,7 +608,7 @@ static bool pitches_are(const Motive *motive, size_t count, const int *pitches) 
         return false;
     }
     for (size_t i = 0; i < count; i++) {
-        if (motive->notes[i].midi != pitches[i]) {
+        if (motive->notes[i].pitch != pitches[i]) {
             return false;
         }
     }
@@ -657,9 +653,9 @@ static void test_explicit_parameters(void) {
     ref = ref_of(PLAN_TRANSFORM_RETROGRADE);
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 4, (int[]){74, 69, 65, 62}));
-    assert(is_time(result.notes[0].offset, 0, 1) && is_time(result.notes[0].duration, 1, 2));
-    assert(is_time(result.notes[1].offset, 1, 2) && is_time(result.notes[2].offset, 5, 8));
-    assert(is_time(result.notes[3].offset, 3, 4) && is_time(result.length, 1, 1));
+    assert(is_time(result.notes[0].onset, 0, 1) && is_time(result.notes[0].duration, 1, 2));
+    assert(is_time(result.notes[1].onset, 1, 2) && is_time(result.notes[2].onset, 5, 8));
+    assert(is_time(result.notes[3].onset, 3, 4) && is_time(result.length, 1, 1));
     free(run.record_json);
 
     /* The second interval, F to A, widened by a semitone; the note after it moves with it. */
@@ -691,14 +687,14 @@ static void test_explicit_parameters(void) {
     ref.length = 3;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 3, (int[]){62, 65, 69}));
-    assert(is_time(result.notes[1].offset, 1, 4) && is_time(result.notes[2].offset, 3, 8));
+    assert(is_time(result.notes[1].onset, 1, 4) && is_time(result.notes[2].onset, 3, 8));
     assert(is_time(result.length, 1, 2));
     free(run.record_json);
     ref.position = PLAN_FRAGMENT_TRAILING;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 3, (int[]){65, 69, 74}));
-    assert(is_time(result.notes[0].offset, 0, 1) && is_time(result.notes[1].offset, 1, 8) &&
-           is_time(result.notes[2].offset, 1, 4) && is_time(result.length, 3, 4));
+    assert(is_time(result.notes[0].onset, 0, 1) && is_time(result.notes[1].onset, 1, 8) &&
+           is_time(result.notes[2].onset, 1, 4) && is_time(result.length, 3, 4));
     free(run.record_json);
     ref.position = PLAN_FRAGMENT_MIDDLE;
     ref.length = 2;
@@ -711,12 +707,12 @@ static void test_explicit_parameters(void) {
     ref.drop = 1;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 3, (int[]){62, 65, 74}));
-    assert(is_time(result.notes[1].offset, 1, 4) && is_time(result.notes[2].offset, 3, 8));
+    assert(is_time(result.notes[1].onset, 1, 4) && is_time(result.notes[2].onset, 3, 8));
     free(run.record_json);
     ref.keep_rhythm = true;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 3, (int[]){62, 65, 74}));
-    assert(is_time(result.notes[2].offset, 1, 2) && is_time(result.length, 1, 1));
+    assert(is_time(result.notes[2].onset, 1, 2) && is_time(result.length, 1, 1));
     free(run.record_json);
     ref.drop = 2;
     ref.keep_rhythm = false;
@@ -730,22 +726,22 @@ static void test_explicit_parameters(void) {
     ref.ratio_den = 1;
     result = develop_with_ref(minor, ref, &context, &run);
     assert(run.completed && pitches_are(&result, 4, (int[]){62, 65, 69, 74}));
-    assert(is_time(result.notes[1].offset, 1, 2) && is_time(result.notes[1].duration, 1, 4) &&
-           is_time(result.notes[3].offset, 1, 1) && is_time(result.notes[3].duration, 1, 1) &&
+    assert(is_time(result.notes[1].onset, 1, 2) && is_time(result.notes[1].duration, 1, 4) &&
+           is_time(result.notes[3].onset, 1, 1) && is_time(result.notes[3].duration, 1, 1) &&
            is_time(result.length, 2, 1));
     free(run.record_json);
     ref.ratio_num = 3;
     ref.ratio_den = 2;
     result = develop_with_ref(minor, ref, &context, &run);
-    assert(run.completed && is_time(result.notes[0].duration, 3, 8) && is_time(result.notes[3].offset, 3, 4) &&
+    assert(run.completed && is_time(result.notes[0].duration, 3, 8) && is_time(result.notes[3].onset, 3, 4) &&
            is_time(result.length, 3, 2));
     free(run.record_json);
     ref = ref_of(PLAN_TRANSFORM_DIMINISHED);
     ref.ratio_num = 1;
     ref.ratio_den = 2;
     result = develop_with_ref(minor, ref, &context, &run);
-    assert(run.completed && is_time(result.notes[0].duration, 1, 8) && is_time(result.notes[1].offset, 1, 8) &&
-           is_time(result.notes[2].offset, 3, 16) && is_time(result.notes[3].duration, 1, 4) &&
+    assert(run.completed && is_time(result.notes[0].duration, 1, 8) && is_time(result.notes[1].onset, 1, 8) &&
+           is_time(result.notes[2].onset, 3, 16) && is_time(result.notes[3].duration, 1, 4) &&
            is_time(result.length, 1, 2));
     free(run.record_json);
 }
@@ -790,7 +786,7 @@ static void test_degenerate_cases(void) {
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && motive_equal(&single, &result));
     spec.kind = MOTIVE_DEV_TRANSPOSE;
     spec.amount = 7;
-    assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && result.notes[0].midi == 67);
+    assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && result.notes[0].pitch == 67);
     memset(&spec, 0, sizeof(spec));
     spec.kind = MOTIVE_DEV_AUGMENT;
     assert(motive_develop(&single, &spec, &result) == MOTIVE_DEV_OK && is_time(result.notes[0].duration, 1, 2));
@@ -908,10 +904,10 @@ static void test_pickups_and_tonal_spelling(void) {
     memset(&spec, 0, sizeof(spec));
     spec.kind = MOTIVE_DEV_AUGMENT;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
-    assert(is_time(result.pickup, 1, 4) && is_time(result.notes[1].offset, 1, 2));
+    assert(is_time(result.pickup, 1, 4) && is_time(result.notes[1].onset, 1, 2));
     spec.kind = MOTIVE_DEV_DIMINISH;
     assert(motive_develop(&source, &spec, &result) == MOTIVE_DEV_OK);
-    assert(is_time(result.pickup, 1, 16) && is_time(result.notes[1].offset, 1, 8));
+    assert(is_time(result.pickup, 1, 16) && is_time(result.notes[1].onset, 1, 8));
 
     /* A pickup that reaches the bar, or leaves the thirty-second grid, is refused. */
     source.pickup = tmake(3, 8);
@@ -928,14 +924,14 @@ static void test_pickups_and_tonal_spelling(void) {
     spec.tonal = true;
     spec.amount = 1;
     assert(motive_develop(&line, &spec, &result) == MOTIVE_DEV_OK);
-    assert(result.notes[0].midi == 62 && result.notes[1].midi == 67 && result.notes[2].midi == 72 &&
-           result.notes[3].midi == 65);
+    assert(result.notes[0].pitch == 62 && result.notes[1].pitch == 67 && result.notes[2].pitch == 72 &&
+           result.notes[3].pitch == 65);
     memset(&spec, 0, sizeof(spec));
     spec.kind = MOTIVE_DEV_INVERT;
     spec.tonal = true;
     assert(motive_develop(&line, &spec, &result) == MOTIVE_DEV_OK);
-    assert(result.notes[0].midi == 60 && result.notes[1].midi == 55 && result.notes[2].midi == 50 &&
-           result.notes[3].midi == 57);
+    assert(result.notes[0].pitch == 60 && result.notes[1].pitch == 55 && result.notes[2].pitch == 50 &&
+           result.notes[3].pitch == 57);
 }
 
 static void test_recognizability(void) {

@@ -17,6 +17,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 
 #include "grow/grow_internal.h"
+#include "motive/motive_internal.h"
 
 #define TICKS_PER_WHOLE 128L
 
@@ -102,7 +103,7 @@ static bool motives_differ(const Motive *a, const Motive *b) {
         return true;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi != b->notes[i].midi) {
+        if (motive_pitch(a, i) != motive_pitch(b, i)) {
             return true;
         }
     }

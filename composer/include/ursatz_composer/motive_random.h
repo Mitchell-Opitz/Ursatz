@@ -16,7 +16,7 @@
  * seed give the same motives: all the random numbers come from one FillRng seeded with `seed`.
  *
  * Key. Without a key the motive is made and sounded in C major (major) or A minor (minor) and carries that key, marked
- * MOTIVE_KEY_GIVEN, so it can be stored. A key must be of the mode asked for.
+ * MOTIVE_SKETCH_KEY_GIVEN, so it can be stored. A key must be of the mode asked for.
  *
  * Form. A full motive is pitches and rhythm. A rhythm motive is the rhythm of a full one, and a contour motive its
  * contour, read back as motive_from_rhythm_text and motive_from_contour_text read them (a contour has no pickup).
@@ -43,7 +43,7 @@ typedef struct {
     PlanMeter meter;
     bool has_key;
     AnalysisKey key;
-    MotiveForm form;
+    MotiveSketchForm form;
     /* NULL for no style. Not owned. */
     const ComposerStyle *style;
     /* How many motives, 1 to MOTIVE_RANDOM_MAX_COUNT. */

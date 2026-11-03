@@ -12,6 +12,7 @@
 #include "util/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
+#include "motive/motive_internal.h"
 
 const char *grow_result_name(GrowResult result) {
     switch (result) {
@@ -306,11 +307,12 @@ static bool slot_motive_valid(const GrowRequest *request, GrowSlot slot, Rationa
     size_t units;
     Rational room;
     bool used = grow_slot_used(&request->pairing, slot, &units);
-    if (!used || motive->form != MOTIVE_FORM_FULL || motive->note_count < 2 ||
-        motive->meter.beats_per_bar != request->meter.beats_per_bar ||
-        motive->meter.beat_unit != request->meter.beat_unit ||
-        (motive->key_source != MOTIVE_KEY_UNSPECIFIED &&
-         (analysis_key_tonic_pitch_class(&motive->key) != analysis_key_tonic_pitch_class(&request->key) || motive->key.mode != request->key.mode))) {
+    if (!used || motive->form != MOTIVE_SKETCH_FORM_FULL || motive->note_count < 2 ||
+        motive_meter(motive).beats_per_bar != request->meter.beats_per_bar ||
+        motive_meter(motive).beat_unit != request->meter.beat_unit ||
+        (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
+         (motive->tonic_pc != analysis_key_tonic_pitch_class(&request->key) ||
+          motive->minor != (request->key.mode == KEY_STRUCTURE_MODE_MINOR)))) {
         return false;
     }
     /* The first idea of the slot has units eighths of the theme; the longest is a bar. */
@@ -327,11 +329,12 @@ static bool idea_motive_valid(const GrowRequest *request, GrowIdea idea, Rationa
     GrowPlace place;
     Rational room;
     if (idea == GROW_IDEA_BASIC || !grow_idea_place(&request->pairing, idea, &place) ||
-        motive->form != MOTIVE_FORM_FULL || motive->note_count < 2 ||
-        motive->meter.beats_per_bar != request->meter.beats_per_bar ||
-        motive->meter.beat_unit != request->meter.beat_unit ||
-        (motive->key_source != MOTIVE_KEY_UNSPECIFIED &&
-         (analysis_key_tonic_pitch_class(&motive->key) != analysis_key_tonic_pitch_class(&request->key) || motive->key.mode != request->key.mode))) {
+        motive->form != MOTIVE_SKETCH_FORM_FULL || motive->note_count < 2 ||
+        motive_meter(motive).beats_per_bar != request->meter.beats_per_bar ||
+        motive_meter(motive).beat_unit != request->meter.beat_unit ||
+        (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED &&
+         (motive->tonic_pc != analysis_key_tonic_pitch_class(&request->key) ||
+          motive->minor != (request->key.mode == KEY_STRUCTURE_MODE_MINOR)))) {
         return false;
     }
     size_t units = grow_place_units(&request->pairing, place);
@@ -367,7 +370,7 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         request->motive->note_count < 2 || analysis_key_tonic_pitch_class(&request->key) < 0 || analysis_key_tonic_pitch_class(&request->key) > 11 ||
         (has_accompaniment && !grow_accompaniment_valid(&request->meter, &accompaniment)) ||
         (has_accompaniment && request->has_voicing) ||
-        (accompaniment_motive && (accompaniment_motive->role != MOTIVE_ROLE_ACCOMPANIMENT ||
+        (accompaniment_motive && (!accompaniment_motive->accompaniment ||
                                   accompaniment_motive->note_count < 1))) {
         return GROW_ERR_BAD_REQUEST;
     }
@@ -583,14 +586,16 @@ bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter
             if (notes->note_count == 0 || notes->note_count > MOTIVE_MAX_NOTES) {
                 return false;
             }
-            memset(out, 0, sizeof(*out));
-            out->meter = *meter;
-            out->key = *key;
-            out->key_source = MOTIVE_KEY_GIVEN;
+            motive_init(out, *meter);
+            motive_set_key(out, key, MOTIVE_SKETCH_KEY_GIVEN);
             out->note_count = notes->note_count;
-            memcpy(out->notes, notes->notes, notes->note_count * sizeof(PlanNote));
-            PlanNote *last = &out->notes[out->note_count - 1];
-            return rational_add(last->offset, last->duration, &out->length) == RATIONAL_OK;
+            for (size_t n = 0; n < notes->note_count; n++) {
+                out->notes[n].pitch = notes->notes[n].midi;
+                out->notes[n].onset = notes->notes[n].offset;
+                out->notes[n].duration = notes->notes[n].duration;
+            }
+            MotiveSketchNote *last = &out->notes[out->note_count - 1];
+            return rational_add(last->onset, last->duration, &out->length) == RATIONAL_OK;
         }
     }
     return false;

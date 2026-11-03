@@ -7,7 +7,6 @@
 
 #include "harmony/harmony_internal.h"
 #include "motive/motive_internal.h"
-#include <ursatz_composer/motive_sketch_bridge.h>
 #include "plan/plan_json_internal.h"
 #include "util/util.h"
 
@@ -123,24 +122,24 @@ static bool power_of_two(unsigned long value) {
 }
 
 static void analyze_rhythm(const Motive *motive, MotiveAnalysis *out) {
-    Rational bar = motive_time(motive->meter.beats_per_bar, (unsigned long)motive->meter.beat_unit);
+    Rational bar = motive_time(motive_meter(motive).beats_per_bar, (unsigned long)motive_meter(motive).beat_unit);
     Rational previous_end = motive_time(0, 1);
     Rational pickup = motive_pickup(motive);
     for (size_t i = 0; i < motive->note_count; i++) {
-        const PlanNote *note = &motive->notes[i];
+        const MotiveSketchNote *note = &motive->notes[i];
         MotiveRhythmNote *rhythm = &out->rhythm[i];
         /* The first barline is at the pickup, so a note before it is in bar -1. */
-        Rational at = motive_time_minus(note->offset, pickup);
+        Rational at = motive_time_minus(note->onset, pickup);
         long bar_index = floor_div(at.num * (long)bar.den, (long)at.den * bar.num);
         Rational inside = motive_time(at.num * (long)bar.den - bar_index * bar.num * (long)at.den, at.den * bar.den);
-        rhythm->onset = note->offset;
+        rhythm->onset = note->onset;
         rhythm->duration = note->duration;
         rhythm->bar = (int)bar_index;
-        rhythm->beat = motive_time(inside.num * motive->meter.beat_unit, inside.den);
+        rhythm->beat = motive_time(inside.num * motive_meter(motive).beat_unit, inside.den);
         rhythm->on_beat = rhythm->beat.den == 1;
         rhythm->dotted = (note->duration.num == 3 || note->duration.num == 7) && power_of_two(note->duration.den);
-        rhythm->rest_before = motive_time_minus(note->offset, previous_end);
-        previous_end = motive_note_end(note);
+        rhythm->rest_before = motive_time_minus(note->onset, previous_end);
+        previous_end = motive_event_end(note);
     }
     out->bars = motive_time(motive->length.num * (long)bar.den, motive->length.den * (unsigned long)bar.num);
 }
@@ -165,7 +164,7 @@ typedef struct {
 } Scored;
 
 static bool score_chord(const Motive *motive, const MotiveAnalysis *analysis, const ChordSpec *spec, Scored *out) {
-    KeyStructureMode mode = motive->key.mode;
+    KeyStructureMode mode = motive->minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
     PhraseChord chord;
     if (spec->leading_tone) {
         if (mode != KEY_STRUCTURE_MODE_MINOR || !harmony_make_leading_tone(mode, 0, 1, &chord)) {
@@ -182,20 +181,20 @@ static bool score_chord(const Motive *motive, const MotiveAnalysis *analysis, co
     int root = spec->leading_tone ? 11 : harmony_applied_scale_semitone(harmony_mode_of(mode), spec->degree);
     bool member[12] = {false};
     for (size_t k = 0; k < interval_count; k++) {
-        member[(analysis_key_tonic_pitch_class(&motive->key) + root + intervals[k]) % 12] = true;
+        member[(motive->tonic_pc + root + intervals[k]) % 12] = true;
     }
 
     double total = 0.0;
     double inside = 0.0;
     size_t tones = 0;
     for (size_t i = 0; i < motive->note_count; i++) {
-        const PlanNote *note = &motive->notes[i];
+        const MotiveSketchNote *note = &motive->notes[i];
         double weight = (double)note->duration.num / (double)note->duration.den;
         if (analysis->rhythm[i].beat.num == 0) {
             weight *= 2.0;
         }
         total += weight;
-        if (member[note->midi % 12]) {
+        if (member[motive_pitch(motive, i) % 12]) {
             inside += weight;
             tones++;
         }
@@ -254,23 +253,23 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
     memset(&result, 0, sizeof(result));
     result.note_count = motive->note_count;
     result.form = motive->form;
-    bool full = motive->form == MOTIVE_FORM_FULL;
+    bool full = motive->form == MOTIVE_SKETCH_FORM_FULL;
     result.intervals_known = full;
-    result.contour_known = motive->form != MOTIVE_FORM_RHYTHM;
-    result.rhythm_known = motive->form != MOTIVE_FORM_CONTOUR;
+    result.contour_known = motive->form != MOTIVE_SKETCH_FORM_RHYTHM;
+    result.rhythm_known = motive->form != MOTIVE_SKETCH_FORM_CONTOUR;
     result.range_known = full;
     result.length = length;
-    result.key_known = motive->key_source != MOTIVE_KEY_UNSPECIFIED;
+    result.key_known = motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED;
     result.key_source = motive->key_source;
     if (result.key_known) {
-        result.key = motive->key;
+        result.key = motive_key(motive);
     }
     result.degrees_known = result.key_known && full;
     result.harmony_known = result.key_known && full;
 
-    result.lowest = result.highest = motive->notes[0].midi;
+    result.lowest = result.highest = motive_pitch(motive, 0);
     for (size_t i = 1; i < motive->note_count; i++) {
-        int pitch = motive->notes[i].midi;
+        int pitch = motive_pitch(motive, i);
         result.lowest = pitch < result.lowest ? pitch : result.lowest;
         result.highest = pitch > result.highest ? pitch : result.highest;
     }
@@ -279,15 +278,15 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
     long positions[MOTIVE_MAX_NOTES] = {0};
     for (size_t i = 0; i < motive->note_count; i++) {
         if (result.degrees_known) {
-            int pitch = motive->notes[i].midi - analysis_key_tonic_pitch_class(&motive->key);
+            int pitch = motive_pitch(motive, i) - motive->tonic_pc;
             long octave = floor_div(pitch, 12);
-            result.degrees[i] = degree_of(motive->key.mode == KEY_STRUCTURE_MODE_MINOR, (int)(pitch - octave * 12));
+            result.degrees[i] = degree_of(motive->minor, (int)(pitch - octave * 12));
             positions[i] = octave * 7 + (result.degrees[i].degree - 1);
         }
     }
     result.interval_count = motive->note_count - 1;
     for (size_t i = 0; i < result.interval_count; i++) {
-        int semitones = motive->notes[i + 1].midi - motive->notes[i].midi;
+        int semitones = motive_pitch(motive, i + 1) - motive_pitch(motive, i);
         result.intervals[i].semitones = semitones;
         result.intervals[i].has_steps = result.degrees_known;
         result.intervals[i].steps = result.degrees_known ? (int)(positions[i + 1] - positions[i]) : 0;
@@ -300,7 +299,7 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
     if (result.rhythm_known) {
         analyze_rhythm(motive, &result);
     } else {
-        Rational bar = motive_time(motive->meter.beats_per_bar, (unsigned long)motive->meter.beat_unit);
+        Rational bar = motive_time(motive_meter(motive).beats_per_bar, (unsigned long)motive_meter(motive).beat_unit);
         result.bars = motive_time(motive->length.num * (long)bar.den, motive->length.den * (unsigned long)bar.num);
     }
     if (result.harmony_known) {
@@ -335,8 +334,8 @@ static void key_text(const AnalysisKey *key, char *out, size_t size) {
              key->mode == KEY_STRUCTURE_MODE_MINOR ? "minor" : "major");
 }
 
-static const char *key_source_name(MotiveKeySource source) {
-    return source == MOTIVE_KEY_GIVEN ? "given" : source == MOTIVE_KEY_INFERRED ? "inferred" : "unspecified";
+static const char *key_source_name(MotiveSketchKeySource source) {
+    return source == MOTIVE_SKETCH_KEY_GIVEN ? "given" : source == MOTIVE_SKETCH_KEY_INFERRED ? "inferred" : "unspecified";
 }
 
 /* A position in beats, counting from 1: "1", "2+1/2". */
@@ -357,7 +356,7 @@ static void degree_text(const MotiveDegree *degree, char *out, size_t size) {
 /* The pickup in beats of the meter's beat unit: "0", "1", "1/2". */
 static void pickup_beats_text(const Motive *motive, char *out, size_t size) {
     Rational pickup = motive_pickup(motive);
-    long numerator = pickup.num * motive->meter.beat_unit;
+    long numerator = pickup.num * motive_meter(motive).beat_unit;
     unsigned long denominator = pickup.den;
     unsigned long a = (unsigned long)(numerator < 0 ? -numerator : numerator);
     unsigned long b = denominator;
@@ -380,8 +379,8 @@ static void pickup_beats_text(const Motive *motive, char *out, size_t size) {
 /* The base harmony in the text syntax of an own harmony; caller frees. */
 static char *base_harmony_text(const Motive *motive, const MotiveBaseHarmony *base) {
     Motive copy = *motive;
-    memcpy(copy.harmony, base->chords, base->count * sizeof(base->chords[0]));
-    copy.harmony_count = base->count;
+    memcpy(copy.chords, base->chords, base->count * sizeof(base->chords[0]));
+    copy.chord_count = base->count;
     return motive_harmony_to_text(&copy);
 }
 
@@ -390,11 +389,11 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
     char text2[64];
     fprintf(out, "Notes:");
     for (size_t i = 0; i < analysis->note_count; i++) {
-        motive_pitch_name(motive->notes[i].midi, text, sizeof(text));
+        motive_pitch_name(motive_pitch(motive, i), text, sizeof(text));
         fprintf(out, " %s", text);
     }
     fprintf(out, "\n");
-    fprintf(out, "Meter: %d/%d\n", motive->meter.beats_per_bar, motive->meter.beat_unit);
+    fprintf(out, "Meter: %d/%d\n", motive_meter(motive).beats_per_bar, motive_meter(motive).beat_unit);
     fprintf(out, "Form: %s\n", motive_form_name(analysis->form));
     char beats[32];
     pickup_beats_text(motive, beats, sizeof(beats));
@@ -410,7 +409,7 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
     } else {
         fprintf(out, "Length: %lld/%lld bars\n", analysis->bars.num, analysis->bars.den);
     }
-    if (motive->harmony_count > 0) {
+    if (motive->chord_count > 0) {
         char *harmony = motive_harmony_to_text(motive);
         fprintf(out, "Own harmony: %s\n", harmony ? harmony : "");
         free(harmony);
@@ -426,7 +425,7 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
         fprintf(out, "Tones:");
         for (size_t i = 0; i < analysis->note_count; i++) {
             const MotiveToneLabel *tone = &analysis->tones[i];
-            motive_pitch_name(motive->notes[i].midi, text, sizeof(text));
+            motive_pitch_name(motive_pitch(motive, i), text, sizeof(text));
             const char *name = tone->role == MOTIVE_TONE_CHORD         ? "chord"
                                : tone->role == MOTIVE_TONE_UNCLASSIFIED ? "unclassified"
                                                                         : motive_tone_type_name(tone->type);
@@ -435,7 +434,7 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
         fprintf(out, "\n");
         for (size_t i = 0; i < analysis->note_count; i++) {
             if (analysis->tones[i].unresolved) {
-                motive_pitch_name(motive->notes[i].midi, text, sizeof(text));
+                motive_pitch_name(motive_pitch(motive, i), text, sizeof(text));
                 fprintf(out, "Warning: Note %zu (%s) does not resolve\n", i + 1, text);
             }
         }
@@ -446,8 +445,8 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
         fprintf(out, "%s%s: notes %zu to %zu\n", i == 0 ? "Features:\n  " : "  ", motive->features[i].label,
                 motive->features[i].first, motive->features[i].last);
     }
-    if (motive->role != MOTIVE_ROLE_MELODIC) {
-        fprintf(out, "Role: %s\n", motive_role_name(motive->role));
+    if (motive->accompaniment) {
+        fprintf(out, "Role: %s\n", motive_role_name(motive->accompaniment));
     }
 
     if (analysis->intervals_known) {
@@ -492,7 +491,7 @@ void motive_analysis_print(const Motive *motive, const MotiveAnalysis *analysis,
     }
     for (size_t i = 0; analysis->rhythm_known && i < analysis->note_count; i++) {
         const MotiveRhythmNote *rhythm = &analysis->rhythm[i];
-        motive_pitch_name(motive->notes[i].midi, text, sizeof(text));
+        motive_pitch_name(motive_pitch(motive, i), text, sizeof(text));
         motive_duration_name(rhythm->duration, text2, sizeof(text2));
         char beat[32];
         beat_text(rhythm->beat, beat, sizeof(beat));
@@ -722,17 +721,18 @@ static cJSON *rendered_json(const Motive *rendered) {
     cJSON *object = cJSON_CreateObject();
     cJSON *notes = cJSON_CreateArray();
     bool ok = object && notes;
-    if (ok && rendered->key_source != MOTIVE_KEY_UNSPECIFIED) {
+    if (ok && rendered->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         char text[32];
-        key_text(&rendered->key, text, sizeof(text));
+        AnalysisKey rendered_key = motive_key(rendered);
+        key_text(&rendered_key, text, sizeof(text));
         ok = add_string(object, "key", text);
     } else if (ok) {
         ok = plan_json_add(object, "key", cJSON_CreateNull());
     }
     for (size_t i = 0; ok && i < rendered->note_count; i++) {
         cJSON *note = cJSON_CreateObject();
-        ok = note && plan_json_add(note, "midi_pitch", json_number(rendered->notes[i].midi)) &&
-             plan_json_add(note, "offset", rational_json(rendered->notes[i].offset.num, rendered->notes[i].offset.den)) &&
+        ok = note && plan_json_add(note, "midi_pitch", json_number(motive_pitch(rendered, i))) &&
+             plan_json_add(note, "offset", rational_json(rendered->notes[i].onset.num, rendered->notes[i].onset.den)) &&
              plan_json_add(note, "duration", rational_json(rendered->notes[i].duration.num, rendered->notes[i].duration.den));
         if (ok) {
             cJSON_AddItemToArray(notes, note);
@@ -790,7 +790,7 @@ static cJSON *tones_json(const Motive *motive, const MotiveAnalysis *analysis, c
         if (ok && label->unresolved) {
             char name[16];
             char text[64];
-            motive_pitch_name(motive->notes[i].midi, name, sizeof(name));
+            motive_pitch_name(motive_pitch(motive, i), name, sizeof(name));
             snprintf(text, sizeof(text), "Note %zu (%s) does not resolve", i + 1, name);
             cJSON *warning = cJSON_CreateString(text);
             if (warning) {
@@ -822,19 +822,19 @@ static char *analysis_json(const Motive *motive, const MotiveAnalysis *analysis,
     }
     char *notes_text = ok ? motive_to_notes_text(motive) : NULL;
     char *degrees_text = ok ? motive_to_degrees_text(motive) : NULL;
-    char *rhythm_text = ok && motive->form == MOTIVE_FORM_RHYTHM ? motive_to_rhythm_text(motive) : NULL;
-    char *contour_text = ok && motive->form == MOTIVE_FORM_CONTOUR ? motive_to_contour_text(motive) : NULL;
+    char *rhythm_text = ok && motive->form == MOTIVE_SKETCH_FORM_RHYTHM ? motive_to_rhythm_text(motive) : NULL;
+    char *contour_text = ok && motive->form == MOTIVE_SKETCH_FORM_CONTOUR ? motive_to_contour_text(motive) : NULL;
     ok = ok && plan_json_add(body, "form", cJSON_CreateString(motive_form_name(analysis->form))) &&
          plan_json_add(body, "pickup", cJSON_CreateString(beats)) &&
          plan_json_add(body, "notes_text", notes_text ? cJSON_CreateString(notes_text) : cJSON_CreateNull()) &&
          plan_json_add(body, "degrees_text", degrees_text ? cJSON_CreateString(degrees_text) : cJSON_CreateNull());
-    if (ok && motive->form == MOTIVE_FORM_RHYTHM) {
+    if (ok && motive->form == MOTIVE_SKETCH_FORM_RHYTHM) {
         ok = rhythm_text && plan_json_add(body, "rhythm_text", cJSON_CreateString(rhythm_text));
     }
-    if (ok && motive->form == MOTIVE_FORM_CONTOUR) {
+    if (ok && motive->form == MOTIVE_SKETCH_FORM_CONTOUR) {
         ok = contour_text && plan_json_add(body, "contour_text", cJSON_CreateString(contour_text));
     }
-    if (ok && motive->harmony_count > 0) {
+    if (ok && motive->chord_count > 0) {
         char *harmony_text = motive_harmony_to_text(motive);
         ok = harmony_text && plan_json_add(body, "harmony_text", cJSON_CreateString(harmony_text));
         free(harmony_text);

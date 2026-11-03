@@ -431,15 +431,14 @@ static void test_built_plan(void) {
 /* The pitches and the length of the motive written on the motive node `name`. */
 static Motive written_motive(const PiecePlan *plan, const char *name, const Motive *template_motive) {
     Motive motive = *template_motive;
-    motive.key = plan_key_of_pitch_class(SCENARIOS[0].tonic, SCENARIOS[0].mode);
-    motive.key_source = MOTIVE_KEY_GIVEN;
+    AnalysisKey motive_key_value = plan_key_of_pitch_class(SCENARIOS[0].tonic, SCENARIOS[0].mode);
+    motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
     LaneSpanId span = PLAN_LANE_SPAN_NONE;
     assert(plan_node_lane_spans(plan, find_node(plan, name), &span, 1) == 1);
     const PlanNotes *notes = &plan_lane_span_payload(plan, span)->notes;
-    motive.note_count = notes->note_count;
-    memcpy(motive.notes, notes->notes, notes->note_count * sizeof(PlanNote));
+    motive_set_lane_notes(&motive, notes->notes, notes->note_count);
     motive.length = plan_lane_span_span(plan, span).length;
-    motive.harmony_count = 0;
+    motive.chord_count = 0;
     motive.feature_count = 0;
     return motive;
 }
@@ -449,7 +448,7 @@ static bool same_notes(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi != b->notes[i].midi || rational_cmp(a->notes[i].offset, b->notes[i].offset) != 0 ||
+        if (a->notes[i].pitch != b->notes[i].pitch || rational_cmp(a->notes[i].onset, b->notes[i].onset) != 0 ||
             rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
             return false;
         }
@@ -494,11 +493,11 @@ static void test_motive_forms(void) {
             /* A form below C#4 is taken up an octave. */
             int lowest = 127;
             for (size_t n = 0; n < expected.note_count; n++) {
-                lowest = expected.notes[n].midi < lowest ? expected.notes[n].midi : lowest;
+                lowest = expected.notes[n].pitch < lowest ? expected.notes[n].pitch : lowest;
             }
             if (lowest < 58) {
                 for (size_t n = 0; n < expected.note_count; n++) {
-                    expected.notes[n].midi += 12;
+                    expected.notes[n].pitch += 12;
                 }
             }
             if (same_notes(&m1, &expected)) {

@@ -10,6 +10,7 @@
 #include "grow/grow_internal.h"
 #include "piece/form_return_internal.h"
 #include "piece/piece_internal.h"
+#include "motive/motive_internal.h"
 #include "util/plan_util.h"
 
 static const char *const PART_NAMES[PIECE_PART_COUNT] = {"intro", "body", "turnaround", "ending"};
@@ -243,12 +244,15 @@ static bool theme_motive(const PieceStructure *structure, const PieceSection *se
     int shift = ((analysis_key_tonic_pitch_class(&structure->key) - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
     shift = shift > 6 ? shift - 12 : shift;
     for (size_t i = 0; i < out->note_count; i++) {
-        out->notes[i].midi += shift;
-        if (out->notes[i].midi < 0 || out->notes[i].midi > 127) {
+        if (out->notes[i].pitch == MOTIVE_SKETCH_PITCH_UNKNOWN) {
+            continue;
+        }
+        out->notes[i].pitch += shift;
+        if (out->notes[i].pitch < 0 || out->notes[i].pitch > 127) {
             return false;
         }
     }
-    out->key = structure->key;
+    motive_set_key(out, &structure->key, out->key_source);
     return true;
 }
 

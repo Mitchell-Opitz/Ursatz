@@ -37,8 +37,8 @@ static int roman_degree(const char *roman) {
  */
 static int chord_degree(const Motive *motive, const MotiveAnalysis *analysis, bool last, bool *altered) {
     *altered = false;
-    if (motive->harmony_count > 0) {
-        const MotiveChord *chord = &motive->harmony[last ? motive->harmony_count - 1 : 0];
+    if (motive->chord_count > 0) {
+        const MotiveSketchChord *chord = &motive->chords[last ? motive->chord_count - 1 : 0];
         *altered = chord->alteration != 0;
         return chord->degree;
     }
@@ -109,7 +109,7 @@ bool variant_functions(const Motive *basic, const Motive *form, const VariantRec
     bool contrast = !remote_half_or_less;
     bool beginning = false;
     bool cadential = false;
-    if (form->form == MOTIVE_FORM_FULL) {
+    if (form->form == MOTIVE_SKETCH_FORM_FULL) {
         VariantRecord difference;
         memset(&difference, 0, sizeof(difference));
         variant_record_difference(basic, form, &difference);

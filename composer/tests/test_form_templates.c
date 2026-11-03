@@ -204,12 +204,12 @@ static Motive scenario_motive(const Scenario *scenario) {
         fprintf(stderr, "cannot load %s: %s\n", path, error.message);
         exit(2);
     }
-    motive.meter.beats_per_bar = scenario->beats;
-    motive.meter.beat_unit = 4;
-    motive.key = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    motive_set_meter(&motive, (PlanMeter){scenario->beats, 4, 0});
+    AnalysisKey motive_key_value = plan_key_of_pitch_class(scenario->tonic, scenario->mode);
+    motive_set_key(&motive, &motive_key_value, MOTIVE_SKETCH_KEY_GIVEN);
     if (scenario->beats == 3) {
         /* The half note at beat 3 ends on the barline as a quarter. */
-        PlanNote *last = &motive.notes[motive.note_count - 1];
+        MotiveSketchNote *last = &motive.notes[motive.note_count - 1];
         assert(rational_make(1, 4, &last->duration) == RATIONAL_OK);
         assert(rational_make(3, 4, &motive.length) == RATIONAL_OK);
     }

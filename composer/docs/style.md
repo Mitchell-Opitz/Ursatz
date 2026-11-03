@@ -191,7 +191,7 @@ one bar of the meter, the last cut at the barline, and moves them by one interva
 the requested key, the source key being the key its analysis heard there (the key of the chord at the passage). In the same
 mode that is a plain transposition (Mozart 545's opening bar, C major, seeds D5 half, F#5 quarter, A5 quarter in D major);
 from major to minor the first note takes the same degree of the other scale and the others keep their intervals. A match with
-fewer than two notes in the bar is passed over for the next. The result is a `Motive` in the requested key (`MOTIVE_KEY_GIVEN`).
+fewer than two notes in the bar is passed over for the next. The result is a `Motive` in the requested key (`MOTIVE_SKETCH_KEY_GIVEN`).
 
 **A progression.** `--like-progression "<numerals>"` goes after `--from-corpus` like a `--given-progression` and takes the
 same `--at` and `--cells`: the chords placed are those of the passage of the corpus that best matches the numerals

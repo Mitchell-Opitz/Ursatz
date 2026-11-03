@@ -68,7 +68,13 @@ static const Baseline BASELINES[SCENARIO_COUNT] = {{10, 10, 12}, {10, 5, 22}, {9
 
 /* --- the plans ----------------------------------------------------------------------- */
 
-static Motive notes_of(const char *text) {
+/* The notes of a note list, as the lane notes plan_give_melody and plan_give_bass take. */
+typedef struct {
+    PlanNote notes[MOTIVE_MAX_NOTES];
+    size_t note_count;
+} Line;
+
+static Line notes_of(const char *text) {
     MotiveOptions options;
     Motive motive;
     MotiveError error;
@@ -77,7 +83,11 @@ static Motive notes_of(const char *text) {
     options.meter.beats_per_bar = 4;
     options.meter.beat_unit = 4;
     assert(motive_from_notes_text(text, &options, &motive, &error) == MOTIVE_OK);
-    return motive;
+    Line line;
+    memset(&line, 0, sizeof(line));
+    motive_lane_notes(&motive, line.notes);
+    line.note_count = motive.note_count;
+    return line;
 }
 
 static NodeId section_with_letter(const PiecePlan *plan, const char *letter) {
@@ -117,12 +127,12 @@ static PiecePlan *plan_of(ScenarioKind kind, unsigned long seed) {
     NodeId section = section_with_letter(plan, kind == SCENARIO_PROGRESSION ? "A" : "B");
     assert(section != PLAN_NODE_NONE);
     if (kind == SCENARIO_MELODY) {
-        Motive melody = notes_of(MELODY);
+        Line melody = notes_of(MELODY);
         assert(plan_give_melody(plan, section, 0, melody.notes, melody.note_count) == GIVEN_OK);
     } else if (kind == SCENARIO_PROGRESSION) {
         assert(plan_give_progression(plan, section, 0, PROGRESSION, 4, 2) == GIVEN_OK);
     } else {
-        Motive bass = notes_of(BASS);
+        Line bass = notes_of(BASS);
         assert(plan_give_bass(plan, section, 0, bass.notes, bass.note_count) == GIVEN_OK);
     }
     return plan;
@@ -150,8 +160,8 @@ static void test_refusals(void) {
     PiecePlan *plan = NULL;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
     NodeId b = section_with_letter(plan, "B");
-    Motive melody = notes_of(MELODY);
-    Motive bass = notes_of(BASS);
+    Line melody = notes_of(MELODY);
+    Line bass = notes_of(BASS);
     assert(b != PLAN_NODE_NONE);
     size_t spans = plan_lane_span_count(plan);
 
@@ -211,7 +221,7 @@ static void test_placing(void) {
     PiecePlan *plan = NULL;
     assert(piece_build_plan(&request, &plan) == PIECE_OK);
     NodeId b = section_with_letter(plan, "B");
-    Motive melody = notes_of("E5:h G5:h G5:q F5:q E5:h E5:h C5:h A4:q B4:q C5:h"); /* 4 bars */
+    Line melody = notes_of("E5:h G5:h G5:q F5:q E5:h E5:h C5:h A4:q B4:q C5:h"); /* 4 bars */
     PlanSpan section = plan_node_span(plan, b);
 
     /* A melody from the third bar: one Given span, 4 bars long, owned by the section. */
@@ -227,7 +237,7 @@ static void test_placing(void) {
     assert(plan_lane_span_payload(plan, ids[0])->notes.note_count == melody.note_count);
 
     /* The same lane is taken there: a second melody that overlaps it is refused, one that does not is not. */
-    Motive bar = notes_of("C5:w");
+    Line bar = notes_of("C5:w");
     assert(plan_give_melody(plan, b, 5, bar.notes, bar.note_count) == GIVEN_ERR_OVERLAP);
     assert(plan_give_melody(plan, b, 6, bar.notes, bar.note_count) == GIVEN_OK);
 
@@ -299,11 +309,11 @@ static void test_key_change(void) {
             }
             if (plan_lane_find(plan, PLAN_LANE_KEY, 0, span, NULL, 0) == 2) {
                 /* A melody from the second bar to the end crosses the half. */
-                Motive melody = notes_of("C5:w C5:w C5:w C5:w C5:w C5:w C5:w");
+                Line melody = notes_of("C5:w C5:w C5:w C5:w C5:w C5:w C5:w");
                 assert(plan_give_melody(plan, section, 1, melody.notes, melody.note_count) == GIVEN_ERR_KEY);
                 assert(given_count(plan, PLAN_LANE_MELODY) == 0);
                 /* The first half is one key: it is accepted. */
-                Motive half = notes_of("C5:w C5:w C5:w C5:w");
+                Line half = notes_of("C5:w C5:w C5:w C5:w");
                 assert(plan_give_melody(plan, section, 0, half.notes, half.note_count) == GIVEN_OK);
                 found = true;
             }
@@ -454,7 +464,7 @@ static void test_partial(void) {
         assert(piece_build_plan(&request, &plan) == PIECE_OK);
         NodeId b = section_with_letter(plan, "B");
         /* Bars 4 to 7: its downbeats are tones of the tonic, the tonic, a predominant and the dominant. */
-        Motive melody = notes_of("E5:h G5:h G5:q F5:q E5:h A4:q B4:q C5:h D5:h B4:h");
+        Line melody = notes_of("E5:h G5:h G5:q F5:q E5:h A4:q B4:q C5:h D5:h B4:h");
         assert(plan_give_melody(plan, b, 3, melody.notes, melody.note_count) == GIVEN_OK);
         GivenSnapshot *snapshot = given_snapshot(plan);
         ComposeConfig config;

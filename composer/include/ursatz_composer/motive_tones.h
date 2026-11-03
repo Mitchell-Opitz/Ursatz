@@ -13,7 +13,7 @@
  * when it has one (given), otherwise it is proposed from the notes.
  */
 typedef struct {
-    MotiveChord chords[MOTIVE_MAX_CHORDS];
+    MotiveSketchChord chords[MOTIVE_MAX_CHORDS];
     size_t count;
     bool given;
 } MotiveBaseHarmony;

@@ -11,6 +11,7 @@
 
 #include "cli_options.h"
 #include "motive_extras.h"
+#include "motive/motive_internal.h"
 
 #define RANDOM_MOTIVE_COUNT_DEFAULT 1
 
@@ -125,7 +126,7 @@ static int read_request(const Options *options, MotiveRandomOptions *out) {
         }
         out->has_key = true;
     }
-    out->form = MOTIVE_FORM_FULL;
+    out->form = MOTIVE_SKETCH_FORM_FULL;
     if (options->form_text && !motive_form_parse(options->form_text, &out->form)) {
         return cli_fail(CLI_EXIT_USAGE, "--form must be full, rhythm or contour, not '%s'", options->form_text);
     }
@@ -150,7 +151,7 @@ static void print_text(unsigned long seed, const Motive *motives, size_t count) 
         char *text = cli_motive_text(&motives[i]);
         printf("\nMotive %zu: %s\n", i + 1, text ? text : "");
         free(text);
-        if (motives[i].form == MOTIVE_FORM_FULL) {
+        if (motives[i].form == MOTIVE_SKETCH_FORM_FULL) {
             char *degrees = motive_to_degrees_text(&motives[i]);
             printf("  degrees: %s\n", degrees ? degrees : "");
             free(degrees);
@@ -235,7 +236,7 @@ int run_random_motive(int argc, char **argv) {
         return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot make random motives (%s)", motive_random_result_name(result));
     }
     for (size_t i = 0; extras.has_role && i < made; i++) {
-        motives[i].role = extras.role;
+        motives[i].accompaniment = extras.accompaniment;
     }
     if (options.json) {
         if (!print_json(request.seed, motives, made)) {

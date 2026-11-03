@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include <ursatz_composer/motive_connect.h>
-#include <ursatz_composer/motive_sketch_bridge.h>
 #include <ursatz_composer/variant_registry.h>
 
 #include "grow/grow_internal.h"
@@ -149,17 +148,17 @@ static void with_extras(const PiecePlan *plan, NodeId node, const MotiveDevelopC
         return;
     }
     for (size_t i = 0; i < motive->note_count; i++) {
-        if (basic->notes[i].midi != motive->notes[i].midi ||
-            rational_cmp(basic->notes[i].offset, motive->notes[i].offset) != 0 ||
+        if (motive_pitch(basic, i) != motive_pitch(motive, i) ||
+            rational_cmp(basic->notes[i].onset, motive->notes[i].onset) != 0 ||
             rational_cmp(basic->notes[i].duration, motive->notes[i].duration) != 0) {
             return;
         }
     }
-    memcpy(motive->harmony, basic->harmony, sizeof(motive->harmony));
-    motive->harmony_count = basic->harmony_count;
+    memcpy(motive->chords, basic->chords, sizeof(motive->chords));
+    motive->chord_count = basic->chord_count;
     memcpy(motive->features, basic->features, sizeof(motive->features));
     motive->feature_count = basic->feature_count;
-    motive->role = basic->role;
+    motive->accompaniment = basic->accompaniment;
     motive->pickup = basic->pickup;
 }
 
@@ -276,13 +275,13 @@ static bool within_range(const Motive *motive) {
     static const bool MAJOR[12] = {true, false, true, false, true, true, false, true, false, true, false, true};
     static const bool MINOR[12] = {true, false, true, true, false, true, false, true, true, false, true, true};
     for (size_t i = 0; i < motive->note_count; i++) {
-        int pitch = motive->notes[i].midi;
+        int pitch = motive_pitch(motive, i);
         if (pitch < FORM_LOW || pitch > FORM_HIGH) {
             return false;
         }
-        if (motive->key_source != MOTIVE_KEY_UNSPECIFIED) {
-            int degree = ((pitch - analysis_key_tonic_pitch_class(&motive->key)) % 12 + 12) % 12;
-            if (!(motive->key.mode == KEY_STRUCTURE_MODE_MINOR ? MINOR : MAJOR)[degree]) {
+        if (motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
+            int degree = ((pitch - motive->tonic_pc) % 12 + 12) % 12;
+            if (!(motive->minor ? MINOR : MAJOR)[degree]) {
                 return false;
             }
         }
@@ -293,7 +292,7 @@ static bool within_range(const Motive *motive) {
 static int widest_leap(const Motive *motive) {
     int widest = 0;
     for (size_t i = 1; i < motive->note_count; i++) {
-        int leap = motive->notes[i].midi - motive->notes[i - 1].midi;
+        int leap = motive_pitch(motive, i) - motive_pitch(motive, i - 1);
         widest = (leap < 0 ? -leap : leap) > widest ? (leap < 0 ? -leap : leap) : widest;
     }
     return widest;
@@ -304,7 +303,7 @@ static bool same_pitches(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi != b->notes[i].midi) {
+        if (motive_pitch(a, i) != motive_pitch(b, i)) {
             return false;
         }
     }
@@ -353,18 +352,18 @@ static void label_of(const Payload *payload, char *out, size_t size) {
    longer than the idea's room. */
 static bool form_fits(const Request *request, const Motive *motive) {
     int allowed = widest_leap(&request->basic) > FORM_LEAP ? widest_leap(&request->basic) : FORM_LEAP;
-    return motive->form == MOTIVE_FORM_FULL && within_range(motive) && widest_leap(motive) <= allowed &&
+    return motive->form == MOTIVE_SKETCH_FORM_FULL && within_range(motive) && widest_leap(motive) <= allowed &&
            rational_cmp(motive->length, request->room) <= 0;
 }
 
 /* An idea that ends in a cadence ends on its tone: the tonic for a PAC, the third for an IAC. */
 static bool cadence_tone_holds(const Request *request, const Motive *motive) {
-    if (!request->has_cadence || motive->key_source == MOTIVE_KEY_UNSPECIFIED) {
+    if (!request->has_cadence || motive->key_source == MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         return true;
     }
-    int tonic = analysis_key_tonic_pitch_class(&motive->key);
-    int last = ((motive->notes[motive->note_count - 1].midi - tonic) % 12 + 12) % 12;
-    int third = motive->key.mode == KEY_STRUCTURE_MODE_MINOR ? 3 : 4;
+    int tonic = motive->tonic_pc;
+    int last = ((motive_pitch(motive, motive->note_count - 1) - tonic) % 12 + 12) % 12;
+    int third = motive->minor ? 3 : 4;
     return !((request->cadence == CADENCE_TYPE_PERFECT_AUTHENTIC && last != 0) || (request->cadence == CADENCE_TYPE_IMPERFECT_AUTHENTIC && last != third));
 }
 
@@ -387,12 +386,14 @@ static bool offer(Proposal *proposal, const VariantChain *chain, unsigned long s
     int lowest = 127;
     int highest = 0;
     for (size_t i = 0; i < result.note_count; i++) {
-        lowest = result.notes[i].midi < lowest ? result.notes[i].midi : lowest;
-        highest = result.notes[i].midi > highest ? result.notes[i].midi : highest;
+        lowest = motive_pitch(&result, i) < lowest ? motive_pitch(&result, i) : lowest;
+        highest = motive_pitch(&result, i) > highest ? motive_pitch(&result, i) : highest;
     }
     if (lowest < FORM_LOW && highest + 12 <= FORM_HIGH) {
         for (size_t i = 0; i < result.note_count; i++) {
-            result.notes[i].midi += 12;
+            if (result.notes[i].pitch != MOTIVE_SKETCH_PITCH_UNKNOWN) {
+                result.notes[i].pitch += 12;
+            }
         }
     }
     if (!form_fits(request, &result) || (!fragment && result.note_count != request->basic.note_count) ||
@@ -522,12 +523,11 @@ static bool offer_operations(Proposal *proposal, const char *function, bool cont
 
 /* The motive's first chord (its own harmony, else its best implied chord) is the unaltered tonic. */
 static bool opens_on_tonic(const Motive *motive) {
-    if (motive->harmony_count > 0) {
-        return motive->harmony[0].degree == 1 && motive->harmony[0].alteration == 0;
+    if (motive->chord_count > 0) {
+        return motive->chords[0].degree == 1 && motive->chords[0].alteration == 0;
     }
-    MotiveSketch sketch;
-    return motive_to_sketch(motive, &sketch) && sketch.chord_count > 0 && sketch.chords[0].degree == 1 &&
-           sketch.chords[0].alteration == 0;
+    MotiveSketchChord implied;
+    return motive_implied_chord(motive, &implied) && implied.degree == 1 && implied.alteration == 0;
 }
 
 /* The basic idea in its dominant form. */
@@ -639,7 +639,9 @@ static PlanResult form_apply(PiecePlan *plan, FillTarget target, const FillCandi
     }
     PlanSpan span = {plan_node_span(plan, target.id).start, payload->result.length};
     PlanLanePayload notes;
-    notes.notes.notes = (PlanNote *)payload->result.notes;
+    PlanNote lane_notes[MOTIVE_MAX_NOTES];
+    motive_lane_notes(&payload->result, lane_notes);
+    notes.notes.notes = lane_notes;
     notes.notes.note_count = payload->result.note_count;
     LaneSpanId id;
     PlanResult result = plan_add_lane_span(plan, target.id, PLAN_LANE_MELODY, 0, span, &notes, &id);

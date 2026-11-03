@@ -48,7 +48,7 @@ static Motive load(const char *notes, const char *meter, const char *key, Motive
 }
 
 static void add_feature(MotiveOptions *options, const char *label, size_t first, size_t last) {
-    MotiveFeature *feature = &options->features[options->feature_count++];
+    MotiveSketchFeature *feature = &options->features[options->feature_count++];
     snprintf(feature->label, sizeof(feature->label), "%s", label);
     feature->first = first;
     feature->last = last;
@@ -86,7 +86,7 @@ static void make_fixtures(Fixture *fixtures) {
 
     fixtures[4].name = "accompaniment";
     fixtures[4].motive = fixtures[0].motive;
-    fixtures[4].motive.role = MOTIVE_ROLE_ACCOMPANIMENT;
+    fixtures[4].motive.accompaniment = true;
 }
 
 static void print_chain(const char *label, const VariantChain *chain) {

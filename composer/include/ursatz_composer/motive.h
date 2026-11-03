@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <analysis/motive_sketch.h>
 #include <analysis/motive_tone_roles.h>
 
 #include <ursatz_composer/constraint.h>
@@ -39,10 +40,10 @@
  *
  * Key. The options come first, then a key the input states (a file's key
  * signature with a major or minor mode, or a JSON "key"), both marked
- * MOTIVE_KEY_GIVEN. Otherwise the key is inferred from the pitches with
+ * MOTIVE_SKETCH_KEY_GIVEN. Otherwise the key is inferred from the pitches with
  * Ursatz's common-practice key identification, which needs all seven degrees of
- * a major or natural minor scale, and is marked MOTIVE_KEY_INFERRED. When the
- * pitches do not settle on one key it stays MOTIVE_KEY_UNSPECIFIED.
+ * a major or natural minor scale, and is marked MOTIVE_SKETCH_KEY_INFERRED. When the
+ * pitches do not settle on one key it stays MOTIVE_SKETCH_KEY_UNSPECIFIED.
  */
 
 #define MOTIVE_MAX_NOTES 64
@@ -67,79 +68,26 @@ typedef enum {
     MOTIVE_ERR_IMPORT         /* the Ursatz importer refused the file */
 } MotiveResult;
 
-typedef enum {
-    MOTIVE_KEY_UNSPECIFIED,
-    MOTIVE_KEY_GIVEN,
-    MOTIVE_KEY_INFERRED
-} MotiveKeySource;
-
 /*
- * What a motive holds. FULL is pitches and rhythm. RHYTHM keeps only the durations and onsets (every note sounds on
- * the same pitch). CONTOUR keeps only the heights of the notes in relation to each other, in even quarter notes.
+ * The motive is the library's MotiveSketch (analysis/motive_sketch.h) under the Composer's name (R-246, R-259); the
+ * library defines it and its sub-types, and this header only names it. Its fields:
+ *   notes[i].pitch, .onset, .duration, note_count    one voice on a timeline from 0; a rhythm motive's pitch is
+ *                                                    MOTIVE_SKETCH_PITCH_UNKNOWN (see motive_pitch)
+ *   length, pickup                                   where the last note ends; the part of a bar before the first barline
+ *   bar, beat                                        the meter, read and set through motive_meter_of and motive_set_meter
+ *   has_scale, tonic_pc, minor, key_source, tonic spelling   the key, read and set through motive_key_of and motive_set_key
+ *   chords, chord_count                              its own harmony (MotiveSketchChord)
+ *   features, feature_count                          labelled runs of notes (MotiveSketchFeature)
+ *   accompaniment                                    the part it plays: false the tune, true what goes under it
+ *   form                                             MOTIVE_SKETCH_FORM_FULL, _RHYTHM or _CONTOUR
+ *   tone_overrides, tone_override_count              the caller's own tone labels
+ * A zero-initialized Motive is not a valid sketch (its bar is 0/0): make one with a reader, or set the meter, pickup
+ * and length. A bar, beat, pickup, length or onset with a denominator of 0 is a time that overflowed (msk_bad).
+ *
+ * Not kept from before B6a: the per-note spelling of a note read from MusicXML (the sketch holds pitches) and the
+ * hyperbar of the meter (the sketch holds a bar and a beat).
  */
-typedef enum {
-    MOTIVE_FORM_FULL = 0,
-    MOTIVE_FORM_RHYTHM,
-    MOTIVE_FORM_CONTOUR
-} MotiveForm;
-
-/*
- * A chord of a motive's own harmony, in the motive's key: degree 1 to 7 of the scale, alteration -1 (flat), 0 or 1
- * (sharp), inversion 0 to 3 (3 needs a seventh), and the onset in whole notes from the start of the motive.
- */
-typedef struct {
-    Rational onset;
-    int degree;
-    int alteration;
-    int inversion;
-    bool seventh;
-} MotiveChord;
-
-/* A labelled run of the motive's notes: first and last are 0-based note indices, inclusive. */
-typedef struct {
-    char label[MOTIVE_FEATURE_LABEL_MAX + 1];
-    size_t first;
-    size_t last;
-} MotiveFeature;
-
-/* What part a motive plays: the tune, or what goes under it. */
-typedef enum {
-    MOTIVE_ROLE_MELODIC = 0,
-    MOTIVE_ROLE_ACCOMPANIMENT
-} MotiveRole;
-
-typedef struct {
-    PlanMeter meter;
-    /* Valid when key_source is not MOTIVE_KEY_UNSPECIFIED. */
-    AnalysisKey key;
-    MotiveKeySource key_source;
-    PlanNote notes[MOTIVE_MAX_NOTES];
-    size_t note_count;
-    /* Where the last note ends. The span of the motive is this long. */
-    Rational length;
-    /* Zero-initialized means a full motive with no pickup. */
-    MotiveForm form;
-    /* How much of the meter's bar comes before the first barline, in whole notes. The motive still starts at offset 0;
-       bars and beats are counted from -pickup. */
-    Rational pickup;
-    /*
-     * Its own harmony: up to MOTIVE_MAX_CHORDS chords with ascending onsets inside the length. Zero chords means none,
-     * and wherever a relation needs chords the best implied chord at 0 stands in.
-     */
-    MotiveChord harmony[MOTIVE_MAX_CHORDS];
-    size_t harmony_count;
-    /* Labelled features, distinct labels. Zero-initialized means none. */
-    MotiveFeature features[MOTIVE_MAX_FEATURES];
-    size_t feature_count;
-    /* Zero-initialized means melodic. */
-    MotiveRole role;
-    /*
-     * The caller's own tone labels (0-based note indices, the later of two on one note wins), which replace the labels the
-     * motive's base harmony gives its notes when it is attached to a plan (motive_tones.h). Zero means none.
-     */
-    MotiveToneOverride tone_overrides[MOTIVE_MAX_NOTES];
-    size_t tone_override_count;
-} Motive;
+typedef MotiveSketch Motive;
 
 /* What the caller says about the motive. NULL options mean nothing. */
 typedef struct {
@@ -156,14 +104,44 @@ typedef struct {
     /* Own harmony, features and role; each replaces what the input says when its has_ flag is set. The chords are
        checked against the length, the features against the note count. */
     bool has_harmony;
-    MotiveChord harmony[MOTIVE_MAX_CHORDS];
+    MotiveSketchChord harmony[MOTIVE_MAX_CHORDS];
     size_t harmony_count;
     bool has_features;
-    MotiveFeature features[MOTIVE_MAX_FEATURES];
+    MotiveSketchFeature features[MOTIVE_MAX_FEATURES];
     size_t feature_count;
     bool has_role;
-    MotiveRole role;
+    bool accompaniment;
 } MotiveOptions;
+
+/*
+ * The meter and key of a library motive sketch (analysis/motive_sketch.h), the only mappings between the sketch's
+ * bar, beat and scale and the Composer's PlanMeter and AnalysisKey. motive_meter_of is false for a bar and beat that
+ * are not a meter of 1 to 64 beats over a unit of 1, 2, 4, 8 or 16; motive_key_of is false for a sketch with no scale.
+ * motive_set_meter is false for a meter that is not one. motive_set_key spells the tonic as the key does; with source UNSPECIFIED it clears the scale.
+ */
+bool motive_meter_of(const MotiveSketch *sketch, PlanMeter *meter);
+bool motive_set_meter(MotiveSketch *sketch, PlanMeter meter);
+bool motive_key_of(const MotiveSketch *sketch, AnalysisKey *key);
+void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKeySource source);
+
+/*
+ * The sounding pitch of note index: its pitch, or for a rhythm motive (pitch MOTIVE_SKETCH_PITCH_UNKNOWN) degree 1 of
+ * its key in MIDI 60 to 71 (C major's without a key). The key and the meter of a motive as the Composer holds them:
+ * C major without a scale (a motive with no key reads as C major), the meter of its bar and beat (4/4 when they are
+ * not a meter). Built on motive_key_of and motive_meter_of.
+ */
+int motive_pitch(const Motive *motive, size_t index);
+AnalysisKey motive_key(const Motive *motive);
+PlanMeter motive_meter(const Motive *motive);
+
+/* A motive with no notes, no key and no harmony in the meter, with no pickup: the zero value is not a valid sketch. */
+void motive_init(Motive *motive, PlanMeter meter);
+
+/* The motive's notes as lane notes (unspelled, at their sounding pitch), for a melody lane span. out holds MOTIVE_MAX_NOTES. */
+void motive_lane_notes(const Motive *motive, PlanNote *out);
+
+/* The inverse: sets the motive's notes (count of them, up to MOTIVE_MAX_NOTES) from lane notes; the spelling is not kept. */
+void motive_set_lane_notes(Motive *motive, const PlanNote *notes, size_t count);
 
 /* Filled on failure. Pass NULL when the details are not wanted. */
 typedef struct {
@@ -193,9 +171,9 @@ bool motive_format_parse(const char *name, MotiveFormat *out);
 const char *motive_format_name(MotiveFormat format);
 
 /* Reads "full", "rhythm" or "contour". False for any other text. */
-bool motive_form_parse(const char *name, MotiveForm *out);
+bool motive_form_parse(const char *name, MotiveSketchForm *out);
 /* "full", "rhythm" or "contour". */
-const char *motive_form_name(MotiveForm form);
+const char *motive_form_name(MotiveSketchForm form);
 
 /*
  * What the bytes look like, never MOTIVE_FORMAT_AUTO: "MThd" is MIDI, a first
@@ -251,7 +229,7 @@ MotiveResult motive_from_degrees_text(const char *text, const MotiveOptions *opt
  *   x:q x:e x:e x:h
  *
  * Each note is "x" and a duration; "r" rests, "~" ties, dots and "|" are as in a note list. The motive is read with
- * form MOTIVE_FORM_RHYTHM and sounds every note on degree 1 of the key (C major's when the options give none).
+ * form MOTIVE_SKETCH_FORM_RHYTHM and sounds every note on degree 1 of the key (C major's when the options give none).
  */
 MotiveResult motive_from_rhythm_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
 
@@ -260,7 +238,7 @@ MotiveResult motive_from_rhythm_text(const char *text, const MotiveOptions *opti
  *
  *   0 2 1 3
  *
- * The motive is read with form MOTIVE_FORM_CONTOUR and sounds rank r on degree r + 1 of the key (C major's when the
+ * The motive is read with form MOTIVE_SKETCH_FORM_CONTOUR and sounds rank r on degree r + 1 of the key (C major's when the
  * options give none), every note a quarter.
  */
 MotiveResult motive_from_contour_text(const char *text, const MotiveOptions *options, Motive *out, MotiveError *error);
@@ -312,7 +290,7 @@ char *motive_to_contour_text(const Motive *motive);
 /*
  * The same degrees, rhythm and pickup in another key: each note keeps its step of the source key's scale and its
  * alteration, and sounds on that step of the new key's scale with degree 1 in octave 0 (MIDI 60 to 71 for the tonic's
- * pitch class). The result is marked MOTIVE_KEY_GIVEN. The mode may differ; the steps are counted in the new mode's
+ * pitch class). The result is marked MOTIVE_SKETCH_KEY_GIVEN. The mode may differ; the steps are counted in the new mode's
  * scale. Rhythm and contour forms sound as their readers place them (every note on degree 1; rank r on degree r + 1).
  * False, with *out untouched, for a source with no key, a note that leaves MIDI 0 to 127, or NULL arguments.
  * out may be the source.
@@ -330,24 +308,24 @@ bool motive_in_key(const Motive *source, const AnalysisKey *key, Motive *out);
  * 0); the others do, and the onsets rise. At most MOTIVE_MAX_CHORDS chords; text with no chord is zero chords.
  * Whether the chords fall inside the motive is checked when the motive is read.
  */
-MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, MotiveChord *out, size_t *count,
+MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, MotiveSketchChord *out, size_t *count,
                                   MotiveError *error);
 /* The most characters of a chord's numeral with its NUL ("bVII65", "#IV43"). */
 #define MOTIVE_CHORD_NUMERAL_MAX 16
 
 /* A chord as the numeral motive_harmony_parse reads, without its onset ("V65", "bVII7"). False for a chord that has none. */
-bool motive_chord_numeral(const MotiveChord *chord, char *out, size_t size);
+bool motive_chord_numeral(const MotiveSketchChord *chord, char *out, size_t size);
 
 /* The motive's own harmony as text, in the form motive_harmony_parse reads ("" when it has none); NULL on failure. */
 char *motive_harmony_to_text(const Motive *motive);
 
 /* A feature as "label:first-last" or "label:index", as in "a:0-2". The label is 1 to 8 characters. */
-MotiveResult motive_feature_parse(const char *text, MotiveFeature *out, MotiveError *error);
+MotiveResult motive_feature_parse(const char *text, MotiveSketchFeature *out, MotiveError *error);
 
 /* Reads "melodic" or "accompaniment". False for any other text. */
-bool motive_role_parse(const char *name, MotiveRole *out);
-/* "melodic" or "accompaniment". */
-const char *motive_role_name(MotiveRole role);
+bool motive_role_parse(const char *name, bool *accompaniment);
+/* "melodic" (false) or "accompaniment" (true). */
+const char *motive_role_name(bool accompaniment);
 
 /* The motive as JSON in the form motive_from_json reads, 2-space indent, trailing newline. NULL on failure; caller frees. */
 char *motive_to_json(const Motive *motive);

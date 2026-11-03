@@ -341,7 +341,7 @@ static void test_each_op_labels(void) {
 static void test_each_op(void) {
     size_t rows = 0;
     for (size_t i = 0; i < variant_registry_count(); i++) {
-        rows += (variant_registry_at(i)->forms & VARIANT_FORM_BIT(MOTIVE_FORM_FULL)) != 0;
+        rows += (variant_registry_at(i)->forms & VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_FULL)) != 0;
     }
     char *out = output_of(THEME " --each-op --seed 3");
     size_t made = count_of(out, "\nVariant ");
@@ -363,7 +363,7 @@ static void test_each_op(void) {
     /* A contour motive takes fewer rows, and the skipped ones are the contour's refusals. */
     size_t contour_rows = 0;
     for (size_t i = 0; i < variant_registry_count(); i++) {
-        contour_rows += (variant_registry_at(i)->forms & VARIANT_FORM_BIT(MOTIVE_FORM_CONTOUR)) != 0;
+        contour_rows += (variant_registry_at(i)->forms & VARIANT_FORM_BIT(MOTIVE_SKETCH_FORM_CONTOUR)) != 0;
     }
     assert(contour_rows < rows);
     test_write_file("variants_cli_contour.txt", "0 2 1 3\n");

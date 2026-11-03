@@ -493,7 +493,7 @@ static bool node_holds(const PiecePlan *plan, NodeId node, const Motive *motive)
             return false;
         }
         for (size_t k = 0; k < notes->note_count; k++) {
-            if (notes->notes[k].midi != motive->notes[k].midi) {
+            if (notes->notes[k].midi != motive->notes[k].pitch) {
                 return false;
             }
         }
@@ -607,11 +607,12 @@ static void test_library_bad_slots(void) {
     /* A motive of another meter, of another key, of one note, and one that is not a full motive. */
     request.slot_motives[GROW_SLOT_CADENTIAL] = NULL;
     Motive other = fits;
-    other.meter.beats_per_bar = 3;
+    motive_set_meter(&other, (PlanMeter){3, 4, 0});
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
     other = fits;
-    other.key = plan_key_of_pitch_class(7, other.key.mode);
+    AnalysisKey other_key = plan_key_of_pitch_class(7, other.minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR);
+    motive_set_key(&other, &other_key, other.key_source);
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
     other = fits;
@@ -619,7 +620,7 @@ static void test_library_bad_slots(void) {
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
     other = fits;
-    other.form = MOTIVE_FORM_RHYTHM;
+    other.form = MOTIVE_SKETCH_FORM_RHYTHM;
     request.slot_motives[GROW_SLOT_CONTRASTING] = &other;
     assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST);
     /* Its own is fine, and the material is a bar longer for it. */

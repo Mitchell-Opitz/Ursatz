@@ -253,8 +253,8 @@ static MotiveResult parse_list(const char *text, PitchParser parse_pitch_text, c
         }
 
         if (tied) {
-            PlanNote *previous = &motive->notes[count - 1];
-            if (rest || previous->midi != midi) {
+            MotiveSketchNote *previous = &motive->notes[count - 1];
+            if (rest || previous->pitch != midi) {
                 motive_set_error(error, location, "token %zu is tied to a note of a different pitch; a tie joins "
                                                   "two notes of one pitch",
                                  tie_number);
@@ -277,10 +277,9 @@ static MotiveResult parse_list(const char *text, PitchParser parse_pitch_text, c
             motive_set_error(error, location, "the motive has more than %d notes", MOTIVE_MAX_NOTES);
             return MOTIVE_ERR_TOO_MANY_NOTES;
         }
-        PlanNote *note = &motive->notes[count++];
-        note->midi = midi;
-        note->spelled = false;
-        note->offset = cursor;
+        MotiveSketchNote *note = &motive->notes[count++];
+        note->pitch = midi;
+        note->onset = cursor;
         note->duration = duration;
         cursor = motive_time_plus(cursor, duration);
         tied = tie;
@@ -327,7 +326,7 @@ MotiveResult motive_parse_rhythm_text(const char *text, Motive *motive, MotiveDo
         key = document->key;
     }
     MotiveResult result = parse_list(text, parse_rhythm_pitch, &key, "x:q", motive, error);
-    document->form = MOTIVE_FORM_RHYTHM;
+    document->form = MOTIVE_SKETCH_FORM_RHYTHM;
     return result;
 }
 
@@ -384,10 +383,9 @@ MotiveResult motive_parse_contour_text(const char *text, Motive *motive, MotiveD
             motive_set_error(error, location, "the motive has more than %d notes", MOTIVE_MAX_NOTES);
             return MOTIVE_ERR_TOO_MANY_NOTES;
         }
-        PlanNote *note = &motive->notes[count];
-        note->midi = (int)pitch;
-        note->spelled = false;
-        note->offset = motive_time((long)count, 4);
+        MotiveSketchNote *note = &motive->notes[count];
+        note->pitch = (int)pitch;
+        note->onset = motive_time((long)count, 4);
         note->duration = motive_time(1, 4);
         count++;
     }
@@ -396,6 +394,6 @@ MotiveResult motive_parse_contour_text(const char *text, Motive *motive, MotiveD
         return MOTIVE_ERR_EMPTY;
     }
     motive->note_count = count;
-    document->form = MOTIVE_FORM_CONTOUR;
+    document->form = MOTIVE_SKETCH_FORM_CONTOUR;
     return MOTIVE_OK;
 }

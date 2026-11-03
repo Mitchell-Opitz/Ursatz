@@ -681,7 +681,7 @@ static int test_motive_labels(void) {
     /* a rhythm motive has no pitches: nothing is added */
     labels = composer_style_labels_create();
     Motive rhythm = motive;
-    rhythm.form = MOTIVE_FORM_RHYTHM;
+    rhythm.form = MOTIVE_SKETCH_FORM_RHYTHM;
     assert(composer_style_labels_add_motive(labels, &rhythm, 0) && composer_style_labels_count(labels) == 0);
     composer_style_labels_destroy(labels);
     /* a non-chord tone: the degrees around it, the note's own and its type; the ends are written "-" */

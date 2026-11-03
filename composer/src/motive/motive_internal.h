@@ -5,6 +5,8 @@
 #include <stdlib.h>
 
 #include <cJSON.h>
+#include <analysis/motive_relation.h>
+#include <analysis/motive_sketch.h>
 #include <core/rational.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
@@ -20,17 +22,17 @@ typedef struct {
     bool has_key;
     AnalysisKey key;
     /* A JSON "form" and "pickup"; the other inputs have neither, and the caller's options can set the pickup. */
-    MotiveForm form;
+    MotiveSketchForm form;
     bool has_pickup;
     Rational pickup;
     /* A JSON "harmony" (text, read once the meter is settled), "features" and "role". */
     bool has_harmony_text;
     char harmony_text[MOTIVE_HARMONY_TEXT_MAX];
     bool has_features;
-    MotiveFeature features[MOTIVE_MAX_FEATURES];
+    MotiveSketchFeature features[MOTIVE_MAX_FEATURES];
     size_t feature_count;
     bool has_role;
-    MotiveRole role;
+    bool accompaniment;
 } MotiveDocument;
 
 /*
@@ -57,8 +59,53 @@ Rational motive_time_minus(Rational a, Rational b);
 /* The pickup of a motive, or zero when it is unset (a zero-initialized Motive has a denominator of 0). */
 Rational motive_pickup(const Motive *motive);
 
+
 /* A note's end. */
 Rational motive_note_end(const PlanNote *note);
+
+/*
+ * The harmonic role of every note of the motive against the given chords (the library's motive_tone_roles): out has
+ * motive->note_count entries. overrides are 0-based note indices with their own role. Returns the library's status:
+ * MOTIVE_TONE_NO_SCALE for a motive with no key or no pitches, MOTIVE_TONE_INVALID when the motive with those chords is
+ * not a valid sketch.
+ */
+MotiveToneStatus motive_tone_labels(const Motive *motive, const MotiveSketchChord *chords, size_t chord_count,
+                                    const MotiveToneOverride *overrides, size_t override_count, MotiveToneLabel *out);
+
+/*
+ * The best implied chord at 0 of a full motive with a key (the triad holding the most notes, then the most time, the
+ * first of I V IV vi ii iii vii on a tie): what a motive without harmony of its own is read as. False for a motive that
+ * is not valid, has no key, is not a full motive, or holds no chord tone.
+ */
+bool motive_implied_chord(const Motive *motive, MotiveSketchChord *out);
+
+/*
+ * The motive a library sketch result makes: the template with the notes, meter, pickup, harmony, features and role of
+ * the sketch, and its scale when it moved (marked given), the length where the last note ends. The template's form, key
+ * source and tone labels stay. False, with *out untouched, for a sketch the Composer cannot hold: not valid, a meter it
+ * does not have, a time past a billion, a pickup off the thirty-second grid, notes that fail motive_check_notes. out may
+ * be the template.
+ */
+bool motive_overlay_sketch(const MotiveSketch *developed, const Motive *template_motive, Motive *out);
+
+/*
+ * The library relation (analysis/motive_relation.h) applied to a motive: the variant is the motive with the notes, meter,
+ * pickup, harmony, features, role and (for the dominant form) key the relation gives, its length where the last note
+ * ends. The motive's form, key source and tone labels stay. The library's refusals keep their meaning as MOTIVE_DEV_*:
+ * OK, UNCHANGED, RANGE, NOT_EXPRESSIBLE; NO_SCALE is NO_KEY, INVALID is INVALID, any other is NOT_APPLICABLE. A result
+ * the Composer cannot hold (a time past a billion, a pickup off the thirty-second grid, a meter it does not have) is
+ * NOT_EXPRESSIBLE. A full motive with a key and no harmony of its own is given its best implied chord at 0 for the
+ * relation; the result leaves that chord out when it is the best implied chord of the result's notes, unless keep_implied
+ * (the harmony rows, whose chords are the variant's own). *out is written only on OK. applied, when not NULL,
+ * gets the library's own result (to tell NO_FEATURE).
+ */
+MotiveDevResult motive_relation_develop(const Motive *source, const MotiveRelationStep *step, bool keep_implied,
+                                        Motive *out, MotiveRelationResult *applied);
+
+/* The end of a motive note. */
+Rational motive_event_end(const MotiveSketchNote *note);
+
+
 
 /*
  * Checks the notes of motive: at least one, pitch 0 to 127, a positive duration, in order and not overlapping.

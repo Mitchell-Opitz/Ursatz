@@ -215,7 +215,7 @@ static void test_bad_requests(void) {
 
 static const char *const ACCOMPANIMENT_MOTIVES[] = {"C4:e G4:e E4:e G4:e", "D4:e A4:e F4:e"};
 
-static Motive make_accompaniment_motive(const Scenario *scenario, const char *notes, MotiveRole role) {
+static Motive make_accompaniment_motive(const Scenario *scenario, const char *notes, bool accompaniment) {
     Motive motive;
     MotiveOptions options;
     memset(&options, 0, sizeof(options));
@@ -223,7 +223,7 @@ static Motive make_accompaniment_motive(const Scenario *scenario, const char *no
     options.meter.beats_per_bar = scenario->beats;
     options.meter.beat_unit = scenario->unit;
     options.has_role = true;
-    options.role = role;
+    options.accompaniment = accompaniment;
     assert(motive_from_notes_text(notes, &options, &motive, NULL) == MOTIVE_OK);
     return motive;
 }
@@ -240,7 +240,7 @@ static void test_accompaniment_motive(void) {
     size_t heard_measures = 0;
     for (size_t s = 0; s < SCENARIO_COUNT; s++) {
         Motive motive = make_motive(&SCENARIOS[s]);
-        Motive accompaniment = make_accompaniment_motive(&SCENARIOS[s], ACCOMPANIMENT_MOTIVES[s], MOTIVE_ROLE_ACCOMPANIMENT);
+        Motive accompaniment = make_accompaniment_motive(&SCENARIOS[s], ACCOMPANIMENT_MOTIVES[s], true);
         GrowRequest request = make_request(&SCENARIOS[s], &motive, (PlanAccompaniment){PLAN_ACCOMPANIMENT_ANY, -1, 0, 0, ""});
         request.has_accompaniment = false;
         request.accompaniment_motive = &accompaniment;
@@ -283,8 +283,8 @@ static void test_accompaniment_motive(void) {
 
 static void test_accompaniment_motive_requests(void) {
     Motive motive = make_motive(&SCENARIOS[0]);
-    Motive melodic = make_accompaniment_motive(&SCENARIOS[0], ACCOMPANIMENT_MOTIVES[0], MOTIVE_ROLE_MELODIC);
-    Motive accompaniment = make_accompaniment_motive(&SCENARIOS[0], ACCOMPANIMENT_MOTIVES[0], MOTIVE_ROLE_ACCOMPANIMENT);
+    Motive melodic = make_accompaniment_motive(&SCENARIOS[0], ACCOMPANIMENT_MOTIVES[0], false);
+    Motive accompaniment = make_accompaniment_motive(&SCENARIOS[0], ACCOMPANIMENT_MOTIVES[0], true);
     PiecePlan *plan = NULL;
     GrowRequest request = make_request(&SCENARIOS[0], &motive, (PlanAccompaniment){PLAN_ACCOMPANIMENT_ANY, -1, 0, 0, ""});
     request.has_accompaniment = false;
@@ -298,7 +298,7 @@ static void test_accompaniment_motive_requests(void) {
     plan_destroy(plan);
 
     /* One longer than a bar, and one together with a voicing, are refused. */
-    Motive longer = make_accompaniment_motive(&SCENARIOS[0], "C4:q E4:q G4:q E4:q C4:q", MOTIVE_ROLE_ACCOMPANIMENT);
+    Motive longer = make_accompaniment_motive(&SCENARIOS[0], "C4:q E4:q G4:q E4:q C4:q", true);
     request.accompaniment_motive = &longer;
     assert(grow_build_plan(&request, &plan) == GROW_ERR_BAD_REQUEST && !plan);
     request.accompaniment_motive = &accompaniment;

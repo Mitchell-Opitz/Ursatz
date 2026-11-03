@@ -16,6 +16,7 @@
 #include <ursatz_composer/piece.h>
 #include <ursatz_composer/plan_json.h>
 #include <ursatz_composer/constraint.h>
+#include "motive/motive_internal.h"
 
 #define SIZE_SEARCH_MAX 96
 /* The most given phrases, progressions and bass lines one plan takes, and the numerals in one progression. */
@@ -828,8 +829,10 @@ static int place_given(const Options *options, PiecePlan *plan) {
                 free(line);
                 return status;
             }
-            placed = given->kind == GIVEN_MELODY ? plan_give_melody(plan, section, given->bar - 1, line->notes, line->note_count)
-                                                 : plan_give_bass(plan, section, given->bar - 1, line->notes, line->note_count);
+            PlanNote lane_notes[MOTIVE_MAX_NOTES];
+            motive_lane_notes(line, lane_notes);
+            placed = given->kind == GIVEN_MELODY ? plan_give_melody(plan, section, given->bar - 1, lane_notes, line->note_count)
+                                                 : plan_give_bass(plan, section, given->bar - 1, lane_notes, line->note_count);
             free(line);
         }
         if (placed != GIVEN_OK) {

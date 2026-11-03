@@ -74,27 +74,28 @@ bool motive_develop_read_node(const PiecePlan *plan, NodeId node, const MotiveDe
     if (!payload || payload->notes.note_count == 0 || payload->notes.note_count > MOTIVE_MAX_NOTES) {
         return false;
     }
+    PlanSpan range = plan_lane_span_span(plan, span);
+    LaneSpanId lane;
+    PlanMeter meter = context->meter;
+    if (plan_lane_find(plan, PLAN_LANE_METER, 0, range, &lane, 1) > 0) {
+        meter = plan_lane_span_payload(plan, lane)->meter;
+    }
     Motive motive;
-    memset(&motive, 0, sizeof(motive));
+    motive_init(&motive, meter);
     motive.note_count = payload->notes.note_count;
-    memcpy(motive.notes, payload->notes.notes, motive.note_count * sizeof(PlanNote));
+    for (size_t i = 0; i < motive.note_count; i++) {
+        const PlanNote *note = &payload->notes.notes[i];
+        motive.notes[i].pitch = note->midi;
+        motive.notes[i].onset = note->offset;
+        motive.notes[i].duration = note->duration;
+    }
     if (motive_check_notes(&motive, &motive.length, NULL) != MOTIVE_OK) {
         return false;
     }
-
-    PlanSpan range = plan_lane_span_span(plan, span);
-    LaneSpanId lane;
-    motive.meter = context->meter;
-    if (plan_lane_find(plan, PLAN_LANE_METER, 0, range, &lane, 1) > 0) {
-        motive.meter = plan_lane_span_payload(plan, lane)->meter;
-    }
-    motive.key_source = MOTIVE_KEY_UNSPECIFIED;
     if (plan_lane_find(plan, PLAN_LANE_KEY, 0, range, &lane, 1) > 0) {
-        motive.key = plan_lane_span_payload(plan, lane)->key;
-        motive.key_source = MOTIVE_KEY_GIVEN;
+        motive_set_key(&motive, &plan_lane_span_payload(plan, lane)->key, MOTIVE_SKETCH_KEY_GIVEN);
     } else if (context->has_key) {
-        motive.key = context->key;
-        motive.key_source = MOTIVE_KEY_GIVEN;
+        motive_set_key(&motive, &context->key, MOTIVE_SKETCH_KEY_GIVEN);
     }
     *out = motive;
     return true;
@@ -198,7 +199,7 @@ static size_t wanted(const MotiveDevelopContext *context) {
 /* Draws transpositions until the wanted number of candidates is there. */
 static bool propose_transpositions(Proposal *proposal, FillRng *rng, bool tonal, bool alternate) {
     size_t goal = proposal->added + wanted(proposal->context);
-    bool key = proposal->request->source.key_source != MOTIVE_KEY_UNSPECIFIED;
+    bool key = proposal->request->source.key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED;
     for (size_t attempt = 0; proposal->added < goal && attempt < goal * ATTEMPTS_PER_CANDIDATE; attempt++) {
         MotiveDevSpec spec;
         memset(&spec, 0, sizeof(spec));
@@ -242,11 +243,11 @@ static bool propose_restatements(Proposal *proposal, FillRng *rng) {
         if (!try_spec(proposal, &spec)) {
             return false;
         }
-        int lowest = source->notes[0].midi;
+        int lowest = motive_pitch(source, 0);
         int highest = lowest;
         for (size_t i = 1; i < source->note_count; i++) {
-            lowest = source->notes[i].midi < lowest ? source->notes[i].midi : lowest;
-            highest = source->notes[i].midi > highest ? source->notes[i].midi : highest;
+            lowest = motive_pitch(source, i) < lowest ? motive_pitch(source, i) : lowest;
+            highest = motive_pitch(source, i) > highest ? motive_pitch(source, i) : highest;
         }
         size_t goal = proposal->added + wanted(proposal->context) - 1;
         for (size_t attempt = 0; proposal->added < goal && attempt < goal * ATTEMPTS_PER_CANDIDATE; attempt++) {
@@ -425,7 +426,9 @@ static PlanResult develop_apply(PiecePlan *plan, FillTarget target, const FillCa
     }
     PlanSpan span = {plan_node_span(plan, target.id).start, payload->result.length};
     PlanLanePayload notes;
-    notes.notes.notes = payload->result.notes;
+    PlanNote lane_notes[MOTIVE_MAX_NOTES];
+    motive_lane_notes(&payload->result, lane_notes);
+    notes.notes.notes = lane_notes;
     notes.notes.note_count = payload->result.note_count;
     LaneSpanId id;
     PlanResult result = plan_add_lane_span(plan, target.id, PLAN_LANE_MELODY, 0, span, &notes, &id);

@@ -43,19 +43,19 @@ PiecePlan *motive_render_plan(const Motive *motive) {
         payload.meter.beat_unit = (int)motive->pickup.den;
         ok = add_given_span(plan, idea, PLAN_LANE_METER, lead, &payload);
         PlanSpan rest = {motive->pickup, rest_length};
-        payload.meter = motive->meter;
+        payload.meter = motive_meter(motive);
         ok = ok && add_given_span(plan, idea, PLAN_LANE_METER, rest, &payload);
     } else if (ok) {
-        payload.meter = motive->meter;
+        payload.meter = motive_meter(motive);
         if (has_pickup) {
             payload.meter.beats_per_bar = (int)motive->pickup.num;
             payload.meter.beat_unit = (int)motive->pickup.den;
         }
         ok = add_given_span(plan, idea, PLAN_LANE_METER, all, &payload);
     }
-    if (ok && motive->key_source != MOTIVE_KEY_UNSPECIFIED) {
+    if (ok && motive->key_source != MOTIVE_SKETCH_KEY_UNSPECIFIED) {
         memset(&payload, 0, sizeof(payload));
-        payload.key = motive->key;
+        payload.key = motive_key(motive);
         ok = add_given_span(plan, idea, PLAN_LANE_KEY, all, &payload);
     }
     if (!ok) {
