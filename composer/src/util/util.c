@@ -32,6 +32,33 @@ void util_pitch_name(int midi, bool prefer_flats, char *out, size_t size) {
              midi / PITCH_SEMITONES_PER_OCTAVE - 1);
 }
 
+static StandardTonalityMode scale_mode(bool minor) {
+    return minor ? STANDARD_TONALITY_MODE_NATURAL_MINOR : STANDARD_TONALITY_MODE_MAJOR;
+}
+
+unsigned util_scale_mask(int tonic_pitch_class, bool minor) {
+    return standard_tonality_mode_pitch_classes(util_pitch_class(tonic_pitch_class), scale_mode(minor));
+}
+
+/* The scale with the raised sixth and seventh beside the natural ones, as counterpoint writes a minor key. */
+unsigned util_scale_mask_melodic(int tonic_pitch_class, bool minor) {
+    unsigned mask = util_scale_mask(tonic_pitch_class, minor);
+    if (minor) {
+        mask |= standard_tonality_mode_pitch_classes(util_pitch_class(tonic_pitch_class),
+                                                     STANDARD_TONALITY_MODE_MELODIC_MINOR);
+    }
+    return mask;
+}
+
+bool util_scale_degree(int tonic_pitch_class, bool minor, int pitch, int *degree, int *alteration) {
+    return standard_tonality_degree_of_semitone(util_pitch_class(pitch - tonic_pitch_class), scale_mode(minor), degree,
+                                                alteration);
+}
+
+int util_scale_semitone(bool minor, int degree) {
+    return standard_tonality_degree_semitone(scale_mode(minor), degree);
+}
+
 void util_key_name(int tonic_pitch_class, bool minor, char *out, size_t size) {
     PitchLetter letter;
     int accidental;

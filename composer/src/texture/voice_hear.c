@@ -15,6 +15,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "harmony/harmony_internal.h"
+#include "util/util.h"
 #include "texture/texture_internal.h"
 
 /* The voices of the grid, top to bottom, as the lanes they are heard from. */
@@ -78,10 +79,11 @@ static bool lane_open(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanS
 
 /* The scale degree a pitch is spelled as in the key; the altered degrees share the degree of the natural one. */
 static int scale_degree(const AnalysisKey *key, int pitch) {
-    static const int MAJOR[12] = {1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7};
-    static const int MINOR[12] = {1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7};
-    int offset = ((pitch - analysis_key_tonic_pitch_class(key)) % 12 + 12) % 12;
-    return (key->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR : MAJOR)[offset];
+    int degree = 1;
+    int alteration;
+    util_scale_degree(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, pitch, &degree,
+                      &alteration);
+    return degree;
 }
 
 /* The spelling of a pitch over a chord: as the tone of the chord it is, else as a degree of the key. */

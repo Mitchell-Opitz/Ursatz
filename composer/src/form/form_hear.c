@@ -19,6 +19,7 @@
 #include <ursatz_composer/render.h>
 
 #include "form/form_internal.h"
+#include "util/util.h"
 #include "harmony/harmony_internal.h"
 
 /* The spans the adapter's input borrows, kept until it is done. */
@@ -142,19 +143,14 @@ static bool lane_open(const PiecePlan *plan, PlanLaneKind lane, PlanSpan range) 
 }
 
 /*
- * The scale degree (1 to 7) and alteration of a MIDI pitch in the key. In major a chromatic pitch is the flat of the
- * degree above, but the raised fourth; in minor the degrees are the natural minor's, with the raised sixth and seventh
- * and the raised fourth, the lowered second.
+ * The scale degree (1 to 7) and alteration of a MIDI pitch in the key, as standard-tonality reads it: a chromatic pitch
+ * is the degree below it raised, in the major scale or the natural minor.
  */
 static void degree_of(AnalysisKey key, int midi, int *degree, int *alteration) {
-    static const int MAJOR[12][2] = {{1, 0}, {2, -1}, {2, 0}, {3, -1}, {3, 0}, {4, 0},
-                                     {4, 1}, {5, 0},  {6, -1}, {6, 0}, {7, -1}, {7, 0}};
-    static const int MINOR[12][2] = {{1, 0}, {2, -1}, {2, 0}, {3, 0}, {3, 1}, {4, 0},
-                                     {4, 1}, {5, 0},  {6, 0},  {6, 1}, {7, 0}, {7, 1}};
-    int relative = ((midi - analysis_key_tonic_pitch_class(&key)) % 12 + 12) % 12;
-    const int(*table)[2] = key.mode == KEY_STRUCTURE_MODE_MINOR ? MINOR : MAJOR;
-    *degree = table[relative][0];
-    *alteration = table[relative][1];
+    *degree = 1;
+    *alteration = 0;
+    util_scale_degree(analysis_key_tonic_pitch_class(&key), key.mode == KEY_STRUCTURE_MODE_MINOR, midi, degree,
+                      alteration);
 }
 
 /* The function the form analysis reads for a chord: HARMONIC_FUNCTION_COUNT when the plan records none. */

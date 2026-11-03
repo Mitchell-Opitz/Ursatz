@@ -7,6 +7,7 @@
 #include <ursatz_composer/plan_state.h>
 
 #include "harmony/harmony_internal.h"
+#include "util/util.h"
 
 /* Sequences tried per call, and candidates kept. */
 #define OCTAVE_ATTEMPTS 32
@@ -44,10 +45,16 @@ static bool cells_of(const PhraseMetre *metre, Rational start, Rational length, 
 
 /* The scale degree (1 to 7) of a pitch class in the key, 0 when it is not in the scale. */
 static int degree_of(const AnalysisKey *key, int pc) {
-    static const int MAJOR[12] = {1, 0, 2, 0, 3, 4, 0, 5, 0, 6, 0, 7};
-    static const int MINOR[12] = {1, 0, 2, 3, 0, 4, 0, 5, 6, 0, 7, 7};
-    int relative = ((pc - analysis_key_tonic_pitch_class(key)) % 12 + 12) % 12;
-    return key->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR[relative] : MAJOR[relative];
+    int tonic = analysis_key_tonic_pitch_class(key);
+    bool minor = key->mode == KEY_STRUCTURE_MODE_MINOR;
+    int degree;
+    int alteration;
+    /* The natural minor, with the raised seventh. */
+    unsigned scale = util_scale_mask(tonic, minor) | (minor ? 1u << ((tonic + 11) % 12) : 0u);
+    if (!((scale >> util_pitch_class(pc)) & 1u) || !util_scale_degree(tonic, minor, pc, &degree, &alteration)) {
+        return 0;
+    }
+    return degree;
 }
 
 static bool is_step(int a, int b) {

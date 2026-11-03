@@ -39,10 +39,11 @@ static const char BASS_VOICE[] = "bass";
 
 /* The scale degree a pitch is spelled as in the key; the altered degrees share the degree of the natural one. */
 static int pitch_degree(const AnalysisKey *key, int pitch) {
-    static const int MAJOR[12] = {1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7};
-    static const int MINOR[12] = {1, 2, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7};
-    int offset = util_pitch_class(pitch - analysis_key_tonic_pitch_class(key));
-    return (key->mode == KEY_STRUCTURE_MODE_MINOR ? MINOR : MAJOR)[offset];
+    int degree = 1;
+    int alteration;
+    util_scale_degree(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, pitch, &degree,
+                      &alteration);
+    return degree;
 }
 
 /* The diatonic step of a pitch from the tonic: 0 is do, 7 the octave above. */
