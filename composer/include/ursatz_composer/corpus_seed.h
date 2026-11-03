@@ -42,6 +42,8 @@ typedef struct {
     /* A progression seed: the matched passage's chords, as the Analyzer prints numerals. */
     char numerals[CORPUS_SEED_MAX_NUMERALS][CORPUS_SEED_NUMERAL_MAX];
     size_t numeral_count;
+    /* How many of the documents read for this seed are not current (analyzed by another version); they are read all the same. */
+    size_t stale_documents;
 } CorpusSeed;
 
 const char *corpus_seed_result_name(CorpusSeedResult result);
