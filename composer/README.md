@@ -90,8 +90,9 @@ lanes of the plan (R-019) hold library values:
 | `src/texture/` | The accompaniment and four-part voicing operators, and hearing the voice leading. |
 | `src/piece/` | Form templates, the piece plan and the compose run over its sections. |
 | `src/grow/` | Growing a theme from a motive: the plan, the structure operator, its checks and the stages. |
-| `src/util/` | Private helpers the sources and the CLI share: `util.h` (numbers, strings, reading a file) and `plan_util.h` (spans, lanes, subtrees, name tables). Not installed. |
-| `cli/` | The `ursatz-composer` command. |
+| `src/api/` | The composer API behind `composer_api.h`: one file for each request kind. |
+| `src/util/` | Private helpers the sources share: `util.h` (numbers, strings, reading a file) and `plan_util.h` (spans, lanes, subtrees, name tables). Not installed. |
+| `cli/` | The `ursatz-composer` command: a thin wrapper over the API. It includes `composer_api.h`, cJSON and the C standard library only, and `scripts/check-cli-api.sh` (CI runs it) fails on any other include. |
 | `tests/` | Tests and their fixtures. `tests/support/` is the `composer_test_support` library the tests share; `tests/snapshots/` holds the CLI snapshots. |
 | `schema/` | `plan.v2.schema.json`, the JSON Schema of the plan file; `test_plan_schema` validates the snapshots' plan files and every fixture written back when python3 with `jsonschema` is installed. |
 
@@ -288,7 +289,46 @@ for the harmony of a section whose melody is given. `lock --format json` prints 
 An application asks the Composer for everything through a versioned in-process C API, `include/ursatz_composer/composer_api.h`:
 JSON text requests, a `ComposerResponse` for every output, a `ComposerJob` for progress and cancel. It also serves the
 vocabularies an application offers (`composer_api_vocabulary`) and reads a request without composing it
-(`composer_api_validate`). See [docs/api.md](docs/api.md).
+(`composer_api_validate`). See [docs/api.md](docs/api.md): every entry with its request, response, example, error paths,
+job rules and the GUI call it replaces.
+
+The CLI is a thin wrapper over the API: each command reads its arguments and files into a request, calls one entry, and
+prints the response or writes its plan, MIDI and MusicXML to the paths given. The API is 1.0: a removed or changed member
+or entry changes the major version, an addition the minor one.
+
+### Using the API from C
+
+Link `ursatz_composer` (add this repo with `add_subdirectory` and `target_link_libraries(app PRIVATE ursatz_composer)`) and
+include the one header. This grows a theme from a motive and writes its MIDI file:
+
+```c
+#include <stdio.h>
+#include <ursatz_composer/composer_api.h>
+
+int main(void) {
+    const char *request =
+        "{\"schema\": \"ursatz-theme-request\", \"schema_version\": 2,"
+        " \"into\": \"sentence\", \"key\": \"D\", \"mode\": \"minor\", \"meter\": \"4/4\", \"bars\": 8, \"cadence\": \"PAC\","
+        " \"motives\": [{\"id\": \"A\", \"form\": \"full\", \"degrees\": \"1:q 3:e 5:e 1':h\"}],"
+        " \"slots\": {\"basic\": \"A\"}, \"seed\": 1, \"midi\": true}";
+
+    ComposerResponse response;
+    ComposerStatus status = composer_api_theme(request, NULL, &response);
+    if (status != COMPOSER_OK) {
+        fprintf(stderr, "%s: %s (at '%s')\n", composer_status_name(status), response.error.message, response.error.path);
+        composer_response_destroy(&response);
+        return 1;
+    }
+    printf("%s\n", response.json);   /* the theme document */
+    FILE *file = fopen("theme.mid", "wb");
+    if (file) {
+        fwrite(response.midi, 1, response.midi_size, file);
+        fclose(file);
+    }
+    composer_response_destroy(&response);
+    return 0;
+}
+```
 
 ## Plan format
 
@@ -340,6 +380,12 @@ stages fill around it ([docs/middle-out.md](docs/middle-out.md)).
 
 `form_hear` hears the phrase-level form of a written plan with standard-form's analysis adapter. See
 [docs/form-hear.md](docs/form-hear.md).
+
+## Version 0.3.0 (phase P26)
+
+Everything an application asks of the Composer is the composer API, 1.0 (R-219); the CLI is a client of it and nothing else:
+`cli/` includes only `composer_api.h`, checked by `scripts/check-cli-api.sh`. The API gained the `limits` of
+`composer_api_vocabulary` and the `plan_file` member of `composer_api_export`. See [docs/api.md](docs/api.md).
 
 ## Version 0.2.0 (phase P25)
 
