@@ -62,13 +62,13 @@ static bool read_spellings(const PlanKey *key, CounterpointContext *out) {
 static bool read_line(const PiecePlan *plan, CounterpointContext *out, const char **why) {
     AccompLine lines[ACCOMP_MAX_LINE];
     size_t count = 0;
-    long origin;
-    if (!melody_ticks(out->span.length, &out->length) || !melody_ticks(out->span.start, &origin) || out->length <= 0) {
-        *why = "the span is not a whole number of ticks";
+    out->length = out->span.length;
+    if (!position_is_positive(out->length)) {
+        *why = "the span has no length";
         return false;
     }
-    if (!accomp_read_line(plan, out->above ? PLAN_LANE_BASS : PLAN_LANE_MELODY, 0, out->span, origin, out->length, lines,
-                          &count) ||
+    if (!accomp_read_line(plan, out->above ? PLAN_LANE_BASS : PLAN_LANE_MELODY, 0, out->span, out->span.start,
+                          out->length, lines, &count) ||
         count == 0) {
         *why = out->above ? "the bass under the span is not written" : "the melody over the span is not written";
         return false;
@@ -77,18 +77,18 @@ static bool read_line(const PiecePlan *plan, CounterpointContext *out, const cha
         *why = "the given line has too many notes";
         return false;
     }
-    long at = 0;
+    Rational at = POSITION_ZERO;
     for (size_t i = 0; i < count; i++) {
-        if (lines[i].onset != at) {
+        if (rational_cmp(lines[i].onset, at) != 0) {
             *why = "the given line has a rest or an overlap";
             return false;
         }
         out->onset[i] = lines[i].onset;
-        out->duration[i] = lines[i].end - lines[i].onset;
+        out->duration[i] = position_sub(lines[i].end, lines[i].onset);
         out->line[i] = lines[i].pitch;
         at = lines[i].end;
     }
-    if (at != out->length) {
+    if (rational_cmp(at, out->length) != 0) {
         *why = "the given line does not fill the span";
         return false;
     }
@@ -99,36 +99,36 @@ static bool read_line(const PiecePlan *plan, CounterpointContext *out, const cha
 /* The bar of the meter under the target, and whether the given line is a cantus firmus in it. */
 static bool read_cantus(const PiecePlan *plan, CounterpointContext *out, const char **why) {
     LaneSpanId meters[2];
-    long origin;
-    long meter_start;
+    Rational origin = out->span.start;
+    Rational meter_start;
     PlanMeter meter;
-    if (plan_lane_find(plan, PLAN_LANE_METER, 0, out->span, meters, 2) != 1 ||
-        !melody_ticks(plan_lane_span_span(plan, meters[0]).start, &meter_start) ||
-        !melody_ticks(out->span.start, &origin)) {
+    if (plan_lane_find(plan, PLAN_LANE_METER, 0, out->span, meters, 2) != 1) {
         *why = "no single meter under the span";
         return false;
     }
+    meter_start = plan_lane_span_span(plan, meters[0]).start;
     meter = plan_lane_span_payload(plan, meters[0])->meter;
-    if (meter.beats_per_bar <= 0 || meter.beat_unit <= 0 || MELODY_TICKS % meter.beat_unit != 0) {
+    if (meter.beats_per_bar <= 0 || meter.beat_unit <= 0) {
         *why = "the meter is not one the operator reads";
         return false;
     }
-    out->bar = (long)meter.beats_per_bar * (MELODY_TICKS / meter.beat_unit);
+    out->bar = position_mul(rational_ratio(1, meter.beat_unit), (long long)meter.beats_per_bar);
     out->per_bar = out->species == 3 ? 4 : 2;
     if (out->species == 3 && meter.beats_per_bar % 4 != 0) {
         *why = "third species is four notes to a bar and needs a meter of four beats";
         return false;
     }
-    if ((origin - meter_start) % out->bar != 0 || out->length % out->bar != 0 || out->bar % (long)out->per_bar != 0) {
+    if (!position_is_multiple(position_sub(origin, meter_start), out->bar) ||
+        !position_is_multiple(out->length, out->bar)) {
         *why = "the span does not start on a barline and fill whole bars";
         return false;
     }
-    if (out->count < 3 || out->count != (size_t)(out->length / out->bar)) {
+    if (out->count < 3 || out->count != (size_t)position_floor_units(out->length, out->bar)) {
         *why = "species 2 to 4 need a cantus firmus of three bars or more, one whole note a bar";
         return false;
     }
     for (size_t i = 0; i < out->count; i++) {
-        if (out->duration[i] != out->bar) {
+        if (rational_cmp(out->duration[i], out->bar) != 0) {
             *why = "species 2 to 4 need a cantus firmus of three bars or more, one whole note a bar";
             return false;
         }
@@ -157,6 +157,12 @@ static bool read_target(const PiecePlan *plan, LaneSpanId target, CounterpointCo
         return false;
     }
     memset(out, 0, sizeof(*out));
+    out->length = POSITION_ZERO;
+    out->bar = POSITION_ZERO;
+    for (size_t i = 0; i < CP_MAX_NOTES; i++) {
+        out->onset[i] = POSITION_ZERO;
+        out->duration[i] = POSITION_ZERO;
+    }
     out->target = target;
     out->owner = plan_lane_span_owner(plan, target);
     out->span = plan_lane_span_span(plan, target);
@@ -218,7 +224,7 @@ bool counterpoint_read_written(const PiecePlan *plan, LaneSpanId target, Counter
                                CounterpointCandidate *line, const char **why) {
     const PlanNotes *notes;
     const char *reason = "";
-    long slot_ticks;
+    Rational slot_length;
     if (!why) {
         why = &reason;
     }
@@ -226,23 +232,18 @@ bool counterpoint_read_written(const PiecePlan *plan, LaneSpanId target, Counter
         return false;
     }
     notes = &plan_lane_span_payload(plan, target)->notes;
-    slot_ticks = out->per_bar == 1 ? 0 : out->bar / (long)out->per_bar;
+    slot_length = out->per_bar == 1 ? POSITION_ZERO : position_div(out->bar, (long long)out->per_bar);
     memset(line, 0, sizeof(*line));
     line->magic = CP_PAYLOAD_MAGIC;
     line->slots = out->count * out->per_bar;
     for (size_t slot = 0; slot < line->slots; slot++) {
-        long at = out->per_bar == 1 ? out->onset[slot] : (long)slot * slot_ticks;
+        Rational at = out->per_bar == 1 ? out->onset[slot] : position_mul(slot_length, (long long)slot);
         line->kind[slot] = CP_SLOT_REST;
         for (size_t n = 0; n < notes->note_count; n++) {
-            long onset;
-            long duration;
-            if (!melody_ticks(notes->notes[n].offset, &onset) || !melody_ticks(notes->notes[n].duration, &duration)) {
-                *why = "a note of the counter-melody is not a whole number of ticks";
-                counterpoint_context_free(out);
-                return false;
-            }
-            if (onset <= at && at < onset + duration) {
-                line->kind[slot] = onset == at ? CP_SLOT_ATTACK : CP_SLOT_TIE;
+            Rational onset = notes->notes[n].offset;
+            Rational duration = notes->notes[n].duration;
+            if (rational_cmp(onset, at) <= 0 && rational_cmp(at, position_add(onset, duration)) < 0) {
+                line->kind[slot] = rational_cmp(onset, at) == 0 ? CP_SLOT_ATTACK : CP_SLOT_TIE;
                 line->pitch[slot] = notes->notes[n].midi_pitch;
             }
         }
@@ -310,9 +311,9 @@ static bool operator_generate(const PiecePlan *plan, FillTarget target, FillRng 
 /* The slots as lane notes: an attack and the ties after it are one note, and a rest is a gap. */
 static PlanResult slot_notes(const CounterpointContext *context, const CounterpointCandidate *candidate, PlanNote *notes,
                              size_t *count) {
-    long slot_ticks = context->per_bar == 1 ? 0 : context->bar / (long)context->per_bar;
-    long start = 0;
-    long end = 0;
+    Rational slot_length = context->per_bar == 1 ? POSITION_ZERO : position_div(context->bar, (long long)context->per_bar);
+    Rational start = POSITION_ZERO;
+    Rational end = POSITION_ZERO;
     int pitch = 0;
     bool open = false;
     *count = 0;
@@ -321,20 +322,18 @@ static PlanResult slot_notes(const CounterpointContext *context, const Counterpo
         if (open && done) {
             PlanNote *note = &notes[(*count)++];
             note->midi_pitch = pitch;
-            PlanResult result = melody_time(start, &note->offset);
-            if (result == PLAN_OK) {
-                result = melody_time(end - start, &note->duration);
-            }
-            if (result != PLAN_OK) {
-                return result;
+            note->offset = start;
+            note->duration = position_sub(end, start);
+            if (position_is_far(note->offset) || position_is_far(note->duration)) {
+                return PLAN_ERR_BAD_TIME;
             }
             open = false;
         }
         if (i == candidate->slots) {
             break;
         }
-        long from = context->per_bar == 1 ? context->onset[i] : (long)i * slot_ticks;
-        long to = context->per_bar == 1 ? from + context->duration[i] : from + slot_ticks;
+        Rational from = context->per_bar == 1 ? context->onset[i] : position_mul(slot_length, (long long)i);
+        Rational to = position_add(from, context->per_bar == 1 ? context->duration[i] : slot_length);
         if (candidate->kind[i] == CP_SLOT_ATTACK) {
             start = from;
             end = to;

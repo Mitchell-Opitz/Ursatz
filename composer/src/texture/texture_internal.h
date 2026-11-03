@@ -8,29 +8,29 @@
 
 #include "melody/melody_internal.h"
 
-/* Time inside the operator is ticks from the start of the target, MELODY_TICKS to a whole note. */
+/* Time inside the operator is a Rational position in whole notes from the start of the target (util/position.h). */
 #define ACCOMP_VOICES 3
 #define ACCOMP_MAX_NOTES 256
 #define ACCOMP_MAX_LINE 256
 #define ACCOMP_MAX_BEATS 64
 #define ACCOMP_PAYLOAD_MAGIC 0x41434331UL
-/* An eighth note, the grid of the arpeggiated and Alberti figures. */
-#define ACCOMP_EIGHTH (MELODY_TICKS / 8)
+/* An eighth note, the step of the arpeggiated and Alberti figures. */
+#define ACCOMP_EIGHTH ((Rational){1, 8})
 
 /* One sounding note of the bass or the melody, clipped to the target. */
 typedef struct {
-    long onset;
-    long end;
+    Rational onset;
+    Rational end;
     int pitch;
 } AccompLine;
 
 /* The most notes of an accompaniment motive. */
 #define ACCOMP_MAX_MOTIVE 64
 
-/* One note of an accompaniment motive: ticks from the start of the motive. */
+/* One note of an accompaniment motive: positions from the start of the motive. */
 typedef struct {
-    long onset;
-    long duration;
+    Rational onset;
+    Rational duration;
     int pitch;
 } AccompMotiveNote;
 
@@ -46,13 +46,13 @@ typedef struct {
     int low;
     int high;
     bool compound;
-    long length;
-    long beat;  /* the pattern's beat: a quarter, or the dotted quarter of a compound meter */
-    long cell;  /* a cell of the meter (the places in a bar a chord may start) */
-    long bar;
-    long phase; /* ticks from the bar line at or before the target's start to its start */
+    Rational length;
+    Rational beat;  /* the pattern's beat: the meter's beat, or the dotted quarter of a compound meter */
+    Rational cell;  /* a cell of the meter (the places in a bar a chord may start) */
+    Rational bar;
+    Rational phase; /* from the bar line at or before the target's start to its start */
     size_t chord_count;
-    long chord_start[HARMONY_MAX_CHORDS + 1]; /* the last entry is the length */
+    Rational chord_start[HARMONY_MAX_CHORDS + 1]; /* the last entry is the length */
     int chord_pcs[HARMONY_MAX_CHORDS][4];     /* root, third, fifth and seventh, as pitch classes */
     size_t chord_pc_count[HARMONY_MAX_CHORDS];
     unsigned chord_mask[HARMONY_MAX_CHORDS];
@@ -64,14 +64,14 @@ typedef struct {
     /* The motive of the pattern MOTIVE; empty (motive_count 0) for the other patterns. */
     AccompMotiveNote motive[ACCOMP_MAX_MOTIVE];
     size_t motive_count;
-    long motive_length;  /* where the motive's last note ends */
-    long liquidate_from; /* ticks from the target's start: the motive is liquidated from here (the last bar of the
-                            section); at or past length when the target does not end the section */
+    Rational motive_length;  /* where the motive's last note ends */
+    Rational liquidate_from; /* from the target's start: the motive is liquidated from here (the last bar of the
+                                section); at or past length when the target does not end the section */
 } AccompContext;
 
 typedef struct {
-    long onset;
-    long duration;
+    Rational onset;
+    Rational duration;
     int pitch;
 } AccompNote;
 
@@ -88,8 +88,8 @@ typedef struct {
      * them, a short one. Notes and voicings are indexed by these.
      */
     size_t beat_count;
-    long beat_start[ACCOMP_MAX_BEATS];
-    long beat_end[ACCOMP_MAX_BEATS];
+    Rational beat_start[ACCOMP_MAX_BEATS];
+    Rational beat_end[ACCOMP_MAX_BEATS];
     bool voiced[ACCOMP_MAX_BEATS];
     /* How each beat was voiced, low to high: three notes, or two where the window leaves no room for three. */
     size_t voicing_size[ACCOMP_MAX_BEATS];
@@ -101,14 +101,17 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out);
 
 /* The pitch classes of a chord in the key, root first (3 or 4 of them). */
 bool accomp_chord_tones(const PlanKey *key, const PhraseChord *chord, int pcs[4], size_t *count);
-/* The notes of a lane and voice over a span that sound inside it, ticks from origin; false if any span there is open. */
-bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, long origin, long length,
-                      AccompLine *out, size_t *count);
+/* The notes of a lane and voice over a span that sound inside it, from origin; false if any span there is open. */
+bool accomp_read_line(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, Rational origin,
+                      Rational length, AccompLine *out, size_t *count);
 /* The span of an inner voice (2 or 3) that is to be written with a target: none, or an open one over the same time. */
 bool accomp_read_voice(const PiecePlan *plan, int voice, PlanSpan span, LaneSpanId *out);
 
-/* The index of the chord sounding at a tick of the target. */
-size_t accomp_chord_at(const AccompContext *context, long tick);
+/* Sets every position of a context to 0, so a context that is not read still holds valid Rationals. */
+void accomp_context_zero(AccompContext *context);
+
+/* The index of the chord sounding at a position of the target. */
+size_t accomp_chord_at(const AccompContext *context, Rational position);
 
 /* Whether the pattern can be written in the meter, and under the texture asked for when the pattern is ANY. */
 bool accomp_pattern_allowed(const AccompContext *context, PlanAccompanimentPattern pattern);

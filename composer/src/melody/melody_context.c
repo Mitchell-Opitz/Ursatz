@@ -8,19 +8,6 @@
 #include <ursatz_composer/seam_hear.h>
 #include "util/plan_util.h"
 
-bool melody_ticks(Rational time, long *out) {
-    long scaled = time.num * MELODY_TICKS;
-    if (time.den == 0 || scaled % (long)time.den != 0) {
-        return false;
-    }
-    *out = scaled / (long)time.den;
-    return true;
-}
-
-PlanResult melody_time(long ticks, Rational *out) {
-    return plan_result_of_rational(rational_make(ticks, (long long)MELODY_TICKS, out));
-}
-
 void melody_context_zero(MelodyContext *context) {
     memset(context, 0, sizeof(*context));
     context->length = POSITION_ZERO;

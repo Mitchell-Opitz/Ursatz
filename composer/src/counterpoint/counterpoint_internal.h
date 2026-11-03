@@ -30,11 +30,11 @@ typedef struct {
     int species;
     bool above;
     size_t count;            /* the notes of the given line */
-    long onset[CP_MAX_NOTES]; /* ticks from the start of the target, MELODY_TICKS to a whole note */
-    long duration[CP_MAX_NOTES];
+    Rational onset[CP_MAX_NOTES]; /* positions from the start of the target, in whole notes */
+    Rational duration[CP_MAX_NOTES];
     int line[CP_MAX_NOTES];  /* MIDI pitch of each note of the given line */
-    long length;
-    long bar;                /* ticks of a bar; 0 in species 1 */
+    Rational length;
+    Rational bar;            /* the length of a bar; 0 in species 1 */
     size_t per_bar;          /* the slots to a bar in species 2 to 4; 1 in species 1, a slot for each note */
     int low;                 /* the MIDI range of the counter-melody */
     int high;

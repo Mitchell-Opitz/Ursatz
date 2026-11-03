@@ -15,8 +15,6 @@
  * The shortest note the operator writes is a 128th: a density that would divide a cell into shorter ones keeps the cell.
  */
 #define MELODY_FINEST_NOTE_DENOMINATOR 128L
-/* The tick grid of the texture and counterpoint operators, which move to rational positions in a later commit. */
-#define MELODY_TICKS 128L
 #define MELODY_MAX_NOTES 256
 #define MELODY_MAX_BASS 256
 /* The most notes of a pickup (R-168). */
@@ -143,11 +141,6 @@ typedef struct {
     MelodyNote pickup_notes[MELODY_MAX_PICKUP]; /* the anacrusis, oldest first, onsets from -context.pickup */
     size_t pickup_count;
 } MelodyCandidate;
-
-/* Texture and counterpoint grid until their commit: a time as ticks from the start of the plan, false when not whole. */
-bool melody_ticks(Rational time, long *out);
-/* Ticks as a time in the plan. */
-PlanResult melody_time(long ticks, Rational *out);
 
 /* Sets every position of a context to 0, so a context that is not read still holds valid Rationals. */
 void melody_context_zero(MelodyContext *context);

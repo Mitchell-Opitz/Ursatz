@@ -288,10 +288,10 @@ static void style_term(ComposerRatio closeness, ComposerRatio weight, FillCheck 
  * How many times an accompaniment pattern sounds in a beat of the meter, times 2: block and oom-pah once, the
  * arpeggiated figure once an eighth and the Alberti figure twice a beat.
  */
-static unsigned long pattern_halves(PlanAccompanimentPattern pattern, long beat) {
+static unsigned long pattern_halves(PlanAccompanimentPattern pattern, Rational beat) {
     switch (pattern) {
     case PLAN_ACCOMPANIMENT_ARPEGGIATED:
-        return 2UL * (unsigned long)(beat / ACCOMP_EIGHTH);
+        return 2UL * (unsigned long)position_floor_units(beat, ACCOMP_EIGHTH);
     case PLAN_ACCOMPANIMENT_ALBERTI:
         return 4;
     case PLAN_ACCOMPANIMENT_ANY:

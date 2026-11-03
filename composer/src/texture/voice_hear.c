@@ -101,11 +101,11 @@ static PitchSpelling *spell_over(const PlanKey *key, const PhraseChord *chord, i
     return harmony_spell_pitch(key, scale_degree(key, pitch), pitch);
 }
 
-/* The pitch of the note sounding at a tick, or -1 for a rest. */
-static int sounding_at(const AccompLine *lines, size_t count, long tick, bool *attacked) {
+/* The pitch of the note sounding at a position, or -1 for a rest. */
+static int sounding_at(const AccompLine *lines, size_t count, Rational position, bool *attacked) {
     for (size_t i = 0; i < count; i++) {
-        if (lines[i].onset <= tick && tick < lines[i].end) {
-            *attacked = lines[i].onset == tick;
+        if (rational_cmp(lines[i].onset, position) <= 0 && rational_cmp(position, lines[i].end) < 0) {
+            *attacked = rational_cmp(lines[i].onset, position) == 0;
             return lines[i].pitch;
         }
     }
@@ -159,8 +159,8 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
     size_t line_count[VOICES];
     PlanKey key;
     size_t count;
-    long origin;
-    long length;
+    Rational origin = span.start;
+    Rational length = span.length;
     Grid *grid;
     EntityID *id = NULL;
     VoiceHearResult result = VOICE_HEAR_OK;
@@ -178,8 +178,7 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
     }
     if (!harmony_find_key(plan, PLAN_LANE_SPAN_NONE, PLAN_NODE_NONE, span, &key) ||
         !harmony_read_lane(plan, span, key.mode, chords, &count, &metre) || count == 0 ||
-        plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, harmony, HARMONY_MAX_CHORDS) != count ||
-        !melody_ticks(span.start, &origin) || !melody_ticks(span.length, &length)) {
+        plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, harmony, HARMONY_MAX_CHORDS) != count) {
         return VOICE_HEAR_ERR_UNREADABLE;
     }
     for (size_t voice = 0; voice < VOICES; voice++) {
@@ -199,16 +198,12 @@ VoiceHearResult voice_hear(const PiecePlan *plan, PlanSpan span, VoiceHeard *out
         return VOICE_HEAR_ERR_ALLOC;
     }
     for (size_t row = 0; result == VOICE_HEAR_OK && row < count; row++) {
-        long start;
+        Rational start;
         snprintf(grid->row_ids[row], sizeof(grid->row_ids[row]), "r%zu", row);
         grid->row_id_ptrs[row] = grid->row_ids[row];
         snprintf(grid->segment_ids[row], sizeof(grid->segment_ids[row]), "c%zu", row);
         grid->segment_id_ptrs[row] = grid->segment_ids[row];
-        if (!melody_ticks(plan_lane_span_span(plan, harmony[row]).start, &start)) {
-            result = VOICE_HEAR_ERR_UNREADABLE;
-            break;
-        }
-        start -= origin;
+        start = position_sub(plan_lane_span_span(plan, harmony[row]).start, origin);
         for (size_t voice = 0; voice < VOICES; voice++) {
             size_t cell = row * VOICES + voice;
             bool attacked = false;

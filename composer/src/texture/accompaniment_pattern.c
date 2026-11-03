@@ -191,31 +191,31 @@ static void voiced_pcs(const AccompContext *context, size_t chord, int out[3]) {
 }
 
 /* The window the notes of the beat from start to end have to keep to: above the bass, below the melody. */
-static void beat_window(const AccompContext *context, long start, long end, int *low, int *high) {
+static void beat_window(const AccompContext *context, Rational start, Rational end, int *low, int *high) {
     *low = context->low;
     *high = context->high;
     for (size_t i = 0; i < context->bass_count; i++) {
         const AccompLine *line = &context->bass[i];
-        if (line->onset < end && line->end > start && line->pitch + 1 > *low) {
+        if (rational_cmp(line->onset, end) < 0 && rational_cmp(line->end, start) > 0 && line->pitch + 1 > *low) {
             *low = line->pitch + 1;
         }
     }
     for (size_t i = 0; i < context->melody_count; i++) {
         const AccompLine *line = &context->melody[i];
-        if (line->onset < end && line->end > start && line->pitch - 1 < *high) {
+        if (rational_cmp(line->onset, end) < 0 && rational_cmp(line->end, start) > 0 && line->pitch - 1 < *high) {
             *high = line->pitch - 1;
         }
     }
 }
 
 /* Whether the beat is one an oom-pah rests on: the strong beats, the first of a bar and the third of four. */
-static bool rests_on(const AccompContext *context, long start) {
-    long beats_in_bar = context->bar / context->beat;
-    long index = ((start + context->phase) % context->bar) / context->beat;
+static bool rests_on(const AccompContext *context, Rational start) {
+    long long beats_in_bar = position_floor_units(context->bar, context->beat);
+    long long index = position_floor_units(position_remainder(position_add(start, context->phase), context->bar), context->beat);
     return beats_in_bar % 2 == 0 ? index % 2 == 0 : index == 0;
 }
 
-static bool add_note(AccompCandidate *candidate, size_t voice, long onset, long duration, int pitch) {
+static bool add_note(AccompCandidate *candidate, size_t voice, Rational onset, Rational duration, int pitch) {
     if (candidate->note_count[voice] >= ACCOMP_MAX_NOTES) {
         return false;
     }
@@ -232,19 +232,20 @@ static bool add_note(AccompCandidate *candidate, size_t voice, long onset, long 
  * The chord tones a statement of the motive over [start, end) can use, low to high: the chord's tones inside the range,
  * above the bass and below the melody sounding in that time. Returns how many.
  */
-static size_t statement_ladder(const AccompContext *context, size_t chord, long start, long end, int ladder[128]) {
+static size_t statement_ladder(const AccompContext *context, size_t chord, Rational start, Rational end,
+                               int ladder[128]) {
     int low = context->low;
     int high = context->high;
     size_t rungs = 0;
     for (size_t i = 0; i < context->bass_count; i++) {
         const AccompLine *line = &context->bass[i];
-        if (line->onset < end && line->end > start && line->pitch + 1 > low) {
+        if (rational_cmp(line->onset, end) < 0 && rational_cmp(line->end, start) > 0 && line->pitch + 1 > low) {
             low = line->pitch + 1;
         }
     }
     for (size_t i = 0; i < context->melody_count; i++) {
         const AccompLine *line = &context->melody[i];
-        if (line->onset < end && line->end > start && line->pitch - 1 < high) {
+        if (rational_cmp(line->onset, end) < 0 && rational_cmp(line->end, start) > 0 && line->pitch - 1 < high) {
             high = line->pitch - 1;
         }
     }
@@ -269,11 +270,12 @@ static size_t statement_ladder(const AccompContext *context, size_t chord, long 
  * chord tone between the bass and the melody is silent, as a beat of the other patterns is. False when the notes do
  * not fit.
  */
-static bool motive_notes(const AccompContext *context, size_t chord, long from, long to, bool liquidate,
+static bool motive_notes(const AccompContext *context, size_t chord, Rational from, Rational to, bool liquidate,
                          AccompCandidate *out) {
     int ladder[128];
-    for (long start = from; start < to; start += context->motive_length) {
-        long end = start + context->motive_length < to ? start + context->motive_length : to;
+    for (Rational start = from; rational_cmp(start, to) < 0; start = position_add(start, context->motive_length)) {
+        Rational stop = position_add(start, context->motive_length);
+        Rational end = rational_cmp(stop, to) < 0 ? stop : to;
         size_t rungs = statement_ladder(context, chord, start, end, ladder);
         size_t at = 0;
         bool sounded = false;
@@ -285,11 +287,11 @@ static bool motive_notes(const AccompContext *context, size_t chord, long from, 
         }
         for (size_t n = 0; n < context->motive_count; n++) {
             const AccompMotiveNote *note = &context->motive[n];
-            if (liquidate && note->onset >= context->beat) {
+            if (liquidate && rational_cmp(note->onset, context->beat) >= 0) {
                 break;
             }
-            long onset = start + note->onset;
-            if (onset >= to) {
+            Rational onset = position_add(start, note->onset);
+            if (rational_cmp(onset, to) >= 0) {
                 break;
             }
             if (n == 0) {
@@ -313,15 +315,16 @@ static bool motive_notes(const AccompContext *context, size_t chord, long from, 
                 }
                 at = best;
             }
-            long note_end = onset + note->duration < to ? onset + note->duration : to;
+            Rational note_stop = position_add(onset, note->duration);
+            Rational note_end = rational_cmp(note_stop, to) < 0 ? note_stop : to;
             sounded = true;
-            if (!add_note(out, 0, onset, note_end - onset, ladder[at])) {
+            if (!add_note(out, 0, onset, position_sub(note_end, onset), ladder[at])) {
                 return false;
             }
         }
         if (liquidate && sounded) {
             AccompNote *last = &out->notes[0][out->note_count[0] - 1];
-            last->duration = to - last->onset;
+            last->duration = position_sub(to, last->onset);
             break;
         }
     }
@@ -331,11 +334,13 @@ static bool motive_notes(const AccompContext *context, size_t chord, long from, 
 /* The motive on every chord; the last bar of the section liquidated (only its first beat group, its last tone held). */
 static bool build_motive(const AccompContext *context, AccompCandidate *out) {
     for (size_t chord = 0; chord < context->chord_count; chord++) {
-        long start = context->chord_start[chord];
-        long end = context->chord_start[chord + 1];
-        long cut = context->liquidate_from < start ? start : (context->liquidate_from > end ? end : context->liquidate_from);
-        if ((cut > start && !motive_notes(context, chord, start, cut, false, out)) ||
-            (end > cut && !motive_notes(context, chord, cut, end, true, out))) {
+        Rational start = context->chord_start[chord];
+        Rational end = context->chord_start[chord + 1];
+        Rational cut = rational_cmp(context->liquidate_from, start) < 0
+                           ? start
+                           : (rational_cmp(context->liquidate_from, end) > 0 ? end : context->liquidate_from);
+        if ((rational_cmp(cut, start) > 0 && !motive_notes(context, chord, start, cut, false, out)) ||
+            (rational_cmp(end, cut) > 0 && !motive_notes(context, chord, cut, end, true, out))) {
             return false;
         }
     }
@@ -347,14 +352,15 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
     out->magic = ACCOMP_PAYLOAD_MAGIC;
     out->pattern = pattern;
     out->voices = accomp_pattern_voices(pattern);
-    if (!accomp_pattern_allowed(context, pattern) || context->beat <= 0) {
+    if (!accomp_pattern_allowed(context, pattern) || !position_is_positive(context->beat)) {
         return false;
     }
     /* The beats run on from each chord's start, so a chord of any length in beats is cut at its end. */
     for (size_t chord = 0; chord < context->chord_count; chord++) {
-        for (long start = context->chord_start[chord]; start < context->chord_start[chord + 1]; start += context->beat) {
-            long end = start + context->beat < context->chord_start[chord + 1] ? start + context->beat
-                                                                                : context->chord_start[chord + 1];
+        for (Rational start = context->chord_start[chord]; rational_cmp(start, context->chord_start[chord + 1]) < 0;
+             start = position_add(start, context->beat)) {
+            Rational stop = position_add(start, context->beat);
+            Rational end = rational_cmp(stop, context->chord_start[chord + 1]) < 0 ? stop : context->chord_start[chord + 1];
             if (out->beat_count >= ACCOMP_MAX_BEATS) {
                 return false;
             }
@@ -371,7 +377,7 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
     const int *previous = NULL;
     size_t previous_size = 0;
     for (size_t b = 0; b < out->beat_count; b++) {
-        long start = out->beat_start[b];
+        Rational start = out->beat_start[b];
         int pcs[3];
         int low;
         int high;
@@ -398,7 +404,7 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         for (size_t b = 0; b < out->beat_count; b++) {
             for (size_t voice = 0; out->voiced[b] && voice < out->voicing_size[b]; voice++) {
                 /* Voice 1 is the top of the chord. */
-                if (!add_note(out, voice, out->beat_start[b], out->beat_end[b] - out->beat_start[b],
+                if (!add_note(out, voice, out->beat_start[b], position_sub(out->beat_end[b], out->beat_start[b]),
                               out->voicing[b][out->voicing_size[b] - 1 - voice])) {
                     return false;
                 }
@@ -410,16 +416,20 @@ bool accomp_build(const AccompContext *context, PlanAccompanimentPattern pattern
         const int *figure = pattern == PLAN_ACCOMPANIMENT_ARPEGGIATED ? ARPEGGIO : ALBERTI;
         for (size_t b = 0; b < out->beat_count; b++) {
             size_t chord = accomp_chord_at(context, out->beat_start[b]);
-            long chord_start = context->chord_start[chord];
+            Rational chord_start = context->chord_start[chord];
             /* A chord on the meter's cells goes by the eighths of the bar; one that starts off them, by its own. */
-            bool on_cells = (chord_start + context->phase) % context->cell == 0;
+            bool on_cells = position_is_multiple(position_add(chord_start, context->phase), context->cell);
             /* A voicing of two notes is the low one and the high one over again, one of a single note. */
             size_t size = out->voicing_size[b];
-            for (long at = out->beat_start[b]; out->voiced[b] && at < out->beat_end[b]; at += ACCOMP_EIGHTH) {
-                long eighth = on_cells ? ((at + context->phase) % context->bar) / ACCOMP_EIGHTH
-                                       : (at - chord_start) / ACCOMP_EIGHTH;
+            for (Rational at = out->beat_start[b]; out->voiced[b] && rational_cmp(at, out->beat_end[b]) < 0;
+                 at = position_add(at, ACCOMP_EIGHTH)) {
+                long long eighth = on_cells ? position_floor_units(
+                                                  position_remainder(position_add(at, context->phase), context->bar),
+                                                  ACCOMP_EIGHTH)
+                                            : position_floor_units(position_sub(at, chord_start), ACCOMP_EIGHTH);
                 int index = size == 3 ? figure[eighth % 4] : (size == 2 ? (int)(eighth % 2) : 0);
-                long length = at + ACCOMP_EIGHTH < out->beat_end[b] ? ACCOMP_EIGHTH : out->beat_end[b] - at;
+                Rational after = position_add(at, ACCOMP_EIGHTH);
+                Rational length = rational_cmp(after, out->beat_end[b]) < 0 ? ACCOMP_EIGHTH : position_sub(out->beat_end[b], at);
                 if (!add_note(out, 0, at, length, out->voicing[b][index])) {
                     return false;
                 }
