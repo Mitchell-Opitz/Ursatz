@@ -5,6 +5,7 @@
 
 #include <cJSON.h>
 #include <ursatz_composer/composer_api.h>
+#include <ursatz_composer/export.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/style.h>
@@ -40,6 +41,12 @@ bool api_member_cadence(const cJSON *object, const char *name, CadenceType *out,
 /* A number of beats of beat_unit, or a string "0", "1/2" (request_parse_pickup). */
 bool api_member_pickup(const cJSON *object, const char *name, int beat_unit, Rational *out, bool *present,
                        ComposerError *error);
+
+/*
+ * The "tempo" member of the request (quarter notes per minute, 20 to 400, a whole number, a fraction string like
+ * "195/2", or null) into options->tempo_numerator and tempo_denominator; absent or null leaves them as they are.
+ */
+ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, ComposerError *error);
 
 /*
  * Reads a motive from the request object (docs/api.md, "Motive requests"): "input" {"format", "form", "text"}, "meter",

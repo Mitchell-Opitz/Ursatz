@@ -4,7 +4,10 @@
 
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/export.h>
 #include <ursatz_composer/motive_analysis.h>
+#include <ursatz_composer/motive_render.h>
+#include <ursatz_composer/render.h>
 #include <ursatz_composer/motive_tones.h>
 
 #include "api_internal.h"
@@ -58,8 +61,73 @@ static ComposerStatus read_tones(const cJSON *request, size_t note_count, Motive
     return COMPOSER_OK;
 }
 
+static ComposerStatus export_failure(ComposerError *error, const char *path, PlanExportResult result,
+                                     const PlanExportError *detail) {
+    return api_fail(error, result == PLAN_EXPORT_ERR_ALLOC ? COMPOSER_ERR_ALLOC : COMPOSER_ERR_UNSATISFIABLE, path, "%s",
+                    detail && detail->message[0] ? detail->message : "the motive cannot be exported");
+}
+
+/*
+ * The motive as it sounds in the request's "render_key" (its own key without one), and as the files asked for by "midi"
+ * and "musicxml", written into out. The failure paths /midi and /musicxml name the file that could not be made.
+ */
+static ComposerStatus render_motive(const cJSON *request, const Motive *motive, Motive *rendered, ComposerResponse *out) {
+    *rendered = *motive;
+    const char *key_text = NULL;
+    bool has_key = false;
+    bool want_midi = false;
+    bool want_musicxml = false;
+    ComposerError *error = &out->error;
+    if (!api_member_string(request, "render_key", &key_text, &has_key, error) ||
+        !api_member_bool(request, "midi", &want_midi, NULL, error) ||
+        !api_member_bool(request, "musicxml", &want_musicxml, NULL, error)) {
+        return COMPOSER_ERR_REQUEST;
+    }
+    if (has_key) {
+        AnalysisKey key;
+        if (!motive_parse_key(key_text, &key)) {
+            return api_fail(error, COMPOSER_ERR_REQUEST, "/render_key",
+                            "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, "
+                            "for example \"D minor\"",
+                            key_text);
+        }
+        if (!motive_in_key(motive, &key, rendered)) {
+            return api_fail(error, COMPOSER_ERR_UNSATISFIABLE, "/render_key",
+                            "cannot move the input to %s: it has no key, or a note leaves the MIDI range", key_text);
+        }
+    }
+    PlanExportOptions options = plan_export_options_default();
+    ComposerStatus status = api_read_tempo(request, &options, error);
+    if (status != COMPOSER_OK || (!want_midi && !want_musicxml)) {
+        return status;
+    }
+    PiecePlan *plan = motive_render_plan(rendered);
+    RenderedPlan plan_rendered;
+    PlanExportError detail;
+    memset(&detail, 0, sizeof detail);
+    PlanExportResult result = PLAN_EXPORT_ERR_NOT_REPRESENTABLE;
+    if (plan) {
+        snprintf(detail.message, sizeof detail.message, "the motive cannot be placed in a plan");
+        result = plan_export_render(plan, &plan_rendered, &detail);
+        plan_destroy(plan);
+    }
+    if (result != PLAN_EXPORT_OK) {
+        return export_failure(error, want_midi ? "/midi" : "/musicxml", result, &detail);
+    }
+    if (want_midi) {
+        result = rendered_plan_midi_bytes(&plan_rendered, &options, &out->midi, &out->midi_size, &detail);
+        status = result == PLAN_EXPORT_OK ? COMPOSER_OK : export_failure(error, "/midi", result, &detail);
+    }
+    if (status == COMPOSER_OK && want_musicxml) {
+        result = rendered_plan_musicxml_text(&plan_rendered, &options, &out->musicxml, &detail);
+        status = result == PLAN_EXPORT_OK ? COMPOSER_OK : export_failure(error, "/musicxml", result, &detail);
+    }
+    rendered_plan_destroy(&plan_rendered);
+    return status;
+}
+
 /* The motive's input: text in the request, or the bytes of a MIDI file when bytes is not NULL. */
-static ComposerStatus analyze_request(const cJSON *request, const unsigned char *bytes, size_t size,
+static ComposerStatus analyze_request(const cJSON *request, const unsigned char *bytes, size_t size, bool render,
                                       const ComposerJob *job, ComposerResponse *out) {
     if (composer_job_step(job, "motive", 0, 1)) {
         return api_fail(&out->error, COMPOSER_ERR_CANCELLED, "", "cancelled");
@@ -91,11 +159,19 @@ static ComposerStatus analyze_request(const cJSON *request, const unsigned char 
     if (!motive_analyze_with_tones(&motive, overrides, override_count, &analysis)) {
         return api_fail(&out->error, COMPOSER_ERR_UNSATISFIABLE, "", "cannot analyze the input");
     }
-    out->json = motive_analysis_to_json(&motive, &analysis);
+    Motive rendered;
+    if (render) {
+        status = render_motive(request, &motive, &rendered, out);
+        if (status != COMPOSER_OK) {
+            return status;
+        }
+    }
+    out->json = render ? motive_analysis_to_json_rendered(&motive, &analysis, &rendered)
+                       : motive_analysis_to_json(&motive, &analysis);
     return out->json ? COMPOSER_OK : api_fail(&out->error, COMPOSER_ERR_ALLOC, "", "out of memory");
 }
 
-static ComposerStatus run_request(const char *request_json, const unsigned char *bytes, size_t size,
+static ComposerStatus run_request(const char *request_json, const unsigned char *bytes, size_t size, bool render,
                                   const ComposerJob *job, ComposerResponse *out) {
     memset(out, 0, sizeof *out);
     cJSON *request = NULL;
@@ -103,7 +179,7 @@ static ComposerStatus run_request(const char *request_json, const unsigned char 
     if (status != COMPOSER_OK) {
         return status;
     }
-    status = analyze_request(request, bytes, size, job, out);
+    status = analyze_request(request, bytes, size, render, job, out);
     cJSON_Delete(request);
     if (status != COMPOSER_OK) {
         ComposerError error = out->error;
@@ -114,7 +190,7 @@ static ComposerStatus run_request(const char *request_json, const unsigned char 
 }
 
 ComposerStatus composer_api_motive(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
-    return run_request(request_json, NULL, 0, job, out);
+    return run_request(request_json, NULL, 0, false, job, out);
 }
 
 ComposerStatus composer_api_motive_from_midi(const uint8_t *bytes, size_t size, const char *request_json,
@@ -123,5 +199,9 @@ ComposerStatus composer_api_motive_from_midi(const uint8_t *bytes, size_t size, 
         memset(out, 0, sizeof *out);
         return api_fail(&out->error, COMPOSER_ERR_REQUEST, "", "the MIDI bytes are missing");
     }
-    return run_request(request_json, bytes, size, job, out);
+    return run_request(request_json, bytes, size, false, job, out);
+}
+
+ComposerStatus composer_api_motive_render(const char *request_json, const ComposerJob *job, ComposerResponse *out) {
+    return run_request(request_json, NULL, 0, true, job, out);
 }

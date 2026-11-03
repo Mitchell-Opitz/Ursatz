@@ -191,3 +191,21 @@ bool api_member_pickup(const cJSON *object, const char *name, int beat_unit, Rat
     }
     return true;
 }
+
+ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, ComposerError *error) {
+    ComposerRatio tempo;
+    bool has_tempo = false;
+    if (!api_member_rational(request, "tempo", &tempo, &has_tempo, error)) {
+        return COMPOSER_ERR_REQUEST;
+    }
+    if (has_tempo && (tempo.denominator == 0 || tempo.numerator < 20UL * tempo.denominator ||
+                      tempo.numerator > 400UL * tempo.denominator)) {
+        return api_fail(error, COMPOSER_ERR_REQUEST, "/tempo",
+                        "tempo must be from 20 to 400 quarter notes per minute, a whole number or a fraction like 195/2");
+    }
+    if (has_tempo) {
+        options->tempo_numerator = tempo.numerator;
+        options->tempo_denominator = tempo.denominator;
+    }
+    return COMPOSER_OK;
+}

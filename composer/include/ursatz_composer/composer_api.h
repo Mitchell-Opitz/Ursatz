@@ -93,4 +93,14 @@ ComposerStatus composer_api_motive(const char *request_json, const ComposerJob *
 ComposerStatus composer_api_motive_from_midi(const uint8_t *bytes, size_t size, const char *request_json,
                                              const ComposerJob *job, ComposerResponse *out);
 
+/*
+ * As composer_api_motive, and renders the motive: the request adds "render_key" ("G minor": hear the motive in this key,
+ * the same degrees; default its own), "tempo" (quarter notes per minute, 20 to 400, a whole number or a string like
+ * "195/2"), "musicxml": true and "midi": true. musicxml and midi/midi_size are filled for the files asked for (a pickup
+ * is an implicit first measure). json: the analysis document with the top-level "rendered" object
+ * {"key", "notes": [{"midi_pitch", "offset", "duration"}]}, always present. A key the motive cannot be moved to, or a file
+ * that cannot be made, is COMPOSER_ERR_UNSATISFIABLE with path /render_key, /midi or /musicxml.
+ */
+ComposerStatus composer_api_motive_render(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
 #endif
