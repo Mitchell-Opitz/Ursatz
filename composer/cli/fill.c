@@ -253,7 +253,9 @@ static void heard_text(const ComposeHeard *heard, char *out, size_t size) {
     char requested[96];
     char found[96];
     form_label(heard->requested_form, requested, sizeof(requested));
-    if (heard->heard_result != FORM_HEAR_OK) {
+    if (!heard->in_scope) {
+        snprintf(out, size, "kept");
+    } else if (heard->heard_result != FORM_HEAR_OK) {
         snprintf(out, size, "not heard (%s)", form_hear_result_name(heard->heard_result));
     } else if (heard->heard.count == 0 || heard->heard_form < 0) {
         snprintf(out, size, "no theme heard");
@@ -348,7 +350,11 @@ void cli_print_heard_json(const PiecePlan *plan, const ComposeOutcome *outcome) 
         printf("%s{\"letter\":", i ? "," : "");
         cli_print_json_string(letter_of(sections, count, heard->section));
         printf(",\"heard\":");
-        cli_print_json_string(text);
+        if (heard->in_scope) {
+            cli_print_json_string(text);
+        } else {
+            printf("null,\"in_scope\":false");
+        }
         printf(",\"heard_as_requested\":%s,\"cadences\":[", heard->heard_as_requested ? "true" : "false");
         for (size_t c = 0; heard->heard_result == FORM_HEAR_OK && c < heard->heard.cadence_count; c++) {
             printf("%s\"%s\"", c ? "," : "", cadence_type_name((CadenceType)heard->heard.cadences[c].type));

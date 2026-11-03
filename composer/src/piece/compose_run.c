@@ -472,11 +472,27 @@ static void hear_seam(const PiecePlan *plan, ComposeOutcome *outcome) {
     }
 }
 
+/* Whether a theme section is heard and checked in this run: every one without a scope. */
+static bool section_in_scope(const ComposeConfig *config, NodeId section) {
+    if (!config->scope) {
+        return true;
+    }
+    for (size_t i = 0; i < config->scope_count; i++) {
+        if (config->scope[i] == section) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static void hear(ComposerHearing *hearing, const PiecePlan *plan, const NodeId *themes, size_t theme_count, ComposeOutcome *outcome) {
     unsigned long numerator = 0;
     unsigned long denominator = 0;
     for (size_t t = 0; t < theme_count; t++) {
         ComposeHeard *heard = &outcome->sections[t];
+        if (!heard->in_scope) {
+            continue;
+        }
         hear_section(hearing, plan, themes[t], outcome->records[COMPOSE_STAGE_STRUCTURE], heard);
         outcome->heard_as_requested += heard->heard_as_requested;
         numerator += heard->structure.numerator + (heard->heard_as_requested ? 1 : 0);
@@ -842,6 +858,7 @@ static PieceResult run_once(PiecePlan *plan, const ComposeConfig *config, unsign
     outcome->section_count = theme_count;
     for (size_t t = 0; t < theme_count; t++) {
         outcome->sections[t].section = themes[t];
+        outcome->sections[t].in_scope = section_in_scope(config, themes[t]);
         read_part(plan, themes[t], &outcome->sections[t]);
         outcome->sections[t].heard_result = FORM_HEAR_ERR_NOT_WRITTEN;
         outcome->sections[t].heard_form = -1;
@@ -975,6 +992,9 @@ static PieceResult check_analyzer(ComposerHearing *hearing, const PiecePlan *pla
     bool contradicts = false;
     for (size_t i = 0; i < outcome->section_count; i++) {
         AnalyzerCheck *check = &outcome->analyzer_checks[i];
+        if (!outcome->sections[i].in_scope) {
+            continue;
+        }
         AnalyzerCheckResult result = analyzer_check_section_in(hearing, outcome->sections[i].section, check);
         if (result == ANALYZER_CHECK_ERR_ALLOC) {
             return PIECE_ERR_ALLOC;

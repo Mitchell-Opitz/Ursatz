@@ -882,6 +882,7 @@ typedef struct {
     bool has_cadence;
     CadenceType cadence;
     const char *heard; /* the cadence the Analyzer heard, NULL without --check */
+    bool kept;         /* a regenerate left the section as it was: it was neither heard nor checked */
 } Row;
 
 /* The sections of a version in time order, with the cadence each planned and, with a check, the one heard. */
@@ -917,6 +918,11 @@ static size_t collect_rows(const Request *request, const Version *version, Row *
             continue;
         }
         row->start = plan_node_span(plan, id).start;
+        for (size_t h = 0; h < version->outcome.section_count; h++) {
+            if (version->outcome.sections[h].section == id && !version->outcome.sections[h].in_scope) {
+                row->kept = true;
+            }
+        }
         row->has_cadence = cadence != NULL;
         row->cadence = cadence ? cadence->params.cadence : CADENCE_TYPE_PERFECT_AUTHENTIC;
         if (cadence && check) {
@@ -973,7 +979,9 @@ static void print_version_text(const char *label, const Request *request, const 
         if (rows[i].has_cadence) {
             printf(", cadence %s", cli_cadence_name(rows[i].cadence));
         }
-        if (rows[i].heard) {
+        if (rows[i].kept) {
+            printf(" (kept)");
+        } else if (rows[i].heard) {
             printf(" (heard %s)", rows[i].heard);
         }
         printf(", %s fill (%s)\n", piece_fill_name(rows[i].section->fill), rows[i].source);
@@ -1022,6 +1030,9 @@ static void print_version_json(const char *label, const Request *request, const 
             cli_print_json_string(rows[i].heard);
         } else {
             printf("null");
+        }
+        if (rows[i].kept) {
+            printf(",\"in_scope\":false");
         }
         printf(",\"fill\":\"%s\",\"source\":", piece_fill_name(rows[i].section->fill));
         cli_print_json_string(rows[i].source);
