@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/lock.response.schema.json",
+  "title": "composer_api_lock response",
+  "description": "How many nodes and lane spans are Given now, and what was locked.",
+  "type": "object",
+  "required": [
+    "locked",
+    "what"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "locked": {
+      "type": "object",
+      "required": [
+        "nodes",
+        "spans"
+      ],
+      "properties": {
+        "nodes": {
+          "type": "integer"
+        },
+        "spans": {
+          "type": "integer"
+        }
+      }
+    },
+    "what": {
+      "type": "string"
+    }
+  }
+}

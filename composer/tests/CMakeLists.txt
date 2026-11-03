@@ -652,6 +652,14 @@ target_compile_definitions(test_api_piece PRIVATE COMPOSER_SNAPSHOT_DIR="${CMAKE
 add_test(NAME test_api_piece COMMAND test_api_piece WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(test_api_piece PROPERTIES FIXTURES_SETUP api_responses_written)
 
+add_executable(test_api_plan_workflow test_api_plan_workflow.c)
+target_link_libraries(test_api_plan_workflow PRIVATE ursatz_composer composer_test_support cjson)
+target_compile_options(test_api_plan_workflow PRIVATE -Wall -Wextra -Wpedantic)
+target_compile_definitions(test_api_plan_workflow PRIVATE COMPOSER_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots"
+                           COMPOSER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_test(NAME test_api_plan_workflow COMMAND test_api_plan_workflow WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+set_tests_properties(test_api_plan_workflow PROPERTIES FIXTURES_SETUP api_responses_written)
+
 add_executable(test_job_cancel test_job_cancel.c)
 target_link_libraries(test_job_cancel PRIVATE ursatz_composer)
 target_compile_options(test_job_cancel PRIVATE -Wall -Wextra -Wpedantic)
@@ -661,7 +669,7 @@ add_test(NAME test_job_cancel COMMAND test_job_cancel)
 add_test(NAME test_api_schema
          COMMAND ${CMAKE_COMMAND} -DPYTHON=${Python3_EXECUTABLE} -DHAVE_JSONSCHEMA=${HAVE_JSONSCHEMA}
                  -DVALIDATOR=${CMAKE_CURRENT_SOURCE_DIR}/validate_schema.py
-                 -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations
+                 -DKINDS=versions,export,motive,variant_operations,variants,recognize,random_motive,theme,piece,piece_variations,plan,fill,lock,regenerate,variations
                  -DSCHEMA_DIR=${PROJECT_SOURCE_DIR}/schema/api -DWRITTEN_DIR=${CMAKE_CURRENT_BINARY_DIR}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/validate_api_schema.cmake)
 set_tests_properties(test_api_schema PROPERTIES SKIP_REGULAR_EXPRESSION "SKIPPED" FIXTURES_REQUIRED api_responses_written)
@@ -689,6 +697,10 @@ if(VALGRIND_PROGRAM)
     add_test(NAME test_api_piece_valgrind
              COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
                      $<TARGET_FILE:test_api_piece> quick
+             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    add_test(NAME test_api_plan_workflow_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     $<TARGET_FILE:test_api_plan_workflow> quick
              WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
     add_test(NAME test_job_cancel_valgrind
              COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect

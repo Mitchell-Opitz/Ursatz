@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/fill.request.schema.json",
+  "title": "composer_api_fill request",
+  "description": "A plan realized in stages, with the options of the fill command.",
+  "type": "object",
+  "required": [
+    "plan"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "plan": {
+      "type": "object"
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "candidates": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "check": {
+      "type": "boolean"
+    },
+    "record": {
+      "type": "boolean"
+    },
+    "explain": {
+      "enum": [
+        "text",
+        "json"
+      ]
+    },
+    "style": {
+      "type": "string"
+    },
+    "style_weight": {
+      "type": "string"
+    },
+    "style_without": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "maxItems": 8
+    },
+    "blend": {
+      "type": "string"
+    },
+    "blend_weight": {
+      "type": "string"
+    },
+    "blend_weights": {
+      "type": "string"
+    },
+    "midi": {
+      "type": "boolean"
+    },
+    "musicxml": {
+      "type": "boolean"
+    },
+    "plain_midi": {
+      "type": "boolean"
+    },
+    "tempo": {
+      "type": [
+        "integer",
+        "number",
+        "string"
+      ]
+    }
+  }
+}
