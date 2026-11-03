@@ -24,6 +24,21 @@ PiecePlan *plan_create(void) {
     return calloc(1, sizeof(PiecePlan));
 }
 
+const char *plan_analyzer_version(const PiecePlan *plan) {
+    return plan ? plan->analyzer_version : "";
+}
+
+PlanResult plan_set_analyzer_version(PiecePlan *plan, const char *version) {
+    if (!plan || !version) {
+        return PLAN_ERR_NULL;
+    }
+    if (strlen(version) >= PLAN_ANALYZER_VERSION_MAX) {
+        return PLAN_ERR_BAD_PAYLOAD;
+    }
+    memcpy(plan->analyzer_version, version, strlen(version) + 1);
+    return PLAN_OK;
+}
+
 void plan_destroy(PiecePlan *plan) {
     if (!plan) {
         return;

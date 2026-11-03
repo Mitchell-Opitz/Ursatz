@@ -3,27 +3,32 @@
 
 #include <stddef.h>
 
+#include <ursatz_analyzer/analysis_result.h>
+#include <ursatz_analyzer/imported_notes.h>
+
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/plan_json.h>
 
 /*
- * Loading an Ursatz-Analyzer analysis document (schema_version 1) as a plan.
- * The document describes an existing piece, so every node and lane span of
- * the plan is Realized.
+ * Loading an analyzed piece as a plan (R-019, R-220): the Composer reads the Analyzer's result, never its document.
+ * The result describes an existing piece, so every node and lane span of the plan is Realized.
  *
- * What maps today:
- *   - a Form root over the extent of the key and chord claims, named for
- *     metadata.source_file (the document has no form tree yet)
- *   - "keys" claims  -> key lane
- *   - "chords" claims -> harmony lane, Roman numeral from the label,
- *     no function (has_function false: a claim carries none)
+ *   - a Form root over the piece, from time 0 to the end of the last note or chord
+ *   - the meter lane from the imported notes' meter map (regions with the same signature are one span)
+ *   - the key lane from the chain's key regions (analysis_chain_key_regions)
+ *   - the harmony lane from analyzer_chord_sequence: the joined chords, Roman numeral, no function (a result records none)
+ *   - a Section node over the piece holding a Phrase node for each phrase of the chain (analysis_chain_phrases)
+ *   - the melody lane from the soprano line and the bass lane from the bass line of the chain's outer voices, a note for
+ *     each run of segments the same note sounds in
  *
- * Nothing is dropped silently. The report lists every element that was left
- * out or changed:
- *   - a "no match" or unreadable key or chord label (skipped)
- *   - a chord that runs past the start of the next one (trimmed to it)
- *   - a section with content the plan has no place for yet: meter, cadences,
- *     phrases, form, motives, melody, rhythm, texture, voice_leading, schemas
+ * The plan records the Analyzer's version (plan_analyzer_version, ursatz_analyzer_version()).
+ *
+ * Nothing is dropped silently. The report lists every element that was left out or changed:
+ *   - a pickup measure (its signature is the meter of the span it is joined to)
+ *   - a phrase that overlaps the one before it or does not fit the piece (skipped)
+ *   - a key region or chord that cannot be placed on the timeline (skipped)
+ *   - an area of the result the plan has no place for yet: cadences, themes, motives, texture, voice leading, schemas
+ *     (listed once, when the result has claims for it)
  */
 
 #define ANALYSIS_LOAD_NOTE_MAX 160
@@ -42,14 +47,12 @@ typedef struct {
 void analysis_load_report_destroy(AnalysisLoadReport *report);
 
 /*
- * Builds a plan from an analysis document. report may be NULL; otherwise it is
- * filled (possibly with no notes) and the caller destroys it. Fails like
- * plan_from_json, and with PLAN_ERR_FORMAT when no key or chord claim can be
- * mapped, since there is then no timeline to build a plan on.
+ * Builds a plan from a result and the notes it was made from. report may be NULL; otherwise it is filled (possibly with
+ * no notes) and the caller destroys it. *out is the plan on PLAN_OK, NULL otherwise. Fails with PLAN_ERR_NULL for a NULL
+ * result, notes or out, PLAN_ERR_FORMAT when the result has no notes or no key region or chord to build a timeline on,
+ * PLAN_ERR_ALLOC.
  */
-PlanResult plan_from_analysis_document(const char *text, PiecePlan **out, AnalysisLoadReport *report,
-                                       PlanJsonError *error);
-PlanResult plan_read_analysis_document_file(const char *path, PiecePlan **out, AnalysisLoadReport *report,
-                                            PlanJsonError *error);
+PlanResult plan_from_analyzer_result(const AnalyzerResult *result, const ImportedNotes *notes, PiecePlan **out,
+                                     AnalysisLoadReport *report);
 
 #endif

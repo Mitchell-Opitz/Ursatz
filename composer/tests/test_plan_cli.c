@@ -254,7 +254,7 @@ static void test_fill_errors(void) {
     write_text("plan_cli_malformed.json", "{\"schema_version\":");
     expect_failure("fill", "plan_cli_malformed.json", 2, "cannot read plan 'plan_cli_malformed.json'");
     /* An analysis document describes a piece already written; it points at the loader. */
-    expect_failure("fill", FIXTURE("analysis_small.json"), 2, "plan_read_analysis_document_file");
+    expect_failure("fill", FIXTURE("analysis_small.json"), 2, "plan_from_analyzer_result");
     expect_failure("fill", "plan_cli_binary.json --seed 1 --midi /nonexistent-directory/a.mid --out plan_cli_none.json", 3,
                    "cannot write '/nonexistent-directory/a.mid'");
     /* Nothing is left behind by a write that failed. */

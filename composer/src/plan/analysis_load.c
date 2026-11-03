@@ -5,15 +5,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <pitch/pitch_arithmetic.h>
+#include <time/meter_map.h>
+#include <time/musical_time.h>
+#include <time/time_rational.h>
+#include <time/time_signature.h>
+#include <time/time_span.h>
+#include <ursatz_analyzer/chord_sequence.h>
+#include <ursatz_analyzer/version.h>
+#include <ursatz_chain/analysis_chain.h>
 
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 
-#include "plan/plan_json_internal.h"
-
-#define COUNT_OF(array) (sizeof(array) / sizeof((array)[0]))
-
+#include "util/plan_util.h"
 
 void analysis_load_report_destroy(AnalysisLoadReport *report) {
     if (!report) {
@@ -52,315 +56,373 @@ static void note(Notes *notes, const char *path, const char *format, ...) {
     va_end(args);
 }
 
+static PlanResult plan_result_of_time(RationalResult result) {
+    return result == RATIONAL_OK ? PLAN_OK : PLAN_ERR_BAD_TIME;
+}
+
+static bool rational_of_time(const MusicalTime *time, Rational *out) {
+    return time && rational_of_musical_time(time, out) == RATIONAL_OK;
+}
+
+/* The span from start to end, false when end is not after start. */
+static bool span_between(Rational start, Rational end, PlanSpan *out) {
+    Rational negative_start = {-start.num, start.den};
+    out->start = start;
+    return plan_result_of_time(rational_add(end, negative_start, &out->length)) == PLAN_OK && out->length.num > 0;
+}
+
+static Rational later(Rational a, Rational b) {
+    return rational_cmp(a, b) >= 0 ? a : b;
+}
+
+/* The time a measure (by MeterMap measure number) starts at, or ends at. */
+static bool measure_time(const MeterMap *map, int number, bool end, Rational *out) {
+    TimeSpan *span = NULL;
+    if (meter_map_measure_span(map, number, &span) != METER_MAP_OK || !span) {
+        return false;
+    }
+    bool ok = rational_of_time(end ? time_span_end(span) : time_span_start(span), out);
+    time_span_destroy(span);
+    return ok;
+}
+
 typedef struct {
+    PiecePlan *plan;
+    NodeId root;
+    Notes *notes;
+    const MeterMap *map;
+    PlanSpan extent;
+} Loader;
+
+static PlanResult add_span(Loader *loader, PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload,
+                           const char *path) {
+    LaneSpanId id;
+    PlanResult result = plan_add_lane_span(loader->plan, loader->root, lane, 0, span, payload, &id);
+    if (result == PLAN_ERR_ALLOC) {
+        return result;
+    }
+    if (result != PLAN_OK) {
+        note(loader->notes, path, "cannot be placed on the timeline; skipped");
+        return PLAN_OK;
+    }
+    plan_lane_span_set_state(loader->plan, id, PLAN_STATE_REALIZED);
+    return PLAN_OK;
+}
+
+/* The extent: from 0 to the latest end of a chord, a key region, a phrase, a voice entry or the last note. */
+static bool find_extent_end(const AnalyzerResult *result, const ImportedNotes *notes, const AnalyzerChord *chords,
+                            size_t chord_count, Rational *end) {
+    const AnalysisChain *chain = analyzer_result_chain(result);
+    const MeterMap *map = notes->meter.meter_map;
+    *end = (Rational){0, 1};
+    if (notes->meter.end_time) {
+        Rational last;
+        if (rational_of_time(notes->meter.end_time, &last)) {
+            *end = later(*end, last);
+        }
+    }
+    for (size_t i = 0; i < chord_count; i++) {
+        *end = later(*end, chords[i].end);
+    }
+    const CommonPracticeKeyRegions *regions = analysis_chain_key_regions(chain);
+    for (size_t i = 0; regions && i < regions->region_count; i++) {
+        Rational region_end;
+        if (measure_time(map, regions->regions[i].last_measure, true, &region_end)) {
+            *end = later(*end, region_end);
+        }
+    }
+    return end->num > 0;
+}
+
+static PlanResult add_meter_span(Loader *loader, Rational start, Rational end, unsigned top, unsigned bottom) {
     PlanSpan span;
-    PlanLanePayload payload;
-    char path[PLAN_JSON_PATH_MAX];
-    bool keep;
-} Claim;
-
-/* "Eb minor" -> tonic 3, minor. */
-static bool parse_key_label(const char *label, AnalysisKey *key) {
-    const char *space = strrchr(label, ' ');
-    if (!space) {
-        return false;
+    if (!span_between(start, end, &span)) {
+        return PLAN_OK;
     }
-    size_t tonic_length = (size_t)(space - label);
-    int mode = -1;
-    if (strcmp(space + 1, "major") == 0) {
-        mode = KEY_STRUCTURE_MODE_MAJOR;
-    } else if (strcmp(space + 1, "minor") == 0) {
-        mode = KEY_STRUCTURE_MODE_MINOR;
-    }
-    if (mode < 0) {
-        return false;
-    }
-    for (int pitch_class = 0; pitch_class < 12; pitch_class++) {
-        const char *flat = pitch_class_name(pitch_class, true);
-        const char *sharp = pitch_class_name(pitch_class, false);
-        if ((strlen(flat) == tonic_length && strncmp(label, flat, tonic_length) == 0) ||
-            (strlen(sharp) == tonic_length && strncmp(label, sharp, tonic_length) == 0)) {
-            *key = plan_key_of_pitch_class(pitch_class, (KeyStructureMode)mode);
-            return true;
-        }
-    }
-    return false;
+    PlanLanePayload payload = {0};
+    payload.meter.beats_per_bar = (int)top;
+    payload.meter.beat_unit = (int)bottom;
+    return add_span(loader, PLAN_LANE_METER, span, &payload, "meter");
 }
 
-/*
- * Reads one claims array. Claims with no usable label are left out and noted.
- * Returns false on a malformed claim.
- */
-static bool read_claims(JsonReader *reader, Notes *notes, const cJSON *document, const char *section,
-                        PlanLaneKind lane, Claim **out, size_t *out_count) {
-    *out = NULL;
-    *out_count = 0;
-    const cJSON *array = plan_json_member(reader, document, "", section, false);
-    if (!array) {
-        return true;
-    }
-    if (!cJSON_IsArray(array)) {
-        return json_bad_format(reader, section, "expected an array");
-    }
-    size_t total = (size_t)cJSON_GetArraySize(array);
-    if (total == 0) {
-        return true;
-    }
-    Claim *claims = calloc(total, sizeof(Claim));
-    if (!claims) {
-        return json_fail(reader, PLAN_ERR_ALLOC, section, "out of memory");
-    }
-    size_t index = 0;
-    const cJSON *item;
-    cJSON_ArrayForEach(item, array) {
-        char at[PLAN_JSON_PATH_MAX];
-        json_index_path(at, section, index++);
-        if (!cJSON_IsObject(item)) {
-            free(claims);
-            return json_bad_format(reader, at, "expected an object");
+/* Regions with one signature are one span; a pickup measure belongs to the span of the measure after it. */
+static PlanResult add_meter(Loader *loader, const ImportedNotes *notes) {
+    const MeterMap *map = notes->meter.meter_map;
+    size_t count = meter_map_region_count(map);
+    Rational piece_end;
+    plan_span_end(loader->extent, &piece_end);
+    Rational start = {0, 1};
+    bool open = false;
+    unsigned top = 0;
+    unsigned bottom = 0;
+    for (size_t i = 0; i < count; i++) {
+        const MeterMapRegion *region = meter_map_region(map, i);
+        const TimeSignature *signature = region ? meter_map_region_time_signature(region) : NULL;
+        if (!signature) {
+            continue;
         }
-        const cJSON *label = plan_json_member(reader, item, at, "label", true);
-        PlanSpan span;
-        if (!label || !json_read_span(reader, item, at, &span)) {
-            free(claims);
-            return false;
+        if (meter_map_region_is_pickup(region)) {
+            note(loader->notes, "meter", "pickup measure joined to the meter of the measure after it");
+            continue;
         }
-        char label_path[PLAN_JSON_PATH_MAX];
-        json_child_path(label_path, at, "label");
-        if (!cJSON_IsString(label)) {
-            free(claims);
-            return json_bad_format(reader, label_path, "expected a string");
+        unsigned region_top = time_signature_top_number(signature);
+        unsigned region_bottom = time_signature_bottom_number(signature);
+        if (open && region_top == top && region_bottom == bottom) {
+            continue;
         }
-
-        Claim *claim = &claims[*out_count];
-        memset(&claim->payload, 0, sizeof(claim->payload));
-        if (lane == PLAN_LANE_KEY) {
-            if (!parse_key_label(label->valuestring, &claim->payload.key)) {
-                note(notes, label_path, "key label '%.40s' skipped", label->valuestring);
-                continue;
+        Rational region_start;
+        if (!rational_of_time(meter_map_region_start(region), &region_start)) {
+            return PLAN_ERR_BAD_TIME;
+        }
+        if (open) {
+            PlanResult added = add_meter_span(loader, start, region_start, top, bottom);
+            if (added != PLAN_OK) {
+                return added;
             }
-        } else {
-            size_t length = strlen(label->valuestring);
-            if (strcmp(label->valuestring, "no match") == 0 || length == 0 || length >= PLAN_ROMAN_NUMERAL_MAX) {
-                note(notes, label_path, "chord label '%.40s' skipped", label->valuestring);
-                continue;
-            }
-            memcpy(claim->payload.harmony.roman_numeral, label->valuestring, length + 1);
-            claim->payload.harmony.has_function = false;
+            start = region_start;
         }
-        claim->span = span;
-        claim->keep = true;
-        snprintf(claim->path, sizeof(claim->path), "%s", at);
-        (*out_count)++;
+        open = true;
+        top = region_top;
+        bottom = region_bottom;
     }
-    *out = claims;
-    return true;
+    return open ? add_meter_span(loader, start, piece_end, top, bottom) : PLAN_OK;
 }
 
-/* A claim that runs past the start of the next is cut off where the next begins. */
-static void trim_overlaps(Notes *notes, Claim *claims, size_t count) {
-    for (size_t i = 0; i + 1 < count; i++) {
+static PlanResult add_keys(Loader *loader, const AnalysisChain *chain) {
+    const CommonPracticeKeyRegions *regions = analysis_chain_key_regions(chain);
+    for (size_t i = 0; regions && i < regions->region_count; i++) {
+        const CommonPracticeKeyRegion *region = &regions->regions[i];
+        char path[PLAN_JSON_PATH_MAX];
+        snprintf(path, sizeof(path), "keys[%zu]", i);
+        PlanLanePayload payload = {0};
+        Rational start;
         Rational end;
-        if (!claims[i].keep || plan_span_end(claims[i].span, &end) != PLAN_OK) {
+        PlanSpan span;
+        if (!common_practice_key_region_analysis_key(region, &payload.key) ||
+            !measure_time(loader->map, region->first_measure, false, &start) ||
+            !measure_time(loader->map, region->last_measure, true, &end) || !span_between(start, end, &span)) {
+            note(loader->notes, path, "key region cannot be read; skipped");
             continue;
         }
-        if (rational_cmp(end, claims[i + 1].span.start) <= 0) {
-            continue;
-        }
-        Rational negative_start = {-claims[i].span.start.num, claims[i].span.start.den};
-        Rational length;
-        rational_add(claims[i + 1].span.start, negative_start, &length);
-        if (length.num <= 0) {
-            claims[i].keep = false;
-            note(notes, claims[i].path, "starts with the next claim; skipped");
-        } else {
-            claims[i].span.length = length;
-            note(notes, claims[i].path, "runs past the next claim; trimmed to its start");
+        payload.key.id = NULL;
+        PlanResult added = add_span(loader, PLAN_LANE_KEY, span, &payload, path);
+        if (added != PLAN_OK) {
+            return added;
         }
     }
+    return PLAN_OK;
 }
 
-static void widen_extent(const Claim *claims, size_t count, bool *have, Rational *start, Rational *end) {
+static PlanResult add_chords(Loader *loader, const AnalyzerChord *chords, size_t count) {
     for (size_t i = 0; i < count; i++) {
-        Rational claim_end;
-        if (!claims[i].keep || plan_span_end(claims[i].span, &claim_end) != PLAN_OK) {
+        char path[PLAN_JSON_PATH_MAX];
+        snprintf(path, sizeof(path), "chords[%zu]", i);
+        size_t length = chords[i].numeral ? strlen(chords[i].numeral) : 0;
+        PlanSpan span;
+        if (length == 0 || length >= PLAN_ROMAN_NUMERAL_MAX || !span_between(chords[i].start, chords[i].end, &span)) {
+            note(loader->notes, path, "chord '%.40s' skipped", chords[i].numeral ? chords[i].numeral : "");
             continue;
         }
-        if (!*have || rational_cmp(claims[i].span.start, *start) < 0) {
-            *start = claims[i].span.start;
+        PlanLanePayload payload = {0};
+        memcpy(payload.harmony.roman_numeral, chords[i].numeral, length + 1);
+        payload.harmony.has_function = false;
+        PlanResult added = add_span(loader, PLAN_LANE_HARMONY, span, &payload, path);
+        if (added != PLAN_OK) {
+            return added;
         }
-        if (!*have || rational_cmp(claim_end, *end) > 0) {
-            *end = claim_end;
-        }
-        *have = true;
     }
+    return PLAN_OK;
 }
 
-static bool add_claims(JsonReader *reader, PiecePlan *plan, NodeId root, PlanLaneKind lane, const Claim *claims,
-                       size_t count) {
+static PlanResult add_phrases(Loader *loader, const AnalysisChain *chain) {
+    const StandardFormPhrases *phrases = analysis_chain_phrases(chain);
+    if (!phrases || phrases->count == 0) {
+        return PLAN_OK;
+    }
+    /* A phrase sits under a section: one section holds the whole piece's phrases (the result has no sections). */
+    NodeId section;
+    PlanResult made = plan_add_node(loader->plan, loader->root, PLAN_NODE_SECTION, loader->extent, "piece", &section);
+    if (made != PLAN_OK) {
+        return made == PLAN_ERR_ALLOC ? made : PLAN_OK;
+    }
+    plan_node_set_state(loader->plan, section, PLAN_STATE_REALIZED);
+    Rational previous_end = loader->extent.start;
+    Rational piece_end;
+    plan_span_end(loader->extent, &piece_end);
+    for (size_t i = 0; i < phrases->count; i++) {
+        const StandardFormPhrase *phrase = &phrases->items[i];
+        char path[PLAN_JSON_PATH_MAX];
+        snprintf(path, sizeof(path), "phrases[%zu]", i);
+        Rational start;
+        Rational end;
+        PlanSpan span;
+        if (!phrase->span || !rational_of_time(time_span_start(phrase->span), &start) ||
+            !rational_of_time(time_span_end(phrase->span), &end) || !span_between(start, end, &span) ||
+            rational_cmp(start, previous_end) < 0 || rational_cmp(end, piece_end) > 0) {
+            note(loader->notes, path, "phrase overlaps the one before it or does not fit the piece; skipped");
+            continue;
+        }
+        char name[32];
+        snprintf(name, sizeof(name), "phrase %zu", i + 1);
+        NodeId node;
+        PlanResult added = plan_add_node(loader->plan, section, PLAN_NODE_PHRASE, span, name, &node);
+        if (added == PLAN_ERR_ALLOC) {
+            return added;
+        }
+        if (added != PLAN_OK) {
+            note(loader->notes, path, "phrase cannot be placed on the timeline; skipped");
+            continue;
+        }
+        plan_node_set_state(loader->plan, node, PLAN_STATE_REALIZED);
+        previous_end = end;
+    }
+    return PLAN_OK;
+}
+
+/* One voice of the outer voices as a lane span over the whole piece: a note for each run of segments one note sounds in. */
+static PlanResult add_voice(Loader *loader, const OuterVoiceEntry *entries, size_t count, PlanLaneKind lane) {
+    PlanNote *voice = count ? calloc(count, sizeof(PlanNote)) : NULL;
+    if (count && !voice) {
+        return PLAN_ERR_ALLOC;
+    }
+    size_t used = 0;
+    const EntityID *run_id = NULL;
+    Rational run_end = {0, 1};
     for (size_t i = 0; i < count; i++) {
-        if (!claims[i].keep) {
+        const OuterVoiceEntry *entry = &entries[i];
+        Rational start;
+        Rational end;
+        if (!entry->present || !entry->span || !entry->note_id || !entry->pitch ||
+            !rational_of_time(time_span_start(entry->span), &start) ||
+            !rational_of_time(time_span_end(entry->span), &end)) {
+            run_id = NULL;
             continue;
         }
-        LaneSpanId id;
-        PlanResult result = plan_add_lane_span(plan, root, lane, 0, claims[i].span, &claims[i].payload, &id);
-        if (result == PLAN_ERR_ALLOC) {
-            return json_fail(reader, PLAN_ERR_ALLOC, claims[i].path, "out of memory");
+        if (run_id && entity_id_equals(run_id, entry->note_id) && rational_cmp(start, run_end) == 0 && used > 0) {
+            Rational begin;
+            rational_add(voice[used - 1].offset, loader->extent.start, &begin);
+            PlanSpan whole;
+            if (span_between(begin, end, &whole)) {
+                voice[used - 1].duration = whole.length;
+            }
+            run_end = end;
+            continue;
         }
-        if (result != PLAN_OK) {
-            return json_fail(reader, PLAN_ERR_FORMAT, claims[i].path, "claim cannot be placed on the timeline");
+        PlanSpan window;
+        Rational negative = {-loader->extent.start.num, loader->extent.start.den};
+        Rational offset;
+        if (!span_between(start, end, &window) || rational_add(start, negative, &offset) != RATIONAL_OK) {
+            run_id = NULL;
+            continue;
         }
-        plan_lane_span_set_state(plan, id, PLAN_STATE_REALIZED);
+        int midi = (int)pitch_numeric_value_position_numerator(entry->pitch);
+        if (midi < 0 || midi > 127) {
+            run_id = NULL;
+            continue;
+        }
+        voice[used++] = plan_note(midi, offset, window.length);
+        run_id = entry->note_id;
+        run_end = end;
     }
-    return true;
+    PlanResult added = PLAN_OK;
+    if (used > 0) {
+        PlanLanePayload payload = {0};
+        payload.notes.notes = voice;
+        payload.notes.note_count = used;
+        added = add_span(loader, lane, loader->extent, &payload, plan_lane_name(lane));
+    } else {
+        note(loader->notes, plan_lane_name(lane), "the result has no notes in this line; no lane written");
+    }
+    free(voice);
+    return added;
 }
 
-static void note_unmapped_sections(Notes *notes, const cJSON *document) {
-    static const char *const SECTIONS[] = {"meter",   "cadences", "phrases", "form",         "motives",
-                                           "melody",  "rhythm",   "texture", "voice_leading", "schemas"};
-    for (size_t i = 0; i < COUNT_OF(SECTIONS); i++) {
-        const cJSON *section = cJSON_GetObjectItemCaseSensitive(document, SECTIONS[i]);
-        bool has_content = section && !cJSON_IsNull(section) && !(cJSON_IsArray(section) && cJSON_GetArraySize(section) == 0);
-        if (has_content) {
-            note(notes, SECTIONS[i], "section has content the plan has no place for yet; not loaded");
+static void note_unmapped_areas(Notes *notes, const AnalyzerResult *result) {
+    static const struct {
+        AnalyzerArea area;
+        const char *name;
+    } AREAS[] = {{ANALYZER_AREA_CADENCES, "cadences"},       {ANALYZER_AREA_THEMES, "themes"},
+                 {ANALYZER_AREA_MOTIVES, "motives"},         {ANALYZER_AREA_TEXTURE, "texture"},
+                 {ANALYZER_AREA_VOICE_LEADING, "voice_leading"}, {ANALYZER_AREA_SCHEMAS, "schemas"}};
+    for (size_t i = 0; i < sizeof(AREAS) / sizeof(AREAS[0]); i++) {
+        if (analyzer_result_claim_count(result, AREAS[i].area) > 0) {
+            note(notes, AREAS[i].name, "area has claims the plan has no place for yet; not loaded");
         }
     }
 }
 
-static PlanResult build_plan(const cJSON *document, PiecePlan *plan, Notes *notes, PlanJsonError *error) {
-    JsonReader reader = {error, PLAN_OK, 0};
-    if (!cJSON_IsObject(document)) {
-        json_bad_format(&reader, "", "expected a JSON object");
-        return reader.result;
+PlanResult plan_from_analyzer_result(const AnalyzerResult *result, const ImportedNotes *notes, PiecePlan **out,
+                                     AnalysisLoadReport *report) {
+    if (out) {
+        *out = NULL;
     }
-    long version;
-    if (!json_read_int_member(&reader, document, "", "schema_version", 1, PLAN_JSON_SCHEMA_VERSION, &version)) {
-        return reader.result;
-    }
-
-    Claim *keys = NULL;
-    Claim *chords = NULL;
-    size_t key_count = 0;
-    size_t chord_count = 0;
-    bool ok = read_claims(&reader, notes, document, "keys", PLAN_LANE_KEY, &keys, &key_count) &&
-              read_claims(&reader, notes, document, "chords", PLAN_LANE_HARMONY, &chords, &chord_count);
-    if (ok) {
-        trim_overlaps(notes, keys, key_count);
-        trim_overlaps(notes, chords, chord_count);
-    }
-
-    bool have_extent = false;
-    Rational extent_start = {0, 1};
-    Rational extent_end = {0, 1};
-    if (ok) {
-        widen_extent(keys, key_count, &have_extent, &extent_start, &extent_end);
-        widen_extent(chords, chord_count, &have_extent, &extent_start, &extent_end);
-        if (!have_extent) {
-            ok = json_bad_format(&reader, "keys", "no key or chord claim to build a plan from");
-        }
-    }
-
-    if (ok) {
-        PlanSpan extent = {extent_start, {0, 1}};
-        Rational negative_start = {-extent_start.num, extent_start.den};
-        rational_add(extent_end, negative_start, &extent.length);
-
-        const cJSON *metadata = cJSON_GetObjectItemCaseSensitive(document, "metadata");
-        const cJSON *source = cJSON_GetObjectItemCaseSensitive(metadata, "source_file");
-        const char *name = cJSON_IsString(source) && source->valuestring[0] != '\0' ? source->valuestring : NULL;
-
-        NodeId root;
-        PlanResult result = plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, extent, name, &root);
-        if (result != PLAN_OK) {
-            ok = json_fail(&reader, result == PLAN_ERR_ALLOC ? PLAN_ERR_ALLOC : PLAN_ERR_FORMAT, "", "could not build the form root");
-        } else {
-            plan_node_set_state(plan, root, PLAN_STATE_REALIZED);
-            ok = add_claims(&reader, plan, root, PLAN_LANE_KEY, keys, key_count) &&
-                 add_claims(&reader, plan, root, PLAN_LANE_HARMONY, chords, chord_count);
-        }
-    }
-    free(keys);
-    free(chords);
-    if (ok) {
-        note_unmapped_sections(notes, document);
-        if (notes->failed) {
-            return json_fail(&reader, PLAN_ERR_ALLOC, "", "out of memory");
-        }
-    }
-    return reader.result;
-}
-
-PlanResult plan_from_analysis_document(const char *text, PiecePlan **out, AnalysisLoadReport *report,
-                                       PlanJsonError *error) {
-    if (!text || !out) {
-        json_set_error(error, -1, "", "text or out is NULL");
-        return PLAN_ERR_NULL;
-    }
-    *out = NULL;
     if (report) {
         report->notes = NULL;
         report->count = 0;
     }
-    const char *end = NULL;
-    cJSON *document = cJSON_ParseWithLengthOpts(text, strlen(text) + 1, &end, true);
-    if (!document) {
-        json_set_error(error, end ? (long)(end - text) : -1, "", "not valid JSON");
-        return PLAN_ERR_PARSE;
+    if (!result || !notes || !out) {
+        return PLAN_ERR_NULL;
     }
+    const AnalysisChain *chain = analyzer_result_chain(result);
+    if (!chain || !notes->meter.meter_map) {
+        return PLAN_ERR_FORMAT;
+    }
+    AnalyzerChord *chords = NULL;
+    size_t chord_count = 0;
+    AnalyzerStatus status = analyzer_chord_sequence(result, &chords, &chord_count);
+    if (status != ANALYZER_OK) {
+        return status == ANALYZER_ERR_ALLOC ? PLAN_ERR_ALLOC : PLAN_ERR_FORMAT;
+    }
+    const CommonPracticeKeyRegions *regions = analysis_chain_key_regions(chain);
+    Rational end;
+    if ((chord_count == 0 && (!regions || regions->region_count == 0)) ||
+        !find_extent_end(result, notes, chords, chord_count, &end)) {
+        analyzer_chord_sequence_free(chords, chord_count);
+        return PLAN_ERR_FORMAT;
+    }
+
     PiecePlan *plan = plan_create();
-    if (!plan) {
-        cJSON_Delete(document);
-        json_set_error(error, -1, "", "out of memory");
-        return PLAN_ERR_ALLOC;
+    Notes bookkeeping = {report, 0, false};
+    PlanResult built = plan ? PLAN_OK : PLAN_ERR_ALLOC;
+    Loader loader = {plan, PLAN_NODE_NONE, &bookkeeping, notes->meter.meter_map, {{0, 1}, end}};
+    if (built == PLAN_OK) {
+        built = plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, loader.extent, NULL, &loader.root);
     }
-    Notes notes = {report, 0, false};
-    PlanResult result = build_plan(document, plan, &notes, error);
-    cJSON_Delete(document);
-    if (result != PLAN_OK) {
+    if (built == PLAN_OK) {
+        plan_node_set_state(plan, loader.root, PLAN_STATE_REALIZED);
+        built = plan_set_analyzer_version(plan, ursatz_analyzer_version());
+    }
+    if (built == PLAN_OK) {
+        built = add_meter(&loader, notes);
+    }
+    if (built == PLAN_OK) {
+        built = add_keys(&loader, chain);
+    }
+    if (built == PLAN_OK) {
+        built = add_chords(&loader, chords, chord_count);
+    }
+    if (built == PLAN_OK) {
+        built = add_phrases(&loader, chain);
+    }
+    const OuterVoiceLines *lines = analysis_chain_outer_voices(chain);
+    if (built == PLAN_OK && lines) {
+        built = add_voice(&loader, lines->soprano, lines->count, PLAN_LANE_MELODY);
+    }
+    if (built == PLAN_OK && lines) {
+        built = add_voice(&loader, lines->bass, lines->count, PLAN_LANE_BASS);
+    }
+    analyzer_chord_sequence_free(chords, chord_count);
+    if (built == PLAN_OK) {
+        note_unmapped_areas(&bookkeeping, result);
+        if (bookkeeping.failed) {
+            built = PLAN_ERR_ALLOC;
+        }
+    }
+    if (built != PLAN_OK) {
         plan_destroy(plan);
         analysis_load_report_destroy(report);
-        return result;
+        return built == PLAN_ERR_ALLOC ? PLAN_ERR_ALLOC : PLAN_ERR_FORMAT;
     }
     *out = plan;
     return PLAN_OK;
-}
-
-PlanResult plan_read_analysis_document_file(const char *path, PiecePlan **out, AnalysisLoadReport *report,
-                                            PlanJsonError *error) {
-    if (!path || !out) {
-        json_set_error(error, -1, "", "path or out is NULL");
-        return PLAN_ERR_NULL;
-    }
-    *out = NULL;
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        json_set_error(error, -1, "", "could not open '%s'", path);
-        return PLAN_ERR_IO;
-    }
-    char *text = NULL;
-    size_t size = 0;
-    size_t capacity = 0;
-    bool ok = true;
-    while (ok && !feof(file)) {
-        if (size + 4096 + 1 > capacity) {
-            capacity = capacity ? capacity * 2 : 8192;
-            char *grown = realloc(text, capacity);
-            ok = grown != NULL;
-            text = grown ? grown : text;
-        }
-        if (ok) {
-            size += fread(text + size, 1, 4096, file);
-            ok = !ferror(file);
-        }
-    }
-    fclose(file);
-    if (!ok) {
-        free(text);
-        json_set_error(error, -1, "", "could not read '%s'", path);
-        return PLAN_ERR_IO;
-    }
-    text[size] = '\0';
-    PlanResult result = plan_from_analysis_document(text, out, report, error);
-    free(text);
-    return result;
 }

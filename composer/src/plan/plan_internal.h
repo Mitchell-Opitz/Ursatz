@@ -45,6 +45,7 @@ struct PiecePlan {
     size_t lane_span_capacity;
     size_t removed_node_count;
     size_t removed_lane_span_count;
+    char analyzer_version[PLAN_ANALYZER_VERSION_MAX]; /* "" unless the plan was loaded from an Analyzer result */
 };
 
 void constraint_list_free(ConstraintList *list);
