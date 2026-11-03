@@ -67,17 +67,13 @@ typedef struct {
     MotiveScore limit; /* the remoteness over which a form's connection is halved; denominator 0 is 3/4 */
 } Request;
 
-static const MotiveDevelopContext *context_or_default(const void *context) {
-    static MotiveDevelopContext defaults;
-    static bool ready = false;
+static MotiveDevelopContext context_or_default(const void *context) {
     if (context) {
-        return context;
+        return *(const MotiveDevelopContext *)context;
     }
-    if (!ready) {
-        motive_develop_context_default(&defaults);
-        ready = true;
-    }
-    return &defaults;
+    MotiveDevelopContext defaults;
+    motive_develop_context_default(&defaults);
+    return defaults;
 }
 
 static Slot slot_of(const char *name, GrowSlot *function_slot) {
@@ -590,18 +586,20 @@ static bool offer_transpositions(Proposal *proposal) {
 
 static bool form_applies(const PiecePlan *plan, FillTarget target, void *context) {
     Request request;
-    return read_request(plan, target, context_or_default(context), &request);
+    MotiveDevelopContext shared = context_or_default(context);
+    return read_request(plan, target, &shared, &request);
 }
 
 static bool form_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                           FillCandidateList *out) {
     (void)rng;
     Request request;
-    if (!read_request(plan, target, context_or_default(context), &request)) {
+    MotiveDevelopContext shared_value = context_or_default(context);
+    const MotiveDevelopContext *shared = &shared_value;
+    if (!read_request(plan, target, shared, &request)) {
         return true;
     }
     Proposal proposal = {&request, out};
-    const MotiveDevelopContext *shared = context_or_default(context);
     if (shared->pool_count > 0 && !offer_pool(&proposal, shared->pool, shared->pool_count)) {
         return false;
     }

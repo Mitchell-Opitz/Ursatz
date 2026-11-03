@@ -44,17 +44,13 @@ void motive_develop_context_default(MotiveDevelopContext *context) {
     context->weights = motive_score_default_weights();
 }
 
-static const MotiveDevelopContext *context_or_default(const void *context) {
-    static MotiveDevelopContext defaults;
-    static bool ready = false;
+static MotiveDevelopContext context_or_default(const void *context) {
     if (context) {
-        return context;
+        return *(const MotiveDevelopContext *)context;
     }
-    if (!ready) {
-        motive_develop_context_default(&defaults);
-        ready = true;
-    }
-    return &defaults;
+    MotiveDevelopContext defaults;
+    motive_develop_context_default(&defaults);
+    return defaults;
 }
 
 /* --------------------------------------------------------------- request */
@@ -385,12 +381,14 @@ static bool propose_rhythms(Proposal *proposal) {
 
 static bool restate_applies(const PiecePlan *plan, FillTarget target, void *context) {
     Request request;
-    return read_request(plan, target, context_or_default(context), FAMILY_RESTATE, &request);
+    MotiveDevelopContext shared = context_or_default(context);
+    return read_request(plan, target, &shared, FAMILY_RESTATE, &request);
 }
 
 static bool restate_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                              FillCandidateList *out) {
-    const MotiveDevelopContext *shared = context_or_default(context);
+    MotiveDevelopContext shared_value = context_or_default(context);
+    const MotiveDevelopContext *shared = &shared_value;
     Request request;
     if (!read_request(plan, target, shared, FAMILY_RESTATE, &request)) {
         return true;
@@ -401,12 +399,14 @@ static bool restate_generate(const PiecePlan *plan, FillTarget target, FillRng *
 
 static bool fragment_applies(const PiecePlan *plan, FillTarget target, void *context) {
     Request request;
-    return read_request(plan, target, context_or_default(context), FAMILY_FRAGMENT, &request);
+    MotiveDevelopContext shared = context_or_default(context);
+    return read_request(plan, target, &shared, FAMILY_FRAGMENT, &request);
 }
 
 static bool fragment_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
-    const MotiveDevelopContext *shared = context_or_default(context);
+    MotiveDevelopContext shared_value = context_or_default(context);
+    const MotiveDevelopContext *shared = &shared_value;
     Request request;
     if (!read_request(plan, target, shared, FAMILY_FRAGMENT, &request)) {
         return true;
@@ -417,13 +417,15 @@ static bool fragment_generate(const PiecePlan *plan, FillTarget target, FillRng 
 
 static bool rhythm_applies(const PiecePlan *plan, FillTarget target, void *context) {
     Request request;
-    return read_request(plan, target, context_or_default(context), FAMILY_RHYTHM, &request);
+    MotiveDevelopContext shared = context_or_default(context);
+    return read_request(plan, target, &shared, FAMILY_RHYTHM, &request);
 }
 
 static bool rhythm_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                             FillCandidateList *out) {
     (void)rng;
-    const MotiveDevelopContext *shared = context_or_default(context);
+    MotiveDevelopContext shared_value = context_or_default(context);
+    const MotiveDevelopContext *shared = &shared_value;
     Request request;
     if (!read_request(plan, target, shared, FAMILY_RHYTHM, &request)) {
         return true;
@@ -499,7 +501,8 @@ bool motive_develop_checker(const PiecePlan *plan, FillTarget target, const Fill
     if (!payload || payload->magic != PAYLOAD_MAGIC) {
         return true;
     }
-    const MotiveDevelopContext *shared = context_or_default(context);
+    MotiveDevelopContext shared_value = context_or_default(context);
+    const MotiveDevelopContext *shared = &shared_value;
     Request request;
     MotiveScoreWeights weights = shared->weights;
     if (weights.contour + weights.intervals + weights.rhythm + weights.length == 0) {

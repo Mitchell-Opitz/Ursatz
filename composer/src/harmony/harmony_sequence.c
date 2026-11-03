@@ -21,14 +21,8 @@ HarmonySequenceParams harmony_sequence_params_default(void) {
     return params;
 }
 
-static const HarmonySequenceParams *params_of(void *context) {
-    static HarmonySequenceParams defaults;
-    static bool made = false;
-    if (!made) {
-        defaults = harmony_sequence_params_default();
-        made = true;
-    }
-    return context ? context : &defaults;
+static HarmonySequenceParams params_of(void *context) {
+    return context ? *(const HarmonySequenceParams *)context : harmony_sequence_params_default();
 }
 
 bool harmony_sequence_find(const char *name, ScalePatternId *id) {
@@ -181,7 +175,8 @@ static bool offer(const SkeletonContext *read, const HarmonySequenceParams *para
 
 static bool sequence_generate(const PiecePlan *plan, FillTarget target, FillRng *rng, void *context,
                               FillCandidateList *out) {
-    const HarmonySequenceParams *params = params_of(context);
+    HarmonySequenceParams params_value = params_of(context);
+    const HarmonySequenceParams *params = &params_value;
     SkeletonContext read;
     if (target.kind != FILL_TARGET_LANE_SPAN || !harmony_skeleton_read(plan, (LaneSpanId)target.id, &read) ||
         read.at_start) {
