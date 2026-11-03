@@ -90,6 +90,22 @@ if(VALGRIND_PROGRAM)
     set_tests_properties(test_analysis_result_valgrind PROPERTIES LABELS slow)
 endif()
 
+add_executable(test_chord_sequence test_chord_sequence.c)
+target_link_libraries(test_chord_sequence PRIVATE ursatz_analyzer analyzer_test_support cjson)
+target_compile_definitions(test_chord_sequence PRIVATE
+    URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
+add_test(NAME test_chord_sequence_smoke COMMAND test_chord_sequence smoke)
+add_test(NAME test_chord_sequence COMMAND test_chord_sequence)
+set_tests_properties(test_chord_sequence PROPERTIES LABELS slow)
+find_program(VALGRIND_PROGRAM valgrind)
+if(VALGRIND_PROGRAM)
+    add_test(NAME test_chord_sequence_valgrind
+             COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
+                     --suppressions=${CMAKE_CURRENT_SOURCE_DIR}/valgrind.supp
+                     $<TARGET_FILE:test_chord_sequence> smoke)
+    set_tests_properties(test_chord_sequence_valgrind PROPERTIES LABELS slow)
+endif()
+
 add_executable(test_measure_locations test_measure_locations.c)
 target_link_libraries(test_measure_locations PRIVATE ursatz_analyzer analyzer_test_support cjson)
 target_compile_definitions(test_measure_locations PRIVATE
