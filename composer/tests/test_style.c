@@ -564,11 +564,11 @@ static Run compose_sentence(unsigned long seed, const ComposerStyle *style, Comp
  * changed the candidates chosen (seeds 1, 3, 4 and 5), then again after the harmony relations moved to tone roles
  * (P18b B2), which changed the variations chosen (seeds 2 and 5), then again after the harmony rows began to draw values that
  * move a note (P18b B7), which changed the variations chosen (seeds 2 to 5), then again when the numerals were written in the
- * library grammar (P25 B3: viio, 65 for 6/5), which changed the numerals in the plan's JSON (seeds 1, 2, 4 and 5), then again when the melodic moves were judged by standard-counterpoint, which refuses the tritone (P25 B5, all seeds). A run without a
+ * library grammar (P25 B3: viio, 65 for 6/5), which changed the numerals in the plan's JSON (seeds 1, 2, 4 and 5), then again when the melodic moves were judged by standard-counterpoint, which refuses the tritone (P25 B5, all seeds), then again when a motive ref was written as its relation step (P25 B6b: "step" in place of "transform" and its members in the plan's JSON, all seeds; the notes are the same). A run without a
  * style is byte for byte the same.
  */
-static const unsigned long long MAIN_HASH[5] = {0xce6298b5c85dd3fcULL, 0x27995648eb31052aULL, 0x2a0d242476dee69aULL,
-                                                0x11d6cca68452cd85ULL, 0xbf553d08db42a5daULL};
+static const unsigned long long MAIN_HASH[5] = {0xaf94694577f3bc4fULL, 0xbbf2bbfe71fce97bULL, 0x107a5be3d64c7241ULL,
+                                                0xdd5dc2a267432e58ULL, 0x0fbfd43d7bd96a3fULL};
 
 static int test_same(void) {
     ComposerStyle *style = NULL;
