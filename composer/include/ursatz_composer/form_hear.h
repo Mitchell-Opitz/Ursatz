@@ -7,23 +7,13 @@
 #include <ursatz_composer/piece_plan.h>
 
 /*
- * Hearing the phrase-level form of a written plan, the way standard-form's analysis adapter hears real
- * music. Only the plan's written lanes over the span are read, never its constraints or its nodes:
+ * Hearing the phrase-level form of a written plan through the Ursatz Analyzer (R-257). Only the plan's written lanes over
+ * the span are read, never its constraints, its nodes or its planned chords: the plan is rendered, the notes that start
+ * inside the span are heard by analyzer_hear in the plan's meter map and the key under the span's start, and the themes,
+ * phrases and cadences are those of the Analyzer's result (analysis_chain_themes, analysis_chain_phrases and
+ * analysis_chain_cadences of analyzer_result_chain). The Analyzer identifies the chords from the notes.
  *
- *   - the melody lane (voice 0) is the soprano, the bass lane the bass, each rendered by plan_render;
- *   - the meter lane gives the MeterMap, the key lane the scale degree of every note and the key of every chord;
- *   - each harmony lane chord is one segment;
- *   - the cadences are what standard-harmony's cadence recognizer hears over the chords, the soprano of
- *     each chord being the melody note sounding at its start (not the soprano a cadence constraint
- *     implies), each with harmony_cadence_strength's rank and uncertainty 0.
- *
- * Then standard-form segments the phrases (through the kernel's Phrase Boundary Detection), divides them
- * into ideas and identifies the themes, with its default configuration and the bass included.
- *
- * The span must lie in one meter lane span, start on a barline and be whole bars long, and its chords must tile it,
- * each a whole number of strong beats. The key lane may hold it in one key span or several (R-069, a modulation): each
- * note's scale degree is read in the key under its start, each chord in the key under it, so a cadence is
- * recognized in the key of the chord it arrives on. A span in one key is heard as it always was.
+ * The span must lie in one meter lane span, start on a barline and be whole bars long.
  */
 
 /* One theme heard. Bars are 0-based from the start of the plan. */
@@ -72,10 +62,8 @@ const char *form_hear_result_name(FormHearResult result);
 FormHearResult form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out);
 
 /*
- * form_hear with the starts of the sections or phrases the caller knows of, plan times inside span. Ursatz reads a
- * root-position V before such a start as a half cadence (the authentic cadence into the tonic competes with it), and
- * a V to I6 with no start there as an evaded cadence, so a period whose consequent opens on I6 is heard as a period
- * only when the start of the consequent is given. NULL and 0 is form_hear.
+ * form_hear with the starts of the sections or phrases the caller knows of, plan times inside span. The Analyzer's hearing
+ * takes no given boundaries, so the starts are not passed on and this is form_hear.
  */
 FormHearResult form_hear_with_sections(const PiecePlan *plan, PlanSpan span, const Rational *section_starts,
                                        size_t section_count, FormHeard *out);

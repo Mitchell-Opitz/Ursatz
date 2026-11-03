@@ -3,10 +3,13 @@
 `<ursatz_composer/analyzer_check.h>`, `src/check/analyzer_check.c`, and `compose_candidates` in
 `<ursatz_composer/compose.h>`. R-080: the Analyzer is the contradiction gate of a composed section, not a score.
 
-A realized section is rendered with every lane (`plan_render_range`, `<ursatz_composer/render.h>`: only the notes that
-start in the section, with times measured from its start), analyzed in memory by the Ursatz Analyzer
-(`analyzer_analyze_fragment`, `<ursatz_analyzer/composer_api.h>`) in the section's meter and in the key the plan has at
-its start, and what the Analyzer hears is compared with what the plan asked for.
+A realized section is heard through the Analyzer's result over the notes that start in it: the plan is rendered once with
+every lane (`plan_render`), `analyzer_hear` (`<ursatz_analyzer/composer_api.h>`) analyzes the section's span in the plan's
+meter map and the key the plan has at the section's start, and what the Analyzer hears is compared with what the plan asked
+for. The result is the one hearing of the run (`src/check/hearing.h`, see [form-hear.md](form-hear.md)): the form, the
+returns and the style distance read the same render. Cadences, chord entries and key regions are read from the result's
+report (`analyzer_result_report`, the export view), and faults from `analyzer_result_violations`. Times in the report are in
+whole notes from the start of the plan, and the check counts bars from the section's start.
 
 ## What is compared
 
@@ -28,8 +31,8 @@ that is not whole bars, no meter or key over it) returns an error and is not hel
 
 ## The whole piece
 
-`analyzer_check_piece(plan, &out)` (R-172, R-173) checks a piece structure plan as one fragment. The plan is rendered whole
-(`plan_render`, so nothing past the piece's end: not the seam, not the material), analyzed in its first meter and key, and
+`analyzer_check_piece(plan, &out)` (R-172, R-173) checks a piece structure plan as one span, from the start of the plan to the
+end of its last section that is not material (so not the seam, not the material), heard in its first meter and key, and
 sections need not be whole bars (the per-section check above stays as it was for the other commands). The planned items are,
 for each section with a piece part, its first `CADENCE` constraint, and the key.
 
@@ -55,8 +58,10 @@ and the run starts again from the plan as given with the next round's seeds, up 
 are kept in `ComposeOutcome.analyzer_checks` (one per theme section) with their totals `analyzer_planned` and
 `analyzer_agreed`, and the compose score adds `agreed` to its numerator and `planned` to its denominator.
 
-`form_hear`, `return_hear`, `voice_hear` and the texture hearing are unchanged: they stay scores, and the Analyzer check
-is the only gate. A single fill-loop candidate is never sent to the Analyzer (too slow, one analysis a candidate): the
+`form_hear` and the texture hearing now read the same Analyzer result, and `return_hear` reads its themes; `voice_hear` and
+the planned-material checks (`harmony_hear`, `harmony_check`, `harmony_given`, motive recognizability) stay framework rule
+checks on the plan's own planned material (boundary rule 7, R-257). They stay scores, and the Analyzer check is the only
+gate. A single fill-loop candidate is never sent to the Analyzer (too slow, one analysis a candidate): the
 check is at section level only.
 
 ## Candidates

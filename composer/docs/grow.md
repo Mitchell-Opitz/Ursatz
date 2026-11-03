@@ -349,15 +349,19 @@ the themes in `GrowOutcome.heard`. A theme heard as the form the section asks fo
 for (`requested_beginning`, `requested_ending`).
 
 Measured by `tests/test_grow_sentence_heard.c`, over four keys and meters and seeds 1 to 10 (`ctest` runs it as
-WILL_FAIL, since it asserts that every grown sentence is heard as a sentence; measured with the motive-forms):
+WILL_FAIL, since it asserts that every grown sentence is heard as a sentence). The theme is heard through the Analyzer
+(P25 B7b); the figures measured with the adapter reading the planned chords (the motive-forms) were 28 of 40 (70%) at 8
+bars, 12 as a hybrid, none unheard:
 
 | Bars | Heard as a sentence | Heard as another form | No theme |
 | --- | --- | --- | --- |
-| 8 | 28 of 40 (70%) | 12 (hybrids: compound basic idea and continuation) | 0 |
+| 8 | 30 of 40 (75%) | 9 | 1 |
 | 4 | 0 of 40 (0%) | 0 | 40 |
-| all | 28 of 80 (35%) | 12 | 40 |
+| all | 30 of 80 (37%) | 9 | 41 |
 
-The causes are limits of the adapter, not tuned away:
+The causes below were found with the adapter reading the planned chords; the Analyzer identifies the chords from the notes
+and hears every written lane, which moved the shares as above. They are not analysed again here. They are limits of the
+phrase and theme stages, not tuned away:
 
 - **Statement-response is heard as a hybrid.** The adapter compares ideas by the semitone interval and the onset
   rhythm of each pair of notes (75% must match). A tonal step up changes some intervals by a semitone, so the
@@ -371,25 +375,27 @@ The causes are limits of the adapter, not tuned away:
 ### Periods and hybrids
 
 Measured by `tests/test_grow_period_heard.c`, one `ctest` test for each pairing but the sentence, over four keys and
-meters and seeds 1 to 10 (`ctest` runs each as WILL_FAIL but the compound basic idea and continuation, which is heard in every run since the motive-forms, since each asserts that every theme of 8 bars is heard as the
+meters and seeds 1 to 10 (`ctest` runs each as WILL_FAIL, since each asserts that every theme of 8 bars is heard as the
 form it was grown as: a period for an antecedent and a consequent, a hybrid with the requested beginning and ending for
-the rest):
+the rest). The compound basic idea and a continuation was heard in every run with the motive-forms and is heard in 38 of
+40 through the Analyzer. The "before" column is the figure measured with the adapter reading the planned chords:
 
-| Pairing | 8 bars: heard as requested | Heard as another form or with other parts | No theme |
-| --- | --- | --- | --- |
-| Presentation + consequent | 9 of 40 (22%) | 31 (14 as another form, 17 as a hybrid with other parts) | 0 |
-| Presentation + cadential | 0 of 40 (0%) | 40 (33 as a sentence, 7 as a hybrid) | 0 |
-| Antecedent + continuation | 30 of 40 (75%) | 0 | 10 |
-| Antecedent + consequent (period) | 0 of 40 (0%) | 10 (hybrids: antecedent and continuation) | 30 |
-| Antecedent + cadential | 0 of 40 (0%) | 40 (hybrids: compound basic idea and continuation) | 0 |
-| Compound basic idea + continuation | 40 of 40 (100%) | 0 | 0 |
-| Compound basic idea + consequent | 19 of 40 (47%) | 21 (hybrids: compound basic idea and continuation) | 0 |
-| Compound basic idea + cadential | 0 of 40 (0%) | 40 (hybrids: compound basic idea and continuation) | 0 |
+| Pairing | Before | 8 bars: heard as requested | Heard as another form or with other parts | No theme |
+| --- | --- | --- | --- | --- |
+| Presentation + consequent | 9 of 40 (22%) | 5 of 40 (12%) | 33 (19 as another form, 14 as a hybrid with other parts) | 2 |
+| Presentation + cadential | 0 of 40 (0%) | 0 of 40 (0%) | 39 (32 as another form, 7 as a hybrid with other parts) | 1 |
+| Antecedent + continuation | 30 of 40 (75%) | 14 of 40 (35%) | 2 (hybrids with other parts) | 24 |
+| Antecedent + consequent (period) | 0 of 40 (0%) | 3 of 40 (7%) | 16 (as another form) | 21 |
+| Antecedent + cadential | 0 of 40 (0%) | 0 of 40 (0%) | 37 (hybrids with other parts) | 3 |
+| Compound basic idea + continuation | 40 of 40 (100%) | 38 of 40 (95%) | 0 | 2 |
+| Compound basic idea + consequent | 19 of 40 (47%) | 3 of 40 (7%) | 34 (hybrids with other parts) | 3 |
+| Compound basic idea + cadential | 0 of 40 (0%) | 0 of 40 (0%) | 34 (hybrids with other parts) | 6 |
 
 Every theme of 4 bars is the same as a sentence of 4 bars: 0 of 40 for every pairing, all no theme. Only the themes of 8
 bars are held to the assertion for that reason.
 
-The causes are limits of the adapter, not tuned away:
+The causes below were found with the adapter reading the planned chords; the Analyzer identifies the chords from the notes
+and hears every written lane, which moved the shares as above. They are not analysed again here:
 
 - **The antecedent's half cadence is never heard.** The V that ends the antecedent is followed by the root-position
   tonic that begins the consequent, which the adapter hears as an authentic cadence, at the consequent's first bar. It

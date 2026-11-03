@@ -1,8 +1,10 @@
 # Hearing the phrase form
 
-`form_hear` (`<ursatz_composer/form_hear.h>`) hears the phrase-level form of a written plan the way
-Ursatz's standard-form analysis adapter hears real music. It is how the Composer checks the form of
-what it wrote with the framework's rules, never with rules of its own.
+`form_hear` (`<ursatz_composer/form_hear.h>`) hears the phrase-level form of a written plan through the Ursatz Analyzer.
+There is one analysis path in the Composer (R-257): the plan is rendered once, `analyzer_hear` (`<ursatz_analyzer/composer_api.h>`)
+analyzes the notes that start inside the span, and `form_hear` reads the themes, phrases and cadences of the Analyzer's
+result (`analysis_chain_themes`, `analysis_chain_phrases`, `analysis_chain_cadences` of `analyzer_result_chain`). It is how
+the Composer checks the form of what it wrote with the framework's rules, never with rules of its own.
 
 ```c
 FormHeard heard;
@@ -15,47 +17,43 @@ if (form_hear(plan, span, &heard) == FORM_HEAR_OK) {
 form_heard_destroy(&heard);
 ```
 
+## One hearing a run
+
+`src/check/hearing.h` (private) `ComposerHearing` renders the plan once (`plan_render`, every written lane) and keeps the
+render with the MIDI number of each note. `hearing_section(hearing, span, &result)` runs `analyzer_hear` over the events
+that start inside the span (borrowed, not copied), with the meter map of the render, the key lane's key under the span's
+start, and a stream for each lane, and keeps the result for the life of the hearing, so a second check of the same span
+reads the same result. `compose_run` makes one hearing after the texture stage, and `form_hear`, `return_hear`,
+`piece_check_keys`, `analyzer_check_section`, `analyzer_check_piece` and `composer_style_measure` read it; each public call
+made on its own makes a hearing of its own. `scripts/check-hearing.sh` (run in CI) fails when `src/` or `cli/` calls the
+library's form or texture detectors, an `analyzer_analyze_fragment` entry, or `plan_render` anywhere but `hearing.c`,
+`export.c` and `variations.c`.
+
+## What the Analyzer hears
+
+Only the plan's written lanes over the span: every lane (melody, bass, inner voices) as a stream of notes, with the meter
+map and the key under the span's start. Constraints, nodes and the planned chords are never read: a cadence constraint does
+not make a cadence, and the Analyzer identifies the chords from the notes. A note belongs to the span when it starts inside
+it. Bars are counted from the start of the plan.
+
+`form_hear` still checks that the lanes over the span are written (`FORM_HEAR_ERR_NOT_WRITTEN`) and that the span is in one
+meter (`FORM_HEAR_ERR_METER`).
+
 ## Where a phrase starts
 
-Ursatz reads a V followed by I6 as an evaded cadence, and reads a root-position V directly before a section start as a half cadence (R-090, R-091). From the music alone `form_hear` cannot tell the two, so a period whose consequent opens on I6 is heard as one phrase. `form_hear_with_sections(plan, span, starts, count, &heard)` takes the plan times where phrases are known to start; the V before each is the half cadence of the phrase before. `form_hear` is that call with no starts. Nothing in the Composer passes starts yet: a general way to hear the boundary from the music is open work.
-
-## What is read
-
-Only the plan's written lanes over the span. Constraints and nodes are never read, so a cadence
-constraint does not make a cadence: the notes and chords must.
-
-| Lane | Read as |
-| --- | --- |
-| Melody, voice 0 | The soprano, rendered by `plan_render`. |
-| Bass | The bass line, rendered by `plan_render`. |
-| Meter | The MeterMap the adapter counts measures in. |
-| Key | The scale degree and alteration of every note, in the key span under the note's start; the key of every chord. |
-| Harmony | One segment per chord, and the chords the cadences are heard over. |
+The Analyzer finds the phrases itself. `form_hear_with_sections(plan, span, starts, count, &heard)` keeps its signature, but
+the Analyzer's hearing takes no given boundaries (`AnalyzerHearingOptions` holds the stages only, not
+`refine_with_given_boundaries`), so the starts are not passed on and it equals `form_hear`. A V followed by I6 is heard as
+an evaded (subverted) cadence, and a period whose consequent opens on I6 is heard as one phrase, a hybrid.
 
 ## Several keys
 
-The key lane may hold the span in one key span or several (a modulation, R-069). A span in one key is heard as it always
-was. With several, a note's scale degree is read in the key under its start and so is the soprano over each chord, and
-each chord is read in the key under it (its numeral in that key's mode), with its own key reference for the recognizer.
-A cadence is therefore recognized in the key of the chord it arrives on: a PAC in G has G as its soprano, which in C
-would be the fifth and make the cadence imperfect. The key spans must follow each other and hold the whole span; a chord
-may not cross a key change. `FormHeard.cadences` lists the cadences heard, each with where its arrival chord starts and
-its `CadenceType`.
-
-A note belongs to the span when it starts inside it.
-
-The cadences are what standard-harmony's cadence recognizer hears over the harmony lane chords. The
-soprano of each chord is the melody note sounding at the chord's start, as a scale degree (none
-over a rest), not the soprano a cadence constraint implies. Each cadence goes to the adapter with
-`harmony_cadence_strength`'s rank and uncertainty 0; a plagal cadence directly after a PAC is
-`post_cadential`. Then the adapter's three steps run with its default configuration and the bass
-included: `standard_form_segment_phrases` (with the kernel's Phrase Boundary Detection as the
-boundary detector, `src/form/form_boundary.c`), `standard_form_segment_ideas` and
-`standard_form_identify_themes`.
+The Analyzer is given the key under the span's start and finds its key regions from the notes. `FormHeard.cadences` lists
+the cadences heard, each with where its arrival chord starts (from the Analyzer's report) and its `CadenceType`.
 
 ## The result
 
-`FormHeard` holds one `FormHeardTheme` per theme the adapter identified, in its order, and the
+`FormHeard` holds one `FormHeardTheme` per theme the Analyzer's result holds, in its order, and the
 number of phrases it segmented. A theme has the form (`PhraseLevelForm`), its beginning and ending
 (`PhraseBeginning`, `PhraseEnding`, -1 for none), the commonality of the pairing, its first bar and
 length in bars (0-based from the start of the plan), its phrase count, the cadence types of its two
@@ -65,36 +63,29 @@ and has fragmentation. `form_hear_form_name` gives standard-form's own name for 
 | Result | When |
 | --- | --- |
 | `FORM_HEAR_ERR_NOT_WRITTEN` | A melody, bass or harmony span over the range is Constrained. |
-| `FORM_HEAR_ERR_METER` | The span is not in one meter span, does not start on a barline, or is not whole bars. |
-| `FORM_HEAR_ERR_ANALYSIS` | The key spans do not hold the span, the chords do not tile it in whole strong beats, or an analysis step failed. |
+| `FORM_HEAR_ERR_METER` | The span is not in one meter span, does not start on a barline, is not whole bars, or the plan has no key under its start. |
+| `FORM_HEAR_ERR_ANALYSIS` | The Analyzer refused the notes or failed. |
 
 ## Limits
 
-These are the limits of the input the adapter is given and of the adapter itself. They are written
+These are the limits of the Analyzer's phrase and theme stages (standard-form's own, `analysis_theme.h`). They are written
 here, not worked around.
 
-- One meter over the span, any number of key spans that follow each other, and at most 64 chords.
-- standard-harmony hears a half cadence only at the END of a phrase on V: a root-position V that
-  the next chord resolves as a cadence's dominant is that cadence's. An antecedent's V followed by a
-  root-position tonic is heard as an authentic cadence into the consequent, and a V reached from a
-  predominant followed by I6 as a subverted cadence; neither ends the antecedent. The section
-  post-pass that fixes this (`harmony_analysis_add_boundary_cadences`) needs section starts, which a
-  plan does not hand the adapter. The period fixture reaches its V from the tonic and starts the
-  consequent on i6.
-- An inverted dominant is never a cadence, so V6/5 inside a presentation keeps it open.
-- The adapter cuts ideas at the nominal two bars and compares them by semitone intervals: a
-  presentation's repetition is heard when it repeats the basic idea's intervals, not as a diatonic
-  sequence. Fragmentation is judged on the nominal ideas, so it is rarely found, and the cadential
-  ending is not identified (standard-form's own limits, `analysis_theme.h`).
+- One meter over the span.
+- The Analyzer cuts ideas at the nominal two bars and compares them by semitone intervals: a presentation's repetition is
+  heard when it repeats the basic idea's intervals, not as a diatonic sequence. Fragmentation is judged on the nominal
+  ideas, so it is rarely found, and the cadential ending is not identified.
+- The Analyzer reads every written lane and identifies the chords from the notes, so a theme that was planned as a period
+  or a presentation may be heard as a hybrid or not at all: the shares are in [grow.md](grow.md) and [piece.md](piece.md).
 
 ## Fixtures
 
-`tests/test_form_hear.c` hears three hand-written Realized themes. All are heard as written.
+`tests/test_form_hear.c` hears three hand-written Realized themes.
 
 | Fixture | Written | Heard |
 | --- | --- | --- |
 | `sentence_c_major.json` | 8 bars, 4/4: presentation I V6/5 I V6/5, continuation IV ii V I, PAC | sentence, bars 0 to 7, presentation + continuation, PAC |
-| `period_a_minor.json` | 8 bars, 4/4: antecedent i V6 i V (HC), consequent i6 V6 iv V i (PAC) | period, bars 0 to 7, antecedent + consequent, HC then PAC |
-| `sentence_c_to_g.json` | 8 bars, 4/4: the C major sentence with its continuation moved a fifth up, in G major from bar 5: presentation in C, then IV (the pivot) ii V I in G | sentence, bars 0 to 7, presentation + continuation, PAC (in G) |
+| `period_a_minor.json` | 8 bars, 4/4: antecedent i V6 i V (HC), consequent i6 V6 iv V i (PAC) | one phrase, a hybrid: compound basic idea + consequent, a subverted cadence at bar 5 and the PAC of bar 8 |
+| `sentence_c_to_g.json` | 8 bars, 4/4: the C major sentence with its continuation moved a fifth up, in G major from bar 5: presentation in C, then IV (the pivot) ii V I in G | sentence, bars 0 to 7, presentation + continuation, PAC (arriving at bar 8) |
 
 The presentation alone (bars 0 to 3) hears no theme, having no cadence.
