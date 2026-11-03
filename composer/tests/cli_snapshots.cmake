@@ -172,4 +172,26 @@ run_case(recognize json recognize "${gui}/recognize-source.txt" "${gui}/recogniz
 run_case(random-motive-style json random-motive --mode major --meter 4/4 --key "C major" --form full --role accompaniment
          --count 2 --seed 5 --json)
 
+# The theme case the GUI runs (--format json --out --midi --musicxml) is the theme-* cases above, which write all three files.
+
+# Piece regenerate of the theme-filled section, one lane (the plan from piece-theme-fill above).
+run_case(piece-regenerate-lane json piece --from "${WORK}/piece-theme-fill.plan.json" --request "${WORK}/theme-fill.request.json"
+         --regenerate a --lane bass --seed 2 --format json --out piece-regenerate-lane.plan.json)
+# Piece variations of the same section: the printed result, result.json and each variation's plan, MIDI and MusicXML.
+run_case(piece-variations json piece --from "${WORK}/piece-theme-fill.plan.json" --request "${WORK}/theme-fill.request.json"
+         --variations a --lane harmony --count 2 --seed 2 --out-dir piece-variations --format json)
+snapshot(piece-variations.result.json piece-variations/result.json)
+foreach(index 1 2)
+    foreach(ext json mid musicxml)
+        snapshot(piece-variations.variation-${index}.${ext} piece-variations/variation-${index}.${ext})
+    endforeach()
+endforeach()
+
+# --version: the version text is normalized to <VERSION> for this case only.
+composer(--version)
+file(READ "${WORK}/stdout.txt" version_text)
+string(REGEX REPLACE "^ursatz-composer [^\n]*" "ursatz-composer <VERSION>" version_text "${version_text}")
+file(WRITE "${WORK}/version.stdout.txt" "${version_text}")
+snapshot(version.stdout.txt version.stdout.txt)
+
 file(REMOVE_RECURSE "${WORK}/normal")
