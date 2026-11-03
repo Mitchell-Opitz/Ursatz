@@ -1,3 +1,8 @@
+/*
+ * A framework rule check on the plan's own planned material (boundary rule 7, R-257): the cadence of the planned chords, for a cadence a request asks for. Its framework
+ * inputs are built from the plan, not from a render, so it stays a framework call. What a listener finds in the
+ * written music is heard through the Analyzer once per run (check/hearing.h).
+ */
 #include "harmony/harmony_internal.h"
 
 #include <stdio.h>

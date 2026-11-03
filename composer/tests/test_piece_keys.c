@@ -240,7 +240,10 @@ static bool authentic_inside(const PiecePlan *plan, const NodeId *sections, size
         for (size_t i = 0; i < heard.cadence_count; i++) {
             Rational at = heard.cadences[i].arrival;
             int type = heard.cadences[i].type;
-            if ((type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC) &&
+            /* The Analyzer hears an authentic cadence it cannot call perfect or imperfect (no soprano under it, the
+               piece's last) as authentic-unspecified; piece_check_keys counts it too. */
+            if ((type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
+                 type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED) &&
                 rational_cmp(at, start) >= 0 && rational_cmp(at, end) < 0) {
                 form_heard_destroy(&heard);
                 return true;

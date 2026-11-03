@@ -21,6 +21,7 @@
 
 #include <ursatz_composer/constraint.h>
 #include <ursatz_composer/plan_state.h>
+#include "render/render_notes.h"
 #include "util/plan_util.h"
 
 const char *rendered_part_lane_name(const RenderedPart *part) {
@@ -482,6 +483,19 @@ static void sort_by_start(const PiecePlan *plan, LaneSpanId *ids, size_t count) 
     }
 }
 
+/* The "midi-note-number" tuning every rendered pitch is under. */
+static PlanRenderResult tuning_create(TuningSystem **out) {
+    EntityID *id = NULL;
+    if (entity_id_create("midi-note-number", &id) != ENTITY_ID_OK) {
+        return PLAN_RENDER_ERR_ALLOC;
+    }
+    if (tuning_system_create(id, "MIDI note number", out) != TUNING_SYSTEM_OK) {
+        entity_id_destroy(id);
+        return PLAN_RENDER_ERR_ALLOC;
+    }
+    return PLAN_RENDER_OK;
+}
+
 static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range, RenderedPlan *out) {
     size_t span_count = plan_lane_span_count(plan);
     size_t skipped_capacity = 0;
@@ -624,13 +638,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
 
     /* NoteEvents. */
     if (result == PLAN_RENDER_OK && note_count > 0) {
-        EntityID *tuning_id = NULL;
-        if (entity_id_create("midi-note-number", &tuning_id) != ENTITY_ID_OK) {
-            result = PLAN_RENDER_ERR_ALLOC;
-        } else if (tuning_system_create(tuning_id, "MIDI note number", &tuning) != TUNING_SYSTEM_OK) {
-            entity_id_destroy(tuning_id);
-            result = PLAN_RENDER_ERR_ALLOC;
-        }
+        result = tuning_create(&tuning);
         out->events = calloc(note_count, sizeof(NoteEvent *));
         out->pitch_values = calloc(note_count, sizeof(PitchNumericValue *));
         out->part_index = calloc(note_count, sizeof(size_t));
@@ -658,6 +666,61 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
     free(note_spans);
     free(key_spans);
     free(meter_spans);
+    return result;
+}
+
+/* ------------------------------------------------------------------ notes alone */
+
+PlanRenderResult render_notes(const RenderNote *notes, size_t count, const AnalysisKey *key, RenderedPlan *out) {
+    TuningSystem *tuning = NULL;
+    NoteSource *sources = NULL;
+    memset(out, 0, sizeof(*out));
+    if (count == 0) {
+        return PLAN_RENDER_OK;
+    }
+    PlanRenderResult result = tuning_create(&tuning);
+    sources = calloc(count, sizeof(NoteSource));
+    out->events = calloc(count, sizeof(NoteEvent *));
+    out->pitch_values = calloc(count, sizeof(PitchNumericValue *));
+    out->part_index = calloc(count, sizeof(size_t));
+    out->spans = calloc(count, sizeof(LaneSpanId));
+    out->parts = calloc(count, sizeof(RenderedPart));
+    if (!sources || !out->events || !out->pitch_values || !out->part_index || !out->spans || !out->parts) {
+        result = PLAN_RENDER_ERR_ALLOC;
+    }
+    for (size_t i = 0; result == PLAN_RENDER_OK && i < count; i++) {
+        if (find_part(out->parts, out->part_count, notes[i].lane, notes[i].voice) == out->part_count) {
+            out->parts[out->part_count].lane = notes[i].lane;
+            out->parts[out->part_count].voice = notes[i].voice;
+            out->part_count++;
+        }
+    }
+    if (result == PLAN_RENDER_OK && out->part_count > 1) {
+        qsort(out->parts, out->part_count, sizeof(RenderedPart), compare_parts);
+    }
+    for (size_t i = 0; result == PLAN_RENDER_OK && i < count; i++) {
+        sources[i].onset = notes[i].onset;
+        sources[i].duration = notes[i].duration;
+        sources[i].midi = notes[i].midi;
+        sources[i].part = find_part(out->parts, out->part_count, notes[i].lane, notes[i].voice);
+        sources[i].index = i;
+    }
+    if (result == PLAN_RENDER_OK && count > 1) {
+        qsort(sources, count, sizeof(NoteSource), compare_notes);
+    }
+    for (size_t i = 0; result == PLAN_RENDER_OK && i < count; i++) {
+        result = build_note(&sources[i], &out->parts[sources[i].part], key, tuning, &out->events[i],
+                            &out->pitch_values[i]);
+        if (result == PLAN_RENDER_OK) {
+            out->part_index[i] = sources[i].part;
+            out->count++;
+        }
+    }
+    tuning_system_destroy(tuning);
+    free(sources);
+    if (result != PLAN_RENDER_OK) {
+        rendered_plan_destroy(out);
+    }
     return result;
 }
 

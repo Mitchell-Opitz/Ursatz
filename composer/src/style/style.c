@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ursatz_analyzer/composer_api.h>
+
 typedef struct {
     char *label;
     unsigned long count;
@@ -25,6 +27,8 @@ struct ComposerStyle {
     size_t category_count;
     char **without; /* the categories the style was read without, in the order given, no repeats */
     size_t without_count;
+    AnalyzerStyleReference *reference; /* the model with the without list applied, for the distances; NULL when the
+                                          Analyzer refuses the list (an unknown category) */
 };
 
 const char *composer_style_result_name(ComposerStyleResult result) {
@@ -59,6 +63,7 @@ void composer_style_destroy(ComposerStyle *style) {
         free(style->without[i]);
     }
     free(style->without);
+    analyzer_style_reference_destroy(style->reference);
     style_model_destroy(style->model);
     free(style);
 }
@@ -117,6 +122,18 @@ static ComposerStyleResult read_statistics(ComposerStyle *style) {
     return COMPOSER_STYLE_OK;
 }
 
+/*
+ * Prepares the style's distances once (analyzer_style_reference_create): the model with the without list dropped. An
+ * unknown category name leaves no reference, and composer_style_measure then reports it as an analysis failure.
+ */
+static ComposerStyleResult refresh_reference(ComposerStyle *style) {
+    analyzer_style_reference_destroy(style->reference);
+    style->reference = NULL;
+    AnalyzerStatus status = analyzer_style_reference_create(style->model, (const char *const *)style->without,
+                                                            style->without_count, &style->reference);
+    return status == ANALYZER_ERR_ALLOC ? COMPOSER_STYLE_ERR_ALLOC : COMPOSER_STYLE_OK;
+}
+
 ComposerStyleResult composer_style_from_model(StyleModel *model, size_t pieces, ComposerStyle **out) {
     if (!out) {
         return COMPOSER_STYLE_ERR_ARGUMENT;
@@ -132,6 +149,9 @@ ComposerStyleResult composer_style_from_model(StyleModel *model, size_t pieces, 
     style->model = model;
     style->pieces = pieces;
     ComposerStyleResult read = read_statistics(style);
+    if (read == COMPOSER_STYLE_OK) {
+        read = refresh_reference(style);
+    }
     if (read != COMPOSER_STYLE_OK) {
         style->model = NULL; /* the caller keeps the model on failure */
         composer_style_destroy(style);
@@ -206,7 +226,7 @@ ComposerStyleResult composer_style_add_without(ComposerStyle *style, const char 
         }
         style->without_count++;
     }
-    return COMPOSER_STYLE_OK;
+    return refresh_reference(style);
 }
 
 bool composer_style_without_has(const ComposerStyle *style, const char *category) {
@@ -227,6 +247,10 @@ size_t composer_style_without_count(const ComposerStyle *style) {
 
 const char *composer_style_without_at(const ComposerStyle *style, size_t i) {
     return style && i < style->without_count ? style->without[i] : NULL;
+}
+
+const AnalyzerStyleReference *composer_style_reference(const ComposerStyle *style) {
+    return style ? style->reference : NULL;
 }
 
 const StyleModel *composer_style_model(const ComposerStyle *style) {

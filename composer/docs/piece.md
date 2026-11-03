@@ -229,14 +229,16 @@ stuck more the longer the form: in A minor 3/4 with a given motive none of the s
 | `<template>` | The composed runs: every key change opens with a valid pivot, every planned modulation is a modulation with an authentic cadence heard in the new key, the last cadence is the strongest. Prints the share that completes. | `slow` |
 
 Every completed run passes every check. The share of runs that complete is below 100% for every template but variations
-(rounded binary was 100% until the motive-forms of P14 B8 left one run stuck), so the other five tests are `WILL_FAIL`,
-with the measured shares:
+(rounded binary was 100% until the motive-forms of P14 B8 left one run stuck, was 100% again once the tritone was refused,
+and is 65% since the checks hear the plan through the Analyzer, P25 B7b: the key check reads the cadences the Analyzer
+hears, which are not those of the planned chords), so the other five tests are `WILL_FAIL`, with the measured shares (the
+stage is where the last round of a stuck run ended; before the Analyzer: binary 14 of 20, rounded binary 20, ternary 16):
 
 | Template | Runs complete | Of them change key | Stuck at |
 | --- | --- | --- | --- |
-| binary | 13 of 20 (65%) | 11 | melody 3, bass 2, harmony 2 |
-| rounded binary | 19 of 20 (95%) | 15 | A minor only: bass 1 |
-| ternary | 15 of 20 (75%) | 13 | A minor only: harmony 2, bass 2, melody 1 |
+| binary | 11 of 20 (55%) | 9 | melody 5, bass 2, harmony 2 |
+| rounded binary | 13 of 20 (65%) | 9 | melody 4, bass 2, texture 1 |
+| ternary | 11 of 20 (55%) | 9 | melody 3, bass 3, harmony 2, structure 1 |
 | variations | 20 of 20 (100%) | 16 | |
 | loop | 10 of 20 (50%) | 0 | A minor only, all harmony |
 | layered | 10 of 20 (50%) | 0 | A minor: harmony 10 |

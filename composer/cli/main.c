@@ -99,7 +99,7 @@ static int run_export(int argc, char **argv) {
     }
 
     RenderedPlan rendered;
-    if (plan_render(plan, &rendered) != PLAN_RENDER_OK) {
+    if (plan_export_render(plan, &rendered, NULL) != PLAN_EXPORT_OK) {
         fprintf(stderr, "Error: cannot render plan '%s'\n", plan_path);
         plan_destroy(plan);
         return 1;

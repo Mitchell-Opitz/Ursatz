@@ -64,8 +64,8 @@
  *
  * With a style (R-080, style.h) the harmony and melody stages prefer the candidates closest to it: their checkers add
  * style_weight times the candidate's closeness to the style (style_labels.h, composer_style_closeness) to the score of
- * every candidate they accept, and reject nothing more (Laws 12 and 13). After a complete run the whole plan is rendered,
- * analyzed (analyzer_analyze_fragment) and compared with the style (analyzer_fragment_style_distance): the independent
+ * every candidate they accept, and reject nothing more (Laws 12 and 13). After a complete run the whole plan is heard
+ * (analyzer_hear) and the result compared with the style (analyzer_result_style_distance): the independent
  * measure outcome->style_distance holds. Without a style a run is byte for byte what it was.
  */
 
@@ -149,7 +149,7 @@ typedef struct {
     /*
      * With a style, after a complete run: the whole plan analyzed and compared with the style. style_measured is false
      * when there is no style, the run is not complete, or the Analyzer could not analyze the plan; then style_distance is
-     * empty. The categories the plan has no data for are listed in it with in_a false (analyzer_fragment_style_distance).
+     * empty. The categories the plan has no data for are listed in it with in_a false (analyzer_result_style_distance).
      */
     bool style_measured;
     StyleComparison style_distance; /* owned */

@@ -35,7 +35,7 @@ If you cloned without `--recurse-submodules`, run `git submodule update --init -
 | Path | Pinned at |
 | --- | --- |
 | `external/ursatz` | Ursatz `main` at PR #182 (`c69f326`). |
-| `external/ursatz-analyzer` | Ursatz-Analyzer `main` at PR #58 (`58323dc`), version 0.4.0. |
+| `external/ursatz-analyzer` | Ursatz-Analyzer `main` at PR #59 (`36cb9f3`), version 0.4.0. |
 
 cJSON 1.7.18 is vendored at `external/cjson` and added before the submodules, so the Analyzer reuses it. `scripts/check-pins.sh`
 fails when a pin is not on its remote's `main` or when one repository is pinned at two commits; CI runs it after the
@@ -209,6 +209,10 @@ cadences and the returns heard in it. See [docs/cli-plan.md](docs/cli-plan.md) a
 A piece can start from the middle: `plan --given-melody phrase.txt --at B:1` (also `--given-progression "I IV V I"` and
 `--given-bass`) places a phrase, a progression or a bass line anywhere in the plan, `fill` grows the form around it and
 never changes it, and the result says so. See [docs/middle-out.md](docs/middle-out.md).
+
+One analysis path: what a listener finds in the written music (the form, the cadences, the key, the texture, the style
+distance) comes from the Ursatz Analyzer's result over one render of the plan per run; the checks of the plan's own planned
+chords and lines stay framework rule calls (see [docs/form-hear.md](docs/form-hear.md)).
 
 `fill --check` and `grow --check` send each composed theme section to the Ursatz Analyzer in memory and reject a run
 whose analysis contradicts the plan (a planned cadence or the key not heard, a hard voice-leading fault);

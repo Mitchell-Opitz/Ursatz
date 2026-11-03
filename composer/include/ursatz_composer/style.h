@@ -53,7 +53,7 @@ const char *composer_style_without_at(const ComposerStyle *style, size_t i);
 /* NULL is a no-op. */
 void composer_style_destroy(ComposerStyle *style);
 
-/* The model the file was read into: for comparing a fragment with the style (analyzer_fragment_style_distance). */
+/* The model the file was read into: for comparing a result with the style (analyzer_style_reference_create). */
 const StyleModel *composer_style_model(const ComposerStyle *style);
 
 /* How many pieces the style was counted from. */
@@ -189,8 +189,8 @@ bool composer_style_closeness(const ComposerStyle *style, const ComposerStyleLab
 
 /*
  * How far a plan is from the style, measured by the Analyzer and nothing the Composer scores with: every note the plan
- * wrote is rendered (plan_render), analyzed in memory (analyzer_analyze_fragment) in the key the plan starts in, and
- * the result compared with the style (analyzer_fragment_style_distance). *out is released with
+ * wrote is rendered (plan_render), heard (analyzer_hear) in the key the plan starts in, and the result compared with
+ * the style (analyzer_result_style_distance, against the AnalyzerStyleReference the style keeps). *out is released with
  * style_comparison_destroy. The categories the plan has no data for stay in out->categories with in_a false and are left
  * out of the means.
  */

@@ -166,21 +166,41 @@ static const struct {
 };
 #define MELODY_COUNT (sizeof(MELODY) / sizeof(MELODY[0]))
 
-/* Renders and analyzes a whole plan; the caller destroys *analysis. */
-static void analyze(const PiecePlan *plan, AnalyzerFragmentAnalysis *analysis) {
+/* A plan heard whole: the render the result borrows from, and the result with its document. */
+typedef struct {
     RenderedPlan rendered;
-    assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
-    AnalyzerFragment fragment;
-    memset(&fragment, 0, sizeof(fragment));
-    fragment.events = (const NoteEvent *const *)rendered.events;
-    fragment.count = rendered.count;
-    fragment.meter = rendered.meter_map;
-    fragment.has_key = true;
-    fragment.key_tonic_pitch_class = 0;
-    fragment.key_minor = false;
-    fragment.streams = rendered.part_index;
-    assert(analyzer_analyze_fragment(&fragment, analysis) == ANALYZER_FRAGMENT_OK);
-    rendered_plan_destroy(&rendered);
+    int *midi;
+    AnalyzerResult *result;
+} Heard;
+
+/* Renders and hears a whole plan in C major with the document rendered; the caller destroys *heard. */
+static void analyze(const PiecePlan *plan, Heard *heard) {
+    memset(heard, 0, sizeof(*heard));
+    assert(plan_render(plan, &heard->rendered) == PLAN_RENDER_OK);
+    heard->midi = calloc(heard->rendered.count ? heard->rendered.count : 1, sizeof(int));
+    assert(heard->midi);
+    for (size_t i = 0; i < heard->rendered.count; i++) {
+        heard->midi[i] = (int)pitch_numeric_value_position_numerator(heard->rendered.pitch_values[i]);
+    }
+    AnalyzerHearing hearing;
+    memset(&hearing, 0, sizeof(hearing));
+    hearing.events = (const NoteEvent *const *)heard->rendered.events;
+    hearing.count = heard->rendered.count;
+    hearing.midi = heard->midi;
+    hearing.meter = heard->rendered.meter_map;
+    hearing.has_key = true;
+    hearing.key_tonic_pitch_class = 0;
+    hearing.key_minor = false;
+    hearing.streams = heard->rendered.part_index;
+    AnalyzerHearingOptions options = analyzer_hearing_options_default();
+    options.render_document = true;
+    assert(analyzer_hear(&hearing, &options, &heard->result) == ANALYZER_OK);
+}
+
+static void heard_destroy(Heard *heard) {
+    analyzer_result_destroy(heard->result);
+    free(heard->midi);
+    rendered_plan_destroy(&heard->rendered);
 }
 
 /* Every label as "category\tlabel", in a list the test sorts and compares. */
@@ -251,9 +271,9 @@ static bool labelled_category(const char *category, bool harmony, bool melody) {
 }
 
 /* The Analyzer's labels of an analysis, counted into a bag, for the categories asked. */
-static void analyzer_bag(const AnalyzerFragmentAnalysis *analysis, bool harmony, bool melody, Bag *bag) {
+static void analyzer_bag(const Heard *heard, bool harmony, bool melody, Bag *bag) {
     StyleProfile *profile = style_profile_create();
-    assert(profile && style_profile_add_document_json(profile, analyzer_fragment_document_json(analysis)) ==
+    assert(profile && style_profile_add_document_json(profile, analyzer_result_document_json(heard->result)) ==
                           STYLE_PROFILE_OK);
     StyleStatistic *statistics = NULL;
     size_t count = 0;
@@ -290,7 +310,7 @@ static bool ratio_is(ComposerRatio ratio, unsigned long numerator, unsigned long
 /* The labels of the hand-written progression and its soprano, against the Analyzer's of the same material. */
 static void test_block_labels(void) {
     PiecePlan *plan = block_plan();
-    AnalyzerFragmentAnalysis analysis;
+    Heard analysis;
     analyze(plan, &analysis);
     ComposerStyleNote soprano[BLOCK_COUNT];
     for (size_t i = 0; i < BLOCK_COUNT; i++) {
@@ -317,7 +337,7 @@ static void test_block_labels(void) {
     bag_free(&ours);
     bag_free(&theirs);
     composer_style_labels_destroy(labels);
-    analyzer_fragment_analysis_destroy(&analysis);
+    heard_destroy(&analysis);
     plan_destroy(plan);
     printf("harmony and melody labels equal the Analyzer's\n");
 }
@@ -393,14 +413,14 @@ static void test_before(void) {
 
 static void write_style(const char *path) {
     PiecePlan *plan = block_plan();
-    AnalyzerFragmentAnalysis analysis;
+    Heard analysis;
     analyze(plan, &analysis);
     StyleProfile *profile = style_profile_create();
-    assert(profile && style_profile_add_document_json(profile, analyzer_fragment_document_json(&analysis)) ==
+    assert(profile && style_profile_add_document_json(profile, analyzer_result_document_json(analysis.result)) ==
                           STYLE_PROFILE_OK);
     assert(style_model_file_write(profile, "block", path) == STYLE_MODEL_FILE_OK);
     style_profile_destroy(profile);
-    analyzer_fragment_analysis_destroy(&analysis);
+    heard_destroy(&analysis);
     plan_destroy(plan);
 }
 

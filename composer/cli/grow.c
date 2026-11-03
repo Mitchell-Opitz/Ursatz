@@ -1242,7 +1242,7 @@ static int write_files(const Options *options, const Theme *themes, size_t count
             }
             PlanExportError error;
             if (!have_rendering) {
-                if (plan_render(themes[k].plan, &rendered) != PLAN_RENDER_OK) {
+                if (plan_export_render(themes[k].plan, &rendered, NULL) != PLAN_EXPORT_OK) {
                     status = cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
                     break;
                 }

@@ -7,11 +7,12 @@
 #include <ursatz_composer/piece_plan.h>
 
 /*
- * The Analyzer check (R-080): a realized section is rendered, analyzed in memory by the Analyzer's composer API
- * (analyzer_analyze_fragment) and what the Analyzer hears is compared with what the plan asked for.
+ * The Analyzer check (R-080): a realized section is heard by the Analyzer's composer API (analyzer_hear) and what the
+ * Analyzer hears is compared with what the plan asked for.
  *
- * The section's span is rendered with every lane (plan_render_range), its events measured from the section's start,
- * and analyzed as a fragment in the section's meter and in the key the plan has at the section's start. Then:
+ * The plan is rendered once with every lane (plan_render); the notes that start in the section's span are heard in the
+ * plan's meter map and the key the plan has at the section's start, and the cadences, chords and key regions are read from
+ * the result's report (analyzer_result_report). Bars are counted from the section's start. Then:
  *   - Cadence: every planned cadence, the CADENCE constraints of the section (the first is the one it ends in, a second
  *     is the weak one an antecedent ends in, halfway), must be heard arriving in its bar. A planned PAC or IAC is heard
  *     as planned when the Analyzer hears any authentic cadence there; any other type must be heard as that type.
@@ -60,7 +61,7 @@ AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section
 
 /*
  * The whole piece (R-172, R-173): every section of a piece structure plan (a section with a piece part; not the seam or
- * the material), rendered as one fragment (plan_render, so nothing past the piece's end) and analyzed in the plan's first
+ * the material), heard as one span (from the plan's start to the end of its last section that is not material) in the plan's first
  * meter and key. A plan version that has sections not on whole bars, a pickup or any length of beats is read as it is.
  *   - Cadence: the first CADENCE constraint of each section is its planned cadence. It is heard as planned when an
  *     Analyzer cadence of that type ends within one beat of the section's end, a cadence ending where the chord of its

@@ -2,76 +2,63 @@
 
 #include "style_internal.h"
 
-#include <stdlib.h>
 #include <string.h>
 
+#include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/composer_api.h>
 
-#include <ursatz_composer/lanes.h>
-#include <ursatz_composer/render.h>
-
-/* The key span the plan starts in. */
-static bool starting_key(const PiecePlan *plan, AnalysisKey *out) {
-    PlanSpan everything = {{0, 1}, {1000000, 1}};
-    LaneSpanId first;
-    size_t count = plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, &first, 1);
-    if (count == 0 || rational_cmp(plan_lane_span_span(plan, first).start, (Rational){0, 1}) > 0) {
-        return false;
-    }
-    *out = plan_lane_span_payload(plan, first)->key;
-    return true;
-}
+#include "check/hearing_result.h"
 
 ComposerMeasureResult composer_style_measure(const PiecePlan *plan, const ComposerStyle *style, StyleComparison *out) {
-    if (!plan || !style || !out) {
+    if (!out) {
         return COMPOSER_MEASURE_ERR_ARGUMENT;
     }
     memset(out, 0, sizeof(*out));
-    AnalysisKey key;
-    if (!starting_key(plan, &key)) {
-        return COMPOSER_MEASURE_ERR_PLAN;
+    if (!plan || !style) {
+        return COMPOSER_MEASURE_ERR_ARGUMENT;
     }
-    RenderedPlan rendered;
-    PlanRenderResult drawn = plan_render(plan, &rendered);
-    if (drawn != PLAN_RENDER_OK) {
-        return drawn == PLAN_RENDER_ERR_ALLOC ? COMPOSER_MEASURE_ERR_ALLOC : COMPOSER_MEASURE_ERR_PLAN;
+    ComposerHearing *hearing = NULL;
+    HearingResult made = hearing_create(plan, &hearing);
+    ComposerMeasureResult result = COMPOSER_MEASURE_OK;
+    if (made != HEARING_OK) {
+        result = made == HEARING_ERR_ALLOC ? COMPOSER_MEASURE_ERR_ALLOC : COMPOSER_MEASURE_ERR_PLAN;
+    } else {
+        result = composer_style_measure_in(hearing, style, out);
     }
-    if (rendered.count == 0) {
-        rendered_plan_destroy(&rendered);
+    hearing_destroy(hearing);
+    return result;
+}
+
+ComposerMeasureResult composer_style_measure_in(ComposerHearing *hearing, const ComposerStyle *style,
+                                                StyleComparison *out) {
+    if (!out) {
+        return COMPOSER_MEASURE_ERR_ARGUMENT;
+    }
+    memset(out, 0, sizeof(*out));
+    if (!hearing || !style) {
+        return COMPOSER_MEASURE_ERR_ARGUMENT;
+    }
+    if (hearing_rendered(hearing)->count == 0) {
         return COMPOSER_MEASURE_ERR_NOT_WRITTEN;
     }
-    AnalyzerFragment fragment;
-    memset(&fragment, 0, sizeof(fragment));
-    fragment.events = (const NoteEvent *const *)rendered.events;
-    fragment.count = rendered.count;
-    fragment.meter = rendered.meter_map;
-    fragment.has_key = true;
-    fragment.key_tonic_pitch_class = analysis_key_tonic_pitch_class(&key);
-    fragment.key_minor = key.mode == KEY_STRUCTURE_MODE_MINOR;
-    fragment.streams = rendered.part_index;
-
-    AnalyzerFragmentAnalysis analysis;
-    AnalyzerFragmentResult analyzed = analyzer_analyze_fragment(&fragment, &analysis);
-    ComposerMeasureResult result = COMPOSER_MEASURE_OK;
-    if (analyzed != ANALYZER_FRAGMENT_OK) {
-        result = analyzed == ANALYZER_FRAGMENT_ERR_ALLOC ? COMPOSER_MEASURE_ERR_ALLOC : COMPOSER_MEASURE_ERR_ANALYSIS;
-    } else {
-        size_t without_count = composer_style_without_count(style);
-        const char *without[64];
-        if (without_count > sizeof without / sizeof *without) {
-            without_count = sizeof without / sizeof *without;
-        }
-        for (size_t i = 0; i < without_count; i++) {
-            without[i] = composer_style_without_at(style, i);
-        }
-        AnalyzerFragmentResult compared = analyzer_fragment_style_distance_without(
-            &analysis, composer_style_model(style), without_count ? without : NULL, without_count, out);
-        if (compared != ANALYZER_FRAGMENT_OK) {
-            memset(out, 0, sizeof(*out));
-            result = compared == ANALYZER_FRAGMENT_ERR_ALLOC ? COMPOSER_MEASURE_ERR_ALLOC : COMPOSER_MEASURE_ERR_ANALYSIS;
-        }
-        analyzer_fragment_analysis_destroy(&analysis);
+    const AnalyzerResult *heard = NULL;
+    switch (hearing_piece(hearing, &heard)) {
+    case HEARING_OK:
+        break;
+    case HEARING_ERR_ALLOC:
+        return COMPOSER_MEASURE_ERR_ALLOC;
+    case HEARING_ERR_NOT_WRITTEN:
+        return COMPOSER_MEASURE_ERR_NOT_WRITTEN;
+    case HEARING_ERR_PLAN:
+        return COMPOSER_MEASURE_ERR_PLAN;
+    default:
+        return COMPOSER_MEASURE_ERR_ANALYSIS;
     }
-    rendered_plan_destroy(&rendered);
-    return result;
+    const AnalyzerStyleReference *reference = composer_style_reference(style);
+    AnalyzerStatus compared = reference ? analyzer_result_style_distance(heard, reference, out) : ANALYZER_ERR_ARGUMENT;
+    if (compared != ANALYZER_OK) {
+        memset(out, 0, sizeof(*out));
+        return compared == ANALYZER_ERR_ALLOC ? COMPOSER_MEASURE_ERR_ALLOC : COMPOSER_MEASURE_ERR_ANALYSIS;
+    }
+    return COMPOSER_MEASURE_OK;
 }
