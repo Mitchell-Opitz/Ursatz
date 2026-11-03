@@ -15,6 +15,7 @@
 #include "plan.h"
 
 #include <ursatz_composer/harmony_phrase.h>
+#include <ursatz_composer/plan_json.h>
 #include "util/plan_util.h"
 #include "util/util.h"
 
@@ -105,6 +106,7 @@ int cli_fail_api(ComposerStatus status, const ComposerError *error, const char *
         {"needs hybrid <beginning>", "needs --hybrid <beginning>"},
         {"applies only to into hybrid", "applies only to --into hybrid"},
         {"use into ", "use --into "},
+        {"regenerate it with lanes harmony", "regenerate it with --lane harmony"},
         {"and texture chorale write the inner voices themselves; they cannot be combined with accompaniment or another "
          "texture",
          "and --texture chorale write the inner voices themselves; they cannot be combined with --accompaniment or another "
@@ -402,22 +404,12 @@ int cli_check_target(CliTargetOptions *options, const char *command, const char 
     options->has_lane = false;
     if (options->lane_text) {
         options->has_lane = true;
-        if (request_equals_ignore_case(options->lane_text, "harmony")) {
-            options->lane = PLAN_LANE_HARMONY;
-        } else if (request_equals_ignore_case(options->lane_text, "bass")) {
-            options->lane = PLAN_LANE_BASS;
-        } else if (request_equals_ignore_case(options->lane_text, "melody")) {
-            options->lane = PLAN_LANE_MELODY;
-        } else if (request_equals_ignore_case(options->lane_text, "inner")) {
-            options->lane = PLAN_LANE_INNER_VOICE;
-        } else {
+        if (!api_lane_from_name(options->lane_text, &options->lane)) {
             return cli_fail(CLI_EXIT_USAGE, "--lane must be harmony, bass, melody or inner, not '%s'", options->lane_text);
         }
     }
     return 0;
 }
-
-static const char *const TARGET_LANE_LABELS[] = {"meter", "key", "harmony", "bass", "melody", "inner voice"};
 
 /* The node the options name, or the exit status of the error it printed. */
 int cli_find_target_node(const PiecePlan *plan, const CliTargetOptions *options, bool quiet, NodeId *out) {
@@ -452,27 +444,10 @@ int cli_find_targets(const PiecePlan *plan, const CliTargetOptions *options, Fil
     if (status != 0) {
         return status;
     }
-    *out = calloc(plan_lane_span_count(plan) + 1, sizeof(FillTarget));
-    *count = 0;
-    if (!*out) {
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "out of memory");
-    }
-    if (!options->has_lane) {
-        (*out)[(*count)++] = (FillTarget){FILL_TARGET_NODE, node};
-        return 0;
-    }
-    for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
-        if (plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == options->lane &&
-            plan_in_subtree(plan, plan_lane_span_owner(plan, id), node)) {
-            (*out)[(*count)++] = (FillTarget){FILL_TARGET_LANE_SPAN, id};
-        }
-    }
-    if (*count == 0) {
-        free(*out);
-        *out = NULL;
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "node %zu has no %s spans", (size_t)node, TARGET_LANE_LABELS[options->lane]);
-    }
-    return 0;
+    ComposerError error;
+    memset(&error, 0, sizeof error);
+    ComposerStatus found = api_lane_targets(plan, node, options->has_lane, options->lane, out, count, &error);
+    return found == COMPOSER_OK ? 0 : cli_fail_api(found, &error, NULL);
 }
 
 /* The name of the target in words: "section B", "node 12", "the harmony of section B". */
@@ -493,29 +468,70 @@ void cli_describe_target(const PiecePlan *plan, const CliTargetOptions *options,
         }
     }
     if (options->has_lane) {
-        snprintf(out, size, "the %s of %s", TARGET_LANE_LABELS[options->lane], what);
+        snprintf(out, size, "the %s of %s", api_lane_label(options->lane), what);
     } else {
         snprintf(out, size, "%s", what);
     }
 }
 
 int cli_report_refused(RegenerateResult result, const char *what) {
-    switch (result) {
-    case REGENERATE_ERR_LOCKED:
-        return cli_fail(CLI_EXIT_UNSATISFIABLE,
-                        "%s is Given (locked) or has Given material among its phrases; locking is for good in a plan, to unlock go "
-                        "back to an earlier plan file",
-                        what);
-    case REGENERATE_ERR_BAD_TARGET:
-        return cli_fail(CLI_EXIT_UNSATISFIABLE,
-                        "%s cannot be regenerated: a motive, the material, the meter and key, and spans the Composer did not "
-                        "open have nothing to write again",
-                        what);
-    case REGENERATE_ERR_NOT_FOUND:
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "%s is not in the plan", what);
-    default:
-        return cli_fail(CLI_EXIT_UNSATISFIABLE, "cannot regenerate %s: %s", what, regenerate_result_name(result));
+    ComposerError error;
+    memset(&error, 0, sizeof error);
+    return cli_fail_api(api_refused(result, what, &error), &error, NULL);
+}
+
+bool cli_write_bytes(const char *path, const void *data, size_t size) {
+    FILE *file = fopen(path, "wb");
+    bool wrote = file && fwrite(data, 1, size, file) == size;
+    bool closed = file && fclose(file) == 0;
+    if (!wrote || !closed) {
+        remove(path);
     }
+    return wrote && closed;
+}
+
+int cli_write_plan_object(const cJSON *plan, const char *temporary, const char *final_path) {
+    char *text = cJSON_PrintUnformatted(plan);
+    PiecePlan *loaded = NULL;
+    PlanJsonError error;
+    memset(&error, 0, sizeof error);
+    bool ok = text && plan_from_json(text, &loaded, &error) == PLAN_OK;
+    cJSON_free(text);
+    if (ok && plan_write_json_file(loaded, temporary, &error) != PLAN_OK) {
+        ok = false;
+    }
+    plan_destroy(loaded);
+    return ok ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot write '%s': %s", final_path, error.message[0] ? error.message : "the plan");
+}
+
+int cli_export_plan(const cJSON *plan, double qpm, bool plain_midi, bool midi, bool musicxml, const cJSON *loop,
+                    ComposerResponse *out) {
+    cJSON *request = cJSON_CreateObject();
+    bool ok = request && cJSON_AddItemToObject(request, "plan", cJSON_Duplicate(plan, true)) &&
+              cJSON_AddBoolToObject(request, "midi", midi) && cJSON_AddBoolToObject(request, "musicxml", musicxml) &&
+              cJSON_AddBoolToObject(request, "plain_midi", plain_midi);
+    if (ok && loop) {
+        ok = cJSON_AddItemToObject(request, "loop", cJSON_Duplicate(loop, true));
+    }
+    if (ok && qpm > 0) {
+        /* A tempo is a whole number or half-steps like 195/2: the document wrote it with %g. */
+        char text[48] = "";
+        for (long den = 1; den <= 16 && !text[0]; den++) {
+            double scaled = qpm * (double)den;
+            if (scaled - (double)(long)(scaled + 0.5) < 1e-6 && (double)(long)(scaled + 0.5) - scaled < 1e-6) {
+                snprintf(text, sizeof text, den == 1 ? "%ld" : "%ld/%ld", (long)(scaled + 0.5), den);
+            }
+        }
+        ok = text[0] && cJSON_AddStringToObject(request, "tempo", text);
+    }
+    char *printed = ok ? cJSON_PrintUnformatted(request) : NULL;
+    cJSON_Delete(request);
+    if (!printed) {
+        return cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
+    }
+    ComposerStatus status = composer_api_export(printed, NULL, out);
+    cJSON_free(printed);
+    return status == COMPOSER_OK ? 0 : cli_fail(CLI_EXIT_WRITE, "cannot render the plan");
 }
 
 void cli_discard_pending(CliPendingFile *pending, size_t count) {

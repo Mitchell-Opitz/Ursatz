@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/piece.request.schema.json",
+  "title": "composer_api_piece request",
+  "description": "The piece request of docs/piece-request.md with a theme fill carrying its plan object, an earlier loop plan to regenerate a section of, and the options of the piece command as members.",
+  "type": "object",
+  "required": [
+    "request"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "api_version": {
+      "type": "integer"
+    },
+    "request": {
+      "$ref": "#/$defs/piece_request"
+    },
+    "seed": {
+      "type": [
+        "integer",
+        "string"
+      ]
+    },
+    "check": {
+      "type": "boolean"
+    },
+    "style": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "plain_midi": {
+      "type": "boolean"
+    },
+    "from": {
+      "$ref": "#/$defs/plan"
+    },
+    "regenerate": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "section": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lanes": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "harmony",
+              "bass",
+              "melody",
+              "inner",
+              "all"
+            ]
+          }
+        }
+      }
+    },
+    "midi": {
+      "type": "boolean"
+    },
+    "musicxml": {
+      "type": "boolean"
+    },
+    "ending_musicxml": {
+      "type": "boolean"
+    },
+    "explain": {
+      "enum": [
+        "text",
+        "json"
+      ]
+    }
+  },
+  "$defs": {
+    "plan": {
+      "type": "object",
+      "required": [
+        "format"
+      ],
+      "properties": {
+        "format": {
+          "type": "string"
+        }
+      },
+      "description": "A plan object (docs/plan-format.md, schema/plan.v2.schema.json)."
+    },
+    "piece_request": {
+      "type": "object",
+      "required": [
+        "schema",
+        "schema_version",
+        "key",
+        "mode",
+        "meter",
+        "sections"
+      ],
+      "properties": {
+        "schema": {
+          "const": "ursatz-piece-request"
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "key": {
+          "type": "string"
+        },
+        "mode": {
+          "enum": [
+            "major",
+            "minor",
+            "style"
+          ]
+        },
+        "meter": {
+          "type": "string"
+        },
+        "motive": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "sections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "part",
+              "beats"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "part": {
+                "enum": [
+                  "intro",
+                  "body",
+                  "turnaround",
+                  "ending"
+                ]
+              },
+              "letter": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "beats": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "pickup": {
+                "type": [
+                  "string",
+                  "number",
+                  "null"
+                ]
+              },
+              "cadence": {
+                "enum": [
+                  "PAC",
+                  "IAC",
+                  "HC",
+                  "DC",
+                  "PC",
+                  null
+                ]
+              },
+              "fill": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "kind"
+                    ],
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "empty",
+                          "motif",
+                          "theme",
+                          "progression"
+                        ]
+                      },
+                      "plan": {
+                        "$ref": "#/$defs/plan",
+                        "description": "theme: the plan object of the theme"
+                      },
+                      "source": {
+                        "type": "string",
+                        "description": "theme: the name shown as the section's source"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "accompaniment": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "voicing": {
+          "enum": [
+            "satb",
+            "chorale",
+            null
+          ]
+        },
+        "style": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "style_weight": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "without": {
+          "type": [
+            "array",
+            "null"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "tempo": {
+          "type": [
+            "number",
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

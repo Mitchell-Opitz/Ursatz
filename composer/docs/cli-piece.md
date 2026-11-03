@@ -4,6 +4,12 @@
 ursatz-composer piece <request.json> [--seed <n>] [--check] [--out <loop-plan.json>] [--ending-out <ending-plan.json>] [--midi <loop.mid>] [--musicxml <loop.musicxml>] [--ending-midi <file>] [--ending-musicxml <file>] [--plain-midi] [--explain <file>] [--format text|json]
 ```
 
+The command is a wrapper of the [composer API](api.md): it reads the request file (and the plan file of each theme fill, and
+the loop plan of `--from`) into a request, calls `composer_api_piece` (or `composer_api_piece_variations` with
+`--variations`), writes the plans, MIDI files, MusicXML and explanation the response holds to the paths given (the ending
+version's MIDI file through `composer_api_export`), prints the result from the response JSON alone, and maps the status to
+the exit status. The output below is the response's `json`; the plan paths and the `files` list are the command's.
+
 Composes a looping game track from a request ([piece-request.md](piece-request.md)): an intro, a body, a turnaround and an
 ending, each made of sections of any length in beats. Two versions come out (R-172):
 

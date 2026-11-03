@@ -6,8 +6,10 @@
 #include <cJSON.h>
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/export.h>
+#include <ursatz_composer/fill_target.h>
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/motive.h>
+#include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/style.h>
 
 /* Parses the request text into *out (the caller deletes it). Checks "api_version" when present. On failure sets error and returns the status. */
@@ -104,5 +106,20 @@ bool api_request_string(const cJSON *object, const char *base, const char *name,
 /* The "pickup" member as text: a string, or a number of beats formatted into text. NULL for none. */
 bool api_request_pickup(const cJSON *object, const char *base, char *text, size_t size, const char **out,
                         ComposerError *error);
+
+/* --- the node and lane a request works on (api_target.c) ----------------------------------------------- */
+
+/* "harmony", "bass", "melody" or "inner", any case. */
+bool api_lane_from_name(const char *name, PlanLaneKind *out);
+/* The lane in words: "harmony", "bass", "melody", "inner voice". */
+const char *api_lane_label(PlanLaneKind lane);
+/*
+ * The targets under node: the node itself, or with a lane every span of it under the node (all the voices for inner), into
+ * a new array the caller frees. COMPOSER_ERR_UNSATISFIABLE when the node has no span of the lane.
+ */
+ComposerStatus api_lane_targets(const PiecePlan *plan, NodeId node, bool has_lane, PlanLaneKind lane, FillTarget **out,
+                                size_t *count, ComposerError *error);
+/* Why a regenerate result refused the target (what names it: "section B"): COMPOSER_ERR_UNSATISFIABLE with the message. */
+ComposerStatus api_refused(RegenerateResult result, const char *what, ComposerError *error);
 
 #endif

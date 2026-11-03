@@ -15,7 +15,7 @@
  */
 
 #define COMPOSER_API_VERSION_MAJOR 0
-#define COMPOSER_API_VERSION_MINOR 4
+#define COMPOSER_API_VERSION_MINOR 5
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
@@ -68,8 +68,9 @@ ComposerStatus composer_api_versions(ComposerResponse *out);
 /*
  * Renders a plan once and exports it. Request: {"plan": <plan object>, "midi": bool, "musicxml": bool, "tempo": <quarter
  * notes per minute, 20 to 400, a whole number or a string like "195/2", or null>, "plain_midi": bool}; each flag defaults
- * to false. midi/midi_size and musicxml are filled for the formats asked for. json: {"skipped": [{"span", "lane", "reason"}]},
- * the lane spans the render left out.
+ * to false. "loop": {"start": "2/1", "end": "14/1"} (times in whole notes from the start of the plan) puts the loopStart and
+ * loopEnd markers into the MIDI file. midi/midi_size and musicxml are filled for the formats asked for. json: {"skipped":
+ * [{"span", "lane", "reason"}]}, the lane spans the render left out.
  */
 ComposerStatus composer_api_export(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
@@ -158,5 +159,37 @@ ComposerStatus composer_api_random_motive(const char *request_json, const Compos
  * COMPOSER_ERR_CANCELLED with no partial plan.
  */
 ComposerStatus composer_api_theme(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Composes a piece (docs/piece-request.md): the loop version and the ending version built from it, or the loop plan of an
+ * earlier piece with one section written again. Request: {"request": <the piece request: schema "ursatz-piece-request"
+ * version 1, a theme fill carrying "plan": <plan object> and, for the display, "source": <a name> instead of a path>,
+ * "from": <the loop plan object of an earlier piece, or absent>, "regenerate": {"section": <section id>|null, "lanes":
+ * ["harmony"|"bass"|"melody"|"inner", ...] (none or "all": the whole section)} (null section: only the ending version is
+ * built again; needs "from"), "seed" (0 to 4294967295; default from the clock), "check", "style" (a style model path that
+ * replaces the request's), "midi", "musicxml" (the loop version's files), "ending_musicxml" (the ending version's MusicXML as
+ * "ending_musicxml" in the document; the ending version's MIDI file is composer_api_export of "plans"."ending"), "plain_midi", "explain" ("text" or "json": the
+ * explanation of both versions in the document)}. json: what `piece --format json` prints (without the files it wrote), with
+ * "plans": {"loop": <plan object>, "ending": <plan object>}, the "plan" of each version null, and "explanation" when asked; a
+ * section a regenerate left as it was has "in_scope": false. plan_json: the loop plan. midi and musicxml: the loop version's
+ * files, when asked (the MIDI file has the loopStart and loopEnd markers). Progress per seed ("seed") and per compose stage; a
+ * cancel is COMPOSER_ERR_CANCELLED with no partial plan. A theme fill with a path in "plan" is refused with its path.
+ */
+ComposerStatus composer_api_piece(const char *request_json, const ComposerJob *job, ComposerResponse *out);
+
+/*
+ * Variations of one section of a loop plan: the section is written again from one seed after another (as a regenerate does,
+ * the seam and the loop's end included) and a version is kept when it sounds different from the plan and from the ones kept
+ * before. Request: {"request": <the piece request, as for composer_api_piece>, "from": <the loop plan object>, "variations":
+ * {"section": <section id>, "lanes": [...] (as "regenerate" of composer_api_piece), "count": 1 to 8}, "seed", "check",
+ * "plain_midi", "style", "musicxml" (each variation's MusicXML as "musicxml" in its entry; its MIDI file is
+ * composer_api_export of its plan with its "loop_markers" as "loop")}. json: {"schema": "ursatz-piece-variations", "section", "lane", "brief", "variations": [{"index",
+ * "seed", "loop": <the version, its "plan" the plan object>, "loop_markers": {"start", "end"}}], "kept", "requested",
+ * "seeds_tried"};
+ * "loop_markers" is the region a MIDI file of the loop version marks with loopStart and loopEnd (composer_api_export's
+ * "loop"). Progress once per seed tried, stage "variations" and the compose stages; a cancel is COMPOSER_ERR_CANCELLED.
+ * COMPOSER_ERR_UNSATISFIABLE when no version differs from the plan.
+ */
+ComposerStatus composer_api_piece_variations(const char *request_json, const ComposerJob *job, ComposerResponse *out);
 
 #endif

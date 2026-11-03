@@ -1,0 +1,374 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Mitchell-Opitz/Ursatz-Composer/schema/api/piece_variations.response.schema.json",
+  "title": "composer_api_piece_variations response",
+  "description": "The variations kept, each with its loop version (its plan inline), the loop markers of its MIDI file and, when asked, its MusicXML.",
+  "type": "object",
+  "required": [
+    "schema",
+    "section",
+    "lane",
+    "brief",
+    "variations",
+    "kept",
+    "requested",
+    "seeds_tried"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {
+      "const": "ursatz-piece-variations"
+    },
+    "section": {
+      "type": "string"
+    },
+    "lane": {
+      "type": "string"
+    },
+    "brief": {
+      "type": "object",
+      "required": [
+        "tempo",
+        "mode",
+        "density",
+        "without"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tempo": {
+          "type": "object",
+          "required": [
+            "qpm",
+            "from"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "qpm": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "from": {
+              "enum": [
+                "option",
+                "style",
+                "none"
+              ]
+            }
+          }
+        },
+        "mode": {
+          "type": "object",
+          "required": [
+            "mode",
+            "from"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "mode": {
+              "enum": [
+                "major",
+                "minor"
+              ]
+            },
+            "from": {
+              "enum": [
+                "request",
+                "style"
+              ]
+            }
+          }
+        },
+        "density": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "without": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "variations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "index",
+          "seed",
+          "loop"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "seed": {
+            "type": "integer"
+          },
+          "loop": {
+            "$ref": "#/$defs/version"
+          },
+          "loop_markers": {
+            "type": "object",
+            "required": [
+              "start",
+              "end"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "start": {
+                "type": "string",
+                "pattern": "^[0-9]+/[0-9]+$"
+              },
+              "end": {
+                "type": "string",
+                "pattern": "^[0-9]+/[0-9]+$"
+              }
+            }
+          },
+          "musicxml": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "kept": {
+      "type": "integer"
+    },
+    "requested": {
+      "type": "integer"
+    },
+    "seeds_tried": {
+      "type": "integer"
+    }
+  },
+  "$defs": {
+    "version": {
+      "type": "object",
+      "required": [
+        "plan",
+        "sections",
+        "score",
+        "seam",
+        "analyzer_check",
+        "style_distance"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "plan": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "The plan object (variations), else null: the plans of a piece are in \"plans\"."
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "part",
+              "letter",
+              "start",
+              "beats",
+              "cadence",
+              "heard",
+              "fill",
+              "source"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "part": {
+                "enum": [
+                  "intro",
+                  "body",
+                  "turnaround",
+                  "ending"
+                ]
+              },
+              "letter": {
+                "type": "string"
+              },
+              "start": {
+                "type": "string",
+                "pattern": "^[0-9]+/[0-9]+$"
+              },
+              "beats": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "cadence": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "heard": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "in_scope": {
+                "const": false,
+                "description": "Present when a regenerate left the section as it was."
+              },
+              "fill": {
+                "enum": [
+                  "empty",
+                  "motif",
+                  "theme",
+                  "progression"
+                ]
+              },
+              "source": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "score": {
+          "type": "object",
+          "required": [
+            "numerator",
+            "denominator"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "numerator": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "denominator": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "seam": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "progression",
+                "no_parallels",
+                "step",
+                "leading_tone",
+                "held"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "progression": {
+                  "type": "boolean"
+                },
+                "no_parallels": {
+                  "type": "boolean"
+                },
+                "step": {
+                  "type": "boolean"
+                },
+                "leading_tone": {
+                  "type": "boolean"
+                },
+                "held": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            }
+          ]
+        },
+        "analyzer_check": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "planned",
+                "agreed",
+                "contradicts",
+                "items"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "planned": {
+                  "type": "integer"
+                },
+                "agreed": {
+                  "type": "integer"
+                },
+                "contradicts": {
+                  "type": "boolean"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "kind",
+                      "bar",
+                      "planned",
+                      "heard",
+                      "agreed"
+                    ],
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "cadence",
+                          "key",
+                          "violation"
+                        ]
+                      },
+                      "bar": {
+                        "type": "integer"
+                      },
+                      "planned": {
+                        "type": "string"
+                      },
+                      "heard": {
+                        "type": "string"
+                      },
+                      "agreed": {
+                        "type": "boolean"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "style_distance": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number"
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
