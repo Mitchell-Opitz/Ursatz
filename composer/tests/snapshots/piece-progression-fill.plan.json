@@ -902,8 +902,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 9,
-                          "transform": "restated",
-                          "semitones": 0
+                          "step": "exact"
                         }]
                     }
                   }, {
@@ -926,10 +925,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 9,
-                          "transform": "fragmented",
-                          "semitones": 0,
-                          "position": "leading",
-                          "length": 2
+                          "step": "fragment position=1 length=2"
                         }]
                     }
                   }, {
@@ -952,10 +948,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 9,
-                          "transform": "fragmented",
-                          "semitones": 0,
-                          "position": "leading",
-                          "length": 2
+                          "step": "fragment position=1 length=2"
                         }]
                     }
                   }, {
@@ -978,9 +971,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 9,
-                          "transform": "liquidated",
-                          "semitones": 0,
-                          "drop": 1
+                          "step": "liquidate drop=1"
                         }]
                     }
                   }, {
@@ -1003,9 +994,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 9,
-                          "transform": "liquidated",
-                          "semitones": 0,
-                          "drop": 1
+                          "step": "liquidate drop=1"
                         }]
                     }
                   }, {
@@ -1028,9 +1017,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 9,
-                          "transform": "liquidated",
-                          "semitones": 0,
-                          "drop": 1
+                          "step": "liquidate drop=1"
                         }]
                     }
                   }],
@@ -1142,9 +1129,7 @@
         "state": "realized",
         "constraints": [{
             "kind": "motive_ref",
-            "motive": 9,
-            "transform": "none",
-            "semitones": 0
+            "motive": 9
           }],
         "payload": {
           "notes": [{
@@ -1204,8 +1189,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 14,
-            "transform": "restated",
-            "semitones": 0
+            "step": "exact"
           }],
         "payload": {
           "notes": [{
@@ -1265,10 +1249,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 19,
-            "transform": "fragmented",
-            "semitones": 0,
-            "position": "leading",
-            "length": 2
+            "step": "fragment position=1 length=2"
           }],
         "payload": {
           "notes": [{
@@ -1318,10 +1299,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 20,
-            "transform": "fragmented",
-            "semitones": 0,
-            "position": "leading",
-            "length": 2
+            "step": "fragment position=1 length=2"
           }],
         "payload": {
           "notes": [{
@@ -1371,9 +1349,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 21,
-            "transform": "liquidated",
-            "semitones": 0,
-            "drop": 1
+            "step": "liquidate drop=1"
           }, {
             "kind": "cadence",
             "type": "iac"
@@ -1445,9 +1421,7 @@
         "state": "realized",
         "constraints": [{
             "kind": "motive_ref",
-            "motive": 9,
-            "transform": "none",
-            "semitones": 0
+            "motive": 9
           }],
         "payload": {
           "notes": [{
@@ -1507,9 +1481,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 25,
-            "transform": "liquidated",
-            "semitones": 0,
-            "drop": 1
+            "step": "liquidate drop=1"
           }, {
             "kind": "cadence",
             "type": "hc"
@@ -1877,9 +1849,7 @@
         "state": "realized",
         "constraints": [{
             "kind": "motive_ref",
-            "motive": 9,
-            "transform": "none",
-            "semitones": 0
+            "motive": 9
           }],
         "payload": {
           "notes": [{
@@ -1939,9 +1909,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 29,
-            "transform": "liquidated",
-            "semitones": 0,
-            "drop": 1
+            "step": "liquidate drop=1"
           }, {
             "kind": "cadence",
             "type": "hc"

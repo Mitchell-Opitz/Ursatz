@@ -606,10 +606,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "transform": "transposed",
-                          "semitones": 0,
-                          "tonal": true,
-                          "steps": 1
+                          "step": "transpose tonal=1 by=1"
                         }]
                     }
                   }, {
@@ -632,10 +629,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "transform": "fragmented",
-                          "semitones": 0,
-                          "position": "leading",
-                          "length": 2
+                          "step": "fragment position=1 length=2"
                         }]
                     }
                   }, {
@@ -658,10 +652,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "transform": "fragmented",
-                          "semitones": 0,
-                          "position": "leading",
-                          "length": 3
+                          "step": "fragment position=1 length=3"
                         }]
                     }
                   }, {
@@ -684,9 +675,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 6,
-                          "transform": "liquidated",
-                          "semitones": 0,
-                          "drop": 1
+                          "step": "liquidate drop=1"
                         }]
                     }
                   }],
@@ -806,9 +795,7 @@
         "state": "realized",
         "constraints": [{
             "kind": "motive_ref",
-            "motive": 6,
-            "transform": "none",
-            "semitones": 0
+            "motive": 6
           }],
         "payload": {
           "notes": [{
@@ -918,10 +905,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 11,
-            "transform": "transposed",
-            "semitones": 0,
-            "tonal": true,
-            "steps": 1
+            "step": "transpose tonal=1 by=1"
           }],
         "payload": {
           "notes": [{
@@ -1031,10 +1015,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 16,
-            "transform": "fragmented",
-            "semitones": 0,
-            "position": "leading",
-            "length": 2
+            "step": "fragment position=1 length=2"
           }],
         "payload": {
           "notes": [{
@@ -1114,10 +1095,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 17,
-            "transform": "fragmented",
-            "semitones": 0,
-            "position": "leading",
-            "length": 3
+            "step": "fragment position=1 length=3"
           }],
         "payload": {
           "notes": [{
@@ -1207,9 +1185,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 18,
-            "transform": "liquidated",
-            "semitones": 0,
-            "drop": 1
+            "step": "liquidate drop=1"
           }, {
             "kind": "cadence",
             "type": "pac"

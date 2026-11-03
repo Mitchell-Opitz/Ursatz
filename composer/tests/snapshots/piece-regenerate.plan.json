@@ -1235,9 +1235,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 18,
-                          "transform": "liquidated",
-                          "semitones": 0,
-                          "drop": 1
+                          "step": "liquidate drop=1"
                         }]
                     }
                   }, {
@@ -1260,9 +1258,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 18,
-                          "transform": "liquidated",
-                          "semitones": 0,
-                          "drop": 2
+                          "step": "liquidate drop=2"
                         }]
                     }
                   }, {
@@ -1285,9 +1281,7 @@
                       "constraints": [{
                           "kind": "motive_ref",
                           "motive": 18,
-                          "transform": "liquidated",
-                          "semitones": 0,
-                          "drop": 1
+                          "step": "liquidate drop=1"
                         }]
                     }
                   }],
@@ -1860,9 +1854,7 @@
         "state": "realized",
         "constraints": [{
             "kind": "motive_ref",
-            "motive": 18,
-            "transform": "none",
-            "semitones": 0
+            "motive": 18
           }],
         "payload": {
           "notes": [{
@@ -1932,9 +1924,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 22,
-            "transform": "liquidated",
-            "semitones": 0,
-            "drop": 1
+            "step": "liquidate drop=1"
           }, {
             "kind": "cadence",
             "type": "hc"
@@ -2046,9 +2036,7 @@
         "state": "realized",
         "constraints": [{
             "kind": "motive_ref",
-            "motive": 18,
-            "transform": "none",
-            "semitones": 0
+            "motive": 18
           }],
         "payload": {
           "notes": [{
@@ -2118,9 +2106,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 26,
-            "transform": "liquidated",
-            "semitones": 0,
-            "drop": 2
+            "step": "liquidate drop=2"
           }, {
             "kind": "cadence",
             "type": "iac"
@@ -2360,9 +2346,7 @@
         "state": "realized",
         "constraints": [{
             "kind": "motive_ref",
-            "motive": 18,
-            "transform": "none",
-            "semitones": 0
+            "motive": 18
           }],
         "payload": {
           "notes": [{
@@ -2432,9 +2416,7 @@
         "constraints": [{
             "kind": "motive_ref",
             "motive": 30,
-            "transform": "liquidated",
-            "semitones": 0,
-            "drop": 1
+            "step": "liquidate drop=1"
           }, {
             "kind": "cadence",
             "type": "hc"
