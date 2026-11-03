@@ -861,7 +861,7 @@ static void test_dominant_form_answers_i_v(void) {
     VariantRecord record;
     assert(run_one(&source, step_of("dominant-form"), 1, &out, &record) == VARIANT_OK);
     assert(out.harmony_count == 2 && out.harmony[0].degree == 5 && out.harmony[1].degree == 1);
-    assert(plan_time_compare(out.harmony[1].onset, source.harmony[1].onset) == 0);
+    assert(rational_cmp(out.harmony[1].onset, source.harmony[1].onset) == 0);
     /* The melody moves with the harmony, and the rhythm and the contour stay. */
     assert(kept(&record, "rhythm") && kept(&record, "contour") && changed(&record, "intervals"));
     assert(out.notes[0].midi_pitch != source.notes[0].midi_pitch);
@@ -1108,7 +1108,7 @@ static void test_liquidate_features_row(void) {
     VariantRecord record;
     assert(run_one(&source, step, 1, &out, &record) == VARIANT_OK);
     assert(out.note_count == 5 && out.notes[0].midi_pitch == 60);
-    assert(plan_time_compare(out.notes[0].duration, (PlanTime){1, 4}) == 0);
+    assert(rational_cmp(out.notes[0].duration, (Rational){1, 4}) == 0);
     assert(out.feature_count == 1 && strcmp(out.features[0].label, "b") == 0 && out.features[0].first == 1 &&
            out.features[0].last == 2);
     /* The chord the source implied stays under the thinned melody as its own harmony. */
@@ -1120,7 +1120,7 @@ static void test_liquidate_features_row(void) {
     assert(variant_step_set(&shorter, "steps", 1, 0) && variant_step_set(&shorter, "shorten", 1, 0));
     Motive half;
     assert(run_one(&source, shorter, 1, &half, &record) == VARIANT_OK);
-    assert(half.note_count == 5 && plan_time_compare(half.length, out.length) < 0);
+    assert(half.note_count == 5 && rational_cmp(half.length, out.length) < 0);
 
     /* Without labelled features each beat group is one (R-144), so a plain motive works too. */
     Motive plain = load("C4:e G4:e E4:q F4:q G4:q", "4/4", "C major", MOTIVE_FORMAT_NOTES);

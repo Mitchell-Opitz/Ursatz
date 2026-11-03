@@ -28,34 +28,34 @@
 
 /* ------------------------------------------------------------- time helpers */
 
-static PlanTime tmake(long num, unsigned long den) {
-    PlanTime time;
-    PlanResult result = plan_time_make(num, den, &time);
-    assert(result == PLAN_OK);
+static Rational tmake(long num, long long den) {
+    Rational time;
+    RationalResult result = rational_make(num, den, &time);
+    assert(result == RATIONAL_OK);
     return time;
 }
 
-static PlanTime tmul(PlanTime a, PlanTime b) {
+static Rational tmul(Rational a, Rational b) {
     return tmake(a.num * b.num, a.den * b.den);
 }
 
-static PlanTime tdiv(PlanTime a, PlanTime b) {
+static Rational tdiv(Rational a, Rational b) {
     return tmake(a.num * (long)b.den, a.den * (unsigned long)b.num);
 }
 
-static PlanTime tadd(PlanTime a, PlanTime b) {
+static Rational tadd(Rational a, Rational b) {
     return tmake(a.num * (long)b.den + b.num * (long)a.den, a.den * b.den);
 }
 
-static PlanTime tsub(PlanTime a, PlanTime b) {
+static Rational tsub(Rational a, Rational b) {
     return tmake(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den);
 }
 
-static bool teq(PlanTime a, PlanTime b) {
-    return plan_time_compare(a, b) == 0;
+static bool teq(Rational a, Rational b) {
+    return rational_cmp(a, b) == 0;
 }
 
-static bool is_time(PlanTime time, long num, unsigned long den) {
+static bool is_time(Rational time, long num, long long den) {
     return time.num == num && time.den == den;
 }
 
@@ -327,10 +327,10 @@ static bool is_retrograde(const Motive *source, const Motive *result) {
     }
     /* The rest between two neighbors, from the end of one to the start of the next. */
     for (size_t i = 0; i + 1 < n; i++) {
-        PlanTime gap_result = tsub(result->notes[i + 1].offset, tadd(result->notes[i].offset, result->notes[i].duration));
+        Rational gap_result = tsub(result->notes[i + 1].offset, tadd(result->notes[i].offset, result->notes[i].duration));
         const PlanNote *later = &source->notes[n - 1 - i];
         const PlanNote *earlier = &source->notes[n - 2 - i];
-        PlanTime gap_source = tsub(later->offset, tadd(earlier->offset, earlier->duration));
+        Rational gap_source = tsub(later->offset, tadd(earlier->offset, earlier->duration));
         if (!teq(gap_result, gap_source)) {
             return false;
         }
@@ -394,7 +394,7 @@ static bool kept_note_matches(const PlanNote *source, const PlanNote *kept) {
 
 /* Some of the source's notes, in order. Kept rhythm: where they were. Otherwise one after another from 0. */
 static bool matches_from(const Motive *source, const Motive *result, bool keep_rhythm, size_t from_source,
-                         size_t from_result, PlanTime at) {
+                         size_t from_result, Rational at) {
     if (from_result == result->note_count) {
         return true;
     }
@@ -404,10 +404,10 @@ static bool matches_from(const Motive *source, const Motive *result, bool keep_r
         }
         const PlanNote *candidate = &source->notes[i];
         const PlanNote *note = &result->notes[from_result];
-        PlanTime expected = keep_rhythm ? candidate->offset : at;
+        Rational expected = keep_rhythm ? candidate->offset : at;
         if ((keep_rhythm ? kept_note_matches(candidate, note) : note_matches(candidate, note)) &&
             teq(note->offset, expected)) {
-            PlanTime next = tmake(at.num * (long)candidate->duration.den + candidate->duration.num * (long)at.den,
+            Rational next = tmake(at.num * (long)candidate->duration.den + candidate->duration.num * (long)at.den,
                                   at.den * candidate->duration.den);
             if (matches_from(source, result, keep_rhythm, i + 1, from_result + 1, next)) {
                 return true;
@@ -427,7 +427,7 @@ static bool is_scaling(const Motive *source, const Motive *result, bool augment)
     if (source->note_count != result->note_count) {
         return false;
     }
-    PlanTime ratio = tdiv(result->notes[0].duration, source->notes[0].duration);
+    Rational ratio = tdiv(result->notes[0].duration, source->notes[0].duration);
     if (augment ? ratio.num <= (long)ratio.den : ratio.num >= (long)ratio.den) {
         return false;
     }

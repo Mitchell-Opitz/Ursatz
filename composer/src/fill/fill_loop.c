@@ -55,7 +55,7 @@ static void span_relatives(const PiecePlan *plan, LaneSpanId id, Relatives *rela
     PlanLaneKind lane = plan_lane_span_lane(plan, id);
     int voice = plan_lane_span_voice(plan, id);
     PlanSpan span = plan_lane_span_span(plan, id);
-    PlanTime end;
+    Rational end;
     plan_span_end(span, &end);
     LaneSpanId before = PLAN_LANE_SPAN_NONE;
     LaneSpanId after = PLAN_LANE_SPAN_NONE;
@@ -64,14 +64,14 @@ static void span_relatives(const PiecePlan *plan, LaneSpanId id, Relatives *rela
             continue;
         }
         PlanSpan other_span = plan_lane_span_span(plan, other);
-        if (plan_time_compare(other_span.start, span.start) < 0) {
+        if (rational_cmp(other_span.start, span.start) < 0) {
             if (before == PLAN_LANE_SPAN_NONE ||
-                plan_time_compare(other_span.start, plan_lane_span_span(plan, before).start) > 0) {
+                rational_cmp(other_span.start, plan_lane_span_span(plan, before).start) > 0) {
                 before = other;
             }
-        } else if (plan_time_compare(other_span.start, end) >= 0) {
+        } else if (rational_cmp(other_span.start, end) >= 0) {
             if (after == PLAN_LANE_SPAN_NONE ||
-                plan_time_compare(other_span.start, plan_lane_span_span(plan, after).start) < 0) {
+                rational_cmp(other_span.start, plan_lane_span_span(plan, after).start) < 0) {
                 after = other;
             }
         }

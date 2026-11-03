@@ -34,7 +34,7 @@ void analyzer_check_destroy(AnalyzerCheck *check) {
 
 /* Whether a lane span the section holds and a run needs is still open. */
 static bool section_open(const PiecePlan *plan, PlanSpan section) {
-    PlanTime end;
+    Rational end;
     if (plan_span_end(section, &end) != PLAN_OK) {
         return true;
     }
@@ -45,7 +45,7 @@ static bool section_open(const PiecePlan *plan, PlanSpan section) {
         PlanLaneKind lane = plan_lane_span_lane(plan, id);
         PlanSpan span = plan_lane_span_span(plan, id);
         if ((lane == PLAN_LANE_MELODY || lane == PLAN_LANE_BASS || lane == PLAN_LANE_HARMONY) &&
-            plan_time_compare(span.start, section.start) >= 0 && plan_time_compare(span.start, end) < 0 &&
+            rational_cmp(span.start, section.start) >= 0 && rational_cmp(span.start, end) < 0 &&
             plan_lane_span_state(plan, id) == PLAN_STATE_CONSTRAINED) {
             return true;
         }
@@ -61,7 +61,7 @@ static bool lane_at_start(const PiecePlan *plan, PlanLaneKind lane, PlanSpan sec
         return false;
     }
     plan_lane_find(plan, lane, 0, section, ids, count);
-    bool found = plan_time_compare(plan_lane_span_span(plan, ids[0]).start, section.start) <= 0;
+    bool found = rational_cmp(plan_lane_span_span(plan, ids[0]).start, section.start) <= 0;
     *out = ids[0];
     free(ids);
     return found;
@@ -271,18 +271,16 @@ AnalyzerCheckResult analyzer_check_section(const PiecePlan *plan, NodeId section
 
 /* ------------------------------------------------------------- the whole piece */
 
-static bool time_minus(PlanTime a, PlanTime b, PlanTime *out) {
-    return plan_time_make(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den, out) == PLAN_OK;
-}
-
 /* |a - b| at most one beat of the meter. */
-static bool within_a_beat(PlanTime a, PlanTime b, const PlanMeter *meter) {
-    PlanTime difference;
-    if (!time_minus(a, b, &difference)) {
+static bool within_a_beat(Rational a, Rational b, const PlanMeter *meter) {
+    Rational difference;
+    if (rational_sub(a, b, &difference) != RATIONAL_OK) {
         return false;
     }
-    long num = difference.num < 0 ? -difference.num : difference.num;
-    return (unsigned long)num * (unsigned long)meter->beat_unit <= difference.den;
+    if (rational_is_negative(difference) && rational_neg(difference, &difference) != RATIONAL_OK) {
+        return false;
+    }
+    return rational_cmp(difference, rational_ratio(1, meter->beat_unit)) <= 0;
 }
 
 /* The section a node is, as the structure plan builds them: one with a piece part, which is not the seam. */
@@ -293,11 +291,11 @@ static bool is_part_section(const PiecePlan *plan, NodeId id) {
 }
 
 /* Where the Analyzer heard a cadence end: the start of the chord after its arrival, else the end of the fragment. */
-static PlanTime cadence_end(const AnalysisReport *report, const AnalysisCadence *cadence, PlanTime fragment_end) {
-    PlanTime out = fragment_end;
+static Rational cadence_end(const AnalysisReport *report, const AnalysisCadence *cadence, Rational fragment_end) {
+    Rational out = fragment_end;
     if (cadence->arrival_last + 1 < report->entry_count) {
         const AnalysisReportEntry *next = &report->entries[cadence->arrival_last + 1];
-        if (plan_time_make(next->time_numerator, next->time_denominator, &out) != PLAN_OK) {
+        if (rational_make(next->time_numerator, next->time_denominator, &out) != RATIONAL_OK) {
             out = fragment_end;
         }
     }
@@ -309,7 +307,7 @@ static PlanTime cadence_end(const AnalysisReport *report, const AnalysisCadence 
  * arrival gives way to the next), or its arrival begins in the section's last bar. A tonic that arrives in the last bar
  * and carries on into the next section ends a bar or more after it, and is the section's cadence all the same.
  */
-static bool cadence_at(const AnalysisReport *report, const AnalysisCadence *cadence, PlanTime section_end, PlanTime fragment_end,
+static bool cadence_at(const AnalysisReport *report, const AnalysisCadence *cadence, Rational section_end, Rational fragment_end,
                        const PlanMeter *meter) {
     if (within_a_beat(cadence_end(report, cadence, fragment_end), section_end, meter)) {
         return true;
@@ -318,18 +316,18 @@ static bool cadence_at(const AnalysisReport *report, const AnalysisCadence *cade
         return false;
     }
     const AnalysisReportEntry *arrival = &report->entries[cadence->arrival_first];
-    PlanTime start;
-    PlanTime last_bar;
-    PlanTime bar = {meter->beats_per_bar, (unsigned long)meter->beat_unit};
-    if (plan_time_make(arrival->time_numerator, arrival->time_denominator, &start) != PLAN_OK ||
-        !time_minus(section_end, bar, &last_bar)) {
+    Rational start;
+    Rational last_bar;
+    Rational bar = {meter->beats_per_bar, (unsigned long)meter->beat_unit};
+    if (rational_make(arrival->time_numerator, arrival->time_denominator, &start) != RATIONAL_OK ||
+        rational_sub(section_end, bar, &last_bar) != RATIONAL_OK) {
         return false;
     }
-    return plan_time_compare(start, last_bar) >= 0 && plan_time_compare(start, section_end) <= 0;
+    return rational_cmp(start, last_bar) >= 0 && rational_cmp(start, section_end) <= 0;
 }
 
 static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter, const AnalysisReport *report,
-                                   PlanTime fragment_end, Items *items) {
+                                   Rational fragment_end, Items *items) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!is_part_section(plan, id)) {
             continue;
@@ -339,14 +337,14 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
             const PlanConstraint *constraint = plan_node_constraint_at(plan, id, i);
             planned = constraint->kind == PLAN_CONSTRAINT_CADENCE ? constraint : NULL;
         }
-        PlanTime end;
+        Rational end;
         PlanSpan span = plan_node_span(plan, id);
         if (!planned || plan_span_end(span, &end) != PLAN_OK) {
             continue;
         }
-        PlanTime last_beat;
-        PlanTime one_beat = {1, (unsigned long)meter->beat_unit};
-        size_t bar = time_minus(end, one_beat, &last_beat) && last_beat.num > 0
+        Rational last_beat;
+        Rational one_beat = {1, (unsigned long)meter->beat_unit};
+        size_t bar = rational_sub(end, one_beat, &last_beat) == RATIONAL_OK && last_beat.num > 0
                          ? bar_of(last_beat.num, last_beat.den, meter)
                          : 0;
         const char *heard = "none";
@@ -365,7 +363,7 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
         /* A half cadence leads on: into the next section's tonic the Analyzer hears the dominant arrive and resolve, an
            authentic cadence that starts the next section; at the piece's end it has nothing to resolve into and is not
            heard at all. Neither is held against the plan. */
-        bool at_end = plan_time_compare(end, fragment_end) >= 0;
+        bool at_end = rational_cmp(end, fragment_end) >= 0;
         /* The last cadence of the piece has no chord after it: when the Analyzer hears none there, none is held against it. */
         if (at_end && !agreed && strcmp(heard, "none") == 0) {
             heard = "none (the piece ends)";
@@ -376,10 +374,10 @@ static void compare_piece_cadences(const PiecePlan *plan, const PlanMeter *meter
             bool resolved = false;
             for (size_t c = 0; c < report->cadence_count && !resolved; c++) {
                 const AnalysisCadence *cadence = &report->cadences[c];
-                PlanTime arrival;
+                Rational arrival;
                 resolved = cadence->arrival_first < report->entry_count &&
-                           plan_time_make(report->entries[cadence->arrival_first].time_numerator,
-                                          report->entries[cadence->arrival_first].time_denominator, &arrival) == PLAN_OK &&
+                           rational_make(report->entries[cadence->arrival_first].time_numerator,
+                                          report->entries[cadence->arrival_first].time_denominator, &arrival) == RATIONAL_OK &&
                            within_a_beat(arrival, end, meter);
             }
             if (last || resolved) {

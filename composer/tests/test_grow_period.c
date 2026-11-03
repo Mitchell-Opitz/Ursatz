@@ -86,7 +86,7 @@ static NodeId find_node(const PiecePlan *plan, const char *name) {
     return PLAN_NODE_NONE;
 }
 
-static long ticks(PlanTime time) {
+static long ticks(Rational time) {
     assert((time.num * TICKS) % (long)time.den == 0);
     return time.num * TICKS / (long)time.den;
 }
@@ -256,8 +256,8 @@ static long motive_length(const PiecePlan *plan, const char *name) {
 
 static void check_structure(const PiecePlan *plan, const Scenario *scenario, size_t bars, PlanThemeBeginning beginning,
                             PlanThemeEnding ending) {
-    PlanTime bar;
-    assert(plan_time_make(scenario->beats, (unsigned long)scenario->unit, &bar) == PLAN_OK);
+    Rational bar;
+    assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     long bar_ticks = ticks(bar);
     NodeId theme = find_node(plan, "theme");
     assert(theme != PLAN_NODE_NONE && plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
@@ -393,8 +393,8 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     LaneSpanId ids[96];
     NodeId theme_node = find_node(plan, "theme");
     PlanSpan theme = plan_node_span(plan, theme_node);
-    PlanTime bar;
-    assert(plan_time_make(scenario->beats, (unsigned long)scenario->unit, &bar) == PLAN_OK);
+    Rational bar;
+    assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     long bar_ticks = ticks(bar);
     size_t cells_per_bar = scenario->unit == 8 || (scenario->beats == 4 && scenario->unit == 4) ? 2 : 1;
     long cell_ticks = bar_ticks / (long)cells_per_bar;
@@ -422,8 +422,8 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     if (antecedent) {
         /* The antecedent's last chord is its weak cadence's: a dominant for a half cadence. */
         PlanSpan first_half = {theme.start, {half, TICKS}};
-        PlanTime first_length;
-        assert(plan_time_make(half, TICKS, &first_length) == PLAN_OK);
+        Rational first_length;
+        assert(rational_make(half, TICKS, &first_length) == RATIONAL_OK);
         first_half.length = first_length;
         LaneSpanId last = last_in(ids, chords, plan, first_half);
         PlanCadenceType weak = PLAN_CADENCE_HC;
@@ -495,8 +495,8 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
 /* The material is not part of the piece: it is skipped, and the piece ends with the theme. */
 static void check_render(const PiecePlan *plan, size_t bars, const Scenario *scenario) {
     RenderedPlan rendered;
-    PlanTime bar;
-    assert(plan_time_make(scenario->beats, (unsigned long)scenario->unit, &bar) == PLAN_OK);
+    Rational bar;
+    assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     assert(rendered.count > 0);
     assert(ticks(rendered.piece_end) == (long)bars * ticks(bar));

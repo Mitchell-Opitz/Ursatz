@@ -292,10 +292,9 @@ static const char *given_lane_name(const GivenReport *run) {
 
 /* The bar of its section a run starts in, from 1. */
 static size_t given_bar(const PiecePlan *plan, const GivenReport *run) {
-    PlanTime offset;
+    Rational offset;
     PlanSpan section = plan_node_span(plan, run->owner);
-    if (plan_time_make(run->span.start.num * (long)section.start.den - section.start.num * (long)run->span.start.den,
-                       run->span.start.den * section.start.den, &offset) != PLAN_OK) {
+    if (rational_sub(run->span.start, section.start, &offset) != RATIONAL_OK) {
         return 1;
     }
     return cli_bars_in(plan, offset) + 1;

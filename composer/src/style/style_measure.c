@@ -15,7 +15,7 @@ static bool starting_key(const PiecePlan *plan, PlanKey *out) {
     PlanSpan everything = {{0, 1}, {1000000, 1}};
     LaneSpanId first;
     size_t count = plan_lane_find(plan, PLAN_LANE_KEY, 0, everything, &first, 1);
-    if (count == 0 || plan_time_compare(plan_lane_span_span(plan, first).start, (PlanTime){0, 1}) > 0) {
+    if (count == 0 || rational_cmp(plan_lane_span_span(plan, first).start, (Rational){0, 1}) > 0) {
         return false;
     }
     *out = plan_lane_span_payload(plan, first)->key;

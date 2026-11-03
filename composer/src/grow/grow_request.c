@@ -9,6 +9,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "util/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 
@@ -240,18 +241,18 @@ bool grow_cells_per_bar(const PlanMeter *meter, size_t *cells) {
     return harmony_rhythm_cells_per_bar(meter, cells);
 }
 
-PlanTime grow_bar_length(const PlanMeter *meter) {
-    PlanTime bar = {0, 1};
-    if (plan_time_make(meter->beats_per_bar, (unsigned long)meter->beat_unit, &bar) != PLAN_OK) {
+Rational grow_bar_length(const PlanMeter *meter) {
+    Rational bar = {0, 1};
+    if (rational_make(meter->beats_per_bar, (long long)meter->beat_unit, &bar) != RATIONAL_OK) {
         bar.num = 0;
         bar.den = 1;
     }
     return bar;
 }
 
-static PlanTime times(PlanTime time, size_t count) {
-    PlanTime out = {0, 1};
-    if (plan_time_make(time.num * (long)count, time.den, &out) != PLAN_OK) {
+static Rational times(Rational time, size_t count) {
+    Rational out = {0, 1};
+    if (rational_make(time.num * (long)count, time.den, &out) != RATIONAL_OK) {
         out.num = 0;
         out.den = 1;
     }
@@ -300,10 +301,10 @@ bool grow_theme_buildable(const PlanMeter *meter, size_t bars, const PlanThemePa
 }
 
 /* Whether a slot's motive is one the theme can be built from: see GrowRequest.slot_motives. */
-static bool slot_motive_valid(const GrowRequest *request, GrowSlot slot, PlanTime bar) {
+static bool slot_motive_valid(const GrowRequest *request, GrowSlot slot, Rational bar) {
     const Motive *motive = request->slot_motives[slot];
     size_t units;
-    PlanTime room;
+    Rational room;
     bool used = grow_slot_used(&request->pairing, slot, &units);
     if (!used || motive->form != MOTIVE_FORM_FULL || motive->note_count < 2 ||
         motive->meter.beats_per_bar != request->meter.beats_per_bar ||
@@ -313,18 +314,18 @@ static bool slot_motive_valid(const GrowRequest *request, GrowSlot slot, PlanTim
         return false;
     }
     /* The first idea of the slot has units eighths of the theme; the longest is a bar. */
-    if (units > 0 && plan_time_make(bar.num * (long)request->bars * (long)units, bar.den * 8, &room) == PLAN_OK &&
-        plan_time_compare(motive->length, room) > 0) {
+    if (units > 0 && rational_make(bar.num * (long)request->bars * (long)units, bar.den * 8, &room) == RATIONAL_OK &&
+        rational_cmp(motive->length, room) > 0) {
         return false;
     }
-    return plan_time_compare(motive->length, bar) <= 0;
+    return rational_cmp(motive->length, bar) <= 0;
 }
 
 /* Whether the motive of a single idea is one the theme can be built from: see GrowRequest.idea_motives. */
-static bool idea_motive_valid(const GrowRequest *request, GrowIdea idea, PlanTime bar) {
+static bool idea_motive_valid(const GrowRequest *request, GrowIdea idea, Rational bar) {
     const Motive *motive = request->idea_motives[idea];
     GrowPlace place;
-    PlanTime room;
+    Rational room;
     if (idea == GROW_IDEA_BASIC || !grow_idea_place(&request->pairing, idea, &place) ||
         motive->form != MOTIVE_FORM_FULL || motive->note_count < 2 ||
         motive->meter.beats_per_bar != request->meter.beats_per_bar ||
@@ -334,11 +335,11 @@ static bool idea_motive_valid(const GrowRequest *request, GrowIdea idea, PlanTim
         return false;
     }
     size_t units = grow_place_units(&request->pairing, place);
-    if (plan_time_make(bar.num * (long)request->bars * (long)units, bar.den * 8, &room) == PLAN_OK &&
-        plan_time_compare(motive->length, room) > 0) {
+    if (rational_make(bar.num * (long)request->bars * (long)units, bar.den * 8, &room) == RATIONAL_OK &&
+        rational_cmp(motive->length, room) > 0) {
         return false;
     }
-    return plan_time_compare(motive->length, bar) <= 0;
+    return rational_cmp(motive->length, bar) <= 0;
 }
 
 GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
@@ -370,8 +371,8 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
                                   accompaniment_motive->note_count < 1))) {
         return GROW_ERR_BAD_REQUEST;
     }
-    PlanTime bar = grow_bar_length(&request->meter);
-    if (plan_time_compare(request->motive->length, bar) > 0) {
+    Rational bar = grow_bar_length(&request->meter);
+    if (rational_cmp(request->motive->length, bar) > 0) {
         return GROW_ERR_MOTIVE_TOO_LONG;
     }
     /* The slot motives, each a node of the material after m0. */
@@ -395,7 +396,7 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
         }
     }
     size_t material_bars = GROW_MATERIAL_BARS + slot_count + idea_count;
-    if (accompaniment_motive && plan_time_compare(accompaniment_motive->length, bar) > 0) {
+    if (accompaniment_motive && rational_cmp(accompaniment_motive->length, bar) > 0) {
         return GROW_ERR_BAD_REQUEST;
     }
 
@@ -406,8 +407,8 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     PlanSpan theme = {{0, 1}, times(bar, request->bars)};
     PlanSpan material = {theme.length, times(bar, material_bars)};
     PlanSpan form = {{0, 1}, {0, 1}};
-    PlanTime total;
-    GrowResult result = from_plan(plan_time_add(theme.length, material.length, &total));
+    Rational total;
+    GrowResult result = from_plan(plan_result_of_rational(rational_add(theme.length, material.length, &total)));
     form.length = total;
     NodeId form_id = PLAN_NODE_NONE;
     NodeId theme_id = PLAN_NODE_NONE;
@@ -510,11 +511,11 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     /* The slot motives follow m0, a bar each. */
     size_t slot_bar = 1;
     for (GrowSlot slot = GROW_SLOT_CONTRASTING; result == GROW_OK && slot < GROW_SLOT_COUNT; slot++) {
-        PlanTime start;
+        Rational start;
         if (!request->slot_motives[slot]) {
             continue;
         }
-        result = from_plan(plan_time_add(material.start, times(bar, slot_bar++), &start));
+        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, slot_bar++), &start)));
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, request->slot_motives[slot],
                                                              grow_slot_node_name(slot), NULL, NULL))
                                    : result;
@@ -522,20 +523,20 @@ GrowResult grow_build_plan(const GrowRequest *request, PiecePlan **out) {
     /* The motives of single ideas follow the slot motives, a bar each. */
     size_t idea_bar = 1 + slot_count;
     for (int idea_at = 0; result == GROW_OK && idea_at < GROW_IDEA_COUNT; idea_at++) {
-        PlanTime start;
+        Rational start;
         char name[8];
         if (!request->idea_motives[idea_at]) {
             continue;
         }
-        result = from_plan(plan_time_add(material.start, times(bar, idea_bar++), &start));
+        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, idea_bar++), &start)));
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, request->idea_motives[idea_at],
                                                              grow_idea_node_name((GrowIdea)idea_at, name, sizeof(name)),
                                                              NULL, NULL))
                                    : result;
     }
     if (result == GROW_OK && accompaniment_motive) {
-        PlanTime start;
-        result = from_plan(plan_time_add(material.start, times(bar, material_bars - 1), &start));
+        Rational start;
+        result = from_plan(plan_result_of_rational(rational_add(material.start, times(bar, material_bars - 1), &start)));
         result = result == GROW_OK ? from_plan(motive_attach(plan, idea, start, accompaniment_motive,
                                                              GROW_ACCOMPANIMENT_NAME, NULL, NULL))
                                    : result;
@@ -589,7 +590,7 @@ bool grow_read_motive(const PiecePlan *plan, NodeId node, const PlanMeter *meter
             out->note_count = notes->note_count;
             memcpy(out->notes, notes->notes, notes->note_count * sizeof(PlanNote));
             PlanNote *last = &out->notes[out->note_count - 1];
-            return plan_time_add(last->offset, last->duration, &out->length) == PLAN_OK;
+            return rational_add(last->offset, last->duration, &out->length) == RATIONAL_OK;
         }
     }
     return false;

@@ -209,19 +209,15 @@ bool return_copy_clone(const ReturnCopy *from, ReturnCopy *out) {
     return ok;
 }
 
-static bool same_times(PlanTime a, PlanTime b);
+static bool same_times(Rational a, Rational b);
 
-static bool time_sub(PlanTime a, PlanTime b, PlanTime *out) {
-    return plan_time_make(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den, out) == PLAN_OK;
+static bool move_span(PlanSpan *span, Rational delta) {
+    return rational_add(span->start, delta, &span->start) == RATIONAL_OK;
 }
 
-static bool move_span(PlanSpan *span, PlanTime delta) {
-    return plan_time_add(span->start, delta, &span->start) == PLAN_OK;
-}
-
-bool return_copy_move(ReturnCopy *copy, PlanTime from, PlanTime to, int transpose) {
-    PlanTime delta;
-    if (!time_sub(to, from, &delta)) {
+bool return_copy_move(ReturnCopy *copy, Rational from, Rational to, int transpose) {
+    Rational delta;
+    if (rational_sub(to, from, &delta) != RATIONAL_OK) {
         return false;
     }
     for (size_t i = 0; i < copy->node_count; i++) {
@@ -329,29 +325,29 @@ bool return_meter_over(const PiecePlan *plan, PlanSpan span, PlanMeter *out) {
 
 /* A key under a section: from and to are measured from the section's start. */
 typedef struct {
-    PlanTime from;
-    PlanTime to;
+    Rational from;
+    Rational to;
     PlanKey key;
 } KeyPiece;
 
 static bool key_pieces(const PiecePlan *plan, PlanSpan span, KeyPiece *out, size_t *count) {
     LaneSpanId ids[MAX_KEY_PIECES];
-    PlanTime end;
+    Rational end;
     size_t found = plan_lane_find(plan, PLAN_LANE_KEY, 0, span, ids, MAX_KEY_PIECES);
     if (found == 0 || found > MAX_KEY_PIECES || plan_span_end(span, &end) != PLAN_OK) {
         return false;
     }
     for (size_t i = 0; i < found; i++) {
         PlanSpan key_span = plan_lane_span_span(plan, ids[i]);
-        PlanTime key_end;
-        PlanTime from = key_span.start;
-        PlanTime to;
+        Rational key_end;
+        Rational from = key_span.start;
+        Rational to;
         if (plan_span_end(key_span, &key_end) != PLAN_OK) {
             return false;
         }
-        to = plan_time_compare(key_end, end) < 0 ? key_end : end;
-        from = plan_time_compare(from, span.start) > 0 ? from : span.start;
-        if (!time_sub(from, span.start, &out[i].from) || !time_sub(to, span.start, &out[i].to)) {
+        to = rational_cmp(key_end, end) < 0 ? key_end : end;
+        from = rational_cmp(from, span.start) > 0 ? from : span.start;
+        if (rational_sub(from, span.start, &out[i].from) != RATIONAL_OK || rational_sub(to, span.start, &out[i].to) != RATIONAL_OK) {
             return false;
         }
         out[i].key = plan_lane_span_payload(plan, ids[i])->key;
@@ -373,7 +369,7 @@ bool return_key_shift(const PiecePlan *source_plan, PlanSpan source, const Piece
     }
     for (size_t i = 0; i < na; i++) {
         int step = ((b[i].key.tonic_pitch_class - a[i].key.tonic_pitch_class) % 12 + 12) % 12;
-        if (plan_time_compare(a[i].from, b[i].from) != 0 || plan_time_compare(a[i].to, b[i].to) != 0 ||
+        if (rational_cmp(a[i].from, b[i].from) != 0 || rational_cmp(a[i].to, b[i].to) != 0 ||
             a[i].key.mode != b[i].key.mode || (difference >= 0 && difference != step)) {
             return false;
         }
@@ -407,7 +403,7 @@ bool form_return_source(const PiecePlan *plan, NodeId section, NodeId *source, P
     }
     PlanSpan from = plan_node_span(plan, ret.section);
     PlanSpan to = plan_node_span(plan, section);
-    if (plan_time_compare(from.length, to.length) != 0 || !return_meter_over(plan, from, &source_meter) ||
+    if (rational_cmp(from.length, to.length) != 0 || !return_meter_over(plan, from, &source_meter) ||
         !return_meter_over(plan, to, &target_meter) || source_meter.beats_per_bar != target_meter.beats_per_bar ||
         source_meter.beat_unit != target_meter.beat_unit || !return_key_shift(plan, from, plan, to, &shift)) {
         return false;
@@ -456,7 +452,7 @@ bool return_source_ready(const PiecePlan *plan, NodeId source) {
 }
 
 /* Whether a time is a whole number of cells. */
-static bool on_cell(PlanTime time, PlanTime cell, size_t *index) {
+static bool on_cell(Rational time, Rational cell, size_t *index) {
     long numerator = time.num * (long)cell.den;
     long denominator = (long)time.den * cell.num;
     if (denominator <= 0 || numerator < 0 || numerator % denominator != 0) {
@@ -500,11 +496,11 @@ bool form_return_melody_fits(const PiecePlan *plan, NodeId section) {
         PlanSpan lane_span = plan_lane_span_span(plan, ids[s]);
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[s])->notes;
         for (size_t n = 0; fits && n < notes->note_count; n++) {
-            PlanTime onset;
-            PlanTime from_start;
+            Rational onset;
+            Rational from_start;
             size_t cell;
-            if (plan_time_add(lane_span.start, notes->notes[n].offset, &onset) != PLAN_OK ||
-                !time_sub(onset, span.start, &from_start)) {
+            if (rational_add(lane_span.start, notes->notes[n].offset, &onset) != RATIONAL_OK ||
+                rational_sub(onset, span.start, &from_start) != RATIONAL_OK) {
                 fits = false;
             } else if (on_cell(from_start, metre.cell_length, &cell)) {
                 size_t c = 0;
@@ -525,8 +521,8 @@ bool form_return_melody_fits(const PiecePlan *plan, NodeId section) {
 
 /* A chord of a section's harmony lane: where it starts in the section, how long it is, and its numeral. */
 typedef struct {
-    PlanTime from;
-    PlanTime length;
+    Rational from;
+    Rational length;
     char roman[PLAN_ROMAN_NUMERAL_MAX];
 } ChordAt;
 
@@ -544,7 +540,7 @@ static ChordAt *read_chords(const PiecePlan *plan, NodeId section, size_t *count
     plan_lane_find(plan, PLAN_LANE_HARMONY, 0, span, ids, found);
     for (size_t i = 0; i < found; i++) {
         PlanSpan chord = plan_lane_span_span(plan, ids[i]);
-        if (!time_sub(chord.start, span.start, &chords[i].from)) {
+        if (rational_sub(chord.start, span.start, &chords[i].from) != RATIONAL_OK) {
             free(ids);
             free(chords);
             return NULL;
@@ -721,8 +717,8 @@ FillResult form_return_register(FillOperatorRegistry *registry, const MelodyFill
 
 /* ------------------------------------------------------------- the checker */
 
-static bool same_times(PlanTime a, PlanTime b) {
-    return plan_time_compare(a, b) == 0;
+static bool same_times(Rational a, Rational b) {
+    return rational_cmp(a, b) == 0;
 }
 
 static bool same_span(PlanSpan a, PlanSpan b) {

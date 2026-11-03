@@ -1,12 +1,19 @@
 #include "util/plan_util.h"
 
+PlanResult plan_result_of_rational(RationalResult result) {
+    if (result == RATIONAL_OK) {
+        return PLAN_OK;
+    }
+    return result == RATIONAL_ERR_NULL ? PLAN_ERR_NULL : PLAN_ERR_BAD_TIME;
+}
+
 bool plan_spans_overlap(PlanSpan a, PlanSpan b) {
-    PlanTime a_end;
-    PlanTime b_end;
+    Rational a_end;
+    Rational b_end;
     if (plan_span_end(a, &a_end) != PLAN_OK || plan_span_end(b, &b_end) != PLAN_OK) {
         return false;
     }
-    return plan_time_compare(a.start, b_end) < 0 && plan_time_compare(b.start, a_end) < 0;
+    return rational_cmp(a.start, b_end) < 0 && rational_cmp(b.start, a_end) < 0;
 }
 
 bool plan_is_note_lane(PlanLaneKind lane) {

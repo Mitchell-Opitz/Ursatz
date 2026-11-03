@@ -29,7 +29,7 @@ bool request_member_string(const cJSON *object, const char *name, bool required,
 /* The "pickup" member as text: a string, or a number of beats formatted into text. NULL for none. */
 bool request_member_pickup(const cJSON *object, char *text, size_t size, const char **out);
 /* "0", "1", "1/2": beats of the beat unit, as whole notes. */
-bool request_parse_pickup(const char *text, int beat_unit, PlanTime *out);
+bool request_parse_pickup(const char *text, int beat_unit, Rational *out);
 /* A motive of a request, a degree list in the key with its pickup, harmony, features and role (role forced when not NULL). */
 int request_read_motive(const char *what, const cJSON *object, const char *role, const PlanMeter *meter, const PlanKey *key,
                         Motive *out);

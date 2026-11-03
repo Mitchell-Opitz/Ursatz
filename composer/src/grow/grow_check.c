@@ -21,7 +21,7 @@
 #define TICKS_PER_WHOLE 128L
 
 /* A length as a whole number of ticks, the unit the rules below are asked in; 0 when it is not a whole number. */
-static size_t ticks_of(PlanTime time) {
+static size_t ticks_of(Rational time) {
     long scaled = time.num * TICKS_PER_WHOLE;
     return time.den != 0 && scaled > 0 && scaled % (long)time.den == 0 ? (size_t)(scaled / (long)time.den) : 0;
 }
@@ -43,12 +43,12 @@ static CadenceType cadence_of(PlanCadenceType cadence) {
 
 /* The rules of a continuation: it fragments the basic idea, the fragments in their span and in their notes. */
 static const char *judge_continuation(const GrowThemeSpec *spec) {
-    PlanTime bar = grow_bar_length(&spec->meter);
-    PlanTime unit = {0, 1};
-    if (plan_time_make(bar.num * (long)spec->bars, bar.den * 8, &unit) != PLAN_OK) {
+    Rational bar = grow_bar_length(&spec->meter);
+    Rational unit = {0, 1};
+    if (rational_make(bar.num * (long)spec->bars, bar.den * 8, &unit) != RATIONAL_OK) {
         return "theme not measurable";
     }
-    PlanTime basic = {unit.num * 2, unit.den};
+    Rational basic = {unit.num * 2, unit.den};
     size_t basic_ticks = ticks_of(basic);
     size_t fragment_ticks = ticks_of(unit);
     if (basic_ticks == 0 || fragment_ticks == 0 || !standard_form_is_fragmentation(basic_ticks, fragment_ticks)) {

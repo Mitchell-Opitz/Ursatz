@@ -278,17 +278,17 @@ static bool build_motive(const MotiveRandomOptions *options, const PlanKey *key,
     long onset = 0;
     for (size_t i = 0; i < rhythm->count; i++) {
         out->notes[i].midi_pitch = melody->pitches[i];
-        if (plan_time_make(onset, den, &out->notes[i].offset) != PLAN_OK ||
-            plan_time_make(rhythm->ticks[i], den, &out->notes[i].duration) != PLAN_OK) {
+        if (rational_make(onset, den, &out->notes[i].offset) != RATIONAL_OK ||
+            rational_make(rhythm->ticks[i], den, &out->notes[i].duration) != RATIONAL_OK) {
             return false;
         }
         onset += rhythm->ticks[i];
     }
     out->note_count = rhythm->count;
-    if (rhythm->pickup > 0 && plan_time_make(rhythm->pickup, den, &out->pickup) != PLAN_OK) {
+    if (rhythm->pickup > 0 && rational_make(rhythm->pickup, den, &out->pickup) != RATIONAL_OK) {
         return false;
     }
-    return plan_time_make(onset, den, &out->length) == PLAN_OK;
+    return rational_make(onset, den, &out->length) == RATIONAL_OK;
 }
 
 /*

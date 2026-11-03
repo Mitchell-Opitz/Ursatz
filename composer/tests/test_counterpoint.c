@@ -49,9 +49,9 @@ static const Cantus CANTI[] = {
      {60, 64, 62, 65, 64, 67, 69, 67, 64, 62, 60}},
 };
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 

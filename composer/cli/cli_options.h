@@ -165,7 +165,7 @@ typedef struct {
 void cli_discard_pending(CliPendingFile *pending, size_t count);
 
 /* A pickup length ("1", "3/2") in beats of the unit as a time; false when it is not one. */
-bool cli_parse_pickup(const char *text, int beat_unit, PlanTime *out);
+bool cli_parse_pickup(const char *text, int beat_unit, Rational *out);
 
 /* The text of a motive in its own form (notes, rhythm or contour); malloc'd, the caller frees it. */
 char *cli_motive_text(const Motive *motive);

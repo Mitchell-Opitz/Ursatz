@@ -32,7 +32,7 @@ static MotiveResult notes_from_events(NoteEvent *const *events, PitchNumericValu
         motive_set_error(error, "", "the file has %zu notes; the most is %d", count, MOTIVE_MAX_NOTES);
         return MOTIVE_ERR_TOO_MANY_NOTES;
     }
-    PlanTime end = motive_time(0, 1);
+    Rational end = motive_time(0, 1);
     for (size_t i = 0; i < count; i++) {
         char location[MOTIVE_ERROR_LOCATION_MAX];
         if (part_index && part_index[i] != part_index[0]) {
@@ -53,8 +53,8 @@ static MotiveResult notes_from_events(NoteEvent *const *events, PitchNumericValu
         note.midi_pitch = (int)pitch_numeric_value_position_numerator(values[i]);
         note.offset = motive_time(musical_time_numerator(position), musical_time_denominator(position));
         note.duration = motive_time(duration_numerator(duration), duration_denominator(duration));
-        if (plan_time_compare(note.offset, end) < 0) {
-            snprintf(location, sizeof(location), "at %ld/%lu (note %zu)", note.offset.num, note.offset.den, i + 1);
+        if (rational_cmp(note.offset, end) < 0) {
+            snprintf(location, sizeof(location), "at %lld/%lld (note %zu)", note.offset.num, note.offset.den, i + 1);
             motive_set_error(error, location,
                              "the note sounds while the note before it still sounds; a motive is one voice");
             return MOTIVE_ERR_POLYPHONIC;

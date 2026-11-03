@@ -48,19 +48,19 @@ typedef struct {
     LaneSpanId target;  /* the melody span to fill, once added */
     PlanSpan span;      /* the phrase */
     PlanSpan form_span;
-    PlanTime bar_length;
+    Rational bar_length;
     Motive motive;
 } Fixture;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
-static PlanTime time_plus(PlanTime a, PlanTime b) {
-    PlanTime sum;
-    assert(plan_time_add(a, b, &sum) == PLAN_OK);
+static Rational time_plus(Rational a, Rational b) {
+    Rational sum;
+    assert(rational_add(a, b, &sum) == RATIONAL_OK);
     return sum;
 }
 
@@ -295,8 +295,8 @@ static unsigned chord_pcs(PlanKeyMode mode, int tonic, const char *roman) {
 }
 
 typedef struct {
-    PlanTime start;
-    PlanTime end;
+    Rational start;
+    Rational end;
     int pitch;
 } Sounding;
 
@@ -320,9 +320,9 @@ static size_t read_melody(const Fixture *fixture, Sounding *out, size_t capacity
     return count;
 }
 
-static size_t sounding_at(const Sounding *notes, size_t count, PlanTime at) {
+static size_t sounding_at(const Sounding *notes, size_t count, Rational at) {
     for (size_t i = 0; i < count; i++) {
-        if (plan_time_compare(notes[i].start, at) <= 0 && plan_time_compare(at, notes[i].end) < 0) {
+        if (rational_cmp(notes[i].start, at) <= 0 && rational_cmp(at, notes[i].end) < 0) {
             return i;
         }
     }
@@ -336,7 +336,7 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
     size_t used = 0;
     out[0] = '\0';
     for (size_t i = 0; i < count; i++) {
-        used += (size_t)snprintf(out + used, size - used, "%ld/%lu+%ld/%lu:%d ", notes[i].start.num, notes[i].start.den,
+        used += (size_t)snprintf(out + used, size - used, "%lld/%lld+%lld/%lld:%d ", notes[i].start.num, notes[i].start.den,
                                  notes[i].end.num, notes[i].end.den, notes[i].pitch);
         assert(used + 128 < size);
     }
@@ -359,21 +359,21 @@ static void check_melody(const Fixture *fixture, const Scenario *scenario, const
     assert(violation == NULL);
 
     /* The spans tile the phrase, are settled, and the notes follow one another from its start to its end. */
-    PlanTime at = fixture->span.start;
+    Rational at = fixture->span.start;
     LaneSpanId melody[MAX_CHORDS];
     assert(plan_lane_find(fixture->plan, PLAN_LANE_MELODY, 0, fixture->span, melody, MAX_CHORDS) == spans);
     for (size_t i = 0; i < spans; i++) {
         PlanSpan span = plan_lane_span_span(fixture->plan, melody[i]);
-        assert(plan_time_compare(span.start, at) == 0);
+        assert(rational_cmp(span.start, at) == 0);
         assert(plan_lane_span_state(fixture->plan, melody[i]) == PLAN_STATE_REALIZED);
         assert(plan_span_end(span, &at) == PLAN_OK);
     }
-    assert(plan_time_compare(at, time_plus(fixture->span.start, fixture->span.length)) == 0);
-    assert(plan_time_compare(notes[0].start, fixture->span.start) == 0);
+    assert(rational_cmp(at, time_plus(fixture->span.start, fixture->span.length)) == 0);
+    assert(rational_cmp(notes[0].start, fixture->span.start) == 0);
     for (size_t i = 1; i < count; i++) {
-        assert(plan_time_compare(notes[i - 1].end, notes[i].start) == 0);
+        assert(rational_cmp(notes[i - 1].end, notes[i].start) == 0);
     }
-    assert(plan_time_compare(notes[count - 1].end, at) == 0);
+    assert(rational_cmp(notes[count - 1].end, at) == 0);
     for (size_t i = 0; i < count; i++) {
         assert(notes[i].pitch >= params->range_low && notes[i].pitch <= params->range_high);
     }
@@ -386,10 +386,10 @@ static void check_melody(const Fixture *fixture, const Scenario *scenario, const
         bool downbeat = beat_num % beat_den == 0;
         for (size_t c = 0; c < chord_count; c++) {
             PlanSpan chord_span = plan_lane_span_span(fixture->plan, chords[c]);
-            PlanTime end;
+            Rational end;
             assert(plan_span_end(chord_span, &end) == PLAN_OK);
-            if (plan_time_compare(notes[n].start, chord_span.start) >= 0 && plan_time_compare(notes[n].start, end) < 0) {
-                bool chord_start = plan_time_compare(notes[n].start, chord_span.start) == 0;
+            if (rational_cmp(notes[n].start, chord_span.start) >= 0 && rational_cmp(notes[n].start, end) < 0) {
+                bool chord_start = rational_cmp(notes[n].start, chord_span.start) == 0;
                 unsigned tones = chord_pcs(scenario->mode, scenario->tonic,
                                            plan_lane_span_payload(fixture->plan, chords[c])->harmony.roman_numeral);
                 non_chord_tones_written += !(tones & (1u << (notes[n].pitch % 12)));
@@ -425,11 +425,11 @@ static void check_melody(const Fixture *fixture, const Scenario *scenario, const
     }
     if (scenario->cadence == PLAN_CADENCE_PAC || scenario->cadence == PLAN_CADENCE_IAC) {
         PlanSpan final_chord = plan_lane_span_span(fixture->plan, chords[chord_count - 1]);
-        PlanTime before = final_chord.start;
+        Rational before = final_chord.start;
         size_t from = count;
         size_t to = sounding_at(notes, count, final_chord.start);
         for (size_t i = 0; i < count; i++) {
-            if (plan_time_compare(notes[i].end, before) <= 0) {
+            if (rational_cmp(notes[i].end, before) <= 0) {
                 from = i;
             }
         }
@@ -477,7 +477,7 @@ static bool pipeline(const Scenario *scenario, bool developed, const MelodyFillP
         }
         assert(found);
         assert(plan_lane_span_state(fixture.plan, fixture.target) == PLAN_STATE_CONSTRAINED);
-        assert(plan_time_compare(plan_lane_span_span(fixture.plan, fixture.target).length, fixture.span.length) == 0);
+        assert(rational_cmp(plan_lane_span_span(fixture.plan, fixture.target).length, fixture.span.length) == 0);
     }
     fill_outcome_destroy(&outcome);
     if (written) {
@@ -634,7 +634,7 @@ static IdeaFixture build_ideas(int beats, int unit, PlanKeyMode mode, int tonic)
     NodeId material_idea;
     MotiveOptions options;
     Motive motive;
-    PlanTime bar = fraction(beats, (unsigned long)unit);
+    Rational bar = fraction(beats, (unsigned long)unit);
     PlanSpan form_span = {fraction(0, 1), fraction(beats * 5L, (unsigned long)unit)};
     PlanSpan phrase_span = {fraction(0, 1), fraction(beats * 4L, (unsigned long)unit)};
     PlanSpan first_span = {fraction(0, 1), fraction(beats * 2L, (unsigned long)unit)};

@@ -166,7 +166,7 @@ bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, PlanKey key, const
     for (size_t i = 0; ok && i < context->count; i++) {
         PlanSpan chord_span;
         LaneSpanId found[2];
-        PlanTime offset = {0, 1};
+        Rational offset = {0, 1};
         size_t cells = 0;
         for (size_t k = 0; ok && k < i; k++) {
             cells += context->chords[k].cells;
@@ -176,18 +176,18 @@ bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, PlanKey key, const
         if (ok) {
             PlanSpan bass_span = plan_lane_span_span(plan, found[0]);
             const PlanNotes *notes = &plan_lane_span_payload(plan, found[0])->notes;
-            ok = plan_time_compare(bass_span.start, chord_span.start) == 0 &&
-                 plan_time_compare(bass_span.length, chord_span.length) == 0;
+            ok = rational_cmp(bass_span.start, chord_span.start) == 0 &&
+                 rational_cmp(bass_span.length, chord_span.length) == 0;
             for (size_t n = 0; ok && n < notes->note_count && line->note_count < BASS_MAX_NOTES; n++) {
                 size_t first_cell;
                 size_t length_cells;
                 PlanSpan note_span;
                 /* A note lasts a whole number of cells of the metre, from the cell it starts on. */
-                ok = plan_time_compare(notes->notes[n].offset, offset) == 0 &&
-                     plan_time_add(chord_span.start, offset, &note_span.start) == PLAN_OK;
+                ok = rational_cmp(notes->notes[n].offset, offset) == 0 &&
+                     rational_add(chord_span.start, offset, &note_span.start) == RATIONAL_OK;
                 note_span.length = notes->notes[n].duration;
                 ok = ok && harmony_metre_find_cells(&context->metre, note_span, &first_cell, &length_cells) &&
-                     plan_time_add(offset, notes->notes[n].duration, &offset) == PLAN_OK;
+                     rational_add(offset, notes->notes[n].duration, &offset) == RATIONAL_OK;
                 if (ok) {
                     line->notes[line->note_count].pitch = notes->notes[n].midi_pitch;
                     line->notes[line->note_count].cells = length_cells;
@@ -195,7 +195,7 @@ bool harmony_check_bass(const PiecePlan *plan, PlanSpan span, PlanKey key, const
                     line->note_count++;
                 }
             }
-            ok = ok && plan_time_compare(offset, bass_span.length) == 0;
+            ok = ok && rational_cmp(offset, bass_span.length) == 0;
         }
     }
     PhraseVerdict verdict;

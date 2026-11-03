@@ -7,6 +7,7 @@
 #include <ursatz_composer/lanes.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "util/plan_util.h"
 #include "grow/grow_internal.h"
 #include "plan/plan_internal.h"
 
@@ -101,7 +102,7 @@ static bool span_is_reopened(const PiecePlan *plan, LaneSpanId id) {
 static bool touches_reached(const Scope *scope, LaneSpanId other) {
     const PiecePlan *plan = scope->plan;
     PlanSpan span = plan_lane_span_span(plan, other);
-    PlanTime other_end;
+    Rational other_end;
     plan_span_end(span, &other_end);
     for (LaneSpanId id = 1; id <= plan_lane_span_count(plan); id++) {
         if (!scope->span_marked[id] || plan_lane_span_lane(plan, id) != plan_lane_span_lane(plan, other) ||
@@ -109,9 +110,9 @@ static bool touches_reached(const Scope *scope, LaneSpanId other) {
             continue;
         }
         PlanSpan reached = plan_lane_span_span(plan, id);
-        PlanTime reached_end;
+        Rational reached_end;
         plan_span_end(reached, &reached_end);
-        if (plan_time_compare(reached_end, span.start) == 0 || plan_time_compare(other_end, reached.start) == 0) {
+        if (rational_cmp(reached_end, span.start) == 0 || rational_cmp(other_end, reached.start) == 0) {
             return true;
         }
     }
@@ -406,14 +407,14 @@ static void placeholder(PlanLaneKind lane, PlanSpan span, PlanNote *note, PlanLa
         return;
     }
     note->midi_pitch = lane == PLAN_LANE_BASS ? BASS_PLACEHOLDER : lane == PLAN_LANE_MELODY ? MELODY_PLACEHOLDER : INNER_PLACEHOLDER;
-    note->offset = (PlanTime){0, 1};
+    note->offset = (Rational){0, 1};
     note->duration = span.length;
     payload->notes.notes = note;
     payload->notes.note_count = 1;
 }
 
 static bool span_earlier(const PiecePlan *plan, LaneSpanId a, LaneSpanId b) {
-    return plan_time_compare(plan_lane_span_span(plan, a).start, plan_lane_span_span(plan, b).start) < 0;
+    return rational_cmp(plan_lane_span_span(plan, a).start, plan_lane_span_span(plan, b).start) < 0;
 }
 
 /*
@@ -425,7 +426,7 @@ static PlanResult reopen_run(PiecePlan *plan, const LaneSpanId *run, size_t coun
     NodeId owner = plan_lane_span_owner(plan, run[0]);
     PlanSpan first = plan_lane_span_span(plan, run[0]);
     PlanSpan last = plan_lane_span_span(plan, run[count - 1]);
-    PlanTime end;
+    Rational end;
     PlanSpan whole = first;
     PlanResult result = plan_span_end(last, &end);
     PlanConstraint *kept = NULL;
@@ -436,8 +437,7 @@ static PlanResult reopen_run(PiecePlan *plan, const LaneSpanId *run, size_t coun
         return result;
     }
     /* length = end - start */
-    result = plan_time_make(end.num * (long)first.start.den - first.start.num * (long)end.den, end.den * first.start.den,
-                            &whole.length);
+    result = plan_result_of_rational(rational_sub(end, first.start, &whole.length));
     kept = calloc(first_count + last_count + 1, sizeof(PlanConstraint));
     if (!kept) {
         return PLAN_ERR_ALLOC;
@@ -509,11 +509,11 @@ static PlanResult reopen_spans(PiecePlan *plan, const LaneSpanId *ids, size_t co
     for (size_t i = 0; result == PLAN_OK && i < sorted_count; i++) {
         bool joins = false;
         if (run_count > 0) {
-            PlanTime end;
+            Rational end;
             plan_span_end(plan_lane_span_span(plan, run[run_count - 1]), &end);
             joins = plan_lane_span_owner(plan, run[run_count - 1]) == plan_lane_span_owner(plan, sorted[i]) &&
                     plan_lane_span_lane(plan, run[run_count - 1]) == plan_lane_span_lane(plan, sorted[i]) &&
-                    plan_time_compare(end, plan_lane_span_span(plan, sorted[i]).start) == 0;
+                    rational_cmp(end, plan_lane_span_span(plan, sorted[i]).start) == 0;
         }
         if (!joins && run_count > 0) {
             result = reopen_run(plan, run, run_count);

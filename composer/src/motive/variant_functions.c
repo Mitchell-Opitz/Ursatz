@@ -72,7 +72,7 @@ static bool chain_thins(const VariantRecord *record) {
 /* The last note is the longest of the motive's notes. */
 static bool last_is_longest(const Motive *form) {
     for (size_t i = 0; i + 1 < form->note_count; i++) {
-        if (plan_time_compare(form->notes[i].duration, form->notes[form->note_count - 1].duration) > 0) {
+        if (rational_cmp(form->notes[i].duration, form->notes[form->note_count - 1].duration) > 0) {
             return false;
         }
     }
@@ -104,7 +104,7 @@ bool variant_functions(const Motive *basic, const Motive *form, const VariantRec
     }
     bool remote_half_or_less = remote_num * 2 <= remote_den;
 
-    bool shorter = plan_time_compare(form->length, basic->length) < 0;
+    bool shorter = rational_cmp(form->length, basic->length) < 0;
     bool continuation = shorter || chain_thins(record);
     bool contrast = !remote_half_or_less;
     bool beginning = false;

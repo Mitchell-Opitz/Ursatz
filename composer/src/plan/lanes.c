@@ -69,19 +69,19 @@ PlanResult plan_lane_span_remove(PiecePlan *plan, LaneSpanId id) {
     return PLAN_OK;
 }
 
-static bool note_fits(const PlanNote *note, PlanTime span_length) {
-    PlanTime zero = {0, 1};
-    PlanTime note_end;
+static bool note_fits(const PlanNote *note, Rational span_length) {
+    Rational zero = {0, 1};
+    Rational note_end;
     if (note->offset.den == 0 || note->duration.den == 0 || note->duration.num <= 0) {
         return false;
     }
-    if (plan_time_compare(note->offset, zero) < 0) {
+    if (rational_cmp(note->offset, zero) < 0) {
         return false;
     }
-    if (plan_time_add(note->offset, note->duration, &note_end) != PLAN_OK) {
+    if (rational_add(note->offset, note->duration, &note_end) != RATIONAL_OK) {
         return false;
     }
-    return plan_time_compare(note_end, span_length) <= 0;
+    return rational_cmp(note_end, span_length) <= 0;
 }
 
 bool lane_payload_is_valid(PlanLaneKind lane, PlanSpan span, const PlanLanePayload *payload) {
@@ -178,7 +178,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
     return PLAN_OK;
 }
 
-PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, PlanTime new_length) {
+PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, Rational new_length) {
     LaneSpan *entry = plan_lane_span_at(plan, id);
     if (!entry) {
         return plan ? PLAN_ERR_NOT_FOUND : PLAN_ERR_NULL;
@@ -186,7 +186,7 @@ PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, PlanTime new_le
     if (entry->state == PLAN_STATE_GIVEN) {
         return PLAN_ERR_GIVEN_LOCKED;
     }
-    if (new_length.den == 0 || new_length.num <= 0 || plan_time_compare(new_length, entry->span.length) > 0) {
+    if (new_length.den == 0 || new_length.num <= 0 || rational_cmp(new_length, entry->span.length) > 0) {
         return PLAN_ERR_BAD_SPAN;
     }
     PlanSpan shorter = {entry->span.start, new_length};
@@ -237,7 +237,7 @@ static bool matches_lane(const LaneSpan *entry, PlanLaneKind lane, int voice, Pl
 
 /* Orders spans by start, then by id. */
 static bool comes_before(const PiecePlan *plan, LaneSpanId a, LaneSpanId b) {
-    int by_start = plan_time_compare(plan->lane_spans[a - 1].span.start, plan->lane_spans[b - 1].span.start);
+    int by_start = rational_cmp(plan->lane_spans[a - 1].span.start, plan->lane_spans[b - 1].span.start);
     return by_start < 0 || (by_start == 0 && a < b);
 }
 

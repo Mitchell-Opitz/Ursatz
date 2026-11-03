@@ -35,26 +35,26 @@
 
 /* One chord, or one note, of a lane over a section, with its time from the section's start. */
 typedef struct {
-    PlanTime at;
-    PlanTime length;
+    Rational at;
+    Rational length;
     int pitch;
     char roman[PLAN_ROMAN_NUMERAL_MAX];
 } Event;
 
-static PlanTime minus(PlanTime a, PlanTime b) {
-    PlanTime out;
-    assert(plan_time_make(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den, &out) == PLAN_OK);
+static Rational minus(Rational a, Rational b) {
+    Rational out;
+    assert(rational_sub(a, b, &out) == RATIONAL_OK);
     return out;
 }
 
-static PlanTime plus(PlanTime a, PlanTime b) {
-    PlanTime out;
-    assert(plan_time_add(a, b, &out) == PLAN_OK);
+static Rational plus(Rational a, Rational b) {
+    Rational out;
+    assert(rational_add(a, b, &out) == RATIONAL_OK);
     return out;
 }
 
-static bool equal(PlanTime a, PlanTime b) {
-    return plan_time_compare(a, b) == 0;
+static bool equal(Rational a, Rational b) {
+    return rational_cmp(a, b) == 0;
 }
 
 static size_t events(const PiecePlan *plan, NodeId section, PlanLaneKind lane, int voice, Event *out) {
@@ -66,7 +66,7 @@ static size_t events(const PiecePlan *plan, NodeId section, PlanLaneKind lane, i
     for (size_t s = 0; s < spans; s++) {
         PlanSpan lane_span = plan_lane_span_span(plan, ids[s]);
         const PlanLanePayload *payload = plan_lane_span_payload(plan, ids[s]);
-        PlanTime from = minus(lane_span.start, span.start);
+        Rational from = minus(lane_span.start, span.start);
         if (lane == PLAN_LANE_HARMONY) {
             assert(count < MAX_EVENTS);
             memset(&out[count], 0, sizeof(Event));
@@ -245,12 +245,12 @@ static int test_exact(bool smoke) {
 
 /* ------------------------------------------------------------ ornament */
 
-static bool strong(PlanTime at) {
+static bool strong(Rational at) {
     /* A cell of 4/4 is a half note. */
     return (at.num * 2) % (long)at.den == 0;
 }
 
-static long beat_of(PlanTime at) {
+static long beat_of(Rational at) {
     return (at.num * 4) / (long)at.den;
 }
 
@@ -274,7 +274,7 @@ static size_t check_ornament(const PiecePlan *plan, NodeId source, NodeId sectio
     for (size_t i = 0; i < an; i++) {
         bool found = false;
         for (size_t j = 0; j < bn && !found; j++) {
-            found = equal(a[i].at, b[j].at) && a[i].pitch == b[j].pitch && plan_time_compare(b[j].length, a[i].length) <= 0;
+            found = equal(a[i].at, b[j].at) && a[i].pitch == b[j].pitch && rational_cmp(b[j].length, a[i].length) <= 0;
         }
         assert(found);
     }

@@ -100,7 +100,7 @@ typedef struct {
     size_t key_count;
     RenderSkip *skipped;              /* owned; in lane span id order */
     size_t skipped_count;
-    PlanTime piece_end;               /* the end of the last section that is not material; 0 when the plan has none */
+    Rational piece_end;               /* the end of the last section that is not material; 0 when the plan has none */
     RenderedSection *sections;        /* owned; the sections that are not material, in time order */
     size_t section_count;
     char *form_name;                  /* owned; the form node's name, NULL when the plan has no form or it has no name */

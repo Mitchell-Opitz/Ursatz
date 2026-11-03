@@ -121,7 +121,7 @@ static char *json_of(const PiecePlan *plan) {
  * what they hold. Only the spans that end no later than limit (a time from the start of the plan) when limit is given: a
  * span that crosses it holds a regenerated chord, so its melody is written again.
  */
-static char *lane_text_before(const PiecePlan *plan, NodeId section, PlanLaneKind lane, const PlanTime *limit) {
+static char *lane_text_before(const PiecePlan *plan, NodeId section, PlanLaneKind lane, const Rational *limit) {
     size_t capacity = 1 << 16;
     char *text = calloc(capacity, 1);
     size_t used = 0;
@@ -133,21 +133,20 @@ static char *lane_text_before(const PiecePlan *plan, NodeId section, PlanLaneKin
         for (size_t i = 0; i < found; i++) {
             PlanSpan at = plan_lane_span_span(plan, ids[i]);
             const PlanLanePayload *payload = plan_lane_span_payload(plan, ids[i]);
-            PlanTime from;
-            PlanTime end;
+            Rational from;
+            Rational end;
             assert(plan_span_end(at, &end) == PLAN_OK);
-            if (limit && plan_time_compare(end, *limit) > 0) {
+            if (limit && rational_cmp(end, *limit) > 0) {
                 continue;
             }
-            assert(plan_time_make(at.start.num * (long)span.start.den - span.start.num * (long)at.start.den,
-                                  at.start.den * span.start.den, &from) == PLAN_OK);
-            used += (size_t)snprintf(text + used, capacity - used, "v%d %ld/%lu+%ld/%lu %d:", voice, from.num, from.den,
+            assert(rational_sub(at.start, span.start, &from) == RATIONAL_OK);
+            used += (size_t)snprintf(text + used, capacity - used, "v%d %lld/%lld+%lld/%lld %d:", voice, from.num, from.den,
                                      at.length.num, at.length.den, (int)plan_lane_span_state(plan, ids[i]));
             if (lane == PLAN_LANE_HARMONY) {
                 used += (size_t)snprintf(text + used, capacity - used, "%s;", payload->harmony.roman_numeral);
             }
             for (size_t n = 0; lane != PLAN_LANE_HARMONY && n < payload->notes.note_count; n++) {
-                used += (size_t)snprintf(text + used, capacity - used, "%d@%ld/%lu,", payload->notes.notes[n].midi_pitch,
+                used += (size_t)snprintf(text + used, capacity - used, "%d@%lld/%lld,", payload->notes.notes[n].midi_pitch,
                                          payload->notes.notes[n].offset.num, payload->notes.notes[n].offset.den);
             }
             assert(used < capacity - 256);
@@ -191,7 +190,7 @@ static size_t spans_in(const PiecePlan *plan, NodeId section, PlanLaneKind lane)
 }
 
 /* The target of a kind in a piece, and the time it starts at. */
-static FillTarget pick(const Piece *piece, TargetKind kind, PlanTime *from) {
+static FillTarget pick(const Piece *piece, TargetKind kind, Rational *from) {
     const PiecePlan *plan = piece->plan;
     PlanLaneKind lane = kind == TARGET_HARMONY_SPAN ? PLAN_LANE_HARMONY : kind == TARGET_BASS_SPAN ? PLAN_LANE_BASS : PLAN_LANE_MELODY;
     switch (kind) {
@@ -222,14 +221,14 @@ static FillTarget pick(const Piece *piece, TargetKind kind, PlanTime *from) {
  * the target is written again with reaches back (the chords of a phrase model are written together, and the melody
  * over them with them).
  */
-static PlanTime rewritten_from(const PiecePlan *plan, FillTarget target, PlanTime from) {
+static Rational rewritten_from(const PiecePlan *plan, FillTarget target, Rational from) {
     FillTarget *scope = NULL;
     size_t count = 0;
     assert(plan_regenerate_scope(plan, target, &scope, &count) == REGENERATE_OK);
     for (size_t i = 0; i < count; i++) {
         if (scope[i].kind == FILL_TARGET_LANE_SPAN) {
-            PlanTime at = plan_lane_span_span(plan, (LaneSpanId)scope[i].id).start;
-            from = plan_time_compare(at, from) < 0 ? at : from;
+            Rational at = plan_lane_span_span(plan, (LaneSpanId)scope[i].id).start;
+            from = rational_cmp(at, from) < 0 ? at : from;
         }
     }
     free(scope);
@@ -247,7 +246,7 @@ static RegenerateResult regenerate_retry(Piece *piece, TargetKind kind, unsigned
     RegenerateResult result = REGENERATE_ERR_STUCK;
     for (unsigned long attempt = 0; attempt < SEED_TRIES && result == REGENERATE_ERR_STUCK; attempt++) {
         PiecePlan *fresh = NULL;
-        PlanTime from;
+        Rational from;
         Piece trial;
         ComposeConfig config = config_of(seed + attempt);
         assert(plan_from_json(snapshot, &fresh, NULL) == PLAN_OK);
@@ -469,11 +468,11 @@ static size_t overlapping(const PiecePlan *plan, const FillTarget *list, size_t 
     for (size_t i = 0; i < count; i++) {
         if (list[i].kind == FILL_TARGET_LANE_SPAN && plan_lane_span_lane(plan, (LaneSpanId)list[i].id) == lane) {
             PlanSpan other = plan_lane_span_span(plan, (LaneSpanId)list[i].id);
-            PlanTime end;
-            PlanTime other_end;
+            Rational end;
+            Rational other_end;
             plan_span_end(span, &end);
             plan_span_end(other, &other_end);
-            found += plan_time_compare(other.start, end) < 0 && plan_time_compare(span.start, other_end) < 0;
+            found += rational_cmp(other.start, end) < 0 && rational_cmp(span.start, other_end) < 0;
         }
     }
     return found;
@@ -703,7 +702,7 @@ static int test_lanes(void) {
         unsigned rewritten = 0;
         for (unsigned long seed = 1; seed <= SEEDS; seed++) {
             Piece piece = fill(seed);
-            PlanTime from;
+            Rational from;
             from = rewritten_from(piece.plan, pick(&piece, CASES[c].kind, &from), from);
             char *a_before = section_text(piece.plan, piece.a);
             char *return_before = section_text(piece.plan, piece.a_return);
@@ -811,7 +810,7 @@ static int test_locked(void) {
     for (unsigned long seed = 1; seed <= SEEDS; seed++) {
         piece = fill(seed);
         plan = piece.plan;
-        PlanTime from;
+        Rational from;
         FillTarget target = pick(&piece, TARGET_HARMONY_SPAN, &from);
         PlanSpan span = plan_lane_span_span(plan, (LaneSpanId)target.id);
         LaneSpanId ids[64];
@@ -829,13 +828,13 @@ static int test_locked(void) {
         RegenerateResult result = plan_regenerate(plan, target, &config, &outcome);
         assert(result == REGENERATE_OK || result == REGENERATE_ERR_STUCK);
         assert(plan_lane_span_state(plan, bass) == PLAN_STATE_GIVEN);
-        assert(plan_time_compare(plan_lane_span_span(plan, bass).start, locked_at.start) == 0);
+        assert(rational_cmp(plan_lane_span_span(plan, bass).start, locked_at.start) == 0);
         const PlanNotes *kept = &plan_lane_span_payload(plan, bass)->notes;
         assert(kept->note_count == note_count);
         for (size_t n = 0; n < note_count; n++) {
             assert(kept->notes[n].midi_pitch == notes[n].midi_pitch);
-            assert(plan_time_compare(kept->notes[n].offset, notes[n].offset) == 0);
-            assert(plan_time_compare(kept->notes[n].duration, notes[n].duration) == 0);
+            assert(rational_cmp(kept->notes[n].offset, notes[n].offset) == 0);
+            assert(rational_cmp(kept->notes[n].duration, notes[n].duration) == 0);
         }
         completed += result == REGENERATE_OK;
         free(notes);
@@ -881,7 +880,7 @@ static int test_determinism(void) {
         RegenerateResult results[2];
         for (int run = 0; run < 2; run++) {
             Piece again;
-            PlanTime from;
+            Rational from;
             ComposeOutcome outcome;
             ComposeConfig config = config_of(9);
             memset(&outcome, 0, sizeof(outcome));

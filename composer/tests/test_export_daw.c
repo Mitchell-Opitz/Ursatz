@@ -206,7 +206,7 @@ static void test_midi(const RenderedPlan *rendered, const PiecePlan *plan) {
         if (plan_node_kind(plan, node) != PLAN_NODE_SECTION || material) {
             continue;
         }
-        PlanTime start = plan_node_span(plan, node).start;
+        Rational start = plan_node_span(plan, node).start;
         assert(found < 3);
         assert(strcmp(tracks[0].markers[found].text, LETTERS[found]) == 0);
         assert(tracks[0].markers[found].tick * start.den == (unsigned long long)start.num * 4 * DIVISION);
@@ -290,8 +290,8 @@ static void test_loop_markers(const RenderedPlan *rendered) {
     TrackMeta tracks[8];
     assert(!options.loop_markers);
     options.loop_markers = true;
-    options.loop_start = (PlanTime){1, 1};
-    options.loop_end = (PlanTime){11, 2};
+    options.loop_start = (Rational){1, 1};
+    options.loop_end = (Rational){11, 2};
     assert(rendered_plan_midi_bytes(rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_OK);
     size_t count = scan_tracks(bytes, size, tracks, 8);
     assert(count >= 2);
@@ -322,7 +322,7 @@ static void test_loop_markers(const RenderedPlan *rendered) {
     assert(tracks[0].marker_count == 2);
     free(bytes);
     /* A time that is not a whole tick at any division is refused. */
-    options.loop_start = (PlanTime){1, 1000003};
+    options.loop_start = (Rational){1, 1000003};
     assert(rendered_plan_midi_bytes(rendered, &options, &bytes, &size, NULL) == PLAN_EXPORT_ERR_NOT_REPRESENTABLE);
 }
 

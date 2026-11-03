@@ -107,7 +107,7 @@ bool accomp_read_voice(const PiecePlan *plan, int voice, PlanSpan span, LaneSpan
     }
     PlanSpan other = plan_lane_span_span(plan, ids[0]);
     if (found != 1 || plan_lane_span_state(plan, ids[0]) != PLAN_STATE_CONSTRAINED ||
-        plan_time_compare(other.start, span.start) != 0 || plan_time_compare(other.length, span.length) != 0) {
+        rational_cmp(other.start, span.start) != 0 || rational_cmp(other.length, span.length) != 0) {
         return false;
     }
     *out = ids[0];
@@ -158,9 +158,9 @@ static long liquidation_start(const PiecePlan *plan, const AccompContext *contex
         return context->length - context->bar;
     }
     PlanSpan whole = plan_node_span(plan, section);
-    PlanTime end;
+    Rational end;
     long end_ticks;
-    if (plan_time_add(whole.start, whole.length, &end) != PLAN_OK || !melody_ticks(end, &end_ticks)) {
+    if (rational_add(whole.start, whole.length, &end) != RATIONAL_OK || !melody_ticks(end, &end_ticks)) {
         return context->length;
     }
     return end_ticks - origin - context->bar;
@@ -219,8 +219,8 @@ bool accomp_read(const PiecePlan *plan, LaneSpanId target, AccompContext *out) {
     long at = 0;
     for (size_t i = 0; i < count; i++) {
         unsigned seventh;
-        PlanTime chord_from;
-        PlanTime chord_length;
+        Rational chord_from;
+        Rational chord_length;
         long chord_ticks;
         if (plan_lane_span_state(plan, harmony[i]) == PLAN_STATE_CONSTRAINED ||
             !accomp_chord_tones(&out->key, &chords[i], out->chord_pcs[i], &out->chord_pc_count[i]) ||

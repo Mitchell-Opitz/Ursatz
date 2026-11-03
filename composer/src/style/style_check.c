@@ -33,13 +33,13 @@
  * The numeral of the chord written right before a span: a span of the harmony lane, not open, that ends where the
  * span starts. False when the span starts the plan or the chord before is still open.
  */
-static bool chord_before(const PiecePlan *plan, PlanSpan span, PlanTime bar, char out[PLAN_ROMAN_NUMERAL_MAX]) {
+static bool chord_before(const PiecePlan *plan, PlanSpan span, Rational bar, char out[PLAN_ROMAN_NUMERAL_MAX]) {
     if (span.start.num <= 0 || bar.num <= 0) {
         return false;
     }
-    PlanTime back = {-bar.num * BEFORE_BARS, bar.den};
-    PlanTime from;
-    if (plan_time_add(span.start, back, &from) != PLAN_OK) {
+    Rational back = {-bar.num * BEFORE_BARS, bar.den};
+    Rational from;
+    if (rational_add(span.start, back, &from) != RATIONAL_OK) {
         return false;
     }
     if (from.num < 0) {
@@ -47,8 +47,7 @@ static bool chord_before(const PiecePlan *plan, PlanSpan span, PlanTime bar, cha
         from.den = 1;
     }
     PlanSpan window = {from, {0, 1}};
-    if (plan_time_make(span.start.num * (long)from.den - from.num * (long)span.start.den, span.start.den * from.den,
-                       &window.length) != PLAN_OK ||
+    if (rational_sub(span.start, from, &window.length) != RATIONAL_OK ||
         window.length.num <= 0) {
         return false;
     }
@@ -58,8 +57,8 @@ static bool chord_before(const PiecePlan *plan, PlanSpan span, PlanTime bar, cha
         return false;
     }
     PlanSpan last = plan_lane_span_span(plan, ids[found - 1]);
-    PlanTime end;
-    if (plan_span_end(last, &end) != PLAN_OK || plan_time_compare(end, span.start) != 0 ||
+    Rational end;
+    if (plan_span_end(last, &end) != PLAN_OK || rational_cmp(end, span.start) != 0 ||
         plan_lane_span_state(plan, ids[found - 1]) == PLAN_STATE_CONSTRAINED) {
         return false;
     }

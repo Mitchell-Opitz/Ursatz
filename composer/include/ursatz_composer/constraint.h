@@ -326,8 +326,8 @@ typedef struct {
 
 typedef struct {
     char numeral[PLAN_ROMAN_NUMERAL_MAX];
-    PlanTime onset;
-    PlanTime length;
+    Rational onset;
+    Rational length;
 } PlanToneChord;
 
 typedef struct {
@@ -357,7 +357,7 @@ typedef struct {
         char letter[PLAN_SECTION_LETTER_MAX];
         PlanStyle style;
         PlanSource source;
-        PlanTime pickup; /* the anacrusis: a multiple of 1/32 of a whole note, shorter than a bar */
+        Rational pickup; /* the anacrusis: a multiple of 1/32 of a whole note, shorter than a bar */
         PlanPiecePart piece_part;
         PlanMotiveTones motive_tones;
     } params;

@@ -347,7 +347,7 @@ static void piece_section(PieceFixture *fixture, const char *id, PiecePart part,
     snprintf(section->letter, sizeof(section->letter), "%c", id[0] - 32);
     section->part = part;
     section->beats = beats;
-    section->pickup = (PlanTime){0, 1};
+    section->pickup = (Rational){0, 1};
     section->fill = fill;
 }
 

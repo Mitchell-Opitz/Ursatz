@@ -31,9 +31,9 @@ typedef struct {
     PlanSpan span;
 } Fixture;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
@@ -121,7 +121,7 @@ static void check_filled(const Scenario *scenario, const Fixture *fixture) {
     /* A span that ends on a root-position V keeps it off the bar's first cell. */
     if (strcmp(last, "V") == 0) {
         PlanSpan span = plan_lane_span_span(fixture->plan, ids[count - 1]);
-        PlanTime offset = fraction(span.start.num * (long)(scenario->beat_unit), span.start.den);
+        Rational offset = fraction(span.start.num * (long)(scenario->beat_unit), span.start.den);
         assert(offset.num % scenario->beats_per_bar != 0 || offset.den != 1);
     }
     assert(harmony_read_lane(fixture->plan, fixture->span, scenario->mode, chords, &read, &metre));

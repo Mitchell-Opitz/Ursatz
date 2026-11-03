@@ -18,7 +18,7 @@ static bool read_numeral(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode,
     return true;
 }
 
-bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, PlanTime cell_length,
+bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, Rational cell_length,
                        PhraseChord *out) {
     return read_numeral(plan, id, mode, out) &&
            harmony_count_cells(cell_length, plan_lane_span_span(plan, id).length, &out->cells);
@@ -62,19 +62,19 @@ bool harmony_context_read(const PiecePlan *plan, LaneSpanId target, PhraseContex
     size_t low = at;
     size_t high = at;
     while (low > 0) {
-        PlanTime end;
+        Rational end;
         PlanSpan before = plan_lane_span_span(plan, same_owner[low - 1]);
         if (plan_span_end(before, &end) != PLAN_OK ||
-            plan_time_compare(end, plan_lane_span_span(plan, same_owner[low]).start) != 0) {
+            rational_cmp(end, plan_lane_span_span(plan, same_owner[low]).start) != 0) {
             break;
         }
         low--;
     }
     while (high + 1 < count) {
-        PlanTime end;
+        Rational end;
         PlanSpan here = plan_lane_span_span(plan, same_owner[high]);
         if (plan_span_end(here, &end) != PLAN_OK ||
-            plan_time_compare(end, plan_lane_span_span(plan, same_owner[high + 1]).start) != 0) {
+            rational_cmp(end, plan_lane_span_span(plan, same_owner[high + 1]).start) != 0) {
             break;
         }
         high++;
@@ -86,11 +86,10 @@ bool harmony_context_read(const PiecePlan *plan, LaneSpanId target, PhraseContex
     context.count = high - low + 1;
     context.target = at - low;
     PlanSpan last = plan_lane_span_span(plan, same_owner[high]);
-    PlanTime end;
+    Rational end;
     context.span.start = plan_lane_span_span(plan, same_owner[low]).start;
     if (plan_span_end(last, &end) != PLAN_OK ||
-        plan_time_make(end.num * (long)context.span.start.den - context.span.start.num * (long)end.den,
-                       end.den * context.span.start.den, &context.span.length) != PLAN_OK) {
+        rational_sub(end, context.span.start, &context.span.length) != RATIONAL_OK) {
         return false;
     }
 

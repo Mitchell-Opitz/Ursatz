@@ -66,9 +66,9 @@ static void test_fixture(void) {
     NodeId theme = theme_section(plan);
     assert(theme != PLAN_NODE_NONE);
     assert(plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
-    PlanTime eight_bars;
-    assert(plan_time_make(8, 1, &eight_bars) == PLAN_OK);
-    assert(plan_time_compare(plan_node_span(plan, theme).length, eight_bars) == 0);
+    Rational eight_bars;
+    assert(rational_make(8, 1, &eight_bars) == RATIONAL_OK);
+    assert(rational_cmp(plan_node_span(plan, theme).length, eight_bars) == 0);
     plan_destroy(plan);
 }
 
@@ -96,7 +96,7 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
     snprintf(section->letter, sizeof(section->letter), "%s", letter);
     section->part = part;
     section->beats = beats;
-    section->pickup = (PlanTime){0, 1};
+    section->pickup = (Rational){0, 1};
     section->fill = fill;
     return section;
 }
@@ -129,8 +129,8 @@ static size_t lane_spans(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span
 /* Every note of the lane inside the span, as pitch and absolute onset, in time order. */
 typedef struct {
     int pitch;
-    PlanTime onset;
-    PlanTime duration;
+    Rational onset;
+    Rational duration;
 } Sounded;
 
 static size_t sounded(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, Sounded *out, size_t max) {
@@ -144,7 +144,7 @@ static size_t sounded(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, S
             assert(count < max);
             out[count].pitch = notes->notes[n].midi_pitch;
             out[count].duration = notes->notes[n].duration;
-            assert(plan_time_add(owner.start, notes->notes[n].offset, &out[count].onset) == PLAN_OK);
+            assert(rational_add(owner.start, notes->notes[n].offset, &out[count].onset) == RATIONAL_OK);
             count++;
         }
     }
@@ -235,8 +235,8 @@ static void test_theme(void) {
         assert(sounded(plan, PLAN_LANE_MELODY, span, now, 512) == melody_count);
         for (size_t i = 0; i < melody_count; i++) {
             assert(now[i].pitch == was_melody[i].pitch + 2);
-            assert(plan_time_compare(now[i].onset, was_melody[i].onset) == 0);
-            assert(plan_time_compare(now[i].duration, was_melody[i].duration) == 0);
+            assert(rational_cmp(now[i].onset, was_melody[i].onset) == 0);
+            assert(rational_cmp(now[i].duration, was_melody[i].duration) == 0);
         }
         assert(sounded(plan, PLAN_LANE_BASS, span, now, 512) == bass_count);
         for (size_t i = 0; i < bass_count; i++) {
@@ -389,9 +389,9 @@ static void test_progression(void) {
         bool tones = count > 0;
         for (size_t i = 0; i < count; i++) {
             for (size_t bar = 0; bar < 4; bar++) {
-                PlanTime downbeat;
-                assert(plan_time_make((long)bar, 1, &downbeat) == PLAN_OK);
-                if (plan_time_compare(notes[i].onset, downbeat) == 0) {
+                Rational downbeat;
+                assert(rational_make((long)bar, 1, &downbeat) == RATIONAL_OK);
+                if (rational_cmp(notes[i].onset, downbeat) == 0) {
                     int pc = ((notes[i].pitch % 12) + 12) % 12;
                     bool found = false;
                     for (size_t t = 0; t < 3; t++) {

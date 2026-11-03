@@ -142,9 +142,9 @@ typedef struct {
 } MelodyCandidate;
 
 /* A time in the plan as ticks from the start of the plan; false when it is not a whole number of them. */
-bool melody_ticks(PlanTime time, long *out);
+bool melody_ticks(Rational time, long *out);
 /* Ticks as a time in the plan. */
-PlanResult melody_time(long ticks, PlanTime *out);
+PlanResult melody_time(long ticks, Rational *out);
 
 /* The pitch classes (bit pc of mask) of a chord in the key, and of its seventh (0 when it has none). */
 bool melody_chord_mask(const PlanKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh);

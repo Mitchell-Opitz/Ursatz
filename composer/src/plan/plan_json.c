@@ -73,9 +73,10 @@ cJSON *json_number(long value) {
     return cJSON_CreateNumber((double)value);
 }
 
-static cJSON *rational_json(PlanTime time) {
+cJSON *rational_json(long long numerator, long long denominator) {
     cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "num", json_number(time.num)) && plan_json_add(object, "den", json_number((long)time.den)))) {
+    if (object && !(plan_json_add(object, "num", json_number((long)numerator)) &&
+                    plan_json_add(object, "den", json_number((long)denominator)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -83,12 +84,12 @@ static cJSON *rational_json(PlanTime time) {
 }
 
 static cJSON *span_json(PlanSpan span) {
-    PlanTime end;
+    Rational end;
     if (plan_span_end(span, &end) != PLAN_OK) {
         return NULL;
     }
     cJSON *object = cJSON_CreateObject();
-    if (object && !(plan_json_add(object, "start", rational_json(span.start)) && plan_json_add(object, "end", rational_json(end)))) {
+    if (object && !(plan_json_add(object, "start", rational_json(span.start.num, span.start.den)) && plan_json_add(object, "end", rational_json(end.num, end.den)))) {
         cJSON_Delete(object);
         return NULL;
     }
@@ -287,7 +288,7 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
     }
     case PLAN_CONSTRAINT_PICKUP: {
         char length[64];
-        snprintf(length, sizeof(length), "%ld/%lu", constraint->params.pickup.num, constraint->params.pickup.den);
+        snprintf(length, sizeof(length), "%lld/%lld", constraint->params.pickup.num, constraint->params.pickup.den);
         ok = ok && plan_json_add(object, "length", cJSON_CreateString(length));
         break;
     }
@@ -304,8 +305,8 @@ static cJSON *constraint_json(const PiecePlan *plan, const PlanConstraint *const
             const PlanToneChord *chord = &tones->chords[i];
             char onset[64];
             char length[64];
-            snprintf(onset, sizeof(onset), "%ld/%lu", chord->onset.num, chord->onset.den);
-            snprintf(length, sizeof(length), "%ld/%lu", chord->length.num, chord->length.den);
+            snprintf(onset, sizeof(onset), "%lld/%lld", chord->onset.num, chord->onset.den);
+            snprintf(length, sizeof(length), "%lld/%lld", chord->length.num, chord->length.den);
             cJSON *item = cJSON_CreateObject();
             ok = plan_json_append(harmony, item) && plan_json_add(item, "numeral", cJSON_CreateString(chord->numeral)) &&
                  plan_json_add(item, "onset", cJSON_CreateString(onset)) &&
@@ -410,8 +411,8 @@ static cJSON *notes_json(const PlanNotes *notes) {
         const PlanNote *note = &notes->notes[i];
         cJSON *object = cJSON_CreateObject();
         if (!(object && plan_json_add(object, "midi_pitch", json_number(note->midi_pitch)) &&
-              plan_json_add(object, "offset", rational_json(note->offset)) &&
-              plan_json_add(object, "duration", rational_json(note->duration)) && plan_json_append(array, object))) {
+              plan_json_add(object, "offset", rational_json(note->offset.num, note->offset.den)) &&
+              plan_json_add(object, "duration", rational_json(note->duration.num, note->duration.den)) && plan_json_append(array, object))) {
             if (object && !cJSON_GetObjectItem(object, "duration")) {
                 cJSON_Delete(object);
             }
@@ -751,7 +752,7 @@ static bool read_enum_member(JsonReader *reader, const cJSON *object, const char
 
 #define TIME_LIMIT 1000000000L
 
-static bool json_read_rational(JsonReader *reader, const cJSON *item, const char *path, PlanTime *out) {
+static bool json_read_rational(JsonReader *reader, const cJSON *item, const char *path, Rational *out) {
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, path, "expected an object with num and den");
     }
@@ -761,11 +762,11 @@ static bool json_read_rational(JsonReader *reader, const cJSON *item, const char
         !json_read_int_member(reader, item, path, "den", 1, TIME_LIMIT, &den)) {
         return false;
     }
-    return plan_time_make(num, (unsigned long)den, out) == PLAN_OK;
+    return rational_make(num, (long long)den, out) == RATIONAL_OK;
 }
 
 static bool read_rational_member(JsonReader *reader, const cJSON *object, const char *path, const char *key,
-                                 PlanTime *out) {
+                                 Rational *out) {
     const cJSON *item = plan_json_member(reader, object, path, key, true);
     if (!item) {
         return false;
@@ -786,13 +787,13 @@ bool json_read_span(JsonReader *reader, const cJSON *object, const char *path, P
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, at, "expected an object with start and end");
     }
-    PlanTime end;
+    Rational end;
     if (!read_rational_member(reader, item, at, "start", &out->start) ||
         !read_rational_member(reader, item, at, "end", &end)) {
         return false;
     }
-    PlanTime negative_start = {-out->start.num, out->start.den};
-    if (plan_time_add(end, negative_start, &out->length) != PLAN_OK || out->length.num <= 0) {
+    Rational negative_start = {-out->start.num, out->start.den};
+    if (rational_add(end, negative_start, &out->length) != RATIONAL_OK || out->length.num <= 0) {
         return json_bad_format(reader, at, "end must be after start");
     }
     return true;
@@ -872,7 +873,7 @@ static bool read_motive_ref_options(JsonReader *reader, const cJSON *item, const
 
 /* A time like "1/4" in whole notes: the numerator not below `least`. */
 static bool read_tones_time(JsonReader *reader, const cJSON *item, const char *path, const char *name, long least,
-                            PlanTime *out) {
+                            Rational *out) {
     const cJSON *text = plan_json_member(reader, item, path, name, true);
     if (!text) {
         return false;
@@ -884,7 +885,7 @@ static bool read_tones_time(JsonReader *reader, const cJSON *item, const char *p
     char rest;
     if (!cJSON_IsString(text) || sscanf(text->valuestring, "%ld/%lu%c", &numerator, &denominator, &rest) != 2 ||
         denominator == 0 || numerator < least || numerator > TIME_LIMIT || denominator > (unsigned long)TIME_LIMIT ||
-        plan_time_make(numerator, denominator, out) != PLAN_OK) {
+        rational_make(numerator, denominator, out) != RATIONAL_OK) {
         return json_bad_format(reader, at, "expected a time in whole notes like \"1/4\"");
     }
     return true;
@@ -1277,7 +1278,7 @@ static bool read_constraint(JsonReader *reader, const cJSON *item, const char *p
         json_child_path(at, path, "length");
         if (!cJSON_IsString(length) || sscanf(length->valuestring, "%ld/%lu%c", &numerator, &denominator, &rest) != 2 ||
             denominator == 0 || numerator <= 0 || numerator > TIME_LIMIT || denominator > (unsigned long)TIME_LIMIT ||
-            plan_time_make(numerator, denominator, &out->params.pickup) != PLAN_OK) {
+            rational_make(numerator, denominator, &out->params.pickup) != RATIONAL_OK) {
             return json_bad_format(reader, at, "expected a length in whole notes like \"1/4\"");
         }
         return true;

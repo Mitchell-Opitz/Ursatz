@@ -33,8 +33,8 @@ typedef struct {
 
 static PlanSpan bars(long start, long length) {
     PlanSpan span;
-    assert(plan_time_make(start, 1, &span.start) == PLAN_OK);
-    assert(plan_time_make(length, 1, &span.length) == PLAN_OK);
+    assert(rational_make(start, 1, &span.start) == RATIONAL_OK);
+    assert(rational_make(length, 1, &span.length) == RATIONAL_OK);
     return span;
 }
 
@@ -127,15 +127,15 @@ int main(void) {
     assert(plan_node_child_count(plan, phrase) == 2);
     PlanSpan first = plan_node_span(plan, plan_node_child_at(plan, phrase, 0));
     PlanSpan second = plan_node_span(plan, plan_node_child_at(plan, phrase, 1));
-    PlanTime first_end;
-    PlanTime second_end;
-    PlanTime phrase_end;
+    Rational first_end;
+    Rational second_end;
+    Rational phrase_end;
     assert(plan_span_end(first, &first_end) == PLAN_OK);
     assert(plan_span_end(second, &second_end) == PLAN_OK);
     assert(plan_span_end(plan_node_span(plan, phrase), &phrase_end) == PLAN_OK);
-    assert(plan_time_compare(first.start, plan_node_span(plan, phrase).start) == 0);
-    assert(plan_time_compare(first_end, second.start) == 0);
-    assert(plan_time_compare(second_end, phrase_end) == 0);
+    assert(rational_cmp(first.start, plan_node_span(plan, phrase).start) == 0);
+    assert(rational_cmp(first_end, second.start) == 0);
+    assert(rational_cmp(second_end, phrase_end) == 0);
 
     /* Structure rules refuse bad additions. */
     NodeId rejected = PLAN_NODE_NONE;
@@ -171,11 +171,11 @@ int main(void) {
     PlanNote melody_notes[2];
     memset(melody_notes, 0, sizeof(melody_notes));
     melody_notes[0].midi_pitch = 64;
-    assert(plan_time_make(0, 1, &melody_notes[0].offset) == PLAN_OK);
-    assert(plan_time_make(1, 2, &melody_notes[0].duration) == PLAN_OK);
+    assert(rational_make(0, 1, &melody_notes[0].offset) == RATIONAL_OK);
+    assert(rational_make(1, 2, &melody_notes[0].duration) == RATIONAL_OK);
     melody_notes[1].midi_pitch = 67;
-    assert(plan_time_make(1, 2, &melody_notes[1].offset) == PLAN_OK);
-    assert(plan_time_make(1, 2, &melody_notes[1].duration) == PLAN_OK);
+    assert(rational_make(1, 2, &melody_notes[1].offset) == RATIONAL_OK);
+    assert(rational_make(1, 2, &melody_notes[1].duration) == RATIONAL_OK);
     PlanLanePayload melody;
     memset(&melody, 0, sizeof(melody));
     melody.notes.notes = melody_notes;

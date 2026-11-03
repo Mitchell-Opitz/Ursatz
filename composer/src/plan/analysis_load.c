@@ -161,16 +161,16 @@ static bool read_claims(JsonReader *reader, Notes *notes, const cJSON *document,
 /* A claim that runs past the start of the next is cut off where the next begins. */
 static void trim_overlaps(Notes *notes, Claim *claims, size_t count) {
     for (size_t i = 0; i + 1 < count; i++) {
-        PlanTime end;
+        Rational end;
         if (!claims[i].keep || plan_span_end(claims[i].span, &end) != PLAN_OK) {
             continue;
         }
-        if (plan_time_compare(end, claims[i + 1].span.start) <= 0) {
+        if (rational_cmp(end, claims[i + 1].span.start) <= 0) {
             continue;
         }
-        PlanTime negative_start = {-claims[i].span.start.num, claims[i].span.start.den};
-        PlanTime length;
-        plan_time_add(claims[i + 1].span.start, negative_start, &length);
+        Rational negative_start = {-claims[i].span.start.num, claims[i].span.start.den};
+        Rational length;
+        rational_add(claims[i + 1].span.start, negative_start, &length);
         if (length.num <= 0) {
             claims[i].keep = false;
             note(notes, claims[i].path, "starts with the next claim; skipped");
@@ -181,16 +181,16 @@ static void trim_overlaps(Notes *notes, Claim *claims, size_t count) {
     }
 }
 
-static void widen_extent(const Claim *claims, size_t count, bool *have, PlanTime *start, PlanTime *end) {
+static void widen_extent(const Claim *claims, size_t count, bool *have, Rational *start, Rational *end) {
     for (size_t i = 0; i < count; i++) {
-        PlanTime claim_end;
+        Rational claim_end;
         if (!claims[i].keep || plan_span_end(claims[i].span, &claim_end) != PLAN_OK) {
             continue;
         }
-        if (!*have || plan_time_compare(claims[i].span.start, *start) < 0) {
+        if (!*have || rational_cmp(claims[i].span.start, *start) < 0) {
             *start = claims[i].span.start;
         }
-        if (!*have || plan_time_compare(claim_end, *end) > 0) {
+        if (!*have || rational_cmp(claim_end, *end) > 0) {
             *end = claim_end;
         }
         *have = true;
@@ -251,8 +251,8 @@ static PlanResult build_plan(const cJSON *document, PiecePlan *plan, Notes *note
     }
 
     bool have_extent = false;
-    PlanTime extent_start = {0, 1};
-    PlanTime extent_end = {0, 1};
+    Rational extent_start = {0, 1};
+    Rational extent_end = {0, 1};
     if (ok) {
         widen_extent(keys, key_count, &have_extent, &extent_start, &extent_end);
         widen_extent(chords, chord_count, &have_extent, &extent_start, &extent_end);
@@ -263,8 +263,8 @@ static PlanResult build_plan(const cJSON *document, PiecePlan *plan, Notes *note
 
     if (ok) {
         PlanSpan extent = {extent_start, {0, 1}};
-        PlanTime negative_start = {-extent_start.num, extent_start.den};
-        plan_time_add(extent_end, negative_start, &extent.length);
+        Rational negative_start = {-extent_start.num, extent_start.den};
+        rational_add(extent_end, negative_start, &extent.length);
 
         const cJSON *metadata = cJSON_GetObjectItemCaseSensitive(document, "metadata");
         const cJSON *source = cJSON_GetObjectItemCaseSensitive(metadata, "source_file");

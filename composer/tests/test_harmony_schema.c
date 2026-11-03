@@ -48,26 +48,26 @@ typedef struct {
     LaneSpanId given_bass;
     PlanSpan phrase;
     PlanSpan region; /* the target */
-    PlanTime bar_length;
+    Rational bar_length;
 } Fixture;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
-static PlanTime time_plus(PlanTime a, PlanTime b) {
-    PlanTime sum;
-    assert(plan_time_add(a, b, &sum) == PLAN_OK);
+static Rational time_plus(Rational a, Rational b) {
+    Rational sum;
+    assert(rational_add(a, b, &sum) == RATIONAL_OK);
     return sum;
 }
 
-static PlanTime time_sub(PlanTime a, PlanTime b) {
+static Rational time_sub(Rational a, Rational b) {
     return fraction(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den);
 }
 
-static PlanTime bars_of(const Fixture *fixture, long bars) {
+static Rational bars_of(const Fixture *fixture, long bars) {
     return fraction(bars * (long)fixture->bar_length.num, fixture->bar_length.den);
 }
 
@@ -194,7 +194,7 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
         for (size_t i = 0; i < count; i++) {
             PlanSpan span = plan_lane_span_span(fixture->plan, ids[i]);
             const PlanLanePayload *payload = plan_lane_span_payload(fixture->plan, ids[i]);
-            used += (size_t)snprintf(out + used, size - used, "%d@%ld/%lu+%ld/%lu:%d", lane, span.start.num,
+            used += (size_t)snprintf(out + used, size - used, "%d@%lld/%lld+%lld/%lld:%d", lane, span.start.num,
                                      span.start.den, span.length.num, span.length.den,
                                      (int)plan_lane_span_state(fixture->plan, ids[i]));
             if (lane == 0) {
@@ -262,10 +262,10 @@ static bool bass_matches(const GalantDegree *wanted, int tonic, int pc) {
     return false;
 }
 
-static PlanTime offset_in_bar(const Fixture *fixture, PlanTime time) {
-    PlanTime start = fixture->phrase.start;
-    PlanTime next = time_plus(start, fixture->bar_length);
-    while (plan_time_compare(next, time) <= 0) {
+static Rational offset_in_bar(const Fixture *fixture, Rational time) {
+    Rational start = fixture->phrase.start;
+    Rational next = time_plus(start, fixture->bar_length);
+    while (rational_cmp(next, time) <= 0) {
         start = next;
         next = time_plus(start, fixture->bar_length);
     }
@@ -278,7 +278,7 @@ static int bass_pc_under(const Fixture *fixture, LaneSpanId chord) {
     LaneSpanId found[2];
     assert(plan_lane_find(fixture->plan, PLAN_LANE_BASS, 0, span, found, 2) == 1);
     PlanSpan bass = plan_lane_span_span(fixture->plan, found[0]);
-    assert(plan_time_compare(bass.start, span.start) == 0 && plan_time_compare(bass.length, span.length) == 0);
+    assert(rational_cmp(bass.start, span.start) == 0 && rational_cmp(bass.length, span.length) == 0);
     assert(plan_lane_span_state(fixture->plan, found[0]) == PLAN_STATE_REALIZED);
     const PlanNotes *notes = &plan_lane_span_payload(fixture->plan, found[0])->notes;
     int pc = notes->notes[0].midi_pitch % 12;
@@ -319,10 +319,10 @@ static int check_schemas(const Fixture *fixture, const Scenario *scenario, const
     LaneSpanId ids[MAX_CHORDS];
     size_t count = plan_lane_find(fixture->plan, PLAN_LANE_HARMONY, 0, fixture->phrase, ids, MAX_CHORDS);
     int found = 0;
-    PlanTime position = fixture->phrase.start;
+    Rational position = fixture->phrase.start;
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_lane_span_span(fixture->plan, ids[i]);
-        assert(plan_time_compare(span.start, position) == 0); /* the harmony lane is a tiling of the phrase */
+        assert(rational_cmp(span.start, position) == 0); /* the harmony lane is a tiling of the phrase */
         position = time_plus(span.start, span.length);
     }
     for (size_t i = 0; i < count;) {
@@ -371,7 +371,7 @@ static int check_schemas(const Fixture *fixture, const Scenario *scenario, const
 
             /* The stage falls on a beat of its strength (the first chord of a weak start is held through the strong
                beat before it). */
-            PlanTime offset = offset_in_bar(fixture, plan_lane_span_span(fixture->plan, ids[i + k]).start);
+            Rational offset = offset_in_bar(fixture, plan_lane_span_span(fixture->plan, ids[i + k]).start);
             bool strong = offset.num == 0;
             if (k > 0 || stage->strength == BEAT_STRENGTH_STRONG || !strong) {
                 assert(strong == (stage->strength == BEAT_STRENGTH_STRONG));
@@ -380,7 +380,7 @@ static int check_schemas(const Fixture *fixture, const Scenario *scenario, const
         /* The schema runs to the end of a bar, and its bass passes the melodic rules. */
         PlanSpan first = plan_lane_span_span(fixture->plan, ids[i]);
         PlanSpan last = plan_lane_span_span(fixture->plan, ids[i + prototype->stage_count - 1]);
-        PlanTime end = time_plus(last.start, last.length);
+        Rational end = time_plus(last.start, last.length);
         assert(offset_in_bar(fixture, end).num == 0);
         PlanSpan whole = {first.start, time_sub(end, first.start)};
         PlanKey key = {scenario->tonic, scenario->mode};
@@ -398,13 +398,13 @@ static void check_given(const Fixture *fixture, const Scenario *scenario) {
     if (scenario->before_bars > 0) {
         PlanSpan span = plan_lane_span_span(fixture->plan, fixture->given_chord);
         assert(plan_lane_span_state(fixture->plan, fixture->given_chord) == PLAN_STATE_GIVEN);
-        assert(plan_time_compare(span.length, bars_of(fixture, scenario->before_bars)) == 0);
+        assert(rational_cmp(span.length, bars_of(fixture, scenario->before_bars)) == 0);
         assert(strcmp(plan_lane_span_payload(fixture->plan, fixture->given_chord)->harmony.roman_numeral,
                       scenario->mode == PLAN_MODE_MINOR ? "i" : "I") == 0);
     }
     PlanSpan span = plan_lane_span_span(fixture->plan, fixture->given_bass);
     assert(plan_lane_span_state(fixture->plan, fixture->given_bass) == PLAN_STATE_GIVEN);
-    assert(plan_time_compare(span.length, fixture->bar_length) == 0);
+    assert(rational_cmp(span.length, fixture->bar_length) == 0);
     assert(plan_lane_span_payload(fixture->plan, fixture->given_bass)->notes.notes[0].midi_pitch == 43);
 }
 
@@ -431,7 +431,7 @@ static int run_schema(const Scenario *scenario, int schema, unsigned roles) {
         assert(outcome.status == FILL_STATUS_STUCK && outcome.stuck_count >= 1);
         assert(plan_lane_span_state(fixture.plan, fixture.target) == PLAN_STATE_CONSTRAINED);
         assert(plan_lane_span_state(fixture.plan, fixture.bass_target) == PLAN_STATE_CONSTRAINED);
-        assert(plan_time_compare(plan_lane_span_span(fixture.plan, fixture.target).length, fixture.region.length) == 0);
+        assert(rational_cmp(plan_lane_span_span(fixture.plan, fixture.target).length, fixture.region.length) == 0);
     }
     fill_outcome_destroy(&outcome);
     signature(&fixture, first, sizeof(first));

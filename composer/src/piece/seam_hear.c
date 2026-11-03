@@ -16,10 +16,10 @@
 #define SEAM_LEAP 7
 #define SEAM_STEP 2
 
-NodeId seam_section_at(const PiecePlan *plan, PlanTime time) {
+NodeId seam_section_at(const PiecePlan *plan, Rational time) {
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (plan_has_node(plan, id) && plan_node_kind(plan, id) == PLAN_NODE_SECTION &&
-            plan_time_compare(plan_node_span(plan, id).start, time) == 0 &&
+            rational_cmp(plan_node_span(plan, id).start, time) == 0 &&
             plan_node_has_constraint(plan, id, PLAN_CONSTRAINT_SEAM)) {
             return id;
         }
@@ -141,9 +141,9 @@ void seam_hear_notes(const SeamNotes *notes, SeamHeard *out) {
 /* ------------------------------------------------------------- the plan */
 
 /* A time one tick (1/4096 of a whole note) before another. */
-static PlanTime before_tick(PlanTime time) {
-    PlanTime out = {0, 1};
-    if (plan_time_make(time.num * 4096 - (long)time.den, time.den * 4096UL, &out) != PLAN_OK) {
+static Rational before_tick(Rational time) {
+    Rational out = {0, 1};
+    if (rational_make(time.num * 4096 - (long)time.den, time.den * 4096UL, &out) != RATIONAL_OK) {
         out.num = 0;
         out.den = 1;
     }
@@ -151,9 +151,9 @@ static PlanTime before_tick(PlanTime time) {
 }
 
 /* The lane span of a lane and voice that sounds over the tick starting at `at`, or none. */
-static LaneSpanId span_at(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanTime at) {
+static LaneSpanId span_at(const PiecePlan *plan, PlanLaneKind lane, int voice, Rational at) {
     LaneSpanId ids[8];
-    PlanTime tick = {1, 4096};
+    Rational tick = {1, 4096};
     PlanSpan range = {at, tick};
     size_t found = plan_lane_find(plan, lane, voice, range, ids, 8);
     for (size_t i = 0; i < found && i < 8; i++) {
@@ -182,8 +182,8 @@ SeamHearResult seam_hear(const PiecePlan *plan, NodeId seam, SeamHeard *out) {
     if (!plan_has_node(plan, seam) || !plan_node_has_constraint(plan, seam, PLAN_CONSTRAINT_SEAM)) {
         return SEAM_HEAR_ERR_NOT_SEAM;
     }
-    PlanTime start = plan_node_span(plan, seam).start;
-    PlanTime before = before_tick(start);
+    Rational start = plan_node_span(plan, seam).start;
+    Rational before = before_tick(start);
     LaneSpanId keys[2];
     memset(&notes, 0, sizeof(notes));
     notes.bass_before = notes.bass_after = notes.melody_previous = notes.melody_before = notes.melody_after =

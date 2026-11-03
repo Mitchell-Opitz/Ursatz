@@ -786,7 +786,7 @@ static PieceResult run_seam(Run *run) {
             held[held_count++] = run->themes[t];
         }
     }
-    PlanTime body_start;
+    Rational body_start;
     if (plan_node_lane_spans(plan, seam, NULL, 0) == 0 && piece_seam_body_start(plan, &body_start)) {
         piece_seam_give(plan, seam, body_start);
     }

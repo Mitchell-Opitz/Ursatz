@@ -35,9 +35,9 @@ typedef struct {
     long bar;
 } Piece;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
@@ -105,13 +105,13 @@ static void add_motive_node(PiecePlan *plan, NodeId form) {
 
 static Piece built_piece_with(int beats, int unit, bool steady, long extra_bars) {
     Piece piece;
-    PlanTime bar;
+    Rational bar;
     PlanLanePayload payload;
     LaneSpanId id;
     NodeId form;
     memset(&piece, 0, sizeof(piece));
     piece.plan = plan_create();
-    assert(plan_time_make(beats, (unsigned long)unit, &bar) == PLAN_OK);
+    assert(rational_make(beats, (long long)unit, &bar) == RATIONAL_OK);
     PlanSpan all = {fraction(0, 1), fraction(bar.num * (8 + extra_bars), bar.den)};
     assert(plan_add_node(piece.plan, PLAN_NODE_NONE, PLAN_NODE_FORM, all, "form", &form) == PLAN_OK);
     memset(&payload, 0, sizeof(payload));

@@ -28,9 +28,9 @@
 
 /* ------------------------------------------------------------- the rules */
 
-static PlanTime whole(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational whole(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
@@ -220,7 +220,7 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
     snprintf(section->letter, sizeof(section->letter), "%s", letter);
     section->part = part;
     section->beats = beats;
-    section->pickup = (PlanTime){0, 1};
+    section->pickup = (Rational){0, 1};
     section->fill = fill;
     return section;
 }
@@ -265,15 +265,15 @@ static NodeId part_section(const PiecePlan *plan, int part, bool last) {
 /* What sounds in a lane inside a window: the onset from the window's start, and the pitch (a hash of the numeral for a
    chord). */
 typedef struct {
-    PlanTime onset;
+    Rational onset;
     int pitch;
 } Sound;
 
 #define MAX_SOUNDS 64
 
-static PlanTime minus(PlanTime a, PlanTime b) {
-    PlanTime out;
-    assert(plan_time_make(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den, &out) == PLAN_OK);
+static Rational minus(Rational a, Rational b) {
+    Rational out;
+    assert(rational_sub(a, b, &out) == RATIONAL_OK);
     return out;
 }
 
@@ -281,7 +281,7 @@ static size_t sounds(const PiecePlan *plan, PlanLaneKind lane, PlanSpan window, 
     LaneSpanId ids[32];
     size_t found = plan_lane_find(plan, lane, 0, window, ids, 32);
     size_t count = 0;
-    PlanTime window_end;
+    Rational window_end;
     assert(found <= 32 && plan_span_end(window, &window_end) == PLAN_OK);
     for (size_t i = 0; i < found; i++) {
         PlanSpan span = plan_lane_span_span(plan, ids[i]);
@@ -290,7 +290,7 @@ static size_t sounds(const PiecePlan *plan, PlanLaneKind lane, PlanSpan window, 
             continue;
         }
         if (lane == PLAN_LANE_HARMONY) {
-            PlanTime start = plan_time_compare(span.start, window.start) > 0 ? span.start : window.start;
+            Rational start = rational_cmp(span.start, window.start) > 0 ? span.start : window.start;
             const char *numeral = payload->harmony.roman_numeral;
             int hash = 0;
             for (size_t c = 0; numeral[c]; c++) {
@@ -302,9 +302,9 @@ static size_t sounds(const PiecePlan *plan, PlanLaneKind lane, PlanSpan window, 
             continue;
         }
         for (size_t n = 0; n < payload->notes.note_count; n++) {
-            PlanTime onset;
-            assert(plan_time_add(span.start, payload->notes.notes[n].offset, &onset) == PLAN_OK);
-            if (plan_time_compare(onset, window.start) < 0 || plan_time_compare(onset, window_end) >= 0) {
+            Rational onset;
+            assert(rational_add(span.start, payload->notes.notes[n].offset, &onset) == RATIONAL_OK);
+            if (rational_cmp(onset, window.start) < 0 || rational_cmp(onset, window_end) >= 0) {
                 continue;
             }
             assert(count < MAX_SOUNDS);
@@ -341,7 +341,7 @@ static void check_copy(const PiecePlan *plan, NodeId seam) {
         size_t copy_count = sounds(plan, LANES[lane], seam_span, copy);
         assert(body_count > 0 && body_count == copy_count);
         for (size_t i = 0; i < body_count; i++) {
-            assert(plan_time_compare(body[i].onset, copy[i].onset) == 0 && body[i].pitch == copy[i].pitch);
+            assert(rational_cmp(body[i].onset, copy[i].onset) == 0 && body[i].pitch == copy[i].pitch);
         }
     }
     LaneSpanId owned[64];
@@ -353,13 +353,13 @@ static void check_copy(const PiecePlan *plan, NodeId seam) {
 }
 
 /* Nothing sounds past the loop's end: the piece ends there, the seam is skipped and has no marker. */
-static void check_render(const PiecePlan *plan, NodeId seam, PlanTime loop_end) {
+static void check_render(const PiecePlan *plan, NodeId seam, Rational loop_end) {
     RenderedPlan rendered;
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
-    assert(plan_time_compare(rendered.piece_end, loop_end) == 0);
+    assert(rational_cmp(rendered.piece_end, loop_end) == 0);
     for (size_t i = 0; i < rendered.count; i++) {
         PlanSpan span = plan_lane_span_span(plan, rendered.spans[i]);
-        assert(plan_lane_span_owner(plan, rendered.spans[i]) != seam && plan_time_compare(span.start, loop_end) < 0);
+        assert(plan_lane_span_owner(plan, rendered.spans[i]) != seam && rational_cmp(span.start, loop_end) < 0);
     }
     size_t skipped = 0;
     for (size_t i = 0; i < rendered.skipped_count; i++) {
@@ -400,11 +400,11 @@ static void test_sweep(void) {
         NodeId loop_end = part_section(plan, PIECE_PART_TURNAROUND, true);
         assert(seam != PLAN_NODE_NONE && loop_end != PLAN_NODE_NONE);
         PlanSpan end_span = plan_node_span(plan, loop_end);
-        PlanTime end;
+        Rational end;
         assert(plan_span_end(end_span, &end) == PLAN_OK);
         /* The seam follows the loop's end, one bar long, and is the first bar of the body. */
-        assert(plan_time_compare(plan_node_span(plan, seam).start, end) == 0);
-        assert(plan_time_compare(plan_node_span(plan, seam).length, whole(1, 1)) == 0);
+        assert(rational_cmp(plan_node_span(plan, seam).start, end) == 0);
+        assert(rational_cmp(plan_node_span(plan, seam).length, whole(1, 1)) == 0);
         check_copy(plan, seam);
         check_render(plan, seam, end);
         /* The held loop end is written, and is still held. */

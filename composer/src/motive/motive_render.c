@@ -31,14 +31,14 @@ PiecePlan *motive_render_plan(const Motive *motive) {
               plan_add_given_node(plan, form, PLAN_NODE_SECTION, all, &section) &&
               plan_add_given_node(plan, section, PLAN_NODE_PHRASE, all, &phrase) &&
               plan_add_given_node(plan, phrase, PLAN_NODE_IDEA, all, &idea) &&
-              motive_attach(plan, idea, (PlanTime){0, 1}, motive, "motive", NULL, NULL) == PLAN_OK;
+              motive_attach(plan, idea, (Rational){0, 1}, motive, "motive", NULL, NULL) == PLAN_OK;
 
     PlanLanePayload payload;
     memset(&payload, 0, sizeof(payload));
-    bool has_pickup = plan_time_compare(motive->pickup, (PlanTime){0, 1}) > 0;
-    if (ok && has_pickup && plan_time_compare(motive->pickup, motive->length) < 0) {
+    bool has_pickup = rational_cmp(motive->pickup, (Rational){0, 1}) > 0;
+    if (ok && has_pickup && rational_cmp(motive->pickup, motive->length) < 0) {
         PlanSpan lead = {{0, 1}, motive->pickup};
-        PlanTime rest_length = motive_time_minus(motive->length, motive->pickup);
+        Rational rest_length = motive_time_minus(motive->length, motive->pickup);
         payload.meter.beats_per_bar = (int)motive->pickup.num;
         payload.meter.beat_unit = (int)motive->pickup.den;
         ok = add_given_span(plan, idea, PLAN_LANE_METER, lead, &payload);

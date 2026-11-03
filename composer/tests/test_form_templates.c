@@ -211,8 +211,8 @@ static Motive scenario_motive(const Scenario *scenario) {
     if (scenario->beats == 3) {
         /* The half note at beat 3 ends on the barline as a quarter. */
         PlanNote *last = &motive.notes[motive.note_count - 1];
-        assert(plan_time_make(1, 4, &last->duration) == PLAN_OK);
-        assert(plan_time_make(3, 4, &motive.length) == PLAN_OK);
+        assert(rational_make(1, 4, &last->duration) == RATIONAL_OK);
+        assert(rational_make(3, 4, &motive.length) == RATIONAL_OK);
     }
     return motive;
 }
@@ -242,7 +242,7 @@ static const PlanConstraint *find(const PiecePlan *plan, NodeId id, PlanConstrai
     return NULL;
 }
 
-static long bars_of(PlanTime time, int beats) {
+static long bars_of(Rational time, int beats) {
     /* time is in whole notes; a bar is beats quarters. */
     long quarters_num = time.num * 4;
     assert(quarters_num % (long)time.den == 0);

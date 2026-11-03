@@ -384,7 +384,7 @@ static void write_chords(const char *chords, const char *path) {
 }
 
 /* The Given harmony spans of the theme in the plan the command wrote: their numerals in order, as "start:numeral" lines. */
-static size_t given_harmony(const char *plan_path, char numerals[][32], PlanTime *starts, size_t capacity) {
+static size_t given_harmony(const char *plan_path, char numerals[][32], Rational *starts, size_t capacity) {
     PiecePlan *plan = NULL;
     PlanJsonError error;
     assert(plan_read_json_file(plan_path, &plan, &error) == PLAN_OK);
@@ -414,7 +414,7 @@ static size_t given_harmony(const char *plan_path, char numerals[][32], PlanTime
 
 static void test_chords(void) {
     char numerals[16][32];
-    PlanTime starts[16];
+    Rational starts[16];
     /* I, IV then V on the third beat, vi and V (a half cadence): all of them stay in the harmony lane, where they were put. */
     write_chords("[{\"bar\": 0, \"text\": \"I\"}, {\"bar\": 1, \"text\": \"IV V@2\"}, {\"bar\": 2, \"text\": \"VI\"}, "
                  "{\"bar\": 3, \"text\": \"V\"}]",

@@ -75,13 +75,13 @@ typedef enum {
 } MotiveShape;
 
 typedef struct {
-    PlanTime onset;
-    PlanTime duration;
+    Rational onset;
+    Rational duration;
     int bar;
-    PlanTime beat;
+    Rational beat;
     bool on_beat;
     bool dotted;
-    PlanTime rest_before;
+    Rational rest_before;
 } MotiveRhythmNote;
 
 typedef struct {
@@ -107,9 +107,9 @@ typedef struct {
     bool contour_known;
     bool rhythm_known;
     bool range_known;
-    PlanTime length;
+    Rational length;
     /* How many bars the motive is: its length over a bar. */
-    PlanTime bars;
+    Rational bars;
 
     MotiveInterval intervals[MOTIVE_MAX_NOTES];
     size_t interval_count; /* note_count - 1 */
@@ -158,7 +158,7 @@ bool motive_analyze_with_tones(const Motive *motive, const MotiveToneOverride *o
 const char *motive_shape_name(MotiveShape shape);
 
 /* A duration the way a note list writes it ("q", "e.", "h..") when it is one, otherwise "3/16". */
-void motive_duration_name(PlanTime duration, char *out, size_t size);
+void motive_duration_name(Rational duration, char *out, size_t size);
 /* A pitch as a note list writes it, a black key with a sharp as the spelling is not known: "D4", "A#3". */
 void motive_pitch_name(int midi_pitch, char *out, size_t size);
 

@@ -19,9 +19,9 @@
 static MelodyCandidate *candidate(long length) {
     MelodyCandidate *melody = calloc(1, sizeof(*melody));
     assert(melody);
-    PlanTime whole;
-    PlanTime quarter;
-    assert(plan_time_make(1, 1, &whole) == PLAN_OK && plan_time_make(1, 4, &quarter) == PLAN_OK);
+    Rational whole;
+    Rational quarter;
+    assert(rational_make(1, 1, &whole) == RATIONAL_OK && rational_make(1, 4, &quarter) == RATIONAL_OK);
     MelodyContext *context = &melody->context;
     context->key.tonic_pitch_class = 0;
     context->key.mode = PLAN_MODE_MAJOR;

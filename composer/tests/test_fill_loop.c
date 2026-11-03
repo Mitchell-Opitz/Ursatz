@@ -26,9 +26,9 @@
 
 /* ------------------------------------------------------------------- plans */
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
@@ -127,9 +127,9 @@ static PlanResult split_apply(PiecePlan *plan, FillTarget target, const FillCand
     PlanSpan span = plan_node_span(plan, parent);
     PlanNodeKind kind;
     next_kind(plan_node_kind(plan, parent), &kind);
-    PlanTime child_length;
-    PlanResult result = plan_time_make(span.length.num, span.length.den * (unsigned long)parts, &child_length);
-    PlanTime start = span.start;
+    Rational child_length;
+    PlanResult result = rational_div_int(span.length, parts, &child_length) == RATIONAL_OK ? PLAN_OK : PLAN_ERR_BAD_TIME;
+    Rational start = span.start;
     for (int i = 0; result == PLAN_OK && i < parts; i++) {
         PlanSpan child_span = {start, child_length};
         NodeId child = PLAN_NODE_NONE;
@@ -138,7 +138,7 @@ static PlanResult split_apply(PiecePlan *plan, FillTarget target, const FillCand
             add_melody(plan, child, child_span, 60);
         }
         if (result == PLAN_OK) {
-            result = plan_time_add(start, child_length, &start);
+            result = rational_add(start, child_length, &start) == RATIONAL_OK ? PLAN_OK : PLAN_ERR_BAD_TIME;
         }
     }
     return result;

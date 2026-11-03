@@ -21,7 +21,7 @@ static Motive load(const char *notes, const char *harmony) {
         /* One chord at the start: the degree is the numeral's. */
         options.has_harmony = true;
         options.harmony_count = 1;
-        options.harmony[0].onset = (PlanTime){0, 1};
+        options.harmony[0].onset = (Rational){0, 1};
         options.harmony[0].degree = atoi(harmony);
     }
     Motive motive;

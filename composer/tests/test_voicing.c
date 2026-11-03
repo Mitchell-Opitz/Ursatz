@@ -73,15 +73,15 @@ typedef struct {
     LaneSpanId alto;
 } Piece;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
 static Piece build(const Progression *progression, bool write_soprano, int melody_override) {
     Piece piece;
-    PlanTime bar = fraction(1, 1);
+    Rational bar = fraction(1, 1);
     PlanSpan all = {fraction(0, 1), fraction(CHORDS, 1)};
     PlanLanePayload payload;
     PlanNote notes[CHORDS];

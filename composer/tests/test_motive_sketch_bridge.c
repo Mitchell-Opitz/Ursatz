@@ -152,7 +152,7 @@ static void test_round_trips(void) {
     assert_round_trip(&one);
 
     Motive pickup = load(MOTIVE_FORMAT_NOTES, "G4:q C5:q. B4:e A4:q F4:h", &FOUR_FOUR, &C_MAJOR);
-    pickup.pickup = (PlanTime){1, 4};
+    pickup.pickup = (Rational){1, 4};
     assert_round_trip(&pickup);
 
     Motive minor = load(MOTIVE_FORMAT_NOTES, "D4:e F4:e A4:e D5:e E5:q", &SIX_EIGHT, &D_MINOR);

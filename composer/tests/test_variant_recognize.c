@@ -66,7 +66,7 @@ static void make_fixtures(Fixture *fixtures) {
     MotiveOptions minor;
     memset(&minor, 0, sizeof(minor));
     minor.has_pickup = true;
-    minor.pickup = (PlanTime){1, 4};
+    minor.pickup = (Rational){1, 4};
     add_feature(&minor, "a", 0, 1);
     PlanMeter meter;
     MotiveError error;

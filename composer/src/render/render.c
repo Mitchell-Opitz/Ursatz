@@ -14,6 +14,7 @@
 #include <pitch/tuning_system.h>
 #include <standard-tonality/tonal_key.h>
 #include <time/duration.h>
+#include <time/time_rational.h>
 #include <time/note_value.h>
 #include <time/temporal_anchor.h>
 #include <time/time_signature.h>
@@ -123,15 +124,15 @@ static bool lane_sounds_in(const PiecePlan *plan, NodeId id, PlanLaneKind lane) 
 }
 
 /* The end of the last section that is not material or the seam; zero when the form has no such section. */
-static PlanTime piece_end_of(const PiecePlan *plan) {
-    PlanTime end = {0, 1};
+static Rational piece_end_of(const PiecePlan *plan) {
+    Rational end = {0, 1};
     NodeId root = plan_root(plan);
     for (size_t i = 0; i < plan_node_child_count(plan, root); i++) {
         NodeId section = plan_node_child_at(plan, root, i);
-        PlanTime section_end;
+        Rational section_end;
         if (plan_node_kind(plan, section) == PLAN_NODE_SECTION && !section_is_material(plan, section) &&
             !section_is_seam(plan, section) && plan_span_end(plan_node_span(plan, section), &section_end) == PLAN_OK &&
-            plan_time_compare(section_end, end) > 0) {
+            rational_cmp(section_end, end) > 0) {
             end = section_end;
         }
     }
@@ -141,25 +142,25 @@ static PlanTime piece_end_of(const PiecePlan *plan) {
 /* ----------------------------------------------------------------- range */
 
 /* A time measured from the start of the range, which is the origin of a range render; unchanged without a range. */
-static PlanTime from_range_start(PlanTime time, const PlanSpan *range) {
-    PlanTime shifted = time;
-    PlanTime back = {range ? -range->start.num : 0, range ? range->start.den : 1};
-    if (range && plan_time_add(time, back, &shifted) != PLAN_OK) {
+static Rational from_range_start(Rational time, const PlanSpan *range) {
+    Rational shifted = time;
+    Rational back = {range ? -range->start.num : 0, range ? range->start.den : 1};
+    if (range && rational_add(time, back, &shifted) != RATIONAL_OK) {
         return time;
     }
     return shifted;
 }
 
 /* A key or meter span's start in a range render: the later of its own and the range's, from the range's start. */
-static PlanTime span_start_in_range(PlanSpan span, const PlanSpan *range) {
-    if (range && plan_time_compare(span.start, range->start) < 0) {
+static Rational span_start_in_range(PlanSpan span, const PlanSpan *range) {
+    if (range && rational_cmp(span.start, range->start) < 0) {
         return from_range_start(range->start, range);
     }
     return from_range_start(span.start, range);
 }
 
-static PlanTime range_end(const PlanSpan *range) {
-    PlanTime end = range->start;
+static Rational range_end(const PlanSpan *range) {
+    Rational end = range->start;
     plan_span_end(*range, &end);
     return end;
 }
@@ -169,12 +170,12 @@ static bool in_range(PlanSpan span, PlanLaneKind lane, const PlanSpan *range) {
     if (!range) {
         return true;
     }
-    PlanTime end;
+    Rational end;
     if (lane == PLAN_LANE_KEY || lane == PLAN_LANE_METER) {
-        return plan_span_end(span, &end) == PLAN_OK && plan_time_compare(end, range->start) > 0 &&
-               plan_time_compare(span.start, range_end(range)) < 0;
+        return plan_span_end(span, &end) == PLAN_OK && rational_cmp(end, range->start) > 0 &&
+               rational_cmp(span.start, range_end(range)) < 0;
     }
-    return plan_time_compare(span.start, range->start) >= 0 && plan_time_compare(span.start, range_end(range)) < 0;
+    return rational_cmp(span.start, range->start) >= 0 && rational_cmp(span.start, range_end(range)) < 0;
 }
 
 /* ----------------------------------------------------------------- keys */
@@ -204,14 +205,14 @@ typedef struct {
 } KeySource;
 
 static bool starts_before(PlanSpan a, PlanSpan b) {
-    return plan_time_compare(a.start, b.start) < 0;
+    return rational_cmp(a.start, b.start) < 0;
 }
 
 /* The last key that starts at or before onset, or NULL when none does. */
-static const PlanKey *key_in_force(const KeySource *keys, size_t count, PlanTime onset) {
+static const PlanKey *key_in_force(const KeySource *keys, size_t count, Rational onset) {
     const PlanKey *in_force = NULL;
     for (size_t i = 0; i < count; i++) {
-        if (plan_time_compare(keys[i].plan_span.start, onset) <= 0) {
+        if (rational_cmp(keys[i].plan_span.start, onset) <= 0) {
             in_force = &keys[i].key;
         }
     }
@@ -277,8 +278,8 @@ static int spelling_octave(int midi_pitch, Spelling written) {
 /* ------------------------------------------------------------------ notes */
 
 typedef struct {
-    PlanTime onset;
-    PlanTime duration;
+    Rational onset;
+    Rational duration;
     int midi_pitch;
     size_t part;
     LaneSpanId span;
@@ -288,7 +289,7 @@ typedef struct {
 static int compare_notes(const void *left, const void *right) {
     const NoteSource *a = left;
     const NoteSource *b = right;
-    int by_time = plan_time_compare(a->onset, b->onset);
+    int by_time = rational_cmp(a->onset, b->onset);
     if (by_time != 0) {
         return by_time;
     }
@@ -342,7 +343,7 @@ static PlanRenderResult build_note(const NoteSource *note, const RenderedPart *p
     snprintf(text, sizeof(text), "composer-span-%zu-note-%zu", note->span, note->index);
     Spelling written = spell(note->midi_pitch, key);
     bool ok = entity_id_create(text, &id) == ENTITY_ID_OK &&
-              musical_time_create(note->onset.num, note->onset.den, &position) == MUSICAL_TIME_OK &&
+              musical_time_from_rational(note->onset, &position) == TIME_RATIONAL_OK &&
               temporal_anchor_create(position, &anchor) == TEMPORAL_ANCHOR_OK;
     if (ok) {
         position = NULL;
@@ -398,7 +399,7 @@ static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t co
     for (size_t i = 0; result == PLAN_RENDER_OK && i < count; i++) {
         const PlanMeter *meter = &plan_lane_span_payload(plan, meter_spans[i])->meter;
         PlanSpan span = plan_lane_span_span(plan, meter_spans[i]);
-        PlanTime start = span_start_in_range(span, range);
+        Rational start = span_start_in_range(span, range);
         int exponent = -1;
         for (int candidate = TIME_SIGNATURE_MIN_BOTTOM_UNIT_EXPONENT;
              candidate <= TIME_SIGNATURE_MAX_BOTTOM_UNIT_EXPONENT; candidate++) {
@@ -416,7 +417,7 @@ static PlanRenderResult build_meter_map(const LaneSpanId *meter_spans, size_t co
             note_value_destroy(unit);
             if (made != TIME_SIGNATURE_OK) {
                 result = PLAN_RENDER_ERR_NOT_REPRESENTABLE;
-            } else if (musical_time_create(start.num, start.den, &starts[i]) != MUSICAL_TIME_OK) {
+            } else if (musical_time_from_rational(start, &starts[i]) != TIME_RATIONAL_OK) {
                 result = PLAN_RENDER_ERR_ALLOC;
             }
         }
@@ -547,14 +548,14 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
     }
     for (size_t i = 0; result == PLAN_RENDER_OK && i < key_count; i++) {
         PlanSpan span = plan_lane_span_span(plan, key_spans[i]);
-        PlanTime key_start = span_start_in_range(span, range);
+        Rational key_start = span_start_in_range(span, range);
         const PlanKey *key = &plan_lane_span_payload(plan, key_spans[i])->key;
         keys[i].span = key_spans[i];
         keys[i].plan_span = span;
         keys[i].key = *key;
         out->keys[i].sharps_flats = key_sharps_flats(key);
         out->keys[i].mode = key->mode;
-        if (musical_time_create(key_start.num, key_start.den, &out->keys[i].position) != MUSICAL_TIME_OK) {
+        if (musical_time_from_rational(key_start, &out->keys[i].position) != TIME_RATIONAL_OK) {
             result = PLAN_RENDER_ERR_ALLOC;
         } else {
             out->key_count++;
@@ -596,7 +597,7 @@ static PlanRenderResult render_into(const PiecePlan *plan, const PlanSpan *range
         for (size_t n = 0; result == PLAN_RENDER_OK && n < span_notes->note_count; n++) {
             const PlanNote *note = &span_notes->notes[n];
             NoteSource *source = &notes[filled++];
-            if (plan_time_add(span.start, note->offset, &source->onset) != PLAN_OK) {
+            if (rational_add(span.start, note->offset, &source->onset) != RATIONAL_OK) {
                 result = PLAN_RENDER_ERR_NOT_REPRESENTABLE;
             }
             source->duration = note->duration;
@@ -672,7 +673,7 @@ static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *r
     if (!out->sections) {
         return PLAN_RENDER_ERR_ALLOC;
     }
-    PlanTime *starts = calloc(child_count, sizeof(PlanTime));
+    Rational *starts = calloc(child_count, sizeof(Rational));
     if (!starts) {
         return PLAN_RENDER_ERR_ALLOC;
     }
@@ -683,8 +684,8 @@ static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *r
             section_is_seam(plan, section)) {
             continue;
         }
-        PlanTime start = plan_node_span(plan, section).start;
-        if (range && (plan_time_compare(start, range->start) < 0 || plan_time_compare(start, range_end(range)) >= 0)) {
+        Rational start = plan_node_span(plan, section).start;
+        if (range && (rational_cmp(start, range->start) < 0 || rational_cmp(start, range_end(range)) >= 0)) {
             continue;
         }
         const char *label = section_label(plan, section);
@@ -692,7 +693,7 @@ static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *r
         if (length == 0) {
             continue;
         }
-        PlanTime shifted = from_range_start(start, range);
+        Rational shifted = from_range_start(start, range);
         RenderedSection *entry = &out->sections[out->section_count];
         entry->label = malloc(length + 1);
         if (!entry->label) {
@@ -700,7 +701,7 @@ static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *r
             break;
         }
         memcpy(entry->label, label, length + 1);
-        if (musical_time_create(shifted.num, shifted.den, &entry->position) != MUSICAL_TIME_OK) {
+        if (musical_time_from_rational(shifted, &entry->position) != TIME_RATIONAL_OK) {
             free(entry->label);
             entry->label = NULL;
             result = PLAN_RENDER_ERR_ALLOC;
@@ -710,8 +711,8 @@ static PlanRenderResult render_sections(const PiecePlan *plan, const PlanSpan *r
     }
     /* Insertion sort by start; the children are normally in order already. */
     for (size_t i = 1; result == PLAN_RENDER_OK && i < out->section_count; i++) {
-        for (size_t j = i; j > 0 && plan_time_compare(starts[j - 1], starts[j]) > 0; j--) {
-            PlanTime time = starts[j];
+        for (size_t j = i; j > 0 && rational_cmp(starts[j - 1], starts[j]) > 0; j--) {
+            Rational time = starts[j];
             starts[j] = starts[j - 1];
             starts[j - 1] = time;
             RenderedSection section = out->sections[j];

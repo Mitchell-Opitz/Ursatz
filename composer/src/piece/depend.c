@@ -142,7 +142,7 @@ static void add_over(DependentList *list, const PiecePlan *plan, PlanLaneKind la
 static void add_next(DependentList *list, const PiecePlan *plan, LaneSpanId id) {
     PlanLaneKind lane = plan_lane_span_lane(plan, id);
     NodeId section = plan_section_of(plan, plan_lane_span_owner(plan, id));
-    PlanTime end;
+    Rational end;
     LaneSpanId next = PLAN_LANE_SPAN_NONE;
     if (plan_span_end(plan_lane_span_span(plan, id), &end) != PLAN_OK) {
         return;
@@ -151,11 +151,11 @@ static void add_next(DependentList *list, const PiecePlan *plan, LaneSpanId id) 
         if (!plan_has_lane_span(plan, other) || other == id || plan_lane_span_lane(plan, other) != lane ||
             plan_lane_span_voice(plan, other) != 0 ||
             plan_section_of(plan, plan_lane_span_owner(plan, other)) != section ||
-            plan_time_compare(plan_lane_span_span(plan, other).start, end) < 0) {
+            rational_cmp(plan_lane_span_span(plan, other).start, end) < 0) {
             continue;
         }
         if (next == PLAN_LANE_SPAN_NONE ||
-            plan_time_compare(plan_lane_span_span(plan, other).start, plan_lane_span_span(plan, next).start) < 0) {
+            rational_cmp(plan_lane_span_span(plan, other).start, plan_lane_span_span(plan, next).start) < 0) {
             next = other;
         }
     }

@@ -40,4 +40,7 @@ extern const char *const plan_fragment_position_names[PLAN_FRAGMENT_POSITION_NAM
 /* The name of a fragment position; "any" for a value that is not one. */
 const char *plan_fragment_position_name(long position);
 
+/* PLAN_OK for RATIONAL_OK, PLAN_ERR_NULL for a NULL result, else PLAN_ERR_BAD_TIME (a zero denominator or overflow). */
+PlanResult plan_result_of_rational(RationalResult result);
+
 #endif

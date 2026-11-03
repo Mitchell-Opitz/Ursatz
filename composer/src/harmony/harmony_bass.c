@@ -285,7 +285,7 @@ PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, Pla
     for (size_t i = 0; i < chord && i < line->context.count; i++) {
         at += line->context.chords[i].cells;
     }
-    PlanTime chord_start;
+    Rational chord_start;
     if (!harmony_metre_cell_offset(metre, at, &chord_start)) {
         return PLAN_ERR_BAD_INDEX;
     }
@@ -295,12 +295,11 @@ PlanResult harmony_bass_chord_notes(const BassCandidate *line, size_t chord, Pla
             continue;
         }
         /* A note's offset is from the chord's start. */
-        PlanTime note_start;
+        Rational note_start;
         PlanSpan span;
         PlanResult result = harmony_metre_cells_span(metre, at, line->notes[i].cells, &span);
         if (result != PLAN_OK || !harmony_metre_cell_offset(metre, at, &note_start) ||
-            plan_time_make(note_start.num * (long)chord_start.den - chord_start.num * (long)note_start.den,
-                           note_start.den * chord_start.den, &notes[used].offset) != PLAN_OK) {
+            rational_sub(note_start, chord_start, &notes[used].offset) != RATIONAL_OK) {
             return PLAN_ERR_BAD_INDEX;
         }
         notes[used].duration = span.length;

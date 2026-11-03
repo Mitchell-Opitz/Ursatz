@@ -10,6 +10,7 @@
 #include <standard-form/phrase_level_form.h>
 #include <time/duration.h>
 #include <time/musical_time.h>
+#include <time/time_rational.h>
 #include <time/temporal_anchor.h>
 #include <time/time_span.h>
 
@@ -98,7 +99,7 @@ static FormHearResult result_of(StandardFormAnalysisStatus status) {
 }
 
 /* A span [start, end) kept by the pool. NULL when out of memory. */
-static const TimeSpan *pool_span(SpanPool *pool, PlanTime start, PlanTime end) {
+static const TimeSpan *pool_span(SpanPool *pool, Rational start, Rational end) {
     if (pool->count == pool->capacity) {
         size_t capacity = pool->capacity ? pool->capacity * 2 : 64;
         TimeSpan **items = realloc(pool->items, capacity * sizeof(*items));
@@ -111,8 +112,8 @@ static const TimeSpan *pool_span(SpanPool *pool, PlanTime start, PlanTime end) {
     MusicalTime *from = NULL;
     MusicalTime *to = NULL;
     TimeSpan *span = NULL;
-    if (musical_time_create(start.num, start.den, &from) == MUSICAL_TIME_OK &&
-        musical_time_create(end.num, end.den, &to) == MUSICAL_TIME_OK &&
+    if (musical_time_from_rational(start, &from) == TIME_RATIONAL_OK &&
+        musical_time_from_rational(end, &to) == TIME_RATIONAL_OK &&
         time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) == TIME_SPAN_OK) {
         pool->items[pool->count++] = span;
     }
@@ -156,9 +157,9 @@ static void degree_of(PlanKey key, int midi, int *degree, int *alteration) {
     *alteration = table[relative][1];
 }
 
-static PlanTime time_of(const MusicalTime *time) {
-    PlanTime out = {0, 1};
-    plan_time_make(musical_time_numerator(time), musical_time_denominator(time), &out);
+static Rational time_of(const MusicalTime *time) {
+    Rational out = {0, 1};
+    rational_of_musical_time(time, &out);
     return out;
 }
 
@@ -174,32 +175,32 @@ typedef struct {
 /* Reads the key spans over the range; they must follow each other and hold all of it. False otherwise. */
 static bool key_map_read(const PiecePlan *plan, PlanSpan range, KeyMap *map) {
     LaneSpanId ids[MAX_KEY_SPANS];
-    PlanTime range_end;
-    PlanTime at = range.start;
+    Rational range_end;
+    Rational at = range.start;
     map->count = plan_lane_find(plan, PLAN_LANE_KEY, 0, range, ids, MAX_KEY_SPANS);
     if (map->count == 0 || map->count > MAX_KEY_SPANS || plan_span_end(range, &range_end) != PLAN_OK) {
         return false;
     }
     for (size_t i = 0; i < map->count; i++) {
-        PlanTime end;
+        Rational end;
         map->span[i] = plan_lane_span_span(plan, ids[i]);
         map->key[i] = plan_lane_span_payload(plan, ids[i])->key;
         /* The first span may start before the range; each next one starts where the one before ends. */
         if (plan_span_end(map->span[i], &end) != PLAN_OK ||
-            (i == 0 ? plan_time_compare(map->span[i].start, range.start) > 0
-                    : plan_time_compare(map->span[i].start, at) != 0)) {
+            (i == 0 ? rational_cmp(map->span[i].start, range.start) > 0
+                    : rational_cmp(map->span[i].start, at) != 0)) {
             return false;
         }
         at = end;
     }
-    return plan_time_compare(at, range_end) >= 0;
+    return rational_cmp(at, range_end) >= 0;
 }
 
 /* The key at a time of the range. */
-static PlanKey key_at(const KeyMap *map, PlanTime time) {
+static PlanKey key_at(const KeyMap *map, Rational time) {
     for (size_t i = 0; i < map->count; i++) {
-        PlanTime end;
-        if (plan_span_end(map->span[i], &end) == PLAN_OK && plan_time_compare(time, end) < 0) {
+        Rational end;
+        if (plan_span_end(map->span[i], &end) == PLAN_OK && rational_cmp(time, end) < 0) {
             return map->key[i];
         }
     }
@@ -209,15 +210,15 @@ static PlanKey key_at(const KeyMap *map, PlanTime time) {
 /* One rendered note of a part over the span. */
 typedef struct {
     size_t event;
-    PlanTime start;
-    PlanTime end;
+    Rational start;
+    Rational end;
     int midi;
 } HeardNote;
 
 /* The notes of the lane's part that start in the span, in time order (the render's). */
 static bool collect_notes(const RenderedPlan *rendered, PlanLaneKind lane, PlanSpan span, HeardNote **out,
                           size_t *count) {
-    PlanTime span_end;
+    Rational span_end;
     plan_span_end(span, &span_end);
     *out = NULL;
     *count = 0;
@@ -234,17 +235,17 @@ static bool collect_notes(const RenderedPlan *rendered, PlanLaneKind lane, PlanS
             continue;
         }
         const NoteEvent *event = rendered->events[i];
-        PlanTime start = time_of(temporal_anchor_position(note_event_temporal_anchor(event)));
-        if (plan_time_compare(start, span.start) < 0 || plan_time_compare(start, span_end) >= 0) {
+        Rational start = time_of(temporal_anchor_position(note_event_temporal_anchor(event)));
+        if (rational_cmp(start, span.start) < 0 || rational_cmp(start, span_end) >= 0) {
             continue;
         }
         const Duration *duration = note_event_duration(event);
-        PlanTime length = {0, 1};
-        plan_time_make(duration_numerator(duration), duration_denominator(duration), &length);
+        Rational length = {0, 1};
+        rational_make(duration_numerator(duration), duration_denominator(duration), &length);
         HeardNote *note = &notes[(*count)++];
         note->event = i;
         note->start = start;
-        plan_time_add(start, length, &note->end);
+        rational_add(start, length, &note->end);
         note->midi = (int)pitch_numeric_value_position_numerator(rendered->pitch_values[i]);
     }
     *out = notes;
@@ -281,10 +282,10 @@ static FormHearResult add_line(HearRun *run, const KeyMap *keys, const HeardNote
 static void soprano_over_chords(const PiecePlan *plan, const KeyMap *keys, const LaneSpanId *chords, size_t chord_count,
                                 const HeardNote *melody, size_t melody_count, int *soprano) {
     for (size_t c = 0; c < chord_count; c++) {
-        PlanTime start = plan_lane_span_span(plan, chords[c]).start;
+        Rational start = plan_lane_span_span(plan, chords[c]).start;
         soprano[c] = 0;
         for (size_t n = 0; n < melody_count; n++) {
-            if (plan_time_compare(melody[n].start, start) <= 0 && plan_time_compare(start, melody[n].end) < 0) {
+            if (rational_cmp(melody[n].start, start) <= 0 && rational_cmp(start, melody[n].end) < 0) {
                 int alteration;
                 degree_of(key_at(keys, melody[n].start), melody[n].midi, &soprano[c], &alteration);
             }
@@ -299,7 +300,7 @@ static FormHearResult add_harmony(HearRun *run, const PiecePlan *plan, const Lan
         if (cadence->arrival_first >= count || cadence->arrival_last >= count) {
             return FORM_HEAR_ERR_ANALYSIS;
         }
-        PlanTime end;
+        Rational end;
         plan_span_end(plan_lane_span_span(plan, chords[cadence->arrival_last]), &end);
         const TimeSpan *arrival =
             pool_span(&run->spans, plan_lane_span_span(plan, chords[cadence->arrival_first]).start, end);
@@ -317,7 +318,7 @@ static FormHearResult add_harmony(HearRun *run, const PiecePlan *plan, const Lan
     }
     for (size_t i = 0; i < count; i++) {
         PlanSpan chord = plan_lane_span_span(plan, chords[i]);
-        PlanTime end;
+        Rational end;
         plan_span_end(chord, &end);
         const TimeSpan *span = pool_span(&run->spans, chord.start, end);
         if (!span) {
@@ -384,7 +385,7 @@ static FormHearResult copy_themes(const HearRun *run, FormHeard *out) {
 
 /* Everything after the checks: the lanes as the adapter's input, then its three steps. */
 static FormHearResult hear(HearRun *run, const PiecePlan *plan, PlanSpan span, const KeyMap *keys,
-                           const PlanTime *section_starts, size_t section_count, FormHeard *out) {
+                           const Rational *section_starts, size_t section_count, FormHeard *out) {
     PlanRenderResult rendered = plan_render(plan, &run->rendered);
     if (rendered != PLAN_RENDER_OK) {
         return rendered == PLAN_RENDER_ERR_ALLOC ? FORM_HEAR_ERR_ALLOC : FORM_HEAR_ERR_ANALYSIS;
@@ -454,7 +455,7 @@ FormHearResult form_hear(const PiecePlan *plan, PlanSpan span, FormHeard *out) {
     return form_hear_with_sections(plan, span, NULL, 0, out);
 }
 
-FormHearResult form_hear_with_sections(const PiecePlan *plan, PlanSpan span, const PlanTime *section_starts,
+FormHearResult form_hear_with_sections(const PiecePlan *plan, PlanSpan span, const Rational *section_starts,
                                        size_t section_count, FormHeard *out) {
     if (!out) {
         return FORM_HEAR_ERR_NULL;

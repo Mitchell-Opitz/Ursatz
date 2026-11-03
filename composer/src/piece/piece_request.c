@@ -42,9 +42,9 @@ size_t piece_material_bars(size_t section_count) {
     return 1 + MATERIAL_BARS_PER_SECTION * section_count;
 }
 
-static PlanTime bars_of(PlanTime bar, size_t count) {
-    PlanTime out = {0, 1};
-    if (plan_time_make(bar.num * (long)count, bar.den, &out) != PLAN_OK) {
+static Rational bars_of(Rational bar, size_t count) {
+    Rational out = {0, 1};
+    if (rational_make(bar.num * (long)count, bar.den, &out) != RATIONAL_OK) {
         out.num = 0;
         out.den = 1;
     }
@@ -154,7 +154,7 @@ static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) 
     PieceResult result = piece_result_of_plan(plan_add_node(plan, idea, PLAN_NODE_MOTIVE, span, GROW_SOURCE_NAME, &node));
     memset(&payload, 0, sizeof(payload));
     note.midi_pitch = INVENT_PLACEHOLDER;
-    note.offset = (PlanTime){0, 1};
+    note.offset = (Rational){0, 1};
     note.duration = span.length;
     payload.notes.notes = &note;
     payload.notes.note_count = 1;
@@ -171,7 +171,7 @@ static PieceResult add_open_motive(PiecePlan *plan, NodeId idea, PlanSpan span) 
 
 /* The material section, its phrase and its idea, Realized, with m0 in it; the source node in *out. */
 PieceResult piece_add_material(PiecePlan *plan, const Motive *motive, const PlanSource *motive_source, NodeId form,
-                               PlanSpan material, PlanTime bar, NodeId *out) {
+                               PlanSpan material, Rational bar, NodeId *out) {
     NodeId section;
     NodeId phrase;
     NodeId idea;
@@ -239,8 +239,8 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
         !template_buildable(&layout, &request->meter)) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    PlanTime bar = grow_bar_length(&request->meter);
-    if (request->motive && plan_time_compare(request->motive->length, bar) > 0) {
+    Rational bar = grow_bar_length(&request->meter);
+    if (request->motive && rational_cmp(request->motive->length, bar) > 0) {
         return PIECE_ERR_MOTIVE_TOO_LONG;
     }
 
@@ -251,7 +251,7 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
     PlanSpan piece = {{0, 1}, bars_of(bar, layout.bars)};
     PlanSpan material = {piece.length, bars_of(bar, piece_material_bars(layout.section_count) + request->given_melodies)};
     PlanSpan form = {{0, 1}, {0, 1}};
-    PieceResult result = piece_result_of_plan(plan_time_add(piece.length, material.length, &form.length));
+    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_add(piece.length, material.length, &form.length)));
     NodeId form_id = PLAN_NODE_NONE;
     NodeId source = PLAN_NODE_NONE;
     NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
@@ -270,13 +270,13 @@ PieceResult piece_build_plan(const PieceRequest *request, PiecePlan **out) {
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     /* The sections in order, then the material; the sections' motive references name m0, so they come last. */
-    PlanTime start = {0, 1};
+    Rational start = {0, 1};
     for (size_t i = 0; result == PIECE_OK && i < layout.section_count; i++) {
         PlanSpan span = {start, bars_of(bar, layout.sections[i].bars)};
         result = add_section(plan, request, &layout.sections[i], span, form_id, sections,
                              accompanied ? &accompaniment : NULL, &sections[i]);
         if (result == PIECE_OK) {
-            result = piece_result_of_plan(plan_time_add(start, span.length, &start));
+            result = piece_result_of_plan(plan_result_of_rational(rational_add(start, span.length, &start)));
         }
     }
     if (result == PIECE_OK) {

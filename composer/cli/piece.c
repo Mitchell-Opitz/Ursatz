@@ -264,7 +264,7 @@ static int read_section(Request *request, size_t index, const cJSON *item, const
         return cli_fail(CLI_EXIT_USAGE, "section '%s': \"beats\" must be a whole number of beats, 1 or more", id);
     }
     section->beats = (size_t)beats->valuedouble;
-    section->pickup = (PlanTime){0, 1};
+    section->pickup = (Rational){0, 1};
     if (pickup && !request_parse_pickup(pickup, meter->beat_unit, &section->pickup)) {
         return cli_fail(CLI_EXIT_USAGE, "section '%s': pickup '%s' is not a number of beats; write 0, 1 or 1/2", id, pickup);
     }
@@ -843,7 +843,7 @@ static PieceResult regenerate_piece(const Request *request, const Edit *edit, bo
 /* ------------------------------------------------------------- reading the plans */
 
 /* The loop's region: from the start of the first body section to the end of the last section of the loop. */
-static bool loop_region(const PiecePlan *plan, PlanTime *start, PlanTime *end) {
+static bool loop_region(const PiecePlan *plan, Rational *start, Rational *end) {
     bool found = false;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         if (!plan_has_node(plan, id) || plan_node_kind(plan, id) != PLAN_NODE_SECTION) {
@@ -856,15 +856,15 @@ static bool loop_region(const PiecePlan *plan, PlanTime *start, PlanTime *end) {
             }
             int part = constraint->params.piece_part.part;
             PlanSpan span = plan_node_span(plan, id);
-            PlanTime span_end;
+            Rational span_end;
             if ((part != (int)PIECE_PART_BODY && part != (int)PIECE_PART_TURNAROUND) ||
                 plan_span_end(span, &span_end) != PLAN_OK) {
                 continue;
             }
-            if (!found || (part == (int)PIECE_PART_BODY && plan_time_compare(span.start, *start) < 0)) {
+            if (!found || (part == (int)PIECE_PART_BODY && rational_cmp(span.start, *start) < 0)) {
                 *start = span.start;
             }
-            if (!found || plan_time_compare(span_end, *end) > 0) {
+            if (!found || rational_cmp(span_end, *end) > 0) {
                 *end = span_end;
             }
             found = true;
@@ -878,7 +878,7 @@ static bool loop_region(const PiecePlan *plan, PlanTime *start, PlanTime *end) {
 typedef struct {
     const PieceSection *section;
     const char *source;
-    PlanTime start;
+    Rational start;
     bool has_cadence;
     PlanCadenceType cadence;
     const char *heard; /* the cadence the Analyzer heard, NULL without --check */
@@ -935,16 +935,16 @@ static size_t collect_rows(const Request *request, const Version *version, Row *
 
 /* ------------------------------------------------------------- the output */
 
-static void print_time(PlanTime time) {
+static void print_time(Rational time) {
     if (time.den == 1) {
-        printf("%ld", time.num);
+        printf("%lld", time.num);
     } else {
-        printf("%ld/%lu", time.num, time.den);
+        printf("%lld/%lld", time.num, time.den);
     }
 }
 
-static void print_time_json(PlanTime time) {
-    printf("\"%ld/%lu\"", time.num, time.den);
+static void print_time_json(Rational time) {
+    printf("\"%lld/%lld\"", time.num, time.den);
 }
 
 static GrowBrief make_brief(const Request *request) {
@@ -1126,8 +1126,8 @@ static int write_files(const Options *options, const Request *request, const Pie
     bool have[2] = {false, false};
     const Version *versions[2] = {&piece->loop, &piece->ending};
     PlanExportOptions loop_options = request->export_options;
-    PlanTime start;
-    PlanTime end;
+    Rational start;
+    Rational end;
     if (loop_region(piece->loop.plan, &start, &end)) {
         loop_options.loop_markers = true;
         loop_options.loop_start = start;
@@ -1200,8 +1200,8 @@ static const char *output_path(const Output *outputs, size_t count, OutputKind k
 
 static void print_result(const Options *options, const Request *request, const Piece *piece, const Output *outputs,
                          size_t count, bool json) {
-    PlanTime start = {0, 1};
-    PlanTime end = {0, 1};
+    Rational start = {0, 1};
+    Rational end = {0, 1};
     bool has_loop = loop_region(piece->loop.plan, &start, &end);
     char key[32];
     GrowBrief brief = make_brief(request);

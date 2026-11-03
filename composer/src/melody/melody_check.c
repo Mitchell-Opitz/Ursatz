@@ -662,7 +662,7 @@ bool melody_check_lane(const PiecePlan *plan, PlanSpan span, PlanKey key, const 
     bool ok = melody && violation;
     size_t found = 0;
     long origin = 0;
-    PlanTime phrase_end;
+    Rational phrase_end;
     if (ok) {
         found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, span, ids, HARMONY_MAX_CHORDS);
         ok = found > 0 && found <= HARMONY_MAX_CHORDS && melody_ticks(span.start, &origin) &&
@@ -677,12 +677,12 @@ bool melody_check_lane(const PiecePlan *plan, PlanSpan span, PlanKey key, const 
     for (size_t i = 0; ok && i < found; i++) {
         long base;
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
-        PlanTime lane_end;
+        Rational lane_end;
         PlanSpan lane_span = plan_lane_span_span(plan, ids[i]);
         /* A melody span may start before the phrase, with a pickup (PLAN_CONSTRAINT_PICKUP), and end where it ends. */
         ok = plan_span_end(lane_span, &lane_end) == PLAN_OK &&
              (plan_span_contains(span, lane_span) ||
-              (plan_time_compare(lane_span.start, span.start) < 0 && plan_time_compare(lane_end, phrase_end) == 0)) &&
+              (rational_cmp(lane_span.start, span.start) < 0 && rational_cmp(lane_end, phrase_end) == 0)) &&
              melody_ticks(lane_span.start, &base);
         for (size_t n = 0; ok && n < notes->note_count; n++) {
             MelodyNote *note = &melody->notes[melody->count];

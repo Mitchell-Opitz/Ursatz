@@ -122,11 +122,11 @@ static bool draw_keys(FormTemplateKind kind, size_t count, PlanKey home, FillRng
 /* Adds a segment, joined to the one before it when that is in the same key and ends where this one starts. */
 static PieceResult push_segment(KeySegment *segments, size_t *count, PlanSpan span, PlanKey key) {
     if (*count > 0 && same_key(segments[*count - 1].key, key)) {
-        PlanTime end;
+        Rational end;
         PieceResult result = piece_result_of_plan(plan_span_end(segments[*count - 1].span, &end));
-        if (result == PIECE_OK && plan_time_compare(end, span.start) == 0) {
-            return piece_result_of_plan(plan_time_add(segments[*count - 1].span.length, span.length,
-                                           &segments[*count - 1].span.length));
+        if (result == PIECE_OK && rational_cmp(end, span.start) == 0) {
+            return piece_result_of_plan(plan_result_of_rational(rational_add(segments[*count - 1].span.length, span.length,
+                                           &segments[*count - 1].span.length)));
         }
         return PIECE_ERR_BAD_REQUEST;
     }
@@ -147,12 +147,12 @@ static PieceResult section_segments(KeySegment *segments, size_t *count, PlanSpa
     PlanSpan first;
     PlanSpan second;
     first.start = span.start;
-    PieceResult result = piece_result_of_plan(plan_time_make(span.length.num, span.length.den * 2, &first.length));
+    PieceResult result = piece_result_of_plan(plan_result_of_rational(rational_div_int(span.length, 2, &first.length)));
     if (result != PIECE_OK) {
         return result;
     }
     second.length = first.length;
-    result = piece_result_of_plan(plan_time_add(span.start, first.length, &second.start));
+    result = piece_result_of_plan(plan_result_of_rational(rational_add(span.start, first.length, &second.start)));
     if (result == PIECE_OK) {
         result = push_segment(segments, count, first, keys->start);
     }
@@ -278,10 +278,6 @@ static bool related_to_home(PlanKey home, PlanKey key) {
     return false;
 }
 
-static double as_double(PlanTime time) {
-    return (double)time.num / (double)time.den;
-}
-
 /* The arrival of every authentic cadence heard in the sections, in whole notes. False when a section is not readable. */
 static bool authentic_arrivals(const PiecePlan *plan, const NodeId *sections, size_t count, double *arrivals,
                                size_t *arrival_count) {
@@ -295,7 +291,7 @@ static bool authentic_arrivals(const PiecePlan *plan, const NodeId *sections, si
             int type = heard.cadences[i].type;
             if (type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC ||
                 type == CADENCE_TYPE_AUTHENTIC_UNSPECIFIED) {
-                arrivals[(*arrival_count)++] = as_double(heard.cadences[i].arrival);
+                arrivals[(*arrival_count)++] = rational_to_double(heard.cadences[i].arrival);
             }
         }
         form_heard_destroy(&heard);
@@ -311,10 +307,10 @@ static bool constraint_key(const PiecePlan *plan, NodeId section, PlanKey *out) 
     return constraint != NULL;
 }
 
-static size_t chords_between(const PiecePlan *plan, PlanTime start, PlanTime end) {
+static size_t chords_between(const PiecePlan *plan, Rational start, Rational end) {
     PlanSpan range = {start, {0, 1}};
-    PlanTime negative = {-start.num, start.den};
-    if (plan_time_compare(end, start) <= 0 || plan_time_add(end, negative, &range.length) != PLAN_OK) {
+    Rational negative = {-start.num, start.den};
+    if (rational_cmp(end, start) <= 0 || rational_add(end, negative, &range.length) != RATIONAL_OK) {
         return 0;
     }
     return plan_lane_find(plan, PLAN_LANE_HARMONY, 0, range, NULL, 0);
@@ -329,7 +325,7 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
     NodeId form = plan_root(plan);
     NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
     size_t section_count = 0;
-    PlanTime piece_end = {0, 1};
+    Rational piece_end = {0, 1};
     for (size_t i = 0; form != PLAN_NODE_NONE && i < plan_node_child_count(plan, form); i++) {
         NodeId child = plan_node_child_at(plan, form, i);
         if (plan_node_find_constraint(plan, child, PLAN_CONSTRAINT_MATERIAL)) {
@@ -359,24 +355,24 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
             continue;
         }
         out->changes++;
-        PlanTime span_end;
-        PlanTime region_end = piece_end;
-        PlanTime cadence_end = {0, 1};
+        Rational span_end;
+        Rational region_end = piece_end;
+        Rational cadence_end = {0, 1};
         bool planned = false;
         if (plan_span_end(lane.span[k], &span_end) != PLAN_OK) {
             return false;
         }
-        region_end = plan_time_compare(span_end, piece_end) < 0 ? span_end : piece_end;
+        region_end = rational_cmp(span_end, piece_end) < 0 ? span_end : piece_end;
         /* A section planned to end in the new key, inside the span: the last of them is where the cadence is. */
         for (size_t s = 0; s < section_count; s++) {
             PlanKey ends_in;
-            PlanTime end;
+            Rational end;
             if (!constraint_key(plan, sections[s], &ends_in) ||
                 plan_span_end(plan_node_span(plan, sections[s]), &end) != PLAN_OK) {
                 return false;
             }
-            if (same_key(ends_in, lane.key[k]) && plan_time_compare(end, lane.span[k].start) > 0 &&
-                plan_time_compare(end, region_end) <= 0 && plan_time_compare(end, cadence_end) > 0) {
+            if (same_key(ends_in, lane.key[k]) && rational_cmp(end, lane.span[k].start) > 0 &&
+                rational_cmp(end, region_end) <= 0 && rational_cmp(end, cadence_end) > 0) {
                 cadence_end = end;
                 planned = true;
             }
@@ -391,7 +387,7 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
         KeyChangeExtent length_extent;
         KeyChangeExtent extent;
         if (!harmony_key_change_classify(&change, &length_extent) ||
-            !harmony_key_change_confirm(length_extent, as_double(lane.span[k].start), as_double(region_end), arrivals,
+            !harmony_key_change_confirm(length_extent, rational_to_double(lane.span[k].start), rational_to_double(region_end), arrivals,
                                         arrival_count, &extent)) {
             return false;
         }
@@ -399,7 +395,7 @@ bool piece_check_keys(const PiecePlan *plan, PieceKeyCheck *out) {
             out->modulations++;
         } else if (out->ok) {
             out->ok = false;
-            snprintf(out->reason, sizeof(out->reason), "the key change at %ld/%lu is a %s, not a modulation",
+            snprintf(out->reason, sizeof(out->reason), "the key change at %lld/%lld is a %s, not a modulation",
                      lane.span[k].start.num, lane.span[k].start.den, key_change_extent_name(extent));
         }
     }

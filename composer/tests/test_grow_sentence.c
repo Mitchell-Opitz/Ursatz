@@ -77,7 +77,7 @@ static NodeId find_node(const PiecePlan *plan, const char *name) {
     return PLAN_NODE_NONE;
 }
 
-static long ticks(PlanTime time) {
+static long ticks(Rational time) {
     assert((time.num * TICKS) % (long)time.den == 0);
     return time.num * TICKS / (long)time.den;
 }
@@ -98,8 +98,8 @@ static size_t tiling(const PiecePlan *plan, PlanLaneKind lane, PlanSpan theme, L
 }
 
 static void check_structure(const PiecePlan *plan, const Scenario *scenario, size_t bars) {
-    PlanTime bar;
-    assert(plan_time_make(scenario->beats, (unsigned long)scenario->unit, &bar) == PLAN_OK);
+    Rational bar;
+    assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     long bar_ticks = ticks(bar);
     NodeId theme = find_node(plan, "theme");
     assert(theme != PLAN_NODE_NONE && plan_node_state(plan, theme) == PLAN_STATE_REALIZED);
@@ -159,8 +159,8 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
     LaneSpanId ids[64];
     NodeId theme_node = find_node(plan, "theme");
     PlanSpan theme = plan_node_span(plan, theme_node);
-    PlanTime bar;
-    assert(plan_time_make(scenario->beats, (unsigned long)scenario->unit, &bar) == PLAN_OK);
+    Rational bar;
+    assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     long bar_ticks = ticks(bar);
     size_t cells_per_bar = scenario->unit == 8 || (scenario->beats == 4 && scenario->unit == 4) ? 2 : 1;
     long cell_ticks = bar_ticks / (long)cells_per_bar;
@@ -224,8 +224,8 @@ static void check_lanes(const PiecePlan *plan, const Scenario *scenario, size_t 
 /* The material is not part of the piece: it is skipped, and the piece ends with the theme. */
 static void check_render(const PiecePlan *plan, size_t bars, const Scenario *scenario) {
     RenderedPlan rendered;
-    PlanTime bar;
-    assert(plan_time_make(scenario->beats, (unsigned long)scenario->unit, &bar) == PLAN_OK);
+    Rational bar;
+    assert(rational_make(scenario->beats, (long long)scenario->unit, &bar) == RATIONAL_OK);
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     assert(rendered.count > 0);
     assert(ticks(rendered.piece_end) == (long)bars * ticks(bar));
@@ -451,8 +451,8 @@ static bool same_notes(const Motive *a, const Motive *b) {
         return false;
     }
     for (size_t i = 0; i < a->note_count; i++) {
-        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch || plan_time_compare(a->notes[i].offset, b->notes[i].offset) != 0 ||
-            plan_time_compare(a->notes[i].duration, b->notes[i].duration) != 0) {
+        if (a->notes[i].midi_pitch != b->notes[i].midi_pitch || rational_cmp(a->notes[i].offset, b->notes[i].offset) != 0 ||
+            rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
             return false;
         }
     }

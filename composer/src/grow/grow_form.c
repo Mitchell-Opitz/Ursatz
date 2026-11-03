@@ -59,7 +59,7 @@ typedef struct {
     Motive previous; /* the idea before this one, else basic */
     Motive taken[4]; /* the motives already written for other ideas of the theme (m1 to m4) */
     size_t taken_count;
-    PlanTime room;   /* the longest a form may be: the motive node's bar, or the idea if it is shorter */
+    Rational room;   /* the longest a form may be: the motive node's bar, or the idea if it is shorter */
     PlanSpan idea;
     bool answers_in_dominant; /* the idea's chords start on the dominant: a response to the basic idea */
     bool has_cadence; /* the idea's melody ends in a cadence */
@@ -150,8 +150,8 @@ static void with_extras(const PiecePlan *plan, NodeId node, const MotiveDevelopC
     }
     for (size_t i = 0; i < motive->note_count; i++) {
         if (basic->notes[i].midi_pitch != motive->notes[i].midi_pitch ||
-            plan_time_compare(basic->notes[i].offset, motive->notes[i].offset) != 0 ||
-            plan_time_compare(basic->notes[i].duration, motive->notes[i].duration) != 0) {
+            rational_cmp(basic->notes[i].offset, motive->notes[i].offset) != 0 ||
+            rational_cmp(basic->notes[i].duration, motive->notes[i].duration) != 0) {
             return;
         }
     }
@@ -237,15 +237,15 @@ static bool read_request(const PiecePlan *plan, FillTarget target, const MotiveD
             }
         }
     }
-    request.room = plan_time_compare(request.idea.length, node_span.length) < 0 ? request.idea.length : node_span.length;
+    request.room = rational_cmp(request.idea.length, node_span.length) < 0 ? request.idea.length : node_span.length;
     request.previous = request.basic;
     request.limit = context->remoteness_limit;
     for (NodeId id = 1; id <= plan_node_count(plan); id++) {
         PlanMotiveRef ref;
         PlanSpan span;
-        PlanTime end;
+        Rational end;
         if (id != idea && plan_node_kind(plan, id) == PLAN_NODE_IDEA && idea_melody(plan, id, &ref, &span, NULL) &&
-            plan_span_end(span, &end) == PLAN_OK && plan_time_compare(end, request.idea.start) == 0 &&
+            plan_span_end(span, &end) == PLAN_OK && rational_cmp(end, request.idea.start) == 0 &&
             ref.motive != request.ref.motive) {
             Motive before;
             if (read_node(plan, ref.motive, context, &before)) {
@@ -354,7 +354,7 @@ static void label_of(const Payload *payload, char *out, size_t size) {
 static bool form_fits(const Request *request, const Motive *motive) {
     int allowed = widest_leap(&request->basic) > FORM_LEAP ? widest_leap(&request->basic) : FORM_LEAP;
     return motive->form == MOTIVE_FORM_FULL && within_range(motive) && widest_leap(motive) <= allowed &&
-           plan_time_compare(motive->length, request->room) <= 0;
+           rational_cmp(motive->length, request->room) <= 0;
 }
 
 /* An idea that ends in a cadence ends on its tone: the tonic for a PAC, the third for an IAC. */

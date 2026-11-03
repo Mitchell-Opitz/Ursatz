@@ -71,18 +71,18 @@ static const char *const MOTIVE_CATEGORIES[4] = {"motive-degrees", "motive-inter
 
 static PlanSpan bars(long start, long length) {
     PlanSpan span;
-    assert(plan_time_make(start, 1, &span.start) == PLAN_OK);
-    assert(plan_time_make(length, 1, &span.length) == PLAN_OK);
+    assert(rational_make(start, 1, &span.start) == RATIONAL_OK);
+    assert(rational_make(length, 1, &span.length) == RATIONAL_OK);
     return span;
 }
 
-static PlanTime time_of(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational time_of(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
-static PlanNote note(int pitch, PlanTime offset, PlanTime duration) {
+static PlanNote note(int pitch, Rational offset, Rational duration) {
     PlanNote result;
     result.midi_pitch = pitch;
     result.offset = offset;
@@ -144,14 +144,14 @@ static PiecePlan *block_plan(void) {
     static const PlanLaneKind LANES[4] = {PLAN_LANE_MELODY, PLAN_LANE_INNER_VOICE, PLAN_LANE_INNER_VOICE, PLAN_LANE_BASS};
     static const int VOICES[4] = {0, 1, 2, 0};
     static PlanNote notes[BLOCK_COUNT][4];
-    PlanTime start = time_of(0, 1);
+    Rational start = time_of(0, 1);
     for (size_t chord = 0; chord < BLOCK_COUNT; chord++) {
         PlanSpan span = {start, time_of(BLOCK[chord].length_num, BLOCK[chord].length_den)};
         for (int voice = 0; voice < 4; voice++) {
             notes[chord][voice] = note(BLOCK[chord].pitch[voice], time_of(0, 1), span.length);
             add_notes(plan, form, LANES[voice], VOICES[voice], span, &notes[chord][voice], 1);
         }
-        assert(plan_time_add(start, span.length, &start) == PLAN_OK);
+        assert(rational_add(start, span.length, &start) == RATIONAL_OK);
     }
     return plan;
 }

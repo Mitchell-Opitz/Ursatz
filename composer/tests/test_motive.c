@@ -37,7 +37,7 @@ static MotiveOptions options_with(const PlanMeter *meter, const PlanKey *key) {
     return options;
 }
 
-static bool time_is(PlanTime time, long num, unsigned long den) {
+static bool time_is(Rational time, long num, long long den) {
     return time.num == num && time.den == den;
 }
 
@@ -296,7 +296,7 @@ static void test_analysis_rest_and_dotted(void) {
     assert(strcmp(name, "q.") == 0);
     motive_duration_name(a.rhythm[0].rest_before, name, sizeof(name));
     assert(strcmp(name, "e") == 0);
-    PlanTime odd = {5, 16};
+    Rational odd = {5, 16};
     motive_duration_name(odd, name, sizeof(name));
     assert(strcmp(name, "5/16") == 0);
 
@@ -596,10 +596,10 @@ static void test_file_errors(void) {
 
 /* ---------------------------------------------------------------- attach */
 
-static PlanTime whole(long num, unsigned long den) {
-    PlanTime time;
-    PlanResult result = plan_time_make(num, den, &time);
-    assert(result == PLAN_OK);
+static Rational whole(long num, long long den) {
+    Rational time;
+    RationalResult result = rational_make(num, den, &time);
+    assert(result == RATIONAL_OK);
     return time;
 }
 
@@ -651,8 +651,8 @@ static void test_attach_as_given(void) {
     assert(payload->notes.note_count == 4);
     for (size_t i = 0; i < 4; i++) {
         assert(payload->notes.notes[i].midi_pitch == motive.notes[i].midi_pitch);
-        assert(plan_time_compare(payload->notes.notes[i].offset, motive.notes[i].offset) == 0);
-        assert(plan_time_compare(payload->notes.notes[i].duration, motive.notes[i].duration) == 0);
+        assert(rational_cmp(payload->notes.notes[i].offset, motive.notes[i].offset) == 0);
+        assert(rational_cmp(payload->notes.notes[i].duration, motive.notes[i].duration) == 0);
     }
 
     /* Nothing changes it later. */
@@ -681,8 +681,8 @@ static void test_attach_as_given(void) {
     assert(read->notes.note_count == 4);
     for (size_t i = 0; i < 4; i++) {
         assert(read->notes.notes[i].midi_pitch == motive.notes[i].midi_pitch);
-        assert(plan_time_compare(read->notes.notes[i].offset, motive.notes[i].offset) == 0);
-        assert(plan_time_compare(read->notes.notes[i].duration, motive.notes[i].duration) == 0);
+        assert(rational_cmp(read->notes.notes[i].offset, motive.notes[i].offset) == 0);
+        assert(rational_cmp(read->notes.notes[i].duration, motive.notes[i].duration) == 0);
     }
     assert(plan_node_set_state(copy, node, PLAN_STATE_REALIZED) == PLAN_ERR_GIVEN_LOCKED);
     char *again = plan_to_json(copy, &json_error);
@@ -933,7 +933,7 @@ static void test_pickup_and_form_in_json(void) {
     assert(json && !strstr(json, "\"form\"") && !strstr(json, "\"pickup\""));
     free(json);
     Motive shifted = plain;
-    shifted.pickup = (PlanTime){1, 4};
+    shifted.pickup = (Rational){1, 4};
     assert(!motive_equal(&plain, &shifted));
     shifted = plain;
     shifted.form = MOTIVE_FORM_CONTOUR;
@@ -997,7 +997,7 @@ static void test_render_in_another_key(void) {
     free(after);
 
     /* The rhythm is the source's, and the pickup too. */
-    source.pickup = (PlanTime){1, 4};
+    source.pickup = (Rational){1, 4};
     assert(motive_in_key(&source, &G_MINOR, &moved));
     assert(time_is(moved.pickup, 1, 4) && time_is(moved.notes[1].offset, 1, 4) && time_is(moved.notes[3].duration, 1, 2));
 
@@ -1235,7 +1235,7 @@ static void test_equal_compares_extras(void) {
     b.harmony[1].degree = 4;
     assert(!motive_equal(&a, &b));
     b = a;
-    b.harmony[2].onset = (PlanTime){7, 8};
+    b.harmony[2].onset = (Rational){7, 8};
     assert(!motive_equal(&a, &b));
     b = a;
     b.harmony_count = 2;

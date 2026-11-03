@@ -9,6 +9,7 @@
 #include <time/duration.h>
 #include <time/metrical_position.h>
 #include <time/musical_time.h>
+#include <time/time_rational.h>
 #include <time/time_span.h>
 
 #define HEARD_KEY_REF "key"
@@ -170,31 +171,31 @@ void harmony_segments_destroy(SegmentSet *set) {
 }
 
 /* The times of the cells [first_cell, first_cell + cells) on the metre, and the bar and place in it where they start. */
-static bool metre_times(const PhraseMetre *metre, size_t first_cell, size_t cells, PlanTime *start, PlanTime *end,
-                        size_t *bar, PlanTime *offset) {
+static bool metre_times(const PhraseMetre *metre, size_t first_cell, size_t cells, Rational *start, Rational *end,
+                        size_t *bar, Rational *offset) {
     return harmony_metre_cell_offset(metre, first_cell, start) &&
            harmony_metre_cell_offset(metre, first_cell + cells, end) &&
            harmony_metre_cell_position(metre, first_cell, bar, offset);
 }
 
 static bool times_create(const HeardPhrase *phrase, size_t first_cell, size_t cells, SegmentTimes *times) {
-    PlanTime start;
-    PlanTime end;
-    PlanTime offset;
+    Rational start;
+    Rational end;
+    Rational offset;
     size_t bar = first_cell / phrase->cells_per_bar;
     if (phrase->metre) {
         if (!metre_times(phrase->metre, first_cell, cells, &start, &end, &bar, &offset)) {
             return false;
         }
-    } else if (plan_time_make(phrase->cell_length.num * (long)first_cell, phrase->cell_length.den, &start) != PLAN_OK ||
-        plan_time_make(phrase->cell_length.num * (long)(first_cell + cells), phrase->cell_length.den, &end) !=
-            PLAN_OK ||
-        plan_time_make(phrase->cell_length.num * (long)(first_cell % phrase->cells_per_bar),
-                       phrase->cell_length.den, &offset) != PLAN_OK) {
+    } else if (rational_make(phrase->cell_length.num * (long)first_cell, phrase->cell_length.den, &start) != RATIONAL_OK ||
+        rational_make(phrase->cell_length.num * (long)(first_cell + cells), phrase->cell_length.den, &end) !=
+            RATIONAL_OK ||
+        rational_make(phrase->cell_length.num * (long)(first_cell % phrase->cells_per_bar),
+                       phrase->cell_length.den, &offset) != RATIONAL_OK) {
         return false;
     }
-    return musical_time_create(start.num, start.den, &times->start) == MUSICAL_TIME_OK &&
-           musical_time_create(end.num, end.den, &times->end) == MUSICAL_TIME_OK &&
+    return musical_time_from_rational(start, &times->start) == TIME_RATIONAL_OK &&
+           musical_time_from_rational(end, &times->end) == TIME_RATIONAL_OK &&
            time_span_create(times->start, times->end, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &times->span) ==
                TIME_SPAN_OK &&
            duration_create(offset.num, offset.den, &times->offset) == DURATION_OK &&
@@ -317,10 +318,10 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, PlanKeyMode mo
     if (found == 0 || found > HARMONY_MAX_CHORDS) {
         return false;
     }
-    PlanTime position = span.start;
+    Rational position = span.start;
     for (size_t i = 0; i < found; i++) {
         PlanSpan chord_span = plan_lane_span_span(plan, ids[i]);
-        PlanTime end;
+        Rational end;
         PlanKeyMode chord_mode = mode;
         LaneSpanId key_id = PLAN_LANE_SPAN_NONE;
         PlanKey key;
@@ -328,7 +329,7 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, PlanKeyMode mo
             chord_mode = key.mode;
         }
         /* Chords must start where the last ended, in whole cells. */
-        if (plan_time_compare(chord_span.start, position) != 0 || plan_span_end(chord_span, &end) != PLAN_OK ||
+        if (rational_cmp(chord_span.start, position) != 0 || plan_span_end(chord_span, &end) != PLAN_OK ||
             !harmony_read_chord_in(plan, ids[i], chord_mode, metre, &chords[i])) {
             return false;
         }
@@ -338,8 +339,8 @@ bool harmony_read_lane_keys(const PiecePlan *plan, PlanSpan span, PlanKeyMode mo
         }
         position = end;
     }
-    PlanTime span_end;
-    if (plan_span_end(span, &span_end) != PLAN_OK || plan_time_compare(position, span_end) != 0) {
+    Rational span_end;
+    if (plan_span_end(span, &span_end) != PLAN_OK || rational_cmp(position, span_end) != 0) {
         return false;
     }
     *count = found;
@@ -364,7 +365,7 @@ bool harmony_hear_cadence(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode
 }
 
 bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, const int *soprano,
-                                size_t count, const PlanTime *section_starts, size_t section_count,
+                                size_t count, const Rational *section_starts, size_t section_count,
                                 HarmonyCadences *out) {
     PhraseMetre metre;
     PhraseChord chords[HARMONY_MAX_CHORDS];

@@ -131,9 +131,9 @@ static PiecePlan *plan_of(ScenarioKind kind, unsigned long seed) {
 
 /* --- the placing calls ------------------------------------------------------------------ */
 
-static PlanTime bars(long count) {
-    PlanTime time;
-    assert(plan_time_make(count, 1, &time) == PLAN_OK);
+static Rational bars(long count) {
+    Rational time;
+    assert(rational_make(count, 1, &time) == RATIONAL_OK);
     return time;
 }
 
@@ -221,9 +221,9 @@ static void test_placing(void) {
     assert(plan_lane_span_state(plan, ids[0]) == PLAN_STATE_GIVEN);
     assert(plan_lane_span_owner(plan, ids[0]) == b);
     PlanSpan span = plan_lane_span_span(plan, ids[0]);
-    PlanTime expected;
-    assert(plan_time_add(section.start, bars(2), &expected) == PLAN_OK);
-    assert(plan_time_compare(span.start, expected) == 0 && plan_time_compare(span.length, bars(4)) == 0);
+    Rational expected;
+    assert(rational_add(section.start, bars(2), &expected) == RATIONAL_OK);
+    assert(rational_cmp(span.start, expected) == 0 && rational_cmp(span.length, bars(4)) == 0);
     assert(plan_lane_span_payload(plan, ids[0])->notes.note_count == melody.note_count);
 
     /* The same lane is taken there: a second melody that overlaps it is refused, one that does not is not. */
@@ -234,14 +234,14 @@ static void test_placing(void) {
     /* The gaps: the two bars before, and the last bar (the two Given spans touch). */
     PlanSpan gaps[4];
     assert(given_gaps(plan, PLAN_LANE_MELODY, 0, section, gaps, 4) == 2);
-    assert(plan_time_compare(gaps[0].start, section.start) == 0 && plan_time_compare(gaps[0].length, bars(2)) == 0);
-    assert(plan_time_add(section.start, bars(7), &expected) == PLAN_OK);
-    assert(plan_time_compare(gaps[1].start, expected) == 0 && plan_time_compare(gaps[1].length, bars(1)) == 0);
+    assert(rational_cmp(gaps[0].start, section.start) == 0 && rational_cmp(gaps[0].length, bars(2)) == 0);
+    assert(rational_add(section.start, bars(7), &expected) == RATIONAL_OK);
+    assert(rational_cmp(gaps[1].start, expected) == 0 && rational_cmp(gaps[1].length, bars(1)) == 0);
     assert(given_touches(plan, PLAN_LANE_MELODY, 0, section));
     assert(!given_touches(plan, PLAN_LANE_BASS, 0, section));
     /* A lane nothing Given is in is its own gap; a span covered wholly has none. */
     assert(given_gaps(plan, PLAN_LANE_BASS, 0, section, gaps, 4) == 1);
-    assert(plan_time_compare(gaps[0].length, section.length) == 0);
+    assert(rational_cmp(gaps[0].length, section.length) == 0);
     assert(given_gaps(plan, PLAN_LANE_MELODY, 0, plan_lane_span_span(plan, ids[0]), gaps, 4) == 0);
 
     /* A progression: a Given span a chord, in the key's mode, with each chord's function. */
@@ -337,19 +337,19 @@ static bool cadence_as_planned(const PiecePlan *plan, const ComposeHeard *heard)
     }
     const FormHeardCadence *last = &heard->heard.cadences[heard->heard.cadence_count - 1];
     PlanSpan section = plan_node_span(plan, heard->section);
-    PlanTime end;
-    PlanTime last_bar;
+    Rational end;
+    Rational last_bar;
     assert(plan_span_end(section, &end) == PLAN_OK);
-    assert(plan_time_make(end.num - (long)end.den, end.den, &last_bar) == PLAN_OK); /* a bar of 4/4 before the end */
-    return (CadenceType)last->type == harmony_cadence_type_of(planned) && plan_time_compare(last->arrival, last_bar) >= 0 &&
-           plan_time_compare(last->arrival, end) < 0;
+    assert(rational_make(end.num - (long)end.den, end.den, &last_bar) == RATIONAL_OK); /* a bar of 4/4 before the end */
+    return (CadenceType)last->type == harmony_cadence_type_of(planned) && rational_cmp(last->arrival, last_bar) >= 0 &&
+           rational_cmp(last->arrival, end) < 0;
 }
 
 /* The melody's notes that start a bar are tones of the chord there; the chords at the bass notes stand on them. */
 static void check_given_fits(const PiecePlan *plan, ScenarioKind kind) {
     PlanLaneKind lane = kind == SCENARIO_MELODY ? PLAN_LANE_MELODY : PLAN_LANE_BASS;
     PlanKey key = {0, PLAN_MODE_MAJOR};
-    PlanTime half = {1, 2}; /* a harmony cell of 4/4 */
+    Rational half = {1, 2}; /* a harmony cell of 4/4 */
     if (kind == SCENARIO_PROGRESSION) {
         return;
     }
@@ -361,9 +361,9 @@ static void check_given_fits(const PiecePlan *plan, ScenarioKind kind) {
         const PlanNotes *notes = &plan_lane_span_payload(plan, id)->notes;
         PlanSpan span = plan_lane_span_span(plan, id);
         for (size_t n = 0; n < notes->note_count; n++) {
-            PlanTime onset;
+            Rational onset;
             LaneSpanId chords[2];
-            assert(plan_time_add(span.start, notes->notes[n].offset, &onset) == PLAN_OK);
+            assert(rational_add(span.start, notes->notes[n].offset, &onset) == RATIONAL_OK);
             /* A bar starts where the onset is a whole number of whole notes (4/4 from the start of the piece). */
             if (onset.den != 1) {
                 continue;
@@ -377,7 +377,7 @@ static void check_given_fits(const PiecePlan *plan, ScenarioKind kind) {
                 unsigned seventh;
                 assert(melody_chord_mask(&key, &chord, &mask, &seventh));
                 assert((mask >> (notes->notes[n].midi_pitch % 12)) & 1u);
-            } else if (plan_time_compare(plan_lane_span_span(plan, chords[0]).start, onset) == 0) {
+            } else if (rational_cmp(plan_lane_span_span(plan, chords[0]).start, onset) == 0) {
                 int pc;
                 assert(harmony_chord_bass_pc(&key, &chord, &pc));
                 assert(pc == notes->notes[n].midi_pitch % 12);

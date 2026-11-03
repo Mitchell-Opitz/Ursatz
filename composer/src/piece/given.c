@@ -50,8 +50,8 @@ const char *given_result_name(GivenResult result) {
 typedef struct {
     PlanSpan section;
     PlanMeter meter;
-    PlanTime bar_length;
-    PlanTime start;     /* where the material starts */
+    Rational bar_length;
+    Rational start;     /* where the material starts */
 } Placement;
 
 static bool is_material(const PiecePlan *plan, NodeId section) {
@@ -63,9 +63,9 @@ static bool is_material(const PiecePlan *plan, NodeId section) {
     return false;
 }
 
-static PlanTime times(PlanTime unit, size_t count) {
-    PlanTime out = {0, 1};
-    if (plan_time_make(unit.num * (long)count, unit.den, &out) != PLAN_OK) {
+static Rational times(Rational unit, size_t count) {
+    Rational out = {0, 1};
+    if (rational_make(unit.num * (long)count, unit.den, &out) != RATIONAL_OK) {
         out.num = 0;
         out.den = 1;
     }
@@ -88,16 +88,16 @@ static GivenResult read_placement(const PiecePlan *plan, NodeId section, size_t 
     }
     out->meter = plan_lane_span_payload(plan, meters[0])->meter;
     size_t cells;
-    if (plan_time_make(out->meter.beats_per_bar, (unsigned long)out->meter.beat_unit, &out->bar_length) != PLAN_OK ||
+    if (rational_make(out->meter.beats_per_bar, (long long)out->meter.beat_unit, &out->bar_length) != RATIONAL_OK ||
         !harmony_rhythm_cells_per_bar(&out->meter, &cells)) {
         return GIVEN_ERR_METER;
     }
-    PlanTime end;
-    if (plan_time_add(out->section.start, times(out->bar_length, bar), &out->start) != PLAN_OK ||
+    Rational end;
+    if (rational_add(out->section.start, times(out->bar_length, bar), &out->start) != RATIONAL_OK ||
         plan_span_end(out->section, &end) != PLAN_OK) {
         return GIVEN_ERR_PLAN;
     }
-    if (plan_time_compare(out->start, end) >= 0) {
+    if (rational_cmp(out->start, end) >= 0) {
         return GIVEN_ERR_BAD_BAR;
     }
     return GIVEN_OK;
@@ -131,30 +131,30 @@ static GivenResult check_room(const PiecePlan *plan, const Placement *placement,
  */
 static GivenResult note_span(const Placement *placement, const PlanNote *notes, size_t count, bool tiled,
                              PlanSpan *out) {
-    PlanTime end = {0, 1};
+    Rational end = {0, 1};
     if (!notes || count == 0) {
         return GIVEN_ERR_BAD_NOTES;
     }
     for (size_t i = 0; i < count; i++) {
-        PlanTime note_end;
+        Rational note_end;
         if (notes[i].midi_pitch < 0 || notes[i].midi_pitch > 127 || notes[i].offset.num < 0 ||
             notes[i].duration.num <= 0 || notes[i].offset.den == 0 || notes[i].duration.den == 0 ||
-            plan_time_compare(notes[i].offset, end) < 0 || plan_time_add(notes[i].offset, notes[i].duration, &note_end) != PLAN_OK ||
-            (tiled && plan_time_compare(notes[i].offset, end) != 0)) {
+            rational_cmp(notes[i].offset, end) < 0 || rational_add(notes[i].offset, notes[i].duration, &note_end) != RATIONAL_OK ||
+            (tiled && rational_cmp(notes[i].offset, end) != 0)) {
             return GIVEN_ERR_BAD_NOTES;
         }
         end = note_end;
     }
     /* As many whole bars as the notes reach into. */
     size_t bars = 0;
-    PlanTime length = {0, 1};
-    while (plan_time_compare(length, end) < 0) {
-        if (bars > 4096 || plan_time_add(length, placement->bar_length, &length) != PLAN_OK) {
+    Rational length = {0, 1};
+    while (rational_cmp(length, end) < 0) {
+        if (bars > 4096 || rational_add(length, placement->bar_length, &length) != RATIONAL_OK) {
             return GIVEN_ERR_BAD_NOTES;
         }
         bars++;
     }
-    if (tiled && plan_time_compare(length, end) != 0) {
+    if (tiled && rational_cmp(length, end) != 0) {
         return GIVEN_ERR_BAD_NOTES;
     }
     out->start = placement->start;
@@ -258,9 +258,9 @@ GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, c
     if (!numerals || count == 0 || cells_per_chord == 0 || count > 4096 || cells_per_chord > 4096) {
         return GIVEN_ERR_BAD_NUMERAL;
     }
-    PlanTime cell_length;
+    Rational cell_length;
     if (!harmony_rhythm_cells_per_bar(&placement.meter, &cells) ||
-        plan_time_make(placement.bar_length.num, placement.bar_length.den * cells, &cell_length) != PLAN_OK) {
+        rational_div_int(placement.bar_length, cells, &cell_length) != RATIONAL_OK) {
         return GIVEN_ERR_METER;
     }
     PlanSpan whole = {placement.start, times(cell_length, count * cells_per_chord)};
@@ -282,7 +282,7 @@ GivenResult plan_give_progression(PiecePlan *plan, NodeId section, size_t bar, c
     result = GIVEN_OK;
     for (size_t i = 0; result == GIVEN_OK && i < count; i++) {
         PlanSpan span = {{0, 1}, times(cell_length, cells_per_chord)};
-        result = plan_time_add(placement.start, times(cell_length, i * cells_per_chord), &span.start) == PLAN_OK
+        result = rational_add(placement.start, times(cell_length, i * cells_per_chord), &span.start) == RATIONAL_OK
                      ? add_given_harmony(plan, section, span, &payloads[i])
                      : GIVEN_ERR_PLAN;
     }
@@ -310,7 +310,7 @@ GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *
         PlanKey key;
         if (chords[i].onset.num < 0 || chords[i].onset.den <= 0 || chords[i].length.num <= 0 ||
             chords[i].length.den <= 0 ||
-            plan_time_add(placement.section.start, chords[i].onset, &spans[i].start) != PLAN_OK) {
+            rational_add(placement.section.start, chords[i].onset, &spans[i].start) != RATIONAL_OK) {
             result = GIVEN_ERR_BAD_NUMERAL;
             break;
         }
@@ -320,10 +320,10 @@ GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *
             result = GIVEN_ERR_BAD_NUMERAL;
         }
         for (size_t j = 0; result == GIVEN_OK && j < i; j++) {
-            PlanTime end_i, end_j;
+            Rational end_i, end_j;
             if (plan_span_end(spans[i], &end_i) != PLAN_OK || plan_span_end(spans[j], &end_j) != PLAN_OK) {
                 result = GIVEN_ERR_PLAN;
-            } else if (plan_time_compare(spans[i].start, end_j) < 0 && plan_time_compare(spans[j].start, end_i) < 0) {
+            } else if (rational_cmp(spans[i].start, end_j) < 0 && rational_cmp(spans[j].start, end_i) < 0) {
                 result = GIVEN_ERR_OVERLAP;
             }
         }
@@ -336,11 +336,11 @@ GivenResult plan_give_chords(PiecePlan *plan, NodeId section, const GivenChord *
     return result;
 }
 
-bool given_cell_length(const PlanMeter *meter, PlanTime *length) {
+bool given_cell_length(const PlanMeter *meter, Rational *length) {
     size_t cells;
-    PlanTime bar;
+    Rational bar;
     return meter && length && harmony_rhythm_cells_per_bar(meter, &cells) &&
-           plan_time_make(meter->beats_per_bar, (unsigned long)meter->beat_unit * cells, &bar) == PLAN_OK &&
+           rational_make(meter->beats_per_bar, (long long)meter->beat_unit * cells, &bar) == RATIONAL_OK &&
            ((*length = bar), true);
 }
 
@@ -357,25 +357,25 @@ static void drop_motive_refs(PlanConstraint *constraints, size_t *count) {
 }
 
 /* The pickup of a section: the length of its PICKUP constraint, else nothing. */
-static PlanTime section_pickup(const PiecePlan *plan, NodeId section) {
+static Rational section_pickup(const PiecePlan *plan, NodeId section) {
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
         if (constraint->kind == PLAN_CONSTRAINT_PICKUP) {
             return constraint->params.pickup;
         }
     }
-    return (PlanTime){0, 1};
+    return (Rational){0, 1};
 }
 
 /* Whether the copy's spans lie from the pickup before the section to its end, and hold pitches a note can have. */
 static GivenResult copy_fits(const PiecePlan *plan, NodeId section, const ReturnCopy *copy) {
     PlanSpan span = plan_node_span(plan, section);
     PlanSpan room = span;
-    PlanTime pickup = section_pickup(plan, section);
-    PlanTime before;
-    if (plan_time_make(-pickup.num, pickup.den, &before) != PLAN_OK ||
-        plan_time_add(span.start, before, &room.start) != PLAN_OK ||
-        plan_time_add(span.length, pickup, &room.length) != PLAN_OK) {
+    Rational pickup = section_pickup(plan, section);
+    Rational before;
+    if (rational_make(-pickup.num, pickup.den, &before) != RATIONAL_OK ||
+        rational_add(span.start, before, &room.start) != RATIONAL_OK ||
+        rational_add(span.length, pickup, &room.length) != RATIONAL_OK) {
         return GIVEN_ERR_LENGTH;
     }
     for (size_t i = 0; i < copy->span_count; i++) {
@@ -415,7 +415,7 @@ GivenResult plan_give_section(PiecePlan *plan, NodeId section, const PiecePlan *
         meter.beat_unit != placement.meter.beat_unit) {
         return GIVEN_ERR_METER;
     }
-    if (plan_time_compare(from.length, placement.section.length) != 0) {
+    if (rational_cmp(from.length, placement.section.length) != 0) {
         return GIVEN_ERR_LENGTH;
     }
     if (plan_node_child_count(plan, section) != 0) {
@@ -454,9 +454,9 @@ GivenResult plan_give_section(PiecePlan *plan, NodeId section, const PiecePlan *
 
 #define MAX_GIVEN_SPANS 64
 
-static PlanSpan between(PlanTime from, PlanTime to) {
+static PlanSpan between(Rational from, Rational to) {
     PlanSpan span = {from, {0, 1}};
-    if (plan_time_make(to.num * (long)from.den - from.num * (long)to.den, to.den * from.den, &span.length) != PLAN_OK) {
+    if (rational_sub(to, from, &span.length) != RATIONAL_OK) {
         span.length.num = 0;
         span.length.den = 1;
     }
@@ -477,8 +477,8 @@ bool given_touches(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan
 size_t given_gaps(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan span, PlanSpan *out, size_t capacity) {
     LaneSpanId ids[MAX_GIVEN_SPANS];
     size_t found = plan_lane_find(plan, lane, voice, span, ids, MAX_GIVEN_SPANS);
-    PlanTime end;
-    PlanTime at = span.start;
+    Rational end;
+    Rational at = span.start;
     size_t count = 0;
     if (plan_span_end(span, &end) != PLAN_OK) {
         return 0;
@@ -491,21 +491,21 @@ size_t given_gaps(const PiecePlan *plan, PlanLaneKind lane, int voice, PlanSpan 
             continue;
         }
         PlanSpan given = plan_lane_span_span(plan, ids[i]);
-        PlanTime given_end;
+        Rational given_end;
         if (plan_span_end(given, &given_end) != PLAN_OK) {
             continue;
         }
-        if (plan_time_compare(given.start, at) > 0) {
+        if (rational_cmp(given.start, at) > 0) {
             if (out && count < capacity) {
                 out[count] = between(at, given.start);
             }
             count++;
         }
-        if (plan_time_compare(given_end, at) > 0) {
+        if (rational_cmp(given_end, at) > 0) {
             at = given_end;
         }
     }
-    if (plan_time_compare(at, end) < 0) {
+    if (rational_cmp(at, end) < 0) {
         if (out && count < capacity) {
             out[count] = between(at, end);
         }
@@ -591,8 +591,8 @@ GivenSnapshot *given_snapshot(const PiecePlan *plan) {
     return snapshot;
 }
 
-static bool same_time(PlanTime a, PlanTime b) {
-    return plan_time_compare(a, b) == 0;
+static bool same_time(Rational a, Rational b) {
+    return rational_cmp(a, b) == 0;
 }
 
 /* Whether the plan has a Given span like the entry: same lane, voice, owner and span, and the same payload. */
@@ -632,10 +632,10 @@ size_t given_snapshot_report(const GivenSnapshot *snapshot, const PiecePlan *pla
         const SnapshotEntry *entry = &snapshot->entries[i];
         bool unchanged = entry_unchanged(entry, plan);
         GivenReport *last = runs > 0 && runs <= capacity && out ? &out[runs - 1] : NULL;
-        PlanTime last_end;
+        Rational last_end;
         if (last && last->lane == entry->lane && last->voice == entry->voice && last->owner == entry->owner &&
             plan_span_end(last->span, &last_end) == PLAN_OK && same_time(last_end, entry->span.start)) {
-            PlanTime end;
+            Rational end;
             if (plan_span_end(entry->span, &end) == PLAN_OK) {
                 last->span = between(last->span.start, end);
             }

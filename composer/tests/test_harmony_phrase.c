@@ -33,22 +33,22 @@ typedef struct {
     NodeId owner;
     LaneSpanId target;
     PlanSpan span;
-    PlanTime bar_length;
+    Rational bar_length;
 } Fixture;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
-static PlanTime time_sub(PlanTime a, PlanTime b) {
+static Rational time_sub(Rational a, Rational b) {
     return fraction(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den);
 }
 
-static PlanTime time_plus(PlanTime a, PlanTime b) {
-    PlanTime sum;
-    assert(plan_time_add(a, b, &sum) == PLAN_OK);
+static Rational time_plus(Rational a, Rational b) {
+    Rational sum;
+    assert(rational_add(a, b, &sum) == RATIONAL_OK);
     return sum;
 }
 
@@ -150,7 +150,7 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
     out[0] = '\0';
     for (size_t i = 0; i < count && i < MAX_CHORDS; i++) {
         PlanSpan span = plan_lane_span_span(fixture->plan, ids[i]);
-        int written = snprintf(out + used, size - used, "%s@%ld/%lu+%ld/%lu ",
+        int written = snprintf(out + used, size - used, "%s@%lld/%lld+%lld/%lld ",
                                plan_lane_span_payload(fixture->plan, ids[i])->harmony.roman_numeral, span.start.num,
                                span.start.den, span.length.num, span.length.den);
         assert(written > 0 && (size_t)written < size - used);
@@ -165,8 +165,8 @@ static void check_progression(const Fixture *fixture, const Scenario *scenario) 
     assert(count >= 2 && count <= MAX_CHORDS);
 
     /* The chords tile the phrase exactly, are Realized, and change only on strong beats. */
-    PlanTime position = fixture->span.start;
-    PlanTime strong_beats[2] = {fraction(0, 1), fraction(0, 1)};
+    Rational position = fixture->span.start;
+    Rational strong_beats[2] = {fraction(0, 1), fraction(0, 1)};
     size_t strong_count = 1;
     if (scenario->beats_per_bar == 4 && scenario->beat_unit == 4) {
         strong_beats[strong_count++] = fraction(1, 2);
@@ -177,29 +177,29 @@ static void check_progression(const Fixture *fixture, const Scenario *scenario) 
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_lane_span_span(fixture->plan, ids[i]);
         const PlanHarmony *harmony = &plan_lane_span_payload(fixture->plan, ids[i])->harmony;
-        assert(plan_time_compare(span.start, position) == 0);
+        assert(rational_cmp(span.start, position) == 0);
         assert(plan_lane_span_state(fixture->plan, ids[i]) == PLAN_STATE_REALIZED);
         assert(harmony->function != PLAN_FUNCTION_UNKNOWN);
         assert(harmony_roman_parse(scenario->mode, harmony->roman_numeral, &chords[i]));
 
-        PlanTime bar_start = fixture->span.start;
-        PlanTime next_bar = time_plus(bar_start, fixture->bar_length);
-        while (plan_time_compare(next_bar, span.start) <= 0) {
+        Rational bar_start = fixture->span.start;
+        Rational next_bar = time_plus(bar_start, fixture->bar_length);
+        while (rational_cmp(next_bar, span.start) <= 0) {
             bar_start = next_bar;
             next_bar = time_plus(bar_start, fixture->bar_length);
         }
-        PlanTime offset = time_sub(span.start, bar_start);
+        Rational offset = time_sub(span.start, bar_start);
         bool strong = false;
         for (size_t b = 0; b < strong_count; b++) {
-            strong = strong || plan_time_compare(offset, strong_beats[b]) == 0;
+            strong = strong || rational_cmp(offset, strong_beats[b]) == 0;
         }
         assert(strong);
         if (i == count - 1) {
-            assert(plan_time_compare(offset, fraction(0, 1)) == 0); /* the last chord arrives on a downbeat */
+            assert(rational_cmp(offset, fraction(0, 1)) == 0); /* the last chord arrives on a downbeat */
         }
         position = time_plus(span.start, span.length);
     }
-    assert(plan_time_compare(position, time_plus(fixture->span.start, fixture->span.length)) == 0);
+    assert(rational_cmp(position, time_plus(fixture->span.start, fixture->span.length)) == 0);
 
     /* The cadence constraint moved to the final chord. */
     assert(plan_lane_span_constraint_count(fixture->plan, ids[count - 1]) == 1);
@@ -364,7 +364,7 @@ static void test_phrase_model_shape(void) {
                         check_progression(&fixture, &scenario);
                         LaneSpanId ids[MAX_CHORDS];
                         size_t count = plan_lane_find(fixture.plan, PLAN_LANE_HARMONY, 0, fixture.span, ids, MAX_CHORDS);
-                        PlanTime cell = fraction(fixture.bar_length.num, fixture.bar_length.den * (unsigned long)per_bar);
+                        Rational cell = fraction(fixture.bar_length.num, fixture.bar_length.den * (unsigned long)per_bar);
                         for (size_t i = 0; i < count; i++) {
                             PlanSpan span = plan_lane_span_span(fixture.plan, ids[i]);
                             /* Length in cells, and the cell it starts on in its bar. */

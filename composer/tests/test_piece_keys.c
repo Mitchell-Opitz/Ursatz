@@ -98,22 +98,22 @@ static KeyLane read_lane(const PiecePlan *plan) {
 
 /* The key lane tiles the plan from 0 to the end of the form, and neighbours differ (they are one span otherwise). */
 static void check_lane_tiles(const PiecePlan *plan, const KeyLane *lane) {
-    PlanTime at = {0, 1};
+    Rational at = {0, 1};
     for (size_t i = 0; i < lane->count; i++) {
-        assert(plan_time_compare(lane->span[i].start, at) == 0);
+        assert(rational_cmp(lane->span[i].start, at) == 0);
         assert(plan_span_end(lane->span[i], &at) == PLAN_OK);
         assert(i == 0 || !same_key(lane->key[i], lane->key[i - 1]));
     }
-    PlanTime form_end;
+    Rational form_end;
     assert(plan_span_end(plan_node_span(plan, plan_root(plan)), &form_end) == PLAN_OK);
-    assert(plan_time_compare(at, form_end) == 0);
+    assert(rational_cmp(at, form_end) == 0);
 }
 
-static PlanKey key_at(const KeyLane *lane, PlanTime time) {
+static PlanKey key_at(const KeyLane *lane, Rational time) {
     for (size_t i = 0; i < lane->count; i++) {
-        PlanTime end;
+        Rational end;
         assert(plan_span_end(lane->span[i], &end) == PLAN_OK);
-        if (plan_time_compare(time, end) < 0) {
+        if (rational_cmp(time, end) < 0) {
             return lane->key[i];
         }
     }
@@ -159,11 +159,11 @@ static void check_plan(const PiecePlan *plan, const Scenario *scenario, FormTemp
     for (size_t s = 0; s < count; s++) {
         /* The KEY constraint is the key the section ends in: the key under its last bar. */
         PlanSpan span = plan_node_span(plan, sections[s]);
-        PlanTime end;
-        PlanTime last_bar;
+        Rational end;
+        Rational last_bar;
         assert(plan_span_end(span, &end) == PLAN_OK);
-        assert(plan_time_make(-1, 1, &last_bar) == PLAN_OK);
-        assert(plan_time_add(end, last_bar, &last_bar) == PLAN_OK);
+        assert(rational_make(-1, 1, &last_bar) == RATIONAL_OK);
+        assert(rational_add(end, last_bar, &last_bar) == RATIONAL_OK);
         const PlanConstraint *key = find(plan, sections[s], PLAN_CONSTRAINT_KEY);
         assert(key && same_key(key->params.key, key_at(&lane, last_bar)));
     }
@@ -208,13 +208,13 @@ static int test_plans(void) {
 /* ------------------------------------------------------------ the pieces */
 
 /* Whether the chord at the start of a key change is a pivot chord between the two keys, by standard-harmony. */
-static bool opens_with_pivot(const PiecePlan *plan, PlanKey from, PlanKey to, PlanTime at) {
+static bool opens_with_pivot(const PiecePlan *plan, PlanKey from, PlanKey to, Rational at) {
     PlanSpan around = {at, {1, 1000}};
     LaneSpanId chord;
     HarmonyRelatedKey key;
     HarmonyChord parsed;
     if (plan_lane_find(plan, PLAN_LANE_HARMONY, 0, around, &chord, 1) != 1 ||
-        plan_time_compare(plan_lane_span_span(plan, chord).start, at) != 0 || !related(from, to, &key) ||
+        rational_cmp(plan_lane_span_span(plan, chord).start, at) != 0 || !related(from, to, &key) ||
         !harmony_roman_parse(to.mode, plan_lane_span_payload(plan, chord)->harmony.roman_numeral, &parsed) ||
         parsed.inversion != 0 || parsed.seventh) {
         return false;
@@ -229,20 +229,20 @@ static bool opens_with_pivot(const PiecePlan *plan, PlanKey from, PlanKey to, Pl
     return false;
 }
 
-static double as_double(PlanTime time) {
+static double as_double(Rational time) {
     return (double)time.num / (double)time.den;
 }
 
 /* Whether an authentic cadence arrives in [start, end), heard section by section. */
-static bool authentic_inside(const PiecePlan *plan, const NodeId *sections, size_t count, PlanTime start, PlanTime end) {
+static bool authentic_inside(const PiecePlan *plan, const NodeId *sections, size_t count, Rational start, Rational end) {
     for (size_t s = 0; s < count; s++) {
         FormHeard heard;
         assert(form_hear(plan, plan_node_span(plan, sections[s]), &heard) == FORM_HEAR_OK);
         for (size_t i = 0; i < heard.cadence_count; i++) {
-            PlanTime at = heard.cadences[i].arrival;
+            Rational at = heard.cadences[i].arrival;
             int type = heard.cadences[i].type;
             if ((type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC) &&
-                plan_time_compare(at, start) >= 0 && plan_time_compare(at, end) < 0) {
+                rational_cmp(at, start) >= 0 && rational_cmp(at, end) < 0) {
                 form_heard_destroy(&heard);
                 return true;
             }
@@ -256,7 +256,7 @@ static void check_piece(const PiecePlan *plan, FormTemplateKind kind) {
     KeyLane lane = read_lane(plan);
     NodeId sections[FORM_TEMPLATE_MAX_SECTIONS];
     size_t count = sections_of(plan, sections);
-    PlanTime piece_end;
+    Rational piece_end;
     assert(plan_span_end(plan_node_span(plan, sections[count - 1]), &piece_end) == PLAN_OK);
     size_t changes = 0;
     for (size_t k = 1; k < lane.count; k++) {
@@ -264,9 +264,9 @@ static void check_piece(const PiecePlan *plan, FormTemplateKind kind) {
         /* Opened by a pivot chord standard-harmony calls valid. */
         assert(opens_with_pivot(plan, lane.key[k - 1], lane.key[k], lane.span[k].start));
         /* A modulation: an authentic cadence arrives inside the new key's span, before the piece ends. */
-        PlanTime end;
+        Rational end;
         assert(plan_span_end(lane.span[k], &end) == PLAN_OK);
-        if (plan_time_compare(end, piece_end) > 0) {
+        if (rational_cmp(end, piece_end) > 0) {
             end = piece_end;
         }
         assert(authentic_inside(plan, sections, count, lane.span[k].start, end));

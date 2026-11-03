@@ -27,7 +27,7 @@ typedef struct {
     int pitch;
 } CheckNote;
 
-static inline long check_ticks(PlanTime time) {
+static inline long check_ticks(Rational time) {
     assert((time.num * CHECK_TICKS) % (long)time.den == 0);
     return time.num * CHECK_TICKS / (long)time.den;
 }

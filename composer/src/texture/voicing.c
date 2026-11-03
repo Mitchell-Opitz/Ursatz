@@ -48,7 +48,7 @@ static bool read_melody_span(const PiecePlan *plan, PlanSpan span, LaneSpanId *o
         return false;
     }
     PlanSpan other = plan_lane_span_span(plan, ids[0]);
-    if (plan_time_compare(other.start, span.start) != 0 || plan_time_compare(other.length, span.length) != 0) {
+    if (rational_cmp(other.start, span.start) != 0 || rational_cmp(other.length, span.length) != 0) {
         return false;
     }
     *out = ids[0];
@@ -65,7 +65,7 @@ static int line_pitch_at(const AccompLine *lines, size_t count, long tick) {
     return -1;
 }
 
-static bool read_chords(const PiecePlan *plan, VoicingContext *out, PlanTime *cell_length) {
+static bool read_chords(const PiecePlan *plan, VoicingContext *out, Rational *cell_length) {
     PhraseChord chords[HARMONY_MAX_CHORDS];
     PhraseMetre metre;
     LaneSpanId harmony[HARMONY_MAX_CHORDS];
@@ -83,8 +83,8 @@ static bool read_chords(const PiecePlan *plan, VoicingContext *out, PlanTime *ce
     long at = 0;
     size_t cells = 0;
     for (size_t i = 0; i < count; i++) {
-        PlanTime chord_from;
-        PlanTime chord_length;
+        Rational chord_from;
+        Rational chord_length;
         long chord_ticks;
         if (plan_lane_span_state(plan, harmony[i]) == PLAN_STATE_CONSTRAINED ||
             !harmony_cells_of_span(&metre, cells, chords[i].cells, &chord_from, &chord_length) ||
@@ -144,14 +144,14 @@ static bool read_tones(VoicingContext *out, size_t i) {
  * note in each of the four voices at its start. Then it becomes chord 0 of the context and the target's chords follow.
  * True with the context as it was when there is none.
  */
-static bool read_lead_in(const PiecePlan *plan, VoicingContext *out, PlanTime cell_length) {
+static bool read_lead_in(const PiecePlan *plan, VoicingContext *out, Rational cell_length) {
     static const PlanLaneKind LANE[4] = {PLAN_LANE_MELODY, PLAN_LANE_INNER_VOICE, PLAN_LANE_INNER_VOICE, PLAN_LANE_BASS};
     static const int VOICE[4] = {0, 1, 2, 0};
     PlanSpan range = {{0, 1}, out->span.start};
     LaneSpanId *ids;
     LaneSpanId before;
     PlanSpan before_span;
-    PlanTime before_end;
+    Rational before_end;
     PhraseChord chord;
     PlanKey key;
     int pitch[4];
@@ -170,7 +170,7 @@ static bool read_lead_in(const PiecePlan *plan, VoicingContext *out, PlanTime ce
     before = ids[found - 1];
     free(ids);
     before_span = plan_lane_span_span(plan, before);
-    if (plan_span_end(before_span, &before_end) != PLAN_OK || plan_time_compare(before_end, out->span.start) != 0 ||
+    if (plan_span_end(before_span, &before_end) != PLAN_OK || rational_cmp(before_end, out->span.start) != 0 ||
         plan_lane_span_state(plan, before) == PLAN_STATE_CONSTRAINED ||
         !harmony_read_chord(plan, before, out->key.mode, cell_length, &chord) ||
         (harmony_find_key(plan, PLAN_LANE_SPAN_NONE, PLAN_NODE_NONE, before_span, &key) &&
@@ -226,7 +226,7 @@ bool voicing_read(const PiecePlan *plan, LaneSpanId target, VoicingContext *out)
     AccompLine bass[ACCOMP_MAX_LINE];
     size_t melody_count = 0;
     size_t bass_count = 0;
-    PlanTime cell_length;
+    Rational cell_length;
     long origin;
     if (!plan || !out || !plan_has_lane_span(plan, target) || plan_lane_span_lane(plan, target) != PLAN_LANE_INNER_VOICE ||
         plan_lane_span_voice(plan, target) != 1 || plan_lane_span_state(plan, target) != PLAN_STATE_CONSTRAINED) {

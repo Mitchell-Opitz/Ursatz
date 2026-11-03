@@ -193,7 +193,7 @@ static size_t count_of(const char *text, const char *needle) {
 
 #define DUMP_SIZE 65536
 
-static double to_double(PlanTime time) {
+static double to_double(Rational time) {
     return (double)time.num / (double)time.den;
 }
 
@@ -207,7 +207,7 @@ static char *dump_lane(const PiecePlan *plan, PlanLaneKind lane, int voice, long
     assert(out && found <= 512);
     for (size_t i = 0; i < found; i++) {
         PlanSpan span = plan_lane_span_span(plan, ids[i]);
-        PlanTime end;
+        Rational end;
         const PlanLanePayload *payload = plan_lane_span_payload(plan, ids[i]);
         assert(plan_span_end(span, &end) == PLAN_OK);
         if (to_double(span.start) < (double)from || to_double(end) > (double)to) {
@@ -381,10 +381,10 @@ static void test_progression_fill(void) {
     assert(found >= 4 && found <= 64);
     /* Two cells each, and a cell is half a bar in 4/4: a bar a chord, from the section's start. */
     for (size_t i = 0; i < 4; i++) {
-        PlanTime want = {2 + (long)i, 1};
+        Rational want = {2 + (long)i, 1};
         bool seen = false;
         for (size_t k = 0; k < found; k++) {
-            if (plan_time_compare(plan_lane_span_span(plan, ids[k]).start, want) == 0 &&
+            if (rational_cmp(plan_lane_span_span(plan, ids[k]).start, want) == 0 &&
                 strcmp(plan_lane_span_payload(plan, ids[k])->harmony.roman_numeral, CHORDS[i]) == 0) {
                 seen = true;
             }

@@ -22,7 +22,7 @@ typedef struct {
     /* A JSON "form" and "pickup"; the other inputs have neither, and the caller's options can set the pickup. */
     MotiveForm form;
     bool has_pickup;
-    PlanTime pickup;
+    Rational pickup;
     /* A JSON "harmony" (text, read once the meter is settled), "features" and "role". */
     bool has_harmony_text;
     char harmony_text[MOTIVE_HARMONY_TEXT_MAX];
@@ -50,21 +50,21 @@ bool motive_score_make(unsigned long long numerator, unsigned long long denomina
 bool motive_score_from_rational(Rational value, MotiveScore *out);
 Rational motive_score_rational(MotiveScore score);
 
-PlanTime motive_time(long num, unsigned long den);
-PlanTime motive_time_plus(PlanTime a, PlanTime b);
-PlanTime motive_time_minus(PlanTime a, PlanTime b);
+Rational motive_time(long num, unsigned long den);
+Rational motive_time_plus(Rational a, Rational b);
+Rational motive_time_minus(Rational a, Rational b);
 
 /* The pickup of a motive, or zero when it is unset (a zero-initialized Motive has a denominator of 0). */
-PlanTime motive_pickup(const Motive *motive);
+Rational motive_pickup(const Motive *motive);
 
 /* A note's end. */
-PlanTime motive_note_end(const PlanNote *note);
+Rational motive_note_end(const PlanNote *note);
 
 /*
  * Checks the notes of motive: at least one, pitch 0 to 127, a positive duration, in order and not overlapping.
  * Writes where the last one ends to *length.
  */
-MotiveResult motive_check_notes(const Motive *motive, PlanTime *length, MotiveError *error);
+MotiveResult motive_check_notes(const Motive *motive, Rational *length, MotiveError *error);
 
 /*
  * Seals the notes (motive_check_notes, then sets the length), then settles the meter and the key from what the
@@ -84,8 +84,6 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
 
 /* JSON building shared with the analysis document. The motive as an object (see motive_to_json); NULL on failure. */
 cJSON *motive_json_object(const Motive *motive);
-/* {"num", "den"}. */
-cJSON *motive_time_json(PlanTime time);
 /* Prints document as the project's JSON text and deletes it. NULL on failure; caller frees the text. */
 char *motive_json_text(cJSON *document);
 

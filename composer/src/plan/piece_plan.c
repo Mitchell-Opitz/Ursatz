@@ -4,57 +4,20 @@
 #include <string.h>
 
 #include "plan/plan_internal.h"
+#include "util/plan_util.h"
 #include "util/util.h"
 
-static unsigned long long gcd_ull(unsigned long long a, unsigned long long b) {
-    while (b != 0) {
-        unsigned long long remainder = a % b;
-        a = b;
-        b = remainder;
-    }
-    return a;
-}
-
-PlanResult plan_time_make(long num, unsigned long den, PlanTime *out) {
-    if (!out) {
-        return PLAN_ERR_NULL;
-    }
-    if (den == 0) {
-        return PLAN_ERR_BAD_TIME;
-    }
-    unsigned long long magnitude = num < 0 ? 0ULL - (unsigned long long)num : (unsigned long long)num;
-    unsigned long long divisor = gcd_ull(magnitude, den);
-    out->num = (long)((long long)num / (long long)divisor);
-    out->den = (unsigned long)(den / divisor);
-    return PLAN_OK;
-}
-
-PlanResult plan_time_add(PlanTime a, PlanTime b, PlanTime *out) {
-    if (!out) {
-        return PLAN_ERR_NULL;
-    }
-    long long num = (long long)a.num * (long long)b.den + (long long)b.num * (long long)a.den;
-    unsigned long long den = (unsigned long long)a.den * (unsigned long long)b.den;
-    return plan_time_make((long)num, (unsigned long)den, out);
-}
-
-int plan_time_compare(PlanTime a, PlanTime b) {
-    long long left = (long long)a.num * (long long)b.den;
-    long long right = (long long)b.num * (long long)a.den;
-    return (left > right) - (left < right);
-}
-
-PlanResult plan_span_end(PlanSpan span, PlanTime *out) {
-    return plan_time_add(span.start, span.length, out);
+PlanResult plan_span_end(PlanSpan span, Rational *out) {
+    return plan_result_of_rational(rational_add(span.start, span.length, out));
 }
 
 bool plan_span_contains(PlanSpan outer, PlanSpan inner) {
-    PlanTime outer_end;
-    PlanTime inner_end;
+    Rational outer_end;
+    Rational inner_end;
     if (plan_span_end(outer, &outer_end) != PLAN_OK || plan_span_end(inner, &inner_end) != PLAN_OK) {
         return false;
     }
-    return plan_time_compare(inner.start, outer.start) >= 0 && plan_time_compare(inner_end, outer_end) <= 0;
+    return rational_cmp(inner.start, outer.start) >= 0 && rational_cmp(inner_end, outer_end) <= 0;
 }
 
 PiecePlan *plan_create(void) {

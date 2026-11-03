@@ -4,12 +4,14 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include <core/rational.h>
+
 /*
  * The piece plan: a tree of Form > Section > Phrase > Subphrase/Idea > Motive
  * nodes, each owning a span of the plan timeline. It is the same tree
  * Ursatz-Analyzer writes for an existing piece, built in memory.
  *
- * Time is a rational position in whole notes from the start of the piece, in
+ * Time is a library Rational position in whole notes from the start of the piece, in
  * lowest terms, the same unit as the Analyzer's analysis document.
  */
 
@@ -38,13 +40,8 @@ typedef enum {
 } PlanResult;
 
 typedef struct {
-    long num;
-    unsigned long den;
-} PlanTime;
-
-typedef struct {
-    PlanTime start;
-    PlanTime length;
+    Rational start;
+    Rational length;
 } PlanSpan;
 
 typedef enum {
@@ -56,14 +53,8 @@ typedef enum {
     PLAN_NODE_MOTIVE
 } PlanNodeKind;
 
-/* Builds a time in lowest terms. Fails with PLAN_ERR_BAD_TIME on a zero denominator. */
-PlanResult plan_time_make(long num, unsigned long den, PlanTime *out);
-PlanResult plan_time_add(PlanTime a, PlanTime b, PlanTime *out);
-/* Negative, zero or positive as a is before, equal to or after b. */
-int plan_time_compare(PlanTime a, PlanTime b);
-
 /* The span's end time: start plus length. */
-PlanResult plan_span_end(PlanSpan span, PlanTime *out);
+PlanResult plan_span_end(PlanSpan span, Rational *out);
 /* True when inner lies entirely inside outer. */
 bool plan_span_contains(PlanSpan outer, PlanSpan inner);
 

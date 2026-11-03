@@ -461,12 +461,12 @@ static int scale_step(unsigned scale, int from, int direction, int low, int high
  */
 static bool place_pickup(const MelodyContext *context, const MelodyFillParams *params, FillRng *rng,
                          MelodyCandidate *out) {
-    PlanTime beat_time;
+    Rational beat_time;
     long beat;
     if (context->pickup == 0) {
         return true;
     }
-    if (plan_time_make(1, (unsigned long)context->metre.meter.beat_unit, &beat_time) != PLAN_OK ||
+    if (rational_make(1, (long long)context->metre.meter.beat_unit, &beat_time) != RATIONAL_OK ||
         !melody_ticks(beat_time, &beat)) {
         return false;
     }

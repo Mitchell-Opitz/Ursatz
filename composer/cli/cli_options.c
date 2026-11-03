@@ -670,7 +670,7 @@ void cli_discard_pending(CliPendingFile *pending, size_t count) {
     }
 }
 
-bool cli_parse_pickup(const char *text, int beat_unit, PlanTime *out) {
+bool cli_parse_pickup(const char *text, int beat_unit, Rational *out) {
     char *end = NULL;
     long numerator = strtol(text, &end, 10);
     long denominator = 1;
@@ -684,7 +684,7 @@ bool cli_parse_pickup(const char *text, int beat_unit, PlanTime *out) {
             return false;
         }
     }
-    return *end == '\0' && plan_time_make(numerator, (unsigned long)(denominator * beat_unit), out) == PLAN_OK;
+    return *end == '\0' && rational_make(numerator, (long long)(denominator * beat_unit), out) == RATIONAL_OK;
 }
 
 char *cli_motive_text(const Motive *motive) {

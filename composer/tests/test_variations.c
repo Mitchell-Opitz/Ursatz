@@ -97,13 +97,13 @@ static char *lane_text(const PiecePlan *plan, NodeId node, PlanLaneKind lane) {
         for (size_t i = 0; i < found; i++) {
             PlanSpan at = plan_lane_span_span(plan, ids[i]);
             const PlanLanePayload *payload = plan_lane_span_payload(plan, ids[i]);
-            used += (size_t)snprintf(text + used, capacity - used, "v%d %ld/%lu+%ld/%lu %d:", voice, at.start.num,
+            used += (size_t)snprintf(text + used, capacity - used, "v%d %lld/%lld+%lld/%lld %d:", voice, at.start.num,
                                      at.start.den, at.length.num, at.length.den, (int)plan_lane_span_state(plan, ids[i]));
             if (lane == PLAN_LANE_HARMONY) {
                 used += (size_t)snprintf(text + used, capacity - used, "%s;", payload->harmony.roman_numeral);
             }
             for (size_t n = 0; lane != PLAN_LANE_HARMONY && n < payload->notes.note_count; n++) {
-                used += (size_t)snprintf(text + used, capacity - used, "%d@%ld/%lu,", payload->notes.notes[n].midi_pitch,
+                used += (size_t)snprintf(text + used, capacity - used, "%d@%lld/%lld,", payload->notes.notes[n].midi_pitch,
                                          payload->notes.notes[n].offset.num, payload->notes.notes[n].offset.den);
             }
             assert(used < capacity - 256);

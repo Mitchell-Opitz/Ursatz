@@ -46,7 +46,7 @@ static PieceSection *add_section(Fixture *fixture, const char *id, const char *l
     snprintf(section->letter, sizeof(section->letter), "%s", letter);
     section->part = part;
     section->beats = beats;
-    section->pickup = (PlanTime){0, 1};
+    section->pickup = (Rational){0, 1};
     section->fill = fill;
     return section;
 }
@@ -115,11 +115,11 @@ static void test_checks(void) {
     /* Pickups: a quarter is fine, a bar is not, a triplet sixteenth is not a multiple of 1/32. */
     fixture_init(&fixture);
     PieceSection *section = add_section(&fixture, "a", "A", PIECE_PART_BODY, 16, PIECE_FILL_EMPTY);
-    assert(plan_time_make(1, 4, &section->pickup) == PLAN_OK);
+    assert(rational_make(1, 4, &section->pickup) == RATIONAL_OK);
     assert(piece_structure_check(&fixture.structure) == PIECE_OK);
-    assert(plan_time_make(1, 1, &section->pickup) == PLAN_OK);
+    assert(rational_make(1, 1, &section->pickup) == RATIONAL_OK);
     assert(piece_structure_check(&fixture.structure) == PIECE_ERR_BAD_REQUEST);
-    assert(plan_time_make(1, 12, &section->pickup) == PLAN_OK);
+    assert(rational_make(1, 12, &section->pickup) == RATIONAL_OK);
     assert(piece_structure_check(&fixture.structure) == PIECE_ERR_BAD_REQUEST);
 
     /* Too many sections, and too many bars. */
@@ -164,7 +164,7 @@ static void test_plan(void) {
     Fixture fixture;
     standard_structure(&fixture);
     PieceSection *pickup = &fixture.sections[2];
-    assert(plan_time_make(1, 4, &pickup->pickup) == PLAN_OK);
+    assert(rational_make(1, 4, &pickup->pickup) == RATIONAL_OK);
     PiecePlan *plan;
     assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
     NodeId sections[8];
@@ -177,12 +177,12 @@ static void test_plan(void) {
     size_t start = 0;
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_node_span(plan, sections[i]);
-        PlanTime want_start;
-        PlanTime want_length;
-        assert(plan_time_make((long)start, 4, &want_start) == PLAN_OK);
-        assert(plan_time_make((long)BEATS[i], 4, &want_length) == PLAN_OK);
-        assert(plan_time_compare(span.start, want_start) == 0);
-        assert(plan_time_compare(span.length, want_length) == 0);
+        Rational want_start;
+        Rational want_length;
+        assert(rational_make((long)start, 4, &want_start) == RATIONAL_OK);
+        assert(rational_make((long)BEATS[i], 4, &want_length) == RATIONAL_OK);
+        assert(rational_cmp(span.start, want_start) == 0);
+        assert(rational_cmp(span.length, want_length) == 0);
         const PlanConstraint *part = node_constraint(plan, sections[i], PLAN_CONSTRAINT_PIECE_PART);
         assert(part && part->params.piece_part.part == PARTS[i] && strcmp(part->params.piece_part.id, IDS[i]) == 0);
         const PlanConstraint *cadence = node_constraint(plan, sections[i], PLAN_CONSTRAINT_CADENCE);
@@ -206,16 +206,16 @@ static void test_plan(void) {
     assert(node_constraint(plan, seam, PLAN_CONSTRAINT_SEAM));
     assert(!node_constraint(plan, seam, PLAN_CONSTRAINT_MATERIAL) && !node_constraint(plan, seam, PLAN_CONSTRAINT_HOLD));
     assert(plan_node_child_count(plan, seam) == 0 && plan_node_state(plan, seam) == PLAN_STATE_CONSTRAINED);
-    PlanTime end;
+    Rational end;
     assert(plan_span_end(plan_node_span(plan, sections[3]), &end) == PLAN_OK);
-    assert(plan_time_compare(plan_node_span(plan, seam).start, end) == 0);
-    assert(plan_time_compare(plan_node_span(plan, seam).length, (PlanTime){1, 1}) == 0);
+    assert(rational_cmp(plan_node_span(plan, seam).start, end) == 0);
+    assert(rational_cmp(plan_node_span(plan, seam).length, (Rational){1, 1}) == 0);
     /* The material starts on the first barline at or after the seam's end (54 beats: bar 14, beat 56). */
     NodeId material = plan_node_child_at(plan, form, count + 1);
     assert(node_constraint(plan, material, PLAN_CONSTRAINT_MATERIAL));
-    PlanTime barline;
-    assert(plan_time_make(56, 4, &barline) == PLAN_OK);
-    assert(plan_time_compare(plan_node_span(plan, material).start, barline) == 0);
+    Rational barline;
+    assert(rational_make(56, 4, &barline) == RATIONAL_OK);
+    assert(rational_cmp(plan_node_span(plan, material).start, barline) == 0);
     plan_destroy(plan);
 
     /* The ending is not laid out. */
@@ -331,7 +331,7 @@ static void test_pickup(void) {
     fixture_init(&fixture);
     add_section(&fixture, "a", "A", PIECE_PART_BODY, 8, PIECE_FILL_MOTIF);
     PieceSection *pickup = add_section(&fixture, "b", "B", PIECE_PART_BODY, 12, PIECE_FILL_EMPTY);
-    assert(plan_time_make(1, 4, &pickup->pickup) == PLAN_OK);
+    assert(rational_make(1, 4, &pickup->pickup) == RATIONAL_OK);
     add_section(&fixture, "t", "T", PIECE_PART_TURNAROUND, 6, PIECE_FILL_EMPTY);
     PiecePlan *plan;
     assert(piece_structure_build_plan(&fixture.structure, &plan) == PIECE_OK);
@@ -392,13 +392,13 @@ static void free_phrase(size_t beats, size_t expected_ideas, const size_t *idea_
             PlanSpan spans[8];
             size_t count = section_ideas(plan, sections[1], spans, 8);
             assert(count == expected_ideas);
-            PlanTime position = plan_node_span(plan, sections[1]).start;
+            Rational position = plan_node_span(plan, sections[1]).start;
             for (size_t i = 0; i < count; i++) {
-                PlanTime want;
-                assert(plan_time_compare(spans[i].start, position) == 0);
-                assert(plan_time_make((long)idea_beats[i], 4, &want) == PLAN_OK);
-                assert(plan_time_compare(spans[i].length, want) == 0);
-                assert(plan_time_add(position, spans[i].length, &position) == PLAN_OK);
+                Rational want;
+                assert(rational_cmp(spans[i].start, position) == 0);
+                assert(rational_make((long)idea_beats[i], 4, &want) == RATIONAL_OK);
+                assert(rational_cmp(spans[i].length, want) == 0);
+                assert(rational_add(position, spans[i].length, &position) == RATIONAL_OK);
             }
             /* The section is written and ends in the cadence it was planned to. */
             assert(section_written(plan, sections[1]));

@@ -58,16 +58,16 @@ static char *text_finish(Text *text) {
 }
 
 /* The longest plain or dotted value (w to t, up to two dots) that is not longer than time; false when none is. */
-static bool longest_value(PlanTime time, char *letter, int *dots, PlanTime *value) {
+static bool longest_value(Rational time, char *letter, int *dots, Rational *value) {
     static const char LETTERS[] = {'w', 'h', 'q', 'e', 's', 't'};
     bool found = false;
     for (unsigned k = 0; k < sizeof(LETTERS); k++) {
         for (unsigned d = 0; d < 3; d++) {
             long numerator = d == 0 ? 1 : (d == 1 ? 3 : 7);
             unsigned long denominator = (1UL << k) * (d == 0 ? 1UL : (d == 1 ? 2UL : 4UL));
-            PlanTime candidate = motive_time(numerator, denominator);
-            if (plan_time_compare(candidate, time) <= 0 &&
-                (!found || plan_time_compare(candidate, *value) > 0)) {
+            Rational candidate = motive_time(numerator, denominator);
+            if (rational_cmp(candidate, time) <= 0 &&
+                (!found || rational_cmp(candidate, *value) > 0)) {
                 *letter = LETTERS[k];
                 *dots = (int)d;
                 *value = candidate;
@@ -82,11 +82,11 @@ static bool longest_value(PlanTime time, char *letter, int *dots, PlanTime *valu
  * Writes time as one or more tokens "<head>:<duration>", all but the last tied when tie is set, each followed by a
  * space. False when time is not a sum of values from w to t.
  */
-static bool add_pieces(Text *text, const char *head, PlanTime time, bool tie) {
+static bool add_pieces(Text *text, const char *head, Rational time, bool tie) {
     while (time.num > 0) {
         char letter;
         int dots;
-        PlanTime value;
+        Rational value;
         if (!longest_value(time, &letter, &dots, &value)) {
             return false;
         }
@@ -146,10 +146,10 @@ static char *write_list(const Motive *motive, ListKind kind) {
         return NULL;
     }
     Text text = {NULL, 0, 0, false};
-    PlanTime cursor = motive_time(0, 1);
+    Rational cursor = motive_time(0, 1);
     for (size_t i = 0; i < motive->note_count; i++) {
         const PlanNote *note = &motive->notes[i];
-        if (plan_time_compare(note->offset, cursor) > 0 &&
+        if (rational_cmp(note->offset, cursor) > 0 &&
             !add_pieces(&text, "r", motive_time_minus(note->offset, cursor), false)) {
             free(text.data);
             return NULL;
@@ -232,7 +232,7 @@ static bool read_figure(const char *figure, int *inversion, bool *seventh) {
 }
 
 /* "2", "1/2": beats of the beat unit, as whole notes. False for anything else. */
-static bool read_beats(const char *text, int beat_unit, PlanTime *out) {
+static bool read_beats(const char *text, int beat_unit, Rational *out) {
     char *end = NULL;
     if (*text < '0' || *text > '9') {
         return false;
@@ -250,7 +250,7 @@ static bool read_beats(const char *text, int beat_unit, PlanTime *out) {
         }
     }
     return *end == '\0' && numerator <= 1000000L && denominator <= 1000000L &&
-           plan_time_make(numerator, (unsigned long)(denominator * beat_unit), out) == PLAN_OK;
+           rational_make(numerator, (long long)(denominator * beat_unit), out) == RATIONAL_OK;
 }
 
 MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, MotiveChord *out, size_t *count,
@@ -328,7 +328,7 @@ MotiveResult motive_harmony_parse(const char *text, const PlanMeter *meter, Moti
                              symbol);
             return MOTIVE_ERR_SYNTAX;
         }
-        if (found > 0 && plan_time_compare(chord.onset, out[found - 1].onset) <= 0) {
+        if (found > 0 && rational_cmp(chord.onset, out[found - 1].onset) <= 0) {
             motive_set_error(error, location, "the chord must come after the one before it");
             return MOTIVE_ERR_VALUE;
         }

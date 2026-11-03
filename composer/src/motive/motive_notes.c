@@ -139,8 +139,8 @@ static bool parse_rhythm_pitch(const char *text, const PlanKey *key, int *midi, 
 }
 
 /* Parses "q", "e.", "h.." into a length in whole notes. On failure writes the reason to message. */
-static bool parse_duration(const char *text, PlanTime *out, char *message, size_t message_size) {
-    PlanTime base;
+static bool parse_duration(const char *text, Rational *out, char *message, size_t message_size) {
+    Rational base;
     switch (text[0]) {
     case 'w':
         base = motive_time(1, 1);
@@ -176,8 +176,8 @@ static bool parse_duration(const char *text, PlanTime *out, char *message, size_
         return false;
     }
     /* A dot adds half of what it follows: 3/2, then 7/4, of the base. */
-    PlanTime total = base;
-    PlanTime added = base;
+    Rational total = base;
+    Rational added = base;
     for (size_t i = 0; i < dots; i++) {
         added = motive_time(added.num, added.den * 2);
         total = motive_time_plus(total, added);
@@ -188,7 +188,7 @@ static bool parse_duration(const char *text, PlanTime *out, char *message, size_
 
 static MotiveResult parse_list(const char *text, PitchParser parse_pitch_text, const PlanKey *key, const char *example,
                                Motive *motive, MotiveError *error) {
-    PlanTime cursor = motive_time(0, 1);
+    Rational cursor = motive_time(0, 1);
     size_t count = 0;
     bool tied = false;          /* the last note is tied to the next token */
     size_t tie_number = 0;
@@ -241,7 +241,7 @@ static MotiveResult parse_list(const char *text, PitchParser parse_pitch_text, c
         }
         bool rest = (pitch_text[0] == 'r' || pitch_text[0] == 'R') && pitch_text[1] == '\0';
         int midi = 0;
-        PlanTime duration;
+        Rational duration;
         if ((!rest && !parse_pitch_text(pitch_text, key, &midi, message, sizeof(message))) ||
             !parse_duration(duration_text, &duration, message, sizeof(message))) {
             motive_set_error(error, location, "%s", message);

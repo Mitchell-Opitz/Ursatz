@@ -88,7 +88,7 @@ typedef enum {
  * (sharp), inversion 0 to 3 (3 needs a seventh), and the onset in whole notes from the start of the motive.
  */
 typedef struct {
-    PlanTime onset;
+    Rational onset;
     int degree;
     int alteration;
     int inversion;
@@ -116,12 +116,12 @@ typedef struct {
     PlanNote notes[MOTIVE_MAX_NOTES];
     size_t note_count;
     /* Where the last note ends. The span of the motive is this long. */
-    PlanTime length;
+    Rational length;
     /* Zero-initialized means a full motive with no pickup. */
     MotiveForm form;
     /* How much of the meter's bar comes before the first barline, in whole notes. The motive still starts at offset 0;
        bars and beats are counted from -pickup. */
-    PlanTime pickup;
+    Rational pickup;
     /*
      * Its own harmony: up to MOTIVE_MAX_CHORDS chords with ascending onsets inside the length. Zero chords means none,
      * and wherever a relation needs chords the best implied chord at 0 stands in.
@@ -149,7 +149,7 @@ typedef struct {
     PlanKey key;
     bool has_pickup;
     /* In whole notes; the CLI converts beats. */
-    PlanTime pickup;
+    Rational pickup;
     /* The most bars the notes may fill, or 0 for no limit. The readers themselves set none: a line of any length up to
        MOTIVE_MAX_NOTES notes is read, and the commands that take a one-bar motive check it after. */
     size_t max_bars;
@@ -366,7 +366,7 @@ char *motive_to_json(const Motive *motive);
  * PLAN_ERR_BAD_PAYLOAD for a motive that is not valid. name may be NULL.
  * out_node and out_span may be NULL.
  */
-PlanResult motive_attach(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
+PlanResult motive_attach(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                          NodeId *out_node, LaneSpanId *out_span);
 
 /*
@@ -374,7 +374,7 @@ PlanResult motive_attach(PiecePlan *plan, NodeId parent, PlanTime start, const M
  * corpus (corpus_seed.h). It is added before the node becomes Given, which is the only time it can be. source may be
  * NULL, which is motive_attach.
  */
-PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
+PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                                  const PlanSource *source, NodeId *out_node, LaneSpanId *out_span);
 
 #endif

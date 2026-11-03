@@ -47,14 +47,14 @@ size_t piece_held_sections(const PiecePlan *plan, NodeId *out, size_t capacity) 
 }
 
 bool piece_section_holds_body_start(const PiecePlan *plan, NodeId section) {
-    PlanTime body_start;
+    Rational body_start;
     if (!plan_has_node(plan, section) || !piece_seam_body_start(plan, &body_start)) {
         return false;
     }
     for (size_t i = 0; i < plan_node_constraint_count(plan, section); i++) {
         const PlanConstraint *constraint = plan_node_constraint_at(plan, section, i);
         if (constraint->kind == PLAN_CONSTRAINT_PIECE_PART && constraint->params.piece_part.part == (int)PIECE_PART_BODY &&
-            plan_time_compare(plan_node_span(plan, section).start, body_start) == 0) {
+            rational_cmp(plan_node_span(plan, section).start, body_start) == 0) {
             return true;
         }
     }
@@ -71,10 +71,10 @@ PieceResult piece_seam_reset(PiecePlan *plan) {
 
 /* Whether the span lies inside the node's. */
 static bool span_inside(PlanSpan span, PlanSpan outer) {
-    PlanTime span_end;
-    PlanTime outer_end;
+    Rational span_end;
+    Rational outer_end;
     return plan_span_end(span, &span_end) == PLAN_OK && plan_span_end(outer, &outer_end) == PLAN_OK &&
-           plan_time_compare(span.start, outer.start) >= 0 && plan_time_compare(span_end, outer_end) <= 0;
+           rational_cmp(span.start, outer.start) >= 0 && rational_cmp(span_end, outer_end) <= 0;
 }
 
 /*
@@ -90,7 +90,7 @@ static NodeId finest_owner(const PiecePlan *plan, NodeId section, PlanSpan span)
             continue;
         }
         PlanSpan inner = plan_node_span(plan, node);
-        if (span_inside(span, inner) && (best == section || plan_time_compare(inner.length, plan_node_span(plan, best).length) < 0)) {
+        if (span_inside(span, inner) && (best == section || rational_cmp(inner.length, plan_node_span(plan, best).length) < 0)) {
             best = node;
         }
     }
@@ -98,8 +98,8 @@ static NodeId finest_owner(const PiecePlan *plan, NodeId section, PlanSpan span)
 }
 
 typedef struct {
-    PlanTime start;
-    PlanTime end;
+    Rational start;
+    Rational end;
     NodeId owner;
 } ChordRun;
 
@@ -124,7 +124,7 @@ static size_t read_runs(const PiecePlan *plan, NodeId section, ChordRun *runs, s
         if (plan_has_lane_span(plan, id) && plan_lane_span_lane(plan, id) == PLAN_LANE_HARMONY &&
             plan_lane_span_owner(plan, id) == section) {
             size_t at = count++;
-            while (at > 0 && plan_time_compare(plan_lane_span_span(plan, id).start, plan_lane_span_span(plan, ids[at - 1]).start) < 0) {
+            while (at > 0 && rational_cmp(plan_lane_span_span(plan, id).start, plan_lane_span_span(plan, ids[at - 1]).start) < 0) {
                 ids[at] = ids[at - 1];
                 at--;
             }
@@ -133,7 +133,7 @@ static size_t read_runs(const PiecePlan *plan, NodeId section, ChordRun *runs, s
     }
     for (size_t i = 0; i < count && run_count <= capacity; i++) {
         PlanSpan span = plan_lane_span_span(plan, ids[i]);
-        PlanTime end;
+        Rational end;
         if (plan_span_end(span, &end) != PLAN_OK) {
             continue;
         }
@@ -149,8 +149,7 @@ static size_t read_runs(const PiecePlan *plan, NodeId section, ChordRun *runs, s
     }
     for (size_t r = 0; r < run_count; r++) {
         PlanSpan whole = {runs[r].start, {0, 1}};
-        plan_time_make(runs[r].end.num * (long)runs[r].start.den - runs[r].start.num * (long)runs[r].end.den,
-                       runs[r].end.den * runs[r].start.den, &whole.length);
+        rational_sub(runs[r].end, runs[r].start, &whole.length);
         runs[r].owner = finest_owner(plan, section, whole);
     }
     free(ids);
@@ -170,7 +169,7 @@ size_t piece_reopen_lane(PiecePlan *plan, NodeId section, PlanLaneKind lane) {
         if (span->owner == section) {
             NodeId owner = PLAN_NODE_NONE;
             for (size_t r = 0; r < run_count; r++) {
-                if (plan_time_compare(span->span.start, runs[r].start) >= 0 && plan_time_compare(span->span.start, runs[r].end) < 0) {
+                if (rational_cmp(span->span.start, runs[r].start) >= 0 && rational_cmp(span->span.start, runs[r].end) < 0) {
                     owner = runs[r].owner;
                 }
             }

@@ -18,7 +18,7 @@
 #define BASS_PLACEHOLDER 40
 #define INNER_PLACEHOLDER 55
 
-static bool to_ticks(PlanTime time, long *out) {
+static bool to_ticks(Rational time, long *out) {
     long numerator = time.num * TICKS;
     if (numerator % (long)time.den != 0) {
         return false;
@@ -27,12 +27,8 @@ static bool to_ticks(PlanTime time, long *out) {
     return true;
 }
 
-static bool from_ticks(long ticks, PlanTime *out) {
-    return plan_time_make(ticks, (unsigned long)TICKS, out) == PLAN_OK;
-}
-
-static bool time_sub(PlanTime a, PlanTime b, PlanTime *out) {
-    return plan_time_make(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den, out) == PLAN_OK;
+static bool from_ticks(long ticks, Rational *out) {
+    return rational_make(ticks, (long long)TICKS, out) == RATIONAL_OK;
 }
 
 static bool is_step(int move) {
@@ -44,7 +40,7 @@ static bool is_step(int move) {
 /* The ticks of a cell of the meter (a strong beat); 0 for a meter the harmony operators do not place on. */
 static long cell_ticks(const PlanMeter *meter) {
     size_t cells;
-    PlanTime bar = grow_bar_length(meter);
+    Rational bar = grow_bar_length(meter);
     long bar_ticks;
     if (!grow_cells_per_bar(meter, &cells) || cells == 0 || !to_ticks(bar, &bar_ticks) ||
         bar_ticks % (long)cells != 0) {
@@ -114,10 +110,10 @@ static long split_at(long onset, long duration, long cell) {
 
 /* The ticks from the start of the target section to the start of a note of a span. */
 static bool note_onset(const ReturnPayload *payload, const ReturnSpan *span, const PlanNote *note, long *onset) {
-    PlanTime start;
-    PlanTime total;
+    Rational start;
+    Rational total;
     long ticks;
-    return time_sub(span->span.start, payload->span.start, &start) && plan_time_add(start, note->offset, &total) == PLAN_OK &&
+    return rational_sub(span->span.start, payload->span.start, &start) == RATIONAL_OK && rational_add(start, note->offset, &total) == RATIONAL_OK &&
            to_ticks(total, &ticks) && (*onset = ticks, true);
 }
 
@@ -125,8 +121,8 @@ static bool note_onset(const ReturnPayload *payload, const ReturnSpan *span, con
 static bool contiguous(const PlanNote *notes, size_t i) {
     long end;
     long next;
-    PlanTime sum;
-    return plan_time_add(notes[i].offset, notes[i].duration, &sum) == PLAN_OK && to_ticks(sum, &end) &&
+    Rational sum;
+    return rational_add(notes[i].offset, notes[i].duration, &sum) == RATIONAL_OK && to_ticks(sum, &end) &&
            to_ticks(notes[i + 1].offset, &next) && end == next;
 }
 
@@ -200,12 +196,12 @@ static bool ornament_melody(ReturnPayload *payload, FillRng *rng) {
             notes[used] = span->notes[n];
             if (ornament) {
                 long duration;
-                PlanTime first;
-                PlanTime second;
-                PlanTime offset;
+                Rational first;
+                Rational second;
+                Rational offset;
                 ok = to_ticks(span->notes[n].duration, &duration) && from_ticks(ornament->first, &first) &&
                      from_ticks(duration - ornament->first, &second) &&
-                     plan_time_add(span->notes[n].offset, first, &offset) == PLAN_OK;
+                     rational_add(span->notes[n].offset, first, &offset) == RATIONAL_OK;
                 notes[used].duration = first;
                 used++;
                 notes[used].midi_pitch = ornament->pitch;
@@ -236,7 +232,7 @@ static bool open_notes(ReturnSpan *span, int pitch) {
     }
     free(span->notes);
     note->midi_pitch = pitch;
-    note->offset = (PlanTime){0, 1};
+    note->offset = (Rational){0, 1};
     note->duration = span->span.length;
     span->notes = note;
     span->note_count = 1;
@@ -261,15 +257,15 @@ static bool has_kind(const ReturnSpan *span, PlanConstraintKind kind) {
     return false;
 }
 
-static bool span_end(PlanSpan span, PlanTime *end) {
+static bool span_end(PlanSpan span, Rational *end) {
     return plan_span_end(span, end) == PLAN_OK;
 }
 
 /* Whether a bass span starts inside the target. */
 static bool inside(const Target *target, const ReturnSpan *span) {
-    PlanTime end;
+    Rational end;
     return span->owner == target->owner && span_end(target->span, &end) &&
-           plan_time_compare(span->span.start, target->span.start) >= 0 && plan_time_compare(span->span.start, end) < 0;
+           rational_cmp(span->span.start, target->span.start) >= 0 && rational_cmp(span->span.start, end) < 0;
 }
 
 static bool reharmonize(ReturnPayload *payload) {
@@ -284,12 +280,12 @@ static bool reharmonize(ReturnPayload *payload) {
             continue;
         }
         Target *current = target_count ? &targets[target_count - 1] : NULL;
-        PlanTime end;
+        Rational end;
         if (!current || current->owner != span->owner || has_kind(span, PLAN_CONSTRAINT_HARMONY_SHAPE)) {
             targets[target_count++] = (Target){span->owner, span->span, i, false};
             continue;
         }
-        ok = span_end(span->span, &end) && time_sub(end, current->span.start, &current->span.length);
+        ok = span_end(span->span, &end) && rational_sub(end, current->span.start, &current->span.length) == RATIONAL_OK;
     }
     ok = ok && target_count > 0;
 
@@ -329,11 +325,11 @@ static bool reharmonize(ReturnPayload *payload) {
             }
             for (size_t j = i; ok && j < copy->span_count; j++) {
                 const ReturnSpan *chord = &copy->spans[j];
-                PlanTime end;
-                PlanTime target_end;
+                Rational end;
+                Rational target_end;
                 if (chord->lane != PLAN_LANE_HARMONY || chord->owner != target->owner ||
                     !span_end(target->span, &target_end) || !span_end(chord->span, &end) ||
-                    plan_time_compare(end, target_end) > 0) {
+                    rational_cmp(end, target_end) > 0) {
                     continue;
                 }
                 for (size_t c = 0; c < chord->constraint_count; c++) {
@@ -448,7 +444,7 @@ bool return_same_melody(const ReturnPayload *a, const ReturnPayload *b) {
         }
         for (size_t n = 0; n < x->note_count; n++) {
             if (x->notes[n].midi_pitch != y->notes[n].midi_pitch ||
-                plan_time_compare(x->notes[n].offset, y->notes[n].offset) != 0) {
+                rational_cmp(x->notes[n].offset, y->notes[n].offset) != 0) {
                 return false;
             }
         }
@@ -464,9 +460,9 @@ static void reject(FillCheck *out, const char *reason) {
 }
 
 /* A note of the returned section, moved, at the same onset in the span: its index in the result's notes, else -1. */
-static long find_onset(const ReturnSpan *span, PlanTime offset) {
+static long find_onset(const ReturnSpan *span, Rational offset) {
     for (size_t n = 0; n < span->note_count; n++) {
-        if (plan_time_compare(span->notes[n].offset, offset) == 0) {
+        if (rational_cmp(span->notes[n].offset, offset) == 0) {
             return (long)n;
         }
     }
@@ -501,7 +497,7 @@ static void check_ornament(const ReturnPayload *payload, FillCheck *out) {
             long onset;
             bool original = false;
             for (size_t k = 0; k < kept->note_count && !original; k++) {
-                original = plan_time_compare(kept->notes[k].offset, span->notes[n].offset) == 0;
+                original = rational_cmp(kept->notes[k].offset, span->notes[n].offset) == 0;
             }
             if (original) {
                 continue;
@@ -539,8 +535,8 @@ static bool same_notes(const ReturnSpan *a, const ReturnSpan *b, int shift) {
     }
     for (size_t n = 0; n < a->note_count; n++) {
         if (a->notes[n].midi_pitch + shift != b->notes[n].midi_pitch ||
-            plan_time_compare(a->notes[n].offset, b->notes[n].offset) != 0 ||
-            plan_time_compare(a->notes[n].duration, b->notes[n].duration) != 0) {
+            rational_cmp(a->notes[n].offset, b->notes[n].offset) != 0 ||
+            rational_cmp(a->notes[n].duration, b->notes[n].duration) != 0) {
             return false;
         }
     }
@@ -550,8 +546,8 @@ static bool same_notes(const ReturnSpan *a, const ReturnSpan *b, int shift) {
 /* The harmony, bass and inner voices are open (the harmony spans with the shape they were written from); the melody is the returned one. */
 static void check_reharmonize(const ReturnPayload *payload, FillCheck *out) {
     const ReturnCopy *copy = &payload->result;
-    PlanTime harmony = {0, 1};
-    PlanTime source_harmony = {0, 1};
+    Rational harmony = {0, 1};
+    Rational source_harmony = {0, 1};
     size_t reopened = 0;
     size_t next_melody = 0;
     for (size_t i = 0; i < copy->span_count; i++) {
@@ -564,7 +560,7 @@ static void check_reharmonize(const ReturnPayload *payload, FillCheck *out) {
         if (span->lane == PLAN_LANE_HARMONY) {
             reopened++;
             if (!has_kind(span, PLAN_CONSTRAINT_HARMONY_SHAPE) ||
-                plan_time_add(harmony, span->span.length, &harmony) != PLAN_OK) {
+                rational_add(harmony, span->span.length, &harmony) != RATIONAL_OK) {
                 reject(out, "a reopened harmony span has no shape");
                 return;
             }
@@ -572,7 +568,7 @@ static void check_reharmonize(const ReturnPayload *payload, FillCheck *out) {
     }
     for (size_t i = 0; i < payload->source.span_count; i++) {
         const ReturnSpan *span = &payload->source.spans[i];
-        if (span->lane == PLAN_LANE_HARMONY && plan_time_add(source_harmony, span->span.length, &source_harmony) != PLAN_OK) {
+        if (span->lane == PLAN_LANE_HARMONY && rational_add(source_harmony, span->span.length, &source_harmony) != RATIONAL_OK) {
             reject(out, "the returned harmony cannot be read");
             return;
         }
@@ -589,7 +585,7 @@ static void check_reharmonize(const ReturnPayload *payload, FillCheck *out) {
         }
         next_melody++;
     }
-    if (reopened == 0 || plan_time_compare(harmony, source_harmony) != 0) {
+    if (reopened == 0 || rational_cmp(harmony, source_harmony) != 0) {
         reject(out, "reharmonization does not cover the returned harmony");
         return;
     }

@@ -228,7 +228,7 @@ static int transposition(int pitch, const PlanKey *source, const PlanKey *target
     return shift > 6 ? shift - 12 : shift;
 }
 
-static bool plan_time_of(unsigned long long numerator, unsigned long long denominator, PlanTime *out) {
+static bool plan_time_of(unsigned long long numerator, unsigned long long denominator, Rational *out) {
     unsigned long long divisor = rational_gcd_unsigned(numerator, denominator);
     if (denominator == 0 || divisor == 0) {
         return false;
@@ -238,12 +238,12 @@ static bool plan_time_of(unsigned long long numerator, unsigned long long denomi
     if (numerator > 0x7fffffffUL || denominator > 0xffffffffUL) {
         return false;
     }
-    return plan_time_make((long)numerator, (unsigned long)denominator, out) == PLAN_OK;
+    return rational_make((long)numerator, (long long)denominator, out) == RATIONAL_OK;
 }
 
 /*
  * One bar of a matched melody as a motive: the notes that start in the first bar, the last shortened to the barline,
- * moved by shift semitones. false when fewer than two notes are left or one does not fit a PlanTime.
+ * moved by shift semitones. false when fewer than two notes are left or one does not fit a Rational.
  */
 static bool motive_from_passage(const SimilarMatch *match, const PlanMeter *meter, const PlanKey *key, int shift,
                                 Motive *out) {
@@ -281,7 +281,7 @@ static bool motive_from_passage(const SimilarMatch *match, const PlanMeter *mete
         return false;
     }
     const PlanNote *last = &out->notes[out->note_count - 1];
-    return plan_time_add(last->offset, last->duration, &out->length) == PLAN_OK;
+    return rational_add(last->offset, last->duration, &out->length) == RATIONAL_OK;
 }
 
 /* Whether a score is within 1/10 of the best: 10 * score >= 10 * best - 1, in fractions. */

@@ -8,7 +8,7 @@
 #include <ursatz_composer/seam_hear.h>
 #include "util/plan_util.h"
 
-bool melody_ticks(PlanTime time, long *out) {
+bool melody_ticks(Rational time, long *out) {
     long scaled = time.num * MELODY_TICKS;
     if (time.den == 0 || scaled % (long)time.den != 0) {
         return false;
@@ -17,8 +17,8 @@ bool melody_ticks(PlanTime time, long *out) {
     return true;
 }
 
-PlanResult melody_time(long ticks, PlanTime *out) {
-    return plan_time_make(ticks, (unsigned long)MELODY_TICKS, out);
+PlanResult melody_time(long ticks, Rational *out) {
+    return plan_result_of_rational(rational_make(ticks, (long long)MELODY_TICKS, out));
 }
 
 bool melody_chord_mask(const PlanKey *key, const PhraseChord *chord, unsigned *mask, unsigned *seventh) {
@@ -242,8 +242,8 @@ bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, Plan
                                &context->chord_seventh[i])) {
             return false;
         }
-        PlanTime start;
-        PlanTime length;
+        Rational start;
+        Rational length;
         long chord_length;
         if (!harmony_cells_of_span(&context->metre, cells, context->chords[i].cells, &start, &length) ||
             !melody_ticks(start, &context->chord_start[i]) || !melody_ticks(length, &chord_length) ||
@@ -265,15 +265,6 @@ bool melody_phrase_read(const PiecePlan *plan, NodeId owner, PlanSpan span, Plan
 }
 
 /* ---------------------------------------------------------- idea targets */
-
-static PlanTime time_minus(PlanTime a, PlanTime b) {
-    PlanTime out = {0, 1};
-    if (plan_time_make(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den, &out) != PLAN_OK) {
-        out.num = 0;
-        out.den = 1;
-    }
-    return out;
-}
 
 /* The nearest ancestor of node (itself included) that is a phrase. */
 static NodeId phrase_of(const PiecePlan *plan, NodeId node) {
@@ -376,8 +367,11 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
     context->phrase_start = start - origin;
 
     /* Ideas are written in time order: every melody span of the phrase before the target is written. */
-    if (plan_time_compare(phrase_span.start, context->span.start) < 0) {
-        PlanSpan before = {phrase_span.start, time_minus(context->span.start, phrase_span.start)};
+    if (rational_cmp(phrase_span.start, context->span.start) < 0) {
+        PlanSpan before = {phrase_span.start, {0, 1}};
+        if (rational_sub(context->span.start, phrase_span.start, &before.length) != RATIONAL_OK) {
+            return false;
+        }
         size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, before, ids, HARMONY_MAX_CHORDS);
         if (found > HARMONY_MAX_CHORDS) {
             return false;
@@ -397,9 +391,12 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
     }
 
     /* The last notes of the span that ends where the target starts. */
-    PlanTime tick;
+    Rational tick;
     if (origin > 0 && melody_time(1, &tick) == PLAN_OK) {
-        PlanSpan last_tick = {time_minus(context->span.start, tick), tick};
+        PlanSpan last_tick = {{0, 1}, tick};
+        if (rational_sub(context->span.start, tick, &last_tick.start) != RATIONAL_OK) {
+            return false;
+        }
         size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, last_tick, ids, HARMONY_MAX_CHORDS);
         if (found == 1 && plan_lane_span_state(plan, ids[0]) != PLAN_STATE_CONSTRAINED) {
             const PlanNotes *notes = &plan_lane_span_payload(plan, ids[0])->notes;
@@ -415,13 +412,13 @@ static bool read_idea_melody(const PiecePlan *plan, MelodyContext *context, Node
     context->seam_bass = -1;
     context->seam_next = -1;
     /* The first note of the melody that starts where the target ends: the target's last note leads to it. */
-    PlanTime end;
-    PlanTime tick_after;
+    Rational end;
+    Rational tick_after;
     if (plan_span_end(context->span, &end) == PLAN_OK && melody_time(1, &tick_after) == PLAN_OK) {
         PlanSpan first_tick = {end, tick_after};
         size_t found = plan_lane_find(plan, PLAN_LANE_MELODY, 0, first_tick, ids, HARMONY_MAX_CHORDS);
         /* A motive's melody (m0 in the material, which starts where the piece ends) is not melody of the piece. */
-        if (found == 1 && plan_time_compare(plan_lane_span_span(plan, ids[0]).start, end) == 0 &&
+        if (found == 1 && rational_cmp(plan_lane_span_span(plan, ids[0]).start, end) == 0 &&
             plan_lane_span_state(plan, ids[0]) != PLAN_STATE_CONSTRAINED &&
             plan_node_kind(plan, plan_lane_span_owner(plan, ids[0])) != PLAN_NODE_MOTIVE) {
             const PlanNotes *notes = &plan_lane_span_payload(plan, ids[0])->notes;
@@ -488,7 +485,7 @@ static bool span_from_root(const PiecePlan *plan, LaneSpanId span, NodeId root) 
  */
 static bool restated_span(const PiecePlan *plan, const MelodyContext *context, LaneSpanId *out) {
     LaneSpanId before[MELODY_MAX_RESTATED];
-    PlanTime tick;
+    Rational tick;
     long origin;
     if (!melody_ticks(context->span.start, &origin) || origin <= 0 || melody_time(1, &tick) != PLAN_OK) {
         return false;
@@ -499,7 +496,7 @@ static bool restated_span(const PiecePlan *plan, const MelodyContext *context, L
     for (size_t i = found; i > 0 && found <= MELODY_MAX_RESTATED; i--) {
         LaneSpanId id = before[i - 1];
         for (size_t k = 0; plan_lane_span_state(plan, id) != PLAN_STATE_CONSTRAINED &&
-                           plan_time_compare(plan_lane_span_span(plan, id).length, context->span.length) == 0 &&
+                           rational_cmp(plan_lane_span_span(plan, id).length, context->span.length) == 0 &&
                            k < plan_lane_span_constraint_count(plan, id);
              k++) {
             const PlanConstraint *constraint = plan_lane_span_constraint_at(plan, id, k);
@@ -510,11 +507,14 @@ static bool restated_span(const PiecePlan *plan, const MelodyContext *context, L
             }
         }
     }
-    PlanSpan last_tick = {time_minus(context->span.start, tick), tick};
+    PlanSpan last_tick = {{0, 1}, tick};
+    if (rational_sub(context->span.start, tick, &last_tick.start) != RATIONAL_OK) {
+        return false;
+    }
     return plan_lane_find(plan, PLAN_LANE_MELODY, 0, last_tick, before, 2) == 1 &&
            plan_lane_span_state(plan, before[0]) != PLAN_STATE_CONSTRAINED &&
            span_from_root(plan, before[0], motive_root(plan, context->motive_node)) &&
-           plan_time_compare(plan_lane_span_span(plan, before[0]).length, context->span.length) == 0 &&
+           rational_cmp(plan_lane_span_span(plan, before[0]).length, context->span.length) == 0 &&
            ((*out = before[0]), true);
 }
 
@@ -578,11 +578,11 @@ static bool melody_idea_read(const PiecePlan *plan, LaneSpanId target, MelodyCon
     long origin;
     long meter_start;
     metre->meter = plan_lane_span_payload(plan, meters[0])->meter;
-    if (plan_time_make(metre->meter.beats_per_bar, (unsigned long)metre->meter.beat_unit, &metre->bar_length) !=
-            PLAN_OK ||
+    if (rational_make(metre->meter.beats_per_bar, (long long)metre->meter.beat_unit, &metre->bar_length) !=
+            RATIONAL_OK ||
         !harmony_rhythm_cells_per_bar(&metre->meter, &metre->cells_per_bar) ||
-        plan_time_make(metre->bar_length.num, metre->bar_length.den * metre->cells_per_bar, &metre->cell_length) !=
-            PLAN_OK ||
+        rational_div_int(metre->bar_length, metre->cells_per_bar, &metre->cell_length) !=
+            RATIONAL_OK ||
         !melody_ticks(span.length, &context->length) || !melody_ticks(metre->cell_length, &context->cell) ||
         context->cell <= 0 || context->length <= 0 || !melody_ticks(span.start, &origin) ||
         !melody_ticks(meter_span.start, &meter_start)) {
@@ -606,11 +606,11 @@ static bool melody_idea_read(const PiecePlan *plan, LaneSpanId target, MelodyCon
  * The anacrusis before a phrase that starts `pickup` after `start`: shorter than a bar, a whole number of ticks, and over
  * the chord of the harmony span that sounds there, when one is written (none starts a plan).
  */
-static bool read_pickup(const PiecePlan *plan, PlanTime start, PlanTime pickup, MelodyContext *context) {
+static bool read_pickup(const PiecePlan *plan, Rational start, Rational pickup, MelodyContext *context) {
     LaneSpanId ids[HARMONY_MAX_CHORDS];
     PlanSpan under = {start, pickup};
     long ticks;
-    if (!melody_ticks(pickup, &ticks) || ticks <= 0 || plan_time_compare(pickup, context->metre.bar_length) >= 0) {
+    if (!melody_ticks(pickup, &ticks) || ticks <= 0 || rational_cmp(pickup, context->metre.bar_length) >= 0) {
         return false;
     }
     context->pickup = ticks;
@@ -649,10 +649,8 @@ bool melody_context_read(const PiecePlan *plan, LaneSpanId target, MelodyContext
     bool has_pickup = harmony_find_constraint(plan, target, owner, PLAN_CONSTRAINT_PICKUP, &pickup);
 
     /* A pickup is the start of the span: the harmony, the key and the notes after it are the phrase's. */
-    if (has_pickup && (plan_time_add(span.start, pickup.params.pickup, &body.start) != PLAN_OK ||
-                       plan_time_make(span.length.num * (long)pickup.params.pickup.den -
-                                          pickup.params.pickup.num * (long)span.length.den,
-                                      span.length.den * pickup.params.pickup.den, &body.length) != PLAN_OK ||
+    if (has_pickup && (rational_add(span.start, pickup.params.pickup, &body.start) != RATIONAL_OK ||
+                       rational_sub(span.length, pickup.params.pickup, &body.length) != RATIONAL_OK ||
                        body.length.num <= 0)) {
         return false;
     }

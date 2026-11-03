@@ -25,14 +25,14 @@
 
 static PlanSpan bars(long start, long length) {
     PlanSpan span;
-    assert(plan_time_make(start, 1, &span.start) == PLAN_OK);
-    assert(plan_time_make(length, 1, &span.length) == PLAN_OK);
+    assert(rational_make(start, 1, &span.start) == RATIONAL_OK);
+    assert(rational_make(length, 1, &span.length) == RATIONAL_OK);
     return span;
 }
 
-static PlanTime time_of(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational time_of(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
@@ -42,7 +42,7 @@ static NodeId add(PiecePlan *plan, NodeId parent, PlanNodeKind kind, PlanSpan sp
     return id;
 }
 
-static PlanNote note(int pitch, PlanTime offset, PlanTime duration) {
+static PlanNote note(int pitch, Rational offset, Rational duration) {
     PlanNote result;
     result.midi_pitch = pitch;
     result.offset = offset;
@@ -94,7 +94,7 @@ static PiecePlan *build_sentence_plan(void) {
     add_meter_and_key(plan, form, bars(0, 8));
 
     /* Melody of the basic idea: seven notes, ending on a triplet eighth. */
-    PlanTime quarter = time_of(1, 4);
+    Rational quarter = time_of(1, 4);
     PlanNote idea_notes[] = {
         note(69, time_of(0, 1), quarter),   note(74, time_of(1, 4), quarter),   note(77, time_of(1, 2), quarter),
         note(74, time_of(3, 4), quarter),   note(72, time_of(1, 1), time_of(1, 2)),
@@ -512,7 +512,7 @@ static void test_material_is_left_out(void) {
         assert(rendered.skipped[i].reason == RENDER_SKIP_MATERIAL);
     }
     assert(rendered.skipped[0].span == source && rendered.skipped[1].span == developed);
-    assert(plan_time_compare(rendered.piece_end, time_of(4, 1)) == 0);
+    assert(rational_cmp(rendered.piece_end, time_of(4, 1)) == 0);
 
     /* The score has the four bars of the theme and no more. */
     char *xml = NULL;
@@ -530,7 +530,7 @@ static void test_material_is_left_out(void) {
     assert(plan_node_remove_constraint(plan, material, 0) == PLAN_OK);
     assert(plan_render(plan, &rendered) == PLAN_RENDER_OK);
     assert(rendered.count == 3);
-    assert(plan_time_compare(rendered.piece_end, time_of(8, 1)) == 0);
+    assert(rational_cmp(rendered.piece_end, time_of(8, 1)) == 0);
     rendered_plan_destroy(&rendered);
     plan_destroy(plan);
 }
@@ -573,7 +573,7 @@ static void test_layers_are_masked(void) {
            rendered.skipped[0].lane == PLAN_LANE_MELODY);
     assert(rendered.skipped[1].span == spans[0][2] && rendered.skipped[1].reason == RENDER_SKIP_LAYER &&
            rendered.skipped[1].lane == PLAN_LANE_INNER_VOICE);
-    assert(plan_time_compare(rendered.piece_end, time_of(12, 1)) == 0);
+    assert(rational_cmp(rendered.piece_end, time_of(12, 1)) == 0);
     rendered_plan_destroy(&rendered);
     plan_destroy(plan);
 }

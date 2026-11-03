@@ -36,7 +36,7 @@ typedef struct {
 } OctaveCandidate;
 
 /* The cells of the metre a note covers exactly, from its start to its end; none is not allowed. */
-static bool cells_of(const PhraseMetre *metre, PlanTime start, PlanTime length, size_t *cells) {
+static bool cells_of(const PhraseMetre *metre, Rational start, Rational length, size_t *cells) {
     size_t first;
     PlanSpan note = {start, length};
     return length.num > 0 && harmony_metre_find_cells(metre, note, &first, cells);
@@ -77,24 +77,24 @@ static bool octave_context_read(const PiecePlan *plan, LaneSpanId target, Octave
     if (found == 0 || found > HARMONY_MAX_CHORDS) {
         return false;
     }
-    PlanTime position = context.span.start;
+    Rational position = context.span.start;
     int previous_degree = 0;
     for (size_t i = 0; i < found; i++) {
         PlanSpan span = plan_lane_span_span(plan, ids[i]);
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
-        PlanTime end;
-        if (plan_lane_span_state(plan, ids[i]) != PLAN_STATE_GIVEN || plan_time_compare(span.start, position) != 0 ||
+        Rational end;
+        if (plan_lane_span_state(plan, ids[i]) != PLAN_STATE_GIVEN || rational_cmp(span.start, position) != 0 ||
             plan_span_end(span, &end) != PLAN_OK) {
             return false;
         }
-        PlanTime at = {0, 1};
+        Rational at = {0, 1};
         for (size_t n = 0; n < notes->note_count; n++) {
             const PlanNote *note = &notes->notes[n];
             size_t cells;
-            PlanTime note_start;
-            if (plan_time_compare(note->offset, at) != 0 || plan_time_add(span.start, at, &note_start) != PLAN_OK ||
+            Rational note_start;
+            if (rational_cmp(note->offset, at) != 0 || rational_add(span.start, at, &note_start) != RATIONAL_OK ||
                 !cells_of(&context.metre, note_start, note->duration, &cells) || cells == 0 ||
-                plan_time_add(at, note->duration, &at) != PLAN_OK) {
+                rational_add(at, note->duration, &at) != RATIONAL_OK) {
                 return false;
             }
             int pc = ((note->midi_pitch % 12) + 12) % 12;
@@ -117,17 +117,17 @@ static bool octave_context_read(const PiecePlan *plan, LaneSpanId target, Octave
             context.count++;
             previous_degree = degree;
         }
-        if (plan_time_compare(at, span.length) != 0) {
+        if (rational_cmp(at, span.length) != 0) {
             return false;
         }
         position = end;
     }
-    PlanTime span_end;
+    Rational span_end;
     size_t total = 0;
     for (size_t i = 0; i < context.count; i++) {
         total += context.runs[i].cells;
     }
-    if (plan_span_end(context.span, &span_end) != PLAN_OK || plan_time_compare(position, span_end) != 0 ||
+    if (plan_span_end(context.span, &span_end) != PLAN_OK || rational_cmp(position, span_end) != 0 ||
         total != context.metre.cells || context.count < 2) {
         return false;
     }

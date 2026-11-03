@@ -112,15 +112,15 @@ static int test_motive(void) {
     PlanMeter six_eight = {6, 8, 0};
     assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &six_eight, &c_major, 1, &seed) == CORPUS_SEED_OK);
     assert(seed.motive.note_count == 2);
-    assert(plan_time_compare(seed.motive.length, (PlanTime){3, 4}) == 0);
-    assert(plan_time_compare(seed.motive.notes[0].duration, (PlanTime){1, 2}) == 0);
-    assert(plan_time_compare(seed.motive.notes[1].duration, (PlanTime){1, 4}) == 0);
+    assert(rational_cmp(seed.motive.length, (Rational){3, 4}) == 0);
+    assert(rational_cmp(seed.motive.notes[0].duration, (Rational){1, 2}) == 0);
+    assert(rational_cmp(seed.motive.notes[1].duration, (Rational){1, 4}) == 0);
     PlanMeter five_eight = {5, 8, 0};
     assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, PASSAGE, &five_eight, &c_major, 1, &seed) == CORPUS_SEED_OK);
     assert(seed.motive.note_count == 2);
-    assert(plan_time_compare(seed.motive.length, (PlanTime){5, 8}) == 0);
-    assert(plan_time_compare(seed.motive.notes[1].offset, (PlanTime){1, 2}) == 0);
-    assert(plan_time_compare(seed.motive.notes[1].duration, (PlanTime){1, 8}) == 0);
+    assert(rational_cmp(seed.motive.length, (Rational){5, 8}) == 0);
+    assert(rational_cmp(seed.motive.notes[1].offset, (Rational){1, 2}) == 0);
+    assert(rational_cmp(seed.motive.notes[1].duration, (Rational){1, 8}) == 0);
 
     assert(corpus_seed_motive(COMPOSER_SONATINAS_CORPUS, "no-such-file.mid", &meter, &d_major, 1, &seed) ==
            CORPUS_SEED_ERR_QUERY);

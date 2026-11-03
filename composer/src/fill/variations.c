@@ -45,9 +45,9 @@ typedef struct {
 static int compare_harmony(const void *left, const void *right) {
     const HarmonySpan *a = left;
     const HarmonySpan *b = right;
-    int order = plan_time_compare(a->span.start, b->span.start);
+    int order = rational_cmp(a->span.start, b->span.start);
     if (order == 0) {
-        order = plan_time_compare(a->span.length, b->span.length);
+        order = rational_cmp(a->span.length, b->span.length);
     }
     return order != 0 ? order
                       : strcmp(a->numeral, b->numeral);

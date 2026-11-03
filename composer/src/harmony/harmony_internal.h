@@ -45,15 +45,15 @@ typedef struct {
  */
 typedef struct {
     PlanMeter meter;
-    PlanTime bar_length;
+    Rational bar_length;
     size_t bars; /* the bars the span touches */
     size_t cells_per_bar;
-    PlanTime cell_length;
+    Rational cell_length;
     size_t cells; /* the span's cells, part cells included */
-    PlanTime start;
-    PlanTime lead;
-    PlanTime tail;
-    PlanTime offset;
+    Rational start;
+    Rational lead;
+    Rational tail;
+    Rational offset;
 } PhraseMetre;
 
 /* What a harmony span asks for, read from the plan. */
@@ -64,13 +64,13 @@ typedef struct {
     PlanKeyMode mode;
     PlanCadenceType cadence;
     PlanMeter meter;
-    PlanTime bar_length;
+    Rational bar_length;
     size_t bars;
     size_t cells_per_bar; /* the places in a bar where a chord may start */
-    PlanTime cell_length;
+    Rational cell_length;
     size_t cells;         /* the cells of the span, part cells included (see PhraseMetre) */
-    PlanTime lead;        /* from the span's start to the first cell boundary; zero when it starts on one */
-    PlanTime tail;        /* from the last cell boundary to the span's end; zero when it ends on one */
+    Rational lead;        /* from the span's start to the first cell boundary; zero when it starts on one */
+    Rational tail;        /* from the last cell boundary to the span's end; zero when it ends on one */
     PhraseMetre metre;    /* the cells, as the functions on PhraseMetre read them */
     bool has_shape;       /* a harmony shape constraint (PHRASE_MODEL, CADENTIAL or PROLONGATION) is on the span or its owner */
     PlanHarmonyShape shape;
@@ -156,7 +156,7 @@ typedef struct {
     PlanKeyMode mode;
     PlanCadenceType requested;
     size_t cells_per_bar;
-    PlanTime cell_length;
+    Rational cell_length;
     /* A phrase that need not end in a cadence, nor explain every inverted chord: a harmonization of a given bass. */
     bool open_ended;
     /* Chords, by index, that need no reason to be there beyond the phrase they are in: a schema's. NULL for none. */
@@ -207,7 +207,7 @@ bool harmony_hear_phrase(const HeardPhrase *phrase, CadenceType *heard, bool *at
  * the tonic as its competing reading; without one, a V to I6 is an evaded cadence (R-090, R-091).
  */
 bool harmony_hear_lane_cadences(const PiecePlan *plan, PlanSpan span, PlanKeyMode mode, const int *soprano,
-                                size_t count, const PlanTime *section_starts, size_t section_count,
+                                size_t count, const Rational *section_starts, size_t section_count,
                                 HarmonyCadences *out);
 
 /* How many strong beats a bar of the meter has, which is where a chord may start. False for a meter not supported. */
@@ -234,7 +234,7 @@ bool harmony_find_mode(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanS
 /* The key of the key lane over the span, else of a key constraint on the span or its owner. */
 bool harmony_find_key(const PiecePlan *plan, LaneSpanId id, NodeId owner, PlanSpan span, PlanKey *out);
 /* The key of the key lane that ends where start is, when the span of the lane after it starts there. */
-bool harmony_key_before(const PiecePlan *plan, PlanTime start, PlanKey *out);
+bool harmony_key_before(const PiecePlan *plan, Rational start, PlanKey *out);
 /*
  * The degrees in the key `to` of the chords a pivot from the key `from` can be: triads of both (harmony_pivot_find), the
  * best of harmony_pivot_rank first, with the chords a phrase cannot open on left out (a dominant in either key, a
@@ -250,16 +250,16 @@ bool harmony_pivot_chord_valid(PlanKey from, PlanKey to, const HarmonyChord *cho
 bool harmony_read_metre(const PiecePlan *plan, PlanSpan span, PhraseMetre *out);
 
 /* Where cell `cell` starts, counted from the span's start; cell == cells is the span's end. */
-bool harmony_metre_cell_offset(const PhraseMetre *metre, size_t cell, PlanTime *out);
+bool harmony_metre_cell_offset(const PhraseMetre *metre, size_t cell, Rational *out);
 /*
  * Where cells [first, first + cells) lie in the span, counted from its start: `start` and `length`. The harmony, melody
  * and texture operators read the same anchored grid, part cells included, through it.
  */
-bool harmony_cells_of_span(const PhraseMetre *metre, size_t first, size_t cells, PlanTime *start, PlanTime *length);
+bool harmony_cells_of_span(const PhraseMetre *metre, size_t first, size_t cells, Rational *start, Rational *length);
 /* The span of cells [first, first + cells). */
 PlanResult harmony_metre_cells_span(const PhraseMetre *metre, size_t first, size_t cells, PlanSpan *out);
 /* The bar (counted from the span's first bar, 0 for it) and the place in it where cell `cell` starts. */
-bool harmony_metre_cell_position(const PhraseMetre *metre, size_t cell, size_t *bar, PlanTime *in_bar);
+bool harmony_metre_cell_position(const PhraseMetre *metre, size_t cell, size_t *bar, Rational *in_bar);
 /* Whether the cell starts on a barline, and whether it is a part cell (the lead or the tail). */
 bool harmony_metre_cell_on_downbeat(const PhraseMetre *metre, size_t cell);
 bool harmony_metre_cell_is_part(const PhraseMetre *metre, size_t cell);
@@ -273,7 +273,7 @@ bool harmony_metre_find_cells(const PhraseMetre *metre, PlanSpan span, size_t *f
  */
 size_t harmony_metre_last_cell(const PhraseMetre *metre);
 /* The span of cells [first_cell, first_cell + cells) counted from start. */
-PlanResult harmony_cells_span(PlanTime start, PlanTime cell_length, size_t first_cell, size_t cells, PlanSpan *out);
+PlanResult harmony_cells_span(Rational start, Rational cell_length, size_t first_cell, size_t cells, PlanSpan *out);
 
 /* Fills out from the plan. False when the span is not one this operator applies to. */
 bool harmony_phrase_read_request(const PiecePlan *plan, LaneSpanId target, PhraseRequest *out);
@@ -321,9 +321,9 @@ PlanResult harmony_request_cells_span(const PhraseRequest *request, size_t first
 /* The cell grid under a span: the meter lane span containing it, and where the span sits in that grid. */
 typedef struct {
     PlanMeter meter;
-    PlanTime bar_length;
+    Rational bar_length;
     size_t cells_per_bar;
-    PlanTime cell_length;
+    Rational cell_length;
     size_t first_cell; /* cells from the start of the meter lane span to the start of the span */
     size_t cells;      /* the span's length in cells */
 } CellMetre;
@@ -331,13 +331,13 @@ typedef struct {
 /* False unless the span lies in one meter lane span, starts on a cell and is a whole number of cells. */
 bool harmony_read_cells(const PiecePlan *plan, PlanSpan span, CellMetre *out);
 /* As harmony_count_cells, but a length of zero is zero cells. */
-bool harmony_count_cells_or_zero(PlanTime cell_length, PlanTime length, size_t *cells);
+bool harmony_count_cells_or_zero(Rational cell_length, Rational length, size_t *cells);
 
 /* How many cells of cell_length make length exactly. False if it is not a whole number. */
-bool harmony_count_cells(PlanTime cell_length, PlanTime length, size_t *cells);
+bool harmony_count_cells(Rational cell_length, Rational length, size_t *cells);
 
 /* Reads the chord of a harmony span: a diatonic numeral, else an applied one, and its length in cells. */
-bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, PlanTime cell_length, PhraseChord *out);
+bool harmony_read_chord(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, Rational cell_length, PhraseChord *out);
 /* The same on the cells of a metre: the span must start and end on a cell boundary of it. */
 bool harmony_read_chord_in(const PiecePlan *plan, LaneSpanId id, PlanKeyMode mode, const PhraseMetre *metre,
                            PhraseChord *out);
@@ -401,7 +401,7 @@ typedef struct {
     PlanKeyMode mode;
     PlanCadenceType cadence;
     size_t cells_per_bar;
-    PlanTime cell_length;
+    Rational cell_length;
     PhraseMetre metre; /* the cells the phrase sits on */
     PhraseChord chords[HARMONY_MAX_CHORDS]; /* the whole phrase after the edit */
     size_t count;

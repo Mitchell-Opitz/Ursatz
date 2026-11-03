@@ -60,8 +60,8 @@ typedef struct {
 /* offset is measured from the start of the owning lane span. */
 typedef struct {
     int midi_pitch;
-    PlanTime offset;
-    PlanTime duration;
+    Rational offset;
+    Rational duration;
 } PlanNote;
 
 /* Notes are copied in; a pointer read back stays valid until the plan is destroyed. */
@@ -96,7 +96,7 @@ PlanResult plan_add_lane_span(PiecePlan *plan, NodeId owner, PlanLaneKind lane, 
  * for a Given span, PLAN_ERR_BAD_SPAN for any other length, and
  * PLAN_ERR_BAD_PAYLOAD when the payload no longer fits (notes past the new end).
  */
-PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, PlanTime new_length);
+PlanResult plan_lane_span_resize(PiecePlan *plan, LaneSpanId id, Rational new_length);
 
 bool plan_has_lane_span(const PiecePlan *plan, LaneSpanId id);
 /* The last id given out: ids run 1 to this count, and an id removed with its node (plan_remove_subtree) is not a span. */

@@ -41,13 +41,13 @@ typedef struct {
     PlanSpan span;
 } Fixture;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
-static PlanTime beats(const Scenario *scenario, long count) {
+static Rational beats(const Scenario *scenario, long count) {
     return fraction(count, (unsigned long)scenario->beat_unit);
 }
 
@@ -191,22 +191,22 @@ static size_t check_lane_tiles(const Fixture *fixture, const Scenario *scenario,
                                LaneSpanId *ids) {
     size_t count = plan_lane_find(fixture->plan, lane, 0, fixture->span, ids, MAX_CHORDS);
     assert(count >= 1 && count <= MAX_CHORDS);
-    PlanTime position = fixture->span.start;
+    Rational position = fixture->span.start;
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_lane_span_span(fixture->plan, ids[i]);
-        assert(plan_time_compare(span.start, position) == 0);
+        assert(rational_cmp(span.start, position) == 0);
         bool on_cell = false;
         for (size_t c = 0; c < cells->cells; c++) {
-            on_cell = on_cell || plan_time_compare(span.start, beats(scenario, cells->starts[c])) == 0;
+            on_cell = on_cell || rational_cmp(span.start, beats(scenario, cells->starts[c])) == 0;
         }
         assert(on_cell);
-        PlanTime end;
+        Rational end;
         assert(plan_span_end(span, &end) == PLAN_OK);
         position = end;
     }
-    PlanTime span_end;
+    Rational span_end;
     assert(plan_span_end(fixture->span, &span_end) == PLAN_OK);
-    assert(plan_time_compare(position, span_end) == 0);
+    assert(rational_cmp(position, span_end) == 0);
     return count;
 }
 
@@ -217,7 +217,7 @@ static void check_harmony(const Fixture *fixture, const Scenario *scenario, cons
         assert(plan_lane_span_state(fixture->plan, ids[i]) == PLAN_STATE_REALIZED);
     }
     PlanSpan last = plan_lane_span_span(fixture->plan, ids[count - 1]);
-    assert(plan_time_compare(last.start, beats(scenario, expected_last(scenario, cells))) == 0);
+    assert(rational_cmp(last.start, beats(scenario, expected_last(scenario, cells))) == 0);
     assert(plan_lane_span_constraint_count(fixture->plan, ids[count - 1]) == 1);
 
     CadenceType heard;
@@ -238,7 +238,7 @@ static void signature(const Fixture *fixture, char *out, size_t size) {
     out[0] = '\0';
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_lane_span_span(fixture->plan, ids[i]);
-        int written = snprintf(out + used, size - used, "%s@%ld/%lu+%ld/%lu ",
+        int written = snprintf(out + used, size - used, "%s@%lld/%lld+%lld/%lld ",
                                plan_lane_span_payload(fixture->plan, ids[i])->harmony.roman_numeral, span.start.num,
                                span.start.den, span.length.num, span.length.den);
         assert(written > 0 && (size_t)written < size - used);
@@ -329,7 +329,7 @@ static void test_lead_and_tail(void) {
     LaneSpanId ids[MAX_CHORDS];
     size_t count = plan_lane_find(fixture.plan, PLAN_LANE_HARMONY, 0, fixture.span, ids, MAX_CHORDS);
     /* The first chord starts on the lead, one beat before the first whole cell. */
-    assert(plan_time_compare(plan_lane_span_span(fixture.plan, ids[0]).start, beats(&scenario, 1)) == 0);
+    assert(rational_cmp(plan_lane_span_span(fixture.plan, ids[0]).start, beats(&scenario, 1)) == 0);
     assert(count >= 2);
     fill_outcome_destroy(&outcome);
     plan_destroy(fixture.plan);
@@ -448,19 +448,19 @@ static void test_bass_under_beat_spans(void) {
                 for (size_t i = 0; i < chord_count; i++) {
                     PlanSpan chord = plan_lane_span_span(fixture.plan, chords[i]);
                     PlanSpan bass = plan_lane_span_span(fixture.plan, basses[i]);
-                    assert(plan_time_compare(chord.start, bass.start) == 0);
-                    assert(plan_time_compare(chord.length, bass.length) == 0);
+                    assert(rational_cmp(chord.start, bass.start) == 0);
+                    assert(rational_cmp(chord.length, bass.length) == 0);
                     const PlanNotes *notes = &plan_lane_span_payload(fixture.plan, basses[i])->notes;
                     assert(notes->note_count >= 1);
                     /* The notes run from the chord's start to its end. */
-                    PlanTime position = fraction(0, 1);
+                    Rational position = fraction(0, 1);
                     for (size_t n = 0; n < notes->note_count; n++) {
-                        assert(plan_time_compare(notes->notes[n].offset, position) == 0);
-                        assert(plan_time_add(position, notes->notes[n].duration, &position) == PLAN_OK);
+                        assert(rational_cmp(notes->notes[n].offset, position) == 0);
+                        assert(rational_add(position, notes->notes[n].duration, &position) == RATIONAL_OK);
                     }
-                    assert(plan_time_compare(position, chord.length) == 0);
+                    assert(rational_cmp(position, chord.length) == 0);
                     /* A chord of one beat gets one note. */
-                    if (plan_time_compare(chord.length, beats(&scenario, 1)) == 0) {
+                    if (rational_cmp(chord.length, beats(&scenario, 1)) == 0) {
                         assert(notes->note_count == 1);
                     }
                 }
@@ -603,12 +603,12 @@ static void test_octave_on_beat_spans(void) {
             Scenario scenario = {4, 4, PLAN_MODE_MAJOR, 0, SPANS[w].start, 7, PLAN_CADENCE_PAC, seed};
             Fixture fixture = build(&scenario, false);
             PlanNote notes[3];
-            PlanTime position = fraction(0, 1);
+            Rational position = fraction(0, 1);
             for (int n = 0; n < 3; n++) {
                 notes[n].midi_pitch = PITCHES[n];
                 notes[n].offset = position;
                 notes[n].duration = beats(&scenario, SPANS[w].lengths[n]);
-                assert(plan_time_add(position, notes[n].duration, &position) == PLAN_OK);
+                assert(rational_add(position, notes[n].duration, &position) == RATIONAL_OK);
             }
             PlanLanePayload payload;
             LaneSpanId bass;
@@ -633,12 +633,12 @@ static void test_octave_on_beat_spans(void) {
             LaneSpanId ids[MAX_CHORDS];
             Cells cells = cells_of(&scenario);
             assert(check_lane_tiles(&fixture, &scenario, &cells, PLAN_LANE_HARMONY, ids) == 3);
-            PlanTime at = fixture.span.start;
+            Rational at = fixture.span.start;
             for (int n = 0; n < 3; n++) {
                 PlanSpan chord = plan_lane_span_span(fixture.plan, ids[n]);
-                assert(plan_time_compare(chord.start, at) == 0);
-                assert(plan_time_compare(chord.length, beats(&scenario, SPANS[w].lengths[n])) == 0);
-                assert(plan_time_add(at, chord.length, &at) == PLAN_OK);
+                assert(rational_cmp(chord.start, at) == 0);
+                assert(rational_cmp(chord.length, beats(&scenario, SPANS[w].lengths[n])) == 0);
+                assert(rational_add(at, chord.length, &at) == RATIONAL_OK);
             }
             fill_outcome_destroy(&outcome);
             fill_registry_destroy(registry);

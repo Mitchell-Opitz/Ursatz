@@ -289,23 +289,13 @@ static int read_options(int argc, char **argv, Options *options) {
 typedef struct {
     PiecePlan *plan;
     PlanSpan span;
-    PlanTime bar_length;
+    Rational bar_length;
 } Built;
 
-static PlanTime time_of(long num, unsigned long den) {
-    PlanTime time;
-    plan_time_make(num, den, &time);
+static Rational time_of(long num, unsigned long den) {
+    Rational time;
+    rational_make(num, den, &time);
     return time;
-}
-
-static PlanTime time_plus(PlanTime a, PlanTime b) {
-    PlanTime sum;
-    plan_time_add(a, b, &sum);
-    return sum;
-}
-
-static PlanTime time_minus(PlanTime a, PlanTime b) {
-    return time_of(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den);
 }
 
 /*
@@ -353,7 +343,9 @@ static bool build_plan(const Options *options, Built *built) {
     if (needs_lead(options)) {
         PlanSpan lead = {built->span.start, built->bar_length};
         region.start = built->bar_length;
-        region.length = time_minus(built->span.length, built->bar_length);
+        if (rational_sub(built->span.length, built->bar_length, &region.length) != RATIONAL_OK) {
+            return false;
+        }
         memset(&payload, 0, sizeof(payload));
         strcpy(payload.harmony.roman_numeral, tonic);
         payload.harmony.function = PLAN_FUNCTION_TONIC;
@@ -668,15 +660,23 @@ static size_t collect_rows(const Options *options, const Built *built, Row *rows
     for (size_t i = 0; i < count; i++) {
         PlanSpan span = plan_lane_span_span(built->plan, ids[i]);
         const PlanHarmony *harmony = &plan_lane_span_payload(built->plan, ids[i])->harmony;
-        PlanTime bar_start = built->span.start;
-        PlanTime next = time_plus(bar_start, built->bar_length);
+        Rational bar_start = built->span.start;
+        Rational next;
+        Rational offset;
         int bar = 1;
-        while (plan_time_compare(next, span.start) <= 0) {
+        if (rational_add(bar_start, built->bar_length, &next) != RATIONAL_OK) {
+            return i;
+        }
+        while (rational_cmp(next, span.start) <= 0) {
             bar_start = next;
-            next = time_plus(bar_start, built->bar_length);
+            if (rational_add(bar_start, built->bar_length, &next) != RATIONAL_OK) {
+                return i;
+            }
             bar++;
         }
-        PlanTime offset = time_minus(span.start, bar_start);
+        if (rational_sub(span.start, bar_start, &offset) != RATIONAL_OK) {
+            return i;
+        }
         rows[i].bar = bar;
         rows[i].beat = (int)(offset.num * options->meter.beat_unit / (long)offset.den) + 1;
         memcpy(rows[i].roman, harmony->roman_numeral, PLAN_ROMAN_NUMERAL_MAX);

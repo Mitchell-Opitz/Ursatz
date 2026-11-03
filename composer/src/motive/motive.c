@@ -227,27 +227,29 @@ PlanKey motive_key_from_signature(int sharps_flats, PlanKeyMode mode) {
 
 /* ------------------------------------------------------------------- time */
 
-PlanTime motive_time(long num, unsigned long den) {
-    PlanTime time = {0, 1};
-    plan_time_make(num, den, &time);
+Rational motive_time(long num, unsigned long den) {
+    Rational time = {0, 1};
+    rational_make(num, den, &time);
     return time;
 }
 
-PlanTime motive_time_plus(PlanTime a, PlanTime b) {
-    PlanTime sum = {0, 1};
-    plan_time_add(a, b, &sum);
+Rational motive_time_plus(Rational a, Rational b) {
+    Rational sum = {0, 1};
+    rational_add(a, b, &sum);
     return sum;
 }
 
-PlanTime motive_time_minus(PlanTime a, PlanTime b) {
-    return motive_time(a.num * (long)b.den - b.num * (long)a.den, a.den * b.den);
+Rational motive_time_minus(Rational a, Rational b) {
+    Rational difference = {0, 1};
+    rational_sub(a, b, &difference);
+    return difference;
 }
 
-PlanTime motive_pickup(const Motive *motive) {
+Rational motive_pickup(const Motive *motive) {
     return motive->pickup.den == 0 ? motive_time(0, 1) : motive->pickup;
 }
 
-PlanTime motive_note_end(const PlanNote *note) {
+Rational motive_note_end(const PlanNote *note) {
     return motive_time_plus(note->offset, note->duration);
 }
 
@@ -264,7 +266,7 @@ void motive_set_error(MotiveError *error, const char *location, const char *form
 
 /* ------------------------------------------------------------ validation */
 
-MotiveResult motive_check_notes(const Motive *motive, PlanTime *length, MotiveError *error) {
+MotiveResult motive_check_notes(const Motive *motive, Rational *length, MotiveError *error) {
     if (motive->note_count == 0) {
         motive_set_error(error, "", "the motive has no notes");
         return MOTIVE_ERR_EMPTY;
@@ -273,7 +275,7 @@ MotiveResult motive_check_notes(const Motive *motive, PlanTime *length, MotiveEr
         motive_set_error(error, "", "the motive has %zu notes; the most is %d", motive->note_count, MOTIVE_MAX_NOTES);
         return MOTIVE_ERR_TOO_MANY_NOTES;
     }
-    PlanTime end = motive_time(0, 1);
+    Rational end = motive_time(0, 1);
     for (size_t i = 0; i < motive->note_count; i++) {
         const PlanNote *note = &motive->notes[i];
         char location[MOTIVE_ERROR_LOCATION_MAX];
@@ -290,7 +292,7 @@ MotiveResult motive_check_notes(const Motive *motive, PlanTime *length, MotiveEr
             motive_set_error(error, location, "the offset must not be before the start of the motive");
             return MOTIVE_ERR_VALUE;
         }
-        if (plan_time_compare(note->offset, end) < 0) {
+        if (rational_cmp(note->offset, end) < 0) {
             motive_set_error(error, location, "the note starts at %ld/%lu, before the note before it ends at %ld/%lu",
                              note->offset.num, note->offset.den, end.num, end.den);
             return MOTIVE_ERR_VALUE;
@@ -356,7 +358,7 @@ static bool infer_key(const Motive *motive, PlanKey *out) {
 
 MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, const MotiveOptions *options,
                              MotiveError *error) {
-    PlanTime length;
+    Rational length;
     MotiveResult checked = motive_check_notes(motive, &length, error);
     if (checked != MOTIVE_OK) {
         return checked;
@@ -395,25 +397,25 @@ MotiveResult motive_complete(Motive *motive, const MotiveDocument *document, con
 
     if (options && options->max_bars > 0) {
         /* The notes end at motive->length; the limit is that many whole bars of the meter. */
-        PlanTime bar;
-        PlanTime limit;
-        if (plan_time_make((long)motive->meter.beats_per_bar, (unsigned long)motive->meter.beat_unit, &bar) != PLAN_OK ||
-            plan_time_make((long)options->max_bars * bar.num, bar.den, &limit) != PLAN_OK ||
-            plan_time_compare(motive->length, limit) > 0) {
+        Rational bar;
+        Rational limit;
+        if (rational_make((long)motive->meter.beats_per_bar, (long long)motive->meter.beat_unit, &bar) != RATIONAL_OK ||
+            rational_make((long)options->max_bars * bar.num, bar.den, &limit) != RATIONAL_OK ||
+            rational_cmp(motive->length, limit) > 0) {
             motive_set_error(error, "", "the notes fill more than %zu bars of %d/%d", options->max_bars,
                              motive->meter.beats_per_bar, motive->meter.beat_unit);
             return MOTIVE_ERR_VALUE;
         }
     }
 
-    PlanTime pickup = options && options->has_pickup ? options->pickup
+    Rational pickup = options && options->has_pickup ? options->pickup
                       : document->has_pickup           ? document->pickup
                                                        : motive_time(0, 1);
-    PlanTime bar_length;
+    Rational bar_length;
     if (pickup.den == 0 || pickup.num < 0 ||
-        plan_time_make((long)motive->meter.beats_per_bar, (unsigned long)motive->meter.beat_unit, &bar_length) !=
-            PLAN_OK ||
-        plan_time_compare(pickup, bar_length) >= 0) {
+        rational_make((long)motive->meter.beats_per_bar, (long long)motive->meter.beat_unit, &bar_length) !=
+            RATIONAL_OK ||
+        rational_cmp(pickup, bar_length) >= 0) {
         motive_set_error(error, "pickup", "the pickup must be at least 0 and shorter than one bar of %d/%d",
                          motive->meter.beats_per_bar, motive->meter.beat_unit);
         return MOTIVE_ERR_VALUE;
@@ -495,12 +497,12 @@ MotiveResult motive_check_extras(const Motive *motive, MotiveError *error) {
                              "a chord is degree 1 to 7, altered by -1 to 1, in inversion 0 to 2 (3 only on a seventh)");
             return MOTIVE_ERR_VALUE;
         }
-        if (chord->onset.den == 0 || chord->onset.num < 0 || plan_time_compare(chord->onset, motive->length) >= 0) {
+        if (chord->onset.den == 0 || chord->onset.num < 0 || rational_cmp(chord->onset, motive->length) >= 0) {
             motive_set_error(error, location, "the chord must start inside the motive, before %ld/%lu",
                              motive->length.num, motive->length.den);
             return MOTIVE_ERR_VALUE;
         }
-        if (i > 0 && plan_time_compare(chord->onset, motive->harmony[i - 1].onset) <= 0) {
+        if (i > 0 && rational_cmp(chord->onset, motive->harmony[i - 1].onset) <= 0) {
             motive_set_error(error, location, "the chord must come after the one before it");
             return MOTIVE_ERR_VALUE;
         }
@@ -721,8 +723,8 @@ bool motive_equal(const Motive *a, const Motive *b) {
     }
     if (a->meter.beats_per_bar != b->meter.beats_per_bar || a->meter.beat_unit != b->meter.beat_unit ||
         a->meter.bars_per_hyperbar != b->meter.bars_per_hyperbar || a->key_source != b->key_source ||
-        a->note_count != b->note_count || plan_time_compare(a->length, b->length) != 0 || a->form != b->form ||
-        plan_time_compare(motive_pickup(a), motive_pickup(b)) != 0) {
+        a->note_count != b->note_count || rational_cmp(a->length, b->length) != 0 || a->form != b->form ||
+        rational_cmp(motive_pickup(a), motive_pickup(b)) != 0) {
         return false;
     }
     if (a->key_source != MOTIVE_KEY_UNSPECIFIED &&
@@ -731,8 +733,8 @@ bool motive_equal(const Motive *a, const Motive *b) {
     }
     for (size_t i = 0; i < a->note_count; i++) {
         if (a->notes[i].midi_pitch != b->notes[i].midi_pitch ||
-            plan_time_compare(a->notes[i].offset, b->notes[i].offset) != 0 ||
-            plan_time_compare(a->notes[i].duration, b->notes[i].duration) != 0) {
+            rational_cmp(a->notes[i].offset, b->notes[i].offset) != 0 ||
+            rational_cmp(a->notes[i].duration, b->notes[i].duration) != 0) {
             return false;
         }
     }
@@ -742,7 +744,7 @@ bool motive_equal(const Motive *a, const Motive *b) {
     for (size_t i = 0; i < a->harmony_count; i++) {
         const MotiveChord *x = &a->harmony[i];
         const MotiveChord *y = &b->harmony[i];
-        if (plan_time_compare(x->onset, y->onset) != 0 || x->degree != y->degree || x->alteration != y->alteration ||
+        if (rational_cmp(x->onset, y->onset) != 0 || x->degree != y->degree || x->alteration != y->alteration ||
             x->inversion != y->inversion || x->seventh != y->seventh) {
             return false;
         }
@@ -757,16 +759,6 @@ bool motive_equal(const Motive *a, const Motive *b) {
 }
 
 /* ------------------------------------------------------------------- JSON */
-
-cJSON *motive_time_json(PlanTime time) {
-    cJSON *object = cJSON_CreateObject();
-    if (object &&
-        !(plan_json_add(object, "num", json_number(time.num)) && plan_json_add(object, "den", json_number((long)time.den)))) {
-        cJSON_Delete(object);
-        return NULL;
-    }
-    return object;
-}
 
 static cJSON *meter_json(const PlanMeter *meter) {
     cJSON *object = cJSON_CreateObject();
@@ -795,8 +787,8 @@ static cJSON *notes_json(const Motive *motive) {
         const PlanNote *note = &motive->notes[i];
         cJSON *object = cJSON_CreateObject();
         bool ok = object && plan_json_add(object, "midi_pitch", json_number(note->midi_pitch)) &&
-                  plan_json_add(object, "offset", motive_time_json(note->offset)) &&
-                  plan_json_add(object, "duration", motive_time_json(note->duration));
+                  plan_json_add(object, "offset", rational_json(note->offset.num, note->offset.den)) &&
+                  plan_json_add(object, "duration", rational_json(note->duration.num, note->duration.den));
         if (!ok) {
             cJSON_Delete(object);
             cJSON_Delete(array);
@@ -844,7 +836,7 @@ cJSON *motive_json_object(const Motive *motive) {
         ok = plan_json_add(document, "form", cJSON_CreateString(motive_form_name(motive->form)));
     }
     if (ok && motive_pickup(motive).num != 0) {
-        ok = plan_json_add(document, "pickup", motive_time_json(motive_pickup(motive)));
+        ok = plan_json_add(document, "pickup", rational_json(motive_pickup(motive).num, motive_pickup(motive).den));
     }
     if (ok && motive->harmony_count > 0) {
         char *harmony = motive_harmony_to_text(motive);
@@ -876,7 +868,7 @@ char *motive_to_json(const Motive *motive) {
     return motive ? motive_json_text(motive_json_object(motive)) : NULL;
 }
 
-static bool read_time(JsonReader *reader, const cJSON *item, const char *path, long min_num, PlanTime *out) {
+static bool read_time(JsonReader *reader, const cJSON *item, const char *path, long min_num, Rational *out) {
     if (!cJSON_IsObject(item)) {
         return json_bad_format(reader, path, "expected an object with num and den");
     }
@@ -886,11 +878,11 @@ static bool read_time(JsonReader *reader, const cJSON *item, const char *path, l
         !json_read_int_member(reader, item, path, "den", 1, 1000000000L, &den)) {
         return false;
     }
-    return plan_time_make(num, (unsigned long)den, out) == PLAN_OK;
+    return rational_make(num, (long long)den, out) == RATIONAL_OK;
 }
 
 static bool read_time_member(JsonReader *reader, const cJSON *object, const char *path, const char *key, long min_num,
-                             PlanTime *out) {
+                             Rational *out) {
     const cJSON *item = plan_json_member(reader, object, path, key, true);
     if (!item) {
         return false;
@@ -961,7 +953,7 @@ static bool read_notes(JsonReader *reader, const cJSON *array, Motive *motive) {
         return json_fail(reader, PLAN_ERR_FORMAT, "notes", "the motive has %d notes; the most is %d", count,
                          MOTIVE_MAX_NOTES);
     }
-    PlanTime end = motive_time(0, 1);
+    Rational end = motive_time(0, 1);
     for (int i = 0; i < count; i++) {
         const cJSON *item = cJSON_GetArrayItem(array, i);
         char path[PLAN_JSON_PATH_MAX];
@@ -977,7 +969,7 @@ static bool read_notes(JsonReader *reader, const cJSON *array, Motive *motive) {
             return false;
         }
         note.midi_pitch = (int)pitch;
-        if (plan_time_compare(note.offset, end) < 0) {
+        if (rational_cmp(note.offset, end) < 0) {
             char at[PLAN_JSON_PATH_MAX];
             json_child_path(at, path, "offset");
             return json_fail(reader, PLAN_ERR_FORMAT, at, "the note starts before the note before it ends");
@@ -1084,12 +1076,12 @@ MotiveResult motive_parse_json_text(const char *text, Motive *motive, MotiveDocu
 
 /* ----------------------------------------------------------------- attach */
 
-static PlanResult attach(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
+static PlanResult attach(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                          const PlanSource *source, NodeId *out_node, LaneSpanId *out_span) {
     if (!plan || !motive) {
         return PLAN_ERR_NULL;
     }
-    PlanTime length;
+    Rational length;
     if (motive_check_notes(motive, &length, NULL) != MOTIVE_OK) {
         return PLAN_ERR_BAD_PAYLOAD;
     }
@@ -1155,12 +1147,12 @@ static PlanResult attach(PiecePlan *plan, NodeId parent, PlanTime start, const M
     return PLAN_OK;
 }
 
-PlanResult motive_attach(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
+PlanResult motive_attach(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                          NodeId *out_node, LaneSpanId *out_span) {
     return attach(plan, parent, start, motive, name, NULL, out_node, out_span);
 }
 
-PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, PlanTime start, const Motive *motive, const char *name,
+PlanResult motive_attach_sourced(PiecePlan *plan, NodeId parent, Rational start, const Motive *motive, const char *name,
                                  const PlanSource *source, NodeId *out_node, LaneSpanId *out_span) {
     return attach(plan, parent, start, motive, name, source, out_node, out_span);
 }

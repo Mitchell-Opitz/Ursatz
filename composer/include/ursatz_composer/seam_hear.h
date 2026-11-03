@@ -67,6 +67,6 @@ typedef enum {
 SeamHearResult seam_hear(const PiecePlan *plan, NodeId seam, SeamHeard *out);
 
 /* The seam section that starts at the time, or PLAN_NODE_NONE. */
-NodeId seam_section_at(const PiecePlan *plan, PlanTime time);
+NodeId seam_section_at(const PiecePlan *plan, Rational time);
 
 #endif

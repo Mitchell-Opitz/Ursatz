@@ -9,18 +9,18 @@
 /* Times in the sketch are unsigned and exact; the Composer's are signed longs over unsigned denominators. */
 #define TIME_LIMIT 1000000000L
 
-static Rational sketch_time(PlanTime time) {
+static Rational sketch_time(Rational time) {
     if (time.den == 0 || time.num < 0) {
         return msk_bad();
     }
     return msk_make((unsigned long long)time.num, time.den);
 }
 
-static bool plan_time(Rational time, PlanTime *out) {
+static bool plan_time(Rational time, Rational *out) {
     if (!msk_ok(time) || time.num > (long long)TIME_LIMIT || time.den > (long long)TIME_LIMIT) {
         return false;
     }
-    return plan_time_make((long)time.num, (unsigned long)time.den, out) == PLAN_OK;
+    return rational_make((long)time.num, (long long)time.den, out) == RATIONAL_OK;
 }
 
 static bool has_pitch_class(const int *pcs, size_t count, int pc) {

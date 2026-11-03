@@ -45,13 +45,13 @@ typedef struct {
     LaneSpanId target;
 } Piece;
 
-static PlanTime fraction(long num, unsigned long den) {
-    PlanTime time;
-    assert(plan_time_make(num, den, &time) == PLAN_OK);
+static Rational fraction(long num, unsigned long den) {
+    Rational time;
+    assert(rational_make(num, den, &time) == RATIONAL_OK);
     return time;
 }
 
-static PlanTime beats(long count) {
+static Rational beats(long count) {
     return fraction(count, 4);
 }
 
@@ -172,7 +172,7 @@ static void add_accompaniment_motive(Piece *piece) {
 /* The melody span to fill, with its motive and, when pickup_32nds is not 0, a pickup of that many 32nds of a whole note. */
 static void add_melody_target(Piece *piece, PlanSpan span, NodeId motive, long pickup_32nds) {
     PlanConstraint ref = {PLAN_CONSTRAINT_MOTIVE_REF, {0}};
-    PlanTime pickup = fraction(pickup_32nds, 32);
+    Rational pickup = fraction(pickup_32nds, 32);
     piece->span = span;
     piece->body = span;
     piece->target = add_notes(piece->plan, piece->owner, PLAN_LANE_MELODY, 0, span, 60, PLAN_STATE_CONSTRAINED);
@@ -185,9 +185,8 @@ static void add_melody_target(Piece *piece, PlanSpan span, NodeId motive, long p
         constraint.kind = PLAN_CONSTRAINT_PICKUP;
         constraint.params.pickup = pickup;
         assert(plan_lane_span_add_constraint(piece->plan, piece->target, &constraint) == PLAN_OK);
-        assert(plan_time_add(span.start, pickup, &piece->body.start) == PLAN_OK);
-        assert(plan_time_make(span.length.num * (long)pickup.den - pickup.num * (long)span.length.den,
-                              span.length.den * pickup.den, &piece->body.length) == PLAN_OK);
+        assert(rational_add(span.start, pickup, &piece->body.start) == RATIONAL_OK);
+        assert(rational_sub(span.length, pickup, &piece->body.length) == RATIONAL_OK);
     }
 }
 

@@ -88,7 +88,7 @@ bool request_member_pickup(const cJSON *object, char *text, size_t size, const c
 }
 
 /* "0", "1", "1/2": beats of the beat unit, as whole notes. */
-bool request_parse_pickup(const char *text, int beat_unit, PlanTime *out) {
+bool request_parse_pickup(const char *text, int beat_unit, Rational *out) {
     char *end = NULL;
     long numerator = strtol(text, &end, 10);
     long denominator = 1;
@@ -102,7 +102,7 @@ bool request_parse_pickup(const char *text, int beat_unit, PlanTime *out) {
             return false;
         }
     }
-    return *end == '\0' && plan_time_make(numerator, (unsigned long)(denominator * beat_unit), out) == PLAN_OK;
+    return *end == '\0' && rational_make(numerator, (long long)(denominator * beat_unit), out) == RATIONAL_OK;
 }
 
 /*
@@ -399,8 +399,8 @@ static int read_chords(ThemeExt *ext, const PlanMeter *meter, const PlanKey *key
     }
     const cJSON *bars_item = cJSON_GetObjectItemCaseSensitive(ext->root, "bars");
     long bars = cJSON_IsNumber(bars_item) ? (long)bars_item->valuedouble : 8;
-    PlanTime bar_length;
-    if (plan_time_make(meter->beats_per_bar, (unsigned long)meter->beat_unit, &bar_length) != PLAN_OK) {
+    Rational bar_length;
+    if (rational_make(meter->beats_per_bar, (long long)meter->beat_unit, &bar_length) != RATIONAL_OK) {
         return cli_fail(CLI_EXIT_USAGE, "the meter has no bar length");
     }
     bool seen[GROW_EXT_CHORDS / 2 + 1] = {false};
@@ -431,34 +431,34 @@ static int read_chords(ThemeExt *ext, const PlanMeter *meter, const PlanKey *key
         if (ext->base.chord_count + count > GROW_EXT_CHORDS) {
             return cli_fail(CLI_EXIT_USAGE, "chords: too many chords");
         }
-        PlanTime bar_start;
-        if (plan_time_make(bar_length.num * bar, bar_length.den, &bar_start) != PLAN_OK) {
+        Rational bar_start;
+        if (rational_make(bar_length.num * bar, bar_length.den, &bar_start) != RATIONAL_OK) {
             return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: the bar is out of range", bar);
         }
         for (size_t c = 0; c < count; c++) {
             const MotiveChord *chord = &parsed[c];
-            PlanTime half_beats;
-            PlanTime end = bar_length;
+            Rational half_beats;
+            Rational end = bar_length;
             /* An onset is a multiple of half a beat of the beat unit, inside the bar. */
-            if (plan_time_make(chord->onset.num * 2 * meter->beat_unit, chord->onset.den, &half_beats) != PLAN_OK ||
+            if (rational_make(chord->onset.num * 2 * meter->beat_unit, chord->onset.den, &half_beats) != RATIONAL_OK ||
                 half_beats.den != 1) {
                 return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: a chord starts on a beat or a half beat", bar);
             }
-            PlanTime cell;
-            PlanTime in_cells;
+            Rational cell;
+            Rational in_cells;
             if (!given_cell_length(meter, &cell) ||
-                plan_time_make(chord->onset.num * (long)cell.den, chord->onset.den * (unsigned long)cell.num, &in_cells) !=
-                    PLAN_OK ||
+                rational_make(chord->onset.num * (long)cell.den, chord->onset.den * (long long)cell.num, &in_cells) !=
+                    RATIONAL_OK ||
                 in_cells.den != 1) {
                 /* The harmony and bass operators write chords on the cells of the meter only (see docs/theme-request.md). */
                 long beats = cell.num * (long)meter->beat_unit / (long)cell.den;
-                return plan_time_compare(cell, bar_length) == 0
+                return rational_cmp(cell, bar_length) == 0
                            ? cli_fail(CLI_EXIT_USAGE, "chords bar %ld: a bar of %d/%d takes one chord", bar,
                                       meter->beats_per_bar, meter->beat_unit)
                            : cli_fail(CLI_EXIT_USAGE, "chords bar %ld: in %d/%d a chord starts only every %ld beats (@%ld)",
                                       bar, meter->beats_per_bar, meter->beat_unit, beats, beats);
             }
-            if (plan_time_compare(chord->onset, bar_length) >= 0) {
+            if (rational_cmp(chord->onset, bar_length) >= 0) {
                 return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: a chord starts inside the bar", bar);
             }
             if (chord->alteration != 0) {
@@ -478,9 +478,8 @@ static int read_chords(ThemeExt *ext, const PlanMeter *meter, const PlanKey *key
             }
             GivenChord *given = &ext->base.chords[at];
             given->numeral = ext->base.chord_numerals[at];
-            if (plan_time_add(bar_start, chord->onset, &given->onset) != PLAN_OK ||
-                plan_time_make(end.num * (long)chord->onset.den - chord->onset.num * (long)end.den,
-                               end.den * chord->onset.den, &given->length) != PLAN_OK) {
+            if (rational_add(bar_start, chord->onset, &given->onset) != RATIONAL_OK ||
+                rational_sub(end, chord->onset, &given->length) != RATIONAL_OK) {
                 return cli_fail(CLI_EXIT_USAGE, "chords bar %ld: the chord has no length", bar);
             }
             ext->base.chord_count++;

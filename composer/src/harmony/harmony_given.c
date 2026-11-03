@@ -17,19 +17,15 @@ static bool given(const PiecePlan *plan, LaneSpanId id) {
     return plan_lane_span_state(plan, id) == PLAN_STATE_GIVEN;
 }
 
-static bool time_plus(PlanTime a, PlanTime b, PlanTime *out) {
-    return plan_time_add(a, b, out) == PLAN_OK;
-}
-
 /* Whether the time is a whole number of bars from the start of the plan. */
-static bool on_bar(PlanTime time, PlanTime bar_length) {
+static bool on_bar(Rational time, Rational bar_length) {
     return time.num >= 0 && (time.num * (long)bar_length.den) % ((long)time.den * bar_length.num) == 0;
 }
 
 /* The pitch class of the Given note of a lane sounding at the time, or -1; with start_only, only one that starts there. */
-static int given_pitch_class(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, PlanTime at, bool start_only) {
+static int given_pitch_class(const PiecePlan *plan, PlanLaneKind lane, PlanSpan span, Rational at, bool start_only) {
     LaneSpanId ids[32];
-    PlanTime tick = {1, 4096};
+    Rational tick = {1, 4096};
     PlanSpan here = {at, tick};
     size_t found = plan_lane_find(plan, lane, 0, here, ids, 32);
     (void)span;
@@ -40,14 +36,14 @@ static int given_pitch_class(const PiecePlan *plan, PlanLaneKind lane, PlanSpan 
         PlanSpan lane_span = plan_lane_span_span(plan, ids[i]);
         const PlanNotes *notes = &plan_lane_span_payload(plan, ids[i])->notes;
         for (size_t n = 0; n < notes->note_count; n++) {
-            PlanTime onset;
-            PlanTime end;
-            if (!time_plus(lane_span.start, notes->notes[n].offset, &onset) ||
-                !time_plus(onset, notes->notes[n].duration, &end)) {
+            Rational onset;
+            Rational end;
+            if (rational_add(lane_span.start, notes->notes[n].offset, &onset) != RATIONAL_OK ||
+                rational_add(onset, notes->notes[n].duration, &end) != RATIONAL_OK) {
                 continue;
             }
-            int from_start = plan_time_compare(onset, at);
-            if (start_only ? from_start == 0 : (from_start <= 0 && plan_time_compare(at, end) < 0)) {
+            int from_start = rational_cmp(onset, at);
+            if (start_only ? from_start == 0 : (from_start <= 0 && rational_cmp(at, end) < 0)) {
                 return ((notes->notes[n].midi_pitch % 12) + 12) % 12;
             }
         }
@@ -56,16 +52,16 @@ static int given_pitch_class(const PiecePlan *plan, PlanLaneKind lane, PlanSpan 
 }
 
 /* The Given chords in a row that end where `from` is, and the ones that start where it is. */
-static size_t read_chain(const PiecePlan *plan, const PhraseRequest *request, PlanTime from, bool before,
+static size_t read_chain(const PiecePlan *plan, const PhraseRequest *request, Rational from, bool before,
                          PhraseChord *out) {
     PlanSpan window = {from, request->bar_length};
     LaneSpanId ids[HARMONY_JOIN_CHORDS * 2 + 4];
     size_t count = 0;
-    PlanTime position = from;
+    Rational position = from;
     if (before) {
-        PlanTime back = {-request->bar_length.num * (long)(HARMONY_JOIN_CHORDS + 2), request->bar_length.den};
-        PlanTime start;
-        if (!time_plus(from, back, &start)) {
+        Rational back = {-request->bar_length.num * (long)(HARMONY_JOIN_CHORDS + 2), request->bar_length.den};
+        Rational start;
+        if (rational_add(from, back, &start) != RATIONAL_OK) {
             return 0;
         }
         if (start.num < 0) {
@@ -73,8 +69,7 @@ static size_t read_chain(const PiecePlan *plan, const PhraseRequest *request, Pl
             start.den = 1;
         }
         window.start = start;
-        if (plan_time_make(from.num * (long)start.den - start.num * (long)from.den, from.den * start.den,
-                           &window.length) != PLAN_OK || window.length.num <= 0) {
+        if (rational_sub(from, start, &window.length) != RATIONAL_OK || window.length.num <= 0) {
             return 0;
         }
     } else {
@@ -88,9 +83,9 @@ static size_t read_chain(const PiecePlan *plan, const PhraseRequest *request, Pl
         /* From the last span, back while each one ends where the one after it starts. */
         for (size_t i = found; i > 0 && count < HARMONY_JOIN_CHORDS; i--) {
             PlanSpan span = plan_lane_span_span(plan, ids[i - 1]);
-            PlanTime end;
+            Rational end;
             PhraseChord chord;
-            if (!given(plan, ids[i - 1]) || plan_span_end(span, &end) != PLAN_OK || plan_time_compare(end, position) != 0 ||
+            if (!given(plan, ids[i - 1]) || plan_span_end(span, &end) != PLAN_OK || rational_cmp(end, position) != 0 ||
                 !harmony_read_chord(plan, ids[i - 1], request->mode, request->cell_length, &chord)) {
                 break;
             }
@@ -105,10 +100,10 @@ static size_t read_chain(const PiecePlan *plan, const PhraseRequest *request, Pl
         }
         while (count > 0 && !on_bar(position, request->bar_length)) {
             /* position is where the first chord of the chain starts; drop it and move on to the next. */
-            PlanTime next;
+            Rational next;
             size_t cells = out[0].cells;
-            PlanTime cells_length = {request->cell_length.num * (long)cells, request->cell_length.den};
-            if (!time_plus(position, cells_length, &next)) {
+            Rational cells_length = {request->cell_length.num * (long)cells, request->cell_length.den};
+            if (rational_add(position, cells_length, &next) != RATIONAL_OK) {
                 return 0;
             }
             memmove(out, out + 1, (count - 1) * sizeof(PhraseChord));
@@ -119,12 +114,12 @@ static size_t read_chain(const PiecePlan *plan, const PhraseRequest *request, Pl
     }
     for (size_t i = 0; i < found && count < HARMONY_JOIN_CHORDS; i++) {
         PlanSpan span = plan_lane_span_span(plan, ids[i]);
-        PlanTime end;
+        Rational end;
         PhraseChord chord;
-        if (plan_time_compare(span.start, position) < 0) {
+        if (rational_cmp(span.start, position) < 0) {
             continue;
         }
-        if (!given(plan, ids[i]) || plan_time_compare(span.start, position) != 0 || plan_span_end(span, &end) != PLAN_OK ||
+        if (!given(plan, ids[i]) || rational_cmp(span.start, position) != 0 || plan_span_end(span, &end) != PLAN_OK ||
             !harmony_read_chord(plan, ids[i], request->mode, request->cell_length, &chord)) {
             break;
         }
@@ -136,16 +131,16 @@ static size_t read_chain(const PiecePlan *plan, const PhraseRequest *request, Pl
 
 /* Whether a phrase or a section of the plan starts (or ends) where the target does. */
 static bool at_boundary(const PiecePlan *plan, const PhraseRequest *request, bool start) {
-    PlanTime target_end;
+    Rational target_end;
     if (plan_span_end(request->span, &target_end) != PLAN_OK) {
         return false;
     }
     for (NodeId node = request->owner; node != PLAN_NODE_NONE; node = plan_node_parent(plan, node)) {
         PlanNodeKind kind = plan_node_kind(plan, node);
         PlanSpan span = plan_node_span(plan, node);
-        PlanTime end;
+        Rational end;
         if ((kind == PLAN_NODE_PHRASE || kind == PLAN_NODE_SECTION) && plan_span_end(span, &end) == PLAN_OK &&
-            plan_time_compare(start ? span.start : end, start ? request->span.start : target_end) == 0) {
+            rational_cmp(start ? span.start : end, start ? request->span.start : target_end) == 0) {
             return true;
         }
     }
@@ -176,7 +171,7 @@ void harmony_given_read(const PiecePlan *plan, PhraseRequest *request) {
             request->has_given = request->has_given || request->bass_pc[cell] >= 0 || request->melody_pc[cell] >= 0;
         }
     }
-    PlanTime end;
+    Rational end;
     if (plan_span_end(request->span, &end) != PLAN_OK) {
         return;
     }
@@ -225,8 +220,8 @@ bool harmony_given_fits(const PhraseRequest *request, const PhraseChord *chords,
 /* The metre of Given chords before the target and the target, in a row from the first of them. False when it is not measurable. */
 static bool chain_metre(const PhraseRequest *request, size_t cells, PhraseMetre *out) {
     *out = request->metre;
-    out->lead = (PlanTime){0, 1};
-    out->tail = (PlanTime){0, 1};
+    out->lead = (Rational){0, 1};
+    out->tail = (Rational){0, 1};
     out->cells = cells;
     if (request->before_count > 0) {
         /* The chords before are trimmed to start on a barline. */
@@ -234,13 +229,13 @@ static bool chain_metre(const PhraseRequest *request, size_t cells, PhraseMetre 
         for (size_t i = 0; i < request->before_count; i++) {
             before_cells += request->before[i].cells;
         }
-        PlanTime before_length;
-        if (plan_time_make(-request->cell_length.num * (long)before_cells, request->cell_length.den, &before_length) !=
-                PLAN_OK ||
-            plan_time_add(request->span.start, before_length, &out->start) != PLAN_OK) {
+        Rational before_length;
+        if (rational_make(-request->cell_length.num * (long)before_cells, request->cell_length.den, &before_length) !=
+                RATIONAL_OK ||
+            rational_add(request->span.start, before_length, &out->start) != RATIONAL_OK) {
             return false;
         }
-        out->offset = (PlanTime){0, 1};
+        out->offset = (Rational){0, 1};
     }
     return true;
 }
@@ -282,8 +277,8 @@ bool harmony_given_join(const PhraseRequest *request, const PhraseChord *chords,
     for (size_t i = 0; i < total; i++) {
         joined_cells += sequence[i].cells;
     }
-    joined.lead = (PlanTime){0, 1};
-    joined.tail = (PlanTime){0, 1};
+    joined.lead = (Rational){0, 1};
+    joined.tail = (Rational){0, 1};
     joined.cells = joined_cells;
     if (request->before_count > 0) {
         /* The chords before are trimmed to start on a barline. */
@@ -291,16 +286,16 @@ bool harmony_given_join(const PhraseRequest *request, const PhraseChord *chords,
         for (size_t i = 0; i < request->before_count; i++) {
             before_cells += sequence[i].cells;
         }
-        PlanTime before_length;
-        PlanTime start;
-        if (plan_time_make(-request->cell_length.num * (long)before_cells, request->cell_length.den, &before_length) !=
-                PLAN_OK ||
-            plan_time_add(request->span.start, before_length, &start) != PLAN_OK) {
+        Rational before_length;
+        Rational start;
+        if (rational_make(-request->cell_length.num * (long)before_cells, request->cell_length.den, &before_length) !=
+                RATIONAL_OK ||
+            rational_add(request->span.start, before_length, &start) != RATIONAL_OK) {
             free(sequence);
             return false;
         }
         joined.start = start;
-        joined.offset = (PlanTime){0, 1};
+        joined.offset = (Rational){0, 1};
     }
     HeardPhrase phrase = {sequence, total, request->mode, PLAN_CADENCE_HC, request->cells_per_bar, request->cell_length,
                           true, NULL, true, false, NULL, NULL, false, &joined};

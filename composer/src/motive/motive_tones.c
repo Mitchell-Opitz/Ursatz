@@ -286,12 +286,12 @@ bool motive_tones_constraint(const Motive *motive, PlanConstraint *out) {
     }
     for (size_t i = 0; i < harmony.count; i++) {
         PlanToneChord *chord = &tones->chords[tones->chord_count++];
-        PlanTime end = i + 1 < harmony.count ? harmony.chords[i + 1].onset : motive->length;
-        PlanTime onset = harmony.chords[i].onset;
+        Rational end = i + 1 < harmony.count ? harmony.chords[i + 1].onset : motive->length;
+        Rational onset = harmony.chords[i].onset;
         if (!motive_chord_numeral(&harmony.chords[i], chord->numeral, sizeof(chord->numeral)) ||
-            plan_time_make(onset.num, onset.den, &chord->onset) != PLAN_OK ||
-            plan_time_make(end.num * (long)onset.den - onset.num * (long)end.den, end.den * onset.den, &chord->length) !=
-                PLAN_OK) {
+            rational_make(onset.num, onset.den, &chord->onset) != RATIONAL_OK ||
+            rational_sub(end, onset, &chord->length) !=
+                RATIONAL_OK) {
             return false;
         }
     }

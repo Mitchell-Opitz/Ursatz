@@ -51,8 +51,8 @@ bool piece_fill_from_name(const char *name, PieceFillKind *out) {
 }
 
 /* Whether the pickup is a multiple of 1/32 of a whole note, not negative and shorter than a bar. */
-static bool pickup_valid(PlanTime pickup, PlanTime bar) {
-    if (pickup.den == 0 || pickup.num < 0 || plan_time_compare(pickup, bar) >= 0) {
+static bool pickup_valid(Rational pickup, Rational bar) {
+    if (pickup.den == 0 || pickup.num < 0 || rational_cmp(pickup, bar) >= 0) {
         return false;
     }
     return (pickup.num * (long)PIECE_PICKUP_GRID) % (long)pickup.den == 0;
@@ -71,7 +71,7 @@ PieceResult piece_structure_check(const PieceStructure *structure) {
         (structure->has_accompaniment && structure->has_voicing)) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    PlanTime bar = grow_bar_length(&structure->meter);
+    Rational bar = grow_bar_length(&structure->meter);
     size_t beats = 0;
     bool body = false;
     int last_part = PIECE_PART_INTRO;
@@ -152,7 +152,7 @@ bool piece_structure_default_ending(PieceStructure *structure, size_t capacity) 
     strcpy(section->letter, "E");
     section->part = PIECE_PART_ENDING;
     section->beats = DEFAULT_ENDING_BARS * (size_t)structure->meter.beats_per_bar;
-    section->pickup = (PlanTime){0, 1};
+    section->pickup = (Rational){0, 1};
     section->has_cadence = true;
     section->cadence = PLAN_CADENCE_PAC;
     section->fill = PIECE_FILL_EMPTY;
@@ -167,9 +167,9 @@ bool piece_structure_default_ending(PieceStructure *structure, size_t capacity) 
 #define MATERIAL_BARS_PER_SECTION 5
 
 /* A length of `count` beats of the meter. */
-static PlanTime beats_of(const PlanMeter *meter, size_t count) {
-    PlanTime out = {0, 1};
-    if (plan_time_make((long)count, (unsigned long)meter->beat_unit, &out) != PLAN_OK) {
+static Rational beats_of(const PlanMeter *meter, size_t count) {
+    Rational out = {0, 1};
+    if (rational_make((long)count, (long long)meter->beat_unit, &out) != RATIONAL_OK) {
         out.num = 0;
         out.den = 1;
     }
@@ -444,7 +444,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
         return result;
     }
     size_t cells;
-    PlanTime bar = grow_bar_length(&structure->meter);
+    Rational bar = grow_bar_length(&structure->meter);
     Motive theme_storage;
     const Motive *motive = basic_motive(structure, &theme_storage);
     if (loop_plan) {
@@ -463,7 +463,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
         !grow_cells_per_bar(&structure->meter, &cells)) {
         return PIECE_ERR_BAD_REQUEST;
     }
-    if (motive && plan_time_compare(motive->length, bar) > 0) {
+    if (motive && rational_cmp(motive->length, bar) > 0) {
         return PIECE_ERR_MOTIVE_TOO_LONG;
     }
     /* The sections laid out are the intro, the body and the turnaround; the ending version lays out the ending. */
@@ -491,7 +491,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
        motives are bars of the meter. The ending version has no seam. */
     beats += loop_plan ? 0 : per_bar;
     PlanSpan material = {{0, 1}, {0, 1}};
-    if (plan_time_make(bar.num * (long)((beats + per_bar - 1) / per_bar), bar.den, &material.start) != PLAN_OK) {
+    if (rational_make(bar.num * (long)((beats + per_bar - 1) / per_bar), bar.den, &material.start) != RATIONAL_OK) {
         return PIECE_ERR_BAD_REQUEST;
     }
     PlanSpan form = {{0, 1}, {0, 1}};
@@ -499,13 +499,13 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
     NodeId source = PLAN_NODE_NONE;
     PlanLanePayload payload;
     LaneSpanId lane;
-    PlanTime bars_length = {0, 1};
-    if (plan_time_make(bar.num * (long)material_bars, bar.den, &bars_length) != PLAN_OK) {
+    Rational bars_length = {0, 1};
+    if (rational_make(bar.num * (long)material_bars, bar.den, &bars_length) != RATIONAL_OK) {
         plan_destroy(plan);
         return PIECE_ERR_BAD_REQUEST;
     }
     material.length = bars_length;
-    result = piece_result_of_plan(plan_time_add(material.start, material.length, &form.length));
+    result = piece_result_of_plan(plan_result_of_rational(rational_add(material.start, material.length, &form.length)));
     if (result == PIECE_OK) {
         result = piece_result_of_plan(plan_add_node(plan, PLAN_NODE_NONE, PLAN_NODE_FORM, form, "structure", &form_id));
     }
@@ -523,7 +523,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
         result = result == PIECE_OK ? piece_result_of_plan(plan_lane_span_set_state(plan, lane, PLAN_STATE_GIVEN)) : result;
     }
     /* The sections in time order, each from the end of the one before. */
-    PlanTime start = {0, 1};
+    Rational start = {0, 1};
     size_t start_beats = 0;
     for (size_t i = 0; result == PIECE_OK && i < laid; i++) {
         if (loop_plan && copy.sections[i].part == PIECE_PART_TURNAROUND) {
@@ -557,7 +557,7 @@ static PieceResult build(const PieceStructure *structure, const PiecePlan *loop_
             result = add_flag(plan, id, PLAN_CONSTRAINT_HOLD);
         }
         if (result == PIECE_OK) {
-            result = piece_result_of_plan(plan_time_add(start, span.length, &start));
+            result = piece_result_of_plan(plan_result_of_rational(rational_add(start, span.length, &start)));
         }
         start_beats += copy.sections[i].beats;
     }

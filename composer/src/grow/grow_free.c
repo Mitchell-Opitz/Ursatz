@@ -6,6 +6,7 @@
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/plan_state.h>
 
+#include "util/plan_util.h"
 #include "grow/grow_internal.h"
 #include "harmony/harmony_internal.h"
 #include <ursatz_composer/constraint.h>
@@ -61,11 +62,11 @@ typedef struct {
  * after it and the part bar at the end the idea before. A section of more bars than MAX_IDEAS has several bars to an
  * idea. The barlines are the meter lane span's.
  */
-static bool lay_ideas(const GrowThemeRequest *theme, PlanTime meter_start, FreeRequest *out) {
+static bool lay_ideas(const GrowThemeRequest *theme, Rational meter_start, FreeRequest *out) {
     PlanSpan span = theme->span;
-    PlanTime end;
-    PlanTime line = meter_start;
-    PlanTime cuts[MAX_BARLINES];
+    Rational end;
+    Rational line = meter_start;
+    Rational cuts[MAX_BARLINES];
     size_t cut_count = 0;
     bool start_on = false;
     bool end_on = false;
@@ -73,8 +74,8 @@ static bool lay_ideas(const GrowThemeRequest *theme, PlanTime meter_start, FreeR
         return false;
     }
     for (size_t k = 0; k < MAX_BARLINES; k++) {
-        int to_end = plan_time_compare(line, end);
-        int to_start = plan_time_compare(line, span.start);
+        int to_end = rational_cmp(line, end);
+        int to_start = rational_cmp(line, span.start);
         if (to_end > 0) {
             break;
         }
@@ -83,7 +84,7 @@ static bool lay_ideas(const GrowThemeRequest *theme, PlanTime meter_start, FreeR
         if (to_start > 0 && to_end < 0) {
             cuts[cut_count++] = line;
         }
-        if (plan_time_add(line, theme->bar, &line) != PLAN_OK) {
+        if (rational_add(line, theme->bar, &line) != RATIONAL_OK) {
             return false;
         }
     }
@@ -100,13 +101,13 @@ static bool lay_ideas(const GrowThemeRequest *theme, PlanTime meter_start, FreeR
     size_t usable = last - first;
     size_t ideas = usable + 1;
     size_t group = (ideas + MAX_IDEAS - 1) / MAX_IDEAS;
-    PlanTime from = span.start;
+    Rational from = span.start;
     out->idea_count = 0;
     for (size_t at = group;; at += group) {
-        PlanTime stop = at >= ideas ? end : cuts[first + at - 1];
+        Rational stop = at >= ideas ? end : cuts[first + at - 1];
         PlanSpan idea = {from, {0, 1}};
-        if (plan_time_make(stop.num * (long)from.den - from.num * (long)stop.den, stop.den * from.den, &idea.length) !=
-                PLAN_OK ||
+        if (rational_sub(stop, from, &idea.length) !=
+                RATIONAL_OK ||
             idea.length.num <= 0 || out->idea_count >= MAX_IDEAS) {
             return false;
         }
@@ -155,7 +156,7 @@ static bool read_free(const PiecePlan *plan, FillTarget target, FreeRequest *out
         !plan_span_contains(plan_lane_span_span(plan, lane[0]), theme->span)) {
         return false;
     }
-    PlanTime meter_start = plan_lane_span_span(plan, lane[0]).start;
+    Rational meter_start = plan_lane_span_span(plan, lane[0]).start;
     theme->meter = plan_lane_span_payload(plan, lane[0])->meter;
     if (!grow_read_keys(plan, theme) || theme->has_start_change || theme->has_end_change) {
         return false;
@@ -215,7 +216,7 @@ static bool in_range(const Motive *motive) {
  * The development of m0 a middle idea is: a leading fragment, a transposition in the key's steps (a sequence), an
  * inversion or an interval changed, drawn from rng. It has to fit the idea and the range. False when no draw does.
  */
-static bool draw_continuation(const Motive *source, PlanTime room, FillRng *rng, MotiveDevSpec *dev, Motive *result) {
+static bool draw_continuation(const Motive *source, Rational room, FillRng *rng, MotiveDevSpec *dev, Motive *result) {
     for (size_t draw = 0; draw < IDEA_DRAWS; draw++) {
         memset(dev, 0, sizeof(*dev));
         switch (fill_rng_below(rng, 4)) {
@@ -250,7 +251,7 @@ static bool draw_continuation(const Motive *source, PlanTime room, FillRng *rng,
         }
         }
         if (motive_develop(source, dev, result) == MOTIVE_DEV_OK && result->note_count >= 1 &&
-            plan_time_compare(result->length, room) <= 0 && in_range(result)) {
+            rational_cmp(result->length, room) <= 0 && in_range(result)) {
             return true;
         }
     }
@@ -258,7 +259,7 @@ static bool draw_continuation(const Motive *source, PlanTime room, FillRng *rng,
 }
 
 /* The development of m0 the last idea is: m0 liquidated, as a theme's cadential idea is. */
-static bool draw_cadential(const Motive *source, PlanTime room, FillRng *rng, MotiveDevSpec *dev, Motive *result) {
+static bool draw_cadential(const Motive *source, Rational room, FillRng *rng, MotiveDevSpec *dev, Motive *result) {
     size_t count = source->note_count;
     size_t drop_most = count / 2 > 1 ? count / 2 : 1;
     memset(dev, 0, sizeof(*dev));
@@ -269,7 +270,7 @@ static bool draw_cadential(const Motive *source, PlanTime room, FillRng *rng, Mo
     }
     dev->min_length = 1;
     return dev->drop >= 1 && motive_develop(source, dev, result) == MOTIVE_DEV_OK &&
-           plan_time_compare(result->length, room) <= 0;
+           rational_cmp(result->length, room) <= 0;
 }
 
 static bool draw_free(const PiecePlan *plan, const FreeRequest *request, FillRng *rng, GrowFreeSpec *spec) {
@@ -282,7 +283,7 @@ static bool draw_free(const PiecePlan *plan, const FreeRequest *request, FillRng
     spec->cap = request->cap;
     memcpy(spec->span, request->ideas, request->idea_count * sizeof(PlanSpan));
     if (!grow_read_motive(plan, theme->source, &theme->meter, &theme->key, &spec->source) || spec->source.note_count < 2 ||
-        plan_time_compare(spec->source.length, request->ideas[0].length) > 0) {
+        rational_cmp(spec->source.length, request->ideas[0].length) > 0) {
         return false;
     }
     spec->developed[0] = spec->source;
@@ -367,7 +368,7 @@ const char *grow_free_judge(const GrowFreeSpec *spec, unsigned *held, unsigned *
     if (!spec || spec->count == 0) {
         return "no ideas";
     }
-    if (spec->has_cadential && plan_time_compare(spec->developed[spec->count - 1].length, spec->source.length) >= 0) {
+    if (spec->has_cadential && rational_cmp(spec->developed[spec->count - 1].length, spec->source.length) >= 0) {
         return "cadential idea not shorter than the basic idea";
     }
     for (size_t i = 1; i + 1 < spec->count; i++) {
@@ -379,7 +380,7 @@ const char *grow_free_judge(const GrowFreeSpec *spec, unsigned *held, unsigned *
     }
     if (spec->has_cadential) {
         (*total)++;
-        *held += plan_time_compare(spec->developed[spec->count - 1].length, spec->source.length) < 0 ? 1u : 0u;
+        *held += rational_cmp(spec->developed[spec->count - 1].length, spec->source.length) < 0 ? 1u : 0u;
     }
     return NULL;
 }
@@ -453,8 +454,8 @@ PlanResult grow_free_apply(PiecePlan *plan, FillTarget target, const GrowFreeSpe
             PlanConstraint constraint;
             grow_dev_ref(&spec->dev[i], build.source, &ref);
             snprintf(name, sizeof(name), "m%zu", i);
-            result = plan_time_add(build.material_span.start, grow_scaled(request.theme.bar, build.slot_base + i - 1),
-                                   &bar.start);
+            result = plan_result_of_rational(rational_add(build.material_span.start, grow_scaled(request.theme.bar, build.slot_base + i - 1),
+                                   &bar.start));
             if (result == PLAN_OK) {
                 result = plan_add_node(plan, build.material, PLAN_NODE_MOTIVE, bar, name, &motive);
             }
