@@ -8,7 +8,9 @@
 #include <cJSON.h>
 #include <core/rational.h>
 
+#include <ursatz_analyzer/chord_sequence.h>
 #include <ursatz_analyzer/similar_material.h>
+#include <ursatz_analyzer/staleness.h>
 #include <ursatz_analyzer/style_labels.h>
 
 #include <ursatz_composer/fill_rng.h>
@@ -47,17 +49,20 @@ void corpus_seed_describe(const CorpusSeed *seed, char *out, size_t size) {
 
 /* --- reading an analysis document ------------------------------------------------- */
 
-static cJSON *read_document(const char *corpus_output_dir, const char *document) {
+/* The text of a document and its parse; the caller frees both. NULL when it cannot be read or parsed. */
+static cJSON *read_document(const char *corpus_output_dir, const char *document, char **text) {
     char path[2048];
     if (snprintf(path, sizeof(path), "%s/%s", corpus_output_dir, document) >= (int)sizeof(path)) {
         return NULL;
     }
-    char *text;
-    if (!util_read_file(path, &text, NULL)) {
+    if (!util_read_file(path, text, NULL)) {
         return NULL;
     }
-    cJSON *parsed = cJSON_Parse(text);
-    free(text);
+    cJSON *parsed = cJSON_Parse(*text);
+    if (!parsed) {
+        free(*text);
+        *text = NULL;
+    }
     return parsed;
 }
 
@@ -81,22 +86,6 @@ static bool location_of(const cJSON *entry, const char *edge, int *measure, doub
     return true;
 }
 
-static bool root_pitch_class(const char *name, int *out) {
-    static const int letters[7] = {9, 11, 0, 2, 4, 5, 7}; /* A to G */
-    if (!name || name[0] < 'A' || name[0] > 'G') {
-        return false;
-    }
-    int pc = letters[name[0] - 'A'];
-    for (const char *c = name + 1; *c; c++) {
-        if (*c != '#' && *c != 'b') {
-            return false;
-        }
-        pc += *c == '#' ? 1 : -1;
-    }
-    *out = ((pc % 12) + 12) % 12;
-    return true;
-}
-
 typedef struct {
     char *numeral;
     int measure;
@@ -112,67 +101,49 @@ static void chords_free(DocumentChord *chords, size_t count) {
 }
 
 /*
- * The document's chords in time order with a root-position numeral, joined as the Analyzer's search joins them (the
- * same numeral and root one after the other in one key region are one chord), so an index here is an index there.
- * *out is NULL when there are none. false on allocation failure.
+ * The document's chords in time order with a root-position numeral: the Analyzer's joined chord sequence (the one
+ * reader of its document, R-220), so an index here is an index there. The sequence holds the numeral and the entry the
+ * chord starts at; the place and key of that entry come from the document's "chords". *out is NULL when there are
+ * none. *stale counts a document that is not current, which is read all the same. false on allocation failure.
  */
-static bool read_chords(const cJSON *document, DocumentChord **out, size_t *count) {
-    const cJSON *entries = member(document, "chords");
-    size_t capacity = cJSON_IsArray(entries) ? (size_t)cJSON_GetArraySize(entries) : 0;
+static bool read_chords(const char *text, const cJSON *document, DocumentChord **out, size_t *count, size_t *stale) {
+    AnalyzerChord *sequence = NULL;
+    size_t sequence_count = 0;
     *out = NULL;
     *count = 0;
-    if (capacity == 0) {
+    if (stale && analyzer_document_status(text) != ANALYZER_DOCUMENT_CURRENT) {
+        (*stale)++;
+    }
+    AnalyzerStatus status = analyzer_chord_sequence_from_document(text, &sequence, &sequence_count);
+    if (status != ANALYZER_OK) {
+        return status != ANALYZER_ERR_ALLOC;
+    }
+    if (sequence_count == 0) {
         return true;
     }
-    DocumentChord *chords = calloc(capacity, sizeof(*chords));
+    const cJSON *entries = member(document, "chords");
+    DocumentChord *chords = calloc(sequence_count, sizeof(*chords));
     if (!chords) {
+        analyzer_chord_sequence_free(sequence, sequence_count);
         return false;
     }
     size_t n = 0;
-    int previous_root = -1;
-    double previous_region = -1;
-    bool joined = false;
-    const cJSON *entry;
-    cJSON_ArrayForEach(entry, entries) {
-        const cJSON *roman = member(entry, "roman_numeral");
-        const cJSON *base = member(roman, "base_numeral");
-        const cJSON *root_name = member(entry, "root");
-        const cJSON *region = member(roman, "key_region");
-        int root;
-        if (!cJSON_IsString(base) || !cJSON_IsString(root_name) || !root_pitch_class(root_name->valuestring, &root) ||
-            !cJSON_IsNumber(region)) {
-            joined = false;
-            continue;
-        }
-        char *numeral = style_label_numeral(base->valuestring);
-        if (!numeral) {
-            joined = false;
-            continue;
-        }
-        int measure;
-        double beat;
-        if (!location_of(entry, "start", &measure, &beat)) {
-            free(numeral);
-            joined = false;
-            continue;
-        }
-        if (region->valuedouble != previous_region) {
-            joined = false;
-        }
-        previous_region = region->valuedouble;
-        if (joined && strcmp(chords[n - 1].numeral, numeral) == 0 && previous_root == root) {
-            free(numeral);
-            continue;
-        }
+    for (size_t i = 0; i < sequence_count; i++) {
+        const cJSON *entry = cJSON_GetArrayItem(entries, (int)sequence[i].first_entry);
         const cJSON *key = member(entry, "key_label");
-        chords[n].numeral = numeral;
-        chords[n].measure = measure;
-        chords[n].beat = beat;
+        if (!location_of(entry, "start", &chords[n].measure, &chords[n].beat)) {
+            continue;
+        }
+        chords[n].numeral = strdup(sequence[i].numeral);
+        if (!chords[n].numeral) {
+            chords_free(chords, n);
+            analyzer_chord_sequence_free(sequence, sequence_count);
+            return false;
+        }
         snprintf(chords[n].key_label, sizeof(chords[n].key_label), "%s", cJSON_IsString(key) ? key->valuestring : "");
         n++;
-        previous_root = root;
-        joined = true;
     }
+    analyzer_chord_sequence_free(sequence, sequence_count);
     if (n == 0) {
         free(chords);
         return true;
@@ -349,28 +320,32 @@ CorpusSeedResult corpus_seed_motive(const char *corpus_output_dir, const char *p
     size_t pick = (size_t)fill_rng_below(&rng, eligible);
 
     status = CORPUS_SEED_ERR_NO_MATCH;
+    size_t stale = 0;
     for (size_t step = 0; step < eligible && status != CORPUS_SEED_OK; step++) {
         const SimilarMatch *match = &results.matches[(pick + step) % eligible];
         if (match->note_count == 0) {
             continue;
         }
         int shift = 0;
-        cJSON *document = read_document(corpus_output_dir, match->document);
+        char *text = NULL;
+        cJSON *document = read_document(corpus_output_dir, match->document, &text);
         if (document) {
             DocumentChord *chords = NULL;
             size_t chord_count = 0;
             AnalysisKey from;
-            if (read_chords(document, &chords, &chord_count) &&
+            if (read_chords(text, document, &chords, &chord_count, &stale) &&
                 source_key(chords, chord_count, match->start_measure, match->start_beat, &from)) {
                 shift = transposition(match->notes[0].pitch, &from, key);
             }
             chords_free(chords, chord_count);
             cJSON_Delete(document);
+            free(text);
         }
         CorpusSeed seeded;
         memset(&seeded, 0, sizeof(seeded));
         if (motive_from_passage(match, meter, key, shift, &seeded.motive)) {
             fill_match(match, &seeded);
+            seeded.stale_documents = stale;
             *out = seeded;
             status = CORPUS_SEED_OK;
         }
@@ -393,15 +368,16 @@ static bool numeral_placeable(KeyStructureMode mode, const char *numeral) {
  * does. false when the document cannot be read, has no chord there, or a numeral cannot be placed under the mode.
  */
 static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *match, size_t wanted, KeyStructureMode mode,
-                           CorpusSeed *seeded) {
+                           CorpusSeed *seeded, size_t *stale) {
     bool ok = false;
-    cJSON *document = read_document(corpus_output_dir, match->document);
+    char *text = NULL;
+    cJSON *document = read_document(corpus_output_dir, match->document, &text);
     if (!document) {
         return false;
     }
     DocumentChord *chords = NULL;
     size_t chord_count = 0;
-    if (read_chords(document, &chords, &chord_count)) {
+    if (read_chords(text, document, &chords, &chord_count, stale)) {
         for (size_t first = 0; first < chord_count && !ok; first++) {
             if (!same_place(chords[first].measure, chords[first].beat, match->start_measure, match->start_beat)) {
                 continue;
@@ -419,6 +395,7 @@ static bool match_numerals(const char *corpus_output_dir, const SimilarMatch *ma
     }
     chords_free(chords, chord_count);
     cJSON_Delete(document);
+    free(text);
     return ok;
 }
 
@@ -452,11 +429,13 @@ CorpusSeedResult corpus_seed_progression(const char *corpus_output_dir, const ch
                               : found != SIMILAR_OK      ? CORPUS_SEED_ERR_CORPUS
                                                          : CORPUS_SEED_ERR_NO_MATCH;
     /* The first match, best first, whose chords the plan can place in the key's mode. */
+    size_t stale = 0;
     for (size_t i = 0; i < results.count && status == CORPUS_SEED_ERR_NO_MATCH; i++) {
         CorpusSeed seeded;
         memset(&seeded, 0, sizeof(seeded));
-        if (match_numerals(corpus_output_dir, &results.matches[i], wanted, mode, &seeded)) {
+        if (match_numerals(corpus_output_dir, &results.matches[i], wanted, mode, &seeded, &stale)) {
             fill_match(&results.matches[i], &seeded);
+            seeded.stale_documents = stale;
             seeded.numeral_count = wanted;
             *out = seeded;
             status = CORPUS_SEED_OK;

@@ -458,14 +458,23 @@ static int seed_failure(CorpusSeedResult result, const char *corpus_dir, const c
     }
 }
 
+static void seed_warn_stale(CorpusSeedResult result, const CorpusSeed *seed, const char *corpus_dir) {
+    if (result == CORPUS_SEED_OK && seed->stale_documents > 0) {
+        fprintf(stderr, "Warning: %zu stale documents in '%s' (analyzed by another version; run the corpus again)\n",
+                seed->stale_documents, corpus_dir);
+    }
+}
+
 int cli_seed_motive(const char *corpus_dir, const char *like_path, const PlanMeter *meter, const AnalysisKey *key,
                     unsigned long seed, CorpusSeed *out) {
     CorpusSeedResult result = corpus_seed_motive(corpus_dir, like_path, meter, key, seed, out);
+    seed_warn_stale(result, out, corpus_dir);
     return result == CORPUS_SEED_OK ? 0 : seed_failure(result, corpus_dir, like_path);
 }
 
 int cli_seed_progression(const char *corpus_dir, const char *numerals_text, KeyStructureMode mode, CorpusSeed *out) {
     CorpusSeedResult result = corpus_seed_progression(corpus_dir, numerals_text, mode, out);
+    seed_warn_stale(result, out, corpus_dir);
     return result == CORPUS_SEED_OK ? 0 : seed_failure(result, corpus_dir, numerals_text);
 }
 

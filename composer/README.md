@@ -246,7 +246,7 @@ ursatz-composer plan --form rounded-binary --key "D major" --meter 4/4 --from-co
 
 `--from-corpus <dir> --like <file>` takes one bar of a similar passage as the motive (the seed picks among the best); on `plan`,
 `--like-progression "<numerals>"` places the chords of the best matching passage like a `--given-progression`. The source
-piece, measures and score are printed and recorded in the plan. See [docs/style.md](docs/style.md).
+piece, measures and score are printed and recorded in the plan. The chords come from the Analyzer's joined chord sequence, and `Warning: N stale documents` goes to stderr when the corpus was analyzed by another version. See [docs/style.md](docs/style.md).
 
 ```sh
 ursatz-composer lock piece.json --section A --out piece-locked.json
