@@ -1027,19 +1027,38 @@ static bool read_motive_tones(JsonReader *reader, const cJSON *item, const char 
     return true;
 }
 
-/* A key's members: "tonic" (a spelled name) in version 2; "tonic_pitch_class" (spelled with the fewest accidentals) in 1. */
+/*
+ * Version 1 files (R-260): a key is "tonic_pitch_class" and "mode", with no spelling. The tonic is spelled as the library
+ * spells the key on that pitch class (standard_tonality_key_tonic_of_pitch_class: the fewest accidentals in its
+ * signature, sharps on a tie), which is how every plan of version 1 was written.
+ */
+static bool read_key_v1(JsonReader *reader, const cJSON *object, const char *path, KeyStructureMode mode,
+                        AnalysisKey *out) {
+    long pitch_class;
+    PitchLetter letter;
+    int accidental;
+    if (!json_read_int_member(reader, object, path, "tonic_pitch_class", 0, 11, &pitch_class)) {
+        return false;
+    }
+    if (!standard_tonality_key_tonic_of_pitch_class((int)pitch_class, mode == KEY_STRUCTURE_MODE_MINOR, &letter,
+                                                    &accidental)) {
+        char at[PLAN_JSON_PATH_MAX];
+        json_child_path(at, path, "tonic_pitch_class");
+        return json_bad_format(reader, at, "no key on this pitch class");
+    }
+    AnalysisKey key = {NULL, letter, accidental, mode};
+    *out = key;
+    return true;
+}
+
+/* A key's members: "tonic" (a spelled name) in version 2; see read_key_v1 for version 1. */
 static bool read_key_members(JsonReader *reader, const cJSON *object, const char *path, AnalysisKey *out) {
     int mode;
     if (!read_enum_member(reader, object, path, "mode", MODE_NAMES, COUNT_OF(MODE_NAMES), &mode)) {
         return false;
     }
     if (reader->version == 1) {
-        long pitch_class;
-        if (!json_read_int_member(reader, object, path, "tonic_pitch_class", 0, 11, &pitch_class)) {
-            return false;
-        }
-        *out = plan_key_of_pitch_class((int)pitch_class, (KeyStructureMode)mode);
-        return true;
+        return read_key_v1(reader, object, path, (KeyStructureMode)mode, out);
     }
     const cJSON *tonic = plan_json_member(reader, object, path, "tonic", true);
     if (!tonic) {
@@ -1057,16 +1076,13 @@ static bool read_key_members(JsonReader *reader, const cJSON *object, const char
     return true;
 }
 
-/* A chord's "function": a harmonic_function_name, absent for none (version 1 also wrote "unknown"). */
+/* A chord's "function": a harmonic_function_name, absent for none. Version 1 always wrote it, "unknown" for none. */
 static bool read_function(JsonReader *reader, const cJSON *object, const char *path, PlanHarmony *harmony) {
     harmony->has_function = false;
     harmony->function = HARMONIC_FUNCTION_TONIC;
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, "function");
-    if (!item && reader->version == 1) {
-        return plan_json_member(reader, object, path, "function", true) != NULL;
-    }
+    const cJSON *item = plan_json_member(reader, object, path, "function", reader->version == 1);
     if (!item) {
-        return true;
+        return reader->result == PLAN_OK;
     }
     char at[PLAN_JSON_PATH_MAX];
     json_child_path(at, path, "function");
