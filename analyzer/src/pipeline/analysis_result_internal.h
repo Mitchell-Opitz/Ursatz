@@ -19,4 +19,9 @@ bool analyzer_result_report_complete(const AnalyzerResult *result);
 /* Moves the report out into *report (the caller releases it with analysis_report_destroy); the result keeps an empty one. */
 bool analyzer_result_take_report(AnalyzerResult *result, AnalysisReport *report);
 
+/* Gives the result something to release after the pass (the notes a hearing built) and a rendered document. The result
+   frees both on destroy; the owner's destroy runs after the pass is released. */
+void analyzer_result_set_owner(AnalyzerResult *result, void *owner, void (*owner_destroy)(void *));
+void analyzer_result_set_document(AnalyzerResult *result, char *document_json);
+
 #endif

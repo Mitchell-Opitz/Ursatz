@@ -9,7 +9,10 @@
 
 #include <ursatz_analyzer/analysis_document.h>
 
+#include "pipeline/analysis_document_internal.h"
+#include "pipeline/analysis_result_internal.h"
 #include "pipeline/corpus_walk.h"
+#include "style/style_profile_internal.h"
 #include "util/json_util.h"
 
 #define SYNCOPATION_CAP 4
@@ -534,24 +537,44 @@ static bool count_form(StyleProfile *profile, const cJSON *document) {
     return true;
 }
 
-StyleProfileResult style_profile_add_document_json(StyleProfile *profile, const char *json) {
-    if (!profile || !json) {
-        return STYLE_PROFILE_ERR_ARGUMENT;
-    }
-    cJSON *document = cJSON_Parse(json);
+/* Counts one document tree (schema version 9) into the profile. */
+static StyleProfileResult add_document_tree(StyleProfile *profile, const cJSON *document) {
     long version;
-    if (!document || !json_number_member(document, "schema_version", &version) || version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
-        cJSON_Delete(document);
+    if (!document || !json_number_member(document, "schema_version", &version) ||
+        version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) {
         return STYLE_PROFILE_ERR_FORMAT;
     }
     bool ok = count_harmony(profile, document) && count_rhythm(profile, document) && count_melody(profile, document) &&
               count_form(profile, document);
-    cJSON_Delete(document);
     if (!ok) {
         return STYLE_PROFILE_ERR_ALLOC;
     }
     profile->pieces++;
     return STYLE_PROFILE_OK;
+}
+
+StyleProfileResult style_profile_add_document_json(StyleProfile *profile, const char *json) {
+    if (!profile || !json) {
+        return STYLE_PROFILE_ERR_ARGUMENT;
+    }
+    cJSON *document = cJSON_Parse(json);
+    StyleProfileResult result = add_document_tree(profile, document);
+    cJSON_Delete(document);
+    return result;
+}
+
+StyleProfileResult style_profile_add_result(StyleProfile *profile, const AnalyzerResult *result) {
+    if (!profile || !result) {
+        return STYLE_PROFILE_ERR_ARGUMENT;
+    }
+    /* The document is the result's export view (R-252): its in-memory tree is counted, with no text rendered or parsed. */
+    AnalysisDocument *document = analysis_document_build_from_result("<fragment>", result);
+    if (!document) {
+        return analyzer_result_report_complete(result) ? STYLE_PROFILE_ERR_ALLOC : STYLE_PROFILE_ERR_ARGUMENT;
+    }
+    StyleProfileResult added = add_document_tree(profile, document->root);
+    analysis_document_destroy(document);
+    return added;
 }
 
 /* ---- corpus ---- */

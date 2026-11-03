@@ -25,6 +25,9 @@ struct AnalyzerResult {
     size_t capacities[ANALYZER_AREA_COUNT];
     Interpretation **owned; /* the Interpretations made here: progressions, tuplets and the meter check */
     size_t owned_count;
+    void *owner; /* what the pass borrows, released after it (a hearing's notes) */
+    void (*owner_destroy)(void *);
+    char *document_json; /* the rendered document of a hearing, or NULL */
 };
 
 /* The claim contents the Analyzer writes for its own results (no library owner builds them), through the kernel's
@@ -309,6 +312,10 @@ void analyzer_result_destroy(AnalyzerResult *result) {
     }
     free(result->owned);
     analyzer_pass_destroy(&result->pass);
+    if (result->owner_destroy) {
+        result->owner_destroy(result->owner);
+    }
+    free(result->document_json);
     free(result);
 }
 
@@ -380,4 +387,18 @@ bool analyzer_result_take_report(AnalyzerResult *result, AnalysisReport *report)
     memset(&result->pass.report, 0, sizeof(result->pass.report));
     result->pass.report.home_duration_denominator = 1;
     return true;
+}
+
+void analyzer_result_set_owner(AnalyzerResult *result, void *owner, void (*owner_destroy)(void *)) {
+    result->owner = owner;
+    result->owner_destroy = owner_destroy;
+}
+
+void analyzer_result_set_document(AnalyzerResult *result, char *document_json) {
+    free(result->document_json);
+    result->document_json = document_json;
+}
+
+const char *analyzer_result_document_json(const AnalyzerResult *result) {
+    return result ? result->document_json : NULL;
 }

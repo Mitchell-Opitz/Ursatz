@@ -26,10 +26,13 @@
 #include <ursatz_analyzer/style_profile.h>
 #include <ursatz_analyzer/version.h>
 
+#include "pipeline/analysis_result_internal.h"
 #include "pipeline/counterpoint_pipeline.h"
+#include "style/style_profile_internal.h"
 #include "util/misc_util.h"
 
 #define MIDI_NOTE_COUNT 128
+#define FRAGMENT_INPUT_PATH "<fragment>"
 #define FRAGMENT_PROVENANCE_ID "composer-fragment-v1"
 
 /* How the MIDI importer spells a note: sharps only (io/midi_importer.c), the pitch class's place on the line of fifths
@@ -308,14 +311,15 @@ AnalyzerFragmentResult analyzer_analyze_fragment(const AnalyzerFragment *fragmen
         *out = (AnalyzerFragmentAnalysis){0};
         return result;
     }
-    if (!run_analysis_pipeline(&out->notes, &out->report)) {
+    AnalyzerStatus status = analyzer_analyze(&out->notes, NULL, &out->result);
+    if (status != ANALYZER_OK) {
         imported_notes_destroy(&out->notes);
         *out = (AnalyzerFragmentAnalysis){0};
         return ANALYZER_FRAGMENT_ERR_ALLOC;
     }
-    out->document_json = analysis_document_render("<fragment>", &out->notes, &out->report);
+    out->document_json = analysis_document_render_result(FRAGMENT_INPUT_PATH, out->result);
     if (!out->document_json) {
-        analysis_report_destroy(&out->report);
+        analyzer_result_destroy(out->result);
         imported_notes_destroy(&out->notes);
         *out = (AnalyzerFragmentAnalysis){0};
         return ANALYZER_FRAGMENT_ERR_ALLOC;
@@ -324,18 +328,140 @@ AnalyzerFragmentResult analyzer_analyze_fragment(const AnalyzerFragment *fragmen
     return ANALYZER_FRAGMENT_OK;
 }
 
+/* ---- the hearing entry ---- */
+
+/* What a hearing builds for the pass: an ImportedNotes whose events are the caller's. */
+typedef struct {
+    ImportedNotes notes;
+    bool owns_meter;
+} HearingNotes;
+
+static void hearing_notes_destroy(void *owner) {
+    HearingNotes *hearing = owner;
+    if (!hearing) {
+        return;
+    }
+    ImportedNotes *notes = &hearing->notes;
+    for (size_t i = 0; i < notes->count; i++) {
+        pitch_numeric_value_destroy(notes->pitch_values[i]); /* the events stay the caller's */
+    }
+    if (!hearing->owns_meter) {
+        notes->meter.meter_map = NULL;
+    }
+    notes->count = 0;
+    free(notes->events);
+    notes->events = NULL;
+    imported_notes_destroy(notes);
+    free(hearing);
+}
+
+static bool hearing_valid(const AnalyzerHearing *hearing) {
+    if (!hearing || (hearing->count > 0 && (!hearing->events || !hearing->midi)) ||
+        (hearing->has_key && (hearing->key_tonic_pitch_class < 0 || hearing->key_tonic_pitch_class > 11))) {
+        return false;
+    }
+    for (size_t i = 0; i < hearing->count; i++) {
+        if (!hearing->events[i] || hearing->midi[i] < 0 || hearing->midi[i] >= MIDI_NOTE_COUNT) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* The notes of a hearing: the arrays are the hearing's, the events the caller's. NULL on allocation failure. */
+static HearingNotes *hearing_notes_build(const AnalyzerHearing *hearing) {
+    HearingNotes *built = calloc(1, sizeof *built);
+    if (!built) {
+        return NULL;
+    }
+    ImportedNotes *notes = &built->notes;
+    notes->source = (ImportedSource){.format = INPUT_FORMAT_MIDI};
+    size_t slots = hearing->count > 0 ? hearing->count : 1;
+    notes->events = calloc(slots, sizeof *notes->events);
+    notes->pitch_values = calloc(slots, sizeof *notes->pitch_values);
+    notes->streams = calloc(slots, sizeof *notes->streams);
+    EntityID *tuning_id = NULL;
+    TuningSystem *tuning = NULL;
+    bool ok = notes->events && notes->pitch_values && notes->streams &&
+              entity_id_create("midi-note-number", &tuning_id) == ENTITY_ID_OK;
+    if (ok && tuning_system_create(tuning_id, "MIDI note number", &tuning) != TUNING_SYSTEM_OK) {
+        entity_id_destroy(tuning_id);
+        ok = false;
+    }
+    for (size_t i = 0; ok && i < hearing->count; i++) {
+        ok = pitch_numeric_value_create(tuning, hearing->midi[i], 1, &notes->pitch_values[i]) ==
+             PITCH_NUMERIC_VALUE_OK;
+        notes->events[i] = (NoteEvent *)hearing->events[i];
+        notes->streams[i] = hearing->streams ? hearing->streams[i] : 0;
+        notes->count = i + 1;
+    }
+    tuning_system_destroy(tuning);
+    if (ok) {
+        built->owns_meter = !hearing->meter || meter_map_is_defaulted(hearing->meter);
+        notes->meter.meter_map = built->owns_meter ? copy_meter_map(NULL) : (MeterMap *)hearing->meter;
+        notes->meter.end_time = notes_last_end(hearing->events, hearing->count);
+        ok = notes->meter.meter_map && notes->meter.end_time;
+    }
+    if (ok && hearing->has_key) {
+        ok = add_key_signature(notes, hearing->key_tonic_pitch_class, hearing->key_minor);
+    }
+    if (!ok) {
+        hearing_notes_destroy(built);
+        return NULL;
+    }
+    return built;
+}
+
+AnalyzerHearingOptions analyzer_hearing_options_default(void) {
+    AnalyzerHearingOptions options = {analyzer_options_default(), false};
+    return options;
+}
+
+AnalyzerStatus analyzer_hear(const AnalyzerHearing *hearing, const AnalyzerHearingOptions *options,
+                             AnalyzerResult **out) {
+    if (!out) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    *out = NULL;
+    AnalyzerHearingOptions used = options ? *options : analyzer_hearing_options_default();
+    if (!hearing_valid(hearing) || (used.render_document && used.analysis.stages != ANALYZER_STAGE_ALL)) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    HearingNotes *built = hearing_notes_build(hearing);
+    if (!built) {
+        return ANALYZER_ERR_ALLOC;
+    }
+    AnalyzerResult *result = NULL;
+    AnalyzerStatus status = analyzer_analyze(&built->notes, &used.analysis, &result);
+    if (status != ANALYZER_OK) {
+        hearing_notes_destroy(built);
+        return status;
+    }
+    analyzer_result_set_owner(result, built, hearing_notes_destroy);
+    if (used.render_document) {
+        char *json = analysis_document_render_result(FRAGMENT_INPUT_PATH, result);
+        if (!json) {
+            analyzer_result_destroy(result);
+            return ANALYZER_ERR_ALLOC;
+        }
+        analyzer_result_set_document(result, json);
+    }
+    *out = result;
+    return ANALYZER_OK;
+}
+
 void analyzer_fragment_analysis_destroy(AnalyzerFragmentAnalysis *analysis) {
     if (!analysis || !analysis->valid) {
         return;
     }
     free(analysis->document_json);
-    analysis_report_destroy(&analysis->report);
+    analyzer_result_destroy(analysis->result); /* before the notes it borrows */
     imported_notes_destroy(&analysis->notes);
     *analysis = (AnalyzerFragmentAnalysis){0};
 }
 
 const AnalysisReport *analyzer_fragment_report(const AnalyzerFragmentAnalysis *analysis) {
-    return analysis && analysis->valid ? &analysis->report : NULL;
+    return analysis && analysis->valid ? analyzer_result_report(analysis->result) : NULL;
 }
 
 const char *analyzer_fragment_document_json(const AnalyzerFragmentAnalysis *analysis) {
@@ -348,7 +474,8 @@ AnalyzerFragmentResult analyzer_fragment_check_counterpoint(AnalyzerFragmentAnal
         return ANALYZER_FRAGMENT_ERR_ARGUMENT;
     }
     CounterpointCheckResult checked =
-        counterpoint_check_collect(&analysis->notes, species, cantus_upper, &analysis->report);
+        counterpoint_check_collect(&analysis->notes, species, cantus_upper,
+                                   analyzer_result_report_mutable(analysis->result));
     if (checked == COUNTERPOINT_CHECK_ERR_ALLOC) {
         return ANALYZER_FRAGMENT_ERR_ALLOC;
     }
@@ -434,7 +561,7 @@ AnalyzerFragmentResult analyzer_fragment_violations(const AnalyzerFragmentAnalys
     }
     *out = NULL;
     *count = 0;
-    const AnalysisReport *report = &analysis->report;
+    const AnalysisReport *report = analyzer_result_report(analysis->result);
     const AnalysisVoiceLeading *leading = &report->voice_leading;
     AnalyzerViolation *list = NULL;
     size_t used = 0, capacity = 0;
@@ -520,53 +647,113 @@ static size_t keep_statistics(StyleStatistic *statistics, size_t count, const ch
     return used;
 }
 
-AnalyzerFragmentResult analyzer_fragment_style_distance_without(const AnalyzerFragmentAnalysis *analysis,
-                                                                const StyleModel *model,
-                                                                const char *const *categories, size_t count,
-                                                                StyleComparison *out) {
-    if (!analysis || !analysis->valid || !model || !out || (count > 0 && !categories)) {
-        return ANALYZER_FRAGMENT_ERR_ARGUMENT;
+/* ---- the style reference ---- */
+
+struct AnalyzerStyleReference {
+    StyleStatistic *statistics; /* the model's, without the dropped categories */
+    size_t count;
+    StyleModel *base; /* a model of the statistics */
+    char **without;   /* the dropped categories */
+    size_t without_count;
+};
+
+void analyzer_style_reference_destroy(AnalyzerStyleReference *reference) {
+    if (!reference) {
+        return;
     }
-    for (size_t i = 0; i < count; i++) {
+    style_model_destroy(reference->base);
+    style_statistics_free(reference->statistics, reference->count);
+    for (size_t i = 0; i < reference->without_count; i++) {
+        free(reference->without[i]);
+    }
+    free(reference->without);
+    free(reference);
+}
+
+AnalyzerStatus analyzer_style_reference_create(const StyleModel *model, const char *const *without,
+                                               size_t without_count, AnalyzerStyleReference **out) {
+    if (!out) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    *out = NULL;
+    if (!model || (without_count > 0 && !without)) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
+    for (size_t i = 0; i < without_count; i++) {
         StyleDimension dimension;
-        if (!categories[i] || !style_category_dimension(categories[i], &dimension)) {
-            return ANALYZER_FRAGMENT_ERR_ARGUMENT;
+        if (!without[i] || !style_category_dimension(without[i], &dimension)) {
+            return ANALYZER_ERR_ARGUMENT;
         }
     }
+    AnalyzerStyleReference *reference = calloc(1, sizeof *reference);
+    if (!reference) {
+        return ANALYZER_ERR_ALLOC;
+    }
+    reference->without = calloc(without_count > 0 ? without_count : 1, sizeof *reference->without);
+    bool ok = reference->without != NULL;
+    for (size_t i = 0; ok && i < without_count; i++) {
+        reference->without[i] = strdup(without[i]);
+        ok = reference->without[i] != NULL;
+        reference->without_count = i + 1;
+    }
+    ok = ok && style_model_statistics(model, &reference->statistics, &reference->count) == STYLE_MODEL_FILE_OK;
+    if (ok) {
+        reference->count = keep_statistics(reference->statistics, reference->count,
+                                           (const char *const *)reference->without, reference->without_count);
+        reference->base = model_of("fragment-style-base", reference->statistics, reference->count);
+        ok = reference->base != NULL;
+    }
+    if (!ok) {
+        analyzer_style_reference_destroy(reference);
+        return ANALYZER_ERR_ALLOC;
+    }
+    *out = reference;
+    return ANALYZER_OK;
+}
+
+AnalyzerStatus analyzer_result_style_distance(const AnalyzerResult *result, const AnalyzerStyleReference *reference,
+                                              StyleComparison *out) {
+    if (!result || !reference || !out) {
+        return ANALYZER_ERR_ARGUMENT;
+    }
     memset(out, 0, sizeof *out);
-    AnalyzerFragmentResult result = ANALYZER_FRAGMENT_ERR_ALLOC;
+    AnalyzerStatus status = ANALYZER_ERR_ALLOC;
     StyleProfile *profile = style_profile_create();
-    StyleStatistic *fragment_stats = NULL, *model_stats = NULL, *kept = NULL;
-    size_t fragment_count = 0, model_count = 0, kept_count = 0;
-    StyleModel *fragment_model = NULL, *base_model = NULL, *kept_model = NULL;
+    StyleStatistic *fragment_stats = NULL, *kept = NULL;
+    size_t fragment_count = 0, kept_count = 0;
+    StyleModel *fragment_model = NULL, *kept_model = NULL;
     StyleComparison full = {0}, means = {0};
-    if (!profile || style_profile_add_document_json(profile, analysis->document_json) != STYLE_PROFILE_OK ||
-        style_profile_statistics(profile, &fragment_stats, &fragment_count) != STYLE_PROFILE_OK ||
-        style_model_statistics(model, &model_stats, &model_count) != STYLE_MODEL_FILE_OK) {
+    if (!profile) {
         goto done;
     }
-    /* The named categories leave both sides before anything is compared. */
-    fragment_count = keep_statistics(fragment_stats, fragment_count, categories, count);
-    model_count = keep_statistics(model_stats, model_count, categories, count);
-    kept = calloc(model_count > 0 ? model_count : 1, sizeof *kept);
+    StyleProfileResult added = style_profile_add_result(profile, result);
+    if (added != STYLE_PROFILE_OK) {
+        status = added == STYLE_PROFILE_ERR_ALLOC ? ANALYZER_ERR_ALLOC : ANALYZER_ERR_ARGUMENT;
+        goto done;
+    }
+    if (style_profile_statistics(profile, &fragment_stats, &fragment_count) != STYLE_PROFILE_OK) {
+        goto done;
+    }
+    fragment_count = keep_statistics(fragment_stats, fragment_count, (const char *const *)reference->without,
+                                     reference->without_count);
+    kept = calloc(reference->count > 0 ? reference->count : 1, sizeof *kept);
     fragment_model = model_of("fragment-style", fragment_stats, fragment_count);
-    base_model = model_of("fragment-style-base", model_stats, model_count);
-    if (!kept || !fragment_model || !base_model) {
+    if (!kept || !fragment_model) {
         goto done;
     }
-    /* The means come from the model cut down to the categories the fragment has. */
-    for (size_t i = 0; i < model_count; i++) {
-        if (has_category(fragment_stats, fragment_count, model_stats[i].category)) {
-            kept[kept_count++] = model_stats[i];
+    /* The means come from the reference cut down to the categories the result has. */
+    for (size_t i = 0; i < reference->count; i++) {
+        if (has_category(fragment_stats, fragment_count, reference->statistics[i].category)) {
+            kept[kept_count++] = reference->statistics[i];
         }
     }
     kept_model = model_of("fragment-style-reference", kept, kept_count);
     if (!kept_model) {
         goto done;
     }
-    if (style_profile_compare(fragment_model, base_model, &full) != STYLE_COMPARE_OK ||
+    if (style_profile_compare(fragment_model, reference->base, &full) != STYLE_COMPARE_OK ||
         style_profile_compare(fragment_model, kept_model, &means) != STYLE_COMPARE_OK) {
-        result = ANALYZER_FRAGMENT_ERR_ARGUMENT;
+        status = ANALYZER_ERR_LIBRARY;
         goto done;
     }
     /* The full comparison's categories (the missing ones too) with the means of the cut one. */
@@ -578,18 +765,37 @@ AnalyzerFragmentResult analyzer_fragment_style_distance_without(const AnalyzerFr
     full.categories = category_list;
     full.category_count = category_count;
     memset(&means, 0, sizeof means);
-    result = ANALYZER_FRAGMENT_OK;
+    status = ANALYZER_OK;
 done:
     style_comparison_destroy(&full);
     style_comparison_destroy(&means);
     style_model_destroy(kept_model);
-    style_model_destroy(base_model);
     style_model_destroy(fragment_model);
     free(kept);
-    style_statistics_free(model_stats, model_count);
     free(fragment_stats);
     style_profile_destroy(profile);
-    return result;
+    return status;
+}
+
+/* ---- the fragment entries, over the hearing entries ---- */
+
+AnalyzerFragmentResult analyzer_fragment_style_distance_without(const AnalyzerFragmentAnalysis *analysis,
+                                                                const StyleModel *model,
+                                                                const char *const *categories, size_t count,
+                                                                StyleComparison *out) {
+    if (!analysis || !analysis->valid || !model || !out || (count > 0 && !categories)) {
+        return ANALYZER_FRAGMENT_ERR_ARGUMENT;
+    }
+    AnalyzerStyleReference *reference = NULL;
+    AnalyzerStatus status = analyzer_style_reference_create(model, categories, count, &reference);
+    if (status == ANALYZER_OK) {
+        status = analyzer_result_style_distance(analysis->result, reference, out);
+    }
+    analyzer_style_reference_destroy(reference);
+    if (status == ANALYZER_OK) {
+        return ANALYZER_FRAGMENT_OK;
+    }
+    return status == ANALYZER_ERR_ALLOC ? ANALYZER_FRAGMENT_ERR_ALLOC : ANALYZER_FRAGMENT_ERR_ARGUMENT;
 }
 
 AnalyzerFragmentResult analyzer_fragment_style_distance(const AnalyzerFragmentAnalysis *analysis,

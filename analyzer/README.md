@@ -240,7 +240,7 @@ Its public include directory is `include/`, and consumers include headers as
 | `style_profile.h` | `StyleProfile` (counts over documents or a corpus), the style model file reader and writer, and `style_profile_compare`. |
 | `similar_material.h` | `similar_material_find` scores the passages of a corpus against a motive or a progression query. |
 | `motive_links.h` | `MotiveLinkScope` (analysis documents), `motive_links_run` links the motive families of its pieces, `MotiveLinkCache` keeps the pairs compared, `motive_links_render` writes the links as JSON. |
-| `composer_api.h` | `analyzer_analyze_fragment` analyzes a fragment of generated notes in memory; violations and style distance for the Composer. |
+| `composer_api.h` | `analyzer_hear` hears borrowed events into an `AnalyzerResult`; `AnalyzerStyleReference` and `analyzer_result_style_distance` measure style distance. `analyzer_analyze_fragment` and the fragment distances are deprecated wrappers; violations for the Composer. |
 
 The Composer calls `composer_api.h` to analyze a fragment it generated, with no file: see [docs/composer-api.md](docs/composer-api.md).
 

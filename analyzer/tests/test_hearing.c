@@ -1,0 +1,275 @@
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <ursatz_chain/analysis_chain.h>
+
+#include "pitch/pitch_numeric_value.h"
+
+#include <ursatz_analyzer/analysis_document.h>
+#include <ursatz_analyzer/analysis_result.h>
+#include <ursatz_analyzer/composer_api.h>
+#include <ursatz_analyzer/input_pipeline.h>
+#include <ursatz_analyzer/style_profile.h>
+
+#include "pipeline/analysis_result_internal.h"
+#include "style/style_profile_internal.h"
+
+/*
+ * The hearing entry and the style reference (composer_api.h) on the five reference pieces:
+ *   - a hearing without render_document has no document; with it, the document equals the one rendered from an
+ *     analysis of the imported notes,
+ *   - the events are not copied: the result's notes point at the caller's events,
+ *   - the claim counts equal those of analyzer_analyze over the same notes,
+ *   - a callback that refuses stops the hearing with ANALYZER_ERR_CANCELLED and nothing written,
+ *   - bad arguments are refused,
+ *   - style_profile_add_result gives the statistics of style_profile_add_document_json on the rendered document,
+ *   - the distance against a style reference equals analyzer_fragment_style_distance on the same fragment and model.
+ *
+ *   test_hearing          the five pieces
+ *   test_hearing smoke    Bach 114 only (the valgrind run)
+ */
+
+static const char *const PIECES[] = {"Bach 114.mid", "Mozart 545.mid", "Clementi 36.mid", "Field 1.mid", "Field 5.mid"};
+
+static int failures = 0;
+
+#define CHECK(condition, ...)                                          \
+    do {                                                               \
+        if (!(condition)) {                                            \
+            fprintf(stderr, "FAIL %s:%d: ", __FILE__, __LINE__);       \
+            fprintf(stderr, __VA_ARGS__);                              \
+            fprintf(stderr, "\n");                                     \
+            failures++;                                                \
+        }                                                              \
+    } while (0)
+
+static bool refuse(void *context) {
+    (*(int *)context)++;
+    return true;
+}
+
+static int tonic_of(const ImportedNotes *notes) {
+    int fifths = notes->key_signature.sharps_flats;
+    int major = (((fifths * 7) % 12) + 12) % 12;
+    return notes->key_signature.is_minor ? (major + 9) % 12 : major;
+}
+
+static bool same_rational(StyleRational a, StyleRational b) {
+    return a.numerator == b.numerator && a.denominator == b.denominator;
+}
+
+static bool same_comparison(const StyleComparison *a, const StyleComparison *b) {
+    if (a->overall_present != b->overall_present || (a->overall_present && !same_rational(a->overall, b->overall)) ||
+        a->category_count != b->category_count) {
+        return false;
+    }
+    for (int d = 0; d < STYLE_DIMENSION_COUNT; d++) {
+        if (a->dimension_present[d] != b->dimension_present[d] ||
+            (a->dimension_present[d] && !same_rational(a->dimension[d], b->dimension[d]))) {
+            return false;
+        }
+    }
+    for (size_t i = 0; i < a->category_count; i++) {
+        if (strcmp(a->categories[i].category, b->categories[i].category) != 0 ||
+            a->categories[i].in_a != b->categories[i].in_a || a->categories[i].in_b != b->categories[i].in_b) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool same_statistics(const StyleProfile *a, const StyleProfile *b) {
+    StyleStatistic *left = NULL, *right = NULL;
+    size_t left_count = 0, right_count = 0;
+    bool same = style_profile_statistics(a, &left, &left_count) == STYLE_PROFILE_OK &&
+                style_profile_statistics(b, &right, &right_count) == STYLE_PROFILE_OK && left_count == right_count;
+    for (size_t i = 0; same && i < left_count; i++) {
+        same = strcmp(left[i].category, right[i].category) == 0 && strcmp(left[i].label, right[i].label) == 0 &&
+               left[i].count == right[i].count && left[i].total == right[i].total;
+    }
+    free(left);
+    free(right);
+    return same && left_count > 0;
+}
+
+/* A reference style: the profile of one piece, as a model. */
+static StyleModel *model_of_document(const char *json, const char *file) {
+    StyleProfile *profile = style_profile_create();
+    StyleModel *model = NULL;
+    CHECK(profile && style_profile_add_document_json(profile, json) == STYLE_PROFILE_OK, "reference profile");
+    CHECK(profile && style_model_file_write(profile, "reference", file) == STYLE_MODEL_FILE_OK &&
+              style_model_file_read_without(file, NULL, 0, &model, NULL) == STYLE_MODEL_FILE_OK,
+          "reference model");
+    style_profile_destroy(profile);
+    return model;
+}
+
+static int *midi_of(const ImportedNotes *notes) {
+    int *midi = malloc((notes->count ? notes->count : 1) * sizeof *midi);
+    for (size_t i = 0; midi && i < notes->count; i++) {
+        midi[i] = (int)pitch_numeric_value_position_numerator(notes->pitch_values[i]);
+    }
+    return midi;
+}
+
+static void check_arguments(const AnalyzerHearing *hearing) {
+    AnalyzerResult *result = (AnalyzerResult *)1;
+    AnalyzerHearing no_midi = *hearing;
+    no_midi.midi = NULL;
+    CHECK(analyzer_hear(&no_midi, NULL, &result) == ANALYZER_ERR_ARGUMENT && result == NULL, "no midi");
+    CHECK(analyzer_hear(NULL, NULL, &result) == ANALYZER_ERR_ARGUMENT, "no hearing");
+    CHECK(analyzer_hear(hearing, NULL, NULL) == ANALYZER_ERR_ARGUMENT, "no out");
+    int *bad = malloc(hearing->count * sizeof *bad);
+    memcpy(bad, hearing->midi, hearing->count * sizeof *bad);
+    bad[0] = 200;
+    AnalyzerHearing out_of_range = *hearing;
+    out_of_range.midi = bad;
+    CHECK(analyzer_hear(&out_of_range, NULL, &result) == ANALYZER_ERR_ARGUMENT, "midi 200");
+    free(bad);
+    AnalyzerHearing bad_key = *hearing;
+    bad_key.has_key = true;
+    bad_key.key_tonic_pitch_class = 12;
+    CHECK(analyzer_hear(&bad_key, NULL, &result) == ANALYZER_ERR_ARGUMENT, "tonic 12");
+    AnalyzerHearingOptions partial = analyzer_hearing_options_default();
+    partial.analysis.stages = ANALYSIS_CHAIN_STAGE_ALL;
+    partial.analysis.stages &= ~1u;
+    partial.render_document = true;
+    CHECK(analyzer_hear(hearing, &partial, &result) == ANALYZER_ERR_ARGUMENT, "document without every stage");
+    CHECK(analyzer_result_document_json(NULL) == NULL, "document of NULL");
+}
+
+static void check_piece(const char *fixture, const StyleModel *reference_model) {
+    char path[1024];
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, fixture);
+    ImportedNotes notes;
+    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) != INPUT_PIPELINE_OK) {
+        CHECK(false, "cannot import %s", path);
+        return;
+    }
+    int *midi = midi_of(&notes);
+    AnalyzerHearing hearing = {(const NoteEvent *const *)notes.events,
+                               notes.count,
+                               midi,
+                               notes.meter.meter_map,
+                               notes.key_signature.found,
+                               tonic_of(&notes),
+                               notes.key_signature.is_minor,
+                               notes.streams};
+
+    /* No document unless asked for; the events are the caller's. */
+    AnalyzerResult *heard = NULL;
+    CHECK(analyzer_hear(&hearing, NULL, &heard) == ANALYZER_OK && heard, "%s: hear", fixture);
+    AnalyzerResult *direct = NULL;
+    CHECK(analyzer_analyze(&notes, NULL, &direct) == ANALYZER_OK && direct, "%s: analyze", fixture);
+    if (!heard || !direct) {
+        free(midi);
+        imported_notes_destroy(&notes);
+        return;
+    }
+    CHECK(analyzer_result_document_json(heard) == NULL, "%s: a document without render_document", fixture);
+    const ImportedNotes *borrowed = analyzer_result_notes(heard);
+    bool same_events = borrowed && borrowed->count == notes.count;
+    for (size_t i = 0; same_events && i < notes.count; i++) {
+        same_events = borrowed->events[i] == notes.events[i];
+    }
+    CHECK(same_events, "%s: the result's notes do not point at the caller's events", fixture);
+    for (int area = 0; area < ANALYZER_AREA_COUNT; area++) {
+        CHECK(analyzer_result_claim_count(heard, (AnalyzerArea)area) ==
+                  analyzer_result_claim_count(direct, (AnalyzerArea)area),
+              "%s: area %d claim count differs", fixture, area);
+    }
+
+    /* The document, when asked for, is the one the fragment entry renders (the notes carry no file source). */
+    AnalyzerHearingOptions with_document = analyzer_hearing_options_default();
+    with_document.render_document = true;
+    AnalyzerResult *rendered = NULL;
+    CHECK(analyzer_hear(&hearing, &with_document, &rendered) == ANALYZER_OK && rendered, "%s: hear with document",
+          fixture);
+    char *expected = analysis_document_render_result("<fragment>", direct);
+    const char *json = analyzer_result_document_json(rendered);
+    /* The result's profile equals the profile of its document. */
+    StyleProfile *from_result = style_profile_create();
+    StyleProfile *from_json = style_profile_create();
+    CHECK(from_result && from_json && style_profile_add_result(from_result, direct) == STYLE_PROFILE_OK &&
+              style_profile_add_document_json(from_json, expected) == STYLE_PROFILE_OK,
+          "%s: profiles", fixture);
+    CHECK(from_result && from_json && same_statistics(from_result, from_json),
+          "%s: profile of the result differs from the profile of its document", fixture);
+    style_profile_destroy(from_result);
+    style_profile_destroy(from_json);
+
+    /* The distance equals the old entry's on the same fragment and model. */
+    AnalyzerFragment fragment = {hearing.events, hearing.count, hearing.meter, hearing.has_key,
+                                 hearing.key_tonic_pitch_class, hearing.key_minor, hearing.streams};
+    AnalyzerFragmentAnalysis analysis;
+    CHECK(analyzer_analyze_fragment(&fragment, &analysis) == ANALYZER_FRAGMENT_OK, "%s: fragment", fixture);
+    const char *old_json = analyzer_fragment_document_json(&analysis);
+    CHECK(json && old_json && strcmp(json, old_json) == 0, "%s: the rendered document differs", fixture);
+    AnalyzerStyleReference *reference = NULL;
+    CHECK(analyzer_style_reference_create(reference_model, NULL, 0, &reference) == ANALYZER_OK && reference,
+          "%s: reference", fixture);
+    StyleComparison old_distance = {0}, new_distance = {0};
+    CHECK(analyzer_fragment_style_distance(&analysis, reference_model, &old_distance) == ANALYZER_FRAGMENT_OK,
+          "%s: old distance", fixture);
+    CHECK(analyzer_result_style_distance(heard, reference, &new_distance) == ANALYZER_OK, "%s: new distance", fixture);
+    CHECK(same_comparison(&old_distance, &new_distance), "%s: the distances differ", fixture);
+    AnalyzerStyleReference *unknown = (AnalyzerStyleReference *)1;
+    const char *const bad_name[] = {"no-such-category"};
+    CHECK(analyzer_style_reference_create(reference_model, bad_name, 1, &unknown) == ANALYZER_ERR_ARGUMENT && !unknown,
+          "%s: unknown category", fixture);
+    style_comparison_destroy(&old_distance);
+    style_comparison_destroy(&new_distance);
+    analyzer_style_reference_destroy(reference);
+    analyzer_style_reference_destroy(NULL);
+    analyzer_fragment_analysis_destroy(&analysis);
+
+    /* Cancel: refusing at once stops the hearing and writes nothing. */
+    int asked = 0;
+    AnalyzerHearingOptions cancelling = analyzer_hearing_options_default();
+    cancelling.analysis.cancel = refuse;
+    cancelling.analysis.cancel_context = &asked;
+    AnalyzerResult *none = (AnalyzerResult *)1;
+    CHECK(analyzer_hear(&hearing, &cancelling, &none) == ANALYZER_ERR_CANCELLED && none == NULL && asked >= 1,
+          "%s: cancel", fixture);
+
+    check_arguments(&hearing);
+
+    free(expected);
+    analyzer_result_destroy(rendered);
+    analyzer_result_destroy(direct);
+    analyzer_result_destroy(heard);
+    free(midi);
+    imported_notes_destroy(&notes);
+}
+
+int main(int argc, char **argv) {
+    bool smoke = argc > 1 && strcmp(argv[1], "smoke") == 0;
+    /* The reference style is Bach 114's own profile: short to make, and every category it has is present. */
+    char path[1024], file[1024];
+    snprintf(path, sizeof(path), "%s/framework-v1-corpus/%s", URSATZ_ANALYZER_FIXTURE_DIR, "Bach 114.mid");
+    snprintf(file, sizeof(file), "%s/hearing-reference.style.json", URSATZ_HEARING_WORK_DIR);
+    ImportedNotes notes;
+    StyleModel *model = NULL;
+    AnalyzerResult *result = NULL;
+    if (input_pipeline_import_file(path, INPUT_FORMAT_AUTO, &notes) == INPUT_PIPELINE_OK &&
+        analyzer_analyze(&notes, NULL, &result) == ANALYZER_OK) {
+        char *json = analysis_document_render_result("<fragment>", result);
+        model = json ? model_of_document(json, file) : NULL;
+        free(json);
+    }
+    CHECK(model != NULL, "reference model");
+    analyzer_result_destroy(result);
+    imported_notes_destroy(&notes);
+    for (size_t i = 0; model && i < (smoke ? 1 : sizeof PIECES / sizeof PIECES[0]); i++) {
+        check_piece(PIECES[i], model);
+    }
+    style_model_destroy(model);
+    if (failures) {
+        fprintf(stderr, "%d failures\n", failures);
+        return 1;
+    }
+    printf("test_hearing: ok\n");
+    return 0;
+}

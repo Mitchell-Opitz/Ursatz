@@ -8,6 +8,7 @@
 #include "time/meter_map.h"
 
 #include <ursatz_analyzer/analysis_report.h>
+#include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/imported_notes.h>
 #include <ursatz_analyzer/style_profile.h>
 
@@ -46,15 +47,90 @@ typedef enum {
 /*
  * What the analysis of one fragment holds. notes is the copy of the fragment's events; report is the pipeline's
  * report; document_json is the analysis document (input path "<fragment>"). Read them through the accessors.
+ *
+ * Deprecated: use analyzer_hear (below), which borrows the events and renders the document only on request.
  */
 typedef struct {
     ImportedNotes notes;
     AnalysisReport report;
     char *document_json;
     bool valid;
+    AnalyzerResult *result; /* the analysis the report is read from; report above is no longer filled */
 } AnalyzerFragmentAnalysis;
 
 /*
+ * The hearing entry (B-C-9): the Composer's way to have a fragment analyzed. The events are borrowed, never copied, and
+ * the result is an AnalyzerResult (analysis_result.h); the analysis document is rendered only when asked for.
+ *
+ * Everything the hearing points to is borrowed and must outlive the result; none of it is changed (Law 20). events has
+ * count entries; midi, when not NULL, has count parallel MIDI note numbers 0 to 127. The library has no call that reads
+ * a MIDI number from an event's pitch (a pitch identity is opaque by design), so midi is required for count > 0:
+ * ANALYZER_ERR_ARGUMENT when it is NULL. meter, has_key, key_tonic_pitch_class, key_minor and streams are as for
+ * AnalyzerFragment (a NULL meter is 4/4, a NULL streams puts every event in stream 0; streams is read, not kept).
+ */
+typedef struct {
+    const NoteEvent *const *events;
+    size_t count;
+    const int *midi;
+    const MeterMap *meter;
+    bool has_key;
+    int key_tonic_pitch_class;
+    bool key_minor;
+    const size_t *streams;
+} AnalyzerHearing;
+
+typedef struct {
+    AnalyzerOptions analysis;
+    bool render_document; /* render the analysis document into the result; needs every stage */
+} AnalyzerHearingOptions;
+
+/* All stages, no cancel callback, no document. */
+AnalyzerHearingOptions analyzer_hearing_options_default(void);
+
+/*
+ * Hears the events into *out, which the caller releases with analyzer_result_destroy. options may be NULL for the
+ * defaults. ANALYZER_ERR_ARGUMENT for a missing argument, a NULL event, a MIDI number outside 0 to 127, a key tonic
+ * outside 0 to 11, no midi for count > 0, or render_document without every stage; the other statuses are those of
+ * analyzer_analyze. *out is NULL on failure and nothing is kept.
+ */
+AnalyzerStatus analyzer_hear(const AnalyzerHearing *hearing, const AnalyzerHearingOptions *options,
+                             AnalyzerResult **out);
+
+/* The analysis document text of a result heard with render_document. Valid until the result is destroyed; NULL
+   otherwise. */
+const char *analyzer_result_document_json(const AnalyzerResult *result);
+
+/*
+ * A style the fragments are measured against, prepared once: the model's statistics with the named categories
+ * dropped. One reference serves any number of results.
+ */
+typedef struct AnalyzerStyleReference AnalyzerStyleReference;
+
+/*
+ * Prepares model for distances. without names the categories left out (the list the model was read without,
+ * style_model_file_read_without); they appear nowhere in a distance. ANALYZER_ERR_ARGUMENT for a NULL model or out, an
+ * unknown category name, or count > 0 with NULL without. *out is NULL on failure. The reference copies what it needs:
+ * model need not outlive it.
+ */
+AnalyzerStatus analyzer_style_reference_create(const StyleModel *model, const char *const *without,
+                                               size_t without_count, AnalyzerStyleReference **out);
+
+/* NULL is a no-op. */
+void analyzer_style_reference_destroy(AnalyzerStyleReference *reference);
+
+/*
+ * How far the result is from the reference: the one-piece profile of the result (read from the result, not from its
+ * document text) compared as analyzer_fragment_style_distance does, with the categories the result has no data for
+ * left out of the means and kept in out->categories. Release out with style_comparison_destroy.
+ * ANALYZER_ERR_ARGUMENT for a NULL argument or a result that did not run every chain stage.
+ */
+AnalyzerStatus analyzer_result_style_distance(const AnalyzerResult *result, const AnalyzerStyleReference *reference,
+                                              StyleComparison *out);
+
+/*
+ * Deprecated: use analyzer_hear. Kept for the Composer until its switch (P25); the analysis is made by
+ * analyzer_analyze over the copy this entry keeps, so a caller may free the fragment's events after it returns.
+ *
  * Analyzes the fragment into *out, which the caller releases with analyzer_fragment_analysis_destroy. *out is left
  * empty on failure. A fragment of no events is analyzed too (an empty report).
  */
@@ -105,6 +181,8 @@ AnalyzerFragmentResult analyzer_fragment_violations(const AnalyzerFragmentAnalys
 void analyzer_violations_free(AnalyzerViolation *violations, size_t count);
 
 /*
+ * Deprecated: use analyzer_style_reference_create and analyzer_result_style_distance.
+ *
  * How far the fragment is from a style. A one-piece profile of the fragment (style_profile_add_document_json) is
  * compared with the model (style_profile_compare), except that the categories the fragment has no data for (a
  * fragment is short) are left out of the dimension and overall means. They stay in out->categories, with in_a false
@@ -115,6 +193,8 @@ AnalyzerFragmentResult analyzer_fragment_style_distance(const AnalyzerFragmentAn
                                                         const StyleModel *model, StyleComparison *out);
 
 /*
+ * Deprecated: use analyzer_style_reference_create (with the categories) and analyzer_result_style_distance.
+ *
  * The same distance with the named categories left out: they are dropped from the fragment's statistics and from the
  * model's before the comparisons, so they appear nowhere in *out (not in the means, not in out->categories). Pass the
  * list the model was read without (style_model_file_read_without); without it a category the fragment has and the
