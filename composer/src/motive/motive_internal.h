@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include <cJSON.h>
+#include <analysis/motive_sketch.h>
 #include <core/rational.h>
 #include <ursatz_composer/motive.h>
 #include <ursatz_composer/motive_develop.h>
@@ -56,6 +57,17 @@ Rational motive_time_minus(Rational a, Rational b);
 
 /* The pickup of a motive, or zero when it is unset (a zero-initialized Motive has a denominator of 0). */
 Rational motive_pickup(const Motive *motive);
+
+/*
+ * The meter and key of a library motive sketch (analysis/motive_sketch.h), the only mappings between the sketch's
+ * bar, beat and scale and the Composer's PlanMeter and AnalysisKey. motive_meter_of is false for a bar and beat that
+ * are not a meter of 1 to 64 beats over a unit of 1, 2, 4, 8 or 16; motive_key_of is false for a sketch with no scale.
+ * motive_set_meter is false for a meter that is not one. motive_set_key spells the tonic as the key does.
+ */
+bool motive_meter_of(const MotiveSketch *sketch, PlanMeter *meter);
+bool motive_set_meter(MotiveSketch *sketch, PlanMeter meter);
+bool motive_key_of(const MotiveSketch *sketch, AnalysisKey *key);
+void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKeySource source);
 
 /* A note's end. */
 Rational motive_note_end(const PlanNote *note);

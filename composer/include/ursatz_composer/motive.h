@@ -45,6 +45,14 @@
  * pitches do not settle on one key it stays MOTIVE_KEY_UNSPECIFIED.
  */
 
+/*
+ * Coming (B6a): Motive becomes the library's MotiveSketch (analysis/motive_sketch.h) under the Composer's name,
+ * `typedef MotiveSketch Motive;`, with the sketch's fields: notes[i].pitch, .onset and .duration; chords and
+ * chord_count; accompaniment; form; has_scale, tonic_pc, minor, key_source and the tonic spelling; bar, beat, pickup
+ * and length. The meter and key are read and set through motive_meter_of, motive_set_meter, motive_key_of and
+ * motive_set_key (motive_internal.h).
+ */
+
 #define MOTIVE_MAX_NOTES 64
 #define MOTIVE_ERROR_LOCATION_MAX 128
 #define MOTIVE_ERROR_MESSAGE_MAX 160

@@ -246,6 +246,57 @@ Rational motive_time_minus(Rational a, Rational b) {
     return difference;
 }
 
+bool motive_meter_of(const MotiveSketch *sketch, PlanMeter *meter) {
+    if (!sketch || !meter || !msk_ok(sketch->bar) || !msk_ok(sketch->beat) || sketch->beat.num != 1) {
+        return false;
+    }
+    Rational beats = msk_div(sketch->bar, sketch->beat);
+    if (!msk_ok(beats) || beats.den != 1 || beats.num < 1 || beats.num > 64) {
+        return false;
+    }
+    PlanMeter found = {(int)beats.num, (int)sketch->beat.den, 0};
+    if (!meter_valid(&found)) {
+        return false;
+    }
+    *meter = found;
+    return true;
+}
+
+bool motive_set_meter(MotiveSketch *sketch, PlanMeter meter) {
+    if (!sketch || !meter_valid(&meter)) {
+        return false;
+    }
+    sketch->beat = msk_make(1, (unsigned long long)meter.beat_unit);
+    sketch->bar = msk_make((unsigned long long)meter.beats_per_bar, (unsigned long long)meter.beat_unit);
+    return true;
+}
+
+bool motive_key_of(const MotiveSketch *sketch, AnalysisKey *key) {
+    if (!sketch || !key || !sketch->has_scale || sketch->tonic_pc < 0 || sketch->tonic_pc > 11) {
+        return false;
+    }
+    KeyStructureMode mode = sketch->minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR;
+    *key = plan_key_of_pitch_class(sketch->tonic_pc, mode);
+    if (sketch->has_tonic_spelling) {
+        key->tonic_letter = (PitchLetter)sketch->tonic_letter;
+        key->tonic_accidental = sketch->tonic_accidental;
+    }
+    return true;
+}
+
+void motive_set_key(MotiveSketch *sketch, const AnalysisKey *key, MotiveSketchKeySource source) {
+    if (!sketch || !key) {
+        return;
+    }
+    sketch->has_scale = true;
+    sketch->tonic_pc = analysis_key_tonic_pitch_class(key);
+    sketch->minor = key->mode == KEY_STRUCTURE_MODE_MINOR;
+    sketch->key_source = source;
+    sketch->has_tonic_spelling = true;
+    sketch->tonic_letter = (int)key->tonic_letter;
+    sketch->tonic_accidental = key->tonic_accidental;
+}
+
 Rational motive_pickup(const Motive *motive) {
     return motive->pickup.den == 0 ? motive_time(0, 1) : motive->pickup;
 }
