@@ -156,9 +156,9 @@ static int check_options(Options *options, bool harmonize) {
         return cli_fail(CLI_EXIT_USAGE, "%s needs --out-dir <dir>\n%s", command, usage);
     }
     if (options->format_text) {
-        if (request_equals_ignore_case(options->format_text, "json")) {
+        if (cli_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
-        } else if (!request_equals_ignore_case(options->format_text, "text")) {
+        } else if (!cli_equals_ignore_case(options->format_text, "text")) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
         }
     }

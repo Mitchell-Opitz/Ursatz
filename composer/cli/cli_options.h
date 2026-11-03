@@ -17,7 +17,6 @@
 #include <ursatz_composer/regenerate.h>
 #include <ursatz_composer/style.h>
 
-#include "util/request_parse.h"
 
 /* The exit statuses every command shares. */
 #define CLI_EXIT_USAGE 1
@@ -27,6 +26,15 @@
 /* The largest seed, and how many seeds a command tries, one after another from the one given, before it gives up. */
 #define CLI_SEED_MAX 4294967295UL
 #define CLI_MAX_SEED_TRIES 16
+
+/* Reads a whole file into a NUL-terminated buffer (*size is its length, may be NULL; the caller frees *text). False when it cannot be read. */
+bool cli_read_file(const char *path, char **text, size_t *size);
+
+/* Parses a whole number (digits only) not above maximum. */
+bool cli_whole_number(const char *text, unsigned long maximum, unsigned long *out);
+
+/* Whether two ASCII texts are equal ignoring case. */
+bool cli_equals_ignore_case(const char *a, const char *b);
 
 /* Prints "Error: <message>" to stderr and returns status. */
 int cli_fail(int status, const char *format, ...);

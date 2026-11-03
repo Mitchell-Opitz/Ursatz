@@ -256,9 +256,9 @@ static int check_options(Options *options) {
         return cli_fail(CLI_EXIT_USAGE, "--accompaniment-format and --accompaniment-pickup need --accompaniment-motive <file>");
     }
     if (options->format_text) {
-        if (request_equals_ignore_case(options->format_text, "json")) {
+        if (cli_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
-        } else if (!request_equals_ignore_case(options->format_text, "text")) {
+        } else if (!cli_equals_ignore_case(options->format_text, "text")) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
         }
     }
@@ -268,7 +268,7 @@ static int check_options(Options *options) {
 /* The explanation file is JSON when its name ends in .json, else text. */
 static bool explain_as_json(const char *path) {
     size_t length = strlen(path);
-    return length >= 5 && request_equals_ignore_case(path + length - 5, ".json");
+    return length >= 5 && cli_equals_ignore_case(path + length - 5, ".json");
 }
 
 /* Adds the options of the command to the request, the motive's members already in it. */
@@ -352,7 +352,7 @@ int run_grow(int argc, char **argv) {
         input.key_text = options.key;
         input.extras = options.extras;
         if (options.mode && !strpbrk(options.key, " \t")) {
-            bool concrete = request_equals_ignore_case(options.mode, "major") || request_equals_ignore_case(options.mode, "minor");
+            bool concrete = cli_equals_ignore_case(options.mode, "major") || cli_equals_ignore_case(options.mode, "minor");
             input.key_text = concrete && snprintf(key_with_mode, sizeof key_with_mode, "%s %s", options.key, options.mode) <
                                              (int)sizeof key_with_mode
                                  ? key_with_mode

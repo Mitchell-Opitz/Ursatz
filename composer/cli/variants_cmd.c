@@ -13,7 +13,6 @@
 #include "cli_options.h"
 #include "motive_extras.h"
 #include "motive_input.h"
-#include "util/util.h"
 
 #define VARIANTS_COUNT_MAX 16
 #define VARIANTS_COUNT_DEFAULT 6
@@ -170,7 +169,7 @@ static void print_operations(const cJSON *document) {
 /* Reads the chain file into *chain (a JSON value the request carries). Returns 0 or the status of the error it printed. */
 static int read_chain(const char *path, cJSON **chain) {
     char *text;
-    if (!util_read_file(path, &text, NULL)) {
+    if (!cli_read_file(path, &text, NULL)) {
         return cli_fail(CLI_EXIT_USAGE, "cannot read chain file '%s'", path);
     }
     *chain = cJSON_Parse(text);

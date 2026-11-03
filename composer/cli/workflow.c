@@ -5,8 +5,6 @@
 #include <string.h>
 
 #include "cli_options.h"
-#include "util/request_parse.h"
-#include "util/util.h"
 
 /* --- reading --------------------------------------------------------------------------------------- */
 
@@ -15,7 +13,7 @@ void cli_read_plan_held(const char *path, cJSON **plan, CliHeldFailure *held) {
     *plan = NULL;
     held->failed = false;
     held->message[0] = '\0';
-    if (!util_read_file(path, &text, NULL)) {
+    if (!cli_read_file(path, &text, NULL)) {
         held->failed = true;
         snprintf(held->message, sizeof held->message, "cannot read plan '%s': could not open '%s'", path, path);
         return;
@@ -65,12 +63,12 @@ int cli_check_target(const CliTargetOptions *options, const char *command, const
     if (!options->node_text == !options->section_text) {
         return cli_fail(CLI_EXIT_USAGE, "%s needs a node: give --node <id> or --section <letter>, not both\n%s", command, usage);
     }
-    if (options->node_text && !request_parse_whole_number(options->node_text, 1000000UL, &node)) {
+    if (options->node_text && !cli_whole_number(options->node_text, 1000000UL, &node)) {
         return cli_fail(CLI_EXIT_USAGE, "--node must be a whole number (the id in the plan file), not '%s'", options->node_text);
     }
     if (options->lane_text &&
-        !(request_equals_ignore_case(options->lane_text, "harmony") || request_equals_ignore_case(options->lane_text, "bass") ||
-          request_equals_ignore_case(options->lane_text, "melody") || request_equals_ignore_case(options->lane_text, "inner"))) {
+        !(cli_equals_ignore_case(options->lane_text, "harmony") || cli_equals_ignore_case(options->lane_text, "bass") ||
+          cli_equals_ignore_case(options->lane_text, "melody") || cli_equals_ignore_case(options->lane_text, "inner"))) {
         return cli_fail(CLI_EXIT_USAGE, "--lane must be harmony, bass, melody or inner, not '%s'", options->lane_text);
     }
     return 0;
@@ -79,7 +77,7 @@ int cli_check_target(const CliTargetOptions *options, const char *command, const
 bool cli_add_target(cJSON *request, const CliTargetOptions *target) {
     unsigned long node;
     bool ok = true;
-    if (target->node_text && request_parse_whole_number(target->node_text, 1000000UL, &node)) {
+    if (target->node_text && cli_whole_number(target->node_text, 1000000UL, &node)) {
         ok = cJSON_AddNumberToObject(request, "node", (double)node) != NULL;
     } else if (target->section_text) {
         ok = cJSON_AddStringToObject(request, "section", target->section_text) != NULL;

@@ -8,8 +8,6 @@
 #include <string.h>
 #include <time.h>
 
-#include <standard-texture/texture_rules.h>
-
 #include "api/api_grow.h"
 #include "api/api_internal.h"
 
@@ -17,6 +15,60 @@
 #include <ursatz_composer/plan_json.h>
 #include "util/plan_util.h"
 #include "util/util.h"
+
+bool cli_read_file(const char *path, char **text, size_t *size) {
+    *text = NULL;
+    FILE *file = fopen(path, "rb");
+    if (!file) {
+        return false;
+    }
+    long length = -1;
+    if (fseek(file, 0, SEEK_END) == 0) {
+        length = ftell(file);
+        if (length < 0 || fseek(file, 0, SEEK_SET) != 0) {
+            length = -1;
+        }
+    }
+    char *buffer = length >= 0 ? malloc((size_t)length + 1) : NULL;
+    bool read = buffer && fread(buffer, 1, (size_t)length, file) == (size_t)length;
+    fclose(file);
+    if (!read) {
+        free(buffer);
+        return false;
+    }
+    buffer[length] = '\0';
+    *text = buffer;
+    if (size) {
+        *size = (size_t)length;
+    }
+    return true;
+}
+
+bool cli_whole_number(const char *text, unsigned long maximum, unsigned long *out) {
+    if (!text || !isdigit((unsigned char)text[0])) {
+        return false;
+    }
+    char *end = NULL;
+    errno = 0;
+    unsigned long value = strtoul(text, &end, 10);
+    if (errno != 0 || *end != '\0' || value > maximum) {
+        return false;
+    }
+    *out = value;
+    return true;
+}
+
+bool cli_equals_ignore_case(const char *a, const char *b) {
+    if (!a || !b) {
+        return false;
+    }
+    for (; *a && *b; a++, b++) {
+        if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) {
+            return false;
+        }
+    }
+    return *a == *b;
+}
 
 int cli_fail(int status, const char *format, ...) {
     va_list args;

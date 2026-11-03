@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ursatz_composer/motive_analysis.h>
 
 /* ----------------------------------------------------------------- members */
 
@@ -25,6 +24,11 @@ static const char *string(const cJSON *object, const char *name) {
 static bool flag(const cJSON *object, const char *name) {
     return cJSON_IsTrue(member(object, name));
 }
+
+typedef struct {
+    long long num;
+    long long den;
+} Rational;
 
 static Rational rational(const cJSON *object, const char *name) {
     const cJSON *item = member(object, name);
@@ -60,8 +64,30 @@ static void degree_text(const cJSON *degree, char *out, size_t size) {
     snprintf(out, size, "%s%ld", number(degree, "alteration") ? "#" : "", number(degree, "degree"));
 }
 
+/* The name of a duration as the analysis writes it: w h q e s t with up to two dots, else "n/d". */
+static void duration_name(Rational duration, char *out, size_t size) {
+    static const char LETTERS[] = {'w', 'h', 'q', 'e', 's', 't'};
+    for (unsigned k = 0; k < sizeof LETTERS; k++) {
+        for (unsigned dots = 0; dots < 3; dots++) {
+            long long numerator = dots == 0 ? 1 : (dots == 1 ? 3 : 7);
+            long long denominator = (1LL << k) * (dots == 0 ? 1 : (dots == 1 ? 2 : 4));
+            if (duration.num * denominator == numerator * duration.den) {
+                snprintf(out, size, "%c%.*s", LETTERS[k], (int)dots, "..");
+                return;
+            }
+        }
+    }
+    snprintf(out, size, "%lld/%lld", duration.num, duration.den);
+}
+
+/* A MIDI pitch as a name with sharps and the octave number where middle C is C4. */
+static void pitch_name(int midi, char *out, size_t size) {
+    static const char *const NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    snprintf(out, size, "%s%d", NAMES[((midi % 12) + 12) % 12], midi / 12 - 1);
+}
+
 static void note_name(const cJSON *notes, size_t index, char *out, size_t size) {
-    motive_pitch_name((int)number(cJSON_GetArrayItem(notes, (int)index), "midi_pitch"), out, size);
+    pitch_name((int)number(cJSON_GetArrayItem(notes, (int)index), "midi_pitch"), out, size);
 }
 
 /* ------------------------------------------------------------------- parts */
@@ -152,14 +178,14 @@ static void print_rhythm(const cJSON *analysis, const cJSON *notes, FILE *out) {
     const cJSON *note = NULL;
     cJSON_ArrayForEach(note, rhythm) {
         note_name(notes, i++, text, sizeof(text));
-        motive_duration_name(rational(note, "duration"), duration, sizeof(duration));
+        duration_name(rational(note, "duration"), duration, sizeof(duration));
         beat_text(rational(note, "beat"), beat, sizeof(beat));
         fprintf(out, "  %-4s %-4s bar %ld beat %s%s", text, duration, number(note, "bar") + 1, beat,
                 flag(note, "on_beat") ? "" : " (off the beat)");
         Rational rest_before = rational(note, "rest_before");
         if (rest_before.num > 0) {
             char rest[32];
-            motive_duration_name(rest_before, rest, sizeof(rest));
+            duration_name(rest_before, rest, sizeof(rest));
             fprintf(out, ", rest %s before", rest);
         }
         fprintf(out, "\n");
@@ -264,8 +290,8 @@ bool motive_text_print(const char *response_json, FILE *out) {
     if (cJSON_IsObject(member(analysis, "range"))) {
         const cJSON *range = member(analysis, "range");
         char text2[64];
-        motive_pitch_name((int)number(range, "lowest"), text, sizeof(text));
-        motive_pitch_name((int)number(range, "highest"), text2, sizeof(text2));
+        pitch_name((int)number(range, "lowest"), text, sizeof(text));
+        pitch_name((int)number(range, "highest"), text2, sizeof(text2));
         fprintf(out, "Range: %s to %s (%ld semitones)\n", text, text2, number(range, "semitones"));
         print_harmony(analysis, out);
     }

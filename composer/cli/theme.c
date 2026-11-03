@@ -12,8 +12,6 @@
 
 #include "cli_options.h"
 #include "grow_text.h"
-#include "util/request_parse.h"
-#include "util/util.h"
 
 #define SCHEMA_NAME "ursatz-theme-request"
 #define MAX_SUGGESTIONS 16
@@ -109,7 +107,7 @@ static int read_options(int argc, char **argv, Options *options) {
 /* The request file with the options of the command as members, printed as the text the API reads. */
 static int build_request(const Options *options, char **out) {
     char *text;
-    if (!util_read_file(options->input, &text, NULL)) {
+    if (!cli_read_file(options->input, &text, NULL)) {
         return cli_fail(CLI_EXIT_USAGE, "cannot read the request '%s'", options->input);
     }
     cJSON *request = cJSON_Parse(text);
@@ -132,7 +130,7 @@ static int build_request(const Options *options, char **out) {
     ok = ok && cJSON_AddBoolToObject(request, "plans", options->suggest != NULL);
     if (options->explain) {
         size_t length = strlen(options->explain);
-        bool json = length >= 5 && request_equals_ignore_case(options->explain + length - 5, ".json");
+        bool json = length >= 5 && cli_equals_ignore_case(options->explain + length - 5, ".json");
         ok = ok && cJSON_AddStringToObject(request, "explain", json ? "json" : "text");
     }
     *out = ok ? cJSON_PrintUnformatted(request) : NULL;
@@ -252,9 +250,9 @@ int run_theme(int argc, char **argv) {
     }
     bool json = false;
     if (options.format) {
-        if (request_equals_ignore_case(options.format, "json")) {
+        if (cli_equals_ignore_case(options.format, "json")) {
             json = true;
-        } else if (!request_equals_ignore_case(options.format, "text")) {
+        } else if (!cli_equals_ignore_case(options.format, "text")) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options.format);
         }
     }

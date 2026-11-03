@@ -9,7 +9,6 @@
 
 #include "cli_options.h"
 #include "motive_input.h"
-#include "util/util.h"
 #include "workflow.h"
 
 #define MAX_SUGGESTIONS 16
@@ -184,7 +183,8 @@ static void duration_name(long long num, long long den, char *out, size_t size) 
 }
 
 static void pitch_name(int pitch, char *out, size_t size) {
-    util_pitch_name(pitch, false, out, size);
+    static const char *const NAMES[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+    snprintf(out, size, "%s%d", NAMES[((pitch % 12) + 12) % 12], pitch / 12 - 1);
 }
 
 static long long greatest_common_divisor(long long a, long long b) {
