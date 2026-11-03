@@ -17,7 +17,7 @@
  * metronome marks) or "default" (the file or score gives none, so 120 quarter notes per minute from 0). It points to a
  * static string. tempo is in time order, never empty, the first region at 0; a MusicXML metronome mark at the position of
  * an earlier region replaces it. at is in whole notes. When a notation reading with a value scale was applied, the
- * tempo is multiplied by the scale (a scale of 2 halves it) so the piece sounds as fast as before; a MIDI file's region
+ * tempo is multiplied by the scale (a scale of 2 doubles it) so the piece sounds as fast as before; a MIDI file's region
  * positions are scaled too, a score's marks were scaled with its notes.
  *
  * notes are in the order of the ImportedNotes, index being that order. onset and length are in whole notes, midi is
