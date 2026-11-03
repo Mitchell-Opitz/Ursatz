@@ -97,34 +97,26 @@ static const char *midi_problem(MidiImportResult result) {
 
 MotiveResult motive_read_midi(const unsigned char *data, size_t size, Motive *motive, MotiveDocument *document,
                               MotiveError *error) {
-    NoteEvent **events = NULL;
-    PitchNumericValue **values = NULL;
-    size_t count = 0;
-    MidiMeterImport meter;
-    memset(&meter, 0, sizeof(meter));
-    MidiImportResult imported = midi_importer_import_with_meter(data, size, &events, &values, &count, &meter);
-    if (imported != MIDI_IMPORT_OK) {
-        motive_set_error(error, "midi", "%s", midi_problem(imported));
-        return imported == MIDI_IMPORT_ERR_ALLOC ? MOTIVE_ERR_ALLOC : MOTIVE_ERR_IMPORT;
+    MidiImport imported;
+    memset(&imported, 0, sizeof(imported));
+    MidiImportResult status = midi_importer_import_complete(data, size, &imported);
+    if (status != MIDI_IMPORT_OK) {
+        motive_set_error(error, "midi", "%s", midi_problem(status));
+        return status == MIDI_IMPORT_ERR_ALLOC ? MOTIVE_ERR_ALLOC : MOTIVE_ERR_IMPORT;
     }
-    MotiveResult result = notes_from_events(events, values, count, NULL, motive, error);
+    MotiveResult result = notes_from_events(imported.events, imported.pitch_values, imported.count, NULL, motive, error);
     if (result == MOTIVE_OK) {
-        meter_from_map(meter.meter_map, document);
-        MidiKeySignature signature;
-        memset(&signature, 0, sizeof(signature));
-        if (midi_key_signature_scan(data, size, &signature) == MIDI_KEY_SIGNATURE_OK && signature.found) {
+        meter_from_map(imported.meter.meter_map, document);
+        /* The first key signature in time order; a mode byte other than minor reads as major. */
+        if (imported.key_signatures.count > 0) {
+            const MidiKeySignatureEvent *key = &imported.key_signatures.events[0];
             document->has_key = true;
-            document->key = motive_key_from_signature(signature.sharps_flats,
-                                                      signature.is_minor ? PLAN_MODE_MINOR : PLAN_MODE_MAJOR);
+            document->key = motive_key_from_signature(key->sharps_flats, key->mode_hint == MIDI_MODE_HINT_MINOR
+                                                                             ? PLAN_MODE_MINOR
+                                                                             : PLAN_MODE_MAJOR);
         }
     }
-    for (size_t i = 0; i < count; i++) {
-        note_event_destroy(events[i]);
-        pitch_numeric_value_destroy(values[i]);
-    }
-    free(events);
-    free(values);
-    midi_meter_import_destroy(&meter);
+    midi_import_destroy(&imported);
     return result;
 }
 
