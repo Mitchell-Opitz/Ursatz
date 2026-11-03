@@ -9,6 +9,7 @@
 
 #include "cli_options.h"
 #include "grow.h"
+#include "request_read.h"
 
 #include <standard-harmony/harmony_chord.h>
 
@@ -47,189 +48,6 @@ typedef struct {
 static const char *const SLOT_KEYS[GROW_SLOT_COUNT] = {"basic", "contrasting", "continuation", "cadential"};
 
 /* --- the request --------------------------------------------------------------- */
-
-/* A member that is a string (or null / absent when optional). Returns false, with the error printed, for any other type. */
-bool request_member_string(const cJSON *object, const char *name, bool required, const char **out) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
-    *out = NULL;
-    if (!item || cJSON_IsNull(item)) {
-        if (required) {
-            cli_fail(CLI_EXIT_USAGE, "the request needs \"%s\"", name);
-            return false;
-        }
-        return true;
-    }
-    if (!cJSON_IsString(item)) {
-        cli_fail(CLI_EXIT_USAGE, "\"%s\" in the request must be a string", name);
-        return false;
-    }
-    *out = item->valuestring;
-    return true;
-}
-
-/* A pickup written as a string ("0", "1/2") or a number of beats; formats a number into text. */
-bool request_member_pickup(const cJSON *object, char *text, size_t size, const char **out) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, "pickup");
-    *out = NULL;
-    if (!item || cJSON_IsNull(item)) {
-        return true;
-    }
-    if (cJSON_IsString(item)) {
-        *out = item->valuestring;
-        return true;
-    }
-    if (cJSON_IsNumber(item)) {
-        snprintf(text, size, "%g", item->valuedouble);
-        *out = text;
-        return true;
-    }
-    cli_fail(CLI_EXIT_USAGE, "\"pickup\" in the request must be a string or a number of beats");
-    return false;
-}
-
-/*
- * Reads "tone_overrides" of a motive, {"<n>": "<role>"}: the 1-based note and its role as the motive command's --tone writes
- * it ("chord" or a non-chord tone). They go on the motive, which a plan keeps as its tones when it is attached.
- */
-static int read_tone_overrides(const char *what, const cJSON *object, Motive *motive) {
-    const cJSON *overrides = cJSON_GetObjectItemCaseSensitive(object, "tone_overrides");
-    if (!overrides || cJSON_IsNull(overrides)) {
-        return 0;
-    }
-    if (!cJSON_IsObject(overrides)) {
-        return cli_fail(CLI_EXIT_USAGE, "%s: tone_overrides must be {\"<note>\": \"<role>\"}", what);
-    }
-    for (const cJSON *entry = overrides->child; entry; entry = entry->next) {
-        char *end = NULL;
-        long note = strtol(entry->string, &end, 10);
-        if (motive->tone_override_count == MOTIVE_MAX_NOTES) {
-            return cli_fail(CLI_EXIT_USAGE, "%s: tone_overrides names a note twice", what);
-        }
-        MotiveToneOverride *slot = &motive->tone_overrides[motive->tone_override_count];
-        if (end == entry->string || *end != '\0' || note < 1 || (unsigned long)note > motive->note_count) {
-            return cli_fail(CLI_EXIT_USAGE, "%s: tone_overrides \"%s\": the note is a number from 1 to %zu", what,
-                            entry->string, motive->note_count);
-        }
-        if (!cJSON_IsString(entry) ||
-            !motive_tone_role_parse(entry->valuestring, &slot->role, &slot->type)) {
-            return cli_fail(CLI_EXIT_USAGE,
-                            "%s: tone_overrides \"%s\": the role is chord, passing, neighbor, appoggiatura, suspension, "
-                            "retardation, escape, anticipation, double-neighbor, changing-tone or pedal",
-                            what, entry->string);
-        }
-        slot->note = (size_t)note - 1;
-        motive->tone_override_count++;
-    }
-    if (motive->tone_override_count > 0) {
-        PlanConstraint tones;
-        if (!motive_tones_constraint(motive, &tones)) {
-            return cli_fail(CLI_EXIT_USAGE, "%s: tone_overrides need a motive with a key and pitches to label", what);
-        }
-    }
-    return 0;
-}
-
-/*
- * Reads a motive of the request, a degree list in the key (R-135), with its pickup, harmony, features and role. `role` is
- * the role to force (NULL for the motive's own member). Returns 0 or the status of the error printed.
- */
-int request_read_motive(const char *what, const cJSON *object, const char *role, const PlanMeter *meter,
-                       const AnalysisKey *key, Motive *out) {
-    const char *degrees;
-    const char *harmony;
-    const char *form;
-    const char *role_text;
-    const char *pickup;
-    char pickup_text[32];
-    if (!request_member_string(object, "degrees", true, &degrees) || !request_member_string(object, "harmony", false, &harmony) ||
-        !request_member_string(object, "form", false, &form) || !request_member_string(object, "role", false, &role_text) ||
-        !request_member_pickup(object, pickup_text, sizeof(pickup_text), &pickup)) {
-        return CLI_EXIT_USAGE;
-    }
-    if (form && strcmp(form, "full") != 0) {
-        return cli_fail(CLI_EXIT_USAGE, "%s: form must be \"full\", not \"%s\"", what, form);
-    }
-    MotiveOptions options;
-    memset(&options, 0, sizeof(options));
-    options.has_meter = true;
-    options.meter = *meter;
-    options.has_key = true;
-    options.key = *key;
-    if (pickup) {
-        if (!request_parse_pickup(pickup, meter->beat_unit, &options.pickup)) {
-            return cli_fail(CLI_EXIT_USAGE, "%s: pickup '%s' is not a number of beats; write 0, 1 or 1/2", what, pickup);
-        }
-        options.has_pickup = true;
-    }
-    MotiveError error;
-    if (harmony && harmony[0]) {
-        if (motive_harmony_parse(harmony, meter, options.harmony, &options.harmony_count, &error) != MOTIVE_OK) {
-            return cli_fail(CLI_EXIT_USAGE, "%s: harmony '%s' at %s: %s", what, harmony, error.location, error.message);
-        }
-        options.has_harmony = true;
-    }
-    const cJSON *features = cJSON_GetObjectItemCaseSensitive(object, "features");
-    if (features && !cJSON_IsNull(features)) {
-        if (!cJSON_IsArray(features) || cJSON_GetArraySize(features) > MOTIVE_MAX_FEATURES) {
-            return cli_fail(CLI_EXIT_USAGE, "%s: \"features\" must be a list of at most %d features", what,
-                            MOTIVE_MAX_FEATURES);
-        }
-        const cJSON *item = NULL;
-        cJSON_ArrayForEach(item, features) {
-            const cJSON *label = cJSON_GetObjectItemCaseSensitive(item, "label");
-            const cJSON *first = cJSON_GetObjectItemCaseSensitive(item, "first");
-            const cJSON *last = cJSON_GetObjectItemCaseSensitive(item, "last");
-            if (!cJSON_IsString(label) || strlen(label->valuestring) > MOTIVE_FEATURE_LABEL_MAX || !cJSON_IsNumber(first) ||
-                !cJSON_IsNumber(last) || first->valuedouble < 0 || last->valuedouble < first->valuedouble) {
-                return cli_fail(CLI_EXIT_USAGE, "%s: a feature is {\"label\", \"first\", \"last\"} with 0 <= first <= last", what);
-            }
-            MotiveSketchFeature *feature = &options.features[options.feature_count++];
-            snprintf(feature->label, sizeof(feature->label), "%s", label->valuestring);
-            feature->first = (size_t)first->valuedouble;
-            feature->last = (size_t)last->valuedouble;
-        }
-        options.has_features = options.feature_count > 0;
-    }
-    const char *wanted_role = role ? role : role_text;
-    if (wanted_role) {
-        if (!motive_role_parse(wanted_role, &options.accompaniment)) {
-            return cli_fail(CLI_EXIT_USAGE, "%s: role must be melodic or accompaniment, not '%s'", what, wanted_role);
-        }
-        options.has_role = true;
-    }
-    if (motive_from_degrees_text(degrees, &options, out, &error) != MOTIVE_OK) {
-        return cli_fail(CLI_EXIT_USAGE, "%s: cannot read the degrees '%s'%s%s: %s", what, degrees,
-                        error.location[0] ? " at " : "", error.location, error.message);
-    }
-    return read_tone_overrides(what, object, out);
-}
-
-/* The bits of the functions a form lists; false, with the error printed, for a name that is not one. */
-bool request_read_functions(const char *what, const cJSON *functions, unsigned *out) {
-    *out = 0;
-    if (!functions || cJSON_IsNull(functions)) {
-        return true;
-    }
-    if (!cJSON_IsArray(functions)) {
-        cli_fail(CLI_EXIT_USAGE, "%s: \"functions\" must be a list", what);
-        return false;
-    }
-    const cJSON *item = NULL;
-    cJSON_ArrayForEach(item, functions) {
-        const char *name = cJSON_IsString(item) ? item->valuestring : "";
-        unsigned bit = strcmp(name, "beginning") == 0      ? GROW_FUNCTION_BEGINNING
-                       : strcmp(name, "continuation") == 0 ? GROW_FUNCTION_CONTINUATION
-                       : strcmp(name, "contrast") == 0     ? GROW_FUNCTION_CONTRAST
-                       : strcmp(name, "cadential") == 0    ? GROW_FUNCTION_CADENTIAL
-                                                           : 0;
-        if (bit == 0) {
-            cli_fail(CLI_EXIT_USAGE, "%s: function must be beginning, continuation, contrast or cadential, not '%s'", what, name);
-            return false;
-        }
-        *out |= bit;
-    }
-    return true;
-}
 
 /* The slots: each names a motive of the request (a motive may be in several slots), "basic" required. */
 static int read_slots(ThemeExt *ext, const cJSON *request) {
@@ -520,14 +338,6 @@ static int theme_load(GrowExt *base, const PlanMeter *meter, const AnalysisKey *
 
 /* --- the output ------------------------------------------------------------------ */
 
-static void print_number(const ComposerRatio *ratio) {
-    if (ratio->denominator == 1) {
-        printf("%lu", ratio->numerator);
-    } else {
-        printf("%g", (double)ratio->numerator / (double)ratio->denominator);
-    }
-}
-
 static void theme_print_slots(const GrowExt *base, const PiecePlan *plan, const GrowOutcome *outcome, bool json);
 
 /* Whether the extension is the theme command's: the piece command prints its brief with this function too. */
@@ -550,52 +360,17 @@ static void print_chords_json(const ThemeExt *ext) {
     printf("]");
 }
 
-void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
+/* The brief as theme prints it: grow's brief, then the chords the request gave. */
+static void theme_print_brief(const GrowExt *base, const GrowBrief *brief, bool json) {
     const ThemeExt *ext = theme_ext_of(base);
+    cli_print_brief(brief, json);
     if (json) {
-        printf("\"brief\":{\"tempo\":{\"qpm\":");
-        if (brief->tempo.denominator > 0) {
-            print_number(&brief->tempo);
-        } else {
-            printf("null");
-        }
-        printf(",\"from\":\"%s\"},\"mode\":{\"mode\":\"%s\",\"from\":\"%s\"},\"density\":", brief->tempo_from,
-               brief->minor ? "minor" : "major", brief->mode_from);
-        if (brief->has_density) {
-            print_number(&brief->density);
-        } else {
-            printf("null");
-        }
-        printf(",\"without\":[");
-        for (size_t i = 0; i < brief->without_count; i++) {
-            printf("%s", i ? "," : "");
-            cli_print_json_string(brief->without[i]);
-        }
-        printf("]}");
         if (ext) {
             printf(",");
             print_chords_json(ext);
         }
         return;
     }
-    printf("brief: mode %s (%s)", brief->minor ? "minor" : "major", brief->mode_from);
-    if (brief->tempo.denominator > 0) {
-        printf(", tempo ");
-        print_number(&brief->tempo);
-        printf(" (%s)", brief->tempo_from);
-    }
-    if (brief->has_density) {
-        printf(", density ");
-        print_number(&brief->density);
-        printf(" attacks per beat");
-    }
-    if (brief->without_count > 0) {
-        printf(", without");
-        for (size_t i = 0; i < brief->without_count; i++) {
-            printf("%s %s", i ? "," : "", brief->without[i]);
-        }
-    }
-    printf("\n");
     const cJSON *found = ext ? cJSON_GetObjectItemCaseSensitive(ext->root, "chords") : NULL;
     const cJSON *list = cJSON_IsArray(found) ? found : NULL;
     const cJSON *entry = NULL;

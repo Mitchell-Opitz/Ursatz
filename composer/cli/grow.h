@@ -11,6 +11,8 @@
 #include <ursatz_composer/piece_plan.h>
 #include <ursatz_composer/style.h>
 
+#include "api/api_grow.h"
+
 /*
  * The `grow` subcommand: argv[1] is "grow". Returns the process exit status:
  *   0  success
@@ -19,21 +21,6 @@
  *   3  an output file could not be written
  */
 int run_grow(int argc, char **argv);
-
-/* What the brief of a run was, for GrowExt.print_brief. */
-typedef struct {
-    ComposerRatio tempo;      /* a denominator of 0 for none */
-    const char *tempo_from;   /* "option", "style" or "none" */
-    bool minor;               /* the key's mode */
-    const char *mode_from;    /* "request" or "style" */
-    bool has_density;         /* the style's density (attacks per beat) */
-    ComposerRatio density;
-    const char *const *without;
-    size_t without_count;
-} GrowBrief;
-
-/* At most two chords a bar in a theme of eight bars. */
-#define GROW_EXT_CHORDS 16
 
 /*
  * What the `theme` command adds to a grow run (R-166). run_grow_ext reads the grow options from argv as run_grow does,
