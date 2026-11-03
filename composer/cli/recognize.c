@@ -242,7 +242,7 @@ int run_recognize(int argc, char **argv) {
     }
     unsigned long depth = VARIANT_CHAIN_MAX;
     if (options.depth_text &&
-        (!cli_parse_whole_number(options.depth_text, VARIANT_CHAIN_MAX, &depth) || depth < 1)) {
+        (!request_parse_whole_number(options.depth_text, VARIANT_CHAIN_MAX, &depth) || depth < 1)) {
         return cli_fail(CLI_EXIT_USAGE, "--depth must be a whole number from 1 to %d, not '%s'", VARIANT_CHAIN_MAX,
                         options.depth_text);
     }

@@ -153,7 +153,7 @@ static int check_options(Options *options, bool harmonize) {
     if (!options->count_text) {
         return cli_fail(CLI_EXIT_USAGE, "%s needs --count <n>\n%s", command, usage);
     }
-    if (!cli_parse_whole_number(options->count_text, PLAN_VARIATIONS_MAX, &options->count) || options->count < 1) {
+    if (!request_parse_whole_number(options->count_text, PLAN_VARIATIONS_MAX, &options->count) || options->count < 1) {
         return cli_fail(CLI_EXIT_USAGE, "--count must be a whole number from 1 to %d, not '%s'", PLAN_VARIATIONS_MAX,
                         options->count_text);
     }
@@ -161,7 +161,7 @@ static int check_options(Options *options, bool harmonize) {
         return cli_fail(CLI_EXIT_USAGE, "%s needs --out-dir <dir>\n%s", command, usage);
     }
     if (options->seed_text) {
-        if (!cli_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
+        if (!request_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
             return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to 4294967295, not '%s'",
                             options->seed_text);
         }
@@ -175,9 +175,9 @@ static int check_options(Options *options, bool harmonize) {
         }
     }
     if (options->format_text) {
-        if (cli_equals_ignore_case(options->format_text, "json")) {
+        if (request_equals_ignore_case(options->format_text, "json")) {
             options->json = true;
-        } else if (!cli_equals_ignore_case(options->format_text, "text")) {
+        } else if (!request_equals_ignore_case(options->format_text, "text")) {
             return cli_fail(CLI_EXIT_USAGE, "--format must be text or json, not '%s'", options->format_text);
         }
     }

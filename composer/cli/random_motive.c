@@ -102,9 +102,9 @@ static int read_request(const Options *options, MotiveRandomOptions *out) {
     if (!options->mode_text || !options->meter_text) {
         return cli_fail(CLI_EXIT_USAGE, "random-motive needs --mode and --meter\n%s", RANDOM_MOTIVE_USAGE_LINE);
     }
-    if (cli_equals_ignore_case(options->mode_text, "major")) {
+    if (request_equals_ignore_case(options->mode_text, "major")) {
         out->mode = KEY_STRUCTURE_MODE_MAJOR;
-    } else if (cli_equals_ignore_case(options->mode_text, "minor")) {
+    } else if (request_equals_ignore_case(options->mode_text, "minor")) {
         out->mode = KEY_STRUCTURE_MODE_MINOR;
     } else {
         return cli_fail(CLI_EXIT_USAGE, "--mode must be major or minor, not '%s'", options->mode_text);
@@ -132,13 +132,13 @@ static int read_request(const Options *options, MotiveRandomOptions *out) {
     }
     unsigned long count = RANDOM_MOTIVE_COUNT_DEFAULT;
     if (options->count_text &&
-        (!cli_parse_whole_number(options->count_text, MOTIVE_RANDOM_MAX_COUNT, &count) || count < 1)) {
+        (!request_parse_whole_number(options->count_text, MOTIVE_RANDOM_MAX_COUNT, &count) || count < 1)) {
         return cli_fail(CLI_EXIT_USAGE, "--count must be a whole number from 1 to %d, not '%s'",
                         MOTIVE_RANDOM_MAX_COUNT, options->count_text);
     }
     out->count = count;
     out->seed = cli_default_seed();
-    if (options->seed_text && !cli_parse_whole_number(options->seed_text, CLI_SEED_MAX, &out->seed)) {
+    if (options->seed_text && !request_parse_whole_number(options->seed_text, CLI_SEED_MAX, &out->seed)) {
         return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to %lu, not '%s'", CLI_SEED_MAX,
                         options->seed_text);
     }

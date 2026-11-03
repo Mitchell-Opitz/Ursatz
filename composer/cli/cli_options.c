@@ -29,7 +29,7 @@ int cli_read_accompaniment(const char *pattern_text, const char *texture_text, c
     if (pattern_text) {
         bool found = false;
         for (int p = 0; p < 5 && !found; p++) {
-            found = cli_equals_ignore_case(pattern_text, ACCOMPANIMENT_WORDS[p]);
+            found = request_equals_ignore_case(pattern_text, ACCOMPANIMENT_WORDS[p]);
             out->pattern = found ? (PlanAccompanimentPattern)p : out->pattern;
         }
         if (!found) {
@@ -40,7 +40,7 @@ int cli_read_accompaniment(const char *pattern_text, const char *texture_text, c
     if (texture_text) {
         bool found = false;
         for (int t = 0; t < (int)STANDARD_TEXTURE_COUNT && !found; t++) {
-            found = cli_equals_ignore_case(texture_text, standard_texture_name((StandardTexture)t));
+            found = request_equals_ignore_case(texture_text, standard_texture_name((StandardTexture)t));
             out->texture = found ? t : out->texture;
         }
         if (!found) {
@@ -81,29 +81,6 @@ int cli_fail(int status, const char *format, ...) {
     return status;
 }
 
-bool cli_equals_ignore_case(const char *a, const char *b) {
-    for (; *a && *b; a++, b++) {
-        if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) {
-            return false;
-        }
-    }
-    return *a == *b;
-}
-
-bool cli_parse_whole_number(const char *text, unsigned long maximum, unsigned long *out) {
-    char *end = NULL;
-    if (!text || !isdigit((unsigned char)text[0])) {
-        return false;
-    }
-    errno = 0;
-    unsigned long value = strtoul(text, &end, 10);
-    if (errno != 0 || *end != '\0' || value > maximum) {
-        return false;
-    }
-    *out = value;
-    return true;
-}
-
 int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportOptions *out) {
     *out = plan_export_options_default();
     if (plain_midi) {
@@ -114,7 +91,7 @@ int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportO
         return 0;
     }
     ComposerRatio tempo;
-    if (!cli_parse_ratio(tempo_text, &tempo) || tempo.denominator == 0 || tempo.numerator < 20UL * tempo.denominator ||
+    if (!request_parse_ratio(tempo_text, &tempo) || tempo.denominator == 0 || tempo.numerator < 20UL * tempo.denominator ||
         tempo.numerator > 400UL * tempo.denominator) {
         return cli_fail(CLI_EXIT_USAGE,
                         "--tempo must be from 20 to 400 quarter notes per minute, a whole number or a fraction like "
@@ -124,35 +101,6 @@ int cli_read_export_options(const char *tempo_text, bool plain_midi, PlanExportO
     out->tempo_numerator = tempo.numerator;
     out->tempo_denominator = tempo.denominator;
     return 0;
-}
-
-bool cli_parse_ratio(const char *text, ComposerRatio *out) {
-    if (!text || !isdigit((unsigned char)text[0])) {
-        return false;
-    }
-    char *end = NULL;
-    errno = 0;
-    unsigned long numerator = strtoul(text, &end, 10);
-    unsigned long denominator = 1;
-    if (errno != 0 || numerator > 4294967295UL) {
-        return false;
-    }
-    if (*end == '/') {
-        if (!isdigit((unsigned char)end[1])) {
-            return false;
-        }
-        errno = 0;
-        denominator = strtoul(end + 1, &end, 10);
-        if (errno != 0 || denominator == 0 || denominator > 4294967295UL) {
-            return false;
-        }
-    }
-    if (*end != '\0') {
-        return false;
-    }
-    out->numerator = numerator;
-    out->denominator = denominator;
-    return true;
 }
 
 static const char *const STYLE_CATEGORIES[] = {
@@ -214,7 +162,7 @@ int cli_read_blend(bool has_style, const char *blend_path, const char *all_text,
     }
     ComposerRatio all = {1, 2};
     if (all_text) {
-        if (!cli_parse_ratio(all_text, &all)) {
+        if (!request_parse_ratio(all_text, &all)) {
             return cli_fail(CLI_EXIT_USAGE, "--blend-weight must be a fraction like 1/2, not '%s'", all_text);
         }
         if (all.numerator > all.denominator) {
@@ -251,7 +199,7 @@ int cli_read_blend(bool has_style, const char *blend_path, const char *all_text,
         }
         seen[dimension] = true;
         ComposerRatio weight;
-        if (!cli_parse_ratio(equals + 1, &weight)) {
+        if (!request_parse_ratio(equals + 1, &weight)) {
             return cli_fail(CLI_EXIT_USAGE, "--blend-weights: %s must be a fraction like 1/2, not '%s'", item,
                             equals + 1);
         }
@@ -321,88 +269,9 @@ void cli_print_style_distance_json(const StyleComparison *comparison) {
     printf("}");
 }
 
-bool cli_parse_key(const char *text, AnalysisKey *key) {
-    static const int NATURAL[7] = {9, 11, 0, 2, 4, 5, 7}; /* A B C D E F G */
-    while (isspace((unsigned char)*text)) {
-        text++;
-    }
-    char letter = (char)toupper((unsigned char)*text);
-    if (letter < 'A' || letter > 'G') {
-        return false;
-    }
-    int pc = NATURAL[letter - 'A'];
-    text++;
-    if (*text == '#') {
-        pc++;
-        text++;
-    } else if (*text == 'b') {
-        pc--;
-        text++;
-    }
-    if (!isspace((unsigned char)*text)) {
-        return false;
-    }
-    while (isspace((unsigned char)*text)) {
-        text++;
-    }
-    char mode[8];
-    size_t length = 0;
-    while (text[length] && !isspace((unsigned char)text[length]) && length + 1 < sizeof(mode)) {
-        mode[length] = text[length];
-        length++;
-    }
-    mode[length] = '\0';
-    const char *rest = text + length;
-    while (isspace((unsigned char)*rest)) {
-        rest++;
-    }
-    if (*rest != '\0') {
-        return false;
-    }
-    if (cli_equals_ignore_case(mode, "major")) {
-        key->mode = KEY_STRUCTURE_MODE_MAJOR;
-    } else if (cli_equals_ignore_case(mode, "minor")) {
-        key->mode = KEY_STRUCTURE_MODE_MINOR;
-    } else {
-        return false;
-    }
-    *key = plan_key_of_pitch_class((pc % 12 + 12) % 12, key->mode);
-    return true;
-}
-
 const char *cli_key_name(const AnalysisKey *key, char *out, size_t size) {
     util_key_name(analysis_key_tonic_pitch_class(key), key->mode == KEY_STRUCTURE_MODE_MINOR, out, size);
     return out;
-}
-
-bool cli_parse_meter(const char *text, PlanMeter *meter) {
-    unsigned long beats;
-    unsigned long unit;
-    char first[16];
-    const char *slash = strchr(text, '/');
-    if (!slash || (size_t)(slash - text) >= sizeof(first)) {
-        return false;
-    }
-    memcpy(first, text, (size_t)(slash - text));
-    first[slash - text] = '\0';
-    if (!cli_parse_whole_number(first, 64, &beats) || !cli_parse_whole_number(slash + 1, 64, &unit) || beats == 0 ||
-        unit == 0) {
-        return false;
-    }
-    meter->beats_per_bar = (int)beats;
-    meter->beat_unit = (int)unit;
-    meter->bars_per_hyperbar = 0;
-    return true;
-}
-
-bool cli_parse_cadence(const char *text, CadenceType *cadence) {
-    for (size_t i = 0; i < PLAN_CADENCE_COUNT; i++) {
-        if (cli_equals_ignore_case(text, plan_cadence_names[i])) {
-            *cadence = plan_cadence_types[i];
-            return true;
-        }
-    }
-    return false;
 }
 
 const char *cli_cadence_name(CadenceType cadence) {
@@ -427,7 +296,7 @@ bool cli_alternative_path(const char *path, size_t k, bool several, char *out, s
 
 int cli_write_explanation(const char *final_path, const char *write_path, const Explanation *explanation) {
     size_t length = strlen(final_path);
-    bool json = length >= 5 && cli_equals_ignore_case(final_path + length - 5, ".json");
+    bool json = length >= 5 && request_equals_ignore_case(final_path + length - 5, ".json");
     char *text = json ? explain_to_json(explanation) : explain_to_text(explanation);
     if (!text) {
         return -1;
@@ -544,24 +413,23 @@ NodeId cli_find_node(const PiecePlan *plan, const char *name) {
 
 /* --- the node a command works on ------------------------------------------------ */
 
-
 int cli_check_target(CliTargetOptions *options, const char *command, const char *usage) {
     if (!options->node_text == !options->section_text) {
         return cli_fail(CLI_EXIT_USAGE, "%s needs a node: give --node <id> or --section <letter>, not both\n%s", command, usage);
     }
-    if (options->node_text && !cli_parse_whole_number(options->node_text, 1000000UL, &options->node)) {
+    if (options->node_text && !request_parse_whole_number(options->node_text, 1000000UL, &options->node)) {
         return cli_fail(CLI_EXIT_USAGE, "--node must be a whole number (the id in the plan file), not '%s'", options->node_text);
     }
     options->has_lane = false;
     if (options->lane_text) {
         options->has_lane = true;
-        if (cli_equals_ignore_case(options->lane_text, "harmony")) {
+        if (request_equals_ignore_case(options->lane_text, "harmony")) {
             options->lane = PLAN_LANE_HARMONY;
-        } else if (cli_equals_ignore_case(options->lane_text, "bass")) {
+        } else if (request_equals_ignore_case(options->lane_text, "bass")) {
             options->lane = PLAN_LANE_BASS;
-        } else if (cli_equals_ignore_case(options->lane_text, "melody")) {
+        } else if (request_equals_ignore_case(options->lane_text, "melody")) {
             options->lane = PLAN_LANE_MELODY;
-        } else if (cli_equals_ignore_case(options->lane_text, "inner")) {
+        } else if (request_equals_ignore_case(options->lane_text, "inner")) {
             options->lane = PLAN_LANE_INNER_VOICE;
         } else {
             return cli_fail(CLI_EXIT_USAGE, "--lane must be harmony, bass, melody or inner, not '%s'", options->lane_text);
@@ -587,7 +455,7 @@ int cli_find_target_node(const PiecePlan *plan, const CliTargetOptions *options,
     count = count > CLI_MAX_SECTIONS ? CLI_MAX_SECTIONS : count;
     for (size_t i = 0; i < count; i++) {
         if (strcmp(sections[i].letter, options->section_text) == 0 ||
-            (options->section_text[1] == '\0' && cli_equals_ignore_case(sections[i].letter, options->section_text))) {
+            (options->section_text[1] == '\0' && request_equals_ignore_case(sections[i].letter, options->section_text))) {
             *out = sections[i].node;
             return 0;
         }
@@ -675,23 +543,6 @@ void cli_discard_pending(CliPendingFile *pending, size_t count) {
     for (size_t i = 0; i < count; i++) {
         remove(pending[i].temporary);
     }
-}
-
-bool cli_parse_pickup(const char *text, int beat_unit, Rational *out) {
-    char *end = NULL;
-    long numerator = strtol(text, &end, 10);
-    long denominator = 1;
-    if (end == text || numerator < 0) {
-        return false;
-    }
-    if (*end == '/') {
-        const char *rest = end + 1;
-        denominator = strtol(rest, &end, 10);
-        if (end == rest || denominator < 1) {
-            return false;
-        }
-    }
-    return *end == '\0' && rational_make(numerator, (long long)(denominator * beat_unit), out) == RATIONAL_OK;
 }
 
 char *cli_motive_text(const Motive *motive) {

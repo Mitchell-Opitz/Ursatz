@@ -157,7 +157,7 @@ static int check_options(Options *options) {
     if (!options->species_text || !options->key_text || !options->meter_text) {
         return cli_fail(CLI_EXIT_USAGE, "counterpoint needs --species, --key and --meter (see --help)");
     }
-    if (!cli_parse_whole_number(options->species_text, 4, &number) || number < 1) {
+    if (!request_parse_whole_number(options->species_text, 4, &number) || number < 1) {
         return cli_fail(CLI_EXIT_USAGE, "--species must be 1, 2, 3 or 4, not '%s' (fifth species is not written)",
                         options->species_text);
     }
@@ -167,34 +167,34 @@ static int check_options(Options *options) {
     }
     if (options->mode_text) {
         char text[64];
-        if (!cli_equals_ignore_case(options->mode_text, "major") && !cli_equals_ignore_case(options->mode_text, "minor")) {
+        if (!request_equals_ignore_case(options->mode_text, "major") && !request_equals_ignore_case(options->mode_text, "minor")) {
             return cli_fail(CLI_EXIT_USAGE, "--mode must be major or minor, not '%s'", options->mode_text);
         }
         if (strchr(options->key_text, ' ')) {
             return cli_fail(CLI_EXIT_USAGE, "--key already names a mode; give a tonic alone with --mode");
         }
         snprintf(text, sizeof(text), "%s %s", options->key_text, options->mode_text);
-        if (!cli_parse_key(text, &options->key)) {
+        if (!request_parse_key(text, &options->key)) {
             return cli_fail(CLI_EXIT_USAGE, "unknown key '%s'", options->key_text);
         }
-    } else if (!cli_parse_key(options->key_text, &options->key)) {
+    } else if (!request_parse_key(options->key_text, &options->key)) {
         return cli_fail(CLI_EXIT_USAGE,
                         "unknown key '%s'; write a tonic letter A-G with an optional # or b, then major or minor, for "
                         "example \"D minor\"",
                         options->key_text);
     }
-    if (!cli_parse_meter(options->meter_text, &options->meter)) {
+    if (!request_parse_meter(options->meter_text, &options->meter)) {
         return cli_fail(CLI_EXIT_USAGE, "meter '%s' is not a meter; write beats over a beat unit, for example 4/4",
                         options->meter_text);
     }
     options->seed = cli_default_seed();
-    if (options->seed_text && !cli_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
+    if (options->seed_text && !request_parse_whole_number(options->seed_text, CLI_SEED_MAX, &options->seed)) {
         return cli_fail(CLI_EXIT_USAGE, "--seed must be a whole number from 0 to %lu, not '%s'", CLI_SEED_MAX,
                         options->seed_text);
     }
     options->suggest = 1;
     if (options->suggest_text &&
-        (!cli_parse_whole_number(options->suggest_text, MAX_SUGGESTIONS, &options->suggest) || options->suggest == 0)) {
+        (!request_parse_whole_number(options->suggest_text, MAX_SUGGESTIONS, &options->suggest) || options->suggest == 0)) {
         return cli_fail(CLI_EXIT_USAGE, "--suggest must be a whole number from 1 to %d, not '%s'", MAX_SUGGESTIONS,
                         options->suggest_text);
     }

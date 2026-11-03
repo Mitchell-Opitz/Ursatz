@@ -59,7 +59,7 @@ int motive_input_load(const MotiveInput *options, Motive *out) {
            read after the first load. */
         if (options->pickup_text) {
             Rational pickup;
-            if (!cli_parse_pickup(options->pickup_text, motive_meter(out).beat_unit, &pickup)) {
+            if (!request_parse_pickup(options->pickup_text, motive_meter(out).beat_unit, &pickup)) {
                 return cli_fail(CLI_EXIT_USAGE, "pickup '%s' is not a number of beats; write 0, 1 or 1/2",
                                 options->pickup_text);
             }

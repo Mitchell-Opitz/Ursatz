@@ -1,5 +1,3 @@
-#include <ctype.h>
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,46 +16,6 @@ static const char *skip_reason_text(RenderSkipReason reason) {
            : reason == RENDER_SKIP_LAYER      ? "not in the layer"
            : reason == RENDER_SKIP_SEAM       ? "seam"
                                               : "lane is not rendered yet";
-}
-
-/* Quarter notes per minute from a whole number, or from "195/2". */
-static bool read_tempo(const cJSON *member, PlanExportOptions *options) {
-    unsigned long numerator = 0;
-    unsigned long denominator = 1;
-    if (cJSON_IsNumber(member)) {
-        if (member->valuedouble != (double)(unsigned long)member->valuedouble || member->valuedouble < 0) {
-            return false;
-        }
-        numerator = (unsigned long)member->valuedouble;
-    } else if (cJSON_IsString(member) && isdigit((unsigned char)member->valuestring[0])) {
-        char *end = NULL;
-        errno = 0;
-        numerator = strtoul(member->valuestring, &end, 10);
-        if (errno != 0 || numerator > 4294967295UL) {
-            return false;
-        }
-        if (*end == '/') {
-            if (!isdigit((unsigned char)end[1])) {
-                return false;
-            }
-            errno = 0;
-            denominator = strtoul(end + 1, &end, 10);
-            if (errno != 0 || denominator == 0 || denominator > 4294967295UL) {
-                return false;
-            }
-        }
-        if (*end != '\0') {
-            return false;
-        }
-    } else {
-        return false;
-    }
-    if (numerator < 20UL * denominator || numerator > 400UL * denominator) {
-        return false;
-    }
-    options->tempo_numerator = numerator;
-    options->tempo_denominator = denominator;
-    return true;
 }
 
 static ComposerStatus export_failure(ComposerError *error, PlanExportResult result, const char *what,
@@ -86,7 +44,6 @@ ComposerStatus composer_api_export(const char *request_json, const ComposerJob *
     const cJSON *plan_member = cJSON_GetObjectItemCaseSensitive(request, "plan");
     const cJSON *midi_member = cJSON_GetObjectItemCaseSensitive(request, "midi");
     const cJSON *musicxml_member = cJSON_GetObjectItemCaseSensitive(request, "musicxml");
-    const cJSON *tempo_member = cJSON_GetObjectItemCaseSensitive(request, "tempo");
     const cJSON *plain_member = cJSON_GetObjectItemCaseSensitive(request, "plain_midi");
     PlanExportOptions options = plan_export_options_default();
     if (!cJSON_IsObject(plan_member)) {
@@ -97,9 +54,19 @@ ComposerStatus composer_api_export(const char *request_json, const ComposerJob *
                            : musicxml_member && !cJSON_IsBool(musicxml_member) ? "/musicxml"
                                                                                : "/plain_midi";
         status = api_fail(&out->error, COMPOSER_ERR_REQUEST, path, "%s must be true or false", path + 1);
-    } else if (tempo_member && !cJSON_IsNull(tempo_member) && !read_tempo(tempo_member, &options)) {
-        status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/tempo",
-                          "tempo must be from 20 to 400 quarter notes per minute, a whole number or a fraction like 195/2");
+    } else {
+        ComposerRatio tempo;
+        bool has_tempo = false;
+        if (!api_member_rational(request, "tempo", &tempo, &has_tempo, &out->error)) {
+            status = COMPOSER_ERR_REQUEST;
+        } else if (has_tempo && (tempo.denominator == 0 || tempo.numerator < 20UL * tempo.denominator ||
+                                 tempo.numerator > 400UL * tempo.denominator)) {
+            status = api_fail(&out->error, COMPOSER_ERR_REQUEST, "/tempo",
+                              "tempo must be from 20 to 400 quarter notes per minute, a whole number or a fraction like 195/2");
+        } else if (has_tempo) {
+            options.tempo_numerator = tempo.numerator;
+            options.tempo_denominator = tempo.denominator;
+        }
     }
     if (status != COMPOSER_OK) {
         cJSON_Delete(request);
