@@ -194,4 +194,30 @@ string(REGEX REPLACE "^ursatz-composer [^\n]*" "ursatz-composer <VERSION>" versi
 file(WRITE "${WORK}/version.stdout.txt" "${version_text}")
 snapshot(version.stdout.txt version.stdout.txt)
 
+# --- refusals and exit statuses ------------------------------------------------------
+# What the GUI reads back when a request fails: the message on stderr and the exit status (1 usage, 2 unsatisfiable, 3 write).
+
+# Runs the composer, requires exit status <expected_status>, and snapshots stderr as <name>.stderr.txt and the status as <name>.status.txt.
+function(run_error_case name expected_status)
+    execute_process(COMMAND "${COMPOSER}" ${ARGN} WORKING_DIRECTORY "${WORK}"
+                    OUTPUT_VARIABLE out ERROR_FILE "${WORK}/${name}.stderr.txt" RESULT_VARIABLE status)
+    if(NOT status EQUAL expected_status)
+        message(FATAL_ERROR "case ${name}: ursatz-composer ${ARGN}: exit ${status}, expected ${expected_status}")
+    endif()
+    file(WRITE "${WORK}/${name}.status.txt" "${status}\n")
+    snapshot("${name}.stderr.txt" "${name}.stderr.txt")
+    snapshot("${name}.status.txt" "${name}.status.txt")
+endfunction()
+
+# A bad meter to motive.
+run_error_case(error-motive-meter 1 motive "${gui}/motive-notes.txt" --format notes --meter 5/3 --json)
+# An unknown key in a theme request.
+run_error_case(error-theme-key 1 theme "${gui}/theme-unknown-key.json" --seed 1)
+# A request member of the wrong type in a piece request (beats as text).
+run_error_case(error-piece-type 1 piece "${gui}/piece-wrong-type.json" --seed 1)
+# A theme the Composer refuses: a last bar V under a perfect cadence.
+run_error_case(error-theme-unsatisfiable 2 theme "${gui}/theme-unsatisfiable.json" --seed 1)
+# An --out the Composer cannot write.
+run_error_case(error-theme-write 3 theme "${theme_one-motive}" --seed 1 --out no-such-directory/theme.plan.json)
+
 file(REMOVE_RECURSE "${WORK}/normal")

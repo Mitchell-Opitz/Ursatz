@@ -1,0 +1,80 @@
+{
+ "schema": "ursatz-piece-request",
+ "schema_version": 1,
+ "key": "D",
+ "mode": "style",
+ "meter": "4/4",
+ "motive": null,
+ "sections": [
+  {
+   "id": "intro",
+   "part": "intro",
+   "letter": "I",
+   "beats": "eight",
+   "pickup": "0",
+   "cadence": null,
+   "fill": {
+    "kind": "empty"
+   }
+  },
+  {
+   "id": "a",
+   "part": "body",
+   "letter": "A",
+   "beats": 32,
+   "pickup": "0",
+   "cadence": null,
+   "fill": {
+    "kind": "motif",
+    "motive": {
+     "degrees": "1:e 3:e 5:e 3:e 1:e 3:e 5:e 1':e",
+     "pickup": "0",
+     "harmony": null,
+     "features": [],
+     "role": "melodic"
+    },
+    "forms": [],
+    "into": "sentence",
+    "hybrid": null
+   }
+  },
+  {
+   "id": "b",
+   "part": "body",
+   "letter": "B",
+   "beats": 16,
+   "pickup": "0",
+   "cadence": null,
+   "fill": {
+    "kind": "motif",
+    "motive": {
+     "degrees": "5:e 4:e 3:e 2:e 4:e 3:e 2:e 1:e",
+     "pickup": "0",
+     "harmony": null,
+     "features": [],
+     "role": "melodic"
+    },
+    "forms": [],
+    "into": null,
+    "hybrid": null
+   }
+  },
+  {
+   "id": "t",
+   "part": "turnaround",
+   "letter": "T",
+   "beats": "eight",
+   "pickup": "0",
+   "cadence": null,
+   "fill": {
+    "kind": "empty"
+   }
+  }
+ ],
+ "accompaniment": null,
+ "voicing": null,
+ "style": "@STYLE@",
+ "style_weight": "1/2",
+ "without": [],
+ "tempo": null
+}
