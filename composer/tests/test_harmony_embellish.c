@@ -139,7 +139,7 @@ static CadenceType expected_type(PlanCadenceType cadence) {
     return CADENCE_TYPE_UNKNOWN;
 }
 
-/* An applied numeral has a slash before a letter (V7/V); a figure has one before a digit (I6/4). */
+/* An applied numeral has a slash before a letter (V7/V); a plain figure has none (I64). */
 static bool is_applied(const char *roman) {
     const char *slash = strrchr(roman, '/');
     return slash && slash[1] != '\0' && (slash[1] < '0' || slash[1] > '9');
@@ -286,7 +286,7 @@ static Result pipeline(const Scenario *scenario, const HarmonyEmbellishParams *p
     count = plan_lane_find(fixture.plan, PLAN_LANE_HARMONY, 0, fixture.span, ids, MAX_CHORDS);
     for (size_t i = 0; i < count; i++) {
         const char *roman = plan_lane_span_payload(fixture.plan, ids[i])->harmony.roman_numeral;
-        result.six_four = result.six_four || (strstr(roman, "6/4") != NULL && !is_applied(roman));
+        result.six_four = result.six_four || (strstr(roman, "64") != NULL && !is_applied(roman));
         result.applied = result.applied || is_applied(roman);
     }
     result.changed = strcmp(plain_text, result_text) != 0;

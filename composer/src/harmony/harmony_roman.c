@@ -2,92 +2,82 @@
 
 #include <string.h>
 
-#define DIMINISHED "\xC2\xB0"
-
-static const char *const MAJOR_NUMERALS[8] = {NULL, "I", "ii", "iii", "IV", "V", "vi", "vii" DIMINISHED};
-static const char *const MINOR_NUMERALS[8] = {NULL, "i", "ii" DIMINISHED, "III", "iv", "V", "VI", "VII"};
-/* The chord on the raised seventh degree of a minor key. */
-static const char *const MINOR_LEADING_TONE = "vii" DIMINISHED;
-
-/* The figures after a numeral: triads in three positions, sevenths in four. */
-typedef struct {
-    const char *text;
-    bool seventh;
-    int inversion;
-} Figure;
-
-static const Figure FIGURES[] = {{"", false, 0},    {"6", false, 1},    {"6/4", false, 2}, {"7", true, 0},
-                                 {"6/5", true, 1}, {"4/3", true, 2}, {"4/2", true, 3}};
+#include <standard-tonality/roman_numeral_grammar.h>
 
 HarmonyMode harmony_mode_of(PlanKeyMode mode) {
     return mode == PLAN_MODE_MINOR ? HARMONY_MODE_MINOR : HARMONY_MODE_MAJOR;
+}
+
+/*
+ * A chord as the library's numeral value (R-232). Case comes from the quality: the chords of the mode's scale that have
+ * a minor third are lower case, a diminished chord and the leading-tone chord of a minor key are diminished (a seventh on
+ * the diminished chord of a major key or on the second degree of a minor key is half-diminished, on the raised seventh
+ * fully diminished).
+ */
+static StandardTonalityNumeralText numeral_of(PlanKeyMode mode, const HarmonyChord *chord) {
+    static const bool MAJOR_MINOR_THIRD[8] = {false, false, true, true, false, false, true, false};
+    static const bool MINOR_MINOR_THIRD[8] = {false, true, false, false, true, false, false, false};
+    StandardTonalityNumeralText numeral;
+    memset(&numeral, 0, sizeof(numeral));
+    numeral.degree = chord->degree;
+    numeral.inversion = chord->inversion;
+    bool minor_mode = mode == PLAN_MODE_MINOR;
+    bool diminished = minor_mode ? (chord->degree == 2 || chord->leading_tone) : chord->degree == 7;
+    bool minor_third = minor_mode ? MINOR_MINOR_THIRD[chord->degree] : MAJOR_MINOR_THIRD[chord->degree];
+    if (diminished) {
+        numeral.quality = !chord->seventh ? STANDARD_TONALITY_NUMERAL_DIMINISHED
+                          : chord->leading_tone ? STANDARD_TONALITY_NUMERAL_FULLY_DIMINISHED_SEVENTH
+                                                : STANDARD_TONALITY_NUMERAL_HALF_DIMINISHED_SEVENTH;
+    } else if (chord->seventh) {
+        numeral.quality = minor_third ? STANDARD_TONALITY_NUMERAL_MINOR_SEVENTH
+                                      : STANDARD_TONALITY_NUMERAL_DOMINANT_SEVENTH;
+    } else {
+        numeral.quality = minor_third ? STANDARD_TONALITY_NUMERAL_MINOR : STANDARD_TONALITY_NUMERAL_MAJOR;
+    }
+    return numeral;
 }
 
 bool harmony_roman_format(PlanKeyMode mode, const HarmonyChord *chord, char out[PLAN_ROMAN_NUMERAL_MAX]) {
     if (!chord || !out || !harmony_chord_valid(chord) || chord->half_diminished) {
         return false;
     }
-    const char *base = NULL;
-    if (mode == PLAN_MODE_MINOR) {
-        base = chord->leading_tone ? MINOR_LEADING_TONE : MINOR_NUMERALS[chord->degree];
-    } else {
-        base = MAJOR_NUMERALS[chord->degree];
-    }
-    for (size_t i = 0; i < sizeof(FIGURES) / sizeof(FIGURES[0]); i++) {
-        if (FIGURES[i].seventh != chord->seventh || FIGURES[i].inversion != chord->inversion) {
-            continue;
-        }
-        size_t base_length = strlen(base);
-        size_t figure_length = strlen(FIGURES[i].text);
-        if (base_length + figure_length >= PLAN_ROMAN_NUMERAL_MAX) {
-            return false;
-        }
-        memset(out, 0, PLAN_ROMAN_NUMERAL_MAX);
-        memcpy(out, base, base_length);
-        memcpy(out + base_length, FIGURES[i].text, figure_length);
-        return true;
-    }
-    return false;
-}
-
-/* Whether text is exactly numeral followed by a figure; sets *figure to it. */
-static bool numeral_with_figure(const char *text, const char *numeral, const Figure **figure) {
-    size_t length = strlen(numeral);
-    if (strncmp(text, numeral, length) != 0) {
+    StandardTonalityNumeralText numeral = numeral_of(mode, chord);
+    char text[PLAN_ROMAN_NUMERAL_MAX];
+    if (!standard_tonality_numeral_format(&numeral, text, sizeof(text))) {
         return false;
     }
-    for (size_t i = 0; i < sizeof(FIGURES) / sizeof(FIGURES[0]); i++) {
-        if (strcmp(text + length, FIGURES[i].text) == 0) {
-            *figure = &FIGURES[i];
-            return true;
-        }
-    }
-    return false;
+    memset(out, 0, PLAN_ROMAN_NUMERAL_MAX);
+    memcpy(out, text, strlen(text));
+    return true;
+}
+
+static bool quality_is_diminished_seventh(StandardTonalityNumeralQuality quality) {
+    return quality == STANDARD_TONALITY_NUMERAL_HALF_DIMINISHED_SEVENTH ||
+           quality == STANDARD_TONALITY_NUMERAL_FULLY_DIMINISHED_SEVENTH;
 }
 
 bool harmony_roman_parse(PlanKeyMode mode, const char *roman, HarmonyChord *out) {
-    if (!roman || !out) {
+    StandardTonalityNumeralText numeral;
+    if (!roman || !out || !standard_tonality_numeral_parse(roman, &numeral) || numeral.alteration != 0 ||
+        numeral.has_target) {
         return false;
     }
-    const char *const *numerals = mode == PLAN_MODE_MINOR ? MINOR_NUMERALS : MAJOR_NUMERALS;
-    const Figure *figure = NULL;
     HarmonyChord chord;
     memset(&chord, 0, sizeof(chord));
-    for (int degree = 1; degree <= 7 && !figure; degree++) {
-        if (numeral_with_figure(roman, numerals[degree], &figure)) {
-            chord.degree = degree;
-        }
-    }
-    if (!figure && mode == PLAN_MODE_MINOR && numeral_with_figure(roman, MINOR_LEADING_TONE, &figure)) {
-        chord.degree = 7;
-        chord.leading_tone = true;
-    }
-    if (!figure) {
+    chord.degree = numeral.degree;
+    chord.seventh = standard_tonality_numeral_quality_is_seventh(numeral.quality);
+    chord.inversion = numeral.inversion;
+    /* The diminished chord on 7 of a minor key is the one on the raised seventh degree. */
+    chord.leading_tone = mode == PLAN_MODE_MINOR && numeral.degree == 7 &&
+                         (numeral.quality == STANDARD_TONALITY_NUMERAL_DIMINISHED ||
+                          quality_is_diminished_seventh(numeral.quality));
+    if (!harmony_chord_valid(&chord)) {
         return false;
     }
-    chord.seventh = figure->seventh;
-    chord.inversion = figure->inversion;
-    if (!harmony_chord_valid(&chord)) {
+    /* Only the numerals of this mode: the same chord must be written the same way (either diminished seventh reads). */
+    StandardTonalityNumeralText expected = numeral_of(mode, &chord);
+    if (expected.quality != numeral.quality &&
+        !(quality_is_diminished_seventh(expected.quality) && quality_is_diminished_seventh(numeral.quality))) {
         return false;
     }
     *out = chord;
