@@ -31,11 +31,20 @@ add_subdirectory(external/ursatz)
 set(URSATZ_ANALYZER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(external/ursatz-analyzer)
 
+# --- Ursatz Composer (linked) ----------------------------------------------
+#
+# The quick requests call the Composer API in process (R-219). The Composer
+# reuses the cJSON, Ursatz and Analyzer targets above; the command is not
+# built here (the long runs still use the one built below until B7).
+set(URSATZ_COMPOSER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(URSATZ_COMPOSER_BUILD_CLI OFF CACHE BOOL "" FORCE)
+add_subdirectory(external/ursatz-composer)
+
 # --- Ursatz Composer (built on its own) ------------------------------------
 #
-# The Composer is a tool the backend runs as a command (R-086), not a library
-# it links. It brings its own Ursatz and Analyzer, so it is built as an
-# external project in its own build tree: its targets never meet the ones
+# The long runs (theme, piece, variations, variants) still run the Composer as
+# a command until B7. It brings its own Ursatz and Analyzer, so it is built as
+# an external project in its own build tree: its targets never meet the ones
 # above. composer_service.c starts the binary named here, or the one in
 # URSATZ_GUI_COMPOSER at run time.
 #

@@ -31,6 +31,7 @@ target_include_directories(ursatz_gui_core PUBLIC
 )
 
 target_link_libraries(ursatz_gui_core PUBLIC
+  ursatz_composer
   ursatz_analyzer
   cjson
   ursatz
