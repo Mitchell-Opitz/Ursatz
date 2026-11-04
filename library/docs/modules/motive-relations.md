@@ -1,6 +1,6 @@
 # Motive relations (analysis, L8)
 
-Files: `src/analysis/motive_sketch.h/.c`, `src/analysis/motive_relation.h/.c`. Tests: `tests/analysis/test_motive_sketch.c`, `tests/analysis/test_motive_sketch_value.c`, `tests/analysis/test_motive_relation.c`, `tests/analysis/test_motive_relation_params.c`. Tone labels for a sketch's notes: `docs/modules/motive-tone-roles.md`. Part of `analysis` (see `docs/modules/analysis.md`); includes only `time/exact_rational.h` and C headers.
+Files: `src/analysis/motive_sketch.h/.c`, `src/analysis/motive_relation.h/.c`. Tests: `tests/analysis/test_motive_sketch.c`, `tests/analysis/test_motive_sketch_value.c`, `tests/analysis/test_motive_relation.c`, `tests/analysis/test_motive_relation_params.c`. Tone labels for a sketch's notes: `docs/modules/motive-tone-roles.md`. Part of `analysis` (see `docs/modules/analysis.md`); includes only kernel headers (`core/rational.h`, `pitch/`, `semantics/`, `time/`) and C headers.
 
 A theory-neutral catalog of the ways a motive can be made into a variant of itself, one relation per operation of a composer's variant registry, with an `apply` over a plain value. The variant recognizer searches chains of these relations. A registry row maps to a relation by name, with the same parameters in the same order. Citations are Schoenberg, *Fundamentals of Musical Composition*.
 

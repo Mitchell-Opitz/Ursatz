@@ -2,7 +2,7 @@
 
 Adapter in `frameworks/standard-meter/analysis/` (`meter_analysis_*.c`). It reads syncopation, hemiola, hypermeter and per-phrase rhythmic density from real music against the rules of `standard-meter`. The adapter includes no other framework and no kernel analysis; the architecture test scans `analysis/` as well as the framework.
 
-`meter_analysis_time.c` is exact arithmetic on `Rational`: its measure functions (`standard_meter_measure_at`, `_measure_bounds`, `_last_measure_touched`) wrap `time/meter_arithmetic.h`. `StandardMeterQ` keeps its layout, and the pickup-aware beat grid and `standard_meter_beat_of` (a `double` beat) stay here, since they read the framework's own beat grid rather than the signature's unit.
+Time is `Rational` and `score_time_*` (`time/score_time.h`). `meter_analysis_position.c` holds the pickup-aware beat grid, `standard_meter_level_at` and `standard_meter_beat_of` (a `double` beat), since they read the framework's own beat grid rather than the signature's unit.
 
 Every result follows the durable claim pattern: an Interpretation with FrameworkReference standard-meter (author `standard-meter-v1`, scalar confidence 1 − uncertainty, status machine-generated) that targets a note, a Structure shell over notes, a Relationship, or a phrase.
 
