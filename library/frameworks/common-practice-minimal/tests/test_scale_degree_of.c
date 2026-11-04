@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "outer_scale_degrees.h"
+#include "standard-tonality/tonal_key.h"
 
 /*
  * Scale degree number tests: all 12 pitch classes in major and minor over every tonic agree with the label, and
@@ -49,6 +50,28 @@ static void test_known_degrees(void) {
     assert(degree == 6 && alteration == 1);
 }
 
+/* common_practice_scale_degree_of is the standard-tonality owner (R-285): the two agree on every offset, both modes. */
+static void test_agrees_with_the_degree_owner(void) {
+    for (int mode = COMMON_PRACTICE_KEY_MAJOR; mode <= COMMON_PRACTICE_KEY_MINOR; mode++) {
+        StandardTonalityMode owner_mode =
+            mode == COMMON_PRACTICE_KEY_MAJOR ? STANDARD_TONALITY_MODE_MAJOR : STANDARD_TONALITY_MODE_NATURAL_MINOR;
+        for (int tonic = 0; tonic < 12; tonic++) {
+            for (int pc = 0; pc < 12; pc++) {
+                int degree = 0;
+                int alteration = 0;
+                int owner_degree = 0;
+                int owner_alteration = 0;
+                assert(common_practice_scale_degree_of(pc, tonic, (CommonPracticeKeyMode)mode, &degree, &alteration));
+                assert(standard_tonality_degree_of_semitone(pc - tonic, owner_mode, &owner_degree, &owner_alteration));
+                assert(degree == owner_degree && alteration == owner_alteration);
+            }
+        }
+    }
+    /* Semitone one above the tonic is b2 with no context. */
+    const char *label = common_practice_scale_degree_label(1, 0, COMMON_PRACTICE_KEY_MAJOR);
+    assert(label != NULL && strcmp(label, "b2") == 0);
+}
+
 static void test_invalid_arguments(void) {
     int degree = 42;
     int alteration = 43;
@@ -66,6 +89,7 @@ static void test_invalid_arguments(void) {
 int main(void) {
     test_every_pitch_class_matches_the_label();
     test_known_degrees();
+    test_agrees_with_the_degree_owner();
     test_invalid_arguments();
     printf("All scale degree number tests passed.\n");
     return 0;
