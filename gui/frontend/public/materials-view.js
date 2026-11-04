@@ -182,6 +182,40 @@ async function mountProjectPicker() {
   await reloadProjectsAndRedraw();
 }
 
+/* Checks a form with the Composer while it is edited (R-276). options: {roots (elements whose input, change and click
+ * events change the form), build() (the validate request of the model), field(path) (the model's fieldForPath),
+ * fields() (the elements by field name)}. Returns {element (the Composer's message, shown as given), check(), now()}.
+ * The refused field is marked with the class field-invalid; an incomplete form shows nothing. */
+function attachFormValidation(options) {
+  const message = document.createElement("div");
+  message.className = "materials-field-error";
+  let marked = [];
+  const validator = Vocabulary.createValidator({
+    build: options.build,
+    field: options.field,
+    show(result) {
+      for (const el of marked) {
+        el.classList.remove("field-invalid");
+      }
+      marked = [];
+      message.textContent = !result.ok && result.complete ? result.message : "";
+      const target = result.field ? options.fields()[result.field] : null;
+      if (target) {
+        const holder = target.closest("label") || target;
+        holder.classList.add("field-invalid");
+        marked.push(holder);
+      }
+    },
+  });
+  for (const root of options.roots) {
+    for (const type of ["input", "change", "click"]) {
+      root.addEventListener(type, () => validator.check());
+    }
+  }
+  validator.check();
+  return { element: message, check: validator.check, now: validator.now };
+}
+
 function materialsElement(tag, className, text) {
   const el = document.createElement(tag);
   if (className) {
@@ -956,6 +990,23 @@ function buildMotifEditor(body, tabStatus) {
       holder.textContent = holder.textContent ? `${holder.textContent} ${problem.message}` : problem.message;
     }
   }
+
+  /* The Composer reads the values while they are edited (R-276): its refusal shows under the field its path names. */
+  const validator = Vocabulary.createValidator({
+    build: () => MaterialsModel.validateRequest(values(), body),
+    field: MaterialsModel.fieldForPath,
+    show(result) {
+      if (!result.ok && result.complete) {
+        showError(result.message, result.field);
+      } else {
+        showError("");
+      }
+    },
+  });
+  for (const type of ["input", "change", "click"]) {
+    el.addEventListener(type, () => validator.check());
+  }
+  validator.check();
 
   return { el, values, fill, showProblems, showError };
 }

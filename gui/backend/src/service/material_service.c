@@ -740,13 +740,11 @@ static UrsatzGuiMaterialResult validate_derived(const cJSON *derived, char *erro
 }
 
 #define TONE_OVERRIDES_MAX 64
-#define TONE_ROLE_SET                                                                                          \
-    {"chord",     "passing",    "neighbor",       "appoggiatura",  "suspension",  "retardation", "escape",   \
-     "anticipation", "double-neighbor", "changing-tone", "pedal", NULL}
+#define TONE_ROLE_MAX 24
 
-/* motif.tone_overrides is absent, null or an object of "<note>": "<role>" (1-based note, role as the Composer's --tone). */
+/* motif.tone_overrides is absent, null or an object of "<note>": "<role>" (1-based note); the role is the Composer's
+ * word (R-276), so a save keeps its type and size and validate marks a role the Composer does not read. */
 static UrsatzGuiMaterialResult validate_tone_overrides(const cJSON *overrides, char *error, size_t error_size) {
-    static const char *const roles[] = TONE_ROLE_SET;
     if (!overrides || cJSON_IsNull(overrides)) {
         return URSATZ_GUI_MATERIAL_OK;
     }
@@ -759,9 +757,9 @@ static UrsatzGuiMaterialResult validate_tone_overrides(const cJSON *overrides, c
         char *end = NULL;
         long note = strtol(name, &end, 10);
         if (name[0] == '\0' || *end != '\0' || name[0] == '+' || name[0] == '-' || note < 1 || note > TONE_OVERRIDES_MAX ||
-            !in_set(entry, roles)) {
+            !cJSON_IsString(entry) || strlen(entry->valuestring) > TONE_ROLE_MAX) {
             return invalid_body(error, error_size,
-                                "motif tone_overrides must map a note number from 1 to 64 to chord or a tone type");
+                                "motif tone_overrides must map a note number from 1 to 64 to a tone type");
         }
     }
     return URSATZ_GUI_MATERIAL_OK;
@@ -862,78 +860,24 @@ static bool is_in_set_or_null(const cJSON *object, const char *name, const char 
     return is_absent_or_null(object, name) || in_set(cJSON_GetObjectItemCaseSensitive(object, name), set);
 }
 
-static bool theme_key_ok(const char *text) {
-    if (strlen(text) > 16 || text[0] < 'A' || text[0] > 'G') {
-        return false;
-    }
-    const char *rest = text + 1;
-    if (*rest == '#' || *rest == 'b') {
-        rest++;
-    }
-    if (*rest == '\0') {
-        return true;
-    }
-    if (*rest != ' ') {
-        return false;
-    }
-    rest++;
-    return strcmp(rest, "major") == 0 || strcmp(rest, "minor") == 0;
-}
+#define THEME_FORM_WORD_MAX 40
 
-/* "presentation", "antecedent" or "cbi", a plus, then "continuation", "consequent" or "cadential". */
-static bool theme_hybrid_ok(const char *text) {
-    static const char *const beginnings[] = {"presentation", "antecedent", "cbi", NULL};
-    static const char *const endings[] = {"continuation", "consequent", "cadential", NULL};
-    const char *plus = strchr(text, '+');
-    if (!plus || plus - text > 16 || strlen(plus + 1) > 16) {
-        return false;
-    }
-    char beginning[24];
-    memcpy(beginning, text, (size_t)(plus - text));
-    beginning[plus - text] = '\0';
-    for (const char *const *b = beginnings; *b; b++) {
-        if (strcmp(*b, beginning) == 0) {
-            for (const char *const *e = endings; *e; e++) {
-                if (strcmp(*e, plus + 1) == 0) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-}
-
+/* The form words are the Composer's (R-276): a save keeps their type and size, and validate marks a value the Composer
+ * does not read, as compose refuses it with its path. */
 static UrsatzGuiMaterialResult validate_theme_form(const cJSON *form, char *error, size_t error_size) {
-    static const char *const intos[] = {"sentence", "period", "hybrid", NULL};
-    static const char *const modes[] = {"major", "minor", "style", NULL};
-    static const char *const meters[] = {"2/4", "3/4", "4/4", "6/8", NULL};
-    static const char *const cadences[] = {"PAC", "IAC", "HC", NULL};
-    static const char *const first_cadences[] = {"HC", "IAC", NULL};
-    const cJSON *into = cJSON_GetObjectItemCaseSensitive(form, "into");
-    const cJSON *hybrid = cJSON_GetObjectItemCaseSensitive(form, "hybrid");
-    const cJSON *bars = cJSON_GetObjectItemCaseSensitive(form, "bars");
-    if (!is_in_set_or_null(form, "into", intos)) {
-        return invalid_body(error, error_size, "theme form into must be sentence, period or hybrid");
-    }
-    if (!is_absent_or_null(form, "hybrid") &&
-        (!cJSON_IsString(hybrid) || !theme_hybrid_ok(hybrid->valuestring))) {
-        return invalid_body(error, error_size, "theme form hybrid must look like presentation+continuation");
+    static const char *const words[] = {"into", "hybrid", "mode", "meter", "cadence", "first_cadence", NULL};
+    for (const char *const *word = words; *word; word++) {
+        const cJSON *value = cJSON_GetObjectItemCaseSensitive(form, *word);
+        if (!is_string_or_null(form, *word) || (cJSON_IsString(value) && strlen(value->valuestring) > THEME_FORM_WORD_MAX)) {
+            return invalid_body(error, error_size, "theme form into, hybrid, mode, meter, cadence and first_cadence must be text");
+        }
     }
     if (cJSON_GetObjectItemCaseSensitive(form, "key")) {
         return invalid_body(error, error_size, "themes are in C; remove key");
     }
-    if (!is_in_set_or_null(form, "mode", modes)) {
-        return invalid_body(error, error_size, "theme form mode must be major, minor or style");
-    }
-    if (!is_in_set_or_null(form, "meter", meters)) {
-        return invalid_body(error, error_size, "theme form meter must be 2/4, 3/4, 4/4 or 6/8");
-    }
-    if (!is_absent_or_null(form, "bars") && (!is_whole_number(bars, 4) || bars->valuedouble > 8 ||
-                                              (bars->valuedouble != 4 && bars->valuedouble != 8))) {
-        return invalid_body(error, error_size, "theme form bars must be 4 or 8");
-    }
-    if (!is_in_set_or_null(form, "cadence", cadences) || !is_in_set_or_null(form, "first_cadence", first_cadences)) {
-        return invalid_body(error, error_size, "theme form cadence must be PAC, IAC or HC and first_cadence HC or IAC");
+    const cJSON *bars = cJSON_GetObjectItemCaseSensitive(form, "bars");
+    if (!is_absent_or_null(form, "bars") && !cJSON_IsNumber(bars)) {
+        return invalid_body(error, error_size, "theme form bars must be a number");
     }
     return URSATZ_GUI_MATERIAL_OK;
 }
@@ -1141,8 +1085,8 @@ static UrsatzGuiMaterialResult validate_theme(const cJSON *theme, char *error, s
         return invalid_body(error, error_size, "theme without lists up to four motive categories");
     }
     const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(theme, "tempo");
-    if (!is_absent_or_null(theme, "tempo") && (!is_whole_number(tempo, 20) || tempo->valuedouble > 400)) {
-        return invalid_body(error, error_size, "theme tempo must be null or 20 to 400");
+    if (!is_absent_or_null(theme, "tempo") && !is_whole_number(tempo, 0)) {
+        return invalid_body(error, error_size, "theme tempo must be null or a whole number");
     }
     const cJSON *check = cJSON_GetObjectItemCaseSensitive(theme, "check");
     if (check && !cJSON_IsBool(check)) {
@@ -1162,10 +1106,6 @@ static UrsatzGuiMaterialResult validate_theme(const cJSON *theme, char *error, s
 /* --- piece bodies -------------------------------------------------------- */
 
 static const char *const kPieceParts[] = {"intro", "body", "turnaround", "ending", NULL};
-static const char *const kPieceCadences[] = {"PAC", "IAC", "HC", "DC", "PC", NULL};
-static const char *const kPieceIntos[] = {"sentence", "period", "hybrid", NULL};
-static const char *const kPieceModes[] = {"major", "minor", "style", NULL};
-static const char *const kPieceMeters[] = {"2/4", "3/4", "4/4", "6/8", NULL};
 /* The members a placeholder piece (structure null, a string, an array or an object without sections) does not have. */
 static const char *const kPieceNewMembers[] = {"motive", "pool",  "accompaniment", "brief", "style_weight", "without",
                                                "tempo",  "check", "seed",          "result", NULL};
@@ -1174,8 +1114,8 @@ static const char *const kPieceNewMembers[] = {"motive", "pool",  "accompaniment
 #define PIECE_BEATS_MAX 2048
 #define PIECE_ID_MAX 15
 #define PIECE_LETTER_MAX 8
-#define PIECE_NUMERALS_MAX 64
-#define PIECE_NUMERAL_CHARS 16
+#define PIECE_TEXT_MAX 1024
+#define PIECE_WORD_MAX 40
 #define PIECE_CELLS_MAX 8
 
 /* True when the piece is a placeholder: no new member and a structure that is not an object with a list of sections. */
@@ -1208,40 +1148,6 @@ static bool piece_section_id_ok(const char *id) {
     return true;
 }
 
-/* Roman numerals separated by single spaces: 1 to 64 words of letters, digits and the marks #, b, o, +, / and -. */
-static bool piece_numerals_ok(const char *text) {
-    size_t words = 0;
-    size_t length = 0;
-    for (const char *c = text;; c++) {
-        if (*c == ' ' || *c == '\0') {
-            if (length == 0) {
-                return false;
-            }
-            words++;
-            length = 0;
-            if (*c == '\0') {
-                break;
-            }
-            continue;
-        }
-        if (!(isalnum((unsigned char)*c) || strchr("#+/-o", *c)) || ++length > PIECE_NUMERAL_CHARS) {
-            return false;
-        }
-    }
-    return words <= PIECE_NUMERALS_MAX;
-}
-
-/* A pickup as beats (n or n/d) shorter than a bar; bar_beats is the meter's numerator. */
-static bool piece_pickup_ok(const cJSON *pickup, int bar_beats) {
-    if (!cJSON_IsString(pickup) || !is_rational(pickup->valuestring, false)) {
-        return false;
-    }
-    char *end = NULL;
-    double top = strtod(pickup->valuestring, &end);
-    double bottom = end && *end == '/' ? strtod(end + 1, NULL) : 1;
-    return bottom > 0 && top / bottom < bar_beats;
-}
-
 /* {kind, ...}: null or empty, a motif, a theme version or a progression. */
 static UrsatzGuiMaterialResult validate_piece_fill(const cJSON *fill, char *error, size_t error_size) {
     static const char *const kinds[] = {"empty", "motif", "theme", "progression", NULL};
@@ -1258,17 +1164,19 @@ static UrsatzGuiMaterialResult validate_piece_fill(const cJSON *fill, char *erro
         }
     }
     if (strcmp(kind->valuestring, "motif") == 0) {
+        const cJSON *into = cJSON_GetObjectItemCaseSensitive(fill, "into");
         const cJSON *hybrid = cJSON_GetObjectItemCaseSensitive(fill, "hybrid");
-        if (!is_in_set_or_null(fill, "into", kPieceIntos) ||
-            (!is_absent_or_null(fill, "hybrid") && (!cJSON_IsString(hybrid) || !theme_hybrid_ok(hybrid->valuestring)))) {
-            return invalid_body(error, error_size, "a motif fill into must be sentence, period or hybrid, and hybrid like presentation+continuation");
+        if (!is_string_or_null(fill, "into") || !is_string_or_null(fill, "hybrid") ||
+            (cJSON_IsString(into) && strlen(into->valuestring) > PIECE_WORD_MAX) ||
+            (cJSON_IsString(hybrid) && strlen(hybrid->valuestring) > PIECE_WORD_MAX)) {
+            return invalid_body(error, error_size, "a motif fill into and hybrid must be text");
         }
     }
     if (strcmp(kind->valuestring, "progression") == 0) {
         const cJSON *numerals = cJSON_GetObjectItemCaseSensitive(fill, "numerals");
         const cJSON *cells = cJSON_GetObjectItemCaseSensitive(fill, "cells");
-        if (!cJSON_IsString(numerals) || !piece_numerals_ok(numerals->valuestring)) {
-            return invalid_body(error, error_size, "a progression fill needs numerals, 1 to 64 roman numerals separated by spaces");
+        if (!cJSON_IsString(numerals) || numerals->valuestring[0] == '\0' || strlen(numerals->valuestring) > PIECE_TEXT_MAX) {
+            return invalid_body(error, error_size, "a progression fill needs numerals as text");
         }
         if (!is_absent_or_null(fill, "cells") && (!is_whole_number(cells, 1) || cells->valuedouble > PIECE_CELLS_MAX)) {
             return invalid_body(error, error_size, "a progression fill cells must be 1 to 8");
@@ -1278,22 +1186,18 @@ static UrsatzGuiMaterialResult validate_piece_fill(const cJSON *fill, char *erro
 }
 
 static UrsatzGuiMaterialResult validate_piece_structure(const cJSON *structure, char *error, size_t error_size) {
-    const cJSON *key = cJSON_GetObjectItemCaseSensitive(structure, "key");
-    const cJSON *meter = cJSON_GetObjectItemCaseSensitive(structure, "meter");
     const cJSON *sections = cJSON_GetObjectItemCaseSensitive(structure, "sections");
     if (!cJSON_IsObject(structure) || !cJSON_IsArray(sections)) {
         return invalid_body(error, error_size, "a piece structure needs key, mode, meter and sections");
     }
-    if (!is_absent_or_null(structure, "key") && (!cJSON_IsString(key) || !theme_key_ok(key->valuestring))) {
-        return invalid_body(error, error_size, "piece key must be a tonic such as D or Bb minor");
+    /* Key, mode and meter are the Composer's words (R-276): a save keeps their type and size. */
+    static const char *const words[] = {"key", "mode", "meter", NULL};
+    for (const char *const *word = words; *word; word++) {
+        const cJSON *value = cJSON_GetObjectItemCaseSensitive(structure, *word);
+        if (!is_string_or_null(structure, *word) || (cJSON_IsString(value) && strlen(value->valuestring) > PIECE_WORD_MAX)) {
+            return invalid_body(error, error_size, "piece key, mode and meter must be text");
+        }
     }
-    if (!is_in_set_or_null(structure, "mode", kPieceModes)) {
-        return invalid_body(error, error_size, "piece mode must be major, minor or style");
-    }
-    if (!is_in_set_or_null(structure, "meter", kPieceMeters)) {
-        return invalid_body(error, error_size, "piece meter must be 2/4, 3/4, 4/4 or 6/8");
-    }
-    int bar_beats = cJSON_IsString(meter) ? atoi(meter->valuestring) : 4;
     int count = cJSON_GetArraySize(sections);
     if (count < 1 || count > PIECE_SECTIONS_MAX) {
         return invalid_body(error, error_size, "a piece has 1 to 32 sections");
@@ -1330,12 +1234,13 @@ static UrsatzGuiMaterialResult validate_piece_structure(const cJSON *structure, 
         if (!is_whole_number(beats, 1) || beats->valuedouble > PIECE_BEATS_MAX) {
             return invalid_body(error, error_size, "a section has 1 to 2048 beats");
         }
-        if (!is_absent_or_null(section, "pickup") &&
-            !piece_pickup_ok(cJSON_GetObjectItemCaseSensitive(section, "pickup"), bar_beats)) {
-            return invalid_body(error, error_size, "a section pickup must be beats as n or n/d, shorter than a bar");
+        const cJSON *pickup = cJSON_GetObjectItemCaseSensitive(section, "pickup");
+        if (!is_absent_or_null(section, "pickup") && (!cJSON_IsString(pickup) || !is_rational(pickup->valuestring, false))) {
+            return invalid_body(error, error_size, "a section pickup must be beats as n or n/d");
         }
-        if (!is_in_set_or_null(section, "cadence", kPieceCadences)) {
-            return invalid_body(error, error_size, "a section cadence must be null, PAC, IAC, HC, DC or PC");
+        const cJSON *cadence = cJSON_GetObjectItemCaseSensitive(section, "cadence");
+        if (!is_string_or_null(section, "cadence") || (cJSON_IsString(cadence) && strlen(cadence->valuestring) > PIECE_WORD_MAX)) {
+            return invalid_body(error, error_size, "a section cadence must be null or text");
         }
         UrsatzGuiMaterialResult filled = validate_piece_fill(cJSON_GetObjectItemCaseSensitive(section, "fill"), error, error_size);
         if (filled != URSATZ_GUI_MATERIAL_OK) {
@@ -1383,8 +1288,8 @@ static UrsatzGuiMaterialResult validate_piece(const cJSON *piece, char *error, s
         return invalid_body(error, error_size, "piece without lists up to four motive categories");
     }
     const cJSON *tempo = cJSON_GetObjectItemCaseSensitive(piece, "tempo");
-    if (!is_absent_or_null(piece, "tempo") && (!is_whole_number(tempo, 20) || tempo->valuedouble > 400)) {
-        return invalid_body(error, error_size, "piece tempo must be null or 20 to 400");
+    if (!is_absent_or_null(piece, "tempo") && !is_whole_number(tempo, 0)) {
+        return invalid_body(error, error_size, "piece tempo must be null or a whole number");
     }
     const cJSON *check = cJSON_GetObjectItemCaseSensitive(piece, "check");
     if (check && !cJSON_IsBool(check)) {
@@ -1761,6 +1666,14 @@ static UrsatzGuiMaterialResult fill_body_uses_locked(const char *self_id, const 
         result = fill_uses_locked(self_id, prepared, out);
     }
     cJSON_Delete(prepared);
+    return result;
+}
+
+UrsatzGuiMaterialResult ursatz_gui_material_body_with_uses(const cJSON *body, cJSON **out) {
+    *out = NULL;
+    LOCK();
+    UrsatzGuiMaterialResult result = fill_body_uses_locked(NULL, body, out);
+    UNLOCK();
     return result;
 }
 

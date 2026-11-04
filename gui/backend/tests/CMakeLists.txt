@@ -31,7 +31,11 @@ target_compile_definitions(test_job_queue PRIVATE
 )
 
 ursatz_gui_add_test(composer_route test_composer_route.c ${CMAKE_CURRENT_BINARY_DIR}/composer_route)
-# The test asks the linked Composer for its versions, in its own working directory.
+# The test asks the linked Composer for its versions and its vocabulary (which it compares with the frontend's fixture),
+# in its own working directory.
+target_compile_definitions(test_composer_route PRIVATE
+  URSATZ_GUI_TEST_VOCABULARY_FIXTURE="${CMAKE_SOURCE_DIR}/frontend/tests/fixtures/vocabulary.json"
+)
 
 ursatz_gui_add_test(styles_route test_styles_route.c ${CMAKE_CURRENT_BINARY_DIR}/styles_route)
 # The test builds styles from the reference pieces; it creates pieces/, collections/ and styles/ in its own

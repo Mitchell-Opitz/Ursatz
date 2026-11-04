@@ -1,0 +1,1559 @@
+{
+ "meters": [
+  {
+   "value": "2/4",
+   "label": "2/4",
+   "beats": 2,
+   "chord_onset_step": "1/2"
+  },
+  {
+   "value": "3/4",
+   "label": "3/4",
+   "beats": 3,
+   "chord_onset_step": "1/2"
+  },
+  {
+   "value": "4/4",
+   "label": "4/4",
+   "beats": 4,
+   "chord_onset_step": "1/2",
+   "second_chord_beat": 2
+  },
+  {
+   "value": "6/8",
+   "label": "6/8",
+   "beats": 6,
+   "chord_onset_step": "1/2",
+   "second_chord_beat": 3
+  }
+ ],
+ "modes": [
+  {
+   "value": "major",
+   "label": "Major"
+  },
+  {
+   "value": "minor",
+   "label": "Minor"
+  }
+ ],
+ "piece_modes": [
+  {
+   "value": "major",
+   "label": "Major"
+  },
+  {
+   "value": "minor",
+   "label": "Minor"
+  },
+  {
+   "value": "style",
+   "label": "From the brief"
+  }
+ ],
+ "keys": [
+  {
+   "value": "C major",
+   "label": "C major"
+  },
+  {
+   "value": "Db major",
+   "label": "Db major"
+  },
+  {
+   "value": "D major",
+   "label": "D major"
+  },
+  {
+   "value": "Eb major",
+   "label": "Eb major"
+  },
+  {
+   "value": "E major",
+   "label": "E major"
+  },
+  {
+   "value": "F major",
+   "label": "F major"
+  },
+  {
+   "value": "F# major",
+   "label": "F# major"
+  },
+  {
+   "value": "G major",
+   "label": "G major"
+  },
+  {
+   "value": "Ab major",
+   "label": "Ab major"
+  },
+  {
+   "value": "A major",
+   "label": "A major"
+  },
+  {
+   "value": "Bb major",
+   "label": "Bb major"
+  },
+  {
+   "value": "B major",
+   "label": "B major"
+  },
+  {
+   "value": "C minor",
+   "label": "C minor"
+  },
+  {
+   "value": "C# minor",
+   "label": "C# minor"
+  },
+  {
+   "value": "D minor",
+   "label": "D minor"
+  },
+  {
+   "value": "D# minor",
+   "label": "D# minor"
+  },
+  {
+   "value": "E minor",
+   "label": "E minor"
+  },
+  {
+   "value": "F minor",
+   "label": "F minor"
+  },
+  {
+   "value": "F# minor",
+   "label": "F# minor"
+  },
+  {
+   "value": "G minor",
+   "label": "G minor"
+  },
+  {
+   "value": "G# minor",
+   "label": "G# minor"
+  },
+  {
+   "value": "A minor",
+   "label": "A minor"
+  },
+  {
+   "value": "Bb minor",
+   "label": "Bb minor"
+  },
+  {
+   "value": "B minor",
+   "label": "B minor"
+  }
+ ],
+ "pitch_class_names": [
+  {
+   "value": 0,
+   "major": "C",
+   "minor": "C"
+  },
+  {
+   "value": 1,
+   "major": "Db",
+   "minor": "C#"
+  },
+  {
+   "value": 2,
+   "major": "D",
+   "minor": "D"
+  },
+  {
+   "value": 3,
+   "major": "Eb",
+   "minor": "D#"
+  },
+  {
+   "value": 4,
+   "major": "E",
+   "minor": "E"
+  },
+  {
+   "value": 5,
+   "major": "F",
+   "minor": "F"
+  },
+  {
+   "value": 6,
+   "major": "F#",
+   "minor": "F#"
+  },
+  {
+   "value": 7,
+   "major": "G",
+   "minor": "G"
+  },
+  {
+   "value": 8,
+   "major": "Ab",
+   "minor": "G#"
+  },
+  {
+   "value": 9,
+   "major": "A",
+   "minor": "A"
+  },
+  {
+   "value": 10,
+   "major": "Bb",
+   "minor": "Bb"
+  },
+  {
+   "value": 11,
+   "major": "B",
+   "minor": "B"
+  }
+ ],
+ "cadences": [
+  {
+   "value": "PAC",
+   "label": "Perfect authentic cadence"
+  },
+  {
+   "value": "IAC",
+   "label": "Imperfect authentic cadence"
+  },
+  {
+   "value": "HC",
+   "label": "Half cadence"
+  },
+  {
+   "value": "DC",
+   "label": "Deceptive cadence"
+  },
+  {
+   "value": "PC",
+   "label": "Plagal cadence"
+  }
+ ],
+ "theme_cadences": [
+  {
+   "value": "PAC",
+   "label": "Perfect authentic cadence"
+  },
+  {
+   "value": "IAC",
+   "label": "Imperfect authentic cadence"
+  },
+  {
+   "value": "HC",
+   "label": "Half cadence"
+  }
+ ],
+ "pickups": {
+  "2/4": [
+   "0",
+   "1/4",
+   "1/2",
+   "1",
+   "3/2"
+  ],
+  "3/4": [
+   "0",
+   "1/4",
+   "1/2",
+   "1",
+   "3/2",
+   "2"
+  ],
+  "4/4": [
+   "0",
+   "1/4",
+   "1/2",
+   "1",
+   "3/2",
+   "2",
+   "3"
+  ],
+  "6/8": [
+   "0",
+   "1/4",
+   "1/2",
+   "1",
+   "3/2",
+   "2",
+   "3"
+  ]
+ },
+ "motive_forms": [
+  {
+   "value": "full",
+   "label": "Full"
+  },
+  {
+   "value": "rhythm",
+   "label": "Rhythm only"
+  },
+  {
+   "value": "contour",
+   "label": "Contour only"
+  }
+ ],
+ "roles": [
+  {
+   "value": "melodic",
+   "label": "Melodic"
+  },
+  {
+   "value": "accompaniment",
+   "label": "Accompaniment"
+  }
+ ],
+ "piece_parts": [
+  {
+   "value": "intro",
+   "label": "Intro"
+  },
+  {
+   "value": "body",
+   "label": "Loop body"
+  },
+  {
+   "value": "turnaround",
+   "label": "Turnaround"
+  },
+  {
+   "value": "ending",
+   "label": "Ending"
+  }
+ ],
+ "fill_kinds": [
+  {
+   "value": "empty",
+   "label": "Empty"
+  },
+  {
+   "value": "motif",
+   "label": "Motif"
+  },
+  {
+   "value": "theme",
+   "label": "Theme"
+  },
+  {
+   "value": "progression",
+   "label": "Progression"
+  }
+ ],
+ "functions": [
+  {
+   "value": "beginning",
+   "label": "Beginning"
+  },
+  {
+   "value": "continuation",
+   "label": "Continuation"
+  },
+  {
+   "value": "contrast",
+   "label": "Contrast"
+  },
+  {
+   "value": "cadential",
+   "label": "Cadential"
+  }
+ ],
+ "distances": [
+  {
+   "value": "close",
+   "label": "Close"
+  },
+  {
+   "value": "medium",
+   "label": "Medium"
+  },
+  {
+   "value": "far",
+   "label": "Far"
+  }
+ ],
+ "theme_slots": [
+  {
+   "value": "basic",
+   "label": "Basic idea"
+  },
+  {
+   "value": "contrasting",
+   "label": "Contrasting idea"
+  },
+  {
+   "value": "continuation",
+   "label": "Continuation"
+  },
+  {
+   "value": "cadential",
+   "label": "Cadential"
+  }
+ ],
+ "theme_ideas": [
+  {
+   "value": "basic idea",
+   "label": "basic idea",
+   "slot": "basic"
+  },
+  {
+   "value": "repetition",
+   "label": "repetition",
+   "slot": "basic"
+  },
+  {
+   "value": "contrasting idea",
+   "label": "contrasting idea",
+   "slot": "contrasting"
+  },
+  {
+   "value": "consequent basic idea",
+   "label": "consequent basic idea",
+   "slot": "basic"
+  },
+  {
+   "value": "consequent contrasting idea",
+   "label": "consequent contrasting idea",
+   "slot": "contrasting"
+  },
+  {
+   "value": "fragment 1",
+   "label": "fragment 1",
+   "slot": "continuation"
+  },
+  {
+   "value": "fragment 2",
+   "label": "fragment 2",
+   "slot": "continuation"
+  },
+  {
+   "value": "cadential",
+   "label": "cadential",
+   "slot": "cadential"
+  },
+  {
+   "value": "cadential 1",
+   "label": "cadential 1",
+   "slot": "cadential"
+  },
+  {
+   "value": "cadential 2",
+   "label": "cadential 2",
+   "slot": "cadential"
+  }
+ ],
+ "theme_motive_categories": [
+  {
+   "value": "motive-degrees",
+   "label": "degrees"
+  },
+  {
+   "value": "motive-intervals",
+   "label": "intervals"
+  },
+  {
+   "value": "motive-rhythm",
+   "label": "rhythm"
+  },
+  {
+   "value": "motive-nct-figure",
+   "label": "non-chord figures"
+  }
+ ],
+ "theme_pools": [
+  {
+   "value": "approved-and-unflagged",
+   "label": "Approved and unflagged"
+  },
+  {
+   "value": "approved",
+   "label": "Approved only"
+  },
+  {
+   "value": "none",
+   "label": "None"
+  }
+ ],
+ "theme_bars": [
+  {
+   "value": "4",
+   "label": "4 bars"
+  },
+  {
+   "value": "8",
+   "label": "8 bars"
+  }
+ ],
+ "theme_first_cadences": [
+  {
+   "value": "IAC",
+   "label": "Imperfect authentic cadence"
+  },
+  {
+   "value": "HC",
+   "label": "Half cadence"
+  }
+ ],
+ "theme_beginnings": [
+  {
+   "value": "presentation",
+   "label": "Presentation",
+   "ideas": [
+    "basic idea",
+    "repetition"
+   ]
+  },
+  {
+   "value": "antecedent",
+   "label": "Antecedent",
+   "ideas": [
+    "basic idea",
+    "contrasting idea"
+   ]
+  },
+  {
+   "value": "cbi",
+   "label": "Compound basic idea",
+   "ideas": [
+    "basic idea",
+    "contrasting idea"
+   ]
+  }
+ ],
+ "theme_endings": [
+  {
+   "value": "continuation",
+   "label": "Continuation",
+   "ideas": [
+    "fragment 1",
+    "fragment 2",
+    "cadential"
+   ]
+  },
+  {
+   "value": "consequent",
+   "label": "Consequent",
+   "ideas": [
+    "consequent basic idea",
+    "consequent contrasting idea"
+   ]
+  },
+  {
+   "value": "cadential",
+   "label": "Cadential",
+   "ideas": [
+    "cadential 1",
+    "cadential 2"
+   ]
+  }
+ ],
+ "style_weights": [
+  {
+   "value": "1/4",
+   "label": "Light"
+  },
+  {
+   "value": "1/2",
+   "label": "Normal"
+  },
+  {
+   "value": "1",
+   "label": "Strong"
+  }
+ ],
+ "accompaniment_patterns": [
+  {
+   "value": "any",
+   "label": "Any pattern"
+  },
+  {
+   "value": "block",
+   "label": "Block"
+  },
+  {
+   "value": "arpeggiated",
+   "label": "Arpeggiated"
+  },
+  {
+   "value": "alberti",
+   "label": "Alberti"
+  },
+  {
+   "value": "oom-pah",
+   "label": "Oom-pah"
+  },
+  {
+   "value": "motive",
+   "label": "From a motive"
+  }
+ ],
+ "piece_intos": [
+  {
+   "value": "sentence",
+   "label": "Sentence"
+  },
+  {
+   "value": "period",
+   "label": "Period"
+  },
+  {
+   "value": "hybrid",
+   "label": "Hybrid"
+  }
+ ],
+ "tone_labels": [
+  {
+   "value": "chord",
+   "label": "Chord tone",
+   "abbreviation": "CT"
+  },
+  {
+   "value": "passing",
+   "label": "Passing tone",
+   "abbreviation": "PT"
+  },
+  {
+   "value": "neighbor",
+   "label": "Neighbor tone",
+   "abbreviation": "NT"
+  },
+  {
+   "value": "appoggiatura",
+   "label": "Appoggiatura",
+   "abbreviation": "APP"
+  },
+  {
+   "value": "suspension",
+   "label": "Suspension",
+   "abbreviation": "SUS"
+  },
+  {
+   "value": "retardation",
+   "label": "Retardation",
+   "abbreviation": "RET"
+  },
+  {
+   "value": "escape",
+   "label": "Escape tone",
+   "abbreviation": "ET"
+  },
+  {
+   "value": "anticipation",
+   "label": "Anticipation",
+   "abbreviation": "ANT"
+  },
+  {
+   "value": "double-neighbor",
+   "label": "Double neighbor",
+   "abbreviation": "DN"
+  },
+  {
+   "value": "changing-tone",
+   "label": "Changing tone",
+   "abbreviation": "CT2"
+  },
+  {
+   "value": "pedal",
+   "label": "Pedal",
+   "abbreviation": "PED"
+  }
+ ],
+ "variant_operations": {
+  "operations": [
+   {
+    "name": "exact",
+    "label": "Exact",
+    "category": "exact",
+    "citation": "Schoenberg ch. III, Ex. 14",
+    "relation": "exact",
+    "params": [],
+    "forms": [
+     "full",
+     "rhythm",
+     "contour"
+    ]
+   },
+   {
+    "name": "transpose",
+    "label": "Transpose",
+    "category": "melody-adaptation",
+    "citation": "ch. III, Exs. 14, 28",
+    "relation": "transpose",
+    "params": [
+     {
+      "name": "tonal",
+      "kind": "bool",
+      "min": 0,
+      "max": 1,
+      "description": "move in steps of the key's scale instead of semitones",
+      "optional": false
+     },
+     {
+      "name": "by",
+      "kind": "int",
+      "min": -12,
+      "max": 12,
+      "description": "how far to move: semitones, or steps when tonal; not 0",
+      "optional": false
+     },
+     {
+      "name": "degree",
+      "kind": "int",
+      "min": 1,
+      "max": 7,
+      "description": "move the first note to this scale degree instead of using by; tonal",
+      "optional": true
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "invert",
+    "label": "Invert",
+    "category": "intervals",
+    "citation": "ch. III, Exs. 14, 19",
+    "relation": "invert",
+    "params": [
+     {
+      "name": "axis",
+      "kind": "pitch",
+      "min": 0,
+      "max": 127,
+      "description": "the pitch mirrored about, a MIDI note number; the first note when -1",
+      "optional": false
+     },
+     {
+      "name": "tonal",
+      "kind": "bool",
+      "min": 0,
+      "max": 1,
+      "description": "mirror in steps of the key's scale instead of semitones",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full",
+     "contour"
+    ]
+   },
+   {
+    "name": "retrograde",
+    "label": "Retrograde",
+    "category": "intervals",
+    "citation": "ch. III, Exs. 14, 19",
+    "relation": "retrograde",
+    "params": [],
+    "forms": [
+     "full",
+     "rhythm",
+     "contour"
+    ]
+   },
+   {
+    "name": "interval-change",
+    "label": "Interval change",
+    "category": "intervals",
+    "citation": "ch. III, Ex. 21",
+    "relation": "interval-change",
+    "params": [
+     {
+      "name": "interval",
+      "kind": "int",
+      "min": 0,
+      "max": 16,
+      "description": "the 1-based interval changed; 0 for every one",
+      "optional": false
+     },
+     {
+      "name": "amount",
+      "kind": "int",
+      "min": -6,
+      "max": 6,
+      "description": "semitones to widen by, negative to narrow; not 0",
+      "optional": false
+     },
+     {
+      "name": "keep-contour",
+      "kind": "bool",
+      "min": 0,
+      "max": 1,
+      "description": "refuse a result that changes a direction",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "fragment",
+    "label": "Fragment",
+    "category": "intervals",
+    "citation": "ch. III, Ex. 21; ch. VIII, Ex. 52",
+    "relation": "fragment",
+    "params": [
+     {
+      "name": "position",
+      "kind": "position",
+      "min": 1,
+      "max": 3,
+      "description": "where the fragment is taken from: leading, trailing or middle",
+      "optional": false
+     },
+     {
+      "name": "length",
+      "kind": "int",
+      "min": 1,
+      "max": 16,
+      "description": "how many notes the fragment has",
+      "optional": false
+     },
+     {
+      "name": "min",
+      "kind": "int",
+      "min": 1,
+      "max": 16,
+      "description": "the fewest notes the result may have; 0 for 2",
+      "optional": true
+     }
+    ],
+    "forms": [
+     "full",
+     "rhythm",
+     "contour"
+    ]
+   },
+   {
+    "name": "liquidate",
+    "label": "Liquidate",
+    "category": "intervals",
+    "citation": "ch. VIII, Ex. 52",
+    "relation": "liquidate",
+    "params": [
+     {
+      "name": "drop",
+      "kind": "int",
+      "min": 1,
+      "max": 16,
+      "description": "how many notes to drop, the weakest first",
+      "optional": false
+     },
+     {
+      "name": "keep-rhythm",
+      "kind": "bool",
+      "min": 0,
+      "max": 1,
+      "description": "leave a dropped note's time as a rest",
+      "optional": false
+     },
+     {
+      "name": "min",
+      "kind": "int",
+      "min": 1,
+      "max": 16,
+      "description": "the fewest notes the result may have; 0 for 2",
+      "optional": true
+     }
+    ],
+    "forms": [
+     "full",
+     "rhythm"
+    ]
+   },
+   {
+    "name": "augment",
+    "label": "Augment",
+    "category": "rhythm",
+    "citation": "ch. III, Exs. 14, 17",
+    "relation": "augment",
+    "params": [
+     {
+      "name": "ratio",
+      "kind": "ratio",
+      "min": 1,
+      "max": 3,
+      "description": "the factor times and durations are multiplied by, n:m above 1; 0:0 for 2:1",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full",
+     "rhythm"
+    ]
+   },
+   {
+    "name": "diminish",
+    "label": "Diminish",
+    "category": "rhythm",
+    "citation": "ch. III, Exs. 14, 17",
+    "relation": "diminish",
+    "params": [
+     {
+      "name": "ratio",
+      "kind": "ratio",
+      "min": 1,
+      "max": 3,
+      "description": "the factor times and durations are multiplied by, n:m below 1; 0:0 for 1:2",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full",
+     "rhythm"
+    ]
+   },
+   {
+    "name": "note-repeat",
+    "label": "Note repeat",
+    "category": "rhythm",
+    "citation": "ch. III, Exs. 17h, i, k, l, n",
+    "relation": "note-repeat",
+    "params": [
+     {
+      "name": "note",
+      "kind": "int",
+      "min": 0,
+      "max": 16,
+      "description": "the 0-based note repeated",
+      "optional": false
+     },
+     {
+      "name": "count",
+      "kind": "int",
+      "min": 2,
+      "max": 4,
+      "description": "how many notes it becomes",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full",
+     "rhythm"
+    ]
+   },
+   {
+    "name": "rhythm-repeat",
+    "label": "Rhythm repeat",
+    "category": "rhythm",
+    "citation": "ch. III, Exs. 17l, m, 18e",
+    "relation": "rhythm-repeat",
+    "params": [
+     {
+      "name": "first",
+      "kind": "int",
+      "min": 0,
+      "max": 16,
+      "description": "the first note whose rhythm is copied",
+      "optional": false
+     },
+     {
+      "name": "length",
+      "kind": "int",
+      "min": 1,
+      "max": 16,
+      "description": "how many notes of rhythm are copied",
+      "optional": false
+     },
+     {
+      "name": "target",
+      "kind": "int",
+      "min": 0,
+      "max": 16,
+      "description": "the note where the copied rhythm starts",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full",
+     "rhythm"
+    ]
+   },
+   {
+    "name": "rhythm-shift",
+    "label": "Rhythm shift",
+    "category": "rhythm",
+    "citation": "ch. III, Ex. 23",
+    "relation": "rhythm-shift",
+    "params": [
+     {
+      "name": "offset",
+      "kind": "ratio",
+      "min": 1,
+      "max": 4,
+      "description": "how far later in the bar the rhythm moves, as a fraction of a whole note",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full",
+     "rhythm"
+    ]
+   },
+   {
+    "name": "add-upbeat",
+    "label": "Add upbeat",
+    "category": "rhythm",
+    "citation": "ch. III, Ex. 22",
+    "relation": "add-upbeat",
+    "params": [
+     {
+      "name": "count",
+      "kind": "int",
+      "min": 1,
+      "max": 3,
+      "description": "how many upbeat notes",
+      "optional": false
+     },
+     {
+      "name": "approach",
+      "kind": "int",
+      "min": -1,
+      "max": 1,
+      "description": "+1 approach from below, -1 from above; not 0",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full",
+     "rhythm"
+    ]
+   },
+   {
+    "name": "change-meter",
+    "label": "Change meter",
+    "category": "rhythm",
+    "citation": "ch. III, Ex. 24",
+    "relation": "change-meter",
+    "params": [
+     {
+      "name": "num",
+      "kind": "int",
+      "min": 1,
+      "max": 16,
+      "description": "beats in the new meter",
+      "optional": false
+     },
+     {
+      "name": "den",
+      "kind": "int",
+      "min": 1,
+      "max": 16,
+      "description": "the new beat value: 1, 2, 4, 8 or 16",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full",
+     "rhythm"
+    ]
+   },
+   {
+    "name": "add-interval",
+    "label": "Add interval",
+    "category": "intervals",
+    "citation": "ch. III, Ex. 21",
+    "relation": "add-interval",
+    "params": [
+     {
+      "name": "interval",
+      "kind": "int",
+      "min": 1,
+      "max": 16,
+      "description": "the 1-based interval a note is added in",
+      "optional": false
+     },
+     {
+      "name": "steps",
+      "kind": "int",
+      "min": -7,
+      "max": 7,
+      "description": "scale steps from the note before the interval; not 0",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full",
+     "contour"
+    ]
+   },
+   {
+    "name": "omit-interval",
+    "label": "Omit interval",
+    "category": "intervals",
+    "citation": "ch. III, Ex. 21",
+    "relation": "omit-interval",
+    "params": [
+     {
+      "name": "interval",
+      "kind": "int",
+      "min": 1,
+      "max": 16,
+      "description": "the 1-based interval; the note after it goes",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full",
+     "contour"
+    ]
+   },
+   {
+    "name": "ancillary-fill",
+    "label": "Ancillary fill",
+    "category": "intervals",
+    "citation": "ch. III, Exs. 18, 20",
+    "relation": "ancillary-fill",
+    "params": [
+     {
+      "name": "interval",
+      "kind": "int",
+      "min": 1,
+      "max": 16,
+      "description": "the 1-based interval filled",
+      "optional": false
+     },
+     {
+      "name": "kind",
+      "kind": "int",
+      "min": 0,
+      "max": 1,
+      "description": "passing notes or a neighbor",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "condense",
+    "label": "Condense",
+    "category": "intervals",
+    "citation": "ch. III, Ex. 21; ch. VIII, Ex. 52",
+    "relation": "condense",
+    "params": [
+     {
+      "name": "first",
+      "kind": "int",
+      "min": 0,
+      "max": 16,
+      "description": "the first note condensed",
+      "optional": false
+     },
+     {
+      "name": "last",
+      "kind": "int",
+      "min": 0,
+      "max": 16,
+      "description": "the last note condensed",
+      "optional": false
+     },
+     {
+      "name": "ratio",
+      "kind": "ratio",
+      "min": 1,
+      "max": 3,
+      "description": "the factor the span is shortened by, below 1",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full",
+     "rhythm"
+    ]
+   },
+   {
+    "name": "repeat-feature",
+    "label": "Repeat feature",
+    "category": "intervals",
+    "citation": "ch. III, Exs. 20h, 22a, b, d",
+    "relation": "repeat-feature",
+    "params": [
+     {
+      "name": "feature",
+      "kind": "int",
+      "min": 0,
+      "max": 7,
+      "description": "the 0-based labelled feature repeated",
+      "optional": false
+     },
+     {
+      "name": "times",
+      "kind": "int",
+      "min": 1,
+      "max": 2,
+      "description": "how many repeats",
+      "optional": false
+     },
+     {
+      "name": "steps",
+      "kind": "int",
+      "min": -7,
+      "max": 7,
+      "description": "scale steps each repeat moves by",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full",
+     "contour"
+    ]
+   },
+   {
+    "name": "shift-feature",
+    "label": "Shift feature",
+    "category": "intervals",
+    "citation": "ch. III, Ex. 23",
+    "relation": "shift-feature",
+    "params": [
+     {
+      "name": "feature",
+      "kind": "int",
+      "min": 0,
+      "max": 7,
+      "description": "the 0-based labelled feature moved",
+      "optional": false
+     },
+     {
+      "name": "offset",
+      "kind": "ratio",
+      "min": 1,
+      "max": 4,
+      "description": "how far later the feature moves, as a fraction of a whole note",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "harmony-inversion",
+    "label": "Harmony inversion",
+    "category": "harmony",
+    "citation": "ch. III, Exs. 25a, b",
+    "relation": "harmony-inversion",
+    "params": [
+     {
+      "name": "chord",
+      "kind": "int",
+      "min": 0,
+      "max": 7,
+      "description": "the 0-based chord",
+      "optional": false
+     },
+     {
+      "name": "inversion",
+      "kind": "int",
+      "min": 0,
+      "max": 3,
+      "description": "the new inversion; 3 needs a seventh chord",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "harmony-append",
+    "label": "Harmony append",
+    "category": "harmony",
+    "citation": "ch. III, Exs. 25c to i",
+    "relation": "harmony-append",
+    "params": [
+     {
+      "name": "degree",
+      "kind": "int",
+      "min": 1,
+      "max": 7,
+      "description": "the scale degree of the chord added at the end",
+      "optional": false
+     },
+     {
+      "name": "seventh",
+      "kind": "bool",
+      "min": 0,
+      "max": 1,
+      "description": "make it a seventh chord",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "harmony-insert",
+    "label": "Harmony insert",
+    "category": "harmony",
+    "citation": "ch. III, Ex. 26",
+    "relation": "harmony-insert",
+    "params": [
+     {
+      "name": "chord",
+      "kind": "int",
+      "min": 0,
+      "max": 7,
+      "description": "the 0-based chord the new one goes before",
+      "optional": false
+     },
+     {
+      "name": "degree",
+      "kind": "int",
+      "min": 1,
+      "max": 7,
+      "description": "the scale degree of the new chord",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "harmony-substitute",
+    "label": "Harmony substitute",
+    "category": "harmony",
+    "citation": "ch. III, Exs. 27a to i",
+    "relation": "harmony-substitute",
+    "params": [
+     {
+      "name": "chord",
+      "kind": "int",
+      "min": 0,
+      "max": 7,
+      "description": "the 0-based chord replaced",
+      "optional": false
+     },
+     {
+      "name": "degree",
+      "kind": "int",
+      "min": 1,
+      "max": 7,
+      "description": "the scale degree of the new chord",
+      "optional": false
+     },
+     {
+      "name": "then",
+      "kind": "int",
+      "min": 1,
+      "max": 7,
+      "description": "a second degree that follows it; 0 for none",
+      "optional": true
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "passing-harmony",
+    "label": "Passing harmony",
+    "category": "melody-adaptation",
+    "citation": "ch. III, Ex. 29",
+    "relation": "passing-harmony",
+    "params": [
+     {
+      "name": "chord",
+      "kind": "int",
+      "min": 0,
+      "max": 7,
+      "description": "the 0-based chord a passing chord goes before",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "counter-line",
+    "label": "Counter line",
+    "category": "melody-adaptation",
+    "citation": "ch. III, Ex. 29",
+    "relation": "counter-line",
+    "params": [],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "dominant-form",
+    "label": "Dominant form",
+    "category": "harmony",
+    "citation": "ch. V, the dominant form",
+    "relation": "dominant-form",
+    "params": [],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "liquidate-features",
+    "label": "Liquidate features",
+    "category": "intervals",
+    "citation": "ch. VIII, Ex. 52",
+    "relation": "liquidate-features",
+    "params": [
+     {
+      "name": "steps",
+      "kind": "int",
+      "min": 1,
+      "max": 3,
+      "description": "how many liquidation steps",
+      "optional": false
+     },
+     {
+      "name": "shorten",
+      "kind": "bool",
+      "min": 0,
+      "max": 1,
+      "description": "also diminish the result 1:2",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "reduce-to-frame",
+    "label": "Reduce to frame",
+    "category": "melody-adaptation",
+    "citation": "ch. II and III",
+    "relation": "reduce-to-frame",
+    "params": [],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "add-non-chord-tone",
+    "label": "Add non-chord tone",
+    "category": "melody-adaptation",
+    "citation": "ch. II and III",
+    "relation": "add-non-chord-tone",
+    "params": [
+     {
+      "name": "after",
+      "kind": "int",
+      "min": 0,
+      "max": 16,
+      "description": "the 0-based chord tone the figure follows",
+      "optional": false
+     },
+     {
+      "name": "type",
+      "kind": "int",
+      "min": 0,
+      "max": 9,
+      "description": "the non-chord tone added",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "remove-non-chord-tone",
+    "label": "Remove non-chord tone",
+    "category": "melody-adaptation",
+    "citation": "ch. II and III",
+    "relation": "remove-non-chord-tone",
+    "params": [
+     {
+      "name": "note",
+      "kind": "int",
+      "min": 0,
+      "max": 16,
+      "description": "the 0-based note that is not a chord tone",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "change-non-chord-tone",
+    "label": "Change non-chord tone",
+    "category": "melody-adaptation",
+    "citation": "ch. II and III",
+    "relation": "change-non-chord-tone",
+    "params": [
+     {
+      "name": "note",
+      "kind": "int",
+      "min": 0,
+      "max": 16,
+      "description": "the 0-based note that is not a chord tone",
+      "optional": false
+     },
+     {
+      "name": "type",
+      "kind": "int",
+      "min": 0,
+      "max": 9,
+      "description": "the type it becomes",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   },
+   {
+    "name": "reharmonize-frame",
+    "label": "Reharmonize frame",
+    "category": "melody-adaptation",
+    "citation": "ch. II and III",
+    "relation": "reharmonize-frame",
+    "params": [
+     {
+      "name": "degree",
+      "kind": "int",
+      "min": 1,
+      "max": 7,
+      "description": "the scale degree of the one chord",
+      "optional": false
+     },
+     {
+      "name": "seventh",
+      "kind": "bool",
+      "min": 0,
+      "max": 1,
+      "description": "make it a seventh chord",
+      "optional": false
+     }
+    ],
+    "forms": [
+     "full"
+    ]
+   }
+  ]
+ },
+ "limits": {
+  "motive_notes": 64,
+  "motive_chords": 8,
+  "motive_features": 8,
+  "variant_chain": 4,
+  "variant_functions": 4,
+  "random_motive_count": 16,
+  "tempo_min": 20,
+  "tempo_max": 400,
+  "piece_sections": 32,
+  "piece_beats": 4096,
+  "seed_max": {
+   "variants": 4294967231,
+   "random_motive": 4294967295,
+   "theme": 4294967295,
+   "piece": 4294967295
+  }
+ }
+}

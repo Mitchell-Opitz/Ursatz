@@ -2486,3 +2486,9 @@ button.button-danger:disabled {
   background: Canvas;
   color: CanvasText;
 }
+
+.field-invalid select,
+.field-invalid input,
+.field-invalid.theme-chords {
+  border-color: #f87171;
+}

@@ -8,58 +8,36 @@
  * with tempo and seed as the text typed (blank for none). */
 (function (root) {
   const Materials = root.MaterialsModel || (typeof require === "function" ? require("./materials-model.js") : null);
-  const SLOT_NAMES = ["basic", "contrasting", "continuation", "cadential"];
-  const SLOT_LABELS = {
-    basic: "Basic idea",
-    contrasting: "Contrasting idea",
-    continuation: "Continuation",
-    cadential: "Cadential",
-  };
-  const INTOS = [
-    { value: "sentence", label: "Sentence" },
-    { value: "period", label: "Period" },
-    { value: "hybrid", label: "Hybrid" },
-  ];
-  const BEGINNINGS = ["presentation", "antecedent", "cbi"];
-  const ENDINGS = ["continuation", "consequent", "cadential"];
-  const MODES = [
-    { value: "major", label: "Major" },
-    { value: "minor", label: "Minor" },
-    { value: "style", label: "From the brief" },
-  ];
-  const METERS = ["2/4", "3/4", "4/4", "6/8"];
-  const BARS = [4, 8];
+  /* The Composer's words (R-270, R-276): every list below is read from the vocabulary when asked, so the model keeps no
+   * table of music. The form state holds the words as the Composer spells them. */
+  const Vocab = root.Vocabulary || (typeof require === "function" ? require("./vocabulary.js") : null);
+  const slotNames = () => Vocab.values("theme_slots");
+  const slotLabels = () => Object.fromEntries(Vocab.list("theme_slots").map((entry) => [entry.value, entry.label]));
+  const intos = () => Vocab.list("piece_intos");
+  const beginnings = () => Vocab.values("theme_beginnings");
+  const endings = () => Vocab.values("theme_endings");
+  const modes = () => Vocab.list("piece_modes");
+  const meters = () => Vocab.values("meters");
+  const barChoices = () => Vocab.values("theme_bars").map(Number);
+  const cadences = () => Vocab.values("theme_cadences");
+  const firstCadences = () => Vocab.values("theme_first_cadences");
+  const pools = () => Vocab.list("theme_pools");
+  const patterns = () => Vocab.list("accompaniment_patterns");
+  const weights = () => Vocab.list("style_weights");
+  const motiveCategories = () =>
+    Vocab.list("theme_motive_categories").map((entry) => ({ category: entry.value, label: entry.label }));
+  /* The beats in a bar, and the beat of the one cell a second chord may start on (absent when the bar takes one). */
+  const meterBeats = (meter) => (Vocab.entry("meters", meter) || {}).beats;
+  const secondChordBeat = (meter) => (Vocab.entry("meters", meter) || {}).second_chord_beat;
+  /* The ideas of a half of a form (a beginning or an ending), each {idea, slot}, in order. */
+  const halfIdeas = (list, half) =>
+    ((Vocab.entry(list, half) || {}).ideas || []).map((idea) => ({ idea, slot: (Vocab.entry("theme_ideas", idea) || {}).slot }));
+  const tempoMin = () => Vocab.limit("tempo_min");
+  const tempoMax = () => Vocab.limit("tempo_max");
+  const maxSeed = () => Vocab.seedMax("theme");
+  /* UI limits the Composer does not hold (R-276). */
   const CHORD_BARS = 8;
   const CHORD_TEXT_MAX = 64;
-  /* The beats in a bar, and the beat of the one cell a second chord may start on (the Composer writes chords on
-   * the cells of the meter only: 2 a bar in 4/4 and 6/8, 1 in 2/4 and 3/4). */
-  const METER_BEATS = { "2/4": 2, "3/4": 3, "4/4": 4, "6/8": 6 };
-  const SECOND_CHORD_BEAT = { "4/4": 2, "6/8": 3 };
-  const CADENCES = ["PAC", "IAC", "HC"];
-  const FIRST_CADENCES = ["HC", "IAC"];
-  const POOLS = [
-    { value: "approved-and-unflagged", label: "Approved and unflagged" },
-    { value: "approved", label: "Approved only" },
-    { value: "none", label: "None" },
-  ];
-  const PATTERNS = [
-    { value: "any", label: "Any pattern" },
-    { value: "block", label: "Block" },
-    { value: "arpeggiated", label: "Arpeggiated" },
-    { value: "alberti", label: "Alberti" },
-    { value: "oom-pah", label: "Oom-pah" },
-  ];
-  const WEIGHTS = [
-    { value: "1/4", label: "Light" },
-    { value: "1/2", label: "Normal" },
-    { value: "1", label: "Strong" },
-  ];
-  const MOTIVE_CATEGORIES = [
-    { category: "motive-degrees", label: "degrees" },
-    { category: "motive-intervals", label: "intervals" },
-    { category: "motive-rhythm", label: "rhythm" },
-    { category: "motive-nct-figure", label: "non-chord figures" },
-  ];
   const SWITCH_TEXT = "Use the brief's motive degrees, intervals, rhythm, non-chord figures";
   const THEME_TABS = [
     { id: "theme", label: "Theme" },
@@ -69,21 +47,6 @@
   ];
   const THEME_TAB_KEY = "ursatz.theme.tab";
   const MAX_SLOTS = 4;
-  /* The ideas each half of a form has, in order, with the slot each takes its motif from (names as the Composer's). */
-  const BEGINNING_IDEAS = {
-    presentation: [["basic idea", "basic"], ["repetition", "basic"]],
-    antecedent: [["basic idea", "basic"], ["contrasting idea", "contrasting"]],
-    cbi: [["basic idea", "basic"], ["contrasting idea", "contrasting"]],
-  };
-  const ENDING_IDEAS = {
-    continuation: [["fragment 1", "continuation"], ["fragment 2", "continuation"], ["cadential", "cadential"]],
-    consequent: [["consequent basic idea", "basic"], ["consequent contrasting idea", "contrasting"]],
-    cadential: [["cadential 1", "cadential"], ["cadential 2", "cadential"]],
-  };
-  const TEMPO_MIN = 20;
-  const TEMPO_MAX = 400;
-  const MAX_SEED = 4294967295;
-
   function jsonRequest(method, url, body) {
     const request = { method, url };
     if (body !== undefined) {
@@ -98,18 +61,18 @@
   }
 
   function allSwitches(on) {
-    return Object.fromEntries(MOTIVE_CATEGORIES.map((entry) => [entry.category, on]));
+    return Object.fromEntries(motiveCategories().map((entry) => [entry.category, on]));
   }
 
   /* The categories whose switch is off, in the order of the four. */
   function withoutFromSwitches(switches) {
     const s = switches || {};
-    return MOTIVE_CATEGORIES.filter((entry) => s[entry.category] === false).map((entry) => entry.category);
+    return motiveCategories().filter((entry) => s[entry.category] === false).map((entry) => entry.category);
   }
 
   function switchesFromWithout(without) {
     const list = Array.isArray(without) ? without : [];
-    return Object.fromEntries(MOTIVE_CATEGORIES.map((entry) => [entry.category, !list.includes(entry.category)]));
+    return Object.fromEntries(motiveCategories().map((entry) => [entry.category, !list.includes(entry.category)]));
   }
 
   function emptyState(id) {
@@ -314,7 +277,7 @@
 
   function slotEntries(slots) {
     const list = Array.isArray(slots) ? slots : [];
-    return SLOT_NAMES.flatMap((name) => list.filter((entry) => entry && entry.slot === name)).map((entry) => ({
+    return slotNames().flatMap((name) => list.filter((entry) => entry && entry.slot === name)).map((entry) => ({
       slot: entry.slot,
       item_id: entry.item_id,
       version: Number(entry.version),
@@ -332,51 +295,6 @@
       }
     }
     return entries;
-  }
-
-  /* What is wrong with the chords typed for the bars of the theme, as sentences naming the bar. A bar takes at most
-   * 2 chords, each a numeral the harmony field accepts; onsets rise, are halves of a beat, stay inside the bar and
-   * fall on the cells of the meter (the Composer refuses the rest). */
-  function chordProblems(state) {
-    const s = state || emptyState();
-    const beats = METER_BEATS[s.meter] || 4;
-    const second = SECOND_CHORD_BEAT[s.meter];
-    const parse = Materials.parseHarmonyToken;
-    const problems = [];
-    for (const entry of chordEntries(s)) {
-      const name = `Bar ${entry.bar + 1}`;
-      const tokens = entry.text.split(/\s+/);
-      if (tokens.length > 2) {
-        problems.push(`${name}: at most 2 chords.`);
-        continue;
-      }
-      if (tokens.length === 2 && !second) {
-        problems.push(`${name}: ${s.meter} takes one chord a bar.`);
-        continue;
-      }
-      let last = -1;
-      tokens.forEach((token, index) => {
-        const chord = parse(token);
-        if (!chord) {
-          problems.push(`${name}: "${token}" is not a chord (a Roman numeral such as IV or V6, then @ and the beat).`);
-          return;
-        }
-        const onset = chord.onset === null ? (index === 0 ? 0 : null) : chord.onset;
-        if (onset === null) {
-          problems.push(`${name}: "${token}" needs an onset, such as ${token}@${second || 2}.`);
-        } else if (!Number.isFinite(onset) || Math.round(onset * 2) !== onset * 2) {
-          problems.push(`${name}: the onset of "${token}" must be a whole or half beat.`);
-        } else if (onset >= beats) {
-          problems.push(`${name}: the onset of "${token}" is past the bar (${beats} beats, from 0).`);
-        } else if (onset <= last) {
-          problems.push(`${name}: the onsets must rise.`);
-        } else if (onset !== 0 && onset !== second) {
-          problems.push(`${name}: in ${s.meter} a chord starts only ${second ? `at @${second}` : "on the downbeat"}.`);
-        }
-        last = Number.isFinite(onset) ? onset : last;
-      });
-    }
-    return problems;
   }
 
   /* The chords given, one line for the facts of a composed theme (`Bar 1: I V@2; Bar 3: IV`), blank when none. */
@@ -398,9 +316,9 @@
     return dropped;
   }
 
-  /* The hint under the chord row, for the meter. */
+  /* The hint under the chord row, for the meter (the beat of the second chord is the Composer's). */
   function chordHint(meter) {
-    const beat = SECOND_CHORD_BEAT[meter];
+    const beat = secondChordBeat(meter);
     const second = beat
       ? `a second chord only at @${beat}: I V@${beat}`
       : "one chord a bar in " + meter;
@@ -412,7 +330,7 @@
   function bodyFromForm(state) {
     const s = state || emptyState();
     const hybrid = s.into === "hybrid";
-    const firstCadence = s.into !== "sentence" && FIRST_CADENCES.includes(s.firstCadence) ? s.firstCadence : null;
+    const firstCadence = s.into !== "sentence" && firstCadences().includes(s.firstCadence) ? s.firstCadence : null;
     const acc = s.accompaniment || { kind: "none" };
     let accompaniment = null;
     if (acc.kind === "pattern") {
@@ -438,9 +356,9 @@
       brief,
       style_weight: s.weight,
       without: withoutFromSwitches(s.switches),
-      tempo: wholeNumber(s.tempo, TEMPO_MIN, TEMPO_MAX),
+      tempo: wholeNumber(s.tempo, 0, Infinity),
       check: Boolean(s.check),
-      seed: wholeNumber(s.seed, 0, MAX_SEED),
+      seed: wholeNumber(s.seed, 0, Infinity),
     };
     return { uses: Array.isArray(s.uses) ? s.uses.slice() : [], theme };
   }
@@ -452,25 +370,25 @@
     const theme = body && body.theme && typeof body.theme === "object" ? body.theme : {};
     state.uses = body && Array.isArray(body.uses) ? body.uses.slice() : [];
     const form = theme.form && typeof theme.form === "object" ? theme.form : {};
-    if (INTOS.some((entry) => entry.value === form.into)) {
+    if (intos().some((entry) => entry.value === form.into)) {
       state.into = form.into;
     }
     if (typeof form.hybrid === "string" && form.hybrid !== "") {
       state.hybrid = form.hybrid;
     }
-    if (MODES.some((entry) => entry.value === form.mode)) {
+    if (modes().some((entry) => entry.value === form.mode)) {
       state.mode = form.mode;
     }
-    if (METERS.includes(form.meter)) {
+    if (meters().includes(form.meter)) {
       state.meter = form.meter;
     }
-    if (BARS.includes(form.bars)) {
+    if (barChoices().includes(form.bars)) {
       state.bars = form.bars;
     }
-    if (CADENCES.includes(form.cadence)) {
+    if (cadences().includes(form.cadence)) {
       state.cadence = form.cadence;
     }
-    if (FIRST_CADENCES.includes(form.first_cadence)) {
+    if (firstCadences().includes(form.first_cadence)) {
       state.firstCadence = form.first_cadence;
     }
     state.slots = slotEntries((Array.isArray(theme.slots) ? theme.slots : []).filter((slot) => slot && typeof slot === "object"));
@@ -492,7 +410,7 @@
     }
     state.picks = picksFromBrief(theme.brief);
     state.switches = switchesFromWithout(theme.without);
-    if (WEIGHTS.some((entry) => entry.value === theme.style_weight)) {
+    if (weights().some((entry) => entry.value === theme.style_weight)) {
       state.weight = theme.style_weight;
     }
     state.tempo = Number.isInteger(theme.tempo) ? String(theme.tempo) : "";
@@ -543,13 +461,13 @@
       continuation: ending === "continuation",
       cadential: ending === "continuation" || ending === "cadential",
     };
-    return SLOT_NAMES.filter((name) => has[name]);
+    return slotNames().filter((name) => has[name]);
   }
 
   /* The form's ideas in order, each {idea, slot} with the slot it takes its motif from. */
   function formIdeas(state) {
     const [beginning, ending] = pairing(state);
-    return [...(BEGINNING_IDEAS[beginning] || []), ...(ENDING_IDEAS[ending] || [])].map(([idea, slot]) => ({ idea, slot }));
+    return [...halfIdeas("theme_beginnings", beginning), ...halfIdeas("theme_endings", ending)];
   }
 
   /* The ideas that can have a motif of their own: those of the form but the basic idea (the basic slot). */
@@ -584,12 +502,8 @@
       }));
   }
 
-  function hybridOk(pairing) {
-    const parts = text(pairing).split("+");
-    return parts.length === 2 && BEGINNINGS.includes(parts[0]) && ENDINGS.includes(parts[1]);
-  }
-
-  /* What stops Compose, as a list of sentences. */
+  /* What stops Compose before the Composer is asked, as a list of sentences: what the form lacks to be a request. The
+   * Composer's own checks of the values (meter, bars, hybrid, tempo, seed, chords) come from the validate route. */
   function formProblems(state) {
     const s = state || emptyState();
     const problems = [];
@@ -600,33 +514,50 @@
     if (!slots.some((entry) => entry && entry.slot === "basic" && text(entry.item_id))) {
       problems.push("The basic idea needs a motif.");
     }
-    if (!METERS.includes(s.meter)) {
-      problems.push("The meter must be 2/4, 3/4, 4/4 or 6/8.");
-    }
-    if (!BARS.includes(Number(s.bars))) {
-      problems.push("The theme has 4 or 8 bars.");
-    }
-    if (s.into === "hybrid" && !hybridOk(s.hybrid)) {
-      problems.push("A hybrid needs a pairing such as presentation+continuation.");
-    }
-    if (text(s.tempo) !== "" && wholeNumber(s.tempo, TEMPO_MIN, TEMPO_MAX) === null) {
-      problems.push(`The tempo is ${TEMPO_MIN} to ${TEMPO_MAX} quarter notes per minute, or blank.`);
-    }
-    if (text(s.seed) !== "" && wholeNumber(s.seed, 0, MAX_SEED) === null) {
-      problems.push("The seed is a whole number, or blank.");
-    }
     if (s.mode === "style" && briefFromPicks(s.picks) === null) {
       problems.push("The mode from the brief needs a brief.");
     }
     if ((Array.isArray(s.ideas) ? s.ideas : []).some((entry) => entry && !text(entry.item_id))) {
       problems.push("Each idea with its own motif needs one.");
     }
-    problems.push(...chordProblems(s));
     const acc = s.accompaniment || {};
     if (acc.kind === "motive" && !text(acc.item_id)) {
       problems.push("The accompaniment needs a motif.");
     }
     return problems;
+  }
+
+  /* The form fields the Composer's request paths name (a prefix of the path), for marking the field a refusal is
+   * about. The chords are checked as a whole: a path under /chords or /harmony marks the chord row. */
+  const FIELD_PATHS = [
+    ["/into", "into"],
+    ["/hybrid", "hybrid"],
+    ["/mode", "mode"],
+    ["/meter", "meter"],
+    ["/bars", "bars"],
+    ["/first_cadence", "firstCadence"],
+    ["/cadence", "cadence"],
+    ["/chords", "chords"],
+    ["/harmony", "chords"],
+    ["/accompaniment", "accompaniment"],
+    ["/style_weight", "weight"],
+    ["/tempo", "tempo"],
+    ["/seed", "seed"],
+    ["/slots", "slots"],
+    ["/ideas", "ideas"],
+    ["/motives", "slots"],
+  ];
+
+  /* The form field a request path is about, or null. */
+  function fieldForPath(path) {
+    const text_ = typeof path === "string" ? path : "";
+    const hit = FIELD_PATHS.find(([prefix]) => text_ === prefix || text_.startsWith(`${prefix}/`));
+    return hit ? hit[1] : null;
+  }
+
+  /* The request that asks the backend to check the form with the Composer (POST /api/materials/items/validate). */
+  function validateRequest(state) {
+    return jsonRequest("POST", "/api/materials/items/validate", { type: "theme", body: bodyFromForm(state) });
   }
 
   /* --- requests -------------------------------------------------------- */
@@ -649,7 +580,7 @@
   function composeRequest(state, options) {
     const o = options || {};
     const body = {};
-    const seed = o.seed !== undefined && o.seed !== null && o.seed !== "" ? wholeNumber(o.seed, 0, MAX_SEED) : wholeNumber(state.seed, 0, MAX_SEED);
+    const seed = o.seed !== undefined && o.seed !== null && o.seed !== "" ? wholeNumber(o.seed, 0, Infinity) : wholeNumber(state.seed, 0, Infinity);
     if (seed !== null) {
       body.seed = seed;
     }
@@ -743,7 +674,7 @@
     const theme = firstTheme(summary) || {};
     const rows = (Array.isArray(theme.slots) ? theme.slots : []).map((entry) => ({
       idea: entry.idea,
-      slot: SLOT_LABELS[entry.slot] || entry.slot,
+      slot: slotLabels()[entry.slot] || entry.slot,
       motive: motiveName(o.motiveNames, entry.motive),
       source: SOURCE_TEXT[entry.source] || entry.source || "",
       item: entry.item || "",
@@ -832,26 +763,55 @@
   }
 
   const api = {
-    SLOT_NAMES,
-    SLOT_LABELS,
-    INTOS,
-    BEGINNINGS,
-    ENDINGS,
-    MODES,
-    METERS,
-    BARS,
+    get SLOT_NAMES() {
+      return slotNames();
+    },
+    get SLOT_LABELS() {
+      return slotLabels();
+    },
+    get INTOS() {
+      return intos();
+    },
+    get BEGINNINGS() {
+      return beginnings();
+    },
+    get ENDINGS() {
+      return endings();
+    },
+    get MODES() {
+      return modes();
+    },
+    get METERS() {
+      return meters();
+    },
+    get BARS() {
+      return barChoices();
+    },
     CHORD_BARS,
     chordHint,
     chordEntries,
-    chordProblems,
     chordsText,
     dropChords,
-    CADENCES,
-    FIRST_CADENCES,
-    POOLS,
-    PATTERNS,
-    WEIGHTS,
-    MOTIVE_CATEGORIES,
+    get CADENCES() {
+      return cadences();
+    },
+    get FIRST_CADENCES() {
+      return firstCadences();
+    },
+    get POOLS() {
+      return pools();
+    },
+    get PATTERNS() {
+      return patterns();
+    },
+    get WEIGHTS() {
+      return weights();
+    },
+    get MOTIVE_CATEGORIES() {
+      return motiveCategories();
+    },
+    fieldForPath,
+    validateRequest,
     SWITCH_TEXT,
     THEME_TABS,
     readThemeTab,

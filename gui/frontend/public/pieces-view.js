@@ -517,7 +517,7 @@ function buildPieceEditor(ctx) {
     pickup.setAttribute("list", PIECE_PICKUP_LIST);
     const list = materialsElement("datalist");
     list.id = PIECE_PICKUP_LIST;
-    for (const value of PiecesModel.PICKUPS) {
+    for (const value of PiecesModel.pickups(state.meter)) {
       const option = materialsElement("option");
       option.value = value;
       list.appendChild(option);
@@ -705,6 +705,15 @@ function buildPieceEditor(ctx) {
   );
 
   el.appendChild(problemsEl);
+
+  /* The Composer's checks of the values (key, meter, tempo, seed, pickups, numerals, sizes) come from the validate route. */
+  const validation = attachFormValidation({
+    roots: [el],
+    build: () => PiecesModel.validateRequest(state),
+    field: PiecesModel.fieldForPath,
+    fields: () => ({ key, mode, meter, tempo, sections: stripEl }),
+  });
+  el.appendChild(validation.element);
 
   function problems() {
     const list = PiecesModel.formProblems(state, structureOptions);

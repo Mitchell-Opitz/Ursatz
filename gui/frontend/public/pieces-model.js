@@ -11,32 +11,21 @@
 (function (root) {
   const Themes = root.ThemesModel || (typeof require === "function" ? require("./themes-model.js") : null);
 
-  const PARTS = [
-    { value: "intro", label: "Intro" },
-    { value: "body", label: "Loop body" },
-    { value: "turnaround", label: "Turnaround" },
-    { value: "ending", label: "Ending" },
-  ];
-  const PART_NAMES = PARTS.map((entry) => entry.value);
-  const CADENCES = ["PAC", "IAC", "HC", "DC", "PC"];
-  const FILL_KINDS = [
-    { value: "empty", label: "Empty" },
-    { value: "motif", label: "Motif" },
-    { value: "theme", label: "Theme" },
-    { value: "progression", label: "Progression" },
-  ];
-  const INTOS = Themes.INTOS;
-  const MODES = Themes.MODES;
-  const METERS = Themes.METERS;
-  const POOLS = Themes.POOLS;
-  const PATTERNS = Themes.PATTERNS;
-  const WEIGHTS = Themes.WEIGHTS;
-  const PICKUPS = ["0", "1/4", "1/2", "1", "3/2", "2", "3"];
-  const MAX_SECTIONS = 32;
-  const MAX_BEATS = 2048;
+  /* The Composer's words (R-270, R-276), read when asked: the vocabulary is loaded after the scripts. */
+  const Vocab = root.Vocabulary || (typeof require === "function" ? require("./vocabulary.js") : null);
+  const parts = () => Vocab.list("piece_parts");
+  const partNames = () => Vocab.values("piece_parts");
+  const cadences = () => Vocab.values("cadences");
+  const fillKinds = () => Vocab.list("fill_kinds");
+  const modes = () => Themes.MODES;
+  const meters = () => Themes.METERS;
+  const pools = () => Themes.POOLS;
+  const weights = () => Themes.WEIGHTS;
+  const themeBars = () => Themes.BARS;
+  /* The pickups offered in a meter, in beats (any other multiple of 1/32 shorter than a bar is accepted too). */
+  const pickups = (meter) => (Vocab.get().pickups || {})[meter] || [];
+  /* A limit of the GUI's own: the Composer holds none for the cells of a chord. */
   const MAX_CELLS = 8;
-  const THEME_BARS = [4, 8];
-  const MAX_SEED = 4294967295;
 
   function text(value) {
     return typeof value === "string" ? value.trim() : "";
@@ -76,11 +65,16 @@
   }
 
   function partIndex(part) {
-    return PART_NAMES.indexOf(part);
+    return partNames().indexOf(part);
   }
 
-  /* The beats in a bar of a meter: 2/4 is 2, 6/8 is 6 (the eighth is the beat). */
+  /* The beats in a bar of a meter, as the Composer lists it: 2/4 is 2, 6/8 is 6 (the eighth is the beat). A meter the
+   * Composer does not list (a piece saved with another) reads its numerator. */
   function barBeats(meter) {
+    const listed = (Vocab.entry("meters", meter) || {}).beats;
+    if (Number.isInteger(listed)) {
+      return listed;
+    }
     const n = parseInt(meter, 10);
     return Number.isInteger(n) && n > 0 ? n : 4;
   }
@@ -186,12 +180,6 @@
 
   /* --- body and form --------------------------------------------------- */
 
-  /* The numerals of a progression fill: words of the marks the Composer reads, 1 to 64 of them. */
-  function numeralsOk(value) {
-    const words = text(value).split(/\s+/);
-    return text(value) !== "" && words.length <= 64 && words.every((word) => /^[A-Za-z0-9#+/-]{1,16}$/.test(word));
-  }
-
   /* A fill as the body keeps it. A fill that names nothing yet is empty, so every fill may be saved unfinished.
    * A motif fill keeps `into` only for a theme length (4 or 8 whole bars, no pickup); any other is a free phrase. */
   function fillFromState(fill, free) {
@@ -259,7 +247,7 @@
       letter: text(section.letter) || null,
       beats: Number(section.beats),
       pickup: text(section.pickup) || "0",
-      cadence: CADENCES.includes(section.cadence) ? section.cadence : null,
+      cadence: cadences().includes(section.cadence) ? section.cadence : null,
       fill: fillFromState(section.fill, motifIsFree(section, meter)),
     };
   }
@@ -282,9 +270,9 @@
       brief: Themes.briefFromPicks(s.picks),
       style_weight: s.weight,
       without: Themes.withoutFromSwitches(s.switches),
-      tempo: wholeNumber(s.tempo, 20, 400),
+      tempo: wholeNumber(s.tempo, 0, Infinity),
       check: Boolean(s.check),
-      seed: wholeNumber(s.seed, 0, MAX_SEED),
+      seed: wholeNumber(s.seed, 0, Infinity),
     };
     return { uses: Array.isArray(s.uses) ? s.uses.slice() : [], piece };
   }
@@ -299,27 +287,27 @@
     if (typeof structure.key === "string" && structure.key !== "") {
       state.key = structure.key;
     }
-    if (MODES.some((entry) => entry.value === structure.mode)) {
+    if (modes().some((entry) => entry.value === structure.mode)) {
       state.mode = structure.mode;
     }
-    if (METERS.includes(structure.meter)) {
+    if (meters().includes(structure.meter)) {
       state.meter = structure.meter;
     }
     state.sections = (Array.isArray(structure.sections) ? structure.sections : [])
-      .filter((section) => section && typeof section === "object" && PART_NAMES.includes(section.part))
+      .filter((section) => section && typeof section === "object" && partNames().includes(section.part))
       .map((section) => ({
         id: String(section.id),
         part: section.part,
         letter: typeof section.letter === "string" ? section.letter : "",
         beats: Number.isInteger(section.beats) ? section.beats : 0,
         pickup: typeof section.pickup === "string" ? section.pickup : "0",
-        cadence: CADENCES.includes(section.cadence) ? section.cadence : null,
+        cadence: cadences().includes(section.cadence) ? section.cadence : null,
         fill: fillFromBody(section.fill),
       }));
     if (piece.motive && typeof piece.motive === "object" && text(piece.motive.item_id)) {
       state.motive = { item_id: piece.motive.item_id, version: Number(piece.motive.version) };
     }
-    if (POOLS.some((entry) => entry.value === piece.pool)) {
+    if (pools().some((entry) => entry.value === piece.pool)) {
       state.pool = piece.pool;
     }
     if (piece.accompaniment && typeof piece.accompaniment === "object" && typeof piece.accompaniment.pattern === "string") {
@@ -327,7 +315,7 @@
     }
     state.picks = Themes.picksFromBrief(piece.brief);
     state.switches = Themes.switchesFromWithout(piece.without);
-    if (WEIGHTS.some((entry) => entry.value === piece.style_weight)) {
+    if (weights().some((entry) => entry.value === piece.style_weight)) {
       state.weight = piece.style_weight;
     }
     state.tempo = Number.isInteger(piece.tempo) ? String(piece.tempo) : "";
@@ -439,7 +427,7 @@
     const per = barBeats(meter);
     const bars = Number(section.beats) / per;
     const pickup = rational(section.pickup);
-    return !(THEME_BARS.includes(bars) && (pickup === null || pickup === 0));
+    return !(themeBars().includes(bars) && (pickup === null || pickup === 0));
   }
 
   /* What stops Compose or Save, as a list of sentences. options.themeBeats(fill) gives the length in beats of the
@@ -449,9 +437,6 @@
     const o = options || {};
     const problems = [];
     const sections = Array.isArray(s.sections) ? s.sections : [];
-    if (sections.length > MAX_SECTIONS) {
-      problems.push(`A piece has at most ${MAX_SECTIONS} sections.`);
-    }
     if (!sections.some((section) => section.part === "body")) {
       problems.push("The piece needs a section in the loop body.");
     }
@@ -467,18 +452,11 @@
     if (!ordered) {
       problems.push("The parts must come in the order intro, loop body, turnaround, ending.");
     }
-    const limit = barBeats(s.meter);
     for (const section of sections) {
       const name = section.letter ? `Section ${section.letter}` : `Section ${section.id}`;
       const beats = Number(section.beats);
       if (!Number.isInteger(beats) || beats < 1) {
         problems.push(`${name} must be at least a beat long.`);
-      } else if (beats > MAX_BEATS) {
-        problems.push(`${name} is at most ${MAX_BEATS} beats.`);
-      }
-      const pickup = rational(section.pickup);
-      if (pickup === null || pickup >= limit) {
-        problems.push(`${name} has a pickup shorter than a bar, such as 1 or 1/2 beat.`);
       }
       const fill = section.fill || {};
       if (fill.kind === "theme" && typeof o.themeBeats === "function") {
@@ -491,38 +469,46 @@
     return problems;
   }
 
-  /* What stops Compose beyond the structure: the key, the meter, the tempo, the seed, the mode and the numerals. */
+  /* What stops Compose beyond the structure: the mode from the brief needs a brief. The Composer's own checks of the
+   * values (key, meter, tempo, seed, pickups, numerals, sizes) come from the validate route. */
   function formProblems(state, options) {
     const s = state || emptyState();
     const problems = structureProblems(s, options);
-    if (!/^[A-G][#b]?( (major|minor))?$/.test(text(s.key)) || text(s.key).length > 16) {
-      problems.push("The key must be a tonic such as D or Bb.");
-    }
-    if (!METERS.includes(s.meter)) {
-      problems.push("The meter must be 2/4, 3/4, 4/4 or 6/8.");
-    }
-    if (text(s.tempo) !== "" && wholeNumber(s.tempo, 20, 400) === null) {
-      problems.push("The tempo is 20 to 400 quarter notes per minute, or blank.");
-    }
-    if (text(s.seed) !== "" && wholeNumber(s.seed, 0, MAX_SEED) === null) {
-      problems.push("The seed is a whole number, or blank.");
-    }
     if (s.mode === "style" && Themes.briefFromPicks(s.picks) === null) {
       problems.push("The mode from the brief needs a brief.");
     }
-    for (const section of Array.isArray(s.sections) ? s.sections : []) {
-      const fill = section.fill || {};
-      const name = section.letter ? `Section ${section.letter}` : `Section ${section.id}`;
-      if (fill.kind === "progression") {
-        if (text(fill.numerals) !== "" && !numeralsOk(fill.numerals)) {
-          problems.push(`${name} needs numerals such as I vi IV V.`);
-        }
-        if (text(fill.cells) !== "" && wholeNumber(fill.cells, 1, MAX_CELLS) === null) {
-          problems.push(`${name} has 1 to ${MAX_CELLS} cells per chord.`);
-        }
-      }
-    }
     return problems;
+  }
+
+  /* The form fields the Composer's request paths name (a prefix of the path), for marking the field a refusal is
+   * about; anything under /sections marks the section list. */
+  const FIELD_PATHS = [
+    ["/key", "key"],
+    ["/mode", "mode"],
+    ["/meter", "meter"],
+    ["/tempo", "tempo"],
+    ["/seed", "seed"],
+    ["/sections", "sections"],
+    ["/motive", "motive"],
+    ["/accompaniment", "accompaniment"],
+    ["/style_weight", "weight"],
+  ];
+
+  /* The form field a request path is about, or null. */
+  function fieldForPath(path) {
+    const value = typeof path === "string" ? path : "";
+    const hit = FIELD_PATHS.find(([prefix]) => value === prefix || value.startsWith(`${prefix}/`));
+    return hit ? hit[1] : null;
+  }
+
+  /* The request that asks the backend to check the form with the Composer (POST /api/materials/items/validate). */
+  function validateRequest(state) {
+    return {
+      method: "POST",
+      url: "/api/materials/items/validate",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: "piece", body: bodyFromState(state) }),
+    };
   }
 
   /* --- requests -------------------------------------------------------- */
@@ -545,7 +531,7 @@
     const o = options || {};
     const body = {};
     const seed =
-      o.seed !== undefined && o.seed !== null && o.seed !== "" ? wholeNumber(o.seed, 0, MAX_SEED) : wholeNumber(state.seed, 0, MAX_SEED);
+      o.seed !== undefined && o.seed !== null && o.seed !== "" ? wholeNumber(o.seed, 0, Infinity) : wholeNumber(state.seed, 0, Infinity);
     if (seed !== null) {
       body.seed = seed;
     }
@@ -582,7 +568,7 @@
     if (text(String(value === undefined || value === null ? "" : value)) === "") {
       return { value: undefined };
     }
-    const seed = wholeNumber(value, 0, MAX_SEED);
+    const seed = wholeNumber(value, 0, Infinity);
     return seed === null ? { error: "The seed is a whole number, or blank." } : { value: seed };
   }
 
@@ -834,19 +820,40 @@
   }
 
   const api = {
-    PARTS,
-    PART_NAMES,
-    CADENCES,
-    FILL_KINDS,
-    INTOS,
-    MODES,
-    METERS,
-    POOLS,
-    PATTERNS,
-    WEIGHTS,
-    PICKUPS,
-    MAX_SECTIONS,
+    get PARTS() {
+      return parts();
+    },
+    get PART_NAMES() {
+      return partNames();
+    },
+    get CADENCES() {
+      return cadences();
+    },
+    get FILL_KINDS() {
+      return fillKinds();
+    },
+    get INTOS() {
+      return Themes.INTOS;
+    },
+    get MODES() {
+      return Themes.MODES;
+    },
+    get METERS() {
+      return Themes.METERS;
+    },
+    get POOLS() {
+      return Themes.POOLS;
+    },
+    get PATTERNS() {
+      return Themes.PATTERNS;
+    },
+    get WEIGHTS() {
+      return Themes.WEIGHTS;
+    },
+    pickups,
     MAX_CELLS,
+    fieldForPath,
+    validateRequest,
     emptyState,
     emptyFill,
     barBeats,
@@ -865,7 +872,6 @@
     themeFormText,
     themeComposed,
     fillKey,
-    numeralsOk,
     structureProblems,
     formProblems,
     saveRequest,

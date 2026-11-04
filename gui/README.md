@@ -119,8 +119,12 @@ for an altered root, figures `6`, `64`, `7`, `65`, `43`, `42`, and `@` the
 onset in beats; the first chord needs no onset; up to 8 chords, at most 2 in a
 bar, at most 200 characters). When the field is empty the Composer proposes a
 base harmony from the notes, and the placeholder shows it (`Proposed: I V@2`,
-`I (proposed)` before the first analysis). A chord the Composer cannot read
-shows its message under the Base harmony field.
+`I (proposed)` before the first analysis). The Composer reads the values while
+they are edited (400 ms after the last change, `POST /api/materials/items/validate`):
+a note list, meter, pickup or chord it cannot read shows its message, as given,
+under the field its request path names. The tone choices, the modes and the tone
+abbreviations are the Composer's lists (`GET /api/composer/vocabulary`); the
+choice for no override is empty.
 
 Tone labels (R-195, R-196): under the note list the Tones row has one chip per
 note, `<note> <label>` with `-> <n>` for the note it resolves to. The label is
@@ -174,8 +178,8 @@ the theme body the backend composes (see Theme bodies and version files).
   holds the accompaniment, the brief, the switches, weight, Check with the
   Analyzer and Seed. Below are the composed theme (Result) and the one Save row.
 - Structure tab: form: into (sentence, period, hybrid with its pairing, and the
-  first cadence for a period or hybrid), bars (4 or 8) and cadence. A theme is
-  always in C: there is no key. The slots are below.
+  first cadence for a period or hybrid), bars and cadence, all from the Composer's
+  vocabulary. A theme is always in C: there is no key. The slots are below.
 - Used by tab: the items that use the theme. Other tab: the versions with their
   notes (View opens one read only) and Derived from.
 - Slots: only the slots the form has are shown. Basic idea (required) is always
@@ -196,9 +200,15 @@ the theme body the backend composes (see Theme bodies and version files).
   placeholder `Composer`. Roman numerals in C, at most 2 a bar, `@` the beat a
   chord starts on from 0. The Composer writes chords on the cells of the meter
   only: a second chord at `@2` in 4/4, `@3` in 6/8, none in 2/4 and 3/4 (the
-  hint under the row follows the meter). A filled bar is checked before Save and
-  Compose (numeral, onsets rising, whole or half beats, inside the bar, on the
-  cell); the message names the bar. Bars 8 to 4 clears the chords of bars 5 to
+  hint under the row follows the meter). The Composer checks the chords, like the
+  other values of the theme (meter, bars, hybrid, tempo, seed), while the form is edited
+  (`POST /api/materials/items/validate`, 400 ms after the last change): its message shows under the
+  Save row, as given, and the field its request path names is marked. It does not block the form: a
+  draft the Composer refuses still saves, and Compose refuses it with the same path. Only what the
+  form lacks to be a request (the basic motif, a motif for an idea, the accompaniment motif, a brief
+  for the mode From the brief) stops Save and Compose. The Composer reads a chord as a numeral with
+  onsets that rise, are whole or half beats, fall inside the bar and on a cell
+  of the meter; its message names the bar. Bars 8 to 4 clears the chords of bars 5 to
   8 with a status line. The body keeps `chords` as `[{bar, text}]` (bar from 0)
   for filled bars only; the result lists them as Given chords. A Composer
   refusal naming a bar shows in the tab status.
@@ -236,16 +246,20 @@ composes (see Piece bodies and version files) and reuses the Themes view's
 builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
 
 - Header: key, mode (major, minor, From the brief), meter and tempo (blank
-  takes the brief's).
+  takes the brief's). The Composer reads the piece while it is edited (400 ms after the last change,
+  `POST /api/materials/items/validate`): the key, meter, tempo, seed, pickups, numerals and sizes it refuses show its
+  message, as given, and mark the header or the strip its request path names. Nothing of that blocks Save as new
+  version; only a missing brief for the mode From the brief, the loop body, the order of the parts and a theme of
+  another length do.
 - Structure strip: four lanes, Intro, Loop body, Turnaround and Ending, each a
   row of section blocks as wide as their beats. Add section puts a section at
   the end of its lane. Selecting a block opens its editor: letter, length (a
   bars and a beats input, giving beats), pickup (beats of anacrusis, `0` for
-  none, or `n` or `n/d` such as `1` and `1/2`; shorter than a bar), cadence
+  none, or `n` or `n/d` such as `1` and `1/2`; the choices are the Composer's for the meter, 2/4 has no `2`), cadence
   (Default shows the default, R-169: HC at the end of the intro and of the
   loop, PAC at the end of the ending, IAC elsewhere), Move left and Move right
-  within the part, and Remove section. A piece has 1 to 32 sections and at
-  least one in the loop body.
+  within the part, and Remove section. A piece has at least one section in the
+  loop body (the Composer holds the largest number of sections and beats).
 - Fill: Empty, Motif, Theme or Progression. Any fill may be left empty and
   saved; one that names nothing is saved as empty. A motif fill has a motif
   picker and, at 4 or 8 whole bars without a pickup, into sentence, period or
@@ -788,10 +802,12 @@ A theme body (the rules are in `service/material_service.h`) is a placeholder or
 placeholder, `form` null or a string and `slots` an array of anything, stays valid so earlier versions still read. A
 body with a `form` object, a slot written as `{slot, item_id, version}` or any of the members below is a composable theme:
 
-- `form`: `{into, hybrid, mode, meter, bars, cadence, first_cadence}`; `into` is `sentence`, `period` or
-  `hybrid`, `mode` `major`, `minor` or `style` (the style's most common mode), `meter` one of `2/4`, `3/4`, `4/4`,
-  `6/8`, `bars` 4 or 8; each member null or as the Composer routes take it. Compose needs `into`, `mode` and
-  `meter`. A theme is in C: a body with a `key` is refused (`themes are in C; remove key`).
+- `form`: `{into, hybrid, mode, meter, bars, cadence, first_cadence}`: each member null or text (`bars` a number), in
+  the words of the Composer's vocabulary (`GET /api/composer/vocabulary`: `into` `sentence`, `period` or `hybrid`, `mode`
+  `major`, `minor` or `style`, `meter` `2/4`, `3/4`, `4/4` or `6/8`, `bars` 4 or 8...). A save keeps the type and size
+  of a word and not the word: a value the Composer does not read is saved, `POST /api/materials/items/validate` marks
+  it and compose refuses it with its path (R-276). Compose needs `into`, `mode` and `meter`. A theme is in C: a body
+  with a `key` is refused (`themes are in C; remove key`).
 - `slots`: `[{slot: "basic" | "contrasting" | "continuation" | "cadential", item_id, version}]`, `basic` once and each
   slot at most once; the same item may be in several slots. Each item is a melodic motif of form `full` at an existing
   version.
@@ -803,7 +819,7 @@ body with a `form` object, a slot written as `{slot, item_id, version}` or any o
   `arpeggiated`, `alberti`, `oom-pah` or `any`) or `{pattern: "motive", item_id, version}`, a motif of role
   `accompaniment`. `brief`: null or `{scopes, piece_ids, style_ids}` as the styles route takes it. `style_weight`
   `n/d`. `without`: up to 4 of `motive-degrees`, `motive-intervals`, `motive-rhythm`, `motive-nct-figure`. `tempo`:
-  null or 20 to 400. `check`: boolean. `seed`: null or a whole number. `result`: null or an object, written by the
+  null or a whole number (the Composer's range is in its vocabulary). `check`: boolean. `seed`: null or a whole number. `result`: null or an object, written by the
   compose route.
 - The server fills `uses` from the slots, the ideas and the accompaniment motif: a client use of those items is replaced
   by one use for each version named, with a fresh `copy` (other client uses stay). Moving a use to a newer version moves
@@ -827,14 +843,14 @@ placeholder, `structure` null, a string, an array or an object without a list of
 versions still read. A body whose `structure` has a `sections` list, or that has any of the members below, is a
 composable piece. A structure alone is valid: every fill may be left out.
 
-- `structure`: `{key, mode, meter, sections}` with `mode` `major`, `minor` or `style`, `meter` one of `2/4`, `3/4`,
-  `4/4`, `6/8`. `sections` is 1 to 32 of `{id, part, letter, beats, pickup, cadence, fill}`: `id` is `s<n>` or `end`,
-  each once; `part` is `intro`, `body`, `turnaround` or `ending`, in that order, with at least one `body`; `letter` 1
-  to 8 characters; `beats` a whole number from 1 to 2048; `pickup` `n` or `n/d` beats, shorter than a bar; `cadence`
-  null or `PAC`, `IAC`, `HC`, `DC` or `PC`.
+- `structure`: `{key, mode, meter, sections}`: `key`, `mode` and `meter` null or text, in the Composer's words (a
+  value it does not read is saved and marked by validate, R-276). `sections` is 1 to 32 of
+  `{id, part, letter, beats, pickup, cadence, fill}`: `id` is `s<n>` or `end`, each once; `part` is `intro`, `body`,
+  `turnaround` or `ending`, in that order, with at least one `body`; `letter` 1 to 8 characters; `beats` a whole
+  number from 1 to 2048; `pickup` `n` or `n/d` beats; `cadence` null or text.
 - `fill`: null or `{kind: "empty"}`; `{kind: "motif", item_id, version, into?, hybrid?}`, a melodic motif of form
   `full`; `{kind: "theme", item_id, version}`, a theme version that was composed (it has a `result` and a `plan.json`);
-  `{kind: "progression", numerals, cells?}`, 1 to 64 roman numerals separated by spaces and 1 to 8 cells for each chord.
+  `{kind: "progression", numerals, cells?}`, the numerals as text (the Composer reads them) and 1 to 8 cells for each chord.
 - `motive`: null or `{item_id, version}`, a melodic motif of form `full`: the piece's basic motive. `pool`,
   `accompaniment` (null or `{pattern}`; the pattern `motive` is not available), `brief`, `style_weight`, `without`,
   `tempo`, `check`, `seed` and `result` are the theme's.
@@ -1601,17 +1617,27 @@ A route that runs long work validates the request, queues the job and answers `2
 
 - `URSATZ_GUI_JOB_WORKERS`: the number of workers (1 to 8, default 2).
 
-Every request field is checked against a fixed pattern or range before it
-reaches the Composer: keys (`D`, `F#`, `Bb`, `D minor`), meters
-(`2/4`, `3/4`, `4/4`, `6/8`), numbers in range, form letters
-(`^[A-Z]'*$`), lanes, node ids, tempos (20 to 400, whole or `n/d`) and
-note-list text. Anything else is 400 and starts nothing.
+The routes check the shape of a request before it reaches the Composer: types, counts in range, form letters
+(`^[A-Z]'*$`), lanes, node ids and the length of text. The words of music (keys, meters, pickups, note lists, harmony)
+are the Composer's to read: it refuses what it does not read with a message and the `path` of the member at fault
+(`400`, nothing starts).
 
 Routes (bodies are JSON; success bodies have `"ok":true`):
 
 - `GET /api/composer/status`: `{"ok":true,"available":true,"version":"ursatz-composer 0.4.0","api_version":"1.1",
   "analyzer_version":"0.5.0","ursatz_commit":"..."}` from `composer_api_versions` (the last three are additive).
 
+- `GET /api/composer/vocabulary`: the lists the Composer reads (`composer_api_vocabulary`), built once and kept: meters
+  with their beats and second chord beat, modes, keys and `pitch_class_names`, cadences, pickups for each meter, the
+  theme words (slots, ideas, beginnings and endings, bars, pools, weights, categories), accompaniment patterns, piece
+  parts, intos and fill kinds, tone labels with their abbreviations, and `limits`. The frontend loads it once before
+  its views mount (`vocabulary.js`) and keeps no table of music of its own; the GUI keeps only its own limits (cells of a
+  chord, tabs, the number of chord bars) and its rules (themes and motifs are in C, the pool rule, storage length caps).
+- `POST /api/materials/items/validate`: `{"type": "motif"|"theme"|"piece", "body"}` builds the Composer request the
+  body would compose (or, for a motif, analyze) with and has the Composer read it without composing
+  (`composer_api_validate`; nothing is written). `{"ok":true,"complete":true,"request"}` gives the request with the
+  Composer's defaults filled; `{"ok":true,"complete":false,"message"}` means the body is not composable yet (no
+  Composer call); a request the Composer refuses is `400` with its message and `path` (the member at fault).
 - `GET /api/jobs/<id>`: `{"ok": true, "job": {"id", "kind", "state", "stage", "done", "total", "http_status"?,
   "result"?}}`. `http_status` and `result` (the body the route answered before jobs) are there once the job is done or
   failed. `404` for an unknown job.

@@ -96,6 +96,16 @@ static int handle_status(struct mg_connection *conn) {
   return send_object(conn, 200, object);
 }
 
+/* GET /api/composer/vocabulary: the words the Composer reads, as composer_api_vocabulary gives them (built once and
+ * kept, R-270). */
+static int handle_vocabulary(struct mg_connection *conn) {
+  const char *vocabulary = ursatz_gui_composer_vocabulary();
+  if (!vocabulary) {
+    return send_error(conn, 500, "composer failed");
+  }
+  return ursatz_gui_send_json_status(conn, 200, "OK", vocabulary);
+}
+
 static size_t split_path(char *rest, char *segments[MAX_SEGMENTS]) {
   size_t count = 0;
   char *start = rest;
@@ -144,6 +154,13 @@ static int composer_handler(struct mg_connection *conn, void *cbdata) {
       return send_error(conn, 405, "method not allowed");
     }
     return handle_status(conn);
+  }
+
+  if (count == 1 && strcmp(segments[0], "vocabulary") == 0) {
+    if (strcmp(method, "GET") != 0) {
+      return send_error(conn, 405, "method not allowed");
+    }
+    return handle_vocabulary(conn);
   }
 
   return send_error(conn, 404, "not found");

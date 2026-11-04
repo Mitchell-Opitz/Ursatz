@@ -120,6 +120,13 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_delete(const char *id);
 UrsatzGuiMaterialResult ursatz_gui_material_body_validate(const char *type, const cJSON *body, char *error,
                                                            size_t error_size);
 
+/*
+ * *out is a copy of body (a theme or piece form not saved yet) with the uses its references imply and a fresh copy of
+ * each used version in them, as a save makes them; nothing is written. Not OK when a reference names no usable motif
+ * or version. Caller-owned.
+ */
+UrsatzGuiMaterialResult ursatz_gui_material_body_with_uses(const cJSON *body, cJSON **out);
+
 /* --- items and versions -------------------------------------------------- */
 
 /*

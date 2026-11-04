@@ -679,6 +679,32 @@ static const UrsatzGuiComposeKind kThemeKind = {"theme",            "the item is
                                                 build_theme_request, run_theme,            theme_note,
                                                 body_with_result};
 
+UrsatzGuiThemeResult ursatz_gui_theme_validate(const cJSON *body, bool *complete, cJSON **out_request, char *message,
+                                               size_t message_size) {
+    *complete = false;
+    *out_request = NULL;
+    ursatz_gui_compose_say(message, message_size, "");
+    const cJSON *theme = cJSON_GetObjectItemCaseSensitive(body, "theme");
+    if (!cJSON_IsObject(theme)) {
+        ursatz_gui_compose_say(message, message_size, "the body is not a theme");
+        return URSATZ_GUI_THEME_OK;
+    }
+    const cJSON *brief = cJSON_GetObjectItemCaseSensitive(theme, "brief");
+    bool has_brief = brief && !cJSON_IsNull(brief);
+    if (!composable(theme, has_brief, message, message_size)) {
+        return URSATZ_GUI_THEME_OK;
+    }
+    const cJSON *form = cJSON_GetObjectItemCaseSensitive(theme, "form");
+    if (has_brief && strcmp(ursatz_gui_compose_text_of(form, "mode"), "style") == 0) {
+        /* The style of the brief is built only when composing. */
+        ursatz_gui_compose_say(message, message_size, "");
+        return URSATZ_GUI_THEME_OK;
+    }
+    UrsatzGuiThemeResult result = build_request(body, NULL, out_request, message, message_size);
+    *complete = result == URSATZ_GUI_THEME_OK;
+    return result;
+}
+
 UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, long long seed, bool update_uses,
                                               const ComposerJob *job, cJSON **out_item, char *message,
                                               size_t message_size) {

@@ -47,6 +47,15 @@ UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, lon
                                               size_t message_size);
 
 /*
+ * The theme request of the Composer for the body of a theme version, to be checked with composer_api_validate and not
+ * composed (R-276). *complete is false (and *out_request NULL) when the body cannot be composed yet; message then says
+ * why ("" when the brief's style is all that is missing). On OK with *complete, *out_request is caller-owned. Writes
+ * nothing. A motif the body refers to that cannot be read is URSATZ_GUI_THEME_ERR_INVALID with the reason in message.
+ */
+UrsatzGuiThemeResult ursatz_gui_theme_validate(const cJSON *body, bool *complete, cJSON **out_request, char *message,
+                                               size_t message_size);
+
+/*
  * Shared with piece_service.c: the same steps for a piece (R-173, R-174).
  */
 

@@ -569,8 +569,6 @@ static void test_bodies(const Motifs *m) {
                                     ",\"without\":[\"mode\"]",
                                     ",\"without\":[\"motive-rhythm\",\"motive-degrees\",\"motive-intervals\","
                                     "\"motive-nct-figure\",\"motive-rhythm\"]",
-                                    ",\"tempo\":19",
-                                    ",\"tempo\":401",
                                     ",\"check\":\"yes\"",
                                     ",\"seed\":-1",
                                     ",\"seed\":1.5",
@@ -582,8 +580,6 @@ static void test_bodies(const Motifs *m) {
                                       "a style weight that is not n/d",
                                       "a without that is not a motive category",
                                       "a without of five",
-                                      "a tempo under 20",
-                                      "a tempo over 400",
                                       "a check that is not a boolean",
                                       "a negative seed",
                                       "a seed that is not whole",
@@ -650,11 +646,11 @@ static void test_bodies(const Motifs *m) {
   snprintf(body, sizeof(body), "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"meter\":\"5/4\"},\"slots\":%s}}",
            basic);
   free(create_item("theme", "x", body, &status));
-  check(status == 400, "a form meter outside the four is refused");
+  check(status == 200, "a form meter outside the four is saved (the Composer refuses it when composing)");
   snprintf(body, sizeof(body), "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"hybrid\",\"hybrid\":\"fugue\"},\"slots\":%s}}",
            basic);
   free(create_item("theme", "x", body, &status));
-  check(status == 400, "a hybrid pairing that is not one is refused");
+  check(status == 200, "a hybrid pairing that is not one is saved (the Composer refuses it when composing)");
 }
 
 /* The request the compose route writes, the version it makes and its files. */

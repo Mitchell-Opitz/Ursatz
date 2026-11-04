@@ -2744,7 +2744,18 @@ function mountSubjectsPanel() {
   subjectsPanel.refresh();
 }
 
-mountTagsPanel();
-mountSubjectsPanel();
-mountProjectPicker();
-selectTool("library");
+/* The Composer's words are loaded before any view mounts (the models read their lists from them). */
+async function boot() {
+  try {
+    await Vocabulary.load();
+  } catch (err) {
+    getContentEl().innerHTML = `<section class="panel"><h1>Composer unavailable</h1><p class="error">${err.message}</p></section>`;
+    return;
+  }
+  mountTagsPanel();
+  mountSubjectsPanel();
+  mountProjectPicker();
+  selectTool("library");
+}
+
+boot();

@@ -598,9 +598,7 @@ static void test_bodies(const Items *m) {
       {"zero beats", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":0}]"},
       {"too many beats", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":2049}]"},
       {"half a beat", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":2.5}]"},
-      {"a pickup as long as a bar", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"4\"}]"},
       {"a pickup that is no number", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"x\"}]"},
-      {"an unknown cadence", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"cadence\":\"XX\"}]"},
       {"an unknown fill kind", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"fill\":{\"kind\":\"bogus\"}}]"},
       {"a fill that is a string", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"fill\":\"empty\"}]"},
       {"a motif fill with no item", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"fill\":{\"kind\":\"motif\"}}]"},
@@ -609,14 +607,13 @@ static void test_bodies(const Items *m) {
        "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"fill\":{\"kind\":\"progression\",\"numerals\":\"\"}}]"},
       {"nine cells", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"fill\":{\"kind\":\"progression\",\"numerals\":\"i\",\"cells\":9}}]"},
       {"zero cells", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"fill\":{\"kind\":\"progression\",\"numerals\":\"i\",\"cells\":0}}]"},
-      {"an unknown into", "[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"fill\":{\"kind\":\"motif\",\"item_id\":\"mot-1\",\"version\":1,\"into\":\"rondo\"}}]"},
   };
   for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
     char what[200];
     snprintf(what, sizeof(what), "%s is refused", bad[i].what);
     check(create_piece("Bad", bad[i].sections, "", NULL) == 400, what);
   }
-  /* 65 numerals and 33 sections. */
+  /* 65 numerals (the Composer's limit, judged by validate) and 33 sections. */
   char numerals[400] = "";
   for (int i = 0; i < 65; i++) {
     strcat(numerals, i ? " I" : "I");
@@ -624,7 +621,7 @@ static void test_bodies(const Items *m) {
   snprintf(fill, sizeof(fill), "{\"kind\":\"progression\",\"numerals\":\"%s\"}", numerals);
   section_of(one, sizeof(one), "s0", "body", 8, fill);
   snprintf(two, sizeof(two), "[%s]", one);
-  check(create_piece("Bad", two, "", NULL) == 400, "65 numerals are refused");
+  check(create_piece("Numerals", two, "", NULL) == 200, "65 numerals are saved (the Composer refuses them when composing)");
   char many[8000] = "[";
   for (int i = 0; i < 33; i++) {
     char one_section[200];
@@ -673,7 +670,7 @@ static void test_bodies(const Items *m) {
   check(create_piece("Bad", ok_sections, ",\"accompaniment\":{\"pattern\":\"motive\",\"item_id\":\"mot-x\",\"version\":1}", NULL) == 400,
         "the accompaniment pattern motive is refused in a piece");
   check(create_piece("Bad", ok_sections, ",\"accompaniment\":{\"pattern\":\"waltz\"}", NULL) == 400, "an unknown pattern is refused");
-  check(create_piece("Bad", ok_sections, ",\"tempo\":10", NULL) == 400, "a tempo below 20 is refused");
+  check(create_piece("Tempo", ok_sections, ",\"tempo\":10", NULL) == 200, "a tempo below 20 is saved (the Composer refuses it when composing)");
   check(create_piece("Bad", ok_sections, ",\"seed\":-1", NULL) == 400, "a negative seed is refused");
   check(create_piece("Bad", ok_sections, ",\"check\":1", NULL) == 400, "a check that is not a boolean is refused");
   check(create_piece("Bad", ok_sections, ",\"style_weight\":\"heavy\"", NULL) == 400, "a bad style weight is refused");
@@ -687,11 +684,13 @@ static void test_bodies(const Items *m) {
     snprintf(body, sizeof(body),
              "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"Z\",\"mode\":\"minor\",\"meter\":\"4/4\",\"sections\":%s}}}", ok_sections);
     id = create_item("piece", "Bad key", body, &status);
-    check(status == 400 && !id, "a key that is not a tonic is refused");
+    check(status == 200 && id, "a key that is not a tonic is saved (the Composer refuses it when composing)");
+    free(id);
     snprintf(body, sizeof(body),
              "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"mode\":\"minor\",\"meter\":\"5/4\",\"sections\":%s}}}", ok_sections);
     id = create_item("piece", "Bad meter", body, &status);
-    check(status == 400 && !id, "a meter of 5/4 is refused");
+    check(status == 200 && id, "a meter of 5/4 is saved (the Composer refuses it when composing)");
+    free(id);
   }
 }
 

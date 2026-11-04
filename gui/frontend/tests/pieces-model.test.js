@@ -6,6 +6,7 @@
  * Plain Node script: `node frontend/tests/pieces-model.test.js`. */
 const fs = require("fs");
 const path = require("path");
+require("../public/vocabulary.js").set(require("./fixtures/vocabulary.json"));
 const P = require("../public/pieces-model.js");
 
 let failures = 0;
@@ -98,23 +99,11 @@ const short = filled();
 short.sections[1].beats = 0;
 short.sections[2].beats = 1.5;
 check(P.structureProblems(short).filter((text) => /at least a beat/.test(text)).length === 2, "a length under a beat is a problem");
-const pickup = filled();
-pickup.sections[1].pickup = "4";
-pickup.sections[2].pickup = "x";
-pickup.sections[3].pickup = "7/2";
-check(P.structureProblems(pickup).filter((text) => /pickup/.test(text)).length === 2, "a pickup not under a bar is a problem, 7/2 beats is not");
-const waltz = filled();
-waltz.meter = "3/4";
-waltz.sections[1].pickup = "3";
-check(P.structureProblems(waltz).some((text) => /pickup/.test(text)), "the bar of the meter limits the pickup");
 const themed = filled();
 themed.sections[1].fill = { kind: "theme", item_id: "thm-1", version: 2 };
 check(P.structureProblems(themed, { themeBeats: () => 32 }).length === 0, "a theme of the section's length is fine");
 check(P.structureProblems(themed, { themeBeats: () => 16 }).some((text) => /theme is 4 bars/.test(text)), "a theme of another length is a problem");
 check(P.structureProblems(themed, { themeBeats: () => null }).length === 0 && P.structureProblems(themed).length === 0, "an unknown theme length is no problem");
-const many = filled();
-many.sections = Array.from({ length: 33 }, (_, i) => section(`s${i}`, "body", `L${i}`, 4));
-check(P.structureProblems(many).some((text) => /at most 32/.test(text)), "more than 32 sections is a problem");
 const form = filled();
 form.key = "H";
 form.tempo = "10";
@@ -122,7 +111,11 @@ form.seed = "-1";
 form.mode = "style";
 form.sections[4].fill.numerals = "I $ V";
 form.sections[4].fill.cells = "9";
-check(P.formProblems(form).length === 6, "the form problems: key, tempo, seed, mode, numerals and cells");
+check(P.formProblems(form).length === 1 && /brief/.test(P.formProblems(form)[0]), "only the missing brief stops the form: the Composer judges the values");
+check(P.bodyFromState({ ...form, seed: "5", tempo: "10" }).piece.tempo === 10, "a tempo out of range is sent for the Composer to refuse");
+check(P.fieldForPath("/key") === "key" && P.fieldForPath("/sections/2/pickup") === "sections" && P.fieldForPath("/x") === null, "request paths name the form fields");
+check(P.pickups("2/4").join() === "0,1/4,1/2,1,3/2" && P.pickups("4/4").includes("3"), "the pickups are the Composer's for each meter");
+check(P.barBeats("6/8") === 6 && P.barBeats("3/4") === 3, "the beats in a bar come from the meters");
 
 /* beats labels */
 check(P.beatsLabel(8, "4/4") === "2 bars" && P.beatsLabel(4, "4/4") === "1 bar", "whole bars");
