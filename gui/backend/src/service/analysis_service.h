@@ -114,6 +114,22 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
 void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail);
 
 /*
+ * The members of an analysis document named in names[0..count), as one JSON object (a name the document lacks is
+ * left out). When out_names_json is not NULL it receives a JSON array of every top-level member name of the whole
+ * document. Both outputs are caller-owned (free()). False when the text is not a JSON object or on allocation
+ * failure.
+ */
+bool ursatz_gui_document_subset(const char *document_json, const char *const *names, size_t count,
+                                char **out_json, char **out_names_json);
+
+/*
+ * Reads a piece's stored analysis.json and returns only the named sections (ursatz_gui_document_subset) without
+ * importing the source. URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_document(const char *pieces_dir, const char *id,
+                                                          const char *const *names, size_t count, char **out_json);
+
+/*
  * Deletes a piece's directory and every file in it.
  * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
  */
@@ -214,6 +230,14 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, co
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
                                                                 char **out_xml, bool *out_meter_defaulted,
                                                                 char message[256]);
+
+/*
+ * Whether the piece's source gave no meter, so its score has barlines from a default 4/4: the answer of
+ * analyzer_imported_meter_defaulted on the cached import (import_cache.h), without exporting a score. Same errors
+ * as ursatz_gui_analysis_get_piece_playback.
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_meter_defaulted(const char *pieces_dir, const char *id,
+                                                                       bool *out_meter_defaulted);
 
 /*
  * Imports the piece's stored source with the same Analyzer call the score

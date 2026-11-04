@@ -459,7 +459,13 @@ static int groups_handler(struct mg_connection *conn, void *cbdata) {
 
 static const char *kPieceDetailPrefix = "/api/analyzer/pieces/";
 
+/* The members of the document a summary keeps: what the header and the Provenance list read. */
+static const char *const kSummarySections[] = {"schema_version", "metadata", "meter"};
+
 static int handle_get_piece(struct mg_connection *conn, const char *id) {
+  char document_mode[16];
+  bool summary = query_value(mg_get_request_info(conn), "document", 0, document_mode, sizeof(document_mode)) &&
+                 strcmp(document_mode, "summary") == 0;
   UrsatzGuiPieceDetail *detail = NULL;
   UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece(kPiecesDir, id, &detail);
 
@@ -492,9 +498,28 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
     }
     json_buffer_append_string(&buf, detail->note_xml_ids[i]);
   }
-  /* The stored document is already JSON; it is inlined as is. */
+  /* The stored document is already JSON; it is inlined as is, or as its summary with the names of all its
+     sections when ?document=summary asks for it. */
   json_buffer_append(&buf, "],\"document\":");
-  json_buffer_append(&buf, detail->document_json);
+  if (summary) {
+    char *summary_json = NULL;
+    char *names_json = NULL;
+    if (!ursatz_gui_document_subset(detail->document_json, kSummarySections,
+                                    sizeof(kSummarySections) / sizeof(kSummarySections[0]), &summary_json,
+                                    &names_json)) {
+      ursatz_gui_piece_detail_destroy(detail);
+      json_buffer_destroy(&buf);
+      send_json(conn, "{\"ok\":false,\"message\":\"failed to load piece\"}");
+      return 200;
+    }
+    json_buffer_append(&buf, summary_json);
+    json_buffer_append(&buf, ",\"document_sections\":");
+    json_buffer_append(&buf, names_json);
+    free(summary_json);
+    free(names_json);
+  } else {
+    json_buffer_append(&buf, detail->document_json);
+  }
 
   /* The subjects that link this piece (R-117). */
   cJSON *subjects = ursatz_gui_materials_subjects_for("pieces", detail->id);
@@ -838,6 +863,72 @@ static int handle_reanalyze_piece(struct mg_connection *conn, const char *id) {
 static const char *kMusicXmlSuffix = "/musicxml";
 static const char *kMusicXmlMetaSuffix = "/musicxml/meta";
 static const char *kPlaybackSuffix = "/playback";
+static const char *kDocumentSuffix = "/document";
+
+#define DOCUMENT_SECTIONS_MAX 64
+#define DOCUMENT_SECTION_NAME_MAX 64
+
+/* GET /api/analyzer/pieces/<id>/document?sections=a,b: only those sections of the stored analysis document, read
+   without importing the source. */
+static int handle_get_piece_document(struct mg_connection *conn, const char *id) {
+  char list[DOCUMENT_SECTIONS_MAX * (DOCUMENT_SECTION_NAME_MAX + 1) + 1];
+  const char *bad_request = "{\"ok\":false,\"message\":\"sections must name one or more document sections\"}";
+  if (!query_value(mg_get_request_info(conn), "sections", 0, list, sizeof(list))) {
+    return ursatz_gui_send_json_status(conn, 400, "Bad Request", bad_request);
+  }
+  char names_text[DOCUMENT_SECTIONS_MAX][DOCUMENT_SECTION_NAME_MAX + 1];
+  const char *names[DOCUMENT_SECTIONS_MAX];
+  size_t count = 0;
+  const char *cursor = list;
+  while (*cursor) {
+    size_t length = 0;
+    while (cursor[length] && cursor[length] != ',') {
+      char c = cursor[length];
+      if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_')) {
+        return ursatz_gui_send_json_status(conn, 400, "Bad Request", bad_request);
+      }
+      length++;
+    }
+    if (length == 0 || length > DOCUMENT_SECTION_NAME_MAX || count == DOCUMENT_SECTIONS_MAX) {
+      return ursatz_gui_send_json_status(conn, 400, "Bad Request", bad_request);
+    }
+    memcpy(names_text[count], cursor, length);
+    names_text[count][length] = '\0';
+    names[count] = names_text[count];
+    count++;
+    cursor += length;
+    if (*cursor == ',') {
+      cursor++;
+      if (!*cursor) {
+        return ursatz_gui_send_json_status(conn, 400, "Bad Request", bad_request);
+      }
+    }
+  }
+
+  char *sections = NULL;
+  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_document(kPiecesDir, id, names, count, &sections);
+  if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+    mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+    return 404;
+  }
+  if (result != URSATZ_GUI_ANALYSIS_OK) {
+    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error",
+                                       "{\"ok\":false,\"message\":\"failed to load the document\"}");
+  }
+  JsonBuffer buf;
+  json_buffer_init(&buf);
+  json_buffer_append(&buf, "{\"ok\":true,\"sections\":");
+  json_buffer_append(&buf, sections);
+  json_buffer_append(&buf, "}");
+  free(sections);
+  if (!buf.ok) {
+    json_buffer_destroy(&buf);
+    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"out of memory\"}");
+  }
+  send_json(conn, buf.data);
+  json_buffer_destroy(&buf);
+  return 200;
+}
 
 static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id) {
   char *xml = NULL;
@@ -870,11 +961,8 @@ static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id)
 }
 
 static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char *id) {
-  char *xml = NULL;
   bool meter_defaulted = false;
-  char export_message[256] = "";
-  UrsatzGuiAnalysisResult result =
-      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted, export_message);
+  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece_meter_defaulted(kPiecesDir, id, &meter_defaulted);
 
   if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
@@ -884,14 +972,9 @@ static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char
     return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
                             "{\"ok\":false,\"message\":\"could not import the stored source\"}");
   }
-  if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED) {
-    send_musicxml_export_error(conn, export_message);
-    return 500;
-  }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
     return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
   }
-  free(xml);
 
   send_json(conn, meter_defaulted ? "{\"ok\":true,\"meter_defaulted\":true}" : "{\"ok\":true,\"meter_defaulted\":false}");
   return 200;
@@ -940,6 +1023,7 @@ static int pieces_handler(struct mg_connection *conn, void *cbdata) {
     size_t xml_suffix_len = strlen(kMusicXmlSuffix);
     size_t reanalyze_suffix_len = strlen(kReanalyzeSuffix);
     size_t playback_suffix_len = strlen(kPlaybackSuffix);
+    size_t document_suffix_len = strlen(kDocumentSuffix);
 
     if (strcmp(info->request_method, "POST") == 0 && rest_len > reanalyze_suffix_len &&
         strcmp(rest + rest_len - reanalyze_suffix_len, kReanalyzeSuffix) == 0) {
@@ -978,6 +1062,19 @@ static int pieces_handler(struct mg_connection *conn, void *cbdata) {
       memcpy(id, rest, id_len);
       id[id_len] = '\0';
       return handle_get_piece_musicxml(conn, id);
+    }
+
+    if (strcmp(info->request_method, "GET") == 0 && rest_len > document_suffix_len &&
+        strcmp(rest + rest_len - document_suffix_len, kDocumentSuffix) == 0) {
+      char id[256];
+      size_t id_len = rest_len - document_suffix_len;
+      if (id_len >= sizeof(id)) {
+        mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
+        return 404;
+      }
+      memcpy(id, rest, id_len);
+      id[id_len] = '\0';
+      return handle_get_piece_document(conn, id);
     }
 
     if (strcmp(info->request_method, "GET") == 0 && rest_len > playback_suffix_len &&

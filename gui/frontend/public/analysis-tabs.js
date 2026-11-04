@@ -197,6 +197,55 @@ function buildProvenanceFields(document) {
   return fields.filter(([, value]) => value !== undefined && value !== null && value !== "").map(([label, value]) => [label, String(value)]);
 }
 
+/* The sections of a piece's analysis document loaded so far in this page: the summary the detail came with, then
+ * the sections the score and the tabs asked for. A section is fetched once per piece. */
+function createDocumentCache(summary, sectionNames) {
+  const sections = {};
+  for (const [name, value] of Object.entries(summary || {})) {
+    sections[name] = value;
+  }
+  return {
+    names: Array.isArray(sectionNames) ? sectionNames.slice() : Object.keys(sections),
+    sections,
+    has(name) {
+      return Object.prototype.hasOwnProperty.call(sections, name) || !this.names.includes(name);
+    },
+    missing(names) {
+      return names.filter((name) => !this.has(name));
+    },
+    put(loaded) {
+      for (const [name, value] of Object.entries(loaded || {})) {
+        sections[name] = value;
+      }
+    },
+    document() {
+      return sections;
+    },
+  };
+}
+
+/* Loads the sections a list of names needs that the cache lacks, with
+ * fetchSections(names) -> Promise of the {name: section} object, and puts them
+ * in the cache. Resolves to true when the cache has them all. */
+async function loadDocumentSections(cache, names, fetchSections) {
+  const missing = cache.missing(names);
+  if (missing.length === 0) {
+    return true;
+  }
+  const loaded = await fetchSections(missing);
+  if (!loaded) {
+    return false;
+  }
+  cache.put(loaded);
+  return true;
+}
+
+/* The state of one tab, after loading its sections. */
+async function loadTabState(cache, tab, fetchSections) {
+  const ok = await loadDocumentSections(cache, tab.sections, fetchSections);
+  return ok ? buildTabState(tab, cache.document()) : null;
+}
+
 /* A claim's note_ids are indices into the imported notes; the score knows
  * notes by xml:id, which the piece detail lists in the same order. */
 function mapNoteIdsToXmlIds(noteIds, noteXmlIds) {
@@ -215,6 +264,9 @@ if (typeof module !== "undefined" && module.exports) {
     ANALYSIS_TABS,
     buildAllTabStates,
     buildTabState,
+    createDocumentCache,
+    loadDocumentSections,
+    loadTabState,
     buildSectionBlock,
     buildAnalysisHeader,
     buildProvenanceFields,

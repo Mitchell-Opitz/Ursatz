@@ -360,6 +360,12 @@ toggles and "Re-run analysis", which runs the Analyzer again on the stored
 source and reloads the view. Below it are three columns: the Layers rail
 (248 px), the score and the Inspector (360 px). A closed panel takes no width.
 
+Opening a piece asks for `GET /api/analyzer/pieces/<id>?document=summary`, then for the document sections the
+score draws its layers from (`ScoreLayers.scoreSectionNames`: every section but the ignored ones, and `rhythm` for
+the meter check) with `GET .../document?sections=`. The other sections load when a Data mode tab opens
+(`loadTabState` in `analysis-tabs.js`) and are kept per piece in the page (`createDocumentCache`), so a section is
+fetched once. A tab's count shows once its sections have loaded.
+
 A Notation row (R-110) sits under the toolbar and at the top of the Data
 view's "Rhythm and meter" tab. It shows the reading the analysis used, the
 meter check's line from the `meter-fit` claim ("Declared 4/4 fits 41%. 3/4 with
@@ -772,6 +778,16 @@ half a write. All of them are in `service/analysis_service.c` and take the lock 
 - re-analyze (`ursatz_gui_analysis_reanalyze`), which the style build and the link worker call for a stale piece;
 - delete (the directory removal; the collection and subject cleanups run after the lock is released);
 - the reads of `analysis.json` plus the source: detail, `/musicxml`, `/musicxml/meta` and `/playback`.
+
+#### Import cache
+
+`service/import_cache.c` keeps the imported notes of up to 8 pieces, so opening a piece imports its source once: the
+detail's note ids, `/musicxml`, `/musicxml/meta` and `/playback` share one `ImportedNotes`. An entry belongs to one
+piece id and one source version (the notation fields of `meta.json` plus the source file's size and modification
+time); a different version imports again. It also holds the exported score (with the title and composer added) and
+whether the meter was defaulted, so a second `/musicxml` exports nothing. The least recently used entry that no
+request holds is dropped to make room. Entries are made and read under the piece lock; PATCH, re-analyze and delete
+invalidate the piece's entry. Memory only: a restart starts empty.
 
 Lock order, stated in `service/piece_lock.h`: a store lock (style, link, collection, subject) first, then one piece
 lock; never the reverse, and never two piece locks. The lock is not recursive. A reader of a piece that is deleted
@@ -1218,6 +1234,13 @@ subjects/
   `<note xml:id>` the score export writes for note `i` of the source; a
   claim's `note_ids` are indices into this array. An unknown id returns
   `{"ok":false,"message":"piece not found"}`.
+  With `?document=summary`, `document` holds only `schema_version`, `metadata` and `meter` (what the header and the
+  Provenance list read) and the reply gains `"document_sections"`, the names of every section of the stored
+  document. The note ids and the rest of the reply are the same.
+- `GET /api/analyzer/pieces/<id>/document?sections=a,b`: `{"ok":true,"sections":{"a":...,"b":...}}`, only those
+  sections of the stored `analysis.json`, read without importing the source. A name the document lacks is left out.
+  Names are lowercase letters, digits and `_` (at most 64 names of 64 characters); a missing, empty or malformed
+  `sections` is `400`; an unknown piece is `404`.
 - `PATCH /api/analyzer/pieces/<id>`: a JSON object with any of `filename`
   (non-empty string), `composer`, `source` (strings; `""` clears), `tags`
   (array of strings, replaces all), `add_tags` and `remove_tags` (arrays of
@@ -1259,7 +1282,9 @@ subjects/
 - `GET /api/analyzer/pieces/<id>/musicxml/meta`:
   `{"ok":true,"meter_defaulted":<bool>}`, true when the source gave no meter
   and the barlines come from a default 4/4 (the export then carries
-  `ursatz:meter-defaulted`). Same errors as the export route.
+  `ursatz:meter-defaulted`). Answered from the cached import
+  (`analyzer_imported_meter_defaulted`); no score is exported. `404` for an unknown piece, `422` when the source no
+  longer imports.
 - `GET /api/analyzer/pieces/<id>/playback`: what a browser needs to play the
   piece and follow it, built by the Analyzer (`analyzer_playback_build`,
   `analyzer_playback_to_json`) from the same import as the score export (so
@@ -1827,11 +1852,14 @@ and skips them. The frontend tests are plain Node scripts that can also be
 run directly, for example `node frontend/tests/analysis-view.test.js`.
 `analysis-view.test.js` loads `analysis-tabs.js` and checks it against
 `frontend/tests/fixtures/mozart545.analysis.json`, the Analyzer CLI's
-document for Mozart 545 cut to its first 6 items per array.
+document for Mozart 545 cut to its first 6 items per array, and that each tab loaded per section equals the tab built
+from the whole document.
 `test_analyzer_route` uploads Mozart 545 and a MusicXML score, compares the
 stored analysis with the Analyzer CLI's document for the same file, and
 covers list, detail, metadata editing, filtering and groups, rename,
-re-run and delete. `test_styles_route` uploads Clementi 36 and Mozart 545,
+re-run and delete; the summary and the `/document` route; and, through a counter in the import cache, that the
+detail, score, meta and playback of one piece import it once and a PATCH or re-analyze makes the next open import
+again. `test_styles_route` uploads Clementi 36 and Mozart 545,
 tags them and builds styles from a tag, a collection and ids, then reads the
 model back with the Analyzer, rebuilds, re-analyzes an old piece and deletes.
 `test_link_service` resolves each scope kind (a project through its subjects), runs the four link fixtures

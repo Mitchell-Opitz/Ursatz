@@ -3,6 +3,7 @@
 #include "id_service.h"
 #include "piece_metadata.h"
 #include "piece_lock.h"
+#include "import_cache.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -640,6 +641,69 @@ static bool import_piece(const char *dir_path, InputFormat format, ImportedNotes
     return true;
 }
 
+/* The size and modification time of a file, as text for a cache version. */
+static bool file_stamp(const char *path, char *out, size_t out_size) {
+#ifdef _WIN32
+    WIN32_FILE_ATTRIBUTE_DATA data;
+    if (!GetFileAttributesExA(path, GetFileExInfoStandard, &data)) {
+        return false;
+    }
+    snprintf(out, out_size, "%lu.%lu/%lu.%lu", (unsigned long)data.nFileSizeHigh, (unsigned long)data.nFileSizeLow,
+             (unsigned long)data.ftLastWriteTime.dwHighDateTime, (unsigned long)data.ftLastWriteTime.dwLowDateTime);
+#else
+    struct stat st;
+    if (stat(path, &st) != 0) {
+        return false;
+    }
+    long nanoseconds = 0;
+#if defined(__linux__)
+    nanoseconds = (long)st.st_mtim.tv_nsec;
+#elif defined(__APPLE__)
+    nanoseconds = (long)st.st_mtimespec.tv_nsec;
+#endif
+    snprintf(out, out_size, "%lld/%lld.%ld", (long long)st.st_size, (long long)st.st_mtime, nanoseconds);
+#endif
+    return true;
+}
+
+typedef struct {
+    const char *dir_path;
+    InputFormat format;
+} ImportRequest;
+
+static bool import_piece_for_cache(void *context, ImportedNotes *out) {
+    const ImportRequest *request = context;
+    return import_piece(request->dir_path, request->format, out);
+}
+
+/* The cached import of the piece (import_cache.h), made when there is none for the current notation and source
+   file. Called with the piece lock held; release the entry with ursatz_gui_import_cache_release. NULL when the
+   source does not import (*out_failed true) or memory ran out. */
+static UrsatzGuiImportEntry *acquire_import(const char *dir_path, const char *id, InputFormat format,
+                                                bool *out_failed) {
+    *out_failed = true;
+    char source_path[400];
+    char stamp[96];
+    if (!find_source_path(dir_path, source_path, sizeof(source_path)) ||
+        !file_stamp(source_path, stamp, sizeof(stamp))) {
+        return NULL;
+    }
+    UrsatzGuiNotation notation;
+    cJSON *meta = read_meta_file(dir_path);
+    bool has_notation = meta && meta_notation_read(meta, &notation);
+    cJSON_Delete(meta);
+    if (!has_notation) {
+        memset(&notation, 0, sizeof(notation));
+    }
+    char version[768];
+    snprintf(version, sizeof(version), "%d|%s|%d|%s|%s|%s|%s", (int)format, source_path, has_notation ? 1 : 0,
+             notation.meter, notation.value_scale, notation.pickup, stamp);
+    ImportRequest request = {dir_path, format};
+    UrsatzGuiImportEntry *entry = ursatz_gui_import_cache_acquire(id, version, import_piece_for_cache, &request,
+                                                                   out_failed);
+    return entry;
+}
+
 static UrsatzGuiAnalysisResult get_piece_unlocked(const char *pieces_dir, const char *id,
                                                         UrsatzGuiPieceDetail **out_detail) {
     char dir_path[320];
@@ -675,15 +739,16 @@ static UrsatzGuiAnalysisResult get_piece_unlocked(const char *pieces_dir, const 
     /* The note ids come from importing the stored source again: they are the
        ids of the source's own NoteEvents (a notation override keeps them), in
        the Analyzer's event order. */
-    ImportedNotes notes;
-    if (!import_piece(dir_path, format_from_label(detail->format), &notes)) {
+    bool import_failed = false;
+    UrsatzGuiImportEntry *import = acquire_import(dir_path, id, format_from_label(detail->format), &import_failed);
+    if (!import) {
         ursatz_gui_piece_detail_destroy(detail);
-        return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
+        return import_failed ? URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED : URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
     char **ids = NULL;
     size_t id_count = 0;
-    AnalyzerStatus ids_status = analyzer_score_note_xml_ids(&notes, &ids, &id_count);
-    imported_notes_destroy(&notes);
+    AnalyzerStatus ids_status = analyzer_score_note_xml_ids(ursatz_gui_import_entry_notes(import), &ids, &id_count);
+    ursatz_gui_import_cache_release(import);
     if (ids_status != ANALYZER_OK) {
         ursatz_gui_piece_detail_destroy(detail);
         return ids_status == ANALYZER_ERR_ALLOC ? URSATZ_GUI_ANALYSIS_ERR_ALLOC : URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
@@ -712,6 +777,7 @@ static UrsatzGuiAnalysisResult delete_piece_unlocked(const char *pieces_dir, con
     if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
+    ursatz_gui_import_cache_invalidate(id);
     remove_piece_dir(dir_path);
     return ursatz_gui_path_is_dir(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED : URSATZ_GUI_ANALYSIS_OK;
 }
@@ -826,6 +892,7 @@ static UrsatzGuiAnalysisResult update_metadata_unlocked(const char *pieces_dir, 
     if (!meta) {
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
+    ursatz_gui_import_cache_invalidate(id);
 
     UrsatzGuiAnalysisResult result = URSATZ_GUI_ANALYSIS_OK;
     if (update->filename && !meta_set_string(meta, "filename", update->filename)) {
@@ -917,6 +984,7 @@ static UrsatzGuiAnalysisResult reanalyze_unlocked(const char *pieces_dir, const 
     if (!meta) {
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
+    ursatz_gui_import_cache_invalidate(id);
     const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
     InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
 
@@ -1082,40 +1150,82 @@ static UrsatzGuiAnalysisResult get_piece_musicxml_unlocked(const char *pieces_di
         *title_dot = '\0';
     }
 
-    ImportedNotes notes;
-    if (!import_piece(dir_path, format, &notes)) {
+    bool import_failed = false;
+    UrsatzGuiImportEntry *import = acquire_import(dir_path, id, format, &import_failed);
+    if (!import) {
         free(title);
         free(composer);
-        return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
+        return import_failed ? URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED : URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
 
-    char *xml = NULL;
-    AnalyzerStatus status = analyzer_score_export_musicxml(&notes, &xml);
-    bool meter_defaulted = analyzer_imported_meter_defaulted(&notes);
-    imported_notes_destroy(&notes);
-
-    if (status != ANALYZER_OK) {
-        fprintf(stderr, "ursatz_gui_analysis_get_piece_musicxml: analyzer_score_export_musicxml failed for piece '%s' "
-                         "with AnalyzerStatus=%d\n",
-                id, (int)status);
-        const char *name = status == ANALYZER_ERR_ALLOC      ? "ANALYZER_ERR_ALLOC"
-                           : status == ANALYZER_ERR_ARGUMENT ? "ANALYZER_ERR_ARGUMENT"
-                                                             : "ANALYZER_ERR_LIBRARY";
-        snprintf(message, 256, "%s", name);
+    bool meter_defaulted = false;
+    const char *cached = ursatz_gui_import_entry_score(import, &meter_defaulted);
+    char *xml = cached ? ursatz_gui_dup_string(cached) : NULL;
+    if (cached) {
+        ursatz_gui_import_cache_release(import);
         free(title);
         free(composer);
-        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
-    }
+        if (!xml) {
+            return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
+    } else {
+        const ImportedNotes *notes = ursatz_gui_import_entry_notes(import);
+        AnalyzerStatus status = analyzer_score_export_musicxml(notes, &xml);
+        meter_defaulted = analyzer_imported_meter_defaulted(notes);
 
-    xml = score_add_title_composer(xml, title, composer);
-    free(title);
-    free(composer);
-    if (!xml) {
-        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        if (status != ANALYZER_OK) {
+            ursatz_gui_import_cache_release(import);
+            fprintf(stderr, "ursatz_gui_analysis_get_piece_musicxml: analyzer_score_export_musicxml failed for piece "
+                             "'%s' with AnalyzerStatus=%d\n",
+                    id, (int)status);
+            const char *name = status == ANALYZER_ERR_ALLOC      ? "ANALYZER_ERR_ALLOC"
+                               : status == ANALYZER_ERR_ARGUMENT ? "ANALYZER_ERR_ARGUMENT"
+                                                                 : "ANALYZER_ERR_LIBRARY";
+            snprintf(message, 256, "%s", name);
+            free(title);
+            free(composer);
+            return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+        }
+
+        xml = score_add_title_composer(xml, title, composer);
+        free(title);
+        free(composer);
+        char *kept = xml ? ursatz_gui_dup_string(xml) : NULL;
+        if (kept) {
+            ursatz_gui_import_entry_set_score(import, kept, meter_defaulted);
+        }
+        ursatz_gui_import_cache_release(import);
+        if (!xml) {
+            return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        }
     }
 
     *out_xml = xml;
     *out_meter_defaulted = meter_defaulted;
+    return URSATZ_GUI_ANALYSIS_OK;
+}
+
+static UrsatzGuiAnalysisResult get_piece_meter_defaulted_unlocked(const char *pieces_dir, const char *id,
+                                                                       bool *out_meter_defaulted) {
+    char dir_path[320];
+    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    cJSON *meta = read_meta_file(dir_path);
+    if (!meta) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
+    InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
+    cJSON_Delete(meta);
+
+    bool import_failed = false;
+    UrsatzGuiImportEntry *import = acquire_import(dir_path, id, format, &import_failed);
+    if (!import) {
+        return import_failed ? URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED : URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    *out_meter_defaulted = analyzer_imported_meter_defaulted(ursatz_gui_import_entry_notes(import));
+    ursatz_gui_import_cache_release(import);
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
@@ -1133,19 +1243,21 @@ static UrsatzGuiAnalysisResult get_piece_playback_unlocked(const char *pieces_di
     InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
     cJSON_Delete(meta);
 
-    ImportedNotes notes;
-    if (!import_piece(dir_path, format, &notes)) {
-        return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
+    bool import_failed = false;
+    UrsatzGuiImportEntry *import = acquire_import(dir_path, id, format, &import_failed);
+    if (!import) {
+        return import_failed ? URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED : URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
+    const ImportedNotes *notes = ursatz_gui_import_entry_notes(import);
 
     AnalyzerPlayback playback;
-    AnalyzerStatus status = analyzer_playback_build(&notes, &playback);
+    AnalyzerStatus status = analyzer_playback_build(notes, &playback);
     char *json = NULL;
     if (status == ANALYZER_OK) {
-        status = analyzer_playback_to_json(&playback, &notes, &json);
+        status = analyzer_playback_to_json(&playback, notes, &json);
         analyzer_playback_destroy(&playback);
     }
-    imported_notes_destroy(&notes);
+    ursatz_gui_import_cache_release(import);
     if (status == ANALYZER_ERR_ALLOC) {
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
@@ -1155,6 +1267,61 @@ static UrsatzGuiAnalysisResult get_piece_playback_unlocked(const char *pieces_di
     }
     *out_json = json;
     return URSATZ_GUI_ANALYSIS_OK;
+}
+
+bool ursatz_gui_document_subset(const char *document_json, const char *const *names, size_t count,
+                                char **out_json, char **out_names_json) {
+    cJSON *document = cJSON_Parse(document_json);
+    if (!document || !cJSON_IsObject(document)) {
+        cJSON_Delete(document);
+        return false;
+    }
+    cJSON *subset = cJSON_CreateObject();
+    cJSON *all_names = cJSON_CreateArray();
+    bool ok = subset && all_names;
+    for (const cJSON *item = document->child; ok && item; item = item->next) {
+        ok = item->string && cJSON_AddItemToArray(all_names, cJSON_CreateString(item->string));
+    }
+    for (size_t i = 0; ok && i < count; i++) {
+        cJSON *value = cJSON_DetachItemFromObjectCaseSensitive(document, names[i]);
+        if (value && !cJSON_AddItemToObject(subset, names[i], value)) {
+            cJSON_Delete(value);
+            ok = false;
+        }
+    }
+    char *json = ok ? cJSON_PrintUnformatted(subset) : NULL;
+    char *names_json = ok && out_names_json ? cJSON_PrintUnformatted(all_names) : NULL;
+    ok = json && (!out_names_json || names_json);
+    cJSON_Delete(subset);
+    cJSON_Delete(all_names);
+    cJSON_Delete(document);
+    if (!ok) {
+        free(json);
+        free(names_json);
+        return false;
+    }
+    *out_json = json;
+    if (out_names_json) {
+        *out_names_json = names_json;
+    }
+    return true;
+}
+
+static UrsatzGuiAnalysisResult get_document_unlocked(const char *pieces_dir, const char *id,
+                                                          const char *const *names, size_t count, char **out_json) {
+    char dir_path[320];
+    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    char analysis_path[400];
+    snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
+    char *document_json = ursatz_gui_read_file(analysis_path, NULL);
+    if (!document_json) {
+        return path_exists(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED : URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    bool ok = ursatz_gui_document_subset(document_json, names, count, out_json, NULL);
+    free(document_json);
+    return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
 }
 
 void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail) {
@@ -1200,6 +1367,17 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     return result;
 }
 
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_document(const char *pieces_dir, const char *id,
+                                                          const char *const *names, size_t count, char **out_json) {
+    UrsatzGuiAnalysisResult result;
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    result = get_document_unlocked(pieces_dir, id, names, count, out_json);
+    ursatz_gui_piece_unlock(id);
+    return result;
+}
+
 UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id) {
     UrsatzGuiAnalysisResult result;
     if (!piece_lock_enter(id, &result)) {
@@ -1241,6 +1419,17 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
         return result;
     }
     result = get_piece_musicxml_unlocked(pieces_dir, id, out_xml, out_meter_defaulted, message);
+    ursatz_gui_piece_unlock(id);
+    return result;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_meter_defaulted(const char *pieces_dir, const char *id,
+                                                                       bool *out_meter_defaulted) {
+    UrsatzGuiAnalysisResult result;
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    result = get_piece_meter_defaulted_unlocked(pieces_dir, id, out_meter_defaulted);
     ursatz_gui_piece_unlock(id);
     return result;
 }

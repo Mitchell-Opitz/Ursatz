@@ -898,7 +898,7 @@ async function startLibraryEdit(row, piece) {
   source.setAttribute("list", "editor-sources");
   const tagInput = buildTagInput(piece.tags);
   const subjectsField = buildSubjectsField("pieces", piece.id, null);
-  fetchJsonResult(`/api/analyzer/pieces/${piece.id}`).then((detail) => {
+  fetchJsonResult(`/api/analyzer/pieces/${piece.id}?document=summary`).then((detail) => {
     subjectsField.setSubjects(detail.ok && detail.data && Array.isArray(detail.data.subjects) ? detail.data.subjects : []);
   });
 
@@ -1211,8 +1211,7 @@ function showAnalysisView(id, options) {
   content.classList.add("content--workspace");
   content.innerHTML = `<div id="analysis-status" class="piece-list-status ws-loading">Loading piece ${id}...</div>`;
 
-  fetch(`/api/analyzer/pieces/${id}`)
-    .then((res) => res.json())
+  loadAnalysisPiece(id)
     .then((data) => {
       if (lastAnalysisPieceId !== id || content.querySelector(".ws")) {
         return;
@@ -1226,6 +1225,36 @@ function showAnalysisView(id, options) {
     .catch((err) => {
       showAnalysisProblem(`Could not reach backend: ${err}`);
     });
+}
+
+/* The sections of a piece's analysis document by name, from
+ * GET /api/analyzer/pieces/<id>/document. Resolves to the {name: section}
+ * object, or null when the request fails. */
+async function fetchDocumentSections(id, names) {
+  const result = await fetchJsonResult(
+    `/api/analyzer/pieces/${encodeURIComponent(id)}/document?sections=${encodeURIComponent(names.join(","))}`,
+  );
+  return result.ok && result.data && result.data.ok && result.data.sections ? result.data.sections : null;
+}
+
+/* The piece detail with the document summary (metadata and meter), then the sections the score draws its layers
+ * from. The other sections load when their tab opens (renderAnalysisTabs). The detail's `document` is the cache's
+ * sections so far; `documentCache` is the cache. */
+async function loadAnalysisPiece(id) {
+  const res = await fetch(`/api/analyzer/pieces/${encodeURIComponent(id)}?document=summary`);
+  const data = await res.json();
+  if (!data.ok) {
+    return data;
+  }
+  const cache = createDocumentCache(data.document, data.document_sections);
+  const scoreSections = ScoreLayers.scoreSectionNames(cache.names);
+  const loaded = await loadDocumentSections(cache, scoreSections, (names) => fetchDocumentSections(id, names));
+  if (!loaded) {
+    return { ok: false, message: "Could not load the analysis document" };
+  }
+  data.document = cache.document();
+  data.documentCache = cache;
+  return data;
 }
 
 function showAnalysisProblem(message) {
@@ -1424,38 +1453,58 @@ function renderProvenancePanel(analysisDocument) {
 function renderAnalysisTabs(data, initialTabId) {
   const tabsEl = document.getElementById("analysis-tabs");
   const claimsEl = document.getElementById("analysis-claims");
-  const states = buildAllTabStates(data.document);
+  const cache = data.documentCache || createDocumentCache(data.document);
+  const fetchSections = (names) => fetchDocumentSections(data.id, names);
+  let selectedTabId = null;
 
-  function selectTab(tabId) {
-    for (const button of tabsEl.querySelectorAll("button")) {
-      button.classList.toggle("active", button.dataset.tabId === tabId);
+  function labelButton(button, state) {
+    if (!state) {
+      button.textContent = button.dataset.label;
+    } else if (state.empty) {
+      button.textContent = `${button.dataset.label} (none)`;
+    } else {
+      button.textContent = `${button.dataset.label} ${state.rowCount}`;
     }
-    renderTabBlocks(claimsEl, states.find((state) => state.tab.id === tabId), data.note_xml_ids, data.id);
-    if (tabId === "rhythm-meter") {
+  }
+
+  async function selectTab(tab) {
+    selectedTabId = tab.id;
+    for (const button of tabsEl.querySelectorAll("button")) {
+      button.classList.toggle("active", button.dataset.tabId === tab.id);
+    }
+    claimsEl.textContent = cache.missing(tab.sections).length > 0 ? "Loading..." : "";
+    const state = await loadTabState(cache, tab, fetchSections);
+    if (selectedTabId !== tab.id) {
+      return;
+    }
+    if (!state) {
+      claimsEl.textContent = "Could not load this tab.";
+      return;
+    }
+    labelButton(tabsEl.querySelector(`button[data-tab-id="${tab.id}"]`), state);
+    claimsEl.textContent = "";
+    if (state.empty) {
+      claimsEl.textContent = "This analysis has no claims in this tab.";
+    } else {
+      renderTabBlocks(claimsEl, state, data.note_xml_ids, data.id);
+    }
+    if (tab.id === "rhythm-meter") {
       claimsEl.prepend(buildNotationRow(data));
     }
   }
 
-  for (const state of states) {
+  for (const tab of ANALYSIS_TABS) {
     const button = document.createElement("button");
     button.type = "button";
-    button.dataset.tabId = state.tab.id;
-    if (state.empty) {
-      button.textContent = `${state.tab.label} (none)`;
-      button.disabled = true;
-    } else {
-      button.textContent = `${state.tab.label} ${state.rowCount}`;
-      button.addEventListener("click", () => selectTab(state.tab.id));
-    }
+    button.dataset.tabId = tab.id;
+    button.dataset.label = tab.label;
+    labelButton(button, cache.missing(tab.sections).length === 0 ? buildTabState(tab, cache.document()) : null);
+    button.addEventListener("click", () => selectTab(tab));
     tabsEl.appendChild(button);
   }
 
-  const firstFilled = states.find((state) => state.tab.id === initialTabId && !state.empty) || states.find((state) => !state.empty);
-  if (firstFilled) {
-    selectTab(firstFilled.tab.id);
-  } else {
-    claimsEl.textContent = "This analysis has no claims.";
-  }
+  const initial = ANALYSIS_TABS.find((tab) => tab.id === initialTabId) || ANALYSIS_TABS[0];
+  selectTab(initial);
 }
 
 /* A Data mode claim row was chosen: the workspace shows it on the score. */
