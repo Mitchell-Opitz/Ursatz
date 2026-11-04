@@ -677,7 +677,10 @@ function from inside `routes/`, it belongs in `service/` instead.
 The Analyzer library (`external/ursatz-analyzer`, linked as
 `ursatz_analyzer`) is the only analysis path: `analysis_service.c` calls
 `input_pipeline_import_file`, `run_analysis_pipeline` and
-`analysis_document_build`, and the GUI keeps no analysis code of its own.
+`analysis_document_build`; the piece detail's note ids, the score
+(`analyzer_score_export_musicxml`, `analyzer_imported_meter_defaulted`) and the
+playback (`analyzer_playback_build`) also come from the Analyzer. The file
+includes no Ursatz header, and the GUI keeps no analysis code of its own.
 Analysis therefore changes only when the Analyzer submodule is bumped.
 
 ### Backend helper modules
@@ -1188,20 +1191,22 @@ subjects/
   The piece is unchanged unless the new analysis succeeded.
 - `DELETE /api/analyzer/pieces/<id>`: removes the piece's directory.
 - `GET /api/analyzer/pieces/<id>/musicxml`: the piece's score as MusicXML
-  (`application/xml`), written by Ursatz's `musicxml_export_write_score` from
-  the stored source: its parts and staves, its real meter and its key
-  signatures. Tempo markings and dynamics are left out. Errors are JSON with
+  (`application/xml`), written by the Analyzer (`analyzer_score_export_musicxml`)
+  from the stored source: its parts and staves, its real meter and its key
+  signatures; the GUI adds the title and the composer credit, which the
+  Analyzer leaves out. Tempo markings and dynamics are left out. Errors are JSON with
   an error status: unknown id `404`; a stored source that no longer imports
   `422` with `{"ok":false,"message":"could not import the stored source"}`;
   a failed export `500` with
-  `{"ok":false,"message":"failed to export piece","code":"<MusicXmlExportResult name>"}`;
+  `{"ok":false,"message":"failed to export piece","code":"<AnalyzerStatus name>"}`;
   anything else `500` with `{"ok":false,"message":"failed to export piece"}`.
 - `GET /api/analyzer/pieces/<id>/musicxml/meta`:
   `{"ok":true,"meter_defaulted":<bool>}`, true when the source gave no meter
   and the barlines come from a default 4/4 (the export then carries
   `ursatz:meter-defaulted`). Same errors as the export route.
 - `GET /api/analyzer/pieces/<id>/playback`: what a browser needs to play the
-  piece and follow it, from the same Analyzer import as the score export (so
+  piece and follow it, built by the Analyzer (`analyzer_playback_build`,
+  `analyzer_playback_to_json`) from the same import as the score export (so
   `notes[i]` is note `i` of a claim's `note_ids` and of `note_xml_ids`):
   `{"ok":true,"tempo_source","tempo":[{"at":[n,d],"qpm"}],"parts":[{"index","name","program"}],"end":[n,d],"notes":[{"i","on":[n,d],"len":[n,d],"pitch","part"}]}`.
   Positions and lengths are whole notes from the start, as `[num, den]` in
