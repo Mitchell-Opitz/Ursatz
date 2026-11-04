@@ -10,7 +10,7 @@
 #include "ursatz_composer/composer_api.h"
 
 /* What the theme and the piece service share when they compose an item into a new version: the small JSON helpers and
- * the steps around the Composer run. The caller holds its own compose lock. */
+ * the steps around the Composer run. Composes of one item may run at once (each makes its files in a staging folder). */
 
 /* Copies text into message when there is room for it. */
 void ursatz_gui_compose_say(char *message, size_t size, const char *text);

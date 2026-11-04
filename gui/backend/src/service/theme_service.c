@@ -4,7 +4,6 @@
 
 #include <dirent.h>
 #include <limits.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,9 +23,6 @@
 #define SLOT_COUNT 4
 #define MOTIVE_MAX 16
 #define MOTIVE_ID_BYTES 16
-
-/* One compose at a time: the next version number and its folder are decided before the Composer runs. */
-static pthread_mutex_t g_compose_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static const char *const kSlotNames[SLOT_COUNT] = {"basic", "contrasting", "continuation", "cadential"};
 
@@ -741,9 +737,7 @@ UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, lon
     }
     ursatz_gui_compose_say(message, message_size, "");
     cJSON *item = NULL;
-    pthread_mutex_lock(&g_compose_lock);
     UrsatzGuiThemeResult result = ursatz_gui_compose_item(&kThemeKind, id, has_seed, seed, update_uses, job, &item, message, message_size);
-    pthread_mutex_unlock(&g_compose_lock);
     if (result == URSATZ_GUI_THEME_OK && out_item) {
         *out_item = item;
     } else {

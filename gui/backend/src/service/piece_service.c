@@ -5,7 +5,6 @@
 
 #include <dirent.h>
 #include <limits.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,9 +15,6 @@
 #include "material_service.h"
 
 #define PATH_BYTES 800
-
-/* One compose at a time: the next version number and its folder are decided before the Composer runs. */
-static pthread_mutex_t g_compose_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static bool copy_file(const char *from, const char *to) {
     FILE *in = fopen(from, "rb");
@@ -500,9 +496,7 @@ UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, lon
     }
     ursatz_gui_compose_say(message, message_size, "");
     cJSON *item = NULL;
-    pthread_mutex_lock(&g_compose_lock);
     UrsatzGuiThemeResult result = ursatz_gui_compose_item(&kPieceKind, id, has_seed, seed, update_uses, job, &item, message, message_size);
-    pthread_mutex_unlock(&g_compose_lock);
     if (result == URSATZ_GUI_THEME_OK && out_item) {
         *out_item = item;
     } else {
@@ -812,10 +806,8 @@ UrsatzGuiThemeResult ursatz_gui_piece_regenerate(const char *id, int version, co
     }
     ursatz_gui_compose_say(message, message_size, "");
     cJSON *item = NULL;
-    pthread_mutex_lock(&g_compose_lock);
     UrsatzGuiThemeResult result =
         regenerate_locked(id, version, section_id, lane, has_seed, seed, job, &item, message, message_size);
-    pthread_mutex_unlock(&g_compose_lock);
     if (result == URSATZ_GUI_THEME_OK && out_item) {
         *out_item = item;
     } else {
@@ -1083,10 +1075,8 @@ UrsatzGuiThemeResult ursatz_gui_piece_variations(const char *id, int version, co
     }
     ursatz_gui_compose_say(message, message_size, "");
     cJSON *answer = NULL;
-    pthread_mutex_lock(&g_compose_lock);
     UrsatzGuiThemeResult result =
         variations_locked(id, version, section_id, lane, count, has_seed, seed, job, &answer, message, message_size);
-    pthread_mutex_unlock(&g_compose_lock);
     if (result == URSATZ_GUI_THEME_OK && out_result) {
         *out_result = answer;
     } else {
@@ -1190,9 +1180,7 @@ UrsatzGuiThemeResult ursatz_gui_piece_choose(const char *id, int version, int se
     }
     ursatz_gui_compose_say(message, message_size, "");
     cJSON *item = NULL;
-    pthread_mutex_lock(&g_compose_lock);
     UrsatzGuiThemeResult result = choose_locked(id, version, set, index, job, &item, message, message_size);
-    pthread_mutex_unlock(&g_compose_lock);
     if (result == URSATZ_GUI_THEME_OK && out_item) {
         *out_item = item;
     } else {
