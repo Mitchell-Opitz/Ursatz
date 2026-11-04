@@ -14,6 +14,7 @@
 #include "pipeline/motive_sketch_map.h"
 #include "pitch/pitch_numeric_value.h"
 #include "semantics/analysis_note.h"
+#include "semantics/motive_occurrence_kind.h"
 #include "time/duration.h"
 #include "time/meter_arithmetic.h"
 #include "time/meter_map.h"
@@ -120,7 +121,7 @@ static bool collect_occurrence(const MotiveStage *stage, const AnalysisReport *r
     if (meter_map_measure_index_at(form->built.input.map, last_start, &occurrence->last_measure) != METER_MAP_OK) {
         return false;
     }
-    occurrence->kind = standard_form_motive_kind_name((StandardFormMotiveKind)claim->kind);
+    occurrence->kind = motive_occurrence_kind_name((MotiveOccurrenceKind)claim->kind);
     if (!occurrence->kind) {
         return false;
     }
