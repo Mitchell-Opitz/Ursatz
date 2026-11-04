@@ -699,7 +699,12 @@ Everything but `main.c` is built as the static library `ursatz_gui_core` (`backe
   `_attach`, `_add_copy_or_null`, `_add_copy_if`) and `ursatz_gui_compose_item`, the steps around a Composer run
   (update the uses, make the version folder, build the brief and the request, run, add the version, rename the folder
   when another writer added a version). Each service passes an `UrsatzGuiComposeKind` with its own checks, request,
-  run, note and result body, and keeps its own compose lock.
+  run, note and result body; there is no compose lock: each compose makes its files in a staging folder
+  (`ursatz_gui_compose_stage_make`) and moves it to its version's folder when the version is written.
+- `service/job_queue.c` and `service/compose_jobs.c`: the job queue and the compose runs as jobs (`routes/jobs.c` are
+  its two routes). `frontend/public/backend-jobs.js` is the client: `runJob` sends a job request, polls every 500 ms
+  and resolves with the status and body the route answered before jobs; `sendMaterialsRequest` runs every request
+  marked `job: true` through it and shows the stage and a Cancel button while it runs.
 
 ## Backend
 
@@ -978,7 +983,7 @@ from the pure `variant-tree.js`, global `VariantTree`).
 - Try every operation (R-190): the last panel of the Variants tab runs every
   registry operation on the motif so each can be checked by ear and eye. Run
   (with an optional seed) calls `POST /api/materials/items/<id>/each-op`
-  `{"seed"?}`, which runs the Composer's `variants --each-op --json` on the
+  `{"seed"?}`, which runs the Composer's `each_op` variants (a job) on the
   current version with the same motif arguments as Generate and answers
   `{seed, variants, skipped}` plus `ok`; nothing is saved. `400` for a seed
   that is not a whole number from 0. Results are grouped by category in
@@ -1443,29 +1448,29 @@ Items:
   version: each slot motif from its use's copy; the pool, every motif item whose `derived` chain (at most 32 steps
   through `derived.source_item`) leads to a slot's item, flag `approved` (and `unflagged` with the default pool), at
   most 64 for each motive, never `rejected`, with its current degrees, harmony, features, chain text and functions;
-  the brief built with the styles code into `brief.style.json`. It runs `ursatz-composer theme <request.json>
-  --format json --out plan.json --midi theme.mid --musicxml theme.musicxml [--check] [--seed]`. The new version is the
-  body as it was plus `result: {seed, summary (the command's JSON), brief: {piece_count, skipped}, files}` with the
-  note `composed seed <n>`. `seed` in the request wins over the body's. `400` for a bad body, an item that is not a
-  composable theme, or a Composer usage error; `404` for an unknown item; `422` when the Composer is stuck or the
-  brief has no piece it can use; `503` without the binary; `504` on a timeout. A failed run writes no version and
-  leaves no folder.
+  the brief built with the styles code into `brief.style.json`. It runs `composer_api_theme` on a job and answers
+  `202 {"job"}`; the job's `result` is `{"item"}`. The files `plan.json`, `theme.mid` and `theme.musicxml` are written
+  from the response. The new version is the body as it was plus `result: {seed, summary (the document `theme --format
+  json` printed, with `files`), brief: {piece_count, skipped}, files}` with the note `composed seed <n>`. `seed` in the
+  request wins over the body's. A bad body or an item that is not a composable theme is `400` at once; the job ends
+  with `400` for a request the Composer refuses (its message), `404` for an unknown item, `422` when the Composer is
+  stuck or the brief has no piece it can use, and `499` when it is cancelled. A failed or cancelled run writes no
+  version and leaves no folder.
 - `POST /api/materials/items/<pce-id>/compose`: `{"seed"?,"update_uses"?}` composes the piece into a new version
   (R-173, R-174) and answers `{"item"}`. `update_uses` is as for a theme. The request is built from the current
   version: the motive and each motif fill from their uses' copies (degrees, pickup, harmony, features, role), each
   motif fill with the pool of its saved forms as for a theme (the piece's `pool`), a theme fill as the absolute path
   of that theme version's `plan.json` copied into the new version's folder as `theme-<section id>.plan.json`,
-  progressions as given, and the brief built into `brief.style.json`. It runs `ursatz-composer piece <request.json>
-  --format json --out plan.json --ending-out ending-plan.json --midi loop.mid --musicxml loop.musicxml --ending-midi
-  ending.mid --ending-musicxml ending.musicxml [--check] [--seed]`. The new version is the body as it was plus
+  progressions as given, and the brief built into `brief.style.json`. It runs `composer_api_piece` on a job (the plan
+  of a theme fill is read into the request, its path kept as the source) and writes `plan.json`, `ending-plan.json`,
+  `loop.mid`, `loop.musicxml`, `ending.mid` and `ending.musicxml` from the response. The new version is the body as it was plus
   `result: {seed, summary (the command's JSON), brief: {piece_count, skipped}, loop: {start, end}, files}` with the
   note `composed seed <n>`. Errors are those of a theme compose.
 - `POST /api/materials/items/<pce-id>/versions/<n>/regenerate`: `{"section_id","lane"?,"seed"?}` writes one section
   of a composed version (one with a `result`) again as the next version and answers `{"item"}`. `lane` is `harmony`,
   `bass`, `melody`, `inner` or `all` (default: the whole section); a section filled with a theme takes `harmony` or
-  `bass` only, and an ending section is refused. It runs `ursatz-composer piece --from <v<n>/plan.json> --request
-  <new>/request.json --regenerate <section id> [--lane] [--seed]` with the eight outputs; without `seed` the Composer
-  picks one. The new version is the source's body with `result` replaced and the note `regenerated <section id> <lane>
+  `bass` only, and an ending section is refused. It runs `composer_api_piece` on a job with `from` the plan of version
+  `n` and `regenerate: {section, lanes}`, and the same eight outputs; without `seed` the Composer picks one. The new version is the source's body with `result` replaced and the note `regenerated <section id> <lane>
   seed <n>`; its folder holds its own `request.json` and copies of the theme plans and the style file. Errors: `400`
   for an item that is not a piece, a version that was never composed, an unknown section or lane, a lane a theme
   section does not take, or a bad seed; `404` for an unknown item or version; `422`, `503`, `504` as for compose. A
@@ -1486,10 +1491,10 @@ Items:
 - `GET /api/materials/variant-operations`: `{"operations"}` from
   `composer_api_variant_operations`.
 - `POST /api/materials/items/<id>/variants`: `{"chain"?,"count"?,"seed"?,"functions"?,"distance"?}`
-  runs `variants` on the motif's stored degrees, form, meter, key and pickup.
+  runs `composer_api_variants` on a job over the motif's stored degrees, form, meter, key and pickup.
   `chain` is `{"steps":[{"op","params"?}]}` (random chains when absent),
   `count` 1 to 16 (default 6), `seed` a whole number from 0. Answers the
-  Composer's `{seed, source, variants}`; nothing is saved.
+  Composer's `{seed, source, variants}` as the job's `result`; nothing is saved.
 - `POST /api/materials/items/<id>/variants/save`: `{"variant","name"?,
   "flag"?}` with one candidate from the route above. Creates a motif in the
   source's project with the candidate's notes and degrees, the source's role,
@@ -1513,7 +1518,7 @@ Items:
   parameters the seed drew drawn again, on the source's stored version with
   seed + 1000003 (+1 while the result equals the current one, 16 tries).
   Writes a new version with the new degrees, seed, kept, changed, kind and
-  analysis, the flag reset to `unflagged` and the note `rerolled: <derivation>`.
+  analysis, the flag reset to `unflagged` and the note `rerolled: <derivation>`. It runs as a job.
   `400` without `derived`, `404` when the source is gone, `409` when no seed
   gives a different motif.
 - `GET /api/materials/items/<id>/variant-tree`: `{"tree"}`, a node
@@ -1551,19 +1556,26 @@ object printed to text, never an argument list; `service/composer_client.c` move
 CLI's exit 1 is `COMPOSER_ERR_REQUEST`, exit 2 `COMPOSER_ERR_UNSATISFIABLE`; both are a refusal (400 with the Composer's
 message and the `path` of the request member at fault, additive to `error`), anything else a failure of the run.
 
-The long runs (theme, piece, piece variations and variants) still run the `ursatz-composer` command until the job
-queue: `composer_service.c` starts it with `posix_spawn` and an argument array (never a shell), capturing stdout and
-stderr. The command is built in its own tree (`external/ursatz-composer`, an `ExternalProject` named
-`ursatz_composer_cli`, with its own Ursatz and Analyzer) and its targets never meet the GUI's (R-086). Every path in
-the arguments is absolute and the working directory is never changed. A run is stopped with `SIGKILL` after 120
-seconds.
+The long runs (theme and piece composes, regenerate, variations and choose, variants, each-op and reroll) are calls of
+the same API on a job queue (R-219, R-274); no request thread waits on a compose and no process is started. The Composer
+command is no longer built or run.
 
 civetweb's request threads have a 32 MB stack (`CIVETWEB_THREAD_STACK_SIZE`, address space only): its 100 KB default is
-too small for entries such as the random motive.
+too small for entries such as the random motive. The job workers get the same 32 MB.
 
-- `URSATZ_GUI_COMPOSER`: the Composer executable the long runs use instead of the one built beside the backend
-  (`build/composer/cli/ursatz-composer`).
-- `URSATZ_GUI_COMPOSER_TIMEOUT`: the time limit in seconds for those runs (default 120).
+#### Jobs
+
+`service/job_queue.c` keeps worker threads (`URSATZ_GUI_JOB_WORKERS`, 1 to 8, default 2) and a list of jobs in memory;
+it is started in `server.c` before the routes and stopped on shutdown (every job is cancelled, the workers are joined).
+A job has a kind, a state (`queued`, `running`, `done`, `failed`, `cancelled`), the `stage`, `done` and `total` the
+Composer's progress callback reports (`"melody"` 6 of 9) and, once it ends, the status and body its route used to send.
+Cancel is asked for the Composer's `cancelled` callback, so a running job stops at its next report and a queued job at
+once. Finished jobs are kept 10 minutes or the newest 64 and are lost on restart.
+
+A route that runs long work validates the request, queues the job and answers `202 {"ok": true, "job": {"id", "kind",
+"state"}}`. The kinds are `theme`, `piece`, `regenerate`, `variations`, `choose`, `variants`, `each-op` and `reroll`.
+
+- `URSATZ_GUI_JOB_WORKERS`: the number of workers (1 to 8, default 2).
 
 Every request field is checked against a fixed pattern or range before it
 reaches the Composer: keys (`D`, `F#`, `Bb`, `D minor`), meters
@@ -1576,9 +1588,14 @@ Routes (bodies are JSON; success bodies have `"ok":true`):
 - `GET /api/composer/status`: `{"ok":true,"available":true,"version":"ursatz-composer 0.4.0","api_version":"1.1",
   "analyzer_version":"0.5.0","ursatz_commit":"..."}` from `composer_api_versions` (the last three are additive).
 
-Themes and pieces compose through `composer_service.c` (see Theme bodies and
-version files, Piece bodies and version files). The Composer needs POSIX
-(`posix_spawn`), so this tool does not build on Windows.
+- `GET /api/jobs/<id>`: `{"ok": true, "job": {"id", "kind", "state", "stage", "done", "total", "http_status"?,
+  "result"?}}`. `http_status` and `result` (the body the route answered before jobs) are there once the job is done or
+  failed. `404` for an unknown job.
+- `DELETE /api/jobs/<id>`: asks the job to stop (`204`; for a finished job nothing changes); `404` for an unknown job.
+
+Themes and pieces compose in process on the job queue (see Theme bodies and version files, Piece bodies and version
+files). Each compose makes its files in a staging folder beside the version's (`v<n>.stage-<k>-<pid>`) and moves it to
+the number the version is written with, so two composes of one item may run at once and both versions are kept.
 
 ## Frontend
 
@@ -1725,12 +1742,9 @@ checkout.
 `git submodule update --init --recursive` (or `git clone --recurse-submodules`
 up front) is required before the first build. Ursatz's own tests are not
 built (`URSATZ_BUILD_TESTS` is OFF). The Composer is a third submodule,
-`external/ursatz-composer`, pinned at PR #90 (`8d7a665`, version 0.4.0, API 1.1). It is built by an
-`ExternalProject` in `build/composer` (its tests off), so it brings its own
-Ursatz and Analyzer; the build runs it as `ursatz-composer` for the long runs. The backend also links the Composer
-library from the same submodule (see Composer routes), without the command. The `ExternalProject` has `BUILD_ALWAYS ON`, so the Composer's own
-incremental build runs on every GUI build and a moved submodule is never left
-with an old binary. If the submodules are missing the build stops: run `git submodule update --init
+`external/ursatz-composer`, pinned at PR #90 (`8d7a665`, version 0.4.0, API 1.1). The backend links the Composer
+library from the submodule (see Composer routes), without the command, and it reuses the cJSON, Ursatz and Analyzer
+targets above. If the submodules are missing the build stops: run `git submodule update --init
 --recursive` and build again.
 
 ## Tests
@@ -1758,14 +1772,16 @@ the list, delete and a piece's links.
 filter rules without a server. `test_material_service` covers the projects,
 items, versions, version body rules and item references without a server. `style-view.test.js` covers the style detail
 rows (order, fractions, "and n more") and `piece-metadata.test.js` the style
-names and request bodies. `test_composer_route` runs
-the real Composer: grow, regenerate, lock, variations, choose and plan make
-versions and leave the earlier ones alone; bad requests start nothing and a
-fake Composer (`URSATZ_GUI_COMPOSER`) that records its arguments or sleeps
-shows the argument lists and the 504. `test_materials_route` replays 36 requests captured while the Composer still ran as a command (`backend/tests/fixtures/composer/b5_replies.json`: motif analysis, degrees to notes, MIDI import, render, operations, recognize, random motifs, status) and checks each reply equal (a refusal by status), and the refusal paths (`/meter`, `/input/text`); `test_composer_route` checks the versions the status reports. `test_theme_route` checks the theme body rules, the request a compose
-writes (slots, a pool of approved and unflagged forms without the rejected, the brief, `without`), the version it
-writes with its files, the files route, a stuck, a bad and a missing Composer writing nothing, `update_uses`, and one
-compose with the real Composer over a brief of fixture pieces.
+names and request bodies. `test_job_queue` covers the queue without a server: a job's answer and kind, progress seen
+while it runs, the cancel of a running theme compose (it ends `cancelled`) and of a queued job, two workers running two
+jobs at once, and stop joining the workers. `backend-jobs.test.js` covers the job client with a fake fetch. `test_materials_route` replays 36 requests captured while the Composer still ran as a command (`backend/tests/fixtures/composer/b5_replies.json`: motif analysis, degrees to notes, MIDI import, render, operations, recognize, random motifs, status) and checks each reply equal (a refusal by status), and the refusal paths (`/meter`, `/input/text`); `test_composer_route` checks the versions the status reports. `test_theme_route` checks the theme body rules, the request a compose
+writes (slots, a pool of approved and unflagged forms without the rejected, the brief, `without`, read back from the
+version's `request.json`), the version it writes with its files, the files route, a stuck run writing nothing and
+leaving no staging folder, `update_uses`, two composes of one theme at once, the jobs routes, and one compose over a
+brief of fixture pieces whose plan, MIDI and MusicXML equal what the Composer command wrote in B6
+(`backend/tests/fixtures/composer/b6_compose`). `test_piece_route` does the same for a piece: its compose,
+regenerate, variations and choose are compared with the same capture (a chosen variation's ending is made from a seed
+read from the clock, so only its loop version is compared).
 
 CI (`.github/workflows/ci.yml`) builds and runs `ctest` on every push and
 pull request. The private submodules are checked out through the
