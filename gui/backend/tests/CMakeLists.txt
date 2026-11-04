@@ -25,13 +25,7 @@ ursatz_gui_add_test(piece_metadata test_piece_metadata.c ${CMAKE_CURRENT_BINARY_
 ursatz_gui_add_test(id_service test_id_service.c ${CMAKE_CURRENT_BINARY_DIR}/id_service)
 
 ursatz_gui_add_test(composer_route test_composer_route.c ${CMAKE_CURRENT_BINARY_DIR}/composer_route)
-# The test runs the real Composer built beside the backend, in its own working
-# directory (compositions/ and the fake Composers are created there).
-add_dependencies(test_composer_route ursatz_composer_cli)
-target_compile_definitions(test_composer_route PRIVATE
-  URSATZ_GUI_TEST_COMPOSER_DIR="${CMAKE_SOURCE_DIR}/external/ursatz-composer"
-  URSATZ_GUI_TEST_URSATZ_DIR="${CMAKE_SOURCE_DIR}/external/ursatz"
-)
+# The test asks the linked Composer for its versions, in its own working directory.
 
 ursatz_gui_add_test(styles_route test_styles_route.c ${CMAKE_CURRENT_BINARY_DIR}/styles_route)
 # The test builds styles from the reference pieces; it creates pieces/, collections/ and styles/ in its own
@@ -47,7 +41,11 @@ ursatz_gui_add_test(subject_service test_subject_service.c ${CMAKE_CURRENT_BINAR
 # The test creates its own materials_<pid>/, subjects_<pid>/ and pieces/ in its working directory.
 
 ursatz_gui_add_test(materials_route test_materials_route.c ${CMAKE_CURRENT_BINARY_DIR}/materials_route)
-# The test creates materials/, subjects/ and pieces/ in its own working directory.
+# The test creates materials/, subjects/ and pieces/ in its own working directory and reads the replies the Composer
+# gave as a command (fixtures/composer).
+target_compile_definitions(test_materials_route PRIVATE
+  URSATZ_GUI_TEST_COMPOSER_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer"
+)
 
 ursatz_gui_add_test(subjects_route test_subjects_route.c ${CMAKE_CURRENT_BINARY_DIR}/subjects_route)
 # The test creates materials/, subjects/ and pieces/ in its own working directory.
