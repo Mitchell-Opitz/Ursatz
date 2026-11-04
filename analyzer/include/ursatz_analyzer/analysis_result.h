@@ -18,9 +18,6 @@
 
 typedef struct AnalyzerResult AnalyzerResult;
 
-/* The library's chain (ursatz_chain/analysis_chain.h, which a caller reading the chain includes itself). */
-typedef struct AnalysisChain AnalysisChain;
-
 typedef enum {
     ANALYZER_OK = 0,
     ANALYZER_ERR_ARGUMENT,
@@ -71,8 +68,7 @@ AnalyzerStatus analyzer_analyze(const ImportedNotes *notes, const AnalyzerOption
 /* NULL is a no-op. */
 void analyzer_result_destroy(AnalyzerResult *result);
 
-/* The library's results, through the accessors of ursatz_chain/analysis_chain.h. NULL for a piece with no notes. */
-const AnalysisChain *analyzer_result_chain(const AnalyzerResult *result);
+/* The library chain is read through result_chain.h (analyzer_result_chain), served by the ursatz_analyzer::chain target. */
 
 /*
  * The claims of an area. Each is an Interpretation of the owning framework's claim (or the Analyzer's, for progressions

@@ -64,10 +64,15 @@ target_include_directories(ursatz_analyzer
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(ursatz_analyzer
-    PUBLIC ursatz ursatz_chain common_practice_minimal standard_meter standard_tonality standard_harmony standard_form
-    PRIVATE cjson standard_counterpoint standard_texture standard_voicing standard_markings galant_schemas
-    scale_harmonization
+    PUBLIC ursatz
+    PRIVATE ursatz_chain common_practice_minimal standard_meter standard_tonality standard_harmony standard_form cjson
+    standard_counterpoint standard_texture standard_voicing standard_markings galant_schemas scale_harmonization
 )
+
+# Reading the chain's claims (analyzer_result_chain): the chain headers reach only a consumer that links this target.
+add_library(ursatz_analyzer_chain INTERFACE)
+add_library(ursatz_analyzer::chain ALIAS ursatz_analyzer_chain)
+target_link_libraries(ursatz_analyzer_chain INTERFACE ursatz_analyzer ursatz_chain)
 
 add_executable(ursatz-analyzer main.c)
 target_include_directories(ursatz-analyzer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

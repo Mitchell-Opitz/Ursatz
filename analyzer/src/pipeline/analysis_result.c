@@ -1,4 +1,5 @@
 #include <ursatz_analyzer/analysis_result.h>
+#include <ursatz_analyzer/result_chain.h>
 
 #include <stdint.h>
 #include <stdio.h>

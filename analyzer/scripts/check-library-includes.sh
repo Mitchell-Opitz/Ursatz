@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Fails when src/ or include/ includes an Ursatz header that is not under a staged public root of the build, names a
 # *_internal.h of Ursatz, or when a CMake file reads SOURCE_DIR of an Ursatz target or a path under
-# external/ursatz/tests. Prints each offending line. Run after the build; the build directory is the first argument.
+# external/ursatz/tests, or when a public Analyzer header other than result_chain.h includes a chain or framework header
+# (the chain reaches only consumers that link ursatz_analyzer::chain). Prints each offending line. Run after the build; the build directory is the first argument.
 set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
@@ -68,7 +69,16 @@ done < <(grep -rnE 'SOURCE_DIR|external/ursatz/tests' --include=CMakeLists.txt -
     --exclude-dir=external --exclude-dir=build --exclude-dir='build-*' |
     grep -E 'get_target_property|external/ursatz/tests' | grep -vE '^[^:]*:[0-9]+:[[:space:]]*#' || true)
 
+# A public header exposes the kernel only: a chain or framework header belongs to result_chain.h alone.
+while IFS=: read -r file line text; do
+    [ "$file" = "include/ursatz_analyzer/result_chain.h" ] && continue
+    name="$(printf '%s' "$text" | sed -E 's/^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]([^">]+)[">].*/\1/')"
+    if [ -e "external/ursatz/chain/$name" ] || [ -e "external/ursatz/frameworks/$name" ]; then
+        report "$file" "$line" "$name" "chain or framework header in a public Analyzer header"
+    fi
+done < <(grep -rnE '^[[:space:]]*#[[:space:]]*include[[:space:]]*["<]' include || true)
+
 if [ "$failed" = 1 ]; then
     exit 1
 fi
-echo "OK analyzer includes only public Ursatz headers"
+echo "OK analyzer includes only public Ursatz headers, and no chain or framework header outside result_chain.h"

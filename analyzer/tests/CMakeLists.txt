@@ -75,7 +75,7 @@ target_compile_definitions(test_document_snapshots PRIVATE
 add_test(NAME test_document_snapshots COMMAND test_document_snapshots)
 
 add_executable(test_analysis_result test_analysis_result.c)
-target_link_libraries(test_analysis_result PRIVATE ursatz_analyzer analyzer_test_support cjson)
+target_link_libraries(test_analysis_result PRIVATE ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain)
 target_compile_definitions(test_analysis_result PRIVATE
     URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
@@ -91,7 +91,7 @@ if(VALGRIND_PROGRAM)
 endif()
 
 add_executable(test_chord_sequence test_chord_sequence.c)
-target_link_libraries(test_chord_sequence PRIVATE ursatz_analyzer analyzer_test_support cjson)
+target_link_libraries(test_chord_sequence PRIVATE ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain)
 target_compile_definitions(test_chord_sequence PRIVATE
     URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_chord_sequence_smoke COMMAND test_chord_sequence smoke)
@@ -490,7 +490,7 @@ if(VALGRIND_PROGRAM)
 endif()
 
 add_executable(test_hearing test_hearing.c)
-target_link_libraries(test_hearing PRIVATE ursatz_analyzer cjson)
+target_link_libraries(test_hearing PRIVATE ursatz_analyzer cjson ursatz_analyzer::chain)
 target_include_directories(test_hearing PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_definitions(test_hearing PRIVATE
     URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
@@ -552,3 +552,18 @@ endif()
 add_executable(test_version test_version.c)
 target_link_libraries(test_version PRIVATE ursatz_analyzer)
 add_test(NAME test_version COMMAND test_version)
+
+# Consumer isolation (A20261104-31): a target linking only ursatz_analyzer cannot include a chain or framework header; one
+# linking ursatz_analyzer::chain reads the chain. The leak targets must fail to compile, so they are left out of the default
+# build and built by consumer_isolation.cmake.
+add_library(analyzer_consumer_plain OBJECT consumer/plain.c)
+target_link_libraries(analyzer_consumer_plain PRIVATE ursatz_analyzer)
+add_library(analyzer_consumer_chain OBJECT consumer/chain.c)
+target_link_libraries(analyzer_consumer_chain PRIVATE ursatz_analyzer::chain)
+foreach(leak leak_framework leak_chain)
+    add_library(analyzer_consumer_${leak} OBJECT EXCLUDE_FROM_ALL consumer/${leak}.c)
+    target_link_libraries(analyzer_consumer_${leak} PRIVATE ursatz_analyzer)
+endforeach()
+add_test(NAME test_consumer_isolation
+         COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${PROJECT_BINARY_DIR}
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_isolation.cmake)
