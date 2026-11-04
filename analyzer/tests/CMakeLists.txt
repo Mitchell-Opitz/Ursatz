@@ -75,7 +75,7 @@ target_compile_definitions(test_document_snapshots PRIVATE
 add_test(NAME test_document_snapshots COMMAND test_document_snapshots)
 
 add_executable(test_analysis_result test_analysis_result.c)
-target_link_libraries(test_analysis_result PRIVATE ursatz_analyzer analyzer_test_support cjson ursatz_chain)
+target_link_libraries(test_analysis_result PRIVATE ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain)
 target_compile_definitions(test_analysis_result PRIVATE
     URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"
     URSATZ_SNAPSHOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/snapshots")
@@ -91,7 +91,7 @@ if(VALGRIND_PROGRAM)
 endif()
 
 add_executable(test_chord_sequence test_chord_sequence.c)
-target_link_libraries(test_chord_sequence PRIVATE ursatz_analyzer analyzer_test_support cjson ursatz_chain)
+target_link_libraries(test_chord_sequence PRIVATE ursatz_analyzer analyzer_test_support cjson ursatz_analyzer::chain)
 target_compile_definitions(test_chord_sequence PRIVATE
     URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures")
 add_test(NAME test_chord_sequence_smoke COMMAND test_chord_sequence smoke)
@@ -490,7 +490,7 @@ if(VALGRIND_PROGRAM)
 endif()
 
 add_executable(test_hearing test_hearing.c)
-target_link_libraries(test_hearing PRIVATE ursatz_analyzer cjson ursatz_chain)
+target_link_libraries(test_hearing PRIVATE ursatz_analyzer cjson ursatz_analyzer::chain)
 target_include_directories(test_hearing PRIVATE ${PROJECT_SOURCE_DIR}/src)
 target_compile_definitions(test_hearing PRIVATE
     URSATZ_ANALYZER_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/fixtures"

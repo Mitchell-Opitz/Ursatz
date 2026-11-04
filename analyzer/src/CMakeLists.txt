@@ -69,6 +69,11 @@ target_link_libraries(ursatz_analyzer
     standard_counterpoint standard_texture standard_voicing standard_markings galant_schemas scale_harmonization
 )
 
+# Reading the chain's claims (analyzer_result_chain): the chain headers reach only a consumer that links this target.
+add_library(ursatz_analyzer_chain INTERFACE)
+add_library(ursatz_analyzer::chain ALIAS ursatz_analyzer_chain)
+target_link_libraries(ursatz_analyzer_chain INTERFACE ursatz_analyzer ursatz_chain)
+
 add_executable(ursatz-analyzer main.c)
 target_include_directories(ursatz-analyzer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(ursatz-analyzer PRIVATE ursatz_analyzer)

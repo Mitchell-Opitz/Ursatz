@@ -9,6 +9,7 @@
 #include <ursatz_analyzer/analysis_result.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/markdown_report.h>
+#include <ursatz_analyzer/result_chain.h>
 
 #include <ursatz_chain/analysis_chain.h>
 
