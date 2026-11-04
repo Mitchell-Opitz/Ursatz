@@ -681,6 +681,27 @@ The Analyzer library (`external/ursatz-analyzer`, linked as
 `analysis_document_build`, and the GUI keeps no analysis code of its own.
 Analysis therefore changes only when the Analyzer submodule is bumped.
 
+### Backend helper modules
+
+Everything but `main.c` is built as the static library `ursatz_gui_core` (`backend/CMakeLists.txt`); the server
+(`ursatz-gui-backend`) is `main.c` linked to it, and each test is built with `ursatz_gui_add_test(name source workdir)`
+(`backend/tests/CMakeLists.txt`), which links the same library. A new source file is added to the library once.
+
+- `util/fs_util.c`: `ursatz_gui_dup_string`, `ursatz_gui_iso_utc_now`, `ursatz_gui_path_is_dir`, `ursatz_gui_make_dir`,
+  `ursatz_gui_ensure_dir`, `ursatz_gui_write_file_atomic` (writes `<path>.tmp`, then renames), `ursatz_gui_read_file`
+  and `ursatz_gui_read_json_object`. Every store and the routes use these; none keeps a copy. `link_service.c` keeps
+  its own `iso_utc_now`, which adds milliseconds so two runs in one second still order.
+- `util/store_lock.h`: `UrsatzGuiLock` (a pthread mutex, an SRWLOCK on Windows) with `URSATZ_GUI_LOCK_INIT` and
+  `ursatz_gui_lock_acquire/release`. Each store wraps it in `LOCK()` and `UNLOCK()`.
+- `routes/route_util.c`: `ursatz_gui_send_json_status` and `ursatz_gui_read_json_body`, the JSON object body of a
+  request (up to 1 MiB; with a status pointer it also sends the 400, 413 or 500 itself). `routes/materials.c` passes
+  its own 256 KiB limit to `ursatz_gui_read_json_body_max`.
+- `service/compose_common.c`: the helpers the theme and piece services share (`ursatz_gui_compose_say`, `_text_of`,
+  `_attach`, `_add_copy_or_null`, `_add_copy_if`) and `ursatz_gui_compose_item`, the steps around a Composer run
+  (update the uses, make the version folder, build the brief and the request, run, add the version, rename the folder
+  when another writer added a version). Each service passes an `UrsatzGuiComposeKind` with its own checks, request,
+  run, note and result body, and keeps its own compose lock.
+
 ## Backend
 
 C HTTP server using [civetweb](https://github.com/civetweb/civetweb) (MIT),
