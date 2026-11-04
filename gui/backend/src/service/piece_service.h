@@ -85,4 +85,11 @@ UrsatzGuiThemeResult ursatz_gui_piece_choose(const char *id, int version, int se
 UrsatzGuiThemeResult ursatz_gui_piece_variation_file(const char *id, int version, int set, const char *name,
                                                      unsigned char **out_data, size_t *out_size, const char **out_type);
 
+/*
+ * The path of variation-<i>.mid of a variations set, after the checks ursatz_gui_piece_variation_file makes. NOT_FOUND
+ * for any other name, an absent item, version, set or file.
+ */
+UrsatzGuiThemeResult ursatz_gui_piece_variation_midi_path(const char *id, int version, int set, const char *name,
+                                                          char *out, size_t out_size);
+
 #endif /* URSATZ_GUI_PIECE_SERVICE_H */

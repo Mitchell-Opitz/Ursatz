@@ -26,12 +26,13 @@
 #include "../service/style_service.h"
 #include "../service/subject_service.h"
 #include "../service/piece_service.h"
+#include "../service/playback_service.h"
 #include "../service/theme_service.h"
 
 static const char *kMaterialsPrefix = "/api/materials";
 static const char *kSubjectsPrefix = "/api/subjects";
 static const size_t kMaxRequestBodySize = 256 * 1024;
-static const int kMaxSegments = 7;
+static const int kMaxSegments = 8;
 
 static const char *reason_for(int status) {
   switch (status) {
@@ -878,117 +879,11 @@ static void render_fail(RenderFailure *failure, int status, const char *message)
   render_fail_at(failure, status, message, "");
 }
 
-static long long fraction_gcd(long long a, long long b) {
-  while (b != 0) {
-    long long t = a % b;
-    a = b;
-    b = t;
-  }
-  return a;
-}
-
-static bool fraction_member(const cJSON *object, const char *name, long long *num, long long *den) {
-  const cJSON *fraction = cJSON_GetObjectItemCaseSensitive(object, name);
-  const cJSON *n = cJSON_GetObjectItemCaseSensitive(fraction, "num");
-  const cJSON *d = cJSON_GetObjectItemCaseSensitive(fraction, "den");
-  if (!cJSON_IsNumber(n) || !cJSON_IsNumber(d) || n->valuedouble < 0 || d->valuedouble < 1) {
-    return false;
-  }
-  long long g = fraction_gcd((long long)n->valuedouble, (long long)d->valuedouble);
-  g = g == 0 ? 1 : g;
-  *num = (long long)n->valuedouble / g;
-  *den = (long long)d->valuedouble / g;
-  return true;
-}
-
-static cJSON *fraction_pair(long long num, long long den) {
-  cJSON *pair = cJSON_CreateArray();
-  if (pair) {
-    cJSON_AddItemToArray(pair, cJSON_CreateNumber((double)num));
-    cJSON_AddItemToArray(pair, cJSON_CreateNumber((double)den));
-  }
-  return pair;
-}
-
-/* The playback shape of analysis_service.h for the Composer's rendered notes: one part named after the role, each
-   position and length in whole notes from the pickup start (the Composer's offsets already start there). */
-static cJSON *build_motif_playback(const cJSON *rendered_notes, const char *role, int tempo) {
-  cJSON *playback = cJSON_CreateObject();
-  cJSON *tempo_list = cJSON_CreateArray();
-  cJSON *parts = cJSON_CreateArray();
-  cJSON *notes = cJSON_CreateArray();
-  cJSON *region = cJSON_CreateObject();
-  cJSON *part = cJSON_CreateObject();
-  if (!playback || !tempo_list || !parts || !notes || !region || !part) {
-    cJSON_Delete(playback);
-    cJSON_Delete(tempo_list);
-    cJSON_Delete(parts);
-    cJSON_Delete(notes);
-    cJSON_Delete(region);
-    cJSON_Delete(part);
-    return NULL;
-  }
-  cJSON_AddItemToObject(region, "at", fraction_pair(0, 1));
-  cJSON_AddNumberToObject(region, "qpm", tempo > 0 ? tempo : 120);
-  cJSON_AddItemToArray(tempo_list, region);
-  cJSON_AddNumberToObject(part, "index", 0);
-  cJSON_AddStringToObject(part, "name", role);
-  cJSON_AddNumberToObject(part, "program", 0);
-  cJSON_AddItemToArray(parts, part);
-  long long end_num = 0;
-  long long end_den = 1;
-  int index = 0;
-  const cJSON *note = NULL;
-  cJSON_ArrayForEach(note, rendered_notes) {
-    long long on_num, on_den, len_num, len_den;
-    const cJSON *pitch = cJSON_GetObjectItemCaseSensitive(note, "midi_pitch");
-    if (!cJSON_IsNumber(pitch) || !fraction_member(note, "offset", &on_num, &on_den) ||
-        !fraction_member(note, "duration", &len_num, &len_den)) {
-      cJSON_Delete(playback);
-      cJSON_Delete(tempo_list);
-      cJSON_Delete(parts);
-      cJSON_Delete(notes);
-      return NULL;
-    }
-    cJSON *entry = cJSON_CreateObject();
-    if (!entry) {
-      cJSON_Delete(playback);
-      cJSON_Delete(tempo_list);
-      cJSON_Delete(parts);
-      cJSON_Delete(notes);
-      return NULL;
-    }
-    cJSON_AddNumberToObject(entry, "i", index++);
-    cJSON_AddItemToObject(entry, "on", fraction_pair(on_num, on_den));
-    cJSON_AddItemToObject(entry, "len", fraction_pair(len_num, len_den));
-    cJSON_AddNumberToObject(entry, "pitch", pitch->valueint);
-    cJSON_AddNumberToObject(entry, "part", 0);
-    cJSON_AddItemToArray(notes, entry);
-    long long stop_num = on_num * len_den + len_num * on_den;
-    long long stop_den = on_den * len_den;
-    long long g = fraction_gcd(stop_num, stop_den);
-    g = g == 0 ? 1 : g;
-    stop_num /= g;
-    stop_den /= g;
-    if (stop_num * end_den > end_num * stop_den) {
-      end_num = stop_num;
-      end_den = stop_den;
-    }
-  }
-  cJSON_AddBoolToObject(playback, "ok", 1);
-  cJSON_AddStringToObject(playback, "tempo_source", tempo > 0 ? "given" : "default");
-  cJSON_AddItemToObject(playback, "tempo", tempo_list);
-  cJSON_AddItemToObject(playback, "parts", parts);
-  cJSON_AddItemToObject(playback, "end", fraction_pair(end_num, end_den));
-  cJSON_AddItemToObject(playback, "notes", notes);
-  return playback;
-}
-
-/* Renders a degree, rhythm or contour list in render_key with the Composer. On success *out_xml is the MusicXML text,
-   *out_playback its playback data and *out_midi (*out_midi_size bytes) the render's MIDI file (all caller-owned). On
-   failure failure holds the status and message. */
-static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_playback, uint8_t **out_midi,
-                         size_t *out_midi_size, RenderFailure *failure) {
+/* Renders a degree, rhythm or contour list in render_key with the Composer. On success *out_xml is the MusicXML text
+   and *out_midi (*out_midi_size bytes) the render's MIDI file, both caller-owned; playback is built from the MIDI by
+   the Analyzer (R-275). On failure failure holds the status and message. */
+static bool render_motif(const RenderInput *in, char **out_xml, uint8_t **out_midi, size_t *out_midi_size,
+                         RenderFailure *failure) {
   const char *form = in->form;
   if (!form || (strcmp(form, "full") != 0 && strcmp(form, "rhythm") != 0 && strcmp(form, "contour") != 0)) {
     render_fail(failure, 400, "form must be full, rhythm or contour");
@@ -1035,26 +930,35 @@ static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_play
   if (composer_refused(&reply)) {
     render_fail_at(failure, 400, reply.message[0] ? reply.message : "composer could not render the motif", reply.path);
   } else {
-    cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
-    const cJSON *notes = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "rendered"), "notes");
-    char *xml = document && cJSON_IsArray(notes) && reply.musicxml ? strdup(reply.musicxml) : NULL;
-    cJSON *playback = xml && reply.midi ? build_motif_playback(notes, in->role && in->role[0] ? in->role : "motif", in->tempo) : NULL;
-    if (playback) {
+    char *xml = reply.status == COMPOSER_OK && reply.musicxml && reply.midi ? strdup(reply.musicxml) : NULL;
+    if (xml) {
       *out_xml = xml;
-      *out_playback = playback;
       *out_midi = reply.midi;
       *out_midi_size = reply.midi_size;
       reply.midi = NULL;
       reply.midi_size = 0;
       ok = true;
     } else {
-      free(xml);
       render_fail(failure, 500, "composer could not render the motif");
     }
-    cJSON_Delete(document);
   }
   ursatz_gui_composer_reply_destroy(&reply);
   return ok;
+}
+
+/* The text of a refusal to build a playback; every one is a 500 (the file came from the Composer, not the request). */
+static const char *playback_failure_text(UrsatzGuiPlaybackResult result) {
+  return result == URSATZ_GUI_PLAYBACK_ERR_ALLOC ? "out of memory" : "could not build the playback from the MIDI file";
+}
+
+/* Sends the playback JSON text the Analyzer built, and frees it. */
+static int send_playback_text(struct mg_connection *conn, char *json) {
+  cJSON *playback = cJSON_Parse(json);
+  free(json);
+  if (!playback) {
+    return send_failure(conn, 500, "could not build the playback from the MIDI file");
+  }
+  return send_object(conn, playback);
 }
 
 /* Sends {"ok":true,"musicxml":...,"playback":{...}} and frees xml and playback. */
@@ -1105,16 +1009,27 @@ static int handle_render(struct mg_connection *conn) {
     return send_failure(conn, 400, "form, degrees, meter, key, pickup, render_key, role and harmony must be text and tempo a whole number");
   }
   char *xml = NULL;
-  cJSON *playback = NULL;
   uint8_t *midi = NULL;
   size_t midi_size = 0;
   RenderFailure failure = {0, ""};
-  bool ok = render_motif(&in, &xml, &playback, &midi, &midi_size, &failure);
+  bool ok = render_motif(&in, &xml, &midi, &midi_size, &failure);
   cJSON_Delete(body);
   if (!ok) {
     return send_failure_at(conn, failure.status, failure.message, failure.path);
   }
+  /* An unsaved render has no folder: its MIDI goes to a temporary file for the Analyzer, which imports by path. */
+  char tmp_dir[512];
+  char *playback_text = NULL;
+  UrsatzGuiPlaybackResult built = ursatz_gui_material_render_tmp_dir(tmp_dir, sizeof(tmp_dir))
+                                      ? ursatz_gui_playback_of_midi_bytes(midi, midi_size, tmp_dir, &playback_text)
+                                      : URSATZ_GUI_PLAYBACK_ERR_IO;
   free(midi);
+  cJSON *playback = built == URSATZ_GUI_PLAYBACK_OK ? cJSON_Parse(playback_text) : NULL;
+  free(playback_text);
+  if (!playback) {
+    free(xml);
+    return send_failure(conn, 500, playback_failure_text(built));
+  }
   return send_render_answer(conn, xml, playback);
 }
 
@@ -1672,13 +1587,73 @@ static void render_cache_write(const char *id, int number, const char *render_ke
   free(meta_text);
 }
 
+/* Sends a file's bytes with a content type. */
+static int send_bytes(struct mg_connection *conn, const char *type, const void *data, size_t size) {
+  mg_send_http_ok(conn, type, (long long)size);
+  mg_write(conn, data, size);
+  return 200;
+}
+
+/* GET /api/materials/items/<id>/versions/<n>/playback?file=theme|loop|ending: the playback of a theme or piece
+   version's MIDI file, built by the Analyzer (R-275). */
+static int handle_version_file_playback(struct mg_connection *conn, const char *id, int number, const char *file) {
+  const char *name = strcmp(file, "theme") == 0 ? "theme.mid" : strcmp(file, "loop") == 0 ? "loop.mid"
+                     : strcmp(file, "ending") == 0 ? "ending.mid" : NULL;
+  char dir[512];
+  char path[640];
+  cJSON *version_body = NULL;
+  if (!name) {
+    return send_failure(conn, 400, "file must be theme, loop or ending");
+  }
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get_version(id, number, &version_body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    return send_material_failure(conn, result);
+  }
+  cJSON_Delete(version_body);
+  FILE *exists = ursatz_gui_material_version_dir(id, number, dir, sizeof(dir)) &&
+                         snprintf(path, sizeof(path), "%s/%s", dir, name) < (int)sizeof(path)
+                     ? fopen(path, "rb")
+                     : NULL;
+  if (!exists) {
+    return send_failure(conn, 404, "file not found");
+  }
+  fclose(exists);
+  char *json = NULL;
+  UrsatzGuiPlaybackResult built = ursatz_gui_playback_of_midi(path, &json);
+  return built == URSATZ_GUI_PLAYBACK_OK ? send_playback_text(conn, json)
+                                         : send_failure(conn, 500, playback_failure_text(built));
+}
+
+/* GET /api/materials/items/<pce-id>/versions/<n>/variations/<set>/<file>/playback: the playback of a variation's MIDI
+   file (variation-<i>.mid). */
+static int handle_piece_variation_playback(struct mg_connection *conn, const char *id, const char *number_text,
+                                           const char *set_text, const char *name) {
+  int version = 0;
+  int set = 0;
+  char path[640];
+  if (!parse_version_number(number_text, &version) || !parse_version_number(set_text, &set) ||
+      ursatz_gui_piece_variation_midi_path(id, version, set, name, path, sizeof(path)) != URSATZ_GUI_THEME_OK) {
+    return send_failure(conn, 404, "file not found");
+  }
+  char *json = NULL;
+  UrsatzGuiPlaybackResult built = ursatz_gui_playback_of_midi(path, &json);
+  return built == URSATZ_GUI_PLAYBACK_OK ? send_playback_text(conn, json)
+                                         : send_failure(conn, 500, playback_failure_text(built));
+}
+
 /* GET /api/materials/items/<id>/versions/<n>/score and .../playback, with ?key= for the key to sound it in (default:
-   the motif's own key). Both render the version's motif.degrees with the Composer. */
+   the motif's own key). Both come from the version's render (motif.degrees through the Composer), cached per version
+   so the Composer runs at most once for a key and tempo. With ?file= the playback route answers for a theme or piece
+   version's own MIDI file instead. */
 static int handle_version_render(struct mg_connection *conn, const char *id, const char *number_text, bool playback_only) {
   char *end = NULL;
   long number = strtol(number_text, &end, 10);
   if (end == number_text || *end != '\0' || number < 1 || number > 1000000) {
     return send_failure(conn, 404, "version not found");
+  }
+  char file[16];
+  if (playback_only && query_value(conn, "file", file, sizeof(file))) {
+    return handle_version_file_playback(conn, id, (int)number, file);
   }
   char render_key[32];
   bool has_render_key = query_value(conn, "key", render_key, sizeof(render_key));
@@ -1712,41 +1687,54 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
     in.pickup = "0";
   }
   const char *effective_key = in.render_key && in.render_key[0] != '\0' ? in.render_key : in.key;
-  if (!playback_only && effective_key) {
-    char *cached = render_cache_read_score(id, (int)number, effective_key, 0);
-    if (cached) {
+  char cache_dir[576];
+  char midi_path[640];
+  bool cached = effective_key && render_cache_dir(id, (int)number, cache_dir, sizeof(cache_dir)) &&
+                render_cache_matches(cache_dir, effective_key, 0) &&
+                snprintf(midi_path, sizeof(midi_path), "%s/motif.mid", cache_dir) < (int)sizeof(midi_path);
+  if (cached && !playback_only) {
+    char *score = render_cache_read_score(id, (int)number, effective_key, 0);
+    if (score) {
       cJSON_Delete(version_body);
-      size_t cached_length = strlen(cached);
-      mg_send_http_ok(conn, "application/xml", (long long)cached_length);
-      mg_write(conn, cached, cached_length);
-      free(cached);
+      send_bytes(conn, "application/xml", score, strlen(score));
+      free(score);
       return 200;
     }
   }
+  if (cached && playback_only) {
+    char *json = NULL;
+    if (ursatz_gui_playback_of_midi(midi_path, &json) == URSATZ_GUI_PLAYBACK_OK) {
+      cJSON_Delete(version_body);
+      return send_playback_text(conn, json);
+    }
+  }
   char *xml = NULL;
-  cJSON *playback = NULL;
   uint8_t *midi = NULL;
   size_t midi_size = 0;
   RenderFailure failure = {0, ""};
-  bool ok = render_motif(&in, &xml, &playback, &midi, &midi_size, &failure);
-  if (ok && effective_key) {
-    render_cache_write(id, (int)number, effective_key, 0, xml, midi, midi_size);
-  }
-  free(midi);
+  bool ok = render_motif(&in, &xml, &midi, &midi_size, &failure);
   cJSON_Delete(version_body);
   if (!ok) {
     return send_failure_at(conn, failure.status, failure.message, failure.path);
   }
-  if (playback_only) {
-    free(xml);
-    return send_object(conn, playback);
+  if (effective_key) {
+    render_cache_write(id, (int)number, effective_key, 0, xml, midi, midi_size);
   }
-  size_t length = strlen(xml);
-  mg_send_http_ok(conn, "application/xml", (long long)length);
-  mg_write(conn, xml, length);
-  cJSON_Delete(playback);
+  int answered;
+  if (playback_only) {
+    char tmp_dir[512];
+    char *json = NULL;
+    UrsatzGuiPlaybackResult built = ursatz_gui_material_render_tmp_dir(tmp_dir, sizeof(tmp_dir))
+                                        ? ursatz_gui_playback_of_midi_bytes(midi, midi_size, tmp_dir, &json)
+                                        : URSATZ_GUI_PLAYBACK_ERR_IO;
+    answered = built == URSATZ_GUI_PLAYBACK_OK ? send_playback_text(conn, json)
+                                               : send_failure(conn, 500, playback_failure_text(built));
+  } else {
+    answered = send_bytes(conn, "application/xml", xml, strlen(xml));
+  }
+  free(midi);
   free(xml);
-  return 200;
+  return answered;
 }
 
 /* ---- variants ---------------------------------------------------------- */
@@ -3129,6 +3117,11 @@ static int route_items(struct mg_connection *conn, const char *method, char segm
   if (count == 5 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "variations") == 0) {
     return post ? handle_piece_variations(conn, segments[1], segments[3]) : send_method_not_allowed(conn);
   }
+  if (count == 8 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "variations") == 0 &&
+      strcmp(segments[7], "playback") == 0) {
+    return get ? handle_piece_variation_playback(conn, segments[1], segments[3], segments[5], segments[6])
+               : send_method_not_allowed(conn);
+  }
   if (count == 7 && strcmp(segments[2], "versions") == 0 && strcmp(segments[4], "variations") == 0) {
     if (strcmp(segments[6], "choose") == 0) {
       return post ? handle_piece_choose(conn, segments[1], segments[3], segments[5]) : send_method_not_allowed(conn);
@@ -3495,7 +3488,7 @@ static int route_subjects(struct mg_connection *conn, const char *method, char s
 static int subjects_handler(struct mg_connection *conn, void *cbdata) {
   (void)cbdata;
   const struct mg_request_info *info = mg_get_request_info(conn);
-  char segments[7][256];
+  char segments[8][256];
   int count = split_path(info->local_uri + strlen(kSubjectsPrefix), segments);
   if (count < 0) {
     return send_not_found(conn);
@@ -3512,7 +3505,7 @@ static int materials_handler(struct mg_connection *conn, void *cbdata) {
   (void)cbdata;
   const struct mg_request_info *info = mg_get_request_info(conn);
   const char *method = info->request_method;
-  char segments[7][256];
+  char segments[8][256];
   int count = split_path(info->local_uri + strlen(kMaterialsPrefix), segments);
   if (count < 1) {
     return send_not_found(conn);

@@ -2774,6 +2774,13 @@ bool ursatz_gui_material_version_dir(const char *id, int number, char *out, size
     return ok;
 }
 
+bool ursatz_gui_material_render_tmp_dir(char *out, size_t out_size) {
+    LOCK();
+    bool ok = g_ready && snprintf(out, out_size, "%s/.render-tmp", g_dir) < (int)out_size;
+    UNLOCK();
+    return ok;
+}
+
 UrsatzGuiMaterialResult ursatz_gui_material_version_file(const char *id, int number, const char *name,
                                                           unsigned char **out_data, size_t *out_size) {
     *out_data = NULL;
