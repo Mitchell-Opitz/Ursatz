@@ -7,12 +7,15 @@
 #include "analysis_claim.h"
 #include "analysis_motive_match.h"
 #include "analysis_motive_shape.h"
-#include "analysis_time.h"
 #include "phrase_ending.h"
 #include "core/occurrence.h"
+#include "core/rational.h"
 #include "core/value.h"
 #include "pitch/pitch_identity.h"
 #include "time/duration.h"
+#include "time/meter_arithmetic.h"
+#include "time/meter_map.h"
+#include "time/score_time.h"
 
 const char *standard_form_motive_kind_name(StandardFormMotiveKind kind) {
     return motive_occurrence_kind_name(kind);
@@ -79,7 +82,7 @@ static char *make_key(const StandardFormMotiveShape *shape) {
     key[at++] = shape->generic ? 'G' : 'S';
     key[at++] = '|';
     for (size_t k = 0; k < shape->intervals; k++) {
-        at += (size_t)snprintf(key + at, size - at, "%d,%lld/%lld;", shape->steps[k], shape->ioi[k].n, shape->ioi[k].d);
+        at += (size_t)snprintf(key + at, size - at, "%d,%lld/%lld;", shape->steps[k], shape->ioi[k].num, shape->ioi[k].den);
     }
     key[at] = '\0';
     return key;
@@ -642,7 +645,7 @@ static bool make_kernel_window(const StandardFormMotiveLine *line, size_t first,
     for (size_t k = 0; ok && k < shape->intervals; k++) {
         directions[k] = shape->steps[k] > 0 ? CONTOUR_DIRECTION_UP
                                             : (shape->steps[k] < 0 ? CONTOUR_DIRECTION_DOWN : CONTOUR_DIRECTION_SAME);
-        ok = duration_create((long)shape->ioi[k].n, (unsigned long)shape->ioi[k].d, &durations[k]) == DURATION_OK;
+        ok = duration_create((long)shape->ioi[k].num, (unsigned long)shape->ioi[k].den, &durations[k]) == DURATION_OK;
     }
     /* On success the contour and the pattern take the elements and copy the arrays; the arrays stay ours. */
     bool pitches_taken = false;
@@ -872,13 +875,14 @@ static StandardFormAnalysisStatus emit_family(const StandardFormInput *input, co
         oc->fragment_intervals = (int)occ->fragment_intervals;
         oc->in_continuation = occ->in_continuation ? 1 : 0;
         oc->first_measure = line->first_measure[occ->first];
-        StandardFormQ measure_start;
-        StandardFormQ beat;
+        Rational measure_start;
+        Rational beat;
         oc->first_beat = 1.0;
-        if (standard_form_measure_bounds(input->map, oc->first_measure, &measure_start, NULL) &&
-            standard_form_beat_length(input->map, oc->first_measure, &beat)) {
-            StandardFormQ offset = standard_form_q_sub(line->start[occ->first], measure_start);
-            oc->first_beat = 1.0 + ((double)offset.n / (double)offset.d) / ((double)beat.n / (double)beat.d);
+        Rational offset;
+        if (score_time_measure_bounds(input->map, oc->first_measure, &measure_start, NULL) &&
+            score_time_beat_length(input->map, oc->first_measure, &beat) &&
+            rational_sub(line->start[occ->first], measure_start, &offset) == RATIONAL_OK) {
+            oc->first_beat = 1.0 + ((double)offset.num / (double)offset.den) / ((double)beat.num / (double)beat.den);
         }
         item->uncertainty = 1.0 - occ->score;
 
@@ -929,7 +933,7 @@ static StandardFormAnalysisStatus emit_family(const StandardFormInput *input, co
             return STANDARD_FORM_ANALYSIS_ERR_ALLOC;
         }
         int last_measure = oc->first_measure;
-        if (!standard_form_last_measure_touched(input->map, line->end[occ->first + occ->n - 1], &last_measure)) {
+        if (meter_map_last_measure_touched(input->map, line->end[occ->first + occ->n - 1], &last_measure) != METER_MAP_OK) {
             last_measure = oc->first_measure;
         }
         const char *container = container_of(phrases, segmentation, oc->first_measure, last_measure);

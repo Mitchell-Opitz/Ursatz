@@ -8,6 +8,8 @@
 #include "identity/entity_id.h"
 #include "meter_analysis_claim.h"
 #include "meter_analysis_time.h"
+#include "time/meter_arithmetic.h"
+#include "time/score_time.h"
 
 typedef struct {
     int measures;
@@ -108,13 +110,13 @@ static StandardMeterAnalysisStatus emit_hypermeasure(StandardMeterHypermeter *fo
 static StandardMeterAnalysisStatus read_phrase(const StandardMeterInput *input, size_t index, StandardMeterHypermeter *found,
                                                Capacities *capacities) {
     const StandardMeterPhrase *phrase = &input->phrases[index];
-    StandardMeterQ start;
-    StandardMeterQ end;
+    Rational start;
+    Rational end;
     int first = 0;
     int last = 0;
     int counted = meter_map_has_pickup(input->map) ? 1 : meter_map_first_measure_number(input->map);
-    if (!standard_meter_span_q(phrase->span, &start, &end) || !standard_meter_measure_at(input->map, start, &first) ||
-        !standard_meter_last_measure_touched(input->map, end, &last)) {
+    if (!score_time_span(phrase->span, &start, &end) || meter_map_measure_of(input->map, start, &first) != METER_MAP_OK ||
+        meter_map_last_measure_touched(input->map, end, &last) != METER_MAP_OK) {
         return STANDARD_METER_ANALYSIS_OK;
     }
     if (first < counted) {
@@ -128,10 +130,10 @@ static StandardMeterAnalysisStatus read_phrase(const StandardMeterInput *input, 
     bool elided = phrase->elided_with_next && index + 1 < input->phrase_count;
     int arrival = -1;
     if (!elided && phrase->cadence_arrival != NULL) {
-        StandardMeterQ arrival_start;
+        Rational arrival_start;
         int arrival_measure = 0;
-        if (standard_meter_span_q(phrase->cadence_arrival, &arrival_start, NULL) &&
-            standard_meter_measure_at(input->map, arrival_start, &arrival_measure) && arrival_measure >= first &&
+        if (score_time_span(phrase->cadence_arrival, &arrival_start, NULL) &&
+            meter_map_measure_of(input->map, arrival_start, &arrival_measure) == METER_MAP_OK && arrival_measure >= first &&
             arrival_measure <= last) {
             arrival = arrival_measure - first;
         }

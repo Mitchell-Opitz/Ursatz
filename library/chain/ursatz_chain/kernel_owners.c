@@ -13,8 +13,8 @@ bool chain_classify_tones(const ToneLineNote *notes, size_t count, ToneLineLabel
     return motive_tone_roles_line(notes, count, out, context);
 }
 
-static Rational gap_of(StandardFormQ q) {
-    return msk_make((unsigned long long)q.n, (unsigned long long)q.d);
+static Rational gap_of(Rational q) {
+    return msk_make((unsigned long long)q.num, (unsigned long long)q.den);
 }
 
 /* The sketch a shape stands for; false when it is not a valid one. */

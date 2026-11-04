@@ -4,7 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "analysis_time.h"
+#include "core/rational.h"
+#include "time/score_time.h"
 
 #define DEFAULT_LEAP_SEMITONES 7
 #define DEFAULT_LOOKAHEAD 4
@@ -75,7 +76,7 @@ StandardFormAnalysisStatus standard_form_input_add_cadence(StandardFormInput *in
         return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
     }
     if (arrival == NULL || !cadence_type_valid(type) || !(uncertainty >= 0.0 && uncertainty <= 1.0) ||
-        !standard_form_span_q(arrival, NULL, NULL)) {
+        !score_time_span(arrival, NULL, NULL)) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
     }
     if (!grow((void **)&input->cadences, &input->cadence_capacity, input->cadence_count, sizeof(StandardFormCadence))) {
@@ -102,14 +103,14 @@ StandardFormAnalysisStatus standard_form_input_add_note(StandardFormInput *input
     if (input == NULL) {
         return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
     }
-    StandardFormQ start;
-    if (event == NULL || span == NULL || !standard_form_span_q(span, &start, NULL)) {
+    Rational start;
+    if (event == NULL || span == NULL || !score_time_span(span, &start, NULL)) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
     }
     if (input->note_count > 0) {
-        StandardFormQ previous;
-        standard_form_span_q(input->notes[input->note_count - 1].span, &previous, NULL);
-        if (standard_form_q_compare(start, previous) < 0) {
+        Rational previous;
+        score_time_span(input->notes[input->note_count - 1].span, &previous, NULL);
+        if (rational_cmp(start, previous) < 0) {
             return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
         }
     }
@@ -133,14 +134,14 @@ StandardFormAnalysisStatus standard_form_input_add_note(StandardFormInput *input
 static StandardFormAnalysisStatus add_to_line(StandardFormNote **items, size_t *count, size_t *capacity, const char *note_id,
                                               const NoteEvent *event, const TimeSpan *span,
                                               const MetricalPosition *position, long semitone) {
-    StandardFormQ start;
-    if (event == NULL || span == NULL || !standard_form_span_q(span, &start, NULL)) {
+    Rational start;
+    if (event == NULL || span == NULL || !score_time_span(span, &start, NULL)) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
     }
     if (*count > 0) {
-        StandardFormQ previous;
-        standard_form_span_q((*items)[*count - 1].span, &previous, NULL);
-        if (standard_form_q_compare(start, previous) < 0) {
+        Rational previous;
+        score_time_span((*items)[*count - 1].span, &previous, NULL);
+        if (rational_cmp(start, previous) < 0) {
             return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
         }
     }
@@ -202,7 +203,7 @@ StandardFormAnalysisStatus standard_form_input_add_segment(StandardFormInput *in
     if (input == NULL) {
         return STANDARD_FORM_ANALYSIS_ERR_NULL_ARGUMENT;
     }
-    if (span == NULL || !standard_form_span_q(span, NULL, NULL)) {
+    if (span == NULL || !score_time_span(span, NULL, NULL)) {
         return STANDARD_FORM_ANALYSIS_ERR_BAD_INPUT;
     }
     if (!grow((void **)&input->segments, &input->segment_capacity, input->segment_count, sizeof(StandardFormSegment))) {
@@ -229,11 +230,11 @@ StandardFormAnalysisStatus standard_form_input_add_analysis_segment(StandardForm
 }
 
 static int compare_cadences(const void *a, const void *b) {
-    StandardFormQ left;
-    StandardFormQ right;
-    standard_form_span_q(((const StandardFormCadence *)a)->arrival, &left, NULL);
-    standard_form_span_q(((const StandardFormCadence *)b)->arrival, &right, NULL);
-    return standard_form_q_compare(left, right);
+    Rational left;
+    Rational right;
+    score_time_span(((const StandardFormCadence *)a)->arrival, &left, NULL);
+    score_time_span(((const StandardFormCadence *)b)->arrival, &right, NULL);
+    return rational_cmp(left, right);
 }
 
 StandardFormAnalysisStatus standard_form_input_finish(StandardFormInput *input) {
@@ -252,11 +253,11 @@ StandardFormAnalysisStatus standard_form_input_finish(StandardFormInput *input) 
             note->semitones_to_next = 0;
             note->direction_to_next = (int)CONTOUR_DIRECTION_SAME;
             if (i + 1 < count) {
-                StandardFormQ end;
-                StandardFormQ next_start;
-                standard_form_span_q(note->span, NULL, &end);
-                standard_form_span_q(items[i + 1].span, &next_start, NULL);
-                if (standard_form_q_compare(end, next_start) >= 0) {
+                Rational end;
+                Rational next_start;
+                score_time_span(note->span, NULL, &end);
+                score_time_span(items[i + 1].span, &next_start, NULL);
+                if (rational_cmp(end, next_start) >= 0) {
                     long delta = items[i + 1].semitone - note->semitone;
                     note->has_next = true;
                     note->semitones_to_next = delta;

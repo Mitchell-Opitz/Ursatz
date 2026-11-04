@@ -6,15 +6,17 @@
 
 #include "meter_analysis_claim.h"
 #include "meter_analysis_time.h"
+#include "time/meter_arithmetic.h"
+#include "time/score_time.h"
 
 typedef struct {
-    StandardMeterQ start;
-    StandardMeterQ duration;
+    Rational start;
+    Rational duration;
     int line;
 } Member;
 
 static int compare_q(const void *a, const void *b) {
-    return standard_meter_q_compare(*(const StandardMeterQ *)a, *(const StandardMeterQ *)b);
+    return rational_cmp(*(const Rational *)a, *(const Rational *)b);
 }
 
 static int compare_ints(const void *a, const void *b) {
@@ -24,26 +26,29 @@ static int compare_ints(const void *a, const void *b) {
 }
 
 /* True when `time` is exactly on a beat of its measure. */
-static bool on_beat(const MeterMap *map, StandardMeterQ time) {
+static bool on_beat(const MeterMap *map, Rational time) {
     int measure = 0;
     StandardMeterMeasureGrid grid;
-    if (!standard_meter_measure_at(map, time, &measure) || !standard_meter_measure_grid(map, measure, &grid)) {
+    if (meter_map_measure_of(map, time, &measure) != METER_MAP_OK || !standard_meter_measure_grid(map, measure, &grid)) {
         return false;
     }
-    StandardMeterQ offset = standard_meter_q_sub(time, grid.base);
-    return offset.n >= 0 && (offset.n * grid.beat.d) % (offset.d * grid.beat.n) == 0;
+    Rational offset;
+    if (rational_sub(time, grid.base, &offset) != RATIONAL_OK) {
+        return false;
+    }
+    return offset.num >= 0 && (offset.num * grid.beat.den) % (offset.den * grid.beat.num) == 0;
 }
 
 /* The profile of the members of one stream (`line` -1 takes every member). */
 static void profile(const StandardMeterInput *input, const Member *members, size_t count, int line, int phrase_index,
-                    StandardMeterQ phrase_start, StandardMeterQ phrase_end, int first_measure, int last_measure,
+                    Rational phrase_start, Rational phrase_end, int first_measure, int last_measure,
                     StandardMeterDensityClaim *claim) {
     memset(claim, 0, sizeof(*claim));
     claim->phrase = phrase_index;
     claim->line = line;
 
-    StandardMeterQ *onsets = (StandardMeterQ *)malloc((count == 0 ? 1 : count) * sizeof(StandardMeterQ));
-    StandardMeterQ *durations = (StandardMeterQ *)malloc((count == 0 ? 1 : count) * sizeof(StandardMeterQ));
+    Rational *onsets = (Rational *)malloc((count == 0 ? 1 : count) * sizeof(Rational));
+    Rational *durations = (Rational *)malloc((count == 0 ? 1 : count) * sizeof(Rational));
     if (onsets == NULL || durations == NULL) {
         free(onsets);
         free(durations);
@@ -57,11 +62,11 @@ static void profile(const StandardMeterInput *input, const Member *members, size
             notes++;
         }
     }
-    qsort(onsets, notes, sizeof(StandardMeterQ), compare_q);
-    qsort(durations, notes, sizeof(StandardMeterQ), compare_q);
+    qsort(onsets, notes, sizeof(Rational), compare_q);
+    qsort(durations, notes, sizeof(Rational), compare_q);
     size_t attacks = 0;
     for (size_t i = 0; i < notes; i++) {
-        if (i == 0 || standard_meter_q_compare(onsets[i], onsets[i - 1]) != 0) {
+        if (i == 0 || rational_cmp(onsets[i], onsets[i - 1]) != 0) {
             onsets[attacks++] = onsets[i];
         }
     }
@@ -69,8 +74,10 @@ static void profile(const StandardMeterInput *input, const Member *members, size
     claim->attacks = (unsigned)attacks;
 
     if (attacks >= 2) {
-        StandardMeterQ span = standard_meter_q_sub(onsets[attacks - 1], onsets[0]);
-        claim->mean_inter_onset = standard_meter_q_double(span) / (double)(attacks - 1);
+        Rational span;
+        if (rational_sub(onsets[attacks - 1], onsets[0], &span) == RATIONAL_OK) {
+            claim->mean_inter_onset = rational_to_double(span) / (double)(attacks - 1);
+        }
     }
     size_t on = 0;
     for (size_t i = 0; i < attacks; i++) {
@@ -91,18 +98,22 @@ static void profile(const StandardMeterInput *input, const Member *members, size
         if (!standard_meter_measure_grid(input->map, measure, &grid)) {
             continue;
         }
-        StandardMeterQ from = standard_meter_q_compare(grid.start, phrase_start) > 0 ? grid.start : phrase_start;
-        StandardMeterQ to = standard_meter_q_compare(grid.end, phrase_end) < 0 ? grid.end : phrase_end;
-        if (standard_meter_q_compare(to, from) <= 0) {
+        Rational from = rational_cmp(grid.start, phrase_start) > 0 ? grid.start : phrase_start;
+        Rational to = rational_cmp(grid.end, phrase_end) < 0 ? grid.end : phrase_end;
+        if (rational_cmp(to, from) <= 0) {
             continue;
         }
         size_t in_part = 0;
         for (size_t i = 0; i < attacks; i++) {
-            if (standard_meter_q_compare(onsets[i], from) >= 0 && standard_meter_q_compare(onsets[i], to) < 0) {
+            if (rational_cmp(onsets[i], from) >= 0 && rational_cmp(onsets[i], to) < 0) {
                 in_part++;
             }
         }
-        double beats = standard_meter_q_double(standard_meter_q_sub(to, from)) / standard_meter_q_double(grid.beat);
+        Rational length;
+        if (rational_sub(to, from, &length) != RATIONAL_OK) {
+            continue;
+        }
+        double beats = rational_to_double(length) / rational_to_double(grid.beat);
         double rate = (double)in_part / beats;
         total += rate;
         if (rate > largest) {
@@ -118,7 +129,7 @@ static void profile(const StandardMeterInput *input, const Member *members, size
 
     for (size_t i = 0; i < notes;) {
         size_t j = i;
-        while (j < notes && standard_meter_q_compare(durations[j], durations[i]) == 0) {
+        while (j < notes && rational_cmp(durations[j], durations[i]) == 0) {
             j++;
         }
         if (claim->bin_count == STANDARD_METER_DENSITY_BINS) {
@@ -126,8 +137,8 @@ static void profile(const StandardMeterInput *input, const Member *members, size
             break;
         }
         StandardMeterDurationBin *bin = &claim->bins[claim->bin_count++];
-        bin->numerator = (long)durations[i].n;
-        bin->denominator = (unsigned long)durations[i].d;
+        bin->numerator = (long)durations[i].num;
+        bin->denominator = (unsigned long)durations[i].den;
         bin->count = (unsigned)(j - i);
         i = j;
     }
@@ -187,30 +198,32 @@ StandardMeterAnalysisStatus standard_meter_find_densities(const StandardMeterInp
     }
     StandardMeterAnalysisStatus status = STANDARD_METER_ANALYSIS_OK;
     for (size_t p = 0; status == STANDARD_METER_ANALYSIS_OK && p < input->phrase_count; p++) {
-        StandardMeterQ start;
-        StandardMeterQ end;
+        Rational start;
+        Rational end;
         int first = 0;
         int last = 0;
-        if (!standard_meter_span_q(input->phrases[p].span, &start, &end) || !standard_meter_measure_at(input->map, start, &first) ||
-            !standard_meter_last_measure_touched(input->map, end, &last)) {
+        if (!score_time_span(input->phrases[p].span, &start, &end) || meter_map_measure_of(input->map, start, &first) != METER_MAP_OK ||
+            meter_map_last_measure_touched(input->map, end, &last) != METER_MAP_OK) {
             continue;
         }
         size_t count = 0;
         size_t line_count = 0;
         for (size_t i = 0; i < input->note_count; i++) {
-            StandardMeterQ note_start;
-            StandardMeterQ note_end;
-            if (!standard_meter_span_q(input->notes[i].span, &note_start, &note_end)) {
+            Rational note_start;
+            Rational note_end;
+            if (!score_time_span(input->notes[i].span, &note_start, &note_end) ||
+                !standard_meter_snap_time(config, &note_start, false, NULL) ||
+                !standard_meter_snap_time(config, &note_end, true, NULL)) {
                 continue;
             }
-            note_start = standard_meter_snap(config, note_start, false, NULL);
-            note_end = standard_meter_snap(config, note_end, true, NULL);
-            if (standard_meter_q_compare(note_start, start) < 0 || standard_meter_q_compare(note_start, end) >= 0 ||
-                standard_meter_q_compare(note_end, note_start) <= 0) {
+            if (rational_cmp(note_start, start) < 0 || rational_cmp(note_start, end) >= 0 ||
+                rational_cmp(note_end, note_start) <= 0) {
                 continue;
             }
             members[count].start = note_start;
-            members[count].duration = standard_meter_q_sub(note_end, note_start);
+            if (rational_sub(note_end, note_start, &members[count].duration) != RATIONAL_OK) {
+                continue;
+            }
             members[count].line = input->notes[i].line;
             lines[line_count++] = input->notes[i].line;
             count++;

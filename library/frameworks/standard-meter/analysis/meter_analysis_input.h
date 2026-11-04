@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "core/rational.h"
 #include "semantics/analysis_note.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
@@ -103,6 +104,9 @@ typedef struct {
 /* The defaults: per line, 2 evidence types, a 1/32 grid with a 1/256 tolerance for attacks and 1/64 for releases. */
 StandardMeterConfig standard_meter_config_default(void);
 bool standard_meter_config_valid(const StandardMeterConfig *config);
+/* Snaps *time per the configuration (an attack, or a release with the wider tolerance); *changed (when not NULL) is set when it
+   moved. False when the snap does not fit a Rational; *time is then untouched. */
+bool standard_meter_snap_time(const StandardMeterConfig *config, Rational *time, bool release, bool *changed);
 
 StandardMeterAnalysisStatus standard_meter_input_init(StandardMeterInput *input, const MeterMap *map);
 

@@ -6,7 +6,26 @@
 
 #include "identity/entity_id.h"
 #include "mixed_texture_rules.h"
+#include "time/musical_time.h"
+#include "time/time_rational.h"
 #include "texture_analysis_claim.h"
+
+/* A new left-closed TimeSpan [start, end) the caller destroys, or NULL. */
+static TimeSpan *make_span(Rational start, Rational end) {
+    MusicalTime *from = NULL;
+    MusicalTime *to = NULL;
+    TimeSpan *span = NULL;
+    if (start.num >= 0 && end.num >= 0) {
+        from = musical_time_from_rational_or_null(start);
+        to = musical_time_from_rational_or_null(end);
+        if (from != NULL && to != NULL && time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) != TIME_SPAN_OK) {
+            span = NULL;
+        }
+    }
+    musical_time_destroy(from);
+    musical_time_destroy(to);
+    return span;
+}
 
 static double clip(double x) {
     return x < 0.0 ? 0.0 : (x > 1.0 ? 1.0 : x);
@@ -119,10 +138,10 @@ static StandardTextureAnalysisStatus build_passage(const StandardTextureAnalysis
         category = (StandardTexture)claim->texture;
     }
     claim->category = (int)category;
-    claim->start_n = windows[first].start.n;
-    claim->start_d = windows[first].start.d;
-    claim->end_n = windows[last].end.n;
-    claim->end_d = windows[last].end.d;
+    claim->start_n = windows[first].start.num;
+    claim->start_d = windows[first].start.den;
+    claim->end_n = windows[last].end.num;
+    claim->end_d = windows[last].end.den;
 
     size_t classified = 0;
     size_t with_notes = 0;
@@ -169,7 +188,7 @@ static StandardTextureAnalysisStatus build_passage(const StandardTextureAnalysis
         claim->pattern /= n;
     }
     out->uncertainty = 1.0 - clip(claim->confidence);
-    out->span = standard_texture_make_span(windows[first].start, windows[last].end);
+    out->span = make_span(windows[first].start, windows[last].end);
 
     char id[96];
     char interpretation_id[128];

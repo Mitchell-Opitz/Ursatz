@@ -9,6 +9,8 @@
 #include "meter_analysis_claim.h"
 #include "meter_analysis_time.h"
 #include "time/duration.h"
+#include "time/meter_arithmetic.h"
+#include "time/score_time.h"
 #include "time/tuplet.h"
 
 /* The finest grid a tuplet is read on: a twelfth of a whole note is a triplet eighth, a 24th a sixteenth triplet. The
@@ -17,11 +19,10 @@
 #define NATIVE_STEPS 3 /* TUPLET_GRID steps in one step of the library's 1/32 grid */
 
 /* True when the onset lies a whole number of beats after the base; false when the arithmetic does not fit. */
-static bool whole_beats_after(StandardMeterQ onset, StandardMeterQ base, StandardMeterQ beat, bool *whole) {
+static bool whole_beats_after(Rational onset, Rational base, Rational beat, bool *whole) {
     Rational offset;
     Rational beats;
-    if (rational_sub(rational_ratio(onset.n, onset.d), rational_ratio(base.n, base.d), &offset) != RATIONAL_OK ||
-        rational_div(offset, rational_ratio(beat.n, beat.d), &beats) != RATIONAL_OK) {
+    if (rational_sub(onset, base, &offset) != RATIONAL_OK || rational_div(offset, beat, &beats) != RATIONAL_OK) {
         return false;
     }
     *whole = beats.den == 1;
@@ -37,34 +38,34 @@ typedef enum {
 /* The time as a whole number of TUPLET_GRID steps, when it lies within a quarter of a step of one: the way a MIDI file's
    rounded times are read. GRID_OFF for a time further from the grid (a performance's rubato), which is then not read at
    all. GRID_OVERFLOW when the arithmetic does not fit. */
-static GridRead on_tuplet_grid(StandardMeterQ time, long long *steps) {
-    if (time.n > LLONG_MAX / TUPLET_GRID || time.n < LLONG_MIN / TUPLET_GRID || time.d > LLONG_MAX / 4 ||
-        time.d <= 0) {
+static GridRead on_tuplet_grid(Rational time, long long *steps) {
+    if (time.num > LLONG_MAX / TUPLET_GRID || time.num < LLONG_MIN / TUPLET_GRID || time.den > LLONG_MAX / 4 ||
+        time.den <= 0) {
         return GRID_OVERFLOW;
     }
-    long long scaled = time.n * TUPLET_GRID;
-    if (scaled > LLONG_MAX - time.d / 2) {
+    long long scaled = time.num * TUPLET_GRID;
+    if (scaled > LLONG_MAX - time.den / 2) {
         return GRID_OVERFLOW;
     }
-    long long nearest = (scaled + time.d / 2) / time.d;
-    if (nearest > LLONG_MAX / time.d) {
+    long long nearest = (scaled + time.den / 2) / time.den;
+    if (nearest > LLONG_MAX / time.den) {
         return GRID_OVERFLOW;
     }
-    long long off = scaled - nearest * time.d;
+    long long off = scaled - nearest * time.den;
     if (off < 0) {
         off = -off;
     }
     *steps = nearest;
-    return off * 4 <= time.d ? GRID_ON : GRID_OFF;
+    return off * 4 <= time.den ? GRID_ON : GRID_OFF;
 }
 
 typedef struct {
     size_t note;
     long long steps;         /* the attack, in steps of the tuplet grid */
-    StandardMeterQ onset;
+    Rational onset;
     long long next_steps;    /* the next attack, or -1 for the last */
-    StandardMeterQ duration; /* the note's length when its release is on the grid, otherwise 0 */
-    StandardMeterQ beat;     /* the length of the beat the note is attacked in */
+    Rational duration; /* the note's length when its release is on the grid, otherwise 0 */
+    Rational beat;           /* the length of the beat the note is attacked in */
     int division;            /* 2 (simple) or 3 (compound) */
     bool on_beat;
     size_t attack;           /* the position of the attack among the piece's attacks */
@@ -84,7 +85,7 @@ static int compare_tuplet_notes(const void *a, const void *b) {
 /* Reads a note's attack on the tuplet grid, and its release when that is on the grid too (a performer's articulation
    leaves it off, and the library's own release snap would pull a triplet's onto its 1/32 grid, so the raw release is
    rounded here). GRID_OFF when the attack is off the grid or the meter has no beat to read against. */
-static GridRead read_tuplet_note(const MeterMap *map, StandardMeterQ onset, StandardMeterQ release, TupletNote *note) {
+static GridRead read_tuplet_note(const MeterMap *map, Rational onset, Rational release, TupletNote *note) {
     long long release_steps = 0;
     int measure = 0;
     StandardMeterMeasureGrid grid;
@@ -92,15 +93,20 @@ static GridRead read_tuplet_note(const MeterMap *map, StandardMeterQ onset, Stan
     if (read != GRID_ON) {
         return read;
     }
-    note->onset = standard_meter_q(note->steps, TUPLET_GRID);
+    note->duration = rational_ratio(0, 1);
+    if (rational_make(note->steps, TUPLET_GRID, &note->onset) != RATIONAL_OK) {
+        return GRID_OVERFLOW;
+    }
     read = on_tuplet_grid(release, &release_steps);
     if (read == GRID_OVERFLOW) {
         return read;
     }
     if (read == GRID_ON && release_steps > note->steps) {
-        note->duration = standard_meter_q(release_steps - note->steps, TUPLET_GRID);
+        if (rational_make(release_steps - note->steps, TUPLET_GRID, &note->duration) != RATIONAL_OK) {
+            return GRID_OVERFLOW;
+        }
     }
-    if (!standard_meter_measure_at(map, note->onset, &measure) || !standard_meter_measure_grid(map, measure, &grid) ||
+    if (meter_map_measure_of(map, note->onset, &measure) != METER_MAP_OK || !standard_meter_measure_grid(map, measure, &grid) ||
         (grid.division != 2 && grid.division != 3)) {
         return GRID_OFF;
     }
@@ -151,19 +157,24 @@ static void mark_duplets(TupletNote *notes, size_t count) {
         if (notes[k].division != 3 || !notes[k].on_beat) {
             continue;
         }
-        StandardMeterQ half = standard_meter_q_div_int(notes[k].beat, 2);
-        StandardMeterQ later = standard_meter_q_add(notes[k].onset, half);
-        for (size_t j = k + 1; j < count && standard_meter_q_compare(notes[j].onset, later) <= 0; j++) {
-            if (standard_meter_q_compare(notes[j].onset, later) != 0) {
+        Rational half;
+        Rational later;
+        Rational after_later;
+        if (rational_div_int(notes[k].beat, 2, &half) != RATIONAL_OK || rational_add(notes[k].onset, half, &later) != RATIONAL_OK ||
+            rational_add(later, half, &after_later) != RATIONAL_OK) {
+            continue;
+        }
+        for (size_t j = k + 1; j < count && rational_cmp(notes[j].onset, later) <= 0; j++) {
+            if (rational_cmp(notes[j].onset, later) != 0) {
                 continue;
             }
-            bool next_is_half =
-                notes[j].next_steps >= 0 && standard_meter_q_compare(standard_meter_q(notes[j].next_steps, TUPLET_GRID),
-                                                                       standard_meter_q_add(later, half)) == 0;
-            bool lasts_half = standard_meter_q_compare(notes[j].duration, half) == 0;
-            if (notes[k].next_steps >= 0 &&
-                standard_meter_q_compare(standard_meter_q(notes[k].next_steps, TUPLET_GRID), later) == 0 &&
-                (next_is_half || lasts_half)) {
+            Rational next_attack;
+            Rational own_next;
+            bool next_is_half = notes[j].next_steps >= 0 && rational_make(notes[j].next_steps, TUPLET_GRID, &next_attack) == RATIONAL_OK &&
+                                rational_cmp(next_attack, after_later) == 0;
+            bool lasts_half = rational_cmp(notes[j].duration, half) == 0;
+            if (notes[k].next_steps >= 0 && rational_make(notes[k].next_steps, TUPLET_GRID, &own_next) == RATIONAL_OK &&
+                rational_cmp(own_next, later) == 0 && (next_is_half || lasts_half)) {
                 for (size_t m = 0; m < 2; m++) {
                     TupletNote *marked = m == 0 ? &notes[k] : &notes[j];
                     if (marked->actual == 0) {
@@ -183,9 +194,9 @@ typedef struct {
     size_t count;
     unsigned attacks;
     size_t last_attack;      /* the attack number of the latest attack of the run */
-    StandardMeterQ first;    /* the first attack */
-    StandardMeterQ end;      /* where the latest attack's note leads: the next attack, or its release */
-    StandardMeterQ group_end;
+    Rational first;          /* the first attack */
+    Rational end;            /* where the latest attack's note leads: the next attack, or its release */
+    Rational group_end;
     bool has_group_end;
 } TupletRun;
 
@@ -229,12 +240,12 @@ static bool emit_run(StandardMeterTuplet **items, size_t *count, size_t *capacit
         item->beat = beat;
     }
     const MeterMapRegion *region = NULL;
-    StandardMeterQ at_q = standard_meter_q(0, 1);
-    StandardMeterQ end_q = standard_meter_q(0, 1);
+    Rational at_q = rational_ratio(0, 1);
+    Rational end_q = rational_ratio(0, 1);
     Tuplet *tuplet = NULL;
-    if (standard_meter_span_q(notes->notes[run->notes[0]].span, &at_q, &end_q)) {
+    if (score_time_span(notes->notes[run->notes[0]].span, &at_q, &end_q)) {
         MusicalTime *at = NULL;
-        if (at_q.n >= 0 && musical_time_create((long)at_q.n, (unsigned long)at_q.d, &at) == MUSICAL_TIME_OK) {
+        if (at_q.num >= 0 && musical_time_create((long)at_q.num, (unsigned long)at_q.den, &at) == MUSICAL_TIME_OK) {
             if (meter_map_region_at(notes->map, at, &region) != METER_MAP_OK) {
                 region = NULL;
             }
@@ -246,11 +257,12 @@ static bool emit_run(StandardMeterTuplet **items, size_t *count, size_t *capacit
         MeterType type = standard_meter_type(signature);
         item->meter = type;
         item->borrowed = standard_meter_tuplet_borrowed(tuplet, type);
-        StandardMeterQ end = run->has_group_end ? run->group_end : run->end;
-        StandardMeterQ span = standard_meter_q_sub(end, run->first);
+        Rational end = run->has_group_end ? run->group_end : run->end;
+        Rational span;
         Duration *duration = NULL;
         TupletLevel level;
-        if (span.n > 0 && duration_create((long)span.n, (unsigned long)span.d, &duration) == DURATION_OK) {
+        if (rational_sub(end, run->first, &span) == RATIONAL_OK && span.num > 0 &&
+            duration_create((long)span.num, (unsigned long)span.den, &duration) == DURATION_OK) {
             if (standard_meter_tuplet_level(signature, duration, &level)) {
                 item->has_level = true;
                 item->level = level;
@@ -278,8 +290,11 @@ static bool collect_runs(StandardMeterTuplet **items, size_t *count, size_t *cap
         if (note->actual != actual || note->normal != normal) {
             continue;
         }
-        StandardMeterQ end = note->next_steps >= 0 ? standard_meter_q(note->next_steps, TUPLET_GRID)
-                                                   : standard_meter_q_add(note->onset, note->duration);
+        Rational end;
+        if ((note->next_steps >= 0 ? rational_make(note->next_steps, TUPLET_GRID, &end)
+                                   : rational_add(note->onset, note->duration, &end)) != RATIONAL_OK) {
+            continue;
+        }
         if (open && note->attack == run.last_attack) {
             /* another note of the same attack */
         } else if (open && note->attack == run.last_attack + 1) {
@@ -346,15 +361,15 @@ StandardMeterAnalysisStatus standard_meter_find_tuplets(const AnalysisNoteSet *n
         if (in_line != NULL && !in_line[i]) {
             continue;
         }
-        StandardMeterQ onset;
-        StandardMeterQ release;
-        if (!standard_meter_span_q(notes->notes[i].span, &onset, &release)) {
+        Rational onset;
+        Rational release;
+        if (!score_time_span(notes->notes[i].span, &onset, &release) || !standard_meter_snap_time(&config, &onset, false, NULL)) {
             continue;
         }
         TupletNote *note = &stream[stream_count];
         memset(note, 0, sizeof(*note));
         note->note = i;
-        GridRead read = read_tuplet_note(notes->map, standard_meter_snap(&config, onset, false, NULL), release, note);
+        GridRead read = read_tuplet_note(notes->map, onset, release, note);
         if (read == GRID_ON) {
             stream_count++;
         } else if (read == GRID_OVERFLOW) {

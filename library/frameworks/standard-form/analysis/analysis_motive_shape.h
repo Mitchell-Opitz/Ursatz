@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "analysis_input.h"
-#include "analysis_time.h"
+#include "core/rational.h"
 
 /*
  * Internal to the motive analysis: a line of notes prepared for windowing, and the SHAPE of a window (its interval sequences and its
@@ -19,7 +19,7 @@ typedef struct StandardFormMotiveShape {
     size_t intervals;             /* notes - 1 */
     int steps[STANDARD_FORM_MOTIVE_MAX_INTERVALS];     /* the pattern's intervals, signed */
     int semitones[STANDARD_FORM_MOTIVE_MAX_INTERVALS]; /* always the semitone intervals */
-    StandardFormQ ioi[STANDARD_FORM_MOTIVE_MAX_INTERVALS]; /* onset to onset */
+    Rational ioi[STANDARD_FORM_MOTIVE_MAX_INTERVALS]; /* onset to onset */
     long first_semitone;
 } StandardFormMotiveShape;
 
@@ -27,8 +27,8 @@ typedef struct {
     const StandardFormNote *notes; /* borrowed */
     size_t count;
     int line;                      /* 0 soprano, 1 bass */
-    StandardFormQ *start;          /* owned arrays, one entry per note */
-    StandardFormQ *end;
+    Rational *start;          /* owned arrays, one entry per note */
+    Rational *end;
     int *first_measure;
     bool *can_start;               /* the first note of an idea, or on a beat */
     bool *has_generic;             /* the generic interval to the next note is known */

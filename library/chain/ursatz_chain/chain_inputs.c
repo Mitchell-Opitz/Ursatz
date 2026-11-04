@@ -763,13 +763,13 @@ ChainInputStatus chain_build_form_input(const AnalysisNoteSet *notes, const Chai
 
 typedef struct {
     size_t index; /* into the note set */
-    StandardFormQ start;
-    StandardFormQ end;
+    Rational start;
+    Rational end;
     long semitone;
 } MotiveNote;
 
-static StandardFormQ q_of_time(const MusicalTime *time) {
-    return standard_form_q(musical_time_numerator(time), (long long)musical_time_denominator(time));
+static Rational q_of_time(const MusicalTime *time) {
+    return rational_ratio(musical_time_numerator(time), (long long)musical_time_denominator(time));
 }
 
 static bool parse_degree(const char *label, int *degree, int *alteration) {

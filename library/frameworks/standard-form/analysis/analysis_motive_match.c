@@ -2,6 +2,8 @@
 
 #include <string.h>
 
+#include "core/rational.h"
+
 static bool comparable(const StandardFormMotiveShape *a, const StandardFormMotiveShape *b) {
     return a != NULL && b != NULL && a->generic == b->generic && a->intervals == b->intervals && a->intervals > 0;
 }
@@ -18,7 +20,7 @@ static void full(StandardFormMotiveMatch *out, StandardFormMotiveKind kind, size
 
 static bool same_rhythm(const StandardFormMotiveShape *a, const StandardFormMotiveShape *b) {
     for (size_t i = 0; i < a->intervals; i++) {
-        if (standard_form_q_compare(a->ioi[i], b->ioi[i]) != 0) {
+        if (rational_cmp(a->ioi[i], b->ioi[i]) != 0) {
             return false;
         }
     }
@@ -63,7 +65,7 @@ bool standard_form_motive_match_retrograde(const StandardFormMotiveShape *protot
     size_t n = prototype->intervals;
     for (size_t i = 0; i < n; i++) {
         if (candidate->steps[i] != -prototype->steps[n - 1 - i] ||
-            standard_form_q_compare(candidate->ioi[i], prototype->ioi[n - 1 - i]) != 0) {
+            rational_cmp(candidate->ioi[i], prototype->ioi[n - 1 - i]) != 0) {
             return false;
         }
     }

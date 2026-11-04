@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "time/score_time.h"
+
 StandardMeterConfig standard_meter_config_default(void) {
     StandardMeterConfig config = {false, 2, 32, 256, 64};
     return config;
@@ -12,6 +14,22 @@ bool standard_meter_config_valid(const StandardMeterConfig *config) {
     return config != NULL && config->hemiola_min_evidence >= 1 && config->hemiola_min_evidence <= 3 &&
            config->onset_grid_denominator >= 1 && config->onset_tolerance_denominator >= 2 * config->onset_grid_denominator &&
            config->release_tolerance_denominator >= 2 * config->onset_grid_denominator;
+}
+
+bool standard_meter_snap_time(const StandardMeterConfig *config, Rational *time, bool release, bool *changed) {
+    if (changed != NULL) {
+        *changed = false;
+    }
+    if (config == NULL || time == NULL) {
+        return false;
+    }
+    unsigned tolerance = release ? config->release_tolerance_denominator : config->onset_tolerance_denominator;
+    Rational snapped;
+    if (!score_time_snap(*time, config->onset_grid_denominator, tolerance, &snapped, changed)) {
+        return false;
+    }
+    *time = snapped;
+    return true;
 }
 
 StandardMeterAnalysisStatus standard_meter_input_init(StandardMeterInput *input, const MeterMap *map) {

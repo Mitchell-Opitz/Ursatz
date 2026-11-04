@@ -7,44 +7,47 @@
 #include "hemiola_rules.h"
 #include "meter_analysis_claim.h"
 #include "meter_analysis_time.h"
+#include "time/meter_arithmetic.h"
+#include "time/score_time.h"
+#include "time/time_rational.h"
 
 typedef struct {
-    StandardMeterQ start;
-    StandardMeterQ end;
+    Rational start;
+    Rational end;
     size_t note;
 } Item;
 
 static int compare_items(const void *a, const void *b) {
     const Item *left = (const Item *)a;
     const Item *right = (const Item *)b;
-    int by_start = standard_meter_q_compare(left->start, right->start);
+    int by_start = rational_cmp(left->start, right->start);
     return by_start != 0 ? by_start : (left->note > right->note) - (left->note < right->note);
 }
 
 static int compare_times(const void *a, const void *b) {
-    return standard_meter_q_compare(*(const StandardMeterQ *)a, *(const StandardMeterQ *)b);
+    return rational_cmp(*(const Rational *)a, *(const Rational *)b);
 }
 
 /* The index of the pulse `time` is on in a window starting at `start`, or -1 when it is not on a pulse of the window. */
-static int pulse_index(StandardMeterQ start, StandardMeterQ pulse, StandardMeterQ time) {
-    StandardMeterQ offset = standard_meter_q_sub(time, start);
-    if (offset.n < 0) {
+static int pulse_index(Rational start, Rational pulse, Rational time) {
+    Rational offset;
+    Rational steps;
+    if (rational_sub(time, start, &offset) != RATIONAL_OK || offset.num < 0 || rational_div(offset, pulse, &steps) != RATIONAL_OK) {
         return -1;
     }
-    StandardMeterQ steps = standard_meter_q(offset.n * pulse.d, offset.d * pulse.n);
-    if (steps.d != 1 || steps.n >= STANDARD_METER_HEMIOLA_PULSES) {
+    if (steps.den != 1 || steps.num >= STANDARD_METER_HEMIOLA_PULSES) {
         return -1;
     }
-    return (int)steps.n;
+    return (int)steps.num;
 }
 
 /* The first index of `array` whose time is at or after `time`. */
-static size_t lower_bound_items(const Item *items, size_t count, StandardMeterQ time) {
+static size_t lower_bound_items(const Item *items, size_t count, Rational time) {
     size_t low = 0;
     size_t high = count;
     while (low < high) {
         size_t mid = low + (high - low) / 2;
-        if (standard_meter_q_compare(items[mid].start, time) < 0) {
+        if (rational_cmp(items[mid].start, time) < 0) {
             low = mid + 1;
         } else {
             high = mid;
@@ -53,12 +56,12 @@ static size_t lower_bound_items(const Item *items, size_t count, StandardMeterQ 
     return low;
 }
 
-static size_t lower_bound_times(const StandardMeterQ *times, size_t count, StandardMeterQ time) {
+static size_t lower_bound_times(const Rational *times, size_t count, Rational time) {
     size_t low = 0;
     size_t high = count;
     while (low < high) {
         size_t mid = low + (high - low) / 2;
-        if (standard_meter_q_compare(times[mid], time) < 0) {
+        if (rational_cmp(times[mid], time) < 0) {
             low = mid + 1;
         } else {
             high = mid;
@@ -68,7 +71,7 @@ static size_t lower_bound_times(const StandardMeterQ *times, size_t count, Stand
 }
 
 static StandardMeterAnalysisStatus emit_window(const StandardMeterInput *input, const Item *items, size_t count,
-                                               StandardMeterQ window_start, StandardMeterQ window_end, StandardMeterQ pulse,
+                                               Rational window_start, Rational window_end, Rational pulse,
                                                const StandardMeterHemiolaClaim *claim, StandardMeterHemiolas *found,
                                                size_t *capacity) {
     const char **ids = (const char **)malloc((count == 0 ? 1 : count) * sizeof(char *));
@@ -77,7 +80,7 @@ static StandardMeterAnalysisStatus emit_window(const StandardMeterInput *input, 
     }
     size_t n = 0;
     for (size_t i = lower_bound_items(items, count, window_start); i < count; i++) {
-        if (standard_meter_q_compare(items[i].start, window_end) >= 0) {
+        if (rational_cmp(items[i].start, window_end) >= 0) {
             break;
         }
         if (pulse_index(window_start, pulse, items[i].start) >= 0) {
@@ -133,44 +136,48 @@ StandardMeterAnalysisStatus standard_meter_find_hemiolas(const StandardMeterInpu
         return STANDARD_METER_ANALYSIS_OK;
     }
     Item *items = (Item *)malloc(input->note_count * sizeof(Item));
-    StandardMeterQ *changes = (StandardMeterQ *)malloc((input->chord_change_count == 0 ? 1 : input->chord_change_count) * sizeof(*changes));
+    Rational *changes = (Rational *)malloc((input->chord_change_count == 0 ? 1 : input->chord_change_count) * sizeof(*changes));
     if (items == NULL || changes == NULL) {
         free(items);
         free(changes);
         return STANDARD_METER_ANALYSIS_ERR_ALLOC;
     }
     size_t count = 0;
-    StandardMeterQ last_end = standard_meter_q(0, 1);
+    Rational last_end = rational_ratio(0, 1);
     for (size_t i = 0; i < input->note_count; i++) {
-        StandardMeterQ start;
-        StandardMeterQ end;
-        if (!standard_meter_span_q(input->notes[i].span, &start, &end)) {
+        Rational start;
+        Rational end;
+        if (!score_time_span(input->notes[i].span, &start, &end) || !standard_meter_snap_time(config, &start, false, NULL) ||
+            !standard_meter_snap_time(config, &end, true, NULL)) {
             continue;
         }
-        start = standard_meter_snap(config, start, false, NULL);
-        end = standard_meter_snap(config, end, true, NULL);
-        if (standard_meter_q_compare(end, start) <= 0) {
+        if (rational_cmp(end, start) <= 0) {
             continue;
         }
         items[count].start = start;
         items[count].end = end;
         items[count].note = i;
         count++;
-        if (standard_meter_q_compare(end, last_end) > 0) {
+        if (rational_cmp(end, last_end) > 0) {
             last_end = end;
         }
     }
     size_t change_count = 0;
     for (size_t i = 0; i < input->chord_change_count; i++) {
-        changes[change_count++] = standard_meter_snap(config, standard_meter_q_of_time(input->chord_changes[i].time), false, NULL);
+        Rational at;
+        if (rational_of_musical_time(input->chord_changes[i].time, &at) != RATIONAL_OK ||
+            !standard_meter_snap_time(config, &at, false, NULL)) {
+            continue;
+        }
+        changes[change_count++] = at;
     }
     qsort(items, count, sizeof(Item), compare_items);
-    qsort(changes, change_count, sizeof(StandardMeterQ), compare_times);
+    qsort(changes, change_count, sizeof(Rational), compare_times);
 
     StandardMeterAnalysisStatus status = STANDARD_METER_ANALYSIS_OK;
     int first = meter_map_has_pickup(input->map) ? 1 : meter_map_first_measure_number(input->map);
     int last = first;
-    if (count == 0 || !standard_meter_last_measure_touched(input->map, last_end, &last)) {
+    if (count == 0 || meter_map_last_measure_touched(input->map, last_end, &last) != METER_MAP_OK) {
         last = first - 1;
     }
     for (int measure = first; status == STANDARD_METER_ANALYSIS_OK && measure <= last;) {
@@ -184,26 +191,34 @@ StandardMeterAnalysisStatus standard_meter_find_hemiolas(const StandardMeterInpu
             measure++;
             continue;
         }
-        StandardMeterQ pulse = standard_meter_q(duration_numerator(pulse_duration), (long long)duration_denominator(pulse_duration));
+        Rational pulse;
+        bool pulse_ok = rational_make(duration_numerator(pulse_duration), (long long)duration_denominator(pulse_duration), &pulse) ==
+                        RATIONAL_OK;
         duration_destroy(pulse_duration);
+        if (!pulse_ok) {
+            measure++;
+            continue;
+        }
 
-        StandardMeterQ window_start = standard_meter_q(0, 1);
-        StandardMeterQ window_end = standard_meter_q(0, 1);
-        bool full = standard_meter_measure_bounds(input->map, measure, &window_start, NULL);
+        Rational window_start = rational_ratio(0, 1);
+        Rational window_end = rational_ratio(0, 1);
+        bool full = score_time_measure_bounds(input->map, measure, &window_start, NULL);
         for (unsigned k = 0; full && k < span; k++) {
             const MeterMapRegion *other = NULL;
-            StandardMeterQ start;
-            StandardMeterQ end;
+            Rational start;
+            Rational end;
             full = meter_map_region_of_measure(input->map, measure + (int)k, &other) == METER_MAP_OK && other == region &&
-                   standard_meter_measure_bounds(input->map, measure + (int)k, &start, &end);
+                   score_time_measure_bounds(input->map, measure + (int)k, &start, &end);
             if (full) {
                 window_end = end;
             }
         }
         /* six whole pulses, so no short measure is inside */
-        if (!full ||
-            standard_meter_q_compare(standard_meter_q_sub(window_end, window_start),
-                                     standard_meter_q_mul_int(pulse, STANDARD_METER_HEMIOLA_PULSES)) != 0) {
+        Rational window_length;
+        Rational six_pulses;
+        if (!full || rational_sub(window_end, window_start, &window_length) != RATIONAL_OK ||
+            rational_mul_int(pulse, STANDARD_METER_HEMIOLA_PULSES, &six_pulses) != RATIONAL_OK ||
+            rational_cmp(window_length, six_pulses) != 0) {
             measure++;
             continue;
         }
@@ -211,9 +226,13 @@ StandardMeterAnalysisStatus standard_meter_find_hemiolas(const StandardMeterInpu
         bool attack[STANDARD_METER_HEMIOLA_PULSES] = {false};
         bool long_onset[STANDARD_METER_HEMIOLA_PULSES] = {false};
         bool change[STANDARD_METER_HEMIOLA_PULSES] = {false};
-        StandardMeterQ long_length = standard_meter_q_mul_int(pulse, 2);
+        Rational long_length;
+        if (rational_mul_int(pulse, 2, &long_length) != RATIONAL_OK) {
+            measure++;
+            continue;
+        }
         for (size_t i = lower_bound_items(items, count, window_start); i < count; i++) {
-            if (standard_meter_q_compare(items[i].start, window_end) >= 0) {
+            if (rational_cmp(items[i].start, window_end) >= 0) {
                 break;
             }
             int index = pulse_index(window_start, pulse, items[i].start);
@@ -221,12 +240,13 @@ StandardMeterAnalysisStatus standard_meter_find_hemiolas(const StandardMeterInpu
                 continue;
             }
             attack[index] = true;
-            if (standard_meter_q_compare(standard_meter_q_sub(items[i].end, items[i].start), long_length) >= 0) {
+            Rational length;
+            if (rational_sub(items[i].end, items[i].start, &length) == RATIONAL_OK && rational_cmp(length, long_length) >= 0) {
                 long_onset[index] = true;
             }
         }
         for (size_t i = lower_bound_times(changes, change_count, window_start); i < change_count; i++) {
-            if (standard_meter_q_compare(changes[i], window_end) >= 0) {
+            if (rational_cmp(changes[i], window_end) >= 0) {
                 break;
             }
             int index = pulse_index(window_start, pulse, changes[i]);

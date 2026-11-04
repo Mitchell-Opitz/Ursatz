@@ -2,7 +2,8 @@
 
 #include <math.h>
 
-#include "analysis_time.h"
+#include "core/rational.h"
+#include "time/score_time.h"
 
 bool standard_form_idea_similarity(const StandardFormNote *a, size_t a_count, const StandardFormNote *b, size_t b_count,
                                    double similarity_min, StandardFormSimilarity *out) {
@@ -18,17 +19,21 @@ bool standard_form_idea_similarity(const StandardFormNote *a, size_t a_count, co
         result.comparable = true;
         result.positions = a_intervals > b_intervals ? a_intervals : b_intervals;
         for (size_t i = 0; i < shared; i++) {
-            StandardFormQ a_from;
-            StandardFormQ a_to;
-            StandardFormQ b_from;
-            StandardFormQ b_to;
-            if (!standard_form_span_q(a[i].span, &a_from, NULL) || !standard_form_span_q(a[i + 1].span, &a_to, NULL) ||
-                !standard_form_span_q(b[i].span, &b_from, NULL) || !standard_form_span_q(b[i + 1].span, &b_to, NULL)) {
+            Rational a_from;
+            Rational a_to;
+            Rational b_from;
+            Rational b_to;
+            if (!score_time_span(a[i].span, &a_from, NULL) || !score_time_span(a[i + 1].span, &a_to, NULL) ||
+                !score_time_span(b[i].span, &b_from, NULL) || !score_time_span(b[i + 1].span, &b_to, NULL)) {
                 return false;
             }
             bool same_interval = a[i + 1].semitone - a[i].semitone == b[i + 1].semitone - b[i].semitone;
-            bool same_rhythm =
-                standard_form_q_compare(standard_form_q_sub(a_to, a_from), standard_form_q_sub(b_to, b_from)) == 0;
+            Rational a_length;
+            Rational b_length;
+            if (rational_sub(a_to, a_from, &a_length) != RATIONAL_OK || rational_sub(b_to, b_from, &b_length) != RATIONAL_OK) {
+                return false;
+            }
+            bool same_rhythm = rational_cmp(a_length, b_length) == 0;
             if (same_interval && same_rhythm) {
                 result.matched++;
             }

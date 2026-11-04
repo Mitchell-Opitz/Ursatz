@@ -3,6 +3,7 @@
 
 #include <stdbool.h>
 
+#include "core/rational.h"
 #include "meter_analysis_input.h"
 #include "standard-meter/metric_position_rules.h"
 
@@ -45,10 +46,10 @@ bool standard_meter_last_measure_touched(const MeterMap *map, StandardMeterQ end
  * `base`, where a full measure with this reading would start (equal to `start` except in a pickup).
  */
 typedef struct {
-    StandardMeterQ start;
-    StandardMeterQ end;
-    StandardMeterQ base;
-    StandardMeterQ beat;
+    Rational start;
+    Rational end;
+    Rational base;
+    Rational beat;
     unsigned beats;
     unsigned division;
 } StandardMeterMeasureGrid;
@@ -56,8 +57,8 @@ typedef struct {
 bool standard_meter_measure_grid(const MeterMap *map, int index, StandardMeterMeasureGrid *grid);
 
 /* The metric level of `time`, as metric_position_rules.h reads it. */
-bool standard_meter_level_at(const MeterMap *map, StandardMeterQ time, StandardMeterLevel *level);
+bool standard_meter_level_at(const MeterMap *map, Rational time, StandardMeterLevel *level);
 /* The measure of `time` and the beat in it, 1-based and fractional (beat 2 and a half is 2.5). */
-bool standard_meter_beat_of(const MeterMap *map, StandardMeterQ time, int *measure, double *beat);
+bool standard_meter_beat_of(const MeterMap *map, Rational time, int *measure, double *beat);
 
 #endif
