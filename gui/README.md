@@ -256,8 +256,8 @@ builders (motif picker, pool, accompaniment and brief in `themes-view.js`).
   the end of its lane. Selecting a block opens its editor: letter, length (a
   bars and a beats input, giving beats), pickup (beats of anacrusis, `0` for
   none, or `n` or `n/d` such as `1` and `1/2`; the choices are the Composer's for the meter, 2/4 has no `2`), cadence
-  (Default shows the default, R-169: HC at the end of the intro and of the
-  loop, PAC at the end of the ending, IAC elsewhere), Move left and Move right
+  (Default shows the cadence the Composer gives a section that has none, from the validate reply and asked again
+  when the structure changes; the GUI computes none, so the label reads plain Default until the reply is in), Move left and Move right
   within the part, and Remove section. A piece has at least one section in the
   loop body (the Composer holds the largest number of sections and beats).
 - Fill: Empty, Motif, Theme or Progression. Any fill may be left empty and
@@ -1121,18 +1121,19 @@ remoteness is measured from the basic motive, not from the parent.
 
 #### Random motifs
 
-The New Motif page has a Random section with one button and no fields. Random draws one motif: the seed is drawn,
-and the mode (major or minor) and the meter (`4/4`, `3/4`, `2/4` or `6/8`) are drawn from the seed, form full, key C in
-the mode, no style. Its score is shown at full width in the score workspace with playback (nothing stored), with
+The New Motif page has a Random section with one button and no fields. Random draws one motif: the seed is drawn
+and sent with `mode` and `meter` set to `random`; the Composer draws the mode (major or minor) and the meter (`4/4`,
+`3/4`, `2/4` or `6/8`) from the seed and answers them as `drawn`, form full, no key (the Composer writes C major or A
+minor), no style. Its score is shown at full width in the score workspace with playback (nothing stored), with
 Reroll (the next seed, which draws its own mode and meter) and Use, which fills the editor above (notes, mode, meter,
 pickup) to name and save; nothing is stored until Save. The backend fills in the analysis and degrees as for any motif.
 
 - `POST /api/materials/motifs/random` `{mode, meter, key?, form?, role?, style_id?, count?, seed?}` calls the Composer's
-  `composer_api_random_motive` and answers its JSON (`seed`, `motives`) plus `ok`. `mode` is `major` or `minor`, `meter` is like
-  `3/4`, `key` is like `D minor`, `count` is 1 to 16, `seed` a whole number from 0. A bad input or an unknown style is
-  400. The style model path comes from `ursatz_gui_style_model_path`.
-- Pure helpers in `materials-model.js`: `randomSettings` (mode and meter from a seed), `randomRequest` (one motif),
-  `randomCandidateToBody`,
+  `composer_api_random_motive` and answers its JSON (`seed`, `motives`, and `drawn` when `mode` or `meter` was `random`) plus
+  `ok`. `mode` is `major`, `minor` or `random`, `meter` is like `3/4` or `random`, `key` is like `D minor`, `count` is 1 to
+  16, `seed` a whole number from 0 (the Composer holds its upper limit). A bad input or an unknown style is 400. The style model path comes from `ursatz_gui_style_model_path`.
+- Pure helpers in `materials-model.js`: `randomRequest` (one motif), `drawnSettings` (the mode and meter the answer
+  names), `randomCandidateToBody`,
   `candidateKeyText`, `rerollSeed`.
 
 ### Subjects
