@@ -50,9 +50,8 @@
  * both I {1,3,5} and vi {6,1,3}) -- this replaces the exact-match
  * version's guarantee that at most one triad could ever match. When
  * that happens, the first match found in TRIAD_DEGREES scan order
- * (I, ii, iii, IV, V, vi, vii dim) wins, and the ambiguity is only
- * logged to stderr (see triad_identification.c), not surfaced through
- * this function's return value -- known limitation, not fixed here.
+ * (I, ii, iii, IV, V, vi, vii dim) wins, and the ambiguity is
+ * reported through common_practice_identify_triad_ex (out_ambiguous).
  * A real confidence-weighted or duration-weighted tie-break is out of
  * scope for this pass, planned for later.
  */
@@ -66,6 +65,13 @@
  * contain any of this framework's seven triads.
  */
 bool common_practice_identify_triad(const int *scale_degrees, size_t scale_degree_count, CommonPracticeTriad *out);
+
+/*
+ * As common_practice_identify_triad, and sets *out_ambiguous (may be NULL) to true when more than one
+ * triad fits the input; *out is then the first match in scan order. *out_ambiguous is false on no match.
+ */
+bool common_practice_identify_triad_ex(const int *scale_degrees, size_t scale_degree_count, CommonPracticeTriad *out,
+                                       bool *out_ambiguous);
 
 /*
  * Convenience: identifies the triad per common_practice_identify_triad

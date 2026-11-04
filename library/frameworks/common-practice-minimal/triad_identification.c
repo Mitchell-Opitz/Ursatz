@@ -2,7 +2,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>
 
 #define TRIAD_DEGREE_COUNT 3
 
@@ -42,7 +41,11 @@ static size_t count_distinct(const int *scale_degrees, size_t scale_degree_count
     return distinct_count;
 }
 
-bool common_practice_identify_triad(const int *scale_degrees, size_t scale_degree_count, CommonPracticeTriad *out) {
+bool common_practice_identify_triad_ex(const int *scale_degrees, size_t scale_degree_count, CommonPracticeTriad *out,
+                                          bool *out_ambiguous) {
+    if (out_ambiguous != NULL) {
+        *out_ambiguous = false;
+    }
     if (scale_degrees == NULL || out == NULL) {
         return false;
     }
@@ -69,11 +72,8 @@ bool common_practice_identify_triad(const int *scale_degrees, size_t scale_degre
         if (!found) {
             found = true;
             picked = (CommonPracticeTriad)triad;
-        } else {
-            fprintf(stderr,
-                    "common_practice_identify_triad: ambiguous subset match -- picked %s, also fits %s "
-                    "(scan-order tie-break, see triad_identification.h)\n",
-                    common_practice_triad_label(picked), common_practice_triad_label((CommonPracticeTriad)triad));
+        } else if (out_ambiguous != NULL) {
+            *out_ambiguous = true;
         }
     }
 
@@ -82,6 +82,10 @@ bool common_practice_identify_triad(const int *scale_degrees, size_t scale_degre
     }
     *out = picked;
     return true;
+}
+
+bool common_practice_identify_triad(const int *scale_degrees, size_t scale_degree_count, CommonPracticeTriad *out) {
+    return common_practice_identify_triad_ex(scale_degrees, scale_degree_count, out, NULL);
 }
 
 bool common_practice_identify_triad_chord(const int *scale_degrees, size_t scale_degree_count,
