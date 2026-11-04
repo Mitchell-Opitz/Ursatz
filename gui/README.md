@@ -49,6 +49,7 @@ a monolithic application.
   Library pieces link to (see Subjects views, below).
 - **Motifs**, **Themes**, **Pieces**: the items of the material store (see
   Materials views, below).
+- **Motive links**: the links between motives of pieces and items (see Motive links view, below).
 - **Health**: last entry in the sidebar. Shows the backend health check; a
   failed check appears only here.
 
@@ -64,8 +65,7 @@ remembered in the browser. Each view lists its items (name, project, current
 version, updated) with a New row (name and project). A row opens the detail:
 the name and project are editable, the uses are listed, and the versions list
 (number, date, note) lets any version be viewed read-only. Themes and pieces
-have body editors (below). Subjects and item references come in later
-branches.
+have body editors (below). Subjects and item references are described below.
 
 #### Motif editor
 
@@ -1907,12 +1907,12 @@ the list, delete and a piece's links.
 re-analyses of one piece while a reader checks that each detail, score and playback reply parses and that the
 document's meter matches the notation override returned with it, and deletes during reads.
 `test_piece_metadata` covers the normalizing, grouping and
-filter rules without a server. `test_material_service` covers the projects,
+filter rules without a server. `test_piece_snapshot` compares a piece's detail, score and playback replies with the snapshots in `backend/tests/fixtures/pieces`. `test_stale_analysis` covers the stale-analysis rules (Staleness keys, above). `test_material_service` covers the projects,
 items, versions, version body rules and item references without a server. `style-view.test.js` covers the style detail
 rows (order, fractions, "and n more") and `piece-metadata.test.js` the style
 names and request bodies. `test_job_queue` covers the queue without a server: a job's answer and kind, progress seen
 while it runs, the cancel of a running theme compose (it ends `cancelled`) and of a queued job, two workers running two
-jobs at once, and stop joining the workers. `backend-jobs.test.js` covers the job client with a fake fetch. `test_materials_route` replays 36 requests captured while the Composer still ran as a command (`backend/tests/fixtures/composer/b5_replies.json`: motif analysis, degrees to notes, MIDI import, render, operations, recognize, random motifs, status) and checks each reply equal (a refusal by status), and the refusal paths (`/meter`, `/input/text`); `test_composer_route` checks the versions the status reports. `test_theme_route` checks the theme body rules, the request a compose
+jobs at once, and stop joining the workers. `backend-jobs.test.js` covers the job client with a fake fetch. `test_materials_route` replays 35 requests captured while the Composer still ran as a command (`backend/tests/fixtures/composer/b5_replies.json`: motif analysis, degrees to notes, MIDI import, render, operations, recognize, random motifs, status) and checks each reply equal (a refusal by status), and the refusal paths (`/meter`, `/input/text`); `test_composer_route` checks the versions the status reports. `test_theme_route` checks the theme body rules, the request a compose
 writes (slots, a pool of approved and unflagged forms without the rejected, the brief, `without`, read back from the
 version's `request.json`), the version it writes with its files, the files route, a stuck run writing nothing and
 leaving no staging folder, `update_uses`, two composes of one theme at once, the jobs routes, and one compose over a
