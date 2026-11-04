@@ -6,7 +6,6 @@
 
 #include "analysis/outer_voice.h"
 #include "core/rational.h"
-#include "standard-form/analysis/analysis_time.h"
 #include "standard-tonality/seventh_rules.h"
 #include "standard-tonality/tonal_key.h"
 #include "standard-tonality/triad_rules.h"

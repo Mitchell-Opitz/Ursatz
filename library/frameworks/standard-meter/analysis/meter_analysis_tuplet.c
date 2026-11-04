@@ -7,7 +7,7 @@
 #include "core/rational.h"
 #include "core/value.h"
 #include "meter_analysis_claim.h"
-#include "meter_analysis_time.h"
+#include "meter_analysis_position.h"
 #include "time/duration.h"
 #include "time/meter_arithmetic.h"
 #include "time/score_time.h"

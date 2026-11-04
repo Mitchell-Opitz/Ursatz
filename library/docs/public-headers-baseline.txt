@@ -105,7 +105,7 @@ meter_analysis_hemiola.h frameworks/standard-meter/analysis/meter_analysis_hemio
 meter_analysis_hypermeter.h frameworks/standard-meter/analysis/meter_analysis_hypermeter.h 
 meter_analysis_input.h frameworks/standard-meter/analysis/meter_analysis_input.h 
 meter_analysis_syncopation.h frameworks/standard-meter/analysis/meter_analysis_syncopation.h 
-meter_analysis_time.h frameworks/standard-meter/analysis/meter_analysis_time.h 
+meter_analysis_position.h frameworks/standard-meter/analysis/meter_analysis_position.h 
 metric_position_rules.h frameworks/standard-meter/metric_position_rules.h 
 non_chord_tones.h frameworks/common-practice-minimal/non_chord_tones.h 
 outer_scale_degrees.h frameworks/common-practice-minimal/outer_scale_degrees.h 
@@ -155,7 +155,6 @@ standard-form/analysis/analysis_input.h frameworks/standard-form/analysis/analys
 standard-form/analysis/analysis_motive.h frameworks/standard-form/analysis/analysis_motive.h 
 standard-form/analysis/analysis_phrase.h frameworks/standard-form/analysis/analysis_phrase.h 
 standard-form/analysis/analysis_theme.h frameworks/standard-form/analysis/analysis_theme.h 
-standard-form/analysis/analysis_time.h frameworks/standard-form/analysis/analysis_time.h 
 standard-form/framework.h frameworks/standard-form/framework.h 
 standard-form/phrase_level_form.h frameworks/standard-form/phrase_level_form.h 
 standard-harmony/analysis/analysis_phrase.h frameworks/standard-harmony/analysis/analysis_phrase.h 

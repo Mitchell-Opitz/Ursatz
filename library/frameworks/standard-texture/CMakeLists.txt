@@ -3,7 +3,6 @@ add_library(standard_texture
     texture_rules.c
     texture_classification_rules.c
     mixed_texture_rules.c
-    analysis/texture_analysis_time.c
     analysis/texture_analysis_input.c
     analysis/texture_analysis_features.c
     analysis/texture_analysis_claim.c
@@ -18,7 +17,6 @@ ursatz_public_headers(standard_texture
         analysis/texture_analysis_classify.h
         analysis/texture_analysis_features.h
         analysis/texture_analysis_input.h
-        analysis/texture_analysis_time.h
         framework.h
         texture_classification_rules.h
         texture_rules.h
