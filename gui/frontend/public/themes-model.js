@@ -656,7 +656,7 @@
     if (o.update_uses) {
       body.update_uses = true;
     }
-    return jsonRequest("POST", itemUrl(state.id, "/compose"), body);
+    return Object.assign(jsonRequest("POST", itemUrl(state.id, "/compose"), body), { job: true });
   }
 
   function versionFileUrl(id, number, name) {

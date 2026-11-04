@@ -1,9 +1,8 @@
-/* Theme bodies, composing and the files of a version end to end (R-167). A fake Composer (URSATZ_GUI_COMPOSER)
- * records the request file of every run and writes the three output files, so the request the route builds can be
- * read back; it also fails with the exit statuses of the real command. The motifs are saved with the real Composer,
- * and one test composes a theme with the real one. Uses a plain TCP socket for the HTTP requests, same as
- * test_composer_route.c. Runs in its own working directory (materials/, subjects/, pieces/ and fake/ are created
- * there). */
+/* Theme bodies, composing and the files of a version end to end (R-167). The theme runs on the job queue through the
+ * Composer API, in process; the request the route built is read back from the version's request.json. The motifs are
+ * saved with the Composer too, and the composed files are compared with what the Composer command gave in B6 (fixtures
+ * composer/b6_compose). Uses a plain TCP socket for the HTTP requests, same as test_composer_route.c. Runs in its own
+ * working directory (materials/, subjects/ and pieces/ are created there). */
 
 #include <civetweb.h>
 #include <stdbool.h>
@@ -12,6 +11,7 @@
 #include <string.h>
 
 #include <arpa/inet.h>
+#include <dirent.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -23,6 +23,9 @@
 
 #ifndef URSATZ_GUI_TEST_LINK_FIXTURES
 #error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
+#endif
+#ifndef URSATZ_GUI_TEST_COMPOSER_FIXTURES
+#error "URSATZ_GUI_TEST_COMPOSER_FIXTURES must name the Composer fixtures directory"
 #endif
 
 static int failures = 0;
@@ -179,16 +182,6 @@ static bool dir_exists(const char *path) {
   return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
 }
 
-static bool write_script(const char *path, const char *text) {
-  FILE *file = fopen(path, "wb");
-  if (!file) {
-    return false;
-  }
-  bool ok = fwrite(text, 1, strlen(text), file) == strlen(text);
-  ok = (fclose(file) == 0) && ok;
-  return ok && chmod(path, 0755) == 0;
-}
-
 static const char *string_of(const cJSON *object, const char *key) {
   const cJSON *item = object ? cJSON_GetObjectItemCaseSensitive(object, key) : NULL;
   return cJSON_IsString(item) ? item->valuestring : "";
@@ -316,19 +309,59 @@ static const cJSON *theme_of(const cJSON *answer) {
   return member(member(answer, "body"), "theme");
 }
 
+/* Waits for the job an accepted request names; its result is the answer the route gave before jobs, and *status the
+   status of it. */
+static cJSON *finish_job(cJSON *accepted, int *status) {
+  const cJSON *job = cJSON_GetObjectItemCaseSensitive(accepted, "job");
+  const cJSON *id = cJSON_GetObjectItemCaseSensitive(job, "id");
+  if (*status != 202 || !cJSON_IsString(id)) {
+    return accepted;
+  }
+  char path[160];
+  snprintf(path, sizeof(path), "/api/jobs/%s", id->valuestring);
+  for (int i = 0; i < 6000; i++) {
+    int poll = 0;
+    cJSON *answer = exchange("GET", path, NULL, &poll);
+    const cJSON *current = cJSON_GetObjectItemCaseSensitive(answer, "job");
+    const cJSON *state = cJSON_GetObjectItemCaseSensitive(current, "state");
+    if (cJSON_IsString(state) && strcmp(state->valuestring, "queued") != 0 && strcmp(state->valuestring, "running") != 0) {
+      const cJSON *http = cJSON_GetObjectItemCaseSensitive(current, "http_status");
+      cJSON *result = cJSON_DetachItemFromObjectCaseSensitive((cJSON *)current, "result");
+      *status = cJSON_IsNumber(http) ? http->valueint : 499;
+      cJSON_Delete(answer);
+      cJSON_Delete(accepted);
+      return result;
+    }
+    cJSON_Delete(answer);
+    sleep_ms(50);
+  }
+  cJSON_Delete(accepted);
+  *status = 0;
+  return NULL;
+}
+
+/* The request.json of the version the last successful compose wrote. */
+static char g_last_request_path[512];
+
 static cJSON *compose(const char *id, const char *body, int *status) {
   char path[160];
   snprintf(path, sizeof(path), "/api/materials/items/%s/compose", id);
-  return exchange("POST", path, body, status);
+  cJSON *answer = finish_job(exchange("POST", path, body, status), status);
+  const cJSON *item = cJSON_GetObjectItemCaseSensitive(answer, "item");
+  const cJSON *version = cJSON_GetObjectItemCaseSensitive(item, "current_version");
+  if (*status == 200 && cJSON_IsNumber(version)) {
+    snprintf(g_last_request_path, sizeof(g_last_request_path), "materials/items/%s/v%d/request.json", id, version->valueint);
+  }
+  return answer;
 }
 
 static void version_dir(const char *id, int version, char *out, size_t size) {
   snprintf(out, size, "materials/items/%s/v%d", id, version);
 }
 
-/* The request file the fake Composer saw last. */
+/* The request the last compose read, as the version kept it. */
 static cJSON *last_request(void) {
-  return read_json_file("fake/last-request.json");
+  return read_json_file(g_last_request_path);
 }
 
 /* Uploads a link fixture to the Library; the new piece's id (caller frees), or NULL. */
@@ -687,11 +720,6 @@ static void test_compose(const Motifs *m) {
   check(cJSON_IsNull(member(request, "accompaniment")) && !member(request, "style"),
         "the request has no accompaniment and no style");
   cJSON_Delete(request);
-  char *argv_log = read_file("fake/argv.log", NULL);
-  check(argv_log && strstr(argv_log, "theme ") && strstr(argv_log, "--check") && strstr(argv_log, "--seed 97") &&
-            strstr(argv_log, "--format json") && strstr(argv_log, "theme.mid") && strstr(argv_log, "theme.musicxml"),
-        "the Composer got theme, the output files, --check and the seed");
-  free(argv_log);
 
   /* The same motif twice is one motive; ideas, chords, the base harmony and the tone overrides go in. */
   snprintf(more, sizeof(more),
@@ -783,9 +811,10 @@ static void test_compose(const Motifs *m) {
   theme_body(basic, ",\"seed\":33", body, sizeof(body));
   char *seeded = create_item("theme", "Seeded", body, &status);
   answer = compose(seeded, "{}", &status);
-  argv_log = read_file("fake/argv.log", NULL);
-  check(status == 200 && argv_log && strstr(argv_log, "--seed 33"), "the body's seed is used");
-  free(argv_log);
+  check(status == 200, "a theme with a seed in its body is composed");
+  cJSON_Delete(answer);
+  answer = get_item(seeded, &status);
+  check(number_of(member(theme_of(answer), "result"), "seed") == 33, "the body's seed is used");
   cJSON_Delete(answer);
   free(seeded);
 
@@ -818,8 +847,24 @@ static void test_compose(const Motifs *m) {
   free(theme);
 }
 
+/* True when the folder of item id holds nothing but version files: no staging folder is left over from a run. */
+static bool no_stage_left(const char *id) {
+  char path[300];
+  snprintf(path, sizeof(path), "materials/items/%s", id);
+  DIR *folder = opendir(path);
+  bool clean = folder != NULL;
+  struct dirent *entry;
+  while (folder && (entry = readdir(folder)) != NULL) {
+    clean = clean && strstr(entry->d_name, ".stage-") == NULL;
+  }
+  if (folder) {
+    closedir(folder);
+  }
+  return clean;
+}
+
 /* A run that fails writes no version and leaves no folder. */
-static void test_failures(const Motifs *m, const char *stuck, const char *usage) {
+static void test_failures(const Motifs *m) {
   int status = 0;
   char slots[600];
   char body[2400];
@@ -833,24 +878,21 @@ static void test_failures(const Motifs *m, const char *stuck, const char *usage)
   }
   version_dir(theme, 2, dir, sizeof(dir));
 
-  setenv("URSATZ_GUI_COMPOSER", stuck, 1);
-  cJSON *answer = compose(theme, "{\"seed\":1}", &status);
-  check(status == 422 && !ok_true(answer), "a stuck run is 422");
-  check(strstr(string_of(answer, "error"), "no seed works") != NULL, "the answer carries the Composer's message");
+  /* A chord in the last bar that the PAC does not allow: nothing satisfies the request. */
+  char more[300];
+  snprintf(more, sizeof(more), ",\"chords\":[{\"bar\":7,\"text\":\"II\"}]");
+  theme_body(slots, more, body, sizeof(body));
+  char *stuck = create_item("theme", "Stuck", body, &status);
+  char stuck_dir[200];
+  version_dir(stuck, 2, stuck_dir, sizeof(stuck_dir));
+  cJSON *answer = compose(stuck, "{\"seed\":1}", &status);
+  check(status == 422 && !ok_true(answer), "a request nothing satisfies is 422");
+  check(strlen(string_of(answer, "error")) > 0, "the answer carries the Composer's message");
   cJSON_Delete(answer);
-  check(current_version(theme) == 1 && !dir_exists(dir), "a stuck run writes no version and leaves no folder");
+  check(current_version(stuck) == 1 && !dir_exists(stuck_dir) && no_stage_left(stuck),
+        "a stuck run writes no version and leaves no folder");
+  free(stuck);
 
-  setenv("URSATZ_GUI_COMPOSER", usage, 1);
-  answer = compose(theme, "{\"seed\":1}", &status);
-  check(status == 400 && strstr(string_of(answer, "error"), "does not read") != NULL, "a usage error is 400");
-  cJSON_Delete(answer);
-  check(current_version(theme) == 1 && !dir_exists(dir), "a usage error writes no version and leaves no folder");
-
-  setenv("URSATZ_GUI_COMPOSER", "/nonexistent/ursatz-composer", 1);
-  answer = compose(theme, "{\"seed\":1}", &status);
-  check(status == 503, "a missing Composer is 503");
-  cJSON_Delete(answer);
-  check(current_version(theme) == 1 && !dir_exists(dir), "a missing Composer writes no version and leaves no folder");
   free(theme);
 }
 
@@ -882,7 +924,8 @@ static void test_files(const Motifs *m) {
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/theme.mid", theme);
   size_t size = 0;
   char *response = http_exchange("GET", path, NULL, NULL, 0, &size);
-  check(size - (size_t)(response_body(response) - response) == 5, "the MIDI file is served whole (the fake writes five bytes)");
+  check(size - (size_t)(response_body(response) - response) > 5 && strncmp(response_body(response), "MThd", 4) == 0,
+        "the MIDI file is served whole");
   free(response);
 
   static const char *const refused[] = {"item.json", "brief.style.json", "..%2Fitem.json", "v2.json", "theme.MID"};
@@ -1010,10 +1053,6 @@ static void test_update_uses(const Motifs *m) {
   char *theme = create_item("theme", "Updating", body, &status);
 
   /* A new version of motif A, analyzed by the real Composer. */
-  const char *fake = getenv("URSATZ_GUI_COMPOSER");
-  char fake_path[600];
-  snprintf(fake_path, sizeof(fake_path), "%s", fake ? fake : "");
-  unsetenv("URSATZ_GUI_COMPOSER");
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions", m->a);
   cJSON *answer = exchange("POST", path,
                            "{\"note\":\"changed\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\","
@@ -1022,7 +1061,6 @@ static void test_update_uses(const Motifs *m) {
                            &status);
   check(status == 200 && number_of(member(answer, "item"), "current_version") == 2, "motif A has a second version");
   cJSON_Delete(answer);
-  setenv("URSATZ_GUI_COMPOSER", fake_path, 1);
 
   answer = get_item(theme, &status);
   bool updated = false;
@@ -1069,6 +1107,105 @@ static void test_update_uses(const Motifs *m) {
   free(theme);
 }
 
+/* Two composes of one theme may run at once; the staging folders keep both versions apart. */
+static void test_concurrent(const Motifs *m) {
+  int status = 0;
+  int status_a = 0;
+  int status_b = 0;
+  char slots[600];
+  char body[2400];
+  char path[400];
+  slots_of(m->a, m->b, slots, sizeof(slots));
+  theme_body(slots, "", body, sizeof(body));
+  char *theme = create_item("theme", "Concurrent", body, &status);
+  check(theme != NULL, "the theme for two composes at once is saved");
+  if (!theme) {
+    return;
+  }
+  snprintf(path, sizeof(path), "/api/materials/items/%s/compose", theme);
+  cJSON *first = exchange("POST", path, "{\"seed\":11}", &status_a);
+  cJSON *second = exchange("POST", path, "{\"seed\":12}", &status_b);
+  check(status_a == 202 && status_b == 202, "both composes are accepted as jobs at once");
+  first = finish_job(first, &status_a);
+  second = finish_job(second, &status_b);
+  check(status_a == 200 && status_b == 200, "both composes finish");
+  cJSON_Delete(first);
+  cJSON_Delete(second);
+  check(current_version(theme) == 3, "both versions are kept (version 3)");
+  bool all = true;
+  for (int version = 2; version <= 3; version++) {
+    static const char *const files[] = {"request.json", "plan.json", "theme.mid", "theme.musicxml"};
+    for (size_t i = 0; i < 4; i++) {
+      snprintf(path, sizeof(path), "materials/items/%s/v%d/%s", theme, version, files[i]);
+      all = all && file_exists(path);
+    }
+  }
+  check(all, "each version has its four files");
+  snprintf(path, sizeof(path), "materials/items/%s", theme);
+  DIR *folder = opendir(path);
+  bool clean = folder != NULL;
+  struct dirent *entry;
+  while (folder && (entry = readdir(folder)) != NULL) {
+    clean = clean && strstr(entry->d_name, ".stage-") == NULL;
+  }
+  if (folder) {
+    closedir(folder);
+  }
+  check(clean, "no staging folder is left");
+  free(theme);
+}
+
+/* GET and DELETE /api/jobs/<id>: the state of a job, its answer, and the cancel of one that is over. */
+static void test_jobs_route(const Motifs *m) {
+  int status = 0;
+  char slots[600];
+  char body[2400];
+  char path[400];
+  slots_of(m->a, m->b, slots, sizeof(slots));
+  theme_body(slots, "", body, sizeof(body));
+  char *theme = create_item("theme", "Jobs", body, &status);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/compose", theme);
+  cJSON *accepted = exchange("POST", path, "{\"seed\":3}", &status);
+  const cJSON *job = member(accepted, "job");
+  check(status == 202 && ok_true(accepted) && strncmp(string_of(job, "id"), "job-", 4) == 0 &&
+            strcmp(string_of(job, "kind"), "theme") == 0 && strcmp(string_of(job, "state"), "queued") == 0,
+        "a compose answers 202 with the job's id, kind and state");
+  char id[64];
+  snprintf(id, sizeof(id), "%s", string_of(job, "id"));
+  cJSON_Delete(accepted);
+  snprintf(path, sizeof(path), "/api/jobs/%s", id);
+  cJSON *state = NULL;
+  for (int i = 0; i < 6000; i++) {
+    cJSON_Delete(state);
+    state = exchange("GET", path, NULL, &status);
+    const char *now = string_of(member(state, "job"), "state");
+    if (strcmp(now, "queued") != 0 && strcmp(now, "running") != 0) {
+      break;
+    }
+    sleep_ms(50);
+  }
+  const cJSON *finished = member(state, "job");
+  check(status == 200 && strcmp(string_of(finished, "state"), "done") == 0 && number_of(finished, "http_status") == 200 &&
+            ok_true(member(finished, "result")) && cJSON_IsObject(member(member(finished, "result"), "item")),
+        "a finished job has its state, its status and the answer of the route");
+  check(cJSON_IsString(member(finished, "stage")) && cJSON_IsNumber(member(finished, "done")) && cJSON_IsNumber(member(finished, "total")),
+        "a job has its stage, done and total");
+  cJSON_Delete(state);
+  state = exchange("DELETE", path, NULL, &status);
+  check(status == 204, "a cancel of a finished job is 204");
+  cJSON_Delete(state);
+  state = exchange("DELETE", "/api/jobs/job-nothere", NULL, &status);
+  check(status == 404, "a cancel of an unknown job is 404");
+  cJSON_Delete(state);
+  state = exchange("GET", "/api/jobs/job-nothere", NULL, &status);
+  check(status == 404 && !ok_true(state), "an unknown job is 404");
+  cJSON_Delete(state);
+  state = exchange("POST", path, "{}", &status);
+  check(status == 405, "a job takes GET and DELETE only");
+  cJSON_Delete(state);
+  free(theme);
+}
+
 /* The real Composer: two eighth-note motives and a small brief of fixture pieces. */
 static void test_real_composer(const Motifs *m) {
   int status = 0;
@@ -1077,7 +1214,6 @@ static void test_real_composer(const Motifs *m) {
   char path[400];
   char dir[200];
   char more[600];
-  unsetenv("URSATZ_GUI_COMPOSER");
   char *first = upload_piece("a.musicxml");
   char *second = upload_piece("b.musicxml");
   slots_of(m->a, m->b, slots, sizeof(slots));
@@ -1104,6 +1240,40 @@ static void test_real_composer(const Motifs *m) {
   check(number_of(result, "seed") == 97 && cJSON_GetArraySize(member(member(result, "summary"), "themes")) >= 1 &&
             number_of(member(result, "brief"), "piece_count") == 2,
         "the result has the Composer's themes and the brief's two pieces");
+
+  /* The same seed gives what the Composer command gave in B6 (capture first: backend/tests/fixtures/composer/b6_compose). */
+  char fixture[700];
+  snprintf(path, sizeof(path), "%s/plan.json", dir);
+  snprintf(fixture, sizeof(fixture), "%s/b6_compose/theme-v2/plan.json", URSATZ_GUI_TEST_COMPOSER_FIXTURES);
+  cJSON *now_plan = read_json_file(path);
+  cJSON *then_plan = read_json_file(fixture);
+  check(now_plan && then_plan && cJSON_Compare(now_plan, then_plan, 1), "the plan equals the one the command wrote");
+  cJSON_Delete(now_plan);
+  cJSON_Delete(then_plan);
+  static const char *const bytes[] = {"theme.mid", "theme.musicxml"};
+  for (size_t i = 0; i < 2; i++) {
+    size_t now_size = 0;
+    size_t then_size = 0;
+    snprintf(path, sizeof(path), "%s/%s", dir, bytes[i]);
+    snprintf(fixture, sizeof(fixture), "%s/b6_compose/theme-v2/%s", URSATZ_GUI_TEST_COMPOSER_FIXTURES, bytes[i]);
+    char *now = read_file(path, &now_size);
+    char *then = read_file(fixture, &then_size);
+    char what[160];
+    snprintf(what, sizeof(what), "%s equals the one the command wrote", bytes[i]);
+    check(now && then && now_size == then_size && memcmp(now, then, now_size) == 0, what);
+    free(now);
+    free(then);
+  }
+  snprintf(fixture, sizeof(fixture), "%s/b6_compose/theme-v2/body.json", URSATZ_GUI_TEST_COMPOSER_FIXTURES);
+  cJSON *then_body = read_json_file(fixture);
+  cJSON *now_summary = cJSON_Duplicate(member(result, "summary"), 1);
+  cJSON *then_summary = cJSON_Duplicate(member(member(member(then_body, "theme"), "result"), "summary"), 1);
+  cJSON_DeleteItemFromObjectCaseSensitive(now_summary, "files");
+  cJSON_DeleteItemFromObjectCaseSensitive(then_summary, "files");
+  check(now_summary && then_summary && cJSON_Compare(now_summary, then_summary, 1), "the stored summary equals the command's");
+  cJSON_Delete(now_summary);
+  cJSON_Delete(then_summary);
+  cJSON_Delete(then_body);
   cJSON_Delete(answer);
   free(theme);
   free(first);
@@ -1111,43 +1281,7 @@ static void test_real_composer(const Motifs *m) {
 }
 
 int main(void) {
-  system("rm -rf materials subjects pieces collections styles fake");
-  mkdir("fake", 0755);
-
-  char cwd[512];
-  if (!getcwd(cwd, sizeof(cwd))) {
-    return 1;
-  }
-  char ok_script[600];
-  char stuck_script[600];
-  char usage_script[600];
-  snprintf(ok_script, sizeof(ok_script), "%s/fake/ok.sh", cwd);
-  snprintf(stuck_script, sizeof(stuck_script), "%s/fake/stuck.sh", cwd);
-  snprintf(usage_script, sizeof(usage_script), "%s/fake/usage.sh", cwd);
-  char script[2048];
-  snprintf(script, sizeof(script),
-           "#!/bin/sh\n"
-           "cp \"$2\" \"%s/fake/last-request.json\"\n"
-           "echo \"$@\" >> \"%s/fake/argv.log\"\n"
-           "seed=5\n"
-           "while [ $# -gt 0 ]; do\n"
-           "  case \"$1\" in\n"
-           "    --out) out=\"$2\"; shift ;;\n"
-           "    --midi) midi=\"$2\"; shift ;;\n"
-           "    --musicxml) xml=\"$2\"; shift ;;\n"
-           "    --seed) seed=\"$2\"; shift ;;\n"
-           "  esac\n"
-           "  shift\n"
-           "done\n"
-           "echo '{}' > \"$out\"\n"
-           "printf 'MThd\\n' > \"$midi\"\n"
-           "echo '<score-partwise/>' > \"$xml\"\n"
-           "echo \"{\\\"seed\\\": $seed, \\\"themes\\\": [{\\\"seed\\\": $seed}]}\"\n",
-           cwd, cwd);
-  check(write_script(ok_script, script), "the recording fake Composer is written");
-  check(write_script(stuck_script, "#!/bin/sh\necho 'no seed works' >&2\nexit 2\n"), "the stuck fake Composer is written");
-  check(write_script(usage_script, "#!/bin/sh\necho 'the request does not read' >&2\nexit 1\n"),
-        "the usage-error fake Composer is written");
+  system("rm -rf materials subjects pieces collections styles");
 
   struct mg_context *ctx = ursatz_gui_server_start("18773", ".");
   check(ctx != NULL, "server starts");
@@ -1161,20 +1295,19 @@ int main(void) {
   snprintf(g_project, sizeof(g_project), "%s", string_of(cJSON_GetArrayItem(member(projects, "projects"), 0), "id"));
   cJSON_Delete(projects);
 
-  /* The motifs are saved with the real Composer; the runs of the theme command use the fake. */
-  unsetenv("URSATZ_GUI_COMPOSER");
   Motifs motifs;
   memset(&motifs, 0, sizeof(motifs));
   bool made = make_motifs(&motifs);
   check(made, "the motifs and their forms are saved");
   if (made) {
     test_bodies(&motifs);
-    setenv("URSATZ_GUI_COMPOSER", ok_script, 1);
     test_compose(&motifs);
     test_files(&motifs);
     test_brief(&motifs);
     test_update_uses(&motifs);
-    test_failures(&motifs, stuck_script, usage_script);
+    test_failures(&motifs);
+    test_concurrent(&motifs);
+    test_jobs_route(&motifs);
     test_real_composer(&motifs);
   }
 

@@ -6,10 +6,12 @@
 #include "routes/composer.h"
 #include "routes/corpus.h"
 #include "routes/health.h"
+#include "routes/jobs.h"
 #include "routes/links.h"
 #include "routes/materials.h"
 #include "routes/styles.h"
 #include "service/collection_service.h"
+#include "service/job_queue.h"
 #include "service/link_service.h"
 #include "service/material_service.h"
 #include "service/subject_service.h"
@@ -55,6 +57,15 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
     return NULL;
   }
 
+  /* Long Composer runs go to worker threads (service/job_queue.h); the workers are up before any route. */
+  if (!ursatz_gui_jobs_start(0)) {
+    ursatz_gui_link_service_shutdown();
+    ursatz_gui_subject_service_shutdown();
+    ursatz_gui_material_service_shutdown();
+    ursatz_gui_collection_service_shutdown();
+    return NULL;
+  }
+
   /* Motifs analyzed before tone labels existed are analyzed again, once (R-204). */
   ursatz_gui_materials_migrate_tones(kMaterialsDir);
 
@@ -63,6 +74,7 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
 
   struct mg_context *ctx = mg_start(NULL, NULL, options);
   if (!ctx) {
+    ursatz_gui_jobs_stop();
     ursatz_gui_link_service_shutdown();
     ursatz_gui_subject_service_shutdown();
     ursatz_gui_material_service_shutdown();
@@ -79,6 +91,7 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
   ursatz_gui_styles_register(ctx);
   ursatz_gui_materials_register(ctx);
   ursatz_gui_links_register(ctx);
+  ursatz_gui_jobs_register(ctx);
 
   return ctx;
 }
@@ -87,6 +100,7 @@ void ursatz_gui_server_stop(struct mg_context *ctx) {
   if (ctx) {
     mg_stop(ctx);
   }
+  ursatz_gui_jobs_stop(); /* cancels what runs and joins the workers, after the last request is answered */
   ursatz_gui_link_service_shutdown();
   ursatz_gui_subject_service_shutdown();
   ursatz_gui_material_service_shutdown();

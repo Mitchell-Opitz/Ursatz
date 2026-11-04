@@ -552,7 +552,7 @@
     if (o.update_uses) {
       body.update_uses = true;
     }
-    return { method: "POST", url: itemUrl(state.id, "/compose"), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
+    return { method: "POST", url: itemUrl(state.id, "/compose"), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), job: true };
   }
 
   function versionFileUrl(id, number, name) {
@@ -601,7 +601,7 @@
       body.seed = seed.value;
     }
     return {
-      request: { method: "POST", url: itemUrl(id, `/versions/${Number(number)}/regenerate`), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+      request: { method: "POST", url: itemUrl(id, `/versions/${Number(number)}/regenerate`), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), job: true },
     };
   }
 
@@ -624,7 +624,7 @@
       body.seed = seed.value;
     }
     return {
-      request: { method: "POST", url: itemUrl(id, `/versions/${Number(number)}/variations`), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) },
+      request: { method: "POST", url: itemUrl(id, `/versions/${Number(number)}/variations`), headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), job: true },
     };
   }
 
@@ -635,6 +635,7 @@
       url: itemUrl(id, `/versions/${Number(number)}/variations/${Number(set)}/choose`),
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ index: Number(index) }),
+      job: true,
     };
   }
 

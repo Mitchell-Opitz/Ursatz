@@ -1,0 +1,188 @@
+{
+	"uses":	[],
+	"piece":	{
+		"structure":	{
+			"key":	"D",
+			"mode":	"minor",
+			"meter":	"4/4",
+			"sections":	[{
+					"id":	"s0",
+					"part":	"intro",
+					"letter":	"I",
+					"beats":	8,
+					"pickup":	"0",
+					"cadence":	null,
+					"fill":	null
+				}, {
+					"id":	"s1",
+					"part":	"body",
+					"letter":	"A",
+					"beats":	32,
+					"pickup":	"0",
+					"cadence":	null,
+					"fill":	null
+				}, {
+					"id":	"s2",
+					"part":	"body",
+					"letter":	"B",
+					"beats":	6,
+					"pickup":	"0",
+					"cadence":	null,
+					"fill":	null
+				}, {
+					"id":	"s3",
+					"part":	"turnaround",
+					"letter":	"T",
+					"beats":	4,
+					"pickup":	"0",
+					"cadence":	null,
+					"fill":	null
+				}]
+		},
+		"result":	{
+			"seed":	1,
+			"loop":	{
+				"start":	"2/1",
+				"end":	"25/2"
+			},
+			"summary":	{
+				"schema":	"ursatz-piece",
+				"seed":	1,
+				"key":	"D minor",
+				"meter":	"4/4",
+				"brief":	{
+					"tempo":	{
+						"qpm":	null,
+						"from":	"none"
+					},
+					"mode":	{
+						"mode":	"minor",
+						"from":	"request"
+					},
+					"density":	null,
+					"without":	[]
+				},
+				"loop":	{
+					"start":	"2/1",
+					"end":	"25/2"
+				},
+				"versions":	{
+					"loop":	{
+						"sections":	[{
+								"id":	"s0",
+								"part":	"intro",
+								"letter":	"I",
+								"start":	"0/1",
+								"beats":	8,
+								"cadence":	"HC",
+								"heard":	null,
+								"fill":	"empty",
+								"source":	"basic motive"
+							}, {
+								"id":	"s1",
+								"part":	"body",
+								"letter":	"A",
+								"start":	"2/1",
+								"beats":	32,
+								"cadence":	"IAC",
+								"heard":	null,
+								"fill":	"empty",
+								"source":	"basic motive"
+							}, {
+								"id":	"s2",
+								"part":	"body",
+								"letter":	"B",
+								"start":	"10/1",
+								"beats":	6,
+								"cadence":	"IAC",
+								"heard":	null,
+								"fill":	"empty",
+								"source":	"basic motive"
+							}, {
+								"id":	"s3",
+								"part":	"turnaround",
+								"letter":	"T",
+								"start":	"23/2",
+								"beats":	4,
+								"cadence":	"HC",
+								"heard":	null,
+								"fill":	"empty",
+								"source":	"basic motive"
+							}],
+						"score":	{
+							"numerator":	9,
+							"denominator":	12
+						},
+						"seam":	{
+							"progression":	true,
+							"no_parallels":	true,
+							"step":	true,
+							"leading_tone":	false,
+							"held":	3
+						},
+						"analyzer_check":	null,
+						"style_distance":	null,
+						"plan":	"/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-dc779be19f821132/v2/plan.json"
+					},
+					"ending":	{
+						"sections":	[{
+								"id":	"s0",
+								"part":	"intro",
+								"letter":	"I",
+								"start":	"0/1",
+								"beats":	8,
+								"cadence":	"HC",
+								"heard":	null,
+								"fill":	"empty",
+								"source":	"basic motive"
+							}, {
+								"id":	"s1",
+								"part":	"body",
+								"letter":	"A",
+								"start":	"2/1",
+								"beats":	32,
+								"cadence":	"IAC",
+								"heard":	null,
+								"fill":	"empty",
+								"source":	"basic motive"
+							}, {
+								"id":	"s2",
+								"part":	"body",
+								"letter":	"B",
+								"start":	"10/1",
+								"beats":	6,
+								"cadence":	"IAC",
+								"heard":	null,
+								"fill":	"empty",
+								"source":	"basic motive"
+							}, {
+								"id":	"end",
+								"part":	"ending",
+								"letter":	"E",
+								"start":	"23/2",
+								"beats":	8,
+								"cadence":	"PAC",
+								"heard":	null,
+								"fill":	"empty",
+								"source":	"basic motive"
+							}],
+						"score":	{
+							"numerator":	0,
+							"denominator":	1
+						},
+						"seam":	null,
+						"analyzer_check":	null,
+						"style_distance":	null,
+						"plan":	"/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-dc779be19f821132/v2/ending-plan.json"
+					}
+				},
+				"files":	["/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-dc779be19f821132/v2/plan.json", "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-dc779be19f821132/v2/ending-plan.json", "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-dc779be19f821132/v2/loop.mid", "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-dc779be19f821132/v2/loop.musicxml", "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-dc779be19f821132/v2/ending.mid", "/home/user/ursatz-gui/build/backend/tests/piece_route/materials/items/pce-dc779be19f821132/v2/ending.musicxml"]
+			},
+			"brief":	{
+				"piece_count":	0,
+				"skipped":	[]
+			},
+			"files":	["request.json", "plan.json", "ending-plan.json", "loop.mid", "loop.musicxml", "ending.mid", "ending.musicxml"]
+		}
+	}
+}

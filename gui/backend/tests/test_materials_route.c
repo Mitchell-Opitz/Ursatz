@@ -914,10 +914,41 @@ static char *variant_source(void) {
 }
 
 /* POST /api/materials/items/<id>/<tail> with a JSON body. */
+/* Waits for the job an accepted request names; its result is the answer the route gave before jobs, and *status the
+   status of it. */
+static cJSON *finish_job(cJSON *accepted, int *status) {
+  const cJSON *job = cJSON_GetObjectItemCaseSensitive(accepted, "job");
+  const cJSON *id = cJSON_GetObjectItemCaseSensitive(job, "id");
+  if (*status != 202 || !cJSON_IsString(id)) {
+    return accepted;
+  }
+  char path[160];
+  snprintf(path, sizeof(path), "/api/jobs/%s", id->valuestring);
+  for (int i = 0; i < 6000; i++) {
+    int poll = 0;
+    cJSON *answer = json_exchange("GET", path, NULL, &poll);
+    const cJSON *current = cJSON_GetObjectItemCaseSensitive(answer, "job");
+    const cJSON *state = cJSON_GetObjectItemCaseSensitive(current, "state");
+    if (cJSON_IsString(state) && strcmp(state->valuestring, "queued") != 0 && strcmp(state->valuestring, "running") != 0) {
+      const cJSON *http = cJSON_GetObjectItemCaseSensitive(current, "http_status");
+      cJSON *result = cJSON_DetachItemFromObjectCaseSensitive((cJSON *)current, "result");
+      *status = cJSON_IsNumber(http) ? http->valueint : 499;
+      cJSON_Delete(answer);
+      cJSON_Delete(accepted);
+      return result;
+    }
+    cJSON_Delete(answer);
+    sleep_ms(50);
+  }
+  cJSON_Delete(accepted);
+  *status = 0;
+  return NULL;
+}
+
 static cJSON *item_post(const char *id, const char *tail, const char *body, int *status) {
   char path[256];
   snprintf(path, sizeof(path), "/api/materials/items/%s/%s", id, tail);
-  return json_exchange("POST", path, body, status);
+  return finish_job(json_exchange("POST", path, body, status), status);
 }
 
 static cJSON *item_get(const char *id, const char *tail, int *status) {
@@ -1221,7 +1252,7 @@ static void test_theme_placeholder(void) {
   check(status == 404, "only the five file names are served");
   cJSON_Delete(answer);
   snprintf(path, sizeof(path), "/api/materials/items/%s/compose", theme);
-  answer = json_exchange("POST", path, "{}", &status);
+  answer = finish_job(json_exchange("POST", path, "{}", &status), &status);
   check(status == 400 && !ok_true(answer), "a placeholder theme cannot be composed");
   cJSON_Delete(answer);
   free(theme);

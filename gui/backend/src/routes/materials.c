@@ -20,7 +20,8 @@
 #include "../util/fs_util.h"
 #include "route_util.h"
 #include "../service/composer_client.h"
-#include "../service/composer_service.h"
+#include "../service/compose_jobs.h"
+#include "jobs.h"
 #include "../service/material_service.h"
 #include "../service/style_service.h"
 #include "../service/subject_service.h"
@@ -360,47 +361,7 @@ static const char *analysis_degrees_text(const cJSON *output, const char *form) 
   return cJSON_IsString(text) ? text->valuestring : NULL;
 }
 
-/* The Composer options for a motif's harmony, features and role (R-140, R-141): --harmony "<text>", one --feature
-   label:first-last per feature (at most 8) and --role. The feature texts live in extras, which the caller keeps until
-   the Composer has run. harmony and role may be overridden (a variant's own harmony, a render's role); NULL means the
-   motif's own. Returns the new argument count. */
 #define MOTIF_FEATURES_MAX 8
-typedef struct {
-  char feature[MOTIF_FEATURES_MAX][64];
-} MotifExtras;
-#define MOTIF_EXTRA_ARGS (2 + 2 * MOTIF_FEATURES_MAX + 2)
-
-static int append_extras_named(const char **args, int n, const char *harmony_option, const char *feature_option,
-                               const char *harmony, const cJSON *features, const char *role, MotifExtras *extras) {
-  if (harmony && harmony[0] != '\0') {
-    args[n++] = harmony_option;
-    args[n++] = harmony;
-  }
-  int count = 0;
-  const cJSON *feature = NULL;
-  cJSON_ArrayForEach(feature, features) {
-    const cJSON *label = cJSON_GetObjectItemCaseSensitive(feature, "label");
-    const cJSON *first = cJSON_GetObjectItemCaseSensitive(feature, "first");
-    const cJSON *last = cJSON_GetObjectItemCaseSensitive(feature, "last");
-    if (count == MOTIF_FEATURES_MAX || !cJSON_IsString(label) || !cJSON_IsNumber(first) || !cJSON_IsNumber(last)) {
-      break;
-    }
-    snprintf(extras->feature[count], sizeof(extras->feature[count]), "%s:%d-%d", label->valuestring, first->valueint,
-             last->valueint);
-    args[n++] = feature_option;
-    args[n++] = extras->feature[count++];
-  }
-  if (role && role[0] != '\0') {
-    args[n++] = "--role";
-    args[n++] = role;
-  }
-  return n;
-}
-
-static int append_motif_extras(const char **args, int n, const char *harmony, const cJSON *features, const char *role,
-                               MotifExtras *extras) {
-  return append_extras_named(args, n, "--harmony", "--feature", harmony, features, role, extras);
-}
 
 /* The harmony text of a motif member, NULL when it has none. */
 static const char *motif_harmony(const cJSON *motif) {
@@ -1023,19 +984,6 @@ static cJSON *build_motif_playback(const cJSON *rendered_notes, const char *role
   return playback;
 }
 
-static bool temp_file(char *path, size_t size, const char *stem) {
-  const char *tmp_dir = getenv("TMPDIR");
-  if (!tmp_dir || tmp_dir[0] != '/' || snprintf(path, size, "%s/%s-XXXXXX", tmp_dir, stem) >= (int)size) {
-    snprintf(path, size, "/tmp/%s-XXXXXX", stem);
-  }
-  int fd = mkstemp(path);
-  if (fd < 0) {
-    return false;
-  }
-  close(fd);
-  return true;
-}
-
 /* Renders a degree, rhythm or contour list in render_key with the Composer. On success *out_xml is the MusicXML text
    and *out_playback its playback data (caller-owned). On failure failure holds the status and message. */
 static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_playback, RenderFailure *failure) {
@@ -1423,25 +1371,6 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
   return send_object(conn, object);
 }
 
-/* The answer for a Composer-backed call that did not succeed: the status follows the result (see theme_service.h). */
-static int send_composer_failure(struct mg_connection *conn, UrsatzGuiThemeResult result, const char *message,
-                                 const char *invalid_text, const char *failed_text) {
-  switch (result) {
-    case URSATZ_GUI_THEME_ERR_NOT_FOUND:
-      return send_failure(conn, 404, message[0] ? message : "not found");
-    case URSATZ_GUI_THEME_ERR_INVALID:
-      return send_failure(conn, 400, message[0] ? message : invalid_text);
-    case URSATZ_GUI_THEME_ERR_UNPROCESSABLE:
-      return send_failure(conn, 422, message[0] ? message : "stuck");
-    case URSATZ_GUI_THEME_ERR_NO_BINARY:
-      return send_failure(conn, 503, "composer not found");
-    case URSATZ_GUI_THEME_ERR_TIMEOUT:
-      return send_failure(conn, 504, "composer timed out");
-    default:
-      return send_failure(conn, 500, message[0] ? message : failed_text);
-  }
-}
-
 /* A version number from a path segment, 1 to 1000000. */
 static bool parse_version_number(const char *text, int *out) {
   char *end = NULL;
@@ -1496,18 +1425,21 @@ static int handle_compose(struct mg_connection *conn, const char *id) {
   bool piece = cJSON_IsString(type) && strcmp(type->valuestring, "piece") == 0;
   cJSON_Delete(meta);
   cJSON_Delete(stored);
-  cJSON *item = NULL;
-  char message[512];
   long long chosen = has_seed ? (long long)seed->valuedouble : 0;
-  UrsatzGuiThemeResult result =
-      piece ? ursatz_gui_piece_compose(id, has_seed, chosen, cJSON_IsTrue(update_uses), &item, message, sizeof(message))
-            : ursatz_gui_theme_compose(id, has_seed, chosen, cJSON_IsTrue(update_uses), &item, message, sizeof(message));
-  cJSON_Delete(body);
-  if (result == URSATZ_GUI_THEME_OK) {
-    return send_ok_with(conn, "item", item);
+  /* Composed on the job queue: the answer is the job (GET /api/jobs/<id>). */
+  UrsatzGuiComposeOp op = piece ? URSATZ_GUI_COMPOSE_PIECE : URSATZ_GUI_COMPOSE_THEME;
+  UrsatzGuiComposeJob *job = ursatz_gui_compose_job_new(op, id);
+  if (job) {
+    job->has_seed = has_seed;
+    job->seed = chosen;
+    job->update_uses = cJSON_IsTrue(update_uses);
   }
-  return send_composer_failure(conn, result, message, piece ? "invalid piece" : "invalid theme",
-                               piece ? "the piece could not be composed" : "the theme could not be composed");
+  cJSON_Delete(body);
+  if (!job) {
+    return send_failure(conn, 500, "out of memory");
+  }
+  return ursatz_gui_jobs_send_accepted(conn, ursatz_gui_compose_job_kind(op), ursatz_gui_compose_job_run, job,
+                                       ursatz_gui_compose_job_free);
 }
 
 /* POST /api/materials/items/<pce-id>/versions/<n>/regenerate {section_id, lane?, seed?}: writes one section of a composed
@@ -1531,16 +1463,21 @@ static int handle_piece_regenerate(struct mg_connection *conn, const char *id, c
     cJSON_Delete(body);
     return send_failure(conn, 400, "section_id is a string; lane is a string; seed is a whole number from 0 to 4294967295");
   }
-  cJSON *item = NULL;
-  char message[512];
-  UrsatzGuiThemeResult result =
-      ursatz_gui_piece_regenerate(id, version, section->valuestring, cJSON_IsString(lane) ? lane->valuestring : NULL, has_seed,
-                                  seed, &item, message, sizeof(message));
-  cJSON_Delete(body);
-  if (result == URSATZ_GUI_THEME_OK) {
-    return send_ok_with(conn, "item", item);
+  UrsatzGuiComposeJob *job = ursatz_gui_compose_job_new(URSATZ_GUI_COMPOSE_PIECE_REGENERATE, id);
+  if (job) {
+    job->version = version;
+    job->section = strdup(section->valuestring);
+    job->lane = cJSON_IsString(lane) ? strdup(lane->valuestring) : NULL;
+    job->has_seed = has_seed;
+    job->seed = seed;
   }
-  return send_composer_failure(conn, result, message, "invalid piece", "the section could not be written again");
+  bool built = job && job->section && (!cJSON_IsString(lane) || job->lane);
+  cJSON_Delete(body);
+  if (!built) {
+    ursatz_gui_compose_job_free(job);
+    return send_failure(conn, 500, "out of memory");
+  }
+  return ursatz_gui_jobs_send_accepted(conn, "regenerate", ursatz_gui_compose_job_run, job, ursatz_gui_compose_job_free);
 }
 
 /* POST /api/materials/items/<pce-id>/versions/<n>/variations {section_id, lane, count, seed?}: makes variations of a
@@ -1566,19 +1503,22 @@ static int handle_piece_variations(struct mg_connection *conn, const char *id, c
     cJSON_Delete(body);
     return send_failure(conn, 400, "section_id and lane are strings; count is a whole number from 1 to 8; seed is a whole number from 0 to 4294967295");
   }
-  cJSON *made = NULL;
-  char message[512];
-  UrsatzGuiThemeResult result = ursatz_gui_piece_variations(id, version, section->valuestring, lane->valuestring,
-                                                            (int)count->valuedouble, has_seed, seed, &made, message, sizeof(message));
-  cJSON_Delete(body);
-  if (result != URSATZ_GUI_THEME_OK) {
-    return send_composer_failure(conn, result, message, "invalid piece", "the variations could not be made");
+  UrsatzGuiComposeJob *job = ursatz_gui_compose_job_new(URSATZ_GUI_COMPOSE_PIECE_VARIATIONS, id);
+  if (job) {
+    job->version = version;
+    job->section = strdup(section->valuestring);
+    job->lane = strdup(lane->valuestring);
+    job->count = (int)count->valuedouble;
+    job->has_seed = has_seed;
+    job->seed = seed;
   }
-  if (!cJSON_AddBoolToObject(made, "ok", 1)) {
-    cJSON_Delete(made);
+  bool built = job && job->section && job->lane;
+  cJSON_Delete(body);
+  if (!built) {
+    ursatz_gui_compose_job_free(job);
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, made);
+  return ursatz_gui_jobs_send_accepted(conn, "variations", ursatz_gui_compose_job_run, job, ursatz_gui_compose_job_free);
 }
 
 /* GET /api/materials/items/<pce-id>/versions/<n>/variations/<set>/<file>: a file of a variations set. */
@@ -1617,15 +1557,17 @@ static int handle_piece_choose(struct mg_connection *conn, const char *id, const
     cJSON_Delete(body);
     return send_failure(conn, 400, "index is a whole number from 1");
   }
-  cJSON *item = NULL;
-  char message[512];
-  UrsatzGuiThemeResult result =
-      ursatz_gui_piece_choose(id, version, set, (int)index->valuedouble, &item, message, sizeof(message));
-  cJSON_Delete(body);
-  if (result == URSATZ_GUI_THEME_OK) {
-    return send_ok_with(conn, "item", item);
+  UrsatzGuiComposeJob *job = ursatz_gui_compose_job_new(URSATZ_GUI_COMPOSE_PIECE_CHOOSE, id);
+  if (job) {
+    job->version = version;
+    job->set = set;
+    job->index = (int)index->valuedouble;
   }
-  return send_composer_failure(conn, result, message, "invalid piece", "the variation could not be chosen");
+  cJSON_Delete(body);
+  if (!job) {
+    return send_failure(conn, 500, "out of memory");
+  }
+  return ursatz_gui_jobs_send_accepted(conn, "choose", ursatz_gui_compose_job_run, job, ursatz_gui_compose_job_free);
 }
 
 /* GET /api/materials/items/<id>/versions/<n>/files/<name>: one of a theme or piece version's files. */
@@ -1711,32 +1653,6 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
 
 /* ---- variants ---------------------------------------------------------- */
 
-/* Runs the Composer with args and parses its JSON output. Returns NULL after setting *status and message (500 when the
-   Composer cannot run, 400 when it refuses the input, which is its exit status 1 or 2). */
-static cJSON *composer_json(const char *const *args, int *status, char *message, size_t message_size) {
-  UrsatzGuiComposerOutput out = {0, NULL, NULL};
-  UrsatzGuiComposerResult result = ursatz_gui_composer_run(args, &out);
-  if (result != URSATZ_GUI_COMPOSER_OK) {
-    *status = 500;
-    snprintf(message, message_size, "%s",
-             result == URSATZ_GUI_COMPOSER_ERR_NO_BINARY  ? "composer not found"
-             : result == URSATZ_GUI_COMPOSER_ERR_TIMEOUT ? "composer timed out"
-                                                          : "composer could not be started");
-    return NULL;
-  }
-  cJSON *json = out.exit_status == 0 ? cJSON_Parse(out.stdout_text) : NULL;
-  if (!json) {
-    *status = out.exit_status == 1 || out.exit_status == 2 ? 400 : 500;
-    snprintf(message, message_size, "%s", out.stderr_text[0] ? out.stderr_text : "composer could not make variants");
-    size_t end = strlen(message);
-    while (end > 0 && (message[end - 1] == '\n' || message[end - 1] == '\r')) {
-      message[--end] = '\0';
-    }
-  }
-  ursatz_gui_composer_output_destroy(&out);
-  return json;
-}
-
 /* GET /api/materials/variant-operations: the Composer's operation list, as the Composer API gives it. */
 static int handle_variant_operations(struct mg_connection *conn) {
   ComposerResponse response;
@@ -1757,23 +1673,6 @@ static int handle_variant_operations(struct mg_connection *conn) {
     return send_failure(conn, 500, "out of memory");
   }
   return send_object(conn, document);
-}
-
-/* Writes text to a new temp file named after stem; path receives its name. */
-static bool write_temp_text(char *path, size_t size, const char *stem, const char *text) {
-  if (!temp_file(path, size, stem)) {
-    return false;
-  }
-  FILE *file = fopen(path, "wb");
-  size_t length = strlen(text);
-  bool written = file && fwrite(text, 1, length, file) == length;
-  if (file && fclose(file) != 0) {
-    written = false;
-  }
-  if (!written) {
-    unlink(path);
-  }
-  return written;
 }
 
 /* The names --function takes; the same four the stored derived.functions hold. */
@@ -1803,11 +1702,13 @@ static cJSON *lineage_root(const cJSON *motif) {
 /* The largest seed the Composer takes: its cap is 4294967295 less the 16 variants of a run. */
 static const double kMaxVariantSeed = 4294967279.0;
 
-/* Runs `variants` on the motif member of a version body (its degrees, form, meter, key and pickup). chain (an object
-   {"steps": [...]}) is optional and means random chains when NULL; seed is optional (negative: the clock). On success
-   returns the Composer's document; otherwise NULL with *status and message set. */
+/* Runs the Composer API `variants` on the motif member of a version body (its degrees, form, meter, key, pickup, harmony,
+   features and role). chain (an object {"steps": [...]}) is optional and means random chains when NULL; seed is optional
+   (negative: the clock). job reports progress and asks for cancel. On success returns the Composer's document; otherwise
+   NULL with *status (400 when the Composer refuses the input, 499 for a cancel, else 500) and message set. */
 static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJSON *functions, const char *distance,
-                           bool each_op, const cJSON *chain, int count, double seed, int *status, char *message, size_t message_size) {
+                           bool each_op, const cJSON *chain, int count, double seed, const ComposerJob *job, int *status,
+                           char *message, size_t message_size) {
   bool bad = false;
   const char *form = optional_string(motif, "form", &bad);
   const char *degrees = optional_string(motif, "degrees", &bad);
@@ -1819,118 +1720,129 @@ static cJSON *run_variants(const cJSON *motif, const cJSON *basic_body, const cJ
     snprintf(message, message_size, "this motif has no degrees to vary");
     return NULL;
   }
-  char input_path[512];
-  char chain_path[512] = "";
-  char basic_path[512] = "";
-  if (!write_temp_text(input_path, sizeof(input_path), "ursatz-variants", degrees)) {
-    *status = 500;
-    snprintf(message, message_size, "could not write the degrees for the Composer");
-    return NULL;
-  }
   bool full = strcmp(form, "full") == 0;
+  cJSON *request = motive_request(full ? "degrees" : NULL, full ? NULL : form, degrees, meter,
+                                  key && key[0] != '\0' ? key : NULL, pickup);
+  const char *role = optional_string(motif, "role", &(bool){false});
+  bool ok = request && add_motive_extras(request, motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
+                                         motif_role_option(role));
   /* The basic motive (the tree root) when this motif is derived: its list, pickup and harmony. */
   const cJSON *basic = cJSON_GetObjectItemCaseSensitive(basic_body, "motif");
   const char *basic_degrees = optional_string(basic, "degrees", &(bool){false});
   const char *basic_pickup = optional_string(basic, "pickup", &(bool){false});
-  if (basic_degrees && basic_degrees[0] != '\0') {
-    if (!write_temp_text(basic_path, sizeof(basic_path), "ursatz-basic", basic_degrees)) {
-      unlink(input_path);
-      *status = 500;
-      snprintf(message, message_size, "could not write the basic motive for the Composer");
-      return NULL;
-    }
-  }
-  if (chain) {
-    char *chain_text = cJSON_PrintUnformatted(chain);
-    bool written = chain_text && write_temp_text(chain_path, sizeof(chain_path), "ursatz-chain", chain_text);
-    free(chain_text);
-    if (!written) {
-      unlink(input_path);
-      if (basic_path[0] != '\0') {
-        unlink(basic_path);
-      }
-      *status = 500;
-      snprintf(message, message_size, "could not write the chain for the Composer");
-      return NULL;
-    }
-  }
-  char count_text[16];
-  char seed_text[32];
-  snprintf(count_text, sizeof(count_text), "%d", count);
-  snprintf(seed_text, sizeof(seed_text), "%.0f", seed);
-  const char *args[40 + MOTIF_EXTRA_ARGS];
-  MotifExtras extras;
-  int n = 0;
-  args[n++] = "variants";
-  args[n++] = input_path;
-  args[n++] = full ? "--format" : "--form";
-  args[n++] = full ? "degrees" : form;
-  args[n++] = "--meter";
-  args[n++] = meter;
-  if (key && key[0] != '\0') {
-    args[n++] = "--key";
-    args[n++] = key;
-  }
-  if (pickup) {
-    args[n++] = "--pickup";
-    args[n++] = pickup;
-  }
-  const char *role = optional_string(motif, "role", &(bool){false});
-  n = append_motif_extras(args, n, motif_harmony(motif), cJSON_GetObjectItemCaseSensitive(motif, "features"),
-                          motif_role_option(role), &extras);
-  if (basic_path[0] != '\0') {
-    args[n++] = "--basic";
-    args[n++] = basic_path;
-    args[n++] = "--basic-format";
-    args[n++] = full ? "degrees" : form;
-    if (basic_pickup) {
-      args[n++] = "--basic-pickup";
-      args[n++] = basic_pickup;
-    }
-    if (motif_harmony(basic)) {
-      args[n++] = "--basic-harmony";
-      args[n++] = motif_harmony(basic);
+  if (ok && basic_degrees && basic_degrees[0] != '\0') {
+    cJSON *basic_request = motive_request(full ? "degrees" : form, NULL, basic_degrees, NULL, NULL, basic_pickup);
+    ok = basic_request && add_motive_extras(basic_request, motif_harmony(basic), NULL, NULL) &&
+         cJSON_AddItemToObject(request, "basic", basic_request);
+    if (!ok) {
+      cJSON_Delete(basic_request);
     }
   }
   const cJSON *function = NULL;
+  cJSON *function_list = ok && functions && cJSON_GetArraySize(functions) > 0 ? cJSON_AddArrayToObject(request, "functions") : NULL;
   int function_count = 0;
   cJSON_ArrayForEach(function, functions) {
     if (function_count++ == 4) {
       break;
     }
-    args[n++] = "--function";
-    args[n++] = function->valuestring;
+    ok = ok && function_list && cJSON_AddItemToArray(function_list, cJSON_CreateString(function->valuestring));
   }
-  if (distance) {
-    args[n++] = "--distance";
-    args[n++] = distance;
+  char count_text[16];
+  char seed_text[32];
+  snprintf(count_text, sizeof(count_text), "%d", count);
+  snprintf(seed_text, sizeof(seed_text), "%.0f", seed);
+  ok = ok && (!distance || cJSON_AddStringToObject(request, "distance", distance)) &&
+       (!chain || cJSON_AddItemToObject(request, "chain", cJSON_Duplicate(chain, 1))) &&
+       /* One variant per operation in registry order; the Composer takes no count, chain, distance or function. */
+       (each_op ? cJSON_AddTrueToObject(request, "each_op") != NULL : cJSON_AddStringToObject(request, "count", count_text) != NULL) &&
+       (seed < 0 || cJSON_AddStringToObject(request, "seed", seed_text));
+  char *text = ok ? cJSON_PrintUnformatted(request) : NULL;
+  cJSON_Delete(request);
+  if (!text) {
+    *status = 500;
+    snprintf(message, message_size, "out of memory");
+    return NULL;
   }
-  if (chain) {
-    args[n++] = "--chain";
-    args[n++] = chain_path;
-  }
-  if (each_op) {
-    /* One variant per operation in registry order; the Composer takes no count, chain, distance or function. */
-    args[n++] = "--each-op";
+  ComposerResponse response;
+  memset(&response, 0, sizeof(response));
+  ComposerStatus composer_status = composer_api_variants(text, job, &response);
+  free(text);
+  UrsatzGuiComposerReply reply;
+  ursatz_gui_composer_reply_take(composer_status, &response, &reply);
+  cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  if (document) {
+    /* the command printed the notices on stderr, not in the document */
+    cJSON_DeleteItemFromObjectCaseSensitive(document, "notices");
   } else {
-    args[n++] = "--count";
-    args[n++] = count_text;
+    *status = composer_refused(&reply) ? 400 : reply.status == COMPOSER_ERR_CANCELLED ? 499 : 500;
+    snprintf(message, message_size, "%s", reply.message[0] ? reply.message : "composer could not make variants");
   }
-  if (seed >= 0) {
-    args[n++] = "--seed";
-    args[n++] = seed_text;
-  }
-  args[n++] = "--json";
-  args[n] = NULL;
-  cJSON *document = composer_json(args, status, message, message_size);
-  unlink(input_path);
-  if (chain) {
-    unlink(chain_path);
-  }
-  if (basic_path[0] != '\0') {
-    unlink(basic_path);
-  }
+  ursatz_gui_composer_reply_destroy(&reply);
   return document;
+}
+
+/* A variants run on the job queue: the variants of the item's motif, the one variant per operation (each-op), or a reroll
+   (a new version of a derived motif). The queue owns it. */
+typedef enum { VARIANTS_JOB_VARIANTS, VARIANTS_JOB_EACH_OP, VARIANTS_JOB_REROLL } VariantsJobOp;
+
+typedef struct {
+  VariantsJobOp op;
+  char *id;
+  cJSON *body; /* the request body of the variants route */
+  int count;
+  double seed; /* negative: from the clock */
+} VariantsJob;
+
+static void variants_job_run(void *input, const ComposerJob *job, UrsatzGuiJobResult *out);
+
+static void variants_job_free(void *input) {
+  VariantsJob *job = input;
+  if (job) {
+    cJSON_Delete(job->body);
+    free(job->id);
+    free(job);
+  }
+}
+
+/* A job input; takes body. NULL on allocation failure (body is freed too). */
+static VariantsJob *variants_job_new(VariantsJobOp op, const char *id, cJSON *body, int count, double seed) {
+  VariantsJob *job = calloc(1, sizeof(*job));
+  if (job) {
+    job->id = strdup(id);
+  }
+  if (!job || !job->id) {
+    free(job);
+    cJSON_Delete(body);
+    return NULL;
+  }
+  job->op = op;
+  job->body = body;
+  job->count = count;
+  job->seed = seed;
+  return job;
+}
+
+static const char *variants_job_kind(VariantsJobOp op) {
+  return op == VARIANTS_JOB_VARIANTS ? "variants" : op == VARIANTS_JOB_EACH_OP ? "each-op" : "reroll";
+}
+
+static void job_failure(UrsatzGuiJobResult *out, int status, const char *message) {
+  ursatz_gui_job_result_failure(out, status, message);
+}
+
+static void job_ok_with(UrsatzGuiJobResult *out, const char *key, cJSON *value) {
+  cJSON *object = cJSON_CreateObject();
+  if (!object || !value || !cJSON_AddBoolToObject(object, "ok", 1) || !cJSON_AddItemToObject(object, key, value)) {
+    cJSON_Delete(value);
+    cJSON_Delete(object);
+    job_failure(out, 500, "out of memory");
+    return;
+  }
+  ursatz_gui_job_result_json(out, 200, object);
+}
+
+static void job_material_failure(UrsatzGuiJobResult *out, UrsatzGuiMaterialResult result) {
+  job_failure(out, material_status(result), material_message(result));
 }
 
 /* POST /api/materials/items/<id>/variants {chain?, count?, seed?, functions?, distance?}: candidates from the item's current degrees; nothing is
@@ -1993,35 +1905,11 @@ static int handle_variants(struct mg_connection *conn, const char *id) {
   if (seed_item) {
     seed = seed_item->valuedouble;
   }
-  cJSON *item_body = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &item_body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
-    cJSON_Delete(body);
-    return send_material_failure(conn, result);
-  }
-  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(item_body, "motif");
-  char message[512];
-  cJSON *basic_body = cJSON_IsObject(motif) ? lineage_root(motif) : NULL;
-  cJSON *document = cJSON_IsObject(motif) ? run_variants(motif, basic_body, functions, distance, false, chain, count, seed, &status,
-                                                         message, sizeof(message))
-                                          : NULL;
-  cJSON_Delete(basic_body);
-  if (!cJSON_IsObject(motif)) {
-    status = 400;
-    snprintf(message, sizeof(message), "only a motif has variants");
-  }
-  cJSON_Delete(body);
-  cJSON_Delete(item_body);
-  if (!document) {
-    return send_failure(conn, status, message);
-  }
-  const cJSON *run_seed = cJSON_GetObjectItemCaseSensitive(document, "seed");
-  if (!cJSON_AddBoolToObject(document, "ok", 1) ||
-      (!run_seed && !cJSON_AddNumberToObject(document, "seed", seed >= 0 ? seed : 0))) {
-    cJSON_Delete(document);
+  VariantsJob *job = variants_job_new(VARIANTS_JOB_VARIANTS, id, body, count, seed);
+  if (!job) {
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, document);
+  return ursatz_gui_jobs_send_accepted(conn, variants_job_kind(job->op), variants_job_run, job, variants_job_free);
 }
 
 /* POST /api/materials/items/<id>/each-op {seed?}: one variant per registry operation on the item's current degrees, in
@@ -2043,34 +1931,11 @@ static int handle_each_op(struct mg_connection *conn, const char *id) {
     return send_failure(conn, 400, "seed is a whole number from 0");
   }
   double seed = seed_item ? seed_item->valuedouble : -1;
-  cJSON_Delete(body);
-  cJSON *item_body = NULL;
-  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &item_body);
-  if (result != URSATZ_GUI_MATERIAL_OK) {
-    return send_material_failure(conn, result);
-  }
-  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(item_body, "motif");
-  char message[512];
-  cJSON *basic_body = cJSON_IsObject(motif) ? lineage_root(motif) : NULL;
-  cJSON *document = cJSON_IsObject(motif)
-                        ? run_variants(motif, basic_body, NULL, NULL, true, NULL, 0, seed, &status, message, sizeof(message))
-                        : NULL;
-  cJSON_Delete(basic_body);
-  if (!cJSON_IsObject(motif)) {
-    status = 400;
-    snprintf(message, sizeof(message), "only a motif has variants");
-  }
-  cJSON_Delete(item_body);
-  if (!document) {
-    return send_failure(conn, status, message);
-  }
-  const cJSON *run_seed = cJSON_GetObjectItemCaseSensitive(document, "seed");
-  if (!cJSON_AddBoolToObject(document, "ok", 1) ||
-      (!run_seed && !cJSON_AddNumberToObject(document, "seed", seed >= 0 ? seed : 0))) {
-    cJSON_Delete(document);
+  VariantsJob *job = variants_job_new(VARIANTS_JOB_EACH_OP, id, body, 0, seed);
+  if (!job) {
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, document);
+  return ursatz_gui_jobs_send_accepted(conn, variants_job_kind(job->op), variants_job_run, job, variants_job_free);
 }
 
 /* GET /api/materials/items/<id>/op-checks: the marks of a motif from Try every operation, {"checks": {...}} (R-190). */
@@ -2785,13 +2650,16 @@ static int handle_link_form(struct mg_connection *conn, const char *id) {
   return send_ok_with(conn, "item", item);
 }
 
-/* POST /api/materials/items/<id>/reroll: reruns the stored chain on the source's stored version with a new seed and
-   stores the result as a new version. */
-static int handle_reroll(struct mg_connection *conn, const char *id) {
+/* Reruns the stored chain of the derived motif id on the source's stored version with a new seed and stores the result
+   as a new version (the reroll job). */
+static void reroll_run(const char *id, const ComposerJob *composer_job, UrsatzGuiJobResult *out) {
   cJSON *current = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(id, NULL, &current);
   if (result != URSATZ_GUI_MATERIAL_OK) {
-    return send_material_failure(conn, result);
+    {
+    job_material_failure(out, result);
+    return;
+  }
   }
   cJSON *motif = cJSON_GetObjectItemCaseSensitive(current, "motif");
   cJSON *derived = derived_of(current);
@@ -2801,14 +2669,16 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
   const cJSON *form_item = cJSON_GetObjectItemCaseSensitive(motif, "form");
   if (!derived || !cJSON_IsString(source_item) || !cJSON_IsNumber(source_version) || !cJSON_IsString(form_item)) {
     cJSON_Delete(current);
-    return send_failure(conn, 400, "only a derived motif can be rerolled");
+    job_failure(out, 400, "only a derived motif can be rerolled");
+    return;
   }
   const char *form = form_item->valuestring;
   cJSON *source = NULL;
   result = ursatz_gui_material_item_get_version(source_item->valuestring, source_version->valueint, &source);
   if (result != URSATZ_GUI_MATERIAL_OK) {
     cJSON_Delete(current);
-    return send_failure(conn, 404, "the source motif or its version is gone");
+    job_failure(out, 404, "the source motif or its version is gone");
+    return;
   }
   cJSON *chain = chain_for_reroll(cJSON_GetObjectItemCaseSensitive(derived, "operations"));
   cJSON *basic_body = lineage_root(cJSON_GetObjectItemCaseSensitive(source, "motif"));
@@ -2822,8 +2692,8 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
   for (int attempt = 0; chain && attempt < 16; attempt++) {
     seed = fmod(base + 1000003.0 + attempt, kMaxVariantSeed + 1);
     cJSON_Delete(document);
-    document = run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), basic_body, NULL, NULL, false, chain, 1, seed, &status,
-                            message, sizeof(message));
+    document = run_variants(cJSON_GetObjectItemCaseSensitive(source, "motif"), basic_body, NULL, NULL, false, chain, 1, seed, composer_job,
+                            &status, message, sizeof(message));
     if (!document) {
       break;
     }
@@ -2848,7 +2718,8 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
     bool same = document != NULL;
     cJSON_Delete(document);
     cJSON_Delete(current);
-    return same ? send_failure(conn, 409, "rerolling gives the same motif") : send_failure(conn, status, message);
+    job_failure(out, same ? 409 : status, same ? "rerolling gives the same motif" : message);
+    return;
   }
   const cJSON *chain_out = cJSON_GetObjectItemCaseSensitive(variant, "chain");
   const cJSON *kind = cJSON_GetObjectItemCaseSensitive(variant, "kind");
@@ -2874,9 +2745,72 @@ static int handle_reroll(struct mg_connection *conn, const char *id) {
   cJSON_Delete(document);
   cJSON_Delete(current);
   if (result != URSATZ_GUI_MATERIAL_OK) {
-    return send_material_failure(conn, result);
+    {
+    job_material_failure(out, result);
+    return;
   }
-  return send_ok_with(conn, "item", item);
+  }
+  job_ok_with(out, "item", item);
+}
+
+/* POST /api/materials/items/<id>/reroll: reruns the stored chain on the source's stored version with a new seed and
+   stores the result as a new version. Runs on the job queue. */
+static int handle_reroll(struct mg_connection *conn, const char *id) {
+  VariantsJob *job = variants_job_new(VARIANTS_JOB_REROLL, id, NULL, 0, -1);
+  if (!job) {
+    return send_failure(conn, 500, "out of memory");
+  }
+  return ursatz_gui_jobs_send_accepted(conn, variants_job_kind(job->op), variants_job_run, job, variants_job_free);
+}
+
+/* The variants and each-op runs of a job: the answer is the Composer's document plus "ok" and "seed". */
+static void variants_run(const VariantsJob *input, const ComposerJob *composer_job, UrsatzGuiJobResult *out) {
+  bool each_op = input->op == VARIANTS_JOB_EACH_OP;
+  const cJSON *chain = cJSON_GetObjectItemCaseSensitive(input->body, "chain");
+  const cJSON *functions = cJSON_GetObjectItemCaseSensitive(input->body, "functions");
+  const cJSON *distance_item = cJSON_GetObjectItemCaseSensitive(input->body, "distance");
+  chain = cJSON_IsNull(chain) ? NULL : chain;
+  functions = cJSON_IsNull(functions) ? NULL : functions;
+  const char *distance = cJSON_IsString(distance_item) ? distance_item->valuestring : NULL;
+  cJSON *item_body = NULL;
+  UrsatzGuiMaterialResult result = ursatz_gui_material_item_get(input->id, NULL, &item_body);
+  if (result != URSATZ_GUI_MATERIAL_OK) {
+    job_material_failure(out, result);
+    return;
+  }
+  const cJSON *motif = cJSON_GetObjectItemCaseSensitive(item_body, "motif");
+  int status = 400;
+  char message[512] = "only a motif has variants";
+  cJSON *basic_body = cJSON_IsObject(motif) ? lineage_root(motif) : NULL;
+  cJSON *document = cJSON_IsObject(motif)
+                        ? (each_op ? run_variants(motif, basic_body, NULL, NULL, true, NULL, 0, input->seed, composer_job, &status,
+                                                  message, sizeof(message))
+                                   : run_variants(motif, basic_body, functions, distance, false, chain, input->count, input->seed,
+                                                  composer_job, &status, message, sizeof(message)))
+                        : NULL;
+  cJSON_Delete(basic_body);
+  cJSON_Delete(item_body);
+  if (!document) {
+    job_failure(out, status, message);
+    return;
+  }
+  const cJSON *run_seed = cJSON_GetObjectItemCaseSensitive(document, "seed");
+  if (!cJSON_AddBoolToObject(document, "ok", 1) ||
+      (!run_seed && !cJSON_AddNumberToObject(document, "seed", input->seed >= 0 ? input->seed : 0))) {
+    cJSON_Delete(document);
+    job_failure(out, 500, "out of memory");
+    return;
+  }
+  ursatz_gui_job_result_json(out, 200, document);
+}
+
+static void variants_job_run(void *input, const ComposerJob *composer_job, UrsatzGuiJobResult *out) {
+  const VariantsJob *job = input;
+  if (job->op == VARIANTS_JOB_REROLL) {
+    reroll_run(job->id, composer_job, out);
+  } else {
+    variants_run(job, composer_job, out);
+  }
 }
 
 static const int kMaxTreeDepth = 32;

@@ -5,7 +5,6 @@
 
 #include <dirent.h>
 #include <limits.h>
-#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,9 +15,6 @@
 #include "material_service.h"
 
 #define PATH_BYTES 800
-
-/* One compose at a time: the next version number and its folder are decided before the Composer runs. */
-static pthread_mutex_t g_compose_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static bool copy_file(const char *from, const char *to) {
     FILE *in = fopen(from, "rb");
@@ -256,60 +252,162 @@ static const char *const kFileNames[] = {"request.json",    "brief.style.json", 
                                          "loop.mid",        "loop.musicxml",    "ending.mid",        "ending.musicxml"};
 #define FILE_NAME_COUNT 8
 
-/*
- * Runs the piece command into dir (absolute) on dir/request.json. With from (a loop plan), it writes section regenerate
- * of that plan again ("none": only the ending version), in lane when that is not NULL.
- */
-static UrsatzGuiThemeResult run_piece(const char *dir, bool check, bool has_seed, long long seed, const char *from,
-                                      const char *regenerate, const char *lane, cJSON **out_summary, char *message,
-                                      size_t message_size) {
-    char paths[FILE_NAME_COUNT][PATH_BYTES + 32];
-    for (int i = 0; i < FILE_NAME_COUNT; i++) {
-        snprintf(paths[i], sizeof(paths[i]), "%s/%s", dir, kFileNames[i]);
+static cJSON *read_json(const char *path);
+static bool set_string(cJSON *object, const char *name, const char *text);
+
+/* A copy of the request as the command read it: the plan file of each theme fill read into the request (the API takes
+   plans, not paths; cli/piece.c read_request_file) and its path kept as the source. */
+static UrsatzGuiThemeResult request_with_plans(const cJSON *request, cJSON **out, char *message, size_t message_size) {
+    cJSON *copy = cJSON_Duplicate(request, 1);
+    if (!copy) {
+        return URSATZ_GUI_THEME_ERR_ALLOC;
     }
+    const cJSON *section = NULL;
+    cJSON_ArrayForEach(section, cJSON_GetObjectItemCaseSensitive(copy, "sections")) {
+        cJSON *fill = cJSON_GetObjectItemCaseSensitive(section, "fill");
+        const cJSON *plan_path = cJSON_GetObjectItemCaseSensitive(fill, "plan");
+        if (!cJSON_IsObject(fill) || strcmp(ursatz_gui_compose_text_of(fill, "kind"), "theme") != 0 || !cJSON_IsString(plan_path)) {
+            continue;
+        }
+        cJSON *plan = read_json(plan_path->valuestring);
+        char *source = strdup(plan_path->valuestring);
+        if (!plan || !source || !cJSON_ReplaceItemInObject(fill, "plan", plan) || !cJSON_AddStringToObject(fill, "source", source)) {
+            snprintf(message, message_size, "section %s: cannot read the theme plan '%s'", ursatz_gui_compose_text_of(section, "id"),
+                     plan_path->valuestring);
+            free(source);
+            cJSON_Delete(copy);
+            return plan ? URSATZ_GUI_THEME_ERR_ALLOC : URSATZ_GUI_THEME_ERR_INVALID;
+        }
+        free(source);
+    }
+    *out = copy;
+    return URSATZ_GUI_THEME_OK;
+}
+
+static double document_tempo(const cJSON *document) {
+    const cJSON *qpm = cJSON_GetObjectItemCaseSensitive(
+        cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "brief"), "tempo"), "qpm");
+    return cJSON_IsNumber(qpm) ? qpm->valuedouble : 0;
+}
+
+
+static bool write_bytes(const char *dir, const char *name, const void *data, size_t size, char *message, size_t message_size) {
+    char path[PATH_BYTES + 128];
+    snprintf(path, sizeof(path), "%s/%s", dir, name);
+    if (!ursatz_gui_write_file_atomic(path, data, size)) {
+        ursatz_gui_compose_say(message, message_size, "a file of the version could not be written");
+        return false;
+    }
+    return true;
+}
+
+/*
+ * Runs the piece API on request (the request file's members, as the command read it) and writes the eight files of
+ * the version into stage. With from (a loop plan object, not owned) it writes section regenerate of that plan again
+ * ("none": only the ending version), in lane when that is not NULL. *out_summary is the document `piece --format json`
+ * printed: the plans of the versions are their files, and the files are listed under the folder named.
+ */
+static UrsatzGuiThemeResult run_piece(const char *stage, const char *named, const cJSON *request, bool check, bool use_seed,
+                                      long long seed, const cJSON *from, const char *regenerate, const char *lane,
+                                      const ComposerJob *job, cJSON **out_summary, char *message, size_t message_size) {
+    cJSON *with_plans = NULL;
+    UrsatzGuiThemeResult result = request_with_plans(request, &with_plans, message, message_size);
+    if (result != URSATZ_GUI_THEME_OK) {
+        return result;
+    }
+    cJSON *api = cJSON_CreateObject();
     char seed_text[32];
     snprintf(seed_text, sizeof(seed_text), "%lld", seed);
-    const char *args[32];
-    int n = 0;
-    args[n++] = "piece";
-    if (from) {
-        args[n++] = "--from";
-        args[n++] = from;
-        args[n++] = "--request";
-        args[n++] = paths[0];
-        args[n++] = "--regenerate";
-        args[n++] = regenerate;
-        if (lane) {
-            args[n++] = "--lane";
-            args[n++] = lane;
+    bool ok = api && cJSON_AddItemToObject(api, "request", with_plans);
+    if (!ok) {
+        cJSON_Delete(with_plans);
+    }
+    if (ok && from) {
+        cJSON *edit = cJSON_CreateObject();
+        cJSON *lanes = cJSON_CreateArray();
+        bool whole = !lane || strcmp(lane, "all") == 0;
+        ok = edit && lanes && cJSON_AddItemToObject(api, "from", cJSON_Duplicate(from, 1)) &&
+             (whole || cJSON_AddItemToArray(lanes, cJSON_CreateString(lane))) && cJSON_AddItemToObject(edit, "lanes", lanes);
+        lanes = ok ? NULL : lanes;
+        ok = ok && (strcmp(regenerate, "none") == 0 ? cJSON_AddNullToObject(edit, "section") != NULL
+                                                    : cJSON_AddStringToObject(edit, "section", regenerate) != NULL) &&
+             cJSON_AddItemToObject(api, "regenerate", edit);
+        if (!ok) {
+            cJSON_Delete(edit);
         }
-    } else {
-        args[n++] = paths[0];
+        cJSON_Delete(lanes);
     }
-    args[n++] = "--format";
-    args[n++] = "json";
-    args[n++] = "--out";
-    args[n++] = paths[2];
-    args[n++] = "--ending-out";
-    args[n++] = paths[3];
-    args[n++] = "--midi";
-    args[n++] = paths[4];
-    args[n++] = "--musicxml";
-    args[n++] = paths[5];
-    args[n++] = "--ending-midi";
-    args[n++] = paths[6];
-    args[n++] = "--ending-musicxml";
-    args[n++] = paths[7];
-    if (check) {
-        args[n++] = "--check";
+    ok = ok && (!use_seed || cJSON_AddStringToObject(api, "seed", seed_text)) && cJSON_AddBoolToObject(api, "check", check) &&
+         cJSON_AddBoolToObject(api, "plain_midi", 0) && cJSON_AddBoolToObject(api, "midi", 1) &&
+         cJSON_AddBoolToObject(api, "musicxml", 1) && cJSON_AddBoolToObject(api, "ending_musicxml", 1);
+    char *text = ok ? cJSON_PrintUnformatted(api) : NULL;
+    cJSON_Delete(api);
+    if (!text) {
+        return URSATZ_GUI_THEME_ERR_ALLOC;
     }
-    if (has_seed) {
-        args[n++] = "--seed";
-        args[n++] = seed_text;
+    ComposerResponse response;
+    memset(&response, 0, sizeof(response));
+    ComposerStatus status = composer_api_piece(text, job, &response);
+    free(text);
+    cJSON *document = NULL;
+    ComposerResponse ending;
+    memset(&ending, 0, sizeof(ending));
+    if (status != COMPOSER_OK) {
+        result = ursatz_gui_compose_failure(status, &response, message, message_size);
+    } else if (!(document = cJSON_Parse(response.json)) || !response.midi || !response.musicxml) {
+        ursatz_gui_compose_say(message, message_size, "composer output unreadable");
+        result = URSATZ_GUI_THEME_ERR_FAILED;
     }
-    args[n] = NULL;
-    const char *outputs[] = {paths[2], paths[3], paths[4], paths[5], paths[6], paths[7], NULL};
-    return ursatz_gui_theme_run_composer(args, outputs, out_summary, message, message_size);
+    const cJSON *plans = cJSON_GetObjectItemCaseSensitive(document, "plans");
+    const cJSON *ending_xml = cJSON_GetObjectItemCaseSensitive(document, "ending_musicxml");
+    if (result == URSATZ_GUI_THEME_OK && (!cJSON_IsObject(plans) || !cJSON_IsString(ending_xml))) {
+        ursatz_gui_compose_say(message, message_size, "composer output unreadable");
+        result = URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    char path[PATH_BYTES + 128];
+    for (int i = 2; result == URSATZ_GUI_THEME_OK && i <= 3; i++) {
+        snprintf(path, sizeof(path), "%s/%s", stage, kFileNames[i]);
+        result = ursatz_gui_compose_write_plan(cJSON_GetObjectItemCaseSensitive(plans, i == 2 ? "loop" : "ending"), path, message,
+                                               message_size);
+    }
+    if (result == URSATZ_GUI_THEME_OK &&
+        (!write_bytes(stage, kFileNames[4], response.midi, response.midi_size, message, message_size) ||
+         !write_bytes(stage, kFileNames[5], response.musicxml, strlen(response.musicxml), message, message_size) ||
+         !write_bytes(stage, kFileNames[7], ending_xml->valuestring, strlen(ending_xml->valuestring), message, message_size))) {
+        result = URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        result = ursatz_gui_compose_export(cJSON_GetObjectItemCaseSensitive(plans, "ending"), document_tempo(document), false, true,
+                                           false, NULL, job, &ending, message, message_size);
+        if (result == URSATZ_GUI_THEME_OK && !write_bytes(stage, kFileNames[6], ending.midi, ending.midi_size, message, message_size)) {
+            result = URSATZ_GUI_THEME_ERR_FAILED;
+        }
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        cJSON *versions = cJSON_GetObjectItemCaseSensitive(document, "versions");
+        for (int v = 0; v < 2; v++) {
+            snprintf(path, sizeof(path), "%s/%s", named, kFileNames[2 + v]);
+            cJSON *version = cJSON_GetObjectItemCaseSensitive(versions, v == 0 ? "loop" : "ending");
+            if (version) {
+                set_string(version, "plan", path);
+            }
+        }
+        cJSON_DeleteItemFromObjectCaseSensitive(document, "plans");
+        cJSON_DeleteItemFromObjectCaseSensitive(document, "explanation");
+        cJSON_DeleteItemFromObjectCaseSensitive(document, "ending_musicxml");
+        static const char *const files[] = {"plan.json", "ending-plan.json", "loop.mid", "loop.musicxml", "ending.mid", "ending.musicxml"};
+        if (!ursatz_gui_compose_add_files(document, named, files, 6)) {
+            result = URSATZ_GUI_THEME_ERR_ALLOC;
+        }
+    }
+    composer_response_destroy(&ending);
+    composer_response_destroy(&response);
+    if (result != URSATZ_GUI_THEME_OK) {
+        cJSON_Delete(document);
+        return result;
+    }
+    *out_summary = document;
+    return URSATZ_GUI_THEME_OK;
 }
 
 /* The seed a run reports. */
@@ -371,10 +469,10 @@ static cJSON *body_with_result(const cJSON *body, cJSON *summary, cJSON *brief_s
     return copy;
 }
 
-static UrsatzGuiThemeResult run_piece_item(const char *dir, const cJSON *piece, bool use_seed, long long seed,
-                                          cJSON **out_summary, char *message, size_t message_size) {
-    return run_piece(dir, cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(piece, "check")), use_seed, seed, NULL, NULL, NULL,
-                     out_summary, message, message_size);
+static UrsatzGuiThemeResult run_piece_item(const UrsatzGuiComposeRun *run, cJSON **out_summary, char *message,
+                                           size_t message_size) {
+    return run_piece(run->stage, run->named, run->request, cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(run->member, "check")),
+                     run->use_seed, run->seed, NULL, NULL, NULL, run->job, out_summary, message, message_size);
 }
 
 static void piece_note(const cJSON *summary, char *note, size_t note_size) {
@@ -391,15 +489,14 @@ static const UrsatzGuiComposeKind kPieceKind = {"piece",       "the item is not 
                                                 body_with_result};
 
 UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, long long seed, bool update_uses,
-                                              cJSON **out_item, char *message, size_t message_size) {
+                                                  const ComposerJob *job, cJSON **out_item, char *message,
+                                                  size_t message_size) {
     if (out_item) {
         *out_item = NULL;
     }
     ursatz_gui_compose_say(message, message_size, "");
     cJSON *item = NULL;
-    pthread_mutex_lock(&g_compose_lock);
-    UrsatzGuiThemeResult result = ursatz_gui_compose_item(&kPieceKind, id, has_seed, seed, update_uses, &item, message, message_size);
-    pthread_mutex_unlock(&g_compose_lock);
+    UrsatzGuiThemeResult result = ursatz_gui_compose_item(&kPieceKind, id, has_seed, seed, update_uses, job, &item, message, message_size);
     if (result == URSATZ_GUI_THEME_OK && out_item) {
         *out_item = item;
     } else {
@@ -522,22 +619,6 @@ static UrsatzGuiThemeResult open_source(const char *id, int version, const char 
     return URSATZ_GUI_THEME_ERR_INVALID;
 }
 
-/* Clears a leftover folder for version number of item id and makes it; dir is its path, absolute the same resolved. */
-static UrsatzGuiThemeResult make_folder(const char *id, int number, char *dir, size_t dir_size, char *absolute,
-                                        size_t absolute_size, char *message, size_t message_size) {
-    char resolved[PATH_MAX];
-    if (!ursatz_gui_material_version_dir(id, number, dir, dir_size)) {
-        ursatz_gui_compose_say(message, message_size, "the version folder does not fit");
-        return URSATZ_GUI_THEME_ERR_FAILED;
-    }
-    ursatz_gui_theme_remove_folder(dir); /* a folder no version names is left over from a failed run */
-    if (mkdir(dir, 0755) != 0 || !realpath(dir, resolved) || snprintf(absolute, absolute_size, "%s", resolved) >= (int)absolute_size) {
-        ursatz_gui_compose_say(message, message_size, "the version folder could not be made");
-        return URSATZ_GUI_THEME_ERR_FAILED;
-    }
-    return URSATZ_GUI_THEME_OK;
-}
-
 /*
  * Copies the request of the version in from_dir into dir with the files it names: the plan of each theme fill and the
  * brief's style file are copied beside it, and the request names the copies, so the new version keeps its own.
@@ -602,26 +683,59 @@ static cJSON *kept_brief_summary(const Source *source) {
     return empty;
 }
 
-/* Writes new_body as the next version, whose folder is dir. Another writer may have added a version meanwhile. */
-static UrsatzGuiThemeResult add_version(const char *id, int number, const char *dir, const cJSON *new_body, const char *note,
-                                        cJSON **out_item, char *message, size_t message_size) {
-    cJSON *item = NULL;
-    if (ursatz_gui_material_item_add_version(id, new_body, note, &item) != URSATZ_GUI_MATERIAL_OK) {
+/* Writes new_body as the next version. */
+static UrsatzGuiThemeResult add_version(const char *id, const cJSON *new_body, const char *note, cJSON **out_item,
+                                        char *message, size_t message_size) {
+    if (ursatz_gui_material_item_add_version(id, new_body, note, out_item) != URSATZ_GUI_MATERIAL_OK) {
         ursatz_gui_compose_say(message, message_size, "the version could not be written");
         return URSATZ_GUI_THEME_ERR_FAILED;
     }
-    int actual = cJSON_GetObjectItemCaseSensitive(item, "current_version")->valueint;
-    char target[PATH_BYTES];
-    if (actual != number && ursatz_gui_material_version_dir(id, actual, target, sizeof(target))) {
-        rename(dir, target);
+    return URSATZ_GUI_THEME_OK;
+}
+
+/* Names the version's own folder in the request file of the stage and in summary instead of the stage's. */
+static UrsatzGuiThemeResult rebase_request(const UrsatzGuiComposeStage *stage, cJSON *summary, char *message,
+                                           size_t message_size) {
+    char path[PATH_BYTES + 96];
+    snprintf(path, sizeof(path), "%s/request.json", stage->absolute);
+    cJSON *request = read_json(path);
+    char *text = NULL;
+    if (request) {
+        ursatz_gui_compose_rebase(request, stage->absolute, stage->named);
+        text = cJSON_Print(request);
     }
-    *out_item = item;
+    bool ok = text && ursatz_gui_theme_write_text(path, text);
+    free(text);
+    cJSON_Delete(request);
+    ursatz_gui_compose_rebase(summary, stage->absolute, stage->named);
+    if (!ok) {
+        ursatz_gui_compose_say(message, message_size, "the request could not be written");
+        return URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    return URSATZ_GUI_THEME_OK;
+}
+
+/* Reads the request and the loop plan of the source version into *request and *from, or says why not. */
+static UrsatzGuiThemeResult read_inputs(const char *request_dir, const char *plan_path, cJSON **request, cJSON **from,
+                                        char *message, size_t message_size) {
+    char path[PATH_BYTES + 96];
+    snprintf(path, sizeof(path), "%s/request.json", request_dir);
+    *request = read_json(path);
+    *from = read_json(plan_path);
+    if (!*request || !*from) {
+        ursatz_gui_compose_say(message, message_size, "the request or the plan of the version could not be read");
+        cJSON_Delete(*request);
+        cJSON_Delete(*from);
+        *request = NULL;
+        *from = NULL;
+        return URSATZ_GUI_THEME_ERR_FAILED;
+    }
     return URSATZ_GUI_THEME_OK;
 }
 
 static UrsatzGuiThemeResult regenerate_locked(const char *id, int version, const char *section_id, const char *lane,
-                                              bool has_seed, long long seed, cJSON **out_item, char *message,
-                                              size_t message_size) {
+                                              bool has_seed, long long seed, const ComposerJob *job, cJSON **out_item,
+                                              char *message, size_t message_size) {
     Source source;
     UrsatzGuiThemeResult result = open_source(id, version, section_id, lane, &source, message, message_size);
     if (result != URSATZ_GUI_THEME_OK) {
@@ -630,22 +744,28 @@ static UrsatzGuiThemeResult regenerate_locked(const char *id, int version, const
     const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source.body, "piece");
     const cJSON *brief_json = cJSON_GetObjectItemCaseSensitive(piece, "brief");
     bool has_brief = brief_json && !cJSON_IsNull(brief_json);
-    int number = source.current + 1;
-    char dir[PATH_BYTES];
-    char absolute[PATH_BYTES];
-    char from[PATH_BYTES + 32];
+    UrsatzGuiComposeStage stage;
+    char plan_path[PATH_BYTES + 32];
+    cJSON *request = NULL;
+    cJSON *from = NULL;
     cJSON *summary = NULL;
     cJSON *new_body = NULL;
     cJSON *item = NULL;
-    result = make_folder(id, number, dir, sizeof(dir), absolute, sizeof(absolute), message, message_size);
+    result = ursatz_gui_compose_stage_make(id, source.current + 1, &stage, message, message_size);
     bool made = result == URSATZ_GUI_THEME_OK;
     if (result == URSATZ_GUI_THEME_OK) {
-        result = carry_request(source.dir, absolute, message, message_size);
+        result = carry_request(source.dir, stage.absolute, message, message_size);
     }
     if (result == URSATZ_GUI_THEME_OK) {
-        snprintf(from, sizeof(from), "%s/plan.json", source.dir);
-        result = run_piece(absolute, cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(piece, "check")), has_seed, seed, from,
-                           section_id, lane, &summary, message, message_size);
+        snprintf(plan_path, sizeof(plan_path), "%s/plan.json", source.dir);
+        result = read_inputs(stage.absolute, plan_path, &request, &from, message, message_size);
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        result = run_piece(stage.absolute, stage.named, request, cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(piece, "check")),
+                           has_seed, seed, from, section_id, lane, job, &summary, message, message_size);
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        result = rebase_request(&stage, summary, message, message_size);
     }
     if (result == URSATZ_GUI_THEME_OK) {
         cJSON *brief_summary = kept_brief_summary(&source);
@@ -661,14 +781,17 @@ static UrsatzGuiThemeResult regenerate_locked(const char *id, int version, const
         if (!new_body) {
             result = URSATZ_GUI_THEME_ERR_ALLOC;
         } else {
-            result = add_version(id, number, dir, new_body, note, &item, message, message_size);
+            result = add_version(id, new_body, note, &item, message, message_size);
         }
     }
     if (result == URSATZ_GUI_THEME_OK) {
+        ursatz_gui_compose_stage_finish(id, item, &stage);
         *out_item = item;
     } else if (made) {
-        ursatz_gui_theme_remove_folder(dir);
+        ursatz_gui_compose_stage_discard(&stage);
     }
+    cJSON_Delete(request);
+    cJSON_Delete(from);
     cJSON_Delete(summary);
     cJSON_Delete(new_body);
     source_clear(&source);
@@ -676,16 +799,15 @@ static UrsatzGuiThemeResult regenerate_locked(const char *id, int version, const
 }
 
 UrsatzGuiThemeResult ursatz_gui_piece_regenerate(const char *id, int version, const char *section_id, const char *lane,
-                                                 bool has_seed, long long seed, cJSON **out_item, char *message,
-                                                 size_t message_size) {
+                                                 bool has_seed, long long seed, const ComposerJob *job, cJSON **out_item,
+                                                 char *message, size_t message_size) {
     if (out_item) {
         *out_item = NULL;
     }
     ursatz_gui_compose_say(message, message_size, "");
     cJSON *item = NULL;
-    pthread_mutex_lock(&g_compose_lock);
-    UrsatzGuiThemeResult result = regenerate_locked(id, version, section_id, lane, has_seed, seed, &item, message, message_size);
-    pthread_mutex_unlock(&g_compose_lock);
+    UrsatzGuiThemeResult result =
+        regenerate_locked(id, version, section_id, lane, has_seed, seed, job, &item, message, message_size);
     if (result == URSATZ_GUI_THEME_OK && out_item) {
         *out_item = item;
     } else {
@@ -768,9 +890,135 @@ static cJSON *variations_answer(const cJSON *result, const char *section_id, int
     return answer;
 }
 
+/* Makes the folder of the next variations set of the item: the first number from next_set whose folder this call makes. */
+static int make_set_dir(const char *source_dir, const char *id, int current, char *out_dir, size_t out_size) {
+    for (int set = next_set(id, current), tries = 0; tries < 1000; set++, tries++) {
+        snprintf(out_dir, out_size, "%s/variations-%d", source_dir, set);
+        if (mkdir(out_dir, 0755) == 0) {
+            return set;
+        }
+    }
+    return 0;
+}
+
+/*
+ * Makes the variations with the Composer API and writes variation-<i>.json, .mid and .musicxml of the loop version and
+ * result.json into out_dir (cli/piece.c write_variations). *out_document is the result.json document.
+ */
+static UrsatzGuiThemeResult run_variations(const Source *source, const cJSON *request, const cJSON *from, const char *section_id,
+                                           const char *lane, int count, bool check, bool has_seed, long long seed,
+                                           const ComposerJob *job, const char *out_dir, cJSON **out_document, char *message,
+                                           size_t message_size) {
+    cJSON *with_plans = NULL;
+    UrsatzGuiThemeResult result = request_with_plans(request, &with_plans, message, message_size);
+    if (result != URSATZ_GUI_THEME_OK) {
+        return result;
+    }
+    (void)source;
+    cJSON *api = cJSON_CreateObject();
+    cJSON *edit = cJSON_CreateObject();
+    cJSON *lanes = cJSON_CreateArray();
+    char count_text[16];
+    char seed_text[32];
+    snprintf(count_text, sizeof(count_text), "%d", count);
+    snprintf(seed_text, sizeof(seed_text), "%lld", seed);
+    bool whole = !lane || strcmp(lane, "all") == 0;
+    bool ok = api && edit && lanes && cJSON_AddItemToObject(api, "request", with_plans);
+    if (!ok) {
+        cJSON_Delete(with_plans);
+    }
+    ok = ok && cJSON_AddItemToObject(api, "from", cJSON_Duplicate(from, 1)) &&
+         (whole || cJSON_AddItemToArray(lanes, cJSON_CreateString(lane))) && cJSON_AddItemToObject(edit, "lanes", lanes);
+    lanes = ok ? NULL : lanes;
+    ok = ok && cJSON_AddStringToObject(edit, "section", section_id) && cJSON_AddStringToObject(edit, "count", count_text) &&
+         cJSON_AddItemToObject(api, "variations", edit);
+    edit = ok ? NULL : edit;
+    ok = ok && (!has_seed || cJSON_AddStringToObject(api, "seed", seed_text)) && cJSON_AddBoolToObject(api, "check", check) &&
+         cJSON_AddBoolToObject(api, "plain_midi", 0) && cJSON_AddBoolToObject(api, "musicxml", 1);
+    char *text = ok ? cJSON_PrintUnformatted(api) : NULL;
+    cJSON_Delete(api);
+    cJSON_Delete(edit);
+    cJSON_Delete(lanes);
+    if (!text) {
+        return URSATZ_GUI_THEME_ERR_ALLOC;
+    }
+    ComposerResponse response;
+    memset(&response, 0, sizeof(response));
+    ComposerStatus status = composer_api_piece_variations(text, job, &response);
+    free(text);
+    cJSON *document = NULL;
+    if (status != COMPOSER_OK) {
+        result = ursatz_gui_compose_failure(status, &response, message, message_size);
+    } else if (!(document = cJSON_Parse(response.json))) {
+        ursatz_gui_compose_say(message, message_size, "the variations could not be read");
+        result = URSATZ_GUI_THEME_ERR_FAILED;
+    }
+    double qpm = document ? document_tempo(document) : 0;
+    const cJSON *list = cJSON_GetObjectItemCaseSensitive(document, "variations");
+    int kept = cJSON_GetArraySize(list);
+    for (int i = 0; result == URSATZ_GUI_THEME_OK && i < kept && i < 8; i++) {
+        cJSON *entry = cJSON_GetArrayItem(list, i);
+        cJSON *loop = cJSON_GetObjectItemCaseSensitive(entry, "loop");
+        const cJSON *plan = cJSON_GetObjectItemCaseSensitive(loop, "plan");
+        const cJSON *musicxml = cJSON_GetObjectItemCaseSensitive(entry, "musicxml");
+        char names[3][64];
+        char paths[3][PATH_BYTES + 128];
+        static const char *const extensions[] = {"json", "mid", "musicxml"};
+        for (int k = 0; k < 3; k++) {
+            snprintf(names[k], sizeof(names[k]), "variation-%d.%s", i + 1, extensions[k]);
+            snprintf(paths[k], sizeof(paths[k]), "%s/%s", out_dir, names[k]);
+        }
+        ComposerResponse exported;
+        memset(&exported, 0, sizeof(exported));
+        result = cJSON_IsObject(plan) && cJSON_IsString(musicxml) ? URSATZ_GUI_THEME_OK : URSATZ_GUI_THEME_ERR_FAILED;
+        if (result != URSATZ_GUI_THEME_OK) {
+            ursatz_gui_compose_say(message, message_size, "the variations could not be read");
+            break;
+        }
+        result = ursatz_gui_compose_write_plan(plan, paths[0], message, message_size);
+        if (result == URSATZ_GUI_THEME_OK) {
+            result = ursatz_gui_compose_export(plan, qpm, false, true, false, cJSON_GetObjectItemCaseSensitive(entry, "loop_markers"),
+                                               job, &exported, message, message_size);
+        }
+        if (result == URSATZ_GUI_THEME_OK &&
+            (!write_bytes(out_dir, names[1], exported.midi, exported.midi_size, message, message_size) ||
+             !write_bytes(out_dir, names[2], musicxml->valuestring, strlen(musicxml->valuestring), message, message_size))) {
+            result = URSATZ_GUI_THEME_ERR_FAILED;
+        }
+        composer_response_destroy(&exported);
+        /* The document as printed: the plan of the version is its file, and the files are named. */
+        if (result == URSATZ_GUI_THEME_OK) {
+            set_string(loop, "plan", paths[0]);
+            set_string(entry, "midi", paths[1]);
+            set_string(entry, "musicxml", paths[2]);
+            cJSON_DeleteItemFromObjectCaseSensitive(entry, "loop_markers");
+        }
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        cJSON_DeleteItemFromObjectCaseSensitive(document, "brief");
+        char *printed = cJSON_PrintUnformatted(document);
+        char *file = printed ? malloc(strlen(printed) + 2) : NULL;
+        if (file) {
+            sprintf(file, "%s\n", printed);
+        }
+        if (!file || !write_bytes(out_dir, "result.json", file, strlen(file), message, message_size)) {
+            result = file ? URSATZ_GUI_THEME_ERR_FAILED : URSATZ_GUI_THEME_ERR_ALLOC;
+        }
+        free(file);
+        free(printed);
+    }
+    composer_response_destroy(&response);
+    if (result != URSATZ_GUI_THEME_OK) {
+        cJSON_Delete(document);
+        return result;
+    }
+    *out_document = document;
+    return URSATZ_GUI_THEME_OK;
+}
+
 static UrsatzGuiThemeResult variations_locked(const char *id, int version, const char *section_id, const char *lane, int count,
-                                              bool has_seed, long long seed, cJSON **out_result, char *message,
-                                              size_t message_size) {
+                                              bool has_seed, long long seed, const ComposerJob *job, cJSON **out_result,
+                                              char *message, size_t message_size) {
     if (!lane || count < 1 || count > 8) {
         ursatz_gui_compose_say(message, message_size, "variations need a lane and a count from 1 to 8");
         return URSATZ_GUI_THEME_ERR_INVALID;
@@ -781,76 +1029,54 @@ static UrsatzGuiThemeResult variations_locked(const char *id, int version, const
         return result;
     }
     const cJSON *piece = cJSON_GetObjectItemCaseSensitive(source.body, "piece");
-    int set = next_set(id, source.current);
     char out_dir[PATH_BYTES + 32];
-    char from[PATH_BYTES + 32];
-    char request[PATH_BYTES + 32];
-    char result_path[PATH_BYTES + 64];
-    char count_text[16];
-    char seed_text[32];
-    snprintf(out_dir, sizeof(out_dir), "%s/variations-%d", source.dir, set);
-    snprintf(from, sizeof(from), "%s/plan.json", source.dir);
-    snprintf(request, sizeof(request), "%s/request.json", source.dir);
-    snprintf(result_path, sizeof(result_path), "%s/result.json", out_dir);
-    snprintf(count_text, sizeof(count_text), "%d", count);
-    snprintf(seed_text, sizeof(seed_text), "%lld", seed);
-    const char *args[24];
-    int n = 0;
-    args[n++] = "piece";
-    args[n++] = "--from";
-    args[n++] = from;
-    args[n++] = "--request";
-    args[n++] = request;
-    args[n++] = "--variations";
-    args[n++] = section_id;
-    args[n++] = "--lane";
-    args[n++] = lane;
-    args[n++] = "--count";
-    args[n++] = count_text;
-    args[n++] = "--out-dir";
-    args[n++] = out_dir;
-    args[n++] = "--format";
-    args[n++] = "json";
-    if (cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(piece, "check"))) {
-        args[n++] = "--check";
-    }
-    if (has_seed) {
-        args[n++] = "--seed";
-        args[n++] = seed_text;
-    }
-    args[n] = NULL;
-    const char *outputs[] = {result_path, NULL};
-    cJSON *summary = NULL;
-    result = ursatz_gui_theme_run_composer(args, outputs, &summary, message, message_size);
-    cJSON *written = result == URSATZ_GUI_THEME_OK ? read_json(result_path) : NULL;
+    char plan_path[PATH_BYTES + 32];
+    cJSON *request = NULL;
+    cJSON *from = NULL;
+    cJSON *written = NULL;
+    snprintf(plan_path, sizeof(plan_path), "%s/plan.json", source.dir);
+    result = read_inputs(source.dir, plan_path, &request, &from, message, message_size);
+    int set = 0;
     if (result == URSATZ_GUI_THEME_OK) {
-        *out_result = written ? variations_answer(written, section_id, set) : NULL;
-        if (!*out_result) {
-            ursatz_gui_compose_say(message, message_size, "the variations could not be read");
+        set = make_set_dir(source.dir, id, source.current, out_dir, sizeof(out_dir));
+        if (set == 0) {
+            ursatz_gui_compose_say(message, message_size, "the folder of the variations could not be made");
             result = URSATZ_GUI_THEME_ERR_FAILED;
         }
     }
-    if (result != URSATZ_GUI_THEME_OK) {
-        ursatz_gui_theme_remove_folder(out_dir);
+    if (result == URSATZ_GUI_THEME_OK) {
+        result = run_variations(&source, request, from, section_id, lane, count,
+                                cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(piece, "check")), has_seed, seed, job, out_dir,
+                                &written, message, message_size);
+        if (result != URSATZ_GUI_THEME_OK) {
+            ursatz_gui_theme_remove_folder(out_dir);
+        }
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        *out_result = variations_answer(written, section_id, set);
+        if (!*out_result) {
+            ursatz_gui_compose_say(message, message_size, "the variations could not be read");
+            ursatz_gui_theme_remove_folder(out_dir);
+            result = URSATZ_GUI_THEME_ERR_FAILED;
+        }
     }
     cJSON_Delete(written);
-    cJSON_Delete(summary);
+    cJSON_Delete(request);
+    cJSON_Delete(from);
     source_clear(&source);
     return result;
 }
 
 UrsatzGuiThemeResult ursatz_gui_piece_variations(const char *id, int version, const char *section_id, const char *lane,
-                                                 int count, bool has_seed, long long seed, cJSON **out_result,
-                                                 char *message, size_t message_size) {
+                                                 int count, bool has_seed, long long seed, const ComposerJob *job,
+                                                 cJSON **out_result, char *message, size_t message_size) {
     if (out_result) {
         *out_result = NULL;
     }
     ursatz_gui_compose_say(message, message_size, "");
     cJSON *answer = NULL;
-    pthread_mutex_lock(&g_compose_lock);
     UrsatzGuiThemeResult result =
-        variations_locked(id, version, section_id, lane, count, has_seed, seed, &answer, message, message_size);
-    pthread_mutex_unlock(&g_compose_lock);
+        variations_locked(id, version, section_id, lane, count, has_seed, seed, job, &answer, message, message_size);
     if (result == URSATZ_GUI_THEME_OK && out_result) {
         *out_result = answer;
     } else {
@@ -859,8 +1085,8 @@ UrsatzGuiThemeResult ursatz_gui_piece_variations(const char *id, int version, co
     return result;
 }
 
-static UrsatzGuiThemeResult choose_locked(const char *id, int version, int set, int index, cJSON **out_item, char *message,
-                                          size_t message_size) {
+static UrsatzGuiThemeResult choose_locked(const char *id, int version, int set, int index, const ComposerJob *job,
+                                          cJSON **out_item, char *message, size_t message_size) {
     Source source;
     UrsatzGuiThemeResult result = open_source(id, version, NULL, NULL, &source, message, message_size);
     if (result != URSATZ_GUI_THEME_OK) {
@@ -888,19 +1114,26 @@ static UrsatzGuiThemeResult choose_locked(const char *id, int version, int set, 
         source_clear(&source);
         return URSATZ_GUI_THEME_ERR_NOT_FOUND;
     }
-    int number = source.current + 1;
-    char dir[PATH_BYTES];
-    char absolute[PATH_BYTES];
+    UrsatzGuiComposeStage stage;
+    cJSON *request = NULL;
+    cJSON *from_plan = NULL;
     cJSON *summary = NULL;
     cJSON *new_body = NULL;
     cJSON *item = NULL;
-    result = make_folder(id, number, dir, sizeof(dir), absolute, sizeof(absolute), message, message_size);
+    result = ursatz_gui_compose_stage_make(id, source.current + 1, &stage, message, message_size);
     bool made = result == URSATZ_GUI_THEME_OK;
     if (result == URSATZ_GUI_THEME_OK) {
-        result = carry_request(source.dir, absolute, message, message_size);
+        result = carry_request(source.dir, stage.absolute, message, message_size);
     }
     if (result == URSATZ_GUI_THEME_OK) {
-        result = run_piece(absolute, false, false, 0, from, "none", NULL, &summary, message, message_size);
+        result = read_inputs(stage.absolute, from, &request, &from_plan, message, message_size);
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        result = run_piece(stage.absolute, stage.named, request, false, false, 0, from_plan, "none", NULL, job, &summary, message,
+                           message_size);
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        result = rebase_request(&stage, summary, message, message_size);
     }
     if (result == URSATZ_GUI_THEME_OK) {
         /* The Composer's run only built the ending version; the loop version is the variation's, with its seed. */
@@ -922,31 +1155,32 @@ static UrsatzGuiThemeResult choose_locked(const char *id, int version, int set, 
             ursatz_gui_compose_say(message, message_size, "the version could not be made from the variation");
             result = URSATZ_GUI_THEME_ERR_ALLOC;
         } else {
-            result = add_version(id, number, dir, new_body, note, &item, message, message_size);
+            result = add_version(id, new_body, note, &item, message, message_size);
         }
     }
     if (result == URSATZ_GUI_THEME_OK) {
+        ursatz_gui_compose_stage_finish(id, item, &stage);
         *out_item = item;
     } else if (made) {
-        ursatz_gui_theme_remove_folder(dir);
+        ursatz_gui_compose_stage_discard(&stage);
     }
     cJSON_Delete(written);
+    cJSON_Delete(request);
+    cJSON_Delete(from_plan);
     cJSON_Delete(summary);
     cJSON_Delete(new_body);
     source_clear(&source);
     return result;
 }
 
-UrsatzGuiThemeResult ursatz_gui_piece_choose(const char *id, int version, int set, int index, cJSON **out_item,
-                                             char *message, size_t message_size) {
+UrsatzGuiThemeResult ursatz_gui_piece_choose(const char *id, int version, int set, int index, const ComposerJob *job,
+                                             cJSON **out_item, char *message, size_t message_size) {
     if (out_item) {
         *out_item = NULL;
     }
     ursatz_gui_compose_say(message, message_size, "");
     cJSON *item = NULL;
-    pthread_mutex_lock(&g_compose_lock);
-    UrsatzGuiThemeResult result = choose_locked(id, version, set, index, &item, message, message_size);
-    pthread_mutex_unlock(&g_compose_lock);
+    UrsatzGuiThemeResult result = choose_locked(id, version, set, index, job, &item, message, message_size);
     if (result == URSATZ_GUI_THEME_OK && out_item) {
         *out_item = item;
     } else {

@@ -105,6 +105,8 @@ check(same(JSON.parse(V.saveRequest("m1", candidate, "approved", "  My name ").b
 check(JSON.parse(V.saveRequest("m1", candidate, "bogus").body).flag === "unflagged", "an unknown flag saves as unflagged");
 check(same(JSON.parse(V.flagRequest("v1", "rejected", "variant").body), { flag: "rejected", kind: "variant" }), "flag body with a kind");
 check(V.rerollRequest("v1").url === "/api/materials/items/v1/reroll", "reroll url");
+check(V.rerollRequest("v1").job === true && V.candidateRerollRequest("m1", candidate).job === true, "a reroll is a job");
+check(V.generateRequest("m1", {}).request.job === true && V.eachOpRequest("m1", "7").request.job === true, "variants and each-op are jobs");
 check(V.treeRequest("v1").method === "GET" && V.treeRequest("v1").url === "/api/materials/items/v1/variant-tree", "tree url");
 
 const cv = V.candidateView(candidate);
