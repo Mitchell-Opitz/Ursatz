@@ -72,7 +72,7 @@ StandardFormAnalysisStatus chain_form_boundary_detect(const StandardFormBoundary
 /*
  * The same for the motive analysis (analysis_motive.h): standard-form's injected window matcher calls the kernel's Motif Window Matching,
  * which finds the windows whose Contour direction sequence and RhythmicPattern both equal another window's. The kernel returns one
- * MotifDetectionOccurrence per window that matched, borrowing the window's event ids, which is how a window is found again here.
+ * MotifWindowOccurrence per window that matched, borrowing the window's event ids, which is how a window is found again here.
  */
 StandardFormAnalysisStatus chain_form_match_windows(const StandardFormMotifWindow *windows, size_t count, bool *matched,
                                                     void *context) {
@@ -84,7 +84,7 @@ StandardFormAnalysisStatus chain_form_match_windows(const StandardFormMotifWindo
     if (count == 0) {
         return STANDARD_FORM_ANALYSIS_OK;
     }
-    MotifDetectionOccurrence *found = NULL;
+    MotifWindowOccurrence *found = NULL;
     size_t found_count = 0;
     StandardFormAnalysisStatus status = STANDARD_FORM_ANALYSIS_ERR_DETECTOR;
     if (motif_window_matching_find(windows, count, &found, &found_count) == MOTIF_WINDOW_MATCHING_OK) {

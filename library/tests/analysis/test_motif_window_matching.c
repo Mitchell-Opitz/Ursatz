@@ -1,35 +1,24 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include "analysis/motif_detection.h"
 #include "analysis/motif_window_matching.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_identity.h"
 #include "semantics/contour.h"
 #include "semantics/rhythmic_pattern.h"
-#include "structure/motif.h"
 #include "time/duration.h"
 
 /*
  * Analysis-regression tests: exact repetition and transposition (same
  * Contour directions, different PitchIdentity tokens) both match;
  * rhythm-mismatch and contour-mismatch windows do not; a window with no
- * partner anywhere in the input produces no occurrence. The matched
- * occurrences produced here also feed straight into
- * motif_detection_analyze, pinning the whole pipeline end to end.
+ * partner anywhere in the input produces no occurrence.
  */
 
 static EntityID *make_id(const char *value) {
     EntityID *id;
     assert(entity_id_create(value, &id) == ENTITY_ID_OK);
     return id;
-}
-
-static Motif *make_motif_stub(void) {
-    EntityID *event_ids[1] = {make_id("note-motif-def-1")};
-    Motif *motif;
-    assert(motif_create(make_id("motif-window-matching-stub"), event_ids, 1, &motif) == MOTIF_OK);
-    return motif;
 }
 
 static PitchIdentity *make_pitch(const char *token) {
@@ -109,7 +98,7 @@ int main(void) {
         {contour_4, rhythm_4, (const EntityID *const *)event_ids_4, 2},
     };
 
-    MotifDetectionOccurrence *occurrences;
+    MotifWindowOccurrence *occurrences;
     size_t occurrence_count;
     assert(motif_window_matching_find(windows, 5, &occurrences, &occurrence_count) == MOTIF_WINDOW_MATCHING_OK);
 
@@ -121,32 +110,23 @@ int main(void) {
         assert(occurrences[i].matched_event_id_count == 2);
     }
 
-    /* Feed straight into MotifDetection: the matched windows package into one Interpretation each. */
-    Motif *motif = make_motif_stub();
-    MotifDetectionInput input = {motif, occurrences, occurrence_count};
-    AnalysisResult *result;
-    assert(motif_detection_analyze(&input, NULL, NULL, &result) == ANALYZER_OK);
-    assert(analysis_result_interpretation_count(result) == 3);
-    analysis_result_destroy(result);
-
     motif_window_matching_destroy_occurrences(occurrences);
 
     /* A window with no partner anywhere in the input yields no occurrence. */
     MotifWindow lone_window[1] = {{contour_4, rhythm_4, (const EntityID *const *)event_ids_4, 2}};
-    MotifDetectionOccurrence *lone_occurrences;
+    MotifWindowOccurrence *lone_occurrences;
     size_t lone_count;
     assert(motif_window_matching_find(lone_window, 1, &lone_occurrences, &lone_count) == MOTIF_WINDOW_MATCHING_OK);
     assert(lone_count == 0);
     assert(lone_occurrences == NULL);
 
     /* Empty input is valid and yields no occurrences. */
-    MotifDetectionOccurrence *empty_occurrences;
+    MotifWindowOccurrence *empty_occurrences;
     size_t empty_count;
     assert(motif_window_matching_find(NULL, 0, &empty_occurrences, &empty_count) == MOTIF_WINDOW_MATCHING_OK);
     assert(empty_count == 0);
     assert(empty_occurrences == NULL);
 
-    motif_destroy(motif);
     for (size_t i = 0; i < 2; i++) {
         entity_id_destroy(event_ids_0[i]);
         entity_id_destroy(event_ids_1[i]);

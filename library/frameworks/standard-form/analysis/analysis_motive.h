@@ -53,7 +53,7 @@
 #define STANDARD_FORM_MOTIVE_CLAIM_TYPE "standard-form/motive"
 #define STANDARD_FORM_MOTIVE_OCCURRENCE_CLAIM_TYPE "standard-form/motive-occurrence"
 
-/* StandardFormMotiveKind is defined in analysis_input.h (the relation matcher of StandardFormConfig names it). */
+/* StandardFormMotiveKind is MotiveOccurrenceKind (semantics/motive_occurrence_kind.h), kept as an alias until B12. */
 
 /* "exact" "real-transposed" "tonal-transposed" "inverted" "retrograde" "augmented" "diminished" "fragmented" "varied"; NULL otherwise. */
 const char *standard_form_motive_kind_name(StandardFormMotiveKind kind);

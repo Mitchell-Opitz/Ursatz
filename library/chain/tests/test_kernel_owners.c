@@ -9,6 +9,7 @@
 #include "pitch/pitch_numeric_value.h"
 #include "pitch/tuning_system.h"
 #include "ursatz_chain/analysis_chain.h"
+#include "standard-form/analysis/analysis_motive_match.h"
 #include "ursatz_chain/kernel_owners.h"
 
 /*
@@ -63,11 +64,10 @@ static void test_equal_and_transposed_shapes(void) {
     StandardFormMotiveShape proto = shape(false, 3, up_steps, up_steps, gaps, 60);
     StandardFormMotiveShape same = proto;
     StandardFormMotiveShape moved = shape(false, 3, up_steps, up_steps, gaps, 65);
-    StandardFormMotiveKind kind;
-    double score = 0.0;
-    assert(chain_match_motive_relation(&proto, &same, &kind, &score, NULL) && kind == STANDARD_FORM_MOTIVE_EXACT && score > 0.0);
-    assert(chain_match_motive_relation(&proto, &moved, &kind, &score, NULL) && kind == STANDARD_FORM_MOTIVE_REAL);
-    assert(score > 0.0 && score <= 1.0);
+    StandardFormRelationMatch m;
+    assert(chain_match_motive_relation(&proto, &same, &m, NULL) && m.kind == MOTIVE_OCCURRENCE_EXACT && m.score > 0.0);
+    assert(chain_match_motive_relation(&proto, &moved, &m, NULL) && m.kind == MOTIVE_OCCURRENCE_REAL);
+    assert(m.score > 0.0 && m.score <= 1.0);
 
     /* C D E C and D E F D in C major: the semitones differ (2 2 -4 / 2 1 -3), the degrees do not: tonal */
     const int semis_a[3] = {2, 2, -4};
@@ -75,9 +75,9 @@ static void test_equal_and_transposed_shapes(void) {
     StandardFormMotiveShape tonal_proto = shape(true, 3, semis_a, generic_up, gaps, 60);
     StandardFormMotiveShape tonal_cand = shape(true, 3, semis_b, generic_up, gaps, 62);
     ChainRelationContext key = {true, 0, false};
-    assert(chain_match_motive_relation(&tonal_proto, &tonal_cand, &kind, &score, &key) && kind == STANDARD_FORM_MOTIVE_TONAL);
+    assert(chain_match_motive_relation(&tonal_proto, &tonal_cand, &m, &key) && m.kind == MOTIVE_OCCURRENCE_TONAL);
     /* without a key the same shapes are not a transposition of a scale: no match as a tonal one */
-    assert(!chain_match_motive_relation(&tonal_proto, &tonal_cand, &kind, &score, NULL) || kind != STANDARD_FORM_MOTIVE_TONAL);
+    assert(!chain_match_motive_relation(&tonal_proto, &tonal_cand, &m, NULL) || m.kind != MOTIVE_OCCURRENCE_TONAL);
 }
 
 static void test_inverted_and_retrograde_shapes(void) {
@@ -87,10 +87,9 @@ static void test_inverted_and_retrograde_shapes(void) {
     const int back[3] = {-2, -3, -2};
     StandardFormMotiveShape proto = shape(false, 3, up, up, gaps, 60);
     StandardFormMotiveShape inverted = shape(false, 3, down, down, gaps, 72);
-    StandardFormMotiveKind kind;
-    double score = 0.0;
-    assert(chain_match_motive_relation(&proto, &inverted, &kind, &score, NULL));
-    assert(kind == STANDARD_FORM_MOTIVE_INVERTED || kind == STANDARD_FORM_MOTIVE_RETROGRADE);
+    StandardFormRelationMatch m;
+    assert(chain_match_motive_relation(&proto, &inverted, &m, NULL));
+    assert(m.kind == MOTIVE_OCCURRENCE_INVERTED || m.kind == MOTIVE_OCCURRENCE_RETROGRADE);
 
     /* an asymmetric figure: its retrograde reverses the intervals and flips them; its inversion only flips */
     const int figure[3] = {2, 3, 1};
@@ -99,8 +98,67 @@ static void test_inverted_and_retrograde_shapes(void) {
     StandardFormMotiveShape p = shape(false, 3, figure, figure, gaps, 60);
     StandardFormMotiveShape r = shape(false, 3, reversed, reversed, gaps, 66);
     StandardFormMotiveShape v = shape(false, 3, flipped, flipped, gaps, 72);
-    assert(chain_match_motive_relation(&p, &r, &kind, &score, NULL) && kind == STANDARD_FORM_MOTIVE_RETROGRADE);
-    assert(chain_match_motive_relation(&p, &v, &kind, &score, NULL) && kind == STANDARD_FORM_MOTIVE_INVERTED);
+    assert(chain_match_motive_relation(&p, &r, &m, NULL) && m.kind == MOTIVE_OCCURRENCE_RETROGRADE);
+    assert(chain_match_motive_relation(&p, &v, &m, NULL) && m.kind == MOTIVE_OCCURRENCE_INVERTED);
+}
+
+static void test_augmentation_and_diminution_shapes(void) {
+    const int steps[3] = {2, 2, -4};
+    const long quarter[3] = {1, 1, 1};
+    const long half[3] = {2, 2, 2};
+    const long double_length[3] = {4, 4, 4};
+    const long triple[3] = {3, 3, 3};
+    StandardFormMotiveShape proto = shape(false, 3, steps, steps, half, 60);
+    StandardFormMotiveShape augmented = shape(false, 3, steps, steps, double_length, 60);
+    StandardFormMotiveShape diminished = shape(false, 3, steps, steps, quarter, 60);
+    StandardFormMotiveShape by_three = shape(false, 3, steps, steps, triple, 60);
+    StandardFormRelationMatch m;
+    assert(chain_match_motive_relation(&proto, &augmented, &m, NULL) && m.kind == MOTIVE_OCCURRENCE_AUGMENTED);
+    assert(m.score > 0.0 && m.score <= 1.0 && m.fragment_part == -1);
+    assert(chain_match_motive_relation(&proto, &diminished, &m, NULL) && m.kind == MOTIVE_OCCURRENCE_DIMINISHED);
+    /* only the factors 2 and 1/2 are read as an augmentation or diminution */
+    assert(!chain_match_motive_relation(&proto, &by_three, &m, NULL) || (m.kind != MOTIVE_OCCURRENCE_AUGMENTED && m.kind != MOTIVE_OCCURRENCE_DIMINISHED));
+
+    /* the form takes these through its classifier, as a kind it does not itself match */
+    StandardFormMotiveMatch match;
+    assert(standard_form_motive_classify_match(&proto, &augmented, 1, chain_match_motive_relation, NULL, &match) &&
+           match.kind == (int)MOTIVE_OCCURRENCE_AUGMENTED && match.intervals == 3);
+    assert(standard_form_motive_classify_match(&proto, &diminished, 1, chain_match_motive_relation, NULL, &match) &&
+           match.kind == (int)MOTIVE_OCCURRENCE_DIMINISHED);
+}
+
+static void test_fragment_shapes(void) {
+    const long gaps[4] = {1, 1, 1, 1};
+    const int whole_steps[4] = {2, 2, 1, 2};
+    const int prefix_steps[2] = {2, 2};
+    const int suffix_steps[2] = {1, 2};
+    const int middle_steps[2] = {2, 1};
+    const int one_step[1] = {2};
+    StandardFormMotiveShape proto = shape(false, 4, whole_steps, whole_steps, gaps, 60);
+    StandardFormMotiveShape prefix = shape(false, 2, prefix_steps, prefix_steps, gaps, 60);
+    StandardFormMotiveShape suffix = shape(false, 2, suffix_steps, suffix_steps, gaps, 64);
+    StandardFormMotiveShape middle = shape(false, 2, middle_steps, middle_steps, gaps, 62);
+    StandardFormMotiveShape single = shape(false, 1, one_step, one_step, gaps, 60);
+    StandardFormRelationMatch m;
+    StandardFormMotiveMatch match;
+
+    assert(chain_match_motive_relation(&proto, &prefix, &m, NULL) && m.kind == MOTIVE_OCCURRENCE_FRAGMENTED);
+    assert(m.fragment_part == 0 && m.fragment_intervals == 2);
+    assert(standard_form_motive_fragment_match(&proto, &prefix, chain_match_motive_relation, NULL, &match) &&
+           match.kind == (int)MOTIVE_OCCURRENCE_FRAGMENTED && match.fragment_part == 0 && match.fragment_intervals == 2 &&
+           match.intervals == 2);
+
+    assert(chain_match_motive_relation(&proto, &suffix, &m, NULL) && m.kind == MOTIVE_OCCURRENCE_FRAGMENTED);
+    assert(m.fragment_part == 1 && m.fragment_intervals == 2);
+    assert(standard_form_motive_fragment_match(&proto, &suffix, chain_match_motive_relation, NULL, &match) && match.fragment_part == 1);
+
+    /* a middle part, and a part below the fewest intervals, are not claimed */
+    assert(!chain_match_motive_relation(&proto, &middle, &m, NULL));
+    assert(!standard_form_motive_fragment_match(&proto, &middle, chain_match_motive_relation, NULL, &match));
+    assert(!standard_form_motive_fragment_match(&proto, &single, chain_match_motive_relation, NULL, &match));
+    /* the whole is no fragment, and a fragment is no whole-window kind */
+    assert(!standard_form_motive_fragment_match(&proto, &proto, chain_match_motive_relation, NULL, &match));
+    assert(!standard_form_motive_classify_match(&proto, &prefix, 1, chain_match_motive_relation, NULL, &match));
 }
 
 static void test_refusals(void) {
@@ -111,14 +169,15 @@ static void test_refusals(void) {
     StandardFormMotiveShape proto = shape(false, 3, a, a, gaps, 60);
     StandardFormMotiveShape unrelated = shape(false, 3, b, b, gaps, 60);
     StandardFormMotiveShape rhythm = shape(false, 3, a, a, other_gaps, 60);
-    StandardFormMotiveShape shorter = shape(false, 2, a, a, gaps, 60);
-    StandardFormMotiveKind kind;
-    double score;
-    assert(!chain_match_motive_relation(&proto, &unrelated, &kind, &score, NULL));
-    assert(!chain_match_motive_relation(&proto, &rhythm, &kind, &score, NULL));
-    assert(!chain_match_motive_relation(&proto, &shorter, &kind, &score, NULL));
-    assert(!chain_match_motive_relation(NULL, &proto, &kind, &score, NULL));
-    assert(!chain_match_motive_relation(&proto, &proto, NULL, &score, NULL));
+    StandardFormMotiveShape shorter = shape(false, 2, b, b, gaps, 60);    /* not a part of the prototype */
+    StandardFormMotiveShape too_short = shape(false, 1, a, a, gaps, 60); /* a part, but below the fewest intervals */
+    StandardFormRelationMatch m;
+    assert(!chain_match_motive_relation(&proto, &unrelated, &m, NULL));
+    assert(!chain_match_motive_relation(&proto, &rhythm, &m, NULL));
+    assert(!chain_match_motive_relation(&proto, &shorter, &m, NULL));
+    assert(!chain_match_motive_relation(&proto, &too_short, &m, NULL));
+    assert(!chain_match_motive_relation(NULL, &proto, &m, NULL));
+    assert(!chain_match_motive_relation(&proto, &proto, NULL, NULL));
 }
 
 static bool all_non_chord(const ToneLineNote *notes, size_t count, ToneLineLabel *out, void *context) {
@@ -210,6 +269,8 @@ int main(void) {
     test_the_classifier_is_the_owner();
     test_equal_and_transposed_shapes();
     test_inverted_and_retrograde_shapes();
+    test_augmentation_and_diminution_shapes();
+    test_fragment_shapes();
     test_refusals();
     test_relabelling_a_melody_line();
     test_the_chain_injects_by_default();

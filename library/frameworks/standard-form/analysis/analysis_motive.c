@@ -15,31 +15,11 @@
 #include "time/duration.h"
 
 const char *standard_form_motive_kind_name(StandardFormMotiveKind kind) {
-    static const char *const NAMES[STANDARD_FORM_MOTIVE_KIND_COUNT] = {
-        "exact", "real-transposed", "tonal-transposed", "inverted", "retrograde", "augmented", "diminished", "fragmented", "varied"};
-    return (unsigned)kind < (unsigned)STANDARD_FORM_MOTIVE_KIND_COUNT ? NAMES[kind] : NULL;
+    return motive_occurrence_kind_name(kind);
 }
 
 int standard_form_motive_kind_rank(StandardFormMotiveKind kind) {
-    switch (kind) {
-        case STANDARD_FORM_MOTIVE_EXACT:
-            return 0;
-        case STANDARD_FORM_MOTIVE_REAL:
-        case STANDARD_FORM_MOTIVE_TONAL:
-            return 1;
-        case STANDARD_FORM_MOTIVE_INVERTED:
-        case STANDARD_FORM_MOTIVE_RETROGRADE:
-            return 2;
-        case STANDARD_FORM_MOTIVE_AUGMENTED:
-        case STANDARD_FORM_MOTIVE_DIMINISHED:
-            return 3;
-        case STANDARD_FORM_MOTIVE_FRAGMENTED:
-            return 4;
-        case STANDARD_FORM_MOTIVE_VARIED:
-            return 5;
-        default:
-            return -1;
-    }
+    return motive_occurrence_kind_rank(kind);
 }
 
 /* --- the internal families --- */
@@ -500,8 +480,11 @@ static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fa
             /* the whole motive under a transformation */
             if (standard_form_motive_shape(line, first, fam->proto_n, fam->generic, &shape) &&
                 !held_by_equal_or_longer(families, family_count, f, first, fam->proto_n) &&
-                standard_form_motive_classify_with(&fam->proto, &shape, config->varied_max_mismatch, config->relation_matcher,
-                                                   config->relation_context, &match) &&
+                (config->relation_match != NULL
+                     ? standard_form_motive_classify_match(&fam->proto, &shape, config->varied_max_mismatch, config->relation_match,
+                                                           config->relation_context, &match)
+                     : standard_form_motive_classify_with(&fam->proto, &shape, config->varied_max_mismatch, config->relation_matcher,
+                                                          config->relation_context, &match)) &&
                 match.kind > (int)STANDARD_FORM_MOTIVE_TONAL) {
                 fill_rec(&rec, f, fam->line, first, fam->proto_n, &match);
                 if (!push_rec(&recs, &rec_count, &capacity, &rec)) {
@@ -513,7 +496,9 @@ static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fa
                 size_t n = length + 1;
                 if (!standard_form_motive_shape(line, first, n, fam->generic, &shape) ||
                     held_by_equal_or_longer(families, family_count, f, first, n) ||
-                    !standard_form_motive_match_fragment(&fam->proto, &shape, &match)) {
+                    config->relation_match == NULL ||
+                    !standard_form_motive_fragment_match(&fam->proto, &shape, config->relation_match, config->relation_context,
+                                                         &match)) {
                     continue;
                 }
                 fill_rec(&rec, f, fam->line, first, n, &match);

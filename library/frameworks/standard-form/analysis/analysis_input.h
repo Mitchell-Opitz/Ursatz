@@ -9,6 +9,7 @@
 #include "semantics/analysis_segment.h"
 #include "semantics/cadence_type.h"
 #include "semantics/contour.h"
+#include "semantics/motive_occurrence_kind.h"
 #include "time/meter_map.h"
 #include "time/metrical_position.h"
 #include "time/time_span.h"
@@ -122,20 +123,37 @@ StandardFormAnalysisStatus standard_form_input_add_analysis_segment(StandardForm
 StandardFormAnalysisStatus standard_form_input_finish(StandardFormInput *input);
 void standard_form_input_destroy(StandardFormInput *input);
 
-typedef enum {
-    STANDARD_FORM_MOTIVE_EXACT = 0,
-    STANDARD_FORM_MOTIVE_REAL,
-    STANDARD_FORM_MOTIVE_TONAL,
-    STANDARD_FORM_MOTIVE_INVERTED,
-    STANDARD_FORM_MOTIVE_RETROGRADE,
-    STANDARD_FORM_MOTIVE_AUGMENTED,
-    STANDARD_FORM_MOTIVE_DIMINISHED,
-    STANDARD_FORM_MOTIVE_FRAGMENTED,
-    STANDARD_FORM_MOTIVE_VARIED,
-    STANDARD_FORM_MOTIVE_KIND_COUNT
-} StandardFormMotiveKind;
+/* Kept for the apps until B12 of P28: the occurrence kind is semantics/motive_occurrence_kind.h. */
+typedef MotiveOccurrenceKind StandardFormMotiveKind;
+#define STANDARD_FORM_MOTIVE_EXACT MOTIVE_OCCURRENCE_EXACT
+#define STANDARD_FORM_MOTIVE_REAL MOTIVE_OCCURRENCE_REAL
+#define STANDARD_FORM_MOTIVE_TONAL MOTIVE_OCCURRENCE_TONAL
+#define STANDARD_FORM_MOTIVE_INVERTED MOTIVE_OCCURRENCE_INVERTED
+#define STANDARD_FORM_MOTIVE_RETROGRADE MOTIVE_OCCURRENCE_RETROGRADE
+#define STANDARD_FORM_MOTIVE_AUGMENTED MOTIVE_OCCURRENCE_AUGMENTED
+#define STANDARD_FORM_MOTIVE_DIMINISHED MOTIVE_OCCURRENCE_DIMINISHED
+#define STANDARD_FORM_MOTIVE_FRAGMENTED MOTIVE_OCCURRENCE_FRAGMENTED
+#define STANDARD_FORM_MOTIVE_VARIED MOTIVE_OCCURRENCE_VARIED
+#define STANDARD_FORM_MOTIVE_KIND_COUNT MOTIVE_OCCURRENCE_KIND_COUNT
 
 typedef struct StandardFormMotiveShape StandardFormMotiveShape;
+
+/* What an injected matcher says about a candidate window: how it reads against the prototype. */
+typedef struct {
+    MotiveOccurrenceKind kind;
+    double score;               /* in (0, 1] */
+    int fragment_part;          /* FRAGMENTED: 0 prefix, 1 suffix; else -1 */
+    size_t fragment_intervals;  /* FRAGMENTED: the intervals of the fragment; else 0 */
+} StandardFormRelationMatch;
+
+/*
+ * An injected matcher for every occurrence kind the kernel owns (motive_variant_recognize): EXACT, REAL, TONAL, INVERTED,
+ * RETROGRADE, AUGMENTED, DIMINISHED and FRAGMENTED. True when the candidate is the prototype under one relation, with *out filled;
+ * false: no relation. The candidate may be shorter than the prototype (a fragment search). context is the config's relation_context.
+ * VARIED is not matched by it; it stays the framework's.
+ */
+typedef bool (*StandardFormRelationMatchFn)(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
+                                            StandardFormRelationMatch *out, void *context);
 
 /*
  * An injected matcher for the transformed occurrences the kernel owns (motive_relation_apply: transposition, inversion,
@@ -158,7 +176,9 @@ typedef bool (*StandardFormRelationMatcher)(const StandardFormMotiveShape *proto
  *   no_signal_uncertainty        the uncertainty of a phrase that ends with no cadence and no discontinuity, only at the end of
  *                                the input (default 0.5)
  *   motive_min_notes, motive_max_notes, varied_max_mismatch, include_bass   the motive analysis (analysis_motive.h): 3, 8, 1, false
- *   relation_matcher, relation_context   NULL (default): standard-form's own pattern, inversion and retrograde matchers. Set: the
+ *   relation_match, relation_context   NULL (default): the matchers below. Set: it replaces the pattern, inversion, retrograde,
+ *                                augmentation, diminution and fragment matchers, in their places in the match order; varied stays the framework's
+ *   relation_matcher, relation_context   (kept until B12; used only when relation_match is NULL) NULL (default): standard-form's own pattern, inversion and retrograde matchers. Set: the
  *                                matcher replaces those three, in their place in the match order (analysis_motive_match.h); the
  *                                other kinds (augmentation, diminution, varied, fragment) keep the framework's matchers
  */
@@ -173,8 +193,9 @@ typedef struct {
     size_t motive_max_notes;      /* the most (default 8) */
     size_t varied_max_mismatch;   /* interval mismatches a varied motive allows (default 1) */
     bool include_bass;            /* also look for motives in the bass line, apart from the soprano's (default false) */
-    StandardFormRelationMatcher relation_matcher; /* injected owner of transposed, inverted and retrograde (default NULL) */
+    StandardFormRelationMatcher relation_matcher; /* kept until B12 of P28: used only when relation_match is NULL (default NULL) */
     void *relation_context;
+    StandardFormRelationMatchFn relation_match; /* injected owner of every kind but varied (default NULL) */
 } StandardFormConfig;
 
 StandardFormConfig standard_form_config_default(void);

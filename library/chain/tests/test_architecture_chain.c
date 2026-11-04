@@ -19,7 +19,7 @@
 static const char *KERNEL_PREFIXES[] = {
     "identity/",    "core/",     "time/",           "pitch/",     "events/", "containers/",
     "structure/",   "context/",  "semantics/",      "relationship/", "interpretation/",
-    "theory/",      "rules/",    "analysis/",       "transform/", "generation/",
+    "theory/",      "rules/",    "analysis/",       "generation/",
 };
 
 static const char *FRAMEWORK_HEADERS[] = {
@@ -27,6 +27,7 @@ static const char *FRAMEWORK_HEADERS[] = {
     "common-practice-minimal/seventh_identification.h",
     "common-practice-minimal/key_identification.h",
     "standard-form/analysis/analysis_motive.h",
+    "standard-form/analysis/analysis_motive_match.h",
     "standard-form/analysis/analysis_phrase.h",
     "common-practice-minimal/key_regions.h",
     "common-practice-minimal/weighted_chord_identification.h",

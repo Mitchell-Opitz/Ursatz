@@ -96,8 +96,8 @@ static void test_a_refusing_matcher_removes_the_three_matchers_only(void) {
     assert(!standard_form_motive_classify_with(&proto, &transposed, 1, scripted, &refuse, &match));
     assert(!standard_form_motive_classify_with(&proto, &inverted, 1, scripted, &refuse, &match));
     assert(refuse.calls == 2);
-    assert(standard_form_motive_classify_with(&proto, &augmented, 1, scripted, &refuse, &match) &&
-           match.kind == (int)STANDARD_FORM_MOTIVE_AUGMENTED);
+    /* augmentation is the injected kernel matcher's: the framework alone no longer finds it */
+    assert(!standard_form_motive_classify_with(&proto, &augmented, 1, scripted, &refuse, &match));
     assert(refuse.calls == 3);
     /* the framework's own order still finds the first two */
     assert(standard_form_motive_classify(&proto, &transposed, 1, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_REAL);

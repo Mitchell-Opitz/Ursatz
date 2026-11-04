@@ -7,6 +7,7 @@
 #include "analysis/motive_tone_roles.h"
 #include "analysis/motive_variant_recognition.h"
 #include "standard-counterpoint/analysis/analysis_melody_nct.h"
+#include "standard-form/analysis/analysis_motive_match.h"
 
 bool chain_classify_tones(const ToneLineNote *notes, size_t count, ToneLineLabel *out, void *context) {
     return motive_tone_roles_line(notes, count, out, context);
@@ -48,16 +49,70 @@ static bool sketch_of(const StandardFormMotiveShape *shape, const ChainRelationC
     return motive_sketch_validate(out);
 }
 
+static bool ratio_is(const MotiveRelationStep *step, long num, long den) {
+    return (step->value[0] == 0 && step->den[0] == 0) || (step->value[0] == num && step->den[0] == den);
+}
+
+/* What the form reads of a candidate as long as its prototype: one step. */
 static bool only_matching_steps(const MotiveRelationStep *step, const void *context) {
     (void)context;
-    return step->kind == MOTIVE_RELATION_EXACT || step->kind == MOTIVE_RELATION_TRANSPOSE ||
-           step->kind == MOTIVE_RELATION_INVERT || step->kind == MOTIVE_RELATION_RETROGRADE;
+    switch (step->kind) {
+    case MOTIVE_RELATION_EXACT:
+    case MOTIVE_RELATION_TRANSPOSE:
+    case MOTIVE_RELATION_INVERT:
+    case MOTIVE_RELATION_RETROGRADE:
+        return true;
+    case MOTIVE_RELATION_AUGMENT:
+        return ratio_is(step, 2, 1);
+    case MOTIVE_RELATION_DIMINISH:
+        return ratio_is(step, 1, 2);
+    default:
+        return false;
+    }
+}
+
+static double score_of(const MotiveSketch *from, const MotiveSketch *to) {
+    MotiveDimensions dimensions;
+    motive_variant_compare(from, to, &dimensions);
+    return motive_variant_nearness(&dimensions);
+}
+
+/*
+ * A candidate shorter than the prototype is a fragment when the kernel's fragment relation, applied to the prototype as a leading (1) or
+ * trailing (2) part of the candidate's length, gives the candidate. The relation is applied directly, not searched for: the form asks
+ * this of every window of every length, and the recognizer's search over every relation is far too slow for that. The sketches are
+ * settled the way the recognizer settles them (an exact step), so the score is the one it would report.
+ */
+static bool fragment_of(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate, const MotiveSketch *source,
+                        const MotiveSketch *target, StandardFormRelationMatch *out) {
+    size_t length = candidate->intervals + 1; /* notes */
+    if (candidate->intervals < standard_form_motive_fragment_min_intervals(prototype->intervals)) {
+        return false;
+    }
+    MotiveRelationStep exact = {MOTIVE_RELATION_EXACT, {0}, {0}};
+    MotiveSketch from;
+    MotiveSketch to;
+    if (motive_relation_apply(source, &exact, &from) != MOTIVE_RELATION_OK ||
+        motive_relation_apply(target, &exact, &to) != MOTIVE_RELATION_OK) {
+        return false;
+    }
+    for (int part = 0; part < 2; part++) {
+        MotiveRelationStep step = {MOTIVE_RELATION_FRAGMENT, {part + 1, (long)length, 0}, {0}};
+        MotiveSketch cut;
+        if (motive_relation_apply(&from, &step, &cut) == MOTIVE_RELATION_OK && motive_sketch_equal(&cut, &to)) {
+            out->kind = MOTIVE_OCCURRENCE_FRAGMENTED;
+            out->fragment_part = part;
+            out->fragment_intervals = candidate->intervals;
+            out->score = score_of(&from, &to);
+            return out->score > 0.0;
+        }
+    }
+    return false;
 }
 
 bool chain_match_motive_relation(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                 StandardFormMotiveKind *kind, double *score, void *context) {
-    if (prototype == NULL || candidate == NULL || kind == NULL || score == NULL ||
-        prototype->intervals != candidate->intervals) {
+                                 StandardFormRelationMatch *out, void *context) {
+    if (prototype == NULL || candidate == NULL || out == NULL || candidate->intervals > prototype->intervals) {
         return false;
     }
     MotiveSketch source;
@@ -65,6 +120,11 @@ bool chain_match_motive_relation(const StandardFormMotiveShape *prototype, const
     if (!sketch_of(prototype, (const ChainRelationContext *)context, &source) ||
         !sketch_of(candidate, (const ChainRelationContext *)context, &target)) {
         return false;
+    }
+    out->fragment_part = -1;
+    out->fragment_intervals = 0;
+    if (candidate->intervals < prototype->intervals) {
+        return fragment_of(prototype, candidate, &source, &target, out);
     }
     MotiveRecognizeOptions options;
     motive_recognize_options_default(&options);
@@ -78,16 +138,22 @@ bool chain_match_motive_relation(const StandardFormMotiveShape *prototype, const
     const MotiveRelationStep *step = &recognition.steps[0];
     switch (step->kind) {
     case MOTIVE_RELATION_EXACT:
-        *kind = STANDARD_FORM_MOTIVE_EXACT;
+        out->kind = MOTIVE_OCCURRENCE_EXACT;
         break;
     case MOTIVE_RELATION_TRANSPOSE:
-        *kind = step->value[0] != 0 ? STANDARD_FORM_MOTIVE_TONAL : STANDARD_FORM_MOTIVE_REAL;
+        out->kind = step->value[0] != 0 ? MOTIVE_OCCURRENCE_TONAL : MOTIVE_OCCURRENCE_REAL;
         break;
     case MOTIVE_RELATION_INVERT:
-        *kind = STANDARD_FORM_MOTIVE_INVERTED;
+        out->kind = MOTIVE_OCCURRENCE_INVERTED;
         break;
     case MOTIVE_RELATION_RETROGRADE:
-        *kind = STANDARD_FORM_MOTIVE_RETROGRADE;
+        out->kind = MOTIVE_OCCURRENCE_RETROGRADE;
+        break;
+    case MOTIVE_RELATION_AUGMENT:
+        out->kind = MOTIVE_OCCURRENCE_AUGMENTED;
+        break;
+    case MOTIVE_RELATION_DIMINISH:
+        out->kind = MOTIVE_OCCURRENCE_DIMINISHED;
         break;
     default:
         return false;
@@ -98,8 +164,8 @@ bool chain_match_motive_relation(const StandardFormMotiveShape *prototype, const
         dimensions.kept[d] = recognition.kept[d];
         dimensions.changed[d] = recognition.changed[d];
     }
-    *score = motive_variant_nearness(&dimensions);
-    return *score > 0.0;
+    out->score = motive_variant_nearness(&dimensions);
+    return out->score > 0.0;
 }
 
 bool chain_relabel_melody_line(ChainMelodyLine *melody, const CommonPracticeWeightedResult *results, size_t segment_count,
