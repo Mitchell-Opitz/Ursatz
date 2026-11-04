@@ -1,5 +1,6 @@
 #include "collection_service.h"
 #include "util/fs_util.h"
+#include "util/store_lock.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -36,15 +37,9 @@ static const char *kImportMarker = ".imported-from-corpus-db";
 static char g_dir[200];
 static bool g_ready = false;
 
-#ifdef _WIN32
-static SRWLOCK g_lock = SRWLOCK_INIT;
-#define LOCK() AcquireSRWLockExclusive(&g_lock)
-#define UNLOCK() ReleaseSRWLockExclusive(&g_lock)
-#else
-static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
-#define LOCK() pthread_mutex_lock(&g_lock)
-#define UNLOCK() pthread_mutex_unlock(&g_lock)
-#endif
+static UrsatzGuiLock g_lock = URSATZ_GUI_LOCK_INIT;
+#define LOCK() ursatz_gui_lock_acquire(&g_lock)
+#define UNLOCK() ursatz_gui_lock_release(&g_lock)
 
 /* The helpers below mirror analysis_service.c's file helpers; each store
  * keeps its own copy so neither depends on the other's internals. */

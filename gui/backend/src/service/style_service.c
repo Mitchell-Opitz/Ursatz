@@ -1,5 +1,6 @@
 #include "style_service.h"
 #include "util/fs_util.h"
+#include "util/store_lock.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -34,15 +35,9 @@ static const char *kStylesDir = "styles";
 #define NAME_MAX_BYTES URSATZ_GUI_META_MAX_VALUE_BYTES
 #define ID_MAX_TRIES 8
 
-#ifdef _WIN32
-static SRWLOCK g_lock = SRWLOCK_INIT;
-#define LOCK() AcquireSRWLockExclusive(&g_lock)
-#define UNLOCK() ReleaseSRWLockExclusive(&g_lock)
-#else
-static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
-#define LOCK() pthread_mutex_lock(&g_lock)
-#define UNLOCK() pthread_mutex_unlock(&g_lock)
-#endif
+static UrsatzGuiLock g_lock = URSATZ_GUI_LOCK_INIT;
+#define LOCK() ursatz_gui_lock_acquire(&g_lock)
+#define UNLOCK() ursatz_gui_lock_release(&g_lock)
 
 /* Renames from over to, replacing it (Windows cannot rename over a file). */
 static bool replace_file(const char *from, const char *to) {
