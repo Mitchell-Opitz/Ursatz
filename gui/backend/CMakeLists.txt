@@ -5,6 +5,7 @@ add_library(ursatz_gui_core STATIC
   src/routes/route_util.c
   src/service/persistence_service.c
   src/service/analysis_service.c
+  src/service/import_cache.c
   src/service/piece_metadata.c
   src/service/id_service.c
   src/service/collection_service.c
