@@ -310,25 +310,6 @@ static void test_a_retrograde_joins_the_family(void) {
     piece_destroy(&p);
 }
 
-static void test_an_augmentation_and_a_diminution_join_the_family(void) {
-    Piece p;
-    piece_init(&p, false);
-    const int a[4] = {60, 62, 64, 60};
-    const double doubled[4] = {10, 12, 14, 16};
-    const double halved[4] = {30, 30.5, 31, 31.5};
-    figure(&p, 0.0, a, NULL, 4);
-    figure(&p, 5.0, a, NULL, 4);
-    chain(&p, doubled, a, 4);
-    chain(&p, halved, a, 4);
-    StandardFormMotives m = find(&p, NULL);
-    const StandardFormMotiveFamily *f = family_of_notes(&m, 4);
-    assert(f != NULL && f->occurrence_count == 4);
-    assert(f->occurrences[2].claim.kind == (int)STANDARD_FORM_MOTIVE_AUGMENTED && f->occurrences[2].claim.note_first == 8);
-    assert(f->occurrences[3].claim.kind == (int)STANDARD_FORM_MOTIVE_DIMINISHED && f->occurrences[3].claim.note_first == 12);
-    standard_form_motives_destroy(&m);
-    piece_destroy(&p);
-}
-
 static void test_a_varied_motive_has_a_score_below_one(void) {
     Piece p;
     piece_init(&p, false);
@@ -400,59 +381,6 @@ static void test_an_exact_window_is_not_also_a_transformation(void) {
     piece_destroy(&p);
 }
 
-static void test_prefix_and_suffix_fragments_are_found_in_a_continuation_first(void) {
-    Piece p;
-    piece_init(&p, false);
-    const int whole[5] = {60, 62, 64, 65, 67};
-    const int prefix[3] = {60, 62, 64};
-    const int suffix[3] = {64, 65, 67};
-    figure(&p, 0.0, whole, NULL, 5);
-    figure(&p, 6.0, whole, NULL, 5);
-    figure(&p, 16.0, prefix, NULL, 3); /* measure 5: inside the continuation (measures 5-8) */
-    figure(&p, 22.0, suffix, NULL, 3); /* measure 6 */
-    figure(&p, 40.0, prefix, NULL, 3); /* measure 11: outside it */
-    form_finish(&p.f);
-    StandardFormTheme theme;
-    memset(&theme, 0, sizeof(theme));
-    theme.claim.ending = (int)PHRASE_ENDING_CONTINUATION;
-    theme.claim.second_part_first_measure = 5;
-    theme.claim.second_part_last_measure = 8;
-    StandardFormThemes themes = {&theme, 1};
-    StandardFormPhrases phrases = {NULL, 0};
-    StandardFormSegmentation segmentation = {NULL, 0, NULL, 0};
-    StandardFormMotives m;
-    assert(standard_form_find_motives(&p.f.input, &phrases, &segmentation, &themes, NULL, chain_form_match_windows, NULL, &m) ==
-           STANDARD_FORM_ANALYSIS_OK);
-    assert(m.family_count == 1); /* the shorter patterns are explained by the fragments of the longer one */
-    const StandardFormMotiveFamily *f = &m.families[0];
-    assert(f->claim.note_count == 5 && f->occurrence_count == 5);
-    const StandardFormMotiveOccurrenceClaim *a = &f->occurrences[2].claim;
-    const StandardFormMotiveOccurrenceClaim *b = &f->occurrences[3].claim;
-    const StandardFormMotiveOccurrenceClaim *c = &f->occurrences[4].claim;
-    assert(a->kind == (int)STANDARD_FORM_MOTIVE_FRAGMENTED && a->fragment_part == 0 && a->fragment_intervals == 2 &&
-           a->in_continuation == 1 && a->note_count == 3 && a->note_first == 10 && a->score == 1.0);
-    assert(b->kind == (int)STANDARD_FORM_MOTIVE_FRAGMENTED && b->fragment_part == 1 && b->fragment_intervals == 2 &&
-           b->in_continuation == 1 && b->note_first == 13);
-    assert(c->kind == (int)STANDARD_FORM_MOTIVE_FRAGMENTED && c->fragment_part == 0 && c->in_continuation == 0 && c->note_first == 16);
-    standard_form_motives_destroy(&m);
-    piece_destroy(&p);
-}
-
-static void test_a_fragment_shorter_than_half_the_motive_is_not_found(void) {
-    Piece p;
-    piece_init(&p, false);
-    const int whole[5] = {60, 62, 64, 65, 67};
-    const int two[2] = {60, 62};
-    figure(&p, 0.0, whole, NULL, 5);
-    figure(&p, 6.0, whole, NULL, 5);
-    figure(&p, 12.0, two, NULL, 2);
-    StandardFormMotives m = find(&p, NULL);
-    const StandardFormMotiveFamily *f = family_of_notes(&m, 5);
-    assert(f != NULL && f->occurrence_count == 2);
-    standard_form_motives_destroy(&m);
-    piece_destroy(&p);
-}
-
 static void test_bad_calls_are_refused(void) {
     Piece p;
     piece_init(&p, false);
@@ -488,11 +416,8 @@ int main(void) {
     test_an_occurrence_outside_every_idea_is_contained_in_the_phrase();
     test_an_inversion_joins_the_family();
     test_a_retrograde_joins_the_family();
-    test_an_augmentation_and_a_diminution_join_the_family();
     test_a_varied_motive_has_a_score_below_one();
     test_an_exact_window_is_not_also_a_transformation();
-    test_prefix_and_suffix_fragments_are_found_in_a_continuation_first();
-    test_a_fragment_shorter_than_half_the_motive_is_not_found();
     test_bad_calls_are_refused();
     printf("test_standard_form_analysis_motive: ok\n");
     return 0;

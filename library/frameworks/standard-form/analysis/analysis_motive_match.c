@@ -71,33 +71,6 @@ bool standard_form_motive_match_retrograde(const StandardFormMotiveShape *protot
     return true;
 }
 
-bool standard_form_motive_match_scaled(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                       long long numerator, long long denominator, StandardFormMotiveMatch *out) {
-    if (out == NULL || !comparable(prototype, candidate) || numerator <= 0 || denominator <= 0 || numerator == denominator ||
-        memcmp(prototype->steps, candidate->steps, prototype->intervals * sizeof(int)) != 0) {
-        return false;
-    }
-    StandardFormQ factor = standard_form_q(numerator, denominator);
-    for (size_t i = 0; i < prototype->intervals; i++) {
-        StandardFormQ scaled = standard_form_q(prototype->ioi[i].n * factor.n, prototype->ioi[i].d * factor.d);
-        if (standard_form_q_compare(scaled, candidate->ioi[i]) != 0) {
-            return false;
-        }
-    }
-    full(out, factor.n > factor.d ? STANDARD_FORM_MOTIVE_AUGMENTED : STANDARD_FORM_MOTIVE_DIMINISHED, prototype->intervals);
-    return true;
-}
-
-bool standard_form_motive_match_augmentation(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                             StandardFormMotiveMatch *out) {
-    return standard_form_motive_match_scaled(prototype, candidate, 2, 1, out);
-}
-
-bool standard_form_motive_match_diminution(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                           StandardFormMotiveMatch *out) {
-    return standard_form_motive_match_scaled(prototype, candidate, 1, 2, out);
-}
-
 bool standard_form_motive_match_varied(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
                                        size_t max_mismatch, StandardFormMotiveMatch *out) {
     if (out == NULL || !comparable(prototype, candidate) || prototype->intervals + 1 < 5) {
@@ -126,33 +99,6 @@ size_t standard_form_motive_fragment_min_intervals(size_t intervals) {
     return half > 2 ? half : 2;
 }
 
-bool standard_form_motive_match_fragment(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                         StandardFormMotiveMatch *out) {
-    if (out == NULL || prototype == NULL || candidate == NULL || prototype->generic != candidate->generic) {
-        return false;
-    }
-    size_t whole = prototype->intervals;
-    size_t length = candidate->intervals;
-    if (length >= whole || length < standard_form_motive_fragment_min_intervals(whole)) {
-        return false;
-    }
-    for (int part = 0; part < 2; part++) {
-        size_t offset = part == 0 ? 0 : whole - length;
-        bool same = true;
-        for (size_t i = 0; same && i < length; i++) {
-            same = candidate->steps[i] == prototype->steps[offset + i] &&
-                   standard_form_q_compare(candidate->ioi[i], prototype->ioi[offset + i]) == 0;
-        }
-        if (same) {
-            full(out, STANDARD_FORM_MOTIVE_FRAGMENTED, length);
-            out->fragment_part = part;
-            out->fragment_intervals = length;
-            return true;
-        }
-    }
-    return false;
-}
-
 bool standard_form_motive_classify_with(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
                                         size_t varied_max_mismatch, StandardFormRelationMatcher matcher, void *context,
                                         StandardFormMotiveMatch *out) {
@@ -171,15 +117,11 @@ bool standard_form_motive_classify_with(const StandardFormMotiveShape *prototype
             out->score = score;
             return true;
         }
-        return standard_form_motive_match_augmentation(prototype, candidate, out) ||
-               standard_form_motive_match_diminution(prototype, candidate, out) ||
-               standard_form_motive_match_varied(prototype, candidate, varied_max_mismatch, out);
+        return standard_form_motive_match_varied(prototype, candidate, varied_max_mismatch, out);
     }
     return standard_form_motive_match_pattern(prototype, candidate, out) ||
            standard_form_motive_match_inversion(prototype, candidate, out) ||
            standard_form_motive_match_retrograde(prototype, candidate, out) ||
-           standard_form_motive_match_augmentation(prototype, candidate, out) ||
-           standard_form_motive_match_diminution(prototype, candidate, out) ||
            standard_form_motive_match_varied(prototype, candidate, varied_max_mismatch, out);
 }
 

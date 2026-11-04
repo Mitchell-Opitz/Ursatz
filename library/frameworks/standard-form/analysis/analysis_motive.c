@@ -496,10 +496,9 @@ static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fa
                 size_t n = length + 1;
                 if (!standard_form_motive_shape(line, first, n, fam->generic, &shape) ||
                     held_by_equal_or_longer(families, family_count, f, first, n) ||
-                    !(config->relation_match != NULL
-                          ? standard_form_motive_fragment_match(&fam->proto, &shape, config->relation_match, config->relation_context,
-                                                                &match)
-                          : standard_form_motive_match_fragment(&fam->proto, &shape, &match))) {
+                    config->relation_match == NULL ||
+                    !standard_form_motive_fragment_match(&fam->proto, &shape, config->relation_match, config->relation_context,
+                                                         &match)) {
                     continue;
                 }
                 fill_rec(&rec, f, fam->line, first, n, &match);

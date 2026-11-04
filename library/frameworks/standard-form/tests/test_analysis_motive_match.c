@@ -118,35 +118,6 @@ static void test_retrograde_reverses_the_notes_and_the_onset_gaps(void) {
     notes_destroy(&n);
 }
 
-static void test_augmentation_doubles_and_diminution_halves_the_onset_gaps(void) {
-    Notes n;
-    notes_init(&n);
-    const int a[4] = {60, 62, 64, 60};
-    const int up[4] = {67, 69, 71, 67};
-    const double doubled[4] = {10, 12, 14, 16};
-    const double halved[4] = {20, 20.5, 21, 21.5};
-    const double tripled[4] = {30, 33, 36, 39};
-    figure(&n, STEADY, a, 4);
-    figure(&n, doubled, up, 4);
-    figure(&n, halved, a, 4);
-    figure(&n, tripled, a, 4);
-    notes_done(&n);
-    StandardFormMotiveShape proto = shape_of(&n, 0, 4);
-    StandardFormMotiveMatch match;
-    StandardFormMotiveShape cand = shape_of(&n, 4, 4);
-    assert(standard_form_motive_match_augmentation(&proto, &cand, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_AUGMENTED &&
-           match.score == 1.0);
-    assert(!standard_form_motive_match_diminution(&proto, &cand, &match));
-    cand = shape_of(&n, 8, 4);
-    assert(standard_form_motive_match_diminution(&proto, &cand, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_DIMINISHED);
-    assert(!standard_form_motive_match_augmentation(&proto, &cand, &match));
-    cand = shape_of(&n, 12, 4); /* by three: no such factor is matched */
-    assert(!standard_form_motive_match_augmentation(&proto, &cand, &match) && !standard_form_motive_match_diminution(&proto, &cand, &match));
-    assert(standard_form_motive_match_scaled(&proto, &cand, 3, 1, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_AUGMENTED);
-    assert(!standard_form_motive_match_scaled(&proto, &cand, 1, 1, &match) && !standard_form_motive_match_scaled(&proto, &cand, 0, 1, &match));
-    notes_destroy(&n);
-}
-
 static void test_a_varied_motive_changes_an_interval_or_the_rhythm(void) {
     Notes n;
     notes_init(&n);
@@ -240,50 +211,10 @@ static void test_precedence_picks_the_strongest_kind(void) {
 }
 
 
-static void test_a_fragment_is_a_prefix_or_a_suffix_of_enough_of_the_motive(void) {
-    Notes n;
-    notes_init(&n);
-    const double s0[5] = {0, 1, 2, 3, 4};
-    const int whole[5] = {60, 62, 64, 65, 67}; /* +2 +2 +1 +2 */
-    const double s3[3] = {10, 11, 12};
-    const int prefix3[3] = {60, 62, 64};
-    const double s4[3] = {20, 21, 22};
-    const int suffix3[3] = {64, 65, 67};
-    const double s5[2] = {30, 31};
-    const int two[2] = {60, 62};
-    const double s6[3] = {40, 41, 42};
-    const int other[3] = {60, 64, 65};
-    const double s7[3] = {50, 51, 53}; /* the prefix's intervals, but the second gap is 2 */
-    const double s8[4] = {60, 61, 62, 63};
-    const int prefix4[4] = {60, 62, 64, 65};
-    figure(&n, s0, whole, 5);
-    figure(&n, s3, prefix3, 3);
-    figure(&n, s4, suffix3, 3);
-    figure(&n, s5, two, 2);
-    figure(&n, s6, other, 3);
-    figure(&n, s7, prefix3, 3);
-    figure(&n, s8, prefix4, 4);
-    notes_done(&n);
-    StandardFormMotiveShape proto = shape_of(&n, 0, 5);
-    StandardFormMotiveMatch match;
-    StandardFormMotiveShape cand = shape_of(&n, 5, 3);
-    assert(standard_form_motive_match_fragment(&proto, &cand, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_FRAGMENTED &&
-           match.fragment_part == 0 && match.fragment_intervals == 2 && match.score == 1.0);
-    cand = shape_of(&n, 8, 3);
-    assert(standard_form_motive_match_fragment(&proto, &cand, &match) && match.fragment_part == 1 && match.fragment_intervals == 2);
-    cand = shape_of(&n, 11, 2); /* one interval: less than the least a fragment may be */
-    assert(!standard_form_motive_match_fragment(&proto, &cand, &match));
-    cand = shape_of(&n, 13, 3);
-    assert(!standard_form_motive_match_fragment(&proto, &cand, &match));
-    cand = shape_of(&n, 16, 3); /* the rhythm differs */
-    assert(!standard_form_motive_match_fragment(&proto, &cand, &match));
-    cand = shape_of(&n, 19, 4); /* three intervals: a longer prefix */
-    assert(standard_form_motive_match_fragment(&proto, &cand, &match) && match.fragment_part == 0 && match.fragment_intervals == 3);
-    assert(!standard_form_motive_match_fragment(&proto, &proto, &match)); /* the whole is no fragment */
+static void test_the_fewest_intervals_of_a_fragment(void) {
     assert(standard_form_motive_fragment_min_intervals(1) == 2 && standard_form_motive_fragment_min_intervals(2) == 2 &&
            standard_form_motive_fragment_min_intervals(4) == 2 && standard_form_motive_fragment_min_intervals(5) == 3 &&
            standard_form_motive_fragment_min_intervals(7) == 4);
-    notes_destroy(&n);
 }
 
 static void test_shapes_of_different_dimensions_or_lengths_do_not_compare(void) {
@@ -311,10 +242,9 @@ int main(void) {
     test_a_pattern_is_exact_real_or_tonal();
     test_inversion_negates_every_interval();
     test_retrograde_reverses_the_notes_and_the_onset_gaps();
-    test_augmentation_doubles_and_diminution_halves_the_onset_gaps();
     test_a_varied_motive_changes_an_interval_or_the_rhythm();
     test_precedence_picks_the_strongest_kind();
-    test_a_fragment_is_a_prefix_or_a_suffix_of_enough_of_the_motive();
+    test_the_fewest_intervals_of_a_fragment();
     test_shapes_of_different_dimensions_or_lengths_do_not_compare();
     printf("test_standard_form_analysis_motive_match: ok\n");
     return 0;
