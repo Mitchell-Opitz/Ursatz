@@ -1,4 +1,5 @@
 #include "analysis_service.h"
+#include "util/fs_util.h"
 #include "id_service.h"
 #include "piece_metadata.h"
 
@@ -37,33 +38,6 @@
 #include <ursatz_analyzer/notation_reading.h>
 #include <ursatz_analyzer/version.h>
 
-static char *dup_string(const char *value) {
-    if (!value) {
-        return NULL;
-    }
-    size_t len = strlen(value) + 1;
-    char *copy = malloc(len);
-    if (copy) {
-        memcpy(copy, value, len);
-    }
-    return copy;
-}
-
-static bool ensure_dir_exists(const char *path) {
-#ifdef _WIN32
-    if (GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES) {
-        return true;
-    }
-    return _mkdir(path) == 0;
-#else
-    struct stat st;
-    if (stat(path, &st) == 0) {
-        return true;
-    }
-    return mkdir(path, 0755) == 0;
-#endif
-}
-
 static bool path_exists(const char *path) {
 #ifdef _WIN32
     return GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
@@ -77,44 +51,6 @@ static bool path_exists(const char *path) {
 
 /* Creates one directory. Returns 1 if created, 0 if it already exists, -1 on
    any other failure. */
-static int make_dir(const char *path) {
-#ifdef _WIN32
-    int rc = _mkdir(path);
-#else
-    int rc = mkdir(path, 0755);
-#endif
-    if (rc == 0) {
-        return 1;
-    }
-    return errno == EEXIST ? 0 : -1;
-}
-
-/* Writes data to "<path>.tmp", then renames it over path. */
-static bool write_file_atomic(const char *path, const void *data, size_t size) {
-    char tmp_path[400];
-    if (snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path) >= (int)sizeof(tmp_path)) {
-        return false;
-    }
-    FILE *file = fopen(tmp_path, "wb");
-    if (!file) {
-        return false;
-    }
-    bool ok = size == 0 || fwrite(data, 1, size, file) == size;
-    ok = (fclose(file) == 0) && ok;
-    if (!ok) {
-        remove(tmp_path);
-        return false;
-    }
-#ifdef _WIN32
-    remove(path);
-#endif
-    if (rename(tmp_path, path) != 0) {
-        remove(tmp_path);
-        return false;
-    }
-    return true;
-}
-
 /* Removes every file in a piece directory, then the directory. */
 static void remove_piece_dir(const char *dir_path) {
 #ifdef _WIN32
@@ -150,69 +86,8 @@ static void remove_piece_dir(const char *dir_path) {
 #endif
 }
 
-static bool path_is_dir(const char *path) {
-#ifdef _WIN32
-    DWORD attributes = GetFileAttributesA(path);
-    return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-#else
-    struct stat st;
-    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-#endif
-}
-
-/* Reads a whole file into a NUL-terminated buffer (caller frees). */
-static char *read_whole_file(const char *path, size_t *out_size) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    size_t capacity = 4096;
-    size_t length = 0;
-    char *buffer = malloc(capacity);
-    while (buffer) {
-        size_t n = fread(buffer + length, 1, capacity - length - 1, file);
-        length += n;
-        if (n == 0 || feof(file)) {
-            break;
-        }
-        if (length + 1 >= capacity) {
-            capacity *= 2;
-            char *grown = realloc(buffer, capacity);
-            if (!grown) {
-                free(buffer);
-                buffer = NULL;
-                break;
-            }
-            buffer = grown;
-        }
-    }
-    bool failed = ferror(file) != 0;
-    fclose(file);
-    if (!buffer || failed) {
-        free(buffer);
-        return NULL;
-    }
-    buffer[length] = '\0';
-    if (out_size) {
-        *out_size = length;
-    }
-    return buffer;
-}
-
 static const char *format_label(InputFormat format) {
     return format == INPUT_FORMAT_MIDI ? "midi" : "musicxml";
-}
-
-/* The current time as "YYYY-MM-DDTHH:MM:SSZ". */
-static void iso_utc_now(char *out, size_t out_size) {
-    time_t now = time(NULL);
-    struct tm parts;
-#ifdef _WIN32
-    gmtime_s(&parts, &now);
-#else
-    gmtime_r(&now, &parts);
-#endif
-    strftime(out, out_size, "%Y-%m-%dT%H:%M:%SZ", &parts);
 }
 
 static const char *analyzer_version_string(void) {
@@ -237,7 +112,7 @@ static bool write_meta_file(const char *dir_path, const char *filename, const ch
     }
     char meta_path[400];
     snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    bool ok = write_file_atomic(meta_path, text, strlen(text));
+    bool ok = ursatz_gui_write_file_atomic(meta_path, text, strlen(text));
     free(text);
     return ok;
 }
@@ -246,7 +121,7 @@ static bool write_meta_file(const char *dir_path, const char *filename, const ch
 static cJSON *read_meta_file(const char *dir_path) {
     char meta_path[400];
     snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    char *text = read_whole_file(meta_path, NULL);
+    char *text = ursatz_gui_read_file(meta_path, NULL);
     if (!text) {
         return NULL;
     }
@@ -262,7 +137,7 @@ static cJSON *read_meta_file(const char *dir_path) {
 /* A copy of a string member of meta, "" when it is absent. */
 static char *meta_string_copy(const cJSON *meta, const char *key) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(meta, key);
-    return dup_string(cJSON_IsString(item) && item->valuestring ? item->valuestring : "");
+    return ursatz_gui_dup_string(cJSON_IsString(item) && item->valuestring ? item->valuestring : "");
 }
 
 /* Copies the string members of meta's "tags" array; *out_tags is NULL when there are none. */
@@ -287,7 +162,7 @@ static bool meta_tags_copy(const cJSON *meta, char ***out_tags, size_t *out_coun
         if (!cJSON_IsString(item) || !item->valuestring) {
             continue;
         }
-        tags[count] = dup_string(item->valuestring);
+        tags[count] = ursatz_gui_dup_string(item->valuestring);
         if (!tags[count]) {
             ursatz_gui_meta_tags_free(tags, count);
             return false;
@@ -442,13 +317,14 @@ static UrsatzGuiAnalysisResult create_piece_dir(const char *pieces_dir, char **o
         }
         char dir_path[320];
         snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, id);
-        int made = make_dir(dir_path);
-        if (made > 0) {
+        bool made = ursatz_gui_make_dir(dir_path);
+        int made_errno = errno;
+        if (made) {
             *out_id = id;
             return URSATZ_GUI_ANALYSIS_OK;
         }
         free(id);
-        if (made < 0) {
+        if (made_errno != EEXIST) {
             return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
         }
     }
@@ -458,7 +334,7 @@ static UrsatzGuiAnalysisResult create_piece_dir(const char *pieces_dir, char **o
 UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_dir, const unsigned char *data,
                                                               size_t size, const char *original_filename,
                                                               char **out_id) {
-    if (!ensure_dir_exists(pieces_dir)) {
+    if (!ursatz_gui_ensure_dir(pieces_dir)) {
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
     }
 
@@ -475,7 +351,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
        is detected from the content, and the final name depends on it. */
     char upload_path[400];
     snprintf(upload_path, sizeof(upload_path), "%s/source.upload", dir_path);
-    if (!write_file_atomic(upload_path, data, size)) {
+    if (!ursatz_gui_write_file_atomic(upload_path, data, size)) {
         remove_piece_dir(dir_path);
         free(id);
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
@@ -506,7 +382,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
 
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    bool written = write_file_atomic(analysis_path, document_json, strlen(document_json));
+    bool written = ursatz_gui_write_file_atomic(analysis_path, document_json, strlen(document_json));
     free(document_json);
     if (!written) {
         remove_piece_dir(dir_path);
@@ -515,7 +391,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
     }
 
     char uploaded_at[32];
-    iso_utc_now(uploaded_at, sizeof(uploaded_at));
+    ursatz_gui_iso_utc_now(uploaded_at, sizeof(uploaded_at));
     if (!write_meta_file(dir_path, original_filename, format_label(format), uploaded_at)) {
         remove_piece_dir(dir_path);
         free(id);
@@ -579,7 +455,7 @@ static bool list_dir_names(const char *dir_path, char ***out_names, size_t *out_
                 names = grown;
                 capacity = new_capacity;
             }
-            names[count] = dup_string(name);
+            names[count] = ursatz_gui_dup_string(name);
             if (!names[count]) {
                 free_ids(names, count);
 #ifdef _WIN32
@@ -639,7 +515,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzG
     for (size_t i = 0; i < name_count && !failed; i++) {
         char dir_path[320];
         snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, names[i]);
-        if (!path_is_dir(dir_path)) {
+        if (!ursatz_gui_path_is_dir(dir_path)) {
             continue;
         }
         cJSON *meta = read_meta_file(dir_path);
@@ -647,7 +523,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzG
             continue;
         }
         UrsatzGuiPieceSummary *piece = &pieces[count];
-        piece->id = dup_string(names[i]);
+        piece->id = ursatz_gui_dup_string(names[i]);
         piece->filename = meta_string_copy(meta, "filename");
         piece->format = meta_string_copy(meta, "format");
         piece->uploaded_at = meta_string_copy(meta, "uploaded_at");
@@ -704,7 +580,7 @@ static bool piece_dir_path(const char *pieces_dir, const char *id, char *out, si
     if (snprintf(out, out_size, "%s/%s", pieces_dir, id) >= (int)out_size) {
         return false;
     }
-    return path_is_dir(out);
+    return ursatz_gui_path_is_dir(out);
 }
 
 static InputFormat format_from_label(const char *label) {
@@ -793,7 +669,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
         cJSON_Delete(meta);
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
-    detail->id = dup_string(id);
+    detail->id = ursatz_gui_dup_string(id);
     detail->filename = meta_string_copy(meta, "filename");
     detail->format = meta_string_copy(meta, "format");
     detail->uploaded_at = meta_string_copy(meta, "uploaded_at");
@@ -802,7 +678,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
 
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    detail->document_json = read_whole_file(analysis_path, NULL);
+    detail->document_json = ursatz_gui_read_file(analysis_path, NULL);
 
     if (!detail->id || !detail->filename || !detail->format || !detail->uploaded_at || !detail->document_json) {
         ursatz_gui_piece_detail_destroy(detail);
@@ -842,7 +718,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir,
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
     }
     remove_piece_dir(dir_path);
-    return path_is_dir(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED : URSATZ_GUI_ANALYSIS_OK;
+    return ursatz_gui_path_is_dir(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED : URSATZ_GUI_ANALYSIS_OK;
 }
 
 /* Sets a string member of meta in place (keeping its position), adding it
@@ -1010,7 +886,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_d
     }
     char meta_path[400];
     snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    bool ok = write_file_atomic(meta_path, text, strlen(text));
+    bool ok = ursatz_gui_write_file_atomic(meta_path, text, strlen(text));
     free(text);
     return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
 }
@@ -1058,7 +934,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, co
 
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    bool ok = write_file_atomic(analysis_path, document_json, strlen(document_json));
+    bool ok = ursatz_gui_write_file_atomic(analysis_path, document_json, strlen(document_json));
     free(document_json);
 
     ok = ok && meta_set_string(meta, "analyzer_version", analyzer_version_string()) &&
@@ -1070,7 +946,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, co
     }
     char meta_path[400];
     snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
-    ok = write_file_atomic(meta_path, text, strlen(text));
+    ok = ursatz_gui_write_file_atomic(meta_path, text, strlen(text));
     free(text);
     return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
 }
@@ -1267,7 +1143,7 @@ static cJSON *rational_json(PlaybackRational r) {
 static bool playback_midi_tempo(const char *source_path, PlaybackTempoRegion **out_regions, size_t *out_count,
                                 bool *out_defaulted) {
     size_t size = 0;
-    char *bytes = read_whole_file(source_path, &size);
+    char *bytes = ursatz_gui_read_file(source_path, &size);
     if (!bytes) {
         return false;
     }

@@ -1,4 +1,5 @@
 #include "collection_service.h"
+#include "util/fs_util.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -48,26 +49,6 @@ static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 /* The helpers below mirror analysis_service.c's file helpers; each store
  * keeps its own copy so neither depends on the other's internals. */
 
-static char *dup_string(const char *value) {
-    size_t len = strlen(value) + 1;
-    char *copy = malloc(len);
-    if (copy) {
-        memcpy(copy, value, len);
-    }
-    return copy;
-}
-
-static void iso_utc_now(char *out, size_t out_size) {
-    time_t now = time(NULL);
-    struct tm parts;
-#ifdef _WIN32
-    gmtime_s(&parts, &now);
-#else
-    gmtime_r(&now, &parts);
-#endif
-    strftime(out, out_size, "%Y-%m-%dT%H:%M:%SZ", &parts);
-}
-
 static bool path_exists(const char *path) {
 #ifdef _WIN32
     return GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
@@ -75,81 +56,6 @@ static bool path_exists(const char *path) {
     struct stat st;
     return stat(path, &st) == 0;
 #endif
-}
-
-static bool path_is_dir(const char *path) {
-#ifdef _WIN32
-    DWORD attributes = GetFileAttributesA(path);
-    return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-#else
-    struct stat st;
-    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-#endif
-}
-
-static bool make_dir(const char *path) {
-#ifdef _WIN32
-    return _mkdir(path) == 0;
-#else
-    return mkdir(path, 0755) == 0;
-#endif
-}
-
-/* Writes data to "<path>.tmp", then renames it over path. */
-static bool write_file_atomic(const char *path, const void *data, size_t size) {
-    char tmp_path[PATH_BYTES + 8];
-    if (snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path) >= (int)sizeof(tmp_path)) {
-        return false;
-    }
-    FILE *file = fopen(tmp_path, "wb");
-    if (!file) {
-        return false;
-    }
-    bool ok = size == 0 || fwrite(data, 1, size, file) == size;
-    ok = (fclose(file) == 0) && ok;
-    if (!ok) {
-        remove(tmp_path);
-        return false;
-    }
-#ifdef _WIN32
-    remove(path);
-#endif
-    if (rename(tmp_path, path) != 0) {
-        remove(tmp_path);
-        return false;
-    }
-    return true;
-}
-
-/* The whole file as a NUL-terminated string (caller frees), or NULL. */
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    size_t capacity = 4096;
-    size_t length = 0;
-    char *text = malloc(capacity);
-    while (text) {
-        size_t n = fread(text + length, 1, capacity - length - 1, file);
-        length += n;
-        if (n == 0 || length < capacity - 1) {
-            break;
-        }
-        capacity *= 2;
-        char *grown = realloc(text, capacity);
-        if (!grown) {
-            free(text);
-            text = NULL;
-        } else {
-            text = grown;
-        }
-    }
-    fclose(file);
-    if (text) {
-        text[length] = '\0';
-    }
-    return text;
 }
 
 bool ursatz_gui_collection_is_valid_id(const char *id) {
@@ -201,7 +107,7 @@ void ursatz_gui_collection_destroy(UrsatzGuiCollection *collection) {
 
 static char *string_member(const cJSON *object, const char *name) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, name);
-    return dup_string(cJSON_IsString(item) ? item->valuestring : "");
+    return ursatz_gui_dup_string(cJSON_IsString(item) ? item->valuestring : "");
 }
 
 /* Loads <dir>/<id>.json into collection (zeroed by the caller). */
@@ -210,7 +116,7 @@ static UrsatzGuiCollectionResult load_collection(const char *id, UrsatzGuiCollec
     if (!collection_path(id, path, sizeof(path))) {
         return URSATZ_GUI_COLLECTION_ERR_INVALID_ID;
     }
-    char *text = read_file(path);
+    char *text = ursatz_gui_read_file(path, NULL);
     if (!text) {
         return path_exists(path) ? URSATZ_GUI_COLLECTION_ERR_FAILED : URSATZ_GUI_COLLECTION_ERR_NOT_FOUND;
     }
@@ -222,7 +128,7 @@ static UrsatzGuiCollectionResult load_collection(const char *id, UrsatzGuiCollec
     }
 
     /* The file name is the id; a copy of it inside the file is not trusted. */
-    collection->id = dup_string(id);
+    collection->id = ursatz_gui_dup_string(id);
     collection->name = string_member(root, "name");
     collection->description = string_member(root, "description");
     collection->created_at = string_member(root, "created_at");
@@ -243,7 +149,7 @@ static UrsatzGuiCollectionResult load_collection(const char *id, UrsatzGuiCollec
             if (!cJSON_IsString(item) || !ursatz_gui_collection_is_valid_id(item->valuestring)) {
                 continue;
             }
-            collection->pieces[collection->piece_count] = dup_string(item->valuestring);
+            collection->pieces[collection->piece_count] = ursatz_gui_dup_string(item->valuestring);
             ok = collection->pieces[collection->piece_count] != NULL;
             if (ok) {
                 collection->piece_count++;
@@ -284,7 +190,7 @@ static UrsatzGuiCollectionResult save_collection(const UrsatzGuiCollection *coll
     if (!text) {
         return URSATZ_GUI_COLLECTION_ERR_ALLOC;
     }
-    ok = write_file_atomic(path, text, strlen(text));
+    ok = ursatz_gui_write_file_atomic(path, text, strlen(text));
     free(text);
     return ok ? URSATZ_GUI_COLLECTION_OK : URSATZ_GUI_COLLECTION_ERR_FAILED;
 }
@@ -300,7 +206,7 @@ static int piece_index(const UrsatzGuiCollection *collection, const char *piece_
 
 /* Appends a copy of piece_id to the collection's pieces. */
 static bool append_piece(UrsatzGuiCollection *collection, const char *piece_id) {
-    char *copy = dup_string(piece_id);
+    char *copy = ursatz_gui_dup_string(piece_id);
     char **grown = copy ? realloc(collection->pieces, (collection->piece_count + 1) * sizeof(char *)) : NULL;
     if (!grown) {
         free(copy);
@@ -313,8 +219,8 @@ static bool append_piece(UrsatzGuiCollection *collection, const char *piece_id) 
 
 static void touch(UrsatzGuiCollection *collection) {
     char now[32];
-    iso_utc_now(now, sizeof(now));
-    char *copy = dup_string(now);
+    ursatz_gui_iso_utc_now(now, sizeof(now));
+    char *copy = ursatz_gui_dup_string(now);
     if (copy) {
         free(collection->updated_at);
         collection->updated_at = copy;
@@ -399,7 +305,7 @@ static bool push_id(char ***ids, size_t *count, size_t *capacity, const char *id
         *ids = grown;
         *capacity = grown_capacity;
     }
-    (*ids)[*count] = dup_string(id);
+    (*ids)[*count] = ursatz_gui_dup_string(id);
     if (!(*ids)[*count]) {
         return false;
     }
@@ -471,14 +377,14 @@ static bool import_corpus(CorpusStoreHandle *handle, const CorpusApiEntry *corpu
     UrsatzGuiCollection collection;
     memset(&collection, 0, sizeof(collection));
     char now[32];
-    iso_utc_now(now, sizeof(now));
-    collection.id = dup_string(corpus->id);
-    collection.description = dup_string("");
-    collection.created_at = dup_string(now);
-    collection.updated_at = dup_string(now);
+    ursatz_gui_iso_utc_now(now, sizeof(now));
+    collection.id = ursatz_gui_dup_string(corpus->id);
+    collection.description = ursatz_gui_dup_string("");
+    collection.created_at = ursatz_gui_dup_string(now);
+    collection.updated_at = ursatz_gui_dup_string(now);
     /* A name the new rules reject (empty, over 120 bytes) falls back to the id. */
     bool ok = normalize_name(corpus->name, &collection.name) == URSATZ_GUI_COLLECTION_OK ||
-              (collection.name = dup_string(corpus->id)) != NULL;
+              (collection.name = ursatz_gui_dup_string(corpus->id)) != NULL;
 
     char **refs = NULL;
     size_t ref_count = 0;
@@ -527,7 +433,7 @@ static bool import_legacy_corpora(const char *db_path) {
     if (ok && snprintf(marker, sizeof(marker), "%s/%s", g_dir, kImportMarker) < (int)sizeof(marker)) {
         char note[PATH_BYTES + 32];
         snprintf(note, sizeof(note), "imported from %s\n", db_path);
-        ok = write_file_atomic(marker, note, strlen(note));
+        ok = ursatz_gui_write_file_atomic(marker, note, strlen(note));
     } else {
         ok = false;
     }
@@ -567,8 +473,8 @@ bool ursatz_gui_collection_service_init(const char *dir, const char *legacy_db_p
         return false;
     }
     LOCK();
-    bool existed = path_is_dir(dir);
-    bool ok = existed || make_dir(dir);
+    bool existed = ursatz_gui_path_is_dir(dir);
+    bool ok = existed || ursatz_gui_make_dir(dir);
     if (ok) {
         strcpy(g_dir, dir);
         /* First start with a collections/ directory that does not exist yet:
@@ -615,10 +521,10 @@ static UrsatzGuiCollectionResult create_locked(const char *id, const char *name,
     }
 
     char now[32];
-    iso_utc_now(now, sizeof(now));
-    collection.id = dup_string(id);
-    collection.created_at = dup_string(now);
-    collection.updated_at = dup_string(now);
+    ursatz_gui_iso_utc_now(now, sizeof(now));
+    collection.id = ursatz_gui_dup_string(id);
+    collection.created_at = ursatz_gui_dup_string(now);
+    collection.updated_at = ursatz_gui_dup_string(now);
     if (!collection.id || !collection.created_at || !collection.updated_at) {
         collection_destroy_contents(&collection);
         return URSATZ_GUI_COLLECTION_ERR_ALLOC;

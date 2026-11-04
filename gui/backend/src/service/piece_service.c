@@ -1,6 +1,7 @@
 #define _XOPEN_SOURCE 700
 
 #include "piece_service.h"
+#include "util/fs_util.h"
 
 #include <dirent.h>
 #include <limits.h>
@@ -542,40 +543,8 @@ UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, lon
 
 /* --- reopening a composed version ---------------------------------------- */
 
-static char *read_text(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    size_t capacity = 8192;
-    size_t length = 0;
-    char *text = malloc(capacity);
-    while (text) {
-        size_t n = fread(text + length, 1, capacity - length - 1, file);
-        length += n;
-        if (n == 0) {
-            break;
-        }
-        if (length + 1 >= capacity) {
-            char *grown = realloc(text, capacity * 2);
-            if (!grown) {
-                free(text);
-                text = NULL;
-                break;
-            }
-            text = grown;
-            capacity *= 2;
-        }
-    }
-    fclose(file);
-    if (text) {
-        text[length] = '\0';
-    }
-    return text;
-}
-
 static cJSON *read_json(const char *path) {
-    char *text = read_text(path);
+    char *text = ursatz_gui_read_file(path, NULL);
     cJSON *json = text ? cJSON_Parse(text) : NULL;
     free(text);
     return json;

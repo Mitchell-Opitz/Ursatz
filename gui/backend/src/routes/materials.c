@@ -17,6 +17,7 @@
 #include <pthread.h>
 #endif
 
+#include "../util/fs_util.h"
 #include "../service/composer_service.h"
 #include "../service/material_service.h"
 #include "../service/style_service.h"
@@ -1115,38 +1116,6 @@ static bool temp_file(char *path, size_t size, const char *stem) {
   return true;
 }
 
-static char *read_whole_file(const char *path) {
-  FILE *file = fopen(path, "rb");
-  if (!file) {
-    return NULL;
-  }
-  size_t capacity = 8192;
-  size_t total = 0;
-  char *text = malloc(capacity);
-  while (text) {
-    size_t n = fread(text + total, 1, capacity - total - 1, file);
-    total += n;
-    if (n == 0) {
-      break;
-    }
-    if (total + 1 >= capacity) {
-      char *grown = realloc(text, capacity * 2);
-      if (!grown) {
-        free(text);
-        text = NULL;
-        break;
-      }
-      text = grown;
-      capacity *= 2;
-    }
-  }
-  fclose(file);
-  if (text) {
-    text[total] = '\0';
-  }
-  return text;
-}
-
 /* Renders a degree, rhythm or contour list in render_key with the Composer. On success *out_xml is the MusicXML text
    and *out_playback its playback data (caller-owned). On failure failure holds the status and message. */
 static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_playback, RenderFailure *failure) {
@@ -1245,7 +1214,7 @@ static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_play
       } else {
         cJSON *document = out.exit_status == 0 ? cJSON_Parse(out.stdout_text) : NULL;
         const cJSON *notes = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "rendered"), "notes");
-        char *xml = document && cJSON_IsArray(notes) ? read_whole_file(xml_path) : NULL;
+        char *xml = document && cJSON_IsArray(notes) ? ursatz_gui_read_file(xml_path, NULL) : NULL;
         cJSON *playback = xml ? build_motif_playback(notes, in->role && in->role[0] ? in->role : "motif", in->tempo) : NULL;
         if (playback) {
           *out_xml = xml;

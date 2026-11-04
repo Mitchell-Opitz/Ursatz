@@ -1,16 +1,8 @@
 #include "piece_metadata.h"
+#include "util/fs_util.h"
 
 #include <stdlib.h>
 #include <string.h>
-
-static char *dup_string(const char *value) {
-    size_t len = strlen(value) + 1;
-    char *copy = malloc(len);
-    if (copy) {
-        memcpy(copy, value, len);
-    }
-    return copy;
-}
 
 static bool is_space(unsigned char c) {
     return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
@@ -124,7 +116,7 @@ UrsatzGuiMetaResult ursatz_gui_meta_tags_add(char ***tags, size_t *count, const 
     if (*count >= URSATZ_GUI_META_MAX_TAGS) {
         return URSATZ_GUI_META_ERR_TOO_MANY_TAGS;
     }
-    char *copy = dup_string(tag);
+    char *copy = ursatz_gui_dup_string(tag);
     char **grown = copy ? realloc(*tags, (*count + 1) * sizeof(char *)) : NULL;
     if (!grown) {
         free(copy);
@@ -203,7 +195,7 @@ static bool bucket_list_add(BucketList *list, const char *value) {
             return true;
         }
     }
-    char *copy = dup_string(value);
+    char *copy = ursatz_gui_dup_string(value);
     char **spellings = copy ? realloc(bucket->spellings, (bucket->spelling_count + 1) * sizeof(char *)) : NULL;
     if (spellings) {
         bucket->spellings = spellings;
@@ -258,7 +250,7 @@ static bool buckets_to_groups(BucketList *list, UrsatzGuiMetaGroup **out_groups,
                 best = j;
             }
         }
-        groups[i].value = dup_string(bucket->spellings[best]);
+        groups[i].value = ursatz_gui_dup_string(bucket->spellings[best]);
         groups[i].count = bucket->count;
         if (!groups[i].value) {
             for (size_t k = 0; k < i; k++) {

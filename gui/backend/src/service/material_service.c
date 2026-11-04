@@ -1,4 +1,5 @@
 #include "material_service.h"
+#include "util/fs_util.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -39,29 +40,6 @@ static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
 #define UNLOCK() pthread_mutex_unlock(&g_lock)
 #endif
 
-/* The helpers below mirror collection_service.c's file helpers; each store
- * keeps its own copy so neither depends on the other's internals. */
-
-static char *dup_string(const char *value) {
-    size_t len = strlen(value) + 1;
-    char *copy = malloc(len);
-    if (copy) {
-        memcpy(copy, value, len);
-    }
-    return copy;
-}
-
-static void iso_utc_now(char *out, size_t out_size) {
-    time_t now = time(NULL);
-    struct tm parts;
-#ifdef _WIN32
-    gmtime_s(&parts, &now);
-#else
-    gmtime_r(&now, &parts);
-#endif
-    strftime(out, out_size, "%Y-%m-%dT%H:%M:%SZ", &parts);
-}
-
 static bool path_exists(const char *path) {
 #ifdef _WIN32
     return GetFileAttributesA(path) != INVALID_FILE_ATTRIBUTES;
@@ -71,107 +49,12 @@ static bool path_exists(const char *path) {
 #endif
 }
 
-static bool path_is_dir(const char *path) {
-#ifdef _WIN32
-    DWORD attributes = GetFileAttributesA(path);
-    return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-#else
-    struct stat st;
-    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-#endif
-}
-
-static bool make_dir(const char *path) {
-#ifdef _WIN32
-    return _mkdir(path) == 0;
-#else
-    return mkdir(path, 0755) == 0;
-#endif
-}
-
-/* Creates the directory when it is absent. */
-static bool ensure_dir(const char *path) {
-    return path_is_dir(path) || make_dir(path) || path_is_dir(path);
-}
-
-/* Writes data to "<path>.tmp", then renames it over path. */
-static bool write_file_atomic(const char *path, const void *data, size_t size) {
-    char tmp_path[PATH_BYTES + 8];
-    if (snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path) >= (int)sizeof(tmp_path)) {
-        return false;
-    }
-    FILE *file = fopen(tmp_path, "wb");
-    if (!file) {
-        return false;
-    }
-    bool ok = size == 0 || fwrite(data, 1, size, file) == size;
-    ok = (fclose(file) == 0) && ok;
-    if (!ok) {
-        remove(tmp_path);
-        return false;
-    }
-#ifdef _WIN32
-    remove(path);
-#endif
-    if (rename(tmp_path, path) != 0) {
-        remove(tmp_path);
-        return false;
-    }
-    return true;
-}
-
-/* The whole file as a NUL-terminated string (caller frees), or NULL. */
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    size_t capacity = 4096;
-    size_t length = 0;
-    char *text = malloc(capacity);
-    while (text) {
-        size_t n = fread(text + length, 1, capacity - length - 1, file);
-        length += n;
-        if (n == 0 || length < capacity - 1) {
-            break;
-        }
-        capacity *= 2;
-        char *grown = realloc(text, capacity);
-        if (!grown) {
-            free(text);
-            text = NULL;
-        } else {
-            text = grown;
-        }
-    }
-    fclose(file);
-    if (text) {
-        text[length] = '\0';
-    }
-    return text;
-}
-
-/* Parses the JSON object in path (caller frees), or NULL when absent or not an object. */
-static cJSON *read_json_object(const char *path) {
-    char *text = read_file(path);
-    if (!text) {
-        return NULL;
-    }
-    cJSON *root = cJSON_Parse(text);
-    free(text);
-    if (!cJSON_IsObject(root)) {
-        cJSON_Delete(root);
-        return NULL;
-    }
-    return root;
-}
-
 static bool write_json(const char *path, const cJSON *json) {
     char *text = cJSON_Print(json);
     if (!text) {
         return false;
     }
-    bool ok = write_file_atomic(path, text, strlen(text));
+    bool ok = ursatz_gui_write_file_atomic(path, text, strlen(text));
     free(text);
     return ok;
 }
@@ -215,7 +98,7 @@ static bool list_names(const char *dir, char ***out_names, size_t *out_count) {
                 names = grown;
                 capacity = grown_capacity;
             }
-            names[count] = dup_string(name);
+            names[count] = ursatz_gui_dup_string(name);
             if (!names[count]) {
                 goto fail;
             }
@@ -373,7 +256,7 @@ static size_t count_items_locked(const char *project_id) {
             snprintf(path, sizeof(path), "%s/items/%s/item.json", g_dir, names[i]) >= (int)sizeof(path)) {
             continue;
         }
-        cJSON *meta = read_json_object(path);
+        cJSON *meta = ursatz_gui_read_json_object(path);
         if (meta && strcmp(string_member(meta, "project_id"), project_id) == 0) {
             found++;
         }
@@ -389,7 +272,7 @@ static UrsatzGuiMaterialResult load_project_locked(const char *id, cJSON **out) 
     if (!project_path(id, path, sizeof(path))) {
         return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     }
-    cJSON *project = read_json_object(path);
+    cJSON *project = ursatz_gui_read_json_object(path);
     if (!project) {
         return path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     }
@@ -451,7 +334,7 @@ static UrsatzGuiMaterialResult create_project_locked(const char *name, const cha
     cJSON *project = NULL;
     if (result == URSATZ_GUI_MATERIAL_OK) {
         char now[32];
-        iso_utc_now(now, sizeof(now));
+        ursatz_gui_iso_utc_now(now, sizeof(now));
         project = cJSON_CreateObject();
         bool ok = project && cJSON_AddStringToObject(project, "id", id) &&
                   cJSON_AddStringToObject(project, "name", clean_name) &&
@@ -481,8 +364,8 @@ bool ursatz_gui_material_service_init(const char *dir) {
     char items[PATH_BYTES];
     bool ok = snprintf(g_dir, sizeof(g_dir), "%s", dir) < (int)sizeof(g_dir) &&
               snprintf(projects, sizeof(projects), "%s/projects", dir) < (int)sizeof(projects) &&
-              snprintf(items, sizeof(items), "%s/items", dir) < (int)sizeof(items) && ensure_dir(g_dir) &&
-              ensure_dir(projects) && ensure_dir(items);
+              snprintf(items, sizeof(items), "%s/items", dir) < (int)sizeof(items) && ursatz_gui_ensure_dir(g_dir) &&
+              ursatz_gui_ensure_dir(projects) && ursatz_gui_ensure_dir(items);
 
     char **names = NULL;
     size_t count = 0;
@@ -637,7 +520,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_project_update(const char *id, const
     }
     if (result == URSATZ_GUI_MATERIAL_OK) {
         char now[32];
-        iso_utc_now(now, sizeof(now));
+        ursatz_gui_iso_utc_now(now, sizeof(now));
         bool ok = (!clean_name || set_string_member(project, "name", clean_name)) &&
                   (!clean_description || set_string_member(project, "description", clean_description)) &&
                   set_string_member(project, "updated_at", now);
@@ -1555,7 +1438,7 @@ static UrsatzGuiMaterialResult load_item_locked(const char *id, cJSON **out) {
     if (!item_file_path(id, "item.json", path, sizeof(path))) {
         return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     }
-    cJSON *item = read_json_object(path);
+    cJSON *item = ursatz_gui_read_json_object(path);
     if (!item) {
         return path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     }
@@ -1582,7 +1465,7 @@ static int current_version_of(const cJSON *item) {
 
 static bool touch_item(cJSON *item) {
     char now[32];
-    iso_utc_now(now, sizeof(now));
+    ursatz_gui_iso_utc_now(now, sizeof(now));
     return set_string_member(item, "updated_at", now);
 }
 
@@ -1594,7 +1477,7 @@ static void remove_item_dir(const char *dir) {
         for (size_t i = 0; i < count; i++) {
             char path[PATH_BYTES];
             if (snprintf(path, sizeof(path), "%s/%s", dir, names[i]) < (int)sizeof(path)) {
-                if (path_is_dir(path)) {
+                if (ursatz_gui_path_is_dir(path)) {
                     remove_item_dir(path);
                 } else {
                     remove(path);
@@ -1618,7 +1501,7 @@ static bool write_version_locked(const char *id, int number, const cJSON *body) 
 /* Appends {number, created_at, note} to the item's versions and makes it current. */
 static bool append_version_entry(cJSON *item, int number, const char *note) {
     char now[32];
-    iso_utc_now(now, sizeof(now));
+    ursatz_gui_iso_utc_now(now, sizeof(now));
     cJSON *versions = cJSON_GetObjectItemCaseSensitive(item, "versions");
     if (!cJSON_IsArray(versions)) {
         cJSON_DeleteItemFromObjectCaseSensitive(item, "versions");
@@ -1641,7 +1524,7 @@ static UrsatzGuiMaterialResult read_version_locked(const char *id, int number, c
     if (!version_path(id, number, path, sizeof(path))) {
         return URSATZ_GUI_MATERIAL_ERR_INVALID_ID;
     }
-    cJSON *body = read_json_object(path);
+    cJSON *body = ursatz_gui_read_json_object(path);
     if (!body) {
         return path_exists(path) ? URSATZ_GUI_MATERIAL_ERR_FAILED : URSATZ_GUI_MATERIAL_ERR_NOT_FOUND;
     }
@@ -1952,7 +1835,7 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
     bool dir_made = false;
     if (result == URSATZ_GUI_MATERIAL_OK) {
         char now[32];
-        iso_utc_now(now, sizeof(now));
+        ursatz_gui_iso_utc_now(now, sizeof(now));
         item = cJSON_CreateObject();
         bool ok = item && cJSON_AddStringToObject(item, "id", id) && cJSON_AddStringToObject(item, "type", type) &&
                   cJSON_AddStringToObject(item, "name", clean_name) &&
@@ -1961,7 +1844,7 @@ static UrsatzGuiMaterialResult create_item_locked(const char *type, const char *
                   append_version_entry(item, 1, clean_note);
         if (!ok) {
             result = URSATZ_GUI_MATERIAL_ERR_ALLOC;
-        } else if (!make_dir(dir)) {
+        } else if (!ursatz_gui_make_dir(dir)) {
             result = URSATZ_GUI_MATERIAL_ERR_FAILED;
         } else {
             dir_made = true;
@@ -2788,7 +2671,7 @@ UrsatzGuiMaterialResult ursatz_gui_material_op_checks_get(const char *id, cJSON 
     char path[PATH_BYTES];
     UrsatzGuiMaterialResult result = g_ready ? op_checks_path_locked(id, path, sizeof(path)) : URSATZ_GUI_MATERIAL_ERR_NOT_INITIALIZED;
     if (result == URSATZ_GUI_MATERIAL_OK) {
-        cJSON *stored = read_json_object(path);
+        cJSON *stored = ursatz_gui_read_json_object(path);
         if (stored && ursatz_gui_material_op_checks_validate(stored, NULL, 0) == URSATZ_GUI_MATERIAL_OK) {
             *out = stored;
         } else {

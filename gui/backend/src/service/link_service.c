@@ -1,4 +1,5 @@
 #include "link_service.h"
+#include "util/fs_util.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -36,15 +37,6 @@ typedef struct {
     size_t capacity;
 } IdList;
 
-static char *dup_string(const char *value) {
-    size_t len = strlen(value) + 1;
-    char *copy = malloc(len);
-    if (copy) {
-        memcpy(copy, value, len);
-    }
-    return copy;
-}
-
 void ursatz_gui_link_ids_free(char **ids, size_t count) {
     for (size_t i = 0; i < count; i++) {
         free(ids[i]);
@@ -75,7 +67,7 @@ static bool id_list_add(IdList *list, const char *id) {
         list->items = grown;
         list->capacity = capacity;
     }
-    list->items[list->count] = dup_string(id);
+    list->items[list->count] = ursatz_gui_dup_string(id);
     if (!list->items[list->count]) {
         return false;
     }
@@ -320,107 +312,12 @@ UrsatzGuiLinkResult ursatz_gui_link_scope_resolve(const UrsatzGuiLinkScope *scop
 
 #define PATH_BYTES 400
 
-static bool make_dir(const char *path) {
-#ifdef _WIN32
-    return _mkdir(path) == 0;
-#else
-    return mkdir(path, 0755) == 0;
-#endif
-}
-
-static bool path_is_dir(const char *path) {
-#ifdef _WIN32
-    DWORD attributes = GetFileAttributesA(path);
-    return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-#else
-    struct stat st;
-    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-#endif
-}
-
-static bool ensure_dir(const char *path) {
-    return path_is_dir(path) || make_dir(path) || path_is_dir(path);
-}
-
 static void remove_dir(const char *path) {
 #ifdef _WIN32
     _rmdir(path);
 #else
     rmdir(path);
 #endif
-}
-
-/* Writes data to "<path>.tmp", then renames it over path. */
-static bool write_file_atomic(const char *path, const char *text) {
-    char tmp_path[PATH_BYTES + 8];
-    if (snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path) >= (int)sizeof(tmp_path)) {
-        return false;
-    }
-    FILE *file = fopen(tmp_path, "wb");
-    if (!file) {
-        return false;
-    }
-    size_t size = strlen(text);
-    bool ok = size == 0 || fwrite(text, 1, size, file) == size;
-    ok = (fclose(file) == 0) && ok;
-    if (!ok) {
-        remove(tmp_path);
-        return false;
-    }
-#ifdef _WIN32
-    remove(path);
-#endif
-    if (rename(tmp_path, path) != 0) {
-        remove(tmp_path);
-        return false;
-    }
-    return true;
-}
-
-/* The whole file as a NUL-terminated string (caller frees), or NULL. */
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    size_t capacity = 4096;
-    size_t length = 0;
-    char *text = malloc(capacity);
-    while (text) {
-        size_t n = fread(text + length, 1, capacity - length - 1, file);
-        length += n;
-        if (n == 0 || length < capacity - 1) {
-            break;
-        }
-        capacity *= 2;
-        char *grown = realloc(text, capacity);
-        if (!grown) {
-            free(text);
-            text = NULL;
-        } else {
-            text = grown;
-        }
-    }
-    fclose(file);
-    if (text) {
-        text[length] = '\0';
-    }
-    return text;
-}
-
-/* Parses the JSON object in path; NULL when it is missing or not an object. */
-static cJSON *read_json_object(const char *path) {
-    char *text = read_file(path);
-    if (!text) {
-        return NULL;
-    }
-    cJSON *root = cJSON_Parse(text);
-    free(text);
-    if (root && !cJSON_IsObject(root)) {
-        cJSON_Delete(root);
-        return NULL;
-    }
-    return root;
 }
 
 /* UTC with milliseconds, so two runs in the same second still order. */
@@ -612,7 +509,7 @@ static void job_free(Job *job) {
 static bool job_write(const Job *job) {
     char path[PATH_BYTES];
     char *text = run_file_path(job->id, path, sizeof(path)) ? cJSON_PrintUnformatted(job->run) : NULL;
-    bool ok = text && write_file_atomic(path, text);
+    bool ok = text && ursatz_gui_write_file_atomic(path, text, strlen(text));
     free(text);
     return ok;
 }
@@ -643,7 +540,7 @@ static const char *add_piece(MotiveLinkScope *scope, const char *id) {
         snprintf(file_path, sizeof(file_path), "%s/%s/meta.json", kPiecesDir, id) >= (int)sizeof(file_path)) {
         return "not found";
     }
-    cJSON *meta = read_json_object(file_path);
+    cJSON *meta = ursatz_gui_read_json_object(file_path);
     if (!meta) {
         return "not found";
     }
@@ -651,7 +548,7 @@ static const char *add_piece(MotiveLinkScope *scope, const char *id) {
     snprintf(file_path, sizeof(file_path), "%s/%s/analysis.json", kPiecesDir, id);
 
     for (int attempt = 0; attempt < 2; attempt++) {
-        char *document = read_file(file_path);
+        char *document = ursatz_gui_read_file(file_path, NULL);
         if (!document) {
             return "unreadable analysis";
         }
@@ -834,7 +731,7 @@ static void mark_interrupted(void) {
         if (!run_file_path(names.items[i], path, sizeof(path))) {
             continue;
         }
-        cJSON *run = read_json_object(path);
+        cJSON *run = ursatz_gui_read_json_object(path);
         const cJSON *status = cJSON_GetObjectItemCaseSensitive(run, "status");
         if (cJSON_IsString(status) && strcmp(status->valuestring, "running") == 0) {
             char now[40];
@@ -844,7 +741,7 @@ static void mark_interrupted(void) {
             set_member(run, "finished_at", cJSON_CreateString(now));
             char *text = cJSON_PrintUnformatted(run);
             if (text) {
-                write_file_atomic(path, text);
+                ursatz_gui_write_file_atomic(path, text, strlen(text));
             }
             free(text);
         }
@@ -860,7 +757,7 @@ bool ursatz_gui_link_service_init(const char *dir) {
     }
     LOCK();
     snprintf(g_state.dir, sizeof(g_state.dir), "%s", dir);
-    bool ok = ensure_dir(dir) && ensure_dir(runs);
+    bool ok = ursatz_gui_ensure_dir(dir) && ursatz_gui_ensure_dir(runs);
     g_state.ready = ok;
     if (ok) {
         mark_interrupted();
@@ -934,7 +831,7 @@ UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, c
         result = URSATZ_GUI_LINK_ERR_BUSY;
     } else {
         char dir[PATH_BYTES];
-        result = run_dir_path(job->id, dir, sizeof(dir)) && ensure_dir(dir) && job_write(job) ? URSATZ_GUI_LINK_OK
+        result = run_dir_path(job->id, dir, sizeof(dir)) && ursatz_gui_ensure_dir(dir) && job_write(job) ? URSATZ_GUI_LINK_OK
                                                                                                  : URSATZ_GUI_LINK_ERR_FAILED;
         if (result == URSATZ_GUI_LINK_OK) {
             g_state.active = true;
@@ -962,7 +859,7 @@ UrsatzGuiLinkResult ursatz_gui_link_run_start(const UrsatzGuiLinkScope *scope, c
         return result;
     }
     if (out_id) {
-        *out_id = dup_string(run_id);
+        *out_id = ursatz_gui_dup_string(run_id);
         if (!*out_id) {
             return URSATZ_GUI_LINK_ERR_ALLOC;
         }
@@ -1012,7 +909,7 @@ static UrsatzGuiLinkResult load_runs(cJSON ***out_runs, size_t *out_count) {
         if (!run_file_path(names.items[i], path, sizeof(path))) {
             continue;
         }
-        cJSON *run = read_json_object(path);
+        cJSON *run = ursatz_gui_read_json_object(path);
         if (run && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(run, "id"))) {
             runs[count++] = run;
         } else {
@@ -1076,7 +973,7 @@ UrsatzGuiLinkResult ursatz_gui_link_run_get(const char *id, cJSON **out_run) {
     if (!id || !run_file_path(id, path, sizeof(path))) {
         return URSATZ_GUI_LINK_ERR_NOT_FOUND;
     }
-    cJSON *run = read_json_object(path);
+    cJSON *run = ursatz_gui_read_json_object(path);
     if (!run) {
         return URSATZ_GUI_LINK_ERR_NOT_FOUND;
     }
@@ -1103,7 +1000,7 @@ UrsatzGuiLinkResult ursatz_gui_link_run_delete(const char *id) {
     UrsatzGuiLinkResult result = URSATZ_GUI_LINK_OK;
     if (g_state.active && strcmp(g_state.id, id) == 0) {
         result = URSATZ_GUI_LINK_ERR_BUSY;
-    } else if (!path_is_dir(dir)) {
+    } else if (!ursatz_gui_path_is_dir(dir)) {
         result = URSATZ_GUI_LINK_ERR_NOT_FOUND;
     } else {
         const char *files[] = {"run.json", "run.json.tmp"};
@@ -1179,10 +1076,10 @@ char *ursatz_gui_link_piece_title(const char *piece_id) {
     cJSON *meta = NULL;
     if (piece_id && ursatz_gui_collection_is_valid_id(piece_id) &&
         snprintf(path, sizeof(path), "%s/%s/meta.json", kPiecesDir, piece_id) < (int)sizeof(path)) {
-        meta = read_json_object(path);
+        meta = ursatz_gui_read_json_object(path);
     }
     const cJSON *filename = cJSON_GetObjectItemCaseSensitive(meta, "filename");
-    char *title = dup_string(cJSON_IsString(filename) && filename->valuestring[0] ? filename->valuestring
+    char *title = ursatz_gui_dup_string(cJSON_IsString(filename) && filename->valuestring[0] ? filename->valuestring
                                                                                    : (piece_id ? piece_id : ""));
     cJSON_Delete(meta);
     char *dot = title ? strrchr(title, '.') : NULL;

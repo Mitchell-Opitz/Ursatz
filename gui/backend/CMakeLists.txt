@@ -1,6 +1,7 @@
 # Everything but main.c, so the tests link the same code the server runs.
 add_library(ursatz_gui_core STATIC
   src/server.c
+  src/util/fs_util.c
   src/service/persistence_service.c
   src/service/analysis_service.c
   src/service/piece_metadata.c
