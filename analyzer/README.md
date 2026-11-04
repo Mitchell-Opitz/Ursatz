@@ -10,7 +10,7 @@ thin consumer of the [Ursatz](https://github.com/Mitchell-Opitz/Ursatz) library 
 ## Build
 
 Requires CMake 3.20+, a C11 compiler, and SQLite3 (for Ursatz). Ursatz is a git submodule at
-`external/ursatz`, pinned to Ursatz main at PR #181 (`2c53118`). cJSON 1.7.18 is vendored at `external/cjson`; it is added only when no
+`external/ursatz`, pinned to Ursatz main at `0c17cb1`. cJSON 1.7.18 is vendored at `external/cjson`; it is added only when no
 parent project already provides a `cjson` target.
 
 Library headers are included only by their staged public paths (`time/meter_map.h`, `standard-harmony/analysis/analysis_cadence.h`,
