@@ -46,6 +46,7 @@ add_library(ursatz
     pitch/generic_interval.c
     pitch/key_signature.c
     pitch/sounding_pitch.c
+    pitch/midi_pitch.c
     events/event.c
     events/note_event.c
     events/rest_event.c
@@ -292,6 +293,7 @@ ursatz_public_headers(ursatz
         pitch/clef_resolution.h
         pitch/generic_interval.h
         pitch/key_signature.h
+        pitch/midi_pitch.h
         pitch/pitch_arithmetic.h
         pitch/pitch_identity.h
         pitch/pitch_numeric_value.h
