@@ -19,6 +19,7 @@
  *   analysis.json                                            the Analyzer's document
  *   meta.json                                                filename, format, uploaded_at,
  *                                                            analyzer_version, document_schema_version,
+ *                                                            ursatz_commit,
  *                                                            composer, source, tags (R-103; absent = unset),
  *                                                            notation (R-110; absent = no override)
  * pieces_dir is created if it does not already exist.
@@ -53,6 +54,7 @@ typedef struct {
     char *uploaded_at; /* ISO 8601 UTC */
     bool has_notation;   /* true when the piece has a notation override */
     UrsatzGuiNotation notation;
+    const char *analysis_status; /* ursatz_gui_analysis_status_name of the stored document; static text */
     char *document_json; /* the Analyzer's analysis document, as stored */
     char **note_xml_ids; /* note_xml_ids[i]: the <note xml:id> the score export writes for note i */
     size_t note_count;
@@ -70,6 +72,8 @@ typedef struct {
     size_t tag_count;
     bool has_notation; /* true when the piece has a notation override */
     UrsatzGuiNotation notation;
+    const char *analysis_status; /* from meta.json alone: "current", "stale_schema", "stale_analyzer",
+                                    "stale_ursatz" or "unreadable"; static text */
 } UrsatzGuiPieceSummary;
 
 /*
@@ -209,6 +213,15 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir,
  * imports or the analysis fails.
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, const char *id);
+
+/*
+ * Makes a piece's stored analysis current, under the piece lock. A meta.json without ursatz_commit gets it from the
+ * stored analysis.json's metadata.ursatz_commit (written back). When analyzer_document_status of analysis.json is
+ * not CURRENT (another schema, Analyzer version or Ursatz commit, or unreadable), the piece is analyzed again as in
+ * ursatz_gui_analysis_reanalyze. OK when the stored analysis is current afterwards; otherwise the failure of the new
+ * analysis, with the stored files unchanged. URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_ensure_current(const char *pieces_dir, const char *id);
 
 /*
  * Imports the piece's stored source and exports it to MusicXML with Ursatz's

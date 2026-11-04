@@ -173,6 +173,7 @@ function buildAnalysisHeader(data) {
     format: data.format || "",
     analyzerVersion: metadata.analyzer_version || "",
     ursatzCommit: commit,
+    analysisStatus: typeof data.analysis_status === "string" ? data.analysis_status : "current",
     noteCount,
     measureCount: typeof meter.measure_count === "number" ? meter.measure_count : null,
   };

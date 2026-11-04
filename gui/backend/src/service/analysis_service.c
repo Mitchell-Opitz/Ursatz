@@ -32,6 +32,7 @@
 #include <ursatz_analyzer/notation_reading.h>
 #include <ursatz_analyzer/playback.h>
 #include <ursatz_analyzer/score_export.h>
+#include <ursatz_analyzer/staleness.h>
 #include <ursatz_analyzer/version.h>
 
 static bool path_exists(const char *path) {
@@ -90,6 +91,33 @@ static const char *analyzer_version_string(void) {
     return ursatz_analyzer_version();
 }
 
+/* The name a status goes by in the routes and the stored flags. */
+static const char *status_name(AnalyzerDocumentStatus status) {
+    switch (status) {
+    case ANALYZER_DOCUMENT_CURRENT:
+        return "current";
+    case ANALYZER_DOCUMENT_STALE_SCHEMA:
+        return "stale_schema";
+    case ANALYZER_DOCUMENT_STALE_ANALYZER:
+        return "stale_analyzer";
+    case ANALYZER_DOCUMENT_STALE_URSATZ:
+        return "stale_ursatz";
+    default:
+        return "unreadable";
+    }
+}
+
+/* The status the three keys in meta.json give; a missing key is unreadable. */
+static const char *meta_status_name(const cJSON *meta) {
+    const cJSON *schema = cJSON_GetObjectItemCaseSensitive(meta, "document_schema_version");
+    const cJSON *analyzer = cJSON_GetObjectItemCaseSensitive(meta, "analyzer_version");
+    const cJSON *commit = cJSON_GetObjectItemCaseSensitive(meta, "ursatz_commit");
+    if (!cJSON_IsNumber(schema) || !cJSON_IsString(analyzer) || !cJSON_IsString(commit)) {
+        return status_name(ANALYZER_DOCUMENT_UNREADABLE);
+    }
+    return status_name(analyzer_document_status_of(schema->valueint, analyzer->valuestring, commit->valuestring));
+}
+
 /* Writes <dir_path>/meta.json. */
 static bool write_meta_file(const char *dir_path, const char *filename, const char *format, const char *uploaded_at) {
     cJSON *meta = cJSON_CreateObject();
@@ -101,6 +129,7 @@ static bool write_meta_file(const char *dir_path, const char *filename, const ch
     cJSON_AddStringToObject(meta, "uploaded_at", uploaded_at);
     cJSON_AddStringToObject(meta, "analyzer_version", analyzer_version_string());
     cJSON_AddNumberToObject(meta, "document_schema_version", URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
+    cJSON_AddStringToObject(meta, "ursatz_commit", ursatz_analyzer_ursatz_commit());
     char *text = cJSON_Print(meta);
     cJSON_Delete(meta);
     if (!text) {
@@ -540,6 +569,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzG
         piece->source = meta_string_copy(meta, "source");
         bool tags_ok = meta_tags_copy(meta, &piece->tags, &piece->tag_count);
         piece->has_notation = meta_notation_read(meta, &piece->notation);
+        piece->analysis_status = meta_status_name(meta);
         cJSON_Delete(meta);
         if (!piece->id || !piece->filename || !piece->format || !piece->uploaded_at || !piece->composer ||
             !piece->source || !tags_ok) {
@@ -704,8 +734,15 @@ static UrsatzGuiImportEntry *acquire_import(const char *dir_path, const char *id
     return entry;
 }
 
+static UrsatzGuiAnalysisResult ensure_current_unlocked(const char *pieces_dir, const char *id);
+
 static UrsatzGuiAnalysisResult get_piece_unlocked(const char *pieces_dir, const char *id,
                                                         UrsatzGuiPieceDetail **out_detail) {
+    /* A stored analysis from another schema, Analyzer or Ursatz is analyzed again, once. When that fails the stored
+       document is served and its status says why it is stale. */
+    if (ensure_current_unlocked(pieces_dir, id) == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
     char dir_path[320];
     if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
@@ -730,6 +767,8 @@ static UrsatzGuiAnalysisResult get_piece_unlocked(const char *pieces_dir, const 
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
     detail->document_json = ursatz_gui_read_file(analysis_path, NULL);
+    detail->analysis_status = status_name(detail->document_json ? analyzer_document_status(detail->document_json)
+                                                                 : ANALYZER_DOCUMENT_UNREADABLE);
 
     if (!detail->id || !detail->filename || !detail->format || !detail->uploaded_at || !detail->document_json) {
         ursatz_gui_piece_detail_destroy(detail);
@@ -1001,7 +1040,8 @@ static UrsatzGuiAnalysisResult reanalyze_unlocked(const char *pieces_dir, const 
     free(document_json);
 
     ok = ok && meta_set_string(meta, "analyzer_version", analyzer_version_string()) &&
-         meta_set_number(meta, "document_schema_version", URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION);
+         meta_set_number(meta, "document_schema_version", URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION) &&
+         meta_set_string(meta, "ursatz_commit", ursatz_analyzer_ursatz_commit());
     char *text = ok ? cJSON_Print(meta) : NULL;
     cJSON_Delete(meta);
     if (!text) {
@@ -1015,6 +1055,52 @@ static UrsatzGuiAnalysisResult reanalyze_unlocked(const char *pieces_dir, const 
 }
 
 /* Appends text to *out (grown with realloc) with the XML characters escaped. */
+/* A meta.json without ursatz_commit gets it from the stored document's metadata.ursatz_commit, written back.
+   Without either, meta.json stays as it is. */
+static void meta_backfill_ursatz_commit(const char *dir_path, cJSON *meta, const char *document_json) {
+    if (!document_json || cJSON_IsString(cJSON_GetObjectItemCaseSensitive(meta, "ursatz_commit"))) {
+        return;
+    }
+    cJSON *document = cJSON_Parse(document_json);
+    const cJSON *metadata = document ? cJSON_GetObjectItemCaseSensitive(document, "metadata") : NULL;
+    const cJSON *commit = metadata ? cJSON_GetObjectItemCaseSensitive(metadata, "ursatz_commit") : NULL;
+    if (cJSON_IsString(commit) && meta_set_string(meta, "ursatz_commit", commit->valuestring)) {
+        char *text = cJSON_Print(meta);
+        if (text) {
+            char meta_path[400];
+            snprintf(meta_path, sizeof(meta_path), "%s/meta.json", dir_path);
+            ursatz_gui_write_file_atomic(meta_path, text, strlen(text));
+            free(text);
+        }
+    }
+    cJSON_Delete(document);
+}
+
+/* Makes the stored analysis current: fills a missing ursatz_commit in meta.json, then analyzes the piece again when
+   analyzer_document_status says the stored document is not CURRENT. OK when it is current now; the failure of the
+   new analysis otherwise, with the stored files unchanged. */
+static UrsatzGuiAnalysisResult ensure_current_unlocked(const char *pieces_dir, const char *id) {
+    char dir_path[320];
+    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    cJSON *meta = read_meta_file(dir_path);
+    if (!meta) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    char analysis_path[400];
+    snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
+    char *document = ursatz_gui_read_file(analysis_path, NULL);
+    meta_backfill_ursatz_commit(dir_path, meta, document);
+    cJSON_Delete(meta);
+    AnalyzerDocumentStatus status = document ? analyzer_document_status(document) : ANALYZER_DOCUMENT_UNREADABLE;
+    free(document);
+    if (status == ANALYZER_DOCUMENT_CURRENT) {
+        return URSATZ_GUI_ANALYSIS_OK;
+    }
+    return reanalyze_unlocked(pieces_dir, id);
+}
+
 static bool append_escaped(char **out, size_t *length, size_t *capacity, const char *text) {
     for (const char *c = text; *c != '\0'; c++) {
         const char *piece = NULL;
@@ -1406,6 +1492,16 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, co
         return result;
     }
     result = reanalyze_unlocked(pieces_dir, id);
+    ursatz_gui_piece_unlock(id);
+    return result;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_ensure_current(const char *pieces_dir, const char *id) {
+    UrsatzGuiAnalysisResult result;
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    result = ensure_current_unlocked(pieces_dir, id);
     ursatz_gui_piece_unlock(id);
     return result;
 }
