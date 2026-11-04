@@ -130,14 +130,13 @@ double neighbor, `CT2` changing tone, `PED` pedal) or `?` (unclassified). A
 chip with no resolution is drawn in the warning style. Clicking a chip opens a
 select (Automatic, Chord tone, each type) that sets an override, stored in the
 version as `motif.tone_overrides` (`{"2": "passing"}`, 1-based notes, the roles
-of the Composer's `--tone`) and sent as `--tone` when the motif is analyzed on
+of the Composer's `tones` request member) and sent as `tones` when the motif is analyzed on
 save or Re-analyze; Automatic removes it, and a changed override is a new
 version like any edit. The Composer's warnings (`Note 3 (B5) does not resolve`)
 show in the Motif tab's status area. On the first start with this version every
 full motif whose current analysis has no tones is analyzed again (a new version
 noted `Re-analyzed`); the file `materials/tones-migrated` records that it ran,
-and a motif the Composer cannot analyze keeps its `analysis_error`. Without a
-Composer nothing is changed and the next start tries again.
+and a motif the Composer cannot analyze keeps its `analysis_error`.
 
 Motifs are written with C as the tonic (R-179): the note list is C-based and
 the Mode select sets major or minor, so every motif is stored with the key
@@ -869,20 +868,21 @@ An item can use other items, from any project. Each entry of a body's `uses` is
 #### Motif analysis on save
 
 `POST /api/materials/items` and `POST /api/materials/items/<id>/versions`
-analyze a motif with `form` `full` before it is written. The route writes
-`notes` to a temporary file and runs `ursatz-composer motive <file> --format
-notes --meter <meter> [--key <key>] --json`, then stores the output as
-`motif.analysis` (scale degrees, implied harmony, intervals, rhythm). Meter
-(`^[0-9]{1,2}/[0-9]{1,2}$`) and key (`^[A-Ga-g][#b]? (major|minor)$`) are
-checked before they reach the argument list.
+analyze a motif with `form` `full` before it is written. The route builds the
+motive request of the Composer API (`input.text` the `notes`, `input.format`
+`notes`, `meter`, `key`, `pickup`, and `harmony`, `features`, `role` and
+`tones` when the motif has them) and calls `composer_api_motive` in process,
+then stores the output as `motif.analysis` (scale degrees, implied harmony,
+intervals, rhythm). Meter (`^[0-9]{1,2}/[0-9]{1,2}$`) and key
+(`^[A-Ga-g][#b]? (major|minor)$`) are checked before the request is built.
 
-- A note list or key the Composer refuses is 400 with its message, and no
-  version is written.
-- Composer missing, timed out, crashed or not startable: the version is saved
-  with `analysis: null` and `motif.analysis_error` holds the reason
-  (`composer not found`, `composer timed out`, `composer could not be started`,
-  `composer crashed (signal <n>)`, or `composer could not analyze the motif:
-  <last stderr line>`); `analysis_error` is `null` when the motif was analyzed.
+- A note list or key the Composer refuses is 400 with its message and, as
+  `path`, the request member at fault (`/meter`, `/harmony`, `/input/text`);
+  no version is written.
+- A failure of the Composer that is not the request's (out of memory, an
+  internal error): the version is saved with `analysis: null` and
+  `motif.analysis_error` holds the reason (`composer could not analyze the
+  motif: <message>`); `analysis_error` is `null` when the motif was analyzed.
   The answer carries `analysis_error` too.
 - `POST /api/materials/items/<id>/reanalyze` (motifs only, else 400 `only
   motifs are analyzed`) analyzes the current version again and writes a new
@@ -891,8 +891,8 @@ checked before they reach the argument list.
   written with C as the tonic`, checked before the Composer runs (re-analyze
   keeps an older motif's key).
 - `POST /api/materials/motifs/to-c` `{degrees, mode, meter, pickup?}` writes a
-  full motif's degrees as C notes: `motive <file> --format degrees --key "C
-  <mode>" --meter <m> --pickup <p> --json`, answering `{ok, notes_text}`.
+  full motif's degrees as C notes: `composer_api_motive` with `input.format`
+  `degrees`, `key` `"C <mode>"`, `meter` and `pickup`, answering `{ok, notes_text}`.
   `degrees` is 1 to 4000 characters and `mode` `major` or `minor`.
 - `POST /api/materials/motifs/import` answers the notes in C: `{notes_text,
   meter, key: "C <mode>", moved_from: "D minor" | null, key_found, pickup,
@@ -909,10 +909,10 @@ in the motif's stored key (C major or C minor). Nothing is saved.
 - `POST /api/materials/render` takes `{form, degrees, meter, key?, pickup?,
   render_key?, tempo?, role?, harmony?, features?}` (`form` `full`, `rhythm` or `contour`;
   `degrees` 1 to 4000 characters; `tempo` 20 to 400) and answers
-  `{ok, musicxml, playback}`. The route runs `ursatz-composer motive <file>
-  --format degrees|rhythm|contour --form <form> --meter <m> [--key <k>]
-  --pickup <p> [--harmony <text>] [--feature <label:first-last>]...
-  [--role <role>] --render-key <k> --musicxml <file> [--tempo <n>] --json`.
+  `{ok, musicxml, playback}`. The route calls `composer_api_motive_render` with
+  `input.format` `degrees` (`rhythm` or `contour` for those forms), `input.form`, `meter`, `key`
+  (when given), `pickup`, `harmony`, `features`, `role`, `render_key`, `tempo` and `musicxml: true`; the
+  MusicXML is the response's `musicxml`, not a file.
   `render_key` defaults to `key`; without either the answer is 400 "give a
   key". A list the Composer refuses is 400 with its message.
 - `playback` has the shape of the Analyzer's playback (`tempo`, one part
@@ -1025,8 +1025,8 @@ four steps turns this motif into the other, the panel says "Not related within 4
 form of this motif" makes the picked motif a form of this one; the variant tree then shows it like a generated form
 (a linked form has no seed, so it has no Reroll).
 
-- `POST /api/materials/recognize` `{"source":{"item","version"},"target":{"item","version"}}` runs the Composer's
-  `recognize` on both versions' degrees, with each motif's harmony and features, and answers its JSON (`found`,
+- `POST /api/materials/recognize` `{"source":{"item","version"},"target":{"item","version"}}` calls
+  `composer_api_recognize` on both versions' degrees, with each motif's harmony and features, and answers its JSON (`found`,
   `chain`, `distance`, `remoteness`, `kept`, `changed`, `derivation`) plus `ok`. The two motifs need the same form,
   meter and key. `400` for a body that is not a motif, has no degrees (not analyzed) or does not match in form, meter
   and key, `404` for a version that is not there. The search is the Composer's beam search, not exhaustive.
@@ -1040,8 +1040,8 @@ form of this motif" makes the picked motif a form of this one; the variant tree 
 #### Motive-forms: harmony, functions and remoteness
 
 Every Composer call for a motif (`motive` on save, `variants`, render and
-`random-motive`) passes the motif's `--harmony`, one `--feature label:first-last`
-per feature (at most 8) and `--role` from the body. When the source of
+`random-motive`) passes the motif's `harmony`, one `features` entry `label:first-last`
+per feature (at most 8) and `role` from the body (as options of `variants`, which still runs the command). When the source of
 `POST /api/materials/items/<id>/variants` is itself derived, the route follows
 `derived.source_item` to the root of the tree (at most 32 steps) and passes it
 as `--basic` with `--basic-format`, `--basic-pickup` and `--basic-harmony`, so
@@ -1084,8 +1084,8 @@ the mode, no style. Its score is shown at full width in the score workspace with
 Reroll (the next seed, which draws its own mode and meter) and Use, which fills the editor above (notes, mode, meter,
 pickup) to name and save; nothing is stored until Save. The backend fills in the analysis and degrees as for any motif.
 
-- `POST /api/materials/motifs/random` `{mode, meter, key?, form?, role?, style_id?, count?, seed?}` runs the Composer's
-  `random-motive` and answers its JSON (`seed`, `motives`) plus `ok`. `mode` is `major` or `minor`, `meter` is like
+- `POST /api/materials/motifs/random` `{mode, meter, key?, form?, role?, style_id?, count?, seed?}` calls the Composer's
+  `composer_api_random_motive` and answers its JSON (`seed`, `motives`) plus `ok`. `mode` is `major` or `minor`, `meter` is like
   `3/4`, `key` is like `D minor`, `count` is 1 to 16, `seed` a whole number from 0. A bad input or an unknown style is
   400. The style model path comes from `ursatz_gui_style_model_path`.
 - Pure helpers in `materials-model.js`: `randomSettings` (mode and meter from a seed), `randomRequest` (one motif),
@@ -1484,7 +1484,7 @@ Items:
   The result is the source's with the Composer's summary, the variation's loop version and its seed; the note is `chose
   variation <i> seed <n>`. `404` for a set or variation that is not there, `400` for a bad index.
 - `GET /api/materials/variant-operations`: `{"operations"}` from
-  `ursatz-composer variants --list-ops --json`, read once per server run.
+  `composer_api_variant_operations`.
 - `POST /api/materials/items/<id>/variants`: `{"chain"?,"count"?,"seed"?,"functions"?,"distance"?}`
   runs `variants` on the motif's stored degrees, form, meter, key and pickup.
   `chain` is `{"steps":[{"op","params"?}]}` (random chains when absent),
@@ -1541,31 +1541,40 @@ link the piece, `[{id,name,kind}]`.
 
 ### Composer routes
 
-The Composer tool grows themes, plans and fills pieces, and makes variations.
-It does not link the Composer library: `composer_service.c` is the only code
-that starts the Composer, and it runs the `ursatz-composer` command line with
-`posix_spawn` and an argument array (never a shell), capturing stdout and
-stderr. The Composer brings its own copies of Ursatz and the Analyzer, so
-linking it would put two versions of each into one build; as a command it is
-built in its own tree (`external/ursatz-composer`, an `ExternalProject` named
-`ursatz_composer_cli`) and its targets never meet the GUI's (R-086). Every
-path in the arguments is absolute and the working directory is never changed.
-A run is stopped with `SIGKILL` after 120 seconds.
+The Composer tool grows themes, plans and fills pieces, and makes variations. The quick requests (version,
+motif analysis, degrees to notes, MIDI to motif, motif render, the operation list, recognize and random motifs)
+are calls of the Composer API (`composer_api_*`, `ursatz_composer/composer_api.h`) in process (R-219): the backend
+links the Composer library (`add_subdirectory(external/ursatz-composer)` with the command off), which reuses the
+cJSON, Ursatz and Analyzer targets the GUI builds, so one version of each is in the build. A request is a cJSON
+object printed to text, never an argument list; `service/composer_client.c` moves the answer into an
+`UrsatzGuiComposerReply` (`status`, `json`, `plan_json`, `midi`, `musicxml`, and the refusal `message` and `path`). The
+CLI's exit 1 is `COMPOSER_ERR_REQUEST`, exit 2 `COMPOSER_ERR_UNSATISFIABLE`; both are a refusal (400 with the Composer's
+message and the `path` of the request member at fault, additive to `error`), anything else a failure of the run.
 
-- `URSATZ_GUI_COMPOSER`: the Composer executable to run instead of the one
-  built beside the backend (`build/composer/cli/ursatz-composer`).
-- `URSATZ_GUI_COMPOSER_TIMEOUT`: the time limit in seconds (default 120).
+The long runs (theme, piece, piece variations and variants) still run the `ursatz-composer` command until the job
+queue: `composer_service.c` starts it with `posix_spawn` and an argument array (never a shell), capturing stdout and
+stderr. The command is built in its own tree (`external/ursatz-composer`, an `ExternalProject` named
+`ursatz_composer_cli`, with its own Ursatz and Analyzer) and its targets never meet the GUI's (R-086). Every path in
+the arguments is absolute and the working directory is never changed. A run is stopped with `SIGKILL` after 120
+seconds.
+
+civetweb's request threads have a 32 MB stack (`CIVETWEB_THREAD_STACK_SIZE`, address space only): its 100 KB default is
+too small for entries such as the random motive.
+
+- `URSATZ_GUI_COMPOSER`: the Composer executable the long runs use instead of the one built beside the backend
+  (`build/composer/cli/ursatz-composer`).
+- `URSATZ_GUI_COMPOSER_TIMEOUT`: the time limit in seconds for those runs (default 120).
 
 Every request field is checked against a fixed pattern or range before it
-reaches an argument list: keys (`D`, `F#`, `Bb`, `D minor`), meters
+reaches the Composer: keys (`D`, `F#`, `Bb`, `D minor`), meters
 (`2/4`, `3/4`, `4/4`, `6/8`), numbers in range, form letters
 (`^[A-Z]'*$`), lanes, node ids, tempos (20 to 400, whole or `n/d`) and
 note-list text. Anything else is 400 and starts nothing.
 
 Routes (bodies are JSON; success bodies have `"ok":true`):
 
-- `GET /api/composer/status`: `{"ok":true,"available":true,"version":"..."}`,
-  or 503 when the binary is missing.
+- `GET /api/composer/status`: `{"ok":true,"available":true,"version":"ursatz-composer 0.4.0","api_version":"1.1",
+  "analyzer_version":"0.5.0","ursatz_commit":"..."}` from `composer_api_versions` (the last three are additive).
 
 Themes and pieces compose through `composer_service.c` (see Theme bodies and
 version files, Piece bodies and version files). The Composer needs POSIX
@@ -1718,11 +1727,10 @@ up front) is required before the first build. Ursatz's own tests are not
 built (`URSATZ_BUILD_TESTS` is OFF). The Composer is a third submodule,
 `external/ursatz-composer`, pinned at PR #90 (`8d7a665`, version 0.4.0, API 1.1). It is built by an
 `ExternalProject` in `build/composer` (its tests off), so it brings its own
-Ursatz and Analyzer; the build runs it as `ursatz-composer` and does not link
-it. The `ExternalProject` has `BUILD_ALWAYS ON`, so the Composer's own
+Ursatz and Analyzer; the build runs it as `ursatz-composer` for the long runs. The backend also links the Composer
+library from the same submodule (see Composer routes), without the command. The `ExternalProject` has `BUILD_ALWAYS ON`, so the Composer's own
 incremental build runs on every GUI build and a moved submodule is never left
-with an old binary. If `GET /api/composer/status` says the Composer is not
-available, motifs save without analysis: run `git submodule update --init
+with an old binary. If the submodules are missing the build stops: run `git submodule update --init
 --recursive` and build again.
 
 ## Tests
@@ -1754,7 +1762,7 @@ names and request bodies. `test_composer_route` runs
 the real Composer: grow, regenerate, lock, variations, choose and plan make
 versions and leave the earlier ones alone; bad requests start nothing and a
 fake Composer (`URSATZ_GUI_COMPOSER`) that records its arguments or sleeps
-shows the argument lists and the 504. `test_theme_route` checks the theme body rules, the request a compose
+shows the argument lists and the 504. `test_materials_route` replays 36 requests captured while the Composer still ran as a command (`backend/tests/fixtures/composer/b5_replies.json`: motif analysis, degrees to notes, MIDI import, render, operations, recognize, random motifs, status) and checks each reply equal (a refusal by status), and the refusal paths (`/meter`, `/input/text`); `test_composer_route` checks the versions the status reports. `test_theme_route` checks the theme body rules, the request a compose
 writes (slots, a pool of approved and unflagged forms without the rejected, the brief, `without`), the version it
 writes with its files, the files route, a stuck, a bad and a missing Composer writing nothing, `update_uses`, and one
 compose with the real Composer over a brief of fixture pieces.

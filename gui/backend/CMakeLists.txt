@@ -10,6 +10,7 @@ add_library(ursatz_gui_core STATIC
   src/service/collection_service.c
   src/service/style_service.c
   src/service/composer_service.c
+  src/service/composer_client.c
   src/service/material_service.c
   src/service/compose_common.c
   src/service/theme_service.c
@@ -31,6 +32,7 @@ target_include_directories(ursatz_gui_core PUBLIC
 )
 
 target_link_libraries(ursatz_gui_core PUBLIC
+  ursatz_composer
   ursatz_analyzer
   cjson
   ursatz

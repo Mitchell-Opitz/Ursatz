@@ -1,5 +1,5 @@
-/* The Composer route is the status check only: it reports the Composer
- * version, gives 503 when the binary is missing, and the old composition and
+/* The Composer route is the status check only: it reports the versions the
+ * linked Composer was built with (composer_api_versions), and the old composition and
  * grow/plan routes are gone (404). Uses a plain TCP socket for the HTTP
  * requests, same as test_analyzer_route.c. */
 
@@ -18,10 +18,7 @@
 #include <cJSON.h>
 
 #include "server.h"
-
-#ifndef URSATZ_GUI_TEST_COMPOSER_DIR
-#error "URSATZ_GUI_TEST_COMPOSER_DIR must name the external/ursatz-composer checkout"
-#endif
+#include "ursatz_composer/composer_api.h"
 
 static int failures = 0;
 
@@ -134,6 +131,13 @@ int main(void) {
   const cJSON *version_text = json ? cJSON_GetObjectItemCaseSensitive(json, "version") : NULL;
   check(status == 200 && cJSON_IsString(version_text) && strncmp(version_text->valuestring, "ursatz-composer", 15) == 0,
         "status reports the Composer version");
+  const cJSON *api = cJSON_GetObjectItemCaseSensitive(json, "api_version");
+  const cJSON *analyzer = cJSON_GetObjectItemCaseSensitive(json, "analyzer_version");
+  const cJSON *commit = cJSON_GetObjectItemCaseSensitive(json, "ursatz_commit");
+  check(cJSON_IsString(api) && strcmp(api->valuestring, composer_api_version()) == 0,
+        "status reports the API version the backend is linked with");
+  check(cJSON_IsString(analyzer) && analyzer->valuestring[0] != '\0', "status reports the Analyzer version");
+  check(cJSON_IsString(commit) && commit->valuestring[0] != '\0', "status reports the Ursatz commit");
   cJSON_Delete(json);
 
   json = exchange_json("POST", "/api/composer/status", "{}", &status);
@@ -148,12 +152,6 @@ int main(void) {
   cJSON_Delete(json);
   json = exchange_json("POST", "/api/composer/plan", "{}", &status);
   check(status == 404, "the plan route is gone");
-  cJSON_Delete(json);
-
-  /* No Composer at all: 503. */
-  setenv("URSATZ_GUI_COMPOSER", "/nonexistent/ursatz-composer", 1);
-  json = exchange_json("GET", "/api/composer/status", NULL, &status);
-  check(status == 503, "status gives 503 when the binary is missing");
   cJSON_Delete(json);
 
   ursatz_gui_server_stop(ctx);
