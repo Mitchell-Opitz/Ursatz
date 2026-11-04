@@ -9,7 +9,7 @@
 #include <cJSON.h>
 
 #include "route_util.h"
-#include "../service/composer_service.h"
+#include "../service/composer_client.h"
 
 static const char *kComposerPrefix = "/api/composer";
 #define MAX_SEGMENTS 8
@@ -55,59 +55,44 @@ static int send_error(struct mg_connection *conn, int status, const char *error)
   return send_object(conn, status, object);
 }
 
-static char *trimmed_copy(const char *text) {
-  size_t len = strlen(text);
-  while (len > 0 && (text[len - 1] == '\n' || text[len - 1] == '\r' || text[len - 1] == ' ')) {
-    len--;
-  }
-  char *copy = malloc(len + 1);
-  if (copy) {
-    memcpy(copy, text, len);
-    copy[len] = '\0';
-  }
-  return copy;
-}
-
-/* GET /api/composer/status: whether the Composer binary is there and what
- * it reports as its version. */
+/* GET /api/composer/status: the versions the Composer was built with (composer_api_versions). "version" keeps the
+ * text the command printed; api_version, analyzer_version and ursatz_commit are additive. */
 static int handle_status(struct mg_connection *conn) {
-  const char *args[] = {"--version", NULL};
-  UrsatzGuiComposerOutput output;
-  UrsatzGuiComposerResult result = ursatz_gui_composer_run(args, &output);
-
-  if (result == URSATZ_GUI_COMPOSER_ERR_NO_BINARY) {
-    cJSON *object = cJSON_CreateObject();
-    if (object) {
-      cJSON_AddStringToObject(object, "error", "composer not found");
-      cJSON_AddFalseToObject(object, "available");
-    }
-    return send_object(conn, 503, object);
-  }
-  if (result == URSATZ_GUI_COMPOSER_ERR_TIMEOUT) {
-    return send_error(conn, 504, "composer timed out");
-  }
-  if (result != URSATZ_GUI_COMPOSER_OK || output.exit_status != 0) {
+  ComposerResponse response;
+  memset(&response, 0, sizeof(response));
+  ComposerStatus composer_status = composer_api_versions(&response);
+  UrsatzGuiComposerReply reply;
+  ursatz_gui_composer_reply_take(composer_status, &response, &reply);
+  cJSON *versions = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  if (!versions) {
     cJSON *object = cJSON_CreateObject();
     if (object) {
       cJSON_AddStringToObject(object, "error", "composer failed");
-      cJSON_AddStringToObject(object, "stderr", result == URSATZ_GUI_COMPOSER_OK ? output.stderr_text : "");
+      cJSON_AddStringToObject(object, "stderr", reply.message);
     }
-    ursatz_gui_composer_output_destroy(&output);
+    ursatz_gui_composer_reply_destroy(&reply);
     return send_object(conn, 500, object);
   }
-
-  char *version = trimmed_copy(output.stdout_text);
-  ursatz_gui_composer_output_destroy(&output);
+  ursatz_gui_composer_reply_destroy(&reply);
+  const cJSON *composer_version = cJSON_GetObjectItemCaseSensitive(versions, "composer_version");
+  const cJSON *api_version = cJSON_GetObjectItemCaseSensitive(versions, "api_version");
+  const cJSON *analyzer_version = cJSON_GetObjectItemCaseSensitive(versions, "analyzer_version");
+  const cJSON *ursatz_commit = cJSON_GetObjectItemCaseSensitive(versions, "ursatz_commit");
+  char version[128];
+  snprintf(version, sizeof(version), "ursatz-composer %s", cJSON_IsString(composer_version) ? composer_version->valuestring : "");
   cJSON *object = cJSON_CreateObject();
-  if (!version || !object) {
-    free(version);
+  bool built = object && cJSON_IsString(composer_version) && cJSON_IsString(api_version) &&
+               cJSON_IsString(analyzer_version) && cJSON_IsString(ursatz_commit) &&
+               cJSON_AddTrueToObject(object, "ok") && cJSON_AddTrueToObject(object, "available") &&
+               cJSON_AddStringToObject(object, "version", version) &&
+               cJSON_AddStringToObject(object, "api_version", api_version->valuestring) &&
+               cJSON_AddStringToObject(object, "analyzer_version", analyzer_version->valuestring) &&
+               cJSON_AddStringToObject(object, "ursatz_commit", ursatz_commit->valuestring);
+  cJSON_Delete(versions);
+  if (!built) {
     cJSON_Delete(object);
-    return send_error(conn, 500, "out of memory");
+    return send_error(conn, 500, "composer failed");
   }
-  cJSON_AddTrueToObject(object, "ok");
-  cJSON_AddTrueToObject(object, "available");
-  cJSON_AddStringToObject(object, "version", version);
-  free(version);
   return send_object(conn, 200, object);
 }
 

@@ -1780,37 +1780,26 @@ static cJSON *composer_json(const char *const *args, int *status, char *message,
   return json;
 }
 
-static cJSON *g_variant_operations = NULL;
-#ifdef _WIN32
-static SRWLOCK g_variant_operations_lock = SRWLOCK_INIT;
-#define OPERATIONS_LOCK() AcquireSRWLockExclusive(&g_variant_operations_lock)
-#define OPERATIONS_UNLOCK() ReleaseSRWLockExclusive(&g_variant_operations_lock)
-#else
-static pthread_mutex_t g_variant_operations_lock = PTHREAD_MUTEX_INITIALIZER;
-#define OPERATIONS_LOCK() pthread_mutex_lock(&g_variant_operations_lock)
-#define OPERATIONS_UNLOCK() pthread_mutex_unlock(&g_variant_operations_lock)
-#endif
-
-/* GET /api/materials/variant-operations: the Composer's operation list, read once and kept for the server's life. */
+/* GET /api/materials/variant-operations: the Composer's operation list, as the Composer API gives it. */
 static int handle_variant_operations(struct mg_connection *conn) {
-  OPERATIONS_LOCK();
-  if (!g_variant_operations) {
-    const char *args[] = {"variants", "--list-ops", "--json", NULL};
-    int status = 0;
-    char message[512];
-    g_variant_operations = composer_json(args, &status, message, sizeof(message));
-    if (!g_variant_operations) {
-      OPERATIONS_UNLOCK();
-      return send_failure(conn, status, message);
-    }
+  ComposerResponse response;
+  memset(&response, 0, sizeof(response));
+  ComposerStatus composer_status = composer_api_variant_operations(&response);
+  UrsatzGuiComposerReply reply;
+  ursatz_gui_composer_reply_take(composer_status, &response, &reply);
+  cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  if (!document) {
+    int failed = send_failure_at(conn, 500, reply.message[0] ? reply.message : "composer could not list the operations",
+                                 reply.path);
+    ursatz_gui_composer_reply_destroy(&reply);
+    return failed;
   }
-  cJSON *copy = cJSON_Duplicate(g_variant_operations, 1);
-  OPERATIONS_UNLOCK();
-  if (!copy || !cJSON_AddBoolToObject(copy, "ok", 1)) {
-    cJSON_Delete(copy);
+  ursatz_gui_composer_reply_destroy(&reply);
+  if (!cJSON_AddBoolToObject(document, "ok", 1)) {
+    cJSON_Delete(document);
     return send_failure(conn, 500, "out of memory");
   }
-  return send_object(conn, copy);
+  return send_object(conn, document);
 }
 
 /* Writes text to a new temp file named after stem; path receives its name. */
@@ -2229,61 +2218,47 @@ static int handle_recognize(struct mg_connection *conn) {
     cJSON_Delete(target_body);
     return send_failure(conn, 400, "the two motifs need the same form, meter and key to be compared");
   }
-  char source_path[512];
-  char target_path[512];
-  if (!write_temp_text(source_path, sizeof(source_path), "ursatz-recognize-source", source_degrees)) {
-    cJSON_Delete(source_body);
-    cJSON_Delete(target_body);
-    return send_failure(conn, 500, "could not write the degrees for the Composer");
-  }
-  if (!write_temp_text(target_path, sizeof(target_path), "ursatz-recognize-target", target_degrees)) {
-    unlink(source_path);
-    cJSON_Delete(source_body);
-    cJSON_Delete(target_body);
-    return send_failure(conn, 500, "could not write the degrees for the Composer");
-  }
   bool full = strcmp(form, "full") == 0;
-  const char *args[16 + 2 * MOTIF_EXTRA_ARGS + 2];
-  MotifExtras source_extras;
-  MotifExtras target_extras;
-  int n = 0;
-  args[n++] = "recognize";
-  args[n++] = source_path;
-  args[n++] = target_path;
-  args[n++] = full ? "--format" : "--form";
-  args[n++] = full ? "degrees" : form;
-  if (full) {
-    args[n++] = "--target-format";
-    args[n++] = "degrees";
+  cJSON *source_request = motive_request(full ? "degrees" : NULL, full ? NULL : form, source_degrees, NULL, NULL, NULL);
+  cJSON *target_request = motive_request(full ? "degrees" : NULL, full ? NULL : form, target_degrees, NULL, NULL, NULL);
+  const char *role = motif_role_option(optional_string(source, "role", &(bool){false}));
+  cJSON *recognize = cJSON_CreateObject();
+  bool built = source_request && target_request && recognize &&
+               add_motive_extras(source_request, motif_harmony(source), cJSON_GetObjectItemCaseSensitive(source, "features"),
+                                 NULL) &&
+               add_motive_extras(target_request, motif_harmony(target), cJSON_GetObjectItemCaseSensitive(target, "features"),
+                                 NULL) &&
+               cJSON_AddStringToObject(recognize, "meter", meter) &&
+               (!key || key[0] == '\0' || cJSON_AddStringToObject(recognize, "key", key)) &&
+               (!role || cJSON_AddStringToObject(recognize, "role", role)) &&
+               (!pickup || cJSON_AddStringToObject(recognize, "pickup", pickup)) &&
+               (!target_pickup || cJSON_AddStringToObject(recognize, "target_pickup", target_pickup));
+  if (built) {
+    built = cJSON_AddItemToObject(recognize, "source", source_request);
+    source_request = built ? NULL : source_request;
   }
-  args[n++] = "--meter";
-  args[n++] = meter;
-  if (key && key[0] != '\0') {
-    args[n++] = "--key";
-    args[n++] = key;
+  if (built) {
+    built = cJSON_AddItemToObject(recognize, "target", target_request);
+    target_request = built ? NULL : target_request;
   }
-  if (pickup) {
-    args[n++] = "--pickup";
-    args[n++] = pickup;
-  }
-  if (target_pickup) {
-    args[n++] = "--target-pickup";
-    args[n++] = target_pickup;
-  }
-  n = append_motif_extras(args, n, motif_harmony(source), cJSON_GetObjectItemCaseSensitive(source, "features"),
-                          motif_role_option(optional_string(source, "role", &(bool){false})), &source_extras);
-  n = append_extras_named(args, n, "--target-harmony", "--target-feature", motif_harmony(target),
-                          cJSON_GetObjectItemCaseSensitive(target, "features"), NULL, &target_extras);
-  args[n++] = "--json";
-  args[n] = NULL;
-  cJSON *document = composer_json(args, &status, message, sizeof(message));
-  unlink(source_path);
-  unlink(target_path);
+  cJSON_Delete(source_request);
+  cJSON_Delete(target_request);
   cJSON_Delete(source_body);
   cJSON_Delete(target_body);
-  if (!document) {
-    return send_failure(conn, status, message);
+  UrsatzGuiComposerReply reply;
+  bool called = built && composer_call(composer_api_recognize, recognize, &reply);
+  cJSON_Delete(recognize);
+  if (!called) {
+    return send_failure(conn, 500, "out of memory");
   }
+  cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  if (!document) {
+    int failed = send_failure_at(conn, composer_refused(&reply) ? 400 : 500,
+                                 reply.message[0] ? reply.message : "composer could not recognize the motifs", reply.path);
+    ursatz_gui_composer_reply_destroy(&reply);
+    return failed;
+  }
+  ursatz_gui_composer_reply_destroy(&reply);
   if (!cJSON_AddBoolToObject(document, "ok", 1)) {
     cJSON_Delete(document);
     return send_failure(conn, 500, "out of memory");
@@ -3097,45 +3072,29 @@ static int handle_random_motifs(struct mg_connection *conn) {
     cJSON_Delete(body);
     return send_failure(conn, 400, "unknown style");
   }
-  char count_text[16];
-  char seed_text[32];
-  snprintf(count_text, sizeof(count_text), "%d", count_item ? (int)count_item->valuedouble : 6);
-  snprintf(seed_text, sizeof(seed_text), "%.0f", seed_item ? seed_item->valuedouble : 0.0);
-  const char *args[24];
-  int n = 0;
-  args[n++] = "random-motive";
-  args[n++] = "--mode";
-  args[n++] = mode;
-  args[n++] = "--meter";
-  args[n++] = meter;
-  if (key) {
-    args[n++] = "--key";
-    args[n++] = key;
-  }
-  args[n++] = "--form";
-  args[n++] = form ? form : "full";
-  if (role) {
-    args[n++] = "--role";
-    args[n++] = role;
-  }
-  if (style_id) {
-    args[n++] = "--style";
-    args[n++] = style_path;
-  }
-  args[n++] = "--count";
-  args[n++] = count_text;
-  if (seed_item) {
-    args[n++] = "--seed";
-    args[n++] = seed_text;
-  }
-  args[n++] = "--json";
-  args[n] = NULL;
-  char message[512];
-  cJSON *document = composer_json(args, &status, message, sizeof(message));
+  cJSON *request = cJSON_CreateObject();
+  bool built = request && cJSON_AddStringToObject(request, "mode", mode) && cJSON_AddStringToObject(request, "meter", meter) &&
+               (!key || cJSON_AddStringToObject(request, "key", key)) &&
+               cJSON_AddStringToObject(request, "form", form ? form : "full") &&
+               (!role || cJSON_AddStringToObject(request, "role", role)) &&
+               (!style_id || cJSON_AddStringToObject(request, "style", style_path)) &&
+               cJSON_AddNumberToObject(request, "count", count_item ? (int)count_item->valuedouble : 6) &&
+               (!seed_item || cJSON_AddNumberToObject(request, "seed", seed_item->valuedouble));
   cJSON_Delete(body);
-  if (!document) {
-    return send_failure(conn, status, message);
+  UrsatzGuiComposerReply reply;
+  bool called = built && composer_call(composer_api_random_motive, request, &reply);
+  cJSON_Delete(request);
+  if (!called) {
+    return send_failure(conn, 500, "out of memory");
   }
+  cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
+  if (!document) {
+    int failed = send_failure_at(conn, composer_refused(&reply) ? 400 : 500,
+                                 reply.message[0] ? reply.message : "composer could not draw the motives", reply.path);
+    ursatz_gui_composer_reply_destroy(&reply);
+    return failed;
+  }
+  ursatz_gui_composer_reply_destroy(&reply);
   if (!cJSON_AddBoolToObject(document, "ok", 1)) {
     cJSON_Delete(document);
     return send_failure(conn, 500, "out of memory");
