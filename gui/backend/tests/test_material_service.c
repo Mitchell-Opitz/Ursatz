@@ -364,6 +364,50 @@ static void test_body_validation(void) {
     cJSON_Delete(body);
     body = cJSON_Parse(kPieceBody);
     CHECK(validate("piece", body) == OK, "a valid piece body");
+    /* the piece's words are the Composer's: a save keeps the type and size, validate marks the value (R-276) */
+    static const struct {
+        const char *structure;
+        UrsatzGuiMaterialResult result;
+        const char *label;
+    } pieces[] = {
+        {"\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\"", OK, "a plain structure"},
+        {"\"key\":\"H\",\"mode\":\"major\",\"meter\":\"4/4\"", OK, "a key the Composer does not read"},
+        {"\"key\":\"C# major\",\"mode\":\"major\",\"meter\":\"4/4\"", OK, "a GUI key spelling"},
+        {"\"key\":\"D\",\"mode\":\"dorian\",\"meter\":\"7/8\"", OK, "a mode and a meter the Composer does not read"},
+        {"\"key\":5,\"mode\":\"major\",\"meter\":\"4/4\"", INVALID, "a key that is not text"},
+        {"\"key\":\"D\",\"mode\":null,\"meter\":7", INVALID, "a meter that is not text"},
+    };
+    for (size_t i = 0; i < sizeof(pieces) / sizeof(pieces[0]); i++) {
+        char text[512];
+        snprintf(text, sizeof(text),
+                 "{\"uses\":[],\"piece\":{\"structure\":{%s,\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null}]}}}",
+                 pieces[i].structure);
+        cJSON *piece_body = cJSON_Parse(text);
+        CHECK(piece_body != NULL, "the piece test body parses");
+        CHECK(validate("piece", piece_body) == pieces[i].result, pieces[i].label);
+        cJSON_Delete(piece_body);
+    }
+    static const struct {
+        const char *section;
+        UrsatzGuiMaterialResult result;
+        const char *label;
+    } sections[] = {
+        {"\"pickup\":\"5\",\"cadence\":\"XX\",\"fill\":null", OK, "a pickup longer than a bar and a cadence the Composer does not read"},
+        {"\"pickup\":\"0\",\"cadence\":null,\"fill\":{\"kind\":\"progression\",\"numerals\":\"I $ V\"}", OK, "numerals the Composer does not read"},
+        {"\"pickup\":\"0\",\"cadence\":null,\"fill\":{\"kind\":\"progression\",\"numerals\":5}", INVALID, "numerals that are not text"},
+        {"\"pickup\":\"0\",\"cadence\":7,\"fill\":null", INVALID, "a cadence that is not text"},
+        {"\"pickup\":\"x\",\"cadence\":null,\"fill\":null", INVALID, "a pickup that is not beats"},
+    };
+    for (size_t i = 0; i < sizeof(sections) / sizeof(sections[0]); i++) {
+        char text[512];
+        snprintf(text, sizeof(text),
+                 "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":[{\"id\":\"s0\",\"part\":\"body\",\"beats\":8,%s}]}}}",
+                 sections[i].section);
+        cJSON *section_body = cJSON_Parse(text);
+        CHECK(section_body != NULL, "the section test body parses");
+        CHECK(validate("piece", section_body) == sections[i].result, sections[i].label);
+        cJSON_Delete(section_body);
+    }
     cJSON_Delete(body);
 
     body = cJSON_Parse("[]");
@@ -423,6 +467,15 @@ static void test_body_validation(void) {
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF},{\"slot\":\"basic\",REF}]", INVALID, "a slot named twice"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"pool\":\"approved\"", INVALID, "a pool is refused"},
         {"\"form\":null,\"slots\":[],\"pool\":\"none\"", INVALID, "a pool is refused on a placeholder too"},
+        /* the Composer's words are not judged on a save: validate marks them, compose refuses them (R-276) */
+        {"\"form\":{\"into\":\"sentence\",\"meter\":\"5/4\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a meter the Composer does not read"},
+        {"\"form\":{\"into\":\"hybrid\",\"hybrid\":\"fugue\"},\"slots\":[{\"slot\":\"basic\",REF}]", OK, "a hybrid the Composer does not read"},
+        {"\"form\":{\"into\":\"rondo\",\"mode\":\"dorian\",\"cadence\":\"DC\",\"first_cadence\":\"PAC\",\"bars\":6},\"slots\":[{\"slot\":\"basic\",REF}]",
+         OK, "an into, mode, cadences and bars the Composer does not read"},
+        {"\"form\":{\"into\":\"sentence\",\"meter\":4},\"slots\":[{\"slot\":\"basic\",REF}]", INVALID, "a meter that is not text"},
+        {"\"form\":{\"into\":\"sentence\",\"bars\":\"8\"},\"slots\":[{\"slot\":\"basic\",REF}]", INVALID, "bars that are not a number"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"tempo\":5", OK, "a tempo under 20"},
+        {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"tempo\":1.5", INVALID, "a tempo that is not whole"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[]", OK, "no ideas"},
         {"\"form\":null,\"slots\":[{\"slot\":\"basic\",REF}],\"ideas\":[{\"idea\":\"repetition\",REF},{\"idea\":\"cadential 2\",REF}]", OK,
          "ideas of a motif"},

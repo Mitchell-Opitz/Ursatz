@@ -2111,6 +2111,120 @@ static void test_refusal_paths(void) {
   cJSON_Delete(answer);
 }
 
+/* POST /api/materials/items/validate (R-276): the Composer reads the request a body would compose with. */
+static void test_validation(void) {
+  int status = 0;
+  char project[64] = "";
+  first_project(project, sizeof(project));
+
+  /* A motif: complete with the Composer's defaults filled, incomplete, refused with its path. */
+  char request[4096];
+  snprintf(request, sizeof(request), "{\"type\":\"motif\",\"body\":%s}", kMotifBody);
+  cJSON *answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  const cJSON *filled = cJSON_GetObjectItemCaseSensitive(answer, "request");
+  check(status == 200 && ok_true(answer) && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "complete")) &&
+            strcmp(string_of(filled, "role"), "melodic") == 0,
+        "a motif body is complete with the Composer's defaults filled");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("POST", "/api/materials/items/validate",
+                         "{\"type\":\"motif\",\"body\":{\"uses\":[],\"motif\":{\"form\":\"full\",\"notes\":\"\",\"meter\":\"4/4\",\"pickup\":\"0\"}}}",
+                         &status);
+  check(status == 200 && ok_true(answer) && cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(answer, "complete")),
+        "a motif with no notes is not complete yet, and no refusal");
+  cJSON_Delete(answer);
+
+  snprintf(request, sizeof(request), "{\"type\":\"motif\",\"body\":%s}", kBadMotifBody);
+  answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  check(status == 400 && !ok_true(answer) && strcmp(string_of(answer, "path"), "/input/text") == 0,
+        "notes the Composer cannot read are refused at /input/text");
+  cJSON_Delete(answer);
+
+  answer = json_exchange("POST", "/api/materials/items/validate",
+                         "{\"type\":\"motif\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q D4:q\","
+                         "\"meter\":\"4/4\",\"key\":null,\"pickup\":\"0\",\"harmony\":\"I V\"}}}",
+                         &status);
+  check(status == 400 && strcmp(string_of(answer, "path"), "/harmony") == 0, "a harmony the Composer cannot read is refused at /harmony");
+  cJSON_Delete(answer);
+
+  /* A key spelled as the GUI did (C# major), as a motif stored before motifs moved to C holds it: the Composer's key
+     reader accepts it. (The frontend opens such an item as stored; see vocabulary.test.js.) */
+  const char *gui_key =
+      "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q D4:q E4:h\",\"meter\":\"4/4\","
+      "\"key\":\"C# major\",\"pickup\":\"0\",\"features\":[],\"analysis\":null,\"derived\":null}}";
+  char *keyed = create_item("motif", "Theme motif", project, kMotifBody);
+  check(keyed != NULL, "a motif to use in a theme is saved");
+  snprintf(request, sizeof(request), "{\"type\":\"motif\",\"body\":%s}", gui_key);
+  answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  check(status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "complete")),
+        "the Composer's key reader accepts the GUI spelling");
+  cJSON_Delete(answer);
+
+  /* A theme: a draft the Composer refuses still saves; validate refuses it with its path. */
+  char theme[2048];
+  snprintf(theme, sizeof(theme),
+           "{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"mode\":\"major\",\"meter\":\"%%s\",\"bars\":8,\"cadence\":\"PAC\"},"
+           "\"slots\":[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1}]}}",
+           keyed ? keyed : "mot-0000000000000000");
+  char body[2048];
+  snprintf(body, sizeof(body), theme, "4/4");
+  snprintf(request, sizeof(request), "{\"type\":\"theme\",\"body\":%s}", body);
+  answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  check(status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "complete")) &&
+            cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "request"), "slots")),
+        "a theme body is complete and gives the Composer's request");
+  cJSON_Delete(answer);
+
+  snprintf(body, sizeof(body), theme, "5/4");
+  char *draft = create_item("theme", "Draft", project, body);
+  check(draft != NULL, "a theme whose meter the Composer refuses still saves");
+  snprintf(request, sizeof(request), "{\"type\":\"theme\",\"body\":%s}", body);
+  answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  check(status == 400 && !ok_true(answer) && strcmp(string_of(answer, "path"), "/meter") == 0,
+        "validate refuses that meter at /meter");
+  cJSON_Delete(answer);
+  free(draft);
+
+  answer = json_exchange("POST", "/api/materials/items/validate",
+                         "{\"type\":\"theme\",\"body\":{\"uses\":[],\"theme\":{\"form\":{\"into\":\"sentence\",\"mode\":\"major\",\"meter\":\"4/4\"},\"slots\":[]}}}",
+                         &status);
+  check(status == 200 && cJSON_IsFalse(cJSON_GetObjectItemCaseSensitive(answer, "complete")) &&
+            strstr(string_of(answer, "message"), "basic") != NULL,
+        "a theme with no basic slot is not complete yet");
+  cJSON_Delete(answer);
+
+  /* A piece: the Composer's defaults (the cadence of every section) come back; a key it refuses is marked. */
+  const char *piece =
+      "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"%s\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":["
+      "{\"id\":\"s0\",\"part\":\"body\",\"letter\":\"A\",\"beats\":16,\"pickup\":\"0\",\"cadence\":null,\"fill\":{\"kind\":\"empty\"}}]}}}";
+  snprintf(body, sizeof(body), piece, "D");
+  snprintf(request, sizeof(request), "{\"type\":\"piece\",\"body\":%s}", body);
+  answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  const cJSON *sections = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "request"), "sections");
+  check(status == 200 && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(answer, "complete")) && cJSON_GetArraySize(sections) >= 1 &&
+            strcmp(string_of(cJSON_GetArrayItem(sections, 0), "cadence"), "HC") == 0,
+        "a piece body is complete and gets the Composer's default cadence");
+  cJSON_Delete(answer);
+
+  snprintf(body, sizeof(body), piece, "H");
+  char *bad_key = create_item("piece", "Bad key", project, body);
+  check(bad_key != NULL, "a piece whose key the Composer refuses still saves");
+  free(bad_key);
+  snprintf(request, sizeof(request), "{\"type\":\"piece\",\"body\":%s}", body);
+  answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  check(status == 400 && strcmp(string_of(answer, "path"), "/key") == 0, "validate refuses that key at /key");
+  cJSON_Delete(answer);
+
+  /* The request itself. */
+  answer = json_exchange("POST", "/api/materials/items/validate", "{\"type\":\"chord\",\"body\":{}}", &status);
+  check(status == 400 && !ok_true(answer), "a type that is not motif, theme or piece is refused");
+  cJSON_Delete(answer);
+  answer = json_exchange("GET", "/api/materials/items/validate", NULL, &status);
+  check(status == 405, "validate accepts only POST");
+  cJSON_Delete(answer);
+  free(keyed);
+}
+
 int main(void) {
 #ifdef _WIN32
   WSADATA wsa_data;
@@ -2158,6 +2272,7 @@ int main(void) {
   test_theme_placeholder();
   test_random_motifs();
   test_refusal_paths();
+  test_validation();
 #ifdef URSATZ_GUI_TEST_COMPOSER_FIXTURES
   test_replies_match_the_command();
 #endif

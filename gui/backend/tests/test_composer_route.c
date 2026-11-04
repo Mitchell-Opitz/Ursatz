@@ -144,6 +144,30 @@ int main(void) {
   check(status == 405, "status accepts only GET");
   cJSON_Delete(json);
 
+  /* The vocabulary: the Composer's lists, kept for the process, equal to the fixture the frontend tests load. */
+  json = exchange_json("GET", "/api/composer/vocabulary", NULL, &status);
+  check(status == 200 && cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(json, "meters")) &&
+            cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(json, "pitch_class_names")) &&
+            cJSON_IsObject(cJSON_GetObjectItemCaseSensitive(json, "limits")),
+        "the vocabulary route gives the Composer's lists");
+  cJSON *again = exchange_json("GET", "/api/composer/vocabulary", NULL, &status);
+  check(status == 200 && cJSON_Compare(json, again, 1), "the vocabulary is the same on every call");
+  cJSON_Delete(again);
+  FILE *fixture_file = fopen(URSATZ_GUI_TEST_VOCABULARY_FIXTURE, "rb");
+  char fixture_text[65536];
+  size_t fixture_size = fixture_file ? fread(fixture_text, 1, sizeof(fixture_text) - 1, fixture_file) : 0;
+  if (fixture_file) {
+    fclose(fixture_file);
+  }
+  fixture_text[fixture_size] = '\0';
+  cJSON *fixture = cJSON_Parse(fixture_text);
+  check(fixture && cJSON_Compare(json, fixture, 1), "the frontend vocabulary fixture is what the route gives");
+  cJSON_Delete(fixture);
+  cJSON_Delete(json);
+  json = exchange_json("POST", "/api/composer/vocabulary", "{}", &status);
+  check(status == 405, "the vocabulary accepts only GET");
+  cJSON_Delete(json);
+
   json = exchange_json("GET", "/api/composer/compositions", NULL, &status);
   check(status == 404, "the compositions route is gone");
   cJSON_Delete(json);
