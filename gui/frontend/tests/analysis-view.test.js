@@ -233,4 +233,78 @@ check(
   "the Analysis nav tab shows an empty state, not a guessed piece, before any piece has been opened",
 );
 
-process.exit(failures === 0 ? 0 : 1);
+/* The document per tab: a cache that starts from the summary, loads only the sections a tab lacks, and builds the
+ * same tab state as the whole document does. */
+const summaryKeys = ["schema_version", "metadata", "meter"];
+const sectionNames = Object.keys(doc);
+
+function makeFetcher() {
+  const calls = [];
+  const fetchSections = async (names) => {
+    calls.push(names.slice());
+    const loaded = {};
+    for (const name of names) {
+      if (Object.prototype.hasOwnProperty.call(doc, name)) {
+        loaded[name] = doc[name];
+      }
+    }
+    return loaded;
+  };
+  return { calls, fetchSections };
+}
+
+function summaryOf() {
+  const summary = {};
+  for (const key of summaryKeys) {
+    if (key in doc) {
+      summary[key] = doc[key];
+    }
+  }
+  return summary;
+}
+
+(async () => {
+  for (const tab of tabs.ANALYSIS_TABS) {
+    const cache = tabs.createDocumentCache(summaryOf(), sectionNames);
+    const { calls, fetchSections } = makeFetcher();
+    const expected = tabs.buildTabState(tab, doc);
+    const state = await tabs.loadTabState(cache, tab, fetchSections);
+    const wanted = tab.sections.filter((name) => sectionNames.includes(name) && !summaryKeys.includes(name));
+    check(
+      state && state.rowCount === expected.rowCount && state.empty === expected.empty,
+      `${tab.id}: the tab loaded per section has the rows of the whole document`,
+    );
+    check(
+      wanted.length === 0 ? calls.length === 0 : calls.length === 1 && JSON.stringify(calls[0]) === JSON.stringify(wanted),
+      `${tab.id}: opening the tab asks for its own sections only`,
+    );
+    await tabs.loadTabState(cache, tab, fetchSections);
+    check(calls.length === (wanted.length === 0 ? 0 : 1), `${tab.id}: a second open asks for nothing`);
+  }
+
+  const cache = tabs.createDocumentCache(summaryOf(), sectionNames);
+  const { calls, fetchSections } = makeFetcher();
+  await tabs.loadDocumentSections(cache, ["keys", "melody"], fetchSections);
+  await tabs.loadDocumentSections(cache, ["melody", "outer_voices"], fetchSections);
+  check(
+    calls.length === 2 && JSON.stringify(calls[1]) === JSON.stringify(["outer_voices"]),
+    "a section loaded for the score is not asked for again by a tab",
+  );
+  check(cache.has("nothing_here") && cache.missing(["no_such"]).length === 0, "a section the document lacks is not asked for");
+  const loadedTab = { id: "loaded", label: "Loaded", sections: ["keys", "melody"] };
+  const rebuilt = await tabs.loadTabState(cache, loadedTab, async () => null);
+  check(rebuilt !== null, "a tab whose sections are all loaded builds without a fetch");
+  const failingCache = tabs.createDocumentCache(summaryOf(), sectionNames);
+  check(
+    (await tabs.loadTabState(failingCache, tabs.ANALYSIS_TABS[0], async () => null)) === null,
+    "a failed fetch gives no tab state",
+  );
+  const header = tabs.buildAnalysisHeader({ id: "p", document: summaryOf(), note_xml_ids: [] });
+  check(header.measureCount !== undefined && header.analyzerVersion === (doc.metadata.analyzer_version || ""), "the header reads from the summary");
+  check(
+    JSON.stringify(tabs.buildProvenanceFields(summaryOf())) === JSON.stringify(tabs.buildProvenanceFields(doc)),
+    "the provenance list reads the same from the summary as from the whole document",
+  );
+
+  process.exit(failures === 0 ? 0 : 1);
+})();

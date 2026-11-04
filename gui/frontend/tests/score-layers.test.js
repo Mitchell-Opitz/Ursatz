@@ -280,6 +280,16 @@ for (let i = 0; i < palette.length; i++) {
 }
 check(closest >= 15, `every pair of colors is at least 15 apart (closest ${closestPair}, ${closest.toFixed(1)})`);
 
+{
+  const names = ["schema_version", "metadata", "meter", "notes", "keys", "rhythm", "chords", "harmonic_rhythm", "new_section"];
+  const wanted = ScoreLayers.scoreSectionNames(names);
+  check(
+    JSON.stringify(wanted) === JSON.stringify(["keys", "chords", "new_section", "rhythm"]),
+    "the score asks for its layer sections, a section it does not know, and rhythm for the meter check",
+  );
+  check(!wanted.includes("notes") && !wanted.includes("metadata"), "the score does not ask for the notes or the metadata");
+}
+
 if (failures > 0) {
   console.error(`${failures} check(s) failed`);
   process.exit(1);

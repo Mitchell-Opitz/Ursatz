@@ -39,6 +39,7 @@ typedef int socket_t;
 #include <ursatz_analyzer/version.h>
 
 #include "server.h"
+#include "service/import_cache.h"
 #include "service/subject_service.h"
 
 #ifndef URSATZ_GUI_TEST_URSATZ_DIR
@@ -929,6 +930,139 @@ static void check_metadata(const char *a, const char *b, const char *c, const ch
   free(response);
 }
 
+/* The summary and per-section shapes of the document (?document=summary and /document?sections=). */
+static void check_document_sections(const char *id) {
+  char path[320];
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s?document=summary", id);
+  cJSON *summary = get_json(path);
+  const cJSON *document = summary ? cJSON_GetObjectItemCaseSensitive(summary, "document") : NULL;
+  const cJSON *names = summary ? cJSON_GetObjectItemCaseSensitive(summary, "document_sections") : NULL;
+  check(summary && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(summary, "ok")), "the summary detail answers ok");
+  check(cJSON_IsObject(document) && cJSON_GetObjectItemCaseSensitive(document, "metadata") &&
+            cJSON_GetObjectItemCaseSensitive(document, "meter"),
+        "the summary holds the metadata and the meter");
+  check(cJSON_IsObject(document) && !cJSON_GetObjectItemCaseSensitive(document, "notes") &&
+            !cJSON_GetObjectItemCaseSensitive(document, "keys") && !cJSON_GetObjectItemCaseSensitive(document, "chords"),
+        "the summary leaves out the claim sections");
+  bool lists_keys = false;
+  bool lists_notes = false;
+  for (int i = 0; cJSON_IsArray(names) && i < cJSON_GetArraySize(names); i++) {
+    const cJSON *name = cJSON_GetArrayItem(names, i);
+    lists_keys = lists_keys || (cJSON_IsString(name) && strcmp(name->valuestring, "keys") == 0);
+    lists_notes = lists_notes || (cJSON_IsString(name) && strcmp(name->valuestring, "notes") == 0);
+  }
+  check(lists_keys && lists_notes, "the summary lists the names of every document section");
+  check(cJSON_IsArray(cJSON_GetObjectItemCaseSensitive(summary, "note_xml_ids")),
+        "the summary detail keeps the note ids");
+  cJSON_Delete(summary);
+
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", id);
+  cJSON *full = get_json(path);
+  document = full ? cJSON_GetObjectItemCaseSensitive(full, "document") : NULL;
+  check(cJSON_IsObject(document) && cJSON_GetObjectItemCaseSensitive(document, "keys") &&
+            cJSON_GetObjectItemCaseSensitive(document, "notes") &&
+            !cJSON_GetObjectItemCaseSensitive(full, "document_sections"),
+        "the detail without the query answers the whole document, as before");
+
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/document?sections=keys,notes", id);
+  cJSON *sections = get_json(path);
+  const cJSON *held = sections ? cJSON_GetObjectItemCaseSensitive(sections, "sections") : NULL;
+  check(sections && cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(sections, "ok")) && cJSON_IsObject(held),
+        "the document route answers ok with a sections object");
+  const cJSON *full_document = full ? cJSON_GetObjectItemCaseSensitive(full, "document") : NULL;
+  bool equal = held && full_document;
+  const char *compared[] = {"keys", "notes"};
+  for (size_t i = 0; equal && i < 2; i++) {
+    char *left = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(held, compared[i]));
+    char *right = cJSON_PrintUnformatted(cJSON_GetObjectItemCaseSensitive(full_document, compared[i]));
+    equal = left && right && strcmp(left, right) == 0;
+    free(left);
+    free(right);
+  }
+  check(equal, "the sections route gives keys and notes as the whole document has them");
+  check(held && cJSON_GetArraySize(held) == 2, "the sections route gives only the sections named");
+  cJSON_Delete(sections);
+  cJSON_Delete(full);
+
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/document?sections=no_such_section", id);
+  sections = get_json(path);
+  held = sections ? cJSON_GetObjectItemCaseSensitive(sections, "sections") : NULL;
+  check(cJSON_IsObject(held) && cJSON_GetArraySize(held) == 0, "a section the document lacks is left out");
+  cJSON_Delete(sections);
+
+  const char *bad[] = {"", "?sections=", "?sections=keys,", "?sections=Keys", "?sections=a%20b", "?sections=,keys"};
+  for (size_t i = 0; i < sizeof(bad) / sizeof(bad[0]); i++) {
+    snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/document%s", id, bad[i]);
+    char *response = http_get(path);
+    char what[160];
+    snprintf(what, sizeof(what), "the document route refuses sections \"%s\" with 400", bad[i]);
+    check(response_has_status(response, 400), what);
+    free(response);
+  }
+  char *unknown = http_get("/api/analyzer/pieces/no-such-piece/document?sections=keys");
+  check(response_has_status(unknown, 404), "the document route for an unknown piece gives 404");
+  free(unknown);
+}
+
+/* Opening a piece imports its source once: the detail, the score, the score meta and the playback share one import,
+ * and a PATCH makes the next open import again. */
+static void check_import_cache(const char *id) {
+  char path[320];
+  const char *tails[] = {"", "/musicxml", "/musicxml/meta", "/playback", "?document=summary", "/musicxml"};
+  ursatz_gui_import_cache_reset();
+  for (size_t i = 0; i < sizeof(tails) / sizeof(tails[0]); i++) {
+    snprintf(path, sizeof(path), "/api/analyzer/pieces/%s%s", id, tails[i]);
+    char *response = http_get(path);
+    check(response_has_status(response, 200), "a cached read answers 200");
+    free(response);
+  }
+  check(ursatz_gui_import_cache_imports() == 1, "detail, score, meta and playback of one piece import it once");
+
+  char *patched = patch_piece(id, "{\"composer\":\"Cache Test\"}");
+  check(response_has_status(patched, 200), "the PATCH answers 200");
+  free(patched);
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s", id);
+  char *response = http_get(path);
+  free(response);
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/musicxml", id);
+  response = http_get(path);
+  check(response_has_status(response, 200) && strstr(response_body(response), "Cache Test") != NULL,
+        "the score after a PATCH carries the new composer, not the cached one");
+  free(response);
+  check(ursatz_gui_import_cache_imports() == 2, "the open after a PATCH imports once more");
+
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/reanalyze", id);
+  char *reanalyzed = http_exchange("POST", path, NULL, "", 0);
+  check(response_has_status(reanalyzed, 200), "re-analyze answers 200");
+  free(reanalyzed);
+  snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/playback", id);
+  response = http_get(path);
+  free(response);
+  check(ursatz_gui_import_cache_imports() == 3, "the open after a re-analyze imports once more");
+
+  /* More pieces than the cache holds: the table stays at 8 entries and every read still answers. */
+  ursatz_gui_import_cache_reset();
+  for (int i = 0; i < 10; i++) {
+    char name[32];
+    char piece_file[64];
+    snprintf(name, sizeof(name), "cache-%d.mid", i);
+    snprintf(piece_file, sizeof(piece_file), "cache-%d.mid", i);
+    static const unsigned char kMidi[] = {'M', 'T', 'h', 'd', 0, 0, 0, 6, 0, 0, 0, 1, 0x01, 0xE0, 'M', 'T',
+                                          'r', 'k', 0, 0, 0, 13, 0x00, 0x90, 0x3C, 0x40, 0x83, 0x60, 0x80,
+                                          0x3C, 0x40, 0x00, 0xFF, 0x2F, 0x00};
+    write_file(piece_file, kMidi, sizeof(kMidi));
+    char *other = upload_file(piece_file, name, NULL);
+    if (other) {
+      snprintf(path, sizeof(path), "/api/analyzer/pieces/%s/playback", other);
+      response = http_get(path);
+      check(response_has_status(response, 200), "a read of one of many pieces answers 200");
+      free(response);
+    }
+    free(other);
+  }
+  check(ursatz_gui_import_cache_entries() <= 8, "the import cache holds at most 8 pieces");
+}
+
 int main(void) {
 #ifdef _WIN32
   WSADATA wsa_data;
@@ -988,6 +1122,8 @@ int main(void) {
     cJSON_Delete(expected);
     check_detail(mozart_id, "midi", "midi-note-0", "Mozart 545");
     check_score_meter(mozart_id, false, "Mozart 545");
+    check_document_sections(mozart_id);
+    check_import_cache(mozart_id);
   }
 
   /* A MusicXML upload. */
