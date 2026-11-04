@@ -961,11 +961,8 @@ static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id)
 }
 
 static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char *id) {
-  char *xml = NULL;
   bool meter_defaulted = false;
-  char export_message[256] = "";
-  UrsatzGuiAnalysisResult result =
-      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted, export_message);
+  UrsatzGuiAnalysisResult result = ursatz_gui_analysis_get_piece_meter_defaulted(kPiecesDir, id, &meter_defaulted);
 
   if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
@@ -975,14 +972,9 @@ static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char
     return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
                             "{\"ok\":false,\"message\":\"could not import the stored source\"}");
   }
-  if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED) {
-    send_musicxml_export_error(conn, export_message);
-    return 500;
-  }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
     return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
   }
-  free(xml);
 
   send_json(conn, meter_defaulted ? "{\"ok\":true,\"meter_defaulted\":true}" : "{\"ok\":true,\"meter_defaulted\":false}");
   return 200;

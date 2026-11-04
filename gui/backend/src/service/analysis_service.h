@@ -232,6 +232,14 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
                                                                 char message[256]);
 
 /*
+ * Whether the piece's source gave no meter, so its score has barlines from a default 4/4: the answer of
+ * analyzer_imported_meter_defaulted on the cached import (import_cache.h), without exporting a score. Same errors
+ * as ursatz_gui_analysis_get_piece_playback.
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_meter_defaulted(const char *pieces_dir, const char *id,
+                                                                       bool *out_meter_defaulted);
+
+/*
  * Imports the piece's stored source with the same Analyzer call the score
  * export uses (so note i here is note i of the document's note_ids and of
  * note_xml_ids) and writes what a browser needs to play it and follow it:

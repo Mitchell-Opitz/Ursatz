@@ -1205,6 +1205,30 @@ static UrsatzGuiAnalysisResult get_piece_musicxml_unlocked(const char *pieces_di
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
+static UrsatzGuiAnalysisResult get_piece_meter_defaulted_unlocked(const char *pieces_dir, const char *id,
+                                                                       bool *out_meter_defaulted) {
+    char dir_path[320];
+    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    cJSON *meta = read_meta_file(dir_path);
+    if (!meta) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    const cJSON *format_item = cJSON_GetObjectItemCaseSensitive(meta, "format");
+    InputFormat format = format_from_label(cJSON_IsString(format_item) ? format_item->valuestring : NULL);
+    cJSON_Delete(meta);
+
+    bool import_failed = false;
+    UrsatzGuiImportEntry *import = acquire_import(dir_path, id, format, &import_failed);
+    if (!import) {
+        return import_failed ? URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED : URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+    }
+    *out_meter_defaulted = analyzer_imported_meter_defaulted(ursatz_gui_import_entry_notes(import));
+    ursatz_gui_import_cache_release(import);
+    return URSATZ_GUI_ANALYSIS_OK;
+}
+
 static UrsatzGuiAnalysisResult get_piece_playback_unlocked(const char *pieces_dir, const char *id,
                                                                 char **out_json) {
     char dir_path[320];
@@ -1395,6 +1419,17 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
         return result;
     }
     result = get_piece_musicxml_unlocked(pieces_dir, id, out_xml, out_meter_defaulted, message);
+    ursatz_gui_piece_unlock(id);
+    return result;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_meter_defaulted(const char *pieces_dir, const char *id,
+                                                                       bool *out_meter_defaulted) {
+    UrsatzGuiAnalysisResult result;
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    result = get_piece_meter_defaulted_unlocked(pieces_dir, id, out_meter_defaulted);
     ursatz_gui_piece_unlock(id);
     return result;
 }
