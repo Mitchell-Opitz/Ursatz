@@ -6,6 +6,8 @@
 
 #include <cJSON.h>
 
+#include "ursatz_composer/composer_api.h"
+
 /*
  * Theme service: composes a theme item into a new version with the Composer's theme command (R-166, R-167).
  *
@@ -23,7 +25,8 @@ typedef enum {
     URSATZ_GUI_THEME_ERR_NO_BINARY,      /* the Composer binary is missing (503) */
     URSATZ_GUI_THEME_ERR_TIMEOUT,        /* the Composer took too long (504) */
     URSATZ_GUI_THEME_ERR_FAILED,         /* any other failure (500) */
-    URSATZ_GUI_THEME_ERR_ALLOC
+    URSATZ_GUI_THEME_ERR_ALLOC,
+    URSATZ_GUI_THEME_ERR_CANCELLED       /* the job was cancelled (499) */
 } UrsatzGuiThemeResult;
 
 /*
@@ -38,11 +41,12 @@ typedef enum {
  *
  * On OK, *out_item is the new item.json, caller-owned. A new version holds the body as it was plus
  * result {seed, summary (the command's JSON), brief {piece_count, skipped}, files [names]}, with the note
- * "composed seed <n>". On any other result no version is written and no folder is left; message (when not NULL)
+ * "composed seed <n>". job (may be NULL) reports progress and asks for cancel (ERR_CANCELLED). On any other result no version is written and no folder is left; message (when not NULL)
  * receives a one-line reason.
  */
 UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, long long seed, bool update_uses,
-                                              cJSON **out_item, char *message, size_t message_size);
+                                              const ComposerJob *job, cJSON **out_item, char *message,
+                                              size_t message_size);
 
 /*
  * Shared with piece_service.c: the same steps for a piece (R-173, R-174).

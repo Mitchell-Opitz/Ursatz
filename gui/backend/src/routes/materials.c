@@ -21,6 +21,8 @@
 #include "route_util.h"
 #include "../service/composer_client.h"
 #include "../service/composer_service.h"
+#include "../service/compose_jobs.h"
+#include "jobs.h"
 #include "../service/material_service.h"
 #include "../service/style_service.h"
 #include "../service/subject_service.h"
@@ -1496,18 +1498,30 @@ static int handle_compose(struct mg_connection *conn, const char *id) {
   bool piece = cJSON_IsString(type) && strcmp(type->valuestring, "piece") == 0;
   cJSON_Delete(meta);
   cJSON_Delete(stored);
+  long long chosen = has_seed ? (long long)seed->valuedouble : 0;
+  if (!piece) {
+    /* A theme is composed on the job queue: the answer is the job (GET /api/jobs/<id>). */
+    UrsatzGuiComposeJob *job = ursatz_gui_compose_job_new(URSATZ_GUI_COMPOSE_THEME, id);
+    if (job) {
+      job->has_seed = has_seed;
+      job->seed = chosen;
+      job->update_uses = cJSON_IsTrue(update_uses);
+    }
+    cJSON_Delete(body);
+    if (!job) {
+      return send_failure(conn, 500, "out of memory");
+    }
+    return ursatz_gui_jobs_send_accepted(conn, "theme", ursatz_gui_compose_job_run, job, ursatz_gui_compose_job_free);
+  }
   cJSON *item = NULL;
   char message[512];
-  long long chosen = has_seed ? (long long)seed->valuedouble : 0;
   UrsatzGuiThemeResult result =
-      piece ? ursatz_gui_piece_compose(id, has_seed, chosen, cJSON_IsTrue(update_uses), &item, message, sizeof(message))
-            : ursatz_gui_theme_compose(id, has_seed, chosen, cJSON_IsTrue(update_uses), &item, message, sizeof(message));
+      ursatz_gui_piece_compose(id, has_seed, chosen, cJSON_IsTrue(update_uses), &item, message, sizeof(message));
   cJSON_Delete(body);
   if (result == URSATZ_GUI_THEME_OK) {
     return send_ok_with(conn, "item", item);
   }
-  return send_composer_failure(conn, result, message, piece ? "invalid piece" : "invalid theme",
-                               piece ? "the piece could not be composed" : "the theme could not be composed");
+  return send_composer_failure(conn, result, message, "invalid piece", "the piece could not be composed");
 }
 
 /* POST /api/materials/items/<pce-id>/versions/<n>/regenerate {section_id, lane?, seed?}: writes one section of a composed

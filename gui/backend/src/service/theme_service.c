@@ -15,6 +15,7 @@
 #include "compose_common.h"
 #include "material_service.h"
 #include "style_service.h"
+#include "util/fs_util.h"
 
 #define PATH_BYTES 800
 #define POOL_MAX 64
@@ -600,40 +601,71 @@ UrsatzGuiThemeResult ursatz_gui_theme_run_composer(const char *const *args, cons
     return result;
 }
 
-static UrsatzGuiThemeResult run_theme(const char *dir, bool check, bool has_seed, long long seed, cJSON **out_summary,
-                                      char *message, size_t message_size) {
-    char request[PATH_BYTES + 32];
-    char plan[PATH_BYTES + 32];
-    char midi[PATH_BYTES + 32];
-    char musicxml[PATH_BYTES + 32];
+static const char *const kThemeFiles[] = {"plan.json", "theme.mid", "theme.musicxml"};
+
+/* The theme request of the API: the request as the command read it, with the options the command added as members
+   (cli/theme.c build_request). */
+static char *api_request(const cJSON *request, bool check, bool use_seed, long long seed) {
+    cJSON *copy = cJSON_Duplicate(request, 1);
     char seed_text[32];
-    snprintf(request, sizeof(request), "%s/request.json", dir);
-    snprintf(plan, sizeof(plan), "%s/plan.json", dir);
-    snprintf(midi, sizeof(midi), "%s/theme.mid", dir);
-    snprintf(musicxml, sizeof(musicxml), "%s/theme.musicxml", dir);
     snprintf(seed_text, sizeof(seed_text), "%lld", seed);
-    const char *args[20];
-    int n = 0;
-    args[n++] = "theme";
-    args[n++] = request;
-    args[n++] = "--format";
-    args[n++] = "json";
-    args[n++] = "--out";
-    args[n++] = plan;
-    args[n++] = "--midi";
-    args[n++] = midi;
-    args[n++] = "--musicxml";
-    args[n++] = musicxml;
-    if (check) {
-        args[n++] = "--check";
+    bool ok = copy && (!use_seed || cJSON_AddStringToObject(copy, "seed", seed_text)) &&
+              cJSON_AddBoolToObject(copy, "check", check) && cJSON_AddBoolToObject(copy, "midi", 1) &&
+              cJSON_AddBoolToObject(copy, "musicxml", 1) && cJSON_AddBoolToObject(copy, "plain_midi", 0) &&
+              cJSON_AddBoolToObject(copy, "plans", 0);
+    char *text = ok ? cJSON_PrintUnformatted(copy) : NULL;
+    cJSON_Delete(copy);
+    return text;
+}
+
+/* Grows the theme with the Composer API and writes plan.json, theme.mid and theme.musicxml into the stage. *out_summary
+   is the document `theme --format json` printed: no plans and explanations, and the files written. */
+static UrsatzGuiThemeResult run_theme(const UrsatzGuiComposeRun *run, cJSON **out_summary, char *message,
+                                      size_t message_size) {
+    char *text = api_request(run->request, cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(run->member, "check")),
+                             run->use_seed, run->seed);
+    if (!text) {
+        return URSATZ_GUI_THEME_ERR_ALLOC;
     }
-    if (has_seed) {
-        args[n++] = "--seed";
-        args[n++] = seed_text;
+    ComposerResponse response;
+    memset(&response, 0, sizeof(response));
+    ComposerStatus status = composer_api_theme(text, run->job, &response);
+    free(text);
+    UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
+    cJSON *document = NULL;
+    if (status != COMPOSER_OK) {
+        result = ursatz_gui_compose_failure(status, &response, message, message_size);
+    } else if (!(document = cJSON_Parse(response.json)) || !response.plan_json || !response.midi || !response.musicxml) {
+        ursatz_gui_compose_say(message, message_size, "composer output unreadable");
+        result = URSATZ_GUI_THEME_ERR_FAILED;
     }
-    args[n] = NULL;
-    const char *outputs[] = {plan, midi, musicxml, NULL};
-    return ursatz_gui_theme_run_composer(args, outputs, out_summary, message, message_size);
+    for (size_t i = 0; result == URSATZ_GUI_THEME_OK && i < 3; i++) {
+        char path[PATH_BYTES + 64];
+        snprintf(path, sizeof(path), "%s/%s", run->stage, kThemeFiles[i]);
+        const void *data = i == 0 ? (const void *)response.plan_json : i == 1 ? (const void *)response.midi : (const void *)response.musicxml;
+        size_t size = i == 1 ? response.midi_size : strlen((const char *)data);
+        if (!ursatz_gui_write_file_atomic(path, data, size)) {
+            ursatz_gui_compose_say(message, message_size, "a file of the version could not be written");
+            result = URSATZ_GUI_THEME_ERR_FAILED;
+        }
+    }
+    if (result == URSATZ_GUI_THEME_OK) {
+        cJSON *theme = NULL;
+        cJSON_ArrayForEach(theme, cJSON_GetObjectItemCaseSensitive(document, "themes")) {
+            cJSON_DeleteItemFromObjectCaseSensitive(theme, "plan");
+            cJSON_DeleteItemFromObjectCaseSensitive(theme, "explanation");
+        }
+        if (!ursatz_gui_compose_add_files(document, run->named, kThemeFiles, 3)) {
+            result = URSATZ_GUI_THEME_ERR_ALLOC;
+        }
+    }
+    composer_response_destroy(&response);
+    if (result != URSATZ_GUI_THEME_OK) {
+        cJSON_Delete(document);
+        return result;
+    }
+    *out_summary = document;
+    return URSATZ_GUI_THEME_OK;
 }
 
 /* The seed a run reports: "seed", or the first theme's. */
@@ -692,30 +724,25 @@ static UrsatzGuiThemeResult build_theme_request(const cJSON *body, const char *d
     return build_request(body, style_path, out_request, message, message_size);
 }
 
-static UrsatzGuiThemeResult run_theme_item(const char *dir, const cJSON *theme, bool use_seed, long long seed,
-                                           cJSON **out_summary, char *message, size_t message_size) {
-    return run_theme(dir, cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(theme, "check")), use_seed, seed, out_summary,
-                     message, message_size);
-}
-
 static void theme_note(const cJSON *summary, char *note, size_t note_size) {
     (void)summary;
     snprintf(note, note_size, "Composed");
 }
 
 static const UrsatzGuiComposeKind kThemeKind = {"theme",            "the item is not a theme", composable,
-                                                build_theme_request, run_theme_item,            theme_note,
+                                                build_theme_request, run_theme,            theme_note,
                                                 body_with_result};
 
 UrsatzGuiThemeResult ursatz_gui_theme_compose(const char *id, bool has_seed, long long seed, bool update_uses,
-                                              cJSON **out_item, char *message, size_t message_size) {
+                                              const ComposerJob *job, cJSON **out_item, char *message,
+                                              size_t message_size) {
     if (out_item) {
         *out_item = NULL;
     }
     ursatz_gui_compose_say(message, message_size, "");
     cJSON *item = NULL;
     pthread_mutex_lock(&g_compose_lock);
-    UrsatzGuiThemeResult result = ursatz_gui_compose_item(&kThemeKind, id, has_seed, seed, update_uses, &item, message, message_size);
+    UrsatzGuiThemeResult result = ursatz_gui_compose_item(&kThemeKind, id, has_seed, seed, update_uses, job, &item, message, message_size);
     pthread_mutex_unlock(&g_compose_lock);
     if (result == URSATZ_GUI_THEME_OK && out_item) {
         *out_item = item;

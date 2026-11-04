@@ -1,0 +1,94 @@
+#include "compose_jobs.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+static void set_json(UrsatzGuiJobResult *out, int status, cJSON *object) {
+  out->http_status = status;
+  out->json = object ? cJSON_PrintUnformatted(object) : NULL;
+  cJSON_Delete(object);
+  if (!out->json) {
+    out->http_status = 500;
+    out->json = strdup("{\"ok\":false,\"error\":\"out of memory\"}");
+  }
+}
+
+static void set_failure(UrsatzGuiJobResult *out, int status, const char *message) {
+  cJSON *object = cJSON_CreateObject();
+  if (object) {
+    cJSON_AddBoolToObject(object, "ok", 0);
+    cJSON_AddStringToObject(object, "error", message);
+  }
+  set_json(out, status, object);
+}
+
+void ursatz_gui_compose_reply(UrsatzGuiThemeResult result, cJSON *item, const char *message, const char *invalid_text,
+                              const char *failed_text, UrsatzGuiJobResult *out) {
+  switch (result) {
+    case URSATZ_GUI_THEME_OK: {
+      cJSON *object = cJSON_CreateObject();
+      if (object && item && cJSON_AddBoolToObject(object, "ok", 1) && cJSON_AddItemToObject(object, "item", item)) {
+        item = NULL;
+        set_json(out, 200, object);
+      } else {
+        cJSON_Delete(object);
+        set_failure(out, 500, "out of memory");
+      }
+      break;
+    }
+    case URSATZ_GUI_THEME_ERR_NOT_FOUND:
+      set_failure(out, 404, message[0] ? message : "not found");
+      break;
+    case URSATZ_GUI_THEME_ERR_INVALID:
+      set_failure(out, 400, message[0] ? message : invalid_text);
+      break;
+    case URSATZ_GUI_THEME_ERR_UNPROCESSABLE:
+      set_failure(out, 422, message[0] ? message : "stuck");
+      break;
+    case URSATZ_GUI_THEME_ERR_CANCELLED:
+      set_failure(out, 499, "cancelled");
+      break;
+    default:
+      set_failure(out, 500, message[0] ? message : failed_text);
+      break;
+  }
+  cJSON_Delete(item);
+}
+
+UrsatzGuiComposeJob *ursatz_gui_compose_job_new(UrsatzGuiComposeOp op, const char *id) {
+  UrsatzGuiComposeJob *job = calloc(1, sizeof(*job));
+  if (!job) {
+    return NULL;
+  }
+  job->op = op;
+  job->id = strdup(id);
+  if (!job->id) {
+    free(job);
+    return NULL;
+  }
+  return job;
+}
+
+void ursatz_gui_compose_job_free(void *input) {
+  UrsatzGuiComposeJob *job = input;
+  if (job) {
+    free(job->id);
+    free(job);
+  }
+}
+
+void ursatz_gui_compose_job_run(void *input, const ComposerJob *composer_job, UrsatzGuiJobResult *out) {
+  const UrsatzGuiComposeJob *job = input;
+  cJSON *item = NULL;
+  char message[512] = "";
+  UrsatzGuiThemeResult result = URSATZ_GUI_THEME_ERR_FAILED;
+  const char *invalid_text = "invalid theme";
+  const char *failed_text = "the theme could not be composed";
+  switch (job->op) {
+    case URSATZ_GUI_COMPOSE_THEME:
+      result = ursatz_gui_theme_compose(job->id, job->has_seed, job->seed, job->update_uses, composer_job, &item, message,
+                                        sizeof(message));
+      break;
+  }
+  ursatz_gui_compose_reply(result, item, message, invalid_text, failed_text, out);
+}

@@ -371,10 +371,10 @@ static cJSON *body_with_result(const cJSON *body, cJSON *summary, cJSON *brief_s
     return copy;
 }
 
-static UrsatzGuiThemeResult run_piece_item(const char *dir, const cJSON *piece, bool use_seed, long long seed,
-                                          cJSON **out_summary, char *message, size_t message_size) {
-    return run_piece(dir, cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(piece, "check")), use_seed, seed, NULL, NULL, NULL,
-                     out_summary, message, message_size);
+static UrsatzGuiThemeResult run_piece_item(const UrsatzGuiComposeRun *run, cJSON **out_summary, char *message,
+                                           size_t message_size) {
+    return run_piece(run->stage, cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(run->member, "check")), run->use_seed,
+                     run->seed, NULL, NULL, NULL, out_summary, message, message_size);
 }
 
 static void piece_note(const cJSON *summary, char *note, size_t note_size) {
@@ -392,13 +392,19 @@ static const UrsatzGuiComposeKind kPieceKind = {"piece",       "the item is not 
 
 UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, long long seed, bool update_uses,
                                               cJSON **out_item, char *message, size_t message_size) {
+    return ursatz_gui_piece_compose_job(id, has_seed, seed, update_uses, NULL, out_item, message, message_size);
+}
+
+UrsatzGuiThemeResult ursatz_gui_piece_compose_job(const char *id, bool has_seed, long long seed, bool update_uses,
+                                                  const ComposerJob *job, cJSON **out_item, char *message,
+                                                  size_t message_size) {
     if (out_item) {
         *out_item = NULL;
     }
     ursatz_gui_compose_say(message, message_size, "");
     cJSON *item = NULL;
     pthread_mutex_lock(&g_compose_lock);
-    UrsatzGuiThemeResult result = ursatz_gui_compose_item(&kPieceKind, id, has_seed, seed, update_uses, &item, message, message_size);
+    UrsatzGuiThemeResult result = ursatz_gui_compose_item(&kPieceKind, id, has_seed, seed, update_uses, job, &item, message, message_size);
     pthread_mutex_unlock(&g_compose_lock);
     if (result == URSATZ_GUI_THEME_OK && out_item) {
         *out_item = item;

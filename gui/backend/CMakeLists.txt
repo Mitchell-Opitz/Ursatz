@@ -12,6 +12,7 @@ add_library(ursatz_gui_core STATIC
   src/service/composer_service.c
   src/service/composer_client.c
   src/service/job_queue.c
+  src/service/compose_jobs.c
   src/service/material_service.c
   src/service/compose_common.c
   src/service/theme_service.c

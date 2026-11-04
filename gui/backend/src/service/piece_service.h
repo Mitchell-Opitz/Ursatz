@@ -38,6 +38,11 @@
 UrsatzGuiThemeResult ursatz_gui_piece_compose(const char *id, bool has_seed, long long seed, bool update_uses,
                                               cJSON **out_item, char *message, size_t message_size);
 
+/* As ursatz_gui_piece_compose, with the job that reports progress and asks for cancel. */
+UrsatzGuiThemeResult ursatz_gui_piece_compose_job(const char *id, bool has_seed, long long seed, bool update_uses,
+                                                  const ComposerJob *job, cJSON **out_item, char *message,
+                                                  size_t message_size);
+
 /*
  * Writes section section_id of version number of piece item id again (R-173): `piece --from <version>/plan.json
  * --request <request.json> --regenerate <section id> [--lane <lane>]`, the eight outputs into the next version's
