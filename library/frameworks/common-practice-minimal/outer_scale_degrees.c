@@ -52,7 +52,7 @@ void common_practice_outer_degrees_destroy(CommonPracticeOuterDegreeList *list) 
 }
 
 /* One ScaleDegree for a present entry. `line` names the line in the Interpretation's id. */
-static CommonPracticeOuterStatus build_degree(const OuterVoiceEntry *entry, const char *line, const Key *key,
+static CommonPracticeOuterStatus build_degree(const CommonPracticeOuterEntry *entry, const char *line, const Key *key,
                                                int tonic_pitch_class, CommonPracticeKeyMode mode,
                                                ScaleDegree **out) {
     if (pitch_numeric_value_position_denominator(entry->pitch) != 1 ||
@@ -135,7 +135,7 @@ cleanup:
     return failure;
 }
 
-CommonPracticeOuterStatus common_practice_outer_scale_degrees(const OuterVoiceLines *lines, const Key *key,
+CommonPracticeOuterStatus common_practice_outer_scale_degrees(const CommonPracticeOuterLines *lines, const Key *key,
                                                                int tonic_pitch_class, CommonPracticeKeyMode mode,
                                                                CommonPracticeOuterDegreeList *out) {
     if (lines == NULL || key == NULL || out == NULL || (lines->count > 0 && (lines->soprano == NULL || lines->bass == NULL))) {
