@@ -6,6 +6,7 @@
 #include "routes/composer.h"
 #include "routes/corpus.h"
 #include "routes/health.h"
+#include "routes/jobs.h"
 #include "routes/links.h"
 #include "routes/materials.h"
 #include "routes/styles.h"
@@ -90,6 +91,7 @@ struct mg_context *ursatz_gui_server_start(const char *listen_port,
   ursatz_gui_styles_register(ctx);
   ursatz_gui_materials_register(ctx);
   ursatz_gui_links_register(ctx);
+  ursatz_gui_jobs_register(ctx);
 
   return ctx;
 }

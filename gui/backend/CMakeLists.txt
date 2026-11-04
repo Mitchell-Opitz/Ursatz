@@ -25,6 +25,7 @@ add_library(ursatz_gui_core STATIC
   src/routes/styles.c
   src/routes/materials.c
   src/routes/links.c
+  src/routes/jobs.c
 )
 
 target_include_directories(ursatz_gui_core PUBLIC
