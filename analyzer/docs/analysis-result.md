@@ -49,8 +49,9 @@ the result holds the chain and the claims of the stages that ran; `analyzer_resu
 
 ## Library results
 
-`analyzer_result_chain(result)` is the `AnalysisChain` of `ursatz_chain/analysis_chain.h`, read through its accessors.
-It is NULL for a piece with no notes.
+`analyzer_result_chain(result)` (`<ursatz_analyzer/result_chain.h>`) is the `AnalysisChain` of `ursatz_chain/analysis_chain.h`,
+read through its accessors. It is NULL for a piece with no notes. The header and the chain's headers reach only a target that
+links `ursatz_analyzer::chain`; a target linking `ursatz_analyzer` alone sees no chain or framework header.
 
 ## Claims
 

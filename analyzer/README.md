@@ -124,9 +124,11 @@ Tests:
 ### Library include check
 
 `scripts/check-library-includes.sh <build dir>` runs after the build and fails when `src/` or `include/` includes an
-Ursatz header that is not under a staged public root of the build, names a `*_internal.h` of Ursatz, or when a CMake
-file reads `SOURCE_DIR` of an Ursatz target or a path under `external/ursatz/tests`. It prints each offending line. CI
-runs it after the build.
+Ursatz header that is not under a staged public root of the build, names a `*_internal.h` of Ursatz, when a CMake
+file reads `SOURCE_DIR` of an Ursatz target or a path under `external/ursatz/tests`, or when a public header other than
+`result_chain.h` includes a chain or framework header. It prints each offending line. CI runs it after the build.
+`test_consumer_isolation` builds the targets of `tests/consumer`: one linking only `ursatz_analyzer` compiles every public
+header but `result_chain.h`, and cannot include a chain or framework header.
 
 ### File scope state check
 
@@ -240,6 +242,7 @@ Its public include directory is `include/`, and consumers include headers as
 | `midi_pipeline.h` | The MIDI backend of the input interface. |
 | `musicxml_pipeline.h` | The MusicXML backend of the input interface. |
 | `analysis_result.h` | `analyzer_analyze` turns `ImportedNotes` into an `AnalyzerResult`: the library chain's results, the claims of every area as `Interpretation`s, and the report view the exports render from. See [docs/analysis-result.md](docs/analysis-result.md). |
+| `result_chain.h` | `analyzer_result_chain`, the `AnalysisChain` behind an `AnalyzerResult`. The one public header that includes a chain header; needs the `ursatz_analyzer::chain` target. |
 | `analysis_pipeline.h` | `run_analysis_pipeline`, a wrapper over `analyzer_analyze` that moves the report out as an `AnalysisReport`. |
 | `analysis_report.h` | `AnalysisReport` and its entries (segment span, chord readings, non-chord tones), key regions and key changes. |
 | `analysis_document.h` | Builds the `AnalysisDocument` from an `AnalyzerResult` (or an `AnalysisReport`), serializes it as JSON, and derives `<stem>.analysis.json`. |
@@ -268,8 +271,14 @@ or the report, so those can be destroyed as soon as it is built. Strings returne
 
 ```cmake
 add_subdirectory(external/ursatz-analyzer)
-target_link_libraries(my_app PRIVATE ursatz_analyzer)
+target_link_libraries(my_app PRIVATE ursatz_analyzer)        # the pipeline, and the Ursatz kernel its headers use
+target_link_libraries(my_tool PRIVATE ursatz_analyzer::chain) # also reads the library chain (result_chain.h)
 ```
+
+| Target | Exposes |
+| --- | --- |
+| `ursatz_analyzer` | Every public header except `result_chain.h`. Links `ursatz` PUBLIC (kernel types in the headers); the chain and the frameworks are linked PRIVATE, so a consumer cannot include their headers. |
+| `ursatz_analyzer::chain` | INTERFACE target (`ursatz_analyzer_chain`): `ursatz_analyzer` plus `ursatz_chain`, and `result_chain.h` with `analyzer_result_chain`. Link it only to read chain claims. |
 
 Private helper modules, each the one home of what several files used to copy:
 
