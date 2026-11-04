@@ -187,6 +187,16 @@
     return words.charAt(0).toUpperCase() + words.slice(1);
   }
 
+  /* The document sections the score needs to draw its layers, out of every section the document has: all but the
+   * ignored ones, plus rhythm, which holds the meter check the Notation row reads. */
+  function scoreSectionNames(sectionNames) {
+    const wanted = (sectionNames || []).filter((name) => !IGNORED_SECTIONS.includes(name));
+    if ((sectionNames || []).includes("rhythm")) {
+      wanted.push("rhythm");
+    }
+    return wanted;
+  }
+
   /* One layer per top-level section the catalog does not know, so a new
    * Analyzer section shows up without a GUI change. */
   function discoverOtherLayers(document) {
@@ -399,6 +409,7 @@
     ratCompare,
     collectLayerItems,
     discoverOtherLayers,
+    scoreSectionNames,
     buildLayerCatalog,
     packRows,
     noteColorOwners,

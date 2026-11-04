@@ -1157,6 +1157,61 @@ static UrsatzGuiAnalysisResult get_piece_playback_unlocked(const char *pieces_di
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
+bool ursatz_gui_document_subset(const char *document_json, const char *const *names, size_t count,
+                                char **out_json, char **out_names_json) {
+    cJSON *document = cJSON_Parse(document_json);
+    if (!document || !cJSON_IsObject(document)) {
+        cJSON_Delete(document);
+        return false;
+    }
+    cJSON *subset = cJSON_CreateObject();
+    cJSON *all_names = cJSON_CreateArray();
+    bool ok = subset && all_names;
+    for (const cJSON *item = document->child; ok && item; item = item->next) {
+        ok = item->string && cJSON_AddItemToArray(all_names, cJSON_CreateString(item->string));
+    }
+    for (size_t i = 0; ok && i < count; i++) {
+        cJSON *value = cJSON_DetachItemFromObjectCaseSensitive(document, names[i]);
+        if (value && !cJSON_AddItemToObject(subset, names[i], value)) {
+            cJSON_Delete(value);
+            ok = false;
+        }
+    }
+    char *json = ok ? cJSON_PrintUnformatted(subset) : NULL;
+    char *names_json = ok && out_names_json ? cJSON_PrintUnformatted(all_names) : NULL;
+    ok = json && (!out_names_json || names_json);
+    cJSON_Delete(subset);
+    cJSON_Delete(all_names);
+    cJSON_Delete(document);
+    if (!ok) {
+        free(json);
+        free(names_json);
+        return false;
+    }
+    *out_json = json;
+    if (out_names_json) {
+        *out_names_json = names_json;
+    }
+    return true;
+}
+
+static UrsatzGuiAnalysisResult get_document_unlocked(const char *pieces_dir, const char *id,
+                                                          const char *const *names, size_t count, char **out_json) {
+    char dir_path[320];
+    if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
+        return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    char analysis_path[400];
+    snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
+    char *document_json = ursatz_gui_read_file(analysis_path, NULL);
+    if (!document_json) {
+        return path_exists(dir_path) ? URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED : URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+    }
+    bool ok = ursatz_gui_document_subset(document_json, names, count, out_json, NULL);
+    free(document_json);
+    return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+}
+
 void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail) {
     if (!detail) {
         return;
@@ -1196,6 +1251,17 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
         return result;
     }
     result = get_piece_unlocked(pieces_dir, id, out_detail);
+    ursatz_gui_piece_unlock(id);
+    return result;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_document(const char *pieces_dir, const char *id,
+                                                          const char *const *names, size_t count, char **out_json) {
+    UrsatzGuiAnalysisResult result;
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    result = get_document_unlocked(pieces_dir, id, names, count, out_json);
     ursatz_gui_piece_unlock(id);
     return result;
 }
