@@ -1,6 +1,7 @@
 #include "time/meter_map.h"
 
 #include <assert.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -330,6 +331,38 @@ static void test_lookup_before_zero_fails(void) {
     meter_map_destroy(map);
 }
 
+/* Two change points whose denominators are coprime and near 2^62: the length of the region between them does not fit a
+   Rational. The old private arithmetic wrapped and built a map with a wrong measure count; now creation is refused. */
+static void test_grid_overflow_is_refused(void) {
+    TimeSignature *first = sig(3, 2);
+    TimeSignature *second = sig(4, 2);
+    MusicalTime *a = at(1, 4000000000000000001UL);
+    MusicalTime *b = at(1, 4000000000000000000UL);
+    MeterMapChangePoint points[2] = {{first, a}, {second, b}};
+    MeterMap *map = NULL;
+    assert(meter_map_create(id("map"), points, 2, &map) == METER_MAP_ERR_OVERFLOW);
+    assert(map == NULL);
+    time_signature_destroy(first);
+    time_signature_destroy(second);
+    musical_time_destroy(a);
+    musical_time_destroy(b);
+}
+
+/* A lookup time past LLONG_MAX in its denominator is refused, not read as a wrapped value. */
+static void test_lookup_overflow_is_refused(void) {
+    MeterMap *map = NULL;
+    assert(meter_map_create_defaulted(id("map"), &map) == METER_MAP_OK);
+    MusicalTime *huge = at(1, ULONG_MAX);
+    int index = 0;
+    assert(meter_map_measure_index_at(map, huge, &index) == METER_MAP_ERR_OVERFLOW);
+    size_t count = 0;
+    assert(meter_map_measure_count(map, huge, &count) == METER_MAP_ERR_OVERFLOW);
+    const MeterMapRegion *region = NULL;
+    assert(meter_map_region_at(map, huge, &region) == METER_MAP_ERR_OVERFLOW);
+    musical_time_destroy(huge);
+    meter_map_destroy(map);
+}
+
 int main(void) {
     test_single_region();
     test_barline_belongs_to_following_measure();
@@ -344,6 +377,8 @@ int main(void) {
     test_region_ids_resolve();
     test_rejects_bad_input();
     test_lookup_before_zero_fails();
+    test_grid_overflow_is_refused();
+    test_lookup_overflow_is_refused();
     printf("test_meter_map: ok\n");
     return 0;
 }

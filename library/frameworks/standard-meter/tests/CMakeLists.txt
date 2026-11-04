@@ -143,3 +143,7 @@ if(URSATZ_METER_ACCENT_VALGRIND)
   add_test(NAME standard_meter_accent_beats_valgrind
            COMMAND ${URSATZ_METER_ACCENT_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_meter_accent_beats>)
 endif()
+
+add_executable(test_standard_meter_analysis_time test_analysis_time.c)
+target_link_libraries(test_standard_meter_analysis_time PRIVATE standard_meter)
+add_test(NAME standard_meter_analysis_time COMMAND test_standard_meter_analysis_time)
