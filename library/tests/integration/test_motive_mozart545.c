@@ -65,8 +65,8 @@ static MotiveAnnotation load_annotation_file(void) {
             AnnotatedOccurrence *o = &f->occurrences[f->occurrence_count++];
             char kind[16];
             assert(sscanf(line, "occurrence %d %lf %15s", &o->measure, &o->beat, kind) == 3);
-            o->kind = strcmp(kind, "exact") == 0 ? STANDARD_FORM_MOTIVE_EXACT
-                                                 : (strcmp(kind, "real") == 0 ? STANDARD_FORM_MOTIVE_REAL : STANDARD_FORM_MOTIVE_TONAL);
+            o->kind = strcmp(kind, "exact") == 0 ? MOTIVE_OCCURRENCE_EXACT
+                                                 : (strcmp(kind, "real") == 0 ? MOTIVE_OCCURRENCE_REAL : MOTIVE_OCCURRENCE_TONAL);
         }
     }
     free(text);
@@ -150,7 +150,7 @@ static void test_mozart_545(void) {
                     occurrence_found = true;
                     /* the adapter's prototype is exact; an occurrence read against the annotation's own prototype matches by kind */
                     occurrence_right = occurrence_right || c->kind == (int)want->occurrences[o].kind ||
-                                       (c->kind == (int)STANDARD_FORM_MOTIVE_EXACT && want->occurrences[o].kind == STANDARD_FORM_MOTIVE_EXACT);
+                                       (c->kind == (int)MOTIVE_OCCURRENCE_EXACT && want->occurrences[o].kind == MOTIVE_OCCURRENCE_EXACT);
                     if (o == 0) {
                         found = true;
                     }

@@ -35,9 +35,9 @@ bool standard_form_motive_match_pattern(const StandardFormMotiveShape *prototype
     }
     StandardFormMotiveKind kind;
     if (memcmp(prototype->semitones, candidate->semitones, prototype->intervals * sizeof(int)) != 0) {
-        kind = STANDARD_FORM_MOTIVE_TONAL;
+        kind = MOTIVE_OCCURRENCE_TONAL;
     } else {
-        kind = prototype->first_semitone == candidate->first_semitone ? STANDARD_FORM_MOTIVE_EXACT : STANDARD_FORM_MOTIVE_REAL;
+        kind = prototype->first_semitone == candidate->first_semitone ? MOTIVE_OCCURRENCE_EXACT : MOTIVE_OCCURRENCE_REAL;
     }
     full(out, kind, prototype->intervals);
     return true;
@@ -53,7 +53,7 @@ bool standard_form_motive_match_inversion(const StandardFormMotiveShape *prototy
             return false;
         }
     }
-    full(out, STANDARD_FORM_MOTIVE_INVERTED, prototype->intervals);
+    full(out, MOTIVE_OCCURRENCE_INVERTED, prototype->intervals);
     return true;
 }
 
@@ -69,7 +69,7 @@ bool standard_form_motive_match_retrograde(const StandardFormMotiveShape *protot
             return false;
         }
     }
-    full(out, STANDARD_FORM_MOTIVE_RETROGRADE, n);
+    full(out, MOTIVE_OCCURRENCE_RETROGRADE, n);
     return true;
 }
 
@@ -86,7 +86,7 @@ bool standard_form_motive_match_varied(const StandardFormMotiveShape *prototype,
     if (mismatches > max_mismatch || (mismatches == 0 && rhythm)) {
         return false; /* a full match is a pattern match, not a variation */
     }
-    out->kind = (int)STANDARD_FORM_MOTIVE_VARIED;
+    out->kind = (int)MOTIVE_OCCURRENCE_VARIED;
     out->mismatches = (int)mismatches;
     out->intervals = prototype->intervals;
     out->rhythm_factor = rhythm ? 1.0 : 0.8;
@@ -101,35 +101,16 @@ size_t standard_form_motive_fragment_min_intervals(size_t intervals) {
     return half > 2 ? half : 2;
 }
 
-bool standard_form_motive_classify_with(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                        size_t varied_max_mismatch, StandardFormRelationMatcher matcher, void *context,
-                                        StandardFormMotiveMatch *out) {
+bool standard_form_motive_classify(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
+                                   size_t varied_max_mismatch, StandardFormMotiveMatch *out) {
     if (out == NULL) {
         return false;
     }
     /* the order is the precedence: the first that applies wins */
-    if (matcher != NULL) {
-        StandardFormMotiveKind kind;
-        double score = 0.0;
-        if (comparable(prototype, candidate) && matcher(prototype, candidate, &kind, &score, context) &&
-            (kind == STANDARD_FORM_MOTIVE_EXACT || kind == STANDARD_FORM_MOTIVE_REAL || kind == STANDARD_FORM_MOTIVE_TONAL ||
-             kind == STANDARD_FORM_MOTIVE_INVERTED || kind == STANDARD_FORM_MOTIVE_RETROGRADE) &&
-            score > 0.0 && score <= 1.0) {
-            full(out, kind, prototype->intervals);
-            out->score = score;
-            return true;
-        }
-        return standard_form_motive_match_varied(prototype, candidate, varied_max_mismatch, out);
-    }
     return standard_form_motive_match_pattern(prototype, candidate, out) ||
            standard_form_motive_match_inversion(prototype, candidate, out) ||
            standard_form_motive_match_retrograde(prototype, candidate, out) ||
            standard_form_motive_match_varied(prototype, candidate, varied_max_mismatch, out);
-}
-
-bool standard_form_motive_classify(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                   size_t varied_max_mismatch, StandardFormMotiveMatch *out) {
-    return standard_form_motive_classify_with(prototype, candidate, varied_max_mismatch, NULL, NULL, out);
 }
 
 bool standard_form_motive_classify_match(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,

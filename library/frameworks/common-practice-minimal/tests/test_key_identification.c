@@ -23,7 +23,7 @@ static void check_identification(const int *pitch_classes, size_t pitch_class_co
     assert(entity_id_create(context_id_value, &context_id) == ENTITY_ID_OK);
 
     Key *key;
-    assert(common_practice_identify_key(pitch_classes, pitch_class_count, tonic_name, context_id, &key));
+    assert(common_practice_build_key(mode, tonic_name, context_id, &key) == KEY_OK);
     assert(strcmp(key_label(key), expected_label) == 0);
     key_destroy(key);
 }

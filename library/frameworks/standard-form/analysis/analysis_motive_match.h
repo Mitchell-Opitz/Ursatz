@@ -62,13 +62,6 @@ size_t standard_form_motive_fragment_min_intervals(size_t intervals);
 /* The kind that applies to the candidate by the framework's own matchers (pattern, inversion, retrograde, varied), with its match. */
 bool standard_form_motive_classify(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
                                    size_t varied_max_mismatch, StandardFormMotiveMatch *out);
-/* The same, with an injected matcher (StandardFormConfig.relation_matcher) in the place of the pattern, inversion and retrograde
-   matchers (kept until B12 of P28): its kind and score are used for a comparable pair (same dimension, same interval count); when it refuses, the pair goes on
-   to varied. matcher NULL is standard_form_motive_classify. */
-bool standard_form_motive_classify_with(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                        size_t varied_max_mismatch, StandardFormRelationMatcher matcher, void *context,
-                                        StandardFormMotiveMatch *out);
-
 /* The same with the injected StandardFormConfig.relation_match: for a pair of the same dimension and interval count its kind (not
    FRAGMENTED, not VARIED) and score are used; when it refuses, the pair goes on to varied alone. */
 bool standard_form_motive_classify_match(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,

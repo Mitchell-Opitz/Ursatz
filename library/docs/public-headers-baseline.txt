@@ -179,7 +179,6 @@ third_species_ends_rules.h frameworks/standard-counterpoint/third_species_ends_r
 third_species_line_rules.h frameworks/standard-counterpoint/third_species_line_rules.h 
 third_species_rules.h frameworks/standard-counterpoint/third_species_rules.h 
 time/duration.h src/time/duration.h 
-time/exact_rational.h src/time/exact_rational.h 
 time/meter_map.h src/time/meter_map.h 
 time/metrical_position.h src/time/metrical_position.h 
 time/musical_time.h src/time/musical_time.h 

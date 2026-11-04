@@ -263,7 +263,7 @@ static void test_relabelling_a_melody_line(void) {
 static void test_the_chain_injects_by_default(void) {
     AnalysisChainConfig config = analysis_chain_config_default();
     assert(config.inject_kernel_owners);
-    assert(config.weighting.classifier == NULL && config.form.relation_matcher == NULL); /* set when the chain runs */
+    assert(config.weighting.classifier == NULL && config.form.relation_match == NULL); /* set when the chain runs */
 }
 
 int main(void) {

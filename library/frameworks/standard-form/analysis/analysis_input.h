@@ -123,18 +123,8 @@ StandardFormAnalysisStatus standard_form_input_add_analysis_segment(StandardForm
 StandardFormAnalysisStatus standard_form_input_finish(StandardFormInput *input);
 void standard_form_input_destroy(StandardFormInput *input);
 
-/* Kept for the apps until B12 of P28: the occurrence kind is semantics/motive_occurrence_kind.h. */
+/* Kept for the apps until their next branch: the occurrence kind is semantics/motive_occurrence_kind.h. */
 typedef MotiveOccurrenceKind StandardFormMotiveKind;
-#define STANDARD_FORM_MOTIVE_EXACT MOTIVE_OCCURRENCE_EXACT
-#define STANDARD_FORM_MOTIVE_REAL MOTIVE_OCCURRENCE_REAL
-#define STANDARD_FORM_MOTIVE_TONAL MOTIVE_OCCURRENCE_TONAL
-#define STANDARD_FORM_MOTIVE_INVERTED MOTIVE_OCCURRENCE_INVERTED
-#define STANDARD_FORM_MOTIVE_RETROGRADE MOTIVE_OCCURRENCE_RETROGRADE
-#define STANDARD_FORM_MOTIVE_AUGMENTED MOTIVE_OCCURRENCE_AUGMENTED
-#define STANDARD_FORM_MOTIVE_DIMINISHED MOTIVE_OCCURRENCE_DIMINISHED
-#define STANDARD_FORM_MOTIVE_FRAGMENTED MOTIVE_OCCURRENCE_FRAGMENTED
-#define STANDARD_FORM_MOTIVE_VARIED MOTIVE_OCCURRENCE_VARIED
-#define STANDARD_FORM_MOTIVE_KIND_COUNT MOTIVE_OCCURRENCE_KIND_COUNT
 
 typedef struct StandardFormMotiveShape StandardFormMotiveShape;
 
@@ -156,14 +146,6 @@ typedef bool (*StandardFormRelationMatchFn)(const StandardFormMotiveShape *proto
                                             StandardFormRelationMatch *out, void *context);
 
 /*
- * An injected matcher for the transformed occurrences the kernel owns (motive_relation_apply: transposition, inversion,
- * retrograde). True when the candidate is the prototype under one of them: *kind is EXACT, REAL, TONAL, INVERTED or RETROGRADE and
- * *score in (0, 1]. False: no relation. context is the config's relation_context.
- */
-typedef bool (*StandardFormRelationMatcher)(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                            StandardFormMotiveKind *kind, double *score, void *context);
-
-/*
  * THE CONFIGURATION. Defaults are stated, not learned.
  *
  *   max_length_without_cadence   measures a phrase may run before the secondary signal can end it (0: the kernel's default, 8)
@@ -178,9 +160,6 @@ typedef bool (*StandardFormRelationMatcher)(const StandardFormMotiveShape *proto
  *   motive_min_notes, motive_max_notes, varied_max_mismatch, include_bass   the motive analysis (analysis_motive.h): 3, 8, 1, false
  *   relation_match, relation_context   NULL (default): the matchers below. Set: it replaces the pattern, inversion, retrograde,
  *                                augmentation, diminution and fragment matchers, in their places in the match order; varied stays the framework's
- *   relation_matcher, relation_context   (kept until B12; used only when relation_match is NULL) NULL (default): standard-form's own pattern, inversion and retrograde matchers. Set: the
- *                                matcher replaces those three, in their place in the match order (analysis_motive_match.h); the
- *                                other kinds (augmentation, diminution, varied, fragment) keep the framework's matchers
  */
 typedef struct {
     size_t max_length_without_cadence;
@@ -193,7 +172,6 @@ typedef struct {
     size_t motive_max_notes;      /* the most (default 8) */
     size_t varied_max_mismatch;   /* interval mismatches a varied motive allows (default 1) */
     bool include_bass;            /* also look for motives in the bass line, apart from the soprano's (default false) */
-    StandardFormRelationMatcher relation_matcher; /* kept until B12 of P28: used only when relation_match is NULL (default NULL) */
     void *relation_context;
     StandardFormRelationMatchFn relation_match; /* injected owner of every kind but varied (default NULL) */
 } StandardFormConfig;

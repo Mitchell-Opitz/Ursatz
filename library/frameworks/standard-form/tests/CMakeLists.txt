@@ -154,14 +154,3 @@ if(URSATZ_FORM_NOTE_VALGRIND)
   add_test(NAME standard_form_analysis_note_valgrind
            COMMAND ${URSATZ_FORM_NOTE_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_form_analysis_note>)
 endif()
-
-add_executable(test_standard_form_relation_matcher test_relation_matcher.c)
-target_link_libraries(test_standard_form_relation_matcher PRIVATE standard_form ursatz_chain)
-add_test(NAME standard_form_relation_matcher COMMAND test_standard_form_relation_matcher)
-
-# Memcheck for the relation matcher test (it builds heap inputs). Skips silently if valgrind isn't installed.
-find_program(URSATZ_FORM_RELATION_VALGRIND valgrind)
-if(URSATZ_FORM_RELATION_VALGRIND)
-  add_test(NAME standard_form_relation_matcher_valgrind
-           COMMAND ${URSATZ_FORM_RELATION_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_form_relation_matcher>)
-endif()
