@@ -17,6 +17,7 @@
 #include "seventh_rules.h"
 #include "theory/framework.h"
 #include "triad_rules.h"
+#include "pitch/midi_pitch.h"
 
 #define CONFIDENCE_DENOMINATOR 1000000UL
 
@@ -115,7 +116,7 @@ static int inversion_of(const StandardTonalityChordInput *input) {
     if (input->bass_pitch_class < 0) {
         return 0;
     }
-    int above_root = ((input->bass_pitch_class - input->root_pitch_class) % 12 + 12) % 12;
+    int above_root = pitch_class_of_midi(input->bass_pitch_class - input->root_pitch_class);
     for (size_t member = 0; member < input->interval_count && member < 4; member++) {
         if (input->intervals[member] == above_root) {
             return (int)member;
@@ -129,7 +130,7 @@ bool standard_tonality_read_roman_numeral(const StandardTonalityChordInput *inpu
     if (input == NULL || out == NULL || !input->has_numeral) {
         return false;
     }
-    int offset = ((input->root_pitch_class - input->tonic_pitch_class) % 12 + 12) % 12;
+    int offset = pitch_class_of_midi(input->root_pitch_class - input->tonic_pitch_class);
     bool raised = false;
     bool raised_sixth = false;
     int degree = degree_of_offset(input->mode, offset, &raised, &raised_sixth);

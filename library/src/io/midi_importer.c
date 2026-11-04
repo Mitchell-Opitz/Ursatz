@@ -12,6 +12,7 @@
 #include "io/midi_event_decoder.h"
 #include "io/midi_key_signature.h"
 #include "io/smf_reader.h"
+#include "pitch/midi_pitch.h"
 #include "pitch/pitch_identity.h"
 #include "pitch/pitch_numeric_value.h"
 #include "pitch/pitch_spelling.h"
@@ -67,17 +68,6 @@
  * optional_voice == NULL -- multi-channel voice separation is a
  * channel-mapping decision for a future pass, not this one.
  */
-
-static const PitchLetter SHARPS_ONLY_LETTER[12] = {
-    PITCH_LETTER_C, PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LETTER_D, PITCH_LETTER_E, PITCH_LETTER_F,
-    PITCH_LETTER_F, PITCH_LETTER_G, PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_A, PITCH_LETTER_B};
-static const int SHARPS_ONLY_ACCIDENTAL[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
-
-static PitchSpellingResult spell_midi_note(uint8_t midi_note, PitchSpelling **out) {
-    int pitch_class = midi_note % 12;
-    int octave = midi_note / 12 - 1;
-    return pitch_spelling_create(SHARPS_ONLY_LETTER[pitch_class], SHARPS_ONLY_ACCIDENTAL[pitch_class], octave, out);
-}
 
 #define MIDI_IMPORTER_PROVENANCE_ID "midi-importer-v1"
 
@@ -324,7 +314,7 @@ static NoteEventResult build_note_event(const MatchedNote *matched, unsigned lon
     }
 
     PitchSpelling *spelling = NULL;
-    if (spell_midi_note(matched->note, &spelling) != PITCH_SPELLING_OK) {
+    if (!pitch_spelling_of_midi(matched->note, 0, &spelling)) {
         pitch_numeric_value_destroy(numeric);
         pitch_identity_destroy(pitch);
         duration_destroy(duration);

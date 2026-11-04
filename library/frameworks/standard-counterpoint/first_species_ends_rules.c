@@ -7,6 +7,7 @@
 #include "motion_rules.h"
 #include "counterpoint_subject.h"
 #include "rule_table.h"
+#include "pitch/midi_pitch.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT] = {
     "begin", "end-on-tonic", "contrary-stepwise-approach", "penultimate-third-or-sixth"};
@@ -49,7 +50,7 @@ static bool is_tonic(const PitchSpelling *note, const PitchSpelling *tonic) {
 static bool is_sol(const PitchSpelling *note, const PitchSpelling *tonic) {
     int letters = (((standard_counterpoint_step_number(note) - standard_counterpoint_step_number(tonic)) % 7) + 7) % 7;
     int semitones =
-        (((standard_counterpoint_semitone_number(note) - standard_counterpoint_semitone_number(tonic)) % 12) + 12) % 12;
+        pitch_class_of_midi(standard_counterpoint_semitone_number(note) - standard_counterpoint_semitone_number(tonic));
     return letters == 4 && semitones == 7;
 }
 

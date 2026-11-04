@@ -60,3 +60,5 @@ omitted-fifth and other incomplete seventh voicings are a violation here.
 Tendency tones other than the leading tone and the chordal seventh have no
 vocabulary yet. Pitches are read as sounding pitch: transposing clefs and
 instruments are not modeled.
+
+`standard_voicing_read_doubling` (`doubling_reading.h`) reads a voiced chord: for 3 to 6 sounding pitches (highest voice first) and the chord's intervals above its root it gives the voices on each chord member, the voices on none, the doubled member and the gap between neighbouring voices. It judges nothing; the doubling and spacing rules are above.

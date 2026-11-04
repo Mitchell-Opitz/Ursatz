@@ -4,6 +4,7 @@
 
 #include "core/rational.h"
 #include "time/time_rational.h"
+#include "pitch/midi_pitch.h"
 
 CommonPracticeWeightedConfig common_practice_weighted_config_default(void) {
     CommonPracticeWeightedConfig config;
@@ -34,10 +35,6 @@ static bool config_valid(const CommonPracticeWeightedConfig *config) {
            usable(config->bass_chord_tone_bonus) && usable(config->min_coverage);
 }
 
-static int pitch_class_of(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
-
 CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPracticeMember *members, size_t count,
                                                              const CommonPracticeWeightedConfig *config,
                                                              CommonPracticeWeights *out) {
@@ -65,15 +62,15 @@ CommonPracticeWeightedStatus common_practice_weight_segment(const CommonPractice
     for (size_t i = 0; i < count; i++) {
         double factor = members[i].held ? config->held_factor : config->strength_factor[members[i].strength];
         double weight = members[i].duration * factor;
-        if (pitch_class_of(members[i].pitch) == pitch_class_of(bass_pitch)) {
+        if (pitch_class_of_midi(members[i].pitch) == pitch_class_of_midi(bass_pitch)) {
             weight *= config->bass_weight;
         }
-        weights.pitch_class[pitch_class_of(members[i].pitch)] += weight;
+        weights.pitch_class[pitch_class_of_midi(members[i].pitch)] += weight;
         weights.total += weight;
     }
     if (have_bass) {
         weights.bass_pitch = bass_pitch;
-        weights.bass_pitch_class = pitch_class_of(bass_pitch);
+        weights.bass_pitch_class = pitch_class_of_midi(bass_pitch);
     }
     *out = weights;
     return COMMON_PRACTICE_WEIGHTED_OK;
@@ -342,7 +339,7 @@ int common_practice_ranked_chord_inversion(const CommonPracticeRankedChord *chor
     if (count == 0 || bass_pitch_class < 0 || bass_pitch_class > 11) {
         return -1;
     }
-    int bass_offset = ((bass_pitch_class - chord->root_pitch_class) % 12 + 12) % 12;
+    int bass_offset = pitch_class_of_midi(bass_pitch_class - chord->root_pitch_class);
     for (size_t i = 0; i < count; i++) {
         if (offsets[i] == bass_offset) {
             return (int)i;

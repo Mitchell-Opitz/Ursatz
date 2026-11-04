@@ -9,6 +9,7 @@
 #include "core/value.h"
 #include "harmony_steps.h"
 #include "identity/entity_id.h"
+#include "pitch/midi_pitch.h"
 
 HarmonyResolutionConfig harmony_resolution_config_default(void) {
     HarmonyResolutionConfig config;
@@ -37,7 +38,7 @@ bool harmony_voice_cell_semitone(const HarmonyVoiceCell *cell, long *out) {
 }
 
 static int pitch_class(long semitone) {
-    return (int)(((semitone % 12) + 12) % 12);
+    return pitch_class_of_midi((int)semitone);
 }
 
 /* A move of `delta` semitones as diatonic steps: 1 or 2 semitones a step, 3 or 4 a third, and so on. */

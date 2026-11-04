@@ -1,6 +1,7 @@
 #include "chord_input.h"
 
 #include <stdlib.h>
+#include "pitch/midi_pitch.h"
 
 /* a < b for two MusicalTimes (positive denominators): cross-multiplied, so no division. */
 static bool time_before(const MusicalTime *a, const MusicalTime *b) {
@@ -36,7 +37,7 @@ static double chord_uncertainty_of(const Chord *chord) {
 }
 
 static bool is_chord_member(const StandardTonalityChordInput *input, int pitch_class) {
-    int interval = ((pitch_class - input->root_pitch_class) % 12 + 12) % 12;
+    int interval = pitch_class_of_midi(pitch_class - input->root_pitch_class);
     for (size_t i = 0; i < input->interval_count; i++) {
         if (input->intervals[i] == interval) {
             return true;
@@ -61,14 +62,14 @@ static int chord_bass_of(const StandardTonalityChordInput *input, const Standard
     int lowest = 0;
     for (size_t i = 0; i < segment->pitch_count; i++) {
         int pitch = segment->pitches[i];
-        if (pitch - floor < STANDARD_TONALITY_BASS_REGISTER && is_chord_member(input, ((pitch % 12) + 12) % 12) &&
+        if (pitch - floor < STANDARD_TONALITY_BASS_REGISTER && is_chord_member(input, pitch_class_of_midi(pitch)) &&
             (!found || pitch < lowest)) {
             lowest = pitch;
             found = true;
         }
     }
     if (found) {
-        return ((lowest % 12) + 12) % 12;
+        return pitch_class_of_midi(lowest);
     }
     if (previous_bass >= 0 && is_chord_member(input, previous_bass)) {
         return previous_bass;

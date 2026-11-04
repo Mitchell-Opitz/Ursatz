@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "pitch/midi_pitch.h"
 
 typedef MotiveRelationResult (*ApplyFn)(const MotiveSketch *in, const MotiveRelationStep *step, MotiveSketch *out);
 
@@ -856,7 +857,7 @@ static bool implied_chord(const MotiveSketch *sketch, MotiveSketchChord *out) {
         size_t hits = 0;
         Rational time = msk_int(0);
         for (size_t i = 0; i < sketch->note_count; i++) {
-            if (mch_has_pc(pcs, count, mch_pitch_class(sketch->notes[i].pitch))) {
+            if (mch_has_pc(pcs, count, pitch_class_of_midi(sketch->notes[i].pitch))) {
                 hits++;
                 time = msk_add(time, sketch->notes[i].duration);
             }
@@ -916,7 +917,7 @@ static int nearest_chord_pitch(const MotiveSketch *before, const MotiveSketch *s
     for (int distance = 1; distance <= 12; distance++) {
         for (int k = 0; k < 2; k++) {
             int candidate = pitch + (k == 0 ? preferred : -preferred) * distance;
-            if (!midi(candidate) || !mch_has_pc(pcs, count, mch_pitch_class(candidate))) {
+            if (!midi(candidate) || !mch_has_pc(pcs, count, pitch_class_of_midi(candidate))) {
                 continue;
             }
             if (nearest < 0) {
@@ -960,7 +961,7 @@ static void adapt_melody(const MotiveSketch *before, MotiveSketch *sketch) {
         }
         int pcs[4];
         size_t count = motive_sketch_chord_tones(sketch, new_chord, pcs);
-        if (mch_has_pc(pcs, count, mch_pitch_class(note->pitch))) {
+        if (mch_has_pc(pcs, count, pitch_class_of_midi(note->pitch))) {
             continue;
         }
         int chosen = nearest_chord_pitch(before, sketch, i, pcs, count);
@@ -1051,14 +1052,14 @@ static void move_bass(MotiveSketch *sketch, size_t chord, int old_inversion) {
     }
     int was = pcs[old_inversion];
     int now = pcs[c->inversion];
-    if (!found || was == now || mch_pitch_class(sketch->notes[lowest].pitch) != was) {
+    if (!found || was == now || pitch_class_of_midi(sketch->notes[lowest].pitch) != was) {
         return;
     }
     int pitch = sketch->notes[lowest].pitch;
     for (int distance = 1; distance <= 12; distance++) {
         for (int k = 0; k < 2; k++) {
             int candidate = pitch + (k == 0 ? -distance : distance);
-            if (midi(candidate) && mch_pitch_class(candidate) == now) {
+            if (midi(candidate) && pitch_class_of_midi(candidate) == now) {
                 sketch->notes[lowest].pitch = candidate;
                 return;
             }
@@ -1258,7 +1259,7 @@ static MotiveRelationResult apply_counter_line(const MotiveSketch *in, const Mot
             for (int d = 1; d <= 12 && target < 0; d++) {
                 for (int k = 0; k < 2 && target < 0; k++) {
                     int candidate = pitch + (k == 0 ? d : -d);
-                    if (midi(candidate) && mch_has_pc(pcs, count, mch_pitch_class(candidate))) {
+                    if (midi(candidate) && mch_has_pc(pcs, count, pitch_class_of_midi(candidate))) {
                         target = candidate;
                     }
                 }
@@ -1412,7 +1413,7 @@ static MotiveRelationResult replace_with_chord_tone(MotiveSketch *sketch, const 
     for (int d = 0; d <= 12 && pitch < 0 && count > 0; d++) {
         for (int k = 0; k < 2 && pitch < 0; k++) {
             int candidate = first.pitch + (k == 0 ? d : -d);
-            if (midi(candidate) && mch_has_pc(pcs, count, mch_pitch_class(candidate))) {
+            if (midi(candidate) && mch_has_pc(pcs, count, pitch_class_of_midi(candidate))) {
                 pitch = candidate;
             }
         }

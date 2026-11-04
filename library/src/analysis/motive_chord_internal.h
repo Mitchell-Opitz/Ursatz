@@ -5,15 +5,12 @@
 #include <stddef.h>
 
 #include "analysis/motive_sketch.h"
+#include "pitch/midi_pitch.h"
 
 /*
  * Internal to the motive analysis: how a sketch's chords are looked up and compared, shared by the harmony
  * relations (motive_relation.c) and the tone roles (motive_tone_roles.c). Not part of the public API.
  */
-
-static inline int mch_pitch_class(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
 
 static inline bool mch_has_pc(const int *pcs, size_t count, int pc) {
     for (size_t i = 0; i < count; i++) {

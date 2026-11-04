@@ -5,6 +5,7 @@
 
 #include "roman_numeral_analysis_rules.h"
 #include "triad_in_key_rules.h"
+#include "pitch/midi_pitch.h"
 
 static const int MAJOR_SCALE[7] = {0, 2, 4, 5, 7, 9, 11};
 static const int NATURAL_MINOR_SCALE[7] = {0, 2, 3, 5, 7, 8, 10};
@@ -54,22 +55,18 @@ bool standard_tonality_applied_config_valid(const StandardTonalityAppliedConfig 
            usable(config->bass_chord_tone_bonus);
 }
 
-static int wrap12(int value) {
-    return ((value % 12) + 12) % 12;
-}
-
 /* The L2.5 score of a chord over the weights (see the header). */
 static double score_chord(const double weights[12], double total, int root, const int *intervals, size_t count,
                           int bass_pitch_class, const StandardTonalityAppliedConfig *config) {
     double in_chord = 0.0;
     bool bass_is_chord_tone = false;
     for (size_t i = 0; i < count; i++) {
-        int pc = wrap12(root + intervals[i]);
+        int pc = pitch_class_of_midi(root + intervals[i]);
         in_chord += weights[pc];
         bass_is_chord_tone = bass_is_chord_tone || pc == bass_pitch_class;
     }
     double score = total > 0.0 ? in_chord / total : 0.0;
-    if (count > 1 && weights[wrap12(root + intervals[1])] <= 0.0) {
+    if (count > 1 && weights[pitch_class_of_midi(root + intervals[1])] <= 0.0) {
         score -= config->missing_third_penalty;
     }
     if (bass_is_chord_tone) {
@@ -79,7 +76,7 @@ static double score_chord(const double weights[12], double total, int root, cons
 }
 
 static bool in_key(const StandardTonalityChordInput *input, int pitch_class) {
-    int offset = wrap12(pitch_class - input->tonic_pitch_class);
+    int offset = pitch_class_of_midi(pitch_class - input->tonic_pitch_class);
     const int *scale = input->mode == STANDARD_TONALITY_ROMAN_KEY_MAJOR ? MAJOR_SCALE : NATURAL_MINOR_SCALE;
     for (int i = 0; i < 7; i++) {
         if (scale[i] == offset) {
@@ -93,7 +90,7 @@ static int member_in_bass(int bass_pitch_class, int root, const int *intervals, 
     if (bass_pitch_class < 0) {
         return 0;
     }
-    int above_root = wrap12(bass_pitch_class - root);
+    int above_root = pitch_class_of_midi(bass_pitch_class - root);
     for (size_t member = 0; member < count && member < 4; member++) {
         if (intervals[member] == above_root) {
             return (int)member;
@@ -167,16 +164,16 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
     int best_target = 0;
     const Shape *best_shape = NULL;
     for (int t = 0; t < 5; t++) {
-        int target_root = wrap12(input->tonic_pitch_class + scale[targets[t] - 1]);
+        int target_root = pitch_class_of_midi(input->tonic_pitch_class + scale[targets[t] - 1]);
         /* The resolution must be the target or (deceptively) its submediant, and it must be a different
            chord from the one being relabelled. */
         int resolution_root = inputs[resolution].root_pitch_class;
-        if (resolution_root != target_root && resolution_root != wrap12(target_root + SUBMEDIANT_SEMITONES)) {
+        if (resolution_root != target_root && resolution_root != pitch_class_of_midi(target_root + SUBMEDIANT_SEMITONES)) {
             continue;
         }
         for (int s = 0; s < 4; s++) {
             const Shape *shape = &SHAPES[s];
-            int root = wrap12(target_root + shape->root_offset);
+            int root = pitch_class_of_midi(target_root + shape->root_offset);
             if (input->weights[root] <= 0.0) {
                 continue; /* the root does not sound */
             }
@@ -194,8 +191,8 @@ bool standard_tonality_recheck_applied_chord(const StandardTonalityChordInput *i
         return false;
     }
 
-    int target_root = wrap12(input->tonic_pitch_class + scale[best_target - 1]);
-    int root = wrap12(target_root + best_shape->root_offset);
+    int target_root = pitch_class_of_midi(input->tonic_pitch_class + scale[best_target - 1]);
+    int root = pitch_class_of_midi(target_root + best_shape->root_offset);
     StandardTonalityRomanReading reading;
     memset(&reading, 0, sizeof(reading));
     bool built = best_shape->seventh

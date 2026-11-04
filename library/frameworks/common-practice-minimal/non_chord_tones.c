@@ -2,10 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-
-static int pitch_class_of(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
+#include "pitch/midi_pitch.h"
 
 static bool same_note(const CommonPracticeMember *a, const CommonPracticeMember *b) {
     if (a->note_id != NULL && b->note_id != NULL) {
@@ -105,7 +102,7 @@ static void find_neighbors(const CommonPracticeSegment *segments, size_t segment
 }
 
 static bool in_mask(unsigned mask, int pitch) {
-    return (mask >> pitch_class_of(pitch)) & 1u;
+    return (mask >> pitch_class_of_midi(pitch)) & 1u;
 }
 
 static bool is_bass_of(const CommonPracticeSegment *segment, const CommonPracticeMember *member) {

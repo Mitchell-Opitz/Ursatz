@@ -45,6 +45,10 @@ typedef struct {
    untouched) for NULL. */
 bool galant_degree_of(const PitchSpelling *pitch, const PitchSpelling *tonic, GalantPitchDegree *out);
 
+/* The degree of the pitch class `semitones` above the tonic (any int, reduced to 0 to 11), read against the major
+   scale with the black keys lowered, except the fourth raised: 1, b2, 2, b3, 3, 4, #4, 5, b6, 6, b7, 7. */
+GalantPitchDegree galant_degree_of_semitones(int semitones);
+
 /* True when a pitch's degree satisfies what the prototype asks for: the same
    degree, and an alteration of 0 (natural), -1 (lowered), either of those
    (either), or +1 (raised). */

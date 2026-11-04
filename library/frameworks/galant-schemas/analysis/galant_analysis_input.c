@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "pitch/midi_pitch.h"
 
 static const int MAJOR_SEMITONES[7] = {0, 2, 4, 5, 7, 9, 11};
 
@@ -111,8 +112,6 @@ bool galant_segment_set_analysis_segment(GalantSegment *segment, const AnalysisS
 }
 
 bool galant_segment_set_analysis_key(GalantSegment *segment, const AnalysisKey *key, const AnalysisKey *home) {
-    static const GalantPitchDegree DEGREE_OF_OFFSET[12] = {{1, 0}, {2, -1}, {2, 0}, {3, -1}, {3, 0}, {4, 0},
-                                                           {4, 1}, {5, 0},  {6, -1}, {6, 0}, {7, -1}, {7, 0}};
     if (segment == NULL || key == NULL || home == NULL) {
         return false;
     }
@@ -127,6 +126,6 @@ bool galant_segment_set_analysis_key(GalantSegment *segment, const AnalysisKey *
     }
     int offset = analysis_key_tonic_pitch_class(key) - analysis_key_tonic_pitch_class(home);
     strcpy(segment->key_id, id);
-    segment->key = DEGREE_OF_OFFSET[((offset % 12) + 12) % 12];
+    segment->key = galant_degree_of_semitones(offset);
     return true;
 }

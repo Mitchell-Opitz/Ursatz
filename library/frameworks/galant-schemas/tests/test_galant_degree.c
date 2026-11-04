@@ -154,6 +154,17 @@ static void test_exemplar_valid(void) {
     assert(galant_exemplar_valid(&f.exemplar));
 }
 
+static void test_degree_of_semitones(void) {
+    static const int DEGREES[12] = {1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 7, 7};
+    static const int ALTERATIONS[12] = {0, -1, 0, -1, 0, 0, 1, 0, -1, 0, -1, 0};
+    for (int semitones = -24; semitones <= 24; semitones++) {
+        int pc = ((semitones % 12) + 12) % 12;
+        GalantPitchDegree degree = galant_degree_of_semitones(semitones);
+        assert(degree.degree == DEGREES[pc]);
+        assert(degree.alteration == ALTERATIONS[pc]);
+    }
+}
+
 int main(void) {
     test_major_scale();
     test_alterations();
@@ -161,6 +172,7 @@ int main(void) {
     test_octave_does_not_matter();
     test_minor_key();
     test_degree_of_arguments();
+    test_degree_of_semitones();
     test_degree_allows();
     test_alteration_names();
     test_exemplar_valid();

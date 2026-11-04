@@ -8,6 +8,7 @@
 #include "time/duration.h"
 #include "time/temporal_anchor.h"
 #include "time/time_span.h"
+#include "pitch/midi_pitch.h"
 
 AdaptiveSegmentationConfig adaptive_segmentation_config_default(void) {
     AdaptiveSegmentationConfig config;
@@ -67,7 +68,7 @@ AdaptiveSegmentationResult segmentation_prepare_notes(NoteEvent *const *notes, s
             return AD_SEGMENTATION_ERR_OVERFLOW;
         }
         spans[i].pitch = semitone_of(spelling);
-        spans[i].pitch_class = ((spans[i].pitch % 12) + 12) % 12;
+        spans[i].pitch_class = pitch_class_of_midi(spans[i].pitch);
     }
     *out = spans;
     return AD_SEGMENTATION_OK;
@@ -254,10 +255,6 @@ static int lowest_at(const NoteSpan *spans, const Segment *segment, Rational t, 
     return lowest;
 }
 
-static int pitch_class_of(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
-
 /* The accepted split times inside `segment`, ascending. *out is allocated (NULL when none). */
 static AdaptiveSegmentationResult split_points_of(const NoteSpan *spans, const Segment *segment,
                                                    const AdaptiveSegmentationConfig *config,
@@ -302,7 +299,7 @@ static AdaptiveSegmentationResult split_points_of(const NoteSpan *spans, const S
         bool attacked = false;
         int after = lowest_at(spans, segment, attacks[i], true, &attacked);
         int before = lowest_at(spans, segment, attacks[i], false, NULL);
-        if (after >= 0 && attacked && (before < 0 || pitch_class_of(before) != pitch_class_of(after))) {
+        if (after >= 0 && attacked && (before < 0 || pitch_class_of_midi(before) != pitch_class_of_midi(after))) {
             changes[change_count++] = attacks[i];
         }
     }
@@ -427,7 +424,7 @@ AdaptiveSegmentationResult segmentation_split_bass(const NoteSpan *spans, const 
 
 /* The pitch class of the lowest sounding pitch of a non-empty segment. */
 static int bass_pitch_class(const NoteSpan *spans, const Segment *segment) {
-    return ((segment_bass_pitch(spans, segment) % 12) + 12) % 12;
+    return pitch_class_of_midi(segment_bass_pitch(spans, segment));
 }
 
 /* Appends the members of `next` that `into` does not already hold, and marks a shared note attacked if

@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "pitch/midi_pitch.h"
 
 #define FLAT_SIGN "\xE2\x99\xAD"
 #define SHARP_SIGN "\xE2\x99\xAF"
@@ -310,7 +311,7 @@ bool standard_tonality_numeral_root_semitone(const StandardTonalityNumeralText *
         }
         root = degree + numeral->alteration;
     }
-    *semitones = ((root % 12) + 12) % 12;
+    *semitones = pitch_class_of_midi(root);
     return true;
 }
 

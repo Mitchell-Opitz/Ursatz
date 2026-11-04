@@ -1,6 +1,7 @@
 #include "harmony_applied.h"
 
 #include <stdio.h>
+#include "pitch/midi_pitch.h"
 
 static const char *const QUALITY_NAMES[HARMONY_APPLIED_QUALITY_COUNT] = {
     "major-triad", "dominant-seventh", "diminished-triad", "fully-diminished-seventh", "half-diminished-seventh"};
@@ -92,7 +93,7 @@ bool harmony_applied_analyze(HarmonyMode mode, int root_semitone, HarmonyApplied
     if (out == NULL || !harmony_mode_valid(mode) || !harmony_applied_quality_kind(quality, &kind)) {
         return false;
     }
-    int root = ((root_semitone % 12) + 12) % 12;
+    int root = pitch_class_of_midi(root_semitone);
     int target_root = kind == APPLIED_CHORD_KIND_SECONDARY_DOMINANT ? (root + 5) % 12 : (root + 1) % 12;
     for (int degree = 1; degree <= 7; degree++) {
         if (harmony_applied_scale_semitone(mode, degree) == target_root) {

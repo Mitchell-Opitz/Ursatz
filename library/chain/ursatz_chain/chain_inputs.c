@@ -7,6 +7,9 @@
 #include "analysis/outer_voice.h"
 #include "core/rational.h"
 #include "standard-form/analysis/analysis_time.h"
+#include "standard-tonality/seventh_rules.h"
+#include "standard-tonality/triad_rules.h"
+#include "time/meter_arithmetic.h"
 #include "time/time_signature.h"
 #include "standard-harmony/harmony_cadence_rules.h"
 #include "standard-harmony/harmony_key_change.h"
@@ -20,6 +23,7 @@
 #include "time/metrical_position.h"
 #include "time/time_rational.h"
 #include "time/time_span.h"
+#include "pitch/midi_pitch.h"
 
 typedef struct {
     const char *id;
@@ -324,19 +328,15 @@ static int degree_of(const OuterVoiceEntry *entry, int tonic) {
         return 0;
     }
     long position = pitch_numeric_value_position_numerator(entry->pitch);
-    return DEGREE_OF_OFFSET[(((position - tonic) % 12) + 12) % 12];
+    return DEGREE_OF_OFFSET[pitch_class_of_midi(position - tonic)];
 }
 
 static void claim_intervals(const StandardTonalityRomanClaim *claim, int out[4], size_t *count) {
-    static const int TRIADS[4][3] = {{0, 4, 7}, {0, 3, 7}, {0, 3, 6}, {0, 4, 8}};
-    static const int SEVENTHS[5][4] = {{0, 4, 7, 11}, {0, 4, 7, 10}, {0, 3, 7, 10}, {0, 3, 6, 10}, {0, 3, 6, 9}};
     memset(out, 0, 4 * sizeof(int));
     if (claim->seventh) {
-        memcpy(out, SEVENTHS[claim->quality], 4 * sizeof(int));
-        *count = 4;
+        *count = standard_tonality_seventh_quality_semitones((StandardTonalitySeventhQuality)claim->quality, out) ? 4 : 0;
     } else {
-        memcpy(out, TRIADS[claim->quality], 3 * sizeof(int));
-        *count = 3;
+        *count = standard_tonality_triad_quality_semitones((StandardTonalityTriadQuality)claim->quality, out) ? 3 : 0;
     }
 }
 
@@ -859,7 +859,7 @@ ChainInputStatus chain_build_motive_input(const AnalysisNoteSet *notes, const Ch
             status = CHAIN_INPUT_ERR_BAD_NOTES;
             break;
         }
-        int pitch_class = (int)(((line[k].semitone % 12) + 12) % 12);
+        int pitch_class = pitch_class_of_midi((int)line[k].semitone);
         int degree = 0;
         int alteration = 0;
         if (!parse_degree(common_practice_scale_degree_label(pitch_class, tonic_pitch_class, mode), &degree, &alteration) ||
@@ -1265,7 +1265,7 @@ ChainInputStatus chain_build_melody_line(const ChainSegments *segments, size_t c
         note.pitch = entry->pitch;
         note.confidence = 1.0;
         long midi = pitch_numeric_value_position_numerator(entry->pitch);
-        if (!parse_degree(common_practice_scale_degree_label((int)(((midi % 12) + 12) % 12), tonic_pitch_class, mode), &note.degree,
+        if (!parse_degree(common_practice_scale_degree_label(pitch_class_of_midi(midi), tonic_pitch_class, mode), &note.degree,
                           &note.alteration)) {
             chain_melody_line_destroy(&built);
             return CHAIN_INPUT_ERR_BAD_NOTES;
@@ -1334,39 +1334,23 @@ static const TimeSpan *galant_span(ChainGalantSegments *build, const MusicalTime
     return span;
 }
 
-static GalantPitchDegree degree_of_offset(int semitones) {
-    static const GalantPitchDegree TABLE[12] = {{1, 0}, {2, -1}, {2, 0}, {3, -1}, {3, 0}, {4, 0},
-                                                {4, 1}, {5, 0},  {6, -1}, {6, 0}, {7, -1}, {7, 0}};
-    return TABLE[((semitones % 12) + 12) % 12];
-}
-
 /* The length of a beat at `time`, in whole notes (a compound meter's beat is its dotted unit); a quarter when it cannot be read. */
 static void beat_length_at(const MeterMap *map, const MusicalTime *time, long *numerator, unsigned long *denominator) {
-    const MeterMapRegion *region = NULL;
+    Rational length;
+    int measure = 0;
     *numerator = 1;
     *denominator = 4;
-    if (meter_map_region_at(map, time, &region) != METER_MAP_OK) {
+    if (meter_map_measure_index_at(map, time, &measure) != METER_MAP_OK ||
+        meter_map_beat_length(map, measure, &length) != METER_MAP_OK) {
         return;
     }
-    const TimeSignature *signature = meter_map_region_time_signature(region);
-    Duration *unit = NULL;
-    if (signature == NULL || time_signature_unit_duration(signature, &unit) != DURATION_OK) {
-        return;
-    }
-    long n = duration_numerator(unit);
-    unsigned long d = duration_denominator(unit);
-    duration_destroy(unit);
-    unsigned top = time_signature_top_number(signature);
-    if ((top == 6 || top == 9 || top == 12) && time_signature_bottom_number(signature) >= 8) {
-        n *= 3;
-    }
-    *numerator = n;
-    *denominator = d;
+    *numerator = (long)length.num;
+    *denominator = (unsigned long)length.den;
 }
 
 static int pitch_class_of(const OuterVoiceEntry *entry) {
     long position = pitch_numeric_value_position_numerator(entry->pitch);
-    return (int)(((position % 12) + 12) % 12);
+    return pitch_class_of_midi((int)position);
 }
 
 static double clamp01(double x) {
@@ -1408,14 +1392,14 @@ ChainInputStatus chain_build_galant_segments(const ChainSegments *segments, size
         }
         beat_length_at(map, time_span_start(window), &segment.beat_numerator, &segment.beat_denominator);
         snprintf(segment.key_id, sizeof(segment.key_id), "key-%d%s", tonic_pc, minor ? "m" : "");
-        segment.key = degree_of_offset(tonic_pc - home_pc);
+        segment.key = galant_degree_of_semitones(tonic_pc - home_pc);
         if (lines->bass[s].present) {
             segment.has_bass = true;
-            segment.bass = degree_of_offset(pitch_class_of(&lines->bass[s]) - tonic_pc);
+            segment.bass = galant_degree_of_semitones(pitch_class_of(&lines->bass[s]) - tonic_pc);
         }
         if (lines->soprano[s].present) {
             segment.has_soprano = true;
-            segment.soprano = degree_of_offset(pitch_class_of(&lines->soprano[s]) - tonic_pc);
+            segment.soprano = galant_degree_of_semitones(pitch_class_of(&lines->soprano[s]) - tonic_pc);
         }
         segment.uncertainty = 0.5;
         if (romans[s].has_numeral) {
