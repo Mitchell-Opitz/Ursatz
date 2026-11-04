@@ -90,11 +90,13 @@ lanes of the plan (R-019) hold library values:
 | `src/texture/` | The accompaniment and four-part voicing operators, and hearing the voice leading. |
 | `src/piece/` | Form templates, the piece plan and the compose run over its sections. |
 | `src/grow/` | Growing a theme from a motive: the plan, the structure operator, its checks and the stages. |
+| `src/check/` | Hearing a render through the Analyzer, the Analyzer check loop and the explanation report. |
+| `src/style/` | Style models, blending, style checks and seeding from a corpus. |
 | `src/api/` | The composer API behind `composer_api.h`: one file for each request kind. |
 | `src/util/` | Private helpers the sources share: `util.h` (numbers, strings, reading a file) and `plan_util.h` (spans, lanes, subtrees, name tables). Not installed. |
 | `cli/` | The `ursatz-composer` command: a thin wrapper over the API. It includes `composer_api.h`, cJSON and the C standard library only, and `scripts/check-cli-api.sh` (CI runs it) fails on any other include. |
 | `tests/` | Tests and their fixtures. `tests/support/` is the `composer_test_support` library the tests share; `tests/snapshots/` holds the CLI snapshots. |
-| `schema/` | `plan.v2.schema.json`, the JSON Schema of the plan file; `test_plan_schema` validates the snapshots' plan files and every fixture written back when python3 with `jsonschema` is installed. |
+| `schema/` | `plan.v2.schema.json`, the JSON Schema of the plan file, and `api/`, the JSON Schemas of the composer API requests and responses; `test_plan_schema` validates the snapshots' plan files and every fixture written back when python3 with `jsonschema` is installed. |
 
 ### CLI snapshots
 
