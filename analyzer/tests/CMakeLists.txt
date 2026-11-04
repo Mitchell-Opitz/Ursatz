@@ -552,3 +552,18 @@ endif()
 add_executable(test_version test_version.c)
 target_link_libraries(test_version PRIVATE ursatz_analyzer)
 add_test(NAME test_version COMMAND test_version)
+
+# Consumer isolation (A20261104-31): a target linking only ursatz_analyzer cannot include a chain or framework header; one
+# linking ursatz_analyzer::chain reads the chain. The leak targets must fail to compile, so they are left out of the default
+# build and built by consumer_isolation.cmake.
+add_library(analyzer_consumer_plain OBJECT consumer/plain.c)
+target_link_libraries(analyzer_consumer_plain PRIVATE ursatz_analyzer)
+add_library(analyzer_consumer_chain OBJECT consumer/chain.c)
+target_link_libraries(analyzer_consumer_chain PRIVATE ursatz_analyzer::chain)
+foreach(leak leak_framework leak_chain)
+    add_library(analyzer_consumer_${leak} OBJECT EXCLUDE_FROM_ALL consumer/${leak}.c)
+    target_link_libraries(analyzer_consumer_${leak} PRIVATE ursatz_analyzer)
+endforeach()
+add_test(NAME test_consumer_isolation
+         COMMAND ${CMAKE_COMMAND} -DBUILD_DIR=${PROJECT_BINARY_DIR}
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/consumer_isolation.cmake)
