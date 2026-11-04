@@ -1,0 +1,43 @@
+{
+  "note": "Captured at the start of B11 from randomSettings (materials-model.js) and defaultCadence (pieces-model.js) before they were removed.",
+  "random": [
+    {
+      "seed": 0,
+      "mode": "minor",
+      "meter": "6/8"
+    },
+    {
+      "seed": 1,
+      "mode": "minor",
+      "meter": "2/4"
+    },
+    {
+      "seed": 2,
+      "mode": "minor",
+      "meter": "2/4"
+    },
+    {
+      "seed": 4294967295,
+      "mode": "major",
+      "meter": "4/4"
+    }
+  ],
+  "cadences": {
+    "parts": [
+      "intro",
+      "body",
+      "body",
+      "turnaround",
+      "ending",
+      "ending"
+    ],
+    "defaults": [
+      "HC",
+      "IAC",
+      "IAC",
+      "HC",
+      "IAC",
+      "PAC"
+    ]
+  }
+}

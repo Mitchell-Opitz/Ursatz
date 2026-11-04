@@ -194,6 +194,9 @@ function attachFormValidation(options) {
     build: options.build,
     field: options.field,
     show(result) {
+      if (options.onResult) {
+        options.onResult(result);
+      }
       for (const el of marked) {
         el.classList.remove("field-invalid");
       }
