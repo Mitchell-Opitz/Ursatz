@@ -43,5 +43,8 @@ jobs:
       - name: Build
         run: cmake --build build -j
 
+      - name: Check library includes
+        run: scripts/check-library-includes.sh build
+
       - name: Test
         run: ctest --test-dir build --output-on-failure -j4
