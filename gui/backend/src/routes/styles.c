@@ -8,11 +8,11 @@
 #include <cJSON.h>
 #include <civetweb.h>
 
+#include "route_util.h"
 #include "../service/collection_service.h"
 #include "../service/style_service.h"
 
 static const char *kStylesPrefix = "/api/styles";
-static const size_t kMaxRequestBodySize = 1024 * 1024;
 /* A style built from ids names every piece of a filtered Library. */
 static const size_t kMaxPieceIds = URSATZ_GUI_STYLE_BRIEF_MAX_PIECES;
 
@@ -20,16 +20,6 @@ static void send_json(struct mg_connection *conn, const char *body) {
   size_t len = strlen(body);
   mg_send_http_ok(conn, "application/json", (long)len);
   mg_write(conn, body, len);
-}
-
-/* Sends body as application/json with a non-200 status line. */
-static int send_json_status(struct mg_connection *conn, int status, const char *reason, const char *body) {
-  size_t len = strlen(body);
-  mg_printf(conn,
-            "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
-            status, reason, len);
-  mg_write(conn, body, len);
-  return status;
 }
 
 /* Sends {"ok":false,"message":...} with the given status. The message goes through cJSON, so it is escaped. */
@@ -41,13 +31,13 @@ static int send_failure(struct mg_connection *conn, int status, const char *mess
   }
   cJSON_Delete(object);
   if (!text) {
-    return send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"out of memory\"}");
+    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"out of memory\"}");
   }
   const char *reason = status == 404   ? "Not Found"
                        : status == 422 ? "Unprocessable Entity"
                        : status == 500 ? "Internal Server Error"
                                        : "Bad Request";
-  send_json_status(conn, status, reason, text);
+  ursatz_gui_send_json_status(conn, status, reason, text);
   free(text);
   return status;
 }
@@ -62,61 +52,6 @@ static int send_object(struct mg_connection *conn, cJSON *object) {
   send_json(conn, text);
   free(text);
   return 200;
-}
-
-/* Reads the request body into a newly allocated, NUL-terminated buffer (caller frees). NULL on allocation
- * failure, a read error, or a body larger than kMaxRequestBodySize. */
-static char *read_request_body(struct mg_connection *conn) {
-  size_t capacity = 4096;
-  char *buffer = malloc(capacity);
-  if (!buffer) {
-    return NULL;
-  }
-
-  size_t total = 0;
-  for (;;) {
-    if (total == capacity) {
-      if (capacity >= kMaxRequestBodySize) {
-        free(buffer);
-        return NULL;
-      }
-      char *grown = realloc(buffer, capacity * 2);
-      if (!grown) {
-        free(buffer);
-        return NULL;
-      }
-      buffer = grown;
-      capacity *= 2;
-    }
-
-    int n = mg_read(conn, buffer + total, capacity - total - 1);
-    if (n < 0) {
-      free(buffer);
-      return NULL;
-    }
-    if (n == 0) {
-      break;
-    }
-    total += (size_t)n;
-  }
-
-  buffer[total] = '\0';
-  return buffer;
-}
-
-/* The request body as a JSON object; NULL when it cannot be read, is not JSON, or is not an object. */
-static cJSON *read_json_body(struct mg_connection *conn) {
-  char *text = read_request_body(conn);
-  if (!text) {
-    return NULL;
-  }
-  cJSON *body = cJSON_Parse(text);
-  free(text);
-  if (!cJSON_IsObject(body)) {
-    cJSON_Delete(body);
-    return NULL;
-  }
-  return body;
 }
 
 static cJSON *string_or_null(const char *text) {
@@ -376,7 +311,7 @@ static int send_built_style(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_build_style(struct mg_connection *conn) {
-  cJSON *body = read_json_body(conn);
+  cJSON *body = ursatz_gui_read_json_body(conn, NULL);
   if (!body) {
     return send_failure(conn, 400, "invalid request body");
   }

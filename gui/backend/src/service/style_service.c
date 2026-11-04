@@ -1,4 +1,6 @@
 #include "style_service.h"
+#include "util/fs_util.h"
+#include "util/store_lock.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -33,61 +35,9 @@ static const char *kStylesDir = "styles";
 #define NAME_MAX_BYTES URSATZ_GUI_META_MAX_VALUE_BYTES
 #define ID_MAX_TRIES 8
 
-#ifdef _WIN32
-static SRWLOCK g_lock = SRWLOCK_INIT;
-#define LOCK() AcquireSRWLockExclusive(&g_lock)
-#define UNLOCK() ReleaseSRWLockExclusive(&g_lock)
-#else
-static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
-#define LOCK() pthread_mutex_lock(&g_lock)
-#define UNLOCK() pthread_mutex_unlock(&g_lock)
-#endif
-
-/* The helpers below mirror collection_service.c's file helpers; each store
- * keeps its own copy so neither depends on the other's internals. */
-
-static char *dup_string(const char *value) {
-    size_t len = strlen(value) + 1;
-    char *copy = malloc(len);
-    if (copy) {
-        memcpy(copy, value, len);
-    }
-    return copy;
-}
-
-static void iso_utc_now(char *out, size_t out_size) {
-    time_t now = time(NULL);
-    struct tm parts;
-#ifdef _WIN32
-    gmtime_s(&parts, &now);
-#else
-    gmtime_r(&now, &parts);
-#endif
-    strftime(out, out_size, "%Y-%m-%dT%H:%M:%SZ", &parts);
-}
-
-static bool make_dir(const char *path) {
-#ifdef _WIN32
-    return _mkdir(path) == 0;
-#else
-    return mkdir(path, 0755) == 0;
-#endif
-}
-
-static bool path_is_dir(const char *path) {
-#ifdef _WIN32
-    DWORD attributes = GetFileAttributesA(path);
-    return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-#else
-    struct stat st;
-    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-#endif
-}
-
-/* Creates the directory when it is missing. */
-static bool ensure_dir(const char *path) {
-    return path_is_dir(path) || make_dir(path) || path_is_dir(path);
-}
+static UrsatzGuiLock g_lock = URSATZ_GUI_LOCK_INIT;
+#define LOCK() ursatz_gui_lock_acquire(&g_lock)
+#define UNLOCK() ursatz_gui_lock_release(&g_lock)
 
 /* Renames from over to, replacing it (Windows cannot rename over a file). */
 static bool replace_file(const char *from, const char *to) {
@@ -99,71 +49,6 @@ static bool replace_file(const char *from, const char *to) {
         return false;
     }
     return true;
-}
-
-/* Writes data to "<path>.tmp", then renames it over path. */
-static bool write_file_atomic(const char *path, const void *data, size_t size) {
-    char tmp_path[PATH_BYTES + 8];
-    if (snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path) >= (int)sizeof(tmp_path)) {
-        return false;
-    }
-    FILE *file = fopen(tmp_path, "wb");
-    if (!file) {
-        return false;
-    }
-    bool ok = size == 0 || fwrite(data, 1, size, file) == size;
-    ok = (fclose(file) == 0) && ok;
-    if (!ok) {
-        remove(tmp_path);
-        return false;
-    }
-    return replace_file(tmp_path, path);
-}
-
-/* The whole file as a NUL-terminated string (caller frees), or NULL. */
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    size_t capacity = 4096;
-    size_t length = 0;
-    char *text = malloc(capacity);
-    while (text) {
-        size_t n = fread(text + length, 1, capacity - length - 1, file);
-        length += n;
-        if (n == 0 || length < capacity - 1) {
-            break;
-        }
-        capacity *= 2;
-        char *grown = realloc(text, capacity);
-        if (!grown) {
-            free(text);
-            text = NULL;
-        } else {
-            text = grown;
-        }
-    }
-    fclose(file);
-    if (text) {
-        text[length] = '\0';
-    }
-    return text;
-}
-
-/* Parses the JSON object in path; NULL when it is missing or not an object. */
-static cJSON *read_json_object(const char *path) {
-    char *text = read_file(path);
-    if (!text) {
-        return NULL;
-    }
-    cJSON *root = cJSON_Parse(text);
-    free(text);
-    if (root && !cJSON_IsObject(root)) {
-        cJSON_Delete(root);
-        return NULL;
-    }
-    return root;
 }
 
 /* --- skipped pieces ------------------------------------------------------- */
@@ -192,8 +77,8 @@ static bool skipped_add(SkippedList *list, const char *id, const char *reason) {
         list->items = grown;
         list->capacity = capacity;
     }
-    list->items[list->count].id = dup_string(id);
-    list->items[list->count].reason = dup_string(reason);
+    list->items[list->count].id = ursatz_gui_dup_string(id);
+    list->items[list->count].reason = ursatz_gui_dup_string(reason);
     if (!list->items[list->count].id || !list->items[list->count].reason) {
         free(list->items[list->count].id);
         free(list->items[list->count].reason);
@@ -238,7 +123,7 @@ static bool id_list_add(IdList *list, const char *id) {
         list->items = grown;
         list->capacity = capacity;
     }
-    list->items[list->count] = dup_string(id);
+    list->items[list->count] = ursatz_gui_dup_string(id);
     if (!list->items[list->count]) {
         return false;
     }
@@ -251,7 +136,7 @@ static bool id_list_add(IdList *list, const char *id) {
 static void free_strings(char **items, size_t count);
 
 static char *dup_or_null(const char *value) {
-    return value && value[0] != '\0' ? dup_string(value) : NULL;
+    return value && value[0] != '\0' ? ursatz_gui_dup_string(value) : NULL;
 }
 
 void ursatz_gui_style_brief_free(UrsatzGuiStyleBrief *brief) {
@@ -282,7 +167,7 @@ static bool strings_copy(char *const *items, size_t count, char ***out) {
         return false;
     }
     for (size_t i = 0; i < count; i++) {
-        copy[i] = dup_string(items[i]);
+        copy[i] = ursatz_gui_dup_string(items[i]);
         if (!copy[i]) {
             free_strings(copy, i);
             return false;
@@ -418,7 +303,7 @@ static UrsatzGuiStyleResult normalized_source_make(const UrsatzGuiStyleSource *i
             normalized_source_free(out);
             return too_long ? URSATZ_GUI_STYLE_ERR_INVALID_SOURCE : URSATZ_GUI_STYLE_ERR_ALLOC;
         }
-        out->tag = tag_text[0] != '\0' ? ursatz_gui_meta_normalize_tag(tag_text, &invalid) : dup_string("");
+        out->tag = tag_text[0] != '\0' ? ursatz_gui_meta_normalize_tag(tag_text, &invalid) : ursatz_gui_dup_string("");
         free(tag_text);
         if (!out->tag) {
             normalized_source_free(out);
@@ -435,7 +320,7 @@ static UrsatzGuiStyleResult normalized_source_make(const UrsatzGuiStyleSource *i
         if (!ursatz_gui_collection_is_valid_id(input->collection_id)) {
             return URSATZ_GUI_STYLE_ERR_INVALID_SOURCE;
         }
-        out->collection_id = dup_string(input->collection_id);
+        out->collection_id = ursatz_gui_dup_string(input->collection_id);
         return out->collection_id ? URSATZ_GUI_STYLE_OK : URSATZ_GUI_STYLE_ERR_ALLOC;
     }
 
@@ -673,7 +558,7 @@ static bool add_piece(StyleProfile *profile, const char *id, const char **reason
         return false;
     }
     snprintf(file_path, sizeof(file_path), "%s/meta.json", dir_path);
-    cJSON *meta = read_json_object(file_path);
+    cJSON *meta = ursatz_gui_read_json_object(file_path);
     if (!meta) {
         *reason = "not found";
         return false;
@@ -688,7 +573,7 @@ static bool add_piece(StyleProfile *profile, const char *id, const char **reason
     }
 
     snprintf(file_path, sizeof(file_path), "%s/analysis.json", dir_path);
-    char *document = read_file(file_path);
+    char *document = ursatz_gui_read_file(file_path, NULL);
     if (!document) {
         *reason = "unreadable analysis";
         return false;
@@ -919,7 +804,7 @@ static bool write_style_files(const char *dir, const char *id, const char *name,
         return false;
     }
     bool ok = style_model_file_write(collected->profile, name, tmp_path) == STYLE_MODEL_FILE_OK &&
-              replace_file(tmp_path, model_path) && write_file_atomic(meta_path, text, strlen(text));
+              replace_file(tmp_path, model_path) && ursatz_gui_write_file_atomic(meta_path, text, strlen(text));
     free(text);
     if (!ok) {
         remove(tmp_path);
@@ -1023,7 +908,7 @@ UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiSty
     char style_dir[PATH_BYTES];
     bool dir_made = false;
     result = URSATZ_GUI_STYLE_ERR_FAILED;
-    if (ensure_dir(kStylesDir)) {
+    if (ursatz_gui_ensure_dir(kStylesDir)) {
         for (int attempt = 0; attempt < ID_MAX_TRIES && !dir_made; attempt++) {
             id = ursatz_gui_new_id("sty");
             if (!id) {
@@ -1031,7 +916,7 @@ UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiSty
                 break;
             }
             if (snprintf(style_dir, sizeof(style_dir), "%s/%s", kStylesDir, id) < (int)sizeof(style_dir)) {
-                dir_made = make_dir(style_dir);
+                dir_made = ursatz_gui_make_dir(style_dir);
             }
             if (!dir_made) {
                 free(id);
@@ -1041,7 +926,7 @@ UrsatzGuiStyleResult ursatz_gui_style_build(const char *name, const UrsatzGuiSty
     }
     if (dir_made) {
         char now[32];
-        iso_utc_now(now, sizeof(now));
+        ursatz_gui_iso_utc_now(now, sizeof(now));
         if (write_style_files(style_dir, id, final_name, now, now, &normalized, &collected)) {
             result = URSATZ_GUI_STYLE_OK;
         } else {
@@ -1163,7 +1048,7 @@ static bool style_dir_path(const char *id, char *out, size_t out_size) {
 /* A copy of a string member, "" when it is absent or not a string. */
 static char *string_member(const cJSON *object, const char *key) {
     const cJSON *item = cJSON_GetObjectItemCaseSensitive(object, key);
-    return dup_string(cJSON_IsString(item) && item->valuestring ? item->valuestring : "");
+    return ursatz_gui_dup_string(cJSON_IsString(item) && item->valuestring ? item->valuestring : "");
 }
 
 /* Copies the string members of an array; *out is NULL when there are none. */
@@ -1184,7 +1069,7 @@ static bool string_array_copy(const cJSON *array, char ***out, size_t *out_count
         if (!cJSON_IsString(item) || !item->valuestring) {
             continue;
         }
-        items[count] = dup_string(item->valuestring);
+        items[count] = ursatz_gui_dup_string(item->valuestring);
         if (!items[count]) {
             free_strings(items, count);
             return false;
@@ -1350,13 +1235,13 @@ static UrsatzGuiStyleResult load_style(const char *id, UrsatzGuiStyle *style) {
         return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
     }
     snprintf(path, sizeof(path), "%s/meta.json", dir);
-    cJSON *meta = read_json_object(path);
+    cJSON *meta = ursatz_gui_read_json_object(path);
     if (!meta) {
         return URSATZ_GUI_STYLE_ERR_NOT_FOUND;
     }
 
     /* The directory name is the id; a copy of it inside the file is not trusted. */
-    style->id = dup_string(id);
+    style->id = ursatz_gui_dup_string(id);
     style->name = string_member(meta, "name");
     style->created_at = string_member(meta, "created_at");
     style->updated_at = string_member(meta, "updated_at");
@@ -1571,8 +1456,8 @@ static UrsatzGuiStyleResult load_statistics(const char *model_path, UrsatzGuiSty
 
         size_t total_labels = end - start;
         UrsatzGuiStyleLabel *labels = calloc(total_labels, sizeof(*labels));
-        category->dimension = dup_string(style_dimension_name(dimension));
-        category->category = dup_string(statistics[start].category);
+        category->dimension = ursatz_gui_dup_string(style_dimension_name(dimension));
+        category->category = ursatz_gui_dup_string(statistics[start].category);
         if (!labels || !category->dimension || !category->category) {
             free(labels);
             result = URSATZ_GUI_STYLE_ERR_ALLOC;
@@ -1587,7 +1472,7 @@ static UrsatzGuiStyleResult load_statistics(const char *model_path, UrsatzGuiSty
 
         size_t kept = total_labels < MAX_LABELS_PER_CATEGORY ? total_labels : MAX_LABELS_PER_CATEGORY;
         for (size_t i = 0; result == URSATZ_GUI_STYLE_OK && i < kept; i++) {
-            labels[i].label = dup_string(labels[i].label);
+            labels[i].label = ursatz_gui_dup_string(labels[i].label);
             if (!labels[i].label) {
                 for (size_t j = 0; j < i; j++) {
                     free(labels[j].label);
@@ -1670,7 +1555,7 @@ UrsatzGuiStyleResult ursatz_gui_style_rebuild(const char *id) {
         if (result == URSATZ_GUI_STYLE_OK) {
             char dir[PATH_BYTES];
             char now[32];
-            iso_utc_now(now, sizeof(now));
+            ursatz_gui_iso_utc_now(now, sizeof(now));
             style_dir_path(id, dir, sizeof(dir));
             if (!write_style_files(dir, style.id, style.name, style.created_at, now, &source, &collected)) {
                 result = URSATZ_GUI_STYLE_ERR_FAILED;
@@ -1691,11 +1576,11 @@ UrsatzGuiStyleResult ursatz_gui_style_delete(const char *id) {
     }
     LOCK();
     UrsatzGuiStyleResult result = URSATZ_GUI_STYLE_OK;
-    if (!path_is_dir(dir)) {
+    if (!ursatz_gui_path_is_dir(dir)) {
         result = URSATZ_GUI_STYLE_ERR_NOT_FOUND;
     } else {
         remove_style_dir(dir);
-        if (path_is_dir(dir)) {
+        if (ursatz_gui_path_is_dir(dir)) {
             result = URSATZ_GUI_STYLE_ERR_FAILED;
         }
     }

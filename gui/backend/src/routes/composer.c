@@ -8,20 +8,11 @@
 #include <civetweb.h>
 #include <cJSON.h>
 
+#include "route_util.h"
 #include "../service/composer_service.h"
 
 static const char *kComposerPrefix = "/api/composer";
 #define MAX_SEGMENTS 8
-
-/* Sends body as application/json with the given status line. */
-static int send_json_status(struct mg_connection *conn, int status, const char *reason, const char *body) {
-  size_t len = strlen(body);
-  mg_printf(conn,
-            "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
-            status, reason, len);
-  mg_write(conn, body, len);
-  return status;
-}
 
 static const char *reason_phrase(int status) {
   switch (status) {
@@ -49,9 +40,9 @@ static int send_object(struct mg_connection *conn, int status, cJSON *object) {
   char *text = object ? cJSON_PrintUnformatted(object) : NULL;
   cJSON_Delete(object);
   if (!text) {
-    return send_json_status(conn, 500, "Internal Server Error", "{\"error\":\"out of memory\"}");
+    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"error\":\"out of memory\"}");
   }
-  int sent = send_json_status(conn, status, reason_phrase(status), text);
+  int sent = ursatz_gui_send_json_status(conn, status, reason_phrase(status), text);
   free(text);
   return sent;
 }

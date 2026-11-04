@@ -1,4 +1,6 @@
 #include "subject_service.h"
+#include "util/fs_util.h"
+#include "util/store_lock.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -29,38 +31,9 @@
 static char g_dir[300];
 static bool g_ready = false;
 
-#ifdef _WIN32
-static SRWLOCK g_lock = SRWLOCK_INIT;
-#define LOCK() AcquireSRWLockExclusive(&g_lock)
-#define UNLOCK() ReleaseSRWLockExclusive(&g_lock)
-#else
-static pthread_mutex_t g_lock = PTHREAD_MUTEX_INITIALIZER;
-#define LOCK() pthread_mutex_lock(&g_lock)
-#define UNLOCK() pthread_mutex_unlock(&g_lock)
-#endif
-
-/* The helpers below mirror collection_service.c's file helpers; each store
- * keeps its own copy so neither depends on the other's internals. */
-
-static char *dup_string(const char *value) {
-    size_t len = strlen(value) + 1;
-    char *copy = malloc(len);
-    if (copy) {
-        memcpy(copy, value, len);
-    }
-    return copy;
-}
-
-static void iso_utc_now(char *out, size_t out_size) {
-    time_t now = time(NULL);
-    struct tm parts;
-#ifdef _WIN32
-    gmtime_s(&parts, &now);
-#else
-    gmtime_r(&now, &parts);
-#endif
-    strftime(out, out_size, "%Y-%m-%dT%H:%M:%SZ", &parts);
-}
+static UrsatzGuiLock g_lock = URSATZ_GUI_LOCK_INIT;
+#define LOCK() ursatz_gui_lock_acquire(&g_lock)
+#define UNLOCK() ursatz_gui_lock_release(&g_lock)
 
 static bool path_exists(const char *path) {
 #ifdef _WIN32
@@ -71,107 +44,12 @@ static bool path_exists(const char *path) {
 #endif
 }
 
-static bool path_is_dir(const char *path) {
-#ifdef _WIN32
-    DWORD attributes = GetFileAttributesA(path);
-    return attributes != INVALID_FILE_ATTRIBUTES && (attributes & FILE_ATTRIBUTE_DIRECTORY) != 0;
-#else
-    struct stat st;
-    return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
-#endif
-}
-
-static bool make_dir(const char *path) {
-#ifdef _WIN32
-    return _mkdir(path) == 0;
-#else
-    return mkdir(path, 0755) == 0;
-#endif
-}
-
-/* Creates the directory when it is absent. */
-static bool ensure_dir(const char *path) {
-    return path_is_dir(path) || make_dir(path) || path_is_dir(path);
-}
-
-/* Writes data to "<path>.tmp", then renames it over path. */
-static bool write_file_atomic(const char *path, const void *data, size_t size) {
-    char tmp_path[PATH_BYTES + 8];
-    if (snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path) >= (int)sizeof(tmp_path)) {
-        return false;
-    }
-    FILE *file = fopen(tmp_path, "wb");
-    if (!file) {
-        return false;
-    }
-    bool ok = size == 0 || fwrite(data, 1, size, file) == size;
-    ok = (fclose(file) == 0) && ok;
-    if (!ok) {
-        remove(tmp_path);
-        return false;
-    }
-#ifdef _WIN32
-    remove(path);
-#endif
-    if (rename(tmp_path, path) != 0) {
-        remove(tmp_path);
-        return false;
-    }
-    return true;
-}
-
-/* The whole file as a NUL-terminated string (caller frees), or NULL. */
-static char *read_file(const char *path) {
-    FILE *file = fopen(path, "rb");
-    if (!file) {
-        return NULL;
-    }
-    size_t capacity = 4096;
-    size_t length = 0;
-    char *text = malloc(capacity);
-    while (text) {
-        size_t n = fread(text + length, 1, capacity - length - 1, file);
-        length += n;
-        if (n == 0 || length < capacity - 1) {
-            break;
-        }
-        capacity *= 2;
-        char *grown = realloc(text, capacity);
-        if (!grown) {
-            free(text);
-            text = NULL;
-        } else {
-            text = grown;
-        }
-    }
-    fclose(file);
-    if (text) {
-        text[length] = '\0';
-    }
-    return text;
-}
-
-/* Parses the JSON object in path (caller frees), or NULL when absent or not an object. */
-static cJSON *read_json_object(const char *path) {
-    char *text = read_file(path);
-    if (!text) {
-        return NULL;
-    }
-    cJSON *root = cJSON_Parse(text);
-    free(text);
-    if (!cJSON_IsObject(root)) {
-        cJSON_Delete(root);
-        return NULL;
-    }
-    return root;
-}
-
 static bool write_json(const char *path, const cJSON *json) {
     char *text = cJSON_Print(json);
     if (!text) {
         return false;
     }
-    bool ok = write_file_atomic(path, text, strlen(text));
+    bool ok = ursatz_gui_write_file_atomic(path, text, strlen(text));
     free(text);
     return ok;
 }
@@ -215,7 +93,7 @@ static bool list_names(const char *dir, char ***out_names, size_t *out_count) {
                 names = grown;
                 capacity = grown_capacity;
             }
-            names[count] = dup_string(name);
+            names[count] = ursatz_gui_dup_string(name);
             if (!names[count]) {
                 goto fail;
             }
@@ -370,7 +248,7 @@ static UrsatzGuiSubjectResult load_subject_locked(const char *id, cJSON **out) {
     if (!subject_path(id, path, sizeof(path))) {
         return URSATZ_GUI_SUBJECT_ERR_INVALID_ID;
     }
-    cJSON *subject = read_json_object(path);
+    cJSON *subject = ursatz_gui_read_json_object(path);
     if (!subject) {
         return path_exists(path) ? URSATZ_GUI_SUBJECT_ERR_FAILED : URSATZ_GUI_SUBJECT_ERR_NOT_FOUND;
     }
@@ -395,7 +273,7 @@ bool ursatz_gui_subject_service_init(const char *dir) {
         return false;
     }
     LOCK();
-    g_ready = snprintf(g_dir, sizeof(g_dir), "%s", dir) < (int)sizeof(g_dir) && ensure_dir(g_dir);
+    g_ready = snprintf(g_dir, sizeof(g_dir), "%s", dir) < (int)sizeof(g_dir) && ursatz_gui_ensure_dir(g_dir);
     bool ok = g_ready;
     UNLOCK();
     return ok;
@@ -446,7 +324,7 @@ static UrsatzGuiSubjectResult create_subject_locked(const char *name, const char
     cJSON *subject = NULL;
     if (result == URSATZ_GUI_SUBJECT_OK) {
         char now[32];
-        iso_utc_now(now, sizeof(now));
+        ursatz_gui_iso_utc_now(now, sizeof(now));
         subject = cJSON_CreateObject();
         bool ok = subject && cJSON_AddStringToObject(subject, "id", id) &&
                   cJSON_AddStringToObject(subject, "name", clean_name) &&
@@ -595,7 +473,7 @@ UrsatzGuiSubjectResult ursatz_gui_subject_update(const char *id, const char *nam
     }
     if (result == URSATZ_GUI_SUBJECT_OK) {
         char now[32];
-        iso_utc_now(now, sizeof(now));
+        ursatz_gui_iso_utc_now(now, sizeof(now));
         bool ok = (!clean_name || set_string_member(subject, "name", clean_name)) &&
                   (!kind || set_string_member(subject, "kind", kind)) &&
                   (!clean_note || set_string_member(subject, "note", clean_note)) &&
@@ -712,7 +590,7 @@ static cJSON *list_member(cJSON *subject, const char *name) {
 
 static UrsatzGuiSubjectResult touch_subject(cJSON *subject) {
     char now[32];
-    iso_utc_now(now, sizeof(now));
+    ursatz_gui_iso_utc_now(now, sizeof(now));
     return set_string_member(subject, "updated_at", now) ? URSATZ_GUI_SUBJECT_OK : URSATZ_GUI_SUBJECT_ERR_ALLOC;
 }
 
