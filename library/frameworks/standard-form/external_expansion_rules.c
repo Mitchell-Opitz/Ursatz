@@ -13,19 +13,7 @@ static const char *const NAMES[STANDARD_FORM_EXTERNAL_EXPANSION_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
     NAMES, STANDARD_FORM_EXTERNAL_EXPANSION_RULE_COUNT);
 
-static bool valid_rule(StandardFormExternalExpansionRule which) {
-    return which >= 0 && which < STANDARD_FORM_EXTERNAL_EXPANSION_RULE_COUNT;
-}
-
-const Rule *standard_form_external_expansion_rule(StandardFormExternalExpansionRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_form_external_expansion_constraint(StandardFormExternalExpansionRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_form_external_expansion, StandardFormExternalExpansionRule, STANDARD_FORM_EXTERNAL_EXPANSION_RULE_COUNT, g_table)
 
 bool standard_form_external_kind_is_suffix(ExternalExpansionKind kind) {
     return kind == EXTERNAL_EXPANSION_KIND_POST_CADENTIAL_EXTENSION || kind == EXTERNAL_EXPANSION_KIND_CODETTA ||

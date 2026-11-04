@@ -11,19 +11,7 @@ static const char *const NAMES[WESTERN_PERIODS_RULE_COUNT] = {"period-boundaries
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(western_periods_framework, "western-periods",
     NAMES, WESTERN_PERIODS_RULE_COUNT);
 
-static bool valid_rule(WesternPeriodsRule which) {
-    return which >= 0 && which < WESTERN_PERIODS_RULE_COUNT;
-}
-
-const Rule *western_periods_rule(WesternPeriodsRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *western_periods_constraint(WesternPeriodsRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(western_periods, WesternPeriodsRule, WESTERN_PERIODS_RULE_COUNT, g_table)
 
 typedef struct {
     const char *name;

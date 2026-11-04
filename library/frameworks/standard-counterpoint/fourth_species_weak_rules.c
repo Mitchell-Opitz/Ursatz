@@ -6,6 +6,7 @@
 #include "counterpoint_interval.h"
 #include "motion_rules.h"
 #include "rule_table.h"
+#include "species_helpers.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_WEAK_COUNT] = {
     "consonant", "no-repeated-perfect", "max-same-imperfect-run", "no-direct-perfect", "no-interior-unison"};
@@ -60,17 +61,6 @@ static bool weak_category(const Exercise *exercise, size_t bar, StandardCounterp
            standard_counterpoint_classify_interval(interval, category);
 }
 
-/* The perfect interval a weak beat makes, with a unison read as an octave:
-   5 for a fifth, 8 for an octave or unison, 0 for anything else. */
-static int perfect_class(const StandardCounterpointInterval *interval) {
-    StandardCounterpointIntervalCategory category;
-    if (!standard_counterpoint_classify_interval(interval, &category) ||
-        category != STANDARD_COUNTERPOINT_PERFECT_CONSONANCE) {
-        return 0;
-    }
-    return interval->simple_size == 5 ? 5 : 8;
-}
-
 static bool check_consonant(const Exercise *exercise) {
     for (size_t bar = 0; bar < weak_bars(exercise); bar++) {
         if (standard_counterpoint_fourth_species_bar_is_broken(exercise, bar)) {
@@ -92,8 +82,8 @@ static bool check_no_repeated_perfect(const Exercise *exercise) {
             !standard_counterpoint_fourth_species_weak_interval(exercise, bar + 1, &second)) {
             return false;
         }
-        int a = perfect_class(&first);
-        if (a != 0 && a == perfect_class(&second)) {
+        int a = standard_counterpoint_species_perfect_class(&first);
+        if (a != 0 && a == standard_counterpoint_species_perfect_class(&second)) {
             return false;
         }
     }
@@ -129,7 +119,7 @@ static bool check_no_direct_perfect(const Exercise *exercise) {
         if (!standard_counterpoint_fourth_species_weak_interval(exercise, bar + 1, &next)) {
             return false;
         }
-        if (perfect_class(&next) == 0) {
+        if (standard_counterpoint_species_perfect_class(&next) == 0) {
             continue;
         }
         const PitchSpelling *cantus_from = exercise->cantus->notes[bar];

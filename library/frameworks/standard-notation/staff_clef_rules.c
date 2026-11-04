@@ -10,19 +10,7 @@ static const char *const NAMES[STANDARD_NOTATION_STAFF_RULE_COUNT] = {"staff-fiv
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_notation_framework, "standard-notation",
     NAMES, STANDARD_NOTATION_STAFF_RULE_COUNT);
 
-static bool valid_rule(StandardNotationStaffRule which) {
-    return which >= 0 && which < STANDARD_NOTATION_STAFF_RULE_COUNT;
-}
-
-const Rule *standard_notation_staff_rule(StandardNotationStaffRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_notation_staff_constraint(StandardNotationStaffRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_notation_staff, StandardNotationStaffRule, STANDARD_NOTATION_STAFF_RULE_COUNT, g_table)
 
 int standard_notation_staff_line_count(void) {
     return STAFF_POSITION_LINE_COUNT;

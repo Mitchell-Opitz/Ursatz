@@ -13,19 +13,7 @@ static const char *const NAMES[STANDARD_TONALITY_TRIAD_IN_KEY_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
     NAMES, STANDARD_TONALITY_TRIAD_IN_KEY_RULE_COUNT);
 
-static bool valid_rule(StandardTonalityTriadInKeyRule which) {
-    return which >= 0 && which < STANDARD_TONALITY_TRIAD_IN_KEY_RULE_COUNT;
-}
-
-const Rule *standard_tonality_triad_in_key_rule(StandardTonalityTriadInKeyRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_tonality_triad_in_key_constraint(StandardTonalityTriadInKeyRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_tonality_triad_in_key, StandardTonalityTriadInKeyRule, STANDARD_TONALITY_TRIAD_IN_KEY_RULE_COUNT, g_table)
 
 #define MA STANDARD_TONALITY_TRIAD_MAJOR
 #define MI STANDARD_TONALITY_TRIAD_MINOR

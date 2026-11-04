@@ -10,19 +10,7 @@ static const char *const NAMES[STANDARD_TEXTURE_CLASSIFICATION_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_texture_framework, "standard-texture",
     NAMES, STANDARD_TEXTURE_CLASSIFICATION_RULE_COUNT);
 
-static bool valid_rule(StandardTextureClassificationRule which) {
-    return which >= 0 && which < STANDARD_TEXTURE_CLASSIFICATION_RULE_COUNT;
-}
-
-const Rule *standard_texture_classification_rule(StandardTextureClassificationRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_texture_classification_constraint(StandardTextureClassificationRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_texture_classification, StandardTextureClassificationRule, STANDARD_TEXTURE_CLASSIFICATION_RULE_COUNT, g_table)
 
 bool standard_texture_features_valid(const StandardTextureFeatures *features) {
     if (features == NULL || features->voice_count < 1) {

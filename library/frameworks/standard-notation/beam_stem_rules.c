@@ -7,19 +7,7 @@ static const char *const NAMES[STANDARD_NOTATION_BEAM_STEM_RULE_COUNT] = {"beam-
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_notation_framework, "standard-notation",
     NAMES, STANDARD_NOTATION_BEAM_STEM_RULE_COUNT);
 
-static bool valid_rule(StandardNotationBeamStemRule which) {
-    return which >= 0 && which < STANDARD_NOTATION_BEAM_STEM_RULE_COUNT;
-}
-
-const Rule *standard_notation_beam_stem_rule(StandardNotationBeamStemRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_notation_beam_stem_constraint(StandardNotationBeamStemRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_notation_beam_stem, StandardNotationBeamStemRule, STANDARD_NOTATION_BEAM_STEM_RULE_COUNT, g_table)
 
 /*
  * Greatest distance above and below the middle line among the notes.

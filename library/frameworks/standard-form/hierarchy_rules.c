@@ -10,19 +10,7 @@ static const char *const NAMES[STANDARD_FORM_HIERARCHY_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
     NAMES, STANDARD_FORM_HIERARCHY_RULE_COUNT);
 
-static bool valid_rule(StandardFormHierarchyRule which) {
-    return which >= 0 && which < STANDARD_FORM_HIERARCHY_RULE_COUNT;
-}
-
-const Rule *standard_form_hierarchy_rule(StandardFormHierarchyRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_form_hierarchy_constraint(StandardFormHierarchyRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_form_hierarchy, StandardFormHierarchyRule, STANDARD_FORM_HIERARCHY_RULE_COUNT, g_table)
 
 bool standard_form_level_contains(FormLevel outer, FormLevel inner) {
     return form_level_valid(outer) && form_level_valid(inner) && outer < inner;

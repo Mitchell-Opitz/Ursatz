@@ -10,19 +10,7 @@ static const char *const NAMES[STANDARD_FORM_SEGMENTATION_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
     NAMES, STANDARD_FORM_SEGMENTATION_RULE_COUNT);
 
-static bool valid_rule(StandardFormSegmentationRule which) {
-    return which >= 0 && which < STANDARD_FORM_SEGMENTATION_RULE_COUNT;
-}
-
-const Rule *standard_form_segmentation_rule(StandardFormSegmentationRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_form_segmentation_constraint(StandardFormSegmentationRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_form_segmentation, StandardFormSegmentationRule, STANDARD_FORM_SEGMENTATION_RULE_COUNT, g_table)
 
 static const char *const STEP_NAMES[STANDARD_FORM_SEGMENTATION_STEP_COUNT] = {
     "identify-closure", "divide-into-ideas", "bracket-ideas", "verify-cadences"};

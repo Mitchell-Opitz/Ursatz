@@ -9,19 +9,7 @@ static const char *const NAMES[STANDARD_METER_TIME_SIGNATURE_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
     NAMES, STANDARD_METER_TIME_SIGNATURE_RULE_COUNT);
 
-static bool valid_rule(StandardMeterTimeSignatureRule which) {
-    return which >= 0 && which < STANDARD_METER_TIME_SIGNATURE_RULE_COUNT;
-}
-
-const Rule *standard_meter_time_signature_rule(StandardMeterTimeSignatureRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_meter_time_signature_constraint(StandardMeterTimeSignatureRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_meter_time_signature, StandardMeterTimeSignatureRule, STANDARD_METER_TIME_SIGNATURE_RULE_COUNT, g_table)
 
 bool standard_meter_beats_are_simple(unsigned beats) {
     return beats >= 2 && beats <= 4;

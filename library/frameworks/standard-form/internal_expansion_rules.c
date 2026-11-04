@@ -14,19 +14,7 @@ static const char *const NAMES[STANDARD_FORM_INTERNAL_EXPANSION_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
     NAMES, STANDARD_FORM_INTERNAL_EXPANSION_RULE_COUNT);
 
-static bool valid_rule(StandardFormInternalExpansionRule which) {
-    return which >= 0 && which < STANDARD_FORM_INTERNAL_EXPANSION_RULE_COUNT;
-}
-
-const Rule *standard_form_internal_expansion_rule(StandardFormInternalExpansionRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_form_internal_expansion_constraint(StandardFormInternalExpansionRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_form_internal_expansion, StandardFormInternalExpansionRule, STANDARD_FORM_INTERNAL_EXPANSION_RULE_COUNT, g_table)
 
 bool standard_form_internal_expansion_inside(size_t beginning_end, size_t cadence_start, size_t position) {
     return position >= beginning_end && position < cadence_start;

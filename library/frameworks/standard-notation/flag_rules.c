@@ -8,19 +8,7 @@ static const char *const NAMES[STANDARD_NOTATION_FLAG_RULE_COUNT] = {"flag-down-
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_notation_framework, "standard-notation",
     NAMES, STANDARD_NOTATION_FLAG_RULE_COUNT);
 
-static bool valid_rule(StandardNotationFlagRule which) {
-    return which >= 0 && which < STANDARD_NOTATION_FLAG_RULE_COUNT;
-}
-
-const Rule *standard_notation_flag_rule(StandardNotationFlagRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_notation_flag_constraint(StandardNotationFlagRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_notation_flag, StandardNotationFlagRule, STANDARD_NOTATION_FLAG_RULE_COUNT, g_table)
 
 FlagFacing standard_notation_flag_facing(StemDirection stem_direction) {
     return stem_direction == STEM_DIRECTION_DOWN ? FLAG_FACING_INWARD : FLAG_FACING_OUTWARD;

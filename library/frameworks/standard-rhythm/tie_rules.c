@@ -8,19 +8,7 @@ static const char *const NAMES[STANDARD_RHYTHM_TIE_RULE_COUNT] = {"tie-same-pitc
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_rhythm_framework, "standard-rhythm",
     NAMES, STANDARD_RHYTHM_TIE_RULE_COUNT);
 
-static bool valid_rule(StandardRhythmTieRule which) {
-    return which >= 0 && which < STANDARD_RHYTHM_TIE_RULE_COUNT;
-}
-
-const Rule *standard_rhythm_tie_rule(StandardRhythmTieRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_rhythm_tie_constraint(StandardRhythmTieRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_rhythm_tie, StandardRhythmTieRule, STANDARD_RHYTHM_TIE_RULE_COUNT, g_table)
 
 bool standard_rhythm_tie_same_pitch(const PitchSpelling *first, const PitchSpelling *second) {
     if (first == NULL || second == NULL) {

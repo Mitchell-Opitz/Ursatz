@@ -9,19 +9,7 @@ static const char *const NAMES[STANDARD_METER_ANACRUSIS_RULE_COUNT] = {"anacrusi
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
     NAMES, STANDARD_METER_ANACRUSIS_RULE_COUNT);
 
-static bool valid_rule(StandardMeterAnacrusisRule which) {
-    return which >= 0 && which < STANDARD_METER_ANACRUSIS_RULE_COUNT;
-}
-
-const Rule *standard_meter_anacrusis_rule(StandardMeterAnacrusisRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_meter_anacrusis_constraint(StandardMeterAnacrusisRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_meter_anacrusis, StandardMeterAnacrusisRule, STANDARD_METER_ANACRUSIS_RULE_COUNT, g_table)
 
 /* measure length minus pickup length, only when the pickup is valid. */
 static bool measure_minus_pickup(const TimeSignature *time_signature, const Duration *pickup, Duration **out) {

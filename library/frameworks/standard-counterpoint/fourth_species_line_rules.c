@@ -8,6 +8,7 @@
 #include "counterpoint_pitch.h"
 #include "counterpoint_subject.h"
 #include "rule_table.h"
+#include "species_helpers.h"
 
 #define BUFFER_SIZE (STANDARD_COUNTERPOINT_FOURTH_SPECIES_SLOTS_PER_BAR * STANDARD_COUNTERPOINT_FOURTH_SPECIES_MAX_BARS)
 
@@ -71,27 +72,6 @@ static bool read_attacks(const Exercise *exercise, Attacks *attacks) {
     return true;
 }
 
-static bool check_leaps(const Attacks *attacks) {
-    for (size_t j = 1; j < attacks->line.count; j++) {
-        StandardCounterpointInterval interval;
-        if (!standard_counterpoint_interval_between(attacks->notes[j - 1], attacks->notes[j], &interval)) {
-            return false;
-        }
-        if (interval.size > 8 || interval.quality == STANDARD_COUNTERPOINT_QUALITY_AUGMENTED ||
-            interval.quality == STANDARD_COUNTERPOINT_QUALITY_DIMINISHED || interval.simple_size == 7) {
-            return false;
-        }
-        if (interval.simple_size == 6) {
-            bool ascending_minor = interval.quality == STANDARD_COUNTERPOINT_QUALITY_MINOR &&
-                                   standard_counterpoint_direction(attacks->notes[j - 1], attacks->notes[j]) > 0;
-            if (!ascending_minor) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
-
 static bool check_downward_steps(const Attacks *attacks) {
     size_t total = attacks->line.count - 1;
     size_t down = 0;
@@ -151,7 +131,7 @@ bool standard_counterpoint_fourth_species_line_rule_holds(StandardCounterpointFo
     }
     switch (which) {
         case STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_LEAPS:
-            return check_leaps(&attacks);
+            return standard_counterpoint_species_check_leaps(attacks.notes, attacks.line.count, NULL, NULL);
         case STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_DOWNWARD_STEPS:
             return check_downward_steps(&attacks);
         case STANDARD_COUNTERPOINT_FOURTH_SPECIES_LINE_UPWARD_LEAP:

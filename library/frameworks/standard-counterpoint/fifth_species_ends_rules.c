@@ -7,6 +7,7 @@
 #include "counterpoint_pitch.h"
 #include "counterpoint_subject.h"
 #include "rule_table.h"
+#include "species_helpers.h"
 
 #define SLOTS STANDARD_COUNTERPOINT_FIFTH_SPECIES_SLOTS_PER_BAR
 
@@ -44,11 +45,6 @@ const char *standard_counterpoint_fifth_species_ends_rule_name(StandardCounterpo
 
 typedef StandardCounterpointFifthSpeciesExercise Exercise;
 
-static bool is_tonic(const PitchSpelling *note, const PitchSpelling *tonic) {
-    return pitch_spelling_letter(note) == pitch_spelling_letter(tonic) &&
-           pitch_spelling_accidental(note) == pitch_spelling_accidental(tonic);
-}
-
 static bool check_begin(const Exercise *exercise) {
     size_t slot = 0;
     while (standard_counterpoint_fifth_species_pitch(exercise, slot) == NULL) {
@@ -63,7 +59,7 @@ static bool check_begin(const Exercise *exercise) {
 
 static bool check_final_bar(const Exercise *exercise, const PitchSpelling *tonic) {
     size_t final_slot = exercise->counterpoint->count - SLOTS;
-    return is_tonic(standard_counterpoint_fifth_species_pitch(exercise, final_slot), tonic);
+    return standard_counterpoint_species_is_tonic(standard_counterpoint_fifth_species_pitch(exercise, final_slot), tonic);
 }
 
 static bool check_clausula_vera(const Exercise *exercise) {

@@ -6,6 +6,7 @@
 #include "counterpoint_pitch.h"
 #include "counterpoint_subject.h"
 #include "rule_table.h"
+#include "species_helpers.h"
 #include "pitch/midi_pitch.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_SECOND_SPECIES_ENDS_COUNT] = {"begin", "opening-bar", "final-bar",
@@ -42,19 +43,6 @@ const char *standard_counterpoint_second_species_ends_rule_name(StandardCounterp
 
 typedef StandardCounterpointSecondSpeciesExercise Exercise;
 
-static bool is_tonic(const PitchSpelling *note, const PitchSpelling *tonic) {
-    return pitch_spelling_letter(note) == pitch_spelling_letter(tonic) &&
-           pitch_spelling_accidental(note) == pitch_spelling_accidental(tonic);
-}
-
-/* A perfect fifth above the tonic, at any octave. */
-static bool is_sol(const PitchSpelling *note, const PitchSpelling *tonic) {
-    int letters = (((standard_counterpoint_step_number(note) - standard_counterpoint_step_number(tonic)) % 7) + 7) % 7;
-    int semitones =
-        pitch_class_of_midi(standard_counterpoint_semitone_number(note) - standard_counterpoint_semitone_number(tonic));
-    return letters == 4 && semitones == 7;
-}
-
 static const StandardCounterpointSlot *slot_at(const Exercise *exercise, size_t slot) {
     return &exercise->counterpoint->slots[slot];
 }
@@ -65,9 +53,9 @@ static bool check_begin(const Exercise *exercise, const PitchSpelling *tonic) {
         first = slot_at(exercise, 1);
     }
     if (exercise->cantus_part == STANDARD_COUNTERPOINT_CANTUS_IN_LOWER) {
-        return is_tonic(first->pitch, tonic) || is_sol(first->pitch, tonic);
+        return standard_counterpoint_species_is_tonic(first->pitch, tonic) || standard_counterpoint_species_is_sol(first->pitch, tonic);
     }
-    return is_tonic(first->pitch, tonic);
+    return standard_counterpoint_species_is_tonic(first->pitch, tonic);
 }
 
 static bool check_opening_bar(const Exercise *exercise) {
@@ -79,7 +67,7 @@ static bool check_final_bar(const Exercise *exercise, const PitchSpelling *tonic
     const StandardCounterpointSlot *strong = slot_at(exercise, last_slot - 1);
     const StandardCounterpointSlot *weak = slot_at(exercise, last_slot);
     return strong->kind == STANDARD_COUNTERPOINT_SLOT_ATTACK && weak->kind == STANDARD_COUNTERPOINT_SLOT_TIE &&
-           is_tonic(strong->pitch, tonic);
+           standard_counterpoint_species_is_tonic(strong->pitch, tonic);
 }
 
 static bool check_clausula_vera(const Exercise *exercise) {

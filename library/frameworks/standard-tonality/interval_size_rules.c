@@ -11,19 +11,7 @@ static const char *const NAMES[STANDARD_TONALITY_INTERVAL_SIZE_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
     NAMES, STANDARD_TONALITY_INTERVAL_SIZE_RULE_COUNT);
 
-static bool valid_rule(StandardTonalityIntervalSizeRule which) {
-    return which >= 0 && which < STANDARD_TONALITY_INTERVAL_SIZE_RULE_COUNT;
-}
-
-const Rule *standard_tonality_interval_size_rule(StandardTonalityIntervalSizeRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_tonality_interval_size_constraint(StandardTonalityIntervalSizeRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_tonality_interval_size, StandardTonalityIntervalSizeRule, STANDARD_TONALITY_INTERVAL_SIZE_RULE_COUNT, g_table)
 
 static const char *const SIZE_NAMES[13] = {"unison", "second", "third",  "fourth",   "fifth",
                                            "sixth",  "seventh", "octave", "ninth",    "tenth",

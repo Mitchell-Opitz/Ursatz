@@ -9,19 +9,7 @@ static const char *const NAMES[STANDARD_METER_HYPERMETER_RULE_COUNT] = {"hyperme
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
     NAMES, STANDARD_METER_HYPERMETER_RULE_COUNT);
 
-static bool valid_rule(StandardMeterHypermeterRule which) {
-    return which >= 0 && which < STANDARD_METER_HYPERMETER_RULE_COUNT;
-}
-
-const Rule *standard_meter_hypermeter_rule(StandardMeterHypermeterRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_meter_hypermeter_constraint(StandardMeterHypermeterRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_meter_hypermeter, StandardMeterHypermeterRule, STANDARD_METER_HYPERMETER_RULE_COUNT, g_table)
 
 /* Measures per hypermetric group, or 0 for no grouping. */
 static unsigned group_size(MeterGrouping grouping) {

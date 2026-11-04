@@ -7,19 +7,7 @@ static const char *const NAMES[STANDARD_RHYTHM_DOT_RULE_COUNT] = {"dot-adds-half
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_rhythm_framework, "standard-rhythm",
     NAMES, STANDARD_RHYTHM_DOT_RULE_COUNT);
 
-static bool valid_rule(StandardRhythmDotRule which) {
-    return which >= 0 && which < STANDARD_RHYTHM_DOT_RULE_COUNT;
-}
-
-const Rule *standard_rhythm_dot_rule(StandardRhythmDotRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_rhythm_dot_constraint(StandardRhythmDotRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_rhythm_dot, StandardRhythmDotRule, STANDARD_RHYTHM_DOT_RULE_COUNT, g_table)
 
 bool standard_rhythm_dot_added_duration(const NoteValue *note_value, unsigned n, Duration **out) {
     if (note_value == NULL || n == 0 || n > NOTE_VALUE_MAX_DOTS) {

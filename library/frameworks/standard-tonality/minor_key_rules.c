@@ -13,19 +13,7 @@ static const char *const NAMES[STANDARD_TONALITY_MINOR_KEY_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
     NAMES, STANDARD_TONALITY_MINOR_KEY_RULE_COUNT);
 
-static bool valid_rule(StandardTonalityMinorKeyRule which) {
-    return which >= 0 && which < STANDARD_TONALITY_MINOR_KEY_RULE_COUNT;
-}
-
-const Rule *standard_tonality_minor_key_rule(StandardTonalityMinorKeyRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_tonality_minor_key_constraint(StandardTonalityMinorKeyRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_tonality_minor_key, StandardTonalityMinorKeyRule, STANDARD_TONALITY_MINOR_KEY_RULE_COUNT, g_table)
 
 StandardTonalityMinorForm standard_tonality_minor_key_scale_form(void) {
     return STANDARD_TONALITY_MINOR_NATURAL;

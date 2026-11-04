@@ -11,19 +11,7 @@ static const char *const NAMES[STANDARD_TONALITY_MAJOR_SCALE_RULE_COUNT] = {"maj
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
     NAMES, STANDARD_TONALITY_MAJOR_SCALE_RULE_COUNT);
 
-static bool valid_rule(StandardTonalityMajorScaleRule which) {
-    return which >= 0 && which < STANDARD_TONALITY_MAJOR_SCALE_RULE_COUNT;
-}
-
-const Rule *standard_tonality_major_scale_rule(StandardTonalityMajorScaleRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_tonality_major_scale_constraint(StandardTonalityMajorScaleRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_tonality_major_scale, StandardTonalityMajorScaleRule, STANDARD_TONALITY_MAJOR_SCALE_RULE_COUNT, g_table)
 
 static const int STEPS[STANDARD_TONALITY_MAJOR_SCALE_STEP_COUNT] = {2, 2, 1, 2, 2, 2, 1};
 

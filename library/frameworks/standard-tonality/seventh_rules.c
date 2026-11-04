@@ -12,19 +12,7 @@ static const char *const NAMES[STANDARD_TONALITY_SEVENTH_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
     NAMES, STANDARD_TONALITY_SEVENTH_RULE_COUNT);
 
-static bool valid_rule(StandardTonalitySeventhRule which) {
-    return which >= 0 && which < STANDARD_TONALITY_SEVENTH_RULE_COUNT;
-}
-
-const Rule *standard_tonality_seventh_rule(StandardTonalitySeventhRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_tonality_seventh_constraint(StandardTonalitySeventhRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_tonality_seventh, StandardTonalitySeventhRule, STANDARD_TONALITY_SEVENTH_RULE_COUNT, g_table)
 
 static bool valid_quality(StandardTonalitySeventhQuality quality) {
     return quality >= 0 && quality < STANDARD_TONALITY_SEVENTH_QUALITY_COUNT;

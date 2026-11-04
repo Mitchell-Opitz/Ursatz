@@ -8,6 +8,7 @@
 #include "counterpoint_pitch.h"
 #include "counterpoint_subject.h"
 #include "rule_table.h"
+#include "species_helpers.h"
 
 #define BUFFER_SIZE (STANDARD_COUNTERPOINT_THIRD_SPECIES_SLOTS_PER_BAR * STANDARD_COUNTERPOINT_THIRD_SPECIES_MAX_BARS)
 
@@ -79,27 +80,6 @@ static bool read_attacks(const Exercise *exercise, Attacks *attacks) {
 static bool within_bar(const Attacks *attacks, size_t j) {
     return attacks->slots[j - 1] / STANDARD_COUNTERPOINT_THIRD_SPECIES_SLOTS_PER_BAR ==
            attacks->slots[j] / STANDARD_COUNTERPOINT_THIRD_SPECIES_SLOTS_PER_BAR;
-}
-
-static bool check_leaps(const Attacks *attacks) {
-    for (size_t j = 1; j < attacks->line.count; j++) {
-        StandardCounterpointInterval interval;
-        if (!standard_counterpoint_interval_between(attacks->notes[j - 1], attacks->notes[j], &interval)) {
-            return false;
-        }
-        if (interval.size > 8 || interval.quality == STANDARD_COUNTERPOINT_QUALITY_AUGMENTED ||
-            interval.quality == STANDARD_COUNTERPOINT_QUALITY_DIMINISHED || interval.simple_size == 7) {
-            return false;
-        }
-        if (interval.simple_size == 6) {
-            bool ascending_minor = interval.quality == STANDARD_COUNTERPOINT_QUALITY_MINOR &&
-                                   standard_counterpoint_direction(attacks->notes[j - 1], attacks->notes[j]) > 0;
-            if (!ascending_minor) {
-                return false;
-            }
-        }
-    }
-    return true;
 }
 
 static bool check_stepwise(const Attacks *attacks) {
@@ -196,7 +176,7 @@ bool standard_counterpoint_third_species_line_rule_holds(StandardCounterpointThi
     }
     switch (which) {
         case STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_LEAPS:
-            return check_leaps(&attacks);
+            return standard_counterpoint_species_check_leaps(attacks.notes, attacks.line.count, NULL, NULL);
         case STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_STEPWISE:
             return check_stepwise(&attacks);
         case STANDARD_COUNTERPOINT_THIRD_SPECIES_LINE_LEAP_PLACEMENT:

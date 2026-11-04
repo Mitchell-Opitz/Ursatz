@@ -9,19 +9,7 @@ static const char *const NAMES[STANDARD_RHYTHM_REST_RULE_COUNT] = {"rest-names",
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_rhythm_framework, "standard-rhythm",
     NAMES, STANDARD_RHYTHM_REST_RULE_COUNT);
 
-static bool valid_rule(StandardRhythmRestRule which) {
-    return which >= 0 && which < STANDARD_RHYTHM_REST_RULE_COUNT;
-}
-
-const Rule *standard_rhythm_rest_rule(StandardRhythmRestRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_rhythm_rest_constraint(StandardRhythmRestRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_rhythm_rest, StandardRhythmRestRule, STANDARD_RHYTHM_REST_RULE_COUNT, g_table)
 
 /* Indexed by exponent + 1 (breve first). */
 #define NAMED_COUNT (STANDARD_RHYTHM_MAX_NAMED_EXPONENT + 2)

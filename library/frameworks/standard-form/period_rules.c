@@ -16,19 +16,7 @@ static const char *const NAMES[STANDARD_FORM_PERIOD_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
     NAMES, STANDARD_FORM_PERIOD_RULE_COUNT);
 
-static bool valid_rule(StandardFormPeriodRule which) {
-    return which >= 0 && which < STANDARD_FORM_PERIOD_RULE_COUNT;
-}
-
-const Rule *standard_form_period_rule(StandardFormPeriodRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_form_period_constraint(StandardFormPeriodRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_form_period, StandardFormPeriodRule, STANDARD_FORM_PERIOD_RULE_COUNT, g_table)
 
 bool standard_form_phrase_roles_in_order(PhraseRole first, PhraseRole second) {
     return first == PHRASE_ROLE_ANTECEDENT && second == PHRASE_ROLE_CONSEQUENT;

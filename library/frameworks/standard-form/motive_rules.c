@@ -10,19 +10,7 @@ static const char *const NAMES[STANDARD_FORM_MOTIVE_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
     NAMES, STANDARD_FORM_MOTIVE_RULE_COUNT);
 
-static bool valid_rule(StandardFormMotiveRule which) {
-    return which >= 0 && which < STANDARD_FORM_MOTIVE_RULE_COUNT;
-}
-
-const Rule *standard_form_motive_rule(StandardFormMotiveRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_form_motive_constraint(StandardFormMotiveRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_form_motive, StandardFormMotiveRule, STANDARD_FORM_MOTIVE_RULE_COUNT, g_table)
 
 bool standard_form_motive_fits_idea(size_t motive_event_count, size_t idea_event_count) {
     return motive_event_count > 0 && motive_event_count < idea_event_count;

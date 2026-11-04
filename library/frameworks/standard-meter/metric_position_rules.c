@@ -14,19 +14,7 @@ static const char *const NAMES[STANDARD_METER_METRIC_RULE_COUNT] = {"metric-beat
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
     NAMES, STANDARD_METER_METRIC_RULE_COUNT);
 
-static bool valid_rule(StandardMeterMetricRule which) {
-    return which >= 0 && which < STANDARD_METER_METRIC_RULE_COUNT;
-}
-
-const Rule *standard_meter_metric_rule(StandardMeterMetricRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_meter_metric_constraint(StandardMeterMetricRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_meter_metric, StandardMeterMetricRule, STANDARD_METER_METRIC_RULE_COUNT, g_table)
 
 bool standard_meter_beat_grid(const TimeSignature *time_signature, Duration **out_beat, unsigned *out_beats) {
     if (time_signature == NULL || out_beat == NULL || out_beats == NULL) {

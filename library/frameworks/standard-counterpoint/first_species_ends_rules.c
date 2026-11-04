@@ -7,6 +7,7 @@
 #include "motion_rules.h"
 #include "counterpoint_subject.h"
 #include "rule_table.h"
+#include "species_helpers.h"
 #include "pitch/midi_pitch.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIRST_SPECIES_ENDS_COUNT] = {
@@ -41,19 +42,6 @@ const char *standard_counterpoint_first_species_ends_rule_name(StandardCounterpo
     return standard_counterpoint_rule_table_name(&TABLE, (int)which);
 }
 
-static bool is_tonic(const PitchSpelling *note, const PitchSpelling *tonic) {
-    return pitch_spelling_letter(note) == pitch_spelling_letter(tonic) &&
-           pitch_spelling_accidental(note) == pitch_spelling_accidental(tonic);
-}
-
-/* A perfect fifth above the tonic, at any octave. */
-static bool is_sol(const PitchSpelling *note, const PitchSpelling *tonic) {
-    int letters = (((standard_counterpoint_step_number(note) - standard_counterpoint_step_number(tonic)) % 7) + 7) % 7;
-    int semitones =
-        pitch_class_of_midi(standard_counterpoint_semitone_number(note) - standard_counterpoint_semitone_number(tonic));
-    return letters == 4 && semitones == 7;
-}
-
 static const StandardCounterpointLine *counterpoint_line(const StandardCounterpointPair *pair,
                                                          StandardCounterpointCantusPart cantus_part) {
     return cantus_part == STANDARD_COUNTERPOINT_CANTUS_IN_LOWER ? pair->upper : pair->lower;
@@ -63,15 +51,15 @@ static bool check_begin(const StandardCounterpointPair *pair, StandardCounterpoi
                         const PitchSpelling *tonic) {
     const PitchSpelling *first = counterpoint_line(pair, cantus_part)->notes[0];
     if (cantus_part == STANDARD_COUNTERPOINT_CANTUS_IN_LOWER) {
-        return is_tonic(first, tonic) || is_sol(first, tonic);
+        return standard_counterpoint_species_is_tonic(first, tonic) || standard_counterpoint_species_is_sol(first, tonic);
     }
-    return is_tonic(first, tonic);
+    return standard_counterpoint_species_is_tonic(first, tonic);
 }
 
 static bool check_end_on_tonic(const StandardCounterpointPair *pair, StandardCounterpointCantusPart cantus_part,
                                const PitchSpelling *tonic) {
     const StandardCounterpointLine *line = counterpoint_line(pair, cantus_part);
-    return is_tonic(line->notes[line->count - 1], tonic);
+    return standard_counterpoint_species_is_tonic(line->notes[line->count - 1], tonic);
 }
 
 static bool check_contrary_stepwise_approach(const StandardCounterpointPair *pair) {

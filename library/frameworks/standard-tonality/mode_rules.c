@@ -12,19 +12,7 @@ static const char *const NAMES[STANDARD_TONALITY_MODE_RULE_COUNT] = {"mode-patte
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
     NAMES, STANDARD_TONALITY_MODE_RULE_COUNT);
 
-static bool valid_rule(StandardTonalityModeRule which) {
-    return which >= 0 && which < STANDARD_TONALITY_MODE_RULE_COUNT;
-}
-
-const Rule *standard_tonality_mode_rule(StandardTonalityModeRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_tonality_mode_constraint(StandardTonalityModeRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_tonality_mode, StandardTonalityModeRule, STANDARD_TONALITY_MODE_RULE_COUNT, g_table)
 
 static bool valid_mode(StandardTonalityMode mode) {
     return mode >= 0 && mode < STANDARD_TONALITY_MODE_COUNT;
