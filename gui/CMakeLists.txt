@@ -77,6 +77,10 @@ set(CIVETWEB_ENABLE_ASAN OFF CACHE BOOL "" FORCE)
 # civetweb v1.16 declares cmake_minimum_required below 3.5, which CMake 4
 # rejects.
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+# civetweb builds its request threads with a 100 KB stack by default. The Composer API runs on those threads (R-219)
+# and some of its entries need more (a random motive draws into several motives on the stack), so a request crashed the
+# server. 32 MB is address space only; the pages are used when a call needs them.
+set(CIVETWEB_THREAD_STACK_SIZE 33554432 CACHE STRING "" FORCE)
 
 FetchContent_Declare(
   civetweb
