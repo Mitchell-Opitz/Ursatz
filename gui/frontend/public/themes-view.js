@@ -418,30 +418,22 @@ function themeFacts(rows) {
   return list;
 }
 
-/* Mounts a version's score in the score workspace, with playback from its MIDI file. options: {midi, musicxml,
- * subtitle} name the files and the subtitle (a theme's by default); {loop: {start, end}} repeats that region and
- * {ending: {midi, musicxml, bodyEnd}} adds Play ending with that version's files. */
+/* Mounts a version's score in the score workspace, with the playback the backend builds from its MIDI file.
+ * options: {playback, musicxml, subtitle} name the playback ("theme", "loop" or "ending"), the MusicXML file and the
+ * subtitle (a theme's by default); {loop: {start, end}} repeats that region and {ending: {playback, musicxml,
+ * bodyEnd}} adds Play ending with that version's files. */
 async function themeMountScore(host, id, version, title, options) {
   const o = options || {};
   const files = (name) => ThemesModel.versionFileUrl(id, version, name);
-  let playbackUrl = null;
-  try {
-    const midi = await fetch(files(o.midi || "theme.mid"));
-    const playback = midi.ok ? ThemesModel.playbackFromMidi(await midi.arrayBuffer()) : null;
-    if (playback) {
-      playbackUrl = URL.createObjectURL(new Blob([JSON.stringify(playback)], { type: "application/json" }));
-    }
-  } catch (error) {
-    playbackUrl = null;
-  }
+  const playbackUrl = ThemesModel.versionPlaybackUrl(id, version, o.playback || "theme");
   if (host.themeWorkspace) {
     host.themeWorkspace.destroy();
   }
   let ending = null;
   if (o.ending) {
     try {
-      const midi = await fetch(files(o.ending.midi));
-      const playback = midi.ok ? ThemesModel.playbackFromMidi(await midi.arrayBuffer()) : null;
+      const served = await fetch(ThemesModel.versionPlaybackUrl(id, version, o.ending.playback));
+      const playback = served.ok ? await served.json() : null;
       if (playback) {
         ending = { musicxmlUrl: files(o.ending.musicxml), playback, bodyEnd: o.ending.bodyEnd };
       }

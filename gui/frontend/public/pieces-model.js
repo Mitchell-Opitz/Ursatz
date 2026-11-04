@@ -559,6 +559,10 @@
     return Themes.versionFileUrl(id, number, name);
   }
 
+  function versionPlaybackUrl(id, number, file) {
+    return Themes.versionPlaybackUrl(id, number, file);
+  }
+
   /* --- regenerate and variations ---------------------------------------- */
 
   const LANES = ["harmony", "bass", "melody", "inner"];
@@ -867,6 +871,7 @@
     saveRequest,
     composeRequest,
     versionFileUrl,
+    versionPlaybackUrl,
     LANES,
     MAX_VARIATIONS,
     lanesFor,

@@ -22,6 +22,7 @@ typedef SOCKET socket_t;
 #define MKDIR(path) _mkdir(path)
 #else
 #include <arpa/inet.h>
+#include <dirent.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <time.h>
@@ -161,6 +162,8 @@ static bool ok_true(const cJSON *json) {
 #include "routes/materials.h"
 #include "service/material_service.h"
 #include "server.h"
+#include "playback_check.h"
+#include "util/fs_util.h"
 
 static const char *kMotifBody =
     "{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\",\"notes\":\"C4:q Eb4:e G4:e C5:h\","
@@ -850,8 +853,7 @@ static void test_motif_render(void) {
   check(strstr(string_of(answer, "musicxml"), "<score-partwise") != NULL, "the render answers MusicXML");
   const cJSON *playback = cJSON_GetObjectItemCaseSensitive(answer, "playback");
   check(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(playback, "notes")) == 4, "the playback holds the four notes");
-  check(strcmp(string_of(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(playback, "parts"), 0), "name"), "melodic") == 0,
-        "the playback has one part named after the role");
+  check(cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(playback, "parts")) == 1, "the playback has one part");
   check(first_note(playback, &pitch, &on_num, &on_den) && pitch == 62, "the first note sounds the tonic");
   cJSON_Delete(answer);
 
@@ -901,6 +903,108 @@ static void test_motif_render(void) {
   free(response);
   cJSON_Delete(saved);
 }
+
+#ifdef URSATZ_GUI_TEST_PLAYBACK_FIXTURES
+/* The playback routes against what the browser and the old motif builder gave (captured at the start of B9 in
+   fixtures/playback): a render, a stored version through the render cache, and the files of other versions. */
+static void test_served_playback(void) {
+  int status = 0;
+  char path[512];
+  char fixture[512];
+  static const char *const motifs[] = {"plain", "pickup"};
+  for (size_t i = 0; i < 2; i++) {
+    char label[160];
+    snprintf(fixture, sizeof(fixture), URSATZ_GUI_TEST_PLAYBACK_FIXTURES "/motif-%s.request.json", motifs[i]);
+    char *request = ursatz_gui_read_file(fixture, NULL);
+    snprintf(fixture, sizeof(fixture), URSATZ_GUI_TEST_PLAYBACK_FIXTURES "/motif-%s.playback.json", motifs[i]);
+    cJSON *want = ursatz_gui_read_json_object(fixture);
+    cJSON *answer = request ? json_exchange("POST", "/api/materials/render", request, &status) : NULL;
+    snprintf(label, sizeof(label), "a %s motif render plays as it did before the Analyzer built it", motifs[i]);
+    check(status == 200 && want && playback_matches_capture(cJSON_GetObjectItemCaseSensitive(answer, "playback"), want), label);
+    cJSON_Delete(answer);
+    cJSON_Delete(want);
+    free(request);
+  }
+  {
+    /* The MIDI file of an unsaved render is deleted once the Analyzer has read it. */
+    int leftovers = 0;
+#ifndef _WIN32
+    DIR *dir = opendir("materials/.render-tmp");
+    for (struct dirent *entry = dir ? readdir(dir) : NULL; entry; entry = readdir(dir)) {
+      leftovers += entry->d_name[0] != '.';
+    }
+    if (dir) {
+      closedir(dir);
+    }
+#endif
+    check(leftovers == 0, "no MIDI file of an unsaved render is left behind");
+  }
+
+  char project[64] = "";
+  first_project(project, sizeof(project));
+  cJSON *saved = save_motif_form(project, "full", "C4:q Eb4:e G4:e C5:h", "\"C minor\"", "0", &status);
+  const char *id = string_of(cJSON_GetObjectItemCaseSensitive(saved, "item"), "id");
+  char render_dir[256];
+  snprintf(render_dir, sizeof(render_dir), "materials/items/%s/v1/render", id);
+
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback", id);
+  cJSON *first = json_exchange("GET", path, NULL, &status);
+  check(status == 200 && ok_true(first) && cJSON_GetArraySize(cJSON_GetObjectItemCaseSensitive(first, "notes")) == 4,
+        "a motif version's playback is built from its MIDI file");
+  char file[300];
+  bool stored = true;
+  static const char *const names[] = {"score.musicxml", "motif.mid", "render.json"};
+  for (size_t i = 0; i < 3; i++) {
+    snprintf(file, sizeof(file), "%s/%s", render_dir, names[i]);
+    char *text = ursatz_gui_read_file(file, NULL);
+    stored = stored && text && text[0] != '\0';
+    free(text);
+  }
+  check(stored, "the render is kept under the version (score.musicxml, motif.mid, render.json)");
+  snprintf(file, sizeof(file), "%s/render.json", render_dir);
+  cJSON *meta = ursatz_gui_read_json_object(file);
+  check(meta && cJSON_IsString(cJSON_GetObjectItemCaseSensitive(meta, "composer_version")) &&
+            strcmp(string_of(meta, "render_key"), "C minor") == 0 && number_of(meta, "tempo") == 0,
+        "render.json names the Composer version, the render key and the tempo");
+  cJSON_Delete(meta);
+
+  /* A changed cache is what the next request reads: the Composer does not run again for the same values. */
+  snprintf(file, sizeof(file), "%s/score.musicxml", render_dir);
+  check(ursatz_gui_write_file_atomic(file, "<cached/>", 9), "the cached score is replaced");
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/score", id);
+  char *response = http_exchange("GET", path, NULL, NULL, 0);
+  check(response && strstr(response, "<cached/>") != NULL, "a version's score reads the cache for the same key and tempo");
+  free(response);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback", id);
+  cJSON *second = json_exchange("GET", path, NULL, &status);
+  check(status == 200 && cJSON_Compare(first, second, 1), "a cached playback equals the first");
+  cJSON_Delete(first);
+  cJSON_Delete(second);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/score?key=G%%20minor", id);
+  response = http_exchange("GET", path, NULL, NULL, 0);
+  check(response && strstr(response, "<cached/>") == NULL && strstr(response, "<score-partwise") != NULL,
+        "another key renders again");
+  free(response);
+
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback?file=loop", id);
+  cJSON *answer = json_exchange("GET", path, NULL, &status);
+  check(status == 404, "a motif version has no loop file to play");
+  cJSON_Delete(answer);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/playback?file=other", id);
+  answer = json_exchange("GET", path, NULL, &status);
+  check(status == 400, "a file other than theme, loop or ending is 400");
+  cJSON_Delete(answer);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/9/playback?file=theme", id);
+  answer = json_exchange("GET", path, NULL, &status);
+  check(status == 404, "a missing version's file playback is 404");
+  cJSON_Delete(answer);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/1/variations/1/variation-1.mid/playback", id);
+  answer = json_exchange("GET", path, NULL, &status);
+  check(status == 404, "a motif has no variations to play");
+  cJSON_Delete(answer);
+  cJSON_Delete(saved);
+}
+#endif
 
 /* The source motif of the variant tests: saved and analyzed in D minor, so it has degrees. */
 static char *variant_source(void) {
@@ -1882,6 +1986,24 @@ static char *saved_motif_item(const char *project, const char *name, const char 
   return create_item("motif", name, project, body);
 }
 
+/* A reply equals the one the command gave. A render's playback is compared up to what P27 B9 declares (it is built
+   from the MIDI file by the Analyzer); every other member must be equal. */
+static bool reply_matches(const cJSON *answer, const cJSON *expected) {
+  const cJSON *got_playback = cJSON_GetObjectItemCaseSensitive(answer, "playback");
+  const cJSON *want_playback = cJSON_GetObjectItemCaseSensitive(expected, "playback");
+  if (!cJSON_IsObject(got_playback) || !cJSON_IsObject(want_playback)) {
+    return cJSON_Compare(answer, expected, 1);
+  }
+  cJSON *got_rest = cJSON_Duplicate(answer, 1);
+  cJSON *want_rest = cJSON_Duplicate(expected, 1);
+  cJSON_DeleteItemFromObjectCaseSensitive(got_rest, "playback");
+  cJSON_DeleteItemFromObjectCaseSensitive(want_rest, "playback");
+  bool same = cJSON_Compare(got_rest, want_rest, 1) && playback_matches_capture(got_playback, want_playback);
+  cJSON_Delete(got_rest);
+  cJSON_Delete(want_rest);
+  return same;
+}
+
 /* Each request the Composer answered as a command at the start of P27 B6 (fixtures/composer/b5_replies.json, captured
    before the routes moved) gets the same answer from the Composer API: a success is equal, a refusal has the same
    status (its text came from the command's stderr and is the API's now). */
@@ -1952,7 +2074,7 @@ static void test_replies_match_the_command(void) {
       cJSON_Delete(stored);
     } else {
       snprintf(label, sizeof(label), "%s is the reply the command gave", name);
-      check(strcmp(name, "status") == 0 ? members_equal(expected, answer) : cJSON_Compare(answer, expected, 1), label);
+      check(strcmp(name, "status") == 0 ? members_equal(expected, answer) : reply_matches(answer, expected), label);
     }
     cJSON_Delete(answer);
   }
@@ -2022,6 +2144,9 @@ int main(void) {
   test_motif_import();
   test_motifs_in_c();
   test_motif_render();
+#ifdef URSATZ_GUI_TEST_PLAYBACK_FIXTURES
+  test_served_playback();
+#endif
   test_harmony();
   test_variants();
   test_variant_flags_and_tree();

@@ -1211,15 +1211,13 @@ static const char *variation_file_type(const char *name) {
     return strcmp(extension, ".musicxml") == 0 ? "application/xml" : NULL;
 }
 
-UrsatzGuiThemeResult ursatz_gui_piece_variation_file(const char *id, int version, int set, const char *name,
-                                                     unsigned char **out_data, size_t *out_size, const char **out_type) {
-    *out_data = NULL;
-    *out_size = 0;
+/* The checked path of a variations-set file, or NOT_FOUND. type is the file's content type when it is wanted. */
+static UrsatzGuiThemeResult variation_path_checked(const char *id, int version, int set, const char *name, char *path,
+                                                   size_t path_size, const char **out_type) {
     const char *type = name ? variation_file_type(name) : NULL;
     cJSON *meta = NULL;
     cJSON *body = NULL;
     char dir[PATH_BYTES];
-    char path[PATH_BYTES + 96];
     if (!type || set < 1 || !ursatz_gui_material_version_dir(id, version, dir, sizeof(dir)) ||
         ursatz_gui_material_item_get(id, &meta, &body) != URSATZ_GUI_MATERIAL_OK) {
         return URSATZ_GUI_THEME_ERR_NOT_FOUND;
@@ -1228,8 +1226,38 @@ UrsatzGuiThemeResult ursatz_gui_piece_variation_file(const char *id, int version
                  strcmp(ursatz_gui_compose_text_of(meta, "type"), "piece") == 0;
     cJSON_Delete(meta);
     cJSON_Delete(body);
-    snprintf(path, sizeof(path), "%s/variations-%d/%s", dir, set, name);
-    FILE *file = found ? fopen(path, "rb") : NULL;
+    if (!found || snprintf(path, path_size, "%s/variations-%d/%s", dir, set, name) >= (int)path_size) {
+        return URSATZ_GUI_THEME_ERR_NOT_FOUND;
+    }
+    *out_type = type;
+    return URSATZ_GUI_THEME_OK;
+}
+
+UrsatzGuiThemeResult ursatz_gui_piece_variation_midi_path(const char *id, int version, int set, const char *name,
+                                                          char *out, size_t out_size) {
+    const char *type = NULL;
+    if (variation_path_checked(id, version, set, name, out, out_size, &type) != URSATZ_GUI_THEME_OK ||
+        strcmp(type, "audio/midi") != 0) {
+        return URSATZ_GUI_THEME_ERR_NOT_FOUND;
+    }
+    FILE *file = fopen(out, "rb");
+    if (!file) {
+        return URSATZ_GUI_THEME_ERR_NOT_FOUND;
+    }
+    fclose(file);
+    return URSATZ_GUI_THEME_OK;
+}
+
+UrsatzGuiThemeResult ursatz_gui_piece_variation_file(const char *id, int version, int set, const char *name,
+                                                     unsigned char **out_data, size_t *out_size, const char **out_type) {
+    *out_data = NULL;
+    *out_size = 0;
+    const char *type = NULL;
+    char path[PATH_BYTES + 96];
+    if (variation_path_checked(id, version, set, name, path, sizeof(path), &type) != URSATZ_GUI_THEME_OK) {
+        return URSATZ_GUI_THEME_ERR_NOT_FOUND;
+    }
+    FILE *file = fopen(path, "rb");
     if (!file) {
         return URSATZ_GUI_THEME_ERR_NOT_FOUND;
     }

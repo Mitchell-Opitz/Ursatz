@@ -663,6 +663,12 @@
     return `${itemUrl(id, "")}/versions/${Number(number)}/files/${encodeURIComponent(name)}`;
   }
 
+  /* The playback the backend builds from one of a version's MIDI files (R-275): file is "theme" (a theme version) or
+   * "loop" or "ending" (a piece version). The answer is the playback shape the score workspace reads. */
+  function versionPlaybackUrl(id, number, file) {
+    return `${itemUrl(id, "")}/versions/${Number(number)}/playback?file=${encodeURIComponent(file)}`;
+  }
+
   /* --- the pool -------------------------------------------------------- */
 
   /* Counts {approved, unflagged, rejected} of the saved forms below a motif
@@ -792,125 +798,6 @@
     return names;
   }
 
-  /* --- playback from the MIDI file -------------------------------------- */
-
-  /* The playback data of a Standard MIDI File (ArrayBuffer or Uint8Array): the shape the score workspace reads
-   * ({ok, tempo, parts, end, notes}, positions in whole notes as [ticks, 4 * ticks per quarter]), or null when the
-   * file is not a MIDI file with ticks per quarter. */
-  function playbackFromMidi(data) {
-    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-    let at = 0;
-    const u8 = () => bytes[at++];
-    const u16 = () => (u8() << 8) | u8();
-    const u32 = () => u16() * 65536 + u16();
-    const tag = () => String.fromCharCode(u8(), u8(), u8(), u8());
-    const varlen = () => {
-      let value = 0;
-      for (let i = 0; i < 4; i++) {
-        const byte = u8();
-        value = value * 128 + (byte & 0x7f);
-        if (byte < 0x80) {
-          break;
-        }
-      }
-      return value;
-    };
-    if (bytes.length < 14 || tag() !== "MThd" || u32() < 6) {
-      return null;
-    }
-    u16();
-    const trackCount = u16();
-    const division = u16();
-    if (division === 0 || division >= 0x8000) {
-      return null;
-    }
-    at = 14;
-    const whole = 4 * division;
-    const tempo = [];
-    const parts = [];
-    const notes = [];
-    let end = 0;
-    for (let t = 0; t < trackCount && at + 8 <= bytes.length; t++) {
-      if (tag() !== "MTrk") {
-        return null;
-      }
-      const length = u32();
-      const stop = Math.min(bytes.length, at + length);
-      let tick = 0;
-      let status = 0;
-      let name = "";
-      let program = 0;
-      const open = new Map();
-      const trackNotes = [];
-      while (at < stop) {
-        tick += varlen();
-        let first = u8();
-        if (first === 0xff) {
-          const type = u8();
-          const length = varlen();
-          if (type === 0x51 && length === 3) {
-            const micros = (u8() << 16) | (u8() << 8) | u8();
-            tempo.push({ at: tick, qpm: Math.round((60000000 / micros) * 100) / 100 });
-          } else if (type === 0x03) {
-            name = String.fromCharCode(...bytes.slice(at, at + length));
-            at += length;
-          } else {
-            at += length;
-          }
-          continue;
-        }
-        if (first === 0xf0 || first === 0xf7) {
-          at += varlen();
-          continue;
-        }
-        if (first >= 0x80) {
-          status = first;
-          first = u8();
-        }
-        const kind = status & 0xf0;
-        if (kind === 0xc0) {
-          program = first;
-        } else if (kind === 0xd0) {
-          continue;
-        } else {
-          const second = u8();
-          const key = `${status & 0x0f}:${first}`;
-          if (kind === 0x90 && second > 0) {
-            open.set(key, [...(open.get(key) || []), tick]);
-          } else if (kind === 0x80 || kind === 0x90) {
-            const starts = open.get(key) || [];
-            if (starts.length > 0) {
-              const on = starts.shift();
-              trackNotes.push({ on, len: tick - on, pitch: first });
-            }
-          }
-        }
-      }
-      at = stop;
-      if (trackNotes.length > 0) {
-        const index = parts.length;
-        parts.push({ index, name: name || `Part ${index + 1}`, program });
-        for (const note of trackNotes) {
-          notes.push({ ...note, part: index });
-          end = Math.max(end, note.on + note.len);
-        }
-      }
-    }
-    notes.sort((a, b) => a.on - b.on || a.pitch - b.pitch || a.part - b.part);
-    tempo.sort((a, b) => a.at - b.at);
-    if (tempo.length === 0 || tempo[0].at > 0) {
-      tempo.unshift({ at: 0, qpm: tempo.length > 0 ? tempo[0].qpm : 120 });
-    }
-    return {
-      ok: true,
-      tempo_source: "given",
-      tempo: tempo.map((region) => ({ at: [region.at, whole], qpm: region.qpm })),
-      parts,
-      end: [end, whole],
-      notes: notes.map((note, i) => ({ i, on: [note.on, whole], len: [note.len, whole], pitch: note.pitch, part: note.part })),
-    };
-  }
-
   /* --- sources --------------------------------------------------------- */
 
   /* The slot and accompaniment motifs with a newer version, from the item
@@ -994,7 +881,7 @@
     motiveNames,
     updatedUses,
     formWithUpdates,
-    playbackFromMidi,
+    versionPlaybackUrl,
   };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

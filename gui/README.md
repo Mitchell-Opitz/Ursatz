@@ -225,8 +225,8 @@ versions list (read-only), has a row for each idea (idea, slot, motif, source,
 chain, connection), the brief's tempo, mode and note density, the motive
 categories read without, the style distance, the form heard and the Analyzer
 check. Below it are the score of `theme.musicxml` in the score workspace and a
-MIDI download. Playback is built in the browser from `theme.mid`
-(`playbackFromMidi`), since the backend has no playback route for theme files.
+MIDI download. Playback is served by the backend, built by the Analyzer from
+`theme.mid` (`GET .../versions/<n>/playback?file=theme`).
 
 #### Pieces view
 
@@ -271,8 +271,8 @@ the loop version and the ending version, a row for each section (section,
 part, letter, start, length, cadence planned and heard, fill, source), the
 score, the seam rules that held (loop only), the Analyzer check and the style
 distance. Below are the MIDI downloads and the scores in the score workspace,
-`loop.musicxml` with a tab for `ending.musicxml`, with playback built in the
-browser from `loop.mid` or `ending.mid` (`playbackFromMidi`).
+`loop.musicxml` with a tab for `ending.musicxml`, with playback served by the
+backend from `loop.mid` or `ending.mid` (`GET .../versions/<n>/playback?file=loop|ending`).
 
 On the current version each section of the loop has Regenerate (lane: all
 lanes, harmony, bass, melody or inner; seed) and Variations (lane, count 1 to
@@ -923,12 +923,31 @@ in the motif's stored key (C major or C minor). Nothing is saved.
   MusicXML is the response's `musicxml`, not a file.
   `render_key` defaults to `key`; without either the answer is 400 "give a
   key". A list the Composer refuses is 400 with its message.
-- `playback` has the shape of the Analyzer's playback (`tempo`, one part
-  named after the role, `end`, `notes`). Positions are whole notes from the
-  pickup start, so the first note is at `[0, 1]`.
+- `playback` is the Analyzer's playback of the render's MIDI file
+  (`analyzer_playback_to_json`: `tempo_source`, `tempo`, `parts`, `end`,
+  `notes`). Positions are whole notes from the pickup start, so the first note
+  is at `[0, 1]`. The backend writes the MIDI bytes to
+  `materials/.render-tmp/<random>.mid` (the Analyzer imports by path), reads
+  it and deletes it; nothing is cached for this route.
 - `GET /api/materials/items/<id>/versions/<n>/score?key=` answers MusicXML
   and `.../playback?key=` answers the playback JSON for that stored version;
   `key` defaults to the motif's own key, and a version without degrees is 404.
+  Both come from one render kept under the version in
+  `items/<id>/v<n>/render/`: `score.musicxml`, `motif.mid` and `render.json`
+  `{composer_version, render_key, tempo}`. A request with the same key, tempo
+  and Composer version reads these files, so the Composer runs at most once
+  per version and key.
+- `GET /api/materials/items/<id>/versions/<n>/playback?file=theme|loop|ending`
+  answers the playback of a theme or piece version's `theme.mid`, `loop.mid`
+  or `ending.mid` (400 for another `file`, 404 when the version has no such
+  file).
+- `GET /api/materials/items/<pce-id>/versions/<n>/variations/<k>/<file>/playback`
+  answers the playback of a variation's MIDI file (`variation-<i>.mid`; 404 for
+  any other file).
+- What the served playback differs in from the browser's former reader:
+  `tempo_source` is `file` or `default` (the browser said `given`); tempo
+  values are rounded to thousandths; positions are reduced fractions; part
+  names are empty for a MIDI file (the score workspace shows `Part <n>`).
 - The motif detail mounts `ScoreWorkspace` with these URLs. The routes still
   accept `render_key` and `?key=` (pieces may use them), but the motif detail
   sends neither. `MaterialsModel.renderRequest(body)` builds the POST for an

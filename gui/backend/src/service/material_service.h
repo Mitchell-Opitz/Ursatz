@@ -260,6 +260,10 @@ const char *ursatz_gui_material_version_file_type(const char *name);
 /* The folder of version number of item id, as a path under the store (it need not exist). false if it does not fit. */
 bool ursatz_gui_material_version_dir(const char *id, int number, char *out, size_t out_size);
 
+/* The folder for the MIDI files of unsaved renders, "<store>/.render-tmp" (the Analyzer imports by path, R-275). It
+ * need not exist; false if the store is not ready or the path does not fit. */
+bool ursatz_gui_material_render_tmp_dir(char *out, size_t out_size);
+
 /*
  * The bytes of one of the five files of version number (1 to current_version). NOT_FOUND for any other name, an
  * absent item, version or file. *out_data is caller-owned (free).

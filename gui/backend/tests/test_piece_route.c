@@ -19,6 +19,7 @@
 #include <cJSON.h>
 
 #include "server.h"
+#include "playback_check.h"
 
 #ifndef URSATZ_GUI_TEST_COMPOSER_FIXTURES
 #error "URSATZ_GUI_TEST_COMPOSER_FIXTURES must name the Composer fixtures directory"
@@ -270,6 +271,18 @@ static void slots_of(const char *basic, const char *cadential, char *out, size_t
 
 static void basic_slot_of(const char *basic, char *out, size_t size) {
   snprintf(out, size, "[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1}]", basic);
+}
+
+/* The playback the route serves for url against the capture made before P27 B9 (fixtures/playback/<name>.playback.json). */
+static void check_served_playback(const char *url, const char *name, const char *what) {
+  char fixture[900];
+  int status = 0;
+  snprintf(fixture, sizeof(fixture), URSATZ_GUI_TEST_COMPOSER_FIXTURES "/../playback/%s.playback.json", name);
+  cJSON *want = read_json_file(fixture);
+  cJSON *got = exchange("GET", url, NULL, &status);
+  check(status == 200 && want && got && playback_matches_capture(got, want), what);
+  cJSON_Delete(want);
+  cJSON_Delete(got);
 }
 
 static cJSON *get_item(const char *id, int *status) {
@@ -1444,6 +1457,10 @@ static void test_real_composer(void) {
   }
   check(all, "the real run wrote the seven files");
   compare_with_b6(piece, 2, "piece-v2", true);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/playback?file=loop", piece);
+  check_served_playback(path, "piece-loop", "the loop version's playback is built from its MIDI file as the browser read it");
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/playback?file=ending", piece);
+  check_served_playback(path, "piece-ending", "the ending version's playback is built from its MIDI file as the browser read it");
   answer = get_item(piece, &status);
   const cJSON *result = member(piece_of_answer(answer), "result");
   check(number_of(result, "seed") >= 0 && cJSON_IsObject(member(result, "loop")) && cJSON_IsObject(member(result, "summary")),
@@ -1464,6 +1481,12 @@ static void test_real_composer(void) {
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/3/variations/1/variation-1.mid", piece);
   char *response = http_exchange("GET", path, NULL, NULL, 0, NULL);
   check(response_status(response) == 200 && strncmp(response_body(response), "MThd", 4) == 0, "a variation's MIDI file is served");
+  free(response);
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/3/variations/1/variation-1.mid/playback", piece);
+  check_served_playback(path, "variation", "a variation's playback is built from its MIDI file as the browser read it");
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/3/variations/1/variation-1.musicxml/playback", piece);
+  response = http_exchange("GET", path, NULL, NULL, 0, NULL);
+  check(response_status(response) == 404, "only a variation's MIDI file has a playback");
   free(response);
   answer = post_json(piece, "versions/3/variations/1/choose", "{\"index\":1}", &status);
   check(status == 200 && number_of(member(answer, "item"), "current_version") == 4 && version_files_exist(piece, 4, false),

@@ -354,11 +354,11 @@ function buildPieceResult(ctx) {
   function showScore(which) {
     const looping = which === "loop" && view.playLoop;
     themeMountScore(scoreHost, ctx.id, ctx.version, ctx.title, {
-      midi: `${which}.mid`,
+      playback: which,
       musicxml: `${which}.musicxml`,
       subtitle: `piece · v${ctx.version} · ${which} version`,
       loop: looping ? { start: view.playLoop.start, end: view.playLoop.end } : null,
-      ending: looping ? { midi: "ending.mid", musicxml: "ending.musicxml", bodyEnd: view.playLoop.bodyEnd } : null,
+      ending: looping ? { playback: "ending", musicxml: "ending.musicxml", bodyEnd: view.playLoop.bodyEnd } : null,
     });
     for (const button of tabs.children) {
       button.classList.toggle("selected", button.dataset.which === which);
