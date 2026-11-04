@@ -15,31 +15,11 @@
 #include "time/duration.h"
 
 const char *standard_form_motive_kind_name(StandardFormMotiveKind kind) {
-    static const char *const NAMES[STANDARD_FORM_MOTIVE_KIND_COUNT] = {
-        "exact", "real-transposed", "tonal-transposed", "inverted", "retrograde", "augmented", "diminished", "fragmented", "varied"};
-    return (unsigned)kind < (unsigned)STANDARD_FORM_MOTIVE_KIND_COUNT ? NAMES[kind] : NULL;
+    return motive_occurrence_kind_name(kind);
 }
 
 int standard_form_motive_kind_rank(StandardFormMotiveKind kind) {
-    switch (kind) {
-        case STANDARD_FORM_MOTIVE_EXACT:
-            return 0;
-        case STANDARD_FORM_MOTIVE_REAL:
-        case STANDARD_FORM_MOTIVE_TONAL:
-            return 1;
-        case STANDARD_FORM_MOTIVE_INVERTED:
-        case STANDARD_FORM_MOTIVE_RETROGRADE:
-            return 2;
-        case STANDARD_FORM_MOTIVE_AUGMENTED:
-        case STANDARD_FORM_MOTIVE_DIMINISHED:
-            return 3;
-        case STANDARD_FORM_MOTIVE_FRAGMENTED:
-            return 4;
-        case STANDARD_FORM_MOTIVE_VARIED:
-            return 5;
-        default:
-            return -1;
-    }
+    return motive_occurrence_kind_rank(kind);
 }
 
 /* --- the internal families --- */

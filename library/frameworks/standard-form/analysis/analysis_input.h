@@ -9,6 +9,7 @@
 #include "semantics/analysis_segment.h"
 #include "semantics/cadence_type.h"
 #include "semantics/contour.h"
+#include "semantics/motive_occurrence_kind.h"
 #include "time/meter_map.h"
 #include "time/metrical_position.h"
 #include "time/time_span.h"
@@ -122,18 +123,18 @@ StandardFormAnalysisStatus standard_form_input_add_analysis_segment(StandardForm
 StandardFormAnalysisStatus standard_form_input_finish(StandardFormInput *input);
 void standard_form_input_destroy(StandardFormInput *input);
 
-typedef enum {
-    STANDARD_FORM_MOTIVE_EXACT = 0,
-    STANDARD_FORM_MOTIVE_REAL,
-    STANDARD_FORM_MOTIVE_TONAL,
-    STANDARD_FORM_MOTIVE_INVERTED,
-    STANDARD_FORM_MOTIVE_RETROGRADE,
-    STANDARD_FORM_MOTIVE_AUGMENTED,
-    STANDARD_FORM_MOTIVE_DIMINISHED,
-    STANDARD_FORM_MOTIVE_FRAGMENTED,
-    STANDARD_FORM_MOTIVE_VARIED,
-    STANDARD_FORM_MOTIVE_KIND_COUNT
-} StandardFormMotiveKind;
+/* Kept for the apps until B12 of P28: the occurrence kind is semantics/motive_occurrence_kind.h. */
+typedef MotiveOccurrenceKind StandardFormMotiveKind;
+#define STANDARD_FORM_MOTIVE_EXACT MOTIVE_OCCURRENCE_EXACT
+#define STANDARD_FORM_MOTIVE_REAL MOTIVE_OCCURRENCE_REAL
+#define STANDARD_FORM_MOTIVE_TONAL MOTIVE_OCCURRENCE_TONAL
+#define STANDARD_FORM_MOTIVE_INVERTED MOTIVE_OCCURRENCE_INVERTED
+#define STANDARD_FORM_MOTIVE_RETROGRADE MOTIVE_OCCURRENCE_RETROGRADE
+#define STANDARD_FORM_MOTIVE_AUGMENTED MOTIVE_OCCURRENCE_AUGMENTED
+#define STANDARD_FORM_MOTIVE_DIMINISHED MOTIVE_OCCURRENCE_DIMINISHED
+#define STANDARD_FORM_MOTIVE_FRAGMENTED MOTIVE_OCCURRENCE_FRAGMENTED
+#define STANDARD_FORM_MOTIVE_VARIED MOTIVE_OCCURRENCE_VARIED
+#define STANDARD_FORM_MOTIVE_KIND_COUNT MOTIVE_OCCURRENCE_KIND_COUNT
 
 typedef struct StandardFormMotiveShape StandardFormMotiveShape;
 
