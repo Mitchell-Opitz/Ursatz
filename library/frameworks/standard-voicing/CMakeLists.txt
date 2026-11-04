@@ -8,6 +8,7 @@ add_library(standard_voicing
     spacing_rules.c
     crossing_rules.c
     doubling_rules.c
+    doubling_reading.c
 )
 # Public headers (R-223), staged under standard-voicing/ in the build tree; the source directories are private.
 ursatz_public_headers(standard_voicing
@@ -15,6 +16,7 @@ ursatz_public_headers(standard_voicing
     PREFIX standard-voicing
     SOURCE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
     HEADERS
+        doubling_reading.h
         framework.h
         range_rules.h
         spacing_rules.h
