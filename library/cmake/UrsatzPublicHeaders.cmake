@@ -9,9 +9,6 @@
 #
 # Each header is copied to ${PROJECT_BINARY_DIR}/public/<target>/<prefix>/<path>
 # and ${PROJECT_BINARY_DIR}/public/<target> becomes a PUBLIC include directory.
-# With URSATZ_LEGACY_INCLUDE_DIRS the source directories are also PUBLIC, as before
-# the public sets (an app turns it on at its bump and off once its includes are
-# switched, P24, P25, P27).
 # Every source header is a configure dependency, so an edited header is staged
 # again by the next build. The target's properties record what was staged:
 #   URSATZ_PUBLIC_ROOT     the staged include root
@@ -42,11 +39,6 @@ function(ursatz_public_headers target)
     target_include_directories(${target} PUBLIC $<BUILD_INTERFACE:${root}>)
     if(ARG_SOURCE_DIRS)
         target_include_directories(${target} PRIVATE ${ARG_SOURCE_DIRS})
-        if(URSATZ_LEGACY_INCLUDE_DIRS)
-            foreach(dir IN LISTS ARG_SOURCE_DIRS)
-                target_include_directories(${target} PUBLIC $<BUILD_INTERFACE:${dir}>)
-            endforeach()
-        endif()
     endif()
     set_target_properties(${target} PROPERTIES
         URSATZ_PUBLIC_ROOT "${root}"

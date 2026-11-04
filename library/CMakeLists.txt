@@ -11,8 +11,6 @@ else()
 endif()
 option(URSATZ_BUILD_TESTS "Build and register kernel and framework tests" ${URSATZ_TESTS_DEFAULT})
 
-option(URSATZ_LEGACY_INCLUDE_DIRS "Also expose the source directories to consumers" OFF)
-
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/UrsatzTests.cmake)
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/UrsatzPublicHeaders.cmake)
 
