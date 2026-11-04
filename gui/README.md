@@ -675,11 +675,14 @@ Attribution 3.0 (https://creativecommons.org/licenses/by/3.0/us/).
 
 Three layers, in order of how rarely they should change:
 
-- **Shared service layer** (`backend/src/service/`): the only code allowed to
-  call into Ursatz's persistence and query functions or the Analyzer
-  library. Every tool goes through this layer; nothing calls Ursatz directly
-  from route code. This boundary is the one thing the scaffold is strict
-  about, because it is expensive to untangle later.
+- **Shared service layer** (`backend/src/service/`): the only code that
+  calls the Analyzer and Composer libraries. Every tool goes through this
+  layer; nothing calls them from route code. The GUI is a client of the
+  apps (R-218, R-219): it displays and takes input, and every music answer
+  comes from the Analyzer or the Composer. The one library edge left is
+  storage: `persistence_service.c` includes `persistence/persistence.h` and
+  `collection_service.c` includes `corpus/corpus_api.h`, both from Ursatz.
+  No other backend file includes an Ursatz header.
 - **Tool modules** (`backend/src/routes/`): independent GUI features
   (Analysis, Corpus and Composer). Each tool registers its own
   HTTP routes under an `/api/<tool_name>/...` prefix and never calls another
@@ -1849,6 +1852,25 @@ vendored at `external/cjson` and added first, so the Ursatz Analyzer reuses it.
 `scripts/check-pins.sh` fails when a pin is not on its remote's `main` or when
 one repository is pinned at two commits; CI runs it after the submodule
 checkout.
+
+Two more checks keep the GUI a client and CI runs both (the build is
+configured with `URSATZ_LEGACY_INCLUDE_DIRS` OFF, so only staged public headers
+are visible):
+
+- `scripts/check-library-includes.sh build` fails when `backend/src` or
+  `backend/include` includes an Ursatz header other than the two storage edge
+  headers above, an Analyzer header outside `ursatz_analyzer/`, a Composer header
+  other than `ursatz_composer/composer_api.h`, or any `*_internal.h`.
+- `scripts/check-frontend-theory.sh` fails when a file under `frontend/public`
+  (not `vendor/`) defines `playbackFromMidi`, `randomSettings`, `defaultCadence`,
+  `parseHarmonyToken`, `HARMONY_TOKEN`, `KEY_TONICS`, `RANDOM_METERS`,
+  `chordProblems` or `numeralsOk`.
+
+Done-when for the client boundary (P27), checked by hand: analyze a reference
+piece (same claims and score as before the phase); make the "Knight's house"
+theme with the same seeded plan; during a compose `ps` shows no
+`ursatz-composer` process; opening a piece imports it once (the import counter);
+all checks above pass.
 `git submodule update --init --recursive` (or `git clone --recurse-submodules`
 up front) is required before the first build. Ursatz's own tests are not
 built (`URSATZ_BUILD_TESTS` is OFF). The Composer is a third submodule,
