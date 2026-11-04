@@ -108,3 +108,10 @@ ursatz_gui_add_test(piece_lock test_piece_lock.c ${CMAKE_CURRENT_BINARY_DIR}/pie
 target_compile_definitions(test_piece_lock PRIVATE
   URSATZ_GUI_TEST_SOURCE="${CMAKE_SOURCE_DIR}/external/ursatz/tests/fixtures/musicxml/chords_backup.musicxml"
 )
+
+ursatz_gui_add_test(stale_analysis test_stale_analysis.c ${CMAKE_CURRENT_BINARY_DIR}/stale_analysis)
+# The test creates pieces/, styles/, collections/, materials/, subjects/ and links/ in its own working directory and reads
+# the link fixtures.
+target_compile_definitions(test_stale_analysis PRIVATE
+  URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
+)
