@@ -1,5 +1,5 @@
-add_executable(ursatz-gui-backend
-  src/main.c
+# Everything but main.c, so the tests link the same code the server runs.
+add_library(ursatz_gui_core STATIC
   src/server.c
   src/service/persistence_service.c
   src/service/analysis_service.c
@@ -22,21 +22,29 @@ add_executable(ursatz-gui-backend
   src/routes/links.c
 )
 
-target_include_directories(ursatz-gui-backend PRIVATE
+target_include_directories(ursatz_gui_core PUBLIC
   include
   src
 )
 
-target_link_libraries(ursatz-gui-backend PRIVATE
+target_link_libraries(ursatz_gui_core PUBLIC
   ursatz_analyzer
   cjson
   ursatz
   civetweb-c-library
 )
 
-target_compile_definitions(ursatz-gui-backend PRIVATE
+if(WIN32)
+  target_link_libraries(ursatz_gui_core PUBLIC ws2_32)
+endif()
+
+target_compile_definitions(ursatz_gui_core PUBLIC
   URSATZ_GUI_FRONTEND_DIR="${CMAKE_SOURCE_DIR}/frontend/public"
 )
+
+add_executable(ursatz-gui-backend src/main.c)
+
+target_link_libraries(ursatz-gui-backend PRIVATE ursatz_gui_core)
 
 # The Composer command the backend runs (composer_service.c).
 add_dependencies(ursatz-gui-backend ursatz_composer_cli)
