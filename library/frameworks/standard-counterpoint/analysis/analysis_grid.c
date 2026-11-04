@@ -2,6 +2,7 @@
 
 #include <math.h>
 #include <stdlib.h>
+#include "pitch/midi_pitch.h"
 
 /* The sharp-preferring spelling of a semitone: the letter, the accidental (0 or 1), and the octave. */
 static void derive(long semitone, PitchLetter *letter, int *accidental, int *octave) {
@@ -9,7 +10,7 @@ static void derive(long semitone, PitchLetter *letter, int *accidental, int *oct
                                             PITCH_LETTER_E, PITCH_LETTER_F, PITCH_LETTER_F, PITCH_LETTER_G,
                                             PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_A, PITCH_LETTER_B};
     static const int ACCIDENTALS[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
-    long pitch_class = ((semitone % 12) + 12) % 12;
+    long pitch_class = pitch_class_of_midi(semitone);
     long floor_octave = (semitone - pitch_class) / 12;
     *letter = LETTERS[pitch_class];
     *accidental = ACCIDENTALS[pitch_class];

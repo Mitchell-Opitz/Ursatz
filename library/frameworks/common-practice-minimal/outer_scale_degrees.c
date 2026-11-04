@@ -10,6 +10,7 @@
 #include "framework.h"
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
+#include "pitch/midi_pitch.h"
 
 typedef struct {
     int degree;     /* 1..7 */
@@ -33,7 +34,7 @@ bool common_practice_scale_degree_of(int pitch_class, int tonic_pitch_class, Com
         tonic_pitch_class > 11 || (mode != COMMON_PRACTICE_KEY_MAJOR && mode != COMMON_PRACTICE_KEY_MINOR)) {
         return false;
     }
-    int offset = ((pitch_class - tonic_pitch_class) % 12 + 12) % 12;
+    int offset = pitch_class_of_midi(pitch_class - tonic_pitch_class);
     const DegreeOfOffset *entry = mode == COMMON_PRACTICE_KEY_MAJOR ? &MAJOR_DEGREES[offset] : &MINOR_DEGREES[offset];
     *degree = entry->degree;
     *alteration = entry->alteration;

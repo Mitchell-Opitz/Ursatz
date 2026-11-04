@@ -20,6 +20,7 @@
 #include "time/metrical_position.h"
 #include "time/time_rational.h"
 #include "time/time_span.h"
+#include "pitch/midi_pitch.h"
 
 typedef struct {
     const char *id;
@@ -324,7 +325,7 @@ static int degree_of(const OuterVoiceEntry *entry, int tonic) {
         return 0;
     }
     long position = pitch_numeric_value_position_numerator(entry->pitch);
-    return DEGREE_OF_OFFSET[(((position - tonic) % 12) + 12) % 12];
+    return DEGREE_OF_OFFSET[pitch_class_of_midi(position - tonic)];
 }
 
 static void claim_intervals(const StandardTonalityRomanClaim *claim, int out[4], size_t *count) {
@@ -859,7 +860,7 @@ ChainInputStatus chain_build_motive_input(const AnalysisNoteSet *notes, const Ch
             status = CHAIN_INPUT_ERR_BAD_NOTES;
             break;
         }
-        int pitch_class = (int)(((line[k].semitone % 12) + 12) % 12);
+        int pitch_class = pitch_class_of_midi((int)line[k].semitone);
         int degree = 0;
         int alteration = 0;
         if (!parse_degree(common_practice_scale_degree_label(pitch_class, tonic_pitch_class, mode), &degree, &alteration) ||
@@ -1265,7 +1266,7 @@ ChainInputStatus chain_build_melody_line(const ChainSegments *segments, size_t c
         note.pitch = entry->pitch;
         note.confidence = 1.0;
         long midi = pitch_numeric_value_position_numerator(entry->pitch);
-        if (!parse_degree(common_practice_scale_degree_label((int)(((midi % 12) + 12) % 12), tonic_pitch_class, mode), &note.degree,
+        if (!parse_degree(common_practice_scale_degree_label(pitch_class_of_midi(midi), tonic_pitch_class, mode), &note.degree,
                           &note.alteration)) {
             chain_melody_line_destroy(&built);
             return CHAIN_INPUT_ERR_BAD_NOTES;
@@ -1337,7 +1338,7 @@ static const TimeSpan *galant_span(ChainGalantSegments *build, const MusicalTime
 static GalantPitchDegree degree_of_offset(int semitones) {
     static const GalantPitchDegree TABLE[12] = {{1, 0}, {2, -1}, {2, 0}, {3, -1}, {3, 0}, {4, 0},
                                                 {4, 1}, {5, 0},  {6, -1}, {6, 0}, {7, -1}, {7, 0}};
-    return TABLE[((semitones % 12) + 12) % 12];
+    return TABLE[pitch_class_of_midi(semitones)];
 }
 
 /* The length of a beat at `time`, in whole notes (a compound meter's beat is its dotted unit); a quarter when it cannot be read. */
@@ -1366,7 +1367,7 @@ static void beat_length_at(const MeterMap *map, const MusicalTime *time, long *n
 
 static int pitch_class_of(const OuterVoiceEntry *entry) {
     long position = pitch_numeric_value_position_numerator(entry->pitch);
-    return (int)(((position % 12) + 12) % 12);
+    return pitch_class_of_midi((int)position);
 }
 
 static double clamp01(double x) {

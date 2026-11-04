@@ -7,6 +7,7 @@
 #include "counterpoint_pitch.h"
 #include "counterpoint_subject.h"
 #include "rule_table.h"
+#include "pitch/midi_pitch.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_CANTUS_RULE_COUNT] = {
     "length",        "tonic-ends",        "final-step",   "melodic-consonance", "range",
@@ -205,7 +206,7 @@ static bool check_leading_tone(const StandardCounterpointLine *line, const Pitch
         if (letters_above != 6) {
             continue;
         }
-        int below = ((((tonic_semitone - standard_counterpoint_semitone_number(note)) % 12) + 12) % 12);
+        int below = pitch_class_of_midi(tonic_semitone - standard_counterpoint_semitone_number(note));
         bool leading = below == 1;
         bool unraised = below == 2;
         if (i + 1 >= line->count) {

@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "pitch/midi_pitch.h"
 
 typedef unsigned long long Mask;
 
@@ -751,9 +752,9 @@ double standard_texture_feature_unison(const StandardTextureEvent *events, size_
         }
         considered++;
         bool all_same = true;
-        long first_class = ((pitches[0] % 12) + 12) % 12;
+        long first_class = pitch_class_of_midi(pitches[0]);
         for (size_t k = 1; k < found; k++) {
-            all_same = all_same && ((pitches[k] % 12) + 12) % 12 == first_class;
+            all_same = all_same && pitch_class_of_midi(pitches[k]) == first_class;
         }
         same += all_same ? 1 : 0;
     }

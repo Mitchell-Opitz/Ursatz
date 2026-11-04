@@ -9,6 +9,7 @@
 #include "core/value.h"
 #include "framework.h"
 #include "interpretation/uncertainty.h"
+#include "pitch/midi_pitch.h"
 
 static const char *mode_suffix(CommonPracticeKeyMode mode) {
     switch (mode) {
@@ -38,7 +39,7 @@ static int tonic_pitch_class_of(const char *name) {
             return -1;
         }
     }
-    return ((pitch_class % 12) + 12) % 12;
+    return pitch_class_of_midi(pitch_class);
 }
 
 KeyResult common_practice_build_key(CommonPracticeKeyMode mode, const char *tonic_name, EntityID *context_target_id,

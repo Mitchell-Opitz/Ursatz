@@ -3,6 +3,7 @@
 #include <stddef.h>
 
 #include "pitch/pitch_arithmetic.h"
+#include "pitch/midi_pitch.h"
 
 #define KEY_MAX_ACCIDENTALS 7
 #define KEY_MINOR_FIFTHS_OFFSET 3
@@ -230,7 +231,7 @@ bool standard_tonality_mode_of_roman_key_mode(StandardTonalityRomanKeyMode mode,
 
 const char *standard_tonality_chromatic_degree_label(int semitones_above_tonic) {
     static const char *const LABELS[12] = {"1", "b2", "2", "b3", "3", "4", "#4", "5", "b6", "6", "b7", "7"};
-    return LABELS[((semitones_above_tonic % 12) + 12) % 12];
+    return LABELS[pitch_class_of_midi(semitones_above_tonic)];
 }
 
 /* Major tonics by signature size 0 to 7, sharps then flats (circle of fifths). */

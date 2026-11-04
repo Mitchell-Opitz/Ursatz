@@ -3,6 +3,7 @@
 #include <stddef.h>
 
 #include "harmony_rule_table.h"
+#include "pitch/midi_pitch.h"
 
 static const char *const NAMES[HARMONY_APPLIED_RULE_COUNT] = {
     "progression",   "chord-notes", "leading-tone-resolves",  "seventh-resolves",
@@ -53,7 +54,7 @@ static int pitch(const HarmonyAppliedMotion *m, int chord, int voice) {
 /* The pitch class of a voice above the applied chord's root: 0 to 11. */
 static int above_root(const HarmonyAppliedMotion *m, int voice) {
     int root = harmony_applied_root_semitone(m->mode, &m->applied);
-    return (((pitch(m, 0, voice) - root) % 12) + 12) % 12;
+    return pitch_class_of_midi(pitch(m, 0, voice) - root);
 }
 
 static bool check_chord_notes(const HarmonyAppliedMotion *m) {
@@ -112,7 +113,7 @@ static bool check_seventh_resolves(const HarmonyAppliedMotion *m) {
 
 /* 0 for an octave or unison, 7 for a fifth, otherwise -1, measured in pitch classes. */
 static int perfect(int low, int high) {
-    int interval = (((high - low) % 12) + 12) % 12;
+    int interval = pitch_class_of_midi(high - low);
     return interval == 0 || interval == 7 ? interval : -1;
 }
 

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include "pitch/midi_pitch.h"
 
 static const int MAJOR_SEMITONES[7] = {0, 2, 4, 5, 7, 9, 11};
 
@@ -127,6 +128,6 @@ bool galant_segment_set_analysis_key(GalantSegment *segment, const AnalysisKey *
     }
     int offset = analysis_key_tonic_pitch_class(key) - analysis_key_tonic_pitch_class(home);
     strcpy(segment->key_id, id);
-    segment->key = DEGREE_OF_OFFSET[((offset % 12) + 12) % 12];
+    segment->key = DEGREE_OF_OFFSET[pitch_class_of_midi(offset)];
     return true;
 }

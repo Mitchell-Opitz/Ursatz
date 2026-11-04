@@ -8,6 +8,7 @@
 #include "core/rational.h"
 #include "pitch/pitch_arithmetic.h"
 #include "time/time_rational.h"
+#include "pitch/midi_pitch.h"
 
 static const char *const TONIC_NAMES[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
@@ -145,7 +146,7 @@ typedef struct {
 } MeasureWeights;
 
 #define DOMINANT_THIRD_BIT(root) (1u << (((root) + 4) % 12))
-#define PITCH_CLASS_BIT(pc) (1u << (((pc) % 12 + 12) % 12))
+#define PITCH_CLASS_BIT(pc) (1u << pitch_class_of_midi(pc))
 
 /* The functional evidence for the key on `tonic` (minor when `minor`) in the move from chord `from` (NULL for
    none) to chord `to`: see key_regions.h, FUNCTIONAL EVIDENCE. A tonic chord counts only when its third is the
@@ -590,7 +591,7 @@ typedef struct {
 } SpanPlan;
 
 static unsigned signature_keys(int sharps_flats) {
-    int tonic = ((7 * sharps_flats) % 12 + 12) % 12; /* the major key: sharps climb by fifths from C */
+    int tonic = pitch_class_of_midi(7 * sharps_flats); /* the major key: sharps climb by fifths from C */
     int relative = (tonic + 9) % 12;
     return (1u << tonic) | (1u << (12 + relative));
 }
@@ -689,7 +690,7 @@ static bool closely_related(int from, int to) {
     int to_tonic = common_practice_key_index_tonic(to);
     CommonPracticeKeyMode from_mode = common_practice_key_index_mode(from);
     CommonPracticeKeyMode to_mode = common_practice_key_index_mode(to);
-    int step = ((to_tonic - from_tonic) % 12 + 12) % 12;
+    int step = pitch_class_of_midi(to_tonic - from_tonic);
     if (from_mode == to_mode) {
         return step == 5 || step == 7;
     }
@@ -730,7 +731,7 @@ static void hold_home_keys(const CommonPracticeKeySegment *segments, size_t segm
                 continue;
             }
             int root = segments[i].chord.root_pitch_class;
-            int degree = ((root - tonic) % 12 + 12) % 12;
+            int degree = pitch_class_of_midi(root - tonic);
             hold = (degree == 2 || degree == 5 || degree == 7) && (segments[i].chord.pitch_classes & ~collection) == 0;
             chords++;
         }

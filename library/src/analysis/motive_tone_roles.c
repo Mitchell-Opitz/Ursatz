@@ -4,6 +4,7 @@
 #include "semantics/analysis_note.h"
 
 #include <string.h>
+#include "pitch/midi_pitch.h"
 
 /* The rule core: a line of notes (pitch and the chord mask of each), any length. */
 typedef struct {
@@ -33,12 +34,8 @@ static bool is_leap(int a, int b) {
     return span(a, b) > 2;
 }
 
-static int pitch_class(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
-
 static bool in_mask(unsigned mask, int pitch) {
-    return (mask >> pitch_class(pitch) & 1u) != 0;
+    return (mask >> pitch_class_of_midi(pitch) & 1u) != 0;
 }
 
 /* Whether the chords of notes i and j hold different pitch classes. */
@@ -232,7 +229,7 @@ MotiveToneStatus motive_tone_roles(const MotiveSketch *sketch, const MotiveToneO
         notes[i].duration = sketch->notes[i].duration;
         notes[i].chord_pitch_classes = 0;
         for (size_t k = 0; k < n; k++) {
-            notes[i].chord_pitch_classes |= 1u << mch_pitch_class(pcs[k]);
+            notes[i].chord_pitch_classes |= 1u << pitch_class_of_midi(pcs[k]);
         }
     }
     Line line = {notes, sketch->note_count, labels};

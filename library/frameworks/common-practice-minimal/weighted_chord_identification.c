@@ -9,6 +9,7 @@
 #include "chord_vocabulary_seventh.h"
 #include "core/rational.h"
 #include "identity/entity_id.h"
+#include "pitch/midi_pitch.h"
 
 #define CONFIDENCE_DENOMINATOR 1000000UL
 
@@ -191,21 +192,17 @@ CommonPracticeWeightedStatus common_practice_identify_weighted(const CommonPract
 
 /* --- context --- */
 
-static int pitch_class_of(int pitch) {
-    return ((pitch % 12) + 12) % 12;
-}
-
 /* The pitch classes a segment sounds, as a 12-bit mask, and its bass pitch class (-1 when empty). */
 static unsigned segment_mask(const CommonPracticeSegment *segment, int *bass_pitch_class) {
     unsigned mask = 0;
     int bass = 0;
     for (size_t i = 0; i < segment->member_count; i++) {
-        mask |= 1u << pitch_class_of(segment->members[i].pitch);
+        mask |= 1u << pitch_class_of_midi(segment->members[i].pitch);
         if (i == 0 || segment->members[i].pitch < bass) {
             bass = segment->members[i].pitch;
         }
     }
-    *bass_pitch_class = segment->member_count > 0 ? pitch_class_of(bass) : -1;
+    *bass_pitch_class = segment->member_count > 0 ? pitch_class_of_midi(bass) : -1;
     return mask;
 }
 
