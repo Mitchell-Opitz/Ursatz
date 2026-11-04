@@ -1,6 +1,6 @@
 # Form analysis
 
-`frameworks/standard-form/analysis/` finds phrases, ideas and subphrases, themes and phrase expansion or contraction from real cadences and the soprano. It applies standard-form's existing rules and length conventions and defines no form of its own. standard-form includes no other framework and no kernel analysis (the architecture test enforces both, and now scans `analysis/` too): the input is neutral structs the caller fills, built in `tests/integration/` (`form_util.h`) from the standard-harmony cadences, the L2 soprano and the `MeterMap`.
+`frameworks/standard-form/analysis/` finds phrases, ideas and subphrases, themes and phrase expansion or contraction from real cadences and the soprano. It applies standard-form's existing rules and length conventions and defines no form of its own. standard-form includes no other framework and no kernel analysis (the architecture test enforces both, and now scans `analysis/` too): the input is neutral structs the caller fills, built by `chain_build_form_input` in `chain/` from the standard-harmony cadences, the L2 soprano and the `MeterMap`.
 
 The time helpers in `analysis_time.c` (`standard_form_measure_at`, `_measure_bounds`, `_last_measure_touched`, `_beat_length`, `_snap_to_beat`, `_on_beat`, `_first_counted_measure`) wrap `time/meter_arithmetic.h`; `StandardFormQ` keeps its layout and converts to `Rational` at each call.
 

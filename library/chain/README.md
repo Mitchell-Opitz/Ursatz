@@ -4,7 +4,7 @@
 
 ## Layer
 
-An extension above the numbered stack. It may include kernel L0 to L8 and the framework headers listed in `tests/test_architecture_chain.c`. It never includes L9 (`io`, `export`, `persistence`, `corpus`, `corpus_stats`, `query`). `architecture_chain` enforces this. The notes it reads (`semantics/analysis_note.h`) are made from an import by `io/import_notes.h`, which the caller includes.
+An extension above the numbered stack. It may include kernel L0 to L8 and the framework headers listed in `chain/tests/test_architecture_chain.c`. It never includes L9 (`io`, `export`, `persistence`, `corpus`, `corpus_stats`, `query`). `architecture_chain` enforces this. The notes it reads (`semantics/analysis_note.h`) are made from an import by `io/import_notes.h`, which the caller includes.
 
 ## Contents
 

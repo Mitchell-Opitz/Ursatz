@@ -1,6 +1,6 @@
 # Melody analysis
 
-`frameworks/standard-counterpoint/analysis/` reads one melodic line and reports its intervals, contour, climax, leap recovery and non-chord tones as durable claims. There is no melody framework: the melodic rules (steps and leaps, leap recovery, a single climax) are standard-counterpoint's, so the adapter is here. standard-counterpoint includes no other framework; the chain from the outer voices to this adapter is built only in `tests/integration/` (`melody_util.h`).
+`frameworks/standard-counterpoint/analysis/` reads one melodic line and reports its intervals, contour, climax, leap recovery and non-chord tones as durable claims. There is no melody framework: the melodic rules (steps and leaps, leap recovery, a single climax) are standard-counterpoint's, so the adapter is here. standard-counterpoint includes no other framework; the chain from the outer voices to this adapter is `chain_build_melody_line` in `chain/`.
 
 ## Input: the melody line
 
