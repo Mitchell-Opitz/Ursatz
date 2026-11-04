@@ -1686,7 +1686,13 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
   if (!in.pickup) {
     in.pickup = "0";
   }
-  const char *effective_key = in.render_key && in.render_key[0] != '\0' ? in.render_key : in.key;
+  /* A copy: the key text lives in version_body, which is freed before the cache is written. */
+  char effective_key_text[64] = "";
+  const char *key_source = in.render_key && in.render_key[0] != '\0' ? in.render_key : in.key;
+  if (key_source) {
+    snprintf(effective_key_text, sizeof(effective_key_text), "%s", key_source);
+  }
+  const char *effective_key = key_source ? effective_key_text : NULL;
   char cache_dir[576];
   char midi_path[640];
   bool cached = effective_key && render_cache_dir(id, (int)number, cache_dir, sizeof(cache_dir)) &&
