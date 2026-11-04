@@ -1,6 +1,6 @@
 # Motive variant recognition (analysis, L8)
 
-Files: `src/analysis/motive_variant_recognition.h/.c`. Tests: `tests/analysis/test_motive_variant_recognition.c`. Part of `analysis` (see `docs/modules/analysis.md`); includes `analysis/motive_relation.h`, `analysis/motive_sketch.h` and C headers. Shared by the Composer's variant recognition and the Analyzer.
+Files: `src/analysis/motive_variant_recognition.h/.c`. Tests: `tests/analysis/test_motive_variant_recognition.c`, `tests/analysis/test_motive_variant_recognition_chains.c`. Part of `analysis` (see `docs/modules/analysis.md`); includes `analysis/motive_relation.h`, `analysis/motive_sketch.h` and C headers. Shared by the Composer's variant recognition and the Analyzer.
 
 Names the chain of motive relations (`docs/modules/motive-relations.md`) that turns one `MotiveSketch` into another, with the chain's distance and the dimensions it kept and changed. The inputs are plain sketches, the notes the analysis chain already produces (R-006: the recognizer reads no audio and no score of its own).
 
@@ -56,6 +56,12 @@ The states one relation from the source are never cut by the beam: level 1 holds
 ## Proposed parameters
 
 Ratios are proposed inside the range a composer writes (terms 1 to 3), inferred from the target where it can be, plus the usual ratios (2:1, 3:2, 3:1 and their inverses for augment and diminish), because a later step can hide the factor in the length. Condense infers its run from the notes whose durations changed, and tries single notes first.
+
+## Depth 2 and the implied chord
+
+A source without chords is searched from two starts when the target has chords: the source as given, and the source with its best implied chord at 0, at no cost. Most relations keep the chords, so without the second start a target that carries the source's implied chord is reachable only through a harmony relation that does nothing but add it, which costs a step and is a different chain from the one that made the target. A chain found from the implied start replays through `motive_relation_apply` from the source with that chord (a sketch with one chord, I or whichever `implied_chord` picks), not from the chordless source. Contour mode and sketches without a scale do not take the second start.
+
+What depth two recognition cannot tell apart: the notes alone do not say whether a chord came from a step or from the source's implied chord, and some pairs of chains reach the same notes at the same cost. The recognizer returns the cheaper chain, then the first in relation order. Known cases on the C major fixture (`test_motive_variant_recognition_chains`): `liquidate-features` then `liquidate` equals `liquidate` alone from the implied chord (the shorter chain is returned); `interval-change` then `ancillary-fill` equals `add-interval` then `interval-change` (the second is returned). A caller that replays chains through its own table, and drops an implied chord from results that are not harmony rows (the Composer), accepts either member of such a set.
 
 ## Limits
 
