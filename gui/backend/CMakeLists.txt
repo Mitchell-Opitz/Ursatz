@@ -16,6 +16,7 @@ add_library(ursatz_gui_core STATIC
   src/service/compose_common.c
   src/service/theme_service.c
   src/service/piece_service.c
+  src/service/playback_service.c
   src/service/subject_service.c
   src/service/link_service.c
   src/routes/health.c
