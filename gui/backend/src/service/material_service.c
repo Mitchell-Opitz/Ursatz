@@ -1764,6 +1764,14 @@ static UrsatzGuiMaterialResult fill_body_uses_locked(const char *self_id, const 
     return result;
 }
 
+UrsatzGuiMaterialResult ursatz_gui_material_body_with_uses(const cJSON *body, cJSON **out) {
+    *out = NULL;
+    LOCK();
+    UrsatzGuiMaterialResult result = fill_body_uses_locked(NULL, body, out);
+    UNLOCK();
+    return result;
+}
+
 /* Points every reference of a theme or piece body that names source_id at version latest. false on allocation failure. */
 static bool bump_versions(cJSON *body, const char *source_id, int latest) {
     const cJSON *refs[BODY_REFERENCES_MAX];

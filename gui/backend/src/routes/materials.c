@@ -3170,10 +3170,20 @@ static int handle_validate(struct mg_connection *conn) {
     if (!draft && !request) {
       snprintf(message, sizeof(message), "the motif needs notes, meter and pickup");
     }
-  } else if (is_theme) {
-    built = ursatz_gui_theme_validate(body, &complete, &request, message, sizeof(message));
   } else {
-    built = ursatz_gui_piece_validate(body, &complete, &request, message, sizeof(message));
+    /* A form not saved yet names its motifs and themes by reference; the uses a save would make are made here. */
+    cJSON *filled = NULL;
+    UrsatzGuiMaterialResult uses = ursatz_gui_material_body_with_uses(body, &filled);
+    if (uses == URSATZ_GUI_MATERIAL_ERR_ALLOC) {
+      built = URSATZ_GUI_THEME_ERR_ALLOC;
+    } else if (uses != URSATZ_GUI_MATERIAL_OK) {
+      snprintf(message, sizeof(message), "a motif or theme the body names cannot be used yet");
+    } else if (is_theme) {
+      built = ursatz_gui_theme_validate(filled, &complete, &request, message, sizeof(message));
+    } else {
+      built = ursatz_gui_piece_validate(filled, &complete, &request, message, sizeof(message));
+    }
+    cJSON_Delete(filled);
   }
   if (built == URSATZ_GUI_THEME_ERR_ALLOC) {
     cJSON_Delete(request);
