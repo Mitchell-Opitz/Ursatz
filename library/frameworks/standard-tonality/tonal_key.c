@@ -48,6 +48,16 @@ unsigned standard_tonality_mode_pitch_classes(int tonic_pitch_class, StandardTon
     return mask;
 }
 
+/* A chromatic semitone with no context is read as the next degree lowered where the two spellings are
+ * a semitone from the neighbors on both sides (R-285): semitone 1 in every mode, and in major also 3, 8
+ * and 10. The sharp readings that stay are the raised fourth, and the natural minor's #3, #6 and #7. */
+static bool semitone_reads_lowered(StandardTonalityMode mode, int inside) {
+    if (inside == 1) {
+        return true;
+    }
+    return mode == STANDARD_TONALITY_MODE_MAJOR && (inside == 3 || inside == 8 || inside == 10);
+}
+
 bool standard_tonality_degree_of_semitone(int semitones_above_tonic, StandardTonalityMode mode, int *degree,
                                           int *alteration) {
     if (degree == NULL || alteration == NULL || !mode_valid(mode)) {
@@ -62,6 +72,10 @@ bool standard_tonality_degree_of_semitone(int semitones_above_tonic, StandardTon
     }
     *degree = found + 1;
     *alteration = inside - MODE_SEMITONES[mode][found];
+    if (semitone_reads_lowered(mode, inside)) {
+        *degree = found + 2;
+        *alteration = -1;
+    }
     return true;
 }
 
