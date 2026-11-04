@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/rational.h"
 #include "core/value.h"
 #include "meter_analysis_claim.h"
 #include "meter_analysis_time.h"
@@ -15,26 +16,16 @@
 #define TUPLET_GRID 96
 #define NATIVE_STEPS 3 /* TUPLET_GRID steps in one step of the library's 1/32 grid */
 
-typedef struct {
-    long long n;
-    long long d;
-} Frac;
-
-static long long gcd_ll(long long a, long long b) {
-    while (b != 0) {
-        long long t = a % b;
-        a = b;
-        b = t;
+/* True when the onset lies a whole number of beats after the base; false when the arithmetic does not fit. */
+static bool whole_beats_after(StandardMeterQ onset, StandardMeterQ base, StandardMeterQ beat, bool *whole) {
+    Rational offset;
+    Rational beats;
+    if (rational_sub(rational_ratio(onset.n, onset.d), rational_ratio(base.n, base.d), &offset) != RATIONAL_OK ||
+        rational_div(offset, rational_ratio(beat.n, beat.d), &beats) != RATIONAL_OK) {
+        return false;
     }
-    return a < 0 ? -a : a;
-}
-
-/* a / b reduced, for a >= 0 and b > 0. */
-static Frac frac_div(StandardMeterQ a, StandardMeterQ b) {
-    long long n = a.n * b.d;
-    long long d = a.d * b.n;
-    long long g = gcd_ll(n, d);
-    return (Frac){g > 1 ? n / g : n, g > 1 ? d / g : d};
+    *whole = beats.den == 1;
+    return true;
 }
 
 typedef enum {
@@ -115,7 +106,9 @@ static GridRead read_tuplet_note(const MeterMap *map, StandardMeterQ onset, Stan
     }
     note->beat = grid.beat;
     note->division = (int)grid.division;
-    note->on_beat = frac_div(standard_meter_q_sub(note->onset, grid.base), grid.beat).d == 1;
+    if (!whole_beats_after(note->onset, grid.base, grid.beat, &note->on_beat)) {
+        return GRID_OVERFLOW;
+    }
     return GRID_ON;
 }
 

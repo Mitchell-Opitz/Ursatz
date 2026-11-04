@@ -4,78 +4,52 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/rational.h"
 #include "time/duration.h"
 #include "time/note_value.h"
+#include "time/time_rational.h"
 
-/* Exact non-negative-denominator rational used for the grid arithmetic. Always reduced, so the
-   products below stay small for any realistic tick position. */
-typedef struct {
-    long long n;
-    long long d;
-} Rat;
+/* Grid arithmetic is on core/rational.h Rationals, every step checked. A step that does not fit is
+   METER_MAP_ERR_OVERFLOW to the caller, never a wrapped value. */
+#define TRY(call)                                  \
+    do {                                           \
+        MeterMapResult try_result_ = (call);       \
+        if (try_result_ != METER_MAP_OK) {         \
+            return try_result_;                    \
+        }                                          \
+    } while (0)
 
-static long long gcd_ll(long long a, long long b) {
-    if (a < 0) {
-        a = -a;
-    }
-    while (b != 0) {
-        long long t = b;
-        b = a % b;
-        a = t;
-    }
-    return a;
+static MeterMapResult checked(RationalResult result) {
+    return result == RATIONAL_OK ? METER_MAP_OK : METER_MAP_ERR_OVERFLOW;
 }
 
-static Rat rat_make(long long n, long long d) {
-    long long g = gcd_ll(n, d);
-    if (g > 1) {
-        n /= g;
-        d /= g;
-    }
-    Rat r = {n, d};
-    return r;
+static MeterMapResult rat_of_time(const MusicalTime *time, Rational *out) {
+    return checked(rational_of_musical_time(time, out));
 }
 
-static Rat rat_of_time(const MusicalTime *time) {
-    return rat_make(musical_time_numerator(time), (long long)musical_time_denominator(time));
+/* a / b rounded down, for b > 0. */
+static MeterMapResult rat_floor_div(Rational a, Rational b, long long *out) {
+    Rational quotient;
+    TRY(checked(rational_div(a, b, &quotient)));
+    return checked(rational_floor(quotient, out));
 }
 
-static int rat_cmp(Rat a, Rat b) {
-    long long left = a.n * b.d;
-    long long right = b.n * a.d;
-    return left < right ? -1 : (left > right ? 1 : 0);
+/* a / b rounded up, for b > 0. */
+static MeterMapResult rat_ceil_div(Rational a, Rational b, long long *out) {
+    Rational quotient;
+    TRY(checked(rational_div(a, b, &quotient)));
+    return checked(rational_ceil(quotient, out));
 }
 
-static Rat rat_add(Rat a, Rat b) {
-    return rat_make(a.n * b.d + b.n * a.d, a.d * b.d);
+static MeterMapResult rat_is_multiple(Rational a, Rational b, bool *out) {
+    Rational quotient;
+    TRY(checked(rational_div(a, b, &quotient)));
+    *out = quotient.den == 1;
+    return METER_MAP_OK;
 }
 
-static Rat rat_sub(Rat a, Rat b) {
-    return rat_make(a.n * b.d - b.n * a.d, a.d * b.d);
-}
-
-static Rat rat_mul_int(Rat a, long long k) {
-    return rat_make(a.n * k, a.d);
-}
-
-static Rat rat_min(Rat a, Rat b) {
-    return rat_cmp(a, b) <= 0 ? a : b;
-}
-
-/* a / b rounded down; a >= 0, b > 0. */
-static long long rat_floor_div(Rat a, Rat b) {
-    return (a.n * b.d) / (a.d * b.n);
-}
-
-/* a / b rounded up; a >= 0, b > 0. */
-static long long rat_ceil_div(Rat a, Rat b) {
-    long long num = a.n * b.d;
-    long long den = a.d * b.n;
-    return (num + den - 1) / den;
-}
-
-static bool rat_is_multiple(Rat a, Rat b) {
-    return ((a.n * b.d) % (a.d * b.n)) == 0;
+static Rational rat_min(Rational a, Rational b) {
+    return rational_cmp(a, b) <= 0 ? a : b;
 }
 
 struct MeterMapRegion {
@@ -83,10 +57,10 @@ struct MeterMapRegion {
     TimeSignature *time_signature;
     MusicalTime *start;
     MusicalTime *end; /* NULL while open */
-    Rat start_r;
-    Rat end_r; /* meaningful only when !open */
+    Rational start_r;
+    Rational end_r; /* meaningful only when !open */
     bool open;
-    Rat measure_len;
+    Rational measure_len;
     int first_measure_number;
     long long measure_total; /* measures in the region; meaningful only when !open */
     bool defaulted;
@@ -100,12 +74,8 @@ struct MeterMap {
     bool pickup;
 };
 
-static MusicalTime *time_of_rat(Rat r) {
-    MusicalTime *t = NULL;
-    if (musical_time_create((long)r.n, (unsigned long)r.d, &t) != MUSICAL_TIME_OK) {
-        return NULL;
-    }
-    return t;
+static MusicalTime *time_of_rat(Rational r) {
+    return musical_time_from_rational_or_null(r);
 }
 
 static TimeSignature *copy_time_signature(const TimeSignature *source) {
@@ -138,17 +108,22 @@ static void region_release(MeterMapRegion *region) {
 }
 
 /* Takes ownership of time_signature on success only. */
-static int region_fill(MeterMapRegion *region, TimeSignature *time_signature, Rat start, bool defaulted) {
+static MeterMapResult region_fill(MeterMapRegion *region, TimeSignature *time_signature, Rational start,
+                                  bool defaulted) {
     Duration *measure = NULL;
     if (time_signature_measure_duration(time_signature, &measure) != DURATION_OK) {
-        return -1;
+        return METER_MAP_ERR_ALLOC;
     }
-    Rat measure_len = rat_make(duration_numerator(measure), (long long)duration_denominator(measure));
+    Rational measure_len;
+    RationalResult read = rational_of_duration(measure, &measure_len);
     duration_destroy(measure);
+    if (read != RATIONAL_OK) {
+        return METER_MAP_ERR_OVERFLOW;
+    }
 
     MusicalTime *start_time = time_of_rat(start);
     if (start_time == NULL) {
-        return -1;
+        return METER_MAP_ERR_ALLOC;
     }
 
     memset(region, 0, sizeof(*region));
@@ -158,7 +133,7 @@ static int region_fill(MeterMapRegion *region, TimeSignature *time_signature, Ra
     region->open = true;
     region->measure_len = measure_len;
     region->defaulted = defaulted;
-    return 0;
+    return METER_MAP_OK;
 }
 
 static void map_release(MeterMap *map, size_t filled) {
@@ -170,30 +145,33 @@ static void map_release(MeterMap *map, size_t filled) {
 }
 
 /* Closes each region at the next one's start, decides the pickup, numbers the measures and mints
-   the region ids. Returns 0, or -1 on allocation failure (regions already filled stay owned by the
-   map, which the caller releases). */
-static int finalize(MeterMap *map) {
+   the region ids. Returns METER_MAP_OK, METER_MAP_ERR_ALLOC, or METER_MAP_ERR_OVERFLOW when a grid
+   step does not fit (regions already filled stay owned by the map, which the caller releases). */
+static MeterMapResult finalize(MeterMap *map) {
     for (size_t i = 0; i + 1 < map->count; i++) {
         MeterMapRegion *region = &map->regions[i];
         region->end_r = map->regions[i + 1].start_r;
         region->open = false;
         region->end = time_of_rat(region->end_r);
         if (region->end == NULL) {
-            return -1;
+            return METER_MAP_ERR_ALLOC;
         }
     }
 
     if (map->count >= 2) {
         const MeterMapRegion *first = &map->regions[0];
         const MeterMapRegion *second = &map->regions[1];
-        Rat length = rat_sub(first->end_r, first->start_r);
-        int against_own = rat_cmp(length, first->measure_len);
+        Rational length;
+        TRY(checked(rational_sub(first->end_r, first->start_r, &length)));
+        int against_own = rational_cmp(length, first->measure_len);
         if (against_own < 0) {
             map->pickup = true;
-        } else if (against_own == 0 &&
-                   !time_signature_equals(first->time_signature, second->time_signature) &&
-                   rat_cmp(rat_mul_int(first->measure_len, 2), second->measure_len) < 0) {
-            map->pickup = true;
+        } else if (against_own == 0 && !time_signature_equals(first->time_signature, second->time_signature)) {
+            Rational doubled;
+            TRY(checked(rational_mul_int(first->measure_len, 2, &doubled)));
+            if (rational_cmp(doubled, second->measure_len) < 0) {
+                map->pickup = true;
+            }
         }
     }
     map->regions[0].pickup = map->pickup;
@@ -203,17 +181,19 @@ static int finalize(MeterMap *map) {
         MeterMapRegion *region = &map->regions[i];
         region->first_measure_number = number;
         if (!region->open) {
-            region->measure_total = rat_ceil_div(rat_sub(region->end_r, region->start_r), region->measure_len);
+            Rational extent;
+            TRY(checked(rational_sub(region->end_r, region->start_r, &extent)));
+            TRY(rat_ceil_div(extent, region->measure_len, &region->measure_total));
             number += (int)region->measure_total;
         }
 
         char buffer[256];
         snprintf(buffer, sizeof(buffer), "%s/region-%zu", entity_id_value(map->id), i);
         if (entity_id_create(buffer, &region->id) != ENTITY_ID_OK) {
-            return -1;
+            return METER_MAP_ERR_ALLOC;
         }
     }
-    return 0;
+    return METER_MAP_OK;
 }
 
 MeterMapResult meter_map_create(EntityID *id, const MeterMapChangePoint *change_points, size_t count, MeterMap **out) {
@@ -231,8 +211,14 @@ MeterMapResult meter_map_create(EntityID *id, const MeterMapChangePoint *change_
         if (musical_time_numerator(change_points[i].start) < 0) {
             return METER_MAP_ERR_NEGATIVE_START;
         }
-        if (i > 0 && rat_cmp(rat_of_time(change_points[i - 1].start), rat_of_time(change_points[i].start)) >= 0) {
-            return METER_MAP_ERR_NOT_ASCENDING;
+        Rational this_start;
+        TRY(rat_of_time(change_points[i].start, &this_start));
+        if (i > 0) {
+            Rational previous_start;
+            TRY(rat_of_time(change_points[i - 1].start, &previous_start));
+            if (rational_cmp(previous_start, this_start) >= 0) {
+                return METER_MAP_ERR_NOT_ASCENDING;
+            }
         }
     }
 
@@ -246,31 +232,53 @@ MeterMapResult meter_map_create(EntityID *id, const MeterMapChangePoint *change_
         return METER_MAP_ERR_ALLOC;
     }
 
-    Rat zero = rat_make(0, 1);
-    if (rat_cmp(rat_of_time(change_points[0].start), zero) != 0) {
+    Rational zero = rational_ratio(0, 1);
+    Rational first_start;
+    (void)rat_of_time(change_points[0].start, &first_start); /* read and checked above */
+    if (rational_cmp(first_start, zero) != 0) {
         TimeSignature *default_signature = make_four_four();
-        if (default_signature == NULL || region_fill(&map->regions[0], default_signature, zero, true) != 0) {
+        MeterMapResult filled = METER_MAP_ERR_ALLOC;
+        if (default_signature != NULL) {
+            filled = region_fill(&map->regions[0], default_signature, zero, true);
+        }
+        if (filled != METER_MAP_OK) {
             time_signature_destroy(default_signature);
             map_release(map, 0);
-            return METER_MAP_ERR_ALLOC;
+            return filled;
         }
         map->count = 1;
     }
 
     for (size_t i = 0; i < count; i++) {
-        Rat start = rat_of_time(change_points[i].start);
+        Rational start;
+        (void)rat_of_time(change_points[i].start, &start); /* read and checked above */
+        MeterMapResult status = METER_MAP_OK;
         if (map->count > 0) {
             const MeterMapRegion *last = &map->regions[map->count - 1];
-            if (!last->defaulted && time_signature_equals(last->time_signature, change_points[i].time_signature) &&
-                rat_is_multiple(rat_sub(start, last->start_r), last->measure_len)) {
-                continue;
+            if (!last->defaulted && time_signature_equals(last->time_signature, change_points[i].time_signature)) {
+                Rational offset;
+                bool on_barline = false;
+                status = checked(rational_sub(start, last->start_r, &offset));
+                if (status == METER_MAP_OK) {
+                    status = rat_is_multiple(offset, last->measure_len, &on_barline);
+                }
+                if (status == METER_MAP_OK && on_barline) {
+                    continue;
+                }
             }
         }
-        TimeSignature *copy = copy_time_signature(change_points[i].time_signature);
-        if (copy == NULL || region_fill(&map->regions[map->count], copy, start, false) != 0) {
+        TimeSignature *copy = NULL;
+        if (status == METER_MAP_OK) {
+            status = METER_MAP_ERR_ALLOC;
+            copy = copy_time_signature(change_points[i].time_signature);
+            if (copy != NULL) {
+                status = region_fill(&map->regions[map->count], copy, start, false);
+            }
+        }
+        if (status != METER_MAP_OK) {
             time_signature_destroy(copy);
             map_release(map, map->count);
-            return METER_MAP_ERR_ALLOC;
+            return status;
         }
         map->count++;
     }
@@ -278,10 +286,11 @@ MeterMapResult meter_map_create(EntityID *id, const MeterMapChangePoint *change_
     /* finalize closes regions as it goes, and the ids come last, so a failure here leaves a
        partly built map that map_release frees region by region. */
     map->id = id;
-    if (finalize(map) != 0) {
+    MeterMapResult finalized = finalize(map);
+    if (finalized != METER_MAP_OK) {
         map->id = NULL;
         map_release(map, map->count);
-        return METER_MAP_ERR_ALLOC;
+        return finalized;
     }
 
     *out = map;
@@ -302,17 +311,22 @@ MeterMapResult meter_map_create_defaulted(EntityID *id, MeterMap **out) {
         return METER_MAP_ERR_ALLOC;
     }
     TimeSignature *default_signature = make_four_four();
-    if (default_signature == NULL || region_fill(&map->regions[0], default_signature, rat_make(0, 1), true) != 0) {
+    MeterMapResult filled = METER_MAP_ERR_ALLOC;
+    if (default_signature != NULL) {
+        filled = region_fill(&map->regions[0], default_signature, rational_ratio(0, 1), true);
+    }
+    if (filled != METER_MAP_OK) {
         time_signature_destroy(default_signature);
         map_release(map, 0);
-        return METER_MAP_ERR_ALLOC;
+        return filled;
     }
     map->count = 1;
     map->id = id;
-    if (finalize(map) != 0) {
+    MeterMapResult finalized = finalize(map);
+    if (finalized != METER_MAP_OK) {
         map->id = NULL;
         map_release(map, map->count);
-        return METER_MAP_ERR_ALLOC;
+        return finalized;
     }
     *out = map;
     return METER_MAP_OK;
@@ -356,9 +370,9 @@ const MeterMapRegion *meter_map_region(const MeterMap *map, size_t index) {
 }
 
 /* The last region that starts at or before t, for t >= 0. */
-static const MeterMapRegion *find_region(const MeterMap *map, Rat t) {
+static const MeterMapRegion *find_region(const MeterMap *map, Rational t) {
     for (size_t i = map->count; i > 0; i--) {
-        if (rat_cmp(map->regions[i - 1].start_r, t) <= 0) {
+        if (rational_cmp(map->regions[i - 1].start_r, t) <= 0) {
             return &map->regions[i - 1];
         }
     }
@@ -372,7 +386,9 @@ MeterMapResult meter_map_region_at(const MeterMap *map, const MusicalTime *time,
     if (musical_time_numerator(time) < 0) {
         return METER_MAP_ERR_TIME_BEFORE_START;
     }
-    *out = find_region(map, rat_of_time(time));
+    Rational t;
+    TRY(rat_of_time(time, &t));
+    *out = find_region(map, t);
     return METER_MAP_OK;
 }
 
@@ -396,9 +412,14 @@ MeterMapResult meter_map_measure_index_at(const MeterMap *map, const MusicalTime
     if (musical_time_numerator(time) < 0) {
         return METER_MAP_ERR_TIME_BEFORE_START;
     }
-    Rat t = rat_of_time(time);
+    Rational t;
+    TRY(rat_of_time(time, &t));
     const MeterMapRegion *region = find_region(map, t);
-    *out_index = region->first_measure_number + (int)rat_floor_div(rat_sub(t, region->start_r), region->measure_len);
+    Rational offset;
+    long long measures;
+    TRY(checked(rational_sub(t, region->start_r, &offset)));
+    TRY(rat_floor_div(offset, region->measure_len, &measures));
+    *out_index = region->first_measure_number + (int)measures;
     return METER_MAP_OK;
 }
 
@@ -429,8 +450,12 @@ MeterMapResult meter_map_measure_span(const MeterMap *map, int index, TimeSpan *
         return found;
     }
 
-    Rat start = rat_add(region->start_r, rat_mul_int(region->measure_len, index - region->first_measure_number));
-    Rat end = rat_add(start, region->measure_len);
+    Rational into_region;
+    Rational start;
+    Rational end;
+    TRY(checked(rational_mul_int(region->measure_len, (long long)index - region->first_measure_number, &into_region)));
+    TRY(checked(rational_add(region->start_r, into_region, &start)));
+    TRY(checked(rational_add(start, region->measure_len, &end)));
     if (!region->open) {
         end = rat_min(end, region->end_r);
     }
@@ -455,8 +480,9 @@ MeterMapResult meter_map_measure_count(const MeterMap *map, const MusicalTime *e
     if (musical_time_numerator(end_time) < 0) {
         return METER_MAP_ERR_TIME_BEFORE_START;
     }
-    Rat t = rat_of_time(end_time);
-    if (t.n == 0) {
+    Rational t;
+    TRY(rat_of_time(end_time, &t));
+    if (t.num == 0) {
         *out_count = 0;
         return METER_MAP_OK;
     }
@@ -464,13 +490,16 @@ MeterMapResult meter_map_measure_count(const MeterMap *map, const MusicalTime *e
     /* The last region that starts strictly before end_time. */
     const MeterMapRegion *region = &map->regions[0];
     for (size_t i = map->count; i > 0; i--) {
-        if (rat_cmp(map->regions[i - 1].start_r, t) < 0) {
+        if (rational_cmp(map->regions[i - 1].start_r, t) < 0) {
             region = &map->regions[i - 1];
             break;
         }
     }
-    Rat limit = region->open ? t : rat_min(t, region->end_r);
-    long long in_region = rat_ceil_div(rat_sub(limit, region->start_r), region->measure_len);
+    Rational limit = region->open ? t : rat_min(t, region->end_r);
+    Rational extent;
+    long long in_region;
+    TRY(checked(rational_sub(limit, region->start_r, &extent)));
+    TRY(rat_ceil_div(extent, region->measure_len, &in_region));
     long long last_index = region->first_measure_number + in_region - 1;
     *out_count = (size_t)(last_index - meter_map_first_measure_number(map) + 1);
     return METER_MAP_OK;
