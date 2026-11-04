@@ -87,3 +87,11 @@ target_compile_definitions(test_piece_route PRIVATE
   URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
   URSATZ_GUI_TEST_COMPOSER_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer"
 )
+
+ursatz_gui_add_test(piece_snapshot test_piece_snapshot.c ${CMAKE_CURRENT_BINARY_DIR}/piece_snapshot)
+# The test compares the detail note ids, score and playback replies of three pieces with fixtures/pieces; it creates
+# pieces/ in its own working directory. URSATZ_GUI_SNAPSHOT_CAPTURE=1 rewrites the snapshot.
+target_compile_definitions(test_piece_snapshot PRIVATE
+  URSATZ_GUI_TEST_URSATZ_DIR="${CMAKE_SOURCE_DIR}/external/ursatz"
+  URSATZ_GUI_TEST_PIECE_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/pieces"
+)
