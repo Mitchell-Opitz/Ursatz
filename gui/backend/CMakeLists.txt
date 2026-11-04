@@ -14,6 +14,7 @@ add_library(ursatz_gui_core STATIC
   src/service/compose_jobs.c
   src/service/material_service.c
   src/service/compose_common.c
+  src/service/piece_lock.c
   src/service/theme_service.c
   src/service/piece_service.c
   src/service/playback_service.c

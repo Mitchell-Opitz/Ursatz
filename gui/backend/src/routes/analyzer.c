@@ -645,14 +645,6 @@ static bool read_notation_member(const cJSON *item, UrsatzGuiNotation *out) {
   return true;
 }
 
-static bool notation_equal(bool has_a, const UrsatzGuiNotation *a, bool has_b, const UrsatzGuiNotation *b) {
-  if (has_a != has_b) {
-    return false;
-  }
-  return !has_a || (strcmp(a->meter, b->meter) == 0 && strcmp(a->value_scale, b->value_scale) == 0 &&
-                    strcmp(a->pickup, b->pickup) == 0);
-}
-
 /* PATCH /api/analyzer/pieces/<id>: filename, composer, source, tags, add_tags,
  * remove_tags, notation (an object, or null to clear; all optional, unknown
  * members ignored). A changed notation analyzes the piece again before the
@@ -754,29 +746,8 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
     send_json(conn, "{\"ok\":false,\"message\":\"nothing to update\"}");
   } else {
     char message[96] = "";
-    bool had_notation = false;
-    UrsatzGuiNotation previous;
-    memset(&previous, 0, sizeof(previous));
-    if (update.has_notation) {
-      ursatz_gui_analysis_get_notation(kPiecesDir, id, &had_notation, &previous);
-    }
     UrsatzGuiAnalysisResult result =
-        ursatz_gui_analysis_update_metadata(kPiecesDir, id, &update, message, sizeof(message));
-    if (result == URSATZ_GUI_ANALYSIS_OK && update.has_notation &&
-        !notation_equal(had_notation, &previous, update.notation != NULL, &notation)) {
-      result = ursatz_gui_analysis_reanalyze(kPiecesDir, id);
-      if (result != URSATZ_GUI_ANALYSIS_OK) {
-        /* The piece keeps its old analysis; put the old reading back to match it. */
-        UrsatzGuiMetaUpdate undo = {0};
-        undo.has_notation = true;
-        undo.notation = had_notation ? &previous : NULL;
-        ursatz_gui_analysis_update_metadata(kPiecesDir, id, &undo, NULL, 0);
-        if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
-          snprintf(message, sizeof(message), "invalid notation");
-          result = URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA;
-        }
-      }
-    }
+        ursatz_gui_analysis_update_piece(kPiecesDir, id, &update, message, sizeof(message));
     if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
       mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
       status = 404;

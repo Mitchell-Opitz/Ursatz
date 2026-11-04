@@ -102,3 +102,9 @@ target_compile_definitions(test_piece_snapshot PRIVATE
   URSATZ_GUI_TEST_URSATZ_DIR="${CMAKE_SOURCE_DIR}/external/ursatz"
   URSATZ_GUI_TEST_PIECE_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/pieces"
 )
+
+ursatz_gui_add_test(piece_lock test_piece_lock.c ${CMAKE_CURRENT_BINARY_DIR}/piece_lock)
+# The test makes pieces/ in its own working directory and uploads this MusicXML file as the piece.
+target_compile_definitions(test_piece_lock PRIVATE
+  URSATZ_GUI_TEST_SOURCE="${CMAKE_SOURCE_DIR}/external/ursatz/tests/fixtures/musicxml/chords_backup.musicxml"
+)

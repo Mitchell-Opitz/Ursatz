@@ -2,6 +2,7 @@
 #include "util/fs_util.h"
 #include "id_service.h"
 #include "piece_metadata.h"
+#include "piece_lock.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -325,6 +326,62 @@ static UrsatzGuiAnalysisResult create_piece_dir(const char *pieces_dir, char **o
     return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
 }
 
+/* Writes the upload into the new piece directory pieces_dir/<id>/ and analyzes it. On failure the directory is
+   removed. The caller holds the piece lock. */
+static UrsatzGuiAnalysisResult save_new_piece(const char *pieces_dir, const char *id, const unsigned char *data,
+                                              size_t size, const char *original_filename) {
+    UrsatzGuiAnalysisResult result;
+    char dir_path[320];
+    snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, id);
+
+    /* The bytes go to disk unchanged under a neutral name first: the format
+       is detected from the content, and the final name depends on it. */
+    char upload_path[400];
+    snprintf(upload_path, sizeof(upload_path), "%s/source.upload", dir_path);
+    if (!ursatz_gui_write_file_atomic(upload_path, data, size)) {
+        remove_piece_dir(dir_path);
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+
+    InputFormat format = input_format_detect(upload_path);
+    if (format == INPUT_FORMAT_AUTO) {
+        remove_piece_dir(dir_path);
+        return URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT;
+    }
+
+    char source_path[400];
+    snprintf(source_path, sizeof(source_path), "%s/%s", dir_path, source_file_name(format, original_filename));
+    if (rename(upload_path, source_path) != 0) {
+        remove_piece_dir(dir_path);
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+
+    char *document_json = NULL;
+    result = analyze_source_file(dir_path, format, &document_json);
+    if (result != URSATZ_GUI_ANALYSIS_OK) {
+        remove_piece_dir(dir_path);
+        return result;
+    }
+
+    char analysis_path[400];
+    snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
+    bool written = ursatz_gui_write_file_atomic(analysis_path, document_json, strlen(document_json));
+    free(document_json);
+    if (!written) {
+        remove_piece_dir(dir_path);
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+
+    char uploaded_at[32];
+    ursatz_gui_iso_utc_now(uploaded_at, sizeof(uploaded_at));
+    if (!write_meta_file(dir_path, original_filename, format_label(format), uploaded_at)) {
+        remove_piece_dir(dir_path);
+        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+
+    return URSATZ_GUI_ANALYSIS_OK;
+}
+
 UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_dir, const unsigned char *data,
                                                               size_t size, const char *original_filename,
                                                               char **out_id) {
@@ -338,60 +395,17 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_import_and_save(const char *pieces_d
         return result;
     }
 
-    char dir_path[320];
-    snprintf(dir_path, sizeof(dir_path), "%s/%s", pieces_dir, id);
-
-    /* The bytes go to disk unchanged under a neutral name first: the format
-       is detected from the content, and the final name depends on it. */
-    char upload_path[400];
-    snprintf(upload_path, sizeof(upload_path), "%s/source.upload", dir_path);
-    if (!ursatz_gui_write_file_atomic(upload_path, data, size)) {
-        remove_piece_dir(dir_path);
+    /* The directory exists from here on, so a reader that lists pieces may open it before it is complete. */
+    if (!ursatz_gui_piece_lock(id)) {
         free(id);
-        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
-
-    InputFormat format = input_format_detect(upload_path);
-    if (format == INPUT_FORMAT_AUTO) {
-        remove_piece_dir(dir_path);
-        free(id);
-        return URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT;
-    }
-
-    char source_path[400];
-    snprintf(source_path, sizeof(source_path), "%s/%s", dir_path, source_file_name(format, original_filename));
-    if (rename(upload_path, source_path) != 0) {
-        remove_piece_dir(dir_path);
-        free(id);
-        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
-    }
-
-    char *document_json = NULL;
-    result = analyze_source_file(dir_path, format, &document_json);
+    result = save_new_piece(pieces_dir, id, data, size, original_filename);
+    ursatz_gui_piece_unlock(id);
     if (result != URSATZ_GUI_ANALYSIS_OK) {
-        remove_piece_dir(dir_path);
         free(id);
         return result;
     }
-
-    char analysis_path[400];
-    snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
-    bool written = ursatz_gui_write_file_atomic(analysis_path, document_json, strlen(document_json));
-    free(document_json);
-    if (!written) {
-        remove_piece_dir(dir_path);
-        free(id);
-        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
-    }
-
-    char uploaded_at[32];
-    ursatz_gui_iso_utc_now(uploaded_at, sizeof(uploaded_at));
-    if (!write_meta_file(dir_path, original_filename, format_label(format), uploaded_at)) {
-        remove_piece_dir(dir_path);
-        free(id);
-        return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
-    }
-
     *out_id = id;
     return URSATZ_GUI_ANALYSIS_OK;
 }
@@ -626,7 +640,7 @@ static bool import_piece(const char *dir_path, InputFormat format, ImportedNotes
     return true;
 }
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, const char *id,
+static UrsatzGuiAnalysisResult get_piece_unlocked(const char *pieces_dir, const char *id,
                                                         UrsatzGuiPieceDetail **out_detail) {
     char dir_path[320];
     if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
@@ -693,7 +707,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id) {
+static UrsatzGuiAnalysisResult delete_piece_unlocked(const char *pieces_dir, const char *id) {
     char dir_path[320];
     if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
@@ -801,7 +815,7 @@ static UrsatzGuiAnalysisResult tags_apply(char ***tags, size_t *count, const cha
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_dir, const char *id,
+static UrsatzGuiAnalysisResult update_metadata_unlocked(const char *pieces_dir, const char *id,
                                                              const UrsatzGuiMetaUpdate *update, char *message,
                                                              size_t message_size) {
     char dir_path[320];
@@ -894,7 +908,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_rename_piece(const char *pieces_dir,
     return ursatz_gui_analysis_update_metadata(pieces_dir, id, &update, NULL, 0);
 }
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, const char *id) {
+static UrsatzGuiAnalysisResult reanalyze_unlocked(const char *pieces_dir, const char *id) {
     char dir_path[320];
     if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
         return URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
@@ -1039,7 +1053,7 @@ static char *score_add_title_composer(char *xml, const char *title, const char *
     return out;
 }
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
+static UrsatzGuiAnalysisResult get_piece_musicxml_unlocked(const char *pieces_dir, const char *id,
                                                                 char **out_xml, bool *out_meter_defaulted,
                                                                 char message[256]) {
     message[0] = '\0';
@@ -1105,7 +1119,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
     return URSATZ_GUI_ANALYSIS_OK;
 }
 
-UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *pieces_dir, const char *id,
+static UrsatzGuiAnalysisResult get_piece_playback_unlocked(const char *pieces_dir, const char *id,
                                                                 char **out_json) {
     char dir_path[320];
     if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
@@ -1157,4 +1171,129 @@ void ursatz_gui_piece_detail_destroy(UrsatzGuiPieceDetail *detail) {
     free(detail->format);
     free(detail->uploaded_at);
     free(detail);
+}
+
+/* The public operations on one piece. Each takes the piece lock (piece_lock.h) around the whole operation, so the
+   writers of a piece directory never interleave and a read never sees a half-written file. They call only the
+   _unlocked functions above, never each other. */
+
+static bool piece_lock_enter(const char *id, UrsatzGuiAnalysisResult *failure) {
+    if (!is_valid_piece_id(id)) {
+        *failure = URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND;
+        return false;
+    }
+    if (!ursatz_gui_piece_lock(id)) {
+        *failure = URSATZ_GUI_ANALYSIS_ERR_ALLOC;
+        return false;
+    }
+    return true;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, const char *id,
+                                                        UrsatzGuiPieceDetail **out_detail) {
+    UrsatzGuiAnalysisResult result;
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    result = get_piece_unlocked(pieces_dir, id, out_detail);
+    ursatz_gui_piece_unlock(id);
+    return result;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_delete_piece(const char *pieces_dir, const char *id) {
+    UrsatzGuiAnalysisResult result;
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    result = delete_piece_unlocked(pieces_dir, id);
+    ursatz_gui_piece_unlock(id);
+    return result;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_dir, const char *id,
+                                                             const UrsatzGuiMetaUpdate *update, char *message,
+                                                             size_t message_size) {
+    UrsatzGuiAnalysisResult result;
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    result = update_metadata_unlocked(pieces_dir, id, update, message, message_size);
+    ursatz_gui_piece_unlock(id);
+    return result;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, const char *id) {
+    UrsatzGuiAnalysisResult result;
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    result = reanalyze_unlocked(pieces_dir, id);
+    ursatz_gui_piece_unlock(id);
+    return result;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
+                                                                char **out_xml, bool *out_meter_defaulted,
+                                                                char message[256]) {
+    UrsatzGuiAnalysisResult result;
+    message[0] = '\0';
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    result = get_piece_musicxml_unlocked(pieces_dir, id, out_xml, out_meter_defaulted, message);
+    ursatz_gui_piece_unlock(id);
+    return result;
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_playback(const char *pieces_dir, const char *id,
+                                                                char **out_json) {
+    UrsatzGuiAnalysisResult result;
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    result = get_piece_playback_unlocked(pieces_dir, id, out_json);
+    ursatz_gui_piece_unlock(id);
+    return result;
+}
+
+static bool notation_equal(bool has_a, const UrsatzGuiNotation *a, bool has_b, const UrsatzGuiNotation *b) {
+    if (has_a != has_b) {
+        return false;
+    }
+    return !has_a || (strcmp(a->meter, b->meter) == 0 && strcmp(a->value_scale, b->value_scale) == 0 &&
+                      strcmp(a->pickup, b->pickup) == 0);
+}
+
+UrsatzGuiAnalysisResult ursatz_gui_analysis_update_piece(const char *pieces_dir, const char *id,
+                                                          const UrsatzGuiMetaUpdate *update, char *message,
+                                                          size_t message_size) {
+    UrsatzGuiAnalysisResult result;
+    if (!piece_lock_enter(id, &result)) {
+        return result;
+    }
+    bool had_notation = false;
+    UrsatzGuiNotation previous;
+    memset(&previous, 0, sizeof(previous));
+    if (update->has_notation) {
+        ursatz_gui_analysis_get_notation(pieces_dir, id, &had_notation, &previous);
+    }
+    result = update_metadata_unlocked(pieces_dir, id, update, message, message_size);
+    if (result == URSATZ_GUI_ANALYSIS_OK && update->has_notation &&
+        !notation_equal(had_notation, &previous, update->notation != NULL,
+                        update->notation ? update->notation : &previous)) {
+        result = reanalyze_unlocked(pieces_dir, id);
+        if (result != URSATZ_GUI_ANALYSIS_OK) {
+            /* The piece keeps its old analysis; put the old reading back to match it. */
+            UrsatzGuiMetaUpdate undo = {0};
+            undo.has_notation = true;
+            undo.notation = had_notation ? &previous : NULL;
+            update_metadata_unlocked(pieces_dir, id, &undo, NULL, 0);
+            if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
+                set_message(message, message_size, "invalid notation");
+                result = URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA;
+            }
+        }
+    }
+    ursatz_gui_piece_unlock(id);
+    return result;
 }

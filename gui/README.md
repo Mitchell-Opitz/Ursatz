@@ -709,6 +709,8 @@ Everything but `main.c` is built as the static library `ursatz_gui_core` (`backe
   its own `iso_utc_now`, which adds milliseconds so two runs in one second still order.
 - `util/store_lock.h`: `UrsatzGuiLock` (a pthread mutex, an SRWLOCK on Windows) with `URSATZ_GUI_LOCK_INIT` and
   `ursatz_gui_lock_acquire/release`. Each store wraps it in `LOCK()` and `UNLOCK()`.
+- `service/piece_lock.c`: `ursatz_gui_piece_lock(id)` and `_unlock`, one mutex per piece directory (see Piece store,
+  Concurrency).
 - `routes/route_util.c`: `ursatz_gui_send_json_status` and `ursatz_gui_read_json_body`, the JSON object body of a
   request (up to 1 MiB; with a status pointer it also sends the 400, 413 or 500 itself). `routes/materials.c` passes
   its own 256 KiB limit to `ursatz_gui_read_json_body_max`.
@@ -757,6 +759,24 @@ removes the directory. Re-running the analysis rewrites `analysis.json` and
 the two version fields of `meta.json`; the filename and `uploaded_at` stay.
 Pieces saved by earlier versions (`pieces/<id>.db`) are ignored: they are
 not listed and cannot be opened, so upload those files again.
+
+#### Concurrency
+
+One lock per piece directory (`service/piece_lock.c`, a table of per-id mutexes with a reference count; an entry
+is freed when its count reaches 0) is held around every writer of `pieces/<id>/` and every read that must not see
+half a write. All of them are in `service/analysis_service.c` and take the lock themselves, so no caller holds it:
+
+- upload (`ursatz_gui_analysis_import_and_save`, from the moment the directory exists until it is complete);
+- PATCH (`ursatz_gui_analysis_update_piece`: the metadata, the re-analysis a changed notation needs and, if that
+  fails, the undo of the notation, as one hold);
+- re-analyze (`ursatz_gui_analysis_reanalyze`), which the style build and the link worker call for a stale piece;
+- delete (the directory removal; the collection and subject cleanups run after the lock is released);
+- the reads of `analysis.json` plus the source: detail, `/musicxml`, `/musicxml/meta` and `/playback`.
+
+Lock order, stated in `service/piece_lock.h`: a store lock (style, link, collection, subject) first, then one piece
+lock; never the reverse, and never two piece locks. The lock is not recursive. A reader of a piece that is deleted
+meanwhile gets `404` or the whole piece. Lists read only `meta.json`, which is replaced by a rename, so they take no
+lock. `test_piece_lock` covers it.
 
 ### Material store
 
@@ -1819,6 +1839,9 @@ model back with the Analyzer, rebuilds, re-analyzes an old piece and deletes.
 scope compares nothing, analyzes a document without features again and reads an interrupted run as failed.
 `test_links_route` starts runs over HTTP, polls them to done, and covers the `409`, `400`, `404` and `422` answers,
 the list, delete and a piece's links.
+`test_piece_lock` covers the piece lock without a server: threads counting under one id, 50 PATCHes and 50
+re-analyses of one piece while a reader checks that each detail, score and playback reply parses and that the
+document's meter matches the notation override returned with it, and deletes during reads.
 `test_piece_metadata` covers the normalizing, grouping and
 filter rules without a server. `test_material_service` covers the projects,
 items, versions, version body rules and item references without a server. `style-view.test.js` covers the style detail
