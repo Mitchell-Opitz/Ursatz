@@ -34,8 +34,8 @@ If you cloned without `--recurse-submodules`, run `git submodule update --init -
 
 | Path | Pinned at |
 | --- | --- |
-| `external/ursatz` | Ursatz `main` at PR #182 (`c69f326`). |
-| `external/ursatz-analyzer` | Ursatz-Analyzer `main` at PR #59 (`36cb9f3`), version 0.4.0. |
+| `external/ursatz` | Ursatz `main` at PR #183 (`0c17cb1`). |
+| `external/ursatz-analyzer` | Ursatz-Analyzer `main` at PR #60 (`9145f9f`), version 0.5.0. |
 
 cJSON 1.7.18 is vendored at `external/cjson` and added before the submodules, so the Analyzer reuses it. `scripts/check-pins.sh`
 fails when a pin is not on its remote's `main` or when one repository is pinned at two commits; CI runs it after the
@@ -293,13 +293,33 @@ vocabularies an application offers (`composer_api_vocabulary`) and reads a reque
 job rules and the GUI call it replaces.
 
 The CLI is a thin wrapper over the API: each command reads its arguments and files into a request, calls one entry, and
-prints the response or writes its plan, MIDI and MusicXML to the paths given. The API is 1.0: a removed or changed member
+prints the response or writes its plan, MIDI and MusicXML to the paths given. The API is 1.1: a removed or changed member
 or entry changes the major version, an addition the minor one.
 
 ### Using the API from C
 
 Link `ursatz_composer` (add this repo with `add_subdirectory` and `target_link_libraries(app PRIVATE ursatz_composer)`) and
-include the one header. This grows a theme from a motive and writes its MIDI file:
+include the one header.
+
+#### Linking
+
+An application that already has the `cjson`, `ursatz` and `ursatz_analyzer` targets adds those first and the Composer after
+them; the Composer adds a target only when it is not there, so the tree keeps one copy of each (pin all four repositories to
+the same commits, `scripts/check-pins.sh`):
+
+```cmake
+add_subdirectory(external/cjson)
+add_subdirectory(external/ursatz)
+add_subdirectory(external/ursatz-analyzer)
+set(URSATZ_COMPOSER_BUILD_CLI OFF CACHE BOOL "")
+add_subdirectory(external/ursatz-composer)
+target_link_libraries(app PRIVATE ursatz_composer)
+```
+
+`URSATZ_COMPOSER_BUILD_CLI` (on only when the Composer is the top project) builds the `ursatz-composer` command; the tests that
+run it are registered only when it is built. `tests/consumer/` is such an application, built by the `consumer_build` test.
+
+This grows a theme from a motive and writes its MIDI file:
 
 ```c
 #include <stdio.h>
@@ -380,6 +400,13 @@ stages fill around it ([docs/middle-out.md](docs/middle-out.md)).
 
 `form_hear` hears the phrase-level form of a written plan with standard-form's analysis adapter. See
 [docs/form-hear.md](docs/form-hear.md).
+
+## Version 0.4.0 (phase P27)
+
+The Composer builds as a subproject of an application that already defines `cjson`, `ursatz` and `ursatz_analyzer`, and
+`URSATZ_COMPOSER_BUILD_CLI` turns the command off. The API is 1.1: `composer_api_vocabulary` also serves `theme_bars`,
+`theme_first_cadences`, `theme_beginnings`, `theme_endings`, `style_weights` and, in `limits`, `tempo_min`, `tempo_max`,
+`seed_max`, `piece_sections` and `piece_beats`. See [docs/api.md](docs/api.md).
 
 ## Version 0.3.0 (phase P26)
 

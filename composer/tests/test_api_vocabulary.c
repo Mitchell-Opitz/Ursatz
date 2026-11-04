@@ -347,6 +347,93 @@ static void test_round_trip(void) {
     }
 }
 
+/* The theme form, style weight and seed vocabularies (API 1.1): each offered value is read, and the limits are the readers'. */
+static void test_theme_form_lists(void) {
+    const cJSON *entry = NULL;
+    cJSON_ArrayForEach(entry, list("theme_bars")) {
+        cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/one-motive.json");
+        cJSON_ReplaceItemInObjectCaseSensitive(request, "bars", cJSON_CreateNumber(atoi(value_of(entry))));
+        accepted("theme", request);
+        cJSON_Delete(request);
+    }
+    assert(cJSON_GetArraySize(list("theme_bars")) == 2);
+    assert(cJSON_GetArraySize(list("theme_first_cadences")) == 2);
+    assert(strcmp(value_of(cJSON_GetArrayItem(list("theme_first_cadences"), 0)), "IAC") == 0);
+    cJSON_ArrayForEach(entry, list("theme_first_cadences")) {
+        cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/period-contrast.json");
+        cJSON_ReplaceItemInObjectCaseSensitive(request, "first_cadence", cJSON_CreateString(value_of(entry)));
+        accepted("theme", request);
+        cJSON_Delete(request);
+    }
+
+    /* Every beginning with every ending is a hybrid the reader takes, and the ideas listed are the ones the form has. */
+    const cJSON *beginning = NULL;
+    const cJSON *ending = NULL;
+    assert(cJSON_GetArraySize(list("theme_beginnings")) == 3 && cJSON_GetArraySize(list("theme_endings")) == 3);
+    cJSON_ArrayForEach(beginning, list("theme_beginnings")) {
+        cJSON_ArrayForEach(ending, list("theme_endings")) {
+            char hybrid[64];
+            snprintf(hybrid, sizeof hybrid, "%s+%s", value_of(beginning), value_of(ending));
+            cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/one-motive.json");
+            cJSON_ReplaceItemInObjectCaseSensitive(request, "into", cJSON_CreateString("hybrid"));
+            cJSON_ReplaceItemInObjectCaseSensitive(request, "hybrid", cJSON_CreateString(hybrid));
+            char *text = print(request);
+            ComposerResponse response;
+            ComposerStatus status = composer_api_validate("theme", text, &response);
+            /* A pairing a sentence or a period already names is refused as such, never as an unknown word. */
+            assert(status == COMPOSER_OK || strstr(response.error.message, "hybrid must be a beginning") == NULL);
+            composer_response_destroy(&response);
+            free(text);
+            cJSON_Delete(request);
+        }
+    }
+    const cJSON *first = cJSON_GetArrayItem(list("theme_beginnings"), 0);
+    assert(strcmp(value_of(first), "presentation") == 0);
+    const cJSON *idea = NULL;
+    const cJSON *known = NULL;
+    cJSON_ArrayForEach(beginning, list("theme_beginnings")) {
+        cJSON_ArrayForEach(idea, cJSON_GetObjectItemCaseSensitive(beginning, "ideas")) {
+            bool found = false;
+            cJSON_ArrayForEach(known, list("theme_ideas")) {
+                found = found || strcmp(value_of(known), idea->valuestring) == 0;
+            }
+            assert(found);
+        }
+    }
+    assert(strcmp(cJSON_GetArrayItem(cJSON_GetObjectItemCaseSensitive(first, "ideas"), 1)->valuestring, "repetition") == 0);
+
+    cJSON_ArrayForEach(entry, list("style_weights")) {
+        cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/one-motive.json");
+        assert(cJSON_AddStringToObject(request, "style", COMPOSER_FIXTURE_DIR "/styles/chorales.style.json"));
+        cJSON_ReplaceItemInObjectCaseSensitive(request, "style_weight", cJSON_CreateString(value_of(entry)));
+        accepted("theme", request);
+        cJSON_Delete(request);
+    }
+
+    const cJSON *limits = cJSON_GetObjectItemCaseSensitive(vocabulary, "limits");
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "tempo_min")->valuedouble == 20);
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "tempo_max")->valuedouble == 400);
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "piece_sections")->valuedouble == 32);
+    assert(cJSON_GetObjectItemCaseSensitive(limits, "piece_beats")->valuedouble == 4096);
+    const cJSON *seed_max = cJSON_GetObjectItemCaseSensitive(limits, "seed_max");
+    assert(cJSON_GetObjectItemCaseSensitive(seed_max, "variants")->valuedouble == 4294967231.0);
+    assert(cJSON_GetObjectItemCaseSensitive(seed_max, "random_motive")->valuedouble == 4294967295.0);
+    assert(cJSON_GetObjectItemCaseSensitive(seed_max, "theme")->valuedouble == 4294967295.0);
+    assert(cJSON_GetObjectItemCaseSensitive(seed_max, "piece")->valuedouble == 4294967295.0);
+
+    /* The largest seed is read, the next one is refused with the path. */
+    cJSON *request = read_json(COMPOSER_FIXTURE_DIR "/theme/one-motive.json");
+    assert(cJSON_AddNumberToObject(request, "seed", 4294967295.0));
+    accepted("theme", request);
+    cJSON_Delete(request);
+    request = read_json(COMPOSER_FIXTURE_DIR "/theme/one-motive.json");
+    assert(cJSON_AddNumberToObject(request, "seed", 4294967296.0));
+    char *text = print(request);
+    refused("theme", text, "/seed");
+    free(text);
+    cJSON_Delete(request);
+}
+
 /* The variants entry reads functions and distance before it makes anything. */
 static void test_variants_words(void) {
     const cJSON *entry = NULL;
@@ -546,9 +633,10 @@ static void test_refusals(void) {
 }
 
 int main(void) {
-    assert(strcmp(composer_api_version(), "1.0") == 0);
+    assert(strcmp(composer_api_version(), "1.1") == 0);
     test_lists();
     test_round_trip();
+    test_theme_form_lists();
     test_variants_words();
     test_tone_labels();
     test_defaults();

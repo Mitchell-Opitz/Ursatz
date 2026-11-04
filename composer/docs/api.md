@@ -16,7 +16,7 @@ A minimal client in C is in the [README](../README.md#using-the-api-from-c).
 ## Versioning
 
 `COMPOSER_API_VERSION_MAJOR` and `COMPOSER_API_VERSION_MINOR`; `composer_api_version()` gives `"<major>.<minor>"`. This
-is API 1.0, the first stable API (R-268).
+is API 1.1 (1.0 was the first stable API, R-268).
 
 **Compatibility rule.** The MAJOR version changes on any removed or changed member or entry: an entry that goes, a request
 or response member that goes, changes meaning or type, or a value a member took that is refused now. The MINOR version
@@ -517,11 +517,13 @@ The words an application offers and the requests accept, in the order an applica
 | `pickups` | `{"<meter>": ["0", "1/4", "1/2", "1", "3/2", "2", "3"]}`: the pickups offered in beats, each a number a reader accepts in that meter (shorter than a bar). Any other multiple of 1/32 of a whole note shorter than a bar is accepted too. |
 | `motive_forms`, `roles`, `functions`, `distances` | `full rhythm contour`; `melodic accompaniment`; `beginning continuation contrast cadential`; `close medium far`. |
 | `theme_slots`, `theme_ideas`, `theme_motive_categories`, `theme_pools` | the four slots; the ten ideas, each with its `slot`; the style categories a theme can read without (`motive-degrees`, `motive-intervals`, `motive-rhythm`, `motive-nct-figure`); the pools `approved-and-unflagged`, `approved`, `none` (the Composer reads no pool: they are the application's rule for which saved motives it offers, listed so the application keeps no table). |
+| `theme_bars`, `theme_first_cadences`, `style_weights` | the bars a theme has (`4`, `8`); the cadences a period's first phrase ends in (`IAC`, `HC`, in the order of `cadences`); the style weights offered (`1/4` Light, `1/2` Normal, `1` Strong; any fraction the reader accepts is still accepted). Theme modes are the existing `piece_modes`. |
+| `theme_beginnings`, `theme_endings` | `{"value", "label", "ideas": [<theme_ideas value>, ...]}`: `presentation antecedent cbi` and `continuation consequent cadential`, each with its ideas in order. A hybrid is written `<beginning>+<ending>`; these are the words its reader takes. |
 | `accompaniment_patterns` | `any block arpeggiated alberti oom-pah motive`. |
 | `piece_parts`, `piece_intos`, `fill_kinds` | `intro body turnaround ending`; `sentence period hybrid`; `empty motif theme progression`. |
 | `tone_labels` | `chord` and the ten non-chord tone types the analysis writes, each with an `abbreviation` (`CT`, `PT`, `NT`, ...). |
 | `variant_operations` | what `composer_api_variant_operations` gives. |
-| `limits` | the sizes a request is held to, as numbers: `motive_notes` (64), `motive_chords` (8), `motive_features` (8), `variant_chain` (4), `variant_functions` (4), `random_motive_count` (16). The command line shows them in its help and holds repeated options to them. |
+| `limits` | the sizes a request is held to, as numbers: `motive_notes` (64), `motive_chords` (8), `motive_features` (8), `variant_chain` (4), `variant_functions` (4), `random_motive_count` (16); since 1.1 also `tempo_min` (20), `tempo_max` (400), `piece_sections` (32), `piece_beats` (4096) and `seed_max`, an object of the largest seed each request reads: `{"variants": 4294967231, "random_motive": 4294967295, "theme": 4294967295, "piece": 4294967295}`. A limit the Composer does not hold (cells of a chord in a piece section) is not listed. The command line shows the first six in its help and holds repeated options to them. |
 
 Every list but those noted is `[{"value", "label"}]`, and every value is accepted by the reader that reads it (`tests/test_api_vocabulary.c` builds a request from each one). The lists come from the parser or table that reads them; the tables of the words that are not a library's are in `src/api/api_vocabulary.c`.
 
@@ -598,7 +600,7 @@ command line, read as JSON (docs/plan-format.md).
 
 ```
 composer_api_versions(&out)
-json: {"composer_version":"0.3.0","api_version":"1.0","analyzer_version":"0.4.0","ursatz_commit":"36cb9f3…","plan_format_version":2}
+json: {"composer_version":"0.4.0","api_version":"1.1","analyzer_version":"0.5.0","ursatz_commit":"0c17cb1…","plan_format_version":2}
 ```
 
 ### Export
@@ -718,7 +720,7 @@ json:    {"key": "D major", "meter": "4/4", "bars": 8, "into": "sentence", "pair
 ```
 composer_api_vocabulary(&out)
 json: {"meters": […], "modes": […], "keys": […], …, "limits": {"motive_notes": 64, "motive_chords": 8, "motive_features": 8,
-       "variant_chain": 4, "variant_functions": 4, "random_motive_count": 16}}
+       "variant_chain": 4, "variant_functions": 4, "random_motive_count": 16, "tempo_min": 20, …}}
 
 composer_api_validate("random_motive", "{\"mode\": \"random\", \"meter\": \"random\", \"seed\": 5}", &out)
 json: {"request": {"seed": 5, "mode": "major", "meter": "4/4"}}

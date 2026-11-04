@@ -18,6 +18,11 @@
     "theme_slots",
     "theme_motive_categories",
     "theme_pools",
+    "theme_bars",
+    "theme_first_cadences",
+    "theme_beginnings",
+    "theme_endings",
+    "style_weights",
     "accompaniment_patterns",
     "piece_parts",
     "piece_intos",
@@ -122,6 +127,41 @@
         "$ref": "#/$defs/choice"
       }
     },
+    "theme_bars": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "theme_first_cadences": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
+    "theme_beginnings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/theme_part"
+      }
+    },
+    "theme_endings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/theme_part"
+      }
+    },
+    "style_weights": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/choice"
+      }
+    },
     "accompaniment_patterns": {
       "type": "array",
       "minItems": 1,
@@ -217,11 +257,28 @@
         "motive_features",
         "variant_chain",
         "variant_functions",
-        "random_motive_count"
+        "random_motive_count",
+        "tempo_min",
+        "tempo_max",
+        "seed_max",
+        "piece_sections",
+        "piece_beats"
       ],
       "additionalProperties": {
-        "type": "integer",
-        "minimum": 1
+        "oneOf": [
+          {
+            "type": "integer",
+            "minimum": 1
+          },
+          {
+            "$ref": "#/$defs/seed_max"
+          }
+        ]
+      },
+      "properties": {
+        "seed_max": {
+          "$ref": "#/$defs/seed_max"
+        }
       }
     }
   },
@@ -311,6 +368,60 @@
         "abbreviation": {
           "type": "string",
           "minLength": 1
+        }
+      },
+      "additionalProperties": false
+    },
+    "theme_part": {
+      "type": "object",
+      "required": [
+        "value",
+        "label",
+        "ideas"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ideas": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "seed_max": {
+      "type": "object",
+      "required": [
+        "variants",
+        "random_motive",
+        "theme",
+        "piece"
+      ],
+      "properties": {
+        "variants": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "random_motive": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "theme": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "piece": {
+          "type": "integer",
+          "minimum": 1
         }
       },
       "additionalProperties": false

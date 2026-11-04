@@ -39,10 +39,8 @@ void api_piece_request_destroy(PieceSpec *request) {
     composer_style_destroy(request->style);
 }
 
-/* "antecedent+continuation": a beginning, a plus sign and an ending (as grow --hybrid). */
+/* "antecedent+continuation": a beginning, a plus sign and an ending (as grow --hybrid), the words of the vocabulary. */
 static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
-    static const char *const BEGINNINGS[] = {"presentation", "antecedent", "cbi"};
-    static const char *const ENDINGS[] = {"continuation", "consequent", "cadential"};
     const char *plus = strchr(text, '+');
     if (!plus) {
         return false;
@@ -50,12 +48,14 @@ static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
     size_t length = (size_t)(plus - text);
     bool beginning_found = false;
     bool ending_found = false;
-    for (int i = 0; i < 3; i++) {
-        if (strlen(BEGINNINGS[i]) == length && strncmp(text, BEGINNINGS[i], length) == 0) {
+    for (int i = 0; API_THEME_BEGINNINGS[i].value; i++) {
+        if (strlen(API_THEME_BEGINNINGS[i].value) == length && strncmp(text, API_THEME_BEGINNINGS[i].value, length) == 0) {
             pairing->beginning = (PlanThemeBeginning)i;
             beginning_found = true;
         }
-        if (request_equals_ignore_case(plus + 1, ENDINGS[i])) {
+    }
+    for (int i = 0; API_THEME_ENDINGS[i].value; i++) {
+        if (request_equals_ignore_case(plus + 1, API_THEME_ENDINGS[i].value)) {
             pairing->ending = (PlanThemeEnding)i;
             ending_found = true;
         }
@@ -255,7 +255,7 @@ static ComposerStatus read_section(PieceSpec *request, size_t index, const cJSON
         snprintf(section->letter, sizeof(section->letter), "%c", toupper((unsigned char)id[0]));
     }
     const cJSON *beats = cJSON_GetObjectItemCaseSensitive(item, "beats");
-    if (!cJSON_IsNumber(beats) || beats->valuedouble < 1 || beats->valuedouble > 4096 ||
+    if (!cJSON_IsNumber(beats) || beats->valuedouble < 1 || beats->valuedouble > API_PIECE_BEATS_MAX ||
         beats->valuedouble != (double)(size_t)beats->valuedouble) {
         snprintf(path, sizeof path, "%s/beats", base);
         return api_fail(error, COMPOSER_ERR_REQUEST, path, "section '%s': \"beats\" must be a whole number of beats, 1 or more", id);

@@ -16,11 +16,10 @@
 
 /* Variants and recognize (docs/api.md): the requests of the `variants` and `recognize` commands, and their documents. */
 
-#define VARIANTS_COUNT_MAX 16
+#define VARIANTS_COUNT_MAX API_VARIANTS_COUNT_MAX
 #define VARIANTS_COUNT_DEFAULT 6
-/* With "functions" or "distance", up to this many chains are drawn for each variant asked for. */
-#define VARIANTS_DRAWS_PER_COUNT 4
-#define SEED_MAX (4294967295UL - VARIANTS_COUNT_MAX * VARIANTS_DRAWS_PER_COUNT)
+#define VARIANTS_DRAWS_PER_COUNT API_VARIANTS_DRAWS_PER_COUNT
+#define SEED_MAX API_VARIANTS_SEED_MAX
 
 ComposerStatus composer_api_variant_operations(ComposerResponse *out) {
     memset(out, 0, sizeof *out);

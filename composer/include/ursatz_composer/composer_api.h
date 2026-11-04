@@ -12,11 +12,11 @@
  *
  * Versioning: a request may carry "api_version": <major>; a different major is refused. The major version changes on any
  * removed or changed member or entry; the minor version on an addition (an entry, a request member, a response member).
- * 1.0 is the first stable API.
+ * 1.0 is the first stable API; 1.1 adds the theme form, style weight and seed vocabularies.
  */
 
 #define COMPOSER_API_VERSION_MAJOR 1
-#define COMPOSER_API_VERSION_MINOR 0
+#define COMPOSER_API_VERSION_MINOR 1
 
 /* "<major>.<minor>". */
 const char *composer_api_version(void);
