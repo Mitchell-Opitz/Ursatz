@@ -157,7 +157,7 @@ call them and render the result:
 `URSATZ_ANALYZER_URSATZ_COMMIT` and declares `ursatz_analyzer_version()` and `ursatz_analyzer_ursatz_commit()`, so a
 consumer reads the version from the library instead of parsing `CMakeLists.txt`.
 
-The version is 0.5.0 (new public APIs in P24: `AnalyzerResult`, `analyzer_hear`, the joined chord sequence, playback and
+The version is 0.6.0 (the deprecated fragment API is gone in P28; new public APIs in P24: `AnalyzerResult`, `analyzer_hear`, the joined chord sequence, playback and
 score export, and `staleness.h`; in P27 the score note ids and defaulted meter of an import). Every analysis stored by an earlier version is stale by version.
 
 `scripts/check-pins.sh` fails when a submodule pin is not on its remote's `main`, or when one repository is pinned at
