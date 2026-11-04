@@ -49,17 +49,13 @@ static bool sketch_of(const StandardFormMotiveShape *shape, const ChainRelationC
     return motive_sketch_validate(out);
 }
 
-/* What the form matcher admits: one step, the relations the form reads. */
-typedef struct {
-    size_t prototype_intervals;
-} AdmitContext;
-
 static bool ratio_is(const MotiveRelationStep *step, long num, long den) {
     return (step->value[0] == 0 && step->den[0] == 0) || (step->value[0] == num && step->den[0] == den);
 }
 
+/* What the form reads of a candidate as long as its prototype: one step. */
 static bool only_matching_steps(const MotiveRelationStep *step, const void *context) {
-    const AdmitContext *admit = (const AdmitContext *)context;
+    (void)context;
     switch (step->kind) {
     case MOTIVE_RELATION_EXACT:
     case MOTIVE_RELATION_TRANSPOSE:
@@ -70,16 +66,48 @@ static bool only_matching_steps(const MotiveRelationStep *step, const void *cont
         return ratio_is(step, 2, 1);
     case MOTIVE_RELATION_DIMINISH:
         return ratio_is(step, 1, 2);
-    case MOTIVE_RELATION_FRAGMENT: {
-        /* a leading or trailing part with at least the form's fewest intervals (length counts notes) */
-        long position = step->value[0];
-        long length = step->value[1];
-        return (position == 1 || position == 2) && length >= 2 &&
-               (size_t)(length - 1) >= standard_form_motive_fragment_min_intervals(admit->prototype_intervals);
-    }
     default:
         return false;
     }
+}
+
+static double score_of(const MotiveSketch *from, const MotiveSketch *to) {
+    MotiveDimensions dimensions;
+    motive_variant_compare(from, to, &dimensions);
+    return motive_variant_nearness(&dimensions);
+}
+
+/*
+ * A candidate shorter than the prototype is a fragment when the kernel's fragment relation, applied to the prototype as a leading (1) or
+ * trailing (2) part of the candidate's length, gives the candidate. The relation is applied directly, not searched for: the form asks
+ * this of every window of every length, and the recognizer's search over every relation is far too slow for that. The sketches are
+ * settled the way the recognizer settles them (an exact step), so the score is the one it would report.
+ */
+static bool fragment_of(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate, const MotiveSketch *source,
+                        const MotiveSketch *target, StandardFormRelationMatch *out) {
+    size_t length = candidate->intervals + 1; /* notes */
+    if (candidate->intervals < standard_form_motive_fragment_min_intervals(prototype->intervals)) {
+        return false;
+    }
+    MotiveRelationStep exact = {MOTIVE_RELATION_EXACT, {0}, {0}};
+    MotiveSketch from;
+    MotiveSketch to;
+    if (motive_relation_apply(source, &exact, &from) != MOTIVE_RELATION_OK ||
+        motive_relation_apply(target, &exact, &to) != MOTIVE_RELATION_OK) {
+        return false;
+    }
+    for (int part = 0; part < 2; part++) {
+        MotiveRelationStep step = {MOTIVE_RELATION_FRAGMENT, {part + 1, (long)length, 0}, {0}};
+        MotiveSketch cut;
+        if (motive_relation_apply(&from, &step, &cut) == MOTIVE_RELATION_OK && motive_sketch_equal(&cut, &to)) {
+            out->kind = MOTIVE_OCCURRENCE_FRAGMENTED;
+            out->fragment_part = part;
+            out->fragment_intervals = candidate->intervals;
+            out->score = score_of(&from, &to);
+            return out->score > 0.0;
+        }
+    }
+    return false;
 }
 
 bool chain_match_motive_relation(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
@@ -87,30 +115,27 @@ bool chain_match_motive_relation(const StandardFormMotiveShape *prototype, const
     if (prototype == NULL || candidate == NULL || out == NULL || candidate->intervals > prototype->intervals) {
         return false;
     }
-    bool whole = prototype->intervals == candidate->intervals;
     MotiveSketch source;
     MotiveSketch target;
     if (!sketch_of(prototype, (const ChainRelationContext *)context, &source) ||
         !sketch_of(candidate, (const ChainRelationContext *)context, &target)) {
         return false;
     }
-    AdmitContext admit = {prototype->intervals};
+    out->fragment_part = -1;
+    out->fragment_intervals = 0;
+    if (candidate->intervals < prototype->intervals) {
+        return fragment_of(prototype, candidate, &source, &target, out);
+    }
     MotiveRecognizeOptions options;
     motive_recognize_options_default(&options);
     options.max_depth = 1;
     options.admit = only_matching_steps;
-    options.admit_context = &admit;
     MotiveRecognition recognition;
     if (motive_variant_recognize(&source, &target, &options, &recognition) != MOTIVE_RECOGNIZE_OK || !recognition.found ||
         recognition.step_count != 1) {
         return false;
     }
     const MotiveRelationStep *step = &recognition.steps[0];
-    out->fragment_part = -1;
-    out->fragment_intervals = 0;
-    if (whole != (step->kind != MOTIVE_RELATION_FRAGMENT)) {
-        return false; /* only a fragment is shorter, and a fragment is shorter */
-    }
     switch (step->kind) {
     case MOTIVE_RELATION_EXACT:
         out->kind = MOTIVE_OCCURRENCE_EXACT;
@@ -129,11 +154,6 @@ bool chain_match_motive_relation(const StandardFormMotiveShape *prototype, const
         break;
     case MOTIVE_RELATION_DIMINISH:
         out->kind = MOTIVE_OCCURRENCE_DIMINISHED;
-        break;
-    case MOTIVE_RELATION_FRAGMENT:
-        out->kind = MOTIVE_OCCURRENCE_FRAGMENTED;
-        out->fragment_part = (int)step->value[0] - 1;
-        out->fragment_intervals = (size_t)(step->value[1] - 1);
         break;
     default:
         return false;
