@@ -97,6 +97,7 @@ add_library(ursatz
     semantics/non_chord_tone.c
     semantics/tone_line.c
     semantics/cadence_type.c
+    semantics/motive_occurrence_kind.c
     semantics/applied_chord_kind.c
     semantics/key_change_extent.c
     semantics/form_level.c
@@ -318,6 +319,7 @@ ursatz_public_headers(ursatz
         semantics/form_level.h
         semantics/interval.h
         semantics/key_change_extent.h
+        semantics/motive_occurrence_kind.h
         semantics/motif_window.h
         semantics/non_chord_tone.h
         semantics/rhythmic_pattern.h
