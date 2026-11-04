@@ -65,7 +65,73 @@
     return typeof table[kind] === "number" ? table[kind] : undefined;
   }
 
-  const api = { load, set, loaded, get, list, values, labelOf, entry, limit, seedMax };
+  /* A debounced check of a form with the Composer (POST /api/materials/items/validate, R-276). options:
+   *   build()        the request {method, url, headers, body} (a model's validateRequest), or null for nothing to check;
+   *   field(path)    the form field a request path is about, or null;
+   *   show(result)   called with {ok, complete, message, path, field}: ok false is the Composer's refusal (message as
+   *                  given, path and the field it marks); an incomplete body (complete false) shows nothing;
+   *   delay (ms, 400), fetch, setTimer and clearTimer (for tests).
+   * check() waits for delay after the last call; an answer that a later check has passed is dropped. */
+  function createValidator(options) {
+    const o = options || {};
+    const delay = o.delay === undefined ? 400 : o.delay;
+    const setTimer = o.setTimer || ((fn, ms) => setTimeout(fn, ms));
+    const clearTimer = o.clearTimer || ((id) => clearTimeout(id));
+    const doFetch = o.fetch || ((url, init) => root.fetch(url, init));
+    let timer = null;
+    let serial = 0;
+
+    async function now() {
+      const mine = ++serial;
+      const request = o.build();
+      if (!request) {
+        o.show({ ok: true, complete: false, message: "", path: "", field: null });
+        return;
+      }
+      let status = 0;
+      let body = null;
+      try {
+        const res = await doFetch(request.url, { method: request.method, headers: request.headers, body: request.body });
+        status = res.status;
+        body = await res.json();
+      } catch (err) {
+        body = null;
+      }
+      if (mine !== serial) {
+        return;
+      }
+      if (status === 200 && body && body.ok) {
+        o.show({ ok: true, complete: body.complete === true, message: body.message || "", path: "", field: null });
+      } else if (status === 400 && body && typeof body.error === "string") {
+        const path = typeof body.path === "string" ? body.path : "";
+        o.show({ ok: false, complete: true, message: body.error, path, field: o.field ? o.field(path) : null });
+      } else {
+        o.show({ ok: true, complete: false, message: "", path: "", field: null });
+      }
+    }
+
+    function check() {
+      if (timer !== null) {
+        clearTimer(timer);
+      }
+      timer = setTimer(() => {
+        timer = null;
+        now();
+      }, delay);
+    }
+
+    function cancel() {
+      if (timer !== null) {
+        clearTimer(timer);
+        timer = null;
+      }
+      serial += 1;
+    }
+
+    return { check, now, cancel };
+  }
+
+  const api = { load, set, loaded, get, list, values, labelOf, entry, limit, seedMax, createValidator };
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;
   } else {

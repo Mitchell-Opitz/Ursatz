@@ -867,6 +867,24 @@ function buildThemeEditor(ctx) {
 
   sections.advanced = buildThemeAdvancedSection(state, itemsOf);
 
+  /* The Composer's checks of the values (meter, bars, hybrid, tempo, seed, chords...) come from the validate route. */
+  const validation = attachFormValidation({
+    roots: [theme, structure, sections.slots, sections.advanced],
+    build: () => ThemesModel.validateRequest(state),
+    field: ThemesModel.fieldForPath,
+    fields: () => ({
+      into,
+      hybrid: beginningSelect,
+      mode,
+      meter,
+      bars,
+      cadence,
+      firstCadence,
+      tempo,
+      chords: chordRow.element,
+    }),
+  });
+
   function problems() {
     const list = ThemesModel.formProblems(state);
     problemsEl.textContent = list.join(" ");
@@ -900,7 +918,7 @@ function buildThemeEditor(ctx) {
   const composeButton = themeButton("Compose", () => compose({}));
   const spinner = materialsElement("span", "theme-spinner");
   spinner.hidden = true;
-  saveRow.append(problemsEl, noteInput, saveButton, composeButton, spinner);
+  saveRow.append(problemsEl, validation.element, noteInput, saveButton, composeButton, spinner);
   sections.result = saveRow;
 
   function setBusy(busy) {

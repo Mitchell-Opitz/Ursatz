@@ -25,12 +25,11 @@
     { value: "theme", label: "Theme" },
     { value: "progression", label: "Progression" },
   ];
-  const INTOS = Themes.INTOS;
-  const MODES = Themes.MODES;
-  const METERS = Themes.METERS;
-  const POOLS = Themes.POOLS;
-  const PATTERNS = Themes.PATTERNS;
-  const WEIGHTS = Themes.WEIGHTS;
+  /* Read when asked: the theme model reads them from the Composer's vocabulary, loaded after the scripts. */
+  const modes = () => Themes.MODES;
+  const meters = () => Themes.METERS;
+  const pools = () => Themes.POOLS;
+  const weights = () => Themes.WEIGHTS;
   const PICKUPS = ["0", "1/4", "1/2", "1", "3/2", "2", "3"];
   const MAX_SECTIONS = 32;
   const MAX_BEATS = 2048;
@@ -299,10 +298,10 @@
     if (typeof structure.key === "string" && structure.key !== "") {
       state.key = structure.key;
     }
-    if (MODES.some((entry) => entry.value === structure.mode)) {
+    if (modes().some((entry) => entry.value === structure.mode)) {
       state.mode = structure.mode;
     }
-    if (METERS.includes(structure.meter)) {
+    if (meters().includes(structure.meter)) {
       state.meter = structure.meter;
     }
     state.sections = (Array.isArray(structure.sections) ? structure.sections : [])
@@ -319,7 +318,7 @@
     if (piece.motive && typeof piece.motive === "object" && text(piece.motive.item_id)) {
       state.motive = { item_id: piece.motive.item_id, version: Number(piece.motive.version) };
     }
-    if (POOLS.some((entry) => entry.value === piece.pool)) {
+    if (pools().some((entry) => entry.value === piece.pool)) {
       state.pool = piece.pool;
     }
     if (piece.accompaniment && typeof piece.accompaniment === "object" && typeof piece.accompaniment.pattern === "string") {
@@ -327,7 +326,7 @@
     }
     state.picks = Themes.picksFromBrief(piece.brief);
     state.switches = Themes.switchesFromWithout(piece.without);
-    if (WEIGHTS.some((entry) => entry.value === piece.style_weight)) {
+    if (weights().some((entry) => entry.value === piece.style_weight)) {
       state.weight = piece.style_weight;
     }
     state.tempo = Number.isInteger(piece.tempo) ? String(piece.tempo) : "";
@@ -498,7 +497,7 @@
     if (!/^[A-G][#b]?( (major|minor))?$/.test(text(s.key)) || text(s.key).length > 16) {
       problems.push("The key must be a tonic such as D or Bb.");
     }
-    if (!METERS.includes(s.meter)) {
+    if (!meters().includes(s.meter)) {
       problems.push("The meter must be 2/4, 3/4, 4/4 or 6/8.");
     }
     if (text(s.tempo) !== "" && wholeNumber(s.tempo, 20, 400) === null) {
@@ -838,12 +837,24 @@
     PART_NAMES,
     CADENCES,
     FILL_KINDS,
-    INTOS,
-    MODES,
-    METERS,
-    POOLS,
-    PATTERNS,
-    WEIGHTS,
+    get INTOS() {
+      return Themes.INTOS;
+    },
+    get MODES() {
+      return Themes.MODES;
+    },
+    get METERS() {
+      return Themes.METERS;
+    },
+    get POOLS() {
+      return Themes.POOLS;
+    },
+    get PATTERNS() {
+      return Themes.PATTERNS;
+    },
+    get WEIGHTS() {
+      return Themes.WEIGHTS;
+    },
     PICKUPS,
     MAX_SECTIONS,
     MAX_CELLS,

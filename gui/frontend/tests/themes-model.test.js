@@ -5,6 +5,8 @@
  * Plain Node script: `node frontend/tests/themes-model.test.js`. */
 const fs = require("fs");
 const path = require("path");
+const Vocabulary = require("../public/vocabulary.js");
+Vocabulary.set(require("./fixtures/vocabulary.json"));
 const T = require("../public/themes-model.js");
 
 let failures = 0;
@@ -71,26 +73,16 @@ check(!("key" in keyed.theme.form) && !("pool" in keyed.theme), "the body has no
 check(!("key" in T.emptyState("x")) && !("pool" in T.emptyState("x")), "the form has no key and no pool");
 const old = T.formFromBody({ uses: [], theme: { form: { into: "sentence", key: "D" }, pool: "approved", slots: [] } }, "thm-3");
 check(!("key" in old) && !("pool" in old), "an old key and pool are not read");
-const badMeter = filled();
-badMeter.meter = "5/4";
-check(T.formProblems(badMeter).some((p) => /meter/.test(p)), "a bad meter is a problem");
-for (const tempo of ["19", "401", "fast", "12.5"]) {
-  const bad = filled();
-  bad.tempo = tempo;
-  check(T.formProblems(bad).some((p) => /tempo/.test(p)), `the tempo ${tempo} is a problem`);
-}
 const edge = filled();
 edge.tempo = "400";
-check(T.formProblems(edge).length === 0 && T.bodyFromForm(edge).theme.tempo === 400, "the tempo 400 is accepted");
+check(T.formProblems(edge).length === 0 && T.bodyFromForm(edge).theme.tempo === 400, "the tempo 400 is sent");
+edge.tempo = "19";
+check(T.formProblems(edge).length === 0 && T.bodyFromForm(edge).theme.tempo === 19, "a tempo out of range is sent for the Composer to refuse");
 const noBrief = filled();
 noBrief.mode = "style";
 check(T.formProblems(noBrief).some((p) => /brief/.test(p)), "the mode from the brief needs a brief");
 noBrief.picks = [{ kind: "style", id: "sty-1" }];
 check(T.formProblems(noBrief).length === 0, "the mode from the brief works with a brief");
-const hybridBad = filled();
-hybridBad.into = "hybrid";
-hybridBad.hybrid = "cbi+nothing";
-check(T.formProblems(hybridBad).some((p) => /hybrid/i.test(p)), "a bad hybrid pairing is a problem");
 const noAcc = filled();
 noAcc.accompaniment = { kind: "motive", pattern: "any", item_id: "", version: 0 };
 check(T.formProblems(noAcc).some((p) => /accompaniment/.test(p)), "a motif accompaniment without a motif is a problem");
@@ -350,17 +342,6 @@ function chordState(chords, meter, bars) {
   });
   return state;
 }
-check(T.chordProblems(chordState({ 0: "IV V@2", 3: "I" })).length === 0, "chords IV V@2 and I are accepted");
-check(T.chordProblems(chordState({ 0: "I V@3", 1: "V" }, "6/8")).length === 0, "6/8 takes a second chord at @3");
-const threeChords = T.chordProblems(chordState({ 2: "I V@2 I@3" }));
-check(threeChords.length === 1 && threeChords[0].startsWith("Bar 3:"), "three chords in a bar are refused, naming the bar");
-check(T.chordProblems(chordState({ 0: "I V@1/3" })).length === 1, "an onset of 1/3 is refused");
-check(T.chordProblems(chordState({ 0: "I V@4" })).length === 1, "an onset past the bar is refused");
-check(T.chordProblems(chordState({ 0: "I V@3/2" })).length === 1, "a half beat off the cell grid is refused");
-check(T.chordProblems(chordState({ 0: "I V@2", 1: "I V" , 2: "I V@0"})).length === 2, "a missing onset and a falling onset are refused");
-check(T.chordProblems(chordState({ 0: "I V@2" }, "3/4")).length === 1, "3/4 takes one chord a bar");
-check(T.chordProblems(chordState({ 0: "X" })).length === 1, "a word that is not a numeral is refused");
-check(T.formProblems(chordState({ 0: "I V@3/2" })).some((p) => p.startsWith("Bar 1:")), "formProblems carries the chord problems");
 const eightToFour = chordState({ 1: "IV", 5: "V", 7: "I" });
 eightToFour.bars = 4;
 check(T.dropChords(eightToFour).join() === "6,8", "bars 8 to 4 drops the chords of bars 6 and 8");

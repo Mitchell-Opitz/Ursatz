@@ -6,6 +6,7 @@
  * Plain Node script: `node frontend/tests/pieces-model.test.js`. */
 const fs = require("fs");
 const path = require("path");
+require("../public/vocabulary.js").set(require("./fixtures/vocabulary.json"));
 const P = require("../public/pieces-model.js");
 
 let failures = 0;
