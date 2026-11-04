@@ -748,7 +748,8 @@ most 8 tries.
   `.xml` or `.mxl` upload keeps its extension (`source.xml`, `source.mxl`).
 - `analysis.json`: the Analyzer's analysis document (schema v9).
 - `meta.json`: `{"filename", "format": "midi"|"musicxml", "uploaded_at"
-  (ISO 8601 UTC), "analyzer_version", "document_schema_version"}` plus the
+  (ISO 8601 UTC), "analyzer_version", "document_schema_version",
+  "ursatz_commit"}` plus the
   optional `"composer"` and `"source"` (strings) and `"tags"` (array of
   strings). A member that is absent reads as `""` or no tags, so pieces
   stored before the metadata existed list as unassigned.
@@ -762,7 +763,17 @@ case-insensitively.
 
 Every file is written to `<name>.tmp` and renamed, and a failed analysis
 removes the directory. Re-running the analysis rewrites `analysis.json` and
-the two version fields of `meta.json`; the filename and `uploaded_at` stay.
+the three version fields of `meta.json`; the filename and `uploaded_at` stay.
+
+Staleness keys: a stored analysis is current only when its `schema_version`, `metadata.analyzer_version` and
+`metadata.ursatz_commit` all equal this build's (`analyzer_document_status` on `analysis.json`; Analyzer
+`staleness.h`). `meta.json` holds the same three values as `document_schema_version`, `analyzer_version` and
+`ursatz_commit`, so the Library list reads the flag without opening a document. A `meta.json` from before
+`ursatz_commit` gets it from its document's `metadata.ursatz_commit` the first time the piece is opened (written back
+under the piece lock); with neither it is stale. A stale analysis is analyzed again once, under the piece lock, when
+the piece is opened, when a style is built from it and before a link run reads it (`ursatz_gui_analysis_ensure_current`);
+the link worker's re-analysis after a feature or format error stays as a fallback. If that analysis fails, the
+stored document is served. Motif and theme analyses are Composer output, not analysis documents, and are not checked.
 Pieces saved by earlier versions (`pieces/<id>.db`) are ignored: they are
 not listed and cannot be opened, so upload those files again.
 
@@ -1218,7 +1229,9 @@ subjects/
   Analyzer cannot import or analyze gives `422` with
   `{"error": "import failed"}`; nothing is stored in either case.
 - `GET /api/analyzer/pieces`: the stored pieces, newest upload first, then by
-  id: `{"ok":true,"pieces":[{"id","filename","format","uploaded_at","composer","source","tags":[...]}]}`.
+  id: `{"ok":true,"pieces":[{"id","filename","format","uploaded_at","composer","source","tags":[...],"notation","analysis_status"}]}`.
+  `analysis_status` is `current`, `stale_schema`, `stale_analyzer`, `stale_ursatz` or `unreadable`, from `meta.json`
+  alone; the Library shows a stale badge for any other value.
   Optional query parameters filter the list, all given ones must match:
   `composer`, `source` and `tag` (case-insensitive, URL-decoded),
   `unassigned=composer` and `unassigned=source` (may appear twice) for pieces
@@ -1229,7 +1242,9 @@ subjects/
   shown spelling of a composer or source is the one most pieces use (ties by
   byte order). A tag repeated within one piece counts once.
 - `GET /api/analyzer/pieces/<id>`:
-  `{"ok":true,"id","filename","format","uploaded_at","notation","note_xml_ids":[...],"document":{...}}`.
+  `{"ok":true,"id","filename","format","uploaded_at","notation","analysis_status","note_xml_ids":[...],"document":{...}}`.
+  A stale analysis is analyzed again before it is read; when that fails, the stored document is served with
+  `analysis_status` naming why and `"stale"` set to the same name (absent when current). The header shows a stale status.
   `notation` is the piece's notation override or `null`. `document` is the analysis document as stored. `note_xml_ids[i]` is the
   `<note xml:id>` the score export writes for note `i` of the source; a
   claim's `note_ids` are indices into this array. An unknown id returns
@@ -1419,9 +1434,8 @@ renamed); a theme version uses it for its brief.
 
 A piece that cannot be added is skipped with a reason and the build goes on:
 `not found` (no such piece), `re-analysis failed` or `unreadable analysis`.
-When a piece's `meta.json` `document_schema_version` is not the Analyzer's
-current one, the piece is analyzed again first (the same call as the
-re-run route), so older pieces still count. Only analysis documents are read,
+When a piece's stored analysis is not current (another schema, Analyzer version or Ursatz commit; see Staleness
+keys), the piece is analyzed again first, so older pieces still count. Only analysis documents are read,
 never the scores. A build runs on the request thread and one mutex serializes
 the style store.
 

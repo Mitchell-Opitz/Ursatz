@@ -96,9 +96,9 @@ void ursatz_gui_style_skipped_free(UrsatzGuiStyleSkipped *skipped, size_t count)
 
 /*
  * Builds a style from the source's pieces. For each piece the stored
- * analysis.json is added to a style profile; when the piece's meta.json
- * document_schema_version is not the Analyzer's current one, the piece is
- * re-analyzed first (ursatz_gui_analysis_reanalyze). A piece that cannot be
+ * analysis.json is added to a style profile; when the stored analysis is not
+ * current (analyzer_document_status), the piece is re-analyzed first
+ * (ursatz_gui_analysis_ensure_current). A piece that cannot be
  * added is skipped with a reason and the build goes on.
  *
  * name is normalized like piece metadata values; when empty it becomes a
