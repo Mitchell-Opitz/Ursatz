@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void set_json(UrsatzGuiJobResult *out, int status, cJSON *object) {
+void ursatz_gui_job_result_json(UrsatzGuiJobResult *out, int status, cJSON *object) {
   out->http_status = status;
   out->json = object ? cJSON_PrintUnformatted(object) : NULL;
   cJSON_Delete(object);
@@ -13,13 +13,13 @@ static void set_json(UrsatzGuiJobResult *out, int status, cJSON *object) {
   }
 }
 
-static void set_failure(UrsatzGuiJobResult *out, int status, const char *message) {
+void ursatz_gui_job_result_failure(UrsatzGuiJobResult *out, int status, const char *message) {
   cJSON *object = cJSON_CreateObject();
   if (object) {
     cJSON_AddBoolToObject(object, "ok", 0);
     cJSON_AddStringToObject(object, "error", message);
   }
-  set_json(out, status, object);
+  ursatz_gui_job_result_json(out, status, object);
 }
 
 void ursatz_gui_compose_reply(UrsatzGuiThemeResult result, cJSON *item, const char *message, const char *invalid_text,
@@ -29,27 +29,27 @@ void ursatz_gui_compose_reply(UrsatzGuiThemeResult result, cJSON *item, const ch
       cJSON *object = cJSON_CreateObject();
       if (object && item && cJSON_AddBoolToObject(object, "ok", 1) && cJSON_AddItemToObject(object, "item", item)) {
         item = NULL;
-        set_json(out, 200, object);
+        ursatz_gui_job_result_json(out, 200, object);
       } else {
         cJSON_Delete(object);
-        set_failure(out, 500, "out of memory");
+        ursatz_gui_job_result_failure(out, 500, "out of memory");
       }
       break;
     }
     case URSATZ_GUI_THEME_ERR_NOT_FOUND:
-      set_failure(out, 404, message[0] ? message : "not found");
+      ursatz_gui_job_result_failure(out, 404, message[0] ? message : "not found");
       break;
     case URSATZ_GUI_THEME_ERR_INVALID:
-      set_failure(out, 400, message[0] ? message : invalid_text);
+      ursatz_gui_job_result_failure(out, 400, message[0] ? message : invalid_text);
       break;
     case URSATZ_GUI_THEME_ERR_UNPROCESSABLE:
-      set_failure(out, 422, message[0] ? message : "stuck");
+      ursatz_gui_job_result_failure(out, 422, message[0] ? message : "stuck");
       break;
     case URSATZ_GUI_THEME_ERR_CANCELLED:
-      set_failure(out, 499, "cancelled");
+      ursatz_gui_job_result_failure(out, 499, "cancelled");
       break;
     default:
-      set_failure(out, 500, message[0] ? message : failed_text);
+      ursatz_gui_job_result_failure(out, 500, message[0] ? message : failed_text);
       break;
   }
   cJSON_Delete(item);
@@ -132,10 +132,10 @@ void ursatz_gui_compose_job_run(void *input, const ComposerJob *composer_job, Ur
   if (job->op == URSATZ_GUI_COMPOSE_PIECE_VARIATIONS && result == URSATZ_GUI_THEME_OK) {
     /* the answer is {"ok": true, "set", "variations": [...]} */
     if (made && cJSON_AddBoolToObject(made, "ok", 1)) {
-      set_json(out, 200, made);
+      ursatz_gui_job_result_json(out, 200, made);
     } else {
       cJSON_Delete(made);
-      set_failure(out, 500, "out of memory");
+      ursatz_gui_job_result_failure(out, 500, "out of memory");
     }
     return;
   }

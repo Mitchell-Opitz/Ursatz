@@ -46,6 +46,12 @@ void ursatz_gui_compose_job_free(void *input);
 /* The UrsatzGuiJobFn of every compose job. */
 void ursatz_gui_compose_job_run(void *input, const ComposerJob *job, UrsatzGuiJobResult *out);
 
+/* Fills out with object (freed) as the answer with the given status, or the out-of-memory failure. */
+void ursatz_gui_job_result_json(UrsatzGuiJobResult *out, int status, cJSON *object);
+
+/* Fills out with {"ok": false, "error": message} and the status. */
+void ursatz_gui_job_result_failure(UrsatzGuiJobResult *out, int status, const char *message);
+
 /* Fills out with the answer for a service result: the item on OK, else the failure (status 404, 400, 422, 499, 500) with
  * message or the given text. Takes item (freed). */
 void ursatz_gui_compose_reply(UrsatzGuiThemeResult result, cJSON *item, const char *message, const char *invalid_text,
