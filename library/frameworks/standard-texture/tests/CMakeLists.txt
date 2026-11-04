@@ -38,7 +38,3 @@ if(URSATZ_TEXTURE_NOTE_VALGRIND)
   add_test(NAME standard_texture_analysis_note_valgrind
            COMMAND ${URSATZ_TEXTURE_NOTE_VALGRIND} --leak-check=full --error-exitcode=1 $<TARGET_FILE:test_standard_texture_analysis_note>)
 endif()
-
-add_executable(test_standard_texture_analysis_time test_analysis_time.c)
-target_link_libraries(test_standard_texture_analysis_time PRIVATE standard_texture)
-add_test(NAME standard_texture_analysis_time COMMAND test_standard_texture_analysis_time)

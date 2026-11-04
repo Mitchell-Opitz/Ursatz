@@ -807,7 +807,7 @@ AnalysisChainStatus analysis_chain_run(const AnalysisNoteSet *notes, const Analy
         if (chain->config.weighting.classifier == NULL) {
             chain->config.weighting.classifier = chain_classify_tones;
         }
-        if (chain->config.form.relation_match == NULL && chain->config.form.relation_matcher == NULL) {
+        if (chain->config.form.relation_match == NULL) {
             chain->config.form.relation_match = chain_match_motive_relation;
             chain->config.form.relation_context = &chain->relation_context;
         }

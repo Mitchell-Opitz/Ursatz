@@ -58,8 +58,8 @@ static void test_an_exact_repetition_is_a_motive(void) {
     assert(m.family_count == 1); /* the three-note windows inside it are suppressed: maximality */
     const StandardFormMotiveFamily *f = &m.families[0];
     assert(f->claim.note_count == 4 && f->occurrence_count == 2 && f->claim.generic == 0 && f->claim.line == 0);
-    assert(f->occurrences[0].claim.kind == (int)STANDARD_FORM_MOTIVE_EXACT && f->occurrences[0].claim.note_first == 0);
-    assert(f->occurrences[1].claim.kind == (int)STANDARD_FORM_MOTIVE_EXACT && f->occurrences[1].claim.note_first == 4);
+    assert(f->occurrences[0].claim.kind == (int)MOTIVE_OCCURRENCE_EXACT && f->occurrences[0].claim.note_first == 0);
+    assert(f->occurrences[1].claim.kind == (int)MOTIVE_OCCURRENCE_EXACT && f->occurrences[1].claim.note_first == 4);
     assert(f->occurrences[1].claim.score == 1.0 && f->occurrences[1].uncertainty == 0.0 && f->occurrences[1].claim.mismatches == 0);
     assert(f->occurrences[0].claim.first_measure == 1 && fabs(f->occurrences[0].claim.first_beat - 1.0) < 1e-12);
     assert(f->occurrences[1].claim.first_measure == 2 && fabs(f->occurrences[1].claim.first_beat - 2.0) < 1e-12);
@@ -76,7 +76,7 @@ static void test_a_real_transposition_keeps_the_semitone_intervals(void) {
     figure(&p, 5.0, b, NULL, 4);
     StandardFormMotives m = find(&p, NULL);
     assert(m.family_count == 1 && m.families[0].occurrence_count == 2);
-    assert(m.families[0].occurrences[1].claim.kind == (int)STANDARD_FORM_MOTIVE_REAL);
+    assert(m.families[0].occurrences[1].claim.kind == (int)MOTIVE_OCCURRENCE_REAL);
     standard_form_motives_destroy(&m);
     piece_destroy(&p);
 }
@@ -102,7 +102,7 @@ static void test_a_tonal_transposition_matches_by_generic_intervals_only(void) {
     figure(&p, 5.0, b, db, 4);
     m = find(&p, NULL);
     assert(m.family_count == 1 && m.families[0].claim.note_count == 4 && m.families[0].claim.generic == 1);
-    assert(m.families[0].occurrences[1].claim.kind == (int)STANDARD_FORM_MOTIVE_TONAL &&
+    assert(m.families[0].occurrences[1].claim.kind == (int)MOTIVE_OCCURRENCE_TONAL &&
            m.families[0].occurrences[1].claim.dimension_generic == 1);
     standard_form_motives_destroy(&m);
     piece_destroy(&p);
@@ -288,7 +288,7 @@ static void test_an_inversion_joins_the_family(void) {
     StandardFormMotives m = find(&p, NULL);
     const StandardFormMotiveFamily *f = family_of_notes(&m, 4);
     assert(m.family_count == 1 && f != NULL && f->occurrence_count == 3);
-    assert(f->occurrences[2].claim.kind == (int)STANDARD_FORM_MOTIVE_INVERTED && f->occurrences[2].claim.note_first == 8);
+    assert(f->occurrences[2].claim.kind == (int)MOTIVE_OCCURRENCE_INVERTED && f->occurrences[2].claim.note_first == 8);
     assert(f->occurrences[2].claim.score == 1.0 && f->occurrences[2].uncertainty == 0.0);
     standard_form_motives_destroy(&m);
     piece_destroy(&p);
@@ -305,7 +305,7 @@ static void test_a_retrograde_joins_the_family(void) {
     chain(&p, steady, back, 4);
     StandardFormMotives m = find(&p, NULL);
     const StandardFormMotiveFamily *f = family_of_notes(&m, 4);
-    assert(f != NULL && f->occurrence_count == 3 && f->occurrences[2].claim.kind == (int)STANDARD_FORM_MOTIVE_RETROGRADE);
+    assert(f != NULL && f->occurrence_count == 3 && f->occurrences[2].claim.kind == (int)MOTIVE_OCCURRENCE_RETROGRADE);
     standard_form_motives_destroy(&m);
     piece_destroy(&p);
 }
@@ -323,7 +323,7 @@ static void test_a_varied_motive_has_a_score_below_one(void) {
     const StandardFormMotiveFamily *f = family_of_notes(&m, 8);
     assert(f != NULL && f->occurrence_count == 3);
     const StandardFormMotiveOccurrence *o = &f->occurrences[2];
-    assert(o->claim.kind == (int)STANDARD_FORM_MOTIVE_VARIED && o->claim.mismatches == 1 && o->claim.intervals == 7);
+    assert(o->claim.kind == (int)MOTIVE_OCCURRENCE_VARIED && o->claim.mismatches == 1 && o->claim.intervals == 7);
     assert(fabs(o->claim.score - 6.0 / 7.0) < 1e-12 && fabs(o->uncertainty - 1.0 / 7.0) < 1e-12 && o->claim.rhythm_factor == 1.0);
     standard_form_motives_destroy(&m);
 
@@ -347,7 +347,7 @@ static void test_a_varied_motive_has_a_score_below_one(void) {
     config.varied_max_mismatch = 2;
     m = find(&q, &config);
     f = family_of_notes(&m, 8);
-    assert(f != NULL && f->occurrence_count == 3 && f->occurrences[2].claim.kind == (int)STANDARD_FORM_MOTIVE_VARIED &&
+    assert(f != NULL && f->occurrence_count == 3 && f->occurrences[2].claim.kind == (int)MOTIVE_OCCURRENCE_VARIED &&
            fabs(f->occurrences[2].claim.score - 5.0 / 7.0) < 1e-12);
     standard_form_motives_destroy(&m);
     piece_destroy(&q);
@@ -371,7 +371,7 @@ static void test_an_exact_window_is_not_also_a_transformation(void) {
     for (size_t i = 0; i < m.family_count; i++) {
         for (size_t j = 0; j < m.families[i].occurrence_count; j++) {
             if (m.families[i].occurrences[j].claim.note_first == 8 || m.families[i].occurrences[j].claim.note_first == 12) {
-                assert(m.families[i].occurrences[j].claim.kind <= (int)STANDARD_FORM_MOTIVE_TONAL);
+                assert(m.families[i].occurrences[j].claim.kind <= (int)MOTIVE_OCCURRENCE_TONAL);
                 exact_pairs++;
             }
         }

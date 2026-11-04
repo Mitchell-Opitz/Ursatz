@@ -102,9 +102,9 @@ static int compare_cands(const void *a, const void *b) {
    another pitch REAL; with other semitones (a generic pattern only) TONAL. */
 static StandardFormMotiveKind pattern_kind(const StandardFormMotiveShape *proto, const StandardFormMotiveShape *other) {
     if (memcmp(proto->semitones, other->semitones, proto->intervals * sizeof(int)) != 0) {
-        return STANDARD_FORM_MOTIVE_TONAL;
+        return MOTIVE_OCCURRENCE_TONAL;
     }
-    return proto->first_semitone == other->first_semitone ? STANDARD_FORM_MOTIVE_EXACT : STANDARD_FORM_MOTIVE_REAL;
+    return proto->first_semitone == other->first_semitone ? MOTIVE_OCCURRENCE_EXACT : MOTIVE_OCCURRENCE_REAL;
 }
 
 typedef struct {
@@ -264,7 +264,7 @@ static StandardFormAnalysisStatus discover(const StandardFormMotiveLine *line, c
                 }
                 occ.first = groups[g].firsts[k];
                 occ.n = fam->proto_n;
-                occ.kind = k == 0 ? (int)STANDARD_FORM_MOTIVE_EXACT : (int)pattern_kind(&fam->proto, &shape);
+                occ.kind = k == 0 ? (int)MOTIVE_OCCURRENCE_EXACT : (int)pattern_kind(&fam->proto, &shape);
                 occ.score = 1.0;
                 occ.intervals = shape.intervals;
                 occ.rhythm_factor = 1.0;
@@ -439,7 +439,7 @@ static void fill_rec(Rec *rec, size_t fam, int line, size_t first, size_t n, con
 static size_t exact_count(const Fam *fam) {
     size_t count = 0;
     for (size_t k = 0; k < fam->occ_count; k++) {
-        count += fam->occ[k].kind <= (int)STANDARD_FORM_MOTIVE_TONAL ? 1 : 0;
+        count += fam->occ[k].kind <= (int)MOTIVE_OCCURRENCE_TONAL ? 1 : 0;
     }
     return count;
 }
@@ -486,9 +486,8 @@ static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fa
                 (config->relation_match != NULL
                      ? standard_form_motive_classify_match(&fam->proto, &shape, config->varied_max_mismatch, config->relation_match,
                                                            config->relation_context, &match)
-                     : standard_form_motive_classify_with(&fam->proto, &shape, config->varied_max_mismatch, config->relation_matcher,
-                                                          config->relation_context, &match)) &&
-                match.kind > (int)STANDARD_FORM_MOTIVE_TONAL) {
+                     : standard_form_motive_classify(&fam->proto, &shape, config->varied_max_mismatch, &match)) &&
+                match.kind > (int)MOTIVE_OCCURRENCE_TONAL) {
                 fill_rec(&rec, f, fam->line, first, fam->proto_n, &match);
                 if (!push_rec(&recs, &rec_count, &capacity, &rec)) {
                     status = STANDARD_FORM_ANALYSIS_ERR_ALLOC;
@@ -547,7 +546,7 @@ static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fa
                 }
                 for (size_t k = 1; k < shorter->occ_count; k++) {
                     if (shorter->occ[k].first == recs[i].occ.first && shorter->occ[k].n == recs[i].occ.n &&
-                        shorter->occ[k].kind <= (int)STANDARD_FORM_MOTIVE_TONAL) {
+                        shorter->occ[k].kind <= (int)MOTIVE_OCCURRENCE_TONAL) {
                         memmove(&shorter->occ[k], &shorter->occ[k + 1], (shorter->occ_count - k - 1) * sizeof(Occ));
                         shorter->occ_count--;
                         break;
@@ -688,7 +687,7 @@ static StandardFormAnalysisStatus check_with_kernel(const StandardFormMotiveLine
     size_t total = 0;
     for (size_t f = 0; f < family_count; f++) {
         for (size_t k = 0; k < families[f].occ_count; k++) {
-            total += families[f].occ[k].kind <= (int)STANDARD_FORM_MOTIVE_TONAL ? 1 : 0;
+            total += families[f].occ[k].kind <= (int)MOTIVE_OCCURRENCE_TONAL ? 1 : 0;
         }
     }
     if (total == 0) {
@@ -707,7 +706,7 @@ static StandardFormAnalysisStatus check_with_kernel(const StandardFormMotiveLine
         for (size_t k = 0; k < families[f].occ_count; k++) {
             const Occ *occ = &families[f].occ[k];
             StandardFormMotiveShape shape;
-            if (occ->kind > (int)STANDARD_FORM_MOTIVE_TONAL) {
+            if (occ->kind > (int)MOTIVE_OCCURRENCE_TONAL) {
                 continue;
             }
             if (!standard_form_motive_shape(line, occ->first, occ->n, families[f].generic, &shape) ||

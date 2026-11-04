@@ -65,10 +65,10 @@ static void test_a_pattern_is_exact_real_or_tonal(void) {
     StandardFormMotiveMatch match;
     assert(standard_form_motive_match_pattern(&proto, &(StandardFormMotiveShape){0}, &match) == false);
     StandardFormMotiveShape exact = shape_of(&n, 4, 4);
-    assert(standard_form_motive_match_pattern(&proto, &exact, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_EXACT &&
+    assert(standard_form_motive_match_pattern(&proto, &exact, &match) && match.kind == (int)MOTIVE_OCCURRENCE_EXACT &&
            match.score == 1.0);
     StandardFormMotiveShape real = shape_of(&n, 8, 4);
-    assert(standard_form_motive_match_pattern(&proto, &real, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_REAL);
+    assert(standard_form_motive_match_pattern(&proto, &real, &match) && match.kind == (int)MOTIVE_OCCURRENCE_REAL);
     notes_destroy(&n);
 }
 
@@ -87,7 +87,7 @@ static void test_inversion_negates_every_interval(void) {
     StandardFormMotiveShape proto = shape_of(&n, 0, 4);
     StandardFormMotiveMatch match;
     StandardFormMotiveShape cand = shape_of(&n, 4, 4);
-    assert(standard_form_motive_match_inversion(&proto, &cand, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_INVERTED &&
+    assert(standard_form_motive_match_inversion(&proto, &cand, &match) && match.kind == (int)MOTIVE_OCCURRENCE_INVERTED &&
            match.score == 1.0 && match.mismatches == 0);
     assert(!standard_form_motive_match_pattern(&proto, &cand, &match));
     cand = shape_of(&n, 8, 4);
@@ -111,7 +111,7 @@ static void test_retrograde_reverses_the_notes_and_the_onset_gaps(void) {
     StandardFormMotiveShape proto = shape_of(&n, 0, 4);
     StandardFormMotiveMatch match;
     StandardFormMotiveShape cand = shape_of(&n, 4, 4);
-    assert(standard_form_motive_match_retrograde(&proto, &cand, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_RETROGRADE &&
+    assert(standard_form_motive_match_retrograde(&proto, &cand, &match) && match.kind == (int)MOTIVE_OCCURRENCE_RETROGRADE &&
            match.score == 1.0);
     cand = shape_of(&n, 8, 4);
     assert(!standard_form_motive_match_retrograde(&proto, &cand, &match));
@@ -139,7 +139,7 @@ static void test_a_varied_motive_changes_an_interval_or_the_rhythm(void) {
     StandardFormMotiveShape proto = shape_of(&n, 0, 5);
     StandardFormMotiveMatch match;
     StandardFormMotiveShape cand = shape_of(&n, 5, 5);
-    assert(standard_form_motive_match_varied(&proto, &cand, 1, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_VARIED &&
+    assert(standard_form_motive_match_varied(&proto, &cand, 1, &match) && match.kind == (int)MOTIVE_OCCURRENCE_VARIED &&
            match.mismatches == 1 && match.intervals == 4 && fabs(match.score - 0.75) < 1e-12 && match.rhythm_factor == 1.0);
     cand = shape_of(&n, 10, 5);
     assert(!standard_form_motive_match_varied(&proto, &cand, 1, &match)); /* two intervals differ */
@@ -181,7 +181,7 @@ static void test_precedence_picks_the_strongest_kind(void) {
     StandardFormMotiveMatch match;
     assert(standard_form_motive_match_retrograde(&proto, &cand, &match));
     assert(standard_form_motive_match_pattern(&proto, &cand, &match));
-    assert(standard_form_motive_classify(&proto, &cand, 1, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_REAL);
+    assert(standard_form_motive_classify(&proto, &cand, 1, &match) && match.kind == (int)MOTIVE_OCCURRENCE_REAL);
     notes_destroy(&n);
 
     notes_init(&n);
@@ -195,19 +195,19 @@ static void test_precedence_picks_the_strongest_kind(void) {
     cand = shape_of(&n, 3, 3);
     assert(standard_form_motive_match_inversion(&proto, &cand, &match));
     assert(standard_form_motive_match_retrograde(&proto, &cand, &match));
-    assert(standard_form_motive_classify(&proto, &cand, 1, &match) && match.kind == (int)STANDARD_FORM_MOTIVE_INVERTED);
+    assert(standard_form_motive_classify(&proto, &cand, 1, &match) && match.kind == (int)MOTIVE_OCCURRENCE_INVERTED);
     notes_destroy(&n);
 
-    assert(standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_EXACT) < standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_REAL) ||
-           standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_EXACT) == 0);
-    assert(standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_TONAL) == standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_REAL));
-    assert(standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_REAL) < standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_INVERTED));
-    assert(standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_INVERTED) == standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_RETROGRADE));
-    assert(standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_RETROGRADE) < standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_AUGMENTED));
-    assert(standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_DIMINISHED) < standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_FRAGMENTED));
-    assert(standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_FRAGMENTED) < standard_form_motive_kind_rank(STANDARD_FORM_MOTIVE_VARIED));
+    assert(standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_EXACT) < standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_REAL) ||
+           standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_EXACT) == 0);
+    assert(standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_TONAL) == standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_REAL));
+    assert(standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_REAL) < standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_INVERTED));
+    assert(standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_INVERTED) == standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_RETROGRADE));
+    assert(standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_RETROGRADE) < standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_AUGMENTED));
+    assert(standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_DIMINISHED) < standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_FRAGMENTED));
+    assert(standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_FRAGMENTED) < standard_form_motive_kind_rank(MOTIVE_OCCURRENCE_VARIED));
     assert(standard_form_motive_kind_rank((StandardFormMotiveKind)99) == -1 && standard_form_motive_kind_name((StandardFormMotiveKind)99) == NULL);
-    assert(strcmp(standard_form_motive_kind_name(STANDARD_FORM_MOTIVE_TONAL), "tonal-transposed") == 0);
+    assert(strcmp(standard_form_motive_kind_name(MOTIVE_OCCURRENCE_TONAL), "tonal-transposed") == 0);
 }
 
 

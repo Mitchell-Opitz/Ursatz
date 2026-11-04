@@ -52,15 +52,4 @@
 bool common_practice_identify_key_mode(const int *tonic_relative_pitch_classes, size_t pitch_class_count,
                                         CommonPracticeKeyMode *out);
 
-/*
- * Convenience: identifies the mode per common_practice_identify_key_mode
- * and, on a match, builds the real Key for it via common_practice_
- * build_key (see key_vocabulary.h for ownership rules on
- * context_target_id and tonic_name requirements). Returns false with
- * *out_key untouched when no mode matches; context_target_id ownership
- * is unaffected by a no-match return (caller still owns it).
- */
-bool common_practice_identify_key(const int *tonic_relative_pitch_classes, size_t pitch_class_count,
-                                   const char *tonic_name, EntityID *context_target_id, Key **out_key);
-
 #endif

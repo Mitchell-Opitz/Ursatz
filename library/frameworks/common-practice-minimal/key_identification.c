@@ -64,12 +64,3 @@ bool common_practice_identify_key_mode(const int *tonic_relative_pitch_classes, 
 
     return false;
 }
-
-bool common_practice_identify_key(const int *tonic_relative_pitch_classes, size_t pitch_class_count,
-                                   const char *tonic_name, EntityID *context_target_id, Key **out_key) {
-    CommonPracticeKeyMode mode;
-    if (!common_practice_identify_key_mode(tonic_relative_pitch_classes, pitch_class_count, &mode)) {
-        return false;
-    }
-    return common_practice_build_key(mode, tonic_name, context_target_id, out_key) == KEY_OK;
-}

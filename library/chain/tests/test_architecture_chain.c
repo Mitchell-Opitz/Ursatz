@@ -61,7 +61,6 @@ static const char *FRAMEWORK_HEADERS[] = {
     "standard-texture/analysis/texture_analysis_classify.h",
     "standard-counterpoint/analysis/analysis_melody.h",
     "galant-schemas/analysis/galant_analysis_input.h",
-    "standard-form/analysis/analysis_time.h",
     "standard-form/analysis/analysis_input.h",
     "standard-form/analysis/analysis_motive_shape.h",
     "standard-meter/analysis/meter_analysis_input.h",

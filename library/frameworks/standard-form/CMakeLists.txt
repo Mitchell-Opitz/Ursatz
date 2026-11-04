@@ -15,7 +15,6 @@ add_library(standard_form
     length_rules.c
     internal_expansion_rules.c
     external_expansion_rules.c
-    analysis/analysis_time.c
     analysis/analysis_input.c
     analysis/analysis_claim.c
     analysis/analysis_phrase.c
@@ -54,7 +53,6 @@ ursatz_public_headers(standard_form
         analysis/analysis_phrase.h
         analysis/analysis_similarity.h
         analysis/analysis_theme.h
-        analysis/analysis_time.h
         continuation_trait.h
         expansion_placement.h
         external_expansion_kind.h

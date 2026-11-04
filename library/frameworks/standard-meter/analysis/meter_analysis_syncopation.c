@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "meter_analysis_claim.h"
-#include "meter_analysis_time.h"
+#include "meter_analysis_position.h"
 #include "syncopation_rules.h"
 #include "time/meter_arithmetic.h"
 #include "time/score_time.h"
