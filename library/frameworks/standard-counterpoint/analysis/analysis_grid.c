@@ -4,19 +4,6 @@
 #include <stdlib.h>
 #include "pitch/midi_pitch.h"
 
-/* The sharp-preferring spelling of a semitone: the letter, the accidental (0 or 1), and the octave. */
-static void derive(long semitone, PitchLetter *letter, int *accidental, int *octave) {
-    static const PitchLetter LETTERS[12] = {PITCH_LETTER_C, PITCH_LETTER_C, PITCH_LETTER_D, PITCH_LETTER_D,
-                                            PITCH_LETTER_E, PITCH_LETTER_F, PITCH_LETTER_F, PITCH_LETTER_G,
-                                            PITCH_LETTER_G, PITCH_LETTER_A, PITCH_LETTER_A, PITCH_LETTER_B};
-    static const int ACCIDENTALS[12] = {0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 1, 0};
-    long pitch_class = pitch_class_of_midi(semitone);
-    long floor_octave = (semitone - pitch_class) / 12;
-    *letter = LETTERS[pitch_class];
-    *accidental = ACCIDENTALS[pitch_class];
-    *octave = (int)(floor_octave - 1); /* MIDI 60 is C4 */
-}
-
 void standard_counterpoint_grid_destroy(StandardCounterpointPreparedGrid *prepared) {
     if (prepared == NULL) {
         return;
@@ -71,17 +58,16 @@ StandardCounterpointGridStatus standard_counterpoint_grid_prepare(const Standard
         if (!cell->present) {
             continue;
         }
-        PitchLetter letter;
-        int accidental;
-        int octave;
+        bool created;
         if (cell->spelling != NULL) {
-            letter = pitch_spelling_letter(cell->spelling);
-            accidental = pitch_spelling_accidental(cell->spelling);
-            octave = pitch_spelling_octave(cell->spelling);
+            created = pitch_spelling_create(pitch_spelling_letter(cell->spelling), pitch_spelling_accidental(cell->spelling),
+                                            pitch_spelling_octave(cell->spelling), &prepared.spellings[i]) == PITCH_SPELLING_OK;
         } else {
-            derive(pitch_numeric_value_position_numerator(cell->pitch), &letter, &accidental, &octave);
+            /* the sharp-preferring spelling; MIDI 60 is C4 */
+            created = pitch_spelling_of_midi((int)pitch_numeric_value_position_numerator(cell->pitch), 0,
+                                             &prepared.spellings[i]);
         }
-        if (pitch_spelling_create(letter, accidental, octave, &prepared.spellings[i]) != PITCH_SPELLING_OK) {
+        if (!created) {
             standard_counterpoint_grid_destroy(&prepared);
             return STANDARD_COUNTERPOINT_GRID_ERR_ALLOC;
         }

@@ -10,8 +10,6 @@
 #include "time/time_rational.h"
 #include "pitch/midi_pitch.h"
 
-static const char *const TONIC_NAMES[12] = {"C", "Db", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
-
 CommonPracticeKeyProfiles common_practice_krumhansl_kessler_profiles(void) {
     CommonPracticeKeyProfiles profiles = {
         {6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88},
@@ -67,7 +65,7 @@ int common_practice_key_index_of(int tonic_pitch_class, CommonPracticeKeyMode mo
 
 const char *common_practice_key_index_tonic_name(int key_index) {
     int tonic = common_practice_key_index_tonic(key_index);
-    return tonic < 0 ? NULL : TONIC_NAMES[tonic];
+    return tonic < 0 ? NULL : key_tonic_name(tonic);
 }
 
 void common_practice_key_windows_destroy(CommonPracticeKeyWindows *windows) {

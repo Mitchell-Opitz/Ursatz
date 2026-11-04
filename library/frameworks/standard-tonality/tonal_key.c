@@ -143,17 +143,7 @@ bool standard_tonality_key_signature_of(PitchLetter tonic_letter, int tonic_acci
         fifths < -KEY_MAX_ACCIDENTALS || fifths > KEY_MAX_ACCIDENTALS) {
         return false;
     }
-    /* Sharps come in the order F C G D A E B; flats in the reverse. */
-    static const PitchLetter SHARP_ORDER[KEY_MAX_ACCIDENTALS] = {
-        PITCH_LETTER_F, PITCH_LETTER_C, PITCH_LETTER_G, PITCH_LETTER_D,
-        PITCH_LETTER_A, PITCH_LETTER_E, PITCH_LETTER_B};
-    int size = fifths < 0 ? -fifths : fifths;
-    KeySignatureEntry entries[KEY_MAX_ACCIDENTALS];
-    for (int i = 0; i < size; i++) {
-        entries[i].letter = fifths > 0 ? SHARP_ORDER[i] : SHARP_ORDER[KEY_MAX_ACCIDENTALS - 1 - i];
-        entries[i].accidental = fifths > 0 ? 1 : -1;
-    }
-    return key_signature_create(entries, (size_t)size, out) == KEY_SIGNATURE_OK;
+    return key_signature_from_fifths(fifths, out);
 }
 
 bool standard_tonality_key_of_fifths(int fifths, bool minor, PitchLetter *letter, int *accidental) {
