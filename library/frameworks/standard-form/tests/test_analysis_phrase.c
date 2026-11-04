@@ -1,5 +1,8 @@
 #include "analysis_phrase.h"
-#include "analysis_time.h"
+#include "core/rational.h"
+#include "time/meter_arithmetic.h"
+#include "time/meter_map.h"
+#include "time/score_time.h"
 #include "external_expansion_rules.h"
 #include "form_test_util.h"
 #include "interpretation/uncertainty.h"
@@ -55,9 +58,9 @@ static void test_the_interpretation_follows_the_claim_pattern(void) {
     assert(uncertainty_scalar_confidence_numerator(interpretation_uncertainty(phrase->interpretation)) == 800000UL);
     StandardFormPhraseClaim read;
     assert(standard_form_phrase_claim_read(phrase->interpretation, &read) && read.length_measures == 4);
-    StandardFormQ start;
-    StandardFormQ end;
-    assert(standard_form_span_q(phrase->span, &start, &end) && start.n == 0 && standard_form_q_compare(end, standard_form_q(4, 1)) == 0);
+    Rational start;
+    Rational end;
+    assert(score_time_span(phrase->span, &start, &end) && start.num == 0 && rational_cmp(end, rational_ratio(4, 1)) == 0);
     standard_form_phrases_destroy(&phrases);
     form_destroy(&f);
 }
@@ -221,9 +224,9 @@ static void test_the_phrase_ends_at_the_next_beat_after_the_arrival(void) {
     form_finish(&f);
     StandardFormPhrases phrases = segment(&f, NULL);
     assert(phrases.count >= 1);
-    StandardFormQ end;
-    assert(standard_form_span_q(phrases.items[0].span, NULL, &end));
-    assert(standard_form_q_compare(end, standard_form_q(14, 4)) == 0); /* 12 quarters to measure 4's start, plus 2 */
+    Rational end;
+    assert(score_time_span(phrases.items[0].span, NULL, &end));
+    assert(rational_cmp(end, rational_ratio(14, 4)) == 0); /* 12 quarters to measure 4's start, plus 2 */
     assert(phrases.items[0].claim.end_measure == 4);
     standard_form_phrases_destroy(&phrases);
     form_destroy(&f);
@@ -236,7 +239,7 @@ static void test_a_pickup_measure_is_not_counted(void) {
     form_measures(&f, 1, 4, RISING);
     form_cadence(&f, "pac4", 4, 0, 4, PAC, 3, false, 0.1);
     form_finish(&f);
-    assert(standard_form_first_counted_measure(f.map) == 1);
+    assert(meter_map_first_counted_measure(f.map) == 1);
     StandardFormPhrases phrases = segment(&f, NULL);
     assert(phrases.count == 1);
     const StandardFormPhraseClaim *c = &phrases.items[0].claim;

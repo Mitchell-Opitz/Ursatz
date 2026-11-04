@@ -25,9 +25,8 @@
  * 8 (music-analysis) work and is out of scope here -- nothing in this
  * file analyzes harmony or infers cadence type." CadenceDetection is
  * that Phase 8 work -- but it reports its finding as an Interpretation
- * ABOUT the region, the same way ScaleAnalysis/ChordIdentification/
- * KeyEstimation do (analysis/scale_analysis.h, analysis/
- * chord_identification.h, ursatz_chain/key_collection_analyzer.h); it does not
+ * ABOUT the region, the same way ScaleAnalysis/ChordIdentification
+ * do (analysis/scale_analysis.h, analysis/chord_identification.h); it does not
  * itself construct a Cadence (structure/cadence.h). Whoever consumes
  * this Interpretation's claim decides whether and how to call
  * cadence_create with region's own event refs -- CadenceDetection has

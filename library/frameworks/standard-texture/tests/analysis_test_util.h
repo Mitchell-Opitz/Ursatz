@@ -73,8 +73,8 @@ static inline void piece_destroy(Piece *piece) {
     meter_map_destroy(piece->map);
 }
 
-static inline StandardTextureQ tq(long n, long d) {
-    return standard_texture_q(n, d);
+static inline Rational tq(long n, long d) {
+    return rational_ratio(n, d);
 }
 
 /* An event on the grid. */

@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "analysis/motive_tone_roles.h"
+#include "core/rational.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_numeric_value.h"
 #include "pitch/tuning_system.h"
@@ -30,7 +31,7 @@ static StandardFormMotiveShape shape(bool generic, size_t intervals, const int *
     for (size_t i = 0; i < intervals; i++) {
         s.semitones[i] = semitones[i];
         s.steps[i] = steps[i];
-        s.ioi[i] = standard_form_q(gaps[i], 4);
+        s.ioi[i] = rational_ratio(gaps[i], 4);
     }
     return s;
 }

@@ -1,4 +1,5 @@
 #include "io/midi_importer.h"
+#include "midi_import_split.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -14,7 +15,7 @@
 /*
  * Tempo import fixtures: SMF files built in code with a constant tempo, a step series that speeds up
  * (an accelerando in steps), a tempo on a non-first track, duplicate and conflicting tempos across
- * tracks, and malformed set-tempo events. Each is imported with midi_importer_import_with_tempo and
+ * tracks, and malformed set-tempo events. Each is imported with midi_importer_import_complete and
  * checked for its regions and for the seconds a chosen note starts at. Division is 480 ticks per
  * quarter note, so a whole note is 1920 ticks.
  */
@@ -115,8 +116,7 @@ static Imported import_tracks(uint16_t format, const TrackBuilder *tracks, uint1
     static unsigned char file[8192];
     size_t size = build_smf(file, format, tracks, track_count);
     Imported imported = {NULL, NULL, 0, {NULL, NULL, 0}};
-    assert(midi_importer_import_with_tempo(file, size, &imported.events, &imported.pitch_values, &imported.count,
-                                           &imported.tempo) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(file, size, &imported.events, &imported.pitch_values, &imported.count, NULL, &imported.tempo) == MIDI_IMPORT_OK);
     return imported;
 }
 

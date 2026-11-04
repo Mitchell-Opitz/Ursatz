@@ -1,6 +1,7 @@
 #include "score_roundtrip_util.h"
 
 #include "io/midi_importer.h"
+#include "../io/midi_import_split.h"
 
 /*
  * musicxml_export_write_score writes chords and overlapping notes instead of refusing them: a chord as notes with
@@ -189,7 +190,7 @@ static void test_midi_without_staves(const char *name) {
     PitchNumericValue **pitches = NULL;
     size_t count = 0;
     MidiMeterImport meter = {NULL, NULL, NULL, 0};
-    assert(midi_importer_import_with_meter(data, size, &events, &pitches, &count, &meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(data, size, &events, &pitches, &count, &meter, NULL) == MIDI_IMPORT_OK);
     assert(count > 0);
     score.events = events;
     score.pitch_values = pitches;

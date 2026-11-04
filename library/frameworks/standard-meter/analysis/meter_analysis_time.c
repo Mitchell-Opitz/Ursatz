@@ -103,8 +103,8 @@ StandardMeterQ standard_meter_snap(const StandardMeterConfig *config, StandardMe
     return of_rational(snapped);
 }
 
-static bool time_of(StandardMeterQ q, MusicalTime **out) {
-    return q.n >= 0 && musical_time_create((long)q.n, (unsigned long)q.d, out) == MUSICAL_TIME_OK;
+static bool time_of(Rational q, MusicalTime **out) {
+    return q.num >= 0 && musical_time_create((long)q.num, (unsigned long)q.den, out) == MUSICAL_TIME_OK;
 }
 
 bool standard_meter_measure_at(const MeterMap *map, StandardMeterQ time, int *measure) {
@@ -130,12 +130,12 @@ bool standard_meter_last_measure_touched(const MeterMap *map, StandardMeterQ end
     return meter_map_last_measure_touched(map, to_rational(end), measure) == METER_MAP_OK;
 }
 
-static StandardMeterQ q_of_duration(const Duration *duration) {
-    return standard_meter_q(duration_numerator(duration), (long long)duration_denominator(duration));
+static bool rational_of_length(const Duration *duration, Rational *out) {
+    return rational_make(duration_numerator(duration), (long long)duration_denominator(duration), out) == RATIONAL_OK;
 }
 
 bool standard_meter_measure_grid(const MeterMap *map, int index, StandardMeterMeasureGrid *grid) {
-    if (grid == NULL || !standard_meter_measure_bounds(map, index, &grid->start, &grid->end)) {
+    if (grid == NULL || !score_time_measure_bounds(map, index, &grid->start, &grid->end)) {
         return false;
     }
     const TimeSignature *signature = NULL;
@@ -148,9 +148,12 @@ bool standard_meter_measure_grid(const MeterMap *map, int index, StandardMeterMe
         duration_destroy(beat);
         return false;
     }
-    grid->beat = q_of_duration(beat);
-    grid->beats = beats;
+    bool beat_ok = rational_of_length(beat, &grid->beat);
     duration_destroy(beat);
+    if (!beat_ok) {
+        return false;
+    }
+    grid->beats = beats;
     grid->division = standard_meter_type(signature) == METER_TYPE_COMPOUND ? 3 : 2;
 
     MusicalTime *at = NULL;
@@ -163,12 +166,14 @@ bool standard_meter_measure_grid(const MeterMap *map, int index, StandardMeterMe
     if (!ok) {
         return false;
     }
-    grid->base = standard_meter_q_sub(grid->start, q_of_duration(metrical_position_offset(position)));
+    Rational offset;
+    ok = rational_of_length(metrical_position_offset(position), &offset) &&
+         rational_sub(grid->start, offset, &grid->base) == RATIONAL_OK;
     metrical_position_destroy(position);
-    return true;
+    return ok;
 }
 
-static bool position_at(const MeterMap *map, StandardMeterQ time, MetricalPosition **position, const TimeSignature **signature) {
+static bool position_at(const MeterMap *map, Rational time, MetricalPosition **position, const TimeSignature **signature) {
     MusicalTime *at = NULL;
     if (map == NULL || !time_of(time, &at)) {
         return false;
@@ -186,7 +191,7 @@ static bool position_at(const MeterMap *map, StandardMeterQ time, MetricalPositi
     return true;
 }
 
-bool standard_meter_level_at(const MeterMap *map, StandardMeterQ time, StandardMeterLevel *level) {
+bool standard_meter_level_at(const MeterMap *map, Rational time, StandardMeterLevel *level) {
     MetricalPosition *position = NULL;
     const TimeSignature *signature = NULL;
     if (level == NULL || !position_at(map, time, &position, &signature)) {
@@ -197,7 +202,7 @@ bool standard_meter_level_at(const MeterMap *map, StandardMeterQ time, StandardM
     return ok;
 }
 
-bool standard_meter_beat_of(const MeterMap *map, StandardMeterQ time, int *measure, double *beat) {
+bool standard_meter_beat_of(const MeterMap *map, Rational time, int *measure, double *beat) {
     MetricalPosition *position = NULL;
     const TimeSignature *signature = NULL;
     if (measure == NULL || beat == NULL || !position_at(map, time, &position, &signature)) {
@@ -206,11 +211,12 @@ bool standard_meter_beat_of(const MeterMap *map, StandardMeterQ time, int *measu
     Duration *unit = NULL;
     unsigned beats = 0;
     bool ok = standard_meter_beat_grid(signature, &unit, &beats);
+    Rational length;
+    Rational offset;
+    ok = ok && rational_of_length(unit, &length) && rational_of_length(metrical_position_offset(position), &offset);
     if (ok) {
-        StandardMeterQ length = q_of_duration(unit);
-        StandardMeterQ offset = q_of_duration(metrical_position_offset(position));
         *measure = metrical_position_measure(position);
-        *beat = 1.0 + standard_meter_q_double(offset) / standard_meter_q_double(length);
+        *beat = 1.0 + rational_to_double(offset) / rational_to_double(length);
     }
     duration_destroy(unit);
     metrical_position_destroy(position);

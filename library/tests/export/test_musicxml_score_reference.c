@@ -1,6 +1,7 @@
 #include "score_roundtrip_util.h"
 
 #include "io/midi_importer.h"
+#include "../io/midi_import_split.h"
 #include "io/midi_key_signature.h"
 
 /*
@@ -88,7 +89,7 @@ static void round_trip_piece(const char *name, const char *expected_beats) {
     memset(&first, 0, sizeof(first));
 
     MidiMeterImport meter = {NULL, NULL, NULL, 0};
-    assert(midi_importer_import_with_meter(data, size, &first.events, &first.pitch_values, &first.count, &meter) ==
+    assert(test_midi_import_parts(data, size, &first.events, &first.pitch_values, &first.count, &meter, NULL) ==
            MIDI_IMPORT_OK);
     assert(first.count > 0);
     first.meter_map = meter.meter_map;
@@ -97,7 +98,7 @@ static void round_trip_piece(const char *name, const char *expected_beats) {
     PitchNumericValue **tempo_pitches = NULL;
     size_t tempo_count = 0;
     MidiTempoImport tempo = {NULL, NULL, 0};
-    assert(midi_importer_import_with_tempo(data, size, &tempo_events, &tempo_pitches, &tempo_count, &tempo) ==
+    assert(test_midi_import_parts(data, size, &tempo_events, &tempo_pitches, &tempo_count, NULL, &tempo) ==
            MIDI_IMPORT_OK);
     for (size_t i = 0; i < tempo_count; i++) {
         note_event_destroy(tempo_events[i]);

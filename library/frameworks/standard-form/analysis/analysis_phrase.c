@@ -5,12 +5,16 @@
 #include <string.h>
 
 #include "analysis_claim.h"
-#include "analysis_time.h"
 #include "core/occurrence.h"
+#include "core/rational.h"
 #include "core/value.h"
 #include "external_expansion_rules.h"
 #include "identity/entity_id.h"
 #include "phrase_rules.h"
+#include "time/meter_arithmetic.h"
+#include "time/meter_map.h"
+#include "time/musical_time.h"
+#include "time/score_time.h"
 #include "external_expansion_kind.h"
 
 #define DISCONTINUITY_UNCERTAINTY 0.25
@@ -20,8 +24,8 @@ bool standard_form_cadence_ends_phrase(CadenceType type) {
 }
 
 typedef struct {
-    StandardFormQ start;
-    StandardFormQ end;
+    Rational start;
+    Rational end;
     int first_measure;
     int last_measure;
 } Extent;
@@ -69,35 +73,51 @@ bool standard_form_phrase_claim_read(const Interpretation *interpretation, Stand
     return true;
 }
 
+/* A new left-closed TimeSpan [start, end) the caller destroys, or NULL. */
+static TimeSpan *make_span(Rational start, Rational end) {
+    MusicalTime *from = NULL;
+    MusicalTime *to = NULL;
+    TimeSpan *span = NULL;
+    if (start.num >= 0 && end.num >= 0 && musical_time_create((long)start.num, (unsigned long)start.den, &from) == MUSICAL_TIME_OK &&
+        musical_time_create((long)end.num, (unsigned long)end.den, &to) == MUSICAL_TIME_OK) {
+        if (time_span_create(from, to, TIME_SPAN_BOUNDARY_LEFT_CLOSED, &span) != TIME_SPAN_OK) {
+            span = NULL;
+        }
+    }
+    musical_time_destroy(from);
+    musical_time_destroy(to);
+    return span;
+}
+
 /* The end of the arrival chord snapped to a beat, and the measure it falls in (the last measure the arrival touches). */
-static bool arrival_end(const StandardFormInput *input, const StandardFormCadence *cadence, StandardFormQ *snapped,
+static bool arrival_end(const StandardFormInput *input, const StandardFormCadence *cadence, Rational *snapped,
                         int *measure) {
-    StandardFormQ end;
-    if (!standard_form_span_q(cadence->arrival, NULL, &end) ||
-        !standard_form_last_measure_touched(input->map, end, measure) ||
-        !standard_form_snap_to_beat(input->map, *measure, end, snapped)) {
+    Rational end;
+    if (!score_time_span(cadence->arrival, NULL, &end) ||
+        meter_map_last_measure_touched(input->map, end, measure) != METER_MAP_OK ||
+        meter_map_snap_to_beat(input->map, *measure, end, snapped) != METER_MAP_OK) {
         return false;
     }
     return true;
 }
 
-static bool measure_start_of(const StandardFormInput *input, int measure, StandardFormQ *start) {
-    return standard_form_measure_bounds(input->map, measure, start, NULL);
+static bool measure_start_of(const StandardFormInput *input, int measure, Rational *start) {
+    return score_time_measure_bounds(input->map, measure, start, NULL);
 }
 
-static bool measure_end_of(const StandardFormInput *input, int measure, StandardFormQ *end) {
-    return standard_form_measure_bounds(input->map, measure, NULL, end);
+static bool measure_end_of(const StandardFormInput *input, int measure, Rational *end) {
+    return score_time_measure_bounds(input->map, measure, NULL, end);
 }
 
 static StandardFormAnalysisStatus build_phrase(const StandardFormInput *input, const Extent *extents,
-                                               StandardFormPhrase *phrase, StandardFormQ end_time, double uncertainty) {
-    StandardFormQ start_time;
+                                               StandardFormPhrase *phrase, Rational end_time, double uncertainty) {
+    Rational start_time;
     StandardFormPhraseClaim *claim = &phrase->claim;
     if (!measure_start_of(input, claim->first_measure, &start_time)) {
         return STANDARD_FORM_ANALYSIS_ERR_METER;
     }
-    claim->counted_first = claim->first_measure < standard_form_first_counted_measure(input->map)
-                               ? standard_form_first_counted_measure(input->map)
+    claim->counted_first = claim->first_measure < meter_map_first_counted_measure(input->map)
+                               ? meter_map_first_counted_measure(input->map)
                                : claim->first_measure;
     claim->length_measures = claim->end_measure >= claim->counted_first ? claim->end_measure - claim->counted_first + 1 : 0;
     claim->extension_measures = claim->last_measure - claim->end_measure;
@@ -115,7 +135,7 @@ static StandardFormAnalysisStatus build_phrase(const StandardFormInput *input, c
         claim->note_first = claim->note_end;
     }
     phrase->uncertainty = uncertainty;
-    phrase->span = standard_form_make_span(start_time, end_time);
+    phrase->span = make_span(start_time, end_time);
     if (phrase->span == NULL) {
         return STANDARD_FORM_ANALYSIS_ERR_METER;
     }
@@ -203,9 +223,9 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
     int first_measure = 0;
     int last_measure = 0;
     for (size_t i = 0; i < input->note_count; i++) {
-        if (!standard_form_span_q(input->notes[i].span, &extents[i].start, &extents[i].end) ||
-            !standard_form_measure_at(input->map, extents[i].start, &extents[i].first_measure) ||
-            !standard_form_last_measure_touched(input->map, extents[i].end, &extents[i].last_measure)) {
+        if (!score_time_span(input->notes[i].span, &extents[i].start, &extents[i].end) ||
+            meter_map_measure_of(input->map, extents[i].start, &extents[i].first_measure) != METER_MAP_OK ||
+            meter_map_last_measure_touched(input->map, extents[i].end, &extents[i].last_measure) != METER_MAP_OK) {
             free(extents);
             return STANDARD_FORM_ANALYSIS_ERR_METER;
         }
@@ -248,18 +268,18 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
     for (size_t k = 0; k + 1 < point_count && status == STANDARD_FORM_ANALYSIS_OK; k++) {
         const Point *next = &points[k + 1];
         bool broken = next->measure > points[k].measure + 1;
-        StandardFormQ barline;
+        Rational barline;
         if (!broken) {
             if (!measure_start_of(input, next->measure, &barline)) {
                 status = STANDARD_FORM_ANALYSIS_ERR_METER;
                 break;
             }
             const StandardFormNote *first = &input->notes[next->note];
-            if (standard_form_q_compare(extents[next->note].start, barline) > 0) {
+            if (rational_cmp(extents[next->note].start, barline) > 0) {
                 broken = true; /* a rest at the barline */
             } else if (next->note > 0 && input->notes[next->note - 1].has_next &&
                        labs(input->notes[next->note - 1].semitones_to_next) >= effective->discontinuity_leap_semitones &&
-                       standard_form_q_compare(extents[next->note].start, barline) == 0) {
+                       rational_cmp(extents[next->note].start, barline) == 0) {
                 broken = true; /* a leap into the first note */
             }
             (void)first;
@@ -272,9 +292,9 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
         if (cadence->post_cadential || !standard_form_cadence_ends_phrase(cadence->type)) {
             continue;
         }
-        StandardFormQ start;
+        Rational start;
         int measure = 0;
-        if (!standard_form_span_q(cadence->arrival, &start, NULL) || !standard_form_measure_at(input->map, start, &measure)) {
+        if (!score_time_span(cadence->arrival, &start, NULL) || meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK) {
             status = STANDARD_FORM_ANALYSIS_ERR_METER;
             break;
         }
@@ -340,7 +360,7 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
         claim->cadence_index = -1;
         claim->cadence_type = -1;
         claim->extension_kind = -1;
-        StandardFormQ end_time;
+        Rational end_time;
         double uncertainty;
         bool by_cadence = boundaries[k].by_cadence && points[k].cadence >= 0;
         if (by_cadence) {
@@ -381,14 +401,14 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
             }
             for (size_t c = 0; c < input->cadence_count; c++) {
                 const StandardFormCadence *post = &input->cadences[c];
-                StandardFormQ start;
+                Rational start;
                 int measure = 0;
-                if (!post->post_cadential || !standard_form_span_q(post->arrival, &start, NULL) ||
-                    !standard_form_measure_at(input->map, start, &measure) || measure < points[k].measure ||
+                if (!post->post_cadential || !score_time_span(post->arrival, &start, NULL) ||
+                    meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK || measure < points[k].measure ||
                     measure >= next_boundary) {
                     continue;
                 }
-                StandardFormQ post_end;
+                Rational post_end;
                 int ended = 0;
                 if (!arrival_end(input, post, &post_end, &ended) || ended < claim->last_measure ||
                     ended - claim->end_measure > (int)effective->max_absorbed_tail) {
@@ -414,7 +434,7 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
         int tail = last_measure - current_first + 1;
         if (found.count > 0 && last_by_cadence && tail <= (int)effective->max_absorbed_tail) {
             StandardFormPhrase *last = &found.items[found.count - 1];
-            StandardFormQ end_time;
+            Rational end_time;
             last->claim.last_measure = last_measure;
             last->claim.extension_kind = (int)(last->claim.last_measure - last->claim.end_measure <= 2
                                                    ? EXTERNAL_EXPANSION_KIND_POST_CADENTIAL_EXTENSION
@@ -431,7 +451,7 @@ StandardFormAnalysisStatus standard_form_segment_phrases(const StandardFormInput
         } else {
             StandardFormPhrase *phrase = &found.items[found.count];
             StandardFormPhraseClaim *claim = &phrase->claim;
-            StandardFormQ end_time;
+            Rational end_time;
             claim->index = (int)found.count;
             claim->first_measure = current_first;
             claim->end_measure = last_measure;

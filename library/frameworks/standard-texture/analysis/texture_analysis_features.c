@@ -2,7 +2,10 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "core/rational.h"
 #include "pitch/midi_pitch.h"
+#include "time/meter_arithmetic.h"
+#include "time/score_time.h"
 
 typedef unsigned long long Mask;
 
@@ -20,24 +23,27 @@ static Mask voice_bit(size_t voice) {
 }
 
 bool standard_texture_event_in_window(const StandardTextureEvent *event, const StandardTextureWindow *window) {
-    return event != NULL && window != NULL && standard_texture_q_compare(event->onset, window->end) < 0 &&
-           standard_texture_q_compare(event->release, window->start) > 0;
+    return event != NULL && window != NULL && rational_cmp(event->onset, window->end) < 0 &&
+           rational_cmp(event->release, window->start) > 0;
 }
 
 double standard_texture_window_beats(const StandardTextureWindow *window) {
     if (window == NULL) {
         return 0.0;
     }
-    return standard_texture_q_double(standard_texture_q_sub(window->end, window->start)) /
-           standard_texture_q_double(window->beat);
+    Rational length;
+    if (rational_sub(window->end, window->start, &length) != RATIONAL_OK) {
+        return 0.0;
+    }
+    return rational_to_double(length) / rational_to_double(window->beat);
 }
 
 static bool attacks_in_window(const StandardTextureEvent *event, const StandardTextureWindow *window) {
-    return standard_texture_q_compare(event->onset, window->start) >= 0 && standard_texture_q_compare(event->onset, window->end) < 0;
+    return rational_cmp(event->onset, window->start) >= 0 && rational_cmp(event->onset, window->end) < 0;
 }
 
-static bool sounds_at(const StandardTextureEvent *event, StandardTextureQ time) {
-    return standard_texture_q_compare(event->onset, time) <= 0 && standard_texture_q_compare(time, event->release) < 0;
+static bool sounds_at(const StandardTextureEvent *event, Rational time) {
+    return rational_cmp(event->onset, time) <= 0 && rational_cmp(time, event->release) < 0;
 }
 
 /* The events that sound in the window, as a new array (NULL with none or on failure; *out_count says which). */
@@ -55,23 +61,23 @@ static StandardTextureEvent *filtered(const StandardTextureEvent *events, size_t
 }
 
 static int compare_q(const void *a, const void *b) {
-    return standard_texture_q_compare(*(const StandardTextureQ *)a, *(const StandardTextureQ *)b);
+    return rational_cmp(*(const Rational *)a, *(const Rational *)b);
 }
 
 /* The distinct attack times of the (filtered) events, sorted; the count in *out. */
-static StandardTextureQ *attack_times(const StandardTextureEvent *events, size_t count, const StandardTextureWindow *window,
+static Rational *attack_times(const StandardTextureEvent *events, size_t count, const StandardTextureWindow *window,
                                       size_t *out) {
-    StandardTextureQ *times = (StandardTextureQ *)malloc((count == 0 ? 1 : count) * sizeof(StandardTextureQ));
+    Rational *times = (Rational *)malloc((count == 0 ? 1 : count) * sizeof(Rational));
     size_t n = 0;
     for (size_t i = 0; times != NULL && i < count; i++) {
         if (attacks_in_window(&events[i], window)) {
             times[n++] = events[i].onset;
         }
     }
-    qsort(times, n, sizeof(StandardTextureQ), compare_q);
+    qsort(times, n, sizeof(Rational), compare_q);
     size_t distinct = 0;
     for (size_t i = 0; i < n; i++) {
-        if (i == 0 || standard_texture_q_compare(times[i], times[i - 1]) != 0) {
+        if (i == 0 || rational_cmp(times[i], times[i - 1]) != 0) {
             times[distinct++] = times[i];
         }
     }
@@ -89,7 +95,7 @@ void standard_texture_feature_voice_counts(const StandardTextureEvent *events, s
     }
     size_t n = 0;
     StandardTextureEvent *in = filtered(events, count, window, &n);
-    StandardTextureQ *points = (StandardTextureQ *)malloc((2 * n + 2) * sizeof(StandardTextureQ));
+    Rational *points = (Rational *)malloc((2 * n + 2) * sizeof(Rational));
     if (in == NULL || points == NULL || window == NULL) {
         free(in);
         free(points);
@@ -99,18 +105,18 @@ void standard_texture_feature_voice_counts(const StandardTextureEvent *events, s
     points[p++] = window->start;
     points[p++] = window->end;
     for (size_t i = 0; i < n; i++) {
-        if (standard_texture_q_compare(in[i].onset, window->start) > 0 && standard_texture_q_compare(in[i].onset, window->end) < 0) {
+        if (rational_cmp(in[i].onset, window->start) > 0 && rational_cmp(in[i].onset, window->end) < 0) {
             points[p++] = in[i].onset;
         }
-        if (standard_texture_q_compare(in[i].release, window->start) > 0 && standard_texture_q_compare(in[i].release, window->end) < 0) {
+        if (rational_cmp(in[i].release, window->start) > 0 && rational_cmp(in[i].release, window->end) < 0) {
             points[p++] = in[i].release;
         }
     }
-    qsort(points, p, sizeof(StandardTextureQ), compare_q);
+    qsort(points, p, sizeof(Rational), compare_q);
     double weighted = 0.0;
     int most = 0;
     for (size_t k = 0; k + 1 < p; k++) {
-        if (standard_texture_q_compare(points[k], points[k + 1]) == 0) {
+        if (rational_cmp(points[k], points[k + 1]) == 0) {
             continue;
         }
         Mask mask = 0;
@@ -123,9 +129,21 @@ void standard_texture_feature_voice_counts(const StandardTextureEvent *events, s
         if (voices > most) {
             most = voices;
         }
-        weighted += (double)voices * standard_texture_q_double(standard_texture_q_sub(points[k + 1], points[k]));
+        Rational step;
+        if (rational_sub(points[k + 1], points[k], &step) != RATIONAL_OK) {
+            free(in);
+            free(points);
+            return;
+        }
+        weighted += (double)voices * rational_to_double(step);
     }
-    double length = standard_texture_q_double(standard_texture_q_sub(window->end, window->start));
+    Rational window_length;
+    if (rational_sub(window->end, window->start, &window_length) != RATIONAL_OK) {
+        free(in);
+        free(points);
+        return;
+    }
+    double length = rational_to_double(window_length);
     if (out_max != NULL) {
         *out_max = most;
     }
@@ -144,14 +162,14 @@ double standard_texture_feature_synchrony(const StandardTextureEvent *events, si
     size_t n = 0;
     StandardTextureEvent *in = filtered(events, count, window, &n);
     size_t times_count = 0;
-    StandardTextureQ *times = in == NULL ? NULL : attack_times(in, n, window, &times_count);
+    Rational *times = in == NULL ? NULL : attack_times(in, n, window, &times_count);
     double share = 0.0;
     if (times != NULL && times_count > 0) {
         size_t shared = 0;
         for (size_t t = 0; t < times_count; t++) {
             Mask mask = 0;
             for (size_t i = 0; i < n; i++) {
-                if (standard_texture_q_compare(in[i].onset, times[t]) == 0) {
+                if (rational_cmp(in[i].onset, times[t]) == 0) {
                     mask |= voice_bit(in[i].voice);
                 }
             }
@@ -169,9 +187,9 @@ double standard_texture_feature_synchrony(const StandardTextureEvent *events, si
     return share;
 }
 
-static bool voice_attacks_at(const StandardTextureEvent *events, size_t count, size_t voice, StandardTextureQ time) {
+static bool voice_attacks_at(const StandardTextureEvent *events, size_t count, size_t voice, Rational time) {
     for (size_t i = 0; i < count; i++) {
-        if (events[i].voice == voice && standard_texture_q_compare(events[i].onset, time) == 0) {
+        if (events[i].voice == voice && rational_cmp(events[i].onset, time) == 0) {
             return true;
         }
     }
@@ -217,7 +235,7 @@ size_t standard_texture_feature_independence(const StandardTextureEvent *events,
     size_t n = 0;
     StandardTextureEvent *in = filtered(events, count, window, &n);
     size_t times_count = 0;
-    StandardTextureQ *times = in == NULL ? NULL : attack_times(in, n, window, &times_count);
+    Rational *times = in == NULL ? NULL : attack_times(in, n, window, &times_count);
     size_t voices[STANDARD_TEXTURE_MAX_VOICES];
     size_t voice_count = in == NULL ? 0 : attacking_voices(in, n, window, voices, STANDARD_TEXTURE_MAX_VOICES);
     size_t pair_count = 0;
@@ -260,7 +278,7 @@ size_t standard_texture_feature_independence(const StandardTextureEvent *events,
 }
 
 /* The highest pitch of `voice` sounding at `time`, or false. */
-static bool voice_pitch_at(const StandardTextureEvent *events, size_t count, size_t voice, StandardTextureQ time, long *pitch) {
+static bool voice_pitch_at(const StandardTextureEvent *events, size_t count, size_t voice, Rational time, long *pitch) {
     bool found = false;
     for (size_t i = 0; i < count; i++) {
         if (events[i].voice == voice && sounds_at(&events[i], time) && (!found || events[i].pitch > *pitch)) {
@@ -353,7 +371,7 @@ double standard_texture_feature_prominence(const StandardTextureEvent *events, s
     double prominence = ratio >= 1.0 ? ratio : 1.0 / ratio;
 
     /* the gap, over the top voice's attacks (the window start when it has none) */
-    StandardTextureQ times[256];
+    Rational times[256];
     size_t time_count = 0;
     for (size_t i = 0; i < n && time_count < 256; i++) {
         if (in[i].voice == voices[top] && attacks_in_window(&in[i], window)) {
@@ -411,7 +429,7 @@ double standard_texture_feature_register(const StandardTextureEvent *events, siz
     size_t n = 0;
     StandardTextureEvent *in = filtered(events, count, window, &n);
     size_t times_count = 0;
-    StandardTextureQ *times = in == NULL ? NULL : attack_times(in, n, window, &times_count);
+    Rational *times = in == NULL ? NULL : attack_times(in, n, window, &times_count);
     double spacing = 0.0;
     if (in != NULL && n > 0 && times != NULL) {
         long low = in[0].pitch;
@@ -426,10 +444,10 @@ double standard_texture_feature_register(const StandardTextureEvent *events, siz
         double gap_total = 0.0;
         size_t gap_count = 0;
         for (size_t t = 0; t <= times_count; t++) {
-            if (t == 0 && times_count > 0 && standard_texture_q_compare(times[0], window->start) == 0) {
+            if (t == 0 && times_count > 0 && rational_cmp(times[0], window->start) == 0) {
                 continue; /* the window start is the first attack time: counted once */
             }
-            StandardTextureQ at = t == 0 ? window->start : times[t - 1];
+            Rational at = t == 0 ? window->start : times[t - 1];
             long pitches[STANDARD_TEXTURE_MAX_VOICES];
             size_t voices_seen[STANDARD_TEXTURE_MAX_VOICES];
             size_t found = 0;
@@ -468,7 +486,7 @@ double standard_texture_feature_density(const StandardTextureEvent *events, size
     size_t n = 0;
     StandardTextureEvent *in = filtered(events, count, window, &n);
     size_t times_count = 0;
-    StandardTextureQ *times = in == NULL ? NULL : attack_times(in, n, window, &times_count);
+    Rational *times = in == NULL ? NULL : attack_times(in, n, window, &times_count);
     double beats = standard_texture_window_beats(window);
     free(times);
     free(in);
@@ -476,40 +494,44 @@ double standard_texture_feature_density(const StandardTextureEvent *events, size
 }
 
 typedef struct {
-    StandardTextureQ onset;
+    Rational onset;
     long pitch;
 } Attack;
 
 static int compare_attacks(const void *a, const void *b) {
     const Attack *left = (const Attack *)a;
     const Attack *right = (const Attack *)b;
-    int by_time = standard_texture_q_compare(left->onset, right->onset);
+    int by_time = rational_cmp(left->onset, right->onset);
     return by_time != 0 ? by_time : (left->pitch < right->pitch) - (left->pitch > right->pitch);
 }
 
 /* The score of one voice's attacks (sorted, one per onset): the share of its (interval, inter-onset) pairs a repeated cell covers. */
-static double voice_pattern_score(const Attack *attacks, size_t n, StandardTextureQ beat) {
+static double voice_pattern_score(const Attack *attacks, size_t n, Rational beat) {
     if (n < 3) {
         return 0.0;
     }
     size_t m = n - 1;
     long d[256];
-    StandardTextureQ o[256];
+    Rational o[256];
     if (m > 256) {
         m = 256;
     }
     for (size_t i = 0; i < m; i++) {
         d[i] = attacks[i + 1].pitch - attacks[i].pitch;
-        o[i] = standard_texture_q_sub(attacks[i + 1].onset, attacks[i].onset);
+        if (rational_sub(attacks[i + 1].onset, attacks[i].onset, &o[i]) != RATIONAL_OK) {
+            return 0.0;
+        }
     }
     size_t best = 0;
     for (size_t length = 1; length <= 4 && length <= m / 2; length++) {
         for (size_t s = 0; s + length <= m; s++) {
-            StandardTextureQ duration = standard_texture_q(0, 1);
+            Rational duration = rational_ratio(0, 1);
             for (size_t k = 0; k < length; k++) {
-                duration = standard_texture_q_add(duration, o[s + k]);
+                if (rational_add(duration, o[s + k], &duration) != RATIONAL_OK) {
+                    return 0.0;
+                }
             }
-            if (standard_texture_q_compare(duration, beat) > 0) {
+            if (rational_cmp(duration, beat) > 0) {
                 continue;
             }
             size_t occurrences = 1;
@@ -517,7 +539,7 @@ static double voice_pattern_score(const Attack *attacks, size_t n, StandardTextu
             while (j + length <= m) {
                 bool same = true;
                 for (size_t k = 0; same && k < length; k++) {
-                    same = d[s + k] == d[j + k] && standard_texture_q_compare(o[s + k], o[j + k]) == 0;
+                    same = d[s + k] == d[j + k] && rational_cmp(o[s + k], o[j + k]) == 0;
                 }
                 if (same) {
                     occurrences++;
@@ -548,7 +570,7 @@ static size_t voice_attacks(const StandardTextureEvent *in, size_t n, const Stan
     qsort(attacks, m, sizeof(Attack), compare_attacks);
     size_t distinct = 0;
     for (size_t i = 0; i < m; i++) {
-        if (i == 0 || standard_texture_q_compare(attacks[i].onset, attacks[distinct - 1].onset) != 0) {
+        if (i == 0 || rational_cmp(attacks[i].onset, attacks[distinct - 1].onset) != 0) {
             attacks[distinct++] = attacks[i];
         }
     }
@@ -682,7 +704,7 @@ size_t standard_texture_consolidate_voices(const StandardTextureEvent *events, s
                 }
                 for (size_t j = 0; !together && j < n; j++) {
                     together = (line_members[g] & voice_bit(out[j].voice)) != 0 && attacks_in_window(&out[j], window) &&
-                               standard_texture_q_compare(out[j].onset, out[i].onset) == 0;
+                               rational_cmp(out[j].onset, out[i].onset) == 0;
                 }
             }
             if (!together) {
@@ -718,14 +740,14 @@ double standard_texture_feature_unison(const StandardTextureEvent *events, size_
     size_t n = 0;
     StandardTextureEvent *in = filtered(events, count, window, &n);
     size_t times_count = 0;
-    StandardTextureQ *times = in == NULL ? NULL : attack_times(in, n, window, &times_count);
+    Rational *times = in == NULL ? NULL : attack_times(in, n, window, &times_count);
     size_t considered = 0;
     size_t same = 0;
     for (size_t t = 0; times != NULL && t <= times_count; t++) {
-        if (t == 0 && times_count > 0 && standard_texture_q_compare(times[0], window->start) == 0) {
+        if (t == 0 && times_count > 0 && rational_cmp(times[0], window->start) == 0) {
             continue;
         }
-        StandardTextureQ at = t == 0 ? window->start : times[t - 1];
+        Rational at = t == 0 ? window->start : times[t - 1];
         size_t voices_seen[STANDARD_TEXTURE_MAX_VOICES];
         long pitches[STANDARD_TEXTURE_MAX_VOICES];
         size_t found = 0;
@@ -839,6 +861,20 @@ static int compare_keys(const void *a, const void *b) {
     return (left->voice > right->voice) - (left->voice < right->voice);
 }
 
+/* The time snapped per the configuration (an attack, or a release with the wider tolerance). A time that cannot be snapped without
+   overflow stays as it is. */
+static void snap_time(const StandardTextureConfig *config, Rational *time, bool release) {
+    if (config == NULL || config->onset_grid_denominator == 0 || config->onset_tolerance_denominator == 0 ||
+        config->release_tolerance_denominator == 0) {
+        return;
+    }
+    unsigned tolerance = release ? config->release_tolerance_denominator : config->onset_tolerance_denominator;
+    Rational snapped;
+    if (score_time_snap(*time, config->onset_grid_denominator, tolerance, &snapped, NULL)) {
+        *time = snapped;
+    }
+}
+
 StandardTextureAnalysisStatus standard_texture_measure_windows(const StandardTextureInput *input, const StandardTextureConfig *config,
                                                                StandardTextureWindows *out) {
     if (input == NULL || out == NULL || input->map == NULL) {
@@ -880,17 +916,17 @@ StandardTextureAnalysisStatus standard_texture_measure_windows(const StandardTex
         return STANDARD_TEXTURE_ANALYSIS_ERR_INVALID;
     }
     size_t usable = 0;
-    StandardTextureQ first = standard_texture_q(0, 1);
-    StandardTextureQ last = standard_texture_q(0, 1);
+    Rational first = rational_ratio(0, 1);
+    Rational last = rational_ratio(0, 1);
     for (size_t i = 0; i < input->note_count; i++) {
-        StandardTextureQ onset;
-        StandardTextureQ release;
-        if (!standard_texture_span_q(input->notes[i].span, &onset, &release)) {
+        Rational onset;
+        Rational release;
+        if (!score_time_span(input->notes[i].span, &onset, &release)) {
             continue;
         }
-        onset = standard_texture_snap(config, onset, false);
-        release = standard_texture_snap(config, release, true);
-        if (standard_texture_q_compare(release, onset) <= 0) {
+        snap_time(config, &onset, false);
+        snap_time(config, &release, true);
+        if (rational_cmp(release, onset) <= 0) {
             continue;
         }
         VoiceKey key = {input->notes[i].track, input->notes[i].voice};
@@ -901,10 +937,10 @@ StandardTextureAnalysisStatus standard_texture_measure_windows(const StandardTex
         events[usable].voice = (size_t)(at - keys);
         events[usable].confidence = input->notes[i].voice_confidence;
         events[usable].track = input->notes[i].track;
-        if (usable == 0 || standard_texture_q_compare(onset, first) < 0) {
+        if (usable == 0 || rational_cmp(onset, first) < 0) {
             first = onset;
         }
-        if (usable == 0 || standard_texture_q_compare(release, last) > 0) {
+        if (usable == 0 || rational_cmp(release, last) > 0) {
             last = release;
         }
         usable++;
@@ -912,16 +948,16 @@ StandardTextureAnalysisStatus standard_texture_measure_windows(const StandardTex
     int first_measure = 0;
     int last_measure = 0;
     StandardTextureAnalysisStatus status = STANDARD_TEXTURE_ANALYSIS_OK;
-    if (usable > 0 && standard_texture_measure_at(input->map, first, &first_measure) &&
-        standard_texture_last_measure_touched(input->map, last, &last_measure) && last_measure >= first_measure) {
+    if (usable > 0 && meter_map_measure_of(input->map, first, &first_measure) == METER_MAP_OK &&
+        meter_map_last_measure_touched(input->map, last, &last_measure) == METER_MAP_OK && last_measure >= first_measure) {
         found.items = (StandardTextureWindowFeatures *)calloc((size_t)(last_measure - first_measure + 1), sizeof(*found.items));
         if (found.items == NULL) {
             status = STANDARD_TEXTURE_ANALYSIS_ERR_ALLOC;
         }
         for (int measure = first_measure; status == STANDARD_TEXTURE_ANALYSIS_OK && measure <= last_measure; measure++) {
             StandardTextureWindow window;
-            if (!standard_texture_measure_bounds(input->map, measure, &window.start, &window.end) ||
-                !standard_texture_beat_length(input->map, measure, &window.beat)) {
+            if (!score_time_measure_bounds(input->map, measure, &window.start, &window.end) ||
+                !score_time_beat_length(input->map, measure, &window.beat)) {
                 continue;
             }
             standard_texture_measure_features(events, usable, &window, measure, &found.items[found.count]);

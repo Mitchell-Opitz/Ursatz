@@ -1,4 +1,5 @@
 #include "io/midi_importer.h"
+#include "midi_import_split.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -373,7 +374,7 @@ static void destroy_notes(NoteEvent **events, PitchNumericValue **pitch_values, 
     free(pitch_values);
 }
 
-/* The complete import equals what the three older entry points and midi_key_signature_scan_all return. */
+/* The complete import equals what midi_importer_import and midi_key_signature_scan_all return. */
 static void assert_matches_old_entry_points(const File *file) {
     MidiImport import;
     assert(midi_importer_import_complete(file->data, file->size, &import) == MIDI_IMPORT_OK);
@@ -384,28 +385,6 @@ static void assert_matches_old_entry_points(const File *file) {
     assert(midi_importer_import(file->data, file->size, &events, &pitch_values, &count) == MIDI_IMPORT_OK);
     assert_notes_equal(&import, events, pitch_values, count);
     destroy_notes(events, pitch_values, count);
-
-    MidiMeterImport meter = {NULL, NULL, NULL, 0};
-    events = NULL;
-    pitch_values = NULL;
-    count = 0;
-    assert(midi_importer_import_with_meter(file->data, file->size, &events, &pitch_values, &count, &meter) ==
-           MIDI_IMPORT_OK);
-    assert_notes_equal(&import, events, pitch_values, count);
-    assert_meters_equal(&import.meter, &meter);
-    destroy_notes(events, pitch_values, count);
-    midi_meter_import_destroy(&meter);
-
-    MidiTempoImport tempo = {NULL, NULL, 0};
-    events = NULL;
-    pitch_values = NULL;
-    count = 0;
-    assert(midi_importer_import_with_tempo(file->data, file->size, &events, &pitch_values, &count, &tempo) ==
-           MIDI_IMPORT_OK);
-    assert_notes_equal(&import, events, pitch_values, count);
-    assert_tempos_equal(&import.tempo, &tempo);
-    destroy_notes(events, pitch_values, count);
-    midi_tempo_import_destroy(&tempo);
 
     MidiKeySignatureEvents keys = {NULL, 0};
     assert(midi_key_signature_scan_all(file->data, file->size, &keys) == MIDI_KEY_SIGNATURE_SCAN_ALL_OK);

@@ -8,6 +8,7 @@
 #include "analysis/voice_separation.h"
 #include "core/provenance_reference.h"
 #include "io/midi_importer.h"
+#include "../io/midi_import_split.h"
 #include "pitch/pitch_identity.h"
 #include "pitch/pitch_spelling.h"
 #include "pitch/tuning_system.h"
@@ -209,8 +210,7 @@ static Imported import_file(const char *file, long ticks_per_quarter) {
     unsigned char *data = read_file(path, &size);
     Imported imported;
     memset(&imported, 0, sizeof(imported));
-    assert(midi_importer_import_with_meter(data, size, &imported.events, &imported.pitches, &imported.count,
-                                           &imported.meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(data, size, &imported.events, &imported.pitches, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     free(data);
     imported.ticks_per_quarter = ticks_per_quarter;
     return imported;

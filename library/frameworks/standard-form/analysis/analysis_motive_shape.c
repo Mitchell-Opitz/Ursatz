@@ -4,6 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "time/meter_arithmetic.h"
+#include "time/meter_map.h"
+#include "time/score_time.h"
+
 void standard_form_motive_line_destroy(StandardFormMotiveLine *line) {
     if (line == NULL) {
         return;
@@ -44,8 +48,8 @@ bool standard_form_motive_line_build(StandardFormMotiveLine *line, const Standar
         return true;
     }
     size_t n = line->count;
-    line->start = (StandardFormQ *)calloc(n, sizeof(StandardFormQ));
-    line->end = (StandardFormQ *)calloc(n, sizeof(StandardFormQ));
+    line->start = (Rational *)calloc(n, sizeof(Rational));
+    line->end = (Rational *)calloc(n, sizeof(Rational));
     line->first_measure = (int *)calloc(n, sizeof(int));
     line->can_start = (bool *)calloc(n, sizeof(bool));
     line->has_generic = (bool *)calloc(n, sizeof(bool));
@@ -56,12 +60,12 @@ bool standard_form_motive_line_build(StandardFormMotiveLine *line, const Standar
         return false;
     }
     for (size_t i = 0; i < n; i++) {
-        if (!standard_form_span_q(line->notes[i].span, &line->start[i], &line->end[i]) ||
-            !standard_form_measure_at(input->map, line->start[i], &line->first_measure[i])) {
+        if (!score_time_span(line->notes[i].span, &line->start[i], &line->end[i]) ||
+            meter_map_measure_of(input->map, line->start[i], &line->first_measure[i]) != METER_MAP_OK) {
             standard_form_motive_line_destroy(line);
             return false;
         }
-        line->can_start[i] = (idea_start != NULL && idea_start[i]) || standard_form_on_beat(input->map, line->start[i]);
+        line->can_start[i] = (idea_start != NULL && idea_start[i]) || meter_map_on_beat(input->map, line->start[i]);
         if (line->notes[i].has_next && line->notes[i].degree > 0 && i + 1 < n && line->notes[i + 1].degree > 0) {
             line->has_generic[i] = true;
             line->generic[i] = generic_between(&line->notes[i], &line->notes[i + 1], line->notes[i].semitones_to_next);
@@ -75,7 +79,7 @@ bool standard_form_motive_window_ok(const StandardFormMotiveLine *line, size_t f
         return false;
     }
     for (size_t i = first; i + 1 < first + n; i++) {
-        if (!line->notes[i].has_next || standard_form_q_compare(line->start[i + 1], line->start[i]) <= 0) {
+        if (!line->notes[i].has_next || rational_cmp(line->start[i + 1], line->start[i]) <= 0) {
             return false;
         }
     }
@@ -98,7 +102,9 @@ bool standard_form_motive_shape(const StandardFormMotiveLine *line, size_t first
         }
         out->semitones[k] = (int)line->notes[i].semitones_to_next;
         out->steps[k] = want_generic ? line->generic[i] : out->semitones[k];
-        out->ioi[k] = standard_form_q_sub(line->start[i + 1], line->start[i]);
+        if (rational_sub(line->start[i + 1], line->start[i], &out->ioi[k]) != RATIONAL_OK) {
+            return false;
+        }
     }
     return true;
 }

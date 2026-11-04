@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "analysis_claim.h"
-#include "analysis_time.h"
 #include "core/value.h"
 #include "external_expansion_rules.h"
 #include "internal_expansion_rules.h"
@@ -15,6 +14,10 @@
 #include "internal_expansion_technique.h"
 #include "phrase_length_change.h"
 #include "phrase_level_form.h"
+#include "core/rational.h"
+#include "time/meter_arithmetic.h"
+#include "time/meter_map.h"
+#include "time/score_time.h"
 
 static void destroy_expansion(StandardFormExpansion *expansion) {
     interpretation_destroy(expansion->interpretation);
@@ -106,10 +109,10 @@ static unsigned techniques_of(const StandardFormInput *input, const StandardForm
     /* one more time: a cadence tried and evaded in the ending, and then retried (the goal cadence that ends it) */
     for (size_t c = 0; c < input->cadence_count; c++) {
         const StandardFormCadence *cadence = &input->cadences[c];
-        StandardFormQ start;
+        Rational start;
         int measure = 0;
         if ((cadence->type != CADENCE_TYPE_SUBVERTED && cadence->type != CADENCE_TYPE_DECEPTIVE) ||
-            !standard_form_span_q(cadence->arrival, &start, NULL) || !standard_form_measure_at(input->map, start, &measure)) {
+            !score_time_span(cadence->arrival, &start, NULL) || meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK) {
             continue;
         }
         if (measure >= ending_first_measure && measure < cadence_measure && standard_form_is_one_more_time(true, true, true)) {
@@ -238,9 +241,9 @@ StandardFormAnalysisStatus standard_form_detect_expansions(const StandardFormInp
         /* the extension's notes: those after the phrase proper */
         int from = -1;
         for (int i = pc->note_first; i < pc->note_end; i++) {
-            StandardFormQ start;
+            Rational start;
             int measure = 0;
-            if (standard_form_span_q(input->notes[i].span, &start, NULL) && standard_form_measure_at(input->map, start, &measure) &&
+            if (score_time_span(input->notes[i].span, &start, NULL) && meter_map_measure_of(input->map, start, &measure) == METER_MAP_OK &&
                 measure > pc->end_measure) {
                 from = i;
                 break;

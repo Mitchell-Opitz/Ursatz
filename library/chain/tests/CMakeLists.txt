@@ -8,10 +8,6 @@ add_executable(test_chord_identification test_chord_identification.c)
 target_link_libraries(test_chord_identification PRIVATE ursatz_chain)
 add_test(NAME chord_identification COMMAND test_chord_identification)
 
-add_executable(test_key_estimation test_key_estimation.c)
-target_link_libraries(test_key_estimation PRIVATE ursatz_chain)
-add_test(NAME key_estimation COMMAND test_key_estimation)
-
 # The two fixture tests keep their ../fixtures paths by running from tests/analysis.
 add_executable(test_bach_prelude_arpeggiated_chords test_bach_prelude_arpeggiated_chords.c)
 target_link_libraries(test_bach_prelude_arpeggiated_chords PRIVATE ursatz_chain)

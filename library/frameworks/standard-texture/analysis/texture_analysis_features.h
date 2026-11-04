@@ -9,7 +9,8 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "texture_analysis_time.h"
+#include "core/rational.h"
+#include "texture_analysis_input.h"
 
 /*
  * Texture features per measure window: theory-neutral measurements of a stretch of separated voices. Each feature is its own function
@@ -60,8 +61,8 @@
 #define STANDARD_TEXTURE_MAX_PAIRS 120
 
 typedef struct {
-    StandardTextureQ onset;
-    StandardTextureQ release;
+    Rational onset;
+    Rational release;
     long pitch;
     size_t voice;
     double confidence;
@@ -69,9 +70,9 @@ typedef struct {
 } StandardTextureEvent;
 
 typedef struct {
-    StandardTextureQ start;
-    StandardTextureQ end;
-    StandardTextureQ beat;
+    Rational start;
+    Rational end;
+    Rational beat;
 } StandardTextureWindow;
 
 typedef struct {
@@ -82,8 +83,8 @@ typedef struct {
 
 typedef struct {
     int measure;
-    StandardTextureQ start;
-    StandardTextureQ end;
+    Rational start;
+    Rational end;
     size_t events;           /* the events that sound in the window */
     size_t attacks;          /* the events that attack in it */
     int voices_max;

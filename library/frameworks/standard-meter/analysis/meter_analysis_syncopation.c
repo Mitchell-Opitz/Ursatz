@@ -7,10 +7,12 @@
 #include "meter_analysis_claim.h"
 #include "meter_analysis_time.h"
 #include "syncopation_rules.h"
+#include "time/meter_arithmetic.h"
+#include "time/score_time.h"
 
 typedef struct {
-    StandardMeterQ start;
-    StandardMeterQ end;
+    Rational start;
+    Rational end;
     bool snapped;
     size_t note;
 } Item;
@@ -18,11 +20,11 @@ typedef struct {
 static int compare_items(const void *a, const void *b) {
     const Item *left = (const Item *)a;
     const Item *right = (const Item *)b;
-    int by_start = standard_meter_q_compare(left->start, right->start);
+    int by_start = rational_cmp(left->start, right->start);
     if (by_start != 0) {
         return by_start;
     }
-    int by_end = standard_meter_q_compare(left->end, right->end);
+    int by_end = rational_cmp(left->end, right->end);
     if (by_end != 0) {
         return by_end;
     }
@@ -36,12 +38,12 @@ static int compare_ints(const void *a, const void *b) {
 }
 
 /* True when some item of the (start-sorted) stream is attacked at `time`. */
-static bool attacked_at(const Item *items, size_t count, StandardMeterQ time) {
+static bool attacked_at(const Item *items, size_t count, Rational time) {
     size_t low = 0;
     size_t high = count;
     while (low < high) {
         size_t mid = low + (high - low) / 2;
-        int order = standard_meter_q_compare(items[mid].start, time);
+        int order = rational_cmp(items[mid].start, time);
         if (order == 0) {
             return true;
         }
@@ -56,10 +58,11 @@ static bool attacked_at(const Item *items, size_t count, StandardMeterQ time) {
 
 /* The strongest position the item is held through that nothing in the stream attacks, if it is stronger than the attack. */
 static bool through_position(const MeterMap *map, const Item *items, size_t count, const Item *item, StandardMeterLevel attack,
-                             StandardMeterLevel *through, StandardMeterQ *where) {
+                             StandardMeterLevel *through, Rational *where) {
     int first = 0;
     int last = 0;
-    if (!standard_meter_measure_at(map, item->start, &first) || !standard_meter_last_measure_touched(map, item->end, &last)) {
+    if (meter_map_measure_of(map, item->start, &first) != METER_MAP_OK ||
+        meter_map_last_measure_touched(map, item->end, &last) != METER_MAP_OK) {
         return false;
     }
     bool found = false;
@@ -71,10 +74,16 @@ static bool through_position(const MeterMap *map, const Item *items, size_t coun
         }
         long long points = (long long)grid.beats * (long long)grid.division;
         for (long long k = 0; k < points; k++) {
-            StandardMeterQ p = standard_meter_q_add(grid.base, standard_meter_q_div_int(standard_meter_q_mul_int(grid.beat, k),
-                                                                                       (long long)grid.division));
-            if (standard_meter_q_compare(p, item->start) <= 0 || standard_meter_q_compare(p, item->end) >= 0 ||
-                standard_meter_q_compare(p, grid.start) < 0 || standard_meter_q_compare(p, grid.end) >= 0) {
+            Rational scaled;
+            Rational step;
+            Rational p;
+            if (rational_mul_int(grid.beat, k, &scaled) != RATIONAL_OK ||
+                rational_div_int(scaled, (long long)grid.division, &step) != RATIONAL_OK ||
+                rational_add(grid.base, step, &p) != RATIONAL_OK) {
+                continue;
+            }
+            if (rational_cmp(p, item->start) <= 0 || rational_cmp(p, item->end) >= 0 || rational_cmp(p, grid.start) < 0 ||
+                rational_cmp(p, grid.end) >= 0) {
                 continue;
             }
             StandardMeterLevel level;
@@ -104,7 +113,7 @@ static StandardMeterAnalysisStatus detect_stream(const StandardMeterInput *input
             continue;
         }
         StandardMeterLevel through;
-        StandardMeterQ where = item->start;
+        Rational where = item->start;
         unsigned strength = 0;
         if (!through_position(input->map, items, count, item, attack, &through, &where) ||
             !standard_meter_syncopated_through_stronger(attack, through, &strength)) {
@@ -175,15 +184,14 @@ StandardMeterAnalysisStatus standard_meter_find_syncopations(const StandardMeter
     size_t usable = 0;
     size_t line_count = 0;
     for (size_t i = 0; i < input->note_count; i++) {
-        StandardMeterQ start;
-        StandardMeterQ end;
-        if (!standard_meter_span_q(input->notes[i].span, &start, &end)) {
+        Rational start;
+        Rational end;
+        bool moved_start = false;
+        if (!score_time_span(input->notes[i].span, &start, &end) ||
+            !standard_meter_snap_time(config, &start, false, &moved_start) || !standard_meter_snap_time(config, &end, true, NULL)) {
             continue;
         }
-        bool moved_start = false;
-        start = standard_meter_snap(config, start, false, &moved_start);
-        end = standard_meter_snap(config, end, true, NULL);
-        if (standard_meter_q_compare(end, start) <= 0) {
+        if (rational_cmp(end, start) <= 0) {
             continue;
         }
         items[usable].start = start;

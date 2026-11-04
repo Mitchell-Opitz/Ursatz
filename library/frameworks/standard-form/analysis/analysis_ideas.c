@@ -5,10 +5,13 @@
 #include <string.h>
 
 #include "analysis_claim.h"
-#include "analysis_time.h"
 #include "core/value.h"
 #include "segmentation_rules.h"
 #include "idea_label.h"
+#include "core/rational.h"
+#include "time/meter_arithmetic.h"
+#include "time/meter_map.h"
+#include "time/score_time.h"
 #include "sentence_rules.h"
 
 static double combine(double a, double b) {
@@ -91,9 +94,9 @@ static bool notes_in_measures(const StandardFormInput *input, int note_first, in
     *from = -1;
     *to = 0;
     for (int i = note_first; i < note_end; i++) {
-        StandardFormQ start;
+        Rational start;
         int measure = 0;
-        if (!standard_form_span_q(input->notes[i].span, &start, NULL) || !standard_form_measure_at(input->map, start, &measure)) {
+        if (!score_time_span(input->notes[i].span, &start, NULL) || meter_map_measure_of(input->map, start, &measure) != METER_MAP_OK) {
             return false;
         }
         if (measure >= first && measure <= last) {

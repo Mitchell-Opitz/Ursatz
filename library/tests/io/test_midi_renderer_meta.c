@@ -322,14 +322,12 @@ static void test_import_ignores_names_and_markers(void) {
     PitchNumericValue **plain_pitches = NULL;
     size_t plain_count = 0;
     MidiMeterImport plain_meter = {NULL, NULL, NULL, 0};
-    assert(midi_importer_import_with_meter(plain, plain_size, &plain_events, &plain_pitches, &plain_count,
-                                           &plain_meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(plain, plain_size, &plain_events, &plain_pitches, &plain_count, &plain_meter, NULL) == MIDI_IMPORT_OK);
     NoteEvent **named_events = NULL;
     PitchNumericValue **named_pitches = NULL;
     size_t named_count = 0;
     MidiMeterImport named_meter = {NULL, NULL, NULL, 0};
-    assert(midi_importer_import_with_meter(named, named_size, &named_events, &named_pitches, &named_count,
-                                           &named_meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(named, named_size, &named_events, &named_pitches, &named_count, &named_meter, NULL) == MIDI_IMPORT_OK);
     assert(plain_count == notes.count && named_count == plain_count);
     TestNoteFact *plain_facts = test_facts_of(plain_events, plain_pitches, plain_count);
     TestNoteFact *named_facts = test_facts_of(named_events, named_pitches, named_count);
@@ -354,10 +352,8 @@ static void test_import_ignores_names_and_markers(void) {
 
     MidiTempoImport plain_tempo = {NULL, NULL, 0};
     MidiTempoImport named_tempo = {NULL, NULL, 0};
-    assert(midi_importer_import_with_tempo(plain, plain_size, &plain_events, &plain_pitches, &plain_count,
-                                           &plain_tempo) == MIDI_IMPORT_OK);
-    assert(midi_importer_import_with_tempo(named, named_size, &named_events, &named_pitches, &named_count,
-                                           &named_tempo) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(plain, plain_size, &plain_events, &plain_pitches, &plain_count, NULL, &plain_tempo) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(named, named_size, &named_events, &named_pitches, &named_count, NULL, &named_tempo) == MIDI_IMPORT_OK);
     test_assert_same_tempo(plain_tempo.tempo_map, named_tempo.tempo_map);
     test_assert_same_tempo(tempo_map, named_tempo.tempo_map);
     for (size_t i = 0; i < plain_count; i++) {

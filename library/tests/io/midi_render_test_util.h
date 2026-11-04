@@ -12,6 +12,7 @@
 #include "events/note_event.h"
 #include "identity/entity_id.h"
 #include "io/midi_importer.h"
+#include "midi_import_split.h"
 #include "io/midi_key_signature.h"
 #include "io/midi_renderer.h"
 #include "io/smf_reader.h"
@@ -382,7 +383,7 @@ static inline void test_round_trip(NoteEvent *const *events, PitchNumericValue *
     PitchNumericValue **back_pitches = NULL;
     size_t back_count = 0;
     MidiMeterImport meter = {NULL, NULL, NULL, 0};
-    assert(midi_importer_import_with_meter(data, size, &back_events, &back_pitches, &back_count, &meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(data, size, &back_events, &back_pitches, &back_count, &meter, NULL) == MIDI_IMPORT_OK);
     assert(back_count == count);
     TestNoteFact *original_facts = test_facts_of(events, pitches, count);
     TestNoteFact *back_facts = test_facts_of(back_events, back_pitches, back_count);
@@ -408,7 +409,7 @@ static inline void test_round_trip(NoteEvent *const *events, PitchNumericValue *
     back_events = NULL;
     back_pitches = NULL;
     MidiTempoImport tempo = {NULL, NULL, 0};
-    assert(midi_importer_import_with_tempo(data, size, &back_events, &back_pitches, &back_count, &tempo) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(data, size, &back_events, &back_pitches, &back_count, NULL, &tempo) == MIDI_IMPORT_OK);
     for (size_t i = 0; i < back_count; i++) {
         note_event_destroy(back_events[i]);
         pitch_numeric_value_destroy(back_pitches[i]);
