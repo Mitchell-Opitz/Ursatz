@@ -4,6 +4,7 @@ add_library(standard_counterpoint
     rule_pair.c
     rule_table.c
     species_aggregate.c
+    species_helpers.c
     counterpoint_pitch.c
     counterpoint_interval.c
     consonance_rules.c

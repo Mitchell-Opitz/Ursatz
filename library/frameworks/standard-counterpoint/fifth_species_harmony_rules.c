@@ -8,6 +8,7 @@
 #include "motion_rules.h"
 #include "motion_type.h"
 #include "rule_table.h"
+#include "species_helpers.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FIFTH_SPECIES_HARMONY_RULE_COUNT] = {
     "downbeat-consonant", "dissonance-figure", "no-repeated-perfect", "no-direct-perfect", "max-same-imperfect-run",
@@ -59,16 +60,6 @@ static bool downbeat_interval(const Exercise *exercise, size_t bar, StandardCoun
     return standard_counterpoint_fifth_species_interval(exercise, SLOTS * bar, out);
 }
 
-/* 5 for a fifth, 8 for an octave or unison, 0 for anything else. */
-static int perfect_class(const StandardCounterpointInterval *interval) {
-    StandardCounterpointIntervalCategory category;
-    if (!standard_counterpoint_classify_interval(interval, &category) ||
-        category != STANDARD_COUNTERPOINT_PERFECT_CONSONANCE) {
-        return 0;
-    }
-    return interval->simple_size == 5 ? 5 : 8;
-}
-
 static bool check_downbeat_consonant(const Exercise *exercise) {
     for (size_t bar = 0; bar < exercise->cantus->count; bar++) {
         StandardCounterpointInterval interval;
@@ -106,8 +97,8 @@ static bool check_no_repeated_perfect(const Exercise *exercise) {
         if (!downbeat_interval(exercise, bar, &first) || !downbeat_interval(exercise, bar + 1, &second)) {
             continue;
         }
-        int a = perfect_class(&first);
-        if (a != 0 && a == perfect_class(&second)) {
+        int a = standard_counterpoint_species_perfect_class(&first);
+        if (a != 0 && a == standard_counterpoint_species_perfect_class(&second)) {
             return false;
         }
     }
@@ -118,7 +109,7 @@ static bool check_no_direct_perfect(const Exercise *exercise) {
     bool cantus_lower = exercise->cantus_part == STANDARD_COUNTERPOINT_CANTUS_IN_LOWER;
     for (size_t bar = 1; bar < exercise->cantus->count; bar++) {
         StandardCounterpointInterval interval;
-        if (!downbeat_interval(exercise, bar, &interval) || perfect_class(&interval) == 0) {
+        if (!downbeat_interval(exercise, bar, &interval) || standard_counterpoint_species_perfect_class(&interval) == 0) {
             continue;
         }
         const PitchSpelling *before = standard_counterpoint_fifth_species_pitch(exercise, SLOTS * bar - 1);

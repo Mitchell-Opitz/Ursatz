@@ -8,6 +8,7 @@
 #include "counterpoint_pitch.h"
 #include "counterpoint_subject.h"
 #include "rule_table.h"
+#include "species_helpers.h"
 #include "second_species_pattern.h"
 
 #define BUFFER_SIZE (STANDARD_COUNTERPOINT_SECOND_SPECIES_SLOTS_PER_BAR * STANDARD_COUNTERPOINT_SECOND_SPECIES_MAX_BARS)
@@ -83,6 +84,11 @@ static bool within_bar(const Attacks *attacks, size_t j) {
            attacks->slots[j] == attacks->slots[j - 1] + 1;
 }
 
+typedef struct {
+    const Exercise *exercise;
+    const Attacks *attacks;
+} LeapContext;
+
 static bool is_change_of_register_leap(const Exercise *exercise, const Attacks *attacks, size_t j) {
     if (!within_bar(attacks, j)) {
         return false;
@@ -93,25 +99,14 @@ static bool is_change_of_register_leap(const Exercise *exercise, const Attacks *
            pattern == STANDARD_COUNTERPOINT_WEAK_BEAT_CHANGE_OF_REGISTER;
 }
 
+static bool register_leap_allowed(const void *context, size_t j) {
+    const LeapContext *leaps = context;
+    return is_change_of_register_leap(leaps->exercise, leaps->attacks, j);
+}
+
 static bool check_leaps(const Exercise *exercise, const Attacks *attacks) {
-    for (size_t j = 1; j < attacks->line.count; j++) {
-        StandardCounterpointInterval interval;
-        if (!standard_counterpoint_interval_between(attacks->notes[j - 1], attacks->notes[j], &interval)) {
-            return false;
-        }
-        if (interval.size > 8 || interval.quality == STANDARD_COUNTERPOINT_QUALITY_AUGMENTED ||
-            interval.quality == STANDARD_COUNTERPOINT_QUALITY_DIMINISHED || interval.simple_size == 7) {
-            return false;
-        }
-        if (interval.simple_size == 6) {
-            bool ascending_minor = interval.quality == STANDARD_COUNTERPOINT_QUALITY_MINOR &&
-                                   standard_counterpoint_direction(attacks->notes[j - 1], attacks->notes[j]) > 0;
-            if (!ascending_minor && !is_change_of_register_leap(exercise, attacks, j)) {
-                return false;
-            }
-        }
-    }
-    return true;
+    LeapContext context = {exercise, attacks};
+    return standard_counterpoint_species_check_leaps(attacks->notes, attacks->line.count, register_leap_allowed, &context);
 }
 
 static bool check_stepwise(const Attacks *attacks) {

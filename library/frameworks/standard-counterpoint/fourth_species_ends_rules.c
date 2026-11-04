@@ -7,6 +7,7 @@
 #include "fourth_species_suspension.h"
 #include "counterpoint_subject.h"
 #include "rule_table.h"
+#include "species_helpers.h"
 #include "pitch/midi_pitch.h"
 
 static const char *const NAMES[STANDARD_COUNTERPOINT_FOURTH_SPECIES_ENDS_COUNT] = {
@@ -43,19 +44,6 @@ const char *standard_counterpoint_fourth_species_ends_rule_name(StandardCounterp
 
 typedef StandardCounterpointFourthSpeciesExercise Exercise;
 
-static bool is_tonic(const PitchSpelling *note, const PitchSpelling *tonic) {
-    return pitch_spelling_letter(note) == pitch_spelling_letter(tonic) &&
-           pitch_spelling_accidental(note) == pitch_spelling_accidental(tonic);
-}
-
-/* A perfect fifth above the tonic, at any octave. */
-static bool is_sol(const PitchSpelling *note, const PitchSpelling *tonic) {
-    int letters = (((standard_counterpoint_step_number(note) - standard_counterpoint_step_number(tonic)) % 7) + 7) % 7;
-    int semitones =
-        pitch_class_of_midi(standard_counterpoint_semitone_number(note) - standard_counterpoint_semitone_number(tonic));
-    return letters == 4 && semitones == 7;
-}
-
 /* The leading tone: the letter below the tonic's, a half step below it. */
 static bool is_leading_tone(const PitchSpelling *note, const PitchSpelling *tonic) {
     int letters = (((standard_counterpoint_step_number(note) - standard_counterpoint_step_number(tonic)) % 7) + 7) % 7;
@@ -75,14 +63,14 @@ static bool is_supertonic(const PitchSpelling *note, const PitchSpelling *tonic)
 static bool check_begin(const Exercise *exercise, const PitchSpelling *tonic) {
     const PitchSpelling *first = standard_counterpoint_fourth_species_weak(exercise, 0);
     if (exercise->cantus_part == STANDARD_COUNTERPOINT_CANTUS_IN_LOWER) {
-        return is_tonic(first, tonic) || is_sol(first, tonic);
+        return standard_counterpoint_species_is_tonic(first, tonic) || standard_counterpoint_species_is_sol(first, tonic);
     }
-    return is_tonic(first, tonic);
+    return standard_counterpoint_species_is_tonic(first, tonic);
 }
 
 static bool check_cantus_ends_re_do(const Exercise *exercise, const PitchSpelling *tonic) {
     size_t bars = exercise->cantus->count;
-    return is_supertonic(exercise->cantus->notes[bars - 2], tonic) && is_tonic(exercise->cantus->notes[bars - 1], tonic);
+    return is_supertonic(exercise->cantus->notes[bars - 2], tonic) && standard_counterpoint_species_is_tonic(exercise->cantus->notes[bars - 1], tonic);
 }
 
 static bool check_penultimate_suspension(const Exercise *exercise, const PitchSpelling *tonic) {
@@ -94,13 +82,13 @@ static bool check_penultimate_suspension(const Exercise *exercise, const PitchSp
     bool above = exercise->cantus_part == STANDARD_COUNTERPOINT_CANTUS_IN_LOWER;
     StandardCounterpointSuspensionType expected =
         above ? STANDARD_COUNTERPOINT_SUSPENSION_SEVEN_SIX : STANDARD_COUNTERPOINT_SUSPENSION_TWO_THREE;
-    return type == expected && is_tonic(standard_counterpoint_fourth_species_downbeat(exercise, bar), tonic) &&
+    return type == expected && standard_counterpoint_species_is_tonic(standard_counterpoint_fourth_species_downbeat(exercise, bar), tonic) &&
            is_leading_tone(standard_counterpoint_fourth_species_weak(exercise, bar), tonic);
 }
 
 static bool check_final_bar(const Exercise *exercise, const PitchSpelling *tonic) {
     size_t bar = exercise->cantus->count - 1;
-    return is_tonic(standard_counterpoint_fourth_species_downbeat(exercise, bar), tonic);
+    return standard_counterpoint_species_is_tonic(standard_counterpoint_fourth_species_downbeat(exercise, bar), tonic);
 }
 
 bool standard_counterpoint_fourth_species_ends_rule_holds(StandardCounterpointFourthSpeciesEndsRule which,
