@@ -3006,7 +3006,6 @@ static int handle_random_motifs(struct mg_connection *conn) {
                (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
                                 count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
                (!seed_item || (cJSON_IsNumber(seed_item) && seed_item->valuedouble >= 0 &&
-                               seed_item->valuedouble <= kMaxVariantSeed &&
                                seed_item->valuedouble == (double)(long long)seed_item->valuedouble));
   if (!valid) {
     cJSON_Delete(body);
