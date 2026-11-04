@@ -68,7 +68,7 @@
   /* A debounced check of a form with the Composer (POST /api/materials/items/validate, R-276). options:
    *   build()        the request {method, url, headers, body} (a model's validateRequest), or null for nothing to check;
    *   field(path)    the form field a request path is about, or null;
-   *   show(result)   called with {ok, complete, message, path, field}: ok false is the Composer's refusal (message as
+   *   show(result)   called with {ok, complete, message, path, field, request}: ok false is the Composer's refusal (message as
    *                  given, path and the field it marks); an incomplete body (complete false) shows nothing;
    *   delay (ms, 400), fetch, setTimer and clearTimer (for tests).
    * check() waits for delay after the last call; an answer that a later check has passed is dropped. */
@@ -101,7 +101,7 @@
         return;
       }
       if (status === 200 && body && body.ok) {
-        o.show({ ok: true, complete: body.complete === true, message: body.message || "", path: "", field: null });
+        o.show({ ok: true, complete: body.complete === true, message: body.message || "", path: "", field: null, request: body.request || null });
       } else if (status === 400 && body && typeof body.error === "string") {
         const path = typeof body.path === "string" ? body.path : "";
         o.show({ ok: false, complete: true, message: body.error, path, field: o.field ? o.field(path) : null });

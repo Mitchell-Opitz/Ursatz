@@ -5770,24 +5770,6 @@
   },
   {
    "body": {
-    "count": 2,
-    "form": "full",
-    "meter": "random",
-    "mode": "random",
-    "seed": 1
-   },
-   "method": "POST",
-   "name": "random_2",
-   "path": "/api/materials/motifs/random",
-   "raw_hex": null,
-   "reply": {
-    "error": "mode is major or minor, meter like 3/4, key like D minor, form full, rhythm or contour, role melodic or accompaniment, count 1 to 16 and seed a whole number from 0",
-    "ok": false
-   },
-   "status": 400
-  },
-  {
-   "body": {
     "count": 1,
     "form": "contour",
     "meter": "4/4",

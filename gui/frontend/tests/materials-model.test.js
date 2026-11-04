@@ -294,16 +294,15 @@ check(urls.playbackUrl === "/api/materials/items/mot-1/versions/2/playback", "pl
 const random = M.randomRequest({ mode: "minor", meter: " 3/4 ", key: "D major", form: "contour", style_id: "sty-1", count: 20, seed: "7" });
 const randomBody = JSON.parse(random.body);
 check(random.method === "POST" && random.url === "/api/materials/motifs/random", "random request is a POST to /motifs/random");
-check(randomBody.mode === "minor" && randomBody.meter === "3/4" && randomBody.key === "C minor" && randomBody.form === "full", "random request is one full motif in C in the drawn mode, meter trimmed");
+check(randomBody.mode === "random" && randomBody.meter === "random" && !("key" in randomBody) && randomBody.form === "full", "random request leaves the mode and meter to the Composer and sends no key");
 check(randomBody.count === 1 && randomBody.seed === 7 && !("style_id" in randomBody) && M.RANDOM_DEFAULT_COUNT === undefined && M.randomProblems === undefined, "random request draws one motif from the seed with no style and no count option");
-const drawnA = M.randomSettings(12345);
-check(same(drawnA, M.randomSettings(12345)) && same(drawnA, M.randomSettings("12345")), "the same seed draws the same mode and meter");
-const drawn = new Set();
-for (let seed = 0; seed < 200; seed++) {
-  const d = M.randomSettings(seed);
-  drawn.add(`${d.mode} ${d.meter}`);
+check(M.randomSettings === undefined, "the draw of the mode and meter is not computed here");
+check(same(M.drawnSettings({ drawn: { mode: "minor", meter: "6/8" } }), { mode: "minor", meter: "6/8" }), "the drawn mode and meter come from the answer");
+for (const captured of require("../../backend/tests/fixtures/composer/b11_captures.json").random) {
+  const answer = { drawn: { mode: captured.mode, meter: captured.meter } };
+  check(same(M.drawnSettings(answer), { mode: captured.mode, meter: captured.meter }) && JSON.parse(M.randomRequest({ seed: captured.seed }).body).seed === captured.seed, `seed ${captured.seed} shows the captured ${captured.mode} ${captured.meter}`);
 }
-check(drawn.size === 8 && [...drawn].every((d) => /^(major|minor) (4\/4|3\/4|2\/4|6\/8)$/.test(d)), "200 seeds draw every mode and meter pair and nothing else");
+check(M.drawnSettings({ drawn: { mode: "minor" } }) === null && M.drawnSettings({}) === null && M.drawnSettings(null) === null, "an answer that names no draw gives none");
 
 const candidate = {
   seed: 3,

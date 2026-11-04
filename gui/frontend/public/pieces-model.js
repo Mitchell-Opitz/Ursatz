@@ -356,36 +356,25 @@
     });
   }
 
-  /* The cadence a section gets when none is chosen (R-169): HC at the end of the intro and of the loop, PAC at the
-   * end of the ending, IAC elsewhere. Returns the type for the section at index. */
-  function defaultCadence(state, index) {
-    const sections = Array.isArray(state && state.sections) ? state.sections : [];
-    const section = sections[index];
-    if (!section) {
-      return "IAC";
+  /* The cadence of every section in a validate reply's request, in section order (the Composer fills those a section
+   * leaves unchosen); empty when the reply has none or its sections are not the form's. */
+  function servedCadences(request, state) {
+    const sections = request && Array.isArray(request.sections) ? request.sections : [];
+    const count = Array.isArray(state && state.sections) ? state.sections.length : 0;
+    if (sections.length !== count) {
+      return [];
     }
-    const lastOf = (test) => {
-      let last = -1;
-      sections.forEach((other, i) => {
-        if (test(other)) {
-          last = i;
-        }
-      });
-      return last;
-    };
-    if (section.part === "ending") {
-      return index === lastOf((other) => other.part === "ending") ? "PAC" : "IAC";
-    }
-    if (section.part === "intro") {
-      return index === lastOf((other) => other.part === "intro") ? "HC" : "IAC";
-    }
-    return index === lastOf((other) => other.part === "body" || other.part === "turnaround") ? "HC" : "IAC";
+    return sections.map((section) => (section && typeof section.cadence === "string" ? section.cadence : ""));
   }
 
-  /* The cadence to show: the chosen one, else the default. */
-  function cadenceOf(state, index) {
+  /* The cadence to show for the section at index: the chosen one, else the one the Composer served, else "" (not
+   * asked yet). */
+  function cadenceOf(state, index, served) {
     const section = state.sections[index];
-    return section && section.cadence ? section.cadence : defaultCadence(state, index);
+    if (section && section.cadence) {
+      return section.cadence;
+    }
+    return Array.isArray(served) && typeof served[index] === "string" ? served[index] : "";
   }
 
   /* --- themes ---------------------------------------------------------- */
@@ -865,7 +854,7 @@
     stateFromBody,
     beatsLabel,
     sectionTimeline,
-    defaultCadence,
+    servedCadences,
     cadenceOf,
     motifIsFree,
     themeLengthBeats,

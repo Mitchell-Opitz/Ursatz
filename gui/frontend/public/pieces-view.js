@@ -386,18 +386,32 @@ function pieceVersionView(viewEl, id, number, body, nameOf, title) {
   viewEl.appendChild(materialsElement("h2", "section-title", `Version ${number} (read only)`));
   const piece = body && body.piece ? body.piece : {};
   const state = PiecesModel.stateFromBody(body, id);
-  viewEl.appendChild(
+  /* The cadences a section leaves unchosen come from the Composer (the validate route); the facts are drawn again when
+   * they arrive. */
+  const facts = (served) =>
     themeFacts([
       ["Key", `${state.key} ${state.mode}, ${state.meter}`],
-      ...state.sections.map((section, index) => [
-        `${PiecesModel.PARTS.find((entry) => entry.value === section.part).label} ${section.letter || section.id}`,
-        `${PiecesModel.beatsLabel(section.beats, state.meter)}, cadence ${PiecesModel.cadenceOf(state, index)}, ${section.fill.kind}${
-          section.fill.item_id ? ` ${nameOf(section.fill.item_id)} v${section.fill.version}` : ""
-        }`,
-      ]),
+      ...state.sections.map((section, index) => {
+        const cadence = PiecesModel.cadenceOf(state, index, served);
+        return [
+          `${PiecesModel.PARTS.find((entry) => entry.value === section.part).label} ${section.letter || section.id}`,
+          `${PiecesModel.beatsLabel(section.beats, state.meter)}, ${cadence ? `cadence ${cadence}, ` : ""}${section.fill.kind}${
+            section.fill.item_id ? ` ${nameOf(section.fill.item_id)} v${section.fill.version}` : ""
+          }`,
+        ];
+      }),
       ["Brief", ThemesModel.briefLabel(ThemesModel.briefFromPicks(state.picks))],
-    ]),
-  );
+    ]);
+  let factsEl = facts([]);
+  viewEl.appendChild(factsEl);
+  sendMaterialsRequest(PiecesModel.validateRequest(state)).then((answer) => {
+    const served = answer.ok && answer.data ? PiecesModel.servedCadences(answer.data.request, state) : [];
+    if (served.length > 0 && factsEl.isConnected) {
+      const next = facts(served);
+      factsEl.replaceWith(next);
+      factsEl = next;
+    }
+  });
   const result = buildPieceResult({ id, version: number, piece, nameOf, title });
   viewEl.appendChild(result || materialsElement("div", "piece-list-status", "This version was not composed."));
 }
@@ -418,6 +432,8 @@ function buildPieceEditor(ctx) {
   };
   const problemsEl = materialsElement("div", "materials-field-error");
   let selected = state.sections[0].id;
+  let served = [];
+  let showDefaultCadence = () => {};
   let poolRefresh = () => {};
   let savedJson = JSON.stringify(PiecesModel.bodyFromState(state));
   const themeLengths = {};
@@ -525,11 +541,14 @@ function buildPieceEditor(ctx) {
     const cadence = themeField(
       controls,
       "Cadence",
-      themeSelect(
-        [{ value: "", label: `Default (${PiecesModel.defaultCadence(state, index)})` }, ...PiecesModel.CADENCES],
-        section.cadence || "",
-      ),
+      themeSelect([{ value: "", label: "Default" }, ...PiecesModel.CADENCES], section.cadence || ""),
     );
+    /* The default's label names the cadence the Composer served for this section, once it has. */
+    showDefaultCadence = () => {
+      const shown = section.cadence ? "" : PiecesModel.cadenceOf(state, index, served);
+      cadence.options[0].textContent = shown ? `Default (${shown})` : "Default";
+    };
+    showDefaultCadence();
     let drawInto = () => {};
     function syncSection() {
       section.letter = letter.value;
@@ -539,6 +558,7 @@ function buildPieceEditor(ctx) {
       lengthEl.textContent = PiecesModel.beatsLabel(section.beats, state.meter);
       section.pickup = pickup.value.trim() === "" ? "0" : pickup.value;
       section.cadence = cadence.value || null;
+      showDefaultCadence();
       drawStrip();
       drawInto();
       problems();
@@ -712,6 +732,10 @@ function buildPieceEditor(ctx) {
     build: () => PiecesModel.validateRequest(state),
     field: PiecesModel.fieldForPath,
     fields: () => ({ key, mode, meter, tempo, sections: stripEl }),
+    onResult: (result) => {
+      served = result.ok && result.complete ? PiecesModel.servedCadences(result.request, state) : [];
+      showDefaultCadence();
+    },
   });
   el.appendChild(validation.element);
 

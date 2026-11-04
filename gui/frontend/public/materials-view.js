@@ -194,6 +194,9 @@ function attachFormValidation(options) {
     build: options.build,
     field: options.field,
     show(result) {
+      if (options.onResult) {
+        options.onResult(result);
+      }
       for (const el of marked) {
         el.classList.remove("field-invalid");
       }
@@ -332,20 +335,22 @@ function buildRandomMotifs(statusEl, onUse) {
   }
 
   async function drawSeed(seed) {
-    const settings = MaterialsModel.randomSettings(seed);
-    const values = { form: "full", role: "melodic", meter: settings.meter, mode: settings.mode, seed };
+    const values = { form: "full", role: "melodic", seed };
     draw.disabled = true;
     reroll.disabled = true;
     statusEl.classList.remove("error");
     statusEl.textContent = "Drawing a motif...";
     const answer = await sendMaterialsRequest(MaterialsModel.randomRequest(values));
     const motive = answer.ok && answer.data && answer.data.motives ? answer.data.motives[0] : null;
-    if (!motive) {
+    const drawn = MaterialsModel.drawnSettings(answer.data);
+    if (!motive || !drawn) {
       draw.disabled = false;
       reroll.disabled = false;
       fail(answer.data, "Could not draw a motif");
       return;
     }
+    values.mode = drawn.mode;
+    values.meter = drawn.meter;
     const candidate = MaterialsModel.randomCandidate(motive, seed);
     const rendered = await sendMaterialsRequest(MaterialsModel.renderRequest(VariantTree.candidateBody(MaterialsModel.randomCandidateToBody(candidate, values), candidate)));
     draw.disabled = false;

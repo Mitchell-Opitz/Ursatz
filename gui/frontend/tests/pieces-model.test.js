@@ -127,13 +127,20 @@ const timeline = P.sectionTimeline(filled());
 check(same(timeline.map((entry) => [entry.id, entry.start, entry.beats]), [["s0", 0, 8], ["s1", 8, 32], ["s2", 40, 16], ["s3", 56, 8], ["s4", 64, 8]]), "the timeline runs section after section");
 check(same(P.sectionTimeline(P.emptyState()), []), "no sections give an empty timeline");
 
-/* default cadences */
+/* cadences: the Composer serves those a section leaves unchosen */
 const cadences = filled();
-check(same(cadences.sections.map((_, i) => P.defaultCadence(cadences, i)), ["HC", "IAC", "IAC", "HC", "PAC"]), "the intro and the loop end on HC, the ending on PAC, the rest IAC");
-cadences.sections.splice(3, 1);
-check(P.defaultCadence(cadences, 2) === "HC", "without a turnaround the last body section ends the loop");
+const servedRequest = { sections: ["HC", "IAC", "IAC", "HC", "PAC"].map((cadence) => ({ cadence })) };
+const served = P.servedCadences(servedRequest, cadences);
+check(same(served, ["HC", "IAC", "IAC", "HC", "PAC"]), "the served cadences follow the sections of the reply");
+check(same(P.servedCadences(servedRequest, { sections: cadences.sections.slice(1) }), []) && same(P.servedCadences(null, cadences), []), "a reply for other sections, or none, serves nothing");
+check(P.cadenceOf(cadences, 4, served) === "PAC" && P.cadenceOf(cadences, 4) === "", "the served cadence shows when none is chosen, and nothing before the reply");
 cadences.sections[2].cadence = "PAC";
-check(P.cadenceOf(cadences, 2) === "PAC" && P.cadenceOf(cadences, 1) === "IAC", "a chosen cadence wins over the default");
+check(P.cadenceOf(cadences, 2, served) === "PAC" && P.cadenceOf(cadences, 1, served) === "IAC", "a chosen cadence wins over the served one");
+check(P.defaultCadence === undefined, "the cadence defaults are not computed here");
+const captured = require("../../backend/tests/fixtures/composer/b11_captures.json");
+const capturedState = { sections: captured.cadences.parts.map((part, i) => ({ id: `s${i}`, part, cadence: null })) };
+const capturedServed = P.servedCadences({ sections: captured.cadences.defaults.map((cadence) => ({ cadence })) }, capturedState);
+check(same(capturedState.sections.map((_, i) => P.cadenceOf(capturedState, i, capturedServed)), captured.cadences.defaults), "the cadences shown for an intro, a loop of three sections and two endings equal the captured ones");
 
 /* editing the structure */
 let edit = P.emptyState("e");
