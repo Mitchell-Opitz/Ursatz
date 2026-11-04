@@ -1,4 +1,5 @@
 #include "io/midi_importer.h"
+#include "midi_import_split.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -11,7 +12,7 @@
 #include "time/temporal_anchor.h"
 
 /*
- * Tempo of the framework-v1-corpus files, read through midi_importer_import_with_tempo. The corpus
+ * Tempo of the framework-v1-corpus files, read through midi_importer_import_complete. The corpus
  * directory is passed in as URSATZ_CORPUS_DIR.
  *
  * Every expected value below is a value FOUND IN THE FILE, not a value from the score: the tempos
@@ -49,15 +50,13 @@ static Imported import_corpus_file(const char *name) {
     assert(read_count == (size_t)length);
 
     Imported imported = {NULL, NULL, 0, {NULL, NULL, 0}, {NULL, NULL, NULL, 0}};
-    assert(midi_importer_import_with_tempo(data, (size_t)length, &imported.events, &imported.pitch_values,
-                                           &imported.count, &imported.tempo) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(data, (size_t)length, &imported.events, &imported.pitch_values, &imported.count, NULL, &imported.tempo) == MIDI_IMPORT_OK);
 
     /* The end time of the last note comes from the meter import; the notes it returns are the same. */
     NoteEvent **events = NULL;
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
-    assert(midi_importer_import_with_meter(data, (size_t)length, &events, &pitch_values, &count,
-                                           &imported.meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(data, (size_t)length, &events, &pitch_values, &count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     assert(count == imported.count);
     for (size_t i = 0; i < count; i++) {
         note_event_destroy(events[i]);

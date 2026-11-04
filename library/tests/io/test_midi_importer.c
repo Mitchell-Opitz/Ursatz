@@ -1,4 +1,5 @@
 #include "io/midi_importer.h"
+#include "midi_import_split.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -461,7 +462,7 @@ static void test_rejects_null_buffer(void) {
     assert(r == MIDI_IMPORT_ERR_NULL_BUFFER);
 }
 
-/* --- meter (midi_importer_import_with_meter) --- */
+/* --- meter (midi_importer_import_complete) --- */
 
 static const unsigned char TS_6_8[] = {0x00, 0xFF, 0x58, 0x04, 0x06, 0x03, 0x18, 0x08};
 static const unsigned char TS_3_4[] = {0x00, 0xFF, 0x58, 0x04, 0x03, 0x02, 0x18, 0x08};
@@ -487,7 +488,7 @@ static void test_import_with_meter_defaults_to_four_four_without_a_time_signatur
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
     MidiMeterImport meter = {0};
-    assert(midi_importer_import_with_meter(buf, size, &events, &pitch_values, &count, &meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(buf, size, &events, &pitch_values, &count, &meter, NULL) == MIDI_IMPORT_OK);
     assert(count == 1);
     assert(meter_map_is_defaulted(meter.meter_map));
     assert(meter_map_region_count(meter.meter_map) == 1);
@@ -525,7 +526,7 @@ static void test_import_with_meter_reads_time_signature_and_matches_plain_import
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
     MidiMeterImport meter = {0};
-    assert(midi_importer_import_with_meter(buf, size, &events, &pitch_values, &count, &meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(buf, size, &events, &pitch_values, &count, &meter, NULL) == MIDI_IMPORT_OK);
     assert(count == plain_count);
     assert(note_event_duration(events[0]) != NULL);
 
@@ -551,7 +552,7 @@ static void test_import_with_meter_reports_conflicting_time_signatures(void) {
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
     MidiMeterImport meter = {0};
-    assert(midi_importer_import_with_meter(buf, size, &events, &pitch_values, &count, &meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(buf, size, &events, &pitch_values, &count, &meter, NULL) == MIDI_IMPORT_OK);
     assert(count == 0);
     assert(meter.conflict_count == 1 && meter.conflict_ticks[0] == 0);
     const MeterMapRegion *region = meter_map_region(meter.meter_map, 0);
@@ -568,15 +569,13 @@ static void test_import_with_meter_rejects_bad_input_without_writing_outputs(voi
     PitchNumericValue **pitch_values = NULL;
     size_t count = 7;
     MidiMeterImport meter = {0};
-    assert(midi_importer_import_with_meter(buf, sizeof(buf), &events, &pitch_values, &count, &meter) ==
+    assert(test_midi_import_parts(buf, sizeof(buf), &events, &pitch_values, &count, &meter, NULL) ==
            MIDI_IMPORT_ERR_TRUNCATED);
     assert(events == NULL && pitch_values == NULL && count == 7 && meter.meter_map == NULL);
-    assert(midi_importer_import_with_meter(buf, sizeof(buf), &events, &pitch_values, &count, NULL) ==
-           MIDI_IMPORT_ERR_NULL_BUFFER);
     midi_meter_import_destroy(NULL);
 }
 
-/* --- tempo (midi_importer_import_with_tempo) --- */
+/* --- tempo (midi_importer_import_complete) --- */
 
 static const unsigned char TEMPO_500000[] = {0x00, 0xFF, 0x51, 0x03, 0x07, 0xA1, 0x20};
 static const unsigned char TEMPO_1000000[] = {0x00, 0xFF, 0x51, 0x03, 0x0F, 0x42, 0x40};
@@ -594,7 +593,7 @@ static void test_import_with_tempo_defaults_without_a_set_tempo(void) {
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
     MidiTempoImport tempo = {0};
-    assert(midi_importer_import_with_tempo(buf, size, &events, &pitch_values, &count, &tempo) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(buf, size, &events, &pitch_values, &count, NULL, &tempo) == MIDI_IMPORT_OK);
     assert(count == 1);
     assert(tempo_map_is_defaulted(tempo.tempo_map));
     assert(tempo_map_region_count(tempo.tempo_map) == 1);
@@ -617,7 +616,7 @@ static void test_import_with_tempo_reads_tempo_at_tick_zero_over_the_default(voi
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
     MidiTempoImport tempo = {0};
-    assert(midi_importer_import_with_tempo(buf, size, &events, &pitch_values, &count, &tempo) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(buf, size, &events, &pitch_values, &count, NULL, &tempo) == MIDI_IMPORT_OK);
     assert(!tempo_map_is_defaulted(tempo.tempo_map));
     assert(tempo_map_region_count(tempo.tempo_map) == 1);
     assert(first_region_tempo(&tempo) == 1000000);
@@ -645,7 +644,7 @@ static void test_import_with_tempo_late_first_tempo_keeps_a_defaulted_start(void
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
     MidiTempoImport tempo = {0};
-    assert(midi_importer_import_with_tempo(buf, size, &events, &pitch_values, &count, &tempo) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(buf, size, &events, &pitch_values, &count, NULL, &tempo) == MIDI_IMPORT_OK);
     assert(tempo_map_region_count(tempo.tempo_map) == 2);
     assert(tempo_map_region_is_defaulted(tempo_map_region(tempo.tempo_map, 0)));
     assert(first_region_tempo(&tempo) == 500000);
@@ -678,7 +677,7 @@ static void test_import_with_tempo_leaves_note_times_unchanged(void) {
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
     MidiTempoImport tempo = {0};
-    assert(midi_importer_import_with_tempo(buf, size, &events, &pitch_values, &count, &tempo) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(buf, size, &events, &pitch_values, &count, NULL, &tempo) == MIDI_IMPORT_OK);
     assert(count == plain_count && count == 2);
     for (size_t i = 0; i < count; i++) {
         const MusicalTime *a = temporal_anchor_position(note_event_temporal_anchor(events[i]));
@@ -707,7 +706,7 @@ static void test_import_with_tempo_reports_conflicting_tempos(void) {
     PitchNumericValue **pitch_values = NULL;
     size_t count = 0;
     MidiTempoImport tempo = {0};
-    assert(midi_importer_import_with_tempo(buf, size, &events, &pitch_values, &count, &tempo) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(buf, size, &events, &pitch_values, &count, NULL, &tempo) == MIDI_IMPORT_OK);
     assert(tempo.conflict_count == 1 && tempo.conflict_ticks[0] == 0);
     assert(first_region_tempo(&tempo) == 1000000); /* last wins */
 
@@ -722,11 +721,9 @@ static void test_import_with_tempo_rejects_bad_input_without_writing_outputs(voi
     PitchNumericValue **pitch_values = NULL;
     size_t count = 7;
     MidiTempoImport tempo = {0};
-    assert(midi_importer_import_with_tempo(buf, sizeof(buf), &events, &pitch_values, &count, &tempo) ==
+    assert(test_midi_import_parts(buf, sizeof(buf), &events, &pitch_values, &count, NULL, &tempo) ==
            MIDI_IMPORT_ERR_TRUNCATED);
     assert(events == NULL && pitch_values == NULL && count == 7 && tempo.tempo_map == NULL);
-    assert(midi_importer_import_with_tempo(buf, sizeof(buf), &events, &pitch_values, &count, NULL) ==
-           MIDI_IMPORT_ERR_NULL_BUFFER);
     midi_tempo_import_destroy(NULL);
 }
 

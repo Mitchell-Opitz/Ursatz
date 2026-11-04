@@ -1,4 +1,5 @@
 #include "io/midi_importer.h"
+#include "midi_import_split.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -13,7 +14,7 @@
 
 /*
  * Meter import fixtures: SMF files built in code in 3/4, 6/8 and 12/8, a 4/4 to 3/4 meter change at
- * measure 5, and a 1/8 pickup before 12/8. Each is imported with midi_importer_import_with_meter
+ * measure 5, and a 1/8 pickup before 12/8. Each is imported with midi_importer_import_complete
  * and checked for the measure index of chosen notes and for the span of chosen measures. Division
  * is 480 ticks per quarter note, so a whole note is 1920 ticks and an eighth note is 240.
  */
@@ -97,8 +98,7 @@ static Imported import_track(const TrackBuilder *track) {
     static unsigned char file[8192];
     size_t size = build_smf(file, track);
     Imported imported = {NULL, NULL, 0, {NULL, NULL, NULL, 0}};
-    assert(midi_importer_import_with_meter(file, size, &imported.events, &imported.pitch_values, &imported.count,
-                                           &imported.meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(file, size, &imported.events, &imported.pitch_values, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     return imported;
 }
 

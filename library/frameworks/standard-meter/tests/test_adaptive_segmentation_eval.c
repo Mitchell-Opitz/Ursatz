@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "io/midi_importer.h"
+#include "../../../tests/io/midi_import_split.h"
 #include "meter_test_util.h"
 #include "segmentation_beat_grid.h"
 #include "semantics/sonority_segmentation.h"
@@ -55,8 +56,7 @@ static Imported import_corpus_file(const char *name) {
     size_t size = 0;
     unsigned char *data = read_file(URSATZ_CORPUS_DIR, name, &size);
     Imported imported = {NULL, NULL, 0, {NULL, NULL, NULL, 0}};
-    assert(midi_importer_import_with_meter(data, size, &imported.events, &imported.pitch_values, &imported.count,
-                                           &imported.meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(data, size, &imported.events, &imported.pitch_values, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     free(data);
     return imported;
 }

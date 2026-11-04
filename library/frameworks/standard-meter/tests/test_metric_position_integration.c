@@ -3,6 +3,7 @@
 #include <stdlib.h>
 
 #include "io/midi_importer.h"
+#include "../../../tests/io/midi_import_split.h"
 #include "meter_test_util.h"
 #include "metric_position_rules.h"
 #include "time/meter_map.h"
@@ -153,8 +154,7 @@ static Imported import_corpus_file(const char *name) {
     assert(read_count == (size_t)length);
 
     Imported imported = {NULL, NULL, 0, {NULL, NULL, NULL, 0}};
-    assert(midi_importer_import_with_meter(data, (size_t)length, &imported.events, &imported.pitch_values,
-                                           &imported.count, &imported.meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(data, (size_t)length, &imported.events, &imported.pitch_values, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     free(data);
     return imported;
 }

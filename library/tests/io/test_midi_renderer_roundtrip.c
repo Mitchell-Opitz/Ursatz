@@ -37,14 +37,14 @@ static void round_trip_reference_piece(const char *name) {
     PitchNumericValue **pitches = NULL;
     size_t count = 0;
     MidiMeterImport meter = {NULL, NULL, NULL, 0};
-    assert(midi_importer_import_with_meter(data, size, &events, &pitches, &count, &meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(data, size, &events, &pitches, &count, &meter, NULL) == MIDI_IMPORT_OK);
     assert(count > 0);
 
     NoteEvent **tempo_events = NULL;
     PitchNumericValue **tempo_pitches = NULL;
     size_t tempo_count = 0;
     MidiTempoImport tempo = {NULL, NULL, 0};
-    assert(midi_importer_import_with_tempo(data, size, &tempo_events, &tempo_pitches, &tempo_count, &tempo) ==
+    assert(test_midi_import_parts(data, size, &tempo_events, &tempo_pitches, &tempo_count, NULL, &tempo) ==
            MIDI_IMPORT_OK);
     for (size_t i = 0; i < tempo_count; i++) {
         note_event_destroy(tempo_events[i]);

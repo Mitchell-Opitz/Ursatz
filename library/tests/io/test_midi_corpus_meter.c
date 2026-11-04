@@ -1,4 +1,5 @@
 #include "io/midi_importer.h"
+#include "midi_import_split.h"
 
 #include <assert.h>
 #include <stdbool.h>
@@ -11,7 +12,7 @@
 #include "time/temporal_anchor.h"
 
 /*
- * Meter of the framework-v1-corpus files, read through midi_importer_import_with_meter. The corpus
+ * Meter of the framework-v1-corpus files, read through midi_importer_import_complete. The corpus
  * directory is passed in as URSATZ_CORPUS_DIR.
  */
 
@@ -38,8 +39,7 @@ static Imported import_corpus_file(const char *name) {
     assert(read_count == (size_t)length);
 
     Imported imported = {NULL, NULL, 0, {NULL, NULL, NULL, 0}};
-    assert(midi_importer_import_with_meter(data, (size_t)length, &imported.events, &imported.pitch_values,
-                                           &imported.count, &imported.meter) == MIDI_IMPORT_OK);
+    assert(test_midi_import_parts(data, (size_t)length, &imported.events, &imported.pitch_values, &imported.count, &imported.meter, NULL) == MIDI_IMPORT_OK);
     free(data);
     assert(imported.count > 0);
     return imported;
