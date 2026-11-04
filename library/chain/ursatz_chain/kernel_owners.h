@@ -15,7 +15,7 @@
  * chord identifier, the melody stage and the motive stage (AnalysisChainConfig.inject_kernel_owners).
  *
  *   non-chord tones   motive_tone_roles (analysis/motive_tone_roles.h) as a NonChordToneClassifier
- *   motive relations  motive_variant_recognize (analysis/motive_variant_recognition.h) as a StandardFormRelationMatcher
+ *   motive relations  motive_variant_recognize (analysis/motive_variant_recognition.h) as a StandardFormRelationMatchFn
  */
 
 /* A NonChordToneClassifier: motive_tone_roles_line. context is unused. */
@@ -29,15 +29,16 @@ typedef struct {
 } ChainRelationContext;
 
 /*
- * A StandardFormRelationMatcher. Both shapes become MotiveSketches (note k at the sum of the first k onset gaps, lasting its gap, the last
+ * A StandardFormRelationMatchFn. Both shapes become MotiveSketches (note k at the sum of the first k onset gaps, lasting its gap, the last
  * note the last gap; a scale from the context when the shape is generic and the context has a key); motive_variant_recognize runs at
- * depth 1 with only exact, transpose (real and tonal), invert and retrograde admitted. Equal sketches are EXACT; a transposition is REAL, or
- * TONAL when its tonal parameter is set. score is the mean similarity of the four dimensions of the recognition (1 for exact and
- * for a transposition). False when no such single step turns the prototype into the candidate, or a shape makes no valid sketch.
- * context is a ChainRelationContext, or NULL for none.
+ * depth 1 with these admitted: exact, transpose (real, or tonal when its tonal parameter is set), invert, retrograde, augment 2:1,
+ * diminish 1:2, and a leading or trailing fragment of at least standard_form_motive_fragment_min_intervals. A candidate of the prototype's
+ * length can only be the first six, a shorter one only a fragment (FRAGMENTED, fragment_part 0 prefix or 1 suffix, fragment_intervals the
+ * intervals of the candidate). score is the mean similarity of the four dimensions of the recognition. False when no such single step
+ * turns the prototype into the candidate, or a shape makes no valid sketch. context is a ChainRelationContext, or NULL for none.
  */
 bool chain_match_motive_relation(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
-                                 StandardFormMotiveKind *kind, double *score, void *context);
+                                 StandardFormRelationMatch *out, void *context);
 
 /*
  * Relabels the non-chord tones of a melody line with a classifier: each note's chord mask is the chord of its first segment (results, one

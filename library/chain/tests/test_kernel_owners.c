@@ -63,11 +63,10 @@ static void test_equal_and_transposed_shapes(void) {
     StandardFormMotiveShape proto = shape(false, 3, up_steps, up_steps, gaps, 60);
     StandardFormMotiveShape same = proto;
     StandardFormMotiveShape moved = shape(false, 3, up_steps, up_steps, gaps, 65);
-    StandardFormMotiveKind kind;
-    double score = 0.0;
-    assert(chain_match_motive_relation(&proto, &same, &kind, &score, NULL) && kind == STANDARD_FORM_MOTIVE_EXACT && score > 0.0);
-    assert(chain_match_motive_relation(&proto, &moved, &kind, &score, NULL) && kind == STANDARD_FORM_MOTIVE_REAL);
-    assert(score > 0.0 && score <= 1.0);
+    StandardFormRelationMatch m;
+    assert(chain_match_motive_relation(&proto, &same, &m, NULL) && m.kind == MOTIVE_OCCURRENCE_EXACT && m.score > 0.0);
+    assert(chain_match_motive_relation(&proto, &moved, &m, NULL) && m.kind == MOTIVE_OCCURRENCE_REAL);
+    assert(m.score > 0.0 && m.score <= 1.0);
 
     /* C D E C and D E F D in C major: the semitones differ (2 2 -4 / 2 1 -3), the degrees do not: tonal */
     const int semis_a[3] = {2, 2, -4};
@@ -75,9 +74,9 @@ static void test_equal_and_transposed_shapes(void) {
     StandardFormMotiveShape tonal_proto = shape(true, 3, semis_a, generic_up, gaps, 60);
     StandardFormMotiveShape tonal_cand = shape(true, 3, semis_b, generic_up, gaps, 62);
     ChainRelationContext key = {true, 0, false};
-    assert(chain_match_motive_relation(&tonal_proto, &tonal_cand, &kind, &score, &key) && kind == STANDARD_FORM_MOTIVE_TONAL);
+    assert(chain_match_motive_relation(&tonal_proto, &tonal_cand, &m, &key) && m.kind == MOTIVE_OCCURRENCE_TONAL);
     /* without a key the same shapes are not a transposition of a scale: no match as a tonal one */
-    assert(!chain_match_motive_relation(&tonal_proto, &tonal_cand, &kind, &score, NULL) || kind != STANDARD_FORM_MOTIVE_TONAL);
+    assert(!chain_match_motive_relation(&tonal_proto, &tonal_cand, &m, NULL) || m.kind != MOTIVE_OCCURRENCE_TONAL);
 }
 
 static void test_inverted_and_retrograde_shapes(void) {
@@ -87,10 +86,9 @@ static void test_inverted_and_retrograde_shapes(void) {
     const int back[3] = {-2, -3, -2};
     StandardFormMotiveShape proto = shape(false, 3, up, up, gaps, 60);
     StandardFormMotiveShape inverted = shape(false, 3, down, down, gaps, 72);
-    StandardFormMotiveKind kind;
-    double score = 0.0;
-    assert(chain_match_motive_relation(&proto, &inverted, &kind, &score, NULL));
-    assert(kind == STANDARD_FORM_MOTIVE_INVERTED || kind == STANDARD_FORM_MOTIVE_RETROGRADE);
+    StandardFormRelationMatch m;
+    assert(chain_match_motive_relation(&proto, &inverted, &m, NULL));
+    assert(m.kind == MOTIVE_OCCURRENCE_INVERTED || m.kind == MOTIVE_OCCURRENCE_RETROGRADE);
 
     /* an asymmetric figure: its retrograde reverses the intervals and flips them; its inversion only flips */
     const int figure[3] = {2, 3, 1};
@@ -99,8 +97,8 @@ static void test_inverted_and_retrograde_shapes(void) {
     StandardFormMotiveShape p = shape(false, 3, figure, figure, gaps, 60);
     StandardFormMotiveShape r = shape(false, 3, reversed, reversed, gaps, 66);
     StandardFormMotiveShape v = shape(false, 3, flipped, flipped, gaps, 72);
-    assert(chain_match_motive_relation(&p, &r, &kind, &score, NULL) && kind == STANDARD_FORM_MOTIVE_RETROGRADE);
-    assert(chain_match_motive_relation(&p, &v, &kind, &score, NULL) && kind == STANDARD_FORM_MOTIVE_INVERTED);
+    assert(chain_match_motive_relation(&p, &r, &m, NULL) && m.kind == MOTIVE_OCCURRENCE_RETROGRADE);
+    assert(chain_match_motive_relation(&p, &v, &m, NULL) && m.kind == MOTIVE_OCCURRENCE_INVERTED);
 }
 
 static void test_refusals(void) {
@@ -112,13 +110,12 @@ static void test_refusals(void) {
     StandardFormMotiveShape unrelated = shape(false, 3, b, b, gaps, 60);
     StandardFormMotiveShape rhythm = shape(false, 3, a, a, other_gaps, 60);
     StandardFormMotiveShape shorter = shape(false, 2, a, a, gaps, 60);
-    StandardFormMotiveKind kind;
-    double score;
-    assert(!chain_match_motive_relation(&proto, &unrelated, &kind, &score, NULL));
-    assert(!chain_match_motive_relation(&proto, &rhythm, &kind, &score, NULL));
-    assert(!chain_match_motive_relation(&proto, &shorter, &kind, &score, NULL));
-    assert(!chain_match_motive_relation(NULL, &proto, &kind, &score, NULL));
-    assert(!chain_match_motive_relation(&proto, &proto, NULL, &score, NULL));
+    StandardFormRelationMatch m;
+    assert(!chain_match_motive_relation(&proto, &unrelated, &m, NULL));
+    assert(!chain_match_motive_relation(&proto, &rhythm, &m, NULL));
+    assert(!chain_match_motive_relation(&proto, &shorter, &m, NULL));
+    assert(!chain_match_motive_relation(NULL, &proto, &m, NULL));
+    assert(!chain_match_motive_relation(&proto, &proto, NULL, NULL));
 }
 
 static bool all_non_chord(const ToneLineNote *notes, size_t count, ToneLineLabel *out, void *context) {
