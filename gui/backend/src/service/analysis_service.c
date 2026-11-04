@@ -32,6 +32,7 @@
 #include <ursatz_analyzer/notation_reading.h>
 #include <ursatz_analyzer/playback.h>
 #include <ursatz_analyzer/score_export.h>
+#include <ursatz_analyzer/staleness.h>
 #include <ursatz_analyzer/version.h>
 
 static bool path_exists(const char *path) {
@@ -88,6 +89,33 @@ static const char *format_label(InputFormat format) {
 
 static const char *analyzer_version_string(void) {
     return ursatz_analyzer_version();
+}
+
+/* The name a status goes by in the routes and the stored flags. */
+static const char *status_name(AnalyzerDocumentStatus status) {
+    switch (status) {
+    case ANALYZER_DOCUMENT_CURRENT:
+        return "current";
+    case ANALYZER_DOCUMENT_STALE_SCHEMA:
+        return "stale_schema";
+    case ANALYZER_DOCUMENT_STALE_ANALYZER:
+        return "stale_analyzer";
+    case ANALYZER_DOCUMENT_STALE_URSATZ:
+        return "stale_ursatz";
+    default:
+        return "unreadable";
+    }
+}
+
+/* The status the three keys in meta.json give; a missing key is unreadable. */
+static const char *meta_status_name(const cJSON *meta) {
+    const cJSON *schema = cJSON_GetObjectItemCaseSensitive(meta, "document_schema_version");
+    const cJSON *analyzer = cJSON_GetObjectItemCaseSensitive(meta, "analyzer_version");
+    const cJSON *commit = cJSON_GetObjectItemCaseSensitive(meta, "ursatz_commit");
+    if (!cJSON_IsNumber(schema) || !cJSON_IsString(analyzer) || !cJSON_IsString(commit)) {
+        return status_name(ANALYZER_DOCUMENT_UNREADABLE);
+    }
+    return status_name(analyzer_document_status_of(schema->valueint, analyzer->valuestring, commit->valuestring));
 }
 
 /* Writes <dir_path>/meta.json. */
@@ -540,6 +568,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_list(const char *pieces_dir, UrsatzG
         piece->source = meta_string_copy(meta, "source");
         bool tags_ok = meta_tags_copy(meta, &piece->tags, &piece->tag_count);
         piece->has_notation = meta_notation_read(meta, &piece->notation);
+        piece->analysis_status = meta_status_name(meta);
         cJSON_Delete(meta);
         if (!piece->id || !piece->filename || !piece->format || !piece->uploaded_at || !piece->composer ||
             !piece->source || !tags_ok) {
@@ -730,6 +759,8 @@ static UrsatzGuiAnalysisResult get_piece_unlocked(const char *pieces_dir, const 
     char analysis_path[400];
     snprintf(analysis_path, sizeof(analysis_path), "%s/analysis.json", dir_path);
     detail->document_json = ursatz_gui_read_file(analysis_path, NULL);
+    detail->analysis_status = status_name(detail->document_json ? analyzer_document_status(detail->document_json)
+                                                                 : ANALYZER_DOCUMENT_UNREADABLE);
 
     if (!detail->id || !detail->filename || !detail->format || !detail->uploaded_at || !detail->document_json) {
         ursatz_gui_piece_detail_destroy(detail);

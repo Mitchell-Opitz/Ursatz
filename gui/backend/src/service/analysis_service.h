@@ -53,6 +53,7 @@ typedef struct {
     char *uploaded_at; /* ISO 8601 UTC */
     bool has_notation;   /* true when the piece has a notation override */
     UrsatzGuiNotation notation;
+    const char *analysis_status; /* ursatz_gui_analysis_status_name of the stored document; static text */
     char *document_json; /* the Analyzer's analysis document, as stored */
     char **note_xml_ids; /* note_xml_ids[i]: the <note xml:id> the score export writes for note i */
     size_t note_count;
@@ -70,6 +71,8 @@ typedef struct {
     size_t tag_count;
     bool has_notation; /* true when the piece has a notation override */
     UrsatzGuiNotation notation;
+    const char *analysis_status; /* from meta.json alone: "current", "stale_schema", "stale_analyzer",
+                                    "stale_ursatz" or "unreadable"; static text */
 } UrsatzGuiPieceSummary;
 
 /*

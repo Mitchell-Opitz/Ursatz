@@ -314,6 +314,8 @@ static void append_piece_entry(JsonBuffer *buf, const UrsatzGuiPieceSummary *pie
   }
   json_buffer_append(buf, "],\"notation\":");
   append_notation(buf, piece->has_notation, &piece->notation);
+  json_buffer_append(buf, ",\"analysis_status\":");
+  json_buffer_append_string(buf, piece->analysis_status ? piece->analysis_status : "unreadable");
   json_buffer_append(buf, "}");
 }
 
@@ -491,6 +493,8 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   json_buffer_append_string(&buf, detail->uploaded_at);
   json_buffer_append(&buf, ",\"notation\":");
   append_notation(&buf, detail->has_notation, &detail->notation);
+  json_buffer_append(&buf, ",\"analysis_status\":");
+  json_buffer_append_string(&buf, detail->analysis_status ? detail->analysis_status : "unreadable");
   json_buffer_append(&buf, ",\"note_xml_ids\":[");
   for (size_t i = 0; i < detail->note_count; i++) {
     if (i != 0) {

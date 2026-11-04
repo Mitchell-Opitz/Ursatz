@@ -601,6 +601,13 @@ function buildPieceRow(piece, buildActions, onFilenameClick) {
 function renderPieceFilenameCell(piece) {
   const span = document.createElement("span");
   span.textContent = piece.filename || piece.id;
+  if (piece.analysis_status && piece.analysis_status !== "current") {
+    const badge = document.createElement("span");
+    badge.className = "stale-badge";
+    badge.textContent = "stale";
+    badge.title = `Analysis ${piece.analysis_status.replace("_", " ")}; it is analyzed again when opened.`;
+    span.append(" ", badge);
+  }
   return span;
 }
 
@@ -1276,6 +1283,7 @@ function analysisSubtitle(header) {
     header.format,
     header.measureCount === null ? "" : `${header.measureCount} measures`,
     `${header.noteCount} notes`,
+    header.analysisStatus === "current" ? "" : `analysis ${header.analysisStatus.replace("_", " ")}`,
   ]
     .filter((part) => part !== "")
     .join(" · ");
