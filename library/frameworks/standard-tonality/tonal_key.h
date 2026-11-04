@@ -117,10 +117,11 @@ unsigned standard_tonality_mode_pitch_classes(int tonic_pitch_class, StandardTon
 
 /*
  * The degree (1 to 7) a chromatic semitone above the tonic is read as in the mode, and its
- * alteration from that degree: 0 for a note of the scale, otherwise the note is read as the next
- * lower degree raised (+1; +2 where the mode has a gap of a minor third, as the harmonic minor's
- * sixth to seventh). Any whole number of semitones is taken mod 12. False (outputs untouched) for
- * NULL outputs or an invalid mode.
+ * alteration from that degree: 0 for a note of the scale. With no context a chromatic note is read
+ * as the next lower degree raised (+1; +2 where the mode has a gap of a minor third, as the harmonic
+ * minor's sixth to seventh), except the lowered readings (-1 on the next degree up): semitone 1 in
+ * every mode (b2, R-285), and in major also semitones 3, 8 and 10 (b3, b6, b7). Any whole number of
+ * semitones is taken mod 12. False (outputs untouched) for NULL outputs or an invalid mode.
  */
 bool standard_tonality_degree_of_semitone(int semitones_above_tonic, StandardTonalityMode mode, int *degree,
                                           int *alteration);

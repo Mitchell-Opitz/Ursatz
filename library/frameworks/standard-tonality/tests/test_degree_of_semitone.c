@@ -33,14 +33,20 @@ static void test_scale_notes(void) {
 static void test_chromatic_notes(void) {
     int degree;
     int alteration;
-    /* Major: the black keys are the lower degree raised. */
+    /* Major: semitones 1, 3, 8, 10 are the next degree lowered; 6 is the fourth raised. */
     assert(standard_tonality_degree_of_semitone(1, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
-    assert(degree == 1 && alteration == 1);
+    assert(degree == 2 && alteration == -1);
+    assert(standard_tonality_degree_of_semitone(3, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(degree == 3 && alteration == -1);
     assert(standard_tonality_degree_of_semitone(6, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
     assert(degree == 4 && alteration == 1);
+    assert(standard_tonality_degree_of_semitone(8, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+    assert(degree == 6 && alteration == -1);
     assert(standard_tonality_degree_of_semitone(10, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
-    assert(degree == 6 && alteration == 1);
+    assert(degree == 7 && alteration == -1);
     /* Natural minor: the leading tone is the seventh raised. */
+    assert(standard_tonality_degree_of_semitone(1, STANDARD_TONALITY_MODE_NATURAL_MINOR, &degree, &alteration));
+    assert(degree == 2 && alteration == -1);
     assert(standard_tonality_degree_of_semitone(11, STANDARD_TONALITY_MODE_NATURAL_MINOR, &degree, &alteration));
     assert(degree == 7 && alteration == 1);
     assert(standard_tonality_degree_of_semitone(4, STANDARD_TONALITY_MODE_NATURAL_MINOR, &degree, &alteration));
@@ -61,7 +67,7 @@ static void test_every_semitone_resolves(void) {
             int degree = 0;
             int alteration = -1;
             assert(standard_tonality_degree_of_semitone(s, (StandardTonalityMode)mode, &degree, &alteration));
-            assert(degree >= 1 && degree <= 7 && alteration >= 0 && alteration <= 2);
+            assert(degree >= 1 && degree <= 7 && alteration >= -1 && alteration <= 2);
             assert(standard_tonality_degree_semitone((StandardTonalityMode)mode, degree) + alteration ==
                    floor_mod12(s));
         }
@@ -97,10 +103,9 @@ static void test_composer_tables(void) {
         }
     }
     /* pitch_degree (melody_check.c) against the library, semitone by semitone. The Composer reads a
-       chromatic note as the degree it is spelled for (flats up, F# as a raised fourth); the library
-       reads it as the lower degree raised. The semitones where the two degrees differ are the record
-       P25 declares: major 1, 3, 8, 10 (the Composer reads the next degree up); natural minor 1 (the
-       Composer reads the second) and 6 (the Composer reads the fifth, the library the fourth raised). */
+       chromatic note as the degree it is spelled for (flats up, F# as a raised fourth). Since R-285
+       the library agrees on every major semitone and on natural minor 1; the one difference left is
+       natural minor 6 (the Composer reads the fifth, the library the fourth raised). */
     unsigned major_differs = 0;
     unsigned minor_differs = 0;
     for (int s = 0; s < 12; s++) {
@@ -115,8 +120,32 @@ static void test_composer_tables(void) {
             assert(alteration == 1 && COMPOSER_MINOR[s] == degree + 1);
         }
     }
-    assert(major_differs == ((1u << 1) | (1u << 3) | (1u << 8) | (1u << 10)));
-    assert(minor_differs == ((1u << 1) | (1u << 6)));
+    assert(major_differs == 0);
+    assert(minor_differs == (1u << 6));
+}
+
+/* The no-context answer for all 12 offsets, major and natural minor (degree, alteration). */
+static const int EXPECTED_MAJOR[12][2] = {{1, 0}, {2, -1}, {2, 0}, {3, -1}, {3, 0}, {4, 0},
+                                          {4, 1}, {5, 0},  {6, -1}, {6, 0}, {7, -1}, {7, 0}};
+static const int EXPECTED_MINOR[12][2] = {{1, 0}, {2, -1}, {2, 0}, {3, 0}, {3, 1}, {4, 0},
+                                          {4, 1}, {5, 0},  {6, 0}, {6, 1}, {7, 0}, {7, 1}};
+
+static void test_every_offset_in_major_and_minor(void) {
+    for (int s = 0; s < 12; s++) {
+        int degree = 0;
+        int alteration = 9;
+        assert(standard_tonality_degree_of_semitone(s, STANDARD_TONALITY_MODE_MAJOR, &degree, &alteration));
+        assert(degree == EXPECTED_MAJOR[s][0] && alteration == EXPECTED_MAJOR[s][1]);
+        assert(standard_tonality_degree_of_semitone(s, STANDARD_TONALITY_MODE_NATURAL_MINOR, &degree, &alteration));
+        assert(degree == EXPECTED_MINOR[s][0] && alteration == EXPECTED_MINOR[s][1]);
+    }
+    /* Semitone one is b2 in every mode. */
+    for (int mode = 0; mode <= STANDARD_TONALITY_MODE_MELODIC_MINOR; mode++) {
+        int degree = 0;
+        int alteration = 0;
+        assert(standard_tonality_degree_of_semitone(1, (StandardTonalityMode)mode, &degree, &alteration));
+        assert(degree == 2 && alteration == -1);
+    }
 }
 
 static void test_invalid(void) {
@@ -133,6 +162,7 @@ int main(void) {
     test_chromatic_notes();
     test_every_semitone_resolves();
     test_composer_tables();
+    test_every_offset_in_major_and_minor();
     test_invalid();
     printf("standard-tonality degree of semitone tests passed\n");
     return 0;

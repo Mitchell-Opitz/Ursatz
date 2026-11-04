@@ -154,7 +154,7 @@ before). Field Nocturne No. 1 stays at 78.7% (48 of 61), below the 90%
 target: its misses are a vii or iii read where V7 or I is marked, on beats
 whose bass sounded in an earlier beat and is not held into them.
 
-`outer_scale_degrees.h` labels the soprano and bass of each segment from
+`outer_scale_degrees.h` takes its degree numbers from `standard_tonality_degree_of_semitone`, the one scale degree owner (R-285), and labels the soprano and bass of each segment from
 `analysis/outer_voice.h` as `ScaleDegree` Interpretations relative to the
 caller's key, with a required `FrameworkReference` and confidence 1/1. Limits:
 no voice-crossing awareness, no inner voices, one line per extreme; absent

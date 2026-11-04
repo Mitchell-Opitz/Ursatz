@@ -11,17 +11,7 @@
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
 #include "pitch/midi_pitch.h"
-
-typedef struct {
-    int degree;     /* 1..7 */
-    int alteration; /* -1, 0 or 1 */
-} DegreeOfOffset;
-
-/* Indexed by semitones above the tonic. Major: 1 b2 2 b3 3 4 #4 5 b6 6 b7 7. Natural minor: 1 b2 2 3 #3 4 #4 5 6 #6 7 #7. */
-static const DegreeOfOffset MAJOR_DEGREES[12] = {{1, 0}, {2, -1}, {2, 0}, {3, -1}, {3, 0}, {4, 0},
-                                                 {4, 1}, {5, 0},  {6, -1}, {6, 0}, {7, -1}, {7, 0}};
-static const DegreeOfOffset MINOR_DEGREES[12] = {{1, 0}, {2, -1}, {2, 0}, {3, 0}, {3, 1}, {4, 0},
-                                                 {4, 1}, {5, 0},  {6, 0}, {6, 1}, {7, 0}, {7, 1}};
+#include "standard-tonality/tonal_key.h"
 
 /* [degree - 1][alteration + 1]: flat, natural, sharp. */
 static const char *const DEGREE_LABELS[7][3] = {{"b1", "1", "#1"}, {"b2", "2", "#2"}, {"b3", "3", "#3"},
@@ -34,11 +24,9 @@ bool common_practice_scale_degree_of(int pitch_class, int tonic_pitch_class, Com
         tonic_pitch_class > 11 || (mode != COMMON_PRACTICE_KEY_MAJOR && mode != COMMON_PRACTICE_KEY_MINOR)) {
         return false;
     }
-    int offset = pitch_class_of_midi(pitch_class - tonic_pitch_class);
-    const DegreeOfOffset *entry = mode == COMMON_PRACTICE_KEY_MAJOR ? &MAJOR_DEGREES[offset] : &MINOR_DEGREES[offset];
-    *degree = entry->degree;
-    *alteration = entry->alteration;
-    return true;
+    StandardTonalityMode owner_mode =
+        mode == COMMON_PRACTICE_KEY_MAJOR ? STANDARD_TONALITY_MODE_MAJOR : STANDARD_TONALITY_MODE_NATURAL_MINOR;
+    return standard_tonality_degree_of_semitone(pitch_class - tonic_pitch_class, owner_mode, degree, alteration);
 }
 
 const char *common_practice_scale_degree_label(int pitch_class, int tonic_pitch_class, CommonPracticeKeyMode mode) {

@@ -13,7 +13,7 @@ catalog and the shared conventions.
 
 | Framework | Covers | Depends on |
 |---|---|---|
-| `common-practice-minimal` | 7 diatonic triads, 4 diatonic seventh qualities, major and natural-minor keys. The weighted chord identification and key regions the chain runs | ursatz |
+| `common-practice-minimal` | 7 diatonic triads, 4 diatonic seventh qualities, major and natural-minor keys. The weighted chord identification and key regions the chain runs | standard-tonality (`tonal_key.h` only, the scale degree owner), ursatz |
 | `standard-notation` | Staff, clefs, ledger lines, stems, accidentals, half and whole steps | ursatz |
 | `standard-markings` | Dynamics order, articulation classes, tempo words, repeat and D.C./D.S. playback order | ursatz |
 | `western-periods` | The six conventional stylistic periods | ursatz |

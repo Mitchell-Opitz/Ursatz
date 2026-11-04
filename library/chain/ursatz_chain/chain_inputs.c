@@ -8,6 +8,7 @@
 #include "core/rational.h"
 #include "standard-form/analysis/analysis_time.h"
 #include "standard-tonality/seventh_rules.h"
+#include "standard-tonality/tonal_key.h"
 #include "standard-tonality/triad_rules.h"
 #include "time/meter_arithmetic.h"
 #include "time/time_signature.h"
@@ -320,15 +321,19 @@ static bool beat_duration(const MeterMap *map, Duration **out) {
     return ok;
 }
 
-static const int DEGREE_OF_OFFSET[12] = {1, 0, 2, 0, 3, 4, 0, 5, 0, 6, 0, 7};
-
 /* The degree (1..7) of an outer line's note in the major key on `tonic`, or 0 for a chromatic or an absent note. */
 static int degree_of(const OuterVoiceEntry *entry, int tonic) {
     if (entry == NULL || !entry->present) {
         return 0;
     }
     long position = pitch_numeric_value_position_numerator(entry->pitch);
-    return DEGREE_OF_OFFSET[pitch_class_of_midi(position - tonic)];
+    int degree = 0;
+    int alteration = 0;
+    if (!standard_tonality_degree_of_semitone((int)(position - tonic), STANDARD_TONALITY_MODE_MAJOR, &degree,
+                                              &alteration)) {
+        return 0;
+    }
+    return alteration == 0 ? degree : 0;
 }
 
 static void claim_intervals(const StandardTonalityRomanClaim *claim, int out[4], size_t *count) {

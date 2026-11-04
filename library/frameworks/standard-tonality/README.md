@@ -40,6 +40,8 @@ Rules about how pitches relate within a key:
   half step below the major scale's on the same tonic. Descending scales
   are listed from the upper tonic. Spelling rules are shared with major
   (`scale_pattern.h`).
+- **Degree of a semitone** (`tonal_key.h`): `standard_tonality_degree_of_semitone` is the one owner of the no-context
+  degree and alteration of a chromatic note (semitone 1 is `b2`, R-285); common-practice-minimal and the chain call it.
 - **Minor scale degrees** (`minor_scale_degree_rules.h`): same numbers as
   major; solfege me, le, te (natural), ti for harmonic, la ti for melodic
   ascending; the subtonic (te, a whole step below the tonic) beside the

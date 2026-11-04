@@ -51,6 +51,9 @@ static int check_file(const char *path) {
         if (strncmp(start, "common-practice-minimal/", 24) == 0) {
             continue; /* same-framework header, by its public path */
         }
+        if (strcmp(start, "standard-tonality/tonal_key.h") == 0) {
+            continue; /* the scale degree owner (R-285), the one framework edge */
+        }
 
         if (strcmp(start, "framework.h") == 0 || strcmp(start, "theory/framework.h") == 0 ||
             strcmp(start, "theory/framework_singleton.h") == 0 ||

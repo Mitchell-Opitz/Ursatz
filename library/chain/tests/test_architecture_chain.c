@@ -37,6 +37,7 @@ static const char *FRAMEWORK_HEADERS[] = {
     "standard-tonality/analysis/roman_numeral_adapter.h",
     "standard-tonality/seventh_rules.h",
     "standard-tonality/triad_rules.h",
+    "standard-tonality/tonal_key.h",
     "standard-harmony/harmony_key_change.h",
     "standard-harmony/harmony_cadence_rules.h",
     "common-practice-minimal/outer_scale_degrees.h",
