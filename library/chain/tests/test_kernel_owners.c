@@ -109,11 +109,13 @@ static void test_refusals(void) {
     StandardFormMotiveShape proto = shape(false, 3, a, a, gaps, 60);
     StandardFormMotiveShape unrelated = shape(false, 3, b, b, gaps, 60);
     StandardFormMotiveShape rhythm = shape(false, 3, a, a, other_gaps, 60);
-    StandardFormMotiveShape shorter = shape(false, 2, a, a, gaps, 60);
+    StandardFormMotiveShape shorter = shape(false, 2, b, b, gaps, 60);    /* not a part of the prototype */
+    StandardFormMotiveShape too_short = shape(false, 1, a, a, gaps, 60); /* a part, but below the fewest intervals */
     StandardFormRelationMatch m;
     assert(!chain_match_motive_relation(&proto, &unrelated, &m, NULL));
     assert(!chain_match_motive_relation(&proto, &rhythm, &m, NULL));
     assert(!chain_match_motive_relation(&proto, &shorter, &m, NULL));
+    assert(!chain_match_motive_relation(&proto, &too_short, &m, NULL));
     assert(!chain_match_motive_relation(NULL, &proto, &m, NULL));
     assert(!chain_match_motive_relation(&proto, &proto, NULL, NULL));
 }
