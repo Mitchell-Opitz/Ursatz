@@ -60,7 +60,7 @@ MotifWindowMatchingResult motif_window_matching_compare(const MotifWindow *a, si
 }
 
 MotifWindowMatchingResult motif_window_matching_find(const MotifWindow *windows, size_t window_count,
-                                                       MotifDetectionOccurrence **out_occurrences,
+                                                       MotifWindowOccurrence **out_occurrences,
                                                        size_t *out_occurrence_count) {
     if (window_count > 0 && windows == NULL) {
         return MOTIF_WINDOW_MATCHING_ERR_NULL_WINDOWS;
@@ -107,8 +107,8 @@ MotifWindowMatchingResult motif_window_matching_find(const MotifWindow *windows,
         return MOTIF_WINDOW_MATCHING_OK;
     }
 
-    MotifDetectionOccurrence *occurrences =
-        (MotifDetectionOccurrence *)calloc(matched_count, sizeof(MotifDetectionOccurrence));
+    MotifWindowOccurrence *occurrences =
+        (MotifWindowOccurrence *)calloc(matched_count, sizeof(MotifWindowOccurrence));
     if (occurrences == NULL) {
         free(has_match);
         return MOTIF_WINDOW_MATCHING_ERR_ALLOC;
@@ -132,4 +132,4 @@ MotifWindowMatchingResult motif_window_matching_find(const MotifWindow *windows,
     return MOTIF_WINDOW_MATCHING_OK;
 }
 
-void motif_window_matching_destroy_occurrences(MotifDetectionOccurrence *occurrences) { free(occurrences); }
+void motif_window_matching_destroy_occurrences(MotifWindowOccurrence *occurrences) { free(occurrences); }

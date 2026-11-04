@@ -217,7 +217,7 @@ static void test_windows(void) {
     }
 
     /* The kernel called directly names the same windows. */
-    MotifDetectionOccurrence *found;
+    MotifWindowOccurrence *found;
     size_t found_count;
     assert(motif_window_matching_find(kernel_windows, 5, &found, &found_count) == MOTIF_WINDOW_MATCHING_OK);
     for (int i = 0; i < 5; i++) {

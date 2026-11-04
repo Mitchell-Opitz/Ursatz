@@ -137,21 +137,6 @@ add_library(ursatz
     theory/style_features.c
     theory/style_model_build.c
     theory/style_model_blend.c
-    transform/transformation.c
-    transform/transform_support.c
-    transform/transform_result.c
-    transform/transposition.c
-    transform/inversion.c
-    transform/retrograde.c
-    transform/retrograde_inversion.c
-    transform/augmentation.c
-    transform/diminution.c
-    transform/fragmentation.c
-    transform/expansion.c
-    transform/contraction.c
-    transform/displacement.c
-    transform/ornamentation.c
-    transform/intervallic_manipulation.c
     analysis/analyzer.c
     analysis/feature_extraction.c
     analysis/interval_analysis.c
@@ -162,7 +147,6 @@ add_library(ursatz
     analysis/voice_separation.c
     analysis/cadence_detection.c
     analysis/cadence_classification.c
-    analysis/motif_detection.c
     analysis/motif_window_matching.c
     analysis/motive_sketch.c
     analysis/motive_relation.c
@@ -233,7 +217,6 @@ ursatz_public_headers(ursatz
         analysis/cadence_classification.h
         analysis/cadence_detection.h
         analysis/form_structure_detection.h
-        analysis/motif_detection.h
         analysis/motif_window_matching.h
         analysis/motive_link.h
         analysis/motive_relation.h

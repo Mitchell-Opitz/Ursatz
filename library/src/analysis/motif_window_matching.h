@@ -9,15 +9,21 @@
 
 #include <stddef.h>
 
-#include "analysis/motif_detection.h"
 #include "identity/entity_id.h"
 #include "semantics/contour.h"
 #include "semantics/motif_window.h"
 #include "semantics/rhythmic_pattern.h"
 
+/* A window that matched at least one other: its event ids (borrowed) and the confidence of the match. */
+typedef struct {
+    const EntityID *const *matched_event_ids;
+    size_t matched_event_id_count;
+    unsigned long confidence_numerator;
+    unsigned long confidence_denominator;
+} MotifWindowOccurrence;
+
 /*
- * MotifWindowMatching (Procedure, feeds MotifDetection's
- * MotifDetectionInput, Registry #20): finds candidate-motif windows
+ * MotifWindowMatching (Procedure, Registry #20): finds candidate-motif windows
  * that repeat elsewhere in a piece by comparing each window's Contour
  * direction sequence (semantics/contour.h) and RhythmicPattern
  * duration sequence (semantics/rhythmic_pattern.h) for exact equality.
@@ -92,7 +98,7 @@ MotifWindowMatchingResult motif_window_matching_compare(const MotifWindow *a, si
  *
  * On success, *out_occurrences is a freshly allocated array (caller
  * frees with motif_window_matching_destroy_occurrences) of one
- * MotifDetectionOccurrence per window that matched at least one other
+ * MotifWindowOccurrence per window that matched at least one other
  * window, in input order; each occurrence's matched_event_ids/
  * matched_event_id_count borrow directly from the corresponding
  * window's event_ids (no copy), and confidence is fixed at 1/1.
@@ -100,12 +106,12 @@ MotifWindowMatchingResult motif_window_matching_compare(const MotifWindow *a, si
  * *out_occurrences left NULL.
  */
 MotifWindowMatchingResult motif_window_matching_find(const MotifWindow *windows, size_t window_count,
-                                                       MotifDetectionOccurrence **out_occurrences,
+                                                       MotifWindowOccurrence **out_occurrences,
                                                        size_t *out_occurrence_count);
 
 /* Frees the array returned by motif_window_matching_find. Does not touch the
    borrowed event_ids each occurrence points at -- those remain owned by
    whatever owns the original MotifWindow array. */
-void motif_window_matching_destroy_occurrences(MotifDetectionOccurrence *occurrences);
+void motif_window_matching_destroy_occurrences(MotifWindowOccurrence *occurrences);
 
 #endif
