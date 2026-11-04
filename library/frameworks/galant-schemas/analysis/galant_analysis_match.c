@@ -8,9 +8,11 @@
 #include "galant_analysis_claim.h"
 #include "galant_matching_rules.h"
 #include "galant_prototypes.h"
+#include "core/rational.h"
 #include "core/value.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_spelling.h"
+#include "time/time_rational.h"
 
 #define NONE ((size_t)-1)
 #define MAX_FRAMES 8
@@ -22,31 +24,19 @@ GalantMatchConfig galant_match_config_default(void) {
 
 /* --- exact times --- */
 
-typedef struct {
-    long long n;
-    long long d;
-} Q;
-
-static Q q_of(const MusicalTime *time) {
-    Q q = {musical_time_numerator(time), (long long)musical_time_denominator(time)};
-    return q;
+/* The time of a segment edge, read exactly. False when it does not fit a Rational. */
+static bool seg_start(const GalantSegmentList *s, size_t i, Rational *out) {
+    return rational_of_musical_time(time_span_start(s->items[i].span), out) == RATIONAL_OK;
 }
 
-static Q q_sub(Q a, Q b) {
-    Q q = {a.n * b.d - b.n * a.d, a.d * b.d};
-    return q;
+static bool seg_end(const GalantSegmentList *s, size_t i, Rational *out) {
+    return rational_of_musical_time(time_span_end(s->items[i].span), out) == RATIONAL_OK;
 }
 
-static double q_double(Q a) {
-    return (double)a.n / (double)a.d;
-}
-
-static Q seg_start(const GalantSegmentList *s, size_t i) {
-    return q_of(time_span_start(s->items[i].span));
-}
-
-static Q seg_end(const GalantSegmentList *s, size_t i) {
-    return q_of(time_span_end(s->items[i].span));
+/* The start of segment `i` less `from`, as whole notes. False when a step does not fit a Rational. */
+static bool gap_from(const GalantSegmentList *s, size_t i, Rational from, Rational *gap) {
+    Rational start;
+    return seg_start(s, i, &start) && rational_sub(start, from, gap) == RATIONAL_OK;
 }
 
 static double seg_beat(const GalantSegmentList *s, size_t i) {
@@ -276,20 +266,25 @@ static void extend(Search *search, Candidate *c, size_t stage, size_t from, unsi
         return;
     }
     size_t previous_last = NONE;
-    Q previous_end = {0, 1};
+    Rational previous_end = rational_ratio(0, 1);
     double previous_beat = 1.0;
     if (stage > 0) {
         previous_last = c->seg2[stage - 1] != NONE ? c->seg2[stage - 1] : c->seg[stage - 1];
-        previous_end = seg_end(s, previous_last);
+        if (!seg_end(s, previous_last, &previous_end)) {
+            return; /* a time that does not fit: no match is read from here */
+        }
         previous_beat = seg_beat(s, previous_last);
     }
     for (size_t j = from; j < s->count && (stage > 0 || j == from); j++) {
         if (stage > 0) {
-            Q gap = q_sub(seg_start(s, j), previous_end);
-            if (gap.n < 0) {
+            Rational gap;
+            if (!gap_from(s, j, previous_end, &gap)) {
+                continue; /* the gap does not fit a Rational: this segment is refused */
+            }
+            if (rational_is_negative(gap)) {
                 continue;
             }
-            if (q_double(gap) / previous_beat > search->config.max_gap_beats + 1e-9) {
+            if (rational_to_double(gap) / previous_beat > search->config.max_gap_beats + 1e-9) {
                 break;
             }
         }
@@ -313,9 +308,13 @@ static size_t frames_for(const GalantSegmentList *s, size_t start, size_t stage_
     size_t count = 0;
     frames[count++] = (GalantPitchDegree){1, 0};
     double limit = (double)stage_count * (config->max_gap_beats + 4.0) * seg_beat(s, start);
-    Q begin = seg_start(s, start);
+    Rational begin;
+    if (!seg_start(s, start, &begin)) {
+        return count;
+    }
     for (size_t j = start; j < s->count && count < MAX_FRAMES; j++) {
-        if (q_double(q_sub(seg_start(s, j), begin)) > limit) {
+        Rational reach;
+        if (!gap_from(s, j, begin, &reach) || rational_to_double(reach) > limit) {
             break;
         }
         bool seen = false;
