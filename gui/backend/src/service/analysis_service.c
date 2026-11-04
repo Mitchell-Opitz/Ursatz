@@ -36,6 +36,7 @@
 #include <ursatz_analyzer/analysis_report.h>
 #include <ursatz_analyzer/input_pipeline.h>
 #include <ursatz_analyzer/notation_reading.h>
+#include <ursatz_analyzer/score_export.h>
 #include <ursatz_analyzer/version.h>
 
 static bool path_exists(const char *path) {
@@ -632,27 +633,6 @@ static bool import_piece(const char *dir_path, InputFormat format, ImportedNotes
     return true;
 }
 
-/* The id the score export writes as <note xml:id> for an event with this
-   EntityID value: a leading 'n' unless it starts with a letter or '_', and
-   every character outside [A-Za-z0-9_.-] replaced by '_'. */
-static char *score_note_xml_id(const char *raw) {
-    size_t length = strlen(raw);
-    char *out = malloc(length + 2);
-    if (!out) {
-        return NULL;
-    }
-    size_t pos = 0;
-    if (length == 0 || !(isalpha((unsigned char)raw[0]) || raw[0] == '_')) {
-        out[pos++] = 'n';
-    }
-    for (size_t i = 0; i < length; i++) {
-        unsigned char c = (unsigned char)raw[i];
-        out[pos++] = (isalnum(c) || c == '_' || c == '.' || c == '-') ? (char)c : '_';
-    }
-    out[pos] = '\0';
-    return out;
-}
-
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, const char *id,
                                                         UrsatzGuiPieceDetail **out_detail) {
     char dir_path[320];
@@ -693,16 +673,24 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece(const char *pieces_dir, co
         ursatz_gui_piece_detail_destroy(detail);
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
-    detail->note_xml_ids = notes.count > 0 ? calloc(notes.count, sizeof(char *)) : NULL;
-    bool ok = notes.count == 0 || detail->note_xml_ids != NULL;
-    for (size_t i = 0; ok && i < notes.count; i++) {
-        detail->note_xml_ids[i] = score_note_xml_id(entity_id_value(note_event_id(notes.events[i])));
+    char **ids = NULL;
+    size_t id_count = 0;
+    AnalyzerStatus ids_status = analyzer_score_note_xml_ids(&notes, &ids, &id_count);
+    imported_notes_destroy(&notes);
+    if (ids_status != ANALYZER_OK) {
+        ursatz_gui_piece_detail_destroy(detail);
+        return ids_status == ANALYZER_ERR_ALLOC ? URSATZ_GUI_ANALYSIS_ERR_ALLOC : URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
+    }
+    detail->note_xml_ids = id_count > 0 ? calloc(id_count, sizeof(char *)) : NULL;
+    bool ok = id_count == 0 || detail->note_xml_ids != NULL;
+    for (size_t i = 0; ok && i < id_count; i++) {
+        detail->note_xml_ids[i] = ursatz_gui_dup_string(ids[i]);
         if (!detail->note_xml_ids[i]) {
             ok = false;
         }
         detail->note_count = i + 1;
     }
-    imported_notes_destroy(&notes);
+    analyzer_score_note_xml_ids_destroy(ids, id_count);
     if (!ok) {
         ursatz_gui_piece_detail_destroy(detail);
         return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
@@ -1052,7 +1040,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
 
     char *xml = NULL;
     MusicXmlExportResult result = musicxml_export_write_score(&score, &xml);
-    bool meter_defaulted = notes.meter.meter_map ? meter_map_is_defaulted(notes.meter.meter_map) : true;
+    bool meter_defaulted = analyzer_imported_meter_defaulted(&notes);
     free(parts);
     free(keys);
     free(title);
