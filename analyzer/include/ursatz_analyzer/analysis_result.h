@@ -37,7 +37,8 @@ typedef enum {
  * With fewer, the result holds the chain and the claims its stages give, and analyzer_result_report is an empty report.
  * The Analyzer-only stages read the chain's results: a bit set without the chain stage it reads gives no entries.
  * ANALYZER_STAGE_VOICING and ANALYZER_STAGE_COUNTERPOINT are reserved: those checks need a species and a voice choice
- * the options do not carry, so they stay on their own entries (voicing_check.h, counterpoint_pipeline.h).
+ * the options do not carry. Voicing stays on its own entry (voicing_check.h); counterpoint is checked with
+ * standard-counterpoint, not by the Analyzer.
  */
 #define ANALYZER_STAGE_PROGRESSIONS    (1u << 12)
 #define ANALYZER_STAGE_HARMONIC_RHYTHM (1u << 13)
