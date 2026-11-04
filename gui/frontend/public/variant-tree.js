@@ -22,6 +22,11 @@
     return request;
   }
 
+  /* A request the backend runs as a job (backend-jobs.js). */
+  function jobRequest(method, url, body) {
+    return Object.assign(jsonRequest(method, url, body), { job: true });
+  }
+
   function itemUrl(id, tail) {
     return `/api/materials/items/${encodeURIComponent(id)}/${tail}`;
   }
@@ -298,7 +303,7 @@
     if (Number.isNaN(value)) {
       return { error: "Seed must be a whole number from 0" };
     }
-    return { request: jsonRequest("POST", itemUrl(id, "each-op"), value === null ? {} : { seed: value }) };
+    return { request: jobRequest("POST", itemUrl(id, "each-op"), value === null ? {} : { seed: value }) };
   }
 
   function opChecksRequest(id) {
@@ -456,7 +461,7 @@
     if (functions.length > 0) {
       body.functions = functions;
     }
-    return { request: jsonRequest("POST", itemUrl(id, "variants"), body) };
+    return { request: jobRequest("POST", itemUrl(id, "variants"), body) };
   }
 
   /* The chain of a candidate with the drawn parameters left open, so the
@@ -484,7 +489,7 @@
   /* Reroll of one candidate: its chain again, one candidate, the next seed. */
   function candidateRerollRequest(id, candidate) {
     const seed = candidate && Number.isInteger(candidate.seed) ? candidate.seed + 1 : 0;
-    return jsonRequest("POST", itemUrl(id, "variants"), { chain: fixedChain(candidate), count: 1, seed });
+    return jobRequest("POST", itemUrl(id, "variants"), { chain: fixedChain(candidate), count: 1, seed });
   }
 
   function operationNames(candidate) {
@@ -526,7 +531,7 @@
   }
 
   function rerollRequest(id) {
-    return jsonRequest("POST", itemUrl(id, "reroll"));
+    return jobRequest("POST", itemUrl(id, "reroll"));
   }
 
   function treeRequest(id) {

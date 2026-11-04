@@ -11,7 +11,56 @@ const materialsState = {
   notice: "",
 };
 
+/* The bar over the page while a job runs: its stage ("melody 6/9") and a Cancel button. Returns {update, remove, signal}. */
+function showJobProgress() {
+  const controller = new AbortController();
+  const bar = document.createElement("div");
+  bar.className = "job-progress";
+  const label = document.createElement("span");
+  label.textContent = BackendJobs.progressText({ state: "queued" });
+  const cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.textContent = "Cancel";
+  cancel.addEventListener("click", () => {
+    cancel.disabled = true;
+    label.textContent = "cancelling";
+    controller.abort();
+  });
+  bar.append(label, cancel);
+  document.body.appendChild(bar);
+  return {
+    signal: controller.signal,
+    update: (progress) => {
+      if (!controller.signal.aborted) {
+        label.textContent = BackendJobs.progressText(progress);
+      }
+    },
+    remove: () => bar.remove(),
+  };
+}
+
+/* A job request (R-219): run on the backend queue, answered as the route answered before. A cancelled job answers
+   {ok: false, status: 499, cancelled: true}, and the page is as it was before the request. */
+async function sendJobRequest(request) {
+  const progress = showJobProgress();
+  try {
+    const result = await BackendJobs.runJob(request, { signal: progress.signal, onProgress: progress.update });
+    const data = result.body;
+    return {
+      ok: result.status >= 200 && result.status < 300 && !(data && data.error),
+      status: result.status,
+      data,
+      cancelled: Boolean(result.cancelled),
+    };
+  } finally {
+    progress.remove();
+  }
+}
+
 function sendMaterialsRequest(request) {
+  if (request.job) {
+    return sendJobRequest(request);
+  }
   return fetchJsonResult(request.url, {
     method: request.method,
     headers: request.headers,
