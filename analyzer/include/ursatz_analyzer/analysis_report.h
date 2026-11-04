@@ -511,7 +511,7 @@ typedef struct {
     double first_beat;       /* 1-based, in beats of the first measure */
     size_t *note_ids;        /* owned; ImportedNotes indices of the occurrence's soprano notes */
     size_t note_id_count;
-    const char *kind;        /* the library's StandardFormMotiveKind name, relative to the family's prototype: "exact",
+    const char *kind;        /* the library's MotiveOccurrenceKind name, relative to the family's prototype: "exact",
                                 "real-transposed", "tonal-transposed", "inverted", "retrograde", "augmented",
                                 "diminished", "fragmented" or "varied"; the prototype is "exact" */
     double score;            /* the library's, in [0, 1]: 1 minus mismatches over intervals, times its rhythm factor */
