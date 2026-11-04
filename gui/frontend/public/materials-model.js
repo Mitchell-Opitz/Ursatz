@@ -737,28 +737,23 @@
     return jsonRequest("POST", "/api/materials/render", request);
   }
 
-  const RANDOM_METERS = ["4/4", "3/4", "2/4", "6/8"];
-
-  /* The mode and meter a seed draws: the seed is mixed, then picks one of major or minor and one of RANDOM_METERS. */
-  function randomSettings(seed) {
-    const n = Number.isInteger(Number(seed)) && Number(seed) >= 0 ? Number(seed) : 0;
-    const mixed = Math.imul((n % 4294967296) + 1, 2654435761) >>> 0;
-    return { mode: (mixed >>> 8) % 2 === 0 ? "major" : "minor", meter: RANDOM_METERS[(mixed >>> 16) % RANDOM_METERS.length] };
-  }
-
-  /* The random motif POST for the drawn values {mode, meter, seed}: one motif, form full, key C in the mode (R-179;
-   * without a key the Composer gives A minor for minor). */
+  /* The random motif POST for a seed: one motif, form full, with the mode and the meter left to the Composer, which
+   * draws them from the seed (R-269). Without a key the Composer writes C major or A minor. values: {seed}. */
   function randomRequest(values) {
     const v = values || {};
-    const mode = v.mode === "minor" ? "minor" : "major";
     return jsonRequest("POST", "/api/materials/motifs/random", {
-      mode,
-      key: `C ${mode}`,
-      meter: String(v.meter || "").trim(),
+      mode: "random",
+      meter: "random",
       form: "full",
       count: 1,
       seed: Number(v.seed),
     });
+  }
+
+  /* The mode and meter the Composer drew, from the random route's answer, or null when it names neither. */
+  function drawnSettings(data) {
+    const drawn = data && data.drawn && typeof data.drawn === "object" ? data.drawn : null;
+    return drawn && typeof drawn.mode === "string" && typeof drawn.meter === "string" ? { mode: drawn.mode, meter: drawn.meter } : null;
   }
 
   /* The key text of a random candidate's motive ("D minor"), or "" when it has none. */
@@ -1040,7 +1035,7 @@
     renderRequest,
     versionScoreUrls,
     randomRequest,
-    randomSettings,
+    drawnSettings,
     randomCandidateToBody,
     candidateKeyText,
     randomCandidate,

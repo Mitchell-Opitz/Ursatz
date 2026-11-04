@@ -2969,7 +2969,8 @@ static int handle_update_use(struct mg_connection *conn, const char *id, const c
 }
 
 /* POST /api/materials/motifs/random {mode, meter, key?, form?, style_id?, count?, seed?}: random motives from the
-   Composer; nothing is saved. The answer is the Composer's document plus "ok". */
+   Composer; nothing is saved. mode and meter may be "random": the Composer draws them from the seed and says what it
+   drew as "drawn". The answer is the Composer's document plus "ok". */
 static int handle_random_motifs(struct mg_connection *conn) {
   int status = 0;
   cJSON *body = read_json_body(conn, &status);
@@ -3000,7 +3001,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
   if (role && role[0] == '\0') {
     role = NULL;
   }
-  bool valid = !bad && mode && (!role || motif_role_option(role)) && (strcmp(mode, "major") == 0 || strcmp(mode, "minor") == 0) && meter &&
+  bool valid = !bad && mode && (!role || motif_role_option(role)) && meter &&
                (!form || strcmp(form, "full") == 0 || strcmp(form, "rhythm") == 0 || strcmp(form, "contour") == 0) &&
                (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
                                 count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
@@ -3010,7 +3011,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
   if (!valid) {
     cJSON_Delete(body);
     return send_failure(conn, 400,
-                        "mode is major or minor, form full, rhythm or contour, role melodic or accompaniment, "
+                        "mode and meter are required, form full, rhythm or contour, role melodic or accompaniment, "
                         "count 1 to 16 and seed a whole number from 0");
   }
   char style_path[1024] = "";
