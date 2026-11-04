@@ -2,6 +2,8 @@
  * and items, item rows, version labels and the current project filter. No
  * DOM; materials-view.js renders from these. */
 (function (root) {
+  /* The Composer's words (R-270, R-276): the modes, tone labels and tonic spellings are read when asked. */
+  const Vocab = root.Vocabulary || (typeof require === "function" ? require("./vocabulary.js") : null);
   const ALL_PROJECTS = "all";
   const FILTER_KEY = "ursatz.materials.project";
   const TYPES = [
@@ -439,73 +441,29 @@
   const SEGMENTS_HINT = "Named note ranges, for example head and tail. Liquidation and motive-forms keep or drop them.";
   const HARMONY_HINT = "Own chords, e.g. I V6@2 I@3: upper case Roman numerals (b or # before for an altered root; figures 6, 64, 7, 65, 43, 42) and @ the onset in beats. The first chord needs no onset. Up to 8 chords, at most 2 in a bar; empty uses the harmony proposed from the notes.";
   const HARMONY_MAX_CHARS = 200;
-  const HARMONY_TOKEN = /^([b#]?)(VII|VI|IV|V|III|II|I)(6|64|7|65|43|42)?(?:@(\d+(?:\/\d+)?))?$/;
-
-  /* Reads one chord of a harmony text (`V6@3/2`): {numeral, onset} with the onset in beats (null when none), or null
-   * when it is not a chord the Composer reads. The harmony field and the theme chord row share it. */
-  function parseHarmonyToken(token) {
-    const match = HARMONY_TOKEN.exec(String(token));
-    if (!match) {
-      return null;
-    }
-    let onset = null;
-    if (match[4] !== undefined) {
-      const [top, bottom] = match[4].split("/").map(Number);
-      onset = bottom === undefined ? top : bottom === 0 ? NaN : top / bottom;
-    }
-    return { numeral: `${match[1]}${match[2]}${match[3] || ""}`, onset };
-  }
   const HARMONY_DEFAULT_PLACEHOLDER = "I (proposed)";
 
   /* The tone label abbreviations (R-195): CT is a chord tone, ? an unclassified note. */
-  const TONE_ABBREVIATIONS = {
-    passing: "PT",
-    neighbor: "NT",
-    appoggiatura: "APP",
-    suspension: "SUS",
-    retardation: "RET",
-    escape: "ET",
-    anticipation: "ANT",
-    "double-neighbor": "DN",
-    "changing-tone": "CT2",
-    pedal: "PED",
-  };
-  const TONE_CHORD_LABEL = "CT";
   const TONE_UNCLASSIFIED_LABEL = "?";
+  const toneAbbreviation = (type) => (Vocab.entry("tone_labels", type) || {}).abbreviation;
 
   /* The label of one entry of analysis.tones. */
   function toneLabel(tone) {
     if (tone.role === "chord") {
-      return TONE_CHORD_LABEL;
+      return toneAbbreviation("chord");
     }
-    if (tone.role === "non-chord" && TONE_ABBREVIATIONS[tone.type]) {
-      return TONE_ABBREVIATIONS[tone.type];
+    if (tone.role === "non-chord" && toneAbbreviation(tone.type)) {
+      return toneAbbreviation(tone.type);
     }
     return TONE_UNCLASSIFIED_LABEL;
   }
 
-  /* The values of a tone override as the Composer's --tone roles, with the Automatic choice (no override) first. */
-  const TONE_ROLE_OPTIONS = [
-    { value: "", label: "Automatic" },
-    { value: "chord", label: "Chord tone" },
-    { value: "passing", label: "Passing tone" },
-    { value: "neighbor", label: "Neighbor tone" },
-    { value: "appoggiatura", label: "Appoggiatura" },
-    { value: "suspension", label: "Suspension" },
-    { value: "retardation", label: "Retardation" },
-    { value: "escape", label: "Escape tone" },
-    { value: "anticipation", label: "Anticipation" },
-    { value: "double-neighbor", label: "Double neighbor" },
-    { value: "changing-tone", label: "Changing tone" },
-    { value: "pedal", label: "Pedal" },
-  ];
+  /* The values of a tone override as the Composer's tone roles, with an empty choice first (no override). */
+  const toneRoleOptions = () => [{ value: "", label: "" }, ...Vocab.list("tone_labels").map(({ value, label }) => ({ value, label }))];
 
   /* The abbreviation of an override value ("passing" gives "PT", "chord" gives "CT"); null for Automatic. */
   function toneRoleLabel(value) {
-    if (value === "chord") {
-      return TONE_CHORD_LABEL;
-    }
-    return TONE_ABBREVIATIONS[value] || null;
+    return value ? toneAbbreviation(value) || null : null;
   }
 
   /* The overrides {"<note>": "<role>"} after setting note (1-based) to value; "" (Automatic) removes it. A new object. */
@@ -567,7 +525,7 @@
     return form === "rhythm" ? RHYTHM_HINT : form === "contour" ? CONTOUR_HINT : NOTE_HINT;
   }
 
-  const MOTIF_MODES = ["major", "minor"];
+  const motifModes = () => Vocab.values("modes");
   const TONIC_HINT = "Write the notes with C as the tonic. A piece sets the real key.";
 
   /* The mode of a stored key text ("D minor" gives "minor"); "major" when there is none. */
@@ -633,7 +591,7 @@
     }
     return jsonRequest("POST", "/api/materials/motifs/to-c", {
       degrees: motif.degrees,
-      mode: MOTIF_MODES.includes(mode) ? mode : "major",
+      mode: motifModes().includes(mode) ? mode : "major",
       meter: typeof motif.meter === "string" ? motif.meter : "4/4",
       pickup: typeof motif.pickup === "string" && motif.pickup !== "" ? motif.pickup : "0",
     });
@@ -654,19 +612,13 @@
   }
 
   /* Problems with the form values as {field, message}; empty when it can be
-   * sent. The Composer judges the note list itself. */
+   * sent. The Composer judges the values itself (notes, meter, pickup, harmony), through the validate route. */
   function motifFormProblems(values) {
     const problems = [];
     if (values.legacyKey) {
       problems.push({ field: "notes", message: "Rewrite the motif in C before saving." });
     } else if (String(values.notes || "").trim() === "") {
       problems.push({ field: "notes", message: "Enter at least one note." });
-    }
-    if (!/^\d{1,2}\/\d{1,2}$/.test(String(values.meter || "").trim())) {
-      problems.push({ field: "meter", message: "Meter looks like 4/4." });
-    }
-    if (!/^\d{1,2}(\/\d{1,2})?$/.test(String(values.pickup || "").trim())) {
-      problems.push({ field: "pickup", message: "Pickup is beats as 0, 1 or 1/2." });
     }
     if (Array.from(String(values.harmony || "")).length > HARMONY_MAX_CHARS) {
       problems.push({ field: "harmony", message: `Harmony is at most ${HARMONY_MAX_CHARS} characters.` });
@@ -685,6 +637,20 @@
       return "harmony";
     }
     return /feature|segment/i.test(text) ? "features" : "notes";
+  }
+
+  /* The editor field a request path of the Composer belongs to (R-276): the note list for /input and /tones. */
+  function fieldForPath(path) {
+    const value = String(path || "");
+    const table = [["/meter", "meter"], ["/pickup", "pickup"], ["/harmony", "harmony"], ["/features", "features"], ["/key", "mode"]];
+    const hit = table.find(([prefix]) => value === prefix || value.startsWith(`${prefix}/`));
+    return hit ? hit[1] : "notes";
+  }
+
+  /* The request that asks the backend to check the editor values with the Composer (POST
+   * /api/materials/items/validate); previous is the body being edited, or null for a new motif. */
+  function validateRequest(values, previous) {
+    return jsonRequest("POST", "/api/materials/items/validate", { type: "motif", body: buildMotifBody(values, previous) });
   }
 
   /* Messages for the feature rows (1-based first and last note). */
@@ -732,7 +698,7 @@
         form: values.form,
         notes: String(values.notes).trim(),
         meter: String(values.meter).trim(),
-        key: `C ${MOTIF_MODES.includes(values.mode) ? values.mode : "major"}`,
+        key: `C ${motifModes().includes(values.mode) ? values.mode : "major"}`,
         pickup: String(values.pickup || "").trim() === "" ? "0" : String(values.pickup).trim(),
         harmony: String(values.harmony || "").trim() === "" ? null : String(values.harmony).trim(),
         ...(Object.keys(values.toneOverrides || {}).length > 0 ? { tone_overrides: { ...values.toneOverrides } } : {}),
@@ -748,7 +714,6 @@
     };
   }
 
-  const KEY_TONICS = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 
   /* The POST that renders a motif body to MusicXML and playback in the motif's own key. */
   function renderRequest(body) {
@@ -809,8 +774,9 @@
 
   function candidateKeyText(candidate) {
     const key = candidate && candidate.motive && candidate.motive.motive ? candidate.motive.motive.key : null;
-    const tonic = key && Number.isInteger(key.tonic_pitch_class) ? KEY_TONICS[key.tonic_pitch_class] : null;
-    return tonic && typeof key.mode === "string" ? `${tonic} ${key.mode}` : "";
+    const names = key && Number.isInteger(key.tonic_pitch_class) ? Vocab.entry("pitch_class_names", key.tonic_pitch_class) : null;
+    const tonic = names && typeof key.mode === "string" ? names[key.mode] : null;
+    return tonic ? `${tonic} ${key.mode}` : "";
   }
 
   /* The motif body to store for a random candidate (an entry of the random route's `motives`). values: the dialog
@@ -1041,11 +1007,12 @@
     formHint,
     errorField,
     HARMONY_HINT,
-    parseHarmonyToken,
     harmonyPlaceholder,
     toneChips,
     toneWarningText,
-    TONE_ROLE_OPTIONS,
+    get TONE_ROLE_OPTIONS() {
+      return toneRoleOptions();
+    },
     toneRoleLabel,
     withToneOverride,
     SEGMENTS_HINT,
@@ -1054,7 +1021,11 @@
     importNotice,
     toCRequest,
     legacyNotice,
-    MOTIF_MODES,
+    get MOTIF_MODES() {
+      return motifModes();
+    },
+    fieldForPath,
+    validateRequest,
     TONIC_HINT,
     keyMode,
     MOTIF_ROLES,

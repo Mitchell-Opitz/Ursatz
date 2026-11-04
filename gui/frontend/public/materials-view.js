@@ -991,6 +991,23 @@ function buildMotifEditor(body, tabStatus) {
     }
   }
 
+  /* The Composer reads the values while they are edited (R-276): its refusal shows under the field its path names. */
+  const validator = Vocabulary.createValidator({
+    build: () => MaterialsModel.validateRequest(values(), body),
+    field: MaterialsModel.fieldForPath,
+    show(result) {
+      if (!result.ok && result.complete) {
+        showError(result.message, result.field);
+      } else {
+        showError("");
+      }
+    },
+  });
+  for (const type of ["input", "change", "click"]) {
+    el.addEventListener(type, () => validator.check());
+  }
+  validator.check();
+
   return { el, values, fill, showProblems, showError };
 }
 
