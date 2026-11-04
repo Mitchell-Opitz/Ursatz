@@ -49,9 +49,7 @@
  * version's guarantee that at most one quality could ever match. When
  * that happens, the first match found in SEVENTH_INTERVALS scan order
  * (dominant7, major7, minor7, half-diminished7) wins, and the ambiguity
- * is only logged to stderr (see seventh_identification.c), not surfaced
- * through this function's return value -- known limitation, not fixed
- * here. A real confidence-weighted or duration-weighted tie-break is
+ * is reported through common_practice_identify_seventh_ex (out_ambiguous). A real confidence-weighted or duration-weighted tie-break is
  * out of scope for this pass, planned for later.
  *
  * Tie-break rule: matching is by interval-set only, never by which
@@ -71,6 +69,13 @@
  */
 bool common_practice_identify_seventh(const int *root_relative_intervals, size_t interval_count,
                                        CommonPracticeSeventh *out);
+
+/*
+ * As common_practice_identify_seventh, and sets *out_ambiguous (may be NULL) to true when more than one
+ * quality fits the input; *out is then the first match in scan order. *out_ambiguous is false on no match.
+ */
+bool common_practice_identify_seventh_ex(const int *root_relative_intervals, size_t interval_count,
+                                         CommonPracticeSeventh *out, bool *out_ambiguous);
 
 /*
  * Convenience: identifies the quality per common_practice_identify_seventh

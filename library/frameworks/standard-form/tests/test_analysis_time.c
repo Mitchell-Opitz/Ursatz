@@ -18,14 +18,8 @@ static bool is_zero(StandardFormQ q) {
 static void test_ordinary_values(void) {
     StandardFormQ a = standard_form_q(1, 4);
     StandardFormQ b = standard_form_q(1, 6);
-    StandardFormQ sum = standard_form_q_add(a, b);
-    assert(sum.n == 5 && sum.d == 12);
     StandardFormQ difference = standard_form_q_sub(a, b);
     assert(difference.n == 1 && difference.d == 12);
-}
-
-static void test_add_overflow_is_refused(void) {
-    assert(is_zero(standard_form_q_add(standard_form_q(1, BIG), standard_form_q(1, BIG + 1))));
 }
 
 static void test_sub_overflow_is_refused(void) {
@@ -34,7 +28,6 @@ static void test_sub_overflow_is_refused(void) {
 
 int main(void) {
     test_ordinary_values();
-    test_add_overflow_is_refused();
     test_sub_overflow_is_refused();
     printf("standard_form_analysis_time: ok\n");
     return 0;

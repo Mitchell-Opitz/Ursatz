@@ -3,6 +3,8 @@
 #   <include as written> <library path of the header>
 # Usage: scripts/app_includes.sh <app checkout>...
 # Run from anywhere; the library is the repository this script lives in.
+# A manual report only. Nothing here enforces anything: enforcement is each app's
+# check-library-includes.sh in CI.
 set -eu
 lib="$(cd "$(dirname "$0")/.." && pwd)"
 [ "$#" -ge 1 ] || { echo "usage: $0 <app checkout>..." >&2; exit 2; }

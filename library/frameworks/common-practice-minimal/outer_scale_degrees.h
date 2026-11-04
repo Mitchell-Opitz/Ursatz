@@ -4,14 +4,16 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "analysis/outer_voice.h"
+#include "identity/entity_id.h"
 #include "interpretation/key.h"
 #include "interpretation/scale_degree.h"
 #include "key_vocabulary.h"
+#include "pitch/pitch_numeric_value.h"
 
 /*
  * The scale degree of the soprano and the bass in each segment, under common-practice-minimal-v1. The
- * outer lines (analysis/outer_voice.h) are theory-neutral pitch heights; here each present note becomes a
+ * outer lines are theory-neutral pitch heights the caller extracts (the chain passes the kernel's
+ * analysis/outer_voice.h lines in the shape below; this framework does not include the kernel analysis layer); here each present note becomes a
  * ScaleDegree (interpretation/scale_degree.h) relative to the caller's key, a framework-relative claim
  * whose FrameworkReference is this framework's (the Registry requires it of every ScaleDegree).
  *
@@ -39,6 +41,22 @@
  * deterministic mapping). Its pitch is the PitchIdentity of the note's pitch.
  */
 
+/* One segment of an outer line, borrowed from the caller. When present is false, note_id and pitch are
+   ignored (an absent entry: a rest, a bridged gap or a register-guarded segment). */
+typedef struct {
+    size_t segment_index;
+    bool present;
+    const EntityID *note_id;
+    const PitchNumericValue *pitch;
+} CommonPracticeOuterEntry;
+
+/* The soprano and the bass, count entries each, both borrowed. */
+typedef struct {
+    const CommonPracticeOuterEntry *soprano;
+    const CommonPracticeOuterEntry *bass;
+    size_t count;
+} CommonPracticeOuterLines;
+
 typedef struct {
     ScaleDegree *soprano; /* owned; NULL when the soprano is absent in the segment */
     ScaleDegree *bass;    /* owned; NULL when the bass is absent in the segment */
@@ -59,7 +77,7 @@ typedef enum {
 } CommonPracticeOuterStatus;
 
 /* On OK, *out owns its degrees (common_practice_outer_degrees_destroy); otherwise *out is untouched. */
-CommonPracticeOuterStatus common_practice_outer_scale_degrees(const OuterVoiceLines *lines, const Key *key,
+CommonPracticeOuterStatus common_practice_outer_scale_degrees(const CommonPracticeOuterLines *lines, const Key *key,
                                                                int tonic_pitch_class, CommonPracticeKeyMode mode,
                                                                CommonPracticeOuterDegreeList *out);
 

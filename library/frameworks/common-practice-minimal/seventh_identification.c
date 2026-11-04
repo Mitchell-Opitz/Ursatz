@@ -2,7 +2,6 @@
 
 #include <stdbool.h>
 #include <stddef.h>
-#include <stdio.h>
 
 #define SEVENTH_INTERVAL_COUNT 4
 
@@ -40,8 +39,11 @@ static size_t count_distinct(const int *root_relative_intervals, size_t interval
     return distinct_count;
 }
 
-bool common_practice_identify_seventh(const int *root_relative_intervals, size_t interval_count,
-                                       CommonPracticeSeventh *out) {
+bool common_practice_identify_seventh_ex(const int *root_relative_intervals, size_t interval_count,
+                                             CommonPracticeSeventh *out, bool *out_ambiguous) {
+    if (out_ambiguous != NULL) {
+        *out_ambiguous = false;
+    }
     if (root_relative_intervals == NULL || out == NULL) {
         return false;
     }
@@ -68,11 +70,8 @@ bool common_practice_identify_seventh(const int *root_relative_intervals, size_t
         if (!found) {
             found = true;
             picked = (CommonPracticeSeventh)seventh;
-        } else {
-            fprintf(stderr,
-                    "common_practice_identify_seventh: ambiguous subset match -- picked %s, also fits %s "
-                    "(scan-order tie-break, see seventh_identification.h)\n",
-                    common_practice_seventh_label(picked), common_practice_seventh_label((CommonPracticeSeventh)seventh));
+        } else if (out_ambiguous != NULL) {
+            *out_ambiguous = true;
         }
     }
 
@@ -81,6 +80,11 @@ bool common_practice_identify_seventh(const int *root_relative_intervals, size_t
     }
     *out = picked;
     return true;
+}
+
+bool common_practice_identify_seventh(const int *root_relative_intervals, size_t interval_count,
+                                       CommonPracticeSeventh *out) {
+    return common_practice_identify_seventh_ex(root_relative_intervals, interval_count, out, NULL);
 }
 
 bool common_practice_identify_seventh_chord(const int *root_relative_intervals, size_t interval_count,

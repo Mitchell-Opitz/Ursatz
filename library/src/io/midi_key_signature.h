@@ -6,19 +6,13 @@
 #include <stdint.h>
 
 #include "pitch/key_signature.h"
-#include "semantics/analysis_key.h"
 #include "time/musical_time.h"
 
 /*
- * midi_key_signature: scans a Standard MIDI File buffer for the first
- * Key Signature meta-event (0xFF 0x59), independently of
- * midi_event_decoder (which only extracts note-on/note-off events and
- * discards meta-event contents without interpreting them).
- *
- * Reuses smf_reader for header/track chunking, then walks each track's
- * raw bytes with its own minimal event-length skipping (the delta-time
- * reader is midi_event_decoder_read_vlq), keeping this scan isolated from
- * midi_event_decoder_decode and its callers.
+ * midi_key_signature: scans a Standard MIDI File buffer for Key Signature
+ * meta-events (0xFF 0x59). Reuses smf_reader for header/track chunking, then
+ * feeds a collector from the one track walk midi_event_decoder_scan makes, so
+ * the walk exists once.
  *
  * Only the first key signature meta-event encountered (scanning tracks
  * in order, byte order within each track) is reported; later key
@@ -52,13 +46,6 @@ typedef enum {
  * left untouched.
  */
 MidiKeySignatureResult midi_key_signature_scan(const unsigned char *data, size_t size, MidiKeySignature *out);
-
-/*
- * midi_key_signature_analysis_key: the AnalysisKey a scanned key signature names, through
- * analysis_key_from_fifths (the "mi" byte picks major or minor). False when no key signature was
- * found, for NULL arguments, or for an sf outside -7..7; *out is then untouched. The id is NULL.
- */
-bool midi_key_signature_analysis_key(const MidiKeySignature *signature, AnalysisKey *out);
 
 /*
  * midi_key_signature_build: the KeySignature a MIDI "sf" (sharps/flats count) value
@@ -147,8 +134,8 @@ void midi_key_signature_events_destroy(MidiKeySignatureEvents *events);
 
 /*
  * Collector (internal to the io module, not part of the public surface): the per-event hook that
- * lets one pass over a file's tracks feed the key signatures too. midi_key_signature_scan_all walks
- * the tracks itself and feeds a collector; midi_importer_import_complete feeds the same collector
+ * lets one pass over a file's tracks feed the key signatures too. midi_key_signature_scan_all and midi_key_signature_scan feed
+ * a collector from midi_event_decoder_scan; midi_importer_import_complete feeds the same collector
  * from the one walk midi_event_decoder_scan makes, so the file is not scanned a second time.
  *
  * midi_key_signature_collector_meta takes any meta-event (type, payload, absolute tick) and keeps it

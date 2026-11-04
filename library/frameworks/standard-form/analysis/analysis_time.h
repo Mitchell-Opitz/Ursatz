@@ -17,7 +17,6 @@ typedef struct {
 
 StandardFormQ standard_form_q(long long n, long long d);
 int standard_form_q_compare(StandardFormQ a, StandardFormQ b);
-StandardFormQ standard_form_q_add(StandardFormQ a, StandardFormQ b);
 StandardFormQ standard_form_q_sub(StandardFormQ a, StandardFormQ b);
 
 bool standard_form_span_q(const TimeSpan *span, StandardFormQ *start, StandardFormQ *end);

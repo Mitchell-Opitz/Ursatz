@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "analysis/outer_voice.h"
 #include "core/framework_reference.h"
 #include "interpretation/interpretation.h"
 #include "interpretation/uncertainty.h"
@@ -59,6 +60,25 @@ static Key *make_key(CommonPracticeKeyMode mode, const char *tonic) {
     return key;
 }
 
+/* The chain's job: hands the kernel's outer lines to the framework in its own input shape. */
+static CommonPracticeOuterStatus scale_degrees_of(const OuterVoiceLines *lines, const Key *key, int tonic_pitch_class,
+                                                  CommonPracticeKeyMode mode, CommonPracticeOuterDegreeList *out) {
+    CommonPracticeOuterEntry *soprano = (CommonPracticeOuterEntry *)calloc(lines->count + 1, sizeof(CommonPracticeOuterEntry));
+    CommonPracticeOuterEntry *bass = (CommonPracticeOuterEntry *)calloc(lines->count + 1, sizeof(CommonPracticeOuterEntry));
+    assert(soprano != NULL && bass != NULL);
+    for (size_t i = 0; i < lines->count; i++) {
+        soprano[i] = (CommonPracticeOuterEntry){lines->soprano[i].segment_index, lines->soprano[i].present,
+                                                lines->soprano[i].note_id, lines->soprano[i].pitch};
+        bass[i] = (CommonPracticeOuterEntry){lines->bass[i].segment_index, lines->bass[i].present, lines->bass[i].note_id,
+                                             lines->bass[i].pitch};
+    }
+    CommonPracticeOuterLines view = {soprano, bass, lines->count};
+    CommonPracticeOuterStatus status = common_practice_outer_scale_degrees(&view, key, tonic_pitch_class, mode, out);
+    free(soprano);
+    free(bass);
+    return status;
+}
+
 static void assert_label(const ScaleDegree *degree, const char *label) {
     assert(degree != NULL);
     assert(strcmp(scale_degree_label(degree), label) == 0);
@@ -71,7 +91,7 @@ static void test_degrees_in_a_major_key(void) {
     OuterVoiceLines lines = make_lines(soprano, bass, 7);
     Key *key = make_key(COMMON_PRACTICE_KEY_MAJOR, "C");
     CommonPracticeOuterDegreeList degrees = {0};
-    assert(common_practice_outer_scale_degrees(&lines, key, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
+    assert(scale_degrees_of(&lines, key, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
            COMMON_PRACTICE_OUTER_OK);
     assert(degrees.count == 7);
     const char *soprano_labels[7] = {"1", "2", "3", "4", "5", "6", "7"};
@@ -92,7 +112,7 @@ static void test_degrees_in_a_transposed_major_key(void) {
     OuterVoiceLines lines = make_lines(soprano, bass, 4);
     Key *key = make_key(COMMON_PRACTICE_KEY_MAJOR, "Eb");
     CommonPracticeOuterDegreeList degrees = {0};
-    assert(common_practice_outer_scale_degrees(&lines, key, 3, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
+    assert(scale_degrees_of(&lines, key, 3, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
            COMMON_PRACTICE_OUTER_OK);
     assert_label(degrees.items[0].soprano, "1");
     assert_label(degrees.items[1].soprano, "5");
@@ -113,7 +133,7 @@ static void test_altered_degrees(void) {
     OuterVoiceLines lines = make_lines(soprano, bass, 5);
     Key *key = make_key(COMMON_PRACTICE_KEY_MAJOR, "C");
     CommonPracticeOuterDegreeList degrees = {0};
-    assert(common_practice_outer_scale_degrees(&lines, key, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
+    assert(scale_degrees_of(&lines, key, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
            COMMON_PRACTICE_OUTER_OK);
     const char *expected[5] = {"#4", "b7", "b2", "b6", "b3"};
     /* 80 is G#/Ab: offset 8 above C, which the major table spells b6. */
@@ -132,7 +152,7 @@ static void test_degrees_in_a_minor_key_including_the_raised_seventh(void) {
     OuterVoiceLines lines = make_lines(soprano, bass, 6);
     Key *key = make_key(COMMON_PRACTICE_KEY_MINOR, "A");
     CommonPracticeOuterDegreeList degrees = {0};
-    assert(common_practice_outer_scale_degrees(&lines, key, 9, COMMON_PRACTICE_KEY_MINOR, &degrees) ==
+    assert(scale_degrees_of(&lines, key, 9, COMMON_PRACTICE_KEY_MINOR, &degrees) ==
            COMMON_PRACTICE_OUTER_OK);
     const char *soprano_labels[6] = {"1", "3", "6", "7", "#7", "#6"};
     for (size_t i = 0; i < 6; i++) {
@@ -151,7 +171,7 @@ static void test_an_absent_line_has_no_scale_degree(void) {
     OuterVoiceLines lines = make_lines(soprano, bass, 3);
     Key *key = make_key(COMMON_PRACTICE_KEY_MAJOR, "C");
     CommonPracticeOuterDegreeList degrees = {0};
-    assert(common_practice_outer_scale_degrees(&lines, key, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
+    assert(scale_degrees_of(&lines, key, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
            COMMON_PRACTICE_OUTER_OK);
     assert(degrees.items[0].soprano != NULL && degrees.items[0].bass != NULL);
     assert(degrees.items[1].soprano == NULL && degrees.items[1].bass != NULL);
@@ -167,7 +187,7 @@ static void test_each_degree_carries_a_framework_reference_and_its_note(void) {
     OuterVoiceLines lines = make_lines(soprano, bass, 1);
     Key *key = make_key(COMMON_PRACTICE_KEY_MAJOR, "C");
     CommonPracticeOuterDegreeList degrees = {0};
-    assert(common_practice_outer_scale_degrees(&lines, key, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
+    assert(scale_degrees_of(&lines, key, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
            COMMON_PRACTICE_OUTER_OK);
 
     const ScaleDegree *degree = degrees.items[0].soprano;
@@ -206,11 +226,11 @@ static void test_rejects_bad_input(void) {
     CommonPracticeOuterDegreeList degrees = {NULL, 7};
     assert(common_practice_outer_scale_degrees(NULL, key, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
            COMMON_PRACTICE_OUTER_ERR_NULL_ARGUMENT);
-    assert(common_practice_outer_scale_degrees(&lines, NULL, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
+    assert(scale_degrees_of(&lines, NULL, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
            COMMON_PRACTICE_OUTER_ERR_NULL_ARGUMENT);
-    assert(common_practice_outer_scale_degrees(&lines, key, 12, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
+    assert(scale_degrees_of(&lines, key, 12, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
            COMMON_PRACTICE_OUTER_ERR_BAD_TONIC);
-    assert(common_practice_outer_scale_degrees(&lines, key, 0, (CommonPracticeKeyMode)7, &degrees) ==
+    assert(scale_degrees_of(&lines, key, 0, (CommonPracticeKeyMode)7, &degrees) ==
            COMMON_PRACTICE_OUTER_ERR_UNSUPPORTED_MODE);
     assert(degrees.items == NULL && degrees.count == 7); /* untouched */
 
@@ -221,7 +241,7 @@ static void test_rejects_bad_input(void) {
     assert(tuning_system_create(make_id("midi"), "MIDI note number", &tuning) == TUNING_SYSTEM_OK);
     assert(pitch_numeric_value_create(tuning, 145, 2, &fractional.soprano[0].pitch) == PITCH_NUMERIC_VALUE_OK);
     tuning_system_destroy(tuning);
-    assert(common_practice_outer_scale_degrees(&fractional, key, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
+    assert(scale_degrees_of(&fractional, key, 0, COMMON_PRACTICE_KEY_MAJOR, &degrees) ==
            COMMON_PRACTICE_OUTER_ERR_UNSUPPORTED_PITCH);
     outer_voice_lines_destroy(&fractional);
 

@@ -51,11 +51,18 @@ textbook; each README names the chapters it covers.
   build a `Preference` per soft rule, scored through `preference_rank`; the other frameworks have none.
 - **Hard vs. soft.** Rules phrased as "must" are hard. Rules phrased as "limit", "avoid" or
   "prefer" are soft.
-- **Dependency ceiling.** L0 to L6 plus `theory/framework.h`, `rules/rule.h` and
-  `rules/constraint.h`, plus any framework listed in its row above. Each framework's
+- **Dependency ceiling.** L0 to L6 plus `theory/framework.h`, `theory/framework_singleton.h`,
+  `rules/rule.h`, `rules/constraint.h`, `rules/preference.h` and `rules/rule_pair.h`, plus any
+  framework listed in its row above. Each framework's
   `tests/test_architecture_<name>.c` enforces this from the root build; a new include edge
   updates that allowlist in the same commit. Input from L8 analysis is passed in by the
   caller as plain data, never included.
+- **Test-only edges.** Framework tests follow the same layer rules (`tests/test_architecture_tests.c`).
+  Edges the tests have beyond the table above are in its `ALLOWED_TEST_EDGES` with a reason:
+  standard-harmony tests include standard-tonality (Roman numeral grammar cases) and the kernel
+  period detection; common-practice-minimal tests include the kernel outer voice lines (they hand them to
+  `common_practice_outer_scale_degrees` in its own input shape, `CommonPracticeOuterLines`);
+  standard-form tests include the chain; standard-meter tests include the MIDI importer.
 - **Vocabulary enums.** Names a framework needs (for example `CadenceType`, `VoicePart`) live
   as plain enums in `src/semantics/` and carry no framework claim. What each name means is the
   framework's convention. See `docs/modules/semantics.md`.

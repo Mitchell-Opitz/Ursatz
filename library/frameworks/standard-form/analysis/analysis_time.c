@@ -32,11 +32,6 @@ int standard_form_q_compare(StandardFormQ a, StandardFormQ b) {
     return rational_cmp(to_rational(a), to_rational(b));
 }
 
-StandardFormQ standard_form_q_add(StandardFormQ a, StandardFormQ b) {
-    Rational sum;
-    return rational_add(to_rational(a), to_rational(b), &sum) == RATIONAL_OK ? of_rational(sum) : zero_q();
-}
-
 StandardFormQ standard_form_q_sub(StandardFormQ a, StandardFormQ b) {
     Rational difference;
     return rational_sub(to_rational(a), to_rational(b), &difference) == RATIONAL_OK ? of_rational(difference) : zero_q();

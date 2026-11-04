@@ -56,3 +56,6 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# Test databases (tests write them under the build tree)
+*.sqlite
