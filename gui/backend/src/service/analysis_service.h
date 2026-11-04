@@ -4,7 +4,6 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <export/musicxml_export.h>
 
 /*
  * Shared analysis service: import, analyze and store a piece.
@@ -188,7 +187,7 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, co
 
 /*
  * Imports the piece's stored source and exports it to MusicXML with Ursatz's
- * musicxml_export_write_score: the source's parts and staves, its meter
+ * analyzer_score_export_musicxml: the source's parts and staves, its meter
  * (the MIDI time signatures or the score's own) and its key signatures in
  * part 0; tempo markings and dynamics are left out. On
  * URSATZ_GUI_ANALYSIS_OK, *out_xml is a newly allocated, caller-owned,
@@ -198,12 +197,14 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, co
  * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
  * URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED if the stored source no longer
  * imports. URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED if the export itself
- * fails; *out_export_error is then the MusicXmlExportResult it returned and
- * is MUSICXML_EXPORT_OK for every other outcome.
+ * fails; message is then the name of the AnalyzerStatus it returned and is
+ * empty for every other outcome. The title (the filename without its
+ * extension) and the composer are added to the score here: the Analyzer
+ * leaves both out.
  */
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
                                                                 char **out_xml, bool *out_meter_defaulted,
-                                                                MusicXmlExportResult *out_export_error);
+                                                                char message[256]);
 
 /*
  * Imports the piece's stored source with the same Analyzer call the score

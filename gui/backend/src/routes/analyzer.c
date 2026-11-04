@@ -69,42 +69,10 @@ static void send_json(struct mg_connection *conn, const char *body) {
   mg_write(conn, body, len);
 }
 
-/* Raw MusicXmlExportResult enum name, for the API's "code" field -- kept
- * unshortened so it is directly greppable against musicxml_export.h. */
-static const char *musicxml_export_error_code(MusicXmlExportResult error) {
-  switch (error) {
-    case MUSICXML_EXPORT_ERR_NULL_ARG:
-      return "MUSICXML_EXPORT_ERR_NULL_ARG";
-    case MUSICXML_EXPORT_ERR_LOAD_FAILED:
-      return "MUSICXML_EXPORT_ERR_LOAD_FAILED";
-    case MUSICXML_EXPORT_ERR_MISSING_SPELLING:
-      return "MUSICXML_EXPORT_ERR_MISSING_SPELLING";
-    case MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES:
-      return "MUSICXML_EXPORT_ERR_OVERLAPPING_NOTES";
-    case MUSICXML_EXPORT_ERR_ALLOC:
-      return "MUSICXML_EXPORT_ERR_ALLOC";
-    case MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT:
-      return "MUSICXML_EXPORT_ERR_INCONSISTENT_INPUT";
-    case MUSICXML_EXPORT_ERR_UNKNOWN_PART:
-      return "MUSICXML_EXPORT_ERR_UNKNOWN_PART";
-    case MUSICXML_EXPORT_ERR_BAD_STAFF:
-      return "MUSICXML_EXPORT_ERR_BAD_STAFF";
-    case MUSICXML_EXPORT_ERR_UNKNOWN_EVENT:
-      return "MUSICXML_EXPORT_ERR_UNKNOWN_EVENT";
-    case MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE:
-      return "MUSICXML_EXPORT_ERR_NOT_REPRESENTABLE";
-    case MUSICXML_EXPORT_ERR_DIVISIONS_OVERFLOW:
-      return "MUSICXML_EXPORT_ERR_DIVISIONS_OVERFLOW";
-    case MUSICXML_EXPORT_OK:
-    default:
-      return "MUSICXML_EXPORT_UNKNOWN";
-  }
-}
-
-static void send_musicxml_export_error(struct mg_connection *conn, MusicXmlExportResult export_error) {
+static void send_musicxml_export_error(struct mg_connection *conn, const char *message) {
   char body[192];
   snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"failed to export piece\",\"code\":\"%s\"}",
-           musicxml_export_error_code(export_error));
+           message[0] != '\0' ? message : "ANALYZER_ERR_LIBRARY");
   ursatz_gui_send_json_status(conn, 500, "Internal Server Error", body);
 }
 
@@ -903,9 +871,9 @@ static const char *kPlaybackSuffix = "/playback";
 static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id) {
   char *xml = NULL;
   bool meter_defaulted = false;
-  MusicXmlExportResult export_error = MUSICXML_EXPORT_OK;
+  char export_message[256] = "";
   UrsatzGuiAnalysisResult result =
-      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted, &export_error);
+      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted, export_message);
 
   if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
@@ -916,7 +884,7 @@ static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id)
                             "{\"ok\":false,\"message\":\"could not import the stored source\"}");
   }
   if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED) {
-    send_musicxml_export_error(conn, export_error);
+    send_musicxml_export_error(conn, export_message);
     return 500;
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
@@ -933,9 +901,9 @@ static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id)
 static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char *id) {
   char *xml = NULL;
   bool meter_defaulted = false;
-  MusicXmlExportResult export_error = MUSICXML_EXPORT_OK;
+  char export_message[256] = "";
   UrsatzGuiAnalysisResult result =
-      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted, &export_error);
+      ursatz_gui_analysis_get_piece_musicxml(kPiecesDir, id, &xml, &meter_defaulted, export_message);
 
   if (result == URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND) {
     mg_send_http_error(conn, 404, "{\"ok\":false,\"message\":\"piece not found\"}");
@@ -946,7 +914,7 @@ static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char
                             "{\"ok\":false,\"message\":\"could not import the stored source\"}");
   }
   if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED) {
-    send_musicxml_export_error(conn, export_error);
+    send_musicxml_export_error(conn, export_message);
     return 500;
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {

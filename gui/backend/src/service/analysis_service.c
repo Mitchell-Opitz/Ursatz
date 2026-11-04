@@ -939,22 +939,117 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_reanalyze(const char *pieces_dir, co
     return ok ? URSATZ_GUI_ANALYSIS_OK : URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
 }
 
-static MusicXmlExportMode export_mode_from_hint(MidiModeHint hint) {
-    switch (hint) {
-        case MIDI_MODE_HINT_MAJOR:
-            return MUSICXML_EXPORT_MODE_MAJOR;
-        case MIDI_MODE_HINT_MINOR:
-            return MUSICXML_EXPORT_MODE_MINOR;
-        case MIDI_MODE_HINT_UNKNOWN:
-        default:
-            return MUSICXML_EXPORT_MODE_UNKNOWN;
+/* Appends text to *out (grown with realloc) with the XML characters escaped. */
+static bool append_escaped(char **out, size_t *length, size_t *capacity, const char *text) {
+    for (const char *c = text; *c != '\0'; c++) {
+        const char *piece = NULL;
+        char single[2] = {*c, '\0'};
+        switch (*c) {
+            case '&': piece = "&amp;"; break;
+            case '<': piece = "&lt;"; break;
+            case '>': piece = "&gt;"; break;
+            case '"': piece = "&quot;"; break;
+            case '\'': piece = "&apos;"; break;
+            default: piece = single; break;
+        }
+        size_t piece_length = strlen(piece);
+        if (*length + piece_length + 1 > *capacity) {
+            size_t grown = (*capacity + piece_length + 1) * 2;
+            char *resized = realloc(*out, grown);
+            if (!resized) {
+                return false;
+            }
+            *out = resized;
+            *capacity = grown;
+        }
+        memcpy(*out + *length, piece, piece_length + 1);
+        *length += piece_length;
     }
+    return true;
+}
+
+/* Adds the piece's title and composer to the score the Analyzer wrote (it leaves both out, they are kept with the
+   piece): <work><work-title> after <score-partwise>, <creator type="composer"> first in <identification>, which is
+   created before <part-list> when the score has none. Returns a new string and frees xml, or NULL (xml is freed). */
+static char *score_add_title_composer(char *xml, const char *title, const char *composer) {
+    bool has_title = title && title[0] != '\0';
+    bool has_composer = composer && composer[0] != '\0';
+    if (!has_title && !has_composer) {
+        return xml;
+    }
+    static const char kRoot[] = "<score-partwise version=\"3.1\">\n";
+    static const char kIdentification[] = "  <identification>\n";
+    static const char kPartList[] = "  <part-list>\n";
+    char *root = strstr(xml, kRoot);
+    char *identification = strstr(xml, kIdentification);
+    char *part_list = strstr(xml, kPartList);
+    if (!root || !part_list) {
+        free(xml);
+        return NULL;
+    }
+    root += sizeof(kRoot) - 1;
+
+    size_t capacity = strlen(xml) + 1024;
+    size_t length = 0;
+    char *out = malloc(capacity);
+    bool ok = out != NULL;
+#define APPEND_RAW(text) \
+    do { \
+        const char *raw_ = (text); \
+        size_t raw_length_ = strlen(raw_); \
+        if (ok && length + raw_length_ + 1 > capacity) { \
+            capacity = (capacity + raw_length_ + 1) * 2; \
+            char *resized_ = realloc(out, capacity); \
+            if (resized_) { out = resized_; } else { ok = false; } \
+        } \
+        if (ok) { memcpy(out + length, raw_, raw_length_ + 1); length += raw_length_; } \
+    } while (0)
+#define APPEND_RANGE(from, to) \
+    do { \
+        size_t range_length_ = (size_t)((to) - (from)); \
+        char *range_copy_ = ok ? malloc(range_length_ + 1) : NULL; \
+        if (range_copy_) { memcpy(range_copy_, (from), range_length_); range_copy_[range_length_] = '\0'; APPEND_RAW(range_copy_); free(range_copy_); } else { ok = false; } \
+    } while (0)
+
+    if (ok) {
+        out[0] = '\0';
+    }
+    APPEND_RANGE(xml, root);
+    if (has_title) {
+        APPEND_RAW("  <work>\n    <work-title>");
+        ok = ok && append_escaped(&out, &length, &capacity, title);
+        APPEND_RAW("</work-title>\n  </work>\n");
+    }
+    if (has_composer && identification && identification < part_list) {
+        char *after = identification + sizeof(kIdentification) - 1;
+        APPEND_RANGE(root, after);
+        APPEND_RAW("    <creator type=\"composer\">");
+        ok = ok && append_escaped(&out, &length, &capacity, composer);
+        APPEND_RAW("</creator>\n");
+        APPEND_RAW(after);
+    } else if (has_composer) {
+        APPEND_RANGE(root, part_list);
+        APPEND_RAW("  <identification>\n    <creator type=\"composer\">");
+        ok = ok && append_escaped(&out, &length, &capacity, composer);
+        APPEND_RAW("</creator>\n  </identification>\n");
+        APPEND_RAW(part_list);
+    } else {
+        APPEND_RAW(root);
+    }
+#undef APPEND_RANGE
+#undef APPEND_RAW
+    free(xml);
+    if (!ok) {
+        free(out);
+        return NULL;
+    }
+    return out;
 }
 
 UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *pieces_dir, const char *id,
                                                                 char **out_xml, bool *out_meter_defaulted,
-                                                                MusicXmlExportResult *out_export_error) {
-    *out_export_error = MUSICXML_EXPORT_OK;
+                                                                char message[256]) {
+    message[0] = '\0';
 
     char dir_path[320];
     if (!piece_dir_path(pieces_dir, id, dir_path, sizeof(dir_path))) {
@@ -987,72 +1082,29 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_get_piece_musicxml(const char *piece
         return URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED;
     }
 
-    /* The score is written from the imported notes: their parts, staves and
-       programs, the source's own meter, and its key signatures in part 0,
-       quantized to notated values. Tempo markings and dynamics are left out. */
-    MusicXmlExportPart *parts = NULL;
-    if (notes.source.part_count > 0) {
-        parts = calloc(notes.source.part_count, sizeof(MusicXmlExportPart));
-    }
-    MusicXmlExportKeySignature *keys = NULL;
-    size_t key_count = notes.key_signature_events.count;
-    if (key_count > 0) {
-        keys = calloc(key_count, sizeof(MusicXmlExportKeySignature));
-    }
-    if ((notes.source.part_count > 0 && !parts) || (key_count > 0 && !keys)) {
-        free(parts);
-        free(keys);
-        free(title);
-        free(composer);
-        imported_notes_destroy(&notes);
-        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
-    }
-    for (size_t i = 0; i < notes.source.part_count; i++) {
-        parts[i].id = notes.source.parts[i].id;
-        parts[i].name = notes.source.parts[i].name;
-        parts[i].staff_count = notes.source.parts[i].staff_count;
-        parts[i].midi_program = notes.source.parts[i].midi_program;
-    }
-    for (size_t i = 0; i < key_count; i++) {
-        const MidiKeySignatureEvent *event = &notes.key_signature_events.events[i];
-        keys[i].sharps_flats = event->sharps_flats;
-        keys[i].mode = export_mode_from_hint(event->mode_hint);
-        keys[i].position = event->position;
-        keys[i].part_index = 0;
-    }
-
-    const ScoreQuantizeOptions quantize = score_quantize_options_default();
-    MusicXmlExportScore score;
-    memset(&score, 0, sizeof(score));
-    score.events = notes.events;
-    score.pitch_values = notes.pitch_values;
-    score.count = notes.count;
-    score.part_index = notes.source.part_index;
-    score.staff = notes.source.staff;
-    score.parts = parts;
-    score.part_count = notes.source.part_count;
-    score.meter_map = notes.meter.meter_map;
-    score.key_signatures = keys;
-    score.key_signature_count = key_count;
-    score.quantize = &quantize;
-    score.title = title;
-    score.composer = composer;
-
     char *xml = NULL;
-    MusicXmlExportResult result = musicxml_export_write_score(&score, &xml);
+    AnalyzerStatus status = analyzer_score_export_musicxml(&notes, &xml);
     bool meter_defaulted = analyzer_imported_meter_defaulted(&notes);
-    free(parts);
-    free(keys);
-    free(title);
-    free(composer);
     imported_notes_destroy(&notes);
 
-    if (result != MUSICXML_EXPORT_OK) {
-        fprintf(stderr, "ursatz_gui_analysis_get_piece_musicxml: musicxml_export_write_score failed for piece '%s' "
-                         "with MusicXmlExportResult=%d\n",
-                id, (int)result);
-        *out_export_error = result;
+    if (status != ANALYZER_OK) {
+        fprintf(stderr, "ursatz_gui_analysis_get_piece_musicxml: analyzer_score_export_musicxml failed for piece '%s' "
+                         "with AnalyzerStatus=%d\n",
+                id, (int)status);
+        const char *name = status == ANALYZER_ERR_ALLOC      ? "ANALYZER_ERR_ALLOC"
+                           : status == ANALYZER_ERR_ARGUMENT ? "ANALYZER_ERR_ARGUMENT"
+                                                             : "ANALYZER_ERR_LIBRARY";
+        snprintf(message, 256, "%s", name);
+        free(title);
+        free(composer);
         return URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED;
+    }
+
+    xml = score_add_title_composer(xml, title, composer);
+    free(title);
+    free(composer);
+    if (!xml) {
+        return URSATZ_GUI_ANALYSIS_ERR_ALLOC;
     }
 
     *out_xml = xml;
