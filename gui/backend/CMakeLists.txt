@@ -9,7 +9,6 @@ add_library(ursatz_gui_core STATIC
   src/service/id_service.c
   src/service/collection_service.c
   src/service/style_service.c
-  src/service/composer_service.c
   src/service/composer_client.c
   src/service/job_queue.c
   src/service/compose_jobs.c
@@ -54,5 +53,3 @@ add_executable(ursatz-gui-backend src/main.c)
 
 target_link_libraries(ursatz-gui-backend PRIVATE ursatz_gui_core)
 
-# The Composer command the backend runs (composer_service.c).
-add_dependencies(ursatz-gui-backend ursatz_composer_cli)

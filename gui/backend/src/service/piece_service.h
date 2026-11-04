@@ -14,8 +14,8 @@
  * A piece version keeps its files beside its body, in the material store's items/<id>/v<n>/ (see material_service.h):
  * request.json (what the Composer read), brief.style.json (when the piece has a brief), plan.json (the loop version),
  * ending-plan.json, loop.mid, loop.musicxml, ending.mid and ending.musicxml, and theme-<section id>.plan.json, a copy
- * of the plan of each theme version a section uses, so the version keeps its own. The Composer runs through
- * composer_service.c and nothing here changes the working directory: every path handed to it is absolute.
+ * of the plan of each theme version a section uses, so the version keeps its own. The Composer runs in process through the
+ * Composer API (composer_api_piece, composer_api_piece_variations), on a job worker.
  *
  * The results are the theme service's (UrsatzGuiThemeResult).
  */

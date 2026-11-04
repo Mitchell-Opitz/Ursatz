@@ -69,7 +69,6 @@ target_compile_definitions(test_links_route PRIVATE
 ursatz_gui_add_test(theme_route test_theme_route.c ${CMAKE_CURRENT_BINARY_DIR}/theme_route)
 # The test runs a fake Composer and, when it is built, the real one, in its own working directory (materials/,
 # subjects/, pieces/ and fake/ are created there) and uploads the link fixtures for the brief.
-add_dependencies(test_theme_route ursatz_composer_cli)
 target_compile_definitions(test_theme_route PRIVATE
   URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
 )
@@ -77,7 +76,6 @@ target_compile_definitions(test_theme_route PRIVATE
 ursatz_gui_add_test(piece_route test_piece_route.c ${CMAKE_CURRENT_BINARY_DIR}/piece_route)
 # The test runs a fake Composer and, when it is built, the real one, in its own working directory (materials/,
 # subjects/, pieces/ and fake/ are created there) and uploads the link fixtures for the brief.
-add_dependencies(test_piece_route ursatz_composer_cli)
 target_compile_definitions(test_piece_route PRIVATE
   URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
 )

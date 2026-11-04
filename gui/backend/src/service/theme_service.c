@@ -10,7 +10,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "composer_service.h"
 #include "compose_common.h"
 #include "material_service.h"
 #include "style_service.h"
@@ -50,11 +49,6 @@ bool ursatz_gui_theme_write_text(const char *path, const char *text) {
         ok = false;
     }
     return ok;
-}
-
-static bool file_exists(const char *path) {
-    struct stat info;
-    return stat(path, &info) == 0 && S_ISREG(info.st_mode);
 }
 
 /* --- updating sources ---------------------------------------------------- */
@@ -552,50 +546,6 @@ UrsatzGuiThemeResult ursatz_gui_theme_build_brief(const cJSON *brief_json, const
 }
 
 /* --- composing ----------------------------------------------------------- */
-
-UrsatzGuiThemeResult ursatz_gui_theme_run_composer(const char *const *args, const char *const *outputs, cJSON **out_summary,
-                                                   char *message, size_t message_size) {
-    UrsatzGuiComposerOutput output = {0, NULL, NULL};
-    UrsatzGuiComposerResult ran = ursatz_gui_composer_run(args, &output);
-    if (ran == URSATZ_GUI_COMPOSER_ERR_NO_BINARY) {
-        ursatz_gui_compose_say(message, message_size, "composer not found");
-        return URSATZ_GUI_THEME_ERR_NO_BINARY;
-    }
-    if (ran == URSATZ_GUI_COMPOSER_ERR_TIMEOUT) {
-        ursatz_gui_compose_say(message, message_size, "composer timed out");
-        return URSATZ_GUI_THEME_ERR_TIMEOUT;
-    }
-    if (ran != URSATZ_GUI_COMPOSER_OK) {
-        ursatz_gui_compose_say(message, message_size, "composer could not be started");
-        return URSATZ_GUI_THEME_ERR_FAILED;
-    }
-    UrsatzGuiThemeResult result = URSATZ_GUI_THEME_OK;
-    if (output.exit_status != 0) {
-        const char *reason = output.stderr_text && output.stderr_text[0] ? output.stderr_text : "composer failed";
-        snprintf(message, message_size, "%s", reason);
-        size_t end = strlen(message);
-        while (end > 0 && (message[end - 1] == '\n' || message[end - 1] == '\r')) {
-            message[--end] = '\0';
-        }
-        result = output.exit_status == 1   ? URSATZ_GUI_THEME_ERR_INVALID
-                 : output.exit_status == 2 ? URSATZ_GUI_THEME_ERR_UNPROCESSABLE
-                                           : URSATZ_GUI_THEME_ERR_FAILED;
-    } else {
-        *out_summary = cJSON_Parse(output.stdout_text);
-        bool written = *out_summary != NULL;
-        for (; written && *outputs; outputs++) {
-            written = file_exists(*outputs);
-        }
-        if (!written) {
-            cJSON_Delete(*out_summary);
-            *out_summary = NULL;
-            ursatz_gui_compose_say(message, message_size, "composer output unreadable");
-            result = URSATZ_GUI_THEME_ERR_FAILED;
-        }
-    }
-    ursatz_gui_composer_output_destroy(&output);
-    return result;
-}
 
 static const char *const kThemeFiles[] = {"plan.json", "theme.mid", "theme.musicxml"};
 

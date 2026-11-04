@@ -20,7 +20,6 @@
 #include "../util/fs_util.h"
 #include "route_util.h"
 #include "../service/composer_client.h"
-#include "../service/composer_service.h"
 #include "../service/compose_jobs.h"
 #include "jobs.h"
 #include "../service/material_service.h"
@@ -362,47 +361,7 @@ static const char *analysis_degrees_text(const cJSON *output, const char *form) 
   return cJSON_IsString(text) ? text->valuestring : NULL;
 }
 
-/* The Composer options for a motif's harmony, features and role (R-140, R-141): --harmony "<text>", one --feature
-   label:first-last per feature (at most 8) and --role. The feature texts live in extras, which the caller keeps until
-   the Composer has run. harmony and role may be overridden (a variant's own harmony, a render's role); NULL means the
-   motif's own. Returns the new argument count. */
 #define MOTIF_FEATURES_MAX 8
-typedef struct {
-  char feature[MOTIF_FEATURES_MAX][64];
-} MotifExtras;
-#define MOTIF_EXTRA_ARGS (2 + 2 * MOTIF_FEATURES_MAX + 2)
-
-static int append_extras_named(const char **args, int n, const char *harmony_option, const char *feature_option,
-                               const char *harmony, const cJSON *features, const char *role, MotifExtras *extras) {
-  if (harmony && harmony[0] != '\0') {
-    args[n++] = harmony_option;
-    args[n++] = harmony;
-  }
-  int count = 0;
-  const cJSON *feature = NULL;
-  cJSON_ArrayForEach(feature, features) {
-    const cJSON *label = cJSON_GetObjectItemCaseSensitive(feature, "label");
-    const cJSON *first = cJSON_GetObjectItemCaseSensitive(feature, "first");
-    const cJSON *last = cJSON_GetObjectItemCaseSensitive(feature, "last");
-    if (count == MOTIF_FEATURES_MAX || !cJSON_IsString(label) || !cJSON_IsNumber(first) || !cJSON_IsNumber(last)) {
-      break;
-    }
-    snprintf(extras->feature[count], sizeof(extras->feature[count]), "%s:%d-%d", label->valuestring, first->valueint,
-             last->valueint);
-    args[n++] = feature_option;
-    args[n++] = extras->feature[count++];
-  }
-  if (role && role[0] != '\0') {
-    args[n++] = "--role";
-    args[n++] = role;
-  }
-  return n;
-}
-
-static int append_motif_extras(const char **args, int n, const char *harmony, const cJSON *features, const char *role,
-                               MotifExtras *extras) {
-  return append_extras_named(args, n, "--harmony", "--feature", harmony, features, role, extras);
-}
 
 /* The harmony text of a motif member, NULL when it has none. */
 static const char *motif_harmony(const cJSON *motif) {
@@ -1025,19 +984,6 @@ static cJSON *build_motif_playback(const cJSON *rendered_notes, const char *role
   return playback;
 }
 
-static bool temp_file(char *path, size_t size, const char *stem) {
-  const char *tmp_dir = getenv("TMPDIR");
-  if (!tmp_dir || tmp_dir[0] != '/' || snprintf(path, size, "%s/%s-XXXXXX", tmp_dir, stem) >= (int)size) {
-    snprintf(path, size, "/tmp/%s-XXXXXX", stem);
-  }
-  int fd = mkstemp(path);
-  if (fd < 0) {
-    return false;
-  }
-  close(fd);
-  return true;
-}
-
 /* Renders a degree, rhythm or contour list in render_key with the Composer. On success *out_xml is the MusicXML text
    and *out_playback its playback data (caller-owned). On failure failure holds the status and message. */
 static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_playback, RenderFailure *failure) {
@@ -1425,25 +1371,6 @@ static int handle_get_version(struct mg_connection *conn, const char *id, const 
   return send_object(conn, object);
 }
 
-/* The answer for a Composer-backed call that did not succeed: the status follows the result (see theme_service.h). */
-static int send_composer_failure(struct mg_connection *conn, UrsatzGuiThemeResult result, const char *message,
-                                 const char *invalid_text, const char *failed_text) {
-  switch (result) {
-    case URSATZ_GUI_THEME_ERR_NOT_FOUND:
-      return send_failure(conn, 404, message[0] ? message : "not found");
-    case URSATZ_GUI_THEME_ERR_INVALID:
-      return send_failure(conn, 400, message[0] ? message : invalid_text);
-    case URSATZ_GUI_THEME_ERR_UNPROCESSABLE:
-      return send_failure(conn, 422, message[0] ? message : "stuck");
-    case URSATZ_GUI_THEME_ERR_NO_BINARY:
-      return send_failure(conn, 503, "composer not found");
-    case URSATZ_GUI_THEME_ERR_TIMEOUT:
-      return send_failure(conn, 504, "composer timed out");
-    default:
-      return send_failure(conn, 500, message[0] ? message : failed_text);
-  }
-}
-
 /* A version number from a path segment, 1 to 1000000. */
 static bool parse_version_number(const char *text, int *out) {
   char *end = NULL;
@@ -1726,32 +1653,6 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
 
 /* ---- variants ---------------------------------------------------------- */
 
-/* Runs the Composer with args and parses its JSON output. Returns NULL after setting *status and message (500 when the
-   Composer cannot run, 400 when it refuses the input, which is its exit status 1 or 2). */
-static cJSON *composer_json(const char *const *args, int *status, char *message, size_t message_size) {
-  UrsatzGuiComposerOutput out = {0, NULL, NULL};
-  UrsatzGuiComposerResult result = ursatz_gui_composer_run(args, &out);
-  if (result != URSATZ_GUI_COMPOSER_OK) {
-    *status = 500;
-    snprintf(message, message_size, "%s",
-             result == URSATZ_GUI_COMPOSER_ERR_NO_BINARY  ? "composer not found"
-             : result == URSATZ_GUI_COMPOSER_ERR_TIMEOUT ? "composer timed out"
-                                                          : "composer could not be started");
-    return NULL;
-  }
-  cJSON *json = out.exit_status == 0 ? cJSON_Parse(out.stdout_text) : NULL;
-  if (!json) {
-    *status = out.exit_status == 1 || out.exit_status == 2 ? 400 : 500;
-    snprintf(message, message_size, "%s", out.stderr_text[0] ? out.stderr_text : "composer could not make variants");
-    size_t end = strlen(message);
-    while (end > 0 && (message[end - 1] == '\n' || message[end - 1] == '\r')) {
-      message[--end] = '\0';
-    }
-  }
-  ursatz_gui_composer_output_destroy(&out);
-  return json;
-}
-
 /* GET /api/materials/variant-operations: the Composer's operation list, as the Composer API gives it. */
 static int handle_variant_operations(struct mg_connection *conn) {
   ComposerResponse response;
@@ -1772,23 +1673,6 @@ static int handle_variant_operations(struct mg_connection *conn) {
     return send_failure(conn, 500, "out of memory");
   }
   return send_object(conn, document);
-}
-
-/* Writes text to a new temp file named after stem; path receives its name. */
-static bool write_temp_text(char *path, size_t size, const char *stem, const char *text) {
-  if (!temp_file(path, size, stem)) {
-    return false;
-  }
-  FILE *file = fopen(path, "wb");
-  size_t length = strlen(text);
-  bool written = file && fwrite(text, 1, length, file) == length;
-  if (file && fclose(file) != 0) {
-    written = false;
-  }
-  if (!written) {
-    unlink(path);
-  }
-  return written;
 }
 
 /* The names --function takes; the same four the stored derived.functions hold. */
