@@ -1088,7 +1088,7 @@ The library's motive analysis found 10 motive families in the soprano, the highe
 | 2 | 8 | b6 6 b7 7 1 b2 2 b3 | scale steps | 4 | 18, 20, 38, 40 | 2, 7 | exact 4 |
 | 3 | 8 | 7 1 b2 2 b3 3 4 3 | scale steps | 4 | 18, 20, 38, 40 | 2, 7 | exact 4 |
 | 4 | 3 | 7 1 b2 | scale steps | 6 | 18, 20, 38, 40, 42, 43 | 2, 7, 9 | exact 4, tonal-transposed 2 |
-| 5 | 8 | 2 b3 3 4 3 2 b2 2 | scale steps | 8 | 18, 19, 20, 21, 38, 39, 40, 41 | 9 | exact 4, fragmented 4 |
+| 5 | 8 | 2 b3 3 4 3 2 b2 2 | scale steps | 4 | 18, 20, 38, 40 | - | exact 4 |
 | 6 | 8 | 4 3 2 b2 2 3 4 3 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 4 |
 | 7 | 8 | b2 2 3 4 3 2 b2 2 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 4 |
 | 8 | 8 | 4 3 2 b2 2 5 1 #4 | scale steps | 4 | 19, 21, 39, 41 | 9 | exact 2, fragmented 2 |
@@ -1167,7 +1167,7 @@ Each family's occurrences in time order, as the measure they start in and the ki
 - **Family 2:** m18 original > m20 exact > m38 exact > m40 exact
 - **Family 3:** m18 original > m20 exact > m38 exact > m40 exact
 - **Family 4:** m18 original > m20 exact > m38 exact > m40 exact > m42 tonal-transposed > m43 tonal-transposed
-- **Family 5:** m18 original > m19 fragmented > m20 exact > m21 fragmented > m38 exact > m39 fragmented > m40 exact > m41 fragmented
+- **Family 5:** m18 original > m20 exact > m38 exact > m40 exact
 - **Family 6:** m19 original > m21 exact > m39 exact > m41 exact
 - **Family 7:** m19 original > m21 exact > m39 exact > m41 exact
 - **Family 8:** m19 original > m21 fragmented > m39 exact > m41 fragmented

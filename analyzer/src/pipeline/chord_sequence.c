@@ -11,6 +11,7 @@
 #include <ursatz_analyzer/style_labels.h>
 
 #include "pipeline/chord_sequence_internal.h"
+#include "pitch/pitch_arithmetic.h"
 #include "util/json_util.h"
 
 /* ---- the join rule ---- */
@@ -35,18 +36,12 @@ static void joiner_skip(Joiner *joiner) {
 }
 
 static bool root_pitch_class(const char *name, int *out) {
-    static const int letters[7] = {9, 11, 0, 2, 4, 5, 7}; /* A to G */
-    if (!name || name[0] < 'A' || name[0] > 'G') {
+    PitchLetter letter;
+    int accidental;
+    if (!name || !pitch_spelling_parse_name(name, &letter, &accidental, NULL)) {
         return false;
     }
-    int pc = letters[name[0] - 'A'];
-    for (const char *c = name + 1; *c; c++) {
-        if (*c != '#' && *c != 'b') {
-            return false;
-        }
-        pc += *c == '#' ? 1 : -1;
-    }
-    *out = ((pc % 12) + 12) % 12;
+    *out = pitch_class_of_letter(letter, accidental);
     return true;
 }
 

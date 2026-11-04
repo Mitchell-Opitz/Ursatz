@@ -66,7 +66,7 @@ static void name_note(const ImportedNotes *notes, size_t note, long pitch, const
 
 /* a/b < c/d for positive denominators. */
 static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
-    return (long long)a * (long long)d < (long long)c * (long long)b;
+    return rational_cmp(rational_ratio(a, (long long)b), rational_ratio(c, (long long)d)) < 0;
 }
 
 /* The key region of the chain's home key: the first region in that key, or none. */

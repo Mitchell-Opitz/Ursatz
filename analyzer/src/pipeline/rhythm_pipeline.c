@@ -17,7 +17,6 @@
 #include "standard-meter/analysis/meter_analysis_input.h"
 #include "standard-meter/analysis/meter_analysis_tuplet.h"
 #include "standard-meter/analysis/meter_analysis_syncopation.h"
-#include "standard-meter/analysis/meter_analysis_time.h"
 #include "standard-meter/borrowed_rules.h"
 #include "semantics/analysis_note.h"
 #include "standard-meter/framework.h"
@@ -27,7 +26,9 @@
 #include "time/meter_arithmetic.h"
 #include "time/meter_map.h"
 #include "time/musical_time.h"
+#include "time/score_time.h"
 #include "time/temporal_anchor.h"
+#include "time/time_rational.h"
 #include "time/time_signature.h"
 #include "time/time_span.h"
 #include "time/tuplet.h"
@@ -278,11 +279,11 @@ static bool build_phrases(RhythmBuild *build, const FormStage *form) {
    is in the phrase's span. */
 static size_t *phrase_notes(const RhythmBuild *build, const ImportedNotes *notes, size_t phrase, int line, size_t *count) {
     StandardMeterConfig config = standard_meter_config_default();
-    StandardMeterQ start;
-    StandardMeterQ end;
+    Rational start;
+    Rational end;
     *count = 0;
     size_t *ids = malloc((build->input.note_count + 1) * sizeof(size_t));
-    if (!ids || !standard_meter_span_q(build->input.phrases[phrase].span, &start, &end)) {
+    if (!ids || !score_time_span(build->input.phrases[phrase].span, &start, &end)) {
         free(ids);
         return NULL;
     }
@@ -291,8 +292,14 @@ static size_t *phrase_notes(const RhythmBuild *build, const ImportedNotes *notes
             continue;
         }
         const MusicalTime *onset = temporal_anchor_position(note_event_temporal_anchor(notes->events[i]));
-        StandardMeterQ at = standard_meter_snap(&config, standard_meter_q_of_time(onset), false, NULL);
-        if (standard_meter_q_compare(at, start) >= 0 && standard_meter_q_compare(at, end) < 0) {
+        Rational at;
+        if (rational_of_musical_time(onset, &at) != RATIONAL_OK ||
+            !score_time_snap(at, config.onset_grid_denominator, config.onset_tolerance_denominator, &at, NULL)) {
+            free(ids);
+            *count = 0;
+            return NULL;
+        }
+        if (rational_cmp(at, start) >= 0 && rational_cmp(at, end) < 0) {
             ids[(*count)++] = i;
         }
     }

@@ -43796,194 +43796,6 @@
 					"phrase":	0,
 					"idea":	null,
 					"degrees":	["1", "1", "6", "4", "5", "6", "7", "1"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	27,
-							"den":	2
-						},
-						"end":	{
-							"num":	221,
-							"den":	16
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	14,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	14,
-							"beat":	4,
-							"subdivision":	{
-								"num":	1,
-								"den":	4
-							}
-						}
-					},
-					"note_ids":	[246, 248, 249, 250, 251],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	4,
-					"measures":	{
-						"first":	14,
-						"last":	14
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	4,
-					"fragment":	"suffix",
-					"in_continuation":	true,
-					"phrase":	0,
-					"idea":	6,
-					"degrees":	["5", "6", "7", "1", "2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	33,
-							"den":	2
-						},
-						"end":	{
-							"num":	269,
-							"den":	16
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	17,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	17,
-							"beat":	4,
-							"subdivision":	{
-								"num":	1,
-								"den":	4
-							}
-						}
-					},
-					"note_ids":	[295, 297, 298, 299, 300],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	5,
-					"measures":	{
-						"first":	17,
-						"last":	17
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	4,
-					"fragment":	"suffix",
-					"in_continuation":	false,
-					"phrase":	1,
-					"idea":	0,
-					"degrees":	["5", "6", "7", "1", "2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	39,
-							"den":	2
-						},
-						"end":	{
-							"num":	317,
-							"den":	16
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	20,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	20,
-							"beat":	4,
-							"subdivision":	{
-								"num":	1,
-								"den":	4
-							}
-						}
-					},
-					"note_ids":	[351, 353, 354, 355, 356],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	6,
-					"measures":	{
-						"first":	20,
-						"last":	20
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	4,
-					"fragment":	"suffix",
-					"in_continuation":	true,
-					"phrase":	1,
-					"idea":	2,
-					"degrees":	["5", "6", "7", "1", "2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	45,
-							"den":	2
-						},
-						"end":	{
-							"num":	365,
-							"den":	16
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	23,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	23,
-							"beat":	4,
-							"subdivision":	{
-								"num":	1,
-								"den":	4
-							}
-						}
-					},
-					"note_ids":	[400, 402, 403, 404, 405],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	7,
-					"measures":	{
-						"first":	23,
-						"last":	23
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	4,
-					"fragment":	"suffix",
-					"in_continuation":	false,
-					"phrase":	1,
-					"idea":	null,
-					"degrees":	["1", "2", "3", "4", "5"]
 				}],
 			"development":	[{
 					"occurrence":	0,
@@ -44009,30 +43821,6 @@
 					"beat":	3,
 					"transformation":	"exact",
 					"from":	2
-				}, {
-					"occurrence":	4,
-					"measure":	14,
-					"beat":	3,
-					"transformation":	"fragmented",
-					"from":	3
-				}, {
-					"occurrence":	5,
-					"measure":	17,
-					"beat":	3,
-					"transformation":	"fragmented",
-					"from":	4
-				}, {
-					"occurrence":	6,
-					"measure":	20,
-					"beat":	3,
-					"transformation":	"fragmented",
-					"from":	5
-				}, {
-					"occurrence":	7,
-					"measure":	23,
-					"beat":	3,
-					"transformation":	"fragmented",
-					"from":	6
 				}],
 			"features":	{
 				"notes":	[{
@@ -45134,53 +44922,6 @@
 					"framework":	"standard-form-v1",
 					"span":	{
 						"start":	{
-							"num":	21,
-							"den":	4
-						},
-						"end":	{
-							"num":	47,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	6,
-							"beat":	2,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	6,
-							"beat":	4,
-							"subdivision":	{
-								"num":	1,
-								"den":	2
-							}
-						}
-					},
-					"note_ids":	[99, 101, 103, 104, 106, 107],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	2,
-					"measures":	{
-						"first":	6,
-						"last":	6
-					},
-					"beat":	2,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	5,
-					"fragment":	"prefix",
-					"in_continuation":	true,
-					"phrase":	0,
-					"idea":	2,
-					"degrees":	["2", "3", "2", "1", "7", "1"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
 							"num":	15,
 							"den":	2
 						},
@@ -45210,7 +44951,7 @@
 					"note_ids":	[138, 139, 140, 141, 142, 143, 145, 146],
 					"label":	"exact",
 					"uncertainty":	0,
-					"index":	3,
+					"index":	2,
 					"measures":	{
 						"first":	8,
 						"last":	9
@@ -45257,7 +44998,7 @@
 					"note_ids":	[196, 197, 198, 199, 201, 202, 204, 205],
 					"label":	"exact",
 					"uncertainty":	0,
-					"index":	4,
+					"index":	3,
 					"measures":	{
 						"first":	11,
 						"last":	12
@@ -45271,53 +45012,6 @@
 					"phrase":	0,
 					"idea":	5,
 					"degrees":	["4", "5", "4", "3", "2", "3", "4", "3"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	45,
-							"den":	4
-						},
-						"end":	{
-							"num":	95,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	12,
-							"beat":	2,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	12,
-							"beat":	4,
-							"subdivision":	{
-								"num":	1,
-								"den":	2
-							}
-						}
-					},
-					"note_ids":	[209, 211, 213, 214, 216, 217],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	5,
-					"measures":	{
-						"first":	12,
-						"last":	12
-					},
-					"beat":	2,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	5,
-					"fragment":	"prefix",
-					"in_continuation":	true,
-					"phrase":	0,
-					"idea":	5,
-					"degrees":	["2", "3", "2", "1", "7", "1"]
 				}],
 			"development":	[{
 					"occurrence":	0,
@@ -45333,28 +45027,16 @@
 					"from":	0
 				}, {
 					"occurrence":	2,
-					"measure":	6,
-					"beat":	2,
-					"transformation":	"fragmented",
-					"from":	1
-				}, {
-					"occurrence":	3,
 					"measure":	8,
 					"beat":	3,
 					"transformation":	"exact",
-					"from":	2
+					"from":	1
 				}, {
-					"occurrence":	4,
+					"occurrence":	3,
 					"measure":	11,
 					"beat":	3,
 					"transformation":	"exact",
-					"from":	3
-				}, {
-					"occurrence":	5,
-					"measure":	12,
-					"beat":	2,
-					"transformation":	"fragmented",
-					"from":	4
+					"from":	2
 				}],
 			"features":	{
 				"notes":	[{
@@ -45442,7 +45124,7 @@
 			},
 			"note_ids":	[31, 32, 33, 35, 36, 37, 38, 39],
 			"label":	"motive",
-			"uncertainty":	0,
+			"uncertainty":	0.10714285714285721,
 			"index":	7,
 			"note_count":	8,
 			"generic":	true,
@@ -45525,14 +45207,14 @@
 					},
 					"note_ids":	[89, 91, 92, 94, 95, 96, 98],
 					"label":	"fragmented",
-					"uncertainty":	0,
+					"uncertainty":	0.10714285714285721,
 					"index":	1,
 					"measures":	{
 						"first":	5,
 						"last":	6
 					},
 					"beat":	4,
-					"score":	1,
+					"score":	0.89285714285714279,
 					"mismatches":	0,
 					"intervals":	6,
 					"fragment":	"prefix",
@@ -45619,14 +45301,14 @@
 					},
 					"note_ids":	[199, 201, 202, 204, 205, 206, 208],
 					"label":	"fragmented",
-					"uncertainty":	0,
+					"uncertainty":	0.10714285714285721,
 					"index":	3,
 					"measures":	{
 						"first":	11,
 						"last":	12
 					},
 					"beat":	4,
-					"score":	1,
+					"score":	0.89285714285714279,
 					"mismatches":	0,
 					"intervals":	6,
 					"fragment":	"prefix",
@@ -46934,7 +46616,7 @@
 			},
 			"note_ids":	[99, 101, 103, 104, 106, 107, 109],
 			"label":	"motive",
-			"uncertainty":	0,
+			"uncertainty":	0.33333333333333326,
 			"index":	14,
 			"note_count":	7,
 			"generic":	true,
@@ -46993,7 +46675,7 @@
 							"den":	2
 						},
 						"end":	{
-							"num":	29,
+							"num":	33,
 							"den":	16
 						}
 					},
@@ -47007,31 +46689,31 @@
 							}
 						},
 						"end":	{
-							"measure":	2,
-							"beat":	4,
+							"measure":	3,
+							"beat":	1,
 							"subdivision":	{
 								"num":	1,
 								"den":	4
 							}
 						}
 					},
-					"note_ids":	[28, 29, 30, 31],
-					"label":	"fragmented",
-					"uncertainty":	0,
+					"note_ids":	[28, 29, 30, 31, 32, 33, 35],
+					"label":	"varied",
+					"uncertainty":	0.33333333333333326,
 					"index":	1,
 					"measures":	{
 						"first":	2,
-						"last":	2
+						"last":	3
 					},
 					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	3,
-					"fragment":	"prefix",
+					"score":	0.66666666666666674,
+					"mismatches":	1,
+					"intervals":	6,
+					"fragment":	null,
 					"in_continuation":	false,
 					"phrase":	0,
-					"idea":	0,
-					"degrees":	["4", "5", "4", "3"]
+					"idea":	null,
+					"degrees":	["4", "5", "4", "3", "2", "3", "4"]
 				}, {
 					"framework":	"standard-form-v1",
 					"span":	{
@@ -47040,7 +46722,7 @@
 							"den":	2
 						},
 						"end":	{
-							"num":	77,
+							"num":	81,
 							"den":	16
 						}
 					},
@@ -47054,31 +46736,31 @@
 							}
 						},
 						"end":	{
-							"measure":	5,
-							"beat":	4,
+							"measure":	6,
+							"beat":	1,
 							"subdivision":	{
 								"num":	1,
 								"den":	4
 							}
 						}
 					},
-					"note_ids":	[86, 87, 88, 89],
-					"label":	"fragmented",
-					"uncertainty":	0,
+					"note_ids":	[86, 87, 88, 89, 91, 92, 94],
+					"label":	"varied",
+					"uncertainty":	0.33333333333333326,
 					"index":	2,
 					"measures":	{
 						"first":	5,
-						"last":	5
+						"last":	6
 					},
 					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	3,
-					"fragment":	"prefix",
-					"in_continuation":	true,
+					"score":	0.66666666666666674,
+					"mismatches":	1,
+					"intervals":	6,
+					"fragment":	null,
+					"in_continuation":	false,
 					"phrase":	0,
 					"idea":	2,
-					"degrees":	["4", "5", "4", "3"]
+					"degrees":	["4", "5", "4", "3", "2", "3", "4"]
 				}, {
 					"framework":	"standard-form-v1",
 					"span":	{
@@ -47087,7 +46769,7 @@
 							"den":	2
 						},
 						"end":	{
-							"num":	125,
+							"num":	129,
 							"den":	16
 						}
 					},
@@ -47101,31 +46783,31 @@
 							}
 						},
 						"end":	{
-							"measure":	8,
-							"beat":	4,
+							"measure":	9,
+							"beat":	1,
 							"subdivision":	{
 								"num":	1,
 								"den":	4
 							}
 						}
 					},
-					"note_ids":	[138, 139, 140, 141],
-					"label":	"fragmented",
-					"uncertainty":	0,
+					"note_ids":	[138, 139, 140, 141, 142, 143, 145],
+					"label":	"varied",
+					"uncertainty":	0.33333333333333326,
 					"index":	3,
 					"measures":	{
 						"first":	8,
-						"last":	8
+						"last":	9
 					},
 					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	3,
-					"fragment":	"prefix",
-					"in_continuation":	true,
+					"score":	0.66666666666666674,
+					"mismatches":	1,
+					"intervals":	6,
+					"fragment":	null,
+					"in_continuation":	false,
 					"phrase":	0,
-					"idea":	3,
-					"degrees":	["4", "5", "4", "3"]
+					"idea":	null,
+					"degrees":	["4", "5", "4", "3", "2", "3", "4"]
 				}, {
 					"framework":	"standard-form-v1",
 					"span":	{
@@ -47134,7 +46816,7 @@
 							"den":	2
 						},
 						"end":	{
-							"num":	173,
+							"num":	177,
 							"den":	16
 						}
 					},
@@ -47148,31 +46830,31 @@
 							}
 						},
 						"end":	{
-							"measure":	11,
-							"beat":	4,
+							"measure":	12,
+							"beat":	1,
 							"subdivision":	{
 								"num":	1,
 								"den":	4
 							}
 						}
 					},
-					"note_ids":	[196, 197, 198, 199],
-					"label":	"fragmented",
-					"uncertainty":	0,
+					"note_ids":	[196, 197, 198, 199, 201, 202, 204],
+					"label":	"varied",
+					"uncertainty":	0.33333333333333326,
 					"index":	4,
 					"measures":	{
 						"first":	11,
-						"last":	11
+						"last":	12
 					},
 					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	3,
-					"fragment":	"prefix",
-					"in_continuation":	true,
+					"score":	0.66666666666666674,
+					"mismatches":	1,
+					"intervals":	6,
+					"fragment":	null,
+					"in_continuation":	false,
 					"phrase":	0,
 					"idea":	5,
-					"degrees":	["4", "5", "4", "3"]
+					"degrees":	["4", "5", "4", "3", "2", "3", "4"]
 				}, {
 					"framework":	"standard-form-v1",
 					"span":	{
@@ -47225,13 +46907,13 @@
 					"occurrence":	1,
 					"measure":	2,
 					"beat":	3,
-					"transformation":	"fragmented",
+					"transformation":	"varied",
 					"from":	null
 				}, {
 					"occurrence":	2,
 					"measure":	5,
 					"beat":	3,
-					"transformation":	"fragmented",
+					"transformation":	"varied",
 					"from":	1
 				}, {
 					"occurrence":	0,
@@ -47243,13 +46925,13 @@
 					"occurrence":	3,
 					"measure":	8,
 					"beat":	3,
-					"transformation":	"fragmented",
+					"transformation":	"varied",
 					"from":	0
 				}, {
 					"occurrence":	4,
 					"measure":	11,
 					"beat":	3,
-					"transformation":	"fragmented",
+					"transformation":	"varied",
 					"from":	3
 				}, {
 					"occurrence":	5,
@@ -48582,53 +48264,6 @@
 					"framework":	"standard-form-v1",
 					"span":	{
 						"start":	{
-							"num":	33,
-							"den":	2
-						},
-						"end":	{
-							"num":	271,
-							"den":	16
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	17,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	17,
-							"beat":	4,
-							"subdivision":	{
-								"num":	3,
-								"den":	4
-							}
-						}
-					},
-					"note_ids":	[295, 297, 298, 299, 300, 302, 303],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	1,
-					"measures":	{
-						"first":	17,
-						"last":	17
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	6,
-					"fragment":	"prefix",
-					"in_continuation":	false,
-					"phrase":	1,
-					"idea":	0,
-					"degrees":	["5", "6", "7", "1", "2", "3", "4"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
 							"num":	39,
 							"den":	2
 						},
@@ -48658,7 +48293,7 @@
 					"note_ids":	[351, 353, 354, 355, 356, 357, 358, 360],
 					"label":	"exact",
 					"uncertainty":	0,
-					"index":	2,
+					"index":	1,
 					"measures":	{
 						"first":	20,
 						"last":	21
@@ -48672,53 +48307,6 @@
 					"phrase":	1,
 					"idea":	2,
 					"degrees":	["5", "6", "7", "1", "2", "3", "4", "3"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	45,
-							"den":	2
-						},
-						"end":	{
-							"num":	367,
-							"den":	16
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	23,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	23,
-							"beat":	4,
-							"subdivision":	{
-								"num":	3,
-								"den":	4
-							}
-						}
-					},
-					"note_ids":	[400, 402, 403, 404, 405, 407, 408],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	3,
-					"measures":	{
-						"first":	23,
-						"last":	23
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	6,
-					"fragment":	"prefix",
-					"in_continuation":	false,
-					"phrase":	1,
-					"idea":	null,
-					"degrees":	["1", "2", "3", "4", "5", "6", "b7"]
 				}],
 			"development":	[{
 					"occurrence":	0,
@@ -48728,22 +48316,10 @@
 					"from":	null
 				}, {
 					"occurrence":	1,
-					"measure":	17,
-					"beat":	3,
-					"transformation":	"fragmented",
-					"from":	0
-				}, {
-					"occurrence":	2,
 					"measure":	20,
 					"beat":	3,
 					"transformation":	"exact",
-					"from":	1
-				}, {
-					"occurrence":	3,
-					"measure":	23,
-					"beat":	3,
-					"transformation":	"fragmented",
-					"from":	2
+					"from":	0
 				}],
 			"features":	{
 				"notes":	[{
@@ -48803,6 +48379,305 @@
 			"framework":	"standard-form-v1",
 			"span":	{
 				"start":	{
+					"num":	27,
+					"den":	2
+				},
+				"end":	{
+					"num":	14,
+					"den":	1
+				}
+			},
+			"location":	{
+				"start":	{
+					"measure":	14,
+					"beat":	3,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				},
+				"end":	{
+					"measure":	15,
+					"beat":	1,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				}
+			},
+			"note_ids":	[246, 248, 249, 250, 251, 252, 253],
+			"label":	"motive",
+			"uncertainty":	0,
+			"index":	22,
+			"note_count":	7,
+			"generic":	true,
+			"occurrences":	[{
+					"framework":	"standard-form-v1",
+					"span":	{
+						"start":	{
+							"num":	27,
+							"den":	2
+						},
+						"end":	{
+							"num":	14,
+							"den":	1
+						}
+					},
+					"location":	{
+						"start":	{
+							"measure":	14,
+							"beat":	3,
+							"subdivision":	{
+								"num":	0,
+								"den":	1
+							}
+						},
+						"end":	{
+							"measure":	15,
+							"beat":	1,
+							"subdivision":	{
+								"num":	0,
+								"den":	1
+							}
+						}
+					},
+					"note_ids":	[246, 248, 249, 250, 251, 252, 253],
+					"label":	"exact",
+					"uncertainty":	0,
+					"index":	0,
+					"measures":	{
+						"first":	14,
+						"last":	14
+					},
+					"beat":	3,
+					"score":	1,
+					"mismatches":	0,
+					"intervals":	6,
+					"fragment":	null,
+					"in_continuation":	false,
+					"phrase":	0,
+					"idea":	6,
+					"degrees":	["5", "6", "7", "1", "2", "3", "4"]
+				}, {
+					"framework":	"standard-form-v1",
+					"span":	{
+						"start":	{
+							"num":	33,
+							"den":	2
+						},
+						"end":	{
+							"num":	271,
+							"den":	16
+						}
+					},
+					"location":	{
+						"start":	{
+							"measure":	17,
+							"beat":	3,
+							"subdivision":	{
+								"num":	0,
+								"den":	1
+							}
+						},
+						"end":	{
+							"measure":	17,
+							"beat":	4,
+							"subdivision":	{
+								"num":	3,
+								"den":	4
+							}
+						}
+					},
+					"note_ids":	[295, 297, 298, 299, 300, 302, 303],
+					"label":	"real-transposed",
+					"uncertainty":	0,
+					"index":	1,
+					"measures":	{
+						"first":	17,
+						"last":	17
+					},
+					"beat":	3,
+					"score":	1,
+					"mismatches":	0,
+					"intervals":	6,
+					"fragment":	null,
+					"in_continuation":	false,
+					"phrase":	1,
+					"idea":	0,
+					"degrees":	["5", "6", "7", "1", "2", "3", "4"]
+				}, {
+					"framework":	"standard-form-v1",
+					"span":	{
+						"start":	{
+							"num":	39,
+							"den":	2
+						},
+						"end":	{
+							"num":	20,
+							"den":	1
+						}
+					},
+					"location":	{
+						"start":	{
+							"measure":	20,
+							"beat":	3,
+							"subdivision":	{
+								"num":	0,
+								"den":	1
+							}
+						},
+						"end":	{
+							"measure":	21,
+							"beat":	1,
+							"subdivision":	{
+								"num":	0,
+								"den":	1
+							}
+						}
+					},
+					"note_ids":	[351, 353, 354, 355, 356, 357, 358],
+					"label":	"exact",
+					"uncertainty":	0,
+					"index":	2,
+					"measures":	{
+						"first":	20,
+						"last":	20
+					},
+					"beat":	3,
+					"score":	1,
+					"mismatches":	0,
+					"intervals":	6,
+					"fragment":	null,
+					"in_continuation":	false,
+					"phrase":	1,
+					"idea":	2,
+					"degrees":	["5", "6", "7", "1", "2", "3", "4"]
+				}, {
+					"framework":	"standard-form-v1",
+					"span":	{
+						"start":	{
+							"num":	45,
+							"den":	2
+						},
+						"end":	{
+							"num":	367,
+							"den":	16
+						}
+					},
+					"location":	{
+						"start":	{
+							"measure":	23,
+							"beat":	3,
+							"subdivision":	{
+								"num":	0,
+								"den":	1
+							}
+						},
+						"end":	{
+							"measure":	23,
+							"beat":	4,
+							"subdivision":	{
+								"num":	3,
+								"den":	4
+							}
+						}
+					},
+					"note_ids":	[400, 402, 403, 404, 405, 407, 408],
+					"label":	"real-transposed",
+					"uncertainty":	0,
+					"index":	3,
+					"measures":	{
+						"first":	23,
+						"last":	23
+					},
+					"beat":	3,
+					"score":	1,
+					"mismatches":	0,
+					"intervals":	6,
+					"fragment":	null,
+					"in_continuation":	false,
+					"phrase":	1,
+					"idea":	null,
+					"degrees":	["1", "2", "3", "4", "5", "6", "b7"]
+				}],
+			"development":	[{
+					"occurrence":	0,
+					"measure":	14,
+					"beat":	3,
+					"transformation":	null,
+					"from":	null
+				}, {
+					"occurrence":	1,
+					"measure":	17,
+					"beat":	3,
+					"transformation":	"real-transposed",
+					"from":	0
+				}, {
+					"occurrence":	2,
+					"measure":	20,
+					"beat":	3,
+					"transformation":	"exact",
+					"from":	1
+				}, {
+					"occurrence":	3,
+					"measure":	23,
+					"beat":	3,
+					"transformation":	"real-transposed",
+					"from":	2
+				}],
+			"features":	{
+				"notes":	[{
+						"note_id":	246,
+						"pitch":	69,
+						"onset":	"0/1",
+						"duration":	"1/16"
+					}, {
+						"note_id":	248,
+						"pitch":	71,
+						"onset":	"1/16",
+						"duration":	"1/16"
+					}, {
+						"note_id":	249,
+						"pitch":	73,
+						"onset":	"1/8",
+						"duration":	"1/16"
+					}, {
+						"note_id":	250,
+						"pitch":	74,
+						"onset":	"3/16",
+						"duration":	"1/16"
+					}, {
+						"note_id":	251,
+						"pitch":	76,
+						"onset":	"1/4",
+						"duration":	"1/16"
+					}, {
+						"note_id":	252,
+						"pitch":	78,
+						"onset":	"5/16",
+						"duration":	"1/16"
+					}, {
+						"note_id":	253,
+						"pitch":	79,
+						"onset":	"3/8",
+						"duration":	"1/8"
+					}],
+				"tonic_pc":	2,
+				"minor":	false,
+				"bar":	"1/1",
+				"beat":	"1/4",
+				"pickup":	"1/2",
+				"degrees":	["5", "6", "7", "1", "2", "3", "4"],
+				"intervals":	[2, 2, 1, 2, 2, 1],
+				"steps":	[1, 1, 1, 1, 1, 1],
+				"rhythm":	["1/16", "1/16", "1/16", "1/16", "1/16", "1/16", "1/8"],
+				"ncts":	["chord-tone", "chord-tone", "passing", "chord-tone", "chord-tone", "chord-tone", "chord-tone"],
+				"fingerprint":	"a7ed769d6fbfb350"
+			}
+		}, {
+			"framework":	"standard-form-v1",
+			"span":	{
+				"start":	{
 					"num":	55,
 					"den":	4
 				},
@@ -48832,7 +48707,7 @@
 			"note_ids":	[251, 252, 253, 255, 257, 259, 261, 263],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	22,
+			"index":	23,
 			"note_count":	8,
 			"generic":	true,
 			"occurrences":	[{
@@ -49030,7 +48905,7 @@
 			"note_ids":	[255, 257, 259, 261, 263, 265, 267, 268],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	23,
+			"index":	24,
 			"note_count":	8,
 			"generic":	true,
 			"occurrences":	[{
@@ -49228,7 +49103,7 @@
 			"note_ids":	[259, 261, 263, 265, 267, 268, 269, 271],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	24,
+			"index":	25,
 			"note_count":	8,
 			"generic":	true,
 			"occurrences":	[{
@@ -49426,7 +49301,7 @@
 			"note_ids":	[263, 265, 267, 268, 269, 271, 273, 274],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	25,
+			"index":	26,
 			"note_count":	8,
 			"generic":	true,
 			"occurrences":	[{
@@ -49624,7 +49499,7 @@
 			"note_ids":	[267, 268, 269, 271, 273, 274, 276, 278],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	26,
+			"index":	27,
 			"note_count":	8,
 			"generic":	true,
 			"occurrences":	[{
@@ -49822,7 +49697,7 @@
 			"note_ids":	[269, 271, 273, 274, 276, 278, 280, 281],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	27,
+			"index":	28,
 			"note_count":	8,
 			"generic":	true,
 			"occurrences":	[{
@@ -50020,7 +49895,7 @@
 			"note_ids":	[274, 276, 278, 280, 281, 283, 285, 287],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	28,
+			"index":	29,
 			"note_count":	8,
 			"generic":	true,
 			"occurrences":	[{
@@ -50218,7 +50093,7 @@
 			"note_ids":	[278, 280, 281, 283, 285, 287, 289, 291],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	29,
+			"index":	30,
 			"note_count":	8,
 			"generic":	true,
 			"occurrences":	[{
@@ -50416,7 +50291,7 @@
 			"note_ids":	[283, 285, 287, 289, 291, 292, 293, 294],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	30,
+			"index":	31,
 			"note_count":	8,
 			"generic":	true,
 			"occurrences":	[{
@@ -50614,7 +50489,7 @@
 			"note_ids":	[287, 289, 291, 292, 293, 294, 295, 297],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	31,
+			"index":	32,
 			"note_count":	8,
 			"generic":	true,
 			"occurrences":	[{
@@ -50812,7 +50687,7 @@
 			"note_ids":	[292, 293, 294, 295, 297, 298, 299, 300],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	32,
+			"index":	33,
 			"note_count":	8,
 			"generic":	true,
 			"occurrences":	[{
@@ -51010,7 +50885,7 @@
 			"note_ids":	[306, 307, 308, 309],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	33,
+			"index":	34,
 			"note_count":	4,
 			"generic":	true,
 			"occurrences":	[{
@@ -51188,7 +51063,7 @@
 			"note_ids":	[312, 314, 315, 317, 319, 324],
 			"label":	"motive",
 			"uncertainty":	0,
-			"index":	34,
+			"index":	35,
 			"note_count":	6,
 			"generic":	true,
 			"occurrences":	[{

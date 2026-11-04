@@ -7,12 +7,13 @@
 #include "standard-texture/framework.h"
 #include "standard-texture/analysis/texture_analysis_classify.h"
 #include "theory/framework.h"
+#include "core/rational.h"
 #include "time/musical_time.h"
 #include "time/temporal_anchor.h"
 
 /* a < b for the rationals na/da and nb/db (denominators positive). */
 static bool before(long long na, long long da, long long nb, long long db) {
-    return na * db < nb * da;
+    return rational_cmp(rational_ratio(na, da), rational_ratio(nb, db)) < 0;
 }
 
 /* The notes attacked in [start, end), in time order. NULL with *count 0 on allocation failure or when there are none. */

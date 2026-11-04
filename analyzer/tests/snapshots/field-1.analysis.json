@@ -78941,53 +78941,6 @@
 					"phrase":	9,
 					"idea":	0,
 					"degrees":	["3", "3", "5", "3"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	15139,
-							"den":	160
-						},
-						"end":	{
-							"num":	45661,
-							"den":	480
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	64,
-							"beat":	1,
-							"subdivision":	{
-								"num":	19,
-								"den":	60
-							}
-						},
-						"end":	{
-							"measure":	64,
-							"beat":	2,
-							"subdivision":	{
-								"num":	121,
-								"den":	180
-							}
-						}
-					},
-					"note_ids":	[1112, 1114, 1117],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	3,
-					"measures":	{
-						"first":	64,
-						"last":	64
-					},
-					"beat":	1.3166666666666667,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	2,
-					"fragment":	"prefix",
-					"in_continuation":	true,
-					"phrase":	9,
-					"idea":	3,
-					"degrees":	["5", "5", "b7"]
 				}],
 			"development":	[{
 					"occurrence":	0,
@@ -79007,12 +78960,6 @@
 					"beat":	3,
 					"transformation":	"real-transposed",
 					"from":	1
-				}, {
-					"occurrence":	3,
-					"measure":	64,
-					"beat":	1.3166666666666667,
-					"transformation":	"fragmented",
-					"from":	2
 				}],
 			"features":	{
 				"notes":	[{
@@ -79047,6 +78994,285 @@
 				"rhythm":	["1/4", "1/4", "1/4", "59/480"],
 				"ncts":	["chord-tone", "chord-tone", "chord-tone", "chord-tone"],
 				"fingerprint":	"0231ec3834de1192"
+			}
+		}, {
+			"framework":	"standard-form-v1",
+			"span":	{
+				"start":	{
+					"num":	183,
+					"den":	4
+				},
+				"end":	{
+					"num":	371,
+					"den":	8
+				}
+			},
+			"location":	{
+				"start":	{
+					"measure":	31,
+					"beat":	3,
+					"subdivision":	{
+						"num":	0,
+						"den":	1
+					}
+				},
+				"end":	{
+					"measure":	31,
+					"beat":	4,
+					"subdivision":	{
+						"num":	2,
+						"den":	3
+					}
+				}
+			},
+			"note_ids":	[480, 481, 483],
+			"label":	"motive",
+			"uncertainty":	0,
+			"index":	1,
+			"note_count":	3,
+			"generic":	true,
+			"occurrences":	[{
+					"framework":	"standard-form-v1",
+					"span":	{
+						"start":	{
+							"num":	183,
+							"den":	4
+						},
+						"end":	{
+							"num":	371,
+							"den":	8
+						}
+					},
+					"location":	{
+						"start":	{
+							"measure":	31,
+							"beat":	3,
+							"subdivision":	{
+								"num":	0,
+								"den":	1
+							}
+						},
+						"end":	{
+							"measure":	31,
+							"beat":	4,
+							"subdivision":	{
+								"num":	2,
+								"den":	3
+							}
+						}
+					},
+					"note_ids":	[480, 481, 483],
+					"label":	"exact",
+					"uncertainty":	0,
+					"index":	0,
+					"measures":	{
+						"first":	31,
+						"last":	31
+					},
+					"beat":	3,
+					"score":	1,
+					"mismatches":	0,
+					"intervals":	2,
+					"fragment":	null,
+					"in_continuation":	false,
+					"phrase":	5,
+					"idea":	0,
+					"degrees":	["1", "1", "b3"]
+				}, {
+					"framework":	"standard-form-v1",
+					"span":	{
+						"start":	{
+							"num":	297,
+							"den":	4
+						},
+						"end":	{
+							"num":	599,
+							"den":	8
+						}
+					},
+					"location":	{
+						"start":	{
+							"measure":	50,
+							"beat":	3,
+							"subdivision":	{
+								"num":	0,
+								"den":	1
+							}
+						},
+						"end":	{
+							"measure":	50,
+							"beat":	4,
+							"subdivision":	{
+								"num":	2,
+								"den":	3
+							}
+						}
+					},
+					"note_ids":	[846, 847, 849],
+					"label":	"real-transposed",
+					"uncertainty":	0,
+					"index":	1,
+					"measures":	{
+						"first":	50,
+						"last":	50
+					},
+					"beat":	3,
+					"score":	1,
+					"mismatches":	0,
+					"intervals":	2,
+					"fragment":	null,
+					"in_continuation":	false,
+					"phrase":	null,
+					"idea":	null,
+					"degrees":	["3", "3", "5"]
+				}, {
+					"framework":	"standard-form-v1",
+					"span":	{
+						"start":	{
+							"num":	345,
+							"den":	4
+						},
+						"end":	{
+							"num":	695,
+							"den":	8
+						}
+					},
+					"location":	{
+						"start":	{
+							"measure":	58,
+							"beat":	3,
+							"subdivision":	{
+								"num":	0,
+								"den":	1
+							}
+						},
+						"end":	{
+							"measure":	58,
+							"beat":	4,
+							"subdivision":	{
+								"num":	2,
+								"den":	3
+							}
+						}
+					},
+					"note_ids":	[984, 985, 987],
+					"label":	"real-transposed",
+					"uncertainty":	0,
+					"index":	2,
+					"measures":	{
+						"first":	58,
+						"last":	58
+					},
+					"beat":	3,
+					"score":	1,
+					"mismatches":	0,
+					"intervals":	2,
+					"fragment":	null,
+					"in_continuation":	false,
+					"phrase":	9,
+					"idea":	0,
+					"degrees":	["3", "3", "5"]
+				}, {
+					"framework":	"standard-form-v1",
+					"span":	{
+						"start":	{
+							"num":	15139,
+							"den":	160
+						},
+						"end":	{
+							"num":	45661,
+							"den":	480
+						}
+					},
+					"location":	{
+						"start":	{
+							"measure":	64,
+							"beat":	1,
+							"subdivision":	{
+								"num":	19,
+								"den":	60
+							}
+						},
+						"end":	{
+							"measure":	64,
+							"beat":	2,
+							"subdivision":	{
+								"num":	121,
+								"den":	180
+							}
+						}
+					},
+					"note_ids":	[1112, 1114, 1117],
+					"label":	"real-transposed",
+					"uncertainty":	0,
+					"index":	3,
+					"measures":	{
+						"first":	64,
+						"last":	64
+					},
+					"beat":	1.3166666666666667,
+					"score":	1,
+					"mismatches":	0,
+					"intervals":	2,
+					"fragment":	null,
+					"in_continuation":	false,
+					"phrase":	9,
+					"idea":	3,
+					"degrees":	["5", "5", "b7"]
+				}],
+			"development":	[{
+					"occurrence":	0,
+					"measure":	31,
+					"beat":	3,
+					"transformation":	null,
+					"from":	null
+				}, {
+					"occurrence":	1,
+					"measure":	50,
+					"beat":	3,
+					"transformation":	"real-transposed",
+					"from":	0
+				}, {
+					"occurrence":	2,
+					"measure":	58,
+					"beat":	3,
+					"transformation":	"real-transposed",
+					"from":	1
+				}, {
+					"occurrence":	3,
+					"measure":	64,
+					"beat":	1.3166666666666667,
+					"transformation":	"real-transposed",
+					"from":	2
+				}],
+			"features":	{
+				"notes":	[{
+						"note_id":	480,
+						"pitch":	53,
+						"onset":	"0/1",
+						"duration":	"1/4"
+					}, {
+						"note_id":	481,
+						"pitch":	65,
+						"onset":	"1/8",
+						"duration":	"1/4"
+					}, {
+						"note_id":	483,
+						"pitch":	56,
+						"onset":	"3/8",
+						"duration":	"1/4"
+					}],
+				"tonic_pc":	5,
+				"minor":	true,
+				"bar":	"3/2",
+				"beat":	"3/8",
+				"pickup":	"3/4",
+				"degrees":	["1", "1", "b3"],
+				"intervals":	[12, -9],
+				"steps":	[7, -5],
+				"rhythm":	["1/4", "1/4", "1/4"],
+				"ncts":	["chord-tone", "chord-tone", "chord-tone"],
+				"fingerprint":	"f7aaf62f0c32072f"
 			}
 		}],
 	"melody":	[{

@@ -6,6 +6,7 @@
 
 #include <limits.h>
 
+#include "core/rational.h"
 #include "standard-form/continuation_trait.h"
 #include "standard-form/expansion_placement.h"
 #include "standard-form/external_expansion_kind.h"
@@ -81,7 +82,7 @@ static const char *signal_name(int signal) {
 
 /* a/b < c/d for positive denominators. */
 static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
-    return (long long)a * (long long)d < (long long)c * (long long)b;
+    return rational_cmp(rational_ratio(a, (long long)b), rational_ratio(c, (long long)d)) < 0;
 }
 
 /* The span from the start of measure `first` to the end of measure `last`. False if the meter does not place them. */
