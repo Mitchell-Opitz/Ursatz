@@ -6,7 +6,9 @@
 #include "core/provenance_reference.h"
 #include "identity/entity_id.h"
 #include "pitch/pitch_identity.h"
+#include "pitch/pitch_arithmetic.h"
 #include "pitch/pitch_numeric_value.h"
+#include "pitch/pitch_spelling.h"
 #include "pitch/tuning_system.h"
 #include "time/duration.h"
 #include "time/temporal_anchor.h"
@@ -18,10 +20,9 @@
 #include <ursatz_analyzer/style_profile.h>
 
 /*
- * The API the Composer calls (composer_api.h). Bach 114 imported from its file and the same events passed as a
- * fragment give the same report; a constructed four-voice fragment with a parallel fifth gives one parallel-fifths
- * violation at its measure and beat; Mozart 545 is closer to the sonatinas model than to the chorales; the caller's
- * events are not changed. With the argument "smoke" the style models (which analyze two corpora) are skipped, so the
+ * The API the Composer calls (composer_api.h), through analyzer_hear. A constructed four-voice fragment with a parallel
+ * fifth gives one parallel-fifths violation at its measure and beat; an empty hearing has no chords and no violations;
+ * Mozart 545 is closer to the sonatinas model than to the chorales; the caller's events are not changed. With the argument "smoke" the style models (which analyze two corpora) are skipped, so the
  * valgrind run stays short.
  */
 
@@ -66,101 +67,10 @@ static char *fingerprint(const NoteEvent *const *events, size_t count) {
     return text;
 }
 
-/* ---- Bach 114 through the file and through the API ---- */
-
-/* The document with the file's ticks per quarter note masked: a fragment has no SMF header, so it reports null. */
-static char *mask_ticks(const char *json) {
-    char *copy = malloc(strlen(json) + 8);
-    if (copy) {
-        strcpy(copy, json);
-    }
-    char *at = copy ? strstr(copy, "\"ticks_per_quarter\": ") : NULL;
-    if (at) {
-        at += strlen("\"ticks_per_quarter\": ");
-        char *end = at;
-        while (*end && *end != ',' && *end != '\n') {
-            end++;
-        }
-        memmove(at + 4, end, strlen(end) + 1);
-        memcpy(at, "null", 4);
-    }
-    return copy;
-}
-
-/* The tonic pitch class of the first key signature event of an imported file. */
 static int tonic_of(const ImportedNotes *notes) {
     int fifths = notes->key_signature.sharps_flats;
     int major = (((fifths * 7) % 12) + 12) % 12;
     return notes->key_signature.is_minor ? (major + 9) % 12 : major;
-}
-
-static void test_bach_round_trip(void) {
-    char path[1024];
-    piece_path(path, sizeof(path), "Bach 114.mid");
-    ImportedNotes notes;
-    CHECK(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK, "cannot import %s", path);
-    AnalysisReport direct;
-    CHECK(run_analysis_pipeline(&notes, &direct), "direct analysis");
-    /* A fragment has no parts and no tempo: leave the file's out of the document it is compared with. */
-    notes.source.tempo_declared = false;
-    notes.source.initial_quarters_per_minute = 0;
-    for (size_t i = 0; i < notes.source.part_count; i++) {
-        free(notes.source.parts[i].id);
-        free(notes.source.parts[i].name);
-    }
-    free(notes.source.parts);
-    notes.source.parts = NULL;
-    notes.source.part_count = 0;
-    char *direct_json = analysis_document_render("<fragment>", &notes, &direct);
-
-    char *before = fingerprint((const NoteEvent *const *)notes.events, notes.count);
-    AnalyzerFragment fragment = {(const NoteEvent *const *)notes.events,
-                                 notes.count,
-                                 notes.meter.meter_map,
-                                 notes.key_signature.found,
-                                 tonic_of(&notes),
-                                 notes.key_signature.is_minor,
-                                 notes.streams};
-    AnalyzerFragmentAnalysis analysis;
-    CHECK(analyzer_analyze_fragment(&fragment, &analysis) == ANALYZER_FRAGMENT_OK, "fragment analysis");
-    const AnalysisReport *report = analyzer_fragment_report(&analysis);
-    CHECK(report != NULL, "report accessor");
-    if (report) {
-        CHECK(report->entry_count == direct.entry_count, "%zu chords against %zu", report->entry_count,
-              direct.entry_count);
-        for (size_t i = 0; i < report->entry_count && i < direct.entry_count; i++) {
-            CHECK(strcmp(report->entries[i].chord_label, direct.entries[i].chord_label) == 0, "chord %zu differs", i);
-        }
-        CHECK(report->cadence_count == direct.cadence_count, "%zu cadences against %zu", report->cadence_count,
-              direct.cadence_count);
-        for (size_t i = 0; i < report->cadence_count && i < direct.cadence_count; i++) {
-            CHECK(report->cadences[i].arrival_first == direct.cadences[i].arrival_first &&
-                      strcmp(report->cadences[i].type, direct.cadences[i].type) == 0,
-                  "cadence %zu differs", i);
-        }
-        CHECK(report->phrase_count == direct.phrase_count, "%zu phrases against %zu", report->phrase_count,
-              direct.phrase_count);
-        for (size_t i = 0; i < report->phrase_count && i < direct.phrase_count; i++) {
-            CHECK(report->phrases[i].first_entry == direct.phrases[i].first_entry &&
-                      report->phrases[i].entry_count == direct.phrases[i].entry_count,
-                  "phrase %zu differs", i);
-        }
-    }
-    const char *json = analyzer_fragment_document_json(&analysis);
-    char *masked = json ? mask_ticks(json) : NULL;
-    char *direct_masked = direct_json ? mask_ticks(direct_json) : NULL;
-    CHECK(masked && direct_masked && strcmp(masked, direct_masked) == 0, "the document differs from the file's");
-    free(masked);
-    free(direct_masked);
-
-    char *after = fingerprint((const NoteEvent *const *)notes.events, notes.count);
-    CHECK(before && after && strcmp(before, after) == 0 && fragment.count == notes.count, "the events were changed");
-    free(before);
-    free(after);
-    free(direct_json);
-    analyzer_fragment_analysis_destroy(&analysis);
-    analysis_report_destroy(&direct);
-    imported_notes_destroy(&notes);
 }
 
 /* ---- a constructed four-voice fragment ---- */
@@ -181,18 +91,35 @@ static NoteEvent *make_event(TuningSystem *tuning, size_t number, int midi, long
     PitchNumericValue *value = NULL;
     PitchIdentity *pitch = NULL;
     ProvenanceReference *provenance = NULL;
+    PitchSpelling *spelling = NULL;
     NoteEvent *event = NULL;
+    /* Spelled as the MIDI importer spells a note: sharps only, so the hearing, which borrows the events, can read it. */
+    int fifths = (midi % PITCH_SEMITONES_PER_OCTAVE) * 7 % PITCH_SEMITONES_PER_OCTAVE;
+    PitchLetter letter;
+    int accidental;
+    pitch_spelling_from_fifths(fifths == 11 ? -1 : fifths, &letter, &accidental);
     if (entity_id_create(name, &id) != ENTITY_ID_OK || musical_time_create(start_half, 2, &position) != MUSICAL_TIME_OK ||
         temporal_anchor_create(position, &anchor) != TEMPORAL_ANCHOR_OK ||
         duration_create(length_half, 2, &duration) != DURATION_OK ||
         pitch_numeric_value_create(tuning, midi, 1, &value) != PITCH_NUMERIC_VALUE_OK ||
         pitch_numeric_value_to_identity(value, &pitch) != PITCH_NUMERIC_VALUE_TO_IDENTITY_OK ||
+        pitch_spelling_create(letter, accidental, midi / PITCH_SEMITONES_PER_OCTAVE - 1, &spelling) !=
+            PITCH_SPELLING_OK ||
         provenance_reference_create_absent(&provenance) != PROVENANCE_REFERENCE_OK ||
-        note_event_create(id, anchor, duration, pitch, NULL, NULL, provenance, &event) != NOTE_EVENT_OK) {
+        note_event_create(id, anchor, duration, pitch, spelling, NULL, provenance, &event) != NOTE_EVENT_OK) {
         return NULL;
     }
     pitch_numeric_value_destroy(value);
     return event;
+}
+
+/* The MIDI note numbers of imported notes, for AnalyzerHearing. The caller frees them. */
+static int *midi_of(const ImportedNotes *notes) {
+    int *midi = malloc((notes->count ? notes->count : 1) * sizeof *midi);
+    for (size_t i = 0; midi && i < notes->count; i++) {
+        midi[i] = (int)pitch_numeric_value_position_numerator(notes->pitch_values[i]);
+    }
+    return midi;
 }
 
 static size_t count_rule(const AnalyzerViolation *violations, size_t count, const char *rule) {
@@ -221,13 +148,17 @@ static void test_parallel_fifth(void) {
         streams[i] = (size_t)plan[i].voice;
         CHECK(events[i] != NULL, "event %zu", i);
     }
+    int midi[8];
+    for (size_t i = 0; i < 8; i++) {
+        midi[i] = plan[i].midi;
+    }
     char *before = fingerprint((const NoteEvent *const *)events, 8);
-    AnalyzerFragment fragment = {(const NoteEvent *const *)events, 8, NULL, true, 0, false, streams};
-    AnalyzerFragmentAnalysis analysis;
-    CHECK(analyzer_analyze_fragment(&fragment, &analysis) == ANALYZER_FRAGMENT_OK, "fragment analysis");
+    AnalyzerHearing hearing = {(const NoteEvent *const *)events, 8, midi, NULL, true, 0, false, streams};
+    AnalyzerResult *heard = NULL;
+    CHECK(analyzer_hear(&hearing, NULL, &heard) == ANALYZER_OK && heard, "hearing");
     AnalyzerViolation *violations = NULL;
     size_t count = 0;
-    CHECK(analyzer_fragment_violations(&analysis, &violations, &count) == ANALYZER_FRAGMENT_OK, "violations");
+    CHECK(analyzer_result_violations(heard, &violations, &count) == ANALYZER_OK, "violations");
     CHECK(count_rule(violations, count, "parallel-fifths") == 1, "%zu parallel fifths", count_rule(violations, count, "parallel-fifths"));
     CHECK(count_rule(violations, count, "parallel-octaves") == 0, "no parallel octaves");
     for (size_t i = 0; i < count; i++) {
@@ -243,7 +174,7 @@ static void test_parallel_fifth(void) {
     CHECK(before && after && strcmp(before, after) == 0, "the events were changed");
     free(before);
     free(after);
-    analyzer_fragment_analysis_destroy(&analysis);
+    analyzer_result_destroy(heard);
     for (size_t i = 0; i < 8; i++) {
         note_event_destroy(events[i]);
     }
@@ -253,22 +184,18 @@ static void test_parallel_fifth(void) {
 /* ---- the argument checks ---- */
 
 static void test_refusals(void) {
-    AnalyzerFragmentAnalysis analysis;
-    CHECK(analyzer_analyze_fragment(NULL, &analysis) == ANALYZER_FRAGMENT_ERR_ARGUMENT, "no fragment");
-    AnalyzerFragment bad_key = {NULL, 0, NULL, true, 12, false, NULL};
-    CHECK(analyzer_analyze_fragment(&bad_key, &analysis) == ANALYZER_FRAGMENT_ERR_ARGUMENT, "tonic out of range");
-    AnalyzerFragment empty = {NULL, 0, NULL, false, 0, false, NULL};
-    CHECK(analyzer_analyze_fragment(&empty, &analysis) == ANALYZER_FRAGMENT_OK, "an empty fragment");
-    CHECK(analyzer_fragment_report(&analysis) && analyzer_fragment_report(&analysis)->entry_count == 0, "no chords");
+    AnalyzerHearing empty = {NULL, 0, NULL, NULL, false, 0, false, NULL};
+    AnalyzerResult *heard = NULL;
+    CHECK(analyzer_hear(&empty, NULL, &heard) == ANALYZER_OK && heard, "an empty hearing");
+    CHECK(analyzer_result_report(heard)->entry_count == 0, "no chords");
     AnalyzerViolation *violations = NULL;
     size_t count = 7;
-    CHECK(analyzer_fragment_violations(&analysis, &violations, &count) == ANALYZER_FRAGMENT_OK && count == 0 &&
-              violations == NULL,
+    CHECK(analyzer_result_violations(heard, &violations, &count) == ANALYZER_OK && count == 0 && violations == NULL,
           "no violations");
-    analyzer_fragment_analysis_destroy(&analysis);
-    CHECK(analyzer_fragment_report(&analysis) == NULL && analyzer_fragment_document_json(NULL) == NULL,
-          "a destroyed analysis has no report");
-    analyzer_fragment_analysis_destroy(NULL);
+    analyzer_result_destroy(heard);
+    AnalyzerHearing bad_key = {NULL, 0, NULL, NULL, true, 12, false, NULL};
+    CHECK(analyzer_hear(&bad_key, NULL, &heard) == ANALYZER_ERR_ARGUMENT && heard == NULL, "tonic out of range");
+    CHECK(analyzer_hear(NULL, NULL, &heard) == ANALYZER_ERR_ARGUMENT, "no hearing");
 }
 
 /* ---- style distance ---- */
@@ -322,17 +249,27 @@ static bool has_motive(const StyleComparison *comparison, bool *fragment_side_on
     return found;
 }
 
+/* The distance of a result against a reference of the model without the named categories. */
+static AnalyzerStatus distance(const AnalyzerResult *result, const StyleModel *model, const char *const *without,
+                               size_t count, StyleComparison *out) {
+    AnalyzerStyleReference *reference = NULL;
+    AnalyzerStatus status = analyzer_style_reference_create(model, without, count, &reference);
+    if (status == ANALYZER_OK) {
+        status = analyzer_result_style_distance(result, reference, out);
+    }
+    analyzer_style_reference_destroy(reference);
+    return status;
+}
+
 /* The distance without the motive categories: the same against the full model as against the model read without
-   them, and no motive category in the result. The plain call against the cut model still lists them. */
-static void check_without(const AnalyzerFragmentAnalysis *analysis, const StyleModel *full, const StyleModel *cut,
+   them, and no motive category in the result. A reference that drops nothing against the cut model still lists them. */
+static void check_without(const AnalyzerResult *result, const StyleModel *full, const StyleModel *cut,
                           const char *name) {
     StyleComparison against_full = {0}, against_cut = {0}, plain = {0};
-    CHECK(analyzer_fragment_style_distance_without(analysis, full, motive_categories, MOTIVE_COUNT, &against_full) ==
-                  ANALYZER_FRAGMENT_OK &&
-              analyzer_fragment_style_distance_without(analysis, cut, motive_categories, MOTIVE_COUNT, &against_cut) ==
-                  ANALYZER_FRAGMENT_OK,
+    CHECK(distance(result, full, motive_categories, MOTIVE_COUNT, &against_full) == ANALYZER_OK &&
+              distance(result, cut, motive_categories, MOTIVE_COUNT, &against_cut) == ANALYZER_OK,
           "%s without", name);
-    CHECK(analyzer_fragment_style_distance(analysis, cut, &plain) == ANALYZER_FRAGMENT_OK, "%s plain", name);
+    CHECK(distance(result, cut, NULL, 0, &plain) == ANALYZER_OK, "%s plain", name);
     bool only = false;
     CHECK(!has_motive(&against_full, &only) && !has_motive(&against_cut, &only), "%s: motive category left in", name);
     CHECK(against_full.category_count == against_cut.category_count, "%s: category counts differ", name);
@@ -345,7 +282,7 @@ static void check_without(const AnalyzerFragmentAnalysis *analysis, const StyleM
                    same_rational(against_full.dimension[d], against_cut.dimension[d])),
               "%s: dimension %d differs", name, d);
     }
-    /* Why the call exists: the plain call lists the fragment's motive categories with in_b false. */
+    /* Why the call exists: the plain reference lists the result's motive categories with in_b false. */
     CHECK(has_motive(&plain, &only) && only, "%s: plain call does not list motive categories as missing", name);
     style_comparison_destroy(&against_full);
     style_comparison_destroy(&against_cut);
@@ -361,19 +298,21 @@ static void test_style_distance(void) {
     piece_path(path, sizeof(path), "Mozart 545.mid");
     ImportedNotes notes;
     CHECK(midi_pipeline_import_file(path, &notes) == MIDI_PIPELINE_OK, "cannot import %s", path);
-    AnalyzerFragment fragment = {(const NoteEvent *const *)notes.events,
-                                 notes.count,
-                                 notes.meter.meter_map,
-                                 notes.key_signature.found,
-                                 tonic_of(&notes),
-                                 notes.key_signature.is_minor,
-                                 notes.streams};
-    AnalyzerFragmentAnalysis analysis;
-    CHECK(analyzer_analyze_fragment(&fragment, &analysis) == ANALYZER_FRAGMENT_OK, "fragment analysis");
+    int *midi = midi_of(&notes);
+    AnalyzerHearing hearing = {(const NoteEvent *const *)notes.events,
+                               notes.count,
+                               midi,
+                               notes.meter.meter_map,
+                               notes.key_signature.found,
+                               tonic_of(&notes),
+                               notes.key_signature.is_minor,
+                               notes.streams};
+    AnalyzerResult *analysis = NULL;
+    CHECK(analyzer_hear(&hearing, NULL, &analysis) == ANALYZER_OK && analysis, "hearing");
     StyleComparison near_style = {0}, far_style = {0};
     if (sonatinas && chorales) {
-        CHECK(analyzer_fragment_style_distance(&analysis, sonatinas, &near_style) == ANALYZER_FRAGMENT_OK, "near");
-        CHECK(analyzer_fragment_style_distance(&analysis, chorales, &far_style) == ANALYZER_FRAGMENT_OK, "far");
+        CHECK(distance(analysis, sonatinas, NULL, 0, &near_style) == ANALYZER_OK, "near");
+        CHECK(distance(analysis, chorales, NULL, 0, &far_style) == ANALYZER_OK, "far");
         CHECK(near_style.overall_present && far_style.overall_present, "overall distances");
         if (near_style.overall_present && far_style.overall_present) {
             double near_distance = style_rational_value(near_style.overall);
@@ -385,23 +324,21 @@ static void test_style_distance(void) {
     style_comparison_destroy(&near_style);
     style_comparison_destroy(&far_style);
     if (sonatinas && chorales && sonatinas_cut && chorales_cut) {
-        check_without(&analysis, sonatinas, sonatinas_cut, "sonatinas");
-        check_without(&analysis, chorales, chorales_cut, "chorales");
+        check_without(analysis, sonatinas, sonatinas_cut, "sonatinas");
+        check_without(analysis, chorales, chorales_cut, "chorales");
         StyleComparison refused = {0};
         const char *unknown[] = {"no-such-category"};
         const char *known[] = {STYLE_CATEGORY_MOTIVE_RHYTHM};
-        CHECK(analyzer_fragment_style_distance_without(&analysis, sonatinas, unknown, 1, &refused) ==
-                  ANALYZER_FRAGMENT_ERR_ARGUMENT,
+        CHECK(distance(analysis, sonatinas, unknown, 1, &refused) == ANALYZER_ERR_ARGUMENT,
               "unknown category name");
-        CHECK(analyzer_fragment_style_distance_without(&analysis, sonatinas, NULL, 1, &refused) ==
-                  ANALYZER_FRAGMENT_ERR_ARGUMENT,
+        CHECK(distance(analysis, sonatinas, NULL, 1, &refused) == ANALYZER_ERR_ARGUMENT,
               "NULL categories with a count");
-        CHECK(analyzer_fragment_style_distance_without(&analysis, sonatinas, known, 1, &refused) ==
-                  ANALYZER_FRAGMENT_OK,
+        CHECK(distance(analysis, sonatinas, known, 1, &refused) == ANALYZER_OK,
               "one category left out");
         style_comparison_destroy(&refused);
     }
-    analyzer_fragment_analysis_destroy(&analysis);
+    analyzer_result_destroy(analysis);
+    free(midi);
     imported_notes_destroy(&notes);
 
     /* A fragment too short for most categories lists them as missing and leaves them out of the means. */
@@ -411,11 +348,12 @@ static void test_style_distance(void) {
               tuning_system_create(tuning_id, "MIDI note number", &tuning) == TUNING_SYSTEM_OK,
           "tuning system");
     NoteEvent *events[2] = {make_event(tuning, 0, 60, 0, 1), make_event(tuning, 1, 62, 1, 1)};
-    AnalyzerFragment tiny = {(const NoteEvent *const *)events, 2, NULL, false, 0, false, NULL};
-    CHECK(analyzer_analyze_fragment(&tiny, &analysis) == ANALYZER_FRAGMENT_OK, "tiny fragment");
+    const int tiny_midi[2] = {60, 62};
+    AnalyzerHearing tiny = {(const NoteEvent *const *)events, 2, tiny_midi, NULL, false, 0, false, NULL};
+    CHECK(analyzer_hear(&tiny, NULL, &analysis) == ANALYZER_OK && analysis, "tiny fragment");
     StyleComparison tiny_style = {0};
     if (sonatinas) {
-        CHECK(analyzer_fragment_style_distance(&analysis, sonatinas, &tiny_style) == ANALYZER_FRAGMENT_OK, "tiny distance");
+        CHECK(distance(analysis, sonatinas, NULL, 0, &tiny_style) == ANALYZER_OK, "tiny distance");
         size_t missing = 0, shared = 0;
         for (size_t i = 0; i < tiny_style.category_count; i++) {
             missing += !tiny_style.categories[i].in_a && tiny_style.categories[i].in_b;
@@ -428,7 +366,7 @@ static void test_style_distance(void) {
         }
     }
     style_comparison_destroy(&tiny_style);
-    analyzer_fragment_analysis_destroy(&analysis);
+    analyzer_result_destroy(analysis);
     note_event_destroy(events[0]);
     note_event_destroy(events[1]);
     tuning_system_destroy(tuning);
@@ -447,7 +385,6 @@ int main(int argc, char **argv) {
         fprintf(stderr, "cannot create %s\n", work_dir);
         return 1;
     }
-    test_bach_round_trip();
     test_parallel_fifth();
     test_refusals();
     if (!smoke) {

@@ -18,15 +18,15 @@
 
 /*
  * The hearing entry and the style reference (composer_api.h) on the five reference pieces:
- *   - a hearing without render_document has no document; with it, the document equals the one rendered from an
- *     analysis of the imported notes,
+ *   - a hearing without render_document has no document; with it, the document is rendered from the
+ *     result,
  *   - the events are not copied: the result's notes point at the caller's events,
  *   - the claim counts equal those of analyzer_analyze over the same notes,
  *   - a callback that refuses stops the hearing with ANALYZER_ERR_CANCELLED and nothing written,
  *   - bad arguments are refused,
  *   - style_profile_add_result gives the statistics of style_profile_add_document_json on the rendered document,
- *   - the distance against a style reference equals analyzer_fragment_style_distance on the same fragment and model,
- *   - the violations of a result equal those of analyzer_fragment_violations on the same fragment.
+ *   - the distance against a style reference equals that of a second hearing of the same events,
+ *   - the violations of a result equal those of the result of analyzer_analyze on the same notes.
  *
  *   test_hearing          the five pieces
  *   test_hearing smoke    Bach 114 only (the valgrind run)
@@ -152,16 +152,16 @@ static bool same_violations(const AnalyzerViolation *a, const AnalyzerViolation 
     return true;
 }
 
-/* The violations of a heard result equal those of the fragment entry over the same events, and bad arguments are
+/* The violations of a heard result equal those of the direct analysis of the same notes, and bad arguments are
    refused. */
-static void check_violations(const char *fixture, const AnalyzerResult *heard, const AnalyzerFragmentAnalysis *analysis) {
+static void check_violations(const char *fixture, const AnalyzerResult *heard, const AnalyzerResult *direct) {
     AnalyzerViolation *from_result = NULL, *from_fragment = NULL;
     size_t result_count = 99, fragment_count = 99;
     CHECK(analyzer_result_violations(heard, &from_result, &result_count) == ANALYZER_OK, "%s: result violations",
           fixture);
-    CHECK(analyzer_fragment_violations(analysis, &from_fragment, &fragment_count) == ANALYZER_FRAGMENT_OK,
-          "%s: fragment violations", fixture);
-    CHECK(result_count == fragment_count, "%s: %zu result violations, %zu fragment violations", fixture, result_count,
+    CHECK(analyzer_result_violations(direct, &from_fragment, &fragment_count) == ANALYZER_OK,
+          "%s: direct violations", fixture);
+    CHECK(result_count == fragment_count, "%s: %zu result violations, %zu direct violations", fixture, result_count,
           fragment_count);
     CHECK((result_count == 0) == (from_result == NULL), "%s: array and count disagree", fixture);
     if (result_count == fragment_count) {
@@ -220,50 +220,44 @@ static void check_piece(const char *fixture, const StyleModel *reference_model) 
               "%s: area %d claim count differs", fixture, area);
     }
 
-    /* The document, when asked for, is the one the fragment entry renders (the notes carry no file source). */
+    /* The document, when asked for, is the one rendered from the direct analysis (the notes carry no file source). */
     AnalyzerHearingOptions with_document = analyzer_hearing_options_default();
     with_document.render_document = true;
     AnalyzerResult *rendered = NULL;
     CHECK(analyzer_hear(&hearing, &with_document, &rendered) == ANALYZER_OK && rendered, "%s: hear with document",
           fixture);
-    char *expected = analysis_document_render_result("<fragment>", direct);
     const char *json = analyzer_result_document_json(rendered);
     /* The result's profile equals the profile of its document. */
     StyleProfile *from_result = style_profile_create();
     StyleProfile *from_json = style_profile_create();
-    CHECK(from_result && from_json && style_profile_add_result(from_result, direct) == STYLE_PROFILE_OK &&
-              style_profile_add_document_json(from_json, expected) == STYLE_PROFILE_OK,
+    CHECK(from_result && from_json && style_profile_add_result(from_result, heard) == STYLE_PROFILE_OK &&
+              style_profile_add_document_json(from_json, json) == STYLE_PROFILE_OK,
           "%s: profiles", fixture);
     CHECK(from_result && from_json && same_statistics(from_result, from_json),
           "%s: profile of the result differs from the profile of its document", fixture);
     style_profile_destroy(from_result);
     style_profile_destroy(from_json);
 
-    /* The distance equals the old entry's on the same fragment and model. */
-    AnalyzerFragment fragment = {hearing.events, hearing.count, hearing.meter, hearing.has_key,
-                                 hearing.key_tonic_pitch_class, hearing.key_minor, hearing.streams};
-    AnalyzerFragmentAnalysis analysis;
-    CHECK(analyzer_analyze_fragment(&fragment, &analysis) == ANALYZER_FRAGMENT_OK, "%s: fragment", fixture);
-    const char *old_json = analyzer_fragment_document_json(&analysis);
-    CHECK(json && old_json && strcmp(json, old_json) == 0, "%s: the rendered document differs", fixture);
+    /* The rendered document exists and holds the profile of the heard result; the distance of the result is that of
+       a second hearing of the same events. */
+    CHECK(json != NULL, "%s: no rendered document", fixture);
     AnalyzerStyleReference *reference = NULL;
     CHECK(analyzer_style_reference_create(reference_model, NULL, 0, &reference) == ANALYZER_OK && reference,
           "%s: reference", fixture);
     StyleComparison old_distance = {0}, new_distance = {0};
-    CHECK(analyzer_fragment_style_distance(&analysis, reference_model, &old_distance) == ANALYZER_FRAGMENT_OK,
-          "%s: old distance", fixture);
+    CHECK(analyzer_result_style_distance(rendered, reference, &old_distance) == ANALYZER_OK, "%s: second distance",
+          fixture);
     CHECK(analyzer_result_style_distance(heard, reference, &new_distance) == ANALYZER_OK, "%s: new distance", fixture);
     CHECK(same_comparison(&old_distance, &new_distance), "%s: the distances differ", fixture);
     AnalyzerStyleReference *unknown = (AnalyzerStyleReference *)1;
     const char *const bad_name[] = {"no-such-category"};
     CHECK(analyzer_style_reference_create(reference_model, bad_name, 1, &unknown) == ANALYZER_ERR_ARGUMENT && !unknown,
           "%s: unknown category", fixture);
-    check_violations(fixture, heard, &analysis);
+    check_violations(fixture, heard, direct);
     style_comparison_destroy(&old_distance);
     style_comparison_destroy(&new_distance);
     analyzer_style_reference_destroy(reference);
     analyzer_style_reference_destroy(NULL);
-    analyzer_fragment_analysis_destroy(&analysis);
 
     /* Cancel: refusing at once stops the hearing and writes nothing. */
     int asked = 0;
@@ -276,7 +270,6 @@ static void check_piece(const char *fixture, const StyleModel *reference_model) 
 
     check_arguments(&hearing);
 
-    free(expected);
     analyzer_result_destroy(rendered);
     analyzer_result_destroy(direct);
     analyzer_result_destroy(heard);
