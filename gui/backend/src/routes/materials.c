@@ -984,9 +984,11 @@ static cJSON *build_motif_playback(const cJSON *rendered_notes, const char *role
   return playback;
 }
 
-/* Renders a degree, rhythm or contour list in render_key with the Composer. On success *out_xml is the MusicXML text
-   and *out_playback its playback data (caller-owned). On failure failure holds the status and message. */
-static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_playback, RenderFailure *failure) {
+/* Renders a degree, rhythm or contour list in render_key with the Composer. On success *out_xml is the MusicXML text,
+   *out_playback its playback data and *out_midi (*out_midi_size bytes) the render's MIDI file (all caller-owned). On
+   failure failure holds the status and message. */
+static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_playback, uint8_t **out_midi,
+                         size_t *out_midi_size, RenderFailure *failure) {
   const char *form = in->form;
   if (!form || (strcmp(form, "full") != 0 && strcmp(form, "rhythm") != 0 && strcmp(form, "contour") != 0)) {
     render_fail(failure, 400, "form must be full, rhythm or contour");
@@ -1016,6 +1018,7 @@ static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_play
   cJSON *request = motive_request(full ? "degrees" : form, form, in->degrees, in->meter, has_key ? in->key : NULL, in->pickup);
   if (!request || !add_motive_extras(request, in->harmony, in->features, motif_role_option(in->role)) ||
       !cJSON_AddStringToObject(request, "render_key", render_key) || !cJSON_AddTrueToObject(request, "musicxml") ||
+      !cJSON_AddTrueToObject(request, "midi") ||
       (in->tempo > 0 && !cJSON_AddNumberToObject(request, "tempo", in->tempo))) {
     cJSON_Delete(request);
     render_fail(failure, 500, "out of memory");
@@ -1035,10 +1038,14 @@ static bool render_motif(const RenderInput *in, char **out_xml, cJSON **out_play
     cJSON *document = reply.status == COMPOSER_OK && reply.json ? cJSON_Parse(reply.json) : NULL;
     const cJSON *notes = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "rendered"), "notes");
     char *xml = document && cJSON_IsArray(notes) && reply.musicxml ? strdup(reply.musicxml) : NULL;
-    cJSON *playback = xml ? build_motif_playback(notes, in->role && in->role[0] ? in->role : "motif", in->tempo) : NULL;
+    cJSON *playback = xml && reply.midi ? build_motif_playback(notes, in->role && in->role[0] ? in->role : "motif", in->tempo) : NULL;
     if (playback) {
       *out_xml = xml;
       *out_playback = playback;
+      *out_midi = reply.midi;
+      *out_midi_size = reply.midi_size;
+      reply.midi = NULL;
+      reply.midi_size = 0;
       ok = true;
     } else {
       free(xml);
@@ -1099,12 +1106,15 @@ static int handle_render(struct mg_connection *conn) {
   }
   char *xml = NULL;
   cJSON *playback = NULL;
+  uint8_t *midi = NULL;
+  size_t midi_size = 0;
   RenderFailure failure = {0, ""};
-  bool ok = render_motif(&in, &xml, &playback, &failure);
+  bool ok = render_motif(&in, &xml, &playback, &midi, &midi_size, &failure);
   cJSON_Delete(body);
   if (!ok) {
     return send_failure_at(conn, failure.status, failure.message, failure.path);
   }
+  free(midi);
   return send_render_answer(conn, xml, playback);
 }
 
@@ -1592,6 +1602,76 @@ static int handle_version_file(struct mg_connection *conn, const char *id, const
   return 200;
 }
 
+/* The render cache of a motif version (R-275): items/<id>/v<n>/render/ holds score.musicxml and motif.mid, and
+   render.json {composer_version, render_key, tempo} names what they were made with. A version never changes, so the
+   files stand for the same key, tempo and Composer version. */
+static bool render_cache_dir(const char *id, int number, char *out, size_t out_size) {
+  char version_dir[512];
+  return ursatz_gui_material_version_dir(id, number, version_dir, sizeof(version_dir)) &&
+         snprintf(out, out_size, "%s/render", version_dir) < (int)out_size;
+}
+
+static bool render_cache_file(const char *dir, const char *name, char *out, size_t out_size) {
+  return snprintf(out, out_size, "%s/%s", dir, name) < (int)out_size;
+}
+
+/* True when render.json in dir names this render key, tempo and the linked Composer. */
+static bool render_cache_matches(const char *dir, const char *render_key, int tempo) {
+  char path[640];
+  if (!render_cache_file(dir, "render.json", path, sizeof(path))) {
+    return false;
+  }
+  cJSON *meta = ursatz_gui_read_json_object(path);
+  const cJSON *version = cJSON_GetObjectItemCaseSensitive(meta, "composer_version");
+  const cJSON *key = cJSON_GetObjectItemCaseSensitive(meta, "render_key");
+  const cJSON *cached_tempo = cJSON_GetObjectItemCaseSensitive(meta, "tempo");
+  bool same = cJSON_IsString(version) && strcmp(version->valuestring, composer_api_version()) == 0 &&
+              cJSON_IsString(key) && strcmp(key->valuestring, render_key) == 0 && cJSON_IsNumber(cached_tempo) &&
+              cached_tempo->valueint == tempo;
+  cJSON_Delete(meta);
+  return same;
+}
+
+/* The cached MusicXML text of a version for this render key and tempo (caller frees), or NULL. */
+static char *render_cache_read_score(const char *id, int number, const char *render_key, int tempo) {
+  char dir[576];
+  char path[640];
+  if (!render_cache_dir(id, number, dir, sizeof(dir)) || !render_cache_matches(dir, render_key, tempo) ||
+      !render_cache_file(dir, "score.musicxml", path, sizeof(path))) {
+    return NULL;
+  }
+  return ursatz_gui_read_file(path, NULL);
+}
+
+/* Stores a render. The files go first and render.json last, so a half-written cache never matches. A failure is
+   silent: the next request renders again. */
+static void render_cache_write(const char *id, int number, const char *render_key, int tempo, const char *xml,
+                               const uint8_t *midi, size_t midi_size) {
+  char version_dir[512];
+  char dir[576];
+  char path[640];
+  if (!ursatz_gui_material_version_dir(id, number, version_dir, sizeof(version_dir)) ||
+      !render_cache_dir(id, number, dir, sizeof(dir)) || !ursatz_gui_ensure_dir(version_dir) ||
+      !ursatz_gui_ensure_dir(dir)) {
+    return;
+  }
+  cJSON *meta = cJSON_CreateObject();
+  if (!meta) {
+    return;
+  }
+  cJSON_AddStringToObject(meta, "composer_version", composer_api_version());
+  cJSON_AddStringToObject(meta, "render_key", render_key);
+  cJSON_AddNumberToObject(meta, "tempo", tempo);
+  char *meta_text = cJSON_PrintUnformatted(meta);
+  cJSON_Delete(meta);
+  if (meta_text && render_cache_file(dir, "score.musicxml", path, sizeof(path)) &&
+      ursatz_gui_write_file_atomic(path, xml, strlen(xml)) && render_cache_file(dir, "motif.mid", path, sizeof(path)) &&
+      ursatz_gui_write_file_atomic(path, midi, midi_size) && render_cache_file(dir, "render.json", path, sizeof(path))) {
+    ursatz_gui_write_file_atomic(path, meta_text, strlen(meta_text));
+  }
+  free(meta_text);
+}
+
 /* GET /api/materials/items/<id>/versions/<n>/score and .../playback, with ?key= for the key to sound it in (default:
    the motif's own key). Both render the version's motif.degrees with the Composer. */
 static int handle_version_render(struct mg_connection *conn, const char *id, const char *number_text, bool playback_only) {
@@ -1631,10 +1711,28 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
   if (!in.pickup) {
     in.pickup = "0";
   }
+  const char *effective_key = in.render_key && in.render_key[0] != '\0' ? in.render_key : in.key;
+  if (!playback_only && effective_key) {
+    char *cached = render_cache_read_score(id, (int)number, effective_key, 0);
+    if (cached) {
+      cJSON_Delete(version_body);
+      size_t cached_length = strlen(cached);
+      mg_send_http_ok(conn, "application/xml", (long long)cached_length);
+      mg_write(conn, cached, cached_length);
+      free(cached);
+      return 200;
+    }
+  }
   char *xml = NULL;
   cJSON *playback = NULL;
+  uint8_t *midi = NULL;
+  size_t midi_size = 0;
   RenderFailure failure = {0, ""};
-  bool ok = render_motif(&in, &xml, &playback, &failure);
+  bool ok = render_motif(&in, &xml, &playback, &midi, &midi_size, &failure);
+  if (ok && effective_key) {
+    render_cache_write(id, (int)number, effective_key, 0, xml, midi, midi_size);
+  }
+  free(midi);
   cJSON_Delete(version_body);
   if (!ok) {
     return send_failure_at(conn, failure.status, failure.message, failure.path);
