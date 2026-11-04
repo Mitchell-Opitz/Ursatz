@@ -518,7 +518,7 @@ static void test_body_validation(void) {
     expect_motif("tone_overrides", "{\"65\":\"passing\"}", INVALID);
     expect_motif("tone_overrides", "{\"-1\":\"passing\"}", INVALID);
     expect_motif("tone_overrides", "{\"x\":\"chord\"}", INVALID);
-    expect_motif("tone_overrides", "{\"2\":\"bogus\"}", INVALID);
+    expect_motif("tone_overrides", "{\"2\":\"bogus\"}", OK); /* a role the Composer does not read: validate marks it */
     expect_motif("tone_overrides", "{\"2\":5}", INVALID);
     expect_motif("tone_overrides", "[]", INVALID);
     expect_motif("analysis", "{\"degrees\":[]}", OK);

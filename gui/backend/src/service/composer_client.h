@@ -1,6 +1,7 @@
 #ifndef URSATZ_GUI_COMPOSER_CLIENT_H
 #define URSATZ_GUI_COMPOSER_CLIENT_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -27,5 +28,13 @@ void ursatz_gui_composer_reply_take(ComposerStatus status, ComposerResponse *res
 
 /* Frees the members and zeroes the reply. Safe on a zeroed reply and when called twice. */
 void ursatz_gui_composer_reply_destroy(UrsatzGuiComposerReply *reply);
+
+/* The Composer's vocabulary (composer_api_vocabulary), built on the first call and kept for the process. NULL when the
+ * Composer could not give it. */
+const char *ursatz_gui_composer_vocabulary(void);
+
+/* The spelling of the tonic of pitch_class (0 to 11) in mode ("major" or "minor") in the vocabulary's pitch_class_names;
+ * false when it has none. */
+bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size);
 
 #endif /* URSATZ_GUI_COMPOSER_CLIENT_H */

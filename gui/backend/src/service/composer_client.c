@@ -1,7 +1,11 @@
 #include "composer_client.h"
 
+#include <pthread.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <cJSON.h>
 
 void ursatz_gui_composer_reply_take(ComposerStatus status, ComposerResponse *response, UrsatzGuiComposerReply *reply) {
   memset(reply, 0, sizeof(*reply));
@@ -35,4 +39,43 @@ void ursatz_gui_composer_reply_destroy(UrsatzGuiComposerReply *reply) {
   free(reply->midi);
   free(reply->musicxml);
   memset(reply, 0, sizeof(*reply));
+}
+
+static pthread_once_t g_vocabulary_once = PTHREAD_ONCE_INIT;
+static char *g_vocabulary = NULL;
+static cJSON *g_vocabulary_tree = NULL;
+
+static void vocabulary_build(void) {
+  ComposerResponse response;
+  memset(&response, 0, sizeof(response));
+  ComposerStatus status = composer_api_vocabulary(&response);
+  UrsatzGuiComposerReply reply;
+  ursatz_gui_composer_reply_take(status, &response, &reply);
+  if (reply.status == COMPOSER_OK && reply.json) {
+    g_vocabulary = reply.json;
+    reply.json = NULL;
+    g_vocabulary_tree = cJSON_Parse(g_vocabulary);
+  }
+  ursatz_gui_composer_reply_destroy(&reply);
+}
+
+const char *ursatz_gui_composer_vocabulary(void) {
+  pthread_once(&g_vocabulary_once, vocabulary_build);
+  return g_vocabulary;
+}
+
+bool ursatz_gui_composer_tonic_name(int pitch_class, const char *mode, char *out, size_t out_size) {
+  if (!ursatz_gui_composer_vocabulary() || !g_vocabulary_tree || !mode) {
+    return false;
+  }
+  const cJSON *entry = NULL;
+  cJSON_ArrayForEach(entry, cJSON_GetObjectItemCaseSensitive(g_vocabulary_tree, "pitch_class_names")) {
+    const cJSON *value = cJSON_GetObjectItemCaseSensitive(entry, "value");
+    const cJSON *name = cJSON_GetObjectItemCaseSensitive(entry, mode);
+    if (cJSON_IsNumber(value) && value->valueint == pitch_class && cJSON_IsString(name)) {
+      snprintf(out, out_size, "%s", name->valuestring);
+      return true;
+    }
+  }
+  return false;
 }

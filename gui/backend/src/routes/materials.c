@@ -284,34 +284,6 @@ static int handle_list_items(struct mg_connection *conn) {
 
 /* ---- motif analysis on save ----------------------------------------- */
 
-/* meter ^[0-9]{1,2}/[0-9]{1,2}$ */
-static bool analysis_meter_ok(const char *text) {
-  size_t i = 0;
-  while (isdigit((unsigned char)text[i])) {
-    i++;
-  }
-  if (i < 1 || i > 2 || text[i] != '/') {
-    return false;
-  }
-  size_t start = ++i;
-  while (isdigit((unsigned char)text[i])) {
-    i++;
-  }
-  return i - start >= 1 && i - start <= 2 && text[i] == '\0';
-}
-
-/* key ^[A-Ga-g][#b]? (major|minor)$ */
-static bool analysis_key_ok(const char *text) {
-  if (!((text[0] >= 'A' && text[0] <= 'G') || (text[0] >= 'a' && text[0] <= 'g'))) {
-    return false;
-  }
-  const char *rest = text + 1;
-  if (*rest == '#' || *rest == 'b') {
-    rest++;
-  }
-  return strcmp(rest, " major") == 0 || strcmp(rest, " minor") == 0;
-}
-
 #define ANALYSIS_ERROR_SIZE 400
 
 typedef enum {
@@ -330,28 +302,6 @@ static void set_motif_member(cJSON *motif, const char *name, cJSON *value) {
 
 static void set_motif_analysis(cJSON *motif, cJSON *analysis) {
   set_motif_member(motif, "analysis", analysis);
-}
-
-/* pickup ^[0-9]{1,2}(/[0-9]{1,2})?$ */
-static bool analysis_pickup_ok(const char *text) {
-  size_t i = 0;
-  while (isdigit((unsigned char)text[i])) {
-    i++;
-  }
-  if (i < 1 || i > 2) {
-    return false;
-  }
-  if (text[i] == '\0') {
-    return true;
-  }
-  if (text[i] != '/') {
-    return false;
-  }
-  size_t start = ++i;
-  while (isdigit((unsigned char)text[i])) {
-    i++;
-  }
-  return i - start >= 1 && i - start <= 2 && text[i] == '\0';
 }
 
 /* The text the Composer returned for the form: degrees_text, rhythm_text or contour_text, or NULL. */
@@ -543,9 +493,7 @@ static AnalysisOutcome analyze_motif_body(cJSON *version_body, char *analysis_er
     return ANALYSIS_DONE;
   }
   bool has_key = cJSON_IsString(key) && key->valuestring[0] != '\0';
-  if (!cJSON_IsString(notes) || !cJSON_IsString(meter) || !analysis_meter_ok(meter->valuestring) ||
-      (has_key && !analysis_key_ok(key->valuestring)) || !cJSON_IsString(pickup) ||
-      !analysis_pickup_ok(pickup->valuestring)) {
+  if (!cJSON_IsString(notes) || !cJSON_IsString(meter) || !cJSON_IsString(pickup)) {
     return ANALYSIS_DONE;
   }
   bool full = strcmp(form->valuestring, "full") == 0;
@@ -656,16 +604,18 @@ static unsigned char *read_file_body(struct mg_connection *conn, size_t *size, i
   return buffer;
 }
 
-/* The key of a motive document as "D minor", or NULL when it has none. */
+/* The key of a motive document as "D minor", or false when it has none. The tonic is spelled as the Composer spells it
+   (pitch_class_names of its vocabulary). */
 static bool import_key_text(const cJSON *document, char *out, size_t out_size) {
-  static const char *const names[] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
   const cJSON *key = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(document, "motive"), "key");
   const cJSON *tonic = cJSON_GetObjectItemCaseSensitive(key, "tonic_pitch_class");
   const cJSON *mode = cJSON_GetObjectItemCaseSensitive(key, "mode");
-  if (!cJSON_IsNumber(tonic) || tonic->valueint < 0 || tonic->valueint > 11 || !cJSON_IsString(mode)) {
+  char name[16];
+  if (!cJSON_IsNumber(tonic) || !cJSON_IsString(mode) ||
+      !ursatz_gui_composer_tonic_name(tonic->valueint, mode->valuestring, name, sizeof(name))) {
     return false;
   }
-  snprintf(out, out_size, "%s %s", names[tonic->valueint], mode->valuestring);
+  snprintf(out, out_size, "%s %s", name, mode->valuestring);
   return true;
 }
 
@@ -700,8 +650,8 @@ static char *degrees_to_c_notes(const char *degrees, const char *mode, const cha
     to_c_fail(failure, 400, "mode must be major or minor");
     return NULL;
   }
-  if (!meter || !analysis_meter_ok(meter) || !pickup || !analysis_pickup_ok(pickup)) {
-    to_c_fail(failure, 400, "meter must look like 4/4 and pickup like 1 or 1/2");
+  if (!meter || !pickup) {
+    to_c_fail(failure, 400, "meter and pickup are needed");
     return NULL;
   }
   char key[16];
@@ -773,9 +723,6 @@ static int handle_import_motif(struct mg_connection *conn) {
   char key[32];
   bool has_meter = query_value(conn, "meter", meter, sizeof(meter));
   bool has_key = query_value(conn, "key", key, sizeof(key));
-  if ((has_meter && !analysis_meter_ok(meter)) || (has_key && !analysis_key_ok(key))) {
-    return send_failure(conn, 400, "meter must look like 4/4 and key like D minor");
-  }
   int status = 0;
   size_t size = 0;
   unsigned char *bytes = read_file_body(conn, &size, &status);
@@ -917,9 +864,8 @@ static bool render_motif(const RenderInput *in, char **out_xml, uint8_t **out_mi
   }
   bool has_key = in->key && in->key[0] != '\0';
   const char *render_key = in->render_key && in->render_key[0] != '\0' ? in->render_key : (has_key ? in->key : NULL);
-  if (!in->meter || !analysis_meter_ok(in->meter) || (has_key && !analysis_key_ok(in->key)) ||
-      (render_key && !analysis_key_ok(render_key)) || !in->pickup || !analysis_pickup_ok(in->pickup)) {
-    render_fail(failure, 400, "meter must look like 4/4, key like D minor and pickup like 1 or 1/2");
+  if (!in->meter || !in->pickup) {
+    render_fail(failure, 400, "meter and pickup are needed");
     return false;
   }
   if (!render_key) {
@@ -1678,9 +1624,6 @@ static int handle_version_render(struct mg_connection *conn, const char *id, con
   }
   char render_key[32];
   bool has_render_key = query_value(conn, "key", render_key, sizeof(render_key));
-  if (has_render_key && !analysis_key_ok(render_key)) {
-    return send_failure(conn, 400, "key must look like D minor");
-  }
   cJSON *version_body = NULL;
   UrsatzGuiMaterialResult result = ursatz_gui_material_item_get_version(id, (int)number, &version_body);
   if (result != URSATZ_GUI_MATERIAL_OK) {
@@ -3058,7 +3001,6 @@ static int handle_random_motifs(struct mg_connection *conn) {
     role = NULL;
   }
   bool valid = !bad && mode && (!role || motif_role_option(role)) && (strcmp(mode, "major") == 0 || strcmp(mode, "minor") == 0) && meter &&
-               analysis_meter_ok(meter) && (!key || analysis_key_ok(key)) &&
                (!form || strcmp(form, "full") == 0 || strcmp(form, "rhythm") == 0 || strcmp(form, "contour") == 0) &&
                (!count_item || (cJSON_IsNumber(count_item) && count_item->valuedouble >= 1 &&
                                 count_item->valuedouble <= 16 && count_item->valuedouble == (int)count_item->valuedouble)) &&
@@ -3068,7 +3010,7 @@ static int handle_random_motifs(struct mg_connection *conn) {
   if (!valid) {
     cJSON_Delete(body);
     return send_failure(conn, 400,
-                        "mode is major or minor, meter like 3/4, key like D minor, form full, rhythm or contour, role melodic or accompaniment, "
+                        "mode is major or minor, form full, rhythm or contour, role melodic or accompaniment, "
                         "count 1 to 16 and seed a whole number from 0");
   }
   char style_path[1024] = "";
