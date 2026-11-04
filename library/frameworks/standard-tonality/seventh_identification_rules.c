@@ -17,20 +17,8 @@ static const char *const NAMES[STANDARD_TONALITY_SEVENTH_IDENTIFICATION_RULE_COU
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
     NAMES, STANDARD_TONALITY_SEVENTH_IDENTIFICATION_RULE_COUNT);
 
-static bool valid_rule(StandardTonalitySeventhIdentificationRule which) {
-    return which >= 0 && which < STANDARD_TONALITY_SEVENTH_IDENTIFICATION_RULE_COUNT;
-}
-
-const Rule *standard_tonality_seventh_identification_rule(StandardTonalitySeventhIdentificationRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_tonality_seventh_identification_constraint(
-    StandardTonalitySeventhIdentificationRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_tonality_seventh_identification, StandardTonalitySeventhIdentificationRule,
+                       STANDARD_TONALITY_SEVENTH_IDENTIFICATION_RULE_COUNT, g_table)
 
 typedef struct {
     PitchLetter letter;

@@ -11,19 +11,7 @@ static const char *const NAMES[STANDARD_FORM_HYBRID_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
     NAMES, STANDARD_FORM_HYBRID_RULE_COUNT);
 
-static bool valid_rule(StandardFormHybridRule which) {
-    return which >= 0 && which < STANDARD_FORM_HYBRID_RULE_COUNT;
-}
-
-const Rule *standard_form_hybrid_rule(StandardFormHybridRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_form_hybrid_constraint(StandardFormHybridRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_form_hybrid, StandardFormHybridRule, STANDARD_FORM_HYBRID_RULE_COUNT, g_table)
 
 static const char *const COMMONALITY_NAMES[STANDARD_FORM_COMMONALITY_COUNT] = {
     "very-common", "slightly-less-common", "occasional", "rare"};

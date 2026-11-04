@@ -11,19 +11,7 @@ static const char *const NAMES[STANDARD_TONALITY_SOLFEGE_RULE_COUNT] = {"solfege
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
     NAMES, STANDARD_TONALITY_SOLFEGE_RULE_COUNT);
 
-static bool valid_rule(StandardTonalitySolfegeRule which) {
-    return which >= 0 && which < STANDARD_TONALITY_SOLFEGE_RULE_COUNT;
-}
-
-const Rule *standard_tonality_solfege_rule(StandardTonalitySolfegeRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_tonality_solfege_constraint(StandardTonalitySolfegeRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_tonality_solfege, StandardTonalitySolfegeRule, STANDARD_TONALITY_SOLFEGE_RULE_COUNT, g_table)
 
 /* Indexed [degree - 1][alteration + 1]. */
 static const char *const SYLLABLES[7][3] = {

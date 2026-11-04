@@ -8,19 +8,7 @@ static const char *const NAMES[STANDARD_NOTATION_OCTAVE_RULE_COUNT] = {"octave-e
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_notation_framework, "standard-notation",
     NAMES, STANDARD_NOTATION_OCTAVE_RULE_COUNT);
 
-static bool valid_rule(StandardNotationOctaveRule which) {
-    return which >= 0 && which < STANDARD_NOTATION_OCTAVE_RULE_COUNT;
-}
-
-const Rule *standard_notation_octave_rule(StandardNotationOctaveRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_notation_octave_constraint(StandardNotationOctaveRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_notation_octave, StandardNotationOctaveRule, STANDARD_NOTATION_OCTAVE_RULE_COUNT, g_table)
 
 int standard_notation_letter_count(void) {
     return 7;

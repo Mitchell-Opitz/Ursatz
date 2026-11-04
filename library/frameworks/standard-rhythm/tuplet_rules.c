@@ -7,19 +7,7 @@ static const char *const NAMES[STANDARD_RHYTHM_TUPLET_RULE_COUNT] = {"tuplet-nam
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_rhythm_framework, "standard-rhythm",
     NAMES, STANDARD_RHYTHM_TUPLET_RULE_COUNT);
 
-static bool valid_rule(StandardRhythmTupletRule which) {
-    return which >= 0 && which < STANDARD_RHYTHM_TUPLET_RULE_COUNT;
-}
-
-const Rule *standard_rhythm_tuplet_rule(StandardRhythmTupletRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_rhythm_tuplet_constraint(StandardRhythmTupletRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_rhythm_tuplet, StandardRhythmTupletRule, STANDARD_RHYTHM_TUPLET_RULE_COUNT, g_table)
 
 TupletKind standard_rhythm_tuplet_kind(const Tuplet *tuplet) {
     if (tuplet == NULL) {

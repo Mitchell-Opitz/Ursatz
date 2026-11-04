@@ -64,4 +64,18 @@ typedef struct {
  */
 const RulePair *rule_pair_table_get(RulePairTable *table, size_t which);
 
+/*
+ * Defines the `<name>_rule` and `<name>_constraint` accessors of a framework rule enum `Type` over its static RulePairTable
+ * `table`: the pair for rule number `which`, NULL when `which` is outside [0, count) or the pair failed to build.
+ */
+#define URSATZ_RULE_ACCESSORS(name, Type, count, table)                                                             \
+    const Rule *name##_rule(Type which) {                                                                           \
+        const RulePair *pair = which >= 0 && which < (count) ? rule_pair_table_get(&(table), (size_t)which) : NULL; \
+        return pair != NULL ? pair->rule : NULL;                                                                    \
+    }                                                                                                               \
+    const Constraint *name##_constraint(Type which) {                                                               \
+        const RulePair *pair = which >= 0 && which < (count) ? rule_pair_table_get(&(table), (size_t)which) : NULL; \
+        return pair != NULL ? pair->constraint : NULL;                                                              \
+    }
+
 #endif

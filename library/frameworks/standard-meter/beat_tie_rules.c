@@ -8,19 +8,7 @@ static const char *const NAMES[STANDARD_METER_BEAT_TIE_RULE_COUNT] = {"beat-tie-
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
     NAMES, STANDARD_METER_BEAT_TIE_RULE_COUNT);
 
-static bool valid_rule(StandardMeterBeatTieRule which) {
-    return which >= 0 && which < STANDARD_METER_BEAT_TIE_RULE_COUNT;
-}
-
-const Rule *standard_meter_beat_tie_rule(StandardMeterBeatTieRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_meter_beat_tie_constraint(StandardMeterBeatTieRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_meter_beat_tie, StandardMeterBeatTieRule, STANDARD_METER_BEAT_TIE_RULE_COUNT, g_table)
 
 bool standard_meter_beat_split(const TimeSignature *time_signature, const Duration *start, const Duration *length,
                                Duration **out_first) {

@@ -11,19 +11,7 @@ static const char *const NAMES[STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_notation_framework, "standard-notation",
     NAMES, STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT);
 
-static bool valid_rule(StandardNotationKeySignatureRule which) {
-    return which >= 0 && which < STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT;
-}
-
-const Rule *standard_notation_key_signature_rule(StandardNotationKeySignatureRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_notation_key_signature_constraint(StandardNotationKeySignatureRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_notation_key_signature, StandardNotationKeySignatureRule, STANDARD_NOTATION_KEY_SIGNATURE_RULE_COUNT, g_table)
 
 static const PitchLetter SHARP_ORDER[STANDARD_NOTATION_KEY_SIGNATURE_MAX_ACCIDENTALS] = {
     PITCH_LETTER_F, PITCH_LETTER_C, PITCH_LETTER_G, PITCH_LETTER_D, PITCH_LETTER_A, PITCH_LETTER_E, PITCH_LETTER_B};

@@ -13,19 +13,7 @@ static const char *const NAMES[STANDARD_TONALITY_ROMAN_NUMERAL_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
     NAMES, STANDARD_TONALITY_ROMAN_NUMERAL_RULE_COUNT);
 
-static bool valid_rule(StandardTonalityRomanNumeralRule which) {
-    return which >= 0 && which < STANDARD_TONALITY_ROMAN_NUMERAL_RULE_COUNT;
-}
-
-const Rule *standard_tonality_roman_numeral_rule(StandardTonalityRomanNumeralRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_tonality_roman_numeral_constraint(StandardTonalityRomanNumeralRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_tonality_roman_numeral, StandardTonalityRomanNumeralRule, STANDARD_TONALITY_ROMAN_NUMERAL_RULE_COUNT, g_table)
 
 static const char *const UPPERCASE[7] = {"I", "II", "III", "IV", "V", "VI", "VII"};
 static const char *const LOWERCASE[7] = {"i", "ii", "iii", "iv", "v", "vi", "vii"};

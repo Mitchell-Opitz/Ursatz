@@ -11,19 +11,7 @@ static const char *const NAMES[STANDARD_FORM_LENGTH_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
     NAMES, STANDARD_FORM_LENGTH_RULE_COUNT);
 
-static bool valid_rule(StandardFormLengthRule which) {
-    return which >= 0 && which < STANDARD_FORM_LENGTH_RULE_COUNT;
-}
-
-const Rule *standard_form_length_rule(StandardFormLengthRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_form_length_constraint(StandardFormLengthRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_form_length, StandardFormLengthRule, STANDARD_FORM_LENGTH_RULE_COUNT, g_table)
 
 bool standard_form_classify_length_change(size_t expected, size_t actual, PhraseLengthChange *out) {
     if (expected == 0 || actual == 0 || expected == actual) {

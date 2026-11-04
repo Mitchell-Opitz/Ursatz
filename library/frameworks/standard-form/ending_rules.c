@@ -12,19 +12,7 @@ static const char *const NAMES[STANDARD_FORM_ENDING_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
     NAMES, STANDARD_FORM_ENDING_RULE_COUNT);
 
-static bool valid_rule(StandardFormEndingRule which) {
-    return which >= 0 && which < STANDARD_FORM_ENDING_RULE_COUNT;
-}
-
-const Rule *standard_form_ending_rule(StandardFormEndingRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_form_ending_constraint(StandardFormEndingRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_form_ending, StandardFormEndingRule, STANDARD_FORM_ENDING_RULE_COUNT, g_table)
 
 static bool is_authentic(CadenceType type) {
     return type == CADENCE_TYPE_PERFECT_AUTHENTIC || type == CADENCE_TYPE_IMPERFECT_AUTHENTIC;

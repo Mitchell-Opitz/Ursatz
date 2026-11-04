@@ -16,19 +16,7 @@ static const char *const NAMES[STANDARD_TEXTURE_MIXED_RULE_COUNT] = {"mixed-text
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_texture_framework, "standard-texture",
     NAMES, STANDARD_TEXTURE_MIXED_RULE_COUNT);
 
-static bool valid_rule(StandardTextureMixedRule which) {
-    return which >= 0 && which < STANDARD_TEXTURE_MIXED_RULE_COUNT;
-}
-
-const Rule *standard_texture_mixed_rule(StandardTextureMixedRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_texture_mixed_constraint(StandardTextureMixedRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_texture_mixed, StandardTextureMixedRule, STANDARD_TEXTURE_MIXED_RULE_COUNT, g_table)
 
 bool standard_texture_segments_valid(const StandardTextureSegment *segments, size_t count) {
     if (segments == NULL || count == 0) {

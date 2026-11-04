@@ -14,19 +14,7 @@ static ConstraintType rule_type(size_t which) {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT_MIXED(standard_voicing_framework, "standard-voicing", NAMES,
                                                           STANDARD_VOICING_DOUBLING_RULE_COUNT, rule_type);
 
-static bool valid_rule(StandardVoicingDoublingRule which) {
-    return which >= 0 && which < STANDARD_VOICING_DOUBLING_RULE_COUNT;
-}
-
-const Rule *standard_voicing_doubling_rule(StandardVoicingDoublingRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_voicing_doubling_constraint(StandardVoicingDoublingRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_voicing_doubling, StandardVoicingDoublingRule, STANDARD_VOICING_DOUBLING_RULE_COUNT, g_table)
 
 static bool chord_complete(const StandardVoicingChord *chord) {
     if (chord == NULL) {

@@ -13,19 +13,7 @@ static const char *const NAMES[STANDARD_TONALITY_MINOR_SCALE_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
     NAMES, STANDARD_TONALITY_MINOR_SCALE_RULE_COUNT);
 
-static bool valid_rule(StandardTonalityMinorScaleRule which) {
-    return which >= 0 && which < STANDARD_TONALITY_MINOR_SCALE_RULE_COUNT;
-}
-
-const Rule *standard_tonality_minor_scale_rule(StandardTonalityMinorScaleRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_tonality_minor_scale_constraint(StandardTonalityMinorScaleRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_tonality_minor_scale, StandardTonalityMinorScaleRule, STANDARD_TONALITY_MINOR_SCALE_RULE_COUNT, g_table)
 
 /* Steps in playing order. The melodic descending drops W W H W W H W are
    the natural ascending steps reversed. */

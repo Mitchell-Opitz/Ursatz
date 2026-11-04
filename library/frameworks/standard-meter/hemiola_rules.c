@@ -9,19 +9,7 @@ static const char *const NAMES[STANDARD_METER_HEMIOLA_RULE_COUNT] = {"hemiola-me
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
     NAMES, STANDARD_METER_HEMIOLA_RULE_COUNT);
 
-static bool valid_rule(StandardMeterHemiolaRule which) {
-    return which >= 0 && which < STANDARD_METER_HEMIOLA_RULE_COUNT;
-}
-
-const Rule *standard_meter_hemiola_rule(StandardMeterHemiolaRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_meter_hemiola_constraint(StandardMeterHemiolaRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_meter_hemiola, StandardMeterHemiolaRule, STANDARD_METER_HEMIOLA_RULE_COUNT, g_table)
 
 bool standard_meter_hemiola_window(const TimeSignature *time_signature, Duration **out_pulse, unsigned *out_measures) {
     if (time_signature == NULL || out_pulse == NULL || out_measures == NULL) {

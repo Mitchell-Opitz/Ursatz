@@ -11,19 +11,7 @@ static const char *const NAMES[STANDARD_NOTATION_ACCIDENTAL_PLACEMENT_RULE_COUNT
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_notation_framework, "standard-notation",
     NAMES, STANDARD_NOTATION_ACCIDENTAL_PLACEMENT_RULE_COUNT);
 
-static bool valid_rule(StandardNotationAccidentalPlacementRule which) {
-    return which >= 0 && which < STANDARD_NOTATION_ACCIDENTAL_PLACEMENT_RULE_COUNT;
-}
-
-const Rule *standard_notation_accidental_placement_rule(StandardNotationAccidentalPlacementRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_notation_accidental_placement_constraint(StandardNotationAccidentalPlacementRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_notation_accidental_placement, StandardNotationAccidentalPlacementRule, STANDARD_NOTATION_ACCIDENTAL_PLACEMENT_RULE_COUNT, g_table)
 
 bool standard_notation_accidental_side_valid(AccidentalSide side) {
     return side == ACCIDENTAL_SIDE_LEFT;

@@ -12,19 +12,7 @@ static const char *const NAMES[STANDARD_NOTATION_STEP_RULE_COUNT] = {"half-step"
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_notation_framework, "standard-notation",
     NAMES, STANDARD_NOTATION_STEP_RULE_COUNT);
 
-static bool valid_rule(StandardNotationStepRule which) {
-    return which >= 0 && which < STANDARD_NOTATION_STEP_RULE_COUNT;
-}
-
-const Rule *standard_notation_step_rule(StandardNotationStepRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_notation_step_constraint(StandardNotationStepRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_notation_step, StandardNotationStepRule, STANDARD_NOTATION_STEP_RULE_COUNT, g_table)
 
 static int absolute_distance(const PitchSpelling *a, const PitchSpelling *b) {
     int distance = standard_notation_semitone_distance(a, b);

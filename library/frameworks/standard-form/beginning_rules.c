@@ -11,19 +11,7 @@ static const char *const NAMES[STANDARD_FORM_BEGINNING_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
     NAMES, STANDARD_FORM_BEGINNING_RULE_COUNT);
 
-static bool valid_rule(StandardFormBeginningRule which) {
-    return which >= 0 && which < STANDARD_FORM_BEGINNING_RULE_COUNT;
-}
-
-const Rule *standard_form_beginning_rule(StandardFormBeginningRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_form_beginning_constraint(StandardFormBeginningRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_form_beginning, StandardFormBeginningRule, STANDARD_FORM_BEGINNING_RULE_COUNT, g_table)
 
 bool standard_form_beginning_ends_with_cadence(PhraseBeginning beginning) {
     return beginning == PHRASE_BEGINNING_ANTECEDENT;

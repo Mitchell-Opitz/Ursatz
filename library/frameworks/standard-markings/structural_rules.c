@@ -13,19 +13,7 @@ static const char *const NAMES[STANDARD_MARKINGS_STRUCTURAL_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_markings_framework, "standard-markings",
     NAMES, STANDARD_MARKINGS_STRUCTURAL_RULE_COUNT);
 
-static bool valid_rule(StandardMarkingsStructuralRule which) {
-    return which >= 0 && which < STANDARD_MARKINGS_STRUCTURAL_RULE_COUNT;
-}
-
-const Rule *standard_markings_structural_rule(StandardMarkingsStructuralRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_markings_structural_constraint(StandardMarkingsStructuralRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_markings_structural, StandardMarkingsStructuralRule, STANDARD_MARKINGS_STRUCTURAL_RULE_COUNT, g_table)
 
 typedef struct {
     const char *name;

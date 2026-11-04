@@ -8,19 +8,7 @@ static const char *const NAMES[STANDARD_METER_GROUPING_RULE_COUNT] = {"grouping-
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
     NAMES, STANDARD_METER_GROUPING_RULE_COUNT);
 
-static bool valid_rule(StandardMeterGroupingRule which) {
-    return which >= 0 && which < STANDARD_METER_GROUPING_RULE_COUNT;
-}
-
-const Rule *standard_meter_grouping_rule(StandardMeterGroupingRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_meter_grouping_constraint(StandardMeterGroupingRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_meter_grouping, StandardMeterGroupingRule, STANDARD_METER_GROUPING_RULE_COUNT, g_table)
 
 bool standard_meter_beat_division_parts(unsigned depth, unsigned *out_parts) {
     if (depth > STANDARD_METER_MAX_DIVISION_DEPTH) {

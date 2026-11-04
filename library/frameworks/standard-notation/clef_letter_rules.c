@@ -9,19 +9,7 @@ static const char *const NAMES[STANDARD_NOTATION_CLEF_LETTER_RULE_COUNT] = {"cle
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_notation_framework, "standard-notation",
     NAMES, STANDARD_NOTATION_CLEF_LETTER_RULE_COUNT);
 
-static bool valid_rule(StandardNotationClefLetterRule which) {
-    return which >= 0 && which < STANDARD_NOTATION_CLEF_LETTER_RULE_COUNT;
-}
-
-const Rule *standard_notation_clef_letter_rule(StandardNotationClefLetterRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_notation_clef_letter_constraint(StandardNotationClefLetterRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_notation_clef_letter, StandardNotationClefLetterRule, STANDARD_NOTATION_CLEF_LETTER_RULE_COUNT, g_table)
 
 /* Letters in ascending order within an octave, C first. PitchLetter itself
    is ordered A..G, so stepping needs its own cycle. */

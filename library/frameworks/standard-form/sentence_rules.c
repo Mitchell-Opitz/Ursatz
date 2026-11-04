@@ -17,19 +17,7 @@ static const char *const NAMES[STANDARD_FORM_SENTENCE_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
     NAMES, STANDARD_FORM_SENTENCE_RULE_COUNT);
 
-static bool valid_rule(StandardFormSentenceRule which) {
-    return which >= 0 && which < STANDARD_FORM_SENTENCE_RULE_COUNT;
-}
-
-const Rule *standard_form_sentence_rule(StandardFormSentenceRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_form_sentence_constraint(StandardFormSentenceRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_form_sentence, StandardFormSentenceRule, STANDARD_FORM_SENTENCE_RULE_COUNT, g_table)
 
 bool standard_form_subphrase_roles_in_order(SubphraseRole first, SubphraseRole second) {
     return first == SUBPHRASE_ROLE_PRESENTATION && second == SUBPHRASE_ROLE_CONTINUATION;

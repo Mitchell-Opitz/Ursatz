@@ -14,19 +14,7 @@ static const char *const NAMES[STANDARD_TONALITY_KEY_RELATIONSHIP_RULE_COUNT] = 
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
     NAMES, STANDARD_TONALITY_KEY_RELATIONSHIP_RULE_COUNT);
 
-static bool valid_rule(StandardTonalityKeyRelationshipRule which) {
-    return which >= 0 && which < STANDARD_TONALITY_KEY_RELATIONSHIP_RULE_COUNT;
-}
-
-const Rule *standard_tonality_key_relationship_rule(StandardTonalityKeyRelationshipRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_tonality_key_relationship_constraint(StandardTonalityKeyRelationshipRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_tonality_key_relationship, StandardTonalityKeyRelationshipRule, STANDARD_TONALITY_KEY_RELATIONSHIP_RULE_COUNT, g_table)
 
 bool standard_tonality_keys_parallel(PitchLetter major_letter, int major_accidental, PitchLetter minor_letter,
                                      int minor_accidental) {

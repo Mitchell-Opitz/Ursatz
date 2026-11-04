@@ -12,19 +12,7 @@ static const char *const NAMES[STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_form_framework, "standard-form",
     NAMES, STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT);
 
-static bool valid_rule(StandardFormCadentialBassRule which) {
-    return which >= 0 && which < STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT;
-}
-
-const Rule *standard_form_cadential_bass_rule(StandardFormCadentialBassRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_form_cadential_bass_constraint(StandardFormCadentialBassRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_form_cadential_bass, StandardFormCadentialBassRule, STANDARD_FORM_CADENTIAL_BASS_RULE_COUNT, g_table)
 
 static const int CORE_DEGREES[4] = {3, 4, 5, 1};
 

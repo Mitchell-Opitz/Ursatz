@@ -18,19 +18,7 @@ static const char *const NAMES[STANDARD_TONALITY_CHORD_SYMBOL_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_tonality_framework, "standard-tonality",
     NAMES, STANDARD_TONALITY_CHORD_SYMBOL_RULE_COUNT);
 
-static bool valid_rule(StandardTonalityChordSymbolRule which) {
-    return which >= 0 && which < STANDARD_TONALITY_CHORD_SYMBOL_RULE_COUNT;
-}
-
-const Rule *standard_tonality_chord_symbol_rule(StandardTonalityChordSymbolRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_tonality_chord_symbol_constraint(StandardTonalityChordSymbolRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_tonality_chord_symbol, StandardTonalityChordSymbolRule, STANDARD_TONALITY_CHORD_SYMBOL_RULE_COUNT, g_table)
 
 const char *standard_tonality_triad_quality_symbol(StandardTonalityTriadQuality quality) {
     switch (quality) {

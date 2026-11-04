@@ -20,15 +20,7 @@ static bool valid_rule(StandardVoicingRule which) {
     return which >= 0 && which < STANDARD_VOICING_RULE_COUNT;
 }
 
-const Rule *standard_voicing_rule(StandardVoicingRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_voicing_constraint(StandardVoicingRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_voicing, StandardVoicingRule, STANDARD_VOICING_RULE_COUNT, g_table)
 
 const char *standard_voicing_rule_name(StandardVoicingRule which) {
     return valid_rule(which) ? NAMES[which] : NULL;

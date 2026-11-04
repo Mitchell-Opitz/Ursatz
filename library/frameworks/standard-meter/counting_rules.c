@@ -11,19 +11,7 @@ static const char *const NAMES[STANDARD_METER_COUNTING_RULE_COUNT] = {
 static RulePairTable g_table = RULE_PAIR_TABLE_INIT(standard_meter_framework, "standard-meter",
     NAMES, STANDARD_METER_COUNTING_RULE_COUNT);
 
-static bool valid_rule(StandardMeterCountingRule which) {
-    return which >= 0 && which < STANDARD_METER_COUNTING_RULE_COUNT;
-}
-
-const Rule *standard_meter_counting_rule(StandardMeterCountingRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->rule : NULL;
-}
-
-const Constraint *standard_meter_counting_constraint(StandardMeterCountingRule which) {
-    const RulePair *pair = valid_rule(which) ? rule_pair_table_get(&g_table, (size_t)which) : NULL;
-    return pair != NULL ? pair->constraint : NULL;
-}
+URSATZ_RULE_ACCESSORS(standard_meter_counting, StandardMeterCountingRule, STANDARD_METER_COUNTING_RULE_COUNT, g_table)
 
 /* American traditional counting, indexed by grid step within the beat. */
 static const char *const SIMPLE_SYLLABLES[STANDARD_METER_COUNT_GRID_SIMPLE] = {NULL, "ta", "e", "ta",
