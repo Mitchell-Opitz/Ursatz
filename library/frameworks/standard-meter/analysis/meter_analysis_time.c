@@ -8,18 +8,15 @@
 #include "time/meter_arithmetic.h"
 #include "time/duration.h"
 #include "time/metrical_position.h"
+#include "time/score_time.h"
+#include "time/time_rational.h"
 #include "time/time_signature.h"
 
-StandardMeterQ standard_meter_q(long long n, long long d) {
-    if (d < 0) {
-        n = -n;
-        d = -d;
-    }
-    long long g = rational_gcd(n, d);
-    if (g == 0) {
-        g = 1;
-    }
-    StandardMeterQ q = {n / g, d / g};
+/* A value that does not fit a Rational (overflow, or a zero denominator) reads as 0/1: these constructors and
+   operators return a plain value, so 0/1 is their failure value. Callers that must see a refusal use the checked
+   score_time_* functions. */
+static inline StandardMeterQ zero_q(void) {
+    StandardMeterQ q = {0, 1};
     return q;
 }
 
@@ -32,32 +29,33 @@ static inline StandardMeterQ of_rational(Rational r) {
     return q;
 }
 
+StandardMeterQ standard_meter_q(long long n, long long d) {
+    Rational r;
+    return rational_make(n, d, &r) == RATIONAL_OK ? of_rational(r) : zero_q();
+}
+
 int standard_meter_q_compare(StandardMeterQ a, StandardMeterQ b) {
     return rational_cmp(to_rational(a), to_rational(b));
 }
 
 StandardMeterQ standard_meter_q_add(StandardMeterQ a, StandardMeterQ b) {
     Rational sum;
-    if (rational_add(to_rational(a), to_rational(b), &sum) == RATIONAL_OK) {
-        return of_rational(sum);
-    }
-    return standard_meter_q(a.n * b.d + b.n * a.d, a.d * b.d);
+    return rational_add(to_rational(a), to_rational(b), &sum) == RATIONAL_OK ? of_rational(sum) : zero_q();
 }
 
 StandardMeterQ standard_meter_q_sub(StandardMeterQ a, StandardMeterQ b) {
     Rational difference;
-    if (rational_sub(to_rational(a), to_rational(b), &difference) == RATIONAL_OK) {
-        return of_rational(difference);
-    }
-    return standard_meter_q(a.n * b.d - b.n * a.d, a.d * b.d);
+    return rational_sub(to_rational(a), to_rational(b), &difference) == RATIONAL_OK ? of_rational(difference) : zero_q();
 }
 
 StandardMeterQ standard_meter_q_mul_int(StandardMeterQ a, long long k) {
-    return standard_meter_q(a.n * k, a.d);
+    Rational product;
+    return rational_mul_int(to_rational(a), k, &product) == RATIONAL_OK ? of_rational(product) : zero_q();
 }
 
 StandardMeterQ standard_meter_q_div_int(StandardMeterQ a, long long k) {
-    return standard_meter_q(a.n, a.d * k);
+    Rational quotient;
+    return rational_div_int(to_rational(a), k, &quotient) == RATIONAL_OK ? of_rational(quotient) : zero_q();
 }
 
 double standard_meter_q_double(StandardMeterQ a) {
@@ -65,22 +63,26 @@ double standard_meter_q_double(StandardMeterQ a) {
 }
 
 StandardMeterQ standard_meter_q_of_time(const MusicalTime *time) {
-    return standard_meter_q(musical_time_numerator(time), (long long)musical_time_denominator(time));
+    Rational r;
+    return time != NULL && rational_of_musical_time(time, &r) == RATIONAL_OK ? of_rational(r) : zero_q();
 }
 
 bool standard_meter_span_q(const TimeSpan *span, StandardMeterQ *start, StandardMeterQ *end) {
-    if (span == NULL || time_span_start(span) == NULL || time_span_end(span) == NULL) {
+    Rational from;
+    Rational to;
+    if (!score_time_span(span, &from, &to)) {
         return false;
     }
     if (start != NULL) {
-        *start = standard_meter_q_of_time(time_span_start(span));
+        *start = of_rational(from);
     }
     if (end != NULL) {
-        *end = standard_meter_q_of_time(time_span_end(span));
+        *end = of_rational(to);
     }
     return true;
 }
 
+/* A time that cannot be snapped without overflow is returned as it is, unchanged. */
 StandardMeterQ standard_meter_snap(const StandardMeterConfig *config, StandardMeterQ time, bool release, bool *changed) {
     if (changed != NULL) {
         *changed = false;
@@ -89,32 +91,16 @@ StandardMeterQ standard_meter_snap(const StandardMeterConfig *config, StandardMe
         config->release_tolerance_denominator == 0) {
         return time;
     }
-    long long grid = (long long)config->onset_grid_denominator;
-    /* nearest multiple of 1/grid: round(time * grid) / grid, with the floor taken toward minus infinity */
-    long long scaled_n = time.n * grid;
-    long long whole = scaled_n / time.d;
-    long long rest = scaled_n % time.d;
-    if (rest < 0) {
-        whole -= 1;
-        rest += time.d;
+    unsigned tolerance = release ? config->release_tolerance_denominator : config->onset_tolerance_denominator;
+    Rational snapped;
+    bool moved = false;
+    if (!score_time_snap(to_rational(time), config->onset_grid_denominator, tolerance, &snapped, &moved)) {
+        return time;
     }
-    if (2 * rest >= time.d) {
-        whole += 1;
+    if (changed != NULL) {
+        *changed = moved;
     }
-    StandardMeterQ nearest = standard_meter_q(whole, grid);
-    StandardMeterQ gap = standard_meter_q_sub(time, nearest);
-    if (gap.n < 0) {
-        gap.n = -gap.n;
-    }
-    StandardMeterQ tolerance = standard_meter_q(
-        1, (long long)(release ? config->release_tolerance_denominator : config->onset_tolerance_denominator));
-    if (standard_meter_q_compare(gap, tolerance) <= 0) {
-        if (changed != NULL) {
-            *changed = standard_meter_q_compare(time, nearest) != 0;
-        }
-        return nearest;
-    }
-    return time;
+    return of_rational(snapped);
 }
 
 static bool time_of(StandardMeterQ q, MusicalTime **out) {
@@ -128,7 +114,7 @@ bool standard_meter_measure_at(const MeterMap *map, StandardMeterQ time, int *me
 bool standard_meter_measure_bounds(const MeterMap *map, int index, StandardMeterQ *start, StandardMeterQ *end) {
     Rational from;
     Rational to;
-    if (meter_map_measure_bounds(map, index, &from, &to) != METER_MAP_OK) {
+    if (!score_time_measure_bounds(map, index, &from, &to)) {
         return false;
     }
     if (start != NULL) {

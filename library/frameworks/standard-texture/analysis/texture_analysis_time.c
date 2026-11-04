@@ -3,19 +3,7 @@
 #include "core/rational.h"
 #include "time/meter_arithmetic.h"
 #include "time/musical_time.h"
-
-StandardTextureQ standard_texture_q(long long n, long long d) {
-    if (d < 0) {
-        n = -n;
-        d = -d;
-    }
-    long long g = rational_gcd(n, d);
-    if (g == 0) {
-        g = 1;
-    }
-    StandardTextureQ q = {n / g, d / g};
-    return q;
-}
+#include "time/score_time.h"
 
 static inline Rational to_rational(StandardTextureQ q) {
     return rational_ratio(q.n, q.d);
@@ -26,71 +14,63 @@ static inline StandardTextureQ of_rational(Rational r) {
     return q;
 }
 
+/* A value that does not fit a Rational (overflow, or a zero denominator) reads as 0/1: these constructors and
+   operators return a plain value, so 0/1 is their failure value. */
+static inline StandardTextureQ zero_q(void) {
+    StandardTextureQ q = {0, 1};
+    return q;
+}
+
+StandardTextureQ standard_texture_q(long long n, long long d) {
+    Rational r;
+    return rational_make(n, d, &r) == RATIONAL_OK ? of_rational(r) : zero_q();
+}
+
 int standard_texture_q_compare(StandardTextureQ a, StandardTextureQ b) {
     return rational_cmp(to_rational(a), to_rational(b));
 }
 
 StandardTextureQ standard_texture_q_add(StandardTextureQ a, StandardTextureQ b) {
     Rational sum;
-    if (rational_add(to_rational(a), to_rational(b), &sum) == RATIONAL_OK) {
-        return of_rational(sum);
-    }
-    return standard_texture_q(a.n * b.d + b.n * a.d, a.d * b.d);
+    return rational_add(to_rational(a), to_rational(b), &sum) == RATIONAL_OK ? of_rational(sum) : zero_q();
 }
 
 StandardTextureQ standard_texture_q_sub(StandardTextureQ a, StandardTextureQ b) {
     Rational difference;
-    if (rational_sub(to_rational(a), to_rational(b), &difference) == RATIONAL_OK) {
-        return of_rational(difference);
-    }
-    return standard_texture_q(a.n * b.d - b.n * a.d, a.d * b.d);
+    return rational_sub(to_rational(a), to_rational(b), &difference) == RATIONAL_OK ? of_rational(difference) : zero_q();
 }
 
 double standard_texture_q_double(StandardTextureQ a) {
     return (double)a.n / (double)a.d;
 }
 
-static StandardTextureQ of_time(const MusicalTime *time) {
-    return standard_texture_q(musical_time_numerator(time), (long long)musical_time_denominator(time));
-}
-
 bool standard_texture_span_q(const TimeSpan *span, StandardTextureQ *start, StandardTextureQ *end) {
-    if (span == NULL || time_span_start(span) == NULL || time_span_end(span) == NULL) {
+    Rational from;
+    Rational to;
+    if (!score_time_span(span, &from, &to)) {
         return false;
     }
     if (start != NULL) {
-        *start = of_time(time_span_start(span));
+        *start = of_rational(from);
     }
     if (end != NULL) {
-        *end = of_time(time_span_end(span));
+        *end = of_rational(to);
     }
     return true;
 }
 
+/* A time that cannot be snapped without overflow is returned as it is, unchanged. */
 StandardTextureQ standard_texture_snap(const StandardTextureConfig *config, StandardTextureQ time, bool release) {
     if (config == NULL || config->onset_grid_denominator == 0 || config->onset_tolerance_denominator == 0 ||
         config->release_tolerance_denominator == 0) {
         return time;
     }
-    long long grid = (long long)config->onset_grid_denominator;
-    long long scaled = time.n * grid;
-    long long whole = scaled / time.d;
-    long long rest = scaled % time.d;
-    if (rest < 0) {
-        whole -= 1;
-        rest += time.d;
+    unsigned tolerance = release ? config->release_tolerance_denominator : config->onset_tolerance_denominator;
+    Rational snapped;
+    if (!score_time_snap(to_rational(time), config->onset_grid_denominator, tolerance, &snapped, NULL)) {
+        return time;
     }
-    if (2 * rest >= time.d) {
-        whole += 1;
-    }
-    StandardTextureQ nearest = standard_texture_q(whole, grid);
-    StandardTextureQ gap = standard_texture_q_sub(time, nearest);
-    if (gap.n < 0) {
-        gap.n = -gap.n;
-    }
-    StandardTextureQ tolerance =
-        standard_texture_q(1, (long long)(release ? config->release_tolerance_denominator : config->onset_tolerance_denominator));
-    return standard_texture_q_compare(gap, tolerance) <= 0 ? nearest : time;
+    return of_rational(snapped);
 }
 
 bool standard_texture_measure_at(const MeterMap *map, StandardTextureQ time, int *measure) {
@@ -100,7 +80,7 @@ bool standard_texture_measure_at(const MeterMap *map, StandardTextureQ time, int
 bool standard_texture_measure_bounds(const MeterMap *map, int index, StandardTextureQ *start, StandardTextureQ *end) {
     Rational from;
     Rational to;
-    if (meter_map_measure_bounds(map, index, &from, &to) != METER_MAP_OK) {
+    if (!score_time_measure_bounds(map, index, &from, &to)) {
         return false;
     }
     if (start != NULL) {
@@ -118,7 +98,7 @@ bool standard_texture_last_measure_touched(const MeterMap *map, StandardTextureQ
 
 bool standard_texture_beat_length(const MeterMap *map, int index, StandardTextureQ *beat) {
     Rational length;
-    if (beat == NULL || meter_map_beat_length(map, index, &length) != METER_MAP_OK) {
+    if (!score_time_beat_length(map, index, &length)) {
         return false;
     }
     *beat = of_rational(length);

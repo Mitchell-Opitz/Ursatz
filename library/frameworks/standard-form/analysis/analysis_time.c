@@ -5,19 +5,7 @@
 #include "core/rational.h"
 #include "time/meter_arithmetic.h"
 #include "time/musical_time.h"
-
-StandardFormQ standard_form_q(long long n, long long d) {
-    if (d < 0) {
-        n = -n;
-        d = -d;
-    }
-    long long g = rational_gcd(n, d);
-    if (g == 0) {
-        g = 1;
-    }
-    StandardFormQ q = {n / g, d / g};
-    return q;
-}
+#include "time/score_time.h"
 
 static inline Rational to_rational(StandardFormQ q) {
     return rational_ratio(q.n, q.d);
@@ -28,39 +16,43 @@ static inline StandardFormQ of_rational(Rational r) {
     return q;
 }
 
+/* A value that does not fit a Rational (overflow, or a zero denominator) reads as 0/1: these constructors and
+   operators return a plain value, so 0/1 is their failure value. */
+static inline StandardFormQ zero_q(void) {
+    StandardFormQ q = {0, 1};
+    return q;
+}
+
+StandardFormQ standard_form_q(long long n, long long d) {
+    Rational r;
+    return rational_make(n, d, &r) == RATIONAL_OK ? of_rational(r) : zero_q();
+}
+
 int standard_form_q_compare(StandardFormQ a, StandardFormQ b) {
     return rational_cmp(to_rational(a), to_rational(b));
 }
 
 StandardFormQ standard_form_q_add(StandardFormQ a, StandardFormQ b) {
     Rational sum;
-    if (rational_add(to_rational(a), to_rational(b), &sum) == RATIONAL_OK) {
-        return of_rational(sum);
-    }
-    return standard_form_q(a.n * b.d + b.n * a.d, a.d * b.d);
+    return rational_add(to_rational(a), to_rational(b), &sum) == RATIONAL_OK ? of_rational(sum) : zero_q();
 }
 
 StandardFormQ standard_form_q_sub(StandardFormQ a, StandardFormQ b) {
     Rational difference;
-    if (rational_sub(to_rational(a), to_rational(b), &difference) == RATIONAL_OK) {
-        return of_rational(difference);
-    }
-    return standard_form_q(a.n * b.d - b.n * a.d, a.d * b.d);
-}
-
-static StandardFormQ of_time(const MusicalTime *time) {
-    return standard_form_q(musical_time_numerator(time), (long long)musical_time_denominator(time));
+    return rational_sub(to_rational(a), to_rational(b), &difference) == RATIONAL_OK ? of_rational(difference) : zero_q();
 }
 
 bool standard_form_span_q(const TimeSpan *span, StandardFormQ *start, StandardFormQ *end) {
-    if (span == NULL || time_span_start(span) == NULL || time_span_end(span) == NULL) {
+    Rational from;
+    Rational to;
+    if (!score_time_span(span, &from, &to)) {
         return false;
     }
     if (start != NULL) {
-        *start = of_time(time_span_start(span));
+        *start = of_rational(from);
     }
     if (end != NULL) {
-        *end = of_time(time_span_end(span));
+        *end = of_rational(to);
     }
     return true;
 }
@@ -72,7 +64,7 @@ bool standard_form_measure_at(const MeterMap *map, StandardFormQ time, int *meas
 bool standard_form_measure_bounds(const MeterMap *map, int index, StandardFormQ *start, StandardFormQ *end) {
     Rational from;
     Rational to;
-    if (meter_map_measure_bounds(map, index, &from, &to) != METER_MAP_OK) {
+    if (!score_time_measure_bounds(map, index, &from, &to)) {
         return false;
     }
     if (start != NULL) {
@@ -90,7 +82,7 @@ bool standard_form_last_measure_touched(const MeterMap *map, StandardFormQ end, 
 
 bool standard_form_beat_length(const MeterMap *map, int index, StandardFormQ *beat) {
     Rational length;
-    if (beat == NULL || meter_map_beat_length(map, index, &length) != METER_MAP_OK) {
+    if (!score_time_beat_length(map, index, &length)) {
         return false;
     }
     *beat = of_rational(length);
