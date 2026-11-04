@@ -56774,53 +56774,6 @@
 					"framework":	"standard-form-v1",
 					"span":	{
 						"start":	{
-							"num":	111,
-							"den":	4
-						},
-						"end":	{
-							"num":	227,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	19,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	19,
-							"beat":	4,
-							"subdivision":	{
-								"num":	2,
-								"den":	3
-							}
-						}
-					},
-					"note_ids":	[361, 366, 371, 376, 381],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	1,
-					"measures":	{
-						"first":	19,
-						"last":	19
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	4,
-					"fragment":	"suffix",
-					"in_continuation":	true,
-					"phrase":	null,
-					"idea":	null,
-					"degrees":	["4", "3", "2", "b2", "2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
 							"num":	237,
 							"den":	8
 						},
@@ -56850,7 +56803,7 @@
 					"note_ids":	[435, 440, 445, 450, 455, 460, 465, 470],
 					"label":	"exact",
 					"uncertainty":	0,
-					"index":	2,
+					"index":	1,
 					"measures":	{
 						"first":	20,
 						"last":	21
@@ -56864,53 +56817,6 @@
 					"phrase":	null,
 					"idea":	null,
 					"degrees":	["2", "b3", "3", "4", "3", "2", "b2", "2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	123,
-							"den":	4
-						},
-						"end":	{
-							"num":	251,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	21,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	21,
-							"beat":	4,
-							"subdivision":	{
-								"num":	2,
-								"den":	3
-							}
-						}
-					},
-					"note_ids":	[480, 485, 490, 495, 500],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	3,
-					"measures":	{
-						"first":	21,
-						"last":	21
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	4,
-					"fragment":	"suffix",
-					"in_continuation":	false,
-					"phrase":	null,
-					"idea":	null,
-					"degrees":	["4", "3", "2", "b2", "2"]
 				}, {
 					"framework":	"standard-form-v1",
 					"span":	{
@@ -56944,7 +56850,7 @@
 					"note_ids":	[838, 843, 848, 853, 858, 863, 868, 873],
 					"label":	"exact",
 					"uncertainty":	0,
-					"index":	4,
+					"index":	2,
 					"measures":	{
 						"first":	38,
 						"last":	39
@@ -56958,53 +56864,6 @@
 					"phrase":	null,
 					"idea":	null,
 					"degrees":	["2", "b3", "3", "4", "3", "2", "b2", "2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	231,
-							"den":	4
-						},
-						"end":	{
-							"num":	467,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	39,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	39,
-							"beat":	4,
-							"subdivision":	{
-								"num":	2,
-								"den":	3
-							}
-						}
-					},
-					"note_ids":	[883, 888, 893, 898, 903],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	5,
-					"measures":	{
-						"first":	39,
-						"last":	39
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	4,
-					"fragment":	"suffix",
-					"in_continuation":	false,
-					"phrase":	null,
-					"idea":	null,
-					"degrees":	["4", "3", "2", "b2", "2"]
 				}, {
 					"framework":	"standard-form-v1",
 					"span":	{
@@ -57038,7 +56897,7 @@
 					"note_ids":	[957, 962, 967, 972, 977, 982, 987, 992],
 					"label":	"exact",
 					"uncertainty":	0,
-					"index":	6,
+					"index":	3,
 					"measures":	{
 						"first":	40,
 						"last":	41
@@ -57052,53 +56911,6 @@
 					"phrase":	null,
 					"idea":	null,
 					"degrees":	["2", "b3", "3", "4", "3", "2", "b2", "2"]
-				}, {
-					"framework":	"standard-form-v1",
-					"span":	{
-						"start":	{
-							"num":	243,
-							"den":	4
-						},
-						"end":	{
-							"num":	491,
-							"den":	8
-						}
-					},
-					"location":	{
-						"start":	{
-							"measure":	41,
-							"beat":	3,
-							"subdivision":	{
-								"num":	0,
-								"den":	1
-							}
-						},
-						"end":	{
-							"measure":	41,
-							"beat":	4,
-							"subdivision":	{
-								"num":	2,
-								"den":	3
-							}
-						}
-					},
-					"note_ids":	[1002, 1007, 1012, 1017, 1022],
-					"label":	"fragmented",
-					"uncertainty":	0,
-					"index":	7,
-					"measures":	{
-						"first":	41,
-						"last":	41
-					},
-					"beat":	3,
-					"score":	1,
-					"mismatches":	0,
-					"intervals":	4,
-					"fragment":	"suffix",
-					"in_continuation":	false,
-					"phrase":	8,
-					"idea":	0,
-					"degrees":	["4", "3", "2", "b2", "2"]
 				}],
 			"development":	[{
 					"occurrence":	0,
@@ -57108,46 +56920,22 @@
 					"from":	null
 				}, {
 					"occurrence":	1,
-					"measure":	19,
-					"beat":	3,
-					"transformation":	"fragmented",
+					"measure":	20,
+					"beat":	4,
+					"transformation":	"exact",
 					"from":	0
 				}, {
 					"occurrence":	2,
-					"measure":	20,
+					"measure":	38,
 					"beat":	4,
 					"transformation":	"exact",
 					"from":	1
 				}, {
 					"occurrence":	3,
-					"measure":	21,
-					"beat":	3,
-					"transformation":	"fragmented",
-					"from":	2
-				}, {
-					"occurrence":	4,
-					"measure":	38,
-					"beat":	4,
-					"transformation":	"exact",
-					"from":	3
-				}, {
-					"occurrence":	5,
-					"measure":	39,
-					"beat":	3,
-					"transformation":	"fragmented",
-					"from":	4
-				}, {
-					"occurrence":	6,
 					"measure":	40,
 					"beat":	4,
 					"transformation":	"exact",
-					"from":	5
-				}, {
-					"occurrence":	7,
-					"measure":	41,
-					"beat":	3,
-					"transformation":	"fragmented",
-					"from":	6
+					"from":	2
 				}],
 			"features":	{
 				"notes":	[{
@@ -57843,7 +57631,7 @@
 			},
 			"note_ids":	[361, 366, 371, 376, 381, 386, 391, 395],
 			"label":	"motive",
-			"uncertainty":	0,
+			"uncertainty":	0.10714285714285721,
 			"index":	7,
 			"note_count":	8,
 			"generic":	true,
@@ -57926,14 +57714,14 @@
 					},
 					"note_ids":	[480, 485, 490, 495, 500, 505, 511],
 					"label":	"fragmented",
-					"uncertainty":	0,
+					"uncertainty":	0.10714285714285721,
 					"index":	1,
 					"measures":	{
 						"first":	21,
 						"last":	22
 					},
 					"beat":	3,
-					"score":	1,
+					"score":	0.89285714285714279,
 					"mismatches":	0,
 					"intervals":	6,
 					"fragment":	"prefix",
@@ -58020,14 +57808,14 @@
 					},
 					"note_ids":	[1002, 1007, 1012, 1017, 1022, 1027, 1033],
 					"label":	"fragmented",
-					"uncertainty":	0,
+					"uncertainty":	0.10714285714285721,
 					"index":	3,
 					"measures":	{
 						"first":	41,
 						"last":	42
 					},
 					"beat":	3,
-					"score":	1,
+					"score":	0.89285714285714279,
 					"mismatches":	0,
 					"intervals":	6,
 					"fragment":	"prefix",

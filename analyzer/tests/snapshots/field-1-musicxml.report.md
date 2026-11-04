@@ -1278,11 +1278,12 @@ The kernel's form structure detection grouped the phrases into 5 sections, closi
 
 ## Motives
 
-The library's motive analysis found 1 motive family in the soprano, the highest sounding note at each attack. A family is a short figure that recurs; Notes is the length of the figure, Pattern whether its occurrences match by scale steps or by semitones, Measures the measures the occurrences start in, Phrases the phrases they lie in (an occurrence across a phrase boundary lies in none), and Transformations how many occurrences are of each kind the library names against the first occurrence (exact, real-transposed, tonal-transposed, inverted, retrograde, augmented, diminished, fragmented, varied).
+The library's motive analysis found 2 motive families in the soprano, the highest sounding note at each attack. A family is a short figure that recurs; Notes is the length of the figure, Pattern whether its occurrences match by scale steps or by semitones, Measures the measures the occurrences start in, Phrases the phrases they lie in (an occurrence across a phrase boundary lies in none), and Transformations how many occurrences are of each kind the library names against the first occurrence (exact, real-transposed, tonal-transposed, inverted, retrograde, augmented, diminished, fragmented, varied).
 
 | Family | Notes | Degrees | Pattern | Occurrences | Measures | Phrases | Transformations |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 4 | 1 1 b3 1 | scale steps | 4 | 31, 50, 58, 64 | 6, 10 | exact 1, real-transposed 2, fragmented 1 |
+| 1 | 4 | 1 1 b3 1 | scale steps | 3 | 31, 50, 58 | 6, 10 | exact 1, real-transposed 2 |
+| 2 | 3 | 1 1 b3 | scale steps | 4 | 31, 50, 58, 64 | 6, 10 | exact 1, real-transposed 3 |
 
 ## Melody
 
@@ -1356,7 +1357,8 @@ The library's melodic tendencies are soft preferences a well-formed line usually
 
 Each family's occurrences in time order, as the measure they start in and the kind the library names against the family's prototype, which is the original.
 
-- **Family 1:** m31 original > m50 real-transposed > m58 real-transposed > m64 fragmented
+- **Family 1:** m31 original > m50 real-transposed > m58 real-transposed
+- **Family 2:** m31 original > m50 real-transposed > m58 real-transposed > m64 real-transposed
 
 ## Progression patterns
 
