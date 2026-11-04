@@ -31,6 +31,7 @@ add_library(ursatz
     time/tuplet.c
     time/time_rational.c
     time/meter_arithmetic.c
+    time/score_time.c
     pitch/pitch_identity.c
     pitch/pitch_spelling.c
     pitch/pitch_arithmetic.c
@@ -349,6 +350,7 @@ ursatz_public_headers(ursatz
         time/musical_time.h
         time/note_value.h
         time/performance_time.h
+        time/score_time.h
         time/tempo_map.h
         time/temporal_anchor.h
         time/time_rational.h
