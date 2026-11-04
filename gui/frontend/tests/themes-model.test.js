@@ -204,12 +204,12 @@ check(T.updatedUses({}).length === 0, "no uses give no notice");
 const moved = T.formWithUpdates(filled(), [{ item_id: "mot-1", current: 5 }]);
 check(moved.slots.find((s) => s.slot === "basic").version === 5 && moved.slots.find((s) => s.slot === "cadential").version === 3, "updating moves the named slot motif");
 
-/* MIDI playback */
-const midi = fs.readFileSync(path.join(__dirname, "fixtures", "theme.mid"));
-const playback = T.playbackFromMidi(midi);
-check(playback && playback.ok && playback.parts.length === 2 && playback.notes.length > 0, "a theme MIDI file gives parts and notes");
-check(playback && playback.tempo[0].qpm === 132 && same(playback.end, [15360, 1920]), "the MIDI tempo and the 8 bars of 4/4");
-check(T.playbackFromMidi(Buffer.from("not midi at all, no")) === null, "bytes that are not MIDI give null");
+/* Playback is served by the backend from the version's MIDI file (R-275); the fixture is the served JSON of theme.mid */
+const playback = JSON.parse(fs.readFileSync(path.join(__dirname, "fixtures", "theme.playback.json"), "utf8"));
+check(playback.ok && playback.parts.length === 2 && playback.notes.length > 0, "a served theme playback has parts and notes");
+check(playback.tempo[0].qpm === 132 && same(playback.end, [8, 1]), "the served tempo and the 8 bars of 4/4");
+check(T.playbackFromMidi === undefined, "the browser no longer reads MIDI files");
+check(T.versionPlaybackUrl("thm-1", 2, "theme") === "/api/materials/items/thm-1/versions/2/playback?file=theme", "a version's playback is asked of the backend by file");
 
 /* Theme tabs (P19 B5) */
 check(same(T.THEME_TABS.map((tab) => tab.id), ["theme", "structure", "used-by", "other"]), "the theme tabs are Theme, Structure, Used by, Other");

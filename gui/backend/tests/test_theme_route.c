@@ -20,6 +20,7 @@
 #include <cJSON.h>
 
 #include "server.h"
+#include "playback_check.h"
 
 #ifndef URSATZ_GUI_TEST_LINK_FIXTURES
 #error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
@@ -288,6 +289,18 @@ static void slots_of(const char *basic, const char *cadential, char *out, size_t
 
 static void basic_slot_of(const char *basic, char *out, size_t size) {
   snprintf(out, size, "[{\"slot\":\"basic\",\"item_id\":\"%s\",\"version\":1}]", basic);
+}
+
+/* The playback the route serves for url against the capture made before P27 B9 (fixtures/playback/<name>.playback.json). */
+static void check_served_playback(const char *url, const char *name, const char *what) {
+  char fixture[900];
+  int status = 0;
+  snprintf(fixture, sizeof(fixture), URSATZ_GUI_TEST_COMPOSER_FIXTURES "/../playback/%s.playback.json", name);
+  cJSON *want = read_json_file(fixture);
+  cJSON *got = exchange("GET", url, NULL, &status);
+  check(status == 200 && want && got && playback_matches_capture(got, want), what);
+  cJSON_Delete(want);
+  cJSON_Delete(got);
 }
 
 static cJSON *get_item(const char *id, int *status) {
@@ -1235,6 +1248,8 @@ static void test_real_composer(const Motifs *m) {
     free(text);
   }
   check(all, "the real run wrote the five files");
+  snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/playback?file=theme", theme);
+  check_served_playback(path, "theme-seeded", "the theme's playback is built from its MIDI file as the browser read it");
   answer = get_item(theme, &status);
   const cJSON *result = member(theme_of(answer), "result");
   check(number_of(result, "seed") == 97 && cJSON_GetArraySize(member(member(result, "summary"), "themes")) >= 1 &&

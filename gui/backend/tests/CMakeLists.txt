@@ -51,6 +51,7 @@ ursatz_gui_add_test(materials_route test_materials_route.c ${CMAKE_CURRENT_BINAR
 # gave as a command (fixtures/composer).
 target_compile_definitions(test_materials_route PRIVATE
   URSATZ_GUI_TEST_COMPOSER_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer"
+  URSATZ_GUI_TEST_PLAYBACK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/playback"
 )
 
 ursatz_gui_add_test(subjects_route test_subjects_route.c ${CMAKE_CURRENT_BINARY_DIR}/subjects_route)
@@ -78,6 +79,7 @@ ursatz_gui_add_test(theme_route test_theme_route.c ${CMAKE_CURRENT_BINARY_DIR}/t
 target_compile_definitions(test_theme_route PRIVATE
   URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
   URSATZ_GUI_TEST_COMPOSER_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer"
+  URSATZ_GUI_TEST_PLAYBACK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/playback"
 )
 
 ursatz_gui_add_test(piece_route test_piece_route.c ${CMAKE_CURRENT_BINARY_DIR}/piece_route)
@@ -86,6 +88,7 @@ ursatz_gui_add_test(piece_route test_piece_route.c ${CMAKE_CURRENT_BINARY_DIR}/p
 target_compile_definitions(test_piece_route PRIVATE
   URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
   URSATZ_GUI_TEST_COMPOSER_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer"
+  URSATZ_GUI_TEST_PLAYBACK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/playback"
 )
 
 ursatz_gui_add_test(piece_snapshot test_piece_snapshot.c ${CMAKE_CURRENT_BINARY_DIR}/piece_snapshot)
