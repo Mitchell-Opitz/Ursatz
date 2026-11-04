@@ -28,7 +28,6 @@
 #define MAX_DEVELOPMENTS 8
 #define SLOT_ROWS 16
 
-static const char *const BEGINNING_WORDS[] = {"presentation", "antecedent", "cbi"};
 static const char *const BEGINNING_NAMES[] = {"presentation", "antecedent", "compound basic idea"};
 static const char *const ENDING_NAMES[] = {"continuation", "consequent", "cadential"};
 
@@ -98,12 +97,14 @@ static bool parse_hybrid(const char *text, PlanThemePairing *pairing) {
     size_t length = (size_t)(plus - text);
     bool beginning_found = false;
     bool ending_found = false;
-    for (int i = 0; i < 3; i++) {
-        if (strlen(BEGINNING_WORDS[i]) == length && strncmp(text, BEGINNING_WORDS[i], length) == 0) {
+    for (int i = 0; API_THEME_BEGINNINGS[i].value; i++) {
+        if (strlen(API_THEME_BEGINNINGS[i].value) == length && strncmp(text, API_THEME_BEGINNINGS[i].value, length) == 0) {
             pairing->beginning = (PlanThemeBeginning)i;
             beginning_found = true;
         }
-        if (request_equals_ignore_case(plus + 1, ENDING_NAMES[i])) {
+    }
+    for (int i = 0; API_THEME_ENDINGS[i].value; i++) {
+        if (request_equals_ignore_case(plus + 1, API_THEME_ENDINGS[i].value)) {
             pairing->ending = (PlanThemeEnding)i;
             ending_found = true;
         }

@@ -3,6 +3,7 @@
 
 #include <ursatz_analyzer/style_labels.h>
 #include <ursatz_composer/composer_api.h>
+#include <ursatz_composer/constraint.h>
 #include <ursatz_composer/given.h>
 #include <ursatz_composer/harmony_phrase.h>
 #include <ursatz_composer/motive.h>
@@ -11,7 +12,10 @@
 #include <ursatz_composer/piece_structure.h>
 #include <ursatz_composer/variant_registry.h>
 
+#include "api_grow.h"
 #include "api_internal.h"
+#include "api_piece.h"
+#include "api_workflow.h"
 #include "api_vocabulary.h"
 #include "util/plan_util.h"
 #include "util/request_parse.h"
@@ -46,6 +50,20 @@ const ApiChoice API_PIECE_INTOS[] = {{"sentence", "Sentence"}, {"period", "Perio
    of a whole note shorter than a bar. */
 const ApiChoice API_PICKUPS[] = {{"0", "0"},   {"1/4", "1/4"}, {"1/2", "1/2"}, {"1", "1"},
                                  {"3/2", "3/2"}, {"2", "2"},   {"3", "3"},     {NULL, NULL}};
+
+const ApiChoice API_THEME_BARS[] = {{"4", "4 bars"}, {"8", "8 bars"}, {NULL, NULL}};
+const ApiChoice API_STYLE_WEIGHTS[] = {{"1/4", "Light"}, {"1/2", "Normal"}, {"1", "Strong"}, {NULL, NULL}};
+
+/* The beginning and ending words of a hybrid ("antecedent+continuation") with the ideas each is made of (grow_idea_place). */
+const ApiThemePart API_THEME_BEGINNINGS[] = {{"presentation", "Presentation", {GROW_IDEA_BASIC, GROW_IDEA_REPETITION}, 2},
+                                             {"antecedent", "Antecedent", {GROW_IDEA_BASIC, GROW_IDEA_CONTRASTING}, 2},
+                                             {"cbi", "Compound basic idea", {GROW_IDEA_BASIC, GROW_IDEA_CONTRASTING}, 2},
+                                             {NULL, NULL, {0}, 0}};
+const ApiThemePart API_THEME_ENDINGS[] = {
+    {"continuation", "Continuation", {GROW_IDEA_FRAGMENT_1, GROW_IDEA_FRAGMENT_2, GROW_IDEA_CADENTIAL}, 3},
+    {"consequent", "Consequent", {GROW_IDEA_CONSEQUENT_BASIC, GROW_IDEA_CONSEQUENT_CONTRASTING}, 2},
+    {"cadential", "Cadential", {GROW_IDEA_CADENTIAL_1, GROW_IDEA_CADENTIAL_2}, 2},
+    {NULL, NULL, {0}, 0}};
 
 /* basic idea, repetition, contrasting idea, consequent basic idea, consequent contrasting idea, fragment 1, fragment 2,
    cadential, cadential 1, cadential 2: the slots basic, contrasting, continuation and cadential are 0 to 3. */
@@ -321,6 +339,37 @@ static bool add_theme_lists(cJSON *root) {
     return ideas && categories;
 }
 
+static bool add_theme_parts(cJSON *root, const char *name, const ApiThemePart *table) {
+    cJSON *list = add_list(root, name);
+    for (size_t i = 0; list && table[i].value; i++) {
+        cJSON *entry = add_choice(list, table[i].value, table[i].label);
+        cJSON *ideas = entry ? cJSON_AddArrayToObject(entry, "ideas") : NULL;
+        for (size_t k = 0; ideas && k < table[i].idea_count; k++) {
+            cJSON *idea = cJSON_CreateString(grow_idea_name(table[i].ideas[k]));
+            if (!idea || !cJSON_AddItemToArray(ideas, idea)) {
+                cJSON_Delete(idea);
+                return false;
+            }
+        }
+        if (!ideas) {
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
+/* The first cadences of a period: the half and imperfect authentic cadences, in the order of the cadences list. */
+static bool add_first_cadences(cJSON *root) {
+    cJSON *list = add_list(root, "theme_first_cadences");
+    for (size_t i = 0; list && i < PLAN_CADENCE_COUNT; i++) {
+        if ((plan_cadence_types[i] == CADENCE_TYPE_HALF || plan_cadence_types[i] == CADENCE_TYPE_IMPERFECT_AUTHENTIC) &&
+            !add_choice(list, plan_cadence_names[i], CADENCE_LABELS[i])) {
+            return false;
+        }
+    }
+    return list != NULL;
+}
+
 static bool add_operations(cJSON *root) {
     char *text = variant_registry_to_json();
     cJSON *operations = text ? cJSON_Parse(text) : NULL;
@@ -335,6 +384,15 @@ static bool add_operations(cJSON *root) {
     return true;
 }
 
+/* The largest seed of each request that reads one: the variants entry keeps room for the seeds its chains draw. */
+static bool add_seed_max(cJSON *limits) {
+    cJSON *seed = cJSON_AddObjectToObject(limits, "seed_max");
+    return seed && cJSON_AddNumberToObject(seed, "variants", (double)API_VARIANTS_SEED_MAX) &&
+           cJSON_AddNumberToObject(seed, "random_motive", (double)API_SEED_MAX) &&
+           cJSON_AddNumberToObject(seed, "theme", (double)GROW_SEED_MAX) &&
+           cJSON_AddNumberToObject(seed, "piece", (double)PIECE_SEED_MAX);
+}
+
 /* The sizes the requests are limited to, for the help of a client that shows them. */
 static bool add_limits(cJSON *root) {
     cJSON *limits = cJSON_AddObjectToObject(root, "limits");
@@ -343,7 +401,11 @@ static bool add_limits(cJSON *root) {
            cJSON_AddNumberToObject(limits, "motive_features", MOTIVE_MAX_FEATURES) &&
            cJSON_AddNumberToObject(limits, "variant_chain", VARIANT_CHAIN_MAX) &&
            cJSON_AddNumberToObject(limits, "variant_functions", VARIANT_FUNCTIONS) &&
-           cJSON_AddNumberToObject(limits, "random_motive_count", MOTIVE_RANDOM_MAX_COUNT);
+           cJSON_AddNumberToObject(limits, "random_motive_count", MOTIVE_RANDOM_MAX_COUNT) &&
+           cJSON_AddNumberToObject(limits, "tempo_min", (double)API_TEMPO_MIN) &&
+           cJSON_AddNumberToObject(limits, "tempo_max", (double)API_TEMPO_MAX) &&
+           cJSON_AddNumberToObject(limits, "piece_sections", PIECE_STRUCTURE_MAX_SECTIONS) &&
+           cJSON_AddNumberToObject(limits, "piece_beats", (double)API_PIECE_BEATS_MAX) && add_seed_max(limits);
 }
 
 bool api_vocabulary_build(cJSON *root) {
@@ -351,7 +413,9 @@ bool api_vocabulary_build(cJSON *root) {
            add_keys(root) && add_cadences(root) && add_pickups(root) && add_library_lists(root) &&
            add_choices(root, "functions", API_FUNCTIONS) && add_choices(root, "distances", API_DISTANCES) &&
            add_choices(root, "theme_slots", API_THEME_SLOTS) && add_theme_lists(root) &&
-           add_choices(root, "theme_pools", API_THEME_POOLS) &&
+           add_choices(root, "theme_pools", API_THEME_POOLS) && add_choices(root, "theme_bars", API_THEME_BARS) &&
+           add_first_cadences(root) && add_theme_parts(root, "theme_beginnings", API_THEME_BEGINNINGS) &&
+           add_theme_parts(root, "theme_endings", API_THEME_ENDINGS) && add_choices(root, "style_weights", API_STYLE_WEIGHTS) &&
            add_choices(root, "accompaniment_patterns", API_ACCOMPANIMENT_PATTERNS) &&
            add_choices(root, "piece_intos", API_PIECE_INTOS) && add_tone_labels(root) && add_operations(root) &&
            add_limits(root);

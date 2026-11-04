@@ -5,6 +5,7 @@
 #include <time.h>
 #include <string.h>
 
+#include "api_vocabulary.h"
 #include "util/request_parse.h"
 
 ComposerStatus api_fail(ComposerError *error, ComposerStatus status, const char *path, const char *format, ...) {
@@ -233,8 +234,8 @@ ComposerStatus api_read_tempo(const cJSON *request, PlanExportOptions *options, 
     if (!api_member_rational(request, "tempo", &tempo, &has_tempo, error)) {
         return COMPOSER_ERR_REQUEST;
     }
-    if (has_tempo && (tempo.denominator == 0 || tempo.numerator < 20UL * tempo.denominator ||
-                      tempo.numerator > 400UL * tempo.denominator)) {
+    if (has_tempo && (tempo.denominator == 0 || tempo.numerator < API_TEMPO_MIN * tempo.denominator ||
+                      tempo.numerator > API_TEMPO_MAX * tempo.denominator)) {
         const cJSON *item = cJSON_GetObjectItemCaseSensitive(request, "tempo");
         char text[48] = "";
         if (cJSON_IsString(item)) {

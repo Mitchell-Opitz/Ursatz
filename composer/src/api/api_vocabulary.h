@@ -8,6 +8,7 @@
 
 #include <ursatz_composer/composer_api.h>
 #include <ursatz_composer/grow.h>
+#include <ursatz_composer/constraint.h>
 
 /*
  * The named tables of the words a request is written in (R-267, R-270). Each table ends with an entry whose value is NULL.
@@ -40,6 +41,27 @@ extern const ApiChoice API_THEME_POOLS[];      /* approved-and-unflagged, approv
 extern const ApiChoice API_ACCOMPANIMENT_PATTERNS[];
 extern const ApiChoice API_PIECE_INTOS[];      /* sentence, period, hybrid */
 extern const ApiChoice API_PICKUPS[];          /* the pickups an application offers, in beats */
+extern const ApiChoice API_THEME_BARS[];       /* 4, 8 */
+extern const ApiChoice API_STYLE_WEIGHTS[];    /* 1/4, 1/2, 1: the weights offered (any fraction the readers accept still works) */
+
+/* A beginning ("presentation") or an ending ("continuation") of a theme, with the ideas it is made of, in GrowIdea order. */
+typedef struct {
+    const char *value;
+    const char *label;
+    GrowIdea ideas[3];
+    size_t idea_count;
+} ApiThemePart;
+
+extern const ApiThemePart API_THEME_BEGINNINGS[]; /* presentation, antecedent, cbi: in PlanThemeBeginning order, NULL ends */
+extern const ApiThemePart API_THEME_ENDINGS[];    /* continuation, consequent, cadential: in PlanThemeEnding order, NULL ends */
+
+/* The limits the readers hold and the vocabulary shows. */
+#define API_TEMPO_MIN 20UL
+#define API_TEMPO_MAX 400UL
+#define API_PIECE_BEATS_MAX 4096UL
+#define API_VARIANTS_COUNT_MAX 16
+#define API_VARIANTS_DRAWS_PER_COUNT 4 /* with "functions" or "distance", up to this many chains for each variant asked for */
+#define API_VARIANTS_SEED_MAX (4294967295UL - API_VARIANTS_COUNT_MAX * API_VARIANTS_DRAWS_PER_COUNT)
 
 /* The slot of API_THEME_SLOTS whose motive an idea (grow_idea_name, in GrowIdea order) is made from. */
 extern const int API_THEME_IDEA_SLOTS[GROW_IDEA_COUNT];
