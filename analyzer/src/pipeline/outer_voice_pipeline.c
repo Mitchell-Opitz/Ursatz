@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/rational.h"
 #include "analysis/outer_voice.h"
 #include "common-practice-minimal/key_vocabulary.h"
 #include "common-practice-minimal/outer_scale_degrees.h"
@@ -71,7 +72,7 @@ static bool fill_note(const ImportedNotes *notes, const Segment *segment, const 
 
 /* a/b < c/d for positive denominators. */
 static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
-    return (long long)a * (long long)d < (long long)c * (long long)b;
+    return rational_cmp(rational_ratio(a, (long long)b), rational_ratio(c, (long long)d)) < 0;
 }
 
 /* The voice segment holding the chord segment's start: the line's entry at the chord's onset. voices->segment_count

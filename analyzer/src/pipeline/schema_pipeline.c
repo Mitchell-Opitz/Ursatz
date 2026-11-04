@@ -7,6 +7,7 @@
 #include <ursatz_chain/analysis_chain.h>
 #include <ursatz_chain/chain_inputs.h>
 
+#include "core/rational.h"
 #include "galant-schemas/analysis/galant_analysis_input.h"
 #include "galant-schemas/analysis/galant_analysis_match.h"
 #include "galant-schemas/galant_framework.h"
@@ -42,7 +43,7 @@ static void build_destroy(SchemaBuild *build) {
 
 /* a/b < c/d for positive denominators. */
 static bool rational_less(long a, unsigned long b, long c, unsigned long d) {
-    return (long long)a * (long long)d < (long long)c * (long long)b;
+    return rational_cmp(rational_ratio(a, (long long)b), rational_ratio(c, (long long)d)) < 0;
 }
 
 /* The chord entries each merged segment covers: those starting inside its span. entries are in time order. */

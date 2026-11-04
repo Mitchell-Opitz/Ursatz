@@ -19,6 +19,7 @@
 #include "standard-counterpoint/analysis/analysis_perfects.h"
 #include "standard-counterpoint/framework.h"
 #include "standard-harmony/analysis/analysis_resolution.h"
+#include "standard-voicing/doubling_reading.h"
 #include "standard-harmony/analysis/analysis_voices.h"
 #include "standard-meter/segmentation_beat_grid.h"
 #include "theory/framework.h"
@@ -203,44 +204,27 @@ static bool fill_chord(const VoiceGrid *build, const HarmonyStage *harmony, size
         (size_t)input->inversion >= input->interval_count || input->interval_count > ANALYSIS_CHORD_MEMBERS) {
         return false;
     }
-    size_t bass = sounding[0];
-    for (size_t i = 1; i < count; i++) {
-        if (cell_semitone(build, row, sounding[i]) < cell_semitone(build, row, bass)) {
-            bass = sounding[i];
-        }
+    long semitones[ANALYSIS_VOICE_LEADING_MAX_VOICES];
+    for (size_t i = 0; i < count; i++) {
+        semitones[i] = cell_semitone(build, row, sounding[i]);
     }
-    int root = pitch_class(pitch_class(cell_semitone(build, row, bass)) - input->intervals[input->inversion]);
+    StandardVoicingDoublingReading reading;
+    if (!standard_voicing_read_doubling(semitones, count, input->intervals, input->interval_count, input->inversion,
+                                        &reading)) {
+        return false;
+    }
     double least_confidence = 1;
     chord->entry = row;
-    chord->voices_sounding = count;
-    chord->doubled_member = -1;
+    chord->voices_sounding = reading.voices_sounding;
+    chord->doubled_member = reading.doubled_member;
+    chord->non_chord_voices = reading.non_chord_voices;
+    memcpy(chord->member_voices, reading.member_voices, sizeof(chord->member_voices));
+    chord->gap_count = reading.gap_count;
+    memcpy(chord->gaps, reading.gaps, sizeof(reading.gaps));
     for (size_t i = 0; i < count; i++) {
         const AnalysisVoiceCell *cell = cell_of(build, row, sounding[i]);
-        int member = -1;
-        for (size_t m = 0; m < input->interval_count; m++) {
-            if (pitch_class(input->intervals[m]) == pitch_class(pitch_class(cell_semitone(build, row, sounding[i])) - root)) {
-                member = (int)m;
-                break;
-            }
-        }
-        if (member < 0) {
-            chord->non_chord_voices++;
-        } else {
-            chord->member_voices[member]++;
-        }
-        if (i + 1 < count) {
-            chord->gaps[chord->gap_count++] =
-                cell_semitone(build, row, sounding[i]) - cell_semitone(build, row, sounding[i + 1]);
-        }
         chord->note_ids[chord->note_id_count++] = build->note_of_cell[row * build->voice_count + sounding[i]];
         least_confidence = cell->confidence < least_confidence ? cell->confidence : least_confidence;
-    }
-    size_t most = 1;
-    for (size_t m = 0; m < ANALYSIS_CHORD_MEMBERS; m++) {
-        if (chord->member_voices[m] > most) {
-            most = chord->member_voices[m];
-            chord->doubled_member = (int)m;
-        }
     }
     chord->uncertainty = 1 - least_confidence;
     if (build->voice_count == 4 && count == 4) {
