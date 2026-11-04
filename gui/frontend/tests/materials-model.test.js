@@ -298,6 +298,10 @@ check(randomBody.mode === "random" && randomBody.meter === "random" && !("key" i
 check(randomBody.count === 1 && randomBody.seed === 7 && !("style_id" in randomBody) && M.RANDOM_DEFAULT_COUNT === undefined && M.randomProblems === undefined, "random request draws one motif from the seed with no style and no count option");
 check(M.randomSettings === undefined, "the draw of the mode and meter is not computed here");
 check(same(M.drawnSettings({ drawn: { mode: "minor", meter: "6/8" } }), { mode: "minor", meter: "6/8" }), "the drawn mode and meter come from the answer");
+for (const captured of require("../../backend/tests/fixtures/composer/b11_captures.json").random) {
+  const answer = { drawn: { mode: captured.mode, meter: captured.meter } };
+  check(same(M.drawnSettings(answer), { mode: captured.mode, meter: captured.meter }) && JSON.parse(M.randomRequest({ seed: captured.seed }).body).seed === captured.seed, `seed ${captured.seed} shows the captured ${captured.mode} ${captured.meter}`);
+}
 check(M.drawnSettings({ drawn: { mode: "minor" } }) === null && M.drawnSettings({}) === null && M.drawnSettings(null) === null, "an answer that names no draw gives none");
 
 const candidate = {

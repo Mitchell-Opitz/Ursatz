@@ -2082,6 +2082,65 @@ static void test_replies_match_the_command(void) {
   free(target);
   cJSON_Delete(fixture);
 }
+
+/* The mode and meter a seed draws and the cadence a section gets when none is chosen are the Composer's, and equal what
+   the GUI computed before (fixtures/composer/b11_captures.json, captured at the start of P27 B11). */
+static void test_served_defaults_and_draws(void) {
+  char *text = read_whole_file(URSATZ_GUI_TEST_COMPOSER_FIXTURES "/b11_captures.json");
+  cJSON *fixture = text ? cJSON_Parse(text) : NULL;
+  free(text);
+  check(fixture != NULL, "the captured draws and cadences are read");
+  if (!fixture) {
+    return;
+  }
+  int status = 0;
+  const cJSON *draw = NULL;
+  cJSON_ArrayForEach(draw, cJSON_GetObjectItemCaseSensitive(fixture, "random")) {
+    char request[256];
+    snprintf(request, sizeof(request), "{\"mode\":\"random\",\"meter\":\"random\",\"form\":\"full\",\"count\":1,\"seed\":%.0f}",
+             cJSON_GetObjectItemCaseSensitive(draw, "seed")->valuedouble);
+    cJSON *answer = json_exchange("POST", "/api/materials/motifs/random", request, &status);
+    const cJSON *drawn = cJSON_GetObjectItemCaseSensitive(answer, "drawn");
+    check(status == 200 && ok_true(answer) && strcmp(string_of(drawn, "mode"), string_of(draw, "mode")) == 0 &&
+              strcmp(string_of(drawn, "meter"), string_of(draw, "meter")) == 0,
+          "a seed draws the mode and meter the GUI drew");
+    cJSON_Delete(answer);
+  }
+
+  cJSON *refused = json_exchange("POST", "/api/materials/motifs/random",
+                                 "{\"mode\":\"random\",\"meter\":\"random\",\"seed\":4294967296}", &status);
+  check(status == 400 && !ok_true(refused) && strcmp(string_of(refused, "path"), "/seed") == 0,
+        "a seed over the Composer's limit is refused by the Composer at /seed");
+  cJSON_Delete(refused);
+
+  const cJSON *cadences = cJSON_GetObjectItemCaseSensitive(fixture, "cadences");
+  const cJSON *parts = cJSON_GetObjectItemCaseSensitive(cadences, "parts");
+  char body[4096] = "{\"uses\":[],\"piece\":{\"structure\":{\"key\":\"D\",\"mode\":\"major\",\"meter\":\"4/4\",\"sections\":[";
+  int index = 0;
+  const cJSON *part = NULL;
+  cJSON_ArrayForEach(part, parts) {
+    char section[256];
+    snprintf(section, sizeof(section),
+             "%s{\"id\":\"s%d\",\"part\":\"%s\",\"letter\":\"A\",\"beats\":16,\"pickup\":\"0\",\"cadence\":null,\"fill\":{\"kind\":\"empty\"}}",
+             index > 0 ? "," : "", index, part->valuestring);
+    strncat(body, section, sizeof(body) - strlen(body) - 1);
+    index++;
+  }
+  strncat(body, "]}}}", sizeof(body) - strlen(body) - 1);
+  char *request = malloc(strlen(body) + 64);
+  snprintf(request, strlen(body) + 64, "{\"type\":\"piece\",\"body\":%s}", body);
+  cJSON *answer = json_exchange("POST", "/api/materials/items/validate", request, &status);
+  free(request);
+  const cJSON *sections = cJSON_GetObjectItemCaseSensitive(cJSON_GetObjectItemCaseSensitive(answer, "request"), "sections");
+  const cJSON *want = cJSON_GetObjectItemCaseSensitive(cadences, "defaults");
+  bool equal = status == 200 && cJSON_GetArraySize(sections) == cJSON_GetArraySize(want);
+  for (int i = 0; equal && i < cJSON_GetArraySize(want); i++) {
+    equal = strcmp(string_of(cJSON_GetArrayItem(sections, i), "cadence"), cJSON_GetArrayItem(want, i)->valuestring) == 0;
+  }
+  check(equal, "an intro, a loop of three sections and two endings get the cadences the GUI gave them");
+  cJSON_Delete(answer);
+  cJSON_Delete(fixture);
+}
 #endif
 
 /* A refusal by the Composer names the request member at fault (additive "path" of the error answer). */
@@ -2275,6 +2334,7 @@ int main(void) {
   test_validation();
 #ifdef URSATZ_GUI_TEST_COMPOSER_FIXTURES
   test_replies_match_the_command();
+  test_served_defaults_and_draws();
 #endif
 #ifndef _WIN32
   test_tones();

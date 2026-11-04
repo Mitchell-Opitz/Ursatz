@@ -137,6 +137,10 @@ check(P.cadenceOf(cadences, 4, served) === "PAC" && P.cadenceOf(cadences, 4) ===
 cadences.sections[2].cadence = "PAC";
 check(P.cadenceOf(cadences, 2, served) === "PAC" && P.cadenceOf(cadences, 1, served) === "IAC", "a chosen cadence wins over the served one");
 check(P.defaultCadence === undefined, "the cadence defaults are not computed here");
+const captured = require("../../backend/tests/fixtures/composer/b11_captures.json");
+const capturedState = { sections: captured.cadences.parts.map((part, i) => ({ id: `s${i}`, part, cadence: null })) };
+const capturedServed = P.servedCadences({ sections: captured.cadences.defaults.map((cadence) => ({ cadence })) }, capturedState);
+check(same(capturedState.sections.map((_, i) => P.cadenceOf(capturedState, i, capturedServed)), captured.cadences.defaults), "the cadences shown for an intro, a loop of three sections and two endings equal the captured ones");
 
 /* editing the structure */
 let edit = P.emptyState("e");
