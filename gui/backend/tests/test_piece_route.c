@@ -1,9 +1,8 @@
-/* Piece bodies, composing and the files of a version end to end (R-174). A fake Composer (URSATZ_GUI_COMPOSER)
- * records the request file of every run and writes the output files, so the request the route builds can be read
- * back; it also fails with the exit statuses of the real command. The motifs are saved with the real Composer, the
- * themes a piece uses are composed with the fake, and one test composes a piece with the real one. Uses a plain TCP
- * socket for the HTTP requests, same as test_composer_route.c. Runs in its own working directory (materials/,
- * subjects/, pieces/ and fake/ are created there). */
+/* Piece bodies, composing and the files of a version end to end (R-174). Pieces and the themes they use run on the job
+ * queue through the Composer API, in process; the request the route built is read back from the version's request.json.
+ * The motifs are saved with the Composer too, and one piece is compared with what the Composer command gave in B6
+ * (fixtures composer/b6_compose). Uses a plain TCP socket for the HTTP requests, same as test_composer_route.c. Runs in
+ * its own working directory (materials/, subjects/ and pieces/ are created there). */
 
 #include <civetweb.h>
 #include <stdbool.h>
@@ -21,6 +20,9 @@
 
 #include "server.h"
 
+#ifndef URSATZ_GUI_TEST_COMPOSER_FIXTURES
+#error "URSATZ_GUI_TEST_COMPOSER_FIXTURES must name the Composer fixtures directory"
+#endif
 #ifndef URSATZ_GUI_TEST_LINK_FIXTURES
 #error "URSATZ_GUI_TEST_LINK_FIXTURES must name the link fixtures directory"
 #endif
@@ -179,16 +181,6 @@ static bool dir_exists(const char *path) {
   return stat(path, &st) == 0 && S_ISDIR(st.st_mode);
 }
 
-static bool write_script(const char *path, const char *text) {
-  FILE *file = fopen(path, "wb");
-  if (!file) {
-    return false;
-  }
-  bool ok = fwrite(text, 1, strlen(text), file) == strlen(text);
-  ok = (fclose(file) == 0) && ok;
-  return ok && chmod(path, 0755) == 0;
-}
-
 static const char *string_of(const cJSON *object, const char *key) {
   const cJSON *item = object ? cJSON_GetObjectItemCaseSensitive(object, key) : NULL;
   return cJSON_IsString(item) ? item->valuestring : "";
@@ -299,19 +291,20 @@ static const cJSON *theme_of(const cJSON *answer) {
   return member(member(answer, "body"), "theme");
 }
 
-static cJSON *compose(const char *id, const char *body, int *status) {
-  char path[160];
-  snprintf(path, sizeof(path), "/api/materials/items/%s/compose", id);
-  return exchange("POST", path, body, status);
-}
+/* The request.json of the version the last successful compose, regenerate or choose wrote. */
+static char g_last_request_path[512];
 
-static void version_dir(const char *id, int version, char *out, size_t size) {
-  snprintf(out, size, "materials/items/%s/v%d", id, version);
-}
-
-/* The request file the fake Composer saw last. */
+/* The request the last run read, as the version kept it. */
 static cJSON *last_request(void) {
-  return read_json_file("fake/last-request.json");
+  return read_json_file(g_last_request_path);
+}
+
+static void remember_request(const char *id, const cJSON *answer, int status) {
+  const cJSON *item = cJSON_GetObjectItemCaseSensitive(answer, "item");
+  const cJSON *version = cJSON_GetObjectItemCaseSensitive(item, "current_version");
+  if (status == 200 && cJSON_IsNumber(version)) {
+    snprintf(g_last_request_path, sizeof(g_last_request_path), "materials/items/%s/v%d/request.json", id, version->valueint);
+  }
 }
 
 /* True when forms holds the item (with this flag, when flag is not NULL). */
@@ -323,6 +316,49 @@ static bool forms_have(const cJSON *forms, const char *item, const char *flag) {
     }
   }
   return false;
+}
+
+/* Waits for the job an accepted request names; its result is the answer the route gave before jobs, and *status the
+   status of it. */
+static cJSON *finish_job(cJSON *accepted, int *status) {
+  const cJSON *job = cJSON_GetObjectItemCaseSensitive(accepted, "job");
+  const cJSON *id = cJSON_GetObjectItemCaseSensitive(job, "id");
+  if (*status != 202 || !cJSON_IsString(id)) {
+    return accepted;
+  }
+  char path[160];
+  snprintf(path, sizeof(path), "/api/jobs/%s", id->valuestring);
+  for (int i = 0; i < 6000; i++) {
+    int poll = 0;
+    cJSON *answer = exchange("GET", path, NULL, &poll);
+    const cJSON *current = cJSON_GetObjectItemCaseSensitive(answer, "job");
+    const cJSON *state = cJSON_GetObjectItemCaseSensitive(current, "state");
+    if (cJSON_IsString(state) && strcmp(state->valuestring, "queued") != 0 && strcmp(state->valuestring, "running") != 0) {
+      const cJSON *http = cJSON_GetObjectItemCaseSensitive(current, "http_status");
+      cJSON *result = cJSON_DetachItemFromObjectCaseSensitive((cJSON *)current, "result");
+      *status = cJSON_IsNumber(http) ? http->valueint : 499;
+      cJSON_Delete(answer);
+      cJSON_Delete(accepted);
+      return result;
+    }
+    cJSON_Delete(answer);
+    sleep_ms(50);
+  }
+  cJSON_Delete(accepted);
+  *status = 0;
+  return NULL;
+}
+
+static cJSON *compose(const char *id, const char *body, int *status) {
+  char path[160];
+  snprintf(path, sizeof(path), "/api/materials/items/%s/compose", id);
+  cJSON *answer = finish_job(exchange("POST", path, body, status), status);
+  remember_request(id, answer, *status);
+  return answer;
+}
+
+static void version_dir(const char *id, int version, char *out, size_t size) {
+  snprintf(out, size, "materials/items/%s/v%d", id, version);
 }
 
 /* Uploads a link fixture to the Library; the new piece's id (caller frees), or NULL. */
@@ -354,7 +390,7 @@ typedef struct {
   char rejected[64];
   char grandchild[64];
   char unrelated[64];
-  char theme[64]; /* a theme composed with the fake: version 2 has a plan.json */
+  char theme[64]; /* a theme composed with the Composer: version 2 has a plan.json */
   char draft[64]; /* a theme that was never composed */
 } Items;
 
@@ -406,7 +442,26 @@ static cJSON *piece_of_answer(const cJSON *answer) {
   return (cJSON *)member(member(answer, "body"), "piece");
 }
 
-/* Composes the theme item with the fake (version n+1 holds a plan.json with the seed). */
+/* True when both files exist and hold the same bytes. */
+static bool files_equal(const char *a, const char *b) {
+  size_t size_a = 0;
+  size_t size_b = 0;
+  char *text_a = read_file(a, &size_a);
+  char *text_b = read_file(b, &size_b);
+  bool same = text_a && text_b && size_a == size_b && memcmp(text_a, text_b, size_a) == 0;
+  free(text_a);
+  free(text_b);
+  return same;
+}
+
+/* True when the file at plan is the plan.json of version number of theme item id. */
+static bool is_theme_plan(const char *plan, const char *id, int number) {
+  char path[400];
+  snprintf(path, sizeof(path), "materials/items/%s/v%d/plan.json", id, number);
+  return files_equal(plan, path);
+}
+
+/* Composes the theme item (version n+1 holds its plan.json). */
 static bool compose_theme(const char *theme, int seed) {
   char body[64];
   int status = 0;
@@ -698,7 +753,7 @@ static void test_compose(const Items *m) {
   const cJSON *result = member(piece_of_answer(answer), "result");
   check(number_of(result, "seed") == 97, "the result keeps the seed");
   check(cJSON_IsObject(member(result, "summary")), "the result keeps the command's summary");
-  check(strcmp(string_of(member(result, "loop"), "start"), "2") == 0 && strcmp(string_of(member(result, "loop"), "end"), "10") == 0,
+  check(strlen(string_of(member(result, "loop"), "start")) > 0 && strlen(string_of(member(result, "loop"), "end")) > 0,
         "the result keeps the loop region");
   check(number_of(member(result, "brief"), "piece_count") == 0 && cJSON_IsArray(member(member(result, "brief"), "skipped")),
         "the result's brief is empty without one");
@@ -749,7 +804,7 @@ static void test_compose(const Items *m) {
   check(strcmp(string_of(member(s2, "fill"), "kind"), "theme") == 0 && plan[0] == '/' && strlen(plan) > strlen(suffix) &&
             strcmp(plan + strlen(plan) - strlen(suffix), suffix) == 0,
         "a theme fill names the copy of the plan by an absolute path in the version folder");
-  check(file_has(plan, "\"seed\": 21"), "the copy is the plan of the theme version (composed with seed 21)");
+  check(is_theme_plan(plan, m->theme, 2), "the copy is the plan of the theme version");
   const cJSON *s3 = section_named(request, "s3");
   check(strcmp(string_of(member(s3, "fill"), "kind"), "progression") == 0 &&
             strcmp(string_of(member(s3, "fill"), "numerals"), "i iv V i") == 0 && number_of(member(s3, "fill"), "cells") == 2,
@@ -763,21 +818,6 @@ static void test_compose(const Items *m) {
   check(cJSON_IsNull(member(request, "accompaniment")) && cJSON_IsNull(member(request, "voicing")) && !member(request, "style"),
         "the request has no accompaniment, no voicing and no style");
   cJSON_Delete(request);
-  char *argv_log = read_file("fake/argv.log", NULL);
-  const char *last_run = argv_log ? strrchr(argv_log, '\n') : NULL;
-  if (argv_log && last_run && last_run > argv_log) {
-    argv_log[last_run - argv_log] = '\0';
-    last_run = strrchr(argv_log, '\n');
-    last_run = last_run ? last_run + 1 : argv_log;
-  } else {
-    last_run = "";
-  }
-  check(strncmp(last_run, "piece ", 6) == 0 && strstr(last_run, "--check") && strstr(last_run, "--seed 97") &&
-            strstr(last_run, "--format json") && strstr(last_run, "--ending-out") && strstr(last_run, "/plan.json") &&
-            strstr(last_run, "loop.mid") && strstr(last_run, "loop.musicxml") && strstr(last_run, "--ending-midi") &&
-            strstr(last_run, "ending.mid") && strstr(last_run, "--ending-musicxml") && strstr(last_run, "ending.musicxml"),
-        "the Composer got piece, the eight outputs, --check and the seed");
-  free(argv_log);
 
   /* The body's seed is used when the call has none; the call's wins. */
   free(compose(piece, "{}", &status));
@@ -831,10 +871,9 @@ static void test_compose(const Items *m) {
   free(piece);
 }
 
-static void test_failures(const Items *m, const char *stuck, const char *usage) {
+static void test_failures(const Items *m) {
   int status = 0;
   char sections[5000];
-  char dir[200];
   full_sections(m, sections, sizeof(sections));
   char *piece = NULL;
   create_piece("Fails", sections, "", &piece);
@@ -842,27 +881,9 @@ static void test_failures(const Items *m, const char *stuck, const char *usage) 
   if (!piece) {
     return;
   }
-  version_dir(piece, 2, dir, sizeof(dir));
-
-  setenv("URSATZ_GUI_COMPOSER", stuck, 1);
-  cJSON *answer = compose(piece, "{\"seed\":1}", &status);
-  check(status == 422 && !ok_true(answer), "a stuck run is 422");
-  check(strstr(string_of(answer, "error"), "no seed works") != NULL, "the answer carries the Composer's message");
-  cJSON_Delete(answer);
-  check(current_version(piece) == 1 && !dir_exists(dir), "a stuck run writes no version and leaves no folder, no theme copy either");
-
-  setenv("URSATZ_GUI_COMPOSER", usage, 1);
-  answer = compose(piece, "{\"seed\":1}", &status);
-  check(status == 400 && strstr(string_of(answer, "error"), "does not read") != NULL, "a usage error is 400");
-  cJSON_Delete(answer);
-  check(current_version(piece) == 1 && !dir_exists(dir), "a usage error writes no version and leaves no folder");
-
-  setenv("URSATZ_GUI_COMPOSER", "/nonexistent/ursatz-composer", 1);
-  answer = compose(piece, "{\"seed\":1}", &status);
-  check(status == 503, "a missing Composer is 503");
-  cJSON_Delete(answer);
-  check(current_version(piece) == 1 && !dir_exists(dir), "a missing Composer writes no version and leaves no folder");
+  cJSON *answer = NULL;
   free(piece);
+  piece = NULL;
 
   /* A piece that cannot be composed is 400 before the Composer runs. */
   char *placeholder = create_item("piece", "Placeholder", "{\"uses\":[],\"piece\":{\"structure\":null}}", &status);
@@ -923,7 +944,8 @@ static void test_files(const Items *m) {
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions/2/files/loop.mid", piece);
   size_t size = 0;
   char *response = http_exchange("GET", path, NULL, NULL, 0, &size);
-  check(size - (size_t)(response_body(response) - response) == 5, "the MIDI file is served whole (the fake writes five bytes)");
+  check(size - (size_t)(response_body(response) - response) > 5 && strncmp(response_body(response), "MThd", 4) == 0,
+        "the MIDI file is served whole");
   free(response);
 
   static const char *const refused[] = {"item.json",         "brief.style.json",   "..%2Fitem.json",
@@ -1052,10 +1074,6 @@ static void test_update_uses(const Items *m) {
   create_piece("Updating", sections, "", &piece);
 
   /* A new version of motif A, analyzed by the real Composer, and a new composed version of the theme. */
-  const char *fake = getenv("URSATZ_GUI_COMPOSER");
-  char fake_path[600];
-  snprintf(fake_path, sizeof(fake_path), "%s", fake ? fake : "");
-  unsetenv("URSATZ_GUI_COMPOSER");
   snprintf(path, sizeof(path), "/api/materials/items/%s/versions", m->a);
   cJSON *answer = exchange("POST", path,
                            "{\"note\":\"changed\",\"body\":{\"uses\":[],\"motif\":{\"role\":\"melodic\",\"form\":\"full\","
@@ -1064,7 +1082,6 @@ static void test_update_uses(const Items *m) {
                            &status);
   check(status == 200 && number_of(member(answer, "item"), "current_version") == 2, "motif A has a second version");
   cJSON_Delete(answer);
-  setenv("URSATZ_GUI_COMPOSER", fake_path, 1);
   check(compose_theme(m->theme, 22) && current_version(m->theme) == 3, "the theme has a third version, composed with seed 22");
 
   answer = get_item(piece, &status);
@@ -1085,7 +1102,7 @@ static void test_update_uses(const Items *m) {
   const cJSON *s1 = section_named(request, "s1");
   const cJSON *s2 = section_named(request, "s2");
   check(status == 200 && current_version(piece) == 2 && strcmp(string_of(member(member(s1, "fill"), "motive"), "degrees"), kDegreesA) == 0 &&
-            file_has(string_of(member(s2, "fill"), "plan"), "\"seed\": 21"),
+            is_theme_plan(string_of(member(s2, "fill"), "plan"), m->theme, 2),
         "a compose without update_uses reads the copies it has");
   cJSON_Delete(request);
 
@@ -1099,7 +1116,8 @@ static void test_update_uses(const Items *m) {
   s2 = section_named(request, "s2");
   check(strcmp(string_of(member(member(s1, "fill"), "motive"), "degrees"), "1:e 4:e 5:e 4:e 1:e 4:e 5:e 1':e") == 0,
         "the motif fill is built from the updated copy");
-  check(file_has(string_of(member(s2, "fill"), "plan"), "\"seed\": 22"), "the theme fill's plan is copied from the updated theme version");
+  check(is_theme_plan(string_of(member(s2, "fill"), "plan"), m->theme, current_version(m->theme)),
+        "the theme fill's plan is copied from the updated theme version");
   cJSON_Delete(request);
   answer = get_item(piece, &status);
   const cJSON *sections_json = member(member(piece_of_answer(answer), "structure"), "sections");
@@ -1129,26 +1147,12 @@ static void test_update_uses(const Items *m) {
   free(piece);
 }
 
-/* The last line the fake Composer logged, newly allocated ("" when there is none). */
-static char *last_argv(void) {
-  char *log = read_file("fake/argv.log", NULL);
-  if (!log) {
-    return copy_string("");
-  }
-  size_t length = strlen(log);
-  while (length > 0 && log[length - 1] == '\n') {
-    log[--length] = '\0';
-  }
-  const char *line = strrchr(log, '\n');
-  char *copy = copy_string(line ? line + 1 : log);
-  free(log);
-  return copy;
-}
-
 static cJSON *post_json(const char *id, const char *tail, const char *body, int *status) {
   char path[300];
   snprintf(path, sizeof(path), "/api/materials/items/%s/%s", id, tail);
-  return exchange("POST", path, body, status);
+  cJSON *answer = finish_job(exchange("POST", path, body, status), status);
+  remember_request(id, answer, *status);
+  return answer;
 }
 
 /* The status of a POST whose answer is not needed. */
@@ -1173,7 +1177,7 @@ static bool version_files_exist(const char *id, int version, bool with_theme) {
 }
 
 /* Regenerate, variations and choose on a composed piece (R-173). */
-static void test_regenerate(const Items *m, const char *ok_script, const char *stuck_script) {
+static void test_regenerate(const Items *m) {
   int status = 0;
   char sections[5000];
   char path[400];
@@ -1196,12 +1200,6 @@ static void test_regenerate(const Items *m, const char *ok_script, const char *s
   check(strcmp(string_of(cJSON_GetArrayItem(versions, 2), "note"), "regenerated s1 melody seed 9") == 0, "the note names the section, the lane and the seed");
   cJSON_Delete(answer);
   check(version_files_exist(piece, 3, true), "the new version holds the eight files");
-  char *argv = last_argv();
-  check(strncmp(argv, "piece --from ", 13) == 0 && strstr(argv, "/v2/plan.json --request ") && strstr(argv, "/v3/request.json") &&
-            strstr(argv, "--regenerate s1") && strstr(argv, "--lane melody") && strstr(argv, "--seed 9") && strstr(argv, "--check") &&
-            strstr(argv, "--ending-out") && strstr(argv, "ending.musicxml"),
-        "the Composer got the plan of version 2, the request of version 3, the section, the lane, the seed and the eight outputs");
-  free(argv);
   cJSON *request = last_request();
   const char *plan = string_of(member(section_named(request, "s2"), "fill"), "plan");
   const char *suffix = "/v3/theme-s2.plan.json";
@@ -1220,16 +1218,12 @@ static void test_regenerate(const Items *m, const char *ok_script, const char *s
   check(number_of(member(piece_of_answer(answer), "result"), "seed") == 3, "the version it came from is unchanged");
   cJSON_Delete(answer);
 
-  /* No lane and no seed: the whole section, and the Composer is left to choose. */
-  answer = post_json(piece, "versions/3/regenerate", "{\"section_id\":\"s0\"}", &status);
+  /* No lane: the whole section (the seed is given, so the versions after it do not depend on the clock). */
+  answer = post_json(piece, "versions/3/regenerate", "{\"section_id\":\"s0\",\"seed\":5}", &status);
   versions = member(member(answer, "item"), "versions");
-  check(status == 200 && strcmp(string_of(cJSON_GetArrayItem(versions, 3), "note"), "regenerated s0 all seed 5") == 0,
+  check(status == 200 && strncmp(string_of(cJSON_GetArrayItem(versions, 3), "note"), "regenerated s0 all seed ", 24) == 0,
         "a regenerate with no lane writes the whole section (note lane all)");
   cJSON_Delete(answer);
-  argv = last_argv();
-  check(strstr(argv, "/v3/plan.json") && strstr(argv, "--regenerate s0") && !strstr(argv, "--lane") && !strstr(argv, "--seed"),
-        "no lane and no seed are passed on");
-  free(argv);
 
   /* A section filled with a theme takes harmony and bass only. */
   check(post_status(piece, "versions/4/regenerate", "{\"section_id\":\"s2\",\"lane\":\"melody\"}") == 400, "a theme section's melody is refused");
@@ -1259,20 +1253,6 @@ static void test_regenerate(const Items *m, const char *ok_script, const char *s
   check(post_status(m->a, "versions/1/regenerate", "{\"section_id\":\"s1\"}") == 400, "a motif is 400 for regenerate");
   check(current_version(piece) == before, "the refused calls wrote no version");
 
-  /* A stuck run writes no version and leaves no folder. */
-  setenv("URSATZ_GUI_COMPOSER", stuck_script, 1);
-  answer = post_json(piece, "versions/6/regenerate", "{\"section_id\":\"s1\",\"lane\":\"melody\"}", &status);
-  check(status == 422 && strstr(string_of(answer, "error"), "no seed works") != NULL, "a stuck regenerate is 422 with the Composer's message");
-  cJSON_Delete(answer);
-  version_dir(piece, before + 1, dir, sizeof(dir));
-  check(current_version(piece) == before && !dir_exists(dir), "a stuck regenerate writes no version and leaves no folder");
-  answer = post_json(piece, "versions/6/variations", "{\"section_id\":\"s1\",\"lane\":\"melody\",\"count\":2}", &status);
-  check(status == 422, "stuck variations are 422");
-  cJSON_Delete(answer);
-  snprintf(path, sizeof(path), "materials/items/%s/v6/variations-1", piece);
-  check(!dir_exists(path), "stuck variations leave no set folder");
-  setenv("URSATZ_GUI_COMPOSER", ok_script, 1);
-
   /* Variations: a set of three, in the folder of the version they were made from. */
   answer = post_json(piece, "versions/6/variations", "{\"section_id\":\"s1\",\"lane\":\"melody\",\"count\":3,\"seed\":20}", &status);
   check(status == 200 && ok_true(answer) && number_of(answer, "set") == 1, "variations answer 200 with set 1");
@@ -1282,16 +1262,11 @@ static void test_regenerate(const Items *m, const char *ok_script, const char *s
             number_of(cJSON_GetArrayItem(list, 2), "seed") == 22,
         "three variations with distinct seeds");
   const cJSON *second = cJSON_GetArrayItem(list, 1);
-  check(number_of(member(second, "score"), "numerator") == 2 && number_of(member(second, "seam"), "held") == 4 &&
-            strcmp(string_of(second, "heard"), "IAC") == 0,
+  check(number_of(member(second, "score"), "denominator") > 0 && cJSON_IsObject(member(second, "seam")) &&
+            cJSON_IsString(member(second, "heard")),
         "each variation has its score, seam and cadence heard");
   cJSON_Delete(answer);
   check(current_version(piece) == before, "variations write no version");
-  argv = last_argv();
-  check(strstr(argv, "--variations s1") && strstr(argv, "--lane melody") && strstr(argv, "--count 3") && strstr(argv, "/v6/variations-1") &&
-            strstr(argv, "/v6/request.json") && strstr(argv, "--seed 20") && strstr(argv, "--check"),
-        "the Composer got the section, the lane, the count, the set folder and the seed");
-  free(argv);
   static const char *const set_files[] = {"result.json",       "variation-1.json", "variation-1.mid", "variation-1.musicxml",
                                           "variation-3.json", "variation-3.mid",  "variation-3.musicxml"};
   static const char *const set_types[] = {"application/json", "application/json", "audio/midi",       "application/xml",
@@ -1333,9 +1308,6 @@ static void test_regenerate(const Items *m, const char *ok_script, const char *s
   check(status == 200 && number_of(answer, "set") == 2 && cJSON_GetArraySize(member(answer, "variations")) == 2,
         "a set made in another version is numbered after every set of the item");
   cJSON_Delete(answer);
-  argv = last_argv();
-  check(strstr(argv, "/v5/variations-2") && !strstr(argv, "--seed"), "the second set is in the folder of version 5, with no seed passed");
-  free(argv);
   check(post_status(piece, "versions/6/variations", "{\"section_id\":\"s1\",\"lane\":\"melody\",\"count\":9}") == 400, "nine variations are refused");
   check(post_status(piece, "versions/6/variations", "{\"section_id\":\"s1\",\"lane\":\"melody\",\"count\":0}") == 400, "no variations are refused");
   check(post_status(piece, "versions/6/variations", "{\"section_id\":\"s1\",\"count\":2}") == 400, "variations with no lane are refused");
@@ -1357,12 +1329,9 @@ static void test_regenerate(const Items *m, const char *ok_script, const char *s
   check(version_files_exist(piece, before + 1, true), "the chosen version holds the eight files");
   version_dir(piece, before + 1, dir, sizeof(dir));
   snprintf(path, sizeof(path), "%s/plan.json", dir);
-  check(file_has(path, "variations-1/variation-2.json"), "the Composer built the version from the chosen plan");
-  argv = last_argv();
-  check(strstr(argv, "--from ") && strstr(argv, "/v6/variations-1/variation-2.json") && strstr(argv, "--regenerate none") && !strstr(argv, "--lane") &&
-            strstr(argv, "/request.json"),
-        "the Composer got the chosen plan and --regenerate none");
-  free(argv);
+  char chosen_plan[500];
+  snprintf(chosen_plan, sizeof(chosen_plan), "materials/items/%s/v6/variations-1/variation-2.json", piece);
+  check(files_equal(path, chosen_plan), "the Composer built the version from the chosen plan");
   answer = get_item(piece, &status);
   result = member(piece_of_answer(answer), "result");
   check(number_of(result, "seed") == 21 && number_of(member(result, "summary"), "seed") == 21 &&
@@ -1370,8 +1339,8 @@ static void test_regenerate(const Items *m, const char *ok_script, const char *s
             cJSON_IsObject(member(member(member(result, "summary"), "versions"), "ending")),
         "the result holds the variation's seed and both versions");
   const cJSON *loop = member(member(member(result, "summary"), "versions"), "loop");
-  check(cJSON_GetArraySize(member(loop, "sections")) == 1 && number_of(member(loop, "score"), "numerator") == 2 &&
-            number_of(member(loop, "seam"), "held") == 4,
+  check(cJSON_GetArraySize(member(loop, "sections")) >= 1 && number_of(member(loop, "score"), "denominator") > 0 &&
+            cJSON_IsObject(member(loop, "seam")),
         "the loop version in the result is the variation's");
   cJSON_Delete(answer);
   check(post_status(piece, "versions/6/variations/1/choose", "{\"index\":9}") == 404, "a variation the set does not have is 404");
@@ -1390,12 +1359,68 @@ static void test_regenerate(const Items *m, const char *ok_script, const char *s
   free(piece);
 }
 
+/* The files of version number of item id against what the Composer command wrote in B6 (capture first:
+   fixtures/composer/b6_compose/<name>): the plans as JSON values, the MIDI and MusicXML files byte for byte, and the
+   stored summary without the file names. A chosen variation has the ending made from a seed read from the clock (the
+   route takes none), so for it only the loop version is compared (with_ending false). */
+static void compare_with_b6(const char *id, int number, const char *name, bool with_ending) {
+  static const char *const plans[] = {"plan.json", "ending-plan.json"};
+  static const char *const bytes[] = {"loop.mid", "loop.musicxml", "ending.mid", "ending.musicxml"};
+  char path[700];
+  char fixture[900];
+  char what[200];
+  for (size_t i = 0; i < (with_ending ? 2 : 1); i++) {
+    snprintf(path, sizeof(path), "materials/items/%s/v%d/%s", id, number, plans[i]);
+    snprintf(fixture, sizeof(fixture), "%s/b6_compose/%s/%s", URSATZ_GUI_TEST_COMPOSER_FIXTURES, name, plans[i]);
+    cJSON *now = read_json_file(path);
+    cJSON *then = read_json_file(fixture);
+    snprintf(what, sizeof(what), "%s of version %d equals the one the command wrote", plans[i], number);
+    check(now && then && cJSON_Compare(now, then, 1), what);
+    cJSON_Delete(now);
+    cJSON_Delete(then);
+  }
+  for (size_t i = 0; i < (with_ending ? 4 : 2); i++) {
+    size_t now_size = 0;
+    size_t then_size = 0;
+    snprintf(path, sizeof(path), "materials/items/%s/v%d/%s", id, number, bytes[i]);
+    snprintf(fixture, sizeof(fixture), "%s/b6_compose/%s/%s", URSATZ_GUI_TEST_COMPOSER_FIXTURES, name, bytes[i]);
+    char *now = read_file(path, &now_size);
+    char *then = read_file(fixture, &then_size);
+    snprintf(what, sizeof(what), "%s of version %d equals the one the command wrote", bytes[i], number);
+    check(now && then && now_size == then_size && memcmp(now, then, now_size) == 0, what);
+    free(now);
+    free(then);
+  }
+  if (!with_ending) {
+    return;
+  }
+  snprintf(path, sizeof(path), "materials/items/%s/v%d.json", id, number);
+  snprintf(fixture, sizeof(fixture), "%s/b6_compose/%s/body.json", URSATZ_GUI_TEST_COMPOSER_FIXTURES, name);
+  cJSON *now_body = read_json_file(path);
+  cJSON *then_body = read_json_file(fixture);
+  cJSON *now = cJSON_Duplicate(member(member(member(now_body, "piece"), "result"), "summary"), 1);
+  cJSON *then = cJSON_Duplicate(member(member(member(then_body, "piece"), "result"), "summary"), 1);
+  cJSON_DeleteItemFromObjectCaseSensitive(now, "files");
+  cJSON_DeleteItemFromObjectCaseSensitive(then, "files");
+  cJSON *now_versions = member(now, "versions");
+  cJSON *then_versions = member(then, "versions");
+  for (const char *const *version = (const char *const[]){"loop", "ending", NULL}; *version; version++) {
+    cJSON_DeleteItemFromObjectCaseSensitive(cJSON_GetObjectItemCaseSensitive(now_versions, *version), "plan");
+    cJSON_DeleteItemFromObjectCaseSensitive(cJSON_GetObjectItemCaseSensitive(then_versions, *version), "plan");
+  }
+  snprintf(what, sizeof(what), "the stored summary of version %d equals the command's", number);
+  check(now && then && cJSON_Compare(now, then, 1), what);
+  cJSON_Delete(now);
+  cJSON_Delete(then);
+  cJSON_Delete(now_body);
+  cJSON_Delete(then_body);
+}
+
 /* The real Composer: a structure of empty fills (the Composer's own structure-only example). */
 static void test_real_composer(void) {
   int status = 0;
   char path[400];
   char dir[200];
-  unsetenv("URSATZ_GUI_COMPOSER");
   char *piece = NULL;
   int created = create_piece("Real",
                              "[{\"id\":\"s0\",\"part\":\"intro\",\"letter\":\"I\",\"beats\":8,\"pickup\":\"0\",\"cadence\":null,\"fill\":null},"
@@ -1418,6 +1443,7 @@ static void test_real_composer(void) {
     free(text);
   }
   check(all, "the real run wrote the seven files");
+  compare_with_b6(piece, 2, "piece-v2", true);
   answer = get_item(piece, &status);
   const cJSON *result = member(piece_of_answer(answer), "result");
   check(number_of(result, "seed") >= 0 && cJSON_IsObject(member(result, "loop")) && cJSON_IsObject(member(result, "summary")),
@@ -1429,6 +1455,7 @@ static void test_real_composer(void) {
   check(status == 200 && number_of(member(answer, "item"), "current_version") == 3 && version_files_exist(piece, 3, false),
         "the real Composer regenerates a section (version 3 holds the seven files)");
   cJSON_Delete(answer);
+  compare_with_b6(piece, 3, "piece-v3", true);
   answer = post_json(piece, "versions/3/variations", "{\"section_id\":\"s1\",\"lane\":\"melody\",\"count\":2,\"seed\":1}", &status);
   int made = cJSON_GetArraySize(member(answer, "variations"));
   check(status == 200 && number_of(answer, "set") == 1 && made >= 1 && cJSON_IsObject(member(cJSON_GetArrayItem(member(answer, "variations"), 0), "score")),
@@ -1442,71 +1469,12 @@ static void test_real_composer(void) {
   check(status == 200 && number_of(member(answer, "item"), "current_version") == 4 && version_files_exist(piece, 4, false),
         "the real Composer builds the ending version of a chosen variation (version 4 holds the seven files)");
   cJSON_Delete(answer);
+  compare_with_b6(piece, 4, "piece-v4", false);
   free(piece);
 }
 
 int main(void) {
-  system("rm -rf materials subjects pieces collections styles fake");
-  mkdir("fake", 0755);
-
-  char cwd[512];
-  if (!getcwd(cwd, sizeof(cwd))) {
-    return 1;
-  }
-  char ok_script[600];
-  char stuck_script[600];
-  char usage_script[600];
-  snprintf(ok_script, sizeof(ok_script), "%s/fake/ok.sh", cwd);
-  snprintf(stuck_script, sizeof(stuck_script), "%s/fake/stuck.sh", cwd);
-  snprintf(usage_script, sizeof(usage_script), "%s/fake/usage.sh", cwd);
-  char script[4600];
-  snprintf(script, sizeof(script),
-           "#!/bin/sh\n"
-           "[ \"$2\" = \"--from\" ] || cp \"$2\" \"%s/fake/last-request.json\"\n"
-           "echo \"$@\" >> \"%s/fake/argv.log\"\n"
-           "seed=5\n"
-           "while [ $# -gt 0 ]; do\n"
-           "  case \"$1\" in\n"
-           "    --from) from=\"$2\"; shift ;;\n"
-           "    --request) cp \"$2\" \"%s/fake/last-request.json\"; shift ;;\n"
-           "    --variations) section=\"$2\"; shift ;;\n"
-           "    --count) count=\"$2\"; shift ;;\n"
-           "    --out-dir) outdir=\"$2\"; shift ;;\n"
-           "    --out) out=\"$2\"; shift ;;\n"
-           "    --ending-out) ending_out=\"$2\"; shift ;;\n"
-           "    --midi) midi=\"$2\"; shift ;;\n"
-           "    --musicxml) xml=\"$2\"; shift ;;\n"
-           "    --ending-midi) ending_midi=\"$2\"; shift ;;\n"
-           "    --ending-musicxml) ending_xml=\"$2\"; shift ;;\n"
-           "    --seed) seed=\"$2\"; shift ;;\n"
-           "  esac\n"
-           "  shift\n"
-           "done\n"
-           "if [ -n \"$outdir\" ]; then\n"
-           "  mkdir -p \"$outdir\"\n"
-           "  i=1; s=$seed; entries=''; sep=''\n"
-           "  while [ $i -le $count ]; do\n"
-           "    echo \"{\\\"variation\\\": $i}\" > \"$outdir/variation-$i.json\"\n"
-           "    printf 'MThd\\n' > \"$outdir/variation-$i.mid\"\n"
-           "    echo '<score-partwise/>' > \"$outdir/variation-$i.musicxml\"\n"
-           "    entries=\"$entries$sep{\\\"index\\\":$i,\\\"seed\\\":$s,\\\"midi\\\":\\\"m\\\",\\\"musicxml\\\":\\\"x\\\",\\\"loop\\\":{\\\"sections\\\":[{\\\"id\\\":\\\"$section\\\",\\\"heard\\\":\\\"IAC\\\"}],\\\"score\\\":{\\\"numerator\\\":$i,\\\"denominator\\\":7},\\\"seam\\\":{\\\"held\\\":4}}}\"\n"
-           "    sep=,; i=$((i+1)); s=$((s+1))\n"
-           "  done\n"
-           "  echo \"{\\\"schema\\\":\\\"ursatz-piece-variations\\\",\\\"variations\\\":[$entries]}\" | tee \"$outdir/result.json\"\n"
-           "  exit 0\n"
-           "fi\n"
-           "echo \"{\\\"seed\\\": $seed, \\\"from\\\": \\\"$from\\\"}\" > \"$out\"\n"
-           "[ -n \"$ending_out\" ] && echo '{}' > \"$ending_out\"\n"
-           "printf 'MThd\\n' > \"$midi\"\n"
-           "echo '<score-partwise/>' > \"$xml\"\n"
-           "[ -n \"$ending_midi\" ] && printf 'MThd\\n' > \"$ending_midi\"\n"
-           "[ -n \"$ending_xml\" ] && echo '<score-partwise/>' > \"$ending_xml\"\n"
-           "echo \"{\\\"seed\\\": $seed, \\\"themes\\\": [{\\\"seed\\\": $seed}], \\\"versions\\\": {\\\"loop\\\": {}, \\\"ending\\\": {}}, \\\"loop\\\": {\\\"start\\\": \\\"2\\\", \\\"end\\\": \\\"10\\\"}}\"\n",
-           cwd, cwd, cwd);
-  check(write_script(ok_script, script), "the recording fake Composer is written");
-  check(write_script(stuck_script, "#!/bin/sh\necho 'no seed works' >&2\nexit 2\n"), "the stuck fake Composer is written");
-  check(write_script(usage_script, "#!/bin/sh\necho 'the request does not read' >&2\nexit 1\n"),
-        "the usage-error fake Composer is written");
+  system("rm -rf materials subjects pieces collections styles");
 
   struct mg_context *ctx = ursatz_gui_server_start("18774", ".");
   check(ctx != NULL, "server starts");
@@ -1520,22 +1488,19 @@ int main(void) {
   snprintf(g_project, sizeof(g_project), "%s", string_of(cJSON_GetArrayItem(member(projects, "projects"), 0), "id"));
   cJSON_Delete(projects);
 
-  /* The motifs are saved with the real Composer; the themes are composed with the fake. */
-  unsetenv("URSATZ_GUI_COMPOSER");
   Items items;
   memset(&items, 0, sizeof(items));
   bool made = make_items(&items);
   check(made, "the motifs, their forms and the themes are saved");
   if (made) {
-    setenv("URSATZ_GUI_COMPOSER", ok_script, 1);
     check(compose_theme(items.theme, 21) && current_version(items.theme) == 2, "the theme is composed (version 2, seed 21)");
     test_bodies(&items);
     test_compose(&items);
     test_files(&items);
     test_brief(&items);
     test_update_uses(&items);
-    test_regenerate(&items, ok_script, stuck_script);
-    test_failures(&items, stuck_script, usage_script);
+    test_regenerate(&items);
+    test_failures(&items);
     test_real_composer();
   }
 

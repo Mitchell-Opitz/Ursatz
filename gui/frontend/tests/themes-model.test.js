@@ -149,6 +149,7 @@ const compose = T.composeRequest(filled(), {});
 check(compose.method === "POST" && compose.url === "/api/materials/items/thm-1/compose" && compose.body === "{}", "compose posts an empty body without a seed");
 const seeded = filled();
 seeded.seed = "97";
+check(T.composeRequest(seeded, {}).job === true, "compose is a job");
 check(same(JSON.parse(T.composeRequest(seeded, {}).body), { seed: 97 }), "the form's seed is sent");
 check(same(JSON.parse(T.composeRequest(seeded, { seed: 5, update_uses: true }).body), { seed: 5, update_uses: true }), "an option seed wins and update_uses is sent");
 check(same(JSON.parse(T.composeRequest(filled(), { seed: "x" }).body), {}), "a seed that is not a number is left out");

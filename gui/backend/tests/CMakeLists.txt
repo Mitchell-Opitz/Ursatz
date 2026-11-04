@@ -24,6 +24,12 @@ ursatz_gui_add_test(piece_metadata test_piece_metadata.c ${CMAKE_CURRENT_BINARY_
 
 ursatz_gui_add_test(id_service test_id_service.c ${CMAKE_CURRENT_BINARY_DIR}/id_service)
 
+ursatz_gui_add_test(job_queue test_job_queue.c ${CMAKE_CURRENT_BINARY_DIR}/job_queue)
+# The test cancels a theme compose made from a request fixture; no server is started.
+target_compile_definitions(test_job_queue PRIVATE
+  URSATZ_GUI_TEST_THEME_REQUEST="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer/theme-request.json"
+)
+
 ursatz_gui_add_test(composer_route test_composer_route.c ${CMAKE_CURRENT_BINARY_DIR}/composer_route)
 # The test asks the linked Composer for its versions, in its own working directory.
 
@@ -67,15 +73,17 @@ target_compile_definitions(test_links_route PRIVATE
 )
 
 ursatz_gui_add_test(theme_route test_theme_route.c ${CMAKE_CURRENT_BINARY_DIR}/theme_route)
-# The test runs a fake Composer and, when it is built, the real one, in its own working directory (materials/,
-# subjects/, pieces/ and fake/ are created there) and uploads the link fixtures for the brief.
+# The test composes with the Composer API in its own working directory (materials/, subjects/ and pieces/ are created
+# there), uploads the link fixtures for the brief and compares the files with fixtures/composer/b6_compose.
 target_compile_definitions(test_theme_route PRIVATE
   URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
+  URSATZ_GUI_TEST_COMPOSER_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer"
 )
 
 ursatz_gui_add_test(piece_route test_piece_route.c ${CMAKE_CURRENT_BINARY_DIR}/piece_route)
-# The test runs a fake Composer and, when it is built, the real one, in its own working directory (materials/,
-# subjects/, pieces/ and fake/ are created there) and uploads the link fixtures for the brief.
+# The test composes with the Composer API in its own working directory (materials/, subjects/ and pieces/ are created
+# there), uploads the link fixtures for the brief and compares the files with fixtures/composer/b6_compose.
 target_compile_definitions(test_piece_route PRIVATE
   URSATZ_GUI_TEST_LINK_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/links"
+  URSATZ_GUI_TEST_COMPOSER_FIXTURES="${CMAKE_CURRENT_SOURCE_DIR}/fixtures/composer"
 )
