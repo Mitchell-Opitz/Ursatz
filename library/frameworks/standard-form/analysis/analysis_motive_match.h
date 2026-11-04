@@ -85,4 +85,14 @@ bool standard_form_motive_classify_with(const StandardFormMotiveShape *prototype
                                         size_t varied_max_mismatch, StandardFormRelationMatcher matcher, void *context,
                                         StandardFormMotiveMatch *out);
 
+/* The same with the injected StandardFormConfig.relation_match: for a pair of the same dimension and interval count its kind (not
+   FRAGMENTED, not VARIED) and score are used; when it refuses, the pair goes on to varied alone. */
+bool standard_form_motive_classify_match(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
+                                         size_t varied_max_mismatch, StandardFormRelationMatchFn match, void *context,
+                                         StandardFormMotiveMatch *out);
+/* The candidate (shorter than the prototype, at least standard_form_motive_fragment_min_intervals) through the injected matcher: true
+   only for a FRAGMENTED result. */
+bool standard_form_motive_fragment_match(const StandardFormMotiveShape *prototype, const StandardFormMotiveShape *candidate,
+                                         StandardFormRelationMatchFn match, void *context, StandardFormMotiveMatch *out);
+
 #endif

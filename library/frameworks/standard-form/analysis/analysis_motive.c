@@ -480,8 +480,11 @@ static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fa
             /* the whole motive under a transformation */
             if (standard_form_motive_shape(line, first, fam->proto_n, fam->generic, &shape) &&
                 !held_by_equal_or_longer(families, family_count, f, first, fam->proto_n) &&
-                standard_form_motive_classify_with(&fam->proto, &shape, config->varied_max_mismatch, config->relation_matcher,
-                                                   config->relation_context, &match) &&
+                (config->relation_match != NULL
+                     ? standard_form_motive_classify_match(&fam->proto, &shape, config->varied_max_mismatch, config->relation_match,
+                                                           config->relation_context, &match)
+                     : standard_form_motive_classify_with(&fam->proto, &shape, config->varied_max_mismatch, config->relation_matcher,
+                                                          config->relation_context, &match)) &&
                 match.kind > (int)STANDARD_FORM_MOTIVE_TONAL) {
                 fill_rec(&rec, f, fam->line, first, fam->proto_n, &match);
                 if (!push_rec(&recs, &rec_count, &capacity, &rec)) {
@@ -493,7 +496,10 @@ static StandardFormAnalysisStatus expand(const StandardFormMotiveLine *lines, Fa
                 size_t n = length + 1;
                 if (!standard_form_motive_shape(line, first, n, fam->generic, &shape) ||
                     held_by_equal_or_longer(families, family_count, f, first, n) ||
-                    !standard_form_motive_match_fragment(&fam->proto, &shape, &match)) {
+                    !(config->relation_match != NULL
+                          ? standard_form_motive_fragment_match(&fam->proto, &shape, config->relation_match, config->relation_context,
+                                                                &match)
+                          : standard_form_motive_match_fragment(&fam->proto, &shape, &match))) {
                     continue;
                 }
                 fill_rec(&rec, f, fam->line, first, n, &match);
