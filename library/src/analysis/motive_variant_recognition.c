@@ -1,4 +1,5 @@
 #include "analysis/motive_variant_recognition.h"
+#include "analysis/motive_chord_internal.h"
 
 #include "analysis/motive_tone_roles.h"
 
@@ -1105,7 +1106,7 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
     State *level[MOTIVE_RECOGNIZE_MAX_DEPTH + 1];
     size_t total = 0;
     for (size_t d = 0; d <= depth_limit; d++) {
-        caps[d] = d == 0 ? 1 : (d == 1 ? MOTIVE_RELATION_KIND_COUNT * PROPOSAL_MAX : beam);
+        caps[d] = d == 0 ? 2 : (d == 1 ? MOTIVE_RELATION_KIND_COUNT * PROPOSAL_MAX : beam);
         total += caps[d];
     }
     State *storage = malloc(total * sizeof(State));
@@ -1121,6 +1122,22 @@ MotiveRecognizeResult motive_variant_recognize(const MotiveSketch *source,
     motive_variant_compare(&from, &to, &dimensions);
     level[0][0].nearness = motive_variant_nearness(&dimensions);
     counts[0] = 1;
+    /*
+     * A source without chords of its own is also tried with its best implied chord at 0, at no cost, when the target has
+     * chords: a relation that keeps the chords (fragment, omit-interval, ancillary-fill and most others) leaves a
+     * chordless source chordless, so a variant that carries the source's implied chord is otherwise only reachable
+     * through a harmony relation that does nothing but add it.
+     */
+    MotiveSketchChord implied;
+    if (!options->contour && from.chord_count == 0 && to.chord_count > 0 && from.has_scale &&
+        from.form == MOTIVE_SKETCH_FORM_FULL && mch_implied_chord(&from, &implied)) {
+        level[0][1] = level[0][0];
+        level[0][1].sketch.chords[0] = implied;
+        level[0][1].sketch.chord_count = 1;
+        motive_variant_compare(&level[0][1].sketch, &to, &dimensions);
+        level[0][1].nearness = motive_variant_nearness(&dimensions);
+        counts[0] = 2;
+    }
     Chain closest = {{{0}}, 0, 0, true};
     double closest_nearness = level[0][0].nearness;
 
