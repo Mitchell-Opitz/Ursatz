@@ -14,6 +14,7 @@
 #include "pipeline/analysis_result_internal.h"
 #include "pipeline/path_util.h"
 #include "pipeline/pitch_class_util.h"
+#include "standard-tonality/tonal_key.h"
 #include "pipeline/progression_pipeline.h"
 #include "pipeline/voicing_check.h"
 #include "standard-form/framework.h"
@@ -1056,15 +1057,6 @@ static cJSON *chord_outer_json(const AnalysisReport *report, const AnalysisRepor
     return outer;
 }
 
-/* Semitones above the tonic of each degree 1..7 of the major scale and the natural minor scale: the key a
-   degree names. This only locates the key the library's applied-chord target degree points at, to compare it
-   with a tonicization's key; what is an applied chord is the library's. */
-static int degree_semitones(bool major, int degree) {
-    static const int MAJOR[7] = {0, 2, 4, 5, 7, 9, 11};
-    static const int MINOR[7] = {0, 2, 3, 5, 7, 8, 10};
-    return (major ? MAJOR : MINOR)[degree - 1];
-}
-
 /* Whether a chord's span lies in, or runs straight into, the span of a region: the tonicization region the
    chord belongs to, or the one it leads to. */
 static bool span_touches(Rational chord_start, Rational chord_end, Rational start, Rational end) {
@@ -1085,7 +1077,9 @@ static cJSON *applied_json(DocBuild *build, const AnalysisReport *report, const 
     int target_tonic = -1;
     if (in_region) {
         const AnalysisKeyRegion *local = &report->key_regions[entry->region];
-        target_tonic = (local->tonic_pitch_class + degree_semitones(local->is_major, roman->target_degree)) % 12;
+        int semitones = standard_tonality_degree_semitone(
+            local->is_major ? STANDARD_TONALITY_MODE_MAJOR : STANDARD_TONALITY_MODE_NATURAL_MINOR, roman->target_degree);
+        target_tonic = semitones < 0 ? -1 : (local->tonic_pitch_class + semitones) % 12;
     }
     Rational chord_start = doc_rational(build, entry->time_numerator, entry->time_denominator);
     Rational chord_end = doc_rational(build, entry->end_numerator, entry->end_denominator);

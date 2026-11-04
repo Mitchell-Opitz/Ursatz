@@ -12,6 +12,7 @@
 #include "pipeline/voicing_check.h"
 #include <ursatz_chain/chain_inputs.h>
 
+#include "pitch/midi_pitch.h"
 #include "pitch/pitch_numeric_value.h"
 #include "standard-counterpoint/analysis/analysis_grid.h"
 #include "standard-counterpoint/analysis/analysis_motion.h"
@@ -184,7 +185,7 @@ static long cell_semitone(const VoiceGrid *build, size_t row, size_t voice) {
 }
 
 static int pitch_class(long semitone) {
-    return (int)(((semitone % 12) + 12) % 12);
+    return pitch_class_of_midi((int)semitone);
 }
 
 /* Fills the doubling and spacing of one row; false when the row has fewer than three voices or is not a chord the harmony
