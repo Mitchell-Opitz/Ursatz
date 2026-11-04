@@ -13,7 +13,7 @@ catalog and the shared conventions.
 
 | Framework | Covers | Depends on |
 |---|---|---|
-| `common-practice-minimal` | 7 diatonic triads, 4 diatonic seventh qualities, major and natural-minor keys. **The only framework the analyzers use today** | ursatz |
+| `common-practice-minimal` | 7 diatonic triads, 4 diatonic seventh qualities, major and natural-minor keys. The weighted chord identification and key regions the chain runs | ursatz |
 | `standard-notation` | Staff, clefs, ledger lines, stems, accidentals, half and whole steps | ursatz |
 | `standard-markings` | Dynamics order, articulation classes, tempo words, repeat and D.C./D.S. playback order | ursatz |
 | `western-periods` | The six conventional stylistic periods | ursatz |
@@ -38,9 +38,11 @@ textbook; each README names the chapters it covers.
 
 - **Rule libraries, not analyzers.** Every framework except `common-practice-minimal` takes
   caller-supplied plain data (scale degrees, spellings, inversions, flags) and returns `bool`
-  results and hard/soft violation bitmasks. Only parts of `standard-tonality` and
-  `standard-texture` build an `Interpretation`. Nothing yet reads MIDI or `NoteEvent`s into
-  these inputs. That bridge is the next piece of work (see the project roadmap).
+  results and hard/soft violation bitmasks. Eight frameworks (`standard-tonality`,
+  `standard-harmony`, `standard-counterpoint`, `standard-form`, `standard-meter`,
+  `standard-texture`, `galant-schemas`, `scale-harmonization`) also have an `analysis/` adapter
+  that builds `Interpretation`s from neutral input. The `chain/` target builds that input from
+  imported notes (`chain/README.md`).
 - **Framework singleton.** Each exposes one lazily built `Framework` instance plus one
   `Rule`/`Constraint` pair per rule. Rules are checked with the framework's own
   `*_rule_holds()` functions. standard-harmony and standard-counterpoint also register an evaluation

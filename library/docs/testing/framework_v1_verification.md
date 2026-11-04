@@ -90,7 +90,7 @@ None in the library. The assertions found no output that is wrong for a reason t
 One defect in the new test was found and fixed: the thematic return glue leaked the arrays that `contour_create`, `rhythmic_pattern_create` and
 `theme_occurrence_create` copy.
 
-One observation, outside the Framework v1 path: the kernel's `chord_identification_analyze` anchors a Chord to the first event id of its sonority, and on
+One observation, outside the Framework v1 path: the chain's `chain_subset_chord_analyze` anchors a Chord to the first event id of its sonority, and on
 Bach 114's adaptive segments two segments share a first event id (a held note), so it would give two Chords one id. The chain does not use it; it identifies chords
 with the weighted identifier, whose Chord ids come from the segment ids. Nothing here depends on it, and it was not changed.
 

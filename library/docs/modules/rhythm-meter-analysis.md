@@ -16,7 +16,7 @@ Every result follows the durable claim pattern: an Interpretation with Framework
 | phrase | id, `TimeSpan`, cadence-arrival `TimeSpan` or none, expansion kind (none, internal, external, contraction) and measures, elided-with-next flag |
 | chord change | id, `MusicalTime`; optional |
 
-`tests/integration/rhythm_util.h` builds it from the import, the L2 outer-voice lines (soprano 0, bass 1, other 2), the harmonic segments and the standard-form phrases.
+`chain_build_meter_input` (`ursatz_chain/chain_inputs.h`) builds it from the import, the L2 outer-voice lines (soprano 0, bass 1, other 2), the harmonic segments and the standard-form phrases.
 
 `StandardMeterConfig`:
 

@@ -14,7 +14,7 @@ Adapter in `frameworks/standard-texture/analysis/` (`texture_analysis_*.c`). It 
 | voice | the voice index the separation gave it inside the track (0 the top); a voice is the pair (track, voice) |
 | voice_confidence | the separation's confidence, 0 to 1 |
 
-`tests/integration/texture_util.h` builds it from the rule-based voice separation (L2.7), run per importer track, and the import.
+`chain_build_texture_input` (`ursatz_chain/chain_inputs.h`) builds it from the rule-based voice separation (L2.7), run per importer track, and the import.
 
 ### Config and snap
 
