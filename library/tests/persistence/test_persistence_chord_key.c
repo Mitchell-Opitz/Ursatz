@@ -12,6 +12,7 @@
 #include "common-practice-minimal/chord_vocabulary.h"
 #include "common-practice-minimal/chord_vocabulary_seventh.h"
 #include "common-practice-minimal/key_identification.h"
+#include "common-practice-minimal/key_vocabulary.h"
 #include "persistence/persistence.h"
 #include "persistence/persistence_chord.h"
 #include "persistence/persistence_key.h"
@@ -19,9 +20,8 @@
 
 /*
  * Round-trip test against real Chord/Key objects, built the same way
- * ChordIdentification/KeyEstimation (ursatz_chain/subset_chord_analyzer.c,
- * ursatz_chain/key_collection_analyzer.c) build them -- via common-practice-minimal's
- * own identification helpers, which those analyzers call internally.
+ * ChordIdentification (ursatz_chain/subset_chord_analyzer.c) builds them -- via
+ * common-practice-minimal's own identification helpers, which that analyzer calls internally.
  */
 
 static void assert_interpretations_equal(const Interpretation *a, const Interpretation *b) {
@@ -118,7 +118,9 @@ static void test_round_trip_key(void) {
     /* C major: W-W-H-W-W-W-H from tonic. */
     int pitch_classes[] = {0, 2, 4, 5, 7, 9, 11};
     Key *original = NULL;
-    assert(common_practice_identify_key(pitch_classes, 7, "C", context_target_id, &original));
+    CommonPracticeKeyMode mode;
+    assert(common_practice_identify_key_mode(pitch_classes, 7, &mode));
+    assert(common_practice_build_key(mode, "C", context_target_id, &original) == KEY_OK);
 
     const char *path = "test_persistence_key_round_trip.sqlite";
     remove(path);

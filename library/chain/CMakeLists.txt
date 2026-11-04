@@ -4,7 +4,6 @@
 add_library(ursatz_chain
     ursatz_chain/form_bridge.c
     ursatz_chain/subset_chord_analyzer.c
-    ursatz_chain/key_collection_analyzer.c
     ursatz_chain/chain_inputs.c
     ursatz_chain/kernel_owners.c
     ursatz_chain/analysis_chain.c
@@ -19,7 +18,6 @@ ursatz_public_headers(ursatz_chain
         chain_inputs.h
         form_bridge.h
         kernel_owners.h
-        key_collection_analyzer.h
         subset_chord_analyzer.h
 )
 target_link_libraries(ursatz_chain PUBLIC

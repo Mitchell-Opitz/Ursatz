@@ -22,8 +22,8 @@
 
 /*
  * Local key regions for common-practice-minimal-v1: a key per stretch of the piece instead of one key for
- * the whole piece. This is a NEW function beside key_identification.h and ursatz_chain/key_collection_analyzer.h, which are
- * unchanged and still give the whole-piece answer to their current callers.
+ * the whole piece. This is a NEW function beside key_identification.h, which is
+ * unchanged and still gives the whole-piece answer to their current callers.
  *
  * This file, step 1: windowed key scoring. The piece is cut into overlapping windows of window_measures
  * measures (default 4, a hop of one measure; real phrases replace the fixed window when phrase detection
