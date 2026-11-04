@@ -219,7 +219,7 @@ static StandardTextureAnalysisStatus build_change(const StandardTextureAnalysis 
     return out->interpretation == NULL ? STANDARD_TEXTURE_ANALYSIS_ERR_ALLOC : STANDARD_TEXTURE_ANALYSIS_OK;
 }
 
-StandardTextureAnalysisStatus standard_texture_analyze_windows(const StandardTextureWindows *windows,
+static StandardTextureAnalysisStatus standard_texture_analyze_windows(const StandardTextureWindows *windows,
                                                                const StandardTextureConfig *config, StandardTextureAnalysis *out) {
     if (windows == NULL || out == NULL) {
         return STANDARD_TEXTURE_ANALYSIS_ERR_NULL_ARGUMENT;

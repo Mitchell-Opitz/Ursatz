@@ -132,10 +132,6 @@ typedef struct {
 StandardTextureAnalysisStatus standard_texture_analyze(const StandardTextureInput *input, const StandardTextureConfig *config,
                                                        StandardTextureAnalysis *out);
 
-/* The same from windows already measured (they are copied into *out). */
-StandardTextureAnalysisStatus standard_texture_analyze_windows(const StandardTextureWindows *windows,
-                                                               const StandardTextureConfig *config, StandardTextureAnalysis *out);
-
 void standard_texture_analysis_destroy(StandardTextureAnalysis *analysis);
 
 #endif

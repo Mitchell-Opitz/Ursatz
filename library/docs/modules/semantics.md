@@ -20,7 +20,7 @@ One set of plain types that framework adapters accept (R-242). All pointers are 
 
 - `AnalysisNote` (`analysis_note.h`): id, optional `NoteEvent`, span, `midi` (C4 = 60, or `ANALYSIS_PITCH_UNKNOWN`), optional spelling and voice id, track and voice (or `ANALYSIS_INDEX_NONE`), voice confidence in [0, 1]. `AnalysisNoteSet` is a note run sorted by `analysis_note_compare` with its `MeterMap`; `analysis_note_valid` and `analysis_note_set_valid` check them.
 - `AnalysisSegment` (`analysis_segment.h`): id, span, optional metrical position, beat strength.
-- `AnalysisKey` and `AnalysisKeyEvent` (`analysis_key.h`): tonic letter and accidental, major or minor (`KeyStructureMode`, so `semantics/` includes `interpretation/key.h`, the one allowlisted L6 exception). `analysis_key_from_fifths` reads a key signature; `midi_key_signature_analysis_key` (`io/`) builds one from a scanned MIDI signature.
+- `AnalysisKey` and `AnalysisKeyEvent` (`analysis_key.h`): tonic letter and accidental, major or minor (`KeyStructureMode`, so `semantics/` includes `interpretation/key.h`, the one allowlisted L6 exception). `analysis_key_from_fifths` reads a key signature.
 - `AnalysisVoiceGrid` and `AnalysisVoiceCell` (`voice_grid.h`): each voice's note in each segment, row-major by segment, voice 0 the top voice. The harmony and counterpoint adapters' grids are typedefs of it.
 
 ## Notes

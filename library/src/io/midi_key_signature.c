@@ -8,93 +8,47 @@
 #include "pitch/midi_pitch.h"
 
 typedef struct {
-    const unsigned char *data;
-    size_t size;
-    size_t pos;
-} Cursor;
+    uint64_t tick;
+    size_t track_index;
+    int8_t sharps_flats;
+    uint8_t mode_byte;
+} RawKeyEvent;
 
-static int cursor_has(const Cursor *c, size_t n) {
-    return c->pos + n <= c->size;
-}
+struct MidiKeySignatureCollector {
+    MidiKeySignature first; /* the first well-formed length-2 event in track then byte order, sf unchecked */
+    RawKeyEvent *items;
+    size_t count;
+    size_t capacity;
+};
 
-static unsigned char cursor_byte(Cursor *c) {
-    return c->data[c->pos++];
-}
-
-/* Walks one track's raw bytes looking for a Key Signature meta-event
-   (0xFF 0x59, 2-byte payload: sf as signed, mi as 0=major/1=minor).
-   Skips every other event just enough to keep byte offsets correct
-   (same event-length rules as midi_event_decoder_decode), without
-   decoding note events at all. Returns 0 on success (out->found tells
-   whether one was located in this track), -1 on malformed track bytes. */
-static int scan_track_for_key_signature(const unsigned char *track_data, size_t track_size, MidiKeySignature *out) {
-    Cursor c = {track_data, track_size, 0};
-    unsigned char running_status = 0;
-
-    while (c.pos < c.size) {
-        uint32_t delta = 0;
-        if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &delta) != 0) {
-            return -1;
-        }
-
-        if (!cursor_has(&c, 1)) {
-            return -1;
-        }
-
-        unsigned char status = c.data[c.pos];
-        if (status & 0x80) {
-            c.pos++;
-            running_status = status;
-        } else {
-            status = running_status;
-        }
-
-        if (status == 0xFF) {
-            if (!cursor_has(&c, 1)) {
-                return -1;
-            }
-            unsigned char meta_type = cursor_byte(&c);
-            uint32_t len = 0;
-            if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &len) != 0 || !cursor_has(&c, len)) {
-                return -1;
-            }
-            if (meta_type == 0x59 && len == 2 && !out->found) {
-                out->found = true;
-                out->sharps_flats = (int8_t)c.data[c.pos];
-                out->is_minor = c.data[c.pos + 1] != 0;
-            }
-            c.pos += len;
-            continue;
-        }
-
-        if (status == 0xF0 || status == 0xF7) {
-            uint32_t len = 0;
-            if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &len) != 0 || !cursor_has(&c, len)) {
-                return -1;
-            }
-            c.pos += len;
-            continue;
-        }
-
-        unsigned char high_nibble = status & 0xF0;
-
-        if (high_nibble == 0x80 || high_nibble == 0x90 || high_nibble == 0xA0 || high_nibble == 0xB0 ||
-            high_nibble == 0xE0) {
-            if (!cursor_has(&c, 2)) {
-                return -1;
-            }
-            c.pos += 2;
-        } else if (high_nibble == 0xC0 || high_nibble == 0xD0) {
-            if (!cursor_has(&c, 1)) {
-                return -1;
-            }
-            c.pos += 1;
-        } else {
-            return -1;
-        }
+static MidiKeySignatureResult scan_failure(SmfReaderResult smf_result) {
+    switch (smf_result) {
+    case SMF_READER_ERR_NULL_BUFFER:
+        return MIDI_KEY_SIGNATURE_ERR_NULL_BUFFER;
+    case SMF_READER_ERR_TRUNCATED:
+        return MIDI_KEY_SIGNATURE_ERR_TRUNCATED;
+    case SMF_READER_ERR_UNSUPPORTED_FORMAT:
+        return MIDI_KEY_SIGNATURE_ERR_UNSUPPORTED_FORMAT;
+    case SMF_READER_ERR_UNSUPPORTED_DIVISION:
+        return MIDI_KEY_SIGNATURE_ERR_UNSUPPORTED_DIVISION;
+    case SMF_READER_ERR_BAD_TRACK:
+        return MIDI_KEY_SIGNATURE_ERR_BAD_TRACK;
+    case SMF_READER_ERR_BAD_HEADER:
+    default:
+        return MIDI_KEY_SIGNATURE_ERR_BAD_HEADER;
     }
+}
 
-    return 0;
+/* One walk of every track by midi_event_decoder_scan, feeding a collector. The caller owns the
+   collector and the tracks array. */
+static MidiEventDecoderResult walk_tracks(const SmfTrack *tracks, size_t track_count,
+                                          MidiKeySignatureCollector *collector) {
+    MidiFileScan scan;
+    MidiEventDecoderResult result = midi_event_decoder_scan(tracks, track_count, collector, &scan);
+    if (result == MIDI_EVENT_DECODER_OK) {
+        midi_file_scan_destroy(&scan);
+    }
+    return result;
 }
 
 MidiKeySignatureResult midi_key_signature_scan(const unsigned char *data, size_t size, MidiKeySignature *out) {
@@ -107,40 +61,22 @@ MidiKeySignatureResult midi_key_signature_scan(const unsigned char *data, size_t
     size_t track_count = 0;
     SmfReaderResult smf_result = smf_reader_parse(data, size, &header, &tracks, &track_count);
     if (smf_result != SMF_READER_OK) {
-        switch (smf_result) {
-        case SMF_READER_ERR_NULL_BUFFER:
-            return MIDI_KEY_SIGNATURE_ERR_NULL_BUFFER;
-        case SMF_READER_ERR_TRUNCATED:
-            return MIDI_KEY_SIGNATURE_ERR_TRUNCATED;
-        case SMF_READER_ERR_UNSUPPORTED_FORMAT:
-            return MIDI_KEY_SIGNATURE_ERR_UNSUPPORTED_FORMAT;
-        case SMF_READER_ERR_UNSUPPORTED_DIVISION:
-            return MIDI_KEY_SIGNATURE_ERR_UNSUPPORTED_DIVISION;
-        case SMF_READER_ERR_BAD_TRACK:
-            return MIDI_KEY_SIGNATURE_ERR_BAD_TRACK;
-        case SMF_READER_ERR_BAD_HEADER:
-        default:
-            return MIDI_KEY_SIGNATURE_ERR_BAD_HEADER;
-        }
+        return scan_failure(smf_result);
     }
 
-    MidiKeySignature result = {false, 0, false};
-    MidiKeySignatureResult failure = MIDI_KEY_SIGNATURE_OK;
-
-    for (size_t t = 0; t < track_count && !result.found; t++) {
-        if (scan_track_for_key_signature(tracks[t].data, tracks[t].size, &result) != 0) {
-            failure = MIDI_KEY_SIGNATURE_ERR_BAD_TRACK;
-            break;
-        }
+    MidiKeySignatureCollector *collector = midi_key_signature_collector_create();
+    if (collector == NULL) {
+        free(tracks);
+        return MIDI_KEY_SIGNATURE_ERR_BAD_TRACK;
     }
-
+    MidiEventDecoderResult walked = walk_tracks(tracks, track_count, collector);
     free(tracks);
-
-    if (failure != MIDI_KEY_SIGNATURE_OK) {
-        return failure;
+    if (walked != MIDI_EVENT_DECODER_OK) {
+        midi_key_signature_collector_destroy(collector);
+        return MIDI_KEY_SIGNATURE_ERR_BAD_TRACK;
     }
-
-    *out = result;
+    *out = collector->first;
+    midi_key_signature_collector_destroy(collector);
     return MIDI_KEY_SIGNATURE_OK;
 }
 
@@ -154,19 +90,6 @@ MidiKeySignatureBuildResult midi_key_signature_build(int sharps_flats, KeySignat
 
     return key_signature_from_fifths(sharps_flats, out) ? MIDI_KEY_SIGNATURE_BUILD_OK : MIDI_KEY_SIGNATURE_BUILD_ERR_ALLOC;
 }
-
-typedef struct {
-    uint64_t tick;
-    size_t track_index;
-    int8_t sharps_flats;
-    uint8_t mode_byte;
-} RawKeyEvent;
-
-struct MidiKeySignatureCollector {
-    RawKeyEvent *items;
-    size_t count;
-    size_t capacity;
-};
 
 MidiKeySignatureCollector *midi_key_signature_collector_create(void) {
     return (MidiKeySignatureCollector *)calloc(1, sizeof(MidiKeySignatureCollector));
@@ -200,89 +123,16 @@ int midi_key_signature_collector_meta(MidiKeySignatureCollector *collector, size
         return 0;
     }
     int8_t sf = (int8_t)data[0];
+    if (!collector->first.found) {
+        collector->first.found = true;
+        collector->first.sharps_flats = sf;
+        collector->first.is_minor = data[1] != 0;
+    }
     if (sf < -7 || sf > 7) {
         return 0;
     }
     RawKeyEvent event = {tick, track_index, sf, data[1]};
     return collector_append(collector, event);
-}
-
-/* Same walk as scan_track_for_key_signature, but accumulates ticks and hands every meta-event to the
-   collector instead of stopping at the first key signature. Returns 0 on success, -1 on malformed
-   track bytes (or a tick that does not fit a MusicalTime numerator), -2 on allocation failure. */
-static int scan_track_for_all_key_signatures(const unsigned char *track_data, size_t track_size, size_t track_index,
-                                              MidiKeySignatureCollector *collector) {
-    Cursor c = {track_data, track_size, 0};
-    unsigned char running_status = 0;
-    uint64_t tick = 0;
-
-    while (c.pos < c.size) {
-        uint32_t delta = 0;
-        if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &delta) != 0) {
-            return -1;
-        }
-        tick += delta;
-        if (tick > (uint64_t)LONG_MAX) {
-            return -1;
-        }
-
-        if (!cursor_has(&c, 1)) {
-            return -1;
-        }
-
-        unsigned char status = c.data[c.pos];
-        if (status & 0x80) {
-            c.pos++;
-            running_status = status;
-        } else {
-            status = running_status;
-        }
-
-        if (status == 0xFF) {
-            if (!cursor_has(&c, 1)) {
-                return -1;
-            }
-            unsigned char meta_type = cursor_byte(&c);
-            uint32_t len = 0;
-            if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &len) != 0 || !cursor_has(&c, len)) {
-                return -1;
-            }
-            if (midi_key_signature_collector_meta(collector, track_index, tick, meta_type, c.data + c.pos, len) !=
-                0) {
-                return -2;
-            }
-            c.pos += len;
-            continue;
-        }
-
-        if (status == 0xF0 || status == 0xF7) {
-            uint32_t len = 0;
-            if (midi_event_decoder_read_vlq(c.data, c.size, &c.pos, &len) != 0 || !cursor_has(&c, len)) {
-                return -1;
-            }
-            c.pos += len;
-            continue;
-        }
-
-        unsigned char high_nibble = status & 0xF0;
-
-        if (high_nibble == 0x80 || high_nibble == 0x90 || high_nibble == 0xA0 || high_nibble == 0xB0 ||
-            high_nibble == 0xE0) {
-            if (!cursor_has(&c, 2)) {
-                return -1;
-            }
-            c.pos += 2;
-        } else if (high_nibble == 0xC0 || high_nibble == 0xD0) {
-            if (!cursor_has(&c, 1)) {
-                return -1;
-            }
-            c.pos += 1;
-        } else {
-            return -1;
-        }
-    }
-
-    return 0;
 }
 
 /* Tracks are appended in order and each track in byte order, so the array index is the final
@@ -460,27 +310,16 @@ MidiKeySignatureScanAllResult midi_key_signature_scan_all(const unsigned char *d
         free(tracks);
         return MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_ALLOC;
     }
-    MidiKeySignatureScanAllResult failure = MIDI_KEY_SIGNATURE_SCAN_ALL_OK;
-    for (size_t t = 0; t < track_count; t++) {
-        int track_result = scan_track_for_all_key_signatures(tracks[t].data, tracks[t].size, t, collector);
-        if (track_result != 0) {
-            failure = track_result == -2 ? MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_ALLOC
-                                         : MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_BAD_TRACK;
-            break;
-        }
-    }
+    MidiEventDecoderResult walked = walk_tracks(tracks, track_count, collector);
     free(tracks);
-    if (failure == MIDI_KEY_SIGNATURE_SCAN_ALL_OK) {
+    MidiKeySignatureScanAllResult failure = MIDI_KEY_SIGNATURE_SCAN_ALL_OK;
+    if (walked == MIDI_EVENT_DECODER_ERR_ALLOC) {
+        failure = MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_ALLOC;
+    } else if (walked != MIDI_EVENT_DECODER_OK) {
+        failure = MIDI_KEY_SIGNATURE_SCAN_ALL_ERR_BAD_TRACK;
+    } else {
         failure = midi_key_signature_collector_finish(collector, header.division, out);
     }
     midi_key_signature_collector_destroy(collector);
     return failure;
-}
-
-bool midi_key_signature_analysis_key(const MidiKeySignature *signature, AnalysisKey *out) {
-    if (signature == NULL || out == NULL || !signature->found) {
-        return false;
-    }
-    return analysis_key_from_fifths(signature->sharps_flats,
-                                    signature->is_minor ? KEY_STRUCTURE_MODE_MINOR : KEY_STRUCTURE_MODE_MAJOR, out);
 }
