@@ -540,6 +540,11 @@ static const char *add_piece(MotiveLinkScope *scope, const char *id) {
         return "not found";
     }
     cJSON_Delete(meta);
+    /* Another schema, Analyzer version or Ursatz commit: analyze the piece again before the run. The error-triggered
+       re-analysis below stays as a fallback. */
+    if (ursatz_gui_analysis_ensure_current(kPiecesDir, id) != URSATZ_GUI_ANALYSIS_OK) {
+        return "re-analysis failed";
+    }
     snprintf(file_path, sizeof(file_path), "%s/%s/analysis.json", kPiecesDir, id);
 
     for (int attempt = 0; attempt < 2; attempt++) {

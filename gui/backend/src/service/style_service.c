@@ -539,12 +539,6 @@ static void collected_free(Collected *collected) {
     memset(collected, 0, sizeof(*collected));
 }
 
-/* The document_schema_version recorded in meta; 0 when absent. */
-static int meta_schema_version(const cJSON *meta) {
-    const cJSON *item = cJSON_GetObjectItemCaseSensitive(meta, "document_schema_version");
-    return cJSON_IsNumber(item) ? item->valueint : 0;
-}
-
 /*
  * Adds one piece's analysis document to the profile. false with *reason set
  * when the piece is skipped; *alloc_failed set when memory ran out.
@@ -563,11 +557,10 @@ static bool add_piece(StyleProfile *profile, const char *id, const char **reason
         *reason = "not found";
         return false;
     }
-    int version = meta_schema_version(meta);
     cJSON_Delete(meta);
 
-    if (version != URSATZ_ANALYZER_DOCUMENT_SCHEMA_VERSION &&
-        ursatz_gui_analysis_reanalyze(kPiecesDir, id) != URSATZ_GUI_ANALYSIS_OK) {
+    /* Another schema, Analyzer version or Ursatz commit: analyze the piece again first. */
+    if (ursatz_gui_analysis_ensure_current(kPiecesDir, id) != URSATZ_GUI_ANALYSIS_OK) {
         *reason = "re-analysis failed";
         return false;
     }

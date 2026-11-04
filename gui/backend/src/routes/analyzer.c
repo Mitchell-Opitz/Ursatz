@@ -495,6 +495,12 @@ static int handle_get_piece(struct mg_connection *conn, const char *id) {
   append_notation(&buf, detail->has_notation, &detail->notation);
   json_buffer_append(&buf, ",\"analysis_status\":");
   json_buffer_append_string(&buf, detail->analysis_status ? detail->analysis_status : "unreadable");
+  if (detail->analysis_status && strcmp(detail->analysis_status, "current") != 0) {
+    /* The stored document is served as it is: a re-analysis failed (or the piece was written by a build without
+       this check); the status names why it is stale. */
+    json_buffer_append(&buf, ",\"stale\":");
+    json_buffer_append_string(&buf, detail->analysis_status);
+  }
   json_buffer_append(&buf, ",\"note_xml_ids\":[");
   for (size_t i = 0; i < detail->note_count; i++) {
     if (i != 0) {
