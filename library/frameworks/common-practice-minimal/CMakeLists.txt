@@ -31,6 +31,6 @@ ursatz_public_headers(common_practice_minimal
         weighted_chord_identification.h
         weighted_identification.h
 )
-target_link_libraries(common_practice_minimal PUBLIC ursatz m)
+target_link_libraries(common_practice_minimal PUBLIC standard_tonality ursatz m)
 
 ursatz_add_tests()
