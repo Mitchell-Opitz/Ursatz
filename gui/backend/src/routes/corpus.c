@@ -8,10 +8,10 @@
 #include <cJSON.h>
 #include <civetweb.h>
 
+#include "route_util.h"
 #include "../service/collection_service.h"
 
 static const char *kCorpusPrefix = "/api/corpus";
-static const size_t kMaxRequestBodySize = 1024 * 1024;
 /* "Add all matching" sends every id of a filtered Library in one request. */
 static const size_t kMaxPieceIds = 5000;
 
@@ -19,16 +19,6 @@ static void send_json(struct mg_connection *conn, const char *body) {
   size_t len = strlen(body);
   mg_send_http_ok(conn, "application/json", (long)len);
   mg_write(conn, body, len);
-}
-
-/* Sends body as application/json with a non-200 status line. */
-static int send_json_status(struct mg_connection *conn, int status, const char *reason, const char *body) {
-  size_t len = strlen(body);
-  mg_printf(conn,
-            "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
-            status, reason, len);
-  mg_write(conn, body, len);
-  return status;
 }
 
 /* Sends {"ok":false,"message":...} with the given status (200 for the
@@ -42,13 +32,13 @@ static int send_failure(struct mg_connection *conn, int status, const char *mess
   }
   cJSON_Delete(object);
   if (!text) {
-    return send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"out of memory\"}");
+    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"out of memory\"}");
   }
   if (status == 200) {
     send_json(conn, text);
   } else {
     const char *reason = status == 404 ? "Not Found" : status == 500 ? "Internal Server Error" : "Bad Request";
-    send_json_status(conn, status, reason, text);
+    ursatz_gui_send_json_status(conn, status, reason, text);
   }
   free(text);
   return status;
@@ -68,67 +58,6 @@ static int send_object(struct mg_connection *conn, cJSON *object) {
   send_json(conn, text);
   free(text);
   return 200;
-}
-
-/* Reads the full request body into a newly allocated, NUL-terminated
- * buffer (caller frees). Returns NULL on allocation failure, a read
- * error, or a body larger than kMaxRequestBodySize -- corpus request
- * bodies are JSON objects (the largest a list of piece ids), unlike the
- * Analyzer upload route. */
-static char *read_request_body(struct mg_connection *conn) {
-  size_t capacity = 4096;
-  char *buffer = malloc(capacity);
-  if (!buffer) {
-    return NULL;
-  }
-
-  size_t total = 0;
-  for (;;) {
-    if (total == capacity) {
-      if (capacity >= kMaxRequestBodySize) {
-        free(buffer);
-        return NULL;
-      }
-      size_t new_capacity = capacity * 2;
-      char *grown = realloc(buffer, new_capacity);
-      if (!grown) {
-        free(buffer);
-        return NULL;
-      }
-      buffer = grown;
-      capacity = new_capacity;
-    }
-
-    int n = mg_read(conn, buffer + total, capacity - total - 1);
-    if (n < 0) {
-      free(buffer);
-      return NULL;
-    }
-    if (n == 0) {
-      break;
-    }
-    total += (size_t)n;
-  }
-
-  buffer[total] = '\0';
-  return buffer;
-}
-
-/* Reads the request body and parses it as a JSON object. NULL when the
- * body cannot be read, is not valid JSON, or is not an object (caller
- * answers "invalid request body"); caller frees with cJSON_Delete. */
-static cJSON *read_json_body(struct mg_connection *conn) {
-  char *text = read_request_body(conn);
-  if (!text) {
-    return NULL;
-  }
-  cJSON *body = cJSON_Parse(text);
-  free(text);
-  if (!cJSON_IsObject(body)) {
-    cJSON_Delete(body);
-    return NULL;
-  }
-  return body;
 }
 
 static const char *collection_message(UrsatzGuiCollectionResult result) {
@@ -191,7 +120,7 @@ static int send_collection_summary(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_create_corpus(struct mg_connection *conn) {
-  cJSON *body = read_json_body(conn);
+  cJSON *body = ursatz_gui_read_json_body(conn, NULL);
   if (!body) {
     return send_failure(conn, 200, "invalid request body");
   }
@@ -296,7 +225,7 @@ static int handle_get_corpus(struct mg_connection *conn, const char *id) {
 }
 
 static int handle_patch_corpus(struct mg_connection *conn, const char *id) {
-  cJSON *body = read_json_body(conn);
+  cJSON *body = ursatz_gui_read_json_body(conn, NULL);
   if (!body) {
     return send_failure(conn, 200, "invalid request body");
   }
@@ -338,7 +267,7 @@ static int handle_delete_corpus(struct mg_connection *conn, const char *id) {
  * collection. A piece already in it is counted, not an error:
  * {"ok":true,"added":n,"already":n}. */
 static int handle_add_pieces(struct mg_connection *conn, const char *corpus_id) {
-  cJSON *body = read_json_body(conn);
+  cJSON *body = ursatz_gui_read_json_body(conn, NULL);
   if (!body) {
     return send_failure(conn, 200, "invalid request body");
   }

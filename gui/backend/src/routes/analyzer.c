@@ -9,6 +9,7 @@
 #include <civetweb.h>
 #include <cJSON.h>
 
+#include "route_util.h"
 #include "../service/analysis_service.h"
 #include "../service/collection_service.h"
 #include "../service/piece_metadata.h"
@@ -68,16 +69,6 @@ static void send_json(struct mg_connection *conn, const char *body) {
   mg_write(conn, body, len);
 }
 
-/* Sends body as application/json with a non-200 status line. */
-static int send_json_status(struct mg_connection *conn, int status, const char *reason, const char *body) {
-  size_t len = strlen(body);
-  mg_printf(conn,
-            "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
-            status, reason, len);
-  mg_write(conn, body, len);
-  return status;
-}
-
 /* Raw MusicXmlExportResult enum name, for the API's "code" field -- kept
  * unshortened so it is directly greppable against musicxml_export.h. */
 static const char *musicxml_export_error_code(MusicXmlExportResult error) {
@@ -114,7 +105,7 @@ static void send_musicxml_export_error(struct mg_connection *conn, MusicXmlExpor
   char body[192];
   snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"failed to export piece\",\"code\":\"%s\"}",
            musicxml_export_error_code(export_error));
-  send_json_status(conn, 500, "Internal Server Error", body);
+  ursatz_gui_send_json_status(conn, 500, "Internal Server Error", body);
 }
 
 /* Append-only buffer that grows as needed, used in place of a
@@ -271,11 +262,11 @@ static int handle_post(struct mg_connection *conn) {
 
   if (result == URSATZ_GUI_ANALYSIS_ERR_UNSUPPORTED_FORMAT) {
     free(filename);
-    return send_json_status(conn, 415, "Unsupported Media Type", "{\"error\": \"unsupported format\"}");
+    return ursatz_gui_send_json_status(conn, 415, "Unsupported Media Type", "{\"error\": \"unsupported format\"}");
   }
   if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
     free(filename);
-    return send_json_status(conn, 422, "Unprocessable Entity", "{\"error\": \"import failed\"}");
+    return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity", "{\"error\": \"import failed\"}");
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
     free(filename);
@@ -623,7 +614,7 @@ static bool string_array_members(const cJSON *item, const char ***out, size_t *o
 static int send_invalid_member(struct mg_connection *conn, const char *member) {
   char body[96];
   snprintf(body, sizeof(body), "{\"ok\":false,\"message\":\"invalid %s\"}", member);
-  return send_json_status(conn, 400, "Bad Request", body);
+  return ursatz_gui_send_json_status(conn, 400, "Bad Request", body);
 }
 
 /* Answers a successful metadata change with the piece as the list shows it. */
@@ -708,7 +699,7 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
   free(body);
   if (!cJSON_IsObject(root)) {
     cJSON_Delete(root);
-    return send_json_status(conn, 400, "Bad Request", "{\"ok\":false,\"message\":\"invalid request body\"}");
+    return ursatz_gui_send_json_status(conn, 400, "Bad Request", "{\"ok\":false,\"message\":\"invalid request body\"}");
   }
 
   UrsatzGuiMetaUpdate update = {0};
@@ -830,7 +821,7 @@ static int handle_patch_piece(struct mg_connection *conn, const char *id) {
         text = cJSON_PrintUnformatted(answer);
         cJSON_Delete(answer);
       }
-      status = send_json_status(conn, 400, "Bad Request", text ? text : "{\"ok\":false,\"message\":\"invalid metadata\"}");
+      status = ursatz_gui_send_json_status(conn, 400, "Bad Request", text ? text : "{\"ok\":false,\"message\":\"invalid metadata\"}");
       free(text);
     } else if (result != URSATZ_GUI_ANALYSIS_OK) {
       send_json(conn, "{\"ok\":false,\"message\":\"failed to update piece\"}");
@@ -883,7 +874,7 @@ static int handle_reanalyze_piece(struct mg_connection *conn, const char *id) {
     return 404;
   }
   if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
-    return send_json_status(conn, 422, "Unprocessable Entity", "{\"error\": \"import failed\"}");
+    return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity", "{\"error\": \"import failed\"}");
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
     send_json(conn, "{\"ok\":false,\"message\":\"failed to analyze piece again\"}");
@@ -921,7 +912,7 @@ static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id)
     return 404;
   }
   if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
-    return send_json_status(conn, 422, "Unprocessable Entity",
+    return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
                             "{\"ok\":false,\"message\":\"could not import the stored source\"}");
   }
   if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED) {
@@ -929,7 +920,7 @@ static int handle_get_piece_musicxml(struct mg_connection *conn, const char *id)
     return 500;
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
-    return send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
+    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
   }
 
   size_t len = strlen(xml);
@@ -951,7 +942,7 @@ static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char
     return 404;
   }
   if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
-    return send_json_status(conn, 422, "Unprocessable Entity",
+    return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
                             "{\"ok\":false,\"message\":\"could not import the stored source\"}");
   }
   if (result == URSATZ_GUI_ANALYSIS_ERR_PERSISTENCE_FAILED) {
@@ -959,7 +950,7 @@ static int handle_get_piece_musicxml_meta(struct mg_connection *conn, const char
     return 500;
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
-    return send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
+    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to export piece\"}");
   }
   free(xml);
 
@@ -976,11 +967,11 @@ static int handle_get_piece_playback(struct mg_connection *conn, const char *id)
     return 404;
   }
   if (result == URSATZ_GUI_ANALYSIS_ERR_IMPORT_FAILED) {
-    return send_json_status(conn, 422, "Unprocessable Entity",
+    return ursatz_gui_send_json_status(conn, 422, "Unprocessable Entity",
                             "{\"ok\":false,\"message\":\"could not import the stored source\"}");
   }
   if (result != URSATZ_GUI_ANALYSIS_OK) {
-    return send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to build playback\"}");
+    return ursatz_gui_send_json_status(conn, 500, "Internal Server Error", "{\"ok\":false,\"message\":\"failed to build playback\"}");
   }
 
   send_json(conn, json);

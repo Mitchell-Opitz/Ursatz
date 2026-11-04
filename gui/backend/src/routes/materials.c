@@ -18,6 +18,7 @@
 #endif
 
 #include "../util/fs_util.h"
+#include "route_util.h"
 #include "../service/composer_service.h"
 #include "../service/material_service.h"
 #include "../service/style_service.h"
@@ -29,15 +30,6 @@ static const char *kMaterialsPrefix = "/api/materials";
 static const char *kSubjectsPrefix = "/api/subjects";
 static const size_t kMaxRequestBodySize = 256 * 1024;
 static const int kMaxSegments = 7;
-
-static int send_json_status(struct mg_connection *conn, int status, const char *reason, const char *body) {
-  size_t len = strlen(body);
-  mg_printf(conn,
-            "HTTP/1.1 %d %s\r\nContent-Type: application/json\r\nContent-Length: %zu\r\nConnection: close\r\n\r\n",
-            status, reason, len);
-  mg_write(conn, body, len);
-  return status;
-}
 
 static const char *reason_for(int status) {
   switch (status) {
@@ -73,9 +65,9 @@ static int send_failure(struct mg_connection *conn, int status, const char *mess
   }
   cJSON_Delete(object);
   if (!text) {
-    return send_json_status(conn, 500, reason_for(500), "{\"ok\":false,\"error\":\"out of memory\"}");
+    return ursatz_gui_send_json_status(conn, 500, reason_for(500), "{\"ok\":false,\"error\":\"out of memory\"}");
   }
-  send_json_status(conn, status, reason_for(status), text);
+  ursatz_gui_send_json_status(conn, status, reason_for(status), text);
   free(text);
   return status;
 }
@@ -87,7 +79,7 @@ static int send_object(struct mg_connection *conn, cJSON *object) {
   if (!text) {
     return send_failure(conn, 500, "out of memory");
   }
-  send_json_status(conn, 200, reason_for(200), text);
+  ursatz_gui_send_json_status(conn, 200, reason_for(200), text);
   free(text);
   return 200;
 }
@@ -109,7 +101,7 @@ static int send_ok_with(struct mg_connection *conn, const char *key, cJSON *valu
 }
 
 static int send_ok(struct mg_connection *conn) {
-  send_json_status(conn, 200, reason_for(200), "{\"ok\":true}");
+  ursatz_gui_send_json_status(conn, 200, reason_for(200), "{\"ok\":true}");
   return 200;
 }
 
@@ -124,56 +116,7 @@ static int send_not_found(struct mg_connection *conn) {
 /* Reads the request body as a JSON object. Returns NULL after sending the failure (400, or 413 past
  * kMaxRequestBodySize); *status is then what the caller returns. */
 static cJSON *read_json_body(struct mg_connection *conn, int *status) {
-  size_t capacity = 4096;
-  char *buffer = malloc(capacity);
-  size_t total = 0;
-  *status = 400;
-  if (!buffer) {
-    *status = send_failure(conn, 500, "out of memory");
-    return NULL;
-  }
-  for (;;) {
-    if (total + 1 >= capacity) {
-      if (capacity > kMaxRequestBodySize) {
-        free(buffer);
-        *status = send_failure(conn, 413, "request body too large");
-        return NULL;
-      }
-      char *grown = realloc(buffer, capacity * 2);
-      if (!grown) {
-        free(buffer);
-        *status = send_failure(conn, 500, "out of memory");
-        return NULL;
-      }
-      buffer = grown;
-      capacity *= 2;
-    }
-    int n = mg_read(conn, buffer + total, capacity - total - 1);
-    if (n < 0) {
-      free(buffer);
-      *status = send_failure(conn, 400, "cannot read the request body");
-      return NULL;
-    }
-    if (n == 0) {
-      break;
-    }
-    total += (size_t)n;
-    if (total > kMaxRequestBodySize) {
-      free(buffer);
-      *status = send_failure(conn, 413, "request body too large");
-      return NULL;
-    }
-  }
-  buffer[total] = '\0';
-  cJSON *body = cJSON_Parse(buffer);
-  free(buffer);
-  if (!cJSON_IsObject(body)) {
-    cJSON_Delete(body);
-    *status = send_failure(conn, 400, "the body must be a JSON object");
-    return NULL;
-  }
-  *status = 200;
-  return body;
+  return ursatz_gui_read_json_body_max(conn, kMaxRequestBodySize, status);
 }
 
 /* The string member, NULL when absent or null; *bad is set when it is present but not a string. */
@@ -1444,7 +1387,7 @@ static int handle_delete_item(struct mg_connection *conn, const char *id) {
     if (!text) {
       return send_failure(conn, 500, "out of memory");
     }
-    send_json_status(conn, 409, reason_for(409), text);
+    ursatz_gui_send_json_status(conn, 409, reason_for(409), text);
     free(text);
     return 409;
   }
