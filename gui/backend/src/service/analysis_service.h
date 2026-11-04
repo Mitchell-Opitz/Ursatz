@@ -158,6 +158,15 @@ UrsatzGuiAnalysisResult ursatz_gui_analysis_update_metadata(const char *pieces_d
                                                              size_t message_size);
 
 /*
+ * The PATCH of a piece as one hold of its lock: ursatz_gui_analysis_update_metadata, then, when the update changes
+ * the notation override, ursatz_gui_analysis_reanalyze; if that fails the old override is put back, and a source
+ * that no longer imports gives URSATZ_GUI_ANALYSIS_ERR_INVALID_METADATA with message "invalid notation".
+ */
+UrsatzGuiAnalysisResult ursatz_gui_analysis_update_piece(const char *pieces_dir, const char *id,
+                                                          const UrsatzGuiMetaUpdate *update, char *message,
+                                                          size_t message_size);
+
+/*
  * Reads the piece's notation override from its meta.json: *out_has is false
  * (and *out is zeroed) when it has none.
  * URSATZ_GUI_ANALYSIS_ERR_NOT_FOUND if no piece with this id exists.
