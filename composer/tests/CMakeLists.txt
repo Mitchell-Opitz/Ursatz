@@ -776,3 +776,10 @@ if(VALGRIND_PROGRAM)
              COMMAND ${VALGRIND_PROGRAM} --error-exitcode=1 --leak-check=full --errors-for-leak-kinds=definite,indirect
                      $<TARGET_FILE:test_job_cancel> cancel)
 endif()
+
+# A project that adds cJSON, Ursatz and the Analyzer first and the Composer after them, with its command off, builds and runs.
+add_test(NAME consumer_build
+         COMMAND ${CMAKE_CTEST_COMMAND} --build-and-test ${CMAKE_CURRENT_SOURCE_DIR}/consumer ${CMAKE_CURRENT_BINARY_DIR}/consumer
+                 --build-generator "${CMAKE_GENERATOR}" --build-target consumer
+                 --build-options -DCOMPOSER_ROOT=${PROJECT_SOURCE_DIR}
+                 --test-command ${CMAKE_CURRENT_BINARY_DIR}/consumer/consumer)
