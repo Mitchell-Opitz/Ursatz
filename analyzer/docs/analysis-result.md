@@ -37,7 +37,8 @@ and form plan. `analyzer_options_default()` selects all of them, with no callbac
 it needs (see the chain header).
 
 `ANALYZER_STAGE_VOICING` and `ANALYZER_STAGE_COUNTERPOINT` are reserved. Those two checks need a species and a voice
-choice the options do not carry, so they stay on their own entries (`voicing_check.h`, `counterpoint_pipeline.h`).
+choice the options do not carry. Voicing stays on its own entry (`voicing_check.h`); counterpoint is checked with
+standard-counterpoint, not by the Analyzer.
 
 `cancel(cancel_context)` is asked before the chain run and before each selected Analyzer-only stage. When it returns
 true the run stops with `ANALYZER_ERR_CANCELLED`.

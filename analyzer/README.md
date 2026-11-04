@@ -157,7 +157,7 @@ call them and render the result:
 `URSATZ_ANALYZER_URSATZ_COMMIT` and declares `ursatz_analyzer_version()` and `ursatz_analyzer_ursatz_commit()`, so a
 consumer reads the version from the library instead of parsing `CMakeLists.txt`.
 
-The version is 0.5.0 (new public APIs in P24: `AnalyzerResult`, `analyzer_hear`, the joined chord sequence, playback and
+The version is 0.6.0 (the deprecated fragment API is gone in P28; new public APIs in P24: `AnalyzerResult`, `analyzer_hear`, the joined chord sequence, playback and
 score export, and `staleness.h`; in P27 the score note ids and defaulted meter of an import). Every analysis stored by an earlier version is stale by version.
 
 `scripts/check-pins.sh` fails when a submodule pin is not on its remote's `main`, or when one repository is pinned at
@@ -254,7 +254,7 @@ Its public include directory is `include/`, and consumers include headers as
 | `score_export.h` | `analyzer_score_export_musicxml` writes the imported notes as a MusicXML score; `analyzer_score_note_xml_ids` gives each note's base `xml:id` and `analyzer_imported_meter_defaulted` says whether the meter was inferred. See [docs/gui-api.md](docs/gui-api.md). |
 | `similar_material.h` | `similar_material_find` scores the passages of a corpus against a motive or a progression query. |
 | `motive_links.h` | `MotiveLinkScope` (analysis documents), `motive_links_run` links the motive families of its pieces, `MotiveLinkCache` keeps the pairs compared, `motive_links_render` writes the links as JSON. |
-| `composer_api.h` | `analyzer_hear` hears borrowed events into an `AnalyzerResult`; `AnalyzerStyleReference` and `analyzer_result_style_distance` measure style distance. `analyzer_analyze_fragment` and the fragment distances are deprecated wrappers; violations for the Composer. |
+| `composer_api.h` | `analyzer_hear` hears borrowed events into an `AnalyzerResult`; `AnalyzerStyleReference` and `analyzer_result_style_distance` measure style distance. `analyzer_result_violations` lists the voice-leading faults of a result. Counterpoint is checked with standard-counterpoint, not by the Analyzer. |
 
 The Composer calls `composer_api.h` to analyze a fragment it generated, with no file: see [docs/composer-api.md](docs/composer-api.md).
 
